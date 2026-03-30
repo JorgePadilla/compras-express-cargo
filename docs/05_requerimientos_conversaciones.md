@@ -4,12 +4,66 @@ Sistema actual: `https://cec.rsahn.com/App/Home`
 
 ## Módulos Identificados
 
-| # | Módulo | Conversación | Estado |
-|---|--------|-------------|--------|
-| 1 | Pre-alertas + Mejoras al sistema actual | Conversación 1 | Documentado abajo |
-| 2 | Login, Logout, Usuarios y Roles | Parcial | Roles definidos, conversación detallada pendiente |
-| 3 | Por definir (visita al cliente) | Pendiente | Por agendar |
-| 4 | Por definir (visita al cliente) | Pendiente | Por agendar |
+### Por Área Funcional (del sistema actual + mejoras solicitadas)
+
+| # | Módulo | Área | Fuente | Estado |
+|---|--------|------|--------|--------|
+| **Autenticación y Usuarios** | | | |
+| 1 | Login, Logout, Sesiones | Core | Conv. 2 (parcial) | Roles definidos, permisos pendiente |
+| 2 | Usuarios del Sistema y Roles | Core | Conv. 2 (parcial) | 8 roles identificados |
+| 3 | Portal Cliente (Mi Cuenta) | Core | Sistema actual | Capturado completo (11 páginas) |
+| 4 | Portal Admin | Core | Sistema actual | Capturado completo (22 páginas) |
+| **Logística** | | | |
+| 5 | Pre-Alertas (cliente + admin) | Logística | Conv. 1 + sistema | Documentado con mejoras |
+| 6 | Etiquetar (recepción Miami) | Logística | Sistema actual | Capturado (18 campos, F-keys) |
+| 7 | Paquetes (CRUD + filtros avanzados) | Logística | Sistema actual | Capturado |
+| 8 | Manifiestos | Logística | Sistema actual | Capturado |
+| 9 | Pre-Facturas | Logística | Sistema actual | Capturado (admin + cliente) |
+| 10 | Entregas / Despacho | Logística | Sistema actual | Capturado |
+| **Ventas y Facturación** | | | |
+| 11 | Clientes (CRUD + precios personalizados) | Ventas | Sistema actual | Capturado |
+| 12 | Ventas (proforma → finalizada) | Ventas | Sistema actual | Capturado |
+| 13 | Cotizaciones | Ventas | Sistema actual | Capturado |
+| 14 | Proformas | Ventas | Sistema actual | Capturado |
+| 15 | Facturas / Facturación | Ventas | Sistema actual | Capturado (cliente: Facturas Pendientes) |
+| 16 | Recibos de pago | Ventas | Sistema actual | Capturado |
+| 17 | Notas de Débito | Ventas | Sistema actual | Capturado |
+| 18 | Financiamientos | Ventas | Sistema actual | Capturado |
+| **Caja** | | | |
+| 19 | Mi Día (POS diario) | Caja | Sistema actual | Capturado (4 secciones + apertura/cierre) |
+| 20 | Ingresos y Egresos de Caja | Caja | Sistema actual | Capturado |
+| **Marketing CRM** | | | |
+| 21 | Campañas de Marketing | Marketing | Sistema actual | Capturado |
+| 22 | Correos masivos (campañas + cola) | Marketing | Sistema actual | Capturado (max 100/clic) |
+| 23 | WhatsApp / SMS | Marketing | Sistema actual | Identificado |
+| 24 | URL Links (tracking marketing) | Marketing | Sistema actual | Identificado |
+| **Productos e Inventario** | | | |
+| 25 | Productos | Inventario | Sistema actual | Capturado |
+| 26 | Ajustes de Inventario | Inventario | Sistema actual | Identificado |
+| 27 | Traslados de Inventario | Inventario | Sistema actual | Identificado |
+| **Configuración y Admin** | | | |
+| 28 | Configuraciones (22 catálogos) | Admin | Sistema actual | Capturado completo |
+| 29 | Reportes (12 tipos) | Admin | Sistema actual | Capturado completo |
+| 30 | Estadísticas / Dashboard admin | Admin | Sistema actual | Capturado |
+| 31 | Costos de Empresa | Admin | Sistema actual | Identificado (ruta /Mantenimientos/) |
+| **Mejoras Nuevas (no existen en sistema actual)** | | | |
+| 32 | Sistema de Tareas para Paquetes | Logística | Conv. 1 | Documentado |
+| 33 | Sonidos/Audio feedback (operadores) | UX | Conv. 1 | Documentado |
+| 34 | Notas del Cliente por ubicación | Logística | Conv. 1 | Documentado |
+| 35 | Fotos de paquetes (cámaras Miami) | Logística | Conv. 1 | Documentado |
+| 36 | Tracking multi-caja (caso DHL) | Logística | Conv. 1 | Documentado |
+| 37 | Reducción de volumen (antes/después) | Logística | Conv. 1 | Documentado |
+| 38 | Calculadora de costos mejorada | Cliente | Sistema actual | Capturado |
+| 39 | Seguimiento público de paquete | Cliente | Sistema actual | Capturado |
+
+### Conversaciones con el Cliente
+
+| # | Tema | Estado |
+|---|------|--------|
+| 1 | Pre-alertas, tareas, audio, notas, fotos, volumen | Documentado completo |
+| 2 | Login, Logout, Usuarios y Roles | Parcial — roles definidos, permisos por definir |
+| 3 | Por definir (visita al cliente) | Pendiente |
+| 4 | Por definir (visita al cliente) | Pendiente |
 
 ---
 
@@ -416,6 +470,246 @@ Muestra direcciones de envío en Miami por tipo, cada una con pricing:
 - **Privacidad** (`/MiCuenta/Dashboard/Privacidad`)
 - **Términos** (`/MiCuenta/Dashboard/Terminos`)
 - **Cambiar Contraseña** (`/MiCuenta/Manage/ChangePassword`)
+
+---
+
+### Portal Admin — Todas las Páginas
+
+#### Navegación Completa (Sidebar Admin)
+
+```
+Home                          → /App/Home
+Estadísticas                  → /App/Dashboard
+Mi Día                        → /App/Transacciones
+Logistica/
+  ├── Paquetes                → /Logistica/Paquetes/
+  ├── Pre-Alertas             → /Logistica/Paquetes/PreAlertas
+  ├── Manifiestos             → /Logistica/Manifiestos
+  ├── Pre-Facturas            → /Logistica/Paquetes/PreFacturas
+  └── Entregas                → /App/Entregas
+Marketing CRM/
+  ├── Campañas                → /Marketing/CampañaVentas
+  ├── Correos                 → /Marketing/Correos
+  ├── URL Links               → /Marketing/DireccionURL
+  ├── WhatsApp                → /Marketing/WhatsApp
+  └── SMS                     → /Marketing/SMS
+Ventas/
+  ├── Clientes                → /App/Clientes
+  ├── Todas las Ventas        → /App/Ventas
+  ├── Financiamientos         → /App/Financiamientos
+  ├── Proformas               → /App/Proformas
+  ├── Cotizaciones            → /App/Cotizaciones
+  ├── Recibos                 → /App/Recibos
+  └── Notas de Débito         → /App/NotasDebito
+Productos/
+  ├── Todos los Productos     → /App/Productos
+  ├── Ajustes Inventario      → /App/Ajustes
+  └── Traslados de Inv.       → /App/Traslados
+Administracion/
+  ├── Costos de Empresa       → /Mantenimientos/ConfigurarCostos
+  ├── Ingresos de Caja        → /Mantenimientos/Ingresos
+  └── Egresos de Caja         → /Mantenimientos/Egresos
+Configuraciones               → /App/Configuraciones
+Reportes                      → /App/Reportes
+```
+
+**Global:** Todas las páginas admin tienen toggle "Oscuro" (dark mode) y botón "Activar" (notificaciones push). Footer: "Copyright 2022-2026 Sistemas RSA. vBETA-4.73" + botón "Enviar Sugerencia".
+
+#### A1. Home (`/App/Home`)
+Dashboard administrativo organizado por áreas de trabajo:
+
+| Área | Accesos Rápidos |
+|------|----------------|
+| **Miami** | Etiquetar, Manifiesto, Clientes, Todos los Paquetes |
+| **Caja** | Pre-Facturas, Todos los Paquetes, Pre-Alertas, Todas las Ventas, Recibos |
+| **Facturación** | Pre-Facturas, Pre-Alertas, Todos los Paquetes, Clientes |
+| **Entrega** | Entrega Paquete |
+| **Marketing CRM** | Correos, WhatsApp, SMS |
+
+#### A2. Estadísticas (`/App/Dashboard`)
+- Botón: "Mostrar Gráficos"
+- Carga 3 tipos de datos: gráfico de ventas, financiamientos, estadísticas generales
+- Nota: página con errores frecuentes al cargar en sistema actual
+
+#### A3. Mi Día (`/App/Transacciones`)
+Vista diaria del cajero/operador:
+- **Acciones:** Nueva Venta, Agregar Ingreso, Agregar Egreso
+- **Botón derecha:** Apertura/Cierre (apertura y cierre de caja)
+- **4 secciones (lazy load con "Cargar Lista"):**
+  1. Ventas Proforma
+  2. Ventas Finalizadas
+  3. Ingresos
+  4. Egreso
+
+#### A4. Logistica > Etiquetar (`/Logistica/Paquetes/Etiquetar`)
+Formulario de etiquetado de paquetes en Miami (vista operador):
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| No. Tracking | text | Tracking del paquete |
+| Expedido por | dropdown | Carrier (Amazon, DHL, etc.) |
+| Código del Cliente | text + autocomplete | Código ej: C5344 |
+| Proveedor del Paquete | text | Tienda origen |
+| Nombre del Cliente | text (auto) | Se llena al ingresar código |
+| Notas del Cliente | textarea (read-only) | Notas guardadas del cliente |
+| Tipo de Envío | dropdown | CER, CKA, CEM, CKM, EXP |
+| RETENER EL PAQUETE | checkbox | Retener en Miami |
+| Contenido del Paquete | textarea | Descripción contenido |
+| Notas Internas | textarea | Notas para operadores |
+| Cantidad Productos | number | Cantidad items dentro |
+| Cantidad Paquetes | number | Cantidad de bultos |
+| Peso Real | number | Peso en libras |
+| Alto | number | Pulgadas |
+| Largo | number | Pulgadas |
+| Ancho | number | Pulgadas |
+| Peso Volumétrico | calculated | largo × ancho × alto / 166 |
+| Peso a Cobrar | calculated | max(peso real, peso volumétrico) |
+
+**Atajos de teclado:**
+- F2: Limpiar formulario
+- F8: Guardar
+- F9: Guardar e Imprimir etiqueta
+
+#### A5. Logistica > Pre-Alertas Admin (`/Logistica/Paquetes/PreAlertas`)
+- **Acciones:** Crear Pre-Alerta, Limpiar Vacías
+- **Búsqueda:** Tracking/No. Recepcion/No. Pre-Alerta/No. Pre-Factura
+- **Filtros toggle:** Mostrar solo anulados / Mostrar solo agrupados / Incluir antiguos a 6 meses
+- **Búsqueda en tabla:** texto libre
+- **Tabla:** Fecha, No. PA, Nombre Cliente, Código, Tipo Envío, checkboxes status (DevExpress), Origen (SITIO WEB), checkboxes notificación, Cant. paquetes, acciones (editar, detalles, eliminar)
+- **Volumen:** 12,413+ registros, paginado
+
+#### A6. Logistica > Manifiestos (`/Logistica/Manifiestos`)
+- **Tabla columnas:** Fecha, No. Manifiesto, Trackings, Carrier (PRONTO CARGO, SERCARGO, GENESIS), Estado (ENVIADO, ADUANA), Tipo (AEREO, AEREO EXPRESS, CKM MARITIMO, CKA ESTANDARD), Cantidades, Pesos, Montos
+
+#### A7. Logistica > Paquetes (`/Logistica/Paquetes/`)
+Vista con filtros avanzados:
+- **Filtros dropdown:** Tipo de Envío, Estado
+- **Filtros fecha:** Fecha Inicio, Fecha Fin
+- **Filtros texto:** Código Cliente, Nombre Cliente (dropdown)
+- **Filtros toggle:** Mostrar solo facturados, Mostrar solo anulados, Mostrar solo sin Pre-Alerta, Mostrar solo sin Pre-Factura, Incluir antiguos a 6 meses
+- **Leyenda colores:** P.A.=Pre-Alerta, P.F.=Pre-Factura, Amarillo=Solicito Cambio de Servicio, Azul=Retener en Miami
+
+#### A8. Logistica > Pre-Facturas Admin (`/Logistica/Paquetes/PreFacturas`)
+- **Filtros:** Tipo de Envío (dropdown), Fecha Inicio/Fin, Código Cliente, Nombre Cliente
+- **Toggles:** Mostrar facturadas, Mostrar anulados, Filtro por fecha de trabajo, Incluir antiguos a 6 meses
+- **Tabla:** Fecha, No. PF, Nombre Cliente, Código, Tipo, Iniciales operador, Notas, checkmarks, Monto (Lempiras)
+
+#### A9. Logistica > Entregas (`/App/Entregas`)
+- **Acción:** Nueva Entrega
+- **Búsqueda:** texto libre
+- **Tabla:** Fecha, No. Entrega (EN000XXXXX), Nombre Cliente, Código Cliente, Pre-Factura# + Tipo (ej: PF00352881 - CER), Nombre Operador, acciones (detalles, eliminar)
+
+#### A10. Ventas > Clientes (`/App/Clientes`)
+- **Acciones:** Nuevo Cliente, Asignar precios a clientes (precios personalizados por cliente)
+- **Toggle:** Mostrar solo clientes con saldo pendiente
+- **Leyenda:** C.E.= Correo Enviado, C.C.= Correo Confirmado
+- **Nota:** Carga lenta con muchos clientes
+
+#### A11. Ventas > Todas las Ventas (`/App/Ventas`)
+- **Acciones:** Nueva Venta, Limpiar Vacías
+- **Toggles:** Mostrar solo ventas con saldo pendiente, Incluir antiguos a 6 meses
+
+#### A12. Ventas > Financiamientos (`/App/Financiamientos`)
+- Lista simple de financiamientos de clientes
+
+#### A13. Ventas > Proformas (`/App/Proformas`)
+- **Acciones:** Nueva Venta, Limpiar Vacías
+- **Toggle:** Incluir antiguos a 6 meses
+
+#### A14. Ventas > Cotizaciones (`/App/Cotizaciones`)
+- **Acción:** Nueva Cotización
+
+#### A15. Ventas > Recibos (`/App/Recibos`)
+- **Toggle:** Incluir antiguos a 6 meses
+
+#### A16. Ventas > Notas de Débito (`/App/NotasDebito`)
+- **Acciones:** Nueva Nota de Débito, Limpiar Vacías
+- **Toggles:** Mostrar solo notas de débito con saldo pendiente, Incluir antiguos a 6 meses
+
+#### A17. Marketing CRM > Campañas (`/Marketing/CampañaVentas`)
+- **Acción:** Nueva Campaña
+- **Toggle:** Mostrar campañas de todos los vendedores
+
+#### A18. Marketing CRM > Correos (`/Marketing/Correos`)
+- **Acción:** Crear Correo
+- **Sección 1: Campañas de Correo** — Lista con búsqueda, paginación (tamaño de página: 20), columnas: Fecha, Nombre Campaña, Conteo, acciones
+- **Sección 2: Cola de Correos** — Botón "Enviar correos", nota: "Se enviarán máximo 100 correos por cada clic", lista de correos pendientes
+
+#### A19. Productos > Todos los Productos (`/App/Productos`)
+- **Acciones:** Crear Nuevo Producto, Recargar Lista
+
+#### A20. Configuraciones (`/App/Configuraciones`)
+Listado de 22 configuraciones del sistema, cada una con botón "Editar":
+
+| # | Configuración | Propósito |
+|---|--------------|-----------|
+| 1 | Mi Cuenta | Datos del usuario actual |
+| 2 | Cambio del Día (tasa de cambio) | Tasa USD→HNL diaria |
+| 3 | Carriers de Carga o Expedido Por | Transportistas (Amazon, DHL, FedEx, etc.) |
+| 4 | Categorías de Precios | Planes de precio por tipo cliente |
+| 5 | Cola de correos (Logistica) | Config cola de emails logística |
+| 6 | Consignatarios (manifiestos) | Destinatarios de manifiestos |
+| 7 | Correos de la Empresa | Emails corporativos |
+| 8 | Egreso de Caja | Tipos de egresos de caja |
+| 9 | Empleados | Gestión de empleados |
+| 10 | Empresas de Manifiestos (Logistica) | Empresas de transporte para manifiestos |
+| 11 | Ingresos de Caja | Tipos de ingresos de caja |
+| 12 | Lugares (Logistica) | Ubicaciones (Miami, SPS, Tegucigalpa) |
+| 13 | Motivos Notas de Crédito | Razones para notas de crédito |
+| 14 | Puntos de Emisión | Puntos de facturación |
+| 15 | Reportes Plantillas | Templates de reportes |
+| 16 | Tamaños de Cajas (Logistica) | Catálogo de tamaños de cajas |
+| 17 | Teléfonos WhatsApp | Números de WhatsApp del negocio |
+| 18 | Tipos de Egreso | Categorías de gastos |
+| 19 | Tipos de envío (manifiestos) | Tipos para manifiestos |
+| 20 | Tipos de Envíos (Logistica) | CER, CKA, CEM, CKM, EXP |
+| 21 | Tipos de Ingresos | Categorías de ingresos |
+| 22 | Usuarios del Sistema | Gestión de usuarios y permisos |
+
+#### A21. Reportes (`/App/Reportes`)
+12 reportes disponibles, cada uno con botón "Ver":
+
+| Reporte | Descripción probable |
+|---------|---------------------|
+| Antigüedad de Saldos | Aging de cuentas por cobrar |
+| Cierres de Caja | Historial de aperturas/cierres de caja |
+| Clientes | Reporte de clientes |
+| Estados de Cuenta | Estados de cuenta por cliente |
+| Historial de correos enviados | Log de emails enviados |
+| Notas de Débito | Reporte de notas de débito |
+| Notificaciones | Historial de notificaciones |
+| Paquetes | Reporte de paquetes |
+| PreFacturas | Reporte de pre-facturas |
+| Reporte Diario | Resumen del día |
+| Sugerencias | Sugerencias de clientes |
+| Ventas | Reporte de ventas |
+
+#### A22. Administración (rutas `/Mantenimientos/`)
+- **Costos de Empresa** (`/Mantenimientos/ConfigurarCostos`) — Configuración de costos operativos
+- **Ingresos de Caja** (`/Mantenimientos/Ingresos`) — Gestión de ingresos
+- **Egresos de Caja** (`/Mantenimientos/Egresos`) — Gestión de egresos
+
+**Nota:** Estas rutas usan path `/Mantenimientos/` (diferente a `/App/`), pueden requerir permisos adicionales.
+
+### Patrones UI Comunes (Admin)
+
+**Patrón lista estándar:**
+1. Título de página
+2. Botón acción principal (Nueva Venta / Crear / etc.) — azul oscuro
+3. Botón secundario opcional (Limpiar Vacías) — rojo, alineado derecha
+4. Filtros/toggles en barra gris
+5. Barra de búsqueda de texto libre
+6. Tabla de datos (DevExpress grid)
+7. Paginación inferior con selector de tamaño de página
+8. Acciones por fila: ver detalles (icono clipboard), eliminar (icono trash)
+
+**Filtros recurrentes:**
+- "Incluir antiguos a 6 meses" — presente en casi todas las listas
+- "Mostrar solo con saldo pendiente" — en Ventas, Notas Débito, Clientes
+- "Mostrar solo anulados" — en Pre-Alertas, Paquetes
+- "Limpiar Vacías" — elimina registros sin contenido (Pre-Alertas, Ventas, Proformas, Notas Débito)
+
+**Tecnología actual:** ASP.NET MVC + DevExpress Controls (dxWeb_edtCheckBox_Moderno), jQuery, sin SPA (full page loads).
 
 ---
 
