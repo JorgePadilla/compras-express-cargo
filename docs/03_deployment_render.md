@@ -2,10 +2,98 @@
 
 ## Ambientes
 
-| Ambiente     | URL                                          | Branch    | Base de datos       |
-|-------------|----------------------------------------------|-----------|---------------------|
-| Staging     | `https://cec-staging.onrender.com`           | `staging` | PostgreSQL (free/starter) |
-| Producción  | `https://cec.comprasexpresscargo.com`        | `main`    | PostgreSQL (standard) |
+| Ambiente     | URL                                          | Branch    | Base de datos         |
+|-------------|----------------------------------------------|-----------|----------------------|
+| Staging     | `https://cec-staging.onrender.com`           | `staging` | PostgreSQL (basic)   |
+| Producción  | `https://cec.comprasexpresscargo.com`        | `main`    | PostgreSQL (basic)   |
+
+---
+
+## Pipeline CI/CD
+
+```
+feature/branch → PR a staging → CI tests pasan? → Merge → Render auto-deploy Staging
+                                      ↓ falla
+                                   Bloquea merge
+
+staging → PR a main → CI tests pasan? → Merge → Render auto-deploy Producción
+                            ↓ falla
+                         Bloquea merge
+```
+
+### GitHub Actions CI
+
+Archivo: `.github/workflows/ci.yml`
+
+- Se ejecuta en cada PR a `staging` y `main`
+- Configura Ruby 3.3 + PostgreSQL 16
+- Corre `bundle install`, `db:create`, `db:migrate`, `rails test`
+- El check **Tests** es requerido para poder hacer merge
+
+### Protección de branches
+
+Ambos branches (`staging` y `main`) tienen protección:
+- Requieren PR (no push directo)
+- Requieren que el check **Tests** pase antes de merge
+
+---
+
+## Servicios en Render
+
+### Web Services
+
+| Servicio          | Tipo | Branch    | Plan    | URL |
+|-------------------|------|-----------|---------|-----|
+| cec-production    | web  | `main`    | starter | `https://cec-production.onrender.com` |
+| cec-staging       | web  | `staging` | starter | `https://cec-staging.onrender.com` |
+
+### Worker
+
+| Servicio               | Tipo             | Branch | Plan    |
+|------------------------|------------------|--------|---------|
+| cec-worker-production  | background_worker | `main` | starter |
+
+- Ejecuta Solid Queue: `bundle exec rails solid_queue:start`
+
+### Bases de Datos
+
+| Base de datos     | Plan       | Database      | Usuario   |
+|-------------------|------------|---------------|-----------|
+| cec-db-production | basic_256mb | cec_production | cec_admin |
+| cec-db-staging    | basic_256mb | cec_staging    | cec_admin |
+
+### Build & Start Commands
+
+```bash
+# Build (web services)
+bundle install && bundle exec rails assets:precompile && bundle exec rails db:migrate
+
+# Start (web)
+bundle exec puma -C config/puma.rb
+
+# Start (worker)
+bundle exec rails solid_queue:start
+```
+
+### Variables de Entorno
+
+**Producción:**
+- `RAILS_ENV=production`
+- `DATABASE_URL` → connection string de cec-db-production
+- `RAILS_MASTER_KEY` → (configurar manualmente desde `config/master.key`)
+- `APP_HOST=cec.comprasexpresscargo.com`
+- `RAILS_SERVE_STATIC_FILES=true`
+- `WEB_CONCURRENCY=2`
+- `RAILS_MAX_THREADS=5`
+
+**Staging:**
+- `RAILS_ENV=production`
+- `DATABASE_URL` → connection string de cec-db-staging
+- `RAILS_MASTER_KEY` → (configurar manualmente desde `config/master.key`)
+- `APP_HOST=cec-staging.onrender.com`
+- `RAILS_SERVE_STATIC_FILES=true`
+
+**Nota:** `RAILS_MASTER_KEY` debe configurarse manualmente en el dashboard de Render para cada servicio.
 
 ---
 
@@ -14,13 +102,13 @@
 ```yaml
 databases:
   - name: cec-db-production
-    plan: standard
+    plan: basic_256mb
     databaseName: cec_production
     user: cec_admin
     region: oregon
 
   - name: cec-db-staging
-    plan: starter
+    plan: basic_256mb
     databaseName: cec_staging
     user: cec_admin
     region: oregon
@@ -30,7 +118,7 @@ services:
   - type: web
     name: cec-production
     runtime: ruby
-    plan: standard
+    plan: starter
     region: oregon
     branch: main
     buildCommand: |
@@ -48,6 +136,8 @@ services:
         fromDatabase:
           name: cec-db-production
           property: connectionString
+      - key: APP_HOST
+        value: cec.comprasexpresscargo.com
       - key: RAILS_SERVE_STATIC_FILES
         value: "true"
       - key: WEB_CONCURRENCY
@@ -89,13 +179,15 @@ services:
     healthCheckPath: /up
     envVars:
       - key: RAILS_ENV
-        value: staging
+        value: production
       - key: RAILS_MASTER_KEY
         sync: false
       - key: DATABASE_URL
         fromDatabase:
           name: cec-db-staging
           property: connectionString
+      - key: APP_HOST
+        value: cec-staging.onrender.com
       - key: RAILS_SERVE_STATIC_FILES
         value: "true"
 ```
@@ -182,47 +274,35 @@ end
 
 ---
 
-## Pasos para Hacer Deploy
-
-### Setup Inicial
+## Workflow del Desarrollador
 
 ```bash
-# 1. Crear app Rails 8
-rails new compras-express-cargo -d postgresql -c tailwind
+# 1. Crear feature branch desde staging
+git checkout staging && git pull
+git checkout -b feature/mi-feature
 
-# 2. Generar autenticación Rails 8
-bin/rails generate authentication
+# 2. Trabajar, commit, push
+git push -u origin feature/mi-feature
 
-# 3. Configurar Git
-git init
-git add .
-git commit -m "Initial Rails 8 setup"
+# 3. PR a staging — CI corre tests
+gh pr create --base staging
 
-# 4. Crear branches
-git checkout -b staging
-git push origin staging
-git checkout main
-git push origin main
+# 4. Tests verdes → merge → Render deploya a cec-staging.onrender.com
+# 5. Verificar en staging URL
+
+# 6. PR staging → main — CI corre tests
+gh pr create --base main --head staging
+
+# 7. Tests verdes → merge → Render deploya a cec.comprasexpresscargo.com
 ```
 
-### En Render Dashboard
+---
 
-1. **Conectar repositorio GitHub** al proyecto en Render
-2. **Crear Blueprint** usando el `render.yaml`
-3. **Configurar variables de entorno:**
-   - `RAILS_MASTER_KEY` → (de `config/master.key`)
-4. **Configurar dominio custom** para producción:
-   - `cec.comprasexpresscargo.com` → apuntar DNS a Render
+## Pasos Pendientes Post-Setup
 
-### Workflow de Deploy
-
-```
-Feature branch → PR a staging → Deploy automático a staging
-                     ↓
-              Revisar en staging URL
-                     ↓
-         PR de staging → main → Deploy a producción
-```
+1. **Configurar `RAILS_MASTER_KEY`** en el dashboard de Render para cada servicio web y worker
+2. **Configurar dominio custom** `cec.comprasexpresscargo.com` → apuntar DNS a Render (desde dashboard de cec-production)
+3. **Primer deploy exitoso** requiere que el código Rails exista (Gemfile, config, etc.)
 
 ---
 
@@ -253,3 +333,16 @@ bin/rails db:seed
 - **Logs:** Render dashboard o CLI
 - **Errores:** Considerar agregar Sentry o Honeybadger
 - **Uptime:** Render incluye monitoring básico
+
+---
+
+## IDs de Recursos en Render
+
+| Recurso              | ID                          |
+|----------------------|-----------------------------|
+| cec-production       | srv-d750d7p4tr6s73d11i70    |
+| cec-staging          | srv-d750da14tr6s73d11k00    |
+| cec-worker-production| srv-d750ddsr85hc73805hpg    |
+| cec-db-production    | dpg-d750d1sr85hc73805bd0-a  |
+| cec-db-staging       | dpg-d750d314tr6s73d11fug-a  |
+| Workspace            | tea-d74uphua2pns73apnong    |

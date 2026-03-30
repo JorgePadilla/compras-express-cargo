@@ -1,12 +1,12 @@
 databases:
   - name: cec-db-production
-    plan: standard
+    plan: basic_256mb
     databaseName: cec_production
     user: cec_admin
     region: oregon
 
   - name: cec-db-staging
-    plan: starter
+    plan: basic_256mb
     databaseName: cec_staging
     user: cec_admin
     region: oregon
@@ -16,7 +16,7 @@ services:
   - type: web
     name: cec-production
     runtime: ruby
-    plan: standard
+    plan: starter
     region: oregon
     branch: main
     buildCommand: |
@@ -42,6 +42,25 @@ services:
         value: "2"
       - key: RAILS_MAX_THREADS
         value: "5"
+
+  # Worker para Solid Queue (producción)
+  - type: worker
+    name: cec-worker-production
+    runtime: ruby
+    plan: starter
+    region: oregon
+    branch: main
+    buildCommand: bundle install
+    startCommand: bundle exec rails solid_queue:start
+    envVars:
+      - key: RAILS_ENV
+        value: production
+      - key: RAILS_MASTER_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cec-db-production
+          property: connectionString
 
   # ============ STAGING ============
   - type: web
