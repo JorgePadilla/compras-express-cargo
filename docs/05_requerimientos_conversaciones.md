@@ -542,7 +542,8 @@ Vista diaria del cajero/operador:
   4. Egreso
 
 #### A4. Logistica > Etiquetar (`/Logistica/Paquetes/Etiquetar`)
-Formulario de etiquetado de paquetes en Miami (vista operador):
+Formulario de etiquetado/digitación de paquetes en Miami.
+**Rol principal:** Digitador Miami | **Supervisa:** Supervisor de Miami
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
@@ -717,16 +718,17 @@ Listado de 22 configuraciones del sistema, cada una con botón "Editar":
 
 ### Roles del Sistema
 
-| Rol | Descripción probable |
-|-----|---------------------|
-| **Cliente** | Usuario final, ve sus paquetes, tracking, facturas |
-| **Administrador** | Acceso total al sistema |
-| **Supervisor de Caja** | Supervisa pagos y cajeros en Honduras |
-| **Supervisor de Miami** | Supervisa recepción, pre-alertas, re-empaque en Miami |
-| **Supervisor Prefactura** | Supervisa generación de prefacturas |
-| **Cajeros** | Procesan pagos de clientes |
-| **SAC** (Servicio al Cliente) | Atención al cliente, consultas, reclamos |
-| **Entrega y Despacho** | Gestiona entregas finales al cliente |
+| Rol | Ubicación | Descripción |
+|-----|-----------|-------------|
+| **Cliente** | N/A | Usuario final, ve sus paquetes, tracking, facturas |
+| **Administrador** | Ambas | Acceso total al sistema |
+| **Supervisor de Miami** | Miami | Supervisa recepción, pre-alertas, re-empaque, digitadores en Miami |
+| **Digitador Miami** | Miami | Opera la pantalla de Etiquetar/Digitar: escanea tracking, ingresa datos de paquetes, imprime etiquetas |
+| **Supervisor de Caja** | Honduras | Supervisa pagos y cajeros en Honduras |
+| **Supervisor Prefactura** | Honduras | Supervisa generación de prefacturas |
+| **Cajeros** | Honduras | Procesan pagos de clientes |
+| **SAC** (Servicio al Cliente) | Honduras | Atención al cliente, consultas, reclamos |
+| **Entrega y Despacho** | Honduras | Gestiona entregas finales al cliente |
 
 ### Pendiente por definir en conversación:
 - [ ] Permisos específicos por rol (qué módulos ve cada uno)
