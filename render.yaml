@@ -1,0 +1,71 @@
+databases:
+  - name: cec-db-production
+    plan: standard
+    databaseName: cec_production
+    user: cec_admin
+    region: oregon
+
+  - name: cec-db-staging
+    plan: starter
+    databaseName: cec_staging
+    user: cec_admin
+    region: oregon
+
+services:
+  # ============ PRODUCCIÓN ============
+  - type: web
+    name: cec-production
+    runtime: ruby
+    plan: standard
+    region: oregon
+    branch: main
+    buildCommand: |
+      bundle install &&
+      bundle exec rails assets:precompile &&
+      bundle exec rails db:migrate
+    startCommand: bundle exec puma -C config/puma.rb
+    healthCheckPath: /up
+    envVars:
+      - key: RAILS_ENV
+        value: production
+      - key: RAILS_MASTER_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cec-db-production
+          property: connectionString
+      - key: APP_HOST
+        value: cec.comprasexpresscargo.com
+      - key: RAILS_SERVE_STATIC_FILES
+        value: "true"
+      - key: WEB_CONCURRENCY
+        value: "2"
+      - key: RAILS_MAX_THREADS
+        value: "5"
+
+  # ============ STAGING ============
+  - type: web
+    name: cec-staging
+    runtime: ruby
+    plan: starter
+    region: oregon
+    branch: staging
+    buildCommand: |
+      bundle install &&
+      bundle exec rails assets:precompile &&
+      bundle exec rails db:migrate
+    startCommand: bundle exec puma -C config/puma.rb
+    healthCheckPath: /up
+    envVars:
+      - key: RAILS_ENV
+        value: production
+      - key: RAILS_MASTER_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cec-db-staging
+          property: connectionString
+      - key: APP_HOST
+        value: cec-staging.onrender.com
+      - key: RAILS_SERVE_STATIC_FILES
+        value: "true"
