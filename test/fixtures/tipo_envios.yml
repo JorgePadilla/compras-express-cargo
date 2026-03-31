@@ -1,0 +1,9 @@
+aereo:
+  nombre: AEREO
+  codigo: aereo
+  activo: true
+
+maritimo:
+  nombre: CKM MARITIMO
+  codigo: ckm-maritimo
+  activo: true

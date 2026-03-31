@@ -57,7 +57,10 @@ class CreateUsers < ActiveRecord::Migration[8.0]
       t.string :nombre, null: false
       t.string :email_address, null: false, index: { unique: true }
       t.string :password_digest, null: false
-      t.string :rol, default: "empleado"  # admin, empleado, cajero, bodega
+      t.string :rol, default: "digitador_miami"
+      # Roles: admin, supervisor_miami, digitador_miami, supervisor_caja,
+      #         supervisor_prefactura, cajero, sac, entrega_despacho
+      t.string :ubicacion  # miami, honduras
       t.boolean :activo, default: true
 
       t.timestamps
