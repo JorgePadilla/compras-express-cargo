@@ -1,0 +1,83 @@
+<%= render PageHeaderComponent.new(title: @cliente.nombre_completo, subtitle: @cliente.codigo) do |header|
+  header.with_action do
+    render ButtonComponent.new(variant: :secondary, href: edit_cliente_path(@cliente), icon: "pencil-square") do
+      "Editar"
+    end
+  end
+  header.with_action do
+    render ButtonComponent.new(variant: :ghost, href: clientes_path, icon: "arrow-left") do
+      "Volver"
+    end
+  end
+end %>
+
+<div class="bg-white rounded-lg shadow overflow-hidden">
+  <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+    <h2 class="text-lg font-semibold text-gray-800">Informacion del Cliente</h2>
+    <%= render StatusBadgeComponent.new(status: @cliente.activo? ? "activo" : "inactivo") %>
+  </div>
+
+  <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Codigo</dt>
+      <dd class="mt-1 text-sm font-mono font-medium text-cec-navy"><%= @cliente.codigo %></dd>
+    </div>
+
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre Completo</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @cliente.nombre_completo %></dd>
+    </div>
+
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Identidad</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @cliente.identidad.presence || "—" %></dd>
+    </div>
+
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Email</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @cliente.email.presence || "—" %></dd>
+    </div>
+
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Telefono</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @cliente.telefono.presence || "—" %></dd>
+    </div>
+
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">WhatsApp</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @cliente.telefono_whatsapp.presence || "—" %></dd>
+    </div>
+
+    <div class="md:col-span-2">
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Direccion</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @cliente.direccion.presence || "—" %></dd>
+    </div>
+
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Ciudad</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @cliente.ciudad.presence || "—" %></dd>
+    </div>
+
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Departamento</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @cliente.departamento.presence || "—" %></dd>
+    </div>
+
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria de Precio</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @cliente.categoria_precio&.nombre || "Sin asignar" %></dd>
+    </div>
+
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo Pendiente</dt>
+      <dd class="mt-1 text-sm font-semibold <%= @cliente.saldo_pendiente.positive? ? 'text-cec-danger' : 'text-gray-900' %>">
+        L. <%= number_with_precision(@cliente.saldo_pendiente, precision: 2, delimiter: ",") %>
+      </dd>
+    </div>
+
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Registrado</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= l(@cliente.created_at, format: :long) rescue @cliente.created_at.strftime("%d/%m/%Y %H:%M") %></dd>
+    </div>
+  </div>
+</div>

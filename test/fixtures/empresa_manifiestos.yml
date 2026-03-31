@@ -1,0 +1,7 @@
+pronto:
+  nombre: PRONTO CARGO
+  activo: true
+
+sercargo:
+  nombre: SERCARGO
+  activo: true

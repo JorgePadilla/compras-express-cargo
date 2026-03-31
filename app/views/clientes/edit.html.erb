@@ -1,0 +1,13 @@
+<%= render PageHeaderComponent.new(title: "Editar Cliente", subtitle: @cliente.codigo) do |header|
+  header.with_action do
+    render ButtonComponent.new(variant: :ghost, href: cliente_path(@cliente), icon: "arrow-left") do
+      "Volver"
+    end
+  end
+end %>
+
+<div class="bg-white rounded-lg shadow overflow-hidden">
+  <div class="p-6">
+    <%= render "form", cliente: @cliente %>
+  </div>
+</div>

@@ -1,0 +1,11 @@
+tasa_cambio:
+  clave: tasa_cambio
+  valor: "24.85"
+  tipo: decimal
+  categoria: general
+
+empresa_nombre:
+  clave: empresa_nombre
+  valor: Compras Express Cargo
+  tipo: string
+  categoria: general

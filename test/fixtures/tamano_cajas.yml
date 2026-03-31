@@ -1,0 +1,11 @@
+pequena:
+  nombre: Pequena
+  largo: 12.0
+  ancho: 10.0
+  alto: 8.0
+
+mediana:
+  nombre: Mediana
+  largo: 20.0
+  ancho: 15.0
+  alto: 12.0
