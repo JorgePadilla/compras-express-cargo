@@ -1,0 +1,130 @@
+name: Gemini Code Review
+
+on:
+  pull_request:
+    branches: [staging, main]
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: Gemini Review
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR diff
+        id: diff
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr diff ${{ github.event.pull_request.number }} > /tmp/pr_diff.txt
+          # Truncate to ~100K chars to stay within Gemini context limits
+          head -c 100000 /tmp/pr_diff.txt > /tmp/pr_diff_trimmed.txt
+          DIFF_SIZE=$(wc -c < /tmp/pr_diff.txt)
+          echo "diff_size=$DIFF_SIZE" >> "$GITHUB_OUTPUT"
+          if [ "$DIFF_SIZE" -gt 100000 ]; then
+            echo "truncated=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "truncated=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Call Gemini API
+        id: gemini
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_BODY=$(cat <<'PRBODY'
+          ${{ github.event.pull_request.body }}
+          PRBODY
+          )
+          TRUNCATION_NOTE=""
+          if [ "${{ steps.diff.outputs.truncated }}" = "true" ]; then
+            TRUNCATION_NOTE="NOTE: The diff was truncated to 100K characters. Full diff is ${{ steps.diff.outputs.diff_size }} bytes."
+          fi
+
+          DIFF_CONTENT=$(cat /tmp/pr_diff_trimmed.txt)
+
+          # Build the prompt
+          cat > /tmp/prompt.json << PROMPT_EOF
+          {
+            "system_instruction": {
+              "parts": [{
+                "text": "You are the code auditor for Compras Express Cargo (CEC), a Rails 8 + Hotwire + Tailwind CSS 4 cargo/shipping logistics system.\n\nReview the PR diff and check for:\n1. **Security**: SQL injection, XSS, CSRF, mass assignment, auth bypass\n2. **Rails conventions**: Follow Rails 8 patterns, proper use of Hotwire/Turbo\n3. **Performance**: N+1 queries, missing indexes, inefficient scopes\n4. **Test coverage**: Missing test cases, edge cases\n5. **Architecture**: Separation of concerns, proper patterns\n6. **Bugs**: Logic errors, missing validations, edge cases\n\nFormat: Use bullet points grouped by file or topic. Rate severity:\n- 🔴 Critical — must fix before merge\n- 🟡 Warning — should fix\n- 🟢 Suggestion — nice to have\n\nEnd with: \"APPROVED ✅\" or \"CHANGES REQUESTED ❌\" with specific items.\n\nKeep the review concise and actionable. Skip boilerplate/generated files (Gemfile.lock, schema.rb, error pages, .keep files). Focus on custom code."
+              }]
+            },
+            "contents": [{
+              "parts": [{
+                "text": "Review this Pull Request:\n\n**Title:** ${PR_TITLE}\n\n**Description:**\n${PR_BODY}\n\n${TRUNCATION_NOTE}\n\n**Diff:**\n\`\`\`diff\n${DIFF_CONTENT}\n\`\`\`"
+              }]
+            }],
+            "generationConfig": {
+              "temperature": 0.3,
+              "maxOutputTokens": 4096
+            }
+          }
+          PROMPT_EOF
+
+          # Use jq to properly escape the content into JSON
+          jq -n \
+            --arg system "You are the code auditor for Compras Express Cargo (CEC), a Rails 8 + Hotwire + Tailwind CSS 4 cargo/shipping logistics system.
+
+          Review the PR diff and check for:
+          1. **Security**: SQL injection, XSS, CSRF, mass assignment, auth bypass
+          2. **Rails conventions**: Follow Rails 8 patterns, proper use of Hotwire/Turbo
+          3. **Performance**: N+1 queries, missing indexes, inefficient scopes
+          4. **Test coverage**: Missing test cases, edge cases
+          5. **Architecture**: Separation of concerns, proper patterns
+          6. **Bugs**: Logic errors, missing validations, edge cases
+
+          Format: Use bullet points grouped by file or topic. Rate severity:
+          - 🔴 Critical — must fix before merge
+          - 🟡 Warning — should fix
+          - 🟢 Suggestion — nice to have
+
+          End with: APPROVED ✅ or CHANGES REQUESTED ❌ with specific items.
+
+          Keep the review concise and actionable. Skip boilerplate/generated files (Gemfile.lock, schema.rb, error pages, .keep files). Focus on custom code." \
+            --arg title "$PR_TITLE" \
+            --arg body "$PR_BODY" \
+            --arg note "$TRUNCATION_NOTE" \
+            --arg diff "$DIFF_CONTENT" \
+            '{
+              system_instruction: { parts: [{ text: $system }] },
+              contents: [{ parts: [{ text: ("Review this Pull Request:\n\n**Title:** " + $title + "\n\n**Description:**\n" + $body + "\n\n" + $note + "\n\n**Diff:**\n```diff\n" + $diff + "\n```") }] }],
+              generationConfig: { temperature: 0.3, maxOutputTokens: 4096 }
+            }' > /tmp/request.json
+
+          # Call Gemini API
+          RESPONSE=$(curl -s -X POST \
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d @/tmp/request.json)
+
+          # Extract the review text
+          REVIEW=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text // "Error: Could not generate review. API response: \(.)"')
+
+          # Save to file (avoid delimiter issues)
+          echo "$REVIEW" > /tmp/review.txt
+
+      - name: Post review comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          REVIEW=$(cat /tmp/review.txt)
+          COMMENT="## 🤖 Gemini Code Review
+
+          ${REVIEW}
+
+          ---
+          *Automated review by Gemini 2.5 Flash*"
+
+          gh pr comment ${{ github.event.pull_request.number }} --body "$COMMENT"
