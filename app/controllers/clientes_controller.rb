@@ -2,7 +2,7 @@ class ClientesController < ApplicationController
   before_action :set_cliente, only: [ :show, :edit, :update ]
 
   def index
-    @clientes = Cliente.activos.order(created_at: :desc)
+    @clientes = Cliente.activos.includes(:categoria_precio).order(created_at: :desc)
     @clientes = @clientes.buscar(params[:q]) if params[:q].present?
     @clientes = @clientes.page(params[:page]).per(25)
   end
