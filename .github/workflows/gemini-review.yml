@@ -41,6 +41,13 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
+          # Verify API key is set
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "::error::GEMINI_API_KEY secret is not set"
+            exit 1
+          fi
+          echo "API key length: ${#GEMINI_API_KEY} chars"
+
           PR_TITLE="${{ github.event.pull_request.title }}"
           PR_BODY=$(cat <<'PRBODY'
           ${{ github.event.pull_request.body }}
