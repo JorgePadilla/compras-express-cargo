@@ -107,7 +107,7 @@ jobs:
             '{
               system_instruction: { parts: [{ text: $system }] },
               contents: [{ parts: [{ text: ("Review this Pull Request:\n\n**Title:** " + $title + "\n\n**Description:**\n" + $body + "\n\n" + $note + "\n\n**Diff:**\n```diff\n" + $diff + "\n```") }] }],
-              generationConfig: { temperature: 0.3, maxOutputTokens: 4096 }
+              generationConfig: { temperature: 0.3, maxOutputTokens: 8192 }
             }' > /tmp/request.json
 
           # Call Gemini API
@@ -126,12 +126,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          REVIEW=$(cat /tmp/review.txt)
-          COMMENT="## 🤖 Gemini Code Review
+          # Build comment file to avoid shell escaping issues
+          {
+            echo "## 🤖 Gemini Code Review"
+            echo ""
+            cat /tmp/review.txt
+            echo ""
+            echo "---"
+            echo "*Automated review by Gemini 2.5 Flash*"
+          } > /tmp/comment.md
 
-          ${REVIEW}
-
-          ---
-          *Automated review by Gemini 2.5 Flash*"
-
-          gh pr comment ${{ github.event.pull_request.number }} --body "$COMMENT"
+          gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/comment.md
