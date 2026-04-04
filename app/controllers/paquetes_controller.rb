@@ -1,5 +1,6 @@
 class PaquetesController < ApplicationController
   before_action :set_paquete, only: [ :show, :edit, :update, :label ]
+  before_action :authorize_tracking_actions, only: [ :check_tracking, :search ]
 
   def index
     @paquetes = base_scope.includes(:cliente, :tipo_envio).order(created_at: :desc)
@@ -71,6 +72,10 @@ class PaquetesController < ApplicationController
 
   def set_paquete
     @paquete = Paquete.find(params[:id])
+  end
+
+  def authorize_tracking_actions
+    require_role(:supervisor_miami, :digitador_miami, :supervisor_prefactura, :supervisor_caja, :cajero)
   end
 
   def base_scope

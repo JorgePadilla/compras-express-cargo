@@ -136,6 +136,23 @@ class PaqueteTest < ActiveSupport::TestCase
     assert num > 0
   end
 
+  test "rejects negative peso" do
+    paquete = Paquete.new(tracking: "1Z999NEG", cliente: clientes(:juan), peso: -1.0)
+    assert_not paquete.valid?
+    assert paquete.errors[:peso].any?
+  end
+
+  test "rejects negative dimensions" do
+    paquete = Paquete.new(tracking: "1Z999NEG2", cliente: clientes(:juan), alto: -1.0, largo: 10.0, ancho: 10.0)
+    assert_not paquete.valid?
+    assert paquete.errors[:alto].any?
+  end
+
+  test "allows nil peso and dimensions" do
+    paquete = Paquete.new(tracking: "1Z999NIL", cliente: clientes(:juan))
+    assert paquete.valid?
+  end
+
   test "save retries on guia collision" do
     # Create a paquete that will take the next guia slot
     p1 = Paquete.create!(tracking: "1Z999RETRY1", cliente: clientes(:juan))

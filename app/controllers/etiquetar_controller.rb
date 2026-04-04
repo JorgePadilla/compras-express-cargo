@@ -3,9 +3,7 @@ class EtiquetarController < ApplicationController
 
   def index
     @paquete = Paquete.new
-    @paquetes_hoy = Paquete.where(user: Current.user)
-      .where(fecha_recibido_miami: Time.current.beginning_of_day..Time.current.end_of_day)
-      .count
+    @paquetes_hoy = paquetes_hoy_count
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     @carriers = Carrier.where(activo: true).order(:nombre)
   end
@@ -16,9 +14,7 @@ class EtiquetarController < ApplicationController
     @paquete.user = Current.user
 
     if @paquete.save
-      @paquetes_hoy = Paquete.where(user: Current.user)
-        .where(fecha_recibido_miami: Time.current.beginning_of_day..Time.current.end_of_day)
-        .count
+      @paquetes_hoy = paquetes_hoy_count
 
       respond_to do |format|
         format.turbo_stream do
@@ -35,9 +31,8 @@ class EtiquetarController < ApplicationController
     else
       @tipo_envios = TipoEnvio.activos.order(:nombre)
       @carriers = Carrier.where(activo: true).order(:nombre)
-      @paquetes_hoy = Paquete.where(user: Current.user)
-        .where(fecha_recibido_miami: Time.current.beginning_of_day..Time.current.end_of_day)
-        .count
+      @paquetes_hoy = paquetes_hoy_count
+      flash.now[:alert] = "No se pudo guardar el paquete."
       render :index, status: :unprocessable_entity
     end
   end
@@ -46,6 +41,12 @@ class EtiquetarController < ApplicationController
 
   def authorize_etiquetar
     require_role(:supervisor_miami, :digitador_miami)
+  end
+
+  def paquetes_hoy_count
+    Paquete.where(user: Current.user)
+      .where(fecha_recibido_miami: Time.current.beginning_of_day..Time.current.end_of_day)
+      .count
   end
 
   def paquete_params

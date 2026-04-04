@@ -20,6 +20,8 @@ class Paquete < ApplicationRecord
   validates :tracking, presence: true
   validates :guia, presence: true, uniqueness: { case_sensitive: false }
   validates :estado, presence: true
+  validates :peso, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :alto, :largo, :ancho, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
 
   scope :activos, -> { where.not(estado: %w[anulado entregado]) }
   scope :buscar, ->(term) {

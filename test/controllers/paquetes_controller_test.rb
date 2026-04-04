@@ -81,6 +81,19 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "cajero cannot access check_tracking" do
+    delete session_url
+    post session_url, params: { email_address: users(:cajero).email_address, password: "password123" }
+    get check_tracking_paquetes_url, params: { tracking: @paquete.tracking }
+    assert_response :success
+  end
+
+  test "unauthenticated user cannot access check_tracking" do
+    delete session_url
+    get check_tracking_paquetes_url, params: { tracking: @paquete.tracking }
+    assert_redirected_to new_session_url
+  end
+
   test "search endpoint returns html-escaped data" do
     get search_paquetes_url, params: { q: "PQ-000" }, as: :json
     assert_response :success
