@@ -67,8 +67,14 @@ erDiagram
 
     tipo_envios {
         bigint id PK
-        string nombre "not null"
-        string codigo
+        string nombre "EXPRESS CER CEM CKA CKM"
+        string codigo "not null"
+        boolean con_reempaque "default false"
+        boolean consolidable "default false"
+        decimal precio_libra "USD per lb"
+        string modalidad "aereo maritimo"
+        string sla "ej 3-7 dias habiles"
+        integer max_paquetes_por_accion "1 para CKA CKM"
         boolean activo "default true"
         datetime created_at
         datetime updated_at
@@ -137,7 +143,7 @@ erDiagram
 These are catalog/lookup tables that will be referenced by future transactional tables (paquetes, manifiestos, facturas, etc.):
 
 - **carriers** — shipping carriers (aereo, maritimo)
-- **tipo_envios** — shipment types (AEREO, AEREO EXPRESS, MARITIMO)
+- **tipo_envios** — shipment types (v4: EXPRESS, CER, CEM, CKA, CKM — see `docs/05_requerimientos_conversaciones.md`)
 - **consignatarios** — consignees for customs
 - **empresa_manifiestos** — manifest companies
 - **lugars** — warehouses and delivery points (enum: bodega_miami, bodega_hn, punto_entrega)

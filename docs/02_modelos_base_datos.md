@@ -139,7 +139,7 @@ class CreateManifiestos < ActiveRecord::Migration[8.0]
       t.string :numero_guia
       t.references :empresa_manifiesto, foreign_key: true     # PRONTO CARGO, SERCARGO, etc.
       t.string :estado, default: "creado"                     # creado, enviado, en_aduana, recibido
-      t.string :tipo_envio                                    # AEREO, AEREO EXPRESS, CKM MARITIMO, CKA ESTANDARD
+      t.string :tipo_envio                                    # v4: EXPRESS, CER, CEM, CKA, CKM
       t.string :expedido_por
       t.integer :cantidad_paquetes, default: 0
       t.decimal :volumen_total, precision: 10, scale: 2, default: 0
@@ -252,9 +252,17 @@ create_table :carriers do |t|
 end
 
 # tipos_envio
+# v4.0: los 5 servicios canónicos son EXPRESS, CER, CEM, CKA, CKM.
+# Ver docs/05_requerimientos_conversaciones.md — sección "Flujo de Pre-Alerta v4.0".
 create_table :tipos_envio do |t|
-  t.string :nombre, null: false   # AEREO, AEREO EXPRESS, CKM MARITIMO, CKA ESTANDARD
-  t.string :codigo
+  t.string :nombre, null: false      # EXPRESS, CER, CEM, CKA, CKM
+  t.string :codigo, null: false      # express, cer, cem, cka, ckm
+  t.boolean :con_reempaque, default: false  # true para EXPRESS, CER, CEM
+  t.boolean :consolidable, default: false   # true para EXPRESS, CER, CEM
+  t.decimal :precio_libra, precision: 10, scale: 2  # USD/lb
+  t.string :modalidad                # aereo | maritimo
+  t.string :sla                      # "3-7 días hábiles", etc.
+  t.integer :max_paquetes_por_accion # null = ilimitado; 1 para CKA, CKM
   t.boolean :activo, default: true
   t.timestamps
 end
@@ -318,10 +326,14 @@ end
 # Tasa de cambio
 Configuracion.create!(clave: "tasa_cambio", valor: "24.85", tipo: "decimal", categoria: "general")
 
-# Tipos de envío (del sistema actual)
-["AEREO", "AEREO EXPRESS", "CKM MARITIMO", "CKA ESTANDARD"].each do |tipo|
-  TipoEnvio.create!(nombre: tipo, codigo: tipo.parameterize)
-end
+# Tipos de envío (v4.0 — ver docs/05_requerimientos_conversaciones.md)
+[
+  { nombre: "EXPRESS", codigo: "express", con_reempaque: true,  consolidable: true,  precio_libra: 8.00, modalidad: "aereo",    sla: "3-7 dias habiles",   max_paquetes_por_accion: nil },
+  { nombre: "CER",     codigo: "cer",     con_reempaque: true,  consolidable: true,  precio_libra: 4.50, modalidad: "aereo",    sla: "6-10 dias habiles",  max_paquetes_por_accion: nil },
+  { nombre: "CEM",     codigo: "cem",     con_reempaque: true,  consolidable: true,  precio_libra: 2.50, modalidad: "maritimo", sla: "14-17 dias habiles", max_paquetes_por_accion: nil },
+  { nombre: "CKA",     codigo: "cka",     con_reempaque: false, consolidable: false, precio_libra: 4.00, modalidad: "aereo",    sla: "6-10 dias habiles",  max_paquetes_por_accion: 1 },
+  { nombre: "CKM",     codigo: "ckm",     con_reempaque: false, consolidable: false, precio_libra: 1.50, modalidad: "maritimo", sla: "14-17 dias habiles", max_paquetes_por_accion: 1 }
+].each { |attrs| TipoEnvio.create!(attrs) }
 
 # Empresas de manifiesto
 ["PRONTO CARGO", "SERCARGO", "GENESIS"].each do |emp|
