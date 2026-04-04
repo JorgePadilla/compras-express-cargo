@@ -32,23 +32,40 @@ export default class extends Controller {
   }
 
   renderDropdown(clientes) {
+    this.dropdownTarget.replaceChildren()
+
     if (clientes.length === 0) {
-      this.dropdownTarget.innerHTML = `<div class="px-4 py-3 text-sm text-gray-500">No se encontraron clientes</div>`
+      const empty = document.createElement("div")
+      empty.className = "px-4 py-3 text-sm text-gray-500"
+      empty.textContent = "No se encontraron clientes"
+      this.dropdownTarget.appendChild(empty)
       this.showDropdown()
       return
     }
 
-    this.dropdownTarget.innerHTML = clientes.map(c => `
-      <button type="button"
-        class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center justify-between"
-        data-action="click->client-autocomplete#select"
-        data-id="${c.id}" data-codigo="${c.codigo}" data-nombre="${c.nombre}">
-        <div>
-          <span class="font-mono text-sm font-medium text-cec-navy">${c.codigo}</span>
-          <span class="ml-2 text-sm text-gray-700">${c.nombre}</span>
-        </div>
-      </button>
-    `).join("")
+    clientes.forEach(c => {
+      const btn = document.createElement("button")
+      btn.type = "button"
+      btn.className = "w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center justify-between"
+      btn.dataset.action = "click->client-autocomplete#select"
+      btn.dataset.id = c.id
+      btn.dataset.codigo = c.codigo
+      btn.dataset.nombre = c.nombre
+
+      const wrapper = document.createElement("div")
+      const codigoSpan = document.createElement("span")
+      codigoSpan.className = "font-mono text-sm font-medium text-cec-navy"
+      codigoSpan.textContent = c.codigo
+
+      const nombreSpan = document.createElement("span")
+      nombreSpan.className = "ml-2 text-sm text-gray-700"
+      nombreSpan.textContent = c.nombre
+
+      wrapper.appendChild(codigoSpan)
+      wrapper.appendChild(nombreSpan)
+      btn.appendChild(wrapper)
+      this.dropdownTarget.appendChild(btn)
+    })
     this.showDropdown()
   }
 
