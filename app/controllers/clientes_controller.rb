@@ -1,5 +1,6 @@
 class ClientesController < ApplicationController
   before_action :set_cliente, only: [ :show, :edit, :update ]
+  before_action :authorize_buscar, only: [ :buscar ]
 
   def index
     @clientes = Cliente.activos.includes(:categoria_precio).order(created_at: :desc)
@@ -51,6 +52,10 @@ class ClientesController < ApplicationController
 
   def set_cliente
     @cliente = Cliente.find(params[:id])
+  end
+
+  def authorize_buscar
+    require_role(:supervisor_miami, :digitador_miami, :supervisor_prefactura, :supervisor_caja, :cajero)
   end
 
   def cliente_params

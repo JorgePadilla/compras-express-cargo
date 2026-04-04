@@ -29,11 +29,7 @@ class EtiquetarController < ApplicationController
           ]
         end
         format.html do
-          if params[:print] == "true"
-            redirect_to label_paquete_path(@paquete)
-          else
-            redirect_to etiquetar_path, notice: "Paquete #{@paquete.guia} guardado exitosamente."
-          end
+          redirect_to etiquetar_path, notice: "Paquete #{@paquete.guia} guardado exitosamente."
         end
       end
     else
