@@ -7,7 +7,7 @@ activa:
   estado: pre_alerta
   notificado: false
   creado_por_tipo: cliente
-  creado_por_id: 1
+  creado_por_id: <%= ActiveRecord::FixtureSet.identify(:juan) %>
 
 recibida:
   numero_documento: PA-000002
@@ -18,7 +18,7 @@ recibida:
   estado: recibido
   notificado: true
   creado_por_tipo: cliente
-  creado_por_id: 1
+  creado_por_id: <%= ActiveRecord::FixtureSet.identify(:juan) %>
 
 maria_pa:
   numero_documento: PA-000003
@@ -29,4 +29,4 @@ maria_pa:
   estado: pre_alerta
   notificado: false
   creado_por_tipo: cliente
-  creado_por_id: 2
+  creado_por_id: <%= ActiveRecord::FixtureSet.identify(:maria) %>

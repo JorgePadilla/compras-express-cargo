@@ -3,7 +3,7 @@
     <%= render "cuenta/pre_alertas/header", pre_alerta: @pre_alerta %>
   </div>
 
-  <div id="flash"></div>
+  <div id="flash" data-controller="auto-dismiss"></div>
 
   <%= form_with model: @pre_alerta, url: cuenta_pre_alerta_path(@pre_alerta), method: :patch,
       data: { pre_alerta_editor_target: "form" }, class: "space-y-6" do |f| %>
