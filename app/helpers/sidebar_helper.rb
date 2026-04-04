@@ -30,9 +30,9 @@ module SidebarHelper
   def sidebar_link_classes(active)
     base = "flex items-center px-3 py-2 text-sm rounded-lg transition-colors"
     if active
-      "#{base} bg-cec-navy-light text-white"
+      "#{base} bg-white/10 text-white border-l-3 border-cec-gold"
     else
-      "#{base} text-gray-300 hover:bg-cec-navy-light hover:text-white"
+      "#{base} text-gray-300 hover:bg-white/5 hover:text-white"
     end
   end
 end

@@ -23,6 +23,19 @@ class ClientesController < ApplicationController
     end
   end
 
+  def buscar
+    clientes = Cliente.activos.buscar(params[:q]).limit(10)
+    render json: clientes.map { |c|
+      {
+        id: c.id,
+        codigo: c.codigo,
+        nombre: c.nombre_completo,
+        notas_miami: c.notas_miami,
+        categoria_precio: c.categoria_precio&.nombre
+      }
+    }
+  end
+
   def edit
   end
 
@@ -44,7 +57,8 @@ class ClientesController < ApplicationController
     params.require(:cliente).permit(
       :codigo, :nombre, :apellido, :identidad, :email,
       :telefono, :telefono_whatsapp, :direccion, :ciudad,
-      :departamento, :categoria_precio_id, :activo
+      :departamento, :categoria_precio_id, :activo,
+      :notas_miami, :notas_honduras
     )
   end
 end

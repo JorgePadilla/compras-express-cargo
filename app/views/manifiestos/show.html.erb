@@ -1,0 +1,149 @@
+<%= render PageHeaderComponent.new(title: @manifiesto.numero, subtitle: "Manifiesto") do |header|
+  header.with_action do
+    render ButtonComponent.new(variant: :secondary, href: edit_manifiesto_path(@manifiesto), icon: "pencil-square") do
+      "Editar"
+    end
+  end
+  header.with_action do
+    render ButtonComponent.new(variant: :ghost, href: manifiestos_path, icon: "arrow-left") do
+      "Volver"
+    end
+  end
+end %>
+
+<%# Manifest details card %>
+<div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+  <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+    <h2 class="text-lg font-semibold text-gray-800">Detalles del Manifiesto</h2>
+    <%= render StatusBadgeComponent.new(status: @manifiesto.estado) %>
+  </div>
+  <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Numero</dt>
+      <dd class="mt-1 text-sm font-mono font-medium text-cec-navy"><%= @manifiesto.numero %></dd>
+    </div>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Empresa</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.empresa_manifiesto&.nombre || "—" %></dd>
+    </div>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo de Envio</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.tipo_envio.presence || "—" %></dd>
+    </div>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Numero Guia</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.numero_guia.presence || "—" %></dd>
+    </div>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Numero Caja</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.numero_caja.presence || "—" %></dd>
+    </div>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Expedido Por</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.expedido_por.presence || "—" %></dd>
+    </div>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Paquetes</dt>
+      <dd class="mt-1 text-sm font-semibold text-gray-900"><%= @manifiesto.cantidad_paquetes %></dd>
+    </div>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Peso Total</dt>
+      <dd class="mt-1 text-sm font-semibold text-gray-900"><%= @manifiesto.peso_total || 0 %> lbs</dd>
+    </div>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Enviado</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.fecha_enviado&.strftime("%d/%m/%Y %H:%M") || "—" %></dd>
+    </div>
+  </div>
+</div>
+
+<%# Enviar action %>
+<% if @manifiesto.creado? && @paquetes.any? %>
+  <div class="mb-6">
+    <%= link_to enviar_manifiesto_path(@manifiesto), method: :patch, data: { turbo_method: :patch, turbo_confirm: "Enviar manifiesto #{@manifiesto.numero} con #{@manifiesto.cantidad_paquetes} paquetes?" },
+        class: "inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors" do %>
+      <%= heroicon "paper-airplane", variant: :outline, options: { class: "w-5 h-5" } %>
+      Enviar Manifiesto
+    <% end %>
+  </div>
+<% end %>
+
+<%# Add packages section (only for creado manifests) %>
+<% if @manifiesto.creado? %>
+  <div class="bg-white rounded-lg shadow overflow-hidden mb-6" data-controller="manifiesto-search"
+       data-manifiesto-search-url-value="<%= search_paquetes_path %>">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h2 class="text-lg font-semibold text-gray-800">Agregar Paquetes</h2>
+    </div>
+    <div class="p-6">
+      <div class="flex gap-3">
+        <input type="text" placeholder="Buscar por tracking o guia..."
+               data-manifiesto-search-target="input"
+               data-action="input->manifiesto-search#search"
+               class="flex-1 rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal">
+      </div>
+      <div data-manifiesto-search-target="results" class="mt-3 hidden">
+      </div>
+    </div>
+  </div>
+<% end %>
+
+<%# Packages table %>
+<div class="bg-white rounded-lg shadow overflow-hidden">
+  <div class="px-6 py-4 border-b border-gray-200">
+    <h2 class="text-lg font-semibold text-gray-800">Paquetes (<%= @paquetes.size %>)</h2>
+  </div>
+
+  <% if @paquetes.any? %>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guia</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tracking</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Peso</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+            <% if @manifiesto.creado? %>
+              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+            <% end %>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @paquetes.each do |paquete| %>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="text-sm font-mono font-medium text-cec-navy"><%= paquete.guia %></span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="text-sm font-mono text-gray-700"><%= truncate(paquete.tracking, length: 25) %></span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="text-sm text-gray-700"><%= paquete.cliente.codigo %> — <%= paquete.cliente.nombre_completo %></span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap hidden md:table-cell">
+                <span class="text-sm text-gray-700"><%= paquete.peso_cobrar || "—" %> lbs</span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <%= render StatusBadgeComponent.new(status: paquete.estado) %>
+              </td>
+              <% if @manifiesto.creado? %>
+                <td class="px-6 py-4 whitespace-nowrap text-right">
+                  <%= link_to remove_paquete_manifiesto_path(@manifiesto, paquete_id: paquete.id),
+                      data: { turbo_method: :delete, turbo_confirm: "Remover #{paquete.guia} del manifiesto?" },
+                      class: "text-red-400 hover:text-red-600" do %>
+                    <%= heroicon "x-mark", variant: :outline, options: { class: "w-5 h-5 inline" } %>
+                  <% end %>
+                </td>
+              <% end %>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="p-6 text-center text-sm text-gray-500">
+      No hay paquetes en este manifiesto
+    </div>
+  <% end %>
+</div>

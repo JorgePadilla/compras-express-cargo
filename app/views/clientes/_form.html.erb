@@ -4,7 +4,7 @@
       <div class="flex items-center gap-2 mb-2">
         <%= heroicon "exclamation-triangle", variant: :outline, options: { class: "w-5 h-5 text-red-600" } %>
         <h3 class="text-sm font-medium text-red-800">
-          <%= pluralize(cliente.errors.count, "error") %> al guardar:
+          Se encontraron <%= cliente.errors.count %> error(es) al guardar:
         </h3>
       </div>
       <ul class="list-disc list-inside text-sm text-red-700 space-y-1">
@@ -24,7 +24,7 @@
       <% else %>
         <%= f.text_field :codigo, placeholder: "Auto-generado si se deja vacio",
             class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                   focus:ring-cec-navy focus:border-cec-navy" %>
+                   focus:ring-cec-teal focus:border-cec-teal" %>
         <p class="mt-1 text-xs text-gray-500">Dejar vacio para generar automaticamente (CEC-XXX)</p>
       <% end %>
     </div>
@@ -35,63 +35,63 @@
       <%= f.label :nombre, class: "block text-sm font-medium text-gray-700 mb-1" %>
       <%= f.text_field :nombre, required: true,
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                 focus:ring-cec-navy focus:border-cec-navy" %>
+                 focus:ring-cec-teal focus:border-cec-teal" %>
     </div>
 
     <div>
       <%= f.label :apellido, class: "block text-sm font-medium text-gray-700 mb-1" %>
       <%= f.text_field :apellido,
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                 focus:ring-cec-navy focus:border-cec-navy" %>
+                 focus:ring-cec-teal focus:border-cec-teal" %>
     </div>
 
     <div>
       <%= f.label :identidad, class: "block text-sm font-medium text-gray-700 mb-1" %>
       <%= f.text_field :identidad,
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                 focus:ring-cec-navy focus:border-cec-navy" %>
+                 focus:ring-cec-teal focus:border-cec-teal" %>
     </div>
 
     <div>
       <%= f.label :email, class: "block text-sm font-medium text-gray-700 mb-1" %>
       <%= f.email_field :email,
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                 focus:ring-cec-navy focus:border-cec-navy" %>
+                 focus:ring-cec-teal focus:border-cec-teal" %>
     </div>
 
     <div>
       <%= f.label :telefono, class: "block text-sm font-medium text-gray-700 mb-1" %>
       <%= f.text_field :telefono,
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                 focus:ring-cec-navy focus:border-cec-navy" %>
+                 focus:ring-cec-teal focus:border-cec-teal" %>
     </div>
 
     <div>
       <%= f.label :telefono_whatsapp, "WhatsApp", class: "block text-sm font-medium text-gray-700 mb-1" %>
       <%= f.text_field :telefono_whatsapp,
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                 focus:ring-cec-navy focus:border-cec-navy" %>
+                 focus:ring-cec-teal focus:border-cec-teal" %>
     </div>
 
     <div class="md:col-span-2">
       <%= f.label :direccion, class: "block text-sm font-medium text-gray-700 mb-1" %>
       <%= f.text_area :direccion, rows: 2,
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                 focus:ring-cec-navy focus:border-cec-navy" %>
+                 focus:ring-cec-teal focus:border-cec-teal" %>
     </div>
 
     <div>
       <%= f.label :ciudad, class: "block text-sm font-medium text-gray-700 mb-1" %>
       <%= f.text_field :ciudad,
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                 focus:ring-cec-navy focus:border-cec-navy" %>
+                 focus:ring-cec-teal focus:border-cec-teal" %>
     </div>
 
     <div>
       <%= f.label :departamento, class: "block text-sm font-medium text-gray-700 mb-1" %>
       <%= f.text_field :departamento,
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                 focus:ring-cec-navy focus:border-cec-navy" %>
+                 focus:ring-cec-teal focus:border-cec-teal" %>
     </div>
 
     <div>
@@ -99,15 +99,31 @@
       <%= f.collection_select :categoria_precio_id, CategoriaPrecio.order(:nombre), :id, :nombre,
           { include_blank: "— Seleccionar —" },
           { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                   focus:ring-cec-navy focus:border-cec-navy" } %>
+                   focus:ring-cec-teal focus:border-cec-teal" } %>
     </div>
 
     <% if cliente.persisted? %>
       <div class="flex items-center gap-3">
-        <%= f.check_box :activo, class: "rounded border-gray-300 text-cec-navy focus:ring-cec-navy" %>
+        <%= f.check_box :activo, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
         <%= f.label :activo, "Cliente activo", class: "text-sm font-medium text-gray-700" %>
       </div>
     <% end %>
+
+    <div class="md:col-span-2">
+      <%= f.label :notas_miami, "Notas Miami", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.text_area :notas_miami, rows: 3, placeholder: "Notas visibles al etiquetar en Miami...",
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                 focus:ring-cec-teal focus:border-cec-teal" %>
+      <p class="mt-1 text-xs text-gray-500">Visible para digitadores al etiquetar paquetes en Miami</p>
+    </div>
+
+    <div class="md:col-span-2">
+      <%= f.label :notas_honduras, "Notas Honduras", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.text_area :notas_honduras, rows: 3, placeholder: "Notas visibles al procesar en Honduras...",
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                 focus:ring-cec-teal focus:border-cec-teal" %>
+      <p class="mt-1 text-xs text-gray-500">Visible para operadores al procesar paquetes en Honduras</p>
+    </div>
   </div>
 
   <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">

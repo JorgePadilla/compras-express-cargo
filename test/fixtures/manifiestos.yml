@@ -1,0 +1,18 @@
+creado:
+  numero: MA-000001
+  estado: creado
+  tipo_envio: AEREO
+  cantidad_paquetes: 0
+  peso_total: 0
+  activo: true
+  user: digitador
+
+enviado:
+  numero: MA-000002
+  estado: enviado
+  tipo_envio: AEREO
+  cantidad_paquetes: 0
+  peso_total: 0
+  fecha_enviado: <%= 3.days.ago %>
+  activo: true
+  user: digitador

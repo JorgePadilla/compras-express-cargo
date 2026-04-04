@@ -79,5 +79,19 @@ end %>
       <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Registrado</dt>
       <dd class="mt-1 text-sm text-gray-900"><%= l(@cliente.created_at, format: :long) rescue @cliente.created_at.strftime("%d/%m/%Y %H:%M") %></dd>
     </div>
+
+    <% if @cliente.notas_miami.present? %>
+      <div class="md:col-span-2">
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Notas Miami</dt>
+        <dd class="mt-1 text-sm text-gray-900 bg-yellow-50 border border-yellow-200 rounded-lg p-3"><%= simple_format(@cliente.notas_miami) %></dd>
+      </div>
+    <% end %>
+
+    <% if @cliente.notas_honduras.present? %>
+      <div class="md:col-span-2">
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Notas Honduras</dt>
+        <dd class="mt-1 text-sm text-gray-900 bg-blue-50 border border-blue-200 rounded-lg p-3"><%= simple_format(@cliente.notas_honduras) %></dd>
+      </div>
+    <% end %>
   </div>
 </div>

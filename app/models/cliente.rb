@@ -1,5 +1,6 @@
 class Cliente < ApplicationRecord
   belongs_to :categoria_precio, optional: true
+  has_many :paquetes, dependent: :restrict_with_error
 
   validates :codigo, presence: true, uniqueness: { case_sensitive: false }
   validates :nombre, presence: true

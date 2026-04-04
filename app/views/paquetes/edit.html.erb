@@ -1,0 +1,11 @@
+<%= render PageHeaderComponent.new(title: "Editar Paquete", subtitle: @paquete.guia) do |header|
+  header.with_action do
+    render ButtonComponent.new(variant: :ghost, href: paquete_path(@paquete), icon: "arrow-left") do
+      "Volver"
+    end
+  end
+end %>
+
+<div class="bg-white rounded-lg shadow p-6">
+  <%= render "form", paquete: @paquete %>
+</div>

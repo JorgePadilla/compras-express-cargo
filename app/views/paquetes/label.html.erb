@@ -1,0 +1,62 @@
+<div style="padding: 8px; font-size: 12px; line-height: 1.4;">
+  <%# Company header %>
+  <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 8px;">
+    <div style="font-size: 16px; font-weight: bold;">COMPRAS EXPRESS CARGO</div>
+  </div>
+
+  <%# Tracking number (large) %>
+  <div style="text-align: center; margin-bottom: 8px;">
+    <div style="font-size: 10px; color: #666;">TRACKING</div>
+    <div style="font-size: 14px; font-weight: bold; font-family: monospace; word-break: break-all;">
+      <%= @paquete.tracking %>
+    </div>
+  </div>
+
+  <%# Guia %>
+  <div style="text-align: center; background: #000; color: #fff; padding: 4px 8px; margin-bottom: 8px; font-size: 18px; font-weight: bold; font-family: monospace;">
+    <%= @paquete.guia %>
+  </div>
+
+  <%# Client info %>
+  <div style="border: 1px solid #000; padding: 6px; margin-bottom: 8px;">
+    <div style="font-size: 10px; color: #666;">CLIENTE</div>
+    <div style="font-size: 14px; font-weight: bold;"><%= @paquete.cliente.codigo %></div>
+    <div style="font-size: 12px;"><%= @paquete.cliente.nombre_completo %></div>
+  </div>
+
+  <%# Details grid %>
+  <table style="width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 11px;">
+    <tr>
+      <td style="border: 1px solid #ccc; padding: 3px;">
+        <span style="font-size: 9px; color: #666;">TIPO ENVIO</span><br>
+        <strong><%= @paquete.tipo_envio&.nombre || "—" %></strong>
+      </td>
+      <td style="border: 1px solid #ccc; padding: 3px;">
+        <span style="font-size: 9px; color: #666;">PESO</span><br>
+        <strong><%= @paquete.peso_cobrar || "—" %> lbs</strong>
+      </td>
+    </tr>
+    <tr>
+      <td style="border: 1px solid #ccc; padding: 3px;">
+        <span style="font-size: 9px; color: #666;">FECHA</span><br>
+        <strong><%= @paquete.fecha_recibido_miami&.strftime("%d/%m/%Y") %></strong>
+      </td>
+      <td style="border: 1px solid #ccc; padding: 3px;">
+        <span style="font-size: 9px; color: #666;">PAQUETES</span><br>
+        <strong><%= @paquete.cantidad_paquetes || 1 %></strong>
+      </td>
+    </tr>
+  </table>
+
+  <% if @paquete.numero_caja.present? && @paquete.cantidad_paquetes.present? && @paquete.cantidad_paquetes > 1 %>
+    <div style="text-align: center; font-size: 14px; font-weight: bold; border: 2px solid #000; padding: 4px; margin-bottom: 8px;">
+      Caja <%= @paquete.numero_caja %> de <%= @paquete.cantidad_paquetes %>
+    </div>
+  <% end %>
+
+  <% if @paquete.descripcion.present? %>
+    <div style="font-size: 10px; color: #666; border-top: 1px solid #ccc; padding-top: 4px;">
+      <%= truncate(@paquete.descripcion, length: 80) %>
+    </div>
+  <% end %>
+</div>

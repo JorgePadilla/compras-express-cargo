@@ -3,9 +3,9 @@
 
   <% if can_access?(:etiquetar) || can_access?(:manifiestos) || can_access?(:paquetes) %>
     <%= sidebar_section "Logistica" do %>
-      <%= sidebar_link "Etiquetar", "#", icon: "tag" if can_access?(:etiquetar) %>
-      <%= sidebar_link "Manifiestos", "#", icon: "cube" if can_access?(:manifiestos) %>
-      <%= sidebar_link "Todos los Paquetes", "#", icon: "archive-box" if can_access?(:paquetes) %>
+      <%= sidebar_link "Etiquetar", etiquetar_path, icon: "tag" if can_access?(:etiquetar) %>
+      <%= sidebar_link "Manifiestos", manifiestos_path, icon: "cube" if can_access?(:manifiestos) %>
+      <%= sidebar_link "Todos los Paquetes", paquetes_path, icon: "archive-box" if can_access?(:paquetes) %>
     <% end %>
   <% end %>
 
