@@ -2,8 +2,12 @@ aereo:
   nombre: AEREO
   codigo: aereo
   activo: true
+  con_reempaque: true
+  consolidable: true
 
 maritimo:
   nombre: CKM MARITIMO
   codigo: ckm-maritimo
   activo: true
+  con_reempaque: false
+  consolidable: false

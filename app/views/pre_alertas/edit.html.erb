@@ -1,0 +1,172 @@
+<div data-controller="pre-alerta-editor">
+  <div id="pre_alerta_header">
+    <%= render "pre_alertas/header", pre_alerta: @pre_alerta %>
+  </div>
+
+  <div id="flash"></div>
+
+  <%= form_with model: @pre_alerta, url: pre_alerta_path(@pre_alerta), method: :patch,
+      data: { pre_alerta_editor_target: "form" }, class: "space-y-6" do |f| %>
+
+    <%# Info row %>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+        <p class="text-xs text-gray-500">Numero</p>
+        <p class="font-mono font-bold text-cec-navy"><%= @pre_alerta.numero_documento %></p>
+      </div>
+      <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+        <p class="text-xs text-gray-500">Cliente</p>
+        <p class="font-mono font-medium text-cec-navy"><%= @pre_alerta.cliente.codigo %></p>
+        <p class="text-sm text-gray-600"><%= @pre_alerta.cliente.nombre_completo %></p>
+      </div>
+      <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+        <p class="text-xs text-gray-500">Tipo Envio</p>
+        <p class="font-medium text-gray-800"><%= @pre_alerta.tipo_envio.nombre %></p>
+      </div>
+      <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+        <p class="text-xs text-gray-500">Estado</p>
+        <div class="mt-1">
+          <%= f.select :estado, options_for_select(PreAlerta.estados.keys.map { |e| [e.humanize, e] }, @pre_alerta.estado),
+              {},
+              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+      </div>
+    </div>
+
+    <%# Opciones %>
+    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+      <div class="flex flex-wrap gap-4">
+        <label class="flex items-center gap-2 text-sm">
+          <%= f.check_box :con_reempaque, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+          Con Reempaque
+        </label>
+        <label class="flex items-center gap-2 text-sm">
+          <%= f.check_box :consolidado, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+          Consolidado
+        </label>
+      </div>
+    </div>
+
+    <%# Notas %>
+    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+      <label class="block text-sm font-medium text-gray-700 mb-1.5">Notas del grupo</label>
+      <%= f.text_area :notas_grupo, rows: 2,
+          placeholder: "Notas opcionales para este grupo de paquetes...",
+          class: "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
+                 focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+
+    <%# Paquetes table %>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+        <h3 class="text-sm font-bold text-gray-800">Paquetes</h3>
+        <button type="button" data-action="click->pre-alerta-editor#addPaquete"
+                class="inline-flex items-center gap-1 text-sm text-cec-teal hover:text-cec-teal-dark font-medium">
+          <%= heroicon "plus-circle", variant: :outline, options: { class: "w-4 h-4" } %>
+          Agregar (F6)
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tracking</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripcion</th>
+              <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Retener</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+              <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Vinculado</th>
+              <th class="px-4 py-2"></th>
+            </tr>
+          </thead>
+          <tbody data-pre-alerta-editor-target="paquetesBody" class="divide-y divide-gray-200">
+            <% @pre_alerta.pre_alerta_paquetes.each.with_index do |pap, index| %>
+              <tr class="paquete-row">
+                <td class="px-4 py-2">
+                  <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
+                    <%= pf.hidden_field :id %>
+                    <%= pf.text_field :tracking, placeholder: "Ej. 1Z999AA1...",
+                        class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+                  <% end %>
+                </td>
+                <td class="px-4 py-2">
+                  <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
+                    <%= pf.text_field :descripcion, placeholder: "Descripcion",
+                        class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+                  <% end %>
+                </td>
+                <td class="px-4 py-2 text-center">
+                  <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
+                    <%= pf.check_box :retener_miami, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+                  <% end %>
+                </td>
+                <td class="px-4 py-2">
+                  <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
+                    <%= pf.date_field :fecha, class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+                  <% end %>
+                </td>
+                <td class="px-4 py-2 text-center">
+                  <% if pap.paquete %>
+                    <%= link_to pap.paquete.guia, paquete_path(pap.paquete), class: "font-mono text-xs text-cec-navy hover:underline", target: "_blank" %>
+                  <% else %>
+                    <span class="text-xs text-gray-400">—</span>
+                  <% end %>
+                </td>
+                <td class="px-4 py-2 text-center">
+                  <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
+                    <input type="hidden" name="pre_alerta[pre_alerta_paquetes_attributes][<%= index %>][_destroy]" value="0" data-pre-alerta-editor-target="destroyField">
+                    <button type="button" data-action="click->pre-alerta-editor#removePaquete" class="text-red-400 hover:text-red-600">
+                      <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
+                    </button>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <%# Template for new rows %>
+    <template data-pre-alerta-editor-target="template">
+      <tr class="paquete-row" data-new-record="true">
+        <td class="px-4 py-2">
+          <input type="text" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][tracking]"
+                 placeholder="Ej. 1Z999AA1..."
+                 class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
+        </td>
+        <td class="px-4 py-2">
+          <input type="text" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][descripcion]"
+                 placeholder="Descripcion"
+                 class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
+        </td>
+        <td class="px-4 py-2 text-center">
+          <input type="checkbox" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][retener_miami]" value="1"
+                 class="rounded border-gray-300 text-cec-teal focus:ring-cec-teal">
+        </td>
+        <td class="px-4 py-2">
+          <input type="date" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][fecha]"
+                 class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
+        </td>
+        <td class="px-4 py-2 text-center">
+          <span class="text-xs text-gray-400">—</span>
+        </td>
+        <td class="px-4 py-2 text-center">
+          <button type="button" data-action="click->pre-alerta-editor#removePaquete" class="text-red-400 hover:text-red-600">
+            <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
+          </button>
+        </td>
+      </tr>
+    </template>
+
+    <%# Action buttons %>
+    <div class="flex flex-col sm:flex-row gap-3 justify-end">
+      <%= link_to "Cancelar", pre_alertas_path,
+          class: "text-gray-600 hover:text-gray-800 text-sm font-medium px-4 py-2.5 text-center" %>
+      <button type="button" data-action="click->pre-alerta-editor#save"
+              class="bg-cec-teal text-white font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm hover:bg-cec-teal-dark transition-colors">
+        Guardar (F8)
+      </button>
+    </div>
+  <% end %>
+</div>

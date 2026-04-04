@@ -1,0 +1,14 @@
+<h2>Hola <%= @cliente.nombre %>,</h2>
+
+<p>Tu pre-alerta <strong><%= @pre_alerta.numero_documento %></strong> ha sido confirmada.</p>
+
+<ul>
+  <li>Tipo de envio: <%= @pre_alerta.tipo_envio.nombre %></li>
+  <li>Paquetes declarados: <%= @pre_alerta.pre_alerta_paquetes.size %></li>
+  <% if @pre_alerta.con_reempaque? %><li>Con reempaque</li><% end %>
+  <% if @pre_alerta.consolidado? %><li>Consolidado</li><% end %>
+</ul>
+
+<p>Te notificaremos cuando tus paquetes sean recibidos en Miami.</p>
+
+<p>Gracias por usar Compras Express Cargo.</p>

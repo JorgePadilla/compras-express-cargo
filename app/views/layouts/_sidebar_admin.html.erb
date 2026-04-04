@@ -12,7 +12,7 @@
   <% if can_access?(:pre_facturas) || can_access?(:pre_alertas) || can_access?(:ventas) %>
     <%= sidebar_section "Caja" do %>
       <%= sidebar_link "Pre-Facturas", "#", icon: "document-text" if can_access?(:pre_facturas) %>
-      <%= sidebar_link "Pre-Alertas", "#", icon: "bell-alert" if can_access?(:pre_alertas) %>
+      <%= sidebar_link "Pre-Alertas", pre_alertas_path, icon: "bell-alert" if can_access?(:pre_alertas) %>
       <%= sidebar_link "Ventas", "#", icon: "currency-dollar" if can_access?(:ventas) %>
       <%= sidebar_link "Recibos", "#", icon: "receipt-percent" if can_access?(:recibos) %>
     <% end %>

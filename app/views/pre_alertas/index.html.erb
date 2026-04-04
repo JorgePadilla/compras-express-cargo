@@ -1,0 +1,160 @@
+<%= render PageHeaderComponent.new(title: "Pre-Alertas", subtitle: "#{@pre_alertas.total_count} pre-alertas") do |c| %>
+  <% c.with_action do %>
+    <%= link_to new_pre_alerta_path, class: "inline-flex items-center gap-2 px-4 py-2 bg-cec-navy text-white text-sm font-medium rounded-lg hover:bg-cec-navy-light transition-colors" do %>
+      <%= heroicon "plus", variant: :mini, options: { class: "w-4 h-4" } %>
+      Nueva Pre-Alerta
+    <% end %>
+  <% end %>
+  <% c.with_action do %>
+    <%= button_to clean_empty_pre_alertas_path, method: :post, class: "inline-flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors",
+        data: { turbo_confirm: "Esto eliminara pre-alertas vacias con mas de 30 dias. Continuar?" } do %>
+      <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
+      Limpiar Vacias
+    <% end %>
+  <% end %>
+<% end %>
+
+<div class="mb-6">
+  <%= render SearchBarComponent.new(url: pre_alertas_path, placeholder: "Buscar por numero, codigo o nombre de cliente...", value: params[:q]) %>
+</div>
+
+<%# Filters panel %>
+<details class="mb-6 bg-white rounded-lg shadow">
+  <summary class="px-6 py-3 cursor-pointer text-sm font-medium text-gray-700 hover:text-cec-navy flex items-center gap-2">
+    <%= heroicon "funnel", variant: :outline, options: { class: "w-4 h-4" } %>
+    Filtros avanzados
+    <% active_filters = [params[:estado], params[:tipo_envio_id], params[:solo_consolidados], params[:solo_anulados], params[:solo_vacias], params[:incluir_anulados]].count(&:present?) %>
+    <% if active_filters > 0 %>
+      <span class="bg-cec-navy text-white text-xs px-2 py-0.5 rounded-full"><%= active_filters %></span>
+    <% end %>
+  </summary>
+  <div class="px-6 py-4 border-t border-gray-200">
+    <%= form_tag pre_alertas_path, method: :get, class: "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4" do %>
+      <% if params[:q].present? %>
+        <%= hidden_field_tag :q, params[:q] %>
+      <% end %>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+        <%= select_tag :estado, options_for_select(PreAlerta.estados.keys.map { |e| [e.humanize, e] }, params[:estado]),
+            include_blank: "— Todos —",
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Envio</label>
+        <%= select_tag :tipo_envio_id, options_from_collection_for_select(@tipo_envios, :id, :nombre, params[:tipo_envio_id]),
+            include_blank: "— Todos —",
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+
+      <div class="md:col-span-1 lg:col-span-2 flex flex-wrap gap-4 items-end">
+        <label class="flex items-center gap-2 text-sm">
+          <%= check_box_tag :solo_consolidados, "1", params[:solo_consolidados] == "1", class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+          Solo Consolidados
+        </label>
+        <label class="flex items-center gap-2 text-sm">
+          <%= check_box_tag :solo_anulados, "1", params[:solo_anulados] == "1", class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+          Solo Anulados
+        </label>
+        <label class="flex items-center gap-2 text-sm">
+          <%= check_box_tag :solo_vacias, "1", params[:solo_vacias] == "1", class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+          Solo Vacias
+        </label>
+        <label class="flex items-center gap-2 text-sm">
+          <%= check_box_tag :incluir_anulados, "1", params[:incluir_anulados] == "1", class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+          Incluir Anulados
+        </label>
+      </div>
+
+      <div class="md:col-span-3 lg:col-span-4 flex gap-3">
+        <button type="submit" class="px-4 py-2 text-sm font-medium bg-cec-navy text-white rounded-lg hover:bg-cec-navy-light">
+          Aplicar Filtros
+        </button>
+        <%= link_to "Limpiar", pre_alertas_path, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900" %>
+      </div>
+    <% end %>
+  </div>
+</details>
+
+<% if @pre_alertas.any? %>
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Numero</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Tipo Envio</th>
+            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Paquetes</th>
+            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Opciones</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Fecha</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @pre_alertas.each do |pa| %>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <%= link_to pa.numero_documento, pre_alerta_path(pa), class: "text-sm font-mono font-medium text-cec-navy hover:underline" %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="text-sm text-gray-700"><%= pa.cliente.codigo %></span>
+                <span class="text-sm text-gray-500 hidden sm:inline ml-1"><%= pa.cliente.nombre_completo %></span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap hidden md:table-cell">
+                <span class="text-sm text-gray-500"><%= pa.tipo_envio.nombre %></span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-center hidden lg:table-cell">
+                <span class="text-sm text-gray-700"><%= pa.pre_alerta_paquetes.size %></span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-center hidden lg:table-cell">
+                <div class="flex items-center justify-center gap-1">
+                  <% if pa.consolidado? %>
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700">C</span>
+                  <% end %>
+                  <% if pa.con_reempaque? %>
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700">R</span>
+                  <% end %>
+                  <% unless pa.consolidado? || pa.con_reempaque? %>
+                    <span class="text-xs text-gray-400">—</span>
+                  <% end %>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <%= render StatusBadgeComponent.new(status: pa.estado) %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
+                <span class="text-sm text-gray-500"><%= pa.created_at.strftime("%d/%m/%Y") %></span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-right">
+                <div class="flex items-center justify-end gap-2">
+                  <%= link_to edit_pre_alerta_path(pa), class: "text-gray-400 hover:text-cec-navy" do %>
+                    <%= heroicon "pencil-square", variant: :outline, options: { class: "w-5 h-5 inline" } %>
+                  <% end %>
+                  <% unless pa.anulado? %>
+                    <%= button_to anular_pre_alerta_path(pa), method: :delete, class: "text-gray-400 hover:text-red-600",
+                        data: { turbo_confirm: "Anular pre-alerta #{pa.numero_documento}?" } do %>
+                      <%= heroicon "x-circle", variant: :outline, options: { class: "w-5 h-5 inline" } %>
+                    <% end %>
+                  <% end %>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="mt-4">
+    <%= paginate @pre_alertas %>
+  </div>
+<% else %>
+  <%= render EmptyStateComponent.new(
+    title: params[:q].present? || params[:estado].present? ? "No se encontraron pre-alertas" : "No hay pre-alertas",
+    description: params[:q].present? || params[:estado].present? ? "Intenta con otros filtros." : "Las pre-alertas apareceran aqui cuando se creen.",
+    icon: "bell-alert"
+  ) %>
+<% end %>

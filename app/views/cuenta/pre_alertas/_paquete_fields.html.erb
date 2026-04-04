@@ -1,4 +1,4 @@
-<% f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
+<%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
   <tr class="paquete-row">
     <% if pap.persisted? %>
       <%= pf.hidden_field :id %>

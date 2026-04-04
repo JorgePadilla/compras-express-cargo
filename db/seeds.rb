@@ -11,15 +11,15 @@ puts "  ✓ Admin user"
 
 # ── Tipos de envio ──
 [
-  { nombre: "AEREO", codigo: "aereo" },
-  { nombre: "AEREO EXPRESS", codigo: "aereo-express" },
-  { nombre: "CKM MARITIMO", codigo: "ckm-maritimo" },
-  { nombre: "CKA ESTANDARD", codigo: "cka-estandard" }
+  { nombre: "AEREO", codigo: "aereo", con_reempaque: true, consolidable: true },
+  { nombre: "AEREO EXPRESS", codigo: "aereo-express", con_reempaque: true, consolidable: false },
+  { nombre: "CKM MARITIMO", codigo: "ckm-maritimo", con_reempaque: false, consolidable: false },
+  { nombre: "CKA ESTANDARD", codigo: "cka-estandard", con_reempaque: false, consolidable: false }
 ].each do |attrs|
-  TipoEnvio.find_or_create_by!(nombre: attrs[:nombre]) do |t|
-    t.codigo = attrs[:codigo]
-    t.activo = true
-  end
+  te = TipoEnvio.find_or_initialize_by(nombre: attrs[:nombre])
+  te.assign_attributes(attrs)
+  te.activo = true
+  te.save!
 end
 puts "  ✓ #{TipoEnvio.count} tipos de envio"
 

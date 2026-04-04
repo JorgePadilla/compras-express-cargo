@@ -15,7 +15,10 @@ export default class extends Controller {
   }
 
   handleKeydown(e) {
-    if (e.key === "F8") {
+    if (e.key === "F6") {
+      e.preventDefault()
+      this.addPaquete()
+    } else if (e.key === "F8") {
       e.preventDefault()
       this.save()
     } else if (e.key === "F9") {
@@ -31,6 +34,10 @@ export default class extends Controller {
     // Replace NEW_INDEX with unique index
     this._newIndex++
     row.innerHTML = row.innerHTML.replaceAll("NEW_INDEX", this._newIndex.toString())
+
+    // Auto-populate fecha with today's date
+    const dateInput = row.querySelector("input[type='date']")
+    if (dateInput) dateInput.value = new Date().toISOString().split("T")[0]
 
     this.paquetesBodyTarget.appendChild(row)
 

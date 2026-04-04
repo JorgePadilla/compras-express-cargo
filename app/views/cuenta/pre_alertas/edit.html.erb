@@ -3,7 +3,7 @@
     <%= render "cuenta/pre_alertas/header", pre_alerta: @pre_alerta %>
   </div>
 
-  <div id="flash" data-controller="auto-dismiss"></div>
+  <div id="flash"></div>
 
   <%= form_with model: @pre_alerta, url: cuenta_pre_alerta_path(@pre_alerta), method: :patch,
       data: { pre_alerta_editor_target: "form" }, class: "space-y-6" do |f| %>
@@ -50,7 +50,7 @@
         <button type="button" data-action="click->pre-alerta-editor#addPaquete"
                 class="inline-flex items-center gap-1 text-sm text-cec-teal hover:text-cec-teal-dark font-medium">
           <%= heroicon "plus-circle", variant: :outline, options: { class: "w-4 h-4" } %>
-          Agregar
+          Agregar (F6)
         </button>
       </div>
 

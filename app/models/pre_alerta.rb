@@ -35,12 +35,24 @@ class PreAlerta < ApplicationRecord
   }
   scope :by_estado, ->(estado) { where(estado: estado) }
   scope :by_cliente, ->(cliente_id) { where(cliente_id: cliente_id) }
+  scope :by_tipo_envio, ->(tipo_envio_id) { where(tipo_envio_id: tipo_envio_id) }
   scope :recientes, -> { order(created_at: :desc) }
+  scope :vacias, -> { left_joins(:pre_alerta_paquetes).where(pre_alerta_paquetes: { id: nil }) }
+  scope :solo_anulados, -> { where(estado: "anulado") }
+  scope :soft_deleted, -> { where.not(deleted_at: nil) }
 
   before_validation :generate_numero_documento, on: :create, if: -> { numero_documento.blank? }
 
   def anular!
     update!(estado: "anulado")
+  end
+
+  def soft_delete!
+    update!(deleted_at: Time.current)
+  end
+
+  def vacia?
+    pre_alerta_paquetes.empty?
   end
 
   def save(**args, &block)

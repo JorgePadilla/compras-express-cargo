@@ -29,6 +29,11 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :pre_alertas, except: %i[destroy] do
+    member { delete :anular }
+    collection { post :clean_empty }
+  end
+
   # Client portal
   namespace :cuenta do
     resource :session, only: %i[new create destroy]
