@@ -75,7 +75,7 @@ puts "  ✓ #{Configuracion.count} configuraciones"
 
 # ── Sample data (dev/staging only) ──
 if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
-  # Demo users per role
+  # Demo users per role — always reset on re-seed so documented credentials work
   [
     { nombre: "Supervisor Miami", email: "supervisor@cec.com", rol: "supervisor_miami", ubicacion: "miami" },
     { nombre: "Digitador Miami", email: "digitador@cec.com", rol: "digitador_miami", ubicacion: "miami" },
@@ -84,12 +84,12 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
     { nombre: "SAC", email: "sac@cec.com", rol: "sac", ubicacion: "honduras" },
     { nombre: "Entrega", email: "entrega@cec.com", rol: "entrega_despacho", ubicacion: "honduras" }
   ].each do |attrs|
-    User.find_or_create_by!(email_address: attrs[:email]) do |u|
-      u.nombre = attrs[:nombre]
-      u.password = "Demo123!"
-      u.rol = attrs[:rol]
-      u.ubicacion = attrs[:ubicacion]
-    end
+    user = User.find_or_initialize_by(email_address: attrs[:email])
+    user.nombre = attrs[:nombre]
+    user.rol = attrs[:rol]
+    user.ubicacion = attrs[:ubicacion]
+    user.password = "Demo123!"
+    user.save!
   end
   puts "  ✓ #{User.count} users total (including demo)"
 
@@ -120,12 +120,12 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
     { nombre: "Carmen", apellido: "Santos", email: "carmen.s@hotmail.com",
       telefono: "91098765", ciudad: "Siguatepeque", departamento: "Comayagua", categoria_precio: vip }
   ].each do |attrs|
-    Cliente.find_or_create_by!(nombre: attrs[:nombre], apellido: attrs[:apellido]) do |c|
-      c.assign_attributes(attrs.except(:nombre, :apellido))
-      c.password = "Cliente123!"
-    end
+    cliente = Cliente.find_or_initialize_by(nombre: attrs[:nombre], apellido: attrs[:apellido])
+    cliente.assign_attributes(attrs.except(:nombre, :apellido))
+    cliente.password = "Cliente123!"
+    cliente.save!
   end
-  # Set password on existing clients without one
+  # Safety net: any other client without a password gets the demo password
   Cliente.where(password_digest: nil).find_each { |c| c.update!(password: "Cliente123!") }
   puts "  ✓ #{Cliente.count} clientes"
 
