@@ -106,8 +106,16 @@ module Cuenta
 
       case step
       when 1
-        session[:pre_alerta_wizard]["con_reempaque"] = params[:con_reempaque] == "1"
-        redirect_to new_cuenta_pre_alerta_path(step: 2)
+        con_reempaque = params[:con_reempaque] == "1"
+        session[:pre_alerta_wizard]["con_reempaque"] = con_reempaque
+
+        if con_reempaque
+          redirect_to new_cuenta_pre_alerta_path(step: 2)
+        else
+          # Sin reempaque types are not consolidable, skip step 2
+          session[:pre_alerta_wizard]["consolidado"] = false
+          redirect_to new_cuenta_pre_alerta_path(step: 3)
+        end
       when 2
         session[:pre_alerta_wizard]["consolidado"] = params[:consolidado] == "1"
         redirect_to new_cuenta_pre_alerta_path(step: 3)
