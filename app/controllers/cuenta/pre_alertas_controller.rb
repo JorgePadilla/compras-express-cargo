@@ -3,7 +3,7 @@ module Cuenta
     before_action :set_pre_alerta, only: %i[show edit update anular]
 
     def index
-      @pre_alertas = current_cliente.pre_alertas.activas.recientes
+      @pre_alertas = current_cliente.pre_alertas.includes(:pre_alerta_paquetes, :tipo_envio).activas.recientes
       @pre_alertas = @pre_alertas.buscar(params[:q]) if params[:q].present?
       @pre_alertas = @pre_alertas.by_estado(params[:estado]) if params[:estado].present?
       @pre_alertas = @pre_alertas.page(params[:page]).per(12)
