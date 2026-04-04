@@ -1,0 +1,5 @@
+<%= render PageHeaderComponent.new(title: "Editar Pre-Alerta #{pre_alerta.numero_documento}", subtitle: pre_alerta.cliente.nombre_completo) do |c| %>
+  <% c.with_action do %>
+    <%= render StatusBadgeComponent.new(status: pre_alerta.estado) %>
+  <% end %>
+<% end %>

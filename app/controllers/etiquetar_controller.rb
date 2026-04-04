@@ -14,6 +14,7 @@ class EtiquetarController < ApplicationController
     @paquete.user = Current.user
 
     if @paquete.save
+      link_pre_alertas(@paquete)
       @paquetes_hoy = paquetes_hoy_count
 
       respond_to do |format|
@@ -47,6 +48,13 @@ class EtiquetarController < ApplicationController
     Paquete.where(user: Current.user)
       .where(fecha_recibido_miami: Time.current.beginning_of_day..Time.current.end_of_day)
       .count
+  end
+
+  def link_pre_alertas(paquete)
+    linked = PreAlertaPaquete.link_tracking!(paquete.tracking, paquete)
+    if linked > 0
+      PreAlertaMailer.paquete_recibido(paquete.cliente, paquete).deliver_later
+    end
   end
 
   def paquete_params

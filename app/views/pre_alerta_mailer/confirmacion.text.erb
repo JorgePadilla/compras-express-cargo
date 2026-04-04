@@ -1,0 +1,12 @@
+Hola <%= @cliente.nombre %>,
+
+Tu pre-alerta <%= @pre_alerta.numero_documento %> ha sido confirmada.
+
+- Tipo de envio: <%= @pre_alerta.tipo_envio.nombre %>
+- Paquetes declarados: <%= @pre_alerta.pre_alerta_paquetes.size %>
+<% if @pre_alerta.con_reempaque? %>- Con reempaque
+<% end %><% if @pre_alerta.consolidado? %>- Consolidado
+<% end %>
+Te notificaremos cuando tus paquetes sean recibidos en Miami.
+
+Gracias por usar Compras Express Cargo.

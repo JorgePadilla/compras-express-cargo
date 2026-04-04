@@ -1,0 +1,112 @@
+<%= render PageHeaderComponent.new(title: "Pre-Alerta #{@pre_alerta.numero_documento}") do |c| %>
+  <% c.with_action do %>
+    <%= link_to edit_pre_alerta_path(@pre_alerta), class: "inline-flex items-center gap-2 px-4 py-2 bg-cec-navy text-white text-sm font-medium rounded-lg hover:bg-cec-navy-light transition-colors" do %>
+      <%= heroicon "pencil-square", variant: :mini, options: { class: "w-4 h-4" } %>
+      Editar
+    <% end %>
+  <% end %>
+  <% unless @pre_alerta.anulado? %>
+    <% c.with_action do %>
+      <%= button_to anular_pre_alerta_path(@pre_alerta), method: :delete, class: "inline-flex items-center gap-2 px-4 py-2 text-sm text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors",
+          data: { turbo_confirm: "Anular esta pre-alerta?" } do %>
+        <%= heroicon "x-circle", variant: :outline, options: { class: "w-4 h-4" } %>
+        Anular
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>
+
+<%# Info cards %>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+    <p class="text-xs text-gray-500">Estado</p>
+    <div class="mt-1"><%= render StatusBadgeComponent.new(status: @pre_alerta.estado) %></div>
+  </div>
+  <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+    <p class="text-xs text-gray-500">Cliente</p>
+    <p class="font-mono font-medium text-cec-navy"><%= @pre_alerta.cliente.codigo %></p>
+    <p class="text-sm text-gray-600"><%= @pre_alerta.cliente.nombre_completo %></p>
+  </div>
+  <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+    <p class="text-xs text-gray-500">Tipo Envio</p>
+    <p class="font-medium text-gray-800"><%= @pre_alerta.tipo_envio.nombre %></p>
+  </div>
+  <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+    <p class="text-xs text-gray-500">Opciones</p>
+    <div class="flex gap-2 mt-1">
+      <% if @pre_alerta.con_reempaque? %>
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 ring-1 ring-indigo-600/20">Reempaque</span>
+      <% end %>
+      <% if @pre_alerta.consolidado? %>
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 ring-1 ring-purple-600/20">Consolidado</span>
+      <% end %>
+      <% unless @pre_alerta.con_reempaque? || @pre_alerta.consolidado? %>
+        <span class="text-sm text-gray-400">Ninguna</span>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<%# Notas %>
+<% if @pre_alerta.notas_grupo.present? %>
+  <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-6">
+    <p class="text-xs text-gray-500 mb-1">Notas del grupo</p>
+    <p class="text-sm text-gray-700"><%= @pre_alerta.notas_grupo %></p>
+  </div>
+<% end %>
+
+<%# Paquetes table %>
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+  <div class="px-4 py-3 border-b border-gray-100">
+    <h3 class="text-sm font-bold text-gray-800">Paquetes (<%= @pre_alerta.pre_alerta_paquetes.size %>)</h3>
+  </div>
+  <% if @pre_alerta.pre_alerta_paquetes.any? %>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tracking</th>
+            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripcion</th>
+            <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Retener</th>
+            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Paquete Vinculado</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+          <% @pre_alerta.pre_alerta_paquetes.includes(:paquete).each do |pap| %>
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-3"><span class="font-mono text-sm"><%= pap.tracking %></span></td>
+              <td class="px-4 py-3 text-sm text-gray-600"><%= pap.descripcion || "—" %></td>
+              <td class="px-4 py-3 text-center">
+                <% if pap.retener_miami? %>
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700">Si</span>
+                <% else %>
+                  <span class="text-xs text-gray-400">No</span>
+                <% end %>
+              </td>
+              <td class="px-4 py-3 text-sm text-gray-500"><%= pap.fecha&.strftime("%d/%m/%Y") || "—" %></td>
+              <td class="px-4 py-3">
+                <% if pap.paquete %>
+                  <%= link_to pap.paquete.guia, paquete_path(pap.paquete), class: "font-mono text-sm text-cec-navy hover:underline" %>
+                  <%= render StatusBadgeComponent.new(status: pap.paquete.estado) %>
+                <% else %>
+                  <span class="text-xs text-gray-400">Sin vincular</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="p-6 text-center text-sm text-gray-500">No hay paquetes en esta pre-alerta.</div>
+  <% end %>
+</div>
+
+<%# Metadata %>
+<div class="text-xs text-gray-400">
+  Creada: <%= @pre_alerta.created_at.strftime("%d/%m/%Y %H:%M") %>
+  <% if @pre_alerta.creado_por_tipo.present? %>
+    | Por: <%= @pre_alerta.creado_por_tipo.humanize %>
+  <% end %>
+</div>
