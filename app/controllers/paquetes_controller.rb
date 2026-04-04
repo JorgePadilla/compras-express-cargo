@@ -37,9 +37,9 @@ class PaquetesController < ApplicationController
       render json: {
         exists: true,
         terminal: paquete.estado_terminal?,
-        guia: paquete.guia,
-        estado: paquete.estado,
-        cliente: paquete.cliente.nombre_completo,
+        guia: ERB::Util.html_escape(paquete.guia),
+        estado: ERB::Util.html_escape(paquete.estado),
+        cliente: ERB::Util.html_escape(paquete.cliente.nombre_completo),
         fecha: paquete.fecha_recibido_miami&.strftime("%d/%m/%Y"),
         count: Paquete.where(tracking: params[:tracking]).count
       }
@@ -57,11 +57,11 @@ class PaquetesController < ApplicationController
     render json: paquetes.map { |p|
       {
         id: p.id,
-        guia: p.guia,
-        tracking: p.tracking,
-        cliente: p.cliente.nombre_completo,
-        cliente_codigo: p.cliente.codigo,
-        estado: p.estado,
+        guia: ERB::Util.html_escape(p.guia),
+        tracking: ERB::Util.html_escape(p.tracking),
+        cliente: ERB::Util.html_escape(p.cliente.nombre_completo),
+        cliente_codigo: ERB::Util.html_escape(p.cliente.codigo),
+        estado: ERB::Util.html_escape(p.estado),
         peso_cobrar: p.peso_cobrar.to_f
       }
     }
@@ -86,8 +86,12 @@ class PaquetesController < ApplicationController
     scope = scope.by_estado(params[:estado]) if params[:estado].present?
     scope = scope.by_tipo_envio(params[:tipo_envio_id]) if params[:tipo_envio_id].present?
     scope = scope.by_cliente(params[:cliente_id]) if params[:cliente_id].present?
-    scope = scope.where(fecha_recibido_miami: Date.parse(params[:fecha_desde])...) if params[:fecha_desde].present?
-    scope = scope.where(fecha_recibido_miami: ...Date.parse(params[:fecha_hasta]).end_of_day) if params[:fecha_hasta].present?
+    if params[:fecha_desde].present? && (fecha_desde = Date.parse(params[:fecha_desde]) rescue nil)
+      scope = scope.where(fecha_recibido_miami: fecha_desde...)
+    end
+    if params[:fecha_hasta].present? && (fecha_hasta = Date.parse(params[:fecha_hasta]) rescue nil)
+      scope = scope.where(fecha_recibido_miami: ...fecha_hasta.end_of_day)
+    end
     scope = scope.where(pre_factura: true) if params[:solo_prefactura] == "1"
     scope = scope.where(estado: "anulado") if params[:solo_anulados] == "1"
     scope = scope.where(pre_alerta: false) if params[:sin_prealerta] == "1"

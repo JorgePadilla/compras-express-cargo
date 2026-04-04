@@ -51,14 +51,14 @@ class ManifiestosController < ApplicationController
     paquete = Paquete.find(params[:paquete_id])
     paquete.update!(manifiesto: @manifiesto, estado: "en_manifiesto")
     @manifiesto.recalculate_totals!
-    redirect_to @manifiesto, notice: "Paquete #{paquete.guia} agregado al manifiesto."
+    respond_to_paquete_change("Paquete #{paquete.guia} agregado al manifiesto.")
   end
 
   def remove_paquete
     paquete = @manifiesto.paquetes.find(params[:paquete_id])
     paquete.update!(manifiesto: nil, estado: "etiquetado")
     @manifiesto.recalculate_totals!
-    redirect_to @manifiesto, notice: "Paquete #{paquete.guia} removido del manifiesto."
+    respond_to_paquete_change("Paquete #{paquete.guia} removido del manifiesto.")
   end
 
   def enviar
@@ -74,6 +74,20 @@ class ManifiestosController < ApplicationController
 
   def set_manifiesto
     @manifiesto = Manifiesto.find(params[:id])
+  end
+
+  def respond_to_paquete_change(message)
+    @paquetes = @manifiesto.paquetes.includes(:cliente).order(:created_at)
+    @manifiesto.reload
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: [
+          turbo_stream.update("manifiesto-paquetes", partial: "manifiestos/paquetes_table", locals: { manifiesto: @manifiesto, paquetes: @paquetes }),
+          turbo_stream.prepend("flash-messages", partial: "shared/flash", locals: { notice: message })
+        ]
+      end
+      format.html { redirect_to @manifiesto, notice: message }
+    end
   end
 
   def manifiesto_params

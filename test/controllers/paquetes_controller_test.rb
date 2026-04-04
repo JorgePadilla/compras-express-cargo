@@ -65,4 +65,29 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     json = JSON.parse(response.body)
     assert json.is_a?(Array)
   end
+
+  test "should filter by valid date range" do
+    get paquetes_url, params: { fecha_desde: Date.current.to_s, fecha_hasta: Date.current.to_s }
+    assert_response :success
+  end
+
+  test "should handle invalid fecha_desde gracefully" do
+    get paquetes_url, params: { fecha_desde: "not-a-date" }
+    assert_response :success
+  end
+
+  test "should handle invalid fecha_hasta gracefully" do
+    get paquetes_url, params: { fecha_hasta: "invalid" }
+    assert_response :success
+  end
+
+  test "search endpoint returns html-escaped data" do
+    get search_paquetes_url, params: { q: "PQ-000" }, as: :json
+    assert_response :success
+    json = JSON.parse(response.body)
+    json.each do |p|
+      assert_not_includes p["guia"].to_s, "<script"
+      assert_not_includes p["cliente"].to_s, "<script"
+    end
+  end
 end

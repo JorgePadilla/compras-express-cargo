@@ -21,6 +21,16 @@ class Manifiesto < ApplicationRecord
 
   before_validation :generate_numero, on: :create, if: -> { numero.blank? }
 
+  def save(**args, &block)
+    super
+  rescue ActiveRecord::RecordNotUnique => e
+    raise unless new_record? && e.message.include?("numero") && (@_numero_retries ||= 0) < 3
+    @_numero_retries += 1
+    self.numero = nil
+    generate_numero
+    retry
+  end
+
   def recalculate_totals!
     update!(
       cantidad_paquetes: paquetes.count,
@@ -39,11 +49,7 @@ class Manifiesto < ApplicationRecord
   private
 
   def generate_numero
-    last_number = self.class
-      .where("numero LIKE 'MA-%'")
-      .pluck(:numero)
-      .map { |n| n.sub("MA-", "").to_i }
-      .max || 0
-    self.numero = "MA-#{(last_number + 1).to_s.rjust(6, '0')}"
+    next_number = (self.class.where("numero LIKE 'MA-%'").maximum(Arel.sql("CAST(SUBSTRING(numero FROM 4) AS INTEGER)")) || 0) + 1
+    self.numero = "MA-#{next_number.to_s.rjust(6, '0')}"
   end
 end

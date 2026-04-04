@@ -77,6 +77,24 @@ class ManifiestosControllerTest < ActionDispatch::IntegrationTest
     assert_equal "enviado", @manifiesto.estado
   end
 
+  test "add_paquete responds with turbo_stream" do
+    paquete = paquetes(:etiquetado)
+    post add_paquete_manifiesto_url(@manifiesto), params: { paquete_id: paquete.id }, as: :turbo_stream
+    assert_response :success
+    paquete.reload
+    assert_equal @manifiesto, paquete.manifiesto
+  end
+
+  test "remove_paquete responds with turbo_stream" do
+    paquete = paquetes(:etiquetado)
+    paquete.update!(manifiesto: @manifiesto, estado: "en_manifiesto")
+
+    delete remove_paquete_manifiesto_url(@manifiesto, paquete_id: paquete.id), as: :turbo_stream
+    assert_response :success
+    paquete.reload
+    assert_nil paquete.manifiesto_id
+  end
+
   test "cajero cannot access manifiestos" do
     delete session_url
     post session_url, params: { email_address: users(:cajero).email_address, password: "password123" }

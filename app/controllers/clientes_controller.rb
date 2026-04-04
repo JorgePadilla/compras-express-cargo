@@ -25,14 +25,14 @@ class ClientesController < ApplicationController
   end
 
   def buscar
-    clientes = Cliente.activos.buscar(params[:q]).limit(10)
+    clientes = Cliente.activos.buscar(params[:q]).includes(:categoria_precio).limit(10)
     render json: clientes.map { |c|
       {
         id: c.id,
-        codigo: c.codigo,
-        nombre: c.nombre_completo,
-        notas_miami: c.notas_miami,
-        categoria_precio: c.categoria_precio&.nombre
+        codigo: ERB::Util.html_escape(c.codigo),
+        nombre: ERB::Util.html_escape(c.nombre_completo),
+        notas_miami: ERB::Util.html_escape(c.notas_miami.to_s),
+        categoria_precio: ERB::Util.html_escape(c.categoria_precio&.nombre.to_s)
       }
     }
   end

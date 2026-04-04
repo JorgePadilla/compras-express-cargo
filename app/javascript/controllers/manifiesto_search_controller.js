@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["input", "results"]
-  static values = { url: String }
+  static values = { url: String, manifiestoId: String }
 
   connect() {
     this._timeout = null
@@ -34,37 +34,66 @@ export default class extends Controller {
   }
 
   renderResults(paquetes) {
+    this.resultsTarget.textContent = ""
+
     if (paquetes.length === 0) {
-      this.resultsTarget.innerHTML = `
-        <p class="text-sm text-gray-500 py-2">No se encontraron paquetes sin manifiesto</p>
-      `
+      const p = document.createElement("p")
+      p.className = "text-sm text-gray-500 py-2"
+      p.textContent = "No se encontraron paquetes sin manifiesto"
+      this.resultsTarget.appendChild(p)
       this.resultsTarget.classList.remove("hidden")
       return
     }
 
-    const manifiestoId = window.location.pathname.split("/").pop()
+    const manifiestoId = this.manifiestoIdValue
+    const csrfToken = document.querySelector('meta[name=csrf-token]')?.content || ''
+    const container = document.createElement("div")
+    container.className = "divide-y divide-gray-100 border rounded-lg"
 
-    this.resultsTarget.innerHTML = `
-      <div class="divide-y divide-gray-100 border rounded-lg">
-        ${paquetes.map(p => `
-          <div class="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
-            <div>
-              <span class="font-mono text-sm font-medium text-cec-navy">${p.guia}</span>
-              <span class="ml-2 text-sm text-gray-500">${p.tracking}</span>
-              <span class="ml-2 text-sm text-gray-700">${p.cliente_codigo} — ${p.cliente}</span>
-              <span class="ml-2 text-xs text-gray-500">${p.peso_cobrar} lbs</span>
-            </div>
-            <form action="/manifiestos/${manifiestoId}/add_paquete" method="post" class="inline">
-              <input type="hidden" name="authenticity_token" value="${document.querySelector('meta[name=csrf-token]')?.content || ''}">
-              <input type="hidden" name="paquete_id" value="${p.id}">
-              <button type="submit" class="px-3 py-1 text-xs font-medium bg-cec-navy text-white rounded hover:bg-cec-navy-light">
-                Agregar
-              </button>
-            </form>
-          </div>
-        `).join("")}
-      </div>
-    `
+    paquetes.forEach(p => {
+      const row = document.createElement("div")
+      row.className = "flex items-center justify-between px-4 py-3 hover:bg-gray-50"
+
+      const info = document.createElement("div")
+      const spans = [
+        { text: p.guia, cls: "font-mono text-sm font-medium text-cec-navy" },
+        { text: p.tracking, cls: "ml-2 text-sm text-gray-500" },
+        { text: `${p.cliente_codigo} — ${p.cliente}`, cls: "ml-2 text-sm text-gray-700" },
+        { text: `${p.peso_cobrar} lbs`, cls: "ml-2 text-xs text-gray-500" }
+      ]
+      spans.forEach(({ text, cls }) => {
+        const span = document.createElement("span")
+        span.className = cls
+        span.textContent = text
+        info.appendChild(span)
+      })
+
+      const form = document.createElement("form")
+      form.action = `/manifiestos/${manifiestoId}/add_paquete`
+      form.method = "post"
+      form.className = "inline"
+
+      const tokenInput = document.createElement("input")
+      tokenInput.type = "hidden"
+      tokenInput.name = "authenticity_token"
+      tokenInput.value = csrfToken
+
+      const idInput = document.createElement("input")
+      idInput.type = "hidden"
+      idInput.name = "paquete_id"
+      idInput.value = p.id
+
+      const btn = document.createElement("button")
+      btn.type = "submit"
+      btn.className = "px-3 py-1 text-xs font-medium bg-cec-navy text-white rounded hover:bg-cec-navy-light"
+      btn.textContent = "Agregar"
+
+      form.append(tokenInput, idInput, btn)
+      row.append(info, form)
+      container.appendChild(row)
+    })
+
+    this.resultsTarget.appendChild(container)
     this.resultsTarget.classList.remove("hidden")
   }
 }

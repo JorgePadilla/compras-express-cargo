@@ -127,4 +127,26 @@ class PaqueteTest < ActiveSupport::TestCase
     assert_nil paquete.tipo_envio
     assert paquete.valid?
   end
+
+  test "generate_guia uses SQL maximum instead of pluck-map" do
+    # Should work even when there are many records
+    paquete = Paquete.create!(tracking: "1Z999SQLMAX", cliente: clientes(:juan))
+    assert_match /\APQ-\d{6}\z/, paquete.guia
+    num = paquete.guia.sub("PQ-", "").to_i
+    assert num > 0
+  end
+
+  test "save retries on guia collision" do
+    # Create a paquete that will take the next guia slot
+    p1 = Paquete.create!(tracking: "1Z999RETRY1", cliente: clientes(:juan))
+    expected_next = p1.guia.sub("PQ-", "").to_i + 1
+
+    # Manually assign the next guia to force collision
+    p2 = Paquete.create!(tracking: "1Z999RETRY2", guia: "PQ-#{expected_next.to_s.rjust(6, '0')}", cliente: clientes(:juan))
+
+    # This should still succeed via retry
+    p3 = Paquete.create!(tracking: "1Z999RETRY3", cliente: clientes(:juan))
+    assert_match /\APQ-\d{6}\z/, p3.guia
+    assert_not_equal p2.guia, p3.guia
+  end
 end

@@ -62,4 +62,17 @@ class ManifiestoTest < ActiveSupport::TestCase
 
     assert_equal 1, manifiesto.cantidad_paquetes
   end
+
+  test "save retries on numero collision" do
+    m1 = Manifiesto.create!
+    expected_next = m1.numero.sub("MA-", "").to_i + 1
+
+    # Manually take the next slot
+    m2 = Manifiesto.create!(numero: "MA-#{expected_next.to_s.rjust(6, '0')}")
+
+    # Should still succeed via retry
+    m3 = Manifiesto.create!
+    assert_match /\AMA-\d{6}\z/, m3.numero
+    assert_not_equal m2.numero, m3.numero
+  end
 end

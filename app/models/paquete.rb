@@ -43,15 +43,21 @@ class Paquete < ApplicationRecord
     entregado? || anulado?
   end
 
+  def save(**args, &block)
+    super
+  rescue ActiveRecord::RecordNotUnique => e
+    raise unless new_record? && e.message.include?("guia") && (@_guia_retries ||= 0) < 3
+    @_guia_retries += 1
+    self.guia = nil
+    generate_guia
+    retry
+  end
+
   private
 
   def generate_guia
-    last_number = self.class
-      .where("guia LIKE 'PQ-%'")
-      .pluck(:guia)
-      .map { |g| g.sub("PQ-", "").to_i }
-      .max || 0
-    self.guia = "PQ-#{(last_number + 1).to_s.rjust(6, '0')}"
+    next_number = (self.class.where("guia LIKE 'PQ-%'").maximum(Arel.sql("CAST(SUBSTRING(guia FROM 4) AS INTEGER)")) || 0) + 1
+    self.guia = "PQ-#{next_number.to_s.rjust(6, '0')}"
   end
 
   def set_fecha_recibido

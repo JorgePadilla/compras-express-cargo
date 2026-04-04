@@ -133,13 +133,21 @@ export default class extends Controller {
       .then(r => r.json())
       .then(data => {
         if (data.exists && !data.terminal) {
-          this.duplicateInfoTarget.innerHTML = `
-            <p class="font-medium">Tracking duplicado encontrado</p>
-            <p class="mt-1">Guia: <span class="font-mono font-medium">${data.guia}</span></p>
-            <p>Cliente: ${data.cliente}</p>
-            <p>Estado: ${data.estado} — Fecha: ${data.fecha}</p>
-            <p class="text-sm text-gray-500 mt-1">${data.count} paquete(s) con este tracking</p>
-          `
+          const info = this.duplicateInfoTarget
+          info.textContent = ""
+          const lines = [
+            { text: "Tracking duplicado encontrado", cls: "font-medium" },
+            { text: `Guia: ${data.guia}`, cls: "mt-1" },
+            { text: `Cliente: ${data.cliente}`, cls: "" },
+            { text: `Estado: ${data.estado} — Fecha: ${data.fecha}`, cls: "" },
+            { text: `${data.count} paquete(s) con este tracking`, cls: "text-sm text-gray-500 mt-1" }
+          ]
+          lines.forEach(({ text, cls }) => {
+            const p = document.createElement("p")
+            p.textContent = text
+            if (cls) p.className = cls
+            info.appendChild(p)
+          })
           this.duplicateModalTarget.classList.remove("hidden")
         }
       })
