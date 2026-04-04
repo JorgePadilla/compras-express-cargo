@@ -1,0 +1,155 @@
+<%= form_with model: paquete, class: "space-y-6" do |f| %>
+  <% if paquete.errors.any? %>
+    <div class="p-4 bg-red-50 rounded-lg">
+      <div class="flex items-center gap-2 mb-2">
+        <%= heroicon "exclamation-triangle", variant: :outline, options: { class: "w-5 h-5 text-red-600" } %>
+        <h3 class="text-sm font-medium text-red-800">
+          Se encontraron <%= paquete.errors.count %> error(es) al guardar:
+        </h3>
+      </div>
+      <ul class="list-disc list-inside text-sm text-red-700 space-y-1">
+        <% paquete.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-3">
+      <p class="text-sm text-gray-500 mb-1">Guia: <span class="font-mono font-medium text-cec-navy"><%= paquete.guia %></span></p>
+    </div>
+
+    <div class="lg:col-span-3">
+      <%= f.label :tracking, class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.text_field :tracking, required: true,
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono
+                 focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+
+    <div>
+      <%= f.label :estado, class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.select :estado, Paquete.estados.keys.map { |e| [e.humanize, e] },
+          {},
+          { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                   focus:ring-cec-teal focus:border-cec-teal" } %>
+    </div>
+
+    <div>
+      <%= f.label :tipo_envio_id, "Tipo de Envio", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.collection_select :tipo_envio_id, @tipo_envios, :id, :nombre,
+          { include_blank: "— Seleccionar —" },
+          { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                   focus:ring-cec-teal focus:border-cec-teal" } %>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Carrier</label>
+      <%= f.text_field :expedido_por, list: "carriers-list-edit",
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                 focus:ring-cec-teal focus:border-cec-teal" %>
+      <datalist id="carriers-list-edit">
+        <% @carriers.each do |carrier| %>
+          <option value="<%= carrier.nombre %>">
+        <% end %>
+      </datalist>
+    </div>
+
+    <div>
+      <%= f.label :proveedor, class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.text_field :proveedor,
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                 focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+
+    <div>
+      <%= f.label :peso, "Peso (lbs)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.number_field :peso, step: 0.01, min: 0,
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                 focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+
+    <div class="grid grid-cols-3 gap-2">
+      <div>
+        <%= f.label :alto, class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.number_field :alto, step: 0.01, min: 0,
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                   focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+      <div>
+        <%= f.label :largo, class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.number_field :largo, step: 0.01, min: 0,
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                   focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+      <div>
+        <%= f.label :ancho, class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.number_field :ancho, step: 0.01, min: 0,
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                   focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <%= f.label :cantidad_productos, "Cant. Productos", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.number_field :cantidad_productos, min: 0,
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                   focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+      <div>
+        <%= f.label :cantidad_paquetes, "Cant. Paquetes", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.number_field :cantidad_paquetes, min: 0,
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                   focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+    </div>
+
+    <div class="lg:col-span-2">
+      <%= f.label :descripcion, class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.text_area :descripcion, rows: 2,
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                 focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+
+    <div>
+      <%= f.label :remitente, class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.text_field :remitente,
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                 focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+
+    <div class="lg:col-span-3 flex flex-wrap gap-6">
+      <div class="flex items-center gap-2">
+        <%= f.check_box :pre_alerta, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+        <%= f.label :pre_alerta, "Pre-Alerta", class: "text-sm font-medium text-gray-700" %>
+      </div>
+      <div class="flex items-center gap-2">
+        <%= f.check_box :pre_factura, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+        <%= f.label :pre_factura, "Pre-Factura", class: "text-sm font-medium text-gray-700" %>
+      </div>
+      <div class="flex items-center gap-2">
+        <%= f.check_box :solicito_cambio_servicio, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+        <%= f.label :solicito_cambio_servicio, "Cambio de Servicio", class: "text-sm font-medium text-gray-700" %>
+      </div>
+      <div class="flex items-center gap-2">
+        <%= f.check_box :retener_miami, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+        <%= f.label :retener_miami, "Retener en Miami", class: "text-sm font-medium text-gray-700" %>
+      </div>
+    </div>
+
+    <div class="lg:col-span-3">
+      <%= f.label :notas_internas, "Notas Internas", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.text_area :notas_internas, rows: 2,
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                 focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+  </div>
+
+  <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+    <%= link_to "Cancelar", paquete_path(paquete), class: "text-sm text-gray-600 hover:text-gray-900" %>
+    <%= f.submit "Guardar Cambios",
+        class: "inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium
+               bg-cec-gold text-cec-navy-dark hover:bg-cec-gold-dark transition-colors cursor-pointer" %>
+  </div>
+<% end %>

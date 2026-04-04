@@ -9,14 +9,14 @@ class ClienteTest < ActiveSupport::TestCase
   test "requires nombre" do
     cliente = Cliente.new(codigo: "CEC-999")
     assert_not cliente.valid?
-    assert_includes cliente.errors[:nombre], "can't be blank"
+    assert_includes cliente.errors[:nombre], "no puede estar en blanco"
   end
 
   test "requires unique codigo" do
     assert_equal "CEC-001", clientes(:juan).codigo
     cliente = Cliente.new(nombre: "Duplicate", codigo: "CEC-001")
     assert_not cliente.valid?
-    assert_includes cliente.errors[:codigo], "has already been taken"
+    assert_includes cliente.errors[:codigo], "ya esta en uso"
   end
 
   test "codigo uniqueness is case insensitive" do
@@ -27,7 +27,7 @@ class ClienteTest < ActiveSupport::TestCase
   test "validates email format" do
     cliente = Cliente.new(nombre: "Test", codigo: "CEC-999", email: "bad-email")
     assert_not cliente.valid?
-    assert_includes cliente.errors[:email], "is invalid"
+    assert_includes cliente.errors[:email], "no es un formato de correo valido"
   end
 
   test "allows blank email" do

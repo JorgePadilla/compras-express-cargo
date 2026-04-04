@@ -1,0 +1,148 @@
+es:
+  activerecord:
+    errors:
+      messages:
+        blank: "no puede estar en blanco"
+        taken: "ya esta en uso"
+        invalid: "no es valido"
+        too_short: "es demasiado corto (minimo %{count} caracteres)"
+        too_long: "es demasiado largo (maximo %{count} caracteres)"
+        not_a_number: "no es un numero"
+        greater_than: "debe ser mayor que %{count}"
+        greater_than_or_equal_to: "debe ser mayor o igual que %{count}"
+        less_than: "debe ser menor que %{count}"
+        less_than_or_equal_to: "debe ser menor o igual que %{count}"
+        equal_to: "debe ser igual a %{count}"
+        confirmation: "no coincide"
+        accepted: "debe ser aceptado"
+        empty: "no puede estar vacio"
+        present: "debe estar en blanco"
+        inclusion: "no esta incluido en la lista"
+        exclusion: "esta reservado"
+        wrong_length: "longitud incorrecta (debe ser %{count} caracteres)"
+        not_an_integer: "debe ser un numero entero"
+        odd: "debe ser impar"
+        even: "debe ser par"
+        record_invalid: "La validacion fallo: %{errors}"
+        restrict_dependent_destroy:
+          has_one: "No se puede eliminar porque tiene un %{record} asociado"
+          has_many: "No se puede eliminar porque tiene %{record} asociados"
+      models:
+        paquete:
+          attributes:
+            tracking:
+              blank: "no puede estar en blanco"
+            guia:
+              blank: "no puede estar en blanco"
+              taken: "ya esta en uso"
+            cliente:
+              required: "es obligatorio"
+            estado:
+              blank: "no puede estar en blanco"
+        manifiesto:
+          attributes:
+            numero:
+              blank: "no puede estar en blanco"
+              taken: "ya esta en uso"
+            estado:
+              blank: "no puede estar en blanco"
+        cliente:
+          attributes:
+            codigo:
+              blank: "no puede estar en blanco"
+              taken: "ya esta en uso"
+            nombre:
+              blank: "no puede estar en blanco"
+            email:
+              invalid: "no es un formato de correo valido"
+        user:
+          attributes:
+            nombre:
+              blank: "no puede estar en blanco"
+            email_address:
+              blank: "no puede estar en blanco"
+              taken: "ya esta en uso"
+            rol:
+              blank: "no puede estar en blanco"
+            password:
+              blank: "no puede estar en blanco"
+  errors:
+    messages:
+      blank: "no puede estar en blanco"
+      taken: "ya esta en uso"
+      invalid: "no es valido"
+      confirmation: "no coincide"
+      not_a_number: "no es un numero"
+      required: "es obligatorio"
+    format: "%{attribute} %{message}"
+  helpers:
+    submit:
+      create: "Crear"
+      update: "Guardar Cambios"
+      submit: "Guardar"
+  date:
+    formats:
+      default: "%d/%m/%Y"
+      short: "%d %b"
+      long: "%d de %B de %Y"
+    day_names:
+      - domingo
+      - lunes
+      - martes
+      - miercoles
+      - jueves
+      - viernes
+      - sabado
+    abbr_day_names:
+      - dom
+      - lun
+      - mar
+      - mie
+      - jue
+      - vie
+      - sab
+    month_names:
+      - ~
+      - enero
+      - febrero
+      - marzo
+      - abril
+      - mayo
+      - junio
+      - julio
+      - agosto
+      - septiembre
+      - octubre
+      - noviembre
+      - diciembre
+    abbr_month_names:
+      - ~
+      - ene
+      - feb
+      - mar
+      - abr
+      - may
+      - jun
+      - jul
+      - ago
+      - sep
+      - oct
+      - nov
+      - dic
+  time:
+    formats:
+      default: "%d/%m/%Y %H:%M"
+      short: "%d %b %H:%M"
+      long: "%d de %B de %Y %H:%M"
+  number:
+    format:
+      separator: "."
+      delimiter: ","
+      precision: 2
+    currency:
+      format:
+        unit: "L."
+        format: "%u %n"
+        separator: "."
+        delimiter: ","
+        precision: 2

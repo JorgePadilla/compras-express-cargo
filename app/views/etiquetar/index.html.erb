@@ -1,0 +1,248 @@
+<%= render PageHeaderComponent.new(title: "Etiquetar Paquetes", subtitle: "Registro de paquetes en Miami") do |header|
+  header.with_action do
+    tag.span(class: "inline-flex items-center gap-2 text-sm text-gray-600") do
+      safe_join([
+        tag.span("Hoy:"),
+        tag.span(id: "paquetes-counter", class: "font-bold text-cec-navy text-lg") { @paquetes_hoy.to_s }
+      ])
+    end
+  end
+end %>
+
+<div data-controller="etiquetar audio"
+     data-etiquetar-check-url-value="<%= check_tracking_paquetes_path %>"
+     data-etiquetar-buscar-url-value="<%= buscar_clientes_path %>"
+     data-action="etiquetar:success->audio#success etiquetar:clienteNotas->audio#alert click@document->etiquetar#clickOutsideDropdown">
+
+  <%# Flash messages area %>
+  <div id="flash-messages" class="mb-4">
+    <% if flash[:notice] %>
+      <div class="p-3 bg-green-50 text-green-700 rounded-lg text-sm" data-controller="auto-dismiss"><%= flash[:notice] %></div>
+    <% end %>
+    <% if flash[:alert] %>
+      <div class="p-3 bg-red-50 text-red-700 rounded-lg text-sm" data-controller="auto-dismiss"><%= flash[:alert] %></div>
+    <% end %>
+  </div>
+
+  <%# Client notes banner (hidden by default) %>
+  <div data-etiquetar-target="notasBanner" class="hidden mb-4 p-4 bg-yellow-50 border border-yellow-300 rounded-lg">
+    <div class="flex items-start gap-2">
+      <%= heroicon "exclamation-triangle", variant: :outline, options: { class: "w-5 h-5 text-yellow-600 shrink-0 mt-0.5" } %>
+      <div>
+        <p class="text-sm font-medium text-yellow-800">Notas del cliente:</p>
+        <p class="text-sm text-yellow-700 mt-1" data-etiquetar-target="notasTexto"></p>
+      </div>
+    </div>
+  </div>
+
+  <%# Duplicate tracking modal %>
+  <div data-etiquetar-target="duplicateModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+      <div class="flex items-center gap-3 mb-4">
+        <%= heroicon "exclamation-circle", variant: :outline, options: { class: "w-6 h-6 text-amber-500" } %>
+        <h3 class="text-lg font-semibold text-gray-800">Tracking Duplicado</h3>
+      </div>
+      <div data-etiquetar-target="duplicateInfo" class="text-sm text-gray-600 mb-6"></div>
+      <div class="flex justify-end gap-3">
+        <button type="button" data-action="click->etiquetar#closeDuplicate"
+                class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Cancelar</button>
+        <button type="button" data-action="click->etiquetar#continueDuplicate"
+                class="px-4 py-2 text-sm font-medium bg-cec-gold text-cec-navy-dark rounded-lg hover:bg-cec-gold-dark">
+          Continuar de todos modos
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <%# Etiquetar form %>
+  <%= form_with model: @paquete, url: etiquetar_path, data: { etiquetar_target: "form" }, class: "bg-white rounded-lg shadow p-6" do |f| %>
+    <% if @paquete.errors.any? %>
+      <div class="mb-6 p-4 bg-red-50 rounded-lg">
+        <div class="flex items-center gap-2 mb-2">
+          <%= heroicon "exclamation-triangle", variant: :outline, options: { class: "w-5 h-5 text-red-600" } %>
+          <h3 class="text-sm font-medium text-red-800">Se encontraron <%= @paquete.errors.count %> error(es) al guardar:</h3>
+        </div>
+        <ul class="list-disc list-inside text-sm text-red-700 space-y-1">
+          <% @paquete.errors.full_messages.each do |msg| %>
+            <li><%= msg %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <%# Row 1: Tracking (full width) %>
+      <div class="lg:col-span-3">
+        <%= f.label :tracking, class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.text_field :tracking, autofocus: true, required: true,
+            placeholder: "Escanear o escribir numero de tracking...",
+            data: { etiquetar_target: "tracking", action: "blur->etiquetar#checkTracking" },
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono
+                   focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+
+      <%# Row 2: Client autocomplete %>
+      <div class="relative">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+        <input type="text" placeholder="Buscar por codigo o nombre..."
+               data-etiquetar-target="clienteInput"
+               data-action="input->etiquetar#searchCliente"
+               autocomplete="off"
+               class="block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                      focus:ring-cec-teal focus:border-cec-teal">
+        <%= f.hidden_field :cliente_id, data: { etiquetar_target: "clienteId" } %>
+        <%# Dropdown %>
+        <div data-etiquetar-target="clienteDropdown"
+             class="hidden absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+        </div>
+      </div>
+
+      <div class="flex items-end">
+        <p data-etiquetar-target="clienteNombre" class="hidden text-sm font-medium text-gray-700 pb-2"></p>
+      </div>
+
+      <div></div>
+
+      <%# Row 3: Tipo envio, Carrier, Proveedor %>
+      <div>
+        <%= f.label :tipo_envio_id, "Tipo de Envio", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.collection_select :tipo_envio_id, @tipo_envios, :id, :nombre,
+            { include_blank: "— Seleccionar —" },
+            { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                     focus:ring-cec-teal focus:border-cec-teal" } %>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Carrier</label>
+        <%= f.text_field :expedido_por, list: "carriers-list",
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                   focus:ring-cec-teal focus:border-cec-teal" %>
+        <datalist id="carriers-list">
+          <% @carriers.each do |carrier| %>
+            <option value="<%= carrier.nombre %>">
+          <% end %>
+        </datalist>
+      </div>
+
+      <div>
+        <%= f.label :proveedor, class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.text_field :proveedor, placeholder: "Amazon, eBay, etc.",
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                   focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+
+      <%# Row 4: Peso, Dimensions, Quantities %>
+      <div>
+        <%= f.label :peso, "Peso (lbs)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.number_field :peso, step: 0.01, min: 0, placeholder: "0.00",
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                   focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2">
+        <div>
+          <%= f.label :alto, class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= f.number_field :alto, step: 0.01, min: 0, placeholder: "0",
+              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                     focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <div>
+          <%= f.label :largo, class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= f.number_field :largo, step: 0.01, min: 0, placeholder: "0",
+              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                     focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <div>
+          <%= f.label :ancho, class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= f.number_field :ancho, step: 0.01, min: 0, placeholder: "0",
+              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                     focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <%= f.label :cantidad_productos, "Cant. Productos", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= f.number_field :cantidad_productos, min: 0, placeholder: "1",
+              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                     focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <div>
+          <%= f.label :cantidad_paquetes, "Cant. Paquetes", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= f.number_field :cantidad_paquetes, min: 0, placeholder: "1",
+              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                     focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+      </div>
+
+      <%# Row 5: Descripcion, Remitente %>
+      <div class="lg:col-span-2">
+        <%= f.label :descripcion, class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.text_area :descripcion, rows: 2, placeholder: "Descripcion del contenido...",
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                   focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+
+      <div>
+        <%= f.label :remitente, class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.text_field :remitente, placeholder: "Nombre del remitente",
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                   focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+
+      <%# Row 6: Boolean toggles %>
+      <div class="lg:col-span-3 flex flex-wrap gap-6">
+        <div class="flex items-center gap-2">
+          <%= f.check_box :pre_alerta, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+          <%= f.label :pre_alerta, "Pre-Alerta", class: "text-sm font-medium text-gray-700" %>
+        </div>
+        <div class="flex items-center gap-2">
+          <%= f.check_box :pre_factura, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+          <%= f.label :pre_factura, "Pre-Factura", class: "text-sm font-medium text-gray-700" %>
+        </div>
+        <div class="flex items-center gap-2">
+          <%= f.check_box :solicito_cambio_servicio, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+          <%= f.label :solicito_cambio_servicio, "Cambio de Servicio", class: "text-sm font-medium text-gray-700" %>
+        </div>
+        <div class="flex items-center gap-2">
+          <%= f.check_box :retener_miami, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+          <%= f.label :retener_miami, "Retener en Miami", class: "text-sm font-medium text-gray-700" %>
+        </div>
+      </div>
+
+      <%# Row 7: Notas internas %>
+      <div class="lg:col-span-3">
+        <%= f.label :notas_internas, "Notas Internas", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.text_area :notas_internas, rows: 2, placeholder: "Notas internas sobre el paquete...",
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                   focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+    </div>
+
+    <%# Action bar %>
+    <div class="mt-6 pt-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="text-xs text-gray-400 hidden sm:flex gap-4">
+        <span><kbd class="px-1.5 py-0.5 bg-gray-100 border rounded text-xs">F2</kbd> Limpiar</span>
+        <span><kbd class="px-1.5 py-0.5 bg-gray-100 border rounded text-xs">F8</kbd> Guardar</span>
+        <span><kbd class="px-1.5 py-0.5 bg-gray-100 border rounded text-xs">F9</kbd> Guardar + Imprimir</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <button type="button" data-action="click->etiquetar#clearForm"
+                class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50">
+          Limpiar
+        </button>
+        <button type="submit" data-etiquetar-target="submitBtn"
+                class="px-4 py-2 text-sm font-medium bg-cec-navy text-white rounded-lg hover:bg-cec-navy-light">
+          Guardar
+        </button>
+        <button type="button" data-action="click->etiquetar#submitFormWithPrint"
+                class="px-4 py-2 text-sm font-medium bg-cec-gold text-cec-navy-dark rounded-lg hover:bg-cec-gold-dark">
+          Guardar + Imprimir
+        </button>
+      </div>
+    </div>
+  <% end %>
+
+  <%# Turbo stream events container %>
+  <div id="etiquetar-events"></div>
+</div>

@@ -19,7 +19,7 @@ class UserTest < ActiveSupport::TestCase
       rol: "admin"
     )
     assert_not user.valid?
-    assert_includes user.errors[:nombre], "can't be blank"
+    assert_includes user.errors[:nombre], "no puede estar en blanco"
   end
 
   test "requires unique email" do

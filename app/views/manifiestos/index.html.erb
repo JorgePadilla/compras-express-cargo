@@ -1,0 +1,85 @@
+<%= render PageHeaderComponent.new(title: "Manifiestos", subtitle: "#{@manifiestos.total_count} manifiestos") do |header|
+  header.with_action do
+    render ButtonComponent.new(variant: :gold, href: new_manifiesto_path, icon: "plus") do
+      "Nuevo Manifiesto"
+    end
+  end
+end %>
+
+<div class="mb-6">
+  <%= render SearchBarComponent.new(url: manifiestos_path, placeholder: "Buscar por numero o guia...", value: params[:q]) %>
+</div>
+
+<%# Estado filter %>
+<div class="mb-4 flex gap-2">
+  <%= link_to "Todos", manifiestos_path, class: "px-3 py-1 text-sm rounded-full #{params[:estado].blank? ? 'bg-cec-navy text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}" %>
+  <% %w[creado enviado en_aduana recibido].each do |estado| %>
+    <%= link_to estado.humanize, manifiestos_path(estado: estado, q: params[:q]),
+        class: "px-3 py-1 text-sm rounded-full #{params[:estado] == estado ? 'bg-cec-navy text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}" %>
+  <% end %>
+</div>
+
+<% if @manifiestos.any? %>
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Numero</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Tipo Envio</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Paquetes</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Peso Total</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @manifiestos.each do |manifiesto| %>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <%= link_to manifiesto.numero, manifiesto, class: "text-sm font-mono font-medium text-cec-navy hover:underline" %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="text-sm text-gray-700"><%= manifiesto.empresa_manifiesto&.nombre || "—" %></span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap hidden md:table-cell">
+                <span class="text-sm text-gray-500"><%= manifiesto.tipo_envio.presence || "—" %></span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <%= render StatusBadgeComponent.new(status: manifiesto.estado) %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
+                <span class="text-sm text-gray-700"><%= manifiesto.cantidad_paquetes %></span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
+                <span class="text-sm text-gray-700"><%= manifiesto.peso_total || 0 %> lbs</span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-right">
+                <%= link_to edit_manifiesto_path(manifiesto), class: "text-gray-400 hover:text-cec-navy" do %>
+                  <%= heroicon "pencil-square", variant: :outline, options: { class: "w-5 h-5 inline" } %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="mt-4">
+    <%= paginate @manifiestos %>
+  </div>
+<% else %>
+  <%= render EmptyStateComponent.new(
+    title: params[:q].present? ? "No se encontraron manifiestos" : "No hay manifiestos",
+    description: params[:q].present? ? "Intenta con otro termino de busqueda." : "Crea el primer manifiesto para comenzar.",
+    icon: "cube"
+  ) do |empty|
+    empty.with_action do
+      render ButtonComponent.new(variant: :gold, href: new_manifiesto_path, icon: "plus") do
+        "Nuevo Manifiesto"
+      end
+    end
+  end %>
+<% end %>

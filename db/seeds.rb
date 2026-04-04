@@ -125,6 +125,79 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
     end
   end
   puts "  ✓ #{Cliente.count} clientes"
+
+  # Demo paquetes
+  digitador = User.find_by!(email_address: "digitador@cec.com")
+  aereo = TipoEnvio.find_by!(nombre: "AEREO")
+  maritimo = TipoEnvio.find_by!(nombre: "CKM MARITIMO")
+  clientes = Cliente.all.to_a
+  carriers = %w[FedEx DHL UPS USPS Amazon]
+  proveedores = %w[Amazon eBay Shein Walmart Target Nike Zara]
+  estados = %w[recibido etiquetado etiquetado etiquetado etiquetado en_manifiesto enviado en_bodega_hn pre_facturado entregado]
+
+  20.times do |i|
+    tracking = "1Z999TEST#{(i + 1).to_s.rjust(6, '0')}"
+    next if Paquete.exists?(tracking: tracking)
+
+    estado = estados[i % estados.length]
+    peso = rand(1.0..50.0).round(2)
+    alto = rand(5.0..30.0).round(2)
+    largo = rand(5.0..40.0).round(2)
+    ancho = rand(5.0..30.0).round(2)
+
+    Paquete.create!(
+      tracking: tracking,
+      cliente: clientes[i % clientes.length],
+      tipo_envio: i.even? ? aereo : maritimo,
+      estado: estado,
+      peso: peso,
+      alto: alto, largo: largo, ancho: ancho,
+      cantidad_productos: rand(1..5),
+      cantidad_paquetes: 1,
+      descripcion: ["Ropa variada", "Zapatos Nike", "Electronica", "Suplementos", "Libros", "Juguetes", "Cosmeticos", "Accesorios"][i % 8],
+      proveedor: proveedores[i % proveedores.length],
+      expedido_por: carriers[i % carriers.length],
+      pre_alerta: i % 5 == 0,
+      pre_factura: i % 7 == 0,
+      solicito_cambio_servicio: i == 3,
+      retener_miami: i == 7,
+      user: digitador,
+      fecha_recibido_miami: rand(1..30).days.ago
+    )
+  end
+  puts "  ✓ #{Paquete.count} paquetes"
+
+  # Demo manifiestos
+  empresa = EmpresaManifiesto.find_by!(nombre: "PRONTO CARGO")
+
+  manifiesto_creado = Manifiesto.find_or_create_by!(numero: "MA-000001") do |m|
+    m.empresa_manifiesto = empresa
+    m.tipo_envio = "AEREO"
+    m.user = digitador
+  end
+
+  manifiesto_enviado = Manifiesto.find_or_create_by!(numero: "MA-000002") do |m|
+    m.empresa_manifiesto = empresa
+    m.tipo_envio = "AEREO"
+    m.estado = "enviado"
+    m.fecha_enviado = 3.days.ago
+    m.user = digitador
+  end
+
+  # Assign some packages to manifests
+  etiquetados = Paquete.where(estado: "etiquetado", manifiesto_id: nil).limit(3)
+  etiquetados.each do |p|
+    p.update!(manifiesto: manifiesto_creado, estado: "en_manifiesto")
+  end
+  manifiesto_creado.recalculate_totals!
+
+  enviados = Paquete.where(estado: "enviado", manifiesto_id: nil).limit(2)
+  enviados.each do |p|
+    p.update!(manifiesto: manifiesto_enviado)
+  end
+  manifiesto_enviado.recalculate_totals!
+
+  puts "  ✓ #{Manifiesto.count} manifiestos"
 end
 
 puts "Seed completed!"

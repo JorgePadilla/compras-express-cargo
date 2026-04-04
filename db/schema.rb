@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_31_051755) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_04_051642) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -49,6 +49,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_31_051755) do
     t.boolean "activo", default: true
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "notas_miami"
+    t.text "notas_honduras"
     t.index ["activo"], name: "index_clientes_on_activo"
     t.index ["categoria_precio_id"], name: "index_clientes_on_categoria_precio_id"
     t.index ["codigo"], name: "index_clientes_on_codigo", unique: true
@@ -86,6 +88,72 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_31_051755) do
     t.text "direccion"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "manifiestos", force: :cascade do |t|
+    t.string "numero", null: false
+    t.string "numero_caja"
+    t.string "numero_guia"
+    t.bigint "empresa_manifiesto_id"
+    t.string "estado", default: "creado", null: false
+    t.string "tipo_envio"
+    t.string "expedido_por"
+    t.integer "cantidad_paquetes", default: 0
+    t.decimal "volumen_total", precision: 10, scale: 2
+    t.decimal "peso_total", precision: 10, scale: 2
+    t.datetime "fecha_enviado"
+    t.datetime "fecha_aduana"
+    t.bigint "user_id"
+    t.boolean "activo", default: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["empresa_manifiesto_id"], name: "index_manifiestos_on_empresa_manifiesto_id"
+    t.index ["estado"], name: "index_manifiestos_on_estado"
+    t.index ["numero"], name: "index_manifiestos_on_numero", unique: true
+    t.index ["user_id"], name: "index_manifiestos_on_user_id"
+  end
+
+  create_table "paquetes", force: :cascade do |t|
+    t.string "tracking", null: false
+    t.string "guia", null: false
+    t.bigint "cliente_id", null: false
+    t.bigint "manifiesto_id"
+    t.bigint "tipo_envio_id"
+    t.string "estado", default: "recibido", null: false
+    t.decimal "peso", precision: 10, scale: 2
+    t.decimal "volumen", precision: 10, scale: 2
+    t.decimal "precio_libra", precision: 10, scale: 2
+    t.decimal "monto_total", precision: 10, scale: 2
+    t.decimal "alto", precision: 8, scale: 2
+    t.decimal "largo", precision: 8, scale: 2
+    t.decimal "ancho", precision: 8, scale: 2
+    t.decimal "peso_volumetrico", precision: 10, scale: 2
+    t.decimal "peso_cobrar", precision: 10, scale: 2
+    t.integer "cantidad_productos"
+    t.integer "cantidad_paquetes"
+    t.integer "numero_caja"
+    t.text "descripcion"
+    t.string "remitente"
+    t.string "expedido_por"
+    t.string "proveedor"
+    t.text "notas_internas"
+    t.boolean "pre_alerta", default: false
+    t.boolean "pre_factura", default: false
+    t.boolean "solicito_cambio_servicio", default: false
+    t.boolean "retener_miami", default: false
+    t.datetime "fecha_recibido_miami"
+    t.datetime "fecha_enviado"
+    t.datetime "fecha_llegada_hn"
+    t.bigint "user_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cliente_id"], name: "index_paquetes_on_cliente_id"
+    t.index ["estado"], name: "index_paquetes_on_estado"
+    t.index ["guia"], name: "index_paquetes_on_guia", unique: true
+    t.index ["manifiesto_id"], name: "index_paquetes_on_manifiesto_id"
+    t.index ["tipo_envio_id"], name: "index_paquetes_on_tipo_envio_id"
+    t.index ["tracking"], name: "index_paquetes_on_tracking"
+    t.index ["user_id"], name: "index_paquetes_on_user_id"
   end
 
   create_table "sessions", force: :cascade do |t|
@@ -130,5 +198,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_31_051755) do
   end
 
   add_foreign_key "clientes", "categoria_precios"
+  add_foreign_key "manifiestos", "empresa_manifiestos"
+  add_foreign_key "manifiestos", "users"
+  add_foreign_key "paquetes", "clientes"
+  add_foreign_key "paquetes", "manifiestos"
+  add_foreign_key "paquetes", "tipo_envios"
+  add_foreign_key "paquetes", "users"
   add_foreign_key "sessions", "users"
 end
