@@ -122,8 +122,11 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   ].each do |attrs|
     Cliente.find_or_create_by!(nombre: attrs[:nombre], apellido: attrs[:apellido]) do |c|
       c.assign_attributes(attrs.except(:nombre, :apellido))
+      c.password = "Cliente123!"
     end
   end
+  # Set password on existing clients without one
+  Cliente.where(password_digest: nil).find_each { |c| c.update!(password: "Cliente123!") }
   puts "  ✓ #{Cliente.count} clientes"
 
   # Demo paquetes
@@ -198,6 +201,58 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   manifiesto_enviado.recalculate_totals!
 
   puts "  ✓ #{Manifiesto.count} manifiestos"
+
+  # Demo pre-alertas
+  juan = Cliente.find_by!(nombre: "Juan", apellido: "Perez")
+  maria = Cliente.find_by!(nombre: "Maria", apellido: "Lopez")
+
+  pa1 = PreAlerta.find_or_create_by!(numero_documento: "PA-000001") do |pa|
+    pa.cliente = juan
+    pa.tipo_envio = aereo
+    pa.con_reempaque = true
+    pa.consolidado = false
+    pa.creado_por_tipo = "cliente"
+    pa.creado_por_id = juan.id
+  end
+  PreAlertaPaquete.find_or_create_by!(pre_alerta: pa1, tracking: "1Z999DEMO000001") do |pap|
+    pap.descripcion = "Zapatos Nike Air Max"
+    pap.fecha = 2.days.ago.to_date
+  end
+  PreAlertaPaquete.find_or_create_by!(pre_alerta: pa1, tracking: "1Z999DEMO000002") do |pap|
+    pap.descripcion = "Ropa variada Amazon"
+    pap.retener_miami = true
+    pap.fecha = 1.day.ago.to_date
+  end
+
+  pa2 = PreAlerta.find_or_create_by!(numero_documento: "PA-000002") do |pa|
+    pa.cliente = maria
+    pa.tipo_envio = maritimo
+    pa.con_reempaque = false
+    pa.consolidado = true
+    pa.estado = "recibido"
+    pa.notificado = true
+    pa.creado_por_tipo = "cliente"
+    pa.creado_por_id = maria.id
+  end
+  PreAlertaPaquete.find_or_create_by!(pre_alerta: pa2, tracking: "9400DEMO000001") do |pap|
+    pap.descripcion = "Cosmeticos Sephora"
+    pap.fecha = 5.days.ago.to_date
+  end
+
+  pa3 = PreAlerta.find_or_create_by!(numero_documento: "PA-000003") do |pa|
+    pa.cliente = juan
+    pa.tipo_envio = aereo
+    pa.con_reempaque = false
+    pa.consolidado = false
+    pa.creado_por_tipo = "cliente"
+    pa.creado_por_id = juan.id
+  end
+  PreAlertaPaquete.find_or_create_by!(pre_alerta: pa3, tracking: "AMZN-DEMO-001") do |pap|
+    pap.descripcion = "Suplementos vitaminicos"
+    pap.fecha = Date.current
+  end
+
+  puts "  ✓ #{PreAlerta.count} pre-alertas"
 end
 
 puts "Seed completed!"

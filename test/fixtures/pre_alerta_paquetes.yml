@@ -1,0 +1,20 @@
+pap_sin_vincular:
+  pre_alerta: activa
+  tracking: "1Z999PREALERT001"
+  descripcion: "Zapatos Nike"
+  retener_miami: false
+  fecha: <%= Date.current %>
+
+pap_con_descripcion:
+  pre_alerta: activa
+  tracking: "1Z999PREALERT002"
+  descripcion: "Ropa variada"
+  retener_miami: true
+  fecha: <%= Date.current %>
+
+pap_maria:
+  pre_alerta: maria_pa
+  tracking: "1Z999PREALERT003"
+  descripcion: "Cosmeticos"
+  retener_miami: false
+  fecha: <%= Date.current %>

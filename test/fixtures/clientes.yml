@@ -14,6 +14,7 @@ juan:
   correo_enviado: false
   correo_confirmado: false
   activo: true
+  password_digest: <%= BCrypt::Password.create("Cliente123!") %>
 
 maria:
   codigo: CEC-002
@@ -26,6 +27,7 @@ maria:
   saldo_pendiente: 150.00
   categoria_precio: vip
   activo: true
+  password_digest: <%= BCrypt::Password.create("Cliente123!") %>
 
 inactivo:
   codigo: CEC-003
@@ -34,3 +36,4 @@ inactivo:
   email: carlos@example.com
   saldo_pendiente: 0.00
   activo: false
+  password_digest: <%= BCrypt::Password.create("Cliente123!") %>

@@ -1,0 +1,48 @@
+<%= render PageHeaderComponent.new(title: "Mis Pre-Alertas") do |header| %>
+  <% header.with_action do %>
+    <%= render ButtonComponent.new(variant: :gold, icon: "plus", href: new_cuenta_pre_alerta_path) do %>
+      Nueva Pre-Alerta
+    <% end %>
+  <% end %>
+<% end %>
+
+<%# Search & filters %>
+<div class="mb-6 flex flex-col sm:flex-row gap-3">
+  <%= render SearchBarComponent.new(url: cuenta_pre_alertas_path, placeholder: "Buscar por numero, cliente...", value: params[:q]) %>
+  <div class="flex gap-2">
+    <% %w[pre_alerta recibido enviado en_aduana disponible].each do |estado| %>
+      <%= link_to estado.humanize,
+          cuenta_pre_alertas_path(estado: estado, q: params[:q]),
+          class: "px-3 py-2 text-xs font-medium rounded-lg transition-colors #{params[:estado] == estado ? 'bg-cec-navy text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}" %>
+    <% end %>
+    <% if params[:estado].present? %>
+      <%= link_to "Todos", cuenta_pre_alertas_path(q: params[:q]),
+          class: "px-3 py-2 text-xs font-medium rounded-lg bg-white text-gray-600 border border-gray-200 hover:bg-gray-50" %>
+    <% end %>
+  </div>
+</div>
+
+<%# Card grid %>
+<% if @pre_alertas.any? %>
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+    <% @pre_alertas.each do |pre_alerta| %>
+      <%= render PreAlertaCardComponent.new(pre_alerta: pre_alerta) %>
+    <% end %>
+  </div>
+
+  <div class="mt-6">
+    <%= paginate @pre_alertas %>
+  </div>
+<% else %>
+  <%= render EmptyStateComponent.new(
+    icon: "bell-alert",
+    title: "No tienes pre-alertas",
+    description: "Crea una pre-alerta para declarar tus paquetes antes de que lleguen."
+  ) do |empty| %>
+    <% empty.with_action do %>
+      <%= render ButtonComponent.new(variant: :gold, icon: "plus", href: new_cuenta_pre_alerta_path) do %>
+        Crear Pre-Alerta
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

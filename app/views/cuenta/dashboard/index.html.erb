@@ -1,0 +1,87 @@
+<%= render PageHeaderComponent.new(title: "Bienvenido, #{@cliente.nombre}",
+                                    subtitle: "Codigo: #{@cliente.codigo}") %>
+
+<%# Stats cards %>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+  <%# Pre-alertas activas %>
+  <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
+        <%= heroicon "bell-alert", variant: :outline, options: { class: "w-5 h-5 text-amber-600" } %>
+      </div>
+      <div>
+        <p class="text-2xl font-bold text-gray-800"><%= @pre_alertas_count %></p>
+        <p class="text-sm text-gray-500">Pre-alertas activas</p>
+      </div>
+    </div>
+  </div>
+
+  <%# Paquetes en transito %>
+  <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-violet-50 rounded-lg flex items-center justify-center">
+        <%= heroicon "archive-box", variant: :outline, options: { class: "w-5 h-5 text-violet-600" } %>
+      </div>
+      <div>
+        <p class="text-2xl font-bold text-gray-800"><%= @cliente.paquetes.activos.count %></p>
+        <p class="text-sm text-gray-500">Paquetes activos</p>
+      </div>
+    </div>
+  </div>
+
+  <%# Saldo pendiente %>
+  <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
+        <%= heroicon "currency-dollar", variant: :outline, options: { class: "w-5 h-5 text-red-600" } %>
+      </div>
+      <div>
+        <p class="text-2xl font-bold text-gray-800">L. <%= number_with_precision(@cliente.saldo_pendiente, precision: 2, delimiter: ",") %></p>
+        <p class="text-sm text-gray-500">Saldo pendiente</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%# CTA: Create pre-alerta %>
+<div class="bg-gradient-to-r from-cec-navy to-cec-navy-light rounded-xl p-6 text-white mb-8">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h2 class="text-lg font-bold">Crear Pre-Alerta</h2>
+      <p class="text-sm text-gray-300 mt-1">Declara tus paquetes antes de que lleguen a Miami.</p>
+    </div>
+    <%= link_to new_cuenta_pre_alerta_path,
+        class: "inline-flex items-center gap-2 btn-gold-gradient text-cec-navy-dark font-semibold
+               px-5 py-2.5 rounded-lg shadow-sm shadow-cec-gold/25 text-sm" do %>
+      <%= heroicon "plus", variant: :outline, options: { class: "w-5 h-5" } %>
+      Nueva Pre-Alerta
+    <% end %>
+  </div>
+</div>
+
+<%# Recent packages %>
+<% if @paquetes_recientes.any? %>
+  <h2 class="text-lg font-bold text-gray-800 mb-4">Paquetes Recientes</h2>
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Guia</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tracking</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Peso</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        <% @paquetes_recientes.each do |paquete| %>
+          <tr>
+            <td class="px-4 py-3 text-sm font-mono font-medium text-cec-navy"><%= paquete.guia %></td>
+            <td class="px-4 py-3 text-sm text-gray-600 truncate max-w-[200px]"><%= paquete.tracking %></td>
+            <td class="px-4 py-3"><%= render StatusBadgeComponent.new(status: paquete.estado) %></td>
+            <td class="px-4 py-3 text-sm text-gray-600"><%= paquete.peso_cobrar ? "#{paquete.peso_cobrar} lbs" : "-" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>

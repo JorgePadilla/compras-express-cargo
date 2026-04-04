@@ -3,6 +3,7 @@ class Paquete < ApplicationRecord
   belongs_to :manifiesto, optional: true
   belongs_to :tipo_envio, optional: true
   belongs_to :user, optional: true
+  has_many :pre_alerta_paquetes, dependent: :nullify
 
   enum :estado, {
     recibido: "recibido",

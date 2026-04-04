@@ -1,0 +1,166 @@
+<%= render PageHeaderComponent.new(title: "Nueva Pre-Alerta", subtitle: "Sigue los pasos para crear tu pre-alerta") %>
+
+<% step = (params[:step] || 1).to_i %>
+<% wizard = session[:pre_alerta_wizard] || {} %>
+
+<div class="max-w-2xl mx-auto" data-controller="wizard">
+  <%# Step indicator %>
+  <div class="flex items-center justify-center mb-8">
+    <% 3.times do |i| %>
+      <% current = i + 1 %>
+      <div class="flex items-center">
+        <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
+                    <%= current <= step ? 'bg-cec-gold text-cec-navy-dark' : 'bg-gray-200 text-gray-500' %>">
+          <%= current %>
+        </div>
+        <% if current < 3 %>
+          <div class="w-12 h-0.5 mx-1 <%= current < step ? 'bg-cec-gold' : 'bg-gray-200' %>"></div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <%# Step 1: Reempaque %>
+  <% if step == 1 %>
+    <%= form_with url: cuenta_pre_alertas_path, method: :post, class: "space-y-6" do |f| %>
+      <%= hidden_field_tag :wizard_step, 1 %>
+      <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <h2 class="text-lg font-bold text-gray-800 mb-2">Deseas reempaque?</h2>
+        <p class="text-sm text-gray-500 mb-6">El reempaque reduce el volumen de tus paquetes ahorrando en costos de envio.</p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" data-wizard-target="options">
+          <label class="cursor-pointer">
+            <input type="radio" name="con_reempaque" value="1" class="peer hidden"
+                   <%= "checked" if wizard["con_reempaque"] %>
+                   data-action="change->wizard#selectOption">
+            <div class="p-4 rounded-xl border-2 border-gray-200 peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 transition-all">
+              <div class="flex items-center gap-3">
+                <%= heroicon "arrow-path-rounded-square", variant: :outline, options: { class: "w-8 h-8 text-cec-gold" } %>
+                <div>
+                  <p class="font-bold text-gray-800">Si, reempacar</p>
+                  <p class="text-xs text-gray-500">Ahorra en volumen</p>
+                </div>
+              </div>
+            </div>
+          </label>
+          <label class="cursor-pointer">
+            <input type="radio" name="con_reempaque" value="0" class="peer hidden"
+                   <%= "checked" if wizard.key?("con_reempaque") && !wizard["con_reempaque"] %>
+                   data-action="change->wizard#selectOption">
+            <div class="p-4 rounded-xl border-2 border-gray-200 peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 transition-all">
+              <div class="flex items-center gap-3">
+                <%= heroicon "archive-box", variant: :outline, options: { class: "w-8 h-8 text-gray-400" } %>
+                <div>
+                  <p class="font-bold text-gray-800">No reempacar</p>
+                  <p class="text-xs text-gray-500">Enviar como llega</p>
+                </div>
+              </div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div class="flex justify-end">
+        <button type="submit" class="btn-gold-gradient text-cec-navy-dark font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm">
+          Siguiente
+        </button>
+      </div>
+    <% end %>
+
+  <%# Step 2: Consolidar %>
+  <% elsif step == 2 %>
+    <%= form_with url: cuenta_pre_alertas_path, method: :post, class: "space-y-6" do |f| %>
+      <%= hidden_field_tag :wizard_step, 2 %>
+      <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <h2 class="text-lg font-bold text-gray-800 mb-2">Deseas consolidar?</h2>
+        <p class="text-sm text-gray-500 mb-6">Consolidar agrupa multiples paquetes en un solo envio.</p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" data-wizard-target="options">
+          <label class="cursor-pointer">
+            <input type="radio" name="consolidado" value="1" class="peer hidden"
+                   <%= "checked" if wizard["consolidado"] %>
+                   data-action="change->wizard#selectOption">
+            <div class="p-4 rounded-xl border-2 border-gray-200 peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 transition-all">
+              <div class="flex items-center gap-3">
+                <%= heroicon "squares-plus", variant: :outline, options: { class: "w-8 h-8 text-cec-gold" } %>
+                <div>
+                  <p class="font-bold text-gray-800">Si, consolidar</p>
+                  <p class="text-xs text-gray-500">Agrupar paquetes</p>
+                </div>
+              </div>
+            </div>
+          </label>
+          <label class="cursor-pointer">
+            <input type="radio" name="consolidado" value="0" class="peer hidden"
+                   <%= "checked" if wizard.key?("consolidado") && !wizard["consolidado"] %>
+                   data-action="change->wizard#selectOption">
+            <div class="p-4 rounded-xl border-2 border-gray-200 peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 transition-all">
+              <div class="flex items-center gap-3">
+                <%= heroicon "archive-box", variant: :outline, options: { class: "w-8 h-8 text-gray-400" } %>
+                <div>
+                  <p class="font-bold text-gray-800">No consolidar</p>
+                  <p class="text-xs text-gray-500">Enviar por separado</p>
+                </div>
+              </div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div class="flex justify-between">
+        <%= link_to "Atras", new_cuenta_pre_alerta_path(step: 1),
+            class: "text-gray-600 hover:text-gray-800 text-sm font-medium px-4 py-2.5" %>
+        <button type="submit" class="btn-gold-gradient text-cec-navy-dark font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm">
+          Siguiente
+        </button>
+      </div>
+    <% end %>
+
+  <%# Step 3: Tipo envio %>
+  <% elsif step == 3 %>
+    <%= form_with url: cuenta_pre_alertas_path, method: :post, class: "space-y-6" do |f| %>
+      <%= hidden_field_tag :wizard_step, 3 %>
+      <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <h2 class="text-lg font-bold text-gray-800 mb-2">Tipo de envio</h2>
+        <p class="text-sm text-gray-500 mb-6">Selecciona como quieres que se envien tus paquetes.</p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" data-wizard-target="options">
+          <% @tipo_envios.each do |tipo| %>
+            <label class="cursor-pointer">
+              <input type="radio" name="tipo_envio_id" value="<%= tipo.id %>" class="peer hidden"
+                     <%= "checked" if wizard["tipo_envio_id"].to_s == tipo.id.to_s %>
+                     data-action="change->wizard#selectOption">
+              <div class="p-4 rounded-xl border-2 border-gray-200 peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 transition-all">
+                <div class="flex items-center gap-3">
+                  <%= heroicon tipo.nombre.include?("AEREO") ? "paper-airplane" : "truck", variant: :outline,
+                      options: { class: "w-8 h-8 text-cec-teal" } %>
+                  <div>
+                    <p class="font-bold text-gray-800"><%= tipo.nombre %></p>
+                  </div>
+                </div>
+              </div>
+            </label>
+          <% end %>
+        </div>
+      </div>
+
+      <% if @pre_alerta&.errors&.any? %>
+        <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+          <ul class="text-sm text-red-700 space-y-1">
+            <% @pre_alerta.errors.full_messages.each do |msg| %>
+              <li><%= msg %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <div class="flex justify-between">
+        <%= link_to "Atras", new_cuenta_pre_alerta_path(step: 2),
+            class: "text-gray-600 hover:text-gray-800 text-sm font-medium px-4 py-2.5" %>
+        <button type="submit" class="btn-gold-gradient text-cec-navy-dark font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm">
+          Crear Pre-Alerta
+        </button>
+      </div>
+    <% end %>
+  <% end %>
+</div>

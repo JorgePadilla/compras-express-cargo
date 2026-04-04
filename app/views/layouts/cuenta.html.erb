@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+  <head>
+    <title><%= content_for(:title) || "Mi Cuenta - Compras Express Cargo" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta charset="UTF-8">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= yield :head %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="h-full bg-slate-50" data-controller="sidebar">
+    <% if cliente_authenticated? %>
+      <div class="flex h-full">
+        <%# ========== SIDEBAR ========== %>
+        <aside id="sidebar"
+          class="fixed inset-y-0 left-0 z-40 w-64 sidebar-gradient text-white
+                 transform -translate-x-full transition-transform duration-300 ease-in-out
+                 lg:translate-x-0 lg:static lg:z-auto flex flex-col"
+          data-sidebar-target="menu">
+
+          <%# Logo %>
+          <div class="p-4 border-b border-white/10">
+            <%= link_to cuenta_root_path, class: "block" do %>
+              <h1 class="text-xl font-bold text-white">Mi Cuenta</h1>
+              <p class="text-xs text-gray-400">Portal de Clientes</p>
+            <% end %>
+          </div>
+
+          <%# Navigation %>
+          <nav class="flex-1 overflow-y-auto py-4">
+            <%= render "layouts/sidebar_cliente" %>
+          </nav>
+
+          <%# Footer %>
+          <div class="p-4 border-t border-white/10">
+            <div class="text-xs text-gray-400 mb-2">
+              <%= current_cliente.nombre_completo %>
+              <span class="block text-gray-500"><%= current_cliente.codigo %></span>
+            </div>
+            <%= link_to cuenta_session_path, data: { turbo_method: :delete },
+                class: "flex items-center gap-2 text-red-400 hover:text-red-300 text-sm" do %>
+              <%= heroicon "arrow-right-start-on-rectangle", variant: :outline, options: { class: "w-4 h-4" } %>
+              Cerrar Sesion
+            <% end %>
+          </div>
+        </aside>
+
+        <%# Backdrop (mobile) %>
+        <div class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden"
+          data-sidebar-target="backdrop"
+          data-action="click->sidebar#close">
+        </div>
+
+        <%# ========== MAIN CONTENT ========== %>
+        <main class="flex-1 flex flex-col min-h-screen overflow-x-hidden">
+          <%# Top bar (mobile) %>
+          <header class="bg-white shadow-sm px-4 py-3 flex items-center justify-between lg:hidden">
+            <button data-action="click->sidebar#toggle" class="text-gray-600 p-1" aria-label="Menu">
+              <%= heroicon "bars-3", variant: :outline, options: { class: "w-6 h-6" } %>
+            </button>
+            <span class="font-bold text-cec-navy">Mi Cuenta</span>
+            <div class="w-6"></div>
+          </header>
+
+          <%# Page content %>
+          <div class="flex-1 p-4 md:p-6 lg:p-8">
+            <% if notice = flash[:notice] %>
+              <div class="mb-4 p-3 bg-green-50 text-green-700 border border-green-200 rounded-xl text-sm flex items-center gap-2" data-controller="auto-dismiss">
+                <%= heroicon "check-circle", variant: :mini, options: { class: "w-5 h-5 shrink-0" } %>
+                <span><%= notice %></span>
+              </div>
+            <% end %>
+            <% if alert = flash[:alert] %>
+              <div class="mb-4 p-3 bg-red-50 text-red-700 border border-red-200 rounded-xl text-sm flex items-center gap-2" data-controller="auto-dismiss">
+                <%= heroicon "exclamation-circle", variant: :mini, options: { class: "w-5 h-5 shrink-0" } %>
+                <span><%= alert %></span>
+              </div>
+            <% end %>
+
+            <%= yield %>
+          </div>
+        </main>
+      </div>
+    <% else %>
+      <%= yield %>
+    <% end %>
+  </body>
+</html>
