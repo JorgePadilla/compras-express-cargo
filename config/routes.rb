@@ -29,5 +29,14 @@ Rails.application.routes.draw do
     end
   end
 
+  # Client portal
+  namespace :cuenta do
+    resource :session, only: %i[new create destroy]
+    root "dashboard#index"
+    resources :pre_alertas do
+      member { delete :anular }
+    end
+  end
+
   root "dashboard#index"
 end

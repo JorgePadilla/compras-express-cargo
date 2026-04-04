@@ -1,0 +1,32 @@
+activa:
+  numero_documento: PA-000001
+  cliente: juan
+  tipo_envio: aereo
+  consolidado: false
+  con_reempaque: true
+  estado: pre_alerta
+  notificado: false
+  creado_por_tipo: cliente
+  creado_por_id: 1
+
+recibida:
+  numero_documento: PA-000002
+  cliente: juan
+  tipo_envio: aereo
+  consolidado: true
+  con_reempaque: false
+  estado: recibido
+  notificado: true
+  creado_por_tipo: cliente
+  creado_por_id: 1
+
+maria_pa:
+  numero_documento: PA-000003
+  cliente: maria
+  tipo_envio: maritimo
+  consolidado: false
+  con_reempaque: false
+  estado: pre_alerta
+  notificado: false
+  creado_por_tipo: cliente
+  creado_por_id: 2

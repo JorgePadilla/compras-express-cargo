@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_04_051642) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_04_060004) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -29,6 +29,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_04_051642) do
     t.decimal "precio_volumen", precision: 10, scale: 2
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "cliente_sessions", force: :cascade do |t|
+    t.bigint "cliente_id", null: false
+    t.string "ip_address"
+    t.string "user_agent"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cliente_id"], name: "index_cliente_sessions_on_cliente_id"
   end
 
   create_table "clientes", force: :cascade do |t|
@@ -51,6 +60,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_04_051642) do
     t.datetime "updated_at", null: false
     t.text "notas_miami"
     t.text "notas_honduras"
+    t.string "password_digest"
     t.index ["activo"], name: "index_clientes_on_activo"
     t.index ["categoria_precio_id"], name: "index_clientes_on_categoria_precio_id"
     t.index ["codigo"], name: "index_clientes_on_codigo", unique: true
@@ -156,6 +166,43 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_04_051642) do
     t.index ["user_id"], name: "index_paquetes_on_user_id"
   end
 
+  create_table "pre_alerta_paquetes", force: :cascade do |t|
+    t.bigint "pre_alerta_id", null: false
+    t.bigint "paquete_id"
+    t.string "tracking", null: false
+    t.text "descripcion"
+    t.boolean "retener_miami", default: false
+    t.date "fecha"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["paquete_id"], name: "index_pre_alerta_paquetes_on_paquete_id"
+    t.index ["pre_alerta_id", "tracking"], name: "index_pre_alerta_paquetes_on_pre_alerta_id_and_tracking", unique: true
+    t.index ["pre_alerta_id"], name: "index_pre_alerta_paquetes_on_pre_alerta_id"
+    t.index ["tracking"], name: "index_pre_alerta_paquetes_on_tracking"
+  end
+
+  create_table "pre_alertas", force: :cascade do |t|
+    t.string "numero_documento", null: false
+    t.bigint "cliente_id", null: false
+    t.bigint "tipo_envio_id", null: false
+    t.boolean "consolidado", default: false
+    t.boolean "con_reempaque", default: false
+    t.text "notas_grupo"
+    t.string "estado", default: "pre_alerta", null: false
+    t.boolean "notificado", default: false
+    t.string "creado_por_tipo"
+    t.bigint "creado_por_id"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cliente_id"], name: "index_pre_alertas_on_cliente_id"
+    t.index ["creado_por_tipo", "creado_por_id"], name: "index_pre_alertas_on_creado_por_tipo_and_creado_por_id"
+    t.index ["deleted_at"], name: "index_pre_alertas_on_deleted_at"
+    t.index ["estado"], name: "index_pre_alertas_on_estado"
+    t.index ["numero_documento"], name: "index_pre_alertas_on_numero_documento", unique: true
+    t.index ["tipo_envio_id"], name: "index_pre_alertas_on_tipo_envio_id"
+  end
+
   create_table "sessions", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.string "ip_address"
@@ -197,6 +244,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_04_051642) do
     t.index ["ubicacion"], name: "index_users_on_ubicacion"
   end
 
+  add_foreign_key "cliente_sessions", "clientes"
   add_foreign_key "clientes", "categoria_precios"
   add_foreign_key "manifiestos", "empresa_manifiestos"
   add_foreign_key "manifiestos", "users"
@@ -204,5 +252,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_04_051642) do
   add_foreign_key "paquetes", "manifiestos"
   add_foreign_key "paquetes", "tipo_envios"
   add_foreign_key "paquetes", "users"
+  add_foreign_key "pre_alerta_paquetes", "paquetes"
+  add_foreign_key "pre_alerta_paquetes", "pre_alertas"
+  add_foreign_key "pre_alertas", "clientes"
+  add_foreign_key "pre_alertas", "tipo_envios"
   add_foreign_key "sessions", "users"
 end

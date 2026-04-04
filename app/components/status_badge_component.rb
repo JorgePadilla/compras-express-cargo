@@ -24,7 +24,10 @@ class StatusBadgeComponent < ViewComponent::Base
     "en_bodega_hn" => "bg-teal-50 text-teal-700 ring-1 ring-teal-600/20",
     "pre_facturado" => "bg-cyan-50 text-cyan-700 ring-1 ring-cyan-600/20",
     # Manifiesto states
-    "creado" => "bg-blue-50 text-blue-700 ring-1 ring-blue-600/20"
+    "creado" => "bg-blue-50 text-blue-700 ring-1 ring-blue-600/20",
+    # PreAlerta states
+    "pre_alerta" => "bg-amber-50 text-amber-700 ring-1 ring-amber-600/20",
+    "disponible" => "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20"
   }.freeze
 
   def initialize(status:, label: nil)
