@@ -740,6 +740,257 @@ Listado de 22 configuraciones del sistema, cada una con botón "Editar":
 
 ---
 
+## Aclaraciones del Cliente (Q&A)
+
+### Consolidación de paquetes que llegan en días diferentes
+
+**Pregunta:** Cuando el cliente consolida varios paquetes en uno, ¿cómo se maneja si los paquetes llegan en días diferentes? ¿Se espera a que lleguen todos o se van agregando?
+
+**Respuesta:** Actualmente se recepcionan/digitalizan y se envían de acuerdo al tipo de envío solicitado. La consolidación se hace en SPS (San Pedro Sula) y se le notifica al cliente cuando ya están todos en SPS.
+
+**Implicación para el sistema:**
+- Los paquetes se etiquetan y envían individualmente en Miami sin esperar consolidación
+- La consolidación física ocurre en la bodega de Honduras (SPS), no en Miami
+- El sistema debe permitir agrupar paquetes de una misma pre-alerta consolidada al llegar a Honduras
+- Se notifica al cliente cuando todos los paquetes de su consolidado están en SPS
+
+### Tipos de envío: configurables o fijos
+
+**Pregunta:** Las combinaciones CER/CKA/CEM/CKM/EXP son fijas o el admin puede crear nuevos tipos? Hay precios diferentes por cada uno?
+
+**Respuesta:** Sí, el administrador puede crear a futuro nuevos servicios o productos. Sí tienen precios diferentes y se manejan en Dólares y Lempiras con una tasa de cambio en el sistema que convierte las tarifas de dólar a Lempiras automáticamente.
+
+**Implicación para el sistema:**
+- Los tipos de envío deben ser un catálogo administrable (CRUD para admin), no hardcoded
+- Cada tipo de envío tiene su propia tarifa en USD
+- El sistema convierte automáticamente USD → LPS usando la tasa de cambio configurada (ya existe en tabla `configuraciones`)
+- Modelo TipoEnvio necesita campos de precio (precio_libra, precio_volumen, etc.)
+
+### Límite de trackings por pre-alerta
+
+**Pregunta:** ¿Hay un máximo de trackings que un cliente puede agregar a una sola pre-alerta?
+
+**Respuesta:** No, no hay límite.
+
+**Implicación para el sistema:**
+- No se necesita validación de cantidad máxima en la relación PreAlerta → Trackings
+- Considerar paginación/scroll en la UI si un cliente agrega muchos trackings
+
+### Edición de pre-alertas después de recibido
+
+**Pregunta:** ¿Puede el cliente editar una pre-alerta después de que Miami ya recibió el paquete? ¿O se bloquea?
+
+**Respuesta:** Hay reglas según el tipo de servicio:
+
+- **Servicios con reempaque (EXP, CER, CEM):** El cliente puede mover paquetes entre pre-alertas del mismo tipo de servicio mientras el estatus sea **Pre-Alerta**, **Recibido** o **Enviado**
+- **Servicios sin reempaque (CKA, CKM):** Solo puede hacer cambios cuando el estatus es **Pre-Alerta** (antes de que llegue a Miami)
+- **Cambio de tipo de envío:** Todos los paquetes pueden cambiar de tipo de envío siempre y cuando estén en estatus de **Pre-Alerta** únicamente
+
+**Implicación para el sistema:**
+- Lógica de permisos de edición depende de: tipo de servicio + estado del paquete
+- Reglas de negocio:
+  - `puede_mover_paquete?`: EXP/CER/CEM → permitido en estados [pre_alerta, recibido, enviado]; CKA/CKM → solo en [pre_alerta]
+  - `puede_cambiar_tipo_envio?`: solo en estado [pre_alerta], cualquier tipo
+- La UI debe deshabilitar/ocultar opciones de edición cuando no aplica
+- Mostrar mensaje explicativo al cliente si intenta editar y no puede
+
+### Cancelación de pre-alertas con paquetes recibidos
+
+**Pregunta:** ¿Puede el cliente cancelar/borrar una pre-alerta que ya tiene paquetes recibidos en Miami?
+
+**Respuesta:** No.
+
+**Implicación para el sistema:**
+- Una pre-alerta solo puede cancelarse/eliminarse si todos sus paquetes están en estado **Pre-Alerta** (ninguno recibido aún)
+- Una vez que al menos un paquete pasa a estado **Recibido**, la pre-alerta se bloquea contra cancelación
+- La UI debe ocultar/deshabilitar el botón de cancelar cuando hay paquetes recibidos
+- Considerar soft-delete (marcar como cancelada) en vez de hard-delete para auditoría
+
+### Notificaciones al cliente durante el flujo
+
+**Pregunta:** ¿Qué notificaciones recibe el cliente durante el flujo? (email, WhatsApp, push?) ¿En qué momentos exactos?
+
+**Respuesta:**
+
+**Email:**
+- Al crear pre-alerta
+- Al actualizar pre-alerta
+- Al recibir paquete en Miami
+- Cuando está disponible para entrega
+- Al crear casillero (envío de información del casillero)
+- Recordatorio los domingos: paquetes no reclamados de la semana antepasada
+
+**WhatsApp:**
+- Cuando está disponible para entrega
+- Futuro: inscripción del cliente vía WhatsApp (queda registrado y aprobado para recibir información general)
+
+**SMS:**
+- Cuando está disponible para retiro, solo si el cliente NO está inscrito para recibirlo por WhatsApp (fallback)
+
+**Push notifications:**
+- En todos los cambios de estado: Pre-Alerta → Recibido en Miami → Enviado → Aduana → Disponible para retiro
+- Recordatorio de paquetes no reclamados
+
+**Implicación para el sistema:**
+- Modelo `Notificacion` o sistema de eventos que dispare notificaciones según cambio de estado del paquete
+- Canales de envío: email (siempre), WhatsApp (si inscrito), SMS (fallback si no WhatsApp), push (siempre)
+- Preferencia de canal por cliente: campo `whatsapp_inscrito` o similar
+- Job de recordatorio dominical (Solid Queue cron): buscar paquetes disponibles no reclamados con más de 1 semana
+- Integración WhatsApp API necesaria para: notificaciones + flujo de inscripción
+- La inscripción vía WhatsApp es un flujo nuevo (no existe en sistema actual)
+
+### Paquetes sin pre-alerta (mayoría de casos)
+
+**Pregunta:** ¿Qué pasa cuando llega un paquete a Miami que NO tiene pre-alerta? ¿Se crea una automáticamente? ¿Se asigna al cliente por el tracking?
+
+**Respuesta:** Se le asigna en Etiquetar/Digitación. Allí es donde se escanea y se llena manualmente toda la información requerida. Son la mayoría de los casos.
+
+**Implicación para el sistema:**
+- La mayoría de paquetes NO tienen pre-alerta previa — el flujo principal es digitación manual en Miami
+- La pantalla Etiquetar es el punto de entrada principal del sistema, no las pre-alertas
+- No se crea pre-alerta automática; el paquete existe independiente sin pre-alerta asociada
+- El digitador asigna el cliente manualmente (autocomplete por código)
+- La vinculación paquete ↔ pre-alerta es opcional, no obligatoria
+- Prioridad de desarrollo: Etiquetar (Fase 1) es más crítico que Pre-Alertas (Fase 2)
+
+### Paquete con pre-alerta pero cliente equivocado
+
+**Pregunta:** Si el tracking de DHL viene a nombre de "Maria" pero el cliente registrado es "Jorge", ¿cómo se resuelve?
+
+**Respuesta:** Pendiente de aclaración — el cliente no estaba seguro de este escenario.
+
+**Implicación para el sistema:**
+- Escenario a resolver en fase de digitación/etiquetado
+- Posiblemente requiere flujo de reasignación o corrección de cliente en el paquete
+- Documentar cuando el cliente aclare el proceso
+
+### Notas Miami vs Honduras (editabilidad)
+
+**Pregunta:** Las notas del cliente, ¿son editables por el digitador? ¿O son read-only y solo el cliente/admin las modifica?
+
+**Respuesta:** Son fijas. Solo el personal de la empresa las modifica: SAC, Admin, Supervisores, Auditoría.
+
+**Implicación para el sistema:**
+- Las notas del cliente NO son editables por el digitador Miami
+- Roles con permiso de edición de notas: `admin`, `sac`, `supervisor_miami`, `supervisor_caja` (auditoría)
+- El digitador las ve como read-only
+- El cliente NO modifica notas (solo personal interno)
+
+### Limpiar Vacías (pre-alertas/pre-facturas sin registros)
+
+**Pregunta:** El botón "Limpiar Vacías" ¿elimina permanentemente o solo marca como anuladas? ¿Tiene confirmación?
+
+**Respuesta:** Limpia pre-facturas, pre-alertas o todo lo que se crea automáticamente o manualmente sin registro alguno. Se sugiere crear un proceso automático que lo haga todos los días tipo 3am.
+
+**Implicación para el sistema:**
+- Crear job automático (Solid Queue cron) que se ejecute diariamente a las 3am
+- El job elimina/anula registros vacíos: pre-alertas sin paquetes, pre-facturas sin líneas, etc.
+- No requiere confirmación del usuario (es automático y solo afecta registros vacíos)
+- Definir "vacío" para cada entidad: pre-alerta sin tracking, pre-factura sin líneas de detalle, etc.
+- Posiblemente soft-delete (marcar como anulado) en lugar de eliminación permanente para auditoría
+
+### Creado Por (registro de auditoría)
+
+**Pregunta:** El campo "Creado Por" en la lista, ¿se refiere al cliente que la creó o al operador? Si el admin crea una pre-alerta por teléfono, ¿quién aparece?
+
+**Respuesta:** Todo lleva registro de quién hizo qué. "Creado" indica si es el cliente o qué usuario interno la creó. En el log se registra cada vez que modifican y presionan botones del sistema.
+
+**Implicación para el sistema:**
+- Todos los modelos principales necesitan campos `creado_por_id` y `creado_por_tipo` (polimórfico: Cliente o User)
+- Implementar sistema de auditoría/log: registrar cada acción (crear, modificar, cambiar estado, presionar botones)
+- Modelo `AuditLog` o similar: `auditable_type`, `auditable_id`, `accion`, `usuario_id`, `usuario_tipo`, `cambios` (JSON), `created_at`
+- Mostrar en la UI: "Creado por: Cliente Jorge Padilla" o "Creado por: Admin María López"
+- Log accesible para roles de auditoría/admin
+
+### Tareas y Re-empaque (pendiente de reunión)
+
+**Pregunta:** ¿Quién asigna las tareas? ¿El digitador Miami al etiquetar? ¿El supervisor? ¿Se auto-asignan basado en el tipo de envío (si es CER = tarea de re-empaque automática)? ¿Re-empaque obligatorio u opcional? Si el cliente seleccionó "sin reempaque" pero el paquete necesita reempaque por tamaño, ¿se puede cambiar? ¿Quién autoriza?
+
+**Respuesta:** Prefiere explicarlo en reunión directa. Pendiente de agendar.
+
+**Implicación para el sistema:**
+- El módulo de tareas/re-empaque requiere reunión dedicada antes de diseñar
+- No implementar hasta tener las reglas claras
+- Temas pendientes: asignación automática vs manual, autorización de cambios, flujo de aprobación
+
+### Fotos del paquete
+
+**Pregunta:** ¿Se toman fotos antes y después del re-empaque? ¿Son obligatorias?
+
+**Respuesta:** Actualmente no se toma foto de nada. Quisiera foto del producto que llegó, posiblemente hasta unas 3 fotos.
+
+**Implicación para el sistema:**
+- Agregar fotos al modelo Paquete: hasta 3 fotos por paquete (del producto al llegar a Miami)
+- Usar Active Storage para manejo de imágenes
+- Las fotos se toman en el paso de digitación/etiquetado en Miami
+- Considerar almacenamiento en la nube (S3/Cloudinary) para producción en Render
+- No son del re-empaque (antes/después), sino del producto al ser recibido
+- Definir si son obligatorias o opcionales (por ahora, opcionales)
+
+### Pre-alertas creadas por servicio al cliente (asistencia)
+
+**Aclaración del cliente:** La pre-alerta no solo la crea el cliente desde su portal. El personal de servicio al cliente también puede crear pre-alertas como asistencia (por ejemplo, cuando el cliente llama por teléfono).
+
+**Roles que pueden crear pre-alertas:** SAC, Supervisor SAC, Admin, Auditor.
+
+**Implicación para el sistema:**
+- La pantalla de crear pre-alerta debe existir tanto en el portal del cliente como en el portal administrativo
+- Roles con permiso de crear/editar pre-alertas: `sac`, `supervisor_sac`, `admin`, `auditor`
+- Cuando la crea personal interno, el campo `creado_por` refleja al usuario interno (no al cliente)
+- **Nuevos roles detectados** no incluidos en la lista original:
+  - `supervisor_sac` — supervisar equipo de servicio al cliente
+  - `auditor` — auditoría del sistema (también mencionado en Q9 para edición de notas)
+- Actualizar enum de roles del modelo User para incluir estos roles adicionales
+
+### Tracking y duplicados (pendiente de reunión parcial)
+
+**Pregunta 15:** 1 tracking = múltiples cajas (DHL): ¿Cómo aparece esto en la pre-alerta del cliente? ¿Ve 1 tracking o 5 líneas separadas? ¿Quién define cuántas cajas son?
+
+**Respuesta:** Eso lo detecta el personal al ingresarlo. El cliente está analizando cambiar la forma de manejarlo y prefiere explicarlo en llamada.
+
+**Pregunta 16:** Tracking reciclado/duplicado: ¿El sistema bloquea la entrada o solo muestra una alerta y deja continuar?
+
+**Respuesta:** Quiere que el sistema muestre un modal informando que el tracking ya está asignado, mostrando la información existente, y dando la opción de: (a) es un nuevo registro, o (b) es una actualización del existente.
+
+**Implicación para el sistema:**
+- El manejo de 1 tracking → múltiples cajas necesita reunión dedicada antes de diseñar el modelo
+- Para tracking duplicado/reciclado: implementar modal de detección al ingresar tracking
+  - Buscar tracking existente en BD
+  - Si existe: mostrar modal con datos del paquete/pre-alerta existente
+  - Opciones en el modal: "Crear nuevo registro" o "Actualizar existente"
+  - Aplica tanto en pre-alertas del cliente como en digitación Miami
+- DHL específicamente reutiliza trackings y envía múltiples cajas con el mismo número
+
+### Transición Pre-Alerta → Pre-Factura
+
+**Pregunta 17:** ¿Cuándo se genera la pre-factura? ¿Automáticamente al recibir y pesar en Miami? ¿O manualmente por el supervisor?
+
+**Respuesta:** El pesaje y medición se hace en Honduras (no en Miami). Se agrega manualmente la información a la pre-factura. Se recomienda visita al sitio para ver todo el proceso.
+
+**Pregunta 18:** Paquetes parciales: Si una pre-alerta tiene 3 trackings pero solo llegaron 2, ¿se puede pre-facturar parcial? ¿O se espera a que lleguen todos?
+
+**Respuesta:** Toda pre-factura que tenga una pre-alerta de consolidación se va alimentando poco a poco. Hasta completar todas se le notifica al cliente. El cliente quiere que esta parte sea semi-dirigida ("como el ganado") y de apoyo al personal: notificando automáticamente si tiene consolidado, etc. Este es un tema largo que requiere más discusión.
+
+**Pregunta 19:** Cambio de tipo de envío: Si el cliente pidió CER (aéreo) pero después quiere cambiar a CEM (marítimo), ¿en qué punto del flujo se permite ese cambio? ¿Eso es lo que significa el flag amarillo "Solicitó Cambio de Servicio"?
+
+**Respuesta:** El cliente puede cambiar el tipo de envío únicamente en estado de pre-alerta. Después de ese estado, solo se puede vía SAC: el cliente se comunica con Miami y se inicia un proceso de localización y cambio. Este proceso casi siempre lleva un costo adicional. El cliente quiere que se realice automáticamente o que el personal de Miami marque algo para que se agregue el cobro en la pre-factura al seleccionar dicho paquete. Y sí, el flag amarillo "Solicitó Cambio de Servicio" es para este escenario.
+
+**Implicación para el sistema:**
+- **Pesaje/medición en HN, no en Miami** — corrige la suposición anterior; el flujo de pre-factura es en Honduras
+- **Pre-factura parcial para consolidaciones:** la pre-factura se alimenta incrementalmente a medida que llegan paquetes
+  - Necesita estado parcial: "En espera de paquetes" vs "Completa"
+  - Notificación automática al cliente cuando se completa la consolidación
+  - Apoyo al digitador: alertas de consolidaciones pendientes
+- **Cambio de tipo de envío:**
+  - Estado pre-alerta: el cliente lo cambia libremente desde su portal
+  - Post pre-alerta: solo vía SAC → proceso de localización + cambio
+  - Agregar campo `solicito_cambio_servicio: boolean` al paquete (flag amarillo)
+  - Al marcar el flag, generar cargo automático en la pre-factura
+  - Modelo `CargoAdicional` o línea extra en pre-factura: concepto "Cambio de servicio", monto configurable
+- **Visita al sitio HN** recomendada para entender flujo completo de pre-facturación
+
+---
+
 ## Próximos Pasos
 
 1. **Conversación 2:** Login, Logout, Creación de usuarios y roles — por documentar
