@@ -14,14 +14,15 @@ module Cuenta
 
     def new
       @pre_alerta = current_cliente.pre_alertas.build
-      @tipo_envios = TipoEnvio.where(activo: true).order(:nombre)
+      @wizard = session[:pre_alerta_wizard] || {}
 
-      if session[:pre_alerta_wizard].present?
-        wizard = session[:pre_alerta_wizard]
-        @pre_alerta.con_reempaque = wizard["con_reempaque"]
-        @pre_alerta.consolidado = wizard["consolidado"]
-        @pre_alerta.tipo_envio_id = wizard["tipo_envio_id"]
+      if @wizard.present?
+        @pre_alerta.con_reempaque = @wizard["con_reempaque"]
+        @pre_alerta.consolidado = @wizard["consolidado"]
+        @pre_alerta.tipo_envio_id = @wizard["tipo_envio_id"]
       end
+
+      @tipo_envios = filtered_tipo_envios
     end
 
     def create
@@ -82,6 +83,21 @@ module Cuenta
         :tipo_envio_id, :consolidado, :con_reempaque, :notas_grupo,
         pre_alerta_paquetes_attributes: [:id, :tracking, :descripcion, :retener_miami, :fecha, :_destroy]
       )
+    end
+
+    def filtered_tipo_envios
+      scope = TipoEnvio.where(activo: true)
+      wizard = session[:pre_alerta_wizard] || {}
+
+      if wizard.key?("con_reempaque")
+        scope = scope.where(con_reempaque: wizard["con_reempaque"])
+      end
+
+      if wizard["consolidado"]
+        scope = scope.where(consolidable: true)
+      end
+
+      scope.order(:nombre)
     end
 
     def handle_wizard_step
