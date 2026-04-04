@@ -69,7 +69,7 @@ class PreAlertasController < ApplicationController
   end
 
   def base_scope
-    if params[:incluir_anulados] == "1"
+    if params[:incluir_anulados] == "1" || params[:solo_anulados] == "1"
       PreAlerta.where(deleted_at: nil)
     else
       PreAlerta.activas

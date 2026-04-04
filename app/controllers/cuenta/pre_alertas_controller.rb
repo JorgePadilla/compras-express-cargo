@@ -15,12 +15,9 @@ module Cuenta
     def new
       @pre_alerta = current_cliente.pre_alertas.build
       @wizard = session[:pre_alerta_wizard] || {}
-
-      if @wizard.present?
-        @pre_alerta.con_reempaque = @wizard["con_reempaque"]
-        @pre_alerta.consolidado = @wizard["consolidado"]
-        @pre_alerta.tipo_envio_id = @wizard["tipo_envio_id"]
-      end
+      @pre_alerta.con_reempaque = @wizard["con_reempaque"]
+      @pre_alerta.consolidado = @wizard["consolidado"]
+      @pre_alerta.tipo_envio_id = @wizard["tipo_envio_id"]
 
       @tipo_envios = filtered_tipo_envios
     end
