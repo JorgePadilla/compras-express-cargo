@@ -1,0 +1,9 @@
+fedex:
+  nombre: FedEx
+  tipo: aereo
+  activo: true
+
+dhl:
+  nombre: DHL
+  tipo: aereo
+  activo: true

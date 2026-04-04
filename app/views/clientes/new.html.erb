@@ -1,0 +1,13 @@
+<%= render PageHeaderComponent.new(title: "Nuevo Cliente") do |header|
+  header.with_action do
+    render ButtonComponent.new(variant: :ghost, href: clientes_path, icon: "arrow-left") do
+      "Volver"
+    end
+  end
+end %>
+
+<div class="bg-white rounded-lg shadow overflow-hidden">
+  <div class="p-6">
+    <%= render "form", cliente: @cliente %>
+  </div>
+</div>

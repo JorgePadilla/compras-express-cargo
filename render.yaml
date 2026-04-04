@@ -19,10 +19,8 @@ services:
     plan: starter
     region: oregon
     branch: main
-    buildCommand: |
-      bundle install &&
-      bundle exec rails assets:precompile &&
-      bundle exec rails db:migrate
+    buildCommand: bundle install && bundle exec rails assets:precompile
+    preDeployCommand: bundle exec rails db:migrate
     startCommand: bundle exec puma -C config/puma.rb
     healthCheckPath: /up
     envVars:
@@ -44,7 +42,7 @@ services:
         value: "5"
 
   # Worker para Solid Queue (producción)
-  - type: worker
+  - type: background_worker
     name: cec-worker-production
     runtime: ruby
     plan: starter
@@ -69,10 +67,8 @@ services:
     plan: starter
     region: oregon
     branch: staging
-    buildCommand: |
-      bundle install &&
-      bundle exec rails assets:precompile &&
-      bundle exec rails db:migrate
+    buildCommand: bundle install && bundle exec rails assets:precompile
+    preDeployCommand: bundle exec rails db:migrate
     startCommand: bundle exec puma -C config/puma.rb
     healthCheckPath: /up
     envVars:
@@ -88,3 +84,28 @@ services:
         value: cec-staging.onrender.com
       - key: RAILS_SERVE_STATIC_FILES
         value: "true"
+      - key: WEB_CONCURRENCY
+        value: "2"
+      - key: RAILS_MAX_THREADS
+        value: "5"
+      - key: SEED_SAMPLE_DATA
+        value: "true"
+
+  # Worker para Solid Queue (staging)
+  - type: background_worker
+    name: cec-worker-staging
+    runtime: ruby
+    plan: starter
+    region: oregon
+    branch: staging
+    buildCommand: bundle install
+    startCommand: bundle exec rails solid_queue:start
+    envVars:
+      - key: RAILS_ENV
+        value: production
+      - key: RAILS_MASTER_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cec-db-staging
+          property: connectionString

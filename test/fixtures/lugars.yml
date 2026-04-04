@@ -1,0 +1,9 @@
+miami:
+  nombre: Bodega Miami
+  tipo: bodega_miami
+  direccion: "1234 NW 25th St, Miami FL"
+
+honduras:
+  nombre: Bodega Honduras
+  tipo: bodega_hn
+  direccion: Col. Kennedy, Tegucigalpa

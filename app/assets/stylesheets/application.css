@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand colors */
+  --color-cec-navy: #262B40;
+  --color-cec-navy-light: #363B54;
+  --color-cec-navy-dark: #1A1E2E;
+  --color-cec-gold: #F5B759;
+  --color-cec-gold-light: #F8BD7A;
+  --color-cec-gold-dark: #E5A040;
+
+  /* Semantic colors */
+  --color-cec-success: #05A677;
+  --color-cec-danger: #FA5252;
+  --color-cec-warning: #FCC419;
+  --color-cec-info: #339AF0;
+
+  /* Typography */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}

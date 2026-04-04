@@ -1,0 +1,23 @@
+admin:
+  nombre: Admin Test
+  email_address: admin@test.com
+  password_digest: <%= BCrypt::Password.create("password123") %>
+  rol: admin
+  ubicacion: honduras
+  activo: true
+
+digitador:
+  nombre: Digitador Miami
+  email_address: digitador@test.com
+  password_digest: <%= BCrypt::Password.create("password123") %>
+  rol: digitador_miami
+  ubicacion: miami
+  activo: true
+
+cajero:
+  nombre: Cajero Honduras
+  email_address: cajero@test.com
+  password_digest: <%= BCrypt::Password.create("password123") %>
+  rol: cajero
+  ubicacion: honduras
+  activo: true

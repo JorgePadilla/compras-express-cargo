@@ -1,0 +1,11 @@
+regular:
+  nombre: Regular
+  precio_libra_aereo: 3.50
+  precio_libra_maritimo: 1.50
+  precio_volumen: 0.008
+
+vip:
+  nombre: VIP
+  precio_libra_aereo: 3.00
+  precio_libra_maritimo: 1.25
+  precio_volumen: 0.007

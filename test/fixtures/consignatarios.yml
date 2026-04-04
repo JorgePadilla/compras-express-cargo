@@ -1,0 +1,9 @@
+consignatario_uno:
+  nombre: Consignatario A
+  identidad: "0801199000001"
+  direccion: Tegucigalpa
+
+consignatario_dos:
+  nombre: Consignatario B
+  identidad: "0801199000002"
+  direccion: San Pedro Sula

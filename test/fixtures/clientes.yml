@@ -1,0 +1,36 @@
+juan:
+  codigo: CEC-001
+  nombre: Juan
+  apellido: Perez
+  identidad: "0801199012345"
+  email: juan@example.com
+  telefono: "99887766"
+  telefono_whatsapp: "99887766"
+  direccion: Col. Kennedy, Tegucigalpa
+  ciudad: Tegucigalpa
+  departamento: Francisco Morazan
+  saldo_pendiente: 0.00
+  categoria_precio: regular
+  correo_enviado: false
+  correo_confirmado: false
+  activo: true
+
+maria:
+  codigo: CEC-002
+  nombre: Maria
+  apellido: Lopez
+  email: maria@example.com
+  telefono: "99112233"
+  ciudad: San Pedro Sula
+  departamento: Cortes
+  saldo_pendiente: 150.00
+  categoria_precio: vip
+  activo: true
+
+inactivo:
+  codigo: CEC-003
+  nombre: Carlos
+  apellido: Reyes
+  email: carlos@example.com
+  saldo_pendiente: 0.00
+  activo: false
