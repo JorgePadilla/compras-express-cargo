@@ -1,4 +1,4 @@
-<% step = (params[:step] || 1).to_i %>
+<% step = (params[:step] || params[:wizard_step] || 1).to_i %>
 <% wizard = session[:pre_alerta_wizard] || {} %>
 
 <%

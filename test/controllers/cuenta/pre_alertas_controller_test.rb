@@ -205,4 +205,38 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_equal cka, pa.tipo_envio
     assert_not pa.consolidado?
   end
+
+  # ── v4: step-3 save-failure re-renders step 3, not step 1 ──
+  # Regression guard: new.html.erb reads params[:step] to decide which step to
+  # render, but render :new after a failed step-3 POST only has params[:wizard_step].
+  # Without a fallback, the view silently bounced the user back to step 1,
+  # losing their input and hiding error messages.
+  test "wizard step 3 save failure re-renders step 3 with errors and preserved input" do
+    # Force save failure: remove CER so assign_default_tipo_envio has no fallback,
+    # and skip wizard steps 1/2 so the session has no tipo_envio_id.
+    TipoEnvio.where(codigo: "cer").destroy_all
+
+    assert_no_difference("PreAlerta.count") do
+      post cuenta_pre_alertas_url, params: {
+        wizard_step: 3,
+        tracking: "FAIL001",
+        descripcion: "Paquete con error",
+        valor_declarado: "12.50",
+        peso: "3.25"
+      }
+    end
+
+    assert_response :unprocessable_entity
+
+    # Must land on step 3, not step 1. Step-3-only copy:
+    assert_match "Datos del paquete", response.body
+    # Step-1-only copy must NOT appear:
+    assert_no_match(/Elige tu servicio/, response.body)
+
+    # User input preserved via params echo at new.html.erb:280-309
+    assert_match "FAIL001", response.body
+    assert_match "Paquete con error", response.body
+    assert_match "12.50", response.body
+    assert_match "3.25", response.body
+  end
 end
