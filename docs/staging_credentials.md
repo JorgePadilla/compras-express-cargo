@@ -1,6 +1,24 @@
 # Staging Test Credentials
 
-## Client Portal (`/cuenta/session/new`)
+All users — admin staff and clientes — log in through the **same unified login** at
+[`/session/new`](https://cec-staging.onrender.com/session/new). `SessionsController#create`
+tries `User.authenticate_by` first and falls back to `Cliente.authenticate_by`, so the
+app routes each user to the correct area automatically: admin users land on the admin
+dashboard, clientes land on `/cuenta`.
+
+## Admin users
+
+| User | Email | Password | Role |
+|:-----|:------|:---------|:-----|
+| Administrador | admin@comprasexpresscargo.com | changeme123 | admin |
+| Supervisor Miami | supervisor@cec.com | Demo123! | supervisor_miami |
+| Digitador Miami | digitador@cec.com | Demo123! | digitador_miami |
+| Supervisor Caja | sup_caja@cec.com | Demo123! | supervisor_caja |
+| Cajero Honduras | cajero@cec.com | Demo123! | cajero |
+| SAC | sac@cec.com | Demo123! | sac |
+| Entrega | entrega@cec.com | Demo123! | entrega_despacho |
+
+## Clientes
 
 | Client | Email | Password |
 |:-------|:------|:---------|
@@ -15,19 +33,7 @@
 | Pedro Mejia | pedro.mejia@yahoo.com | Cliente123! |
 | Carmen Santos | carmen.s@hotmail.com | Cliente123! |
 
-> All demo clients share the same password. Carlos Reyes is **inactive** and cannot log in.
-
-## Admin Portal (`/session/new`)
-
-| User | Email | Password | Role |
-|:-----|:------|:---------|:-----|
-| Administrador | admin@comprasexpresscargo.com | changeme123 | admin |
-| Supervisor Miami | supervisor@cec.com | Demo123! | supervisor_miami |
-| Digitador Miami | digitador@cec.com | Demo123! | digitador_miami |
-| Supervisor Caja | sup_caja@cec.com | Demo123! | supervisor_caja |
-| Cajero Honduras | cajero@cec.com | Demo123! | cajero |
-| SAC | sac@cec.com | Demo123! | sac |
-| Entrega | entrega@cec.com | Demo123! | entrega_despacho |
+> All demo clientes share the same password. Carlos Reyes is **inactive** and cannot log in.
 
 ## Demo Data
 
