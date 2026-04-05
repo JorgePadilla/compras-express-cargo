@@ -1,4 +1,5 @@
-<div data-controller="pre-alerta-editor">
+<div data-controller="pre-alerta-editor"
+     data-pre-alerta-editor-cancel-url-value="<%= pre_alertas_path %>">
   <div id="pre_alerta_header">
     <%= render "pre_alertas/header", pre_alerta: @pre_alerta %>
   </div>
@@ -102,7 +103,7 @@
                 </td>
                 <td class="px-4 py-2">
                   <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
-                    <%= pf.date_field :fecha, class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+                    <%= pf.date_field :fecha, class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal", data: { controller: "flatpickr" } %>
                   <% end %>
                 </td>
                 <td class="px-4 py-2 text-center">
@@ -146,6 +147,7 @@
         </td>
         <td class="px-4 py-2">
           <input type="date" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][fecha]"
+                 data-controller="flatpickr"
                  class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
         </td>
         <td class="px-4 py-2 text-center">
@@ -161,7 +163,7 @@
 
     <%# Action buttons %>
     <div class="flex flex-col sm:flex-row gap-3 justify-end">
-      <%= link_to "Cancelar", pre_alertas_path,
+      <%= link_to "Cancelar (F2)", pre_alertas_path,
           class: "text-gray-600 hover:text-gray-800 text-sm font-medium px-4 py-2.5 text-center" %>
       <button type="button" data-action="click->pre-alerta-editor#save"
               class="bg-cec-teal text-white font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm hover:bg-cec-teal-dark transition-colors">

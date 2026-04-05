@@ -1,33 +1,31 @@
 class StatusBadgeComponent < ViewComponent::Base
+  # 5 semantic families — labels distinguish sub-states within each family.
+  SUCCESS = "bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30".freeze
+  INFO    = "bg-cec-navy/5  text-cec-navy      ring-1 ring-cec-navy/20".freeze
+  WARNING = "bg-cec-gold/10 text-cec-gold-dark ring-1 ring-cec-gold/30".freeze
+  DANGER  = "bg-red-50      text-red-700       ring-1 ring-red-600/20".freeze
+  NEUTRAL = "bg-slate-100   text-slate-600     ring-1 ring-slate-500/20".freeze
+
   COLORS = {
-    "activo" => "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20",
-    "inactivo" => "bg-gray-50 text-gray-600 ring-1 ring-gray-500/20",
-    "pendiente" => "bg-yellow-50 text-yellow-700 ring-1 ring-yellow-600/20",
-    "en_proceso" => "bg-blue-50 text-blue-700 ring-1 ring-blue-600/20",
-    "en_miami" => "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-600/20",
-    "en_transito" => "bg-purple-50 text-purple-700 ring-1 ring-purple-600/20",
-    "en_aduana" => "bg-orange-50 text-orange-700 ring-1 ring-orange-600/20",
-    "en_bodega" => "bg-teal-50 text-teal-700 ring-1 ring-teal-600/20",
-    "listo_entrega" => "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20",
-    "entregado" => "bg-green-50 text-green-700 ring-1 ring-green-600/20",
-    "facturado" => "bg-lime-50 text-lime-700 ring-1 ring-lime-600/20",
-    "pagado" => "bg-green-50 text-green-700 ring-1 ring-green-600/20",
-    "anulado" => "bg-red-50 text-red-700 ring-1 ring-red-600/20",
-    "devuelto" => "bg-rose-50 text-rose-700 ring-1 ring-rose-600/20",
-    "retenido" => "bg-amber-50 text-amber-700 ring-1 ring-amber-600/20",
-    "extraviado" => "bg-red-50 text-red-700 ring-1 ring-red-600/20",
-    # Paquete states
-    "recibido" => "bg-sky-50 text-sky-700 ring-1 ring-sky-600/20",
-    "etiquetado" => "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-600/20",
-    "en_manifiesto" => "bg-purple-50 text-purple-700 ring-1 ring-purple-600/20",
-    "enviado" => "bg-violet-50 text-violet-700 ring-1 ring-violet-600/20",
-    "en_bodega_hn" => "bg-teal-50 text-teal-700 ring-1 ring-teal-600/20",
-    "pre_facturado" => "bg-cyan-50 text-cyan-700 ring-1 ring-cyan-600/20",
-    # Manifiesto states
-    "creado" => "bg-blue-50 text-blue-700 ring-1 ring-blue-600/20",
-    # PreAlerta states
-    "pre_alerta" => "bg-amber-50 text-amber-700 ring-1 ring-amber-600/20",
-    "disponible" => "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20"
+    # Success — positive end-states
+    "activo" => SUCCESS, "disponible" => SUCCESS, "listo_entrega" => SUCCESS,
+    "entregado" => SUCCESS, "pagado" => SUCCESS, "facturado" => SUCCESS,
+
+    # Info — in-progress logistics states
+    "en_proceso" => INFO, "en_miami" => INFO, "en_transito" => INFO,
+    "en_bodega" => INFO,  "en_bodega_hn" => INFO, "recibido" => INFO,
+    "etiquetado" => INFO, "en_manifiesto" => INFO, "enviado" => INFO,
+    "pre_facturado" => INFO, "creado" => INFO,
+
+    # Warning — pending / held / awaiting action
+    "pendiente" => WARNING, "pre_alerta" => WARNING,
+    "retenido" => WARNING, "en_aduana" => WARNING,
+
+    # Danger
+    "anulado" => DANGER, "extraviado" => DANGER, "devuelto" => DANGER,
+
+    # Neutral
+    "inactivo" => NEUTRAL
   }.freeze
 
   def initialize(status:, label: nil)
@@ -43,6 +41,6 @@ class StatusBadgeComponent < ViewComponent::Base
   private
 
   def color_classes
-    COLORS[@status] || "bg-gray-50 text-gray-600 ring-1 ring-gray-500/20"
+    COLORS[@status] || NEUTRAL
   end
 end

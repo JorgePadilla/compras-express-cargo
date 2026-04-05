@@ -9,19 +9,29 @@ User.find_or_create_by!(email_address: "admin@comprasexpresscargo.com") do |u|
 end
 puts "  ✓ Admin user"
 
-# ── Tipos de envio ──
+# ── Tipos de envio (v4.0 — ver docs/approved/pre_alerta_v4.docx) ──
 [
-  { nombre: "AEREO", codigo: "aereo", con_reempaque: true, consolidable: true },
-  { nombre: "AEREO EXPRESS", codigo: "aereo-express", con_reempaque: true, consolidable: false },
-  { nombre: "CKM MARITIMO", codigo: "ckm-maritimo", con_reempaque: false, consolidable: false },
-  { nombre: "CKA ESTANDARD", codigo: "cka-estandard", con_reempaque: false, consolidable: false }
+  { nombre: "EXPRESS", codigo: "express", con_reempaque: true,  consolidable: true,
+    precio_libra: 8.00, modalidad: "aereo",    sla: "3-7 dias habiles",   max_paquetes_por_accion: nil },
+  { nombre: "CER",     codigo: "cer",     con_reempaque: true,  consolidable: true,
+    precio_libra: 4.50, modalidad: "aereo",    sla: "6-10 dias habiles",  max_paquetes_por_accion: nil },
+  { nombre: "CEM",     codigo: "cem",     con_reempaque: true,  consolidable: true,
+    precio_libra: 2.50, modalidad: "maritimo", sla: "14-17 dias habiles", max_paquetes_por_accion: nil },
+  { nombre: "CKA",     codigo: "cka",     con_reempaque: false, consolidable: false,
+    precio_libra: 4.00, modalidad: "aereo",    sla: "6-10 dias habiles",  max_paquetes_por_accion: 1 },
+  { nombre: "CKM",     codigo: "ckm",     con_reempaque: false, consolidable: false,
+    precio_libra: 1.50, modalidad: "maritimo", sla: "14-17 dias habiles", max_paquetes_por_accion: 1 }
 ].each do |attrs|
-  te = TipoEnvio.find_or_initialize_by(nombre: attrs[:nombre])
+  te = TipoEnvio.find_or_initialize_by(codigo: attrs[:codigo])
   te.assign_attributes(attrs)
   te.activo = true
   te.save!
 end
-puts "  ✓ #{TipoEnvio.count} tipos de envio"
+
+# Deprecar legacy si existen (safety-net para staging)
+TipoEnvio.where(codigo: %w[aereo aereo-express ckm-maritimo cka-estandard]).update_all(activo: false)
+
+puts "  ✓ #{TipoEnvio.activos.count} tipos de envio v4"
 
 # ── Carriers ──
 [
@@ -131,8 +141,8 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
 
   # Demo paquetes
   digitador = User.find_by!(email_address: "digitador@cec.com")
-  aereo = TipoEnvio.find_by!(nombre: "AEREO")
-  maritimo = TipoEnvio.find_by!(nombre: "CKM MARITIMO")
+  aereo = TipoEnvio.find_by!(codigo: "cer")
+  maritimo = TipoEnvio.find_by!(codigo: "cem")
   clientes = Cliente.all.to_a
   carriers = %w[FedEx DHL UPS USPS Amazon]
   proveedores = %w[Amazon eBay Shein Walmart Target Nike Zara]
@@ -175,13 +185,13 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
 
   manifiesto_creado = Manifiesto.find_or_create_by!(numero: "MA-000001") do |m|
     m.empresa_manifiesto = empresa
-    m.tipo_envio = "AEREO"
+    m.tipo_envio = "CER"
     m.user = digitador
   end
 
   manifiesto_enviado = Manifiesto.find_or_create_by!(numero: "MA-000002") do |m|
     m.empresa_manifiesto = empresa
-    m.tipo_envio = "AEREO"
+    m.tipo_envio = "CER"
     m.estado = "enviado"
     m.fecha_enviado = 3.days.ago
     m.user = digitador

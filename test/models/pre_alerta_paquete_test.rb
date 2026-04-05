@@ -10,10 +10,20 @@ class PreAlertaPaqueteTest < ActiveSupport::TestCase
     assert pap.valid?
   end
 
-  test "requires tracking" do
+  test "tracking is optional (v4)" do
     pap = PreAlertaPaquete.new(pre_alerta: @pre_alerta, tracking: "")
-    assert_not pap.valid?
-    assert pap.errors[:tracking].any?
+    assert pap.valid?
+  end
+
+  test "nil tracking is allowed" do
+    pap = PreAlertaPaquete.new(pre_alerta: @pre_alerta, tracking: nil, descripcion: "Sin tracking")
+    assert pap.valid?
+  end
+
+  test "blank tracking does not violate uniqueness" do
+    PreAlertaPaquete.create!(pre_alerta: @pre_alerta, tracking: "", descripcion: "Uno")
+    pap2 = PreAlertaPaquete.new(pre_alerta: @pre_alerta, tracking: "", descripcion: "Dos")
+    assert pap2.valid?
   end
 
   test "requires pre_alerta" do
@@ -42,6 +52,27 @@ class PreAlertaPaqueteTest < ActiveSupport::TestCase
     pap = PreAlertaPaquete.new(pre_alerta: @pre_alerta, tracking: "OPTIONALTRACK")
     assert pap.valid?
     assert_nil pap.paquete_id
+  end
+
+  # v4: valor_declarado + peso
+  test "persists valor_declarado and peso with decimal precision" do
+    pap = PreAlertaPaquete.create!(
+      pre_alerta: @pre_alerta,
+      tracking: "VALTRACK001",
+      descripcion: "Con valor y peso",
+      valor_declarado: 123.45,
+      peso: 7.89
+    )
+    pap.reload
+    assert_equal BigDecimal("123.45"), pap.valor_declarado
+    assert_equal BigDecimal("7.89"), pap.peso
+  end
+
+  test "valor_declarado and peso are optional" do
+    pap = PreAlertaPaquete.new(pre_alerta: @pre_alerta, tracking: "NOEXTRA001")
+    assert pap.valid?
+    assert_nil pap.valor_declarado
+    assert_nil pap.peso
   end
 
   # Scopes

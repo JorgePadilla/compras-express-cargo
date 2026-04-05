@@ -2,8 +2,7 @@ class PreAlertaPaquete < ApplicationRecord
   belongs_to :pre_alerta
   belongs_to :paquete, optional: true
 
-  validates :tracking, presence: true
-  validates :tracking, uniqueness: { scope: :pre_alerta_id, case_sensitive: false }
+  validates :tracking, uniqueness: { scope: :pre_alerta_id, case_sensitive: false, allow_blank: true }
 
   scope :sin_vincular, -> { where(paquete_id: nil) }
   scope :vinculados, -> { where.not(paquete_id: nil) }

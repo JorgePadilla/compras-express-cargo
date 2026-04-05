@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_04_091042) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_04_214941) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -175,6 +175,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_04_091042) do
     t.date "fecha"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "valor_declarado", precision: 10, scale: 2
+    t.decimal "peso", precision: 10, scale: 2
     t.index ["paquete_id"], name: "index_pre_alerta_paquetes_on_paquete_id"
     t.index ["pre_alerta_id", "tracking"], name: "index_pre_alerta_paquetes_on_pre_alerta_id_and_tracking", unique: true
     t.index ["pre_alerta_id"], name: "index_pre_alerta_paquetes_on_pre_alerta_id"
@@ -229,6 +231,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_04_091042) do
     t.datetime "updated_at", null: false
     t.boolean "con_reempaque", default: false, null: false
     t.boolean "consolidable", default: false, null: false
+    t.decimal "precio_libra", precision: 10, scale: 2
+    t.string "modalidad"
+    t.string "sla"
+    t.integer "max_paquetes_por_accion"
   end
 
   create_table "users", force: :cascade do |t|

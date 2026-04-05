@@ -35,10 +35,10 @@
     <p class="text-xs text-gray-500">Opciones</p>
     <div class="flex gap-2 mt-1">
       <% if @pre_alerta.con_reempaque? %>
-        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 ring-1 ring-indigo-600/20">Reempaque</span>
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30">Reempaque</span>
       <% end %>
       <% if @pre_alerta.consolidado? %>
-        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 ring-1 ring-purple-600/20">Consolidado</span>
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cec-gold/10 text-cec-gold-dark ring-1 ring-cec-gold/30">Consolidado</span>
       <% end %>
       <% unless @pre_alerta.con_reempaque? || @pre_alerta.consolidado? %>
         <span class="text-sm text-gray-400">Ninguna</span>

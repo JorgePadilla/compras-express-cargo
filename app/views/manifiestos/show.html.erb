@@ -63,7 +63,7 @@ end %>
 <% if @manifiesto.creado? && @paquetes.any? %>
   <div class="mb-6">
     <%= link_to enviar_manifiesto_path(@manifiesto), method: :patch, data: { turbo_method: :patch, turbo_confirm: "Enviar manifiesto #{@manifiesto.numero} con #{@manifiesto.cantidad_paquetes} paquetes?" },
-        class: "inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors" do %>
+        class: "inline-flex items-center gap-2 px-6 py-3 bg-cec-teal text-white rounded-lg font-medium hover:bg-cec-teal-dark transition-colors" do %>
       <%= heroicon "paper-airplane", variant: :outline, options: { class: "w-5 h-5" } %>
       Enviar Manifiesto
     <% end %>
