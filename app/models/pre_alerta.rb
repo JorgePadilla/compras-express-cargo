@@ -29,7 +29,8 @@ class PreAlerta < ApplicationRecord
       attrs["tracking"].blank? &&
       attrs["descripcion"].blank? &&
       attrs["valor_declarado"].blank? &&
-      attrs["peso"].blank?
+      attrs["peso"].blank? &&
+      attrs["instrucciones"].blank?
     }
 
   scope :activas, -> { where(deleted_at: nil).where.not(estado: "anulado") }

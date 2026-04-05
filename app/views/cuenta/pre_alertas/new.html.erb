@@ -291,6 +291,17 @@
                              focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"><%= params[:descripcion] %></textarea>
           </label>
 
+          <%# Instrucciones %>
+          <label class="block">
+            <span class="block text-sm font-semibold text-cec-navy mb-1.5">
+              Instrucciones <span class="text-xs font-normal text-gray-500">(opcional)</span>
+            </span>
+            <textarea name="instrucciones" rows="2"
+                      placeholder="Instrucciones para el procesamiento del paquete..."
+                      class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
+                             focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"><%= params[:instrucciones] %></textarea>
+          </label>
+
           <%# Valor declarado + Peso en fila %>
           <div class="grid grid-cols-2 gap-4">
             <label class="block">

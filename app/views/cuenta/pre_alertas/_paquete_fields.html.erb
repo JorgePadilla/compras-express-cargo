@@ -19,6 +19,11 @@
                  focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
     </td>
     <td class="px-4 py-2">
+      <%= pf.text_field :instrucciones, placeholder: "Instrucciones",
+          class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
+                 focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+    </td>
+    <td class="px-4 py-2">
       <%= pf.number_field :valor_declarado, step: 0.01, min: 0, placeholder: "$",
           class: "block w-24 rounded-lg border border-gray-300 px-2 py-1.5 text-sm
                  focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>

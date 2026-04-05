@@ -78,7 +78,7 @@ module Cuenta
     def pre_alerta_params
       params.require(:pre_alerta).permit(
         :tipo_envio_id, :consolidado, :con_reempaque, :notas_grupo,
-        pre_alerta_paquetes_attributes: [:id, :tracking, :descripcion, :valor_declarado, :peso, :retener_miami, :fecha, :_destroy]
+        pre_alerta_paquetes_attributes: [:id, :tracking, :descripcion, :valor_declarado, :peso, :retener_miami, :fecha, :instrucciones, :_destroy]
       )
     end
 
@@ -130,7 +130,7 @@ module Cuenta
     end
 
     def paquete_attrs_from_params
-      params.permit(:tracking, :descripcion, :valor_declarado, :peso).to_h
+      params.permit(:tracking, :descripcion, :valor_declarado, :peso, :instrucciones).to_h
     end
   end
 end
