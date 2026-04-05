@@ -30,7 +30,7 @@
 
       <%# Icon %>
       <div class="flex items-center justify-center mb-8">
-        <div class="w-14 h-14 bg-cec-gold/10 rounded-2xl flex items-center justify-center">
+        <div class="w-14 h-14 bg-gradient-to-br from-cec-gold/20 to-cec-teal/10 rounded-2xl flex items-center justify-center shadow-lg shadow-cec-gold/10">
           <%= heroicon "key", variant: :solid, options: { class: "w-8 h-8 text-cec-gold" } %>
         </div>
       </div>
@@ -67,15 +67,15 @@
                 value: params[:email_address],
                 class: "block w-full rounded-xl border border-gray-300 pl-11 pr-4 py-3 text-sm
                        transition-all duration-200
-                       focus:border-cec-gold focus:ring-2 focus:ring-cec-gold/20 focus:outline-none
+                       focus:border-cec-teal focus:ring-2 focus:ring-cec-teal/20 focus:outline-none
                        placeholder:text-gray-400" %>
           </div>
         </div>
 
         <div>
           <button type="submit"
-                  class="w-full rounded-xl bg-cec-gold px-4 py-3 text-sm font-bold text-cec-navy-dark
-                         hover:bg-cec-gold-dark active:scale-[0.98] transition-all duration-200
+                  class="w-full rounded-xl btn-gold-gradient px-4 py-3 text-sm font-bold text-cec-navy-dark
+                         shadow-md shadow-cec-gold/25 active:scale-[0.98] transition-all duration-200
                          cursor-pointer flex items-center justify-center gap-2">
             Enviar instrucciones
           </button>

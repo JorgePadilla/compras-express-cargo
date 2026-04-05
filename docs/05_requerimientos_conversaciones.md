@@ -67,6 +67,54 @@ Sistema actual: `https://cec.rsahn.com/App/Home`
 
 ---
 
+## Flujo de Pre-Alerta v4.0 — Especificación Canónica
+
+> **Fuente:** [`docs/approved/pre_alerta_v4.docx`](approved/pre_alerta_v4.docx) · Abril 2026
+> **Estado:** Documento aprobado (fuente oficial archivada en el repo).
+> Esta sección es la **fuente de verdad** para tipos de envío, precios y reglas de pre-alerta.
+> Las secciones más abajo que describen el sistema legacy (`cec.rsahn.com`) permanecen como contexto histórico — ante cualquier conflicto, **prevalece v4**.
+
+### Servicios disponibles (v4)
+
+**Con reempaque unitario + opción a consolidar**
+
+| Código | Nombre | Modalidad | Precio/lb | SLA | Consolidable |
+|:------:|:------|:----------|:---------:|:---:|:------------:|
+| **EXPRESS** | Aéreo Express | Aéreo (sale viernes) | $8.00 | 3–7 días hábiles | Sí |
+| **CER**     | Aéreo estándar | Aéreo | $4.50 | 6–10 días hábiles | Sí |
+| **CEM**     | Marítimo | Marítimo | $2.50 | 14–17 días hábiles | Sí |
+
+**Sin reempaque — sin opción a consolidar**
+
+| Código | Nombre | Modalidad | Precio/lb | SLA | Regla |
+|:------:|:------|:----------|:---------:|:---:|:------|
+| **CKA** | Aéreo | Aéreo | $4.00 | 6–10 días hábiles | Máximo 1 paquete por acción |
+| **CKM** | Marítimo | Marítimo | $1.50 | 14–17 días hábiles | Máximo 1 paquete por acción |
+
+### Reglas del flujo (v4)
+
+- **Límite por acción (CKA/CKM):** solo permiten **1 paquete por acción** para evitar malos entendidos.
+- **Consolidación:** disponible en **EXPRESS, CER y CEM**. Permite elegir entre consolidar o solo reempacar sin consolidar. **Sin costo adicional.** Debe solicitarse **antes de que el paquete llegue a Honduras**.
+- **Tracking:** opcional en todos los servicios — puede omitirse al crear la pre-alerta y agregarse después.
+- **Notas del cliente:** se muestran automáticamente al crear la pre-alerta. (⚠️ bug activo en Miami del sistema legacy, pendiente de corrección en la implementación nueva.)
+- **Default:** paquetes sin tipo de envío asignado se procesan automáticamente como **CER**.
+
+### Implicaciones para la implementación
+
+> **Estado:** ✅ Implementado (Abril 2026). Código, seeds y wizard de pre-alerta del portal cliente alineados con v4.
+
+- [x] El seed de `TipoEnvio` refleja los 5 servicios canónicos (`EXPRESS`, `CER`, `CEM`, `CKA`, `CKM`) con sus precios, SLA y flags `con_reempaque` / `consolidable` / `max_paquetes_por_accion`.
+- [x] El wizard de Pre-Alerta permite consolidar en **EXPRESS** (el sistema legacy lo marcaba como "SIN CONSOLIDAR", obsoleto con v4).
+- [x] Validación: al crear una pre-alerta CKA o CKM, se rechaza si el payload contiene más de 1 paquete (`PreAlerta#respect_max_paquetes_por_accion`).
+- [x] Precio de CKM pasa de **$1.90/lb** (legacy) a **$1.50/lb** (v4).
+- [x] Tracking es opcional en `PreAlertaPaquete` (solo valida unicidad cuando está presente).
+- [x] Al crear una pre-alerta sin `tipo_envio_id`, se asigna CER automáticamente (`PreAlerta#assign_default_tipo_envio`).
+- [x] UI del wizard refleja el flujo del diagrama v4: **Servicio → Consolidación → Datos del paquete** (se eliminó el orden invertido previo de reempaque/consolidar/servicio).
+- [x] `pre_alerta_paquetes` tiene `valor_declarado` y `peso` (opcionales, `decimal(10,2)`) capturables en el wizard y en la edición.
+- [x] Aviso inline en rojo "1 paquete por acción" al seleccionar CKA/CKM en el paso 1 del wizard.
+
+---
+
 ## Conversación 1: Pre-alertas y Mejoras al Sistema Actual
 
 ### 1. Sistema de Tareas para Paquetes
@@ -260,11 +308,19 @@ Pre-alerta → Recepción Miami → Pre-factura → Factura → Pago → Entrega
 - Radio: Sí, consolidar varios paquetes en uno solo / No, manejar los paquetes de forma independiente
 
 **Paso 3:** Seleccione el tipo de envío (opciones dinámicas según pasos anteriores)
+- CON REEMPAQUE + CONSOLIDAR:
+  - EXPRESS - AEREO EXPRESS CON REEMPAQUE CONSOLIDADO (v4: EXPRESS es consolidable)
+  - CER - AEREO CON REEMPAQUE CONSOLIDADO
+  - CEM - MARITIMO CON REEMPAQUE CONSOLIDADO
 - CON REEMPAQUE + SIN CONSOLIDAR:
+  - EXPRESS - AEREO EXPRESS CON REEMPAQUE SIN CONSOLIDAR
   - CER - AEREO CON REEMPAQUE SIN CONSOLIDAR
   - CEM - MARITIMO CON REEMPAQUE SIN CONSOLIDAR
-  - EXP - AEREO EXPRESS SIN CONSOLIDAR
-- (Otras combinaciones generan opciones diferentes: CKA, CKM, etc.)
+- SIN REEMPAQUE:
+  - CKA - AEREO (máximo 1 paquete por acción)
+  - CKM - MARITIMO (máximo 1 paquete por acción)
+
+> **v4:** El sistema legacy marcaba `EXP - AEREO EXPRESS SIN CONSOLIDAR` como única opción. En v4, EXPRESS admite consolidación (sin costo adicional). Ver sección canónica v4 al inicio del documento.
 
 **Botón:** Agregar detalles del paquete (F6)
 
@@ -299,13 +355,15 @@ Pre-alerta → Recepción Miami → Pre-factura → Factura → Pago → Entrega
 
 ### Tipos de Envío (T.E.) Identificados
 
+> ⚠️ **Obsoleto en la parte del código legacy "EXP".** Ver [Flujo de Pre-Alerta v4.0](#flujo-de-pre-alerta-v40--especificación-canónica) — el código canónico es `EXPRESS`, no `EXP`.
+
 | Código | Significado |
 |--------|------------|
 | CER | Carga Express Aéreo (con reempaque) |
 | CEM | Carga Express Marítimo (con reempaque) |
 | CKA | Carga Kilo Aéreo (sin reempaque) |
 | CKM | Carga Kilo Marítimo (sin reempaque) |
-| EXP | Express (aéreo rápido) |
+| EXP *(legacy)* | Express (aéreo rápido) — renombrado a **EXPRESS** en v4 |
 
 ### Estados de Paquete Identificados
 - PRE-ALERTA
@@ -349,13 +407,16 @@ Pre-alerta → Recepción Miami → Pre-factura → Factura → Pago → Entrega
 - Muestra "Sin datos para mostrar" cuando vacío
 
 #### 6. Calculadora de Costos (`/MiCuenta/Paquetes/Calculadora/`)
+
+> *Captura del sistema legacy. Para la implementación nueva, usar los códigos canónicos v4 (ver sección al inicio del documento): el dropdown debe listar `EXPRESS` en lugar de `EXP`.*
+
 - **Tipo de Envío** (dropdown):
-  - Sin Definir (default)
+  - Sin Definir (default, en v4 se asigna **CER** automáticamente)
   - CKA - AEREO SIN REEMPAQUE (value=1)
   - CER - AEREO CON REEMPAQUE (value=2)
   - CKM - MARITIMO SIN REEMPAQUE (value=3)
   - CEM - MARITIMO CON REEMPAQUE (value=4)
-  - EXP - AEREO EXPRESS (value=5)
+  - EXP - AEREO EXPRESS (value=5) *(legacy · v4: `EXPRESS`)*
 - **Peso (libras):** input numérico
 - **Alto (pulgadas):** input numérico
 - **Largo (pulgadas):** input numérico
@@ -378,14 +439,16 @@ Muestra direcciones de envío en Miami por tipo, cada una con pricing:
 **CKA - AÉREO SIN REEMPAQUE NI CONSOLIDADO:**
 - $4.00 por libra o tamaño + ISV
 - 6 a 10 días hábiles
+- Máximo 1 paquete por acción (v4)
 - Cobro mínimo SPS: L200.00, Tegucigalpa: L200.00 (ISV incluido)
 - LÍNEA 2: AEREO CKA
 
-**EXP - AÉREO EXPRESS:**
+**EXPRESS - AÉREO EXPRESS:** *(legacy: `EXP`)*
 - $8.00 por libra o tamaño + ISV
 - 3 a 7 días hábiles
 - Cobro mínimo SPS y Tegucigalpa: $14.95 ISV incluido
 - Vuela una vez a la semana los viernes a las 10:00 AM
+- v4: admite consolidación sin costo adicional
 - LÍNEA 2: EXPRESS
 
 **CEM - MARÍTIMO CON REEMPAQUE Y OPCIÓN A CONSOLIDAR:**
@@ -395,8 +458,9 @@ Muestra direcciones de envío en Miami por tipo, cada una con pricing:
 - LÍNEA 2: REEMPAQUE MARITIMO
 
 **CKM - MARÍTIMO SIN REEMPAQUE NI CONSOLIDADO:**
-- SPS: $1.90 por libra o tamaño + ISV
+- ~~SPS: $1.90 por libra~~ · **v4: $1.50 por libra** o tamaño + ISV
 - 14 a 17 días hábiles
+- Máximo 1 paquete por acción (v4)
 - Mínimo 20 libras
 - LÍNEA 2: MARITIMO CKM
 
@@ -580,7 +644,7 @@ Formulario de etiquetado/digitación de paquetes en Miami.
 - **Volumen:** 12,413+ registros, paginado
 
 #### A6. Logistica > Manifiestos (`/Logistica/Manifiestos`)
-- **Tabla columnas:** Fecha, No. Manifiesto, Trackings, Carrier (PRONTO CARGO, SERCARGO, GENESIS), Estado (ENVIADO, ADUANA), Tipo (AEREO, AEREO EXPRESS, CKM MARITIMO, CKA ESTANDARD), Cantidades, Pesos, Montos
+- **Tabla columnas:** Fecha, No. Manifiesto, Trackings, Carrier (PRONTO CARGO, SERCARGO, GENESIS), Estado (ENVIADO, ADUANA), Tipo *(legacy muestra `AEREO, AEREO EXPRESS, CKM MARITIMO, CKA ESTANDARD` — v4: `EXPRESS, CER, CEM, CKA, CKM`)*, Cantidades, Pesos, Montos
 
 #### A7. Logistica > Paquetes (`/Logistica/Paquetes/`)
 Vista con filtros avanzados:

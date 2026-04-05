@@ -11,7 +11,79 @@
 
 ---
 
-## Paleta de Colores
+## Paleta de Colores — Navy · Gold · Teal (autoritativa, Abril 2026)
+
+> La paleta vigente del Portal Rails (cliente y admin) es **Navy · Gold · Teal**
+> más neutrales slate, rojo (errores) y amber (notas). Cualquier tono fuera de
+> esta lista está prohibido en `app/views/` y `app/components/` — ver
+> `test/lint/banned_colors_test.rb`.
+
+### Tokens de marca
+
+| Rol | Token Tailwind | Hex | Uso |
+|---|---|---|---|
+| **Primary chrome** | `cec-navy` / `cec-navy-dark` / `cec-navy-light` | `#1B2559` / `#111C44` / `#2D3A7B` | Sidebar, headers, texto primario, estados info |
+| **Accent / CTA** | `cec-gold` / `cec-gold-dark` / `cec-gold-light` | `#FFB547` / `#E69E2E` / `#FFCA6E` | Botones submit, stepper activo, warnings, selecciones foco |
+| **Secondary accent** | `cec-teal` / `cec-teal-dark` / `cec-teal-light` | `#00B4D8` / `#0096C7` / `#48CAE4` | Botones secundarios, estados éxito, stepper completado |
+| **Neutral** | `slate-*` (Tailwind) | — | Bordes, fondos recessed, texto inactivo |
+| **Danger** | `red-*` + `cec-danger` | `#EF4444` | Errores, acciones destructivas, límite CKA/CKM |
+| **Warning / notes** | `amber-*` (Tailwind) | — | Tarjeta "Notas de tu cuenta" y paneles informativos discretos |
+
+Los aliases semánticos `cec-success`, `cec-info`, `cec-warning` son atajos que
+apuntan respectivamente a `cec-teal`, `cec-navy`, `cec-gold` (ver
+`app/assets/tailwind/application.css`).
+
+### Chips de estado — 5 familias semánticas
+
+`StatusBadgeComponent` colapsa todos los estados logísticos a 5 cubetas. La
+etiqueta (texto humanizado) distingue los sub-estados; el color comunica la
+categoría.
+
+| Familia | Clase | Estados |
+|---|---|---|
+| **Success** (teal) | `bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30` | `activo`, `disponible`, `listo_entrega`, `entregado`, `pagado`, `facturado` |
+| **Info** (navy) | `bg-cec-navy/5 text-cec-navy ring-1 ring-cec-navy/20` | `en_proceso`, `en_miami`, `en_transito`, `en_bodega`, `en_bodega_hn`, `recibido`, `etiquetado`, `en_manifiesto`, `enviado`, `pre_facturado`, `creado` |
+| **Warning** (gold) | `bg-cec-gold/10 text-cec-gold-dark ring-1 ring-cec-gold/30` | `pendiente`, `pre_alerta`, `retenido`, `en_aduana` |
+| **Danger** (red) | `bg-red-50 text-red-700 ring-1 ring-red-600/20` | `anulado`, `extraviado`, `devuelto` |
+| **Neutral** (slate) | `bg-slate-100 text-slate-600 ring-1 ring-slate-500/20` | `inactivo` + fallback por defecto |
+
+### Opciones de pre-alerta
+
+| Opción | Clase | Razón |
+|---|---|---|
+| **Reempaque** | `bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30` | Opción operativa → teal frío |
+| **Consolidado** | `bg-cec-gold/10 text-cec-gold-dark ring-1 ring-cec-gold/30` | Opción premium → oro cálido |
+| **Notificado / Vinculado** | `bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30` | Confirmación de sistema → éxito teal |
+
+### Tonos prohibidos
+
+Las siguientes familias de Tailwind están **prohibidas** en `app/views/` y
+`app/components/`:
+
+```
+emerald · green · lime · sky · cyan · indigo · violet ·
+purple · fuchsia · pink · rose · orange · yellow
+```
+
+El test `test/lint/banned_colors_test.rb` falla si alguna de ellas reaparece.
+
+### Gradientes permitidos
+
+Sólo dos gradientes decorativos están autorizados a nivel global:
+
+- `.sidebar-gradient` — `cec-navy → cec-navy-dark` (chrome del sidebar)
+- `.btn-gold-gradient` — `cec-gold → cec-gold-dark` (tratamiento de CTA primario)
+
+Gradientes ad-hoc como `from-emerald-*`, `from-gray-500 to-gray-600` o
+`from-white to-gray-50` decorativos fueron removidos y no deben reintroducirse.
+
+---
+
+## Paleta de Colores — Referencia histórica (sistema legacy)
+
+> La siguiente tabla documenta la paleta observada en el sistema ASP.NET
+> previo y sólo se mantiene como referencia histórica. **No usar estos tokens
+> en código nuevo** — usar la paleta Navy · Gold · Teal de la sección anterior.
 
 ### Colores Primarios (extraidos del sistema actual)
 

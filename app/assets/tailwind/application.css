@@ -1,19 +1,23 @@
 @import "tailwindcss";
+@import "./flatpickr.css";
 
 @theme {
   /* Brand colors */
-  --color-cec-navy: #262B40;
-  --color-cec-navy-light: #363B54;
-  --color-cec-navy-dark: #1A1E2E;
-  --color-cec-gold: #F5B759;
-  --color-cec-gold-light: #F8BD7A;
-  --color-cec-gold-dark: #E5A040;
+  --color-cec-navy: #1B2559;
+  --color-cec-navy-light: #2D3A7B;
+  --color-cec-navy-dark: #111C44;
+  --color-cec-gold: #FFB547;
+  --color-cec-gold-light: #FFCA6E;
+  --color-cec-gold-dark: #E69E2E;
+  --color-cec-teal: #00B4D8;
+  --color-cec-teal-light: #48CAE4;
+  --color-cec-teal-dark: #0096C7;
 
-  /* Semantic colors */
-  --color-cec-success: #05A677;
-  --color-cec-danger: #FA5252;
-  --color-cec-warning: #FCC419;
-  --color-cec-info: #339AF0;
+  /* Semantic colors (aliases pointing at brand tones — no new palette) */
+  --color-cec-success: var(--color-cec-teal);
+  --color-cec-danger: #EF4444;
+  --color-cec-warning: var(--color-cec-gold);
+  --color-cec-info: var(--color-cec-navy);
 
   /* Typography */
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -26,4 +30,25 @@
 @keyframes fade-in-up {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* Sidebar gradient */
+.sidebar-gradient {
+  background: linear-gradient(to bottom, var(--color-cec-navy), var(--color-cec-navy-dark));
+}
+
+/* Gold CTA gradient button */
+.btn-gold-gradient {
+  background: linear-gradient(135deg, var(--color-cec-gold), var(--color-cec-gold-dark));
+  transition: all 0.2s;
+}
+.btn-gold-gradient:hover {
+  background: linear-gradient(135deg, var(--color-cec-gold-light), var(--color-cec-gold));
+}
+
+/* Glass card */
+.glass-card {
+  background: rgb(255 255 255 / 0.8);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
 }

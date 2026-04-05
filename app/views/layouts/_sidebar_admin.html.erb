@@ -3,16 +3,16 @@
 
   <% if can_access?(:etiquetar) || can_access?(:manifiestos) || can_access?(:paquetes) %>
     <%= sidebar_section "Logistica" do %>
-      <%= sidebar_link "Etiquetar", "#", icon: "tag" if can_access?(:etiquetar) %>
-      <%= sidebar_link "Manifiestos", "#", icon: "cube" if can_access?(:manifiestos) %>
-      <%= sidebar_link "Todos los Paquetes", "#", icon: "archive-box" if can_access?(:paquetes) %>
+      <%= sidebar_link "Etiquetar", etiquetar_path, icon: "tag" if can_access?(:etiquetar) %>
+      <%= sidebar_link "Manifiestos", manifiestos_path, icon: "cube" if can_access?(:manifiestos) %>
+      <%= sidebar_link "Todos los Paquetes", paquetes_path, icon: "archive-box" if can_access?(:paquetes) %>
     <% end %>
   <% end %>
 
   <% if can_access?(:pre_facturas) || can_access?(:pre_alertas) || can_access?(:ventas) %>
     <%= sidebar_section "Caja" do %>
       <%= sidebar_link "Pre-Facturas", "#", icon: "document-text" if can_access?(:pre_facturas) %>
-      <%= sidebar_link "Pre-Alertas", "#", icon: "bell-alert" if can_access?(:pre_alertas) %>
+      <%= sidebar_link "Pre-Alertas", pre_alertas_path, icon: "bell-alert" if can_access?(:pre_alertas) %>
       <%= sidebar_link "Ventas", "#", icon: "currency-dollar" if can_access?(:ventas) %>
       <%= sidebar_link "Recibos", "#", icon: "receipt-percent" if can_access?(:recibos) %>
     <% end %>

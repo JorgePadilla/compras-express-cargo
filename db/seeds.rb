@@ -9,19 +9,29 @@ User.find_or_create_by!(email_address: "admin@comprasexpresscargo.com") do |u|
 end
 puts "  ✓ Admin user"
 
-# ── Tipos de envio ──
+# ── Tipos de envio (v4.0 — ver docs/approved/pre_alerta_v4.docx) ──
 [
-  { nombre: "AEREO", codigo: "aereo" },
-  { nombre: "AEREO EXPRESS", codigo: "aereo-express" },
-  { nombre: "CKM MARITIMO", codigo: "ckm-maritimo" },
-  { nombre: "CKA ESTANDARD", codigo: "cka-estandard" }
+  { nombre: "EXPRESS", codigo: "express", con_reempaque: true,  consolidable: true,
+    precio_libra: 8.00, modalidad: "aereo",    sla: "3-7 dias habiles",   max_paquetes_por_accion: nil },
+  { nombre: "CER",     codigo: "cer",     con_reempaque: true,  consolidable: true,
+    precio_libra: 4.50, modalidad: "aereo",    sla: "6-10 dias habiles",  max_paquetes_por_accion: nil },
+  { nombre: "CEM",     codigo: "cem",     con_reempaque: true,  consolidable: true,
+    precio_libra: 2.50, modalidad: "maritimo", sla: "14-17 dias habiles", max_paquetes_por_accion: nil },
+  { nombre: "CKA",     codigo: "cka",     con_reempaque: false, consolidable: false,
+    precio_libra: 4.00, modalidad: "aereo",    sla: "6-10 dias habiles",  max_paquetes_por_accion: 1 },
+  { nombre: "CKM",     codigo: "ckm",     con_reempaque: false, consolidable: false,
+    precio_libra: 1.50, modalidad: "maritimo", sla: "14-17 dias habiles", max_paquetes_por_accion: 1 }
 ].each do |attrs|
-  TipoEnvio.find_or_create_by!(nombre: attrs[:nombre]) do |t|
-    t.codigo = attrs[:codigo]
-    t.activo = true
-  end
+  te = TipoEnvio.find_or_initialize_by(codigo: attrs[:codigo])
+  te.assign_attributes(attrs)
+  te.activo = true
+  te.save!
 end
-puts "  ✓ #{TipoEnvio.count} tipos de envio"
+
+# Deprecar legacy si existen (safety-net para staging)
+TipoEnvio.where(codigo: %w[aereo aereo-express ckm-maritimo cka-estandard]).update_all(activo: false)
+
+puts "  ✓ #{TipoEnvio.activos.count} tipos de envio v4"
 
 # ── Carriers ──
 [
@@ -75,7 +85,7 @@ puts "  ✓ #{Configuracion.count} configuraciones"
 
 # ── Sample data (dev/staging only) ──
 if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
-  # Demo users per role
+  # Demo users per role — always reset on re-seed so documented credentials work
   [
     { nombre: "Supervisor Miami", email: "supervisor@cec.com", rol: "supervisor_miami", ubicacion: "miami" },
     { nombre: "Digitador Miami", email: "digitador@cec.com", rol: "digitador_miami", ubicacion: "miami" },
@@ -84,12 +94,12 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
     { nombre: "SAC", email: "sac@cec.com", rol: "sac", ubicacion: "honduras" },
     { nombre: "Entrega", email: "entrega@cec.com", rol: "entrega_despacho", ubicacion: "honduras" }
   ].each do |attrs|
-    User.find_or_create_by!(email_address: attrs[:email]) do |u|
-      u.nombre = attrs[:nombre]
-      u.password = "Demo123!"
-      u.rol = attrs[:rol]
-      u.ubicacion = attrs[:ubicacion]
-    end
+    user = User.find_or_initialize_by(email_address: attrs[:email])
+    user.nombre = attrs[:nombre]
+    user.rol = attrs[:rol]
+    user.ubicacion = attrs[:ubicacion]
+    user.password = "Demo123!"
+    user.save!
   end
   puts "  ✓ #{User.count} users total (including demo)"
 
@@ -120,11 +130,139 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
     { nombre: "Carmen", apellido: "Santos", email: "carmen.s@hotmail.com",
       telefono: "91098765", ciudad: "Siguatepeque", departamento: "Comayagua", categoria_precio: vip }
   ].each do |attrs|
-    Cliente.find_or_create_by!(nombre: attrs[:nombre], apellido: attrs[:apellido]) do |c|
-      c.assign_attributes(attrs.except(:nombre, :apellido))
-    end
+    cliente = Cliente.find_or_initialize_by(nombre: attrs[:nombre], apellido: attrs[:apellido])
+    cliente.assign_attributes(attrs.except(:nombre, :apellido))
+    cliente.password = "Cliente123!"
+    cliente.save!
   end
+  # Safety net: any other client without a password gets the demo password
+  Cliente.where(password_digest: nil).find_each { |c| c.update!(password: "Cliente123!") }
   puts "  ✓ #{Cliente.count} clientes"
+
+  # Demo paquetes
+  digitador = User.find_by!(email_address: "digitador@cec.com")
+  aereo = TipoEnvio.find_by!(codigo: "cer")
+  maritimo = TipoEnvio.find_by!(codigo: "cem")
+  clientes = Cliente.all.to_a
+  carriers = %w[FedEx DHL UPS USPS Amazon]
+  proveedores = %w[Amazon eBay Shein Walmart Target Nike Zara]
+  estados = %w[recibido etiquetado etiquetado etiquetado etiquetado en_manifiesto enviado en_bodega_hn pre_facturado entregado]
+
+  20.times do |i|
+    tracking = "1Z999TEST#{(i + 1).to_s.rjust(6, '0')}"
+    next if Paquete.exists?(tracking: tracking)
+
+    estado = estados[i % estados.length]
+    peso = rand(1.0..50.0).round(2)
+    alto = rand(5.0..30.0).round(2)
+    largo = rand(5.0..40.0).round(2)
+    ancho = rand(5.0..30.0).round(2)
+
+    Paquete.create!(
+      tracking: tracking,
+      cliente: clientes[i % clientes.length],
+      tipo_envio: i.even? ? aereo : maritimo,
+      estado: estado,
+      peso: peso,
+      alto: alto, largo: largo, ancho: ancho,
+      cantidad_productos: rand(1..5),
+      cantidad_paquetes: 1,
+      descripcion: ["Ropa variada", "Zapatos Nike", "Electronica", "Suplementos", "Libros", "Juguetes", "Cosmeticos", "Accesorios"][i % 8],
+      proveedor: proveedores[i % proveedores.length],
+      expedido_por: carriers[i % carriers.length],
+      pre_alerta: i % 5 == 0,
+      pre_factura: i % 7 == 0,
+      solicito_cambio_servicio: i == 3,
+      retener_miami: i == 7,
+      user: digitador,
+      fecha_recibido_miami: rand(1..30).days.ago
+    )
+  end
+  puts "  ✓ #{Paquete.count} paquetes"
+
+  # Demo manifiestos
+  empresa = EmpresaManifiesto.find_by!(nombre: "PRONTO CARGO")
+
+  manifiesto_creado = Manifiesto.find_or_create_by!(numero: "MA-000001") do |m|
+    m.empresa_manifiesto = empresa
+    m.tipo_envio = "CER"
+    m.user = digitador
+  end
+
+  manifiesto_enviado = Manifiesto.find_or_create_by!(numero: "MA-000002") do |m|
+    m.empresa_manifiesto = empresa
+    m.tipo_envio = "CER"
+    m.estado = "enviado"
+    m.fecha_enviado = 3.days.ago
+    m.user = digitador
+  end
+
+  # Assign some packages to manifests
+  etiquetados = Paquete.where(estado: "etiquetado", manifiesto_id: nil).limit(3)
+  etiquetados.each do |p|
+    p.update!(manifiesto: manifiesto_creado, estado: "en_manifiesto")
+  end
+  manifiesto_creado.recalculate_totals!
+
+  enviados = Paquete.where(estado: "enviado", manifiesto_id: nil).limit(2)
+  enviados.each do |p|
+    p.update!(manifiesto: manifiesto_enviado)
+  end
+  manifiesto_enviado.recalculate_totals!
+
+  puts "  ✓ #{Manifiesto.count} manifiestos"
+
+  # Demo pre-alertas
+  juan = Cliente.find_by!(nombre: "Juan", apellido: "Perez")
+  maria = Cliente.find_by!(nombre: "Maria", apellido: "Lopez")
+
+  pa1 = PreAlerta.find_or_create_by!(numero_documento: "PA-000001") do |pa|
+    pa.cliente = juan
+    pa.tipo_envio = aereo
+    pa.con_reempaque = true
+    pa.consolidado = false
+    pa.creado_por_tipo = "cliente"
+    pa.creado_por_id = juan.id
+  end
+  PreAlertaPaquete.find_or_create_by!(pre_alerta: pa1, tracking: "1Z999DEMO000001") do |pap|
+    pap.descripcion = "Zapatos Nike Air Max"
+    pap.fecha = 2.days.ago.to_date
+  end
+  PreAlertaPaquete.find_or_create_by!(pre_alerta: pa1, tracking: "1Z999DEMO000002") do |pap|
+    pap.descripcion = "Ropa variada Amazon"
+    pap.retener_miami = true
+    pap.fecha = 1.day.ago.to_date
+  end
+
+  pa2 = PreAlerta.find_or_create_by!(numero_documento: "PA-000002") do |pa|
+    pa.cliente = maria
+    pa.tipo_envio = maritimo
+    pa.con_reempaque = false
+    pa.consolidado = true
+    pa.estado = "recibido"
+    pa.notificado = true
+    pa.creado_por_tipo = "cliente"
+    pa.creado_por_id = maria.id
+  end
+  PreAlertaPaquete.find_or_create_by!(pre_alerta: pa2, tracking: "9400DEMO000001") do |pap|
+    pap.descripcion = "Cosmeticos Sephora"
+    pap.fecha = 5.days.ago.to_date
+  end
+
+  pa3 = PreAlerta.find_or_create_by!(numero_documento: "PA-000003") do |pa|
+    pa.cliente = juan
+    pa.tipo_envio = aereo
+    pa.con_reempaque = false
+    pa.consolidado = false
+    pa.creado_por_tipo = "cliente"
+    pa.creado_por_id = juan.id
+  end
+  PreAlertaPaquete.find_or_create_by!(pre_alerta: pa3, tracking: "AMZN-DEMO-001") do |pap|
+    pap.descripcion = "Suplementos vitaminicos"
+    pap.fecha = Date.current
+  end
+
+  puts "  ✓ #{PreAlerta.count} pre-alertas"
 end
 
 puts "Seed completed!"

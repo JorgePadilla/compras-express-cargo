@@ -1,0 +1,11 @@
+<%= render PageHeaderComponent.new(title: "Editar Manifiesto", subtitle: @manifiesto.numero) do |header|
+  header.with_action do
+    render ButtonComponent.new(variant: :ghost, href: manifiesto_path(@manifiesto), icon: "arrow-left") do
+      "Volver"
+    end
+  end
+end %>
+
+<div class="bg-white rounded-lg shadow p-6">
+  <%= render "form", manifiesto: @manifiesto %>
+</div>

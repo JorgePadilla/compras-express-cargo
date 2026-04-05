@@ -1,0 +1,44 @@
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow">
+  <div class="flex items-start justify-between mb-3">
+    <div>
+      <p class="font-mono font-bold text-cec-navy text-sm"><%= pre_alerta.numero_documento %></p>
+      <p class="text-xs text-gray-500 mt-0.5"><%= pre_alerta.created_at.strftime("%d/%m/%Y") %></p>
+    </div>
+    <%= render StatusBadgeComponent.new(status: pre_alerta.estado) %>
+  </div>
+
+  <div class="flex items-center gap-2 mb-3">
+    <% if pre_alerta.con_reempaque? %>
+      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30">Reempaque</span>
+    <% end %>
+    <% if pre_alerta.consolidado? %>
+      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cec-gold/10 text-cec-gold-dark ring-1 ring-cec-gold/30">Consolidado</span>
+    <% end %>
+    <% if pre_alerta.notificado? %>
+      <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30">
+        <%= helpers.heroicon "check", variant: :mini, options: { class: "w-3 h-3 inline" } %>
+      </span>
+    <% end %>
+  </div>
+
+  <div class="flex items-center justify-between text-sm">
+    <div class="flex items-center gap-1 text-gray-500">
+      <%= helpers.heroicon "archive-box", variant: :outline, options: { class: "w-4 h-4" } %>
+      <span><%= pre_alerta.pre_alerta_paquetes.size %> paquete(s)</span>
+    </div>
+    <span class="text-xs text-gray-400"><%= pre_alerta.tipo_envio.nombre %></span>
+  </div>
+
+  <div class="mt-3 pt-3 border-t border-gray-100 flex gap-2">
+    <%= link_to helpers.cuenta_pre_alerta_path(pre_alerta),
+        class: "text-xs text-gray-500 hover:text-gray-700 font-medium" do %>
+      Ver detalle
+    <% end %>
+    <% unless pre_alerta.anulado? %>
+      <%= link_to helpers.edit_cuenta_pre_alerta_path(pre_alerta),
+          class: "text-xs text-cec-teal hover:text-cec-teal-dark font-medium" do %>
+        Editar
+      <% end %>
+    <% end %>
+  </div>
+</div>

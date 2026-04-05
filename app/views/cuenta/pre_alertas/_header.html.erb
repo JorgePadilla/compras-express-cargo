@@ -1,0 +1,14 @@
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+  <div>
+    <div class="flex items-center gap-3">
+      <h1 class="text-2xl font-bold text-gray-800">Pre-Alerta <%= pre_alerta.numero_documento %></h1>
+      <%= render StatusBadgeComponent.new(status: pre_alerta.estado) %>
+    </div>
+    <p class="text-sm text-gray-500 mt-1">
+      Creada el <%= l(pre_alerta.created_at, format: :short) rescue pre_alerta.created_at.strftime("%d/%m/%Y %H:%M") %>
+      <% if pre_alerta.notificado? %>
+        <span class="text-cec-teal-dark font-medium ml-2">Notificado</span>
+      <% end %>
+    </p>
+  </div>
+</div>

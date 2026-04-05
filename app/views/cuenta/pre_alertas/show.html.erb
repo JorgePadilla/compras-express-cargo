@@ -1,0 +1,97 @@
+<%= render PageHeaderComponent.new(title: "Pre-Alerta #{@pre_alerta.numero_documento}") do |header| %>
+  <% header.with_action do %>
+    <% unless @pre_alerta.anulado? %>
+      <%= render ButtonComponent.new(variant: :primary, icon: "pencil-square", href: edit_cuenta_pre_alerta_path(@pre_alerta)) do %>
+        Editar
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>
+
+<%# Status & info %>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+    <p class="text-xs text-gray-500 mb-1">Estado</p>
+    <%= render StatusBadgeComponent.new(status: @pre_alerta.estado) %>
+  </div>
+  <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+    <p class="text-xs text-gray-500 mb-1">Tipo Envio</p>
+    <p class="font-medium text-gray-800"><%= @pre_alerta.tipo_envio.nombre %></p>
+  </div>
+  <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+    <p class="text-xs text-gray-500 mb-1">Paquetes</p>
+    <p class="font-medium text-gray-800"><%= @pre_alerta.pre_alerta_paquetes.count %></p>
+  </div>
+  <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+    <p class="text-xs text-gray-500 mb-1">Creada</p>
+    <p class="font-medium text-gray-800"><%= @pre_alerta.created_at.strftime("%d/%m/%Y") %></p>
+  </div>
+</div>
+
+<%# Options %>
+<div class="flex gap-2 mb-6">
+  <% if @pre_alerta.con_reempaque? %>
+    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30">Reempaque</span>
+  <% end %>
+  <% if @pre_alerta.consolidado? %>
+    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-cec-gold/10 text-cec-gold-dark ring-1 ring-cec-gold/30">Consolidado</span>
+  <% end %>
+  <% if @pre_alerta.notificado? %>
+    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30">Notificado</span>
+  <% end %>
+</div>
+
+<%# Notas %>
+<% if @pre_alerta.notas_grupo.present? %>
+  <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-6">
+    <p class="text-xs text-gray-500 mb-1">Notas</p>
+    <p class="text-sm text-gray-700"><%= @pre_alerta.notas_grupo %></p>
+  </div>
+<% end %>
+
+<%# Paquetes %>
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+  <div class="px-4 py-3 border-b border-gray-100">
+    <h3 class="text-sm font-bold text-gray-800">Paquetes declarados</h3>
+  </div>
+  <% if @pre_alerta.pre_alerta_paquetes.any? %>
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tracking</th>
+          <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripcion</th>
+          <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Retener</th>
+          <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Vinculado</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        <% @pre_alerta.pre_alerta_paquetes.each do |pap| %>
+          <tr>
+            <td class="px-4 py-3 font-mono text-sm"><%= pap.tracking %></td>
+            <td class="px-4 py-3 text-sm text-gray-600"><%= pap.descripcion || "-" %></td>
+            <td class="px-4 py-3 text-center">
+              <% if pap.retener_miami? %>
+                <%= heroicon "check", variant: :mini, options: { class: "w-4 h-4 text-amber-600 inline" } %>
+              <% else %>
+                <span class="text-gray-300">-</span>
+              <% end %>
+            </td>
+            <td class="px-4 py-3 text-center">
+              <% if pap.paquete_id.present? %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30">
+                  Vinculado
+                </span>
+              <% else %>
+                <span class="text-xs text-gray-400">Pendiente</span>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% else %>
+    <div class="p-8 text-center text-sm text-gray-500">
+      No se han declarado paquetes en esta pre-alerta.
+    </div>
+  <% end %>
+</div>

@@ -1,0 +1,50 @@
+recibido:
+  tracking: "1Z999AA10123456784"
+  guia: "PQ-000001"
+  cliente: juan
+  estado: recibido
+  peso: 5.50
+  alto: 10.0
+  largo: 12.0
+  ancho: 8.0
+  peso_volumetrico: 5.78
+  peso_cobrar: 5.78
+  cantidad_productos: 1
+  cantidad_paquetes: 1
+  descripcion: "Zapatos Nike"
+  proveedor: "Amazon"
+  fecha_recibido_miami: <%= Time.current %>
+  user: digitador
+
+etiquetado:
+  tracking: "9400111899223033005282"
+  guia: "PQ-000002"
+  cliente: maria
+  tipo_envio: aereo
+  estado: etiquetado
+  peso: 3.20
+  alto: 6.0
+  largo: 8.0
+  ancho: 5.0
+  peso_volumetrico: 1.45
+  peso_cobrar: 3.20
+  cantidad_productos: 2
+  cantidad_paquetes: 1
+  descripcion: "Ropa variada"
+  proveedor: "Shein"
+  pre_alerta: true
+  fecha_recibido_miami: <%= Time.current %>
+  user: digitador
+
+entregado:
+  tracking: "RECYCLED-TRACK-001"
+  guia: "PQ-000003"
+  cliente: juan
+  estado: entregado
+  peso: 2.00
+  peso_cobrar: 2.00
+  cantidad_productos: 1
+  cantidad_paquetes: 1
+  descripcion: "Libro"
+  fecha_recibido_miami: <%= 30.days.ago %>
+  user: digitador

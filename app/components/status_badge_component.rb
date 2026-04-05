@@ -1,21 +1,31 @@
 class StatusBadgeComponent < ViewComponent::Base
+  # 5 semantic families — labels distinguish sub-states within each family.
+  SUCCESS = "bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30".freeze
+  INFO    = "bg-cec-navy/5  text-cec-navy      ring-1 ring-cec-navy/20".freeze
+  WARNING = "bg-cec-gold/10 text-cec-gold-dark ring-1 ring-cec-gold/30".freeze
+  DANGER  = "bg-red-50      text-red-700       ring-1 ring-red-600/20".freeze
+  NEUTRAL = "bg-slate-100   text-slate-600     ring-1 ring-slate-500/20".freeze
+
   COLORS = {
-    "activo" => "bg-green-100 text-green-800",
-    "inactivo" => "bg-gray-100 text-gray-800",
-    "pendiente" => "bg-yellow-100 text-yellow-800",
-    "en_proceso" => "bg-blue-100 text-blue-800",
-    "en_miami" => "bg-indigo-100 text-indigo-800",
-    "en_transito" => "bg-purple-100 text-purple-800",
-    "en_aduana" => "bg-orange-100 text-orange-800",
-    "en_bodega" => "bg-teal-100 text-teal-800",
-    "listo_entrega" => "bg-emerald-100 text-emerald-800",
-    "entregado" => "bg-green-100 text-green-800",
-    "facturado" => "bg-cyan-100 text-cyan-800",
-    "pagado" => "bg-green-100 text-green-700",
-    "anulado" => "bg-red-100 text-red-800",
-    "devuelto" => "bg-rose-100 text-rose-800",
-    "retenido" => "bg-amber-100 text-amber-800",
-    "extraviado" => "bg-red-100 text-red-700"
+    # Success — positive end-states
+    "activo" => SUCCESS, "disponible" => SUCCESS, "listo_entrega" => SUCCESS,
+    "entregado" => SUCCESS, "pagado" => SUCCESS, "facturado" => SUCCESS,
+
+    # Info — in-progress logistics states
+    "en_proceso" => INFO, "en_miami" => INFO, "en_transito" => INFO,
+    "en_bodega" => INFO,  "en_bodega_hn" => INFO, "recibido" => INFO,
+    "etiquetado" => INFO, "en_manifiesto" => INFO, "enviado" => INFO,
+    "pre_facturado" => INFO, "creado" => INFO,
+
+    # Warning — pending / held / awaiting action
+    "pendiente" => WARNING, "pre_alerta" => WARNING,
+    "retenido" => WARNING, "en_aduana" => WARNING,
+
+    # Danger
+    "anulado" => DANGER, "extraviado" => DANGER, "devuelto" => DANGER,
+
+    # Neutral
+    "inactivo" => NEUTRAL
   }.freeze
 
   def initialize(status:, label: nil)
@@ -31,6 +41,6 @@ class StatusBadgeComponent < ViewComponent::Base
   private
 
   def color_classes
-    COLORS[@status] || "bg-gray-100 text-gray-800"
+    COLORS[@status] || NEUTRAL
   end
 end

@@ -1,5 +1,13 @@
 class Cliente < ApplicationRecord
+  # validations: false because admins create clients without passwords;
+  # only clients who opt into portal access get a password set later.
+  has_secure_password validations: false
+  validates :password, length: { minimum: 8 }, if: -> { password.present? }
+
   belongs_to :categoria_precio, optional: true
+  has_many :paquetes, dependent: :restrict_with_error
+  has_many :cliente_sessions, dependent: :destroy
+  has_many :pre_alertas, dependent: :restrict_with_error
 
   validates :codigo, presence: true, uniqueness: { case_sensitive: false }
   validates :nombre, presence: true

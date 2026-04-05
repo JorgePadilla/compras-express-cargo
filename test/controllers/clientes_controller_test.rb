@@ -60,4 +60,33 @@ class ClientesControllerTest < ActionDispatch::IntegrationTest
     patch cliente_url(@cliente), params: { cliente: { nombre: "" } }
     assert_response :unprocessable_entity
   end
+
+  test "admin can access buscar" do
+    get buscar_clientes_url, params: { q: "CEC" }, as: :json
+    assert_response :success
+  end
+
+  test "digitador can access buscar" do
+    delete session_url
+    post session_url, params: { email_address: users(:digitador).email_address, password: "password123" }
+    get buscar_clientes_url, params: { q: "CEC" }, as: :json
+    assert_response :success
+  end
+
+  test "cajero can access buscar" do
+    delete session_url
+    post session_url, params: { email_address: users(:cajero).email_address, password: "password123" }
+    get buscar_clientes_url, params: { q: "CEC" }, as: :json
+    assert_response :success
+  end
+
+  test "buscar returns html-escaped data" do
+    get buscar_clientes_url, params: { q: "CEC" }, as: :json
+    assert_response :success
+    json = JSON.parse(response.body)
+    json.each do |c|
+      assert_not_includes c["nombre"].to_s, "<script"
+      assert_not_includes c["codigo"].to_s, "<script"
+    end
+  end
 end

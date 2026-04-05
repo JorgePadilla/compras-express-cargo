@@ -1,0 +1,169 @@
+<%= render PageHeaderComponent.new(title: @paquete.guia, subtitle: "Paquete") do |header|
+  header.with_action do
+    render ButtonComponent.new(variant: :secondary, href: edit_paquete_path(@paquete), icon: "pencil-square") do
+      "Editar"
+    end
+  end
+  header.with_action do
+    render ButtonComponent.new(variant: :secondary, href: label_paquete_path(@paquete), icon: "printer", target: "_blank") do
+      "Imprimir"
+    end
+  end
+  header.with_action do
+    render ButtonComponent.new(variant: :ghost, href: paquetes_path, icon: "arrow-left") do
+      "Volver"
+    end
+  end
+end %>
+
+<div class="bg-white rounded-lg shadow overflow-hidden">
+  <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+    <h2 class="text-lg font-semibold text-gray-800">Detalles del Paquete</h2>
+    <%= render StatusBadgeComponent.new(status: @paquete.estado) %>
+  </div>
+
+  <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Guia</dt>
+      <dd class="mt-1 text-sm font-mono font-medium text-cec-navy"><%= @paquete.guia %></dd>
+    </div>
+    <div class="md:col-span-2">
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Tracking</dt>
+      <dd class="mt-1 text-sm font-mono text-gray-900"><%= @paquete.tracking %></dd>
+    </div>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</dt>
+      <dd class="mt-1 text-sm text-gray-900">
+        <%= link_to @paquete.cliente.codigo, @paquete.cliente, class: "font-mono text-cec-navy hover:underline" %>
+        — <%= @paquete.cliente.nombre_completo %>
+      </dd>
+    </div>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo de Envio</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @paquete.tipo_envio&.nombre || "—" %></dd>
+    </div>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Carrier</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @paquete.expedido_por.presence || "—" %></dd>
+    </div>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @paquete.proveedor.presence || "—" %></dd>
+    </div>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Remitente</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @paquete.remitente.presence || "—" %></dd>
+    </div>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Manifiesto</dt>
+      <dd class="mt-1 text-sm text-gray-900">
+        <% if @paquete.manifiesto %>
+          <%= link_to @paquete.manifiesto.numero, @paquete.manifiesto, class: "font-mono text-cec-navy hover:underline" %>
+        <% else %>
+          —
+        <% end %>
+      </dd>
+    </div>
+
+    <%# Weights and dimensions %>
+    <div class="md:col-span-3 border-t border-gray-200 pt-4 mt-2">
+      <h3 class="text-sm font-semibold text-gray-700 mb-3">Peso y Dimensiones</h3>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div>
+          <dt class="text-xs font-medium text-gray-500 uppercase">Peso</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= @paquete.peso || "—" %> lbs</dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium text-gray-500 uppercase">Dimensiones (A x L x An)</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= [@paquete.alto, @paquete.largo, @paquete.ancho].compact.join(" x ").presence || "—" %></dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium text-gray-500 uppercase">Peso Volumetrico</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= @paquete.peso_volumetrico || "—" %> lbs</dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium text-gray-500 uppercase">Peso a Cobrar</dt>
+          <dd class="mt-1 text-sm font-semibold text-gray-900"><%= @paquete.peso_cobrar || "—" %> lbs</dd>
+        </div>
+      </div>
+    </div>
+
+    <%# Quantities %>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cant. Productos</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @paquete.cantidad_productos || "—" %></dd>
+    </div>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cant. Paquetes</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @paquete.cantidad_paquetes || "—" %></dd>
+    </div>
+    <% if @paquete.numero_caja.present? %>
+      <div>
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Caja Numero</dt>
+        <dd class="mt-1 text-sm text-gray-900"><%= @paquete.numero_caja %></dd>
+      </div>
+    <% end %>
+
+    <%# Description %>
+    <% if @paquete.descripcion.present? %>
+      <div class="md:col-span-3">
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Descripcion</dt>
+        <dd class="mt-1 text-sm text-gray-900"><%= @paquete.descripcion %></dd>
+      </div>
+    <% end %>
+
+    <%# Flags %>
+    <div class="md:col-span-3 border-t border-gray-200 pt-4 mt-2">
+      <h3 class="text-sm font-semibold text-gray-700 mb-3">Marcas</h3>
+      <div class="flex flex-wrap gap-3">
+        <span class="inline-flex items-center gap-1 text-sm <%= @paquete.pre_alerta? ? 'text-cec-teal-dark' : 'text-gray-400' %>">
+          <%= heroicon(@paquete.pre_alerta? ? "check-circle" : "x-circle", variant: :outline, options: { class: "w-4 h-4" }) %>
+          Pre-Alerta
+        </span>
+        <span class="inline-flex items-center gap-1 text-sm <%= @paquete.pre_factura? ? 'text-blue-700' : 'text-gray-400' %>">
+          <%= heroicon(@paquete.pre_factura? ? "check-circle" : "x-circle", variant: :outline, options: { class: "w-4 h-4" }) %>
+          Pre-Factura
+        </span>
+        <span class="inline-flex items-center gap-1 text-sm <%= @paquete.solicito_cambio_servicio? ? 'text-amber-700' : 'text-gray-400' %>">
+          <%= heroicon(@paquete.solicito_cambio_servicio? ? "check-circle" : "x-circle", variant: :outline, options: { class: "w-4 h-4" }) %>
+          Cambio Servicio
+        </span>
+        <span class="inline-flex items-center gap-1 text-sm <%= @paquete.retener_miami? ? 'text-amber-700' : 'text-gray-400' %>">
+          <%= heroicon(@paquete.retener_miami? ? "check-circle" : "x-circle", variant: :outline, options: { class: "w-4 h-4" }) %>
+          Retener Miami
+        </span>
+      </div>
+    </div>
+
+    <%# Notes %>
+    <% if @paquete.notas_internas.present? %>
+      <div class="md:col-span-3">
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Notas Internas</dt>
+        <dd class="mt-1 text-sm text-gray-900 bg-gray-50 rounded-lg p-3"><%= simple_format(@paquete.notas_internas) %></dd>
+      </div>
+    <% end %>
+
+    <%# Dates %>
+    <div class="md:col-span-3 border-t border-gray-200 pt-4 mt-2">
+      <h3 class="text-sm font-semibold text-gray-700 mb-3">Fechas</h3>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div>
+          <dt class="text-xs font-medium text-gray-500 uppercase">Recibido Miami</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= @paquete.fecha_recibido_miami&.strftime("%d/%m/%Y %H:%M") || "—" %></dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium text-gray-500 uppercase">Enviado</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= @paquete.fecha_enviado&.strftime("%d/%m/%Y %H:%M") || "—" %></dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium text-gray-500 uppercase">Llegada HN</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= @paquete.fecha_llegada_hn&.strftime("%d/%m/%Y %H:%M") || "—" %></dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium text-gray-500 uppercase">Registrado</dt>
+          <dd class="mt-1 text-sm text-gray-900"><%= @paquete.created_at.strftime("%d/%m/%Y %H:%M") %></dd>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
