@@ -101,12 +101,17 @@ Sistema actual: `https://cec.rsahn.com/App/Home`
 
 ### Implicaciones para la implementación
 
-- El seed de `TipoEnvio` debe reflejar los 5 servicios canónicos (`EXPRESS`, `CER`, `CEM`, `CKA`, `CKM`) con sus precios, SLA y flags `con_reempaque` / `consolidable`.
-- El wizard de Pre-Alerta debe permitir consolidar en **EXPRESS** (el sistema legacy lo marcaba como "SIN CONSOLIDAR", esto queda obsoleto con v4).
-- Validación: al crear una pre-alerta CKA o CKM, rechazar si el payload contiene más de 1 paquete (devolver error claro al usuario).
-- Precio de CKM pasa de **$1.90/lb** (legacy) a **$1.50/lb** (v4) — actualizar categorías de precio y calculadora.
-- Tracking debe ser `optional: true` en el modelo `PreAlertaPaquete` y validaciones relacionadas.
-- Al crear una pre-alerta sin `tipo_envio_id`, asignar CER automáticamente en el controller/model.
+> **Estado:** ✅ Implementado (Abril 2026). Código, seeds y wizard de pre-alerta del portal cliente alineados con v4.
+
+- [x] El seed de `TipoEnvio` refleja los 5 servicios canónicos (`EXPRESS`, `CER`, `CEM`, `CKA`, `CKM`) con sus precios, SLA y flags `con_reempaque` / `consolidable` / `max_paquetes_por_accion`.
+- [x] El wizard de Pre-Alerta permite consolidar en **EXPRESS** (el sistema legacy lo marcaba como "SIN CONSOLIDAR", obsoleto con v4).
+- [x] Validación: al crear una pre-alerta CKA o CKM, se rechaza si el payload contiene más de 1 paquete (`PreAlerta#respect_max_paquetes_por_accion`).
+- [x] Precio de CKM pasa de **$1.90/lb** (legacy) a **$1.50/lb** (v4).
+- [x] Tracking es opcional en `PreAlertaPaquete` (solo valida unicidad cuando está presente).
+- [x] Al crear una pre-alerta sin `tipo_envio_id`, se asigna CER automáticamente (`PreAlerta#assign_default_tipo_envio`).
+- [x] UI del wizard refleja el flujo del diagrama v4: **Servicio → Consolidación → Datos del paquete** (se eliminó el orden invertido previo de reempaque/consolidar/servicio).
+- [x] `pre_alerta_paquetes` tiene `valor_declarado` y `peso` (opcionales, `decimal(10,2)`) capturables en el wizard y en la edición.
+- [x] Aviso inline en rojo "1 paquete por acción" al seleccionar CKA/CKM en el paso 1 del wizard.
 
 ---
 

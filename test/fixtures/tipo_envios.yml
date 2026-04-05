@@ -1,13 +1,72 @@
-aereo:
-  nombre: AEREO
-  codigo: aereo
+express:
+  nombre: EXPRESS
+  codigo: express
   activo: true
   con_reempaque: true
   consolidable: true
+  precio_libra: 8.00
+  modalidad: aereo
+  sla: 3-7 dias habiles
 
-maritimo:
-  nombre: CKM MARITIMO
-  codigo: ckm-maritimo
+cer:
+  nombre: CER
+  codigo: cer
+  activo: true
+  con_reempaque: true
+  consolidable: true
+  precio_libra: 4.50
+  modalidad: aereo
+  sla: 6-10 dias habiles
+
+cem:
+  nombre: CEM
+  codigo: cem
+  activo: true
+  con_reempaque: true
+  consolidable: true
+  precio_libra: 2.50
+  modalidad: maritimo
+  sla: 14-17 dias habiles
+
+cka:
+  nombre: CKA
+  codigo: cka
   activo: true
   con_reempaque: false
   consolidable: false
+  precio_libra: 4.00
+  modalidad: aereo
+  sla: 6-10 dias habiles
+  max_paquetes_por_accion: 1
+
+ckm:
+  nombre: CKM
+  codigo: ckm
+  activo: true
+  con_reempaque: false
+  consolidable: false
+  precio_libra: 1.50
+  modalidad: maritimo
+  sla: 14-17 dias habiles
+  max_paquetes_por_accion: 1
+
+# Backwards-compat aliases for existing tests that reference :aereo / :maritimo
+aereo:
+  nombre: CER Legacy
+  codigo: cer-legacy
+  activo: true
+  con_reempaque: true
+  consolidable: true
+  precio_libra: 4.50
+  modalidad: aereo
+  sla: 6-10 dias habiles
+
+maritimo:
+  nombre: CEM Legacy
+  codigo: cem-legacy
+  activo: true
+  con_reempaque: true
+  consolidable: true
+  precio_libra: 2.50
+  modalidad: maritimo
+  sla: 14-17 dias habiles

@@ -19,6 +19,8 @@ class PreAlertaTest < ActiveSupport::TestCase
   end
 
   test "requires tipo_envio" do
+    # When no CER exists, PreAlerta without tipo_envio is invalid.
+    TipoEnvio.where(codigo: "cer").destroy_all
     pa = PreAlerta.new(cliente: @cliente)
     assert_not pa.valid?
     assert pa.errors[:tipo_envio].any?
@@ -147,17 +149,122 @@ class PreAlertaTest < ActiveSupport::TestCase
     assert_equal 2, pa.pre_alerta_paquetes.count
   end
 
-  test "rejects blank tracking in nested attributes" do
+  test "rejects fully blank rows in nested attributes" do
     pa = PreAlerta.create!(
       cliente: @cliente,
       tipo_envio: @tipo_envio,
       creado_por_tipo: "cliente",
       creado_por_id: @cliente.id,
       pre_alerta_paquetes_attributes: [
-        { tracking: "", descripcion: "Test" },
+        { tracking: "", descripcion: "" },
         { tracking: "TRACK001", descripcion: "Test2" }
       ]
     )
     assert_equal 1, pa.pre_alerta_paquetes.count
+  end
+
+  test "accepts description-only rows (tracking optional in v4)" do
+    pa = PreAlerta.create!(
+      cliente: @cliente,
+      tipo_envio: @tipo_envio,
+      creado_por_tipo: "cliente",
+      creado_por_id: @cliente.id,
+      pre_alerta_paquetes_attributes: [
+        { tracking: "", descripcion: "Paquete sin tracking" }
+      ]
+    )
+    assert_equal 1, pa.pre_alerta_paquetes.count
+  end
+
+  test "accepts rows with only peso (valor_declarado and peso keep rows alive)" do
+    pa = PreAlerta.create!(
+      cliente: @cliente,
+      tipo_envio: @tipo_envio,
+      creado_por_tipo: "cliente",
+      creado_por_id: @cliente.id,
+      pre_alerta_paquetes_attributes: [
+        { tracking: "", descripcion: "", peso: 3.25 }
+      ]
+    )
+    assert_equal 1, pa.pre_alerta_paquetes.count
+    assert_equal BigDecimal("3.25"), pa.pre_alerta_paquetes.first.peso
+  end
+
+  # ── v4: default tipo_envio ──
+  test "assigns default CER when tipo_envio is not provided" do
+    cer = tipo_envios(:cer)
+    pa = PreAlerta.new(cliente: @cliente, creado_por_tipo: "cliente", creado_por_id: @cliente.id)
+    assert pa.valid?
+    assert_equal cer, pa.tipo_envio
+  end
+
+  test "does not override explicitly set tipo_envio" do
+    express = tipo_envios(:express)
+    pa = PreAlerta.new(cliente: @cliente, tipo_envio: express, creado_por_tipo: "cliente", creado_por_id: @cliente.id)
+    assert pa.valid?
+    assert_equal express, pa.tipo_envio
+  end
+
+  # ── v4: max_paquetes_por_accion ──
+  test "CKA rejects more than 1 paquete" do
+    cka = tipo_envios(:cka)
+    pa = PreAlerta.new(
+      cliente: @cliente,
+      tipo_envio: cka,
+      creado_por_tipo: "cliente",
+      creado_por_id: @cliente.id,
+      pre_alerta_paquetes_attributes: [
+        { tracking: "CKA001", descripcion: "Paquete 1" },
+        { tracking: "CKA002", descripcion: "Paquete 2" }
+      ]
+    )
+    assert_not pa.valid?
+    assert pa.errors[:base].any? { |m| m.include?("CKA") && m.include?("1 paquete") }
+  end
+
+  test "CKM rejects more than 1 paquete" do
+    ckm = tipo_envios(:ckm)
+    pa = PreAlerta.new(
+      cliente: @cliente,
+      tipo_envio: ckm,
+      creado_por_tipo: "cliente",
+      creado_por_id: @cliente.id,
+      pre_alerta_paquetes_attributes: [
+        { tracking: "CKM001", descripcion: "Paquete 1" },
+        { tracking: "CKM002", descripcion: "Paquete 2" }
+      ]
+    )
+    assert_not pa.valid?
+    assert pa.errors[:base].any? { |m| m.include?("CKM") }
+  end
+
+  test "CKA accepts exactly 1 paquete" do
+    cka = tipo_envios(:cka)
+    pa = PreAlerta.new(
+      cliente: @cliente,
+      tipo_envio: cka,
+      creado_por_tipo: "cliente",
+      creado_por_id: @cliente.id,
+      pre_alerta_paquetes_attributes: [
+        { tracking: "CKA-SINGLE", descripcion: "Solo uno" }
+      ]
+    )
+    assert pa.valid?, "Expected CKA with 1 paquete to be valid, got: #{pa.errors.full_messages.join(', ')}"
+  end
+
+  test "CER (no limit) accepts multiple paquetes" do
+    cer = tipo_envios(:cer)
+    pa = PreAlerta.new(
+      cliente: @cliente,
+      tipo_envio: cer,
+      creado_por_tipo: "cliente",
+      creado_por_id: @cliente.id,
+      pre_alerta_paquetes_attributes: [
+        { tracking: "CER001", descripcion: "Uno" },
+        { tracking: "CER002", descripcion: "Dos" },
+        { tracking: "CER003", descripcion: "Tres" }
+      ]
+    )
+    assert pa.valid?
   end
 end

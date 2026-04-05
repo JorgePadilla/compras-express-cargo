@@ -19,7 +19,7 @@ module Cuenta
       @pre_alerta.consolidado = @wizard["consolidado"]
       @pre_alerta.tipo_envio_id = @wizard["tipo_envio_id"]
 
-      @tipo_envios = filtered_tipo_envios
+      @tipo_envios = TipoEnvio.activos.order(:nombre)
     end
 
     def create
@@ -78,23 +78,8 @@ module Cuenta
     def pre_alerta_params
       params.require(:pre_alerta).permit(
         :tipo_envio_id, :consolidado, :con_reempaque, :notas_grupo,
-        pre_alerta_paquetes_attributes: [:id, :tracking, :descripcion, :retener_miami, :fecha, :_destroy]
+        pre_alerta_paquetes_attributes: [:id, :tracking, :descripcion, :valor_declarado, :peso, :retener_miami, :fecha, :_destroy]
       )
-    end
-
-    def filtered_tipo_envios
-      scope = TipoEnvio.where(activo: true)
-      wizard = session[:pre_alerta_wizard] || {}
-
-      if wizard.key?("con_reempaque")
-        scope = scope.where(con_reempaque: wizard["con_reempaque"])
-      end
-
-      if wizard["consolidado"]
-        scope = scope.where(consolidable: true)
-      end
-
-      scope.order(:nombre)
     end
 
     def handle_wizard_step
@@ -102,38 +87,50 @@ module Cuenta
       step = params[:wizard_step].to_i
 
       case step
-      when 1
-        con_reempaque = params[:con_reempaque] == "1"
-        session[:pre_alerta_wizard]["con_reempaque"] = con_reempaque
+      when 1  # Servicio
+        tipo = TipoEnvio.activos.find_by(id: params[:tipo_envio_id])
+        return redirect_to(new_cuenta_pre_alerta_path(step: 1), alert: "Selecciona un servicio") unless tipo
 
-        if con_reempaque
+        session[:pre_alerta_wizard]["tipo_envio_id"] = tipo.id
+        session[:pre_alerta_wizard]["con_reempaque"] = tipo.con_reempaque
+
+        if tipo.consolidable
           redirect_to new_cuenta_pre_alerta_path(step: 2)
         else
-          # Sin reempaque types are not consolidable, skip step 2
+          # CKA/CKM are never consolidable — go straight to step 3
           session[:pre_alerta_wizard]["consolidado"] = false
           redirect_to new_cuenta_pre_alerta_path(step: 3)
         end
-      when 2
+
+      when 2  # Consolidación (only reached for EXPRESS/CER/CEM)
         session[:pre_alerta_wizard]["consolidado"] = params[:consolidado] == "1"
         redirect_to new_cuenta_pre_alerta_path(step: 3)
-      when 3
-        session[:pre_alerta_wizard]["tipo_envio_id"] = params[:tipo_envio_id]
+
+      when 3  # Datos del paquete → crear PreAlerta + primer paquete
+        wizard = session[:pre_alerta_wizard]
         @pre_alerta = current_cliente.pre_alertas.build(
-          con_reempaque: session[:pre_alerta_wizard]["con_reempaque"],
-          consolidado: session[:pre_alerta_wizard]["consolidado"],
-          tipo_envio_id: session[:pre_alerta_wizard]["tipo_envio_id"],
+          tipo_envio_id:   wizard["tipo_envio_id"],
+          con_reempaque:   wizard["con_reempaque"],
+          consolidado:     wizard["consolidado"],
           creado_por_tipo: "cliente",
-          creado_por_id: current_cliente.id
+          creado_por_id:   current_cliente.id,
+          pre_alerta_paquetes_attributes: [paquete_attrs_from_params]
         )
 
         if @pre_alerta.save
           session.delete(:pre_alerta_wizard)
-          redirect_to edit_cuenta_pre_alerta_path(@pre_alerta), notice: "Pre-alerta creada. Agrega tus paquetes."
+          redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
+                      notice: "¡Pre-alerta #{@pre_alerta.numero_documento} registrada! Puedes agregar más paquetes abajo."
         else
-          @tipo_envios = TipoEnvio.where(activo: true).order(:nombre)
+          @wizard = wizard
+          @tipo_envios = TipoEnvio.activos.order(:nombre)
           render :new, status: :unprocessable_entity
         end
       end
+    end
+
+    def paquete_attrs_from_params
+      params.permit(:tracking, :descripcion, :valor_declarado, :peso).to_h
     end
   end
 end

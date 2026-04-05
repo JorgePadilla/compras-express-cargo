@@ -116,7 +116,7 @@ end %>
     <div class="md:col-span-3 border-t border-gray-200 pt-4 mt-2">
       <h3 class="text-sm font-semibold text-gray-700 mb-3">Marcas</h3>
       <div class="flex flex-wrap gap-3">
-        <span class="inline-flex items-center gap-1 text-sm <%= @paquete.pre_alerta? ? 'text-green-700' : 'text-gray-400' %>">
+        <span class="inline-flex items-center gap-1 text-sm <%= @paquete.pre_alerta? ? 'text-cec-teal-dark' : 'text-gray-400' %>">
           <%= heroicon(@paquete.pre_alerta? ? "check-circle" : "x-circle", variant: :outline, options: { class: "w-4 h-4" }) %>
           Pre-Alerta
         </span>
@@ -124,7 +124,7 @@ end %>
           <%= heroicon(@paquete.pre_factura? ? "check-circle" : "x-circle", variant: :outline, options: { class: "w-4 h-4" }) %>
           Pre-Factura
         </span>
-        <span class="inline-flex items-center gap-1 text-sm <%= @paquete.solicito_cambio_servicio? ? 'text-yellow-700' : 'text-gray-400' %>">
+        <span class="inline-flex items-center gap-1 text-sm <%= @paquete.solicito_cambio_servicio? ? 'text-amber-700' : 'text-gray-400' %>">
           <%= heroicon(@paquete.solicito_cambio_servicio? ? "check-circle" : "x-circle", variant: :outline, options: { class: "w-4 h-4" }) %>
           Cambio Servicio
         </span>

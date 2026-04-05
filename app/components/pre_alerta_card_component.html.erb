@@ -9,13 +9,13 @@
 
   <div class="flex items-center gap-2 mb-3">
     <% if pre_alerta.con_reempaque? %>
-      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 ring-1 ring-indigo-600/20">Reempaque</span>
+      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30">Reempaque</span>
     <% end %>
     <% if pre_alerta.consolidado? %>
-      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 ring-1 ring-purple-600/20">Consolidado</span>
+      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cec-gold/10 text-cec-gold-dark ring-1 ring-cec-gold/30">Consolidado</span>
     <% end %>
     <% if pre_alerta.notificado? %>
-      <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20">
+      <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30">
         <%= helpers.heroicon "check", variant: :mini, options: { class: "w-3 h-3 inline" } %>
       </span>
     <% end %>

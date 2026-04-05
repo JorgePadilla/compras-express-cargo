@@ -22,9 +22,15 @@ class PreAlerta < ApplicationRecord
 
   validates :numero_documento, presence: true, uniqueness: { case_sensitive: false }
   validates :estado, presence: true
+  validate :respect_max_paquetes_por_accion
 
   accepts_nested_attributes_for :pre_alerta_paquetes, allow_destroy: true,
-    reject_if: ->(attrs) { attrs["tracking"].blank? }
+    reject_if: ->(attrs) {
+      attrs["tracking"].blank? &&
+      attrs["descripcion"].blank? &&
+      attrs["valor_declarado"].blank? &&
+      attrs["peso"].blank?
+    }
 
   scope :activas, -> { where(deleted_at: nil).where.not(estado: "anulado") }
   scope :buscar, ->(term) {
@@ -41,6 +47,7 @@ class PreAlerta < ApplicationRecord
   scope :solo_anulados, -> { where(estado: "anulado") }
   scope :soft_deleted, -> { where.not(deleted_at: nil) }
 
+  before_validation :assign_default_tipo_envio, on: :create
   before_validation :generate_numero_documento, on: :create, if: -> { numero_documento.blank? }
 
   def anular!
@@ -66,6 +73,18 @@ class PreAlerta < ApplicationRecord
   end
 
   private
+
+  def assign_default_tipo_envio
+    return if tipo_envio_id.present? || tipo_envio.present?
+    self.tipo_envio = TipoEnvio.activos.find_by(codigo: "cer")
+  end
+
+  def respect_max_paquetes_por_accion
+    return unless tipo_envio&.single_package?
+    active_paquetes = pre_alerta_paquetes.reject(&:marked_for_destruction?)
+    return if active_paquetes.size <= 1
+    errors.add(:base, "#{tipo_envio.nombre} solo permite 1 paquete por pre-alerta")
+  end
 
   def generate_numero_documento
     next_number = (self.class.where("numero_documento LIKE 'PA-%'")

@@ -7,7 +7,7 @@
     <p class="text-sm text-gray-500 mt-1">
       Creada el <%= l(pre_alerta.created_at, format: :short) rescue pre_alerta.created_at.strftime("%d/%m/%Y %H:%M") %>
       <% if pre_alerta.notificado? %>
-        <span class="text-emerald-600 font-medium ml-2">Notificado</span>
+        <span class="text-cec-teal-dark font-medium ml-2">Notificado</span>
       <% end %>
     </p>
   </div>
