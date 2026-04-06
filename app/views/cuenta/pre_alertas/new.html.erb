@@ -277,7 +277,7 @@
             <span class="block text-sm font-semibold text-cec-navy mb-1.5">
               ¿Tienes número de tracking? <span class="text-xs font-normal text-gray-500">(opcional)</span>
             </span>
-            <input type="text" name="tracking" value="<%= params[:tracking] %>"
+            <input type="text" name="tracking" value="<%= h(params[:tracking]) %>"
                    placeholder="Ej. 1Z999AA1..."
                    class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
                           focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
@@ -288,7 +288,7 @@
             <span class="block text-sm font-semibold text-cec-navy mb-1.5">Descripción</span>
             <textarea name="descripcion" rows="2" placeholder="¿Qué contiene el paquete?"
                       class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
-                             focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"><%= params[:descripcion] %></textarea>
+                             focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"><%= h(params[:descripcion]) %></textarea>
           </label>
 
           <%# Instrucciones %>
@@ -299,7 +299,7 @@
             <textarea name="instrucciones" rows="2"
                       placeholder="Instrucciones para el procesamiento del paquete..."
                       class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
-                             focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"><%= params[:instrucciones] %></textarea>
+                             focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"><%= h(params[:instrucciones]) %></textarea>
           </label>
 
           <%# Valor declarado + Peso en fila %>
@@ -308,7 +308,7 @@
               <span class="block text-sm font-semibold text-cec-navy mb-1.5">Valor declarado</span>
               <div class="relative">
                 <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
-                <input type="number" step="0.01" min="0" name="valor_declarado" value="<%= params[:valor_declarado] %>"
+                <input type="number" step="0.01" min="0" name="valor_declarado" value="<%= h(params[:valor_declarado]) %>"
                        placeholder="0.00"
                        class="block w-full rounded-lg border border-gray-300 pl-7 pr-3 py-2.5 text-sm
                               focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
@@ -317,7 +317,7 @@
             <label class="block">
               <span class="block text-sm font-semibold text-cec-navy mb-1.5">Peso</span>
               <div class="relative">
-                <input type="number" step="0.01" min="0" name="peso" value="<%= params[:peso] %>"
+                <input type="number" step="0.01" min="0" name="peso" value="<%= h(params[:peso]) %>"
                        placeholder="0.00"
                        class="block w-full rounded-lg border border-gray-300 px-3 pr-10 py-2.5 text-sm
                               focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
