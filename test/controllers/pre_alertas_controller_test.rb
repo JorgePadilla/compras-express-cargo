@@ -63,6 +63,21 @@ class PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to pre_alerta_path(pa)
   end
 
+  test "should create pre_alerta with instrucciones" do
+    assert_difference("PreAlerta.count") do
+      post pre_alertas_url, params: { pre_alerta: {
+        cliente_id: clientes(:juan).id,
+        tipo_envio_id: tipo_envios(:aereo).id,
+        pre_alerta_paquetes_attributes: {
+          "0" => { tracking: "ADMININSTR001", descripcion: "Test", instrucciones: "Fragil" }
+        }
+      } }
+    end
+
+    pap = PreAlerta.last.pre_alerta_paquetes.first
+    assert_equal "Fragil", pap.instrucciones
+  end
+
   test "should not create pre_alerta without cliente" do
     assert_no_difference("PreAlerta.count") do
       post pre_alertas_url, params: { pre_alerta: {
@@ -82,6 +97,19 @@ class PreAlertasControllerTest < ActionDispatch::IntegrationTest
     patch pre_alerta_url(@pre_alerta), params: { pre_alerta: { notas_grupo: "Updated notes" } }
     assert_redirected_to pre_alerta_path(@pre_alerta)
     assert_equal "Updated notes", @pre_alerta.reload.notas_grupo
+  end
+
+  test "should update paquete instrucciones" do
+    pap = pre_alerta_paquetes(:pap_sin_vincular)
+    patch pre_alerta_url(@pre_alerta), params: {
+      pre_alerta: {
+        pre_alerta_paquetes_attributes: {
+          "0" => { id: pap.id, instrucciones: "Consolidar con PA-000002" }
+        }
+      }
+    }
+    assert_redirected_to pre_alerta_path(@pre_alerta)
+    assert_equal "Consolidar con PA-000002", pap.reload.instrucciones
   end
 
   test "should update pre_alerta estado" do

@@ -126,6 +126,39 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_equal BigDecimal("2.0"), pa.pre_alerta_paquetes.first.peso
   end
 
+  test "wizard step 3 persists instrucciones field" do
+    post cuenta_pre_alertas_url, params: { wizard_step: 1, tipo_envio_id: tipo_envios(:cer).id }
+    post cuenta_pre_alertas_url, params: { wizard_step: 2, consolidado: "0" }
+
+    assert_difference("PreAlertaPaquete.count", 1) do
+      post cuenta_pre_alertas_url, params: {
+        wizard_step: 3,
+        tracking: "INSTRTEST001",
+        descripcion: "Con instrucciones",
+        instrucciones: "Combinar con otro paquete",
+        valor_declarado: "25.00",
+        peso: "1.5"
+      }
+    end
+
+    pap = PreAlertaPaquete.last
+    assert_equal "Combinar con otro paquete", pap.instrucciones
+  end
+
+  test "wizard step 3 save failure preserves instrucciones in re-render" do
+    TipoEnvio.where(codigo: "cer").destroy_all
+
+    post cuenta_pre_alertas_url, params: {
+      wizard_step: 3,
+      tracking: "FAILINSTR001",
+      descripcion: "Test",
+      instrucciones: "Manejar con cuidado"
+    }
+
+    assert_response :unprocessable_entity
+    assert_match "Manejar con cuidado", response.body
+  end
+
   # Edit
   test "should get edit" do
     get edit_cuenta_pre_alerta_url(@pre_alerta)
@@ -144,6 +177,19 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     }
     assert_redirected_to edit_cuenta_pre_alerta_url(@pre_alerta)
     assert_equal "Updated notes", @pre_alerta.reload.notas_grupo
+  end
+
+  test "should update paquete instrucciones" do
+    pap = pre_alerta_paquetes(:pap_sin_vincular)
+    patch cuenta_pre_alerta_url(@pre_alerta), params: {
+      pre_alerta: {
+        pre_alerta_paquetes_attributes: {
+          "0" => { id: pap.id, instrucciones: "No abrir" }
+        }
+      }
+    }
+    assert_redirected_to edit_cuenta_pre_alerta_url(@pre_alerta)
+    assert_equal "No abrir", pap.reload.instrucciones
   end
 
   test "should update via turbo_stream" do

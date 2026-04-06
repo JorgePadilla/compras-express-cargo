@@ -75,6 +75,7 @@
             <tr>
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tracking</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripcion</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Instrucciones</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Valor</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Peso</th>
               <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Retener</th>
@@ -106,6 +107,12 @@
                  placeholder="Descripcion"
                  class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
                         focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
+        </td>
+        <td class="px-4 py-2">
+          <textarea name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][instrucciones]"
+                    rows="2" placeholder="Instrucciones"
+                    class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
+                           focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"></textarea>
         </td>
         <td class="px-4 py-2">
           <input type="number" step="0.01" min="0"
