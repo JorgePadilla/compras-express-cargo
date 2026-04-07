@@ -60,7 +60,6 @@
         <tr>
           <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tracking</th>
           <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripcion</th>
-          <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Retener</th>
           <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Vinculado</th>
         </tr>
       </thead>
@@ -69,13 +68,6 @@
           <tr>
             <td class="px-4 py-3 font-mono text-sm"><%= pap.tracking %></td>
             <td class="px-4 py-3 text-sm text-gray-600"><%= pap.descripcion || "-" %></td>
-            <td class="px-4 py-3 text-center">
-              <% if pap.retener_miami? %>
-                <%= heroicon "check", variant: :mini, options: { class: "w-4 h-4 text-amber-600 inline" } %>
-              <% else %>
-                <span class="text-gray-300">-</span>
-              <% end %>
-            </td>
             <td class="px-4 py-3 text-center">
               <% if pap.paquete_id.present? %>
                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30">
