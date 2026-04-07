@@ -75,7 +75,6 @@
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tracking</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripcion</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Instrucciones</th>
-              <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Retener</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
               <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Vinculado</th>
               <th class="px-4 py-2"></th>
@@ -101,11 +100,6 @@
                   <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
                     <%= pf.text_area :instrucciones, placeholder: "Instrucciones", rows: 2,
                         class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
-                  <% end %>
-                </td>
-                <td class="px-4 py-2 text-center">
-                  <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
-                    <%= pf.check_box :retener_miami, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
                   <% end %>
                 </td>
                 <td class="px-4 py-2">
@@ -152,10 +146,6 @@
           <textarea name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][instrucciones]"
                     rows="2" placeholder="Instrucciones"
                     class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"></textarea>
-        </td>
-        <td class="px-4 py-2 text-center">
-          <input type="checkbox" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][retener_miami]" value="1"
-                 class="rounded border-gray-300 text-cec-teal focus:ring-cec-teal">
         </td>
         <td class="px-4 py-2">
           <input type="date" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][fecha]"
