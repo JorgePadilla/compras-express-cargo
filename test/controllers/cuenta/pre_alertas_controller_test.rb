@@ -107,11 +107,11 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Paquete desde wizard", pap.descripcion
   end
 
-  test "wizard step 3 creates pre_alerta with titulo only (no tracking)" do
+  test "wizard step 3 fails without tracking" do
     post cuenta_pre_alertas_url, params: { wizard_step: 1, tipo_envio_id: tipo_envios(:cer).id }
     post cuenta_pre_alertas_url, params: { wizard_step: 2, consolidado: "0" }
 
-    assert_difference("PreAlerta.count", 1) do
+    assert_no_difference("PreAlerta.count") do
       post cuenta_pre_alertas_url, params: {
         wizard_step: 3,
         titulo: "Zapatos",
@@ -120,9 +120,7 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
       }
     end
 
-    pa = PreAlerta.last
-    assert_equal "Zapatos", pa.titulo
-    assert_equal 1, pa.pre_alerta_paquetes.count
+    assert_response :unprocessable_entity
   end
 
   test "wizard step 3 persists instrucciones field" do

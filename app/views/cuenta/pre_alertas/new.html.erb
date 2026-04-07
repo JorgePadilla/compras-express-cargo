@@ -263,16 +263,13 @@
       <div class="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-100">
         <div class="mb-6">
           <h2 class="text-xl sm:text-2xl font-bold text-cec-navy mb-2">Datos del paquete</h2>
-          <p class="text-sm text-gray-600 leading-relaxed">
-            Puedes dejar el tracking vacío y agregarlo después.
-          </p>
         </div>
 
         <div class="grid grid-cols-1 gap-5">
-          <%# Titulo + Proveedor en fila %>
+          <%# Titulo de Referencia + Proveedor en fila %>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label class="block">
-              <span class="block text-sm font-semibold text-cec-navy mb-1.5">Título</span>
+              <span class="block text-sm font-semibold text-cec-navy mb-1.5">Título de Referencia</span>
               <input type="text" name="titulo" value="<%= h(params[:titulo]) %>"
                      placeholder="Ej. Televisor, Zapatos..."
                      class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
@@ -292,28 +289,30 @@
           <%# Tracking %>
           <label class="block">
             <span class="block text-sm font-semibold text-cec-navy mb-1.5">
-              ¿Tienes número de tracking? <span class="text-xs font-normal text-gray-500">(opcional)</span>
+              Tracking o Número de Rastreo
+              <span class="text-xs font-normal text-red-500 ml-1">Obligatorio (Aquí NO va el Número de Orden)</span>
             </span>
-            <input type="text" name="tracking" value="<%= h(params[:tracking]) %>"
+            <input type="text" name="tracking" value="<%= h(params[:tracking]) %>" required
                    placeholder="Ej. 1Z999AA1..."
                    class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
                           focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
           </label>
 
-          <%# Descripción %>
+          <%# Descripción del Producto %>
           <label class="block">
             <span class="block text-sm font-semibold text-cec-navy mb-1.5">
-              Descripción <span class="text-xs font-normal text-gray-500">(opcional)</span>
+              Descripción del Producto
+              <span class="text-xs font-normal text-red-500 ml-1">Obligatorio</span>
             </span>
-            <textarea name="descripcion" rows="2" placeholder="¿Qué contiene el paquete?"
+            <textarea name="descripcion" rows="2" placeholder="¿Qué contiene el paquete?" required
                       class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
                              focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"><%= h(params[:descripcion]) %></textarea>
           </label>
 
-          <%# Instrucciones %>
+          <%# Instrucciones Especiales del Paquete %>
           <label class="block">
             <span class="block text-sm font-semibold text-cec-navy mb-1.5">
-              Instrucciones <span class="text-xs font-normal text-gray-500">(opcional)</span>
+              Instrucciones Especiales del Paquete <span class="text-xs font-normal text-gray-500">(opcional)</span>
             </span>
             <textarea name="instrucciones" rows="2"
                       placeholder="Instrucciones para el procesamiento del paquete..."
@@ -351,10 +350,19 @@
                 href: new_cuenta_pre_alerta_path(step: back_step)) do %>
             Atrás
           <% end %>
-          <button type="submit" class="inline-flex items-center gap-2 rounded-lg transition-all duration-200 btn-gold-gradient text-cec-navy-dark font-semibold shadow-sm shadow-cec-gold/25 px-6 py-3 text-base">
-            Crear pre-alerta
-            <%= heroicon "check-circle", variant: :outline, options: { class: "w-5 h-5" } %>
-          </button>
+          <div class="flex flex-col sm:flex-row gap-3">
+            <% if show_consolidacion %>
+              <button type="submit" name="agregar_otro" value="1"
+                      class="inline-flex items-center gap-2 rounded-lg transition-all duration-200 border border-cec-teal text-cec-teal font-semibold px-6 py-3 text-base hover:bg-cec-teal/10">
+                <%= heroicon "plus-circle", variant: :outline, options: { class: "w-5 h-5" } %>
+                Agregar Otro Paquete
+              </button>
+            <% end %>
+            <button type="submit" class="inline-flex items-center gap-2 rounded-lg transition-all duration-200 btn-gold-gradient text-cec-navy-dark font-semibold shadow-sm shadow-cec-gold/25 px-6 py-3 text-base">
+              Crear Pre-Alerta
+              <%= heroicon "check-circle", variant: :outline, options: { class: "w-5 h-5" } %>
+            </button>
+          </div>
         </div>
       </div>
     <% end %>
