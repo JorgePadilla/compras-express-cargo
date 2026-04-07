@@ -7,6 +7,17 @@
     <%= render StatusBadgeComponent.new(status: pre_alerta.estado) %>
   </div>
 
+  <% if pre_alerta.titulo.present? || pre_alerta.proveedor.present? %>
+    <div class="mb-2">
+      <% if pre_alerta.titulo.present? %>
+        <p class="text-sm font-medium text-gray-800"><%= pre_alerta.titulo %></p>
+      <% end %>
+      <% if pre_alerta.proveedor.present? %>
+        <p class="text-xs text-gray-500"><%= pre_alerta.proveedor %></p>
+      <% end %>
+    </div>
+  <% end %>
+
   <div class="flex items-center gap-2 mb-3">
     <% if pre_alerta.con_reempaque? %>
       <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30">Reempaque</span>

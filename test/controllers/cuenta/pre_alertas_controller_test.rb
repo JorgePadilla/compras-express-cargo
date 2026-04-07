@@ -85,10 +85,10 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
       assert_difference("PreAlertaPaquete.count", 1) do
         post cuenta_pre_alertas_url, params: {
           wizard_step: 3,
+          titulo: "Televisor",
+          proveedor: "Best Buy",
           tracking: "WIZTRACK001",
-          descripcion: "Paquete desde wizard",
-          valor_declarado: "49.99",
-          peso: "5.5"
+          descripcion: "Paquete desde wizard"
         }
       end
     end
@@ -99,31 +99,30 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert pa.con_reempaque?
     assert_not pa.consolidado?
     assert_equal "cliente", pa.creado_por_tipo
+    assert_equal "Televisor", pa.titulo
+    assert_equal "Best Buy", pa.proveedor
 
     pap = pa.pre_alerta_paquetes.first
     assert_equal "WIZTRACK001", pap.tracking
     assert_equal "Paquete desde wizard", pap.descripcion
-    assert_equal BigDecimal("49.99"), pap.valor_declarado
-    assert_equal BigDecimal("5.5"), pap.peso
   end
 
-  test "wizard step 3 creates pre_alerta with only peso (no tracking)" do
+  test "wizard step 3 creates pre_alerta with titulo only (no tracking)" do
     post cuenta_pre_alertas_url, params: { wizard_step: 1, tipo_envio_id: tipo_envios(:cer).id }
     post cuenta_pre_alertas_url, params: { wizard_step: 2, consolidado: "0" }
 
     assert_difference("PreAlerta.count", 1) do
       post cuenta_pre_alertas_url, params: {
         wizard_step: 3,
+        titulo: "Zapatos",
         tracking: "",
-        descripcion: "",
-        valor_declarado: "",
-        peso: "2.0"
+        descripcion: "Zapatos Nike"
       }
     end
 
     pa = PreAlerta.last
+    assert_equal "Zapatos", pa.titulo
     assert_equal 1, pa.pre_alerta_paquetes.count
-    assert_equal BigDecimal("2.0"), pa.pre_alerta_paquetes.first.peso
   end
 
   test "wizard step 3 persists instrucciones field" do
@@ -265,10 +264,10 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_no_difference("PreAlerta.count") do
       post cuenta_pre_alertas_url, params: {
         wizard_step: 3,
+        titulo: "TV Samsung",
+        proveedor: "Amazon",
         tracking: "FAIL001",
-        descripcion: "Paquete con error",
-        valor_declarado: "12.50",
-        peso: "3.25"
+        descripcion: "Paquete con error"
       }
     end
 
@@ -279,10 +278,10 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     # Step-1-only copy must NOT appear:
     assert_no_match(/Elige tu servicio/, response.body)
 
-    # User input preserved via params echo at new.html.erb:280-309
+    # User input preserved via params echo
     assert_match "FAIL001", response.body
     assert_match "Paquete con error", response.body
-    assert_match "12.50", response.body
-    assert_match "3.25", response.body
+    assert_match "TV Samsung", response.body
+    assert_match "Amazon", response.body
   end
 end

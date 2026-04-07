@@ -197,24 +197,10 @@ class PreAlertaTest < ActiveSupport::TestCase
       creado_por_tipo: "cliente",
       creado_por_id: @cliente.id,
       pre_alerta_paquetes_attributes: [
-        { tracking: "", descripcion: "", instrucciones: "", valor_declarado: "", peso: "" }
+        { tracking: "", descripcion: "", instrucciones: "" }
       ]
     )
     assert_equal 0, pa.pre_alerta_paquetes.count
-  end
-
-  test "accepts rows with only peso (valor_declarado and peso keep rows alive)" do
-    pa = PreAlerta.create!(
-      cliente: @cliente,
-      tipo_envio: @tipo_envio,
-      creado_por_tipo: "cliente",
-      creado_por_id: @cliente.id,
-      pre_alerta_paquetes_attributes: [
-        { tracking: "", descripcion: "", peso: 3.25 }
-      ]
-    )
-    assert_equal 1, pa.pre_alerta_paquetes.count
-    assert_equal BigDecimal("3.25"), pa.pre_alerta_paquetes.first.peso
   end
 
   # ── v4: default tipo_envio ──

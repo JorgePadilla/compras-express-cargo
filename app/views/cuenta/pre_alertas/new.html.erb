@@ -269,6 +269,26 @@
         </div>
 
         <div class="grid grid-cols-1 gap-5">
+          <%# Titulo + Proveedor en fila %>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label class="block">
+              <span class="block text-sm font-semibold text-cec-navy mb-1.5">Título</span>
+              <input type="text" name="titulo" value="<%= h(params[:titulo]) %>"
+                     placeholder="Ej. Televisor, Zapatos..."
+                     class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
+                            focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
+            </label>
+            <label class="block">
+              <span class="block text-sm font-semibold text-cec-navy mb-1.5">
+                Proveedor / Tienda <span class="text-xs font-normal text-gray-500">(opcional)</span>
+              </span>
+              <input type="text" name="proveedor" value="<%= h(params[:proveedor]) %>"
+                     placeholder="Ej. Amazon, Best Buy..."
+                     class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
+                            focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
+            </label>
+          </div>
+
           <%# Tracking %>
           <label class="block">
             <span class="block text-sm font-semibold text-cec-navy mb-1.5">
@@ -282,7 +302,9 @@
 
           <%# Descripción %>
           <label class="block">
-            <span class="block text-sm font-semibold text-cec-navy mb-1.5">Descripción</span>
+            <span class="block text-sm font-semibold text-cec-navy mb-1.5">
+              Descripción <span class="text-xs font-normal text-gray-500">(opcional)</span>
+            </span>
             <textarea name="descripcion" rows="2" placeholder="¿Qué contiene el paquete?"
                       class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
                              focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"><%= h(params[:descripcion]) %></textarea>
@@ -298,30 +320,6 @@
                       class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
                              focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"><%= h(params[:instrucciones]) %></textarea>
           </label>
-
-          <%# Valor declarado + Peso en fila %>
-          <div class="grid grid-cols-2 gap-4">
-            <label class="block">
-              <span class="block text-sm font-semibold text-cec-navy mb-1.5">Valor declarado</span>
-              <div class="relative">
-                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
-                <input type="number" step="0.01" min="0" name="valor_declarado" value="<%= h(params[:valor_declarado]) %>"
-                       placeholder="0.00"
-                       class="block w-full rounded-lg border border-gray-300 pl-7 pr-3 py-2.5 text-sm
-                              focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
-              </div>
-            </label>
-            <label class="block">
-              <span class="block text-sm font-semibold text-cec-navy mb-1.5">Peso</span>
-              <div class="relative">
-                <input type="number" step="0.01" min="0" name="peso" value="<%= h(params[:peso]) %>"
-                       placeholder="0.00"
-                       class="block w-full rounded-lg border border-gray-300 px-3 pr-10 py-2.5 text-sm
-                              focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
-                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">lb</span>
-              </div>
-            </label>
-          </div>
         </div>
 
         <% if defined?(@pre_alerta) && @pre_alerta&.errors&.any? %>

@@ -54,27 +54,6 @@ class PreAlertaPaqueteTest < ActiveSupport::TestCase
     assert_nil pap.paquete_id
   end
 
-  # v4: valor_declarado + peso
-  test "persists valor_declarado and peso with decimal precision" do
-    pap = PreAlertaPaquete.create!(
-      pre_alerta: @pre_alerta,
-      tracking: "VALTRACK001",
-      descripcion: "Con valor y peso",
-      valor_declarado: 123.45,
-      peso: 7.89
-    )
-    pap.reload
-    assert_equal BigDecimal("123.45"), pap.valor_declarado
-    assert_equal BigDecimal("7.89"), pap.peso
-  end
-
-  test "valor_declarado and peso are optional" do
-    pap = PreAlertaPaquete.new(pre_alerta: @pre_alerta, tracking: "NOEXTRA001")
-    assert pap.valid?
-    assert_nil pap.valor_declarado
-    assert_nil pap.peso
-  end
-
   # Scopes
   test "sin_vincular returns unlinked records" do
     result = PreAlertaPaquete.sin_vincular

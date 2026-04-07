@@ -28,15 +28,13 @@ class PreAlerta < ApplicationRecord
     reject_if: ->(attrs) {
       attrs["tracking"].blank? &&
       attrs["descripcion"].blank? &&
-      attrs["valor_declarado"].blank? &&
-      attrs["peso"].blank? &&
       attrs["instrucciones"].blank?
     }
 
   scope :activas, -> { where(deleted_at: nil).where.not(estado: "anulado") }
   scope :buscar, ->(term) {
     left_joins(:cliente).where(
-      "pre_alertas.numero_documento ILIKE :q OR clientes.codigo ILIKE :q OR clientes.nombre ILIKE :q",
+      "pre_alertas.numero_documento ILIKE :q OR clientes.codigo ILIKE :q OR clientes.nombre ILIKE :q OR pre_alertas.titulo ILIKE :q OR pre_alertas.proveedor ILIKE :q",
       q: "%#{sanitize_sql_like(term)}%"
     )
   }
