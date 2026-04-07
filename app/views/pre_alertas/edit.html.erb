@@ -77,13 +77,10 @@
 
     <%# Paquetes table %>
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+      <div class="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
         <h3 class="text-sm font-bold text-gray-800">Paquetes</h3>
-        <button type="button" data-action="click->pre-alerta-editor#addPaquete"
-                class="inline-flex items-center gap-1 text-sm text-cec-teal hover:text-cec-teal-dark font-medium">
-          <%= heroicon "plus-circle", variant: :outline, options: { class: "w-4 h-4" } %>
-          Agregar (F6)
-        </button>
+        <span data-pre-alerta-editor-target="counter"
+              class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500"></span>
       </div>
 
       <div class="overflow-x-auto">
@@ -185,6 +182,12 @@
     <div class="flex flex-col sm:flex-row gap-3 justify-end">
       <%= link_to "Cancelar (F2)", pre_alertas_path,
           class: "text-gray-600 hover:text-gray-800 text-sm font-medium px-4 py-2.5 text-center" %>
+      <button type="button" data-action="click->pre-alerta-editor#addPaquete"
+              data-pre-alerta-editor-target="addButton"
+              class="inline-flex items-center gap-1.5 border border-cec-teal text-cec-teal font-semibold px-6 py-2.5 rounded-lg text-sm hover:bg-cec-teal/10 transition-colors">
+        <%= heroicon "plus-circle", variant: :outline, options: { class: "w-4 h-4" } %>
+        Agregar Paquete (F6)
+      </button>
       <button type="button" data-action="click->pre-alerta-editor#save"
               class="bg-cec-teal text-white font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm hover:bg-cec-teal-dark transition-colors">
         Guardar (F8)
