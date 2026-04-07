@@ -77,8 +77,8 @@ module Cuenta
 
     def pre_alerta_params
       params.require(:pre_alerta).permit(
-        :tipo_envio_id, :consolidado, :con_reempaque, :notas_grupo,
-        pre_alerta_paquetes_attributes: [:id, :tracking, :descripcion, :valor_declarado, :peso, :fecha, :instrucciones, :_destroy]
+        :tipo_envio_id, :consolidado, :con_reempaque, :notas_grupo, :titulo, :proveedor,
+        pre_alerta_paquetes_attributes: [:id, :tracking, :descripcion, :fecha, :instrucciones, :_destroy]
       )
     end
 
@@ -112,6 +112,8 @@ module Cuenta
           tipo_envio_id:   wizard["tipo_envio_id"],
           con_reempaque:   wizard["con_reempaque"],
           consolidado:     wizard["consolidado"],
+          titulo:          params[:titulo],
+          proveedor:       params[:proveedor],
           creado_por_tipo: "cliente",
           creado_por_id:   current_cliente.id,
           pre_alerta_paquetes_attributes: [paquete_attrs_from_params]
@@ -130,7 +132,7 @@ module Cuenta
     end
 
     def paquete_attrs_from_params
-      params.permit(:tracking, :descripcion, :valor_declarado, :peso, :instrucciones).to_h
+      params.permit(:tracking, :descripcion, :instrucciones).to_h
     end
   end
 end

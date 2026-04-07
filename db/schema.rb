@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_06_164622) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_07_194516) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -174,8 +174,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_06_164622) do
     t.date "fecha"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.decimal "valor_declarado", precision: 10, scale: 2
-    t.decimal "peso", precision: 10, scale: 2
     t.text "instrucciones"
     t.index ["paquete_id"], name: "index_pre_alerta_paquetes_on_paquete_id"
     t.index ["pre_alerta_id", "tracking"], name: "index_pre_alerta_paquetes_on_pre_alerta_id_and_tracking", unique: true
@@ -197,6 +195,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_06_164622) do
     t.datetime "deleted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "titulo"
+    t.string "proveedor"
     t.index ["cliente_id"], name: "index_pre_alertas_on_cliente_id"
     t.index ["creado_por_tipo", "creado_por_id"], name: "index_pre_alertas_on_creado_por_tipo_and_creado_por_id"
     t.index ["deleted_at"], name: "index_pre_alertas_on_deleted_at"
