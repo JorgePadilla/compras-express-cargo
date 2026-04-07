@@ -173,12 +173,13 @@
           </div>
         </div>
 
-        <%# Card footer — integrated action bar %>
-        <div class="mt-8 -mx-6 sm:-mx-8 px-6 sm:px-8 pt-5 border-t border-gray-200 flex justify-end">
-          <button type="submit" class="inline-flex items-center gap-2 rounded-lg transition-all duration-200 btn-gold-gradient text-cec-navy-dark font-semibold shadow-sm shadow-cec-gold/25 px-6 py-3 text-base">
-            Continuar
-            <%= heroicon "arrow-right", variant: :outline, options: { class: "w-5 h-5" } %>
-          </button>
+        <%# Card footer — back link %>
+        <div class="mt-8 -mx-6 sm:-mx-8 px-6 sm:px-8 pt-5 border-t border-gray-200 flex justify-start">
+          <%= render ButtonComponent.new(
+                variant: :ghost, size: :lg, icon: "arrow-left",
+                href: cuenta_pre_alertas_path) do %>
+            Mis Pre-Alertas
+          <% end %>
         </div>
       </div>
     <% end %>
@@ -238,17 +239,13 @@
           </label>
         </div>
 
-        <%# Card footer — integrated action bar %>
-        <div class="mt-8 -mx-6 sm:-mx-8 px-6 sm:px-8 pt-5 border-t border-gray-200 flex flex-col-reverse sm:flex-row sm:justify-between gap-3">
+        <%# Card footer — back link %>
+        <div class="mt-8 -mx-6 sm:-mx-8 px-6 sm:px-8 pt-5 border-t border-gray-200 flex justify-start">
           <%= render ButtonComponent.new(
                 variant: :ghost, size: :lg, icon: "arrow-left",
                 href: new_cuenta_pre_alerta_path(step: 1)) do %>
             Atrás
           <% end %>
-          <button type="submit" class="inline-flex items-center gap-2 rounded-lg transition-all duration-200 btn-gold-gradient text-cec-navy-dark font-semibold shadow-sm shadow-cec-gold/25 px-6 py-3 text-base">
-            Continuar
-            <%= heroicon "arrow-right", variant: :outline, options: { class: "w-5 h-5" } %>
-          </button>
         </div>
       </div>
     <% end %>
