@@ -78,7 +78,7 @@ module Cuenta
     def pre_alerta_params
       params.require(:pre_alerta).permit(
         :tipo_envio_id, :consolidado, :con_reempaque, :notas_grupo,
-        pre_alerta_paquetes_attributes: [:id, :tracking, :descripcion, :valor_declarado, :peso, :retener_miami, :fecha, :instrucciones, :_destroy]
+        pre_alerta_paquetes_attributes: [:id, :tracking, :descripcion, :valor_declarado, :peso, :fecha, :instrucciones, :_destroy]
       )
     end
 

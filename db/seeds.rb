@@ -230,7 +230,6 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   end
   PreAlertaPaquete.find_or_create_by!(pre_alerta: pa1, tracking: "1Z999DEMO000002") do |pap|
     pap.descripcion = "Ropa variada Amazon"
-    pap.retener_miami = true
     pap.fecha = 1.day.ago.to_date
   end
 

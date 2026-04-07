@@ -91,7 +91,7 @@ class PreAlertasController < ApplicationController
     params.require(:pre_alerta).permit(
       :cliente_id, :tipo_envio_id, :consolidado, :con_reempaque,
       :notas_grupo, :estado,
-      pre_alerta_paquetes_attributes: %i[id tracking descripcion retener_miami fecha instrucciones _destroy]
+      pre_alerta_paquetes_attributes: %i[id tracking descripcion fecha instrucciones _destroy]
     )
   end
 end
