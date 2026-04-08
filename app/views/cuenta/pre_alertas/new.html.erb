@@ -71,7 +71,6 @@
                 <label class="cursor-pointer group block">
                   <input type="radio" name="tipo_envio_id" value="<%= tipo.id %>" class="peer sr-only"
                          data-single-package="<%= tipo.single_package? %>"
-                         <%= "checked" if wizard["tipo_envio_id"].to_s == tipo.id.to_s %>
                          data-action="change->wizard#selectService">
                   <div class="p-4 rounded-xl border-2 border-gray-200 bg-white
                               peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 peer-checked:ring-2 peer-checked:ring-cec-gold/30
@@ -118,7 +117,6 @@
                 <label class="cursor-pointer group block">
                   <input type="radio" name="tipo_envio_id" value="<%= tipo.id %>" class="peer sr-only"
                          data-single-package="<%= tipo.single_package? %>"
-                         <%= "checked" if wizard["tipo_envio_id"].to_s == tipo.id.to_s %>
                          data-action="change->wizard#selectService">
                   <div class="p-4 rounded-xl border-2 border-gray-200 bg-white
                               peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 peer-checked:ring-2 peer-checked:ring-cec-gold/30
