@@ -107,6 +107,52 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Paquete desde wizard", pap.descripcion
   end
 
+  test "wizard step 3 agregar_otro preserves wizard session and redirects to edit" do
+    post cuenta_pre_alertas_url, params: { wizard_step: 1, tipo_envio_id: tipo_envios(:cer).id }
+    post cuenta_pre_alertas_url, params: { wizard_step: 2, consolidado: "1" }
+
+    assert_difference("PreAlerta.count", 1) do
+      post cuenta_pre_alertas_url, params: {
+        wizard_step: 3,
+        agregar_otro: "1",
+        titulo: "Ropa",
+        proveedor: "Shein",
+        tracking: "AGROTRO001",
+        descripcion: "Camisetas"
+      }
+    end
+
+    pa = PreAlerta.last
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+    assert_match "Agrega más paquetes", flash[:notice]
+
+    # Wizard session must be preserved so the user can reuse it
+    follow_redirect!
+    assert session[:pre_alerta_wizard].present?
+    assert_equal tipo_envios(:cer).id, session[:pre_alerta_wizard]["tipo_envio_id"]
+  end
+
+  test "wizard step 3 without agregar_otro clears wizard session" do
+    post cuenta_pre_alertas_url, params: { wizard_step: 1, tipo_envio_id: tipo_envios(:cer).id }
+    post cuenta_pre_alertas_url, params: { wizard_step: 2, consolidado: "0" }
+
+    assert_difference("PreAlerta.count", 1) do
+      post cuenta_pre_alertas_url, params: {
+        wizard_step: 3,
+        titulo: "Laptop",
+        tracking: "NOSESSION001",
+        descripcion: "MacBook Pro"
+      }
+    end
+
+    pa = PreAlerta.last
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+    assert_match "registrada", flash[:notice]
+
+    follow_redirect!
+    assert_nil session[:pre_alerta_wizard]
+  end
+
   test "wizard step 3 fails without tracking" do
     post cuenta_pre_alertas_url, params: { wizard_step: 1, tipo_envio_id: tipo_envios(:cer).id }
     post cuenta_pre_alertas_url, params: { wizard_step: 2, consolidado: "0" }

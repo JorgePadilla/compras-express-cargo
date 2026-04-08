@@ -121,8 +121,7 @@ module Cuenta
 
         if @pre_alerta.save
           if params[:agregar_otro] == "1"
-            # Keep wizard session so titulo/proveedor carry over, redirect to edit to add more paquetes
-            session.delete(:pre_alerta_wizard)
+            # Keep wizard session so user can continue adding paquetes in the edit view
             redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
                         notice: "¡Paquete agregado a #{@pre_alerta.numero_documento}! Agrega más paquetes abajo."
           else
