@@ -163,31 +163,17 @@ class PreAlertaTest < ActiveSupport::TestCase
     assert_equal 1, pa.pre_alerta_paquetes.count
   end
 
-  test "accepts description-only rows (tracking optional in v4)" do
-    pa = PreAlerta.create!(
+  test "requires tracking and descripcion on paquetes" do
+    pa = PreAlerta.new(
       cliente: @cliente,
       tipo_envio: @tipo_envio,
       creado_por_tipo: "cliente",
       creado_por_id: @cliente.id,
       pre_alerta_paquetes_attributes: [
-        { tracking: "", descripcion: "Paquete sin tracking" }
+        { tracking: "", descripcion: "Sin tracking" }
       ]
     )
-    assert_equal 1, pa.pre_alerta_paquetes.count
-  end
-
-  test "accepts rows with only instrucciones (keeps instrucciones-only rows)" do
-    pa = PreAlerta.create!(
-      cliente: @cliente,
-      tipo_envio: @tipo_envio,
-      creado_por_tipo: "cliente",
-      creado_por_id: @cliente.id,
-      pre_alerta_paquetes_attributes: [
-        { tracking: "", descripcion: "", instrucciones: "Manejar con cuidado" }
-      ]
-    )
-    assert_equal 1, pa.pre_alerta_paquetes.count
-    assert_equal "Manejar con cuidado", pa.pre_alerta_paquetes.first.instrucciones
+    assert_not pa.valid?
   end
 
   test "rejects rows where instrucciones is also blank" do

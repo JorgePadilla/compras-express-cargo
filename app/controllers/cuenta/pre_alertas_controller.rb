@@ -120,9 +120,15 @@ module Cuenta
         )
 
         if @pre_alerta.save
-          session.delete(:pre_alerta_wizard)
-          redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
-                      notice: "¡Pre-alerta #{@pre_alerta.numero_documento} registrada! Puedes agregar más paquetes abajo."
+          if params[:agregar_otro] == "1"
+            # Keep wizard session so user can continue adding paquetes in the edit view
+            redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
+                        notice: "¡Paquete agregado a #{@pre_alerta.numero_documento}! Agrega más paquetes abajo."
+          else
+            session.delete(:pre_alerta_wizard)
+            redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
+                        notice: "¡Pre-alerta #{@pre_alerta.numero_documento} registrada!"
+          end
         else
           @wizard = wizard
           @tipo_envios = TipoEnvio.activos.order(:nombre)
