@@ -138,7 +138,7 @@ module Cuenta
     end
 
     def paquete_attrs_from_params
-      params.permit(:tracking, :descripcion, :instrucciones).to_h
+      params.permit(:tracking, :descripcion, :instrucciones).to_h.merge(fecha: Date.current)
     end
   end
 end
