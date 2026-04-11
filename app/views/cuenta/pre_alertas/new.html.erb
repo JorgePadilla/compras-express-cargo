@@ -200,7 +200,6 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" data-wizard-target="options">
           <label class="cursor-pointer group">
             <input type="radio" name="consolidado" value="1" class="peer sr-only"
-                   <%= "checked" if wizard["consolidado"] %>
                    data-action="change->wizard#selectOption">
             <div class="h-full p-5 rounded-xl border-2 border-gray-200 bg-white
                         peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 peer-checked:ring-2 peer-checked:ring-cec-gold/30
@@ -219,7 +218,6 @@
 
           <label class="cursor-pointer group">
             <input type="radio" name="consolidado" value="0" class="peer sr-only"
-                   <%= "checked" if wizard.key?("consolidado") && !wizard["consolidado"] %>
                    data-action="change->wizard#selectOption">
             <div class="h-full p-5 rounded-xl border-2 border-gray-200 bg-white
                         peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 peer-checked:ring-2 peer-checked:ring-cec-gold/30
