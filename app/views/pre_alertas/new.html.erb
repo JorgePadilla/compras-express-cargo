@@ -1,6 +1,6 @@
 <%= render PageHeaderComponent.new(title: "Nueva Pre-Alerta") %>
 
-<div class="max-w-3xl">
+<div class="max-w-5xl">
   <%= form_with model: @pre_alerta, url: pre_alertas_path, class: "space-y-6" do |f| %>
     <% if @pre_alerta.errors.any? %>
       <div class="p-4 bg-red-50 border border-red-200 rounded-xl">
