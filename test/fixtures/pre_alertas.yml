@@ -6,6 +6,7 @@ activa:
   con_reempaque: true
   estado: pre_alerta
   notificado: false
+  titulo: Televisor Samsung
   creado_por_tipo: cliente
   creado_por_id: <%= ActiveRecord::FixtureSet.identify(:juan) %>
 
@@ -17,6 +18,7 @@ recibida:
   con_reempaque: false
   estado: recibido
   notificado: true
+  titulo: Ropa variada
   creado_por_tipo: cliente
   creado_por_id: <%= ActiveRecord::FixtureSet.identify(:juan) %>
 
@@ -28,6 +30,7 @@ consolidada_destino:
   con_reempaque: false
   estado: pre_alerta
   notificado: false
+  titulo: Zapatos Nike
   creado_por_tipo: cliente
   creado_por_id: <%= ActiveRecord::FixtureSet.identify(:juan) %>
 
@@ -39,6 +42,7 @@ cka_pa:
   con_reempaque: false
   estado: pre_alerta
   notificado: false
+  titulo: Caja grande
   creado_por_tipo: cliente
   creado_por_id: <%= ActiveRecord::FixtureSet.identify(:juan) %>
 
@@ -50,5 +54,6 @@ maria_pa:
   con_reempaque: false
   estado: pre_alerta
   notificado: false
+  titulo: Laptop Dell
   creado_por_tipo: cliente
   creado_por_id: <%= ActiveRecord::FixtureSet.identify(:maria) %>

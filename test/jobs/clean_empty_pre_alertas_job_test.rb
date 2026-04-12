@@ -5,6 +5,7 @@ class CleanEmptyPreAlertasJobTest < ActiveJob::TestCase
     old_empty = PreAlerta.create!(
       cliente: clientes(:juan),
       tipo_envio: tipo_envios(:aereo),
+      titulo: "Test",
       estado: "pre_alerta",
       created_at: 31.days.ago
     )
@@ -29,6 +30,7 @@ class CleanEmptyPreAlertasJobTest < ActiveJob::TestCase
     recent_empty = PreAlerta.create!(
       cliente: clientes(:juan),
       tipo_envio: tipo_envios(:aereo),
+      titulo: "Test",
       estado: "pre_alerta",
       created_at: 5.days.ago
     )
@@ -42,6 +44,7 @@ class CleanEmptyPreAlertasJobTest < ActiveJob::TestCase
     old_anulado = PreAlerta.create!(
       cliente: clientes(:juan),
       tipo_envio: tipo_envios(:aereo),
+      titulo: "Test",
       estado: "anulado",
       created_at: 31.days.ago
     )

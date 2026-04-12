@@ -24,10 +24,7 @@
                  focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
     </td>
     <td class="px-4 py-2">
-      <%= pf.date_field :fecha,
-          class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
-                 focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal",
-          data: { controller: "flatpickr" } %>
+      <span class="text-sm text-gray-500"><%= pap.fecha&.strftime("%d/%m/%Y") || "—" %></span>
     </td>
     <td class="px-4 py-2 text-center">
       <% if pap.paquete_id.present? %>

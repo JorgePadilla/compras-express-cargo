@@ -8,12 +8,12 @@ class PreAlertaTest < ActiveSupport::TestCase
 
   # Validations
   test "valid pre_alerta" do
-    pa = PreAlerta.new(cliente: @cliente, tipo_envio: @tipo_envio, creado_por_tipo: "cliente", creado_por_id: @cliente.id)
+    pa = PreAlerta.new(cliente: @cliente, tipo_envio: @tipo_envio, titulo: "Test", creado_por_tipo: "cliente", creado_por_id: @cliente.id)
     assert pa.valid?
   end
 
   test "requires cliente" do
-    pa = PreAlerta.new(tipo_envio: @tipo_envio)
+    pa = PreAlerta.new(tipo_envio: @tipo_envio, titulo: "Test")
     assert_not pa.valid?
     assert pa.errors[:cliente].any?
   end
@@ -21,14 +21,20 @@ class PreAlertaTest < ActiveSupport::TestCase
   test "requires tipo_envio" do
     # When no CER exists, PreAlerta without tipo_envio is invalid.
     TipoEnvio.where(codigo: "cer").destroy_all
-    pa = PreAlerta.new(cliente: @cliente)
+    pa = PreAlerta.new(cliente: @cliente, titulo: "Test")
     assert_not pa.valid?
     assert pa.errors[:tipo_envio].any?
   end
 
   test "requires estado" do
-    pa = PreAlerta.new(cliente: @cliente, tipo_envio: @tipo_envio, estado: nil)
+    pa = PreAlerta.new(cliente: @cliente, tipo_envio: @tipo_envio, titulo: "Test", estado: nil)
     assert_not pa.valid?
+  end
+
+  test "requires titulo" do
+    pa = PreAlerta.new(cliente: @cliente, tipo_envio: @tipo_envio, creado_por_tipo: "cliente", creado_por_id: @cliente.id)
+    assert_not pa.valid?
+    assert pa.errors[:titulo].any?
   end
 
   test "numero_documento must be unique" do
@@ -39,41 +45,41 @@ class PreAlertaTest < ActiveSupport::TestCase
 
   # Auto-generation
   test "auto-generates PA-XXXXXX numero_documento" do
-    pa = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, creado_por_tipo: "cliente", creado_por_id: @cliente.id)
+    pa = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, titulo: "Test", creado_por_tipo: "cliente", creado_por_id: @cliente.id)
     assert_match(/\APA-\d{6}\z/, pa.numero_documento)
   end
 
   test "generates sequential numero_documento" do
-    pa1 = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, creado_por_tipo: "cliente", creado_por_id: @cliente.id)
-    pa2 = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, creado_por_tipo: "cliente", creado_por_id: @cliente.id)
+    pa1 = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, titulo: "Test", creado_por_tipo: "cliente", creado_por_id: @cliente.id)
+    pa2 = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, titulo: "Test", creado_por_tipo: "cliente", creado_por_id: @cliente.id)
     num1 = pa1.numero_documento.sub("PA-", "").to_i
     num2 = pa2.numero_documento.sub("PA-", "").to_i
     assert_equal num1 + 1, num2
   end
 
   test "retries on duplicate numero_documento" do
-    pa = PreAlerta.new(cliente: @cliente, tipo_envio: @tipo_envio, creado_por_tipo: "cliente", creado_por_id: @cliente.id)
+    pa = PreAlerta.new(cliente: @cliente, tipo_envio: @tipo_envio, titulo: "Test", creado_por_tipo: "cliente", creado_por_id: @cliente.id)
     assert_nothing_raised { pa.save! }
   end
 
   # Defaults
   test "defaults estado to pre_alerta" do
-    pa = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, creado_por_tipo: "cliente", creado_por_id: @cliente.id)
+    pa = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, titulo: "Test", creado_por_tipo: "cliente", creado_por_id: @cliente.id)
     assert_equal "pre_alerta", pa.estado
   end
 
   test "defaults consolidado to false" do
-    pa = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, creado_por_tipo: "cliente", creado_por_id: @cliente.id)
+    pa = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, titulo: "Test", creado_por_tipo: "cliente", creado_por_id: @cliente.id)
     assert_equal false, pa.consolidado
   end
 
   test "defaults con_reempaque to false" do
-    pa = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, creado_por_tipo: "cliente", creado_por_id: @cliente.id)
+    pa = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, titulo: "Test", creado_por_tipo: "cliente", creado_por_id: @cliente.id)
     assert_equal false, pa.con_reempaque
   end
 
   test "defaults notificado to false" do
-    pa = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, creado_por_tipo: "cliente", creado_por_id: @cliente.id)
+    pa = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, titulo: "Test", creado_por_tipo: "cliente", creado_por_id: @cliente.id)
     assert_equal false, pa.notificado
   end
 
@@ -85,9 +91,9 @@ class PreAlertaTest < ActiveSupport::TestCase
   # Scopes
   test "activas excludes anulados and deleted" do
     activa = pre_alertas(:activa)
-    anulada = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, estado: "anulado",
+    anulada = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, titulo: "Anulada", estado: "anulado",
       creado_por_tipo: "cliente", creado_por_id: @cliente.id)
-    deleted = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, deleted_at: Time.current,
+    deleted = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, titulo: "Deleted", deleted_at: Time.current,
       creado_por_tipo: "cliente", creado_por_id: @cliente.id)
 
     result = PreAlerta.activas
@@ -120,8 +126,8 @@ class PreAlertaTest < ActiveSupport::TestCase
 
   test "recientes orders by created_at desc" do
     # Create records with explicit timestamps to test ordering
-    pa1 = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, creado_por_tipo: "cliente", creado_por_id: @cliente.id, created_at: 2.days.ago)
-    pa2 = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, creado_por_tipo: "cliente", creado_por_id: @cliente.id, created_at: 1.day.ago)
+    pa1 = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, titulo: "Test1", creado_por_tipo: "cliente", creado_por_id: @cliente.id, created_at: 2.days.ago)
+    pa2 = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, titulo: "Test2", creado_por_tipo: "cliente", creado_por_id: @cliente.id, created_at: 1.day.ago)
 
     result = PreAlerta.where(id: [pa1.id, pa2.id]).recientes.to_a
     assert_equal [pa2, pa1], result
@@ -139,6 +145,7 @@ class PreAlertaTest < ActiveSupport::TestCase
     pa = PreAlerta.create!(
       cliente: @cliente,
       tipo_envio: @tipo_envio,
+      titulo: "Test",
       creado_por_tipo: "cliente",
       creado_por_id: @cliente.id,
       pre_alerta_paquetes_attributes: [
@@ -153,6 +160,7 @@ class PreAlertaTest < ActiveSupport::TestCase
     pa = PreAlerta.create!(
       cliente: @cliente,
       tipo_envio: @tipo_envio,
+      titulo: "Test",
       creado_por_tipo: "cliente",
       creado_por_id: @cliente.id,
       pre_alerta_paquetes_attributes: [
@@ -167,6 +175,7 @@ class PreAlertaTest < ActiveSupport::TestCase
     pa = PreAlerta.new(
       cliente: @cliente,
       tipo_envio: @tipo_envio,
+      titulo: "Test",
       creado_por_tipo: "cliente",
       creado_por_id: @cliente.id,
       pre_alerta_paquetes_attributes: [
@@ -180,6 +189,7 @@ class PreAlertaTest < ActiveSupport::TestCase
     pa = PreAlerta.create!(
       cliente: @cliente,
       tipo_envio: @tipo_envio,
+      titulo: "Test",
       creado_por_tipo: "cliente",
       creado_por_id: @cliente.id,
       pre_alerta_paquetes_attributes: [
@@ -192,14 +202,14 @@ class PreAlertaTest < ActiveSupport::TestCase
   # ── v4: default tipo_envio ──
   test "assigns default CER when tipo_envio is not provided" do
     cer = tipo_envios(:cer)
-    pa = PreAlerta.new(cliente: @cliente, creado_por_tipo: "cliente", creado_por_id: @cliente.id)
+    pa = PreAlerta.new(cliente: @cliente, titulo: "Test", creado_por_tipo: "cliente", creado_por_id: @cliente.id)
     assert pa.valid?
     assert_equal cer, pa.tipo_envio
   end
 
   test "does not override explicitly set tipo_envio" do
     express = tipo_envios(:express)
-    pa = PreAlerta.new(cliente: @cliente, tipo_envio: express, creado_por_tipo: "cliente", creado_por_id: @cliente.id)
+    pa = PreAlerta.new(cliente: @cliente, tipo_envio: express, titulo: "Test", creado_por_tipo: "cliente", creado_por_id: @cliente.id)
     assert pa.valid?
     assert_equal express, pa.tipo_envio
   end
@@ -210,6 +220,7 @@ class PreAlertaTest < ActiveSupport::TestCase
     pa = PreAlerta.new(
       cliente: @cliente,
       tipo_envio: cka,
+      titulo: "Test",
       creado_por_tipo: "cliente",
       creado_por_id: @cliente.id,
       pre_alerta_paquetes_attributes: [
@@ -226,6 +237,7 @@ class PreAlertaTest < ActiveSupport::TestCase
     pa = PreAlerta.new(
       cliente: @cliente,
       tipo_envio: ckm,
+      titulo: "Test",
       creado_por_tipo: "cliente",
       creado_por_id: @cliente.id,
       pre_alerta_paquetes_attributes: [
@@ -242,6 +254,7 @@ class PreAlertaTest < ActiveSupport::TestCase
     pa = PreAlerta.new(
       cliente: @cliente,
       tipo_envio: cka,
+      titulo: "Test",
       creado_por_tipo: "cliente",
       creado_por_id: @cliente.id,
       pre_alerta_paquetes_attributes: [
@@ -256,6 +269,7 @@ class PreAlertaTest < ActiveSupport::TestCase
     pa = PreAlerta.new(
       cliente: @cliente,
       tipo_envio: cer,
+      titulo: "Test",
       creado_por_tipo: "cliente",
       creado_por_id: @cliente.id,
       pre_alerta_paquetes_attributes: [

@@ -256,8 +256,11 @@
           <%# Titulo de Referencia + Proveedor en fila %>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label class="block">
-              <span class="block text-sm font-semibold text-cec-navy mb-1.5">Título de Referencia</span>
-              <input type="text" name="titulo" value="<%= h(params[:titulo]) %>"
+              <span class="block text-sm font-semibold text-cec-navy mb-1.5">
+                Título de Referencia
+                <span class="text-xs font-normal text-red-500 ml-1">Obligatorio</span>
+              </span>
+              <input type="text" name="titulo" value="<%= h(params[:titulo]) %>" required
                      placeholder="Ej. Televisor, Zapatos..."
                      class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
                             focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">

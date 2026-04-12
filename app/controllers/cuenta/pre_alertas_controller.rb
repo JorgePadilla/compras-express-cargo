@@ -129,7 +129,7 @@ module Cuenta
     def pre_alerta_params
       params.require(:pre_alerta).permit(
         :tipo_envio_id, :consolidado, :con_reempaque, :notas_grupo, :titulo, :proveedor,
-        pre_alerta_paquetes_attributes: [:id, :tracking, :descripcion, :fecha, :instrucciones, :_destroy]
+        pre_alerta_paquetes_attributes: [:id, :tracking, :descripcion, :instrucciones, :_destroy]
       )
     end
 
@@ -194,7 +194,7 @@ module Cuenta
     end
 
     def paquete_attrs_from_params
-      params.permit(:tracking, :descripcion, :instrucciones).to_h.merge(fecha: Date.current)
+      params.permit(:tracking, :descripcion, :instrucciones).to_h
     end
 
     # Move rules matrix:

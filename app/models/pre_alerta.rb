@@ -22,6 +22,7 @@ class PreAlerta < ApplicationRecord
 
   validates :numero_documento, presence: true, uniqueness: { case_sensitive: false }
   validates :estado, presence: true
+  validates :titulo, presence: true
   validate :respect_max_paquetes_por_accion
 
   accepts_nested_attributes_for :pre_alerta_paquetes, allow_destroy: true,

@@ -13,6 +13,11 @@ export default class extends Controller {
     this._handleGlobalKeydown = this.handleKeydown.bind(this)
     document.addEventListener("keydown", this._handleGlobalKeydown)
     this.updateCounter()
+
+    // Auto-add a blank row for consolidated pre-alertas so the next line is ready
+    if (this.hasAddButtonTarget && !this.isAtLimit()) {
+      this.addPaquete()
+    }
   }
 
   disconnect() {
@@ -54,10 +59,6 @@ export default class extends Controller {
     // Replace NEW_INDEX with unique index
     this._newIndex++
     row.innerHTML = row.innerHTML.replaceAll("NEW_INDEX", this._newIndex.toString())
-
-    // Auto-populate fecha with today's date
-    const dateInput = row.querySelector("input[type='date']")
-    if (dateInput) dateInput.value = new Date().toISOString().split("T")[0]
 
     this.paquetesBodyTarget.appendChild(row)
 
