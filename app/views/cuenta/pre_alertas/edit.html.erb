@@ -125,9 +125,7 @@
                            focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"></textarea>
         </td>
         <td class="px-4 py-2">
-          <input type="date" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][fecha]"
-                 readonly
-                 class="block w-full rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm text-gray-500 cursor-not-allowed">
+          <span class="text-sm text-gray-500"><%= Date.current.strftime("%d/%m/%Y") %></span>
         </td>
         <td class="px-4 py-2 text-center">
           <%= render StatusBadgeComponent.new(status: "pre_alerta", label: "Pre Alerta") %>

@@ -8,6 +8,7 @@ class PreAlertaPaquete < ApplicationRecord
   scope :sin_vincular, -> { where(paquete_id: nil) }
   scope :vinculados, -> { where.not(paquete_id: nil) }
 
+  before_validation :set_default_fecha
   before_save :normalize_tracking
 
   # Links unlinked pre_alerta_paquetes by tracking to a given paquete.
@@ -29,6 +30,10 @@ class PreAlertaPaquete < ApplicationRecord
   end
 
   private
+
+  def set_default_fecha
+    self.fecha ||= Date.current
+  end
 
   def normalize_tracking
     self.tracking = tracking.strip.upcase if tracking.present?

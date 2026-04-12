@@ -60,10 +60,6 @@ export default class extends Controller {
     this._newIndex++
     row.innerHTML = row.innerHTML.replaceAll("NEW_INDEX", this._newIndex.toString())
 
-    // Auto-populate fecha with today's date
-    const dateInput = row.querySelector("input[type='date']")
-    if (dateInput) dateInput.value = new Date().toISOString().split("T")[0]
-
     this.paquetesBodyTarget.appendChild(row)
 
     // Focus the tracking field in the new row
