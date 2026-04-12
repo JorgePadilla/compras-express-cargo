@@ -92,17 +92,32 @@ export default class extends Controller {
 
   saveAndNotify() {
     this._removeNotifyField()
-    const input = document.createElement("input")
-    input.type = "hidden"
-    input.name = "notificar"
-    input.value = "true"
-    input.dataset.notifyField = "true"
-    this.formTarget.appendChild(input)
+    this._removeFinalizarField()
+
+    const notifyInput = document.createElement("input")
+    notifyInput.type = "hidden"
+    notifyInput.name = "notificar"
+    notifyInput.value = "true"
+    notifyInput.dataset.notifyField = "true"
+    this.formTarget.appendChild(notifyInput)
+
+    const finalizarInput = document.createElement("input")
+    finalizarInput.type = "hidden"
+    finalizarInput.name = "finalizar"
+    finalizarInput.value = "true"
+    finalizarInput.dataset.finalizarField = "true"
+    this.formTarget.appendChild(finalizarInput)
+
     this.formTarget.requestSubmit()
   }
 
   _removeNotifyField() {
     const existing = this.formTarget.querySelector("[data-notify-field]")
+    if (existing) existing.remove()
+  }
+
+  _removeFinalizarField() {
+    const existing = this.formTarget.querySelector("[data-finalizar-field]")
     if (existing) existing.remove()
   }
 
