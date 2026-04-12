@@ -1,6 +1,7 @@
 <% max_paquetes = @pre_alerta.consolidado? ? @pre_alerta.tipo_envio&.max_paquetes_por_accion : 1 %>
 <div data-controller="pre-alerta-editor pre-alerta-mover"
      data-pre-alerta-editor-max-paquetes-value="<%= max_paquetes || -1 %>"
+     data-pre-alerta-editor-consolidado-value="<%= @pre_alerta.consolidado? %>"
      data-pre-alerta-editor-cancel-url-value="<%= cuenta_pre_alertas_path %>"
      data-pre-alerta-mover-destinos-url-value="<%= destinos_disponibles_cuenta_pre_alerta_path(@pre_alerta) %>"
      data-pre-alerta-mover-mover-url-value="<%= mover_paquete_cuenta_pre_alerta_path(@pre_alerta) %>">

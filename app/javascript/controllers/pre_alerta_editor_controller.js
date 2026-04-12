@@ -4,7 +4,8 @@ export default class extends Controller {
   static targets = ["form", "paquetesBody", "template", "counter", "addButton", "limitMessage"]
   static values = {
     maxPaquetes: { type: Number, default: -1 },
-    cancelUrl: { type: String, default: "" }
+    cancelUrl: { type: String, default: "" },
+    consolidado: { type: Boolean, default: false }
   }
 
   _newIndex = Date.now()
@@ -92,8 +93,6 @@ export default class extends Controller {
 
   saveAndNotify() {
     this._removeNotifyField()
-    this._removeFinalizarField()
-
     const notifyInput = document.createElement("input")
     notifyInput.type = "hidden"
     notifyInput.name = "notificar"
@@ -101,12 +100,15 @@ export default class extends Controller {
     notifyInput.dataset.notifyField = "true"
     this.formTarget.appendChild(notifyInput)
 
-    const finalizarInput = document.createElement("input")
-    finalizarInput.type = "hidden"
-    finalizarInput.name = "finalizar"
-    finalizarInput.value = "true"
-    finalizarInput.dataset.finalizarField = "true"
-    this.formTarget.appendChild(finalizarInput)
+    if (this.consolidadoValue) {
+      this._removeFinalizarField()
+      const finalizarInput = document.createElement("input")
+      finalizarInput.type = "hidden"
+      finalizarInput.name = "finalizar"
+      finalizarInput.value = "true"
+      finalizarInput.dataset.finalizarField = "true"
+      this.formTarget.appendChild(finalizarInput)
+    }
 
     this.formTarget.requestSubmit()
   }
