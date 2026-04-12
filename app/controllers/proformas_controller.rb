@@ -134,7 +134,7 @@ class ProformasController < ApplicationController
     if @proforma.save
       # Reserve paquetes on the proforma (venta_id set, estado stays)
       @proforma.venta_items.includes(:paquete).each do |item|
-        item.paquete&.update_column(:venta_id, @proforma.id)
+        item.paquete&.update!(venta_id: @proforma.id)
       end
       redirect_to proforma_path(@proforma), notice: "Proforma #{@proforma.numero} creada con #{paquete_ids.size} paquete(s)."
     else
