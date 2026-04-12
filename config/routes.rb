@@ -109,6 +109,23 @@ Rails.application.routes.draw do
 
   resources :categoria_precios, except: :destroy, path: "categorias-precio"
 
+  resources :entregas, except: [:destroy] do
+    collection { get :entregables }
+    member do
+      post :despachar
+      post :entregar
+      delete :anular
+    end
+  end
+
+  resource :caja, only: [:show], controller: "caja" do
+    post :apertura
+    post :cierre
+    get  :historial
+  end
+  resources :ingresos_caja, only: %i[index new create show], path: "ingresos-caja"
+  resources :egresos_caja, only: %i[index new create show], path: "egresos-caja"
+
   # Client portal
   namespace :cuenta do
     root "dashboard#index"
@@ -142,6 +159,7 @@ Rails.application.routes.draw do
       member { get :pdf }
     end
     resources :financiamientos, only: %i[index show]
+    resources :entregas, only: %i[index show]
   end
 
   root "dashboard#index"

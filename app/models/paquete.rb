@@ -5,6 +5,8 @@ class Paquete < ApplicationRecord
   belongs_to :user, optional: true
   belongs_to :pre_factura, optional: true
   belongs_to :venta, optional: true
+  belongs_to :entrega, optional: true
+  has_many :entrega_paquetes, dependent: :nullify
   has_many :pre_alerta_paquetes, dependent: :nullify
   has_many :nota_debito_items,  dependent: :nullify
   has_many :nota_credito_items, dependent: :nullify
@@ -44,6 +46,7 @@ class Paquete < ApplicationRecord
   scope :recibidos_hoy, -> { where(fecha_recibido_miami: Time.current.beginning_of_day..Time.current.end_of_day) }
   scope :sin_manifiesto, -> { where(manifiesto_id: nil).where.not(estado: %w[anulado entregado retornado desechado]) }
   scope :facturables, -> { where(estado: "disponible_entrega", pre_factura_id: nil, venta_id: nil) }
+  scope :entregables, -> { where(estado: "facturado", entrega_id: nil) }
 
   before_validation :generate_guia, on: :create, if: -> { guia.blank? }
   before_save :set_fecha_recibido, if: -> { fecha_recibido_miami.blank? && new_record? }

@@ -1,0 +1,8 @@
+egreso_ayer:
+  numero: EC-000001
+  apertura_caja: ayer_cerrada
+  monto: 50.00
+  concepto: "Combustible repartidor"
+  metodo_pago: efectivo
+  categoria: transporte
+  registrado_por: cajero

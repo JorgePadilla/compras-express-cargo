@@ -31,7 +31,7 @@ class PaqueteTest < ActiveSupport::TestCase
 
   test "auto-generated guia increments" do
     paquete = Paquete.create!(tracking: "1Z999INCR", cliente: clientes(:juan))
-    assert_equal "PQ-000007", paquete.guia
+    assert_equal "PQ-000010", paquete.guia
   end
 
   test "default estado is recibido_miami" do

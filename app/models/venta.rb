@@ -82,6 +82,9 @@ class Venta < ApplicationRecord
         registrado_por: user
       )
 
+      apertura = AperturaCaja.del_dia
+      pago.update!(apertura_caja: apertura) if apertura&.abierta?
+
       recibo = recibos.create!(
         pago: pago,
         cliente: cliente,

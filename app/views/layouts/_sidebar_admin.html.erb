@@ -26,7 +26,16 @@
   <%= sidebar_link "Clientes", clientes_path, icon: "users" if can_access?(:clientes) %>
 
   <% if can_access?(:entregas) %>
-    <%= sidebar_link "Entregas", "#", icon: "truck" %>
+    <%= sidebar_link "Entregas", entregas_path, icon: "truck" %>
+  <% end %>
+
+  <% if can_access?(:caja) %>
+    <%= sidebar_section "Caja Diaria" do %>
+      <%= sidebar_link "Mi Dia", caja_path, icon: "calculator" %>
+      <%= sidebar_link "Ingresos", ingresos_caja_path, icon: "arrow-trending-up" %>
+      <%= sidebar_link "Egresos", egresos_caja_path, icon: "arrow-trending-down" %>
+      <%= sidebar_link "Historial", historial_caja_path, icon: "clock" %>
+    <% end %>
   <% end %>
 
   <% if can_access?(:marketing) || admin? %>

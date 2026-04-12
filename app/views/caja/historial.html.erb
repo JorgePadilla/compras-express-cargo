@@ -1,0 +1,53 @@
+<%= render PageHeaderComponent.new(title: "Historial de Caja", subtitle: "#{@aperturas.total_count} aperturas") %>
+
+<div class="mb-4">
+  <%= link_to "Volver a Mi Dia", caja_path, class: "text-sm text-cec-teal hover:underline" %>
+</div>
+
+<% if @aperturas.any? %>
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Numero</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Apertura</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Pagos</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ingresos</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Egresos</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Diferencia</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @aperturas.each do |a| %>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-mono font-medium text-cec-navy"><%= a.numero %></td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><%= a.fecha.strftime("%d/%m/%Y") %></td>
+              <td class="px-6 py-4 whitespace-nowrap"><%= render StatusBadgeComponent.new(status: a.estado) %></td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-right">L. <%= number_with_delimiter(a.monto_apertura.to_f, precision: 2) %></td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-cec-teal-dark">L. <%= number_with_delimiter(a.total_pagos.to_f, precision: 2) %></td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-cec-teal-dark">L. <%= number_with_delimiter(a.total_ingresos.to_f, precision: 2) %></td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600">L. <%= number_with_delimiter(a.total_egresos.to_f, precision: 2) %></td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium <%= a.diferencia.to_f >= 0 ? "text-cec-teal-dark" : "text-red-600" %>">
+                <% if a.cerrada? %>
+                  L. <%= number_with_delimiter(a.diferencia.to_f, precision: 2) %>
+                <% else %>
+                  —
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="mt-4"><%= paginate @aperturas %></div>
+<% else %>
+  <%= render EmptyStateComponent.new(
+    title: "Sin historial",
+    description: "Aun no se han registrado aperturas de caja.",
+    icon: "calculator"
+  ) %>
+<% end %>

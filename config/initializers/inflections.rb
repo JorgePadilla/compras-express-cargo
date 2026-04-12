@@ -28,4 +28,9 @@ ActiveSupport::Inflector.inflections(:en) do |inflect|
   inflect.irregular "cotizacion_item", "cotizacion_items"
   inflect.irregular "financiamiento", "financiamientos"
   inflect.irregular "financiamiento_cuota", "financiamiento_cuotas"
+  inflect.irregular "entrega", "entregas"
+  inflect.irregular "entrega_paquete", "entrega_paquetes"
+  inflect.irregular "apertura_caja", "aperturas_caja"
+  inflect.irregular "ingreso_caja", "ingresos_caja"
+  inflect.irregular "egreso_caja", "egresos_caja"
 end

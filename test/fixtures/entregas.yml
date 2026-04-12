@@ -1,0 +1,20 @@
+pendiente_juan:
+  numero: EN-000001
+  cliente: juan
+  tipo_entrega: retiro_oficina
+  estado: pendiente
+  receptor_nombre: Juan Perez
+  receptor_identidad: "0801199012345"
+  creado_por: cajero
+
+en_reparto_maria:
+  numero: EN-000002
+  cliente: maria
+  tipo_entrega: domicilio
+  estado: en_reparto
+  receptor_nombre: Maria Lopez
+  receptor_identidad: "0801199054321"
+  direccion_entrega: Col. Las Colinas, SPS
+  repartidor: repartidor
+  creado_por: cajero
+  despachado_at: <%= 1.hour.ago %>

@@ -1,0 +1,7 @@
+ingreso_ayer:
+  numero: IC-000001
+  apertura_caja: ayer_cerrada
+  monto: 200.00
+  concepto: "Venta de cajas de empaque"
+  metodo_pago: efectivo
+  registrado_por: cajero

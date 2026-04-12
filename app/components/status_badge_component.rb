@@ -10,10 +10,11 @@ class StatusBadgeComponent < ViewComponent::Base
     # Success — positive end-states
     "activo" => SUCCESS, "disponible" => SUCCESS, "disponible_entrega" => SUCCESS,
     "entregado" => SUCCESS, "pagado" => SUCCESS, "facturado" => SUCCESS,
+    "abierta" => SUCCESS, "cerrada" => NEUTRAL, "completado" => SUCCESS,
 
     # Info — in-progress logistics states
     "recibido_miami" => INFO, "empacado" => INFO, "enviado_honduras" => INFO,
-    "en_reparto" => INFO, "pre_facturado" => INFO, "creado" => INFO,
+    "en_reparto" => INFO, "pre_facturado" => INFO, "creado" => INFO, "domicilio" => INFO,
     "en_proceso" => INFO, "en_miami" => INFO, "en_transito" => INFO,
     "recibido" => INFO, "enviado" => INFO,
 
@@ -26,7 +27,7 @@ class StatusBadgeComponent < ViewComponent::Base
     "extraviado" => DANGER, "devuelto" => DANGER,
 
     # Neutral
-    "inactivo" => NEUTRAL
+    "inactivo" => NEUTRAL, "retiro_oficina" => NEUTRAL
   }.freeze
 
   def initialize(status:, label: nil)

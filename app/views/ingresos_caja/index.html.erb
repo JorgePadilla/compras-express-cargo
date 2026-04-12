@@ -1,0 +1,48 @@
+<%= render PageHeaderComponent.new(title: "Ingresos de Caja") %>
+
+<div class="mb-4 flex gap-3">
+  <% if @apertura&.abierta? %>
+    <%= link_to new_ingreso_caja_path, class: "inline-flex items-center gap-2 px-4 py-2 bg-cec-teal text-white rounded-lg text-sm font-medium hover:bg-cec-teal-dark" do %>
+      <%= heroicon "plus", variant: :mini, options: { class: "w-4 h-4" } %>
+      Nuevo Ingreso
+    <% end %>
+  <% end %>
+  <%= link_to "Volver a Mi Dia", caja_path, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900" %>
+</div>
+
+<% if @ingresos.any? %>
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Numero</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Metodo</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Monto</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hora</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @ingresos.each do |i| %>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <%= link_to i.numero, ingreso_caja_path(i), class: "text-sm font-mono font-medium text-cec-navy hover:underline" %>
+              </td>
+              <td class="px-6 py-4 text-sm"><%= i.concepto %></td>
+              <td class="px-6 py-4 text-sm"><%= i.metodo_pago.humanize %></td>
+              <td class="px-6 py-4 text-sm text-right font-medium text-cec-teal-dark">L. <%= number_with_delimiter(i.monto.to_f, precision: 2) %></td>
+              <td class="px-6 py-4 text-sm text-gray-500"><%= i.created_at.strftime("%H:%M") %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% else %>
+  <%= render EmptyStateComponent.new(
+    title: "Sin ingresos",
+    description: "No hay ingresos extras registrados hoy.",
+    icon: "banknotes"
+  ) %>
+<% end %>

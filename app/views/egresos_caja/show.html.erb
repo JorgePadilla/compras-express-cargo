@@ -1,0 +1,46 @@
+<div class="max-w-lg mx-auto bg-white p-6 rounded-lg shadow">
+  <div class="flex justify-between items-start border-b border-gray-200 pb-4 mb-4">
+    <div>
+      <h1 class="text-xl font-bold text-cec-navy">Egreso de Caja</h1>
+      <p class="text-sm text-gray-500">Detalle del egreso</p>
+    </div>
+    <p class="font-mono font-bold"><%= @egreso.numero %></p>
+  </div>
+
+  <dl class="space-y-3 text-sm mb-6">
+    <div class="flex justify-between">
+      <dt class="text-gray-500">Concepto</dt>
+      <dd class="font-medium"><%= @egreso.concepto %></dd>
+    </div>
+    <div class="flex justify-between">
+      <dt class="text-gray-500">Monto</dt>
+      <dd class="font-bold text-red-600">L. <%= number_with_delimiter(@egreso.monto.to_f, precision: 2) %></dd>
+    </div>
+    <div class="flex justify-between">
+      <dt class="text-gray-500">Metodo de Pago</dt>
+      <dd><%= @egreso.metodo_pago.humanize %></dd>
+    </div>
+    <% if @egreso.categoria.present? %>
+      <div class="flex justify-between">
+        <dt class="text-gray-500">Categoria</dt>
+        <dd><%= @egreso.categoria.humanize %></dd>
+      </div>
+    <% end %>
+    <div class="flex justify-between">
+      <dt class="text-gray-500">Registrado por</dt>
+      <dd><%= @egreso.registrado_por&.nombre %></dd>
+    </div>
+    <div class="flex justify-between">
+      <dt class="text-gray-500">Fecha/Hora</dt>
+      <dd><%= @egreso.created_at.strftime("%d/%m/%Y %H:%M") %></dd>
+    </div>
+    <% if @egreso.notas.present? %>
+      <div>
+        <dt class="text-gray-500 mb-1">Notas</dt>
+        <dd><%= @egreso.notas %></dd>
+      </div>
+    <% end %>
+  </dl>
+
+  <%= link_to "Volver a Mi Dia", caja_path, class: "text-sm text-cec-teal hover:underline" %>
+</div>

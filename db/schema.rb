@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_12_050500) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_12_060600) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -40,6 +40,30 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_12_050500) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "aperturas_caja", force: :cascade do |t|
+    t.string "numero", null: false
+    t.date "fecha", null: false
+    t.string "estado", default: "abierta", null: false
+    t.decimal "monto_apertura", precision: 10, scale: 2, default: "0.0", null: false
+    t.decimal "monto_cierre", precision: 10, scale: 2
+    t.decimal "total_pagos", precision: 10, scale: 2, default: "0.0"
+    t.decimal "total_ingresos", precision: 10, scale: 2, default: "0.0"
+    t.decimal "total_egresos", precision: 10, scale: 2, default: "0.0"
+    t.decimal "diferencia", precision: 10, scale: 2
+    t.text "notas_apertura"
+    t.text "notas_cierre"
+    t.bigint "abierta_por_id", null: false
+    t.bigint "cerrada_por_id"
+    t.datetime "cerrada_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["abierta_por_id"], name: "index_aperturas_caja_on_abierta_por_id"
+    t.index ["cerrada_por_id"], name: "index_aperturas_caja_on_cerrada_por_id"
+    t.index ["estado"], name: "index_aperturas_caja_on_estado"
+    t.index ["fecha"], name: "index_aperturas_caja_on_fecha", unique: true
+    t.index ["numero"], name: "index_aperturas_caja_on_numero", unique: true
   end
 
   create_table "carriers", force: :cascade do |t|
@@ -157,6 +181,22 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_12_050500) do
     t.index ["venta_id"], name: "index_cotizaciones_on_venta_id"
   end
 
+  create_table "egresos_caja", force: :cascade do |t|
+    t.string "numero", null: false
+    t.bigint "apertura_caja_id", null: false
+    t.decimal "monto", precision: 10, scale: 2, null: false
+    t.string "concepto", null: false
+    t.string "metodo_pago", null: false
+    t.string "categoria"
+    t.text "notas"
+    t.bigint "registrado_por_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["apertura_caja_id"], name: "index_egresos_caja_on_apertura_caja_id"
+    t.index ["numero"], name: "index_egresos_caja_on_numero", unique: true
+    t.index ["registrado_por_id"], name: "index_egresos_caja_on_registrado_por_id"
+  end
+
   create_table "empresa_manifiestos", force: :cascade do |t|
     t.string "nombre", null: false
     t.boolean "activo", default: true
@@ -178,6 +218,39 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_12_050500) do
     t.text "terminos_factura"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "entrega_paquetes", force: :cascade do |t|
+    t.bigint "entrega_id", null: false
+    t.bigint "paquete_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["entrega_id", "paquete_id"], name: "index_entrega_paquetes_on_entrega_id_and_paquete_id", unique: true
+    t.index ["entrega_id"], name: "index_entrega_paquetes_on_entrega_id"
+    t.index ["paquete_id"], name: "index_entrega_paquetes_on_paquete_id"
+  end
+
+  create_table "entregas", force: :cascade do |t|
+    t.string "numero", null: false
+    t.bigint "cliente_id", null: false
+    t.string "tipo_entrega", default: "retiro_oficina", null: false
+    t.string "estado", default: "pendiente", null: false
+    t.string "receptor_nombre", null: false
+    t.string "receptor_identidad", null: false
+    t.text "direccion_entrega"
+    t.bigint "repartidor_id"
+    t.bigint "creado_por_id"
+    t.text "notas"
+    t.datetime "despachado_at"
+    t.datetime "entregado_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cliente_id"], name: "index_entregas_on_cliente_id"
+    t.index ["creado_por_id"], name: "index_entregas_on_creado_por_id"
+    t.index ["estado"], name: "index_entregas_on_estado"
+    t.index ["numero"], name: "index_entregas_on_numero", unique: true
+    t.index ["repartidor_id"], name: "index_entregas_on_repartidor_id"
+    t.index ["tipo_entrega"], name: "index_entregas_on_tipo_entrega"
   end
 
   create_table "financiamiento_cuotas", force: :cascade do |t|
@@ -217,6 +290,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_12_050500) do
     t.index ["estado"], name: "index_financiamientos_on_estado"
     t.index ["numero"], name: "index_financiamientos_on_numero", unique: true
     t.index ["venta_id"], name: "index_financiamientos_on_venta_id"
+  end
+
+  create_table "ingresos_caja", force: :cascade do |t|
+    t.string "numero", null: false
+    t.bigint "apertura_caja_id", null: false
+    t.decimal "monto", precision: 10, scale: 2, null: false
+    t.string "concepto", null: false
+    t.string "metodo_pago", null: false
+    t.text "notas"
+    t.bigint "registrado_por_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["apertura_caja_id"], name: "index_ingresos_caja_on_apertura_caja_id"
+    t.index ["numero"], name: "index_ingresos_caja_on_numero", unique: true
+    t.index ["registrado_por_id"], name: "index_ingresos_caja_on_registrado_por_id"
   end
 
   create_table "lugars", force: :cascade do |t|
@@ -337,6 +425,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_12_050500) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.decimal "tasa_cambio_aplicada", precision: 10, scale: 4
+    t.bigint "apertura_caja_id"
+    t.index ["apertura_caja_id"], name: "index_pagos_on_apertura_caja_id"
     t.index ["cliente_id"], name: "index_pagos_on_cliente_id"
     t.index ["estado"], name: "index_pagos_on_estado"
     t.index ["registrado_por_id"], name: "index_pagos_on_registrado_por_id"
@@ -379,7 +469,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_12_050500) do
     t.datetime "updated_at", null: false
     t.bigint "pre_factura_id"
     t.bigint "venta_id"
+    t.bigint "entrega_id"
     t.index ["cliente_id"], name: "index_paquetes_on_cliente_id"
+    t.index ["entrega_id"], name: "index_paquetes_on_entrega_id"
     t.index ["estado"], name: "index_paquetes_on_estado"
     t.index ["guia"], name: "index_paquetes_on_guia", unique: true
     t.index ["manifiesto_id"], name: "index_paquetes_on_manifiesto_id"
@@ -570,6 +662,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_12_050500) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "aperturas_caja", "users", column: "abierta_por_id"
+  add_foreign_key "aperturas_caja", "users", column: "cerrada_por_id"
   add_foreign_key "cliente_sessions", "clientes"
   add_foreign_key "clientes", "categoria_precios"
   add_foreign_key "cotizacion_items", "cotizaciones"
@@ -577,11 +671,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_12_050500) do
   add_foreign_key "cotizaciones", "clientes"
   add_foreign_key "cotizaciones", "users", column: "creado_por_id"
   add_foreign_key "cotizaciones", "ventas"
+  add_foreign_key "egresos_caja", "aperturas_caja"
+  add_foreign_key "egresos_caja", "users", column: "registrado_por_id"
+  add_foreign_key "entrega_paquetes", "entregas"
+  add_foreign_key "entrega_paquetes", "paquetes"
+  add_foreign_key "entregas", "clientes"
+  add_foreign_key "entregas", "users", column: "creado_por_id"
+  add_foreign_key "entregas", "users", column: "repartidor_id"
   add_foreign_key "financiamiento_cuotas", "financiamientos"
   add_foreign_key "financiamiento_cuotas", "pagos"
   add_foreign_key "financiamientos", "clientes"
   add_foreign_key "financiamientos", "users", column: "creado_por_id"
   add_foreign_key "financiamientos", "ventas"
+  add_foreign_key "ingresos_caja", "aperturas_caja"
+  add_foreign_key "ingresos_caja", "users", column: "registrado_por_id"
   add_foreign_key "manifiestos", "empresa_manifiestos"
   add_foreign_key "manifiestos", "users"
   add_foreign_key "nota_credito_items", "notas_credito"
@@ -594,10 +697,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_12_050500) do
   add_foreign_key "notas_debito", "clientes"
   add_foreign_key "notas_debito", "users", column: "creado_por_id"
   add_foreign_key "notas_debito", "ventas"
+  add_foreign_key "pagos", "aperturas_caja"
   add_foreign_key "pagos", "clientes"
   add_foreign_key "pagos", "users", column: "registrado_por_id"
   add_foreign_key "pagos", "ventas"
   add_foreign_key "paquetes", "clientes"
+  add_foreign_key "paquetes", "entregas"
   add_foreign_key "paquetes", "manifiestos"
   add_foreign_key "paquetes", "pre_facturas"
   add_foreign_key "paquetes", "tipo_envios"
