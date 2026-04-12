@@ -13,7 +13,9 @@ class FinanciamientosController < ApplicationController
   end
 
   def new
-    @venta = Venta.find(params[:venta_id])
+    @venta = Venta.find_by(id: params[:venta_id])
+    return redirect_to(financiamientos_path, alert: "Selecciona una venta valida.") unless @venta
+
     @financiamiento = Financiamiento.new(
       venta: @venta,
       cliente: @venta.cliente,
