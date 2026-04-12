@@ -9,7 +9,7 @@
 <%# Search & filters %>
 <div class="mb-6 flex flex-col sm:flex-row gap-3">
   <%= render SearchBarComponent.new(url: cuenta_pre_alertas_path, placeholder: "Buscar por numero, cliente...", value: params[:q]) %>
-  <div class="flex gap-2">
+  <div class="flex flex-wrap gap-2">
     <% %w[pre_alerta recibido enviado en_aduana disponible].each do |estado| %>
       <%= link_to estado.humanize,
           cuenta_pre_alertas_path(estado: estado, q: params[:q]),
