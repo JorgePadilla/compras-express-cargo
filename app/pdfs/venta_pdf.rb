@@ -8,7 +8,8 @@ class VentaPdf < ApplicationPdf
 
   def build
     header
-    titulo_documento("FACTURA", @venta.numero)
+    titulo = @venta.proforma? ? "PROFORMA" : "FACTURA"
+    titulo_documento(titulo, @venta.numero)
 
     text "Fecha: #{I18n.l(@venta.created_at.to_date, format: :long)}" rescue text "Fecha: #{@venta.created_at.to_date}"
     text "Estado: #{@venta.estado.upcase}"
@@ -22,12 +23,13 @@ class VentaPdf < ApplicationPdf
       impuesto: @venta.impuesto,
       total:    @venta.total,
       saldo:    @venta.saldo_pendiente,
-      moneda:   @venta.moneda
+      moneda:   @venta.moneda,
+      tasa_cambio: @venta.tasa_cambio_aplicada
     )
 
     if @venta.notas.present?
       move_down 10
-      text "Notas: #{@venta.notas}", size: 9, color: "666666"
+      text "Notas: #{sanitize_text(@venta.notas)}", size: 9, color: "666666"
     end
 
     footer_terminos

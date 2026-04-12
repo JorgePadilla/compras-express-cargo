@@ -43,12 +43,13 @@ class Paquete < ApplicationRecord
   scope :by_cliente, ->(cliente_id) { where(cliente_id: cliente_id) }
   scope :recibidos_hoy, -> { where(fecha_recibido_miami: Time.current.beginning_of_day..Time.current.end_of_day) }
   scope :sin_manifiesto, -> { where(manifiesto_id: nil).where.not(estado: %w[anulado entregado retornado desechado]) }
-  scope :facturables, -> { where(estado: "disponible_entrega", pre_factura_id: nil) }
+  scope :facturables, -> { where(estado: "disponible_entrega", pre_factura_id: nil, venta_id: nil) }
 
   before_validation :generate_guia, on: :create, if: -> { guia.blank? }
   before_save :set_fecha_recibido, if: -> { fecha_recibido_miami.blank? && new_record? }
   before_save :calculate_peso_volumetrico
   before_save :calculate_peso_cobrar
+  after_save :sync_pre_alerta_estados, if: :saved_change_to_estado?
 
   def estado_terminal?
     entregado? || anulado? || retornado? || desechado?
@@ -65,6 +66,12 @@ class Paquete < ApplicationRecord
   end
 
   private
+
+  def sync_pre_alerta_estados
+    pre_alerta_paquetes.includes(:pre_alerta).each do |pap|
+      pap.pre_alerta&.actualizar_estado_from_paquetes!
+    end
+  end
 
   def generate_guia
     next_number = (self.class.where("guia LIKE 'PQ-%'").maximum(Arel.sql("CAST(SUBSTRING(guia FROM 4) AS INTEGER)")) || 0) + 1

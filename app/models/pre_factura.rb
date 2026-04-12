@@ -1,4 +1,6 @@
 class PreFactura < ApplicationRecord
+  include CurrencyAware
+
   ISV_RATE = BigDecimal("0.15")
 
   belongs_to :cliente
@@ -12,7 +14,6 @@ class PreFactura < ApplicationRecord
 
   validates :numero, presence: true, uniqueness: { case_sensitive: false }
   validates :estado, presence: true, inclusion: { in: ESTADOS }
-  validates :moneda, presence: true
 
   before_validation :generate_numero, on: :create, if: -> { numero.blank? }
   before_save :calculate_totals

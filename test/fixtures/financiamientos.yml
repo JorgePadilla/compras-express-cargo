@@ -1,0 +1,12 @@
+activo_juan:
+  numero: FN-000001
+  venta: pendiente_juan
+  cliente: juan
+  estado: activo
+  numero_cuotas: 3
+  monto_total: 20.13
+  monto_cuota: 6.71
+  moneda: LPS
+  frecuencia: mensual
+  fecha_inicio: <%= Date.current %>
+  creado_por: cajero

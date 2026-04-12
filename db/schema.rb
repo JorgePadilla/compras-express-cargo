@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_12_040000) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_12_050500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -114,6 +114,49 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_12_040000) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "cotizacion_items", force: :cascade do |t|
+    t.bigint "cotizacion_id", null: false
+    t.bigint "paquete_id"
+    t.string "concepto", null: false
+    t.decimal "cantidad", precision: 10, scale: 2, default: "1.0"
+    t.decimal "precio_unitario", precision: 10, scale: 2, default: "0.0"
+    t.decimal "peso_cobrar", precision: 10, scale: 2
+    t.decimal "precio_libra", precision: 10, scale: 2
+    t.decimal "subtotal", precision: 10, scale: 2, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cotizacion_id"], name: "index_cotizacion_items_on_cotizacion_id"
+    t.index ["paquete_id"], name: "index_cotizacion_items_on_paquete_id"
+  end
+
+  create_table "cotizaciones", force: :cascade do |t|
+    t.string "numero", null: false
+    t.bigint "cliente_id", null: false
+    t.string "estado", default: "borrador", null: false
+    t.decimal "subtotal", precision: 10, scale: 2, default: "0.0"
+    t.decimal "impuesto", precision: 10, scale: 2, default: "0.0"
+    t.decimal "total", precision: 10, scale: 2, default: "0.0"
+    t.string "moneda", default: "LPS", null: false
+    t.decimal "tasa_cambio_aplicada", precision: 10, scale: 4
+    t.text "notas"
+    t.text "terminos"
+    t.integer "vigencia_dias", default: 30
+    t.date "fecha_vencimiento"
+    t.bigint "creado_por_id"
+    t.datetime "enviada_at"
+    t.datetime "aceptada_at"
+    t.datetime "rechazada_at"
+    t.datetime "email_enviado_at"
+    t.bigint "venta_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cliente_id"], name: "index_cotizaciones_on_cliente_id"
+    t.index ["creado_por_id"], name: "index_cotizaciones_on_creado_por_id"
+    t.index ["estado"], name: "index_cotizaciones_on_estado"
+    t.index ["numero"], name: "index_cotizaciones_on_numero", unique: true
+    t.index ["venta_id"], name: "index_cotizaciones_on_venta_id"
+  end
+
   create_table "empresa_manifiestos", force: :cascade do |t|
     t.string "nombre", null: false
     t.boolean "activo", default: true
@@ -135,6 +178,45 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_12_040000) do
     t.text "terminos_factura"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "financiamiento_cuotas", force: :cascade do |t|
+    t.bigint "financiamiento_id", null: false
+    t.integer "numero_cuota", null: false
+    t.decimal "monto", precision: 10, scale: 2, null: false
+    t.string "estado", default: "pendiente", null: false
+    t.date "fecha_vencimiento", null: false
+    t.datetime "pagada_at"
+    t.bigint "pago_id"
+    t.text "notas"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["financiamiento_id", "numero_cuota"], name: "idx_fin_cuotas_unique", unique: true
+    t.index ["financiamiento_id"], name: "index_financiamiento_cuotas_on_financiamiento_id"
+    t.index ["pago_id"], name: "index_financiamiento_cuotas_on_pago_id"
+  end
+
+  create_table "financiamientos", force: :cascade do |t|
+    t.string "numero", null: false
+    t.bigint "venta_id", null: false
+    t.bigint "cliente_id", null: false
+    t.string "estado", default: "activo", null: false
+    t.integer "numero_cuotas", null: false
+    t.decimal "monto_total", precision: 10, scale: 2, null: false
+    t.decimal "monto_cuota", precision: 10, scale: 2, null: false
+    t.string "moneda", default: "LPS", null: false
+    t.decimal "tasa_cambio_aplicada", precision: 10, scale: 4
+    t.string "frecuencia", default: "mensual", null: false
+    t.date "fecha_inicio", null: false
+    t.text "notas"
+    t.bigint "creado_por_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cliente_id"], name: "index_financiamientos_on_cliente_id"
+    t.index ["creado_por_id"], name: "index_financiamientos_on_creado_por_id"
+    t.index ["estado"], name: "index_financiamientos_on_estado"
+    t.index ["numero"], name: "index_financiamientos_on_numero", unique: true
+    t.index ["venta_id"], name: "index_financiamientos_on_venta_id"
   end
 
   create_table "lugars", force: :cascade do |t|
@@ -210,6 +292,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_12_040000) do
     t.datetime "anulado_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "tasa_cambio_aplicada", precision: 10, scale: 4
     t.index ["cliente_id"], name: "index_notas_credito_on_cliente_id"
     t.index ["creado_por_id"], name: "index_notas_credito_on_creado_por_id"
     t.index ["estado"], name: "index_notas_credito_on_estado"
@@ -233,6 +316,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_12_040000) do
     t.datetime "anulado_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "tasa_cambio_aplicada", precision: 10, scale: 4
     t.index ["cliente_id"], name: "index_notas_debito_on_cliente_id"
     t.index ["creado_por_id"], name: "index_notas_debito_on_creado_por_id"
     t.index ["estado"], name: "index_notas_debito_on_estado"
@@ -252,6 +336,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_12_040000) do
     t.bigint "registrado_por_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "tasa_cambio_aplicada", precision: 10, scale: 4
     t.index ["cliente_id"], name: "index_pagos_on_cliente_id"
     t.index ["estado"], name: "index_pagos_on_estado"
     t.index ["registrado_por_id"], name: "index_pagos_on_registrado_por_id"
@@ -372,6 +457,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_12_040000) do
     t.datetime "facturado_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "tasa_cambio_aplicada", precision: 10, scale: 4
     t.index ["cliente_id"], name: "index_pre_facturas_on_cliente_id"
     t.index ["creado_por_id"], name: "index_pre_facturas_on_creado_por_id"
     t.index ["estado"], name: "index_pre_facturas_on_estado"
@@ -388,6 +474,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_12_040000) do
     t.string "moneda", default: "LPS", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "tasa_cambio_aplicada", precision: 10, scale: 4
     t.index ["cliente_id"], name: "index_recibos_on_cliente_id"
     t.index ["numero"], name: "index_recibos_on_numero", unique: true
     t.index ["pago_id"], name: "index_recibos_on_pago_id"
@@ -471,9 +558,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_12_040000) do
     t.datetime "updated_at", null: false
     t.datetime "email_pendiente_enviado_at"
     t.datetime "email_pagada_enviado_at"
+    t.decimal "tasa_cambio_aplicada", precision: 10, scale: 4
+    t.bigint "financiamiento_id"
     t.index ["cliente_id"], name: "index_ventas_on_cliente_id"
     t.index ["creado_por_id"], name: "index_ventas_on_creado_por_id"
     t.index ["estado"], name: "index_ventas_on_estado"
+    t.index ["financiamiento_id"], name: "index_ventas_on_financiamiento_id"
     t.index ["numero"], name: "index_ventas_on_numero", unique: true
     t.index ["pre_factura_id"], name: "index_ventas_on_pre_factura_id"
   end
@@ -482,6 +572,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_12_040000) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "cliente_sessions", "clientes"
   add_foreign_key "clientes", "categoria_precios"
+  add_foreign_key "cotizacion_items", "cotizaciones"
+  add_foreign_key "cotizacion_items", "paquetes"
+  add_foreign_key "cotizaciones", "clientes"
+  add_foreign_key "cotizaciones", "users", column: "creado_por_id"
+  add_foreign_key "cotizaciones", "ventas"
+  add_foreign_key "financiamiento_cuotas", "financiamientos"
+  add_foreign_key "financiamiento_cuotas", "pagos"
+  add_foreign_key "financiamientos", "clientes"
+  add_foreign_key "financiamientos", "users", column: "creado_por_id"
+  add_foreign_key "financiamientos", "ventas"
   add_foreign_key "manifiestos", "empresa_manifiestos"
   add_foreign_key "manifiestos", "users"
   add_foreign_key "nota_credito_items", "notas_credito"
@@ -518,6 +618,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_12_040000) do
   add_foreign_key "venta_items", "paquetes"
   add_foreign_key "venta_items", "ventas"
   add_foreign_key "ventas", "clientes"
+  add_foreign_key "ventas", "financiamientos"
   add_foreign_key "ventas", "pre_facturas"
   add_foreign_key "ventas", "users", column: "creado_por_id"
 end

@@ -127,6 +127,92 @@ class VentaTest < ActiveSupport::TestCase
     assert_equal expected, venta.total_ajustado.to_d
   end
 
+  # ── Proforma with paquetes ──
+  test "build_proforma_from_paquetes creates proforma with venta_items linked to paquetes" do
+    cliente = clientes(:juan)
+    paquete = paquetes(:disponible_entrega_juan)
+
+    proforma = Venta.build_proforma_from_paquetes(cliente, [paquete.id], user: @user)
+    assert_equal "proforma", proforma.estado
+    assert_equal 1, proforma.venta_items.size
+
+    item = proforma.venta_items.first
+    assert_equal paquete, item.paquete
+    assert_includes item.concepto, paquete.guia
+    assert_equal paquete.peso_cobrar.to_d, item.peso_cobrar.to_d
+  end
+
+  test "build_proforma_from_paquetes uses cliente categoria_precio" do
+    cliente = clientes(:juan)
+    paquete = paquetes(:disponible_entrega_juan) # tipo_envio: aereo
+
+    proforma = Venta.build_proforma_from_paquetes(cliente, [paquete.id])
+    item = proforma.venta_items.first
+    expected_precio = cliente.categoria_precio&.precio_para(paquete.tipo_envio) || paquete.tipo_envio&.precio_libra
+    assert_equal expected_precio.to_d, item.precio_libra.to_d
+  end
+
+  test "emitir_proforma! transitions paquetes to pre_facturado and charges client" do
+    cliente = clientes(:juan)
+    paquete = paquetes(:disponible_entrega_juan)
+
+    proforma = Venta.build_proforma_from_paquetes(cliente, [paquete.id], user: @user)
+    proforma.save!
+    proforma.venta_items.each { |i| i.paquete&.update_column(:venta_id, proforma.id) }
+
+    initial_saldo = cliente.saldo_pendiente.to_d
+    assert proforma.emitir_proforma!
+
+    proforma.reload
+    assert_equal "pendiente", proforma.estado
+    assert_equal proforma.total.to_d, proforma.saldo_pendiente.to_d
+
+    paquete.reload
+    assert_equal "pre_facturado", paquete.estado
+    assert_equal proforma.id, paquete.venta_id
+
+    cliente.reload
+    assert_equal initial_saldo + proforma.total.to_d, cliente.saldo_pendiente.to_d
+  end
+
+  test "emitir_proforma! returns false for non-proforma" do
+    venta = ventas(:pendiente_juan)
+    assert_not venta.emitir_proforma!
+  end
+
+  test "anular_proforma! releases paquetes back to disponible_entrega" do
+    cliente = clientes(:juan)
+    paquete = paquetes(:disponible_entrega_juan2)
+
+    proforma = Venta.build_proforma_from_paquetes(cliente, [paquete.id], user: @user)
+    proforma.save!
+    paquete.update_column(:venta_id, proforma.id)
+
+    assert proforma.anular_proforma!
+
+    proforma.reload
+    assert_equal "anulada", proforma.estado
+
+    paquete.reload
+    assert_nil paquete.venta_id
+    assert_equal "disponible_entrega", paquete.estado
+  end
+
+  test "anular_proforma! returns false for non-proforma" do
+    venta = ventas(:pendiente_juan)
+    assert_not venta.anular_proforma!
+  end
+
+  test "anular! on proforma does not decrement saldo_pendiente" do
+    proforma = Venta.create!(
+      cliente: @cliente, estado: "proforma", moneda: "LPS",
+      venta_items_attributes: [{ concepto: "Flete", subtotal: 50 }]
+    )
+    initial_saldo = @cliente.saldo_pendiente.to_d
+    proforma.anular!
+    assert_equal initial_saldo, @cliente.reload.saldo_pendiente.to_d
+  end
+
   test "has_many notas_debito and notas_credito" do
     venta = ventas(:pagada_maria)
     assert_includes venta.notas_debito, notas_debito(:nd_emitida)

@@ -155,6 +155,9 @@
     <% if can_access?(:notas_credito) %>
       <%= link_to "Nueva NC", new_nota_credito_path(venta_id: @venta.id), class: "px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50" %>
     <% end %>
+    <% if can_access?(:financiamientos) && @venta.pendiente? && @venta.financiamiento.blank? %>
+      <%= link_to "Crear Financiamiento", new_financiamiento_path(venta_id: @venta.id), class: "px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50" %>
+    <% end %>
     <%= link_to "Volver", ventas_path, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900" %>
     <% unless @venta.pagada? || @venta.anulada? %>
       <%= button_to "Anular", anular_venta_path(@venta), method: :delete,

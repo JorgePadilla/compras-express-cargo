@@ -81,7 +81,7 @@ class ApplicationPdf
     rows = [columnas]
     items.each do |item|
       rows << [
-        item.concepto.to_s,
+        sanitize_text(item.concepto),
         item.peso_cobrar.present? ? format("%.2f", item.peso_cobrar) : "-",
         item.precio_libra.present? ? format("%.2f", item.precio_libra) : "-",
         format_money(item.subtotal || 0)
@@ -99,13 +99,14 @@ class ApplicationPdf
     move_down 10
   end
 
-  def bloque_totales(subtotal:, impuesto:, total:, saldo: nil, moneda: "LPS")
+  def bloque_totales(subtotal:, impuesto:, total:, saldo: nil, moneda: "LPS", tasa_cambio: nil)
     data = [
       ["Subtotal:", format_money(subtotal, moneda)],
       ["ISV (#{(empresa.isv_rate * 100).to_i}%):", format_money(impuesto, moneda)],
       ["Total:", format_money(total, moneda)]
     ]
     data << ["Saldo Pendiente:", format_money(saldo, moneda)] if saldo
+    data << ["Tasa de cambio:", "#{tasa_cambio} LPS/USD"] if moneda == "USD" && tasa_cambio.present?
 
     bounding_box([bounds.width - 250, cursor], width: 250) do
       table(data, width: 250) do
@@ -124,6 +125,10 @@ class ApplicationPdf
 
     move_down 20
     text empresa.terminos_factura, size: 8, color: "666666", align: :center
+  end
+
+  def sanitize_text(value)
+    ActionController::Base.helpers.strip_tags(value.to_s)
   end
 
   def format_money(amount, moneda = "LPS")

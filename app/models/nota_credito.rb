@@ -1,5 +1,6 @@
 class NotaCredito < ApplicationRecord
   self.table_name = "notas_credito"
+  include CurrencyAware
 
   ISV_RATE = Venta::ISV_RATE
 
@@ -17,7 +18,6 @@ class NotaCredito < ApplicationRecord
   validates :numero, presence: true, uniqueness: { case_sensitive: false }
   validates :estado, presence: true, inclusion: { in: ESTADOS }
   validates :motivo, presence: true, inclusion: { in: MOTIVOS }
-  validates :moneda, presence: true
 
   before_validation :generate_numero, on: :create, if: -> { numero.blank? }
   before_save :calculate_totals

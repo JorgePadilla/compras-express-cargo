@@ -23,12 +23,13 @@ class NotaDebitoPdf < ApplicationPdf
       subtotal: @nd.subtotal,
       impuesto: @nd.impuesto,
       total:    @nd.total,
-      moneda:   @nd.moneda
+      moneda:   @nd.moneda,
+      tasa_cambio: @nd.tasa_cambio_aplicada
     )
 
     if @nd.notas.present?
       move_down 10
-      text "Notas: #{@nd.notas}", size: 9, color: "666666"
+      text "Notas: #{sanitize_text(@nd.notas)}", size: 9, color: "666666"
     end
 
     footer_terminos

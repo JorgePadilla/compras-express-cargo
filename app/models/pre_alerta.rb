@@ -50,6 +50,38 @@ class PreAlerta < ApplicationRecord
   before_validation :assign_default_tipo_envio, on: :create
   before_validation :generate_numero_documento, on: :create, if: -> { numero_documento.blank? }
 
+  PAQUETE_TO_PRE_ALERTA_ESTADO = {
+    "recibido_miami"     => "recibido",
+    "empacado"           => "recibido",
+    "enviado_honduras"   => "enviado",
+    "en_aduana"          => "en_aduana",
+    "disponible_entrega" => "disponible",
+    "pre_facturado"      => "disponible",
+    "facturado"          => "facturado",
+    "en_reparto"         => "facturado",
+    "entregado"          => "facturado"
+  }.freeze
+
+  ESTADO_PIPELINE = %w[pre_alerta recibido enviado en_aduana disponible facturado].freeze
+
+  def actualizar_estado_from_paquetes!
+    return if anulado?
+
+    paquetes = pre_alerta_paquetes.where.not(paquete_id: nil).includes(:paquete).filter_map(&:paquete)
+    return if paquetes.empty?
+
+    mapped = paquetes.filter_map { |p| PAQUETE_TO_PRE_ALERTA_ESTADO[p.estado] }
+    return if mapped.empty?
+
+    min_idx = mapped.map { |e| ESTADO_PIPELINE.index(e) }.compact.min
+    return if min_idx.nil?
+
+    cur_idx = ESTADO_PIPELINE.index(estado)
+    return if cur_idx.nil? || min_idx <= cur_idx
+
+    update!(estado: ESTADO_PIPELINE[min_idx])
+  end
+
   def anular!
     update!(estado: "anulado")
   end

@@ -1,5 +1,6 @@
 class Venta < ApplicationRecord
   self.table_name = "ventas"
+  include CurrencyAware
 
   ISV_RATE = BigDecimal("0.15")
 
@@ -12,6 +13,8 @@ class Venta < ApplicationRecord
   has_many :recibos, dependent: :restrict_with_error
   has_many :notas_debito,  dependent: :restrict_with_error
   has_many :notas_credito, dependent: :restrict_with_error
+  has_one  :cotizacion, dependent: :nullify
+  has_one  :financiamiento, dependent: :restrict_with_error
 
   accepts_nested_attributes_for :venta_items, allow_destroy: true
 
@@ -19,14 +22,15 @@ class Venta < ApplicationRecord
 
   validates :numero, presence: true, uniqueness: { case_sensitive: false }
   validates :estado, presence: true, inclusion: { in: ESTADOS }
-  validates :moneda, presence: true
 
   before_validation :generate_numero, on: :create, if: -> { numero.blank? }
   before_save :calculate_totals
 
-  scope :activas,    -> { where.not(estado: "anulada") }
-  scope :pendientes, -> { where(estado: "pendiente") }
-  scope :pagadas,    -> { where(estado: "pagada") }
+  scope :activas,        -> { where.not(estado: "anulada") }
+  scope :pendientes,     -> { where(estado: "pendiente") }
+  scope :pagadas,        -> { where(estado: "pagada") }
+  scope :sin_proformas,  -> { where.not(estado: "proforma") }
+  scope :proformas,      -> { where(estado: "proforma") }
   scope :recientes,  -> { order(created_at: :desc) }
   scope :by_cliente, ->(id) { where(cliente_id: id) }
   scope :by_estado,  ->(estado) { where(estado: estado) }
@@ -124,7 +128,67 @@ class Venta < ApplicationRecord
       if pre_factura
         pre_factura.update!(estado: "pendiente", facturado_at: nil)
       end
-      cliente.decrement!(:saldo_pendiente, total)
+      cliente.decrement!(:saldo_pendiente, total) unless proforma?
+      update!(estado: "anulada")
+    end
+    true
+  end
+
+  # Builds a Venta(proforma) with venta_items linked to paquetes, like PreFactura.build_from_paquetes.
+  def self.build_proforma_from_paquetes(cliente, paquete_ids, user: nil, notas: nil)
+    proforma = new(
+      cliente: cliente,
+      creado_por: user,
+      estado: "proforma",
+      moneda: "LPS",
+      notas: notas
+    )
+
+    paquetes = cliente.paquetes.where(id: paquete_ids).includes(:tipo_envio)
+    paquetes.each do |paquete|
+      precio = cliente.categoria_precio&.precio_para(paquete.tipo_envio) ||
+               paquete.tipo_envio&.precio_libra ||
+               BigDecimal("0")
+      peso = paquete.peso_cobrar || BigDecimal("0")
+      subtotal = (BigDecimal(peso.to_s) * BigDecimal(precio.to_s)).round(2)
+
+      proforma.venta_items.build(
+        paquete: paquete,
+        concepto: "Flete #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia}",
+        peso_cobrar: peso,
+        precio_libra: precio,
+        subtotal: subtotal
+      )
+    end
+
+    proforma
+  end
+
+  # Emits a proforma as a real factura: transitions paquetes to pre_facturado,
+  # sets saldo_pendiente, and charges the client.
+  def emitir_proforma!
+    return false unless proforma?
+
+    transaction do
+      venta_items.includes(:paquete).each do |item|
+        next unless item.paquete
+        item.paquete.update!(venta_id: id, estado: "pre_facturado")
+      end
+      update!(estado: "pendiente", saldo_pendiente: total)
+      cliente.increment!(:saldo_pendiente, total)
+    end
+    true
+  end
+
+  # Cancels a proforma, releasing any reserved paquetes.
+  def anular_proforma!
+    return false unless proforma?
+
+    transaction do
+      venta_items.includes(:paquete).each do |item|
+        next unless item.paquete
+        item.paquete.update!(venta_id: nil, estado: "disponible_entrega")
+      end
       update!(estado: "anulada")
     end
     true

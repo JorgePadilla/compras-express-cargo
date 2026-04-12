@@ -1,11 +1,12 @@
 class Recibo < ApplicationRecord
+  include CurrencyAware
+
   belongs_to :venta
   belongs_to :pago
   belongs_to :cliente
 
   validates :numero, presence: true, uniqueness: { case_sensitive: false }
   validates :monto, numericality: { greater_than: 0 }
-  validates :moneda, presence: true
 
   before_validation :generate_numero, on: :create, if: -> { numero.blank? }
 
