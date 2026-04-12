@@ -108,7 +108,7 @@
       <tr class="paquete-row" data-new-record="true">
         <td class="px-4 py-2">
           <input type="text" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][tracking]"
-                 placeholder="Tracking (opcional)"
+                 placeholder="Tracking" required
                  class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
                         focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
         </td>
@@ -126,9 +126,8 @@
         </td>
         <td class="px-4 py-2">
           <input type="date" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][fecha]"
-                 data-controller="flatpickr"
-                 class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
-                        focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
+                 readonly
+                 class="block w-full rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm text-gray-500 cursor-not-allowed">
         </td>
         <td class="px-4 py-2 text-center">
           <%= render StatusBadgeComponent.new(status: "pre_alerta", label: "Pre Alerta") %>
