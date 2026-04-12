@@ -176,6 +176,7 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_difference("PreAlertaPaquete.count", 1) do
       post cuenta_pre_alertas_url, params: {
         wizard_step: 3,
+        titulo: "Con instrucciones",
         tracking: "INSTRTEST001",
         descripcion: "Con instrucciones",
         instrucciones: "Combinar con otro paquete",
@@ -285,6 +286,7 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_difference("PreAlerta.count") do
       post cuenta_pre_alertas_url, params: {
         wizard_step: 3,
+        titulo: "Caja CKA",
         tracking: "CKAWIZ001",
         descripcion: "Paquete CKA"
       }
@@ -305,6 +307,7 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_difference("PreAlerta.count") do
       post cuenta_pre_alertas_url, params: {
         wizard_step: 3,
+        titulo: "Caja CKM",
         tracking: "CKMWIZ001",
         descripcion: "Paquete CKM"
       }

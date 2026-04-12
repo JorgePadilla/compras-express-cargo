@@ -50,6 +50,7 @@ class PreAlertasControllerTest < ActionDispatch::IntegrationTest
       post pre_alertas_url, params: { pre_alerta: {
         cliente_id: clientes(:juan).id,
         tipo_envio_id: tipo_envios(:aereo).id,
+        titulo: "Test Admin",
         consolidado: false,
         con_reempaque: false,
         pre_alerta_paquetes_attributes: {
@@ -68,6 +69,7 @@ class PreAlertasControllerTest < ActionDispatch::IntegrationTest
       post pre_alertas_url, params: { pre_alerta: {
         cliente_id: clientes(:juan).id,
         tipo_envio_id: tipo_envios(:aereo).id,
+        titulo: "Test Admin",
         pre_alerta_paquetes_attributes: {
           "0" => { tracking: "ADMININSTR001", descripcion: "Test", instrucciones: "Fragil" }
         }
@@ -131,6 +133,7 @@ class PreAlertasControllerTest < ActionDispatch::IntegrationTest
     old_empty = PreAlerta.create!(
       cliente: clientes(:juan),
       tipo_envio: tipo_envios(:aereo),
+      titulo: "Test",
       estado: "pre_alerta",
       created_at: 31.days.ago
     )
