@@ -293,6 +293,46 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     pa = PreAlerta.last
     assert_equal cka, pa.tipo_envio
     assert_not pa.consolidado?
+    # Sin reempaque → redirect to home, not edit
+    assert_redirected_to cuenta_root_url
+  end
+
+  test "wizard step 3 creates with CKM and redirects to home" do
+    ckm = tipo_envios(:ckm)
+    post cuenta_pre_alertas_url, params: { wizard_step: 1, tipo_envio_id: ckm.id }
+    assert_redirected_to new_cuenta_pre_alerta_url(step: 3)
+
+    assert_difference("PreAlerta.count") do
+      post cuenta_pre_alertas_url, params: {
+        wizard_step: 3,
+        tracking: "CKMWIZ001",
+        descripcion: "Paquete CKM"
+      }
+    end
+
+    pa = PreAlerta.last
+    assert_equal ckm, pa.tipo_envio
+    assert_not pa.consolidado?
+    assert_redirected_to cuenta_root_url
+    assert_match "registrada exitosamente", flash[:notice]
+  end
+
+  test "wizard step 3 with con reempaque service still redirects to edit" do
+    post cuenta_pre_alertas_url, params: { wizard_step: 1, tipo_envio_id: tipo_envios(:express).id }
+    post cuenta_pre_alertas_url, params: { wizard_step: 2, consolidado: "0" }
+
+    assert_difference("PreAlerta.count") do
+      post cuenta_pre_alertas_url, params: {
+        wizard_step: 3,
+        titulo: "Monitor",
+        tracking: "EXPRESSWIZ001",
+        descripcion: "Monitor Dell"
+      }
+    end
+
+    pa = PreAlerta.last
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+    assert_match "registrada", flash[:notice]
   end
 
   # ── v4: step-3 save-failure re-renders step 3, not step 1 ──

@@ -1,5 +1,10 @@
 <ul class="space-y-1 px-3">
   <%= sidebar_link "Inicio", cuenta_root_path, icon: "home" %>
+
+  <%= sidebar_section "Accesos Rápidos" do %>
+    <%= sidebar_link "Nueva Pre-Alerta", new_cuenta_pre_alerta_path, icon: "plus-circle" %>
+  <% end %>
+
   <%= sidebar_link "Pre-Alertas", cuenta_pre_alertas_path, icon: "bell-alert" %>
   <%= sidebar_link "Mis Paquetes", "#", icon: "archive-box" %>
   <%= sidebar_link "Mis Facturas", cuenta_facturas_path, icon: "currency-dollar" %>

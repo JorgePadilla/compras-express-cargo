@@ -175,6 +175,11 @@ module Cuenta
             # Keep wizard session so user can continue adding paquetes in the edit view
             redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
                         notice: "¡Paquete agregado a #{@pre_alerta.numero_documento}! Agrega más paquetes abajo."
+          elsif !wizard["con_reempaque"]
+            # Sin reempaque (CKA/CKM): solo 1 paquete, no necesita ir a editar
+            session.delete(:pre_alerta_wizard)
+            redirect_to cuenta_root_path,
+                        notice: "¡Pre-alerta #{@pre_alerta.numero_documento} registrada exitosamente!"
           else
             session.delete(:pre_alerta_wizard)
             redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
