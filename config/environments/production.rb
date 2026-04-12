@@ -74,7 +74,7 @@ Rails.application.configure do
       enable_starttls_auto: true
     }
   else
-    Rails.logger.warn("[mail] SMTP_ADDRESS not set - using :test delivery. No emails will be sent.") if defined?(Rails.logger)
+    Rails.logger&.warn("[mail] SMTP_ADDRESS not set - using :test delivery. No emails will be sent.")
     config.action_mailer.delivery_method = :test
     config.action_mailer.perform_deliveries = true
     config.action_mailer.raise_delivery_errors = false
