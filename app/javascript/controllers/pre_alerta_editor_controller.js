@@ -55,7 +55,7 @@ export default class extends Controller {
     }
 
     const template = this.templateTarget.content.cloneNode(true)
-    const row = template.querySelector("tr")
+    const row = template.querySelector(".paquete-row")
 
     // Replace NEW_INDEX with unique index
     this._newIndex++
@@ -71,7 +71,7 @@ export default class extends Controller {
   }
 
   removePaquete(e) {
-    const row = e.currentTarget.closest("tr")
+    const row = e.currentTarget.closest(".paquete-row")
     const destroyField = row.querySelector("[data-pre-alerta-editor-target='destroyField']")
 
     if (destroyField) {
@@ -127,7 +127,7 @@ export default class extends Controller {
 
   currentPackageCount() {
     if (!this.hasPaquetesBodyTarget) return 0
-    return this.paquetesBodyTarget.querySelectorAll("tr.paquete-row:not(.hidden)").length
+    return this.paquetesBodyTarget.querySelectorAll(".paquete-row:not(.hidden)").length
   }
 
   isAtLimit() {
