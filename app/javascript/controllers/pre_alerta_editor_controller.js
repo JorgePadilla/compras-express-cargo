@@ -4,7 +4,8 @@ export default class extends Controller {
   static targets = ["form", "paquetesBody", "template", "counter", "addButton", "limitMessage"]
   static values = {
     maxPaquetes: { type: Number, default: -1 },
-    cancelUrl: { type: String, default: "" }
+    cancelUrl: { type: String, default: "" },
+    consolidado: { type: Boolean, default: false }
   }
 
   _newIndex = Date.now()
@@ -92,17 +93,33 @@ export default class extends Controller {
 
   saveAndNotify() {
     this._removeNotifyField()
-    const input = document.createElement("input")
-    input.type = "hidden"
-    input.name = "notificar"
-    input.value = "true"
-    input.dataset.notifyField = "true"
-    this.formTarget.appendChild(input)
+    const notifyInput = document.createElement("input")
+    notifyInput.type = "hidden"
+    notifyInput.name = "notificar"
+    notifyInput.value = "true"
+    notifyInput.dataset.notifyField = "true"
+    this.formTarget.appendChild(notifyInput)
+
+    if (this.consolidadoValue) {
+      this._removeFinalizarField()
+      const finalizarInput = document.createElement("input")
+      finalizarInput.type = "hidden"
+      finalizarInput.name = "finalizar"
+      finalizarInput.value = "true"
+      finalizarInput.dataset.finalizarField = "true"
+      this.formTarget.appendChild(finalizarInput)
+    }
+
     this.formTarget.requestSubmit()
   }
 
   _removeNotifyField() {
     const existing = this.formTarget.querySelector("[data-notify-field]")
+    if (existing) existing.remove()
+  }
+
+  _removeFinalizarField() {
+    const existing = this.formTarget.querySelector("[data-finalizar-field]")
     if (existing) existing.remove()
   }
 

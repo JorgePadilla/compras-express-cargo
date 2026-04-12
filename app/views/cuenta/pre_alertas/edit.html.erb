@@ -1,6 +1,7 @@
 <% max_paquetes = @pre_alerta.consolidado? ? @pre_alerta.tipo_envio&.max_paquetes_por_accion : 1 %>
 <div data-controller="pre-alerta-editor pre-alerta-mover"
      data-pre-alerta-editor-max-paquetes-value="<%= max_paquetes || -1 %>"
+     data-pre-alerta-editor-consolidado-value="<%= @pre_alerta.consolidado? %>"
      data-pre-alerta-editor-cancel-url-value="<%= cuenta_pre_alertas_path %>"
      data-pre-alerta-mover-destinos-url-value="<%= destinos_disponibles_cuenta_pre_alerta_path(@pre_alerta) %>"
      data-pre-alerta-mover-mover-url-value="<%= mover_paquete_cuenta_pre_alerta_path(@pre_alerta) %>">
@@ -152,14 +153,25 @@
           Agregar Paquete (F6)
         </button>
       <% end %>
-      <button type="button" data-action="click->pre-alerta-editor#save"
-              class="bg-cec-teal text-white font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm hover:bg-cec-teal-dark transition-colors">
-        Guardar (F8)
-      </button>
-      <button type="button" data-action="click->pre-alerta-editor#saveAndNotify"
-              class="btn-gold-gradient text-cec-navy-dark font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm">
-        Guardar y Notificar (F9)
-      </button>
+      <% if @pre_alerta.consolidado? %>
+        <button type="button" data-action="click->pre-alerta-editor#save"
+                class="bg-cec-teal text-white font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm hover:bg-cec-teal-dark transition-colors">
+          Guardar, Seguir Consolidando (F8)
+        </button>
+        <button type="button" data-action="click->pre-alerta-editor#saveAndNotify"
+                class="btn-gold-gradient text-cec-navy-dark font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm">
+          Guardar, Finalizar Consolidación (F9)
+        </button>
+      <% else %>
+        <button type="button" data-action="click->pre-alerta-editor#save"
+                class="bg-cec-teal text-white font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm hover:bg-cec-teal-dark transition-colors">
+          Guardar (F8)
+        </button>
+        <button type="button" data-action="click->pre-alerta-editor#saveAndNotify"
+                class="btn-gold-gradient text-cec-navy-dark font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm">
+          Guardar y Notificar (F9)
+        </button>
+      <% end %>
     </div>
   <% end %>
 

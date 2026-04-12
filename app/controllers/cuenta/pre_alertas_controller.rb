@@ -54,10 +54,15 @@ module Cuenta
         respond_to do |format|
           format.html { redirect_to edit_cuenta_pre_alerta_path(@pre_alerta), notice: "Pre-alerta actualizada." }
           format.turbo_stream {
-            render turbo_stream: [
-              turbo_stream.update("pre_alerta_header", partial: "cuenta/pre_alertas/header", locals: { pre_alerta: @pre_alerta }),
-              turbo_stream.update("flash", partial: "shared/flash", locals: { notice: notificar ? "Guardado y notificado." : "Guardado." })
-            ]
+            if params[:finalizar] == "true" && @pre_alerta.consolidado?
+              redirect_to cuenta_root_path,
+                          notice: "¡Consolidación finalizada! Pre-alerta #{@pre_alerta.numero_documento} guardada."
+            else
+              render turbo_stream: [
+                turbo_stream.update("pre_alerta_header", partial: "cuenta/pre_alertas/header", locals: { pre_alerta: @pre_alerta }),
+                turbo_stream.update("flash", partial: "shared/flash", locals: { notice: notificar ? "Guardado y notificado." : "Guardado." })
+              ]
+            end
           }
         end
       else
