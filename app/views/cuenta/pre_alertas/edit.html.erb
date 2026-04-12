@@ -152,14 +152,25 @@
           Agregar Paquete (F6)
         </button>
       <% end %>
-      <button type="button" data-action="click->pre-alerta-editor#save"
-              class="bg-cec-teal text-white font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm hover:bg-cec-teal-dark transition-colors">
-        Guardar (F8)
-      </button>
-      <button type="button" data-action="click->pre-alerta-editor#saveAndNotify"
-              class="btn-gold-gradient text-cec-navy-dark font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm">
-        Guardar y Notificar (F9)
-      </button>
+      <% if @pre_alerta.consolidado? %>
+        <button type="button" data-action="click->pre-alerta-editor#save"
+                class="bg-cec-teal text-white font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm hover:bg-cec-teal-dark transition-colors">
+          Guardar, Seguir Consolidando (F8)
+        </button>
+        <button type="button" data-action="click->pre-alerta-editor#saveAndNotify"
+                class="btn-gold-gradient text-cec-navy-dark font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm">
+          Guardar, Finalizar Consolidación (F9)
+        </button>
+      <% else %>
+        <button type="button" data-action="click->pre-alerta-editor#save"
+                class="bg-cec-teal text-white font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm hover:bg-cec-teal-dark transition-colors">
+          Guardar (F8)
+        </button>
+        <button type="button" data-action="click->pre-alerta-editor#saveAndNotify"
+                class="btn-gold-gradient text-cec-navy-dark font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm">
+          Guardar y Notificar (F9)
+        </button>
+      <% end %>
     </div>
   <% end %>
 
