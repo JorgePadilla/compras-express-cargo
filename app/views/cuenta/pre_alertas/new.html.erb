@@ -147,26 +147,17 @@
                             <%= tipo.sla %>
                           </p>
                         <% end %>
+                        <% if tipo.single_package? %>
+                          <p class="text-xs text-red-600 mt-1 inline-flex items-center gap-1">
+                            <%= heroicon "exclamation-triangle", variant: :outline, options: { class: "w-3 h-3" } %>
+                            Solo 1 tracking por pre-alerta
+                          </p>
+                        <% end %>
                       </div>
                     </div>
                   </div>
                 </label>
               <% end %>
-            </div>
-          </div>
-        </div>
-
-        <%# Red banner: shown only when CKA/CKM is selected %>
-        <%
-          preselected_single = selected_tipo&.single_package?
-        %>
-        <div data-wizard-target="limitWarning"
-             class="<%= preselected_single ? '' : 'hidden' %> mt-6 rounded-xl border-2 border-red-300 bg-red-50 p-4 animate-fade-in-up">
-          <div class="flex items-start gap-3">
-            <%= heroicon "exclamation-triangle", variant: :outline, options: { class: "w-6 h-6 text-red-500 shrink-0" } %>
-            <div>
-              <p class="font-bold text-red-700">1 paquete por acción</p>
-              <p class="text-sm text-red-600 mt-0.5">CKA y CKM no permiten más de un tracking por pre-alerta.</p>
             </div>
           </div>
         </div>
@@ -347,7 +338,7 @@
             Atrás
           <% end %>
           <div class="flex flex-col sm:flex-row gap-3">
-            <% if show_consolidacion %>
+            <% if wizard["consolidado"] %>
               <button type="submit" name="agregar_otro" value="1"
                       class="inline-flex items-center gap-2 rounded-lg transition-all duration-200 border border-cec-teal text-cec-teal font-semibold px-6 py-3 text-base hover:bg-cec-teal/10">
                 <%= heroicon "plus-circle", variant: :outline, options: { class: "w-5 h-5" } %>

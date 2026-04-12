@@ -1,4 +1,4 @@
-<% max_paquetes = @pre_alerta.tipo_envio&.max_paquetes_por_accion %>
+<% max_paquetes = @pre_alerta.consolidado? ? @pre_alerta.tipo_envio&.max_paquetes_por_accion : 1 %>
 <div data-controller="pre-alerta-editor pre-alerta-mover"
      data-pre-alerta-editor-max-paquetes-value="<%= max_paquetes || -1 %>"
      data-pre-alerta-editor-cancel-url-value="<%= cuenta_pre_alertas_path %>"
@@ -77,7 +77,7 @@
         <div data-pre-alerta-editor-target="limitMessage"
              class="hidden px-4 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-800 flex items-center gap-2">
           <%= heroicon "information-circle", variant: :outline, options: { class: "w-4 h-4 shrink-0" } %>
-          <span><%= @pre_alerta.tipo_envio.nombre %> solo permite <%= max_paquetes %> paquete<%= "s" if max_paquetes != 1 %> por pre-alerta.</span>
+          <span>Solo se permite <%= max_paquetes %> paquete<%= "s" if max_paquetes != 1 %> por pre-alerta.</span>
         </div>
       <% end %>
 
@@ -147,12 +147,14 @@
     <div class="flex flex-col sm:flex-row gap-3 justify-end">
       <%= link_to "Cancelar (F2)", cuenta_pre_alertas_path,
           class: "text-gray-600 hover:text-gray-800 text-sm font-medium px-4 py-2.5 text-center" %>
-      <button type="button" data-action="click->pre-alerta-editor#addPaquete"
-              data-pre-alerta-editor-target="addButton"
-              class="inline-flex items-center gap-1.5 border border-cec-teal text-cec-teal font-semibold px-6 py-2.5 rounded-lg text-sm hover:bg-cec-teal/10 transition-colors">
-        <%= heroicon "plus-circle", variant: :outline, options: { class: "w-4 h-4" } %>
-        Agregar Paquete (F6)
-      </button>
+      <% if @pre_alerta.consolidado? %>
+        <button type="button" data-action="click->pre-alerta-editor#addPaquete"
+                data-pre-alerta-editor-target="addButton"
+                class="inline-flex items-center gap-1.5 border border-cec-teal text-cec-teal font-semibold px-6 py-2.5 rounded-lg text-sm hover:bg-cec-teal/10 transition-colors">
+          <%= heroicon "plus-circle", variant: :outline, options: { class: "w-4 h-4" } %>
+          Agregar Paquete (F6)
+        </button>
+      <% end %>
       <button type="button" data-action="click->pre-alerta-editor#save"
               class="bg-cec-teal text-white font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm hover:bg-cec-teal-dark transition-colors">
         Guardar (F8)
