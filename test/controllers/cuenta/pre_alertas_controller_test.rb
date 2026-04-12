@@ -3,7 +3,7 @@ require "test_helper"
 class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
   setup do
     @cliente = clientes(:juan)
-    post cuenta_session_url, params: { email: @cliente.email, password: "Cliente123!" }
+    post session_url, params: { email_address: @cliente.email, password: "Cliente123!" }
     @pre_alerta = pre_alertas(:activa)
   end
 
@@ -259,9 +259,9 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
 
   # Security
   test "requires authentication" do
-    delete cuenta_session_url
+    delete session_url
     get cuenta_pre_alertas_url
-    assert_redirected_to new_cuenta_session_url
+    assert_redirected_to new_session_url
   end
 
   # ── v4 services ──

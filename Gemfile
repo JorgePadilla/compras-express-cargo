@@ -43,6 +43,8 @@ gem "thruster", require: false
 gem "heroicon"           # Heroicons v2 SVG icons
 gem "view_component"     # Reusable UI components
 gem "kaminari"           # Pagination
+gem "prawn", "~> 2.5"    # PDF generation (pure Ruby)
+gem "prawn-table", "~> 0.2" # Tables in Prawn PDFs
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem

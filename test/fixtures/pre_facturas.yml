@@ -1,0 +1,21 @@
+borrador_juan:
+  numero: PF-000001
+  cliente: juan
+  estado: creado
+  subtotal: 35.00
+  impuesto: 5.25
+  total: 40.25
+  moneda: LPS
+  creado_por: cajero
+  fecha_trabajo: <%= Date.current %>
+
+pendiente_maria:
+  numero: PF-000002
+  cliente: maria
+  estado: pendiente
+  subtotal: 25.00
+  impuesto: 3.75
+  total: 28.75
+  moneda: LPS
+  creado_por: cajero
+  confirmado_at: <%= 1.hour.ago %>

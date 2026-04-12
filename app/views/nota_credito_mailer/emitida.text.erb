@@ -1,0 +1,11 @@
+Hola, <%= @cliente.nombre %>
+
+Hemos emitido la nota de credito <%= @nc.numero %> relacionada con tu factura <%= @venta.numero %>.
+Adjunto encontraras el PDF con el detalle del credito aplicado.
+
+Nota: <%= @nc.numero %>
+Motivo: <%= @nc.motivo.humanize %>
+Total: <%= @nc.moneda %> <%= format("%.2f", @nc.total) %>
+
+Este importe se restara de tu saldo pendiente.
+- <%= @empresa.nombre %>

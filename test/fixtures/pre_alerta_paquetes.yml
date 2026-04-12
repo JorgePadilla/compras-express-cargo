@@ -12,6 +12,19 @@ pap_con_descripcion:
 
   fecha: <%= Date.current %>
 
+pap_vinculado:
+  pre_alerta: recibida
+  tracking: "1Z999AA10123456784"
+  descripcion: "Zapatos Nike vinculado"
+  paquete: recibido
+  fecha: <%= Date.current %>
+
+pap_destino:
+  pre_alerta: consolidada_destino
+  tracking: "1Z999DESTINO001"
+  descripcion: "Paquete destino"
+  fecha: <%= Date.current %>
+
 pap_maria:
   pre_alerta: maria_pa
   tracking: "1Z999PREALERT003"

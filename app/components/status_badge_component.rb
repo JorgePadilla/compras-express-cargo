@@ -8,21 +8,22 @@ class StatusBadgeComponent < ViewComponent::Base
 
   COLORS = {
     # Success — positive end-states
-    "activo" => SUCCESS, "disponible" => SUCCESS, "listo_entrega" => SUCCESS,
+    "activo" => SUCCESS, "disponible" => SUCCESS, "disponible_entrega" => SUCCESS,
     "entregado" => SUCCESS, "pagado" => SUCCESS, "facturado" => SUCCESS,
 
     # Info — in-progress logistics states
+    "recibido_miami" => INFO, "empacado" => INFO, "enviado_honduras" => INFO,
+    "en_reparto" => INFO, "pre_facturado" => INFO, "creado" => INFO,
     "en_proceso" => INFO, "en_miami" => INFO, "en_transito" => INFO,
-    "en_bodega" => INFO,  "en_bodega_hn" => INFO, "recibido" => INFO,
-    "etiquetado" => INFO, "en_manifiesto" => INFO, "enviado" => INFO,
-    "pre_facturado" => INFO, "creado" => INFO,
+    "recibido" => INFO, "enviado" => INFO,
 
     # Warning — pending / held / awaiting action
     "pendiente" => WARNING, "pre_alerta" => WARNING,
     "retenido" => WARNING, "en_aduana" => WARNING,
 
     # Danger
-    "anulado" => DANGER, "extraviado" => DANGER, "devuelto" => DANGER,
+    "anulado" => DANGER, "retornado" => DANGER, "desechado" => DANGER,
+    "extraviado" => DANGER, "devuelto" => DANGER,
 
     # Neutral
     "inactivo" => NEUTRAL

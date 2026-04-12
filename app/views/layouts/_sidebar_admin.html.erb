@@ -9,12 +9,14 @@
     <% end %>
   <% end %>
 
-  <% if can_access?(:pre_facturas) || can_access?(:pre_alertas) || can_access?(:ventas) %>
+  <% if can_access?(:pre_facturas) || can_access?(:pre_alertas) || can_access?(:ventas) || can_access?(:notas_debito) || can_access?(:notas_credito) %>
     <%= sidebar_section "Caja" do %>
-      <%= sidebar_link "Pre-Facturas", "#", icon: "document-text" if can_access?(:pre_facturas) %>
+      <%= sidebar_link "Pre-Facturas", pre_facturas_path, icon: "document-text" if can_access?(:pre_facturas) %>
       <%= sidebar_link "Pre-Alertas", pre_alertas_path, icon: "bell-alert" if can_access?(:pre_alertas) %>
-      <%= sidebar_link "Ventas", "#", icon: "currency-dollar" if can_access?(:ventas) %>
-      <%= sidebar_link "Recibos", "#", icon: "receipt-percent" if can_access?(:recibos) %>
+      <%= sidebar_link "Ventas", ventas_path, icon: "currency-dollar" if can_access?(:ventas) %>
+      <%= sidebar_link "Recibos", recibos_path, icon: "receipt-percent" if can_access?(:recibos) %>
+      <%= sidebar_link "Notas de Debito", notas_debito_path, icon: "document-plus" if can_access?(:notas_debito) %>
+      <%= sidebar_link "Notas de Credito", notas_credito_path, icon: "document-minus" if can_access?(:notas_credito) %>
     <% end %>
   <% end %>
 
@@ -33,6 +35,8 @@
   <% end %>
 
   <% if admin? %>
+    <%= sidebar_link "Categorias de Precio", categoria_precios_path, icon: "tag" %>
+    <%= sidebar_link "Empresa", empresa_path, icon: "building-office-2" %>
     <%= sidebar_link "Configuraciones", "#", icon: "cog-6-tooth" %>
     <%= sidebar_link "Reportes", "#", icon: "table-cells" %>
   <% end %>

@@ -1,0 +1,28 @@
+<% content_for :title, "Nota de Credito #{@nc.numero}" %>
+
+<h2 style="margin:0 0 12px 0; font-size:18px; color:#0f2b5b;">Hola, <%= @cliente.nombre %></h2>
+
+<p style="margin:0 0 16px 0; line-height:1.5;">
+  Hemos emitido la nota de credito <strong><%= @nc.numero %></strong>
+  relacionada con tu factura <strong><%= @venta.numero %></strong>.
+  Adjunto encontraras el PDF con el detalle del credito aplicado.
+</p>
+
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:16px 0; background:#eff6ff; border-radius:6px;">
+  <tr>
+    <td style="padding:12px 16px; border-bottom:1px solid #bfdbfe;"><strong>Nota:</strong></td>
+    <td align="right" style="padding:12px 16px; border-bottom:1px solid #bfdbfe;"><%= @nc.numero %></td>
+  </tr>
+  <tr>
+    <td style="padding:12px 16px; border-bottom:1px solid #bfdbfe;"><strong>Motivo:</strong></td>
+    <td align="right" style="padding:12px 16px; border-bottom:1px solid #bfdbfe;"><%= @nc.motivo.humanize %></td>
+  </tr>
+  <tr>
+    <td style="padding:12px 16px; font-size:16px; color:#1e40af;"><strong>Total:</strong></td>
+    <td align="right" style="padding:12px 16px; font-size:16px; color:#1e40af;"><strong><%= @nc.moneda %> <%= number_with_delimiter(format("%.2f", @nc.total)) %></strong></td>
+  </tr>
+</table>
+
+<p style="margin:16px 0 0 0; font-size:13px; color:#6b7280;">
+  Este importe se restara de tu saldo pendiente. - <%= @empresa.nombre %>
+</p>

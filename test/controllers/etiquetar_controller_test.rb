@@ -22,7 +22,7 @@ class EtiquetarControllerTest < ActionDispatch::IntegrationTest
       } }
     end
     paquete = Paquete.last
-    assert_equal "etiquetado", paquete.estado
+    assert_equal "empacado", paquete.estado
     assert_equal @digitador, paquete.user
     assert_redirected_to etiquetar_url
   end

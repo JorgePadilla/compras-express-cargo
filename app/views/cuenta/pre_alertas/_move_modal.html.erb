@@ -1,0 +1,54 @@
+<%# Move paquete modal — controlled by pre-alerta-mover Stimulus controller %>
+<div data-pre-alerta-mover-target="modal"
+     class="hidden fixed inset-0 z-50 flex items-center justify-center">
+  <%# Backdrop %>
+  <div data-action="click->pre-alerta-mover#close"
+       class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"></div>
+
+  <%# Card %>
+  <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <h3 class="text-sm font-bold text-gray-800">
+        Mover paquete <span data-pre-alerta-mover-target="trackingLabel" class="font-mono text-cec-navy"></span>
+      </h3>
+      <button type="button" data-action="click->pre-alerta-mover#close"
+              class="text-gray-400 hover:text-gray-600">
+        <%= heroicon "x-mark", variant: :outline, options: { class: "w-5 h-5" } %>
+      </button>
+    </div>
+
+    <div data-pre-alerta-mover-target="body" class="px-6 py-4 max-h-80 overflow-y-auto">
+      <%# Loading state %>
+      <div data-pre-alerta-mover-target="loading" class="text-center py-8">
+        <div class="inline-block w-6 h-6 border-2 border-cec-teal/30 border-t-cec-teal rounded-full animate-spin"></div>
+        <p class="text-sm text-gray-500 mt-2">Buscando destinos...</p>
+      </div>
+
+      <%# Destination list (populated by Stimulus) %>
+      <div data-pre-alerta-mover-target="list" class="hidden space-y-2"></div>
+
+      <%# Empty state %>
+      <div data-pre-alerta-mover-target="empty" class="hidden text-center py-8">
+        <p class="text-sm text-gray-500">No hay pre-alertas disponibles para mover este paquete.</p>
+      </div>
+    </div>
+
+    <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+      <button type="button" data-action="click->pre-alerta-mover#close"
+              class="text-gray-600 hover:text-gray-800 text-sm font-medium px-4 py-2">
+        Cancelar
+      </button>
+      <%= form_with url: mover_paquete_cuenta_pre_alerta_path(pre_alerta), method: :post,
+            data: { pre_alerta_mover_target: "form" }, class: "inline" do |f| %>
+        <input type="hidden" name="pre_alerta_paquete_id" data-pre-alerta-mover-target="papIdField" value="">
+        <input type="hidden" name="destino_id" data-pre-alerta-mover-target="destinoField" value="">
+        <button type="submit" data-pre-alerta-mover-target="confirmBtn"
+                disabled
+                class="bg-cec-teal text-white font-semibold px-6 py-2 rounded-lg text-sm
+                       hover:bg-cec-teal-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+          Confirmar
+        </button>
+      <% end %>
+    </div>
+  </div>
+</div>

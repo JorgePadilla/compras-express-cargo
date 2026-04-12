@@ -8,6 +8,12 @@ class Cliente < ApplicationRecord
   has_many :paquetes, dependent: :restrict_with_error
   has_many :cliente_sessions, dependent: :destroy
   has_many :pre_alertas, dependent: :restrict_with_error
+  has_many :pre_facturas, dependent: :restrict_with_error
+  has_many :ventas, dependent: :restrict_with_error
+  has_many :pagos, dependent: :restrict_with_error
+  has_many :recibos, dependent: :restrict_with_error
+  has_many :notas_debito,  dependent: :restrict_with_error
+  has_many :notas_credito, dependent: :restrict_with_error
 
   validates :codigo, presence: true, uniqueness: { case_sensitive: false }
   validates :nombre, presence: true

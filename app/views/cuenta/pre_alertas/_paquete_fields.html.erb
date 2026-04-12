@@ -31,11 +31,20 @@
     </td>
     <td class="px-4 py-2 text-center">
       <% if pap.paquete_id.present? %>
-        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30">
-          Vinculado
-        </span>
+        <%= render StatusBadgeComponent.new(status: pap.paquete.estado) %>
       <% else %>
-        <span class="text-xs text-gray-400">-</span>
+        <%= render StatusBadgeComponent.new(status: "pre_alerta", label: "Pre Alerta") %>
+      <% end %>
+    </td>
+    <td class="px-4 py-2 text-center">
+      <% if pap.persisted? && puede_mover?(pap) %>
+        <button type="button"
+                data-action="click->pre-alerta-mover#open"
+                data-pap-id="<%= pap.id %>"
+                data-tracking="<%= pap.tracking %>"
+                class="text-cec-teal hover:text-cec-teal-dark text-xs font-medium">
+          Mover
+        </button>
       <% end %>
     </td>
     <td class="px-4 py-2 text-center">

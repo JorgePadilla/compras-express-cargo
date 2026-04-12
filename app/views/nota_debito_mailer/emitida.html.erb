@@ -1,0 +1,28 @@
+<% content_for :title, "Nota de Debito #{@nd.numero}" %>
+
+<h2 style="margin:0 0 12px 0; font-size:18px; color:#0f2b5b;">Hola, <%= @cliente.nombre %></h2>
+
+<p style="margin:0 0 16px 0; line-height:1.5;">
+  Hemos emitido la nota de debito <strong><%= @nd.numero %></strong>
+  relacionada con tu factura <strong><%= @venta.numero %></strong>.
+  Adjunto encontraras el PDF con el detalle del ajuste.
+</p>
+
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:16px 0; background:#fff7ed; border-radius:6px;">
+  <tr>
+    <td style="padding:12px 16px; border-bottom:1px solid #fed7aa;"><strong>Nota:</strong></td>
+    <td align="right" style="padding:12px 16px; border-bottom:1px solid #fed7aa;"><%= @nd.numero %></td>
+  </tr>
+  <tr>
+    <td style="padding:12px 16px; border-bottom:1px solid #fed7aa;"><strong>Motivo:</strong></td>
+    <td align="right" style="padding:12px 16px; border-bottom:1px solid #fed7aa;"><%= @nd.motivo.humanize %></td>
+  </tr>
+  <tr>
+    <td style="padding:12px 16px; font-size:16px; color:#9a3412;"><strong>Total:</strong></td>
+    <td align="right" style="padding:12px 16px; font-size:16px; color:#9a3412;"><strong><%= @nd.moneda %> <%= number_with_delimiter(format("%.2f", @nd.total)) %></strong></td>
+  </tr>
+</table>
+
+<p style="margin:16px 0 0 0; font-size:13px; color:#6b7280;">
+  Este importe se sumara a tu saldo pendiente. - <%= @empresa.nombre %>
+</p>

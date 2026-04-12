@@ -1,0 +1,31 @@
+<% content_for :title, "Pago recibido - Recibo #{@recibo.numero}" %>
+
+<h2 style="margin:0 0 12px 0; font-size:18px; color:#0f2b5b;">Hola, <%= @cliente.nombre %></h2>
+
+<p style="margin:0 0 16px 0; line-height:1.5;">
+  Hemos recibido tu pago de la factura <strong><%= @venta.numero %></strong>.
+  Adjunto encontraras el recibo en PDF como comprobante.
+</p>
+
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:16px 0; background:#f0fdf4; border-radius:6px;">
+  <tr>
+    <td style="padding:12px 16px; border-bottom:1px solid #bbf7d0;"><strong>Recibo:</strong></td>
+    <td align="right" style="padding:12px 16px; border-bottom:1px solid #bbf7d0;"><%= @recibo.numero %></td>
+  </tr>
+  <tr>
+    <td style="padding:12px 16px; border-bottom:1px solid #bbf7d0;"><strong>Factura:</strong></td>
+    <td align="right" style="padding:12px 16px; border-bottom:1px solid #bbf7d0;"><%= @venta.numero %></td>
+  </tr>
+  <tr>
+    <td style="padding:12px 16px; border-bottom:1px solid #bbf7d0;"><strong>Forma de pago:</strong></td>
+    <td align="right" style="padding:12px 16px; border-bottom:1px solid #bbf7d0;"><%= @recibo.forma_pago %></td>
+  </tr>
+  <tr>
+    <td style="padding:12px 16px; font-size:16px; color:#166534;"><strong>Monto:</strong></td>
+    <td align="right" style="padding:12px 16px; font-size:16px; color:#166534;"><strong><%= @recibo.moneda %> <%= number_with_delimiter(format("%.2f", @recibo.monto)) %></strong></td>
+  </tr>
+</table>
+
+<p style="margin:16px 0 0 0; font-size:13px; color:#6b7280;">
+  Gracias por tu pago. - <%= @empresa.nombre %>
+</p>

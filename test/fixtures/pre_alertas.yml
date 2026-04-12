@@ -20,6 +20,28 @@ recibida:
   creado_por_tipo: cliente
   creado_por_id: <%= ActiveRecord::FixtureSet.identify(:juan) %>
 
+consolidada_destino:
+  numero_documento: PA-000010
+  cliente: juan
+  tipo_envio: aereo
+  consolidado: true
+  con_reempaque: false
+  estado: pre_alerta
+  notificado: false
+  creado_por_tipo: cliente
+  creado_por_id: <%= ActiveRecord::FixtureSet.identify(:juan) %>
+
+cka_pa:
+  numero_documento: PA-000011
+  cliente: juan
+  tipo_envio: cka
+  consolidado: false
+  con_reempaque: false
+  estado: pre_alerta
+  notificado: false
+  creado_por_tipo: cliente
+  creado_por_id: <%= ActiveRecord::FixtureSet.identify(:juan) %>
+
 maria_pa:
   numero_documento: PA-000003
   cliente: maria

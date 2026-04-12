@@ -10,7 +10,7 @@ class EtiquetarController < ApplicationController
 
   def create
     @paquete = Paquete.new(paquete_params)
-    @paquete.estado = "etiquetado"
+    @paquete.estado = "empacado"
     @paquete.user = Current.user
 
     if @paquete.save

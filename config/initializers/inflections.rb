@@ -14,3 +14,14 @@
 # ActiveSupport::Inflector.inflections(:en) do |inflect|
 #   inflect.acronym "RESTful"
 # end
+
+# Spanish-language model names whose default pluralization breaks Rails helpers.
+# English inflector turns "venta" into "ventum" (Latin-style) and similar quirks,
+# which makes form_with model: @venta generate ventum_path. Declare irregular pairs.
+ActiveSupport::Inflector.inflections(:en) do |inflect|
+  inflect.irregular "venta", "ventas"
+  inflect.irregular "nota_debito",      "notas_debito"
+  inflect.irregular "nota_credito",     "notas_credito"
+  inflect.irregular "nota_debito_item", "nota_debito_items"
+  inflect.irregular "nota_credito_item", "nota_credito_items"
+end

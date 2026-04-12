@@ -1,1 +1,9 @@
+<% empresa = (Empresa.instance rescue nil) %>
+<%= empresa&.nombre || "Compras Express Cargo" %>
+===============================================
+
 <%= yield %>
+
+<% if empresa&.direccion.present? %><%= empresa.direccion %><% end %>
+<% if empresa&.telefono.present? %>Tel: <%= empresa.telefono %><% end %>
+<% if empresa&.email_contacto.present? %>Email: <%= empresa.email_contacto %><% end %>

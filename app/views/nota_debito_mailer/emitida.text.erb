@@ -1,0 +1,11 @@
+Hola, <%= @cliente.nombre %>
+
+Hemos emitido la nota de debito <%= @nd.numero %> relacionada con tu factura <%= @venta.numero %>.
+Adjunto encontraras el PDF con el detalle del ajuste.
+
+Nota: <%= @nd.numero %>
+Motivo: <%= @nd.motivo.humanize %>
+Total: <%= @nd.moneda %> <%= format("%.2f", @nd.total) %>
+
+Este importe se sumara a tu saldo pendiente.
+- <%= @empresa.nombre %>
