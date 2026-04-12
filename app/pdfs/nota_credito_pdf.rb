@@ -29,7 +29,7 @@ class NotaCreditoPdf < ApplicationPdf
 
     if @nc.notas.present?
       move_down 10
-      text "Notas: #{@nc.notas}", size: 9, color: "666666"
+      text "Notas: #{sanitize_text(@nc.notas)}", size: 9, color: "666666"
     end
 
     footer_terminos

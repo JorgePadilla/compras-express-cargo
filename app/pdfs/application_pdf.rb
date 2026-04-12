@@ -81,7 +81,7 @@ class ApplicationPdf
     rows = [columnas]
     items.each do |item|
       rows << [
-        item.concepto.to_s,
+        sanitize_text(item.concepto),
         item.peso_cobrar.present? ? format("%.2f", item.peso_cobrar) : "-",
         item.precio_libra.present? ? format("%.2f", item.precio_libra) : "-",
         format_money(item.subtotal || 0)
@@ -125,6 +125,10 @@ class ApplicationPdf
 
     move_down 20
     text empresa.terminos_factura, size: 8, color: "666666", align: :center
+  end
+
+  def sanitize_text(value)
+    ActionController::Base.helpers.strip_tags(value.to_s)
   end
 
   def format_money(amount, moneda = "LPS")

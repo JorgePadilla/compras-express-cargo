@@ -2,8 +2,11 @@ class ActualizarTasaCambioJob < ApplicationJob
   queue_as :default
 
   def perform
-    response = Net::HTTP.get(URI("https://www.floatrates.com/daily/usd.json"))
-    data = JSON.parse(response)
+    uri = URI("https://www.floatrates.com/daily/usd.json")
+    response = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 10, read_timeout: 10) do |http|
+      http.get(uri.request_uri)
+    end
+    data = JSON.parse(response.body)
     rate = data.dig("hnl", "rate")
 
     if rate.present? && rate.to_f > 0

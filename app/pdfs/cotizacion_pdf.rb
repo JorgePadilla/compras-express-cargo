@@ -27,13 +27,13 @@ class CotizacionPdf < ApplicationPdf
 
     if @ct.notas.present?
       move_down 10
-      text "Notas: #{@ct.notas}", size: 9, color: "666666"
+      text "Notas: #{sanitize_text(@ct.notas)}", size: 9, color: "666666"
     end
 
     if @ct.terminos.present?
       move_down 10
       text "Terminos y condiciones:", style: :bold, size: 9
-      text @ct.terminos, size: 8, color: "666666"
+      text sanitize_text(@ct.terminos), size: 8, color: "666666"
     end
 
     footer_terminos
@@ -52,7 +52,7 @@ class CotizacionPdf < ApplicationPdf
               else
                 format_money(item.precio_unitario || 0, @ct.moneda)
               end
-      rows << [item.concepto.to_s, qty, price, format_money(item.subtotal || 0, @ct.moneda)]
+      rows << [sanitize_text(item.concepto), qty, price, format_money(item.subtotal || 0, @ct.moneda)]
     end
 
     table(rows, header: true, width: bounds.width) do
