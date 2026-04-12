@@ -1,0 +1,61 @@
+<%= render PageHeaderComponent.new(title: "Financiamientos", subtitle: "#{@financiamientos.total_count} financiamientos") %>
+
+<div class="mb-6">
+  <%= render SearchBarComponent.new(url: financiamientos_path, placeholder: "Buscar por numero o cliente...", value: params[:q]) %>
+</div>
+
+<% if @financiamientos.any? %>
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Numero</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Venta</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Progreso</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Monto Total</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @financiamientos.each do |fn| %>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <%= link_to fn.numero, fn, class: "text-sm font-mono font-medium text-cec-navy hover:underline" %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="text-sm text-gray-700"><%= fn.cliente.codigo %></span>
+                <span class="text-sm text-gray-500 hidden sm:inline ml-1"><%= fn.cliente.nombre_completo %></span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <%= link_to fn.venta.numero, venta_path(fn.venta), class: "text-sm font-mono text-cec-teal hover:underline" %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <%= render StatusBadgeComponent.new(status: fn.estado) %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex items-center gap-2">
+                  <div class="w-24 bg-gray-200 rounded-full h-2">
+                    <div class="bg-cec-teal h-2 rounded-full" style="width: <%= fn.progreso_porcentaje %>%"></div>
+                  </div>
+                  <span class="text-xs text-gray-500"><%= fn.progreso_porcentaje %>%</span>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                <%= fn.simbolo_moneda %> <%= number_with_delimiter(fn.monto_total.to_f, precision: 2) %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="mt-4"><%= paginate @financiamientos %></div>
+<% else %>
+  <%= render EmptyStateComponent.new(
+    title: "No hay financiamientos",
+    description: "Crea un financiamiento desde una venta pendiente de pago.",
+    icon: "banknotes"
+  ) %>
+<% end %>

@@ -46,6 +46,10 @@ module Authorization
       role.in?(%w[supervisor_caja supervisor_prefactura cajero])
     when :notas_credito
       role.in?(%w[supervisor_caja])
+    when :cotizaciones
+      role.in?(%w[supervisor_caja supervisor_prefactura cajero])
+    when :financiamientos
+      role.in?(%w[supervisor_caja cajero])
     when :empresa_settings
       false
     when :entregas

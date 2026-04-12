@@ -14,6 +14,8 @@ class Cliente < ApplicationRecord
   has_many :recibos, dependent: :restrict_with_error
   has_many :notas_debito,  dependent: :restrict_with_error
   has_many :notas_credito, dependent: :restrict_with_error
+  has_many :cotizaciones, dependent: :restrict_with_error
+  has_many :financiamientos, dependent: :restrict_with_error
 
   validates :codigo, presence: true, uniqueness: { case_sensitive: false }
   validates :nombre, presence: true

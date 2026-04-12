@@ -99,13 +99,14 @@ class ApplicationPdf
     move_down 10
   end
 
-  def bloque_totales(subtotal:, impuesto:, total:, saldo: nil, moneda: "LPS")
+  def bloque_totales(subtotal:, impuesto:, total:, saldo: nil, moneda: "LPS", tasa_cambio: nil)
     data = [
       ["Subtotal:", format_money(subtotal, moneda)],
       ["ISV (#{(empresa.isv_rate * 100).to_i}%):", format_money(impuesto, moneda)],
       ["Total:", format_money(total, moneda)]
     ]
     data << ["Saldo Pendiente:", format_money(saldo, moneda)] if saldo
+    data << ["Tasa de cambio:", "#{tasa_cambio} LPS/USD"] if moneda == "USD" && tasa_cambio.present?
 
     bounding_box([bounds.width - 250, cursor], width: 250) do
       table(data, width: 250) do

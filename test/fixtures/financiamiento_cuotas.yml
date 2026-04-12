@@ -1,0 +1,20 @@
+cuota_1:
+  financiamiento: activo_juan
+  numero_cuota: 1
+  monto: 6.71
+  estado: pendiente
+  fecha_vencimiento: <%= Date.current %>
+
+cuota_2:
+  financiamiento: activo_juan
+  numero_cuota: 2
+  monto: 6.71
+  estado: pendiente
+  fecha_vencimiento: <%= 1.month.from_now.to_date %>
+
+cuota_3:
+  financiamiento: activo_juan
+  numero_cuota: 3
+  monto: 6.71
+  estado: pendiente
+  fecha_vencimiento: <%= 2.months.from_now.to_date %>

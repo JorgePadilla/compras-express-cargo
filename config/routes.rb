@@ -77,6 +77,34 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :cotizaciones, except: :destroy do
+    member do
+      post   :enviar
+      post   :aceptar
+      delete :rechazar
+      post   :generar_proforma
+      get    :pdf
+      post   :enviar_email
+    end
+  end
+
+  resources :proformas, except: :destroy do
+    collection { get :facturables }
+    member do
+      post   :emitir
+      delete :anular
+      get    :pdf
+      post   :enviar_email
+    end
+  end
+
+  resources :financiamientos, only: %i[index show new create] do
+    member do
+      post   :pagar_cuota
+      delete :cancelar
+    end
+  end
+
   resource :empresa, only: %i[show edit update]
 
   resources :categoria_precios, except: :destroy, path: "categorias-precio"
@@ -103,6 +131,17 @@ Rails.application.routes.draw do
     resources :notas_credito, only: %i[index show] do
       member { get :pdf }
     end
+    resources :cotizaciones, only: %i[index show] do
+      member do
+        get  :pdf
+        post :aceptar
+        delete :rechazar
+      end
+    end
+    resources :proformas, only: %i[index show] do
+      member { get :pdf }
+    end
+    resources :financiamientos, only: %i[index show]
   end
 
   root "dashboard#index"

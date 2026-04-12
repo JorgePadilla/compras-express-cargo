@@ -3,7 +3,7 @@ class VentasController < ApplicationController
   before_action :set_venta, only: %i[show edit update registrar_pago anular pdf enviar_email]
 
   def index
-    @ventas = Venta.includes(:cliente, :creado_por).recientes
+    @ventas = Venta.sin_proformas.includes(:cliente, :creado_por).recientes
     @ventas = apply_filters(@ventas)
     @ventas = @ventas.page(params[:page]).per(25)
   end

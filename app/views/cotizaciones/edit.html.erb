@@ -1,0 +1,2 @@
+<%= render PageHeaderComponent.new(title: "Editar Cotizacion #{@cotizacion.numero}") %>
+<%= render "form", form_url: cotizacion_path(@cotizacion), form_method: :patch %>

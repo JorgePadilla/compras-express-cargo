@@ -24,4 +24,8 @@ ActiveSupport::Inflector.inflections(:en) do |inflect|
   inflect.irregular "nota_credito",     "notas_credito"
   inflect.irregular "nota_debito_item", "nota_debito_items"
   inflect.irregular "nota_credito_item", "nota_credito_items"
+  inflect.irregular "cotizacion", "cotizaciones"
+  inflect.irregular "cotizacion_item", "cotizacion_items"
+  inflect.irregular "financiamiento", "financiamientos"
+  inflect.irregular "financiamiento_cuota", "financiamiento_cuotas"
 end

@@ -23,7 +23,8 @@ class NotaDebitoPdf < ApplicationPdf
       subtotal: @nd.subtotal,
       impuesto: @nd.impuesto,
       total:    @nd.total,
-      moneda:   @nd.moneda
+      moneda:   @nd.moneda,
+      tasa_cambio: @nd.tasa_cambio_aplicada
     )
 
     if @nd.notas.present?

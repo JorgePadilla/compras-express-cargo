@@ -1,4 +1,6 @@
 class Pago < ApplicationRecord
+  include CurrencyAware
+
   METODOS = %w[efectivo tarjeta transferencia].freeze
   ESTADOS = %w[pendiente completado fallido reembolsado].freeze
 
@@ -10,7 +12,6 @@ class Pago < ApplicationRecord
   validates :monto, numericality: { greater_than: 0 }
   validates :metodo_pago, presence: true, inclusion: { in: METODOS }
   validates :estado, presence: true, inclusion: { in: ESTADOS }
-  validates :moneda, presence: true
 
   scope :completados, -> { where(estado: "completado") }
   scope :recientes,   -> { order(created_at: :desc) }

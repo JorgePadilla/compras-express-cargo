@@ -1,0 +1,20 @@
+item_borrador:
+  cotizacion: borrador_juan
+  concepto: Flete Express - Paquete Test
+  peso_cobrar: 10.00
+  precio_libra: 5.00
+  subtotal: 50.00
+
+item_enviada:
+  cotizacion: enviada_maria
+  concepto: Flete CER - Paquete Maria
+  peso_cobrar: 20.00
+  precio_libra: 5.00
+  subtotal: 100.00
+
+item_aceptada:
+  cotizacion: aceptada_juan
+  concepto: Flete Express - Otro Paquete
+  peso_cobrar: 15.00
+  precio_libra: 5.00
+  subtotal: 75.00

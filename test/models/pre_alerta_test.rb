@@ -264,6 +264,85 @@ class PreAlertaTest < ActiveSupport::TestCase
     assert pa.valid?, "Expected CKA with 1 paquete to be valid, got: #{pa.errors.full_messages.join(', ')}"
   end
 
+  # ── Auto-sync from paquetes ──
+  test "actualizar_estado_from_paquetes! advances estado based on paquete minimum" do
+    # Create a fresh pre-alerta with a single linked paquete in disponible_entrega
+    pa = PreAlerta.create!(
+      cliente: @cliente, tipo_envio: @tipo_envio, titulo: "Sync test",
+      estado: "recibido", creado_por_tipo: "cliente", creado_por_id: @cliente.id
+    )
+    paquete = paquetes(:disponible_entrega_juan)
+    pa.pre_alerta_paquetes.create!(
+      tracking: paquete.tracking, descripcion: "Test", paquete: paquete
+    )
+
+    # disponible_entrega maps to "disponible", which is ahead of "recibido"
+    pa.actualizar_estado_from_paquetes!
+    assert_equal "disponible", pa.reload.estado
+  end
+
+  test "actualizar_estado_from_paquetes! takes minimum of multiple paquetes" do
+    pa = pre_alertas(:recibida)
+    # pap_vinculado links to :recibido (recibido_miami → "recibido")
+    # pap_disponible_juan links to :disponible_entrega_juan (disponible_entrega → "disponible")
+    # Minimum is "recibido", same as current → no change
+    pa.actualizar_estado_from_paquetes!
+    assert_equal "recibido", pa.reload.estado
+  end
+
+  test "actualizar_estado_from_paquetes! never retrocedes estado" do
+    pa = PreAlerta.create!(
+      cliente: @cliente, tipo_envio: @tipo_envio, titulo: "No retrocede",
+      estado: "en_aduana", creado_por_tipo: "cliente", creado_por_id: @cliente.id
+    )
+    paquete = paquetes(:recibido) # recibido_miami → "recibido"
+    pa.pre_alerta_paquetes.create!(
+      tracking: paquete.tracking, descripcion: "Test", paquete: paquete
+    )
+
+    # "recibido" < "en_aduana" → no change
+    pa.actualizar_estado_from_paquetes!
+    assert_equal "en_aduana", pa.reload.estado
+  end
+
+  test "actualizar_estado_from_paquetes! skips anulado pre-alertas" do
+    pa = PreAlerta.create!(
+      cliente: @cliente, tipo_envio: @tipo_envio, titulo: "Anulado test",
+      estado: "anulado", creado_por_tipo: "cliente", creado_por_id: @cliente.id
+    )
+    paquete = paquetes(:disponible_entrega_juan)
+    pa.pre_alerta_paquetes.create!(
+      tracking: paquete.tracking, descripcion: "Test", paquete: paquete
+    )
+
+    pa.actualizar_estado_from_paquetes!
+    assert_equal "anulado", pa.reload.estado
+  end
+
+  test "actualizar_estado_from_paquetes! does nothing when no linked paquetes" do
+    pa = pre_alertas(:activa) # has no linked paquetes (pap_sin_vincular has no paquete_id)
+    pa.actualizar_estado_from_paquetes!
+    assert_equal "pre_alerta", pa.reload.estado
+  end
+
+  test "paquete estado change triggers pre-alerta sync via callback" do
+    pa = PreAlerta.create!(
+      cliente: @cliente, tipo_envio: @tipo_envio, titulo: "Callback test",
+      estado: "recibido", creado_por_tipo: "cliente", creado_por_id: @cliente.id
+    )
+    paquete = Paquete.create!(
+      tracking: "SYNC-CALLBACK-001", cliente: @cliente,
+      estado: "recibido_miami", peso: 5, peso_cobrar: 5
+    )
+    pa.pre_alerta_paquetes.create!(
+      tracking: paquete.tracking, descripcion: "Test", paquete: paquete
+    )
+
+    # Change paquete to enviado_honduras → maps to "enviado" → ahead of "recibido"
+    paquete.update!(estado: "enviado_honduras")
+    assert_equal "enviado", pa.reload.estado
+  end
+
   test "CER (no limit) accepts multiple paquetes" do
     cer = tipo_envios(:cer)
     pa = PreAlerta.new(

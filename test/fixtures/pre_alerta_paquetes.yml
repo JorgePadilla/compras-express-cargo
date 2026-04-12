@@ -31,3 +31,10 @@ pap_maria:
   descripcion: "Cosmeticos"
 
   fecha: <%= Date.current %>
+
+pap_disponible_juan:
+  pre_alerta: recibida
+  tracking: "1Z999BODEGA000001"
+  descripcion: "Paquete en bodega"
+  paquete: disponible_entrega_juan
+  fecha: <%= Date.current %>

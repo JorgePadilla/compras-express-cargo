@@ -9,14 +9,17 @@
     <% end %>
   <% end %>
 
-  <% if can_access?(:pre_facturas) || can_access?(:pre_alertas) || can_access?(:ventas) || can_access?(:notas_debito) || can_access?(:notas_credito) %>
+  <% if can_access?(:pre_facturas) || can_access?(:pre_alertas) || can_access?(:ventas) || can_access?(:notas_debito) || can_access?(:notas_credito) || can_access?(:cotizaciones) || can_access?(:financiamientos) %>
     <%= sidebar_section "Caja" do %>
       <%= sidebar_link "Pre-Facturas", pre_facturas_path, icon: "document-text" if can_access?(:pre_facturas) %>
       <%= sidebar_link "Pre-Alertas", pre_alertas_path, icon: "bell-alert" if can_access?(:pre_alertas) %>
+      <%= sidebar_link "Cotizaciones", cotizaciones_path, icon: "clipboard-document-list" if can_access?(:cotizaciones) %>
+      <%= sidebar_link "Proformas", proformas_path, icon: "document-duplicate" if can_access?(:ventas) %>
       <%= sidebar_link "Ventas", ventas_path, icon: "currency-dollar" if can_access?(:ventas) %>
       <%= sidebar_link "Recibos", recibos_path, icon: "receipt-percent" if can_access?(:recibos) %>
       <%= sidebar_link "Notas de Debito", notas_debito_path, icon: "document-plus" if can_access?(:notas_debito) %>
       <%= sidebar_link "Notas de Credito", notas_credito_path, icon: "document-minus" if can_access?(:notas_credito) %>
+      <%= sidebar_link "Financiamientos", financiamientos_path, icon: "banknotes" if can_access?(:financiamientos) %>
     <% end %>
   <% end %>
 

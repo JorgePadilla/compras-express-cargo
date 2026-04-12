@@ -1,0 +1,23 @@
+<% content_for :title, "Cotizacion #{@cotizacion.numero} aceptada" %>
+
+<h2 style="margin:0 0 12px 0; font-size:18px; color:#0f2b5b;">Cotizacion aceptada</h2>
+
+<p style="margin:0 0 16px 0; line-height:1.5;">
+  El cliente <strong><%= @cliente.codigo %> — <%= @cliente.nombre_completo %></strong>
+  ha aceptado la cotizacion <strong><%= @cotizacion.numero %></strong>.
+</p>
+
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:16px 0; background:#f9fafb; border-radius:6px;">
+  <tr>
+    <td style="padding:12px 16px; border-bottom:1px solid #e5e7eb;"><strong>Cotizacion:</strong></td>
+    <td align="right" style="padding:12px 16px; border-bottom:1px solid #e5e7eb;"><%= @cotizacion.numero %></td>
+  </tr>
+  <tr>
+    <td style="padding:12px 16px; font-size:16px; color:#0f2b5b;"><strong>Total:</strong></td>
+    <td align="right" style="padding:12px 16px; font-size:16px; color:#0f2b5b;"><strong><%= @cotizacion.moneda %> <%= number_with_delimiter(format("%.2f", @cotizacion.total)) %></strong></td>
+  </tr>
+</table>
+
+<p style="margin:16px 0 0 0; font-size:13px; color:#6b7280;">
+  Proceda a generar la proforma correspondiente.
+</p>
