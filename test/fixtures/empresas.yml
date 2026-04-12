@@ -1,0 +1,12 @@
+singleton:
+  nombre: Compras Express Cargo
+  rtn: "08011998123456"
+  telefono: "+504 2550-0000"
+  email_contacto: info@comprasexpresscargo.com
+  direccion: Boulevard del Este, San Pedro Sula
+  ciudad: San Pedro Sula
+  pais: Honduras
+  moneda_default: LPS
+  isv_rate: 0.15
+  sitio_web: https://comprasexpresscargo.com
+  terminos_factura: Esta factura es valida como comprobante fiscal.

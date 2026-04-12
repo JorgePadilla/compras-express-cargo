@@ -80,22 +80,31 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 
 **Objetivo:** Pre-facturas, ventas, pagos y recibos funcionando.
 
+### Fase 3a — Core Billing MVP ✅ COMPLETA (Abril 2026)
+
+| # | Tarea | Modulos | Estado |
+|---|-------|---------|--------|
+| 3.1 | Modelo PreFactura: generacion desde paquetes recibidos/pesados | 9 | ✅ |
+| 3.2 | Vista Pre-Facturas admin + cliente | 9 | ✅ |
+| 3.3 | Categorias de precio por cliente (precio/libra aereo, maritimo, volumen) | 11 | ✅ |
+| 3.4 | Calculo automatico: peso cobrar = max(peso real, peso volumetrico) | 9 | ✅ (Fase 1) |
+| 3.5 | Modelo Venta + items (proforma → pendiente → pagada → anulada) | 12 | ✅ |
+| 3.6 | Modelo Recibo + generacion al pagar | 16 | ✅ |
+| 3.7 | Modelo Pago (efectivo, tarjeta, transferencia) | — | ✅ |
+| 3.12 | Facturas Pendientes (vista cliente) | 15 | ✅ |
+
+**Entregable:** Ciclo completo Pre-factura → Venta → Pago → Recibo en LPS con ISV 15%.
+
+### Fase 3b/3c/3d — Pendiente
+
 | # | Tarea | Modulos |
 |---|-------|---------|
-| 3.1 | Modelo PreFactura: generacion desde paquetes recibidos/pesados | 9 |
-| 3.2 | Vista Pre-Facturas admin + cliente | 9 |
-| 3.3 | Categorias de precio por cliente (precio/libra aereo, maritimo, volumen) | 11 |
-| 3.4 | Calculo automatico: peso cobrar = max(peso real, peso volumetrico) | 9 |
-| 3.5 | Modelo Venta + items (proforma → finalizada → anulada) | 12 |
-| 3.6 | Modelo Recibo + generacion al pagar | 16 |
-| 3.7 | Modelo Pago (efectivo, tarjeta, transferencia) | — |
-| 3.8 | Notas de Debito | 17 |
+| 3.8 | Notas de Debito (auto-gatillado por cambio de servicio) | 17 |
 | 3.9 | Notas de Credito | — |
 | 3.10 | Cotizaciones + Proformas | 13, 14 |
 | 3.11 | Financiamientos | 18 |
-| 3.12 | Facturas Pendientes (vista cliente) | 15 |
-
-**Entregable:** Ciclo completo Pre-factura → Venta → Pago → Recibo.
+| 3b | USD + tasa de cambio, emails de factura pendiente/pagada | — |
+| 3d | Generacion de PDFs (Prawn/Grover) | — |
 
 **Dependencia:** Fase 2 (pre-alertas y paquetes vinculados).
 

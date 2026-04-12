@@ -1,0 +1,24 @@
+<%= render PageHeaderComponent.new(title: @categoria.nombre) do |h| %>
+  <% h.with_action do %>
+    <%= render ButtonComponent.new(href: edit_categoria_precio_path(@categoria), variant: :secondary, icon: "pencil-square") do %>
+      Editar
+    <% end %>
+  <% end %>
+<% end %>
+
+<div class="bg-white rounded-lg shadow p-6">
+  <dl class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+    <div>
+      <dt class="text-gray-500">Precio Aereo (LPS/lb)</dt>
+      <dd class="font-medium">L. <%= number_with_delimiter(@categoria.precio_libra_aereo.to_f, precision: 2) %></dd>
+    </div>
+    <div>
+      <dt class="text-gray-500">Precio Maritimo (LPS/lb)</dt>
+      <dd class="font-medium">L. <%= number_with_delimiter(@categoria.precio_libra_maritimo.to_f, precision: 2) %></dd>
+    </div>
+    <div>
+      <dt class="text-gray-500">Clientes asignados</dt>
+      <dd class="font-medium"><%= @categoria.clientes.count %></dd>
+    </div>
+  </dl>
+</div>

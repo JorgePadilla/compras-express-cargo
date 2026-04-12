@@ -1,7 +1,9 @@
 <% max_paquetes = @pre_alerta.tipo_envio&.max_paquetes_por_accion %>
-<div data-controller="pre-alerta-editor"
+<div data-controller="pre-alerta-editor pre-alerta-mover"
      data-pre-alerta-editor-max-paquetes-value="<%= max_paquetes || -1 %>"
-     data-pre-alerta-editor-cancel-url-value="<%= cuenta_pre_alertas_path %>">
+     data-pre-alerta-editor-cancel-url-value="<%= cuenta_pre_alertas_path %>"
+     data-pre-alerta-mover-destinos-url-value="<%= destinos_disponibles_cuenta_pre_alerta_path(@pre_alerta) %>"
+     data-pre-alerta-mover-mover-url-value="<%= mover_paquete_cuenta_pre_alerta_path(@pre_alerta) %>">
   <div id="pre_alerta_header">
     <%= render "cuenta/pre_alertas/header", pre_alerta: @pre_alerta %>
   </div>
@@ -87,7 +89,8 @@
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripcion</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Instrucciones</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-              <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Vinculado</th>
+              <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
+              <th class="px-4 py-2"></th>
               <th class="px-4 py-2"></th>
             </tr>
           </thead>
@@ -128,8 +131,9 @@
                         focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
         </td>
         <td class="px-4 py-2 text-center">
-          <span class="text-xs text-gray-400">-</span>
+          <%= render StatusBadgeComponent.new(status: "pre_alerta", label: "Pre Alerta") %>
         </td>
+        <td class="px-4 py-2"></td>
         <td class="px-4 py-2 text-center">
           <button type="button" data-action="click->pre-alerta-editor#removePaquete"
                   class="text-red-400 hover:text-red-600">
@@ -159,4 +163,6 @@
       </button>
     </div>
   <% end %>
+
+  <%= render "cuenta/pre_alertas/move_modal", pre_alerta: @pre_alerta %>
 </div>

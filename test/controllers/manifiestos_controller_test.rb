@@ -47,28 +47,28 @@ class ManifiestosControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should add paquete to manifiesto" do
-    paquete = paquetes(:etiquetado)
+    paquete = paquetes(:empacado)
     post add_paquete_manifiesto_url(@manifiesto), params: { paquete_id: paquete.id }
     assert_redirected_to manifiesto_url(@manifiesto)
     paquete.reload
     assert_equal @manifiesto, paquete.manifiesto
-    assert_equal "en_manifiesto", paquete.estado
+    assert_equal "empacado", paquete.estado
   end
 
   test "should remove paquete from manifiesto" do
-    paquete = paquetes(:etiquetado)
-    paquete.update!(manifiesto: @manifiesto, estado: "en_manifiesto")
+    paquete = paquetes(:empacado)
+    paquete.update!(manifiesto: @manifiesto)
 
     delete remove_paquete_manifiesto_url(@manifiesto, paquete_id: paquete.id)
     assert_redirected_to manifiesto_url(@manifiesto)
     paquete.reload
     assert_nil paquete.manifiesto_id
-    assert_equal "etiquetado", paquete.estado
+    assert_equal "empacado", paquete.estado
   end
 
   test "should enviar manifiesto" do
-    paquete = paquetes(:etiquetado)
-    paquete.update!(manifiesto: @manifiesto, estado: "en_manifiesto")
+    paquete = paquetes(:empacado)
+    paquete.update!(manifiesto: @manifiesto)
     @manifiesto.recalculate_totals!
 
     patch enviar_manifiesto_url(@manifiesto)
@@ -78,7 +78,7 @@ class ManifiestosControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "add_paquete responds with turbo_stream" do
-    paquete = paquetes(:etiquetado)
+    paquete = paquetes(:empacado)
     post add_paquete_manifiesto_url(@manifiesto), params: { paquete_id: paquete.id }, as: :turbo_stream
     assert_response :success
     paquete.reload
@@ -86,8 +86,8 @@ class ManifiestosControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "remove_paquete responds with turbo_stream" do
-    paquete = paquetes(:etiquetado)
-    paquete.update!(manifiesto: @manifiesto, estado: "en_manifiesto")
+    paquete = paquetes(:empacado)
+    paquete.update!(manifiesto: @manifiesto)
 
     delete remove_paquete_manifiesto_url(@manifiesto, paquete_id: paquete.id), as: :turbo_stream
     assert_response :success

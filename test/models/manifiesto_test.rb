@@ -39,8 +39,8 @@ class ManifiestoTest < ActiveSupport::TestCase
 
   test "enviar! transitions manifest and paquetes to enviado" do
     manifiesto = manifiestos(:creado)
-    paquete = paquetes(:etiquetado)
-    paquete.update!(manifiesto: manifiesto, estado: "en_manifiesto")
+    paquete = paquetes(:empacado)
+    paquete.update!(manifiesto: manifiesto)
     manifiesto.recalculate_totals!
 
     manifiesto.enviar!
@@ -49,7 +49,7 @@ class ManifiestoTest < ActiveSupport::TestCase
     paquete.reload
     assert_equal "enviado", manifiesto.estado
     assert_not_nil manifiesto.fecha_enviado
-    assert_equal "enviado", paquete.estado
+    assert_equal "enviado_honduras", paquete.estado
   end
 
   test "recalculate_totals! updates counts" do

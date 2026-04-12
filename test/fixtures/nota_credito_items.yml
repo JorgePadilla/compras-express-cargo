@@ -1,0 +1,20 @@
+nc_creada_item1:
+  nota_credito: nc_creada
+  concepto: Descuento cortesia
+  peso_cobrar: 2.00
+  precio_libra: 4.00
+  subtotal: 8.00
+
+nc_emitida_item1:
+  nota_credito: nc_emitida
+  concepto: Devolucion parcial
+  peso_cobrar: 3.00
+  precio_libra: 4.00
+  subtotal: 12.00
+
+nc_anulada_item1:
+  nota_credito: nc_anulada
+  concepto: Error de facturacion
+  peso_cobrar: 1.00
+  precio_libra: 3.00
+  subtotal: 3.00

@@ -45,7 +45,7 @@
               <%= current_cliente.nombre_completo %>
               <span class="block text-gray-500"><%= current_cliente.codigo %></span>
             </div>
-            <%= link_to cuenta_session_path, data: { turbo_method: :delete },
+            <%= link_to session_path, data: { turbo_method: :delete },
                 class: "flex items-center gap-2 text-red-400 hover:text-red-300 text-sm" do %>
               <%= heroicon "arrow-right-start-on-rectangle", variant: :outline, options: { class: "w-4 h-4" } %>
               Cerrar Sesion

@@ -10,9 +10,37 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_04_07_194516) do
+ActiveRecord::Schema[8.0].define(version: 2026_04_12_040000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "active_storage_attachments", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "record_type", null: false
+    t.bigint "record_id", null: false
+    t.bigint "blob_id", null: false
+    t.datetime "created_at", null: false
+    t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
+    t.index ["record_type", "record_id", "name", "blob_id"], name: "index_active_storage_attachments_uniqueness", unique: true
+  end
+
+  create_table "active_storage_blobs", force: :cascade do |t|
+    t.string "key", null: false
+    t.string "filename", null: false
+    t.string "content_type"
+    t.text "metadata"
+    t.string "service_name", null: false
+    t.bigint "byte_size", null: false
+    t.string "checksum"
+    t.datetime "created_at", null: false
+    t.index ["key"], name: "index_active_storage_blobs_on_key", unique: true
+  end
+
+  create_table "active_storage_variant_records", force: :cascade do |t|
+    t.bigint "blob_id", null: false
+    t.string "variation_digest", null: false
+    t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
 
   create_table "carriers", force: :cascade do |t|
     t.string "nombre", null: false
@@ -61,6 +89,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_07_194516) do
     t.text "notas_miami"
     t.text "notas_honduras"
     t.string "password_digest"
+    t.boolean "notificar_facturas", default: true, null: false
     t.index ["activo"], name: "index_clientes_on_activo"
     t.index ["categoria_precio_id"], name: "index_clientes_on_categoria_precio_id"
     t.index ["codigo"], name: "index_clientes_on_codigo", unique: true
@@ -88,6 +117,22 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_07_194516) do
   create_table "empresa_manifiestos", force: :cascade do |t|
     t.string "nombre", null: false
     t.boolean "activo", default: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "empresas", force: :cascade do |t|
+    t.string "nombre", default: "Compras Express Cargo", null: false
+    t.string "rtn"
+    t.string "telefono"
+    t.string "email_contacto"
+    t.text "direccion"
+    t.string "ciudad", default: "San Pedro Sula"
+    t.string "pais", default: "Honduras"
+    t.string "moneda_default", default: "LPS"
+    t.decimal "isv_rate", precision: 5, scale: 4, default: "0.15"
+    t.string "sitio_web"
+    t.text "terminos_factura"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
@@ -123,13 +168,103 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_07_194516) do
     t.index ["user_id"], name: "index_manifiestos_on_user_id"
   end
 
+  create_table "nota_credito_items", force: :cascade do |t|
+    t.bigint "nota_credito_id", null: false
+    t.bigint "paquete_id"
+    t.string "concepto", null: false
+    t.decimal "peso_cobrar", precision: 10, scale: 2
+    t.decimal "precio_libra", precision: 10, scale: 2
+    t.decimal "subtotal", precision: 10, scale: 2, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["nota_credito_id"], name: "index_nota_credito_items_on_nota_credito_id"
+    t.index ["paquete_id"], name: "index_nota_credito_items_on_paquete_id"
+  end
+
+  create_table "nota_debito_items", force: :cascade do |t|
+    t.bigint "nota_debito_id", null: false
+    t.bigint "paquete_id"
+    t.string "concepto", null: false
+    t.decimal "peso_cobrar", precision: 10, scale: 2
+    t.decimal "precio_libra", precision: 10, scale: 2
+    t.decimal "subtotal", precision: 10, scale: 2, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["nota_debito_id"], name: "index_nota_debito_items_on_nota_debito_id"
+    t.index ["paquete_id"], name: "index_nota_debito_items_on_paquete_id"
+  end
+
+  create_table "notas_credito", force: :cascade do |t|
+    t.string "numero", null: false
+    t.bigint "venta_id", null: false
+    t.bigint "cliente_id", null: false
+    t.string "estado", default: "creado", null: false
+    t.string "motivo", null: false
+    t.decimal "subtotal", precision: 10, scale: 2, default: "0.0"
+    t.decimal "impuesto", precision: 10, scale: 2, default: "0.0"
+    t.decimal "total", precision: 10, scale: 2, default: "0.0"
+    t.string "moneda", default: "LPS", null: false
+    t.text "notas"
+    t.bigint "creado_por_id"
+    t.datetime "emitido_at"
+    t.datetime "anulado_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cliente_id"], name: "index_notas_credito_on_cliente_id"
+    t.index ["creado_por_id"], name: "index_notas_credito_on_creado_por_id"
+    t.index ["estado"], name: "index_notas_credito_on_estado"
+    t.index ["numero"], name: "index_notas_credito_on_numero", unique: true
+    t.index ["venta_id"], name: "index_notas_credito_on_venta_id"
+  end
+
+  create_table "notas_debito", force: :cascade do |t|
+    t.string "numero", null: false
+    t.bigint "venta_id", null: false
+    t.bigint "cliente_id", null: false
+    t.string "estado", default: "creado", null: false
+    t.string "motivo", null: false
+    t.decimal "subtotal", precision: 10, scale: 2, default: "0.0"
+    t.decimal "impuesto", precision: 10, scale: 2, default: "0.0"
+    t.decimal "total", precision: 10, scale: 2, default: "0.0"
+    t.string "moneda", default: "LPS", null: false
+    t.text "notas"
+    t.bigint "creado_por_id"
+    t.datetime "emitido_at"
+    t.datetime "anulado_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cliente_id"], name: "index_notas_debito_on_cliente_id"
+    t.index ["creado_por_id"], name: "index_notas_debito_on_creado_por_id"
+    t.index ["estado"], name: "index_notas_debito_on_estado"
+    t.index ["numero"], name: "index_notas_debito_on_numero", unique: true
+    t.index ["venta_id"], name: "index_notas_debito_on_venta_id"
+  end
+
+  create_table "pagos", force: :cascade do |t|
+    t.bigint "venta_id", null: false
+    t.bigint "cliente_id", null: false
+    t.decimal "monto", precision: 10, scale: 2, null: false
+    t.string "metodo_pago", null: false
+    t.string "moneda", default: "LPS", null: false
+    t.string "estado", default: "completado", null: false
+    t.datetime "pagado_at"
+    t.text "notas"
+    t.bigint "registrado_por_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cliente_id"], name: "index_pagos_on_cliente_id"
+    t.index ["estado"], name: "index_pagos_on_estado"
+    t.index ["registrado_por_id"], name: "index_pagos_on_registrado_por_id"
+    t.index ["venta_id"], name: "index_pagos_on_venta_id"
+  end
+
   create_table "paquetes", force: :cascade do |t|
     t.string "tracking", null: false
     t.string "guia", null: false
     t.bigint "cliente_id", null: false
     t.bigint "manifiesto_id"
     t.bigint "tipo_envio_id"
-    t.string "estado", default: "recibido", null: false
+    t.string "estado", default: "recibido_miami", null: false
     t.decimal "peso", precision: 10, scale: 2
     t.decimal "volumen", precision: 10, scale: 2
     t.decimal "precio_libra", precision: 10, scale: 2
@@ -157,13 +292,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_07_194516) do
     t.bigint "user_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "pre_factura_id"
+    t.bigint "venta_id"
     t.index ["cliente_id"], name: "index_paquetes_on_cliente_id"
     t.index ["estado"], name: "index_paquetes_on_estado"
     t.index ["guia"], name: "index_paquetes_on_guia", unique: true
     t.index ["manifiesto_id"], name: "index_paquetes_on_manifiesto_id"
+    t.index ["pre_factura_id"], name: "index_paquetes_on_pre_factura_id"
     t.index ["tipo_envio_id"], name: "index_paquetes_on_tipo_envio_id"
     t.index ["tracking"], name: "index_paquetes_on_tracking"
     t.index ["user_id"], name: "index_paquetes_on_user_id"
+    t.index ["venta_id"], name: "index_paquetes_on_venta_id"
   end
 
   create_table "pre_alerta_paquetes", force: :cascade do |t|
@@ -203,6 +342,56 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_07_194516) do
     t.index ["estado"], name: "index_pre_alertas_on_estado"
     t.index ["numero_documento"], name: "index_pre_alertas_on_numero_documento", unique: true
     t.index ["tipo_envio_id"], name: "index_pre_alertas_on_tipo_envio_id"
+  end
+
+  create_table "pre_factura_items", force: :cascade do |t|
+    t.bigint "pre_factura_id", null: false
+    t.bigint "paquete_id"
+    t.string "concepto", null: false
+    t.decimal "peso_cobrar", precision: 10, scale: 2
+    t.decimal "precio_libra", precision: 10, scale: 2
+    t.decimal "subtotal", precision: 10, scale: 2, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["paquete_id"], name: "index_pre_factura_items_on_paquete_id"
+    t.index ["pre_factura_id"], name: "index_pre_factura_items_on_pre_factura_id"
+  end
+
+  create_table "pre_facturas", force: :cascade do |t|
+    t.string "numero", null: false
+    t.bigint "cliente_id", null: false
+    t.string "estado", default: "creado", null: false
+    t.decimal "subtotal", precision: 10, scale: 2, default: "0.0"
+    t.decimal "impuesto", precision: 10, scale: 2, default: "0.0"
+    t.decimal "total", precision: 10, scale: 2, default: "0.0"
+    t.string "moneda", default: "LPS", null: false
+    t.date "fecha_trabajo"
+    t.text "notas"
+    t.bigint "creado_por_id"
+    t.datetime "confirmado_at"
+    t.datetime "facturado_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cliente_id"], name: "index_pre_facturas_on_cliente_id"
+    t.index ["creado_por_id"], name: "index_pre_facturas_on_creado_por_id"
+    t.index ["estado"], name: "index_pre_facturas_on_estado"
+    t.index ["numero"], name: "index_pre_facturas_on_numero", unique: true
+  end
+
+  create_table "recibos", force: :cascade do |t|
+    t.string "numero", null: false
+    t.bigint "venta_id", null: false
+    t.bigint "pago_id", null: false
+    t.bigint "cliente_id", null: false
+    t.decimal "monto", precision: 10, scale: 2, null: false
+    t.string "forma_pago"
+    t.string "moneda", default: "LPS", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cliente_id"], name: "index_recibos_on_cliente_id"
+    t.index ["numero"], name: "index_recibos_on_numero", unique: true
+    t.index ["pago_id"], name: "index_recibos_on_pago_id"
+    t.index ["venta_id"], name: "index_recibos_on_venta_id"
   end
 
   create_table "sessions", force: :cascade do |t|
@@ -252,17 +441,83 @@ ActiveRecord::Schema[8.0].define(version: 2026_04_07_194516) do
     t.index ["ubicacion"], name: "index_users_on_ubicacion"
   end
 
+  create_table "venta_items", force: :cascade do |t|
+    t.bigint "venta_id", null: false
+    t.bigint "paquete_id"
+    t.string "concepto", null: false
+    t.decimal "peso_cobrar", precision: 10, scale: 2
+    t.decimal "precio_libra", precision: 10, scale: 2
+    t.decimal "subtotal", precision: 10, scale: 2, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["paquete_id"], name: "index_venta_items_on_paquete_id"
+    t.index ["venta_id"], name: "index_venta_items_on_venta_id"
+  end
+
+  create_table "ventas", force: :cascade do |t|
+    t.string "numero", null: false
+    t.bigint "cliente_id", null: false
+    t.bigint "pre_factura_id"
+    t.string "estado", default: "pendiente", null: false
+    t.decimal "subtotal", precision: 10, scale: 2, default: "0.0"
+    t.decimal "impuesto", precision: 10, scale: 2, default: "0.0"
+    t.decimal "total", precision: 10, scale: 2, default: "0.0"
+    t.decimal "saldo_pendiente", precision: 10, scale: 2, default: "0.0"
+    t.string "moneda", default: "LPS", null: false
+    t.text "notas"
+    t.bigint "creado_por_id"
+    t.datetime "pagada_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "email_pendiente_enviado_at"
+    t.datetime "email_pagada_enviado_at"
+    t.index ["cliente_id"], name: "index_ventas_on_cliente_id"
+    t.index ["creado_por_id"], name: "index_ventas_on_creado_por_id"
+    t.index ["estado"], name: "index_ventas_on_estado"
+    t.index ["numero"], name: "index_ventas_on_numero", unique: true
+    t.index ["pre_factura_id"], name: "index_ventas_on_pre_factura_id"
+  end
+
+  add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "cliente_sessions", "clientes"
   add_foreign_key "clientes", "categoria_precios"
   add_foreign_key "manifiestos", "empresa_manifiestos"
   add_foreign_key "manifiestos", "users"
+  add_foreign_key "nota_credito_items", "notas_credito"
+  add_foreign_key "nota_credito_items", "paquetes"
+  add_foreign_key "nota_debito_items", "notas_debito"
+  add_foreign_key "nota_debito_items", "paquetes"
+  add_foreign_key "notas_credito", "clientes"
+  add_foreign_key "notas_credito", "users", column: "creado_por_id"
+  add_foreign_key "notas_credito", "ventas"
+  add_foreign_key "notas_debito", "clientes"
+  add_foreign_key "notas_debito", "users", column: "creado_por_id"
+  add_foreign_key "notas_debito", "ventas"
+  add_foreign_key "pagos", "clientes"
+  add_foreign_key "pagos", "users", column: "registrado_por_id"
+  add_foreign_key "pagos", "ventas"
   add_foreign_key "paquetes", "clientes"
   add_foreign_key "paquetes", "manifiestos"
+  add_foreign_key "paquetes", "pre_facturas"
   add_foreign_key "paquetes", "tipo_envios"
   add_foreign_key "paquetes", "users"
+  add_foreign_key "paquetes", "ventas"
   add_foreign_key "pre_alerta_paquetes", "paquetes"
   add_foreign_key "pre_alerta_paquetes", "pre_alertas"
   add_foreign_key "pre_alertas", "clientes"
   add_foreign_key "pre_alertas", "tipo_envios"
+  add_foreign_key "pre_factura_items", "paquetes"
+  add_foreign_key "pre_factura_items", "pre_facturas"
+  add_foreign_key "pre_facturas", "clientes"
+  add_foreign_key "pre_facturas", "users", column: "creado_por_id"
+  add_foreign_key "recibos", "clientes"
+  add_foreign_key "recibos", "pagos"
+  add_foreign_key "recibos", "ventas"
   add_foreign_key "sessions", "users"
+  add_foreign_key "venta_items", "paquetes"
+  add_foreign_key "venta_items", "ventas"
+  add_foreign_key "ventas", "clientes"
+  add_foreign_key "ventas", "pre_facturas"
+  add_foreign_key "ventas", "users", column: "creado_por_id"
 end

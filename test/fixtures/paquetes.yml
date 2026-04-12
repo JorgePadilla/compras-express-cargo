@@ -2,7 +2,7 @@ recibido:
   tracking: "1Z999AA10123456784"
   guia: "PQ-000001"
   cliente: juan
-  estado: recibido
+  estado: recibido_miami
   peso: 5.50
   alto: 10.0
   largo: 12.0
@@ -16,12 +16,12 @@ recibido:
   fecha_recibido_miami: <%= Time.current %>
   user: digitador
 
-etiquetado:
+empacado:
   tracking: "9400111899223033005282"
   guia: "PQ-000002"
   cliente: maria
   tipo_envio: aereo
-  estado: etiquetado
+  estado: empacado
   peso: 3.20
   alto: 6.0
   largo: 8.0
@@ -47,4 +47,53 @@ entregado:
   cantidad_paquetes: 1
   descripcion: "Libro"
   fecha_recibido_miami: <%= 30.days.ago %>
+  user: digitador
+
+disponible_entrega_juan:
+  tracking: "1Z999BODEGA000001"
+  guia: "PQ-000004"
+  cliente: juan
+  tipo_envio: aereo
+  estado: disponible_entrega
+  peso: 10.00
+  alto: 10.0
+  largo: 10.0
+  ancho: 10.0
+  peso_volumetrico: 6.02
+  peso_cobrar: 10.00
+  cantidad_productos: 1
+  cantidad_paquetes: 1
+  descripcion: "Paquete en bodega HN - Juan"
+  proveedor: "Amazon"
+  fecha_recibido_miami: <%= 10.days.ago %>
+  user: digitador
+
+disponible_entrega_juan2:
+  tracking: "1Z999BODEGA000002"
+  guia: "PQ-000005"
+  cliente: juan
+  tipo_envio: aereo
+  estado: disponible_entrega
+  peso: 5.00
+  peso_cobrar: 5.00
+  cantidad_productos: 1
+  cantidad_paquetes: 1
+  descripcion: "Segundo paquete en bodega HN - Juan"
+  proveedor: "eBay"
+  fecha_recibido_miami: <%= 8.days.ago %>
+  user: digitador
+
+disponible_entrega_maria:
+  tracking: "1Z999BODEGA000003"
+  guia: "PQ-000006"
+  cliente: maria
+  tipo_envio: maritimo
+  estado: disponible_entrega
+  peso: 20.00
+  peso_cobrar: 20.00
+  cantidad_productos: 2
+  cantidad_paquetes: 1
+  descripcion: "Paquete en bodega HN - Maria"
+  proveedor: "Walmart"
+  fecha_recibido_miami: <%= 12.days.ago %>
   user: digitador

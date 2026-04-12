@@ -42,7 +42,7 @@ class Manifiesto < ApplicationRecord
   def enviar!
     transaction do
       update!(estado: "enviado", fecha_enviado: Time.current)
-      paquetes.update_all(estado: "enviado", fecha_enviado: Time.current)
+      paquetes.update_all(estado: "enviado_honduras", fecha_enviado: Time.current)
     end
   end
 

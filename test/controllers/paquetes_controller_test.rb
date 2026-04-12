@@ -18,7 +18,7 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should filter by estado" do
-    get paquetes_url, params: { estado: "recibido" }
+    get paquetes_url, params: { estado: "recibido_miami" }
     assert_response :success
   end
 

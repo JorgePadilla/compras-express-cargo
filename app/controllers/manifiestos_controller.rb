@@ -49,14 +49,14 @@ class ManifiestosController < ApplicationController
 
   def add_paquete
     paquete = Paquete.find(params[:paquete_id])
-    paquete.update!(manifiesto: @manifiesto, estado: "en_manifiesto")
+    paquete.update!(manifiesto: @manifiesto)
     @manifiesto.recalculate_totals!
     respond_to_paquete_change("Paquete #{paquete.guia} agregado al manifiesto.")
   end
 
   def remove_paquete
     paquete = @manifiesto.paquetes.find(params[:paquete_id])
-    paquete.update!(manifiesto: nil, estado: "etiquetado")
+    paquete.update!(manifiesto: nil, estado: "empacado")
     @manifiesto.recalculate_totals!
     respond_to_paquete_change("Paquete #{paquete.guia} removido del manifiesto.")
   end

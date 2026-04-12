@@ -1,0 +1,13 @@
+pendiente_juan_item1:
+  venta: pendiente_juan
+  concepto: "Flete CER - PQ-000005"
+  peso_cobrar: 5.00
+  precio_libra: 3.50
+  subtotal: 17.50
+
+pagada_maria_item1:
+  venta: pagada_maria
+  concepto: "Flete CEM - PQ-000006"
+  peso_cobrar: 20.00
+  precio_libra: 1.25
+  subtotal: 25.00

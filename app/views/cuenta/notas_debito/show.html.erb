@@ -1,0 +1,61 @@
+<div class="max-w-3xl mx-auto bg-white p-8 print:p-0 print:shadow-none shadow rounded-lg">
+  <div class="flex justify-between items-start border-b border-gray-200 pb-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-cec-navy">Compras Express Cargo</h1>
+      <p class="text-sm text-gray-500">Nota de Debito</p>
+    </div>
+    <div class="text-right">
+      <p class="font-mono font-bold text-lg"><%= @nota_debito.numero %></p>
+      <p class="text-sm text-gray-500"><%= (@nota_debito.emitido_at || @nota_debito.created_at).strftime("%d/%m/%Y") %></p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 gap-4 mb-6 text-sm">
+    <div>
+      <p class="text-gray-500">Venta origen</p>
+      <p><%= link_to @nota_debito.venta.numero, cuenta_factura_path(@nota_debito.venta), class: "font-mono text-cec-teal hover:underline" %></p>
+    </div>
+    <div class="text-right">
+      <p class="text-gray-500">Motivo</p>
+      <p class="font-medium"><%= @nota_debito.motivo&.humanize %></p>
+    </div>
+  </div>
+
+  <table class="min-w-full border border-gray-200 mb-6">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase border-b">Concepto</th>
+        <th class="px-4 py-2 text-right text-xs font-medium text-gray-700 uppercase border-b">Peso</th>
+        <th class="px-4 py-2 text-right text-xs font-medium text-gray-700 uppercase border-b">Subtotal</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @nota_debito.nota_debito_items.each do |item| %>
+        <tr>
+          <td class="px-4 py-2 text-sm"><%= item.concepto %></td>
+          <td class="px-4 py-2 text-sm text-right"><%= item.peso_cobrar %></td>
+          <td class="px-4 py-2 text-sm text-right">L. <%= number_with_delimiter(item.subtotal.to_f, precision: 2) %></td>
+        </tr>
+      <% end %>
+    </tbody>
+    <tfoot class="bg-gray-50">
+      <tr>
+        <td colspan="2" class="px-4 py-2 text-right text-sm">Subtotal</td>
+        <td class="px-4 py-2 text-right text-sm">L. <%= number_with_delimiter(@nota_debito.subtotal.to_f, precision: 2) %></td>
+      </tr>
+      <tr>
+        <td colspan="2" class="px-4 py-2 text-right text-sm">ISV (15%)</td>
+        <td class="px-4 py-2 text-right text-sm">L. <%= number_with_delimiter(@nota_debito.impuesto.to_f, precision: 2) %></td>
+      </tr>
+      <tr>
+        <td colspan="2" class="px-4 py-2 text-right font-bold">Total</td>
+        <td class="px-4 py-2 text-right font-bold text-cec-navy">L. <%= number_with_delimiter(@nota_debito.total.to_f, precision: 2) %></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="flex gap-3 print:hidden">
+    <%= link_to "Descargar PDF", pdf_cuenta_nota_debito_path(@nota_debito), class: "px-4 py-2 bg-cec-navy text-white rounded-lg text-sm font-medium" %>
+    <%= link_to "Volver", cuenta_notas_debito_path, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900" %>
+  </div>
+</div>

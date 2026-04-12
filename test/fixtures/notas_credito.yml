@@ -1,0 +1,41 @@
+nc_creada:
+  numero: NC-000001
+  venta: pendiente_juan
+  cliente: juan
+  estado: creado
+  motivo: descuento
+  subtotal: 8.00
+  impuesto: 1.20
+  total: 9.20
+  moneda: LPS
+  notas: Descuento cortesia pendiente aprobacion.
+  creado_por: cajero
+
+nc_emitida:
+  numero: NC-000002
+  venta: pagada_maria
+  cliente: maria
+  estado: emitido
+  motivo: devolucion
+  subtotal: 12.00
+  impuesto: 1.80
+  total: 13.80
+  moneda: LPS
+  notas: Devolucion parcial por paquete dañado.
+  creado_por: cajero
+  emitido_at: <%= 1.hour.ago %>
+
+nc_anulada:
+  numero: NC-000003
+  venta: pendiente_juan
+  cliente: juan
+  estado: anulado
+  motivo: error_facturacion
+  subtotal: 3.00
+  impuesto: 0.45
+  total: 3.45
+  moneda: LPS
+  notas: Anulada tras revision contable.
+  creado_por: cajero
+  emitido_at: <%= 2.hours.ago %>
+  anulado_at: <%= 1.hour.ago %>

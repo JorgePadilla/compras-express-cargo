@@ -1,0 +1,38 @@
+<%= render PageHeaderComponent.new(title: "Categorias de Precio") do |h| %>
+  <% h.with_action do %>
+    <%= render ButtonComponent.new(href: new_categoria_precio_path, variant: :primary, icon: "plus") do %>
+      Nueva Categoria
+    <% end %>
+  <% end %>
+<% end %>
+
+<% if @categorias.any? %>
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio Aereo/Lb</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio Maritimo/Lb</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Clientes</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        <% @categorias.each do |c| %>
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 text-sm font-medium text-gray-900"><%= c.nombre %></td>
+            <td class="px-6 py-4 text-right text-sm">L. <%= number_with_delimiter(c.precio_libra_aereo.to_f, precision: 2) %></td>
+            <td class="px-6 py-4 text-right text-sm">L. <%= number_with_delimiter(c.precio_libra_maritimo.to_f, precision: 2) %></td>
+            <td class="px-6 py-4 text-right text-sm text-gray-500"><%= c.clientes.count %></td>
+            <td class="px-6 py-4 text-right text-sm">
+              <%= link_to "Editar", edit_categoria_precio_path(c), class: "text-cec-navy hover:underline" %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <%= render EmptyStateComponent.new(title: "No hay categorias", description: "Crea una categoria para asignar precios especiales por cliente.", icon: "tag") %>
+<% end %>

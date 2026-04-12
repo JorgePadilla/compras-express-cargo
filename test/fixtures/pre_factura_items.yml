@@ -1,0 +1,13 @@
+borrador_juan_item1:
+  pre_factura: borrador_juan
+  concepto: "Flete CER - PQ-000004"
+  peso_cobrar: 10.00
+  precio_libra: 3.50
+  subtotal: 35.00
+
+pendiente_maria_item1:
+  pre_factura: pendiente_maria
+  concepto: "Flete CEM - PQ-000006"
+  peso_cobrar: 20.00
+  precio_libra: 1.25
+  subtotal: 25.00
