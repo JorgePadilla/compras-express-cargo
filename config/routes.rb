@@ -1,5 +1,6 @@
 Rails.application.routes.draw do
   resource :session
+  resource :registro, only: %i[new create], controller: "registrations"
   resources :passwords, param: :token
 
   # Health check for Render
@@ -8,6 +9,8 @@ Rails.application.routes.draw do
   # Etiquetar (Miami labeling)
   get "etiquetar", to: "etiquetar#index"
   post "etiquetar", to: "etiquetar#create"
+
+  resources :users, except: [:destroy]
 
   resources :clientes, except: [:destroy] do
     collection { get :buscar }

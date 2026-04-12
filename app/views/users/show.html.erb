@@ -1,0 +1,46 @@
+<%= render PageHeaderComponent.new(title: @user.nombre, subtitle: @user.rol_label) do |header|
+  header.with_action do
+    render ButtonComponent.new(variant: :secondary, href: edit_user_path(@user), icon: "pencil-square") do
+      "Editar"
+    end
+  end
+  header.with_action do
+    render ButtonComponent.new(variant: :ghost, href: users_path, icon: "arrow-left") do
+      "Volver"
+    end
+  end
+end %>
+
+<div class="bg-white rounded-lg shadow overflow-hidden">
+  <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+    <h2 class="text-lg font-semibold text-gray-800">Informacion del Usuario</h2>
+    <%= render StatusBadgeComponent.new(status: @user.activo? ? "activo" : "inactivo") %>
+  </div>
+
+  <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @user.nombre %></dd>
+    </div>
+
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Email</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @user.email_address %></dd>
+    </div>
+
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @user.rol_label %></dd>
+    </div>
+
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Ubicacion</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @user.ubicacion&.humanize || "—" %></dd>
+    </div>
+
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Registrado</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= l(@user.created_at, format: :long) rescue @user.created_at.strftime("%d/%m/%Y %H:%M") %></dd>
+    </div>
+  </div>
+</div>

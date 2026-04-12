@@ -1,0 +1,13 @@
+<%= render PageHeaderComponent.new(title: "Editar Usuario", subtitle: @user.nombre) do |header|
+  header.with_action do
+    render ButtonComponent.new(variant: :ghost, href: user_path(@user), icon: "arrow-left") do
+      "Volver"
+    end
+  end
+end %>
+
+<div class="bg-white rounded-lg shadow overflow-hidden">
+  <div class="p-6">
+    <%= render "form", user: @user %>
+  </div>
+</div>

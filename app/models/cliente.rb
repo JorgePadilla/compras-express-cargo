@@ -2,7 +2,7 @@ class Cliente < ApplicationRecord
   # validations: false because admins create clients without passwords;
   # only clients who opt into portal access get a password set later.
   has_secure_password validations: false
-  validates :password, length: { minimum: 8 }, if: -> { password.present? }
+  validates :password, length: { minimum: 8 }, confirmation: true, if: -> { password.present? }
 
   belongs_to :categoria_precio, optional: true
   has_many :paquetes, dependent: :restrict_with_error
@@ -17,7 +17,9 @@ class Cliente < ApplicationRecord
 
   validates :codigo, presence: true, uniqueness: { case_sensitive: false }
   validates :nombre, presence: true
-  validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
+  validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true,
+                   uniqueness: { case_sensitive: false, message: "ya esta registrado" }, if: -> { email.present? }
+  validates :password_confirmation, presence: true, if: -> { password.present? }
 
   scope :activos, -> { where(activo: true) }
   scope :buscar, ->(term) {

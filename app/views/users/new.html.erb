@@ -1,0 +1,13 @@
+<%= render PageHeaderComponent.new(title: "Nuevo Usuario") do |header|
+  header.with_action do
+    render ButtonComponent.new(variant: :ghost, href: users_path, icon: "arrow-left") do
+      "Volver"
+    end
+  end
+end %>
+
+<div class="bg-white rounded-lg shadow overflow-hidden">
+  <div class="p-6">
+    <%= render "form", user: @user %>
+  </div>
+</div>
