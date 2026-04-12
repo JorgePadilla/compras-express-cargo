@@ -47,9 +47,14 @@ class FinanciamientosController < ApplicationController
       redirect_to(@financiamiento, alert: "Esta cuota ya fue pagada.") and return
     end
 
-    monto = cuota.monto
-    metodo = params[:metodo_pago] || "efectivo"
     venta = @financiamiento.venta
+    metodo = params[:metodo_pago] || "efectivo"
+    # Cap at venta's remaining saldo to avoid overpayment if someone paid directly on the venta
+    monto = [cuota.monto.to_d, venta.saldo_pendiente.to_d].min
+
+    if monto <= 0
+      redirect_to(@financiamiento, alert: "La venta ya no tiene saldo pendiente.") and return
+    end
 
     recibo = venta.registrar_pago(monto: monto, metodo_pago: metodo, user: Current.user, notas: "Cuota #{cuota.numero_cuota} - #{@financiamiento.numero}")
 
