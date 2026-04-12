@@ -19,7 +19,6 @@ class Cliente < ApplicationRecord
   validates :nombre, presence: true
   validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true,
                    uniqueness: { case_sensitive: false, message: "ya esta registrado" }, if: -> { email.present? }
-  validates :password_confirmation, presence: true, if: -> { password.present? }
 
   scope :activos, -> { where(activo: true) }
   scope :buscar, ->(term) {
