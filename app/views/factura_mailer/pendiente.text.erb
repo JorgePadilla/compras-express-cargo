@@ -1,0 +1,14 @@
+Hola, <%= @cliente.nombre %>
+
+Hemos generado tu factura <%= @venta.numero %> por los envios recientes.
+Adjunto encontraras el PDF con el detalle completo.
+
+Factura: <%= @venta.numero %>
+Fecha: <%= @venta.created_at.to_date.strftime("%d/%m/%Y") %>
+Subtotal: <%= @venta.moneda %> <%= format("%.2f", @venta.subtotal) %>
+ISV: <%= @venta.moneda %> <%= format("%.2f", @venta.impuesto) %>
+Total: <%= @venta.moneda %> <%= format("%.2f", @venta.total) %>
+
+Ver online: <%= (cuenta_factura_url(@venta) rescue "") %>
+
+Gracias por confiar en <%= @empresa.nombre %>.

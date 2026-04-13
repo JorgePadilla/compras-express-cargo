@@ -28,8 +28,8 @@ puts "  ✓ Admin user"
   te.save!
 end
 
-# Deprecar legacy si existen (safety-net para staging)
-TipoEnvio.where(codigo: %w[aereo aereo-express ckm-maritimo cka-estandard]).update_all(activo: false)
+# Eliminar legacy tipos de envio (safety-net para staging/production)
+TipoEnvio.where(codigo: %w[aereo aereo-express ckm-maritimo cka-estandard cer-legacy cem-legacy]).destroy_all
 
 puts "  ✓ #{TipoEnvio.activos.count} tipos de envio v4"
 
@@ -146,7 +146,7 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   clientes = Cliente.all.to_a
   carriers = %w[FedEx DHL UPS USPS Amazon]
   proveedores = %w[Amazon eBay Shein Walmart Target Nike Zara]
-  estados = %w[recibido etiquetado etiquetado etiquetado etiquetado en_manifiesto enviado en_bodega_hn pre_facturado entregado]
+  estados = %w[recibido_miami empacado empacado empacado empacado empacado enviado_honduras disponible_entrega pre_facturado entregado]
 
   20.times do |i|
     tracking = "1Z999TEST#{(i + 1).to_s.rjust(6, '0')}"
@@ -171,7 +171,6 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
       proveedor: proveedores[i % proveedores.length],
       expedido_por: carriers[i % carriers.length],
       pre_alerta: i % 5 == 0,
-      pre_factura: i % 7 == 0,
       solicito_cambio_servicio: i == 3,
       retener_miami: i == 7,
       user: digitador,
@@ -198,14 +197,14 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   end
 
   # Assign some packages to manifests
-  etiquetados = Paquete.where(estado: "etiquetado", manifiesto_id: nil).limit(3)
-  etiquetados.each do |p|
-    p.update!(manifiesto: manifiesto_creado, estado: "en_manifiesto")
+  empacados = Paquete.where(estado: "empacado", manifiesto_id: nil).limit(3)
+  empacados.each do |p|
+    p.update!(manifiesto: manifiesto_creado)
   end
   manifiesto_creado.recalculate_totals!
 
-  enviados = Paquete.where(estado: "enviado", manifiesto_id: nil).limit(2)
-  enviados.each do |p|
+  enviados_hn = Paquete.where(estado: "enviado_honduras", manifiesto_id: nil).limit(2)
+  enviados_hn.each do |p|
     p.update!(manifiesto: manifiesto_enviado)
   end
   manifiesto_enviado.recalculate_totals!
@@ -230,7 +229,6 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   end
   PreAlertaPaquete.find_or_create_by!(pre_alerta: pa1, tracking: "1Z999DEMO000002") do |pap|
     pap.descripcion = "Ropa variada Amazon"
-    pap.retener_miami = true
     pap.fecha = 1.day.ago.to_date
   end
 
@@ -264,5 +262,21 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
 
   puts "  ✓ #{PreAlerta.count} pre-alertas"
 end
+
+# ── Empresa singleton (datos fiscales para PDFs y mailers) ──
+Empresa.instance.update!(
+  nombre: "Compras Express Cargo",
+  rtn: "08011998123456",
+  telefono: "+504 2550-0000",
+  email_contacto: "info@comprasexpresscargo.com",
+  direccion: "Boulevard del Este, San Pedro Sula",
+  ciudad: "San Pedro Sula",
+  pais: "Honduras",
+  moneda_default: "LPS",
+  isv_rate: BigDecimal("0.15"),
+  sitio_web: "https://comprasexpresscargo.com",
+  terminos_factura: "Esta factura es valida como comprobante fiscal. Gracias por preferir Compras Express Cargo."
+)
+puts "  ✓ Empresa singleton"
 
 puts "Seed completed!"

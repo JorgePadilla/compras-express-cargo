@@ -1,0 +1,12 @@
+Hola, <%= @cliente.nombre %>
+
+Hemos preparado una cotizacion para ti.
+
+Cotizacion: <%= @cotizacion.numero %>
+Fecha: <%= @cotizacion.created_at.to_date.strftime("%d/%m/%Y") %>
+Vigencia: <%= @cotizacion.vigencia_dias %> dias
+Total: <%= @cotizacion.moneda %> <%= format("%.2f", @cotizacion.total) %>
+
+Puedes revisar y aceptar esta cotizacion desde tu portal.
+
+Gracias por confiar en <%= @empresa.nombre %>.

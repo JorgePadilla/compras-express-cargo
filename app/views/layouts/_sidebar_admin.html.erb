@@ -9,19 +9,33 @@
     <% end %>
   <% end %>
 
-  <% if can_access?(:pre_facturas) || can_access?(:pre_alertas) || can_access?(:ventas) %>
+  <% if can_access?(:pre_facturas) || can_access?(:pre_alertas) || can_access?(:ventas) || can_access?(:notas_debito) || can_access?(:notas_credito) || can_access?(:cotizaciones) || can_access?(:financiamientos) %>
     <%= sidebar_section "Caja" do %>
-      <%= sidebar_link "Pre-Facturas", "#", icon: "document-text" if can_access?(:pre_facturas) %>
+      <%= sidebar_link "Pre-Facturas", pre_facturas_path, icon: "document-text" if can_access?(:pre_facturas) %>
       <%= sidebar_link "Pre-Alertas", pre_alertas_path, icon: "bell-alert" if can_access?(:pre_alertas) %>
-      <%= sidebar_link "Ventas", "#", icon: "currency-dollar" if can_access?(:ventas) %>
-      <%= sidebar_link "Recibos", "#", icon: "receipt-percent" if can_access?(:recibos) %>
+      <%= sidebar_link "Cotizaciones", cotizaciones_path, icon: "clipboard-document-list" if can_access?(:cotizaciones) %>
+      <%= sidebar_link "Proformas", proformas_path, icon: "document-duplicate" if can_access?(:ventas) %>
+      <%= sidebar_link "Ventas", ventas_path, icon: "currency-dollar" if can_access?(:ventas) %>
+      <%= sidebar_link "Recibos", recibos_path, icon: "receipt-percent" if can_access?(:recibos) %>
+      <%= sidebar_link "Notas de Debito", notas_debito_path, icon: "document-plus" if can_access?(:notas_debito) %>
+      <%= sidebar_link "Notas de Credito", notas_credito_path, icon: "document-minus" if can_access?(:notas_credito) %>
+      <%= sidebar_link "Financiamientos", financiamientos_path, icon: "banknotes" if can_access?(:financiamientos) %>
     <% end %>
   <% end %>
 
   <%= sidebar_link "Clientes", clientes_path, icon: "users" if can_access?(:clientes) %>
 
   <% if can_access?(:entregas) %>
-    <%= sidebar_link "Entregas", "#", icon: "truck" %>
+    <%= sidebar_link "Entregas", entregas_path, icon: "truck" %>
+  <% end %>
+
+  <% if can_access?(:caja) %>
+    <%= sidebar_section "Caja Diaria" do %>
+      <%= sidebar_link "Mi Dia", caja_path, icon: "calculator" %>
+      <%= sidebar_link "Ingresos", ingresos_caja_path, icon: "arrow-trending-up" %>
+      <%= sidebar_link "Egresos", egresos_caja_path, icon: "arrow-trending-down" %>
+      <%= sidebar_link "Historial", historial_caja_path, icon: "clock" %>
+    <% end %>
   <% end %>
 
   <% if can_access?(:marketing) || admin? %>
@@ -33,6 +47,9 @@
   <% end %>
 
   <% if admin? %>
+    <%= sidebar_link "Usuarios", users_path, icon: "user-group" %>
+    <%= sidebar_link "Categorias de Precio", categoria_precios_path, icon: "tag" %>
+    <%= sidebar_link "Empresa", empresa_path, icon: "building-office-2" %>
     <%= sidebar_link "Configuraciones", "#", icon: "cog-6-tooth" %>
     <%= sidebar_link "Reportes", "#", icon: "table-cells" %>
   <% end %>

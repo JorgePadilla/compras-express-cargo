@@ -1,0 +1,9 @@
+pago_maria:
+  venta: pagada_maria
+  cliente: maria
+  monto: 28.75
+  metodo_pago: efectivo
+  moneda: LPS
+  estado: completado
+  pagado_at: <%= 1.day.ago %>
+  registrado_por: cajero

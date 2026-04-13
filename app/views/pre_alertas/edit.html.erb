@@ -48,6 +48,24 @@
       </div>
     </div>
 
+    <%# Titulo + Proveedor %>
+    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Título de Referencia</label>
+          <%= f.text_field :titulo, placeholder: "Ej. Televisor, Zapatos...",
+              class: "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
+                     focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">Proveedor / Tienda</label>
+          <%= f.text_field :proveedor, placeholder: "Ej. Amazon, Best Buy...",
+              class: "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
+                     focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+      </div>
+    </div>
+
     <%# Notas %>
     <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
       <label class="block text-sm font-medium text-gray-700 mb-1.5">Notas del grupo</label>
@@ -59,13 +77,10 @@
 
     <%# Paquetes table %>
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+      <div class="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
         <h3 class="text-sm font-bold text-gray-800">Paquetes</h3>
-        <button type="button" data-action="click->pre-alerta-editor#addPaquete"
-                class="inline-flex items-center gap-1 text-sm text-cec-teal hover:text-cec-teal-dark font-medium">
-          <%= heroicon "plus-circle", variant: :outline, options: { class: "w-4 h-4" } %>
-          Agregar (F6)
-        </button>
+        <span data-pre-alerta-editor-target="counter"
+              class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500"></span>
       </div>
 
       <div class="overflow-x-auto">
@@ -74,7 +89,7 @@
             <tr>
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tracking</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripcion</th>
-              <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Retener</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Instrucciones</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
               <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Vinculado</th>
               <th class="px-4 py-2"></th>
@@ -96,9 +111,10 @@
                         class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
                   <% end %>
                 </td>
-                <td class="px-4 py-2 text-center">
+                <td class="px-4 py-2">
                   <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
-                    <%= pf.check_box :retener_miami, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+                    <%= pf.text_area :instrucciones, placeholder: "Instrucciones", rows: 2,
+                        class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
                   <% end %>
                 </td>
                 <td class="px-4 py-2">
@@ -141,9 +157,10 @@
                  placeholder="Descripcion"
                  class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
         </td>
-        <td class="px-4 py-2 text-center">
-          <input type="checkbox" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][retener_miami]" value="1"
-                 class="rounded border-gray-300 text-cec-teal focus:ring-cec-teal">
+        <td class="px-4 py-2">
+          <textarea name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][instrucciones]"
+                    rows="2" placeholder="Instrucciones"
+                    class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"></textarea>
         </td>
         <td class="px-4 py-2">
           <input type="date" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][fecha]"
@@ -165,6 +182,12 @@
     <div class="flex flex-col sm:flex-row gap-3 justify-end">
       <%= link_to "Cancelar (F2)", pre_alertas_path,
           class: "text-gray-600 hover:text-gray-800 text-sm font-medium px-4 py-2.5 text-center" %>
+      <button type="button" data-action="click->pre-alerta-editor#addPaquete"
+              data-pre-alerta-editor-target="addButton"
+              class="inline-flex items-center gap-1.5 border border-cec-teal text-cec-teal font-semibold px-6 py-2.5 rounded-lg text-sm hover:bg-cec-teal/10 transition-colors">
+        <%= heroicon "plus-circle", variant: :outline, options: { class: "w-4 h-4" } %>
+        Agregar Paquete (F6)
+      </button>
       <button type="button" data-action="click->pre-alerta-editor#save"
               class="bg-cec-teal text-white font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm hover:bg-cec-teal-dark transition-colors">
         Guardar (F8)

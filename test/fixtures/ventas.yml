@@ -1,0 +1,22 @@
+pendiente_juan:
+  numero: VT-000001
+  cliente: juan
+  estado: pendiente
+  subtotal: 17.50
+  impuesto: 2.63
+  total: 20.13
+  saldo_pendiente: 20.13
+  moneda: LPS
+  creado_por: cajero
+
+pagada_maria:
+  numero: VT-000002
+  cliente: maria
+  estado: pagada
+  subtotal: 25.00
+  impuesto: 3.75
+  total: 28.75
+  saldo_pendiente: 0.00
+  moneda: LPS
+  creado_por: cajero
+  pagada_at: <%= 1.day.ago %>

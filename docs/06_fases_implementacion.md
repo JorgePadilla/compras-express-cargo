@@ -8,44 +8,44 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 
 ---
 
-## Fase 0: Fundacion (Rails scaffold + auth + deploy)
+## Fase 0: Fundacion (Rails scaffold + auth + deploy) ✅ COMPLETA
 
 **Objetivo:** App corriendo en staging con login, roles y layout base.
 
-| # | Tarea | Modulos |
-|---|-------|---------|
-| 0.1 | Rails 8 new + PostgreSQL + Tailwind 4 + Hotwire | — |
-| 0.2 | Autenticacion (Rails 8 generator) + sesiones | 1 |
-| 0.3 | Modelo User con 9 roles + enum + ubicacion (miami/honduras) | 2 |
-| 0.4 | Sistema de autorizacion por rol (qué ve cada quien) | 2 |
-| 0.5 | Layout responsive: sidebar admin + sidebar cliente (Mi Cuenta) | 3, 4 |
-| 0.6 | Plantilla base reutilizable (busqueda + filtros + tabla + paginacion) | 8 (patron UI) |
-| 0.7 | Seeds: tipos envio, carriers, empresas manifiesto, categorias precio, admin user | Config |
-| 0.8 | Deploy a Render staging + CI/CD GitHub Actions | Infra |
-| 0.9 | Modelo Cliente + CRUD basico | 11 |
+| # | Tarea | Modulos | Estado |
+|---|-------|---------|--------|
+| 0.1 | Rails 8 new + PostgreSQL + Tailwind 4 + Hotwire | — | ✅ |
+| 0.2 | Autenticacion (Rails 8 generator) + sesiones | 1 | ✅ |
+| 0.3 | Modelo User con 9 roles + enum + ubicacion (miami/honduras) | 2 | ✅ |
+| 0.4 | Sistema de autorizacion por rol (qué ve cada quien) | 2 | ✅ |
+| 0.5 | Layout responsive: sidebar admin + sidebar cliente (Mi Cuenta) | 3, 4 | ✅ |
+| 0.6 | Plantilla base reutilizable (busqueda + filtros + tabla + paginacion) | 8 (patron UI) | ✅ |
+| 0.7 | Seeds: tipos envio, carriers, empresas manifiesto, categorias precio, admin user | Config | ✅ |
+| 0.8 | Deploy a Render staging + CI/CD GitHub Actions | Infra | ✅ |
+| 0.9 | Modelo Cliente + CRUD basico | 11 | ✅ |
 
 **Entregable:** Login funcional, 2 portales (admin/cliente), layout responsive, deploy automatico.
 
-**Dependencia:** Ninguna — se puede empezar ya.
+**Dependencia:** Ninguna.
 
 ---
 
-## Fase 1: Flujo Miami (el core del negocio)
+## Fase 1: Flujo Miami (el core del negocio) ✅ COMPLETA
 
 **Objetivo:** Digitadores en Miami pueden etiquetar paquetes y armar manifiestos.
 
-| # | Tarea | Modulos |
-|---|-------|---------|
-| 1.1 | Modelo Paquete con estados (enum), tracking, dimensiones | 7 |
-| 1.2 | Pantalla Etiquetar/Digitar — formulario con 18 campos, atajos F2/F8/F9 | 6 |
-| 1.3 | Autocomplete de cliente por codigo (C5344) con Turbo | 6 |
-| 1.4 | Notas del cliente por ubicacion (Miami/Honduras) visibles al etiquetar | 34 |
-| 1.5 | Sonidos: confirmacion al guardar, error en duplicados, alerta en notas | 33 |
-| 1.6 | Deteccion de tracking duplicado/reciclado con historial | 36 |
-| 1.7 | Soporte 1 tracking → multiples cajas (caso DHL) | 36 |
-| 1.8 | Impresion de etiquetas (F9) | 6 |
-| 1.9 | Modelo Manifiesto + CRUD: crear, agregar paquetes, enviar | 8 |
-| 1.10 | Vista Todos los Paquetes con filtros avanzados + leyenda colores | 7 |
+| # | Tarea | Modulos | Estado |
+|---|-------|---------|--------|
+| 1.1 | Modelo Paquete con estados (enum), tracking, dimensiones | 7 | ✅ |
+| 1.2 | Pantalla Etiquetar/Digitar — formulario con 18 campos, atajos F2/F8/F9 | 6 | ✅ |
+| 1.3 | Autocomplete de cliente por codigo (C5344) con Turbo | 6 | ✅ |
+| 1.4 | Notas del cliente por ubicacion (Miami/Honduras) visibles al etiquetar | 34 | ✅ |
+| 1.5 | Sonidos: confirmacion al guardar, error en duplicados, alerta en notas | 33 | ✅ |
+| 1.6 | Deteccion de tracking duplicado/reciclado con historial | 36 | ✅ |
+| 1.7 | Soporte 1 tracking → multiples cajas (caso DHL) | 36 | ✅ |
+| 1.8 | Impresion de etiquetas (F9) | 6 | ✅ |
+| 1.9 | Modelo Manifiesto + CRUD: crear, agregar paquetes, enviar | 8 | ✅ |
+| 1.10 | Vista Todos los Paquetes con filtros avanzados + leyenda colores | 7 | ✅ |
 
 **Entregable:** Miami operativo — digitadores etiquetan, supervisores crean manifiestos.
 
@@ -53,22 +53,22 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 
 ---
 
-## Fase 2: Pre-Alertas (cliente + admin)
+## Fase 2: Pre-Alertas (cliente + admin) ✅ COMPLETA
 
 **Objetivo:** Clientes crean pre-alertas desde Mi Cuenta, admin las gestiona.
 
-| # | Tarea | Modulos |
-|---|-------|---------|
-| 2.1 | Portal Cliente (Mi Cuenta): dashboard con quick links, sidebar | 3 |
-| 2.2 | Modelo PreAlerta + asociacion con paquetes | 5 |
-| 2.3 | Wizard de 3 pasos cliente: reempaque? → consolidar? → tipo envio | 5 |
-| 2.4 | Editor Pre-Alerta cliente: agregar trackings, contenido, badges | 5 |
-| 2.5 | Vista lista Pre-Alertas cliente (cards en grid) | 5 |
-| 2.6 | Vista lista Pre-Alertas admin (tabla con filtros, 12k+ registros) | 5 |
-| 2.7 | Admin: Crear/Editar pre-alerta con atajos F6/F8/F9 | 5 |
-| 2.8 | Vinculacion automatica: paquete etiquetado en Miami ↔ pre-alerta existente | 5, 6 |
-| 2.9 | Notificaciones al cliente (email) al recibir paquete en Miami | 5 |
-| 2.10 | Boton "Limpiar Vacias" | 5 |
+| # | Tarea | Modulos | Estado |
+|---|-------|---------|--------|
+| 2.1 | Portal Cliente (Mi Cuenta): dashboard con quick links, sidebar | 3 | ✅ |
+| 2.2 | Modelo PreAlerta + asociacion con paquetes | 5 | ✅ |
+| 2.3 | Wizard de 3 pasos cliente (v4): Servicio → Consolidacion → Datos | 5 | ✅ |
+| 2.4 | Editor Pre-Alerta cliente: agregar trackings, contenido, badges | 5 | ✅ |
+| 2.5 | Vista lista Pre-Alertas cliente (cards en grid) | 5 | ✅ |
+| 2.6 | Vista lista Pre-Alertas admin (tabla con filtros, 12k+ registros) | 5 | ✅ |
+| 2.7 | Admin: Crear/Editar pre-alerta con atajos F6/F8/F9 | 5 | ✅ |
+| 2.8 | Vinculacion automatica: paquete etiquetado en Miami ↔ pre-alerta existente | 5, 6 | ✅ |
+| 2.9 | Notificaciones al cliente (email) al recibir paquete en Miami | 5 | ✅ |
+| 2.10 | Boton "Limpiar Vacias" + job automatico | 5 | ✅ |
 
 **Entregable:** Flujo completo Pre-alerta → Recepcion Miami conectado.
 
@@ -80,43 +80,84 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 
 **Objetivo:** Pre-facturas, ventas, pagos y recibos funcionando.
 
+### Fase 3a — Core Billing MVP ✅ COMPLETA (Abril 2026)
+
+| # | Tarea | Modulos | Estado |
+|---|-------|---------|--------|
+| 3.1 | Modelo PreFactura: generacion desde paquetes recibidos/pesados | 9 | ✅ |
+| 3.2 | Vista Pre-Facturas admin + cliente | 9 | ✅ |
+| 3.3 | Categorias de precio por cliente (precio/libra aereo, maritimo, volumen) | 11 | ✅ |
+| 3.4 | Calculo automatico: peso cobrar = max(peso real, peso volumetrico) | 9 | ✅ (Fase 1) |
+| 3.5 | Modelo Venta + items (proforma → pendiente → pagada → anulada) | 12 | ✅ |
+| 3.6 | Modelo Recibo + generacion al pagar | 16 | ✅ |
+| 3.7 | Modelo Pago (efectivo, tarjeta, transferencia) | — | ✅ |
+| 3.12 | Facturas Pendientes (vista cliente) | 15 | ✅ |
+
+**Entregable:** Ciclo completo Pre-factura → Venta → Pago → Recibo en LPS con ISV 15%.
+
+### Fase 3b — Notas D/C + PDFs + Emails ✅ COMPLETA (Abril 2026)
+
+| # | Tarea | Modulos | Estado |
+|---|-------|---------|--------|
+| 3.8 | Notas de Debito (admin CRUD + cuenta read-only) | 17 | ✅ |
+| 3.9 | Notas de Credito (admin CRUD + cuenta read-only) | — | ✅ |
+| 3b.1 | Modelo Empresa (singleton, datos fiscales para PDFs) | — | ✅ |
+| 3b.2 | Prawn PDFs: Venta, Recibo, NotaDebito, NotaCredito | — | ✅ |
+| 3b.3 | Mailers: FacturaMailer, NotaDebitoMailer, NotaCreditoMailer | — | ✅ |
+
+**Entregable:** Documentos fiscales completos con PDFs y envio por email.
+
+### Fase 3c — Pendiente (futuro)
+
 | # | Tarea | Modulos |
 |---|-------|---------|
-| 3.1 | Modelo PreFactura: generacion desde paquetes recibidos/pesados | 9 |
-| 3.2 | Vista Pre-Facturas admin + cliente | 9 |
-| 3.3 | Categorias de precio por cliente (precio/libra aereo, maritimo, volumen) | 11 |
-| 3.4 | Calculo automatico: peso cobrar = max(peso real, peso volumetrico) | 9 |
-| 3.5 | Modelo Venta + items (proforma → finalizada → anulada) | 12 |
-| 3.6 | Modelo Recibo + generacion al pagar | 16 |
-| 3.7 | Modelo Pago (efectivo, tarjeta, transferencia) | — |
-| 3.8 | Notas de Debito | 17 |
-| 3.9 | Notas de Credito | — |
 | 3.10 | Cotizaciones + Proformas | 13, 14 |
 | 3.11 | Financiamientos | 18 |
-| 3.12 | Facturas Pendientes (vista cliente) | 15 |
+| 3c.1 | USD + tasa de cambio automatica | — |
 
-**Entregable:** Ciclo completo Pre-factura → Venta → Pago → Recibo.
+**Nota:** Fase 3c no es bloqueante para Fase 4. Se puede implementar en paralelo o despues.
 
-**Dependencia:** Fase 2 (pre-alertas y paquetes vinculados).
+**Dependencia:** Fase 3a (billing core).
 
 ---
 
-## Fase 4: Caja y Entrega
+### Extras (entre fases) ✅
 
-**Objetivo:** Cajeros procesan pagos diarios, despacho entrega paquetes.
+| Tarea | Estado |
+|-------|--------|
+| Admin Users CRUD (8 roles, activo toggle, buscar) | ✅ Abril 2026 |
+| Client Self-Registration (`/registro`) | ✅ Abril 2026 |
+| UI polish: mobile responsive, admin pre-alerta form redesign | ✅ Abril 2026 |
+
+**Test suite:** 453 tests passing.
+
+---
+
+## Fase 4: Caja y Entrega ← **SIGUIENTE**
+
+**Objetivo:** Cajeros procesan pagos diarios, despacho entrega paquetes. Completa el loop operativo.
+
+**Lo que ya existe (listo para usar):**
+- Roles `supervisor_caja` y `entrega_despacho` definidos en User
+- `can_access?(:entregas)` en Authorization
+- Sidebar link placeholder para "Entregas" (apunta a `#`)
+- Paquete states: `disponible_entrega`, `en_reparto`, `entregado`
+- Lugar tipo `punto_entrega`
+- Modelos de billing completos (Venta, Pago, Recibo)
 
 | # | Tarea | Modulos |
 |---|-------|---------|
-| 4.1 | Mi Dia (POS diario): 4 secciones + apertura/cierre de caja | 19 |
-| 4.2 | Ingresos de caja | 20 |
-| 4.3 | Egresos de caja | 20 |
-| 4.4 | Modelo Entrega: registro con receptor, identidad, firma | 10 |
-| 4.5 | Vista Entrega Paquete con busqueda por tracking/cliente | 10 |
-| 4.6 | Cambio de estado paquete a "entregado" al registrar entrega | 10 |
+| 4.1 | Modelo Entrega: registro con receptor, identidad, firma, paquetes | 10 |
+| 4.2 | Vista Entregas admin: lista + busqueda por tracking/cliente | 10 |
+| 4.3 | Crear Entrega: seleccionar paquetes `disponible_entrega`, registrar receptor | 10 |
+| 4.4 | Cambio de estado paquete a `en_reparto` → `entregado` al entregar | 10 |
+| 4.5 | Mi Dia (POS diario): 4 secciones + apertura/cierre de caja | 19 |
+| 4.6 | Modelo Ingreso de caja + CRUD | 20 |
+| 4.7 | Modelo Egreso de caja + CRUD | 20 |
 
 **Entregable:** Caja operativa en Honduras + entregas registradas.
 
-**Dependencia:** Fase 3 (ventas y pagos deben existir).
+**Dependencia:** Fase 3a (ventas y pagos deben existir). ✅ Cumplida.
 
 ---
 
@@ -198,15 +239,18 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 ## Resumen Visual
 
 ```
-Fase 0  ████████░░░░░░░░░░░░  Fundacion (auth, roles, layout, deploy)
-Fase 1  ░░░░████████░░░░░░░░  Miami (etiquetar, manifiestos)
-Fase 2  ░░░░░░░░████████░░░░  Pre-Alertas (cliente + admin)
-Fase 3  ░░░░░░░░░░░░████████  Facturacion (pre-factura → venta → pago)
-Fase 4  ░░░░░░░░░░░░░░██████  Caja + Entregas
-Fase 5  ░░░░░░░░░░████░░░░░░  Tareas + Fotos (paralelo a F3)
-Fase 6  ░░░░░░░░░░░░░░░░████  Reportes + Config
-Fase 7  ░░░░░░░░░░░░░░░░░░██  Marketing CRM
-Fase 8  ░░░░░░░░░░░░░░░░░░██  Inventario
+Fase 0  ████████████████████  Fundacion (auth, roles, layout, deploy)     ✅
+Fase 1  ████████████████████  Miami (etiquetar, manifiestos)              ✅
+Fase 2  ████████████████████  Pre-Alertas (cliente + admin + v4)          ✅
+Fase 3a ████████████████████  Billing MVP (prefactura→venta→pago→recibo)  ✅
+Fase 3b ████████████████████  Notas D/C + PDFs + Emails                   ✅
+Extras  ████████████████████  Users CRUD + Registro + UI polish           ✅
+Fase 4  ░░░░░░░░░░░░░░░░░░░░  Caja + Entregas                            ← SIGUIENTE
+Fase 3c ░░░░░░░░░░░░░░░░░░░░  Cotizaciones + Proformas + Financiamientos
+Fase 5  ░░░░░░░░░░░░░░░░░░░░  Tareas + Fotos + Re-empaque (Miami)
+Fase 6  ░░░░░░░░░░░░░░░░░░░░  Reportes + Config + Dashboard
+Fase 7  ░░░░░░░░░░░░░░░░░░░░  Marketing CRM
+Fase 8  ░░░░░░░░░░░░░░░░░░░░  Inventario
 ```
 
 **Fases paralelas posibles:**

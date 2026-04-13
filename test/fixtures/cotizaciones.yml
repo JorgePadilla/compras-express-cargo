@@ -1,0 +1,39 @@
+borrador_juan:
+  numero: CT-000001
+  cliente: juan
+  estado: borrador
+  subtotal: 50.00
+  impuesto: 7.50
+  total: 57.50
+  moneda: LPS
+  vigencia_dias: 30
+  fecha_vencimiento: <%= 30.days.from_now.to_date %>
+  notas: Cotizacion en borrador
+  creado_por: cajero
+
+enviada_maria:
+  numero: CT-000002
+  cliente: maria
+  estado: enviada
+  subtotal: 100.00
+  impuesto: 15.00
+  total: 115.00
+  moneda: LPS
+  vigencia_dias: 30
+  fecha_vencimiento: <%= 25.days.from_now.to_date %>
+  creado_por: cajero
+  enviada_at: <%= 5.days.ago %>
+
+aceptada_juan:
+  numero: CT-000003
+  cliente: juan
+  estado: aceptada
+  subtotal: 75.00
+  impuesto: 11.25
+  total: 86.25
+  moneda: LPS
+  vigencia_dias: 30
+  fecha_vencimiento: <%= 20.days.from_now.to_date %>
+  creado_por: cajero
+  enviada_at: <%= 10.days.ago %>
+  aceptada_at: <%= 2.days.ago %>

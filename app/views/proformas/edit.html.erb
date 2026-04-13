@@ -1,0 +1,2 @@
+<%= render PageHeaderComponent.new(title: "Editar Proforma #{@proforma.numero}") %>
+<%= render "form", form_url: proforma_path(@proforma), form_method: :patch %>

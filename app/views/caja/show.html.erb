@@ -1,0 +1,231 @@
+<%= render PageHeaderComponent.new(title: "Mi Dia — Caja", subtitle: Date.current.strftime("%d/%m/%Y")) %>
+
+<div class="flex justify-end mb-4">
+  <%= link_to "Historial de Caja", historial_caja_path, class: "text-sm text-cec-teal hover:underline" %>
+</div>
+
+<% if @apertura.nil? %>
+  <%# ===== NO APERTURA — FORM ABRIR CAJA ===== %>
+  <div class="max-w-md mx-auto bg-white p-6 rounded-lg shadow">
+    <div class="text-center mb-6">
+      <%= heroicon "calculator", variant: :outline, options: { class: "w-12 h-12 text-gray-400 mx-auto mb-2" } %>
+      <h2 class="text-lg font-semibold text-cec-navy">Abrir Caja del Dia</h2>
+      <p class="text-sm text-gray-500">No hay caja abierta para hoy.</p>
+    </div>
+    <%= form_with url: apertura_caja_path, method: :post, class: "space-y-4", local: true do |f| %>
+      <div>
+        <label for="monto_apertura" class="block text-sm font-medium text-gray-700 mb-1">Monto de Apertura (LPS)</label>
+        <%= f.number_field :monto_apertura, value: 0, step: 0.01, min: 0, required: true, id: "monto_apertura",
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+      </div>
+      <div>
+        <label for="notas_apertura" class="block text-sm font-medium text-gray-700 mb-1">Notas (opcional)</label>
+        <%= f.text_area :notas_apertura, value: "", rows: 2, id: "notas_apertura",
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+      </div>
+      <button type="submit" class="w-full px-4 py-2 bg-cec-teal text-white rounded-lg text-sm font-medium hover:bg-cec-teal-dark">
+        Abrir Caja
+      </button>
+    <% end %>
+  </div>
+
+<% elsif @apertura.abierta? %>
+  <%# ===== CAJA ABIERTA — DASHBOARD ===== %>
+
+  <%# Summary cards %>
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white p-4 rounded-lg shadow">
+      <p class="text-xs text-gray-500 uppercase font-medium">Apertura</p>
+      <p class="text-xl font-bold text-cec-navy">L. <%= number_with_delimiter(@apertura.monto_apertura.to_f, precision: 2) %></p>
+    </div>
+    <div class="bg-white p-4 rounded-lg shadow">
+      <p class="text-xs text-gray-500 uppercase font-medium">Pagos</p>
+      <p class="text-xl font-bold text-cec-teal-dark">L. <%= number_with_delimiter(@apertura.total_pagos.to_f, precision: 2) %></p>
+    </div>
+    <div class="bg-white p-4 rounded-lg shadow">
+      <p class="text-xs text-gray-500 uppercase font-medium">Ingresos Extras</p>
+      <p class="text-xl font-bold text-cec-teal-dark">L. <%= number_with_delimiter(@apertura.total_ingresos.to_f, precision: 2) %></p>
+    </div>
+    <div class="bg-white p-4 rounded-lg shadow">
+      <p class="text-xs text-gray-500 uppercase font-medium">Egresos</p>
+      <p class="text-xl font-bold text-red-600">L. <%= number_with_delimiter(@apertura.total_egresos.to_f, precision: 2) %></p>
+    </div>
+  </div>
+
+  <div class="bg-white p-4 rounded-lg shadow mb-6">
+    <div class="flex justify-between items-center">
+      <span class="text-sm font-medium text-gray-700">Total Esperado en Caja:</span>
+      <span class="text-lg font-bold text-cec-navy">L. <%= number_with_delimiter(@apertura.total_esperado.to_f, precision: 2) %></span>
+    </div>
+  </div>
+
+  <%# Quick actions %>
+  <div class="flex gap-3 mb-6">
+    <%= link_to new_ingreso_caja_path, class: "inline-flex items-center gap-2 px-4 py-2 bg-cec-teal text-white rounded-lg text-sm font-medium hover:bg-cec-teal-dark" do %>
+      <%= heroicon "plus", variant: :mini, options: { class: "w-4 h-4" } %>
+      Nuevo Ingreso
+    <% end %>
+    <%= link_to new_egreso_caja_path, class: "inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50" do %>
+      <%= heroicon "minus", variant: :mini, options: { class: "w-4 h-4" } %>
+      Nuevo Egreso
+    <% end %>
+  </div>
+
+  <%# Pagos del dia %>
+  <% if @pagos.any? %>
+    <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+      <div class="px-6 py-3 bg-gray-50 border-b">
+        <h3 class="text-sm font-semibold text-gray-700">Pagos del Dia (<%= @pagos.count %>)</h3>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Venta</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Metodo</th>
+              <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Monto</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+            <% @pagos.each do |p| %>
+              <tr>
+                <td class="px-4 py-2 font-mono"><%= link_to p.venta.numero, venta_path(p.venta), class: "text-cec-navy hover:underline" %></td>
+                <td class="px-4 py-2"><%= p.cliente.codigo %></td>
+                <td class="px-4 py-2"><%= p.metodo_pago.humanize %></td>
+                <td class="px-4 py-2 text-right font-medium">L. <%= number_with_delimiter(p.monto.to_f, precision: 2) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+
+  <%# Ingresos del dia %>
+  <% if @ingresos.any? %>
+    <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+      <div class="px-6 py-3 bg-gray-50 border-b">
+        <h3 class="text-sm font-semibold text-gray-700">Ingresos Extras (<%= @ingresos.count %>)</h3>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Numero</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Metodo</th>
+              <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Monto</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+            <% @ingresos.each do |i| %>
+              <tr>
+                <td class="px-4 py-2 font-mono"><%= link_to i.numero, ingreso_caja_path(i), class: "text-cec-navy hover:underline" %></td>
+                <td class="px-4 py-2"><%= i.concepto %></td>
+                <td class="px-4 py-2"><%= i.metodo_pago.humanize %></td>
+                <td class="px-4 py-2 text-right font-medium text-cec-teal-dark">L. <%= number_with_delimiter(i.monto.to_f, precision: 2) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+
+  <%# Egresos del dia %>
+  <% if @egresos.any? %>
+    <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+      <div class="px-6 py-3 bg-gray-50 border-b">
+        <h3 class="text-sm font-semibold text-gray-700">Egresos (<%= @egresos.count %>)</h3>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Numero</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Categoria</th>
+              <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Monto</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+            <% @egresos.each do |e| %>
+              <tr>
+                <td class="px-4 py-2 font-mono"><%= link_to e.numero, egreso_caja_path(e), class: "text-cec-navy hover:underline" %></td>
+                <td class="px-4 py-2"><%= e.concepto %></td>
+                <td class="px-4 py-2"><%= e.categoria&.humanize %></td>
+                <td class="px-4 py-2 text-right font-medium text-red-600">L. <%= number_with_delimiter(e.monto.to_f, precision: 2) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+
+  <%# Cerrar caja %>
+  <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+    <h3 class="text-sm font-semibold text-amber-800 mb-3">Cerrar Caja</h3>
+    <%= form_with url: cierre_caja_path, method: :post, class: "grid grid-cols-1 md:grid-cols-2 gap-3", local: true do |f| %>
+      <div>
+        <label for="monto_cierre" class="block text-xs font-medium text-gray-700 mb-1">Monto Real en Caja (LPS)</label>
+        <%= f.number_field :monto_cierre, value: @apertura.total_esperado.to_f, step: 0.01, min: 0, required: true, id: "monto_cierre",
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+      </div>
+      <div>
+        <label for="notas_cierre" class="block text-xs font-medium text-gray-700 mb-1">Notas de Cierre</label>
+        <%= f.text_field :notas_cierre, value: "", id: "notas_cierre", class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+      </div>
+      <div class="md:col-span-2">
+        <button type="submit" class="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700"
+                data-turbo-confirm="¿Cerrar caja del dia? Esta accion no se puede deshacer.">
+          Cerrar Caja
+        </button>
+      </div>
+    <% end %>
+  </div>
+
+<% else %>
+  <%# ===== CAJA CERRADA — RESUMEN READ-ONLY ===== %>
+  <div class="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow">
+    <div class="text-center mb-6">
+      <p class="text-sm text-gray-500">Caja del dia</p>
+      <h2 class="text-xl font-bold text-cec-navy"><%= @apertura.numero %></h2>
+      <p class="mt-1"><%= render StatusBadgeComponent.new(status: "cerrada") %></p>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 text-sm mb-6">
+      <div>
+        <p class="text-gray-500">Abierta por</p>
+        <p class="font-medium"><%= @apertura.abierta_por.nombre %></p>
+      </div>
+      <div>
+        <p class="text-gray-500">Cerrada por</p>
+        <p class="font-medium"><%= @apertura.cerrada_por&.nombre %></p>
+        <p class="text-xs text-gray-400"><%= @apertura.cerrada_at&.strftime("%H:%M") %></p>
+      </div>
+    </div>
+
+    <table class="min-w-full text-sm mb-6">
+      <tbody>
+        <tr class="border-b"><td class="py-2 text-gray-500">Monto Apertura</td><td class="py-2 text-right">L. <%= number_with_delimiter(@apertura.monto_apertura.to_f, precision: 2) %></td></tr>
+        <tr class="border-b"><td class="py-2 text-gray-500">Total Pagos</td><td class="py-2 text-right text-cec-teal-dark">+ L. <%= number_with_delimiter(@apertura.total_pagos.to_f, precision: 2) %></td></tr>
+        <tr class="border-b"><td class="py-2 text-gray-500">Total Ingresos</td><td class="py-2 text-right text-cec-teal-dark">+ L. <%= number_with_delimiter(@apertura.total_ingresos.to_f, precision: 2) %></td></tr>
+        <tr class="border-b"><td class="py-2 text-gray-500">Total Egresos</td><td class="py-2 text-right text-red-600">- L. <%= number_with_delimiter(@apertura.total_egresos.to_f, precision: 2) %></td></tr>
+        <tr class="border-b font-bold"><td class="py-2">Total Esperado</td><td class="py-2 text-right">L. <%= number_with_delimiter(@apertura.total_esperado.to_f, precision: 2) %></td></tr>
+        <tr class="border-b font-bold"><td class="py-2">Monto Cierre (real)</td><td class="py-2 text-right">L. <%= number_with_delimiter(@apertura.monto_cierre.to_f, precision: 2) %></td></tr>
+        <tr class="font-bold text-lg">
+          <td class="py-2">Diferencia</td>
+          <td class="py-2 text-right <%= @apertura.diferencia.to_f >= 0 ? "text-cec-teal-dark" : "text-red-600" %>">
+            L. <%= number_with_delimiter(@apertura.diferencia.to_f, precision: 2) %>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <% if @apertura.notas_cierre.present? %>
+      <p class="text-sm text-gray-500 mb-4"><strong>Notas:</strong> <%= @apertura.notas_cierre %></p>
+    <% end %>
+  </div>
+<% end %>

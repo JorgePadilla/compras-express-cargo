@@ -1,0 +1,47 @@
+<%= render PageHeaderComponent.new(title: "Mis Cotizaciones", subtitle: "#{@cotizaciones.total_count} cotizaciones") %>
+
+<% if @cotizaciones.any? %>
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Numero</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vencimiento</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @cotizaciones.each do |ct| %>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <%= link_to ct.numero, cuenta_cotizacion_path(ct), class: "text-sm font-mono font-medium text-cec-navy hover:underline" %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><%= ct.created_at.strftime("%d/%m/%Y") %></td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <%= render StatusBadgeComponent.new(status: ct.estado) %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><%= ct.fecha_vencimiento %></td>
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <%= ct.simbolo_moneda %> <%= number_with_delimiter(ct.total.to_f, precision: 2) %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-right">
+                <%= link_to "PDF", pdf_cuenta_cotizacion_path(ct), class: "text-cec-teal hover:underline text-sm" %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="mt-4"><%= paginate @cotizaciones %></div>
+<% else %>
+  <%= render EmptyStateComponent.new(
+    title: "Sin cotizaciones",
+    description: "Aun no tienes cotizaciones enviadas.",
+    icon: "document-text"
+  ) %>
+<% end %>

@@ -4,7 +4,8 @@ export default class extends Controller {
   static targets = ["form", "paquetesBody", "template", "counter", "addButton", "limitMessage"]
   static values = {
     maxPaquetes: { type: Number, default: -1 },
-    cancelUrl: { type: String, default: "" }
+    cancelUrl: { type: String, default: "" },
+    consolidado: { type: Boolean, default: false }
   }
 
   _newIndex = Date.now()
@@ -13,6 +14,11 @@ export default class extends Controller {
     this._handleGlobalKeydown = this.handleKeydown.bind(this)
     document.addEventListener("keydown", this._handleGlobalKeydown)
     this.updateCounter()
+
+    // Auto-add a blank row for consolidated pre-alertas so the next line is ready
+    if (this.hasAddButtonTarget && !this.isAtLimit()) {
+      this.addPaquete()
+    }
   }
 
   disconnect() {
@@ -49,15 +55,11 @@ export default class extends Controller {
     }
 
     const template = this.templateTarget.content.cloneNode(true)
-    const row = template.querySelector("tr")
+    const row = template.querySelector(".paquete-row")
 
     // Replace NEW_INDEX with unique index
     this._newIndex++
     row.innerHTML = row.innerHTML.replaceAll("NEW_INDEX", this._newIndex.toString())
-
-    // Auto-populate fecha with today's date
-    const dateInput = row.querySelector("input[type='date']")
-    if (dateInput) dateInput.value = new Date().toISOString().split("T")[0]
 
     this.paquetesBodyTarget.appendChild(row)
 
@@ -69,7 +71,7 @@ export default class extends Controller {
   }
 
   removePaquete(e) {
-    const row = e.currentTarget.closest("tr")
+    const row = e.currentTarget.closest(".paquete-row")
     const destroyField = row.querySelector("[data-pre-alerta-editor-target='destroyField']")
 
     if (destroyField) {
@@ -91,12 +93,23 @@ export default class extends Controller {
 
   saveAndNotify() {
     this._removeNotifyField()
-    const input = document.createElement("input")
-    input.type = "hidden"
-    input.name = "notificar"
-    input.value = "true"
-    input.dataset.notifyField = "true"
-    this.formTarget.appendChild(input)
+    const notifyInput = document.createElement("input")
+    notifyInput.type = "hidden"
+    notifyInput.name = "notificar"
+    notifyInput.value = "true"
+    notifyInput.dataset.notifyField = "true"
+    this.formTarget.appendChild(notifyInput)
+
+    if (this.consolidadoValue) {
+      this._removeFinalizarField()
+      const finalizarInput = document.createElement("input")
+      finalizarInput.type = "hidden"
+      finalizarInput.name = "finalizar"
+      finalizarInput.value = "true"
+      finalizarInput.dataset.finalizarField = "true"
+      this.formTarget.appendChild(finalizarInput)
+    }
+
     this.formTarget.requestSubmit()
   }
 
@@ -105,11 +118,16 @@ export default class extends Controller {
     if (existing) existing.remove()
   }
 
+  _removeFinalizarField() {
+    const existing = this.formTarget.querySelector("[data-finalizar-field]")
+    if (existing) existing.remove()
+  }
+
   // ── v4 max-paquetes-por-accion enforcement ──
 
   currentPackageCount() {
     if (!this.hasPaquetesBodyTarget) return 0
-    return this.paquetesBodyTarget.querySelectorAll("tr.paquete-row:not(.hidden)").length
+    return this.paquetesBodyTarget.querySelectorAll(".paquete-row:not(.hidden)").length
   }
 
   isAtLimit() {

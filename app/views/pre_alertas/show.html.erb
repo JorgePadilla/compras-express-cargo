@@ -47,6 +47,26 @@
   </div>
 </div>
 
+<%# Titulo + Proveedor %>
+<% if @pre_alerta.titulo.present? || @pre_alerta.proveedor.present? %>
+  <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <% if @pre_alerta.titulo.present? %>
+        <div>
+          <p class="text-xs text-gray-500 mb-1">Título de Referencia</p>
+          <p class="text-sm font-medium text-gray-800"><%= @pre_alerta.titulo %></p>
+        </div>
+      <% end %>
+      <% if @pre_alerta.proveedor.present? %>
+        <div>
+          <p class="text-xs text-gray-500 mb-1">Proveedor / Tienda</p>
+          <p class="text-sm font-medium text-gray-800"><%= @pre_alerta.proveedor %></p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>
+
 <%# Notas %>
 <% if @pre_alerta.notas_grupo.present? %>
   <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-6">
@@ -67,7 +87,6 @@
           <tr>
             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tracking</th>
             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripcion</th>
-            <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Retener</th>
             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Paquete Vinculado</th>
           </tr>
@@ -77,13 +96,6 @@
             <tr class="hover:bg-gray-50">
               <td class="px-4 py-3"><span class="font-mono text-sm"><%= pap.tracking %></span></td>
               <td class="px-4 py-3 text-sm text-gray-600"><%= pap.descripcion || "—" %></td>
-              <td class="px-4 py-3 text-center">
-                <% if pap.retener_miami? %>
-                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700">Si</span>
-                <% else %>
-                  <span class="text-xs text-gray-400">No</span>
-                <% end %>
-              </td>
               <td class="px-4 py-3 text-sm text-gray-500"><%= pap.fecha&.strftime("%d/%m/%Y") || "—" %></td>
               <td class="px-4 py-3">
                 <% if pap.paquete %>

@@ -1,0 +1,46 @@
+<% content_for :title, "Factura #{@venta.numero}" %>
+
+<h2 style="margin:0 0 12px 0; font-size:18px; color:#0f2b5b;">Hola, <%= @cliente.nombre %></h2>
+
+<p style="margin:0 0 16px 0; line-height:1.5;">
+  Hemos generado tu factura <strong><%= @venta.numero %></strong> por los envios recientes.
+  Adjunto encontraras el PDF con el detalle completo.
+</p>
+
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:16px 0; background:#f9fafb; border-radius:6px;">
+  <tr>
+    <td style="padding:12px 16px; border-bottom:1px solid #e5e7eb;"><strong>Factura:</strong></td>
+    <td align="right" style="padding:12px 16px; border-bottom:1px solid #e5e7eb;"><%= @venta.numero %></td>
+  </tr>
+  <tr>
+    <td style="padding:12px 16px; border-bottom:1px solid #e5e7eb;"><strong>Fecha:</strong></td>
+    <td align="right" style="padding:12px 16px; border-bottom:1px solid #e5e7eb;"><%= @venta.created_at.to_date.strftime("%d/%m/%Y") %></td>
+  </tr>
+  <tr>
+    <td style="padding:12px 16px; border-bottom:1px solid #e5e7eb;"><strong>Subtotal:</strong></td>
+    <td align="right" style="padding:12px 16px; border-bottom:1px solid #e5e7eb;"><%= @venta.moneda %> <%= number_with_delimiter(format("%.2f", @venta.subtotal)) %></td>
+  </tr>
+  <tr>
+    <td style="padding:12px 16px; border-bottom:1px solid #e5e7eb;"><strong>ISV:</strong></td>
+    <td align="right" style="padding:12px 16px; border-bottom:1px solid #e5e7eb;"><%= @venta.moneda %> <%= number_with_delimiter(format("%.2f", @venta.impuesto)) %></td>
+  </tr>
+  <tr>
+    <td style="padding:12px 16px; font-size:16px; color:#0f2b5b;"><strong>Total:</strong></td>
+    <td align="right" style="padding:12px 16px; font-size:16px; color:#0f2b5b;"><strong><%= @venta.moneda %> <%= number_with_delimiter(format("%.2f", @venta.total)) %></strong></td>
+  </tr>
+</table>
+
+<p style="margin:16px 0; line-height:1.5;">
+  Puedes revisar el detalle y pagar tu factura desde tu portal:
+</p>
+
+<p style="margin:24px 0;">
+  <a href="<%= (cuenta_factura_url(@venta) rescue "#") %>"
+     style="display:inline-block; padding:12px 20px; background:#0f2b5b; color:#ffffff; text-decoration:none; border-radius:6px; font-weight:600;">
+    Ver factura online
+  </a>
+</p>
+
+<p style="margin:16px 0 0 0; font-size:13px; color:#6b7280;">
+  Gracias por confiar en <%= @empresa.nombre %>.
+</p>

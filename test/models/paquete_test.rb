@@ -31,12 +31,12 @@ class PaqueteTest < ActiveSupport::TestCase
 
   test "auto-generated guia increments" do
     paquete = Paquete.create!(tracking: "1Z999INCR", cliente: clientes(:juan))
-    assert_equal "PQ-000004", paquete.guia
+    assert_equal "PQ-000010", paquete.guia
   end
 
-  test "default estado is recibido" do
+  test "default estado is recibido_miami" do
     paquete = Paquete.new(tracking: "1Z999TEST", cliente: clientes(:juan))
-    assert_equal "recibido", paquete.estado
+    assert_equal "recibido_miami", paquete.estado
   end
 
   test "sets fecha_recibido_miami on create" do
@@ -74,14 +74,14 @@ class PaqueteTest < ActiveSupport::TestCase
     assert paquetes(:entregado).estado_terminal?
   end
 
-  test "estado_terminal? returns false for recibido" do
+  test "estado_terminal? returns false for recibido_miami" do
     assert_not paquetes(:recibido).estado_terminal?
   end
 
   test "scope activos excludes anulado and entregado" do
     activos = Paquete.activos
     assert_includes activos, paquetes(:recibido)
-    assert_includes activos, paquetes(:etiquetado)
+    assert_includes activos, paquetes(:empacado)
     assert_not_includes activos, paquetes(:entregado)
   end
 
@@ -92,7 +92,7 @@ class PaqueteTest < ActiveSupport::TestCase
 
   test "scope buscar searches by guia" do
     results = Paquete.buscar("PQ-000002")
-    assert_includes results, paquetes(:etiquetado)
+    assert_includes results, paquetes(:empacado)
   end
 
   test "scope buscar searches by client codigo" do
@@ -101,15 +101,37 @@ class PaqueteTest < ActiveSupport::TestCase
   end
 
   test "scope by_estado filters by estado" do
-    results = Paquete.by_estado("etiquetado")
-    assert_includes results, paquetes(:etiquetado)
+    results = Paquete.by_estado("empacado")
+    assert_includes results, paquetes(:empacado)
     assert_not_includes results, paquetes(:recibido)
   end
 
   test "scope sin_manifiesto returns packages without manifest" do
     results = Paquete.sin_manifiesto
     assert_includes results, paquetes(:recibido)
-    assert_includes results, paquetes(:etiquetado)
+    assert_includes results, paquetes(:empacado)
+  end
+
+  test "scope facturables returns disponible_entrega without pre_factura" do
+    results = Paquete.facturables
+    assert_includes results, paquetes(:disponible_entrega_juan)
+    assert_includes results, paquetes(:disponible_entrega_maria)
+    assert_not_includes results, paquetes(:recibido)
+    assert_not_includes results, paquetes(:empacado)
+  end
+
+  test "scope facturables excludes paquetes with venta_id (reserved by proforma)" do
+    p = paquetes(:disponible_entrega_juan)
+    proforma = Venta.create!(cliente: clientes(:juan), estado: "proforma", moneda: "LPS",
+      venta_items_attributes: [{ concepto: "Flete", subtotal: 50 }])
+    p.update_column(:venta_id, proforma.id)
+    assert_not_includes Paquete.facturables, p.reload
+  end
+
+  test "scope facturables excludes paquetes already linked to pre_factura" do
+    p = paquetes(:disponible_entrega_juan)
+    p.update_column(:pre_factura_id, pre_facturas(:borrador_juan).id)
+    assert_not_includes Paquete.facturables, p.reload
   end
 
   test "belongs to cliente" do

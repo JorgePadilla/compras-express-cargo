@@ -1,0 +1,8 @@
+Hola, <%= @cliente.nombre %>
+
+Hemos preparado una proforma para ti.
+
+Proforma: <%= @venta.numero %>
+Total: <%= @venta.moneda %> <%= format("%.2f", @venta.total) %>
+
+Gracias por confiar en <%= @empresa.nombre %>.

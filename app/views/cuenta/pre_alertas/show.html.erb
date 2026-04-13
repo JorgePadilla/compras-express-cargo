@@ -28,6 +28,26 @@
   </div>
 </div>
 
+<%# Titulo + Proveedor %>
+<% if @pre_alerta.titulo.present? || @pre_alerta.proveedor.present? %>
+  <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <% if @pre_alerta.titulo.present? %>
+        <div>
+          <p class="text-xs text-gray-500 mb-1">Título de Referencia</p>
+          <p class="text-sm font-medium text-gray-800"><%= @pre_alerta.titulo %></p>
+        </div>
+      <% end %>
+      <% if @pre_alerta.proveedor.present? %>
+        <div>
+          <p class="text-xs text-gray-500 mb-1">Proveedor / Tienda</p>
+          <p class="text-sm font-medium text-gray-800"><%= @pre_alerta.proveedor %></p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>
+
 <%# Options %>
 <div class="flex gap-2 mb-6">
   <% if @pre_alerta.con_reempaque? %>
@@ -60,8 +80,7 @@
         <tr>
           <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tracking</th>
           <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripcion</th>
-          <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Retener</th>
-          <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Vinculado</th>
+          <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-200">
@@ -70,19 +89,10 @@
             <td class="px-4 py-3 font-mono text-sm"><%= pap.tracking %></td>
             <td class="px-4 py-3 text-sm text-gray-600"><%= pap.descripcion || "-" %></td>
             <td class="px-4 py-3 text-center">
-              <% if pap.retener_miami? %>
-                <%= heroicon "check", variant: :mini, options: { class: "w-4 h-4 text-amber-600 inline" } %>
-              <% else %>
-                <span class="text-gray-300">-</span>
-              <% end %>
-            </td>
-            <td class="px-4 py-3 text-center">
               <% if pap.paquete_id.present? %>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30">
-                  Vinculado
-                </span>
+                <%= render StatusBadgeComponent.new(status: pap.paquete.estado) %>
               <% else %>
-                <span class="text-xs text-gray-400">Pendiente</span>
+                <%= render StatusBadgeComponent.new(status: "pre_alerta", label: "Pre Alerta") %>
               <% end %>
             </td>
           </tr>

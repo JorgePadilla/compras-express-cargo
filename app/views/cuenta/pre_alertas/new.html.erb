@@ -5,9 +5,13 @@
   selected_tipo = wizard["tipo_envio_id"].present? ? TipoEnvio.find_by(id: wizard["tipo_envio_id"]) : nil
   show_consolidacion = selected_tipo.nil? || selected_tipo.consolidable
   status_for = ->(i) { step == i ? :active : (step > i ? :completed : :upcoming) }
+
+  step1_detail = step > 1 && selected_tipo ? selected_tipo.nombre : nil
+  step2_detail = step > 2 && show_consolidacion ? (wizard["consolidado"] ? "Consolidado" : "Sin consolidar") : nil
+
   stepper_steps = [
-    { label: "Servicio",          status: status_for.call(1) },
-    ({ label: "Consolidación",    status: status_for.call(2) } if show_consolidacion),
+    { label: "Servicio",          status: status_for.call(1), detail: step1_detail },
+    ({ label: "Consolidación",    status: status_for.call(2), detail: step2_detail } if show_consolidacion),
     { label: "Datos del paquete", status: status_for.call(3) }
   ].compact
 
@@ -71,7 +75,6 @@
                 <label class="cursor-pointer group block">
                   <input type="radio" name="tipo_envio_id" value="<%= tipo.id %>" class="peer sr-only"
                          data-single-package="<%= tipo.single_package? %>"
-                         <%= "checked" if wizard["tipo_envio_id"].to_s == tipo.id.to_s %>
                          data-action="change->wizard#selectService">
                   <div class="p-4 rounded-xl border-2 border-gray-200 bg-white
                               peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 peer-checked:ring-2 peer-checked:ring-cec-gold/30
@@ -118,7 +121,6 @@
                 <label class="cursor-pointer group block">
                   <input type="radio" name="tipo_envio_id" value="<%= tipo.id %>" class="peer sr-only"
                          data-single-package="<%= tipo.single_package? %>"
-                         <%= "checked" if wizard["tipo_envio_id"].to_s == tipo.id.to_s %>
                          data-action="change->wizard#selectService">
                   <div class="p-4 rounded-xl border-2 border-gray-200 bg-white
                               peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 peer-checked:ring-2 peer-checked:ring-cec-gold/30
@@ -149,6 +151,12 @@
                             <%= tipo.sla %>
                           </p>
                         <% end %>
+                        <% if tipo.single_package? %>
+                          <p class="text-xs text-red-600 mt-1 inline-flex items-center gap-1">
+                            <%= heroicon "exclamation-triangle", variant: :outline, options: { class: "w-3 h-3" } %>
+                            Solo 1 tracking por pre-alerta
+                          </p>
+                        <% end %>
                       </div>
                     </div>
                   </div>
@@ -158,27 +166,13 @@
           </div>
         </div>
 
-        <%# Red banner: shown only when CKA/CKM is selected %>
-        <%
-          preselected_single = selected_tipo&.single_package?
-        %>
-        <div data-wizard-target="limitWarning"
-             class="<%= preselected_single ? '' : 'hidden' %> mt-6 rounded-xl border-2 border-red-300 bg-red-50 p-4 animate-fade-in-up">
-          <div class="flex items-start gap-3">
-            <%= heroicon "exclamation-triangle", variant: :outline, options: { class: "w-6 h-6 text-red-500 shrink-0" } %>
-            <div>
-              <p class="font-bold text-red-700">1 paquete por acción</p>
-              <p class="text-sm text-red-600 mt-0.5">CKA y CKM no permiten más de un tracking por pre-alerta.</p>
-            </div>
-          </div>
-        </div>
-
-        <%# Card footer — integrated action bar %>
-        <div class="mt-8 -mx-6 sm:-mx-8 px-6 sm:px-8 pt-5 border-t border-gray-200 flex justify-end">
-          <button type="submit" class="inline-flex items-center gap-2 rounded-lg transition-all duration-200 btn-gold-gradient text-cec-navy-dark font-semibold shadow-sm shadow-cec-gold/25 px-6 py-3 text-base">
-            Continuar
-            <%= heroicon "arrow-right", variant: :outline, options: { class: "w-5 h-5" } %>
-          </button>
+        <%# Card footer — back link %>
+        <div class="mt-8 -mx-6 sm:-mx-8 px-6 sm:px-8 pt-5 border-t border-gray-200 flex justify-start">
+          <%= render ButtonComponent.new(
+                variant: :ghost, size: :lg, icon: "arrow-left",
+                href: cuenta_pre_alertas_path) do %>
+            Mis Pre-Alertas
+          <% end %>
         </div>
       </div>
     <% end %>
@@ -201,7 +195,6 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" data-wizard-target="options">
           <label class="cursor-pointer group">
             <input type="radio" name="consolidado" value="1" class="peer sr-only"
-                   <%= "checked" if wizard["consolidado"] %>
                    data-action="change->wizard#selectOption">
             <div class="h-full p-5 rounded-xl border-2 border-gray-200 bg-white
                         peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 peer-checked:ring-2 peer-checked:ring-cec-gold/30
@@ -220,7 +213,6 @@
 
           <label class="cursor-pointer group">
             <input type="radio" name="consolidado" value="0" class="peer sr-only"
-                   <%= "checked" if wizard.key?("consolidado") && !wizard["consolidado"] %>
                    data-action="change->wizard#selectOption">
             <div class="h-full p-5 rounded-xl border-2 border-gray-200 bg-white
                         peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 peer-checked:ring-2 peer-checked:ring-cec-gold/30
@@ -238,17 +230,13 @@
           </label>
         </div>
 
-        <%# Card footer — integrated action bar %>
-        <div class="mt-8 -mx-6 sm:-mx-8 px-6 sm:px-8 pt-5 border-t border-gray-200 flex flex-col-reverse sm:flex-row sm:justify-between gap-3">
+        <%# Card footer — back link %>
+        <div class="mt-8 -mx-6 sm:-mx-8 px-6 sm:px-8 pt-5 border-t border-gray-200 flex justify-start">
           <%= render ButtonComponent.new(
                 variant: :ghost, size: :lg, icon: "arrow-left",
                 href: new_cuenta_pre_alerta_path(step: 1)) do %>
             Atrás
           <% end %>
-          <button type="submit" class="inline-flex items-center gap-2 rounded-lg transition-all duration-200 btn-gold-gradient text-cec-navy-dark font-semibold shadow-sm shadow-cec-gold/25 px-6 py-3 text-base">
-            Continuar
-            <%= heroicon "arrow-right", variant: :outline, options: { class: "w-5 h-5" } %>
-          </button>
         </div>
       </div>
     <% end %>
@@ -266,54 +254,65 @@
       <div class="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-100">
         <div class="mb-6">
           <h2 class="text-xl sm:text-2xl font-bold text-cec-navy mb-2">Datos del paquete</h2>
-          <p class="text-sm text-gray-600 leading-relaxed">
-            Puedes dejar el tracking vacío y agregarlo después.
-          </p>
         </div>
 
         <div class="grid grid-cols-1 gap-5">
+          <%# Titulo de Referencia + Proveedor en fila %>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label class="block">
+              <span class="block text-sm font-semibold text-cec-navy mb-1.5">
+                Título de Referencia
+                <span class="text-xs font-normal text-red-500 ml-1">Obligatorio</span>
+              </span>
+              <input type="text" name="titulo" value="<%= h(params[:titulo]) %>" required
+                     placeholder="Ej. Televisor, Zapatos..."
+                     class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
+                            focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
+            </label>
+            <label class="block">
+              <span class="block text-sm font-semibold text-cec-navy mb-1.5">
+                Proveedor / Tienda <span class="text-xs font-normal text-gray-500">(opcional)</span>
+              </span>
+              <input type="text" name="proveedor" value="<%= h(params[:proveedor]) %>"
+                     placeholder="Ej. Amazon, Best Buy..."
+                     class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
+                            focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
+            </label>
+          </div>
+
           <%# Tracking %>
           <label class="block">
             <span class="block text-sm font-semibold text-cec-navy mb-1.5">
-              ¿Tienes número de tracking? <span class="text-xs font-normal text-gray-500">(opcional)</span>
+              Tracking o Número de Rastreo
+              <span class="text-xs font-normal text-red-500 ml-1">Obligatorio (Aquí NO va el Número de Orden)</span>
             </span>
-            <input type="text" name="tracking" value="<%= params[:tracking] %>"
+            <input type="text" name="tracking" value="<%= h(params[:tracking]) %>" required
                    placeholder="Ej. 1Z999AA1..."
                    class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
                           focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
           </label>
 
-          <%# Descripción %>
+          <%# Descripción del Producto %>
           <label class="block">
-            <span class="block text-sm font-semibold text-cec-navy mb-1.5">Descripción</span>
-            <textarea name="descripcion" rows="2" placeholder="¿Qué contiene el paquete?"
+            <span class="block text-sm font-semibold text-cec-navy mb-1.5">
+              Descripción del Producto
+              <span class="text-xs font-normal text-red-500 ml-1">Obligatorio</span>
+            </span>
+            <textarea name="descripcion" rows="2" placeholder="¿Qué contiene el paquete?" required
                       class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
-                             focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"><%= params[:descripcion] %></textarea>
+                             focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"><%= h(params[:descripcion]) %></textarea>
           </label>
 
-          <%# Valor declarado + Peso en fila %>
-          <div class="grid grid-cols-2 gap-4">
-            <label class="block">
-              <span class="block text-sm font-semibold text-cec-navy mb-1.5">Valor declarado</span>
-              <div class="relative">
-                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
-                <input type="number" step="0.01" min="0" name="valor_declarado" value="<%= params[:valor_declarado] %>"
-                       placeholder="0.00"
-                       class="block w-full rounded-lg border border-gray-300 pl-7 pr-3 py-2.5 text-sm
-                              focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
-              </div>
-            </label>
-            <label class="block">
-              <span class="block text-sm font-semibold text-cec-navy mb-1.5">Peso</span>
-              <div class="relative">
-                <input type="number" step="0.01" min="0" name="peso" value="<%= params[:peso] %>"
-                       placeholder="0.00"
-                       class="block w-full rounded-lg border border-gray-300 px-3 pr-10 py-2.5 text-sm
-                              focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
-                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">lb</span>
-              </div>
-            </label>
-          </div>
+          <%# Instrucciones Especiales del Paquete %>
+          <label class="block">
+            <span class="block text-sm font-semibold text-cec-navy mb-1.5">
+              Instrucciones Especiales del Paquete <span class="text-xs font-normal text-gray-500">(opcional)</span>
+            </span>
+            <textarea name="instrucciones" rows="2"
+                      placeholder="Instrucciones para el procesamiento del paquete..."
+                      class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
+                             focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"><%= h(params[:instrucciones]) %></textarea>
+          </label>
         </div>
 
         <% if defined?(@pre_alerta) && @pre_alerta&.errors&.any? %>
@@ -345,10 +344,19 @@
                 href: new_cuenta_pre_alerta_path(step: back_step)) do %>
             Atrás
           <% end %>
-          <button type="submit" class="inline-flex items-center gap-2 rounded-lg transition-all duration-200 btn-gold-gradient text-cec-navy-dark font-semibold shadow-sm shadow-cec-gold/25 px-6 py-3 text-base">
-            Crear pre-alerta
-            <%= heroicon "check-circle", variant: :outline, options: { class: "w-5 h-5" } %>
-          </button>
+          <div class="flex flex-col sm:flex-row gap-3">
+            <% if wizard["consolidado"] %>
+              <button type="submit" name="agregar_otro" value="1"
+                      class="inline-flex items-center gap-2 rounded-lg transition-all duration-200 border border-cec-teal text-cec-teal font-semibold px-6 py-3 text-base hover:bg-cec-teal/10">
+                <%= heroicon "plus-circle", variant: :outline, options: { class: "w-5 h-5" } %>
+                Agregar Otro Paquete
+              </button>
+            <% end %>
+            <button type="submit" class="inline-flex items-center gap-2 rounded-lg transition-all duration-200 btn-gold-gradient text-cec-navy-dark font-semibold shadow-sm shadow-cec-gold/25 px-6 py-3 text-base">
+              Crear Pre-Alerta
+              <%= heroicon "check-circle", variant: :outline, options: { class: "w-5 h-5" } %>
+            </button>
+          </div>
         </div>
       </div>
     <% end %>

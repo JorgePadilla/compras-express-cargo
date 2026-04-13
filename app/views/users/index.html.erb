@@ -1,0 +1,72 @@
+<%= render PageHeaderComponent.new(title: "Usuarios", subtitle: "#{@users.total_count} usuarios registrados") do |header|
+  header.with_action do
+    render ButtonComponent.new(variant: :gold, href: new_user_path, icon: "plus") do
+      "Nuevo Usuario"
+    end
+  end
+end %>
+
+<div class="mb-6">
+  <%= render SearchBarComponent.new(url: users_path, placeholder: "Buscar por nombre o email...", value: params[:q]) %>
+</div>
+
+<% if @users.any? %>
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Email</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Ubicacion</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @users.each do |user| %>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <%= link_to user.nombre, user, class: "text-sm font-medium text-gray-900 hover:text-cec-navy" %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap hidden md:table-cell">
+                <span class="text-sm text-gray-500"><%= user.email_address %></span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="text-sm text-gray-700"><%= user.rol_label %></span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
+                <span class="text-sm text-gray-500"><%= user.ubicacion&.humanize || "—" %></span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <%= render StatusBadgeComponent.new(status: user.activo? ? "activo" : "inactivo") %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-right">
+                <%= link_to edit_user_path(user), class: "text-gray-400 hover:text-cec-navy" do %>
+                  <%= heroicon "pencil-square", variant: :outline, options: { class: "w-5 h-5 inline" } %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="mt-4">
+    <%= paginate @users %>
+  </div>
+<% else %>
+  <%= render EmptyStateComponent.new(
+    title: params[:q].present? ? "No se encontraron usuarios" : "No hay usuarios registrados",
+    description: params[:q].present? ? "Intenta con otro termino de busqueda." : "Crea el primer usuario para comenzar.",
+    icon: "user-group"
+  ) do |empty|
+    empty.with_action do
+      render ButtonComponent.new(variant: :gold, href: new_user_path, icon: "plus") do
+        "Nuevo Usuario"
+      end
+    end
+  end %>
+<% end %>

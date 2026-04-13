@@ -1,0 +1,45 @@
+<%= render PageHeaderComponent.new(title: "Mis Entregas", subtitle: "#{@entregas.total_count} entregas") %>
+
+<% if @entregas.any? %>
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Numero</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Receptor</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Paquetes</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @entregas.each do |e| %>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <%= link_to e.numero, cuenta_entrega_path(e), class: "text-sm font-mono font-medium text-cec-navy hover:underline" %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <%= render StatusBadgeComponent.new(status: e.tipo_entrega) %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <%= render StatusBadgeComponent.new(status: e.estado) %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700"><%= e.receptor_nombre %></td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><%= e.created_at.strftime("%d/%m/%Y") %></td>
+              <td class="px-6 py-4 whitespace-nowrap text-center text-sm"><%= e.paquetes.size %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="mt-4"><%= paginate @entregas %></div>
+<% else %>
+  <%= render EmptyStateComponent.new(
+    title: "No tienes entregas",
+    description: "Aqui aparecerán tus entregas cuando se despachen paquetes a tu nombre.",
+    icon: "truck"
+  ) %>
+<% end %>

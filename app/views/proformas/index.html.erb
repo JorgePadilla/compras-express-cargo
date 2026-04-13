@@ -1,0 +1,49 @@
+<%= render PageHeaderComponent.new(title: "Proformas", subtitle: "#{@proformas.total_count} proformas") %>
+
+<div class="mb-6 flex flex-wrap gap-3">
+  <%= render SearchBarComponent.new(url: proformas_path, placeholder: "Buscar por numero o cliente...", value: params[:q]) %>
+  <%= link_to "Nueva Proforma", new_proforma_path, class: "px-4 py-2 bg-cec-navy text-white rounded-lg text-sm font-medium hover:bg-cec-navy-light" %>
+</div>
+
+<% if @proformas.any? %>
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Numero</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @proformas.each do |p| %>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <%= link_to p.numero, proforma_path(p), class: "text-sm font-mono font-medium text-cec-navy hover:underline" %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="text-sm text-gray-700"><%= p.cliente.codigo %></span>
+                <span class="text-sm text-gray-500 hidden sm:inline ml-1"><%= p.cliente.nombre_completo %></span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><%= p.created_at.strftime("%d/%m/%Y") %></td>
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm"><%= p.simbolo_moneda %> <%= number_with_delimiter(p.total.to_f, precision: 2) %></td>
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                <%= link_to "Ver", proforma_path(p), class: "text-cec-teal hover:underline" %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="mt-4"><%= paginate @proformas %></div>
+<% else %>
+  <%= render EmptyStateComponent.new(
+    title: "No hay proformas",
+    description: "Crea una proforma o genera una desde una cotizacion aceptada.",
+    icon: "document-text"
+  ) %>
+<% end %>

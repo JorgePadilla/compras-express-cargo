@@ -1,0 +1,168 @@
+<div class="max-w-3xl mx-auto bg-white p-8 print:p-0 print:shadow-none shadow rounded-lg">
+  <div class="flex justify-between items-start border-b border-gray-200 pb-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-cec-navy">Compras Express Cargo</h1>
+      <p class="text-sm text-gray-500">Factura / Venta</p>
+    </div>
+    <div class="text-right">
+      <p class="font-mono font-bold text-lg"><%= @venta.numero %></p>
+      <p class="text-sm text-gray-500"><%= @venta.created_at.strftime("%d/%m/%Y") %></p>
+      <p class="text-sm mt-1"><%= render StatusBadgeComponent.new(status: @venta.estado) %></p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 gap-4 mb-6 text-sm">
+    <div>
+      <p class="text-gray-500">Cliente</p>
+      <p class="font-medium"><%= @venta.cliente.codigo %> — <%= @venta.cliente.nombre_completo %></p>
+    </div>
+    <div class="text-right">
+      <% if @venta.pre_factura %>
+        <p class="text-gray-500">Pre-Factura origen</p>
+        <p class="font-mono text-sm"><%= @venta.pre_factura.numero %></p>
+      <% end %>
+    </div>
+  </div>
+
+  <table class="min-w-full border border-gray-200 mb-6">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase border-b">Concepto</th>
+        <th class="px-4 py-2 text-right text-xs font-medium text-gray-700 uppercase border-b">Peso</th>
+        <th class="px-4 py-2 text-right text-xs font-medium text-gray-700 uppercase border-b">Precio/Lb</th>
+        <th class="px-4 py-2 text-right text-xs font-medium text-gray-700 uppercase border-b">Subtotal</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @venta.venta_items.each do |item| %>
+        <tr>
+          <td class="px-4 py-2 text-sm"><%= item.concepto %></td>
+          <td class="px-4 py-2 text-sm text-right"><%= item.peso_cobrar %></td>
+          <td class="px-4 py-2 text-sm text-right">L. <%= number_with_delimiter(item.precio_libra.to_f, precision: 2) %></td>
+          <td class="px-4 py-2 text-sm text-right">L. <%= number_with_delimiter(item.subtotal.to_f, precision: 2) %></td>
+        </tr>
+      <% end %>
+    </tbody>
+    <tfoot class="bg-gray-50">
+      <tr>
+        <td colspan="3" class="px-4 py-2 text-right text-sm">Subtotal</td>
+        <td class="px-4 py-2 text-right text-sm">L. <%= number_with_delimiter(@venta.subtotal.to_f, precision: 2) %></td>
+      </tr>
+      <tr>
+        <td colspan="3" class="px-4 py-2 text-right text-sm">ISV (15%)</td>
+        <td class="px-4 py-2 text-right text-sm">L. <%= number_with_delimiter(@venta.impuesto.to_f, precision: 2) %></td>
+      </tr>
+      <tr>
+        <td colspan="3" class="px-4 py-2 text-right font-bold">Total</td>
+        <td class="px-4 py-2 text-right font-bold text-cec-navy">L. <%= number_with_delimiter(@venta.total.to_f, precision: 2) %></td>
+      </tr>
+      <tr>
+        <td colspan="3" class="px-4 py-2 text-right text-sm">Saldo Pendiente</td>
+        <td class="px-4 py-2 text-right text-sm font-bold <%= @venta.saldo_pendiente.to_f > 0 ? "text-amber-700" : "text-cec-teal-dark" %>">
+          L. <%= number_with_delimiter(@venta.saldo_pendiente.to_f, precision: 2) %>
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <% if @venta.pagos.any? %>
+    <div class="mb-6">
+      <h3 class="text-sm font-semibold text-gray-700 mb-2">Historial de Pagos</h3>
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-4 py-2 text-left">Fecha</th>
+            <th class="px-4 py-2 text-left">Metodo</th>
+            <th class="px-4 py-2 text-right">Monto</th>
+            <th class="px-4 py-2 text-left">Recibo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @venta.pagos.order(:created_at).each do |pago| %>
+            <tr>
+              <td class="px-4 py-2"><%= pago.pagado_at&.strftime("%d/%m/%Y %H:%M") %></td>
+              <td class="px-4 py-2"><%= pago.metodo_pago.humanize %></td>
+              <td class="px-4 py-2 text-right">L. <%= number_with_delimiter(pago.monto.to_f, precision: 2) %></td>
+              <td class="px-4 py-2">
+                <% if pago.recibo %>
+                  <%= link_to pago.recibo.numero, recibo_path(pago.recibo), class: "text-cec-teal hover:underline font-mono" %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+
+  <% unless @venta.pagada? || @venta.anulada? %>
+    <div class="bg-cec-teal/5 border border-cec-teal/20 rounded-lg p-4 mb-6 print:hidden">
+      <h3 class="text-sm font-semibold text-cec-navy mb-3">Registrar Pago</h3>
+      <%= form_with url: registrar_pago_venta_path(@venta), method: :post, local: true, class: "grid grid-cols-1 md:grid-cols-3 gap-3" do |f| %>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">Monto (LPS)</label>
+          <%= number_field_tag :monto, @venta.saldo_pendiente.to_f, step: 0.01, required: true, class: "block w-full rounded border-gray-300 text-sm" %>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">Metodo</label>
+          <%= select_tag :metodo_pago, options_for_select(Pago::METODOS.map { |m| [m.humanize, m] }), class: "block w-full rounded border-gray-300 text-sm" %>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">Notas (opcional)</label>
+          <%= text_field_tag :notas, "", class: "block w-full rounded border-gray-300 text-sm" %>
+        </div>
+        <div class="md:col-span-3">
+          <button type="submit" class="px-4 py-2 bg-cec-teal text-white rounded-lg text-sm font-medium hover:bg-cec-teal-dark">Registrar Pago</button>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <% if @venta.notas_debito.emitidas.any? || @venta.notas_credito.emitidas.any? %>
+    <div class="mb-6 print:hidden">
+      <h3 class="text-sm font-semibold text-gray-700 mb-2">Ajustes</h3>
+      <ul class="text-sm space-y-1">
+        <% @venta.notas_debito.emitidas.order(:created_at).each do |nd| %>
+          <li class="flex justify-between">
+            <%= link_to "#{nd.numero} — Debito (#{nd.motivo&.humanize})", nota_debito_path(nd), class: "text-cec-teal hover:underline font-mono" %>
+            <span class="font-medium">+ L. <%= number_with_delimiter(nd.total.to_f, precision: 2) %></span>
+          </li>
+        <% end %>
+        <% @venta.notas_credito.emitidas.order(:created_at).each do |nc| %>
+          <li class="flex justify-between">
+            <%= link_to "#{nc.numero} — Credito (#{nc.motivo&.humanize})", nota_credito_path(nc), class: "text-cec-teal hover:underline font-mono" %>
+            <span class="font-medium text-cec-teal-dark">- L. <%= number_with_delimiter(nc.total.to_f, precision: 2) %></span>
+          </li>
+        <% end %>
+        <li class="flex justify-between pt-2 border-t border-gray-200 font-bold">
+          <span>Total ajustado</span>
+          <span>L. <%= number_with_delimiter(@venta.total_ajustado.to_f, precision: 2) %></span>
+        </li>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="flex flex-wrap gap-3 print:hidden">
+    <%= link_to "Descargar PDF", pdf_venta_path(@venta), class: "px-4 py-2 bg-cec-navy text-white rounded-lg text-sm font-medium" %>
+    <button onclick="window.print()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50">Imprimir</button>
+    <% if @venta.cliente.email.present? %>
+      <%= button_to "Reenviar Email", enviar_email_venta_path(@venta), method: :post,
+          class: "px-4 py-2 bg-white border border-cec-teal text-cec-teal rounded-lg text-sm font-medium hover:bg-cec-teal/5" %>
+    <% end %>
+    <% if can_access?(:notas_debito) %>
+      <%= link_to "Nueva ND", new_nota_debito_path(venta_id: @venta.id), class: "px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50" %>
+    <% end %>
+    <% if can_access?(:notas_credito) %>
+      <%= link_to "Nueva NC", new_nota_credito_path(venta_id: @venta.id), class: "px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50" %>
+    <% end %>
+    <% if can_access?(:financiamientos) && @venta.pendiente? && @venta.financiamiento.blank? %>
+      <%= link_to "Crear Financiamiento", new_financiamiento_path(venta_id: @venta.id), class: "px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50" %>
+    <% end %>
+    <%= link_to "Volver", ventas_path, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900" %>
+    <% unless @venta.pagada? || @venta.anulada? %>
+      <%= button_to "Anular", anular_venta_path(@venta), method: :delete,
+          class: "px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm font-medium",
+          data: { turbo_confirm: "¿Anular la venta? Se liberaran los paquetes." } %>
+    <% end %>
+  </div>
+</div>

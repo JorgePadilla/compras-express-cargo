@@ -1,0 +1,23 @@
+hoy:
+  numero: AC-000001
+  fecha: <%= Date.current %>
+  estado: abierta
+  monto_apertura: 500.00
+  total_pagos: 0.00
+  total_ingresos: 0.00
+  total_egresos: 0.00
+  abierta_por: cajero
+
+ayer_cerrada:
+  numero: AC-000002
+  fecha: <%= 1.day.ago.to_date %>
+  estado: cerrada
+  monto_apertura: 500.00
+  monto_cierre: 1850.00
+  total_pagos: 1200.00
+  total_ingresos: 200.00
+  total_egresos: 50.00
+  diferencia: 0.00
+  abierta_por: cajero
+  cerrada_por: cajero
+  cerrada_at: <%= 1.day.ago.end_of_day %>

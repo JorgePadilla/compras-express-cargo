@@ -1,0 +1,41 @@
+nd_creada:
+  numero: ND-000001
+  venta: pendiente_juan
+  cliente: juan
+  estado: creado
+  motivo: cambio_servicio
+  subtotal: 10.00
+  impuesto: 1.50
+  total: 11.50
+  moneda: LPS
+  notas: ND en estado creado, pendiente de revision.
+  creado_por: cajero
+
+nd_emitida:
+  numero: ND-000002
+  venta: pagada_maria
+  cliente: maria
+  estado: emitido
+  motivo: peso_adicional
+  subtotal: 20.00
+  impuesto: 3.00
+  total: 23.00
+  moneda: LPS
+  notas: Peso adicional tras re-pesaje.
+  creado_por: cajero
+  emitido_at: <%= 1.hour.ago %>
+
+nd_anulada:
+  numero: ND-000003
+  venta: pendiente_juan
+  cliente: juan
+  estado: anulado
+  motivo: ajuste_manual
+  subtotal: 5.00
+  impuesto: 0.75
+  total: 5.75
+  moneda: LPS
+  notas: Anulada por error de digitacion.
+  creado_por: cajero
+  emitido_at: <%= 2.hours.ago %>
+  anulado_at: <%= 1.hour.ago %>

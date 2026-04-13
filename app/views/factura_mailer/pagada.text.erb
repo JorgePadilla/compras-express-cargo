@@ -1,0 +1,11 @@
+Hola, <%= @cliente.nombre %>
+
+Hemos recibido tu pago de la factura <%= @venta.numero %>.
+Adjunto encontraras el recibo en PDF como comprobante.
+
+Recibo: <%= @recibo.numero %>
+Factura: <%= @venta.numero %>
+Forma de pago: <%= @recibo.forma_pago %>
+Monto: <%= @recibo.moneda %> <%= format("%.2f", @recibo.monto) %>
+
+Gracias por tu pago. - <%= @empresa.nombre %>

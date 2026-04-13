@@ -1,0 +1,41 @@
+<%= render PageHeaderComponent.new(title: "Mis Proformas", subtitle: "#{@proformas.total_count} proformas") %>
+
+<% if @proformas.any? %>
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Numero</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @proformas.each do |p| %>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <%= link_to p.numero, cuenta_proforma_path(p), class: "text-sm font-mono font-medium text-cec-navy hover:underline" %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><%= p.created_at.strftime("%d/%m/%Y") %></td>
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <%= p.simbolo_moneda %> <%= number_with_delimiter(p.total.to_f, precision: 2) %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-right">
+                <%= link_to "PDF", pdf_cuenta_proforma_path(p), class: "text-cec-teal hover:underline text-sm" %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="mt-4"><%= paginate @proformas %></div>
+<% else %>
+  <%= render EmptyStateComponent.new(
+    title: "Sin proformas",
+    description: "Aun no tienes proformas generadas.",
+    icon: "document-text"
+  ) %>
+<% end %>

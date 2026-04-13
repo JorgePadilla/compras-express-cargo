@@ -1,0 +1,7 @@
+Cotizacion aceptada
+
+El cliente <%= @cliente.codigo %> - <%= @cliente.nombre_completo %> ha aceptado la cotizacion <%= @cotizacion.numero %>.
+
+Total: <%= @cotizacion.moneda %> <%= format("%.2f", @cotizacion.total) %>
+
+Proceda a generar la proforma correspondiente.

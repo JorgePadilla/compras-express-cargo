@@ -94,6 +94,7 @@ Sistema actual: `https://cec.rsahn.com/App/Home`
 ### Reglas del flujo (v4)
 
 - **Límite por acción (CKA/CKM):** solo permiten **1 paquete por acción** para evitar malos entendidos.
+- **Límite por consolidación:** solo las pre-alertas **consolidadas** pueden tener múltiples paquetes. Las pre-alertas sin consolidar (EXPRESS/CER/CEM con `consolidado=false`, CKA, CKM) se limitan a **1 paquete**. El botón "Agregar Paquete" se oculta tanto en el wizard como en la edición cuando no es consolidado.
 - **Consolidación:** disponible en **EXPRESS, CER y CEM**. Permite elegir entre consolidar o solo reempacar sin consolidar. **Sin costo adicional.** Debe solicitarse **antes de que el paquete llegue a Honduras**.
 - **Tracking:** opcional en todos los servicios — puede omitirse al crear la pre-alerta y agregarse después.
 - **Notas del cliente:** se muestran automáticamente al crear la pre-alerta. (⚠️ bug activo en Miami del sistema legacy, pendiente de corrección en la implementación nueva.)

@@ -1,0 +1,45 @@
+<%= render PageHeaderComponent.new(title: "Nuevo Ingreso de Caja") %>
+
+<div class="max-w-lg mx-auto bg-white p-6 rounded-lg shadow">
+  <%= form_with model: @ingreso, url: ingresos_caja_path, local: true do |f| %>
+    <% if @ingreso.errors.any? %>
+      <div class="mb-4 p-3 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm">
+        <ul class="list-disc pl-4">
+          <% @ingreso.errors.full_messages.each do |msg| %>
+            <li><%= msg %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <div class="space-y-4 mb-6">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Concepto *</label>
+        <%= f.text_field :concepto, required: true,
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm",
+            placeholder: "Ej: Venta de cajas, cobro de embalaje..." %>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Monto (LPS) *</label>
+        <%= f.number_field :monto, step: 0.01, min: 0.01, required: true,
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Metodo de Pago *</label>
+        <%= f.select :metodo_pago, IngresoCaja::METODOS_PAGO.map { |m| [m.humanize, m] },
+            { include_blank: "— Seleccionar —" },
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm", required: true %>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Notas (opcional)</label>
+        <%= f.text_area :notas, rows: 2,
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+      </div>
+    </div>
+
+    <div class="flex gap-3">
+      <button type="submit" class="px-4 py-2 bg-cec-teal text-white rounded-lg text-sm font-medium hover:bg-cec-teal-dark">Registrar Ingreso</button>
+      <%= link_to "Cancelar", caja_path, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900" %>
+    </div>
+  <% end %>
+</div>

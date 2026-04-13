@@ -1,0 +1,87 @@
+<div class="max-w-3xl mx-auto bg-white p-8 shadow rounded-lg">
+  <div class="flex justify-between items-start border-b border-gray-200 pb-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-cec-navy">Cotizacion</h1>
+    </div>
+    <div class="text-right">
+      <p class="font-mono font-bold text-lg"><%= @cotizacion.numero %></p>
+      <p class="text-sm text-gray-500"><%= @cotizacion.created_at.strftime("%d/%m/%Y") %></p>
+      <p class="text-sm mt-1"><%= render StatusBadgeComponent.new(status: @cotizacion.estado) %></p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 gap-4 mb-6 text-sm">
+    <div>
+      <p class="text-gray-500">Vigencia</p>
+      <p><%= @cotizacion.vigencia_dias %> dias — vence <%= @cotizacion.fecha_vencimiento %></p>
+    </div>
+  </div>
+
+  <table class="min-w-full border border-gray-200 mb-6">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase border-b">Concepto</th>
+        <th class="px-4 py-2 text-right text-xs font-medium text-gray-700 uppercase border-b">Cantidad/Peso</th>
+        <th class="px-4 py-2 text-right text-xs font-medium text-gray-700 uppercase border-b">Precio</th>
+        <th class="px-4 py-2 text-right text-xs font-medium text-gray-700 uppercase border-b">Subtotal</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @cotizacion.cotizacion_items.each do |item| %>
+        <tr>
+          <td class="px-4 py-2 text-sm"><%= item.concepto %></td>
+          <td class="px-4 py-2 text-sm text-right">
+            <%= item.peso_cobrar.present? ? "#{item.peso_cobrar} lb" : item.cantidad %>
+          </td>
+          <td class="px-4 py-2 text-sm text-right">
+            <%= @cotizacion.simbolo_moneda %> <%= number_with_delimiter((item.precio_libra || item.precio_unitario || 0).to_f, precision: 2) %>
+          </td>
+          <td class="px-4 py-2 text-sm text-right"><%= @cotizacion.simbolo_moneda %> <%= number_with_delimiter(item.subtotal.to_f, precision: 2) %></td>
+        </tr>
+      <% end %>
+    </tbody>
+    <tfoot class="bg-gray-50">
+      <tr>
+        <td colspan="3" class="px-4 py-2 text-right text-sm">Subtotal</td>
+        <td class="px-4 py-2 text-right text-sm"><%= @cotizacion.simbolo_moneda %> <%= number_with_delimiter(@cotizacion.subtotal.to_f, precision: 2) %></td>
+      </tr>
+      <tr>
+        <td colspan="3" class="px-4 py-2 text-right text-sm">ISV (15%)</td>
+        <td class="px-4 py-2 text-right text-sm"><%= @cotizacion.simbolo_moneda %> <%= number_with_delimiter(@cotizacion.impuesto.to_f, precision: 2) %></td>
+      </tr>
+      <tr>
+        <td colspan="3" class="px-4 py-2 text-right font-bold">Total</td>
+        <td class="px-4 py-2 text-right font-bold text-cec-navy"><%= @cotizacion.simbolo_moneda %> <%= number_with_delimiter(@cotizacion.total.to_f, precision: 2) %></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <% if @cotizacion.notas.present? %>
+    <div class="mb-4 text-sm">
+      <p class="text-gray-500">Notas</p>
+      <p><%= @cotizacion.notas %></p>
+    </div>
+  <% end %>
+
+  <% if @cotizacion.terminos.present? %>
+    <div class="mb-6 text-sm">
+      <p class="text-gray-500">Terminos y condiciones</p>
+      <p class="text-xs text-gray-600"><%= @cotizacion.terminos %></p>
+    </div>
+  <% end %>
+
+  <div class="flex flex-wrap gap-3">
+    <%= link_to "Descargar PDF", pdf_cuenta_cotizacion_path(@cotizacion), class: "px-4 py-2 bg-cec-navy text-white rounded-lg text-sm font-medium" %>
+
+    <% if @cotizacion.enviada? %>
+      <%= button_to "Aceptar Cotizacion", aceptar_cuenta_cotizacion_path(@cotizacion), method: :post,
+          class: "px-4 py-2 bg-cec-teal text-white rounded-lg text-sm font-medium hover:bg-cec-teal-dark",
+          data: { turbo_confirm: "¿Aceptar esta cotizacion?" } %>
+      <%= button_to "Rechazar", rechazar_cuenta_cotizacion_path(@cotizacion), method: :delete,
+          class: "px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm font-medium",
+          data: { turbo_confirm: "¿Rechazar esta cotizacion?" } %>
+    <% end %>
+
+    <%= link_to "Volver", cuenta_cotizaciones_path, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900" %>
+  </div>
+</div>

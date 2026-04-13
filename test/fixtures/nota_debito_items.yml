@@ -1,0 +1,20 @@
+nd_creada_item1:
+  nota_debito: nd_creada
+  concepto: Cambio de servicio CER a EXPRESS
+  peso_cobrar: 2.50
+  precio_libra: 4.00
+  subtotal: 10.00
+
+nd_emitida_item1:
+  nota_debito: nd_emitida
+  concepto: Peso adicional 4.00 lbs
+  peso_cobrar: 4.00
+  precio_libra: 5.00
+  subtotal: 20.00
+
+nd_anulada_item1:
+  nota_debito: nd_anulada
+  concepto: Ajuste manual
+  peso_cobrar: 1.00
+  precio_libra: 5.00
+  subtotal: 5.00

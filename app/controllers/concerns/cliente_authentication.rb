@@ -36,7 +36,7 @@ module ClienteAuthentication
 
   def request_cliente_authentication
     session[:return_to_after_cliente_authenticating] = request.url
-    redirect_to new_cuenta_session_path
+    redirect_to new_session_path
   end
 
   def after_cliente_authentication_url

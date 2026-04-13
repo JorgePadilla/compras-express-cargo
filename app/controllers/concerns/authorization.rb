@@ -7,6 +7,10 @@ module Authorization
 
   private
 
+  def require_admin
+    require_role # no roles passed → only admin? guard passes
+  end
+
   def require_role(*roles)
     return if Current.user&.admin?
 
@@ -38,11 +42,21 @@ module Authorization
       role.in?(%w[supervisor_prefactura supervisor_caja cajero])
     when :caja, :ventas, :recibos
       role.in?(%w[supervisor_caja cajero])
+    when :notas_debito
+      role.in?(%w[supervisor_caja supervisor_prefactura cajero])
+    when :notas_credito
+      role.in?(%w[supervisor_caja])
+    when :cotizaciones
+      role.in?(%w[supervisor_caja supervisor_prefactura cajero])
+    when :financiamientos
+      role.in?(%w[supervisor_caja cajero])
+    when :empresa_settings
+      false
     when :entregas
       role.in?(%w[entrega_despacho supervisor_caja])
     when :clientes, :pre_alertas, :paquetes
       true
-    when :configuraciones, :reportes, :empleados
+    when :usuarios, :configuraciones, :reportes, :empleados
       false
     when :marketing
       role.in?(%w[sac])

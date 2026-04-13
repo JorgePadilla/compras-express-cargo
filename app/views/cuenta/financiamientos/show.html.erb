@@ -1,0 +1,67 @@
+<div class="max-w-3xl mx-auto">
+  <div class="bg-white p-8 shadow rounded-lg mb-6">
+    <div class="flex justify-between items-start border-b border-gray-200 pb-4 mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-cec-navy">Financiamiento</h1>
+        <p class="text-sm text-gray-500"><%= @financiamiento.numero %></p>
+      </div>
+      <div class="text-right">
+        <%= render StatusBadgeComponent.new(status: @financiamiento.estado) %>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-4 mb-6">
+      <div class="bg-gray-50 rounded-lg p-4 text-center">
+        <p class="text-xs text-gray-500 uppercase">Total</p>
+        <p class="text-lg font-bold text-cec-navy"><%= @financiamiento.simbolo_moneda %> <%= number_with_delimiter(@financiamiento.monto_total.to_f, precision: 2) %></p>
+      </div>
+      <div class="bg-cec-teal/10 rounded-lg p-4 text-center">
+        <p class="text-xs text-gray-500 uppercase">Pagado</p>
+        <p class="text-lg font-bold text-cec-teal-dark"><%= @financiamiento.simbolo_moneda %> <%= number_with_delimiter(@financiamiento.monto_pagado.to_f, precision: 2) %></p>
+      </div>
+      <div class="bg-amber-50 rounded-lg p-4 text-center">
+        <p class="text-xs text-gray-500 uppercase">Pendiente</p>
+        <p class="text-lg font-bold text-amber-700"><%= @financiamiento.simbolo_moneda %> <%= number_with_delimiter(@financiamiento.monto_pendiente.to_f, precision: 2) %></p>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <div class="flex items-center gap-3">
+        <div class="flex-1 bg-gray-200 rounded-full h-3">
+          <div class="bg-cec-teal h-3 rounded-full" style="width: <%= @financiamiento.progreso_porcentaje %>%"></div>
+        </div>
+        <span class="text-sm font-medium text-gray-700"><%= @financiamiento.progreso_porcentaje %>%</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white shadow rounded-lg overflow-hidden mb-6">
+    <div class="px-6 py-3 border-b border-gray-200 bg-gray-50 text-sm font-medium text-gray-700">Cuotas</div>
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vencimiento</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Monto</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        <% @cuotas.each do |cuota| %>
+          <tr class="<%= cuota.vencida? ? 'bg-red-50' : '' %>">
+            <td class="px-6 py-4 text-sm font-medium"><%= cuota.numero_cuota %></td>
+            <td class="px-6 py-4 text-sm text-gray-500"><%= cuota.fecha_vencimiento.strftime("%d/%m/%Y") %></td>
+            <td class="px-6 py-4">
+              <%= render StatusBadgeComponent.new(status: cuota.estado) %>
+            </td>
+            <td class="px-6 py-4 text-sm text-right font-medium">
+              <%= @financiamiento.simbolo_moneda %> <%= number_with_delimiter(cuota.monto.to_f, precision: 2) %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <%= link_to "Volver", cuenta_financiamientos_path, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900" %>
+</div>

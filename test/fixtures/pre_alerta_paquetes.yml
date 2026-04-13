@@ -2,19 +2,39 @@ pap_sin_vincular:
   pre_alerta: activa
   tracking: "1Z999PREALERT001"
   descripcion: "Zapatos Nike"
-  retener_miami: false
+
   fecha: <%= Date.current %>
 
 pap_con_descripcion:
   pre_alerta: activa
   tracking: "1Z999PREALERT002"
   descripcion: "Ropa variada"
-  retener_miami: true
+
+  fecha: <%= Date.current %>
+
+pap_vinculado:
+  pre_alerta: recibida
+  tracking: "1Z999AA10123456784"
+  descripcion: "Zapatos Nike vinculado"
+  paquete: recibido
+  fecha: <%= Date.current %>
+
+pap_destino:
+  pre_alerta: consolidada_destino
+  tracking: "1Z999DESTINO001"
+  descripcion: "Paquete destino"
   fecha: <%= Date.current %>
 
 pap_maria:
   pre_alerta: maria_pa
   tracking: "1Z999PREALERT003"
   descripcion: "Cosmeticos"
-  retener_miami: false
+
+  fecha: <%= Date.current %>
+
+pap_disponible_juan:
+  pre_alerta: recibida
+  tracking: "1Z999BODEGA000001"
+  descripcion: "Paquete en bodega"
+  paquete: disponible_entrega_juan
   fecha: <%= Date.current %>

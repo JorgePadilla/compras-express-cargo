@@ -2,11 +2,13 @@ class PreAlertaPaquete < ApplicationRecord
   belongs_to :pre_alerta
   belongs_to :paquete, optional: true
 
-  validates :tracking, uniqueness: { scope: :pre_alerta_id, case_sensitive: false, allow_blank: true }
+  validates :tracking, presence: true, uniqueness: { scope: :pre_alerta_id, case_sensitive: false }
+  validates :descripcion, presence: true
 
   scope :sin_vincular, -> { where(paquete_id: nil) }
   scope :vinculados, -> { where.not(paquete_id: nil) }
 
+  before_validation :set_default_fecha
   before_save :normalize_tracking
 
   # Links unlinked pre_alerta_paquetes by tracking to a given paquete.
@@ -28,6 +30,10 @@ class PreAlertaPaquete < ApplicationRecord
   end
 
   private
+
+  def set_default_fecha
+    self.fecha ||= Date.current
+  end
 
   def normalize_tracking
     self.tracking = tracking.strip.upcase if tracking.present?

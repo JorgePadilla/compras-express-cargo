@@ -3,7 +3,7 @@ require "test_helper"
 class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
   setup do
     @cliente = clientes(:juan)
-    post cuenta_session_url, params: { email: @cliente.email, password: "Cliente123!" }
+    post session_url, params: { email_address: @cliente.email, password: "Cliente123!" }
     @pre_alerta = pre_alertas(:activa)
   end
 
@@ -85,45 +85,123 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
       assert_difference("PreAlertaPaquete.count", 1) do
         post cuenta_pre_alertas_url, params: {
           wizard_step: 3,
+          titulo: "Televisor",
+          proveedor: "Best Buy",
           tracking: "WIZTRACK001",
-          descripcion: "Paquete desde wizard",
-          valor_declarado: "49.99",
-          peso: "5.5"
+          descripcion: "Paquete desde wizard"
         }
       end
     end
 
     pa = PreAlerta.last
-    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+    assert_redirected_to cuenta_root_url
     assert_equal tipo_envios(:cer), pa.tipo_envio
     assert pa.con_reempaque?
     assert_not pa.consolidado?
     assert_equal "cliente", pa.creado_por_tipo
+    assert_equal "Televisor", pa.titulo
+    assert_equal "Best Buy", pa.proveedor
 
     pap = pa.pre_alerta_paquetes.first
     assert_equal "WIZTRACK001", pap.tracking
     assert_equal "Paquete desde wizard", pap.descripcion
-    assert_equal BigDecimal("49.99"), pap.valor_declarado
-    assert_equal BigDecimal("5.5"), pap.peso
   end
 
-  test "wizard step 3 creates pre_alerta with only peso (no tracking)" do
+  test "wizard step 3 agregar_otro preserves wizard session and redirects to edit" do
+    post cuenta_pre_alertas_url, params: { wizard_step: 1, tipo_envio_id: tipo_envios(:cer).id }
+    post cuenta_pre_alertas_url, params: { wizard_step: 2, consolidado: "1" }
+
+    assert_difference("PreAlerta.count", 1) do
+      post cuenta_pre_alertas_url, params: {
+        wizard_step: 3,
+        agregar_otro: "1",
+        titulo: "Ropa",
+        proveedor: "Shein",
+        tracking: "AGROTRO001",
+        descripcion: "Camisetas"
+      }
+    end
+
+    pa = PreAlerta.last
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+    assert_match "Agrega más paquetes", flash[:notice]
+
+    # Wizard session must be preserved so the user can reuse it
+    follow_redirect!
+    assert session[:pre_alerta_wizard].present?
+    assert_equal tipo_envios(:cer).id, session[:pre_alerta_wizard]["tipo_envio_id"]
+  end
+
+  test "wizard step 3 without agregar_otro clears wizard session" do
     post cuenta_pre_alertas_url, params: { wizard_step: 1, tipo_envio_id: tipo_envios(:cer).id }
     post cuenta_pre_alertas_url, params: { wizard_step: 2, consolidado: "0" }
 
     assert_difference("PreAlerta.count", 1) do
       post cuenta_pre_alertas_url, params: {
         wizard_step: 3,
-        tracking: "",
-        descripcion: "",
-        valor_declarado: "",
-        peso: "2.0"
+        titulo: "Laptop",
+        tracking: "NOSESSION001",
+        descripcion: "MacBook Pro"
       }
     end
 
     pa = PreAlerta.last
-    assert_equal 1, pa.pre_alerta_paquetes.count
-    assert_equal BigDecimal("2.0"), pa.pre_alerta_paquetes.first.peso
+    assert_redirected_to cuenta_root_url
+    assert_match "registrada", flash[:success_modal]
+    assert pa.notificado?
+
+    follow_redirect!
+    assert_nil session[:pre_alerta_wizard]
+  end
+
+  test "wizard step 3 fails without tracking" do
+    post cuenta_pre_alertas_url, params: { wizard_step: 1, tipo_envio_id: tipo_envios(:cer).id }
+    post cuenta_pre_alertas_url, params: { wizard_step: 2, consolidado: "0" }
+
+    assert_no_difference("PreAlerta.count") do
+      post cuenta_pre_alertas_url, params: {
+        wizard_step: 3,
+        titulo: "Zapatos",
+        tracking: "",
+        descripcion: "Zapatos Nike"
+      }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "wizard step 3 persists instrucciones field" do
+    post cuenta_pre_alertas_url, params: { wizard_step: 1, tipo_envio_id: tipo_envios(:cer).id }
+    post cuenta_pre_alertas_url, params: { wizard_step: 2, consolidado: "0" }
+
+    assert_difference("PreAlertaPaquete.count", 1) do
+      post cuenta_pre_alertas_url, params: {
+        wizard_step: 3,
+        titulo: "Con instrucciones",
+        tracking: "INSTRTEST001",
+        descripcion: "Con instrucciones",
+        instrucciones: "Combinar con otro paquete",
+        valor_declarado: "25.00",
+        peso: "1.5"
+      }
+    end
+
+    pap = PreAlertaPaquete.last
+    assert_equal "Combinar con otro paquete", pap.instrucciones
+  end
+
+  test "wizard step 3 save failure preserves instrucciones in re-render" do
+    TipoEnvio.where(codigo: "cer").destroy_all
+
+    post cuenta_pre_alertas_url, params: {
+      wizard_step: 3,
+      tracking: "FAILINSTR001",
+      descripcion: "Test",
+      instrucciones: "Manejar con cuidado"
+    }
+
+    assert_response :unprocessable_entity
+    assert_match "Manejar con cuidado", response.body
   end
 
   # Edit
@@ -144,6 +222,19 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     }
     assert_redirected_to edit_cuenta_pre_alerta_url(@pre_alerta)
     assert_equal "Updated notes", @pre_alerta.reload.notas_grupo
+  end
+
+  test "should update paquete instrucciones" do
+    pap = pre_alerta_paquetes(:pap_sin_vincular)
+    patch cuenta_pre_alerta_url(@pre_alerta), params: {
+      pre_alerta: {
+        pre_alerta_paquetes_attributes: {
+          "0" => { id: pap.id, instrucciones: "No abrir" }
+        }
+      }
+    }
+    assert_redirected_to edit_cuenta_pre_alerta_url(@pre_alerta)
+    assert_equal "No abrir", pap.reload.instrucciones
   end
 
   test "should update via turbo_stream" do
@@ -170,9 +261,9 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
 
   # Security
   test "requires authentication" do
-    delete cuenta_session_url
+    delete session_url
     get cuenta_pre_alertas_url
-    assert_redirected_to new_cuenta_session_url
+    assert_redirected_to new_session_url
   end
 
   # ── v4 services ──
@@ -196,6 +287,7 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_difference("PreAlerta.count") do
       post cuenta_pre_alertas_url, params: {
         wizard_step: 3,
+        titulo: "Caja CKA",
         tracking: "CKAWIZ001",
         descripcion: "Paquete CKA"
       }
@@ -204,6 +296,48 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     pa = PreAlerta.last
     assert_equal cka, pa.tipo_envio
     assert_not pa.consolidado?
+    # Sin reempaque → redirect to home, not edit
+    assert_redirected_to cuenta_root_url
+  end
+
+  test "wizard step 3 creates with CKM and redirects to home" do
+    ckm = tipo_envios(:ckm)
+    post cuenta_pre_alertas_url, params: { wizard_step: 1, tipo_envio_id: ckm.id }
+    assert_redirected_to new_cuenta_pre_alerta_url(step: 3)
+
+    assert_difference("PreAlerta.count") do
+      post cuenta_pre_alertas_url, params: {
+        wizard_step: 3,
+        titulo: "Caja CKM",
+        tracking: "CKMWIZ001",
+        descripcion: "Paquete CKM"
+      }
+    end
+
+    pa = PreAlerta.last
+    assert_equal ckm, pa.tipo_envio
+    assert_not pa.consolidado?
+    assert_redirected_to cuenta_root_url
+    assert_match "registrada exitosamente", flash[:success_modal]
+  end
+
+  test "wizard step 3 with con reempaque sin consolidar redirects to home" do
+    post cuenta_pre_alertas_url, params: { wizard_step: 1, tipo_envio_id: tipo_envios(:express).id }
+    post cuenta_pre_alertas_url, params: { wizard_step: 2, consolidado: "0" }
+
+    assert_difference("PreAlerta.count") do
+      post cuenta_pre_alertas_url, params: {
+        wizard_step: 3,
+        titulo: "Monitor",
+        tracking: "EXPRESSWIZ001",
+        descripcion: "Monitor Dell"
+      }
+    end
+
+    pa = PreAlerta.last
+    assert_redirected_to cuenta_root_url
+    assert_match "registrada", flash[:success_modal]
+    assert pa.notificado?
   end
 
   # ── v4: step-3 save-failure re-renders step 3, not step 1 ──
@@ -219,10 +353,10 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_no_difference("PreAlerta.count") do
       post cuenta_pre_alertas_url, params: {
         wizard_step: 3,
+        titulo: "TV Samsung",
+        proveedor: "Amazon",
         tracking: "FAIL001",
-        descripcion: "Paquete con error",
-        valor_declarado: "12.50",
-        peso: "3.25"
+        descripcion: "Paquete con error"
       }
     end
 
@@ -233,10 +367,10 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     # Step-1-only copy must NOT appear:
     assert_no_match(/Elige tu servicio/, response.body)
 
-    # User input preserved via params echo at new.html.erb:280-309
+    # User input preserved via params echo
     assert_match "FAIL001", response.body
     assert_match "Paquete con error", response.body
-    assert_match "12.50", response.body
-    assert_match "3.25", response.body
+    assert_match "TV Samsung", response.body
+    assert_match "Amazon", response.body
   end
 end

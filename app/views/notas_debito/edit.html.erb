@@ -1,0 +1,15 @@
+<%= render PageHeaderComponent.new(title: "Editar #{@nota_debito.numero}", subtitle: "Venta: #{@nota_debito.venta.numero}") do |h| %>
+  <% h.with_action do %>
+    <%= render StatusBadgeComponent.new(status: @nota_debito.estado) %>
+  <% end %>
+<% end %>
+
+<% if !@nota_debito.creado? %>
+  <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+    Solo se pueden editar notas de debito en estado "creado". Esta nota esta en estado
+    <strong><%= @nota_debito.estado.humanize %></strong>.
+  </div>
+<% end %>
+
+<% @venta = @nota_debito.venta %>
+<%= render "form", form_url: nota_debito_path(@nota_debito), form_method: :patch %>

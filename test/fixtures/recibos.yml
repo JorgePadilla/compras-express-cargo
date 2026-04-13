@@ -1,0 +1,8 @@
+recibo_maria:
+  numero: RE-000001
+  venta: pagada_maria
+  pago: pago_maria
+  cliente: maria
+  monto: 28.75
+  forma_pago: efectivo
+  moneda: LPS
