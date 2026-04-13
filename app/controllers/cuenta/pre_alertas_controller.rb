@@ -118,12 +118,18 @@ module Cuenta
       destinos = destinos_para(pap)
 
       render json: destinos.map { |pa|
+        te = pa.tipo_envio
+        modalidad = te.modalidad&.capitalize || "—"
+        desc = te.con_reempaque ? "#{modalidad} con Reempaque" : "#{modalidad} sin Reempaque"
+
         {
           id: pa.id,
           numero_documento: pa.numero_documento,
           titulo: pa.titulo,
-          tipo_envio: pa.tipo_envio.nombre,
-          paquetes_count: pa.pre_alerta_paquetes.size
+          tipo_envio: te.nombre,
+          tipo_envio_descripcion: desc,
+          paquetes_count: pa.pre_alerta_paquetes.size,
+          created_at: pa.created_at.strftime("%d/%m/%Y")
         }
       }
     end
@@ -265,7 +271,7 @@ module Cuenta
         base = base.where(tipo_envio_id: @pre_alerta.tipo_envio_id)
       end
 
-      base.order(:created_at)
+      base.order(created_at: :desc)
     end
 
     def append_nota(pre_alerta, nota)

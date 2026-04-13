@@ -66,13 +66,16 @@ export default class extends Controller {
               data-destino-id="${d.id}"
               class="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:border-cec-teal/50 transition-colors cursor-pointer">
         <div class="flex items-center justify-between">
-          <span class="font-mono text-sm font-bold text-cec-navy">${d.numero_documento}</span>
-          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cec-navy/5 text-cec-navy ring-1 ring-cec-navy/20">
-            ${d.tipo_envio}
-          </span>
+          <span class="text-sm font-bold text-cec-navy truncate mr-2">${d.titulo || "Sin titulo"}</span>
+          <div class="flex flex-col items-end shrink-0">
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-cec-navy/5 text-cec-navy ring-1 ring-cec-navy/20">
+              ${d.tipo_envio}
+            </span>
+            <span class="text-[10px] text-gray-400 mt-0.5">${d.tipo_envio_descripcion}</span>
+          </div>
         </div>
         <p class="text-xs text-gray-500 mt-1">
-          ${d.titulo || "Sin titulo"} &middot; ${d.paquetes_count} paquete${d.paquetes_count === 1 ? "" : "s"}
+          ${d.numero_documento} &middot; ${d.paquetes_count} paquete${d.paquetes_count === 1 ? "" : "s"} &middot; ${d.created_at}
         </p>
       </button>
     `).join("")
