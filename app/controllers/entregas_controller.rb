@@ -3,7 +3,7 @@ class EntregasController < ApplicationController
   before_action :set_entrega, only: %i[show edit update despachar entregar anular]
 
   def index
-    @entregas = Entrega.includes(:cliente, :repartidor, :creado_por).recientes
+    @entregas = Entrega.includes(:cliente, :repartidor, :creado_por, :paquetes).recientes
     @entregas = apply_filters(@entregas)
     @entregas = @entregas.page(params[:page]).per(25)
   end
@@ -32,7 +32,6 @@ class EntregasController < ApplicationController
     )
 
     if @entrega.save
-      @entrega.paquetes.each { |p| p.update!(entrega_id: @entrega.id) }
       redirect_to @entrega, notice: "Entrega #{@entrega.numero} creada exitosamente."
     else
       @paquetes = @cliente.paquetes.entregables.includes(:tipo_envio)

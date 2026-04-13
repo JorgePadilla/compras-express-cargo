@@ -22,7 +22,7 @@ class CajaController < ApplicationController
     if @apertura.save
       redirect_to caja_path, notice: "Caja abierta exitosamente."
     else
-      redirect_to caja_path, alert: "No se pudo abrir la caja: #{@apertura.errors.full_messages.join(', ')}"
+      render :show, status: :unprocessable_entity
     end
   end
 
@@ -36,7 +36,7 @@ class CajaController < ApplicationController
     if @apertura.cerrar!(monto_cierre: cierre_params[:monto_cierre].to_d, user: Current.user, notas: cierre_params[:notas_cierre])
       redirect_to caja_path, notice: "Caja cerrada exitosamente."
     else
-      redirect_to caja_path, alert: "No se pudo cerrar la caja."
+      render :show, status: :unprocessable_entity
     end
   end
 

@@ -5,8 +5,7 @@ class Entrega < ApplicationRecord
   belongs_to :cliente
   belongs_to :repartidor, class_name: "User", optional: true
   belongs_to :creado_por, class_name: "User", optional: true
-  has_many :entrega_paquetes, dependent: :destroy
-  has_many :paquetes, through: :entrega_paquetes
+  has_many :paquetes, dependent: :nullify
 
   validates :numero, presence: true, uniqueness: { case_sensitive: false }
   validates :tipo_entrega, presence: true, inclusion: { in: TIPOS }
@@ -78,10 +77,7 @@ class Entrega < ApplicationRecord
       notas: notas
     )
 
-    paquetes = cliente.paquetes.entregables.where(id: paquete_ids)
-    paquetes.each do |paquete|
-      entrega.entrega_paquetes.build(paquete: paquete)
-    end
+    entrega.paquetes = cliente.paquetes.entregables.where(id: paquete_ids)
 
     entrega
   end

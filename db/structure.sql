@@ -606,38 +606,6 @@ ALTER SEQUENCE public.empresas_id_seq OWNED BY public.empresas.id;
 
 
 --
--- Name: entrega_paquetes; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.entrega_paquetes (
-    id bigint NOT NULL,
-    entrega_id bigint NOT NULL,
-    paquete_id bigint NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
--- Name: entrega_paquetes_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.entrega_paquetes_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: entrega_paquetes_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.entrega_paquetes_id_seq OWNED BY public.entrega_paquetes.id;
-
-
---
 -- Name: entregas; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1698,13 +1666,6 @@ ALTER TABLE ONLY public.empresas ALTER COLUMN id SET DEFAULT nextval('public.emp
 
 
 --
--- Name: entrega_paquetes id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.entrega_paquetes ALTER COLUMN id SET DEFAULT nextval('public.entrega_paquetes_id_seq'::regclass);
-
-
---
 -- Name: entregas id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1991,14 +1952,6 @@ ALTER TABLE ONLY public.empresa_manifiestos
 
 ALTER TABLE ONLY public.empresas
     ADD CONSTRAINT empresas_pkey PRIMARY KEY (id);
-
-
---
--- Name: entrega_paquetes entrega_paquetes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.entrega_paquetes
-    ADD CONSTRAINT entrega_paquetes_pkey PRIMARY KEY (id);
 
 
 --
@@ -2373,27 +2326,6 @@ CREATE UNIQUE INDEX index_egresos_caja_on_numero ON public.egresos_caja USING bt
 --
 
 CREATE INDEX index_egresos_caja_on_registrado_por_id ON public.egresos_caja USING btree (registrado_por_id);
-
-
---
--- Name: index_entrega_paquetes_on_entrega_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_entrega_paquetes_on_entrega_id ON public.entrega_paquetes USING btree (entrega_id);
-
-
---
--- Name: index_entrega_paquetes_on_entrega_id_and_paquete_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_entrega_paquetes_on_entrega_id_and_paquete_id ON public.entrega_paquetes USING btree (entrega_id, paquete_id);
-
-
---
--- Name: index_entrega_paquetes_on_paquete_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_entrega_paquetes_on_paquete_id ON public.entrega_paquetes USING btree (paquete_id);
 
 
 --
@@ -3091,14 +3023,6 @@ ALTER TABLE ONLY public.recibos
 
 
 --
--- Name: entrega_paquetes fk_rails_349a6780c3; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.entrega_paquetes
-    ADD CONSTRAINT fk_rails_349a6780c3 FOREIGN KEY (entrega_id) REFERENCES public.entregas(id);
-
-
---
 -- Name: pre_factura_items fk_rails_3838674e35; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3323,14 +3247,6 @@ ALTER TABLE ONLY public.ventas
 
 
 --
--- Name: entrega_paquetes fk_rails_a710547135; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.entrega_paquetes
-    ADD CONSTRAINT fk_rails_a710547135 FOREIGN KEY (paquete_id) REFERENCES public.paquetes(id);
-
-
---
 -- Name: manifiestos fk_rails_a737f28500; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3505,6 +3421,7 @@ ALTER TABLE ONLY public.paquetes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260413024624'),
 ('20260412060700'),
 ('20260412060600'),
 ('20260412060500'),

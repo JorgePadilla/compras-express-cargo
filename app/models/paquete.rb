@@ -6,7 +6,6 @@ class Paquete < ApplicationRecord
   belongs_to :pre_factura, optional: true
   belongs_to :venta, optional: true
   belongs_to :entrega, optional: true
-  has_many :entrega_paquetes, dependent: :nullify
   has_many :pre_alerta_paquetes, dependent: :nullify
   has_many :nota_debito_items,  dependent: :nullify
   has_many :nota_credito_items, dependent: :nullify
