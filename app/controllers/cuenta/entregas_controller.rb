@@ -14,7 +14,7 @@ module Cuenta
     private
 
     def set_entrega
-      @entrega = current_cliente.entregas.find(params[:id])
+      @entrega = current_cliente.entregas.includes(paquetes: :tipo_envio).find(params[:id])
     end
   end
 end

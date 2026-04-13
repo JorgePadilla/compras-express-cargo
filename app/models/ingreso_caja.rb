@@ -16,21 +16,10 @@ class IngresoCaja < ApplicationRecord
 
   scope :recientes, -> { order(created_at: :desc) }
 
-  def save(**args, &block)
-    super
-  rescue ActiveRecord::RecordNotUnique => e
-    raise unless new_record? && e.message.include?("numero") && (@_numero_retries ||= 0) < 3
-    @_numero_retries += 1
-    self.numero = nil
-    generate_numero
-    retry
-  end
-
   private
 
   def generate_numero
-    next_number = (self.class.where("numero LIKE 'IC-%'")
-                    .maximum(Arel.sql("CAST(SUBSTRING(numero FROM 4) AS INTEGER)")) || 0) + 1
+    next_number = self.class.connection.select_value("SELECT nextval('ingresos_caja_numero_seq')")
     self.numero = "IC-#{next_number.to_s.rjust(6, '0')}"
   end
 

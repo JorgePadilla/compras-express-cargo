@@ -86,21 +86,10 @@ class Entrega < ApplicationRecord
     entrega
   end
 
-  def save(**args, &block)
-    super
-  rescue ActiveRecord::RecordNotUnique => e
-    raise unless new_record? && e.message.include?("numero") && (@_numero_retries ||= 0) < 3
-    @_numero_retries += 1
-    self.numero = nil
-    generate_numero
-    retry
-  end
-
   private
 
   def generate_numero
-    next_number = (self.class.where("numero LIKE 'EN-%'")
-                    .maximum(Arel.sql("CAST(SUBSTRING(numero FROM 4) AS INTEGER)")) || 0) + 1
+    next_number = self.class.connection.select_value("SELECT nextval('entregas_numero_seq')")
     self.numero = "EN-#{next_number.to_s.rjust(6, '0')}"
   end
 end

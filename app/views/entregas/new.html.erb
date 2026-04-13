@@ -3,9 +3,9 @@
 <% unless @cliente %>
   <div class="max-w-lg mx-auto bg-white p-6 rounded-lg shadow">
     <h2 class="text-lg font-semibold text-cec-navy mb-4">Seleccionar Cliente</h2>
-    <%= form_tag new_entrega_path, method: :get, class: "flex gap-3" do %>
+    <%= form_with url: new_entrega_path, method: :get, class: "flex gap-3", local: true do |f| %>
       <div class="flex-1">
-        <%= text_field_tag :q, params[:q], placeholder: "Buscar por codigo o nombre...",
+        <%= f.search_field :q, value: params[:q], placeholder: "Buscar por codigo o nombre...",
             class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
       </div>
       <button type="submit" class="px-4 py-2 bg-cec-navy text-white rounded-lg text-sm font-medium">Buscar</button>
