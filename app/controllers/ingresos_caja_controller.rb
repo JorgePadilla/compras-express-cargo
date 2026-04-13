@@ -5,7 +5,7 @@ class IngresosCajaController < ApplicationController
   def index
     @apertura = AperturaCaja.del_dia
     @ingresos = if @apertura
-      @apertura.ingresos_caja.recientes
+      @apertura.ingresos_caja.includes(:registrado_por).recientes
     else
       IngresoCaja.none
     end
