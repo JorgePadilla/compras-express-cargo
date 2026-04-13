@@ -24,6 +24,11 @@
         <span class="mt-2 text-xs text-center <%= label_classes(step[:status]) %>">
           <%= step[:label] %>
         </span>
+        <% if step[:detail].present? %>
+          <span class="text-[10px] text-center <%= detail_classes(step[:status]) %>">
+            <%= step[:detail] %>
+          </span>
+        <% end %>
       </li>
     <% end %>
   </ol>
@@ -41,9 +46,16 @@
             <%= i + 1 %>
           <% end %>
         </div>
-        <span class="text-sm <%= label_classes(step[:status]) %>">
-          <%= step[:label] %>
-        </span>
+        <div>
+          <span class="text-sm <%= label_classes(step[:status]) %>">
+            <%= step[:label] %>
+          </span>
+          <% if step[:detail].present? %>
+            <span class="block text-[10px] <%= detail_classes(step[:status]) %>">
+              <%= step[:detail] %>
+            </span>
+          <% end %>
+        </div>
       </li>
     <% end %>
   </ol>

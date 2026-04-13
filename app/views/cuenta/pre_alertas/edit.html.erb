@@ -45,15 +45,23 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1.5">Título de Referencia</label>
-          <%= f.text_field :titulo, placeholder: "Ej. Televisor, Zapatos...",
-              class: "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
-                     focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+          <% if @pre_alerta.consolidado? %>
+            <%= f.text_field :titulo, placeholder: "Ej. Televisor, Zapatos...",
+                class: "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
+                       focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+          <% else %>
+            <p class="text-sm text-gray-800 py-2"><%= @pre_alerta.titulo.presence || "—" %></p>
+          <% end %>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1.5">Proveedor / Tienda</label>
-          <%= f.text_field :proveedor, placeholder: "Ej. Amazon, Best Buy...",
-              class: "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
-                     focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+          <% if @pre_alerta.consolidado? %>
+            <%= f.text_field :proveedor, placeholder: "Ej. Amazon, Best Buy...",
+                class: "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
+                       focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+          <% else %>
+            <p class="text-sm text-gray-800 py-2"><%= @pre_alerta.proveedor.presence || "—" %></p>
+          <% end %>
         </div>
       </div>
     </div>
@@ -61,10 +69,14 @@
     <%# Notas %>
     <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
       <label class="block text-sm font-medium text-gray-700 mb-1.5">Notas del grupo</label>
-      <%= f.text_area :notas_grupo, rows: 2,
-          placeholder: "Notas opcionales para este grupo de paquetes...",
-          class: "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
-                 focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+      <% if @pre_alerta.consolidado? %>
+        <%= f.text_area :notas_grupo, rows: 2,
+            placeholder: "Notas opcionales para este grupo de paquetes...",
+            class: "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
+                   focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+      <% else %>
+        <p class="text-sm text-gray-800 py-2"><%= @pre_alerta.notas_grupo.presence || "—" %></p>
+      <% end %>
     </div>
 
     <%# Paquetes table %>
@@ -143,7 +155,7 @@
 
     <%# Action buttons %>
     <div class="flex flex-col sm:flex-row gap-3 justify-end">
-      <%= link_to "Cancelar (F2)", cuenta_pre_alertas_path,
+      <%= link_to "Volver", cuenta_pre_alertas_path,
           class: "text-gray-600 hover:text-gray-800 text-sm font-medium px-4 py-2.5 text-center" %>
       <% if @pre_alerta.consolidado? %>
         <button type="button" data-action="click->pre-alerta-editor#addPaquete"
@@ -152,8 +164,6 @@
           <%= heroicon "plus-circle", variant: :outline, options: { class: "w-4 h-4" } %>
           Agregar Paquete (F6)
         </button>
-      <% end %>
-      <% if @pre_alerta.consolidado? %>
         <button type="button" data-action="click->pre-alerta-editor#save"
                 class="bg-cec-teal text-white font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm hover:bg-cec-teal-dark transition-colors">
           Guardar, Seguir Consolidando (F8)
@@ -161,15 +171,6 @@
         <button type="button" data-action="click->pre-alerta-editor#saveAndNotify"
                 class="btn-gold-gradient text-cec-navy-dark font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm">
           Guardar, Finalizar Consolidación (F9)
-        </button>
-      <% else %>
-        <button type="button" data-action="click->pre-alerta-editor#save"
-                class="bg-cec-teal text-white font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm hover:bg-cec-teal-dark transition-colors">
-          Guardar (F8)
-        </button>
-        <button type="button" data-action="click->pre-alerta-editor#saveAndNotify"
-                class="btn-gold-gradient text-cec-navy-dark font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm">
-          Guardar y Notificar (F9)
         </button>
       <% end %>
     </div>

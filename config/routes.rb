@@ -134,6 +134,7 @@ Rails.application.routes.draw do
         delete :anular
         post :mover_paquete
         get  :destinos_disponibles
+        delete :eliminar_paquete
       end
     end
     resources :facturas, only: %i[index show] do

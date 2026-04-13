@@ -5,9 +5,13 @@
   selected_tipo = wizard["tipo_envio_id"].present? ? TipoEnvio.find_by(id: wizard["tipo_envio_id"]) : nil
   show_consolidacion = selected_tipo.nil? || selected_tipo.consolidable
   status_for = ->(i) { step == i ? :active : (step > i ? :completed : :upcoming) }
+
+  step1_detail = step > 1 && selected_tipo ? selected_tipo.nombre : nil
+  step2_detail = step > 2 && show_consolidacion ? (wizard["consolidado"] ? "Consolidado" : "Sin consolidar") : nil
+
   stepper_steps = [
-    { label: "Servicio",          status: status_for.call(1) },
-    ({ label: "Consolidación",    status: status_for.call(2) } if show_consolidacion),
+    { label: "Servicio",          status: status_for.call(1), detail: step1_detail },
+    ({ label: "Consolidación",    status: status_for.call(2), detail: step2_detail } if show_consolidacion),
     { label: "Datos del paquete", status: status_for.call(3) }
   ].compact
 

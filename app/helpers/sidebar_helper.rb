@@ -1,6 +1,6 @@
 module SidebarHelper
   def sidebar_link(label, path, icon: nil, badge_count: nil)
-    active = current_page?(path)
+    active = (path != "#" && current_page?(path)) rescue false
     content_tag(:li) do
       link_to path, class: sidebar_link_classes(active),
               data: { action: "click->sidebar#navigate" } do

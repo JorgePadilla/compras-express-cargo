@@ -94,7 +94,7 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     end
 
     pa = PreAlerta.last
-    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+    assert_redirected_to cuenta_root_url
     assert_equal tipo_envios(:cer), pa.tipo_envio
     assert pa.con_reempaque?
     assert_not pa.consolidado?
@@ -146,8 +146,9 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     end
 
     pa = PreAlerta.last
-    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+    assert_redirected_to cuenta_root_url
     assert_match "registrada", flash[:notice]
+    assert pa.notificado?
 
     follow_redirect!
     assert_nil session[:pre_alerta_wizard]
@@ -320,7 +321,7 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_match "registrada exitosamente", flash[:notice]
   end
 
-  test "wizard step 3 with con reempaque service still redirects to edit" do
+  test "wizard step 3 with con reempaque sin consolidar redirects to home" do
     post cuenta_pre_alertas_url, params: { wizard_step: 1, tipo_envio_id: tipo_envios(:express).id }
     post cuenta_pre_alertas_url, params: { wizard_step: 2, consolidado: "0" }
 
@@ -334,8 +335,9 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     end
 
     pa = PreAlerta.last
-    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+    assert_redirected_to cuenta_root_url
     assert_match "registrada", flash[:notice]
+    assert pa.notificado?
   end
 
   # ── v4: step-3 save-failure re-renders step 3, not step 1 ──
