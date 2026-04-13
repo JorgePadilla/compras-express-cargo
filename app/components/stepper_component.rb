@@ -1,5 +1,5 @@
 class StepperComponent < ViewComponent::Base
-  # steps: Array of { label: String, status: :upcoming | :active | :completed }
+  # steps: Array of { label: String, status: :upcoming | :active | :completed, detail: String (optional) }
   def initialize(steps:)
     @steps = steps
   end
@@ -36,6 +36,17 @@ class StepperComponent < ViewComponent::Base
       "text-cec-teal font-medium"
     else
       "text-gray-400 font-medium"
+    end
+  end
+
+  def detail_classes(status)
+    case status
+    when :active
+      "text-cec-gold-dark"
+    when :completed
+      "text-cec-teal"
+    else
+      "text-gray-500"
     end
   end
 end

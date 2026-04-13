@@ -1,5 +1,5 @@
 <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
-  <tr class="paquete-row">
+  <tr class="paquete-row" id="<%= "paquete_row_#{pap.id}" if pap.persisted? %>">
     <% if pap.persisted? %>
       <%= pf.hidden_field :id %>
     <% end %>
@@ -8,20 +8,32 @@
         <span class="font-mono text-sm text-gray-700"><%= pap.tracking %></span>
         <%= pf.hidden_field :tracking %>
       <% else %>
-        <%= pf.text_field :tracking, placeholder: "Tracking (opcional)",
-            class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
-                   focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+        <% if @pre_alerta.consolidado? %>
+          <%= pf.text_field :tracking, placeholder: "Tracking (opcional)",
+              class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
+                     focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+        <% else %>
+          <span class="font-mono text-sm text-gray-700"><%= pap.tracking.presence || "—" %></span>
+        <% end %>
       <% end %>
     </td>
     <td class="px-4 py-2">
-      <%= pf.text_field :descripcion, placeholder: "Descripcion",
-          class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
-                 focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+      <% if @pre_alerta.consolidado? %>
+        <%= pf.text_field :descripcion, placeholder: "Descripcion",
+            class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
+                   focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+      <% else %>
+        <span class="text-sm text-gray-700"><%= pap.descripcion.presence || "—" %></span>
+      <% end %>
     </td>
     <td class="px-4 py-2">
-      <%= pf.text_area :instrucciones, placeholder: "Instrucciones", rows: 2,
-          class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
-                 focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+      <% if @pre_alerta.consolidado? %>
+        <%= pf.text_area :instrucciones, placeholder: "Instrucciones", rows: 2,
+            class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
+                   focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+      <% else %>
+        <span class="text-sm text-gray-700"><%= pap.instrucciones.presence || "—" %></span>
+      <% end %>
     </td>
     <td class="px-4 py-2">
       <span class="text-sm text-gray-500"><%= pap.fecha&.strftime("%d/%m/%Y") || "—" %></span>
@@ -46,11 +58,19 @@
     </td>
     <td class="px-4 py-2 text-center">
       <% unless pap.paquete_id.present? %>
-        <input type="hidden" name="pre_alerta[pre_alerta_paquetes_attributes][<%= index %>][_destroy]" value="0" data-pre-alerta-editor-target="destroyField">
-        <button type="button" data-action="click->pre-alerta-editor#removePaquete"
-                class="text-red-400 hover:text-red-600">
-          <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
-        </button>
+        <% if pap.persisted? && !@pre_alerta.consolidado? %>
+          <%= button_to eliminar_paquete_cuenta_pre_alerta_path(@pre_alerta, pre_alerta_paquete_id: pap.id),
+                method: :delete, class: "text-red-400 hover:text-red-600",
+                data: { turbo_confirm: "¿Eliminar este paquete?" } do %>
+            <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
+          <% end %>
+        <% else %>
+          <input type="hidden" name="pre_alerta[pre_alerta_paquetes_attributes][<%= index %>][_destroy]" value="0" data-pre-alerta-editor-target="destroyField">
+          <button type="button" data-action="click->pre-alerta-editor#removePaquete"
+                  class="text-red-400 hover:text-red-600">
+            <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
+          </button>
+        <% end %>
       <% end %>
     </td>
   </tr>

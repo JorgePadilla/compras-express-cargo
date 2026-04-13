@@ -1,6 +1,6 @@
 module Cuenta
   class PreAlertasController < BaseController
-    before_action :set_pre_alerta, only: %i[show edit update anular mover_paquete destinos_disponibles]
+    before_action :set_pre_alerta, only: %i[show edit update anular mover_paquete destinos_disponibles eliminar_paquete]
     helper_method :puede_mover?
 
     def index
@@ -100,6 +100,9 @@ module Cuenta
         append_nota(destino, destino_nota)
       end
 
+      PreAlertaMailer.confirmacion(@pre_alerta).deliver_later
+      PreAlertaMailer.confirmacion(destino).deliver_later
+
       redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
                   notice: "Paquete movido a #{destino.numero_documento}."
     end
@@ -123,6 +126,27 @@ module Cuenta
           paquetes_count: pa.pre_alerta_paquetes.size
         }
       }
+    end
+
+    def eliminar_paquete
+      pap = @pre_alerta.pre_alerta_paquetes.find(params[:pre_alerta_paquete_id])
+
+      if pap.paquete_id.present?
+        redirect_to edit_cuenta_pre_alerta_path(@pre_alerta), alert: "No se puede eliminar un paquete vinculado."
+        return
+      end
+
+      pap.destroy!
+      PreAlertaMailer.confirmacion(@pre_alerta).deliver_later
+
+      respond_to do |format|
+        format.turbo_stream {
+          render turbo_stream: turbo_stream.remove("paquete_row_#{pap.id}")
+        }
+        format.html {
+          redirect_to edit_cuenta_pre_alerta_path(@pre_alerta), notice: "Paquete eliminado."
+        }
+      end
     end
 
     private
@@ -180,15 +204,13 @@ module Cuenta
             # Keep wizard session so user can continue adding paquetes in the edit view
             redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
                         notice: "¡Paquete agregado a #{@pre_alerta.numero_documento}! Agrega más paquetes abajo."
-          elsif !wizard["con_reempaque"]
-            # Sin reempaque (CKA/CKM): solo 1 paquete, no necesita ir a editar
-            session.delete(:pre_alerta_wizard)
-            redirect_to cuenta_root_path,
-                        notice: "¡Pre-alerta #{@pre_alerta.numero_documento} registrada exitosamente!"
           else
+            # All other cases: save, notify, go home with success modal
             session.delete(:pre_alerta_wizard)
-            redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
-                        notice: "¡Pre-alerta #{@pre_alerta.numero_documento} registrada!"
+            @pre_alerta.update_column(:notificado, true)
+            PreAlertaMailer.confirmacion(@pre_alerta).deliver_later
+            redirect_to cuenta_root_path,
+                        flash: { success_modal: "¡Pre-alerta #{@pre_alerta.numero_documento} registrada exitosamente!" }
           end
         else
           @wizard = wizard
@@ -210,8 +232,6 @@ module Cuenta
     ESTADOS_MOVIBLES = %w[recibido_miami empacado enviado_honduras].freeze
 
     def puede_mover?(pap)
-      return false unless @pre_alerta.consolidado? || pap.paquete_id.nil?
-
       if pap.paquete_id.present?
         return false if @pre_alerta.tipo_envio.single_package?
         ESTADOS_MOVIBLES.include?(pap.paquete.estado)
