@@ -72,6 +72,17 @@
 
           <%# Page content %>
           <div class="flex-1 p-4 md:p-6 lg:p-8">
+            <% if success_modal = flash[:success_modal] %>
+              <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm"
+                   data-controller="auto-dismiss" data-auto-dismiss-delay-value="1500">
+                <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm mx-4 text-center animate-fade-in-up">
+                  <div class="mx-auto w-16 h-16 rounded-full bg-cec-teal/10 flex items-center justify-center mb-4">
+                    <%= heroicon "check-circle", variant: :solid, options: { class: "w-10 h-10 text-cec-teal" } %>
+                  </div>
+                  <p class="text-lg font-bold text-cec-navy mb-1"><%= success_modal %></p>
+                </div>
+              </div>
+            <% end %>
             <% if notice = flash[:notice] %>
               <div class="mb-4 p-3 bg-cec-teal/10 text-cec-teal-dark border border-cec-teal/30 rounded-xl text-sm flex items-center gap-2" data-controller="auto-dismiss">
                 <%= heroicon "check-circle", variant: :mini, options: { class: "w-5 h-5 shrink-0" } %>

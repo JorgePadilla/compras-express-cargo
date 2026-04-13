@@ -205,12 +205,12 @@ module Cuenta
             redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
                         notice: "¡Paquete agregado a #{@pre_alerta.numero_documento}! Agrega más paquetes abajo."
           else
-            # All other cases: save, notify, go home
+            # All other cases: save, notify, go home with success modal
             session.delete(:pre_alerta_wizard)
             @pre_alerta.update_column(:notificado, true)
             PreAlertaMailer.confirmacion(@pre_alerta).deliver_later
             redirect_to cuenta_root_path,
-                        notice: "¡Pre-alerta #{@pre_alerta.numero_documento} registrada exitosamente!"
+                        flash: { success_modal: "¡Pre-alerta #{@pre_alerta.numero_documento} registrada exitosamente!" }
           end
         else
           @wizard = wizard

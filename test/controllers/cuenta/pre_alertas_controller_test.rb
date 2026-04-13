@@ -147,7 +147,7 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
 
     pa = PreAlerta.last
     assert_redirected_to cuenta_root_url
-    assert_match "registrada", flash[:notice]
+    assert_match "registrada", flash[:success_modal]
     assert pa.notificado?
 
     follow_redirect!
@@ -318,7 +318,7 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_equal ckm, pa.tipo_envio
     assert_not pa.consolidado?
     assert_redirected_to cuenta_root_url
-    assert_match "registrada exitosamente", flash[:notice]
+    assert_match "registrada exitosamente", flash[:success_modal]
   end
 
   test "wizard step 3 with con reempaque sin consolidar redirects to home" do
@@ -336,7 +336,7 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
 
     pa = PreAlerta.last
     assert_redirected_to cuenta_root_url
-    assert_match "registrada", flash[:notice]
+    assert_match "registrada", flash[:success_modal]
     assert pa.notificado?
   end
 
