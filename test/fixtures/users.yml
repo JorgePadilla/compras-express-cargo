@@ -21,3 +21,11 @@ cajero:
   rol: cajero
   ubicacion: honduras
   activo: true
+
+repartidor:
+  nombre: Repartidor Honduras
+  email_address: repartidor@test.com
+  password_digest: <%= BCrypt::Password.create("password123") %>
+  rol: entrega_despacho
+  ubicacion: honduras
+  activo: true

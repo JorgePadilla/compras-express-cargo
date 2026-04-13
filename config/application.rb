@@ -21,6 +21,7 @@ module ComprasExpressCargo
     # These settings can be overridden in specific environments using the files
     # in config/environments, which are processed later.
     #
+    config.active_record.schema_format = :sql
     config.time_zone = "Central America"
     config.i18n.default_locale = :es
     config.i18n.available_locales = [:es, :en]

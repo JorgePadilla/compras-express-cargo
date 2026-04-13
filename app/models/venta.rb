@@ -82,6 +82,11 @@ class Venta < ApplicationRecord
         registrado_por: user
       )
 
+      # Link pago to today's open cash register if available.
+      # Payments can exist without an apertura (e.g., outside business hours or before caja is opened).
+      apertura = AperturaCaja.del_dia
+      pago.update!(apertura_caja: apertura) if apertura&.abierta?
+
       recibo = recibos.create!(
         pago: pago,
         cliente: cliente,

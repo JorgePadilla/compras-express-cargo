@@ -1,0 +1,107 @@
+<div class="max-w-3xl mx-auto bg-white p-8 shadow rounded-lg">
+  <div class="flex justify-between items-start border-b border-gray-200 pb-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-cec-navy">Entrega</h1>
+      <p class="text-sm text-gray-500">Detalle de entrega de paquetes</p>
+    </div>
+    <div class="text-right">
+      <p class="font-mono font-bold text-lg"><%= @entrega.numero %></p>
+      <p class="text-sm text-gray-500"><%= @entrega.created_at.strftime("%d/%m/%Y %H:%M") %></p>
+      <p class="text-sm mt-1"><%= render StatusBadgeComponent.new(status: @entrega.estado) %></p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 gap-4 mb-6 text-sm">
+    <div>
+      <p class="text-gray-500">Cliente</p>
+      <p class="font-medium"><%= @entrega.cliente.codigo %> — <%= @entrega.cliente.nombre_completo %></p>
+    </div>
+    <div>
+      <p class="text-gray-500">Tipo de Entrega</p>
+      <p class="font-medium"><%= render StatusBadgeComponent.new(status: @entrega.tipo_entrega) %></p>
+    </div>
+    <div>
+      <p class="text-gray-500">Receptor</p>
+      <p class="font-medium"><%= @entrega.receptor_nombre %></p>
+      <p class="text-xs text-gray-400"><%= @entrega.receptor_identidad %></p>
+    </div>
+    <% if @entrega.repartidor %>
+      <div>
+        <p class="text-gray-500">Repartidor</p>
+        <p class="font-medium"><%= @entrega.repartidor.nombre %></p>
+      </div>
+    <% end %>
+    <% if @entrega.direccion_entrega.present? %>
+      <div class="col-span-2">
+        <p class="text-gray-500">Direccion de Entrega</p>
+        <p class="font-medium"><%= @entrega.direccion_entrega %></p>
+      </div>
+    <% end %>
+    <% if @entrega.notas.present? %>
+      <div class="col-span-2">
+        <p class="text-gray-500">Notas</p>
+        <p class="text-sm"><%= @entrega.notas %></p>
+      </div>
+    <% end %>
+    <% if @entrega.despachado_at %>
+      <div>
+        <p class="text-gray-500">Despachado</p>
+        <p class="text-sm"><%= @entrega.despachado_at.strftime("%d/%m/%Y %H:%M") %></p>
+      </div>
+    <% end %>
+    <% if @entrega.entregado_at %>
+      <div>
+        <p class="text-gray-500">Entregado</p>
+        <p class="text-sm"><%= @entrega.entregado_at.strftime("%d/%m/%Y %H:%M") %></p>
+      </div>
+    <% end %>
+  </div>
+
+  <h3 class="text-sm font-semibold text-gray-700 mb-3">Paquetes (<%= @entrega.paquetes.count %>)</h3>
+  <table class="min-w-full border border-gray-200 mb-6">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase border-b">Guia</th>
+        <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase border-b">Tracking</th>
+        <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase border-b">Descripcion</th>
+        <th class="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase border-b">Estado</th>
+        <th class="px-4 py-2 text-right text-xs font-medium text-gray-700 uppercase border-b">Peso</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @entrega.paquetes.includes(:tipo_envio).each do |p| %>
+        <tr>
+          <td class="px-4 py-2 text-sm font-mono"><%= link_to p.guia, paquete_path(p), class: "text-cec-navy hover:underline" %></td>
+          <td class="px-4 py-2 text-sm text-gray-600"><%= truncate(p.tracking, length: 25) %></td>
+          <td class="px-4 py-2 text-sm"><%= p.descripcion %></td>
+          <td class="px-4 py-2"><%= render StatusBadgeComponent.new(status: p.estado) %></td>
+          <td class="px-4 py-2 text-sm text-right"><%= p.peso_cobrar %> lbs</td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+
+  <div class="flex flex-wrap gap-3">
+    <% if @entrega.pendiente? %>
+      <%= button_to "Despachar", despachar_entrega_path(@entrega), method: :post,
+          class: "px-4 py-2 bg-cec-navy text-white rounded-lg text-sm font-medium hover:bg-cec-navy-light",
+          data: { turbo_confirm: "¿Despachar entrega? Los paquetes pasaran a en_reparto." } %>
+      <%= link_to "Editar", edit_entrega_path(@entrega),
+          class: "px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50" %>
+    <% end %>
+
+    <% if @entrega.en_reparto? %>
+      <%= button_to "Marcar Entregado", entregar_entrega_path(@entrega), method: :post,
+          class: "px-4 py-2 bg-cec-teal text-white rounded-lg text-sm font-medium hover:bg-cec-teal-dark",
+          data: { turbo_confirm: "¿Confirmar entrega? Los paquetes pasaran a entregado." } %>
+    <% end %>
+
+    <%= link_to "Volver", entregas_path, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900" %>
+
+    <% unless @entrega.entregado? || @entrega.anulado? %>
+      <%= button_to "Anular", anular_entrega_path(@entrega), method: :delete,
+          class: "px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm font-medium",
+          data: { turbo_confirm: "¿Anular entrega? Los paquetes volveran a facturado." } %>
+    <% end %>
+  </div>
+</div>

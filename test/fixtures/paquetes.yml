@@ -83,6 +83,53 @@ disponible_entrega_juan2:
   fecha_recibido_miami: <%= 8.days.ago %>
   user: digitador
 
+facturado_juan:
+  tracking: "1Z999FACT000001"
+  guia: "PQ-000007"
+  cliente: juan
+  tipo_envio: aereo
+  estado: facturado
+  peso: 4.00
+  peso_cobrar: 4.00
+  cantidad_productos: 1
+  cantidad_paquetes: 1
+  descripcion: "Paquete facturado Juan"
+  proveedor: "Amazon"
+  fecha_recibido_miami: <%= 5.days.ago %>
+  user: digitador
+  entrega: pendiente_juan
+
+facturado_juan2:
+  tracking: "1Z999FACT000002"
+  guia: "PQ-000008"
+  cliente: juan
+  tipo_envio: aereo
+  estado: facturado
+  peso: 3.00
+  peso_cobrar: 3.00
+  cantidad_productos: 1
+  cantidad_paquetes: 1
+  descripcion: "Segundo paquete facturado Juan"
+  proveedor: "eBay"
+  fecha_recibido_miami: <%= 4.days.ago %>
+  user: digitador
+
+facturado_maria:
+  tracking: "1Z999FACT000003"
+  guia: "PQ-000009"
+  cliente: maria
+  tipo_envio: aereo
+  estado: facturado
+  peso: 6.00
+  peso_cobrar: 6.00
+  cantidad_productos: 1
+  cantidad_paquetes: 1
+  descripcion: "Paquete facturado Maria"
+  proveedor: "Shein"
+  fecha_recibido_miami: <%= 3.days.ago %>
+  user: digitador
+  entrega: en_reparto_maria
+
 disponible_entrega_maria:
   tracking: "1Z999BODEGA000003"
   guia: "PQ-000006"
