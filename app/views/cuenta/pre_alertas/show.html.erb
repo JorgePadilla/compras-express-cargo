@@ -1,6 +1,6 @@
 <%= render PageHeaderComponent.new(title: "Pre-Alerta #{@pre_alerta.numero_documento}") do |header| %>
   <% header.with_action do %>
-    <% unless @pre_alerta.anulado? %>
+    <% unless @pre_alerta.anulado? || @pre_alerta.finalizado? %>
       <%= render ButtonComponent.new(variant: :primary, icon: "pencil-square", href: edit_cuenta_pre_alerta_path(@pre_alerta)) do %>
         Editar
       <% end %>
@@ -16,7 +16,7 @@
   </div>
   <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
     <p class="text-xs text-gray-500 mb-1">Tipo Envio</p>
-    <p class="font-medium text-gray-800"><%= @pre_alerta.tipo_envio.nombre %></p>
+    <p class="font-medium text-gray-800"><%= @pre_alerta.tipo_envio.nombre %> — <%= @pre_alerta.tipo_envio_descripcion %></p>
   </div>
   <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
     <p class="text-xs text-gray-500 mb-1">Paquetes</p>
@@ -53,19 +53,29 @@
   <% if @pre_alerta.con_reempaque? %>
     <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30">Reempaque</span>
   <% end %>
-  <% if @pre_alerta.consolidado? %>
-    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-cec-gold/10 text-cec-gold-dark ring-1 ring-cec-gold/30">Consolidado</span>
+  <% if @pre_alerta.finalizado? %>
+    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30">Consolidado Finalizado</span>
+  <% elsif @pre_alerta.consolidando? %>
+    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-cec-gold/10 text-cec-gold-dark ring-1 ring-cec-gold/30">Consolidando</span>
   <% end %>
   <% if @pre_alerta.notificado? %>
     <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30">Notificado</span>
   <% end %>
 </div>
 
-<%# Notas %>
-<% if @pre_alerta.notas_grupo.present? %>
+<%# Notas de Consolidacion (only for consolidated PAs) %>
+<% if @pre_alerta.consolidado? && @pre_alerta.notas_grupo.present? %>
   <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-6">
-    <p class="text-xs text-gray-500 mb-1">Notas</p>
+    <p class="text-xs text-gray-500 mb-1">Notas de Consolidacion</p>
     <p class="text-sm text-gray-700"><%= @pre_alerta.notas_grupo %></p>
+  </div>
+<% end %>
+
+<%# Historial de Movimientos %>
+<% if @pre_alerta.historial.present? %>
+  <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-6">
+    <p class="text-xs text-gray-500 mb-1">Historial de Movimientos</p>
+    <div class="bg-gray-50 rounded-lg p-3 text-xs font-mono text-gray-600 whitespace-pre-line"><%= @pre_alerta.historial %></div>
   </div>
 <% end %>
 

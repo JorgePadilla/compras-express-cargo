@@ -32,6 +32,12 @@ pap_maria:
 
   fecha: <%= Date.current %>
 
+pap_finalizada:
+  pre_alerta: finalizada
+  tracking: "1Z999FINAL001"
+  descripcion: "Paquete finalizado"
+  fecha: <%= Date.current %>
+
 pap_disponible_juan:
   pre_alerta: recibida
   tracking: "1Z999BODEGA000001"

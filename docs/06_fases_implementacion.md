@@ -264,3 +264,19 @@ Fase 8  ░░░░░░░░░░░░░░░░░░░░  Inventario
 4. **Fase 5:** Mejoras operativas Miami (diferenciador)
 5. **Fase 6:** Visibilidad y control
 6. **Fase 7 + 8:** Nice to have, no bloquea operacion
+
+---
+
+## Reglas de Negocio — Pre-Alertas
+
+1. **Notas de Consolidacion**: Solo visible para pre-alertas consolidadas. No aplica para CKA/CKM ni servicios sin consolidar (CER/CEM/EXPRESS sin consolidar).
+2. **Finalizar Consolidacion**: Al finalizar una pre-alerta consolidada:
+   - Se marca `finalizado=true` y `notificado=true`
+   - Todos los campos quedan en modo solo lectura
+   - No se pueden agregar, mover ni eliminar paquetes
+   - No se aceptan paquetes movidos desde otras pre-alertas
+   - Las notas de consolidacion se bloquean
+   - Se muestra badge "Consolidado Finalizado" en la interfaz
+3. **Historial de Movimientos**: Registro automatico, no editable, separado de las notas del usuario. Incluye: timestamp, tracking, descripcion del paquete, PA origen/destino con titulo.
+4. **Tipos de Servicio en Cards**: Las tarjetas de pre-alertas muestran el titulo como identificador principal, el codigo de servicio (CER, CEM, EXPRESS) con su descripcion (Aereo con Reempaque, etc.), y el estado de consolidacion.
+5. **Mover paquetes**: Solo permitido desde/hacia pre-alertas consolidadas activas (no finalizadas). Paquetes en estado en_aduana o posterior estan bloqueados.

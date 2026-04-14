@@ -94,6 +94,22 @@ class PreAlerta < ApplicationRecord
     pre_alerta_paquetes.empty?
   end
 
+  def consolidando?
+    consolidado? && !finalizado?
+  end
+
+  def append_historial!(entry)
+    current = historial.to_s
+    new_historial = current.present? ? "#{current}\n#{entry}" : entry
+    update_column(:historial, new_historial)
+  end
+
+  def tipo_envio_descripcion
+    return "" unless tipo_envio
+    modalidad = tipo_envio.modalidad&.capitalize || "—"
+    tipo_envio.con_reempaque ? "#{modalidad} con Reempaque" : "#{modalidad} sin Reempaque"
+  end
+
   def save(**args, &block)
     super
   rescue ActiveRecord::RecordNotUnique => e

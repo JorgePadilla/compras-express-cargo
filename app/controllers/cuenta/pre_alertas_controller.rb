@@ -46,23 +46,31 @@ module Cuenta
     end
 
     def update
+      if @pre_alerta.finalizado?
+        redirect_to edit_cuenta_pre_alerta_path(@pre_alerta), alert: "Esta pre-alerta ya fue finalizada y no se puede modificar."
+        return
+      end
+
       notificar = params[:notificar] == "true"
+      finalizar = params[:finalizar] == "true" && @pre_alerta.consolidado?
 
       if @pre_alerta.update(pre_alerta_params)
         @pre_alerta.update_column(:notificado, true) if notificar
 
+        if finalizar
+          @pre_alerta.update_column(:finalizado, true)
+          redirect_to cuenta_root_path,
+                      notice: "¡Consolidación finalizada! Pre-alerta #{@pre_alerta.numero_documento} guardada."
+          return
+        end
+
         respond_to do |format|
           format.html { redirect_to edit_cuenta_pre_alerta_path(@pre_alerta), notice: "Pre-alerta actualizada." }
           format.turbo_stream {
-            if params[:finalizar] == "true" && @pre_alerta.consolidado?
-              redirect_to cuenta_root_path,
-                          notice: "¡Consolidación finalizada! Pre-alerta #{@pre_alerta.numero_documento} guardada."
-            else
-              render turbo_stream: [
-                turbo_stream.update("pre_alerta_header", partial: "cuenta/pre_alertas/header", locals: { pre_alerta: @pre_alerta }),
-                turbo_stream.update("flash", partial: "shared/flash", locals: { notice: notificar ? "Guardado y notificado." : "Guardado." })
-              ]
-            end
+            render turbo_stream: [
+              turbo_stream.update("pre_alerta_header", partial: "cuenta/pre_alertas/header", locals: { pre_alerta: @pre_alerta }),
+              turbo_stream.update("flash", partial: "shared/flash", locals: { notice: notificar ? "Guardado y notificado." : "Guardado." })
+            ]
           }
         end
       else
@@ -79,6 +87,11 @@ module Cuenta
       pap = @pre_alerta.pre_alerta_paquetes.find(params[:pre_alerta_paquete_id])
       destino = current_cliente.pre_alertas.activas.find(params[:destino_id])
 
+      if @pre_alerta.finalizado?
+        redirect_to edit_cuenta_pre_alerta_path(@pre_alerta), alert: "No se puede mover paquetes desde una pre-alerta finalizada."
+        return
+      end
+
       unless puede_mover?(pap)
         redirect_to edit_cuenta_pre_alerta_path(@pre_alerta), alert: "No se puede mover este paquete."
         return
@@ -91,13 +104,14 @@ module Cuenta
 
       PreAlertaPaquete.transaction do
         timestamp = Time.current.strftime("%d/%m/%Y %H:%M")
-        origen_nota = "[#{timestamp}] Paquete '#{pap.tracking}' movido a #{destino.numero_documento}."
-        destino_nota = "[#{timestamp}] Paquete '#{pap.tracking}' recibido de #{@pre_alerta.numero_documento}."
+        paq_desc = pap.descripcion.presence || pap.tracking.presence || "sin descripcion"
+        origen_entry = "[#{timestamp}] Paquete '#{paq_desc}' (#{pap.tracking}) movido a #{destino.numero_documento} — #{destino.titulo}."
+        destino_entry = "[#{timestamp}] Paquete '#{paq_desc}' (#{pap.tracking}) recibido de #{@pre_alerta.numero_documento} — #{@pre_alerta.titulo}."
 
         pap.update!(pre_alerta: destino)
 
-        append_nota(@pre_alerta, origen_nota)
-        append_nota(destino, destino_nota)
+        @pre_alerta.append_historial!(origen_entry)
+        destino.append_historial!(destino_entry)
       end
 
       PreAlertaMailer.confirmacion(@pre_alerta).deliver_later
@@ -137,10 +151,19 @@ module Cuenta
     def eliminar_paquete
       pap = @pre_alerta.pre_alerta_paquetes.find(params[:pre_alerta_paquete_id])
 
+      if @pre_alerta.finalizado?
+        redirect_to edit_cuenta_pre_alerta_path(@pre_alerta), alert: "No se puede eliminar paquetes de una pre-alerta finalizada."
+        return
+      end
+
       if pap.paquete_id.present?
         redirect_to edit_cuenta_pre_alerta_path(@pre_alerta), alert: "No se puede eliminar un paquete vinculado."
         return
       end
+
+      timestamp = Time.current.strftime("%d/%m/%Y %H:%M")
+      paq_desc = pap.descripcion.presence || pap.tracking.presence || "sin descripcion"
+      @pre_alerta.append_historial!("[#{timestamp}] Paquete '#{paq_desc}' (#{pap.tracking}) eliminado.")
 
       pap.destroy!
       PreAlertaMailer.confirmacion(@pre_alerta).deliver_later
@@ -238,6 +261,8 @@ module Cuenta
     ESTADOS_MOVIBLES = %w[recibido_miami empacado enviado_honduras].freeze
 
     def puede_mover?(pap)
+      return false if @pre_alerta.finalizado?
+
       if pap.paquete_id.present?
         return false if @pre_alerta.tipo_envio.single_package?
         ESTADOS_MOVIBLES.include?(pap.paquete.estado)
@@ -249,6 +274,7 @@ module Cuenta
     def destino_valido?(pap, destino)
       return false if destino.id == @pre_alerta.id
       return false unless destino.consolidado?
+      return false if destino.finalizado?
       return false if destino.tipo_envio.single_package?
 
       if pap.paquete_id.present?
@@ -260,7 +286,7 @@ module Cuenta
 
     def destinos_para(pap)
       base = current_cliente.pre_alertas.activas
-               .where(consolidado: true)
+               .where(consolidado: true, finalizado: false)
                .where.not(id: @pre_alerta.id)
                .includes(:tipo_envio, :pre_alerta_paquetes)
 
@@ -272,12 +298,6 @@ module Cuenta
       end
 
       base.order(created_at: :desc)
-    end
-
-    def append_nota(pre_alerta, nota)
-      current = pre_alerta.notas_grupo.to_s
-      new_notas = current.present? ? "#{current}\n#{nota}" : nota
-      pre_alerta.update_column(:notas_grupo, new_notas)
     end
   end
 end
