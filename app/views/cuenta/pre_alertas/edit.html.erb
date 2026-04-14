@@ -1,7 +1,7 @@
 <% max_paquetes = @pre_alerta.consolidado? ? @pre_alerta.tipo_envio&.max_paquetes_por_accion : 1 %>
 <div data-controller="pre-alerta-editor pre-alerta-mover"
      data-pre-alerta-editor-max-paquetes-value="<%= max_paquetes || -1 %>"
-     data-pre-alerta-editor-consolidado-value="<%= @pre_alerta.consolidado? %>"
+     data-pre-alerta-editor-consolidado-value="<%= @pre_alerta.consolidando? %>"
      data-pre-alerta-editor-cancel-url-value="<%= cuenta_pre_alertas_path %>"
      data-pre-alerta-mover-destinos-url-value="<%= destinos_disponibles_cuenta_pre_alerta_path(@pre_alerta) %>"
      data-pre-alerta-mover-mover-url-value="<%= mover_paquete_cuenta_pre_alerta_path(@pre_alerta) %>">
@@ -22,7 +22,7 @@
       </div>
       <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
         <p class="text-xs text-gray-500">Tipo Envio</p>
-        <p class="font-medium text-gray-800"><%= @pre_alerta.tipo_envio.nombre %></p>
+        <p class="font-medium text-gray-800"><%= @pre_alerta.tipo_envio.nombre %> — <%= @pre_alerta.tipo_envio_descripcion %></p>
       </div>
       <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
         <p class="text-xs text-gray-500">Opciones</p>
@@ -30,8 +30,10 @@
           <% if @pre_alerta.con_reempaque? %>
             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30">Reempaque</span>
           <% end %>
-          <% if @pre_alerta.consolidado? %>
-            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cec-gold/10 text-cec-gold-dark ring-1 ring-cec-gold/30">Consolidado</span>
+          <% if @pre_alerta.finalizado? %>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30">Consolidado Finalizado</span>
+          <% elsif @pre_alerta.consolidando? %>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cec-gold/10 text-cec-gold-dark ring-1 ring-cec-gold/30">Consolidando</span>
           <% end %>
           <% unless @pre_alerta.con_reempaque? || @pre_alerta.consolidado? %>
             <span class="text-sm text-gray-400">Ninguna</span>
@@ -45,7 +47,7 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1.5">Título de Referencia</label>
-          <% if @pre_alerta.consolidado? %>
+          <% if @pre_alerta.consolidando? %>
             <%= f.text_field :titulo, placeholder: "Ej. Televisor, Zapatos...",
                 class: "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
                        focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
@@ -55,7 +57,7 @@
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1.5">Proveedor / Tienda</label>
-          <% if @pre_alerta.consolidado? %>
+          <% if @pre_alerta.consolidando? %>
             <%= f.text_field :proveedor, placeholder: "Ej. Amazon, Best Buy...",
                 class: "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
                        focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
@@ -66,18 +68,28 @@
       </div>
     </div>
 
-    <%# Notas %>
-    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-      <label class="block text-sm font-medium text-gray-700 mb-1.5">Notas del grupo</label>
-      <% if @pre_alerta.consolidado? %>
-        <%= f.text_area :notas_grupo, rows: 2,
-            placeholder: "Notas opcionales para este grupo de paquetes...",
-            class: "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
-                   focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
-      <% else %>
-        <p class="text-sm text-gray-800 py-2"><%= @pre_alerta.notas_grupo.presence || "—" %></p>
-      <% end %>
-    </div>
+    <%# Notas de Consolidacion (only for consolidated, non-finalized) %>
+    <% if @pre_alerta.consolidado? %>
+      <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Notas de Consolidacion</label>
+        <% if @pre_alerta.consolidando? %>
+          <%= f.text_area :notas_grupo, rows: 2,
+              placeholder: "Notas opcionales para este grupo de paquetes...",
+              class: "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
+                     focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+        <% else %>
+          <p class="text-sm text-gray-800 py-2"><%= @pre_alerta.notas_grupo.presence || "—" %></p>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%# Historial de Movimientos (read-only, only when present) %>
+    <% if @pre_alerta.historial.present? %>
+      <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+        <label class="block text-sm font-medium text-gray-700 mb-1.5">Historial de Movimientos</label>
+        <div class="bg-gray-50 rounded-lg p-3 text-xs font-mono text-gray-600 whitespace-pre-line"><%= @pre_alerta.historial %></div>
+      </div>
+    <% end %>
 
     <%# Paquetes table %>
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -116,48 +128,50 @@
       </div>
     </div>
 
-    <%# Template for new rows (hidden) %>
-    <template data-pre-alerta-editor-target="template">
-      <tr class="paquete-row" data-new-record="true">
-        <td class="px-4 py-2">
-          <input type="text" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][tracking]"
-                 placeholder="Tracking" required
-                 class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
-                        focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
-        </td>
-        <td class="px-4 py-2">
-          <input type="text" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][descripcion]"
-                 placeholder="Descripcion"
-                 class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
-                        focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
-        </td>
-        <td class="px-4 py-2">
-          <textarea name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][instrucciones]"
-                    rows="2" placeholder="Instrucciones"
-                    class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
-                           focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"></textarea>
-        </td>
-        <td class="px-4 py-2">
-          <span class="text-sm text-gray-500"><%= Date.current.strftime("%d/%m/%Y") %></span>
-        </td>
-        <td class="px-4 py-2 text-center">
-          <%= render StatusBadgeComponent.new(status: "pre_alerta", label: "Pre Alerta") %>
-        </td>
-        <td class="px-4 py-2"></td>
-        <td class="px-4 py-2 text-center">
-          <button type="button" data-action="click->pre-alerta-editor#removePaquete"
-                  class="text-red-400 hover:text-red-600">
-            <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
-          </button>
-        </td>
-      </tr>
-    </template>
+    <% unless @pre_alerta.finalizado? %>
+      <%# Template for new rows (hidden) %>
+      <template data-pre-alerta-editor-target="template">
+        <tr class="paquete-row" data-new-record="true">
+          <td class="px-4 py-2">
+            <input type="text" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][tracking]"
+                   placeholder="Tracking" required
+                   class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
+                          focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
+          </td>
+          <td class="px-4 py-2">
+            <input type="text" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][descripcion]"
+                   placeholder="Descripcion"
+                   class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
+                          focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
+          </td>
+          <td class="px-4 py-2">
+            <textarea name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][instrucciones]"
+                      rows="2" placeholder="Instrucciones"
+                      class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
+                             focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"></textarea>
+          </td>
+          <td class="px-4 py-2">
+            <span class="text-sm text-gray-500"><%= Date.current.strftime("%d/%m/%Y") %></span>
+          </td>
+          <td class="px-4 py-2 text-center">
+            <%= render StatusBadgeComponent.new(status: "pre_alerta", label: "Pre Alerta") %>
+          </td>
+          <td class="px-4 py-2"></td>
+          <td class="px-4 py-2 text-center">
+            <button type="button" data-action="click->pre-alerta-editor#removePaquete"
+                    class="text-red-400 hover:text-red-600">
+              <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
+            </button>
+          </td>
+        </tr>
+      </template>
+    <% end %>
 
     <%# Action buttons %>
     <div class="flex flex-col sm:flex-row gap-3 justify-end">
       <%= link_to "Volver", cuenta_pre_alertas_path,
           class: "text-gray-600 hover:text-gray-800 text-sm font-medium px-4 py-2.5 text-center" %>
-      <% if @pre_alerta.consolidado? %>
+      <% if @pre_alerta.consolidando? %>
         <button type="button" data-action="click->pre-alerta-editor#addPaquete"
                 data-pre-alerta-editor-target="addButton"
                 class="inline-flex items-center gap-1.5 border border-cec-teal text-cec-teal font-semibold px-6 py-2.5 rounded-lg text-sm hover:bg-cec-teal/10 transition-colors">
@@ -176,5 +190,7 @@
     </div>
   <% end %>
 
-  <%= render "cuenta/pre_alertas/move_modal", pre_alerta: @pre_alerta %>
+  <% unless @pre_alerta.finalizado? %>
+    <%= render "cuenta/pre_alertas/move_modal", pre_alerta: @pre_alerta %>
+  <% end %>
 </div>

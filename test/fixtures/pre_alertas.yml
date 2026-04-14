@@ -46,6 +46,19 @@ cka_pa:
   creado_por_tipo: cliente
   creado_por_id: <%= ActiveRecord::FixtureSet.identify(:juan) %>
 
+finalizada:
+  numero_documento: PA-000012
+  cliente: juan
+  tipo_envio: aereo
+  consolidado: true
+  con_reempaque: false
+  estado: pre_alerta
+  notificado: true
+  finalizado: true
+  titulo: Compra Black Friday
+  creado_por_tipo: cliente
+  creado_por_id: <%= ActiveRecord::FixtureSet.identify(:juan) %>
+
 maria_pa:
   numero_documento: PA-000003
   cliente: maria

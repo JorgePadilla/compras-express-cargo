@@ -8,7 +8,7 @@
         <span class="font-mono text-sm text-gray-700"><%= pap.tracking %></span>
         <%= pf.hidden_field :tracking %>
       <% else %>
-        <% if @pre_alerta.consolidado? %>
+        <% if @pre_alerta.consolidando? %>
           <%= pf.text_field :tracking, placeholder: "Tracking (opcional)",
               class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
                      focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
@@ -18,7 +18,7 @@
       <% end %>
     </td>
     <td class="px-4 py-2">
-      <% if @pre_alerta.consolidado? %>
+      <% if @pre_alerta.consolidando? %>
         <%= pf.text_field :descripcion, placeholder: "Descripcion",
             class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
                    focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
@@ -27,7 +27,7 @@
       <% end %>
     </td>
     <td class="px-4 py-2">
-      <% if @pre_alerta.consolidado? %>
+      <% if @pre_alerta.consolidando? %>
         <%= pf.text_area :instrucciones, placeholder: "Instrucciones", rows: 2,
             class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
                    focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
@@ -46,7 +46,7 @@
       <% end %>
     </td>
     <td class="px-4 py-2 text-center">
-      <% if pap.persisted? && puede_mover?(pap) %>
+      <% if !@pre_alerta.finalizado? && pap.persisted? && puede_mover?(pap) %>
         <button type="button"
                 data-action="click->pre-alerta-mover#open"
                 data-pap-id="<%= pap.id %>"
@@ -57,8 +57,8 @@
       <% end %>
     </td>
     <td class="px-4 py-2 text-center">
-      <% unless pap.paquete_id.present? %>
-        <% if pap.persisted? && !@pre_alerta.consolidado? %>
+      <% unless pap.paquete_id.present? || @pre_alerta.finalizado? %>
+        <% if pap.persisted? && !@pre_alerta.consolidando? %>
           <%= button_to eliminar_paquete_cuenta_pre_alerta_path(@pre_alerta, pre_alerta_paquete_id: pap.id),
                 method: :delete, class: "text-red-400 hover:text-red-600",
                 data: { turbo_confirm: "¿Eliminar este paquete?" } do %>

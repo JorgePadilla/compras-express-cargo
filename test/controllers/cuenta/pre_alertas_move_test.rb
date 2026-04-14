@@ -36,8 +36,8 @@ class Cuenta::PreAlertasMoveTest < ActionDispatch::IntegrationTest
 
     origen.reload
     @destino.reload
-    assert_match "movido a #{@destino.numero_documento}", origen.notas_grupo
-    assert_match "recibido de #{origen.numero_documento}", @destino.notas_grupo
+    assert_match "movido a #{@destino.numero_documento}", origen.historial
+    assert_match "recibido de #{origen.numero_documento}", @destino.historial
   end
 
   # ── Move linked paquete (recibido_miami) ──

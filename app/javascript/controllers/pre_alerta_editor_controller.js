@@ -14,11 +14,6 @@ export default class extends Controller {
     this._handleGlobalKeydown = this.handleKeydown.bind(this)
     document.addEventListener("keydown", this._handleGlobalKeydown)
     this.updateCounter()
-
-    // Auto-add a blank row for consolidated pre-alertas so the next line is ready
-    if (this.hasAddButtonTarget && !this.isAtLimit()) {
-      this.addPaquete()
-    }
   }
 
   disconnect() {
