@@ -112,7 +112,7 @@ jobs:
 
           # Call Gemini API
           RESPONSE=$(curl -s -X POST \
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}" \
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${GEMINI_API_KEY}" \
             -H "Content-Type: application/json" \
             -d @/tmp/request.json)
 
@@ -133,7 +133,7 @@ jobs:
             cat /tmp/review.txt
             echo ""
             echo "---"
-            echo "*Automated review by Gemini 2.5 Flash*"
+            echo "*Automated review by Gemini 3.1 Flash Lite*"
           } > /tmp/comment.md
 
           gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/comment.md
