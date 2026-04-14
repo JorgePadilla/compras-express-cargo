@@ -6,4 +6,30 @@ class PreAlertaCardComponent < ViewComponent::Base
   private
 
   attr_reader :pre_alerta
+
+  def tipo_envio_badge_text
+    pre_alerta.tipo_envio.nombre
+  end
+
+  def tipo_envio_description
+    pre_alerta.tipo_envio_descripcion
+  end
+
+  def consolidation_badge
+    if pre_alerta.consolidado?
+      if pre_alerta.finalizado?
+        { text: "Consolidado Finalizado", bg: "bg-cec-teal/10", text_color: "text-cec-teal-dark", ring: "ring-cec-teal/30" }
+      else
+        { text: "Consolidando", bg: "bg-cec-gold/10", text_color: "text-cec-gold-dark", ring: "ring-cec-gold/30" }
+      end
+    end
+  end
+
+  def info_line
+    parts = []
+    parts << pre_alerta.proveedor if pre_alerta.proveedor.present?
+    parts << pre_alerta.numero_documento
+    parts << pre_alerta.created_at.strftime("%d/%m/%Y")
+    parts.join(" · ")
+  end
 end

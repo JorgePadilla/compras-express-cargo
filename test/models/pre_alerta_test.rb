@@ -343,6 +343,58 @@ class PreAlertaTest < ActiveSupport::TestCase
     assert_equal "enviado", pa.reload.estado
   end
 
+  # ── Finalizado + Consolidando ──
+  test "finalizado defaults to false" do
+    pa = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, titulo: "Test", creado_por_tipo: "cliente", creado_por_id: @cliente.id)
+    assert_equal false, pa.finalizado?
+  end
+
+  test "consolidando? returns true for consolidado non-finalized" do
+    pa = pre_alertas(:consolidada_destino)
+    assert pa.consolidado?
+    assert_not pa.finalizado?
+    assert pa.consolidando?
+  end
+
+  test "consolidando? returns false for finalized" do
+    pa = pre_alertas(:finalizada)
+    assert pa.consolidado?
+    assert pa.finalizado?
+    assert_not pa.consolidando?
+  end
+
+  test "consolidando? returns false for non-consolidado" do
+    pa = pre_alertas(:activa)
+    assert_not pa.consolidado?
+    assert_not pa.consolidando?
+  end
+
+  test "append_historial! appends to nil historial" do
+    pa = pre_alertas(:activa)
+    assert_nil pa.historial
+    pa.append_historial!("First entry")
+    assert_equal "First entry", pa.reload.historial
+  end
+
+  test "append_historial! appends to existing historial" do
+    pa = pre_alertas(:activa)
+    pa.update_column(:historial, "Line 1")
+    pa.append_historial!("Line 2")
+    assert_equal "Line 1\nLine 2", pa.reload.historial
+  end
+
+  test "tipo_envio_descripcion for aereo con reempaque" do
+    cer = tipo_envios(:cer)
+    pa = PreAlerta.new(tipo_envio: cer)
+    assert_equal "Aereo con Reempaque", pa.tipo_envio_descripcion
+  end
+
+  test "tipo_envio_descripcion for aereo sin reempaque" do
+    cka = tipo_envios(:cka)
+    pa = PreAlerta.new(tipo_envio: cka)
+    assert_equal "Aereo sin Reempaque", pa.tipo_envio_descripcion
+  end
+
   test "CER (no limit) accepts multiple paquetes" do
     cer = tipo_envios(:cer)
     pa = PreAlerta.new(

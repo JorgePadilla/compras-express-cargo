@@ -1,6 +1,6 @@
 # CEC — Fases de Implementacion
 
-39 modulos, Rails 8 + Hotwire + Tailwind CSS 4 + PostgreSQL 16
+39 modulos · 37 modelos · 583 tests · Rails 8 + Hotwire + Tailwind CSS 4 + PostgreSQL 16
 
 ```
 Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pago → Entrega
@@ -107,15 +107,16 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 
 **Entregable:** Documentos fiscales completos con PDFs y envio por email.
 
-### Fase 3c — Pendiente (futuro)
+### Fase 3c — Cotizaciones + Proformas + Financiamientos + Dual Currency ✅ COMPLETA (Abril 2026)
 
-| # | Tarea | Modulos |
-|---|-------|---------|
-| 3.10 | Cotizaciones + Proformas | 13, 14 |
-| 3.11 | Financiamientos | 18 |
-| 3c.1 | USD + tasa de cambio automatica | — |
+| # | Tarea | Modulos | Estado |
+|---|-------|---------|--------|
+| 3.10 | Cotizaciones (borrador→enviada→aceptada/rechazada/expirada) + PDF + Email | 13 | ✅ |
+| 3.11 | Proformas (vista filtrada de Venta con estado=proforma, emitir→pendiente) | 14 | ✅ |
+| 3.12 | Financiamientos (cuotas semanal/quincenal/mensual, pagar_cuota genera Pago+Recibo) | 18 | ✅ |
+| 3c.1 | Dual Currency LPS/USD (CurrencyAware concern + ActualizarTasaCambioJob vía FloatRates) | — | ✅ |
 
-**Nota:** Fase 3c no es bloqueante para Fase 4. Se puede implementar en paralelo o despues.
+**Entregable:** Cotizaciones con PDF, proformas emitibles, financiamientos con cuotas, soporte USD/LPS.
 
 **Dependencia:** Fase 3a (billing core).
 
@@ -128,34 +129,30 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 | Admin Users CRUD (8 roles, activo toggle, buscar) | ✅ Abril 2026 |
 | Client Self-Registration (`/registro`) | ✅ Abril 2026 |
 | UI polish: mobile responsive, admin pre-alerta form redesign | ✅ Abril 2026 |
+| Pre-Alerta UX: stepper details, unified wizard flow, auto-save on move/delete | ✅ Abril 2026 |
 
-**Test suite:** 453 tests passing.
+**Test suite:** 583 tests passing.
 
 ---
 
-## Fase 4: Caja y Entrega ← **SIGUIENTE**
+## Fase 4: Caja y Entrega ✅ COMPLETA (Abril 2026)
 
 **Objetivo:** Cajeros procesan pagos diarios, despacho entrega paquetes. Completa el loop operativo.
 
-**Lo que ya existe (listo para usar):**
-- Roles `supervisor_caja` y `entrega_despacho` definidos en User
-- `can_access?(:entregas)` en Authorization
-- Sidebar link placeholder para "Entregas" (apunta a `#`)
-- Paquete states: `disponible_entrega`, `en_reparto`, `entregado`
-- Lugar tipo `punto_entrega`
-- Modelos de billing completos (Venta, Pago, Recibo)
+| # | Tarea | Modulos | Estado |
+|---|-------|---------|--------|
+| 4.1 | Modelo Entrega: despachar!/entregar!/anular!, receptor, identidad, paquetes | 10 | ✅ |
+| 4.2 | Vista Entregas admin: lista + busqueda + filtros por estado/repartidor | 10 | ✅ |
+| 4.3 | Crear Entrega: seleccionar paquetes facturados, registrar receptor | 10 | ✅ |
+| 4.4 | Flujo facturado → en_reparto → entregado con transiciones validadas | 10 | ✅ |
+| 4.5 | Mi Dia dashboard: apertura/cierre caja, resumen, ingresos/egresos del dia | 19 | ✅ |
+| 4.6 | Modelo IngresoCaja + CRUD (ingresos extras a caja) | 20 | ✅ |
+| 4.7 | Modelo EgresoCaja + CRUD (egresos de caja) | 20 | ✅ |
+| 4.8 | Pago auto-link a AperturaCaja abierta del dia | — | ✅ |
+| 4.9 | Numero de entrega via PostgreSQL sequence (concurrency-safe) | — | ✅ |
+| 4.10 | Vista Mis Entregas (cliente) | 10 | ✅ |
 
-| # | Tarea | Modulos |
-|---|-------|---------|
-| 4.1 | Modelo Entrega: registro con receptor, identidad, firma, paquetes | 10 |
-| 4.2 | Vista Entregas admin: lista + busqueda por tracking/cliente | 10 |
-| 4.3 | Crear Entrega: seleccionar paquetes `disponible_entrega`, registrar receptor | 10 |
-| 4.4 | Cambio de estado paquete a `en_reparto` → `entregado` al entregar | 10 |
-| 4.5 | Mi Dia (POS diario): 4 secciones + apertura/cierre de caja | 19 |
-| 4.6 | Modelo Ingreso de caja + CRUD | 20 |
-| 4.7 | Modelo Egreso de caja + CRUD | 20 |
-
-**Entregable:** Caja operativa en Honduras + entregas registradas.
+**Entregable:** Caja operativa en Honduras + entregas registradas + portal cliente.
 
 **Dependencia:** Fase 3a (ventas y pagos deben existir). ✅ Cumplida.
 
@@ -244,10 +241,10 @@ Fase 1  ████████████████████  Miami (eti
 Fase 2  ████████████████████  Pre-Alertas (cliente + admin + v4)          ✅
 Fase 3a ████████████████████  Billing MVP (prefactura→venta→pago→recibo)  ✅
 Fase 3b ████████████████████  Notas D/C + PDFs + Emails                   ✅
+Fase 3c ████████████████████  Cotizaciones + Proformas + Financiamientos  ✅
+Fase 4  ████████████████████  Entregas + Caja Diaria                      ✅
 Extras  ████████████████████  Users CRUD + Registro + UI polish           ✅
-Fase 4  ░░░░░░░░░░░░░░░░░░░░  Caja + Entregas                            ← SIGUIENTE
-Fase 3c ░░░░░░░░░░░░░░░░░░░░  Cotizaciones + Proformas + Financiamientos
-Fase 5  ░░░░░░░░░░░░░░░░░░░░  Tareas + Fotos + Re-empaque (Miami)
+Fase 5  ░░░░░░░░░░░░░░░░░░░░  Tareas + Fotos + Re-empaque (Miami)        ← SIGUIENTE
 Fase 6  ░░░░░░░░░░░░░░░░░░░░  Reportes + Config + Dashboard
 Fase 7  ░░░░░░░░░░░░░░░░░░░░  Marketing CRM
 Fase 8  ░░░░░░░░░░░░░░░░░░░░  Inventario
@@ -267,3 +264,19 @@ Fase 8  ░░░░░░░░░░░░░░░░░░░░  Inventario
 4. **Fase 5:** Mejoras operativas Miami (diferenciador)
 5. **Fase 6:** Visibilidad y control
 6. **Fase 7 + 8:** Nice to have, no bloquea operacion
+
+---
+
+## Reglas de Negocio — Pre-Alertas
+
+1. **Notas de Consolidacion**: Solo visible para pre-alertas consolidadas. No aplica para CKA/CKM ni servicios sin consolidar (CER/CEM/EXPRESS sin consolidar).
+2. **Finalizar Consolidacion**: Al finalizar una pre-alerta consolidada:
+   - Se marca `finalizado=true` y `notificado=true`
+   - Todos los campos quedan en modo solo lectura
+   - No se pueden agregar, mover ni eliminar paquetes
+   - No se aceptan paquetes movidos desde otras pre-alertas
+   - Las notas de consolidacion se bloquean
+   - Se muestra badge "Consolidado Finalizado" en la interfaz
+3. **Historial de Movimientos**: Registro automatico, no editable, separado de las notas del usuario. Incluye: timestamp, tracking, descripcion del paquete, PA origen/destino con titulo.
+4. **Tipos de Servicio en Cards**: Las tarjetas de pre-alertas muestran el titulo como identificador principal, el codigo de servicio (CER, CEM, EXPRESS) con su descripcion (Aereo con Reempaque, etc.), y el estado de consolidacion.
+5. **Mover paquetes**: Solo permitido desde/hacia pre-alertas consolidadas activas (no finalizadas). Paquetes en estado en_aduana o posterior estan bloqueados.

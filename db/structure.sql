@@ -1,6 +1,7 @@
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -1187,7 +1188,9 @@ CREATE TABLE public.pre_alertas (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     titulo character varying,
-    proveedor character varying
+    proveedor character varying,
+    finalizado boolean DEFAULT false NOT NULL,
+    historial text
 );
 
 
@@ -3421,6 +3424,7 @@ ALTER TABLE ONLY public.paquetes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260414022221'),
 ('20260413024624'),
 ('20260412060700'),
 ('20260412060600'),

@@ -340,6 +340,92 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert pa.notificado?
   end
 
+  # ── Finalization ──
+  test "finalizar sets finalizado to true" do
+    pa = pre_alertas(:consolidada_destino)
+    assert_not pa.finalizado?
+
+    patch cuenta_pre_alerta_url(pa), params: {
+      notificar: "true",
+      finalizar: "true",
+      pre_alerta: { notas_grupo: "Final notes" }
+    }
+    assert_redirected_to cuenta_root_url
+    assert pa.reload.finalizado?
+    assert pa.notificado?
+  end
+
+  test "update rejected on finalized PA" do
+    pa = pre_alertas(:finalizada)
+    patch cuenta_pre_alerta_url(pa), params: {
+      pre_alerta: { titulo: "Should not change" }
+    }
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+    assert_equal "Compra Black Friday", pa.reload.titulo
+  end
+
+  test "mover blocked from finalized PA" do
+    pa = pre_alertas(:finalizada)
+    pap = pre_alerta_paquetes(:pap_finalizada)
+    destino = pre_alertas(:consolidada_destino)
+
+    post mover_paquete_cuenta_pre_alerta_url(pa), params: {
+      pre_alerta_paquete_id: pap.id,
+      destino_id: destino.id
+    }
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+    assert_match "finalizada", flash[:alert]
+    assert_equal pa.id, pap.reload.pre_alerta_id
+  end
+
+  test "destinos excludes finalized PAs" do
+    pa = pre_alertas(:consolidada_destino)
+    pap = pre_alerta_paquetes(:pap_destino)
+
+    get destinos_disponibles_cuenta_pre_alerta_url(pa, pre_alerta_paquete_id: pap.id), as: :json
+    assert_response :success
+
+    destino_ids = response.parsed_body.map { |d| d["id"] }
+    finalizada = pre_alertas(:finalizada)
+    assert_not_includes destino_ids, finalizada.id
+  end
+
+  test "eliminar blocked on finalized PA" do
+    pa = pre_alertas(:finalizada)
+    pap = pre_alerta_paquetes(:pap_finalizada)
+
+    assert_no_difference("PreAlertaPaquete.count") do
+      delete eliminar_paquete_cuenta_pre_alerta_url(pa, pre_alerta_paquete_id: pap.id)
+    end
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+    assert_match "finalizada", flash[:alert]
+  end
+
+  test "move writes to historial not notas_grupo" do
+    pa = pre_alertas(:recibida)
+    pap = pre_alerta_paquetes(:pap_vinculado)
+    destino = pre_alertas(:consolidada_destino)
+
+    # Ensure notas_grupo starts empty
+    pa.update_column(:notas_grupo, nil)
+    destino.update_column(:notas_grupo, nil)
+
+    post mover_paquete_cuenta_pre_alerta_url(pa), params: {
+      pre_alerta_paquete_id: pap.id,
+      destino_id: destino.id
+    }
+
+    pa.reload
+    destino.reload
+    # notas_grupo should stay nil — moves go to historial now
+    assert_nil pa.notas_grupo
+    assert_nil destino.notas_grupo
+    assert pa.historial.present?
+    assert_match "movido a", pa.historial
+    assert destino.historial.present?
+    assert_match "recibido de", destino.historial
+  end
+
   # ── v4: step-3 save-failure re-renders step 3, not step 1 ──
   # Regression guard: new.html.erb reads params[:step] to decide which step to
   # render, but render :new after a failed step-3 POST only has params[:wizard_step].
