@@ -258,7 +258,7 @@ class PreAlertaTest < ActiveSupport::TestCase
       creado_por_tipo: "cliente",
       creado_por_id: @cliente.id,
       pre_alerta_paquetes_attributes: [
-        { tracking: "CKA-SINGLE", descripcion: "Solo uno" }
+        { tracking: "CKASINGLE", descripcion: "Solo uno" }
       ]
     )
     assert pa.valid?, "Expected CKA with 1 paquete to be valid, got: #{pa.errors.full_messages.join(', ')}"
@@ -331,7 +331,7 @@ class PreAlertaTest < ActiveSupport::TestCase
       estado: "recibido", creado_por_tipo: "cliente", creado_por_id: @cliente.id
     )
     paquete = Paquete.create!(
-      tracking: "SYNC-CALLBACK-001", cliente: @cliente,
+      tracking: "SYNCCALLBACK001", cliente: @cliente,
       estado: "recibido_miami", peso: 5, peso_cobrar: 5
     )
     pa.pre_alerta_paquetes.create!(

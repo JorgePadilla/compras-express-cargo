@@ -262,9 +262,9 @@ module Cuenta
 
     def puede_mover?(pap)
       return false if @pre_alerta.finalizado?
+      return false if @pre_alerta.tipo_envio.single_package?
 
       if pap.paquete_id.present?
-        return false if @pre_alerta.tipo_envio.single_package?
         ESTADOS_MOVIBLES.include?(pap.paquete.estado)
       else
         true
