@@ -3,6 +3,8 @@ class PreAlertaPaquete < ApplicationRecord
   belongs_to :paquete, optional: true
 
   validates :tracking, presence: true, uniqueness: { scope: :pre_alerta_id, case_sensitive: false }
+  # allow_blank: true avoids double error ("can't be blank" + format) when tracking is empty;
+  # presence: true above already handles the blank case.
   validates :tracking, format: { with: /\A[A-Z0-9]+\z/, message: "solo permite letras y numeros" },
                        allow_blank: true
   validates :descripcion, presence: true
