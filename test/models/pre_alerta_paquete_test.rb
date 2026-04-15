@@ -55,13 +55,18 @@ class PreAlertaPaqueteTest < ActiveSupport::TestCase
   end
 
   test "should reject tracking with special characters" do
-    pap = PreAlertaPaquete.new(pre_alerta: @pre_alerta, tracking: "ABC-123!", descripcion: "Test")
+    pap = PreAlertaPaquete.new(pre_alerta: @pre_alerta, tracking: "ABC@123!", descripcion: "Test")
     assert_not pap.valid?
     assert pap.errors[:tracking].any?
   end
 
   test "should accept alphanumeric tracking" do
     pap = PreAlertaPaquete.new(pre_alerta: @pre_alerta, tracking: "ABC123", descripcion: "Test")
+    assert pap.valid?
+  end
+
+  test "should accept tracking with hyphens" do
+    pap = PreAlertaPaquete.new(pre_alerta: @pre_alerta, tracking: "ABC-123-DEF", descripcion: "Test")
     assert pap.valid?
   end
 
