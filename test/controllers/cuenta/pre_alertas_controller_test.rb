@@ -426,6 +426,30 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_match "recibido de", destino.historial
   end
 
+  # ── CKA/CKM move blocking ──
+  test "should not allow moving unlinked paquete from CKA PA" do
+    pa = pre_alertas(:cka_pa)
+    pap = pre_alerta_paquetes(:pap_cka_unlinked)
+    destino = pre_alertas(:consolidada_destino)
+
+    post mover_paquete_cuenta_pre_alerta_url(pa), params: {
+      pre_alerta_paquete_id: pap.id,
+      destino_id: destino.id
+    }
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+    assert_match "No se puede mover", flash[:alert]
+    assert_equal pa.id, pap.reload.pre_alerta_id
+  end
+
+  test "destinos returns empty for CKA PA" do
+    pa = pre_alertas(:cka_pa)
+    pap = pre_alerta_paquetes(:pap_cka_unlinked)
+
+    get destinos_disponibles_cuenta_pre_alerta_url(pa, pre_alerta_paquete_id: pap.id), as: :json
+    assert_response :success
+    assert_equal [], response.parsed_body
+  end
+
   # ── v4: step-3 save-failure re-renders step 3, not step 1 ──
   # Regression guard: new.html.erb reads params[:step] to decide which step to
   # render, but render :new after a failed step-3 POST only has params[:wizard_step].

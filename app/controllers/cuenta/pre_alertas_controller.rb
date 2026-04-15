@@ -257,17 +257,17 @@ module Cuenta
     # - Unlinked (paquete_id nil): can move to any consolidado PA (EXP/CER/CEM), NOT CKA/CKM
     # - Linked with recibido_miami/empacado/enviado_honduras: same tipo_envio consolidado PA only
     # - Linked with en_aduana or later: BLOCKED
-    # - Source or dest is CKA/CKM with linked paquete: BLOCKED
+    # - Source or dest is CKA/CKM: BLOCKED (both linked and unlinked)
     ESTADOS_MOVIBLES = %w[recibido_miami empacado enviado_honduras].freeze
 
     def puede_mover?(pap)
       return false if @pre_alerta.finalizado?
+      return false if @pre_alerta.tipo_envio.single_package? # CKA/CKM never allow moves
 
       if pap.paquete_id.present?
-        return false if @pre_alerta.tipo_envio.single_package?
         ESTADOS_MOVIBLES.include?(pap.paquete.estado)
       else
-        true
+        true # unlinked paquetes on non-CKA/CKM PAs can always move
       end
     end
 

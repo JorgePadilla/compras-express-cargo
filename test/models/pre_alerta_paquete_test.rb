@@ -44,8 +44,25 @@ class PreAlertaPaqueteTest < ActiveSupport::TestCase
   end
 
   test "normalizes tracking to uppercase" do
-    pap = PreAlertaPaquete.create!(pre_alerta: @pre_alerta, tracking: "  lower case track  ", descripcion: "Test")
-    assert_equal "LOWER CASE TRACK", pap.tracking
+    pap = PreAlertaPaquete.create!(pre_alerta: @pre_alerta, tracking: "lowercase123", descripcion: "Test")
+    assert_equal "LOWERCASE123", pap.tracking
+  end
+
+  test "should reject tracking with spaces" do
+    pap = PreAlertaPaquete.new(pre_alerta: @pre_alerta, tracking: "ABC 123", descripcion: "Test")
+    assert_not pap.valid?
+    assert pap.errors[:tracking].any?
+  end
+
+  test "should reject tracking with special characters" do
+    pap = PreAlertaPaquete.new(pre_alerta: @pre_alerta, tracking: "ABC-123!", descripcion: "Test")
+    assert_not pap.valid?
+    assert pap.errors[:tracking].any?
+  end
+
+  test "should accept alphanumeric tracking" do
+    pap = PreAlertaPaquete.new(pre_alerta: @pre_alerta, tracking: "ABC123", descripcion: "Test")
+    assert pap.valid?
   end
 
   test "paquete is optional" do

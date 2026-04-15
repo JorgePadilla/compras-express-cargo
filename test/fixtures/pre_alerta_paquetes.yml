@@ -44,3 +44,9 @@ pap_disponible_juan:
   descripcion: "Paquete en bodega"
   paquete: disponible_entrega_juan
   fecha: <%= Date.current %>
+
+pap_cka_unlinked:
+  pre_alerta: cka_pa
+  tracking: "CKA000001"
+  descripcion: "Caja grande sin vincular"
+  fecha: <%= Date.current %>

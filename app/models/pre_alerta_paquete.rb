@@ -3,13 +3,17 @@ class PreAlertaPaquete < ApplicationRecord
   belongs_to :paquete, optional: true
 
   validates :tracking, presence: true, uniqueness: { scope: :pre_alerta_id, case_sensitive: false }
+  # allow_blank: true avoids double error ("can't be blank" + format) when tracking is empty;
+  # presence: true above already handles the blank case.
+  validates :tracking, format: { with: /\A[A-Z0-9]+\z/, message: "solo permite letras y numeros" },
+                       allow_blank: true
   validates :descripcion, presence: true
 
   scope :sin_vincular, -> { where(paquete_id: nil) }
   scope :vinculados, -> { where.not(paquete_id: nil) }
 
   before_validation :set_default_fecha
-  before_save :normalize_tracking
+  before_validation :normalize_tracking
 
   # Links unlinked pre_alerta_paquetes by tracking to a given paquete.
   # Advances parent pre_alerta estado to "recibido" if still in pre_alerta state.
