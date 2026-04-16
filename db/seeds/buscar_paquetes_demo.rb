@@ -10,15 +10,21 @@
 #
 # Idempotent: safe to re-run. Matches by tracking.
 
-require_relative "../../config/environment"
+require_relative "../../config/environment" unless defined?(Rails)
 
-juan = Cliente.find_by!(codigo: "CEC-001")
+# Cliente destino: Juan Perez (creado por seeds sample data) o el primero con codigo CEC-001
+juan = Cliente.find_by(nombre: "Juan", apellido: "Perez") || Cliente.find_by(codigo: "CEC-001")
+unless juan
+  puts "⚠️  No se encontro cliente Juan Perez ni CEC-001 — corre primero `SEED_SAMPLE_DATA=1 bin/rails db:seed`"
+  exit 1
+end
+
 cer  = TipoEnvio.find_by!(codigo: "cer")
 cka  = TipoEnvio.find_by!(codigo: "cka")
-digitador = User.find_by(rol: "digitador") || User.first
+digitador = User.where(rol: %w[digitador_miami supervisor_miami]).first || User.first
 
 puts "═══ Buscar Paquetes demo seed ═══"
-puts "Cliente: #{juan.codigo} (#{juan.nombre})"
+puts "Cliente: #{juan.codigo} (#{juan.nombre} #{juan.apellido})"
 puts "Tipo envio: CER (id=#{cer.id})"
 puts ""
 

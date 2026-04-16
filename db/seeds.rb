@@ -261,6 +261,10 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   end
 
   puts "  ✓ #{PreAlerta.count} pre-alertas"
+
+  # Demo data para el modal "Buscar Paquetes" en /cuenta/pre_alertas/:id/edit
+  # Crea paquetes sueltos + 2 PAs CER consolidando + 1 PA CKA (para verificar bloqueo)
+  load Rails.root.join("db/seeds/buscar_paquetes_demo.rb")
 end
 
 # ── Empresa singleton (datos fiscales para PDFs y mailers) ──
