@@ -46,6 +46,10 @@ class Paquete < ApplicationRecord
   scope :sin_manifiesto, -> { where(manifiesto_id: nil).where.not(estado: %w[anulado entregado retornado desechado]) }
   scope :facturables, -> { where(estado: "disponible_entrega", pre_factura_id: nil, venta_id: nil) }
   scope :entregables, -> { where(estado: "facturado", entrega_id: nil) }
+  # Paquetes sin vincular a ninguna pre_alerta_paquete (sueltos en bodega)
+  scope :sin_pre_alerta, -> {
+    left_joins(:pre_alerta_paquetes).where(pre_alerta_paquetes: { id: nil })
+  }
 
   before_validation :generate_guia, on: :create, if: -> { guia.blank? }
   before_save :set_fecha_recibido, if: -> { fecha_recibido_miami.blank? && new_record? }
