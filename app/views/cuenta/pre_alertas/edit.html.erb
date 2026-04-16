@@ -75,11 +75,11 @@
       </div>
     </div>
 
-    <%# Notas de Consolidacion (only for consolidated, non-finalized) %>
+    <%# Notas de Consolidacion (only for consolidated, non-finalized, no paquetes en_aduana+) %>
     <% if @pre_alerta.consolidado? %>
       <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
         <label class="block text-sm font-medium text-gray-700 mb-1.5">Notas de Consolidacion</label>
-        <% if @pre_alerta.consolidando? %>
+        <% if @pre_alerta.notas_editables? %>
           <%= f.text_area :notas_grupo, rows: 2,
               placeholder: "Notas opcionales para este grupo de paquetes...",
               class: "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm

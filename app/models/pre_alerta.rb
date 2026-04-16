@@ -98,6 +98,21 @@ class PreAlerta < ApplicationRecord
     consolidado? && !finalizado?
   end
 
+  # Estados where a linked paquete being at this estado or later locks notas_grupo editing.
+  # Mirrors the "BLOCKED" row of the move/delete rules matrix.
+  ESTADOS_QUE_BLOQUEAN_NOTAS = %w[
+    en_aduana disponible_entrega pre_facturado facturado en_reparto entregado
+    retenido retornado desechado anulado
+  ].freeze
+
+  def notas_editables?
+    return false unless consolidando?
+
+    pre_alerta_paquetes.includes(:paquete).none? do |pap|
+      pap.paquete && ESTADOS_QUE_BLOQUEAN_NOTAS.include?(pap.paquete.estado)
+    end
+  end
+
   def append_historial!(entry)
     current = historial.to_s
     new_historial = current.present? ? "#{current}\n#{entry}" : entry
