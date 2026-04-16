@@ -50,3 +50,20 @@ pap_cka_unlinked:
   tracking: "CKA000001"
   descripcion: "Caja grande sin vincular"
   fecha: <%= Date.current %>
+
+# PAP que vincula un paquete aereo/recibido_miami a cka_pa — para bloquear pull desde CKA
+pap_cka_linked:
+  pre_alerta: cka_pa
+  tracking: "CKA000100"
+  descripcion: "Paquete vinculado a CKA"
+  paquete: cka_linked_juan
+  fecha: <%= Date.current %>
+
+# PAP que vincula un paquete aereo/recibido_miami a la PA consolidando :recibida
+# → usado para probar "pull" desde otra PA consolidando hacia :consolidada_destino
+pap_vinculado_aereo:
+  pre_alerta: recibida
+  tracking: "1Z999VINC001"
+  descripcion: "Paquete vinculado aereo"
+  paquete: vinculado_aereo_juan
+  fecha: <%= Date.current %>

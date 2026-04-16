@@ -1,7 +1,7 @@
 module Cuenta
   class PreAlertasController < BaseController
-    before_action :set_pre_alerta, only: %i[show edit update anular mover_paquete destinos_disponibles eliminar_paquete]
-    helper_method :puede_mover?
+    before_action :set_pre_alerta, only: %i[show edit update anular mover_paquete destinos_disponibles eliminar_paquete paquetes_disponibles agregar_paquete]
+    helper_method :puede_mover?, :puede_buscar?
 
     def index
       @pre_alertas = current_cliente.pre_alertas.includes(:pre_alerta_paquetes, :tipo_envio).activas.recientes
@@ -216,6 +216,117 @@ module Cuenta
       end
     end
 
+    def paquetes_disponibles
+      unless puede_buscar?
+        render json: []
+        return
+      end
+
+      paquetes = candidatos_para_buscar
+
+      render json: paquetes.map { |p|
+        pap_origen = p.pre_alerta_paquetes.joins(:pre_alerta)
+                       .where(pre_alertas: { consolidado: true, finalizado: false })
+                       .where.not(pre_alertas: { id: @pre_alerta.id })
+                       .first
+        origen_info = if pap_origen
+          {
+            numero: pap_origen.pre_alerta.numero_documento,
+            titulo: pap_origen.pre_alerta.titulo,
+            pap_id: pap_origen.id
+          }
+        end
+
+        {
+          id: p.id,
+          tracking: p.tracking,
+          guia: p.guia,
+          descripcion: p.descripcion.presence || "—",
+          estado: p.estado,
+          estado_label: p.estado.humanize,
+          peso_cobrar: p.peso_cobrar&.to_f,
+          fecha_recibido: p.fecha_recibido_miami&.strftime("%d/%m/%Y"),
+          tipo_envio: p.tipo_envio&.nombre || "—",
+          origen: origen_info
+        }
+      }
+    end
+
+    def agregar_paquete
+      paquete = current_cliente.paquetes.find(params[:paquete_id])
+
+      unless puede_buscar?
+        redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
+                    alert: "No se puede agregar paquetes a esta pre-alerta."
+        return
+      end
+
+      unless paquete.tipo_envio_id == @pre_alerta.tipo_envio_id &&
+             ESTADOS_MOVIBLES.include?(paquete.estado)
+        redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
+                    alert: "El paquete no cumple los requisitos para ser agregado."
+        return
+      end
+
+      # Buscar CUALQUIER PAP vinculado a otra PA activa (no solo consolidando) para
+      # poder detectar si el origen es CKA/CKM y bloquear el pull.
+      pap_origen = paquete.pre_alerta_paquetes
+                          .joins(:pre_alerta)
+                          .where(pre_alertas: { deleted_at: nil })
+                          .where.not(pre_alertas: { estado: "anulado" })
+                          .where.not(pre_alertas: { id: @pre_alerta.id })
+                          .first
+
+      blocked_cka = false
+      PreAlertaPaquete.transaction do
+        timestamp = Time.current.strftime("%d/%m/%Y %H:%M")
+        paq_desc = paquete.descripcion.presence || paquete.tracking
+
+        if pap_origen
+          if pap_origen.pre_alerta.tipo_envio.single_package?
+            blocked_cka = true
+            raise ActiveRecord::Rollback
+          end
+
+          source_pa = pap_origen.pre_alerta
+          notas_origen = source_pa.notas_grupo.presence
+          notas_suffix = notas_origen ? " Notas del grupo origen: \"#{notas_origen}\"." : ""
+
+          origen_entry  = "[#{timestamp}] Paquete '#{paq_desc}' (#{paquete.tracking}) jalado a #{@pre_alerta.numero_documento} — #{@pre_alerta.titulo}.#{notas_suffix}"
+          destino_entry = "[#{timestamp}] Paquete '#{paq_desc}' (#{paquete.tracking}) jalado de #{source_pa.numero_documento} — #{source_pa.titulo}.#{notas_suffix}"
+
+          pap_origen.update!(pre_alerta: @pre_alerta)
+          source_pa.append_historial!(origen_entry)
+          @pre_alerta.append_historial!(destino_entry)
+
+          PreAlertaMailer.confirmacion(source_pa).deliver_later
+        else
+          @pre_alerta.pre_alerta_paquetes.create!(
+            paquete: paquete,
+            tracking: paquete.tracking,
+            descripcion: paq_desc,
+            fecha: Date.current
+          )
+          destino_entry = "[#{timestamp}] Paquete suelto '#{paq_desc}' (#{paquete.tracking}) agregado desde bodega."
+          @pre_alerta.append_historial!(destino_entry)
+        end
+      end
+
+      if blocked_cka
+        redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
+                    alert: "No se puede jalar un paquete de una pre-alerta CKA/CKM."
+        return
+      end
+
+      PreAlertaMailer.confirmacion(@pre_alerta).deliver_later
+
+      redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
+                  notice: "Paquete agregado a la pre-alerta."
+    rescue ActiveRecord::RecordNotFound
+      redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
+                  alert: "Paquete no encontrado."
+    end
+
     private
 
     def set_pre_alerta
@@ -336,6 +447,36 @@ module Cuenta
       end
 
       base.order(created_at: :desc)
+    end
+
+    def puede_buscar?
+      return false if @pre_alerta.finalizado?
+      return false unless @pre_alerta.consolidando?
+      return false if @pre_alerta.tipo_envio.single_package?
+      true
+    end
+
+    def candidatos_para_buscar
+      tipo_id = @pre_alerta.tipo_envio_id
+
+      # Paquetes sueltos del cliente, mismo tipo_envio, estado movible
+      sueltos = current_cliente.paquetes
+                  .sin_pre_alerta
+                  .where(estado: ESTADOS_MOVIBLES)
+                  .where(tipo_envio_id: tipo_id)
+
+      # Paquetes vinculados a otras PAs consolidando del cliente (NO CKA/CKM)
+      vinculados = current_cliente.paquetes
+                     .where(estado: ESTADOS_MOVIBLES)
+                     .where(tipo_envio_id: tipo_id)
+                     .joins(pre_alerta_paquetes: { pre_alerta: :tipo_envio })
+                     .where(pre_alertas: { consolidado: true, finalizado: false })
+                     .where.not(pre_alertas: { id: @pre_alerta.id })
+                     .where("tipo_envios.max_paquetes_por_accion IS NULL OR tipo_envios.max_paquetes_por_accion != 1")
+
+      (sueltos.to_a + vinculados.to_a).uniq
+        .sort_by { |p| p.fecha_recibido_miami || p.created_at }
+        .reverse
     end
   end
 end

@@ -135,6 +135,8 @@ Rails.application.routes.draw do
         post :mover_paquete
         get  :destinos_disponibles
         delete :eliminar_paquete
+        get  :paquetes_disponibles
+        post :agregar_paquete
       end
     end
     resources :facturas, only: %i[index show] do
