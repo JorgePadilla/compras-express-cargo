@@ -248,7 +248,14 @@
     <%
       back_step = (selected_tipo && selected_tipo.consolidable) ? 2 : 1
     %>
-    <%= form_with url: cuenta_pre_alertas_path, method: :post, class: "space-y-6 animate-fade-in-up" do |f| %>
+    <%= form_with url: cuenta_pre_alertas_path, method: :post,
+        data: {
+          controller: "wizard-draft",
+          wizard_draft_tipo_envio_id_value: @wizard["tipo_envio_id"],
+          wizard_draft_consolidado_value: @wizard["consolidado"] ? "true" : "false",
+          action: "input->wizard-draft#saveDraft submit->wizard-draft#clearDraft"
+        },
+        class: "space-y-6 animate-fade-in-up" do |f| %>
       <%= hidden_field_tag :wizard_step, 3 %>
 
       <div class="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-100">

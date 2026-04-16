@@ -22,27 +22,66 @@
   </div>
 </div>
 
-<%# Card grid %>
-<% if @pre_alertas.any? %>
+<%# Card grid (draft card + real pre-alertas) %>
+<div data-controller="draft-banner">
   <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+    <%# Draft card — revealed by Stimulus when localStorage has a draft %>
+    <div data-draft-banner-target="card"
+         class="hidden bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow">
+      <%# Row 1: Titulo + DRAFT badge %>
+      <div class="flex items-start justify-between mb-1">
+        <p class="font-semibold text-gray-800 text-sm leading-tight" data-draft-banner-target="titulo">Pre-alerta sin título</p>
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-cec-gold/20 text-cec-navy ring-1 ring-cec-gold/40 shrink-0 ml-2">BORRADOR</span>
+      </div>
+
+      <%# Row 2: helper text %>
+      <p class="text-xs text-gray-500 mb-2">Sin guardar — solo en este dispositivo</p>
+
+      <%# Row 3: Info line (proveedor · tracking) %>
+      <p class="text-xs text-gray-400 mb-3" data-draft-banner-target="info"></p>
+
+      <%# Row 4: Estado row %>
+      <div class="flex items-center justify-between text-sm mb-3">
+        <div class="flex items-center gap-1 text-gray-500">
+          <%= heroicon "document-text", variant: :outline, options: { class: "w-4 h-4" } %>
+          <span>Borrador</span>
+        </div>
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 ring-1 ring-amber-200">En progreso</span>
+      </div>
+
+      <%# Row 5: Actions %>
+      <div class="pt-3 border-t border-gray-100 flex gap-3">
+        <a href="<%= new_cuenta_pre_alerta_path %>" data-draft-banner-target="continueLink"
+           class="text-xs text-cec-teal hover:text-cec-teal-dark font-semibold">Continuar</a>
+        <button type="button" data-action="draft-banner#discard"
+                class="text-xs text-gray-500 hover:text-red-600 font-medium">
+          Descartar
+        </button>
+      </div>
+    </div>
+
     <% @pre_alertas.each do |pre_alerta| %>
       <%= render PreAlertaCardComponent.new(pre_alerta: pre_alerta) %>
     <% end %>
   </div>
 
-  <div class="mt-6">
-    <%= paginate @pre_alertas %>
-  </div>
-<% else %>
-  <%= render EmptyStateComponent.new(
-    icon: "bell-alert",
-    title: "No tienes pre-alertas",
-    description: "Crea una pre-alerta para declarar tus paquetes antes de que lleguen."
-  ) do |empty| %>
-    <% empty.with_action do %>
-      <%= render ButtonComponent.new(variant: :gold, icon: "plus", href: new_cuenta_pre_alerta_path) do %>
-        Crear Pre-Alerta
+  <% if @pre_alertas.any? %>
+    <div class="mt-6">
+      <%= paginate @pre_alertas %>
+    </div>
+  <% else %>
+    <div data-draft-banner-target="emptyState">
+      <%= render EmptyStateComponent.new(
+        icon: "bell-alert",
+        title: "No tienes pre-alertas",
+        description: "Crea una pre-alerta para declarar tus paquetes antes de que lleguen."
+      ) do |empty| %>
+        <% empty.with_action do %>
+          <%= render ButtonComponent.new(variant: :gold, icon: "plus", href: new_cuenta_pre_alerta_path) do %>
+            Crear Pre-Alerta
+          <% end %>
+        <% end %>
       <% end %>
-    <% end %>
+    </div>
   <% end %>
-<% end %>
+</div>

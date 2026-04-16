@@ -14,6 +14,18 @@ module Cuenta
     end
 
     def new
+      # Resume from a client-side draft: restore wizard session state from URL params
+      if params[:resume] == "1" && params[:tipo_envio_id].present?
+        tipo = TipoEnvio.activos.find_by(id: params[:tipo_envio_id])
+        if tipo
+          session[:pre_alerta_wizard] = {
+            "tipo_envio_id" => tipo.id,
+            "con_reempaque" => tipo.con_reempaque,
+            "consolidado"   => params[:consolidado] == "1"
+          }
+        end
+      end
+
       @pre_alerta = current_cliente.pre_alertas.build
       @wizard = session[:pre_alerta_wizard] || {}
       @pre_alerta.con_reempaque = @wizard["con_reempaque"]
