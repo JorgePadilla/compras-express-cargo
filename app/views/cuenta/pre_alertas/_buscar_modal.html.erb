@@ -1,0 +1,87 @@
+<%# Buscar paquetes modal — controlled by pre-alerta-buscar Stimulus controller %>
+<div data-pre-alerta-buscar-target="modal"
+     class="hidden fixed inset-0 z-50 flex items-center justify-center">
+  <%# Backdrop %>
+  <div data-action="click->pre-alerta-buscar#close"
+       class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"></div>
+
+  <%# Card %>
+  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden">
+    <%# Header %>
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-cec-teal/10 flex items-center justify-center">
+          <%= heroicon "magnifying-glass", variant: :outline, options: { class: "w-5 h-5 text-cec-teal" } %>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold text-gray-800">Buscar Paquetes</h3>
+          <p class="text-xs text-gray-500">Agrega paquetes existentes a esta pre-alerta</p>
+        </div>
+      </div>
+      <button type="button" data-action="click->pre-alerta-buscar#close"
+              class="text-gray-400 hover:text-gray-600">
+        <%= heroicon "x-mark", variant: :outline, options: { class: "w-5 h-5" } %>
+      </button>
+    </div>
+
+    <%# Search input %>
+    <div class="px-6 py-3 border-b border-gray-100 bg-gray-50">
+      <div class="relative">
+        <%= heroicon "magnifying-glass", variant: :outline,
+              options: { class: "w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" } %>
+        <input type="text"
+               data-pre-alerta-buscar-target="filterInput"
+               data-action="input->pre-alerta-buscar#filter"
+               placeholder="Filtrar por tracking o descripcion..."
+               class="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm
+                      focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
+      </div>
+    </div>
+
+    <%# Body %>
+    <div class="px-6 py-4 max-h-[28rem] overflow-y-auto">
+      <%# Loading %>
+      <div data-pre-alerta-buscar-target="loading" class="text-center py-12">
+        <div class="inline-block w-8 h-8 border-2 border-cec-teal/30 border-t-cec-teal rounded-full animate-spin"></div>
+        <p class="text-sm text-gray-500 mt-3">Buscando paquetes disponibles...</p>
+      </div>
+
+      <%# List (populated by Stimulus) %>
+      <div data-pre-alerta-buscar-target="list" class="hidden space-y-2"></div>
+
+      <%# Empty %>
+      <div data-pre-alerta-buscar-target="empty" class="hidden text-center py-12">
+        <%= heroicon "inbox", variant: :outline,
+              options: { class: "w-12 h-12 text-gray-300 mx-auto mb-3" } %>
+        <p class="text-sm font-medium text-gray-600">No hay paquetes disponibles</p>
+        <p class="text-xs text-gray-400 mt-1">
+          Los paquetes con mismo tipo de envio (<%= pre_alerta.tipo_envio.codigo.upcase %>)
+          en estados movibles apareceran aqui.
+        </p>
+      </div>
+    </div>
+
+    <%# Footer %>
+    <%= form_with url: agregar_paquete_cuenta_pre_alerta_path(pre_alerta), method: :post,
+          data: { pre_alerta_buscar_target: "form" },
+          class: "px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center gap-3" do |f| %>
+      <p class="text-xs text-gray-500 truncate" data-pre-alerta-buscar-target="selectedLabel">
+        Selecciona un paquete para agregar
+      </p>
+      <input type="hidden" name="paquete_id" data-pre-alerta-buscar-target="paqueteIdField" value="">
+      <div class="flex gap-3 shrink-0">
+        <button type="button" data-action="click->pre-alerta-buscar#close"
+                class="text-gray-600 hover:text-gray-800 text-sm font-medium px-4 py-2">
+          Cancelar
+        </button>
+        <button type="submit" data-pre-alerta-buscar-target="confirmBtn"
+                disabled
+                class="inline-flex items-center gap-2 bg-cec-teal text-white font-semibold px-5 py-2 rounded-lg text-sm
+                       hover:bg-cec-teal-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+          <%= heroicon "plus-circle", variant: :outline, options: { class: "w-4 h-4" } %>
+          Agregar
+        </button>
+      </div>
+    <% end %>
+  </div>
+</div>
