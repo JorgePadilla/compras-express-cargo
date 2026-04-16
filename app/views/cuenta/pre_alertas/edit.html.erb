@@ -2,6 +2,7 @@
 <div data-controller="pre-alerta-editor pre-alerta-mover"
      data-pre-alerta-editor-max-paquetes-value="<%= max_paquetes || -1 %>"
      data-pre-alerta-editor-consolidado-value="<%= @pre_alerta.consolidando? %>"
+     data-pre-alerta-editor-auto-add-value="<%= params[:agregar] == "1" %>"
      data-pre-alerta-editor-cancel-url-value="<%= cuenta_pre_alertas_path %>"
      data-pre-alerta-editor-autosave-url-value="<%= cuenta_pre_alerta_path(@pre_alerta) %>"
      data-pre-alerta-mover-destinos-url-value="<%= destinos_disponibles_cuenta_pre_alerta_path(@pre_alerta) %>"

@@ -269,7 +269,7 @@ module Cuenta
         if @pre_alerta.save
           if params[:agregar_otro] == "1"
             # Keep wizard session so user can continue adding paquetes in the edit view
-            redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
+            redirect_to edit_cuenta_pre_alerta_path(@pre_alerta, agregar: 1),
                         notice: "¡Paquete agregado a #{@pre_alerta.numero_documento}! Agrega más paquetes abajo."
           else
             # All other cases: save, notify, go home with success modal

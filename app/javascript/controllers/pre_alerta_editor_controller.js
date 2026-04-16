@@ -6,7 +6,8 @@ export default class extends Controller {
     maxPaquetes: { type: Number, default: -1 },
     cancelUrl: { type: String, default: "" },
     consolidado: { type: Boolean, default: false },
-    autosaveUrl: { type: String, default: "" }
+    autosaveUrl: { type: String, default: "" },
+    autoAdd: { type: Boolean, default: false }
   }
 
   _newIndex = Date.now()
@@ -22,6 +23,10 @@ export default class extends Controller {
     if (this.consolidadoValue && this.autosaveUrlValue) {
       this._handleInput = this.scheduleAutosave.bind(this)
       this.formTarget.addEventListener("input", this._handleInput)
+    }
+
+    if (this.autoAddValue) {
+      this.addPaquete()
     }
   }
 
