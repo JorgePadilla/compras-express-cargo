@@ -485,17 +485,19 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
 
   test "autosave returns 422 on validation error" do
     pa = pre_alertas(:consolidada_destino)
-    # Submit with a paquete that has blank tracking (required unless optional tracking mode)
+    # tracking with invalid characters passes reject_if but fails format validation
     patch cuenta_pre_alerta_url(pa), params: {
       autosave: "true",
       pre_alerta: {
         pre_alerta_paquetes_attributes: {
-          "0" => { tracking: "", descripcion: "" }
+          "0" => { tracking: "INVALID SPACES", descripcion: "Test" }
         }
       }
     }, as: :json
-    # Either saves (if tracking is optional) or returns 422
-    assert_includes [200, 422], response.status
+    assert_response :unprocessable_entity
+    body = response.parsed_body
+    assert_equal "error", body["status"]
+    assert body["errors"].any?
   end
 
   test "autosave rejected on finalized PA" do

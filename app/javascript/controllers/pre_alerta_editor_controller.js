@@ -193,12 +193,14 @@ export default class extends Controller {
       // Give it an ID for DOM reference
       row.id = `paquete_row_${dbId}`
 
+      const firstTd = row.querySelector("td")
+
       // Inject hidden id field
       const idInput = document.createElement("input")
       idInput.type = "hidden"
       idInput.name = `pre_alerta[pre_alerta_paquetes_attributes][${index}][id]`
       idInput.value = dbId
-      row.querySelector("td").prepend(idInput)
+      firstTd.prepend(idInput)
 
       // Inject hidden _destroy field + target so removePaquete works
       const destroyInput = document.createElement("input")
@@ -206,7 +208,7 @@ export default class extends Controller {
       destroyInput.name = `pre_alerta[pre_alerta_paquetes_attributes][${index}][_destroy]`
       destroyInput.value = "0"
       destroyInput.dataset.preAlertaEditorTarget = "destroyField"
-      row.querySelector("td").prepend(destroyInput)
+      firstTd.prepend(destroyInput)
     }
   }
 
@@ -221,13 +223,17 @@ export default class extends Controller {
     hiddenRows.forEach(row => row.remove())
   }
 
+  static STATUS_COLORS = ["text-gray-400", "text-cec-teal", "text-red-500"]
+
   _showStatus(message, colorClass, fadeAfterMs = 0) {
     if (!this.hasStatusTarget) return
 
     clearTimeout(this._statusTimer)
     const el = this.statusTarget
     el.textContent = message
-    el.className = `text-xs ${colorClass} transition-opacity duration-300`
+    // Swap only the color class, preserving base classes from the template
+    this.constructor.STATUS_COLORS.forEach(c => el.classList.remove(c))
+    el.classList.add(colorClass)
     el.style.opacity = "1"
 
     if (fadeAfterMs > 0) {
