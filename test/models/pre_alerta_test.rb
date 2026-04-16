@@ -369,6 +369,47 @@ class PreAlertaTest < ActiveSupport::TestCase
     assert_not pa.consolidando?
   end
 
+  # ── notas_editables? ──
+  test "notas_editables? false when not consolidando" do
+    pa = pre_alertas(:activa) # not consolidado
+    assert_not pa.notas_editables?
+  end
+
+  test "notas_editables? false when finalizado" do
+    pa = pre_alertas(:finalizada)
+    assert_not pa.notas_editables?
+  end
+
+  test "notas_editables? true when consolidando and no linked paquete" do
+    pa = pre_alertas(:consolidada_destino) # consolidado=true, finalizado=false, pap_destino unlinked
+    assert pa.notas_editables?
+  end
+
+  test "notas_editables? true when consolidando and all linked paquetes in movible estado" do
+    pa = pre_alertas(:consolidada_destino)
+    # Link a paquete in recibido_miami to this PA
+    paquete = paquetes(:recibido) # estado: recibido_miami
+    pa.pre_alerta_paquetes.create!(tracking: "MOVIBLE-TEST-001", descripcion: "Test", paquete: paquete)
+    assert pa.reload.notas_editables?
+  end
+
+  test "notas_editables? false when any linked paquete is in en_aduana" do
+    pa = pre_alertas(:consolidada_destino)
+    paquete = Paquete.create!(
+      tracking: "ADUANA-TEST-001", cliente: @cliente,
+      estado: "en_aduana", peso: 5, peso_cobrar: 5
+    )
+    pa.pre_alerta_paquetes.create!(tracking: paquete.tracking, descripcion: "Test", paquete: paquete)
+    assert_not pa.reload.notas_editables?
+  end
+
+  test "notas_editables? false when any linked paquete is in entregado" do
+    pa = pre_alertas(:consolidada_destino)
+    paquete = paquetes(:entregado) # estado: entregado
+    pa.pre_alerta_paquetes.create!(tracking: "ENTREGADO-TEST-001", descripcion: "Test", paquete: paquete)
+    assert_not pa.reload.notas_editables?
+  end
+
   test "append_historial! appends to nil historial" do
     pa = pre_alertas(:activa)
     assert_nil pa.historial

@@ -57,14 +57,23 @@
       <% end %>
     </td>
     <td class="px-4 py-2 text-center">
-      <% unless pap.paquete_id.present? || @pre_alerta.finalizado? %>
-        <% if pap.persisted? && !@pre_alerta.consolidando? %>
+      <% if puede_eliminar?(pap) %>
+        <% if pap.persisted? && pap.paquete_id.present? %>
+          <%# Linked paquete in movible estado: server delete with long warning %>
+          <%= button_to eliminar_paquete_cuenta_pre_alerta_path(@pre_alerta, pre_alerta_paquete_id: pap.id),
+                method: :delete, class: "text-red-400 hover:text-red-600",
+                data: { turbo_confirm: "¿Borrar este paquete de la pre-alerta? El paquete físico permanece en nuestra bodega. Si cambias de opinión tendrás que crear una nueva pre-alerta." } do %>
+            <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
+          <% end %>
+        <% elsif pap.persisted? && !@pre_alerta.consolidando? %>
+          <%# Unlinked + not consolidando: server delete %>
           <%= button_to eliminar_paquete_cuenta_pre_alerta_path(@pre_alerta, pre_alerta_paquete_id: pap.id),
                 method: :delete, class: "text-red-400 hover:text-red-600",
                 data: { turbo_confirm: "¿Eliminar este paquete?" } do %>
             <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
           <% end %>
         <% else %>
+          <%# Unlinked + consolidando (or new row): JS-side remove keeps editor state %>
           <input type="hidden" name="pre_alerta[pre_alerta_paquetes_attributes][<%= index %>][_destroy]" value="0" data-pre-alerta-editor-target="destroyField">
           <button type="button" data-action="click->pre-alerta-editor#removePaquete"
                   class="text-red-400 hover:text-red-600">
