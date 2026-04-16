@@ -1,7 +1,7 @@
 module Cuenta
   class PreAlertasController < BaseController
     before_action :set_pre_alerta, only: %i[show edit update anular mover_paquete destinos_disponibles eliminar_paquete paquetes_disponibles agregar_paquete]
-    helper_method :puede_mover?, :puede_buscar?
+    helper_method :puede_mover?, :puede_eliminar?, :puede_buscar?
 
     def index
       @pre_alertas = current_cliente.pre_alertas.includes(:pre_alerta_paquetes, :tipo_envio).activas.recientes
@@ -143,8 +143,11 @@ module Cuenta
       PreAlertaPaquete.transaction do
         timestamp = Time.current.strftime("%d/%m/%Y %H:%M")
         paq_desc = pap.descripcion.presence || pap.tracking.presence || "sin descripcion"
-        origen_entry = "[#{timestamp}] Paquete '#{paq_desc}' (#{pap.tracking}) movido a #{destino.numero_documento} — #{destino.titulo}."
-        destino_entry = "[#{timestamp}] Paquete '#{paq_desc}' (#{pap.tracking}) recibido de #{@pre_alerta.numero_documento} — #{@pre_alerta.titulo}."
+        notas_origen = @pre_alerta.notas_grupo.presence
+        notas_suffix = notas_origen ? " Notas del grupo origen: \"#{notas_origen}\"." : ""
+
+        origen_entry  = "[#{timestamp}] Paquete '#{paq_desc}' (#{pap.tracking}) movido a #{destino.numero_documento} — #{destino.titulo}.#{notas_suffix}"
+        destino_entry = "[#{timestamp}] Paquete '#{paq_desc}' (#{pap.tracking}) recibido de #{@pre_alerta.numero_documento} — #{@pre_alerta.titulo}.#{notas_suffix}"
 
         pap.update!(pre_alerta: destino)
 
@@ -195,13 +198,27 @@ module Cuenta
       end
 
       if pap.paquete_id.present?
-        redirect_to edit_cuenta_pre_alerta_path(@pre_alerta), alert: "No se puede eliminar un paquete vinculado."
-        return
+        # Linked paquete: allowed only for non-CKA/CKM source + movible estado
+        if @pre_alerta.tipo_envio.single_package?
+          redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
+                      alert: "No se puede eliminar un paquete vinculado de una pre-alerta #{@pre_alerta.tipo_envio.nombre}."
+          return
+        end
+        unless ESTADOS_MOVIBLES.include?(pap.paquete.estado)
+          redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
+                      alert: "No se puede eliminar: el paquete ya avanzó más allá del reempaque."
+          return
+        end
       end
 
       timestamp = Time.current.strftime("%d/%m/%Y %H:%M")
       paq_desc = pap.descripcion.presence || pap.tracking.presence || "sin descripcion"
-      @pre_alerta.append_historial!("[#{timestamp}] Paquete '#{paq_desc}' (#{pap.tracking}) eliminado.")
+      historial_entry = if pap.paquete_id.present?
+        "[#{timestamp}] Paquete '#{paq_desc}' (#{pap.tracking}) removido de la pre-alerta; el paquete físico permanece en bodega."
+      else
+        "[#{timestamp}] Paquete '#{paq_desc}' (#{pap.tracking}) eliminado."
+      end
+      @pre_alerta.append_historial!(historial_entry)
 
       pap.destroy!
       PreAlertaMailer.confirmacion(@pre_alerta).deliver_later
@@ -402,22 +419,35 @@ module Cuenta
       params.permit(:tracking, :descripcion, :instrucciones).to_h
     end
 
-    # Move rules matrix:
-    # - Unlinked (paquete_id nil): can move to any consolidado PA (EXP/CER/CEM), NOT CKA/CKM
-    # - Linked with recibido_miami/empacado/enviado_honduras: same tipo_envio consolidado PA only
-    # - Linked with en_aduana or later: BLOCKED
-    # - Source or dest is CKA/CKM: BLOCKED (both linked and unlinked)
+    # Move / delete rules matrix (Abril 2026):
+    # - Unlinked (paquete_id nil): can move to any consolidado PA (EXP/CER/CEM) and can be
+    #   deleted from the source PA. Works for any source tipo, including CKA/CKM.
+    # - Linked with recibido_miami / empacado / enviado_honduras: can move to same-tipo
+    #   consolidando PA; PAP can be deleted (Paquete stays in warehouse). BLOCKED for
+    #   CKA/CKM sources.
+    # - Linked with en_aduana or later: BLOCKED.
+    # - Destino must be consolidando EXP/CER/CEM (never CKA/CKM).
     ESTADOS_MOVIBLES = %w[recibido_miami empacado enviado_honduras].freeze
 
     def puede_mover?(pap)
       return false if @pre_alerta.finalizado?
-      return false if @pre_alerta.tipo_envio.single_package? # CKA/CKM never allow moves
 
       if pap.paquete_id.present?
+        # Linked paquetes: cannot move from CKA/CKM, must be in movible estado
+        return false if @pre_alerta.tipo_envio.single_package?
         ESTADOS_MOVIBLES.include?(pap.paquete.estado)
       else
-        true # unlinked paquetes on non-CKA/CKM PAs can always move
+        # Unlinked (estado PRE_ALERTA): always movable, even from CKA/CKM
+        true
       end
+    end
+
+    def puede_eliminar?(pap)
+      return false if @pre_alerta.finalizado?
+      return true if pap.paquete_id.nil?
+
+      return false if @pre_alerta.tipo_envio.single_package?
+      ESTADOS_MOVIBLES.include?(pap.paquete.estado)
     end
 
     def destino_valido?(pap, destino)

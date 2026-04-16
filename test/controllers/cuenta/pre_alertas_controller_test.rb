@@ -426,8 +426,8 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_match "recibido de", destino.historial
   end
 
-  # ── CKA/CKM move blocking ──
-  test "should not allow moving unlinked paquete from CKA PA" do
+  # ── CKA/CKM move rules (Abril 2026 matrix) ──
+  test "allows moving unlinked paquete from CKA PA to consolidado CER/CEM/EXP" do
     pa = pre_alertas(:cka_pa)
     pap = pre_alerta_paquetes(:pap_cka_unlinked)
     destino = pre_alertas(:consolidada_destino)
@@ -437,17 +437,106 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
       destino_id: destino.id
     }
     assert_redirected_to edit_cuenta_pre_alerta_url(pa)
-    assert_match "No se puede mover", flash[:alert]
-    assert_equal pa.id, pap.reload.pre_alerta_id
+    assert_match "movido a", flash[:notice]
+    assert_equal destino.id, pap.reload.pre_alerta_id
   end
 
-  test "destinos returns empty for CKA PA" do
+  test "destinos returns valid consolidando destinations for CKA PA" do
     pa = pre_alertas(:cka_pa)
     pap = pre_alerta_paquetes(:pap_cka_unlinked)
 
     get destinos_disponibles_cuenta_pre_alerta_url(pa, pre_alerta_paquete_id: pap.id), as: :json
     assert_response :success
-    assert_equal [], response.parsed_body
+    destino_ids = response.parsed_body.map { |d| d["id"] }
+    assert_includes destino_ids, pre_alertas(:consolidada_destino).id
+    # CKA itself (non-consolidado) must not appear
+    assert_not_includes destino_ids, pa.id
+  end
+
+  # ── Eliminar paquete — new matrix ──
+  test "eliminar_paquete allows deletion of linked paquete in recibido_miami estado (non-CKA source)" do
+    pa = pre_alertas(:recibida)
+    pap = pre_alerta_paquetes(:pap_vinculado) # linked to paquetes(:recibido), estado recibido_miami
+    paquete_id = pap.paquete_id
+
+    assert_difference("PreAlertaPaquete.count", -1) do
+      delete eliminar_paquete_cuenta_pre_alerta_url(pa, pre_alerta_paquete_id: pap.id)
+    end
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+    # Paquete still exists in warehouse
+    assert Paquete.exists?(paquete_id)
+    assert_match "permanece en bodega", pa.reload.historial
+  end
+
+  test "eliminar_paquete allows deletion of linked paquete in empacado estado" do
+    pa = pre_alertas(:recibida)
+    paquete = paquetes(:recibido)
+    paquete.update_column(:estado, "empacado")
+    pap = pre_alerta_paquetes(:pap_vinculado)
+
+    assert_difference("PreAlertaPaquete.count", -1) do
+      delete eliminar_paquete_cuenta_pre_alerta_url(pa, pre_alerta_paquete_id: pap.id)
+    end
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+  end
+
+  test "eliminar_paquete allows deletion of linked paquete in enviado_honduras estado" do
+    pa = pre_alertas(:recibida)
+    paquete = paquetes(:recibido)
+    paquete.update_column(:estado, "enviado_honduras")
+    pap = pre_alerta_paquetes(:pap_vinculado)
+
+    assert_difference("PreAlertaPaquete.count", -1) do
+      delete eliminar_paquete_cuenta_pre_alerta_url(pa, pre_alerta_paquete_id: pap.id)
+    end
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+  end
+
+  test "eliminar_paquete blocks deletion of linked paquete in en_aduana estado" do
+    pa = pre_alertas(:recibida)
+    paquete = paquetes(:recibido)
+    paquete.update_column(:estado, "en_aduana")
+    pap = pre_alerta_paquetes(:pap_vinculado)
+
+    assert_no_difference("PreAlertaPaquete.count") do
+      delete eliminar_paquete_cuenta_pre_alerta_url(pa, pre_alerta_paquete_id: pap.id)
+    end
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+    assert_match "reempaque", flash[:alert]
+  end
+
+  test "eliminar_paquete blocks deletion of linked paquete from CKA/CKM source" do
+    # Link the CKA PAP to a paquete in recibido_miami
+    pap = pre_alerta_paquetes(:pap_cka_unlinked)
+    paquete = paquetes(:recibido)
+    pap.update!(paquete: paquete, tracking: paquete.tracking)
+    pa = pre_alertas(:cka_pa)
+
+    assert_no_difference("PreAlertaPaquete.count") do
+      delete eliminar_paquete_cuenta_pre_alerta_url(pa, pre_alerta_paquete_id: pap.id)
+    end
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+    assert_match(/CKA/, flash[:alert])
+  end
+
+  test "mover_paquete appends source notas_grupo to origen and destino historial" do
+    pa = pre_alertas(:recibida)
+    pap = pre_alerta_paquetes(:pap_vinculado)
+    destino = pre_alertas(:consolidada_destino)
+
+    pa.update_column(:notas_grupo, "urgente")
+    pa.update_column(:historial, nil)
+    destino.update_column(:historial, nil)
+
+    post mover_paquete_cuenta_pre_alerta_url(pa), params: {
+      pre_alerta_paquete_id: pap.id,
+      destino_id: destino.id
+    }
+
+    pa.reload
+    destino.reload
+    assert_match 'Notas del grupo origen: "urgente"', pa.historial
+    assert_match 'Notas del grupo origen: "urgente"', destino.historial
   end
 
   # ── Autosave ──
