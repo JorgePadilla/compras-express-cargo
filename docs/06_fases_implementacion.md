@@ -1,6 +1,6 @@
 # CEC — Fases de Implementacion
 
-39 modulos · 37 modelos · 583 tests · Rails 8 + Hotwire + Tailwind CSS 4 + PostgreSQL 16
+39 modulos · 37 modelos · 620 tests · Rails 8 + Hotwire + Tailwind CSS 4 + PostgreSQL 16
 
 ```
 Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pago → Entrega
@@ -130,8 +130,12 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 | Client Self-Registration (`/registro`) | ✅ Abril 2026 |
 | UI polish: mobile responsive, admin pre-alerta form redesign | ✅ Abril 2026 |
 | Pre-Alerta UX: stepper details, unified wizard flow, auto-save on move/delete | ✅ Abril 2026 |
+| Pre-Alerta wizard: client-side draft persistence (localStorage) + BORRADOR card | ✅ Abril 2026 |
+| Pre-Alerta wizard: stepper simplify (selection as label on completed steps) | ✅ Abril 2026 |
+| Pre-Alerta wizard: auto-open blank paquete row after "Agregar Otro Paquete" | ✅ Abril 2026 |
+| Pre-Alerta rules matrix (Abril 2026): CKA/CKM unlinked moves + linked delete + notas_editables? | ✅ Abril 2026 |
 
-**Test suite:** 583 tests passing.
+**Test suite:** 620 tests passing.
 
 ---
 
@@ -269,7 +273,7 @@ Fase 8  ░░░░░░░░░░░░░░░░░░░░  Inventario
 
 ## Reglas de Negocio — Pre-Alertas
 
-1. **Notas de Consolidacion**: Solo visible para pre-alertas consolidadas. No aplica para CKA/CKM ni servicios sin consolidar (CER/CEM/EXPRESS sin consolidar).
+1. **Notas de Consolidacion**: Solo visible para pre-alertas consolidadas. No aplica para CKA/CKM ni servicios sin consolidar (CER/CEM/EXPRESS sin consolidar). Editables mientras `consolidando?` Y ningún paquete vinculado haya llegado a `en_aduana` o posterior (`PreAlerta#notas_editables?`). Una vez bloqueadas se renderizan en modo solo lectura.
 2. **Finalizar Consolidacion**: Al finalizar una pre-alerta consolidada:
    - Se marca `finalizado=true` y `notificado=true`
    - Todos los campos quedan en modo solo lectura
@@ -277,6 +281,15 @@ Fase 8  ░░░░░░░░░░░░░░░░░░░░  Inventario
    - No se aceptan paquetes movidos desde otras pre-alertas
    - Las notas de consolidacion se bloquean
    - Se muestra badge "Consolidado Finalizado" en la interfaz
-3. **Historial de Movimientos**: Registro automatico, no editable, separado de las notas del usuario. Incluye: timestamp, tracking, descripcion del paquete, PA origen/destino con titulo.
+3. **Historial de Movimientos**: Registro automatico, no editable, separado de las notas del usuario. Incluye: timestamp, tracking, descripcion del paquete, PA origen/destino con titulo. Al mover un paquete, las `notas_grupo` del origen se anexan como sufijo (`Notas del grupo origen: "..."`) a las entradas de origen Y destino, preservando contexto sin mutar las notas del destino.
 4. **Tipos de Servicio en Cards**: Las tarjetas de pre-alertas muestran el titulo como identificador principal, el codigo de servicio (CER, CEM, EXPRESS) con su descripcion (Aereo con Reempaque, etc.), y el estado de consolidacion.
-5. **Mover paquetes**: Solo permitido desde/hacia pre-alertas consolidadas activas (no finalizadas). Paquetes en estado en_aduana o posterior estan bloqueados.
+5. **Matriz Mover / Eliminar paquetes (Abril 2026)**:
+
+   | Estado del Paquete | Origen CONSOLIDANDO (EXP/CER/CEM) | Origen SIN CONSOLIDAR (EXP/CER/CEM) | Origen CKA/CKM |
+   |---|---|---|---|
+   | **PRE_ALERTA** (no vinculado) | Mover a cualquier PA consolidando CER/CEM/EXP · eliminar PAP | Igual | Igual |
+   | **recibido_miami / empacado / enviado_honduras** (vinculado) | Mover a PA consolidando del mismo tipo · eliminar PAP (el paquete queda en bodega) | Igual | BLOQUEADO |
+   | **en_aduana** en adelante | BLOQUEADO | BLOQUEADO | BLOQUEADO |
+
+   Implementación: `ESTADOS_MOVIBLES = %w[recibido_miami empacado enviado_honduras]`, `puede_mover?(pap)` y `puede_eliminar?(pap)` en `Cuenta::PreAlertasController`. Eliminar un PAP vinculado destruye sólo la fila de unión; el `Paquete` físico permanece intacto en la bodega.
+6. **Wizard Cliente**: Stepper de 3 pasos (Servicio → Consolidación → Datos) con persistencia en localStorage (draft BORRADOR en Mis Pre-Alertas). Al completar un paso, el stepper muestra la selección como label. En el paso 3, "Agregar Otro Paquete" guarda el primer paquete y abre automáticamente una fila en blanco en el editor.

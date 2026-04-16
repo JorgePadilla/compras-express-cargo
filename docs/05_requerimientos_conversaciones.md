@@ -845,19 +845,33 @@ Listado de 22 configuraciones del sistema, cada una con botón "Editar":
 
 **Pregunta:** ¿Puede el cliente editar una pre-alerta después de que Miami ya recibió el paquete? ¿O se bloquea?
 
-**Respuesta:** Hay reglas según el tipo de servicio:
+**Respuesta (Abril 2026, matriz refinada):** Las reglas dependen de si el paquete está **vinculado** (ya recibido en Miami) o **no vinculado** (aún en estado PRE_ALERTA), combinado con el tipo de servicio origen y el estado del paquete físico.
 
-- **Servicios con reempaque (EXP, CER, CEM):** El cliente puede mover paquetes entre pre-alertas del mismo tipo de servicio mientras el estatus sea **Pre-Alerta**, **Recibido** o **Enviado**
-- **Servicios sin reempaque (CKA, CKM):** Solo puede hacer cambios cuando el estatus es **Pre-Alerta** (antes de que llegue a Miami)
-- **Cambio de tipo de envío:** Todos los paquetes pueden cambiar de tipo de envío siempre y cuando estén en estatus de **Pre-Alerta** únicamente
+**Matriz de reglas — Mover / Eliminar paquete de una pre-alerta:**
+
+| Estado del Paquete | Origen CONSOLIDANDO (EXP/CER/CEM) | Origen SIN CONSOLIDAR (EXP/CER/CEM) | Origen CKA/CKM |
+|---|---|---|---|
+| **PRE_ALERTA** (no vinculado, sin paquete físico) | Mover a cualquier PA consolidando CER/CEM/EXP · editar tracking/descripción · eliminar PAP | Igual | Igual |
+| **recibido_miami** (vinculado) | Mover a PA consolidando del mismo tipo · eliminar PAP (el paquete queda en bodega) | Igual | BLOQUEADO |
+| **empacado** (vinculado) | Igual que fila anterior | Igual | BLOQUEADO |
+| **enviado_honduras** (vinculado) | Igual que fila anterior | Igual | BLOQUEADO |
+| **en_aduana** en adelante (incluye disponible_entrega, pre_facturado, facturado, en_reparto, entregado, retenido, retornado, desechado, anulado) | BLOQUEADO | BLOQUEADO | BLOQUEADO |
+
+**Notas de Consolidación (`notas_grupo`):** Editables mientras la PA esté consolidando Y ningún paquete vinculado haya llegado a `en_aduana` o posterior. Si cualquier paquete avanza a `en_aduana`+, las notas quedan en modo solo lectura.
+
+**Historial de movimientos:** Al mover un paquete entre pre-alertas, las notas del grupo origen (`notas_grupo`) se incluyen como sufijo en las entradas del historial de ambas PAs (origen y destino). Esto permite conservar el contexto sin mutar las `notas_grupo` del destino.
+
+**Eliminar paquete vinculado:** Cuando el cliente elimina un PAP vinculado (permitido sólo en recibido_miami/empacado/enviado_honduras y fuera de CKA/CKM), se destruye únicamente la fila de unión. El `Paquete` físico permanece intacto en la bodega y sigue siendo visible desde las vistas admin.
 
 **Implicación para el sistema:**
-- Lógica de permisos de edición depende de: tipo de servicio + estado del paquete
-- Reglas de negocio:
-  - `puede_mover_paquete?`: EXP/CER/CEM → permitido en estados [pre_alerta, recibido, enviado]; CKA/CKM → solo en [pre_alerta]
-  - `puede_cambiar_tipo_envio?`: solo en estado [pre_alerta], cualquier tipo
-- La UI debe deshabilitar/ocultar opciones de edición cuando no aplica
-- Mostrar mensaje explicativo al cliente si intenta editar y no puede
+- Lógica de permisos de edición depende de: tipo de servicio origen + estado del paquete vinculado + si el paquete está o no vinculado
+- Reglas de negocio (controller `Cuenta::PreAlertasController`):
+  - `puede_mover?(pap)` → false si PA finalizada; si `pap.paquete_id` presente exige estado en `ESTADOS_MOVIBLES` y origen no CKA/CKM; si no vinculado → true siempre
+  - `puede_eliminar?(pap)` → misma lógica que `puede_mover?`
+  - `PreAlerta#notas_editables?` → `consolidando?` y ningún paquete vinculado en `ESTADOS_QUE_BLOQUEAN_NOTAS` (en_aduana hacia adelante)
+- `ESTADOS_MOVIBLES = %w[recibido_miami empacado enviado_honduras]`
+- `ESTADOS_QUE_BLOQUEAN_NOTAS = %w[en_aduana disponible_entrega pre_facturado facturado en_reparto entregado retenido retornado desechado anulado]`
+- La UI oculta botón "Mover" / "Eliminar" cuando no aplica; muestra confirmación larga ("el paquete físico permanece en nuestra bodega...") para eliminaciones vinculadas
 
 ### Cancelación de pre-alertas con paquetes recibidos
 
