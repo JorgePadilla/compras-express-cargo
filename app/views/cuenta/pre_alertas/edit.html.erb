@@ -3,6 +3,7 @@
      data-pre-alerta-editor-max-paquetes-value="<%= max_paquetes || -1 %>"
      data-pre-alerta-editor-consolidado-value="<%= @pre_alerta.consolidando? %>"
      data-pre-alerta-editor-cancel-url-value="<%= cuenta_pre_alertas_path %>"
+     data-pre-alerta-editor-autosave-url-value="<%= cuenta_pre_alerta_path(@pre_alerta) %>"
      data-pre-alerta-mover-destinos-url-value="<%= destinos_disponibles_cuenta_pre_alerta_path(@pre_alerta) %>"
      data-pre-alerta-mover-mover-url-value="<%= mover_paquete_cuenta_pre_alerta_path(@pre_alerta) %>">
   <div id="pre_alerta_header">
@@ -10,6 +11,11 @@
   </div>
 
   <div id="flash"></div>
+
+  <% if @pre_alerta.consolidando? %>
+    <div data-pre-alerta-editor-target="status"
+         class="text-xs text-gray-400 transition-opacity duration-300"></div>
+  <% end %>
 
   <%= form_with model: @pre_alerta, url: cuenta_pre_alerta_path(@pre_alerta), method: :patch,
       data: { pre_alerta_editor_target: "form" }, class: "space-y-6" do |f| %>
@@ -134,7 +140,7 @@
         <tr class="paquete-row" data-new-record="true">
           <td class="px-4 py-2">
             <input type="text" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][tracking]"
-                   placeholder="Tracking" required
+                   placeholder="Tracking"
                    class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
                           focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
           </td>
@@ -178,13 +184,9 @@
           <%= heroicon "plus-circle", variant: :outline, options: { class: "w-4 h-4" } %>
           Agregar Paquete (F6)
         </button>
-        <button type="button" data-action="click->pre-alerta-editor#save"
-                class="bg-cec-teal text-white font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm hover:bg-cec-teal-dark transition-colors">
-          Guardar, Seguir Consolidando (F8)
-        </button>
-        <button type="button" data-action="click->pre-alerta-editor#saveAndNotify"
+        <button type="button" data-action="click->pre-alerta-editor#finalizar"
                 class="btn-gold-gradient text-cec-navy-dark font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm">
-          Guardar, Finalizar Consolidación (F9)
+          Finalizar Consolidación (F9)
         </button>
       <% end %>
     </div>

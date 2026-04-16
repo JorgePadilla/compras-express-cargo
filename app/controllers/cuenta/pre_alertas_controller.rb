@@ -47,7 +47,33 @@ module Cuenta
 
     def update
       if @pre_alerta.finalizado?
+        if params[:autosave] == "true"
+          render json: { status: "error", errors: ["Esta pre-alerta ya fue finalizada."] }, status: :unprocessable_entity
+          return
+        end
         redirect_to edit_cuenta_pre_alerta_path(@pre_alerta), alert: "Esta pre-alerta ya fue finalizada y no se puede modificar."
+        return
+      end
+
+      # ── Autosave (JSON) ──
+      if params[:autosave] == "true"
+        if @pre_alerta.update(pre_alerta_params)
+          new_paquetes = {}
+          pap_params = params.dig(:pre_alerta, :pre_alerta_paquetes_attributes)
+          if pap_params
+            pap_params.each do |index, attrs|
+              next if attrs[:id].present? || attrs[:_destroy] == "1"
+              pap = @pre_alerta.pre_alerta_paquetes.find_by(
+                tracking: attrs[:tracking]&.strip&.upcase
+              )
+              new_paquetes[index] = pap.id if pap
+            end
+          end
+          render json: { status: "saved", new_paquetes: new_paquetes }
+        else
+          render json: { status: "error", errors: @pre_alerta.errors.full_messages },
+                 status: :unprocessable_entity
+        end
         return
       end
 
