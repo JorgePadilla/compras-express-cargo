@@ -30,8 +30,10 @@ class PaqueteTest < ActiveSupport::TestCase
   end
 
   test "auto-generated guia increments" do
+    current_max = Paquete.where("guia LIKE 'PQ-%'")
+                    .maximum(Arel.sql("CAST(SUBSTRING(guia FROM 4) AS INTEGER)")) || 0
     paquete = Paquete.create!(tracking: "1Z999INCR", cliente: clientes(:juan))
-    assert_equal "PQ-000010", paquete.guia
+    assert_equal "PQ-#{(current_max + 1).to_s.rjust(6, '0')}", paquete.guia
   end
 
   test "default estado is recibido_miami" do
@@ -110,6 +112,16 @@ class PaqueteTest < ActiveSupport::TestCase
     results = Paquete.sin_manifiesto
     assert_includes results, paquetes(:recibido)
     assert_includes results, paquetes(:empacado)
+  end
+
+  test "scope sin_pre_alerta returns only paquetes without any PAP" do
+    result_ids = Paquete.sin_pre_alerta.pluck(:id)
+    # :suelto_juan_aereo has no PAP linking to it
+    assert_includes result_ids, paquetes(:suelto_juan_aereo).id
+    # :recibido is linked via pap_vinculado → should NOT appear
+    assert_not_includes result_ids, paquetes(:recibido).id
+    # :cka_linked_juan is linked via pap_cka_linked → should NOT appear
+    assert_not_includes result_ids, paquetes(:cka_linked_juan).id
   end
 
   test "scope facturables returns disponible_entrega without pre_factura" do

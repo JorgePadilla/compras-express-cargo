@@ -144,3 +144,53 @@ disponible_entrega_maria:
   proveedor: "Walmart"
   fecha_recibido_miami: <%= 12.days.ago %>
   user: digitador
+
+# Paquete aereo/recibido_miami vinculado a :recibida (aereo consolidando)
+# → candidato para "pull" desde consolidada_destino
+vinculado_aereo_juan:
+  tracking: "1Z999VINC001"
+  guia: "PQ-000022"
+  cliente: juan
+  tipo_envio: aereo
+  estado: recibido_miami
+  peso: 4.00
+  peso_cobrar: 4.00
+  cantidad_productos: 1
+  cantidad_paquetes: 1
+  descripcion: "Paquete vinculado aereo Juan"
+  proveedor: "eBay"
+  fecha_recibido_miami: <%= 3.days.ago %>
+  user: digitador
+
+# Paquete suelto de juan (sin PAP) — mismo tipo_envio que :activa/:consolidada_destino (aereo)
+# y estado recibido_miami → candidato para "Buscar Paquetes"
+suelto_juan_aereo:
+  tracking: "1Z999SUELTO001"
+  guia: "PQ-000020"
+  cliente: juan
+  tipo_envio: aereo
+  estado: recibido_miami
+  peso: 3.00
+  peso_cobrar: 3.00
+  cantidad_productos: 1
+  cantidad_paquetes: 1
+  descripcion: "Paquete suelto aereo Juan"
+  proveedor: "Amazon"
+  fecha_recibido_miami: <%= 2.days.ago %>
+  user: digitador
+
+# Paquete aereo vinculado a PA CKA (:cka_pa) — no debe aparecer como candidato
+# a pesar de tener tipo_envio aereo (matching destino), porque la PA origen es CKA
+cka_linked_juan:
+  tracking: "CKA000100"
+  guia: "PQ-000021"
+  cliente: juan
+  tipo_envio: aereo
+  estado: recibido_miami
+  peso: 8.00
+  peso_cobrar: 8.00
+  cantidad_productos: 1
+  cantidad_paquetes: 1
+  descripcion: "Paquete vinculado a CKA"
+  fecha_recibido_miami: <%= 1.day.ago %>
+  user: digitador
