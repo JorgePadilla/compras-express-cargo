@@ -123,7 +123,7 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     end
 
     pa = PreAlerta.last
-    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa, agregar: 1)
     assert_match "Agrega más paquetes", flash[:notice]
 
     # Wizard session must be preserved so the user can reuse it
