@@ -534,6 +534,188 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
   # render, but render :new after a failed step-3 POST only has params[:wizard_step].
   # Without a fallback, the view silently bounced the user back to step 1,
   # losing their input and hiding error messages.
+  # ── Buscar Paquetes (paquetes_disponibles + agregar_paquete) ──
+
+  test "paquetes_disponibles returns JSON list of candidates with same tipo_envio in movable estado" do
+    pa = pre_alertas(:consolidada_destino) # aereo, consolidando
+    get paquetes_disponibles_cuenta_pre_alerta_url(pa), as: :json
+    assert_response :success
+
+    body = response.parsed_body
+    ids = body.map { |p| p["id"] }
+
+    # Suelto aereo recibido_miami → aparece
+    assert_includes ids, paquetes(:suelto_juan_aereo).id
+    # Paquete maritimo → no aparece (distinto tipo_envio)
+    assert_not_includes ids, paquetes(:disponible_entrega_maria).id
+  end
+
+  test "paquetes_disponibles excludes paquetes in blocked estados" do
+    pa = pre_alertas(:consolidada_destino)
+    # :disponible_entrega_juan es aereo pero estado=disponible_entrega (bloqueado)
+    get paquetes_disponibles_cuenta_pre_alerta_url(pa), as: :json
+    assert_response :success
+    ids = response.parsed_body.map { |p| p["id"] }
+    assert_not_includes ids, paquetes(:disponible_entrega_juan).id
+    assert_not_includes ids, paquetes(:facturado_juan).id
+  end
+
+  test "paquetes_disponibles excludes paquetes linked to CKA/CKM PA" do
+    pa = pre_alertas(:consolidada_destino)
+    # :cka_linked_juan es aereo/recibido_miami pero está vinculado a cka_pa (single_package)
+    get paquetes_disponibles_cuenta_pre_alerta_url(pa), as: :json
+    assert_response :success
+    ids = response.parsed_body.map { |p| p["id"] }
+    assert_not_includes ids, paquetes(:cka_linked_juan).id
+  end
+
+  test "paquetes_disponibles returns empty for finalizado PA" do
+    pa = pre_alertas(:finalizada)
+    get paquetes_disponibles_cuenta_pre_alerta_url(pa), as: :json
+    assert_response :success
+    assert_equal [], response.parsed_body
+  end
+
+  test "paquetes_disponibles returns empty for CKA/CKM destino" do
+    pa = pre_alertas(:cka_pa)
+    get paquetes_disponibles_cuenta_pre_alerta_url(pa), as: :json
+    assert_response :success
+    assert_equal [], response.parsed_body
+  end
+
+  test "paquetes_disponibles returns empty for sin consolidar PA" do
+    pa = pre_alertas(:activa) # consolidado: false
+    get paquetes_disponibles_cuenta_pre_alerta_url(pa), as: :json
+    assert_response :success
+    assert_equal [], response.parsed_body
+  end
+
+  test "paquetes_disponibles includes origen info when paquete is linked to another consolidando PA" do
+    pa = pre_alertas(:consolidada_destino)
+    # :vinculado_aereo_juan is linked via :pap_vinculado_aereo to :recibida (consolidando, aereo)
+    get paquetes_disponibles_cuenta_pre_alerta_url(pa), as: :json
+    assert_response :success
+    body = response.parsed_body
+
+    vinculado_entry = body.find { |p| p["id"] == paquetes(:vinculado_aereo_juan).id }
+    assert_not_nil vinculado_entry
+    assert_not_nil vinculado_entry["origen"]
+    assert_equal pre_alertas(:recibida).numero_documento, vinculado_entry["origen"]["numero"]
+
+    suelto_entry = body.find { |p| p["id"] == paquetes(:suelto_juan_aereo).id }
+    assert_not_nil suelto_entry
+    assert_nil suelto_entry["origen"]
+  end
+
+  test "agregar_paquete creates PAP for loose paquete" do
+    pa = pre_alertas(:consolidada_destino)
+    paquete = paquetes(:suelto_juan_aereo)
+
+    assert_difference("PreAlertaPaquete.count", 1) do
+      post agregar_paquete_cuenta_pre_alerta_url(pa), params: { paquete_id: paquete.id }
+    end
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+    assert_match "agregado", flash[:notice]
+
+    pap = PreAlertaPaquete.where(pre_alerta: pa, paquete: paquete).first
+    assert_not_nil pap
+    assert_equal paquete.tracking, pap.tracking
+    assert_equal paquete.descripcion, pap.descripcion
+  end
+
+  test "agregar_paquete moves PAP from source PA when paquete already linked" do
+    pa_destino = pre_alertas(:consolidada_destino)
+    paquete = paquetes(:vinculado_aereo_juan) # linked via pap_vinculado_aereo to :recibida
+    pap = pre_alerta_paquetes(:pap_vinculado_aereo)
+    source_pa = pre_alertas(:recibida)
+
+    assert_no_difference("PreAlertaPaquete.count") do
+      post agregar_paquete_cuenta_pre_alerta_url(pa_destino), params: { paquete_id: paquete.id }
+    end
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa_destino)
+
+    assert_equal pa_destino.id, pap.reload.pre_alerta_id
+
+    # Historial en ambas PAs
+    source_pa.reload
+    pa_destino.reload
+    assert source_pa.historial.present?
+    assert_match "jalado a", source_pa.historial
+    assert pa_destino.historial.present?
+    assert_match "jalado de", pa_destino.historial
+  end
+
+  test "agregar_paquete appends notas_grupo suffix on pull" do
+    pa_destino = pre_alertas(:consolidada_destino)
+    paquete = paquetes(:vinculado_aereo_juan)
+    source_pa = pre_alertas(:recibida)
+    source_pa.update_column(:notas_grupo, "Notas importantes")
+
+    post agregar_paquete_cuenta_pre_alerta_url(pa_destino), params: { paquete_id: paquete.id }
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa_destino)
+
+    source_pa.reload
+    pa_destino.reload
+    assert_match "Notas del grupo origen: \"Notas importantes\"", source_pa.historial
+    assert_match "Notas del grupo origen: \"Notas importantes\"", pa_destino.historial
+  end
+
+  test "agregar_paquete blocks paquete with different tipo_envio" do
+    pa = pre_alertas(:consolidada_destino) # aereo
+    paquete = paquetes(:disponible_entrega_maria) # maritimo, also estado=disponible_entrega
+    # cambiar a cliente juan via fixture? ya es de maria — pero current_cliente es juan.
+    # Por lo tanto current_cliente.paquetes no encontrará → devuelve RecordNotFound → alert.
+    assert_no_difference("PreAlertaPaquete.count") do
+      post agregar_paquete_cuenta_pre_alerta_url(pa), params: { paquete_id: paquete.id }
+    end
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+  end
+
+  test "agregar_paquete blocks paquete in blocked estado" do
+    pa = pre_alertas(:consolidada_destino) # aereo, consolidando
+    paquete = paquetes(:disponible_entrega_juan) # aereo, juan, pero estado disponible_entrega
+
+    assert_no_difference("PreAlertaPaquete.count") do
+      post agregar_paquete_cuenta_pre_alerta_url(pa), params: { paquete_id: paquete.id }
+    end
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+    assert_match "no cumple", flash[:alert]
+  end
+
+  test "agregar_paquete blocks from CKA/CKM source" do
+    pa_destino = pre_alertas(:consolidada_destino)
+    paquete = paquetes(:cka_linked_juan) # aereo, recibido_miami, pero vinculado a cka_pa
+
+    post agregar_paquete_cuenta_pre_alerta_url(pa_destino), params: { paquete_id: paquete.id }
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa_destino)
+    assert_match "CKA/CKM", flash[:alert]
+    # PAP no debe haberse movido
+    pap = pre_alerta_paquetes(:pap_cka_linked)
+    assert_equal pre_alertas(:cka_pa).id, pap.reload.pre_alerta_id
+  end
+
+  test "agregar_paquete blocks on finalizado destino" do
+    pa = pre_alertas(:finalizada)
+    paquete = paquetes(:suelto_juan_aereo)
+
+    assert_no_difference("PreAlertaPaquete.count") do
+      post agregar_paquete_cuenta_pre_alerta_url(pa), params: { paquete_id: paquete.id }
+    end
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+    assert_match "No se puede", flash[:alert]
+  end
+
+  test "agregar_paquete blocks on CKA/CKM destino" do
+    pa = pre_alertas(:cka_pa)
+    paquete = paquetes(:suelto_juan_aereo)
+
+    assert_no_difference("PreAlertaPaquete.count") do
+      post agregar_paquete_cuenta_pre_alerta_url(pa), params: { paquete_id: paquete.id }
+    end
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+    assert_match "No se puede", flash[:alert]
+  end
+
   test "wizard step 3 save failure re-renders step 3 with errors and preserved input" do
     # Force save failure: remove CER so assign_default_tipo_envio has no fallback,
     # and skip wizard steps 1/2 so the session has no tipo_envio_id.
