@@ -450,6 +450,85 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_equal [], response.parsed_body
   end
 
+  # ── Autosave ──
+  test "autosave returns JSON on success" do
+    pa = pre_alertas(:consolidada_destino)
+    patch cuenta_pre_alerta_url(pa), params: {
+      autosave: "true",
+      pre_alerta: { titulo: "Autosaved title" }
+    }, as: :json
+    assert_response :success
+    body = response.parsed_body
+    assert_equal "saved", body["status"]
+    assert_equal "Autosaved title", pa.reload.titulo
+  end
+
+  test "autosave creates new paquete and returns its id" do
+    pa = pre_alertas(:consolidada_destino)
+    assert_difference("PreAlertaPaquete.count", 1) do
+      patch cuenta_pre_alerta_url(pa), params: {
+        autosave: "true",
+        pre_alerta: {
+          pre_alerta_paquetes_attributes: {
+            "99999" => { tracking: "AUTOSAVETRACK001", descripcion: "Autosaved pkg" }
+          }
+        }
+      }, as: :json
+    end
+    assert_response :success
+    body = response.parsed_body
+    assert_equal "saved", body["status"]
+    assert body["new_paquetes"]["99999"].present?
+    pap = PreAlertaPaquete.find(body["new_paquetes"]["99999"])
+    assert_equal "AUTOSAVETRACK001", pap.tracking
+  end
+
+  test "autosave returns 422 on validation error" do
+    pa = pre_alertas(:consolidada_destino)
+    # tracking with invalid characters passes reject_if but fails format validation
+    patch cuenta_pre_alerta_url(pa), params: {
+      autosave: "true",
+      pre_alerta: {
+        pre_alerta_paquetes_attributes: {
+          "0" => { tracking: "INVALID SPACES", descripcion: "Test" }
+        }
+      }
+    }, as: :json
+    assert_response :unprocessable_entity
+    body = response.parsed_body
+    assert_equal "error", body["status"]
+    assert body["errors"].any?
+  end
+
+  test "autosave rejected on finalized PA" do
+    pa = pre_alertas(:finalizada)
+    patch cuenta_pre_alerta_url(pa), params: {
+      autosave: "true",
+      pre_alerta: { titulo: "Should not change" }
+    }, as: :json
+    assert_response :unprocessable_entity
+    body = response.parsed_body
+    assert_equal "error", body["status"]
+    assert_equal "Compra Black Friday", pa.reload.titulo
+  end
+
+  test "autosave deletes paquete marked with _destroy" do
+    pa = pre_alertas(:consolidada_destino)
+    pap = pre_alerta_paquetes(:pap_destino)
+    assert_difference("PreAlertaPaquete.count", -1) do
+      patch cuenta_pre_alerta_url(pa), params: {
+        autosave: "true",
+        pre_alerta: {
+          pre_alerta_paquetes_attributes: {
+            "0" => { id: pap.id, _destroy: "1" }
+          }
+        }
+      }, as: :json
+    end
+    assert_response :success
+    assert_equal "saved", response.parsed_body["status"]
+  end
+
   # ── v4: step-3 save-failure re-renders step 3, not step 1 ──
   # Regression guard: new.html.erb reads params[:step] to decide which step to
   # render, but render :new after a failed step-3 POST only has params[:wizard_step].
