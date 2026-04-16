@@ -6,12 +6,12 @@
   show_consolidacion = selected_tipo.nil? || selected_tipo.consolidable
   status_for = ->(i) { step == i ? :active : (step > i ? :completed : :upcoming) }
 
-  step1_detail = step > 1 && selected_tipo ? selected_tipo.nombre : nil
-  step2_detail = step > 2 && show_consolidacion ? (wizard["consolidado"] ? "Consolidado" : "Sin consolidar") : nil
+  step1_label = step > 1 && selected_tipo ? selected_tipo.nombre : "Servicio"
+  step2_label = step > 2 ? (wizard["consolidado"] ? "Consolidado" : "Sin consolidar") : "Consolidación"
 
   stepper_steps = [
-    { label: "Servicio",          status: status_for.call(1), detail: step1_detail },
-    ({ label: "Consolidación",    status: status_for.call(2), detail: step2_detail } if show_consolidacion),
+    { label: step1_label, status: status_for.call(1) },
+    ({ label: step2_label, status: status_for.call(2) } if show_consolidacion),
     { label: "Datos del paquete", status: status_for.call(3) }
   ].compact
 
