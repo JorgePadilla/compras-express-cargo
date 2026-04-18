@@ -1,23 +1,24 @@
 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow">
-  <%# Row 1: Titulo + stacked right-column badges (tipo envio, progreso, opción) %>
-  <div class="flex items-start justify-between mb-1 gap-2">
-    <div class="min-w-0">
-      <p class="font-semibold text-gray-800 text-sm leading-tight"><%= pre_alerta.titulo.presence || pre_alerta.numero_documento %></p>
-      <p class="text-xs text-gray-500 mt-1"><%= tipo_envio_description %></p>
-      <p class="text-xs text-gray-400 mt-1"><%= info_line %></p>
-    </div>
-    <div class="flex flex-col items-end gap-1.5 shrink-0">
-      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-cec-navy/10 text-cec-navy ring-1 ring-cec-navy/20"><%= tipo_envio_badge_text %></span>
-      <% if (p_badge = progress_badge) %>
-        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <%= p_badge[:bg] %> <%= p_badge[:text_color] %> ring-1 <%= p_badge[:ring] %>"><%= p_badge[:text] %></span>
-      <% end %>
-      <% o_badge = option_badge %>
-      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <%= o_badge[:bg] %> <%= o_badge[:text_color] %> ring-1 <%= o_badge[:ring] %>"><%= o_badge[:text] %></span>
-    </div>
+  <%# Row 1-3: Info lines + stacked right-aligned badges, aligned by text row %>
+  <% p_badge = progress_badge %>
+  <% o_badge = option_badge %>
+  <div class="flex items-center justify-between gap-2 mb-1">
+    <p class="font-semibold text-gray-800 text-sm leading-tight truncate"><%= pre_alerta.titulo.presence || pre_alerta.numero_documento %></p>
+    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-cec-navy/10 text-cec-navy ring-1 ring-cec-navy/20 shrink-0"><%= tipo_envio_badge_text %></span>
+  </div>
+  <div class="flex items-center justify-between gap-2 mb-1 min-h-5">
+    <p class="text-xs text-gray-500 truncate"><%= tipo_envio_description %></p>
+    <% if p_badge %>
+      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <%= p_badge[:bg] %> <%= p_badge[:text_color] %> ring-1 <%= p_badge[:ring] %> shrink-0"><%= p_badge[:text] %></span>
+    <% end %>
+  </div>
+  <div class="flex items-center justify-between gap-2 mb-3 min-h-5">
+    <p class="text-xs text-gray-400 truncate"><%= info_line %></p>
+    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <%= o_badge[:bg] %> <%= o_badge[:text_color] %> ring-1 <%= o_badge[:ring] %> shrink-0"><%= o_badge[:text] %></span>
   </div>
 
   <%# Row 5: Paquetes count + Estado %>
-  <div class="flex items-center justify-between text-sm mb-3 mt-3">
+  <div class="flex items-center justify-between text-sm mb-3">
     <div class="flex items-center gap-1 text-gray-500">
       <%= helpers.heroicon "archive-box", variant: :outline, options: { class: "w-4 h-4" } %>
       <span><%= pre_alerta.pre_alerta_paquetes.size %> paquete(s)</span>
