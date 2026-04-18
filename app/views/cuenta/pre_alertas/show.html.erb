@@ -52,11 +52,15 @@
 <div class="flex gap-2 mb-6">
   <% if @pre_alerta.con_reempaque? %>
     <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30">Reempaque</span>
+  <% else %>
+    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 ring-1 ring-gray-200">Sin Reempaque</span>
   <% end %>
   <% if @pre_alerta.finalizado? %>
     <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30">Consolidado Finalizado</span>
   <% elsif @pre_alerta.consolidando? %>
     <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-cec-gold/10 text-cec-gold-dark ring-1 ring-cec-gold/30">Consolidando</span>
+  <% else %>
+    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 ring-1 ring-gray-200">Sin Consolidación</span>
   <% end %>
   <% if @pre_alerta.notificado? %>
     <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30">Notificado</span>

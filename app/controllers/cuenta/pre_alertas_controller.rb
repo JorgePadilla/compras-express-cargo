@@ -1,7 +1,7 @@
 module Cuenta
   class PreAlertasController < BaseController
     before_action :set_pre_alerta, only: %i[show edit update anular mover_paquete destinos_disponibles eliminar_paquete paquetes_disponibles agregar_paquete]
-    helper_method :puede_mover?, :puede_eliminar?, :puede_buscar?
+    helper_method :puede_mover?, :puede_eliminar?, :puede_editar?, :puede_buscar?
 
     def index
       @pre_alertas = current_cliente.pre_alertas.includes(:pre_alerta_paquetes, :tipo_envio).activas.recientes
@@ -448,6 +448,11 @@ module Cuenta
 
       return false if @pre_alerta.tipo_envio.single_package?
       ESTADOS_MOVIBLES.include?(pap.paquete.estado)
+    end
+
+    def puede_editar?(pap)
+      return false if @pre_alerta.finalizado?
+      pap.paquete_id.nil?
     end
 
     def destino_valido?(pap, destino)
