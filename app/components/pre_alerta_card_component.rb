@@ -15,13 +15,19 @@ class PreAlertaCardComponent < ViewComponent::Base
     pre_alerta.tipo_envio_descripcion
   end
 
-  def consolidation_badge
+  def progress_badge
+    if pre_alerta.finalizado?
+      { text: "Consolidado Finalizado", bg: "bg-cec-teal/10", text_color: "text-cec-teal-dark", ring: "ring-cec-teal/30" }
+    elsif pre_alerta.consolidando?
+      { text: "Consolidando", bg: "bg-cec-gold/10", text_color: "text-cec-gold-dark", ring: "ring-cec-gold/30" }
+    end
+  end
+
+  def option_badge
     if pre_alerta.consolidado?
-      if pre_alerta.finalizado?
-        { text: "Consolidado Finalizado", bg: "bg-cec-teal/10", text_color: "text-cec-teal-dark", ring: "ring-cec-teal/30" }
-      else
-        { text: "Consolidando", bg: "bg-cec-gold/10", text_color: "text-cec-gold-dark", ring: "ring-cec-gold/30" }
-      end
+      { text: "Consolidado", bg: "bg-cec-teal/10", text_color: "text-cec-teal-dark", ring: "ring-cec-teal/30" }
+    else
+      { text: "Sin Consolidar", bg: "bg-red-50", text_color: "text-red-700", ring: "ring-red-600/20" }
     end
   end
 
