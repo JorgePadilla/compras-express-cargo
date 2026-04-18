@@ -6,7 +6,7 @@
       <p class="text-xs text-gray-500 mt-1"><%= tipo_envio_description %></p>
       <p class="text-xs text-gray-400 mt-1"><%= info_line %></p>
     </div>
-    <div class="flex flex-col items-end gap-1 shrink-0">
+    <div class="flex flex-col items-end gap-1.5 shrink-0">
       <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-cec-navy/10 text-cec-navy ring-1 ring-cec-navy/20"><%= tipo_envio_badge_text %></span>
       <% if (p_badge = progress_badge) %>
         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <%= p_badge[:bg] %> <%= p_badge[:text_color] %> ring-1 <%= p_badge[:ring] %>"><%= p_badge[:text] %></span>
