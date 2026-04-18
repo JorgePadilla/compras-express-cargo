@@ -7,18 +7,16 @@
       <% if pap.paquete_id.present? %>
         <span class="font-mono text-sm text-gray-700"><%= pap.tracking %></span>
         <%= pf.hidden_field :tracking %>
+      <% elsif puede_editar?(pap) %>
+        <%= pf.text_field :tracking, placeholder: "Tracking (opcional)",
+            class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
+                   focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
       <% else %>
-        <% if @pre_alerta.consolidando? %>
-          <%= pf.text_field :tracking, placeholder: "Tracking (opcional)",
-              class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
-                     focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
-        <% else %>
-          <span class="font-mono text-sm text-gray-700"><%= pap.tracking.presence || "—" %></span>
-        <% end %>
+        <span class="font-mono text-sm text-gray-700"><%= pap.tracking.presence || "—" %></span>
       <% end %>
     </td>
     <td class="px-4 py-2">
-      <% if @pre_alerta.consolidando? %>
+      <% if puede_editar?(pap) %>
         <%= pf.text_field :descripcion, placeholder: "Descripcion",
             class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
                    focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
@@ -27,7 +25,7 @@
       <% end %>
     </td>
     <td class="px-4 py-2">
-      <% if @pre_alerta.consolidando? %>
+      <% if puede_editar?(pap) %>
         <%= pf.text_area :instrucciones, placeholder: "Instrucciones", rows: 2,
             class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
                    focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
