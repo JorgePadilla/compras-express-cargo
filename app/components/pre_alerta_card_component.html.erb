@@ -11,12 +11,11 @@
   <%# Row 3: Info line (proveedor · PA number · date) %>
   <p class="text-xs text-gray-400 mb-3"><%= info_line %></p>
 
-  <%# Row 4: Consolidation badge %>
-  <% if (badge = consolidation_badge) %>
-    <div class="mb-3">
-      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <%= badge[:bg] %> <%= badge[:text_color] %> ring-1 <%= badge[:ring] %>"><%= badge[:text] %></span>
-    </div>
-  <% end %>
+  <%# Row 4: Consolidation badge (right-aligned) %>
+  <% badge = consolidation_badge %>
+  <div class="flex justify-end mb-3">
+    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <%= badge[:bg] %> <%= badge[:text_color] %> ring-1 <%= badge[:ring] %>"><%= badge[:text] %></span>
+  </div>
 
   <%# Row 5: Paquetes count + Estado %>
   <div class="flex items-center justify-between text-sm mb-3">
