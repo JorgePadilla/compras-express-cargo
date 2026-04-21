@@ -150,7 +150,7 @@ class PreAlerta < ApplicationRecord
   end
 
   def generate_numero_documento
-    next_number = (self.class.where("numero_documento LIKE 'PA-%'")
+    next_number = (self.class.where("numero_documento ~ '^PA-[0-9]+$'")
       .maximum(Arel.sql("CAST(SUBSTRING(numero_documento FROM 4) AS INTEGER)")) || 0) + 1
     self.numero_documento = "PA-#{next_number.to_s.rjust(6, '0')}"
   end
