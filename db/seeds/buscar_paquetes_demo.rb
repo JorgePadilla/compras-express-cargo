@@ -13,9 +13,9 @@
 require_relative "../../config/environment" unless defined?(Rails)
 
 # ── Cliente destino ──
-juan = Cliente.find_by(nombre: "Juan", apellido: "Perez") || Cliente.find_by(codigo: "CEC-001")
+juan = Cliente.find_by(nombre: "Juan", apellido: "Perez")
 unless juan
-  puts "⚠️  No se encontro cliente Juan Perez ni CEC-001 — corre primero `SEED_SAMPLE_DATA=1 bin/rails db:seed`"
+  puts "⚠️  No se encontro cliente Juan Perez — corre primero `SEED_SAMPLE_DATA=1 bin/rails db:seed`"
   exit 1
 end
 
@@ -130,13 +130,13 @@ puts ""
 puts "▸ PAs consolidando con paquetes vinculados:"
 
 pas_consolidando = [
-  { tipo: :express, numero: "PA-DEMO-EXP1", titulo: "EXPRESS - Gadgets urgentes",
+  { tipo: :express, numero: "DEMO-EXP1", titulo: "EXPRESS - Gadgets urgentes",
     pq_tracking: "DEMO-EXP-V001", pq_desc: "iPad Pro 12.9\"",      pq_estado: "recibido_miami",   pq_peso: 2.0, prov: "Apple",   dias: 1 },
-  { tipo: :cer,     numero: "PA-DEMO-CER1", titulo: "CER - Productos Amazon",
+  { tipo: :cer,     numero: "DEMO-CER1", titulo: "CER - Productos Amazon",
     pq_tracking: "DEMO-CER-V001", pq_desc: "Smart TV Samsung 55\"", pq_estado: "recibido_miami",   pq_peso: 2.5, prov: "Best Buy", dias: 2 },
-  { tipo: :cer,     numero: "PA-DEMO-CER2", titulo: "CER - Pedido Ebay",
+  { tipo: :cer,     numero: "DEMO-CER2", titulo: "CER - Pedido Ebay",
     pq_tracking: "DEMO-CER-V002", pq_desc: "Xbox Series X",        pq_estado: "empacado",         pq_peso: 2.5, prov: "Ebay",    dias: 4 },
-  { tipo: :cem,     numero: "PA-DEMO-CEM1", titulo: "CEM - Muebles consolidados",
+  { tipo: :cem,     numero: "DEMO-CEM1", titulo: "CEM - Muebles consolidados",
     pq_tracking: "DEMO-CEM-V001", pq_desc: "Sofa 3 plazas",         pq_estado: "recibido_miami",   pq_peso: 45.0, prov: "Wayfair", dias: 3 }
 ]
 
@@ -161,10 +161,10 @@ puts ""
 puts "▸ PAs single_package (CKA/CKM) con paquete vinculado (verifican bloqueo):"
 
 single_package = [
-  { tipo: :cka, numero: "PA-DEMO-CKA", titulo: "CKA - Caja grande aerea",
+  { tipo: :cka, numero: "DEMO-CKA1", titulo: "CKA - Caja grande aerea",
     pq_tracking: "DEMO-CKA-V001", pq_desc: "Caja con productos aereos",
     pq_tipo_envio: :cer, pq_estado: "recibido_miami", pq_peso: 15.0, prov: "Walmart", dias: 6 },
-  { tipo: :ckm, numero: "PA-DEMO-CKM", titulo: "CKM - Caja grande maritima",
+  { tipo: :ckm, numero: "DEMO-CKM1", titulo: "CKM - Caja grande maritima",
     pq_tracking: "DEMO-CKM-V001", pq_desc: "Caja con productos maritimos",
     pq_tipo_envio: :cem, pq_estado: "recibido_miami", pq_peso: 40.0, prov: "Costco", dias: 7 }
 ]
@@ -202,14 +202,14 @@ puts ""
 puts "═══ Listo ═══"
 puts ""
 puts "Resumen por tipo de envio:"
-puts "  EXPRESS: 2 sueltos + 1 PA consolidando (PA-DEMO-EXP1 con DEMO-EXP-V001)"
-puts "  CER:     3 sueltos + 2 PAs consolidando (PA-DEMO-CER1/CER2)"
-puts "  CEM:     2 sueltos + 1 PA consolidando (PA-DEMO-CEM1 con DEMO-CEM-V001)"
-puts "  CKA:     1 PA con paquete CER vinculado (PA-DEMO-CKA)  → NO debe aparecer en pulls"
-puts "  CKM:     1 PA con paquete CEM vinculado (PA-DEMO-CKM)  → NO debe aparecer en pulls"
+puts "  EXPRESS: 2 sueltos + 1 PA consolidando (DEMO-EXP1 con DEMO-EXP-V001)"
+puts "  CER:     3 sueltos + 2 PAs consolidando (DEMO-CER1/CER2)"
+puts "  CEM:     2 sueltos + 1 PA consolidando (DEMO-CEM1 con DEMO-CEM-V001)"
+puts "  CKA:     1 PA con paquete CER vinculado (DEMO-CKA1)  → NO debe aparecer en pulls"
+puts "  CKM:     1 PA con paquete CEM vinculado (DEMO-CKM1)  → NO debe aparecer en pulls"
 puts ""
 puts "Para probar:"
-puts "  1. Login como Juan (CEC-001)"
+puts "  1. Login como Juan (#{juan.codigo})"
 puts "  2. Abre /cuenta/pre_alertas/<id de una PA consolidando>/edit"
 puts "  3. Click 'Buscar Paquetes' → ves solo candidatos con MISMO tipo_envio"
 puts "     y el pill indigo muestra CER/CEM/EXPRESS"
