@@ -75,7 +75,7 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
       password: "Secure123!", password_confirmation: "Secure123!"
     } }
     cliente = Cliente.find_by(email: "autocode@test.com")
-    assert_match(/\ACEC-\d{3,}\z/, cliente.codigo)
+    assert_match(/\AC\d+\z/, cliente.codigo)
   end
 
   test "login page should have registration link" do
