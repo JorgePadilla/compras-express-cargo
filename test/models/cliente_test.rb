@@ -37,13 +37,13 @@ class ClienteTest < ActiveSupport::TestCase
 
   test "auto-generates codigo on create" do
     cliente = Cliente.create!(nombre: "Auto Code")
-    assert_match /\ACEC-\d{3}\z/, cliente.codigo
+    assert_match /\AC\d+\z/, cliente.codigo
   end
 
   test "auto-generated codigo increments" do
-    # Fixtures have CEC-001, CEC-002, CEC-003
-    cliente = Cliente.create!(nombre: "Next")
-    assert_equal "CEC-004", cliente.codigo
+    first = Cliente.create!(nombre: "First")
+    second = Cliente.create!(nombre: "Second")
+    assert_equal first.codigo.sub("C", "").to_i + 1, second.codigo.sub("C", "").to_i
   end
 
   test "scope activos returns only active clients" do

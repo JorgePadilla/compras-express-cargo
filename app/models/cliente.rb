@@ -39,10 +39,10 @@ class Cliente < ApplicationRecord
 
   def generate_codigo
     last_number = self.class
-      .where("codigo LIKE 'CEC-%'")
+      .where("codigo ~ '^C[0-9]+$'")
       .pluck(:codigo)
-      .map { |c| c.sub("CEC-", "").to_i }
+      .map { |c| c.sub("C", "").to_i }
       .max || 0
-    self.codigo = "CEC-#{(last_number + 1).to_s.rjust(3, '0')}"
+    self.codigo = "C#{last_number + 1}"
   end
 end
