@@ -56,18 +56,20 @@
     </td>
     <td class="px-4 py-2 text-center">
       <% if puede_eliminar?(pap) %>
+        <% es_ultimo_paquete = @pre_alerta.pre_alerta_paquetes.size == 1 %>
+        <% sufijo_ultimo = es_ultimo_paquete ? " Es el último paquete: la pre-alerta quedará vacía y será eliminada." : "" %>
         <% if pap.persisted? && pap.paquete_id.present? %>
           <%# Linked paquete in movible estado: server delete with long warning %>
           <%= button_to eliminar_paquete_cuenta_pre_alerta_path(@pre_alerta, pre_alerta_paquete_id: pap.id),
                 method: :delete, class: "text-red-400 hover:text-red-600",
-                data: { turbo_confirm: "¿Borrar este paquete de la pre-alerta? El paquete físico permanece en nuestra bodega. Si cambias de opinión tendrás que crear una nueva pre-alerta." } do %>
+                data: { turbo_confirm: "¿Borrar este paquete de la pre-alerta? El paquete físico permanece en nuestra bodega. Si cambias de opinión tendrás que crear una nueva pre-alerta.#{sufijo_ultimo}" } do %>
             <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
           <% end %>
         <% elsif pap.persisted? && !@pre_alerta.consolidando? %>
           <%# Unlinked + not consolidando: server delete %>
           <%= button_to eliminar_paquete_cuenta_pre_alerta_path(@pre_alerta, pre_alerta_paquete_id: pap.id),
                 method: :delete, class: "text-red-400 hover:text-red-600",
-                data: { turbo_confirm: "¿Eliminar este paquete?" } do %>
+                data: { turbo_confirm: "¿Eliminar este paquete?#{sufijo_ultimo}" } do %>
             <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
           <% end %>
         <% else %>

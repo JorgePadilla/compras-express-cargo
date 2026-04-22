@@ -83,6 +83,15 @@ export default class extends Controller {
 
   removePaquete(e) {
     const row = e.currentTarget.closest(".paquete-row")
+    const visibleRows = this.paquetesBodyTarget.querySelectorAll(".paquete-row:not(.hidden)").length
+    const esUltimo = visibleRows <= 1
+
+    const mensaje = esUltimo
+      ? "¿Eliminar este paquete? Es el último de la pre-alerta; la pre-alerta quedará vacía y será eliminada."
+      : "¿Eliminar este paquete?"
+
+    if (!window.confirm(mensaje)) return
+
     const destroyField = row.querySelector("[data-pre-alerta-editor-target='destroyField']")
 
     if (destroyField) {
@@ -130,6 +139,10 @@ export default class extends Controller {
 
       if (response.ok) {
         const data = await response.json()
+        if (data.redirect) {
+          window.location.href = data.redirect
+          return
+        }
         this._injectNewPaqueteIds(data.new_paquetes || {})
         this._removeDestroyedRows()
         this.updateCounter()

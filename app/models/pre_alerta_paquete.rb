@@ -15,6 +15,8 @@ class PreAlertaPaquete < ApplicationRecord
   before_validation :set_default_fecha
   before_validation :normalize_tracking
 
+  after_destroy_commit :soft_delete_pre_alerta_if_empty
+
   # Links unlinked pre_alerta_paquetes by tracking to a given paquete.
   # Advances parent pre_alerta estado to "recibido" if still in pre_alerta state.
   # Returns number of rows linked.
@@ -41,5 +43,12 @@ class PreAlertaPaquete < ApplicationRecord
 
   def normalize_tracking
     self.tracking = tracking.strip.upcase if tracking.present?
+  end
+
+  def soft_delete_pre_alerta_if_empty
+    pa = pre_alerta
+    return unless pa
+    return if pa.deleted_at.present?
+    pa.soft_delete! if pa.pre_alerta_paquetes.reload.empty?
   end
 end
