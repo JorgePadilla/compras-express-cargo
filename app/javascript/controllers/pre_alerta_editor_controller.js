@@ -81,7 +81,7 @@ export default class extends Controller {
     this.updateCounter()
   }
 
-  removePaquete(e) {
+  async removePaquete(e) {
     const row = e.currentTarget.closest(".paquete-row")
     const visibleRows = this.paquetesBodyTarget.querySelectorAll(".paquete-row:not(.hidden)").length
     const esUltimo = visibleRows <= 1
@@ -90,7 +90,16 @@ export default class extends Controller {
       ? "¿Eliminar este paquete? Es el último de la pre-alerta; la pre-alerta quedará vacía y será eliminada."
       : "¿Eliminar este paquete?"
 
-    if (!window.confirm(mensaje)) return
+    const ask = typeof window.cecConfirm === "function"
+      ? window.cecConfirm
+      : (m) => Promise.resolve(window.confirm(m))
+
+    const ok = await ask(mensaje, {
+      title: esUltimo ? "Eliminar paquete y pre-alerta" : "Eliminar paquete",
+      confirmLabel: "Eliminar",
+      danger: true,
+    })
+    if (!ok) return
 
     const destroyField = row.querySelector("[data-pre-alerta-editor-target='destroyField']")
 
