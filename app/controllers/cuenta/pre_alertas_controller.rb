@@ -217,26 +217,14 @@ module Cuenta
       end
 
       if pap.paquete_id.present?
-        # Linked paquete: allowed only for non-CKA/CKM source + movible estado
-        if @pre_alerta.tipo_envio.single_package?
-          redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
-                      alert: "No se puede eliminar un paquete vinculado de una pre-alerta #{@pre_alerta.tipo_envio.nombre}."
-          return
-        end
-        unless ESTADOS_MOVIBLES.include?(pap.paquete.estado)
-          redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
-                      alert: "No se puede eliminar: el paquete ya avanzó más allá del reempaque."
-          return
-        end
+        redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
+                    alert: "No se puede eliminar: el paquete ya fue recibido en nuestra bodega."
+        return
       end
 
       timestamp = Time.current.strftime("%d/%m/%Y %H:%M")
       paq_desc = pap.descripcion.presence || pap.tracking.presence || "sin descripcion"
-      historial_entry = if pap.paquete_id.present?
-        "[#{timestamp}] Paquete '#{paq_desc}' (#{pap.tracking}) removido de la pre-alerta; el paquete físico permanece en bodega."
-      else
-        "[#{timestamp}] Paquete '#{paq_desc}' (#{pap.tracking}) eliminado."
-      end
+      historial_entry = "[#{timestamp}] Paquete '#{paq_desc}' (#{pap.tracking}) eliminado."
       @pre_alerta.append_historial!(historial_entry)
 
       pap.destroy!
@@ -475,10 +463,7 @@ module Cuenta
 
     def puede_eliminar?(pap)
       return false if @pre_alerta.finalizado?
-      return true if pap.paquete_id.nil?
-
-      return false if @pre_alerta.tipo_envio.single_package?
-      ESTADOS_MOVIBLES.include?(pap.paquete.estado)
+      pap.paquete_id.nil?
     end
 
     def puede_editar?(pap)
