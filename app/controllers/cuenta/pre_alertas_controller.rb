@@ -81,6 +81,13 @@ module Cuenta
               new_paquetes[index] = pap.id if pap
             end
           end
+
+          if @pre_alerta.reload.deleted_at.present?
+            flash[:notice] = "La pre-alerta quedó vacía y fue eliminada."
+            render json: { status: "saved", redirect: cuenta_pre_alertas_path }
+            return
+          end
+
           render json: { status: "saved", new_paquetes: new_paquetes }
         else
           render json: { status: "error", errors: @pre_alerta.errors.full_messages },
@@ -140,6 +147,8 @@ module Cuenta
         return
       end
 
+      origen_quedo_vacia = false
+
       PreAlertaPaquete.transaction do
         timestamp = Time.current.strftime("%d/%m/%Y %H:%M")
         paq_desc = pap.descripcion.presence || pap.tracking.presence || "sin descripcion"
@@ -153,13 +162,23 @@ module Cuenta
 
         @pre_alerta.append_historial!(origen_entry)
         destino.append_historial!(destino_entry)
+
+        if @pre_alerta.pre_alerta_paquetes.reload.empty?
+          @pre_alerta.soft_delete!
+          origen_quedo_vacia = true
+        end
       end
 
-      PreAlertaMailer.confirmacion(@pre_alerta).deliver_later
+      PreAlertaMailer.confirmacion(@pre_alerta).deliver_later unless origen_quedo_vacia
       PreAlertaMailer.confirmacion(destino).deliver_later
 
-      redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
-                  notice: "Paquete movido a #{destino.numero_documento}."
+      if origen_quedo_vacia
+        redirect_to cuenta_pre_alertas_path,
+                    notice: "Paquete movido a #{destino.numero_documento}. La pre-alerta origen quedó vacía y fue eliminada."
+      else
+        redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
+                    notice: "Paquete movido a #{destino.numero_documento}."
+      end
     end
 
     def destinos_disponibles
@@ -198,37 +217,37 @@ module Cuenta
       end
 
       if pap.paquete_id.present?
-        # Linked paquete: allowed only for non-CKA/CKM source + movible estado
-        if @pre_alerta.tipo_envio.single_package?
-          redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
-                      alert: "No se puede eliminar un paquete vinculado de una pre-alerta #{@pre_alerta.tipo_envio.nombre}."
-          return
-        end
-        unless ESTADOS_MOVIBLES.include?(pap.paquete.estado)
-          redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
-                      alert: "No se puede eliminar: el paquete ya avanzó más allá del reempaque."
-          return
-        end
+        redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
+                    alert: "No se puede eliminar: el paquete ya fue recibido en nuestra bodega."
+        return
       end
 
       timestamp = Time.current.strftime("%d/%m/%Y %H:%M")
       paq_desc = pap.descripcion.presence || pap.tracking.presence || "sin descripcion"
-      historial_entry = if pap.paquete_id.present?
-        "[#{timestamp}] Paquete '#{paq_desc}' (#{pap.tracking}) removido de la pre-alerta; el paquete físico permanece en bodega."
-      else
-        "[#{timestamp}] Paquete '#{paq_desc}' (#{pap.tracking}) eliminado."
-      end
+      historial_entry = "[#{timestamp}] Paquete '#{paq_desc}' (#{pap.tracking}) eliminado."
       @pre_alerta.append_historial!(historial_entry)
 
       pap.destroy!
-      PreAlertaMailer.confirmacion(@pre_alerta).deliver_later
+
+      quedo_vacia = @pre_alerta.reload.deleted_at.present?
+      PreAlertaMailer.confirmacion(@pre_alerta).deliver_later unless quedo_vacia
 
       respond_to do |format|
         format.turbo_stream {
-          render turbo_stream: turbo_stream.remove("paquete_row_#{pap.id}")
+          if quedo_vacia
+            redirect_to cuenta_pre_alertas_path,
+                        notice: "Paquete eliminado. La pre-alerta quedó vacía y fue eliminada."
+          else
+            render turbo_stream: turbo_stream.remove("paquete_row_#{pap.id}")
+          end
         }
         format.html {
-          redirect_to edit_cuenta_pre_alerta_path(@pre_alerta), notice: "Paquete eliminado."
+          if quedo_vacia
+            redirect_to cuenta_pre_alertas_path,
+                        notice: "Paquete eliminado. La pre-alerta quedó vacía y fue eliminada."
+          else
+            redirect_to edit_cuenta_pre_alerta_path(@pre_alerta), notice: "Paquete eliminado."
+          end
         }
       end
     end
@@ -444,10 +463,7 @@ module Cuenta
 
     def puede_eliminar?(pap)
       return false if @pre_alerta.finalizado?
-      return true if pap.paquete_id.nil?
-
-      return false if @pre_alerta.tipo_envio.single_package?
-      ESTADOS_MOVIBLES.include?(pap.paquete.estado)
+      pap.paquete_id.nil?
     end
 
     def puede_editar?(pap)
