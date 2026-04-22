@@ -453,60 +453,23 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes destino_ids, pa.id
   end
 
-  # ── Eliminar paquete — new matrix ──
-  test "eliminar_paquete allows deletion of linked paquete in recibido_miami estado (non-CKA source)" do
+  # ── Eliminar paquete — linked paquetes no longer deletable from client portal ──
+  test "eliminar_paquete blocks deletion of linked paquete regardless of estado" do
     pa = pre_alertas(:recibida)
-    pap = pre_alerta_paquetes(:pap_vinculado) # linked to paquetes(:recibido), estado recibido_miami
-    paquete_id = pap.paquete_id
-
-    assert_difference("PreAlertaPaquete.count", -1) do
-      delete eliminar_paquete_cuenta_pre_alerta_url(pa, pre_alerta_paquete_id: pap.id)
-    end
-    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
-    # Paquete still exists in warehouse
-    assert Paquete.exists?(paquete_id)
-    assert_match "permanece en bodega", pa.reload.historial
-  end
-
-  test "eliminar_paquete allows deletion of linked paquete in empacado estado" do
-    pa = pre_alertas(:recibida)
-    paquete = paquetes(:recibido)
-    paquete.update_column(:estado, "empacado")
     pap = pre_alerta_paquetes(:pap_vinculado)
 
-    assert_difference("PreAlertaPaquete.count", -1) do
-      delete eliminar_paquete_cuenta_pre_alerta_url(pa, pre_alerta_paquete_id: pap.id)
+    %w[recibido_miami empacado enviado_honduras en_aduana].each do |estado|
+      pap.paquete.update_column(:estado, estado)
+
+      assert_no_difference("PreAlertaPaquete.count", "estado=#{estado}") do
+        delete eliminar_paquete_cuenta_pre_alerta_url(pa, pre_alerta_paquete_id: pap.id)
+      end
+      assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+      assert_match(/bodega/, flash[:alert])
     end
-    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
-  end
-
-  test "eliminar_paquete allows deletion of linked paquete in enviado_honduras estado" do
-    pa = pre_alertas(:recibida)
-    paquete = paquetes(:recibido)
-    paquete.update_column(:estado, "enviado_honduras")
-    pap = pre_alerta_paquetes(:pap_vinculado)
-
-    assert_difference("PreAlertaPaquete.count", -1) do
-      delete eliminar_paquete_cuenta_pre_alerta_url(pa, pre_alerta_paquete_id: pap.id)
-    end
-    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
-  end
-
-  test "eliminar_paquete blocks deletion of linked paquete in en_aduana estado" do
-    pa = pre_alertas(:recibida)
-    paquete = paquetes(:recibido)
-    paquete.update_column(:estado, "en_aduana")
-    pap = pre_alerta_paquetes(:pap_vinculado)
-
-    assert_no_difference("PreAlertaPaquete.count") do
-      delete eliminar_paquete_cuenta_pre_alerta_url(pa, pre_alerta_paquete_id: pap.id)
-    end
-    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
-    assert_match "reempaque", flash[:alert]
   end
 
   test "eliminar_paquete blocks deletion of linked paquete from CKA/CKM source" do
-    # Link the CKA PAP to a paquete in recibido_miami
     pap = pre_alerta_paquetes(:pap_cka_unlinked)
     paquete = paquetes(:recibido)
     pap.update!(paquete: paquete, tracking: paquete.tracking)
@@ -516,7 +479,7 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
       delete eliminar_paquete_cuenta_pre_alerta_url(pa, pre_alerta_paquete_id: pap.id)
     end
     assert_redirected_to edit_cuenta_pre_alerta_url(pa)
-    assert_match(/CKA/, flash[:alert])
+    assert_match(/bodega/, flash[:alert])
   end
 
   test "mover_paquete appends source notas_grupo to origen and destino historial" do
