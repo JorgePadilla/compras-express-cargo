@@ -295,6 +295,8 @@
             </span>
             <input type="text" name="tracking" value="<%= h(params[:tracking]) %>" required
                    placeholder="Ej. 1Z999AA1..."
+                   pattern="[A-Za-z0-9\-]+"
+                   title="Solo letras, números y guiones. Sin espacios ni símbolos."
                    class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
                           focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
           </label>

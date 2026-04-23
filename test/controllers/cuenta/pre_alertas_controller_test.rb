@@ -635,11 +635,15 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_equal [], response.parsed_body
   end
 
-  test "paquetes_disponibles returns empty for sin consolidar PA" do
-    pa = pre_alertas(:activa) # consolidado: false
+  test "paquetes_disponibles lists sueltos (no vinculados) for sin consolidar PA" do
+    pa = pre_alertas(:activa) # consolidado: false, aereo
+    # Asegura que el suelto es aereo y del cliente actual
     get paquetes_disponibles_cuenta_pre_alerta_url(pa), as: :json
     assert_response :success
-    assert_equal [], response.parsed_body
+    body = response.parsed_body
+
+    # Todos los items deben ser sueltos (sin origen)
+    body.each { |p| assert_nil p["origen"], "expected no linked paquetes for sin-consolidar destino" }
   end
 
   test "paquetes_disponibles includes origen info when paquete is linked to another consolidando PA" do
@@ -723,7 +727,7 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to edit_cuenta_pre_alerta_url(pa)
   end
 
-  test "agregar_paquete blocks paquete in blocked estado" do
+  test "agregar_paquete blocks paquete in blocked estado with explicit message" do
     pa = pre_alertas(:consolidada_destino) # aereo, consolidando
     paquete = paquetes(:disponible_entrega_juan) # aereo, juan, pero estado disponible_entrega
 
@@ -731,7 +735,42 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
       post agregar_paquete_cuenta_pre_alerta_url(pa), params: { paquete_id: paquete.id }
     end
     assert_redirected_to edit_cuenta_pre_alerta_url(pa)
-    assert_match "no cumple", flash[:alert]
+    assert_match(/ya se encuentra en/i, flash[:alert])
+    assert_match(/oficinas/i, flash[:alert])
+  end
+
+  test "agregar_paquete permits suelto on sin consolidar destino" do
+    pa = pre_alertas(:activa) # consolidado: false, aereo
+    paquete = paquetes(:suelto_juan_aereo)
+
+    assert_difference("PreAlertaPaquete.count", 1) do
+      post agregar_paquete_cuenta_pre_alerta_url(pa), params: { paquete_id: paquete.id }
+    end
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+    assert_match "agregado", flash[:notice]
+  end
+
+  test "agregar_paquete blocks vinculado into sin consolidar destino" do
+    pa = pre_alertas(:activa) # consolidado: false, aereo
+    paquete = paquetes(:vinculado_aereo_juan)
+
+    assert_no_difference("PreAlertaPaquete.count") do
+      post agregar_paquete_cuenta_pre_alerta_url(pa), params: { paquete_id: paquete.id }
+    end
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+    assert_match(/modo Consolidando/i, flash[:alert])
+  end
+
+  test "agregar_paquete with cross-cliente paquete_id shows generic not found alert" do
+    pa = pre_alertas(:consolidada_destino) # juan
+    # paquete de Maria, no de Juan (current_cliente)
+    paquete = paquetes(:disponible_entrega_maria)
+
+    assert_no_difference("PreAlertaPaquete.count") do
+      post agregar_paquete_cuenta_pre_alerta_url(pa), params: { paquete_id: paquete.id }
+    end
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa)
+    assert_match "Paquete no encontrado", flash[:alert]
   end
 
   test "agregar_paquete blocks from CKA/CKM source" do

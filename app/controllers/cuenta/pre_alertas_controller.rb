@@ -298,10 +298,16 @@ module Cuenta
         return
       end
 
-      unless paquete.tipo_envio_id == @pre_alerta.tipo_envio_id &&
-             ESTADOS_MOVIBLES.include?(paquete.estado)
+      if paquete.tipo_envio_id != @pre_alerta.tipo_envio_id
         redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
-                    alert: "El paquete no cumple los requisitos para ser agregado."
+                    alert: "El tipo de envío del paquete (#{paquete.tipo_envio.nombre}) no coincide con esta pre-alerta (#{@pre_alerta.tipo_envio.nombre})."
+        return
+      end
+
+      unless ESTADOS_MOVIBLES.include?(paquete.estado)
+        estado_humano = paquete.estado.to_s.tr("_", " ").capitalize
+        redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
+                    alert: "Este paquete ya se encuentra en #{estado_humano} y no puede moverse. Por favor comuníquese con las oficinas de Compras Express."
         return
       end
 
@@ -315,6 +321,7 @@ module Cuenta
                           .first
 
       blocked_cka = false
+      blocked_sin_consolidar = false
       PreAlertaPaquete.transaction do
         timestamp = Time.current.strftime("%d/%m/%Y %H:%M")
         paq_desc = paquete.descripcion.presence || paquete.tracking
@@ -322,6 +329,11 @@ module Cuenta
         if pap_origen
           if pap_origen.pre_alerta.tipo_envio.single_package?
             blocked_cka = true
+            raise ActiveRecord::Rollback
+          end
+
+          unless @pre_alerta.consolidando?
+            blocked_sin_consolidar = true
             raise ActiveRecord::Rollback
           end
 
@@ -352,6 +364,12 @@ module Cuenta
       if blocked_cka
         redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
                     alert: "No se puede jalar un paquete de una pre-alerta CKA/CKM."
+        return
+      end
+
+      if blocked_sin_consolidar
+        redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
+                    alert: "Para jalar un paquete desde otra pre-alerta, esta debe estar en modo Consolidando."
         return
       end
 
@@ -503,7 +521,6 @@ module Cuenta
 
     def puede_buscar?
       return false if @pre_alerta.finalizado?
-      return false unless @pre_alerta.consolidando?
       return false if @pre_alerta.tipo_envio.single_package?
       true
     end
@@ -517,7 +534,10 @@ module Cuenta
                   .where(estado: ESTADOS_MOVIBLES)
                   .where(tipo_envio_id: tipo_id)
 
-      # Paquetes vinculados a otras PAs consolidando del cliente (NO CKA/CKM)
+      # Vinculados (mover entre PAs) solo si la PA destino es consolidando.
+      # La matriz requiere que el destino de un move sea CONSOLIDANDO del mismo tipo.
+      return sueltos.to_a.sort_by { |p| p.fecha_recibido_miami || p.created_at }.reverse unless @pre_alerta.consolidando?
+
       vinculados = current_cliente.paquetes
                      .where(estado: ESTADOS_MOVIBLES)
                      .where(tipo_envio_id: tipo_id)
