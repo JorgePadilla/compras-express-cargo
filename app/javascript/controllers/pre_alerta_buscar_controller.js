@@ -2,13 +2,14 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["modal", "filterInput", "loading", "list", "empty",
-                    "form", "paqueteIdField", "confirmBtn", "selectedLabel"]
+                    "form", "paqueteIdField", "papIdField", "confirmBtn", "selectedLabel"]
   static values  = { paquetesUrl: String, agregarUrl: String }
 
   open() {
     this.modalTarget.classList.remove("hidden")
     this.filterInputTarget.value = ""
     this.paqueteIdFieldTarget.value = ""
+    if (this.hasPapIdFieldTarget) this.papIdFieldTarget.value = ""
     this.confirmBtnTarget.disabled = true
     this.selectedLabelTarget.textContent = "Selecciona un paquete para agregar"
 
@@ -47,15 +48,24 @@ export default class extends Controller {
 
   selectPaquete(event) {
     const id = event.currentTarget.dataset.paqueteId
+    const kind = event.currentTarget.dataset.kind || "paquete"
     const tracking = event.currentTarget.dataset.tracking
     this.listTarget.querySelectorAll("[data-paquete-id]").forEach(el => {
       el.classList.remove("ring-2", "ring-cec-teal", "bg-cec-teal/5")
     })
     event.currentTarget.classList.add("ring-2", "ring-cec-teal", "bg-cec-teal/5")
-    this.paqueteIdFieldTarget.value = id
+
+    if (kind === "placeholder") {
+      this.paqueteIdFieldTarget.value = ""
+      if (this.hasPapIdFieldTarget) this.papIdFieldTarget.value = id
+    } else {
+      if (this.hasPapIdFieldTarget) this.papIdFieldTarget.value = ""
+      this.paqueteIdFieldTarget.value = id
+    }
+
     this.confirmBtnTarget.disabled = false
     this.selectedLabelTarget.textContent = `Paquete seleccionado: ${tracking}`
-    this.selectedPaquete = (this.paquetes || []).find(p => String(p.id) === String(id))
+    this.selectedPaquete = (this.paquetes || []).find(p => String(p.id) === String(id) && (p.kind || "paquete") === kind)
   }
 
   async handleSubmit(event) {
@@ -94,6 +104,9 @@ export default class extends Controller {
     const truckIcon = `<svg class="w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/></svg>`
 
     this.listTarget.innerHTML = paquetes.map(p => {
+      const kind = p.kind || "paquete"
+      const isPlaceholder = kind === "placeholder"
+
       const origenBadge = p.origen
         ? `<span class="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full ring-1 ring-amber-200 shrink-0">
              ${arrowIcon}
@@ -109,10 +122,31 @@ export default class extends Controller {
              <span>${this.escape(p.tipo_envio)}</span>
            </span>`
 
+      const placeholderBadge = isPlaceholder
+        ? `<span class="inline-flex items-center gap-1 text-[10px] font-semibold text-cec-navy bg-cec-navy/10 px-2 py-0.5 rounded-full ring-1 ring-cec-navy/20 shrink-0">
+             <span>Pre Alerta</span>
+           </span>`
+        : ""
+
+      const pesoYFecha = isPlaceholder
+        ? `<span class="inline-flex items-center gap-1 italic text-gray-400">Paquete esperado, aún no recibido</span>`
+        : `<span class="inline-flex items-center gap-1">
+             ${scaleIcon}
+             ${p.peso_cobrar || 0} lbs
+           </span>
+           <span class="inline-flex items-center gap-1">
+             ${calendarIcon}
+             ${p.fecha_recibido || "—"}
+           </span>
+           <span class="inline-flex items-center gap-1 text-cec-teal font-medium">
+             ${this.escape(p.estado_label)}
+           </span>`
+
       return `
         <button type="button"
                 data-action="click->pre-alerta-buscar#selectPaquete"
                 data-paquete-id="${p.id}"
+                data-kind="${kind}"
                 data-tracking="${this.escape(p.tracking)}"
                 class="w-full text-left px-4 py-3 rounded-xl border border-gray-200 hover:border-cec-teal/50 transition-colors cursor-pointer flex gap-3">
           <div class="w-10 h-10 shrink-0 rounded-lg bg-cec-navy/5 flex items-center justify-center">
@@ -123,22 +157,13 @@ export default class extends Controller {
               <span class="font-mono text-sm font-bold text-cec-navy truncate">${this.escape(p.tracking)}</span>
               <div class="flex items-center gap-1 shrink-0">
                 ${tipoEnvioBadge}
+                ${placeholderBadge}
                 ${origenBadge}
               </div>
             </div>
             <p class="text-xs text-gray-600 truncate mt-0.5">${this.escape(p.descripcion)}</p>
             <div class="flex items-center gap-3 mt-1 text-[11px] text-gray-400">
-              <span class="inline-flex items-center gap-1">
-                ${scaleIcon}
-                ${p.peso_cobrar || 0} lbs
-              </span>
-              <span class="inline-flex items-center gap-1">
-                ${calendarIcon}
-                ${p.fecha_recibido || "—"}
-              </span>
-              <span class="inline-flex items-center gap-1 text-cec-teal font-medium">
-                ${this.escape(p.estado_label)}
-              </span>
+              ${pesoYFecha}
             </div>
           </div>
         </button>

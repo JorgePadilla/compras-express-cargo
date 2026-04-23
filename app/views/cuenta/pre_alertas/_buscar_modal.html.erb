@@ -55,8 +55,8 @@
               options: { class: "w-12 h-12 text-gray-300 mx-auto mb-3" } %>
         <p class="text-sm font-medium text-gray-600">No hay paquetes disponibles</p>
         <p class="text-xs text-gray-400 mt-1">
-          Los paquetes con mismo tipo de envio (<%= pre_alerta.tipo_envio.codigo.upcase %>)
-          en estados movibles apareceran aqui.
+          Aparecerán paquetes físicos del mismo tipo (<%= pre_alerta.tipo_envio.codigo.upcase %>)
+          y paquetes esperados en tus otras pre-alertas consolidando.
         </p>
       </div>
     </div>
@@ -69,6 +69,7 @@
         Selecciona un paquete para agregar
       </p>
       <input type="hidden" name="paquete_id" data-pre-alerta-buscar-target="paqueteIdField" value="">
+      <input type="hidden" name="pap_id" data-pre-alerta-buscar-target="papIdField" value="">
       <div class="flex gap-3 shrink-0">
         <button type="button" data-action="click->pre-alerta-buscar#close"
                 class="text-gray-600 hover:text-gray-800 text-sm font-medium px-4 py-2">

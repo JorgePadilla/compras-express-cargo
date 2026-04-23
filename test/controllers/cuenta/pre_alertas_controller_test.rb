@@ -806,6 +806,102 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/quedó vacía/i, flash[:notice].to_s)
   end
 
+  test "paquetes_disponibles includes placeholder PAPs from other consolidando PAs" do
+    destino = pre_alertas(:consolidada_destino) # juan, aereo, consolidando
+    # Crear un placeholder en otra PA consolidando del cliente
+    source = pre_alertas(:recibida) # juan, aereo, consolidando
+    placeholder = source.pre_alerta_paquetes.create!(
+      tracking: "PLACEHOLDER001",
+      descripcion: "Esperado",
+      fecha: Date.current
+    )
+
+    get paquetes_disponibles_cuenta_pre_alerta_url(destino), as: :json
+    assert_response :success
+
+    entry = response.parsed_body.find { |p| p["kind"] == "placeholder" && p["id"] == placeholder.id }
+    assert_not_nil entry, "expected placeholder in JSON"
+    assert_equal "PLACEHOLDER001", entry["tracking"]
+    assert_equal "pre_alerta", entry["estado"]
+    assert_equal source.numero_documento, entry["origen"]["numero"]
+  end
+
+  test "paquetes_disponibles excludes placeholders when destino is sin-consolidar" do
+    destino = pre_alertas(:activa) # consolidado: false
+    # Crear un placeholder en otra PA consolidando del cliente
+    source = pre_alertas(:recibida)
+    source.pre_alerta_paquetes.create!(
+      tracking: "PLACEHOLDER002",
+      descripcion: "Esperado",
+      fecha: Date.current
+    )
+
+    get paquetes_disponibles_cuenta_pre_alerta_url(destino), as: :json
+    assert_response :success
+
+    placeholders = response.parsed_body.select { |p| p["kind"] == "placeholder" }
+    assert_empty placeholders, "no placeholders allowed in sin-consolidar destino"
+  end
+
+  test "agregar_paquete via pap_id moves placeholder to destino" do
+    destino = pre_alertas(:consolidada_destino)
+    source = pre_alertas(:recibida)
+    placeholder = source.pre_alerta_paquetes.create!(
+      tracking: "PLACEHOLDER100",
+      descripcion: "Esperado",
+      fecha: Date.current
+    )
+
+    assert_no_difference("PreAlertaPaquete.count") do
+      post agregar_paquete_cuenta_pre_alerta_url(destino), params: { pap_id: placeholder.id }
+    end
+    assert_redirected_to edit_cuenta_pre_alerta_url(destino)
+    assert_equal destino.id, placeholder.reload.pre_alerta_id
+  end
+
+  test "agregar_paquete via pap_id blocks from CKA/CKM source" do
+    destino = pre_alertas(:consolidada_destino)
+    placeholder = pre_alerta_paquetes(:pap_cka_unlinked) # CKA origen
+
+    assert_no_difference("PreAlertaPaquete.count") do
+      post agregar_paquete_cuenta_pre_alerta_url(destino), params: { pap_id: placeholder.id }
+    end
+    assert_redirected_to edit_cuenta_pre_alerta_url(destino)
+    assert_match "CKA/CKM", flash[:alert]
+  end
+
+  test "agregar_paquete via pap_id soft-deletes source when last PAP moved" do
+    destino = pre_alertas(:consolidada_destino)
+    source = pre_alertas(:recibida)
+    source.pre_alerta_paquetes.destroy_all # vaciar source (auto-soft-deletes source)
+    source.update_column(:deleted_at, nil) # restaurar para crear placeholder
+    placeholder = source.pre_alerta_paquetes.create!(
+      tracking: "PLACEHOLDER300",
+      descripcion: "Esperado",
+      fecha: Date.current
+    )
+
+    post agregar_paquete_cuenta_pre_alerta_url(destino), params: { pap_id: placeholder.id }
+    assert_redirected_to edit_cuenta_pre_alerta_url(destino)
+    assert_not_nil source.reload.deleted_at
+    assert_match(/quedó vacía/i, flash[:notice])
+  end
+
+  test "agregar_paquete via pap_id with cross-cliente pap returns not found" do
+    destino = pre_alertas(:consolidada_destino) # juan
+    maria_placeholder = pre_alertas(:maria_pa).pre_alerta_paquetes.create!(
+      tracking: "MARIAPLACE001",
+      descripcion: "de maria",
+      fecha: Date.current
+    )
+
+    assert_no_difference("PreAlertaPaquete.count") do
+      post agregar_paquete_cuenta_pre_alerta_url(destino), params: { pap_id: maria_placeholder.id }
+    end
+    assert_redirected_to edit_cuenta_pre_alerta_url(destino)
+    assert_match "Paquete no encontrado", flash[:alert]
+  end
+
   test "paquetes_disponibles includes origen paquetes_count for linked paquetes" do
     pa = pre_alertas(:consolidada_destino)
     get paquetes_disponibles_cuenta_pre_alerta_url(pa), as: :json
