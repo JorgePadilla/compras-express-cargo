@@ -181,7 +181,9 @@ export default class extends Controller {
     const formData = new FormData(this.formTarget)
     formData.append("autosave", "true")
 
-    // Find new paquete rows where tracking AND descripcion are both blank — skip them
+    // Skip new paquete rows that are not fully filled. Tracking + descripcion
+    // are both required server-side, so sending a partial row triggers a 422
+    // while the user is still typing. Only include the row once both are set.
     const rows = this.paquetesBodyTarget.querySelectorAll(".paquete-row:not(.hidden)")
     const keysToDelete = []
 
@@ -198,7 +200,7 @@ export default class extends Controller {
       const tracking = formData.get(`pre_alerta[pre_alerta_paquetes_attributes][${index}][tracking]`) || ""
       const descripcion = formData.get(`pre_alerta[pre_alerta_paquetes_attributes][${index}][descripcion]`) || ""
 
-      if (tracking.trim() === "" && descripcion.trim() === "") {
+      if (tracking.trim() === "" || descripcion.trim() === "") {
         // Remove this incomplete row's fields from formData
         keysToDelete.push(index)
       }
