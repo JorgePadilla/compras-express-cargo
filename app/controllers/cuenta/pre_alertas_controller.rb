@@ -259,9 +259,7 @@ module Cuenta
         return
       end
 
-      paquetes = candidatos_para_buscar
-
-      render json: paquetes.map { |p|
+      fisicos = candidatos_para_buscar.map do |p|
         pap_origen = p.pre_alerta_paquetes.joins(:pre_alerta)
                        .where(pre_alertas: { consolidado: true, finalizado: false })
                        .where.not(pre_alertas: { id: @pre_alerta.id })
@@ -270,11 +268,13 @@ module Cuenta
           {
             numero: pap_origen.pre_alerta.numero_documento,
             titulo: pap_origen.pre_alerta.titulo,
-            pap_id: pap_origen.id
+            pap_id: pap_origen.id,
+            paquetes_count: pap_origen.pre_alerta.pre_alerta_paquetes.size
           }
         end
 
         {
+          kind: "paquete",
           id: p.id,
           tracking: p.tracking,
           guia: p.guia,
@@ -286,17 +286,46 @@ module Cuenta
           tipo_envio: p.tipo_envio&.nombre || "—",
           origen: origen_info
         }
-      }
+      end
+
+      placeholders = placeholders_para_buscar.map do |pap|
+        source_pa = pap.pre_alerta
+        {
+          kind: "placeholder",
+          id: pap.id,
+          tracking: pap.tracking,
+          guia: nil,
+          descripcion: pap.descripcion.presence || "—",
+          estado: "pre_alerta",
+          estado_label: "Pre Alerta",
+          peso_cobrar: nil,
+          fecha_recibido: nil,
+          tipo_envio: source_pa.tipo_envio&.nombre || "—",
+          origen: {
+            numero: source_pa.numero_documento,
+            titulo: source_pa.titulo,
+            pap_id: pap.id,
+            paquetes_count: source_pa.pre_alerta_paquetes.size
+          }
+        }
+      end
+
+      render json: fisicos + placeholders
     end
 
     def agregar_paquete
-      paquete = current_cliente.paquetes.find(params[:paquete_id])
-
       unless puede_buscar?
         redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
                     alert: "No se puede agregar paquetes a esta pre-alerta."
         return
       end
+
+      if params[:pap_id].present? && params[:paquete_id].blank?
+        agregar_placeholder(params[:pap_id])
+        return
+      end
+
+      paquete = current_cliente.paquetes.find(params[:paquete_id])
 
       if paquete.tipo_envio_id != @pre_alerta.tipo_envio_id
         redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
@@ -322,6 +351,8 @@ module Cuenta
 
       blocked_cka = false
       blocked_sin_consolidar = false
+      source_pa = nil
+      source_pa_vacia = false
       PreAlertaPaquete.transaction do
         timestamp = Time.current.strftime("%d/%m/%Y %H:%M")
         paq_desc = paquete.descripcion.presence || paquete.tracking
@@ -348,7 +379,12 @@ module Cuenta
           source_pa.append_historial!(origen_entry)
           @pre_alerta.append_historial!(destino_entry)
 
-          PreAlertaMailer.confirmacion(source_pa).deliver_later
+          if source_pa.pre_alerta_paquetes.reload.empty?
+            source_pa.soft_delete!
+            source_pa_vacia = true
+          else
+            PreAlertaMailer.confirmacion(source_pa).deliver_later
+          end
         else
           @pre_alerta.pre_alerta_paquetes.create!(
             paquete: paquete,
@@ -375,8 +411,13 @@ module Cuenta
 
       PreAlertaMailer.confirmacion(@pre_alerta).deliver_later
 
-      redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
-                  notice: "Paquete agregado a la pre-alerta."
+      notice = if source_pa_vacia && source_pa
+        "Paquete agregado. La pre-alerta #{source_pa.numero_documento} quedó vacía y fue eliminada."
+      else
+        "Paquete agregado a la pre-alerta."
+      end
+
+      redirect_to edit_cuenta_pre_alerta_path(@pre_alerta), notice: notice
     rescue ActiveRecord::RecordNotFound
       redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
                   alert: "Paquete no encontrado."
@@ -517,6 +558,87 @@ module Cuenta
       end
 
       base.order(created_at: :desc)
+    end
+
+    def agregar_placeholder(pap_id)
+      pap = PreAlertaPaquete
+              .joins(:pre_alerta)
+              .where(pre_alertas: { cliente_id: current_cliente.id, deleted_at: nil })
+              .where.not(pre_alertas: { estado: "anulado" })
+              .where.not(pre_alertas: { id: @pre_alerta.id })
+              .find_by(id: pap_id, paquete_id: nil)
+
+      unless pap
+        redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
+                    alert: "Paquete no encontrado."
+        return
+      end
+
+      source_pa = pap.pre_alerta
+
+      if source_pa.tipo_envio.single_package?
+        redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
+                    alert: "No se puede jalar un paquete de una pre-alerta CKA/CKM."
+        return
+      end
+
+      unless source_pa.consolidando?
+        redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
+                    alert: "Solo se pueden jalar paquetes de pre-alertas consolidando."
+        return
+      end
+
+      source_pa_vacia = false
+      PreAlertaPaquete.transaction do
+        timestamp = Time.current.strftime("%d/%m/%Y %H:%M")
+        paq_desc = pap.descripcion.presence || pap.tracking
+
+        notas_origen = source_pa.notas_grupo.presence
+        notas_suffix = notas_origen ? " Notas del grupo origen: \"#{notas_origen}\"." : ""
+
+        origen_entry  = "[#{timestamp}] Paquete '#{paq_desc}' (#{pap.tracking}) jalado a #{@pre_alerta.numero_documento} — #{@pre_alerta.titulo}.#{notas_suffix}"
+        destino_entry = "[#{timestamp}] Paquete '#{paq_desc}' (#{pap.tracking}) jalado de #{source_pa.numero_documento} — #{source_pa.titulo}.#{notas_suffix}"
+
+        pap.update!(pre_alerta: @pre_alerta)
+        source_pa.append_historial!(origen_entry)
+        @pre_alerta.append_historial!(destino_entry)
+
+        if source_pa.pre_alerta_paquetes.reload.empty?
+          source_pa.soft_delete!
+          source_pa_vacia = true
+        else
+          PreAlertaMailer.confirmacion(source_pa).deliver_later
+        end
+      end
+
+      PreAlertaMailer.confirmacion(@pre_alerta).deliver_later
+
+      notice = source_pa_vacia ?
+        "Paquete agregado. La pre-alerta #{source_pa.numero_documento} quedó vacía y fue eliminada." :
+        "Paquete agregado a la pre-alerta."
+
+      redirect_to edit_cuenta_pre_alerta_path(@pre_alerta), notice: notice
+    end
+
+    # PAPs sin paquete físico (estado PRE_ALERTA) en otras PAs del cliente.
+    # Solo se pueden jalar a un destino consolidando (matriz: mover un PAP
+    # PRE_ALERTA requiere destino consolidando CER/CEM/EXP). Origen no puede
+    # ser CKA/CKM ni finalizada.
+    def placeholders_para_buscar
+      return [] unless @pre_alerta.consolidando?
+
+      PreAlertaPaquete
+        .joins(pre_alerta: :tipo_envio)
+        .where(paquete_id: nil)
+        .where(pre_alertas: { cliente_id: current_cliente.id,
+                              consolidado: true,
+                              finalizado: false,
+                              deleted_at: nil })
+        .where.not(pre_alertas: { id: @pre_alerta.id })
+        .where.not(pre_alertas: { estado: "anulado" })
+        .where("tipo_envios.max_paquetes_por_accion IS NULL OR tipo_envios.max_paquetes_por_accion != 1")
+        .includes(pre_alerta: :tipo_envio)
+        .order(created_at: :desc)
     end
 
     def puede_buscar?
