@@ -163,7 +163,9 @@ export default class extends Controller {
         return true
       } else if (response.status === 422) {
         const data = await response.json()
-        this._showStatus("Error al guardar", "text-red-500", 5000)
+        const errors = Array.isArray(data.errors) && data.errors.length > 0 ? data.errors : null
+        const message = errors ? `Error al guardar: ${errors.join(". ")}` : "Error al guardar"
+        this._showStatus(message, "text-red-500", 8000)
         return false
       } else {
         this._showStatus("Error de conexión", "text-red-500", 5000)
