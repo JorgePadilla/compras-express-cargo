@@ -344,9 +344,10 @@ Pre-alerta → Recepción Miami → Pre-factura → Factura → Pago → Entrega
 
 **Botón:** "Agregar otro paquete" (añadir más trackings)
 
-**Acciones de guardado:**
-- "Guardar y Notificar (F9)" — guarda y envía notificación
-- "Solo Guardar (F8)" — guarda sin notificar
+**Acciones de guardado (portal cliente, Abril 2026):**
+- **Autosave**: activo en pre-alertas consolidando. PATCH con `autosave=true` tras 1.5s de debounce en cualquier input.
+- **Guardar (F8)**: botón/atajo que fuerza el flush del autosave pendiente (cancela debounce, espera respuesta) y muestra un modal de confirmación estilizado ("¡Tus cambios fueron guardados!") con auto-dismiss a 3s. Visible en ambos modos.
+- **Finalizar Consolidación (F9)**: solo en consolidando. Espera el autosave en vuelo y marca la PA como finalizada.
 
 **Modales disponibles:**
 - Pre-Factura
@@ -500,13 +501,14 @@ Muestra direcciones de envío en Miami por tipo, cada una con pricing:
 
 **Confirmados en el sistema actual (Pre-Alerta editor):**
 
-| Atajo | Acción | Función JS |
+| Atajo | Acción | Stimulus handler (cliente) |
 |-------|--------|-----------|
-| F6 | Agregar detalles del paquete (crear nuevo grupo) | `AgregarGrupoPreAlerta()` |
-| F8 | Solo Guardar (sin notificar) | `GuardarPreAlerta(false)` |
-| F9 | Guardar y Notificar al cliente | `GuardarPreAlerta(true)` |
+| F2 / Escape | Cancelar edición y volver al listado | `pre_alerta_editor#cancel` |
+| F6 | Agregar una fila de paquete en el editor | `pre_alerta_editor#addPaquete` |
+| F8 | Guardar: flush de autosave pendiente + modal "Guardado" | `pre_alerta_editor#save` |
+| F9 | Finalizar Consolidación (solo consolidando) | `pre_alerta_editor#finalizar` |
 
-**Nota:** En la vista cliente, los F-keys están como labels en los botones pero no tienen global keydown handlers. El binding de teclado probablemente existe en la vista admin/logística (operadores Miami).
+**Nota:** En el portal cliente, los atajos están bindeados globalmente en `pre_alerta_editor_controller#handleKeydown`. La vista admin/logística (operadores Miami) es un sistema legacy con sus propios bindings.
 
 **Funciones JS encontradas en el editor:**
 - `CrearNuevaPreAlerta()`
@@ -852,26 +854,32 @@ Listado de 22 configuraciones del sistema, cada una con botón "Editar":
 | Estado del Paquete | Origen CONSOLIDANDO (EXP/CER/CEM) | Origen SIN CONSOLIDAR (EXP/CER/CEM) | Origen CKA/CKM |
 |---|---|---|---|
 | **PRE_ALERTA** (no vinculado, sin paquete físico) | Mover a cualquier PA consolidando CER/CEM/EXP · editar tracking/descripción · eliminar PAP | Igual | Igual |
-| **recibido_miami** (vinculado) | Mover a PA consolidando del mismo tipo · eliminar PAP (el paquete queda en bodega) | Igual | BLOQUEADO |
-| **empacado** (vinculado) | Igual que fila anterior | Igual | BLOQUEADO |
-| **enviado_honduras** (vinculado) | Igual que fila anterior | Igual | BLOQUEADO |
+| **recibido_miami** (vinculado) | Mover a PA consolidando del mismo tipo · **eliminar BLOQUEADO desde el portal cliente** | Igual | BLOQUEADO |
+| **empacado** (vinculado) | Mover a PA consolidando del mismo tipo · **eliminar BLOQUEADO desde el portal cliente** | Igual | BLOQUEADO |
+| **enviado_honduras** (vinculado) | Mover a PA consolidando del mismo tipo · **eliminar BLOQUEADO desde el portal cliente** | Igual | BLOQUEADO |
 | **en_aduana** en adelante (incluye disponible_entrega, pre_facturado, facturado, en_reparto, entregado, retenido, retornado, desechado, anulado) | BLOQUEADO | BLOQUEADO | BLOQUEADO |
 
 **Notas de Consolidación (`notas_grupo`):** Editables mientras la PA esté consolidando Y ningún paquete vinculado haya llegado a `en_aduana` o posterior. Si cualquier paquete avanza a `en_aduana`+, las notas quedan en modo solo lectura.
 
 **Historial de movimientos:** Al mover un paquete entre pre-alertas, las notas del grupo origen (`notas_grupo`) se incluyen como sufijo en las entradas del historial de ambas PAs (origen y destino). Esto permite conservar el contexto sin mutar las `notas_grupo` del destino.
 
-**Eliminar paquete vinculado:** Cuando el cliente elimina un PAP vinculado (permitido sólo en recibido_miami/empacado/enviado_honduras y fuera de CKA/CKM), se destruye únicamente la fila de unión. El `Paquete` físico permanece intacto en la bodega y sigue siendo visible desde las vistas admin.
+**Eliminar paquete vinculado (Abril 2026):** El cliente **ya no puede** desvincular un PAP vinculado desde el portal, independientemente del estado o tipo de envío. El ícono de basurero se oculta para cualquier PAP con `paquete_id.present?`. El endpoint `eliminar_paquete` responde con alert "No se puede eliminar: el paquete ya fue recibido en nuestra bodega" como red de seguridad.
+
+**Auto-soft-delete de pre-alerta vacía:** Si al mover o eliminar un PAP la pre-alerta queda sin paquetes, se hace `soft_delete!` automáticamente:
+- Callback `after_destroy_commit :soft_delete_pre_alerta_if_empty` en `PreAlertaPaquete` cubre `destroy!` directo, `accepts_nested_attributes_for` y el autosave.
+- `mover_paquete` controller hace soft-delete manual (el PAP se actualiza, no se destruye).
+- Antes de borrar siempre se pide confirmación (modal estilizada, ver sección UI).
 
 **Implicación para el sistema:**
 - Lógica de permisos de edición depende de: tipo de servicio origen + estado del paquete vinculado + si el paquete está o no vinculado
 - Reglas de negocio (controller `Cuenta::PreAlertasController`):
   - `puede_mover?(pap)` → false si PA finalizada; si `pap.paquete_id` presente exige estado en `ESTADOS_MOVIBLES` y origen no CKA/CKM; si no vinculado → true siempre
-  - `puede_eliminar?(pap)` → misma lógica que `puede_mover?`
+  - `puede_eliminar?(pap)` → **false si PA finalizada o si `pap.paquete_id.present?`**; true solo para PAPs no vinculados
   - `PreAlerta#notas_editables?` → `consolidando?` y ningún paquete vinculado en `ESTADOS_QUE_BLOQUEAN_NOTAS` (en_aduana hacia adelante)
-- `ESTADOS_MOVIBLES = %w[recibido_miami empacado enviado_honduras]`
+- `ESTADOS_MOVIBLES = %w[recibido_miami empacado enviado_honduras]` (aplica solo a `puede_mover?`)
 - `ESTADOS_QUE_BLOQUEAN_NOTAS = %w[en_aduana disponible_entrega pre_facturado facturado en_reparto entregado retenido retornado desechado anulado]`
-- La UI oculta botón "Mover" / "Eliminar" cuando no aplica; muestra confirmación larga ("el paquete físico permanece en nuestra bodega...") para eliminaciones vinculadas
+- La UI oculta botón "Mover" / "Eliminar" cuando no aplica
+- Las confirmaciones usan modal estilizada (`shared/_confirm_modal` + `confirm_modal_controller`); `Turbo.setConfirmMethod` está sobreescrito para que `data-turbo-confirm` renderice el modal en vez del `window.confirm` nativo; `window.cecConfirm(message, { title, confirmLabel, danger })` está disponible globalmente para confirmaciones desde JS
 
 ### Cancelación de pre-alertas con paquetes recibidos
 
@@ -883,7 +891,7 @@ Listado de 22 configuraciones del sistema, cada una con botón "Editar":
 - Una pre-alerta solo puede cancelarse/eliminarse si todos sus paquetes están en estado **Pre-Alerta** (ninguno recibido aún)
 - Una vez que al menos un paquete pasa a estado **Recibido**, la pre-alerta se bloquea contra cancelación
 - La UI debe ocultar/deshabilitar el botón de cancelar cuando hay paquetes recibidos
-- Considerar soft-delete (marcar como cancelada) en vez de hard-delete para auditoría
+- **Soft-delete automático (Abril 2026):** si la pre-alerta queda sin PAPs tras mover o eliminar el último, se marca `deleted_at` automáticamente (callback `after_destroy_commit` en `PreAlertaPaquete` + soft-delete manual en `mover_paquete` controller). El job `CleanEmptyPreAlertasJob` sigue activo para limpieza retroactiva (PAs vacías con 30+ días)
 
 ### Notificaciones al cliente durante el flujo
 

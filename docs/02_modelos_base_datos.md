@@ -74,7 +74,7 @@ end
 class CreateClientes < ActiveRecord::Migration[8.0]
   def change
     create_table :clientes do |t|
-      t.string :codigo, null: false, index: { unique: true }  # CEC-001, etc.
+      t.string :codigo, null: false, index: { unique: true }  # C1, C10, C100, etc. (generador regex ^C[0-9]+$)
       t.string :nombre, null: false
       t.string :apellido
       t.string :identidad                    # Documento de identidad
