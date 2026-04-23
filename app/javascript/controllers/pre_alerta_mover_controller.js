@@ -60,25 +60,32 @@ export default class extends Controller {
       return
     }
 
-    this.listTarget.innerHTML = destinos.map(d => `
-      <button type="button"
-              data-action="click->pre-alerta-mover#selectDestino"
-              data-destino-id="${d.id}"
-              class="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:border-cec-teal/50 transition-colors cursor-pointer">
-        <div class="flex items-center justify-between">
-          <span class="text-sm font-bold text-cec-navy truncate mr-2">${d.titulo || "Sin titulo"}</span>
-          <div class="flex flex-col items-end shrink-0">
-            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-cec-navy/5 text-cec-navy ring-1 ring-cec-navy/20">
-              ${d.tipo_envio}
-            </span>
-            <span class="text-[10px] text-gray-400 mt-0.5">${d.tipo_envio_descripcion}</span>
+    this.listTarget.innerHTML = destinos.map(d => {
+      const consolidadoBadge = d.consolidado
+        ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30 mt-1">Consolidado</span>`
+        : `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 ring-1 ring-red-600/20 mt-1">Sin Consolidar</span>`
+
+      return `
+        <button type="button"
+                data-action="click->pre-alerta-mover#selectDestino"
+                data-destino-id="${d.id}"
+                class="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:border-cec-teal/50 transition-colors cursor-pointer">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-bold text-cec-navy truncate mr-2">${d.titulo || "Sin titulo"}</span>
+            <div class="flex flex-col items-end shrink-0">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-cec-navy/5 text-cec-navy ring-1 ring-cec-navy/20">
+                ${d.tipo_envio}
+              </span>
+              <span class="text-[10px] text-gray-400 mt-0.5">${d.tipo_envio_descripcion}</span>
+              ${consolidadoBadge}
+            </div>
           </div>
-        </div>
-        <p class="text-xs text-gray-500 mt-1">
-          ${d.numero_documento} &middot; ${d.paquetes_count} paquete${d.paquetes_count === 1 ? "" : "s"} &middot; ${d.created_at}
-        </p>
-      </button>
-    `).join("")
+          <p class="text-xs text-gray-500 mt-1">
+            ${d.numero_documento} &middot; ${d.paquetes_count} paquete${d.paquetes_count === 1 ? "" : "s"} &middot; ${d.created_at}
+          </p>
+        </button>
+      `
+    }).join("")
 
     this.listTarget.classList.remove("hidden")
   }
