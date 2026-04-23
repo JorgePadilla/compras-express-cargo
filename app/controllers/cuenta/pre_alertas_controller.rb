@@ -202,6 +202,7 @@ module Cuenta
           titulo: pa.titulo,
           tipo_envio: te.nombre,
           tipo_envio_descripcion: desc,
+          consolidado: pa.consolidado,
           paquetes_count: pa.pre_alerta_paquetes.size,
           created_at: pa.created_at.strftime("%d/%m/%Y")
         }
