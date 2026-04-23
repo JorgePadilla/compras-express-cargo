@@ -881,6 +881,36 @@ Listado de 22 configuraciones del sistema, cada una con botón "Editar":
 - La UI oculta botón "Mover" / "Eliminar" cuando no aplica
 - Las confirmaciones usan modal estilizada (`shared/_confirm_modal` + `confirm_modal_controller`); `Turbo.setConfirmMethod` está sobreescrito para que `data-turbo-confirm` renderice el modal en vez del `window.confirm` nativo; `window.cecConfirm(message, { title, confirmLabel, danger })` está disponible globalmente para confirmaciones desde JS
 
+### Buscar Paquetes (Agregar a la pre-alerta actual)
+
+Modal accesible desde el botón "Buscar Paquetes" en el editor. Permite al cliente agregar paquetes **sueltos** (recibidos en bodega, sin pre-alerta) y, cuando aplica, **jalar** paquetes vinculados desde otras pre-alertas del mismo cliente.
+
+**Reglas (matriz abril 2026):**
+
+| PA destino | Sueltos | Vinculados de otra PA |
+|---|---|---|
+| CONSOLIDANDO (EXP/CER/CEM) | ✅ mismo tipo, estado en `ESTADOS_MOVIBLES` | ✅ origen consolidando del mismo tipo, no CKA/CKM |
+| SIN CONSOLIDAR (EXP/CER/CEM) | ✅ mismo tipo, estado en `ESTADOS_MOVIBLES` | ❌ bloqueado (destino debe ser consolidando) |
+| CKA/CKM | ❌ bloqueado (single_package) | ❌ bloqueado |
+| Finalizada | ❌ bloqueado | ❌ bloqueado |
+
+**Implementación (`Cuenta::PreAlertasController`):**
+- `puede_buscar?` → false solo si PA finalizada o tipo single_package (CKA/CKM).
+- `candidatos_para_buscar` scope: siempre sueltos del `current_cliente` mismo tipo. Vinculados solo cuando el destino está `consolidando?` (y el origen es consolidando no CKA/CKM).
+- `agregar_paquete` con mensajes específicos:
+  - Tipo distinto → "El tipo de envío del paquete (X) no coincide con esta pre-alerta (Y)."
+  - Estado fuera de `ESTADOS_MOVIBLES` → "Este paquete ya se encuentra en [estado] y no puede moverse. Por favor comuníquese con las oficinas de Compras Express."
+  - Origen CKA/CKM → "No se puede jalar un paquete de una pre-alerta CKA/CKM."
+  - Vinculado + destino sin-consolidar → "Para jalar un paquete desde otra pre-alerta, esta debe estar en modo Consolidando."
+  - `RecordNotFound` (paquete de otro cliente, o inexistente) → "Paquete no encontrado." (protección por scope `current_cliente.paquetes`, el modal nunca expone paquetes de otros clientes).
+
+### Validación de Tracking
+
+El tracking debe ser alfanumérico + guiones, sin espacios ni símbolos especiales. Se auto-convierte a mayúsculas al guardar.
+
+- **Server-side:** `PreAlertaPaquete` valida con `/\A[A-Z0-9-]+\z/` + callback `normalize_tracking` que uppercases.
+- **Client-side (abril 2026):** inputs del editor (`_paquete_fields.html.erb`) y del wizard (`new.html.erb`) llevan `pattern="[A-Za-z0-9\-]+"` + `title="Solo letras, números y guiones. Sin espacios ni símbolos."` para feedback inmediato del browser antes del submit.
+
 ### Cancelación de pre-alertas con paquetes recibidos
 
 **Pregunta:** ¿Puede el cliente cancelar/borrar una pre-alerta que ya tiene paquetes recibidos en Miami?
