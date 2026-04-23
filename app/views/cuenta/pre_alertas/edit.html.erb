@@ -217,11 +217,16 @@
   <%# Saved overlay (toggled by pre-alerta-editor controller) %>
   <div data-pre-alerta-editor-target="savedModal"
        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm">
-    <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm mx-4 text-center animate-fade-in-up">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md mx-4 text-center animate-fade-in-up">
       <div class="mx-auto w-16 h-16 rounded-full bg-cec-teal/10 flex items-center justify-center mb-4">
         <%= heroicon "check-circle", variant: :solid, options: { class: "w-10 h-10 text-cec-teal" } %>
       </div>
-      <p class="text-lg font-bold text-cec-navy mb-1">Guardado</p>
+      <p class="text-lg font-bold text-cec-navy mb-2">¡Tus cambios fueron guardados!</p>
+      <p class="text-sm text-gray-600 leading-relaxed">
+        Tu pre-alerta está al día. Podés seguir editándola cuando quieras;
+        nosotros nos encargamos de que nada se pierda.
+      </p>
+      <p class="text-xs text-gray-400 mt-4">Gracias por confiar en Compras Express Cargo.</p>
     </div>
   </div>
 

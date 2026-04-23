@@ -309,7 +309,7 @@ export default class extends Controller {
     this.savedModalTarget.classList.remove("hidden")
     this._savedModalTimer = setTimeout(() => {
       this.savedModalTarget.classList.add("hidden")
-    }, 1500)
+    }, 3000)
   }
 
   // ── Finalize ──
