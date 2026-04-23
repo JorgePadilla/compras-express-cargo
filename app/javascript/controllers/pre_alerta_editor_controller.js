@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["form", "paquetesBody", "template", "counter", "addButton", "limitMessage", "status"]
+  static targets = ["form", "paquetesBody", "template", "counter", "addButton", "limitMessage", "status", "saveButton", "savedModal"]
   static values = {
     maxPaquetes: { type: Number, default: -1 },
     cancelUrl: { type: String, default: "" },
@@ -37,6 +37,7 @@ export default class extends Controller {
     }
     clearTimeout(this._autosaveTimer)
     clearTimeout(this._statusTimer)
+    clearTimeout(this._savedModalTimer)
   }
 
   handleKeydown(e) {
@@ -46,6 +47,9 @@ export default class extends Controller {
     } else if (e.key === "F6") {
       e.preventDefault()
       this.addPaquete()
+    } else if (e.key === "F8") {
+      e.preventDefault()
+      this.save()
     } else if (e.key === "F9") {
       e.preventDefault()
       this.finalizar()
@@ -127,10 +131,10 @@ export default class extends Controller {
   async autosave() {
     clearTimeout(this._autosaveTimer)
 
-    if (this._saving || !this.autosaveUrlValue) return
+    if (this._saving || !this.autosaveUrlValue) return false
 
     const formData = this._buildAutosaveFormData()
-    if (!formData) return
+    if (!formData) return false
 
     this._saving = true
     this._showStatus("Guardando...", "text-gray-400")
@@ -150,20 +154,24 @@ export default class extends Controller {
         const data = await response.json()
         if (data.redirect) {
           window.location.href = data.redirect
-          return
+          return true
         }
         this._injectNewPaqueteIds(data.new_paquetes || {})
         this._removeDestroyedRows()
         this.updateCounter()
         this._showStatus("Guardado \u2713", "text-cec-teal", 3000)
+        return true
       } else if (response.status === 422) {
         const data = await response.json()
         this._showStatus("Error al guardar", "text-red-500", 5000)
+        return false
       } else {
         this._showStatus("Error de conexión", "text-red-500", 5000)
+        return false
       }
     } catch (error) {
       this._showStatus("Error de conexión", "text-red-500", 5000)
+      return false
     } finally {
       this._saving = false
     }
@@ -268,6 +276,40 @@ export default class extends Controller {
         el.style.opacity = "0"
       }, fadeAfterMs)
     }
+  }
+
+  // ── Manual save (flush + confirm modal) ──
+
+  async save() {
+    // Cancel any pending debounced autosave
+    clearTimeout(this._autosaveTimer)
+
+    // Wait for any in-flight autosave to finish before flushing a new one
+    if (this._saving) {
+      await this._waitForSaveComplete()
+    }
+
+    const ok = await this.autosave()
+    if (ok) this._showSavedModal()
+  }
+
+  _waitForSaveComplete() {
+    return new Promise(resolve => {
+      const check = () => {
+        if (!this._saving) return resolve()
+        setTimeout(check, 100)
+      }
+      check()
+    })
+  }
+
+  _showSavedModal() {
+    if (!this.hasSavedModalTarget) return
+    clearTimeout(this._savedModalTimer)
+    this.savedModalTarget.classList.remove("hidden")
+    this._savedModalTimer = setTimeout(() => {
+      this.savedModalTarget.classList.add("hidden")
+    }, 3000)
   }
 
   // ── Finalize ──
