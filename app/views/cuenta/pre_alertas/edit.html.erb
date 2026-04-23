@@ -199,6 +199,13 @@
           <%= heroicon "plus-circle", variant: :outline, options: { class: "w-4 h-4" } %>
           Agregar Paquete (F6)
         </button>
+      <% end %>
+      <button type="button" data-action="click->pre-alerta-editor#save"
+              data-pre-alerta-editor-target="saveButton"
+              class="bg-cec-teal text-white font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm hover:bg-cec-teal-dark transition-colors">
+        Guardar (F8)
+      </button>
+      <% if @pre_alerta.consolidando? %>
         <button type="button" data-action="click->pre-alerta-editor#finalizar"
                 class="btn-gold-gradient text-cec-navy-dark font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm">
           Finalizar Consolidación (F9)
@@ -206,6 +213,17 @@
       <% end %>
     </div>
   <% end %>
+
+  <%# Saved overlay (toggled by pre-alerta-editor controller) %>
+  <div data-pre-alerta-editor-target="savedModal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm mx-4 text-center animate-fade-in-up">
+      <div class="mx-auto w-16 h-16 rounded-full bg-cec-teal/10 flex items-center justify-center mb-4">
+        <%= heroicon "check-circle", variant: :solid, options: { class: "w-10 h-10 text-cec-teal" } %>
+      </div>
+      <p class="text-lg font-bold text-cec-navy mb-1">Guardado</p>
+    </div>
+  </div>
 
   <% unless @pre_alerta.finalizado? %>
     <%= render "cuenta/pre_alertas/move_modal", pre_alerta: @pre_alerta %>
