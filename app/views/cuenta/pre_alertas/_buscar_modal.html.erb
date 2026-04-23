@@ -63,7 +63,7 @@
 
     <%# Footer %>
     <%= form_with url: agregar_paquete_cuenta_pre_alerta_path(pre_alerta), method: :post,
-          data: { pre_alerta_buscar_target: "form" },
+          data: { pre_alerta_buscar_target: "form", action: "submit->pre-alerta-buscar#handleSubmit" },
           class: "px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center gap-3" do |f| %>
       <p class="text-xs text-gray-500 truncate" data-pre-alerta-buscar-target="selectedLabel">
         Selecciona un paquete para agregar

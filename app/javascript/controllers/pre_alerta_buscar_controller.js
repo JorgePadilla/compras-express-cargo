@@ -55,6 +55,24 @@ export default class extends Controller {
     this.paqueteIdFieldTarget.value = id
     this.confirmBtnTarget.disabled = false
     this.selectedLabelTarget.textContent = `Paquete seleccionado: ${tracking}`
+    this.selectedPaquete = (this.paquetes || []).find(p => String(p.id) === String(id))
+  }
+
+  async handleSubmit(event) {
+    const p = this.selectedPaquete
+    if (!p || !p.origen || p.origen.paquetes_count !== 1) return
+
+    event.preventDefault()
+
+    const ask = typeof window.cecConfirm === "function"
+      ? window.cecConfirm
+      : (m) => Promise.resolve(window.confirm(m))
+
+    const ok = await ask(
+      `Este es el único paquete de la pre-alerta ${p.origen.numero}. Al jalarlo, esa pre-alerta quedará vacía y será eliminada.`,
+      { title: "Jalar paquete y eliminar pre-alerta origen", confirmLabel: "Jalar y eliminar", danger: true }
+    )
+    if (ok) this.formTarget.submit()
   }
 
   render(paquetes) {

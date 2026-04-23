@@ -773,6 +773,52 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_match "Paquete no encontrado", flash[:alert]
   end
 
+  test "agregar_paquete soft-deletes source_pa when pulled paquete was its last" do
+    pa_destino = pre_alertas(:consolidada_destino)
+    paquete = paquetes(:vinculado_aereo_juan)
+    pap = pre_alerta_paquetes(:pap_vinculado_aereo)
+    source_pa = pap.pre_alerta
+    # Asegurar que el PAP jalado es el único de source_pa
+    source_pa.pre_alerta_paquetes.where.not(id: pap.id).destroy_all
+
+    assert_nil source_pa.reload.deleted_at
+
+    post agregar_paquete_cuenta_pre_alerta_url(pa_destino), params: { paquete_id: paquete.id }
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa_destino)
+
+    assert_not_nil source_pa.reload.deleted_at, "source_pa should be soft-deleted when it ends up empty"
+    assert_match(/quedó vacía y fue eliminada/i, flash[:notice])
+  end
+
+  test "agregar_paquete keeps source_pa active when origen still has other paquetes" do
+    pa_destino = pre_alertas(:consolidada_destino)
+    paquete = paquetes(:vinculado_aereo_juan)
+    pap = pre_alerta_paquetes(:pap_vinculado_aereo)
+    source_pa = pap.pre_alerta
+
+    # Verificar que origen tiene más de 1 PAP
+    assert_operator source_pa.pre_alerta_paquetes.count, :>, 1
+
+    post agregar_paquete_cuenta_pre_alerta_url(pa_destino), params: { paquete_id: paquete.id }
+    assert_redirected_to edit_cuenta_pre_alerta_url(pa_destino)
+
+    assert_nil source_pa.reload.deleted_at
+    assert_no_match(/quedó vacía/i, flash[:notice].to_s)
+  end
+
+  test "paquetes_disponibles includes origen paquetes_count for linked paquetes" do
+    pa = pre_alertas(:consolidada_destino)
+    get paquetes_disponibles_cuenta_pre_alerta_url(pa), as: :json
+    assert_response :success
+
+    vinculado_entry = response.parsed_body.find { |p| p["id"] == paquetes(:vinculado_aereo_juan).id }
+    assert_not_nil vinculado_entry
+    assert_not_nil vinculado_entry["origen"]
+    assert vinculado_entry["origen"].key?("paquetes_count")
+    expected = pre_alertas(:recibida).pre_alerta_paquetes.size
+    assert_equal expected, vinculado_entry["origen"]["paquetes_count"]
+  end
+
   test "agregar_paquete blocks from CKA/CKM source" do
     pa_destino = pre_alertas(:consolidada_destino)
     paquete = paquetes(:cka_linked_juan) # aereo, recibido_miami, pero vinculado a cka_pa

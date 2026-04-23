@@ -284,7 +284,9 @@ module Cuenta
           peso_cobrar: p.peso_cobrar&.to_f,
           fecha_recibido: p.fecha_recibido_miami&.strftime("%d/%m/%Y"),
           tipo_envio: p.tipo_envio&.nombre || "—",
-          origen: origen_info
+          origen: origen_info && origen_info.merge(
+            paquetes_count: pap_origen.pre_alerta.pre_alerta_paquetes.size
+          )
         }
       }
     end
@@ -322,6 +324,8 @@ module Cuenta
 
       blocked_cka = false
       blocked_sin_consolidar = false
+      source_pa = nil
+      source_pa_vacia = false
       PreAlertaPaquete.transaction do
         timestamp = Time.current.strftime("%d/%m/%Y %H:%M")
         paq_desc = paquete.descripcion.presence || paquete.tracking
@@ -348,7 +352,12 @@ module Cuenta
           source_pa.append_historial!(origen_entry)
           @pre_alerta.append_historial!(destino_entry)
 
-          PreAlertaMailer.confirmacion(source_pa).deliver_later
+          if source_pa.pre_alerta_paquetes.reload.empty?
+            source_pa.soft_delete!
+            source_pa_vacia = true
+          else
+            PreAlertaMailer.confirmacion(source_pa).deliver_later
+          end
         else
           @pre_alerta.pre_alerta_paquetes.create!(
             paquete: paquete,
@@ -375,8 +384,13 @@ module Cuenta
 
       PreAlertaMailer.confirmacion(@pre_alerta).deliver_later
 
-      redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
-                  notice: "Paquete agregado a la pre-alerta."
+      notice = if source_pa_vacia && source_pa
+        "Paquete agregado. La pre-alerta #{source_pa.numero_documento} quedó vacía y fue eliminada."
+      else
+        "Paquete agregado a la pre-alerta."
+      end
+
+      redirect_to edit_cuenta_pre_alerta_path(@pre_alerta), notice: notice
     rescue ActiveRecord::RecordNotFound
       redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
                   alert: "Paquete no encontrado."
