@@ -154,10 +154,17 @@
       <template data-pre-alerta-editor-target="template">
         <tr class="paquete-row" data-new-record="true">
           <td class="px-4 py-2">
-            <input type="text" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][tracking]"
-                   placeholder="Tracking"
-                   class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
-                          focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
+            <div data-controller="tracking-input">
+              <input type="text" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][tracking]"
+                     placeholder="Tracking"
+                     pattern="[A-Za-z0-9\-]+"
+                     title="Solo letras, números y guiones. Sin espacios ni símbolos."
+                     data-tracking-input-target="input"
+                     data-action="input->tracking-input#sanitize"
+                     class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
+                            focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
+              <p data-tracking-input-target="error" class="hidden text-xs text-red-600 mt-1"></p>
+            </div>
           </td>
           <td class="px-4 py-2">
             <input type="text" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][descripcion]"
