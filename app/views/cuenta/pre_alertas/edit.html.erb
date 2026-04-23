@@ -17,7 +17,7 @@
 
   <% if @pre_alerta.consolidando? %>
     <div data-pre-alerta-editor-target="status"
-         class="text-xs text-gray-400 transition-opacity duration-300"></div>
+         class="text-xs text-gray-400 transition-opacity duration-300 mb-3"></div>
   <% end %>
 
   <%= form_with model: @pre_alerta, url: cuenta_pre_alerta_path(@pre_alerta), method: :patch,
