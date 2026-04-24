@@ -8,7 +8,7 @@ class TareasController < ApplicationController
 
   def new
     @tarea = @paquete.tareas.new
-    @users = User.where(activo: true).order(:name)
+    @users = User.where(activo: true).order(:nombre)
   end
 
   def create
@@ -16,20 +16,20 @@ class TareasController < ApplicationController
     if @tarea.save
       redirect_to paquete_tareas_path(@paquete), notice: "Tarea creada."
     else
-      @users = User.where(activo: true).order(:name)
+      @users = User.where(activo: true).order(:nombre)
       render :new, status: :unprocessable_entity
     end
   end
 
   def edit
-    @users = User.where(activo: true).order(:name)
+    @users = User.where(activo: true).order(:nombre)
   end
 
   def update
     if @tarea.update(tarea_params)
       redirect_to paquete_tareas_path(@paquete), notice: "Tarea actualizada."
     else
-      @users = User.where(activo: true).order(:name)
+      @users = User.where(activo: true).order(:nombre)
       render :edit, status: :unprocessable_entity
     end
   end

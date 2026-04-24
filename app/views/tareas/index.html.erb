@@ -49,13 +49,13 @@
               </span>
             </td>
             <td class="px-4 py-3 text-sm text-gray-600">
-              <%= tarea.asignado_a&.name || "—" %>
+              <%= tarea.asignado_a&.nombre || "—" %>
             </td>
             <td class="px-4 py-3 text-xs text-gray-500">
               <% if tarea.completada_en %>
                 <%= tarea.completada_en.strftime("%d/%m/%Y %H:%M") %>
                 <% if tarea.completado_por %>
-                  <br><span class="text-[10px]">por <%= tarea.completado_por.name %></span>
+                  <br><span class="text-[10px]">por <%= tarea.completado_por.nombre %></span>
                 <% end %>
               <% else %>
                 —
