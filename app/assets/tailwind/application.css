@@ -68,3 +68,78 @@
   /* Desactiva la animación fade-in-up para usuarios sensibles al movimiento */
   .animate-fade-in-up { animation: none !important; }
 }
+
+/* ─── Dark mode: reglas globales para form inputs y elementos base ───
+   Cubre inputs que en modo dark quedarian con texto oscuro sobre fondo
+   oscuro o placeholders invisibles. Se aplica a todo input/textarea/select
+   que no tenga un dark:bg-* explicito. */
+.dark input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+.dark textarea,
+.dark select {
+  background-color: rgb(31 41 55); /* gray-800 */
+  color: rgb(243 244 246);         /* gray-100 */
+  border-color: rgb(55 65 81);     /* gray-700 */
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: rgb(156 163 175);         /* gray-400 */
+  opacity: 1;
+}
+
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus,
+.dark textarea:-webkit-autofill,
+.dark select:-webkit-autofill {
+  -webkit-text-fill-color: rgb(243 244 246);
+  -webkit-box-shadow: 0 0 0px 1000px rgb(31 41 55) inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.dark hr {
+  border-color: rgb(55 65 81);     /* gray-700 */
+}
+
+.dark ::selection {
+  background-color: rgb(14 116 144 / 0.5); /* cec-teal tint */
+  color: rgb(243 244 246);
+}
+
+/* ─── Dark mode shim ───
+   Mapea las clases Tailwind mas usadas a valores dark automaticamente.
+   Se pone en @layer components para que cualquier `dark:bg-*` / `dark:text-*`
+   explicito en una vista (que vive en la capa utilities) siempre gane.
+   Esto cubre las vistas que aun no recibieron variantes dark explicitas. */
+@layer components {
+  /* Backgrounds */
+  :where(.dark) .bg-white              { background-color: rgb(31 41 55); }   /* gray-800 */
+  :where(.dark) .bg-slate-50           { background-color: rgb(17 24 39); }   /* gray-900 */
+  :where(.dark) .bg-gray-50            { background-color: rgb(17 24 39); }
+  :where(.dark) .bg-gray-100           { background-color: rgb(31 41 55); }
+  :where(.dark) .bg-amber-50           { background-color: rgba(120, 53, 15, 0.35); }
+  :where(.dark) .bg-red-50             { background-color: rgba(127, 29, 29, 0.35); }
+  :where(.dark) .bg-emerald-50         { background-color: rgba(6, 78, 59, 0.35); }
+  :where(.dark) .bg-indigo-50          { background-color: rgba(49, 46, 129, 0.35); }
+
+  /* Text colors — oscuros → claros */
+  :where(.dark) .text-gray-900         { color: rgb(243 244 246); }           /* gray-100 */
+  :where(.dark) .text-gray-800         { color: rgb(229 231 235); }           /* gray-200 */
+  :where(.dark) .text-gray-700         { color: rgb(209 213 219); }           /* gray-300 */
+  :where(.dark) .text-gray-600         { color: rgb(156 163 175); }           /* gray-400 */
+  :where(.dark) .text-gray-500         { color: rgb(156 163 175); }
+  :where(.dark) .text-gray-400         { color: rgb(107 114 128); }           /* gray-500 */
+  :where(.dark) .text-cec-navy         { color: rgb(243 244 246); }
+  :where(.dark) .text-cec-navy-dark    { color: rgb(243 244 246); }
+
+  /* Bordes y divisores */
+  :where(.dark) .border-gray-100       { border-color: rgb(55 65 81); }
+  :where(.dark) .border-gray-200       { border-color: rgb(55 65 81); }
+  :where(.dark) .border-gray-300       { border-color: rgb(75 85 99); }
+  :where(.dark) .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: rgb(55 65 81); }
+  :where(.dark) .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: rgb(55 65 81); }
+
+  /* Hover backgrounds que desaparecen en dark */
+  :where(.dark) .hover\:bg-gray-50:hover   { background-color: rgba(55, 65, 81, 0.5); }
+  :where(.dark) .hover\:bg-gray-100:hover  { background-color: rgba(55, 65, 81, 0.7); }
+}
