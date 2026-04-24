@@ -1331,6 +1331,49 @@ ALTER SEQUENCE public.recibos_id_seq OWNED BY public.recibos.id;
 
 
 --
+-- Name: reempaques; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.reempaques (
+    id bigint NOT NULL,
+    paquete_id bigint NOT NULL,
+    hecho_por_id bigint,
+    tarea_id bigint,
+    alto_antes numeric(8,2),
+    largo_antes numeric(8,2),
+    ancho_antes numeric(8,2),
+    peso_antes numeric(10,2),
+    alto_despues numeric(8,2),
+    largo_despues numeric(8,2),
+    ancho_despues numeric(8,2),
+    peso_despues numeric(10,2),
+    notas text,
+    realizado_en timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: reempaques_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.reempaques_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: reempaques_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.reempaques_id_seq OWNED BY public.reempaques.id;
+
+
+--
 -- Name: schema_migrations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1826,6 +1869,13 @@ ALTER TABLE ONLY public.recibos ALTER COLUMN id SET DEFAULT nextval('public.reci
 
 
 --
+-- Name: reempaques id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.reempaques ALTER COLUMN id SET DEFAULT nextval('public.reempaques_id_seq'::regclass);
+
+
+--
 -- Name: sessions id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -2136,6 +2186,14 @@ ALTER TABLE ONLY public.pre_facturas
 
 ALTER TABLE ONLY public.recibos
     ADD CONSTRAINT recibos_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: reempaques reempaques_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.reempaques
+    ADD CONSTRAINT reempaques_pkey PRIMARY KEY (id);
 
 
 --
@@ -2868,6 +2926,27 @@ CREATE INDEX index_recibos_on_venta_id ON public.recibos USING btree (venta_id);
 
 
 --
+-- Name: index_reempaques_on_hecho_por_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_reempaques_on_hecho_por_id ON public.reempaques USING btree (hecho_por_id);
+
+
+--
+-- Name: index_reempaques_on_paquete_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_reempaques_on_paquete_id ON public.reempaques USING btree (paquete_id);
+
+
+--
+-- Name: index_reempaques_on_tarea_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_reempaques_on_tarea_id ON public.reempaques USING btree (tarea_id);
+
+
+--
 -- Name: index_sessions_on_user_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3075,6 +3154,14 @@ ALTER TABLE ONLY public.pre_facturas
 
 
 --
+-- Name: reempaques fk_rails_1a20685463; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.reempaques
+    ADD CONSTRAINT fk_rails_1a20685463 FOREIGN KEY (tarea_id) REFERENCES public.tareas(id);
+
+
+--
 -- Name: nota_debito_items fk_rails_1b6eb53363; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3144,6 +3231,22 @@ ALTER TABLE ONLY public.pagos
 
 ALTER TABLE ONLY public.pre_facturas
     ADD CONSTRAINT fk_rails_4771dee5f9 FOREIGN KEY (cliente_id) REFERENCES public.clientes(id);
+
+
+--
+-- Name: reempaques fk_rails_4c184d921a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.reempaques
+    ADD CONSTRAINT fk_rails_4c184d921a FOREIGN KEY (paquete_id) REFERENCES public.paquetes(id);
+
+
+--
+-- Name: reempaques fk_rails_4fd8dd567a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.reempaques
+    ADD CONSTRAINT fk_rails_4fd8dd567a FOREIGN KEY (hecho_por_id) REFERENCES public.users(id);
 
 
 --
@@ -3529,6 +3632,7 @@ ALTER TABLE ONLY public.paquetes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260424040301'),
 ('20260424034720'),
 ('20260414022221'),
 ('20260413024624'),
