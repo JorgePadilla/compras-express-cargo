@@ -45,4 +45,28 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     get root_url
     assert_redirected_to new_session_path
   end
+
+  # Protege contra regresiones de N+1: el dashboard tiene un set fijo de
+  # queries agregadas (COUNT/SUM + GROUP BY para la serie de 7 dias + 2
+  # includes). Si se agregan colecciones nuevas sin eager loading, este
+  # test va a fallar.
+  test "dashboard ejecuta un numero acotado de queries (sin N+1)" do
+    login_as users(:admin)
+    # Warm caches (schema introspection, etc.)
+    get root_url
+
+    query_count = 0
+    callback = ->(_name, _start, _finish, _id, payload) {
+      query_count += 1 unless payload[:name].to_s.match?(/SCHEMA|CACHE|TRANSACTION/i) || payload[:cached]
+    }
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      get root_url
+    end
+
+    # 11 KPIs individuales + 1 GROUP BY + 2 queries para paquetes_recientes
+    # (paquetes + clientes) + 2 para ventas_recientes + ~5 de auth/cookie.
+    # Cota holgada para acomodar overhead de Current/session.
+    assert_operator query_count, :<=, 35,
+      "Se ejecutaron #{query_count} queries en el dashboard (esperado ≤ 35). Posible N+1."
+  end
 end
