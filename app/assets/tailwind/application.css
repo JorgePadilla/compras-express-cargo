@@ -61,3 +61,10 @@
   background: rgb(30 41 59 / 0.8);
   box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
 }
+
+/* Accesibilidad: respetar prefers-reduced-motion en animaciones custom */
+@media (prefers-reduced-motion: reduce) {
+  .btn-gold-gradient { transition: none; }
+  /* Desactiva la animación fade-in-up para usuarios sensibles al movimiento */
+  .animate-fade-in-up { animation: none !important; }
+}

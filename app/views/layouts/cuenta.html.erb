@@ -96,14 +96,16 @@
               </div>
             <% end %>
             <% if notice = flash[:notice] %>
-              <div class="mb-4 p-3 bg-cec-teal/10 text-cec-teal-dark border border-cec-teal/30 rounded-xl text-sm flex items-center gap-2" data-controller="auto-dismiss">
-                <%= heroicon "check-circle", variant: :mini, options: { class: "w-5 h-5 shrink-0" } %>
+              <div class="mb-4 p-3 bg-cec-teal/10 text-cec-teal-dark border border-cec-teal/30 dark:bg-cec-teal/20 dark:text-cec-teal-light dark:border-cec-teal/50 rounded-xl text-sm flex items-center gap-2"
+                   role="status" aria-live="polite" data-controller="auto-dismiss">
+                <%= heroicon "check-circle", variant: :mini, options: { class: "w-5 h-5 shrink-0", "aria-hidden" => "true" } %>
                 <span><%= notice %></span>
               </div>
             <% end %>
             <% if alert = flash[:alert] %>
-              <div class="mb-4 p-3 bg-red-50 text-red-700 border border-red-200 rounded-xl text-sm flex items-center gap-2" data-controller="auto-dismiss">
-                <%= heroicon "exclamation-circle", variant: :mini, options: { class: "w-5 h-5 shrink-0" } %>
+              <div class="mb-4 p-3 bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/40 dark:text-red-200 dark:border-red-800 rounded-xl text-sm flex items-center gap-2"
+                   role="alert" data-controller="auto-dismiss">
+                <%= heroicon "exclamation-circle", variant: :mini, options: { class: "w-5 h-5 shrink-0", "aria-hidden" => "true" } %>
                 <span><%= alert %></span>
               </div>
             <% end %>

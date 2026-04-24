@@ -1,17 +1,17 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["iconLight", "iconDark"]
+  static targets = ["iconLight", "iconDark", "button"]
   static values  = { url: String }
 
   connect() {
-    this.updateIcons()
+    this.updateUI()
     this._mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
     this._onSystemChange = () => {
       const dataTheme = document.documentElement.dataset.theme
       if (dataTheme === "auto") {
         document.documentElement.classList.toggle("dark", this._mediaQuery.matches)
-        this.updateIcons()
+        this.updateUI()
       }
     }
     this._mediaQuery.addEventListener("change", this._onSystemChange)
@@ -27,14 +27,21 @@ export default class extends Controller {
     const isDark = document.documentElement.classList.toggle("dark")
     const nuevoTema = isDark ? "dark" : "light"
     document.documentElement.dataset.theme = nuevoTema
-    this.updateIcons()
+    this.updateUI()
     this.persist(nuevoTema)
   }
 
-  updateIcons() {
+  // Actualiza iconos visibles, aria-pressed y aria-label para que los
+  // usuarios de screen reader siempre sepan en qué modo están y qué hace
+  // el botón al clickear.
+  updateUI() {
     const isDark = document.documentElement.classList.contains("dark")
     if (this.hasIconLightTarget) this.iconLightTarget.classList.toggle("hidden", isDark)
     if (this.hasIconDarkTarget)  this.iconDarkTarget.classList.toggle("hidden", !isDark)
+    if (this.hasButtonTarget) {
+      this.buttonTarget.setAttribute("aria-pressed", String(isDark))
+      this.buttonTarget.setAttribute("aria-label", isDark ? "Cambiar a tema claro" : "Cambiar a tema oscuro")
+    }
   }
 
   async persist(tema) {

@@ -1,13 +1,23 @@
 <%# Toggle sun/moon. Requiere helper `theme_preferencia_url`. %>
 <% if theme_toggle_available? %>
+  <%
+    is_dark = current_theme == "dark"
+    aria_label = is_dark ? "Cambiar a tema claro" : "Cambiar a tema oscuro"
+  %>
   <div data-controller="theme" data-theme-url-value="<%= theme_preferencia_url %>" class="inline-flex">
-    <button type="button" data-action="click->theme#toggle"
-            class="inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700 transition-colors"
-            aria-label="Cambiar tema">
-      <span data-theme-target="iconLight" class="<%= 'hidden' if current_theme == 'dark' %>">
+    <button type="button"
+            data-action="click->theme#toggle"
+            data-theme-target="button"
+            aria-pressed="<%= is_dark %>"
+            aria-label="<%= aria_label %>"
+            class="inline-flex items-center justify-center w-9 h-9 rounded-lg
+                   text-gray-600 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700
+                   focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cec-teal
+                   transition-colors motion-reduce:transition-none">
+      <span data-theme-target="iconLight" class="<%= 'hidden' if is_dark %>" aria-hidden="true">
         <%= heroicon "sun", variant: :outline, options: { class: "w-5 h-5" } %>
       </span>
-      <span data-theme-target="iconDark" class="<%= 'hidden' unless current_theme == 'dark' %>">
+      <span data-theme-target="iconDark" class="<%= 'hidden' unless is_dark %>" aria-hidden="true">
         <%= heroicon "moon", variant: :outline, options: { class: "w-5 h-5" } %>
       </span>
     </button>
