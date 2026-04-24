@@ -3,7 +3,7 @@
 <div class="space-y-6">
   <div>
     <h1 class="text-2xl font-bold text-cec-navy">Dashboard</h1>
-    <p class="text-sm text-gray-600">Bienvenido, <%= Current.user.name %> · <%= Date.current.strftime("%d/%m/%Y") %></p>
+    <p class="text-sm text-gray-600">Bienvenido, <%= Current.user.nombre.presence || Current.user.email_address %> · <%= Date.current.strftime("%d/%m/%Y") %></p>
   </div>
 
   <%# ── KPIs del día ── %>

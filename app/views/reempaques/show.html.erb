@@ -10,7 +10,7 @@
     <p class="text-sm text-gray-600">
       Paquete <span class="font-mono"><%= @paquete.tracking %></span> ·
       <%= @reempaque.realizado_en&.strftime("%d/%m/%Y %H:%M") %> ·
-      <%= @reempaque.hecho_por&.name || "—" %>
+      <%= @reempaque.hecho_por&.nombre || "—" %>
     </p>
   </div>
 
