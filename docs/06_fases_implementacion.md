@@ -1,6 +1,6 @@
 # CEC — Fases de Implementacion
 
-39 modulos · 37 modelos · 620 tests · Rails 8 + Hotwire + Tailwind CSS 4 + PostgreSQL 16
+39 modulos · 39 modelos · 670 tests · Rails 8 + Hotwire + Tailwind CSS 4 + PostgreSQL 17
 
 ```
 Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pago → Entrega
@@ -162,7 +162,7 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 
 ---
 
-## Fase 5: Tareas y Re-empaque (mejoras Miami)
+## Fase 5: Tareas y Re-empaque (mejoras Miami) ✅ COMPLETA (Abril 2026)
 
 **Objetivo:** Sistema de tareas para operaciones especiales + registro de re-empaque con dimensiones.
 
@@ -171,12 +171,20 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 | 5.1 | Modelo Tarea asociada a paquete (checklist operador) | 32 | ✅ PR #66 |
 | 5.2 | Estados tarea: pendiente → en proceso → realizada + CRUD admin | 32 | ✅ PR #67 |
 | 5.3 | Paquete no avanza hasta completar todas sus tareas (guard en model) | 32 | ✅ PR #67 |
-| 5.4 | Re-empaque como tarea/servicio: tracking de quien lo hizo | 2, 37 | ⏳ |
-| 5.5 | Registro dimensiones antes/despues, calculo ahorro volumen | 37 | ⏳ |
+| 5.4 | Re-empaque como tarea/servicio: tracking de quien lo hizo | 2, 37 | ✅ PR #69 |
+| 5.5 | Registro dimensiones antes/despues, calculo ahorro volumen | 37 | ✅ PR #69 |
 
 **Entregable:** Operaciones especiales en Miami sistematizadas.
 
 **Dependencia:** Fase 1 (etiquetar) + Fase 2 (pre-alertas).
+
+**Modelos nuevos:** `Tarea` (pendiente/en_proceso/realizada, asignado_a, completado_por), `Reempaque` (snapshot antes/después de dimensiones, cálculo de ahorro volumétrico, vinculación opcional a Tarea).
+
+**Reglas clave implementadas:**
+- Tareas abiertas bloquean el avance del paquete en el pipeline operativo (`Paquete::ESTADOS_ORDEN` validation en el modelo).
+- Estados laterales (`anulado`, `retornado`, `desechado`, `retenido`) no se bloquean; admin puede transicionar a ellos aunque haya tareas.
+- Re-empaque: al crear, snapshot automático de dimensiones actuales del paquete; después de guardar, actualiza el paquete con las nuevas dimensiones (recalcula `peso_volumetrico` y `peso_cobrar` via `before_save` existentes).
+- Si el Reempaque está vinculado a una Tarea, completarla al guardar.
 
 **Nota (2026-04-24):** Las tareas de **Fotos de paquetes** (antes 5.6–5.8) se movieron a una fase posterior (Fase 9) para priorizar el flujo operativo core y postergar la decisión de storage (R2 vs Render Disk vs S3).
 
@@ -205,19 +213,29 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 
 **Objetivo:** Visibilidad completa del negocio + administracion.
 
-| # | Tarea | Modulos |
-|---|-------|---------|
-| 6.1 | Dashboard admin con estadisticas (graficas, KPIs) | 30 |
-| 6.2 | 12 reportes (por definir detalle de cada uno) | 29 |
-| 6.3 | 22 catalogos de configuracion (CRUD para cada uno) | 28 |
-| 6.4 | Costos de empresa (/Mantenimientos/) | 31 |
-| 6.5 | Tasa de cambio LPS/USD configurable | 28 |
-| 6.6 | Calculadora de costos mejorada (cliente) | 38 |
-| 6.7 | Seguimiento publico de paquete (sin login) | 39 |
+| # | Tarea | Modulos | Estado |
+|---|-------|---------|--------|
+| 6.1 | Dashboard admin con estadisticas (graficas, KPIs) | 30 | ✅ PR #70 |
+| 6.2 | 12 reportes (por definir detalle de cada uno) | 29 | ⏳ |
+| 6.3 | 22 catalogos de configuracion (CRUD para cada uno) | 28 | ⏳ |
+| 6.4 | Costos de empresa (/Mantenimientos/) | 31 | ⏳ |
+| 6.5 | Tasa de cambio LPS/USD configurable (UI admin) | 28 | ⏳ |
+| 6.6 | Calculadora de costos mejorada (cliente) | 38 | ⏳ |
+| 6.7 | Seguimiento publico de paquete (sin login) | 39 | ⏳ |
 
 **Entregable:** Admin tiene control total, cliente tiene visibilidad.
 
 **Dependencia:** Fases 1-4 (necesita datos reales para reportes).
+
+**6.1 Dashboard Admin (Abril 2026):**
+- 4 KPIs del día: ingresos LPS, paquetes recibidos Miami, entregas realizadas, pre-alertas nuevas (con contexto semana/mes).
+- Pipeline operativo: en bodega, en tránsito, disponibles entrega, ventas pendientes.
+- Gráfica 7 días de paquetes recibidos (CSS puro, 1 query `GROUP BY DATE`).
+- Actividad reciente: últimos 8 paquetes + últimas 5 ventas con eager loading `includes(:cliente)`.
+- Autorización explícita por rol (`DASHBOARD_ROLES = [admin, supervisor_miami, supervisor_caja, supervisor_prefactura]`); otros roles son redirigidos a su sección apropiada.
+- Separación admin/cliente: `redirect_cliente_to_portal` before_action detecta ClienteSession y redirige a `cuenta_root_path`.
+- Refactor: métricas extraídas a `app/queries/dashboard_metrics.rb` (query object); controller queda slim.
+- Test anti-N+1: el suite incluye un caso que cuenta queries en `sql.active_record` notifications y asserta cota ≤ 35.
 
 ---
 
@@ -266,8 +284,8 @@ Fase 3b ████████████████████  Notas D/C 
 Fase 3c ████████████████████  Cotizaciones + Proformas + Financiamientos  ✅
 Fase 4  ████████████████████  Entregas + Caja Diaria                      ✅
 Extras  ████████████████████  Users CRUD + Registro + UI polish           ✅
-Fase 5  ████████████░░░░░░░░  Tareas (✅ 5.1–5.3) + Re-empaque (⏳ 5.4–5.5) ← EN CURSO
-Fase 6  ░░░░░░░░░░░░░░░░░░░░  Reportes + Config + Dashboard
+Fase 5  ████████████████████  Tareas + Re-empaque (5.1–5.5)              ✅
+Fase 6  ███░░░░░░░░░░░░░░░░░  Reportes + Config + Dashboard (6.1 ✅)    ← EN CURSO
 Fase 7  ░░░░░░░░░░░░░░░░░░░░  Marketing CRM
 Fase 8  ░░░░░░░░░░░░░░░░░░░░  Inventario
 Fase 9  ░░░░░░░░░░░░░░░░░░░░  Fotos de Paquetes (storage + envio a cliente)
