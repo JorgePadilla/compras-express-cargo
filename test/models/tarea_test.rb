@@ -65,4 +65,34 @@ class TareaTest < ActiveSupport::TestCase
     paquete.tareas.destroy_all
     assert_not paquete.tareas_pendientes?
   end
+
+  test "paquete no avanza de estado si tiene tareas abiertas" do
+    paquete = paquetes(:recibido) # estado recibido_miami
+    paquete.tareas.destroy_all
+    paquete.tareas.create!(titulo: "Revisar")
+
+    paquete.estado = "empacado"
+    assert_not paquete.save
+    assert_includes paquete.errors[:estado].join, "tareas pendientes"
+  end
+
+  test "paquete avanza de estado cuando todas las tareas estan realizadas" do
+    paquete = paquetes(:recibido)
+    paquete.tareas.destroy_all
+    tarea = paquete.tareas.create!(titulo: "Revisar")
+    tarea.completar!(users(:digitador))
+
+    paquete.estado = "empacado"
+    assert paquete.save
+  end
+
+  test "paquete puede cambiar a estado terminal aunque tenga tareas abiertas" do
+    paquete = paquetes(:recibido)
+    paquete.tareas.destroy_all
+    paquete.tareas.create!(titulo: "Revisar")
+
+    # anular es terminal, no parte del orden de progresion
+    paquete.estado = "anulado"
+    assert paquete.save
+  end
 end

@@ -5,6 +5,13 @@
     end
   end
   header.with_action do
+    count = @paquete.tareas.abiertas.count
+    label = count.positive? ? "Tareas (#{count})" : "Tareas"
+    render ButtonComponent.new(variant: :secondary, href: paquete_tareas_path(@paquete), icon: "clipboard-document-check") do
+      label
+    end
+  end
+  header.with_action do
     render ButtonComponent.new(variant: :secondary, href: label_paquete_path(@paquete), icon: "printer", target: "_blank") do
       "Imprimir"
     end

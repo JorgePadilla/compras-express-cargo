@@ -32,6 +32,12 @@ class Paquete < ApplicationRecord
   validates :estado, presence: true
   validates :peso, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :alto, :largo, :ancho, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validate :no_advance_with_open_tareas
+
+  # Orden del pipeline operativo; avances a un indice mayor requieren que
+  # las tareas pendientes del paquete esten cerradas.
+  ESTADOS_ORDEN = %w[recibido_miami empacado enviado_honduras en_aduana
+                     disponible_entrega pre_facturado facturado en_reparto entregado].freeze
 
   scope :activos, -> { where.not(estado: %w[anulado entregado retornado desechado]) }
   scope :buscar, ->(term) {
@@ -80,6 +86,17 @@ class Paquete < ApplicationRecord
   end
 
   private
+
+  def no_advance_with_open_tareas
+    return if new_record? || !estado_changed?
+
+    old_idx = ESTADOS_ORDEN.index(estado_was)
+    new_idx = ESTADOS_ORDEN.index(estado)
+    return unless old_idx && new_idx && new_idx > old_idx
+    return unless tareas.abiertas.exists?
+
+    errors.add(:estado, "no se puede avanzar: el paquete tiene tareas pendientes")
+  end
 
   def sync_pre_alerta_estados
     pre_alerta_paquetes.includes(:pre_alerta).each do |pap|

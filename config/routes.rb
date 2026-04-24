@@ -22,6 +22,13 @@ Rails.application.routes.draw do
       get :check_tracking
       get :search
     end
+    resources :tareas, only: [:index, :new, :create, :edit, :update, :destroy] do
+      member do
+        post :iniciar
+        post :completar
+        post :reabrir
+      end
+    end
   end
 
   resources :manifiestos, except: [:destroy] do
