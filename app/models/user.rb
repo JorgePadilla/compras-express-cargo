@@ -25,6 +25,7 @@ class User < ApplicationRecord
   validates :nombre, presence: true
   validates :email_address, presence: true, uniqueness: true
   validates :rol, presence: true
+  validates :tema, inclusion: { in: %w[light dark], allow_nil: true }
 
   # Scopes
   scope :activos, -> { where(activo: true) }

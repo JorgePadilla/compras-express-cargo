@@ -307,7 +307,8 @@ CREATE TABLE public.clientes (
     notas_miami text,
     notas_honduras text,
     password_digest character varying,
-    notificar_facturas boolean DEFAULT true NOT NULL
+    notificar_facturas boolean DEFAULT true NOT NULL,
+    tema character varying
 );
 
 
@@ -1539,7 +1540,8 @@ CREATE TABLE public.users (
     nombre character varying DEFAULT ''::character varying NOT NULL,
     rol character varying DEFAULT 'digitador_miami'::character varying NOT NULL,
     ubicacion character varying DEFAULT 'honduras'::character varying,
-    activo boolean DEFAULT true NOT NULL
+    activo boolean DEFAULT true NOT NULL,
+    tema character varying
 );
 
 
@@ -3632,6 +3634,8 @@ ALTER TABLE ONLY public.paquetes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260424142626'),
+('20260424142625'),
 ('20260424040301'),
 ('20260424034720'),
 ('20260414022221'),
