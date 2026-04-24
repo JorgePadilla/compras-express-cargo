@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "./flatpickr.css";
 
+/* Dark mode: activado por clase .dark en <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   /* Brand colors */
   --color-cec-navy: #1B2559;
@@ -51,4 +54,10 @@
   background: rgb(255 255 255 / 0.8);
   backdrop-filter: blur(8px);
   box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+/* Dark mode overrides para clases custom */
+.dark .glass-card {
+  background: rgb(30 41 59 / 0.8);
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
 }

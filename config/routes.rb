@@ -3,6 +3,8 @@ Rails.application.routes.draw do
   resource :registro, only: %i[new create], controller: "registrations"
   resources :passwords, param: :token
 
+  resource :preferencia_tema, only: [:update], controller: "theme_preferences"
+
   # Health check for Render
   get "up" => "rails/health#show", as: :rails_health_check
 
@@ -137,6 +139,7 @@ Rails.application.routes.draw do
   # Client portal
   namespace :cuenta do
     root "dashboard#index"
+    resource :preferencia_tema, only: [:update], controller: "theme_preferences"
     resources :pre_alertas do
       member do
         delete :anular

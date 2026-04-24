@@ -22,6 +22,7 @@ class Cliente < ApplicationRecord
   validates :nombre, presence: true
   validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true,
                    uniqueness: { case_sensitive: false, message: "ya esta registrado" }, if: -> { email.present? }
+  validates :tema, inclusion: { in: %w[light dark], allow_nil: true }
 
   scope :activos, -> { where(activo: true) }
   scope :buscar, ->(term) {

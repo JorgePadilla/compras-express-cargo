@@ -1,6 +1,14 @@
 <!DOCTYPE html>
-<html lang="es" class="h-full">
+<html lang="es" class="h-full <%= html_theme_class %>" data-theme="<%= current_theme %>">
   <head>
+    <script>
+      (function() {
+        var t = document.documentElement.dataset.theme;
+        if (t === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
     <title><%= content_for(:title) || "Compras Express Cargo" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta charset="UTF-8">
@@ -16,7 +24,7 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body class="h-full bg-slate-50" data-controller="sidebar">
+  <body class="h-full bg-slate-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100" data-controller="sidebar">
     <% if authenticated? %>
       <div class="flex h-full">
         <%# ========== SIDEBAR ========== %>
@@ -62,13 +70,17 @@
         <%# ========== MAIN CONTENT ========== %>
         <main class="flex-1 flex flex-col min-h-screen overflow-x-hidden">
           <%# Top bar (mobile) %>
-          <header class="bg-white shadow-sm px-4 py-3 flex items-center justify-between lg:hidden">
-            <button data-action="click->sidebar#toggle" class="text-gray-600 p-1" aria-label="Menu">
+          <header class="bg-white dark:bg-gray-800 shadow-sm px-4 py-3 flex items-center justify-between lg:hidden">
+            <button data-action="click->sidebar#toggle" class="text-gray-600 dark:text-gray-200 p-1" aria-label="Menu">
               <%= heroicon "bars-3", variant: :outline, options: { class: "w-6 h-6" } %>
             </button>
-            <span class="font-bold text-cec-navy">CEC</span>
-            <div class="w-6"></div>
+            <span class="font-bold text-cec-navy dark:text-cec-gold">CEC</span>
+            <%= render "shared/theme_toggle" %>
           </header>
+          <%# Theme toggle desktop — fixed top-right %>
+          <div class="hidden lg:flex justify-end px-6 pt-4">
+            <%= render "shared/theme_toggle" %>
+          </div>
 
           <%# Page content %>
           <div class="flex-1 p-4 md:p-6 lg:p-8">
