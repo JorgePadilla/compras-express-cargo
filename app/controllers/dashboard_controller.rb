@@ -1,4 +1,6 @@
 class DashboardController < ApplicationController
+  before_action :redirect_cliente_to_portal
+
   def index
     today = Time.zone.now.to_date
     week_start = today.beginning_of_week
@@ -26,18 +28,33 @@ class DashboardController < ApplicationController
     @ventas_pendientes     = Venta.where(estado: "pendiente").count
     @tareas_abiertas       = Tarea.abiertas.count
 
-    # ── Serie 7 dias: paquetes recibidos por dia ──
+    # ── Serie 7 días: 1 sola query agrupada por día (antes eran 7 COUNT) ──
+    range_start = (today - 6).beginning_of_day
+    counts_by_day = Paquete
+                      .where(fecha_recibido_miami: range_start..today.end_of_day)
+                      .group("DATE(fecha_recibido_miami)")
+                      .count
+                      .transform_keys { |k| k.is_a?(String) ? Date.parse(k) : k.to_date }
+
     @paquetes_7_dias = (0..6).map do |i|
       day = today - i
-      {
-        fecha: day,
-        label: day.strftime("%a %d"),
-        paquetes: Paquete.where(fecha_recibido_miami: day.all_day).count
-      }
+      { fecha: day, label: day.strftime("%a %d"), paquetes: counts_by_day[day] || 0 }
     end.reverse
 
-    # ── Actividad reciente ──
+    # ── Actividad reciente (eager load cliente para evitar N+1) ──
     @paquetes_recientes = Paquete.includes(:cliente).order(created_at: :desc).limit(8)
     @ventas_recientes   = Venta.includes(:cliente).order(created_at: :desc).limit(5)
+  end
+
+  private
+
+  # Si hay una sesión de cliente activa, redirige al portal de cuenta antes
+  # de procesar la vista de dashboard admin. Evita exponer la UI admin a un
+  # cliente y mantiene la separación de contextos.
+  def redirect_cliente_to_portal
+    return unless cookies.signed[:cliente_session_id]
+    return unless ClienteSession.exists?(id: cookies.signed[:cliente_session_id])
+
+    redirect_to cuenta_root_path
   end
 end
