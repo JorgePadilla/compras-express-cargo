@@ -162,24 +162,42 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 
 ---
 
-## Fase 5: Tareas, Fotos y Re-empaque (mejoras Miami)
+## Fase 5: Tareas y Re-empaque (mejoras Miami)
 
-**Objetivo:** Sistema de tareas para operaciones especiales + fotos.
+**Objetivo:** Sistema de tareas para operaciones especiales + registro de re-empaque con dimensiones.
 
-| # | Tarea | Modulos |
-|---|-------|---------|
-| 5.1 | Modelo Tarea asociada a paquete (checklist operador) | 32 |
-| 5.2 | Estados tarea: pendiente → en proceso → realizado | 32 |
-| 5.3 | Paquete no avanza hasta completar todas sus tareas | 32 |
-| 5.4 | Re-empaque como tarea/servicio: tracking de quien lo hizo | 2, 37 |
-| 5.5 | Registro dimensiones antes/despues, calculo ahorro volumen | 37 |
-| 5.6 | Fotos de paquetes: captura desde camaras de estacion (2 camaras) | 35 |
-| 5.7 | Active Storage + S3: adjuntar fotos al paquete | 35 |
-| 5.8 | Fotos en email de notificacion al cliente | 35 |
+| # | Tarea | Modulos | Estado |
+|---|-------|---------|--------|
+| 5.1 | Modelo Tarea asociada a paquete (checklist operador) | 32 | ✅ PR #66 |
+| 5.2 | Estados tarea: pendiente → en proceso → realizada + CRUD admin | 32 | ✅ PR #67 |
+| 5.3 | Paquete no avanza hasta completar todas sus tareas (guard en model) | 32 | ✅ PR #67 |
+| 5.4 | Re-empaque como tarea/servicio: tracking de quien lo hizo | 2, 37 | ⏳ |
+| 5.5 | Registro dimensiones antes/despues, calculo ahorro volumen | 37 | ⏳ |
 
 **Entregable:** Operaciones especiales en Miami sistematizadas.
 
 **Dependencia:** Fase 1 (etiquetar) + Fase 2 (pre-alertas).
+
+**Nota (2026-04-24):** Las tareas de **Fotos de paquetes** (antes 5.6–5.8) se movieron a una fase posterior (Fase 9) para priorizar el flujo operativo core y postergar la decisión de storage (R2 vs Render Disk vs S3).
+
+---
+
+## Fase 9: Fotos de Paquetes (Miami)
+
+**Objetivo:** Capturar fotos en la estación de recepción y asociarlas al paquete con envío al cliente.
+
+| # | Tarea | Modulos |
+|---|-------|---------|
+| 9.1 | Fotos de paquetes: captura desde camaras de estacion (2 camaras) | 35 |
+| 9.2 | Active Storage + bucket externo (Cloudflare R2 / S3 / Render Disk) | 35 |
+| 9.3 | Fotos en email de notificacion al cliente | 35 |
+
+**Dependencia:** Fase 5 (tareas, el re-empaque usa fotos).
+
+**Pendiente de decisión:** Provider de storage. Opciones consideradas:
+- Cloudflare R2 (recomendado: S3-compatible, sin egress, 10 GB free tier).
+- Render Persistent Disk ($0.25/GB/mes, ata a single-instance, sin CDN).
+- Backblaze B2 (el más barato por GB, egress pagado).
 
 ---
 
@@ -248,10 +266,11 @@ Fase 3b ████████████████████  Notas D/C 
 Fase 3c ████████████████████  Cotizaciones + Proformas + Financiamientos  ✅
 Fase 4  ████████████████████  Entregas + Caja Diaria                      ✅
 Extras  ████████████████████  Users CRUD + Registro + UI polish           ✅
-Fase 5  ░░░░░░░░░░░░░░░░░░░░  Tareas + Fotos + Re-empaque (Miami)        ← SIGUIENTE
+Fase 5  ████████████░░░░░░░░  Tareas (✅ 5.1–5.3) + Re-empaque (⏳ 5.4–5.5) ← EN CURSO
 Fase 6  ░░░░░░░░░░░░░░░░░░░░  Reportes + Config + Dashboard
 Fase 7  ░░░░░░░░░░░░░░░░░░░░  Marketing CRM
 Fase 8  ░░░░░░░░░░░░░░░░░░░░  Inventario
+Fase 9  ░░░░░░░░░░░░░░░░░░░░  Fotos de Paquetes (storage + envio a cliente)
 ```
 
 **Fases paralelas posibles:**
