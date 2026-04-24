@@ -1407,6 +1407,44 @@ ALTER SEQUENCE public.tamano_cajas_id_seq OWNED BY public.tamano_cajas.id;
 
 
 --
+-- Name: tareas; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.tareas (
+    id bigint NOT NULL,
+    paquete_id bigint NOT NULL,
+    asignado_a_id bigint,
+    completado_por_id bigint,
+    titulo character varying NOT NULL,
+    descripcion text,
+    estado character varying DEFAULT 'pendiente'::character varying NOT NULL,
+    completada_en timestamp(6) without time zone,
+    notas text,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: tareas_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.tareas_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: tareas_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.tareas_id_seq OWNED BY public.tareas.id;
+
+
+--
 -- Name: tipo_envios; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1802,6 +1840,13 @@ ALTER TABLE ONLY public.tamano_cajas ALTER COLUMN id SET DEFAULT nextval('public
 
 
 --
+-- Name: tareas id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tareas ALTER COLUMN id SET DEFAULT nextval('public.tareas_id_seq'::regclass);
+
+
+--
 -- Name: tipo_envios id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -2115,6 +2160,14 @@ ALTER TABLE ONLY public.sessions
 
 ALTER TABLE ONLY public.tamano_cajas
     ADD CONSTRAINT tamano_cajas_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tareas tareas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tareas
+    ADD CONSTRAINT tareas_pkey PRIMARY KEY (id);
 
 
 --
@@ -2822,6 +2875,34 @@ CREATE INDEX index_sessions_on_user_id ON public.sessions USING btree (user_id);
 
 
 --
+-- Name: index_tareas_on_asignado_a_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tareas_on_asignado_a_id ON public.tareas USING btree (asignado_a_id);
+
+
+--
+-- Name: index_tareas_on_completado_por_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tareas_on_completado_por_id ON public.tareas USING btree (completado_por_id);
+
+
+--
+-- Name: index_tareas_on_estado; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tareas_on_estado ON public.tareas USING btree (estado);
+
+
+--
+-- Name: index_tareas_on_paquete_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tareas_on_paquete_id ON public.tareas USING btree (paquete_id);
+
+
+--
 -- Name: index_users_on_activo; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3007,6 +3088,14 @@ ALTER TABLE ONLY public.nota_debito_items
 
 ALTER TABLE ONLY public.pre_alertas
     ADD CONSTRAINT fk_rails_1c36982d64 FOREIGN KEY (tipo_envio_id) REFERENCES public.tipo_envios(id);
+
+
+--
+-- Name: tareas fk_rails_239a2c336c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tareas
+    ADD CONSTRAINT fk_rails_239a2c336c FOREIGN KEY (paquete_id) REFERENCES public.paquetes(id);
 
 
 --
@@ -3202,6 +3291,14 @@ ALTER TABLE ONLY public.notas_credito
 
 
 --
+-- Name: tareas fk_rails_95011bfdd3; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tareas
+    ADD CONSTRAINT fk_rails_95011bfdd3 FOREIGN KEY (completado_por_id) REFERENCES public.users(id);
+
+
+--
 -- Name: notas_debito fk_rails_959289c6e4; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3354,6 +3451,14 @@ ALTER TABLE ONLY public.ventas
 
 
 --
+-- Name: tareas fk_rails_d5800c2f0f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tareas
+    ADD CONSTRAINT fk_rails_d5800c2f0f FOREIGN KEY (asignado_a_id) REFERENCES public.users(id);
+
+
+--
 -- Name: ventas fk_rails_d8655b3ca7; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3424,6 +3529,7 @@ ALTER TABLE ONLY public.paquetes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260424034720'),
 ('20260414022221'),
 ('20260413024624'),
 ('20260412060700'),
