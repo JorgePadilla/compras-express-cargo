@@ -10,6 +10,7 @@ class Paquete < ApplicationRecord
   has_many :nota_debito_items,  dependent: :nullify
   has_many :nota_credito_items, dependent: :nullify
   has_many :tareas, dependent: :destroy
+  has_many :reempaques, dependent: :destroy
 
   enum :estado, {
     recibido_miami: "recibido_miami",

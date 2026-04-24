@@ -1,0 +1,86 @@
+<% content_for :title, "Registrar re-empaque" %>
+
+<div class="max-w-3xl mx-auto space-y-6">
+  <div>
+    <%= link_to paquete_reempaques_path(@paquete), class: "text-xs text-gray-500 hover:text-cec-teal inline-flex items-center gap-1" do %>
+      <%= heroicon "arrow-left", variant: :outline, options: { class: "w-3 h-3" } %>
+      Volver
+    <% end %>
+    <h1 class="text-2xl font-bold text-cec-navy mt-1">Registrar re-empaque</h1>
+    <p class="text-sm text-gray-600">Paquete <span class="font-mono"><%= @paquete.tracking %></span></p>
+  </div>
+
+  <%# Dimensiones actuales (antes) %>
+  <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+    <h3 class="text-sm font-semibold text-amber-800 mb-2">Dimensiones actuales (antes del re-empaque)</h3>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+      <div><span class="text-gray-500 text-xs block">Alto</span><%= @paquete.alto || "—" %></div>
+      <div><span class="text-gray-500 text-xs block">Largo</span><%= @paquete.largo || "—" %></div>
+      <div><span class="text-gray-500 text-xs block">Ancho</span><%= @paquete.ancho || "—" %></div>
+      <div><span class="text-gray-500 text-xs block">Peso</span><%= @paquete.peso || "—" %> lbs</div>
+      <div><span class="text-gray-500 text-xs block">Peso cobrar</span><strong><%= @paquete.peso_cobrar || "—" %> lbs</strong></div>
+    </div>
+  </div>
+
+  <%= form_with model: [@paquete, @reempaque], class: "space-y-6" do |f| %>
+    <% if @reempaque.errors.any? %>
+      <div class="p-4 bg-red-50 rounded-lg text-sm text-red-700">
+        <ul class="list-disc list-inside space-y-1">
+          <% @reempaque.errors.full_messages.each do |msg| %>
+            <li><%= msg %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <h3 class="text-sm font-semibold text-cec-navy mb-4">Nuevas dimensiones (después)</h3>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div>
+          <%= f.label :alto_despues, "Alto (in)", class: "block text-xs text-gray-600 mb-1" %>
+          <%= f.number_field :alto_despues, step: 0.01, min: 0, required: true,
+              class: "block w-full rounded-lg border-gray-300 text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <div>
+          <%= f.label :largo_despues, "Largo (in)", class: "block text-xs text-gray-600 mb-1" %>
+          <%= f.number_field :largo_despues, step: 0.01, min: 0, required: true,
+              class: "block w-full rounded-lg border-gray-300 text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <div>
+          <%= f.label :ancho_despues, "Ancho (in)", class: "block text-xs text-gray-600 mb-1" %>
+          <%= f.number_field :ancho_despues, step: 0.01, min: 0, required: true,
+              class: "block w-full rounded-lg border-gray-300 text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <div>
+          <%= f.label :peso_despues, "Peso (lbs)", class: "block text-xs text-gray-600 mb-1" %>
+          <%= f.number_field :peso_despues, step: 0.01, min: 0, required: true,
+              class: "block w-full rounded-lg border-gray-300 text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+      </div>
+    </div>
+
+    <% if @tareas_abiertas.any? %>
+      <div>
+        <%= f.label :tarea_id, "Vincular a una tarea abierta (opcional)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.select :tarea_id,
+            options_from_collection_for_select(@tareas_abiertas, :id, :titulo),
+            { include_blank: "— Ninguna —" },
+            { class: "block w-full rounded-lg border-gray-300 text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
+        <p class="mt-1 text-xs text-gray-500">Si vinculás una tarea, se marcará como realizada al guardar.</p>
+      </div>
+    <% end %>
+
+    <div>
+      <%= f.label :notas, class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.text_area :notas, rows: 3,
+          class: "block w-full rounded-lg border-gray-300 text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+
+    <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+      <%= link_to "Cancelar", paquete_reempaques_path(@paquete),
+          class: "text-sm text-gray-600 hover:text-gray-900" %>
+      <%= f.submit "Registrar re-empaque",
+          class: "bg-cec-gold text-cec-navy-dark font-semibold px-4 py-2 rounded-lg text-sm" %>
+    </div>
+  <% end %>
+</div>

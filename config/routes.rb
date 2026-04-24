@@ -29,6 +29,7 @@ Rails.application.routes.draw do
         post :reabrir
       end
     end
+    resources :reempaques, only: [:index, :new, :create, :show]
   end
 
   resources :manifiestos, except: [:destroy] do

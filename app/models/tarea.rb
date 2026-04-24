@@ -2,6 +2,7 @@ class Tarea < ApplicationRecord
   belongs_to :paquete
   belongs_to :asignado_a, class_name: "User", optional: true
   belongs_to :completado_por, class_name: "User", optional: true
+  has_one :reempaque, dependent: :nullify
 
   enum :estado, {
     pendiente: "pendiente",
