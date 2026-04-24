@@ -1,5 +1,8 @@
 class DashboardController < ApplicationController
+  DASHBOARD_ROLES = %w[admin supervisor_miami supervisor_caja supervisor_prefactura].freeze
+
   before_action :redirect_cliente_to_portal
+  before_action :require_dashboard_access
 
   def index
     today = Time.zone.now.to_date
@@ -56,5 +59,25 @@ class DashboardController < ApplicationController
     return unless ClienteSession.exists?(id: cookies.signed[:cliente_session_id])
 
     redirect_to cuenta_root_path
+  end
+
+  # Requiere que el usuario autenticado tenga un rol con acceso al dashboard
+  # admin (admin + supervisores). Otros roles (digitador, cajero, sac,
+  # entrega_despacho) son redirigidos a su seccion apropiada. Esto complementa
+  # a `require_authentication` (que solo verifica que haya sesion) con un
+  # chequeo explicito de rol.
+  def require_dashboard_access
+    return if Current.user&.admin?
+    return if DASHBOARD_ROLES.include?(Current.user&.rol)
+
+    fallback = case Current.user&.rol
+               when "cajero"           then caja_path
+               when "digitador_miami"  then etiquetar_path
+               when "entrega_despacho" then entregas_path
+               when "sac"              then paquetes_path
+               else new_session_path
+               end
+
+    redirect_to fallback, alert: "No tienes permiso para acceder al dashboard."
   end
 end
