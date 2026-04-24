@@ -1,7 +1,5 @@
 class DashboardController < ApplicationController
   def index
-    return if cliente_authenticated?
-
     today = Time.zone.now.to_date
     week_start = today.beginning_of_week
     month_start = today.beginning_of_month
