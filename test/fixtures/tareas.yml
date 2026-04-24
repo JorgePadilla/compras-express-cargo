@@ -1,0 +1,18 @@
+pendiente_recibido:
+  paquete: recibido
+  titulo: "Revisar contenido"
+  descripcion: "Verificar que el paquete no tenga daños"
+  estado: pendiente
+
+en_proceso_recibido:
+  paquete: vinculado_aereo_juan
+  titulo: "Reempaque unitario"
+  descripcion: "Reempaque en caja más chica"
+  estado: en_proceso
+
+realizada_disponible:
+  paquete: disponible_entrega_juan
+  titulo: "Foto de evidencia"
+  descripcion: "Foto antes de entrega"
+  estado: realizada
+  completada_en: <%= 1.hour.ago %>

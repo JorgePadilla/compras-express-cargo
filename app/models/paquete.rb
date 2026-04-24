@@ -9,6 +9,7 @@ class Paquete < ApplicationRecord
   has_many :pre_alerta_paquetes, dependent: :nullify
   has_many :nota_debito_items,  dependent: :nullify
   has_many :nota_credito_items, dependent: :nullify
+  has_many :tareas, dependent: :destroy
 
   enum :estado, {
     recibido_miami: "recibido_miami",
@@ -59,6 +60,13 @@ class Paquete < ApplicationRecord
 
   def estado_terminal?
     entregado? || anulado? || retornado? || desechado?
+  end
+
+  # True when at least one tarea vinculada sigue abierta (pendiente/en_proceso).
+  # Los operadores no pueden avanzar el paquete a siguientes estados mientras
+  # queden tareas sin realizar.
+  def tareas_pendientes?
+    tareas.abiertas.exists?
   end
 
   def save(**args, &block)
