@@ -9,6 +9,18 @@ User.find_or_create_by!(email_address: "admin@comprasexpresscargo.com") do |u|
 end
 puts "  ✓ Admin user"
 
+# ── Sucursales iniciales ──
+[
+  { codigo: "MIA", nombre: "Miami",      pais: "USA",      ubicacion: "miami",    codigo_recepcion_prefix: "RM" },
+  { codigo: "SPS", nombre: "Zeron SPS",  pais: "Honduras", ubicacion: "honduras", codigo_recepcion_prefix: "RS" },
+  { codigo: "TGU", nombre: "Humuya TGU", pais: "Honduras", ubicacion: "honduras", codigo_recepcion_prefix: "RH" }
+].each do |attrs|
+  Sucursal.find_or_create_by!(codigo: attrs[:codigo]) do |s|
+    s.assign_attributes(attrs)
+  end
+end
+puts "  ✓ #{Sucursal.count} sucursales"
+
 # ── Tipos de envio (v4.0 — ver docs/approved/pre_alerta_v4.docx) ──
 [
   { nombre: "EXPRESS", codigo: "express", con_reempaque: true,  consolidable: true,

@@ -32,4 +32,5 @@ ActiveSupport::Inflector.inflections(:en) do |inflect|
   inflect.irregular "apertura_caja", "aperturas_caja"
   inflect.irregular "ingreso_caja", "ingresos_caja"
   inflect.irregular "egreso_caja", "egresos_caja"
+  inflect.irregular "sucursal", "sucursales"
 end

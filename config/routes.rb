@@ -34,6 +34,8 @@ Rails.application.routes.draw do
     resources :reempaques, only: [:index, :new, :create, :show]
   end
 
+  resources :sucursales, except: [:show]
+
   resources :manifiestos, except: [:destroy] do
     member do
       post :add_paquete
