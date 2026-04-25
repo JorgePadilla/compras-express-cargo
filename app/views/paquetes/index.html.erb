@@ -1,33 +1,38 @@
+<div data-controller="paquetes-shortcuts"
+     data-paquetes-shortcuts-export-xlsx-url-value="<%= export_paquetes_path(request.query_parameters.merge(format: :xlsx)) %>"
+     data-paquetes-shortcuts-export-pdf-url-value="<%= export_paquetes_path(request.query_parameters.merge(format: :pdf)) %>">
+
 <%= render PageHeaderComponent.new(title: "Todos los Paquetes", subtitle: "#{@paquetes.total_count} paquetes") do |header|
   current_params = request.query_parameters
   header.with_action do
     render ButtonComponent.new(variant: :secondary, href: export_paquetes_path(current_params.merge(format: :xlsx)), icon: "arrow-down-tray") do
-      "Excel"
+      "Excel (F8)"
     end
   end
   header.with_action do
     render ButtonComponent.new(variant: :secondary, href: export_paquetes_path(current_params.merge(format: :pdf)), icon: "document-arrow-down") do
-      "PDF"
+      "PDF (F9)"
+    end
+  end
+  header.with_action do
+    render ButtonComponent.new(variant: :secondary, icon: "printer",
+                               data: { action: "click->paquetes-shortcuts#print" }) do
+      "Imprimir (F4)"
     end
   end
 end %>
 
-<%# Barra de busqueda global (refinada: tracking, numero_recepcion, guia, cliente, contenido, tipo envio, manifiesto) %>
-<div class="mb-4">
+<%# Barra de busqueda global %>
+<div class="mb-1">
   <%= render SearchBarComponent.new(
     url: paquetes_path,
-    placeholder: "Buscar por tracking, número recepción, cliente, contenido, tipo envío o manifiesto...",
+    placeholder: "Buscar paquete...",
     value: params[:q]
   ) %>
 </div>
-
-<%# Color legend %>
-<div class="mb-4 flex flex-wrap gap-3 text-xs text-gray-700 dark:text-gray-300">
-  <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-cec-teal/10 border border-cec-teal/30"></span> Pre-Alerta</span>
-  <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-blue-100 border border-blue-200"></span> Pre-Factura</span>
-  <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-amber-100 border border-amber-200"></span> Cambio Servicio</span>
-  <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-amber-50 border border-amber-200"></span> Retener Miami</span>
-</div>
+<p class="mb-4 text-[11px] text-gray-500 dark:text-gray-400">
+  Busca en: tracking · n° recepción · guía · cliente (código/nombre) · contenido · tipo envío · manifiesto.
+</p>
 
 <%# Panel de filtros avanzados %>
 <% active_filters_count = [
@@ -339,3 +344,5 @@ end %>
     icon: "archive-box"
   ) %>
 <% end %>
+
+</div><%# /paquetes-shortcuts %>
