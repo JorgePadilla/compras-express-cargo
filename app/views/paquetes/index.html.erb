@@ -191,21 +191,21 @@ end %>
                        class="rounded border-gray-300 text-cec-teal focus:ring-cec-teal"
                        aria-label="Seleccionar todos">
               </th>
-            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider"><%= sortable_header :fecha_recibido, "F. recibido" %></th>
-            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider"><%= sortable_header :fecha_disponible, "F. disponible" %></th>
-            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider"><%= sortable_header :numero_recepcion, "N° recepción" %></th>
-            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider"><%= sortable_header :tracking, "Tracking" %></th>
-            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider"><%= sortable_header :cliente, "Cliente" %></th>
-            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider"><%= sortable_header :estado, "Estado" %></th>
-            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider"><%= sortable_header :tipo_envio, "T.E." %></th>
-            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Cons.</th>
-            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Contenido</th>
-            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider" title="Pre-Alerta">PA</th>
-            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider" title="Pre-Factura">PF</th>
-            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider" title="Factura">FA</th>
-            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Ed.</th>
-            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Bo.</th>
-            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Im.</th>
+            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Fecha de recepción en Miami"><%= sortable_header :fecha_recibido, "F. recibido" %></th>
+            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Fecha disponible para retiro en sucursal"><%= sortable_header :fecha_disponible, "F. disponible" %></th>
+            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Número de recepción (RM/RS/RH-XXXXXX) según sucursal"><%= sortable_header :numero_recepcion, "N° recepción" %></th>
+            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Tracking del transportista"><%= sortable_header :tracking, "Tracking" %></th>
+            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Cliente y código (ej. C123)"><%= sortable_header :cliente, "Cliente" %></th>
+            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Estado actual del paquete"><%= sortable_header :estado, "Estado" %></th>
+            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Tipo de envío (CER, CKA, EXP, CEM, CKM)"><%= sortable_header :tipo_envio, "T.E." %></th>
+            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Consolidado: el paquete pertenece a una pre-alerta consolidada">Cons.</th>
+            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Descripción del contenido del paquete">Contenido</th>
+            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Pre-Alerta — link al documento si el paquete tiene una asociada">PA</th>
+            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Pre-Factura — link al documento si existe">PF</th>
+            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Factura — link a la venta facturada">FA</th>
+            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Editar paquete (admin / supervisor Miami / supervisor Pre-factura)">Ed.</th>
+            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Borrar paquete (solo admin)">Bo.</th>
+            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Imprimir etiqueta del paquete">Im.</th>
           </tr>
         </thead>
         <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
