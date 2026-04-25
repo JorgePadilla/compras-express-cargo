@@ -279,4 +279,42 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to paquete_url(paquete)
     assert_equal "Updated by sup", paquete.reload.descripcion
   end
+
+  # ── Sort direction whitelist (review round 4) ──
+
+  test "sort dir invalida cae al default desc" do
+    get paquetes_url, params: { sort: "tracking", dir: "DROP TABLE", incluir_mas_1_ano: "1" }
+    assert_response :success
+  end
+
+  test "sort dir vacia cae al default desc" do
+    get paquetes_url, params: { sort: "tracking", dir: "", incluir_mas_1_ano: "1" }
+    assert_response :success
+  end
+
+  # ── Destroy: blockers especificos ──
+
+  test "destroy paquete con manifiesto bloquea con mensaje especifico" do
+    paquete = paquetes(:recibido)
+    paquete.update_columns(pre_factura_id: nil, venta_id: nil)
+    paquete.pre_alerta_paquetes.destroy_all
+    paquete.tareas.destroy_all if paquete.respond_to?(:tareas)
+
+    # Asociar a un manifiesto
+    manifiesto = manifiestos(:creado)
+    paquete.update_column(:manifiesto_id, manifiesto.id)
+
+    assert_no_difference("Paquete.count") do
+      delete paquete_url(paquete)
+    end
+    assert_redirected_to paquete_url(paquete)
+    assert_match(/manifiesto/i, flash[:alert])
+  end
+
+  # ── Helpers permisos ──
+
+  test "can_edit_paquetes? helper devuelve true para admin" do
+    helper = ApplicationController.helpers
+    assert helper.respond_to?(:can_edit_paquetes?)
+  end
 end

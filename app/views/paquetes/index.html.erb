@@ -309,12 +309,15 @@ end %>
               </td>
               <td class="px-3 py-2 text-center">
                 <% if can_edit_paquetes? %>
-                  <%= link_to edit_paquete_path(paquete), class: "inline-flex text-gray-400 hover:text-cec-navy dark:hover:text-cec-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cec-teal rounded", title: "Editar" do %>
+                  <%= link_to edit_paquete_path(paquete), class: "inline-flex text-gray-400 hover:text-cec-navy dark:hover:text-cec-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cec-teal rounded", title: "Editar paquete" do %>
                     <%= heroicon "pencil-square", variant: :outline, options: { class: "w-4 h-4" } %>
                   <% end %>
                 <% else %>
-                  <span class="inline-flex text-gray-300 dark:text-gray-600" title="Sin permiso para editar">
-                    <%= heroicon "pencil-square", variant: :outline, options: { class: "w-4 h-4" } %>
+                  <span class="inline-flex text-gray-300 dark:text-gray-600 cursor-not-allowed"
+                        role="button" aria-disabled="true"
+                        title="Sin permiso para editar (admin / supervisor Miami / supervisor Pre-factura)">
+                    <%= heroicon "pencil-square", variant: :outline, options: { class: "w-4 h-4", "aria-hidden" => "true" } %>
+                    <span class="sr-only">Editar (deshabilitado)</span>
                   </span>
                 <% end %>
               </td>
@@ -327,8 +330,11 @@ end %>
                     <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
                   <% end %>
                 <% else %>
-                  <span class="inline-flex text-gray-300 dark:text-gray-600" title="Sin permiso para borrar">
-                    <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
+                  <span class="inline-flex text-gray-300 dark:text-gray-600 cursor-not-allowed"
+                        role="button" aria-disabled="true"
+                        title="Sin permiso para borrar (solo admin)">
+                    <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4", "aria-hidden" => "true" } %>
+                    <span class="sr-only">Borrar (deshabilitado)</span>
                   </span>
                 <% end %>
               </td>

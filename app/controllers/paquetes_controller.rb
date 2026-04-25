@@ -56,10 +56,21 @@ class PaquetesController < ApplicationController
   end
 
   def destroy
-    if @paquete.destroy
-      redirect_to paquetes_path, notice: "Paquete eliminado."
-    else
-      redirect_to @paquete, alert: "No se puede eliminar: #{@paquete.errors.full_messages.to_sentence}"
+    blockers = paquete_destroy_blockers(@paquete)
+    if blockers.any?
+      redirect_to @paquete, alert: "No se puede eliminar: #{blockers.to_sentence}."
+      return
+    end
+
+    begin
+      @paquete.destroy!
+      redirect_to paquetes_path, notice: "Paquete #{@paquete.guia} eliminado."
+    rescue ActiveRecord::InvalidForeignKey
+      redirect_to @paquete, alert: "No se puede eliminar: el paquete tiene dependencias activas en la base de datos."
+    rescue ActiveRecord::RecordNotDestroyed => e
+      messages = e.record.errors.full_messages
+      msg = messages.any? ? messages.to_sentence : "tiene relaciones que no se pueden eliminar"
+      redirect_to @paquete, alert: "No se puede eliminar: #{msg}."
     end
   end
 
@@ -219,25 +230,50 @@ class PaquetesController < ApplicationController
   def authorize_edit
     return if Current.user&.admin?
     return if EDIT_ROLES.include?(Current.user&.rol)
-    redirect_to paquetes_path, alert: "No tienes permiso para editar paquetes."
+    redirect_to paquetes_path,
+                alert: "No tienes permiso para editar paquetes. Solo admin, supervisor Miami o supervisor Pre-factura."
   end
 
   def authorize_delete
     return if Current.user&.admin?
     return if DELETE_ROLES.include?(Current.user&.rol)
-    redirect_to paquetes_path, alert: "No tienes permiso para eliminar paquetes."
+    redirect_to paquetes_path,
+                alert: "No tienes permiso para eliminar paquetes. Solo administradores."
   end
 
-  def apply_sort(scope)
-    column = SORTABLE_COLUMNS[params[:sort]] || "paquetes.created_at"
-    direction = params[:dir].to_s.downcase == "asc" ? "asc" : "desc"
+  # Devuelve los motivos especificos por los cuales el paquete no puede
+  # eliminarse (FK activas hacia documentos contables / logisticos).
+  def paquete_destroy_blockers(paquete)
+    blockers = []
+    blockers << "tiene una pre-factura asociada (#{paquete.pre_factura.numero})" if paquete.pre_factura_id
+    blockers << "tiene una venta facturada (#{paquete.venta.numero})" if paquete.venta_id
+    blockers << "esta asignado a una entrega (#{paquete.entrega.numero})" if paquete.entrega_id
+    blockers << "esta en un manifiesto (#{paquete.manifiesto.numero})" if paquete.manifiesto_id
+    blockers
+  end
 
-    # Si se ordena por columna de un join (clientes.nombre, tipo_envios.codigo)
-    # asegurar el LEFT JOIN explicito (los includes no garantizan join SQL).
-    if column.start_with?("clientes.")
-      scope = scope.left_joins(:cliente)
-    elsif column.start_with?("tipo_envios.")
-      scope = scope.left_joins(:tipo_envio)
+  # Direccion del sort: solo aceptamos exactamente "asc" o "desc". Cualquier
+  # otro valor (incluyendo strings con espacios, SQL fragments, nil) cae al
+  # default "desc".
+  SORT_DIRECTIONS = %w[asc desc].freeze
+
+  def apply_sort(scope)
+    sort_param = params[:sort].to_s
+    user_picked_sort = SORTABLE_COLUMNS.key?(sort_param)
+    column = user_picked_sort ? SORTABLE_COLUMNS[sort_param] : "paquetes.created_at"
+
+    dir = params[:dir].to_s.downcase
+    direction = SORT_DIRECTIONS.include?(dir) ? dir : "desc"
+
+    # Solo agregamos LEFT JOIN si el usuario realmente eligio una columna
+    # de relacion. El sort default (created_at) no requiere joins extra.
+    # Esto evita queries con joins innecesarios cuando se pagina sin sort.
+    if user_picked_sort
+      if column.start_with?("clientes.")
+        scope = scope.left_joins(:cliente)
+      elsif column.start_with?("tipo_envios.")
+        scope = scope.left_joins(:tipo_envio)
+      end
     end
 
     scope.order(Arel.sql("#{column} #{direction} NULLS LAST"))
