@@ -28,11 +28,29 @@
 
   /* Animations */
   --animate-fade-in-up: fade-in-up 0.6s ease-out both;
+  --animate-dot-pulse: dot-pulse 2s ease-in-out infinite;
+  --animate-draw-line: draw-line 1.1s ease-out both;
+  --animate-shimmer: shimmer 1.6s linear infinite;
 }
 
 @keyframes fade-in-up {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dot-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.35); opacity: 0.6; }
+}
+
+@keyframes draw-line {
+  from { stroke-dashoffset: var(--draw-length, 600); opacity: 0; }
+  to   { stroke-dashoffset: 0; opacity: 1; }
+}
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
 }
 
 /* Sidebar gradient */
@@ -62,11 +80,67 @@
   box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
 }
 
+/* ─── Dashboard "Mission Control" utilities ───
+   Composición de tokens existentes (no introduce paleta nueva). */
+
+/* Hero gradient: navy oscuro → navy → teal-dark con halo gold sutil */
+.bg-cec-hero {
+  background:
+    radial-gradient(140% 120% at 100% 0%, rgb(0 150 199 / 0.25), transparent 55%),
+    radial-gradient(120% 100% at 0% 100%, rgb(255 181 71 / 0.18), transparent 55%),
+    linear-gradient(135deg, var(--color-cec-navy-dark) 0%, var(--color-cec-navy) 55%, var(--color-cec-navy-light) 100%);
+}
+
+/* Gradients lineales para icon pills, KPIs, chips */
+.bg-cec-teal-gradient { background: linear-gradient(135deg, var(--color-cec-teal-light), var(--color-cec-teal-dark)); }
+.bg-cec-gold-gradient { background: linear-gradient(135deg, var(--color-cec-gold-light), var(--color-cec-gold-dark)); }
+.bg-cec-navy-gradient { background: linear-gradient(135deg, var(--color-cec-navy-light), var(--color-cec-navy-dark)); }
+.bg-cec-red-gradient  { background: linear-gradient(135deg, #F87171, #DC2626); }
+
+/* Colored shadows: dan profundidad sin sumar paleta nueva */
+.shadow-cec-teal-glow { box-shadow: 0 8px 24px -8px rgb(0 180 216 / 0.45), 0 2px 6px -2px rgb(0 180 216 / 0.20); }
+.shadow-cec-gold-glow { box-shadow: 0 8px 24px -8px rgb(255 181 71 / 0.55), 0 2px 6px -2px rgb(255 181 71 / 0.25); }
+.shadow-cec-navy-glow { box-shadow: 0 8px 24px -8px rgb(27 37 89 / 0.45), 0 2px 6px -2px rgb(27 37 89 / 0.25); }
+.shadow-cec-red-glow  { box-shadow: 0 8px 24px -8px rgb(239 68 68 / 0.45), 0 2px 6px -2px rgb(239 68 68 / 0.20); }
+
+/* Icon pill polish: subtle inner highlight + rounded-xl con tamaño consistente */
+.icon-pill {
+  border-radius: 0.625rem; /* rounded-[10px] */
+  box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.20),
+              0 1px 2px 0 rgb(0 0 0 / 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.group:hover .icon-pill { transform: scale(1.06) rotate(-2deg); }
+@media (prefers-reduced-motion: reduce) {
+  .group:hover .icon-pill { transform: none; }
+  .icon-pill { transition: none; }
+}
+
+/* Health pulse dots */
+.dot-pulse { animation: var(--animate-dot-pulse); }
+
+/* SVG line draw-in */
+.animate-draw-line {
+  stroke-dasharray: var(--draw-length, 600);
+  animation: var(--animate-draw-line);
+}
+
+/* Stagger reveal: combina fade-in-up con delay manejado por JS via inline style */
+.animate-stagger { animation: var(--animate-fade-in-up); animation-fill-mode: both; }
+
+/* Avatar gradients deterministicos (3 variantes) */
+.avatar-gradient-navy { background: linear-gradient(135deg, var(--color-cec-navy), var(--color-cec-navy-light)); }
+.avatar-gradient-teal { background: linear-gradient(135deg, var(--color-cec-teal-dark), var(--color-cec-teal-light)); }
+.avatar-gradient-gold { background: linear-gradient(135deg, var(--color-cec-gold-dark), var(--color-cec-gold-light)); }
+
 /* Accesibilidad: respetar prefers-reduced-motion en animaciones custom */
 @media (prefers-reduced-motion: reduce) {
   .btn-gold-gradient { transition: none; }
-  /* Desactiva la animación fade-in-up para usuarios sensibles al movimiento */
-  .animate-fade-in-up { animation: none !important; }
+  .animate-fade-in-up,
+  .animate-stagger,
+  .animate-draw-line,
+  .dot-pulse { animation: none !important; }
+  .animate-draw-line { stroke-dashoffset: 0 !important; opacity: 1 !important; }
 }
 
 /* ─── Dark mode: reglas globales para form inputs y elementos base ───

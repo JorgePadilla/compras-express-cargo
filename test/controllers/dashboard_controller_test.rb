@@ -63,10 +63,99 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
       get root_url
     end
 
-    # 11 KPIs individuales + 1 GROUP BY + 2 queries para paquetes_recientes
-    # (paquetes + clientes) + 2 para ventas_recientes + ~5 de auth/cookie.
-    # Cota holgada para acomodar overhead de Current/session.
-    assert_operator query_count, :<=, 35,
-      "Se ejecutaron #{query_count} queries en el dashboard (esperado ≤ 35). Posible N+1."
+    # KPIs hoy (4) + KPIs ayer (4) + semana/mes (4) + pipeline (6) +
+    # series 7d ×4 (paquetes/ingresos/entregas/pre_alertas) + activity recientes (4) +
+    # auth/session (~5). Cota holgada para overhead.
+    assert_operator query_count, :<=, 50,
+      "Se ejecutaron #{query_count} queries en el dashboard (esperado ≤ 50). Posible N+1."
+  end
+
+  # ── Mission Control: nuevas instance vars ──
+
+  test "expone deltas, sparklines y health_status" do
+    login_as users(:admin)
+    get root_url
+    assert_response :success
+    %i[ingresos_ayer entregas_ayer paquetes_recibidos_ayer pre_alertas_ayer
+       ingresos_7_dias entregas_7_dias pre_alertas_7_dias paquetes_7_dias
+       health_status].each do |ivar|
+      assert_not_nil @controller.instance_variable_get("@#{ivar}"),
+        "Esperaba que @#{ivar} estuviera seteado"
+    end
+    health = @controller.instance_variable_get(:@health_status)
+    assert_includes %i[ok warn alert], health[:level]
+    assert health[:message].is_a?(String)
+  end
+
+  # ── Shortcuts agrupados (role-based visibility) ──
+
+  test "admin ve todas las áreas de shortcuts" do
+    login_as users(:admin)
+    get root_url
+    assert_response :success
+    groups = @controller.instance_variable_get(:@shortcut_groups)
+    areas = groups.map { |g| g[:area] }
+    assert_includes areas, "Logística"
+    assert_includes areas, "Facturación y Cobro"
+    assert_includes areas, "Entregas"
+    assert_includes areas, "Caja Diaria"
+    assert_includes areas, "Clientes"
+    assert_includes areas, "Marketing"
+    assert_includes areas, "Configuración"
+  end
+
+  test "supervisor_miami ve Logística + Clientes pero no Facturación/Caja Diaria/Configuración" do
+    sup = User.create!(nombre: "Sup M", email_address: "sup_m_dash@test.com", password: "password123",
+                       rol: "supervisor_miami", ubicacion: "miami", activo: true)
+    login_as sup
+    get root_url
+    assert_response :success
+    groups = @controller.instance_variable_get(:@shortcut_groups)
+    areas = groups.map { |g| g[:area] }
+    assert_includes areas, "Logística"
+    assert_includes areas, "Clientes"
+    assert_not_includes areas, "Facturación y Cobro"
+    assert_not_includes areas, "Caja Diaria"
+    assert_not_includes areas, "Entregas"
+    assert_not_includes areas, "Configuración"
+  end
+
+  test "supervisor_caja ve Facturación + Caja Diaria + Entregas pero no Configuración" do
+    sup = User.create!(nombre: "Sup C", email_address: "sup_c_dash@test.com", password: "password123",
+                       rol: "supervisor_caja", ubicacion: "honduras", activo: true)
+    login_as sup
+    get root_url
+    assert_response :success
+    groups = @controller.instance_variable_get(:@shortcut_groups)
+    areas = groups.map { |g| g[:area] }
+    assert_includes areas, "Facturación y Cobro"
+    assert_includes areas, "Caja Diaria"
+    assert_includes areas, "Entregas"
+    assert_includes areas, "Clientes"
+    assert_not_includes areas, "Configuración"
+  end
+
+  test "supervisor_prefactura ve Facturación pero no Caja Diaria ni Configuración" do
+    sup = User.create!(nombre: "Sup P", email_address: "sup_p_dash@test.com", password: "password123",
+                       rol: "supervisor_prefactura", ubicacion: "honduras", activo: true)
+    login_as sup
+    get root_url
+    assert_response :success
+    groups = @controller.instance_variable_get(:@shortcut_groups)
+    areas = groups.map { |g| g[:area] }
+    assert_includes areas, "Facturación y Cobro"
+    assert_includes areas, "Clientes"
+    assert_not_includes areas, "Caja Diaria"
+    assert_not_includes areas, "Entregas"
+    assert_not_includes areas, "Configuración"
+  end
+
+  test "shortcut_groups omite áreas vacías" do
+    login_as users(:admin)
+    get root_url
+    groups = @controller.instance_variable_get(:@shortcut_groups)
+    groups.each do |g|
+      assert g[:cards].any?, "El área #{g[:area]} está vacía y no debería renderizarse"
+    end
   end
 end

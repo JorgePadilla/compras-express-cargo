@@ -1,0 +1,73 @@
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+  <div class="flex items-center justify-between mb-4 gap-3">
+    <h2 class="text-sm font-bold text-gray-800 dark:text-gray-100">Paquetes recibidos · últimos 7 días</h2>
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-cec-teal/10 text-cec-teal-dark dark:bg-cec-teal/20 dark:text-cec-teal-light">
+        Total <span class="font-bold"><%= total %></span>
+      </span>
+      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-cec-gold/15 text-cec-gold-dark dark:bg-cec-gold/20 dark:text-cec-gold-light">
+        Pico <span class="font-bold"><%= peak %></span>
+      </span>
+      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+        Promedio <span class="font-bold"><%= avg %></span>
+      </span>
+    </div>
+  </div>
+
+  <% if points.empty? %>
+    <p class="text-center py-12 text-sm text-gray-400 dark:text-gray-500">Sin datos en los últimos 7 días.</p>
+  <% else %>
+    <svg viewBox="<%= viewbox %>" preserveAspectRatio="none" class="w-full h-44" role="img" aria-label="Tendencia de paquetes recibidos en los últimos 7 días">
+      <defs>
+        <linearGradient id="dashboard-chart-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stop-color="var(--color-cec-teal)" stop-opacity="0.55" />
+          <stop offset="100%" stop-color="var(--color-cec-teal)" stop-opacity="0" />
+        </linearGradient>
+      </defs>
+
+      <%# Grid horizontal (tres líneas) %>
+      <% [ 0.25, 0.5, 0.75 ].each do |frac| %>
+        <% y = DashboardChartComponent::PAD_Y + frac * (DashboardChartComponent::HEIGHT - DashboardChartComponent::AXIS_H - DashboardChartComponent::PAD_Y * 2) %>
+        <line x1="<%= DashboardChartComponent::PAD_X %>" x2="<%= DashboardChartComponent::WIDTH - DashboardChartComponent::PAD_X %>"
+              y1="<%= y.round(2) %>" y2="<%= y.round(2) %>"
+              stroke="currentColor" stroke-opacity="0.08" stroke-dasharray="2 4" class="text-gray-500" />
+      <% end %>
+
+      <%# Línea de promedio %>
+      <line x1="<%= DashboardChartComponent::PAD_X %>" x2="<%= DashboardChartComponent::WIDTH - DashboardChartComponent::PAD_X %>"
+            y1="<%= avg_y.round(2) %>" y2="<%= avg_y.round(2) %>"
+            stroke="var(--color-cec-gold-dark)" stroke-opacity="0.6" stroke-dasharray="4 4" stroke-width="1" />
+      <text x="<%= (DashboardChartComponent::WIDTH - DashboardChartComponent::PAD_X - 4) %>" y="<%= (avg_y - 4).round(2) %>"
+            text-anchor="end" fill="var(--color-cec-gold-dark)" font-size="10" font-weight="600">prom <%= avg %></text>
+
+      <%# Área bajo la curva %>
+      <path d="<%= area_path %>" fill="url(#dashboard-chart-grad)" />
+
+      <%# Curva principal %>
+      <path d="<%= smooth_path %>"
+            fill="none"
+            stroke="var(--color-cec-teal-dark)"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="animate-draw-line"
+            style="--draw-length: 1600;" />
+
+      <%# Punto pulsante en el último valor %>
+      <% if last_point %>
+        <g transform="translate(<%= last_point[:x] %>, <%= last_point[:y] %>)">
+          <circle r="9" fill="var(--color-cec-teal)" fill-opacity="0.25" class="dot-pulse" />
+          <circle r="5" fill="var(--color-cec-teal)" />
+          <circle r="2" fill="white" />
+        </g>
+      <% end %>
+    </svg>
+
+    <%# Eje X labels (separado del SVG para que respete el font del documento) %>
+    <div class="flex justify-between mt-2 px-6 text-[11px] text-gray-500 dark:text-gray-400">
+      <% labels.each do |lbl| %>
+        <span class="flex-1 text-center"><%= lbl %></span>
+      <% end %>
+    </div>
+  <% end %>
+</div>

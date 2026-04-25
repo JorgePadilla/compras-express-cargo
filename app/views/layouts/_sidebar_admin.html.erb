@@ -1,18 +1,18 @@
 <ul class="space-y-1 px-3">
   <%= sidebar_link "Home", root_path, icon: "home" %>
 
-  <% if can_access?(:etiquetar) || can_access?(:manifiestos) || can_access?(:paquetes) %>
+  <% if can_access?(:etiquetar) || can_access?(:manifiestos) || can_access?(:pre_alertas) || can_access?(:paquetes) %>
     <%= sidebar_section "Logistica" do %>
       <%= sidebar_link "Etiquetar", etiquetar_path, icon: "tag" if can_access?(:etiquetar) %>
       <%= sidebar_link "Manifiestos", manifiestos_path, icon: "cube" if can_access?(:manifiestos) %>
+      <%= sidebar_link "Pre-Alertas", pre_alertas_path, icon: "bell-alert" if can_access?(:pre_alertas) %>
       <%= sidebar_link "Todos los Paquetes", paquetes_path, icon: "archive-box" if can_access?(:paquetes) %>
     <% end %>
   <% end %>
 
-  <% if can_access?(:pre_facturas) || can_access?(:pre_alertas) || can_access?(:ventas) || can_access?(:notas_debito) || can_access?(:notas_credito) || can_access?(:cotizaciones) || can_access?(:financiamientos) %>
-    <%= sidebar_section "Caja" do %>
+  <% if can_access?(:pre_facturas) || can_access?(:ventas) || can_access?(:notas_debito) || can_access?(:notas_credito) || can_access?(:cotizaciones) || can_access?(:financiamientos) %>
+    <%= sidebar_section "Facturacion y Cobro" do %>
       <%= sidebar_link "Pre-Facturas", pre_facturas_path, icon: "document-text" if can_access?(:pre_facturas) %>
-      <%= sidebar_link "Pre-Alertas", pre_alertas_path, icon: "bell-alert" if can_access?(:pre_alertas) %>
       <%= sidebar_link "Cotizaciones", cotizaciones_path, icon: "clipboard-document-list" if can_access?(:cotizaciones) %>
       <%= sidebar_link "Proformas", proformas_path, icon: "document-duplicate" if can_access?(:ventas) %>
       <%= sidebar_link "Ventas", ventas_path, icon: "currency-dollar" if can_access?(:ventas) %>
@@ -47,11 +47,12 @@
   <% end %>
 
   <% if admin? %>
-    <%= sidebar_link "Usuarios", users_path, icon: "user-group" %>
-    <%= sidebar_link "Sucursales", sucursales_path, icon: "building-storefront" %>
-    <%= sidebar_link "Categorias de Precio", categoria_precios_path, icon: "tag" %>
-    <%= sidebar_link "Empresa", empresa_path, icon: "building-office-2" %>
-    <%= sidebar_link "Configuraciones", "#", icon: "cog-6-tooth" %>
-    <%= sidebar_link "Reportes", "#", icon: "table-cells" %>
+    <%= sidebar_section "Configuracion" do %>
+      <%= sidebar_link "Usuarios", users_path, icon: "user-group" %>
+      <%= sidebar_link "Sucursales", sucursales_path, icon: "building-storefront" %>
+      <%= sidebar_link "Categorias de Precio", categoria_precios_path, icon: "tag" %>
+      <%= sidebar_link "Empresa", empresa_path, icon: "building-office-2" %>
+      <%= sidebar_link "Reportes", "#", icon: "table-cells" %>
+    <% end %>
   <% end %>
 </ul>
