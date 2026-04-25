@@ -216,24 +216,47 @@ Cuando el digitador escanea/ingresa un tracking que ya existe en el sistema, el 
 
 **Contexto:** Hoy el formato es `RM-042424` (prefijo de sucursal `+` 6 dígitos secuenciales corridos para siempre, vía PostgreSQL sequence por sucursal).
 
-**Formato pedido (confirmado por Yusef, 2026-04-25):** `RM00000020261`
+**Formato confirmado (Yusef, 2026-04-25):** `RM0002026000001`
 
 Estructura:
-- **`RM`** = código de sucursal (Recibido Miami; análogos `RH`, `RS`, etc. para otras).
+- **Prefijo de sucursal** (1-4 letras mayúsculas, configurable por sucursal vía `codigo_recepcion_prefix`):
+  - `RM` = Recibido Miami.
+  - `SZN` = Sucursal Zerón (Honduras).
+  - Otros prefijos se configuran al crear la sucursal.
 - **`0002026`** = año en 7 dígitos zero-padded.
-- **`1`** = contador secuencial **dentro del año** (reinicia el 1° de enero).
+- **`000001`** = número de paquete del año, 6 dígitos zero-padded — **reinicia el 1° de enero**.
 
-Ejemplo: el paquete #42 recibido en Miami en el año 2026 → `RM000002600042` (zero-padding del contador a definir).
+Ejemplos:
+- `RM0002026000001` = primer paquete recibido en Miami en 2026.
+- `SZN0002026000042` = paquete #42 recibido en sucursal Zerón en 2026.
+- `RM0002027000001` = primer paquete del 2027 (contador reinicia).
 
 **Implicaciones:**
-- La PostgreSQL sequence actual (corrida para siempre por sucursal) se reemplaza por contador `(sucursal_id, anio)`.
-- Backfill: los `numero_recepcion` históricos quedan en formato viejo o se migran (decisión pendiente).
-- Cambia el regex de búsqueda y los exports (Excel/PDF) que muestran el número.
+- La PostgreSQL sequence anterior (corrida para siempre por sucursal) se reemplaza por contador `(sucursal_id, anio)` con lock atómico.
+- Backfill: los `numero_recepcion` históricos quedan en formato viejo y los nuevos usan el formato anual (coexisten).
+- Búsqueda ILIKE encuentra ambos formatos sin cambios adicionales.
+
+**Estado:** ✅ Implementado en PR-A (#79).
+
+#### 6.1 Sub-etiquetas: división de un tracking en varios paquetes (1/3, 2/3, 3/3)
+
+**Nota de Yusef (2026-04-25):**
+Cuando un mismo `tracking` se recibe físicamente como **varios bultos**, se divide en sub-etiquetas con notación `<n>/<N>`:
+- 1/3, 2/3, 3/3 = un tracking dividido en 3 cajas.
+
+**Dónde ocurre la división:**
+- **Miami:** principal — al recibir el tracking se decide si se divide en N cajas.
+- **Honduras:** ocurre en el contexto de la **pre-factura** (al agrupar trackings).
+
+**Estado actual:** existe `paquetes.numero_caja` y `paquetes.cantidad_paquetes` en el modelo (módulo 36 — multi-caja DHL). Pendiente confirmar:
+- Si la notación `<n>/<N>` se imprime en la etiqueta física, en el `numero_recepcion`, o en una columna aparte.
+- Si los N paquetes comparten el mismo `numero_recepcion` con sufijo o tienen `numero_recepcion` distinto cada uno.
+- UX en Etiquetar: ¿el digitador indica "dividir en 3 cajas" y el sistema crea 3 paquetes automáticamente?
 
 **Preguntas abiertas para el cliente:**
-- ¿Cuántos dígitos para el contador del año? Sugerencia: 6 (`RM0002026000001` → capacidad 1M paquetes/sucursal/año).
-- ¿Migrar números históricos al nuevo formato o coexisten ambos?
-- ¿Confirmar códigos de prefijo de las 3-4 sucursales activas (RM, RH, RS, …)?
+- ¿Se reusa la columna `cantidad_paquetes` (existente) o necesitamos nuevas columnas (`numero_caja_secuencia`, `total_cajas_tracking`)?
+- ¿La etiqueta impresa muestra `1/3` como texto separado o forma parte del `numero_recepcion`?
+- ¿En Honduras, la división en pre-factura ya funciona en el sistema actual (Roger) o también hay que diseñarla?
 
 ### 7. Fotos de Paquetes en Recepción (Miami)
 

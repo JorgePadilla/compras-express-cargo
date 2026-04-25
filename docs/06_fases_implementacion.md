@@ -190,24 +190,25 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 
 ---
 
-## Fase 5b: Recepción — Mejoras de Numeración y Tracking (PR-A + PR-B)
+## Fase 5b: Recepción — Mejoras de Numeración y Tracking
 
-**Objetivo:** Adaptar el flujo de recepción Miami a 2 requerimientos confirmados por el cliente (Yusef, 2026-04-25): nuevo formato anual de `numero_recepcion` y flow guiado para tracking duplicado.
+**Objetivo:** Adaptar el flujo de recepción Miami a los requerimientos confirmados por el cliente (Yusef, 2026-04-25): nuevo formato anual de `numero_recepcion`, flow guiado para tracking duplicado y soporte para sub-etiquetas (división de tracking en N bultos).
 
-**Decisión:** Se implementa en **dos PRs separados** porque tocan capas distintas (data layer vs. UX/endpoint).
+**Decisión:** Se implementa en **PRs separados** porque tocan capas distintas (data layer vs. UX/endpoint).
 
 | # | Tarea | PR | Estado |
 |---|-------|----|----|
-| 5b.1 | Nuevo formato `numero_recepcion` anual (`RM00000020261`): `<prefix><año 7-dígitos><contador-año>`. Reemplaza la sequence corrida por contador `(sucursal_id, año)`. Reinicia 1° de enero. | PR-A | ⏳ Bloqueado por respuestas cliente |
+| 5b.1 | Nuevo formato `numero_recepcion` anual (`RM0002026000001`): `<prefix><año 7-dig><contador-año 6-dig>`. Reemplaza la sequence corrida por contador atómico `(sucursal_id, año)`. Reinicia 1° de enero. | PR-A | ✅ #79 |
 | 5b.2 | Flow guiado de tracking duplicado: modal con 2 opciones (`Es actualización` vs. `Es tracking repetido`) + sufijo letras automático (`A`, `B`, `C`, …). | PR-B | ⏳ Bloqueado por respuestas cliente |
+| 5b.3 | Sub-etiquetas: división de un tracking en N bultos (1/3, 2/3, 3/3). Principal en Miami (al recibir); también en Honduras vía pre-factura. | PR-C | ⏳ Bloqueado por respuestas cliente |
 
 **Dependencia:** Fase 1 (etiquetar/recepción operativa).
 
-**Detalle PR-A — Nuevo formato `numero_recepcion`:**
-- Reemplazar PostgreSQL sequence corrida (`numero_recepcion_<PREFIX>_seq` por sucursal) por contador atómico `(sucursal_id, año)`.
-- Estrategias posibles: tabla `numero_recepcion_counters` con `FOR UPDATE` lock, o sequence on-demand `numero_recepcion_<PREFIX>_<YYYY>_seq` creada en cada cambio de año.
-- Backfill: decisión pendiente — los `numero_recepcion` históricos quedan en formato viejo o migran al nuevo.
-- Cambia regex de búsqueda en `Paquete::QUERY_FIELDS` y exports Excel/PDF.
+**Detalle PR-A — Nuevo formato `numero_recepcion`:** ✅ Implementado.
+- Tabla `numero_recepcion_counters(sucursal_id, anio, ultimo_numero)` con unique index.
+- `NumeroRecepcionCounter.next_for!` usa `lock!` (`SELECT FOR UPDATE`) para serializar bajo concurrencia.
+- `Paquete#generate_numero_recepcion` formatea con `format("%<prefix>s%<anio>07d%<num>06d", …)`.
+- Decisiones por default: 6 dígitos contador (1M/año), no migrar históricos (coexisten formatos), prefijo via `codigo_recepcion_prefix` existente (regex `[A-Z]{1,4}`).
 
 **Detalle PR-B — Flow tracking duplicado:**
 - Endpoint `check_tracking` existente (`PaquetesController#check_tracking`) extender response JSON con `existing_paquete_id`, `tracking_base`, `next_suffix`.
@@ -216,11 +217,21 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 - Mantener uniqueness en `paquetes.tracking` (los sufijos hacen cada tracking único).
 - Auditoría: registrar quién marcó "actualización" vs. "duplicado" (decisión pendiente).
 
-**Preguntas abiertas con el cliente (bloquean implementación):**
-- PR-A: dígitos del contador anual (sugerencia: 6); migración de históricos (sí/no); confirmar prefijos de sucursales.
-- PR-B: comportamiento al pasar `Z`; alcance del modo "actualización" (cualquier campo o solo tipo_envio + cliente); auditoría sí/no.
+**Detalle PR-C — Sub-etiquetas (1/3, 2/3, 3/3):**
+- Caso de uso: un mismo `tracking` se recibe físicamente como N bultos. Cada uno lleva un identificador `<n>/<N>`.
+- Existen ya `paquetes.numero_caja` y `paquetes.cantidad_paquetes` (módulo 36 — multi-caja DHL). Probablemente reutilizables.
+- Pendiente confirmar:
+  - ¿Se reusa `cantidad_paquetes` o se necesitan columnas nuevas (`numero_caja_secuencia`, `total_cajas_tracking`)?
+  - ¿La notación `1/3` se imprime en la etiqueta física? ¿forma parte del `numero_recepcion` o queda en una columna aparte?
+  - ¿Los N paquetes comparten `numero_recepcion` con sufijo, o cada uno tiene `numero_recepcion` propio?
+  - UX en Etiquetar: ¿el digitador indica "dividir en 3 cajas" y el sistema crea los 3 paquetes automáticamente, o cada uno se etiqueta individualmente?
+  - En Honduras: ¿ya existe el flow vía pre-factura (Roger lo construyó) o también se diseña aquí?
 
-**Referencia:** `docs/05_requerimientos_conversaciones.md` secciones 5.1 y 6.
+**Preguntas abiertas con el cliente (bloquean implementación):**
+- PR-B: comportamiento al pasar `Z`; alcance del modo "actualización" (cualquier campo o solo tipo_envio + cliente); auditoría sí/no.
+- PR-C: estructura de columnas; UX de "dividir en N"; estado actual del flow de pre-factura en Honduras.
+
+**Referencia:** `docs/05_requerimientos_conversaciones.md` secciones 5.1, 6 y 6.1.
 
 ---
 
