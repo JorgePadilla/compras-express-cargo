@@ -1,4 +1,6 @@
 class Sucursal < ApplicationRecord
+  self.table_name = "sucursales"
+
   UBICACIONES = %w[miami honduras otros].freeze
 
   has_many :paquetes, dependent: :restrict_with_error
