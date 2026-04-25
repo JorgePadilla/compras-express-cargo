@@ -282,7 +282,7 @@ end %>
               </td>
               <td class="px-3 py-2 text-center">
                 <% if pa %>
-                  <%= link_to cuenta_pre_alerta_path(pa), class: "inline-flex text-cec-teal dark:text-cec-teal-light hover:text-cec-teal-dark", title: "Ver Pre-Alerta #{pa.numero_documento}" do %>
+                  <%= link_to pre_alerta_path(pa), class: "inline-flex text-cec-teal dark:text-cec-teal-light hover:text-cec-teal-dark", title: "Ver Pre-Alerta #{pa.numero_documento}" do %>
                     <%= heroicon "bell-alert", variant: :solid, options: { class: "w-4 h-4" } %>
                   <% end %>
                 <% else %>
