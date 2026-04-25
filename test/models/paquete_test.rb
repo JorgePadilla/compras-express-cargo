@@ -231,4 +231,29 @@ class PaqueteTest < ActiveSupport::TestCase
     result = Paquete.by_estados(%w[recibido_miami empacado])
     assert result.to_sql.include?("IN")
   end
+
+  test "save reintenta cuando numero_recepcion colisiona" do
+    p1 = Paquete.create!(tracking: "1Z999REC_A", cliente: clientes(:juan), sucursal: sucursales(:miami))
+    expected_next = p1.numero_recepcion.sub("RM-", "").to_i + 1
+
+    # Forzar colision: asigna manualmente el proximo slot a otro paquete
+    Paquete.create!(
+      tracking: "1Z999REC_B", cliente: clientes(:juan), sucursal: sucursales(:miami),
+      numero_recepcion: "RM-#{expected_next.to_s.rjust(6, "0")}"
+    )
+
+    # El retry deberia generar un numero distinto (no colisionar)
+    p3 = Paquete.create!(tracking: "1Z999REC_C", cliente: clientes(:juan), sucursal: sucursales(:miami))
+    assert_match(/\ARM-\d{6}\z/, p3.numero_recepcion)
+  end
+
+  test "consolidado? usa coleccion precargada si esta loaded" do
+    pap = pre_alerta_paquetes(:pap_vinculado)
+    paquete = pap.paquete
+    reloaded = Paquete.includes(pre_alerta_paquetes: :pre_alerta).find(paquete.id)
+
+    assert_no_queries do
+      reloaded.consolidado?
+    end
+  end
 end

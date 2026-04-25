@@ -1,4 +1,6 @@
 class SucursalesController < ApplicationController
+  # require_authentication viene de ApplicationController (Authentication concern);
+  # aqui apilamos chequeo explicito de rol admin antes de cualquier accion.
   before_action :require_admin_access
   before_action :set_sucursal, only: [ :edit, :update, :destroy ]
 
@@ -50,7 +52,17 @@ class SucursalesController < ApplicationController
   end
 
   def require_admin_access
-    return if Current.user&.admin?
+    # Si no hay sesion activa, require_authentication (concern) ya lo habra
+    # redirigido antes. Defensive: segundo chequeo por si alguien cambia el
+    # orden de callbacks.
+    unless Current.user
+      redirect_to new_session_path, alert: "Iniciá sesión para continuar."
+      return
+    end
+
+    return if Current.user.admin?
+
+    # 403-equivalente: redirige con alert y aborta la accion.
     redirect_to root_path, alert: "Solo administradores pueden gestionar sucursales."
   end
 end

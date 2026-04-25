@@ -90,8 +90,14 @@ class Paquete < ApplicationRecord
   end
 
   # True si el paquete esta vinculado a alguna pre-alerta consolidando.
+  # Evita N+1: si pre_alerta_paquetes ya esta preloaded, usa la coleccion en
+  # memoria (caso del listado admin con includes). Si no, hace 1 query.
   def consolidado?
-    pre_alerta_paquetes.joins(:pre_alerta).exists?(pre_alertas: { consolidado: true })
+    if pre_alerta_paquetes.loaded?
+      pre_alerta_paquetes.any? { |pap| pap.pre_alerta&.consolidado? }
+    else
+      pre_alerta_paquetes.joins(:pre_alerta).exists?(pre_alertas: { consolidado: true })
+    end
   end
 
   # True when at least one tarea vinculada sigue abierta (pendiente/en_proceso).
@@ -104,11 +110,23 @@ class Paquete < ApplicationRecord
   def save(**args, &block)
     super
   rescue ActiveRecord::RecordNotUnique => e
-    raise unless new_record? && e.message.include?("guia") && (@_guia_retries ||= 0) < 3
-    @_guia_retries += 1
-    self.guia = nil
-    generate_guia
-    retry
+    raise unless new_record?
+
+    if e.message.include?("guia") && (@_guia_retries ||= 0) < 3
+      @_guia_retries += 1
+      self.guia = nil
+      generate_guia
+      retry
+    end
+
+    if e.message.include?("numero_recepcion") && (@_recep_retries ||= 0) < 3
+      @_recep_retries += 1
+      self.numero_recepcion = nil
+      generate_numero_recepcion
+      retry
+    end
+
+    raise
   end
 
   private
@@ -136,12 +154,18 @@ class Paquete < ApplicationRecord
   end
 
   # Numero de recepcion formato <prefix>-<6 digitos>. Prefix viene de la
-  # sucursal (ej: RM, RLA, RS, RH). Se genera solo si hay sucursal asignada.
+  # sucursal (ej: RM, RS, RH). Concurrencia: se toma un advisory lock de
+  # Postgres por prefix para serializar el calculo del siguiente numero
+  # entre transacciones concurrentes. Ademas `save` rescue'a RecordNotUnique
+  # y reintenta (ver `save` override abajo).
   def generate_numero_recepcion
     prefix = sucursal&.codigo_recepcion_prefix
     return unless prefix.present?
 
     pattern = "#{prefix}-"
+    lock_key = "numero_recepcion:#{prefix}".hash
+
+    self.class.connection.execute("SELECT pg_advisory_xact_lock(#{lock_key})") if self.class.connection.adapter_name =~ /PostgreSQL/i
     next_number = (self.class.where("numero_recepcion LIKE ?", "#{pattern}%")
                              .maximum(Arel.sql("CAST(SUBSTRING(numero_recepcion FROM #{pattern.length + 1}) AS INTEGER)")) || 0) + 1
     self.numero_recepcion = "#{pattern}#{next_number.to_s.rjust(6, '0')}"
