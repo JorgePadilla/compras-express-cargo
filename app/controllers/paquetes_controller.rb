@@ -1,14 +1,32 @@
 class PaquetesController < ApplicationController
-  before_action :set_paquete, only: [ :show, :edit, :update, :label ]
+  before_action :set_paquete, only: [ :show, :edit, :update, :label, :destroy ]
   before_action :authorize_tracking_actions, only: [ :check_tracking, :search ]
+  before_action :authorize_edit, only: [ :edit, :update ]
+  before_action :authorize_delete, only: [ :destroy ]
+
+  # Whitelist de columnas ordenables. Mapea param `sort` -> SQL fragment.
+  # Cualquier otro valor cae al default (created_at desc).
+  SORTABLE_COLUMNS = {
+    "fecha_recibido"   => "paquetes.fecha_recibido_miami",
+    "fecha_disponible" => "paquetes.fecha_disponible",
+    "numero_recepcion" => "paquetes.numero_recepcion",
+    "tracking"         => "paquetes.tracking",
+    "cliente"          => "clientes.nombre",
+    "estado"           => "paquetes.estado",
+    "tipo_envio"       => "tipo_envios.codigo",
+    "created_at"       => "paquetes.created_at"
+  }.freeze
+
+  EDIT_ROLES   = %w[admin supervisor_miami supervisor_prefactura].freeze
+  DELETE_ROLES = %w[admin].freeze
 
   def index
     @paquetes = base_scope
                   .includes(:cliente, :tipo_envio, :sucursal, :manifiesto,
                             :pre_factura, :venta,
                             pre_alerta_paquetes: :pre_alerta)
-                  .order(created_at: :desc)
     @paquetes = apply_filters(@paquetes)
+    @paquetes = apply_sort(@paquetes)
     @paquetes = @paquetes.page(params[:page]).per(25)
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     @sucursales = Sucursal.activas.ordered
@@ -35,6 +53,14 @@ class PaquetesController < ApplicationController
 
   def label
     render layout: "print"
+  end
+
+  def destroy
+    if @paquete.destroy
+      redirect_to paquetes_path, notice: "Paquete eliminado."
+    else
+      redirect_to @paquete, alert: "No se puede eliminar: #{@paquete.errors.full_messages.to_sentence}"
+    end
   end
 
   # Export de la coleccion filtrada (xlsx o pdf). El set de resultados sigue
@@ -147,6 +173,33 @@ class PaquetesController < ApplicationController
 
   def authorize_tracking_actions
     require_role(:supervisor_miami, :digitador_miami, :supervisor_prefactura, :supervisor_caja, :cajero)
+  end
+
+  def authorize_edit
+    return if Current.user&.admin?
+    return if EDIT_ROLES.include?(Current.user&.rol)
+    redirect_to paquetes_path, alert: "No tienes permiso para editar paquetes."
+  end
+
+  def authorize_delete
+    return if Current.user&.admin?
+    return if DELETE_ROLES.include?(Current.user&.rol)
+    redirect_to paquetes_path, alert: "No tienes permiso para eliminar paquetes."
+  end
+
+  def apply_sort(scope)
+    column = SORTABLE_COLUMNS[params[:sort]] || "paquetes.created_at"
+    direction = params[:dir].to_s.downcase == "asc" ? "asc" : "desc"
+
+    # Si se ordena por columna de un join (clientes.nombre, tipo_envios.codigo)
+    # asegurar el LEFT JOIN explicito (los includes no garantizan join SQL).
+    if column.start_with?("clientes.")
+      scope = scope.left_joins(:cliente)
+    elsif column.start_with?("tipo_envios.")
+      scope = scope.left_joins(:tipo_envio)
+    end
+
+    scope.order(Arel.sql("#{column} #{direction} NULLS LAST"))
   end
 
   def base_scope

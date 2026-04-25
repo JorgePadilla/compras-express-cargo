@@ -18,7 +18,7 @@ Rails.application.routes.draw do
     collection { get :buscar }
   end
 
-  resources :paquetes, except: [:new, :destroy] do
+  resources :paquetes, except: [:new] do
     member { get :label }
     collection do
       get :check_tracking

@@ -214,4 +214,67 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to paquetes_path
     assert_match(/Selecciona/i, flash[:alert])
   end
+
+  # ── Sorting + role gating (PR3) ──
+
+  test "sort por tracking ascendente" do
+    get paquetes_url, params: { sort: "tracking", dir: "asc", incluir_mas_1_ano: "1" }
+    assert_response :success
+  end
+
+  test "sort por cliente con LEFT JOIN clientes" do
+    get paquetes_url, params: { sort: "cliente", dir: "asc", incluir_mas_1_ano: "1" }
+    assert_response :success
+  end
+
+  test "sort por columna no whitelisted cae al default sin SQL injection" do
+    get paquetes_url, params: { sort: "DROP TABLE paquetes", dir: "asc" }
+    assert_response :success
+  end
+
+  test "admin puede borrar paquete" do
+    paquete = paquetes(:recibido)
+    paquete.update_columns(pre_factura_id: nil, venta_id: nil, manifiesto_id: nil)
+    paquete.pre_alerta_paquetes.destroy_all
+    paquete.tareas.destroy_all if paquete.respond_to?(:tareas)
+
+    assert_difference("Paquete.count", -1) do
+      delete paquete_url(paquete)
+    end
+    assert_redirected_to paquetes_path
+  end
+
+  test "digitador no puede borrar paquete" do
+    delete session_url
+    post session_url, params: { email_address: users(:digitador).email_address, password: "password123" }
+
+    paquete = paquetes(:recibido)
+    assert_no_difference("Paquete.count") do
+      delete paquete_url(paquete)
+    end
+    assert_redirected_to paquetes_path
+    assert_match(/permiso/i, flash[:alert])
+  end
+
+  test "cajero no puede editar paquete" do
+    delete session_url
+    post session_url, params: { email_address: users(:cajero).email_address, password: "password123" }
+
+    paquete = paquetes(:recibido)
+    patch paquete_url(paquete), params: { paquete: { descripcion: "Hacked by cajero" } }
+    assert_redirected_to paquetes_path
+    assert_not_equal "Hacked by cajero", paquete.reload.descripcion
+  end
+
+  test "supervisor_miami puede editar paquete" do
+    delete session_url
+    sup = User.create!(nombre: "Sup", email_address: "sup_m@test.com", password: "password123",
+                        rol: "supervisor_miami", ubicacion: "miami", activo: true)
+    post session_url, params: { email_address: sup.email_address, password: "password123" }
+
+    paquete = paquetes(:recibido)
+    patch paquete_url(paquete), params: { paquete: { descripcion: "Updated by sup" } }
+    assert_redirected_to paquete_url(paquete)
+    assert_equal "Updated by sup", paquete.reload.descripcion
+  end
 end

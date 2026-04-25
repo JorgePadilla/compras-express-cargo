@@ -186,13 +186,13 @@ end %>
                        class="rounded border-gray-300 text-cec-teal focus:ring-cec-teal"
                        aria-label="Seleccionar todos">
               </th>
-            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">F. recibido</th>
-            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">F. disponible</th>
-            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">N° recepción</th>
-            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Tracking</th>
-            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Cliente</th>
-            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Estado</th>
-            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">T.E.</th>
+            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider"><%= sortable_header :fecha_recibido, "F. recibido" %></th>
+            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider"><%= sortable_header :fecha_disponible, "F. disponible" %></th>
+            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider"><%= sortable_header :numero_recepcion, "N° recepción" %></th>
+            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider"><%= sortable_header :tracking, "Tracking" %></th>
+            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider"><%= sortable_header :cliente, "Cliente" %></th>
+            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider"><%= sortable_header :estado, "Estado" %></th>
+            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider"><%= sortable_header :tipo_envio, "T.E." %></th>
             <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Cons.</th>
             <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Contenido</th>
             <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider" title="Pre-Alerta">PA</th>
@@ -292,13 +292,26 @@ end %>
                 <% end %>
               </td>
               <td class="px-3 py-2 text-center">
-                <%= link_to edit_paquete_path(paquete), class: "inline-flex text-gray-400 hover:text-cec-navy dark:hover:text-cec-gold", title: "Editar" do %>
-                  <%= heroicon "pencil-square", variant: :outline, options: { class: "w-4 h-4" } %>
+                <% if can_edit_paquetes? %>
+                  <%= link_to edit_paquete_path(paquete), class: "inline-flex text-gray-400 hover:text-cec-navy dark:hover:text-cec-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cec-teal rounded", title: "Editar" do %>
+                    <%= heroicon "pencil-square", variant: :outline, options: { class: "w-4 h-4" } %>
+                  <% end %>
+                <% else %>
+                  <span class="inline-flex text-gray-300 dark:text-gray-600" title="Sin permiso para editar">
+                    <%= heroicon "pencil-square", variant: :outline, options: { class: "w-4 h-4" } %>
+                  </span>
                 <% end %>
               </td>
               <td class="px-3 py-2 text-center">
-                <% if admin? %>
-                  <span class="inline-flex text-gray-300 dark:text-gray-600" title="Borrar (próximo PR)">
+                <% if can_delete_paquetes? %>
+                  <%= button_to paquete_path(paquete), method: :delete,
+                      data: { turbo_confirm: "¿Eliminar el paquete #{paquete.guia}? Esta acción no se puede deshacer." },
+                      class: "inline-flex text-red-400 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 rounded",
+                      title: "Borrar paquete" do %>
+                    <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
+                  <% end %>
+                <% else %>
+                  <span class="inline-flex text-gray-300 dark:text-gray-600" title="Sin permiso para borrar">
                     <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
                   </span>
                 <% end %>
