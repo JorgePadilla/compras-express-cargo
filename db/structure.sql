@@ -1029,6 +1029,75 @@ ALTER SEQUENCE public.notas_debito_id_seq OWNED BY public.notas_debito.id;
 
 
 --
+-- Name: numero_recepcion_counters; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.numero_recepcion_counters (
+    id bigint NOT NULL,
+    sucursal_id bigint NOT NULL,
+    anio integer NOT NULL,
+    ultimo_numero integer DEFAULT 0 NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: numero_recepcion_counters_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.numero_recepcion_counters_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: numero_recepcion_counters_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.numero_recepcion_counters_id_seq OWNED BY public.numero_recepcion_counters.id;
+
+
+--
+-- Name: numero_recepcion_rh_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.numero_recepcion_rh_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: numero_recepcion_rm_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.numero_recepcion_rm_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: numero_recepcion_rs_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.numero_recepcion_rs_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
 -- Name: pagos; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1861,6 +1930,13 @@ ALTER TABLE ONLY public.notas_debito ALTER COLUMN id SET DEFAULT nextval('public
 
 
 --
+-- Name: numero_recepcion_counters id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.numero_recepcion_counters ALTER COLUMN id SET DEFAULT nextval('public.numero_recepcion_counters_id_seq'::regclass);
+
+
+--
 -- Name: pagos id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -2181,6 +2257,14 @@ ALTER TABLE ONLY public.notas_debito
 
 
 --
+-- Name: numero_recepcion_counters numero_recepcion_counters_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.numero_recepcion_counters
+    ADD CONSTRAINT numero_recepcion_counters_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: pagos pagos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2321,6 +2405,13 @@ ALTER TABLE ONLY public.ventas
 --
 
 CREATE UNIQUE INDEX idx_fin_cuotas_unique ON public.financiamiento_cuotas USING btree (financiamiento_id, numero_cuota);
+
+
+--
+-- Name: idx_recepcion_counters_sucursal_anio; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_recepcion_counters_sucursal_anio ON public.numero_recepcion_counters USING btree (sucursal_id, anio);
 
 
 --
@@ -2734,6 +2825,13 @@ CREATE UNIQUE INDEX index_notas_debito_on_numero ON public.notas_debito USING bt
 --
 
 CREATE INDEX index_notas_debito_on_venta_id ON public.notas_debito USING btree (venta_id);
+
+
+--
+-- Name: index_numero_recepcion_counters_on_sucursal_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_numero_recepcion_counters_on_sucursal_id ON public.numero_recepcion_counters USING btree (sucursal_id);
 
 
 --
@@ -3405,6 +3503,14 @@ ALTER TABLE ONLY public.notas_debito
 
 
 --
+-- Name: numero_recepcion_counters fk_rails_6b50eeee77; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.numero_recepcion_counters
+    ADD CONSTRAINT fk_rails_6b50eeee77 FOREIGN KEY (sucursal_id) REFERENCES public.sucursales(id);
+
+
+--
 -- Name: paquetes fk_rails_6fd48bb9d4; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3731,6 +3837,7 @@ ALTER TABLE ONLY public.paquetes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260425225919'),
 ('20260425033302'),
 ('20260425031409'),
 ('20260425031408'),
