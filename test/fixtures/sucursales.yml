@@ -1,0 +1,23 @@
+miami:
+  codigo: MIA
+  nombre: Miami
+  pais: USA
+  ubicacion: miami
+  codigo_recepcion_prefix: RM
+  activo: true
+
+zeron_sps:
+  codigo: SPS
+  nombre: Zeron SPS
+  pais: Honduras
+  ubicacion: honduras
+  codigo_recepcion_prefix: RS
+  activo: true
+
+humuya_tgu:
+  codigo: TGU
+  nombre: Humuya TGU
+  pais: Honduras
+  ubicacion: honduras
+  codigo_recepcion_prefix: RH
+  activo: true

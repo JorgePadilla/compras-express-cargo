@@ -200,4 +200,35 @@ class PaqueteTest < ActiveSupport::TestCase
     assert_match /\APQ-\d{6}\z/, p3.guia
     assert_not_equal p2.guia, p3.guia
   end
+
+  test "genera numero_recepcion con prefijo de la sucursal" do
+    p = Paquete.create!(tracking: "1Z999REC1", cliente: clientes(:juan), sucursal: sucursales(:miami))
+    assert_match(/\ARM-\d{6}\z/, p.numero_recepcion)
+  end
+
+  test "genera numero_recepcion distinto por prefijo (sucursales distintas)" do
+    p1 = Paquete.create!(tracking: "1Z999REC2A", cliente: clientes(:juan), sucursal: sucursales(:miami))
+    p2 = Paquete.create!(tracking: "1Z999REC2B", cliente: clientes(:juan), sucursal: sucursales(:zeron_sps))
+    assert p1.numero_recepcion.start_with?("RM-")
+    assert p2.numero_recepcion.start_with?("RS-")
+  end
+
+  test "track_fecha_disponible se setea al pasar a disponible_entrega" do
+    p = Paquete.create!(tracking: "1Z999FDISP", cliente: clientes(:juan), sucursal: sucursales(:miami))
+    assert_nil p.fecha_disponible
+    p.update!(estado: "disponible_entrega")
+    assert_not_nil p.reload.fecha_disponible
+  end
+
+  test "consolidado? es true si hay alguna pre-alerta consolidada vinculada" do
+    pap = pre_alerta_paquetes(:pap_vinculado)
+    paquete = pap.paquete
+    # :recibida tiene consolidado: true en fixture
+    assert paquete.consolidado?
+  end
+
+  test "by_estados filtra por multiple valores" do
+    result = Paquete.by_estados(%w[recibido_miami empacado])
+    assert result.to_sql.include?("IN")
+  end
 end

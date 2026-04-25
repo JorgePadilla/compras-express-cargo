@@ -1110,7 +1110,10 @@ CREATE TABLE public.paquetes (
     updated_at timestamp(6) without time zone NOT NULL,
     pre_factura_id bigint,
     venta_id bigint,
-    entrega_id bigint
+    entrega_id bigint,
+    sucursal_id bigint,
+    numero_recepcion character varying,
+    fecha_disponible timestamp(6) without time zone
 );
 
 
@@ -1414,6 +1417,42 @@ CREATE SEQUENCE public.sessions_id_seq
 --
 
 ALTER SEQUENCE public.sessions_id_seq OWNED BY public.sessions.id;
+
+
+--
+-- Name: sucursales; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sucursales (
+    id bigint NOT NULL,
+    codigo character varying NOT NULL,
+    nombre character varying NOT NULL,
+    pais character varying,
+    ubicacion character varying,
+    codigo_recepcion_prefix character varying NOT NULL,
+    activo boolean DEFAULT true NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: sucursales_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.sucursales_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: sucursales_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.sucursales_id_seq OWNED BY public.sucursales.id;
 
 
 --
@@ -1885,6 +1924,13 @@ ALTER TABLE ONLY public.sessions ALTER COLUMN id SET DEFAULT nextval('public.ses
 
 
 --
+-- Name: sucursales id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sucursales ALTER COLUMN id SET DEFAULT nextval('public.sucursales_id_seq'::regclass);
+
+
+--
 -- Name: tamano_cajas id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -2212,6 +2258,14 @@ ALTER TABLE ONLY public.schema_migrations
 
 ALTER TABLE ONLY public.sessions
     ADD CONSTRAINT sessions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: sucursales sucursales_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sucursales
+    ADD CONSTRAINT sucursales_pkey PRIMARY KEY (id);
 
 
 --
@@ -2753,10 +2807,24 @@ CREATE INDEX index_paquetes_on_manifiesto_id ON public.paquetes USING btree (man
 
 
 --
+-- Name: index_paquetes_on_numero_recepcion; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_paquetes_on_numero_recepcion ON public.paquetes USING btree (numero_recepcion);
+
+
+--
 -- Name: index_paquetes_on_pre_factura_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX index_paquetes_on_pre_factura_id ON public.paquetes USING btree (pre_factura_id);
+
+
+--
+-- Name: index_paquetes_on_sucursal_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_paquetes_on_sucursal_id ON public.paquetes USING btree (sucursal_id);
 
 
 --
@@ -2953,6 +3021,20 @@ CREATE INDEX index_reempaques_on_tarea_id ON public.reempaques USING btree (tare
 --
 
 CREATE INDEX index_sessions_on_user_id ON public.sessions USING btree (user_id);
+
+
+--
+-- Name: index_sucursales_on_codigo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_sucursales_on_codigo ON public.sucursales USING btree (codigo);
+
+
+--
+-- Name: index_sucursales_on_codigo_recepcion_prefix; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_sucursales_on_codigo_recepcion_prefix ON public.sucursales USING btree (codigo_recepcion_prefix);
 
 
 --
@@ -3153,6 +3235,14 @@ ALTER TABLE ONLY public.cotizacion_items
 
 ALTER TABLE ONLY public.pre_facturas
     ADD CONSTRAINT fk_rails_16be8ee9dd FOREIGN KEY (creado_por_id) REFERENCES public.users(id);
+
+
+--
+-- Name: paquetes fk_rails_19b48ef815; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_19b48ef815 FOREIGN KEY (sucursal_id) REFERENCES public.sucursales(id);
 
 
 --
@@ -3634,6 +3724,8 @@ ALTER TABLE ONLY public.paquetes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260425031409'),
+('20260425031408'),
 ('20260424142626'),
 ('20260424142625'),
 ('20260424040301'),

@@ -6,6 +6,7 @@ class Paquete < ApplicationRecord
   belongs_to :pre_factura, optional: true
   belongs_to :venta, optional: true
   belongs_to :entrega, optional: true
+  belongs_to :sucursal, optional: true
   has_many :pre_alerta_paquetes, dependent: :nullify
   has_many :nota_debito_items,  dependent: :nullify
   has_many :nota_credito_items, dependent: :nullify
@@ -17,10 +18,12 @@ class Paquete < ApplicationRecord
     empacado: "empacado",
     enviado_honduras: "enviado_honduras",
     en_aduana: "en_aduana",
+    consolidando_honduras: "consolidando_honduras",
     disponible_entrega: "disponible_entrega",
     pre_facturado: "pre_facturado",
     facturado: "facturado",
     en_reparto: "en_reparto",
+    recoleta_en_proceso: "recoleta_en_proceso",
     entregado: "entregado",
     retenido: "retenido",
     retornado: "retornado",
@@ -42,14 +45,29 @@ class Paquete < ApplicationRecord
 
   scope :activos, -> { where.not(estado: %w[anulado entregado retornado desechado]) }
   scope :buscar, ->(term) {
-    left_joins(:cliente).where(
-      "paquetes.tracking ILIKE :q OR paquetes.guia ILIKE :q OR clientes.codigo ILIKE :q OR clientes.nombre ILIKE :q",
-      q: "%#{sanitize_sql_like(term)}%"
+    q = "%#{sanitize_sql_like(term)}%"
+    left_joins(:cliente, :tipo_envio, :manifiesto).where(
+      <<~SQL,
+        paquetes.tracking ILIKE :q
+        OR paquetes.guia ILIKE :q
+        OR paquetes.numero_recepcion ILIKE :q
+        OR paquetes.descripcion ILIKE :q
+        OR clientes.codigo ILIKE :q
+        OR clientes.nombre ILIKE :q
+        OR clientes.apellido ILIKE :q
+        OR tipo_envios.codigo ILIKE :q
+        OR tipo_envios.nombre ILIKE :q
+        OR manifiestos.numero ILIKE :q
+      SQL
+      q: q
     )
   }
   scope :by_estado, ->(estado) { where(estado: estado) }
+  scope :by_estados, ->(arr) { where(estado: Array(arr).compact_blank) }
   scope :by_tipo_envio, ->(tipo_envio_id) { where(tipo_envio_id: tipo_envio_id) }
+  scope :by_tipos_envio, ->(arr) { where(tipo_envio_id: Array(arr).compact_blank) }
   scope :by_cliente, ->(cliente_id) { where(cliente_id: cliente_id) }
+  scope :by_sucursal, ->(ids) { where(sucursal_id: Array(ids).compact_blank) }
   scope :recibidos_hoy, -> { where(fecha_recibido_miami: Time.current.beginning_of_day..Time.current.end_of_day) }
   scope :sin_manifiesto, -> { where(manifiesto_id: nil).where.not(estado: %w[anulado entregado retornado desechado]) }
   scope :facturables, -> { where(estado: "disponible_entrega", pre_factura_id: nil, venta_id: nil) }
@@ -60,13 +78,20 @@ class Paquete < ApplicationRecord
   }
 
   before_validation :generate_guia, on: :create, if: -> { guia.blank? }
+  before_validation :generate_numero_recepcion, on: :create, if: -> { numero_recepcion.blank? && sucursal_id.present? }
   before_save :set_fecha_recibido, if: -> { fecha_recibido_miami.blank? && new_record? }
   before_save :calculate_peso_volumetrico
   before_save :calculate_peso_cobrar
+  before_save :track_fecha_disponible, if: :will_save_change_to_estado?
   after_save :sync_pre_alerta_estados, if: :saved_change_to_estado?
 
   def estado_terminal?
     entregado? || anulado? || retornado? || desechado?
+  end
+
+  # True si el paquete esta vinculado a alguna pre-alerta consolidando.
+  def consolidado?
+    pre_alerta_paquetes.joins(:pre_alerta).exists?(pre_alertas: { consolidado: true })
   end
 
   # True when at least one tarea vinculada sigue abierta (pendiente/en_proceso).
@@ -108,6 +133,23 @@ class Paquete < ApplicationRecord
   def generate_guia
     next_number = (self.class.where("guia LIKE 'PQ-%'").maximum(Arel.sql("CAST(SUBSTRING(guia FROM 4) AS INTEGER)")) || 0) + 1
     self.guia = "PQ-#{next_number.to_s.rjust(6, '0')}"
+  end
+
+  # Numero de recepcion formato <prefix>-<6 digitos>. Prefix viene de la
+  # sucursal (ej: RM, RLA, RS, RH). Se genera solo si hay sucursal asignada.
+  def generate_numero_recepcion
+    prefix = sucursal&.codigo_recepcion_prefix
+    return unless prefix.present?
+
+    pattern = "#{prefix}-"
+    next_number = (self.class.where("numero_recepcion LIKE ?", "#{pattern}%")
+                             .maximum(Arel.sql("CAST(SUBSTRING(numero_recepcion FROM #{pattern.length + 1}) AS INTEGER)")) || 0) + 1
+    self.numero_recepcion = "#{pattern}#{next_number.to_s.rjust(6, '0')}"
+  end
+
+  def track_fecha_disponible
+    return unless estado == "disponible_entrega"
+    self.fecha_disponible ||= Time.current
   end
 
   def set_fecha_recibido

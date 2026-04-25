@@ -3,10 +3,16 @@ class PaquetesController < ApplicationController
   before_action :authorize_tracking_actions, only: [ :check_tracking, :search ]
 
   def index
-    @paquetes = base_scope.includes(:cliente, :tipo_envio).order(created_at: :desc)
+    @paquetes = base_scope
+                  .includes(:cliente, :tipo_envio, :sucursal, :manifiesto,
+                            :pre_factura, :venta,
+                            pre_alerta_paquetes: :pre_alerta)
+                  .order(created_at: :desc)
     @paquetes = apply_filters(@paquetes)
     @paquetes = @paquetes.page(params[:page]).per(25)
     @tipo_envios = TipoEnvio.activos.order(:nombre)
+    @sucursales = Sucursal.activas.ordered
+    @estados_paquete = Paquete.estados.keys
   end
 
   def show
@@ -79,28 +85,47 @@ class PaquetesController < ApplicationController
   end
 
   def base_scope
-    if params[:incluir_antiguos] == "1"
+    if params[:incluir_mas_1_ano] == "1"
       Paquete.all
+    elsif params[:incluir_3_12_meses] == "1"
+      Paquete.where(created_at: 1.year.ago..)
     else
-      Paquete.where(created_at: 6.months.ago..)
+      Paquete.where(created_at: 3.months.ago..)
     end
   end
 
   def apply_filters(scope)
     scope = scope.buscar(params[:q]) if params[:q].present?
-    scope = scope.by_estado(params[:estado]) if params[:estado].present?
-    scope = scope.by_tipo_envio(params[:tipo_envio_id]) if params[:tipo_envio_id].present?
+
+    # Multi-select: estado, tipo_envio, sucursal
+    estados = Array(params[:estados]).reject(&:blank?)
+    scope = scope.by_estados(estados) if estados.any?
+    # Back-compat: param single `estado`
+    scope = scope.by_estado(params[:estado]) if params[:estado].present? && estados.empty?
+
+    tipos = Array(params[:tipo_envio_ids]).reject(&:blank?)
+    scope = scope.by_tipos_envio(tipos) if tipos.any?
+    scope = scope.by_tipo_envio(params[:tipo_envio_id]) if params[:tipo_envio_id].present? && tipos.empty?
+
+    sucursales = Array(params[:sucursal_ids]).reject(&:blank?)
+    scope = scope.by_sucursal(sucursales) if sucursales.any?
+
     scope = scope.by_cliente(params[:cliente_id]) if params[:cliente_id].present?
+
     if params[:fecha_desde].present? && (fecha_desde = Date.parse(params[:fecha_desde]) rescue nil)
       scope = scope.where(fecha_recibido_miami: fecha_desde...)
     end
     if params[:fecha_hasta].present? && (fecha_hasta = Date.parse(params[:fecha_hasta]) rescue nil)
       scope = scope.where(fecha_recibido_miami: ...fecha_hasta.end_of_day)
     end
-    scope = scope.where(pre_factura: true) if params[:solo_prefactura] == "1"
-    scope = scope.where(estado: "anulado") if params[:solo_anulados] == "1"
+
+    # Quick toggles
+    scope = scope.where(estado: "facturado") if params[:solo_facturados] == "1"
+    # incluir_facturados: default muestra todos; si == "0" los excluye
+    scope = scope.where.not(estado: "facturado") if params[:incluir_facturados] == "0"
     scope = scope.where(pre_alerta: false) if params[:sin_prealerta] == "1"
-    scope = scope.where(pre_factura: false) if params[:sin_prefactura] == "1"
+    scope = scope.where(estado: "anulado") if params[:solo_anulados] == "1"
+    scope = scope.where(pre_factura: true) if params[:solo_prefactura] == "1"
     scope
   end
 
