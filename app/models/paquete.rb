@@ -147,26 +147,31 @@ class Paquete < ApplicationRecord
     self.guia = "PQ-#{next_number.to_s.rjust(6, '0')}"
   end
 
-  # Numero de recepcion formato <prefix>-<6 digitos>. Prefix viene de la
-  # sucursal (ej: RM, RS, RH). Concurrencia: se usa una PostgreSQL sequence
-  # atomica por sucursal (`numero_recepcion_<PREFIX>_seq`), creada al crear
-  # la sucursal. `nextval()` garantiza unicidad sin locks de aplicacion
-  # aun bajo alta concurrencia. El unique index en paquetes.numero_recepcion
-  # es la salvaguarda final; el retry en `save` cubre colisiones con data
-  # legacy que no haya pasado por la sequence.
+  # Numero de recepcion formato anual:
+  #
+  #   <PREFIX><AÑO 7-DIGITOS><CONTADOR 6-DIGITOS>
+  #
+  # Ej: `RM0002026000042` = Recibido Miami, año 2026, paquete #42 del año.
+  # El contador reinicia el 1 de enero. Atomico via NumeroRecepcionCounter
+  # (lock FOR UPDATE sobre (sucursal_id, anio)).
+  #
+  # El unique index en paquetes.numero_recepcion es la salvaguarda final;
+  # el retry en `save` cubre colisiones con data legacy que no pasó por
+  # el counter.
   def generate_numero_recepcion
     return if sucursal.nil?
     prefix = sucursal.codigo_recepcion_prefix
     return if prefix.blank?
 
-    # Defensive: crea la sequence si no existe (cubre fixtures, sucursales
-    # creadas via SQL raw, y la migracion inicial que puede haber corrido
-    # antes del seed).
-    sucursal.ensure_numero_recepcion_sequence
+    anio = (fecha_recibido_miami&.year || Time.zone.now.year)
+    next_number = NumeroRecepcionCounter.next_for!(sucursal: sucursal, anio: anio)
 
-    seq_name = sucursal.numero_recepcion_sequence_name
-    next_number = self.class.connection.select_value("SELECT nextval('#{seq_name}')").to_i
-    self.numero_recepcion = "#{prefix}-#{next_number.to_s.rjust(6, '0')}"
+    self.numero_recepcion = format(
+      "%<prefix>s%<anio>07d%<num>06d",
+      prefix: prefix,
+      anio:   anio,
+      num:    next_number
+    )
   end
 
   # Registra la primera vez que el paquete llega a disponible_entrega.
