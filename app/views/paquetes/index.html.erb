@@ -22,8 +22,8 @@
   end
 end %>
 
-<%# Barra de busqueda global con popover info-on-click %>
-<div class="mb-4 flex items-start gap-2">
+<%# Barra de busqueda global con popover info-on-click pegado a la barra %>
+<div class="mb-4 flex items-center gap-2 w-full sm:max-w-md">
   <div class="flex-1">
     <%= render SearchBarComponent.new(
       url: paquetes_path,
@@ -31,12 +31,12 @@ end %>
       value: params[:q]
     ) %>
   </div>
-  <details class="relative pt-1.5 group">
-    <summary class="list-none cursor-pointer text-gray-400 hover:text-cec-teal dark:hover:text-cec-teal-light focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cec-teal rounded-full"
+  <details class="relative">
+    <summary class="list-none cursor-pointer inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-400 hover:text-cec-teal hover:bg-gray-100 dark:hover:text-cec-teal-light dark:hover:bg-gray-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cec-teal transition-colors"
              aria-label="¿Qué busca esta barra?" title="¿Qué busca esta barra?">
       <%= heroicon "information-circle", variant: :outline, options: { class: "w-5 h-5" } %>
     </summary>
-    <div class="absolute right-0 z-20 mt-2 w-72 rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-gray-200 dark:ring-gray-700 p-4 text-xs text-gray-700 dark:text-gray-200">
+    <div class="absolute left-1/2 -translate-x-1/2 sm:left-auto sm:right-0 sm:translate-x-0 z-20 mt-2 w-72 rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-gray-200 dark:ring-gray-700 p-4 text-xs text-gray-700 dark:text-gray-200">
       <p class="font-semibold text-gray-800 dark:text-gray-100 mb-2">La búsqueda incluye estos campos:</p>
       <ul class="space-y-1 list-disc list-inside text-gray-600 dark:text-gray-300">
         <li>Tracking</li>
