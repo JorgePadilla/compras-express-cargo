@@ -232,19 +232,17 @@ class PaqueteTest < ActiveSupport::TestCase
     assert result.to_sql.include?("IN")
   end
 
-  test "save reintenta cuando numero_recepcion colisiona" do
-    p1 = Paquete.create!(tracking: "1Z999REC_A", cliente: clientes(:juan), sucursal: sucursales(:miami))
-    expected_next = p1.numero_recepcion.sub("RM-", "").to_i + 1
+  test "numero_recepcion se genera atomicamente para creates secuenciales" do
+    # La sequence de Postgres garantiza unicidad sin locks de aplicacion.
+    # Aunque dos inserts "concurrentes" corran en serie en los tests, cada
+    # nextval retorna un valor distinto.
+    p1 = Paquete.create!(tracking: "1Z999SEQ_A", cliente: clientes(:juan), sucursal: sucursales(:miami))
+    p2 = Paquete.create!(tracking: "1Z999SEQ_B", cliente: clientes(:juan), sucursal: sucursales(:miami))
+    p3 = Paquete.create!(tracking: "1Z999SEQ_C", cliente: clientes(:juan), sucursal: sucursales(:miami))
 
-    # Forzar colision: asigna manualmente el proximo slot a otro paquete
-    Paquete.create!(
-      tracking: "1Z999REC_B", cliente: clientes(:juan), sucursal: sucursales(:miami),
-      numero_recepcion: "RM-#{expected_next.to_s.rjust(6, "0")}"
-    )
-
-    # El retry deberia generar un numero distinto (no colisionar)
-    p3 = Paquete.create!(tracking: "1Z999REC_C", cliente: clientes(:juan), sucursal: sucursales(:miami))
-    assert_match(/\ARM-\d{6}\z/, p3.numero_recepcion)
+    numeros = [ p1, p2, p3 ].map(&:numero_recepcion)
+    assert_equal numeros, numeros.uniq, "Se esperaban 3 numeros distintos, se obtuvieron duplicados"
+    numeros.each { |n| assert_match(/\ARM-\d{6}\z/, n) }
   end
 
   test "consolidado? usa coleccion precargada si esta loaded" do

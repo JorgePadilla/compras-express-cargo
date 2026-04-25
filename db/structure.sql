@@ -2793,6 +2793,13 @@ CREATE INDEX index_paquetes_on_estado ON public.paquetes USING btree (estado);
 
 
 --
+-- Name: index_paquetes_on_fecha_disponible; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_paquetes_on_fecha_disponible ON public.paquetes USING btree (fecha_disponible);
+
+
+--
 -- Name: index_paquetes_on_guia; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3724,6 +3731,7 @@ ALTER TABLE ONLY public.paquetes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260425033302'),
 ('20260425031409'),
 ('20260425031408'),
 ('20260424142626'),

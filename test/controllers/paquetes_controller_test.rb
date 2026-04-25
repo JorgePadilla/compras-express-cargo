@@ -103,4 +103,69 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
       assert_not_includes p["cliente"].to_s, "<script"
     end
   end
+
+  # ── Filtros multi-select (PR1) ──
+
+  test "index filtra por multiples estados via estados[]" do
+    get paquetes_url, params: { estados: %w[recibido_miami empacado], incluir_mas_1_ano: "1" }
+    assert_response :success
+    assigned = @controller.instance_variable_get(:@paquetes)
+    assigned.each { |p| assert_includes %w[recibido_miami empacado], p.estado }
+  end
+
+  test "index filtra por sucursal via sucursal_ids[]" do
+    miami = sucursales(:miami)
+    paquetes(:recibido).update_column(:sucursal_id, miami.id)
+    get paquetes_url, params: { sucursal_ids: [ miami.id ], incluir_mas_1_ano: "1" }
+    assert_response :success
+    assigned = @controller.instance_variable_get(:@paquetes)
+    assigned.each { |p| assert_equal miami.id, p.sucursal_id }
+  end
+
+  test "index combina estado + sucursal (AND logico)" do
+    miami = sucursales(:miami)
+    paquetes(:recibido).update_columns(sucursal_id: miami.id, estado: "recibido_miami")
+    get paquetes_url, params: {
+      estados: [ "recibido_miami" ],
+      sucursal_ids: [ miami.id ],
+      incluir_mas_1_ano: "1"
+    }
+    assert_response :success
+    assigned = @controller.instance_variable_get(:@paquetes)
+    assert_includes assigned, paquetes(:recibido).reload
+  end
+
+  test "busqueda por descripcion (contenido)" do
+    paquetes(:recibido).update_column(:descripcion, "iPhone 15 Pro Max")
+    get paquetes_url, params: { q: "iPhone", incluir_mas_1_ano: "1" }
+    assert_response :success
+    assigned = @controller.instance_variable_get(:@paquetes)
+    assert_includes assigned, paquetes(:recibido).reload
+  end
+
+  test "busqueda por numero_recepcion" do
+    miami = sucursales(:miami)
+    paquete = paquetes(:recibido)
+    paquete.update!(sucursal_id: miami.id, numero_recepcion: "RM-042424")
+    get paquetes_url, params: { q: "RM-042424", incluir_mas_1_ano: "1" }
+    assert_response :success
+    assigned = @controller.instance_variable_get(:@paquetes)
+    assert_includes assigned, paquete
+  end
+
+  test "toggle solo_facturados filtra estado = facturado" do
+    paquetes(:recibido).update_column(:estado, "facturado")
+    get paquetes_url, params: { solo_facturados: "1", incluir_mas_1_ano: "1" }
+    assert_response :success
+    assigned = @controller.instance_variable_get(:@paquetes)
+    assigned.each { |p| assert_equal "facturado", p.estado }
+  end
+
+  test "toggle incluir_facturados=0 excluye facturados" do
+    paquetes(:recibido).update_column(:estado, "facturado")
+    get paquetes_url, params: { incluir_facturados: "0", incluir_mas_1_ano: "1" }
+    assert_response :success
+    assigned = @controller.instance_variable_get(:@paquetes)
+    assert_not(assigned.any? { |p| p.estado == "facturado" })
+  end
 end

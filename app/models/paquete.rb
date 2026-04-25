@@ -107,26 +107,20 @@ class Paquete < ApplicationRecord
     tareas.abiertas.exists?
   end
 
+  # Retry on guia collisions (old max+1 generator). numero_recepcion usa una
+  # PostgreSQL sequence atomica por sucursal (`nextval`), por lo que nunca
+  # debe colisionar para records nuevos — la migracion inicial hizo setval
+  # al max existente, y nextval garantiza unicidad para inserts concurrentes.
+  # Si hay una colision de numero_recepcion, es un problema de integridad
+  # (data legacy insertada fuera de la sequence) y bubbleamos el error.
   def save(**args, &block)
     super
   rescue ActiveRecord::RecordNotUnique => e
-    raise unless new_record?
-
-    if e.message.include?("guia") && (@_guia_retries ||= 0) < 3
-      @_guia_retries += 1
-      self.guia = nil
-      generate_guia
-      retry
-    end
-
-    if e.message.include?("numero_recepcion") && (@_recep_retries ||= 0) < 3
-      @_recep_retries += 1
-      self.numero_recepcion = nil
-      generate_numero_recepcion
-      retry
-    end
-
-    raise
+    raise unless new_record? && e.message.include?("guia") && (@_guia_retries ||= 0) < 3
+    @_guia_retries += 1
+    self.guia = nil
+    generate_guia
+    retry
   end
 
   private
@@ -154,23 +148,34 @@ class Paquete < ApplicationRecord
   end
 
   # Numero de recepcion formato <prefix>-<6 digitos>. Prefix viene de la
-  # sucursal (ej: RM, RS, RH). Concurrencia: se toma un advisory lock de
-  # Postgres por prefix para serializar el calculo del siguiente numero
-  # entre transacciones concurrentes. Ademas `save` rescue'a RecordNotUnique
-  # y reintenta (ver `save` override abajo).
+  # sucursal (ej: RM, RS, RH). Concurrencia: se usa una PostgreSQL sequence
+  # atomica por sucursal (`numero_recepcion_<PREFIX>_seq`), creada al crear
+  # la sucursal. `nextval()` garantiza unicidad sin locks de aplicacion
+  # aun bajo alta concurrencia. El unique index en paquetes.numero_recepcion
+  # es la salvaguarda final; el retry en `save` cubre colisiones con data
+  # legacy que no haya pasado por la sequence.
   def generate_numero_recepcion
-    prefix = sucursal&.codigo_recepcion_prefix
-    return unless prefix.present?
+    return if sucursal.nil?
+    prefix = sucursal.codigo_recepcion_prefix
+    return if prefix.blank?
 
-    pattern = "#{prefix}-"
-    lock_key = "numero_recepcion:#{prefix}".hash
+    # Defensive: crea la sequence si no existe (cubre fixtures, sucursales
+    # creadas via SQL raw, y la migracion inicial que puede haber corrido
+    # antes del seed).
+    sucursal.ensure_numero_recepcion_sequence
 
-    self.class.connection.execute("SELECT pg_advisory_xact_lock(#{lock_key})") if self.class.connection.adapter_name =~ /PostgreSQL/i
-    next_number = (self.class.where("numero_recepcion LIKE ?", "#{pattern}%")
-                             .maximum(Arel.sql("CAST(SUBSTRING(numero_recepcion FROM #{pattern.length + 1}) AS INTEGER)")) || 0) + 1
-    self.numero_recepcion = "#{pattern}#{next_number.to_s.rjust(6, '0')}"
+    seq_name = sucursal.numero_recepcion_sequence_name
+    next_number = self.class.connection.select_value("SELECT nextval('#{seq_name}')").to_i
+    self.numero_recepcion = "#{prefix}-#{next_number.to_s.rjust(6, '0')}"
   end
 
+  # Registra la primera vez que el paquete llega a disponible_entrega.
+  # Una vez seteada, NO se borra si el estado avanza (pre_facturado,
+  # facturado, entregado...) porque es un timestamp historico util para
+  # reportes y listados. Tampoco se resetea si retrocede por correccion
+  # administrativa: mantener el timestamp original evita perder trazabilidad.
+  # Si en el futuro se necesita "fecha programada vs fecha real", se agrega
+  # un segundo campo (ej. fecha_disponible_programada).
   def track_fecha_disponible
     return unless estado == "disponible_entrega"
     self.fecha_disponible ||= Time.current
