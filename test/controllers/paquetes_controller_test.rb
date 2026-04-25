@@ -178,11 +178,12 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert response.body.start_with?("%PDF"), "expected PDF magic bytes"
   end
 
-  test "export.xlsx devuelve un XLSX" do
+  test "export.xlsx devuelve un XLSX valido (firma ZIP)" do
     get export_paquetes_url(format: :xlsx, incluir_mas_1_ano: "1")
     assert_response :success
-    # caxlsx responde con el mime de spreadsheet
     assert_match(/openxmlformats-officedocument.spreadsheetml.sheet|vnd.ms-excel|excel/i, response.media_type)
+    # XLSX es un ZIP, debe empezar con bytes "PK\x03\x04".
+    assert response.body.bytes.first(2) == [ 0x50, 0x4B ], "expected ZIP magic PK"
   end
 
   test "bulk_print requiere al menos un id seleccionado" do
@@ -197,10 +198,11 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "application/pdf", response.media_type
   end
 
-  test "bulk_export xlsx con ids seleccionados" do
+  test "bulk_export xlsx con ids seleccionados (XLSX valido)" do
     post bulk_export_paquetes_url, params: { paquete_ids: [ paquetes(:recibido).id ], formato: "xlsx" }
     assert_response :success
     assert_match(/openxmlformats-officedocument.spreadsheetml.sheet|vnd.ms-excel|excel/i, response.media_type)
+    assert response.body.bytes.first(2) == [ 0x50, 0x4B ], "expected ZIP magic PK"
   end
 
   test "bulk_export pdf con ids seleccionados" do

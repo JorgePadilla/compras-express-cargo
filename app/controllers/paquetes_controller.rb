@@ -152,19 +152,60 @@ class PaquetesController < ApplicationController
 
   private
 
-  # Genera el XLSX via Axlsx::Package directamente y lo manda como send_data.
-  # Evita las idiosincrasias de render xlsx: "..." (que resuelve template
-  # segun format y falla si el request llego como HTML).
+  # Genera el XLSX via Axlsx::Package directo (sin template) y lo manda
+  # como send_data. Construir el workbook en Ruby evita los problemas de
+  # binding de `xlsx_package` cuando el request llega como HTML (forms POST).
   def send_xlsx(paquetes, filename:)
-    xlsx_package = Axlsx::Package.new
-    view = view_context
-    view.instance_variable_set(:@xlsx_package, xlsx_package)
-    view.xlsx_package = xlsx_package if view.respond_to?(:xlsx_package=)
-    view.render(template: "paquetes/export", formats: [ :xlsx ], handlers: [ :axlsx ], locals: { paquetes: paquetes })
-    send_data xlsx_package.to_stream.read,
+    package = build_xlsx_package(paquetes)
+    send_data package.to_stream.read,
               filename: filename,
               type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
               disposition: "attachment"
+  end
+
+  def build_xlsx_package(paquetes)
+    package = Axlsx::Package.new
+    wb = package.workbook
+
+    bold_header = wb.styles.add_style(b: true, bg_color: "1B2559", fg_color: "FFFFFF",
+                                       border: { style: :thin, color: "DDDDDD" },
+                                       alignment: { vertical: :center })
+    date_style = wb.styles.add_style(format_code: "dd/mm/yyyy")
+
+    wb.add_worksheet(name: "Paquetes") do |sheet|
+      sheet.add_row([
+        "F. Recibido", "F. Disponible", "N° Recepción", "Tracking",
+        "Cliente Código", "Cliente Nombre", "Estado", "Tipo Envío",
+        "Sucursal", "Consolidado", "Contenido", "Guía", "Pre-Alerta",
+        "Pre-Factura", "Factura"
+      ], style: bold_header)
+
+      paquetes.each do |p|
+        pa = p.pre_alerta_paquetes.first&.pre_alerta
+        row_styles = [ date_style, date_style, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil ]
+        sheet.add_row([
+          p.fecha_recibido_miami&.to_date || p.created_at.to_date,
+          p.fecha_disponible&.to_date,
+          p.numero_recepcion.presence || "—",
+          p.tracking.to_s,
+          p.cliente.codigo.to_s,
+          p.cliente.nombre_completo.to_s,
+          p.estado.to_s.humanize,
+          p.tipo_envio&.codigo&.upcase || "—",
+          p.sucursal&.nombre || "—",
+          p.consolidado? ? "Sí" : "No",
+          p.descripcion.to_s,
+          p.guia.to_s,
+          pa&.numero_documento || "—",
+          p.pre_factura&.numero || "—",
+          p.venta&.numero || "—"
+        ], style: row_styles)
+      end
+
+      sheet.column_widths 12, 12, 14, 20, 12, 28, 18, 10, 18, 12, 40, 14, 14, 14, 14
+    end
+
+    package
   end
 
   def set_paquete
