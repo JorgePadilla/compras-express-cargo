@@ -23,6 +23,9 @@ Rails.application.routes.draw do
     collection do
       get :check_tracking
       get :search
+      get :export
+      post :bulk_print
+      post :bulk_export
     end
     resources :tareas, only: [:index, :new, :create, :edit, :update, :destroy] do
       member do

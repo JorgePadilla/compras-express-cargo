@@ -1,4 +1,16 @@
-<%= render PageHeaderComponent.new(title: "Todos los Paquetes", subtitle: "#{@paquetes.total_count} paquetes") %>
+<%= render PageHeaderComponent.new(title: "Todos los Paquetes", subtitle: "#{@paquetes.total_count} paquetes") do |header|
+  current_params = request.query_parameters
+  header.with_action do
+    render ButtonComponent.new(variant: :secondary, href: export_paquetes_path(current_params.merge(format: :xlsx)), icon: "arrow-down-tray") do
+      "Excel"
+    end
+  end
+  header.with_action do
+    render ButtonComponent.new(variant: :secondary, href: export_paquetes_path(current_params.merge(format: :pdf)), icon: "document-arrow-down") do
+      "PDF"
+    end
+  end
+end %>
 
 <%# Barra de busqueda global (refinada: tracking, numero_recepcion, guia, cliente, contenido, tipo envio, manifiesto) %>
 <div class="mb-4">
@@ -137,14 +149,43 @@
 </details>
 
 <% if @paquetes.any? %>
-  <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
-        <thead class="bg-gray-50 dark:bg-gray-900">
-          <tr>
-            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-              <input type="checkbox" disabled title="Selección bulk (próximo PR)" class="rounded border-gray-300 opacity-50" />
-            </th>
+  <div data-controller="bulk-selection">
+    <%# Barra flotante con acciones bulk (aparece cuando count > 0) %>
+    <div data-bulk-selection-target="bar"
+         class="hidden sticky top-0 z-10 mb-3 bg-cec-navy text-white rounded-lg shadow-lg px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="text-sm">
+        <span data-bulk-selection-target="counter">0</span> paquete(s) seleccionado(s)
+      </div>
+      <div class="flex items-center gap-2">
+        <%= form_tag bulk_print_paquetes_path, method: :post, class: "inline" do %>
+          <div data-bulk-selection-target="idsField"></div>
+          <button type="submit" class="bg-white text-cec-navy font-semibold px-3 py-1.5 rounded text-xs hover:bg-gray-100">Imprimir</button>
+        <% end %>
+        <%= form_tag bulk_export_paquetes_path, method: :post, class: "inline" do %>
+          <div data-bulk-selection-target="idsField"></div>
+          <%= hidden_field_tag :formato, "xlsx" %>
+          <button type="submit" class="bg-white text-cec-navy font-semibold px-3 py-1.5 rounded text-xs hover:bg-gray-100">Excel</button>
+        <% end %>
+        <%= form_tag bulk_export_paquetes_path, method: :post, class: "inline" do %>
+          <div data-bulk-selection-target="idsField"></div>
+          <%= hidden_field_tag :formato, "pdf" %>
+          <button type="submit" class="bg-white text-cec-navy font-semibold px-3 py-1.5 rounded text-xs hover:bg-gray-100">PDF</button>
+        <% end %>
+        <button type="button" data-action="click->bulk-selection#clear" class="text-white/70 hover:text-white text-xs underline">Limpiar</button>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-900">
+            <tr>
+              <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                <input type="checkbox" data-bulk-selection-target="selectAll"
+                       data-action="change->bulk-selection#toggleAll"
+                       class="rounded border-gray-300 text-cec-teal focus:ring-cec-teal"
+                       aria-label="Seleccionar todos">
+              </th>
             <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">F. recibido</th>
             <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">F. disponible</th>
             <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">N° recepción</th>
@@ -183,7 +224,10 @@
             %>
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 <%= row_class %>">
               <td class="px-3 py-2">
-                <input type="checkbox" value="<%= paquete.id %>" name="paquete_ids[]" class="rounded border-gray-300 text-cec-teal focus:ring-cec-teal">
+                <input type="checkbox" value="<%= paquete.id %>"
+                       data-bulk-selection-target="row"
+                       data-action="change->bulk-selection#toggleRow"
+                       class="rounded border-gray-300 text-cec-teal focus:ring-cec-teal">
               </td>
               <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-600 dark:text-gray-300">
                 <%= paquete.fecha_recibido_miami&.strftime("%d/%m/%Y") || paquete.created_at.strftime("%d/%m/%Y") %>
@@ -268,6 +312,7 @@
           <% end %>
         </tbody>
       </table>
+    </div>
     </div>
   </div>
 
