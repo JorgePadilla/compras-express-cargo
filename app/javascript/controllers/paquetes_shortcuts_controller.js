@@ -40,19 +40,22 @@ export default class extends Controller {
 
     if (e.key === "F4") {
       e.preventDefault()
-      this.print()
+      this._clickAction("bulk-selection#print")
     } else if (e.key === "F8") {
       e.preventDefault()
-      if (this.hasExportXlsxUrlValue) window.location.href = this.exportXlsxUrlValue
+      this._clickAction("bulk-selection#exportXlsx")
     } else if (e.key === "F9") {
       e.preventDefault()
-      if (this.hasExportPdfUrlValue) window.location.href = this.exportPdfUrlValue
+      this._clickAction("bulk-selection#exportPdf")
     }
   }
 
-  print(event) {
-    if (event) event.preventDefault()
-    window.print()
+  // Triggers un click en el primer elemento que tenga el data-action dado.
+  // Asi el atajo de teclado se comporta exactamente igual que el click del
+  // boton del header (incluyendo la logica smart de bulk-selection).
+  _clickAction(action) {
+    const btn = document.querySelector(`[data-action*="${action}"]`)
+    if (btn) btn.click()
   }
 
   _isTyping(el) {

@@ -1,26 +1,32 @@
-<div data-controller="paquetes-shortcuts"
+<div data-controller="paquetes-shortcuts bulk-selection"
      data-paquetes-shortcuts-export-xlsx-url-value="<%= export_paquetes_path(request.query_parameters.merge(format: :xlsx)) %>"
-     data-paquetes-shortcuts-export-pdf-url-value="<%= export_paquetes_path(request.query_parameters.merge(format: :pdf)) %>">
+     data-paquetes-shortcuts-export-pdf-url-value="<%= export_paquetes_path(request.query_parameters.merge(format: :pdf)) %>"
+     data-bulk-selection-bulk-print-url-value="<%= bulk_print_paquetes_path %>"
+     data-bulk-selection-bulk-export-url-value="<%= bulk_export_paquetes_path %>"
+     data-bulk-selection-export-xlsx-url-value="<%= export_paquetes_path(request.query_parameters.merge(format: :xlsx)) %>"
+     data-bulk-selection-export-pdf-url-value="<%= export_paquetes_path(request.query_parameters.merge(format: :pdf)) %>">
 
 <%= render PageHeaderComponent.new(title: "Todos los Paquetes", subtitle: "#{@paquetes.total_count} paquetes") do |header|
-  current_params = request.query_parameters
   header.with_action do
-    render ButtonComponent.new(variant: :secondary, href: export_paquetes_path(current_params.merge(format: :xlsx)), icon: "arrow-down-tray") do
+    render ButtonComponent.new(variant: :secondary, icon: "arrow-down-tray",
+                               data: { action: "click->bulk-selection#exportXlsx" }) do
       "Excel (F8)"
     end
   end
   header.with_action do
-    render ButtonComponent.new(variant: :secondary, href: export_paquetes_path(current_params.merge(format: :pdf)), icon: "document-arrow-down") do
+    render ButtonComponent.new(variant: :secondary, icon: "document-arrow-down",
+                               data: { action: "click->bulk-selection#exportPdf" }) do
       "PDF (F9)"
     end
   end
   header.with_action do
     render ButtonComponent.new(variant: :secondary, icon: "printer",
-                               data: { action: "click->paquetes-shortcuts#print" }) do
+                               data: { action: "click->bulk-selection#print" }) do
       "Imprimir (F4)"
     end
   end
 end %>
+
 
 <%# Barra de busqueda global con popover info-on-click pegado a la barra %>
 <div class="mb-4 flex items-center gap-2 w-full sm:max-w-md">
@@ -172,31 +178,18 @@ end %>
 </details>
 
 <% if @paquetes.any? %>
-  <div data-controller="bulk-selection">
-    <%# Barra flotante con acciones bulk (aparece cuando count > 0) %>
-    <div data-bulk-selection-target="bar"
-         class="hidden sticky top-0 z-10 mb-3 bg-cec-navy text-white rounded-lg shadow-lg px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-      <div class="text-sm">
-        <span data-bulk-selection-target="counter">0</span> paquete(s) seleccionado(s)
-      </div>
-      <div class="flex items-center gap-2">
-        <%= form_tag bulk_print_paquetes_path, method: :post, class: "inline" do %>
-          <div data-bulk-selection-target="idsField"></div>
-          <button type="submit" class="bg-white text-cec-navy font-semibold px-3 py-1.5 rounded text-xs hover:bg-gray-100">Imprimir</button>
-        <% end %>
-        <%= form_tag bulk_export_paquetes_path, method: :post, class: "inline" do %>
-          <div data-bulk-selection-target="idsField"></div>
-          <%= hidden_field_tag :formato, "xlsx" %>
-          <button type="submit" class="bg-white text-cec-navy font-semibold px-3 py-1.5 rounded text-xs hover:bg-gray-100">Excel</button>
-        <% end %>
-        <%= form_tag bulk_export_paquetes_path, method: :post, class: "inline" do %>
-          <div data-bulk-selection-target="idsField"></div>
-          <%= hidden_field_tag :formato, "pdf" %>
-          <button type="submit" class="bg-white text-cec-navy font-semibold px-3 py-1.5 rounded text-xs hover:bg-gray-100">PDF</button>
-        <% end %>
-        <button type="button" data-action="click->bulk-selection#clear" class="text-white/70 hover:text-white text-xs underline">Limpiar</button>
-      </div>
+  <%# Indicador de seleccion (sticky top, aparece cuando hay >= 1). Las
+      acciones (Excel/PDF/Imprimir) viven en los botones del header y son
+      "smart": si hay seleccion actuan sobre los IDs, si no exportan el
+      scope filtrado. %>
+  <div data-bulk-selection-target="bar"
+       class="hidden sticky top-0 z-10 mb-3 bg-cec-navy text-white rounded-lg shadow-lg px-4 py-3 flex items-center justify-between gap-3">
+    <div class="text-sm">
+      <span data-bulk-selection-target="counter">0</span> paquete(s) seleccionado(s)
+      <span class="ml-2 text-white/70 text-xs">— Excel/PDF/Imprimir actuan sobre la seleccion</span>
     </div>
+    <button type="button" data-action="click->bulk-selection#clear" class="text-white/80 hover:text-white text-xs underline">Limpiar selección</button>
+  </div>
 
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
       <div class="overflow-x-auto">
@@ -348,7 +341,6 @@ end %>
           <% end %>
         </tbody>
       </table>
-    </div>
     </div>
   </div>
 
