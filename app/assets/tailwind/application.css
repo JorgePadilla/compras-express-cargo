@@ -143,3 +143,23 @@
   :where(.dark) .hover\:bg-gray-50:hover   { background-color: rgba(55, 65, 81, 0.5); }
   :where(.dark) .hover\:bg-gray-100:hover  { background-color: rgba(55, 65, 81, 0.7); }
 }
+
+/* ─── Print stylesheet ───
+   Oculta sidebar, topbar mobile y elementos de UI no-contenido al imprimir.
+   Aplica a window.print() (atajo F4) y al print del navegador. Las clases
+   .no-print se pueden agregar puntualmente a otros elementos. */
+@media print {
+  aside, [data-controller="sidebar"] aside,
+  header.lg\:hidden, .no-print, details, [data-controller="auto-dismiss"] {
+    display: none !important;
+  }
+  /* Reset color a fondo blanco / texto negro para que el PDF / impresion
+     no use el dark theme aunque la pagina lo tenga activo. */
+  html, body { background: #fff !important; color: #000 !important; }
+  html.dark, html.dark body { background: #fff !important; color: #000 !important; }
+  /* Tabla compacta, sin hover background. */
+  table { font-size: 9pt; }
+  thead { background: #f3f4f6 !important; color: #000 !important; }
+  /* No expandir paginacion ni botones. */
+  nav.pagination, button[type="submit"], [data-bulk-selection-target="bar"] { display: none !important; }
+}

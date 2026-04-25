@@ -1,0 +1,66 @@
+import { Controller } from "@hotwired/stimulus"
+
+// Atajos de teclado para el listado /paquetes:
+//   F4  → Imprimir vista actual (window.print)
+//   F8  → Descargar Excel del scope filtrado
+//   F9  → Descargar PDF del scope filtrado
+//   F2  → Limpiar búsqueda (foco en el campo de búsqueda)
+//
+// Los atajos solo se disparan cuando el foco NO está en un input/textarea
+// editable (excepto F2, que sí limpia el campo de búsqueda).
+export default class extends Controller {
+  static values = {
+    exportXlsxUrl: String,
+    exportPdfUrl: String
+  }
+
+  connect() {
+    this._onKey = this.handleKeydown.bind(this)
+    document.addEventListener("keydown", this._onKey)
+  }
+
+  disconnect() {
+    document.removeEventListener("keydown", this._onKey)
+  }
+
+  handleKeydown(e) {
+    // F2 limpia búsqueda y enfoca el campo (siempre disponible).
+    if (e.key === "F2") {
+      e.preventDefault()
+      const input = document.querySelector("input[name='q']")
+      if (input) {
+        input.value = ""
+        input.focus()
+      }
+      return
+    }
+
+    // Las demás solo cuando NO se está editando un input.
+    if (this._isTyping(e.target)) return
+
+    if (e.key === "F4") {
+      e.preventDefault()
+      this._clickAction("bulk-selection#print")
+    } else if (e.key === "F8") {
+      e.preventDefault()
+      this._clickAction("bulk-selection#exportXlsx")
+    } else if (e.key === "F9") {
+      e.preventDefault()
+      this._clickAction("bulk-selection#exportPdf")
+    }
+  }
+
+  // Triggers un click en el primer elemento que tenga el data-action dado.
+  // Asi el atajo de teclado se comporta exactamente igual que el click del
+  // boton del header (incluyendo la logica smart de bulk-selection).
+  _clickAction(action) {
+    const btn = document.querySelector(`[data-action*="${action}"]`)
+    if (btn) btn.click()
+  }
+
+  _isTyping(el) {
+    if (!el) return false
+    const tag = (el.tagName || "").toUpperCase()
+    return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable
+  }
+}

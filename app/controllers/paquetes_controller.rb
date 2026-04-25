@@ -1,14 +1,32 @@
 class PaquetesController < ApplicationController
-  before_action :set_paquete, only: [ :show, :edit, :update, :label ]
+  before_action :set_paquete, only: [ :show, :edit, :update, :label, :destroy ]
   before_action :authorize_tracking_actions, only: [ :check_tracking, :search ]
+  before_action :authorize_edit, only: [ :edit, :update ]
+  before_action :authorize_delete, only: [ :destroy ]
+
+  # Whitelist de columnas ordenables. Mapea param `sort` -> SQL fragment.
+  # Cualquier otro valor cae al default (created_at desc).
+  SORTABLE_COLUMNS = {
+    "fecha_recibido"   => "paquetes.fecha_recibido_miami",
+    "fecha_disponible" => "paquetes.fecha_disponible",
+    "numero_recepcion" => "paquetes.numero_recepcion",
+    "tracking"         => "paquetes.tracking",
+    "cliente"          => "clientes.nombre",
+    "estado"           => "paquetes.estado",
+    "tipo_envio"       => "tipo_envios.codigo",
+    "created_at"       => "paquetes.created_at"
+  }.freeze
+
+  EDIT_ROLES   = %w[admin supervisor_miami supervisor_prefactura].freeze
+  DELETE_ROLES = %w[admin].freeze
 
   def index
     @paquetes = base_scope
                   .includes(:cliente, :tipo_envio, :sucursal, :manifiesto,
                             :pre_factura, :venta,
                             pre_alerta_paquetes: :pre_alerta)
-                  .order(created_at: :desc)
     @paquetes = apply_filters(@paquetes)
+    @paquetes = apply_sort(@paquetes)
     @paquetes = @paquetes.page(params[:page]).per(25)
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     @sucursales = Sucursal.activas.ordered
@@ -35,6 +53,25 @@ class PaquetesController < ApplicationController
 
   def label
     render layout: "print"
+  end
+
+  def destroy
+    blockers = paquete_destroy_blockers(@paquete)
+    if blockers.any?
+      redirect_to @paquete, alert: "No se puede eliminar: #{blockers.to_sentence}."
+      return
+    end
+
+    begin
+      @paquete.destroy!
+      redirect_to paquetes_path, notice: "Paquete #{@paquete.guia} eliminado."
+    rescue ActiveRecord::InvalidForeignKey
+      redirect_to @paquete, alert: "No se puede eliminar: el paquete tiene dependencias activas en la base de datos."
+    rescue ActiveRecord::RecordNotDestroyed => e
+      messages = e.record.errors.full_messages
+      msg = messages.any? ? messages.to_sentence : "tiene relaciones que no se pueden eliminar"
+      redirect_to @paquete, alert: "No se puede eliminar: #{msg}."
+    end
   end
 
   # Export de la coleccion filtrada (xlsx o pdf). El set de resultados sigue
@@ -126,19 +163,60 @@ class PaquetesController < ApplicationController
 
   private
 
-  # Genera el XLSX via Axlsx::Package directamente y lo manda como send_data.
-  # Evita las idiosincrasias de render xlsx: "..." (que resuelve template
-  # segun format y falla si el request llego como HTML).
+  # Genera el XLSX via Axlsx::Package directo (sin template) y lo manda
+  # como send_data. Construir el workbook en Ruby evita los problemas de
+  # binding de `xlsx_package` cuando el request llega como HTML (forms POST).
   def send_xlsx(paquetes, filename:)
-    xlsx_package = Axlsx::Package.new
-    view = view_context
-    view.instance_variable_set(:@xlsx_package, xlsx_package)
-    view.xlsx_package = xlsx_package if view.respond_to?(:xlsx_package=)
-    view.render(template: "paquetes/export", formats: [ :xlsx ], handlers: [ :axlsx ], locals: { paquetes: paquetes })
-    send_data xlsx_package.to_stream.read,
+    package = build_xlsx_package(paquetes)
+    send_data package.to_stream.read,
               filename: filename,
               type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
               disposition: "attachment"
+  end
+
+  def build_xlsx_package(paquetes)
+    package = Axlsx::Package.new
+    wb = package.workbook
+
+    bold_header = wb.styles.add_style(b: true, bg_color: "1B2559", fg_color: "FFFFFF",
+                                       border: { style: :thin, color: "DDDDDD" },
+                                       alignment: { vertical: :center })
+    date_style = wb.styles.add_style(format_code: "dd/mm/yyyy")
+
+    wb.add_worksheet(name: "Paquetes") do |sheet|
+      sheet.add_row([
+        "F. Recibido", "F. Disponible", "N° Recepción", "Tracking",
+        "Cliente Código", "Cliente Nombre", "Estado", "Tipo Envío",
+        "Sucursal", "Consolidado", "Contenido", "Guía", "Pre-Alerta",
+        "Pre-Factura", "Factura"
+      ], style: bold_header)
+
+      paquetes.each do |p|
+        pa = p.pre_alerta_paquetes.first&.pre_alerta
+        row_styles = [ date_style, date_style, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil ]
+        sheet.add_row([
+          p.fecha_recibido_miami&.to_date || p.created_at.to_date,
+          p.fecha_disponible&.to_date,
+          p.numero_recepcion.presence || "—",
+          p.tracking.to_s,
+          p.cliente.codigo.to_s,
+          p.cliente.nombre_completo.to_s,
+          p.estado.to_s.humanize,
+          p.tipo_envio&.codigo&.upcase || "—",
+          p.sucursal&.nombre || "—",
+          p.consolidado? ? "Sí" : "No",
+          p.descripcion.to_s,
+          p.guia.to_s,
+          pa&.numero_documento || "—",
+          p.pre_factura&.numero || "—",
+          p.venta&.numero || "—"
+        ], style: row_styles)
+      end
+
+      sheet.column_widths 12, 12, 14, 20, 12, 28, 18, 10, 18, 12, 40, 14, 14, 14, 14
+    end
+
+    package
   end
 
   def set_paquete
@@ -147,6 +225,58 @@ class PaquetesController < ApplicationController
 
   def authorize_tracking_actions
     require_role(:supervisor_miami, :digitador_miami, :supervisor_prefactura, :supervisor_caja, :cajero)
+  end
+
+  def authorize_edit
+    return if Current.user&.admin?
+    return if EDIT_ROLES.include?(Current.user&.rol)
+    redirect_to paquetes_path,
+                alert: "No tienes permiso para editar paquetes. Solo admin, supervisor Miami o supervisor Pre-factura."
+  end
+
+  def authorize_delete
+    return if Current.user&.admin?
+    return if DELETE_ROLES.include?(Current.user&.rol)
+    redirect_to paquetes_path,
+                alert: "No tienes permiso para eliminar paquetes. Solo administradores."
+  end
+
+  # Devuelve los motivos especificos por los cuales el paquete no puede
+  # eliminarse (FK activas hacia documentos contables / logisticos).
+  def paquete_destroy_blockers(paquete)
+    blockers = []
+    blockers << "tiene una pre-factura asociada (#{paquete.pre_factura.numero})" if paquete.pre_factura_id
+    blockers << "tiene una venta facturada (#{paquete.venta.numero})" if paquete.venta_id
+    blockers << "esta asignado a una entrega (#{paquete.entrega.numero})" if paquete.entrega_id
+    blockers << "esta en un manifiesto (#{paquete.manifiesto.numero})" if paquete.manifiesto_id
+    blockers
+  end
+
+  # Direccion del sort: solo aceptamos exactamente "asc" o "desc". Cualquier
+  # otro valor (incluyendo strings con espacios, SQL fragments, nil) cae al
+  # default "desc".
+  SORT_DIRECTIONS = %w[asc desc].freeze
+
+  def apply_sort(scope)
+    sort_param = params[:sort].to_s
+    user_picked_sort = SORTABLE_COLUMNS.key?(sort_param)
+    column = user_picked_sort ? SORTABLE_COLUMNS[sort_param] : "paquetes.created_at"
+
+    dir = params[:dir].to_s.downcase
+    direction = SORT_DIRECTIONS.include?(dir) ? dir : "desc"
+
+    # Solo agregamos LEFT JOIN si el usuario realmente eligio una columna
+    # de relacion. El sort default (created_at) no requiere joins extra.
+    # Esto evita queries con joins innecesarios cuando se pagina sin sort.
+    if user_picked_sort
+      if column.start_with?("clientes.")
+        scope = scope.left_joins(:cliente)
+      elsif column.start_with?("tipo_envios.")
+        scope = scope.left_joins(:tipo_envio)
+      end
+    end
+
+    scope.order(Arel.sql("#{column} #{direction} NULLS LAST"))
   end
 
   def base_scope

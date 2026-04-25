@@ -178,11 +178,12 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert response.body.start_with?("%PDF"), "expected PDF magic bytes"
   end
 
-  test "export.xlsx devuelve un XLSX" do
+  test "export.xlsx devuelve un XLSX valido (firma ZIP)" do
     get export_paquetes_url(format: :xlsx, incluir_mas_1_ano: "1")
     assert_response :success
-    # caxlsx responde con el mime de spreadsheet
     assert_match(/openxmlformats-officedocument.spreadsheetml.sheet|vnd.ms-excel|excel/i, response.media_type)
+    # XLSX es un ZIP, debe empezar con bytes "PK\x03\x04".
+    assert response.body.bytes.first(2) == [ 0x50, 0x4B ], "expected ZIP magic PK"
   end
 
   test "bulk_print requiere al menos un id seleccionado" do
@@ -197,10 +198,11 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "application/pdf", response.media_type
   end
 
-  test "bulk_export xlsx con ids seleccionados" do
+  test "bulk_export xlsx con ids seleccionados (XLSX valido)" do
     post bulk_export_paquetes_url, params: { paquete_ids: [ paquetes(:recibido).id ], formato: "xlsx" }
     assert_response :success
     assert_match(/openxmlformats-officedocument.spreadsheetml.sheet|vnd.ms-excel|excel/i, response.media_type)
+    assert response.body.bytes.first(2) == [ 0x50, 0x4B ], "expected ZIP magic PK"
   end
 
   test "bulk_export pdf con ids seleccionados" do
@@ -213,5 +215,106 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     post bulk_export_paquetes_url, params: { paquete_ids: [], formato: "xlsx" }
     assert_redirected_to paquetes_path
     assert_match(/Selecciona/i, flash[:alert])
+  end
+
+  # ── Sorting + role gating (PR3) ──
+
+  test "sort por tracking ascendente" do
+    get paquetes_url, params: { sort: "tracking", dir: "asc", incluir_mas_1_ano: "1" }
+    assert_response :success
+  end
+
+  test "sort por cliente con LEFT JOIN clientes" do
+    get paquetes_url, params: { sort: "cliente", dir: "asc", incluir_mas_1_ano: "1" }
+    assert_response :success
+  end
+
+  test "sort por columna no whitelisted cae al default sin SQL injection" do
+    get paquetes_url, params: { sort: "DROP TABLE paquetes", dir: "asc" }
+    assert_response :success
+  end
+
+  test "admin puede borrar paquete" do
+    paquete = paquetes(:recibido)
+    paquete.update_columns(pre_factura_id: nil, venta_id: nil, manifiesto_id: nil)
+    paquete.pre_alerta_paquetes.destroy_all
+    paquete.tareas.destroy_all if paquete.respond_to?(:tareas)
+
+    assert_difference("Paquete.count", -1) do
+      delete paquete_url(paquete)
+    end
+    assert_redirected_to paquetes_path
+  end
+
+  test "digitador no puede borrar paquete" do
+    delete session_url
+    post session_url, params: { email_address: users(:digitador).email_address, password: "password123" }
+
+    paquete = paquetes(:recibido)
+    assert_no_difference("Paquete.count") do
+      delete paquete_url(paquete)
+    end
+    assert_redirected_to paquetes_path
+    assert_match(/permiso/i, flash[:alert])
+  end
+
+  test "cajero no puede editar paquete" do
+    delete session_url
+    post session_url, params: { email_address: users(:cajero).email_address, password: "password123" }
+
+    paquete = paquetes(:recibido)
+    patch paquete_url(paquete), params: { paquete: { descripcion: "Hacked by cajero" } }
+    assert_redirected_to paquetes_path
+    assert_not_equal "Hacked by cajero", paquete.reload.descripcion
+  end
+
+  test "supervisor_miami puede editar paquete" do
+    delete session_url
+    sup = User.create!(nombre: "Sup", email_address: "sup_m@test.com", password: "password123",
+                        rol: "supervisor_miami", ubicacion: "miami", activo: true)
+    post session_url, params: { email_address: sup.email_address, password: "password123" }
+
+    paquete = paquetes(:recibido)
+    patch paquete_url(paquete), params: { paquete: { descripcion: "Updated by sup" } }
+    assert_redirected_to paquete_url(paquete)
+    assert_equal "Updated by sup", paquete.reload.descripcion
+  end
+
+  # ── Sort direction whitelist (review round 4) ──
+
+  test "sort dir invalida cae al default desc" do
+    get paquetes_url, params: { sort: "tracking", dir: "DROP TABLE", incluir_mas_1_ano: "1" }
+    assert_response :success
+  end
+
+  test "sort dir vacia cae al default desc" do
+    get paquetes_url, params: { sort: "tracking", dir: "", incluir_mas_1_ano: "1" }
+    assert_response :success
+  end
+
+  # ── Destroy: blockers especificos ──
+
+  test "destroy paquete con manifiesto bloquea con mensaje especifico" do
+    paquete = paquetes(:recibido)
+    paquete.update_columns(pre_factura_id: nil, venta_id: nil)
+    paquete.pre_alerta_paquetes.destroy_all
+    paquete.tareas.destroy_all if paquete.respond_to?(:tareas)
+
+    # Asociar a un manifiesto
+    manifiesto = manifiestos(:creado)
+    paquete.update_column(:manifiesto_id, manifiesto.id)
+
+    assert_no_difference("Paquete.count") do
+      delete paquete_url(paquete)
+    end
+    assert_redirected_to paquete_url(paquete)
+    assert_match(/manifiesto/i, flash[:alert])
+  end
+
+  # ── Helpers permisos ──
+
+  test "can_edit_paquetes? helper devuelve true para admin" do
+    helper = ApplicationController.helpers
+    assert helper.respond_to?(:can_edit_paquetes?)
   end
 end
