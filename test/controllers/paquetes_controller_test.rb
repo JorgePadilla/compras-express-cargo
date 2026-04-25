@@ -168,4 +168,50 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assigned = @controller.instance_variable_get(:@paquetes)
     assert_not(assigned.any? { |p| p.estado == "facturado" })
   end
+
+  # ── Export / Bulk actions (PR2) ──
+
+  test "export.pdf devuelve un PDF con los filtros aplicados" do
+    get export_paquetes_url(format: :pdf, incluir_mas_1_ano: "1")
+    assert_response :success
+    assert_equal "application/pdf", response.media_type
+    assert response.body.start_with?("%PDF"), "expected PDF magic bytes"
+  end
+
+  test "export.xlsx devuelve un XLSX" do
+    get export_paquetes_url(format: :xlsx, incluir_mas_1_ano: "1")
+    assert_response :success
+    # caxlsx responde con el mime de spreadsheet
+    assert_match(/openxmlformats-officedocument.spreadsheetml.sheet|vnd.ms-excel|excel/i, response.media_type)
+  end
+
+  test "bulk_print requiere al menos un id seleccionado" do
+    post bulk_print_paquetes_url, params: { paquete_ids: [] }
+    assert_redirected_to paquetes_path
+    assert_match(/Selecciona/i, flash[:alert])
+  end
+
+  test "bulk_print genera PDF con los paquetes seleccionados" do
+    post bulk_print_paquetes_url, params: { paquete_ids: [ paquetes(:recibido).id ] }
+    assert_response :success
+    assert_equal "application/pdf", response.media_type
+  end
+
+  test "bulk_export xlsx con ids seleccionados" do
+    post bulk_export_paquetes_url, params: { paquete_ids: [ paquetes(:recibido).id ], formato: "xlsx" }
+    assert_response :success
+    assert_match(/openxmlformats-officedocument.spreadsheetml.sheet|vnd.ms-excel|excel/i, response.media_type)
+  end
+
+  test "bulk_export pdf con ids seleccionados" do
+    post bulk_export_paquetes_url, params: { paquete_ids: [ paquetes(:recibido).id ], formato: "pdf" }
+    assert_response :success
+    assert_equal "application/pdf", response.media_type
+  end
+
+  test "bulk_export sin ids redirige con alert" do
+    post bulk_export_paquetes_url, params: { paquete_ids: [], formato: "xlsx" }
+    assert_redirected_to paquetes_path
+    assert_match(/Selecciona/i, flash[:alert])
+  end
 end

@@ -37,6 +37,56 @@ class PaquetesController < ApplicationController
     render layout: "print"
   end
 
+  # Export de la coleccion filtrada (xlsx o pdf). El set de resultados sigue
+  # el mismo pipeline que `index` (base_scope + apply_filters) para mantener
+  # consistencia usuario: exporta lo que ve.
+  def export
+    paquetes = export_scope
+    respond_to do |format|
+      format.xlsx { send_xlsx(paquetes, filename: "paquetes-#{Date.current.iso8601}.xlsx") }
+      format.pdf do
+        pdf = Paquetes::ListadoPdf.new(paquetes).render
+        send_data pdf, filename: "paquetes-#{Date.current.iso8601}.pdf",
+                       type: "application/pdf", disposition: "attachment"
+      end
+    end
+  end
+
+  # Imprime (PDF) los paquetes seleccionados via checkbox bulk.
+  def bulk_print
+    ids = Array(params[:paquete_ids]).reject(&:blank?)
+    if ids.empty?
+      redirect_to paquetes_path, alert: "Selecciona al menos un paquete."
+      return
+    end
+
+    paquetes = Paquete.where(id: ids).includes(:cliente, :tipo_envio, :sucursal)
+    pdf = Paquetes::ListadoPdf.new(paquetes, titulo: "Paquetes seleccionados (#{paquetes.size})").render
+    send_data pdf, filename: "paquetes-seleccion-#{Date.current.iso8601}.pdf",
+                   type: "application/pdf", disposition: "attachment"
+  end
+
+  # Export xlsx/pdf de solo los paquetes seleccionados.
+  def bulk_export
+    ids = Array(params[:paquete_ids]).reject(&:blank?)
+    if ids.empty?
+      redirect_to paquetes_path, alert: "Selecciona al menos un paquete."
+      return
+    end
+
+    paquetes = Paquete.where(id: ids).includes(:cliente, :tipo_envio, :sucursal, :manifiesto,
+                                                pre_alerta_paquetes: :pre_alerta)
+    formato = params[:formato].presence_in(%w[xlsx pdf]) || "xlsx"
+
+    if formato == "xlsx"
+      send_xlsx(paquetes, filename: "paquetes-seleccion-#{Date.current.iso8601}.xlsx")
+    else
+      pdf = Paquetes::ListadoPdf.new(paquetes, titulo: "Paquetes seleccionados (#{paquetes.size})").render
+      send_data pdf, filename: "paquetes-seleccion-#{Date.current.iso8601}.pdf",
+                     type: "application/pdf", disposition: "attachment"
+    end
+  end
+
   def check_tracking
     paquete = Paquete.where(tracking: params[:tracking]).order(created_at: :desc).first
 
@@ -76,6 +126,21 @@ class PaquetesController < ApplicationController
 
   private
 
+  # Genera el XLSX via Axlsx::Package directamente y lo manda como send_data.
+  # Evita las idiosincrasias de render xlsx: "..." (que resuelve template
+  # segun format y falla si el request llego como HTML).
+  def send_xlsx(paquetes, filename:)
+    xlsx_package = Axlsx::Package.new
+    view = view_context
+    view.instance_variable_set(:@xlsx_package, xlsx_package)
+    view.xlsx_package = xlsx_package if view.respond_to?(:xlsx_package=)
+    view.render(template: "paquetes/export", formats: [ :xlsx ], handlers: [ :axlsx ], locals: { paquetes: paquetes })
+    send_data xlsx_package.to_stream.read,
+              filename: filename,
+              type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              disposition: "attachment"
+  end
+
   def set_paquete
     @paquete = Paquete.find(params[:id])
   end
@@ -92,6 +157,18 @@ class PaquetesController < ApplicationController
     else
       Paquete.where(created_at: 3.months.ago..)
     end
+  end
+
+  # Mismos filtros que index pero sin paginacion (para exports). Cap defensivo
+  # para evitar generar exports imposibles de manejar en memoria.
+  EXPORT_CAP = 5_000
+
+  def export_scope
+    scope = base_scope
+              .includes(:cliente, :tipo_envio, :sucursal, :manifiesto,
+                        pre_alerta_paquetes: :pre_alerta)
+              .order(created_at: :desc)
+    apply_filters(scope).limit(EXPORT_CAP)
   end
 
   def apply_filters(scope)
