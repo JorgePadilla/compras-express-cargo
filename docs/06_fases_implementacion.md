@@ -199,7 +199,7 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 | # | Tarea | PR | Estado |
 |---|-------|----|----|
 | 5b.1 | Nuevo formato `numero_recepcion` anual (`RM0002026000001`): `<prefix><año 7-dig><contador-año 6-dig>`. Reemplaza la sequence corrida por contador atómico `(sucursal_id, año)`. Reinicia 1° de enero. | PR-A | ✅ #79 |
-| 5b.2 | Flow guiado de tracking duplicado: modal con 2 opciones (`Es actualización` vs. `Es tracking repetido`) + sufijo letras automático (`A`, `B`, `C`, …). | PR-B | ⏳ Bloqueado por respuestas cliente |
+| 5b.2 | Flow guiado de tracking duplicado: modal con 2 opciones (`Es actualización` vs. `Es tracking repetido`) + sufijo letras automático (`A`, `B`, `C`, …). | PR-B | ⏳ Listo para implementar |
 | 5b.3 | Sub-etiquetas: división de un tracking en N bultos (1/3, 2/3, 3/3). Principal en Miami (al recibir); también en Honduras vía pre-factura. | PR-C | ⏳ Bloqueado por respuestas cliente |
 
 **Dependencia:** Fase 1 (etiquetar/recepción operativa).
@@ -210,12 +210,14 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 - `Paquete#generate_numero_recepcion` formatea con `format("%<prefix>s%<anio>07d%<num>06d", …)`.
 - Decisiones por default: 6 dígitos contador (1M/año), no migrar históricos (coexisten formatos), prefijo via `codigo_recepcion_prefix` existente (regex `[A-Z]{1,4}`).
 
-**Detalle PR-B — Flow tracking duplicado:**
+**Detalle PR-B — Flow tracking duplicado** (decisiones tomadas, Yusef 2026-04-25):
 - Endpoint `check_tracking` existente (`PaquetesController#check_tracking`) extender response JSON con `existing_paquete_id`, `tracking_base`, `next_suffix`.
-- Stimulus controller en `etiquetar` (y opcionalmente `paquetes/_form`) que muestre modal al detectar duplicado.
-- Helper Ruby `Paquete.next_duplicate_suffix(tracking_base)` — calcula próxima letra libre (`A`→`B`→…→`Z`→`AA`?).
+- Stimulus controller en `etiquetar` (y opcionalmente `paquetes/_form`) que muestre modal al detectar duplicado con dos opciones explícitas.
+- Helper Ruby `Paquete.next_duplicate_suffix(tracking_base)` calcula la próxima letra libre (`A`→`B`→…→`Z`).
+- **Comportamiento al pasar `Z`:** parar y pedir intervención manual del supervisor (caso extremadamente raro). No se extiende a `AA` por ahora.
+- **Modo "actualización":** carga la recepción original en el form de edit estándar — el digitador puede cambiar **cualquier campo**.
+- **Auditoría:** sin bitácora dedicada en este PR; `updated_at` y logs estándar son suficientes. Se evalúa agregar reportes específicos como follow-up si el supervisor los pide.
 - Mantener uniqueness en `paquetes.tracking` (los sufijos hacen cada tracking único).
-- Auditoría: registrar quién marcó "actualización" vs. "duplicado" (decisión pendiente).
 
 **Detalle PR-C — Sub-etiquetas (1/3, 2/3, 3/3):**
 - Caso de uso: un mismo `tracking` se recibe físicamente como N bultos. Cada uno lleva un identificador `<n>/<N>`.
@@ -228,8 +230,7 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
   - En Honduras: ¿ya existe el flow vía pre-factura (Roger lo construyó) o también se diseña aquí?
 
 **Preguntas abiertas con el cliente (bloquean implementación):**
-- PR-B: comportamiento al pasar `Z`; alcance del modo "actualización" (cualquier campo o solo tipo_envio + cliente); auditoría sí/no.
-- PR-C: estructura de columnas; UX de "dividir en N"; estado actual del flow de pre-factura en Honduras.
+- PR-C únicamente: estructura de columnas; UX de "dividir en N"; estado actual del flow de pre-factura en Honduras.
 
 **Referencia:** `docs/05_requerimientos_conversaciones.md` secciones 5.1, 6 y 6.1.
 
