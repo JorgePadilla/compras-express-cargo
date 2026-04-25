@@ -190,6 +190,40 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 
 ---
 
+## Fase 5b: Recepción — Mejoras de Numeración y Tracking (PR-A + PR-B)
+
+**Objetivo:** Adaptar el flujo de recepción Miami a 2 requerimientos confirmados por el cliente (Yusef, 2026-04-25): nuevo formato anual de `numero_recepcion` y flow guiado para tracking duplicado.
+
+**Decisión:** Se implementa en **dos PRs separados** porque tocan capas distintas (data layer vs. UX/endpoint).
+
+| # | Tarea | PR | Estado |
+|---|-------|----|----|
+| 5b.1 | Nuevo formato `numero_recepcion` anual (`RM00000020261`): `<prefix><año 7-dígitos><contador-año>`. Reemplaza la sequence corrida por contador `(sucursal_id, año)`. Reinicia 1° de enero. | PR-A | ⏳ Bloqueado por respuestas cliente |
+| 5b.2 | Flow guiado de tracking duplicado: modal con 2 opciones (`Es actualización` vs. `Es tracking repetido`) + sufijo letras automático (`A`, `B`, `C`, …). | PR-B | ⏳ Bloqueado por respuestas cliente |
+
+**Dependencia:** Fase 1 (etiquetar/recepción operativa).
+
+**Detalle PR-A — Nuevo formato `numero_recepcion`:**
+- Reemplazar PostgreSQL sequence corrida (`numero_recepcion_<PREFIX>_seq` por sucursal) por contador atómico `(sucursal_id, año)`.
+- Estrategias posibles: tabla `numero_recepcion_counters` con `FOR UPDATE` lock, o sequence on-demand `numero_recepcion_<PREFIX>_<YYYY>_seq` creada en cada cambio de año.
+- Backfill: decisión pendiente — los `numero_recepcion` históricos quedan en formato viejo o migran al nuevo.
+- Cambia regex de búsqueda en `Paquete::QUERY_FIELDS` y exports Excel/PDF.
+
+**Detalle PR-B — Flow tracking duplicado:**
+- Endpoint `check_tracking` existente (`PaquetesController#check_tracking`) extender response JSON con `existing_paquete_id`, `tracking_base`, `next_suffix`.
+- Stimulus controller en `etiquetar` (y opcionalmente `paquetes/_form`) que muestre modal al detectar duplicado.
+- Helper Ruby `Paquete.next_duplicate_suffix(tracking_base)` — calcula próxima letra libre (`A`→`B`→…→`Z`→`AA`?).
+- Mantener uniqueness en `paquetes.tracking` (los sufijos hacen cada tracking único).
+- Auditoría: registrar quién marcó "actualización" vs. "duplicado" (decisión pendiente).
+
+**Preguntas abiertas con el cliente (bloquean implementación):**
+- PR-A: dígitos del contador anual (sugerencia: 6); migración de históricos (sí/no); confirmar prefijos de sucursales.
+- PR-B: comportamiento al pasar `Z`; alcance del modo "actualización" (cualquier campo o solo tipo_envio + cliente); auditoría sí/no.
+
+**Referencia:** `docs/05_requerimientos_conversaciones.md` secciones 5.1 y 6.
+
+---
+
 ## Fase 9: Fotos de Paquetes (Miami)
 
 **Objetivo:** Capturar fotos en la estación de recepción y asociarlas al paquete con envío al cliente.

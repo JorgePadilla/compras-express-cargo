@@ -188,7 +188,54 @@ Sistema actual: `https://cec.rsahn.com/App/Home`
 - [ ] Soportar 1 tracking → múltiples cajas (caso DHL)
 - [ ] Alerta de tracking duplicado/reciclado con contexto (mostrar historial)
 
-### 6. Fotos de Paquetes en Recepción (Miami)
+#### 5.1 Flow guiado al detectar duplicado (confirmado por Yusef, 2026-04-25)
+
+Cuando el digitador escanea/ingresa un tracking que ya existe en el sistema, el sistema **interrumpe el flujo** y muestra un modal con dos opciones explícitas:
+
+**Opción A — "Es actualización de información"**
+- Caso típico: error de captura previo (tipo de envío equivocado, cliente equivocado).
+- El sistema **carga la recepción original en modo edit** — el digitador no crea un paquete nuevo, edita el existente.
+- Se mantiene el mismo `numero_recepcion`, mismo tracking, mismo paquete físico. Cambia los campos que el digitador necesite corregir.
+
+**Opción B — "Es un tracking repetido (duplicado real)"**
+- Caso típico: dos paquetes físicos distintos comparten el mismo tracking impreso (paquetería que recicla números).
+- El sistema **agrega una letra al tracking** del nuevo paquete, conservando el original intacto:
+  - 1° con ese tracking: `1ZHGR123451234` (sin sufijo).
+  - 2°: `1ZHGR123451234A`.
+  - 3°: `1ZHGR123451234B`.
+  - 4°: `1ZHGR123451234C`.
+  - … y así sucesivamente.
+- Cada uno es un paquete distinto en BD, con su propio `numero_recepcion`, cliente, etc.
+
+**Preguntas abiertas para el cliente:**
+- ¿Qué hacemos si llega al 27° (después de `Z`)? Sugerencia: pasar a `AA`, `AB`… ó parar y pedir intervención manual.
+- ¿En modo "actualización", se permite editar **cualquier campo** o solo los típicos (tipo de envío, cliente)?
+- ¿Auditoría: registrar en bitácora quién marcó duplicado vs. actualización?
+
+### 6. Numeración de Recepción (`numero_recepcion`) — Formato Anual
+
+**Contexto:** Hoy el formato es `RM-042424` (prefijo de sucursal `+` 6 dígitos secuenciales corridos para siempre, vía PostgreSQL sequence por sucursal).
+
+**Formato pedido (confirmado por Yusef, 2026-04-25):** `RM00000020261`
+
+Estructura:
+- **`RM`** = código de sucursal (Recibido Miami; análogos `RH`, `RS`, etc. para otras).
+- **`0002026`** = año en 7 dígitos zero-padded.
+- **`1`** = contador secuencial **dentro del año** (reinicia el 1° de enero).
+
+Ejemplo: el paquete #42 recibido en Miami en el año 2026 → `RM000002600042` (zero-padding del contador a definir).
+
+**Implicaciones:**
+- La PostgreSQL sequence actual (corrida para siempre por sucursal) se reemplaza por contador `(sucursal_id, anio)`.
+- Backfill: los `numero_recepcion` históricos quedan en formato viejo o se migran (decisión pendiente).
+- Cambia el regex de búsqueda y los exports (Excel/PDF) que muestran el número.
+
+**Preguntas abiertas para el cliente:**
+- ¿Cuántos dígitos para el contador del año? Sugerencia: 6 (`RM0002026000001` → capacidad 1M paquetes/sucursal/año).
+- ¿Migrar números históricos al nuevo formato o coexisten ambos?
+- ¿Confirmar códigos de prefijo de las 3-4 sucursales activas (RM, RH, RS, …)?
+
+### 7. Fotos de Paquetes en Recepción (Miami)
 
 **Contexto:** Al abrir cajas en Miami, necesitan documentar el contenido con fotos. Actualmente hay 2 cámaras por estación de trabajo.
 
@@ -206,7 +253,7 @@ Sistema actual: `https://cec.rsahn.com/App/Home`
 - [ ] Considerar IA para detectar contenido al abrir la caja (mencionado como ideal futuro)
 - [ ] Soporte para 2 cámaras por estación (vista general + detalle)
 
-### 7. Re-empaque y Reducción de Volumen
+### 8. Re-empaque y Reducción de Volumen
 
 **Contexto:** Los operadores en Miami reducen el tamaño de las cajas manualmente (cortan cartón) para bajar el volumen cobrado al cliente. Esto es un diferenciador vs. la competencia.
 
@@ -219,7 +266,7 @@ Sistema actual: `https://cec.rsahn.com/App/Home`
 - [ ] Calcular ahorro en volumen automáticamente
 - [ ] Mostrar al cliente el beneficio del re-empaque (antes/después)
 
-### 8. Patrón de UI Consistente + Búsquedas y Filtros
+### 9. Patrón de UI Consistente + Búsquedas y Filtros
 
 **Del cliente:** "La plantilla es la misma casi. Búsqueda, filtro por fecha. Lo que cambia son unas cositas."
 
@@ -240,7 +287,7 @@ Sistema actual: `https://cec.rsahn.com/App/Home`
 - [ ] Ordenamiento por columna (asc/desc)
 - [ ] Los filtros deben ser combinables (ej: fecha + estado + tipo envío)
 
-### 9. Mejoras Generales Identificadas
+### 10. Mejoras Generales Identificadas
 
 - [ ] Compatibilidad cross-browser (Chrome, Edge, otros) — el cliente reportó problemas con popups bloqueados
 - [ ] Las notas del cliente deben funcionar en todos los navegadores
