@@ -22,17 +22,35 @@
   end
 end %>
 
-<%# Barra de busqueda global %>
-<div class="mb-1">
-  <%= render SearchBarComponent.new(
-    url: paquetes_path,
-    placeholder: "Buscar paquete...",
-    value: params[:q]
-  ) %>
+<%# Barra de busqueda global con popover info-on-click %>
+<div class="mb-4 flex items-start gap-2">
+  <div class="flex-1">
+    <%= render SearchBarComponent.new(
+      url: paquetes_path,
+      placeholder: "Buscar paquete...",
+      value: params[:q]
+    ) %>
+  </div>
+  <details class="relative pt-1.5 group">
+    <summary class="list-none cursor-pointer text-gray-400 hover:text-cec-teal dark:hover:text-cec-teal-light focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cec-teal rounded-full"
+             aria-label="¿Qué busca esta barra?" title="¿Qué busca esta barra?">
+      <%= heroicon "information-circle", variant: :outline, options: { class: "w-5 h-5" } %>
+    </summary>
+    <div class="absolute right-0 z-20 mt-2 w-72 rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-gray-200 dark:ring-gray-700 p-4 text-xs text-gray-700 dark:text-gray-200">
+      <p class="font-semibold text-gray-800 dark:text-gray-100 mb-2">La búsqueda incluye estos campos:</p>
+      <ul class="space-y-1 list-disc list-inside text-gray-600 dark:text-gray-300">
+        <li>Tracking</li>
+        <li>N° de recepción (RM/RS/RH-XXXXXX)</li>
+        <li>Guía del paquete (PQ-XXXXXX)</li>
+        <li>Cliente: código y nombre</li>
+        <li>Contenido / descripción</li>
+        <li>Tipo de envío (CER, CKA, EXP, CEM, CKM)</li>
+        <li>Número de manifiesto</li>
+      </ul>
+      <p class="mt-3 text-[11px] text-gray-500 dark:text-gray-400">Sucursal y estado se filtran desde el panel "Filtros avanzados".</p>
+    </div>
+  </details>
 </div>
-<p class="mb-4 text-[11px] text-gray-500 dark:text-gray-400">
-  Busca en: tracking · n° recepción · guía · cliente (código/nombre) · contenido · tipo envío · manifiesto.
-</p>
 
 <%# Panel de filtros avanzados %>
 <% active_filters_count = [
