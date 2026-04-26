@@ -89,6 +89,53 @@ class Paquete < ApplicationRecord
     entregado? || anulado? || retornado? || desechado?
   end
 
+  # ── Sub-etiquetas / split de tracking en N bultos ──
+  # `numero_caja` (1..N) + `cantidad_paquetes` (total) reusados del módulo 36.
+  # Un paquete dividido es un bulto físico identificado como "1/3", "2/3", etc.
+
+  # True si el paquete pertenece a un tracking dividido en >1 bulto.
+  def dividido?
+    cantidad_paquetes.to_i > 1
+  end
+
+  # Devuelve "1/3" cuando el paquete está dividido; nil cuando no.
+  # Se muestra en etiqueta impresa, detalle y badges del listado.
+  def etiqueta_secuencia
+    return nil unless dividido?
+    return nil if numero_caja.to_i.zero?
+    "#{numero_caja}/#{cantidad_paquetes}"
+  end
+
+  # Otros bultos del mismo tracking dividido (sin incluir self). Útiles
+  # para mostrar "ver hermanos" en el detalle.
+  def paquetes_hermanos
+    return Paquete.none unless dividido? && tracking.present?
+    Paquete.where(tracking: tracking).where.not(id: id)
+  end
+
+  # Crea N paquetes "hijos" en una sola transacción cuando el digitador
+  # divide un tracking en varios bultos físicos (split de etiqueta).
+  #
+  # Reglas (Yusef, 2026-04-25):
+  #   - El digitador llena los datos UNA vez, indica `total_cajas`.
+  #   - El sistema replica esos datos en N paquetes:
+  #       * todos comparten el mismo `tracking`,
+  #       * cada uno recibe su propio `numero_recepcion` único (vía counter),
+  #       * `numero_caja` 1..N, `cantidad_paquetes` = N (para mostrar "1/N").
+  #   - Si el save de cualquiera falla, la transacción hace rollback.
+  #
+  # Devuelve un array con los paquetes creados (en orden 1..N).
+  def self.crear_split!(attrs:, total_cajas:)
+    n = total_cajas.to_i
+    raise ArgumentError, "total_cajas debe ser >= 2" if n < 2
+
+    transaction do
+      (1..n).map do |i|
+        Paquete.create!(attrs.merge(numero_caja: i, cantidad_paquetes: n))
+      end
+    end
+  end
+
   # Calcula la próxima letra A-Z disponible para distinguir un tracking
   # físicamente duplicado (paquetes distintos que comparten el mismo
   # tracking impreso por reciclaje del courier).

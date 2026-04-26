@@ -9,6 +9,18 @@ class EtiquetarController < ApplicationController
   end
 
   def create
+    cantidad = paquete_params[:cantidad_paquetes].to_i
+
+    if cantidad > 1
+      create_split(cantidad)
+    else
+      create_single
+    end
+  end
+
+  private
+
+  def create_single
     @paquete = Paquete.new(paquete_params)
     @paquete.estado = "empacado"
     @paquete.user = Current.user
@@ -30,15 +42,53 @@ class EtiquetarController < ApplicationController
         end
       end
     else
-      @tipo_envios = TipoEnvio.activos.order(:nombre)
-      @carriers = Carrier.where(activo: true).order(:nombre)
-      @paquetes_hoy = paquetes_hoy_count
-      flash.now[:alert] = "No se pudo guardar el paquete."
-      render :index, status: :unprocessable_entity
+      render_create_error
     end
   end
 
-  private
+  # Crea N paquetes "hijos" para un tracking dividido en varias cajas físicas.
+  # El digitador llenó los datos una sola vez; el sistema replica y asigna
+  # numero_caja 1..N. Imprime N etiquetas si se pidió print.
+  def create_split(total_cajas)
+    attrs = paquete_params.except(:cantidad_paquetes, :numero_caja).merge(
+      estado: "empacado",
+      user: Current.user
+    )
+    paquetes = Paquete.crear_split!(attrs: attrs, total_cajas: total_cajas)
+    @paquete = paquetes.first
+    paquetes.each { |p| link_pre_alertas(p) }
+    @paquetes_hoy = paquetes_hoy_count
+
+    respond_to do |format|
+      format.turbo_stream do
+        events = paquetes.map do |p|
+          "<div data-etiquetar-target='event' data-action='paquete-saved' " \
+            "data-guia='#{p.guia}' data-print='#{params[:print]}' data-paquete-id='#{p.id}'></div>"
+        end.join
+
+        render turbo_stream: [
+          turbo_stream.update("paquetes-counter", @paquetes_hoy.to_s),
+          turbo_stream.prepend("flash-messages", partial: "shared/flash",
+                               locals: { notice: "Tracking dividido en #{total_cajas} cajas: #{paquetes.map(&:guia).join(', ')}." }),
+          turbo_stream.append("etiquetar-events", events)
+        ]
+      end
+      format.html do
+        redirect_to etiquetar_path, notice: "Tracking dividido en #{total_cajas} cajas."
+      end
+    end
+  rescue ActiveRecord::RecordInvalid => e
+    @paquete = e.record
+    render_create_error
+  end
+
+  def render_create_error
+    @tipo_envios = TipoEnvio.activos.order(:nombre)
+    @carriers = Carrier.where(activo: true).order(:nombre)
+    @paquetes_hoy = paquetes_hoy_count
+    flash.now[:alert] = "No se pudo guardar el paquete."
+    render :index, status: :unprocessable_entity
+  end
 
   def authorize_etiquetar
     require_role(:supervisor_miami, :digitador_miami)

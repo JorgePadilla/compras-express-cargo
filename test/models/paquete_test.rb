@@ -250,6 +250,90 @@ class PaqueteTest < ActiveSupport::TestCase
     numeros.each { |n| assert_match(/\ARM\d{13}\z/, n) }
   end
 
+  # ── Sub-etiquetas / split de tracking (PR-C) ──
+
+  test "dividido? es true cuando cantidad_paquetes > 1" do
+    p = Paquete.create!(tracking: "1Z999SPLIT_A", cliente: clientes(:juan), sucursal: sucursales(:miami),
+                        numero_caja: 1, cantidad_paquetes: 3)
+    assert p.dividido?
+  end
+
+  test "dividido? es false cuando cantidad_paquetes <= 1 o nil" do
+    p1 = Paquete.create!(tracking: "1Z999SPLIT_B1", cliente: clientes(:juan), sucursal: sucursales(:miami))
+    p2 = Paquete.create!(tracking: "1Z999SPLIT_B2", cliente: clientes(:juan), sucursal: sucursales(:miami),
+                         cantidad_paquetes: 1)
+    assert_not p1.dividido?
+    assert_not p2.dividido?
+  end
+
+  test "etiqueta_secuencia devuelve formato n/N" do
+    p = Paquete.create!(tracking: "1Z999SPLIT_C", cliente: clientes(:juan), sucursal: sucursales(:miami),
+                        numero_caja: 2, cantidad_paquetes: 4)
+    assert_equal "2/4", p.etiqueta_secuencia
+  end
+
+  test "etiqueta_secuencia devuelve nil cuando no está dividido" do
+    p = Paquete.create!(tracking: "1Z999SPLIT_D", cliente: clientes(:juan), sucursal: sucursales(:miami))
+    assert_nil p.etiqueta_secuencia
+  end
+
+  test "paquetes_hermanos devuelve los otros bultos del mismo tracking" do
+    paquetes = Paquete.crear_split!(
+      attrs: { tracking: "1Z999SPLIT_E", cliente: clientes(:juan), sucursal: sucursales(:miami) },
+      total_cajas: 3
+    )
+    p1, p2, p3 = paquetes
+    hermanos = p2.paquetes_hermanos.to_a
+    assert_equal 2, hermanos.size
+    assert_includes hermanos.map(&:id), p1.id
+    assert_includes hermanos.map(&:id), p3.id
+    assert_not_includes hermanos.map(&:id), p2.id
+  end
+
+  test "paquetes_hermanos devuelve none cuando no está dividido" do
+    p = Paquete.create!(tracking: "1Z999SPLIT_F", cliente: clientes(:juan), sucursal: sucursales(:miami))
+    assert_equal 0, p.paquetes_hermanos.count
+  end
+
+  test "crear_split! crea N paquetes con numero_caja 1..N y cantidad_paquetes N" do
+    paquetes = Paquete.crear_split!(
+      attrs: { tracking: "1Z999SPLIT_G", cliente: clientes(:juan), sucursal: sucursales(:miami) },
+      total_cajas: 4
+    )
+
+    assert_equal 4, paquetes.size
+    paquetes.each_with_index do |p, idx|
+      assert_equal idx + 1, p.numero_caja
+      assert_equal 4, p.cantidad_paquetes
+      assert_equal "1Z999SPLIT_G", p.tracking
+    end
+
+    # numero_recepcion debe ser único por bulto
+    numeros = paquetes.map(&:numero_recepcion)
+    assert_equal numeros, numeros.uniq, "cada caja debe tener su propio numero_recepcion"
+  end
+
+  test "crear_split! con total_cajas < 2 lanza ArgumentError" do
+    assert_raises(ArgumentError) do
+      Paquete.crear_split!(
+        attrs: { tracking: "1Z999SPLIT_H", cliente: clientes(:juan), sucursal: sucursales(:miami) },
+        total_cajas: 1
+      )
+    end
+  end
+
+  test "crear_split! hace rollback completo si una creación falla" do
+    # Forzamos failure en el segundo create con tracking inválido (presence: true).
+    initial_count = Paquete.count
+    assert_raises(ActiveRecord::RecordInvalid) do
+      Paquete.crear_split!(
+        attrs: { tracking: nil, cliente: clientes(:juan), sucursal: sucursales(:miami) },
+        total_cajas: 3
+      )
+    end
+    assert_equal initial_count, Paquete.count, "rollback debió revertir todos los inserts"
+  end
+
   # ── next_duplicate_suffix (PR-B: tracking duplicado) ──
 
   test "next_duplicate_suffix devuelve A si no hay sufijos previos" do
