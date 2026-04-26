@@ -255,7 +255,12 @@ end %>
                 <span class="font-mono text-xs font-semibold text-cec-navy dark:text-cec-gold"><%= paquete.numero_recepcion || paquete.guia %></span>
               </td>
               <td class="px-3 py-2 whitespace-nowrap">
-                <%= link_to truncate(paquete.tracking, length: 18), paquete, class: "font-mono text-xs text-gray-700 dark:text-gray-200 hover:underline" %>
+                <div class="flex items-center gap-1.5">
+                  <%= link_to truncate(paquete.tracking, length: 18), paquete, class: "font-mono text-xs text-gray-700 dark:text-gray-200 hover:underline" %>
+                  <% if paquete.dividido? %>
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold font-mono bg-cec-gold-gradient text-white shadow-sm" title="Caja <%= paquete.numero_caja %> de <%= paquete.cantidad_paquetes %>"><%= paquete.etiqueta_secuencia %></span>
+                  <% end %>
+                </div>
               </td>
               <td class="px-3 py-2 whitespace-nowrap">
                 <p class="text-xs font-medium text-gray-800 dark:text-gray-100 truncate max-w-[180px]"><%= paquete.cliente.nombre_completo %></p>

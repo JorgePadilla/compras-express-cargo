@@ -59,4 +59,37 @@ class EtiquetarControllerTest < ActionDispatch::IntegrationTest
     get etiquetar_url
     assert_response :success
   end
+
+  # ── Sub-etiquetas / split (PR-C) ──
+
+  test "create con cantidad_paquetes > 1 divide el tracking en N paquetes" do
+    sucursal = sucursales(:miami)
+    assert_difference("Paquete.count", 3) do
+      post etiquetar_url, params: { paquete: {
+        tracking: "1Z999SPLITCTRL001",
+        cliente_id: clientes(:juan).id,
+        tipo_envio_id: tipo_envios(:aereo).id,
+        peso: 5.0,
+        cantidad_paquetes: 3,
+        sucursal_id: sucursal.id,
+        descripcion: "Split test"
+      } }
+    end
+
+    paquetes = Paquete.where(tracking: "1Z999SPLITCTRL001").order(:numero_caja)
+    assert_equal [ 1, 2, 3 ], paquetes.map(&:numero_caja)
+    assert paquetes.all? { |p| p.cantidad_paquetes == 3 }
+    assert paquetes.all? { |p| p.estado == "empacado" }
+    assert_redirected_to etiquetar_url
+  end
+
+  test "create con cantidad_paquetes = 1 crea solo 1 paquete (no split)" do
+    assert_difference("Paquete.count", 1) do
+      post etiquetar_url, params: { paquete: {
+        tracking: "1Z999SINGLECTRL001",
+        cliente_id: clientes(:juan).id,
+        cantidad_paquetes: 1
+      } }
+    end
+  end
 end
