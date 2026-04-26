@@ -250,6 +250,47 @@ class PaqueteTest < ActiveSupport::TestCase
     numeros.each { |n| assert_match(/\ARM\d{13}\z/, n) }
   end
 
+  # ── next_duplicate_suffix (PR-B: tracking duplicado) ──
+
+  test "next_duplicate_suffix devuelve A si no hay sufijos previos" do
+    base = "1Z999DUPLICATE_A"
+    assert_equal "A", Paquete.next_duplicate_suffix(base)
+  end
+
+  test "next_duplicate_suffix devuelve B si ya existe el A" do
+    base = "1Z999DUPLICATE_B"
+    Paquete.create!(tracking: "#{base}A", cliente: clientes(:juan), sucursal: sucursales(:miami))
+    assert_equal "B", Paquete.next_duplicate_suffix(base)
+  end
+
+  test "next_duplicate_suffix devuelve la próxima letra libre tras múltiples sufijos" do
+    base = "1Z999DUPLICATE_C"
+    %w[A B C].each do |letra|
+      Paquete.create!(tracking: "#{base}#{letra}", cliente: clientes(:juan), sucursal: sucursales(:miami))
+    end
+    assert_equal "D", Paquete.next_duplicate_suffix(base)
+  end
+
+  test "next_duplicate_suffix devuelve nil cuando se agotó A-Z" do
+    base = "1Z999DUPLICATE_FULL"
+    ("A".."Z").each do |letra|
+      Paquete.create!(tracking: "#{base}#{letra}", cliente: clientes(:juan), sucursal: sucursales(:miami))
+    end
+    assert_nil Paquete.next_duplicate_suffix(base)
+  end
+
+  test "next_duplicate_suffix ignora sufijos compuestos (más de 1 letra)" do
+    base = "1Z999DUPLICATE_D"
+    # Tracking con 2 letras al final (caso fuera-de-spec) NO debe contar.
+    Paquete.create!(tracking: "#{base}AA", cliente: clientes(:juan), sucursal: sucursales(:miami))
+    assert_equal "A", Paquete.next_duplicate_suffix(base)
+  end
+
+  test "next_duplicate_suffix con base vacío devuelve nil" do
+    assert_nil Paquete.next_duplicate_suffix("")
+    assert_nil Paquete.next_duplicate_suffix(nil)
+  end
+
   test "consolidado? usa coleccion precargada si esta loaded" do
     pap = pre_alerta_paquetes(:pap_vinculado)
     paquete = pap.paquete

@@ -4,7 +4,8 @@ export default class extends Controller {
   static targets = [
     "form", "tracking", "clienteInput", "clienteId", "clienteDropdown",
     "clienteNombre", "notasBanner", "notasTexto", "duplicateModal",
-    "duplicateInfo", "submitBtn", "event"
+    "duplicateInfo", "duplicateNewBtn", "duplicateNewHint",
+    "submitBtn", "event"
   ]
   static values = {
     checkUrl: String,
@@ -133,34 +134,74 @@ export default class extends Controller {
       .then(r => r.json())
       .then(data => {
         if (data.exists && !data.terminal) {
-          const info = this.duplicateInfoTarget
-          info.textContent = ""
-          const lines = [
-            { text: "Tracking duplicado encontrado", cls: "font-medium" },
-            { text: `Guia: ${data.guia}`, cls: "mt-1" },
-            { text: `Cliente: ${data.cliente}`, cls: "" },
-            { text: `Estado: ${data.estado} — Fecha: ${data.fecha}`, cls: "" },
-            { text: `${data.count} paquete(s) con este tracking`, cls: "text-sm text-gray-500 mt-1" }
-          ]
-          lines.forEach(({ text, cls }) => {
-            const p = document.createElement("p")
-            p.textContent = text
-            if (cls) p.className = cls
-            info.appendChild(p)
-          })
-          this.duplicateModalTarget.classList.remove("hidden")
+          this._openDuplicateModal(data)
         }
       })
       .catch(() => {})
   }
 
-  closeDuplicate() {
-    this.duplicateModalTarget.classList.add("hidden")
+  _openDuplicateModal(data) {
+    // Render info section.
+    const info = this.duplicateInfoTarget
+    info.textContent = ""
+    const lines = [
+      { text: "Este tracking ya está registrado en el sistema:", cls: "font-medium text-gray-800 dark:text-gray-100 mb-2" },
+      { text: `Guía: ${data.guia}`, cls: "mt-1" },
+      { text: `Cliente: ${data.cliente}`, cls: "" },
+      { text: `Estado: ${data.estado} — Fecha: ${data.fecha}`, cls: "" },
+      { text: `${data.count} paquete(s) con este tracking base`, cls: "text-xs text-gray-500 dark:text-gray-400 mt-1" }
+    ]
+    lines.forEach(({ text, cls }) => {
+      const p = document.createElement("p")
+      p.textContent = text
+      if (cls) p.className = cls
+      info.appendChild(p)
+    })
+
+    // Configure "Es duplicado real" button: requires next_suffix; if exhausted (Z),
+    // disable + explain that needs manual intervention.
+    this._duplicateData = data
+    if (this.hasDuplicateNewBtnTarget) {
+      if (data.next_suffix && data.next_tracking) {
+        this.duplicateNewBtnTarget.disabled = false
+        if (this.hasDuplicateNewHintTarget) {
+          this.duplicateNewHintTarget.textContent =
+            `Crea paquete nuevo con tracking ${data.next_tracking} (sufijo ${data.next_suffix}).`
+        }
+      } else {
+        this.duplicateNewBtnTarget.disabled = true
+        if (this.hasDuplicateNewHintTarget) {
+          this.duplicateNewHintTarget.textContent =
+            "Sufijos A-Z agotados. Pedí intervención manual del supervisor."
+        }
+      }
+    }
+
+    this.duplicateModalTarget.classList.remove("hidden")
   }
 
-  continueDuplicate() {
+  closeDuplicate() {
     this.duplicateModalTarget.classList.add("hidden")
-    // Focus next field
+    this._duplicateData = null
+  }
+
+  // Opción 1: "Es actualización" — navega al edit del paquete original.
+  // El digitador ajusta lo que ocupe en el form de edit estándar.
+  duplicateAsUpdate() {
+    const data = this._duplicateData
+    if (!data || !data.edit_url) return
+    window.location.href = data.edit_url
+  }
+
+  // Opción 2: "Es duplicado real" — pre-rellena el tracking del form con
+  // el siguiente sufijo libre (A, B, C…) y cierra el modal. El digitador
+  // termina de llenar los demás campos y guarda normalmente.
+  duplicateAsNew() {
+    const data = this._duplicateData
+    if (!data || !data.next_tracking) return
+    this.trackingTarget.value = data.next_tracking
+    this.duplicateModalTarget.classList.add("hidden")
+    this._duplicateData = null
     this.clienteInputTarget.focus()
   }
 

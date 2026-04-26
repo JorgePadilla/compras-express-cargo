@@ -89,6 +89,40 @@ class Paquete < ApplicationRecord
     entregado? || anulado? || retornado? || desechado?
   end
 
+  # Calcula la próxima letra A-Z disponible para distinguir un tracking
+  # físicamente duplicado (paquetes distintos que comparten el mismo
+  # tracking impreso por reciclaje del courier).
+  #
+  # Reglas (Yusef, 2026-04-25):
+  #   - 1° con tracking_base: el original (sin sufijo).
+  #   - 2°: tracking_base + "A"
+  #   - 3°: tracking_base + "B"
+  #   - ...
+  #   - 27°: no se permite — devuelve nil (intervención manual del supervisor).
+  #
+  # Devuelve la letra (String "A".."Z") a usar para el próximo paquete con
+  # ese mismo `tracking_base`, o nil si ya se agotó el alfabeto.
+  def self.next_duplicate_suffix(tracking_base)
+    return nil if tracking_base.blank?
+
+    base = tracking_base.to_s
+    # Encuentra todos los suffixed existentes para este base. Solo letras
+    # A-Z mayúsculas inmediatamente después del base, sin nada más detrás.
+    used = where("tracking ~ ?", "^#{Regexp.escape(base)}[A-Z]$")
+             .pluck(:tracking)
+             .map { |t| t[base.length..] }
+             .compact
+
+    if used.empty?
+      "A"
+    else
+      max_letter = used.max
+      next_index = max_letter.ord - "A".ord + 1
+      return nil if next_index >= 26
+      ("A".ord + next_index).chr
+    end
+  end
+
   # True si el paquete esta vinculado a alguna pre-alerta consolidando.
   # Evita N+1: si pre_alerta_paquetes ya esta preloaded, usa la coleccion en
   # memoria (caso del listado admin con includes). Si no, hace 1 query.

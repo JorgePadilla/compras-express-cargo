@@ -52,6 +52,31 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_equal @paquete.guia, json["guia"]
   end
 
+  test "check_tracking incluye datos del flow de duplicado (PR-B)" do
+    get check_tracking_paquetes_url, params: { tracking: @paquete.tracking }
+    assert_response :success
+    json = JSON.parse(response.body)
+
+    assert json["exists"]
+    assert_equal @paquete.id, json["existing_paquete_id"]
+    assert_equal edit_paquete_path(@paquete), json["edit_url"]
+    assert_equal @paquete.tracking, json["tracking_base"]
+    assert_equal "A", json["next_suffix"]
+    assert_equal "#{@paquete.tracking}A", json["next_tracking"]
+  end
+
+  test "check_tracking devuelve next_suffix nil cuando A-Z se agotaron" do
+    base = @paquete.tracking
+    ("A".."Z").each do |letra|
+      Paquete.create!(tracking: "#{base}#{letra}", cliente: clientes(:juan), sucursal: sucursales(:miami))
+    end
+    get check_tracking_paquetes_url, params: { tracking: base }
+    assert_response :success
+    json = JSON.parse(response.body)
+    assert_nil json["next_suffix"]
+    assert_nil json["next_tracking"]
+  end
+
   test "should check tracking not found" do
     get check_tracking_paquetes_url, params: { tracking: "NONEXISTENT" }
     assert_response :success

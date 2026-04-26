@@ -125,9 +125,12 @@ class PaquetesController < ApplicationController
   end
 
   def check_tracking
-    paquete = Paquete.where(tracking: params[:tracking]).order(created_at: :desc).first
+    tracking = params[:tracking].to_s
+    paquete = Paquete.where(tracking: tracking).order(created_at: :desc).first
 
     if paquete
+      next_suffix = Paquete.next_duplicate_suffix(tracking)
+
       render json: {
         exists: true,
         terminal: paquete.estado_terminal?,
@@ -135,7 +138,16 @@ class PaquetesController < ApplicationController
         estado: ERB::Util.html_escape(paquete.estado),
         cliente: ERB::Util.html_escape(paquete.cliente.nombre_completo),
         fecha: paquete.fecha_recibido_miami&.strftime("%d/%m/%Y"),
-        count: Paquete.where(tracking: params[:tracking]).count
+        count: Paquete.where(tracking: tracking).count,
+        # Datos para el flow de duplicado (Yusef 2026-04-25):
+        # - existing_paquete_id: para "Es actualización" → cargar edit del original.
+        # - tracking_base + next_suffix → para "Es duplicado real" → tracking nuevo.
+        # - next_suffix nil cuando se agotó A-Z (intervención manual).
+        existing_paquete_id: paquete.id,
+        edit_url: edit_paquete_path(paquete),
+        tracking_base: tracking,
+        next_suffix: next_suffix,
+        next_tracking: next_suffix ? "#{tracking}#{next_suffix}" : nil
       }
     else
       render json: { exists: false }

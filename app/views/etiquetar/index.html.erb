@@ -35,21 +35,38 @@ end %>
     </div>
   </div>
 
-  <%# Duplicate tracking modal %>
-  <div data-etiquetar-target="duplicateModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+  <%# Duplicate tracking modal — flow guiado (2026-04-25):
+      al detectar duplicado, ofrece dos opciones:
+        1) "Es actualización"  → carga la recepción original en edit.
+        2) "Es duplicado real"  → pre-rellena el tracking con sufijo (A, B, C…)
+                                  para crear paquete distinto. %>
+  <div data-etiquetar-target="duplicateModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70 p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full p-6">
       <div class="flex items-center gap-3 mb-4">
         <%= heroicon "exclamation-circle", variant: :outline, options: { class: "w-6 h-6 text-amber-500" } %>
-        <h3 class="text-lg font-semibold text-gray-800">Tracking Duplicado</h3>
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Tracking ya existe en el sistema</h3>
       </div>
-      <div data-etiquetar-target="duplicateInfo" class="text-sm text-gray-600 mb-6"></div>
-      <div class="flex justify-end gap-3">
-        <button type="button" data-action="click->etiquetar#closeDuplicate"
-                class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Cancelar</button>
-        <button type="button" data-action="click->etiquetar#continueDuplicate"
-                class="px-4 py-2 text-sm font-medium bg-cec-gold text-cec-navy-dark rounded-lg hover:bg-cec-gold-dark">
-          Continuar de todos modos
+
+      <div data-etiquetar-target="duplicateInfo" class="text-sm text-gray-700 dark:text-gray-300 mb-5"></div>
+
+      <p class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-3">¿Qué corresponde hacer?</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+        <button type="button" data-action="click->etiquetar#duplicateAsUpdate"
+                class="flex flex-col items-start text-left p-4 rounded-lg ring-1 ring-cec-teal/40 bg-cec-teal/5 hover:bg-cec-teal/10 dark:bg-cec-teal/10 dark:hover:bg-cec-teal/20 transition">
+          <span class="font-semibold text-cec-teal-dark dark:text-cec-teal-light">Es actualización</span>
+          <span class="text-xs text-gray-600 dark:text-gray-400 mt-1">Cargar la recepción original para corregir tipo de envío, cliente u otros datos.</span>
         </button>
+        <button type="button" data-action="click->etiquetar#duplicateAsNew"
+                data-etiquetar-target="duplicateNewBtn"
+                class="flex flex-col items-start text-left p-4 rounded-lg ring-1 ring-cec-gold/40 bg-cec-gold/5 hover:bg-cec-gold/10 dark:bg-cec-gold/10 dark:hover:bg-cec-gold/20 transition disabled:opacity-50 disabled:cursor-not-allowed">
+          <span class="font-semibold text-cec-gold-dark dark:text-cec-gold-light">Es duplicado real</span>
+          <span class="text-xs text-gray-600 dark:text-gray-400 mt-1" data-etiquetar-target="duplicateNewHint">Crea un paquete nuevo con sufijo de letra.</span>
+        </button>
+      </div>
+
+      <div class="flex justify-end">
+        <button type="button" data-action="click->etiquetar#closeDuplicate"
+                class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100">Cancelar</button>
       </div>
     </div>
   </div>
