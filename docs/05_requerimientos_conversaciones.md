@@ -207,10 +207,10 @@ Cuando el digitador escanea/ingresa un tracking que ya existe en el sistema, el 
   - … y así sucesivamente.
 - Cada uno es un paquete distinto en BD, con su propio `numero_recepcion`, cliente, etc.
 
-**Preguntas abiertas para el cliente:**
-- ¿Qué hacemos si llega al 27° (después de `Z`)? Sugerencia: pasar a `AA`, `AB`… ó parar y pedir intervención manual.
-- ¿En modo "actualización", se permite editar **cualquier campo** o solo los típicos (tipo de envío, cliente)?
-- ¿Auditoría: registrar en bitácora quién marcó duplicado vs. actualización?
+**Decisiones tomadas (Yusef, 2026-04-25):**
+- **Alcance del modo "actualización":** el digitador puede editar **cualquier campo** del paquete original (sin restricción). El caso típico es corregir tipo de envío o cliente, pero pueden cambiar lo que ocupen — el sistema simplemente carga la recepción original en el form de edit ya existente.
+- **Comportamiento al pasar `Z` (27° duplicado):** parar y pedir intervención manual del supervisor. En la práctica nunca se llega a `Z` (la mayoría de duplicados son 1-2). Si en el futuro se vuelve común, se puede extender a `AA`, `AB`, … en un PR posterior.
+- **Auditoría:** por ahora no se agrega bitácora explícita. El `updated_at` de Rails y los logs estándar son suficientes para trazabilidad. Si más adelante el supervisor quiere reportes específicos de duplicados, se agrega como follow-up.
 
 ### 6. Numeración de Recepción (`numero_recepcion`) — Formato Anual
 
