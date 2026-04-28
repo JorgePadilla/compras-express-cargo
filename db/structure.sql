@@ -2915,7 +2915,14 @@ CREATE INDEX index_paquetes_on_manifiesto_id ON public.paquetes USING btree (man
 -- Name: index_paquetes_on_numero_recepcion; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_paquetes_on_numero_recepcion ON public.paquetes USING btree (numero_recepcion);
+CREATE INDEX index_paquetes_on_numero_recepcion ON public.paquetes USING btree (numero_recepcion);
+
+
+--
+-- Name: index_paquetes_on_numero_recepcion_caja; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_paquetes_on_numero_recepcion_caja ON public.paquetes USING btree (numero_recepcion, numero_caja);
 
 
 --
@@ -3837,6 +3844,7 @@ ALTER TABLE ONLY public.paquetes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260428233900'),
 ('20260425225919'),
 ('20260425033302'),
 ('20260425031409'),
