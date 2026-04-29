@@ -17,8 +17,8 @@
     end
   end
   header.with_action do
-    render ButtonComponent.new(variant: :secondary, href: label_paquete_path(@paquete), icon: "printer", target: "_blank") do
-      "Imprimir"
+    render ButtonComponent.new(variant: :secondary, href: label_paquete_path(@paquete), icon: "document-text", target: "_blank") do
+      "Warehouse Receipt"
     end
   end
   header.with_action do
