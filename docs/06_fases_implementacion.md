@@ -248,7 +248,7 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 | 5c.1 | `feat/paquete-estados-fechas-audit` | Nuevo estado `pre_alerta`, ~7 fechas + `*_user_id` por fecha, `users.iniciales` (campo nuevo editable), `paper_trail` + UI bitácora. Job nocturno de "disponible programada" con notif email/SMS/WhatsApp/push a las 7am. Modelo `SubLocalidad` + `sucursal_actual_id`/`sub_localidad_actual_id` en paquetes. Recolecta fija $35 USD editable. | ✅ Listo para implementar |
 | 5c.2 | `feat/paquete-notas-categorizadas` | Refactor notas (especiales PA, consolidación PA, retención, internas, al_cliente). Notas permanentes del cliente como modal por área (`notas_miami`, `notas_honduras`, **`notas_caja` NUEVA**, **`notas_sac` NUEVA**). **Plantillas de notas al cliente** (modelo `PlantillaNotaCliente` + picker, compartidas entre Etiquetar/Pre-Factura/Caja/SAC). Notas al cliente viajan en email de notificación. **Notas de retención obligatorias en estado `retenido`** + modelo `MotivoRetencion` con multi-select de motivos. | ✅ Listo para implementar |
 | 5c.3 | `feat/paquete-tercero-proveedor-services` | `tercero_nombre` (string libre, no FK), `Proveedor` modelo con dropdown + opción "Otros" (texto libre), flow ENTREGA PERSONAL con tracking auto generado (`<SUCURSAL>-<YYYYMMDD>-<correlativo>`), `service_code` enum, `repackaging_type` enum, `consolidation` bool. | ⏳ Bloqueado solo por preguntas 13 y 14b (carrier + empresa transporte) |
-| 5c.4 | `feat/paquete-show-actions` | ~10 botones del header del show (mover/eliminar PA, copy buttons, ver pre-factura/factura). El WR ya está hecho en 5c.WR. | ⏳ Bloqueado por preguntas 15-16 |
+| 5c.4 | `feat/paquete-show-actions` | ~10 botones del header del show (mover/eliminar PA, copy buttons, ver pre-factura/factura). **Re-imprimir Etiquetas Miami: preview con checkboxes para seleccionar cuáles imprimir** (1 por página). El WR ya está hecho en 5c.WR. | ⏳ Bloqueado solo por pregunta 16 (botón Refrescar) |
 
 **Dependencia:** Fase 5b (numero_recepcion anual + split). ✅ Cumplida.
 
@@ -286,10 +286,13 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 14. **Tercero:** **texto libre** (no Cliente registrado). Flujo de revendedor: `cliente_id` = revendedor; `tercero_nombre` = cliente final del revendedor. Etiqueta y WR muestran ambos.
 15. **Cliente vs tercero:** revendedor en `cliente_id` (registrado en CEC), tercero en `tercero_nombre` (texto libre).
 
+**Respuesta confirmada para PR-D4 (botones) — 2026-04-29:**
+
+15. **Re-imprimir Etiquetas Miami:** preview de todas las etiquetas hermanas con **checkboxes** → digitador marca cuáles imprimir → una etiqueta por hoja. Ej: paquete de 4 cajas → digitador marca solo 2/4 y 3/4 → 2 hojas impresas.
+
 **Preguntas pendientes para Yusef:**
 - 13. Carrier (`expedido_por`): ¿FK a `Carrier` o string libre?
 - 14b. Empresa transporte vs manifiesto: ¿una fuente o redundante?
-- 15. Re-imprimir etiquetas: ¿todas las cajas o solo actual? (PR-D4)
 - 16. Botón "Refrescar": F5 o algo específico? (PR-D4)
 - 17. Manifiesto formato `MM2026000001` (general).
 

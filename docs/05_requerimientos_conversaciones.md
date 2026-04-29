@@ -1359,6 +1359,20 @@ Componentes:
 - Helper `Paquete.generate_tracking_entrega_personal(sucursal:, fecha:)` que llama al counter y formatea el string.
 - Cuando proveedor = `entrega_personal` y el digitador no provee tracking real, se genera automáticamente. Si el digitador provee uno (caso atípico), se respeta.
 
+#### N. Re-imprimir Etiquetas Miami — preview con selección (pregunta 15, 2026-04-29 6:50pm)
+
+Cuando el digitador clickea "Re-imprimir Etiquetas Miami" en un paquete dividido en N cajas:
+- Aparece un **preview con las N etiquetas en miniatura**.
+- El digitador **marca cuál(es) quiere imprimir** (checkboxes).
+- Al imprimir, **una etiqueta por hoja** (cada una en su propia página).
+- Ejemplo: paquete con 4 cajas → preview muestra etiquetas 1/4, 2/4, 3/4, 4/4 → digitador marca solo 2/4 y 3/4 → se imprimen esas dos (en 2 hojas).
+
+**Implementación (PR-D4):**
+- Nueva action `reimprimir_etiquetas` en `PaquetesController` que renderiza preview con todas las etiquetas hermanas del split.
+- Vista con grid de tarjetas, cada una con checkbox + miniatura de la etiqueta.
+- Botón "Imprimir seleccionadas" genera HTML print-friendly con `page-break-after: always` entre etiquetas → cada selección sale en página propia. `window.print()` se dispara automáticamente.
+- Para paquetes single (no split), preview muestra 1 etiqueta + checkbox marcado por default (UX consistente).
+
 ### Preguntas aún pendientes (al cliente)
 
 **Bloque PR-D3 — pendiente:**
