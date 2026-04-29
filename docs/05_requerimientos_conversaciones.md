@@ -1301,10 +1301,20 @@ Las "notas permanentes" se reusan/expanden:
 - Campo `paquetes.notas_al_cliente` (text, ya existe en plan PR-D2 — confirmado).
 - Mailer de notificación al cliente al recibirse en Miami: incluye `notas_al_cliente` actualizada en el cuerpo del correo.
 
-### Preguntas aún pendientes (al cliente)
+#### J. Notas de retención — obligatorias + multi-select de motivos (pregunta 10, 2026-04-29 6:42pm)
 
-**Bloque PR-D2 — notas categorizadas:**
-- 10. Notas de retención: ¿obligatorias en estado `retenido` (validación), o opcionales?
+- **Obligatorias** cuando el paquete pasa a estado `retenido` (validation a nivel de modelo).
+- **Selección múltiple de motivos** desde un catálogo de plantillas (no solo texto libre).
+- Caso de uso típico: paquete dañado, confirmar tipo de envío, mercancía prohibida, falta declaración, etc.
+
+**Implementación (PR-D2):**
+- Modelo nuevo `MotivoRetencion(nombre, descripcion, activo, position)` + CRUD admin (`/motivos-retencion`).
+- Tabla join `paquete_motivos_retencion(paquete_id, motivo_retencion_id)` o columna array `paquetes.motivos_retencion_ids`. Decisión técnica al implementar — recomendable join table para preservar integridad referencial.
+- Campo `paquetes.notas_retencion` (text, opcional pero útil para detalle libre adicional).
+- Validation en `Paquete`: cuando `estado: retenido`, debe haber al menos 1 motivo seleccionado o `notas_retencion` presente.
+- UI: cuando el digitador cambia estado a `retenido`, modal con checkboxes de motivos activos + textarea para detalle adicional.
+
+### Preguntas aún pendientes (al cliente)
 
 **Bloque PR-D3 — proveedor + carrier:**
 - 11. Lista de proveedores: CRUD admin o seed fijo.

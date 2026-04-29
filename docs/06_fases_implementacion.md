@@ -246,7 +246,7 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 | 5c.WR | `feat/warehouse-receipt-redesign` | Rediseño `label.html.erb` al WR completo (header empresa Miami LLC, banner navy, columnas Shipper/Consignee/Agent, tabla packages, totales LB/KG/cuft/m³, T&C bilingüe). | ✅ #85 |
 | 5c.5 | `feat/warehouse-receipt-model` | Modelos nuevos: `WarehouseReceipt` + `Supplier` + `Agent` + `Terms`. Migra `paquetes.numero_recepcion` → `paquetes.warehouse_receipt_id`. **Antecede a D1-D4.** | ⏳ Listo para implementar |
 | 5c.1 | `feat/paquete-estados-fechas-audit` | Nuevo estado `pre_alerta`, ~7 fechas + `*_user_id` por fecha, `users.iniciales` (campo nuevo editable), `paper_trail` + UI bitácora. Job nocturno de "disponible programada" con notif email/SMS/WhatsApp/push a las 7am. Modelo `SubLocalidad` + `sucursal_actual_id`/`sub_localidad_actual_id` en paquetes. Recolecta fija $35 USD editable. | ✅ Listo para implementar |
-| 5c.2 | `feat/paquete-notas-categorizadas` | Refactor notas (especiales PA, consolidación PA, retención, internas, al_cliente). Notas permanentes del cliente como modal por área (`notas_miami`, `notas_honduras`, **`notas_caja` NUEVA**, **`notas_sac` NUEVA**). **Plantillas de notas al cliente** (modelo `PlantillaNotaCliente` + Stimulus picker, compartidas entre Etiquetar/Pre-Factura/Caja/SAC). Notas al cliente viajan en el email de notificación al recibirse en Miami. | ⏳ Bloqueado solo por pregunta 10 (retención obligatoria) |
+| 5c.2 | `feat/paquete-notas-categorizadas` | Refactor notas (especiales PA, consolidación PA, retención, internas, al_cliente). Notas permanentes del cliente como modal por área (`notas_miami`, `notas_honduras`, **`notas_caja` NUEVA**, **`notas_sac` NUEVA**). **Plantillas de notas al cliente** (modelo `PlantillaNotaCliente` + picker, compartidas entre Etiquetar/Pre-Factura/Caja/SAC). Notas al cliente viajan en email de notificación. **Notas de retención obligatorias en estado `retenido`** + modelo `MotivoRetencion` con multi-select de motivos. | ✅ Listo para implementar |
 | 5c.3 | `feat/paquete-tercero-supplier-agent-services` | `tercero_id` (cliente search), `service_code` enum, `repackaging_type` enum, `consolidation` bool. Refina `Supplier` y `Agent` desde 5c.5. | ⏳ Bloqueado por preguntas 11-14 |
 | 5c.4 | `feat/paquete-show-actions` | ~10 botones del header del show (mover/eliminar PA, copy buttons, ver pre-factura/factura). El WR ya está hecho en 5c.WR. | ⏳ Bloqueado por preguntas 15-16 |
 
@@ -277,8 +277,9 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 
 12. **Notas al cliente:** flujo: Etiquetar **inicia** → email de notificación al cliente lleva esa nota → Pre-Factura/Caja/SAC **adicionan** (no sobrescriben). NUEVO: **modelo `PlantillaNotaCliente`** + dropdown picker en el form para insertar plantillas de texto recurrente. Compartidas entre las 4 áreas.
 
+10. **Notas de retención:** **OBLIGATORIAS** cuando el paquete pasa a estado `retenido` (validation). Multi-select de motivos desde catálogo (modelo nuevo `MotivoRetencion`) + textarea de detalle libre adicional.
+
 **Preguntas pendientes para Yusef (bloquean PRs específicos):**
-- 10. Notas retención obligatoriedad (PR-D2).
 - 11-14. Proveedor/carrier/agent (PR-D3).
 - 15-16. Botones (PR-D4).
 - 17. Manifiesto formato `MM2026000001` (general).
