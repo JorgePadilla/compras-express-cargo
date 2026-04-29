@@ -80,12 +80,31 @@ module WarehouseReceiptHelper
     6. Signature or electronic acceptance of this receipt constitutes agreement with the terms.
   EN
 
-  # Atajo al hash de la empresa emisora del WR (US LLC) para usar en la vista.
+  # Defaults inline — si el initializer no se cargó (typical en dev sin
+  # restart), no rompemos la página. El initializer puede sobrescribirlos.
+  WR_ISSUING_COMPANY_DEFAULT = {
+    name:          "COMPRAS EXPRESS LOGISTICS LLC",
+    street:        "8109 NW 60th STREET",
+    city:          "Miami",
+    state:         "Florida",
+    postal_code:   "33195-3415",
+    country:       "USA",
+    phone:         "+1 305-848-0990",
+    website:       "https://www.comprasexpresshn.com",
+    footer_credit: "Powered by SISTEMAS PADILLAS"
+  }.freeze
+  WR_TERMS_VERSION_DEFAULT = "2026-01".freeze
+
+  # Atajo al hash de la empresa emisora del WR (US LLC). Cae a defaults
+  # inline si el initializer no está cargado.
   def wr_issuing_company
-    Rails.application.config.x.warehouse_receipt.issuing_company
+    cfg = Rails.application.config.x.warehouse_receipt rescue nil
+    return WR_ISSUING_COMPANY_DEFAULT if cfg.nil? || cfg.issuing_company.nil?
+    WR_ISSUING_COMPANY_DEFAULT.merge(cfg.issuing_company.to_h)
   end
 
   def wr_terms_version
-    Rails.application.config.x.warehouse_receipt.terms_version
+    cfg = Rails.application.config.x.warehouse_receipt rescue nil
+    cfg&.terms_version || WR_TERMS_VERSION_DEFAULT
   end
 end
