@@ -47,9 +47,33 @@ class WarehouseReceiptTest < ActiveSupport::TestCase
     assert_in_delta 45.36, wr.total_weight_kg, 0.05
   end
 
+  test "calcula total_volumetric_weight_kg desde lb" do
+    wr = WarehouseReceipt.new(total_volumetric_weight_lb: 237.0)
+    # 237 * 0.4535924 = 107.4974... → redondeado a 2 = 107.50
+    assert_in_delta 107.50, wr.total_volumetric_weight_kg, 0.05
+  end
+
+  test "calcula total_volumetric_weight_kg con valores chicos" do
+    wr = WarehouseReceipt.new(total_volumetric_weight_lb: 5.0)
+    # 5 * 0.4535924 = 2.267962 → redondeado a 2 = 2.27
+    assert_in_delta 2.27, wr.total_volumetric_weight_kg, 0.01
+  end
+
   test "calcula total_volume_m3 desde cuft" do
     wr = WarehouseReceipt.new(total_volume_cuft: 10.0)
     assert_in_delta 0.2832, wr.total_volume_m3, 0.001
+  end
+
+  # ── to_s methods (suggestion del reviewer) ──
+
+  test "to_s en WarehouseReceipt devuelve receipt_number" do
+    wr = build_wr(receipt_number: "RM0002026000042")
+    assert_equal "RM0002026000042", wr.to_s
+  end
+
+  test "to_s en WarehouseReceipt cuando receipt_number tiene espacios y minúsculas se normaliza" do
+    wr = build_wr(receipt_number: "  rm0002026000099  ")
+    assert_equal "RM0002026000099", wr.to_s
   end
 
   test "declared_value setter convierte a cents" do

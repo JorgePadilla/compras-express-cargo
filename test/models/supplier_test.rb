@@ -50,4 +50,9 @@ class SupplierTest < ActiveSupport::TestCase
     supplier = Supplier.create!(codigo: "abc", nombre: "X")
     assert_equal "ABC", supplier.codigo
   end
+
+  test "to_s combina codigo y nombre" do
+    supplier = Supplier.new(codigo: "AMZN", nombre: "AMAZON LLC")
+    assert_equal "AMZN · AMAZON LLC", supplier.to_s
+  end
 end
