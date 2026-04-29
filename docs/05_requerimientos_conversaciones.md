@@ -1178,9 +1178,296 @@ El tracking debe ser alfanumérico + guiones, sin espacios ni símbolos especial
 
 ---
 
+## Conversación 3 (2026-04-29): Detalle de Paquete Interno + Warehouse Receipt
+
+Contexto: Yusef envió spec completa para el rediseño de la vista detalle/edit del paquete y de la etiqueta que ya imprimimos como Warehouse Receipt. Sigue 17 preguntas pendientes con respuestas parciales.
+
+### Decisiones de arquitectura confirmadas (Jorge + Yusef)
+
+- **`numero_recepcion` compartido** entre las N cajas del split (madre único). Las cajas se distinguen por `numero_caja`. Formato `RM0002026000001` (15 chars) confirmado — no usar el formato `RM2026ZN000000001` del WR sample.
+- **`WarehouseReceipt` como modelo separado** (no enriquecer `Paquete`). `has_many :packages`. El `numero_recepcion` actual de `paquetes` migra a `warehouse_receipts.receipt_number`.
+- **`Supplier` (Proveedor)** modelo nuevo con código manual al crear, CRUD admin. Reemplaza el campo `paquetes.proveedor` (string libre actual).
+- **`Agent`** modelo nuevo, opcional, CRUD admin. Aparece en el WR sample (ej. `CORPORACION KARSAM`).
+- **`Terms`** (T&C) con texto genérico inicial (en/es), versionable. Cada WR congela la versión activa para auditoría.
+- **Audit log con `paper_trail` gem** para `Paquete`, `Cliente`, `PreAlerta`, `Manifiesto`, `Venta`, `PreFactura`, `Entrega`. Sin implementación custom.
+
+### Respuestas confirmadas por Yusef (PR-D1: estados, fechas, audit log)
+
+#### A. Estado "Disponible para retiro" programado
+
+La fecha programada se llena al **crear pre-factura en Honduras** (UI con: guía de manifiesto, fecha de trabajo/disponible, tipo de envío a procesar). Mientras espera la fecha programada, el paquete queda en estado `aduana`.
+
+El día programado, el sistema **automáticamente**:
+- Cambia el estado de todos los paquetes a `disponible_entrega`.
+- Envía notificaciones al cliente: email + SMS/WhatsApp + push notification del navegador.
+- Las notificaciones se envían **solo a partir de las 7am** (no de madrugada).
+
+**Implementación:** job nocturno (cron a las 7am) que revisa los paquetes con `fecha_programada_disponible <= hoy` y dispara los cambios + notifs.
+
+#### B. Re-modificación de fechas — política por campo
+
+| Campo | Política |
+|---|---|
+| `fecha_pre_alerta` | Queda original — **NUNCA se sobrescribe** |
+| `fecha_recibido_miami` | Se actualiza al cambio (sobrescribe) — **muestra indicador visual de "modificada"** cuando ya tuvo un cambio previo |
+| `fecha_empacado` | Se actualiza al cambio (sobrescribe) |
+| `fecha_enviado` | Se actualiza al cambio (sobrescribe) |
+| `fecha_aduana` | Se actualiza al cambio (sobrescribe) |
+| `fecha_consolidando` | Se actualiza al cambio (sobrescribe) |
+| `fecha_disponible_entrega` | Se actualiza al cambio (sobrescribe) |
+
+El **log/bitácora** conserva el histórico completo de cambios. Visible para roles definidos en sección G más abajo.
+
+**Indicador visual de "fecha modificada"** (Yusef refinó 2026-04-29 spec): cuando una fecha (especialmente `fecha_recibido_miami`) ya fue actualizada al menos una vez, debe mostrarse algo que comunique que NO es la fecha original. Implementación: badge pequeño `(modificada)` o icono de lápiz junto a la fecha. Hover/click muestra "Original: <fecha previa> · Última edición por <iniciales> el <timestamp>".
+
+**Implementación:** se aprovecha `paper_trail` (ya en plan PR-D1). Una `version` previa con `object_changes` que toque ese campo → el helper renderiza el indicador.
+
+#### C. Iniciales del usuario
+
+Campo nuevo `users.iniciales` editable al crear/editar el usuario en el CRUD admin. **NO calculado del nombre** (porque hay nombres repetidos y cada uno define su alias).
+
+#### D. "En qué bodega está" = Sucursal + Sub-localidad
+
+Bodega = sucursal. Sucursales operativas actuales:
+- **Sucursal Col Zerón, SPS** (San Pedro Sula).
+- **Sucursal Col Humuya, TGU** (Tegucigalpa).
+
+Cada sucursal tiene **sub-localidades** (bodegas dentro de la sucursal o áreas tercerizadas) para simplificar búsquedas:
+- `ZR01` = Zerón bodega central.
+- `ZR02` = Zerón bodega CEM.
+- (y así sucesivamente, configurables por admin).
+
+Caso de uso: hay cargas que se almacenan en áreas terceras dentro/cerca de la sucursal y se identifican con sub-código.
+
+**Implementación:**
+- Modelo nuevo `SubLocalidad(sucursal_id, codigo, nombre, activo)`. CRUD admin.
+- El paquete tiene **dos referencias a sucursal + sub-localidad**:
+  - `sucursal_actual_id` + `sub_localidad_actual_id` — donde está físicamente. Se setea al escanear recepción.
+  - `sucursal_destino_id` — a dónde va. Sale del manifiesto.
+
+#### E. Fecha posible de entrega
+
+- Tabla `tipos_envio` agrega columna `dias_estimados` (días típicos para ese tipo).
+- Al crear el paquete: `fecha_posible_entrega = fecha_recibido_miami + tipo_envio.dias_estimados`.
+- Al agregarse a un manifiesto: se actualiza con `manifiesto.fecha_envio + tipo_envio.dias_estimados` (afinar al implementar).
+- **Override manual** opcional via columna `fecha_posible_entrega_override`.
+- Roles autorizados a modificar manualmente: **admin + supervisor_miami + supervisor_prefactura**.
+
+> Yusef adelantó: "más adelante quiero escanear paquete por paquete que se está empacando" — fuera de scope de PR-D1, pero tener el flow listo.
+
+#### F. Recolecta — tarifa fija editable (pregunta 7, 2026-04-29 6:22pm)
+
+- **No hay tabla de tarifas todavía** (porque siempre cambia por zona y cantidad).
+- **Tarifa pre-establecida**: **$35 USD + ISV**, editable por el cajero al crear la recolecta.
+- Implementación: configuración global (ej. `Empresa.tarifa_recolecta_default = 35.00 USD`), editable inline en el form al crear/asignar la recolecta del paquete.
+
+#### G. Audit log — quién accede (pregunta 8, 2026-04-29 6:25pm)
+
+**Admin + TODOS los supervisores** (`supervisor_miami`, `supervisor_caja`, `supervisor_prefactura`). Ya **NO** incluye SAC ni cajero ni digitador ni entrega_despacho.
+
+> Esto refina la respuesta inicial del bloque B (que decía "SAC + Supervisores + Admin"). La nueva respuesta del 2026-04-29 6:25pm excluye SAC del audit log.
+
+#### H. Notas permanentes del cliente — modal por área (pregunta 9, 2026-04-29 6:30pm)
+
+Las "notas permanentes" se reusan/expanden:
+- `clientes.notas_miami` (existente).
+- `clientes.notas_honduras` (existente).
+- `clientes.notas_caja` (**NUEVO**) — notas permanentes para el equipo de Caja en HND.
+- `clientes.notas_sac` (**NUEVO**) — notas permanentes para el equipo de SAC.
+
+**UI:** las notas se muestran como **MODAL** automático al abrir el paquete del cliente, filtradas por **área del usuario actual**:
+
+| Rol que entra | Modal muestra |
+|---|---|
+| Digitador Miami / Supervisor Miami | `notas_miami` |
+| Cajero / Supervisor Caja | `notas_honduras` + `notas_caja` |
+| SAC | `notas_sac` |
+| Supervisor Pre-Factura | `notas_honduras` + `notas_caja` |
+| Admin | Todas |
+
+#### I. Notas al cliente — flujo + plantillas (2026-04-29 follow-up)
+
+**Estado actual:** "no está funcionando bien" — refactor necesario.
+
+**Quién la ingresa/edita y cuándo:**
+- **Etiquetar (Miami)** la INGRESA inicialmente al recibir el paquete. Esa nota viaja en el **correo de notificación al cliente** cuando llega la carga a Miami.
+- **Pre-Factura (HND)** ADICIONA a la nota (no sobrescribe).
+- **Caja + SAC** también adicionan (con las mismas plantillas que Pre-Factura).
+
+**Nueva feature requerida — Plantillas de Notas al Cliente:**
+- Yusef quiere un **catálogo de plantillas** porque hoy escriben información recurrente a mano.
+- Cada plantilla: título + texto. Editable por admin.
+- En el form de "Notas al cliente", botón "Insertar plantilla" → dropdown de plantillas → texto se pega al campo (no reemplaza, agrega).
+- Las plantillas son compartidas entre Etiquetar / Pre-Factura / Caja / SAC (todos usan las mismas; sin segmentación por área para v1).
+
+**Implementación (PR-D2):**
+- Modelo nuevo `PlantillaNotaCliente(titulo, texto, activo, position)` + CRUD admin (`/plantillas-notas`).
+- Stimulus `nota_template_picker_controller.js` que abre dropdown e inserta texto en el textarea.
+- Campo `paquetes.notas_al_cliente` (text, ya existe en plan PR-D2 — confirmado).
+- Mailer de notificación al cliente al recibirse en Miami: incluye `notas_al_cliente` actualizada en el cuerpo del correo.
+
+#### J. Notas de retención — obligatorias + multi-select de motivos (pregunta 10, 2026-04-29 6:42pm)
+
+- **Obligatorias** cuando el paquete pasa a estado `retenido` (validation a nivel de modelo).
+- **Selección múltiple de motivos** desde un catálogo de plantillas (no solo texto libre).
+- Caso de uso típico: paquete dañado, confirmar tipo de envío, mercancía prohibida, falta declaración, etc.
+
+**Implementación (PR-D2):**
+- Modelo nuevo `MotivoRetencion(nombre, descripcion, activo, position)` + CRUD admin (`/motivos-retencion`).
+- Tabla join `paquete_motivos_retencion(paquete_id, motivo_retencion_id)` o columna array `paquetes.motivos_retencion_ids`. Decisión técnica al implementar — recomendable join table para preservar integridad referencial.
+- Campo `paquetes.notas_retencion` (text, opcional pero útil para detalle libre adicional).
+- Validation en `Paquete`: cuando `estado: retenido`, debe haber al menos 1 motivo seleccionado o `notas_retencion` presente.
+- UI: cuando el digitador cambia estado a `retenido`, modal con checkboxes de motivos activos + textarea para detalle adicional.
+
+#### K. Tercero — texto libre (revendedor flow) (preguntas 14-15, 2026-04-29)
+
+**Tercero NO es un cliente registrado** — es **texto libre** porque son clientes de empresas terceras a CEC.
+
+**Flujo de revendedor:**
+- Quienes mantienen "terceros" son **revendedores** (negocios que usan CEC para mandar cargas a sus propios clientes).
+- El **cliente principal (`cliente_id`)** es el revendedor (cliente registrado de CEC con su `clientes.codigo`).
+- El **tercero** es el cliente final del revendedor — viene como **texto libre** en el form (nombre + opcionalmente teléfono/dirección).
+- El paquete se procesa bajo el código del revendedor; la etiqueta y WR muestran el nombre del tercero como destinatario adicional.
+
+**Implementación (PR-D3):**
+- Columna nueva `paquetes.tercero_nombre` (string, nullable). Opcionalmente `tercero_telefono` / `tercero_direccion` si Yusef confirma alcance.
+- **NO hay lupa de búsqueda** — solo input simple de texto libre.
+- En el WR (`Consignee`): si `tercero_nombre` está presente, muestra "Cliente: [revendedor] · A nombre de: [tercero]".
+
+#### L. Proveedor — dropdown con "Otros" + CRUD admin (pregunta 11, 2026-04-29)
+
+- Dropdown de proveedores **pre-determinados** para facilitar el trabajo (Amazon, eBay, Walmart, Sams, Target, ENTREGA PERSONAL).
+- Agregar opción **"OTROS"** que activa input de texto libre para cualquier proveedor no listado.
+- Implementación: modelo `Proveedor(nombre, tipo enum [comercio | entrega_personal | otros], activo, position)` + CRUD admin para que el equipo agregue/modifique. Cuando el digitador elige "OTROS", se muestra textfield `paquete.proveedor_libre` (string) para capturar el nombre real.
+
+#### M. ENTREGA PERSONAL — formulario + tracking interno auto (pregunta 12, 2026-04-29)
+
+Cuando el digitador elige proveedor = `ENTREGA PERSONAL`, se activa un **formulario adicional** y el sistema **genera un tracking interno propio**.
+
+**Formato del tracking interno:**
+```
+<CODIGO_SUCURSAL_RECIBIDO>-<YYYYMMDD>-<correlativo>
+```
+
+Ejemplos:
+- `MIA-20260429-0001` (primero recibido en Miami el 2026-04-29 vía entrega personal).
+- `MIA-20260429-0002` (segundo del mismo día).
+- `SPS-20260429-0001` (recibido en sucursal SPS).
+
+Componentes:
+- **Sucursal donde se recibió** (sucursal Miami por default; otras si tenemos sub-bodegas en el extranjero).
+- **Fecha de recibido** (`YYYYMMDD`).
+- **Correlativo** del día por sucursal (4 dígitos, reinicia diariamente).
+
+**Implementación:**
+- Tabla nueva `entrega_personal_counters(sucursal_id, fecha, ultimo_numero)` con unique index `(sucursal_id, fecha)` (similar a `numero_recepcion_counters` pero por día, no por año).
+- Helper `Paquete.generate_tracking_entrega_personal(sucursal:, fecha:)` que llama al counter y formatea el string.
+- Cuando proveedor = `entrega_personal` y el digitador no provee tracking real, se genera automáticamente. Si el digitador provee uno (caso atípico), se respeta.
+
+#### N. Re-imprimir Etiquetas Miami — preview con selección (pregunta 15, 2026-04-29 6:50pm)
+
+Cuando el digitador clickea "Re-imprimir Etiquetas Miami" en un paquete dividido en N cajas:
+- Aparece un **preview con las N etiquetas en miniatura**.
+- El digitador **marca cuál(es) quiere imprimir** (checkboxes).
+- Al imprimir, **una etiqueta por hoja** (cada una en su propia página).
+- Ejemplo: paquete con 4 cajas → preview muestra etiquetas 1/4, 2/4, 3/4, 4/4 → digitador marca solo 2/4 y 3/4 → se imprimen esas dos (en 2 hojas).
+
+**Implementación (PR-D4):**
+- Nueva action `reimprimir_etiquetas` en `PaquetesController` que renderiza preview con todas las etiquetas hermanas del split.
+- Vista con grid de tarjetas, cada una con checkbox + miniatura de la etiqueta.
+- Botón "Imprimir seleccionadas" genera HTML print-friendly con `page-break-after: always` entre etiquetas → cada selección sale en página propia. `window.print()` se dispara automáticamente.
+- Para paquetes single (no split), preview muestra 1 etiqueta + checkbox marcado por default (UX consistente).
+
+#### Ñ. Imprimir Pre-Factura desde paquete — preview + copiar imagen (pregunta nueva, 2026-04-29 6:53pm)
+
+Cuando el digitador clickea "Imprimir Pre-Factura" en el detalle de un paquete:
+- Aparece un **preview** de la pre-factura completa (con todos sus paquetes — no solo el actual).
+- Botón **Imprimir** disponible.
+- También sirve para que el agente **copie la imagen** y la envíe al cliente por WhatsApp/correo.
+
+**Implementación (PR-D4):**
+- Vista de preview de la pre-factura (renderizar el PDF actual `PreFacturaPdf` en HTML print-friendly o mostrar el PDF en `<iframe>`).
+- El botón ya existe en módulos de pre-factura — agregarlo al header del paquete linkeando a `pre_factura_path(@paquete.pre_factura)` con `?preview=true`.
+- Para "copiar imagen": el preview es HTML por lo que el usuario puede capturar pantalla nativamente; sin lógica adicional.
+
+#### O. Botón "Refrescar" — visual estilo Gmail (pregunta 16, 2026-04-29 6:54pm)
+
+> "solo lo ocupamos para actualizar, pero lo que busco es un boton de actualizar (mas que todo en el web app que hace google)"
+
+Es solo un **botón visual con icono de refresh** (↻) que recarga la página, equivalente a F5 pero accesible con un click. UX similar al botón de "actualizar" de Gmail.
+
+**Implementación (PR-D4):**
+- `ButtonComponent` con `icon: "arrow-path"` (heroicon de refresh circular).
+- `href: request.fullpath` o `data-action="click->refresh#reload"` con un Stimulus controller mínimo que hace `location.reload()`.
+- Sin lógica especial — solo recarga la página completa.
+
+#### P. F2 = limpieza de parámetros (universal, 2026-04-29 6:54pm)
+
+Yusef pidió que la tecla **F2** sirva para **limpiar los parámetros del formulario actual** en todos los módulos del sistema (ya respondido — universal).
+
+Hoy F2 ya existe en `/etiquetar` y `/paquetes` (limpia búsqueda + foco al input). Necesitamos extenderlo a TODOS los formularios y listados con filtros.
+
+**Implementación (PR-D-F2 separado, futuro o como parte de PR-D1):**
+- Stimulus controller `f2_clear_controller.js` reutilizable que escucha global F2 y resetea el form/filtros del scope al que se aplica.
+- Aplicar en: pre_facturas, ventas, manifiestos, entregas, ingresos_caja, egresos_caja, recibos, notas_debito, notas_credito, cotizaciones, proformas, financiamientos, clientes, usuarios, sucursales (cualquier index con filtros).
+- Mantener el F2 actual en etiquetar/paquetes intacto.
+
+#### Q. Carrier — FK al modelo `Carrier` (pregunta 13, 2026-04-29)
+
+`paquetes.expedido_por` (string libre actual) se convierte en FK `paquetes.carrier_id` que referencia al modelo `Carrier` ya existente (UPS, USPS, DHL, FedEx).
+
+**Implementación (PR-D3):**
+- Migración: `add_reference :paquetes, :carrier, foreign_key: true`. Backfill: best-effort matching del string `expedido_por` contra `carriers.nombre`/`carriers.codigo`. Mantener el string actual durante un periodo de transición.
+- En el form, dropdown con los carriers activos.
+
+#### R. Manifiesto formato anual `MM2026000001` — incluir en PR-D1 (pregunta 17, 2026-04-29)
+
+Yusef confirmó que el cambio de formato del manifiesto va **junto con PR-D1** (estados/fechas/audit log) — no PR aparte.
+
+Formato análogo a `numero_recepcion` pero para manifiesto:
+- `M` = Manifiesto.
+- `M` = Miami (o `H` para Honduras según sucursal del manifiesto).
+- `2026` = año (4 dígitos).
+- `000001` = correlativo del año.
+- Ejemplo: `MM2026000001`.
+
+**Implementación (PR-D1):**
+- Tabla nueva `manifiesto_counters(sucursal_id, anio, ultimo_numero)` similar a `numero_recepcion_counters`.
+- `Manifiesto#generate_numero` genera el número en este formato al crear.
+- `manifiestos.numero` queda como string. Backfill opcional para manifiestos viejos.
+
+#### S. Segundo tracking (2do tracking) — agregado 2026-04-29
+
+**Contexto:** muchos paquetes llegan con **2 números de seguimiento**. El proveedor le da UNO al cliente que crea la pre-alerta con ese tracking, pero el paquete físicamente llega con un tracking DIFERENTE. Eso complica:
+- Vincular pre-alerta ↔ paquete (porque los strings no matchean).
+- Comunicarle al cliente cuando pregunta por el suyo (el cliente conoce solo uno de los dos).
+
+**Solución:**
+- Nueva columna `paquetes.tracking_secundario` (string, nullable, indexed).
+- En el form de etiquetar/edit del paquete: input opcional adicional debajo del tracking principal.
+- **Vinculación de pre-alertas** (`PreAlertaPaquete.link_tracking!`) ahora intenta matchear contra `paquetes.tracking` **O** `paquetes.tracking_secundario`. Misma lógica al crear paquete: si el tracking de la pre-alerta no aparece como principal, el digitador captura el principal (físico) + el de la pre-alerta como secundario, y el sistema vincula.
+- **Búsqueda** (`Paquete.buscar` scope) incluye `tracking_secundario` en el ILIKE.
+- WR + etiquetas: muestran tracking principal; opcionalmente debajo "Alt: <secundario>" si hay.
+
+**Implementación (PR-D1):** una columna más en la migración de PR-D1 + ajustes mínimos en `Paquete::buscar` y `PreAlertaPaquete.link_tracking!` + form input.
+
+### Preguntas aún pendientes (al cliente)
+
+**Bloque PR-D3 — única pendiente:**
+- 14b. **Empresa de transporte (ej. EPN = Pronto Cargo)** cuando un paquete cambia de manifiesto: ¿el detalle del paquete muestra la empresa **del manifiesto actual** (heredamos automático y cambia si el paquete cambia de manifiesto), o la **empresa original** (guardamos en el paquete y queda fija aunque el manifiesto cambie)?
+
+**Bloque PR-D4 — botones:**
+- 15. Re-imprimir etiquetas: ¿todas las cajas o solo la actual?
+- 16. Botón "Refrescar": F5 o algo específico (ej. recargar solo la bitácora).
+
+**General:**
+- 17. Manifiesto formato `MM2026000001`: ¿en PR-D1, PR aparte, o postergar?
+
+---
+
 ## Próximos Pasos
 
 1. **Conversación 2:** Login, Logout, Creación de usuarios y roles — por documentar
-2. **Conversación 3:** Pendiente — visita al cliente
+2. **Conversación 3:** Detalle de Paquete Interno + Warehouse Receipt — ✅ documentada arriba (en curso, ~6 preguntas pendientes)
 3. **Conversación 4:** Pendiente — visita al cliente
 4. Después de las 4 conversaciones: crear plan de implementación completo por módulo
