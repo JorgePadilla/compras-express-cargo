@@ -1,24 +1,30 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <title>Etiqueta - <%= @paquete.guia %></title>
+  <title>Warehouse Receipt - <%= @paquete.numero_recepcion.presence || @paquete.guia %></title>
   <meta charset="UTF-8">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, Helvetica, sans-serif; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #111; }
     @media print {
-      @page { margin: 5mm; size: 4in 6in; }
+      @page { margin: 12mm; size: Letter; }
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .no-print { display: none !important; }
     }
     @media screen {
-      body { padding: 20px; max-width: 4in; margin: 0 auto; border: 1px dashed #ccc; }
+      body { padding: 24px; max-width: 8.5in; margin: 0 auto; background: #f3f4f6; }
+      .wr-sheet { background: #fff; padding: 28px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); border-radius: 6px; }
     }
   </style>
 </head>
 <body>
-  <%= yield %>
+  <div class="wr-sheet">
+    <%= yield %>
+  </div>
   <script>
-    window.onload = function() { window.print(); }
+    if (new URL(window.location.href).searchParams.get("print") === "true") {
+      window.onload = function() { window.print(); }
+    }
   </script>
 </body>
 </html>
