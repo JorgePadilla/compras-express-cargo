@@ -29,6 +29,10 @@ class WarehouseReceipt < ApplicationRecord
 
   validates :receipt_number, presence: true, uniqueness: { case_sensitive: false }
   validates :issued_on,      presence: true
+  # `consignee` ya es requerido por `belongs_to` non-optional. La validación
+  # explícita la hace evidente en el modelo y produce el mismo mensaje de
+  # error sin tener que leer la línea del belongs_to.
+  validates :consignee,      presence: true
   validates :status,         inclusion: { in: STATUSES }
   validates :repackaging_type, inclusion: { in: REPACKAGING_TYPES, allow_nil: true }
   validates :declared_value_currency, presence: true
@@ -55,6 +59,12 @@ class WarehouseReceipt < ApplicationRecord
     (total_volume_cuft.to_f * CUFT_TO_M3).round(4)
   end
 
+  # `declared_value_cents` (Integer) es la fuente de verdad en BD; los
+  # accessors `declared_value` (Float) leen/escriben sobre cents para que
+  # el caller pueda usar el monto en dólares. Si código consumidor escribe
+  # `declared_value_cents` directamente (ej. una migración), el getter
+  # `declared_value` derivado sigue siendo consistente porque siempre
+  # convierte desde cents.
   def declared_value
     declared_value_cents.to_i / 100.0
   end

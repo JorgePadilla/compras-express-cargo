@@ -85,4 +85,64 @@ class WarehouseReceiptTest < ActiveSupport::TestCase
   test "permite supplier nil (caso ENTREGA PERSONAL sin proveedor real)" do
     assert build_wr(receipt_number: "X", supplier: nil).valid?
   end
+
+  # ── Edge cases en cálculos LB↔KG y cuft↔m³ ──
+
+  test "total_weight_kg con cero devuelve cero" do
+    wr = WarehouseReceipt.new(total_weight_lb: 0)
+    assert_equal 0.0, wr.total_weight_kg
+  end
+
+  test "total_weight_kg con nil devuelve cero (defensivo)" do
+    wr = WarehouseReceipt.new
+    assert_equal 0.0, wr.total_weight_kg
+  end
+
+  test "total_weight_kg con valor grande mantiene precisión 2-decimales" do
+    wr = WarehouseReceipt.new(total_weight_lb: 100_000.0)
+    # 100_000 * 0.4535924 = 45_359.24
+    assert_in_delta 45_359.24, wr.total_weight_kg, 0.05
+    # No debe haber explosión a Float::INFINITY ni overflow
+    assert wr.total_weight_kg.finite?
+  end
+
+  test "total_volumetric_weight_kg redondea a 2 decimales (no floating-point drift)" do
+    wr = WarehouseReceipt.new(total_volumetric_weight_lb: 0.1) # 0.1 es problemático en floats
+    # Resultado debe terminar en .05 redondeado a 2 decimales, no en 0.04535924...
+    decimals = wr.total_volumetric_weight_kg.to_s.split(".").last
+    assert_operator decimals.length, :<=, 2, "esperaba ≤2 decimales, got #{wr.total_volumetric_weight_kg}"
+  end
+
+  test "total_volume_m3 con valor pequeño preserva precisión 4-decimales" do
+    wr = WarehouseReceipt.new(total_volume_cuft: 0.5)
+    # 0.5 * 0.0283168 = 0.0141584 → redondeado a 4 = 0.0142
+    assert_in_delta 0.0142, wr.total_volume_m3, 0.0001
+  end
+
+  test "total_volume_m3 con cero devuelve cero" do
+    wr = WarehouseReceipt.new(total_volume_cuft: 0)
+    assert_equal 0.0, wr.total_volume_m3
+  end
+
+  # ── declared_value setter contract ──
+
+  test "declared_value=0 setea cents en 0" do
+    wr = WarehouseReceipt.new
+    wr.declared_value = 0
+    assert_equal 0, wr.declared_value_cents
+    assert_equal 0.0, wr.declared_value
+  end
+
+  test "declared_value redondea half cent al entero más cercano" do
+    wr = WarehouseReceipt.new
+    wr.declared_value = 12.345  # 1234.5 cents → round → 1235
+    assert_equal 1235, wr.declared_value_cents
+    assert_equal 12.35, wr.declared_value
+  end
+
+  test "declared_value_cents asignado directo se lee correctamente vía declared_value" do
+    # Asegura que escritura directa al cents column NO rompe el getter (cents es source of truth).
+    wr = WarehouseReceipt.new(declared_value_cents: 99_999)
+    assert_equal 999.99, wr.declared_value
+  end
 end

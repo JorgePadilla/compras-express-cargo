@@ -18,8 +18,16 @@ class Term < ApplicationRecord
     activos.order(effective_from: :desc, version: :desc).pick(:version)
   end
 
-  # Devuelve el body de la version+language pedidos. Cae a la version activa
-  # más reciente si la pedida no existe.
+  # Devuelve el body para la combinación version+language pedidos.
+  #
+  # Si la combinación exacta no existe, hace **fallback al término activo
+  # más reciente DEL MISMO LANGUAGE** (no al absoluto más reciente). Esto
+  # es intencional: si un WR antiguo congeló `terms_version="2025-01"` y
+  # ese registro luego fue eliminado, mostrar el último activo del idioma
+  # pedido es mejor que romper la vista o servir un body en otro idioma.
+  # Si el negocio prefiere "absoluto más reciente sin filtrar por idioma",
+  # cambiar aquí — pero entonces hay que asegurar que cada language tenga
+  # siempre al menos una versión activa.
   def self.body_for(version:, language:)
     record = find_by(version: version, language: language)
     record ||= activos.where(language: language).order(effective_from: :desc).first
