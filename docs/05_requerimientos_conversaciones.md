@@ -1221,15 +1221,24 @@ El **log/bitácora** conserva el histórico completo de cambios. Visible para ro
 
 Campo nuevo `users.iniciales` editable al crear/editar el usuario en el CRUD admin. **NO calculado del nombre** (porque hay nombres repetidos y cada uno define su alias).
 
-#### D. "En qué bodega está" = Sucursal
+#### D. "En qué bodega está" = Sucursal + Sub-localidad
 
 Bodega = sucursal. Sucursales operativas actuales:
 - **Sucursal Col Zerón, SPS** (San Pedro Sula).
 - **Sucursal Col Humuya, TGU** (Tegucigalpa).
 
-Implementación: el paquete tiene **dos referencias a sucursal**:
-- `sucursal_actual_id` — donde está físicamente. Se setea al escanear recepción.
-- `sucursal_destino_id` — a dónde va. Sale del manifiesto.
+Cada sucursal tiene **sub-localidades** (bodegas dentro de la sucursal o áreas tercerizadas) para simplificar búsquedas:
+- `ZR01` = Zerón bodega central.
+- `ZR02` = Zerón bodega CEM.
+- (y así sucesivamente, configurables por admin).
+
+Caso de uso: hay cargas que se almacenan en áreas terceras dentro/cerca de la sucursal y se identifican con sub-código.
+
+**Implementación:**
+- Modelo nuevo `SubLocalidad(sucursal_id, codigo, nombre, activo)`. CRUD admin.
+- El paquete tiene **dos referencias a sucursal + sub-localidad**:
+  - `sucursal_actual_id` + `sub_localidad_actual_id` — donde está físicamente. Se setea al escanear recepción.
+  - `sucursal_destino_id` — a dónde va. Sale del manifiesto.
 
 #### E. Fecha posible de entrega
 
@@ -1241,14 +1250,61 @@ Implementación: el paquete tiene **dos referencias a sucursal**:
 
 > Yusef adelantó: "más adelante quiero escanear paquete por paquete que se está empacando" — fuera de scope de PR-D1, pero tener el flow listo.
 
+#### F. Recolecta — tarifa fija editable (pregunta 7, 2026-04-29 6:22pm)
+
+- **No hay tabla de tarifas todavía** (porque siempre cambia por zona y cantidad).
+- **Tarifa pre-establecida**: **$35 USD + ISV**, editable por el cajero al crear la recolecta.
+- Implementación: configuración global (ej. `Empresa.tarifa_recolecta_default = 35.00 USD`), editable inline en el form al crear/asignar la recolecta del paquete.
+
+#### G. Audit log — quién accede (pregunta 8, 2026-04-29 6:25pm)
+
+**Admin + TODOS los supervisores** (`supervisor_miami`, `supervisor_caja`, `supervisor_prefactura`). Ya **NO** incluye SAC ni cajero ni digitador ni entrega_despacho.
+
+> Esto refina la respuesta inicial del bloque B (que decía "SAC + Supervisores + Admin"). La nueva respuesta del 2026-04-29 6:25pm excluye SAC del audit log.
+
+#### H. Notas permanentes del cliente — modal por área (pregunta 9, 2026-04-29 6:30pm)
+
+Las "notas permanentes" se reusan/expanden:
+- `clientes.notas_miami` (existente).
+- `clientes.notas_honduras` (existente).
+- `clientes.notas_caja` (**NUEVO**) — notas permanentes para el equipo de Caja en HND.
+- `clientes.notas_sac` (**NUEVO**) — notas permanentes para el equipo de SAC.
+
+**UI:** las notas se muestran como **MODAL** automático al abrir el paquete del cliente, filtradas por **área del usuario actual**:
+
+| Rol que entra | Modal muestra |
+|---|---|
+| Digitador Miami / Supervisor Miami | `notas_miami` |
+| Cajero / Supervisor Caja | `notas_honduras` + `notas_caja` |
+| SAC | `notas_sac` |
+| Supervisor Pre-Factura | `notas_honduras` + `notas_caja` |
+| Admin | Todas |
+
+#### I. Notas al cliente — flujo + plantillas (2026-04-29 follow-up)
+
+**Estado actual:** "no está funcionando bien" — refactor necesario.
+
+**Quién la ingresa/edita y cuándo:**
+- **Etiquetar (Miami)** la INGRESA inicialmente al recibir el paquete. Esa nota viaja en el **correo de notificación al cliente** cuando llega la carga a Miami.
+- **Pre-Factura (HND)** ADICIONA a la nota (no sobrescribe).
+- **Caja + SAC** también adicionan (con las mismas plantillas que Pre-Factura).
+
+**Nueva feature requerida — Plantillas de Notas al Cliente:**
+- Yusef quiere un **catálogo de plantillas** porque hoy escriben información recurrente a mano.
+- Cada plantilla: título + texto. Editable por admin.
+- En el form de "Notas al cliente", botón "Insertar plantilla" → dropdown de plantillas → texto se pega al campo (no reemplaza, agrega).
+- Las plantillas son compartidas entre Etiquetar / Pre-Factura / Caja / SAC (todos usan las mismas; sin segmentación por área para v1).
+
+**Implementación (PR-D2):**
+- Modelo nuevo `PlantillaNotaCliente(titulo, texto, activo, position)` + CRUD admin (`/plantillas-notas`).
+- Stimulus `nota_template_picker_controller.js` que abre dropdown e inserta texto en el textarea.
+- Campo `paquetes.notas_al_cliente` (text, ya existe en plan PR-D2 — confirmado).
+- Mailer de notificación al cliente al recibirse en Miami: incluye `notas_al_cliente` actualizada en el cuerpo del correo.
+
 ### Preguntas aún pendientes (al cliente)
 
-**Bloque PR-D1:**
-- 7. Recolecta — valor a cobrar: tabla de tarifas / manual / fijo.
-
 **Bloque PR-D2 — notas categorizadas:**
-- 9. Notas permanentes del cliente: ¿reusar `clientes.notas_miami/notas_honduras` o campo nuevo?
-- 10. Notas de retención: ¿obligatorias en estado `retenido`?
+- 10. Notas de retención: ¿obligatorias en estado `retenido` (validación), o opcionales?
 
 **Bloque PR-D3 — proveedor + carrier:**
 - 11. Lista de proveedores: CRUD admin o seed fijo.

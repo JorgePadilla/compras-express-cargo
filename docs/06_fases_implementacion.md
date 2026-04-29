@@ -245,8 +245,8 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 | 5c.0 | `fix/numero-recepcion-compartido-split` | `numero_recepcion` compartido entre las N cajas del split (madre único). Unique compuesto `(numero_recepcion, numero_caja)`. | ✅ #84 |
 | 5c.WR | `feat/warehouse-receipt-redesign` | Rediseño `label.html.erb` al WR completo (header empresa Miami LLC, banner navy, columnas Shipper/Consignee/Agent, tabla packages, totales LB/KG/cuft/m³, T&C bilingüe). | ✅ #85 |
 | 5c.5 | `feat/warehouse-receipt-model` | Modelos nuevos: `WarehouseReceipt` + `Supplier` + `Agent` + `Terms`. Migra `paquetes.numero_recepcion` → `paquetes.warehouse_receipt_id`. **Antecede a D1-D4.** | ⏳ Listo para implementar |
-| 5c.1 | `feat/paquete-estados-fechas-audit` | Nuevo estado `pre_alerta`, ~7 fechas + `*_user_id` por fecha, `users.iniciales` (campo nuevo editable), `paper_trail` + UI bitácora. Job nocturno de "disponible programada" con notif email/SMS/WhatsApp/push a las 7am. | ⏳ Bloqueado solo por pregunta 7 (recolecta) |
-| 5c.2 | `feat/paquete-notas-categorizadas` | Refactor notas (especiales PA, consolidación PA, retención, permanentes_cliente, internas, al_cliente). | ⏳ Bloqueado por preguntas 9-10 |
+| 5c.1 | `feat/paquete-estados-fechas-audit` | Nuevo estado `pre_alerta`, ~7 fechas + `*_user_id` por fecha, `users.iniciales` (campo nuevo editable), `paper_trail` + UI bitácora. Job nocturno de "disponible programada" con notif email/SMS/WhatsApp/push a las 7am. Modelo `SubLocalidad` + `sucursal_actual_id`/`sub_localidad_actual_id` en paquetes. Recolecta fija $35 USD editable. | ✅ Listo para implementar |
+| 5c.2 | `feat/paquete-notas-categorizadas` | Refactor notas (especiales PA, consolidación PA, retención, internas, al_cliente). Notas permanentes del cliente como modal por área (`notas_miami`, `notas_honduras`, **`notas_caja` NUEVA**, **`notas_sac` NUEVA**). **Plantillas de notas al cliente** (modelo `PlantillaNotaCliente` + Stimulus picker, compartidas entre Etiquetar/Pre-Factura/Caja/SAC). Notas al cliente viajan en el email de notificación al recibirse en Miami. | ⏳ Bloqueado solo por pregunta 10 (retención obligatoria) |
 | 5c.3 | `feat/paquete-tercero-supplier-agent-services` | `tercero_id` (cliente search), `service_code` enum, `repackaging_type` enum, `consolidation` bool. Refina `Supplier` y `Agent` desde 5c.5. | ⏳ Bloqueado por preguntas 11-14 |
 | 5c.4 | `feat/paquete-show-actions` | ~10 botones del header del show (mover/eliminar PA, copy buttons, ver pre-factura/factura). El WR ya está hecho en 5c.WR. | ⏳ Bloqueado por preguntas 15-16 |
 
@@ -263,15 +263,22 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 **Respuestas confirmadas para PR-D1 (estados/fechas/audit) — 2026-04-29:**
 
 1. **Disponible programada:** se llena al crear pre-factura; job a las 7am cambia estado + dispara notif (email + SMS/WhatsApp + push browser).
-2. **Re-modificación de fechas:** `fecha_pre_alerta` queda original. Empacado/Enviado/Aduana/Consolidando/Disponible se sobrescriben. Log conserva histórico, visible para SAC + Supervisores + Admin.
+2. **Re-modificación de fechas:** `fecha_pre_alerta` queda original. Empacado/Enviado/Aduana/Consolidando/Disponible se sobrescriben. Log conserva histórico.
 3. **Iniciales:** campo nuevo `users.iniciales` editable al crear/editar usuario en CRUD admin (no calculado del nombre).
-4. **Bodega = Sucursal.** Sucursales actuales: **Zerón SPS** + **Humuya TGU**. Paquete tiene `sucursal_actual_id` (físico, al escanear) y `sucursal_destino_id` (del manifiesto).
+4. **Bodega = Sucursal + Sub-localidad.** Sucursales actuales: **Zerón SPS** + **Humuya TGU**. Sub-localidades dentro de cada sucursal (ej. `ZR01` bodega central, `ZR02` bodega CEM). Modelo nuevo `SubLocalidad`. Paquete tiene `sucursal_actual_id` + `sub_localidad_actual_id` (físico, al escanear) y `sucursal_destino_id` (del manifiesto).
 5. **Fecha posible de entrega:** `tipos_envio.dias_estimados` + `fecha_recibido_miami`. Al ir a manifiesto se actualiza con fecha del manifiesto. Override manual via `fecha_posible_entrega_override`.
 6. **Modificar fecha posible:** admin + supervisor_miami + supervisor_prefactura.
+7. **Recolecta:** tarifa fija $35 USD + ISV pre-establecida, editable inline por el cajero. No hay tabla de tarifas todavía (siempre cambia por zona/cantidad).
+8. **Audit log access:** **admin + TODOS los supervisores** (`supervisor_miami`, `supervisor_caja`, `supervisor_prefactura`). NO incluye SAC/cajero/digitador/entrega_despacho.
+
+**Respuestas confirmadas para PR-D2 (notas) — 2026-04-29:**
+
+9. **Notas permanentes del cliente:** se reusan `clientes.notas_miami`/`notas_honduras` y se agregan **`notas_caja`** y **`notas_sac`** (nuevas). UI: modal automático al abrir paquete, filtrado por área del usuario actual (Miami / Caja+HND / SAC / Pre-Factura ve combos / Admin ve todas).
+
+12. **Notas al cliente:** flujo: Etiquetar **inicia** → email de notificación al cliente lleva esa nota → Pre-Factura/Caja/SAC **adicionan** (no sobrescriben). NUEVO: **modelo `PlantillaNotaCliente`** + dropdown picker en el form para insertar plantillas de texto recurrente. Compartidas entre las 4 áreas.
 
 **Preguntas pendientes para Yusef (bloquean PRs específicos):**
-- 7. Recolecta valor (PR-D1).
-- 9-10. Notas (PR-D2).
+- 10. Notas retención obligatoriedad (PR-D2).
 - 11-14. Proveedor/carrier/agent (PR-D3).
 - 15-16. Botones (PR-D4).
 - 17. Manifiesto formato `MM2026000001` (general).
