@@ -1209,13 +1209,18 @@ El día programado, el sistema **automáticamente**:
 | Campo | Política |
 |---|---|
 | `fecha_pre_alerta` | Queda original — **NUNCA se sobrescribe** |
+| `fecha_recibido_miami` | Se actualiza al cambio (sobrescribe) — **muestra indicador visual de "modificada"** cuando ya tuvo un cambio previo |
 | `fecha_empacado` | Se actualiza al cambio (sobrescribe) |
 | `fecha_enviado` | Se actualiza al cambio (sobrescribe) |
 | `fecha_aduana` | Se actualiza al cambio (sobrescribe) |
 | `fecha_consolidando` | Se actualiza al cambio (sobrescribe) |
 | `fecha_disponible_entrega` | Se actualiza al cambio (sobrescribe) |
 
-El **log/bitácora** conserva el histórico completo de cambios. Visible para roles: **SAC, Supervisores, Admin**.
+El **log/bitácora** conserva el histórico completo de cambios. Visible para roles definidos en sección G más abajo.
+
+**Indicador visual de "fecha modificada"** (Yusef refinó 2026-04-29 spec): cuando una fecha (especialmente `fecha_recibido_miami`) ya fue actualizada al menos una vez, debe mostrarse algo que comunique que NO es la fecha original. Implementación: badge pequeño `(modificada)` o icono de lápiz junto a la fecha. Hover/click muestra "Original: <fecha previa> · Última edición por <iniciales> el <timestamp>".
+
+**Implementación:** se aprovecha `paper_trail` (ya en plan PR-D1). Una `version` previa con `object_changes` que toque ese campo → el helper renderiza el indicador.
 
 #### C. Iniciales del usuario
 
@@ -1430,6 +1435,21 @@ Formato análogo a `numero_recepcion` pero para manifiesto:
 - Tabla nueva `manifiesto_counters(sucursal_id, anio, ultimo_numero)` similar a `numero_recepcion_counters`.
 - `Manifiesto#generate_numero` genera el número en este formato al crear.
 - `manifiestos.numero` queda como string. Backfill opcional para manifiestos viejos.
+
+#### S. Segundo tracking (2do tracking) — agregado 2026-04-29
+
+**Contexto:** muchos paquetes llegan con **2 números de seguimiento**. El proveedor le da UNO al cliente que crea la pre-alerta con ese tracking, pero el paquete físicamente llega con un tracking DIFERENTE. Eso complica:
+- Vincular pre-alerta ↔ paquete (porque los strings no matchean).
+- Comunicarle al cliente cuando pregunta por el suyo (el cliente conoce solo uno de los dos).
+
+**Solución:**
+- Nueva columna `paquetes.tracking_secundario` (string, nullable, indexed).
+- En el form de etiquetar/edit del paquete: input opcional adicional debajo del tracking principal.
+- **Vinculación de pre-alertas** (`PreAlertaPaquete.link_tracking!`) ahora intenta matchear contra `paquetes.tracking` **O** `paquetes.tracking_secundario`. Misma lógica al crear paquete: si el tracking de la pre-alerta no aparece como principal, el digitador captura el principal (físico) + el de la pre-alerta como secundario, y el sistema vincula.
+- **Búsqueda** (`Paquete.buscar` scope) incluye `tracking_secundario` en el ILIKE.
+- WR + etiquetas: muestran tracking principal; opcionalmente debajo "Alt: <secundario>" si hay.
+
+**Implementación (PR-D1):** una columna más en la migración de PR-D1 + ajustes mínimos en `Paquete::buscar` y `PreAlertaPaquete.link_tracking!` + form input.
 
 ### Preguntas aún pendientes (al cliente)
 
