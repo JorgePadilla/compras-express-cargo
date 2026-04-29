@@ -95,6 +95,59 @@ puts "  ✓ #{CategoriaPrecio.count} categorias de precio"
 end
 puts "  ✓ #{Configuracion.count} configuraciones"
 
+# ── Suppliers (PR-5c.5) ──
+puts "Seeding suppliers..."
+[
+  { codigo: "AMZN",     nombre: "AMAZON LLC",      tipo: "comercio",         city: "Seattle",     state: "WA", country: "USA" },
+  { codigo: "EBAY",     nombre: "EBAY INC",        tipo: "comercio",         city: "San Jose",    state: "CA", country: "USA" },
+  { codigo: "WMT",      nombre: "WALMART",         tipo: "comercio",         city: "Bentonville", state: "AR", country: "USA" },
+  { codigo: "SAMS",     nombre: "SAMS CLUB",       tipo: "comercio",         city: "Bentonville", state: "AR", country: "USA" },
+  { codigo: "TGT",      nombre: "TARGET",          tipo: "comercio",         city: "Minneapolis", state: "MN", country: "USA" },
+  { codigo: "EP",       nombre: "ENTREGA PERSONAL", tipo: "entrega_personal", country: "USA" },
+  { codigo: "OTROS",    nombre: "OTROS",           tipo: "otros",            country: "USA" }
+].each_with_index do |attrs, idx|
+  Supplier.find_or_create_by!(codigo: attrs[:codigo]) do |s|
+    s.nombre        = attrs[:nombre]
+    s.tipo          = attrs[:tipo]
+    s.city          = attrs[:city]
+    s.state         = attrs[:state]
+    s.country       = attrs[:country]
+    s.position      = idx
+  end
+end
+puts "  ✓ #{Supplier.count} suppliers"
+
+# ── Terms (T&C bilingues, PR-5c.5) ──
+puts "Seeding terms..."
+TERMS_ES = <<~ES.strip.freeze
+  1. La empresa transportará la mercancía descrita en este recibo bajo las condiciones aquí establecidas.
+  2. El cliente declara que la información del contenido es verídica. La empresa no se responsabiliza por declaraciones falsas o incompletas.
+  3. Los pesos y dimensiones son verificados al recibir; la facturación final usa el peso facturable mayor entre real y volumétrico.
+  4. La mercancía no reclamada en un plazo de 30 días naturales se considerará abandonada.
+  5. La empresa no se hace responsable de daños por embalaje insuficiente, mercancía prohibida o contenido perecedero.
+  6. La firma o aceptación electrónica de este recibo constituye conformidad con los términos.
+ES
+
+TERMS_EN = <<~EN.strip.freeze
+  1. The carrier shall transport the merchandise described herein under the conditions set forth.
+  2. The customer warrants that the content information is true and accurate. Carrier is not liable for false or incomplete declarations.
+  3. Weights and dimensions are verified upon receipt; billing uses the chargeable weight (greater of actual and volumetric).
+  4. Goods unclaimed within 30 calendar days will be deemed abandoned.
+  5. Carrier shall not be liable for damages caused by insufficient packaging, prohibited items, or perishable content.
+  6. Signature or electronic acceptance of this receipt constitutes agreement with the terms.
+EN
+
+[
+  { version: "2026-01", language: "es", body: TERMS_ES },
+  { version: "2026-01", language: "en", body: TERMS_EN }
+].each do |attrs|
+  Term.find_or_create_by!(version: attrs[:version], language: attrs[:language]) do |t|
+    t.body           = attrs[:body]
+    t.effective_from = Date.new(2026, 1, 1)
+  end
+end
+puts "  ✓ #{Term.count} terms (#{Term.distinct.pluck(:version).join(', ')})"
+
 # ── Sample data (dev/staging only) ──
 if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   # Demo users per role — always reset on re-seed so documented credentials work
