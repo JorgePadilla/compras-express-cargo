@@ -245,10 +245,10 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 | 5c.0 | `fix/numero-recepcion-compartido-split` | `numero_recepcion` compartido entre las N cajas del split (madre único). Unique compuesto `(numero_recepcion, numero_caja)`. | ✅ #84 |
 | 5c.WR | `feat/warehouse-receipt-redesign` | Rediseño `label.html.erb` al WR completo (header empresa Miami LLC, banner navy, columnas Shipper/Consignee/Agent, tabla packages, totales LB/KG/cuft/m³, T&C bilingüe). | ✅ #85 |
 | 5c.5 | `feat/warehouse-receipt-model` | Modelos nuevos: `WarehouseReceipt` + `Supplier` + `Agent` + `Terms`. Migra `paquetes.numero_recepcion` → `paquetes.warehouse_receipt_id`. **Antecede a D1-D4.** | ⏳ Listo para implementar |
-| 5c.1 | `feat/paquete-estados-fechas-audit` | Nuevo estado `pre_alerta`, ~7 fechas + `*_user_id` por fecha, `users.iniciales` (campo nuevo editable), `paper_trail` + UI bitácora. Job nocturno de "disponible programada" con notif email/SMS/WhatsApp/push a las 7am. Modelo `SubLocalidad` + `sucursal_actual_id`/`sub_localidad_actual_id` en paquetes. Recolecta fija $35 USD editable. | ✅ Listo para implementar |
+| 5c.1 | `feat/paquete-estados-fechas-audit` | Nuevo estado `pre_alerta`, ~7 fechas + `*_user_id` por fecha, `users.iniciales` (campo nuevo editable), `paper_trail` + UI bitácora. Job nocturno de "disponible programada" con notif email/SMS/WhatsApp/push a las 7am. Modelo `SubLocalidad` + `sucursal_actual_id`/`sub_localidad_actual_id` en paquetes. Recolecta fija $35 USD editable. **Manifiesto formato anual `MM2026000001`** (counter por sucursal/año, análogo a `numero_recepcion`). | ✅ Listo para implementar |
 | 5c.2 | `feat/paquete-notas-categorizadas` | Refactor notas (especiales PA, consolidación PA, retención, internas, al_cliente). Notas permanentes del cliente como modal por área (`notas_miami`, `notas_honduras`, **`notas_caja` NUEVA**, **`notas_sac` NUEVA**). **Plantillas de notas al cliente** (modelo `PlantillaNotaCliente` + picker, compartidas entre Etiquetar/Pre-Factura/Caja/SAC). Notas al cliente viajan en email de notificación. **Notas de retención obligatorias en estado `retenido`** + modelo `MotivoRetencion` con multi-select de motivos. | ✅ Listo para implementar |
-| 5c.3 | `feat/paquete-tercero-proveedor-services` | `tercero_nombre` (string libre, no FK), `Proveedor` modelo con dropdown + opción "Otros" (texto libre), flow ENTREGA PERSONAL con tracking auto generado (`<SUCURSAL>-<YYYYMMDD>-<correlativo>`), `service_code` enum, `repackaging_type` enum, `consolidation` bool. | ⏳ Bloqueado solo por preguntas 13 y 14b (carrier + empresa transporte) |
-| 5c.4 | `feat/paquete-show-actions` | ~10 botones del header del show (mover/eliminar PA, copy buttons, ver pre-factura/factura). **Re-imprimir Etiquetas Miami: preview con checkboxes para seleccionar cuáles imprimir** (1 por página). El WR ya está hecho en 5c.WR. | ⏳ Bloqueado solo por pregunta 16 (botón Refrescar) |
+| 5c.3 | `feat/paquete-tercero-proveedor-services` | `tercero_nombre` (string libre, no FK), `Proveedor` modelo con dropdown + opción "Otros" (texto libre), flow ENTREGA PERSONAL con tracking auto generado (`<SUCURSAL>-<YYYYMMDD>-<correlativo>`), `service_code` enum, `repackaging_type` enum, `consolidation` bool. **`paquetes.carrier_id` FK al modelo `Carrier` existente** (UPS/USPS/DHL/FedEx). | ⏳ Bloqueado solo por pregunta 14b (empresa transporte) |
+| 5c.4 | `feat/paquete-show-actions` | ~10 botones del header del show (mover/eliminar PA, copy buttons, ver pre-factura/factura). **Re-imprimir Etiquetas Miami: preview con checkboxes para seleccionar cuáles imprimir** (1 por página). **Imprimir Pre-Factura: preview + imprimir + copiar imagen para enviar al cliente.** **Botón "Refrescar"** visual estilo Gmail (icono ↻). El WR ya está hecho en 5c.WR. | ✅ Listo para implementar |
 
 **Dependencia:** Fase 5b (numero_recepcion anual + split). ✅ Cumplida.
 
@@ -286,15 +286,19 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 14. **Tercero:** **texto libre** (no Cliente registrado). Flujo de revendedor: `cliente_id` = revendedor; `tercero_nombre` = cliente final del revendedor. Etiqueta y WR muestran ambos.
 15. **Cliente vs tercero:** revendedor en `cliente_id` (registrado en CEC), tercero en `tercero_nombre` (texto libre).
 
-**Respuesta confirmada para PR-D4 (botones) — 2026-04-29:**
+**Respuestas confirmadas para PR-D4 (botones) — 2026-04-29:**
 
 15. **Re-imprimir Etiquetas Miami:** preview de todas las etiquetas hermanas con **checkboxes** → digitador marca cuáles imprimir → una etiqueta por hoja. Ej: paquete de 4 cajas → digitador marca solo 2/4 y 3/4 → 2 hojas impresas.
+16. **Botón "Refrescar":** botón visual con icono de refresh (↻) estilo Gmail — solo recarga la página completa. Equivalente visual a F5.
+- **Imprimir Pre-Factura desde paquete:** preview de la pre-factura completa + botón imprimir + sirve para que el agente copie imagen y envíe al cliente.
+- **F2 universal:** Stimulus controller reutilizable para limpiar parámetros/filtros del form actual en TODOS los módulos (extender el F2 ya existente en etiquetar/paquetes).
 
-**Preguntas pendientes para Yusef:**
-- 13. Carrier (`expedido_por`): ¿FK a `Carrier` o string libre?
-- 14b. Empresa transporte vs manifiesto: ¿una fuente o redundante?
-- 16. Botón "Refrescar": F5 o algo específico? (PR-D4)
-- 17. Manifiesto formato `MM2026000001` (general).
+**Respuesta confirmada para PR-D3 (carrier):** 13. **Carrier:** FK al modelo `Carrier` existente (UPS/USPS/DHL/FedEx). Backfill best-effort matching `expedido_por` string → `carriers.nombre`.
+
+**Respuesta confirmada general:** 17. **Manifiesto formato `MM2026000001`:** se incluye en **PR-D1** junto con estados/fechas. Counter por sucursal/año análogo a `numero_recepcion_counters`.
+
+**Pregunta pendiente para Yusef (única restante):**
+- 14b. Empresa transporte vs manifiesto: cuando un paquete cambia de manifiesto, ¿muestra la empresa actual del manifiesto (heredada) o la empresa original con la que viajó (redundante en paquete)?
 
 **Referencia:** `docs/05_requerimientos_conversaciones.md` Conversación 3.
 

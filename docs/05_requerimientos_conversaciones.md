@@ -1373,11 +1373,68 @@ Cuando el digitador clickea "Re-imprimir Etiquetas Miami" en un paquete dividido
 - Botón "Imprimir seleccionadas" genera HTML print-friendly con `page-break-after: always` entre etiquetas → cada selección sale en página propia. `window.print()` se dispara automáticamente.
 - Para paquetes single (no split), preview muestra 1 etiqueta + checkbox marcado por default (UX consistente).
 
+#### Ñ. Imprimir Pre-Factura desde paquete — preview + copiar imagen (pregunta nueva, 2026-04-29 6:53pm)
+
+Cuando el digitador clickea "Imprimir Pre-Factura" en el detalle de un paquete:
+- Aparece un **preview** de la pre-factura completa (con todos sus paquetes — no solo el actual).
+- Botón **Imprimir** disponible.
+- También sirve para que el agente **copie la imagen** y la envíe al cliente por WhatsApp/correo.
+
+**Implementación (PR-D4):**
+- Vista de preview de la pre-factura (renderizar el PDF actual `PreFacturaPdf` en HTML print-friendly o mostrar el PDF en `<iframe>`).
+- El botón ya existe en módulos de pre-factura — agregarlo al header del paquete linkeando a `pre_factura_path(@paquete.pre_factura)` con `?preview=true`.
+- Para "copiar imagen": el preview es HTML por lo que el usuario puede capturar pantalla nativamente; sin lógica adicional.
+
+#### O. Botón "Refrescar" — visual estilo Gmail (pregunta 16, 2026-04-29 6:54pm)
+
+> "solo lo ocupamos para actualizar, pero lo que busco es un boton de actualizar (mas que todo en el web app que hace google)"
+
+Es solo un **botón visual con icono de refresh** (↻) que recarga la página, equivalente a F5 pero accesible con un click. UX similar al botón de "actualizar" de Gmail.
+
+**Implementación (PR-D4):**
+- `ButtonComponent` con `icon: "arrow-path"` (heroicon de refresh circular).
+- `href: request.fullpath` o `data-action="click->refresh#reload"` con un Stimulus controller mínimo que hace `location.reload()`.
+- Sin lógica especial — solo recarga la página completa.
+
+#### P. F2 = limpieza de parámetros (universal, 2026-04-29 6:54pm)
+
+Yusef pidió que la tecla **F2** sirva para **limpiar los parámetros del formulario actual** en todos los módulos del sistema (ya respondido — universal).
+
+Hoy F2 ya existe en `/etiquetar` y `/paquetes` (limpia búsqueda + foco al input). Necesitamos extenderlo a TODOS los formularios y listados con filtros.
+
+**Implementación (PR-D-F2 separado, futuro o como parte de PR-D1):**
+- Stimulus controller `f2_clear_controller.js` reutilizable que escucha global F2 y resetea el form/filtros del scope al que se aplica.
+- Aplicar en: pre_facturas, ventas, manifiestos, entregas, ingresos_caja, egresos_caja, recibos, notas_debito, notas_credito, cotizaciones, proformas, financiamientos, clientes, usuarios, sucursales (cualquier index con filtros).
+- Mantener el F2 actual en etiquetar/paquetes intacto.
+
+#### Q. Carrier — FK al modelo `Carrier` (pregunta 13, 2026-04-29)
+
+`paquetes.expedido_por` (string libre actual) se convierte en FK `paquetes.carrier_id` que referencia al modelo `Carrier` ya existente (UPS, USPS, DHL, FedEx).
+
+**Implementación (PR-D3):**
+- Migración: `add_reference :paquetes, :carrier, foreign_key: true`. Backfill: best-effort matching del string `expedido_por` contra `carriers.nombre`/`carriers.codigo`. Mantener el string actual durante un periodo de transición.
+- En el form, dropdown con los carriers activos.
+
+#### R. Manifiesto formato anual `MM2026000001` — incluir en PR-D1 (pregunta 17, 2026-04-29)
+
+Yusef confirmó que el cambio de formato del manifiesto va **junto con PR-D1** (estados/fechas/audit log) — no PR aparte.
+
+Formato análogo a `numero_recepcion` pero para manifiesto:
+- `M` = Manifiesto.
+- `M` = Miami (o `H` para Honduras según sucursal del manifiesto).
+- `2026` = año (4 dígitos).
+- `000001` = correlativo del año.
+- Ejemplo: `MM2026000001`.
+
+**Implementación (PR-D1):**
+- Tabla nueva `manifiesto_counters(sucursal_id, anio, ultimo_numero)` similar a `numero_recepcion_counters`.
+- `Manifiesto#generate_numero` genera el número en este formato al crear.
+- `manifiestos.numero` queda como string. Backfill opcional para manifiestos viejos.
+
 ### Preguntas aún pendientes (al cliente)
 
-**Bloque PR-D3 — pendiente:**
-- 13. Carrier (`expedido_por`): ¿convertir a FK al modelo `Carrier` (UPS/USPS/DHL/FedEx) o dejar string libre?
-- 14b. Empresa de transporte (ej. EPN = Pronto Cargo): ¿una sola fuente desde `manifiesto.empresa_manifiesto` o redundante en el paquete?
+**Bloque PR-D3 — única pendiente:**
+- 14b. **Empresa de transporte (ej. EPN = Pronto Cargo)** cuando un paquete cambia de manifiesto: ¿el detalle del paquete muestra la empresa **del manifiesto actual** (heredamos automático y cambia si el paquete cambia de manifiesto), o la **empresa original** (guardamos en el paquete y queda fija aunque el manifiesto cambie)?
 
 **Bloque PR-D4 — botones:**
 - 15. Re-imprimir etiquetas: ¿todas las cajas o solo la actual?
