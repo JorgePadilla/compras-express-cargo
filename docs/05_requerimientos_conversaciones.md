@@ -1178,9 +1178,96 @@ El tracking debe ser alfanumérico + guiones, sin espacios ni símbolos especial
 
 ---
 
+## Conversación 3 (2026-04-29): Detalle de Paquete Interno + Warehouse Receipt
+
+Contexto: Yusef envió spec completa para el rediseño de la vista detalle/edit del paquete y de la etiqueta que ya imprimimos como Warehouse Receipt. Sigue 17 preguntas pendientes con respuestas parciales.
+
+### Decisiones de arquitectura confirmadas (Jorge + Yusef)
+
+- **`numero_recepcion` compartido** entre las N cajas del split (madre único). Las cajas se distinguen por `numero_caja`. Formato `RM0002026000001` (15 chars) confirmado — no usar el formato `RM2026ZN000000001` del WR sample.
+- **`WarehouseReceipt` como modelo separado** (no enriquecer `Paquete`). `has_many :packages`. El `numero_recepcion` actual de `paquetes` migra a `warehouse_receipts.receipt_number`.
+- **`Supplier` (Proveedor)** modelo nuevo con código manual al crear, CRUD admin. Reemplaza el campo `paquetes.proveedor` (string libre actual).
+- **`Agent`** modelo nuevo, opcional, CRUD admin. Aparece en el WR sample (ej. `CORPORACION KARSAM`).
+- **`Terms`** (T&C) con texto genérico inicial (en/es), versionable. Cada WR congela la versión activa para auditoría.
+- **Audit log con `paper_trail` gem** para `Paquete`, `Cliente`, `PreAlerta`, `Manifiesto`, `Venta`, `PreFactura`, `Entrega`. Sin implementación custom.
+
+### Respuestas confirmadas por Yusef (PR-D1: estados, fechas, audit log)
+
+#### A. Estado "Disponible para retiro" programado
+
+La fecha programada se llena al **crear pre-factura en Honduras** (UI con: guía de manifiesto, fecha de trabajo/disponible, tipo de envío a procesar). Mientras espera la fecha programada, el paquete queda en estado `aduana`.
+
+El día programado, el sistema **automáticamente**:
+- Cambia el estado de todos los paquetes a `disponible_entrega`.
+- Envía notificaciones al cliente: email + SMS/WhatsApp + push notification del navegador.
+- Las notificaciones se envían **solo a partir de las 7am** (no de madrugada).
+
+**Implementación:** job nocturno (cron a las 7am) que revisa los paquetes con `fecha_programada_disponible <= hoy` y dispara los cambios + notifs.
+
+#### B. Re-modificación de fechas — política por campo
+
+| Campo | Política |
+|---|---|
+| `fecha_pre_alerta` | Queda original — **NUNCA se sobrescribe** |
+| `fecha_empacado` | Se actualiza al cambio (sobrescribe) |
+| `fecha_enviado` | Se actualiza al cambio (sobrescribe) |
+| `fecha_aduana` | Se actualiza al cambio (sobrescribe) |
+| `fecha_consolidando` | Se actualiza al cambio (sobrescribe) |
+| `fecha_disponible_entrega` | Se actualiza al cambio (sobrescribe) |
+
+El **log/bitácora** conserva el histórico completo de cambios. Visible para roles: **SAC, Supervisores, Admin**.
+
+#### C. Iniciales del usuario
+
+Campo nuevo `users.iniciales` editable al crear/editar el usuario en el CRUD admin. **NO calculado del nombre** (porque hay nombres repetidos y cada uno define su alias).
+
+#### D. "En qué bodega está" = Sucursal
+
+Bodega = sucursal. Sucursales operativas actuales:
+- **Sucursal Col Zerón, SPS** (San Pedro Sula).
+- **Sucursal Col Humuya, TGU** (Tegucigalpa).
+
+Implementación: el paquete tiene **dos referencias a sucursal**:
+- `sucursal_actual_id` — donde está físicamente. Se setea al escanear recepción.
+- `sucursal_destino_id` — a dónde va. Sale del manifiesto.
+
+#### E. Fecha posible de entrega
+
+- Tabla `tipos_envio` agrega columna `dias_estimados` (días típicos para ese tipo).
+- Al crear el paquete: `fecha_posible_entrega = fecha_recibido_miami + tipo_envio.dias_estimados`.
+- Al agregarse a un manifiesto: se actualiza con `manifiesto.fecha_envio + tipo_envio.dias_estimados` (afinar al implementar).
+- **Override manual** opcional via columna `fecha_posible_entrega_override`.
+- Roles autorizados a modificar manualmente: **admin + supervisor_miami + supervisor_prefactura**.
+
+> Yusef adelantó: "más adelante quiero escanear paquete por paquete que se está empacando" — fuera de scope de PR-D1, pero tener el flow listo.
+
+### Preguntas aún pendientes (al cliente)
+
+**Bloque PR-D1:**
+- 7. Recolecta — valor a cobrar: tabla de tarifas / manual / fijo.
+
+**Bloque PR-D2 — notas categorizadas:**
+- 9. Notas permanentes del cliente: ¿reusar `clientes.notas_miami/notas_honduras` o campo nuevo?
+- 10. Notas de retención: ¿obligatorias en estado `retenido`?
+
+**Bloque PR-D3 — proveedor + carrier:**
+- 11. Lista de proveedores: CRUD admin o seed fijo.
+- 12. ENTREGA PERSONAL flow completo (listado, tracking automático, nombre obligatorio).
+- 13. Carrier (`expedido_por`): ¿convertir a FK al modelo `Carrier`?
+- 14. Empresa de transporte vs manifiesto: ¿una fuente o redundante?
+
+**Bloque PR-D4 — botones:**
+- 15. Re-imprimir etiquetas: ¿todas las cajas o solo la actual?
+- 16. Botón "Refrescar": F5 o algo específico (ej. recargar solo la bitácora).
+
+**General:**
+- 17. Manifiesto formato `MM2026000001`: ¿en PR-D1, PR aparte, o postergar?
+
+---
+
 ## Próximos Pasos
 
 1. **Conversación 2:** Login, Logout, Creación de usuarios y roles — por documentar
-2. **Conversación 3:** Pendiente — visita al cliente
+2. **Conversación 3:** Detalle de Paquete Interno + Warehouse Receipt — ✅ documentada arriba (en curso, ~6 preguntas pendientes)
 3. **Conversación 4:** Pendiente — visita al cliente
 4. Después de las 4 conversaciones: crear plan de implementación completo por módulo

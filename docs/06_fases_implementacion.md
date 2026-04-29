@@ -236,6 +236,50 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 
 ---
 
+## Fase 5c: Detalle de Paquete + Warehouse Receipt (PR-D series)
+
+**Objetivo:** Rediseño completo de la vista detalle/edit del paquete y del Warehouse Receipt según spec del cliente (2026-04-29). Ver `docs/05_requerimientos_conversaciones.md` Conversación 3.
+
+| # | Branch / PR | Scope | Estado |
+|---|-------------|-------|--------|
+| 5c.0 | `fix/numero-recepcion-compartido-split` | `numero_recepcion` compartido entre las N cajas del split (madre único). Unique compuesto `(numero_recepcion, numero_caja)`. | ✅ #84 |
+| 5c.WR | `feat/warehouse-receipt-redesign` | Rediseño `label.html.erb` al WR completo (header empresa Miami LLC, banner navy, columnas Shipper/Consignee/Agent, tabla packages, totales LB/KG/cuft/m³, T&C bilingüe). | ✅ #85 |
+| 5c.5 | `feat/warehouse-receipt-model` | Modelos nuevos: `WarehouseReceipt` + `Supplier` + `Agent` + `Terms`. Migra `paquetes.numero_recepcion` → `paquetes.warehouse_receipt_id`. **Antecede a D1-D4.** | ⏳ Listo para implementar |
+| 5c.1 | `feat/paquete-estados-fechas-audit` | Nuevo estado `pre_alerta`, ~7 fechas + `*_user_id` por fecha, `users.iniciales` (campo nuevo editable), `paper_trail` + UI bitácora. Job nocturno de "disponible programada" con notif email/SMS/WhatsApp/push a las 7am. | ⏳ Bloqueado solo por pregunta 7 (recolecta) |
+| 5c.2 | `feat/paquete-notas-categorizadas` | Refactor notas (especiales PA, consolidación PA, retención, permanentes_cliente, internas, al_cliente). | ⏳ Bloqueado por preguntas 9-10 |
+| 5c.3 | `feat/paquete-tercero-supplier-agent-services` | `tercero_id` (cliente search), `service_code` enum, `repackaging_type` enum, `consolidation` bool. Refina `Supplier` y `Agent` desde 5c.5. | ⏳ Bloqueado por preguntas 11-14 |
+| 5c.4 | `feat/paquete-show-actions` | ~10 botones del header del show (mover/eliminar PA, copy buttons, ver pre-factura/factura). El WR ya está hecho en 5c.WR. | ⏳ Bloqueado por preguntas 15-16 |
+
+**Dependencia:** Fase 5b (numero_recepcion anual + split). ✅ Cumplida.
+
+**Decisiones de arquitectura confirmadas (Jorge + Yusef, 2026-04-28..29):**
+- `numero_recepcion` compartido en split, formato `RM0002026000001` (15 chars, no `RM2026ZN000000001`).
+- `WarehouseReceipt` modelo separado de `Paquete`. `has_many :packages`.
+- `Supplier` (Proveedor) modelo nuevo con código manual + CRUD admin.
+- `Agent` modelo nuevo opcional + CRUD admin.
+- `Terms` modelo versionable, texto genérico bilingüe inicial.
+- Audit log con `paper_trail` gem (no custom).
+
+**Respuestas confirmadas para PR-D1 (estados/fechas/audit) — 2026-04-29:**
+
+1. **Disponible programada:** se llena al crear pre-factura; job a las 7am cambia estado + dispara notif (email + SMS/WhatsApp + push browser).
+2. **Re-modificación de fechas:** `fecha_pre_alerta` queda original. Empacado/Enviado/Aduana/Consolidando/Disponible se sobrescriben. Log conserva histórico, visible para SAC + Supervisores + Admin.
+3. **Iniciales:** campo nuevo `users.iniciales` editable al crear/editar usuario en CRUD admin (no calculado del nombre).
+4. **Bodega = Sucursal.** Sucursales actuales: **Zerón SPS** + **Humuya TGU**. Paquete tiene `sucursal_actual_id` (físico, al escanear) y `sucursal_destino_id` (del manifiesto).
+5. **Fecha posible de entrega:** `tipos_envio.dias_estimados` + `fecha_recibido_miami`. Al ir a manifiesto se actualiza con fecha del manifiesto. Override manual via `fecha_posible_entrega_override`.
+6. **Modificar fecha posible:** admin + supervisor_miami + supervisor_prefactura.
+
+**Preguntas pendientes para Yusef (bloquean PRs específicos):**
+- 7. Recolecta valor (PR-D1).
+- 9-10. Notas (PR-D2).
+- 11-14. Proveedor/carrier/agent (PR-D3).
+- 15-16. Botones (PR-D4).
+- 17. Manifiesto formato `MM2026000001` (general).
+
+**Referencia:** `docs/05_requerimientos_conversaciones.md` Conversación 3.
+
+---
+
 ## Fase 9: Fotos de Paquetes (Miami)
 
 **Objetivo:** Capturar fotos en la estación de recepción y asociarlas al paquete con envío al cliente.
