@@ -1218,7 +1218,8 @@ CREATE TABLE public.paquetes (
     entrega_id bigint,
     sucursal_id bigint,
     numero_recepcion character varying,
-    fecha_disponible timestamp(6) without time zone
+    fecha_disponible timestamp(6) without time zone,
+    warehouse_receipt_id bigint
 );
 
 
@@ -2628,6 +2629,13 @@ ALTER TABLE ONLY public.warehouse_receipts
 --
 
 CREATE UNIQUE INDEX idx_fin_cuotas_unique ON public.financiamiento_cuotas USING btree (financiamiento_id, numero_cuota);
+
+
+--
+-- Name: idx_paquetes_warehouse_receipt; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_paquetes_warehouse_receipt ON public.paquetes USING btree (warehouse_receipt_id);
 
 
 --
@@ -4213,6 +4221,14 @@ ALTER TABLE ONLY public.financiamiento_cuotas
 
 
 --
+-- Name: paquetes fk_rails_fa39c85169; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_fa39c85169 FOREIGN KEY (warehouse_receipt_id) REFERENCES public.warehouse_receipts(id);
+
+
+--
 -- Name: paquetes fk_rails_fd73715478; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4227,6 +4243,7 @@ ALTER TABLE ONLY public.paquetes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260429234222'),
 ('20260429231028'),
 ('20260429231027'),
 ('20260429231026'),

@@ -316,6 +316,49 @@ class PaqueteTest < ActiveSupport::TestCase
     assert_match(/\ARM\d{13}\z/, numeros.first)
   end
 
+  # ── PR-5c.5p2: integración Paquete ↔ WarehouseReceipt ──
+
+  test "crear_split! crea un único WarehouseReceipt madre y lo asocia a las N cajas" do
+    paquetes = Paquete.crear_split!(
+      attrs: { tracking: "1Z999WRINT_A", cliente: clientes(:juan), sucursal: sucursales(:miami) },
+      total_cajas: 4
+    )
+
+    wr_ids = paquetes.map(&:warehouse_receipt_id).uniq
+    assert_equal 1, wr_ids.size, "las 4 cajas deben apuntar al MISMO warehouse_receipt"
+    assert_not_nil wr_ids.first
+
+    wr = WarehouseReceipt.find(wr_ids.first)
+    assert_equal paquetes.first.numero_recepcion, wr.receipt_number
+    assert_equal clientes(:juan), wr.consignee
+    assert_equal sucursales(:miami), wr.sucursal
+    assert_equal "received", wr.status
+  end
+
+  test "create de paquete single dispara ensure_warehouse_receipt" do
+    p = Paquete.create!(tracking: "1Z999WRINT_B", cliente: clientes(:juan), sucursal: sucursales(:miami))
+    assert_not_nil p.warehouse_receipt_id, "paquete single debe tener WR asociado tras create"
+    assert_equal p.numero_recepcion, p.warehouse_receipt.receipt_number
+    assert_equal clientes(:juan), p.warehouse_receipt.consignee
+  end
+
+  test "ensure_warehouse_receipt es idempotente (find_or_initialize_by)" do
+    p1 = Paquete.create!(tracking: "1Z999WRINT_C1", cliente: clientes(:juan), sucursal: sucursales(:miami))
+    wr_count_after_first = WarehouseReceipt.count
+
+    p2 = Paquete.create!(
+      tracking: "1Z999WRINT_C2",
+      cliente: clientes(:juan),
+      sucursal: sucursales(:miami),
+      numero_recepcion: p1.numero_recepcion,
+      numero_caja: 2,
+      cantidad_paquetes: 2
+    )
+
+    assert_equal wr_count_after_first, WarehouseReceipt.count, "no debe crearse un 2do WR para el mismo madre"
+    assert_equal p1.warehouse_receipt_id, p2.warehouse_receipt_id
+  end
+
   test "crear_split! incrementa el counter UNA sola vez (no N)" do
     counter_before = NumeroRecepcionCounter.where(sucursal: sucursales(:miami), anio: Time.zone.now.year)
                                             .pick(:ultimo_numero) || 0

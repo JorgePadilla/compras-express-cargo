@@ -25,7 +25,9 @@ class WarehouseReceipt < ApplicationRecord
   belongs_to :pre_alerta, optional: true
   belongs_to :sucursal,   optional: true
 
-  # En parte 2 se agrega: has_many :paquetes (FK paquetes.warehouse_receipt_id)
+  # PR-5c.5p2: las N cajas del split (mismo numero_recepcion) apuntan al
+  # mismo WR. Para paquete single, hay 1 sola fila apuntando.
+  has_many :paquetes, dependent: :nullify
 
   validates :receipt_number, presence: true, uniqueness: { case_sensitive: false }
   validates :issued_on,      presence: true

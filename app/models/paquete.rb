@@ -7,6 +7,7 @@ class Paquete < ApplicationRecord
   belongs_to :venta, optional: true
   belongs_to :entrega, optional: true
   belongs_to :sucursal, optional: true
+  belongs_to :warehouse_receipt, optional: true  # PR-5c.5p2 — fuente rica del numero_recepcion (madre)
   has_many :pre_alerta_paquetes, dependent: :nullify
   has_many :nota_debito_items,  dependent: :nullify
   has_many :nota_credito_items, dependent: :nullify
@@ -79,6 +80,7 @@ class Paquete < ApplicationRecord
 
   before_validation :generate_guia, on: :create, if: -> { guia.blank? }
   before_validation :generate_numero_recepcion, on: :create, if: -> { numero_recepcion.blank? && sucursal_id.present? }
+  after_create :ensure_warehouse_receipt, if: -> { warehouse_receipt_id.nil? && numero_recepcion.present? && cliente_id.present? }
   before_save :set_fecha_recibido, if: -> { fecha_recibido_miami.blank? && new_record? }
   before_save :calculate_peso_volumetrico
   before_save :calculate_peso_cobrar
@@ -132,18 +134,48 @@ class Paquete < ApplicationRecord
     n = total_cajas.to_i
     raise ArgumentError, "total_cajas debe ser >= 2" if n < 2
 
-    sucursal = attrs[:sucursal] || Sucursal.find_by(id: attrs[:sucursal_id])
+    sucursal     = attrs[:sucursal]     || Sucursal.find_by(id: attrs[:sucursal_id])
+    cliente      = attrs[:cliente]      || Cliente.find_by(id: attrs[:cliente_id])
     numero_madre = generate_numero_recepcion_madre(sucursal: sucursal, attrs: attrs)
 
     transaction do
+      # PR-5c.5p2: crea el WR madre antes de los paquetes y los enlaza.
+      wr = build_warehouse_receipt(
+        receipt_number: numero_madre,
+        cliente: cliente,
+        sucursal: sucursal,
+        attrs: attrs
+      )
+      wr&.save!
+
       (1..n).map do |i|
         Paquete.create!(attrs.merge(
           numero_caja: i,
           cantidad_paquetes: n,
-          numero_recepcion: numero_madre
+          numero_recepcion: numero_madre,
+          warehouse_receipt_id: wr&.id
         ))
       end
     end
+  end
+
+  # Construye un WarehouseReceipt para el split. Solo se crea cuando hay
+  # cliente+receipt_number+sucursal — ausente en fixtures y tests legacy.
+  # Retorna nil cuando faltan datos para no romper esos casos.
+  def self.build_warehouse_receipt(receipt_number:, cliente:, sucursal:, attrs:)
+    return nil if cliente.nil? || receipt_number.blank?
+
+    fecha = attrs[:fecha_recibido_miami] || Time.zone.now
+    issued_on = fecha.respond_to?(:to_date) ? fecha.to_date : Time.zone.today
+
+    WarehouseReceipt.new(
+      receipt_number: receipt_number,
+      issued_on:      issued_on,
+      consignee:      cliente,
+      sucursal:       sucursal,
+      user:           attrs[:user],
+      status:         "received"
+    )
   end
 
   # Genera el número madre que las N cajas del split compartirán. Usa el
@@ -306,5 +338,25 @@ class Paquete < ApplicationRecord
     if peso.present? || peso_volumetrico.present?
       self.peso_cobrar = [peso || 0, peso_volumetrico || 0].max
     end
+  end
+
+  # PR-5c.5p2: para paquetes creados fuera de `crear_split!` (flow normal de
+  # /etiquetar single, fixtures, scripts), crea/encuentra un WR madre con
+  # el mismo numero_recepcion. Las N cajas de un split (que comparten
+  # numero_recepcion) terminan apuntando al mismo WR aunque cada una entre
+  # por aquí — el find_or_create_by hace el match por receipt_number.
+  def ensure_warehouse_receipt
+    wr = WarehouseReceipt.find_or_initialize_by(receipt_number: numero_recepcion)
+    if wr.new_record?
+      wr.assign_attributes(
+        issued_on: (fecha_recibido_miami&.to_date || created_at&.to_date || Time.zone.today),
+        consignee: cliente,
+        sucursal: sucursal,
+        user: user,
+        status: "received"
+      )
+      wr.save!
+    end
+    update_column(:warehouse_receipt_id, wr.id) if warehouse_receipt_id != wr.id
   end
 end

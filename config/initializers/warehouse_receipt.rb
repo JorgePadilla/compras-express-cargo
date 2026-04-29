@@ -12,8 +12,7 @@ Rails.application.config.x.warehouse_receipt = ActiveSupport::OrderedOptions.new
     postal_code: "33195-3415",
     country: "USA",
     phone: "+1 305-848-0990",
-    website: "https://www.comprasexpresshn.com",
-    footer_credit: "Powered by SISTEMAS PADILLAS"
+    website: "https://www.comprasexpresshn.com"
   ),
   terms_version: "2026-01"
 )
