@@ -9,8 +9,17 @@ class WarehouseReceipt < ApplicationRecord
   STATUSES = %w[draft received printed dispatched delivered abandoned].freeze
   REPACKAGING_TYPES = %w[sin_reempacar reempacar reempacar_unitario].freeze
 
+  # `consignee` (Cliente destinatario) es REQUERIDO: todo WR se emite a
+  # nombre de un cliente concreto que recibirá la mercancía. Si no hay
+  # consignee, el documento no tiene sentido de negocio.
+  #
+  # Las demás asociaciones quedan opcionales:
+  #   - `supplier` puede ser nil (caso ENTREGA PERSONAL sin proveedor real registrado).
+  #   - `agent` es opcional por diseño (mayoría de WRs no llevan agent).
+  #   - `user`, `pre_alerta`, `sucursal` pueden faltar en escenarios edge
+  #     (data legacy, WRs creados via console, paquetes sin pre-alerta).
+  belongs_to :consignee,  class_name: "Cliente"
   belongs_to :supplier,   optional: true
-  belongs_to :consignee,  class_name: "Cliente",   optional: true
   belongs_to :agent,      optional: true
   belongs_to :user,       optional: true
   belongs_to :pre_alerta, optional: true

@@ -1,35 +1,45 @@
 require "test_helper"
 
 class WarehouseReceiptTest < ActiveSupport::TestCase
-  test "valid con campos requeridos" do
-    wr = WarehouseReceipt.new(
+  setup do
+    @cliente = clientes(:juan)
+  end
+
+  def build_wr(attrs = {})
+    WarehouseReceipt.new({
       receipt_number: "RM0002026000001",
       issued_on: Date.current,
-      status: "draft"
-    )
-    assert wr.valid?
+      consignee: @cliente
+    }.merge(attrs))
+  end
+
+  test "valid con campos requeridos (incluye consignee)" do
+    assert build_wr(status: "draft").valid?
+  end
+
+  test "consignee es requerido — sin consignee no es válido" do
+    wr = WarehouseReceipt.new(receipt_number: "RM0002026000999", issued_on: Date.current)
+    assert_not wr.valid?
+    assert wr.errors[:consignee].any?, "esperaba error de presence en consignee"
   end
 
   test "receipt_number es requerido y único case-insensitive" do
-    WarehouseReceipt.create!(receipt_number: "RM0002026000001", issued_on: Date.current)
-    duplicate = WarehouseReceipt.new(receipt_number: "rm0002026000001", issued_on: Date.current)
+    WarehouseReceipt.create!(receipt_number: "RM0002026000001",
+                             issued_on: Date.current, consignee: @cliente)
+    duplicate = build_wr(receipt_number: "rm0002026000001")
     assert_not duplicate.valid?
   end
 
   test "status debe estar en STATUSES" do
-    wr = WarehouseReceipt.new(receipt_number: "X", issued_on: Date.current, status: "invalido")
-    assert_not wr.valid?
+    assert_not build_wr(receipt_number: "X", status: "invalido").valid?
   end
 
   test "repackaging_type acepta solo valores válidos" do
-    wr = WarehouseReceipt.new(receipt_number: "X", issued_on: Date.current,
-                              repackaging_type: "invalido")
-    assert_not wr.valid?
+    assert_not build_wr(receipt_number: "X", repackaging_type: "invalido").valid?
   end
 
   test "permite repackaging_type nil" do
-    wr = WarehouseReceipt.new(receipt_number: "X", issued_on: Date.current)
-    assert wr.valid?
+    assert build_wr(receipt_number: "X").valid?
   end
 
   test "calcula total_weight_kg desde lb" do
@@ -55,27 +65,24 @@ class WarehouseReceiptTest < ActiveSupport::TestCase
   end
 
   test "scope recientes ordena por issued_on desc" do
-    wr1 = WarehouseReceipt.create!(receipt_number: "WR1", issued_on: Date.new(2026, 1, 1))
-    wr2 = WarehouseReceipt.create!(receipt_number: "WR2", issued_on: Date.new(2026, 2, 1))
+    wr1 = build_wr(receipt_number: "WR1", issued_on: Date.new(2026, 1, 1)).tap(&:save!)
+    wr2 = build_wr(receipt_number: "WR2", issued_on: Date.new(2026, 2, 1)).tap(&:save!)
     assert_equal [ wr2, wr1 ], WarehouseReceipt.recientes.to_a.first(2)
   end
 
   test "scope activos excluye abandonados" do
-    draft = WarehouseReceipt.create!(receipt_number: "D1", issued_on: Date.current, status: "draft")
-    abandoned = WarehouseReceipt.create!(receipt_number: "D2", issued_on: Date.current, status: "abandoned")
+    draft = build_wr(receipt_number: "D1", status: "draft").tap(&:save!)
+    abandoned = build_wr(receipt_number: "D2", status: "abandoned").tap(&:save!)
     assert_includes WarehouseReceipt.activos, draft
     assert_not_includes WarehouseReceipt.activos, abandoned
   end
 
   test "belongs_to consignee con class_name Cliente" do
-    cliente = clientes(:juan)
-    wr = WarehouseReceipt.create!(receipt_number: "WR-CONS",
-                                  issued_on: Date.current, consignee: cliente)
-    assert_equal cliente, wr.consignee
+    wr = build_wr(receipt_number: "WR-CONS").tap(&:save!)
+    assert_equal @cliente, wr.consignee
   end
 
   test "permite supplier nil (caso ENTREGA PERSONAL sin proveedor real)" do
-    wr = WarehouseReceipt.new(receipt_number: "X", issued_on: Date.current, supplier: nil)
-    assert wr.valid?
+    assert build_wr(receipt_number: "X", supplier: nil).valid?
   end
 end
