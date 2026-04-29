@@ -86,15 +86,14 @@ module WarehouseReceiptHelper
   # Defaults inline — si el initializer no se cargó (typical en dev sin
   # restart), no rompemos la página. El initializer puede sobrescribirlos.
   WR_ISSUING_COMPANY_DEFAULT = {
-    name:          "COMPRAS EXPRESS LOGISTICS LLC",
-    street:        "8109 NW 60th STREET",
-    city:          "Miami",
-    state:         "Florida",
-    postal_code:   "33195-3415",
-    country:       "USA",
-    phone:         "+1 305-848-0990",
-    website:       "https://www.comprasexpresshn.com",
-    footer_credit: "Powered by SISTEMAS PADILLAS"
+    name:        "COMPRAS EXPRESS LOGISTICS LLC",
+    street:      "8109 NW 60th STREET",
+    city:        "Miami",
+    state:       "Florida",
+    postal_code: "33195-3415",
+    country:     "USA",
+    phone:       "+1 305-848-0990",
+    website:     "https://www.comprasexpresshn.com"
   }.freeze
   WR_TERMS_VERSION_DEFAULT = "2026-01".freeze
 
