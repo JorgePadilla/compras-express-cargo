@@ -51,11 +51,14 @@ module WarehouseReceiptHelper
     parts.first(2).map { |w| "#{w[0].to_s.upcase}." }.join
   end
 
-  # Texto T&C bilingüe genérico inicial. Versionado via
-  # `Rails.application.config.x.warehouse_receipt.terms_version` (2026-01).
-  # Cuando se cree el modelo `Terms` (PR-D5) este helper consultará la fila
-  # activa para la versión congelada del WR.
-  def wr_terms(language: :es)
+  # Texto T&C para el WR. Consulta el modelo `Term` cuando hay una version
+  # asociada al WR; cae a las constantes inline (defensive) si no hay
+  # ninguna fila activa para el idioma pedido.
+  def wr_terms(language: :es, version: nil)
+    if version.present?
+      from_db = Term.body_for(version: version, language: language.to_s)
+      return from_db if from_db.present?
+    end
     case language.to_sym
     when :en then WR_TERMS_EN
     else          WR_TERMS_ES

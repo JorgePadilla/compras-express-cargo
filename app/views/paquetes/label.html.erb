@@ -58,12 +58,24 @@
 
 <hr class="wr-divider">
 
+<% wr        = @paquete.warehouse_receipt %>
+<% supplier = wr&.supplier %>
+<% agent    = wr&.agent %>
+
 <%# ── Shipper / Consignee / Agent ── %>
 <div class="wr-row wr-section">
-  <%# Shipper (Supplier / Proveedor) — placeholder hasta PR-D5 %>
+  <%# Shipper (Supplier / Proveedor) %>
   <div class="wr-col">
     <div class="wr-h">Shipper / Proveedor</div>
-    <% if @paquete.proveedor.present? %>
+    <% if supplier %>
+      <div class="wr-v">
+        <span class="wr-mono" style="color:#1B2559;font-weight:bold;"><%= supplier.codigo %></span>
+        · <strong><%= supplier.nombre %></strong>
+      </div>
+      <div class="wr-v" style="color:#666;">
+        <%= [ supplier.street_address, supplier.city, supplier.state, supplier.postal_code ].compact_blank.join(", ").presence || "—" %>
+      </div>
+    <% elsif @paquete.proveedor.present? %>
       <div class="wr-v" style="font-weight:bold;"><%= @paquete.proveedor %></div>
       <div class="wr-v" style="color:#666;">
         <% if @paquete.expedido_por.present? %>via <%= @paquete.expedido_por %><% end %>
@@ -73,24 +85,33 @@
     <% end %>
   </div>
 
-  <%# Consignee (Cliente) %>
+  <%# Consignee (Cliente) — leído del WR si existe, fallback a paquete.cliente %>
+  <% consignee = wr&.consignee || @paquete.cliente %>
   <div class="wr-col">
     <div class="wr-h">Consignee / Cliente</div>
     <div class="wr-v">
-      <span class="wr-mono" style="color:#1B2559;font-weight:bold;"><%= @paquete.cliente.codigo %></span>
+      <span class="wr-mono" style="color:#1B2559;font-weight:bold;"><%= consignee.codigo %></span>
       ·
-      <strong><%= @paquete.cliente.nombre_completo %></strong>
+      <strong><%= consignee.nombre_completo %></strong>
     </div>
     <div class="wr-v" style="color:#666;">
-      <%= [ @paquete.cliente.ciudad, @paquete.cliente.departamento ].compact.join(", ").presence || "—" %><br>
+      <%= [ consignee.ciudad, consignee.departamento ].compact_blank.join(", ").presence || "—" %><br>
       HONDURAS
     </div>
   </div>
 
-  <%# Agent — placeholder hasta PR-D5 %>
+  <%# Agent — del WR si lo hay, fallback a Sucursal %>
   <div class="wr-col">
     <div class="wr-h">Agent</div>
-    <% if @paquete.sucursal.present? %>
+    <% if agent %>
+      <div class="wr-v">
+        <span class="wr-mono" style="color:#1B2559;font-weight:bold;"><%= agent.codigo %></span>
+        · <strong><%= agent.nombre %></strong>
+      </div>
+      <div class="wr-v" style="color:#666;">
+        <%= [ agent.destination_city, agent.destination_country ].compact_blank.join(", ").presence || "—" %>
+      </div>
+    <% elsif @paquete.sucursal.present? %>
       <div class="wr-v" style="font-weight:bold;"><%= @paquete.sucursal.nombre %></div>
       <div class="wr-v" style="color:#666;font-family:'Courier New',monospace;font-size:11px;"><%= @paquete.sucursal.codigo %></div>
     <% else %>
@@ -174,17 +195,18 @@
   </table>
 </div>
 
+<% terms_version = wr&.terms_version.presence || wr_terms_version %>
 <%# ── Terms & Conditions bilingüe ── %>
 <div class="wr-section">
-  <div class="wr-h" style="margin-bottom:6px;">Terms & Conditions / Términos y Condiciones — v<%= wr_terms_version %></div>
+  <div class="wr-h" style="margin-bottom:6px;">Terms & Conditions / Términos y Condiciones — v<%= terms_version %></div>
   <div class="wr-terms-cols">
     <div>
       <div class="wr-h" style="color:#1B2559;">English</div>
-      <div style="white-space:pre-line;"><%= wr_terms(language: :en) %></div>
+      <div style="white-space:pre-line;"><%= wr_terms(language: :en, version: terms_version) %></div>
     </div>
     <div>
       <div class="wr-h" style="color:#1B2559;">Español</div>
-      <div style="white-space:pre-line;"><%= wr_terms(language: :es) %></div>
+      <div style="white-space:pre-line;"><%= wr_terms(language: :es, version: terms_version) %></div>
     </div>
   </div>
 </div>
