@@ -114,6 +114,42 @@ ALTER SEQUENCE public.active_storage_variant_records_id_seq OWNED BY public.acti
 
 
 --
+-- Name: agents; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.agents (
+    id bigint NOT NULL,
+    codigo character varying NOT NULL,
+    nombre character varying NOT NULL,
+    destination_city character varying,
+    destination_country character varying DEFAULT 'Honduras'::character varying,
+    activo boolean DEFAULT true NOT NULL,
+    "position" integer DEFAULT 0 NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: agents_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.agents_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: agents_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.agents_id_seq OWNED BY public.agents.id;
+
+
+--
 -- Name: aperturas_caja; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1525,6 +1561,46 @@ ALTER SEQUENCE public.sucursales_id_seq OWNED BY public.sucursales.id;
 
 
 --
+-- Name: suppliers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.suppliers (
+    id bigint NOT NULL,
+    codigo character varying NOT NULL,
+    nombre character varying NOT NULL,
+    tipo character varying DEFAULT 'comercio'::character varying NOT NULL,
+    street_address character varying,
+    city character varying,
+    state character varying,
+    postal_code character varying,
+    country character varying DEFAULT 'USA'::character varying,
+    activo boolean DEFAULT true NOT NULL,
+    "position" integer DEFAULT 0 NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: suppliers_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.suppliers_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: suppliers_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.suppliers_id_seq OWNED BY public.suppliers.id;
+
+
+--
 -- Name: tamano_cajas; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1594,6 +1670,41 @@ CREATE SEQUENCE public.tareas_id_seq
 --
 
 ALTER SEQUENCE public.tareas_id_seq OWNED BY public.tareas.id;
+
+
+--
+-- Name: terms; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.terms (
+    id bigint NOT NULL,
+    version character varying NOT NULL,
+    language character varying NOT NULL,
+    body text NOT NULL,
+    effective_from date NOT NULL,
+    activo boolean DEFAULT true NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: terms_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.terms_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: terms_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.terms_id_seq OWNED BY public.terms.id;
 
 
 --
@@ -1755,6 +1866,58 @@ ALTER SEQUENCE public.ventas_id_seq OWNED BY public.ventas.id;
 
 
 --
+-- Name: warehouse_receipts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.warehouse_receipts (
+    id bigint NOT NULL,
+    receipt_number character varying NOT NULL,
+    issued_on date NOT NULL,
+    printed_at timestamp(6) without time zone,
+    printed_by_initials character varying,
+    supplier_id bigint,
+    consignee_id bigint,
+    agent_id bigint,
+    user_id bigint,
+    pre_alerta_id bigint,
+    sucursal_id bigint,
+    service_code character varying,
+    repackaging_type character varying,
+    consolidation boolean DEFAULT false NOT NULL,
+    declared_value_cents integer DEFAULT 0 NOT NULL,
+    declared_value_currency character varying DEFAULT 'USD'::character varying NOT NULL,
+    total_pieces integer DEFAULT 0 NOT NULL,
+    total_weight_lb numeric(10,2) DEFAULT 0.0,
+    total_volumetric_weight_lb numeric(10,2) DEFAULT 0.0,
+    total_volume_cuft numeric(10,2) DEFAULT 0.0,
+    status character varying DEFAULT 'draft'::character varying NOT NULL,
+    terms_version character varying,
+    notes_internal text,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: warehouse_receipts_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.warehouse_receipts_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: warehouse_receipts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.warehouse_receipts_id_seq OWNED BY public.warehouse_receipts.id;
+
+
+--
 -- Name: active_storage_attachments id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1773,6 +1936,13 @@ ALTER TABLE ONLY public.active_storage_blobs ALTER COLUMN id SET DEFAULT nextval
 --
 
 ALTER TABLE ONLY public.active_storage_variant_records ALTER COLUMN id SET DEFAULT nextval('public.active_storage_variant_records_id_seq'::regclass);
+
+
+--
+-- Name: agents id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agents ALTER COLUMN id SET DEFAULT nextval('public.agents_id_seq'::regclass);
 
 
 --
@@ -2007,6 +2177,13 @@ ALTER TABLE ONLY public.sucursales ALTER COLUMN id SET DEFAULT nextval('public.s
 
 
 --
+-- Name: suppliers id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.suppliers ALTER COLUMN id SET DEFAULT nextval('public.suppliers_id_seq'::regclass);
+
+
+--
 -- Name: tamano_cajas id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -2018,6 +2195,13 @@ ALTER TABLE ONLY public.tamano_cajas ALTER COLUMN id SET DEFAULT nextval('public
 --
 
 ALTER TABLE ONLY public.tareas ALTER COLUMN id SET DEFAULT nextval('public.tareas_id_seq'::regclass);
+
+
+--
+-- Name: terms id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.terms ALTER COLUMN id SET DEFAULT nextval('public.terms_id_seq'::regclass);
 
 
 --
@@ -2049,6 +2233,13 @@ ALTER TABLE ONLY public.ventas ALTER COLUMN id SET DEFAULT nextval('public.venta
 
 
 --
+-- Name: warehouse_receipts id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.warehouse_receipts ALTER COLUMN id SET DEFAULT nextval('public.warehouse_receipts_id_seq'::regclass);
+
+
+--
 -- Name: active_storage_attachments active_storage_attachments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2070,6 +2261,14 @@ ALTER TABLE ONLY public.active_storage_blobs
 
 ALTER TABLE ONLY public.active_storage_variant_records
     ADD CONSTRAINT active_storage_variant_records_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: agents agents_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.agents
+    ADD CONSTRAINT agents_pkey PRIMARY KEY (id);
 
 
 --
@@ -2353,6 +2552,14 @@ ALTER TABLE ONLY public.sucursales
 
 
 --
+-- Name: suppliers suppliers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.suppliers
+    ADD CONSTRAINT suppliers_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: tamano_cajas tamano_cajas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2366,6 +2573,14 @@ ALTER TABLE ONLY public.tamano_cajas
 
 ALTER TABLE ONLY public.tareas
     ADD CONSTRAINT tareas_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: terms terms_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.terms
+    ADD CONSTRAINT terms_pkey PRIMARY KEY (id);
 
 
 --
@@ -2401,6 +2616,14 @@ ALTER TABLE ONLY public.ventas
 
 
 --
+-- Name: warehouse_receipts warehouse_receipts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.warehouse_receipts
+    ADD CONSTRAINT warehouse_receipts_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: idx_fin_cuotas_unique; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2412,6 +2635,20 @@ CREATE UNIQUE INDEX idx_fin_cuotas_unique ON public.financiamiento_cuotas USING 
 --
 
 CREATE UNIQUE INDEX idx_recepcion_counters_sucursal_anio ON public.numero_recepcion_counters USING btree (sucursal_id, anio);
+
+
+--
+-- Name: idx_terms_version_language; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_terms_version_language ON public.terms USING btree (version, language);
+
+
+--
+-- Name: idx_wr_receipt_number; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_wr_receipt_number ON public.warehouse_receipts USING btree (receipt_number);
 
 
 --
@@ -2440,6 +2677,20 @@ CREATE UNIQUE INDEX index_active_storage_blobs_on_key ON public.active_storage_b
 --
 
 CREATE UNIQUE INDEX index_active_storage_variant_records_uniqueness ON public.active_storage_variant_records USING btree (blob_id, variation_digest);
+
+
+--
+-- Name: index_agents_on_activo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_agents_on_activo ON public.agents USING btree (activo);
+
+
+--
+-- Name: index_agents_on_codigo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_agents_on_codigo ON public.agents USING btree (codigo);
 
 
 --
@@ -3150,6 +3401,27 @@ CREATE UNIQUE INDEX index_sucursales_on_codigo_recepcion_prefix ON public.sucurs
 
 
 --
+-- Name: index_suppliers_on_activo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_suppliers_on_activo ON public.suppliers USING btree (activo);
+
+
+--
+-- Name: index_suppliers_on_codigo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_suppliers_on_codigo ON public.suppliers USING btree (codigo);
+
+
+--
+-- Name: index_suppliers_on_tipo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_suppliers_on_tipo ON public.suppliers USING btree (tipo);
+
+
+--
 -- Name: index_tareas_on_asignado_a_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3175,6 +3447,13 @@ CREATE INDEX index_tareas_on_estado ON public.tareas USING btree (estado);
 --
 
 CREATE INDEX index_tareas_on_paquete_id ON public.tareas USING btree (paquete_id);
+
+
+--
+-- Name: index_terms_on_activo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_terms_on_activo ON public.terms USING btree (activo);
 
 
 --
@@ -3259,6 +3538,62 @@ CREATE UNIQUE INDEX index_ventas_on_numero ON public.ventas USING btree (numero)
 --
 
 CREATE INDEX index_ventas_on_pre_factura_id ON public.ventas USING btree (pre_factura_id);
+
+
+--
+-- Name: index_warehouse_receipts_on_agent_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_warehouse_receipts_on_agent_id ON public.warehouse_receipts USING btree (agent_id);
+
+
+--
+-- Name: index_warehouse_receipts_on_consignee_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_warehouse_receipts_on_consignee_id ON public.warehouse_receipts USING btree (consignee_id);
+
+
+--
+-- Name: index_warehouse_receipts_on_issued_on; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_warehouse_receipts_on_issued_on ON public.warehouse_receipts USING btree (issued_on);
+
+
+--
+-- Name: index_warehouse_receipts_on_pre_alerta_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_warehouse_receipts_on_pre_alerta_id ON public.warehouse_receipts USING btree (pre_alerta_id);
+
+
+--
+-- Name: index_warehouse_receipts_on_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_warehouse_receipts_on_status ON public.warehouse_receipts USING btree (status);
+
+
+--
+-- Name: index_warehouse_receipts_on_sucursal_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_warehouse_receipts_on_sucursal_id ON public.warehouse_receipts USING btree (sucursal_id);
+
+
+--
+-- Name: index_warehouse_receipts_on_supplier_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_warehouse_receipts_on_supplier_id ON public.warehouse_receipts USING btree (supplier_id);
+
+
+--
+-- Name: index_warehouse_receipts_on_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_warehouse_receipts_on_user_id ON public.warehouse_receipts USING btree (user_id);
 
 
 --
@@ -3382,6 +3717,14 @@ ALTER TABLE ONLY public.pre_alertas
 
 
 --
+-- Name: warehouse_receipts fk_rails_206d572a0b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.warehouse_receipts
+    ADD CONSTRAINT fk_rails_206d572a0b FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
 -- Name: tareas fk_rails_239a2c336c; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3403,6 +3746,22 @@ ALTER TABLE ONLY public.clientes
 
 ALTER TABLE ONLY public.recibos
     ADD CONSTRAINT fk_rails_2f5aebc4a3 FOREIGN KEY (venta_id) REFERENCES public.ventas(id);
+
+
+--
+-- Name: warehouse_receipts fk_rails_318e9c5df4; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.warehouse_receipts
+    ADD CONSTRAINT fk_rails_318e9c5df4 FOREIGN KEY (agent_id) REFERENCES public.agents(id);
+
+
+--
+-- Name: warehouse_receipts fk_rails_35c83da0a8; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.warehouse_receipts
+    ADD CONSTRAINT fk_rails_35c83da0a8 FOREIGN KEY (pre_alerta_id) REFERENCES public.pre_alertas(id);
 
 
 --
@@ -3459,6 +3818,14 @@ ALTER TABLE ONLY public.reempaques
 
 ALTER TABLE ONLY public.cotizaciones
     ADD CONSTRAINT fk_rails_54a36869dd FOREIGN KEY (cliente_id) REFERENCES public.clientes(id);
+
+
+--
+-- Name: warehouse_receipts fk_rails_56a042f43b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.warehouse_receipts
+    ADD CONSTRAINT fk_rails_56a042f43b FOREIGN KEY (sucursal_id) REFERENCES public.sucursales(id);
 
 
 --
@@ -3694,6 +4061,14 @@ ALTER TABLE ONLY public.ingresos_caja
 
 
 --
+-- Name: warehouse_receipts fk_rails_bd11b17ab6; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.warehouse_receipts
+    ADD CONSTRAINT fk_rails_bd11b17ab6 FOREIGN KEY (consignee_id) REFERENCES public.clientes(id);
+
+
+--
 -- Name: nota_credito_items fk_rails_be235163df; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3790,6 +4165,14 @@ ALTER TABLE ONLY public.pre_alerta_paquetes
 
 
 --
+-- Name: warehouse_receipts fk_rails_d9ce00665a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.warehouse_receipts
+    ADD CONSTRAINT fk_rails_d9ce00665a FOREIGN KEY (supplier_id) REFERENCES public.suppliers(id);
+
+
+--
 -- Name: manifiestos fk_rails_e55f679c59; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3844,6 +4227,10 @@ ALTER TABLE ONLY public.paquetes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260429231028'),
+('20260429231027'),
+('20260429231026'),
+('20260429231025'),
 ('20260428233900'),
 ('20260425225919'),
 ('20260425033302'),
