@@ -1314,13 +1314,56 @@ Las "notas permanentes" se reusan/expanden:
 - Validation en `Paquete`: cuando `estado: retenido`, debe haber al menos 1 motivo seleccionado o `notas_retencion` presente.
 - UI: cuando el digitador cambia estado a `retenido`, modal con checkboxes de motivos activos + textarea para detalle adicional.
 
+#### K. Tercero — texto libre (revendedor flow) (preguntas 14-15, 2026-04-29)
+
+**Tercero NO es un cliente registrado** — es **texto libre** porque son clientes de empresas terceras a CEC.
+
+**Flujo de revendedor:**
+- Quienes mantienen "terceros" son **revendedores** (negocios que usan CEC para mandar cargas a sus propios clientes).
+- El **cliente principal (`cliente_id`)** es el revendedor (cliente registrado de CEC con su `clientes.codigo`).
+- El **tercero** es el cliente final del revendedor — viene como **texto libre** en el form (nombre + opcionalmente teléfono/dirección).
+- El paquete se procesa bajo el código del revendedor; la etiqueta y WR muestran el nombre del tercero como destinatario adicional.
+
+**Implementación (PR-D3):**
+- Columna nueva `paquetes.tercero_nombre` (string, nullable). Opcionalmente `tercero_telefono` / `tercero_direccion` si Yusef confirma alcance.
+- **NO hay lupa de búsqueda** — solo input simple de texto libre.
+- En el WR (`Consignee`): si `tercero_nombre` está presente, muestra "Cliente: [revendedor] · A nombre de: [tercero]".
+
+#### L. Proveedor — dropdown con "Otros" + CRUD admin (pregunta 11, 2026-04-29)
+
+- Dropdown de proveedores **pre-determinados** para facilitar el trabajo (Amazon, eBay, Walmart, Sams, Target, ENTREGA PERSONAL).
+- Agregar opción **"OTROS"** que activa input de texto libre para cualquier proveedor no listado.
+- Implementación: modelo `Proveedor(nombre, tipo enum [comercio | entrega_personal | otros], activo, position)` + CRUD admin para que el equipo agregue/modifique. Cuando el digitador elige "OTROS", se muestra textfield `paquete.proveedor_libre` (string) para capturar el nombre real.
+
+#### M. ENTREGA PERSONAL — formulario + tracking interno auto (pregunta 12, 2026-04-29)
+
+Cuando el digitador elige proveedor = `ENTREGA PERSONAL`, se activa un **formulario adicional** y el sistema **genera un tracking interno propio**.
+
+**Formato del tracking interno:**
+```
+<CODIGO_SUCURSAL_RECIBIDO>-<YYYYMMDD>-<correlativo>
+```
+
+Ejemplos:
+- `MIA-20260429-0001` (primero recibido en Miami el 2026-04-29 vía entrega personal).
+- `MIA-20260429-0002` (segundo del mismo día).
+- `SPS-20260429-0001` (recibido en sucursal SPS).
+
+Componentes:
+- **Sucursal donde se recibió** (sucursal Miami por default; otras si tenemos sub-bodegas en el extranjero).
+- **Fecha de recibido** (`YYYYMMDD`).
+- **Correlativo** del día por sucursal (4 dígitos, reinicia diariamente).
+
+**Implementación:**
+- Tabla nueva `entrega_personal_counters(sucursal_id, fecha, ultimo_numero)` con unique index `(sucursal_id, fecha)` (similar a `numero_recepcion_counters` pero por día, no por año).
+- Helper `Paquete.generate_tracking_entrega_personal(sucursal:, fecha:)` que llama al counter y formatea el string.
+- Cuando proveedor = `entrega_personal` y el digitador no provee tracking real, se genera automáticamente. Si el digitador provee uno (caso atípico), se respeta.
+
 ### Preguntas aún pendientes (al cliente)
 
-**Bloque PR-D3 — proveedor + carrier:**
-- 11. Lista de proveedores: CRUD admin o seed fijo.
-- 12. ENTREGA PERSONAL flow completo (listado, tracking automático, nombre obligatorio).
-- 13. Carrier (`expedido_por`): ¿convertir a FK al modelo `Carrier`?
-- 14. Empresa de transporte vs manifiesto: ¿una fuente o redundante?
+**Bloque PR-D3 — pendiente:**
+- 13. Carrier (`expedido_por`): ¿convertir a FK al modelo `Carrier` (UPS/USPS/DHL/FedEx) o dejar string libre?
+- 14b. Empresa de transporte (ej. EPN = Pronto Cargo): ¿una sola fuente desde `manifiesto.empresa_manifiesto` o redundante en el paquete?
 
 **Bloque PR-D4 — botones:**
 - 15. Re-imprimir etiquetas: ¿todas las cajas o solo la actual?

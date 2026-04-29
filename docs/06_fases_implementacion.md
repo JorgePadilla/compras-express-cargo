@@ -247,7 +247,7 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 | 5c.5 | `feat/warehouse-receipt-model` | Modelos nuevos: `WarehouseReceipt` + `Supplier` + `Agent` + `Terms`. Migra `paquetes.numero_recepcion` → `paquetes.warehouse_receipt_id`. **Antecede a D1-D4.** | ⏳ Listo para implementar |
 | 5c.1 | `feat/paquete-estados-fechas-audit` | Nuevo estado `pre_alerta`, ~7 fechas + `*_user_id` por fecha, `users.iniciales` (campo nuevo editable), `paper_trail` + UI bitácora. Job nocturno de "disponible programada" con notif email/SMS/WhatsApp/push a las 7am. Modelo `SubLocalidad` + `sucursal_actual_id`/`sub_localidad_actual_id` en paquetes. Recolecta fija $35 USD editable. | ✅ Listo para implementar |
 | 5c.2 | `feat/paquete-notas-categorizadas` | Refactor notas (especiales PA, consolidación PA, retención, internas, al_cliente). Notas permanentes del cliente como modal por área (`notas_miami`, `notas_honduras`, **`notas_caja` NUEVA**, **`notas_sac` NUEVA**). **Plantillas de notas al cliente** (modelo `PlantillaNotaCliente` + picker, compartidas entre Etiquetar/Pre-Factura/Caja/SAC). Notas al cliente viajan en email de notificación. **Notas de retención obligatorias en estado `retenido`** + modelo `MotivoRetencion` con multi-select de motivos. | ✅ Listo para implementar |
-| 5c.3 | `feat/paquete-tercero-supplier-agent-services` | `tercero_id` (cliente search), `service_code` enum, `repackaging_type` enum, `consolidation` bool. Refina `Supplier` y `Agent` desde 5c.5. | ⏳ Bloqueado por preguntas 11-14 |
+| 5c.3 | `feat/paquete-tercero-proveedor-services` | `tercero_nombre` (string libre, no FK), `Proveedor` modelo con dropdown + opción "Otros" (texto libre), flow ENTREGA PERSONAL con tracking auto generado (`<SUCURSAL>-<YYYYMMDD>-<correlativo>`), `service_code` enum, `repackaging_type` enum, `consolidation` bool. | ⏳ Bloqueado solo por preguntas 13 y 14b (carrier + empresa transporte) |
 | 5c.4 | `feat/paquete-show-actions` | ~10 botones del header del show (mover/eliminar PA, copy buttons, ver pre-factura/factura). El WR ya está hecho en 5c.WR. | ⏳ Bloqueado por preguntas 15-16 |
 
 **Dependencia:** Fase 5b (numero_recepcion anual + split). ✅ Cumplida.
@@ -279,9 +279,18 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 
 10. **Notas de retención:** **OBLIGATORIAS** cuando el paquete pasa a estado `retenido` (validation). Multi-select de motivos desde catálogo (modelo nuevo `MotivoRetencion`) + textarea de detalle libre adicional.
 
-**Preguntas pendientes para Yusef (bloquean PRs específicos):**
-- 11-14. Proveedor/carrier/agent (PR-D3).
-- 15-16. Botones (PR-D4).
+**Respuestas confirmadas para PR-D3 (tercero/proveedor) — 2026-04-29:**
+
+11. **Proveedor:** dropdown con pre-determinados (Amazon, eBay, Walmart, Sams, Target, ENTREGA PERSONAL) + opción **"OTROS"** que activa input de texto libre. Modelo `Proveedor` con CRUD admin.
+12. **ENTREGA PERSONAL:** activa formulario adicional + sistema genera **tracking interno automático** con formato `<SUCURSAL>-<YYYYMMDD>-<correlativo>` (ej. `MIA-20260429-0001`). Tabla `entrega_personal_counters(sucursal_id, fecha, ultimo_numero)`.
+14. **Tercero:** **texto libre** (no Cliente registrado). Flujo de revendedor: `cliente_id` = revendedor; `tercero_nombre` = cliente final del revendedor. Etiqueta y WR muestran ambos.
+15. **Cliente vs tercero:** revendedor en `cliente_id` (registrado en CEC), tercero en `tercero_nombre` (texto libre).
+
+**Preguntas pendientes para Yusef:**
+- 13. Carrier (`expedido_por`): ¿FK a `Carrier` o string libre?
+- 14b. Empresa transporte vs manifiesto: ¿una fuente o redundante?
+- 15. Re-imprimir etiquetas: ¿todas las cajas o solo actual? (PR-D4)
+- 16. Botón "Refrescar": F5 o algo específico? (PR-D4)
 - 17. Manifiesto formato `MM2026000001` (general).
 
 **Referencia:** `docs/05_requerimientos_conversaciones.md` Conversación 3.
