@@ -308,9 +308,25 @@ class PaqueteTest < ActiveSupport::TestCase
       assert_equal "1Z999SPLIT_G", p.tracking
     end
 
-    # numero_recepcion debe ser único por bulto
-    numeros = paquetes.map(&:numero_recepcion)
-    assert_equal numeros, numeros.uniq, "cada caja debe tener su propio numero_recepcion"
+    # PR-D0 (Yusef spec): el numero_recepcion es UN número MADRE compartido
+    # por las N cajas (Warehouse Receipt único). Las cajas se distinguen
+    # solo por numero_caja (no por numero_recepcion).
+    numeros = paquetes.map(&:numero_recepcion).uniq
+    assert_equal 1, numeros.size, "las N cajas deben compartir el mismo numero_recepcion (madre)"
+    assert_match(/\ARM\d{13}\z/, numeros.first)
+  end
+
+  test "crear_split! incrementa el counter UNA sola vez (no N)" do
+    counter_before = NumeroRecepcionCounter.where(sucursal: sucursales(:miami), anio: Time.zone.now.year)
+                                            .pick(:ultimo_numero) || 0
+    Paquete.crear_split!(
+      attrs: { tracking: "1Z999SPLIT_COUNTER", cliente: clientes(:juan), sucursal: sucursales(:miami) },
+      total_cajas: 5
+    )
+    counter_after = NumeroRecepcionCounter.where(sucursal: sucursales(:miami), anio: Time.zone.now.year)
+                                           .pick(:ultimo_numero)
+    assert_equal counter_before + 1, counter_after,
+      "el counter debe incrementar 1 vez para todo el split, no #{5} veces"
   end
 
   test "crear_split! con total_cajas < 2 lanza ArgumentError" do

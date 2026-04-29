@@ -116,12 +116,15 @@ class Paquete < ApplicationRecord
   # Crea N paquetes "hijos" en una sola transacción cuando el digitador
   # divide un tracking en varios bultos físicos (split de etiqueta).
   #
-  # Reglas (Yusef, 2026-04-25):
+  # Reglas (Yusef, spec 2026-04-28):
   #   - El digitador llena los datos UNA vez, indica `total_cajas`.
   #   - El sistema replica esos datos en N paquetes:
   #       * todos comparten el mismo `tracking`,
-  #       * cada uno recibe su propio `numero_recepcion` único (vía counter),
+  #       * todos comparten el mismo `numero_recepcion` (número MADRE / WR único),
   #       * `numero_caja` 1..N, `cantidad_paquetes` = N (para mostrar "1/N").
+  #   - El número madre se solicita UNA sola vez al counter y se asigna a las N filas.
+  #   - El unique index compuesto `(numero_recepcion, numero_caja)` garantiza que
+  #     no se dupliquen cajas del mismo madre.
   #   - Si el save de cualquiera falla, la transacción hace rollback.
   #
   # Devuelve un array con los paquetes creados (en orden 1..N).
@@ -129,11 +132,33 @@ class Paquete < ApplicationRecord
     n = total_cajas.to_i
     raise ArgumentError, "total_cajas debe ser >= 2" if n < 2
 
+    sucursal = attrs[:sucursal] || Sucursal.find_by(id: attrs[:sucursal_id])
+    numero_madre = generate_numero_recepcion_madre(sucursal: sucursal, attrs: attrs)
+
     transaction do
       (1..n).map do |i|
-        Paquete.create!(attrs.merge(numero_caja: i, cantidad_paquetes: n))
+        Paquete.create!(attrs.merge(
+          numero_caja: i,
+          cantidad_paquetes: n,
+          numero_recepcion: numero_madre
+        ))
       end
     end
+  end
+
+  # Genera el número madre que las N cajas del split compartirán. Usa el
+  # mismo counter anual que un paquete single (1 sola llamada — incrementa
+  # el contador 1 vez, no N).
+  def self.generate_numero_recepcion_madre(sucursal:, attrs:)
+    return nil if sucursal.nil?
+    prefix = sucursal.codigo_recepcion_prefix
+    return nil if prefix.blank?
+
+    fecha = attrs[:fecha_recibido_miami] || Time.zone.now
+    anio = fecha.respond_to?(:year) ? fecha.year : Time.zone.now.year
+    next_number = NumeroRecepcionCounter.next_for!(sucursal: sucursal, anio: anio)
+
+    format("%<prefix>s%<anio>07d%<num>06d", prefix: prefix, anio: anio, num: next_number)
   end
 
   # Calcula la próxima letra A-Z disponible para distinguir un tracking
