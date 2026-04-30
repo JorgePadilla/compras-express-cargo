@@ -2,6 +2,11 @@ class ApplicationController < ActionController::Base
   include Authentication
   include Authorization
 
+  # PR-D1.a: paper_trail v15+ ya no incluye el concern automáticamente
+  # vía Railtie. Hay que incluirlo explícitamente para tener
+  # `set_paper_trail_whodunnit` y los demás callbacks disponibles.
+  include PaperTrail::Rails::Controller
+
   allow_browser versions: :modern
 
   # PR-D1.a: paper_trail audit log — registra qué usuario disparó cada
