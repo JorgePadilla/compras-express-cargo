@@ -6,6 +6,8 @@
 #
 # Spec: docs/warehouse_receipt_fields.md (Yusef 2026-04-29).
 class WarehouseReceipt < ApplicationRecord
+  has_paper_trail  # PR-D1.a: audit log
+
   STATUSES = %w[draft received printed dispatched delivered abandoned].freeze
   REPACKAGING_TYPES = %w[sin_reempacar reempacar reempacar_unitario].freeze
 

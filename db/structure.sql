@@ -1867,6 +1867,41 @@ ALTER SEQUENCE public.ventas_id_seq OWNED BY public.ventas.id;
 
 
 --
+-- Name: versions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.versions (
+    id bigint NOT NULL,
+    whodunnit character varying,
+    created_at timestamp(6) without time zone,
+    item_id bigint NOT NULL,
+    item_type character varying NOT NULL,
+    event character varying NOT NULL,
+    object text,
+    object_changes text
+);
+
+
+--
+-- Name: versions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.versions_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: versions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.versions_id_seq OWNED BY public.versions.id;
+
+
+--
 -- Name: warehouse_receipts; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2231,6 +2266,13 @@ ALTER TABLE ONLY public.venta_items ALTER COLUMN id SET DEFAULT nextval('public.
 --
 
 ALTER TABLE ONLY public.ventas ALTER COLUMN id SET DEFAULT nextval('public.ventas_id_seq'::regclass);
+
+
+--
+-- Name: versions id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.versions ALTER COLUMN id SET DEFAULT nextval('public.versions_id_seq'::regclass);
 
 
 --
@@ -2614,6 +2656,14 @@ ALTER TABLE ONLY public.venta_items
 
 ALTER TABLE ONLY public.ventas
     ADD CONSTRAINT ventas_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: versions versions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.versions
+    ADD CONSTRAINT versions_pkey PRIMARY KEY (id);
 
 
 --
@@ -3549,6 +3599,13 @@ CREATE INDEX index_ventas_on_pre_factura_id ON public.ventas USING btree (pre_fa
 
 
 --
+-- Name: index_versions_on_item_type_and_item_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_versions_on_item_type_and_item_id ON public.versions USING btree (item_type, item_id);
+
+
+--
 -- Name: index_warehouse_receipts_on_agent_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4243,6 +4300,8 @@ ALTER TABLE ONLY public.paquetes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260429235510'),
+('20260429235509'),
 ('20260429234222'),
 ('20260429231028'),
 ('20260429231027'),

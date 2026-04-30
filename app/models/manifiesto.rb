@@ -1,4 +1,6 @@
 class Manifiesto < ApplicationRecord
+  has_paper_trail  # PR-D1.a: audit log
+
   belongs_to :empresa_manifiesto, optional: true
   belongs_to :user, optional: true
   has_many :paquetes, dependent: :nullify

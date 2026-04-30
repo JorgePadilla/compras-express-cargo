@@ -1,4 +1,6 @@
 class Cliente < ApplicationRecord
+  has_paper_trail  # PR-D1.a: audit log
+
   # validations: false because admins create clients without passwords;
   # only clients who opt into portal access get a password set later.
   has_secure_password validations: false

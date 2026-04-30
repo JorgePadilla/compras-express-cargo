@@ -1,4 +1,6 @@
 class Entrega < ApplicationRecord
+  has_paper_trail  # PR-D1.a: audit log
+
   TIPOS = %w[retiro_oficina domicilio].freeze
   ESTADOS = %w[pendiente en_reparto entregado anulado].freeze
 

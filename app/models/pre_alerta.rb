@@ -1,5 +1,6 @@
 class PreAlerta < ApplicationRecord
   self.table_name = "pre_alertas"
+  has_paper_trail  # PR-D1.a: audit log
 
   belongs_to :cliente
   belongs_to :tipo_envio
