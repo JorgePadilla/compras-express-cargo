@@ -4,6 +4,7 @@ class Sucursal < ApplicationRecord
   UBICACIONES = %w[miami honduras otros].freeze
 
   has_many :paquetes, dependent: :restrict_with_error
+  has_many :sub_localidades, dependent: :destroy  # PR-D1.c: bodegas internas
 
   validates :codigo, presence: true, uniqueness: { case_sensitive: false }
   validates :nombre, presence: true
