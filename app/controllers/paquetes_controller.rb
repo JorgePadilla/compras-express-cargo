@@ -232,7 +232,9 @@ class PaquetesController < ApplicationController
   end
 
   def set_paquete
-    @paquete = Paquete.find(params[:id])
+    # PR-D2: eager-load motivos_retencion para evitar N+1 al listar
+    # los badges del bloque de retención en show/edit.
+    @paquete = Paquete.includes(:motivos_retencion).find(params[:id])
   end
 
   def authorize_tracking_actions
