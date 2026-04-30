@@ -861,6 +861,39 @@ ALTER SEQUENCE public.lugars_id_seq OWNED BY public.lugars.id;
 
 
 --
+-- Name: manifiesto_counters; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.manifiesto_counters (
+    id bigint NOT NULL,
+    sucursal_id bigint NOT NULL,
+    anio integer NOT NULL,
+    ultimo_numero integer DEFAULT 0 NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: manifiesto_counters_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.manifiesto_counters_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: manifiesto_counters_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.manifiesto_counters_id_seq OWNED BY public.manifiesto_counters.id;
+
+
+--
 -- Name: manifiestos; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -881,7 +914,8 @@ CREATE TABLE public.manifiestos (
     user_id bigint,
     activo boolean DEFAULT true,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    sucursal_origen_id bigint
 );
 
 
@@ -1238,7 +1272,12 @@ CREATE TABLE public.paquetes (
     fecha_consolidando_by_user_id bigint,
     fecha_en_reparto_by_user_id bigint,
     fecha_entregado_by_user_id bigint,
-    fecha_posible_entrega_by_user_id bigint
+    fecha_posible_entrega_by_user_id bigint,
+    sucursal_actual_id bigint,
+    sub_localidad_actual_id bigint,
+    recolecta_solicitada boolean DEFAULT false NOT NULL,
+    recolecta_monto numeric(10,2),
+    recolecta_moneda character varying DEFAULT 'USD'::character varying
 );
 
 
@@ -1542,6 +1581,41 @@ CREATE SEQUENCE public.sessions_id_seq
 --
 
 ALTER SEQUENCE public.sessions_id_seq OWNED BY public.sessions.id;
+
+
+--
+-- Name: sub_localidades; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sub_localidades (
+    id bigint NOT NULL,
+    sucursal_id bigint NOT NULL,
+    codigo character varying NOT NULL,
+    nombre character varying NOT NULL,
+    activo boolean DEFAULT true NOT NULL,
+    "position" integer DEFAULT 0 NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: sub_localidades_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.sub_localidades_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: sub_localidades_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.sub_localidades_id_seq OWNED BY public.sub_localidades.id;
 
 
 --
@@ -2121,6 +2195,13 @@ ALTER TABLE ONLY public.lugars ALTER COLUMN id SET DEFAULT nextval('public.lugar
 
 
 --
+-- Name: manifiesto_counters id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manifiesto_counters ALTER COLUMN id SET DEFAULT nextval('public.manifiesto_counters_id_seq'::regclass);
+
+
+--
 -- Name: manifiestos id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -2223,6 +2304,13 @@ ALTER TABLE ONLY public.reempaques ALTER COLUMN id SET DEFAULT nextval('public.r
 --
 
 ALTER TABLE ONLY public.sessions ALTER COLUMN id SET DEFAULT nextval('public.sessions_id_seq'::regclass);
+
+
+--
+-- Name: sub_localidades id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sub_localidades ALTER COLUMN id SET DEFAULT nextval('public.sub_localidades_id_seq'::regclass);
 
 
 --
@@ -2479,6 +2567,14 @@ ALTER TABLE ONLY public.lugars
 
 
 --
+-- Name: manifiesto_counters manifiesto_counters_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manifiesto_counters
+    ADD CONSTRAINT manifiesto_counters_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: manifiestos manifiestos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2607,6 +2703,14 @@ ALTER TABLE ONLY public.sessions
 
 
 --
+-- Name: sub_localidades sub_localidades_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sub_localidades
+    ADD CONSTRAINT sub_localidades_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: sucursales sucursales_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2702,6 +2806,13 @@ CREATE UNIQUE INDEX idx_fin_cuotas_unique ON public.financiamiento_cuotas USING 
 
 
 --
+-- Name: idx_manifiesto_counters_sucursal_anio; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_manifiesto_counters_sucursal_anio ON public.manifiesto_counters USING btree (sucursal_id, anio);
+
+
+--
 -- Name: idx_paquetes_warehouse_receipt; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2713,6 +2824,13 @@ CREATE INDEX idx_paquetes_warehouse_receipt ON public.paquetes USING btree (ware
 --
 
 CREATE UNIQUE INDEX idx_recepcion_counters_sucursal_anio ON public.numero_recepcion_counters USING btree (sucursal_id, anio);
+
+
+--
+-- Name: idx_sub_localidades_sucursal_codigo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_sub_localidades_sucursal_codigo ON public.sub_localidades USING btree (sucursal_id, codigo);
 
 
 --
@@ -3031,6 +3149,13 @@ CREATE INDEX index_ingresos_caja_on_registrado_por_id ON public.ingresos_caja US
 
 
 --
+-- Name: index_manifiesto_counters_on_sucursal_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_manifiesto_counters_on_sucursal_id ON public.manifiesto_counters USING btree (sucursal_id);
+
+
+--
 -- Name: index_manifiestos_on_empresa_manifiesto_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3049,6 +3174,13 @@ CREATE INDEX index_manifiestos_on_estado ON public.manifiestos USING btree (esta
 --
 
 CREATE UNIQUE INDEX index_manifiestos_on_numero ON public.manifiestos USING btree (numero);
+
+
+--
+-- Name: index_manifiestos_on_sucursal_origen_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_manifiestos_on_sucursal_origen_id ON public.manifiestos USING btree (sucursal_origen_id);
 
 
 --
@@ -3262,6 +3394,20 @@ CREATE INDEX index_paquetes_on_pre_factura_id ON public.paquetes USING btree (pr
 
 
 --
+-- Name: index_paquetes_on_sub_localidad_actual_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_paquetes_on_sub_localidad_actual_id ON public.paquetes USING btree (sub_localidad_actual_id);
+
+
+--
+-- Name: index_paquetes_on_sucursal_actual_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_paquetes_on_sucursal_actual_id ON public.paquetes USING btree (sucursal_actual_id);
+
+
+--
 -- Name: index_paquetes_on_sucursal_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3462,6 +3608,20 @@ CREATE INDEX index_reempaques_on_tarea_id ON public.reempaques USING btree (tare
 --
 
 CREATE INDEX index_sessions_on_user_id ON public.sessions USING btree (user_id);
+
+
+--
+-- Name: index_sub_localidades_on_activo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_sub_localidades_on_activo ON public.sub_localidades USING btree (activo);
+
+
+--
+-- Name: index_sub_localidades_on_sucursal_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_sub_localidades_on_sucursal_id ON public.sub_localidades USING btree (sucursal_id);
 
 
 --
@@ -3714,6 +3874,14 @@ ALTER TABLE ONLY public.paquetes
 
 
 --
+-- Name: paquetes fk_rails_0ba9c43e6b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_0ba9c43e6b FOREIGN KEY (sub_localidad_actual_id) REFERENCES public.sub_localidades(id);
+
+
+--
 -- Name: cotizaciones fk_rails_0bf5758b31; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3818,6 +3986,14 @@ ALTER TABLE ONLY public.warehouse_receipts
 
 
 --
+-- Name: manifiesto_counters fk_rails_23887ed0e1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manifiesto_counters
+    ADD CONSTRAINT fk_rails_23887ed0e1 FOREIGN KEY (sucursal_id) REFERENCES public.sucursales(id);
+
+
+--
 -- Name: tareas fk_rails_239a2c336c; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3863,6 +4039,14 @@ ALTER TABLE ONLY public.warehouse_receipts
 
 ALTER TABLE ONLY public.pre_factura_items
     ADD CONSTRAINT fk_rails_3838674e35 FOREIGN KEY (pre_factura_id) REFERENCES public.pre_facturas(id);
+
+
+--
+-- Name: manifiestos fk_rails_3935231297; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manifiestos
+    ADD CONSTRAINT fk_rails_3935231297 FOREIGN KEY (sucursal_origen_id) REFERENCES public.sucursales(id);
 
 
 --
@@ -4210,6 +4394,14 @@ ALTER TABLE ONLY public.nota_credito_items
 
 
 --
+-- Name: paquetes fk_rails_c06a4ad9ac; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_c06a4ad9ac FOREIGN KEY (sucursal_actual_id) REFERENCES public.sucursales(id);
+
+
+--
 -- Name: financiamientos fk_rails_c368bc42b3; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4271,6 +4463,14 @@ ALTER TABLE ONLY public.cotizacion_items
 
 ALTER TABLE ONLY public.notas_credito
     ADD CONSTRAINT fk_rails_d13d5954e1 FOREIGN KEY (venta_id) REFERENCES public.ventas(id);
+
+
+--
+-- Name: sub_localidades fk_rails_d342595a12; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sub_localidades
+    ADD CONSTRAINT fk_rails_d342595a12 FOREIGN KEY (sucursal_id) REFERENCES public.sucursales(id);
 
 
 --
@@ -4408,6 +4608,9 @@ ALTER TABLE ONLY public.paquetes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260430043116'),
+('20260430042343'),
+('20260430042342'),
 ('20260430034028'),
 ('20260430034027'),
 ('20260429235510'),
