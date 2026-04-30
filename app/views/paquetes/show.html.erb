@@ -177,11 +177,43 @@ end %>
       </div>
     </div>
 
-    <%# Notes %>
+    <%# Notes — categorizadas (PR-D2) %>
     <% if @paquete.notas_internas.present? %>
       <div class="md:col-span-3">
-        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Notas Internas</dt>
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Notas Internas <span class="text-[10px] normal-case text-gray-400">(solo equipo CEC)</span></dt>
         <dd class="mt-1 text-sm text-gray-900 bg-gray-50 rounded-lg p-3"><%= simple_format(@paquete.notas_internas) %></dd>
+      </div>
+    <% end %>
+
+    <% if @paquete.notas_al_cliente.present? %>
+      <div class="md:col-span-3">
+        <dt class="text-xs font-medium text-blue-700 uppercase tracking-wider">Notas al Cliente <span class="text-[10px] normal-case text-blue-500">(visibles al cliente)</span></dt>
+        <dd class="mt-1 text-sm text-gray-900 bg-blue-50 rounded-lg p-3 border border-blue-200"><%= simple_format(@paquete.notas_al_cliente) %></dd>
+      </div>
+    <% end %>
+
+    <% if @paquete.notas_consolidacion.present? %>
+      <div class="md:col-span-3">
+        <dt class="text-xs font-medium text-cec-teal uppercase tracking-wider">Notas de Consolidación</dt>
+        <dd class="mt-1 text-sm text-gray-900 bg-teal-50 rounded-lg p-3 border border-teal-200"><%= simple_format(@paquete.notas_consolidacion) %></dd>
+      </div>
+    <% end %>
+
+    <% if @paquete.estado == "retenido" || @paquete.notas_retencion.present? || @paquete.motivos_retencion.any? %>
+      <div class="md:col-span-3">
+        <dt class="text-xs font-medium text-amber-800 uppercase tracking-wider">Retención</dt>
+        <dd class="mt-1 text-sm text-gray-900 bg-amber-50 rounded-lg p-3 border border-amber-200 space-y-2">
+          <% if @paquete.motivos_retencion.any? %>
+            <div class="flex flex-wrap gap-1.5">
+              <% @paquete.motivos_retencion.each do |m| %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-xs font-medium border border-amber-300"><%= m.nombre %></span>
+              <% end %>
+            </div>
+          <% end %>
+          <% if @paquete.notas_retencion.present? %>
+            <div class="text-sm"><%= simple_format(@paquete.notas_retencion) %></div>
+          <% end %>
+        </dd>
       </div>
     <% end %>
 

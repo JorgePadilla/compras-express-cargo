@@ -63,7 +63,10 @@ class PaqueteEstadoFechasTest < ActiveSupport::TestCase
     %w[anulado retornado desechado retenido].each do |estado_final|
       p = Paquete.create!(tracking: "1Z999EF_TERM_#{estado_final}",
                           cliente: clientes(:juan), sucursal: sucursales(:miami))
-      assert_nothing_raised { p.update!(estado: estado_final) }
+      # PR-D2: retenido requiere motivo o notas_retencion.
+      attrs = { estado: estado_final }
+      attrs[:notas_retencion] = "Test - retención" if estado_final == "retenido"
+      assert_nothing_raised { p.update!(attrs) }
     end
   end
 end

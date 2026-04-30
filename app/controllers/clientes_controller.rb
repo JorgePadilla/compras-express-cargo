@@ -63,7 +63,8 @@ class ClientesController < ApplicationController
       :codigo, :nombre, :apellido, :identidad, :email,
       :telefono, :telefono_whatsapp, :direccion, :ciudad,
       :departamento, :categoria_precio_id, :activo,
-      :notas_miami, :notas_honduras
+      :notas_miami, :notas_honduras,
+      :notas_caja, :notas_sac
     )
   end
 end

@@ -124,6 +124,23 @@
                  focus:ring-cec-teal focus:border-cec-teal" %>
       <p class="mt-1 text-xs text-gray-500">Visible para operadores al procesar paquetes en Honduras</p>
     </div>
+
+    <%# PR-D2: notas permanentes filtradas por área (caja / SAC) %>
+    <div class="md:col-span-2">
+      <%= f.label :notas_caja, "Notas Caja", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.text_area :notas_caja, rows: 3, placeholder: "Notas permanentes visibles a Caja / cobranzas...",
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                 focus:ring-cec-teal focus:border-cec-teal" %>
+      <p class="mt-1 text-xs text-gray-500">Visibles al equipo de Caja en cada operación de cobro</p>
+    </div>
+
+    <div class="md:col-span-2">
+      <%= f.label :notas_sac, "Notas SAC", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.text_area :notas_sac, rows: 3, placeholder: "Notas permanentes para Servicio al Cliente...",
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                 focus:ring-cec-teal focus:border-cec-teal" %>
+      <p class="mt-1 text-xs text-gray-500">Visibles al equipo de SAC al atender al cliente</p>
+    </div>
   </div>
 
   <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">

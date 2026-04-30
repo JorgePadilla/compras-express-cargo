@@ -167,6 +167,38 @@ humuya = Sucursal.find_by(codigo: "TGU")
 end
 puts "  ✓ #{SubLocalidad.count} sub-localidades"
 
+# ── Plantillas Notas al Cliente (PR-D2) ──
+puts "Seeding plantillas_notas_cliente..."
+[
+  { titulo: "Falta declaración de aduana",   texto: "Estimado cliente, para procesar su paquete necesitamos la declaración de aduana firmada. Por favor envíela a info@comprasexpresscargo.com.", position: 0 },
+  { titulo: "Pago pendiente",                texto: "Estimado cliente, su paquete está listo en bodega. Para procesar la entrega favor cancelar el saldo pendiente en sucursal o vía transferencia.", position: 1 },
+  { titulo: "Confirmar dirección de entrega", texto: "Estimado cliente, necesitamos que confirme la dirección de entrega para programar el reparto. Responda este correo o llame a la sucursal.", position: 2 },
+  { titulo: "Paquete listo para retiro",     texto: "Estimado cliente, su paquete está disponible en sucursal. Horario de atención: lunes a viernes 8am-5pm, sábado 8am-1pm.", position: 3 }
+].each do |attrs|
+  PlantillaNotaCliente.find_or_create_by!(titulo: attrs[:titulo]) do |p|
+    p.texto    = attrs[:texto]
+    p.position = attrs[:position]
+  end
+end
+puts "  ✓ #{PlantillaNotaCliente.count} plantillas notas al cliente"
+
+# ── Motivos de Retención (PR-D2) ──
+puts "Seeding motivos_retencion..."
+[
+  { nombre: "Paquete dañado",                descripcion: "Llegó con daños visibles", position: 0 },
+  { nombre: "Confirmar tipo de envío",       descripcion: "El cliente debe confirmar si va aéreo, marítimo o express", position: 1 },
+  { nombre: "Mercancía prohibida",           descripcion: "Contenido no permitido por aduana o por nuestras políticas", position: 2 },
+  { nombre: "Falta declaración del cliente", descripcion: "Cliente debe enviar declaración de contenido", position: 3 },
+  { nombre: "Contenido perecedero",          descripcion: "Requiere manejo especial o no se acepta", position: 4 },
+  { nombre: "Pago pendiente",                descripcion: "Saldo pendiente que bloquea la entrega",       position: 5 }
+].each do |attrs|
+  MotivoRetencion.find_or_create_by!(nombre: attrs[:nombre]) do |m|
+    m.descripcion = attrs[:descripcion]
+    m.position    = attrs[:position]
+  end
+end
+puts "  ✓ #{MotivoRetencion.count} motivos de retención"
+
 # ── Sample data (dev/staging only) ──
 if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   # Demo users per role — always reset on re-seed so documented credentials work

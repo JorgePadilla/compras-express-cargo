@@ -18,6 +18,14 @@ class Paquete < ApplicationRecord
   has_many :tareas, dependent: :destroy
   has_many :reempaques, dependent: :destroy
 
+  # PR-D2: multi-select de motivos cuando se retiene el paquete.
+  has_many :paquete_motivos_retencion,
+           class_name: "PaqueteMotivoRetencion",
+           dependent: :destroy
+  has_many :motivos_retencion,
+           through: :paquete_motivos_retencion,
+           source:  :motivo_retencion
+
   enum :estado, {
     pre_alerta_estado:     "pre_alerta_estado",  # PR-D1.b: paquete creado desde pre-alerta antes de llegar a Miami
     recibido_miami:        "recibido_miami",
@@ -62,6 +70,7 @@ class Paquete < ApplicationRecord
   validates :alto, :largo, :ancho, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validate :no_advance_with_open_tareas
   validate :sub_localidad_pertenece_a_sucursal_actual
+  validate :retencion_requiere_motivo_o_notas, if: -> { estado == "retenido" }
 
   # PR-D1.c: tarifa fija pre-establecida $35 USD + ISV (Yusef 2026-04-29).
   # Editable por el cajero al crear/asignar la recolecta. No hay tabla de
@@ -407,6 +416,16 @@ class Paquete < ApplicationRecord
     return if sub_localidad_actual.blank? || sucursal_actual.blank?
     return if sub_localidad_actual.sucursal_id == sucursal_actual_id
     errors.add(:sub_localidad_actual, "no pertenece a la sucursal actual")
+  end
+
+  # PR-D2: si el paquete pasa a estado=retenido, debe tener al menos un
+  # motivo seleccionado o `notas_retencion` con detalle libre. Yusef
+  # confirmó (2026-04-29 6:42pm) que es OBLIGATORIO en ese estado.
+  def retencion_requiere_motivo_o_notas
+    has_motivos = paquete_motivos_retencion.any? || motivos_retencion.any?
+    has_notas   = notas_retencion.to_s.strip.present?
+    return if has_motivos || has_notas
+    errors.add(:notas_retencion, "es obligatoria al retener (selecciona motivo o escribe detalle)")
   end
 
   # PR-5c.5p2: para paquetes creados fuera de `crear_split!` (flow normal de

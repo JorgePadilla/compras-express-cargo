@@ -344,7 +344,9 @@ CREATE TABLE public.clientes (
     notas_honduras text,
     password_digest character varying,
     notificar_facturas boolean DEFAULT true NOT NULL,
-    tema character varying
+    tema character varying,
+    notas_caja text,
+    notas_sac text
 );
 
 
@@ -939,6 +941,40 @@ ALTER SEQUENCE public.manifiestos_id_seq OWNED BY public.manifiestos.id;
 
 
 --
+-- Name: motivos_retencion; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.motivos_retencion (
+    id bigint NOT NULL,
+    nombre character varying NOT NULL,
+    descripcion text,
+    "position" integer DEFAULT 0 NOT NULL,
+    activo boolean DEFAULT true NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: motivos_retencion_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.motivos_retencion_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: motivos_retencion_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.motivos_retencion_id_seq OWNED BY public.motivos_retencion.id;
+
+
+--
 -- Name: nota_credito_items; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1209,6 +1245,38 @@ ALTER SEQUENCE public.pagos_id_seq OWNED BY public.pagos.id;
 
 
 --
+-- Name: paquete_motivos_retencion; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.paquete_motivos_retencion (
+    id bigint NOT NULL,
+    paquete_id bigint NOT NULL,
+    motivo_retencion_id bigint NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: paquete_motivos_retencion_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.paquete_motivos_retencion_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: paquete_motivos_retencion_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.paquete_motivos_retencion_id_seq OWNED BY public.paquete_motivos_retencion.id;
+
+
+--
 -- Name: paquetes; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1278,7 +1346,10 @@ CREATE TABLE public.paquetes (
     recolecta_solicitada boolean DEFAULT false NOT NULL,
     recolecta_monto numeric(10,2),
     recolecta_moneda character varying DEFAULT 'USD'::character varying,
-    tracking_secundario character varying
+    tracking_secundario character varying,
+    notas_consolidacion text,
+    notas_retencion text,
+    notas_al_cliente text
 );
 
 
@@ -1299,6 +1370,40 @@ CREATE SEQUENCE public.paquetes_id_seq
 --
 
 ALTER SEQUENCE public.paquetes_id_seq OWNED BY public.paquetes.id;
+
+
+--
+-- Name: plantillas_notas_cliente; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.plantillas_notas_cliente (
+    id bigint NOT NULL,
+    titulo character varying NOT NULL,
+    texto text NOT NULL,
+    "position" integer DEFAULT 0 NOT NULL,
+    activo boolean DEFAULT true NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: plantillas_notas_cliente_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.plantillas_notas_cliente_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: plantillas_notas_cliente_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.plantillas_notas_cliente_id_seq OWNED BY public.plantillas_notas_cliente.id;
 
 
 --
@@ -2210,6 +2315,13 @@ ALTER TABLE ONLY public.manifiestos ALTER COLUMN id SET DEFAULT nextval('public.
 
 
 --
+-- Name: motivos_retencion id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.motivos_retencion ALTER COLUMN id SET DEFAULT nextval('public.motivos_retencion_id_seq'::regclass);
+
+
+--
 -- Name: nota_credito_items id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -2252,10 +2364,24 @@ ALTER TABLE ONLY public.pagos ALTER COLUMN id SET DEFAULT nextval('public.pagos_
 
 
 --
+-- Name: paquete_motivos_retencion id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquete_motivos_retencion ALTER COLUMN id SET DEFAULT nextval('public.paquete_motivos_retencion_id_seq'::regclass);
+
+
+--
 -- Name: paquetes id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.paquetes ALTER COLUMN id SET DEFAULT nextval('public.paquetes_id_seq'::regclass);
+
+
+--
+-- Name: plantillas_notas_cliente id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.plantillas_notas_cliente ALTER COLUMN id SET DEFAULT nextval('public.plantillas_notas_cliente_id_seq'::regclass);
 
 
 --
@@ -2584,6 +2710,14 @@ ALTER TABLE ONLY public.manifiestos
 
 
 --
+-- Name: motivos_retencion motivos_retencion_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.motivos_retencion
+    ADD CONSTRAINT motivos_retencion_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: nota_credito_items nota_credito_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2632,11 +2766,27 @@ ALTER TABLE ONLY public.pagos
 
 
 --
+-- Name: paquete_motivos_retencion paquete_motivos_retencion_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquete_motivos_retencion
+    ADD CONSTRAINT paquete_motivos_retencion_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: paquetes paquetes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.paquetes
     ADD CONSTRAINT paquetes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: plantillas_notas_cliente plantillas_notas_cliente_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.plantillas_notas_cliente
+    ADD CONSTRAINT plantillas_notas_cliente_pkey PRIMARY KEY (id);
 
 
 --
@@ -2811,6 +2961,13 @@ CREATE UNIQUE INDEX idx_fin_cuotas_unique ON public.financiamiento_cuotas USING 
 --
 
 CREATE UNIQUE INDEX idx_manifiesto_counters_sucursal_anio ON public.manifiesto_counters USING btree (sucursal_id, anio);
+
+
+--
+-- Name: idx_paquete_motivos_retencion_pair; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_paquete_motivos_retencion_pair ON public.paquete_motivos_retencion USING btree (paquete_id, motivo_retencion_id);
 
 
 --
@@ -3192,6 +3349,20 @@ CREATE INDEX index_manifiestos_on_user_id ON public.manifiestos USING btree (use
 
 
 --
+-- Name: index_motivos_retencion_on_activo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_motivos_retencion_on_activo ON public.motivos_retencion USING btree (activo);
+
+
+--
+-- Name: index_motivos_retencion_on_nombre; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_motivos_retencion_on_nombre ON public.motivos_retencion USING btree (nombre);
+
+
+--
 -- Name: index_nota_credito_items_on_nota_credito_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3332,6 +3503,20 @@ CREATE INDEX index_pagos_on_venta_id ON public.pagos USING btree (venta_id);
 
 
 --
+-- Name: index_paquete_motivos_retencion_on_motivo_retencion_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_paquete_motivos_retencion_on_motivo_retencion_id ON public.paquete_motivos_retencion USING btree (motivo_retencion_id);
+
+
+--
+-- Name: index_paquete_motivos_retencion_on_paquete_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_paquete_motivos_retencion_on_paquete_id ON public.paquete_motivos_retencion USING btree (paquete_id);
+
+
+--
 -- Name: index_paquetes_on_cliente_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3448,6 +3633,13 @@ CREATE INDEX index_paquetes_on_user_id ON public.paquetes USING btree (user_id);
 --
 
 CREATE INDEX index_paquetes_on_venta_id ON public.paquetes USING btree (venta_id);
+
+
+--
+-- Name: index_plantillas_notas_cliente_on_activo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_plantillas_notas_cliente_on_activo ON public.plantillas_notas_cliente USING btree (activo);
 
 
 --
@@ -4098,6 +4290,14 @@ ALTER TABLE ONLY public.reempaques
 
 
 --
+-- Name: paquete_motivos_retencion fk_rails_4ee027132c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquete_motivos_retencion
+    ADD CONSTRAINT fk_rails_4ee027132c FOREIGN KEY (paquete_id) REFERENCES public.paquetes(id) ON DELETE CASCADE;
+
+
+--
 -- Name: reempaques fk_rails_4fd8dd567a; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4386,6 +4586,14 @@ ALTER TABLE ONLY public.paquetes
 
 
 --
+-- Name: paquete_motivos_retencion fk_rails_bb4a99be86; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquete_motivos_retencion
+    ADD CONSTRAINT fk_rails_bb4a99be86 FOREIGN KEY (motivo_retencion_id) REFERENCES public.motivos_retencion(id) ON DELETE RESTRICT;
+
+
+--
 -- Name: warehouse_receipts fk_rails_bd11b17ab6; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4616,6 +4824,9 @@ ALTER TABLE ONLY public.paquetes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260430052744'),
+('20260430052743'),
+('20260430052742'),
 ('20260430043555'),
 ('20260430043116'),
 ('20260430042343'),
