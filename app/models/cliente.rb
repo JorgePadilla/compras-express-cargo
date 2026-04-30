@@ -1,5 +1,8 @@
 class Cliente < ApplicationRecord
-  has_paper_trail  # PR-D1.a: audit log
+  # PR-D1.a: audit log. Excluye `password_digest` (BCrypt hash) por
+  # seguridad — aunque es hash y no plaintext, no aporta valor al
+  # log y reduce la superficie ante una brecha del audit_log.
+  has_paper_trail skip: %i[password_digest]
 
   # validations: false because admins create clients without passwords;
   # only clients who opt into portal access get a password set later.

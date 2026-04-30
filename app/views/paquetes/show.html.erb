@@ -205,9 +205,9 @@ end %>
   </div>
 </div>
 
-<%# PR-D1.a: bitácora (paper_trail versions). Visible para admin +
-    todos los supervisores (decisión Yusef 2026-04-29). %>
-<% if admin? || %w[supervisor_miami supervisor_caja supervisor_prefactura].include?(Current.user&.rol) %>
+<%# PR-D1.a: bitácora (paper_trail versions). Visibilidad gated por
+    `can_view_audit_log?` (admin + todos los supervisores — Yusef 2026-04-29). %>
+<% if can_view_audit_log? %>
   <% versions = @paquete.versions.reorder(created_at: :desc).limit(50) %>
   <% users_by_id = audit_users_index(versions) %>
   <details class="mt-4 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-100 dark:border-gray-700 overflow-hidden">

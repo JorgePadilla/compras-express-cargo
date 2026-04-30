@@ -2,6 +2,19 @@
 # las vistas. La tabla `versions` guarda `whodunnit` como string con el ID
 # del User. Acá resolvemos el User para mostrar nombre + iniciales.
 module AuditLogHelper
+  # Roles autorizados a ver la bitácora (paper_trail versions). Decisión
+  # Yusef 2026-04-29: admin + TODOS los supervisores. Excluye SAC, cajero,
+  # digitador, entrega_despacho. Centralizado acá para evitar duplicar la
+  # lista en cada vista que muestre bitácora.
+  AUDIT_LOG_ROLES = %w[supervisor_miami supervisor_caja supervisor_prefactura].freeze
+
+  def can_view_audit_log?
+    user = Current.user
+    return false unless user
+    return true if user.admin?
+    AUDIT_LOG_ROLES.include?(user.rol)
+  end
+
   # Carga eficiente de los users referenciados por una colección de versions
   # para evitar N+1. Devuelve un hash {user_id_string => User}.
   def audit_users_index(versions)

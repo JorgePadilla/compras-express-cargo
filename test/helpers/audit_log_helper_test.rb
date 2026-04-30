@@ -57,4 +57,94 @@ class AuditLogHelperTest < ActionView::TestCase
   ensure
     PaperTrail.request.whodunnit = nil
   end
+
+  # ── Edge cases en audit_changes_summary ──
+
+  test "audit_changes_summary maneja cambio a nil (campo borrado)" do
+    PaperTrail.request.whodunnit = users(:admin).id
+    p = Paquete.create!(tracking: "1Z999AUDIT_NIL", cliente: clientes(:juan),
+                        sucursal: sucursales(:miami), descripcion: "antes")
+    p.update!(descripcion: nil)
+    summary = audit_changes_summary(p.versions.where(event: "update").last)
+    assert_includes summary, "antes"
+    assert_includes summary, "—"  # audit_value(nil) → "—"
+  ensure
+    PaperTrail.request.whodunnit = nil
+  end
+
+  test "audit_changes_summary maneja cambio desde empty string" do
+    PaperTrail.request.whodunnit = users(:admin).id
+    p = Paquete.create!(tracking: "1Z999AUDIT_EMPTY", cliente: clientes(:juan),
+                        sucursal: sucursales(:miami), descripcion: "")
+    p.update!(descripcion: "lleno")
+    summary = audit_changes_summary(p.versions.where(event: "update").last)
+    assert_includes summary, "(vacío)"  # audit_value("") → "(vacío)"
+    assert_includes summary, "lleno"
+  ensure
+    PaperTrail.request.whodunnit = nil
+  end
+
+  test "audit_changes_summary trunca strings muy largos a 40 chars" do
+    PaperTrail.request.whodunnit = users(:admin).id
+    long_str = "x" * 80
+    p = Paquete.create!(tracking: "1Z999AUDIT_LONG", cliente: clientes(:juan),
+                        sucursal: sucursales(:miami), descripcion: "antes")
+    p.update!(descripcion: long_str)
+    summary = audit_changes_summary(p.versions.where(event: "update").last)
+    refute_match(/x{80}/, summary, "el string de 80x no debe aparecer entero")
+    assert_match(/x{1,45}/, summary, "debe haber al menos algunos x truncados")
+  ensure
+    PaperTrail.request.whodunnit = nil
+  end
+
+  test "audit_changes_summary maneja cambios booleanos" do
+    PaperTrail.request.whodunnit = users(:admin).id
+    p = Paquete.create!(tracking: "1Z999AUDIT_BOOL", cliente: clientes(:juan),
+                        sucursal: sucursales(:miami), pre_alerta: false)
+    p.update!(pre_alerta: true)
+    summary = audit_changes_summary(p.versions.where(event: "update").last)
+    assert_includes summary, "pre_alerta:"
+    assert_includes summary, "true"
+    assert_includes summary, "false"
+  ensure
+    PaperTrail.request.whodunnit = nil
+  end
+
+  # ── can_view_audit_log? ──
+
+  test "can_view_audit_log? true para admin" do
+    set_current_user(users(:admin))
+    assert can_view_audit_log?
+  ensure
+    Current.session = nil
+  end
+
+  test "can_view_audit_log? true para supervisor_miami" do
+    set_current_user(User.new(rol: "supervisor_miami"))
+    assert can_view_audit_log?
+  ensure
+    Current.session = nil
+  end
+
+  test "can_view_audit_log? false para cajero/sac/digitador" do
+    %w[cajero sac digitador_miami entrega_despacho].each do |rol|
+      set_current_user(User.new(rol: rol))
+      assert_not can_view_audit_log?, "rol #{rol} no debería ver bitácora"
+    end
+  ensure
+    Current.session = nil
+  end
+
+  test "can_view_audit_log? false sin user" do
+    Current.session = nil
+    assert_not can_view_audit_log?
+  end
+
+  private
+
+  # Helper para tests: Current.user es un delegate de Current.session.user,
+  # así que hay que asignar un objeto que responda a `:user`.
+  def set_current_user(user)
+    Current.session = Struct.new(:user).new(user)
+  end
 end
