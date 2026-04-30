@@ -1,0 +1,150 @@
+require "test_helper"
+
+class AuditLogHelperTest < ActionView::TestCase
+  include AuditLogHelper
+
+  test "audit_event_label traduce eventos comunes" do
+    assert_equal "creó", audit_event_label("create")
+    assert_equal "actualizó", audit_event_label("update")
+    assert_equal "eliminó", audit_event_label("destroy")
+    assert_equal "rare_event", audit_event_label("rare_event")
+  end
+
+  test "audit_value formatea distintos tipos" do
+    assert_equal "—", audit_value(nil)
+    assert_equal "(vacío)", audit_value("")
+    assert_equal "hola", audit_value("hola")
+    long_text = "x" * 100
+    assert audit_value(long_text).length <= 41 # 40 + ellipsis "..."
+  end
+
+  test "audit_users_index resuelve users por whodunnit" do
+    user = users(:admin)
+    fake_version = Struct.new(:whodunnit).new(user.id.to_s)
+    result = audit_users_index([ fake_version ])
+    assert_equal user, result[user.id.to_s]
+  end
+
+  test "audit_users_index con versions vacío devuelve hash vacío" do
+    assert_equal({}, audit_users_index([]))
+    assert_equal({}, audit_users_index(nil))
+  end
+
+  test "audit_user_for devuelve nil cuando whodunnit es blank" do
+    fake_version = Struct.new(:whodunnit).new("")
+    assert_nil audit_user_for(fake_version)
+  end
+
+  test "audit_changes_summary formatea cambios humanamente" do
+    PaperTrail.request.whodunnit = users(:admin).id
+    p = paquetes(:recibido)
+    p.update!(descripcion: "Nuevo X")
+    update_v = p.versions.where(event: "update").last
+    summary = audit_changes_summary(update_v)
+    assert_includes summary, "descripcion:"
+    assert_includes summary, "Nuevo X"
+  ensure
+    PaperTrail.request.whodunnit = nil
+  end
+
+  test "audit_changes_summary excluye timestamps ruidosos" do
+    PaperTrail.request.whodunnit = users(:admin).id
+    p = paquetes(:recibido)
+    p.update!(descripcion: "Test123")
+    update_v = p.versions.where(event: "update").last
+    summary = audit_changes_summary(update_v)
+    assert_not_includes summary, "updated_at"
+  ensure
+    PaperTrail.request.whodunnit = nil
+  end
+
+  # ── Edge cases en audit_changes_summary ──
+
+  test "audit_changes_summary maneja cambio a nil (campo borrado)" do
+    PaperTrail.request.whodunnit = users(:admin).id
+    p = Paquete.create!(tracking: "1Z999AUDIT_NIL", cliente: clientes(:juan),
+                        sucursal: sucursales(:miami), descripcion: "antes")
+    p.update!(descripcion: nil)
+    summary = audit_changes_summary(p.versions.where(event: "update").last)
+    assert_includes summary, "antes"
+    assert_includes summary, "—"  # audit_value(nil) → "—"
+  ensure
+    PaperTrail.request.whodunnit = nil
+  end
+
+  test "audit_changes_summary maneja cambio desde empty string" do
+    PaperTrail.request.whodunnit = users(:admin).id
+    p = Paquete.create!(tracking: "1Z999AUDIT_EMPTY", cliente: clientes(:juan),
+                        sucursal: sucursales(:miami), descripcion: "")
+    p.update!(descripcion: "lleno")
+    summary = audit_changes_summary(p.versions.where(event: "update").last)
+    assert_includes summary, "(vacío)"  # audit_value("") → "(vacío)"
+    assert_includes summary, "lleno"
+  ensure
+    PaperTrail.request.whodunnit = nil
+  end
+
+  test "audit_changes_summary trunca strings muy largos a 40 chars" do
+    PaperTrail.request.whodunnit = users(:admin).id
+    long_str = "x" * 80
+    p = Paquete.create!(tracking: "1Z999AUDIT_LONG", cliente: clientes(:juan),
+                        sucursal: sucursales(:miami), descripcion: "antes")
+    p.update!(descripcion: long_str)
+    summary = audit_changes_summary(p.versions.where(event: "update").last)
+    refute_match(/x{80}/, summary, "el string de 80x no debe aparecer entero")
+    assert_match(/x{1,45}/, summary, "debe haber al menos algunos x truncados")
+  ensure
+    PaperTrail.request.whodunnit = nil
+  end
+
+  test "audit_changes_summary maneja cambios booleanos" do
+    PaperTrail.request.whodunnit = users(:admin).id
+    p = Paquete.create!(tracking: "1Z999AUDIT_BOOL", cliente: clientes(:juan),
+                        sucursal: sucursales(:miami), pre_alerta: false)
+    p.update!(pre_alerta: true)
+    summary = audit_changes_summary(p.versions.where(event: "update").last)
+    assert_includes summary, "pre_alerta:"
+    assert_includes summary, "true"
+    assert_includes summary, "false"
+  ensure
+    PaperTrail.request.whodunnit = nil
+  end
+
+  # ── can_view_audit_log? ──
+
+  test "can_view_audit_log? true para admin" do
+    set_current_user(users(:admin))
+    assert can_view_audit_log?
+  ensure
+    Current.session = nil
+  end
+
+  test "can_view_audit_log? true para supervisor_miami" do
+    set_current_user(User.new(rol: "supervisor_miami"))
+    assert can_view_audit_log?
+  ensure
+    Current.session = nil
+  end
+
+  test "can_view_audit_log? false para cajero/sac/digitador" do
+    %w[cajero sac digitador_miami entrega_despacho].each do |rol|
+      set_current_user(User.new(rol: rol))
+      assert_not can_view_audit_log?, "rol #{rol} no debería ver bitácora"
+    end
+  ensure
+    Current.session = nil
+  end
+
+  test "can_view_audit_log? false sin user" do
+    Current.session = nil
+    assert_not can_view_audit_log?
+  end
+
+  private
+
+  # Helper para tests: Current.user es un delegate de Current.session.user,
+  # así que hay que asignar un objeto que responda a `:user`.
+  def set_current_user(user)
+    Current.session = Struct.new(:user).new(user)
+  end
+end

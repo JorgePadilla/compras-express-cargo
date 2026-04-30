@@ -1,6 +1,7 @@
 class Venta < ApplicationRecord
   self.table_name = "ventas"
   include CurrencyAware
+  has_paper_trail  # PR-D1.a: audit log
 
   ISV_RATE = BigDecimal("0.15")
 

@@ -204,3 +204,46 @@ end %>
     </div>
   </div>
 </div>
+
+<%# PR-D1.a: bitácora (paper_trail versions). Visibilidad gated por
+    `can_view_audit_log?` (admin + todos los supervisores — Yusef 2026-04-29). %>
+<% if can_view_audit_log? %>
+  <% versions = @paquete.versions.reorder(created_at: :desc).limit(50) %>
+  <% users_by_id = audit_users_index(versions) %>
+  <details class="mt-4 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <summary class="px-6 py-3 cursor-pointer flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/40">
+      <div class="flex items-center gap-2">
+        <%= heroicon "clock", variant: :outline, options: { class: "w-4 h-4 text-gray-500" } %>
+        <h2 class="text-sm font-bold text-gray-800 dark:text-gray-100">Bitácora del paquete</h2>
+        <span class="text-[11px] text-gray-500 dark:text-gray-400">(<%= versions.size %> evento<%= 's' if versions.size != 1 %>)</span>
+      </div>
+      <span class="text-[11px] text-gray-400 dark:text-gray-500">click para expandir/colapsar</span>
+    </summary>
+
+    <div class="border-t border-gray-100 dark:border-gray-700">
+      <% if versions.any? %>
+        <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+          <% versions.each do |v| %>
+            <% user = audit_user_for(v, users_by_id) %>
+            <li class="px-6 py-3">
+              <div class="flex items-baseline justify-between gap-3">
+                <p class="text-xs text-gray-500 dark:text-gray-400 font-mono whitespace-nowrap">
+                  <%= v.created_at.strftime("%Y-%m-%d %H:%M:%S") %>
+                </p>
+                <p class="text-xs text-gray-700 dark:text-gray-200">
+                  <strong class="text-cec-navy dark:text-gray-100"><%= user&.nombre || "Sistema" %></strong>
+                  <%= audit_event_label(v.event) %> el paquete
+                </p>
+              </div>
+              <% if v.event == "update" %>
+                <p class="mt-1 text-xs text-gray-600 dark:text-gray-300 break-all"><%= audit_changes_summary(v) %></p>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="px-6 py-6 text-sm text-gray-400 dark:text-gray-500 text-center">Aún no hay registros en la bitácora para este paquete.</p>
+      <% end %>
+    </div>
+  </details>
+<% end %>

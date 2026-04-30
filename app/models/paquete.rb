@@ -1,4 +1,6 @@
 class Paquete < ApplicationRecord
+  has_paper_trail  # PR-D1.a: audit log de cada cambio en el paquete
+
   belongs_to :cliente
   belongs_to :manifiesto, optional: true
   belongs_to :tipo_envio, optional: true
