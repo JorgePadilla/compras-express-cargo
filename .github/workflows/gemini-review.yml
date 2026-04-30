@@ -11,12 +11,12 @@ permissions:
 
 # Modelo Gemini configurable. Override desde repo Settings → Secrets and
 # variables → Actions → Variables: setear `GEMINI_MODEL`.
-# Modelos disponibles (free tier — verificar quotas actuales):
-#   - gemini-2.5-flash       ← recomendado (mejor balance calidad/quota)
+# Modelos disponibles (verificar quotas actuales en ai.google.dev):
+#   - gemini-2.5-pro         ← default (mejor calidad de reviews)
+#   - gemini-2.5-flash       ← más quota free tier, calidad decente
 #   - gemini-2.5-flash-lite  ← original (20 RPD, baja calidad)
-#   - gemini-2.5-pro         ← mejor calidad, quota muy limitada
 env:
-  GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-2.5-flash' }}
+  GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-2.5-pro' }}
 
 jobs:
   review:
