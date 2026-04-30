@@ -2,6 +2,7 @@ class Manifiesto < ApplicationRecord
   has_paper_trail  # PR-D1.a: audit log
 
   belongs_to :empresa_manifiesto, optional: true
+  belongs_to :sucursal_origen, class_name: "Sucursal", optional: true  # PR-D1.d
   belongs_to :user, optional: true
   has_many :paquetes, dependent: :nullify
 
@@ -50,8 +51,20 @@ class Manifiesto < ApplicationRecord
 
   private
 
+  # PR-D1.d: nuevo formato anual `M<letra-sucursal><año 4-dig><contador 6-dig>`.
+  # Ejemplos: MM2026000001 (Miami), MS2026000042 (SPS), MT2026000001 (Humuya).
+  # Si no hay sucursal_origen (manifiestos legacy o tests), cae al formato
+  # antiguo `MA-XXXXXX` para no romper la creación.
   def generate_numero
-    next_number = (self.class.where("numero LIKE 'MA-%'").maximum(Arel.sql("CAST(SUBSTRING(numero FROM 4) AS INTEGER)")) || 0) + 1
-    self.numero = "MA-#{next_number.to_s.rjust(6, '0')}"
+    if sucursal_origen.present?
+      letra = sucursal_origen.codigo.to_s[0]&.upcase || "X"
+      anio = (fecha_enviado&.year || created_at&.year || Time.zone.now.year)
+      next_number = ManifiestoCounter.next_for!(sucursal: sucursal_origen, anio: anio)
+      self.numero = format("M%<letra>s%<anio>04d%<num>06d", letra: letra, anio: anio, num: next_number)
+    else
+      # Fallback legacy
+      next_number = (self.class.where("numero LIKE 'MA-%'").maximum(Arel.sql("CAST(SUBSTRING(numero FROM 4) AS INTEGER)")) || 0) + 1
+      self.numero = "MA-#{next_number.to_s.rjust(6, '0')}"
+    end
   end
 end
