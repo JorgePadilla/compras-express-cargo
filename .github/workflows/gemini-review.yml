@@ -9,6 +9,15 @@ permissions:
   contents: read
   pull-requests: write
 
+# Modelo Gemini configurable. Override desde repo Settings → Secrets and
+# variables → Actions → Variables: setear `GEMINI_MODEL`.
+# Modelos disponibles (free tier — verificar quotas actuales):
+#   - gemini-2.5-flash       ← recomendado (mejor balance calidad/quota)
+#   - gemini-2.5-flash-lite  ← original (20 RPD, baja calidad)
+#   - gemini-2.5-pro         ← mejor calidad, quota muy limitada
+env:
+  GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-2.5-flash' }}
+
 jobs:
   review:
     name: Gemini Review
@@ -47,6 +56,7 @@ jobs:
             exit 1
           fi
           echo "API key length: ${#GEMINI_API_KEY} chars"
+          echo "Using model: ${GEMINI_MODEL}"
 
           PR_TITLE="${{ github.event.pull_request.title }}"
           PR_BODY=$(cat <<'PRBODY'
@@ -112,7 +122,7 @@ jobs:
 
           # Call Gemini API
           RESPONSE=$(curl -s -X POST \
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${GEMINI_API_KEY}" \
+            "https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}" \
             -H "Content-Type: application/json" \
             -d @/tmp/request.json)
 
