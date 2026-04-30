@@ -11,12 +11,18 @@ permissions:
 
 # Modelo Gemini configurable. Override desde repo Settings → Secrets and
 # variables → Actions → Variables: setear `GEMINI_MODEL`.
-# Modelos disponibles (verificar quotas actuales en ai.google.dev):
-#   - gemini-2.5-pro         ← default (mejor calidad de reviews)
-#   - gemini-2.5-flash       ← más quota free tier, calidad decente
-#   - gemini-2.5-flash-lite  ← original (20 RPD, baja calidad)
+#
+# IMPORTANTE: NO todos los modelos están en el free tier. La cuenta del
+# proyecto (la owner del GEMINI_API_KEY) determina qué modelos pueden
+# usarse gratis:
+#   - gemini-2.5-flash       ← default actual: free tier ~250 RPD
+#   - gemini-2.5-flash-lite  ← más bajo, ~20 RPD
+#   - gemini-2.5-pro         ← REQUIERE billing/paid tier; free tier = 0
+#
+# Si activas billing en Google AI Studio para el API key de este repo,
+# poné `vars.GEMINI_MODEL = gemini-2.5-pro` y vas a tener mejores reviews.
 env:
-  GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-2.5-pro' }}
+  GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-2.5-flash' }}
 
 jobs:
   review:
@@ -143,7 +149,7 @@ jobs:
             cat /tmp/review.txt
             echo ""
             echo "---"
-            echo "*Automated review by Gemini 2.5 Flash Lite*"
+            echo "*Automated review by ${GEMINI_MODEL}*"
           } > /tmp/comment.md
 
           gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/comment.md
