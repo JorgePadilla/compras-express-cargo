@@ -9,6 +9,8 @@ class Paquete < ApplicationRecord
   belongs_to :venta, optional: true
   belongs_to :entrega, optional: true
   belongs_to :sucursal, optional: true
+  belongs_to :sucursal_actual,      class_name: "Sucursal",      optional: true  # PR-D1.c: ubicación física actual
+  belongs_to :sub_localidad_actual, class_name: "SubLocalidad",  optional: true  # PR-D1.c: bodega interna actual
   belongs_to :warehouse_receipt, optional: true  # PR-5c.5p2 — fuente rica del numero_recepcion (madre)
   has_many :pre_alerta_paquetes, dependent: :nullify
   has_many :nota_debito_items,  dependent: :nullify
@@ -59,6 +61,13 @@ class Paquete < ApplicationRecord
   validates :peso, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :alto, :largo, :ancho, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validate :no_advance_with_open_tareas
+  validate :sub_localidad_pertenece_a_sucursal_actual
+
+  # PR-D1.c: tarifa fija pre-establecida $35 USD + ISV (Yusef 2026-04-29).
+  # Editable por el cajero al crear/asignar la recolecta. No hay tabla de
+  # tarifas por zona todavía porque siempre cambia.
+  RECOLECTA_TARIFA_DEFAULT_USD = 35.0
+  RECOLECTA_MONEDAS = %w[USD LPS].freeze
 
   # Orden del pipeline operativo; avances a un indice mayor requieren que
   # las tareas pendientes del paquete esten cerradas.
@@ -101,6 +110,7 @@ class Paquete < ApplicationRecord
 
   before_validation :generate_guia, on: :create, if: -> { guia.blank? }
   before_validation :generate_numero_recepcion, on: :create, if: -> { numero_recepcion.blank? && sucursal_id.present? }
+  before_validation :default_recolecta_monto, if: -> { recolecta_solicitada? && recolecta_monto.blank? }
   after_create :ensure_warehouse_receipt, if: -> { warehouse_receipt_id.nil? && numero_recepcion.present? && cliente_id.present? }
   before_save :set_fecha_recibido, if: -> { fecha_recibido_miami.blank? && new_record? }
   before_save :calculate_peso_volumetrico
@@ -380,6 +390,22 @@ class Paquete < ApplicationRecord
     if peso.present? || peso_volumetrico.present?
       self.peso_cobrar = [peso || 0, peso_volumetrico || 0].max
     end
+  end
+
+  # PR-D1.c: cuando se marca recolecta_solicitada y aún no hay monto,
+  # auto-llena con la tarifa default de $35 USD. El cajero puede editarlo.
+  def default_recolecta_monto
+    self.recolecta_monto = RECOLECTA_TARIFA_DEFAULT_USD
+    self.recolecta_moneda ||= "USD"
+  end
+
+  # PR-D1.c: si se asigna sub_localidad_actual, debe pertenecer a la
+  # sucursal_actual (consistencia referencial — no se puede meter un
+  # paquete en una bodega de Zerón si dijiste que está en Humuya).
+  def sub_localidad_pertenece_a_sucursal_actual
+    return if sub_localidad_actual.blank? || sucursal_actual.blank?
+    return if sub_localidad_actual.sucursal_id == sucursal_actual_id
+    errors.add(:sub_localidad_actual, "no pertenece a la sucursal actual")
   end
 
   # PR-5c.5p2: para paquetes creados fuera de `crear_split!` (flow normal de
