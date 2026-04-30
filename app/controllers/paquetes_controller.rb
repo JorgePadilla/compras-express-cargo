@@ -353,8 +353,10 @@ class PaquetesController < ApplicationController
       :tracking, :tracking_secundario, :cliente_id, :tipo_envio_id, :estado, :peso,
       :alto, :largo, :ancho, :cantidad_productos, :cantidad_paquetes,
       :numero_caja, :descripcion, :remitente, :expedido_por, :proveedor,
-      :notas_internas, :pre_alerta, :pre_factura,
-      :solicito_cambio_servicio, :retener_miami
+      :notas_internas, :notas_al_cliente, :notas_consolidacion, :notas_retencion,
+      :pre_alerta, :pre_factura,
+      :solicito_cambio_servicio, :retener_miami,
+      motivo_retencion_ids: []
     )
   end
 end

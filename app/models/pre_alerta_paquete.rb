@@ -41,7 +41,23 @@ class PreAlertaPaquete < ApplicationRecord
     count = rows.update_all(paquete_id: paquete.id)
 
     if count > 0
-      PreAlerta.where(id: pre_alerta_ids, estado: "pre_alerta").find_each do |pa|
+      pre_alertas = PreAlerta.where(id: pre_alerta_ids)
+
+      # PR-D2: snapshot de notas_grupo de pre-alerta consolidada al
+      # paquete (notas_consolidacion). Solo si el paquete no las tiene
+      # ya (no sobrescribir si admin/sac las editó).
+      if paquete.notas_consolidacion.blank?
+        notas = pre_alertas.where(consolidado: true)
+                          .where.not(notas_grupo: [ nil, "" ])
+                          .pluck(:notas_grupo)
+                          .compact_blank
+                          .uniq
+        if notas.any?
+          paquete.update_column(:notas_consolidacion, notas.join("\n\n"))
+        end
+      end
+
+      pre_alertas.where(estado: "pre_alerta").find_each do |pa|
         pa.update!(estado: "recibido")
       end
     end
