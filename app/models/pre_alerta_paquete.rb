@@ -26,8 +26,14 @@ class PreAlertaPaquete < ApplicationRecord
   # llegan con 2 trackings: el cliente pre-alerta con uno, el paquete
   # físico llega con el otro. Sin este match dual, la vinculación falla.
   def self.link_tracking!(tracking, paquete)
-    candidatos = [ tracking, paquete.tracking, paquete.tracking_secundario ]
-                   .compact_blank.map { |t| t.to_s.strip.upcase }.uniq
+    argument_tracking  = tracking
+    primary_tracking   = paquete.tracking
+    secondary_tracking = paquete.tracking_secundario
+
+    candidatos = [ argument_tracking, primary_tracking, secondary_tracking ]
+                   .compact_blank
+                   .map { |t| t.to_s.strip.upcase }
+                   .uniq
     return 0 if candidatos.empty?
 
     rows = sin_vincular.where("UPPER(tracking) IN (?)", candidatos)

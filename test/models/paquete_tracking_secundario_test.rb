@@ -31,6 +31,15 @@ class PaqueteTrackingSecundarioTest < ActiveSupport::TestCase
     assert_nil p.tracking_secundario
   end
 
+  test "buscar devuelve UN solo registro cuando el query matchea primario Y secundario del mismo paquete" do
+    # Edge case (review feedback): un mismo paquete con primary='ABCXYZ' y
+    # secondary='ABCDEF' buscado por 'ABC' debe aparecer UNA vez, no dos.
+    p = Paquete.create!(tracking: "ABCXYZ123", tracking_secundario: "ABCDEF456",
+                        cliente: @cliente, sucursal: @sucursal)
+    results = Paquete.buscar("ABC").to_a
+    assert_equal 1, results.count(p), "el paquete no debe duplicarse cuando ambos trackings matchean el query"
+  end
+
   # ── PreAlertaPaquete.link_tracking! con dual matching ──
 
   test "link_tracking! matchea contra tracking principal del paquete" do
