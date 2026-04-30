@@ -1,19 +1,16 @@
-# PR-D1.a: paper_trail v17 NO incluye `PaperTrail::Rails::Controller`
-# en ActionController::Base automáticamente vía Railtie. Tenemos que
-# requerir y usarlo explícitamente. El `require` en el top del archivo
-# garantiza que el constant esté definido al evaluar la clase.
-require "paper_trail/frameworks/rails/controller"
-
 class ApplicationController < ActionController::Base
   include Authentication
   include Authorization
-  include PaperTrail::Rails::Controller
 
   allow_browser versions: :modern
 
-  # paper_trail audit log — registra qué usuario disparó cada cambio.
-  # El callback se ejecuta antes de cada acción del controller.
-  before_action :set_paper_trail_whodunnit
+  # PR-D1.a: paper_trail audit log — registra qué usuario disparó cada
+  # cambio. paper_trail hace su propio `include PaperTrail::Rails::Controller`
+  # via Railtie + `ActiveSupport.on_load(:action_controller)`, así que
+  # `set_paper_trail_whodunnit` está disponible en runtime aunque no
+  # aparezca en `included_modules` al boot. Usamos lambda defensiva para
+  # evitar el caso edge donde el hook aún no disparó.
+  before_action -> { set_paper_trail_whodunnit if respond_to?(:set_paper_trail_whodunnit) }
 
   private
 
