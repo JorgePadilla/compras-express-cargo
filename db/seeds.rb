@@ -148,6 +148,25 @@ EN
 end
 puts "  ✓ #{Term.count} terms (#{Term.distinct.pluck(:version).join(', ')})"
 
+# ── Sub-Localidades (PR-D1.c) ──
+# Bodegas internas / áreas terceras dentro de cada sucursal HND. Yusef
+# 2026-04-29: "ZR01 (bodega central), ZR02 (bodega CEM)".
+puts "Seeding sub_localidades..."
+zeron  = Sucursal.find_by(codigo: "SPS")
+humuya = Sucursal.find_by(codigo: "TGU")
+[
+  { sucursal: zeron,  codigo: "ZR01", nombre: "Zerón Bodega Central",        position: 0 },
+  { sucursal: zeron,  codigo: "ZR02", nombre: "Zerón Bodega CEM (Marítimo)", position: 1 },
+  { sucursal: humuya, codigo: "HM01", nombre: "Humuya Bodega Central",       position: 0 }
+].each do |attrs|
+  next if attrs[:sucursal].nil?
+  SubLocalidad.find_or_create_by!(sucursal: attrs[:sucursal], codigo: attrs[:codigo]) do |s|
+    s.nombre = attrs[:nombre]
+    s.position = attrs[:position]
+  end
+end
+puts "  ✓ #{SubLocalidad.count} sub-localidades"
+
 # ── Sample data (dev/staging only) ──
 if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   # Demo users per role — always reset on re-seed so documented credentials work
