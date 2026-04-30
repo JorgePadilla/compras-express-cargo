@@ -26,6 +26,7 @@ class User < ApplicationRecord
   validates :email_address, presence: true, uniqueness: true
   validates :rol, presence: true
   validates :tema, inclusion: { in: %w[light dark], allow_nil: true }
+  validates :iniciales, length: { maximum: 8 }, allow_blank: true
 
   # Scopes
   scope :activos, -> { where(activo: true) }
@@ -56,5 +57,17 @@ class User < ApplicationRecord
 
   def nombre_completo
     nombre
+  end
+
+  # PR-D1.b: iniciales para mostrar en bitácora, WR, y cualquier campo
+  # tipo "(YS)" en la UI. Si admin no asignó iniciales custom, computa
+  # automáticamente desde el nombre como fallback razonable. La preferencia
+  # es la columna explícita (Yusef pidió alias custom porque hay nombres
+  # repetidos como "Juan").
+  def iniciales_display
+    return iniciales.upcase if iniciales.present?
+    parts = nombre.to_s.split(/\s+/).reject(&:blank?).first(2)
+    return "—" if parts.empty?
+    parts.map { |p| p[0].to_s.upcase }.join
   end
 end

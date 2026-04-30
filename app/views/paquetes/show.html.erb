@@ -205,6 +205,49 @@ end %>
   </div>
 </div>
 
+<%# PR-D1.b: línea de tiempo del paquete con fechas + iniciales del usuario
+    que disparó cada cambio + indicador "(modificada)" cuando hay re-edit. %>
+<% timeline = paquete_timeline_steps(@paquete) %>
+<% if timeline.any? { |s| s[:fecha].present? } %>
+  <div class="mt-4 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="px-6 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
+      <%= heroicon "clock", variant: :outline, options: { class: "w-4 h-4 text-gray-500" } %>
+      <h2 class="text-sm font-bold text-gray-800 dark:text-gray-100">Línea de tiempo</h2>
+    </div>
+    <ol class="divide-y divide-gray-100 dark:divide-gray-700">
+      <% timeline.each do |step| %>
+        <% accent = timeline_accent(step[:accent]) %>
+        <li class="px-6 py-3 flex items-center gap-3 <%= 'opacity-50' unless step[:fecha] %>">
+          <span class="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-full <%= accent[:bg] %> text-white">
+            <%= heroicon step[:icon], variant: :solid, options: { class: "w-4 h-4" } %>
+          </span>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-800 dark:text-gray-100"><%= step[:label] %></p>
+            <% if step[:fecha] %>
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                <%= step[:fecha].strftime("%d/%m/%Y %H:%M") %>
+                <% if step[:user] %>
+                  · <span class="font-mono"><%= step[:user].iniciales_display %></span>
+                  <span class="text-gray-400">(<%= step[:user].nombre %>)</span>
+                <% end %>
+                <% if step[:modificada] %>
+                  <span class="ml-1 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-cec-gold/15 text-cec-gold-dark dark:bg-cec-gold/25 dark:text-cec-gold-light"
+                        title="Esta fecha fue actualizada después de su captura inicial">
+                    <%= heroicon "pencil-square", variant: :solid, options: { class: "w-3 h-3" } %>
+                    modificada
+                  </span>
+                <% end %>
+              </p>
+            <% else %>
+              <p class="text-xs text-gray-400 dark:text-gray-500">Pendiente</p>
+            <% end %>
+          </div>
+        </li>
+      <% end %>
+    </ol>
+  </div>
+<% end %>
+
 <%# PR-D1.a: bitácora (paper_trail versions). Visibilidad gated por
     `can_view_audit_log?` (admin + todos los supervisores — Yusef 2026-04-29). %>
 <% if can_view_audit_log? %>

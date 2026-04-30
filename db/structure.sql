@@ -1219,7 +1219,26 @@ CREATE TABLE public.paquetes (
     sucursal_id bigint,
     numero_recepcion character varying,
     fecha_disponible timestamp(6) without time zone,
-    warehouse_receipt_id bigint
+    warehouse_receipt_id bigint,
+    fecha_solicito_recolecta timestamp(6) without time zone,
+    fecha_pre_alerta timestamp(6) without time zone,
+    fecha_empacado timestamp(6) without time zone,
+    fecha_aduana timestamp(6) without time zone,
+    fecha_consolidando timestamp(6) without time zone,
+    fecha_en_reparto timestamp(6) without time zone,
+    fecha_entregado timestamp(6) without time zone,
+    fecha_posible_entrega timestamp(6) without time zone,
+    fecha_recibido_miami_by_user_id bigint,
+    fecha_enviado_by_user_id bigint,
+    fecha_disponible_by_user_id bigint,
+    fecha_solicito_recolecta_by_user_id bigint,
+    fecha_pre_alerta_by_user_id bigint,
+    fecha_empacado_by_user_id bigint,
+    fecha_aduana_by_user_id bigint,
+    fecha_consolidando_by_user_id bigint,
+    fecha_en_reparto_by_user_id bigint,
+    fecha_entregado_by_user_id bigint,
+    fecha_posible_entrega_by_user_id bigint
 );
 
 
@@ -1761,7 +1780,8 @@ CREATE TABLE public.users (
     rol character varying DEFAULT 'digitador_miami'::character varying NOT NULL,
     ubicacion character varying DEFAULT 'honduras'::character varying,
     activo boolean DEFAULT true NOT NULL,
-    tema character varying
+    tema character varying,
+    iniciales character varying(8)
 );
 
 
@@ -3686,6 +3706,14 @@ ALTER TABLE ONLY public.financiamientos
 
 
 --
+-- Name: paquetes fk_rails_0b62b01889; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_0b62b01889 FOREIGN KEY (fecha_recibido_miami_by_user_id) REFERENCES public.users(id);
+
+
+--
 -- Name: cotizaciones fk_rails_0bf5758b31; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3862,6 +3890,14 @@ ALTER TABLE ONLY public.pre_facturas
 
 
 --
+-- Name: paquetes fk_rails_498bb416af; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_498bb416af FOREIGN KEY (fecha_aduana_by_user_id) REFERENCES public.users(id);
+
+
+--
 -- Name: reempaques fk_rails_4c184d921a; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3942,6 +3978,14 @@ ALTER TABLE ONLY public.notas_debito
 
 
 --
+-- Name: paquetes fk_rails_69f5991b3d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_69f5991b3d FOREIGN KEY (fecha_enviado_by_user_id) REFERENCES public.users(id);
+
+
+--
 -- Name: numero_recepcion_counters fk_rails_6b50eeee77; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3958,11 +4002,27 @@ ALTER TABLE ONLY public.paquetes
 
 
 --
+-- Name: paquetes fk_rails_72e789d8fd; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_72e789d8fd FOREIGN KEY (fecha_empacado_by_user_id) REFERENCES public.users(id);
+
+
+--
 -- Name: sessions fk_rails_758836b4f0; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.sessions
     ADD CONSTRAINT fk_rails_758836b4f0 FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: paquetes fk_rails_7d1067208a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_7d1067208a FOREIGN KEY (fecha_posible_entrega_by_user_id) REFERENCES public.users(id);
 
 
 --
@@ -4126,6 +4186,14 @@ ALTER TABLE ONLY public.ingresos_caja
 
 
 --
+-- Name: paquetes fk_rails_ad55b41320; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_ad55b41320 FOREIGN KEY (fecha_en_reparto_by_user_id) REFERENCES public.users(id);
+
+
+--
 -- Name: warehouse_receipts fk_rails_bd11b17ab6; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4179,6 +4247,14 @@ ALTER TABLE ONLY public.venta_items
 
 ALTER TABLE ONLY public.pre_factura_items
     ADD CONSTRAINT fk_rails_ca1057ddd4 FOREIGN KEY (paquete_id) REFERENCES public.paquetes(id);
+
+
+--
+-- Name: paquetes fk_rails_cb242c76fb; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_cb242c76fb FOREIGN KEY (fecha_disponible_by_user_id) REFERENCES public.users(id);
 
 
 --
@@ -4254,6 +4330,14 @@ ALTER TABLE ONLY public.nota_debito_items
 
 
 --
+-- Name: paquetes fk_rails_e8cced4358; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_e8cced4358 FOREIGN KEY (fecha_pre_alerta_by_user_id) REFERENCES public.users(id);
+
+
+--
 -- Name: financiamiento_cuotas fk_rails_ee080782c8; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4267,6 +4351,30 @@ ALTER TABLE ONLY public.financiamiento_cuotas
 
 ALTER TABLE ONLY public.paquetes
     ADD CONSTRAINT fk_rails_eeda9f916d FOREIGN KEY (venta_id) REFERENCES public.ventas(id);
+
+
+--
+-- Name: paquetes fk_rails_f54229c82d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_f54229c82d FOREIGN KEY (fecha_solicito_recolecta_by_user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: paquetes fk_rails_f762ed6e03; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_f762ed6e03 FOREIGN KEY (fecha_entregado_by_user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: paquetes fk_rails_f7d2d37727; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_f7d2d37727 FOREIGN KEY (fecha_consolidando_by_user_id) REFERENCES public.users(id);
 
 
 --
@@ -4300,6 +4408,8 @@ ALTER TABLE ONLY public.paquetes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260430034028'),
+('20260430034027'),
 ('20260429235510'),
 ('20260429235509'),
 ('20260429234222'),
