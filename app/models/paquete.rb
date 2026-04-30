@@ -80,6 +80,7 @@ class Paquete < ApplicationRecord
     left_joins(:cliente, :tipo_envio, :manifiesto).where(
       <<~SQL,
         paquetes.tracking ILIKE :q
+        OR paquetes.tracking_secundario ILIKE :q
         OR paquetes.guia ILIKE :q
         OR paquetes.numero_recepcion ILIKE :q
         OR paquetes.descripcion ILIKE :q

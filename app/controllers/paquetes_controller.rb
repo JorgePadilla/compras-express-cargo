@@ -350,7 +350,7 @@ class PaquetesController < ApplicationController
 
   def paquete_params
     params.require(:paquete).permit(
-      :tracking, :cliente_id, :tipo_envio_id, :estado, :peso,
+      :tracking, :tracking_secundario, :cliente_id, :tipo_envio_id, :estado, :peso,
       :alto, :largo, :ancho, :cantidad_productos, :cantidad_paquetes,
       :numero_caja, :descripcion, :remitente, :expedido_por, :proveedor,
       :notas_internas, :pre_alerta, :pre_factura,

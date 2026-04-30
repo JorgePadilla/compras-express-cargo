@@ -67,6 +67,11 @@ end %>
     <div class="md:col-span-2">
       <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Tracking</dt>
       <dd class="mt-1 text-sm font-mono text-gray-900"><%= @paquete.tracking %></dd>
+      <% if @paquete.tracking_secundario.present? %>
+        <dd class="mt-1 text-xs font-mono text-gray-500" title="Tracking secundario / alternativo">
+          Alt: <%= @paquete.tracking_secundario %>
+        </dd>
+      <% end %>
     </div>
     <div>
       <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</dt>

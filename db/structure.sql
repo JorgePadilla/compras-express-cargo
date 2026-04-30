@@ -1277,7 +1277,8 @@ CREATE TABLE public.paquetes (
     sub_localidad_actual_id bigint,
     recolecta_solicitada boolean DEFAULT false NOT NULL,
     recolecta_monto numeric(10,2),
-    recolecta_moneda character varying DEFAULT 'USD'::character varying
+    recolecta_moneda character varying DEFAULT 'USD'::character varying,
+    tracking_secundario character varying
 );
 
 
@@ -3429,6 +3430,13 @@ CREATE INDEX index_paquetes_on_tracking ON public.paquetes USING btree (tracking
 
 
 --
+-- Name: index_paquetes_on_tracking_secundario; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_paquetes_on_tracking_secundario ON public.paquetes USING btree (tracking_secundario);
+
+
+--
 -- Name: index_paquetes_on_user_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4608,6 +4616,7 @@ ALTER TABLE ONLY public.paquetes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260430043555'),
 ('20260430043116'),
 ('20260430042343'),
 ('20260430042342'),

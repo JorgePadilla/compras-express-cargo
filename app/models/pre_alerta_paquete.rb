@@ -20,9 +20,23 @@ class PreAlertaPaquete < ApplicationRecord
   # Links unlinked pre_alerta_paquetes by tracking to a given paquete.
   # Advances parent pre_alerta estado to "recibido" if still in pre_alerta state.
   # Returns number of rows linked.
+  #
+  # PR-D1.e: ahora matchea contra el tracking PRINCIPAL del paquete y el
+  # SECUNDARIO (cuando existe). Yusef pidió esto porque muchos paquetes
+  # llegan con 2 trackings: el cliente pre-alerta con uno, el paquete
+  # físico llega con el otro. Sin este match dual, la vinculación falla.
   def self.link_tracking!(tracking, paquete)
-    normalized = tracking.strip.upcase
-    rows = sin_vincular.where("UPPER(tracking) = ?", normalized)
+    argument_tracking  = tracking
+    primary_tracking   = paquete.tracking
+    secondary_tracking = paquete.tracking_secundario
+
+    candidatos = [ argument_tracking, primary_tracking, secondary_tracking ]
+                   .compact_blank
+                   .map { |t| t.to_s.strip.upcase }
+                   .uniq
+    return 0 if candidatos.empty?
+
+    rows = sin_vincular.where("UPPER(tracking) IN (?)", candidatos)
     pre_alerta_ids = rows.pluck(:pre_alerta_id).uniq
     count = rows.update_all(paquete_id: paquete.id)
 
