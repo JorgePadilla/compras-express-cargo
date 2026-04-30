@@ -24,6 +24,14 @@
     </div>
 
     <div>
+      <%= f.label :iniciales, "Iniciales", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.text_field :iniciales, maxlength: 8, placeholder: "Ej: YG, JP, YS",
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono uppercase
+                 focus:ring-cec-teal focus:border-cec-teal" %>
+      <p class="mt-1 text-xs text-gray-500">Hasta 8 caracteres. Aparece en la bitácora y el Warehouse Receipt.</p>
+    </div>
+
+    <div>
       <%= f.label :email_address, "Email", class: "block text-sm font-medium text-gray-700 mb-1" %>
       <%= f.email_field :email_address, required: true,
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm

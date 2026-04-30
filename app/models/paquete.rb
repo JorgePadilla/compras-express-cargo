@@ -17,22 +17,41 @@ class Paquete < ApplicationRecord
   has_many :reempaques, dependent: :destroy
 
   enum :estado, {
-    recibido_miami: "recibido_miami",
-    empacado: "empacado",
-    enviado_honduras: "enviado_honduras",
-    en_aduana: "en_aduana",
+    pre_alerta_estado:     "pre_alerta_estado",  # PR-D1.b: paquete creado desde pre-alerta antes de llegar a Miami
+    recibido_miami:        "recibido_miami",
+    empacado:              "empacado",
+    enviado_honduras:      "enviado_honduras",
+    en_aduana:             "en_aduana",
     consolidando_honduras: "consolidando_honduras",
-    disponible_entrega: "disponible_entrega",
-    pre_facturado: "pre_facturado",
-    facturado: "facturado",
-    en_reparto: "en_reparto",
-    recoleta_en_proceso: "recoleta_en_proceso",
-    entregado: "entregado",
-    retenido: "retenido",
-    retornado: "retornado",
-    desechado: "desechado",
-    anulado: "anulado"
+    disponible_entrega:    "disponible_entrega",
+    pre_facturado:         "pre_facturado",
+    facturado:             "facturado",
+    en_reparto:            "en_reparto",
+    recoleta_en_proceso:   "recoleta_en_proceso",
+    entregado:             "entregado",
+    retenido:              "retenido",
+    retornado:             "retornado",
+    desechado:             "desechado",
+    anulado:               "anulado"
   }
+
+  # PR-D1.b: mapping estado → columna de fecha. El cambio a un estado
+  # actualiza `fecha_<estado>` + `fecha_<estado>_by_user_id` (excepto
+  # pre_alerta que NUNCA se sobrescribe — Yusef 2026-04-29).
+  ESTADO_FECHA_MAP = {
+    "pre_alerta_estado"  => :fecha_pre_alerta,
+    "recibido_miami"     => :fecha_recibido_miami,
+    "empacado"           => :fecha_empacado,
+    "enviado_honduras"   => :fecha_enviado,
+    "en_aduana"          => :fecha_aduana,
+    "consolidando_honduras" => :fecha_consolidando,
+    "disponible_entrega" => :fecha_disponible,
+    "en_reparto"         => :fecha_en_reparto,
+    "entregado"          => :fecha_entregado
+  }.freeze
+
+  # Fechas que NO se sobrescriben una vez seteadas (queda la primera).
+  ESTADO_FECHA_INMUTABLE = %i[fecha_pre_alerta].freeze
 
   validates :tracking, presence: true
   validates :guia, presence: true, uniqueness: { case_sensitive: false }
@@ -87,6 +106,7 @@ class Paquete < ApplicationRecord
   before_save :calculate_peso_volumetrico
   before_save :calculate_peso_cobrar
   before_save :track_fecha_disponible, if: :will_save_change_to_estado?
+  before_save :track_estado_fecha_y_user, if: :will_save_change_to_estado?
   after_save :sync_pre_alerta_estados, if: :saved_change_to_estado?
 
   def estado_terminal?
@@ -324,6 +344,26 @@ class Paquete < ApplicationRecord
   def track_fecha_disponible
     return unless estado == "disponible_entrega"
     self.fecha_disponible ||= Time.current
+  end
+
+  # PR-D1.b: cuando cambia el estado, setea la fecha correspondiente +
+  # quién la disparó. Las fechas en ESTADO_FECHA_INMUTABLE solo se setean
+  # si están en blanco (no sobrescriben).
+  def track_estado_fecha_y_user
+    fecha_attr = ESTADO_FECHA_MAP[estado]
+    return if fecha_attr.nil?
+
+    user_attr = "#{fecha_attr}_by_user_id"
+
+    if ESTADO_FECHA_INMUTABLE.include?(fecha_attr)
+      # Solo setea si está en blanco. Conserva el primer valor.
+      return if self[fecha_attr].present?
+      self[fecha_attr] = Time.current
+      self[user_attr] = Current.user&.id
+    else
+      self[fecha_attr] = Time.current
+      self[user_attr] = Current.user&.id
+    end
   end
 
   def set_fecha_recibido

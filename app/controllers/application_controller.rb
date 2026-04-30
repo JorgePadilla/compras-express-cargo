@@ -5,8 +5,12 @@ class ApplicationController < ActionController::Base
   allow_browser versions: :modern
 
   # PR-D1.a: paper_trail audit log — registra qué usuario disparó cada
-  # cambio. El callback se ejecuta antes de cada acción del controller.
-  before_action :set_paper_trail_whodunnit
+  # cambio. paper_trail hace su propio `include PaperTrail::Rails::Controller`
+  # via Railtie + `ActiveSupport.on_load(:action_controller)`, así que
+  # `set_paper_trail_whodunnit` está disponible en runtime aunque no
+  # aparezca en `included_modules` al boot. Usamos lambda defensiva para
+  # evitar el caso edge donde el hook aún no disparó.
+  before_action -> { set_paper_trail_whodunnit if respond_to?(:set_paper_trail_whodunnit) }
 
   private
 
