@@ -78,4 +78,25 @@ class UserTest < ActiveSupport::TestCase
     user = users(:admin)
     assert_equal "Admin Test", user.nombre_completo
   end
+
+  # PR-D2.b: cada rol ve sólo las notas permanentes pensadas para su área.
+  test "notas_permanentes_visibles filtra por rol" do
+    cajero = User.new(rol: "cajero")
+    campos = cajero.notas_permanentes_visibles.map { |n| n[:campo] }
+    assert_includes campos, :notas_caja
+    assert_not_includes campos, :notas_miami
+    assert_not_includes campos, :notas_sac
+
+    miami = User.new(rol: "digitador_miami")
+    assert_equal [ :notas_miami ], miami.notas_permanentes_visibles.map { |n| n[:campo] }
+
+    sac = User.new(rol: "sac")
+    assert_includes sac.notas_permanentes_visibles.map { |n| n[:campo] }, :notas_sac
+  end
+
+  test "notas_permanentes_visibles para admin incluye todas las áreas" do
+    admin = User.new(rol: "admin")
+    campos = admin.notas_permanentes_visibles.map { |n| n[:campo] }
+    assert_equal %i[notas_miami notas_honduras notas_caja notas_sac].sort, campos.sort
+  end
 end
