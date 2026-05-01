@@ -34,6 +34,8 @@ ActiveSupport::Inflector.inflections(:en) do |inflect|
   inflect.irregular "egreso_caja", "egresos_caja"
   inflect.irregular "sucursal", "sucursales"
   inflect.irregular "proveedor", "proveedores"
+  inflect.irregular "tarifa_recolecta", "tarifas_recolecta"
+  inflect.irregular "servicio_extra",   "servicios_extra"
   inflect.irregular "motivo_retencion", "motivos_retencion"
   inflect.irregular "paquete_motivo_retencion", "paquete_motivos_retencion"
   inflect.irregular "plantilla_nota_cliente", "plantillas_notas_cliente"

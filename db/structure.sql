@@ -1728,6 +1728,45 @@ CREATE TABLE public.schema_migrations (
 
 
 --
+-- Name: servicios_extra; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.servicios_extra (
+    id bigint NOT NULL,
+    codigo character varying NOT NULL,
+    descripcion character varying NOT NULL,
+    costo numeric(10,2) DEFAULT 0.0 NOT NULL,
+    precio_venta numeric(10,2) NOT NULL,
+    moneda character varying DEFAULT 'USD'::character varying NOT NULL,
+    precio_incluye_isv boolean DEFAULT true NOT NULL,
+    "position" integer DEFAULT 0 NOT NULL,
+    activo boolean DEFAULT true NOT NULL,
+    notas text,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: servicios_extra_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.servicios_extra_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: servicios_extra_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.servicios_extra_id_seq OWNED BY public.servicios_extra.id;
+
+
+--
 -- Name: sessions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1942,6 +1981,42 @@ CREATE SEQUENCE public.tareas_id_seq
 --
 
 ALTER SEQUENCE public.tareas_id_seq OWNED BY public.tareas.id;
+
+
+--
+-- Name: tarifas_recolecta; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.tarifas_recolecta (
+    id bigint NOT NULL,
+    zona character varying NOT NULL,
+    monto numeric(10,2) NOT NULL,
+    moneda character varying DEFAULT 'USD'::character varying NOT NULL,
+    "position" integer DEFAULT 0 NOT NULL,
+    activo boolean DEFAULT true NOT NULL,
+    notas text,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: tarifas_recolecta_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.tarifas_recolecta_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: tarifas_recolecta_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.tarifas_recolecta_id_seq OWNED BY public.tarifas_recolecta.id;
 
 
 --
@@ -2513,6 +2588,13 @@ ALTER TABLE ONLY public.reempaques ALTER COLUMN id SET DEFAULT nextval('public.r
 
 
 --
+-- Name: servicios_extra id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.servicios_extra ALTER COLUMN id SET DEFAULT nextval('public.servicios_extra_id_seq'::regclass);
+
+
+--
 -- Name: sessions id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -2552,6 +2634,13 @@ ALTER TABLE ONLY public.tamano_cajas ALTER COLUMN id SET DEFAULT nextval('public
 --
 
 ALTER TABLE ONLY public.tareas ALTER COLUMN id SET DEFAULT nextval('public.tareas_id_seq'::regclass);
+
+
+--
+-- Name: tarifas_recolecta id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarifas_recolecta ALTER COLUMN id SET DEFAULT nextval('public.tarifas_recolecta_id_seq'::regclass);
 
 
 --
@@ -2948,6 +3037,14 @@ ALTER TABLE ONLY public.schema_migrations
 
 
 --
+-- Name: servicios_extra servicios_extra_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.servicios_extra
+    ADD CONSTRAINT servicios_extra_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: sessions sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2993,6 +3090,14 @@ ALTER TABLE ONLY public.tamano_cajas
 
 ALTER TABLE ONLY public.tareas
     ADD CONSTRAINT tareas_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tarifas_recolecta tarifas_recolecta_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarifas_recolecta
+    ADD CONSTRAINT tarifas_recolecta_pkey PRIMARY KEY (id);
 
 
 --
@@ -3962,6 +4067,20 @@ CREATE INDEX index_reempaques_on_tarea_id ON public.reempaques USING btree (tare
 
 
 --
+-- Name: index_servicios_extra_on_activo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_servicios_extra_on_activo ON public.servicios_extra USING btree (activo);
+
+
+--
+-- Name: index_servicios_extra_on_codigo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_servicios_extra_on_codigo ON public.servicios_extra USING btree (codigo);
+
+
+--
 -- Name: index_sessions_on_user_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4050,6 +4169,20 @@ CREATE INDEX index_tareas_on_estado ON public.tareas USING btree (estado);
 --
 
 CREATE INDEX index_tareas_on_paquete_id ON public.tareas USING btree (paquete_id);
+
+
+--
+-- Name: index_tarifas_recolecta_on_activo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tarifas_recolecta_on_activo ON public.tarifas_recolecta USING btree (activo);
+
+
+--
+-- Name: index_tarifas_recolecta_on_zona; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tarifas_recolecta_on_zona ON public.tarifas_recolecta USING btree (zona);
 
 
 --
@@ -5013,6 +5146,7 @@ ALTER TABLE ONLY public.ep_counters
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260501160000'),
 ('20260501150000'),
 ('20260501100000'),
 ('20260430052744'),

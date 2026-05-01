@@ -1,0 +1,56 @@
+<%= render PageHeaderComponent.new(title: "Servicios Extra", subtitle: "Cargos adicionales que se aplican a la pre-factura") do |h| %>
+  <% h.with_action do %>
+    <%= render ButtonComponent.new(href: new_servicio_extra_path, variant: :primary, icon: "plus") do %>
+      Nuevo Servicio
+    <% end %>
+  <% end %>
+<% end %>
+
+<% if @servicios.any? %>
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Costo</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio Venta</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Moneda</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ISV?</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        <% @servicios.each do |s| %>
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 text-sm font-mono font-semibold text-cec-navy"><%= s.codigo %></td>
+            <td class="px-6 py-4 text-sm text-gray-900"><%= s.descripcion %></td>
+            <td class="px-6 py-4 text-right text-sm text-gray-500 font-mono"><%= number_with_delimiter(s.costo.to_f, precision: 2) %></td>
+            <td class="px-6 py-4 text-right text-sm font-mono"><%= number_with_delimiter(s.precio_venta.to_f, precision: 2) %></td>
+            <td class="px-6 py-4 text-sm"><%= s.moneda %></td>
+            <td class="px-6 py-4 text-sm">
+              <% if s.precio_incluye_isv %>
+                <span class="text-cec-teal">incluido</span>
+              <% else %>
+                <span class="text-gray-500">+ ISV</span>
+              <% end %>
+            </td>
+            <td class="px-6 py-4 text-sm">
+              <% if s.activo %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal">Activo</span>
+              <% else %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Inactivo</span>
+              <% end %>
+            </td>
+            <td class="px-6 py-4 text-right text-sm">
+              <%= link_to "Editar", edit_servicio_extra_path(s), class: "text-cec-navy hover:underline" %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <%= render EmptyStateComponent.new(title: "No hay servicios configurados", description: "Crea uno (ej. cambio de servicio) para que se aplique automáticamente a la pre-factura cuando el paquete tenga el flag.", icon: "tag") %>
+<% end %>
