@@ -11,13 +11,16 @@ puts "  ✓ Admin user"
 
 # ── Sucursales iniciales ──
 [
-  { codigo: "MIA", nombre: "Miami",      pais: "USA",      ubicacion: "miami",    codigo_recepcion_prefix: "RM" },
-  { codigo: "SPS", nombre: "Zeron SPS",  pais: "Honduras", ubicacion: "honduras", codigo_recepcion_prefix: "RS" },
-  { codigo: "TGU", nombre: "Humuya TGU", pais: "Honduras", ubicacion: "honduras", codigo_recepcion_prefix: "RH" }
+  { codigo: "MIA", codigo_ep: "SMI", nombre: "Miami",      pais: "USA",      ubicacion: "miami",    codigo_recepcion_prefix: "RM" },
+  { codigo: "SPS", codigo_ep: "SZR", nombre: "Zeron SPS",  pais: "Honduras", ubicacion: "honduras", codigo_recepcion_prefix: "RS" },
+  { codigo: "TGU", codigo_ep: "SHU", nombre: "Humuya TGU", pais: "Honduras", ubicacion: "honduras", codigo_recepcion_prefix: "RH" }
 ].each do |attrs|
   Sucursal.find_or_create_by!(codigo: attrs[:codigo]) do |s|
     s.assign_attributes(attrs)
   end
+  # Backfill defensivo para sucursales que ya existían sin codigo_ep.
+  s = Sucursal.find_by(codigo: attrs[:codigo])
+  s.update_column(:codigo_ep, attrs[:codigo_ep]) if s && s.codigo_ep.blank?
 end
 puts "  ✓ #{Sucursal.count} sucursales"
 
