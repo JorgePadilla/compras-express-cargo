@@ -7,6 +7,12 @@
 # (ej. EP-2026-SM-AMZ-000001). Es editable manualmente en caso de
 # colisión o si admin quiere un alias distinto.
 class Proveedor < ApplicationRecord
+  # Defensivo: el inflector irregular `proveedor ↔ proveedores` está
+  # configurado en config/initializers/inflections.rb, pero forzar el
+  # table_name acá protege contra cualquier orden de autoload donde el
+  # modelo se cargue antes del initializer.
+  self.table_name = "proveedores"
+
   TIPOS = %w[comercio entrega_personal].freeze
 
   has_many :paquetes, dependent: :restrict_with_error
