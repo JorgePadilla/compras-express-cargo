@@ -39,6 +39,12 @@ Rails.application.routes.draw do
 
   resources :sucursales, except: [:show]
 
+  # PR-D2.b: catálogos admin para retención y plantillas de notas al cliente.
+  resources :motivos_retencion, only: %i[index new create edit update],
+            controller: "motivos_retencion"
+  resources :plantillas_notas_cliente, only: %i[index new create edit update],
+            controller: "plantillas_notas_cliente"
+
   # PR-D3.a: catálogo de proveedores con autocomplete público para el
   # form del paquete; CRUD restringido a admin (controller-level guard).
   resources :proveedores, only: %i[index new create edit update] do

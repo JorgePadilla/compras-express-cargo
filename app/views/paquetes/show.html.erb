@@ -79,6 +79,24 @@ end %>
         <%= link_to @paquete.cliente.codigo, @paquete.cliente, class: "font-mono text-cec-navy hover:underline" %>
         — <%= @paquete.cliente.nombre_completo %>
       </dd>
+      <%# PR-D2.b — notas permanentes del cliente filtradas por rol del usuario %>
+      <% notas_visibles = Current.user&.notas_permanentes_visibles.to_a
+                                 .select { |n| @paquete.cliente.public_send(n[:campo]).to_s.strip.present? } %>
+      <% if notas_visibles.any? %>
+        <details class="mt-2 text-xs">
+          <summary class="cursor-pointer font-medium text-cec-navy hover:underline select-none">
+            Ver notas permanentes del cliente (<%= notas_visibles.size %>)
+          </summary>
+          <div class="mt-2 space-y-2">
+            <% notas_visibles.each do |n| %>
+              <div class="rounded-md border border-amber-200 bg-amber-50 p-2">
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-amber-800"><%= n[:etiqueta] %></div>
+                <div class="mt-0.5 text-gray-900 whitespace-pre-line"><%= @paquete.cliente.public_send(n[:campo]) %></div>
+              </div>
+            <% end %>
+          </div>
+        </details>
+      <% end %>
     </div>
     <div>
       <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo de Envio</dt>

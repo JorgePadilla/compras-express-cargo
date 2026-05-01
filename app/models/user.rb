@@ -70,4 +70,30 @@ class User < ApplicationRecord
     return "—" if parts.empty?
     parts.map { |p| p[0].to_s.upcase }.join
   end
+
+  # PR-D2.b: campos de `Cliente` con notas permanentes que el usuario
+  # puede ver según su rol. Admin ve todas; cada rol operativo ve sólo
+  # las notas pensadas para su área. Devuelve una lista ordenada para
+  # renderizar el modal "Notas del cliente" en el detalle del paquete.
+  def notas_permanentes_visibles
+    pares =
+      case rol
+      when "admin"
+        [ %i[notas_miami Miami], %i[notas_honduras Honduras],
+          %i[notas_caja Caja], %i[notas_sac SAC] ]
+      when "supervisor_miami", "digitador_miami"
+        [ %i[notas_miami Miami] ]
+      when "supervisor_caja", "cajero"
+        [ %i[notas_caja Caja], %i[notas_honduras Honduras] ]
+      when "supervisor_prefactura"
+        [ %i[notas_honduras Honduras] ]
+      when "sac"
+        [ %i[notas_sac SAC], %i[notas_honduras Honduras] ]
+      when "entrega_despacho"
+        [ %i[notas_honduras Honduras] ]
+      else
+        []
+      end
+    pares.map { |campo, etiqueta| { campo: campo, etiqueta: etiqueta } }
+  end
 end

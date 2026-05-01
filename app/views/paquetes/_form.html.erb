@@ -162,8 +162,29 @@
     </div>
 
     <%# PR-D2: notas categorizadas %>
-    <div class="lg:col-span-3">
-      <%= f.label :notas_al_cliente, "Notas al Cliente (visibles al cliente)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <div class="lg:col-span-3"
+         data-controller="plantilla-picker"
+         data-plantilla-picker-target-selector-value="#paquete_notas_al_cliente">
+      <div class="flex items-baseline justify-between mb-1">
+        <%= f.label :notas_al_cliente, "Notas al Cliente (visibles al cliente)", class: "block text-sm font-medium text-gray-700" %>
+        <% plantillas_activas = PlantillaNotaCliente.activas.ordered %>
+        <% if plantillas_activas.any? %>
+          <span class="text-[11px] text-gray-500">Plantillas:</span>
+        <% end %>
+      </div>
+      <% if plantillas_activas.any? %>
+        <div class="flex flex-wrap gap-1.5 mb-2">
+          <% plantillas_activas.each do |plantilla| %>
+            <button type="button"
+                    data-action="plantilla-picker#insert"
+                    data-text="<%= plantilla.texto %>"
+                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                           bg-cec-teal/10 text-cec-teal hover:bg-cec-teal/20 transition-colors cursor-pointer">
+              <%= plantilla.titulo %>
+            </button>
+          <% end %>
+        </div>
+      <% end %>
       <%= f.text_area :notas_al_cliente, rows: 2,
           placeholder: "Mensaje que el cliente verá en su portal / pre-factura.",
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
