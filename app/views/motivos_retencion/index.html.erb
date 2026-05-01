@@ -1,0 +1,44 @@
+<%= render PageHeaderComponent.new(title: "Motivos de Retención") do |h| %>
+  <% h.with_action do %>
+    <%= render ButtonComponent.new(href: new_motivo_retencion_path, variant: :primary, icon: "plus") do %>
+      Nuevo Motivo
+    <% end %>
+  <% end %>
+<% end %>
+
+<% if @motivos.any? %>
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Posición</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        <% @motivos.each do |m| %>
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 text-sm text-gray-500"><%= m.position %></td>
+            <td class="px-6 py-4 text-sm font-medium text-gray-900"><%= m.nombre %></td>
+            <td class="px-6 py-4 text-sm text-gray-500"><%= m.descripcion.presence || "—" %></td>
+            <td class="px-6 py-4 text-sm">
+              <% if m.activo %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal">Activo</span>
+              <% else %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Inactivo</span>
+              <% end %>
+            </td>
+            <td class="px-6 py-4 text-right text-sm">
+              <%= link_to "Editar", edit_motivo_retencion_path(m), class: "text-cec-navy hover:underline" %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <%= render EmptyStateComponent.new(title: "No hay motivos de retención", description: "Crea uno para que los operadores puedan seleccionarlo al retener un paquete.", icon: "tag") %>
+<% end %>
