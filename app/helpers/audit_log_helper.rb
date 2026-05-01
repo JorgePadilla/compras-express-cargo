@@ -16,7 +16,9 @@ module AuditLogHelper
   end
 
   # Carga eficiente de los users referenciados por una colección de versions
-  # para evitar N+1. Devuelve un hash {user_id_string => User}.
+  # para evitar N+1. Devuelve un hash {user_id_string => User}. Una sola
+  # query por toda la colección de versions, sin importar cuántas filas
+  # apunten al mismo whodunnit.
   def audit_users_index(versions)
     return {} if versions.blank?
     ids = versions.map(&:whodunnit).compact_blank.uniq
@@ -25,10 +27,13 @@ module AuditLogHelper
   end
 
   # Devuelve el User que disparó la version, o nil si whodunnit es blank
-  # o el user fue eliminado.
+  # o el user fue eliminado. **Nunca hace queries por su cuenta** — sólo
+  # consulta el índice precargado por audit_users_index. Esto garantiza
+  # que no se cuele un N+1 aunque el caller olvide preloadear (peor caso:
+  # devuelve nil y se renderiza "Sistema").
   def audit_user_for(version, users_by_id = {})
     return nil if version.whodunnit.blank?
-    users_by_id[version.whodunnit] || User.find_by(id: version.whodunnit)
+    users_by_id[version.whodunnit]
   end
 
   # Etiqueta legible del evento: "creó", "actualizó", "eliminó".
