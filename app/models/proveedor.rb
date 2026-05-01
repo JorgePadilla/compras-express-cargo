@@ -7,6 +7,7 @@
 # (ej. EP-2026-SM-AMZ-000001). Es editable manualmente en caso de
 # colisión o si admin quiere un alias distinto.
 class Proveedor < ApplicationRecord
+  has_paper_trail  # PR-D7: audit log de cambios al catálogo
   # Defensivo: el inflector irregular `proveedor ↔ proveedores` está
   # configurado en config/initializers/inflections.rb, pero forzar el
   # table_name acá protege contra cualquier orden de autoload donde el

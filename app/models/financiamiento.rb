@@ -1,4 +1,5 @@
 class Financiamiento < ApplicationRecord
+  has_paper_trail  # PR-D7: audit log
   include CurrencyAware
 
   ESTADOS = %w[activo completado cancelado].freeze

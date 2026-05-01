@@ -1,4 +1,5 @@
 class Cotizacion < ApplicationRecord
+  has_paper_trail  # PR-D7: audit log
   self.table_name = "cotizaciones"
   include CurrencyAware
 

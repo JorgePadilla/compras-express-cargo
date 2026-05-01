@@ -1,4 +1,5 @@
 class Sucursal < ApplicationRecord
+  has_paper_trail  # PR-D7: audit log de cambios al catálogo
   self.table_name = "sucursales"
 
   UBICACIONES = %w[miami honduras otros].freeze

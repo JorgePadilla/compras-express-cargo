@@ -3,6 +3,7 @@
 # Casos típicos: paquete dañado, confirmar tipo de envío, mercancía
 # prohibida, falta declaración, contenido perecedero.
 class MotivoRetencion < ApplicationRecord
+  has_paper_trail  # PR-D7: audit log de cambios al catálogo
   self.table_name = "motivos_retencion"
 
   has_many :paquete_motivos_retencion,
