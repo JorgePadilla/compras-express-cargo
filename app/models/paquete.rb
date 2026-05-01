@@ -12,6 +12,7 @@ class Paquete < ApplicationRecord
   belongs_to :sucursal_actual,      class_name: "Sucursal",      optional: true  # PR-D1.c: ubicación física actual
   belongs_to :sub_localidad_actual, class_name: "SubLocalidad",  optional: true  # PR-D1.c: bodega interna actual
   belongs_to :warehouse_receipt, optional: true  # PR-5c.5p2 — fuente rica del numero_recepcion (madre)
+  belongs_to :proveedor, optional: true  # PR-D3.a: catálogo (Amazon, Walmart, drivers privados…)
   has_many :pre_alerta_paquetes, dependent: :nullify
   has_many :nota_debito_items,  dependent: :nullify
   has_many :nota_credito_items, dependent: :nullify

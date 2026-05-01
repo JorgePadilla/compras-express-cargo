@@ -39,6 +39,12 @@ Rails.application.routes.draw do
 
   resources :sucursales, except: [:show]
 
+  # PR-D3.a: catálogo de proveedores con autocomplete público para el
+  # form del paquete; CRUD restringido a admin (controller-level guard).
+  resources :proveedores, only: %i[index new create edit update] do
+    collection { get :buscar }
+  end
+
   resources :manifiestos, except: [:destroy] do
     member do
       post :add_paquete
