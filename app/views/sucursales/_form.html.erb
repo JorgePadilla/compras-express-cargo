@@ -33,6 +33,15 @@
       <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Se antepondrá al número de recepción (ej. RM-000001).</p>
     </div>
 
+    <%# PR-D3.b: codigo_ep para tracking auto de paquetes ENTREGA PERSONAL %>
+    <div>
+      <%= f.label :codigo_ep, "Código EP (3 letras)", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+      <%= f.text_field :codigo_ep, maxlength: 3,
+          placeholder: "Ej. SMI, SZR, SHU",
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono uppercase focus:ring-cec-teal focus:border-cec-teal" %>
+      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Se usa en el tracking auto de paquetes ENTREGA PERSONAL (ej. EP-2026-SMI-AMZ-000001).</p>
+    </div>
+
     <div>
       <%= f.label :ubicacion, class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
       <%= f.select :ubicacion, Sucursal::UBICACIONES.map { |u| [u.humanize, u] },

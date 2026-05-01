@@ -122,6 +122,10 @@ class Paquete < ApplicationRecord
   before_validation :generate_guia, on: :create, if: -> { guia.blank? }
   before_validation :generate_numero_recepcion, on: :create, if: -> { numero_recepcion.blank? && sucursal_id.present? }
   before_validation :default_recolecta_monto, if: -> { recolecta_solicitada? && recolecta_monto.blank? }
+  # PR-D3.b: tracking auto EP-AÑO-SUC-PROV-NNNNNN para paquetes
+  # cuyo proveedor es de tipo entrega_personal y el operador no
+  # ingresó tracking propio (típico: drivers privados, Uber).
+  before_validation :generate_ep_tracking, on: :create, if: :ep_tracking_required?
   after_create :ensure_warehouse_receipt, if: -> { warehouse_receipt_id.nil? && numero_recepcion.present? && cliente_id.present? }
   before_save :set_fecha_recibido, if: -> { fecha_recibido_miami.blank? && new_record? }
   before_save :calculate_peso_volumetrico
@@ -447,5 +451,37 @@ class Paquete < ApplicationRecord
       wr.save!
     end
     update_column(:warehouse_receipt_id, wr.id) if warehouse_receipt_id != wr.id
+  end
+
+  # PR-D3.b: condición para auto-generar tracking EP. Sólo aplica
+  # cuando el proveedor es ENTREGA PERSONAL Y el operador no ingresó
+  # tracking propio (caso típico: driver privado sin GUID del courier).
+  # Si el operador SÍ escribió un tracking (Uber GUID, etc.), se respeta
+  # tal cual — no se sobreescribe.
+  def ep_tracking_required?
+    tracking.blank? &&
+      proveedor.present? &&
+      proveedor.entrega_personal? &&
+      sucursal.present?
+  end
+
+  # Genera tracking con formato EP-AÑO-SUC-PROV-NNNNNN. Se llama desde
+  # before_validation cuando ep_tracking_required? es true. Si la
+  # sucursal no tiene `codigo_ep` configurado, falla limpio con
+  # error de validación en lugar de tracking malformado.
+  def generate_ep_tracking
+    suc_codigo = sucursal&.codigo_ep
+    if suc_codigo.blank?
+      errors.add(:tracking, "no se puede generar (sucursal #{sucursal&.nombre || sucursal_id} no tiene codigo_ep configurado)")
+      return
+    end
+
+    anio = (fecha_recibido_miami&.year || Time.zone.now.year)
+    next_number = EpCounter.next_for!(anio: anio, sucursal: sucursal, proveedor: proveedor)
+
+    self.tracking = format(
+      "EP-%<anio>04d-%<suc>s-%<prov>s-%<num>06d",
+      anio: anio, suc: suc_codigo, prov: proveedor.codigo, num: next_number
+    )
   end
 end

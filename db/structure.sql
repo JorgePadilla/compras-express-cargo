@@ -700,6 +700,40 @@ CREATE SEQUENCE public.entregas_numero_seq
 
 
 --
+-- Name: ep_counters; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ep_counters (
+    id bigint NOT NULL,
+    anio integer NOT NULL,
+    sucursal_id bigint NOT NULL,
+    proveedor_id bigint NOT NULL,
+    last_value integer DEFAULT 0 NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: ep_counters_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.ep_counters_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: ep_counters_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.ep_counters_id_seq OWNED BY public.ep_counters.id;
+
+
+--
 -- Name: financiamiento_cuotas; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1774,7 +1808,8 @@ CREATE TABLE public.sucursales (
     codigo_recepcion_prefix character varying NOT NULL,
     activo boolean DEFAULT true NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    codigo_ep character varying(3)
 );
 
 
@@ -2310,6 +2345,13 @@ ALTER TABLE ONLY public.entregas ALTER COLUMN id SET DEFAULT nextval('public.ent
 
 
 --
+-- Name: ep_counters id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ep_counters ALTER COLUMN id SET DEFAULT nextval('public.ep_counters_id_seq'::regclass);
+
+
+--
 -- Name: financiamiento_cuotas id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -2706,6 +2748,14 @@ ALTER TABLE ONLY public.entregas
 
 
 --
+-- Name: ep_counters ep_counters_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ep_counters
+    ADD CONSTRAINT ep_counters_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: financiamiento_cuotas financiamiento_cuotas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3002,6 +3052,13 @@ ALTER TABLE ONLY public.warehouse_receipts
 
 
 --
+-- Name: idx_ep_counter_combo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_ep_counter_combo ON public.ep_counters USING btree (anio, sucursal_id, proveedor_id);
+
+
+--
 -- Name: idx_fin_cuotas_unique; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3286,6 +3343,20 @@ CREATE INDEX index_entregas_on_repartidor_id ON public.entregas USING btree (rep
 --
 
 CREATE INDEX index_entregas_on_tipo_entrega ON public.entregas USING btree (tipo_entrega);
+
+
+--
+-- Name: index_ep_counters_on_proveedor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_ep_counters_on_proveedor_id ON public.ep_counters USING btree (proveedor_id);
+
+
+--
+-- Name: index_ep_counters_on_sucursal_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_ep_counters_on_sucursal_id ON public.ep_counters USING btree (sucursal_id);
 
 
 --
@@ -3919,6 +3990,13 @@ CREATE UNIQUE INDEX index_sucursales_on_codigo ON public.sucursales USING btree 
 
 
 --
+-- Name: index_sucursales_on_codigo_ep; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_sucursales_on_codigo_ep ON public.sucursales USING btree (codigo_ep) WHERE (codigo_ep IS NOT NULL);
+
+
+--
 -- Name: index_sucursales_on_codigo_recepcion_prefix; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4342,6 +4420,14 @@ ALTER TABLE ONLY public.pre_factura_items
 
 ALTER TABLE ONLY public.manifiestos
     ADD CONSTRAINT fk_rails_3935231297 FOREIGN KEY (sucursal_origen_id) REFERENCES public.sucursales(id);
+
+
+--
+-- Name: ep_counters fk_rails_3c629b8689; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ep_counters
+    ADD CONSTRAINT fk_rails_3c629b8689 FOREIGN KEY (sucursal_id) REFERENCES public.sucursales(id) ON DELETE RESTRICT;
 
 
 --
@@ -4913,12 +4999,21 @@ ALTER TABLE ONLY public.paquetes
 
 
 --
+-- Name: ep_counters fk_rails_fed4cab9d1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ep_counters
+    ADD CONSTRAINT fk_rails_fed4cab9d1 FOREIGN KEY (proveedor_id) REFERENCES public.proveedores(id) ON DELETE RESTRICT;
+
+
+--
 -- PostgreSQL database dump complete
 --
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260501150000'),
 ('20260501100000'),
 ('20260430052744'),
 ('20260430052743'),

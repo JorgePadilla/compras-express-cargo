@@ -1,5 +1,6 @@
 miami:
   codigo: MIA
+  codigo_ep: SMI
   nombre: Miami
   pais: USA
   ubicacion: miami
@@ -8,6 +9,7 @@ miami:
 
 zeron_sps:
   codigo: SPS
+  codigo_ep: SZR
   nombre: Zeron SPS
   pais: Honduras
   ubicacion: honduras
@@ -16,6 +18,7 @@ zeron_sps:
 
 humuya_tgu:
   codigo: TGU
+  codigo_ep: SHU
   nombre: Humuya TGU
   pais: Honduras
   ubicacion: honduras
