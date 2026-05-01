@@ -1,7 +1,7 @@
 <%= render PageHeaderComponent.new(title: "Motivos de Retención") do |h| %>
   <% h.with_action do %>
-    <%= render ButtonComponent.new(href: new_motivo_retencion_path, variant: :primary, icon: "plus") do %>
-      Nuevo Motivo
+    <%= render ButtonComponent.new(href: new_motivo_retencion_path, variant: :primary, icon: "plus", data: { shortcut: "F7" }) do %>
+      Nuevo Motivo <span class="ml-1 text-[10px] opacity-70">(F7)</span>
     <% end %>
   <% end %>
 <% end %>

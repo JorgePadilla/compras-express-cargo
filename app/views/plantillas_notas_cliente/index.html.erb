@@ -1,7 +1,7 @@
 <%= render PageHeaderComponent.new(title: "Plantillas de Notas al Cliente") do |h| %>
   <% h.with_action do %>
-    <%= render ButtonComponent.new(href: new_plantilla_nota_cliente_path, variant: :primary, icon: "plus") do %>
-      Nueva Plantilla
+    <%= render ButtonComponent.new(href: new_plantilla_nota_cliente_path, variant: :primary, icon: "plus", data: { shortcut: "F7" }) do %>
+      Nueva Plantilla <span class="ml-1 text-[10px] opacity-70">(F7)</span>
     <% end %>
   <% end %>
 <% end %>

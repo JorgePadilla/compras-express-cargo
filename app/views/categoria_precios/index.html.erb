@@ -1,7 +1,7 @@
 <%= render PageHeaderComponent.new(title: "Categorias de Precio") do |h| %>
   <% h.with_action do %>
-    <%= render ButtonComponent.new(href: new_categoria_precio_path, variant: :primary, icon: "plus") do %>
-      Nueva Categoria
+    <%= render ButtonComponent.new(href: new_categoria_precio_path, variant: :primary, icon: "plus", data: { shortcut: "F7" }) do %>
+      Nueva Categoria <span class="ml-1 text-[10px] opacity-70">(F7)</span>
     <% end %>
   <% end %>
 <% end %>
