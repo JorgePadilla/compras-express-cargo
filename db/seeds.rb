@@ -225,6 +225,43 @@ puts "Seeding proveedores..."
 end
 puts "  ✓ #{Proveedor.count} proveedores"
 
+# ── Tarifas de Recolecta (PR-D6.a) ──
+# Yusef 2026-05-01: tabla configurable por zona en lugar de tarifa fija.
+# Estos seeds son ejemplos razonables — admin los edita en /tarifas_recolecta.
+puts "Seeding tarifas de recolecta..."
+[
+  { zona: "SPS Centro",          monto: 30.00, moneda: "USD", position: 0 },
+  { zona: "SPS Periférico",      monto: 35.00, moneda: "USD", position: 1 },
+  { zona: "Tegucigalpa Centro",  monto: 35.00, moneda: "USD", position: 2 },
+  { zona: "Tegucigalpa Suyapa",  monto: 40.00, moneda: "USD", position: 3 },
+  { zona: "La Ceiba",            monto: 50.00, moneda: "USD", position: 4 },
+  { zona: "Otra zona / cotizar", monto: 40.00, moneda: "USD", position: 9 }
+].each do |attrs|
+  TarifaRecolecta.find_or_create_by!(zona: attrs[:zona]) do |t|
+    t.assign_attributes(attrs.merge(activo: true))
+  end
+end
+puts "  ✓ #{TarifaRecolecta.count} tarifas de recolecta"
+
+# ── Servicios Extra (PR-D6.a) ──
+# Yusef 2026-05-01: catálogo de servicios/productos que se agregan
+# automáticamente a la pre-factura cuando el paquete tiene el flag
+# correspondiente (cambio de servicio, etc.). Precio incluye ISV.
+puts "Seeding servicios extra..."
+[
+  { codigo: "CAMBIO_SERVICIO", descripcion: "Cambio de servicio (aéreo↔marítimo, con/sin reempaque)",
+    costo: 0, precio_venta: 15.00, moneda: "USD", precio_incluye_isv: true, position: 0 },
+  { codigo: "PESO_ADICIONAL",  descripcion: "Peso adicional declarado vs medido",
+    costo: 0, precio_venta: 0,     moneda: "USD", precio_incluye_isv: true, position: 1 },
+  { codigo: "MANEJO_ESPECIAL", descripcion: "Manejo especial (frágil, voluminoso, perecedero)",
+    costo: 0, precio_venta: 10.00, moneda: "USD", precio_incluye_isv: true, position: 2 }
+].each do |attrs|
+  ServicioExtra.find_or_create_by!(codigo: attrs[:codigo]) do |s|
+    s.assign_attributes(attrs.merge(activo: true))
+  end
+end
+puts "  ✓ #{ServicioExtra.count} servicios extra"
+
 # ── Sample data (dev/staging only) ──
 if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   # Demo users per role — always reset on re-seed so documented credentials work

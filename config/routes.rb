@@ -39,6 +39,12 @@ Rails.application.routes.draw do
 
   resources :sucursales, except: [:show]
 
+  # PR-D6.a: catálogos de cobros automáticos en pre-factura.
+  resources :tarifas_recolecta, only: %i[index new create edit update],
+            controller: "tarifas_recolecta"
+  resources :servicios_extra, only: %i[index new create edit update],
+            controller: "servicios_extra"
+
   # PR-D2.b: catálogos admin para retención y plantillas de notas al cliente.
   resources :motivos_retencion, only: %i[index new create edit update],
             controller: "motivos_retencion"
