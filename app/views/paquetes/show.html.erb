@@ -1,7 +1,7 @@
 <%= render PageHeaderComponent.new(title: @paquete.guia, subtitle: "Paquete") do |header|
   header.with_action do
-    render ButtonComponent.new(variant: :secondary, href: edit_paquete_path(@paquete), icon: "pencil-square") do
-      "Editar"
+    render(ButtonComponent.new(variant: :secondary, href: edit_paquete_path(@paquete), icon: "pencil-square", data: { shortcut: "F6" })) do
+      raw('Editar <span class="ml-1 text-[10px] opacity-70">(F6)</span>')
     end
   end
   header.with_action do
@@ -17,13 +17,13 @@
     end
   end
   header.with_action do
-    render ButtonComponent.new(variant: :secondary, href: label_paquete_path(@paquete), icon: "document-text", target: "_blank") do
-      "Warehouse Receipt"
+    render(ButtonComponent.new(variant: :secondary, href: label_paquete_path(@paquete), icon: "document-text", target: "_blank", data: { shortcut: "F4" })) do
+      raw('Warehouse Receipt <span class="ml-1 text-[10px] opacity-70">(F4)</span>')
     end
   end
   header.with_action do
-    render ButtonComponent.new(variant: :ghost, href: paquetes_path, icon: "arrow-left") do
-      "Volver"
+    render(ButtonComponent.new(variant: :ghost, href: paquetes_path, icon: "arrow-left", data: { shortcut: "F2" })) do
+      raw('Volver <span class="ml-1 text-[10px] opacity-70">(F2)</span>')
     end
   end
 end %>

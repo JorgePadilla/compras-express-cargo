@@ -1,7 +1,7 @@
 <%= render PageHeaderComponent.new(title: "Usuarios", subtitle: "#{@users.total_count} usuarios registrados") do |header|
   header.with_action do
-    render ButtonComponent.new(variant: :gold, href: new_user_path, icon: "plus") do
-      "Nuevo Usuario"
+    render(ButtonComponent.new(variant: :gold, href: new_user_path, icon: "plus", data: { shortcut: "F7" })) do
+      raw('Nuevo Usuario <span class="ml-1 text-[10px] opacity-70">(F7)</span>')
     end
   end
 end %>

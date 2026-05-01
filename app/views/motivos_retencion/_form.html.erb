@@ -37,8 +37,11 @@
   </div>
 
   <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-    <%= link_to "Cancelar", motivos_retencion_path, class: "text-sm text-gray-600 hover:text-gray-900" %>
-    <%= f.submit motivo.persisted? ? "Guardar" : "Crear",
-        class: "inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-cec-gold text-cec-navy-dark hover:bg-cec-gold-dark transition-colors cursor-pointer" %>
+    <%= link_to "Cancelar (F2)", motivos_retencion_path,
+        class: "text-sm text-gray-600 hover:text-gray-900",
+        data: { shortcut: "F2" } %>
+    <%= f.submit "#{motivo.persisted? ? 'Guardar' : 'Crear'} (F10)",
+        class: "inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-cec-gold text-cec-navy-dark hover:bg-cec-gold-dark transition-colors cursor-pointer",
+        data: { shortcut: "F10" } %>
   </div>
 <% end %>

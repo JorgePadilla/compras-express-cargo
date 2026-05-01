@@ -2,8 +2,8 @@
 
 <%= render PageHeaderComponent.new(title: "Sucursales", subtitle: "Administra ubicaciones de recepcion") do |header|
   header.with_action do
-    render ButtonComponent.new(variant: :primary, href: new_sucursal_path, icon: "plus") do
-      "Nueva sucursal"
+    render(ButtonComponent.new(variant: :primary, href: new_sucursal_path, icon: "plus", data: { shortcut: "F7" })) do
+      raw('Nueva sucursal <span class="ml-1 text-[10px] opacity-70">(F7)</span>')
     end
   end
 end %>
