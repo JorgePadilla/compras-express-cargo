@@ -1349,7 +1349,8 @@ CREATE TABLE public.paquetes (
     tracking_secundario character varying,
     notas_consolidacion text,
     notas_retencion text,
-    notas_al_cliente text
+    notas_al_cliente text,
+    proveedor_id bigint
 );
 
 
@@ -1564,6 +1565,42 @@ CREATE SEQUENCE public.pre_facturas_id_seq
 --
 
 ALTER SEQUENCE public.pre_facturas_id_seq OWNED BY public.pre_facturas.id;
+
+
+--
+-- Name: proveedores; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.proveedores (
+    id bigint NOT NULL,
+    nombre character varying NOT NULL,
+    codigo character varying(8) NOT NULL,
+    tipo character varying DEFAULT 'comercio'::character varying NOT NULL,
+    "position" integer DEFAULT 0 NOT NULL,
+    activo boolean DEFAULT true NOT NULL,
+    notas text,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: proveedores_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.proveedores_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: proveedores_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.proveedores_id_seq OWNED BY public.proveedores.id;
 
 
 --
@@ -2413,6 +2450,13 @@ ALTER TABLE ONLY public.pre_facturas ALTER COLUMN id SET DEFAULT nextval('public
 
 
 --
+-- Name: proveedores id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.proveedores ALTER COLUMN id SET DEFAULT nextval('public.proveedores_id_seq'::regclass);
+
+
+--
 -- Name: recibos id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -2819,6 +2863,14 @@ ALTER TABLE ONLY public.pre_factura_items
 
 ALTER TABLE ONLY public.pre_facturas
     ADD CONSTRAINT pre_facturas_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: proveedores proveedores_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.proveedores
+    ADD CONSTRAINT proveedores_pkey PRIMARY KEY (id);
 
 
 --
@@ -3580,6 +3632,13 @@ CREATE INDEX index_paquetes_on_pre_factura_id ON public.paquetes USING btree (pr
 
 
 --
+-- Name: index_paquetes_on_proveedor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_paquetes_on_proveedor_id ON public.paquetes USING btree (proveedor_id);
+
+
+--
 -- Name: index_paquetes_on_sub_localidad_actual_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3752,6 +3811,34 @@ CREATE INDEX index_pre_facturas_on_estado ON public.pre_facturas USING btree (es
 --
 
 CREATE UNIQUE INDEX index_pre_facturas_on_numero ON public.pre_facturas USING btree (numero);
+
+
+--
+-- Name: index_proveedores_on_activo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_proveedores_on_activo ON public.proveedores USING btree (activo);
+
+
+--
+-- Name: index_proveedores_on_codigo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_proveedores_on_codigo ON public.proveedores USING btree (codigo);
+
+
+--
+-- Name: index_proveedores_on_nombre; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_proveedores_on_nombre ON public.proveedores USING btree (nombre);
+
+
+--
+-- Name: index_proveedores_on_tipo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_proveedores_on_tipo ON public.proveedores USING btree (tipo);
 
 
 --
@@ -4199,6 +4286,14 @@ ALTER TABLE ONLY public.manifiesto_counters
 
 ALTER TABLE ONLY public.tareas
     ADD CONSTRAINT fk_rails_239a2c336c FOREIGN KEY (paquete_id) REFERENCES public.paquetes(id);
+
+
+--
+-- Name: paquetes fk_rails_275a8504d5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_275a8504d5 FOREIGN KEY (proveedor_id) REFERENCES public.proveedores(id) ON DELETE RESTRICT;
 
 
 --
@@ -4824,6 +4919,7 @@ ALTER TABLE ONLY public.paquetes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260501100000'),
 ('20260430052744'),
 ('20260430052743'),
 ('20260430052742'),

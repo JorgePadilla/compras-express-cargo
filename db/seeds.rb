@@ -199,6 +199,29 @@ puts "Seeding motivos_retencion..."
 end
 puts "  ✓ #{MotivoRetencion.count} motivos de retención"
 
+# ── Proveedores (PR-D3.a) ──
+# Yusef 2026-04-30: lista inicial de comercios recurrentes (Walmart,
+# Whole Foods, Amazon, eBay, Target, Sams, Costco, etc.). Drivers
+# privados (entrega_personal) los agregan los operadores conforme
+# aparecen. El `codigo` se autogenera del nombre (ver Proveedor.generar_codigo_desde).
+puts "Seeding proveedores..."
+[
+  { nombre: "Amazon",      tipo: "comercio", position: 0 },
+  { nombre: "Walmart",     tipo: "comercio", position: 1 },
+  { nombre: "Target",      tipo: "comercio", position: 2 },
+  { nombre: "eBay",        tipo: "comercio", position: 3 },
+  { nombre: "Sams Club",   tipo: "comercio", position: 4 },
+  { nombre: "Costco",      tipo: "comercio", position: 5 },
+  { nombre: "Whole Foods", tipo: "comercio", position: 6 }
+].each do |attrs|
+  Proveedor.find_or_create_by!(nombre: attrs[:nombre]) do |p|
+    p.tipo     = attrs[:tipo]
+    p.position = attrs[:position]
+    p.activo   = true
+  end
+end
+puts "  ✓ #{Proveedor.count} proveedores"
+
 # ── Sample data (dev/staging only) ──
 if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   # Demo users per role — always reset on re-seed so documented credentials work

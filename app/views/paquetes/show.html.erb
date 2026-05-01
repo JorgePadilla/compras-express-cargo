@@ -108,7 +108,17 @@ end %>
     </div>
     <div>
       <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @paquete.proveedor.presence || "—" %></dd>
+      <dd class="mt-1 text-sm text-gray-900">
+        <% if @paquete.proveedor.is_a?(Proveedor) %>
+          <span class="font-mono text-cec-navy"><%= @paquete.proveedor.codigo %></span>
+          — <%= @paquete.proveedor.nombre %>
+          <% if @paquete.proveedor.entrega_personal? %>
+            <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-900">EP</span>
+          <% end %>
+        <% else %>
+          <%= @paquete[:proveedor].presence || "—" %>
+        <% end %>
+      </dd>
     </div>
     <div>
       <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Remitente</dt>

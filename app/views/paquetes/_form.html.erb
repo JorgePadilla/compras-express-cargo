@@ -55,11 +55,27 @@
       </datalist>
     </div>
 
-    <div>
-      <%= f.label :proveedor, class: "block text-sm font-medium text-gray-700 mb-1" %>
-      <%= f.text_field :proveedor,
-          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                 focus:ring-cec-teal focus:border-cec-teal" %>
+    <%# PR-D3.a: autocomplete contra el catálogo de proveedores. %>
+    <div data-controller="proveedor-autocomplete"
+         data-proveedor-autocomplete-url-value="<%= buscar_proveedores_path %>"
+         class="relative">
+      <%= f.label :proveedor_id, "Proveedor", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <% sel = paquete.proveedor %>
+      <input type="text"
+             value="<%= sel&.nombre || paquete[:proveedor].to_s %>"
+             placeholder="Amazon, Walmart, Driver Juan…"
+             autocomplete="off"
+             data-proveedor-autocomplete-target="input"
+             data-action="input->proveedor-autocomplete#search"
+             class="block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal">
+      <%= f.hidden_field :proveedor_id,
+          data: { proveedor_autocomplete_target: "proveedorId" } %>
+      <div data-proveedor-autocomplete-target="dropdown"
+           class="hidden absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-auto"></div>
+      <span data-proveedor-autocomplete-target="nombre"
+            class="<%= sel ? '' : 'hidden ' %>mt-1 block text-xs text-gray-500 font-mono">
+        <%= "(#{sel.codigo})" if sel %>
+      </span>
     </div>
 
     <div>
