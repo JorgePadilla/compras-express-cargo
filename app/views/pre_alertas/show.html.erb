@@ -122,3 +122,5 @@
     | Por: <%= @pre_alerta.creado_por_tipo.humanize %>
   <% end %>
 </div>
+
+<%= render "shared/bitacora", record: @pre_alerta, label: "Pre-Alerta" %>

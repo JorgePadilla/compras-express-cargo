@@ -2,6 +2,7 @@
 # Etiquetar / Pre-Factura / Caja / SAC para evitar reescribir info
 # recurrente.
 class PlantillaNotaCliente < ApplicationRecord
+  has_paper_trail  # PR-D7: audit log de cambios al catálogo
   self.table_name = "plantillas_notas_cliente"
 
   validates :titulo, presence: true
