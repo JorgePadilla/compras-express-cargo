@@ -72,4 +72,182 @@ module AuditLogHelper
     else            v.to_s.truncate(40)
     end
   end
+
+  # ─────────────────────────────────────────────────────────────────
+  # PR Bitácora overhaul (2026-05-02): diccionario de labels humanos
+  # + FK resolvers para que las versions se lean en lenguaje natural
+  # en lugar de "cliente_id: 12 → 34".
+  # ─────────────────────────────────────────────────────────────────
+
+  COLUMN_LABELS = {
+    # Identificadores y estado
+    "estado"               => "Estado",
+    "tracking"             => "Tracking",
+    "tracking_secundario"  => "Tracking secundario",
+    "guia"                 => "Guía",
+    "numero_recepcion"     => "N° Recepción",
+    "numero_caja"          => "N° Caja",
+    "cantidad_paquetes"    => "Cant. paquetes",
+    "cantidad_productos"   => "Cant. productos",
+
+    # Pesos y dimensiones
+    "peso"                 => "Peso (lbs)",
+    "alto"                 => "Alto",
+    "largo"                => "Largo",
+    "ancho"                => "Ancho",
+    "peso_volumetrico"     => "Peso volumétrico",
+    "peso_cobrar"          => "Peso a cobrar",
+
+    # Asociaciones (FK)
+    "cliente_id"           => "Cliente",
+    "tipo_envio_id"        => "Tipo de envío",
+    "manifiesto_id"        => "Manifiesto",
+    "sucursal_id"          => "Sucursal destino",
+    "sucursal_actual_id"   => "Sucursal actual",
+    "sub_localidad_actual_id" => "Bodega interna",
+    "warehouse_receipt_id" => "Warehouse Receipt",
+    "proveedor_id"         => "Proveedor",
+    "user_id"              => "Usuario",
+    "pre_factura_id"       => "Pre-factura",
+    "venta_id"             => "Venta / Factura",
+    "entrega_id"           => "Entrega",
+
+    # Texto libre
+    "proveedor"            => "Proveedor (texto)",
+    "expedido_por"         => "Carrier",
+    "remitente"            => "Remitente",
+    "descripcion"          => "Descripción",
+
+    # Notas
+    "notas_internas"       => "Notas internas",
+    "notas_al_cliente"     => "Notas al cliente",
+    "notas_consolidacion"  => "Notas de consolidación",
+    "notas_retencion"      => "Notas de retención",
+    "notas_caja"           => "Notas de Caja",
+    "notas_sac"            => "Notas SAC",
+    "notas_miami"          => "Notas Miami",
+    "notas_honduras"       => "Notas Honduras",
+
+    # Fechas (PR-D1)
+    "fecha_recibido_miami"        => "Fecha recibido Miami",
+    "fecha_empacado"              => "Fecha empacado",
+    "fecha_enviado"               => "Fecha enviado",
+    "fecha_aduana"                => "Fecha aduana",
+    "fecha_consolidando"          => "Fecha consolidando",
+    "fecha_disponible"            => "Fecha disponible",
+    "fecha_disponible_programada" => "Fecha programada",
+    "fecha_en_reparto"            => "Fecha en reparto",
+    "fecha_entregado"             => "Fecha entregado",
+    "fecha_pre_alerta"            => "Fecha pre-alerta",
+    "fecha_solicito_recolecta"    => "Fecha solicitó recolecta",
+    "fecha_posible_entrega"       => "Fecha posible entrega",
+
+    # Recolecta + cambio servicio
+    "recolecta_solicitada"     => "Solicitó recolecta",
+    "recolecta_monto"          => "Monto recolecta",
+    "recolecta_moneda"         => "Moneda recolecta",
+    "solicito_cambio_servicio" => "Solicitó cambio de servicio",
+    "retener_miami"            => "Retener en Miami",
+
+    # Pre-alerta / Pre-factura flags
+    "pre_alerta"  => "Flag pre-alerta",
+    "pre_factura" => "Flag pre-factura",
+    "consolidado" => "Consolidado"
+  }.freeze
+
+  # Mapping FK column → resolver. Cada resolver es un Proc que recibe
+  # un array de IDs y devuelve un hash {id => label_string}. Ejecuta
+  # UNA query por modelo (no N+1).
+  FK_RESOLVERS = {
+    "cliente_id" => ->(ids) {
+      Cliente.where(id: ids).each_with_object({}) { |c, h| h[c.id] = "#{c.codigo} — #{c.nombre_completo}" }
+    },
+    "user_id"    => ->(ids) {
+      User.where(id: ids).each_with_object({}) { |u, h| h[u.id] = "#{u.nombre} (#{u.iniciales_display})" }
+    },
+    "tipo_envio_id" => ->(ids) {
+      TipoEnvio.where(id: ids).each_with_object({}) { |t, h| h[t.id] = "#{t.codigo&.upcase} — #{t.nombre}" }
+    },
+    "manifiesto_id" => ->(ids) {
+      Manifiesto.where(id: ids).each_with_object({}) { |m, h| h[m.id] = m.numero }
+    },
+    "sucursal_id"        => ->(ids) { Sucursal.where(id: ids).pluck(:id, :nombre).to_h },
+    "sucursal_actual_id" => ->(ids) { Sucursal.where(id: ids).pluck(:id, :nombre).to_h },
+    "warehouse_receipt_id" => ->(ids) {
+      defined?(WarehouseReceipt) ? WarehouseReceipt.where(id: ids).pluck(:id, :receipt_number).to_h : {}
+    },
+    "proveedor_id" => ->(ids) {
+      defined?(Proveedor) ? Proveedor.where(id: ids).pluck(:id, :nombre).to_h : {}
+    },
+    "pre_factura_id" => ->(ids) { PreFactura.where(id: ids).pluck(:id, :numero).to_h },
+    "venta_id"       => ->(ids) { Venta.where(id: ids).pluck(:id, :numero).to_h }
+  }.freeze
+
+  # Etiqueta humana de columna (usa COLUMN_LABELS o humaniza el nombre).
+  def audit_column_label(column)
+    COLUMN_LABELS[column.to_s] || column.to_s.humanize
+  end
+
+  # Pre-carga FK resolutions para todas las versions con UNA query por
+  # modelo. Devuelve hash anidado { column => { id => label } }.
+  # Llamar una sola vez por bitácora antes de iterar versions.
+  def audit_fk_index(versions)
+    fk_columns = FK_RESOLVERS.keys
+    return {} if versions.blank?
+
+    # Recolecta IDs por columna scaneando todos los changesets.
+    ids_by_column = Hash.new { |h, k| h[k] = Set.new }
+    versions.each do |v|
+      next if v.event != "update" || v.object_changes.blank?
+      changes = v.changeset rescue {}
+      changes.each do |col, (old_v, new_v)|
+        next unless fk_columns.include?(col)
+        ids_by_column[col] << old_v.to_i if old_v.present?
+        ids_by_column[col] << new_v.to_i if new_v.present?
+      end
+    end
+
+    ids_by_column.each_with_object({}) do |(col, ids), index|
+      next if ids.empty?
+      resolver = FK_RESOLVERS[col]
+      resolved = resolver.call(ids.to_a) rescue {}
+      index[col] = resolved
+    end
+  end
+
+  # Renderiza un valor crudo aplicando FK resolution si la columna es
+  # un FK conocido. Fallback: devuelve audit_value(raw_value).
+  def audit_resolved_value(column, raw_value, fk_index = {})
+    return "—"      if raw_value.nil?
+    return "(vacío)" if raw_value == ""
+
+    if (col_index = fk_index[column.to_s])
+      label = col_index[raw_value.to_i]
+      return label.presence || "(eliminado ##{raw_value})"
+    end
+
+    case raw_value
+    when true  then "Sí"
+    when false then "No"
+    when Date, DateTime, Time, ActiveSupport::TimeWithZone
+      raw_value.strftime("%d %b %Y, %-I:%M %p")
+    else raw_value.to_s.truncate(60)
+    end
+  end
+
+  # ¿La version cambia el estado? Para destacar visualmente en timeline.
+  def audit_changes_estado?(version)
+    return false if version.event != "update" || version.object_changes.blank?
+    (version.changeset rescue {}).key?("estado")
+  end
+
+  # Cambios filtrados (sin ruido) listos para iterar como pares
+  # [column, [old, new]]. Excluye updated_at/created_at y opcionalmente
+  # estado (cuando lo manejamos como evento principal aparte).
+  def audit_clean_changes(version, exclude: [])
+    return [] if version.event != "update" || version.object_changes.blank?
+    changes = (version.changeset rescue {})
+    changes = changes.except(*AUDIT_NOISY_COLUMNS, *exclude.map(&:to_s))
+    changes.to_a
+  end
 end
