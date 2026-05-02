@@ -1384,7 +1384,8 @@ CREATE TABLE public.paquetes (
     notas_consolidacion text,
     notas_retencion text,
     notas_al_cliente text,
-    proveedor_id bigint
+    proveedor_id bigint,
+    tercero_id bigint
 );
 
 
@@ -3839,6 +3840,13 @@ CREATE INDEX index_paquetes_on_sucursal_id ON public.paquetes USING btree (sucur
 
 
 --
+-- Name: index_paquetes_on_tercero_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_paquetes_on_tercero_id ON public.paquetes USING btree (tercero_id);
+
+
+--
 -- Name: index_paquetes_on_tipo_envio_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4804,6 +4812,14 @@ ALTER TABLE ONLY public.pre_alertas
 
 
 --
+-- Name: paquetes fk_rails_803b2d84ac; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_803b2d84ac FOREIGN KEY (tercero_id) REFERENCES public.clientes(id) ON DELETE SET NULL;
+
+
+--
 -- Name: notas_credito fk_rails_81056e6cc2; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5186,6 +5202,7 @@ ALTER TABLE ONLY public.ep_counters
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260502130000'),
 ('20260501180000'),
 ('20260501160000'),
 ('20260501150000'),
