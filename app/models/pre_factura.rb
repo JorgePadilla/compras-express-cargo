@@ -152,11 +152,57 @@ class PreFactura < ApplicationRecord
         concepto: "Flete #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia}",
         peso_cobrar: peso,
         precio_libra: precio,
-        subtotal: subtotal
+        subtotal: subtotal,
+        origen: "manual"
       )
     end
 
+    # PR-D6.b: cargos automáticos por flags del paquete.
+    paquetes.each { |p| pre_factura.aplicar_cobros_automaticos_para(p) }
+
     pre_factura
+  end
+
+  # PR-D6.b: agrega líneas auto al pre_factura por cada flag activo en
+  # el paquete (recolecta_solicitada, solicito_cambio_servicio).
+  # Idempotente: si ya hay líneas auto para ese paquete, no las duplica
+  # (el caller debe limpiar antes con `pre_factura_items.auto.destroy_all`
+  # si quiere re-generar desde cero).
+  def aplicar_cobros_automaticos_para(paquete)
+    if paquete.recolecta_solicitada? && paquete.recolecta_monto.to_d.positive?
+      ya_existe = pre_factura_items.any? { |i|
+        i.origen == "auto_recolecta" && i.paquete_id == paquete.id && !i.marked_for_destruction?
+      }
+      unless ya_existe
+        pre_factura_items.build(
+          paquete: paquete,
+          concepto: "Recolecta - #{paquete.guia}",
+          subtotal: paquete.recolecta_monto,
+          origen: "auto_recolecta"
+        )
+      end
+    end
+
+    if paquete.solicito_cambio_servicio?
+      servicio = ServicioExtra.activos.find_by(codigo: "CAMBIO_SERVICIO")
+      if servicio
+        ya_existe = pre_factura_items.any? { |i|
+          i.origen == "auto_servicio_extra" &&
+            i.paquete_id == paquete.id &&
+            i.servicio_extra_id == servicio.id &&
+            !i.marked_for_destruction?
+        }
+        unless ya_existe
+          pre_factura_items.build(
+            paquete: paquete,
+            servicio_extra: servicio,
+            concepto: "#{servicio.descripcion} - #{paquete.guia}",
+            subtotal: servicio.precio_venta,
+            origen: "auto_servicio_extra"
+          )
+        end
+      end
+    end
   end
 
   private

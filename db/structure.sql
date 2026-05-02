@@ -1535,7 +1535,10 @@ CREATE TABLE public.pre_factura_items (
     precio_libra numeric(10,2),
     subtotal numeric(10,2) DEFAULT 0.0 NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    origen character varying DEFAULT 'manual'::character varying NOT NULL,
+    tarifa_recolecta_id bigint,
+    servicio_extra_id bigint
 );
 
 
@@ -3948,6 +3951,13 @@ CREATE INDEX index_pre_alertas_on_tipo_envio_id ON public.pre_alertas USING btre
 
 
 --
+-- Name: index_pre_factura_items_on_origen; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pre_factura_items_on_origen ON public.pre_factura_items USING btree (origen);
+
+
+--
 -- Name: index_pre_factura_items_on_paquete_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3959,6 +3969,20 @@ CREATE INDEX index_pre_factura_items_on_paquete_id ON public.pre_factura_items U
 --
 
 CREATE INDEX index_pre_factura_items_on_pre_factura_id ON public.pre_factura_items USING btree (pre_factura_id);
+
+
+--
+-- Name: index_pre_factura_items_on_servicio_extra_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pre_factura_items_on_servicio_extra_id ON public.pre_factura_items USING btree (servicio_extra_id);
+
+
+--
+-- Name: index_pre_factura_items_on_tarifa_recolecta_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pre_factura_items_on_tarifa_recolecta_id ON public.pre_factura_items USING btree (tarifa_recolecta_id);
 
 
 --
@@ -4636,6 +4660,14 @@ ALTER TABLE ONLY public.warehouse_receipts
 
 
 --
+-- Name: pre_factura_items fk_rails_58cfd992c2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pre_factura_items
+    ADD CONSTRAINT fk_rails_58cfd992c2 FOREIGN KEY (tarifa_recolecta_id) REFERENCES public.tarifas_recolecta(id) ON DELETE SET NULL;
+
+
+--
 -- Name: entregas fk_rails_5acc57e1ba; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4657,6 +4689,14 @@ ALTER TABLE ONLY public.paquetes
 
 ALTER TABLE ONLY public.venta_items
     ADD CONSTRAINT fk_rails_5dcbb32fc2 FOREIGN KEY (paquete_id) REFERENCES public.paquetes(id);
+
+
+--
+-- Name: pre_factura_items fk_rails_640d1bf992; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pre_factura_items
+    ADD CONSTRAINT fk_rails_640d1bf992 FOREIGN KEY (servicio_extra_id) REFERENCES public.servicios_extra(id) ON DELETE SET NULL;
 
 
 --
@@ -5146,6 +5186,7 @@ ALTER TABLE ONLY public.ep_counters
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260501180000'),
 ('20260501160000'),
 ('20260501150000'),
 ('20260501100000'),

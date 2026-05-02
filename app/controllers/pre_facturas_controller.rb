@@ -135,7 +135,7 @@ class PreFacturasController < ApplicationController
     params.require(:pre_factura).permit(
       :notas, :fecha_trabajo,
       pre_factura_items_attributes: [
-        :id, :concepto, :precio_libra, :peso_cobrar, :subtotal, :_destroy
+        :id, :concepto, :precio_libra, :peso_cobrar, :subtotal, :origen, :_destroy
       ]
     )
   end
