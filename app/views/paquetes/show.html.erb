@@ -21,8 +21,13 @@
                                icon: "document-text", target: "_blank", shortcut: "F4")) { "Warehouse Receipt" }
   end
   if (pf = @paquete.pre_factura)
+    # PreFactura no tiene una ruta `pdf` separada — la "impresión"
+    # se hace abriendo el show en una pestaña nueva y usando el
+    # diálogo de impresión del navegador (Ctrl/Cmd+P). Yusef pidió
+    # tanto "Imprimir" como "Ver"; el primero abre en _blank, el
+    # segundo navega in-place.
     header.with_action do
-      render(ButtonComponent.new(variant: :secondary, href: pdf_pre_factura_path(pf),
+      render(ButtonComponent.new(variant: :secondary, href: pre_factura_path(pf),
                                  icon: "document-arrow-down", target: "_blank")) { "Imprimir Pre-Factura" }
     end
     header.with_action do
