@@ -195,6 +195,8 @@ es:
     month_names: [~, Enero, Febrero, Marzo, Abril, Mayo, Junio, Julio, Agosto, Septiembre, Octubre, Noviembre, Diciembre]
 
   time:
+    am: "am"
+    pm: "pm"
     formats:
       default: "%d/%m/%Y %H:%M"
       long: "%d de %B de %Y, %-I:%M %p"
