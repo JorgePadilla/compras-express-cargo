@@ -19,7 +19,11 @@ Rails.application.routes.draw do
   end
 
   resources :paquetes, except: [:new] do
-    member { get :label }
+    member do
+      get :label
+      get :reimprimir_etiquetas
+      delete :eliminar_de_pre_alerta
+    end
     collection do
       get :check_tracking
       get :search

@@ -1,7 +1,7 @@
 class PaquetesController < ApplicationController
-  before_action :set_paquete, only: [ :show, :edit, :update, :label, :destroy ]
+  before_action :set_paquete, only: [ :show, :edit, :update, :label, :destroy, :eliminar_de_pre_alerta, :reimprimir_etiquetas ]
   before_action :authorize_tracking_actions, only: [ :check_tracking, :search ]
-  before_action :authorize_edit, only: [ :edit, :update ]
+  before_action :authorize_edit, only: [ :edit, :update, :eliminar_de_pre_alerta ]
   before_action :authorize_delete, only: [ :destroy ]
 
   # Whitelist de columnas ordenables. Mapea param `sort` -> SQL fragment.
@@ -53,6 +53,34 @@ class PaquetesController < ApplicationController
 
   def label
     render layout: "print"
+  end
+
+  # PR-D4.a: desvincula este paquete de TODAS sus pre-alertas (PreAlertaPaquete
+  # join). NO destruye el paquete. Yusef: "esto se hace cuando el paquete lo
+  # agregaron a una pre-alerta equivocada y necesitamos reasignarlo al cliente
+  # correcto".
+  def eliminar_de_pre_alerta
+    count = @paquete.pre_alerta_paquetes.count
+    if count.zero?
+      redirect_to @paquete, alert: "Este paquete no está vinculado a ninguna pre-alerta."
+      return
+    end
+    @paquete.pre_alerta_paquetes.destroy_all
+    redirect_to @paquete, notice: "Paquete desvinculado de #{count} pre-alerta(s). Listo para reasignar."
+  end
+
+  # PR-D4.a: re-imprime etiquetas Miami. Para paquetes divididos (split en
+  # varias cajas) muestra modal con checkboxes por caja. Para paquetes
+  # individuales abre directamente la etiqueta. Yusef pidió que las cajas
+  # hermanas estén preseleccionadas por default.
+  def reimprimir_etiquetas
+    if @paquete.dividido?
+      @hermanas = @paquete.paquetes_hermanos.order(:numero_caja).to_a + [ @paquete ]
+      @hermanas.sort_by!(&:numero_caja)
+      render layout: false # modal partial
+    else
+      redirect_to label_paquete_path(@paquete)
+    end
   end
 
   def destroy

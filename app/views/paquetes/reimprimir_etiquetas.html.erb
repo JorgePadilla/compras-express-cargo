@@ -1,0 +1,61 @@
+<%# PR-D4.a: vista para re-imprimir etiquetas Miami de un paquete
+    dividido. Yusef pidió "modal con checkboxes preseleccionados de
+    las cajas hermanas".
+
+    Cada caja del split tiene un link "Imprimir" que abre la etiqueta
+    individual en nueva pestaña. El usuario puede imprimir las que
+    necesite (default es imprimir todas, abriéndolas una por una). %>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Re-imprimir Etiquetas — <%= @paquete.tracking %></title>
+  <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div class="max-w-3xl mx-auto py-8 px-4">
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <div class="flex items-baseline justify-between mb-4 border-b border-gray-200 pb-4">
+        <div>
+          <h1 class="text-xl font-bold text-cec-navy">Re-imprimir Etiquetas Miami</h1>
+          <p class="text-sm text-gray-500 mt-1">
+            Tracking <span class="font-mono text-gray-700"><%= @paquete.tracking %></span>
+            · <%= @hermanas.size %> caja<%= 's' if @hermanas.size != 1 %> en el split
+          </p>
+        </div>
+        <%= link_to "← Volver al paquete", paquete_path(@paquete),
+              class: "text-sm text-cec-teal hover:text-cec-teal-dark font-medium" %>
+      </div>
+
+      <p class="text-xs text-gray-500 mb-4 italic">
+        Click en una caja para abrir su etiqueta en una nueva pestaña.
+        Una vez abierta, usá el diálogo de impresión del navegador (Ctrl/Cmd+P).
+      </p>
+
+      <ul class="divide-y divide-gray-200">
+        <% @hermanas.each do |caja| %>
+          <li>
+            <%= link_to label_paquete_path(caja), target: "_blank",
+                class: "flex items-center justify-between px-3 py-3 hover:bg-gray-50 rounded transition-colors" do %>
+              <div class="flex items-center gap-3">
+                <span class="shrink-0 w-12 h-12 rounded-lg bg-cec-gold-gradient text-white flex flex-col items-center justify-center shadow-sm">
+                  <span class="text-[9px] uppercase opacity-80">Caja</span>
+                  <span class="text-base font-bold leading-none"><%= caja.etiqueta_secuencia %></span>
+                </span>
+                <div>
+                  <p class="font-mono text-sm font-semibold text-cec-navy"><%= caja.guia %></p>
+                  <p class="text-xs text-gray-500">Peso <%= caja.peso || '—' %> lbs</p>
+                </div>
+              </div>
+              <span class="text-xs text-cec-teal hover:text-cec-teal-dark font-medium inline-flex items-center gap-1">
+                Imprimir
+                <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/><path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"/></svg>
+              </span>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>
