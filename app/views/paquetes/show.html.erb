@@ -147,7 +147,7 @@ end %>
           <dt class="text-xs font-medium text-gray-500 uppercase">Dimensiones (A × L × An)</dt>
           <dd class="mt-1 text-sm text-gray-900">
             <% dims = [@paquete.alto, @paquete.largo, @paquete.ancho].compact %>
-            <%= dims.any? ? "#{dims.join(' × ')} in" : "—" %>
+            <%= dims.any? ? "#{dims.join(' × ')} pulgadas" : "—" %>
           </dd>
         </div>
         <div>
