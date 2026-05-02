@@ -30,6 +30,34 @@
   end
 end %>
 
+<%# Leyenda de colores de fila — siempre visible (Yusef 2026-05-02).
+    Los swatches usan EXACTAMENTE los mismos colores que el row (amber-50,
+    amber-100, blue-50, cec-teal/10) para que el match visual sea inmediato.
+    El ring de 2px en un tono más oscuro hace cada swatch distinguible
+    sobre el fondo blanco del card de la leyenda. %>
+<div class="mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 px-4 py-3 shadow-sm">
+  <span class="inline-flex items-center gap-2 text-gray-500 dark:text-gray-400 pr-2 border-r border-gray-200 dark:border-gray-700">
+    <%= heroicon "swatch", variant: :outline, options: { class: "w-4 h-4" } %>
+    <span class="font-semibold uppercase tracking-wide text-[10px]">Leyenda</span>
+  </span>
+  <span class="inline-flex items-center gap-2">
+    <span class="inline-block w-6 h-6 rounded bg-amber-50 dark:bg-amber-900/20 ring-2 ring-amber-300 dark:ring-amber-700 shadow-sm"></span>
+    <span class="font-medium">Retener en Miami</span>
+  </span>
+  <span class="inline-flex items-center gap-2">
+    <span class="inline-block w-6 h-6 rounded bg-amber-100 dark:bg-amber-900/30 ring-2 ring-amber-400 dark:ring-amber-600 shadow-sm"></span>
+    <span class="font-medium">Cambio de servicio</span>
+  </span>
+  <span class="inline-flex items-center gap-2">
+    <span class="inline-block w-6 h-6 rounded bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-300 dark:ring-blue-700 shadow-sm"></span>
+    <span class="font-medium">Con pre-factura</span>
+  </span>
+  <span class="inline-flex items-center gap-2">
+    <span class="inline-block w-6 h-6 rounded bg-cec-teal/10 dark:bg-cec-teal/15 ring-2 ring-cec-teal dark:ring-cec-teal-light shadow-sm"></span>
+    <span class="font-medium">Vinculado a pre-alerta</span>
+  </span>
+</div>
+
 
 <%# Barra de busqueda global con popover info-on-click pegado a la barra %>
 <div class="mb-4 flex items-center gap-2 w-full sm:max-w-md">
@@ -198,38 +226,6 @@ end %>
     </div>
     <button type="button" data-action="click->bulk-selection#clear" class="text-white/80 hover:text-white text-xs underline">Limpiar selección</button>
   </div>
-
-  <%# Leyenda de colores de fila — explica qué significa cada highlight.
-      Los swatches usan tonos más saturados que las filas para legibilidad
-      (las filas usan tints sutiles para no gritar visualmente). %>
-  <details class="mb-3 group">
-    <summary class="list-none cursor-pointer inline-flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 hover:text-cec-navy dark:hover:text-cec-gold select-none">
-      <%= heroicon "information-circle", variant: :outline, options: { class: "w-4 h-4" } %>
-      <span class="font-medium">Leyenda de colores de fila</span>
-      <svg class="w-3.5 h-3.5 text-gray-400 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor">
-        <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06 0L10 10.94l3.71-3.73a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 0-1.04Z" clip-rule="evenodd"/>
-      </svg>
-    </summary>
-    <div class="mt-2 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 px-4 py-3 shadow-sm">
-      <span class="inline-flex items-center gap-2">
-        <span class="inline-block w-5 h-5 rounded bg-amber-300 ring-1 ring-amber-500 shadow-sm"></span>
-        <span class="font-medium">Retener en Miami</span>
-      </span>
-      <span class="inline-flex items-center gap-2">
-        <span class="inline-block w-5 h-5 rounded bg-amber-500 ring-1 ring-amber-700 shadow-sm"></span>
-        <span class="font-medium">Cambio de servicio</span>
-      </span>
-      <span class="inline-flex items-center gap-2">
-        <span class="inline-block w-5 h-5 rounded bg-blue-400 ring-1 ring-blue-600 shadow-sm"></span>
-        <span class="font-medium">Con pre-factura</span>
-      </span>
-      <span class="inline-flex items-center gap-2">
-        <span class="inline-block w-5 h-5 rounded bg-cec-teal ring-1 ring-cec-teal-dark shadow-sm"></span>
-        <span class="font-medium">Vinculado a pre-alerta</span>
-      </span>
-      <span class="text-[11px] text-gray-500 dark:text-gray-400 italic ml-auto">Las filas usan tonos más sutiles que estos swatches</span>
-    </div>
-  </details>
 
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
       <div class="overflow-x-auto">
