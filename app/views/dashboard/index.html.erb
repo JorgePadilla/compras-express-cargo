@@ -2,7 +2,16 @@
 
 <div class="space-y-6" data-controller="stagger-reveal" data-stagger-reveal-step-value="80">
   <%# ── Hero saludo ── %>
-  <%= render DashboardHeroComponent.new(user: Current.user, health_status: @health_status) %>
+  <%= render DashboardHeroComponent.new(
+        user: Current.user,
+        health_status: @health_status,
+        signals: {
+          ventas_pendientes:    @ventas_pendientes,
+          tareas_abiertas:      @tareas_abiertas,
+          paquetes_disponibles: @paquetes_disponibles,
+          entregas_en_reparto:  @entregas_en_reparto
+        }
+      ) %>
 
   <%# ── Shortcuts agrupados por área (role-based) ── %>
   <% if @shortcut_groups.present? %>
