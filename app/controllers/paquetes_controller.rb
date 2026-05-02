@@ -260,7 +260,7 @@ class PaquetesController < ApplicationController
   def set_paquete
     # PR-D2: motivos_retencion para los badges en show/edit.
     # PR-D3.a: proveedor para evitar query extra al renderizar el detalle.
-    @paquete = Paquete.includes(:motivos_retencion, :proveedor).find(params[:id])
+    @paquete = Paquete.includes(:motivos_retencion, :proveedor, :tercero).find(params[:id])
   end
 
   def authorize_tracking_actions
@@ -381,6 +381,7 @@ class PaquetesController < ApplicationController
       :tracking, :tracking_secundario, :cliente_id, :tipo_envio_id, :estado, :peso,
       :alto, :largo, :ancho, :cantidad_productos, :cantidad_paquetes,
       :numero_caja, :descripcion, :remitente, :expedido_por, :proveedor, :proveedor_id,
+      :tercero_id,
       :notas_internas, :notas_al_cliente, :notas_consolidacion, :notas_retencion,
       :pre_alerta, :pre_factura,
       :solicito_cambio_servicio, :retener_miami,
