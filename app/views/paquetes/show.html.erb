@@ -95,9 +95,41 @@ end %>
 <% end %>
 
 <div class="bg-white rounded-lg shadow overflow-hidden">
-  <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-    <h2 class="text-lg font-semibold text-gray-800">Detalles del Paquete</h2>
-    <%= render StatusBadgeComponent.new(status: @paquete.estado) %>
+  <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Detalles del Paquete</h2>
+      <%# Tag visual "Consolidando" cuando el estado lo indica %>
+      <% if @paquete.estado == "consolidando_honduras" %>
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide bg-cec-gold/15 text-cec-gold-dark dark:bg-cec-gold/25 dark:text-cec-gold-light ring-1 ring-cec-gold/40">
+          <%= heroicon "archive-box", variant: :solid, options: { class: "w-3 h-3" } %>
+          Consolidando
+        </span>
+      <% end %>
+    </div>
+
+    <%# PR-D4.b: Estado como dropdown inline editable. Yusef:
+        "esto debe ser drop down para modificar en caso de un error".
+        Si el usuario no tiene permiso de editar, sólo se muestra el badge. %>
+    <% if can_edit_paquetes? %>
+      <div class="flex items-center gap-2"
+           data-controller="inline-select"
+           data-inline-select-url-value="<%= paquete_path(@paquete) %>"
+           data-inline-select-field-value="estado"
+           data-inline-select-resource-value="paquete">
+        <%= render StatusBadgeComponent.new(status: @paquete.estado) %>
+        <select data-action="change->inline-select#submit"
+                data-inline-select-target="select"
+                aria-label="Cambiar estado del paquete"
+                class="text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:ring-cec-teal focus:border-cec-teal py-1 pr-7">
+          <% Paquete.estados.keys.each do |est| %>
+            <option value="<%= est %>" <%= "selected" if est == @paquete.estado %>><%= est.humanize %></option>
+          <% end %>
+        </select>
+        <span data-inline-select-target="status" class="hidden text-[10px] font-semibold"></span>
+      </div>
+    <% else %>
+      <%= render StatusBadgeComponent.new(status: @paquete.estado) %>
+    <% end %>
   </div>
 
   <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
