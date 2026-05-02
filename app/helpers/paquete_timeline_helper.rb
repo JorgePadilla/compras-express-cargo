@@ -31,8 +31,37 @@ module PaqueteTimelineHelper
       step.merge(
         fecha: fecha,
         user:  uid && users_index[uid.to_s],
-        modificada: fecha_modificada?(paquete, step[:fecha_attr])
+        modificada: fecha_modificada?(paquete, step[:fecha_attr]),
+        # PR-D4.c: contexto extra por step (bodega, pre-factura, sucursal,
+        # referencia de entrega) según lo pidió Yusef en la spec.
+        contexto: timeline_step_contexto(paquete, step[:fecha_attr])
       )
+    end
+  end
+
+  # Datos extra a mostrar por step según fecha_attr. Devuelve array de
+  # tuples [icon, text] para renderizar como pills al lado de la fecha.
+  def timeline_step_contexto(paquete, fecha_attr)
+    case fecha_attr
+    when :fecha_aduana
+      bodega = paquete.sub_localidad_actual&.codigo
+      bodega ? [ [ "building-storefront", "Bodega #{bodega}" ] ] : []
+    when :fecha_consolidando
+      pieces = []
+      pieces << [ "building-storefront", "Bodega #{paquete.sub_localidad_actual.codigo}" ] if paquete.sub_localidad_actual
+      pieces << [ "document-text", paquete.pre_factura.numero ] if paquete.pre_factura
+      pieces
+    when :fecha_disponible
+      suc = paquete.sucursal_actual || paquete.sucursal
+      suc ? [ [ "map-pin", "Sucursal #{suc.nombre}" ] ] : []
+    when :fecha_en_reparto
+      entrega = paquete.entrega
+      entrega ? [ [ "truck", entrega.numero ] ] : []
+    when :fecha_pre_alerta
+      pa = paquete.pre_alerta_paquetes.first&.pre_alerta
+      pa ? [ [ "bell-alert", pa.numero_documento ] ] : []
+    else
+      []
     end
   end
 
