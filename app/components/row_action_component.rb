@@ -56,7 +56,9 @@ class RowActionComponent < ViewComponent::Base
       destructive: false
     },
     annul: {
-      icon: "x-circle",
+      # Yusef 2026-05-02: usar el mismo trash que /paquetes para cualquier
+      # acción destructiva (annul/delete) — consistencia visual.
+      icon: "trash",
       color: "text-red-400 hover:text-red-600",
       method: :delete,
       destructive: true,
