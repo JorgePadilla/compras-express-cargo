@@ -8,20 +8,23 @@
 
 <%= render PageHeaderComponent.new(title: "Todos los Paquetes", subtitle: "#{@paquetes.total_count} paquetes") do |header|
   header.with_action do
-    render ButtonComponent.new(variant: :secondary, icon: "arrow-down-tray",
-                               data: { action: "click->bulk-selection#exportXlsx" }) do
+    render ButtonComponent.new(variant: :purple, icon: "arrow-down-tray",
+                               data: { action: "click->bulk-selection#exportXlsx",
+                                       shortcut: "F8" }) do
       "Excel (F8)"
     end
   end
   header.with_action do
-    render ButtonComponent.new(variant: :secondary, icon: "document-arrow-down",
-                               data: { action: "click->bulk-selection#exportPdf" }) do
+    render ButtonComponent.new(variant: :purple, icon: "document-arrow-down",
+                               data: { action: "click->bulk-selection#exportPdf",
+                                       shortcut: "F9" }) do
       "PDF (F9)"
     end
   end
   header.with_action do
-    render ButtonComponent.new(variant: :secondary, icon: "printer",
-                               data: { action: "click->bulk-selection#print" }) do
+    render ButtonComponent.new(variant: :purple, icon: "printer",
+                               data: { action: "click->bulk-selection#print",
+                                       shortcut: "F4" }) do
       "Imprimir (F4)"
     end
   end
@@ -69,13 +72,18 @@ end %>
   params[:incluir_3_12_meses] == "1", params[:incluir_mas_1_ano] == "1"
 ].count(true) %>
 
-<details class="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow" <%= "open" if active_filters_count.positive? %>>
-  <summary class="px-6 py-3 cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-cec-navy dark:hover:text-cec-gold flex items-center gap-2">
-    <%= heroicon "funnel", variant: :outline, options: { class: "w-4 h-4" } %>
-    Filtros avanzados
+<details class="mb-6 group bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-200 dark:ring-gray-700 transition-all open:ring-cec-navy/30 dark:open:ring-cec-gold/40" <%= "open" if active_filters_count.positive? %>>
+  <summary class="list-none px-6 py-3.5 cursor-pointer text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/40 rounded-lg group-open:rounded-b-none group-open:border-b group-open:border-gray-200 dark:group-open:border-gray-700 flex items-center gap-2 transition-colors">
+    <%= heroicon "funnel", variant: :outline, options: { class: "w-4 h-4 text-cec-navy dark:text-cec-gold" } %>
+    <span class="text-cec-navy dark:text-gray-100">Filtros avanzados</span>
     <% if active_filters_count.positive? %>
-      <span class="bg-cec-navy text-white text-xs px-2 py-0.5 rounded-full"><%= active_filters_count %></span>
+      <span class="bg-cec-navy text-white text-xs px-2 py-0.5 rounded-full"><%= active_filters_count %> activo<%= "s" if active_filters_count > 1 %></span>
     <% end %>
+    <span class="ml-auto text-xs text-gray-500 dark:text-gray-400 group-open:hidden">click para abrir</span>
+    <span class="ml-auto text-xs text-gray-500 dark:text-gray-400 hidden group-open:inline">click para cerrar</span>
+    <svg class="w-4 h-4 text-gray-400 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor">
+      <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06 0L10 10.94l3.71-3.73a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 0-1.04Z" clip-rule="evenodd"/>
+    </svg>
   </summary>
   <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
     <%= form_tag paquetes_path, method: :get, class: "space-y-5" do %>
@@ -190,6 +198,38 @@ end %>
     </div>
     <button type="button" data-action="click->bulk-selection#clear" class="text-white/80 hover:text-white text-xs underline">Limpiar selección</button>
   </div>
+
+  <%# Leyenda de colores de fila — explica qué significa cada highlight.
+      Los swatches usan tonos más saturados que las filas para legibilidad
+      (las filas usan tints sutiles para no gritar visualmente). %>
+  <details class="mb-3 group">
+    <summary class="list-none cursor-pointer inline-flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 hover:text-cec-navy dark:hover:text-cec-gold select-none">
+      <%= heroicon "information-circle", variant: :outline, options: { class: "w-4 h-4" } %>
+      <span class="font-medium">Leyenda de colores de fila</span>
+      <svg class="w-3.5 h-3.5 text-gray-400 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06 0L10 10.94l3.71-3.73a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 0-1.04Z" clip-rule="evenodd"/>
+      </svg>
+    </summary>
+    <div class="mt-2 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 px-4 py-3 shadow-sm">
+      <span class="inline-flex items-center gap-2">
+        <span class="inline-block w-5 h-5 rounded bg-amber-300 ring-1 ring-amber-500 shadow-sm"></span>
+        <span class="font-medium">Retener en Miami</span>
+      </span>
+      <span class="inline-flex items-center gap-2">
+        <span class="inline-block w-5 h-5 rounded bg-amber-500 ring-1 ring-amber-700 shadow-sm"></span>
+        <span class="font-medium">Cambio de servicio</span>
+      </span>
+      <span class="inline-flex items-center gap-2">
+        <span class="inline-block w-5 h-5 rounded bg-blue-400 ring-1 ring-blue-600 shadow-sm"></span>
+        <span class="font-medium">Con pre-factura</span>
+      </span>
+      <span class="inline-flex items-center gap-2">
+        <span class="inline-block w-5 h-5 rounded bg-cec-teal ring-1 ring-cec-teal-dark shadow-sm"></span>
+        <span class="font-medium">Vinculado a pre-alerta</span>
+      </span>
+      <span class="text-[11px] text-gray-500 dark:text-gray-400 italic ml-auto">Las filas usan tonos más sutiles que estos swatches</span>
+    </div>
+  </details>
 
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
       <div class="overflow-x-auto">
