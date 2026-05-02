@@ -5,7 +5,7 @@ class UsersController < ApplicationController
   def index
     @users = User.order(created_at: :desc)
     @users = @users.buscar(params[:q]) if params[:q].present?
-    @users = @users.page(params[:page]).per(25)
+    @users = @users.page(params[:page]).per(per_page_sanitized)
   end
 
   def show
@@ -37,9 +37,7 @@ class UsersController < ApplicationController
     end
   end
 
-  private
-
-  def set_user
+  private  def set_user
     @user = User.find(params[:id])
   end
 

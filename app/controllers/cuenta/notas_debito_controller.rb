@@ -4,7 +4,7 @@ module Cuenta
 
     def index
       @notas_debito = current_cliente.notas_debito.emitidas.includes(:venta).recientes
-      @notas_debito = @notas_debito.page(params[:page]).per(12)
+      @notas_debito = @notas_debito.page(params[:page]).per(per_page_sanitized)
     end
 
     def show

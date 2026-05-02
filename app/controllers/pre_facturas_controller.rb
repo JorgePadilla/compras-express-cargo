@@ -5,7 +5,7 @@ class PreFacturasController < ApplicationController
   def index
     @pre_facturas = PreFactura.includes(:cliente, :creado_por).recientes
     @pre_facturas = apply_filters(@pre_facturas)
-    @pre_facturas = @pre_facturas.page(params[:page]).per(25)
+    @pre_facturas = @pre_facturas.page(params[:page]).per(per_page_sanitized)
   end
 
   def show
@@ -108,9 +108,7 @@ class PreFacturasController < ApplicationController
     }
   end
 
-  private
-
-  def require_feature_access
+  private  def require_feature_access
     redirect_to(root_path, alert: "No tienes permiso para acceder a esta seccion.") unless can_access?(:pre_facturas)
   end
 

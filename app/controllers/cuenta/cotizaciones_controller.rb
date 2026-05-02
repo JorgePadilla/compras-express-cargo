@@ -4,7 +4,7 @@ module Cuenta
 
     def index
       @cotizaciones = current_cliente.cotizaciones.where.not(estado: "borrador").recientes
-      @cotizaciones = @cotizaciones.page(params[:page]).per(12)
+      @cotizaciones = @cotizaciones.page(params[:page]).per(per_page_sanitized)
     end
 
     def show

@@ -7,7 +7,7 @@ module Cuenta
       @pre_alertas = current_cliente.pre_alertas.includes(:pre_alerta_paquetes, :tipo_envio).activas.recientes
       @pre_alertas = @pre_alertas.buscar(params[:q]) if params[:q].present?
       @pre_alertas = @pre_alertas.by_estado(params[:estado]) if params[:estado].present?
-      @pre_alertas = @pre_alertas.page(params[:page]).per(12)
+      @pre_alertas = @pre_alertas.page(params[:page]).per(per_page_sanitized)
     end
 
     def show

@@ -5,7 +5,7 @@ class FinanciamientosController < ApplicationController
   def index
     @financiamientos = Financiamiento.includes(:cliente, :venta).recientes
     @financiamientos = apply_filters(@financiamientos)
-    @financiamientos = @financiamientos.page(params[:page]).per(25)
+    @financiamientos = @financiamientos.page(params[:page]).per(per_page_sanitized)
   end
 
   def show
@@ -76,9 +76,7 @@ class FinanciamientosController < ApplicationController
     end
   end
 
-  private
-
-  def require_feature_access
+  private  def require_feature_access
     redirect_to(root_path, alert: "No tienes permiso para acceder a esta seccion.") unless can_access?(:financiamientos)
   end
 

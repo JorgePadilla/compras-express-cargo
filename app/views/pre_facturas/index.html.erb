@@ -87,7 +87,7 @@
       </table>
     </div>
   </div>
-  <div class="mt-4"><%= paginate @pre_facturas %></div>
+  <div class="mt-4"><%= render PaginationComponent.new(collection: @pre_facturas, label: "pre-facturas") %></div>
 <% else %>
   <%= render EmptyStateComponent.new(
     title: "No hay pre-facturas",

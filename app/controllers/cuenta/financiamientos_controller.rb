@@ -4,7 +4,7 @@ module Cuenta
 
     def index
       @financiamientos = current_cliente.financiamientos.recientes
-      @financiamientos = @financiamientos.page(params[:page]).per(12)
+      @financiamientos = @financiamientos.page(params[:page]).per(per_page_sanitized)
     end
 
     def show

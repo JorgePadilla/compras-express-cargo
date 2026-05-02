@@ -5,7 +5,7 @@ class EntregasController < ApplicationController
   def index
     @entregas = Entrega.includes(:cliente, :repartidor, :creado_por, :paquetes).recientes
     @entregas = apply_filters(@entregas)
-    @entregas = @entregas.page(params[:page]).per(25)
+    @entregas = @entregas.page(params[:page]).per(per_page_sanitized)
   end
 
   def new
@@ -91,9 +91,7 @@ class EntregasController < ApplicationController
     }
   end
 
-  private
-
-  def require_feature_access
+  private  def require_feature_access
     redirect_to(root_path, alert: "No tienes permiso para acceder a esta seccion.") unless can_access?(:entregas)
   end
 

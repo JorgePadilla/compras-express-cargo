@@ -20,4 +20,12 @@ class ApplicationController < ActionController::Base
   def user_for_paper_trail
     Current.user&.id
   end
+
+  # Pagination: per_page sanitizado (PR pagination redesign 2026-05-02).
+  # Permite ?per=N en query, clamped a [10, 200], default 25.
+  def per_page_sanitized
+    n = params[:per].to_i
+    return 25 if n <= 0
+    n.clamp(10, 200)
+  end
 end

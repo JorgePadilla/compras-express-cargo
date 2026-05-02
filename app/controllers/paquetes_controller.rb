@@ -27,7 +27,7 @@ class PaquetesController < ApplicationController
                             pre_alerta_paquetes: :pre_alerta)
     @paquetes = apply_filters(@paquetes)
     @paquetes = apply_sort(@paquetes)
-    @paquetes = @paquetes.page(params[:page]).per(25)
+    @paquetes = @paquetes.page(params[:page]).per(per_page_sanitized)
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     @sucursales = Sucursal.activas.ordered
     @estados_paquete = Paquete.estados.keys
@@ -173,9 +173,7 @@ class PaquetesController < ApplicationController
     }
   end
 
-  private
-
-  # Genera el XLSX via Axlsx::Package directo (sin template) y lo manda
+  private  # Genera el XLSX via Axlsx::Package directo (sin template) y lo manda
   # como send_data. Construir el workbook en Ruby evita los problemas de
   # binding de `xlsx_package` cuando el request llega como HTML (forms POST).
   def send_xlsx(paquetes, filename:)

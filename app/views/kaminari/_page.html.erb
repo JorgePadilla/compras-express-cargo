@@ -1,0 +1,8 @@
+<%# Página numerada — el active queda navy sólido sin link, los demás link gris %>
+<% if page.current? %>
+  <span class="inline-flex items-center justify-center min-w-[2.25rem] h-9 px-2 rounded-md text-sm font-semibold bg-cec-navy text-white shadow-sm ring-1 ring-cec-navy"
+        aria-current="page"><%= page %></span>
+<% else %>
+  <%= link_to page, url, remote: remote,
+      class: "inline-flex items-center justify-center min-w-[2.25rem] h-9 px-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 ring-1 ring-gray-200 dark:ring-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700/60 transition-colors" %>
+<% end %>

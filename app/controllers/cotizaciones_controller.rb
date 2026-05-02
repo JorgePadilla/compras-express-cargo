@@ -5,7 +5,7 @@ class CotizacionesController < ApplicationController
   def index
     @cotizaciones = Cotizacion.includes(:cliente, :creado_por).recientes
     @cotizaciones = apply_filters(@cotizaciones)
-    @cotizaciones = @cotizaciones.page(params[:page]).per(25)
+    @cotizaciones = @cotizaciones.page(params[:page]).per(per_page_sanitized)
   end
 
   def show
@@ -98,9 +98,7 @@ class CotizacionesController < ApplicationController
     end
   end
 
-  private
-
-  def require_feature_access
+  private  def require_feature_access
     redirect_to(root_path, alert: "No tienes permiso para acceder a esta seccion.") unless can_access?(:cotizaciones)
   end
 
