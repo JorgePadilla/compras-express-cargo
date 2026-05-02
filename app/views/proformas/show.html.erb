@@ -71,11 +71,11 @@
   <% end %>
 
   <div class="flex flex-wrap gap-3 print:hidden">
-    <%= link_to "Descargar PDF", pdf_proforma_path(@proforma), class: "px-4 py-2 bg-cec-navy text-white rounded-lg text-sm font-medium" %>
+    <%= link_to "Descargar PDF (F9)", pdf_proforma_path(@proforma), class: "px-4 py-2 bg-cec-navy text-white rounded-lg text-sm font-medium", data: { shortcut: "F9" } %>
     <button onclick="window.print()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50">Imprimir</button>
 
     <% if @proforma.proforma? %>
-      <%= link_to "Editar", edit_proforma_path(@proforma), class: "px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50" %>
+      <%= link_to "Editar (F6)", edit_proforma_path(@proforma), class: "px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50", data: { shortcut: "F6" } %>
       <%= button_to "Emitir como Factura", emitir_proforma_path(@proforma), method: :post,
           class: "px-4 py-2 bg-cec-teal text-white rounded-lg text-sm font-medium hover:bg-cec-teal-dark",
           data: { turbo_confirm: "¿Emitir esta proforma como factura? Se cargara al saldo del cliente." } %>
@@ -89,6 +89,6 @@
           class: "px-4 py-2 bg-white border border-cec-teal text-cec-teal rounded-lg text-sm font-medium hover:bg-cec-teal/5" %>
     <% end %>
 
-    <%= link_to "Volver", proformas_path, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900" %>
+    <%= link_to "Volver (F2)", proformas_path, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900", data: { shortcut: "F2" } %>
   </div>
 </div>

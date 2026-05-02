@@ -1,6 +1,6 @@
 <%= render PageHeaderComponent.new(title: "Servicios Extra", subtitle: "Cargos adicionales que se aplican a la pre-factura") do |h| %>
   <% h.with_action do %>
-    <%= render ButtonComponent.new(href: new_servicio_extra_path, variant: :primary, icon: "plus") do %>
+    <%= render ButtonComponent.new(href: new_servicio_extra_path, variant: :primary, icon: "plus", shortcut: "F7") do %>
       Nuevo Servicio
     <% end %>
   <% end %>

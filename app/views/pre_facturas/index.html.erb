@@ -1,6 +1,6 @@
 <%= render PageHeaderComponent.new(title: "Pre-Facturas", subtitle: "#{@pre_facturas.total_count} pre-facturas") do |h| %>
   <% h.with_action do %>
-    <%= render ButtonComponent.new(href: new_pre_factura_path, variant: :primary, icon: "plus") do %>
+    <%= render ButtonComponent.new(href: new_pre_factura_path, variant: :primary, icon: "plus", shortcut: "F7") do %>
       Nueva Pre-Factura
     <% end %>
   <% end %>

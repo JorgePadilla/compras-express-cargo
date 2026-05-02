@@ -1,6 +1,6 @@
 <%= render PageHeaderComponent.new(title: "Tarifas de Recolecta", subtitle: "Catálogo por zona/distancia") do |h| %>
   <% h.with_action do %>
-    <%= render ButtonComponent.new(href: new_tarifa_recolecta_path, variant: :primary, icon: "plus") do %>
+    <%= render ButtonComponent.new(href: new_tarifa_recolecta_path, variant: :primary, icon: "plus", shortcut: "F7") do %>
       Nueva Tarifa
     <% end %>
   <% end %>

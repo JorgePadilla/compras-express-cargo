@@ -1,6 +1,6 @@
 <%= render PageHeaderComponent.new(title: "Manifiestos", subtitle: "#{@manifiestos.total_count} manifiestos") do |header|
   header.with_action do
-    render ButtonComponent.new(variant: :gold, href: new_manifiesto_path, icon: "plus") do
+    render ButtonComponent.new(variant: :gold, href: new_manifiesto_path, icon: "plus", shortcut: "F7") do
       "Nuevo Manifiesto"
     end
   end
@@ -77,7 +77,7 @@ end %>
     icon: "cube"
   ) do |empty|
     empty.with_action do
-      render ButtonComponent.new(variant: :gold, href: new_manifiesto_path, icon: "plus") do
+      render ButtonComponent.new(variant: :gold, href: new_manifiesto_path, icon: "plus", shortcut: "F7") do
         "Nuevo Manifiesto"
       end
     end

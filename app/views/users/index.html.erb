@@ -64,7 +64,7 @@ end %>
     icon: "user-group"
   ) do |empty|
     empty.with_action do
-      render ButtonComponent.new(variant: :gold, href: new_user_path, icon: "plus") do
+      render ButtonComponent.new(variant: :gold, href: new_user_path, icon: "plus", shortcut: "F7") do
         "Nuevo Usuario"
       end
     end

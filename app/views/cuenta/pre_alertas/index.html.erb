@@ -1,6 +1,6 @@
 <%= render PageHeaderComponent.new(title: "Mis Pre-Alertas") do |header| %>
   <% header.with_action do %>
-    <%= render ButtonComponent.new(variant: :gold, icon: "plus", href: new_cuenta_pre_alerta_path) do %>
+    <%= render ButtonComponent.new(variant: :gold, icon: "plus", href: new_cuenta_pre_alerta_path, shortcut: "F7") do %>
       Nueva Pre-Alerta
     <% end %>
   <% end %>
@@ -77,7 +77,7 @@
         description: "Crea una pre-alerta para declarar tus paquetes antes de que lleguen."
       ) do |empty| %>
         <% empty.with_action do %>
-          <%= render ButtonComponent.new(variant: :gold, icon: "plus", href: new_cuenta_pre_alerta_path) do %>
+          <%= render ButtonComponent.new(variant: :gold, icon: "plus", href: new_cuenta_pre_alerta_path, shortcut: "F7") do %>
             Crear Pre-Alerta
           <% end %>
         <% end %>
