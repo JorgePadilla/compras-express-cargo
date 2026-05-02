@@ -1642,6 +1642,40 @@ ALTER SEQUENCE public.proveedores_id_seq OWNED BY public.proveedores.id;
 
 
 --
+-- Name: rc_counters; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.rc_counters (
+    id bigint NOT NULL,
+    anio integer NOT NULL,
+    sucursal_id bigint NOT NULL,
+    proveedor_id bigint NOT NULL,
+    last_value integer DEFAULT 0 NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: rc_counters_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.rc_counters_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: rc_counters_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.rc_counters_id_seq OWNED BY public.rc_counters.id;
+
+
+--
 -- Name: recibos; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2578,6 +2612,13 @@ ALTER TABLE ONLY public.proveedores ALTER COLUMN id SET DEFAULT nextval('public.
 
 
 --
+-- Name: rc_counters id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.rc_counters ALTER COLUMN id SET DEFAULT nextval('public.rc_counters_id_seq'::regclass);
+
+
+--
 -- Name: recibos id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -3017,6 +3058,14 @@ ALTER TABLE ONLY public.proveedores
 
 
 --
+-- Name: rc_counters rc_counters_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.rc_counters
+    ADD CONSTRAINT rc_counters_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: recibos recibos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3193,6 +3242,13 @@ CREATE UNIQUE INDEX idx_paquete_motivos_retencion_pair ON public.paquete_motivos
 --
 
 CREATE INDEX idx_paquetes_warehouse_receipt ON public.paquetes USING btree (warehouse_receipt_id);
+
+
+--
+-- Name: idx_rc_counter_combo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_rc_counter_combo ON public.rc_counters USING btree (anio, sucursal_id, proveedor_id);
 
 
 --
@@ -4050,6 +4106,20 @@ CREATE INDEX index_proveedores_on_tipo ON public.proveedores USING btree (tipo);
 
 
 --
+-- Name: index_rc_counters_on_proveedor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_rc_counters_on_proveedor_id ON public.rc_counters USING btree (proveedor_id);
+
+
+--
+-- Name: index_rc_counters_on_sucursal_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_rc_counters_on_sucursal_id ON public.rc_counters USING btree (sucursal_id);
+
+
+--
 -- Name: index_recibos_on_cliente_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4540,6 +4610,14 @@ ALTER TABLE ONLY public.paquetes
 
 
 --
+-- Name: rc_counters fk_rails_2a65b6f8a6; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.rc_counters
+    ADD CONSTRAINT fk_rails_2a65b6f8a6 FOREIGN KEY (sucursal_id) REFERENCES public.sucursales(id) ON DELETE RESTRICT;
+
+
+--
 -- Name: clientes fk_rails_2ead6dd043; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4657,6 +4735,14 @@ ALTER TABLE ONLY public.reempaques
 
 ALTER TABLE ONLY public.cotizaciones
     ADD CONSTRAINT fk_rails_54a36869dd FOREIGN KEY (cliente_id) REFERENCES public.clientes(id);
+
+
+--
+-- Name: rc_counters fk_rails_55c124a7bf; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.rc_counters
+    ADD CONSTRAINT fk_rails_55c124a7bf FOREIGN KEY (proveedor_id) REFERENCES public.proveedores(id) ON DELETE RESTRICT;
 
 
 --
@@ -5202,6 +5288,7 @@ ALTER TABLE ONLY public.ep_counters
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260502150000'),
 ('20260502130000'),
 ('20260501180000'),
 ('20260501160000'),
