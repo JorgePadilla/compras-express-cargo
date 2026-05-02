@@ -23,19 +23,32 @@
       </thead>
       <tbody class="bg-white divide-y divide-gray-200">
         <%= f.fields_for :pre_factura_items do |item_f| %>
-          <tr>
+          <% it = item_f.object %>
+          <tr<%= ' class="bg-cec-teal/5"'.html_safe if it.auto? %>>
             <td class="px-6 py-3">
               <%= item_f.hidden_field :id %>
+              <%= item_f.hidden_field :origen %>
               <%= item_f.text_field :concepto, class: "w-full rounded border-gray-300 text-sm", readonly: @pre_factura.facturado? || @pre_factura.anulado? %>
+              <% if it.origen == "auto_recolecta" %>
+                <span class="mt-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-cec-teal/10 text-cec-teal">Auto · Recolecta</span>
+              <% elsif it.origen == "auto_servicio_extra" %>
+                <span class="mt-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-900">Auto · Servicio</span>
+              <% end %>
             </td>
             <td class="px-6 py-3">
-              <%= item_f.number_field :peso_cobrar, step: 0.01, class: "w-24 rounded border-gray-300 text-sm text-right" %>
+              <%= item_f.number_field :peso_cobrar, step: 0.01, class: "w-24 rounded border-gray-300 text-sm text-right" unless it.auto? %>
             </td>
             <td class="px-6 py-3">
-              <%= item_f.number_field :precio_libra, step: 0.01, class: "w-24 rounded border-gray-300 text-sm text-right" %>
+              <% if it.auto? %>
+                <%= item_f.number_field :subtotal, step: 0.01, min: 0,
+                    class: "w-24 rounded border-gray-300 text-sm text-right",
+                    title: "Editable para descuentos autorizados" %>
+              <% else %>
+                <%= item_f.number_field :precio_libra, step: 0.01, class: "w-24 rounded border-gray-300 text-sm text-right" %>
+              <% end %>
             </td>
             <td class="px-6 py-3 text-right text-sm font-medium">
-              L. <%= number_with_delimiter(item_f.object.subtotal.to_f, precision: 2) %>
+              L. <%= number_with_delimiter(it.subtotal.to_f, precision: 2) %>
             </td>
           </tr>
         <% end %>

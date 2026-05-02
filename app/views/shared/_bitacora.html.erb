@@ -1,10 +1,7 @@
-<%# PR-D7: bitácora paper_trail reutilizable.
-    Renderiza el historial de versions de cualquier modelo con
-    has_paper_trail. Visibilidad gated por can_view_audit_log?.
-
-    Uso:
-      <%%= render "shared/bitacora", record: @cotizacion, label: "Cotización" %>
-%>
+<%# PR-D7: bitácora paper_trail reutilizable.                                  %>
+<%# Renderiza el historial de versions de cualquier modelo con                  %>
+<%# has_paper_trail. Visibilidad gated por can_view_audit_log?.                 %>
+<%# Uso: render "shared/bitacora", record: @cotizacion, label: "Cotización"     %>
 <% if can_view_audit_log? && record.respond_to?(:versions) %>
   <% versions = record.versions.reorder(created_at: :desc).limit(50) %>
   <% users_by_id = audit_users_index(versions) %>

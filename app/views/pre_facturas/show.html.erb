@@ -36,10 +36,19 @@
     </thead>
     <tbody>
       <% @pre_factura.pre_factura_items.each do |item| %>
-        <tr>
-          <td class="px-4 py-2 text-sm"><%= item.concepto %></td>
+        <tr<%= ' class="bg-cec-teal/5"'.html_safe if item.auto? %>>
+          <td class="px-4 py-2 text-sm">
+            <%= item.concepto %>
+            <% if item.origen == "auto_recolecta" %>
+              <span class="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-cec-teal/10 text-cec-teal">Auto · Recolecta</span>
+            <% elsif item.origen == "auto_servicio_extra" %>
+              <span class="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-900">Auto · Servicio</span>
+            <% end %>
+          </td>
           <td class="px-4 py-2 text-sm text-right"><%= item.peso_cobrar %></td>
-          <td class="px-4 py-2 text-sm text-right">L. <%= number_with_delimiter(item.precio_libra.to_f, precision: 2) %></td>
+          <td class="px-4 py-2 text-sm text-right">
+            <%= "L. #{number_with_delimiter(item.precio_libra.to_f, precision: 2)}" if item.precio_libra %>
+          </td>
           <td class="px-4 py-2 text-sm text-right">L. <%= number_with_delimiter(item.subtotal.to_f, precision: 2) %></td>
         </tr>
       <% end %>
