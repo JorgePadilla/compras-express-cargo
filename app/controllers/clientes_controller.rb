@@ -5,7 +5,7 @@ class ClientesController < ApplicationController
   def index
     @clientes = Cliente.activos.includes(:categoria_precio).order(created_at: :desc)
     @clientes = @clientes.buscar(params[:q]) if params[:q].present?
-    @clientes = @clientes.page(params[:page]).per(25)
+    @clientes = @clientes.page(params[:page]).per(per_page_sanitized)
   end
 
   def show
@@ -48,9 +48,7 @@ class ClientesController < ApplicationController
     end
   end
 
-  private
-
-  def set_cliente
+  private  def set_cliente
     @cliente = Cliente.find(params[:id])
   end
 

@@ -59,7 +59,7 @@ end %>
   </div>
 
   <div class="mt-4">
-    <%= paginate @clientes %>
+    <%= render PaginationComponent.new(collection: @clientes, label: "clientes") %>
   </div>
 <% else %>
   <%= render EmptyStateComponent.new(

@@ -5,7 +5,7 @@ class NotasDebitoController < ApplicationController
   def index
     @notas_debito = NotaDebito.includes(:cliente, :venta, :creado_por).recientes
     @notas_debito = apply_filters(@notas_debito)
-    @notas_debito = @notas_debito.page(params[:page]).per(25)
+    @notas_debito = @notas_debito.page(params[:page]).per(per_page_sanitized)
   end
 
   def show
@@ -93,9 +93,7 @@ class NotasDebitoController < ApplicationController
     end
   end
 
-  private
-
-  def require_feature_access
+  private  def require_feature_access
     redirect_to(root_path, alert: "No tienes permiso para acceder a esta seccion.") unless can_access?(:notas_debito)
   end
 

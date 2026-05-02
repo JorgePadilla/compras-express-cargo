@@ -149,7 +149,7 @@
   </div>
 
   <div class="mt-4">
-    <%= paginate @pre_alertas %>
+    <%= render PaginationComponent.new(collection: @pre_alertas, label: "pre-alertas") %>
   </div>
 <% else %>
   <%= render EmptyStateComponent.new(

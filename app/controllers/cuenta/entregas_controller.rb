@@ -5,7 +5,7 @@ module Cuenta
     def index
       @entregas = current_cliente.entregas.includes(:repartidor, :paquetes).recientes
       @entregas = @entregas.by_estado(params[:estado]) if params[:estado].present?
-      @entregas = @entregas.page(params[:page]).per(12)
+      @entregas = @entregas.page(params[:page]).per(per_page_sanitized)
     end
 
     def show

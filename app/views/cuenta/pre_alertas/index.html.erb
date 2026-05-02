@@ -67,7 +67,7 @@
 
   <% if @pre_alertas.any? %>
     <div class="mt-6">
-      <%= paginate @pre_alertas %>
+      <%= render PaginationComponent.new(collection: @pre_alertas, label: "pre-alertas") %>
     </div>
   <% else %>
     <div data-draft-banner-target="emptyState">

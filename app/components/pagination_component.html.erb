@@ -1,0 +1,45 @@
+<%# Pagination compuesta — summary izq, controles centro, per-page der. %>
+<% if empty? %>
+  <div class="text-sm text-gray-500 dark:text-gray-400 italic py-2">
+    Sin <%= @label %> que mostrar.
+  </div>
+<% else %>
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-3 text-sm text-gray-600 dark:text-gray-300">
+    <%# Summary %>
+    <div>
+      <% if single_page? %>
+        Mostrando <span class="font-semibold text-gray-900 dark:text-gray-100"><%= total %></span>
+        <%= total == 1 ? @label.singularize : @label %>
+      <% else %>
+        Mostrando
+        <span class="font-semibold text-gray-900 dark:text-gray-100">
+          <%= number_with_delimiter(first_index) %>&nbsp;–&nbsp;<%= number_with_delimiter(last_index) %>
+        </span>
+        de
+        <span class="font-semibold text-gray-900 dark:text-gray-100"><%= number_with_delimiter(total) %></span>
+        <%= @label %>
+      <% end %>
+    </div>
+
+    <%# Controles + per-page %>
+    <div class="flex items-center gap-3 flex-wrap">
+      <% unless single_page? %>
+        <%= helpers.paginate @collection %>
+      <% end %>
+
+      <% if show_per_page_selector? %>
+        <label class="inline-flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+          <span>Por página:</span>
+          <select onchange="window.location.href = this.value"
+                  class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 text-xs py-1 pr-7 focus:ring-cec-teal focus:border-cec-teal">
+            <% @per_page_options.each do |opt| %>
+              <option value="<%= per_page_url(opt) %>" <%= "selected" if opt == per_page %>>
+                <%= opt %>
+              </option>
+            <% end %>
+          </select>
+        </label>
+      <% end %>
+    </div>
+  </div>
+<% end %>

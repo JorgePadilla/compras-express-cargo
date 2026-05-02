@@ -51,7 +51,7 @@
       </table>
     </div>
   </div>
-  <div class="mt-4"><%= paginate @financiamientos %></div>
+  <div class="mt-4"><%= render PaginationComponent.new(collection: @financiamientos, label: "financiamientos") %></div>
 <% else %>
   <%= render EmptyStateComponent.new(
     title: "No hay financiamientos",

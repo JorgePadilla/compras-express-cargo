@@ -6,7 +6,7 @@ class ManifiestosController < ApplicationController
     @manifiestos = Manifiesto.activos.includes(:empresa_manifiesto).order(created_at: :desc)
     @manifiestos = @manifiestos.buscar(params[:q]) if params[:q].present?
     @manifiestos = @manifiestos.by_estado(params[:estado]) if params[:estado].present?
-    @manifiestos = @manifiestos.page(params[:page]).per(25)
+    @manifiestos = @manifiestos.page(params[:page]).per(per_page_sanitized)
   end
 
   def show
@@ -66,9 +66,7 @@ class ManifiestosController < ApplicationController
     redirect_to @manifiesto, notice: "Manifiesto #{@manifiesto.numero} enviado exitosamente."
   end
 
-  private
-
-  def authorize_manifiestos
+  private  def authorize_manifiestos
     require_role(:supervisor_miami, :digitador_miami)
   end
 

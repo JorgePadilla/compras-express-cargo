@@ -4,7 +4,7 @@ module Cuenta
 
     def index
       @proformas = current_cliente.ventas.proformas.recientes
-      @proformas = @proformas.page(params[:page]).per(12)
+      @proformas = @proformas.page(params[:page]).per(per_page_sanitized)
     end
 
     def show

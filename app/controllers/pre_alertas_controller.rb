@@ -4,7 +4,7 @@ class PreAlertasController < ApplicationController
   def index
     @pre_alertas = base_scope.includes(:cliente, :tipo_envio, :pre_alerta_paquetes).recientes
     @pre_alertas = apply_filters(@pre_alertas)
-    @pre_alertas = @pre_alertas.page(params[:page]).per(25)
+    @pre_alertas = @pre_alertas.page(params[:page]).per(per_page_sanitized)
     @tipo_envios = TipoEnvio.activos.order(:nombre)
   end
 
@@ -62,9 +62,7 @@ class PreAlertasController < ApplicationController
     redirect_to pre_alertas_path, notice: "#{count} pre-alertas vacias eliminadas."
   end
 
-  private
-
-  def set_pre_alerta
+  private  def set_pre_alerta
     @pre_alerta = PreAlerta.find(params[:id])
   end
 

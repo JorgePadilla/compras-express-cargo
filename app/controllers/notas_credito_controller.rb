@@ -5,7 +5,7 @@ class NotasCreditoController < ApplicationController
   def index
     @notas_credito = NotaCredito.includes(:cliente, :venta, :creado_por).recientes
     @notas_credito = apply_filters(@notas_credito)
-    @notas_credito = @notas_credito.page(params[:page]).per(25)
+    @notas_credito = @notas_credito.page(params[:page]).per(per_page_sanitized)
   end
 
   def show
@@ -93,9 +93,7 @@ class NotasCreditoController < ApplicationController
     end
   end
 
-  private
-
-  def require_feature_access
+  private  def require_feature_access
     redirect_to(root_path, alert: "No tienes permiso para acceder a esta seccion.") unless can_access?(:notas_credito)
   end
 

@@ -55,7 +55,7 @@ end %>
   </div>
 
   <div class="mt-4">
-    <%= paginate @users %>
+    <%= render PaginationComponent.new(collection: @users, label: "usuarios") %>
   </div>
 <% else %>
   <%= render EmptyStateComponent.new(

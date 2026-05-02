@@ -5,7 +5,7 @@ class ProformasController < ApplicationController
   def index
     @proformas = Venta.proformas.includes(:cliente, :creado_por).recientes
     @proformas = apply_filters(@proformas)
-    @proformas = @proformas.page(params[:page]).per(25)
+    @proformas = @proformas.page(params[:page]).per(per_page_sanitized)
   end
 
   def show
@@ -113,9 +113,7 @@ class ProformasController < ApplicationController
     }
   end
 
-  private
-
-  def create_from_paquetes
+  private  def create_from_paquetes
     cliente = Cliente.find(params[:cliente_id])
     paquete_ids = Array(params[:paquete_ids]).map(&:to_i).reject(&:zero?)
 
