@@ -1,0 +1,115 @@
+<% return unless visible? %>
+
+<details class="mt-4 bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-100 dark:ring-gray-700 overflow-hidden">
+  <summary class="list-none px-6 py-3 cursor-pointer flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/40">
+    <div class="flex items-center gap-2">
+      <%= helpers.heroicon "clock", variant: :outline, options: { class: "w-4 h-4 text-cec-navy dark:text-cec-gold" } %>
+      <h2 class="text-sm font-bold text-gray-800 dark:text-gray-100">Bitácora <%= @label %></h2>
+      <span class="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-mono">
+        <%= total_count %> evento<%= 's' if total_count != 1 %>
+      </span>
+    </div>
+    <span class="text-[11px] text-gray-400 dark:text-gray-500">click para expandir / colapsar</span>
+  </summary>
+
+  <div class="border-t border-gray-100 dark:border-gray-700 px-6 py-5">
+    <% if versions.empty? %>
+      <p class="text-sm text-gray-400 dark:text-gray-500 text-center py-8">
+        Aún no hay registros en la bitácora.
+      </p>
+    <% else %>
+      <%# ─── Timeline vertical ─── %>
+      <ol class="relative space-y-5 border-l-2 border-gray-200 dark:border-gray-700 ml-2 pl-5">
+        <% versions.each_with_index do |v, idx| %>
+          <% user = helpers.audit_user_for(v, users_index) %>
+          <% changes = helpers.audit_clean_changes(v, exclude: %w[estado]) %>
+          <% has_estado = helpers.audit_changes_estado?(v) %>
+          <% estado_change = has_estado ? (v.changeset rescue {})["estado"] : nil %>
+
+          <%# Color del nodo + icono según evento %>
+          <% case v.event
+             when "create"
+               dot_classes = "bg-cec-teal-light ring-cec-teal-light/40"
+               icon = "sparkles"; icon_color = "text-cec-teal"
+               event_label = "creó #{@label.downcase}"
+             when "destroy"
+               dot_classes = "bg-red-500 ring-red-300"
+               icon = "trash"; icon_color = "text-red-500"
+               event_label = "eliminó #{@label.downcase}"
+             else
+               # update
+               if has_estado
+                 dot_classes = "bg-cec-gold ring-cec-gold-light/40"
+                 icon = "check-circle"; icon_color = "text-cec-gold"
+                 event_label = "cambió estado"
+               elsif changes.any? { |col, _| col.to_s.start_with?("fecha_") }
+                 dot_classes = "bg-cec-navy-light ring-cec-navy-light/40"
+                 icon = "calendar"; icon_color = "text-cec-navy"
+                 event_label = "actualizó fechas"
+               else
+                 dot_classes = "bg-gray-400 ring-gray-300"
+                 icon = "pencil-square"; icon_color = "text-gray-500"
+                 event_label = "actualizó"
+               end
+             end %>
+
+          <li class="relative">
+            <%# Nodo del timeline (offset al borde izq) %>
+            <span class="absolute -left-[1.7rem] top-1 inline-flex w-3 h-3 rounded-full ring-4 <%= dot_classes %>" aria-hidden="true"></span>
+
+            <%# Header: fecha relativa + absoluta + usuario %>
+            <div class="flex items-baseline justify-between gap-3 mb-1">
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                <span class="font-medium text-gray-700 dark:text-gray-300">Hace <%= time_ago_in_words(v.created_at) %></span>
+                <span class="mx-1">·</span>
+                <span class="font-mono"><%= l v.created_at, format: :long rescue v.created_at.strftime("%d %b %Y, %-I:%M %p") %></span>
+              </p>
+            </div>
+
+            <%# Línea principal: usuario + acción %>
+            <p class="text-sm text-gray-800 dark:text-gray-100 flex items-baseline gap-1.5">
+              <%= helpers.heroicon icon, variant: :outline, options: { class: "w-4 h-4 #{icon_color} self-center shrink-0" } %>
+              <strong class="font-semibold"><%= user&.nombre || "Sistema" %></strong>
+              <% if user&.iniciales_display.present? && user.iniciales_display != "—" %>
+                <span class="text-[10px] font-mono text-gray-500">(<%= user.iniciales_display %>)</span>
+              <% end %>
+              <span><%= event_label %></span>
+              <% if has_estado %>
+                <span class="ml-1">:</span>
+                <span class="ml-1 font-mono text-[11px] uppercase tracking-wider text-gray-600 dark:text-gray-300"><%= estado_change[0]&.humanize %></span>
+                <span class="text-gray-400">→</span>
+                <%= render StatusBadgeComponent.new(status: estado_change[1]) %>
+              <% end %>
+            </p>
+
+            <%# Sub-bullets: cambios adicionales (sin estado) %>
+            <% if changes.any? %>
+              <ul class="mt-1.5 space-y-1 ml-6 text-xs text-gray-600 dark:text-gray-300">
+                <% changes.first(10).each do |col, (old_v, new_v)| %>
+                  <li class="flex flex-wrap gap-x-1.5 items-baseline">
+                    <span class="text-gray-400">└</span>
+                    <span class="font-medium text-gray-700 dark:text-gray-200"><%= helpers.audit_column_label(col) %>:</span>
+                    <span class="font-mono text-gray-500 dark:text-gray-400 truncate max-w-xs"
+                          title="<%= helpers.audit_resolved_value(col, old_v, fk_index) %>"><%= helpers.audit_resolved_value(col, old_v, fk_index) %></span>
+                    <span class="text-gray-400">→</span>
+                    <span class="font-mono text-gray-900 dark:text-gray-100 truncate max-w-xs"
+                          title="<%= helpers.audit_resolved_value(col, new_v, fk_index) %>"><%= helpers.audit_resolved_value(col, new_v, fk_index) %></span>
+                  </li>
+                <% end %>
+                <% if changes.size > 10 %>
+                  <li class="text-[11px] italic text-gray-400">+ <%= changes.size - 10 %> cambios más</li>
+                <% end %>
+              </ul>
+            <% end %>
+          </li>
+        <% end %>
+      </ol>
+
+      <% if truncated? %>
+        <p class="mt-5 pt-3 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 text-center">
+          Mostrando últimos <%= @limit %> de <%= total_count %> eventos.
+        </p>
+      <% end %>
+    <% end %>
+  </div>
+</details>
