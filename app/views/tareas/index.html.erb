@@ -91,7 +91,7 @@
         <% if @tareas.empty? %>
           <tr>
             <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500">
-              Sin tareas asignadas. <%= link_to "Crear la primera", new_paquete_tarea_path(@paquete), class: "text-cec-teal hover:text-cec-teal-dark font-medium" %>.
+              Sin tareas asignadas. <%= link_to "Crear la primera (F7)", new_paquete_tarea_path(@paquete), class: "text-cec-teal hover:text-cec-teal-dark font-medium", data: { shortcut: "F7" } %>.
             </td>
           </tr>
         <% end %>

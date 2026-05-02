@@ -1,6 +1,6 @@
 <%= render PageHeaderComponent.new(title: @categoria.nombre) do |h| %>
   <% h.with_action do %>
-    <%= render ButtonComponent.new(href: edit_categoria_precio_path(@categoria), variant: :secondary, icon: "pencil-square") do %>
+    <%= render ButtonComponent.new(href: edit_categoria_precio_path(@categoria), variant: :secondary, icon: "pencil-square", shortcut: "F6") do %>
       Editar
     <% end %>
   <% end %>

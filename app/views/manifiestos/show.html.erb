@@ -2,7 +2,7 @@
 
 <%= render PageHeaderComponent.new(title: @manifiesto.numero, subtitle: "Manifiesto") do |header|
   header.with_action do
-    render ButtonComponent.new(variant: :secondary, href: edit_manifiesto_path(@manifiesto), icon: "pencil-square") do
+    render ButtonComponent.new(variant: :secondary, href: edit_manifiesto_path(@manifiesto), icon: "pencil-square", shortcut: "F6") do
       "Editar"
     end
   end

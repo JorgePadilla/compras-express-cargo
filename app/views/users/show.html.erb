@@ -1,6 +1,6 @@
 <%= render PageHeaderComponent.new(title: @user.nombre, subtitle: @user.rol_label) do |header|
   header.with_action do
-    render ButtonComponent.new(variant: :secondary, href: edit_user_path(@user), icon: "pencil-square") do
+    render ButtonComponent.new(variant: :secondary, href: edit_user_path(@user), icon: "pencil-square", shortcut: "F6") do
       "Editar"
     end
   end
