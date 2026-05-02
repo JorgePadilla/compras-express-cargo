@@ -97,23 +97,40 @@ end %>
 
   <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
     <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Guia</dt>
-      <dd class="mt-1 text-sm font-mono font-medium text-cec-navy"><%= @paquete.guia %></dd>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Guía</dt>
+      <dd class="mt-1 text-sm"><%= copyable(@paquete.guia, font_mono: true, css_class: "font-medium text-cec-navy dark:text-cec-gold") %></dd>
     </div>
     <div class="md:col-span-2">
       <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Tracking</dt>
-      <dd class="mt-1 text-sm font-mono text-gray-900"><%= @paquete.tracking %></dd>
+      <dd class="mt-1 text-sm"><%= copyable(@paquete.tracking, font_mono: true) %></dd>
       <% if @paquete.tracking_secundario.present? %>
-        <dd class="mt-1 text-xs font-mono text-gray-500" title="Tracking secundario / alternativo">
-          Alt: <%= @paquete.tracking_secundario %>
+        <dd class="mt-1 text-xs">
+          <span class="text-gray-500">Tracking 2:</span>
+          <%= copyable(@paquete.tracking_secundario, font_mono: true, css_class: "text-gray-600 dark:text-gray-300 text-xs") %>
+        </dd>
+      <% end %>
+      <% if @paquete.numero_recepcion.present? %>
+        <dd class="mt-1 text-xs">
+          <span class="text-gray-500">N° Recepción:</span>
+          <%= copyable(@paquete.numero_recepcion, font_mono: true, css_class: "text-gray-700 dark:text-gray-200 font-medium") %>
         </dd>
       <% end %>
     </div>
     <div>
       <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</dt>
-      <dd class="mt-1 text-sm text-gray-900">
-        <%= link_to @paquete.cliente.codigo, @paquete.cliente, class: "font-mono text-cec-navy hover:underline" %>
+      <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+        <%= link_to @paquete.cliente.codigo, @paquete.cliente, class: "font-mono text-cec-navy dark:text-cec-gold hover:underline" %>
         — <%= @paquete.cliente.nombre_completo %>
+        <%# Botón Copy del código del cliente %>
+        <span class="ml-1 inline-flex" data-controller="clipboard" data-clipboard-text-value="<%= @paquete.cliente.codigo %>">
+          <button type="button"
+                  data-action="clipboard#copy" data-clipboard-target="button"
+                  title="Copiar código del cliente"
+                  aria-label="Copiar código del cliente"
+                  class="inline-flex items-center justify-center w-5 h-5 rounded text-gray-400 hover:text-cec-teal hover:bg-gray-100 dark:hover:text-cec-teal-light dark:hover:bg-gray-700 transition-colors">
+            <%= heroicon "clipboard-document", variant: :outline, options: { class: "w-3.5 h-3.5" } %>
+          </button>
+        </span>
       </dd>
       <%# PR-D2.b — notas permanentes del cliente filtradas por rol del usuario %>
       <% notas_visibles = Current.user&.notas_permanentes_visibles.to_a
@@ -162,11 +179,17 @@ end %>
     </div>
     <div>
       <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Manifiesto</dt>
-      <dd class="mt-1 text-sm text-gray-900">
+      <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
         <% if @paquete.manifiesto %>
-          <%= link_to @paquete.manifiesto.numero, @paquete.manifiesto, class: "font-mono text-cec-navy hover:underline" %>
+          <%= link_to @paquete.manifiesto.numero, @paquete.manifiesto,
+              class: "font-mono text-cec-navy dark:text-cec-gold hover:underline" %>
+          <% if (empresa = @paquete.manifiesto.empresa_manifiesto) %>
+            <span class="block text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+              vía <span class="font-medium"><%= empresa.nombre %></span>
+            </span>
+          <% end %>
         <% else %>
-          —
+          <span class="text-gray-400">—</span>
         <% end %>
       </dd>
     </div>
@@ -342,6 +365,17 @@ end %>
                   </span>
                 <% end %>
               </p>
+              <%# PR-D4.c: contexto extra (bodega, pre-factura, sucursal, ref entrega, pre-alerta) %>
+              <% if step[:contexto].present? %>
+                <div class="mt-1 flex flex-wrap gap-1.5">
+                  <% step[:contexto].each do |icon_name, text| %>
+                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+                      <%= heroicon icon_name, variant: :outline, options: { class: "w-3 h-3" } %>
+                      <%= text %>
+                    </span>
+                  <% end %>
+                </div>
+              <% end %>
             <% else %>
               <p class="text-xs text-gray-400 dark:text-gray-500">Pendiente</p>
             <% end %>
