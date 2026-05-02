@@ -34,7 +34,7 @@
               <% end %>
             </td>
             <td class="px-6 py-4 text-right text-sm">
-              <%= link_to "Editar", edit_tarifa_recolecta_path(t), class: "text-cec-navy hover:underline" %>
+              <%= render RowActionComponent.new(action: :edit, href: edit_tarifa_recolecta_path(t), label: "Editar tarifa") %>
             </td>
           </tr>
         <% end %>

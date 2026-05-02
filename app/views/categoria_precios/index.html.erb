@@ -26,7 +26,7 @@
             <td class="px-6 py-4 text-right text-sm">L. <%= number_with_delimiter(c.precio_libra_maritimo.to_f, precision: 2) %></td>
             <td class="px-6 py-4 text-right text-sm text-gray-500"><%= c.clientes.count %></td>
             <td class="px-6 py-4 text-right text-sm">
-              <%= link_to "Editar", edit_categoria_precio_path(c), class: "text-cec-navy hover:underline" %>
+              <%= render RowActionComponent.new(action: :edit, href: edit_categoria_precio_path(c), label: "Editar categoría") %>
             </td>
           </tr>
         <% end %>

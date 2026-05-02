@@ -32,8 +32,10 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><%= p.created_at.strftime("%d/%m/%Y") %></td>
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm"><%= p.simbolo_moneda %> <%= number_with_delimiter(p.total.to_f, precision: 2) %></td>
-              <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
-                <%= link_to "Ver", proforma_path(p), class: "text-cec-teal hover:underline" %>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex items-center justify-end gap-2">
+                  <%= render RowActionComponent.new(action: :view, href: proforma_path(p), label: "Ver proforma #{p.numero}") %>
+                </div>
               </td>
             </tr>
           <% end %>

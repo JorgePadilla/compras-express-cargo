@@ -75,11 +75,12 @@
               <td class="px-6 py-4 whitespace-nowrap text-right">
                 <span class="text-sm font-medium text-gray-900">L. <%= number_with_delimiter(pf.total.to_f, precision: 2) %></span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right space-x-2">
-                <%= link_to "Ver", pf, class: "text-cec-teal hover:underline text-sm" %>
-                <% unless pf.facturado? || pf.anulado? %>
-                  <%= link_to "Editar", edit_pre_factura_path(pf), class: "text-cec-navy hover:underline text-sm" %>
-                <% end %>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex items-center justify-end gap-2">
+                  <%= render RowActionComponent.new(action: :view, href: pf, label: "Ver pre-factura #{pf.numero}") %>
+                  <%= render RowActionComponent.new(action: :edit, href: edit_pre_factura_path(pf),
+                        disabled: pf.facturado? || pf.anulado?, label: "Editar pre-factura") %>
+                </div>
               </td>
             </tr>
           <% end %>

@@ -32,7 +32,7 @@
               <% end %>
             </td>
             <td class="px-6 py-4 text-right text-sm">
-              <%= link_to "Editar", edit_motivo_retencion_path(m), class: "text-cec-navy hover:underline" %>
+              <%= render RowActionComponent.new(action: :edit, href: edit_motivo_retencion_path(m), label: "Editar motivo") %>
             </td>
           </tr>
         <% end %>

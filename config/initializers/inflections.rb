@@ -20,6 +20,10 @@
 # which makes form_with model: @venta generate ventum_path. Declare irregular pairs.
 ActiveSupport::Inflector.inflections(:en) do |inflect|
   inflect.irregular "venta", "ventas"
+  # PreAlerta: sin esta regla `pre_alerta`.singularize → "pre_alertum"
+  # (regla Latin -a → -um). Causa que polymorphic_path(@pre_alerta)
+  # busque `pre_alertum_path` que no existe.
+  inflect.irregular "pre_alerta", "pre_alertas"
   inflect.irregular "nota_debito",      "notas_debito"
   inflect.irregular "nota_credito",     "notas_credito"
   inflect.irregular "nota_debito_item", "nota_debito_items"

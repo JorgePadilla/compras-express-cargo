@@ -60,11 +60,13 @@
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 L. <%= number_with_delimiter(nd.total.to_f, precision: 2) %>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right space-x-2">
-                <%= link_to "Ver", nd, class: "text-cec-teal hover:underline text-sm" %>
-                <% if nd.creado? %>
-                  <%= link_to "Editar", edit_nota_debito_path(nd), class: "text-cec-navy hover:underline text-sm" %>
-                <% end %>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex items-center justify-end gap-2">
+                  <%= render RowActionComponent.new(action: :view, href: nd, label: "Ver nota de débito") %>
+                  <% if nd.creado? %>
+                    <%= render RowActionComponent.new(action: :edit, href: edit_nota_debito_path(nd), label: "Editar nota de débito") %>
+                  <% end %>
+                </div>
               </td>
             </tr>
           <% end %>

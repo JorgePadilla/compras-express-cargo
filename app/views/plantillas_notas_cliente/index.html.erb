@@ -32,7 +32,7 @@
               <% end %>
             </td>
             <td class="px-6 py-4 text-right text-sm">
-              <%= link_to "Editar", edit_plantilla_nota_cliente_path(p), class: "text-cec-navy hover:underline" %>
+              <%= render RowActionComponent.new(action: :edit, href: edit_plantilla_nota_cliente_path(p), label: "Editar plantilla") %>
             </td>
           </tr>
         <% end %>
