@@ -23,7 +23,7 @@
 
   <div>
     <%= f.label :asignado_a_id, "Asignar a", class: "block text-sm font-medium text-gray-700 mb-1" %>
-    <%= f.collection_select :asignado_a_id, @users, :id, :name,
+    <%= f.collection_select :asignado_a_id, @users, :id, :nombre,
         { include_blank: "— Sin asignar —" },
         { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
   </div>

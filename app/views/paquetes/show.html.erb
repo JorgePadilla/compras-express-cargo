@@ -144,8 +144,11 @@ end %>
           <dd class="mt-1 text-sm text-gray-900"><%= @paquete.peso || "—" %> lbs</dd>
         </div>
         <div>
-          <dt class="text-xs font-medium text-gray-500 uppercase">Dimensiones (A x L x An)</dt>
-          <dd class="mt-1 text-sm text-gray-900"><%= [@paquete.alto, @paquete.largo, @paquete.ancho].compact.join(" x ").presence || "—" %></dd>
+          <dt class="text-xs font-medium text-gray-500 uppercase">Dimensiones (A × L × An)</dt>
+          <dd class="mt-1 text-sm text-gray-900">
+            <% dims = [@paquete.alto, @paquete.largo, @paquete.ancho].compact %>
+            <%= dims.any? ? "#{dims.join(' × ')} pulgadas" : "—" %>
+          </dd>
         </div>
         <div>
           <dt class="text-xs font-medium text-gray-500 uppercase">Peso Volumetrico</dt>
@@ -317,4 +320,4 @@ end %>
     resolution + diccionario de columnas. Reemplaza el render manual
     de PR-D1.a — la lógica vive ahora en BitacoraComponent (compartido
     con los otros 10 shows). %>
-<%= render BitacoraComponent.new(record: @paquete, label: "del paquete") %>
+<%= render BitacoraComponent.new(record: @paquete, label: "paquete") %>
