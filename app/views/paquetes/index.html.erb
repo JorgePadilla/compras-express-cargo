@@ -30,32 +30,34 @@
   end
 end %>
 
-<%# Leyenda de colores de fila — cuadro alineado a la derecha (Yusef
-    2026-05-02). Vertical para que cada swatch + label vaya en su
-    propia línea. Width fijo (max-w-xs) para mantener proporción de
-    "card de info" sin estirar a todo el ancho. %>
+<%# Leyenda de colores de fila — cuadro 2x2 alineado a la derecha
+    (Yusef 2026-05-02). Width = max-w-md (mismo que el search bar)
+    para que ambos elementos formen columnas paralelas armónicas.
+    Items agrupados por flujo operativo:
+      Fila 1: Retener Miami      | Cambio servicio   (pre-envío Miami)
+      Fila 2: Con pre-factura    | Vinculado a PA    (HN / contable) %>
 <div class="mb-4 flex justify-end">
-  <div class="w-full sm:max-w-xs bg-white dark:bg-gray-800 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm overflow-hidden">
+  <div class="w-full sm:max-w-md bg-white dark:bg-gray-800 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm overflow-hidden">
     <div class="px-4 py-2 bg-gray-50 dark:bg-gray-700/40 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 text-gray-600 dark:text-gray-300">
       <%= heroicon "swatch", variant: :outline, options: { class: "w-4 h-4" } %>
       <span class="font-semibold uppercase tracking-wider text-[11px]">Leyenda</span>
     </div>
-    <ul class="px-4 py-3 space-y-2 text-xs text-gray-700 dark:text-gray-200">
-      <li class="flex items-center gap-2.5">
+    <ul class="px-4 py-3 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-2.5 text-xs text-gray-700 dark:text-gray-200">
+      <li class="flex items-center gap-2.5 min-w-0">
         <span class="shrink-0 inline-block w-5 h-5 rounded bg-amber-50 dark:bg-amber-900/20 ring-2 ring-amber-300 dark:ring-amber-700 shadow-sm"></span>
-        <span class="font-medium">Retener en Miami</span>
+        <span class="font-medium truncate">Retener en Miami</span>
       </li>
-      <li class="flex items-center gap-2.5">
+      <li class="flex items-center gap-2.5 min-w-0">
         <span class="shrink-0 inline-block w-5 h-5 rounded bg-amber-100 dark:bg-amber-900/30 ring-2 ring-amber-400 dark:ring-amber-600 shadow-sm"></span>
-        <span class="font-medium">Cambio de servicio</span>
+        <span class="font-medium truncate">Cambio de servicio</span>
       </li>
-      <li class="flex items-center gap-2.5">
+      <li class="flex items-center gap-2.5 min-w-0">
         <span class="shrink-0 inline-block w-5 h-5 rounded bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-300 dark:ring-blue-700 shadow-sm"></span>
-        <span class="font-medium">Con pre-factura</span>
+        <span class="font-medium truncate">Con pre-factura</span>
       </li>
-      <li class="flex items-center gap-2.5">
+      <li class="flex items-center gap-2.5 min-w-0">
         <span class="shrink-0 inline-block w-5 h-5 rounded bg-cec-teal/10 dark:bg-cec-teal/15 ring-2 ring-cec-teal dark:ring-cec-teal-light shadow-sm"></span>
-        <span class="font-medium">Vinculado a pre-alerta</span>
+        <span class="font-medium truncate">Vinculado a pre-alerta</span>
       </li>
     </ul>
   </div>
