@@ -16,6 +16,13 @@
   --color-cec-teal-light: #48CAE4;
   --color-cec-teal-dark: #0096C7;
 
+  /* Accent purple — Yusef 2026-05-02 pidió un morado para acciones
+     secundarias del header (Excel/PDF/Imprimir). Hue moderna (~violeta
+     Stripe/Linear) que combina con cec-navy y cec-teal sin chocar. */
+  --color-cec-purple: #7C3AED;
+  --color-cec-purple-light: #A78BFA;
+  --color-cec-purple-dark: #5B21B6;
+
   /* Semantic colors (aliases pointing at brand tones — no new palette) */
   --color-cec-success: var(--color-cec-teal);
   --color-cec-danger: #EF4444;

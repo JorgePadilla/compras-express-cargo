@@ -5,6 +5,7 @@ class ButtonComponent < ViewComponent::Base
     danger: "bg-cec-danger text-white hover:bg-red-600 shadow-sm",
     gold: "btn-gold-gradient text-cec-navy-dark font-semibold shadow-sm shadow-cec-gold/25",
     teal: "bg-cec-teal text-white hover:bg-cec-teal-dark shadow-sm",
+    purple: "bg-cec-purple text-white hover:bg-cec-purple-dark shadow-sm shadow-cec-purple/25",
     ghost: "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
   }.freeze
 
