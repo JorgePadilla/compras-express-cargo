@@ -1,6 +1,6 @@
 <%= render PageHeaderComponent.new(title: "Clientes", subtitle: "#{@clientes.total_count} clientes registrados") do |header|
   header.with_action do
-    render ButtonComponent.new(variant: :gold, href: new_cliente_path, icon: "plus") do
+    render ButtonComponent.new(variant: :gold, href: new_cliente_path, icon: "plus", shortcut: "F7") do
       "Nuevo Cliente"
     end
   end
@@ -68,7 +68,7 @@ end %>
     icon: "users"
   ) do |empty|
     empty.with_action do
-      render ButtonComponent.new(variant: :gold, href: new_cliente_path, icon: "plus") do
+      render ButtonComponent.new(variant: :gold, href: new_cliente_path, icon: "plus", shortcut: "F7") do
         "Nuevo Cliente"
       end
     end

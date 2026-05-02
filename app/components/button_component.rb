@@ -15,16 +15,23 @@ class ButtonComponent < ViewComponent::Base
     lg: "px-6 py-3 text-base"
   }.freeze
 
-  def initialize(variant: :primary, size: :md, href: nil, icon: nil, **attrs)
+  def initialize(variant: :primary, size: :md, href: nil, icon: nil, shortcut: nil, **attrs)
     @variant = variant.to_sym
     @size = size.to_sym
     @href = href
     @icon = icon
+    @shortcut = shortcut # ej. "F10" — agrega data-shortcut + label visual "(F10)"
     @attrs = attrs
   end
 
   def call
     classes = "inline-flex items-center gap-2 rounded-lg font-medium transition-all duration-200 #{VARIANTS[@variant]} #{SIZES[@size]} #{@attrs.delete(:class)}"
+
+    # Si hay shortcut, mergearlo en el data-attrs sin pisar otros data-* del caller.
+    if @shortcut.present?
+      existing_data = @attrs.delete(:data) || {}
+      @attrs[:data] = existing_data.merge(shortcut: @shortcut)
+    end
 
     if @href
       link_to @href, class: classes, **@attrs do
@@ -42,8 +49,16 @@ class ButtonComponent < ViewComponent::Base
   def inner_content
     safe_join([
       @icon ? helpers.heroicon(@icon, variant: :outline, options: { class: icon_size }) : nil,
-      content
+      content,
+      shortcut_label
     ].compact)
+  end
+
+  # "(F10)" pequeño y semitransparente al final del label cuando hay shortcut.
+  def shortcut_label
+    return nil if @shortcut.blank?
+    content_tag :span, "(#{@shortcut})",
+                class: "ml-1 text-[10px] opacity-70 font-normal"
   end
 
   def icon_size
