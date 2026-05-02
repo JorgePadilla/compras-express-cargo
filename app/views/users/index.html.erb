@@ -42,10 +42,11 @@ end %>
               <td class="px-6 py-4 whitespace-nowrap">
                 <%= render StatusBadgeComponent.new(status: user.activo? ? "activo" : "inactivo") %>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right">
-                <%= link_to edit_user_path(user), class: "text-gray-400 hover:text-cec-navy" do %>
-                  <%= heroicon "pencil-square", variant: :outline, options: { class: "w-5 h-5 inline" } %>
-                <% end %>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex items-center justify-end gap-2">
+                  <%= render RowActionComponent.new(action: :view, href: user, label: "Ver usuario") %>
+                  <%= render RowActionComponent.new(action: :edit, href: edit_user_path(user), label: "Editar usuario") %>
+                </div>
               </td>
             </tr>
           <% end %>

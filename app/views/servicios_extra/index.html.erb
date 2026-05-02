@@ -44,7 +44,7 @@
               <% end %>
             </td>
             <td class="px-6 py-4 text-right text-sm">
-              <%= link_to "Editar", edit_servicio_extra_path(s), class: "text-cec-navy hover:underline" %>
+              <%= render RowActionComponent.new(action: :edit, href: edit_servicio_extra_path(s), label: "Editar servicio") %>
             </td>
           </tr>
         <% end %>

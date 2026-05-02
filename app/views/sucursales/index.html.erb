@@ -38,7 +38,7 @@ end %>
           </td>
           <td class="px-4 py-3 text-right">
             <div class="inline-flex items-center gap-2">
-              <%= link_to "Editar", edit_sucursal_path(s), class: "text-xs text-cec-teal hover:text-cec-teal-dark dark:text-cec-teal-light font-semibold" %>
+              <%= render RowActionComponent.new(action: :edit, href: edit_sucursal_path(s), label: "Editar sucursal") %>
               <%= button_to "Borrar", sucursal_path(s), method: :delete,
                   data: { turbo_confirm: "¿Eliminar la sucursal #{s.nombre}?" },
                   class: "text-xs text-red-500 hover:text-red-700 font-semibold" %>
