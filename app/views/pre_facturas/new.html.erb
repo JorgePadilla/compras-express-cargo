@@ -11,7 +11,7 @@
             include_blank: "— Selecciona un cliente —",
             class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
       </div>
-      <button type="submit" class="px-4 py-2 bg-cec-navy text-white rounded-lg hover:bg-cec-navy-light text-sm font-medium">Continuar</button>
+      <button type="submit" class="px-4 py-2 bg-cec-navy text-white rounded-lg hover:bg-cec-navy-light text-sm font-medium" data-shortcut="F10">Continuar (F10)</button>
     <% end %>
   </div>
 <% else %>
@@ -71,8 +71,8 @@
       </div>
 
       <div class="mt-6 flex gap-3">
-        <button type="submit" class="px-4 py-2 bg-cec-navy text-white rounded-lg hover:bg-cec-navy-light text-sm font-medium">Crear Pre-Factura</button>
-        <%= link_to "Cancelar", pre_facturas_path, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900" %>
+        <button type="submit" class="px-4 py-2 bg-cec-navy text-white rounded-lg hover:bg-cec-navy-light text-sm font-medium" data-shortcut="F10">Crear Pre-Factura (F10)</button>
+        <%= link_to "Cancelar (F2)", pre_facturas_path, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900", data: { shortcut: "F2" } %>
       </div>
     <% end %>
   <% else %>

@@ -1,8 +1,9 @@
 <%= render PageHeaderComponent.new(title: "Pre-Alerta #{@pre_alerta.numero_documento}") do |c| %>
   <% c.with_action do %>
-    <%= link_to edit_pre_alerta_path(@pre_alerta), class: "inline-flex items-center gap-2 px-4 py-2 bg-cec-navy text-white text-sm font-medium rounded-lg hover:bg-cec-navy-light transition-colors" do %>
+    <%= link_to edit_pre_alerta_path(@pre_alerta), data: { shortcut: "F6" },
+        class: "inline-flex items-center gap-2 px-4 py-2 bg-cec-navy text-white text-sm font-medium rounded-lg hover:bg-cec-navy-light transition-colors" do %>
       <%= heroicon "pencil-square", variant: :mini, options: { class: "w-4 h-4" } %>
-      Editar
+      Editar (F6)
     <% end %>
   <% end %>
   <% unless @pre_alerta.anulado? %>
