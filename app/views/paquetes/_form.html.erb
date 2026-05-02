@@ -140,9 +140,17 @@
         <%= f.check_box :pre_alerta, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
         <%= f.label :pre_alerta, "Pre-Alerta", class: "text-sm font-medium text-gray-700" %>
       </div>
+      <%# La columna boolean `pre_factura` tiene un name clash con el
+          belongs_to :pre_factura (FK). Usamos check_box_tag para
+          leer/escribir la columna directamente sin pasar por el
+          accessor de la asociación. %>
       <div class="flex items-center gap-2">
-        <%= f.check_box :pre_factura, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-        <%= f.label :pre_factura, "Pre-Factura", class: "text-sm font-medium text-gray-700" %>
+        <%= hidden_field_tag "paquete[pre_factura]", "0" %>
+        <%= check_box_tag "paquete[pre_factura]", "1",
+            ActiveModel::Type::Boolean.new.cast(paquete[:pre_factura]),
+            id: "paquete_pre_factura_flag",
+            class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+        <label for="paquete_pre_factura_flag" class="text-sm font-medium text-gray-700">Pre-Factura</label>
       </div>
       <div class="flex items-center gap-2">
         <%= f.check_box :solicito_cambio_servicio, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
