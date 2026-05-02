@@ -444,6 +444,87 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   # Demo data para el modal "Buscar Paquetes" en /cuenta/pre_alertas/:id/edit
   # Crea paquetes sueltos + 2 PAs CER consolidando + 1 PA CKA (para verificar bloqueo)
   load Rails.root.join("db/seeds/buscar_paquetes_demo.rb")
+
+  # ── Demo Pre-Factura + Venta (PR-D6.b) ──
+  # Permite probar:
+  #   - Vista de pre-factura con cargos auto (recolecta + cambio servicio).
+  #   - Link "Imprimir Pre-Factura" desde el detalle del paquete.
+  #   - Link "Ver Factura" desde el paquete cuando ya fue facturado.
+  puts "Seeding pre-facturas + venta demo..."
+  juan_demo = Cliente.find_by!(nombre: "Juan", apellido: "Perez")
+  cer_envio = TipoEnvio.find_by!(codigo: "cer")
+  amz_proveedor = Proveedor.find_by(nombre: "Amazon")
+
+  # Helper local: prepara un paquete listo para entrar a pre-factura.
+  crear_paquete_facturable = ->(tracking, **flags) {
+    p = Paquete.find_or_initialize_by(tracking: tracking)
+    p.assign_attributes(
+      cliente: juan_demo,
+      tipo_envio: cer_envio,
+      sucursal: Sucursal.find_by(codigo: "MIA"),
+      estado: "disponible_entrega",
+      peso: 12.5, alto: 20, largo: 30, ancho: 25,
+      cantidad_paquetes: 1, cantidad_productos: 1,
+      descripcion: flags.delete(:descripcion) || "Demo PR-D6.b",
+      proveedor: amz_proveedor,
+      expedido_por: "UPS",
+      fecha_recibido_miami: 7.days.ago
+    )
+    flags.each { |k, v| p[k] = v }
+    p.recolecta_moneda ||= "USD" if flags[:recolecta_solicitada]
+    p.save!
+    p
+  }
+
+  pkg_pf1 = crear_paquete_facturable.call(
+    "1Z999PFDEMO00001",
+    descripcion: "Demo paquete con recolecta",
+    recolecta_solicitada: true, recolecta_monto: 35.00
+  )
+  pkg_pf2 = crear_paquete_facturable.call(
+    "1Z999PFDEMO00002",
+    descripcion: "Demo paquete con cambio de servicio",
+    solicito_cambio_servicio: true
+  )
+  pkg_pf3 = crear_paquete_facturable.call(
+    "1Z999PFDEMO00003",
+    descripcion: "Demo paquete con AMBOS cargos auto",
+    recolecta_solicitada: true, recolecta_monto: 50.00,
+    solicito_cambio_servicio: true
+  )
+  pkg_facturado = crear_paquete_facturable.call(
+    "1Z999PFDEMO00004",
+    descripcion: "Demo paquete que ya está facturado",
+    recolecta_solicitada: true, recolecta_monto: 30.00
+  )
+
+  # Pre-factura 1: estado "creado" — todavía sin facturar.
+  pf_creado = PreFactura.where(cliente: juan_demo).where("numero LIKE 'PF-%'")
+                        .order(:id).first
+  if pf_creado.nil? || pf_creado.pre_factura_items.where(paquete: [ pkg_pf1, pkg_pf2, pkg_pf3 ]).empty?
+    pf_creado = PreFactura.build_from_paquetes(juan_demo, [ pkg_pf1.id, pkg_pf2.id, pkg_pf3.id ])
+    pf_creado.save!
+    [ pkg_pf1, pkg_pf2, pkg_pf3 ].each { |p| p.update_column(:pre_factura_id, pf_creado.id) }
+  end
+
+  # Pre-factura 2: facturada → genera Venta + link "Ver Factura".
+  pf_facturada = PreFactura.joins(:pre_factura_items)
+                           .where(pre_factura_items: { paquete_id: pkg_facturado.id })
+                           .first
+  if pf_facturada.nil?
+    pf_facturada = PreFactura.build_from_paquetes(juan_demo, [ pkg_facturado.id ])
+    pf_facturada.save!
+    pkg_facturado.update_column(:pre_factura_id, pf_facturada.id)
+    pf_facturada.confirmar!
+    pf_facturada.facturar!
+  end
+
+  puts "  ✓ #{PreFactura.count} pre-facturas (1 creado, 1 facturada)"
+  puts "  ✓ #{Venta.count} ventas demo"
+  puts "    → Probar PF en: /pre_facturas/#{pf_creado.id}"
+  puts "    → Probar Venta en: /ventas/#{pf_facturada.venta_id || Venta.last&.id}"
+  puts "    → Detalle paquete con link a PF: /paquetes/#{pkg_pf3.id}"
+  puts "    → Detalle paquete con link a Venta: /paquetes/#{pkg_facturado.id}"
 end
 
 # ── Empresa singleton (datos fiscales para PDFs y mailers) ──

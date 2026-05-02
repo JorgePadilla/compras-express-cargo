@@ -38,21 +38,31 @@ puts ""
 
 def upsert_paquete(tracking:, cliente:, tipo_envio:, estado:, peso:, descripcion:, proveedor:, dias:, digitador:)
   p = Paquete.find_by(tracking: tracking)
+  # PR-D3.a: `proveedor` es asociación AR. Si recibimos un string (legacy seeds),
+  # buscar el Proveedor por nombre case-insensitive; si no existe, escribir
+  # el string al campo legacy `paquete[:proveedor]` para no perder el dato.
+  proveedor_model = case proveedor
+                    when Proveedor then proveedor
+                    when String    then Proveedor.where("LOWER(nombre) = ?", proveedor.downcase).first
+                    end
+
   attrs = {
     cliente: cliente,
     tipo_envio: tipo_envio,
     estado: estado,
     peso: peso,
     descripcion: descripcion,
-    proveedor: proveedor,
+    proveedor: proveedor_model,
     fecha_recibido_miami: dias.days.ago
   }
 
   if p
     p.update!(attrs)
+    p[:proveedor] = proveedor.to_s if proveedor_model.nil? && proveedor.is_a?(String)
+    p.save! if p.changed?
     p
   else
-    Paquete.create!(
+    p = Paquete.create!(
       attrs.merge(
         tracking: tracking,
         cantidad_productos: 1,
@@ -60,6 +70,10 @@ def upsert_paquete(tracking:, cliente:, tipo_envio:, estado:, peso:, descripcion
         user: digitador
       )
     )
+    if proveedor_model.nil? && proveedor.is_a?(String)
+      p.update_column(:proveedor, proveedor.to_s)
+    end
+    p
   end
 end
 
