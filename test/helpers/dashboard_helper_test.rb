@@ -91,15 +91,19 @@ class DashboardHelperTest < ActionView::TestCase
 
   test "health_chip ok" do
     dot, chip, msg = health_chip(level: :ok, message: "Operación saludable")
-    assert_match(/cec-teal/, dot)
-    assert_match(/cec-teal/, chip)
+    # 2026-05-02: rediseño — chip solid teal-dark con texto blanco;
+    # dot teal-light para halo dentro de la familia teal.
+    assert_match(/bg-cec-teal/, dot)
+    assert_match(/bg-cec-teal-dark/, chip)
+    assert_match(/text-white/, chip)
     assert_equal "Operación saludable", msg
   end
 
   test "health_chip alert" do
     dot, chip, msg = health_chip(level: :alert, message: "Crítico")
-    assert_match(/cec-danger|red-/, dot)
-    assert_match(/red/, chip)
+    assert_match(/bg-white/, dot)
+    assert_match(/bg-red-/, chip)
+    assert_match(/text-white/, chip)
     assert_equal "Crítico", msg
   end
 end

@@ -10,16 +10,23 @@ module DashboardHelper
 
   # Etiqueta legible y accent (teal/gold/red) para el chip de health status.
   # Devuelve [classes_dot, classes_chip, label].
+  #
+  # Diseño 2026-05-02: el chip vive sobre bg-cec-hero (gradient navy)
+  # y los tints anteriores quedaban casi invisibles. Pasamos a fondo
+  # SÓLIDO + texto contrastado + ring blanco translúcido + sombra de
+  # color para profundidad. Yusef pidió mejor visibilidad/contraste.
   def health_chip(status)
     case status[:level]
     when :ok
-      [ "bg-cec-teal", "bg-cec-teal/15 text-cec-teal-dark dark:text-cec-teal-light ring-1 ring-cec-teal/30", status[:message] ]
+      # cec-teal-dark + halo cec-teal — más sobrio y dentro de la
+      # paleta CEC sin saltar al cyan vibrante.
+      [ "bg-cec-teal-light", "bg-cec-teal-dark text-white ring-1 ring-cec-teal-light/40 shadow-md shadow-cec-teal/30", status[:message] ]
     when :warn
-      [ "bg-cec-gold-dark", "bg-cec-gold/15 text-cec-gold-dark dark:text-cec-gold-light ring-1 ring-cec-gold/40", status[:message] ]
+      [ "bg-cec-navy-dark",  "bg-cec-gold-dark text-white ring-1 ring-cec-gold-light/40 shadow-md shadow-cec-gold/30", status[:message] ]
     when :alert
-      [ "bg-cec-danger", "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-200 ring-1 ring-red-300/60", status[:message] ]
+      [ "bg-white",          "bg-red-600 text-white ring-1 ring-white/40 shadow-md shadow-red-500/40",   status[:message] ]
     else
-      [ "bg-gray-400", "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 ring-1 ring-gray-300", status[:message].to_s ]
+      [ "bg-white",          "bg-gray-600 text-white ring-1 ring-white/30 shadow-md shadow-gray-700/30", status[:message].to_s ]
     end
   end
 
