@@ -2147,7 +2147,10 @@ CREATE TABLE public.users (
     ubicacion character varying DEFAULT 'honduras'::character varying,
     activo boolean DEFAULT true NOT NULL,
     tema character varying,
-    iniciales character varying(8)
+    iniciales character varying(8),
+    sidebar_collapsed boolean DEFAULT true NOT NULL,
+    sidebar_pinned boolean DEFAULT false NOT NULL,
+    sidebar_position character varying DEFAULT 'left'::character varying NOT NULL
 );
 
 
@@ -5304,6 +5307,7 @@ ALTER TABLE ONLY public.ep_counters
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260503063133'),
 ('20260503050815'),
 ('20260502150000'),
 ('20260502130000'),
