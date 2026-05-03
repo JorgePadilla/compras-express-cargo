@@ -297,13 +297,16 @@ aside#sidebar nav::-webkit-scrollbar { width: 0; height: 0; display: none; }
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
   }
 
-  /* Footer: 3 botones apilados verticalmente, cada uno full-width. */
+  /* Footer: en colapsado escondemos pin y position toggle (Yusef:
+     ocupan espacio innecesario en el rail). Solo queda logout
+     centrado. Al expandir reaparecen los 3 botones en row. */
+  aside#sidebar.is-collapsed .sidebar-collapsed-hide { display: none; }
+
+  /* Logout queda centrado solo. */
   aside#sidebar.is-collapsed .sidebar-footer-buttons {
-    flex-direction: column;
-    gap: 0.25rem;
+    justify-content: center;
   }
-  aside#sidebar.is-collapsed .sidebar-footer-buttons > a,
-  aside#sidebar.is-collapsed .sidebar-footer-buttons > button {
+  aside#sidebar.is-collapsed .sidebar-footer-buttons > a {
     width: 100%;
     justify-content: center;
   }
