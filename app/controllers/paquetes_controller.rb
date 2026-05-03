@@ -1,7 +1,7 @@
 class PaquetesController < ApplicationController
-  before_action :set_paquete, only: [ :show, :edit, :update, :label, :destroy, :eliminar_de_pre_alerta, :reimprimir_etiquetas ]
+  before_action :set_paquete, only: [ :show, :edit, :update, :label, :destroy, :eliminar_de_pre_alerta, :reimprimir_etiquetas, :mover_a_pre_alerta ]
   before_action :authorize_tracking_actions, only: [ :check_tracking, :search ]
-  before_action :authorize_edit, only: [ :edit, :update, :eliminar_de_pre_alerta ]
+  before_action :authorize_edit, only: [ :edit, :update, :eliminar_de_pre_alerta, :mover_a_pre_alerta ]
   before_action :authorize_delete, only: [ :destroy ]
 
   # Whitelist de columnas ordenables. Mapea param `sort` -> SQL fragment.
@@ -67,6 +67,31 @@ class PaquetesController < ApplicationController
     end
     @paquete.pre_alerta_paquetes.destroy_all
     redirect_to @paquete, notice: "Paquete desvinculado de #{count} pre-alerta(s). Listo para reasignar."
+  end
+
+  # PR-D4.a.2: mueve este paquete a una pre-alerta existente. Yusef:
+  # "se permite mover a pre-alerta de cualquier cliente (caso típico:
+  # corregir asignación equivocada)". Borra los join existentes con
+  # otras PAs y crea un nuevo PreAlertaPaquete vinculado a la PA destino.
+  def mover_a_pre_alerta
+    pa = PreAlerta.activas.find_by(id: params[:pre_alerta_id])
+    if pa.nil?
+      redirect_to @paquete, alert: "Pre-alerta no encontrada o anulada."
+      return
+    end
+
+    PreAlertaPaquete.transaction do
+      @paquete.pre_alerta_paquetes.destroy_all
+      PreAlertaPaquete.create!(
+        pre_alerta: pa,
+        paquete: @paquete,
+        tracking: @paquete.tracking,
+        descripcion: @paquete.descripcion,
+        fecha: Date.current
+      )
+    end
+
+    redirect_to @paquete, notice: "Paquete movido a pre-alerta #{pa.numero_documento} (#{pa.cliente.codigo})."
   end
 
   # PR-D4.a: re-imprime etiquetas Miami. Para paquetes divididos (split en
