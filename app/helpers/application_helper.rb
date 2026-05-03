@@ -13,7 +13,7 @@ module ApplicationHelper
     text_class = "#{font_mono ? 'font-mono' : ''} text-gray-900 dark:text-gray-100 #{css_class}".strip
 
     content_tag :span,
-                class: "inline-flex items-center gap-2",
+                class: "inline-flex items-center gap-2 max-w-full align-middle",
                 data: { controller: "clipboard", "clipboard-text-value": value.to_s } do
       safe_join([
         content_tag(:span, value, class: text_class),

@@ -26,20 +26,28 @@ export default class extends Controller {
     if (!text) return
 
     navigator.clipboard.writeText(text).then(
-      () => this.showFeedback("✓ Copiado", "text-cec-teal-dark"),
-      () => this.showFeedback("✗ Error", "text-red-600")
+      () => this.showFeedback("ok"),
+      () => this.showFeedback("error")
     )
   }
 
-  showFeedback(message, colorClass) {
+  // PR-D4.c follow-up: swap solo el ícono dentro del mismo `w-5 h-5`
+  // para NO cambiar el width del botón ni mover los elementos vecinos.
+  // Antes mostrábamos "✓ Copiado" (~70px) → causaba layout shift.
+  showFeedback(state) {
     if (!this.hasButtonTarget) return
 
     const original = this.buttonTarget.innerHTML
     const originalTitle = this.buttonTarget.getAttribute("title")
+    const symbol = state === "ok" ? "✓" : "✕"
+    const colorClass = state === "ok"
+      ? "text-cec-teal dark:text-cec-teal-light"
+      : "text-red-600 dark:text-red-400"
+    const newTitle = state === "ok" ? "Copiado" : "Error al copiar"
 
-    // Reemplazar contenido temporalmente con el mensaje.
-    this.buttonTarget.innerHTML = `<span class="text-[10px] font-semibold ${colorClass}">${message}</span>`
-    this.buttonTarget.setAttribute("title", message)
+    this.buttonTarget.innerHTML =
+      `<span class="text-sm leading-none font-bold ${colorClass}">${symbol}</span>`
+    this.buttonTarget.setAttribute("title", newTitle)
     this.buttonTarget.disabled = true
 
     setTimeout(() => {
