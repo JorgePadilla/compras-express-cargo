@@ -137,6 +137,11 @@ class Paquete < ApplicationRecord
   before_save :calculate_peso_cobrar
   before_save :track_fecha_disponible, if: :will_save_change_to_estado?
   before_save :track_estado_fecha_y_user, if: :will_save_change_to_estado?
+  # PR-D3.c.2: dropdown híbrido de carrier. Si el usuario escribe un
+  # nombre nuevo (no presente en el catálogo), se agrega automáticamente
+  # para que la próxima vez aparezca en el dropdown. Yusef:
+  # "entre más cosas nos dejes crear, menos te molestaremos".
+  after_save :sync_carrier_catalog, if: :saved_change_to_expedido_por?
   after_save :sync_pre_alerta_estados, if: :saved_change_to_estado?
 
   def estado_terminal?
@@ -520,5 +525,18 @@ class Paquete < ApplicationRecord
       "RC-%<anio>04d-%<suc>s-%<prov>s-%<num>06d",
       anio: anio, suc: suc_codigo, prov: proveedor.codigo, num: next_number
     )
+  end
+
+  # PR-D3.c.2: agrega al catálogo de Carriers cualquier nombre nuevo que
+  # el usuario escriba en el dropdown híbrido. Match case-insensitive
+  # contra el nombre para evitar duplicados (FedEx vs fedex vs FEDEX).
+  # Silenciamos errores de validación: si el carrier no se puede crear
+  # por algún motivo, el paquete se guarda igual con el string libre.
+  def sync_carrier_catalog
+    nombre = expedido_por.to_s.strip
+    return if nombre.blank?
+    return if Carrier.where("LOWER(nombre) = ?", nombre.downcase).exists?
+
+    Carrier.create(nombre: nombre, activo: true)
   end
 end

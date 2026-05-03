@@ -443,4 +443,43 @@ class PaqueteTest < ActiveSupport::TestCase
       reloaded.consolidado?
     end
   end
+
+  # PR-D3.c.2 — sync_carrier_catalog (dropdown híbrido auto-add)
+  test "guardar paquete con carrier nuevo lo agrega al catalogo" do
+    paquete = paquetes(:recibido)
+    nuevo_nombre = "USPS Priority Mail Express"
+    assert_not Carrier.where("LOWER(nombre) = ?", nuevo_nombre.downcase).exists?
+
+    assert_difference("Carrier.count", 1) do
+      paquete.update!(expedido_por: nuevo_nombre)
+    end
+    assert Carrier.where(nombre: nuevo_nombre, activo: true).exists?
+  end
+
+  test "guardar paquete con carrier ya existente NO duplica" do
+    paquete = paquetes(:recibido)
+    existing = carriers(:fedex)
+
+    assert_no_difference("Carrier.count") do
+      paquete.update!(expedido_por: existing.nombre)
+    end
+  end
+
+  test "guardar paquete con carrier en otro case NO duplica" do
+    paquete = paquetes(:recibido)
+    carriers(:fedex)
+
+    assert_no_difference("Carrier.count") do
+      paquete.update!(expedido_por: "fEdEx")
+    end
+  end
+
+  test "guardar paquete sin carrier no toca catalogo" do
+    paquete = paquetes(:recibido)
+    paquete.update_column(:expedido_por, "FedEx")
+
+    assert_no_difference("Carrier.count") do
+      paquete.update!(expedido_por: "")
+    end
+  end
 end
