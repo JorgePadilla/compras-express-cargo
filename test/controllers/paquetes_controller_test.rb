@@ -384,4 +384,17 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to paquete_url(@paquete)
     assert_match(/no encontrada|anulada/i, flash[:alert])
   end
+
+  # PR-D4.a.3 — Refrescar recarga sólo el turbo-frame (preserva scroll)
+  test "show envuelve contenido en turbo-frame paquete_dynamic" do
+    get paquete_url(@paquete)
+    assert_response :success
+    assert_select "turbo-frame#paquete_dynamic[target=?]", "_top"
+  end
+
+  test "Refrescar button opta-in al frame paquete_dynamic" do
+    get paquete_url(@paquete)
+    assert_response :success
+    assert_select "a[data-turbo-frame=?]", "paquete_dynamic"
+  end
 end
