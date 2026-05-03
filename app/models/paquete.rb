@@ -127,6 +127,10 @@ class Paquete < ApplicationRecord
   # cuyo proveedor es de tipo entrega_personal y el operador no
   # ingresó tracking propio (típico: drivers privados, Uber).
   before_validation :generate_ep_tracking, on: :create, if: :ep_tracking_required?
+  # PR-D4.d: tracking auto RC-AÑO-SUC-PROV-NNNNNN cuando CEC mandó
+  # un motorista propio a recoletar/comprar al merchant. Trigger:
+  # recolecta_solicitada + tracking blank + proveedor (comercio) presente.
+  before_validation :generate_rc_tracking, on: :create, if: :rc_tracking_required?
   after_create :ensure_warehouse_receipt, if: -> { warehouse_receipt_id.nil? && numero_recepcion.present? && cliente_id.present? }
   before_save :set_fecha_recibido, if: -> { fecha_recibido_miami.blank? && new_record? }
   before_save :calculate_peso_volumetrico
@@ -482,6 +486,38 @@ class Paquete < ApplicationRecord
 
     self.tracking = format(
       "EP-%<anio>04d-%<suc>s-%<prov>s-%<num>06d",
+      anio: anio, suc: suc_codigo, prov: proveedor.codigo, num: next_number
+    )
+  end
+
+  # PR-D4.d: condición para auto-generar tracking RC. Aplica cuando
+  # CEC mandó un motorista propio a recoletar (no es entrega personal
+  # vía driver externo). Mismo formato que EP pero prefijo RC y trigger
+  # distinto: recolecta_solicitada + tracking blank + proveedor presente.
+  # Si el proveedor es entrega_personal, gana EP (chequeado primero
+  # por el orden de los before_validation).
+  def rc_tracking_required?
+    tracking.blank? &&
+      recolecta_solicitada? &&
+      proveedor.present? &&
+      !proveedor.entrega_personal? &&
+      sucursal.present?
+  end
+
+  # Genera tracking RC-AÑO-SUC-PROV-NNNNNN. Counter independiente de
+  # EpCounter — RC y EP no comparten secuencia.
+  def generate_rc_tracking
+    suc_codigo = sucursal&.codigo_ep
+    if suc_codigo.blank?
+      errors.add(:tracking, "no se puede generar (sucursal #{sucursal&.nombre || sucursal_id} no tiene codigo_ep configurado)")
+      return
+    end
+
+    anio = (fecha_recibido_miami&.year || Time.zone.now.year)
+    next_number = RcCounter.next_for!(anio: anio, sucursal: sucursal, proveedor: proveedor)
+
+    self.tracking = format(
+      "RC-%<anio>04d-%<suc>s-%<prov>s-%<num>06d",
       anio: anio, suc: suc_codigo, prov: proveedor.codigo, num: next_number
     )
   end
