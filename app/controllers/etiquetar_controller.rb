@@ -24,6 +24,9 @@ class EtiquetarController < ApplicationController
     @paquete = Paquete.new(paquete_params)
     @paquete.estado = "empacado"
     @paquete.user = Current.user
+    if (flag = pre_factura_flag_param) != :missing
+      @paquete[:pre_factura] = flag
+    end
 
     if @paquete.save
       link_pre_alertas(@paquete)
@@ -112,8 +115,17 @@ class EtiquetarController < ApplicationController
       :tracking, :tracking_secundario, :cliente_id, :tipo_envio_id, :peso,
       :alto, :largo, :ancho, :cantidad_productos, :cantidad_paquetes,
       :numero_caja, :descripcion, :remitente, :expedido_por, :proveedor,
-      :notas_internas, :pre_alerta, :pre_factura,
+      :notas_internas, :pre_alerta,
       :solicito_cambio_servicio, :retener_miami
     )
+  end
+
+  # `pre_factura` es columna boolean Y a la vez el name de la asociación
+  # belongs_to :pre_factura. Para evitar AssociationTypeMismatch al asignar
+  # "0"/"1" desde el form, se escribe vía column accessor `paquete[:pre_factura]`.
+  def pre_factura_flag_param
+    return :missing unless params.dig(:paquete)&.key?(:pre_factura)
+
+    ActiveModel::Type::Boolean.new.cast(params[:paquete][:pre_factura])
   end
 end

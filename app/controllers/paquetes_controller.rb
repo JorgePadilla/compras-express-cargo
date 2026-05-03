@@ -42,7 +42,15 @@ class PaquetesController < ApplicationController
   end
 
   def update
-    if @paquete.update(paquete_params)
+    @paquete.assign_attributes(paquete_params)
+    # `paquete[:pre_factura]` es columna boolean; el accessor normal lo
+    # interpreta como la asociación belongs_to :pre_factura. Lo escribimos
+    # vía el column accessor `[]=` para evitar AssociationTypeMismatch.
+    if (flag = pre_factura_flag_param) != :missing
+      @paquete[:pre_factura] = flag
+    end
+
+    if @paquete.save
       redirect_to @paquete, notice: "Paquete actualizado exitosamente."
     else
       @tipo_envios = TipoEnvio.activos.order(:nombre)
@@ -408,9 +416,18 @@ class PaquetesController < ApplicationController
       :numero_caja, :descripcion, :remitente, :expedido_por, :proveedor, :proveedor_id,
       :tercero_id,
       :notas_internas, :notas_al_cliente, :notas_consolidacion, :notas_retencion,
-      :pre_alerta, :pre_factura,
+      :pre_alerta,
       :solicito_cambio_servicio, :retener_miami,
       motivo_retencion_ids: []
     )
+  end
+
+  # Devuelve true/false casteado, o `:missing` si el form no envió el campo.
+  # Necesario porque `pre_factura` es columna boolean Y a la vez el name de
+  # un belongs_to (la asociación gana al setter normal).
+  def pre_factura_flag_param
+    return :missing unless params.dig(:paquete)&.key?(:pre_factura)
+
+    ActiveModel::Type::Boolean.new.cast(params[:paquete][:pre_factura])
   end
 end
