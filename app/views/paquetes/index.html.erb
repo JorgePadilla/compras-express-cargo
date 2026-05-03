@@ -91,7 +91,7 @@ end %>
   Array(params[:tipo_envio_ids]).reject(&:blank?).any?,
   Array(params[:sucursal_ids]).reject(&:blank?).any?,
   params[:fecha_desde].present?, params[:fecha_hasta].present?,
-  params[:solo_facturados] == "1", params[:incluir_facturados] == "0",
+  params[:solo_facturados] == "1", params[:incluir_facturados] == "1",
   params[:sin_prealerta] == "1",
   params[:incluir_3_12_meses] == "1", params[:incluir_mas_1_ano] == "1"
 ].count(true) %>
@@ -184,8 +184,8 @@ end %>
           Solo facturados
         </label>
         <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
-          <%= check_box_tag :incluir_facturados, "0", params[:incluir_facturados] == "0", class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-          Excluir facturados
+          <%= check_box_tag :incluir_facturados, "1", params[:incluir_facturados] == "1", class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+          Incluir facturados
         </label>
         <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
           <%= check_box_tag :sin_prealerta, "1", params[:sin_prealerta] == "1", class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>

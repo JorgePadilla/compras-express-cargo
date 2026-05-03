@@ -403,8 +403,13 @@ class PaquetesController < ApplicationController
 
     # Quick toggles
     scope = scope.where(estado: "facturado") if params[:solo_facturados] == "1"
-    # incluir_facturados: default muestra todos; si == "0" los excluye
-    scope = scope.where.not(estado: "facturado") if params[:incluir_facturados] == "0"
+    # incluir_facturados (PR-D4 review): el default EXCLUYE facturados
+    # (operadores ven solo trabajo activo). El toggle marcado los incluye.
+    # `solo_facturados=1` y `solo_anulados=1` ya tienen su propio scope —
+    # en esos casos no aplicamos la exclusión.
+    unless params[:incluir_facturados] == "1" || params[:solo_facturados] == "1" || params[:solo_anulados] == "1"
+      scope = scope.where.not(estado: "facturado")
+    end
     scope = scope.where(pre_alerta: false) if params[:sin_prealerta] == "1"
     scope = scope.where(estado: "anulado") if params[:solo_anulados] == "1"
     scope = scope.where(pre_factura: true) if params[:solo_prefactura] == "1"

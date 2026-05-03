@@ -186,12 +186,20 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assigned.each { |p| assert_equal "facturado", p.estado }
   end
 
-  test "toggle incluir_facturados=0 excluye facturados" do
+  test "default excluye facturados (sin toggle)" do
     paquetes(:recibido).update_column(:estado, "facturado")
-    get paquetes_url, params: { incluir_facturados: "0", incluir_mas_1_ano: "1" }
+    get paquetes_url, params: { incluir_mas_1_ano: "1" }
     assert_response :success
     assigned = @controller.instance_variable_get(:@paquetes)
     assert_not(assigned.any? { |p| p.estado == "facturado" })
+  end
+
+  test "toggle incluir_facturados=1 incluye facturados" do
+    paquetes(:recibido).update_column(:estado, "facturado")
+    get paquetes_url, params: { incluir_facturados: "1", incluir_mas_1_ano: "1" }
+    assert_response :success
+    assigned = @controller.instance_variable_get(:@paquetes)
+    assert(assigned.any? { |p| p.estado == "facturado" })
   end
 
   # ── Export / Bulk actions (PR2) ──
