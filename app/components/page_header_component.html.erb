@@ -1,4 +1,5 @@
-<div class="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-6 gap-4">
+<div class="mb-6">
+  <%# Fila 1: título + subtitle + meta — ocupan el ancho completo. %>
   <div class="min-w-0">
     <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100"><%= @title %></h1>
     <% if @subtitle %>
@@ -8,8 +9,12 @@
       <div class="mt-2 flex flex-wrap items-center gap-2"><%= meta %></div>
     <% end %>
   </div>
+
+  <%# Fila 2: acciones full-width separadas por un border-top sutil. Al
+      tener 100% del ancho disponible, los botones wrappean mucho menos
+      que cuando vivían en la mitad derecha del header. %>
   <% if actions? %>
-    <div class="flex flex-wrap items-center gap-2">
+    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-2">
       <% actions.each do |action| %>
         <%= action %>
       <% end %>
