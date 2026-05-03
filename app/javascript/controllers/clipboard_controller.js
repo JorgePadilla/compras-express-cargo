@@ -32,21 +32,20 @@ export default class extends Controller {
   }
 
   // PR-D4.c follow-up: swap solo el ícono dentro del mismo `w-5 h-5`
-  // para NO cambiar el width del botón ni mover los elementos vecinos.
-  // Antes mostrábamos "✓ Copiado" (~70px) → causaba layout shift.
+  // para NO cambiar el width del botón ni la altura del baseline.
+  // Usamos SVGs heroicon (check / x-mark) en w-3.5 h-3.5 — mismas
+  // dimensiones que el clipboard-document original → zero layout shift.
+  // Versiones con texto unicode "✓" causaban shift de línea base porque
+  // el caracter tiene altura distinta al SVG.
   showFeedback(state) {
     if (!this.hasButtonTarget) return
 
     const original = this.buttonTarget.innerHTML
     const originalTitle = this.buttonTarget.getAttribute("title")
-    const symbol = state === "ok" ? "✓" : "✕"
-    const colorClass = state === "ok"
-      ? "text-cec-teal dark:text-cec-teal-light"
-      : "text-red-600 dark:text-red-400"
     const newTitle = state === "ok" ? "Copiado" : "Error al copiar"
+    const newHTML = state === "ok" ? this.checkSvg() : this.xMarkSvg()
 
-    this.buttonTarget.innerHTML =
-      `<span class="text-sm leading-none font-bold ${colorClass}">${symbol}</span>`
+    this.buttonTarget.innerHTML = newHTML
     this.buttonTarget.setAttribute("title", newTitle)
     this.buttonTarget.disabled = true
 
@@ -55,5 +54,13 @@ export default class extends Controller {
       this.buttonTarget.setAttribute("title", originalTitle || "Copiar")
       this.buttonTarget.disabled = false
     }, this.feedbackDurationValue)
+  }
+
+  checkSvg() {
+    return '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5 text-cec-teal dark:text-cec-teal-light"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>'
+  }
+
+  xMarkSvg() {
+    return '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5 text-red-600 dark:text-red-400"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>'
   }
 }
