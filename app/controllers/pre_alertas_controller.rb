@@ -11,6 +11,27 @@ class PreAlertasController < ApplicationController
   def show
   end
 
+  # PR-D4.a.2: endpoint JSON para el modal "Mover a Pre-Alerta Existente".
+  # Devuelve PAs activas que matchean el query (numero_documento, titulo
+  # o nombre del cliente). Limit 12 resultados.
+  def buscar
+    term = params[:q].to_s.strip
+    @resultados = PreAlerta.includes(:cliente).activas
+                            .buscar(term)
+                            .order(created_at: :desc)
+                            .limit(12)
+    render json: @resultados.map { |pa|
+      {
+        id: pa.id,
+        numero: pa.numero_documento,
+        titulo: pa.titulo.presence || "(sin título)",
+        cliente: "#{pa.cliente.codigo} — #{pa.cliente.nombre_completo}",
+        consolidado: pa.consolidado,
+        estado: pa.estado
+      }
+    }
+  end
+
   def new
     @pre_alerta = PreAlerta.new
     @pre_alerta.pre_alerta_paquetes.build

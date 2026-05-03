@@ -23,6 +23,7 @@ Rails.application.routes.draw do
       get :label
       get :reimprimir_etiquetas
       delete :eliminar_de_pre_alerta
+      post :mover_a_pre_alerta
     end
     collection do
       get :check_tracking
@@ -71,7 +72,10 @@ Rails.application.routes.draw do
 
   resources :pre_alertas, except: %i[destroy] do
     member { delete :anular }
-    collection { post :clean_empty }
+    collection do
+      post :clean_empty
+      get :buscar
+    end
   end
 
   resources :pre_facturas, except: [:destroy] do

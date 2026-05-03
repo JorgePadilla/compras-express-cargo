@@ -143,6 +143,29 @@ class PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil old_empty.reload.deleted_at
   end
 
+  # PR-D4.a.2 — Buscar (JSON endpoint para el modal "Mover a Pre-Alerta")
+  test "buscar should return JSON matching activas only" do
+    get buscar_pre_alertas_url(q: @pre_alerta.numero_documento), as: :json
+    assert_response :success
+    json = JSON.parse(response.body)
+    assert json.is_a?(Array)
+    assert json.any? { |pa| pa["numero"] == @pre_alerta.numero_documento }
+    assert json.first.key?("cliente")
+    assert json.first.key?("consolidado")
+  end
+
+  test "buscar should exclude anuladas" do
+    anulada = PreAlerta.create!(
+      cliente: clientes(:juan),
+      tipo_envio: tipo_envios(:aereo),
+      titulo: "Anulada test buscar",
+      estado: "anulado"
+    )
+    get buscar_pre_alertas_url(q: "Anulada test buscar"), as: :json
+    json = JSON.parse(response.body)
+    assert_not json.any? { |pa| pa["id"] == anulada.id }
+  end
+
   # Role access
   test "all roles can access pre_alertas index" do
     delete session_url

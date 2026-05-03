@@ -46,18 +46,6 @@
                                icon: "printer", target: "_blank")) { "Re-imprimir Etiquetas Miami" }
   end
 
-  # ── Pre-Alerta management ──
-  if @paquete.pre_alerta_paquetes.any?
-    header.with_action do
-      render(ButtonComponent.new(variant: :secondary, href: eliminar_de_pre_alerta_paquete_path(@paquete),
-                                 icon: "x-mark",
-                                 data: {
-                                   turbo_method: :delete,
-                                   turbo_confirm: "¿Desvincular este paquete de su pre-alerta? El paquete NO se elimina, sólo se desasocia para poder reasignarlo."
-                                 })) { "Eliminar de Pre-Alerta" }
-    end
-  end
-
   # ── Navegación ──
   header.with_action do
     render(ButtonComponent.new(variant: :ghost, href: paquete_path(@paquete),
@@ -68,6 +56,112 @@
                                icon: "arrow-left", shortcut: "F2")) { "Volver" }
   end
 end %>
+
+<%# PR-D4.a.2: barra de gestión de Pre-Alerta. Mover y Eliminar van juntos
+    en una misma scope de Stimulus para que el botón trigger y el <dialog>
+    compartan controlador (PageHeader no permite anidar el data-controller). %>
+<div class="mb-4"
+     data-controller="mover-pre-alerta-modal"
+     data-mover-pre-alerta-modal-search-url-value="<%= buscar_pre_alertas_path %>"
+     data-mover-pre-alerta-modal-paquete-id-value="<%= @paquete.id %>">
+  <div class="flex flex-wrap items-center gap-2">
+    <span class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+      <%= heroicon "bell-alert", variant: :solid, options: { class: "w-4 h-4 text-cec-teal" } %>
+      Pre-Alerta
+    </span>
+    <% if @paquete.pre_alerta_paquetes.any? %>
+      <% pa = @paquete.pre_alerta_paquetes.first.pre_alerta %>
+      <%= link_to pre_alerta_path(pa),
+            class: "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-cec-teal/10 dark:bg-cec-teal/20 text-cec-teal-dark dark:text-cec-teal-light ring-1 ring-cec-teal/30 text-xs font-mono font-semibold hover:ring-cec-teal/60" do %>
+        <%= pa.numero_documento %>
+        <span class="text-gray-500 dark:text-gray-400">·</span>
+        <span class="font-sans"><%= pa.cliente.codigo %></span>
+      <% end %>
+    <% else %>
+      <span class="text-xs italic text-gray-500 dark:text-gray-400">Sin pre-alerta vinculada</span>
+    <% end %>
+
+    <button type="button"
+            data-action="click->mover-pre-alerta-modal#open"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-cec-navy text-white hover:bg-cec-navy-dark ring-1 ring-cec-navy/40 transition-colors">
+      <%= heroicon "arrows-right-left", variant: :solid, options: { class: "w-3.5 h-3.5" } %>
+      <%= @paquete.pre_alerta_paquetes.any? ? "Mover a otra Pre-Alerta" : "Asignar a Pre-Alerta" %>
+    </button>
+
+    <% if @paquete.pre_alerta_paquetes.any? %>
+      <%= button_to eliminar_de_pre_alerta_paquete_path(@paquete),
+            method: :delete,
+            data: { turbo_confirm: "¿Desvincular este paquete de su pre-alerta? El paquete NO se elimina, sólo se desasocia para poder reasignarlo." },
+            class: "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" do %>
+        <%= heroicon "x-mark", variant: :solid, options: { class: "w-3.5 h-3.5" } %>
+        Eliminar de Pre-Alerta
+      <% end %>
+    <% end %>
+  </div>
+
+  <%# Dialog modal — search PA + select + submit. %>
+  <dialog data-mover-pre-alerta-modal-target="dialog"
+          style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0;"
+          class="rounded-xl shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm w-full max-w-lg p-0 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 ring-1 ring-gray-200 dark:ring-gray-700">
+    <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <h3 class="text-base font-semibold text-cec-navy dark:text-cec-gold flex items-center gap-2">
+        <%= heroicon "arrows-right-left", variant: :solid, options: { class: "w-5 h-5 text-cec-teal" } %>
+        Mover a Pre-Alerta Existente
+      </h3>
+      <button type="button"
+              data-action="click->mover-pre-alerta-modal#close"
+              class="p-1 rounded text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
+              aria-label="Cerrar">
+        <%= heroicon "x-mark", variant: :solid, options: { class: "w-5 h-5" } %>
+      </button>
+    </div>
+
+    <div class="px-5 py-4 space-y-3">
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
+          Buscar pre-alerta
+        </label>
+        <div class="relative">
+          <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+            <%= heroicon "magnifying-glass", variant: :solid, options: { class: "w-4 h-4" } %>
+          </span>
+          <input type="text"
+                 data-mover-pre-alerta-modal-target="input"
+                 data-action="input->mover-pre-alerta-modal#search"
+                 placeholder="Número, título o cliente…"
+                 class="w-full pl-10 pr-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-cec-teal/40 focus:border-cec-teal">
+        </div>
+        <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+          Mínimo 2 caracteres. Se incluyen pre-alertas de cualquier cliente.
+        </p>
+      </div>
+
+      <ul data-mover-pre-alerta-modal-target="results"
+          class="max-h-72 overflow-y-auto rounded-md ring-1 ring-gray-200 dark:ring-gray-700 divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+      </ul>
+
+      <div data-mover-pre-alerta-modal-target="selectedSummary" class="hidden"></div>
+    </div>
+
+    <%= form_with url: mover_a_pre_alerta_paquete_path(@paquete),
+                  method: :post,
+                  local: true,
+                  data: { mover_pre_alerta_modal_target: "form" },
+                  class: "px-5 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2 bg-gray-50 dark:bg-gray-800/50" do |f| %>
+      <%= f.hidden_field :pre_alerta_id, value: "", data: { mover_pre_alerta_modal_target: "hiddenId" } %>
+      <button type="button"
+              data-action="click->mover-pre-alerta-modal#close"
+              class="px-3 py-1.5 rounded-md text-sm font-medium bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 ring-1 ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600">
+        Cancelar
+      </button>
+      <button type="submit" disabled
+              class="px-3 py-1.5 rounded-md text-sm font-semibold bg-cec-navy text-white hover:bg-cec-navy-dark disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5">
+        <%= heroicon "check", variant: :solid, options: { class: "w-4 h-4" } %>
+        Mover paquete
+      </button>
+    <% end %>
+  </dialog>
+</div>
 
 <% if @paquete.dividido? %>
   <%# Banner de paquete dividido (sub-etiqueta) — muestra "1/3" + links a hermanos. %>

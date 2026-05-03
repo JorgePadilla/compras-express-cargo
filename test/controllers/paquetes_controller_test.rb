@@ -342,4 +342,46 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     helper = ApplicationController.helpers
     assert helper.respond_to?(:can_edit_paquetes?)
   end
+
+  # PR-D4.a.2 — Mover paquete a otra pre-alerta existente
+  test "mover_a_pre_alerta vincula al destino y desvincula del origen" do
+    paquete = @paquete
+    origen  = pre_alertas(:activa)
+    destino = PreAlerta.create!(
+      cliente: clientes(:juan),
+      tipo_envio: tipo_envios(:aereo),
+      titulo: "Destino mover test",
+      estado: "pre_alerta"
+    )
+    paquete.pre_alerta_paquetes.destroy_all
+    PreAlertaPaquete.create!(
+      pre_alerta: origen, paquete: paquete,
+      tracking: paquete.tracking, descripcion: "x", fecha: Date.current
+    )
+
+    post mover_a_pre_alerta_paquete_url(paquete), params: { pre_alerta_id: destino.id }
+    assert_redirected_to paquete_url(paquete)
+
+    paquete.reload
+    assert_equal 1, paquete.pre_alerta_paquetes.count
+    assert_equal destino.id, paquete.pre_alerta_paquetes.first.pre_alerta_id
+  end
+
+  test "mover_a_pre_alerta rechaza pre-alerta inexistente" do
+    post mover_a_pre_alerta_paquete_url(@paquete), params: { pre_alerta_id: 999999 }
+    assert_redirected_to paquete_url(@paquete)
+    assert_match(/no encontrada|anulada/i, flash[:alert])
+  end
+
+  test "mover_a_pre_alerta rechaza pre-alerta anulada" do
+    anulada = PreAlerta.create!(
+      cliente: clientes(:juan),
+      tipo_envio: tipo_envios(:aereo),
+      titulo: "Anulada destino",
+      estado: "anulado"
+    )
+    post mover_a_pre_alerta_paquete_url(@paquete), params: { pre_alerta_id: anulada.id }
+    assert_redirected_to paquete_url(@paquete)
+    assert_match(/no encontrada|anulada/i, flash[:alert])
+  end
 end
