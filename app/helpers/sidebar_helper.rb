@@ -17,7 +17,7 @@ module SidebarHelper
   end
 
   def sidebar_section(title, &block)
-    content_tag(:li, class: "pt-4") do
+    content_tag(:li, class: "pt-4 sidebar-section") do
       safe_join([
         content_tag(:p, title,
           class: "px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 sidebar-label whitespace-nowrap"),
@@ -29,9 +29,9 @@ module SidebarHelper
   private
 
   def sidebar_link_classes(active)
-    base = "flex items-center px-3 py-2 text-sm rounded-lg transition-colors"
+    base = "sidebar-link flex items-center px-3 py-2 text-sm rounded-lg transition-colors"
     if active
-      "#{base} bg-white/10 text-white border-l-3 border-cec-gold"
+      "#{base} active-link bg-white/10 text-white border-l-3 border-cec-gold"
     else
       "#{base} text-gray-300 hover:bg-white/5 hover:text-white"
     end

@@ -58,14 +58,22 @@
                  <%= sidebar_pinned_init ? 'lg:static' : 'lg:fixed lg:shadow-2xl lg:shadow-cec-navy/30' %>"
           data-sidebar-target="menu">
 
-          <%# Logo: en collapsed solo "CEC" centrado, en expanded el logo completo. %>
-          <div class="p-4 border-b border-white/10 transition-all duration-200">
+          <%# Logo: expandido muestra texto completo; colapsado muestra
+              un badge circular gold con "CEC" centrado para dar
+              jerarquía visual al top del rail. %>
+          <div class="border-b border-white/10 transition-all duration-200">
             <%= link_to root_path, class: "block" do %>
-              <h1 class="text-xl font-bold text-white whitespace-nowrap overflow-hidden">
-                <span class="sidebar-label">Compras Express</span>
-                <span class="sidebar-icon-only hidden text-center block">CEC</span>
-              </h1>
-              <p class="text-xs text-gray-400 sidebar-label whitespace-nowrap">Sistema de Carga</p>
+              <%# Expanded label %>
+              <div class="sidebar-label p-4">
+                <h1 class="text-xl font-bold text-white whitespace-nowrap">Compras Express</h1>
+                <p class="text-xs text-gray-400 whitespace-nowrap">Sistema de Carga</p>
+              </div>
+              <%# Collapsed badge %>
+              <div class="sidebar-icon-only hidden p-3 flex justify-center">
+                <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-cec-gold-gradient text-cec-navy-dark font-bold text-xs shadow-md ring-2 ring-white/10">
+                  CEC
+                </span>
+              </div>
             <% end %>
           </div>
 
@@ -81,7 +89,10 @@
               <span class="block text-gray-500"><%= Current.user.rol.humanize %></span>
             </div>
 
-            <div class="flex items-center justify-between gap-1">
+            <%# Wrapper con clase `sidebar-footer-buttons` — el CSS
+                colapsado lo cambia a `flex-col` para apilar los 3
+                botones verticalmente en el rail de 64px. %>
+            <div class="sidebar-footer-buttons flex items-center justify-between gap-1">
               <%# Pin/unpin %>
               <button type="button"
                       data-action="click->sidebar#togglePin"

@@ -255,6 +255,50 @@
   body.sidebar-pinned:not(.sidebar-collapsed):not(.sidebar-right) main { margin-left: 16rem; margin-right: 0; }
   body.sidebar-right.sidebar-collapsed main            { margin-right: 4rem; margin-left: 0; }
   body.sidebar-right.sidebar-pinned:not(.sidebar-collapsed) main { margin-right: 16rem; margin-left: 0; }
+
+  /* Iconic rail: cuando está colapsado (≥lg), centramos íconos,
+     reemplazamos border-left por glow, mostramos dividers entre
+     secciones y apilamos botones del footer. */
+  aside#sidebar.is-collapsed nav li > a.sidebar-link {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  aside#sidebar.is-collapsed .sidebar-section {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  aside#sidebar.is-collapsed .sidebar-section:first-of-type {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  /* Active link: glow gold sutil en lugar del border-left de 3px que
+     se ve offset cuando el ícono está centrado. */
+  aside#sidebar.is-collapsed nav li > a.active-link {
+    border-left-width: 0 !important;
+    box-shadow: 0 0 0 1px rgba(255, 181, 71, 0.5),
+                0 0 12px -2px rgba(255, 181, 71, 0.4);
+  }
+
+  /* Hover ambient ring para feedback visual extra. */
+  aside#sidebar.is-collapsed nav li > a.sidebar-link:not(.active-link):hover {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+
+  /* Footer: 3 botones apilados verticalmente, cada uno full-width. */
+  aside#sidebar.is-collapsed .sidebar-footer-buttons {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  aside#sidebar.is-collapsed .sidebar-footer-buttons > a,
+  aside#sidebar.is-collapsed .sidebar-footer-buttons > button {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 /* ─── Print stylesheet ───
