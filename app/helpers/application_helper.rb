@@ -13,12 +13,12 @@ module ApplicationHelper
     text_class = "#{font_mono ? 'font-mono' : ''} text-gray-900 dark:text-gray-100 #{css_class}".strip
 
     content_tag :span,
-                class: "inline-flex items-center gap-1.5 group",
+                class: "inline-flex items-center gap-2",
                 data: { controller: "clipboard", "clipboard-text-value": value.to_s } do
       safe_join([
         content_tag(:span, value, class: text_class),
         button_tag(type: "button",
-                   class: "shrink-0 inline-flex items-center justify-center w-5 h-5 rounded text-gray-400 hover:text-cec-teal hover:bg-gray-100 dark:hover:text-cec-teal-light dark:hover:bg-gray-700 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity",
+                   class: "shrink-0 inline-flex items-center justify-center w-5 h-5 rounded text-gray-300 dark:text-gray-600 hover:text-cec-teal hover:bg-gray-100 dark:hover:text-cec-teal-light dark:hover:bg-gray-700 transition-colors",
                    title: "Copiar",
                    "aria-label": "Copiar valor",
                    data: { action: "clipboard#copy", "clipboard-target": "button" }) do

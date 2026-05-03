@@ -195,13 +195,13 @@ end %>
       <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
         <%= link_to @paquete.cliente.codigo, @paquete.cliente, class: "font-mono text-cec-navy dark:text-cec-gold hover:underline" %>
         — <%= @paquete.cliente.nombre_completo %>
-        <%# Botón Copy del código del cliente %>
-        <span class="ml-1 inline-flex" data-controller="clipboard" data-clipboard-text-value="<%= @paquete.cliente.codigo %>">
+        <%# Botón Copy del código del cliente — alineado con el helper copyable. %>
+        <span class="ml-2 inline-flex" data-controller="clipboard" data-clipboard-text-value="<%= @paquete.cliente.codigo %>">
           <button type="button"
                   data-action="clipboard#copy" data-clipboard-target="button"
                   title="Copiar código del cliente"
                   aria-label="Copiar código del cliente"
-                  class="inline-flex items-center justify-center w-5 h-5 rounded text-gray-400 hover:text-cec-teal hover:bg-gray-100 dark:hover:text-cec-teal-light dark:hover:bg-gray-700 transition-colors">
+                  class="inline-flex items-center justify-center w-5 h-5 rounded text-gray-300 dark:text-gray-600 hover:text-cec-teal hover:bg-gray-100 dark:hover:text-cec-teal-light dark:hover:bg-gray-700 transition-colors">
             <%= heroicon "clipboard-document", variant: :outline, options: { class: "w-3.5 h-3.5" } %>
           </button>
         </span>
