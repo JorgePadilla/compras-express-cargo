@@ -385,6 +385,22 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_match(/no encontrada|anulada/i, flash[:alert])
   end
 
+  # Regresión 2026-05-03 — pre_factura como flag boolean no debe colisionar
+  # con el belongs_to :pre_factura. El form usa check_box_tag "paquete[pre_factura]"
+  # con valores "0"/"1"; el controller debe escribirlos vía column accessor
+  # para evitar AssociationTypeMismatch.
+  test "update acepta pre_factura como flag boolean ('0' / '1')" do
+    paquete = paquetes(:recibido)
+
+    patch paquete_url(paquete), params: { paquete: { pre_factura: "1", descripcion: "x" } }
+    assert_redirected_to paquete_url(paquete)
+    assert_equal true, paquete.reload[:pre_factura]
+
+    patch paquete_url(paquete), params: { paquete: { pre_factura: "0", descripcion: "x" } }
+    assert_redirected_to paquete_url(paquete)
+    assert_equal false, paquete.reload[:pre_factura]
+  end
+
   # PR-D4.a.3 — Refrescar recarga sólo el turbo-frame (preserva scroll)
   test "show envuelve contenido en turbo-frame paquete_dynamic" do
     get paquete_url(@paquete)

@@ -18,7 +18,7 @@ import { Controller } from "@hotwired/stimulus"
 // ("Copiado!" durante 1.5s).
 export default class extends Controller {
   static values = { text: String, feedbackDuration: { type: Number, default: 1500 } }
-  static targets = ["button", "label"]
+  static targets = ["button", "iconIdle", "iconOk", "iconErr"]
 
   copy(event) {
     event.preventDefault()
@@ -26,26 +26,32 @@ export default class extends Controller {
     if (!text) return
 
     navigator.clipboard.writeText(text).then(
-      () => this.showFeedback("✓ Copiado", "text-cec-teal-dark"),
-      () => this.showFeedback("✗ Error", "text-red-600")
+      () => this.showFeedback("ok"),
+      () => this.showFeedback("err")
     )
   }
 
-  showFeedback(message, colorClass) {
-    if (!this.hasButtonTarget) return
+  // PR-D4.c follow-up v3: los 3 íconos viven SIEMPRE en el DOM
+  // (idle/ok/err). El controller solo toggle-ea su visibilidad con CSS
+  // (clases `hidden` / `inline-flex`) — cero re-render del innerHTML del
+  // button → cero reflow → cero shift de los elementos vecinos.
+  showFeedback(state) {
+    if (!this.hasIconIdleTarget || !this.hasIconOkTarget || !this.hasIconErrTarget) return
 
-    const original = this.buttonTarget.innerHTML
-    const originalTitle = this.buttonTarget.getAttribute("title")
+    const showKey = state === "ok" ? "ok" : "err"
+    this.iconIdleTarget.classList.add("hidden")
+    this.iconOkTarget.classList.toggle("hidden", showKey !== "ok")
+    this.iconErrTarget.classList.toggle("hidden", showKey !== "err")
 
-    // Reemplazar contenido temporalmente con el mensaje.
-    this.buttonTarget.innerHTML = `<span class="text-[10px] font-semibold ${colorClass}">${message}</span>`
-    this.buttonTarget.setAttribute("title", message)
-    this.buttonTarget.disabled = true
+    if (this.hasButtonTarget) {
+      this.buttonTarget.setAttribute("title", state === "ok" ? "Copiado" : "Error al copiar")
+    }
 
     setTimeout(() => {
-      this.buttonTarget.innerHTML = original
-      this.buttonTarget.setAttribute("title", originalTitle || "Copiar")
-      this.buttonTarget.disabled = false
+      this.iconIdleTarget.classList.remove("hidden")
+      this.iconOkTarget.classList.add("hidden")
+      this.iconErrTarget.classList.add("hidden")
+      if (this.hasButtonTarget) this.buttonTarget.setAttribute("title", "Copiar")
     }, this.feedbackDurationValue)
   }
 }
