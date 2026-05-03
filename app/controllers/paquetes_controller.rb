@@ -39,6 +39,7 @@ class PaquetesController < ApplicationController
   def edit
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     @carriers = Carrier.where(activo: true).order(:nombre)
+    @tarifas_recolecta = TarifaRecolecta.activas.ordered
   end
 
   def update
@@ -55,6 +56,7 @@ class PaquetesController < ApplicationController
     else
       @tipo_envios = TipoEnvio.activos.order(:nombre)
       @carriers = Carrier.where(activo: true).order(:nombre)
+      @tarifas_recolecta = TarifaRecolecta.activas.ordered
       render :edit, status: :unprocessable_entity
     end
   end
@@ -418,6 +420,7 @@ class PaquetesController < ApplicationController
       :notas_internas, :notas_al_cliente, :notas_consolidacion, :notas_retencion,
       :pre_alerta,
       :solicito_cambio_servicio, :retener_miami,
+      :recolecta_solicitada, :recolecta_monto, :recolecta_moneda, :tarifa_recolecta_id,
       motivo_retencion_ids: []
     )
   end
