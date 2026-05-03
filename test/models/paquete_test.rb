@@ -482,4 +482,52 @@ class PaqueteTest < ActiveSupport::TestCase
       paquete.update!(expedido_por: "")
     end
   end
+
+  # PR-D6.a — tarifa_recolecta del catálogo autocompleta monto+moneda
+  test "elegir tarifa_recolecta autocompleta monto y moneda" do
+    paquete = paquetes(:recibido)
+    tarifa = tarifas_recolecta(:tegucigalpa) # 50 USD
+
+    paquete.update!(recolecta_solicitada: true, tarifa_recolecta: tarifa)
+
+    assert_equal 50.0,  paquete.reload.recolecta_monto.to_f
+    assert_equal "USD", paquete.recolecta_moneda
+  end
+
+  test "elegir tarifa LPS copia moneda LPS al paquete" do
+    paquete = paquetes(:recibido)
+    tarifa = tarifas_recolecta(:la_lima_lps) # 800 LPS
+
+    paquete.update!(recolecta_solicitada: true, tarifa_recolecta: tarifa)
+
+    assert_equal 800.0, paquete.reload.recolecta_monto.to_f
+    assert_equal "LPS", paquete.recolecta_moneda
+  end
+
+  test "cambiar tarifa actualiza monto+moneda del paquete" do
+    paquete = paquetes(:recibido)
+    paquete.update!(recolecta_solicitada: true, tarifa_recolecta: tarifas_recolecta(:tegucigalpa))
+    assert_equal 50.0, paquete.reload.recolecta_monto.to_f
+
+    paquete.update!(tarifa_recolecta: tarifas_recolecta(:san_pedro_centro))
+    assert_equal 35.0, paquete.reload.recolecta_monto.to_f
+  end
+
+  test "recolecta sin tarifa cae al default $35 USD" do
+    paquete = paquetes(:recibido)
+
+    paquete.update!(recolecta_solicitada: true)
+
+    assert_equal 35.0,  paquete.reload.recolecta_monto.to_f
+    assert_equal "USD", paquete.recolecta_moneda
+  end
+
+  test "monto manual no se sobrescribe si no cambia tarifa" do
+    paquete = paquetes(:recibido)
+    paquete.update!(recolecta_solicitada: true, recolecta_monto: 99.99, recolecta_moneda: "USD")
+
+    paquete.update!(descripcion: "otro cambio sin tocar tarifa")
+
+    assert_equal 99.99, paquete.reload.recolecta_monto.to_f
+  end
 end

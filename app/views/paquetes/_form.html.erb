@@ -225,6 +225,35 @@
         <%= f.check_box :retener_miami, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
         <%= f.label :retener_miami, "Retener en Miami", class: "text-sm font-medium text-gray-700" %>
       </div>
+      <div class="flex items-center gap-2">
+        <%= f.check_box :recolecta_solicitada, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+        <%= f.label :recolecta_solicitada, "Solicitó Recolecta", class: "text-sm font-medium text-gray-700 dark:text-gray-200" %>
+      </div>
+    </div>
+
+    <%# PR-D6.a: cuando se marca "Solicitó Recolecta", aparece la zona
+        del catálogo. Al elegir una tarifa, el monto y la moneda se
+        autocompletan; el cajero puede sobreescribir manualmente. %>
+    <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50 ring-1 ring-gray-200 dark:ring-gray-700">
+      <div>
+        <%= f.label :tarifa_recolecta_id, "Zona / Tarifa de Recolecta", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <%= f.collection_select :tarifa_recolecta_id, @tarifas_recolecta, :id, :to_s,
+              { include_blank: "— Sin tarifa del catálogo —" },
+              { class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
+        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 italic">Al elegir, el monto y moneda se autocompletan.</p>
+      </div>
+      <div>
+        <%= f.label :recolecta_monto, "Monto Recolecta", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <%= f.number_field :recolecta_monto, step: "0.01", min: 0,
+            placeholder: "—",
+            class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+      <div>
+        <%= f.label :recolecta_moneda, "Moneda", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <%= f.select :recolecta_moneda, [ %w[USD USD], %w[LPS LPS] ],
+              { include_blank: "—" },
+              { class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
+      </div>
     </div>
 
     <div class="lg:col-span-3">

@@ -14,6 +14,7 @@ class Paquete < ApplicationRecord
   belongs_to :warehouse_receipt, optional: true  # PR-5c.5p2 — fuente rica del numero_recepcion (madre)
   belongs_to :proveedor, optional: true  # PR-D3.a: catálogo (Amazon, Walmart, drivers privados…)
   belongs_to :tercero, class_name: "Cliente", optional: true  # PR-D3.c: cliente final cuando CEC le maneja carga a otra empresa
+  belongs_to :tarifa_recolecta, optional: true  # PR-D6.a: cuando el cajero elige una tarifa del catálogo, copiamos monto+moneda
   has_many :pre_alerta_paquetes, dependent: :nullify
   has_many :nota_debito_items,  dependent: :nullify
   has_many :nota_credito_items, dependent: :nullify
@@ -122,7 +123,10 @@ class Paquete < ApplicationRecord
 
   before_validation :generate_guia, on: :create, if: -> { guia.blank? }
   before_validation :generate_numero_recepcion, on: :create, if: -> { numero_recepcion.blank? && sucursal_id.present? }
-  before_validation :default_recolecta_monto, if: -> { recolecta_solicitada? && recolecta_monto.blank? }
+  # Trigger si: (a) marcó recolecta y aún no hay monto, o (b) cambió la
+  # tarifa elegida (el cajero corrige zona) → re-sincronizamos monto+moneda.
+  before_validation :default_recolecta_monto,
+                    if: -> { recolecta_solicitada? && (recolecta_monto.blank? || will_save_change_to_tarifa_recolecta_id?) }
   # PR-D3.b: tracking auto EP-AÑO-SUC-PROV-NNNNNN para paquetes
   # cuyo proveedor es de tipo entrega_personal y el operador no
   # ingresó tracking propio (típico: drivers privados, Uber).
@@ -417,11 +421,20 @@ class Paquete < ApplicationRecord
     end
   end
 
-  # PR-D1.c: cuando se marca recolecta_solicitada y aún no hay monto,
-  # auto-llena con la tarifa default de $35 USD. El cajero puede editarlo.
+  # PR-D1.c + PR-D6.a: cuando se marca recolecta_solicitada y aún no
+  # hay monto, autocompletar.
+  # - Si el cajero seleccionó una `tarifa_recolecta` del catálogo →
+  #   copiar monto+moneda de ahí (Yusef pidió tabla configurable por zona).
+  # - Si no eligió tarifa → fallback al default $35 USD del PR-D1.c.
+  # El cajero puede sobreescribir el monto manualmente después.
   def default_recolecta_monto
-    self.recolecta_monto = RECOLECTA_TARIFA_DEFAULT_USD
-    self.recolecta_moneda ||= "USD"
+    if tarifa_recolecta.present?
+      self.recolecta_monto  = tarifa_recolecta.monto
+      self.recolecta_moneda = tarifa_recolecta.moneda
+    else
+      self.recolecta_monto  = RECOLECTA_TARIFA_DEFAULT_USD
+      self.recolecta_moneda ||= "USD"
+    end
   end
 
   # PR-D1.c: si se asigna sub_localidad_actual, debe pertenecer a la
