@@ -1,9 +1,15 @@
 <%# PR-D4.a.2 follow-up: el show entero vive dentro del scope de
     `mover-pre-alerta-modal` para que el trigger (en PageHeader) y el
-    <dialog> (al final) compartan controlador Stimulus. %>
+    <dialog> (al final) compartan controlador Stimulus.
+
+    PR-D4.a.3: además envolvemos todo en un <turbo-frame> para que el
+    botón "Refrescar" recargue solo esta zona sin perder scroll. El
+    frame usa `target="_top"` para que el resto de los links naveguen
+    a página completa por defecto; sólo Refrescar opta-in al frame. %>
 <div data-controller="mover-pre-alerta-modal"
      data-mover-pre-alerta-modal-search-url-value="<%= buscar_pre_alertas_path %>"
      data-mover-pre-alerta-modal-paquete-id-value="<%= @paquete.id %>">
+<%= turbo_frame_tag "paquete_dynamic", target: "_top" do %>
 
 <%= render PageHeaderComponent.new(title: @paquete.guia, subtitle: "Paquete") do |header|
   # ── Pill de Pre-Alerta vinculada (contexto, debajo del título) ──
@@ -92,7 +98,7 @@
   # ── Navegación ──
   header.with_action do
     render(ButtonComponent.new(variant: :primary, size: :sm, href: paquete_path(@paquete),
-                               icon: "arrow-path", data: { turbo_action: "replace" })) { "Refrescar" }
+                               icon: "arrow-path", data: { turbo_frame: "paquete_dynamic" })) { "Refrescar" }
   end
   header.with_action do
     render(ButtonComponent.new(variant: :primary, size: :sm, href: paquetes_path,
@@ -537,4 +543,5 @@ end %>
   <% end %>
 </dialog>
 
+<% end %><%# /turbo-frame "paquete_dynamic" %>
 </div><%# /data-controller="mover-pre-alerta-modal" %>
