@@ -1,0 +1,25 @@
+<%# PR-D4.review v2: vista combinada que renderiza N warehouse receipts
+    en una sola pestaña con saltos de página entre cada una. Reemplaza
+    el flow anterior de "abrir N pop-ups" que dependía del navegador
+    autorizar pop-ups. Yusef: "queremos un flow más simple que no requiera
+    autorizar pop-ups".
+
+    Auto-trigger window.print() al cargar para que el usuario vea el
+    diálogo de impresión con todas las páginas listas. %>
+<style>
+  @media print {
+    .wr-page-break { page-break-after: always; break-after: page; }
+  }
+</style>
+
+<% @paquetes.each_with_index do |p, idx| %>
+  <div class="<%= 'wr-page-break' if idx < @paquetes.size - 1 %>">
+    <%= render "label", paquete: p %>
+  </div>
+<% end %>
+
+<script>
+  window.addEventListener("load", () => {
+    setTimeout(() => window.print(), 300)
+  })
+</script>

@@ -428,6 +428,34 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to label_paquete_path(@paquete)
   end
 
+  # PR-D4.review v2 — etiquetas_combinadas renderiza N etiquetas en una sola
+  # pestaña con saltos de página, evitando el flow de N pop-ups.
+  test "etiquetas_combinadas renderiza varios paquetes con page-breaks" do
+    paquete = paquetes(:recibido)
+    paquete.update_columns(cantidad_paquetes: 2, numero_caja: 1)
+    hermano = Paquete.create!(tracking: paquete.tracking, cliente: paquete.cliente,
+                              sucursal: paquete.sucursal, cantidad_paquetes: 2, numero_caja: 2)
+
+    get etiquetas_combinadas_paquetes_url(paquete_ids: [ paquete.id, hermano.id ])
+    assert_response :success
+    # Debe haber UN page-break entre los 2 (no después del último).
+    assert_select "div.wr-page-break", count: 1
+    # Auto-print en JS al cargar.
+    assert_match(/window\.print/, response.body)
+  end
+
+  test "etiquetas_combinadas sin ids redirige con alerta" do
+    get etiquetas_combinadas_paquetes_url
+    assert_redirected_to paquetes_path
+    assert_match(/seleccion/i, flash[:alert])
+  end
+
+  test "etiquetas_combinadas con ids inexistentes redirige con alerta" do
+    get etiquetas_combinadas_paquetes_url(paquete_ids: [ 999999 ])
+    assert_redirected_to paquetes_path
+    assert_match(/no se encontraron|no encontró/i, flash[:alert])
+  end
+
   test "Refrescar button opta-in al frame paquete_dynamic" do
     get paquete_url(@paquete)
     assert_response :success

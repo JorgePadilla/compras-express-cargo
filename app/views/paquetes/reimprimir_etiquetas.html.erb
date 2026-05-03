@@ -1,11 +1,12 @@
-<%# PR-D4.a + PR-D4.review: vista para re-imprimir etiquetas Miami.
+<%# PR-D4.a + PR-D4.review v2: vista para re-imprimir etiquetas Miami.
     Yusef pidió "modal con checkboxes preseleccionados de las cajas
-    hermanas". Cada checkbox arranca tildado (todas seleccionadas) y
-    el botón "Imprimir seleccionadas" abre las etiquetas elegidas en
-    pestañas nuevas (un click → N tabs gracias al user gesture).
+    hermanas". Cada checkbox arranca tildado.
 
-    Quick-link individual por caja sigue disponible para imprimir una
-    sola sin tocar checkboxes. %>
+    Al click "Imprimir seleccionadas" submitea como GET a
+    `etiquetas_combinadas_paquetes_path` que renderiza las N etiquetas
+    elegidas en UNA sola pestaña con saltos de página y auto-print.
+    Reemplaza el flow anterior de "N pop-ups" que requería autorización
+    del browser. %>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -30,11 +31,13 @@
 
       <p class="text-xs text-gray-500 mb-4 italic">
         Las cajas vienen pre-seleccionadas. Destildá las que NO querés imprimir
-        y hacé click en <strong>Imprimir seleccionadas</strong> — se abrirá una
-        pestaña por caja. Si tu navegador bloquea pop-ups, autorizalo para este sitio.
+        y hacé click en <strong>Imprimir seleccionadas</strong> — se abrirá UNA
+        sola pestaña con todas las etiquetas y el diálogo de impresión.
       </p>
 
-      <form id="reimprimir-form" class="space-y-3">
+      <%= form_with url: etiquetas_combinadas_paquetes_path, method: :get,
+                    html: { id: "reimprimir-form", target: "_blank" },
+                    class: "space-y-3" do %>
         <%# Toggle "Seleccionar todas / ninguna" %>
         <div class="flex items-center justify-between bg-gray-50 px-3 py-2 rounded">
           <label class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-600">
@@ -50,7 +53,7 @@
         <ul class="divide-y divide-gray-200 ring-1 ring-gray-200 rounded">
           <% @hermanas.each do |caja| %>
             <li class="flex items-center gap-3 px-3 py-3 hover:bg-gray-50">
-              <input type="checkbox" name="caja_url" value="<%= label_paquete_path(caja) %>" checked
+              <input type="checkbox" name="paquete_ids[]" value="<%= caja.id %>" checked
                      class="caja-checkbox w-4 h-4 shrink-0 rounded border-gray-300 text-cec-teal focus:ring-cec-teal">
 
               <span class="shrink-0 w-12 h-12 rounded-lg bg-cec-gold-gradient text-white flex flex-col items-center justify-center shadow-sm">
@@ -74,18 +77,16 @@
         <div class="flex items-center justify-end gap-2 pt-2">
           <%= link_to "Cancelar", paquete_path(@paquete),
                 class: "px-3 py-1.5 rounded text-sm font-medium text-gray-700 hover:bg-gray-100" %>
-          <button type="button" id="print-selected"
+          <button type="submit" id="print-selected"
                   class="px-4 py-1.5 rounded text-sm font-semibold bg-cec-navy text-white hover:bg-cec-navy-dark shadow-sm inline-flex items-center gap-2">
             <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/><path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"/></svg>
             Imprimir seleccionadas
           </button>
         </div>
-      </form>
+      <% end %>
     </div>
   </div>
 
-  <%# Lógica simple en línea: 1 user click → window.open por cada checkbox marcado.
-      Browsers permiten N pop-ups dentro del mismo gesto del usuario. %>
   <script>
     (function () {
       const form     = document.getElementById("reimprimir-form")
@@ -100,7 +101,6 @@
         printBtn.disabled = total === 0
         printBtn.classList.toggle("opacity-50", total === 0)
         printBtn.classList.toggle("cursor-not-allowed", total === 0)
-        // toggle-all reflects current state: si todas están tildadas, marcado.
         toggle.checked = total === boxes().length && total > 0
       }
 
@@ -111,12 +111,6 @@
 
       form.addEventListener("change", e => {
         if (e.target.classList.contains("caja-checkbox")) refreshCount()
-      })
-
-      printBtn.addEventListener("click", () => {
-        const selected = boxes().filter(b => b.checked).map(b => b.value)
-        if (selected.length === 0) return
-        selected.forEach(url => window.open(url, "_blank"))
       })
 
       refreshCount()

@@ -118,6 +118,26 @@ class PaquetesController < ApplicationController
     end
   end
 
+  # PR-D4.review v2: imprime varias etiquetas en UNA sola pestaña con
+  # saltos de página. Reemplaza el flow de N pop-ups (que dependía del
+  # browser autorizar pop-ups). El usuario elige las cajas con checkboxes
+  # en `reimprimir_etiquetas` y submitea acá; auto-trigger window.print().
+  def etiquetas_combinadas
+    ids = Array(params[:paquete_ids]).reject(&:blank?).map(&:to_i)
+    if ids.empty?
+      redirect_to paquetes_path, alert: "Selecciona al menos una caja para imprimir."
+      return
+    end
+    @paquetes = Paquete.where(id: ids).includes(:cliente, :sucursal, :tipo_envio,
+                                                 warehouse_receipt: %i[supplier agent consignee])
+                       .order(:numero_caja, :id)
+    if @paquetes.empty?
+      redirect_to paquetes_path, alert: "No se encontraron paquetes con los IDs solicitados."
+      return
+    end
+    render layout: "print"
+  end
+
   def destroy
     blockers = paquete_destroy_blockers(@paquete)
     if blockers.any?
