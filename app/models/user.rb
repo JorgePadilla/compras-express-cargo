@@ -27,6 +27,7 @@ class User < ApplicationRecord
   validates :rol, presence: true
   validates :tema, inclusion: { in: %w[light dark], allow_nil: true }
   validates :iniciales, length: { maximum: 8 }, allow_blank: true
+  validates :sidebar_position, inclusion: { in: %w[left right] }
 
   # Scopes
   scope :activos, -> { where(activo: true) }

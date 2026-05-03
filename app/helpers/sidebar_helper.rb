@@ -3,13 +3,14 @@ module SidebarHelper
     active = (path != "#" && current_page?(path)) rescue false
     content_tag(:li) do
       link_to path, class: sidebar_link_classes(active),
+              title: label,
               data: { action: "click->sidebar#navigate" } do
         safe_join([
           icon ? heroicon(icon, variant: :outline, options: { class: "w-5 h-5 shrink-0" }) : nil,
-          content_tag(:span, label, class: "ml-3"),
+          content_tag(:span, label, class: "ml-3 sidebar-label whitespace-nowrap"),
           badge_count && badge_count > 0 ?
             content_tag(:span, badge_count,
-              class: "ml-auto bg-cec-gold text-cec-navy-dark text-xs font-bold px-2 py-0.5 rounded-full") : nil
+              class: "ml-auto sidebar-label bg-cec-gold text-cec-navy-dark text-xs font-bold px-2 py-0.5 rounded-full") : nil
         ].compact)
       end
     end
@@ -19,7 +20,7 @@ module SidebarHelper
     content_tag(:li, class: "pt-4") do
       safe_join([
         content_tag(:p, title,
-          class: "px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2"),
+          class: "px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 sidebar-label whitespace-nowrap"),
         content_tag(:ul, class: "space-y-1", &block)
       ])
     end

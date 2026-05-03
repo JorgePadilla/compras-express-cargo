@@ -4,6 +4,7 @@ Rails.application.routes.draw do
   resources :passwords, param: :token
 
   resource :preferencia_tema, only: [:update], controller: "theme_preferences"
+  resource :preferencia_sidebar, only: [:update], controller: "sidebar_preferences"
 
   # Health check for Render
   get "up" => "rails/health#show", as: :rails_health_check

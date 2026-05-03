@@ -225,6 +225,38 @@
   :where(.dark) .hover\:bg-gray-100:hover  { background-color: rgba(55, 65, 81, 0.7); }
 }
 
+/* ─── Sidebar hover-expand + pin + position ───
+   Las clases las controla Stimulus (sidebar_controller.js) en el <aside>:
+     .is-collapsed → ancho 64px, esconde labels.
+     .is-pinned    → no auto-colapsa al sacar mouse.
+     .is-right     → cambia anclaje de izq a der.
+
+   En mobile (<lg) la lógica de hover-expand se desactiva — el sidebar
+   sigue siendo el drawer clásico con `-translate-x-full`. */
+@media (min-width: 1024px) {
+  aside#sidebar.is-collapsed { width: 4rem; }
+  aside#sidebar.is-collapsed .sidebar-label { display: none; }
+  aside#sidebar.is-collapsed .sidebar-icon-only { display: block !important; }
+  aside#sidebar:not(.is-collapsed) { width: 16rem; }
+  aside#sidebar:not(.is-collapsed) .sidebar-icon-only { display: none !important; }
+
+  /* Pin button visual: solid icon cuando pinned, outline cuando no. */
+  aside#sidebar.is-pinned .sidebar-pin-on  { display: inline-block; }
+  aside#sidebar.is-pinned .sidebar-pin-off { display: none; }
+
+  /* Posición a la derecha. */
+  aside#sidebar.is-right { left: auto; right: 0; }
+
+  /* Main compensa margin según estado actual del sidebar.
+     Cuando está pinned, main pierde el ancho completo del sidebar.
+     Cuando NO está pinned (overlay), main solo deja espacio para los
+     íconos colapsados (4rem). */
+  body.sidebar-collapsed:not(.sidebar-right) main      { margin-left: 4rem; margin-right: 0; }
+  body.sidebar-pinned:not(.sidebar-collapsed):not(.sidebar-right) main { margin-left: 16rem; margin-right: 0; }
+  body.sidebar-right.sidebar-collapsed main            { margin-right: 4rem; margin-left: 0; }
+  body.sidebar-right.sidebar-pinned:not(.sidebar-collapsed) main { margin-right: 16rem; margin-left: 0; }
+}
+
 /* ─── Print stylesheet ───
    Oculta sidebar, topbar mobile y elementos de UI no-contenido al imprimir.
    Aplica a window.print() (atajo F4) y al print del navegador. Las clases
