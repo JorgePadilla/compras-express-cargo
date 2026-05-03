@@ -195,15 +195,11 @@ end %>
       <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
         <%= link_to @paquete.cliente.codigo, @paquete.cliente, class: "font-mono text-cec-navy dark:text-cec-gold hover:underline" %>
         — <%= @paquete.cliente.nombre_completo %>
-        <%# Botón Copy del código del cliente — alineado con el helper copyable. %>
-        <span class="ml-2 inline-flex" data-controller="clipboard" data-clipboard-text-value="<%= @paquete.cliente.codigo %>">
-          <button type="button"
-                  data-action="clipboard#copy" data-clipboard-target="button"
-                  title="Copiar código del cliente"
-                  aria-label="Copiar código del cliente"
-                  class="inline-flex items-center justify-center w-5 h-5 rounded text-gray-300 dark:text-gray-600 hover:text-cec-teal hover:bg-gray-100 dark:hover:text-cec-teal-light dark:hover:bg-gray-700 transition-colors">
-            <%= heroicon "clipboard-document", variant: :outline, options: { class: "w-3.5 h-3.5" } %>
-          </button>
+        <%# Botón Copy del código del cliente — usa copy_button helper
+            (mismo markup que copyable, con los 3 íconos en el DOM y
+            toggle de visibilidad por CSS → zero layout shift). %>
+        <span class="ml-2 inline-flex align-middle" data-controller="clipboard" data-clipboard-text-value="<%= @paquete.cliente.codigo %>">
+          <%= copy_button(label: "Copiar código del cliente") %>
         </span>
       </dd>
       <%# PR-D3.c: Tercero — cliente final cuando aplica %>
