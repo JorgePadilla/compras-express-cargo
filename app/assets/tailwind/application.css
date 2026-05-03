@@ -225,6 +225,14 @@
   :where(.dark) .hover\:bg-gray-100:hover  { background-color: rgba(55, 65, 81, 0.7); }
 }
 
+/* ─── Sidebar nav: scrollbar oculto (clean rail) ───
+   El overflow-y-auto sigue activo en el <nav> → wheel / touch /
+   teclado scrollean normal; solo se oculta el indicador visual de
+   la barra para que el rail (sobre todo colapsado en 64px) se vea
+   limpio. Patrón macOS / Slack / Discord. */
+aside#sidebar nav { scrollbar-width: none; -ms-overflow-style: none; }
+aside#sidebar nav::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
 /* ─── Sidebar hover-expand + pin + position ───
    Las clases las controla Stimulus (sidebar_controller.js) en el <aside>:
      .is-collapsed → ancho 64px, esconde labels.
