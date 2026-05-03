@@ -29,6 +29,7 @@ Rails.application.routes.draw do
       get :check_tracking
       get :search
       get :export
+      get :etiquetas_combinadas
       post :bulk_print
       post :bulk_export
     end
