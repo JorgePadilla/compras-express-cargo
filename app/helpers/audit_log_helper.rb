@@ -85,10 +85,16 @@ module AuditLogHelper
     "tracking"             => "Tracking",
     "tracking_secundario"  => "Tracking secundario",
     "guia"                 => "Guía",
+    "numero"               => "N° Documento",
+    "numero_documento"     => "N° Documento",
     "numero_recepcion"     => "N° Recepción",
     "numero_caja"          => "N° Caja",
+    "numero_guia"          => "N° Guía",
     "cantidad_paquetes"    => "Cant. paquetes",
     "cantidad_productos"   => "Cant. productos",
+    "volumen_total"        => "Volumen total",
+    "peso_total"           => "Peso total",
+    "tipo_envio"           => "Tipo de envío",
 
     # Pesos y dimensiones
     "peso"                 => "Peso (lbs)",
@@ -99,18 +105,25 @@ module AuditLogHelper
     "peso_cobrar"          => "Peso a cobrar",
 
     # Asociaciones (FK)
-    "cliente_id"           => "Cliente",
-    "tipo_envio_id"        => "Tipo de envío",
-    "manifiesto_id"        => "Manifiesto",
-    "sucursal_id"          => "Sucursal destino",
-    "sucursal_actual_id"   => "Sucursal actual",
+    "cliente_id"             => "Cliente",
+    "tipo_envio_id"          => "Tipo de envío",
+    "manifiesto_id"          => "Manifiesto",
+    "sucursal_id"            => "Sucursal destino",
+    "sucursal_origen_id"     => "Sucursal origen",
+    "sucursal_actual_id"     => "Sucursal actual",
     "sub_localidad_actual_id" => "Bodega interna",
-    "warehouse_receipt_id" => "Warehouse Receipt",
-    "proveedor_id"         => "Proveedor",
-    "user_id"              => "Usuario",
-    "pre_factura_id"       => "Pre-factura",
-    "venta_id"             => "Venta / Factura",
-    "entrega_id"           => "Entrega",
+    "warehouse_receipt_id"   => "Warehouse Receipt",
+    "proveedor_id"           => "Proveedor",
+    "user_id"                => "Usuario",
+    "creado_por_id"          => "Creado por",
+    "repartidor_id"          => "Repartidor",
+    "pre_factura_id"         => "Pre-factura",
+    "venta_id"               => "Venta / Factura",
+    "entrega_id"             => "Entrega",
+    "categoria_precio_id"    => "Categoría de precios",
+    "empresa_manifiesto_id"  => "Empresa transportadora",
+    "financiamiento_id"      => "Financiamiento",
+    "tercero_id"             => "Tercero",
 
     # Texto libre
     "proveedor"            => "Proveedor (texto)",
@@ -152,7 +165,52 @@ module AuditLogHelper
     # Pre-alerta / Pre-factura flags
     "pre_alerta"  => "Flag pre-alerta",
     "pre_factura" => "Flag pre-factura",
-    "consolidado" => "Consolidado"
+    "consolidado" => "Consolidado",
+    "con_reempaque" => "Con re-empaque",
+    "notificado" => "Notificado",
+    "finalizado" => "Finalizado",
+    "creado_por_tipo" => "Creado por (tipo)",
+    "deleted_at" => "Anulado en",
+
+    # Cliente — datos personales / catálogo
+    "codigo"             => "Código",
+    "nombre"             => "Nombre",
+    "apellido"           => "Apellido",
+    "identidad"          => "Identidad / DNI",
+    "email"              => "Email",
+    "telefono"           => "Teléfono",
+    "telefono_whatsapp"  => "WhatsApp",
+    "direccion"          => "Dirección",
+    "ciudad"             => "Ciudad",
+    "departamento"       => "Departamento",
+    "saldo_pendiente"    => "Saldo pendiente",
+    "activo"             => "Activo",
+    "notificar_facturas" => "Notificar facturas por email",
+    "tema"               => "Tema (preferencia)",
+    "correo_enviado"     => "Correo bienvenida enviado",
+    "correo_confirmado"  => "Correo confirmado",
+
+    # PreFactura / Venta — totales y montos (saldo_pendiente ya está
+    # arriba en sección Cliente; queda mismo label).
+    "subtotal"               => "Subtotal",
+    "impuesto"               => "Impuesto",
+    "total"                  => "Total",
+    "moneda"                 => "Moneda",
+    "tasa_cambio_aplicada"   => "Tasa de cambio aplicada",
+    "fecha_trabajo"          => "Fecha de trabajo",
+    "confirmado_at"          => "Confirmado en",
+    "facturado_at"           => "Facturado en",
+    "pagada_at"              => "Pagada en",
+    "email_pendiente_enviado_at" => "Email pendiente enviado",
+    "email_pagada_enviado_at"    => "Email pago confirmado enviado",
+
+    # Entrega
+    "tipo_entrega"       => "Tipo de entrega",
+    "receptor_nombre"    => "Nombre del receptor",
+    "receptor_identidad" => "Identidad del receptor",
+    "direccion_entrega"  => "Dirección de entrega",
+    "despachado_at"      => "Despachado en",
+    "entregado_at"       => "Entregado en"
   }.freeze
 
   # Mapping FK column → resolver. Cada resolver es un Proc que recibe
@@ -172,6 +230,7 @@ module AuditLogHelper
       Manifiesto.where(id: ids).each_with_object({}) { |m, h| h[m.id] = m.numero }
     },
     "sucursal_id"        => ->(ids) { Sucursal.where(id: ids).pluck(:id, :nombre).to_h },
+    "sucursal_origen_id" => ->(ids) { Sucursal.where(id: ids).pluck(:id, :nombre).to_h },
     "sucursal_actual_id" => ->(ids) { Sucursal.where(id: ids).pluck(:id, :nombre).to_h },
     "warehouse_receipt_id" => ->(ids) {
       defined?(WarehouseReceipt) ? WarehouseReceipt.where(id: ids).pluck(:id, :receipt_number).to_h : {}
@@ -180,7 +239,26 @@ module AuditLogHelper
       defined?(Proveedor) ? Proveedor.where(id: ids).pluck(:id, :nombre).to_h : {}
     },
     "pre_factura_id" => ->(ids) { PreFactura.where(id: ids).pluck(:id, :numero).to_h },
-    "venta_id"       => ->(ids) { Venta.where(id: ids).pluck(:id, :numero).to_h }
+    "venta_id"       => ->(ids) { Venta.where(id: ids).pluck(:id, :numero).to_h },
+    "entrega_id"     => ->(ids) { Entrega.where(id: ids).pluck(:id, :numero).to_h },
+    "tercero_id"     => ->(ids) {
+      Cliente.where(id: ids).each_with_object({}) { |c, h| h[c.id] = "#{c.codigo} — #{c.nombre_completo}" }
+    },
+    "creado_por_id" => ->(ids) {
+      User.where(id: ids).each_with_object({}) { |u, h| h[u.id] = "#{u.nombre} (#{u.iniciales_display})" }
+    },
+    "repartidor_id" => ->(ids) {
+      User.where(id: ids).each_with_object({}) { |u, h| h[u.id] = "#{u.nombre} (#{u.iniciales_display})" }
+    },
+    "categoria_precio_id" => ->(ids) {
+      defined?(CategoriaPrecio) ? CategoriaPrecio.where(id: ids).pluck(:id, :nombre).to_h : {}
+    },
+    "empresa_manifiesto_id" => ->(ids) {
+      defined?(EmpresaManifiesto) ? EmpresaManifiesto.where(id: ids).pluck(:id, :nombre).to_h : {}
+    },
+    "financiamiento_id" => ->(ids) {
+      defined?(Financiamiento) ? Financiamiento.where(id: ids).pluck(:id, :numero).to_h : {}
+    }
   }.freeze
 
   # Etiqueta humana de columna (usa COLUMN_LABELS o humaniza el nombre).

@@ -140,6 +140,50 @@ class AuditLogHelperTest < ActionView::TestCase
     assert_not can_view_audit_log?
   end
 
+  # ── PR-D7.b: COLUMN_LABELS y FK_RESOLVERS expandidos para los modelos
+  #    Cliente, PreAlerta, PreFactura, Venta, Manifiesto, Entrega.
+
+  test "audit_column_label resuelve labels de cliente" do
+    assert_equal "Nombre",       audit_column_label("nombre")
+    assert_equal "Email",        audit_column_label("email")
+    assert_equal "Teléfono",     audit_column_label("telefono")
+    assert_equal "Categoría de precios", audit_column_label("categoria_precio_id")
+  end
+
+  test "audit_column_label resuelve labels de pre_alerta y pre_factura" do
+    assert_equal "N° Documento",       audit_column_label("numero_documento")
+    assert_equal "Con re-empaque",     audit_column_label("con_reempaque")
+    assert_equal "Tasa de cambio aplicada", audit_column_label("tasa_cambio_aplicada")
+    assert_equal "Confirmado en",      audit_column_label("confirmado_at")
+  end
+
+  test "audit_column_label resuelve labels de manifiesto y entrega" do
+    assert_equal "Empresa transportadora", audit_column_label("empresa_manifiesto_id")
+    assert_equal "Sucursal origen",        audit_column_label("sucursal_origen_id")
+    assert_equal "Repartidor",             audit_column_label("repartidor_id")
+    assert_equal "Tipo de entrega",        audit_column_label("tipo_entrega")
+    assert_equal "Despachado en",          audit_column_label("despachado_at")
+  end
+
+  test "audit_column_label cae a humanize para columnas no listadas" do
+    assert_equal "Columna inventada", audit_column_label("columna_inventada")
+  end
+
+  test "FK_RESOLVERS incluye todos los nuevos resolvers" do
+    %w[entrega_id tercero_id creado_por_id repartidor_id categoria_precio_id
+       empresa_manifiesto_id financiamiento_id sucursal_origen_id].each do |col|
+      assert AuditLogHelper::FK_RESOLVERS.key?(col), "falta resolver para #{col}"
+    end
+  end
+
+  test "tercero_id resolver retorna codigo + nombre del cliente" do
+    cliente = clientes(:juan)
+    resolver = AuditLogHelper::FK_RESOLVERS["tercero_id"]
+    result = resolver.call([ cliente.id ])
+    assert_includes result[cliente.id], cliente.codigo
+    assert_includes result[cliente.id], cliente.nombre_completo
+  end
+
   private
 
   # Helper para tests: Current.user es un delegate de Current.session.user,
