@@ -408,6 +408,26 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame#paquete_dynamic[target=?]", "_top"
   end
 
+  # PR-D4.review — Re-imprimir etiquetas de un paquete dividido muestra
+  # checkboxes preseleccionados (Yusef: "modal con checkboxes preseleccionados").
+  test "reimprimir_etiquetas para paquete dividido renderiza checkboxes preseleccionados" do
+    paquete = paquetes(:recibido)
+    paquete.update_columns(cantidad_paquetes: 2, numero_caja: 1)
+    Paquete.create!(tracking: paquete.tracking, cliente: paquete.cliente,
+                    sucursal: paquete.sucursal, cantidad_paquetes: 2, numero_caja: 2)
+
+    get reimprimir_etiquetas_paquete_url(paquete)
+    assert_response :success
+    assert_select "input.caja-checkbox[checked]", count: 2
+    assert_select "button#print-selected", text: /Imprimir seleccionadas/
+    assert_select "input#toggle-all[checked]"
+  end
+
+  test "reimprimir_etiquetas para paquete individual redirige al label" do
+    get reimprimir_etiquetas_paquete_url(@paquete)
+    assert_redirected_to label_paquete_path(@paquete)
+  end
+
   test "Refrescar button opta-in al frame paquete_dynamic" do
     get paquete_url(@paquete)
     assert_response :success
