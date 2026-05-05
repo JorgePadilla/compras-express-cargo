@@ -125,17 +125,6 @@ Rails.application.routes.draw do
       post   :enviar
       post   :aceptar
       delete :rechazar
-      post   :generar_proforma
-      get    :pdf
-      post   :enviar_email
-    end
-  end
-
-  resources :proformas, except: :destroy do
-    collection { get :facturables }
-    member do
-      post   :emitir
-      delete :anular
       get    :pdf
       post   :enviar_email
     end
@@ -201,9 +190,6 @@ Rails.application.routes.draw do
         post :aceptar
         delete :rechazar
       end
-    end
-    resources :proformas, only: %i[index show] do
-      member { get :pdf }
     end
     resources :financiamientos, only: %i[index show]
     resources :entregas, only: %i[index show]

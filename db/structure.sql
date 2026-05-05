@@ -5307,6 +5307,7 @@ ALTER TABLE ONLY public.ep_counters
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260505061205'),
 ('20260505052442'),
 ('20260505025649'),
 ('20260503063133'),

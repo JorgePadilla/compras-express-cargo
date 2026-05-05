@@ -8,8 +8,7 @@ class VentaPdf < ApplicationPdf
 
   def build
     header
-    titulo = @venta.proforma? ? "PROFORMA" : "FACTURA"
-    titulo_documento(titulo, @venta.numero)
+    titulo_documento("FACTURA", @venta.numero)
 
     text "Fecha: #{I18n.l(@venta.created_at.to_date, format: :long)}" rescue text "Fecha: #{@venta.created_at.to_date}"
     text "Estado: #{@venta.estado.upcase}"
