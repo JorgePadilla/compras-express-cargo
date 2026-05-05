@@ -6,7 +6,7 @@
     Filtros
   </summary>
   <div class="px-6 py-4 border-t border-gray-200">
-    <%= form_tag recibos_path, method: :get, class: "grid grid-cols-1 md:grid-cols-3 gap-4" do %>
+    <%= form_tag recibos_path, method: :get, class: "grid grid-cols-1 md:grid-cols-3 gap-4", data: { controller: "f2-clear", f2_clear_submit_value: "true" } do %>
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Desde</label>
         <%= date_field_tag :fecha_desde, params[:fecha_desde], class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
