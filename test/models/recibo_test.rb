@@ -3,7 +3,7 @@ require "test_helper"
 class ReciboTest < ActiveSupport::TestCase
   test "auto-generates numero" do
     recibo = Recibo.create!(
-      venta: ventas(:pagada_maria),
+      venta: facturas(:pagada_maria),
       pago: pagos(:pago_maria),
       cliente: clientes(:maria),
       monto: 5.00,
@@ -15,7 +15,7 @@ class ReciboTest < ActiveSupport::TestCase
   test "requires unique numero" do
     dup = Recibo.new(
       numero: "RE-000001",
-      venta: ventas(:pagada_maria),
+      venta: facturas(:pagada_maria),
       pago: pagos(:pago_maria),
       cliente: clientes(:maria),
       monto: 5.00
@@ -25,7 +25,7 @@ class ReciboTest < ActiveSupport::TestCase
 
   test "belongs to venta, pago and cliente" do
     r = recibos(:recibo_maria)
-    assert_equal ventas(:pagada_maria), r.venta
+    assert_equal facturas(:pagada_maria), r.venta
     assert_equal pagos(:pago_maria), r.pago
     assert_equal clientes(:maria), r.cliente
   end

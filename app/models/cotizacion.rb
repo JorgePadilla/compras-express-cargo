@@ -3,13 +3,13 @@ class Cotizacion < ApplicationRecord
   self.table_name = "cotizaciones"
   include CurrencyAware
 
-  ISV_RATE = Venta::ISV_RATE
+  ISV_RATE = Factura::ISV_RATE
 
   ESTADOS = %w[borrador enviada aceptada rechazada expirada].freeze
 
   belongs_to :cliente
   belongs_to :creado_por, class_name: "User", optional: true
-  belongs_to :venta, optional: true
+  belongs_to :venta, class_name: "Factura", optional: true
   has_many :cotizacion_items, dependent: :destroy, inverse_of: :cotizacion
 
   accepts_nested_attributes_for :cotizacion_items, allow_destroy: true, reject_if: :all_blank
@@ -75,7 +75,7 @@ class Cotizacion < ApplicationRecord
 
     proforma = nil
     transaction do
-      proforma = Venta.new(
+      proforma = Factura.new(
         cliente: cliente,
         creado_por: user,
         moneda: moneda,
@@ -83,7 +83,7 @@ class Cotizacion < ApplicationRecord
         notas: "Generada desde cotizacion #{numero}"
       )
       cotizacion_items.each do |item|
-        proforma.venta_items.build(
+        proforma.factura_items.build(
           paquete: item.paquete,
           concepto: item.concepto,
           peso_cobrar: item.peso_cobrar,

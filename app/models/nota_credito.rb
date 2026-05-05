@@ -3,12 +3,12 @@ class NotaCredito < ApplicationRecord
   self.table_name = "notas_credito"
   include CurrencyAware
 
-  ISV_RATE = Venta::ISV_RATE
+  ISV_RATE = Factura::ISV_RATE
 
   ESTADOS = %w[creado emitido anulado].freeze
   MOTIVOS = %w[devolucion descuento error_facturacion otro].freeze
 
-  belongs_to :venta
+  belongs_to :venta, class_name: "Factura"
   belongs_to :cliente
   belongs_to :creado_por, class_name: "User", optional: true
   has_many :nota_credito_items, dependent: :destroy, inverse_of: :nota_credito

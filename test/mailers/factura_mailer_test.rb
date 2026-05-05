@@ -2,7 +2,7 @@ require "test_helper"
 
 class FacturaMailerTest < ActionMailer::TestCase
   setup do
-    @venta = ventas(:pendiente_juan)
+    @venta = facturas(:pendiente_juan)
     @recibo = recibos(:recibo_maria) rescue nil
   end
 
@@ -31,7 +31,7 @@ class FacturaMailerTest < ActionMailer::TestCase
   end
 
   test "pagada sends with recibo PDF attachment" do
-    venta = ventas(:pagada_maria)
+    venta = facturas(:pagada_maria)
     recibo = recibos(:recibo_maria)
     email = FacturaMailer.pagada(venta, recibo)
     assert_emails 1 do

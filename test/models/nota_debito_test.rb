@@ -3,7 +3,7 @@ require "test_helper"
 class NotaDebitoTest < ActiveSupport::TestCase
   setup do
     @cliente = clientes(:juan)
-    @venta = ventas(:pendiente_juan)
+    @venta = facturas(:pendiente_juan)
     @user = users(:cajero)
   end
 

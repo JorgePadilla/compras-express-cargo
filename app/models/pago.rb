@@ -4,7 +4,7 @@ class Pago < ApplicationRecord
   METODOS = %w[efectivo tarjeta transferencia].freeze
   ESTADOS = %w[pendiente completado fallido reembolsado].freeze
 
-  belongs_to :venta
+  belongs_to :venta, class_name: "Factura"
   belongs_to :cliente
   belongs_to :registrado_por, class_name: "User", optional: true
   belongs_to :apertura_caja, class_name: "AperturaCaja", optional: true

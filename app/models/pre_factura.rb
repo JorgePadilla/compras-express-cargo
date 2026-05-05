@@ -74,7 +74,7 @@ class PreFactura < ApplicationRecord
         notas: notas
       )
       pre_factura_items.each do |item|
-        venta.venta_items.build(
+        venta.factura_items.build(
           paquete: item.paquete,
           concepto: item.concepto,
           peso_cobrar: item.peso_cobrar,

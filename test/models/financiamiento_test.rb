@@ -2,7 +2,7 @@ require "test_helper"
 
 class FinanciamientoTest < ActiveSupport::TestCase
   setup do
-    @venta = ventas(:pendiente_juan)
+    @venta = facturas(:pendiente_juan)
     @cliente = clientes(:juan)
     @user = users(:cajero)
   end

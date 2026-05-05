@@ -18,7 +18,7 @@ class FinanciamientosControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should get new with venta_id" do
-    get new_financiamiento_url(venta_id: ventas(:pendiente_juan).id)
+    get new_financiamiento_url(venta_id: facturas(:pendiente_juan).id)
     assert_response :success
   end
 
@@ -26,7 +26,7 @@ class FinanciamientosControllerTest < ActionDispatch::IntegrationTest
     assert_difference "Financiamiento.count", 1 do
       post financiamientos_url, params: {
         financiamiento: {
-          venta_id: ventas(:pendiente_juan).id,
+          venta_id: facturas(:pendiente_juan).id,
           cliente_id: clientes(:juan).id,
           moneda: "LPS",
           monto_total: 60,

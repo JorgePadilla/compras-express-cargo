@@ -3,7 +3,7 @@ module Cuenta
     before_action :set_factura, only: [:show, :pdf]
 
     def index
-      @ventas = current_cliente.ventas.includes(:venta_items).activas.recientes
+      @ventas = current_cliente.ventas.includes(:factura_items).activas.recientes
       @ventas = @ventas.by_estado(params[:estado]) if params[:estado].present?
       @ventas = @ventas.page(params[:page]).per(per_page_sanitized)
     end

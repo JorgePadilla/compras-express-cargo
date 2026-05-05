@@ -5,7 +5,7 @@ class Financiamiento < ApplicationRecord
   ESTADOS = %w[activo completado cancelado].freeze
   FRECUENCIAS = %w[semanal quincenal mensual].freeze
 
-  belongs_to :venta
+  belongs_to :venta, class_name: "Factura"
   belongs_to :cliente
   belongs_to :creado_por, class_name: "User", optional: true
   has_many :financiamiento_cuotas, dependent: :destroy

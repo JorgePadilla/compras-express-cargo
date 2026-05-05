@@ -1,7 +1,7 @@
 class Recibo < ApplicationRecord
   include CurrencyAware
 
-  belongs_to :venta
+  belongs_to :venta, class_name: "Factura"
   belongs_to :pago
   belongs_to :cliente
 

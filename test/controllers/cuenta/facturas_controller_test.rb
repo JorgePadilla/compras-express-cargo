@@ -4,7 +4,7 @@ class Cuenta::FacturasControllerTest < ActionDispatch::IntegrationTest
   setup do
     @cliente = clientes(:juan)
     post session_url, params: { email_address: @cliente.email, password: "Cliente123!" }
-    @venta = ventas(:pendiente_juan)
+    @venta = facturas(:pendiente_juan)
   end
 
   test "should get index" do
@@ -23,7 +23,7 @@ class Cuenta::FacturasControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should not show another clients venta" do
-    other = ventas(:pagada_maria)
+    other = facturas(:pagada_maria)
     get cuenta_factura_url(other)
     assert_response :not_found
   end

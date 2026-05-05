@@ -4,7 +4,7 @@ class VentasControllerTest < ActionDispatch::IntegrationTest
   setup do
     @user = users(:cajero)
     post session_url, params: { email_address: @user.email_address, password: "password123" }
-    @venta = ventas(:pendiente_juan)
+    @venta = facturas(:pendiente_juan)
   end
 
   test "should get index" do
@@ -63,8 +63,8 @@ class VentasControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "anular pagada venta fails" do
-    delete anular_venta_url(ventas(:pagada_maria))
-    assert_not ventas(:pagada_maria).reload.anulada?
+    delete anular_venta_url(facturas(:pagada_maria))
+    assert_not facturas(:pagada_maria).reload.anulada?
   end
 
   test "pdf responds with application/pdf" do

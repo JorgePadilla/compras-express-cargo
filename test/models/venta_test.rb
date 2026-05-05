@@ -33,7 +33,7 @@ class VentaTest < ActiveSupport::TestCase
   end
 
   test "registrar_pago creates pago and recibo for full amount" do
-    venta = ventas(:pendiente_juan)
+    venta = facturas(:pendiente_juan)
     initial_cliente_saldo = venta.cliente.saldo_pendiente.to_d
 
     assert_difference ["Pago.count", "Recibo.count"], 1 do
@@ -51,7 +51,7 @@ class VentaTest < ActiveSupport::TestCase
   end
 
   test "registrar_pago with partial amount keeps estado pendiente" do
-    venta = ventas(:pendiente_juan)
+    venta = facturas(:pendiente_juan)
     half = (venta.total.to_d / 2).round(2)
 
     venta.registrar_pago(monto: half, metodo_pago: "efectivo", user: @user)
@@ -62,7 +62,7 @@ class VentaTest < ActiveSupport::TestCase
   end
 
   test "two partial pagos transition to pagada" do
-    venta = ventas(:pendiente_juan)
+    venta = facturas(:pendiente_juan)
     half = (venta.total.to_d / 2).round(2)
 
     venta.registrar_pago(monto: half, metodo_pago: "efectivo", user: @user)
@@ -74,25 +74,25 @@ class VentaTest < ActiveSupport::TestCase
   end
 
   test "registrar_pago returns nil when venta already pagada" do
-    venta = ventas(:pagada_maria)
+    venta = facturas(:pagada_maria)
     assert_nil venta.registrar_pago(monto: 10, metodo_pago: "efectivo", user: @user)
   end
 
   test "registrar_pago returns nil for zero or negative amount" do
-    venta = ventas(:pendiente_juan)
+    venta = facturas(:pendiente_juan)
     assert_nil venta.registrar_pago(monto: 0, metodo_pago: "efectivo", user: @user)
     assert_nil venta.registrar_pago(monto: -5, metodo_pago: "efectivo", user: @user)
   end
 
   test "anular! refuses when pagada" do
-    assert_not ventas(:pagada_maria).anular!
+    assert_not facturas(:pagada_maria).anular!
   end
 
   test "anular! releases paquetes when allowed" do
-    venta = ventas(:pendiente_juan)
+    venta = facturas(:pendiente_juan)
     # Link a paquete to the venta via venta_item so venta.paquetes includes it
     paquete = paquetes(:disponible_entrega_juan)
-    venta_items(:pendiente_juan_item1).update!(paquete: paquete)
+    factura_items(:pendiente_juan_item1).update!(paquete: paquete)
     paquete.update!(venta: venta)
 
     initial_cliente_saldo = @cliente.saldo_pendiente.to_d
@@ -108,18 +108,18 @@ class VentaTest < ActiveSupport::TestCase
   end
 
   test "scope activas excludes anulada" do
-    v = ventas(:pendiente_juan)
+    v = facturas(:pendiente_juan)
     v.update!(estado: "anulada")
     assert_not_includes Venta.activas, v
   end
 
   test "scope pagadas" do
-    assert_includes Venta.pagadas, ventas(:pagada_maria)
-    assert_not_includes Venta.pagadas, ventas(:pendiente_juan)
+    assert_includes Venta.pagadas, facturas(:pagada_maria)
+    assert_not_includes Venta.pagadas, facturas(:pendiente_juan)
   end
 
   test "total_ajustado includes emitidas NDs and NCs" do
-    venta = ventas(:pagada_maria)
+    venta = facturas(:pagada_maria)
     nd = notas_debito(:nd_emitida)  # total 23.00, emitida, belongs to pagada_maria
     nc = notas_credito(:nc_emitida) # total 13.80, emitida, belongs to pagada_maria
 
@@ -176,7 +176,7 @@ class VentaTest < ActiveSupport::TestCase
   end
 
   test "emitir_proforma! returns false for non-proforma" do
-    venta = ventas(:pendiente_juan)
+    venta = facturas(:pendiente_juan)
     assert_not venta.emitir_proforma!
   end
 
@@ -199,7 +199,7 @@ class VentaTest < ActiveSupport::TestCase
   end
 
   test "anular_proforma! returns false for non-proforma" do
-    venta = ventas(:pendiente_juan)
+    venta = facturas(:pendiente_juan)
     assert_not venta.anular_proforma!
   end
 
@@ -214,7 +214,7 @@ class VentaTest < ActiveSupport::TestCase
   end
 
   test "has_many notas_debito and notas_credito" do
-    venta = ventas(:pagada_maria)
+    venta = facturas(:pagada_maria)
     assert_includes venta.notas_debito, notas_debito(:nd_emitida)
     assert_includes venta.notas_credito, notas_credito(:nc_emitida)
   end

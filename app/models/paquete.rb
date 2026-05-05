@@ -6,7 +6,7 @@ class Paquete < ApplicationRecord
   belongs_to :tipo_envio, optional: true
   belongs_to :user, optional: true
   belongs_to :pre_factura, optional: true
-  belongs_to :venta, optional: true
+  belongs_to :venta, class_name: "Factura", optional: true
   belongs_to :entrega, optional: true
   belongs_to :sucursal, optional: true
   belongs_to :sucursal_actual,      class_name: "Sucursal",      optional: true  # PR-D1.c: ubicación física actual

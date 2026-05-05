@@ -5,7 +5,7 @@ class NotasCreditoControllerTest < ActionDispatch::IntegrationTest
     @user = users(:admin)
     post session_url, params: { email_address: @user.email_address, password: "password123" }
     @nc = notas_credito(:nc_creada)
-    @venta = ventas(:pendiente_juan)
+    @venta = facturas(:pendiente_juan)
   end
 
   test "should get index" do
