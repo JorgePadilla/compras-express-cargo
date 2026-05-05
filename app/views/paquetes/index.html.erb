@@ -110,7 +110,7 @@ end %>
     </svg>
   </summary>
   <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-    <%= form_tag paquetes_path, method: :get, class: "space-y-5" do %>
+    <%= form_tag paquetes_path, method: :get, class: "space-y-5", data: { controller: "f2-clear", f2_clear_submit_value: "true" } do %>
       <% if params[:q].present? %>
         <%= hidden_field_tag :q, params[:q] %>
       <% end %>

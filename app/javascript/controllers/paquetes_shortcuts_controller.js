@@ -4,10 +4,9 @@ import { Controller } from "@hotwired/stimulus"
 //   F4  → Imprimir vista actual (window.print)
 //   F8  → Descargar Excel del scope filtrado
 //   F9  → Descargar PDF del scope filtrado
-//   F2  → Limpiar búsqueda (foco en el campo de búsqueda)
 //
-// Los atajos solo se disparan cuando el foco NO está en un input/textarea
-// editable (excepto F2, que sí limpia el campo de búsqueda).
+// F2 (limpiar filtros + reload) lo maneja el controller universal
+// `f2-clear` adjunto al form de filtros (ver f2_clear_controller.js).
 export default class extends Controller {
   static values = {
     exportXlsxUrl: String,
@@ -24,18 +23,7 @@ export default class extends Controller {
   }
 
   handleKeydown(e) {
-    // F2 limpia búsqueda y enfoca el campo (siempre disponible).
-    if (e.key === "F2") {
-      e.preventDefault()
-      const input = document.querySelector("input[name='q']")
-      if (input) {
-        input.value = ""
-        input.focus()
-      }
-      return
-    }
-
-    // Las demás solo cuando NO se está editando un input.
+    // Los atajos solo cuando NO se está editando un input.
     if (this._isTyping(e.target)) return
 
     if (e.key === "F4") {
