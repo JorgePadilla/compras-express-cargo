@@ -92,7 +92,7 @@ class ProformasControllerTest < ActionDispatch::IntegrationTest
     paquete.reload
     assert_equal "pre_facturado", paquete.estado
 
-    assert_redirected_to venta_url(proforma)
+    assert_redirected_to factura_url(proforma)
   end
 
   test "anular proforma releases paquetes" do

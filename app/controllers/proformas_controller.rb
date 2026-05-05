@@ -60,7 +60,7 @@ class ProformasController < ApplicationController
         FacturaMailer.pendiente(@proforma).deliver_later
         @proforma.update_column(:email_pendiente_enviado_at, Time.current)
       end
-      redirect_to venta_path(@proforma), notice: "Proforma emitida como factura #{@proforma.numero}."
+      redirect_to factura_path(@proforma), notice: "Proforma emitida como factura #{@proforma.numero}."
     else
       redirect_to proforma_path(@proforma), alert: "No se pudo emitir la proforma."
     end
@@ -81,7 +81,7 @@ class ProformasController < ApplicationController
   end
 
   def pdf
-    send_data VentaPdf.new(@proforma).render,
+    send_data FacturaPdf.new(@proforma).render,
               filename: "proforma-#{@proforma.numero}.pdf",
               type: "application/pdf",
               disposition: "inline"

@@ -5,7 +5,7 @@ class ProformaMailer < ApplicationMailer
     @empresa = Empresa.instance
     return unless @cliente.email.present?
 
-    attachments["proforma-#{@venta.numero}.pdf"] = VentaPdf.new(@venta).render
+    attachments["proforma-#{@venta.numero}.pdf"] = FacturaPdf.new(@venta).render
     mail to: @cliente.email,
          subject: "Proforma #{@venta.numero} - #{@empresa.nombre}"
   end

@@ -68,7 +68,7 @@
   end
   if (vt = @paquete.venta)
     header.with_action do
-      render(ButtonComponent.new(variant: :primary, size: :sm, href: venta_path(vt),
+      render(ButtonComponent.new(variant: :primary, size: :sm, href: factura_path(vt),
                                  icon: "currency-dollar")) { "Ver Factura #{vt.numero}" }
     end
   end

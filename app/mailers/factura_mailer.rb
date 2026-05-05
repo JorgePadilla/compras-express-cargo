@@ -5,7 +5,7 @@ class FacturaMailer < ApplicationMailer
     @empresa = Empresa.instance
     return unless @cliente.email.present? && @cliente.notificar_facturas?
 
-    attachments["factura-#{@venta.numero}.pdf"] = VentaPdf.new(@venta).render
+    attachments["factura-#{@venta.numero}.pdf"] = FacturaPdf.new(@venta).render
     mail to: @cliente.email,
          subject: "Factura #{@venta.numero} - #{@empresa.nombre}"
   end

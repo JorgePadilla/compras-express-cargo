@@ -90,7 +90,7 @@
           <tbody class="divide-y divide-gray-200">
             <% @pagos.each do |p| %>
               <tr>
-                <td class="px-4 py-2 font-mono"><%= link_to p.venta.numero, venta_path(p.venta), class: "text-cec-navy hover:underline" %></td>
+                <td class="px-4 py-2 font-mono"><%= link_to p.venta.numero, factura_path(p.venta), class: "text-cec-navy hover:underline" %></td>
                 <td class="px-4 py-2"><%= p.cliente.codigo %></td>
                 <td class="px-4 py-2"><%= p.metodo_pago.humanize %></td>
                 <td class="px-4 py-2 text-right font-medium">L. <%= number_with_delimiter(p.monto.to_f, precision: 2) %></td>

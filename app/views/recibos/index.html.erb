@@ -47,7 +47,7 @@
                 <%= r.cliente.codigo %> <span class="text-gray-500"><%= r.cliente.nombre_completo %></span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-500">
-                <%= link_to r.venta.numero, venta_path(r.venta), class: "hover:underline" %>
+                <%= link_to r.venta.numero, factura_path(r.venta), class: "hover:underline" %>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 <%= r.created_at.strftime("%d/%m/%Y %H:%M") %>

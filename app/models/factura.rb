@@ -3,14 +3,10 @@ class Factura < ApplicationRecord
   include CurrencyAware
   has_paper_trail  # PR-D1.a: audit log
 
-  # PR-FAC.2: rutas, helpers y forms siguen usando `:ventas` hasta que
-  # PR-3 las renombre. `model_name` reporta "Venta" para que `link_to
-  # @factura` resuelva a `venta_path(@factura)`, `form_with model: @factura`
-  # use `/ventas`, etc. El `table_name` explícito (arriba) evita que la
-  # inflexión derive "ventas" del nombre del modelo.
-  def self.model_name
-    ActiveModel::Name.new(self, nil, "Venta")
-  end
+  # PR-FAC.3: model_name vuelve a "Factura" (default). `link_to @factura`
+  # resuelve a `factura_path(@factura)`, `form_with model: @factura` use
+  # `/facturas`, etc. El `table_name` explícito (arriba) ya garantiza que
+  # las queries van contra la tabla `facturas`.
 
   ISV_RATE = BigDecimal("0.15")
 

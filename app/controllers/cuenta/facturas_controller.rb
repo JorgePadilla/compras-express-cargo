@@ -12,7 +12,7 @@ module Cuenta
     end
 
     def pdf
-      send_data VentaPdf.new(@venta).render,
+      send_data FacturaPdf.new(@venta).render,
                 filename: "factura-#{@venta.numero}.pdf",
                 type: "application/pdf",
                 disposition: "inline"

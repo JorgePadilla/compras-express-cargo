@@ -47,7 +47,7 @@
                 <%= link_to nc.numero, nc, class: "text-sm font-mono font-medium text-cec-navy hover:underline" %>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <%= link_to nc.venta.numero, venta_path(nc.venta), class: "text-sm font-mono text-cec-teal hover:underline" %>
+                <%= link_to nc.venta.numero, factura_path(nc.venta), class: "text-sm font-mono text-cec-teal hover:underline" %>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <span class="text-sm text-gray-700"><%= nc.cliente.codigo %></span>

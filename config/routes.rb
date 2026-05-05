@@ -89,7 +89,7 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :ventas, except: %i[new create destroy] do
+  resources :facturas, except: %i[new create destroy] do
     member do
       post   :registrar_pago
       delete :anular
@@ -97,6 +97,14 @@ Rails.application.routes.draw do
       post   :enviar_email
     end
   end
+
+  # PR-FAC.3: alias legacy. Redirige las URLs viejas /ventas/* a las
+  # nuevas /facturas/* hasta que se purguen los enlaces externos
+  # (emails antiguos, bookmarks). PR-4 lo borrará.
+  get  "/ventas",        to: redirect { |_, req| "/facturas#{(req.params.any? ? "?#{req.query_string}" : "")}" }
+  get  "/ventas/:id",     to: redirect("/facturas/%{id}")
+  get  "/ventas/:id/edit", to: redirect("/facturas/%{id}/edit")
+  get  "/ventas/:id/pdf",  to: redirect("/facturas/%{id}/pdf")
 
   resources :recibos, only: %i[index show] do
     member { get :pdf }

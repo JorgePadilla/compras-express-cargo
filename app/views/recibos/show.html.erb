@@ -35,6 +35,6 @@
     <%= link_to "Descargar PDF (F9)", pdf_recibo_path(@recibo), class: "px-4 py-2 bg-cec-navy text-white rounded-lg text-sm font-medium", data: { shortcut: "F9" } %>
     <button onclick="window.print()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50">Imprimir</button>
     <%= link_to "Volver (F2)", recibos_path, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900", data: { shortcut: "F2" } %>
-    <%= link_to "Ver Venta", venta_path(@recibo.venta), class: "px-4 py-2 text-sm text-cec-navy hover:underline" %>
+    <%= link_to "Ver Venta", factura_path(@recibo.venta), class: "px-4 py-2 text-sm text-cec-navy hover:underline" %>
   </div>
 </div>

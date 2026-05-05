@@ -112,13 +112,13 @@
     <div data-stagger class="animate-stagger bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
       <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
         <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100">Ventas recientes</h3>
-        <%= link_to "Ver todas", ventas_path,
+        <%= link_to "Ver todas", facturas_path,
             class: "text-xs text-cec-teal hover:text-cec-teal-dark dark:text-cec-teal-light dark:hover:text-cec-teal font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cec-teal rounded" %>
       </div>
       <div class="divide-y divide-gray-100 dark:divide-gray-700">
         <% @ventas_recientes.each do |v| %>
           <%= render DashboardActivityItemComponent.new(
-                href: venta_path(v),
+                href: factura_path(v),
                 avatar_name: v.cliente&.nombre_completo,
                 eyebrow: v.numero,
                 title: v.cliente&.nombre_completo.to_s,
