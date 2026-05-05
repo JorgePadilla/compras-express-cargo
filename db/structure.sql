@@ -499,8 +499,7 @@ CREATE TABLE public.cotizaciones (
     email_enviado_at timestamp(6) without time zone,
     venta_id bigint,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    factura_id bigint
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -735,6 +734,88 @@ ALTER SEQUENCE public.ep_counters_id_seq OWNED BY public.ep_counters.id;
 
 
 --
+-- Name: venta_items; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.venta_items (
+    id bigint NOT NULL,
+    venta_id bigint NOT NULL,
+    paquete_id bigint,
+    concepto character varying NOT NULL,
+    peso_cobrar numeric(10,2),
+    precio_libra numeric(10,2),
+    subtotal numeric(10,2) DEFAULT 0.0 NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: factura_items_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.factura_items_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: factura_items_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.factura_items_id_seq OWNED BY public.venta_items.id;
+
+
+--
+-- Name: ventas; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ventas (
+    id bigint NOT NULL,
+    numero character varying NOT NULL,
+    cliente_id bigint NOT NULL,
+    pre_factura_id bigint,
+    estado character varying DEFAULT 'pendiente'::character varying NOT NULL,
+    subtotal numeric(10,2) DEFAULT 0.0,
+    impuesto numeric(10,2) DEFAULT 0.0,
+    total numeric(10,2) DEFAULT 0.0,
+    saldo_pendiente numeric(10,2) DEFAULT 0.0,
+    moneda character varying DEFAULT 'LPS'::character varying NOT NULL,
+    notas text,
+    creado_por_id bigint,
+    pagada_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    email_pendiente_enviado_at timestamp(6) without time zone,
+    email_pagada_enviado_at timestamp(6) without time zone,
+    tasa_cambio_aplicada numeric(10,4),
+    financiamiento_id bigint
+);
+
+
+--
+-- Name: facturas_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.facturas_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: facturas_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.facturas_id_seq OWNED BY public.ventas.id;
+
+
+--
 -- Name: financiamiento_cuotas; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -792,8 +873,7 @@ CREATE TABLE public.financiamientos (
     notas text,
     creado_por_id bigint,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    factura_id bigint
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -1103,8 +1183,7 @@ CREATE TABLE public.notas_credito (
     anulado_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    tasa_cambio_aplicada numeric(10,4),
-    factura_id bigint
+    tasa_cambio_aplicada numeric(10,4)
 );
 
 
@@ -1148,8 +1227,7 @@ CREATE TABLE public.notas_debito (
     anulado_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    tasa_cambio_aplicada numeric(10,4),
-    factura_id bigint
+    tasa_cambio_aplicada numeric(10,4)
 );
 
 
@@ -1259,8 +1337,7 @@ CREATE TABLE public.pagos (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     tasa_cambio_aplicada numeric(10,4),
-    apertura_caja_id bigint,
-    factura_id bigint
+    apertura_caja_id bigint
 );
 
 
@@ -1391,8 +1468,7 @@ CREATE TABLE public.paquetes (
     notas_al_cliente text,
     proveedor_id bigint,
     tercero_id bigint,
-    tarifa_recolecta_id bigint,
-    factura_id bigint
+    tarifa_recolecta_id bigint
 );
 
 
@@ -1697,8 +1773,7 @@ CREATE TABLE public.recibos (
     moneda character varying DEFAULT 'LPS'::character varying NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    tasa_cambio_aplicada numeric(10,4),
-    factura_id bigint
+    tasa_cambio_aplicada numeric(10,4)
 );
 
 
@@ -2181,94 +2256,6 @@ ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
 
 
 --
--- Name: venta_items; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.venta_items (
-    id bigint NOT NULL,
-    venta_id bigint NOT NULL,
-    paquete_id bigint,
-    concepto character varying NOT NULL,
-    peso_cobrar numeric(10,2),
-    precio_libra numeric(10,2),
-    subtotal numeric(10,2) DEFAULT 0.0 NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    origen character varying DEFAULT 'manual'::character varying NOT NULL,
-    tarifa_recolecta_id bigint,
-    servicio_extra_id bigint
-);
-
-
---
--- Name: venta_items_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.venta_items_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: venta_items_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.venta_items_id_seq OWNED BY public.venta_items.id;
-
-
---
--- Name: ventas; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.ventas (
-    id bigint NOT NULL,
-    numero character varying NOT NULL,
-    cliente_id bigint NOT NULL,
-    pre_factura_id bigint,
-    estado character varying DEFAULT 'pendiente'::character varying NOT NULL,
-    subtotal numeric(10,2) DEFAULT 0.0,
-    impuesto numeric(10,2) DEFAULT 0.0,
-    total numeric(10,2) DEFAULT 0.0,
-    saldo_pendiente numeric(10,2) DEFAULT 0.0,
-    moneda character varying DEFAULT 'LPS'::character varying NOT NULL,
-    notas text,
-    creado_por_id bigint,
-    pagada_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    email_pendiente_enviado_at timestamp(6) without time zone,
-    email_pagada_enviado_at timestamp(6) without time zone,
-    tasa_cambio_aplicada numeric(10,4),
-    financiamiento_id bigint,
-    fecha_trabajo date,
-    confirmado_at timestamp(6) without time zone,
-    facturado_at timestamp(6) without time zone
-);
-
-
---
--- Name: ventas_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.ventas_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: ventas_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.ventas_id_seq OWNED BY public.ventas.id;
-
-
---
 -- Name: versions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2730,14 +2717,14 @@ ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_
 -- Name: venta_items id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.venta_items ALTER COLUMN id SET DEFAULT nextval('public.venta_items_id_seq'::regclass);
+ALTER TABLE ONLY public.venta_items ALTER COLUMN id SET DEFAULT nextval('public.factura_items_id_seq'::regclass);
 
 
 --
 -- Name: ventas id; Type: DEFAULT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.ventas ALTER COLUMN id SET DEFAULT nextval('public.ventas_id_seq'::regclass);
+ALTER TABLE ONLY public.ventas ALTER COLUMN id SET DEFAULT nextval('public.facturas_id_seq'::regclass);
 
 
 --
@@ -2904,6 +2891,22 @@ ALTER TABLE ONLY public.entregas
 
 ALTER TABLE ONLY public.ep_counters
     ADD CONSTRAINT ep_counters_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: venta_items factura_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.venta_items
+    ADD CONSTRAINT factura_items_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: ventas facturas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ventas
+    ADD CONSTRAINT facturas_pkey PRIMARY KEY (id);
 
 
 --
@@ -3195,22 +3198,6 @@ ALTER TABLE ONLY public.users
 
 
 --
--- Name: venta_items venta_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.venta_items
-    ADD CONSTRAINT venta_items_pkey PRIMARY KEY (id);
-
-
---
--- Name: ventas ventas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.ventas
-    ADD CONSTRAINT ventas_pkey PRIMARY KEY (id);
-
-
---
 -- Name: versions versions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3451,13 +3438,6 @@ CREATE INDEX index_cotizaciones_on_estado ON public.cotizaciones USING btree (es
 
 
 --
--- Name: index_cotizaciones_on_factura_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_cotizaciones_on_factura_id ON public.cotizaciones USING btree (factura_id);
-
-
---
 -- Name: index_cotizaciones_on_numero; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3549,6 +3529,62 @@ CREATE INDEX index_ep_counters_on_sucursal_id ON public.ep_counters USING btree 
 
 
 --
+-- Name: index_factura_items_on_factura_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_factura_items_on_factura_id ON public.venta_items USING btree (venta_id);
+
+
+--
+-- Name: index_factura_items_on_paquete_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_factura_items_on_paquete_id ON public.venta_items USING btree (paquete_id);
+
+
+--
+-- Name: index_facturas_on_cliente_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_facturas_on_cliente_id ON public.ventas USING btree (cliente_id);
+
+
+--
+-- Name: index_facturas_on_creado_por_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_facturas_on_creado_por_id ON public.ventas USING btree (creado_por_id);
+
+
+--
+-- Name: index_facturas_on_estado; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_facturas_on_estado ON public.ventas USING btree (estado);
+
+
+--
+-- Name: index_facturas_on_financiamiento_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_facturas_on_financiamiento_id ON public.ventas USING btree (financiamiento_id);
+
+
+--
+-- Name: index_facturas_on_numero; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_facturas_on_numero ON public.ventas USING btree (numero);
+
+
+--
+-- Name: index_facturas_on_pre_factura_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_facturas_on_pre_factura_id ON public.ventas USING btree (pre_factura_id);
+
+
+--
 -- Name: index_financiamiento_cuotas_on_financiamiento_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3581,13 +3617,6 @@ CREATE INDEX index_financiamientos_on_creado_por_id ON public.financiamientos US
 --
 
 CREATE INDEX index_financiamientos_on_estado ON public.financiamientos USING btree (estado);
-
-
---
--- Name: index_financiamientos_on_factura_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_financiamientos_on_factura_id ON public.financiamientos USING btree (factura_id);
 
 
 --
@@ -3731,13 +3760,6 @@ CREATE INDEX index_notas_credito_on_estado ON public.notas_credito USING btree (
 
 
 --
--- Name: index_notas_credito_on_factura_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_notas_credito_on_factura_id ON public.notas_credito USING btree (factura_id);
-
-
---
 -- Name: index_notas_credito_on_numero; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3770,13 +3792,6 @@ CREATE INDEX index_notas_debito_on_creado_por_id ON public.notas_debito USING bt
 --
 
 CREATE INDEX index_notas_debito_on_estado ON public.notas_debito USING btree (estado);
-
-
---
--- Name: index_notas_debito_on_factura_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_notas_debito_on_factura_id ON public.notas_debito USING btree (factura_id);
 
 
 --
@@ -3819,13 +3834,6 @@ CREATE INDEX index_pagos_on_cliente_id ON public.pagos USING btree (cliente_id);
 --
 
 CREATE INDEX index_pagos_on_estado ON public.pagos USING btree (estado);
-
-
---
--- Name: index_pagos_on_factura_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_pagos_on_factura_id ON public.pagos USING btree (factura_id);
 
 
 --
@@ -3875,13 +3883,6 @@ CREATE INDEX index_paquetes_on_entrega_id ON public.paquetes USING btree (entreg
 --
 
 CREATE INDEX index_paquetes_on_estado ON public.paquetes USING btree (estado);
-
-
---
--- Name: index_paquetes_on_factura_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_paquetes_on_factura_id ON public.paquetes USING btree (factura_id);
 
 
 --
@@ -4193,13 +4194,6 @@ CREATE INDEX index_recibos_on_cliente_id ON public.recibos USING btree (cliente_
 
 
 --
--- Name: index_recibos_on_factura_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_recibos_on_factura_id ON public.recibos USING btree (factura_id);
-
-
---
 -- Name: index_recibos_on_numero; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4393,83 +4387,6 @@ CREATE INDEX index_users_on_rol ON public.users USING btree (rol);
 --
 
 CREATE INDEX index_users_on_ubicacion ON public.users USING btree (ubicacion);
-
-
---
--- Name: index_venta_items_on_origen; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_venta_items_on_origen ON public.venta_items USING btree (origen);
-
-
---
--- Name: index_venta_items_on_paquete_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_venta_items_on_paquete_id ON public.venta_items USING btree (paquete_id);
-
-
---
--- Name: index_venta_items_on_servicio_extra_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_venta_items_on_servicio_extra_id ON public.venta_items USING btree (servicio_extra_id);
-
-
---
--- Name: index_venta_items_on_tarifa_recolecta_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_venta_items_on_tarifa_recolecta_id ON public.venta_items USING btree (tarifa_recolecta_id);
-
-
---
--- Name: index_venta_items_on_venta_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_venta_items_on_venta_id ON public.venta_items USING btree (venta_id);
-
-
---
--- Name: index_ventas_on_cliente_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_ventas_on_cliente_id ON public.ventas USING btree (cliente_id);
-
-
---
--- Name: index_ventas_on_creado_por_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_ventas_on_creado_por_id ON public.ventas USING btree (creado_por_id);
-
-
---
--- Name: index_ventas_on_estado; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_ventas_on_estado ON public.ventas USING btree (estado);
-
-
---
--- Name: index_ventas_on_financiamiento_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_ventas_on_financiamiento_id ON public.ventas USING btree (financiamiento_id);
-
-
---
--- Name: index_ventas_on_numero; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_ventas_on_numero ON public.ventas USING btree (numero);
-
-
---
--- Name: index_ventas_on_pre_factura_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_ventas_on_pre_factura_id ON public.ventas USING btree (pre_factura_id);
 
 
 --
@@ -4704,14 +4621,6 @@ ALTER TABLE ONLY public.paquetes
 
 
 --
--- Name: venta_items fk_rails_27fa8c417e; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.venta_items
-    ADD CONSTRAINT fk_rails_27fa8c417e FOREIGN KEY (tarifa_recolecta_id) REFERENCES public.tarifas_recolecta(id) ON DELETE SET NULL;
-
-
---
 -- Name: rc_counters fk_rails_2a65b6f8a6; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4773,14 +4682,6 @@ ALTER TABLE ONLY public.manifiestos
 
 ALTER TABLE ONLY public.ep_counters
     ADD CONSTRAINT fk_rails_3c629b8689 FOREIGN KEY (sucursal_id) REFERENCES public.sucursales(id) ON DELETE RESTRICT;
-
-
---
--- Name: venta_items fk_rails_438c1677d9; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.venta_items
-    ADD CONSTRAINT fk_rails_438c1677d9 FOREIGN KEY (servicio_extra_id) REFERENCES public.servicios_extra(id) ON DELETE SET NULL;
 
 
 --
@@ -4896,14 +4797,6 @@ ALTER TABLE ONLY public.venta_items
 
 
 --
--- Name: pagos fk_rails_5e27dcf97d; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.pagos
-    ADD CONSTRAINT fk_rails_5e27dcf97d FOREIGN KEY (factura_id) REFERENCES public.ventas(id);
-
-
---
 -- Name: pre_factura_items fk_rails_640d1bf992; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4912,27 +4805,11 @@ ALTER TABLE ONLY public.pre_factura_items
 
 
 --
--- Name: paquetes fk_rails_64f0e58c90; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.paquetes
-    ADD CONSTRAINT fk_rails_64f0e58c90 FOREIGN KEY (factura_id) REFERENCES public.ventas(id);
-
-
---
 -- Name: aperturas_caja fk_rails_684d1326d2; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.aperturas_caja
     ADD CONSTRAINT fk_rails_684d1326d2 FOREIGN KEY (cerrada_por_id) REFERENCES public.users(id);
-
-
---
--- Name: cotizaciones fk_rails_695ca0e82d; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.cotizaciones
-    ADD CONSTRAINT fk_rails_695ca0e82d FOREIGN KEY (factura_id) REFERENCES public.ventas(id);
 
 
 --
@@ -4997,14 +4874,6 @@ ALTER TABLE ONLY public.paquetes
 
 ALTER TABLE ONLY public.sessions
     ADD CONSTRAINT fk_rails_758836b4f0 FOREIGN KEY (user_id) REFERENCES public.users(id);
-
-
---
--- Name: notas_debito fk_rails_785ce8e430; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.notas_debito
-    ADD CONSTRAINT fk_rails_785ce8e430 FOREIGN KEY (factura_id) REFERENCES public.ventas(id);
 
 
 --
@@ -5128,14 +4997,6 @@ ALTER TABLE ONLY public.pagos
 
 
 --
--- Name: recibos fk_rails_9f2199e3b8; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.recibos
-    ADD CONSTRAINT fk_rails_9f2199e3b8 FOREIGN KEY (factura_id) REFERENCES public.ventas(id);
-
-
---
 -- Name: entregas fk_rails_9f9db40a27; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5189,14 +5050,6 @@ ALTER TABLE ONLY public.cliente_sessions
 
 ALTER TABLE ONLY public.ingresos_caja
     ADD CONSTRAINT fk_rails_aca2db36e1 FOREIGN KEY (apertura_caja_id) REFERENCES public.aperturas_caja(id);
-
-
---
--- Name: notas_credito fk_rails_ad07916049; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.notas_credito
-    ADD CONSTRAINT fk_rails_ad07916049 FOREIGN KEY (factura_id) REFERENCES public.ventas(id);
 
 
 --
@@ -5360,14 +5213,6 @@ ALTER TABLE ONLY public.manifiestos
 
 
 --
--- Name: financiamientos fk_rails_e64f5d9794; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.financiamientos
-    ADD CONSTRAINT fk_rails_e64f5d9794 FOREIGN KEY (factura_id) REFERENCES public.ventas(id);
-
-
---
 -- Name: nota_debito_items fk_rails_e8aa65ac3d; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5462,6 +5307,7 @@ ALTER TABLE ONLY public.ep_counters
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260505052442'),
 ('20260505025649'),
 ('20260503063133'),
 ('20260503050815'),
