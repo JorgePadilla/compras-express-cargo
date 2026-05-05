@@ -86,4 +86,58 @@ class VentasControllerTest < ActionDispatch::IntegrationTest
     get facturas_url
     assert_redirected_to root_url
   end
+
+  # ── PR-FAC.3c.2: lifecycle actions (new/create/confirmar/emitir) ──
+
+  test "new sin cliente_id muestra selector" do
+    get new_factura_url
+    assert_response :success
+  end
+
+  test "new con cliente_id carga paquetes facturables" do
+    get new_factura_url, params: { cliente_id: clientes(:juan).id }
+    assert_response :success
+  end
+
+  test "create crea factura en estado borrador desde paquetes" do
+    paquete = paquetes(:disponible_entrega_juan)
+    assert_difference "Factura.count", 1 do
+      post facturas_url, params: { cliente_id: clientes(:juan).id, paquete_ids: [paquete.id] }
+    end
+    factura = Factura.last
+    assert_equal "borrador", factura.estado
+    assert_redirected_to edit_factura_url(factura)
+  end
+
+  test "create sin paquete_ids redirige con alert" do
+    post facturas_url, params: { cliente_id: clientes(:juan).id, paquete_ids: [] }
+    assert_redirected_to new_factura_url(cliente_id: clientes(:juan).id)
+    assert_equal "Selecciona al menos un paquete.", flash[:alert]
+  end
+
+  test "confirmar transiciona borrador → confirmado" do
+    factura = Factura.build_from_paquetes(clientes(:juan), [paquetes(:disponible_entrega_juan).id], user: @user)
+    factura.save!
+
+    post confirmar_factura_url(factura)
+    assert_equal "confirmado", factura.reload.estado
+    assert_redirected_to edit_factura_url(factura)
+  end
+
+  test "emitir transiciona confirmado → emitido y redirige a show" do
+    factura = Factura.build_from_paquetes(clientes(:juan), [paquetes(:disponible_entrega_juan).id], user: @user)
+    factura.save!
+    factura.confirmar!
+
+    post emitir_factura_url(factura)
+    assert_equal "emitido", factura.reload.estado
+    assert_redirected_to factura_url(factura)
+  end
+
+  test "facturables devuelve JSON con paquetes facturables" do
+    get facturables_facturas_url, params: { cliente_id: clientes(:juan).id }
+    assert_response :success
+    json = JSON.parse(response.body)
+    assert json.is_a?(Array)
+  end
 end

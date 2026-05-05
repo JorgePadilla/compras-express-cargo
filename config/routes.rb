@@ -89,8 +89,13 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :facturas, except: %i[new create destroy] do
+  # PR-FAC.3c: Factura ahora maneja todo el lifecycle (borrador → confirmado
+  # → emitido → pagado), reemplazando el flujo PreFactura+Venta.
+  resources :facturas, except: :destroy do
+    collection { get :facturables }
     member do
+      post   :confirmar
+      post   :emitir
       post   :registrar_pago
       delete :anular
       get    :pdf

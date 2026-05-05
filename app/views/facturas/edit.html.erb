@@ -1,19 +1,110 @@
-<%= render PageHeaderComponent.new(title: "Editar Venta #{@factura.numero}") %>
+<%= render PageHeaderComponent.new(title: "Factura #{@factura.numero}", subtitle: "Cliente: #{@factura.cliente.codigo} — #{@factura.cliente.nombre_completo}") do |h| %>
+  <% h.with_action do %>
+    <%= render StatusBadgeComponent.new(status: @factura.estado) %>
+  <% end %>
+<% end %>
 
-<%= form_with model: @factura, local: true do |f| %>
+<%= form_with model: @factura, url: factura_path(@factura), method: :patch, local: true do |f| %>
   <% if @factura.errors.any? %>
     <div class="mb-4 p-3 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm">
       <%= @factura.errors.full_messages.to_sentence %>
     </div>
   <% end %>
 
-  <div class="bg-white rounded-lg shadow p-6 mb-6">
-    <label class="block text-sm font-medium text-gray-700 mb-1">Notas</label>
-    <%= f.text_area :notas, rows: 3, class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+  <% editable = @factura.borrador? || @factura.confirmado? %>
+
+  <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Peso</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio/Lb</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        <%= f.fields_for :factura_items do |item_f| %>
+          <% it = item_f.object %>
+          <tr<%= ' class="bg-cec-teal/5"'.html_safe if it.auto? %>>
+            <td class="px-6 py-3">
+              <%= item_f.hidden_field :id %>
+              <%= item_f.hidden_field :origen %>
+              <%= item_f.text_field :concepto, class: "w-full rounded border-gray-300 text-sm", readonly: !editable %>
+              <% if it.origen == "auto_recolecta" %>
+                <span class="mt-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-cec-teal/10 text-cec-teal">Auto · Recolecta</span>
+              <% elsif it.origen == "auto_servicio_extra" %>
+                <span class="mt-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-900">Auto · Servicio</span>
+              <% end %>
+            </td>
+            <td class="px-6 py-3">
+              <% if editable && !it.auto? %>
+                <%= item_f.number_field :peso_cobrar, step: 0.01, class: "w-24 rounded border-gray-300 text-sm text-right" %>
+              <% else %>
+                <span class="text-sm text-right block"><%= it.peso_cobrar || "—" %></span>
+              <% end %>
+            </td>
+            <td class="px-6 py-3">
+              <% if editable && it.auto? %>
+                <%= item_f.number_field :subtotal, step: 0.01, min: 0,
+                    class: "w-24 rounded border-gray-300 text-sm text-right",
+                    title: "Editable para descuentos autorizados" %>
+              <% elsif editable %>
+                <%= item_f.number_field :precio_libra, step: 0.01, class: "w-24 rounded border-gray-300 text-sm text-right" %>
+              <% else %>
+                <span class="text-sm text-right block">L. <%= number_with_delimiter(it.precio_libra.to_f, precision: 2) %></span>
+              <% end %>
+            </td>
+            <td class="px-6 py-3 text-right text-sm font-medium">
+              L. <%= number_with_delimiter(it.subtotal.to_f, precision: 2) %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot class="bg-gray-50">
+        <tr>
+          <td colspan="3" class="px-6 py-3 text-right text-sm font-medium">Subtotal</td>
+          <td class="px-6 py-3 text-right text-sm font-medium">L. <%= number_with_delimiter(@factura.subtotal.to_f, precision: 2) %></td>
+        </tr>
+        <tr>
+          <td colspan="3" class="px-6 py-3 text-right text-sm font-medium">ISV (15%)</td>
+          <td class="px-6 py-3 text-right text-sm font-medium">L. <%= number_with_delimiter(@factura.impuesto.to_f, precision: 2) %></td>
+        </tr>
+        <tr>
+          <td colspan="3" class="px-6 py-3 text-right text-base font-bold">Total</td>
+          <td class="px-6 py-3 text-right text-base font-bold text-cec-navy">L. <%= number_with_delimiter(@factura.total.to_f, precision: 2) %></td>
+        </tr>
+      </tfoot>
+    </table>
   </div>
 
-  <div class="flex gap-3">
-    <button type="submit" class="px-4 py-2 bg-cec-navy text-white rounded-lg text-sm font-medium" data-shortcut="F10">Guardar (F10)</button>
-    <%= link_to "Cancelar (F2)", factura_path(@factura), class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900", data: { shortcut: "F2" } %>
+  <div class="bg-white rounded-lg shadow p-6 mb-6">
+    <label class="block text-sm font-medium text-gray-700 mb-1">Notas</label>
+    <%= f.text_area :notas, rows: 2, class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+  </div>
+
+  <div class="flex flex-wrap gap-3">
+    <% unless @factura.anulado? %>
+      <button type="submit" class="px-4 py-2 bg-cec-navy text-white rounded-lg hover:bg-cec-navy-light text-sm font-medium" data-shortcut="F10">Guardar (F10)</button>
+    <% end %>
+
+    <% if @factura.borrador? %>
+      <%= button_to "Confirmar", confirmar_factura_path(@factura), method: :post,
+          class: "px-4 py-2 bg-cec-teal text-white rounded-lg hover:bg-cec-teal-dark text-sm font-medium" %>
+    <% end %>
+
+    <% if @factura.confirmado? %>
+      <%= button_to "Emitir", emitir_factura_path(@factura), method: :post,
+          class: "px-4 py-2 bg-cec-gold text-cec-navy-dark rounded-lg hover:opacity-90 text-sm font-semibold",
+          data: { turbo_confirm: "¿Emitir esta factura al cliente?" } %>
+    <% end %>
+
+    <% unless @factura.anulado? || @factura.pagado? %>
+      <%= button_to "Anular", anular_factura_path(@factura), method: :delete,
+          class: "px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 text-sm font-medium",
+          data: { turbo_confirm: "¿Anular la factura?" } %>
+    <% end %>
+
+    <%= link_to "Ver imprimible", @factura, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900" %>
   </div>
 <% end %>
