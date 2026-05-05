@@ -1,4 +1,5 @@
 class CategoriaPrecio < ApplicationRecord
+  has_paper_trail  # PR-D7: audit log — precios afectan tarifas a clientes
   has_many :clientes, dependent: :restrict_with_error
 
   validates :nombre, presence: true, uniqueness: { case_sensitive: false }

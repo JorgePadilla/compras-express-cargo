@@ -1,4 +1,5 @@
 class Lugar < ApplicationRecord
+  has_paper_trail  # PR-D7: audit log de zonas/lugares
   validates :nombre, presence: true
 
   enum :tipo, {

@@ -1,4 +1,5 @@
 class Supplier < ApplicationRecord
+  has_paper_trail  # PR-D7: audit log de cambios al catálogo
   TIPOS = %w[comercio entrega_personal otros].freeze
 
   has_many :warehouse_receipts, dependent: :restrict_with_error

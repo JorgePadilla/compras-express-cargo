@@ -1,4 +1,5 @@
 class Configuracion < ApplicationRecord
+  has_paper_trail  # PR-D7: audit log de cambios a config global (tasa, ISV, etc.)
   validates :clave, presence: true, uniqueness: true
 
   def self.get(clave)

@@ -4,6 +4,7 @@
 # (bodega cem) y así sucesivamente, ya que hay cargas que las ponemos
 # en áreas terceras".
 class SubLocalidad < ApplicationRecord
+  has_paper_trail  # PR-D7: audit log — bodegas internas, afecta ubicación física
   self.table_name = "sub_localidades"
 
   belongs_to :sucursal

@@ -1,4 +1,5 @@
 class Recibo < ApplicationRecord
+  has_paper_trail  # PR-D7: audit log — comprobantes financieros
   include CurrencyAware
 
   belongs_to :venta

@@ -1,4 +1,5 @@
 class AperturaCaja < ApplicationRecord
+  has_paper_trail  # PR-D7: audit log — aperturas/cierres de caja
   self.table_name = "aperturas_caja"
 
   ESTADOS = %w[abierta cerrada].freeze

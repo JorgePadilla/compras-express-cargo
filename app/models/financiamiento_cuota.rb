@@ -1,4 +1,5 @@
 class FinanciamientoCuota < ApplicationRecord
+  has_paper_trail  # PR-D7: audit log — pagos de financiamiento
   self.table_name = "financiamiento_cuotas"
 
   ESTADOS = %w[pendiente pagada vencida].freeze

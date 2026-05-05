@@ -2,6 +2,11 @@
 # Cada `WarehouseReceipt` congela una `terms_version` para auditoría.
 # Para una version dada, hay 2 filas: language="es" + language="en".
 class Term < ApplicationRecord
+  # PR-D7: audit log — versionado bilingüe de T&C.
+  # Renombramos la asociación paper_trail porque `Term#version` ya es una
+  # columna del modelo (la versión del documento legal), distinta del
+  # concepto "versión histórica" de paper_trail.
+  has_paper_trail versions: { name: :paper_versions }, version: :paper_version
   LANGUAGES = %w[es en].freeze
 
   validates :version,        presence: true
