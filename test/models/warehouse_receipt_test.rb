@@ -7,7 +7,7 @@ class WarehouseReceiptTest < ActiveSupport::TestCase
 
   def build_wr(attrs = {})
     WarehouseReceipt.new({
-      receipt_number: "RM0002026000001",
+      receipt_number: "RMI0002026000001",
       issued_on: Date.current,
       consignee: @cliente
     }.merge(attrs))
@@ -18,15 +18,15 @@ class WarehouseReceiptTest < ActiveSupport::TestCase
   end
 
   test "consignee es requerido — sin consignee no es válido" do
-    wr = WarehouseReceipt.new(receipt_number: "RM0002026000999", issued_on: Date.current)
+    wr = WarehouseReceipt.new(receipt_number: "RMI0002026000999", issued_on: Date.current)
     assert_not wr.valid?
     assert wr.errors[:consignee].any?, "esperaba error de presence en consignee"
   end
 
   test "receipt_number es requerido y único case-insensitive" do
-    WarehouseReceipt.create!(receipt_number: "RM0002026000001",
+    WarehouseReceipt.create!(receipt_number: "RMI0002026000001",
                              issued_on: Date.current, consignee: @cliente)
-    duplicate = build_wr(receipt_number: "rm0002026000001")
+    duplicate = build_wr(receipt_number: "rmi0002026000001")
     assert_not duplicate.valid?
   end
 
@@ -67,13 +67,13 @@ class WarehouseReceiptTest < ActiveSupport::TestCase
   # ── to_s methods (suggestion del reviewer) ──
 
   test "to_s en WarehouseReceipt devuelve receipt_number" do
-    wr = build_wr(receipt_number: "RM0002026000042")
-    assert_equal "RM0002026000042", wr.to_s
+    wr = build_wr(receipt_number: "RMI0002026000042")
+    assert_equal "RMI0002026000042", wr.to_s
   end
 
   test "to_s en WarehouseReceipt cuando receipt_number tiene espacios y minúsculas se normaliza" do
-    wr = build_wr(receipt_number: "  rm0002026000099  ")
-    assert_equal "RM0002026000099", wr.to_s
+    wr = build_wr(receipt_number: "  rmi0002026000099  ")
+    assert_equal "RMI0002026000099", wr.to_s
   end
 
   test "declared_value setter convierte a cents" do

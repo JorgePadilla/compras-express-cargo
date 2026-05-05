@@ -203,19 +203,19 @@ class PaqueteTest < ActiveSupport::TestCase
 
   test "genera numero_recepcion con prefijo de la sucursal y formato anual" do
     p = Paquete.create!(tracking: "1Z999REC1", cliente: clientes(:juan), sucursal: sucursales(:miami))
-    # Formato: <PREFIX><AÑO 7-DIG><CONTADOR 6-DIG>, ej. RM0002026000001
+    # Formato: <PREFIX><AÑO 7-DIG><CONTADOR 6-DIG>, ej. RMI0002026000001
     anio = (p.fecha_recibido_miami&.year || Time.zone.now.year)
-    assert_match(/\ARM\d{7}\d{6}\z/, p.numero_recepcion)
-    assert p.numero_recepcion.start_with?("RM#{anio.to_s.rjust(7, '0')}")
+    assert_match(/\ARMI\d{7}\d{6}\z/, p.numero_recepcion)
+    assert p.numero_recepcion.start_with?("RMI#{anio.to_s.rjust(7, '0')}")
   end
 
   test "genera numero_recepcion distinto por prefijo (sucursales distintas)" do
     p1 = Paquete.create!(tracking: "1Z999REC2A", cliente: clientes(:juan), sucursal: sucursales(:miami))
     p2 = Paquete.create!(tracking: "1Z999REC2B", cliente: clientes(:juan), sucursal: sucursales(:zeron_sps))
-    assert p1.numero_recepcion.start_with?("RM")
-    assert p2.numero_recepcion.start_with?("RS")
-    assert_match(/\ARM\d{13}\z/, p1.numero_recepcion)
-    assert_match(/\ARS\d{13}\z/, p2.numero_recepcion)
+    assert p1.numero_recepcion.start_with?("RMI")
+    assert p2.numero_recepcion.start_with?("RZE")
+    assert_match(/\ARMI\d{13}\z/, p1.numero_recepcion)
+    assert_match(/\ARZE\d{13}\z/, p2.numero_recepcion)
   end
 
   test "track_fecha_disponible se setea al pasar a disponible_entrega" do
@@ -247,7 +247,7 @@ class PaqueteTest < ActiveSupport::TestCase
 
     numeros = [ p1, p2, p3 ].map(&:numero_recepcion)
     assert_equal numeros, numeros.uniq, "Se esperaban 3 numeros distintos, se obtuvieron duplicados"
-    numeros.each { |n| assert_match(/\ARM\d{13}\z/, n) }
+    numeros.each { |n| assert_match(/\ARMI\d{13}\z/, n) }
   end
 
   # ── Sub-etiquetas / split de tracking (PR-C) ──
@@ -313,7 +313,7 @@ class PaqueteTest < ActiveSupport::TestCase
     # solo por numero_caja (no por numero_recepcion).
     numeros = paquetes.map(&:numero_recepcion).uniq
     assert_equal 1, numeros.size, "las N cajas deben compartir el mismo numero_recepcion (madre)"
-    assert_match(/\ARM\d{13}\z/, numeros.first)
+    assert_match(/\ARMI\d{13}\z/, numeros.first)
   end
 
   # ── PR-5c.5p2: integración Paquete ↔ WarehouseReceipt ──
