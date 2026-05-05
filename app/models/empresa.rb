@@ -1,4 +1,5 @@
 class Empresa < ApplicationRecord
+  has_paper_trail  # PR-D7: audit log — datos de empresa, ISV
   has_one_attached :logo
 
   validates :nombre, presence: true

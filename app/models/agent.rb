@@ -1,4 +1,5 @@
 class Agent < ApplicationRecord
+  has_paper_trail  # PR-D7: audit log de cambios al catálogo
   has_many :warehouse_receipts, dependent: :restrict_with_error
 
   validates :codigo, presence: true, uniqueness: { case_sensitive: false }

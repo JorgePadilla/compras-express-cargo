@@ -1,4 +1,5 @@
 class Tarea < ApplicationRecord
+  has_paper_trail  # PR-D7: audit log — asignación, estado, completado_por
   belongs_to :paquete
   belongs_to :asignado_a, class_name: "User", optional: true
   belongs_to :completado_por, class_name: "User", optional: true

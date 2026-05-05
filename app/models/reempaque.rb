@@ -1,4 +1,5 @@
 class Reempaque < ApplicationRecord
+  has_paper_trail  # PR-D7: audit log — snapshot de dimensiones antes/después
   DIVISOR_VOLUMETRICO = 166.0
 
   belongs_to :paquete

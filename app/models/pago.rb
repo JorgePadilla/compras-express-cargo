@@ -1,4 +1,5 @@
 class Pago < ApplicationRecord
+  has_paper_trail  # PR-D7: audit log — pagos (sensible: monto, método, fecha)
   include CurrencyAware
 
   METODOS = %w[efectivo tarjeta transferencia].freeze
