@@ -218,4 +218,57 @@ class VentaTest < ActiveSupport::TestCase
     assert_includes venta.notas_debito, notas_debito(:nd_emitida)
     assert_includes venta.notas_credito, notas_credito(:nc_emitida)
   end
+
+  # ── PR-FAC.3c: lifecycle methods (borrador → confirmado → emitido → pagado) ──
+
+  test "build_from_paquetes crea factura en estado borrador con items" do
+    paquete = paquetes(:disponible_entrega_juan)
+    factura = Factura.build_from_paquetes(@cliente, [paquete.id], user: @user)
+
+    assert_equal "borrador", factura.estado
+    assert_equal Date.current, factura.fecha_trabajo
+    assert factura.factura_items.any? { |i| i.paquete_id == paquete.id && i.origen == "manual" }
+  end
+
+  test "confirmar! transiciona borrador a confirmado y reserva paquetes" do
+    paquete = paquetes(:disponible_entrega_juan)
+    factura = Factura.build_from_paquetes(@cliente, [paquete.id], user: @user)
+    factura.save!
+
+    assert factura.confirmar!
+    assert_equal "confirmado", factura.reload.estado
+    assert_not_nil factura.confirmado_at
+    paquete.reload
+    assert_equal "pre_facturado", paquete.estado
+    assert_equal factura.id, paquete.venta_id
+  end
+
+  test "emitir! transiciona confirmado a emitido y cobra al cliente" do
+    paquete = paquetes(:disponible_entrega_juan)
+    factura = Factura.build_from_paquetes(@cliente, [paquete.id], user: @user)
+    factura.save!
+    factura.confirmar!
+    initial_saldo = @cliente.saldo_pendiente.to_d
+
+    assert factura.emitir!
+    assert_equal "emitido", factura.reload.estado
+    assert_equal factura.total.to_d, factura.saldo_pendiente.to_d
+    assert_not_nil factura.facturado_at
+    @cliente.reload
+    assert_equal initial_saldo + factura.total.to_d, @cliente.saldo_pendiente.to_d
+  end
+
+  test "emitir! falla si no esta confirmado" do
+    factura = facturas(:pendiente_juan)  # ya emitido
+    assert_not factura.emitir!
+  end
+
+  test "factura emitida no permite editar items" do
+    factura = facturas(:pendiente_juan)
+    assert_equal "emitido", factura.estado
+
+    factura.subtotal = 9999.99
+    assert_not factura.valid?, "esperaba que validation bloquee cambios post-emitido"
+    assert factura.errors[:base].any? { |e| e.include?("emitida") }
+  end
 end

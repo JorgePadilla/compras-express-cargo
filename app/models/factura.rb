@@ -165,9 +165,136 @@ class Factura < ApplicationRecord
         # PR-3c migrará PreFactura → Factura.
         pre_factura.update!(estado: "pendiente", facturado_at: nil)
       end
-      cliente.decrement!(:saldo_pendiente, total) unless proforma?
+      # Sólo decrementar saldo si la factura ya estaba cobrando al cliente
+      # (estado emitido o posterior). Borrador/confirmado/proforma no cobraban.
+      cliente.decrement!(:saldo_pendiente, total) if emitido? || pagado?
       update!(estado: "anulado")
     end
+    true
+  end
+
+  # PR-FAC.3c: builds a Factura en estado=borrador con items linked a
+  # paquetes facturables del cliente. Aplica cobros automáticos
+  # (recolecta + cambio de servicio) basado en los flags del paquete.
+  # Migrado desde PreFactura.build_from_paquetes.
+  attr_reader :nota_debito_auto
+
+  def self.build_from_paquetes(cliente, paquete_ids, user: nil)
+    factura = new(
+      cliente: cliente,
+      creado_por: user,
+      estado: "borrador",
+      moneda: "LPS",
+      fecha_trabajo: Date.current
+    )
+
+    paquetes = cliente.paquetes.where(id: paquete_ids).includes(:tipo_envio)
+    paquetes.each do |paquete|
+      precio = cliente.categoria_precio&.precio_para(paquete.tipo_envio) ||
+               paquete.tipo_envio&.precio_libra ||
+               BigDecimal("0")
+      peso = paquete.peso_cobrar || BigDecimal("0")
+      subtotal = (BigDecimal(peso.to_s) * BigDecimal(precio.to_s)).round(2)
+
+      factura.factura_items.build(
+        paquete: paquete,
+        concepto: "Flete #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia}",
+        peso_cobrar: peso,
+        precio_libra: precio,
+        subtotal: subtotal,
+        origen: "manual"
+      )
+    end
+
+    # PR-D6.b: cargos automáticos por flags del paquete (recolecta, cambio servicio).
+    paquetes.each { |p| factura.aplicar_cobros_automaticos_para(p) }
+
+    factura
+  end
+
+  # PR-D6.b: agrega líneas auto al factura por cada flag activo en el
+  # paquete. Idempotente: no duplica si ya existe una línea auto para ese
+  # paquete.
+  def aplicar_cobros_automaticos_para(paquete)
+    if paquete.recolecta_solicitada? && paquete.recolecta_monto.to_d.positive?
+      ya_existe = factura_items.any? { |i|
+        i.origen == "auto_recolecta" && i.paquete_id == paquete.id && !i.marked_for_destruction?
+      }
+      unless ya_existe
+        factura_items.build(
+          paquete: paquete,
+          concepto: "Recolecta - #{paquete.guia}",
+          subtotal: paquete.recolecta_monto,
+          origen: "auto_recolecta"
+        )
+      end
+    end
+
+    if paquete.solicito_cambio_servicio?
+      servicio = ServicioExtra.activos.find_by(codigo: "CAMBIO_SERVICIO")
+      if servicio
+        ya_existe = factura_items.any? { |i|
+          i.origen == "auto_servicio_extra" &&
+            i.paquete_id == paquete.id &&
+            i.servicio_extra_id == servicio.id &&
+            !i.marked_for_destruction?
+        }
+        unless ya_existe
+          factura_items.build(
+            paquete: paquete,
+            servicio_extra: servicio,
+            concepto: "#{servicio.descripcion} - #{paquete.guia}",
+            subtotal: servicio.precio_venta,
+            origen: "auto_servicio_extra"
+          )
+        end
+      end
+    end
+  end
+
+  # PR-FAC.3c: borrador → confirmado. Reserva los paquetes
+  # (estado=pre_facturado) para que no entren en otra factura.
+  def confirmar!
+    return false unless borrador?
+
+    transaction do
+      update!(estado: "confirmado", confirmado_at: Time.current)
+      paquetes.reload.each { |p| p.update!(estado: "pre_facturado", venta_id: id) }
+    end
+    true
+  end
+
+  # PR-FAC.3c: confirmado → emitido. Cobra al cliente, dispara email,
+  # y crea NotaDebito automática si hay paquetes con cambio de servicio.
+  def emitir!
+    return false unless confirmado?
+
+    @nota_debito_auto = nil
+    transaction do
+      update!(estado: "emitido", saldo_pendiente: total, facturado_at: Time.current)
+      cliente.increment!(:saldo_pendiente, total)
+
+      paquetes_cambio = paquetes.reload.select(&:solicito_cambio_servicio?)
+      if paquetes_cambio.any?
+        nd = NotaDebito.build_from_paquetes(
+          self,
+          paquete_ids: paquetes_cambio.map(&:id),
+          motivo: "cambio_servicio",
+          user: creado_por
+        )
+        nd.notas = "Generada automaticamente al emitir factura #{numero} por paquetes con solicitud de cambio de servicio."
+        nd.save!
+        @nota_debito_auto = nd
+      end
+    end
+
+    # Email idempotente fuera de la transaction
+    if email_pendiente_enviado_at.nil? &&
+       cliente.email.present? && cliente.notificar_facturas?
+      FacturaMailer.pendiente(self).deliver_later
+      update_column(:email_pendiente_enviado_at, Time.current)
+    end
+
     true
   end
 
