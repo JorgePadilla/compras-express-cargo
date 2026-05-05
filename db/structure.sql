@@ -782,7 +782,7 @@ CREATE TABLE public.facturas (
     numero character varying NOT NULL,
     cliente_id bigint NOT NULL,
     pre_factura_id bigint,
-    estado character varying DEFAULT 'pendiente'::character varying NOT NULL,
+    estado character varying DEFAULT 'borrador'::character varying NOT NULL,
     subtotal numeric(10,2) DEFAULT 0.0,
     impuesto numeric(10,2) DEFAULT 0.0,
     total numeric(10,2) DEFAULT 0.0,
@@ -5462,6 +5462,7 @@ ALTER TABLE ONLY public.ep_counters
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260505044900'),
 ('20260505031818'),
 ('20260505025649'),
 ('20260503063133'),

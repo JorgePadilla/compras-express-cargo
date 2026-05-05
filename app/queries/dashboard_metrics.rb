@@ -21,7 +21,7 @@ class DashboardMetrics
     paquetes_recibidos_ayer_val = Paquete.where(fecha_recibido_miami: @yesterday.all_day).count
     pre_alertas_ayer_val        = PreAlerta.where(created_at: @yesterday.all_day).count
 
-    ventas_pendientes_val = Venta.where(estado: "pendiente").count
+    ventas_pendientes_val = Factura.where(estado: "emitido").count
     tareas_abiertas_val   = Tarea.abiertas.count
 
     {

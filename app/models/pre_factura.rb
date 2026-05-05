@@ -70,7 +70,7 @@ class PreFactura < ApplicationRecord
         pre_factura: self,
         creado_por: creado_por,
         moneda: moneda,
-        estado: "pendiente",
+        estado: "emitido",
         notas: notas
       )
       pre_factura_items.each do |item|

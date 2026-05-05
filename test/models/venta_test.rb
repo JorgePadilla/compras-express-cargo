@@ -17,13 +17,13 @@ class VentaTest < ActiveSupport::TestCase
     assert_not dup.valid?
   end
 
-  test "default estado is pendiente" do
-    v = Venta.new(cliente: @cliente, estado: "pendiente")
-    assert_equal "pendiente", v.estado
+  test "default estado is borrador" do
+    v = Venta.new(cliente: @cliente)
+    assert_equal "borrador", v.estado
   end
 
   test "calculate_totals applies 15% ISV and sets saldo_pendiente on new record" do
-    v = Venta.new(cliente: @cliente, estado: "pendiente")
+    v = Venta.new(cliente: @cliente, estado: "emitido")
     v.venta_items.build(concepto: "Flete", peso_cobrar: 10, precio_libra: 5, subtotal: 50)
     v.save!
     assert_equal 50.to_d, v.subtotal.to_d
@@ -107,9 +107,9 @@ class VentaTest < ActiveSupport::TestCase
     assert_equal initial_cliente_saldo - venta.total.to_d, @cliente.saldo_pendiente.to_d
   end
 
-  test "scope activas excludes anulada" do
+  test "scope activas excludes anulado" do
     v = facturas(:pendiente_juan)
-    v.update!(estado: "anulada")
+    v.update!(estado: "anulado")
     assert_not_includes Venta.activas, v
   end
 
@@ -164,7 +164,7 @@ class VentaTest < ActiveSupport::TestCase
     assert proforma.emitir_proforma!
 
     proforma.reload
-    assert_equal "pendiente", proforma.estado
+    assert_equal "emitido", proforma.estado
     assert_equal proforma.total.to_d, proforma.saldo_pendiente.to_d
 
     paquete.reload
@@ -191,7 +191,7 @@ class VentaTest < ActiveSupport::TestCase
     assert proforma.anular_proforma!
 
     proforma.reload
-    assert_equal "anulada", proforma.estado
+    assert_equal "anulado", proforma.estado
 
     paquete.reload
     assert_nil paquete.venta_id

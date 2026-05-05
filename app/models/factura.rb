@@ -34,17 +34,27 @@ class Factura < ApplicationRecord
   # Legacy alias para forms que aún envían `venta_items_attributes`
   def venta_items_attributes=(attrs); self.factura_items_attributes = attrs; end
 
-  ESTADOS = %w[proforma pendiente pagada anulada].freeze
+  # PR-FAC.3b: nuevo enum unificado.
+  # `proforma` queda como legacy hasta PR-3d (migrar a Cotizacion).
+  # `borrador` y `confirmado` reemplazan al flujo PreFactura.creado/pendiente.
+  # `emitido`, `pagado`, `anulado` reemplazan a Venta.pendiente/pagada/anulada.
+  ESTADOS = %w[proforma borrador confirmado emitido pagado anulado].freeze
+  # Estados editables: items y montos pueden modificarse. emitido/pagado/anulado son inmutables.
+  ESTADOS_EDITABLES = %w[proforma borrador confirmado].freeze
+  ESTADOS_INMUTABLES = %w[emitido pagado anulado].freeze
 
   validates :numero, presence: true, uniqueness: { case_sensitive: false }
   validates :estado, presence: true, inclusion: { in: ESTADOS }
+  validate :inmutable_post_emitido, on: :update
 
   before_validation :generate_numero, on: :create, if: -> { numero.blank? }
   before_save :calculate_totals
 
-  scope :activas,        -> { where.not(estado: "anulada") }
-  scope :pendientes,     -> { where(estado: "pendiente") }
-  scope :pagadas,        -> { where(estado: "pagada") }
+  scope :activas,        -> { where.not(estado: "anulado") }
+  scope :emitidas,       -> { where(estado: "emitido") }
+  scope :pagadas,        -> { where(estado: "pagado") }
+  scope :anuladas,       -> { where(estado: "anulado") }
+  scope :pendientes,     -> { where(estado: "emitido") }   # alias legacy: PreFactura/Venta llamaba "pendiente"
   scope :sin_proformas,  -> { where.not(estado: "proforma") }
   scope :proformas,      -> { where(estado: "proforma") }
   scope :recientes,  -> { order(created_at: :desc) }
@@ -60,6 +70,12 @@ class Factura < ApplicationRecord
   ESTADOS.each do |estado|
     define_method("#{estado}?") { self.estado == estado }
   end
+
+  # Aliases legacy para callers que aún usan los nombres viejos.
+  # PR-3c eliminará estos call sites; este alias evita romper en el ínterin.
+  alias_method :pendiente?, :emitido?
+  alias_method :pagada?,    :pagado?
+  alias_method :anulada?,   :anulado?
 
   def save(**args, &block)
     super
@@ -114,20 +130,20 @@ class Factura < ApplicationRecord
       attrs = { saldo_pendiente: nuevo_saldo }
 
       if nuevo_saldo <= 0
-        attrs[:estado] = "pagada"
+        attrs[:estado] = "pagado"
         attrs[:pagada_at] = Time.current
       end
       update!(attrs)
 
       cliente.decrement!(:saldo_pendiente, monto_bd)
 
-      if pagada?
+      if pagado?
         paquetes.reload.each { |p| p.update!(estado: "facturado") }
       end
     end
 
     # Fuera de la transaction: encola email si factura quedo pagada
-    if pagada? && email_pagada_enviado_at.nil? &&
+    if pagado? && email_pagada_enviado_at.nil? &&
        cliente.email.present? && cliente.notificar_facturas?
       FacturaMailer.pagada(self, recibo).deliver_later
       update_column(:email_pagada_enviado_at, Time.current)
@@ -137,18 +153,20 @@ class Factura < ApplicationRecord
   end
 
   def anular!
-    return false if anulada?
-    return false if pagada?
+    return false if anulado?
+    return false if pagado?
 
     transaction do
       paquetes.reload.each do |p|
         p.update!(venta_id: nil, estado: "disponible_entrega")
       end
       if pre_factura
+        # PreFactura sigue con su propio enum (creado/pendiente/...) por ahora.
+        # PR-3c migrará PreFactura → Factura.
         pre_factura.update!(estado: "pendiente", facturado_at: nil)
       end
       cliente.decrement!(:saldo_pendiente, total) unless proforma?
-      update!(estado: "anulada")
+      update!(estado: "anulado")
     end
     true
   end
@@ -194,7 +212,7 @@ class Factura < ApplicationRecord
         next unless item.paquete
         item.paquete.update!(venta_id: id, estado: "pre_facturado")
       end
-      update!(estado: "pendiente", saldo_pendiente: total)
+      update!(estado: "emitido", saldo_pendiente: total)
       cliente.increment!(:saldo_pendiente, total)
     end
     true
@@ -209,12 +227,25 @@ class Factura < ApplicationRecord
         next unless item.paquete
         item.paquete.update!(venta_id: nil, estado: "disponible_entrega")
       end
-      update!(estado: "anulada")
+      update!(estado: "anulado")
     end
     true
   end
 
   private
+
+  # PR-FAC.3b: una vez emitida la factura, items y montos no se pueden
+  # editar. Solo se permite editar `notas`. Yusef confirmó 2026-05-04:
+  # "una vez emitida no se edita — solo Nota Crédito/Débito".
+  def inmutable_post_emitido
+    return unless ESTADOS_INMUTABLES.include?(estado_was)
+    # Permitir cambio de estado (transición de emitido→pagado, anular, etc.)
+    # y cambio de saldo_pendiente (registrar_pago).
+    cambios_permitidos = %w[estado saldo_pendiente pagada_at email_pagada_enviado_at email_pendiente_enviado_at notas updated_at]
+    cambios_no_permitidos = changed_attributes.keys - cambios_permitidos
+    return if cambios_no_permitidos.empty?
+    errors.add(:base, "no se puede editar una factura ya emitida (estado=#{estado_was}). Cambios bloqueados: #{cambios_no_permitidos.join(', ')}. Usa Nota Crédito/Débito para ajustes.")
+  end
 
   def generate_numero
     next_number = (self.class.where("numero LIKE 'VT-%'")

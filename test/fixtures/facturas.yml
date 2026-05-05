@@ -1,7 +1,7 @@
 pendiente_juan:
   numero: VT-000001
   cliente: juan
-  estado: pendiente
+  estado: emitido
   subtotal: 17.50
   impuesto: 2.63
   total: 20.13
@@ -12,7 +12,7 @@ pendiente_juan:
 pagada_maria:
   numero: VT-000002
   cliente: maria
-  estado: pagada
+  estado: pagado
   subtotal: 25.00
   impuesto: 3.75
   total: 28.75

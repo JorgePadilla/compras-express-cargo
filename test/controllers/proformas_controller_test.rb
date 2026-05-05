@@ -85,7 +85,7 @@ class ProformasControllerTest < ActionDispatch::IntegrationTest
 
     post emitir_proforma_url(proforma)
     proforma.reload
-    assert_equal "pendiente", proforma.estado
+    assert_equal "emitido", proforma.estado
     assert proforma.saldo_pendiente.to_d > 0
     assert_equal initial_saldo + proforma.total.to_d, clientes(:juan).reload.saldo_pendiente.to_d
 
@@ -102,7 +102,7 @@ class ProformasControllerTest < ActionDispatch::IntegrationTest
     paquete.update_column(:venta_id, proforma.id)
 
     delete anular_proforma_url(proforma)
-    assert_equal "anulada", proforma.reload.estado
+    assert_equal "anulado", proforma.reload.estado
 
     paquete.reload
     assert_nil paquete.venta_id
