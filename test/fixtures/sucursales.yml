@@ -4,7 +4,7 @@ miami:
   nombre: Miami
   pais: USA
   ubicacion: miami
-  codigo_recepcion_prefix: RM
+  codigo_recepcion_prefix: RMI
   activo: true
 
 zeron_sps:
@@ -13,7 +13,7 @@ zeron_sps:
   nombre: Zeron SPS
   pais: Honduras
   ubicacion: honduras
-  codigo_recepcion_prefix: RS
+  codigo_recepcion_prefix: RZE
   activo: true
 
 humuya_tgu:
@@ -22,5 +22,14 @@ humuya_tgu:
   nombre: Humuya TGU
   pais: Honduras
   ubicacion: honduras
-  codigo_recepcion_prefix: RH
+  codigo_recepcion_prefix: RHU
+  activo: true
+
+san_manuel:
+  codigo: SAM
+  codigo_ep: SSM
+  nombre: San Manuel
+  pais: Honduras
+  ubicacion: honduras
+  codigo_recepcion_prefix: RSM
   activo: true

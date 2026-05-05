@@ -171,8 +171,8 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
   test "busqueda por numero_recepcion" do
     miami = sucursales(:miami)
     paquete = paquetes(:recibido)
-    paquete.update!(sucursal_id: miami.id, numero_recepcion: "RM-042424")
-    get paquetes_url, params: { q: "RM-042424", incluir_mas_1_ano: "1" }
+    paquete.update!(sucursal_id: miami.id, numero_recepcion: "RMI-042424")
+    get paquetes_url, params: { q: "RMI-042424", incluir_mas_1_ano: "1" }
     assert_response :success
     assigned = @controller.instance_variable_get(:@paquetes)
     assert_includes assigned, paquete
