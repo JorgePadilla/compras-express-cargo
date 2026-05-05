@@ -11,9 +11,10 @@ puts "  ✓ Admin user"
 
 # ── Sucursales iniciales ──
 [
-  { codigo: "MIA", codigo_ep: "SMI", nombre: "Miami",      pais: "USA",      ubicacion: "miami",    codigo_recepcion_prefix: "RM" },
-  { codigo: "SPS", codigo_ep: "SZR", nombre: "Zeron SPS",  pais: "Honduras", ubicacion: "honduras", codigo_recepcion_prefix: "RS" },
-  { codigo: "TGU", codigo_ep: "SHU", nombre: "Humuya TGU", pais: "Honduras", ubicacion: "honduras", codigo_recepcion_prefix: "RH" }
+  { codigo: "MIA", codigo_ep: "SMI", nombre: "Miami",      pais: "USA",      ubicacion: "miami",    codigo_recepcion_prefix: "RMI" },
+  { codigo: "SPS", codigo_ep: "SZR", nombre: "Zeron SPS",  pais: "Honduras", ubicacion: "honduras", codigo_recepcion_prefix: "RZE" },
+  { codigo: "TGU", codigo_ep: "SHU", nombre: "Humuya TGU", pais: "Honduras", ubicacion: "honduras", codigo_recepcion_prefix: "RHU" },
+  { codigo: "SAM", codigo_ep: "SSM", nombre: "San Manuel", pais: "Honduras", ubicacion: "honduras", codigo_recepcion_prefix: "RSM" }
 ].each do |attrs|
   Sucursal.find_or_create_by!(codigo: attrs[:codigo]) do |s|
     s.assign_attributes(attrs)
