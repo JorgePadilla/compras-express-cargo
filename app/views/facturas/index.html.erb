@@ -1,7 +1,7 @@
-<%= render PageHeaderComponent.new(title: "Ventas", subtitle: "#{@ventas.total_count} ventas") %>
+<%= render PageHeaderComponent.new(title: "Ventas", subtitle: "#{@facturas.total_count} ventas") %>
 
 <div class="mb-6">
-  <%= render SearchBarComponent.new(url: ventas_path, placeholder: "Buscar por numero o cliente...", value: params[:q]) %>
+  <%= render SearchBarComponent.new(url: facturas_path, placeholder: "Buscar por numero o cliente...", value: params[:q]) %>
 </div>
 
 <details class="mb-6 bg-white rounded-lg shadow">
@@ -10,7 +10,7 @@
     Filtros
   </summary>
   <div class="px-6 py-4 border-t border-gray-200">
-    <%= form_tag ventas_path, method: :get, class: "grid grid-cols-1 md:grid-cols-3 gap-4", data: { controller: "f2-clear", f2_clear_submit_value: "true" } do %>
+    <%= form_tag facturas_path, method: :get, class: "grid grid-cols-1 md:grid-cols-3 gap-4", data: { controller: "f2-clear", f2_clear_submit_value: "true" } do %>
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
         <%= select_tag :estado, options_for_select(Venta::ESTADOS.map { |e| [e.humanize, e] }, params[:estado]),
@@ -19,13 +19,13 @@
       </div>
       <div class="md:col-span-3 flex gap-3">
         <button type="submit" class="px-4 py-2 bg-cec-navy text-white rounded-lg hover:bg-cec-navy-light text-sm font-medium">Aplicar</button>
-        <%= link_to "Limpiar", ventas_path, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900" %>
+        <%= link_to "Limpiar", facturas_path, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900" %>
       </div>
     <% end %>
   </div>
 </details>
 
-<% if @ventas.any? %>
+<% if @facturas.any? %>
   <div class="bg-white rounded-lg shadow overflow-hidden">
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-gray-200">
@@ -40,7 +40,7 @@
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
-          <% @ventas.each do |v| %>
+          <% @facturas.each do |v| %>
             <tr class="hover:bg-gray-50">
               <td class="px-6 py-4 whitespace-nowrap">
                 <%= link_to v.numero, v, class: "text-sm font-mono font-medium text-cec-navy hover:underline" %>
@@ -65,7 +65,7 @@
       </table>
     </div>
   </div>
-  <div class="mt-4"><%= render PaginationComponent.new(collection: @ventas, label: "ventas") %></div>
+  <div class="mt-4"><%= render PaginationComponent.new(collection: @facturas, label: "ventas") %></div>
 <% else %>
   <%= render EmptyStateComponent.new(
     title: "No hay ventas registradas",

@@ -89,7 +89,7 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :ventas, except: %i[new create destroy] do
+  resources :facturas, except: %i[new create destroy] do
     member do
       post   :registrar_pago
       delete :anular

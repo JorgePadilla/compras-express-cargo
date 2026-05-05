@@ -90,7 +90,7 @@ class PreFacturasControllerTest < ActionDispatch::IntegrationTest
     end
     pf.reload
     assert pf.facturado?
-    assert_redirected_to venta_url(Venta.last)
+    assert_redirected_to factura_url(Venta.last)
   end
 
   test "anular transitions to anulado" do

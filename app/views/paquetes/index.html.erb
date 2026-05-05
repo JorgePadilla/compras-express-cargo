@@ -337,7 +337,7 @@ end %>
               </td>
               <td class="px-3 py-2 text-center">
                 <% if fa %>
-                  <%= link_to venta_path(fa), class: "inline-flex text-cec-teal dark:text-cec-teal-light hover:text-cec-teal-dark", title: "Ver Factura #{fa.numero}" do %>
+                  <%= link_to factura_path(fa), class: "inline-flex text-cec-teal dark:text-cec-teal-light hover:text-cec-teal-dark", title: "Ver Factura #{fa.numero}" do %>
                     <%= heroicon "currency-dollar", variant: :solid, options: { class: "w-4 h-4" } %>
                   <% end %>
                 <% else %>

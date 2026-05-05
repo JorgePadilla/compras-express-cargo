@@ -74,7 +74,7 @@ class PreFacturasController < ApplicationController
         else
           "Venta #{venta.numero} generada."
         end
-      redirect_to venta_path(venta), notice: notice
+      redirect_to factura_path(venta), notice: notice
     else
       redirect_to edit_pre_factura_path(@pre_factura), alert: "No se pudo facturar la pre-factura."
     end

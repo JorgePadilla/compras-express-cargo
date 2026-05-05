@@ -28,7 +28,7 @@ class DashboardController < ApplicationController
     fac = []
     fac << card("Pre-Facturas",      nil, "document-text",            pre_facturas_path,    :teal) if can_access?(:pre_facturas)
     fac << card("Cotizaciones",      nil, "clipboard-document-list",  cotizaciones_path,    :teal) if can_access?(:cotizaciones)
-    fac << card("Facturas",          nil, "currency-dollar",          ventas_path,          :teal) if can_access?(:ventas)
+    fac << card("Facturas",          nil, "currency-dollar",          facturas_path,          :teal) if can_access?(:ventas)
     fac << card("Recibos",           nil, "receipt-percent",          recibos_path,         :teal) if can_access?(:recibos)
     fac << card("Notas de Débito",   nil, "document-plus",            notas_debito_path,    :teal) if can_access?(:notas_debito)
     fac << card("Notas de Crédito",  nil, "document-minus",           notas_credito_path,   :teal) if can_access?(:notas_credito)

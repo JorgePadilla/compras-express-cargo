@@ -40,7 +40,7 @@ module Authorization
       role.in?(%w[supervisor_miami digitador_miami])
     when :pre_facturas
       role.in?(%w[supervisor_prefactura supervisor_caja cajero])
-    when :caja, :ventas, :recibos
+    when :caja, :ventas, :facturas, :recibos
       role.in?(%w[supervisor_caja cajero])
     when :notas_debito
       role.in?(%w[supervisor_caja supervisor_prefactura cajero])

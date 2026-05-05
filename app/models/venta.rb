@@ -3,6 +3,15 @@ class Venta < ApplicationRecord
   include CurrencyAware
   has_paper_trail  # PR-D1.a: audit log
 
+  # 2026-05-05: las URLs y forms son `/facturas` (Jorge: "ventas debería de
+  # ser facturas"). El override de `model_name` hace que `link_to @venta`,
+  # `form_with model: @venta` y los path helpers resuelvan a Factura/factura.
+  # La clase Ruby sigue siendo `Venta` y la tabla `ventas` (rename interno
+  # se podría hacer después en otra PR — el nombre interno no es user-facing).
+  def self.model_name
+    ActiveModel::Name.new(self, nil, "Factura")
+  end
+
   ISV_RATE = BigDecimal("0.15")
 
   belongs_to :cliente
@@ -10,12 +19,15 @@ class Venta < ApplicationRecord
   belongs_to :creado_por, class_name: "User", optional: true
   has_many :venta_items, dependent: :destroy, inverse_of: :venta
   has_many :paquetes, -> { distinct }, through: :venta_items
-  has_many :pagos, dependent: :restrict_with_error
-  has_many :recibos, dependent: :restrict_with_error
-  has_many :notas_debito,  dependent: :restrict_with_error
-  has_many :notas_credito, dependent: :restrict_with_error
-  has_one  :cotizacion, dependent: :nullify
-  has_one  :financiamiento, dependent: :restrict_with_error
+  # FK explícita `venta_id` porque `model_name` reporta "Factura" y Rails
+  # inferiría `factura_id` (que no existe). Las tablas hijas siguen usando
+  # la columna `venta_id` legacy.
+  has_many :pagos,         foreign_key: :venta_id, dependent: :restrict_with_error
+  has_many :recibos,       foreign_key: :venta_id, dependent: :restrict_with_error
+  has_many :notas_debito,  foreign_key: :venta_id, dependent: :restrict_with_error
+  has_many :notas_credito, foreign_key: :venta_id, dependent: :restrict_with_error
+  has_one  :cotizacion,    foreign_key: :venta_id, dependent: :nullify
+  has_one  :financiamiento, foreign_key: :venta_id, dependent: :restrict_with_error
 
   accepts_nested_attributes_for :venta_items, allow_destroy: true
 
