@@ -124,6 +124,23 @@ class PaqueteTest < ActiveSupport::TestCase
     assert_not_includes result_ids, paquetes(:cka_linked_juan).id
   end
 
+  test "scope by_pre_alerta returns paquetes linked via pre_alerta_paquetes" do
+    pap = pre_alerta_paquetes(:pap_vinculado)
+    pa = pap.pre_alerta
+    paquete = pap.paquete
+
+    results = Paquete.by_pre_alerta(pa.id)
+    assert_includes results, paquete
+    assert_not_includes results, paquetes(:empacado)
+  end
+
+  test "scope by_pre_alerta uses distinct (no duplicates)" do
+    pap = pre_alerta_paquetes(:pap_vinculado)
+    pa = pap.pre_alerta
+    # Si se llamara sin distinct, joins multiplicaría por cada pap match.
+    assert_equal 1, Paquete.by_pre_alerta(pa.id).where(id: pap.paquete_id).count
+  end
+
   test "scope facturables returns disponible_entrega without pre_factura" do
     results = Paquete.facturables
     assert_includes results, paquetes(:disponible_entrega_juan)

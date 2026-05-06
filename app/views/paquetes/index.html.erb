@@ -90,6 +90,7 @@ end %>
   Array(params[:estados]).reject(&:blank?).any?,
   Array(params[:tipo_envio_ids]).reject(&:blank?).any?,
   Array(params[:sucursal_ids]).reject(&:blank?).any?,
+  params[:cliente_id].present?, params[:pre_alerta_id].present?,
   params[:fecha_desde].present?, params[:fecha_hasta].present?,
   params[:solo_facturados] == "1", params[:incluir_facturados] == "1",
   params[:sin_prealerta] == "1",
@@ -160,6 +161,42 @@ end %>
                 class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal",
                 data: { controller: "flatpickr" } %>
           </div>
+        </div>
+      </div>
+
+      <%# Cliente + Pre-Alerta (autocomplete con dropdown) %>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="relative" data-controller="client-autocomplete"
+             data-client-autocomplete-url-value="<%= buscar_clientes_path %>">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Cliente</label>
+          <input type="text"
+                 placeholder="Buscar por código, nombre o apellido…"
+                 value="<%= @cliente_seleccionado ? "#{@cliente_seleccionado.codigo} — #{@cliente_seleccionado.nombre_completo}" : '' %>"
+                 data-client-autocomplete-target="input"
+                 data-action="input->client-autocomplete#search"
+                 class="block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" />
+          <%= hidden_field_tag :cliente_id, params[:cliente_id], data: { client_autocomplete_target: "clienteId" } %>
+          <div data-client-autocomplete-target="dropdown"
+               class="hidden absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700 rounded-lg shadow-lg max-h-64 overflow-auto"></div>
+          <span data-client-autocomplete-target="nombre" class="hidden text-xs text-gray-500 dark:text-gray-400 mt-1"></span>
+        </div>
+
+        <div class="relative" data-controller="pre-alerta-search"
+             data-pre-alerta-search-url-value="<%= buscar_pre_alertas_path %>">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Pre-Alerta</label>
+          <input type="text"
+                 placeholder="Número, título o cliente…"
+                 value="<%= @pre_alerta_seleccionada&.numero_documento %>"
+                 data-pre-alerta-search-target="input"
+                 data-action="input->pre-alerta-search#search"
+                 class="block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" />
+          <%= hidden_field_tag :pre_alerta_id, params[:pre_alerta_id], data: { pre_alerta_search_target: "preAlertaId" } %>
+          <div data-pre-alerta-search-target="dropdown"
+               class="hidden absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700 rounded-lg shadow-lg max-h-64 overflow-auto"></div>
+          <p data-pre-alerta-search-target="nombre"
+             class="<%= @pre_alerta_seleccionada ? '' : 'hidden ' %>text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <%= [@pre_alerta_seleccionada&.titulo, @pre_alerta_seleccionada&.cliente&.codigo].compact.reject(&:blank?).join(" · ") %>
+          </p>
         </div>
       </div>
 

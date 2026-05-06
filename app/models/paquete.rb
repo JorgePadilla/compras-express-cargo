@@ -120,6 +120,13 @@ class Paquete < ApplicationRecord
   scope :sin_pre_alerta, -> {
     left_joins(:pre_alerta_paquetes).where(pre_alerta_paquetes: { id: nil })
   }
+  # Paquetes vinculados a una pre-alerta específica (vía join table).
+  # `.distinct` evita duplicados si el paquete tiene varias pap (raro pero posible).
+  scope :by_pre_alerta, ->(pre_alerta_id) {
+    joins(:pre_alerta_paquetes)
+      .where(pre_alerta_paquetes: { pre_alerta_id: pre_alerta_id })
+      .distinct
+  }
 
   before_validation :generate_guia, on: :create, if: -> { guia.blank? }
   before_validation :generate_numero_recepcion, on: :create, if: -> { numero_recepcion.blank? && sucursal_id.present? }

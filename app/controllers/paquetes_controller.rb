@@ -31,6 +31,9 @@ class PaquetesController < ApplicationController
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     @sucursales = Sucursal.activas.ordered
     @estados_paquete = Paquete.estados.keys
+    # Pre-fill para los inputs de autocomplete cuando el filtro viene en la URL.
+    @cliente_seleccionado    = Cliente.find_by(id: params[:cliente_id]) if params[:cliente_id].present?
+    @pre_alerta_seleccionada = PreAlerta.find_by(id: params[:pre_alerta_id]) if params[:pre_alerta_id].present?
   end
 
   def show
@@ -413,6 +416,7 @@ class PaquetesController < ApplicationController
     scope = scope.by_sucursal(sucursales) if sucursales.any?
 
     scope = scope.by_cliente(params[:cliente_id]) if params[:cliente_id].present?
+    scope = scope.by_pre_alerta(params[:pre_alerta_id]) if params[:pre_alerta_id].present?
 
     if params[:fecha_desde].present? && (fecha_desde = Date.parse(params[:fecha_desde]) rescue nil)
       scope = scope.where(fecha_recibido_miami: fecha_desde...)
