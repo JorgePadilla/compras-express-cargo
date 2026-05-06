@@ -448,3 +448,39 @@ Fase 9  ░░░░░░░░░░░░░░░░░░░░  Fotos de P
 
    Implementación: `ESTADOS_MOVIBLES = %w[recibido_miami empacado enviado_honduras]`, `puede_mover?(pap)` y `puede_eliminar?(pap)` en `Cuenta::PreAlertasController`. Eliminar un PAP vinculado destruye sólo la fila de unión; el `Paquete` físico permanece intacto en la bodega.
 6. **Wizard Cliente**: Stepper de 3 pasos (Servicio → Consolidación → Datos) con persistencia en localStorage (draft BORRADOR en Mis Pre-Alertas). Al completar un paso, el stepper muestra la selección como label. En el paso 3, "Agregar Otro Paquete" guarda el primer paquete y abre automáticamente una fila en blanco en el editor.
+
+
+---
+
+## Filtros en /paquetes
+
+El listado `/paquetes` (admin) tiene un panel "Filtros avanzados" colapsable con los siguientes controles:
+
+### Filtros disponibles
+- **Búsqueda libre** (`params[:q]`): scope `Paquete.buscar` que matchea tracking, tracking_secundario, guía, número de recepción, descripción, código/nombre/apellido del cliente, código/nombre del tipo de envío y número de manifiesto.
+- **Tipo de envío** (`params[:tipo_envio_ids][]`): multi-select de checkboxes.
+- **Sucursal** (`params[:sucursal_ids][]`): multi-select.
+- **Estado del paquete** (`params[:estados][]`): multi-select de los ~15 estados.
+- **Cliente** (`params[:cliente_id]`): autocomplete contra `/clientes/buscar`. Stimulus `client-autocomplete`. Pre-llena el input al recargar la página con el filtro activo.
+- **Pre-Alerta** (`params[:pre_alerta_id]`): autocomplete contra `/pre_alertas/buscar`. Stimulus `pre-alerta-search`. Devuelve los paquetes vinculados vía `pre_alerta_paquetes`. Scope `Paquete.by_pre_alerta(id)` con `.distinct`.
+- **Rango de fechas** (`fecha_desde` / `fecha_hasta`): aplica sobre `fecha_recibido_miami`.
+- **Toggles rápidos**: `solo_facturados`, `incluir_facturados`, `sin_prealerta`, `incluir_3_12_meses`, `incluir_mas_1_ano`.
+
+### UX y atajos de teclado
+- **F2**: limpia todos los filtros y recarga (controller `f2-clear`).
+- **Enter dentro de un input**: submitea el form (default del browser). Si el dropdown del autocomplete tiene un item resaltado, Enter selecciona ese item en lugar de submitear.
+- **ArrowDown / ArrowUp**: navega entre opciones del dropdown (Cliente y Pre-Alerta).
+- **Escape**: cierra el dropdown sin seleccionar.
+- **Tab**: cierra el dropdown y pasa al siguiente campo.
+- Submit con `data: { turbo: false }` + URL con anchor `#resultados` para que el browser scrollee a la tabla después de aplicar.
+- Badge de "filtros activos" (esquina del summary) cuenta cuántos filtros están aplicados, incluyendo Cliente y Pre-Alerta.
+
+### Endpoints reutilizados
+- `GET /clientes/buscar?q=…` → JSON `[{id, codigo, nombre, notas_miami, categoria_precio}]`. Busca en código, nombre y apellido.
+- `GET /pre_alertas/buscar?q=…` → JSON `[{id, numero, titulo, cliente, consolidado, estado}]`. Busca en `numero_documento`, `titulo`, `proveedor`, código y nombre del cliente.
+
+### Archivos
+- Vista: `app/views/paquetes/index.html.erb`.
+- Controller: `app/controllers/paquetes_controller.rb` (acción `index`, método privado `apply_filters`).
+- Stimulus: `app/javascript/controllers/client_autocomplete_controller.js`, `app/javascript/controllers/pre_alerta_search_controller.js`, `app/javascript/controllers/f2_clear_controller.js`.
+- Modelo: `app/models/paquete.rb` (scopes `buscar`, `by_cliente`, `by_pre_alerta`, etc.).

@@ -1,25 +1,28 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Lupa de búsqueda para filtrar paquetes por pre-alerta. Reusa el endpoint
-// pre_alertas#buscar (ya existe), que devuelve:
-//   [{ id, numero, titulo, cliente, consolidado, estado }, ...]
+// Autocomplete de Pre-Alerta con keyboard nav. Endpoint: /pre_alertas/buscar.
 //
 // Markup esperado:
 //   <div data-controller="pre-alerta-search"
 //        data-pre-alerta-search-url-value="<%= buscar_pre_alertas_path %>">
 //     <input data-pre-alerta-search-target="input"
-//            data-action="input->pre-alerta-search#search">
+//            data-action="input->pre-alerta-search#search
+//                         keydown->pre-alerta-search#onKeydown">
 //     <input type="hidden" name="pre_alerta_id"
 //            data-pre-alerta-search-target="preAlertaId">
 //     <div data-pre-alerta-search-target="dropdown" class="hidden …"></div>
 //     <p   data-pre-alerta-search-target="nombre"   class="hidden …"></p>
 //   </div>
+//
+// Keyboard: ArrowDown/Up navegan, Enter selecciona, Escape cierra,
+// Tab cierra. Si Enter sin highlight → submit normal del form.
 export default class extends Controller {
   static targets = ["input", "preAlertaId", "dropdown", "nombre"]
   static values  = { url: String }
 
   connect() {
     this._timeout = null
+    this._activeIndex = -1
   }
 
   disconnect() {
@@ -31,7 +34,6 @@ export default class extends Controller {
 
     const query = this.inputTarget.value.trim()
     if (query.length === 0) {
-      // Si el input se vacía, limpiar el FK y ocultar dropdown
       this.preAlertaIdTarget.value = ""
       if (this.hasNombreTarget) this.nombreTarget.classList.add("hidden")
       this.hideDropdown()
@@ -52,8 +54,54 @@ export default class extends Controller {
     }, 300)
   }
 
+  onKeydown(e) {
+    if (this.dropdownTarget.classList.contains("hidden")) return
+
+    const items = this.itemButtons()
+    if (items.length === 0) return
+
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault()
+        this._activeIndex = (this._activeIndex + 1) % items.length
+        this.applyHighlight(items)
+        break
+      case "ArrowUp":
+        e.preventDefault()
+        this._activeIndex = this._activeIndex <= 0 ? items.length - 1 : this._activeIndex - 1
+        this.applyHighlight(items)
+        break
+      case "Enter":
+        if (this._activeIndex >= 0 && this._activeIndex < items.length) {
+          e.preventDefault()
+          items[this._activeIndex].click()
+        }
+        break
+      case "Escape":
+        e.preventDefault()
+        this.hideDropdown()
+        break
+      case "Tab":
+        this.hideDropdown()
+        break
+    }
+  }
+
+  itemButtons() {
+    return Array.from(this.dropdownTarget.querySelectorAll("button[data-action*='pre-alerta-search#select']"))
+  }
+
+  applyHighlight(items) {
+    items.forEach((btn, i) => {
+      btn.classList.toggle("bg-cec-teal/10", i === this._activeIndex)
+      btn.classList.toggle("dark:bg-cec-teal/20", i === this._activeIndex)
+      if (i === this._activeIndex) btn.scrollIntoView({ block: "nearest" })
+    })
+  }
+
   renderDropdown(items) {
     this.dropdownTarget.replaceChildren()
+    this._activeIndex = -1
 
     if (items.length === 0) {
       const empty = document.createElement("div")
@@ -119,6 +167,12 @@ export default class extends Controller {
     this.hideDropdown()
   }
 
-  hideDropdown() { this.dropdownTarget.classList.add("hidden") }
-  showDropdown() { this.dropdownTarget.classList.remove("hidden") }
+  hideDropdown() {
+    this.dropdownTarget.classList.add("hidden")
+    this._activeIndex = -1
+  }
+
+  showDropdown() {
+    this.dropdownTarget.classList.remove("hidden")
+  }
 }

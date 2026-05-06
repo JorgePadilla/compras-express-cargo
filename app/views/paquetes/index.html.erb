@@ -176,7 +176,7 @@ end %>
                  placeholder="Buscar por código, nombre o apellido…"
                  value="<%= @cliente_seleccionado ? "#{@cliente_seleccionado.codigo} — #{@cliente_seleccionado.nombre_completo}" : '' %>"
                  data-client-autocomplete-target="input"
-                 data-action="input->client-autocomplete#search"
+                 data-action="input->client-autocomplete#search keydown->client-autocomplete#onKeydown"
                  class="block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" />
           <%= hidden_field_tag :cliente_id, params[:cliente_id], data: { client_autocomplete_target: "clienteId" } %>
           <div data-client-autocomplete-target="dropdown"
@@ -191,7 +191,7 @@ end %>
                  placeholder="Número, título o cliente…"
                  value="<%= @pre_alerta_seleccionada&.numero_documento %>"
                  data-pre-alerta-search-target="input"
-                 data-action="input->pre-alerta-search#search"
+                 data-action="input->pre-alerta-search#search keydown->pre-alerta-search#onKeydown"
                  class="block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" />
           <%= hidden_field_tag :pre_alerta_id, params[:pre_alerta_id], data: { pre_alerta_search_target: "preAlertaId" } %>
           <div data-pre-alerta-search-target="dropdown"
