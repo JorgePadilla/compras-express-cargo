@@ -111,7 +111,7 @@ end %>
     </svg>
   </summary>
   <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-    <%= form_tag paquetes_path, method: :get, class: "space-y-5", data: { controller: "f2-clear", f2_clear_submit_value: "true" } do %>
+    <%= form_tag paquetes_path(anchor: "resultados"), method: :get, class: "space-y-5", data: { controller: "f2-clear", f2_clear_submit_value: "true" } do %>
       <% if params[:q].present? %>
         <%= hidden_field_tag :q, params[:q] %>
       <% end %>
@@ -245,6 +245,10 @@ end %>
     <% end %>
   </div>
 </details>
+
+<%# Anchor: el form de filtros submitea a `paquetes_path#resultados` para
+    que tras aplicar, el browser desplace la página hasta acá. %>
+<div id="resultados" class="scroll-mt-4"></div>
 
 <% if @paquetes.any? %>
   <%# Indicador de seleccion (sticky top, aparece cuando hay >= 1). Las
