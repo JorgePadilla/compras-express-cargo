@@ -44,8 +44,11 @@ puts "  ✓ #{Sucursal.count} sucursales"
   te.save!
 end
 
-# Eliminar legacy tipos de envio (safety-net para staging/production)
-TipoEnvio.where(codigo: %w[aereo aereo-express ckm-maritimo cka-estandard cer-legacy cem-legacy]).destroy_all
+# Marcar legacy tipos de envio como inactivos (no borrar — pueden estar
+# referenciados por paquetes existentes y `destroy_all` violaría la FK).
+# Quedan ocultos del listado activo pero conservan integridad referencial.
+TipoEnvio.where(codigo: %w[aereo aereo-express ckm-maritimo cka-estandard cer-legacy cem-legacy])
+         .update_all(activo: false)
 
 puts "  ✓ #{TipoEnvio.activos.count} tipos de envio v4"
 
