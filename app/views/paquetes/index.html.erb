@@ -111,7 +111,10 @@ end %>
     </svg>
   </summary>
   <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-    <%= form_tag paquetes_path(anchor: "resultados"), method: :get, class: "space-y-5", data: { controller: "f2-clear", f2_clear_submit_value: "true" } do %>
+    <%# data-turbo: false → browser hace navegación clásica y respeta el
+        anchor #resultados. Con Turbo Drive el anchor en GET-forms no
+        siempre dispara el scroll. %>
+    <%= form_tag paquetes_path(anchor: "resultados"), method: :get, class: "space-y-5", data: { controller: "f2-clear", f2_clear_submit_value: "true", turbo: false } do %>
       <% if params[:q].present? %>
         <%= hidden_field_tag :q, params[:q] %>
       <% end %>
