@@ -200,59 +200,197 @@
                  focus:ring-cec-teal focus:border-cec-teal" %>
     </div>
 
-    <div class="lg:col-span-3 flex flex-wrap gap-6">
-      <div class="flex items-center gap-2">
-        <%= f.check_box :pre_alerta, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-        <%= f.label :pre_alerta, "Pre-Alerta", class: "text-sm font-medium text-gray-700" %>
+    <%# ── Estado de vinculación: Pre-Alerta y Pre-Factura ─────────────
+        Display read-only — el flag boolean se preserva via hidden field.
+        Si el paquete tiene pre-alertas o pre-factura, mostramos link directo. %>
+    <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+      <% pap = paquete.pre_alerta_paquetes.includes(:pre_alerta).first %>
+      <div class="px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-800/50 ring-1 ring-gray-200 dark:ring-gray-700">
+        <span class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Pre-Alerta</span>
+        <% if pap&.pre_alerta %>
+          <%= link_to pap.pre_alerta.numero_documento, pre_alerta_path(pap.pre_alerta),
+              class: "font-mono text-sm font-medium text-cec-navy dark:text-cec-gold hover:underline" %>
+          <span class="text-xs text-gray-600 dark:text-gray-300 ml-1">— <%= pap.pre_alerta.titulo %></span>
+        <% else %>
+          <span class="text-sm text-gray-500 italic">Sin pre-alerta</span>
+        <% end %>
+        <%# Mantener compat con el flag boolean existente. %>
+        <%= f.hidden_field :pre_alerta, value: paquete.pre_alerta %>
       </div>
-      <%# La columna boolean `pre_factura` tiene un name clash con el
-          belongs_to :pre_factura (FK). Usamos check_box_tag para
-          leer/escribir la columna directamente sin pasar por el
-          accessor de la asociación. %>
-      <div class="flex items-center gap-2">
-        <%= hidden_field_tag "paquete[pre_factura]", "0" %>
-        <%= check_box_tag "paquete[pre_factura]", "1",
-            ActiveModel::Type::Boolean.new.cast(paquete[:pre_factura]),
-            id: "paquete_pre_factura_flag",
-            class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-        <label for="paquete_pre_factura_flag" class="text-sm font-medium text-gray-700">Pre-Factura</label>
-      </div>
-      <div class="flex items-center gap-2">
-        <%= f.check_box :solicito_cambio_servicio, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-        <%= f.label :solicito_cambio_servicio, "Cambio de Servicio", class: "text-sm font-medium text-gray-700" %>
-      </div>
-      <div class="flex items-center gap-2">
-        <%= f.check_box :retener_miami, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-        <%= f.label :retener_miami, "Retener en Miami", class: "text-sm font-medium text-gray-700" %>
-      </div>
-      <div class="flex items-center gap-2">
-        <%= f.check_box :recolecta_solicitada, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-        <%= f.label :recolecta_solicitada, "Solicitó Recolecta", class: "text-sm font-medium text-gray-700 dark:text-gray-200" %>
+      <div class="px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-800/50 ring-1 ring-gray-200 dark:ring-gray-700">
+        <span class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Pre-Factura</span>
+        <% if paquete.pre_factura_id %>
+          <%= link_to paquete.pre_factura.numero, pre_factura_path(paquete.pre_factura),
+              class: "font-mono text-sm font-medium text-cec-navy dark:text-cec-gold hover:underline" %>
+        <% else %>
+          <span class="text-sm text-gray-500 italic">Sin pre-factura</span>
+        <% end %>
+        <%# pre_factura es columna boolean (no la asociación FK). Hidden field
+            preserva el valor existente para que el form submit no lo borre. %>
+        <%= hidden_field_tag "paquete[pre_factura]",
+            (ActiveModel::Type::Boolean.new.cast(paquete[:pre_factura]) ? "1" : "0"),
+            id: "paquete_pre_factura_flag" %>
       </div>
     </div>
 
-    <%# PR-D6.a: cuando se marca "Solicitó Recolecta", aparece la zona
-        del catálogo. Al elegir una tarifa, el monto y la moneda se
-        autocompletan; el cajero puede sobreescribir manualmente. %>
-    <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50 ring-1 ring-gray-200 dark:ring-gray-700">
-      <div>
-        <%= f.label :tarifa_recolecta_id, "Zona / Tarifa de Recolecta", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
-        <%= f.collection_select :tarifa_recolecta_id, @tarifas_recolecta, :id, :to_s,
-              { include_blank: "— Sin tarifa del catálogo —" },
-              { class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
-        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 italic">Al elegir, el monto y moneda se autocompletan.</p>
+    <%# ── Checkboxes con modal: Cambio de Servicio, Retener Miami, Recolecta ── %>
+    <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+
+      <%# Cambio de Servicio — modal: nuevo tipo + razón. %>
+      <div data-controller="checkbox-modal"
+           class="px-3 py-2 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <%= f.check_box :solicito_cambio_servicio,
+              data: { checkbox_modal_target: "checkbox", action: "change->checkbox-modal#onChange" },
+              class: "rounded border-gray-300 text-amber-600 focus:ring-amber-500" %>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Cambio de Servicio</span>
+          <% if paquete.solicito_cambio_servicio? %>
+            <span class="ml-auto text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">activo</span>
+          <% end %>
+        </label>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Genera cargo automático en pre-factura.</p>
+
+        <dialog data-checkbox-modal-target="dialog"
+                aria-labelledby="modal-cambio-servicio-title"
+                style="margin: auto" class="rounded-xl p-0 w-[32rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-amber-300">
+          <div class="bg-amber-50 px-5 py-3 border-b border-amber-200">
+            <h3 id="modal-cambio-servicio-title" class="text-base font-semibold text-amber-900">Cambio de Servicio</h3>
+          </div>
+          <div class="p-5 space-y-4 bg-white">
+            <p class="text-sm text-gray-700">
+              El cliente solicitó cambio de servicio. Confirmá el nuevo tipo de envío.
+              Pre-Factura agregará automáticamente la línea con el cargo correspondiente.
+            </p>
+            <div>
+              <%= f.label :tipo_envio_id, "Nuevo Tipo de Envío", class: "block text-sm font-medium text-gray-700 mb-1" %>
+              <%= f.collection_select :tipo_envio_id, @tipo_envios, :id, :nombre,
+                    { include_blank: "— Mantener actual —" },
+                    { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-amber-500 focus:border-amber-500" } %>
+            </div>
+            <p class="text-[11px] text-gray-600 italic">
+              Si querés agregar la razón del cambio, escribila en
+              <strong>Notas Internas</strong> (campo abajo del formulario).
+            </p>
+          </div>
+          <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">
+            <button type="button" data-action="checkbox-modal#cancel"
+                    class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900">Cancelar</button>
+            <button type="button" data-action="checkbox-modal#confirm"
+                    class="px-3 py-1.5 text-sm font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700">Confirmar</button>
+          </div>
+        </dialog>
       </div>
-      <div>
-        <%= f.label :recolecta_monto, "Monto Recolecta", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
-        <%= f.number_field :recolecta_monto, step: "0.01", min: 0,
-            placeholder: "—",
-            class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+
+      <%# Retener en Miami — modal: motivos[] + nota. %>
+      <div data-controller="checkbox-modal"
+           class="px-3 py-2 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <%= f.check_box :retener_miami,
+              data: { checkbox_modal_target: "checkbox", action: "change->checkbox-modal#onChange" },
+              class: "rounded border-gray-300 text-amber-600 focus:ring-amber-500" %>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Retener en Miami</span>
+          <% if paquete.retener_miami? %>
+            <span class="ml-auto text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">activo</span>
+          <% end %>
+        </label>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Especificá motivo(s) de la retención.</p>
+
+        <dialog data-checkbox-modal-target="dialog"
+                aria-labelledby="modal-retener-miami-title"
+                style="margin: auto" class="rounded-xl p-0 w-[32rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-amber-300">
+          <div class="bg-amber-50 px-5 py-3 border-b border-amber-200">
+            <h3 id="modal-retener-miami-title" class="text-base font-semibold text-amber-900">Retener en Miami</h3>
+          </div>
+          <div class="p-5 space-y-4 bg-white">
+            <div>
+              <span class="block text-sm font-medium text-gray-700 mb-1">Motivos</span>
+              <% motivos = MotivoRetencion.activos.ordered %>
+              <% if motivos.any? %>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <% motivos.each do |m| %>
+                    <label class="flex items-start gap-2 text-sm text-gray-800">
+                      <%= check_box_tag "paquete[motivo_retencion_ids][]", m.id,
+                          paquete.motivo_retencion_ids.include?(m.id),
+                          class: "mt-0.5 rounded border-amber-300 text-amber-600 focus:ring-amber-500" %>
+                      <span><%= m.nombre %></span>
+                    </label>
+                  <% end %>
+                </div>
+                <%= hidden_field_tag "paquete[motivo_retencion_ids][]", "" %>
+              <% else %>
+                <p class="text-xs text-amber-700 italic">No hay motivos configurados todavía.</p>
+              <% end %>
+            </div>
+            <div>
+              <%= f.label :notas_retencion, "Notas de retención (detalle del caso)",
+                  class: "block text-sm font-medium text-gray-700 mb-1" %>
+              <%= f.text_area :notas_retencion, rows: 3,
+                  placeholder: "Detalle adicional. Obligatorio si no seleccionaste motivo.",
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-amber-500 focus:border-amber-500" %>
+            </div>
+          </div>
+          <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">
+            <button type="button" data-action="checkbox-modal#cancel"
+                    class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900">Cancelar</button>
+            <button type="button" data-action="checkbox-modal#confirm"
+                    class="px-3 py-1.5 text-sm font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700">Confirmar</button>
+          </div>
+        </dialog>
       </div>
-      <div>
-        <%= f.label :recolecta_moneda, "Moneda", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
-        <%= f.select :recolecta_moneda, [ %w[USD USD], %w[LPS LPS] ],
-              { include_blank: "—" },
-              { class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
+
+      <%# Solicitó Recolecta — modal: zona + monto + moneda. %>
+      <div data-controller="checkbox-modal"
+           class="px-3 py-2 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 hover:bg-cec-teal/5 transition-colors">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <%= f.check_box :recolecta_solicitada,
+              data: { checkbox_modal_target: "checkbox", action: "change->checkbox-modal#onChange" },
+              class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Solicitó Recolecta</span>
+          <% if paquete.recolecta_solicitada? %>
+            <span class="ml-auto text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-cec-teal/10 text-cec-teal-dark">
+              <%= paquete.recolecta_monto.present? ? "#{paquete.recolecta_moneda} #{number_with_delimiter(paquete.recolecta_monto.to_f, precision: 2)}" : "activa" %>
+            </span>
+          <% end %>
+        </label>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Elegí la zona / tarifa.</p>
+
+        <dialog data-checkbox-modal-target="dialog"
+                aria-labelledby="modal-recolecta-title"
+                style="margin: auto" class="rounded-xl p-0 w-[32rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-cec-teal/40">
+          <div class="bg-cec-teal/10 px-5 py-3 border-b border-cec-teal/20">
+            <h3 id="modal-recolecta-title" class="text-base font-semibold text-cec-navy dark:text-cec-gold">Solicitó Recolecta</h3>
+          </div>
+          <div class="p-5 space-y-4 bg-white">
+            <div>
+              <%= f.label :tarifa_recolecta_id, "Zona / Tarifa", class: "block text-sm font-medium text-gray-700 mb-1" %>
+              <%= f.collection_select :tarifa_recolecta_id, @tarifas_recolecta, :id, :to_s,
+                    { include_blank: "— Sin tarifa del catálogo —" },
+                    { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
+              <p class="mt-1 text-xs text-gray-500 italic">Al elegir, monto y moneda se autocompletan al guardar.</p>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <%= f.label :recolecta_monto, "Monto", class: "block text-sm font-medium text-gray-700 mb-1" %>
+                <%= f.number_field :recolecta_monto, step: "0.01", min: 0,
+                    placeholder: "—",
+                    class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+              </div>
+              <div>
+                <%= f.label :recolecta_moneda, "Moneda", class: "block text-sm font-medium text-gray-700 mb-1" %>
+                <%= f.select :recolecta_moneda, [ %w[USD USD], %w[LPS LPS] ],
+                      { include_blank: "—" },
+                      { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
+              </div>
+            </div>
+            <p class="text-xs text-gray-600 italic">Se cobra automáticamente en la pre-factura.</p>
+          </div>
+          <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">
+            <button type="button" data-action="checkbox-modal#cancel"
+                    class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900">Cancelar</button>
+            <button type="button" data-action="checkbox-modal#confirm"
+                    class="px-3 py-1.5 text-sm font-medium bg-cec-teal text-white rounded-lg hover:bg-cec-teal-dark">Confirmar</button>
+          </div>
+        </dialog>
       </div>
     </div>
 
@@ -301,37 +439,8 @@
                  focus:ring-cec-teal focus:border-cec-teal" %>
     </div>
 
-    <div class="lg:col-span-3 rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
-      <div>
-        <%= f.label :motivos_retencion, "Motivos de Retención",
-            class: "block text-sm font-medium text-amber-900 mb-1" %>
-        <p class="text-xs text-amber-700 mb-2">Selecciona uno o varios cuando el paquete se retiene en bodega.</p>
-        <% motivos = MotivoRetencion.activos.ordered %>
-        <% if motivos.any? %>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <% motivos.each do |m| %>
-              <label class="flex items-start gap-2 text-sm text-amber-900">
-                <%= check_box_tag "paquete[motivo_retencion_ids][]", m.id,
-                    paquete.motivo_retencion_ids.include?(m.id),
-                    class: "mt-0.5 rounded border-amber-300 text-amber-600 focus:ring-amber-500" %>
-                <span><%= m.nombre %></span>
-              </label>
-            <% end %>
-          </div>
-          <%= hidden_field_tag "paquete[motivo_retencion_ids][]", "" %>
-        <% else %>
-          <p class="text-xs text-amber-700 italic">No hay motivos configurados todavía.</p>
-        <% end %>
-      </div>
-      <div>
-        <%= f.label :notas_retencion, "Notas de Retención (detalle del caso)",
-            class: "block text-sm font-medium text-amber-900 mb-1" %>
-        <%= f.text_area :notas_retencion, rows: 2,
-            placeholder: "Detalle adicional. Obligatorio si no seleccionaste motivo y el estado es 'retenido'.",
-            class: "block w-full rounded-lg border-amber-300 shadow-sm text-sm bg-white
-                   focus:ring-amber-500 focus:border-amber-500" %>
-      </div>
-    </div>
+    <%# El panel de Motivos de Retención + Notas de Retención vive ahora
+        dentro del modal del checkbox "Retener en Miami" (más arriba). %>
   </div>
 
   <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">

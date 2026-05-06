@@ -39,6 +39,29 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Updated", @paquete.descripcion
   end
 
+  test "update persiste flags + campos del modal (recolecta + retencion + cambio servicio)" do
+    motivo = MotivoRetencion.create!(nombre: "Caja dañada", activo: true)
+
+    patch paquete_url(@paquete), params: { paquete: {
+      recolecta_solicitada: "1",
+      recolecta_monto: "35.0",
+      recolecta_moneda: "USD",
+      retener_miami: "1",
+      notas_retencion: "Caja se ve golpeada",
+      motivo_retencion_ids: [ "", motivo.id.to_s ],
+      solicito_cambio_servicio: "1"
+    } }
+
+    @paquete.reload
+    assert @paquete.recolecta_solicitada?
+    assert_equal 35.0, @paquete.recolecta_monto.to_f
+    assert_equal "USD", @paquete.recolecta_moneda
+    assert @paquete.retener_miami?
+    assert_equal "Caja se ve golpeada", @paquete.notas_retencion
+    assert_includes @paquete.motivo_retencion_ids, motivo.id
+    assert @paquete.solicito_cambio_servicio?
+  end
+
   test "should get label" do
     get label_paquete_url(@paquete)
     assert_response :success
