@@ -132,11 +132,11 @@ class PaqueteTest < ActiveSupport::TestCase
     assert_not_includes results, paquetes(:empacado)
   end
 
-  test "scope facturables excludes paquetes with venta_id (reserved by proforma)" do
+  test "scope facturables excludes paquetes with venta_id (already invoiced)" do
     p = paquetes(:disponible_entrega_juan)
-    proforma = Venta.create!(cliente: clientes(:juan), estado: "proforma", moneda: "LPS",
+    venta = Venta.create!(cliente: clientes(:juan), estado: "pendiente", moneda: "LPS",
       venta_items_attributes: [{ concepto: "Flete", subtotal: 50 }])
-    p.update_column(:venta_id, proforma.id)
+    p.update_column(:venta_id, venta.id)
     assert_not_includes Paquete.facturables, p.reload
   end
 

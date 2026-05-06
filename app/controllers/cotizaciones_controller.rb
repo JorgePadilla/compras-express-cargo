@@ -1,6 +1,6 @@
 class CotizacionesController < ApplicationController
   before_action :require_feature_access
-  before_action :set_cotizacion, only: %i[show edit update enviar aceptar rechazar generar_proforma pdf enviar_email]
+  before_action :set_cotizacion, only: %i[show edit update enviar aceptar rechazar pdf enviar_email]
 
   def index
     @cotizaciones = Cotizacion.includes(:cliente, :creado_por).recientes
@@ -68,17 +68,6 @@ class CotizacionesController < ApplicationController
     else
       redirect_to @cotizacion, alert: "Solo se pueden rechazar cotizaciones enviadas."
     end
-  end
-
-  def generar_proforma
-    proforma = @cotizacion.generar_proforma!(user: Current.user)
-    if proforma
-      redirect_to proforma_path(proforma), notice: "Proforma #{proforma.numero} generada desde cotizacion."
-    else
-      redirect_to @cotizacion, alert: "No se pudo generar la proforma. Verifica que la cotizacion este aceptada."
-    end
-  rescue ActiveRecord::RecordInvalid => e
-    redirect_to @cotizacion, alert: "Error: #{e.message}"
   end
 
   def pdf

@@ -58,31 +58,6 @@ class CotizacionTest < ActiveSupport::TestCase
     assert_not_nil ct.rechazada_at
   end
 
-  test "generar_proforma! creates venta with estado proforma" do
-    ct = cotizaciones(:aceptada_juan)
-    assert_difference "Venta.count", 1 do
-      proforma = ct.generar_proforma!(user: @user)
-      assert_equal "proforma", proforma.estado
-      assert_equal ct.cliente, proforma.cliente
-      assert_equal ct.total.to_d, proforma.total.to_d
-    end
-    ct.reload
-    assert_not_nil ct.venta_id
-  end
-
-  test "generar_proforma! returns nil for non-aceptada" do
-    ct = cotizaciones(:borrador_juan)
-    assert_nil ct.generar_proforma!(user: @user)
-  end
-
-  test "generar_proforma! returns existing venta if already generated" do
-    ct = cotizaciones(:aceptada_juan)
-    proforma1 = ct.generar_proforma!(user: @user)
-    ct.reload
-    proforma2 = ct.generar_proforma!(user: @user)
-    assert_equal proforma1, proforma2
-  end
-
   test "marcar_expiradas! expires overdue enviadas" do
     ct = cotizaciones(:enviada_maria)
     ct.update!(fecha_vencimiento: 1.day.ago)
