@@ -96,7 +96,7 @@
           <%= render DashboardActivityItemComponent.new(
                 href: paquete_path(p),
                 avatar_name: p.cliente&.nombre_completo,
-                eyebrow: p.guia,
+                eyebrow: paquete_display_id(p),
                 title: "#{p.cliente&.nombre_completo} · #{p.tracking}",
                 time: p.created_at
               ) do |item| %>

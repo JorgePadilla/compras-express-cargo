@@ -35,7 +35,7 @@ end %>
   <div class="flex-1">
     <%= render SearchBarComponent.new(
       url: paquetes_path,
-      placeholder: "Buscar por tracking, recepción, guía, cliente, contenido, tipo de envío o manifiesto...",
+      placeholder: "Buscar por tracking, recepción, cliente, contenido, tipo de envío o manifiesto...",
       value: params[:q]
     ) %>
   </div>
@@ -49,7 +49,6 @@ end %>
       <ul class="space-y-1 list-disc list-inside text-gray-600 dark:text-gray-300">
         <li>Tracking</li>
         <li>N° de recepción (RM/RS/RH-XXXXXX)</li>
-        <li>Guía del paquete (PQ-XXXXXX)</li>
         <li>Cliente: código y nombre</li>
         <li>Tercero (cuando aplica): código y nombre</li>
         <li>Contenido / descripción</li>
@@ -417,7 +416,7 @@ end %>
                 <%= paquete.fecha_disponible&.strftime("%d/%m/%Y") || "—" %>
               </td>
               <td class="px-3 py-2 whitespace-nowrap">
-                <span class="font-mono text-xs font-semibold text-cec-navy dark:text-cec-gold"><%= paquete.numero_recepcion || paquete.guia %></span>
+                <span class="font-mono text-xs font-semibold text-cec-navy dark:text-cec-gold"><%= paquete_display_id(paquete) %></span>
               </td>
               <td class="px-3 py-2 whitespace-nowrap">
                 <div class="flex items-center gap-1.5">
@@ -501,7 +500,7 @@ end %>
               <td class="px-3 py-2 text-center">
                 <% if can_delete_paquetes? %>
                   <%= button_to paquete_path(paquete), method: :delete,
-                      data: { turbo_confirm: "¿Eliminar el paquete #{paquete.guia}? Esta acción no se puede deshacer." },
+                      data: { turbo_confirm: "¿Eliminar el paquete #{paquete.tracking}? Esta acción no se puede deshacer." },
                       class: "inline-flex text-red-400 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 rounded",
                       title: "Borrar paquete" do %>
                     <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>

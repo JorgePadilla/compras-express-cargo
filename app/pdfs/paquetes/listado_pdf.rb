@@ -43,7 +43,7 @@ module Paquetes
       [
         paquete.fecha_recibido_miami&.strftime("%d/%m/%Y") || paquete.created_at.strftime("%d/%m/%Y"),
         paquete.fecha_disponible&.strftime("%d/%m/%Y") || "—",
-        paquete.numero_recepcion.presence || paquete.guia,
+        paquete.numero_recepcion.presence || paquete.tracking,
         truncate(paquete.tracking, 22),
         "#{paquete.cliente.codigo} · #{truncate(paquete.cliente.nombre_completo, 28)}",
         paquete.estado.humanize,

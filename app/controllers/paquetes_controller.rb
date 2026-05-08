@@ -151,7 +151,7 @@ class PaquetesController < ApplicationController
 
     begin
       @paquete.destroy!
-      redirect_to paquetes_path, notice: "Paquete #{@paquete.guia} eliminado."
+      redirect_to paquetes_path, notice: "Paquete #{@paquete.tracking} eliminado."
     rescue ActiveRecord::InvalidForeignKey
       redirect_to @paquete, alert: "No se puede eliminar: el paquete tiene dependencias activas en la base de datos."
     rescue ActiveRecord::RecordNotDestroyed => e

@@ -1,4 +1,4 @@
-<%= render PageHeaderComponent.new(title: "Editar Paquete", subtitle: @paquete.guia) do |header|
+<%= render PageHeaderComponent.new(title: "Editar Paquete", subtitle: paquete_display_id(@paquete)) do |header|
   header.with_action do
     render ButtonComponent.new(variant: :ghost, href: paquete_path(@paquete), icon: "arrow-left") do
       "Volver"

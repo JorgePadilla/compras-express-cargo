@@ -61,7 +61,7 @@
                 <span class="text-base font-bold leading-none"><%= caja.etiqueta_secuencia %></span>
               </span>
               <div class="flex-1 min-w-0">
-                <p class="font-mono text-sm font-semibold text-cec-navy truncate"><%= caja.guia %></p>
+                <p class="font-mono text-sm font-semibold text-cec-navy truncate"><%= paquete_display_id(caja) %></p>
                 <p class="text-xs text-gray-500">Peso <%= caja.peso || '—' %> lbs</p>
               </div>
               <%= link_to label_paquete_path(caja), target: "_blank",

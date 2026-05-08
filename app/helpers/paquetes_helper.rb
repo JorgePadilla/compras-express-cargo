@@ -29,4 +29,12 @@ module PaquetesHelper
     return false unless Current.user
     Current.user.admin? || PaquetesController::DELETE_ROLES.include?(Current.user.rol)
   end
+
+  # Identificador visible del paquete en UI (títulos, tablas, mensajes,
+  # emails). Reemplaza el uso directo de `paquete.guia` — Yusef 2026-05-08:
+  # la guía PQ-XXXXXX se mantiene en backend (DB + auto-gen + búsqueda)
+  # pero NO se muestra al usuario.
+  def paquete_display_id(paquete)
+    paquete.numero_recepcion.presence || paquete.tracking
+  end
 end
