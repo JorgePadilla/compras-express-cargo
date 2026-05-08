@@ -11,7 +11,7 @@
      data-mover-pre-alerta-modal-paquete-id-value="<%= @paquete.id %>">
 <%= turbo_frame_tag "paquete_dynamic", target: "_top" do %>
 
-<%= render PageHeaderComponent.new(title: @paquete.guia, subtitle: "Paquete") do |header|
+<%= render PageHeaderComponent.new(title: paquete_display_id(@paquete), subtitle: "Paquete") do |header|
   # ── Pill de Pre-Alerta vinculada (contexto, debajo del título) ──
   header.with_meta do
     if @paquete.pre_alerta_paquetes.any?
@@ -121,7 +121,7 @@ end %>
           <%= link_to paquete_path(sib),
                 class: "inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white dark:bg-gray-800 ring-1 ring-cec-gold/40 text-xs font-medium text-cec-navy dark:text-gray-100 hover:ring-cec-gold" do %>
             <%= heroicon "cube", variant: :solid, options: { class: "w-3 h-3 text-cec-gold-dark" } %>
-            <span class="font-mono"><%= sib.guia %></span>
+            <span class="font-mono"><%= paquete_display_id(sib) %></span>
             <span class="text-gray-500">·</span>
             <span><%= sib.etiqueta_secuencia %></span>
           <% end %>
@@ -170,11 +170,7 @@ end %>
   </div>
 
   <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Guía</dt>
-      <dd class="mt-1 text-sm"><%= copyable(@paquete.guia, font_mono: true, css_class: "font-medium text-cec-navy dark:text-cec-gold") %></dd>
-    </div>
-    <div class="md:col-span-2">
+    <div class="md:col-span-3">
       <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Tracking</dt>
       <dd class="mt-1 text-sm"><%= copyable(@paquete.tracking, font_mono: true) %></dd>
       <% if @paquete.tracking_secundario.present? %>

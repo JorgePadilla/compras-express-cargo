@@ -45,7 +45,7 @@
     <div class="wr-banner">
       <div style="font-size:9px;letter-spacing:1px;opacity:0.8;">WAREHOUSE RECEIPT</div>
       <div class="wr-mono" style="font-size:18px;font-weight:bold;letter-spacing:0.5px;margin-top:2px;">
-        <%= paquete.numero_recepcion.presence || paquete.guia %>
+        <%= paquete_display_id(paquete) %>
       </div>
     </div>
     <div class="wr-v" style="margin-top:6px;color:#444;">

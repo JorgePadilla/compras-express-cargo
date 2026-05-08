@@ -47,12 +47,12 @@ class EtiquetarController < ApplicationController
         format.turbo_stream do
           render turbo_stream: [
             turbo_stream.update("paquetes-counter", @paquetes_hoy.to_s),
-            turbo_stream.prepend("flash-messages", partial: "shared/flash", locals: { notice: "Paquete #{@paquete.guia} guardado exitosamente." }),
+            turbo_stream.prepend("flash-messages", partial: "shared/flash", locals: { notice: "Paquete #{@paquete.tracking} guardado exitosamente." }),
             turbo_stream.append("etiquetar-events", "<div data-etiquetar-target='event' data-action='paquete-saved' data-guia='#{@paquete.guia}' data-print='#{params[:print]}' data-paquete-id='#{@paquete.id}'></div>")
           ]
         end
         format.html do
-          redirect_to etiquetar_path, notice: "Paquete #{@paquete.guia} guardado exitosamente."
+          redirect_to etiquetar_path, notice: "Paquete #{@paquete.tracking} guardado exitosamente."
         end
       end
     else

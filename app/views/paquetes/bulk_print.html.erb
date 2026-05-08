@@ -58,7 +58,7 @@
         <tr>
           <td><%= (p.fecha_recibido_miami || p.created_at).strftime("%d/%m/%Y") %></td>
           <td><%= p.fecha_disponible&.strftime("%d/%m/%Y") || "—" %></td>
-          <td><%= p.numero_recepcion.presence || p.guia %></td>
+          <td><%= paquete_display_id(p) %></td>
           <td><%= p.tracking %></td>
           <td><%= p.cliente.codigo %> · <%= p.cliente.nombre_completo %></td>
           <td><%= p.estado.humanize %></td>

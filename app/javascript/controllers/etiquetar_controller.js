@@ -146,7 +146,7 @@ export default class extends Controller {
     info.textContent = ""
     const lines = [
       { text: "Este tracking ya está registrado en el sistema:", cls: "font-medium text-gray-800 dark:text-gray-100 mb-2" },
-      { text: `Guía: ${data.guia}`, cls: "mt-1" },
+      { text: `Tracking: ${data.tracking_base || ""}`, cls: "mt-1 font-mono text-sm" },
       { text: `Cliente: ${data.cliente}`, cls: "" },
       { text: `Estado: ${data.estado} — Fecha: ${data.fecha}`, cls: "" },
       { text: `${data.count} paquete(s) con este tracking base`, cls: "text-xs text-gray-500 dark:text-gray-400 mt-1" }

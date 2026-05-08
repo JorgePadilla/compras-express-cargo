@@ -56,8 +56,7 @@ export default class extends Controller {
 
       const info = document.createElement("div")
       const spans = [
-        { text: p.guia, cls: "font-mono text-sm font-medium text-cec-navy" },
-        { text: p.tracking, cls: "ml-2 text-sm text-gray-500" },
+        { text: p.tracking, cls: "font-mono text-sm font-medium text-cec-navy" },
         { text: `${p.cliente_codigo} — ${p.cliente}`, cls: "ml-2 text-sm text-gray-700" },
         { text: `${p.peso_cobrar} lbs`, cls: "ml-2 text-xs text-gray-500" }
       ]

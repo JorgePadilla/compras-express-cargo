@@ -80,7 +80,7 @@ end %>
     </div>
     <div class="p-6">
       <div class="flex gap-3">
-        <input type="text" placeholder="Buscar por tracking o guia..."
+        <input type="text" placeholder="Buscar por tracking o número de recepción..."
                data-manifiesto-search-target="input"
                data-action="input->manifiesto-search#search"
                class="flex-1 rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal">
@@ -103,7 +103,6 @@ end %>
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guia</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tracking</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Peso</th>
@@ -116,9 +115,6 @@ end %>
           <tbody class="bg-white divide-y divide-gray-200">
             <% @paquetes.each do |paquete| %>
               <tr class="hover:bg-gray-50">
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="text-sm font-mono font-medium text-cec-navy"><%= paquete.guia %></span>
-                </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span class="text-sm font-mono text-gray-700"><%= truncate(paquete.tracking, length: 25) %></span>
                 </td>
@@ -134,7 +130,7 @@ end %>
                 <% if @manifiesto.creado? %>
                   <td class="px-6 py-4 whitespace-nowrap text-right">
                     <%= link_to remove_paquete_manifiesto_path(@manifiesto, paquete_id: paquete.id),
-                        data: { turbo_method: :delete, turbo_confirm: "Remover #{paquete.guia} del manifiesto?" },
+                        data: { turbo_method: :delete, turbo_confirm: "Remover #{paquete.tracking} del manifiesto?" },
                         class: "text-red-400 hover:text-red-600" do %>
                       <%= heroicon "x-mark", variant: :outline, options: { class: "w-5 h-5 inline" } %>
                     <% end %>

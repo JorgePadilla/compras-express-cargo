@@ -34,7 +34,6 @@
             <thead class="bg-gray-50">
               <tr>
                 <th class="px-4 py-3 text-left"><input type="checkbox" data-action="change->select-all#toggle" class="rounded"></th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Guia</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tracking</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Peso Cobrar</th>
@@ -52,7 +51,6 @@
                   <td class="px-4 py-3">
                     <%= check_box_tag "paquete_ids[]", p.id, false, id: "paquete_#{p.id}", class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
                   </td>
-                  <td class="px-6 py-3 font-mono text-sm"><%= p.guia %></td>
                   <td class="px-6 py-3 font-mono text-sm"><%= truncate(p.tracking, length: 20) %></td>
                   <td class="px-6 py-3 text-sm text-gray-600"><%= p.tipo_envio&.nombre || "—" %></td>
                   <td class="px-6 py-3 text-right text-sm"><%= p.peso_cobrar || "—" %></td>

@@ -51,7 +51,6 @@
                 <th class="px-4 py-2 text-center w-10">
                   <input type="checkbox" id="select-all" class="rounded border-gray-300">
                 </th>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Guia</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tracking</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripcion</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
@@ -64,8 +63,7 @@
                   <td class="px-4 py-2 text-center">
                     <input type="checkbox" name="paquete_ids[]" value="<%= p.id %>" class="paquete-check rounded border-gray-300">
                   </td>
-                  <td class="px-4 py-2 font-mono"><%= p.guia %></td>
-                  <td class="px-4 py-2 text-gray-600 text-xs"><%= truncate(p.tracking, length: 20) %></td>
+                  <td class="px-4 py-2 font-mono text-gray-700"><%= truncate(p.tracking, length: 20) %></td>
                   <td class="px-4 py-2"><%= p.descripcion %></td>
                   <td class="px-4 py-2"><%= p.tipo_envio&.nombre %></td>
                   <td class="px-4 py-2 text-right"><%= p.peso_cobrar %> lbs</td>

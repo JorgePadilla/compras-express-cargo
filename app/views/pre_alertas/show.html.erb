@@ -100,7 +100,7 @@
               <td class="px-4 py-3 text-sm text-gray-500"><%= pap.fecha&.strftime("%d/%m/%Y") || "—" %></td>
               <td class="px-4 py-3">
                 <% if pap.paquete %>
-                  <%= link_to pap.paquete.guia, paquete_path(pap.paquete), class: "font-mono text-sm text-cec-navy hover:underline" %>
+                  <%= link_to paquete_display_id(pap.paquete), paquete_path(pap.paquete), class: "font-mono text-sm text-cec-navy hover:underline" %>
                   <%= render StatusBadgeComponent.new(status: pap.paquete.estado) %>
                 <% else %>
                   <span class="text-xs text-gray-400">Sin vincular</span>

@@ -6,7 +6,7 @@ wb.add_worksheet(name: "Paquetes") do |sheet|
   sheet.add_row([
     "F. Recibido", "F. Disponible", "N° Recepción", "Tracking",
     "Cliente Código", "Cliente Nombre", "Estado", "Tipo Envío",
-    "Sucursal", "Consolidado", "Contenido", "Guía", "Pre-Alerta",
+    "Sucursal", "Consolidado", "Contenido", "Pre-Alerta",
     "Pre-Factura", "Factura"
   ], style: bold)
 
@@ -24,13 +24,12 @@ wb.add_worksheet(name: "Paquetes") do |sheet|
       p.sucursal&.nombre || "—",
       p.consolidado? ? "Sí" : "No",
       p.descripcion.to_s,
-      p.guia,
       pa&.numero_documento || "—",
       p.pre_factura&.numero || "—",
       p.venta&.numero || "—"
-    ], types: [ :date, :date, :string, :string, :string, :string, :string, :string, :string, :string, :string, :string, :string, :string, :string ],
-       style: [ date_style, date_style, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil ])
+    ], types: [ :date, :date, :string, :string, :string, :string, :string, :string, :string, :string, :string, :string, :string, :string ],
+       style: [ date_style, date_style, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil ])
   end
 
-  sheet.column_widths 12, 12, 14, 20, 10, 28, 18, 10, 18, 12, 40, 14, 14, 14, 14
+  sheet.column_widths 12, 12, 14, 20, 10, 28, 18, 10, 18, 12, 40, 14, 14, 14
 end
