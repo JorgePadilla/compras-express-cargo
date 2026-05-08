@@ -116,7 +116,7 @@ end %>
       <%= date_field_tag :fecha_desde, qf_desde,
             id: "qf_fecha_desde",
             class: "w-full h-9 px-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-cec-teal",
-            data: { action: "change->quick-filters#submit" } %>
+            data: { controller: "flatpickr", action: "change->quick-filters#submit" } %>
     </div>
 
     <div>
@@ -124,7 +124,7 @@ end %>
       <%= date_field_tag :fecha_hasta, qf_hasta,
             id: "qf_fecha_hasta",
             class: "w-full h-9 px-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-cec-teal",
-            data: { action: "change->quick-filters#submit" } %>
+            data: { controller: "flatpickr", action: "change->quick-filters#submit" } %>
     </div>
 
     <div>
