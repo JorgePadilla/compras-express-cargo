@@ -15,6 +15,10 @@ class PreAlertaPaquete < ApplicationRecord
   before_validation :set_default_fecha
   before_validation :normalize_tracking
 
+  after_create :crear_paquete_esperado
+  after_update :sync_paquete_esperado
+  before_destroy :anular_paquete_esperado
+
   after_destroy_commit :soft_delete_pre_alerta_if_empty
 
   # Links unlinked pre_alerta_paquetes by tracking to a given paquete.
@@ -80,5 +84,49 @@ class PreAlertaPaquete < ApplicationRecord
     return unless pa
     return if pa.deleted_at.present?
     pa.soft_delete! if pa.pre_alerta_paquetes.reload.empty?
+  end
+
+  # Al crear un PAP, materializamos un Paquete "esperado" en estado
+  # `pre_alerta_estado` para que aparezca de una vez en /paquetes.
+  # Cuando el paquete físico llegue a Miami, EtiquetarController lo
+  # encuentra por tracking y lo transiciona en lugar de crear uno nuevo.
+  def crear_paquete_esperado
+    return if paquete_id.present?
+
+    paquete = Paquete.create!(
+      cliente_id: pre_alerta.cliente_id,
+      tipo_envio_id: pre_alerta.tipo_envio_id,
+      tracking: tracking,
+      descripcion: descripcion,
+      estado: "pre_alerta_estado",
+      user: Current.user,
+      pre_alerta: true
+    )
+    update_columns(paquete_id: paquete.id)
+  end
+
+  # Si el cliente edita el PAP (cambia tracking o descripcion) y el
+  # paquete asociado todavía está en `pre_alerta_estado`, sincronizamos.
+  # Una vez recibido en Miami, el operador es dueño del paquete — no
+  # tocamos.
+  def sync_paquete_esperado
+    return unless paquete_id.present?
+    return unless saved_change_to_tracking? || saved_change_to_descripcion?
+
+    p = paquete
+    return unless p && p.estado == "pre_alerta_estado"
+
+    p.update!(tracking: tracking, descripcion: descripcion)
+  end
+
+  # Si el PAP se elimina (vía nested-attributes _destroy o cascade de
+  # PreAlerta destroy) y el paquete sigue esperando, lo anulamos en vez
+  # de destruirlo — preserva audit trail y evita FK hell.
+  def anular_paquete_esperado
+    return unless paquete_id.present?
+    p = paquete
+    return unless p && p.estado == "pre_alerta_estado"
+
+    p.update!(estado: "anulado")
   end
 end

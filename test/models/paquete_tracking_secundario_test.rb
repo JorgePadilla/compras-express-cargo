@@ -44,8 +44,11 @@ class PaqueteTrackingSecundarioTest < ActiveSupport::TestCase
 
   test "link_tracking! matchea contra tracking principal del paquete" do
     pa = pre_alertas(:activa)
-    PreAlertaPaquete.create!(pre_alerta: pa, tracking: "1Z999LINKA", fecha: Date.current,
-                             descripcion: "x")
+    pap = PreAlertaPaquete.create!(pre_alerta: pa, tracking: "1Z999LINKA", fecha: Date.current,
+                                   descripcion: "x")
+    # Forzar PAP "sin vincular" — el after_create lo enlaza con su paquete
+    # esperado, pero acá probamos el camino legacy donde no hay paquete previo.
+    pap.update_columns(paquete_id: nil)
 
     paquete = Paquete.create!(tracking: "1Z999LINKA", cliente: @cliente, sucursal: @sucursal)
     count = PreAlertaPaquete.link_tracking!("1Z999LINKA", paquete)
@@ -55,8 +58,9 @@ class PaqueteTrackingSecundarioTest < ActiveSupport::TestCase
   test "link_tracking! matchea contra tracking_secundario del paquete" do
     pa = pre_alertas(:activa)
     # Cliente pre-alerta con el tracking que el proveedor le dio al cliente.
-    PreAlertaPaquete.create!(pre_alerta: pa, tracking: "AMZCLIENTTRK", fecha: Date.current,
-                             descripcion: "x")
+    pap = PreAlertaPaquete.create!(pre_alerta: pa, tracking: "AMZCLIENTTRK", fecha: Date.current,
+                                   descripcion: "x")
+    pap.update_columns(paquete_id: nil)
 
     # El paquete físico llega con OTRO tracking principal, pero el secundario
     # es el que el cliente pre-alerta.

@@ -51,6 +51,8 @@ class PreAlerta < ApplicationRecord
   before_validation :assign_default_tipo_envio, on: :create
   before_validation :generate_numero_documento, on: :create, if: -> { numero_documento.blank? }
 
+  after_update :cascade_anular_a_paquetes, if: :saved_change_to_estado?
+
   PAQUETE_TO_PRE_ALERTA_ESTADO = {
     "recibido_miami"     => "recibido",
     "empacado"           => "recibido",
@@ -154,5 +156,17 @@ class PreAlerta < ApplicationRecord
     next_number = (self.class.where("numero_documento ~ '^PA-[0-9]+$'")
       .maximum(Arel.sql("CAST(SUBSTRING(numero_documento FROM 4) AS INTEGER)")) || 0) + 1
     self.numero_documento = "PA-#{next_number.to_s.rjust(6, '0')}"
+  end
+
+  # Cuando la PA pasa a `anulado`, anular en cascada los paquetes
+  # esperados (los que aún no han llegado físicamente a Miami).
+  # Usa update_all para saltar callbacks — la PA ya está anulada y no
+  # debe re-sincronizarse desde sus paquetes.
+  def cascade_anular_a_paquetes
+    return unless estado == "anulado"
+    paquete_ids = pre_alerta_paquetes.pluck(:paquete_id).compact
+    return if paquete_ids.empty?
+    Paquete.where(id: paquete_ids, estado: "pre_alerta_estado")
+           .update_all(estado: "anulado", updated_at: Time.current)
   end
 end

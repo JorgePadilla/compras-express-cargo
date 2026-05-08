@@ -452,4 +452,67 @@ class PreAlertaTest < ActiveSupport::TestCase
     )
     assert pa.valid?
   end
+
+  # Eager-creation: crear PA con N items materializa N Paquetes en
+  # estado pre_alerta_estado (visibles en /paquetes inmediatamente).
+  test "creating PA with nested PAPs creates Paquetes in pre_alerta_estado" do
+    cer = tipo_envios(:cer)
+    assert_difference -> { Paquete.where(estado: "pre_alerta_estado").count }, +2 do
+      PreAlerta.create!(
+        cliente: @cliente,
+        tipo_envio: cer,
+        titulo: "Eager test",
+        creado_por_tipo: "cliente",
+        creado_por_id: @cliente.id,
+        pre_alerta_paquetes_attributes: [
+          { tracking: "EAGERPA001", descripcion: "Uno" },
+          { tracking: "EAGERPA002", descripcion: "Dos" }
+        ]
+      )
+    end
+  end
+
+  # Cuando la PA pasa a anulada, los paquetes esperados se cascadean a anulado.
+  test "anular cascades to esperado paquetes" do
+    cer = tipo_envios(:cer)
+    pa = PreAlerta.create!(
+      cliente: @cliente,
+      tipo_envio: cer,
+      titulo: "Cascade test",
+      creado_por_tipo: "cliente",
+      creado_por_id: @cliente.id,
+      pre_alerta_paquetes_attributes: [
+        { tracking: "CASCANUL001", descripcion: "A" },
+        { tracking: "CASCANUL002", descripcion: "B" }
+      ]
+    )
+    paquetes = pa.pre_alerta_paquetes.map(&:paquete).compact
+    assert_equal 2, paquetes.size
+
+    pa.anular!
+
+    paquetes.each { |p| assert_equal "anulado", p.reload.estado }
+  end
+
+  # Cuando un paquete ya fue recibido en Miami (no está en pre_alerta_estado),
+  # anular la PA NO debe tocarlo.
+  test "anular does NOT cascade to paquetes already past pre_alerta_estado" do
+    cer = tipo_envios(:cer)
+    pa = PreAlerta.create!(
+      cliente: @cliente,
+      tipo_envio: cer,
+      titulo: "Partial cascade",
+      creado_por_tipo: "cliente",
+      creado_por_id: @cliente.id,
+      pre_alerta_paquetes_attributes: [
+        { tracking: "PARTCASC001", descripcion: "Recibido" }
+      ]
+    )
+    p = pa.pre_alerta_paquetes.first.paquete
+    p.update!(estado: "empacado")
+
+    pa.anular!
+
+    assert_equal "empacado", p.reload.estado
+  end
 end

@@ -88,23 +88,34 @@ class Paquete < ApplicationRecord
 
   scope :activos, -> { where.not(estado: %w[anulado entregado retornado desechado]) }
   scope :buscar, ->(term) {
+    term = term.to_s.strip
+    return all if term.empty?
+
     q = "%#{sanitize_sql_like(term)}%"
-    left_joins(:cliente, :tipo_envio, :manifiesto).where(
-      <<~SQL,
-        paquetes.tracking ILIKE :q
-        OR paquetes.tracking_secundario ILIKE :q
-        OR paquetes.guia ILIKE :q
-        OR paquetes.numero_recepcion ILIKE :q
-        OR paquetes.descripcion ILIKE :q
-        OR clientes.codigo ILIKE :q
-        OR clientes.nombre ILIKE :q
-        OR clientes.apellido ILIKE :q
-        OR tipo_envios.codigo ILIKE :q
-        OR tipo_envios.nombre ILIKE :q
-        OR manifiestos.numero ILIKE :q
-      SQL
-      q: q
-    )
+    left_joins(:cliente, :tipo_envio, :manifiesto)
+      .joins("LEFT OUTER JOIN clientes terceros ON terceros.id = paquetes.tercero_id")
+      .where(
+        <<~SQL,
+          paquetes.tracking ILIKE :q
+          OR paquetes.tracking_secundario ILIKE :q
+          OR paquetes.guia ILIKE :q
+          OR paquetes.numero_recepcion ILIKE :q
+          OR paquetes.descripcion ILIKE :q
+          OR clientes.codigo ILIKE :q
+          OR clientes.nombre ILIKE :q
+          OR clientes.apellido ILIKE :q
+          OR CONCAT(clientes.nombre, ' ', clientes.apellido) ILIKE :q
+          OR CONCAT(clientes.apellido, ' ', clientes.nombre) ILIKE :q
+          OR terceros.codigo ILIKE :q
+          OR terceros.nombre ILIKE :q
+          OR terceros.apellido ILIKE :q
+          OR CONCAT(terceros.nombre, ' ', terceros.apellido) ILIKE :q
+          OR tipo_envios.codigo ILIKE :q
+          OR tipo_envios.nombre ILIKE :q
+          OR manifiestos.numero ILIKE :q
+        SQL
+        q: q
+      )
   }
   scope :by_estado, ->(estado) { where(estado: estado) }
   scope :by_estados, ->(arr) { where(estado: Array(arr).compact_blank) }
