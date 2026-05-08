@@ -80,6 +80,26 @@ class PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Fragil", pap.instrucciones
   end
 
+  # POST /pre_alertas con N items materializa N paquetes pre_alerta_estado
+  # — visibles inmediatamente en /paquetes.
+  test "create pre_alerta materializes Paquetes in pre_alerta_estado" do
+    assert_difference -> { Paquete.where(estado: "pre_alerta_estado").count }, +2 do
+      post pre_alertas_url, params: { pre_alerta: {
+        cliente_id: clientes(:juan).id,
+        tipo_envio_id: tipo_envios(:aereo).id,
+        titulo: "Eager via controller",
+        pre_alerta_paquetes_attributes: {
+          "0" => { tracking: "CTRLEAGER001", descripcion: "Uno" },
+          "1" => { tracking: "CTRLEAGER002", descripcion: "Dos" }
+        }
+      } }
+    end
+
+    trackings = Paquete.where(estado: "pre_alerta_estado").pluck(:tracking)
+    assert_includes trackings, "CTRLEAGER001"
+    assert_includes trackings, "CTRLEAGER002"
+  end
+
   test "should not create pre_alerta without cliente" do
     assert_no_difference("PreAlerta.count") do
       post pre_alertas_url, params: { pre_alerta: {

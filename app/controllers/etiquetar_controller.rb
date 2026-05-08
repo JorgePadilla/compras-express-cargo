@@ -21,7 +21,18 @@ class EtiquetarController < ApplicationController
   private
 
   def create_single
-    @paquete = Paquete.new(paquete_params)
+    # Reconciliación: si ya existe un paquete "esperado" creado desde una
+    # pre-alerta con este tracking, lo transicionamos en lugar de crear
+    # uno nuevo (evita duplicados).
+    existing = Paquete.where(estado: "pre_alerta_estado")
+                      .find_by("UPPER(tracking) = ?", paquete_params[:tracking].to_s.strip.upcase)
+
+    if existing
+      @paquete = existing
+      @paquete.assign_attributes(paquete_params)
+    else
+      @paquete = Paquete.new(paquete_params)
+    end
     @paquete.estado = "empacado"
     @paquete.user = Current.user
     if (flag = pre_factura_flag_param) != :missing

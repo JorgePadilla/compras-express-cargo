@@ -92,4 +92,37 @@ class EtiquetarControllerTest < ActionDispatch::IntegrationTest
       } }
     end
   end
+
+  # Reconciliación: si ya existe un paquete pre_alerta_estado con ese
+  # tracking (creado eager desde una pre-alerta), se transiciona en lugar
+  # de crear uno nuevo. Esto evita duplicados al etiquetar la caja física.
+  test "create reconciles with existing pre_alerta_estado paquete instead of duplicating" do
+    pa = PreAlerta.create!(
+      cliente: clientes(:juan),
+      tipo_envio: tipo_envios(:cer),
+      titulo: "Reconcile test",
+      creado_por_tipo: "cliente",
+      creado_por_id: clientes(:juan).id,
+      pre_alerta_paquetes_attributes: [
+        { tracking: "RECONCILE001", descripcion: "Original from PA" }
+      ]
+    )
+    esperado = pa.pre_alerta_paquetes.first.paquete
+    assert_equal "pre_alerta_estado", esperado.estado
+
+    assert_no_difference -> { Paquete.count } do
+      post etiquetar_url, params: { paquete: {
+        tracking: "RECONCILE001",
+        cliente_id: clientes(:juan).id,
+        tipo_envio_id: tipo_envios(:cer).id,
+        peso: 7.5,
+        descripcion: "Updated by digitador"
+      } }
+    end
+
+    esperado.reload
+    assert_equal "empacado", esperado.estado
+    assert_equal 7.5, esperado.peso.to_f
+    assert_equal "Updated by digitador", esperado.descripcion
+  end
 end

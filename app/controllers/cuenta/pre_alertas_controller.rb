@@ -561,12 +561,17 @@ module Cuenta
     end
 
     def agregar_placeholder(pap_id)
+      # Placeholder = PAP cuyo paquete físico aún no llega. Antes (legacy)
+      # eso era `paquete_id IS NULL`. Con eager-creation, además puede ser
+      # un Paquete asociado en estado `pre_alerta_estado`.
       pap = PreAlertaPaquete
               .joins(:pre_alerta)
+              .left_outer_joins(:paquete)
               .where(pre_alertas: { cliente_id: current_cliente.id, deleted_at: nil })
               .where.not(pre_alertas: { estado: "anulado" })
               .where.not(pre_alertas: { id: @pre_alerta.id })
-              .find_by(id: pap_id, paquete_id: nil)
+              .where("pre_alerta_paquetes.paquete_id IS NULL OR paquetes.estado = 'pre_alerta_estado'")
+              .find_by(id: pap_id)
 
       unless pap
         redirect_to edit_cuenta_pre_alerta_path(@pre_alerta),
@@ -627,9 +632,13 @@ module Cuenta
     def placeholders_para_buscar
       return [] unless @pre_alerta.consolidando?
 
+      # Placeholder = PAP esperando su paquete físico. Cubre ambos casos:
+      # legacy (paquete_id NULL) y nuevo (paquete asociado en
+      # pre_alerta_estado).
       PreAlertaPaquete
         .joins(pre_alerta: :tipo_envio)
-        .where(paquete_id: nil)
+        .left_outer_joins(:paquete)
+        .where("pre_alerta_paquetes.paquete_id IS NULL OR paquetes.estado = 'pre_alerta_estado'")
         .where(pre_alertas: { cliente_id: current_cliente.id,
                               consolidado: true,
                               finalizado: false,
@@ -638,7 +647,7 @@ module Cuenta
         .where.not(pre_alertas: { estado: "anulado" })
         .where("tipo_envios.max_paquetes_por_accion IS NULL OR tipo_envios.max_paquetes_por_accion != 1")
         .includes(pre_alerta: :tipo_envio)
-        .order(created_at: :desc)
+        .order("pre_alerta_paquetes.created_at DESC")
     end
 
     def puede_buscar?
