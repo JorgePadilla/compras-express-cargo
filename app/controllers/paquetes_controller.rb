@@ -416,6 +416,8 @@ class PaquetesController < ApplicationController
     scope = scope.by_sucursal(sucursales) if sucursales.any?
 
     scope = scope.by_cliente(params[:cliente_id]) if params[:cliente_id].present?
+    scope = scope.by_cliente_codigo(params[:cliente_codigo]) if params[:cliente_codigo].present?
+    scope = scope.by_cliente_nombre(params[:cliente_nombre]) if params[:cliente_nombre].present?
     scope = scope.by_pre_alerta(params[:pre_alerta_id]) if params[:pre_alerta_id].present?
 
     if params[:fecha_desde].present? && (fecha_desde = Date.parse(params[:fecha_desde]) rescue nil)

@@ -122,6 +122,23 @@ class Paquete < ApplicationRecord
   scope :by_tipo_envio, ->(tipo_envio_id) { where(tipo_envio_id: tipo_envio_id) }
   scope :by_tipos_envio, ->(arr) { where(tipo_envio_id: Array(arr).compact_blank) }
   scope :by_cliente, ->(cliente_id) { where(cliente_id: cliente_id) }
+  scope :by_cliente_codigo, ->(text) {
+    text = text.to_s.strip
+    next all if text.empty?
+    q = "%#{sanitize_sql_like(text)}%"
+    left_joins(:cliente).where("clientes.codigo ILIKE ?", q)
+  }
+  scope :by_cliente_nombre, ->(text) {
+    text = text.to_s.strip
+    next all if text.empty?
+    q = "%#{sanitize_sql_like(text)}%"
+    left_joins(:cliente).where(
+      "clientes.nombre ILIKE :q OR clientes.apellido ILIKE :q OR " \
+      "CONCAT(clientes.nombre, ' ', clientes.apellido) ILIKE :q OR " \
+      "CONCAT(clientes.apellido, ' ', clientes.nombre) ILIKE :q",
+      q: q
+    )
+  }
   scope :by_sucursal, ->(ids) { where(sucursal_id: Array(ids).compact_blank) }
   scope :recibidos_hoy, -> { where(fecha_recibido_miami: Time.current.beginning_of_day..Time.current.end_of_day) }
   scope :sin_manifiesto, -> { where(manifiesto_id: nil).where.not(estado: %w[anulado entregado retornado desechado]) }

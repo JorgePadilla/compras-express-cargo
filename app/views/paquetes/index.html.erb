@@ -61,6 +61,94 @@ end %>
   </details>
 </div>
 
+<%# Filtros rápidos — fila inline auto-submit. Yusef 2026-05-08:
+    "filtros rapidos: tipo de envio, estado dropdowns, rango de fechas,
+    codigo de cliente texto libre, nombre de cliente texto libre con trim
+    y multi-palabra (juan perez)". Comparte la misma URL/params que el
+    panel "Filtros avanzados" — submitear cualquiera actualiza el otro al
+    siguiente render porque Rails los lee del query string. %>
+<%
+  qf_tipo_envio  = Array(params[:tipo_envio_ids]).reject(&:blank?).first
+  qf_estado      = Array(params[:estados]).reject(&:blank?).first
+  qf_codigo      = params[:cliente_codigo]
+  qf_nombre      = params[:cliente_nombre]
+  qf_desde       = params[:fecha_desde]
+  qf_hasta       = params[:fecha_hasta]
+%>
+<%= form_tag paquetes_path(anchor: "resultados"), method: :get,
+      class: "mb-4 bg-white dark:bg-gray-800 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm px-4 py-3",
+      data: { controller: "quick-filters", turbo: false } do %>
+
+  <%# Hidden: preservar params que NO controla esta fila %>
+  <%= hidden_field_tag :q, params[:q] if params[:q].present? %>
+  <%= hidden_field_tag :cliente_id, params[:cliente_id] if params[:cliente_id].present? %>
+  <%= hidden_field_tag :pre_alerta_id, params[:pre_alerta_id] if params[:pre_alerta_id].present? %>
+  <% Array(params[:sucursal_ids]).reject(&:blank?).each do |sid| %>
+    <%= hidden_field_tag "sucursal_ids[]", sid %>
+  <% end %>
+  <% %i[solo_facturados incluir_facturados solo_anulados solo_prefactura sin_prealerta incluir_3_12_meses incluir_mas_1_ano].each do |k| %>
+    <%= hidden_field_tag k, "1" if params[k] == "1" %>
+  <% end %>
+
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 items-end">
+    <div>
+      <label for="qf_tipo_envio" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Tipo envío</label>
+      <%= select_tag "tipo_envio_ids[]",
+            options_from_collection_for_select(@tipo_envios, :id, :nombre, qf_tipo_envio),
+            include_blank: "Todos",
+            id: "qf_tipo_envio",
+            class: "w-full h-9 px-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-cec-teal",
+            data: { action: "change->quick-filters#submit" } %>
+    </div>
+
+    <div>
+      <label for="qf_estado" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Estado</label>
+      <%= select_tag "estados[]",
+            options_for_select(@estados_paquete.map { |e| [ e.humanize, e ] }, qf_estado),
+            include_blank: "Todos",
+            id: "qf_estado",
+            class: "w-full h-9 px-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-cec-teal",
+            data: { action: "change->quick-filters#submit" } %>
+    </div>
+
+    <div>
+      <label for="qf_fecha_desde" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Desde</label>
+      <%= date_field_tag :fecha_desde, qf_desde,
+            id: "qf_fecha_desde",
+            class: "w-full h-9 px-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-cec-teal",
+            data: { action: "change->quick-filters#submit" } %>
+    </div>
+
+    <div>
+      <label for="qf_fecha_hasta" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Hasta</label>
+      <%= date_field_tag :fecha_hasta, qf_hasta,
+            id: "qf_fecha_hasta",
+            class: "w-full h-9 px-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-cec-teal",
+            data: { action: "change->quick-filters#submit" } %>
+    </div>
+
+    <div>
+      <label for="qf_cliente_codigo" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Código cliente</label>
+      <%= text_field_tag :cliente_codigo, qf_codigo,
+            id: "qf_cliente_codigo",
+            placeholder: "ej. CEC-001",
+            autocomplete: "off",
+            class: "w-full h-9 px-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-cec-teal",
+            data: { action: "input->quick-filters#debouncedSubmit keydown.enter->quick-filters#submit" } %>
+    </div>
+
+    <div>
+      <label for="qf_cliente_nombre" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Nombre cliente</label>
+      <%= text_field_tag :cliente_nombre, qf_nombre,
+            id: "qf_cliente_nombre",
+            placeholder: "ej. juan perez",
+            autocomplete: "off",
+            class: "w-full h-9 px-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-cec-teal",
+            data: { action: "input->quick-filters#debouncedSubmit keydown.enter->quick-filters#submit" } %>
+    </div>
+  </div>
+<% end %>
+
 <%# Leyenda de colores de fila — horizontal, full-width, arriba de filtros.
     Yusef 2026-05-02: pidió layout horizontal en lugar de cuadro 2x2. %>
 <div class="mb-4 bg-white dark:bg-gray-800 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm px-4 py-2.5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-gray-700 dark:text-gray-200">
