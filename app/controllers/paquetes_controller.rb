@@ -175,7 +175,10 @@ class PaquetesController < ApplicationController
     end
   end
 
-  # Imprime (PDF) los paquetes seleccionados via checkbox bulk.
+  # Imprime los paquetes seleccionados via checkbox bulk. Renderiza HTML
+  # con layout "print" (sin chrome) que auto-dispara window.print() — el
+  # usuario ve el diálogo de impresión nativo del navegador en vez de
+  # descargar un PDF. Yusef 2026-05-08: F4 debe abrir preview, no descarga.
   def bulk_print
     ids = Array(params[:paquete_ids]).reject(&:blank?)
     if ids.empty?
@@ -183,10 +186,8 @@ class PaquetesController < ApplicationController
       return
     end
 
-    paquetes = Paquete.where(id: ids).includes(:cliente, :tipo_envio, :sucursal)
-    pdf = Paquetes::ListadoPdf.new(paquetes, titulo: "Paquetes seleccionados (#{paquetes.size})").render
-    send_data pdf, filename: "paquetes-seleccion-#{Date.current.iso8601}.pdf",
-                   type: "application/pdf", disposition: "attachment"
+    @paquetes = Paquete.where(id: ids).includes(:cliente, :tipo_envio, :sucursal).order(:numero_caja, :id)
+    render :bulk_print, layout: "print"
   end
 
   # Export xlsx/pdf de solo los paquetes seleccionados.
