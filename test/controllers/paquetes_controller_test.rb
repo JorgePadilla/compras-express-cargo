@@ -27,9 +27,15 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "should get edit" do
+  test "edit redirects to show?mode=edit (inline edit)" do
     get edit_paquete_url(@paquete)
+    assert_redirected_to paquete_url(@paquete, mode: "edit")
+  end
+
+  test "show with mode=edit renders editable form" do
+    get paquete_url(@paquete, mode: "edit")
     assert_response :success
+    assert_match(/id="paquete-edit-form"/, response.body)
   end
 
   test "should update paquete" do

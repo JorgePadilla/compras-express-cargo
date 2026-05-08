@@ -38,9 +38,21 @@
   end
 
   # ── Acciones (todas :primary :sm; excepción: Eliminar PA = :danger) ──
-  header.with_action do
-    render(ButtonComponent.new(variant: :primary, size: :sm, href: edit_paquete_path(@paquete),
-                               icon: "pencil-square", shortcut: "F6")) { "Editar" }
+  if @edit_mode
+    header.with_action do
+      render(ButtonComponent.new(variant: :primary, size: :sm, type: "submit",
+                                 form: "paquete-edit-form",
+                                 icon: "check", shortcut: "F10")) { "Guardar" }
+    end
+    header.with_action do
+      render(ButtonComponent.new(variant: :ghost, size: :sm, href: paquete_path(@paquete),
+                                 icon: "x-mark", shortcut: "F2")) { "Cancelar" }
+    end
+  else
+    header.with_action do
+      render(ButtonComponent.new(variant: :primary, size: :sm, href: paquete_path(@paquete, mode: "edit"),
+                                 icon: "pencil-square", shortcut: "F6")) { "Editar" }
+    end
   end
   header.with_action do
     count = @paquete.tareas.abiertas.count
@@ -130,6 +142,27 @@ end %>
     </div>
   </div>
 <% end %>
+
+<% if @edit_mode %>
+  <%# Modo edición inline (Yusef 2026-05-08): el form de edit se
+      renderiza en el show via `?mode=edit`, eliminando la página
+      separada `/paquetes/:id/edit`. Los modales (Cambio Servicio,
+      Retener Miami, Solicitó Recolecta) y el buscador de Tercero
+      siguen funcionando dentro del form. %>
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+      <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100">
+        Editar Paquete
+      </h2>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        Cambios se guardan al presionar <strong>Guardar</strong> arriba (F10) o <strong>Cancelar</strong> (F2) para descartar.
+      </p>
+    </div>
+    <div class="px-6 py-4">
+      <%= render "form", paquete: @paquete %>
+    </div>
+  </div>
+<% else %>
 
 <div class="bg-white rounded-lg shadow overflow-hidden">
   <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-3">
@@ -418,6 +451,7 @@ end %>
     </div>
   </div>
 </div>
+<% end %><%# /@edit_mode %>
 
 <%# PR-D1.b: línea de tiempo del paquete con fechas + iniciales del usuario
     que disparó cada cambio + indicador "(modificada)" cuando hay re-edit. %>
