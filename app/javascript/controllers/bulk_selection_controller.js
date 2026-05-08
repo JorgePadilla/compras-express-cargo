@@ -77,13 +77,14 @@ export default class extends Controller {
     }
   }
 
-  // Imprimir: si hay selección genera PDF de los seleccionados; si no,
-  // window.print() de la vista actual.
+  // Imprimir: si hay selección abre el listado HTML imprimible en una
+  // pestaña nueva (auto-dispara window.print() al cargar). Si no hay
+  // selección, window.print() de la vista actual.
   print(event) {
     if (event) event.preventDefault()
     const ids = this._selectedIds()
     if (ids.length > 0) {
-      this._submitPost(this.bulkPrintUrlValue, { paquete_ids: ids })
+      this._submitPost(this.bulkPrintUrlValue, { paquete_ids: ids }, "_blank")
     } else {
       window.print()
     }
@@ -102,11 +103,15 @@ export default class extends Controller {
   // Construye y envía un form POST dinámico con los params dados. Usado
   // por las acciones bulk del header para evitar GET con URLs gigantes
   // y reusar las rutas POST del controller.
-  _submitPost(url, params) {
+  // `target` opcional: pasar "_blank" para abrir la respuesta en pestaña
+  // nueva (usado por print → ver el preview de impresión sin perder la
+  // página actual).
+  _submitPost(url, params, target = null) {
     if (!url) return
     const form = document.createElement("form")
     form.method = "post"
     form.action = url
+    if (target) form.target = target
     form.style.display = "none"
 
     const csrf = document.createElement("input")

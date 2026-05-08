@@ -282,10 +282,16 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Selecciona/i, flash[:alert])
   end
 
-  test "bulk_print genera PDF con los paquetes seleccionados" do
+  test "bulk_print renderiza HTML imprimible (no PDF download)" do
     post bulk_print_paquetes_url, params: { paquete_ids: [ paquetes(:recibido).id ] }
     assert_response :success
-    assert_equal "application/pdf", response.media_type
+    assert_equal "text/html", response.media_type
+    # No debe ser disposición attachment (no descarga).
+    assert_no_match(/attachment/i, response.headers["Content-Disposition"].to_s)
+    # Auto-dispara window.print() al cargar.
+    assert_match(/window\.print\(\)/, response.body)
+    # Listado contiene al paquete seleccionado.
+    assert_match(paquetes(:recibido).tracking, response.body)
   end
 
   test "bulk_export xlsx con ids seleccionados (XLSX valido)" do

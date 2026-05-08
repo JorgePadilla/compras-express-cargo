@@ -1,0 +1,78 @@
+<%# Vista imprimible del listado de paquetes seleccionados. Auto-dispara
+    window.print() al cargar. Mirror de las columnas de Paquetes::ListadoPdf
+    (app/pdfs/paquetes/listado_pdf.rb) para mantener consistencia visual
+    con el flow de descarga PDF (F9). %>
+<style>
+  @page { size: letter landscape; margin: 1cm; }
+  body { font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; color: #111; }
+  .listado-header { margin-bottom: 12px; }
+  .listado-header h1 { font-size: 14pt; font-weight: bold; margin: 0 0 4px; }
+  .listado-header p { font-size: 9pt; color: #666; margin: 0; }
+  table.listado { width: 100%; border-collapse: collapse; font-size: 8pt; }
+  table.listado thead th {
+    background: #1B2559; color: #fff;
+    padding: 6px 4px; text-align: left;
+    border-bottom: 1px solid #1B2559;
+  }
+  table.listado tbody td {
+    padding: 4px;
+    border-bottom: 1px solid #DDD;
+    vertical-align: top;
+  }
+  table.listado tbody tr:nth-child(even) td { background: #F8F9FB; }
+  .empty { padding: 20px; color: #999; text-align: center; font-size: 10pt; }
+
+  @media print {
+    .listado-header { margin-bottom: 8px; }
+    table.listado tbody tr { page-break-inside: avoid; }
+  }
+</style>
+
+<div class="listado-header">
+  <h1>Listado de Paquetes</h1>
+  <p>
+    Generado: <%= Time.current.strftime("%d/%m/%Y %H:%M") %>
+    · Total: <%= @paquetes.size %> paquete<%= "s" if @paquetes.size != 1 %>
+  </p>
+</div>
+
+<% if @paquetes.empty? %>
+  <p class="empty">Sin resultados.</p>
+<% else %>
+  <table class="listado">
+    <thead>
+      <tr>
+        <th>F. Recibido</th>
+        <th>F. Disponible</th>
+        <th>N° Recepción</th>
+        <th>Tracking</th>
+        <th>Cliente</th>
+        <th>Estado</th>
+        <th>T.E.</th>
+        <th>Cons.</th>
+        <th>Contenido</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @paquetes.each do |p| %>
+        <tr>
+          <td><%= (p.fecha_recibido_miami || p.created_at).strftime("%d/%m/%Y") %></td>
+          <td><%= p.fecha_disponible&.strftime("%d/%m/%Y") || "—" %></td>
+          <td><%= p.numero_recepcion.presence || p.guia %></td>
+          <td><%= p.tracking %></td>
+          <td><%= p.cliente.codigo %> · <%= p.cliente.nombre_completo %></td>
+          <td><%= p.estado.humanize %></td>
+          <td><%= p.tipo_envio&.codigo&.upcase || "—" %></td>
+          <td><%= p.consolidado? ? "Sí" : "—" %></td>
+          <td><%= p.descripcion %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
+
+<script>
+  window.addEventListener("load", () => {
+    setTimeout(() => window.print(), 300)
+  })
+</script>
