@@ -38,12 +38,19 @@ class PaquetesController < ApplicationController
   end
 
   def show
+    @edit_mode = params[:mode] == "edit"
+    if @edit_mode
+      @tipo_envios = TipoEnvio.activos.order(:nombre)
+      @carriers = Carrier.where(activo: true).order(:nombre)
+      @tarifas_recolecta = TarifaRecolecta.activas.ordered
+    end
   end
 
+  # Yusef 2026-05-08: el flow de edit ahora es inline en el show via
+  # `?mode=edit`. Mantenemos la ruta para back-compat de links y la
+  # redirigimos al show con el query param.
   def edit
-    @tipo_envios = TipoEnvio.activos.order(:nombre)
-    @carriers = Carrier.where(activo: true).order(:nombre)
-    @tarifas_recolecta = TarifaRecolecta.activas.ordered
+    redirect_to paquete_path(@paquete, mode: "edit")
   end
 
   def update
@@ -58,10 +65,12 @@ class PaquetesController < ApplicationController
     if @paquete.save
       redirect_to @paquete, notice: "Paquete actualizado exitosamente."
     else
+      # Re-render show en modo edit con los errores.
+      @edit_mode = true
       @tipo_envios = TipoEnvio.activos.order(:nombre)
       @carriers = Carrier.where(activo: true).order(:nombre)
       @tarifas_recolecta = TarifaRecolecta.activas.ordered
-      render :edit, status: :unprocessable_entity
+      render :show, status: :unprocessable_entity
     end
   end
 

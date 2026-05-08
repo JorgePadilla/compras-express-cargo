@@ -1,4 +1,4 @@
-<%= form_with model: paquete, class: "space-y-6" do |f| %>
+<%= form_with model: paquete, class: "space-y-6", html: { id: "paquete-edit-form" } do |f| %>
   <% if paquete.errors.any? %>
     <div class="p-4 bg-red-50 rounded-lg">
       <div class="flex items-center gap-2 mb-2">
