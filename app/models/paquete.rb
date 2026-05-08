@@ -139,6 +139,29 @@ class Paquete < ApplicationRecord
       q: q
     )
   }
+  # Búsqueda avanzada: campos extras NO cubiertos por el search bar (`q`).
+  # Útil para encontrar paquetes por contenido de notas internas, nombre
+  # de sucursal, manifiesto, proveedor, remitente o expedido_por.
+  scope :busqueda_avanzada, ->(text) {
+    text = text.to_s.strip
+    next all if text.empty?
+
+    q = "%#{sanitize_sql_like(text)}%"
+    left_joins(:sucursal, :manifiesto, :proveedor)
+      .where(<<~SQL, q: q)
+        paquetes.notas_internas ILIKE :q
+        OR paquetes.notas_al_cliente ILIKE :q
+        OR paquetes.notas_consolidacion ILIKE :q
+        OR paquetes.notas_retencion ILIKE :q
+        OR paquetes.proveedor ILIKE :q
+        OR paquetes.remitente ILIKE :q
+        OR paquetes.expedido_por ILIKE :q
+        OR sucursales.nombre ILIKE :q
+        OR sucursales.codigo ILIKE :q
+        OR manifiestos.numero ILIKE :q
+        OR proveedores.nombre ILIKE :q
+      SQL
+  }
   scope :by_sucursal, ->(ids) { where(sucursal_id: Array(ids).compact_blank) }
   scope :recibidos_hoy, -> { where(fecha_recibido_miami: Time.current.beginning_of_day..Time.current.end_of_day) }
   scope :sin_manifiesto, -> { where(manifiesto_id: nil).where.not(estado: %w[anulado entregado retornado desechado]) }
