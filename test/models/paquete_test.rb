@@ -102,6 +102,44 @@ class PaqueteTest < ActiveSupport::TestCase
     assert_includes results, paquetes(:recibido)
   end
 
+  test "scope buscar searches by full name nombre + apellido" do
+    results = Paquete.buscar("juan perez")
+    assert_includes results, paquetes(:recibido)
+  end
+
+  test "scope buscar searches by full name apellido + nombre" do
+    results = Paquete.buscar("perez juan")
+    assert_includes results, paquetes(:recibido)
+  end
+
+  test "belongs_to tercero (Cliente) optional" do
+    p = paquetes(:recibido)
+    p.update!(tercero: clientes(:maria))
+    assert_equal clientes(:maria), p.reload.tercero
+  end
+
+  test "tercero is optional" do
+    p = paquetes(:recibido)
+    assert p.update(tercero_id: nil)
+  end
+
+  test "scope buscar matches by tercero codigo" do
+    p = paquetes(:recibido)
+    p.update!(tercero: clientes(:maria))
+    assert_includes Paquete.buscar(clientes(:maria).codigo), p
+  end
+
+  test "scope buscar matches by tercero nombre" do
+    p = paquetes(:recibido)
+    p.update!(tercero: clientes(:maria))
+    assert_includes Paquete.buscar("maria"), p
+  end
+
+  test "scope buscar strips leading/trailing whitespace" do
+    results = Paquete.buscar("  1Z999AA1  ")
+    assert_includes results, paquetes(:recibido)
+  end
+
   test "scope by_estado filters by estado" do
     results = Paquete.by_estado("empacado")
     assert_includes results, paquetes(:empacado)

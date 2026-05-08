@@ -451,6 +451,21 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_equal false, paquete.reload[:pre_factura]
   end
 
+  test "update permite asignar tercero_id" do
+    paquete = paquetes(:recibido)
+    patch paquete_url(paquete), params: { paquete: { tercero_id: clientes(:maria).id } }
+    assert_redirected_to paquete_url(paquete)
+    assert_equal clientes(:maria).id, paquete.reload.tercero_id
+  end
+
+  test "update permite limpiar tercero_id" do
+    paquete = paquetes(:recibido)
+    paquete.update!(tercero: clientes(:maria))
+    patch paquete_url(paquete), params: { paquete: { tercero_id: "" } }
+    assert_redirected_to paquete_url(paquete)
+    assert_nil paquete.reload.tercero_id
+  end
+
   # PR-D4.a.3 — Refrescar recarga sólo el turbo-frame (preserva scroll)
   test "show envuelve contenido en turbo-frame paquete_dynamic" do
     get paquete_url(@paquete)

@@ -30,12 +30,12 @@
   end
 end %>
 
-<%# Barra de búsqueda — izquierda, max-w-md %>
-<div class="mb-4 flex items-center gap-2 w-full sm:max-w-md">
+<%# Barra de búsqueda — full-width, llega hasta el borde derecho como el botón Imprimir. %>
+<div class="mb-4 flex items-center gap-2 w-full">
   <div class="flex-1">
     <%= render SearchBarComponent.new(
       url: paquetes_path,
-      placeholder: "Buscar paquete...",
+      placeholder: "Buscar por tracking, recepción, guía, cliente, contenido, tipo de envío o manifiesto...",
       value: params[:q]
     ) %>
   </div>
@@ -51,6 +51,7 @@ end %>
         <li>N° de recepción (RM/RS/RH-XXXXXX)</li>
         <li>Guía del paquete (PQ-XXXXXX)</li>
         <li>Cliente: código y nombre</li>
+        <li>Tercero (cuando aplica): código y nombre</li>
         <li>Contenido / descripción</li>
         <li>Tipo de envío (CER, CKA, EXP, CEM, CKM)</li>
         <li>Número de manifiesto</li>
@@ -341,6 +342,13 @@ end %>
               <td class="px-3 py-2 whitespace-nowrap">
                 <p class="text-xs font-medium text-gray-800 dark:text-gray-100 truncate max-w-[180px]"><%= paquete.cliente.nombre_completo %></p>
                 <p class="text-[10px] text-gray-500 font-mono"><%= paquete.cliente.codigo %></p>
+                <% if paquete.tercero %>
+                  <span class="mt-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-cec-purple/10 text-cec-purple-dark dark:bg-cec-purple/20 dark:text-cec-purple-light ring-1 ring-cec-purple/30"
+                        title="3ro: <%= paquete.tercero.nombre_completo %>">
+                    <%= heroicon "user-group", variant: :solid, options: { class: "w-2.5 h-2.5" } %>
+                    <span class="font-mono"><%= paquete.tercero.codigo %></span>
+                  </span>
+                <% end %>
               </td>
               <td class="px-3 py-2 whitespace-nowrap">
                 <%= render StatusBadgeComponent.new(status: paquete.estado) %>
