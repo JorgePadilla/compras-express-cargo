@@ -202,19 +202,27 @@ end %>
           <%= copy_button(label: "Copiar código del cliente") %>
         </span>
       </dd>
-      <%# PR-D3.c: Tercero — cliente final cuando aplica %>
-      <% if @paquete.tercero %>
-        <dd class="mt-2 text-xs flex items-center gap-1.5">
-          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-cec-purple/10 text-cec-purple-dark dark:bg-cec-purple/20 dark:text-cec-purple-light ring-1 ring-cec-purple/30 font-semibold uppercase tracking-wider text-[9px]">
-            <%= heroicon "user-group", variant: :solid, options: { class: "w-3 h-3" } %>
-            Tercero
-          </span>
+      <%# PR-D3.c: Tercero — cliente final cuando CEC le maneja la carga
+          a otra empresa. Siempre visible (con placeholder si no aplica)
+          para que sea descubrible desde el show. %>
+      <dd class="mt-2 text-xs flex items-center gap-1.5">
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-cec-purple/10 text-cec-purple-dark dark:bg-cec-purple/20 dark:text-cec-purple-light ring-1 ring-cec-purple/30 font-semibold uppercase tracking-wider text-[9px]">
+          <%= heroicon "user-group", variant: :solid, options: { class: "w-3 h-3" } %>
+          Tercero
+        </span>
+        <% if @paquete.tercero %>
           <%= link_to @paquete.tercero, class: "text-gray-700 dark:text-gray-200 hover:underline" do %>
             <span class="font-mono text-cec-navy dark:text-cec-gold"><%= @paquete.tercero.codigo %></span>
             — <%= @paquete.tercero.nombre_completo %>
           <% end %>
-        </dd>
-      <% end %>
+        <% else %>
+          <span class="text-gray-400 dark:text-gray-500 italic">Sin 3ro asignado</span>
+          <% if can_edit_paquetes? %>
+            <%= link_to "Asignar", edit_paquete_path(@paquete, anchor: "tercero"),
+                  class: "ml-1 text-cec-teal hover:text-cec-teal-dark hover:underline" %>
+          <% end %>
+        <% end %>
+      </dd>
       <%# PR-D2.b — notas permanentes del cliente filtradas por rol del usuario %>
       <% notas_visibles = Current.user&.notas_permanentes_visibles.to_a
                                  .select { |n| @paquete.cliente.public_send(n[:campo]).to_s.strip.present? } %>
