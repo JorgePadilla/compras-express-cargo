@@ -140,6 +140,32 @@ class PaqueteTest < ActiveSupport::TestCase
     assert_includes results, paquetes(:recibido)
   end
 
+  test "scope by_cliente_codigo matches partial ILIKE" do
+    juan = clientes(:juan) # CEC-001
+    assert_includes Paquete.by_cliente_codigo(juan.codigo), paquetes(:recibido)
+    assert_includes Paquete.by_cliente_codigo("001"), paquetes(:recibido)
+    assert_not_includes Paquete.by_cliente_codigo("999XYZ"), paquetes(:recibido)
+  end
+
+  test "scope by_cliente_codigo strips and short-circuits empty" do
+    assert_includes Paquete.by_cliente_codigo("  CEC-001  "), paquetes(:recibido)
+    assert_equal Paquete.all.to_a.size, Paquete.by_cliente_codigo("   ").to_a.size
+  end
+
+  test "scope by_cliente_nombre matches single word" do
+    assert_includes Paquete.by_cliente_nombre("Juan"), paquetes(:recibido)
+    assert_includes Paquete.by_cliente_nombre("Perez"), paquetes(:recibido)
+  end
+
+  test "scope by_cliente_nombre matches multi-word concatenated" do
+    assert_includes Paquete.by_cliente_nombre("juan perez"), paquetes(:recibido)
+    assert_includes Paquete.by_cliente_nombre("perez juan"), paquetes(:recibido)
+  end
+
+  test "scope by_cliente_nombre strips whitespace" do
+    assert_includes Paquete.by_cliente_nombre("  juan perez  "), paquetes(:recibido)
+  end
+
   test "scope by_estado filters by estado" do
     results = Paquete.by_estado("empacado")
     assert_includes results, paquetes(:empacado)

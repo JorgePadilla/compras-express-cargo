@@ -189,6 +189,21 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_equal pa, @controller.instance_variable_get(:@pre_alerta_seleccionada)
   end
 
+  test "index filtra por cliente_codigo (quick filter)" do
+    juan = clientes(:juan)
+    get paquetes_url, params: { cliente_codigo: juan.codigo, incluir_mas_1_ano: "1" }
+    assert_response :success
+    assigned = @controller.instance_variable_get(:@paquetes)
+    assigned.each { |p| assert_equal juan.id, p.cliente_id }
+  end
+
+  test "index filtra por cliente_nombre multi-palabra (quick filter)" do
+    get paquetes_url, params: { cliente_nombre: "juan perez", incluir_mas_1_ano: "1" }
+    assert_response :success
+    assigned = @controller.instance_variable_get(:@paquetes)
+    assert_includes assigned, paquetes(:recibido)
+  end
+
   test "index combina estado + sucursal (AND logico)" do
     miami = sucursales(:miami)
     paquetes(:recibido).update_columns(sucursal_id: miami.id, estado: "recibido_miami")
