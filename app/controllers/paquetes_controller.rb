@@ -31,8 +31,9 @@ class PaquetesController < ApplicationController
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     @sucursales = Sucursal.activas.ordered
     @estados_paquete = Paquete.estados.keys
-    # Pre-fill para los inputs de autocomplete cuando el filtro viene en la URL.
-    @cliente_seleccionado    = Cliente.find_by(id: params[:cliente_id]) if params[:cliente_id].present?
+    # Pre-fill para el input de autocomplete de Pre-Alerta cuando el filtro
+    # viene en la URL. (El de Cliente fue removido — Yusef 2026-05-08:
+    # reemplazado por "Búsqueda avanzada" + quick filters de codigo/nombre.)
     @pre_alerta_seleccionada = PreAlerta.find_by(id: params[:pre_alerta_id]) if params[:pre_alerta_id].present?
   end
 
@@ -416,9 +417,9 @@ class PaquetesController < ApplicationController
     sucursales = Array(params[:sucursal_ids]).reject(&:blank?)
     scope = scope.by_sucursal(sucursales) if sucursales.any?
 
-    scope = scope.by_cliente(params[:cliente_id]) if params[:cliente_id].present?
     scope = scope.by_cliente_codigo(params[:cliente_codigo]) if params[:cliente_codigo].present?
     scope = scope.by_cliente_nombre(params[:cliente_nombre]) if params[:cliente_nombre].present?
+    scope = scope.busqueda_avanzada(params[:busqueda_avanzada]) if params[:busqueda_avanzada].present?
     scope = scope.by_pre_alerta(params[:pre_alerta_id]) if params[:pre_alerta_id].present?
 
     if params[:fecha_desde].present? && (fecha_desde = Date.parse(params[:fecha_desde]) rescue nil)
