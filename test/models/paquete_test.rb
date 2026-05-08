@@ -166,6 +166,38 @@ class PaqueteTest < ActiveSupport::TestCase
     assert_includes Paquete.by_cliente_nombre("  juan perez  "), paquetes(:recibido)
   end
 
+  test "scope busqueda_avanzada matches by notas_internas" do
+    p = paquetes(:recibido)
+    p.update!(notas_internas: "Caja golpeada del lado izquierdo")
+    assert_includes Paquete.busqueda_avanzada("golpeada"), p
+  end
+
+  test "scope busqueda_avanzada matches by sucursal nombre" do
+    miami = sucursales(:miami)
+    paquetes(:recibido).update!(sucursal: miami)
+    assert_includes Paquete.busqueda_avanzada(miami.nombre), paquetes(:recibido)
+  end
+
+  test "scope busqueda_avanzada matches by remitente" do
+    paquetes(:recibido).update!(remitente: "Juan Sender")
+    assert_includes Paquete.busqueda_avanzada("Sender"), paquetes(:recibido)
+  end
+
+  test "scope busqueda_avanzada matches by expedido_por" do
+    paquetes(:recibido).update!(expedido_por: "Amazon Logistics LLC")
+    assert_includes Paquete.busqueda_avanzada("Logistics"), paquetes(:recibido)
+  end
+
+  test "scope busqueda_avanzada strips whitespace" do
+    paquetes(:recibido).update!(notas_internas: "Foo bar baz")
+    assert_includes Paquete.busqueda_avanzada("  bar  "), paquetes(:recibido)
+  end
+
+  test "scope busqueda_avanzada empty term returns all" do
+    assert_equal Paquete.count, Paquete.busqueda_avanzada("").count
+    assert_equal Paquete.count, Paquete.busqueda_avanzada("   ").count
+  end
+
   test "scope by_estado filters by estado" do
     results = Paquete.by_estado("empacado")
     assert_includes results, paquetes(:empacado)
