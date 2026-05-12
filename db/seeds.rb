@@ -322,32 +322,64 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   Cliente.where(password_digest: nil).find_each { |c| c.update!(password: "Cliente123!") }
   puts "  ✓ #{Cliente.count} clientes"
 
-  # Demo paquetes
+  # Demo paquetes con transiciones progresivas (Yusef 2026-05-12):
+  # Cada paquete arranca en `recibido_miami` y avanza estado a estado para
+  # que el callback `track_estado_fecha_y_user` setee fecha+user en cada
+  # paso. Después backdatean los fechas con update_columns para que la
+  # línea de tiempo se vea realista en demos.
   digitador = User.find_by!(email_address: "digitador@cec.com")
+  Current.session = Session.new(user: digitador)
   aereo = TipoEnvio.find_by!(codigo: "cer")
   maritimo = TipoEnvio.find_by!(codigo: "cem")
+  tarifa_demo = (TarifaRecolecta.respond_to?(:activos) ? TarifaRecolecta.activos.first : nil) || TarifaRecolecta.first
   clientes = Cliente.all.to_a
   carriers = %w[FedEx DHL UPS USPS Amazon]
-  proveedores = %w[Amazon eBay Shein Walmart Target Nike Zara]
-  estados = %w[recibido_miami empacado empacado empacado empacado empacado enviado_honduras disponible_entrega pre_facturado entregado]
+  proveedores = Proveedor.all.to_a
 
-  20.times do |i|
+  # Orden del pipeline. La progresión se detiene al `final` de cada profile.
+  estado_pipeline = %w[recibido_miami empacado enviado_honduras en_aduana
+                       consolidando_honduras disponible_entrega en_reparto entregado]
+
+  # 20 perfiles distribuidos en el pipeline para que el demo refleje el
+  # ciclo completo (incluyendo paquetes detenidos en cada hito).
+  profiles = [
+    { final: "recibido_miami",        dias_recibido: 1 },
+    { final: "recibido_miami",        dias_recibido: 3 },
+    { final: "empacado",              dias_recibido: 5 },
+    { final: "empacado",              dias_recibido: 6 },
+    { final: "empacado",              dias_recibido: 8 },
+    { final: "enviado_honduras",      dias_recibido: 10 },
+    { final: "enviado_honduras",      dias_recibido: 12 },
+    { final: "en_aduana",             dias_recibido: 14 },
+    { final: "en_aduana",             dias_recibido: 15 },
+    { final: "consolidando_honduras", dias_recibido: 18, recolecta: true },
+    { final: "consolidando_honduras", dias_recibido: 20 },
+    { final: "disponible_entrega",    dias_recibido: 22 },
+    { final: "disponible_entrega",    dias_recibido: 24, recolecta: true },
+    { final: "disponible_entrega",    dias_recibido: 25 },
+    { final: "en_reparto",            dias_recibido: 27 },
+    { final: "en_reparto",            dias_recibido: 28, recolecta: true },
+    { final: "entregado",             dias_recibido: 30 },
+    { final: "entregado",             dias_recibido: 35 },
+    { final: "entregado",             dias_recibido: 40, recolecta: true },
+    { final: "entregado",             dias_recibido: 45 }
+  ]
+
+  profiles.each_with_index do |profile, i|
     tracking = "1Z999TEST#{(i + 1).to_s.rjust(6, '0')}"
     next if Paquete.exists?(tracking: tracking)
 
-    estado = estados[i % estados.length]
-    peso = rand(1.0..50.0).round(2)
-    alto = rand(5.0..30.0).round(2)
-    largo = rand(5.0..40.0).round(2)
-    ancho = rand(5.0..30.0).round(2)
+    recibido_at = profile[:dias_recibido].days.ago
 
-    Paquete.create!(
+    paquete = Paquete.create!(
       tracking: tracking,
       cliente: clientes[i % clientes.length],
       tipo_envio: i.even? ? aereo : maritimo,
-      estado: estado,
-      peso: peso,
-      alto: alto, largo: largo, ancho: ancho,
+      estado: "recibido_miami",
+      peso: rand(1.0..50.0).round(2),
+      alto: rand(5.0..30.0).round(2),
+      largo: rand(5.0..40.0).round(2),
+      ancho: rand(5.0..30.0).round(2),
       cantidad_productos: rand(1..5),
       cantidad_paquetes: 1,
       descripcion: ["Ropa variada", "Zapatos Nike", "Electronica", "Suplementos", "Libros", "Juguetes", "Cosmeticos", "Accesorios"][i % 8],
@@ -355,10 +387,34 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
       expedido_por: carriers[i % carriers.length],
       pre_alerta: i % 5 == 0,
       solicito_cambio_servicio: i == 3,
-      retener_miami: i == 7,
-      user: digitador,
-      fecha_recibido_miami: rand(1..30).days.ago
+      retener_miami: i == 7 && profile[:final] == "recibido_miami",
+      user: digitador
     )
+    paquete.update_columns(fecha_recibido_miami: recibido_at)
+
+    if profile[:recolecta] && tarifa_demo
+      paquete.update_columns(
+        recolecta_solicitada: true,
+        tarifa_recolecta_id: tarifa_demo.id,
+        recolecta_monto: tarifa_demo.monto,
+        recolecta_moneda: tarifa_demo.moneda,
+        fecha_solicito_recolecta: recibido_at + 12.hours,
+        fecha_solicito_recolecta_by_user_id: digitador.id
+      )
+    end
+
+    next if profile[:final] == "recibido_miami"
+
+    # Avanzar por cada estado intermedio hasta `final`. Cada update!
+    # dispara el callback (fecha+user via Time.current); luego backdatea.
+    final_idx = estado_pipeline.index(profile[:final])
+    estados_a_transitar = estado_pipeline[1..final_idx]
+    estados_a_transitar.each_with_index do |estado, paso|
+      paquete.update!(estado: estado)
+      fecha_attr = Paquete::ESTADO_FECHA_MAP[estado]
+      next unless fecha_attr
+      paquete.update_columns(fecha_attr => recibido_at + (paso + 1).days)
+    end
   end
   puts "  ✓ #{Paquete.count} paquetes"
 
@@ -460,6 +516,10 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   amz_proveedor = Proveedor.find_by(nombre: "Amazon")
 
   # Helper local: prepara un paquete listo para entrar a pre-factura.
+  # Si tiene recolecta_solicitada, también setea fecha + tarifa para que
+  # el step "Solicitud Recolecta" aparezca en la línea de tiempo.
+  Current.session = Session.new(user: digitador)
+  tarifa_pf_demo = (TarifaRecolecta.respond_to?(:activos) ? TarifaRecolecta.activos.first : nil) || TarifaRecolecta.first
   crear_paquete_facturable = ->(tracking, **flags) {
     p = Paquete.find_or_initialize_by(tracking: tracking)
     p.assign_attributes(
@@ -477,6 +537,13 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
     flags.each { |k, v| p[k] = v }
     p.recolecta_moneda ||= "USD" if flags[:recolecta_solicitada]
     p.save!
+    if flags[:recolecta_solicitada] && tarifa_pf_demo
+      p.update_columns(
+        tarifa_recolecta_id: tarifa_pf_demo.id,
+        fecha_solicito_recolecta: 7.days.ago + 4.hours,
+        fecha_solicito_recolecta_by_user_id: digitador.id
+      )
+    end
     p
   }
 
