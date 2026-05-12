@@ -47,7 +47,7 @@ end %>
     <div class="absolute left-1/2 -translate-x-1/2 sm:left-auto sm:right-0 sm:translate-x-0 z-20 mt-2 w-72 rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-gray-200 dark:ring-gray-700 p-4 text-xs text-gray-700 dark:text-gray-200">
       <p class="font-semibold text-gray-800 dark:text-gray-100 mb-2">La búsqueda incluye estos campos:</p>
       <ul class="space-y-1 list-disc list-inside text-gray-600 dark:text-gray-300">
-        <li>Tracking</li>
+        <li>Tracking (primario y secundario)</li>
         <li>N° de recepción (RM/RS/RH-XXXXXX)</li>
         <li>Cliente: código y nombre</li>
         <li>Tercero (cuando aplica): código y nombre</li>
@@ -425,6 +425,11 @@ end %>
                     <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold font-mono bg-cec-gold-gradient text-white shadow-sm" title="Caja <%= paquete.numero_caja %> de <%= paquete.cantidad_paquetes %>"><%= paquete.etiqueta_secuencia %></span>
                   <% end %>
                 </div>
+                <% if paquete.tracking_secundario.present? %>
+                  <div class="font-mono text-[10px] text-gray-500 dark:text-gray-400 mt-0.5" title="Tracking secundario">
+                    <%= truncate(paquete.tracking_secundario, length: 22) %>
+                  </div>
+                <% end %>
               </td>
               <td class="px-3 py-2 whitespace-nowrap">
                 <p class="text-xs font-medium text-gray-800 dark:text-gray-100 truncate max-w-[180px]"><%= paquete.cliente.nombre_completo %></p>

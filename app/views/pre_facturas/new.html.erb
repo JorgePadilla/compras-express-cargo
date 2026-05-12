@@ -51,7 +51,12 @@
                   <td class="px-4 py-3">
                     <%= check_box_tag "paquete_ids[]", p.id, false, id: "paquete_#{p.id}", class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
                   </td>
-                  <td class="px-6 py-3 font-mono text-sm"><%= truncate(p.tracking, length: 20) %></td>
+                  <td class="px-6 py-3 font-mono text-sm">
+                    <%= truncate(p.tracking, length: 20) %>
+                    <% if p.tracking_secundario.present? %>
+                      <div class="text-[11px] text-gray-500 mt-0.5" title="Tracking secundario"><%= truncate(p.tracking_secundario, length: 22) %></div>
+                    <% end %>
+                  </td>
                   <td class="px-6 py-3 text-sm text-gray-600"><%= p.tipo_envio&.nombre || "—" %></td>
                   <td class="px-6 py-3 text-right text-sm"><%= p.peso_cobrar || "—" %></td>
                   <td class="px-6 py-3 text-right text-sm">L. <%= number_with_delimiter(precio.to_f, precision: 2) %></td>
