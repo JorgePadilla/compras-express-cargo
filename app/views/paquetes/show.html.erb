@@ -448,31 +448,42 @@ end %>
     <% end %>
 
     <%# Notas categorizadas — 4 secciones (Yusef Mayo 4):
-        Internas | al Cliente | Consolidación | Retención (ya arriba) %>
-    <% if @paquete.notas_internas.present? %>
-      <div>
-        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">
-          Notas Internas
-          <span class="text-[10px] normal-case text-gray-400">(solo equipo CEC)</span>
-        </dt>
+        Internas | al Cliente | Consolidación | Retención (ya arriba).
+        PR-D7.e: siempre visibles para que el usuario sepa qué hay (o
+        que está vacío) sin tener que entrar al modo edit. %>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">
+        Notas Internas
+        <span class="text-[10px] normal-case text-gray-400">(solo equipo CEC)</span>
+      </dt>
+      <% if @paquete.notas_internas.present? %>
         <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 rounded-lg p-3"><%= simple_format(@paquete.notas_internas) %></dd>
-      </div>
-    <% end %>
-    <% if @paquete.notas_al_cliente.present? %>
-      <div>
-        <dt class="text-xs font-medium text-blue-700 uppercase tracking-wider">
-          Notas al Cliente
-          <span class="text-[10px] normal-case text-blue-500">(visibles al cliente)</span>
-        </dt>
+      <% else %>
+        <dd class="mt-1 text-xs italic text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">— sin nota —</dd>
+      <% end %>
+    </div>
+    <div>
+      <dt class="text-xs font-medium text-blue-700 uppercase tracking-wider">
+        Notas al Cliente
+        <span class="text-[10px] normal-case text-blue-500">(visibles al cliente / en pre-factura)</span>
+      </dt>
+      <% if @paquete.notas_al_cliente.present? %>
         <dd class="mt-1 text-sm text-gray-900 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800"><%= simple_format(@paquete.notas_al_cliente) %></dd>
-      </div>
-    <% end %>
-    <% if @paquete.notas_consolidacion.present? %>
-      <div>
-        <dt class="text-xs font-medium text-cec-teal uppercase tracking-wider">Notas de Consolidación</dt>
+      <% else %>
+        <dd class="mt-1 text-xs italic text-blue-400 dark:text-blue-500 bg-blue-50/40 dark:bg-blue-900/10 rounded-lg p-3 border border-blue-100 dark:border-blue-900/40">— sin nota —</dd>
+      <% end %>
+    </div>
+    <div>
+      <dt class="text-xs font-medium text-cec-teal uppercase tracking-wider">
+        Notas de Consolidación
+        <span class="text-[10px] normal-case text-cec-teal/70">(auto-llenadas desde la pre-alerta consolidada al vincular)</span>
+      </dt>
+      <% if @paquete.notas_consolidacion.present? %>
         <dd class="mt-1 text-sm text-gray-900 bg-teal-50 dark:bg-teal-900/20 rounded-lg p-3 border border-teal-200 dark:border-teal-800"><%= simple_format(@paquete.notas_consolidacion) %></dd>
-      </div>
-    <% end %>
+      <% else %>
+        <dd class="mt-1 text-xs italic text-cec-teal/60 bg-teal-50/40 dark:bg-teal-900/10 rounded-lg p-3 border border-teal-100 dark:border-teal-900/40">— sin nota —</dd>
+      <% end %>
+    </div>
 
     <%# Notas Especiales (instrucciones de la pre-alerta del cliente) %>
     <% pap_instrucciones = @paquete.pre_alerta_paquetes
