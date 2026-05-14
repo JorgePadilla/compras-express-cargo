@@ -112,6 +112,13 @@ class PaquetesController < ApplicationController
         descripcion: @paquete.descripcion,
         fecha: Date.current
       )
+      # Yusef: la fecha de pre-alerta debe reflejar la última transacción,
+      # no la original. Actualizamos fecha + user explícitamente porque el
+      # estado del paquete no cambia y el callback no dispara.
+      @paquete.update!(
+        fecha_pre_alerta: Time.current,
+        fecha_pre_alerta_by_user_id: Current.user&.id
+      )
     end
 
     redirect_to @paquete, notice: "Paquete movido a pre-alerta #{pa.numero_documento} (#{pa.cliente.codigo})."

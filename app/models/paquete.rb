@@ -64,7 +64,9 @@ class Paquete < ApplicationRecord
   }.freeze
 
   # Fechas que NO se sobrescriben una vez seteadas (queda la primera).
-  ESTADO_FECHA_INMUTABLE = %i[fecha_pre_alerta].freeze
+  # Yusef pidió que fecha_pre_alerta sí se actualice al mover el paquete
+  # a otra PA — la última transacción manda — así que ya no es inmutable.
+  ESTADO_FECHA_INMUTABLE = %i[].freeze
 
   validates :tracking, presence: true
   validates :guia, presence: true, uniqueness: { case_sensitive: false }
@@ -198,7 +200,11 @@ class Paquete < ApplicationRecord
   before_save :calculate_peso_volumetrico
   before_save :calculate_peso_cobrar
   before_save :track_fecha_disponible, if: :will_save_change_to_estado?
-  before_save :track_estado_fecha_y_user, if: :will_save_change_to_estado?
+  # En `new_record?` `will_save_change_to_estado?` puede ser falso cuando
+  # el estado coincide con el default de la columna ("recibido_miami").
+  # Forzamos que la captura inicial de fecha+user funcione también ahí.
+  before_save :track_estado_fecha_y_user,
+              if: -> { will_save_change_to_estado? || (new_record? && ESTADO_FECHA_MAP.key?(estado)) }
   # PR-D3.c.2: dropdown híbrido de carrier. Si el usuario escribe un
   # nombre nuevo (no presente en el catálogo), se agrega automáticamente
   # para que la próxima vez aparezca en el dropdown. Yusef:
