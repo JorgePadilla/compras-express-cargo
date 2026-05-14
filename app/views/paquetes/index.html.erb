@@ -359,7 +359,7 @@ end %>
             <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Tipo de envío (CER, CKA, EXP, CEM, CKM)"><%= sortable_header :tipo_envio, "T.E." %></th>
             <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Consolidado: el paquete pertenece a una pre-alerta consolidada">Cons.</th>
             <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Descripción del contenido del paquete">Contenido</th>
-            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Pre-Alerta — link al documento si el paquete tiene una asociada">PA</th>
+            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Número de Pre-Alerta · hover muestra el título de referencia">PA</th>
             <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Pre-Factura — link al documento si existe">PF</th>
             <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Factura — link a la venta facturada">FA</th>
             <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Editar paquete (admin / supervisor Miami / supervisor Pre-factura)">Ed.</th>
@@ -448,11 +448,11 @@ end %>
               </td>
               <td class="px-3 py-2 text-center">
                 <% if pa %>
-                  <%= link_to pre_alerta_path(pa), class: "inline-flex text-cec-teal dark:text-cec-teal-light hover:text-cec-teal-dark", title: "Ver Pre-Alerta #{pa.numero_documento}" do %>
-                    <%= heroicon "bell-alert", variant: :solid, options: { class: "w-4 h-4" } %>
-                  <% end %>
+                  <%= link_to pa.numero_documento, pre_alerta_path(pa),
+                        class: "font-mono text-[11px] text-cec-teal dark:text-cec-teal-light hover:text-cec-teal-dark hover:underline whitespace-nowrap",
+                        title: pa.titulo.presence || "Ver Pre-Alerta" %>
                 <% else %>
-                  <span class="inline-flex text-gray-300 dark:text-gray-600" title="Sin pre-alerta"><%= heroicon "bell-alert", variant: :outline, options: { class: "w-4 h-4" } %></span>
+                  <span class="text-[11px] text-gray-300 dark:text-gray-600" title="Sin pre-alerta">—</span>
                 <% end %>
               </td>
               <td class="px-3 py-2 text-center">
