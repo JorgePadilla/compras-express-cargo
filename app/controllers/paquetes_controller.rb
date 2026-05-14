@@ -19,6 +19,12 @@ class PaquetesController < ApplicationController
 
   EDIT_ROLES   = %w[admin supervisor_miami supervisor_prefactura].freeze
   DELETE_ROLES = %w[admin].freeze
+  # PR-D7.b: cambios manuales de estado solo para roles con permiso de
+  # edición. El resto ve el badge solo lectura y depende de los flujos
+  # programáticos (manifiesto, entrega, pre-factura) para mover el
+  # paquete por el pipeline. Por ahora alineado con EDIT_ROLES —
+  # ampliar requiere también ampliar EDIT_ROLES.
+  ESTADO_CHANGE_ROLES = EDIT_ROLES
 
   def index
     @paquetes = base_scope
@@ -54,6 +60,26 @@ class PaquetesController < ApplicationController
   end
 
   def update
+    # PR-D7.b: gate de cambio de estado. Antes de aplicar attributes,
+    # validamos quien y como puede tocar `estado`. Si bloqueamos,
+    # rendereamos show con `@estado_transition_block` para que el modal
+    # se abra automáticamente con motivo + acción alternativa.
+    if (blocker = estado_transition_blocker(paquete_params))
+      @estado_transition_block = blocker
+      render_show_with_edit_assigns(status: blocker[:status])
+      return
+    end
+
+    # PR-D7.d: cuando un retroceso ya fue confirmado por el supervisor,
+    # limpiar fechas + FKs de los estados posteriores antes de tocar
+    # attributes para que el paquete quede coherente con el nuevo estado.
+    target_estado = paquete_params[:estado].to_s
+    if target_estado.present? && target_estado != @paquete.estado &&
+       Paquete.transicion_retroceso?(@paquete.estado, target_estado) &&
+       params[:confirm_retroceso].to_s == "1"
+      @paquete.apply_retroceso_cleanup!(target_estado)
+    end
+
     @paquete.assign_attributes(paquete_params)
     # `paquete[:pre_factura]` es columna boolean; el accessor normal lo
     # interpreta como la asociación belongs_to :pre_factura. Lo escribimos
@@ -65,12 +91,7 @@ class PaquetesController < ApplicationController
     if @paquete.save
       redirect_to @paquete, notice: "Paquete actualizado exitosamente."
     else
-      # Re-render show en modo edit con los errores.
-      @edit_mode = true
-      @tipo_envios = TipoEnvio.activos.order(:nombre)
-      @carriers = Carrier.where(activo: true).order(:nombre)
-      @tarifas_recolecta = TarifaRecolecta.activas.ordered
-      render :show, status: :unprocessable_entity
+      render_show_with_edit_assigns(status: :unprocessable_entity)
     end
   end
 
@@ -348,6 +369,47 @@ class PaquetesController < ApplicationController
     return if EDIT_ROLES.include?(Current.user&.rol)
     redirect_to paquetes_path,
                 alert: "No tienes permiso para editar paquetes. Solo admin, supervisor Miami o supervisor Pre-factura."
+  end
+
+  # PR-D7.b: decide si la transición de estado debe bloquearse antes de
+  # tocar el paquete. Retorna nil cuando OK; un hash describiendo el
+  # bloqueo (motivo + datos para el modal) cuando hay que cortar.
+  def estado_transition_blocker(attrs)
+    return nil unless attrs.key?(:estado)
+    target = attrs[:estado].to_s
+    return nil if target.blank?
+    actual = @paquete.estado.to_s
+    return nil if target == actual
+
+    unless Current.user&.admin? || ESTADO_CHANGE_ROLES.include?(Current.user&.rol.to_s)
+      return {
+        motivo:   :rol,
+        status:   :forbidden,
+        actual:   actual,
+        objetivo: target
+      }
+    end
+
+    if Paquete.transicion_retroceso?(actual, target) &&
+       params[:confirm_retroceso].to_s != "1"
+      return {
+        motivo:   :retroceso,
+        status:   :unprocessable_entity,
+        actual:   actual,
+        objetivo: target,
+        pasos:    Paquete.transicion_pasos_atras(actual, target)
+      }
+    end
+
+    nil
+  end
+
+  def render_show_with_edit_assigns(status:)
+    @edit_mode = true
+    @tipo_envios = TipoEnvio.activos.order(:nombre)
+    @carriers = Carrier.where(activo: true).order(:nombre)
+    @tarifas_recolecta = TarifaRecolecta.activas.ordered
+    render :show, status: status
   end
 
   def authorize_delete

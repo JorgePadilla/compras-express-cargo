@@ -643,4 +643,94 @@ class PaqueteTest < ActiveSupport::TestCase
 
     assert_equal 99.99, paquete.reload.recolecta_monto.to_f
   end
+
+  # PR-D7.b: helpers de transición de estado.
+  test "transicion_retroceso? detecta retrocesos en el pipeline" do
+    assert Paquete.transicion_retroceso?("entregado", "en_reparto")
+    assert Paquete.transicion_retroceso?("disponible_entrega", "empacado")
+    assert Paquete.transicion_retroceso?("facturado", "disponible_entrega")
+  end
+
+  test "transicion_retroceso? no marca avances como retroceso" do
+    assert_not Paquete.transicion_retroceso?("recibido_miami", "empacado")
+    assert_not Paquete.transicion_retroceso?("empacado", "enviado_honduras")
+    assert_not Paquete.transicion_retroceso?("en_reparto", "entregado")
+  end
+
+  test "transicion_retroceso? ignora estados excepcionales" do
+    assert_not Paquete.transicion_retroceso?("retenido", "recibido_miami")
+    assert_not Paquete.transicion_retroceso?("disponible_entrega", "anulado")
+    assert_not Paquete.transicion_retroceso?("entregado", "consolidando_honduras")
+  end
+
+  test "transicion_retroceso? con estado igual o nil retorna false" do
+    assert_not Paquete.transicion_retroceso?("empacado", "empacado")
+    assert_not Paquete.transicion_retroceso?(nil, "empacado")
+    assert_not Paquete.transicion_retroceso?("empacado", nil)
+  end
+
+  test "transicion_pasos_atras cuenta correctamente" do
+    assert_equal 1, Paquete.transicion_pasos_atras("entregado", "en_reparto")
+    assert_equal 3, Paquete.transicion_pasos_atras("disponible_entrega", "empacado")
+    assert_equal 0, Paquete.transicion_pasos_atras("recibido_miami", "empacado")
+    assert_equal 0, Paquete.transicion_pasos_atras("retenido", "recibido_miami")
+  end
+
+  # PR-D7.d: cleanup automático al confirmar retroceso.
+  test "retroceso_cleanup_preview lista fechas y FKs de estados posteriores" do
+    p = paquetes(:entregado)
+    user_id = users(:admin).id
+    p.update_columns(
+      fecha_entregado:                1.day.ago,
+      fecha_entregado_by_user_id:     user_id,
+      fecha_en_reparto:               2.days.ago,
+      fecha_en_reparto_by_user_id:    user_id,
+      fecha_disponible:               3.days.ago,
+      fecha_disponible_by_user_id:    user_id,
+      fecha_empacado:                 5.days.ago,
+      fecha_empacado_by_user_id:      user_id
+    )
+    preview = p.retroceso_cleanup_preview("recibido_miami")
+    assert_includes preview[:fechas], :fecha_entregado
+    assert_includes preview[:fechas], :fecha_entregado_by_user_id
+    assert_includes preview[:fechas], :fecha_en_reparto
+    assert_includes preview[:fechas], :fecha_en_reparto_by_user_id
+    assert_includes preview[:fechas], :fecha_disponible
+    assert_includes preview[:fechas], :fecha_empacado
+  end
+
+  test "retroceso_cleanup_preview omite columnas en nil" do
+    p = paquetes(:entregado)
+    # Solo fecha_entregado seteada; las anteriores nil.
+    p.update_columns(
+      fecha_entregado:    1.day.ago,
+      fecha_en_reparto:   nil,
+      fecha_disponible:   nil,
+      fecha_consolidando: nil,
+      fecha_empacado:     nil
+    )
+    preview = p.retroceso_cleanup_preview("recibido_miami")
+    assert_includes preview[:fechas], :fecha_entregado
+    assert_not_includes preview[:fechas], :fecha_en_reparto
+    assert_not_includes preview[:fechas], :fecha_disponible
+  end
+
+  test "retroceso_cleanup_preview retorna vacío para avance o estado igual" do
+    p = paquetes(:recibido)
+    assert_equal({ fechas: [], fks: [] }, p.retroceso_cleanup_preview("empacado"))
+    assert_equal({ fechas: [], fks: [] }, p.retroceso_cleanup_preview("recibido_miami"))
+  end
+
+  test "apply_retroceso_cleanup! nula fechas y FKs en memoria" do
+    p = paquetes(:entregado)
+    p.update_columns(
+      fecha_entregado:  1.day.ago,
+      fecha_en_reparto: 2.days.ago
+    )
+    p.apply_retroceso_cleanup!("recibido_miami")
+    assert_nil p.fecha_entregado
+    assert_nil p.fecha_en_reparto
+    # No persiste hasta el save siguiente.
+    assert_not_nil p.reload.fecha_entregado
+  end
 end

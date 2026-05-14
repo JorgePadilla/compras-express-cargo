@@ -1,8 +1,13 @@
 import { Controller } from "@hotwired/stimulus"
 
-// PR-D4.b — Inline edit de un campo via <select> que dispara PATCH al
-// servidor en cuanto cambia. Yusef pidió "estado del paquete dropdown
-// para modificar en caso de un error" sin obligar a entrar a /edit.
+// PR-D4.b / PR-D7.b / PR-D7.d — Inline edit de un campo via <select>.
+// El submit se hace vía Turbo (form oculto con data-turbo-frame) para
+// que el server pueda inyectar modals de bloqueo dentro del frame.
+//
+// Para retrocesos del pipeline, NO confirmamos client-side: el server
+// detecta el caso y devuelve 422 con un modal que lista exactamente
+// qué fechas + FKs se van a limpiar antes de pedir confirmación. Esto
+// asegura un solo punto de decisión con info completa.
 //
 // Markup esperado:
 //   <div data-controller="inline-select"
@@ -10,46 +15,36 @@ import { Controller } from "@hotwired/stimulus"
 //        data-inline-select-field-value="estado"
 //        data-inline-select-resource-value="paquete">
 //     <select data-action="change->inline-select#submit"
-//             data-inline-select-target="select">
-//       <option ...>...</option>
-//     </select>
+//             data-inline-select-target="select">…</select>
 //     <span data-inline-select-target="status" class="hidden">…</span>
 //   </div>
-//
-// Hace fetch PATCH a `url` con body `resource[field]=valor` y muestra
-// feedback temporal "✓ Guardado" o "✗ Error".
 export default class extends Controller {
-  static values = { url: String, field: String, resource: String, feedbackDuration: { type: Number, default: 1500 } }
+  static values = {
+    url: String,
+    field: String,
+    resource: String,
+    frame: { type: String, default: "paquete_dynamic" }
+  }
   static targets = ["select", "status"]
 
   submit(event) {
     const value = event.target.value
-    const body = new FormData()
-    body.append(`${this.resourceValue}[${this.fieldValue}]`, value)
 
     this.showStatus("Guardando…", "text-gray-500")
     this.selectTarget.disabled = true
 
-    fetch(this.urlValue, {
-      method: "PATCH",
-      headers: {
-        "X-CSRF-Token": this.csrfToken,
-        "Accept": "text/vnd.turbo-stream.html, text/html"
-      },
-      body: body
-    }).then(response => {
-      if (response.ok) {
-        this.showStatus("✓ Guardado", "text-cec-teal-dark")
-        // Recarga para que el badge / clases CSS reflejen el nuevo estado.
-        setTimeout(() => window.location.reload(), 600)
-      } else {
-        this.showStatus("✗ Error al guardar", "text-red-600")
-        this.selectTarget.disabled = false
-      }
-    }).catch(() => {
-      this.showStatus("✗ Sin conexión", "text-red-600")
-      this.selectTarget.disabled = false
-    })
+    const form = document.createElement("form")
+    form.method = "post"
+    form.action = this.urlValue
+    form.setAttribute("data-turbo-frame", this.frameValue)
+    form.style.display = "none"
+    form.append(this.#hidden("_method", "patch"))
+    form.append(this.#hidden("authenticity_token", this.csrfToken))
+    form.append(this.#hidden(`${this.resourceValue}[${this.fieldValue}]`, value))
+
+    document.body.appendChild(form)
+    form.requestSubmit()
+    setTimeout(() => form.remove(), 5000)
   }
 
   showStatus(text, colorClass) {
@@ -61,5 +56,13 @@ export default class extends Controller {
 
   get csrfToken() {
     return document.querySelector("meta[name='csrf-token']")?.content || ""
+  }
+
+  #hidden(name, value) {
+    const i = document.createElement("input")
+    i.type = "hidden"
+    i.name = name
+    i.value = value
+    return i
   }
 }

@@ -179,8 +179,10 @@ end %>
 
     <%# PR-D4.b: Estado como dropdown inline editable. Yusef:
         "esto debe ser drop down para modificar en caso de un error".
-        Si el usuario no tiene permiso de editar, sólo se muestra el badge. %>
-    <% if can_edit_paquetes? %>
+        PR-D7.b: solo admin/supervisores ven el dropdown; el resto ve el
+        badge solo lectura. El dropdown detecta retrocesos via JS y
+        muestra modal de confirmación antes de mandar el PATCH. %>
+    <% if can_change_estado_paquete? %>
       <div class="flex items-center gap-2"
            data-controller="inline-select"
            data-inline-select-url-value="<%= paquete_path(@paquete) %>"
@@ -623,6 +625,12 @@ end %>
     </button>
   <% end %>
 </dialog>
+
+<%# PR-D7.b: modal de transición de estado (bloqueo por rol o retroceso).
+    Se renderiza solo cuando el controller setea @estado_transition_block. %>
+<% if @estado_transition_block.present? %>
+  <%= render "estado_transition_modal", paquete: @paquete, block_info: @estado_transition_block %>
+<% end %>
 
 <% end %><%# /turbo-frame "paquete_dynamic" %>
 </div><%# /data-controller="mover-pre-alerta-modal" %>
