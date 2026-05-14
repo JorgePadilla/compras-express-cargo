@@ -39,7 +39,7 @@ class PaqueteEstadoFechasTest < ActiveSupport::TestCase
 
   test "fecha_pre_alerta SE actualiza al re-asignar (PR-D7: mutable)" do
     # Yusef cambió la regla: al mover un paquete entre pre-alertas (o
-    # volver a estado pre_alerta_estado), la fecha debe reflejar la
+    # volver al estado pre_alerta_estado), la fecha debe reflejar la
     # última transacción, no la primera. El badge "(modificada)" en la
     # línea de tiempo deja la historia visible.
     p = Paquete.create!(tracking: "1Z999EF_PA", cliente: clientes(:juan), sucursal: sucursales(:miami),
