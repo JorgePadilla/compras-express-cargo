@@ -36,10 +36,19 @@
 
     <div>
       <%= f.label :estado, class: "block text-sm font-medium text-gray-700 mb-1" %>
-      <%= f.select :estado, Paquete.estados.keys.map { |e| [e.humanize, e] },
-          {},
-          { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                   focus:ring-cec-teal focus:border-cec-teal" } %>
+      <% if can_change_estado_paquete? %>
+        <%= f.select :estado, Paquete.estados.keys.map { |e| [e.humanize, e] },
+            {},
+            { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                     focus:ring-cec-teal focus:border-cec-teal" } %>
+      <% else %>
+        <%# PR-D7.b: roles operativos no pueden cambiar estado manualmente. %>
+        <div class="block w-full rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-600 px-3 py-2">
+          <%= paquete.estado&.humanize %>
+        </div>
+        <p class="text-[11px] text-gray-500 mt-1">Solo supervisores o admin pueden cambiar el estado.</p>
+        <%= f.hidden_field :estado %>
+      <% end %>
     </div>
 
     <div>

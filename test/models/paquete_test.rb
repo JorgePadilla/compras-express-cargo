@@ -643,4 +643,36 @@ class PaqueteTest < ActiveSupport::TestCase
 
     assert_equal 99.99, paquete.reload.recolecta_monto.to_f
   end
+
+  # PR-D7.b: helpers de transición de estado.
+  test "transicion_retroceso? detecta retrocesos en el pipeline" do
+    assert Paquete.transicion_retroceso?("entregado", "en_reparto")
+    assert Paquete.transicion_retroceso?("disponible_entrega", "empacado")
+    assert Paquete.transicion_retroceso?("facturado", "disponible_entrega")
+  end
+
+  test "transicion_retroceso? no marca avances como retroceso" do
+    assert_not Paquete.transicion_retroceso?("recibido_miami", "empacado")
+    assert_not Paquete.transicion_retroceso?("empacado", "enviado_honduras")
+    assert_not Paquete.transicion_retroceso?("en_reparto", "entregado")
+  end
+
+  test "transicion_retroceso? ignora estados excepcionales" do
+    assert_not Paquete.transicion_retroceso?("retenido", "recibido_miami")
+    assert_not Paquete.transicion_retroceso?("disponible_entrega", "anulado")
+    assert_not Paquete.transicion_retroceso?("entregado", "consolidando_honduras")
+  end
+
+  test "transicion_retroceso? con estado igual o nil retorna false" do
+    assert_not Paquete.transicion_retroceso?("empacado", "empacado")
+    assert_not Paquete.transicion_retroceso?(nil, "empacado")
+    assert_not Paquete.transicion_retroceso?("empacado", nil)
+  end
+
+  test "transicion_pasos_atras cuenta correctamente" do
+    assert_equal 1, Paquete.transicion_pasos_atras("entregado", "en_reparto")
+    assert_equal 3, Paquete.transicion_pasos_atras("disponible_entrega", "empacado")
+    assert_equal 0, Paquete.transicion_pasos_atras("recibido_miami", "empacado")
+    assert_equal 0, Paquete.transicion_pasos_atras("retenido", "recibido_miami")
+  end
 end

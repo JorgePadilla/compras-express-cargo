@@ -30,6 +30,11 @@ module PaquetesHelper
     Current.user.admin? || PaquetesController::DELETE_ROLES.include?(Current.user.rol)
   end
 
+  def can_change_estado_paquete?
+    return false unless Current.user
+    Current.user.admin? || PaquetesController::ESTADO_CHANGE_ROLES.include?(Current.user.rol)
+  end
+
   # Identificador visible del paquete en UI (títulos, tablas, mensajes,
   # emails). Reemplaza el uso directo de `paquete.guia` — Yusef 2026-05-08:
   # la guía PQ-XXXXXX se mantiene en backend (DB + auto-gen + búsqueda)

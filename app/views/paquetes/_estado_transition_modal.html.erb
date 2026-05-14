@@ -1,0 +1,75 @@
+<%# PR-D7.b: modal explicando por qué el cambio de estado se bloqueó.
+    Dos variantes según block_info[:motivo]:
+    - :rol      → usuario no autorizado, sólo botón Entendido.
+    - :retroceso → confirmación de retroceso del pipeline con Cancelar/Confirmar.
+    Se abre automáticamente al render (via script al final). %>
+<dialog id="estado-transition-dialog"
+        class="rounded-xl shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm w-full max-w-md p-0 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 ring-1 ring-gray-200 dark:ring-gray-700"
+        style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0;">
+  <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+    <% if block_info[:motivo] == :rol %>
+      <%= heroicon "lock-closed", variant: :solid, options: { class: "w-5 h-5 text-red-600" } %>
+      <h3 class="text-base font-semibold text-red-700 dark:text-red-400">
+        No tienes permiso para cambiar el estado
+      </h3>
+    <% else %>
+      <%= heroicon "exclamation-triangle", variant: :solid, options: { class: "w-5 h-5 text-amber-600" } %>
+      <h3 class="text-base font-semibold text-amber-700 dark:text-amber-400">
+        Estás retrocediendo el pipeline
+      </h3>
+    <% end %>
+  </div>
+
+  <div class="px-5 py-4 space-y-3 text-sm">
+    <p class="flex items-center gap-2 text-gray-700 dark:text-gray-200">
+      <span class="font-mono text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-800"><%= block_info[:actual]&.humanize %></span>
+      <%= heroicon "arrow-right", variant: :solid, options: { class: "w-4 h-4 text-gray-400" } %>
+      <span class="font-mono text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-800"><%= block_info[:objetivo]&.humanize %></span>
+    </p>
+
+    <% if block_info[:motivo] == :rol %>
+      <p class="text-gray-700 dark:text-gray-200">
+        Solo <strong>admin</strong> y <strong>supervisores</strong> (Miami, Caja, Pre-Factura) pueden cambiar manualmente el estado de un paquete.
+      </p>
+      <p class="text-gray-500 dark:text-gray-400 text-xs">
+        Si necesitas mover este paquete, pídele a tu supervisor que lo haga, o usa el flujo correspondiente (manifiesto, entrega, pre-factura).
+      </p>
+    <% else %>
+      <p class="text-gray-700 dark:text-gray-200">
+        Este cambio retrocede el paquete <strong><%= block_info[:pasos] %> paso<%= 's' if block_info[:pasos] != 1 %></strong> en el pipeline operativo.
+      </p>
+      <p class="text-gray-500 dark:text-gray-400 text-xs">
+        Puede dejar referencias inconsistentes con la Entrega, Pre-Factura o Venta asociadas. Solo confirma si entendés el impacto.
+      </p>
+    <% end %>
+  </div>
+
+  <div class="px-5 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2 bg-gray-50 dark:bg-gray-800/50 rounded-b-xl">
+    <% if block_info[:motivo] == :rol %>
+      <%= link_to "Entendido", paquete_path(paquete),
+            class: "px-4 py-1.5 rounded-md text-sm font-semibold bg-cec-navy text-white hover:bg-cec-navy-dark" %>
+    <% else %>
+      <%= link_to "Cancelar", paquete_path(paquete),
+            class: "px-3 py-1.5 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700" %>
+      <%= button_to paquete_path(paquete),
+            method: :patch,
+            params: {
+              paquete: { estado: block_info[:objetivo] },
+              confirm_retroceso: "1"
+            },
+            class: "px-4 py-1.5 rounded-md text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700 inline-flex items-center gap-1.5" do %>
+        <%= heroicon "check", variant: :solid, options: { class: "w-4 h-4" } %>
+        Confirmar retroceso
+      <% end %>
+    <% end %>
+  </div>
+</dialog>
+
+<script>
+  (function () {
+    var dlg = document.getElementById('estado-transition-dialog');
+    if (dlg && typeof dlg.showModal === 'function' && !dlg.open) {
+      dlg.showModal();
+    }
+  })();
+</script>

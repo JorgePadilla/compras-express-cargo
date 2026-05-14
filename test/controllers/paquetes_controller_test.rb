@@ -560,4 +560,69 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "a[data-turbo-frame=?]", "paquete_dynamic"
   end
+
+  # PR-D7.b: cambios manuales de estado restringidos por rol + modal de
+  # retroceso cuando un supervisor mueve hacia atrás en el pipeline.
+
+  test "cajero no puede acceder al update (authorize_edit lo redirecciona antes del gate)" do
+    delete session_url
+    cajero = users(:cajero)
+    post session_url, params: { email_address: cajero.email_address, password: "password123" }
+
+    # Cajero ni siquiera pasa `authorize_edit`; redirect a /paquetes.
+    # El gate de estado (defensa en profundidad) solo aplica a usuarios
+    # que sí pueden editar otros campos pero no estado — el dropdown
+    # del show ya está oculto para los demás vía can_change_estado_paquete?
+    estado_inicial = @paquete.estado
+    patch paquete_url(@paquete), params: { paquete: { estado: "empacado" } }
+
+    assert_response :redirect
+    assert_match(/No tienes permiso/, flash[:alert])
+    @paquete.reload
+    assert_equal estado_inicial, @paquete.estado
+  end
+
+  test "update bloquea retroceso sin confirm_retroceso (admin)" do
+    entregado = paquetes(:entregado)
+    estado_inicial = entregado.estado
+
+    patch paquete_url(entregado), params: { paquete: { estado: "en_reparto" } }
+
+    assert_response :unprocessable_entity
+    entregado.reload
+    assert_equal estado_inicial, entregado.estado
+    assert_select "dialog#estado-transition-dialog"
+    assert_match(/retrocediendo el pipeline/i, response.body)
+  end
+
+  test "update permite retroceso con confirm_retroceso=1 (admin)" do
+    entregado = paquetes(:entregado)
+
+    patch paquete_url(entregado), params: {
+      paquete: { estado: "en_reparto" },
+      confirm_retroceso: "1"
+    }
+
+    assert_redirected_to paquete_url(entregado)
+    entregado.reload
+    assert_equal "en_reparto", entregado.estado
+  end
+
+  test "update permite avance normal (admin, sin retroceso)" do
+    # Usa el fixture `empacado` (sin tareas abiertas) y avanza un paso.
+    p = paquetes(:empacado)
+    patch paquete_url(p), params: { paquete: { estado: "enviado_honduras" } }
+    assert_redirected_to paquete_url(p)
+    p.reload
+    assert_equal "enviado_honduras", p.estado
+  end
+
+  test "update sin cambio de estado no toca el gate" do
+    estado_inicial = @paquete.estado
+    patch paquete_url(@paquete), params: { paquete: { descripcion: "Nueva desc" } }
+    assert_redirected_to paquete_url(@paquete)
+    @paquete.reload
+    assert_equal estado_inicial, @paquete.estado
+    assert_equal "Nueva desc", @paquete.descripcion
+  end
 end

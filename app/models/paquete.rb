@@ -88,6 +88,36 @@ class Paquete < ApplicationRecord
   ESTADOS_ORDEN = %w[recibido_miami empacado enviado_honduras en_aduana
                      disponible_entrega pre_facturado facturado en_reparto entregado].freeze
 
+  # Estados excepcionales / fuera del pipeline lineal. Las transiciones
+  # hacia o desde estos NO se consideran "retroceso" (son rutas
+  # alternativas válidas como retención, anulación, consolidación).
+  ESTADOS_EXCEPCIONALES = %w[pre_alerta_estado consolidando_honduras
+                              recoleta_en_proceso retenido retornado
+                              desechado anulado].freeze
+
+  # PR-D7.b: helpers para que controller/JS detecten retrocesos en el
+  # pipeline. Yusef pidió advertir con modal cuando un supervisor mueve
+  # un paquete a un estado anterior (ej. entregado → en_reparto).
+  def self.estado_excepcional?(estado)
+    ESTADOS_EXCEPCIONALES.include?(estado.to_s)
+  end
+
+  def self.transicion_retroceso?(estado_from, estado_to)
+    return false if estado_from.blank? || estado_to.blank?
+    return false if estado_excepcional?(estado_from) || estado_excepcional?(estado_to)
+    i_from = ESTADOS_ORDEN.index(estado_from.to_s)
+    i_to   = ESTADOS_ORDEN.index(estado_to.to_s)
+    return false unless i_from && i_to
+    i_to < i_from
+  end
+
+  def self.transicion_pasos_atras(estado_from, estado_to)
+    i_from = ESTADOS_ORDEN.index(estado_from.to_s)
+    i_to   = ESTADOS_ORDEN.index(estado_to.to_s)
+    return 0 unless i_from && i_to
+    [ i_from - i_to, 0 ].max
+  end
+
   scope :activos, -> { where.not(estado: %w[anulado entregado retornado desechado]) }
   scope :buscar, ->(term) {
     term = term.to_s.strip
