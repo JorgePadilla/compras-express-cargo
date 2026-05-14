@@ -208,7 +208,7 @@ end %>
         <%= hidden_field_tag :q, params[:q] %>
       <% end %>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
         <%# Tipo envio multi-select %>
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Tipo de envío</label>
@@ -239,21 +239,6 @@ end %>
           </div>
         </div>
 
-        <%# Rango de fechas %>
-        <div class="space-y-2">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Desde</label>
-            <%= date_field_tag :fecha_desde, params[:fecha_desde],
-                class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal",
-                data: { controller: "flatpickr" } %>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Hasta</label>
-            <%= date_field_tag :fecha_hasta, params[:fecha_hasta],
-                class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal",
-                data: { controller: "flatpickr" } %>
-          </div>
-        </div>
       </div>
 
       <%# Búsqueda avanzada + Pre-Alerta. La búsqueda avanzada reemplazó
