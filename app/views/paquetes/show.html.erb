@@ -315,20 +315,21 @@ end %>
         </dd>
       </div>
       <div>
-        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Recibido Miami</dt>
-        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
-          <%= @paquete.fecha_recibido_miami&.strftime("%d/%m/%Y %H:%M") || "—" %>
-        </dd>
-        <%# PR-D7.g: Fecha Posible de Entrega siempre visible. Yusef:
-            "esta amarrada a la fecha del manifiesto... modificado
-            desde el módulo de Manifiestos (personal limitado)". %>
-        <dt class="mt-2 text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Posible Entrega</dt>
+        <%# PR-D7.h: Yusef pidió que "Fecha Posible Entrega" vaya
+            arriba (es el dato más relevante para el cliente:
+            cuándo le va a llegar). Recibido Miami queda debajo
+            como dato de trazabilidad. %>
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Posible Entrega</dt>
         <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
           <% if @paquete.fecha_posible_entrega.present? %>
             <%= @paquete.fecha_posible_entrega.strftime("%d/%m/%Y") %>
           <% else %>
             <span class="text-gray-400">—</span>
           <% end %>
+        </dd>
+        <dt class="mt-2 text-xs font-medium text-gray-500 uppercase tracking-wider">Recibido Miami</dt>
+        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+          <%= @paquete.fecha_recibido_miami&.strftime("%d/%m/%Y %H:%M") || "—" %>
         </dd>
       </div>
     </div>
