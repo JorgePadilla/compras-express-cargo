@@ -269,7 +269,7 @@ end %>
           </dd>
         <% end %>
       </div>
-      <div class="md:col-span-2">
+      <div class="md:col-span-1">
         <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo de Envío</dt>
         <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
           <% if (te = @paquete.tipo_envio) %>
@@ -282,7 +282,7 @@ end %>
           <% end %>
         </dd>
       </div>
-      <div class="md:col-span-2">
+      <div class="md:col-span-3">
         <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Contenido</dt>
         <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100 line-clamp-2"
             title="<%= @paquete.descripcion %>">
