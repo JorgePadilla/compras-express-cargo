@@ -490,7 +490,7 @@ end %>
               </td>
               <td class="px-3 py-2 text-center">
                 <% if can_edit_paquetes? %>
-                  <%= link_to edit_paquete_path(paquete), class: "inline-flex text-gray-400 hover:text-cec-navy dark:hover:text-cec-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cec-teal rounded", title: "Editar paquete" do %>
+                  <%= link_to paquete_path(paquete), class: "inline-flex text-gray-400 hover:text-cec-navy dark:hover:text-cec-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cec-teal rounded", title: "Abrir paquete (Editar dentro)" do %>
                     <%= heroicon "pencil-square", variant: :outline, options: { class: "w-4 h-4" } %>
                   <% end %>
                 <% else %>
