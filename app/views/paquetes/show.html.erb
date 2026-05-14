@@ -217,14 +217,14 @@ end %>
       el alineamiento del resto. %>
   <div class="p-6 space-y-6">
 
-    <%# ── SECCIÓN 1: Identificación + Clasificación (5 celdas) ──
-        PR-D7.i: Yusef reorganizó la primera fila con los 5 campos más
-        consultados — Cliente, Tracking, Tipo Envío, Contenido, Cantidad.
-        Usa grid-cols-12 para spans custom (Cliente y Tracking más anchos
-        porque cargan info anidada Tercero / Tracking 2 / N° Recepción).
-        Recibido Miami sale de aquí (ya vive en el timeline más abajo). %>
-    <div class="grid grid-cols-2 md:grid-cols-12 gap-4">
-      <div class="col-span-2 md:col-span-4">
+    <%# PR-D7.j: layout reorganizado por prioridad descendente (identidad
+        → clasificación/fechas → proveedor/origen → contenido →
+        medidas). Todas las secciones usan md:grid-cols-4 — sin
+        secciones de 3 celdas que dejaban huecos visuales. %>
+
+    <%# ── SECCIÓN 1: Identidad (Cliente + Tracking) ── %>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="col-span-2">
         <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</dt>
         <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
           <%= link_to @paquete.cliente.codigo, @paquete.cliente, class: "font-mono text-cec-navy dark:text-cec-gold hover:underline" %>
@@ -253,7 +253,7 @@ end %>
           <% end %>
         </dd>
       </div>
-      <div class="col-span-2 md:col-span-4">
+      <div class="col-span-2">
         <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Tracking</dt>
         <dd class="mt-1 text-sm"><%= copyable(@paquete.tracking, font_mono: true) %></dd>
         <% if @paquete.tracking_secundario.present? %>
@@ -269,7 +269,11 @@ end %>
           </dd>
         <% end %>
       </div>
-      <div class="md:col-span-1">
+    </div>
+
+    <%# ── SECCIÓN 2: Clasificación + Manifiesto + Fecha Posible ── %>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+      <div>
         <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo de Envío</dt>
         <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
           <% if (te = @paquete.tipo_envio) %>
@@ -282,17 +286,22 @@ end %>
           <% end %>
         </dd>
       </div>
-      <div class="md:col-span-3">
-        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Contenido</dt>
-        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100 line-clamp-2"
-            title="<%= @paquete.descripcion %>">
-          <%= @paquete.descripcion.presence || content_tag(:span, "—", class: "text-gray-400") %>
+      <div>
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</dt>
+        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+          <%
+            paqs  = @paquete.cantidad_paquetes
+            prods = @paquete.cantidad_productos
+            parts = []
+            parts << "#{paqs} #{'caja'.pluralize(paqs)}" if paqs.present? && paqs.to_i > 0
+            parts << "#{prods} #{'producto'.pluralize(prods)}" if prods.present? && prods.to_i > 0
+          %>
+          <%= parts.any? ? parts.join(" · ").html_safe : "—" %>
+          <% if @paquete.numero_caja.present? %>
+            <span class="ml-1 text-xs text-gray-500">· Caja <%= @paquete.numero_caja %></span>
+          <% end %>
         </dd>
       </div>
-    </div>
-
-    <%# ── SECCIÓN 2: Logística (Manifiesto + Fecha Posible Entrega + Cantidad) ── %>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-gray-200 dark:border-gray-700 pt-4">
       <div>
         <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Manifiesto</dt>
         <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
@@ -316,22 +325,6 @@ end %>
             <%= @paquete.fecha_posible_entrega.strftime("%d/%m/%Y") %>
           <% else %>
             <span class="text-gray-400">—</span>
-          <% end %>
-        </dd>
-      </div>
-      <div>
-        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</dt>
-        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
-          <%
-            paqs  = @paquete.cantidad_paquetes
-            prods = @paquete.cantidad_productos
-            parts = []
-            parts << "#{paqs} #{'caja'.pluralize(paqs)}" if paqs.present? && paqs.to_i > 0
-            parts << "#{prods} #{'producto'.pluralize(prods)}" if prods.present? && prods.to_i > 0
-          %>
-          <%= parts.any? ? parts.join(" · ").html_safe : "—" %>
-          <% if @paquete.numero_caja.present? %>
-            <span class="ml-1 text-xs text-gray-500">· Caja <%= @paquete.numero_caja %></span>
           <% end %>
         </dd>
       </div>
@@ -365,6 +358,14 @@ end %>
           <%= @paquete.remitente.presence || content_tag(:span, "—", class: "text-gray-400") %>
         </dd>
       </div>
+    </div>
+
+    <%# ── SECCIÓN 4: Contenido (full width) ── %>
+    <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Contenido</dt>
+      <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+        <%= @paquete.descripcion.presence || content_tag(:span, "—", class: "text-gray-400") %>
+      </dd>
     </div>
 
     <%# ── SECCIÓN 4: Medidas ── %>
