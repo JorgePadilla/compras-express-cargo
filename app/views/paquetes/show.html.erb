@@ -217,9 +217,14 @@ end %>
       el alineamiento del resto. %>
   <div class="p-6 space-y-6">
 
-    <%# ── SECCIÓN 1: Identificación ── %>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div class="col-span-2">
+    <%# ── SECCIÓN 1: Identificación + Clasificación (5 celdas) ──
+        PR-D7.i: Yusef reorganizó la primera fila con los 5 campos más
+        consultados — Cliente, Tracking, Tipo Envío, Contenido, Cantidad.
+        Usa grid-cols-12 para spans custom (Cliente y Tracking más anchos
+        porque cargan info anidada Tercero / Tracking 2 / N° Recepción).
+        Recibido Miami sale de aquí (ya vive en el timeline más abajo). %>
+    <div class="grid grid-cols-2 md:grid-cols-12 gap-4">
+      <div class="col-span-2 md:col-span-3">
         <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</dt>
         <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
           <%= link_to @paquete.cliente.codigo, @paquete.cliente, class: "font-mono text-cec-navy dark:text-cec-gold hover:underline" %>
@@ -248,7 +253,7 @@ end %>
           <% end %>
         </dd>
       </div>
-      <div class="col-span-2">
+      <div class="col-span-2 md:col-span-3">
         <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Tracking</dt>
         <dd class="mt-1 text-sm"><%= copyable(@paquete.tracking, font_mono: true) %></dd>
         <% if @paquete.tracking_secundario.present? %>
@@ -264,16 +269,11 @@ end %>
           </dd>
         <% end %>
       </div>
-    </div>
-
-    <%# ── SECCIÓN 2: Clasificación + Logística ── %>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 border-t border-gray-200 dark:border-gray-700 pt-4">
-      <div>
+      <div class="md:col-span-2">
         <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo de Envío</dt>
         <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
           <% if (te = @paquete.tipo_envio) %>
             <span class="font-mono text-xs font-semibold text-cec-navy dark:text-cec-gold"><%= te.codigo&.upcase %></span>
-            <%# Yusef pidió no duplicar cuando codigo == nombre. %>
             <% if te.nombre.present? && te.nombre.to_s.upcase != te.codigo.to_s.upcase %>
               <span class="block text-[11px] text-gray-500 dark:text-gray-400 mt-0.5"><%= te.nombre %></span>
             <% end %>
@@ -282,7 +282,14 @@ end %>
           <% end %>
         </dd>
       </div>
-      <div>
+      <div class="md:col-span-2">
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Contenido</dt>
+        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100 line-clamp-2"
+            title="<%= @paquete.descripcion %>">
+          <%= @paquete.descripcion.presence || content_tag(:span, "—", class: "text-gray-400") %>
+        </dd>
+      </div>
+      <div class="md:col-span-2">
         <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</dt>
         <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
           <%
@@ -298,6 +305,10 @@ end %>
           <% end %>
         </dd>
       </div>
+    </div>
+
+    <%# ── SECCIÓN 2: Logística (Manifiesto + Fecha Posible Entrega) ── %>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-200 dark:border-gray-700 pt-4">
       <div>
         <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Manifiesto</dt>
         <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
@@ -315,15 +326,14 @@ end %>
         </dd>
       </div>
       <div>
-        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Recibido Miami</dt>
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Posible Entrega</dt>
         <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
-          <%= @paquete.fecha_recibido_miami&.strftime("%d/%m/%Y %H:%M") || "—" %>
+          <% if @paquete.fecha_posible_entrega.present? %>
+            <%= @paquete.fecha_posible_entrega.strftime("%d/%m/%Y") %>
+          <% else %>
+            <span class="text-gray-400">—</span>
+          <% end %>
         </dd>
-        <% if @paquete.fecha_posible_entrega.present? %>
-          <dd class="mt-1 text-[11px] text-gray-500">
-            F. posible entrega: <%= @paquete.fecha_posible_entrega.strftime("%d/%m/%Y") %>
-          </dd>
-        <% end %>
       </div>
     </div>
 
@@ -379,14 +389,6 @@ end %>
         <dd class="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100"><%= @paquete.peso_cobrar || "—" %> lbs</dd>
       </div>
     </div>
-
-    <%# Contenido (full width) %>
-    <% if @paquete.descripcion.present? %>
-      <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
-        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Contenido</dt>
-        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100"><%= @paquete.descripcion %></dd>
-      </div>
-    <% end %>
 
     <%# Sucursal actual + Flags + Recolecta + Retención + Cambio Servicio %>
     <div class="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
