@@ -37,15 +37,20 @@ class PaqueteEstadoFechasTest < ActiveSupport::TestCase
     assert_equal @user.id, p.fecha_entregado_by_user_id
   end
 
-  test "fecha_pre_alerta NO se sobrescribe (es inmutable)" do
+  test "fecha_pre_alerta SE actualiza al re-asignar (PR-D7: mutable)" do
+    # Yusef cambió la regla: al mover un paquete entre pre-alertas (o
+    # volver al estado pre_alerta_estado), la fecha debe reflejar la
+    # última transacción, no la primera. El badge "(modificada)" en la
+    # línea de tiempo deja la historia visible.
     p = Paquete.create!(tracking: "1Z999EF_PA", cliente: clientes(:juan), sucursal: sucursales(:miami),
                         estado: "pre_alerta_estado")
     primera_fecha = p.fecha_pre_alerta
     assert_not_nil primera_fecha
     sleep 1.1
     p.update!(estado: "recibido_miami")
-    p.update!(estado: "pre_alerta_estado")  # vuelve al pre-alerta — fecha NO cambia
-    assert_equal primera_fecha.to_i, p.reload.fecha_pre_alerta.to_i
+    p.update!(estado: "pre_alerta_estado")
+    assert p.reload.fecha_pre_alerta.to_i > primera_fecha.to_i,
+           "fecha_pre_alerta debió actualizarse al volver al estado"
   end
 
   test "estado pre_alerta_estado existe en el enum" do
