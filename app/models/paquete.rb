@@ -95,6 +95,29 @@ class Paquete < ApplicationRecord
                               recoleta_en_proceso retenido retornado
                               desechado anulado].freeze
 
+  # PR-D7.d: al confirmar un retroceso, limpiar fechas + users de los
+  # estados posteriores al nuevo. Yusef pidió "que el paquete quede
+  # limpio en los estados que ya no aplican".
+  RETROCESO_CLEANUP_FECHAS_POR_ESTADO = {
+    "empacado"              => %i[fecha_empacado fecha_empacado_by_user_id],
+    "enviado_honduras"      => %i[fecha_enviado fecha_enviado_by_user_id],
+    "en_aduana"             => %i[fecha_aduana fecha_aduana_by_user_id],
+    "consolidando_honduras" => %i[fecha_consolidando fecha_consolidando_by_user_id],
+    "disponible_entrega"    => %i[fecha_disponible fecha_disponible_by_user_id
+                                  fecha_posible_entrega fecha_posible_entrega_by_user_id],
+    "en_reparto"            => %i[fecha_en_reparto fecha_en_reparto_by_user_id],
+    "entregado"             => %i[fecha_entregado fecha_entregado_by_user_id]
+  }.freeze
+
+  # FK que se desliga si el estado nuevo es ANTERIOR al estado mínimo
+  # donde la asociación se setea.
+  RETROCESO_CLEANUP_FKS_DESDE_ESTADO = {
+    "enviado_honduras" => :manifiesto_id,
+    "pre_facturado"    => :pre_factura_id,
+    "facturado"        => :venta_id,
+    "en_reparto"       => :entrega_id
+  }.freeze
+
   # PR-D7.b: helpers para que controller/JS detecten retrocesos en el
   # pipeline. Yusef pidió advertir con modal cuando un supervisor mueve
   # un paquete a un estado anterior (ej. entregado → en_reparto).
@@ -116,6 +139,35 @@ class Paquete < ApplicationRecord
     i_to   = ESTADOS_ORDEN.index(estado_to.to_s)
     return 0 unless i_from && i_to
     [ i_from - i_to, 0 ].max
+  end
+
+  # Devuelve un preview de lo que se limpiaría si se confirma el
+  # retroceso (fechas + FKs presentes en el paquete). Útil para que el
+  # modal de confirmación liste los items afectados.
+  def retroceso_cleanup_preview(target_estado)
+    i_to   = ESTADOS_ORDEN.index(target_estado.to_s)
+    i_from = ESTADOS_ORDEN.index(estado.to_s)
+    return { fechas: [], fks: [] } unless i_to && i_from && i_to < i_from
+
+    fechas = ESTADOS_ORDEN[(i_to + 1)..i_from].flat_map do |est|
+      RETROCESO_CLEANUP_FECHAS_POR_ESTADO[est] || []
+    end.select { |attr| self[attr].present? }
+
+    fks = RETROCESO_CLEANUP_FKS_DESDE_ESTADO.filter_map do |min_estado, fk|
+      min_idx = ESTADOS_ORDEN.index(min_estado)
+      next unless min_idx && i_to < min_idx && self[fk].present?
+      fk
+    end
+
+    { fechas: fechas, fks: fks }
+  end
+
+  # Aplica la limpieza en memoria (no persiste). El save lo hace el flujo
+  # normal de update — el callback paper_trail registra el cambio.
+  def apply_retroceso_cleanup!(target_estado)
+    preview = retroceso_cleanup_preview(target_estado)
+    preview[:fechas].each { |attr| self[attr] = nil }
+    preview[:fks].each { |fk| self[fk] = nil }
   end
 
   scope :activos, -> { where.not(estado: %w[anulado entregado retornado desechado]) }

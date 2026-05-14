@@ -70,6 +70,16 @@ class PaquetesController < ApplicationController
       return
     end
 
+    # PR-D7.d: cuando un retroceso ya fue confirmado por el supervisor,
+    # limpiar fechas + FKs de los estados posteriores antes de tocar
+    # attributes para que el paquete quede coherente con el nuevo estado.
+    target_estado = paquete_params[:estado].to_s
+    if target_estado.present? && target_estado != @paquete.estado &&
+       Paquete.transicion_retroceso?(@paquete.estado, target_estado) &&
+       params[:confirm_retroceso].to_s == "1"
+      @paquete.apply_retroceso_cleanup!(target_estado)
+    end
+
     @paquete.assign_attributes(paquete_params)
     # `paquete[:pre_factura]` es columna boolean; el accessor normal lo
     # interpreta como la asociación belongs_to :pre_factura. Lo escribimos

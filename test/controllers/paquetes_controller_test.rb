@@ -608,6 +608,41 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "en_reparto", entregado.estado
   end
 
+  # PR-D7.d
+  test "update con retroceso confirmado limpia fechas posteriores" do
+    entregado = paquetes(:entregado)
+    entregado.update_columns(
+      fecha_entregado:    1.day.ago,
+      fecha_en_reparto:   2.days.ago,
+      fecha_disponible:   3.days.ago,
+      fecha_consolidando: 4.days.ago,
+      fecha_aduana:       5.days.ago,
+      fecha_enviado:      6.days.ago,
+      fecha_empacado:     7.days.ago,
+      fecha_recibido_miami: 8.days.ago
+    )
+
+    patch paquete_url(entregado), params: {
+      paquete: { estado: "recibido_miami" },
+      confirm_retroceso: "1"
+    }
+
+    entregado.reload
+    assert_redirected_to paquete_url(entregado)
+    assert_equal "recibido_miami", entregado.estado
+    assert_nil entregado.fecha_entregado
+    assert_nil entregado.fecha_en_reparto
+    assert_nil entregado.fecha_disponible
+    # fecha_consolidando NO se limpia: consolidando_honduras está fuera de
+    # ESTADOS_ORDEN (estado excepcional). Si Yusef quiere también limpiar
+    # esa, se ajusta el map en otro PR.
+    assert_nil entregado.fecha_aduana
+    assert_nil entregado.fecha_enviado
+    assert_nil entregado.fecha_empacado
+    # Fecha del nuevo estado se mantiene (callback la actualiza a Time.current).
+    assert_not_nil entregado.fecha_recibido_miami
+  end
+
   test "update permite avance normal (admin, sin retroceso)" do
     # Usa el fixture `empacado` (sin tareas abiertas) y avanza un paso.
     p = paquetes(:empacado)

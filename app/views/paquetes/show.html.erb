@@ -187,10 +187,7 @@ end %>
            data-controller="inline-select"
            data-inline-select-url-value="<%= paquete_path(@paquete) %>"
            data-inline-select-field-value="estado"
-           data-inline-select-resource-value="paquete"
-           data-inline-select-pipeline-value="<%= Paquete::ESTADOS_ORDEN.to_json %>"
-           data-inline-select-excepcionales-value="<%= Paquete::ESTADOS_EXCEPCIONALES.to_json %>"
-           data-inline-select-current-value="<%= @paquete.estado %>">
+           data-inline-select-resource-value="paquete">
         <%= render StatusBadgeComponent.new(status: @paquete.estado) %>
         <select data-action="change->inline-select#submit"
                 data-inline-select-target="select"
