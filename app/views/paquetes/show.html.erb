@@ -224,7 +224,7 @@ end %>
         porque cargan info anidada Tercero / Tracking 2 / N° Recepción).
         Recibido Miami sale de aquí (ya vive en el timeline más abajo). %>
     <div class="grid grid-cols-2 md:grid-cols-12 gap-4">
-      <div class="col-span-2 md:col-span-3">
+      <div class="col-span-2 md:col-span-4">
         <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</dt>
         <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
           <%= link_to @paquete.cliente.codigo, @paquete.cliente, class: "font-mono text-cec-navy dark:text-cec-gold hover:underline" %>
@@ -253,7 +253,7 @@ end %>
           <% end %>
         </dd>
       </div>
-      <div class="col-span-2 md:col-span-3">
+      <div class="col-span-2 md:col-span-4">
         <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Tracking</dt>
         <dd class="mt-1 text-sm"><%= copyable(@paquete.tracking, font_mono: true) %></dd>
         <% if @paquete.tracking_secundario.present? %>
@@ -289,26 +289,10 @@ end %>
           <%= @paquete.descripcion.presence || content_tag(:span, "—", class: "text-gray-400") %>
         </dd>
       </div>
-      <div class="md:col-span-2">
-        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</dt>
-        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
-          <%
-            paqs  = @paquete.cantidad_paquetes
-            prods = @paquete.cantidad_productos
-            parts = []
-            parts << "#{paqs} #{'caja'.pluralize(paqs)}" if paqs.present? && paqs.to_i > 0
-            parts << "#{prods} #{'producto'.pluralize(prods)}" if prods.present? && prods.to_i > 0
-          %>
-          <%= parts.any? ? parts.join(" · ").html_safe : "—" %>
-          <% if @paquete.numero_caja.present? %>
-            <span class="ml-1 text-xs text-gray-500">· Caja <%= @paquete.numero_caja %></span>
-          <% end %>
-        </dd>
-      </div>
     </div>
 
-    <%# ── SECCIÓN 2: Logística (Manifiesto + Fecha Posible Entrega) ── %>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+    <%# ── SECCIÓN 2: Logística (Manifiesto + Fecha Posible Entrega + Cantidad) ── %>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-gray-200 dark:border-gray-700 pt-4">
       <div>
         <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Manifiesto</dt>
         <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
@@ -332,6 +316,22 @@ end %>
             <%= @paquete.fecha_posible_entrega.strftime("%d/%m/%Y") %>
           <% else %>
             <span class="text-gray-400">—</span>
+          <% end %>
+        </dd>
+      </div>
+      <div>
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</dt>
+        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+          <%
+            paqs  = @paquete.cantidad_paquetes
+            prods = @paquete.cantidad_productos
+            parts = []
+            parts << "#{paqs} #{'caja'.pluralize(paqs)}" if paqs.present? && paqs.to_i > 0
+            parts << "#{prods} #{'producto'.pluralize(prods)}" if prods.present? && prods.to_i > 0
+          %>
+          <%= parts.any? ? parts.join(" · ").html_safe : "—" %>
+          <% if @paquete.numero_caja.present? %>
+            <span class="ml-1 text-xs text-gray-500">· Caja <%= @paquete.numero_caja %></span>
           <% end %>
         </dd>
       </div>
