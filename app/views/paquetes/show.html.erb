@@ -434,40 +434,54 @@ end %>
           <span class="text-xs text-gray-400 italic">Sin marcas especiales</span>
         <% end %>
       </div>
-      <% if @paquete.notas_retencion.present? || @paquete.motivos_retencion.any? %>
-        <div class="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-100 space-y-1.5">
-          <div class="font-semibold uppercase tracking-wider text-[10px]">Detalles de Retención</div>
-          <% if @paquete.motivos_retencion.any? %>
-            <div class="flex flex-wrap gap-1.5">
-              <% @paquete.motivos_retencion.each do |m| %>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[11px] font-medium border border-amber-300"><%= m.nombre %></span>
-              <% end %>
-            </div>
-          <% end %>
-          <% if @paquete.notas_retencion.present? %>
-            <div><%= simple_format(@paquete.notas_retencion) %></div>
-          <% end %>
-        </div>
-      <% end %>
+      <%# PR-D7.k: Notas de Retención siempre visibles. Estilo amber
+          cuando hay motivo o nota; gris/neutral cuando no hay
+          retención (sin generar falsa alerta visual). %>
+      <% retenido = @paquete.notas_retencion.present? || @paquete.motivos_retencion.any? %>
+      <div class="<%= retenido ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100' : 'bg-gray-50 dark:bg-gray-700/30 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400' %> rounded-lg p-3 border text-xs space-y-1.5">
+        <div class="font-semibold uppercase tracking-wider text-[10px]">Detalles de Retención</div>
+        <% if @paquete.motivos_retencion.any? %>
+          <div class="flex flex-wrap gap-1.5">
+            <% @paquete.motivos_retencion.each do |m| %>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[11px] font-medium border border-amber-300"><%= m.nombre %></span>
+            <% end %>
+          </div>
+        <% end %>
+        <% if @paquete.notas_retencion.present? %>
+          <div><%= simple_format(@paquete.notas_retencion) %></div>
+        <% elsif !retenido %>
+          <div class="italic">— sin retención —</div>
+        <% end %>
+      </div>
     </div>
 
-    <%# Notas Permanentes del Cliente (PR-D2.b) %>
-    <% notas_visibles = Current.user&.notas_permanentes_visibles.to_a
-                               .select { |n| @paquete.cliente.public_send(n[:campo]).to_s.strip.present? } %>
-    <% if notas_visibles.any? %>
+    <%# Notas Permanentes del Cliente (PR-D2.b / PR-D7.k).
+        Siempre visible para roles que tienen acceso a algún campo de
+        notas del cliente. Si los campos visibles para el rol están
+        todos vacíos → placeholder. Si el rol no tiene acceso a ningún
+        campo → sección oculta. %>
+    <% campos_visibles = Current.user&.notas_permanentes_visibles.to_a %>
+    <% if campos_visibles.any? %>
+      <% campos_con_contenido = campos_visibles.select { |n| @paquete.cliente.public_send(n[:campo]).to_s.strip.present? } %>
       <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
         <dt class="text-xs font-medium uppercase tracking-wider text-amber-800 dark:text-amber-200">
           Notas Permanentes del Cliente
           <span class="text-[10px] normal-case text-amber-600">(visibles a etiquetar / pre-factura / SAC)</span>
         </dt>
-        <dd class="mt-2 space-y-2">
-          <% notas_visibles.each do |n| %>
-            <div class="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-900/20 p-2 text-xs">
-              <div class="text-[10px] font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-200"><%= n[:etiqueta] %></div>
-              <div class="mt-0.5 text-gray-900 dark:text-gray-100 whitespace-pre-line"><%= @paquete.cliente.public_send(n[:campo]) %></div>
-            </div>
-          <% end %>
-        </dd>
+        <% if campos_con_contenido.any? %>
+          <dd class="mt-2 space-y-2">
+            <% campos_con_contenido.each do |n| %>
+              <div class="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-900/20 p-2 text-xs">
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-200"><%= n[:etiqueta] %></div>
+                <div class="mt-0.5 text-gray-900 dark:text-gray-100 whitespace-pre-line"><%= @paquete.cliente.public_send(n[:campo]) %></div>
+              </div>
+            <% end %>
+          </dd>
+        <% else %>
+          <dd class="mt-1 text-xs italic text-amber-600 dark:text-amber-400 bg-amber-50/40 dark:bg-amber-900/10 rounded-lg p-3 border border-amber-100 dark:border-amber-900/40">
+            — sin notas permanentes para tus áreas visibles —
+          </dd>
+        <% end %>
       </div>
     <% end %>
 
@@ -509,22 +523,28 @@ end %>
       <% end %>
     </div>
 
-    <%# Notas Especiales (instrucciones de la pre-alerta del cliente) %>
+    <%# Notas Especiales (instrucciones de la pre-alerta del cliente).
+        PR-D7.k: siempre visibles con placeholder cuando no hay
+        instrucciones. %>
     <% pap_instrucciones = @paquete.pre_alerta_paquetes
                                   .where.not(instrucciones: [ nil, "" ])
                                   .pluck(:instrucciones)
                                   .compact_blank %>
-    <% if pap_instrucciones.any? %>
-      <div>
-        <dt class="text-xs font-medium text-cec-navy uppercase tracking-wider">
-          Notas Especiales
-          <span class="text-[10px] normal-case text-gray-500">(instrucciones del cliente en la pre-alerta)</span>
-        </dt>
+    <div>
+      <dt class="text-xs font-medium text-cec-navy uppercase tracking-wider">
+        Notas Especiales
+        <span class="text-[10px] normal-case text-gray-500">(instrucciones del cliente en la pre-alerta)</span>
+      </dt>
+      <% if pap_instrucciones.any? %>
         <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100 bg-cec-navy/5 rounded-lg p-3 border border-cec-navy/20 whitespace-pre-line">
           <%= pap_instrucciones.join("\n\n") %>
         </dd>
-      </div>
-    <% end %>
+      <% else %>
+        <dd class="mt-1 text-xs italic text-gray-400 dark:text-gray-500 bg-cec-navy/[0.02] dark:bg-cec-navy/10 rounded-lg p-3 border border-cec-navy/10 dark:border-cec-navy/30">
+          — sin instrucciones del cliente —
+        </dd>
+      <% end %>
+    </div>
   </div>
 </div>
 <% end %><%# /@edit_mode %>
