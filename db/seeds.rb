@@ -593,9 +593,247 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   puts "  ✓ #{PreFactura.count} pre-facturas (1 creado, 1 facturada)"
   puts "  ✓ #{Venta.count} ventas demo"
   puts "    → Probar PF en: /pre_facturas/#{pf_creado.id}"
-  puts "    → Probar Venta en: /ventas/#{pf_facturada.venta_id || Venta.last&.id}"
+  puts "    → Probar Venta en: /ventas/#{Venta.last&.id}"
   puts "    → Detalle paquete con link a PF: /paquetes/#{pkg_pf3.id}"
   puts "    → Detalle paquete con link a Venta: /paquetes/#{pkg_facturado.id}"
+
+  # ── 4 paquetes "demo completo" — todos los campos llenos (PR-D7.n) ──
+  # Para revisar todas las features juntas: notas (5 tipos), tareas (3
+  # estados), recolecta, retención, manifest, pre-factura, fechas
+  # editables, etc.
+  puts "Seeding 4 paquetes demo completos..."
+  Current.session = Session.new(user: digitador)
+  juan      = Cliente.find_by!(nombre: "Juan",  apellido: "Perez")
+  maria     = Cliente.find_by!(nombre: "Maria", apellido: "Lopez")
+  sofia     = Cliente.find_by(nombre: "Sofia", apellido: "Garcia") || juan
+  ana       = Cliente.find_by(nombre: "Ana",    apellido: "Martinez") || maria
+  cer       = TipoEnvio.find_by!(codigo: "cer")
+  cem       = TipoEnvio.find_by!(codigo: "cem")
+  exp_envio = TipoEnvio.find_by(codigo: "exp") || cer
+  amz       = Proveedor.find_by(nombre: "Amazon")
+  wmt       = Proveedor.find_by(nombre: "Walmart") || amz
+  tgt       = Proveedor.find_by(nombre: "Target") || amz
+  ebay      = Proveedor.find_by(nombre: "eBay") || amz
+  tarifa_sps  = TarifaRecolecta.find_by(zona: "SPS Centro") || TarifaRecolecta.first
+  sucursal_sps = Sucursal.find_by(codigo_ep: "SZR") || Sucursal.first
+
+  motivo_dano = MotivoRetencion.find_or_create_by!(nombre: "Caja dañada") { |m| m.activo = true }
+  motivo_pago = MotivoRetencion.find_or_create_by!(nombre: "Pago pendiente") { |m| m.activo = true }
+
+  juan.update!(
+    notas_miami:    juan.notas_miami.presence    || "Cliente VIP. Re-empacar todo en cajas nuevas con stickers.",
+    notas_honduras: juan.notas_honduras.presence || "Entrega solo entre 9am-12pm. Tel: 9999-0000.",
+    notas_caja:     juan.notas_caja.presence     || "Acepta L. en cualquier denominación.",
+    notas_sac:      juan.notas_sac.presence      || "Prefiere comunicación vía WhatsApp."
+  )
+
+  # ── Paquete 1: ENTREGADO — pipeline completo + recolecta + tareas ──
+  pkg1 = Paquete.find_or_initialize_by(tracking: "1Z999FULL-DEMO-001")
+  if pkg1.new_record?
+    pkg1.assign_attributes(
+      cliente: juan, tercero: maria,
+      tipo_envio: cer, proveedor: amz, expedido_por: "UPS",
+      tracking_secundario: "9400111899560FULL0001",
+      remitente: "Walmart Logistics LLC",
+      sucursal: Sucursal.find_by(codigo: "MIA"),
+      sucursal_actual: sucursal_sps,
+      estado: "recibido_miami",
+      peso: 18.5, alto: 25, largo: 35, ancho: 30,
+      cantidad_paquetes: 2, cantidad_productos: 5,
+      descripcion: "Ropa deportiva: 3 conjuntos Nike + 2 pares de tenis Adidas. Total 5 productos divididos en 2 cajas (12x12x10 + 18x18x14).",
+      notas_internas: "Cliente VIP, priorizar empaque rápido. Etiquetar como FRÁGIL las dos cajas. Coordinar con repartidor.",
+      notas_al_cliente: "Su pedido fue empacado con cuidado adicional. Cualquier consulta puede contactarnos vía WhatsApp al 9999-0000.",
+      notas_consolidacion: "Paquete pertenece a pre-alerta consolidada de marzo. Esperar consolidación completa antes de despachar.",
+      notas_retencion: "",
+      pre_alerta: true,
+      recolecta_solicitada: true,
+      tarifa_recolecta: tarifa_sps,
+      recolecta_monto: tarifa_sps.monto, recolecta_moneda: tarifa_sps.moneda,
+      user: digitador
+    )
+    pkg1.save!
+    pkg1.update_columns(
+      fecha_solicito_recolecta: 25.days.ago,
+      fecha_solicito_recolecta_by_user_id: digitador.id,
+      fecha_recibido_miami: 20.days.ago,
+      fecha_recibido_miami_by_user_id: digitador.id
+    )
+    # Avanzar por todo el pipeline
+    %w[empacado enviado_honduras en_aduana consolidando_honduras disponible_entrega en_reparto entregado].each_with_index do |estado, i|
+      pkg1.update!(estado: estado)
+      attr = Paquete::ESTADO_FECHA_MAP[estado]
+      pkg1.update_columns(attr => 20.days.ago + (i + 2).days) if attr
+    end
+    pkg1.update_columns(fecha_posible_entrega: 12.days.ago)
+  end
+
+  # Pre-alerta + tareas para pkg1
+  pa1_full = PreAlerta.find_or_create_by!(numero_documento: "PA-FULL-001") do |pa|
+    pa.cliente = juan
+    pa.tipo_envio = cer
+    pa.titulo = "Compra Nike + Adidas marzo"
+    pa.con_reempaque = true
+    pa.consolidado = true
+    pa.creado_por_tipo = "cliente"
+    pa.creado_por_id = juan.id
+  end
+  PreAlertaPaquete.find_or_create_by!(pre_alerta: pa1_full, tracking: pkg1.tracking) do |pap|
+    pap.paquete = pkg1
+    pap.descripcion = pkg1.descripcion
+    pap.instrucciones = "Si el calzado viene en caja original, NO la abran. Si la talla del pantalón es L, contactarme antes de empacar."
+    pap.fecha = 28.days.ago.to_date
+  end
+  if pkg1.tareas.none?
+    Tarea.create!(paquete: pkg1, titulo: "Confirmar tallas con cliente", descripcion: "Verificar talla L vs M en pantalones.", asignado_a: digitador, estado: "realizada", completado_por: digitador, completada_en: 18.days.ago, notas: "Cliente confirmó L para todo.")
+    Tarea.create!(paquete: pkg1, titulo: "Llamar para coordinar entrega", asignado_a: digitador, estado: "realizada", completado_por: digitador, completada_en: 10.days.ago)
+  end
+
+  # ── Paquete 2: EN ADUANA — retenido + cambio servicio + sin recolecta ──
+  pkg2 = Paquete.find_or_initialize_by(tracking: "1Z999FULL-DEMO-002")
+  if pkg2.new_record?
+    pkg2.assign_attributes(
+      cliente: maria, tercero: nil,
+      tipo_envio: cem, proveedor: wmt, expedido_por: "FedEx",
+      tracking_secundario: nil,
+      remitente: "Walmart e-commerce",
+      sucursal: Sucursal.find_by(codigo: "MIA"),
+      estado: "recibido_miami",
+      peso: 45.0, alto: 50, largo: 60, ancho: 55,
+      cantidad_paquetes: 1, cantidad_productos: 3,
+      descripcion: "Electrodomésticos: licuadora, batidora, tostadora. Caja exterior con daño.",
+      notas_internas: "Caja exterior abollada al recibir — fotografiado para reclamo a Walmart. Revisar contenido antes de enviar.",
+      notas_al_cliente: "Estimado/a cliente, su paquete llegó con daño en la caja exterior. Estamos verificando el contenido antes de despachar. Le contactaremos si hay algún problema.",
+      notas_consolidacion: "",
+      retener_miami: true,
+      notas_retencion: "Caja exterior abollada en transporte FedEx. Confirmar con cliente si desea proceder o reclamar. Fotos en carpeta /miami/danados/2026-05/",
+      solicito_cambio_servicio: true,
+      pre_alerta: true,
+      recolecta_solicitada: false,
+      user: digitador
+    )
+    pkg2.save!
+    pkg2.motivos_retencion << motivo_dano unless pkg2.motivos_retencion.include?(motivo_dano)
+    pkg2.update_columns(
+      fecha_recibido_miami: 8.days.ago,
+      fecha_recibido_miami_by_user_id: digitador.id
+    )
+    %w[empacado enviado_honduras en_aduana].each_with_index do |estado, i|
+      pkg2.update!(estado: estado)
+      attr = Paquete::ESTADO_FECHA_MAP[estado]
+      pkg2.update_columns(attr => 8.days.ago + (i + 2).days) if attr
+    end
+    pkg2.update_columns(fecha_posible_entrega: 3.days.from_now)
+  end
+
+  # Pre-alerta + tareas para pkg2
+  pa2_full = PreAlerta.find_or_create_by!(numero_documento: "PA-FULL-002") do |pa|
+    pa.cliente = maria
+    pa.tipo_envio = cem
+    pa.titulo = "Electrodomésticos cocina"
+    pa.con_reempaque = false
+    pa.consolidado = false
+    pa.creado_por_tipo = "usuario"
+    pa.creado_por_id = digitador.id
+  end
+  PreAlertaPaquete.find_or_create_by!(pre_alerta: pa2_full, tracking: pkg2.tracking) do |pap|
+    pap.paquete = pkg2
+    pap.descripcion = pkg2.descripcion
+    pap.instrucciones = "Por favor verificar que los 3 productos vengan completos. La licuadora es la prioridad."
+    pap.fecha = 10.days.ago.to_date
+  end
+  if pkg2.tareas.none?
+    Tarea.create!(paquete: pkg2, titulo: "Subir fotos del daño", descripcion: "Fotografiar la caja desde varios ángulos para reclamo.", asignado_a: digitador, estado: "realizada", completado_por: digitador, completada_en: 7.days.ago)
+    Tarea.create!(paquete: pkg2, titulo: "Llamar al cliente para autorización", descripcion: "Cliente decide si proceder o reclamar.", asignado_a: digitador, estado: "en_proceso", notas: "Dejé mensaje en WhatsApp, esperando respuesta.")
+    Tarea.create!(paquete: pkg2, titulo: "Coordinar cambio de servicio a CEM", asignado_a: digitador, estado: "pendiente")
+  end
+
+  # ── Paquete 3: RECIBIDO MIAMI — recién llegado con tareas pendientes ──
+  pkg3 = Paquete.find_or_initialize_by(tracking: "1Z999FULL-DEMO-003")
+  if pkg3.new_record?
+    pkg3.assign_attributes(
+      cliente: sofia, tercero: nil,
+      tipo_envio: exp_envio, proveedor: tgt, expedido_por: "USPS",
+      remitente: "Target Distribution",
+      sucursal: Sucursal.find_by(codigo: "MIA"),
+      estado: "recibido_miami",
+      peso: 5.2, alto: 15, largo: 20, ancho: 18,
+      cantidad_paquetes: 3, cantidad_productos: 12,
+      descripcion: "Productos de bebé: 6 mamilas, 4 chupones, 2 sets de cobijas.",
+      notas_internas: "Cliente nuevo. Confirmar dirección de entrega antes de despachar.",
+      notas_al_cliente: "¡Bienvenido/a! Su primer envío con CEC. Le contactaremos cuando esté listo para retiro.",
+      notas_consolidacion: "Cliente solicitó consolidación con próximo envío si llega antes del 25/05.",
+      pre_alerta: true,
+      user: digitador
+    )
+    pkg3.save!
+    pkg3.update_columns(
+      fecha_recibido_miami: 1.day.ago,
+      fecha_recibido_miami_by_user_id: digitador.id
+    )
+  end
+
+  pa3_full = PreAlerta.find_or_create_by!(numero_documento: "PA-FULL-003") do |pa|
+    pa.cliente = sofia
+    pa.tipo_envio = exp_envio
+    pa.titulo = "Ajuar bebé Target"
+    pa.con_reempaque = true
+    pa.consolidado = true
+    pa.creado_por_tipo = "cliente"
+    pa.creado_por_id = sofia.id
+  end
+  PreAlertaPaquete.find_or_create_by!(pre_alerta: pa3_full, tracking: pkg3.tracking) do |pap|
+    pap.paquete = pkg3
+    pap.descripcion = pkg3.descripcion
+    pap.instrucciones = "Las mamilas vienen en bolsas individuales — por favor NO las saquen del empaque original."
+    pap.fecha = 2.days.ago.to_date
+  end
+  if pkg3.tareas.none?
+    Tarea.create!(paquete: pkg3, titulo: "Confirmar dirección de entrega", descripcion: "Cliente nuevo — verificar dirección y horario.", asignado_a: digitador, estado: "pendiente")
+    Tarea.create!(paquete: pkg3, titulo: "Verificar consolidación", descripcion: "Revisar si tiene otros envíos pendientes antes del 25/05.", estado: "pendiente")
+  end
+
+  # ── Paquete 4: ENTREGADO simple — flujo limpio sin retención ni recolecta ──
+  pkg4 = Paquete.find_or_initialize_by(tracking: "1Z999FULL-DEMO-004")
+  if pkg4.new_record?
+    pkg4.assign_attributes(
+      cliente: ana, tercero: nil,
+      tipo_envio: cer, proveedor: ebay, expedido_por: "DHL",
+      remitente: "eBay Seller — JoesCollectibles",
+      sucursal: Sucursal.find_by(codigo: "MIA"),
+      sucursal_actual: sucursal_sps,
+      estado: "recibido_miami",
+      peso: 2.8, alto: 10, largo: 15, ancho: 12,
+      cantidad_paquetes: 1, cantidad_productos: 1,
+      descripcion: "Reloj vintage Rolex (réplica) coleccionable.",
+      notas_internas: "Producto coleccionable — manipular con extremo cuidado. Cliente quiere fotos antes de empacar.",
+      notas_al_cliente: "Gracias por su compra. Adjuntamos foto del producto antes del empaque para su tranquilidad.",
+      notas_consolidacion: "",
+      user: digitador
+    )
+    pkg4.save!
+    pkg4.update_columns(
+      fecha_recibido_miami: 30.days.ago,
+      fecha_recibido_miami_by_user_id: digitador.id
+    )
+    %w[empacado enviado_honduras en_aduana disponible_entrega en_reparto entregado].each_with_index do |estado, i|
+      pkg4.update!(estado: estado)
+      attr = Paquete::ESTADO_FECHA_MAP[estado]
+      pkg4.update_columns(attr => 30.days.ago + (i + 2).days) if attr
+    end
+    pkg4.update_columns(fecha_posible_entrega: 24.days.ago)
+  end
+
+  if pkg4.tareas.none?
+    Tarea.create!(paquete: pkg4, titulo: "Tomar foto pre-empaque", descripcion: "Cliente solicitó foto del producto antes de empacar.", asignado_a: digitador, estado: "realizada", completado_por: digitador, completada_en: 28.days.ago)
+    Tarea.create!(paquete: pkg4, titulo: "Confirmar entrega con cliente", asignado_a: digitador, estado: "realizada", completado_por: digitador, completada_en: 25.days.ago)
+    Tarea.create!(paquete: pkg4, titulo: "Encuesta de satisfacción", asignado_a: digitador, estado: "realizada", completado_por: digitador, completada_en: 23.days.ago, notas: "5/5 estrellas. Cliente muy contento.")
+  end
+
+  puts "  ✓ 4 paquetes demo completos creados:"
+  puts "    → /paquetes/#{pkg1.id} — Entregado · pipeline completo + recolecta + 2 tareas"
+  puts "    → /paquetes/#{pkg2.id} — En aduana · retenido + cambio servicio + 3 tareas"
+  puts "    → /paquetes/#{pkg3.id} — Recibido Miami · cliente nuevo + 2 tareas pendientes"
+  puts "    → /paquetes/#{pkg4.id} — Entregado simple · 3 tareas realizadas"
 end
 
 # ── Empresa singleton (datos fiscales para PDFs y mailers) ──
