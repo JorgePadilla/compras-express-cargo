@@ -459,6 +459,80 @@
         dentro del modal del checkbox "Retener en Miami" (más arriba). %>
   </div>
 
+  <%# PR-D7.m: edición manual de fechas (solo admin / supervisor).
+      `_by_user_id` se actualiza automáticamente en el modelo.
+      Toda edición queda auditada via paper_trail; el timeline marca
+      con badge "modificada" automáticamente. %>
+  <% if can_change_estado_paquete? %>
+    <div class="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6">
+      <div class="flex items-center gap-2 mb-2">
+        <%= heroicon "calendar-days", variant: :solid, options: { class: "w-5 h-5 text-cec-navy dark:text-cec-gold" } %>
+        <h3 class="text-base font-semibold text-gray-800 dark:text-gray-100">Editar Fechas</h3>
+        <span class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">admin / supervisor</span>
+      </div>
+      <div class="flex items-start gap-2 mb-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-xs text-amber-800 dark:text-amber-200">
+        <%= heroicon "exclamation-triangle", variant: :solid, options: { class: "w-4 h-4 shrink-0 mt-px" } %>
+        <span>Las fechas que modifiques registrarán tus iniciales y aparecerán con badge <strong>"modificada"</strong> en la línea de tiempo. Toda edición queda auditada.</span>
+      </div>
+
+      <%
+        # icon = heroicon del paso del timeline; with_time = mostrar selector de hora.
+        fechas_config = [
+          [:fecha_solicito_recolecta,  "Solicitud Recolecta",   "phone-arrow-up-right", false],
+          [:fecha_pre_alerta,          "Pre-Alerta",            "bell-alert",           true],
+          [:fecha_recibido_miami,      "Recibido en Miami",     "inbox-arrow-down",     true],
+          [:fecha_empacado,            "Empacado",              "cube",                 true],
+          [:fecha_enviado,             "Enviado a HND",         "paper-airplane",       true],
+          [:fecha_aduana,              "Aduana",                "shield-check",         true],
+          [:fecha_consolidando,        "Consolidando",          "archive-box",          true],
+          [:fecha_disponible,          "Disponible Entrega",    "check-badge",          true],
+          [:fecha_posible_entrega,     "Fecha Posible Entrega", "calendar",             false],
+          [:fecha_en_reparto,          "En Reparto",            "truck",                true],
+          [:fecha_entregado,           "Entregado",             "hand-thumb-up",        true]
+        ]
+      %>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <% fechas_config.each do |attr, label, icon, with_time| %>
+          <% current_value = paquete.send(attr) %>
+          <% display_value = current_value&.strftime(with_time ? "%Y-%m-%d %H:%M" : "%Y-%m-%d") %>
+          <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 hover:border-cec-teal/40 hover:shadow-sm transition">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-cec-navy/10 dark:bg-cec-gold/15 text-cec-navy dark:text-cec-gold shrink-0">
+                <%= heroicon icon, variant: :solid, options: { class: "w-3.5 h-3.5" } %>
+              </span>
+              <%= f.label attr, label, class: "text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider" %>
+            </div>
+            <div class="relative" data-controller="flatpickr" data-flatpickr-time-value="<%= with_time %>">
+              <%= f.text_field attr,
+                  value: display_value,
+                  placeholder: with_time ? "DD/MM/AAAA HH:MM" : "DD/MM/AAAA",
+                  autocomplete: "off",
+                  class: "block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm py-2 pl-3 pr-9 focus:ring-cec-teal focus:border-cec-teal" %>
+              <button type="button"
+                      data-action="click->flatpickr#clear"
+                      title="Limpiar fecha"
+                      class="absolute inset-y-0 right-0 flex items-center px-2.5 text-gray-400 hover:text-red-500 focus:outline-none">
+                <%= heroicon "x-mark", variant: :solid, options: { class: "w-4 h-4" } %>
+              </button>
+            </div>
+            <% by_user_id = paquete.send("#{attr}_by_user_id") %>
+            <% if by_user_id && (u = User.find_by(id: by_user_id)) %>
+              <p class="mt-2 text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                <%= heroicon "user", variant: :outline, options: { class: "w-3 h-3" } %>
+                <span>Por:</span>
+                <span class="font-mono font-semibold text-gray-700 dark:text-gray-200"><%= u.iniciales_display %></span>
+                <span class="text-gray-400 truncate">(<%= u.nombre %>)</span>
+              </p>
+            <% else %>
+              <p class="mt-2 text-[11px] italic text-gray-400 dark:text-gray-500">Sin registro</p>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
   <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
     <%= link_to "Cancelar (F2)", paquete_path(paquete),
         class: "text-sm text-gray-600 hover:text-gray-900",

@@ -287,6 +287,11 @@ class Paquete < ApplicationRecord
   # Forzamos que la captura inicial de fecha+user funcione también ahí.
   before_save :track_estado_fecha_y_user,
               if: -> { will_save_change_to_estado? || (new_record? && ESTADO_FECHA_MAP.key?(estado)) }
+  # PR-D7.m: cuando un admin/supervisor edita manualmente una fecha
+  # desde el form (?mode=edit), también actualizar el _by_user_id
+  # correspondiente. No aplica a la fecha mapeada al estado que está
+  # cambiando — esa la cubre track_estado_fecha_y_user.
+  before_save :track_fecha_by_user_on_manual_edit
   # PR-D3.c.2: dropdown híbrido de carrier. Si el usuario escribe un
   # nombre nuevo (no presente en el catálogo), se agrega automáticamente
   # para que la próxima vez aparezca en el dropdown. Yusef:
@@ -548,6 +553,26 @@ class Paquete < ApplicationRecord
     else
       self[fecha_attr] = Time.current
       self[user_attr] = Current.user&.id
+    end
+  end
+
+  # PR-D7.m: lista de fechas que admin/supervisor puede editar
+  # manualmente desde el form. Al editar, el `_by_user_id` se
+  # actualiza al editor.
+  FECHAS_EDITABLES = %i[
+    fecha_solicito_recolecta fecha_pre_alerta fecha_recibido_miami
+    fecha_empacado fecha_enviado fecha_aduana fecha_consolidando
+    fecha_disponible fecha_posible_entrega fecha_en_reparto fecha_entregado
+  ].freeze
+
+  def track_fecha_by_user_on_manual_edit
+    return unless Current.user
+    fecha_del_estado = ESTADO_FECHA_MAP[estado] if will_save_change_to_estado?
+
+    FECHAS_EDITABLES.each do |attr|
+      next if attr == fecha_del_estado
+      next unless will_save_change_to_attribute?(attr.to_s)
+      self["#{attr}_by_user_id"] = Current.user.id
     end
   end
 

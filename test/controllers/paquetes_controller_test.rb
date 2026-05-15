@@ -660,4 +660,30 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_equal estado_inicial, @paquete.estado
     assert_equal "Nueva desc", @paquete.descripcion
   end
+
+  # PR-D7.m: edición manual de fechas desde el form.
+  test "admin edita fecha_recibido_miami y actualiza _by_user_id" do
+    fecha_nueva = 3.days.ago.beginning_of_minute
+    patch paquete_url(@paquete), params: {
+      paquete: { fecha_recibido_miami: fecha_nueva.iso8601 }
+    }
+    assert_redirected_to paquete_url(@paquete)
+    @paquete.reload
+    assert_equal fecha_nueva.to_i, @paquete.fecha_recibido_miami.to_i
+    assert_equal @user.id, @paquete.fecha_recibido_miami_by_user_id
+  end
+
+  test "cajero no puede editar fechas (authorize_edit lo redirecciona)" do
+    delete session_url
+    cajero = users(:cajero)
+    post session_url, params: { email_address: cajero.email_address, password: "password123" }
+
+    fecha_original = @paquete.fecha_recibido_miami
+    patch paquete_url(@paquete), params: {
+      paquete: { fecha_recibido_miami: 5.days.ago.iso8601 }
+    }
+    assert_response :redirect
+    @paquete.reload
+    assert_equal fecha_original&.to_i, @paquete.fecha_recibido_miami&.to_i
+  end
 end

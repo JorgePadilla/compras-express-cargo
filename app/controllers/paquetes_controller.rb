@@ -532,6 +532,12 @@ class PaquetesController < ApplicationController
       :pre_alerta,
       :solicito_cambio_servicio, :retener_miami,
       :recolecta_solicitada, :recolecta_monto, :recolecta_moneda, :tarifa_recolecta_id,
+      # PR-D7.m: fechas editables manualmente (admin/supervisor). El gate
+      # de permisos lo hace `authorize_edit` antes; el callback del modelo
+      # `track_fecha_by_user_on_manual_edit` se encarga de _by_user_id.
+      :fecha_solicito_recolecta, :fecha_pre_alerta, :fecha_recibido_miami,
+      :fecha_empacado, :fecha_enviado, :fecha_aduana, :fecha_consolidando,
+      :fecha_disponible, :fecha_posible_entrega, :fecha_en_reparto, :fecha_entregado,
       motivo_retencion_ids: []
     )
   end
