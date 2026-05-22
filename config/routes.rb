@@ -72,6 +72,9 @@ Rails.application.routes.draw do
       delete "remove_paquete/:paquete_id", action: :remove_paquete, as: :remove_paquete
       patch :enviar
     end
+    collection do
+      get :buscar
+    end
   end
 
   resources :pre_alertas, except: %i[destroy] do

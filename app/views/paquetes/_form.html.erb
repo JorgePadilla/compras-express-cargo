@@ -99,6 +99,87 @@
     </div>
   <% end %>
 
+  <%# Selector del Manifiesto. Yusef: "este debe ser cambiable de un
+      manifiesto a otro, y al cambiarlo, las fechas de salida y aduana
+      deben actualizarse al nuevo manifiesto". El sync de fechas lo hace
+      el callback `sync_dates_from_manifiesto` en Paquete. %>
+  <% mani = paquete.manifiesto %>
+  <div data-controller="manifiesto-autocomplete"
+       data-manifiesto-autocomplete-url-value="<%= buscar_manifiestos_path %>"
+       data-manifiesto-autocomplete-original-id-value="<%= mani&.id || 0 %>"
+       data-manifiesto-autocomplete-original-numero-value="<%= mani&.numero.to_s %>"
+       data-manifiesto-autocomplete-original-estado-value="<%= mani&.estado.to_s %>"
+       class="rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-gray-800 px-4 py-3 space-y-2">
+
+    <div class="flex items-center gap-3">
+      <span class="inline-flex items-center justify-center w-9 h-9 rounded-full bg-cec-teal/10 dark:bg-cec-teal/20 text-cec-teal-dark dark:text-cec-teal-light shrink-0">
+        <%= heroicon "paper-airplane", variant: :solid, options: { class: "w-5 h-5" } %>
+      </span>
+      <div class="min-w-0 flex-1">
+        <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Manifiesto</div>
+        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <span class="font-mono text-sm font-bold text-cec-navy dark:text-cec-gold"
+                data-manifiesto-autocomplete-target="numeroDisplay"><%= mani&.numero || "Sin manifiesto" %></span>
+          <% if mani %>
+            <span class="text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+                  data-manifiesto-autocomplete-target="estadoDisplay"><%= mani.estado %></span>
+          <% else %>
+            <span data-manifiesto-autocomplete-target="estadoDisplay" class="hidden"></span>
+          <% end %>
+          <span data-manifiesto-autocomplete-target="changedBadge"
+                class="hidden text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+            Modificado
+          </span>
+        </div>
+      </div>
+      <button type="button"
+              data-action="click->manifiesto-autocomplete#toggle"
+              data-manifiesto-autocomplete-target="toggleButton"
+              class="text-xs font-medium text-cec-teal hover:text-cec-teal-dark hover:underline cursor-pointer">
+        <%= mani ? "Cambiar" : "Asignar" %>
+      </button>
+      <button type="button"
+              data-action="click->manifiesto-autocomplete#cancelChange"
+              data-manifiesto-autocomplete-target="cancelButton"
+              class="hidden text-xs font-medium text-red-600 hover:text-red-800 hover:underline cursor-pointer">
+        Cancelar cambio
+      </button>
+    </div>
+
+    <%= f.hidden_field :manifiesto_id, data: { manifiesto_autocomplete_target: "manifiestoId" } %>
+
+    <div data-manifiesto-autocomplete-target="searchPanel" class="hidden">
+      <label class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
+        Buscar manifiesto
+      </label>
+      <div class="relative">
+        <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+          <%= heroicon "magnifying-glass", variant: :solid, options: { class: "w-4 h-4" } %>
+        </span>
+        <input type="text"
+               placeholder="Número (ej. MM2026000001)…"
+               data-manifiesto-autocomplete-target="input"
+               data-action="input->manifiesto-autocomplete#search focus->manifiesto-autocomplete#search"
+               autocomplete="off"
+               class="block w-full pl-9 pr-3 py-2 rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 dark:text-gray-100 shadow-sm text-sm focus:ring-2 focus:ring-cec-teal/40 focus:border-cec-teal">
+        <div data-manifiesto-autocomplete-target="dropdown"
+             class="hidden absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 rounded-lg shadow-xl max-h-64 overflow-auto"></div>
+      </div>
+      <div class="mt-1 flex items-center justify-between">
+        <p class="text-[11px] text-gray-500 dark:text-gray-400 italic">
+          Cambiar el manifiesto sincroniza fechas de salida y aduana.
+        </p>
+        <% if mani %>
+          <button type="button"
+                  data-action="click->manifiesto-autocomplete#clear"
+                  class="text-[11px] font-medium text-red-600 hover:underline cursor-pointer">
+            Quitar manifiesto
+          </button>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-3">
       <div class="md:col-span-2">

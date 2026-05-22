@@ -586,6 +586,9 @@ class PaquetesController < ApplicationController
       :fecha_solicito_recolecta, :fecha_pre_alerta, :fecha_recibido_miami,
       :fecha_empacado, :fecha_enviado, :fecha_aduana, :fecha_consolidando,
       :fecha_disponible, :fecha_posible_entrega, :fecha_en_reparto, :fecha_entregado,
+      # Reasignación de manifiesto desde el form. El callback
+      # `sync_dates_from_manifiesto` se encarga de actualizar las fechas.
+      :manifiesto_id,
       motivo_retencion_ids: []
     )
   end

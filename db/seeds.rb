@@ -829,11 +829,45 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
     Tarea.create!(paquete: pkg4, titulo: "Encuesta de satisfacción", asignado_a: digitador, estado: "realizada", completado_por: digitador, completada_en: 23.days.ago, notas: "5/5 estrellas. Cliente muy contento.")
   end
 
+  # Manifiestos demo — linkear pkg1, pkg2, pkg4 a manifiestos reales
+  # para que el operador vea trazabilidad. pkg3 queda sin manifiesto
+  # porque su estado es recibido_miami (aún no empacado).
+  empresa_pronto = EmpresaManifiesto.find_by!(nombre: "PRONTO CARGO")
+
+  mani_full_a = Manifiesto.find_or_create_by!(numero: "MA-FULL-001") do |m|
+    m.empresa_manifiesto = empresa_pronto
+    m.tipo_envio = "CER"
+    m.estado = "enviado"
+    m.fecha_enviado = 18.days.ago
+    m.fecha_aduana = 17.days.ago
+    m.user = digitador
+  end
+
+  mani_full_b = Manifiesto.find_or_create_by!(numero: "MA-FULL-002") do |m|
+    m.empresa_manifiesto = empresa_pronto
+    m.tipo_envio = "CER"
+    m.estado = "enviado"
+    m.fecha_enviado = 4.days.ago
+    m.fecha_aduana = 3.days.ago
+    m.user = digitador
+  end
+
+  # Idempotente: solo asignar si está sin manifiesto. update_column
+  # bypasea el callback sync_dates_from_manifiesto (las fechas ya
+  # están seteadas correctamente por el state walk; no queremos que
+  # el callback las sobrescriba con los millis del manifiesto demo).
+  { pkg1 => mani_full_a, pkg2 => mani_full_b, pkg4 => mani_full_a }.each do |paq, mani|
+    paq.update_column(:manifiesto_id, mani.id) if paq.manifiesto_id.nil?
+  end
+
+  mani_full_a.recalculate_totals!
+  mani_full_b.recalculate_totals!
+
   puts "  ✓ 4 paquetes demo completos creados:"
-  puts "    → /paquetes/#{pkg1.id} — Entregado · pipeline completo + recolecta + 2 tareas"
-  puts "    → /paquetes/#{pkg2.id} — En aduana · retenido + cambio servicio + 3 tareas"
-  puts "    → /paquetes/#{pkg3.id} — Recibido Miami · cliente nuevo + 2 tareas pendientes"
-  puts "    → /paquetes/#{pkg4.id} — Entregado simple · 3 tareas realizadas"
+  puts "    → /paquetes/#{pkg1.id} — Entregado · pipeline completo + recolecta + 2 tareas · #{mani_full_a.numero}"
+  puts "    → /paquetes/#{pkg2.id} — En aduana · retenido + cambio servicio + 3 tareas · #{mani_full_b.numero}"
+  puts "    → /paquetes/#{pkg3.id} — Recibido Miami · cliente nuevo + 2 tareas pendientes · sin manifiesto"
+  puts "    → /paquetes/#{pkg4.id} — Entregado simple · 3 tareas realizadas · #{mani_full_a.numero}"
 end
 
 # ── Empresa singleton (datos fiscales para PDFs y mailers) ──

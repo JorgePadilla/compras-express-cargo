@@ -298,6 +298,11 @@ class Paquete < ApplicationRecord
   # "entre más cosas nos dejes crear, menos te molestaremos".
   after_save :sync_carrier_catalog, if: :saved_change_to_expedido_por?
   after_save :sync_pre_alerta_estados, if: :saved_change_to_estado?
+  # Yusef: "al cambiar el manifiesto, las fechas de salida/aduana deben
+  # actualizarse al nuevo manifiesto". Mejor como callback (no solo
+  # controller) para que el flow desde manifiestos#add_paquete también
+  # sincronice las fechas al añadir un paquete a un manifiesto ya enviado.
+  before_save :sync_dates_from_manifiesto, if: :manifiesto_id_changed?
 
   def estado_terminal?
     entregado? || anulado? || retornado? || desechado?
@@ -489,6 +494,19 @@ class Paquete < ApplicationRecord
   def sync_pre_alerta_estados
     pre_alerta_paquetes.includes(:pre_alerta).each do |pap|
       pap.pre_alerta&.actualizar_estado_from_paquetes!
+    end
+  end
+
+  # Copia las fechas del manifiesto al paquete. Si manifiesto_id pasa
+  # a nil (paquete sacado del manifiesto), las fechas se limpian — sin
+  # manifiesto no hay despacho registrado.
+  def sync_dates_from_manifiesto
+    if manifiesto
+      self.fecha_enviado = manifiesto.fecha_enviado
+      self.fecha_aduana  = manifiesto.fecha_aduana
+    else
+      self.fecha_enviado = nil
+      self.fecha_aduana  = nil
     end
   end
 
