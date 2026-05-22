@@ -25,6 +25,8 @@ Rails.application.routes.draw do
       get :reimprimir_etiquetas
       delete :eliminar_de_pre_alerta
       post :mover_a_pre_alerta
+      post :asignar_tercero
+      delete :quitar_tercero
     end
     collection do
       get :check_tracking
