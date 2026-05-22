@@ -494,6 +494,48 @@
       </div>
     </div>
 
+    <%# Sección "Información de la Pre-Alerta" — campos que vienen del
+        cliente al crear la pre-alerta. Editables acá por si el operador
+        necesita corregir o agregar contexto. %>
+    <div class="lg:col-span-3 rounded-lg ring-1 ring-cec-teal/20 dark:ring-cec-teal/30 bg-cec-teal/5 dark:bg-cec-teal/10 px-4 py-3 space-y-3">
+      <div class="flex items-center gap-2">
+        <%= heroicon "bell-alert", variant: :solid, options: { class: "w-4 h-4 text-cec-teal" } %>
+        <h3 class="text-sm font-semibold text-cec-teal-dark dark:text-cec-teal-light">
+          Información de la Pre-Alerta
+        </h3>
+        <span class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 italic">
+          del cliente — editable
+        </span>
+      </div>
+
+      <% pap = paquete.pre_alerta_paquetes.first %>
+      <div>
+        <%= label_tag "paquete_pap_instrucciones", "Instrucciones Especiales",
+            class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <% if pap %>
+          <%= text_area_tag "paquete[pap_instrucciones]", pap.instrucciones, rows: 2,
+              id: "paquete_pap_instrucciones",
+              placeholder: "Mensaje del cliente al crear la pre-alerta.",
+              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+          <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400 italic">
+            Guardado en la pre-alerta <strong><%= pap.pre_alerta&.numero_documento %></strong>.
+          </p>
+        <% else %>
+          <textarea disabled rows="2"
+                    placeholder="Vinculá el paquete a una pre-alerta primero (botón 'Asignar a Pre-Alerta' arriba)."
+                    class="block w-full rounded-lg border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500 shadow-sm text-sm cursor-not-allowed"></textarea>
+        <% end %>
+      </div>
+
+      <div>
+        <%= f.label :notas_consolidacion, "Notas de Consolidación",
+            class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <%= f.text_area :notas_consolidacion, rows: 2,
+            placeholder: "Solo si el cliente solicitó consolidación. Se llena automáticamente desde la pre-alerta consolidada al vincular.",
+            class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+    </div>
+
     <div class="lg:col-span-3">
       <%= f.label :notas_internas, "Notas Internas (solo equipo CEC)", class: "block text-sm font-medium text-gray-700 mb-1" %>
       <%= f.text_area :notas_internas, rows: 2,
@@ -527,14 +569,6 @@
       <% end %>
       <%= f.text_area :notas_al_cliente, rows: 2,
           placeholder: "Mensaje que el cliente verá en su portal / pre-factura.",
-          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                 focus:ring-cec-teal focus:border-cec-teal" %>
-    </div>
-
-    <div class="lg:col-span-3">
-      <%= f.label :notas_consolidacion, "Notas de Consolidación", class: "block text-sm font-medium text-gray-700 mb-1" %>
-      <%= f.text_area :notas_consolidacion, rows: 2,
-          placeholder: "Se llena automáticamente desde la pre-alerta consolidada al vincular.",
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
                  focus:ring-cec-teal focus:border-cec-teal" %>
     </div>
