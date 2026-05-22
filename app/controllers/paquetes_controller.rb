@@ -100,6 +100,13 @@ class PaquetesController < ApplicationController
     end
 
     if @paquete.save
+      # Persistir instrucciones de la pre-alerta si el operador las editó
+      # desde el form del paquete. Va a la primera PAP vinculada (caso
+      # normal: 1 paquete vive en 1 pre-alerta).
+      if params[:paquete].key?(:pap_instrucciones) && (pap = @paquete.pre_alerta_paquetes.first)
+        pap.update(instrucciones: params[:paquete][:pap_instrucciones].to_s.strip.presence)
+      end
+
       msg = "Paquete actualizado exitosamente."
       if cliente_change_unlinked_pa
         msg += " Se desvinculó de pre-alerta #{cliente_change_unlinked_pa} por cambio de cliente — usá 'Asignar a Pre-Alerta' para re-vincular."
