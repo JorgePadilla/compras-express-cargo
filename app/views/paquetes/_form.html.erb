@@ -15,6 +15,90 @@
     </div>
   <% end %>
 
+  <%# Selector editable del cliente dueño. Yusef: "ocupamos poder cambiar
+      el nombre o código del cliente si está mal asignado". Si se cambia
+      y el paquete tiene pre-alerta vinculada, el controller la desvincula
+      automáticamente para mantener el invariante (mismo cliente). %>
+  <% cli = paquete.cliente %>
+  <% if cli %>
+    <div data-controller="cliente-search"
+         data-cliente-search-url-value="<%= buscar_clientes_path %>"
+         data-cliente-search-original-id-value="<%= cli.id %>"
+         data-cliente-search-original-codigo-value="<%= cli.codigo %>"
+         data-cliente-search-original-nombre-value="<%= cli.nombre_completo %>"
+         class="rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-gray-800 px-4 py-3 space-y-2">
+
+      <div class="flex items-center gap-3">
+        <span class="inline-flex items-center justify-center w-9 h-9 rounded-full bg-cec-navy/10 dark:bg-cec-gold/20 text-cec-navy dark:text-cec-gold shrink-0">
+          <%= heroicon "user-circle", variant: :solid, options: { class: "w-5 h-5" } %>
+        </span>
+        <div class="min-w-0 flex-1">
+          <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Cliente asignado</div>
+          <div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span class="font-mono text-sm font-bold text-cec-navy dark:text-cec-gold"
+                  data-cliente-search-target="codigoDisplay"><%= cli.codigo %></span>
+            <span class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate"
+                  data-cliente-search-target="nombreDisplay"><%= cli.nombre_completo %></span>
+            <span data-cliente-search-target="changedBadge"
+                  class="hidden text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+              Modificado
+            </span>
+          </div>
+        </div>
+        <button type="button"
+                data-action="click->cliente-search#toggle"
+                data-cliente-search-target="toggleButton"
+                class="text-xs font-medium text-cec-teal hover:text-cec-teal-dark hover:underline cursor-pointer">
+          Cambiar
+        </button>
+        <button type="button"
+                data-action="click->cliente-search#cancelChange"
+                data-cliente-search-target="cancelButton"
+                class="hidden text-xs font-medium text-red-600 hover:text-red-800 hover:underline cursor-pointer">
+          Cancelar cambio
+        </button>
+      </div>
+
+      <%= f.hidden_field :cliente_id, data: { cliente_search_target: "clienteId" } %>
+
+      <div data-cliente-search-target="searchPanel" class="hidden">
+        <label class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
+          Cambiar a otro cliente
+        </label>
+        <div class="relative">
+          <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+            <%= heroicon "magnifying-glass", variant: :solid, options: { class: "w-4 h-4" } %>
+          </span>
+          <input type="text"
+                 placeholder="Código (ej. CEC-010) o nombre…"
+                 data-cliente-search-target="input"
+                 data-action="input->cliente-search#search"
+                 autocomplete="off"
+                 class="block w-full pl-9 pr-3 py-2 rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 dark:text-gray-100 shadow-sm text-sm focus:ring-2 focus:ring-cec-teal/40 focus:border-cec-teal">
+          <div data-cliente-search-target="dropdown"
+               class="hidden absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 rounded-lg shadow-xl max-h-64 overflow-auto"></div>
+        </div>
+        <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+          Mínimo 2 caracteres. Click en un resultado para seleccionarlo.
+        </p>
+      </div>
+
+      <% if paquete.pre_alerta_paquetes.any? %>
+        <p class="text-[11px] text-amber-700 dark:text-amber-300 italic flex items-start gap-1">
+          <%= heroicon "exclamation-triangle", variant: :solid, options: { class: "w-3.5 h-3.5 shrink-0 mt-px" } %>
+          <span>Cambiar el cliente desvinculará el paquete de la pre-alerta actual.</span>
+        </p>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="rounded-lg ring-1 ring-red-300 dark:ring-red-700 bg-red-50 dark:bg-red-900/20 px-4 py-3 flex items-center gap-3">
+      <%= heroicon "exclamation-triangle", variant: :solid, options: { class: "w-5 h-5 text-red-600 shrink-0" } %>
+      <div class="text-sm text-red-800 dark:text-red-200">
+        <strong>Sin cliente asignado.</strong> Este paquete necesita ser vinculado a una pre-alerta.
+      </div>
+    </div>
+  <% end %>
+
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-3">
       <div class="md:col-span-2">

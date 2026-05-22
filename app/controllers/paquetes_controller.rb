@@ -1,7 +1,7 @@
 class PaquetesController < ApplicationController
-  before_action :set_paquete, only: [ :show, :edit, :update, :label, :destroy, :eliminar_de_pre_alerta, :reimprimir_etiquetas, :mover_a_pre_alerta ]
+  before_action :set_paquete, only: [ :show, :edit, :update, :label, :destroy, :eliminar_de_pre_alerta, :reimprimir_etiquetas, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero ]
   before_action :authorize_tracking_actions, only: [ :check_tracking, :search ]
-  before_action :authorize_edit, only: [ :edit, :update, :eliminar_de_pre_alerta, :mover_a_pre_alerta ]
+  before_action :authorize_edit, only: [ :edit, :update, :eliminar_de_pre_alerta, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero ]
   before_action :authorize_delete, only: [ :destroy ]
 
   # Whitelist de columnas ordenables. Mapea param `sort` -> SQL fragment.
@@ -80,6 +80,17 @@ class PaquetesController < ApplicationController
       @paquete.apply_retroceso_cleanup!(target_estado)
     end
 
+    # Si el operador cambió el cliente y hay PA vinculada, desvinculamos
+    # automáticamente para mantener el invariante: paquete y su pre-alerta
+    # tienen el mismo cliente. El operador puede re-vincular después con
+    # "Asignar a Pre-Alerta" / "Mover a Pre-Alerta".
+    cliente_change_unlinked_pa = nil
+    new_cli_id = paquete_params[:cliente_id].to_i
+    if new_cli_id.positive? && new_cli_id != @paquete.cliente_id && @paquete.pre_alerta_paquetes.any?
+      cliente_change_unlinked_pa = @paquete.pre_alerta_paquetes.first.pre_alerta&.numero_documento
+      @paquete.pre_alerta_paquetes.destroy_all
+    end
+
     @paquete.assign_attributes(paquete_params)
     # `paquete[:pre_factura]` es columna boolean; el accessor normal lo
     # interpreta como la asociación belongs_to :pre_factura. Lo escribimos
@@ -89,7 +100,11 @@ class PaquetesController < ApplicationController
     end
 
     if @paquete.save
-      redirect_to @paquete, notice: "Paquete actualizado exitosamente."
+      msg = "Paquete actualizado exitosamente."
+      if cliente_change_unlinked_pa
+        msg += " Se desvinculó de pre-alerta #{cliente_change_unlinked_pa} por cambio de cliente — usá 'Asignar a Pre-Alerta' para re-vincular."
+      end
+      redirect_to @paquete, notice: msg
     else
       render_show_with_edit_assigns(status: :unprocessable_entity)
     end
@@ -143,6 +158,32 @@ class PaquetesController < ApplicationController
     end
 
     redirect_to @paquete, notice: "Paquete movido a pre-alerta #{pa.numero_documento} (#{pa.cliente.codigo})."
+  end
+
+  # Asigna (o cambia) el Tercero — cliente final cuando CEC le maneja la
+  # carga a una empresa pequeña con su propio cliente. Reemplazo del flow
+  # "Asignar → edit mode" que confundía a los operadores.
+  def asignar_tercero
+    cliente = Cliente.activos.find_by(id: params[:tercero_id])
+    if cliente.nil?
+      redirect_to @paquete, alert: "Cliente no encontrado."
+      return
+    end
+    if cliente.id == @paquete.cliente_id
+      redirect_to @paquete, alert: "El tercero no puede ser el mismo cliente dueño del paquete."
+      return
+    end
+    @paquete.update!(tercero: cliente)
+    redirect_to @paquete, notice: "Tercero asignado: #{cliente.codigo} — #{cliente.nombre_completo}."
+  end
+
+  def quitar_tercero
+    if @paquete.tercero_id.nil?
+      redirect_to @paquete, alert: "Este paquete no tiene tercero asignado."
+      return
+    end
+    @paquete.update!(tercero: nil)
+    redirect_to @paquete, notice: "Tercero removido del paquete."
   end
 
   # PR-D4.a: re-imprime etiquetas Miami. Para paquetes divididos (split en
