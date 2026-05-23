@@ -26,20 +26,59 @@ module PaqueteTimelineHelper
   }.freeze
 
   def paquete_timeline_steps(paquete, users_index = nil)
-    users_index ||= paquete_timeline_users_index(paquete)
+    # Pre-fetch versions + users (incluye whodunnits de paper_trail) en
+    # 2 queries totales para evitar N+1.
+    versions = paquete.versions.where(event: [ "create", "update" ]).order(:created_at).to_a
+    audit_by_attr = TIMELINE_STEPS.each_with_object({}) do |step, h|
+      h[step[:fecha_attr]] = fecha_audit_info(versions, step[:fecha_attr])
+    end
+    users_index ||= paquete_timeline_users_index(paquete, audit_by_attr)
 
     TIMELINE_STEPS.filter_map do |step|
       fecha = paquete.send(step[:fecha_attr])
       next if step[:optional] && fecha.blank?
 
       uid = paquete.send(step[:user_attr])
+      audit = audit_by_attr[step[:fecha_attr]] || {}
+      first_set = audit[:first_set]
+      last_edit = audit[:last_edit]
       step.merge(
         fecha: fecha,
         user:  uid && users_index[uid.to_s],
-        modificada: fecha_modificada?(paquete, step[:fecha_attr]),
+        modificada: last_edit.present?,
+        first_set: first_set,
+        first_set_user: first_set && users_index[first_set[:by_user_id].to_s],
+        last_edit: last_edit,
+        last_edit_user: last_edit && users_index[last_edit[:by_user_id].to_s],
         contexto: timeline_step_contexto(paquete, step[:fecha_attr])
       )
     end
+  end
+
+  # Extrae captura inicial y última edición de una fecha desde las
+  # versions ya cargadas. `first_set` = primer cambio nil → valor.
+  # `last_edit` = último cambio donde el valor previo NO era nil
+  # (re-edición real, no la captura original).
+  def fecha_audit_info(versions, fecha_attr)
+    col = fecha_attr.to_s
+    first_set = nil
+    last_edit = nil
+    versions.each do |v|
+      cs = begin
+        v.changeset
+      rescue StandardError
+        nil
+      end
+      next unless cs.is_a?(Hash) && cs[col].is_a?(Array)
+      old_val, new_val = cs[col]
+      if first_set.nil? && old_val.nil? && !new_val.nil?
+        first_set = { at: v.created_at, by_user_id: v.whodunnit }
+      end
+      if !old_val.nil?
+        last_edit = { at: v.created_at, by_user_id: v.whodunnit }
+      end
+    end
+    { first_set: first_set, last_edit: last_edit }
   end
 
   # Datos extra a mostrar por step según fecha_attr. Devuelve array de
@@ -103,26 +142,18 @@ module PaqueteTimelineHelper
     end
   end
 
-  # Resuelve los users referenciados por las columnas *_by_user_id en una
-  # sola query.
-  def paquete_timeline_users_index(paquete)
-    user_ids = TIMELINE_STEPS.map { |s| paquete.send(s[:user_attr]) }.compact.uniq
+  # Resuelve los users referenciados por las columnas *_by_user_id +
+  # los whodunnit de paper_trail (first_set / last_edit) en una sola
+  # query.
+  def paquete_timeline_users_index(paquete, audit_by_attr = {})
+    user_ids = TIMELINE_STEPS.map { |s| paquete.send(s[:user_attr]) }.compact
+    audit_by_attr.each_value do |info|
+      user_ids << info[:first_set][:by_user_id] if info[:first_set]&.dig(:by_user_id)
+      user_ids << info[:last_edit][:by_user_id] if info[:last_edit]&.dig(:by_user_id)
+    end
+    user_ids = user_ids.compact.map(&:to_s).uniq
     return {} if user_ids.empty?
     User.where(id: user_ids).index_by { |u| u.id.to_s }
-  end
-
-  # Devuelve true si la fecha en cuestión fue REASIGNADA — la primera vez
-  # que se setea (de nil a un valor) cuenta como creación, no como
-  # modificación. Yusef pidió un indicador visual sólo cuando una fecha
-  # ya seteada se cambia (típicamente fecha_recibido_miami re-editada o
-  # fecha_pre_alerta al mover el paquete a otra PA).
-  def fecha_modificada?(paquete, fecha_attr)
-    return false unless paquete.send(fecha_attr).present?
-    column = fecha_attr.to_s
-    paquete.versions.where(event: "update").any? do |v|
-      cs = v.changeset rescue nil
-      cs.is_a?(Hash) && cs[column].is_a?(Array) && cs[column][0].present?
-    end
   end
 
   def timeline_accent(accent)

@@ -653,30 +653,61 @@ end %>
     <ol class="divide-y divide-gray-100 dark:divide-gray-700">
       <% timeline.each do |step| %>
         <% accent = timeline_accent(step[:accent]) %>
-        <li class="px-6 py-3 flex items-center gap-3 <%= 'opacity-50' unless step[:fecha] %>">
-          <span class="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-full <%= accent[:bg] %> text-white">
+        <li class="px-6 py-3 flex items-start gap-3 <%= 'opacity-50' unless step[:fecha] %>">
+          <span class="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-full <%= accent[:bg] %> text-white mt-0.5">
             <%= heroicon step[:icon], variant: :solid, options: { class: "w-4 h-4" } %>
           </span>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-gray-800 dark:text-gray-100"><%= step[:label] %></p>
+          <div class="flex-1 min-w-0 space-y-1">
+            <%# Línea 1: label + badge "modificada" si aplica %>
+            <div class="flex items-center gap-2 flex-wrap">
+              <p class="text-sm font-semibold text-gray-800 dark:text-gray-100"><%= step[:label] %></p>
+              <% if step[:modificada] %>
+                <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-cec-gold/15 text-cec-gold-dark dark:bg-cec-gold/25 dark:text-cec-gold-light"
+                      title="Esta fecha fue actualizada después de su captura inicial">
+                  <%= heroicon "pencil-square", variant: :solid, options: { class: "w-3 h-3" } %>
+                  modificada
+                </span>
+              <% end %>
+            </div>
+
             <% if step[:fecha] %>
-              <p class="text-xs text-gray-500 dark:text-gray-400">
-                <%= step[:fecha].strftime("%d/%m/%Y %H:%M") %>
-                <% if step[:user] %>
-                  · <span class="font-mono"><%= step[:user].iniciales_display %></span>
-                  <span class="text-gray-400">(<%= step[:user].nombre %>)</span>
-                <% end %>
-                <% if step[:modificada] %>
-                  <span class="ml-1 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-cec-gold/15 text-cec-gold-dark dark:bg-cec-gold/25 dark:text-cec-gold-light"
-                        title="Esta fecha fue actualizada después de su captura inicial">
-                    <%= heroicon "pencil-square", variant: :solid, options: { class: "w-3 h-3" } %>
-                    modificada
-                  </span>
-                <% end %>
+              <%# Línea 2: fecha absoluta + tiempo relativo. %>
+              <p class="text-xs text-gray-600 dark:text-gray-300">
+                <span class="font-mono"><%= step[:fecha].strftime("%d/%m/%Y %H:%M") %></span>
+                <span class="text-gray-400 dark:text-gray-500 italic">· hace <%= time_ago_in_words(step[:fecha]) %></span>
               </p>
-              <%# Contexto extra. Tuple [icon, text] → span; [icon, text, link_path] → link clickeable. %>
+
+              <%# Línea 3: usuario actual (último que tocó la fecha). %>
+              <% if step[:user] %>
+                <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5 flex-wrap">
+                  <span class="font-mono font-bold text-gray-700 dark:text-gray-100 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-[10px] tracking-wide">
+                    <%= step[:user].iniciales_display %>
+                  </span>
+                  <span><%= step[:user].nombre %></span>
+                  <% if step[:user].rol.present? %>
+                    <span class="text-[10px] text-gray-400 dark:text-gray-500">· <%= step[:user].rol_label %></span>
+                  <% end %>
+                </p>
+              <% end %>
+
+              <%# Línea 4 (solo si modificada): captura original. %>
+              <% if step[:modificada] && step[:first_set] %>
+                <p class="text-[11px] italic text-gray-500 dark:text-gray-400 flex items-start gap-1">
+                  <%= heroicon "clock", variant: :outline, options: { class: "w-3 h-3 mt-0.5 shrink-0" } %>
+                  <span>
+                    Capturada originalmente
+                    <span class="font-mono font-semibold not-italic"><%= step[:first_set][:at].strftime("%d/%m/%Y %H:%M") %></span>
+                    <% if step[:first_set_user] %>
+                      por <span class="font-mono font-semibold not-italic"><%= step[:first_set_user].iniciales_display %></span>
+                      <span class="text-gray-400 dark:text-gray-500">(<%= step[:first_set_user].nombre %>)</span>
+                    <% end %>
+                  </span>
+                </p>
+              <% end %>
+
+              <%# Contexto pills (sin cambios funcionales). %>
               <% if step[:contexto].present? %>
-                <div class="mt-1 flex flex-wrap gap-1.5">
+                <div class="flex flex-wrap gap-1.5 pt-0.5">
                   <% step[:contexto].each do |icon_name, text, link_path| %>
                     <% pill_base = "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200" %>
                     <% if link_path %>
@@ -694,7 +725,7 @@ end %>
                 </div>
               <% end %>
             <% else %>
-              <p class="text-xs text-gray-400 dark:text-gray-500">Pendiente</p>
+              <p class="text-xs text-gray-400 dark:text-gray-500 italic">Pendiente</p>
             <% end %>
           </div>
         </li>
