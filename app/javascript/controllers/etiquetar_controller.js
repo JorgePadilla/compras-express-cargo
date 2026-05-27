@@ -6,8 +6,9 @@ export default class extends Controller {
     "trackingSecundario", "trackingSecundarioContainer",
     "trackingSecundarioToggle", "trackingSecundarioToggleLabel",
     "clienteInput", "clienteId", "clienteDropdown",
-    "clienteNombre", "notasBanner", "notasTexto", "duplicateModal",
-    "duplicateInfo", "duplicateNewBtn", "duplicateNewHint",
+    "clienteNombre", "notasBanner", "notasTexto",
+    "preAlertaBanner", "preAlertaNumero", "preAlertaCliente", "preAlertaDescripcion",
+    "duplicateModal", "duplicateInfo", "duplicateNewBtn", "duplicateNewHint",
     "submitBtn", "event"
   ]
   static values = {
@@ -168,11 +169,32 @@ export default class extends Controller {
     })
       .then(r => r.json())
       .then(data => {
+        // PR-2: si el tracking tiene pre-alerta, sonido distintivo + banner verde.
+        // No abrimos el modal de duplicado en ese caso — la pre-alerta NO es un
+        // duplicado, es un "paquete esperado" que el sistema reconciliará al guardar.
+        if (data.pre_alerta_match) {
+          this._showPreAlertaBanner(data)
+          this.dispatch("preAlertaMatch")
+          return
+        }
         if (data.exists && !data.terminal) {
           this._openDuplicateModal(data)
         }
       })
       .catch(() => {})
+  }
+
+  _showPreAlertaBanner(data) {
+    if (!this.hasPreAlertaBannerTarget) return
+    if (this.hasPreAlertaNumeroTarget) this.preAlertaNumeroTarget.textContent = data.pre_alerta_numero || ""
+    if (this.hasPreAlertaClienteTarget) this.preAlertaClienteTarget.textContent = data.pre_alerta_cliente || ""
+    if (this.hasPreAlertaDescripcionTarget) this.preAlertaDescripcionTarget.textContent = data.pre_alerta_descripcion || ""
+    this.preAlertaBannerTarget.classList.remove("hidden")
+  }
+
+  _hidePreAlertaBanner() {
+    if (!this.hasPreAlertaBannerTarget) return
+    this.preAlertaBannerTarget.classList.add("hidden")
   }
 
   _openDuplicateModal(data) {
@@ -248,6 +270,7 @@ export default class extends Controller {
     this.clienteNombreTarget.classList.add("hidden")
     this.notasBannerTarget.classList.add("hidden")
     this.duplicateModalTarget.classList.add("hidden")
+    this._hidePreAlertaBanner()
     if (this.hasTrackingSecundarioContainerTarget) this._hideTrackingSecundario()
     if (this.hasTipoEnvioTarget) {
       this.tipoEnvioTarget.focus()
