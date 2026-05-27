@@ -101,7 +101,7 @@ end %>
         </div>
       </div>
 
-      <%# Row 2: Tracking principal (full width). Secundario oculto detrás de toggle/TAB. %>
+      <%# Row 2: Tracking principal (full width). Secundario oculto detrás de toggle/F3. %>
       <div class="lg:col-span-3">
         <div class="flex items-center justify-between mb-1">
           <%= f.label :tracking, class: "block text-sm font-medium text-gray-700" %>
@@ -110,13 +110,13 @@ end %>
                   data-action="click->etiquetar#toggleTrackingSecundario"
                   class="text-xs text-cec-teal hover:text-cec-teal-dark font-medium inline-flex items-center gap-1">
             <span data-etiquetar-target="trackingSecundarioToggleLabel">+ Agregar tracking secundario</span>
-            <kbd class="px-1 py-0.5 bg-gray-100 border rounded text-[10px]">TAB</kbd>
+            <kbd class="px-1 py-0.5 bg-gray-100 border rounded text-[10px]">F3</kbd>
           </button>
         </div>
         <%= f.text_field :tracking, required: true,
             placeholder: "Escanear o escribir número de tracking…",
             data: { etiquetar_target: "tracking",
-                    action: "blur->etiquetar#checkTracking keydown->etiquetar#trackingKeydown" },
+                    action: "blur->etiquetar#checkTracking" },
             class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono
                    focus:ring-cec-teal focus:border-cec-teal" %>
 

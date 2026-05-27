@@ -30,6 +30,12 @@ export default class extends Controller {
     if (e.key === "F2") {
       e.preventDefault()
       this.clearForm()
+    } else if (e.key === "F3") {
+      // F3 = revelar / esconder tracking secundario (solo ~40% lo usa,
+      // por eso lo dejamos detrás de un atajo en vez de visible siempre).
+      // Antes era TAB pero rompía la navegación natural del form.
+      e.preventDefault()
+      this.toggleTrackingSecundario()
     } else if (e.key === "F8") {
       e.preventDefault()
       this.submitForm()
@@ -37,19 +43,6 @@ export default class extends Controller {
       e.preventDefault()
       this.submitFormWithPrint()
     }
-  }
-
-  // Tracking secundario — oculto por default. TAB key sobre el campo de tracking
-  // principal lo revela y mueve el foco hacia él (solo ~40% de paquetes lo usan,
-  // así que mantenemos el flujo limpio para el 60% restante).
-  trackingKeydown(e) {
-    if (e.key !== "Tab" || e.shiftKey) return
-    if (!this.hasTrackingSecundarioContainerTarget) return
-    if (!this.trackingSecundarioContainerTarget.classList.contains("hidden")) return
-
-    e.preventDefault()
-    this._showTrackingSecundario()
-    if (this.hasTrackingSecundarioTarget) this.trackingSecundarioTarget.focus()
   }
 
   toggleTrackingSecundario() {
