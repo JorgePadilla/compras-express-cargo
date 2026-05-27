@@ -10,11 +10,13 @@ export default class extends Controller {
   success() {
     if (!this.enabledValue) return
     this._playTone(800, 0.15)
+    this._broadcast("success")
   }
 
   error() {
     if (!this.enabledValue) return
     this._playTone(200, 0.3)
+    this._broadcast("error")
   }
 
   alert() {
@@ -22,6 +24,7 @@ export default class extends Controller {
     this._playTone(600, 0.15, () => {
       setTimeout(() => this._playTone(900, 0.15), 180)
     })
+    this._broadcast("alert")
   }
 
   // Two-chime ascending fifth (880Hz → 1320Hz) — distinto del alert/error/success.
@@ -31,6 +34,16 @@ export default class extends Controller {
     this._playTone(880, 0.12, () => {
       setTimeout(() => this._playTone(1320, 0.18), 120)
     })
+    this._broadcast("notify")
+  }
+
+  // Emite un evento global para que indicadores visuales (al lado del
+  // dark mode toggle) puedan parpadear cuando suena un audio. Útil para
+  // entornos ruidosos o si el speaker está en mute.
+  _broadcast(type) {
+    document.dispatchEvent(new CustomEvent("audio:played", {
+      detail: { type }
+    }))
   }
 
   _getContext() {

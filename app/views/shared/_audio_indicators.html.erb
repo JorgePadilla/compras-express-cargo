@@ -1,0 +1,38 @@
+<%# Indicadores visuales que parpadean cuando se reproduce un audio.
+    Acompañan los sonidos del audio_controller (success/alert/notify/error)
+    para que el usuario distinga la causa también de forma visual.
+    Se renderiza al lado del theme toggle en el layout. %>
+<div data-controller="audio-indicator" class="inline-flex items-center gap-1"
+     aria-hidden="true" title="Indicadores de sonido del sistema">
+  <%# success — paquete guardado %>
+  <span data-audio-indicator-target="icon" data-audio-type="success"
+        class="inline-flex items-center justify-center w-7 h-7 rounded-md
+               bg-cec-teal/10 text-cec-teal-dark dark:bg-cec-teal/20 dark:text-cec-teal-light
+               opacity-0 scale-90 transition-all duration-200 motion-reduce:transition-none">
+    <%= heroicon "check-circle", variant: :solid, options: { class: "w-4 h-4" } %>
+  </span>
+
+  <%# notify — match con pre-alerta (PR-2) %>
+  <span data-audio-indicator-target="icon" data-audio-type="notify"
+        class="inline-flex items-center justify-center w-7 h-7 rounded-md
+               bg-cec-navy/10 text-cec-navy dark:bg-cec-gold/20 dark:text-cec-gold-light
+               opacity-0 scale-90 transition-all duration-200 motion-reduce:transition-none">
+    <%= heroicon "bell-alert", variant: :solid, options: { class: "w-4 h-4" } %>
+  </span>
+
+  <%# alert — cliente con notas %>
+  <span data-audio-indicator-target="icon" data-audio-type="alert"
+        class="inline-flex items-center justify-center w-7 h-7 rounded-md
+               bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200
+               opacity-0 scale-90 transition-all duration-200 motion-reduce:transition-none">
+    <%= heroicon "exclamation-triangle", variant: :solid, options: { class: "w-4 h-4" } %>
+  </span>
+
+  <%# error %>
+  <span data-audio-indicator-target="icon" data-audio-type="error"
+        class="inline-flex items-center justify-center w-7 h-7 rounded-md
+               bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200
+               opacity-0 scale-90 transition-all duration-200 motion-reduce:transition-none">
+    <%= heroicon "x-circle", variant: :solid, options: { class: "w-4 h-4" } %>
+  </span>
+</div>

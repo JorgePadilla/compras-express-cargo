@@ -151,10 +151,14 @@
               <%= heroicon "bars-3", variant: :outline, options: { class: "w-6 h-6" } %>
             </button>
             <span class="font-bold text-cec-navy dark:text-cec-gold">CEC</span>
-            <%= render "shared/theme_toggle" %>
+            <div class="inline-flex items-center gap-2">
+              <%= render "shared/audio_indicators" %>
+              <%= render "shared/theme_toggle" %>
+            </div>
           </header>
           <%# Theme toggle desktop — fixed top-right %>
-          <div class="hidden lg:flex justify-end px-6 pt-4">
+          <div class="hidden lg:flex justify-end items-center gap-2 px-6 pt-4">
+            <%= render "shared/audio_indicators" %>
             <%= render "shared/theme_toggle" %>
           </div>
 
