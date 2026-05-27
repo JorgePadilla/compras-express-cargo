@@ -2,7 +2,10 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = [
-    "form", "tracking", "clienteInput", "clienteId", "clienteDropdown",
+    "form", "tipoEnvio", "tracking",
+    "trackingSecundario", "trackingSecundarioContainer",
+    "trackingSecundarioToggle", "trackingSecundarioToggleLabel",
+    "clienteInput", "clienteId", "clienteDropdown",
     "clienteNombre", "notasBanner", "notasTexto", "duplicateModal",
     "duplicateInfo", "duplicateNewBtn", "duplicateNewHint",
     "submitBtn", "event"
@@ -27,12 +30,44 @@ export default class extends Controller {
     if (e.key === "F2") {
       e.preventDefault()
       this.clearForm()
+    } else if (e.key === "F3") {
+      // F3 = revelar / esconder tracking secundario (solo ~40% lo usa,
+      // por eso lo dejamos detrás de un atajo en vez de visible siempre).
+      // Antes era TAB pero rompía la navegación natural del form.
+      e.preventDefault()
+      this.toggleTrackingSecundario()
     } else if (e.key === "F8") {
       e.preventDefault()
       this.submitForm()
     } else if (e.key === "F9") {
       e.preventDefault()
       this.submitFormWithPrint()
+    }
+  }
+
+  toggleTrackingSecundario() {
+    if (!this.hasTrackingSecundarioContainerTarget) return
+    const container = this.trackingSecundarioContainerTarget
+    if (container.classList.contains("hidden")) {
+      this._showTrackingSecundario()
+      if (this.hasTrackingSecundarioTarget) this.trackingSecundarioTarget.focus()
+    } else {
+      this._hideTrackingSecundario()
+    }
+  }
+
+  _showTrackingSecundario() {
+    this.trackingSecundarioContainerTarget.classList.remove("hidden")
+    if (this.hasTrackingSecundarioToggleLabelTarget) {
+      this.trackingSecundarioToggleLabelTarget.textContent = "− Quitar tracking secundario"
+    }
+  }
+
+  _hideTrackingSecundario() {
+    this.trackingSecundarioContainerTarget.classList.add("hidden")
+    if (this.hasTrackingSecundarioTarget) this.trackingSecundarioTarget.value = ""
+    if (this.hasTrackingSecundarioToggleLabelTarget) {
+      this.trackingSecundarioToggleLabelTarget.textContent = "+ Agregar tracking secundario"
     }
   }
 
@@ -213,7 +248,12 @@ export default class extends Controller {
     this.clienteNombreTarget.classList.add("hidden")
     this.notasBannerTarget.classList.add("hidden")
     this.duplicateModalTarget.classList.add("hidden")
-    this.trackingTarget.focus()
+    if (this.hasTrackingSecundarioContainerTarget) this._hideTrackingSecundario()
+    if (this.hasTipoEnvioTarget) {
+      this.tipoEnvioTarget.focus()
+    } else {
+      this.trackingTarget.focus()
+    }
   }
 
   submitForm() {
