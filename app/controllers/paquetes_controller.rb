@@ -301,6 +301,11 @@ class PaquetesController < ApplicationController
     tracking = params[:tracking].to_s
     paquete = Paquete.where(tracking: tracking).order(created_at: :desc).first
 
+    # PR-2: detectar match con pre-alerta. Caso (a): el paquete ya existe en
+    # estado `pre_alerta_estado` (lo creó PreAlertaPaquete#crear_paquete_esperado).
+    # Caso (b): no hay paquete pero sí hay un PAP sin vincular con este tracking.
+    pre_alerta_match_info = detect_pre_alerta_match(tracking, paquete)
+
     if paquete
       next_suffix = Paquete.next_duplicate_suffix(tracking)
 
@@ -320,12 +325,41 @@ class PaquetesController < ApplicationController
         edit_url: edit_paquete_path(paquete),
         tracking_base: tracking,
         next_suffix: next_suffix,
-        next_tracking: next_suffix ? "#{tracking}#{next_suffix}" : nil
+        next_tracking: next_suffix ? "#{tracking}#{next_suffix}" : nil,
+        **pre_alerta_match_info
       }
     else
-      render json: { exists: false }
+      render json: { exists: false, **pre_alerta_match_info }
     end
   end
+
+  # PR-2: helper que devuelve `pre_alerta_match: true` cuando este tracking
+  # tiene una pre-alerta esperándolo. Frontend usa este flag para disparar
+  # el sonido `notify` y mostrar un banner verde en vez del modal de duplicado.
+  def detect_pre_alerta_match(tracking, paquete)
+    return { pre_alerta_match: false } if tracking.blank?
+
+    pap_query = PreAlertaPaquete.sin_vincular
+                                .where("UPPER(tracking) = ?", tracking.strip.upcase)
+
+    pap = pap_query.includes(:pre_alerta).first
+    pa = pap&.pre_alerta || (paquete && paquete.estado == "pre_alerta_estado" ?
+                              PreAlertaPaquete.where(paquete_id: paquete.id).first&.pre_alerta : nil)
+
+    if pa.present?
+      {
+        pre_alerta_match: true,
+        pre_alerta_numero: ERB::Util.html_escape(pa.numero_documento.to_s),
+        pre_alerta_cliente: ERB::Util.html_escape(pa.cliente&.nombre_completo.to_s),
+        pre_alerta_descripcion: ERB::Util.html_escape((pap&.descripcion || paquete&.descripcion).to_s)
+      }
+    else
+      { pre_alerta_match: false }
+    end
+  end
+  private :detect_pre_alerta_match
+
+  public
 
   def search
     paquetes = Paquete.sin_manifiesto

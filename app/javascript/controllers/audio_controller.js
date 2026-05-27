@@ -24,6 +24,15 @@ export default class extends Controller {
     })
   }
 
+  // Two-chime ascending fifth (880Hz → 1320Hz) — distinto del alert/error/success.
+  // Yusef quiere un sonido distintivo cuando el tracking matchea con pre-alerta.
+  notify() {
+    if (!this.enabledValue) return
+    this._playTone(880, 0.12, () => {
+      setTimeout(() => this._playTone(1320, 0.18), 120)
+    })
+  }
+
   _getContext() {
     if (!this._audioContext) {
       this._audioContext = new (window.AudioContext || window.webkitAudioContext)()

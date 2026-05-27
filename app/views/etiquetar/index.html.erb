@@ -12,7 +12,7 @@ end %>
 <div data-controller="etiquetar audio"
      data-etiquetar-check-url-value="<%= check_tracking_paquetes_path %>"
      data-etiquetar-buscar-url-value="<%= buscar_clientes_path %>"
-     data-action="etiquetar:success->audio#success etiquetar:clienteNotas->audio#alert click@document->etiquetar#clickOutsideDropdown">
+     data-action="etiquetar:success->audio#success etiquetar:clienteNotas->audio#alert etiquetar:preAlertaMatch->audio#notify click@document->etiquetar#clickOutsideDropdown">
 
   <%# Flash messages area %>
   <div id="flash-messages" class="mb-4">
@@ -31,6 +31,27 @@ end %>
       <div>
         <p class="text-sm font-medium text-amber-800">Notas del cliente:</p>
         <p class="text-sm text-amber-700 mt-1" data-etiquetar-target="notasTexto"></p>
+      </div>
+    </div>
+  </div>
+
+  <%# PR-2: Pre-alerta match banner (hidden por default). Aparece cuando el
+      tracking escaneado matchea con una pre-alerta esperándolo. Se acompaña
+      con un sonido `audio#notify` distintivo (doble chime ascendente). %>
+  <div data-etiquetar-target="preAlertaBanner"
+       class="hidden mb-4 p-4 bg-cec-teal/10 border border-cec-teal/40 rounded-lg dark:bg-cec-teal/15 dark:border-cec-teal/50">
+    <div class="flex items-start gap-2">
+      <%= heroicon "bell-alert", variant: :solid, options: { class: "w-5 h-5 text-cec-teal shrink-0 mt-0.5" } %>
+      <div class="flex-1">
+        <p class="text-sm font-semibold text-cec-teal-dark dark:text-cec-teal-light">
+          ✓ Tracking encontrado en Pre-Alerta
+          <span class="font-mono ml-1" data-etiquetar-target="preAlertaNumero"></span>
+        </p>
+        <p class="text-sm text-gray-700 dark:text-gray-200 mt-1">
+          <span class="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mr-1">Cliente:</span>
+          <span data-etiquetar-target="preAlertaCliente"></span>
+        </p>
+        <p class="text-sm text-gray-700 dark:text-gray-200 mt-1" data-etiquetar-target="preAlertaDescripcion"></p>
       </div>
     </div>
   </div>
