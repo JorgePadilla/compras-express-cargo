@@ -6,6 +6,7 @@ class EtiquetarController < ApplicationController
     @paquetes_hoy = paquetes_hoy_count
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     @carriers = Carrier.where(activo: true).order(:nombre)
+    @motivos_retencion = MotivoRetencion.activos.ordered
   end
 
   def create
@@ -105,6 +106,7 @@ class EtiquetarController < ApplicationController
   def render_create_error
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     @carriers = Carrier.where(activo: true).order(:nombre)
+    @motivos_retencion = MotivoRetencion.activos.ordered
     @paquetes_hoy = paquetes_hoy_count
     flash.now[:alert] = "No se pudo guardar el paquete."
     render :index, status: :unprocessable_entity
@@ -132,8 +134,9 @@ class EtiquetarController < ApplicationController
       :tracking, :tracking_secundario, :cliente_id, :tipo_envio_id, :peso,
       :alto, :largo, :ancho, :cantidad_productos, :cantidad_paquetes,
       :numero_caja, :descripcion, :remitente, :expedido_por,
-      :notas_internas, :pre_alerta,
-      :solicito_cambio_servicio, :retener_miami
+      :notas_internas, :notas_retencion, :pre_alerta,
+      :solicito_cambio_servicio, :retener_miami,
+      motivo_retencion_ids: []
     )
   end
 
