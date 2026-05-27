@@ -38,6 +38,9 @@ class EtiquetarController < ApplicationController
     if (flag = pre_factura_flag_param) != :missing
       @paquete[:pre_factura] = flag
     end
+    if (prov_str = proveedor_string_param) != :missing
+      @paquete[:proveedor] = prov_str
+    end
 
     if @paquete.save
       link_pre_alertas(@paquete)
@@ -69,6 +72,9 @@ class EtiquetarController < ApplicationController
       user: Current.user
     )
     paquetes = Paquete.crear_split!(attrs: attrs, total_cajas: total_cajas)
+    if (prov_str = proveedor_string_param) != :missing && prov_str.present?
+      paquetes.each { |p| p.update_column(:proveedor, prov_str) }
+    end
     @paquete = paquetes.first
     paquetes.each { |p| link_pre_alertas(p) }
     @paquetes_hoy = paquetes_hoy_count
@@ -125,7 +131,7 @@ class EtiquetarController < ApplicationController
     params.require(:paquete).permit(
       :tracking, :tracking_secundario, :cliente_id, :tipo_envio_id, :peso,
       :alto, :largo, :ancho, :cantidad_productos, :cantidad_paquetes,
-      :numero_caja, :descripcion, :remitente, :expedido_por, :proveedor,
+      :numero_caja, :descripcion, :remitente, :expedido_por,
       :notas_internas, :pre_alerta,
       :solicito_cambio_servicio, :retener_miami
     )
@@ -138,5 +144,16 @@ class EtiquetarController < ApplicationController
     return :missing unless params.dig(:paquete)&.key?(:pre_factura)
 
     ActiveModel::Type::Boolean.new.cast(params[:paquete][:pre_factura])
+  end
+
+  # `proveedor` (string legacy) Y a la vez el name de la asociación
+  # belongs_to :proveedor (PR-D3.a catálogo). Mismo conflicto que pre_factura:
+  # asignar un string desde el form dispara AssociationTypeMismatch. Se escribe
+  # vía column accessor `paquete[:proveedor]`. La asociación se usa solo cuando
+  # hay un Proveedor del catálogo (via proveedor_id en otros flows).
+  def proveedor_string_param
+    return :missing unless params.dig(:paquete)&.key?(:proveedor)
+
+    params[:paquete][:proveedor].to_s
   end
 end
