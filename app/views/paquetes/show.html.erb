@@ -151,6 +151,28 @@ end %>
       separada `/paquetes/:id/edit`. Los modales (Cambio Servicio,
       Retener Miami, Solicitó Recolecta) y el buscador de Tercero
       siguen funcionando dentro del form. %>
+  <% if @cambio_servicio_from_rescaneo %>
+    <%# PR-5: Banner cuando el operador llegó acá desde /etiquetar
+        re-escaneando un tracking existente y eligiendo "Cambio de Servicio".
+        El flag solicito_cambio_servicio ya está pre-marcado en memoria;
+        falta que el operador ajuste Tipo de Envío y guarde. %>
+    <div class="mb-4 p-4 bg-amber-50 border border-amber-300 rounded-lg dark:bg-amber-900/20 dark:border-amber-800">
+      <div class="flex items-start gap-2">
+        <%= heroicon "arrow-path", variant: :solid, options: { class: "w-5 h-5 text-amber-600 shrink-0 mt-0.5" } %>
+        <div>
+          <p class="text-sm font-semibold text-amber-900 dark:text-amber-200">
+            Cambio de Servicio detectado por re-escaneo
+          </p>
+          <p class="text-sm text-amber-800 dark:text-amber-300 mt-1">
+            El tracking <span class="font-mono font-bold"><%= @paquete.tracking %></span> ya estaba en el sistema.
+            La marca "Cambio de Servicio" quedó pre-activada — solo ajustá el nuevo Tipo de Envío y guardá.
+            Al facturar, se generará una Nota de Débito automática.
+          </p>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
   <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
     <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
       <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100">
