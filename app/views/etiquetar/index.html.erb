@@ -56,13 +56,14 @@ end %>
     </div>
   </div>
 
-  <%# Duplicate tracking modal — flow guiado (2026-04-25):
-      al detectar duplicado, ofrece dos opciones:
-        1) "Es actualización"  → carga la recepción original en edit.
-        2) "Es duplicado real"  → pre-rellena el tracking con sufijo (A, B, C…)
-                                  para crear paquete distinto. %>
+  <%# Duplicate tracking modal — flow guiado (PR-5 amplía con 3ra opción):
+        1) "Es actualización"      → carga la recepción original en edit.
+        2) "Cambio de Servicio"    → carga edit con flag pre-marcado +
+                                     banner amarillo (PR-5).
+        3) "Es duplicado real"     → pre-rellena el tracking con sufijo (A-Z)
+                                     para crear paquete distinto. %>
   <div data-etiquetar-target="duplicateModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70 p-4">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full p-6">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full p-6">
       <div class="flex items-center gap-3 mb-4">
         <%= heroicon "exclamation-circle", variant: :outline, options: { class: "w-6 h-6 text-amber-500" } %>
         <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Tracking ya existe en el sistema</h3>
@@ -71,11 +72,16 @@ end %>
       <div data-etiquetar-target="duplicateInfo" class="text-sm text-gray-700 dark:text-gray-300 mb-5"></div>
 
       <p class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-3">¿Qué corresponde hacer?</p>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
         <button type="button" data-action="click->etiquetar#duplicateAsUpdate"
                 class="flex flex-col items-start text-left p-4 rounded-lg ring-1 ring-cec-teal/40 bg-cec-teal/5 hover:bg-cec-teal/10 dark:bg-cec-teal/10 dark:hover:bg-cec-teal/20 transition">
           <span class="font-semibold text-cec-teal-dark dark:text-cec-teal-light">Es actualización</span>
           <span class="text-xs text-gray-600 dark:text-gray-400 mt-1">Cargar la recepción original para corregir tipo de envío, cliente u otros datos.</span>
+        </button>
+        <button type="button" data-action="click->etiquetar#duplicateAsCambioServicio"
+                class="flex flex-col items-start text-left p-4 rounded-lg ring-1 ring-amber-400/60 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/30 transition">
+          <span class="font-semibold text-amber-800 dark:text-amber-200">Cambio de Servicio</span>
+          <span class="text-xs text-gray-600 dark:text-gray-400 mt-1">El cliente cambió a otro tipo (CER↔CEM…). Abre el paquete con el flag marcado y genera Nota de Débito al facturar.</span>
         </button>
         <button type="button" data-action="click->etiquetar#duplicateAsNew"
                 data-etiquetar-target="duplicateNewBtn"

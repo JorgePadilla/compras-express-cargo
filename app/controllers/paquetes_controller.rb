@@ -49,6 +49,14 @@ class PaquetesController < ApplicationController
       @tipo_envios = TipoEnvio.activos.order(:nombre)
       @carriers = Carrier.where(activo: true).order(:nombre)
       @tarifas_recolecta = TarifaRecolecta.activas.ordered
+      # PR-5: cuando el digitador re-escanea un tracking existente desde
+      # /etiquetar y elige "Cambio de Servicio", llegamos acá con
+      # ?cambio_servicio=1. Pre-marcamos el flag en memoria (no se guarda
+      # hasta que el operador confirme con Guardar) y exponemos un banner.
+      if params[:cambio_servicio] == "1"
+        @paquete.solicito_cambio_servicio = true
+        @cambio_servicio_from_rescaneo = true
+      end
     end
   end
 

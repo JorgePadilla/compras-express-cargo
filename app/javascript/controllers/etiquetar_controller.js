@@ -251,6 +251,18 @@ export default class extends Controller {
     window.location.href = data.edit_url
   }
 
+  // PR-5: Opción 2 — "Cambio de Servicio". Navega al show del paquete
+  // original con ?mode=edit&cambio_servicio=1 (no usamos edit_url porque
+  // edit_paquete_path redirige sin preservar query params). El banner amber
+  // se muestra y el flag solicito_cambio_servicio queda pre-marcado.
+  // Al guardar, la Nota de Débito auto se genera en facturar! (pre_factura.rb).
+  duplicateAsCambioServicio() {
+    const data = this._duplicateData
+    if (!data || !data.existing_paquete_id) return
+    window.location.href =
+      `/paquetes/${data.existing_paquete_id}?mode=edit&cambio_servicio=1`
+  }
+
   // Opción 2: "Es duplicado real" — pre-rellena el tracking del form con
   // el siguiente sufijo libre (A, B, C…) y cierra el modal. El digitador
   // termina de llenar los demás campos y guarda normalmente.
