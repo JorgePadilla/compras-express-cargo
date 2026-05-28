@@ -230,21 +230,17 @@ end %>
         </div>
       </div>
 
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <%= f.label :cantidad_productos, "Cant. Productos", class: "block text-sm font-medium text-gray-700 mb-1" %>
-          <%= f.number_field :cantidad_productos, min: 0, placeholder: "1",
-              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                     focus:ring-cec-teal focus:border-cec-teal" %>
-        </div>
-        <div>
-          <%= f.label :cantidad_paquetes, "Cant. de Cajas", class: "block text-sm font-medium text-gray-700 mb-1" %>
-          <%= f.number_field :cantidad_paquetes, min: 1, placeholder: "1",
-              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                     focus:ring-cec-teal focus:border-cec-teal" %>
-          <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Si el tracking llega en varias cajas, ingresa el total. El sistema imprimirá una etiqueta por caja (1/N, 2/N…).</p>
-        </div>
+      <div>
+        <%= f.label :cantidad_productos, "Cant. Productos", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.number_field :cantidad_productos, min: 0, placeholder: "1",
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                   focus:ring-cec-teal focus:border-cec-teal" %>
       </div>
+
+      <%# Cant. de Cajas se pregunta en un modal post-F9 (PR-4). Yusef:
+          "cantidad de paquetes se lo vamos a poner después de presionar F9".
+          Hidden con default 1; el modal lo sobreescribe si N > 1. %>
+      <%= f.hidden_field :cantidad_paquetes, value: 1, data: { etiquetar_target: "cantidadPaquetesHidden" } %>
 
       <%# Row 5: Descripcion, Remitente %>
       <div class="lg:col-span-2">
@@ -369,6 +365,45 @@ end %>
       </div>
     </div>
   <% end %>
+
+  <%# PR-4: Modal "¿Cuántas cajas?" — se abre al presionar F9 / Guardar+Imprimir.
+      Yusef: "cantidad de paquetes se lo vamos a poner después de presionar F9".
+      Default 1, max 26 (límite del sufijo A-Z para duplicados). %>
+  <dialog data-etiquetar-target="cajasModal"
+          aria-labelledby="modal-cajas-title"
+          style="margin: auto"
+          class="rounded-xl p-0 w-[28rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-cec-teal/40">
+    <div class="bg-cec-teal/10 px-5 py-3 border-b border-cec-teal/30">
+      <h3 id="modal-cajas-title" class="text-base font-semibold text-cec-teal-dark dark:text-cec-teal-light">
+        ¿Cuántas cajas trae este tracking?
+      </h3>
+    </div>
+    <div class="p-5 space-y-4 bg-white dark:bg-gray-800">
+      <div>
+        <label for="cajas-input" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+          Cantidad de cajas a imprimir
+        </label>
+        <input id="cajas-input" type="number" min="1" max="26" value="1"
+               data-etiquetar-target="cajasInput"
+               data-action="keydown->etiquetar#cajasKeydown"
+               class="block w-full text-2xl text-center font-mono rounded-lg border-gray-300 shadow-sm
+                      focus:ring-cec-teal focus:border-cec-teal dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Cada caja recibe su propia etiqueta (1/N, 2/N…). Máximo 26.
+        </p>
+      </div>
+    </div>
+    <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+      <button type="button" data-action="click->etiquetar#cancelCajas"
+              class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100">
+        Cancelar
+      </button>
+      <button type="button" data-action="click->etiquetar#confirmCajas"
+              class="px-4 py-1.5 text-sm font-medium bg-cec-gold text-cec-navy-dark rounded-lg hover:bg-cec-gold-dark">
+        Confirmar e imprimir
+      </button>
+    </div>
+  </dialog>
 
   <%# Turbo stream events container %>
   <div id="etiquetar-events"></div>
