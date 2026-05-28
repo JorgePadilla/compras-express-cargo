@@ -1,0 +1,252 @@
+<%= render PageHeaderComponent.new(title: "Entrega Personal", subtitle: "Paquetes traídos físicamente al mostrador") do |header|
+  header.with_action do
+    tag.span(class: "inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400") do
+      safe_join([
+        tag.span("Hoy:"),
+        tag.span(id: "paquetes-counter", class: "font-bold text-cec-navy dark:text-cec-gold text-lg") { @paquetes_hoy.to_s }
+      ])
+    end
+  end
+end %>
+
+<div data-controller="entrega-personal audio"
+     data-action="entrega-personal:success->audio#success">
+
+  <%# Flash messages %>
+  <div id="flash-messages" class="mb-4">
+    <% if flash[:notice] %>
+      <div class="p-3 bg-cec-teal/10 text-cec-teal-dark border border-cec-teal/30 rounded-lg text-sm" data-controller="auto-dismiss"><%= flash[:notice] %></div>
+    <% end %>
+    <% if flash[:alert] %>
+      <div class="p-3 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm" data-controller="auto-dismiss"><%= flash[:alert] %></div>
+    <% end %>
+  </div>
+
+  <%# Info banner — explica el flujo al digitador %>
+  <div class="mb-4 p-4 bg-cec-navy/5 dark:bg-cec-navy/20 border border-cec-navy/20 dark:border-cec-navy/40 rounded-lg">
+    <div class="flex items-start gap-2">
+      <%= heroicon "information-circle", variant: :solid, options: { class: "w-5 h-5 text-cec-navy dark:text-cec-gold shrink-0 mt-0.5" } %>
+      <div class="text-sm text-gray-700 dark:text-gray-200">
+        Este flujo registra paquetes que el cliente trajo en persona al mostrador (sin tracking del courier).
+        El sistema genera automáticamente un tracking <span class="font-mono font-semibold">EP-AÑO-SUC-PROV-NNNNNN</span>
+        al guardar — no hace falta escanear nada.
+      </div>
+    </div>
+  </div>
+
+  <%= form_with model: @paquete, url: entrega_personal_index_path,
+                data: { entrega_personal_target: "form" },
+                class: "bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden" do |f| %>
+    <% if @paquete.errors.any? %>
+      <div class="m-6 p-4 bg-red-50 dark:bg-red-900/30 rounded-lg">
+        <div class="flex items-center gap-2 mb-2">
+          <%= heroicon "exclamation-triangle", variant: :outline, options: { class: "w-5 h-5 text-red-600" } %>
+          <h3 class="text-sm font-medium text-red-800 dark:text-red-200">Se encontraron <%= @paquete.errors.count %> error(es):</h3>
+        </div>
+        <ul class="list-disc list-inside text-sm text-red-700 dark:text-red-300 space-y-1">
+          <% @paquete.errors.full_messages.each do |msg| %>
+            <li><%= msg %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <div class="px-6 py-4 space-y-6">
+
+      <%# Sección 1: Proveedor EP + Sucursal — define el prefijo del tracking %>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <%= f.label :proveedor_id, "Proveedor / Driver", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <% if @proveedores_ep.any? %>
+            <%= f.collection_select :proveedor_id, @proveedores_ep, :id, :nombre,
+                { include_blank: "— Seleccionar proveedor EP —" },
+                { autofocus: true,
+                  class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              ¿Falta un proveedor? Agregalo en <%= link_to "Proveedores", proveedores_path, class: "text-cec-teal hover:underline" %>.
+            </p>
+          <% else %>
+            <p class="text-sm text-amber-700 dark:text-amber-300 italic">
+              No hay proveedores de tipo "entrega_personal" configurados.
+              Pedile a un admin que los cargue en <%= link_to "Proveedores", proveedores_path, class: "underline" %>.
+            </p>
+          <% end %>
+        </div>
+        <div>
+          <%= f.label :sucursal_id, "Sucursal de Miami", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <% if @sucursales_miami.any? %>
+            <%= f.collection_select :sucursal_id, @sucursales_miami, :id, :nombre,
+                { include_blank: "— Seleccionar sucursal —" },
+                { class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Determina el código de sucursal (SMI, etc.) en el tracking generado.</p>
+          <% else %>
+            <p class="text-sm text-amber-700 dark:text-amber-300 italic">
+              No hay sucursales de Miami con código EP configurado.
+            </p>
+          <% end %>
+        </div>
+      </div>
+
+      <%# Sección 2: Cliente + Tipo de Envío %>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="relative">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Cliente</label>
+          <input type="text" placeholder="Buscar por código o nombre..."
+                 data-entrega-personal-target="clienteInput"
+                 data-action="input->entrega-personal#searchCliente"
+                 autocomplete="off"
+                 class="block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal">
+          <%= f.hidden_field :cliente_id, data: { entrega_personal_target: "clienteId" } %>
+          <div data-entrega-personal-target="clienteDropdown"
+               class="hidden absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto"></div>
+          <p data-entrega-personal-target="clienteNombre" class="hidden text-sm font-medium text-gray-700 dark:text-gray-200 mt-1"></p>
+        </div>
+        <div>
+          <%= f.label :tipo_envio_id, "Tipo de Envío", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%= f.collection_select :tipo_envio_id, @tipo_envios, :id, :nombre,
+              { include_blank: "— Seleccionar —" },
+              { class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
+        </div>
+      </div>
+
+      <%# Sección 3: Peso + Dimensiones %>
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div>
+          <%= f.label :peso, "Peso (lbs)", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%= f.number_field :peso, step: 0.01, min: 0, placeholder: "0.00",
+              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <div>
+          <%= f.label :alto, class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%= f.number_field :alto, step: 0.01, min: 0, placeholder: "0",
+              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <div>
+          <%= f.label :largo, class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%= f.number_field :largo, step: 0.01, min: 0, placeholder: "0",
+              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <div>
+          <%= f.label :ancho, class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%= f.number_field :ancho, step: 0.01, min: 0, placeholder: "0",
+              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <div>
+          <%= f.label :cantidad_productos, "Cant. Productos", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%= f.number_field :cantidad_productos, min: 0, placeholder: "1",
+              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+      </div>
+
+      <%# Sección 4: Contenido + Remitente %>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <%= f.label :descripcion, "Contenido", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%= f.text_area :descripcion, rows: 2, placeholder: "Descripción del contenido…",
+              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <div>
+          <%= f.label :remitente, "Remitente / Quien lo envía", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%= f.text_field :remitente, placeholder: "Nombre del remitente",
+              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+      </div>
+
+      <%# Sección 5: Pago — pre-pagado en Miami o se cobra en Honduras %>
+      <div class="rounded-lg ring-1 ring-cec-teal/30 bg-cec-teal/5 dark:bg-cec-teal/10 dark:ring-cec-teal/40 px-4 py-3">
+        <p class="text-sm font-semibold text-cec-teal-dark dark:text-cec-teal-light mb-2">
+          <%= heroicon "currency-dollar", variant: :solid, options: { class: "w-4 h-4 inline mr-1" } %>
+          Pago
+        </p>
+        <div class="space-y-2">
+          <label class="flex items-start gap-2 cursor-pointer">
+            <%= radio_button_tag "paquete[prepagado_miami]", "0", true,
+                class: "mt-1 border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+            <div>
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Cobrar en Honduras al entregar (default)</span>
+              <p class="text-xs text-gray-500 dark:text-gray-400">Sigue el flujo normal: PreFactura → Factura cuando llegue.</p>
+            </div>
+          </label>
+          <label class="flex items-start gap-2 cursor-pointer">
+            <%= radio_button_tag "paquete[prepagado_miami]", "1", false,
+                class: "mt-1 border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+            <div>
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Pagado aquí en Miami</span>
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                Sin factura formal. La etiqueta muestra "PREPAGADO EN MIAMI" y Honduras hace factura simbólica editable al recibir.
+              </p>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <%# Sección 6: Notas internas %>
+      <div>
+        <%= f.label :notas_internas, "Notas Internas", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <%= f.text_area :notas_internas, rows: 2, placeholder: "Notas internas del paquete…",
+            class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+
+      <%# Cantidad de cajas: modal post-F9 (mismo patrón que PR-4 etiquetar) %>
+      <%= f.hidden_field :cantidad_paquetes, value: 1,
+          data: { entrega_personal_target: "cantidadPaquetesHidden" } %>
+    </div>
+
+    <%# Action bar %>
+    <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="text-xs text-gray-400 hidden sm:flex gap-4">
+        <span><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border rounded text-xs">F2</kbd> Limpiar</span>
+        <span><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border rounded text-xs">F9</kbd> Guardar + Imprimir</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <button type="button" data-action="click->entrega-personal#clearForm"
+                class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+          Limpiar
+        </button>
+        <button type="button" data-action="click->entrega-personal#submitFormWithPrint"
+                class="px-4 py-2 text-sm font-medium bg-cec-gold text-cec-navy-dark rounded-lg hover:bg-cec-gold-dark">
+          Guardar + Imprimir (F9)
+        </button>
+      </div>
+    </div>
+  <% end %>
+
+  <%# Modal "¿Cuántas cajas?" — mismo patrón que PR-4 %>
+  <dialog data-entrega-personal-target="cajasModal"
+          aria-labelledby="modal-cajas-title"
+          style="margin: auto"
+          class="rounded-xl p-0 w-[28rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-cec-teal/40">
+    <div class="bg-cec-teal/10 px-5 py-3 border-b border-cec-teal/30">
+      <h3 id="modal-cajas-title" class="text-base font-semibold text-cec-teal-dark dark:text-cec-teal-light">
+        ¿Cuántas cajas trae esta entrega personal?
+      </h3>
+    </div>
+    <div class="p-5 space-y-4 bg-white dark:bg-gray-800">
+      <div>
+        <label for="ep-cajas-input" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+          Cantidad de cajas a imprimir
+        </label>
+        <input id="ep-cajas-input" type="number" min="1" max="26" value="1"
+               data-entrega-personal-target="cajasInput"
+               data-action="keydown->entrega-personal#cajasKeydown"
+               class="block w-full text-2xl text-center font-mono rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:ring-cec-teal focus:border-cec-teal">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Cada caja recibe su propia etiqueta (1/N, 2/N…). Máximo 26.
+        </p>
+      </div>
+    </div>
+    <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+      <button type="button" data-action="click->entrega-personal#cancelCajas"
+              class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100">
+        Cancelar
+      </button>
+      <button type="button" data-action="click->entrega-personal#confirmCajas"
+              class="px-4 py-1.5 text-sm font-medium bg-cec-gold text-cec-navy-dark rounded-lg hover:bg-cec-gold-dark">
+        Confirmar e imprimir
+      </button>
+    </div>
+  </dialog>
+
+  <%# Turbo stream events container %>
+  <div id="entrega-personal-events"></div>
+</div>
