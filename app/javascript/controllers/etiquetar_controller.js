@@ -206,7 +206,11 @@ export default class extends Controller {
   _fillAndLockClienteFromPreAlerta(data) {
     if (this.hasClienteIdTarget) this.clienteIdTarget.value = data.cliente_id
     if (this.hasClienteInputTarget) {
-      this.clienteInputTarget.value = data.cliente_codigo || ""
+      // Mostrar "CEC-006 — Maria Lopez" todo en el mismo input cuando hay lock —
+      // Jorge pidió que código y nombre vayan juntos en vez de separados.
+      const codigo = data.cliente_codigo || ""
+      const nombre = data.cliente_nombre || ""
+      this.clienteInputTarget.value = nombre ? `${codigo} — ${nombre}` : codigo
       this.clienteInputTarget.setAttribute("readonly", "readonly")
       this.clienteInputTarget.setAttribute("tabindex", "-1")
       this.clienteInputTarget.classList.add(
@@ -214,9 +218,11 @@ export default class extends Controller {
         "ring-1", "ring-cec-teal/40"
       )
     }
+    // El `<p>` separado de nombre completo deja de tener sentido cuando el
+    // código+nombre ya están juntos en el input. Lo escondemos.
     if (this.hasClienteNombreTarget) {
-      this.clienteNombreTarget.textContent = data.cliente_nombre || ""
-      this.clienteNombreTarget.classList.remove("hidden")
+      this.clienteNombreTarget.textContent = ""
+      this.clienteNombreTarget.classList.add("hidden")
     }
     if (this.hasClienteLockHintTarget) {
       this.clienteLockHintTarget.classList.remove("hidden")
