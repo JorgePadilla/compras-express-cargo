@@ -447,7 +447,12 @@ class PaquetesController < ApplicationController
   def set_paquete
     # PR-D2: motivos_retencion para los badges en show/edit.
     # PR-D3.a: proveedor para evitar query extra al renderizar el detalle.
-    @paquete = Paquete.includes(:motivos_retencion, :proveedor, :tercero).find(params[:id])
+    # PR-6b: prepagado_miami_* para evitar 2 queries extras en show cuando
+    # el banner verde de "PREPAGADO EN MIAMI" aparece (gemini-review #191).
+    @paquete = Paquete.includes(
+      :motivos_retencion, :proveedor, :tercero,
+      :prepagado_miami_sucursal, :prepagado_miami_by_user
+    ).find(params[:id])
   end
 
   def authorize_tracking_actions
