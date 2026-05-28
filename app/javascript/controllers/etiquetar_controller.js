@@ -6,7 +6,8 @@ export default class extends Controller {
     "trackingSecundario", "trackingSecundarioContainer",
     "trackingSecundarioToggle", "trackingSecundarioToggleLabel",
     "clienteInput", "clienteId", "clienteDropdown",
-    "clienteNombre", "clienteLockHint", "notasBanner", "notasTexto",
+    "clienteNombre", "clienteLockHint", "descripcion",
+    "notasBanner", "notasTexto",
     "preAlertaBanner", "preAlertaNumero", "preAlertaCliente", "preAlertaDescripcion",
     "duplicateModal", "duplicateInfo", "duplicateNewBtn", "duplicateNewHint",
     "cajasModal", "cajasInput", "cantidadPaquetesHidden",
@@ -196,6 +197,14 @@ export default class extends Controller {
     // que NO se permita cambiar el cliente cuando viene de pre-alerta —
     // evita errores de tipear código equivocado.
     if (data.cliente_id) this._fillAndLockClienteFromPreAlerta(data)
+
+    // Auto-fill descripción desde la PA (editable, NO se bloquea — Miami
+    // a veces descubre que el contenido real difiere del declarado).
+    // Solo rellena si el operador no escribió nada para no pisar input.
+    if (data.pre_alerta_descripcion && this.hasDescripcionTarget &&
+        this.descripcionTarget.value.trim() === "") {
+      this.descripcionTarget.value = data.pre_alerta_descripcion
+    }
   }
 
   _hidePreAlertaBanner() {
