@@ -6,7 +6,7 @@ export default class extends Controller {
     "trackingSecundario", "trackingSecundarioContainer",
     "trackingSecundarioToggle", "trackingSecundarioToggleLabel",
     "clienteInput", "clienteId", "clienteDropdown",
-    "clienteNombre", "notasBanner", "notasTexto",
+    "clienteNombre", "clienteLockHint", "notasBanner", "notasTexto",
     "preAlertaBanner", "preAlertaNumero", "preAlertaCliente", "preAlertaDescripcion",
     "duplicateModal", "duplicateInfo", "duplicateNewBtn", "duplicateNewHint",
     "cajasModal", "cajasInput", "cantidadPaquetesHidden",
@@ -191,11 +191,60 @@ export default class extends Controller {
     if (this.hasPreAlertaClienteTarget) this.preAlertaClienteTarget.textContent = data.pre_alerta_cliente || ""
     if (this.hasPreAlertaDescripcionTarget) this.preAlertaDescripcionTarget.textContent = data.pre_alerta_descripcion || ""
     this.preAlertaBannerTarget.classList.remove("hidden")
+
+    // Auto-fill + lock cliente cuando el JSON trae los campos. Yusef pidió
+    // que NO se permita cambiar el cliente cuando viene de pre-alerta —
+    // evita errores de tipear código equivocado.
+    if (data.cliente_id) this._fillAndLockClienteFromPreAlerta(data)
   }
 
   _hidePreAlertaBanner() {
     if (!this.hasPreAlertaBannerTarget) return
     this.preAlertaBannerTarget.classList.add("hidden")
+  }
+
+  _fillAndLockClienteFromPreAlerta(data) {
+    if (this.hasClienteIdTarget) this.clienteIdTarget.value = data.cliente_id
+    if (this.hasClienteInputTarget) {
+      this.clienteInputTarget.value = data.cliente_codigo || ""
+      this.clienteInputTarget.setAttribute("readonly", "readonly")
+      this.clienteInputTarget.setAttribute("tabindex", "-1")
+      this.clienteInputTarget.classList.add(
+        "bg-cec-teal/5", "dark:bg-cec-teal/15", "cursor-not-allowed",
+        "ring-1", "ring-cec-teal/40"
+      )
+    }
+    if (this.hasClienteNombreTarget) {
+      this.clienteNombreTarget.textContent = data.cliente_nombre || ""
+      this.clienteNombreTarget.classList.remove("hidden")
+    }
+    if (this.hasClienteLockHintTarget) {
+      this.clienteLockHintTarget.classList.remove("hidden")
+    }
+    this.hideDropdown()
+
+    // Si el cliente tiene notas Miami, mostrar banner + sonido alerta —
+    // misma lógica que selectCliente() para mantener consistencia.
+    const notas = (data.cliente_notas_miami || "").trim()
+    if (notas !== "") {
+      if (this.hasNotasTextoTarget) this.notasTextoTarget.textContent = notas
+      if (this.hasNotasBannerTarget) this.notasBannerTarget.classList.remove("hidden")
+      this.dispatch("clienteNotas")
+    }
+  }
+
+  _unlockCliente() {
+    if (this.hasClienteInputTarget) {
+      this.clienteInputTarget.removeAttribute("readonly")
+      this.clienteInputTarget.removeAttribute("tabindex")
+      this.clienteInputTarget.classList.remove(
+        "bg-cec-teal/5", "dark:bg-cec-teal/15", "cursor-not-allowed",
+        "ring-1", "ring-cec-teal/40"
+      )
+    }
+    if (this.hasClienteLockHintTarget) {
+      this.clienteLockHintTarget.classList.add("hidden")
+    }
   }
 
   _openDuplicateModal(data) {
@@ -283,6 +332,7 @@ export default class extends Controller {
     this.clienteNombreTarget.classList.add("hidden")
     this.notasBannerTarget.classList.add("hidden")
     this.duplicateModalTarget.classList.add("hidden")
+    this._unlockCliente()
     this._hidePreAlertaBanner()
     this._closeCajasModal()
     this._resetCantidadPaquetes()
