@@ -164,11 +164,12 @@ end %>
         <div class="flex items-center justify-between mb-1">
           <label class="block text-sm font-medium text-gray-700">Cliente</label>
           <%# Hint cuando el cliente fue auto-asignado desde una pre-alerta.
-              El JS lo muestra/oculta junto con el read-only del input. F2 limpia. %>
+              El input queda editable — el operador puede borrar y poner otro
+              cliente si necesita corregir. La pill solo indica el origen. %>
           <span data-etiquetar-target="clienteLockHint"
                 class="hidden inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-cec-teal/15 text-cec-teal-dark ring-1 ring-cec-teal/40"
-                title="Asignado desde la pre-alerta. F2 para limpiar y cambiar.">
-            <%= heroicon "lock-closed", variant: :solid, options: { class: "w-3 h-3" } %>
+                title="Auto-rellenado desde la pre-alerta. Podés editarlo si necesitás cambiar el cliente.">
+            <%= heroicon "information-circle", variant: :solid, options: { class: "w-3 h-3" } %>
             Pre-Alerta
           </span>
         </div>

@@ -193,10 +193,10 @@ export default class extends Controller {
     if (this.hasPreAlertaDescripcionTarget) this.preAlertaDescripcionTarget.textContent = data.pre_alerta_descripcion || ""
     this.preAlertaBannerTarget.classList.remove("hidden")
 
-    // Auto-fill + lock cliente cuando el JSON trae los campos. Yusef pidió
-    // que NO se permita cambiar el cliente cuando viene de pre-alerta —
-    // evita errores de tipear código equivocado.
-    if (data.cliente_id) this._fillAndLockClienteFromPreAlerta(data)
+    // Auto-fill cliente cuando el JSON trae los campos. Queda editable
+    // por si el operador necesita cambiarlo (Jorge), pero con pill
+    // informativa indicando que vino de la PA.
+    if (data.cliente_id) this._fillClienteFromPreAlerta(data)
 
     // Auto-fill descripción desde la PA (editable, NO se bloquea — Miami
     // a veces descubre que el contenido real difiere del declarado).
@@ -212,19 +212,18 @@ export default class extends Controller {
     this.preAlertaBannerTarget.classList.add("hidden")
   }
 
-  _fillAndLockClienteFromPreAlerta(data) {
+  _fillClienteFromPreAlerta(data) {
     if (this.hasClienteIdTarget) this.clienteIdTarget.value = data.cliente_id
     if (this.hasClienteInputTarget) {
-      // Mostrar "CEC-006 — Maria Lopez" todo en el mismo input cuando hay lock —
-      // Jorge pidió que código y nombre vayan juntos en vez de separados.
+      // Mostrar "CEC-006 — Maria Lopez" todo junto en el input cuando viene
+      // de PA. Queda editable — si el operador necesita cambiar, Ctrl+A o
+      // borrar y escribir el nuevo código dispara el dropdown de búsqueda.
       const codigo = data.cliente_codigo || ""
       const nombre = data.cliente_nombre || ""
       this.clienteInputTarget.value = nombre ? `${codigo} — ${nombre}` : codigo
-      this.clienteInputTarget.setAttribute("readonly", "readonly")
-      this.clienteInputTarget.setAttribute("tabindex", "-1")
+      // Ring teal sutil indica origen PA, pero sin cursor-not-allowed.
       this.clienteInputTarget.classList.add(
-        "bg-cec-teal/5", "dark:bg-cec-teal/15", "cursor-not-allowed",
-        "ring-1", "ring-cec-teal/40"
+        "bg-cec-teal/5", "dark:bg-cec-teal/15", "ring-1", "ring-cec-teal/40"
       )
     }
     // El `<p>` separado de nombre completo deja de tener sentido cuando el
@@ -248,13 +247,13 @@ export default class extends Controller {
     }
   }
 
-  _unlockCliente() {
+  // Limpia los estilos visuales del input cliente que ponemos cuando viene
+  // de PA (anillo teal + pill informativa). Lo usa clearForm (F2) y se podría
+  // disparar también si el operador empieza a editar el código manualmente.
+  _resetClienteFromPreAlertaStyling() {
     if (this.hasClienteInputTarget) {
-      this.clienteInputTarget.removeAttribute("readonly")
-      this.clienteInputTarget.removeAttribute("tabindex")
       this.clienteInputTarget.classList.remove(
-        "bg-cec-teal/5", "dark:bg-cec-teal/15", "cursor-not-allowed",
-        "ring-1", "ring-cec-teal/40"
+        "bg-cec-teal/5", "dark:bg-cec-teal/15", "ring-1", "ring-cec-teal/40"
       )
     }
     if (this.hasClienteLockHintTarget) {
@@ -347,7 +346,7 @@ export default class extends Controller {
     this.clienteNombreTarget.classList.add("hidden")
     this.notasBannerTarget.classList.add("hidden")
     this.duplicateModalTarget.classList.add("hidden")
-    this._unlockCliente()
+    this._resetClienteFromPreAlertaStyling()
     this._hidePreAlertaBanner()
     this._closeCajasModal()
     this._resetCantidadPaquetes()
