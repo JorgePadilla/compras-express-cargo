@@ -1468,7 +1468,11 @@ CREATE TABLE public.paquetes (
     notas_al_cliente text,
     proveedor_id bigint,
     tercero_id bigint,
-    tarifa_recolecta_id bigint
+    tarifa_recolecta_id bigint,
+    prepagado_miami boolean DEFAULT false NOT NULL,
+    prepagado_miami_sucursal_id bigint,
+    prepagado_miami_at timestamp(6) without time zone,
+    prepagado_miami_by_user_id bigint
 );
 
 
@@ -3928,6 +3932,20 @@ CREATE INDEX index_paquetes_on_pre_factura_id ON public.paquetes USING btree (pr
 
 
 --
+-- Name: index_paquetes_on_prepagado_miami_by_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_paquetes_on_prepagado_miami_by_user_id ON public.paquetes USING btree (prepagado_miami_by_user_id);
+
+
+--
+-- Name: index_paquetes_on_prepagado_miami_sucursal_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_paquetes_on_prepagado_miami_sucursal_id ON public.paquetes USING btree (prepagado_miami_sucursal_id);
+
+
+--
 -- Name: index_paquetes_on_proveedor_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5029,6 +5047,14 @@ ALTER TABLE ONLY public.manifiestos
 
 
 --
+-- Name: paquetes fk_rails_a8b9796b4b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_a8b9796b4b FOREIGN KEY (prepagado_miami_sucursal_id) REFERENCES public.sucursales(id);
+
+
+--
 -- Name: ingresos_caja fk_rails_ac3bbd36d7; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5253,6 +5279,14 @@ ALTER TABLE ONLY public.paquetes
 
 
 --
+-- Name: paquetes fk_rails_f68042788b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_f68042788b FOREIGN KEY (prepagado_miami_by_user_id) REFERENCES public.users(id);
+
+
+--
 -- Name: paquetes fk_rails_f762ed6e03; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5307,6 +5341,7 @@ ALTER TABLE ONLY public.ep_counters
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260528192218'),
 ('20260505061205'),
 ('20260505052442'),
 ('20260505025649'),

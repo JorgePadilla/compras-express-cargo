@@ -15,6 +15,10 @@ class Paquete < ApplicationRecord
   belongs_to :proveedor, optional: true  # PR-D3.a: catálogo (Amazon, Walmart, drivers privados…)
   belongs_to :tercero, class_name: "Cliente", optional: true  # PR-D3.c: cliente final cuando CEC le maneja carga a otra empresa
   belongs_to :tarifa_recolecta, optional: true  # PR-D6.a: cuando el cajero elige una tarifa del catálogo, copiamos monto+moneda
+  # PR-6 (Entrega Personal): cobro al recibir en Miami. Cuando esto está
+  # marcado, NO se emite factura formal — solo se anota que ya pagó.
+  belongs_to :prepagado_miami_sucursal, class_name: "Sucursal", optional: true
+  belongs_to :prepagado_miami_by_user,  class_name: "User",     optional: true
   has_many :pre_alerta_paquetes, dependent: :nullify
   has_many :nota_debito_items,  dependent: :nullify
   has_many :nota_credito_items, dependent: :nullify

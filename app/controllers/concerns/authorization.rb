@@ -36,7 +36,7 @@ module Authorization
 
     role = Current.user&.rol
     case feature
-    when :etiquetar, :manifiestos
+    when :etiquetar, :manifiestos, :entrega_personal
       role.in?(%w[supervisor_miami digitador_miami])
     when :pre_facturas
       role.in?(%w[supervisor_prefactura supervisor_caja cajero])

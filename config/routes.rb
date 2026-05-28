@@ -13,6 +13,12 @@ Rails.application.routes.draw do
   get "etiquetar", to: "etiquetar#index"
   post "etiquetar", to: "etiquetar#create"
 
+  # PR-6: Entrega Personal — flow separado para paquetes que llegan
+  # físicamente al mostrador (sin tracking del courier). Sistema genera
+  # tracking automático EP-YYYY-SUC-PROV-NNNNNN. Los paquetes resultantes
+  # se ven en /paquetes (listado general), no hay listado propio.
+  resources :entrega_personal, only: [ :new, :create ], path: "entrega_personal"
+
   resources :users, except: [:destroy]
 
   resources :clientes, except: [:destroy] do

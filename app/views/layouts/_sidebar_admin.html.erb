@@ -4,6 +4,7 @@
   <% if can_access?(:etiquetar) || can_access?(:manifiestos) || can_access?(:pre_alertas) || can_access?(:paquetes) %>
     <%= sidebar_section "Logistica" do %>
       <%= sidebar_link "Etiquetar", etiquetar_path, icon: "tag" if can_access?(:etiquetar) %>
+      <%= sidebar_link "Entrega Personal", new_entrega_personal_path, icon: "user-plus" if can_access?(:entrega_personal) %>
       <%= sidebar_link "Manifiestos", manifiestos_path, icon: "cube" if can_access?(:manifiestos) %>
       <%= sidebar_link "Pre-Alertas", pre_alertas_path, icon: "bell-alert" if can_access?(:pre_alertas) %>
       <%= sidebar_link "Todos los Paquetes", paquetes_path, icon: "archive-box" if can_access?(:paquetes) %>
