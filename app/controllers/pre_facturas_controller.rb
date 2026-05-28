@@ -34,10 +34,18 @@ class PreFacturasController < ApplicationController
 
     @pre_factura = PreFactura.build_from_paquetes(cliente, paquete_ids, user: Current.user)
     @pre_factura.notas = params.dig(:pre_factura, :notas)
+    prepagados = @pre_factura.prepagados_miami_detected
 
     if @pre_factura.save
-      redirect_to edit_pre_factura_path(@pre_factura),
-                  notice: "Pre-factura #{@pre_factura.numero} creada."
+      # PR-6b: si alguno de los paquetes seleccionados venía prepagado
+      # desde Miami, avisamos al cajero. La línea simbólica ya está
+      # construida; aquí solo flag-eamos visualmente.
+      notice = "Pre-factura #{@pre_factura.numero} creada."
+      if prepagados.any?
+        trackings = prepagados.map(&:tracking).join(", ")
+        notice += " #{prepagados.size} paquete(s) prepagado(s) en Miami detectado(s) (#{trackings}) — agregué cobro simbólico de $#{PreFactura::PREPAGADO_MIAMI_SIMBOLICO} c/u. Ajustá el monto si necesitas antes de facturar."
+      end
+      redirect_to edit_pre_factura_path(@pre_factura), notice: notice
     else
       @cliente = cliente
       @paquetes_facturables = cliente.paquetes.facturables.includes(:tipo_envio)

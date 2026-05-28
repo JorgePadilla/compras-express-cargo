@@ -188,6 +188,37 @@ end %>
   </div>
 <% else %>
 
+<%# PR-6b: Banner verde cuando el paquete fue prepagado en Miami. El
+    digitador de Honduras debe verlo de una vez para no cobrar doble.
+    Al agregar este paquete a una pre-factura, el sistema generará un
+    cobro simbólico automático en lugar del flete completo. %>
+<% if @paquete.prepagado_miami? %>
+  <div class="mb-4 p-4 bg-cec-teal/10 dark:bg-cec-teal/20 border border-cec-teal/40 dark:border-cec-teal/50 rounded-lg">
+    <div class="flex items-start gap-3">
+      <%= heroicon "check-badge", variant: :solid, options: { class: "w-6 h-6 text-cec-teal shrink-0 mt-0.5" } %>
+      <div class="flex-1">
+        <p class="text-base font-bold text-cec-teal-dark dark:text-cec-teal-light">
+          ✓ Este paquete ya fue pagado en Miami
+        </p>
+        <p class="text-sm text-gray-700 dark:text-gray-200 mt-1">
+          <% if @paquete.prepagado_miami_sucursal %>
+            Sucursal <span class="font-mono font-semibold"><%= @paquete.prepagado_miami_sucursal.codigo_ep || @paquete.prepagado_miami_sucursal.codigo %></span> ·
+          <% end %>
+          <% if @paquete.prepagado_miami_at %>
+            <%= @paquete.prepagado_miami_at.strftime("%d/%m/%Y %H:%M") %>
+          <% end %>
+          <% if @paquete.prepagado_miami_by_user %>
+            · Cobrado por <%= @paquete.prepagado_miami_by_user.nombre %>
+          <% end %>
+        </p>
+        <p class="text-xs text-cec-teal-dark dark:text-cec-teal-light mt-2 italic">
+          Al agregarlo a una pre-factura se generará un cobro simbólico automático — no cobres el flete completo otra vez.
+        </p>
+      </div>
+    </div>
+  </div>
+<% end %>
+
 <div class="bg-white rounded-lg shadow overflow-hidden">
   <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-3">
     <div class="flex items-center gap-3">

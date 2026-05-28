@@ -47,7 +47,7 @@
                   precio = @cliente.categoria_precio&.precio_para(p.tipo_envio) || p.tipo_envio&.precio_libra || 0
                   subtotal = ((p.peso_cobrar || 0).to_d * precio.to_d).round(2)
                 %>
-                <tr class="hover:bg-gray-50">
+                <tr class="hover:bg-gray-50 <%= 'bg-cec-teal/5' if p.prepagado_miami? %>">
                   <td class="px-4 py-3">
                     <%= check_box_tag "paquete_ids[]", p.id, false, id: "paquete_#{p.id}", class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
                   </td>
@@ -56,11 +56,32 @@
                     <% if p.tracking_secundario.present? %>
                       <div class="text-[11px] text-gray-500 mt-0.5" title="Tracking secundario"><%= truncate(p.tracking_secundario, length: 22) %></div>
                     <% end %>
+                    <% if p.prepagado_miami? %>
+                      <%# PR-6b: pill para alertar al cajero que este paquete ya
+                          está pagado. Si lo seleccionan, se agregará línea
+                          simbólica en vez del flete completo. %>
+                      <div class="mt-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-cec-teal/15 text-cec-teal-dark ring-1 ring-cec-teal/40"
+                           title="Pagado en Miami — al agregarlo a la pre-factura se cobra solo el monto simbólico">
+                        ✓ Prepagado Miami
+                      </div>
+                    <% end %>
                   </td>
                   <td class="px-6 py-3 text-sm text-gray-600"><%= p.tipo_envio&.nombre || "—" %></td>
                   <td class="px-6 py-3 text-right text-sm"><%= p.peso_cobrar || "—" %></td>
-                  <td class="px-6 py-3 text-right text-sm">L. <%= number_with_delimiter(precio.to_f, precision: 2) %></td>
-                  <td class="px-6 py-3 text-right text-sm font-medium">L. <%= number_with_delimiter(subtotal.to_f, precision: 2) %></td>
+                  <td class="px-6 py-3 text-right text-sm">
+                    <% if p.prepagado_miami? %>
+                      <span class="text-cec-teal-dark italic">simbólico</span>
+                    <% else %>
+                      L. <%= number_with_delimiter(precio.to_f, precision: 2) %>
+                    <% end %>
+                  </td>
+                  <td class="px-6 py-3 text-right text-sm font-medium">
+                    <% if p.prepagado_miami? %>
+                      <span class="text-cec-teal-dark">$<%= PreFactura::PREPAGADO_MIAMI_SIMBOLICO %></span>
+                    <% else %>
+                      L. <%= number_with_delimiter(subtotal.to_f, precision: 2) %>
+                    <% end %>
+                  </td>
                 </tr>
               <% end %>
             </tbody>

@@ -153,6 +153,26 @@
   <% end %>
 </div>
 
+<%# PR-6b: badge prominente "PREPAGADO EN MIAMI" cuando el cliente pagó
+    al recibir el paquete en Miami. Cuando llega a Honduras, el digitador
+    ve la etiqueta y sabe que solo debe agregar el cobro simbólico. %>
+<% if paquete.prepagado_miami? %>
+  <div class="wr-section" style="margin: 8px 0; padding: 10px 14px; border: 2px solid #047857; background: #ecfdf5; border-radius: 6px; text-align: center;">
+    <div style="font-weight: 800; font-size: 14px; color: #064e3b; letter-spacing: 0.04em;">
+      ✓ PREPAGADO EN MIAMI
+      <% if paquete.prepagado_miami_sucursal %>
+        · SUCURSAL <%= paquete.prepagado_miami_sucursal.codigo_ep || paquete.prepagado_miami_sucursal.codigo %>
+      <% end %>
+    </div>
+    <% if paquete.prepagado_miami_at %>
+      <div style="font-size: 10px; color: #065f46; margin-top: 2px;">
+        <%= paquete.prepagado_miami_at.strftime("%d/%m/%Y") %>
+        <% if paquete.prepagado_miami_by_user %>· por <%= paquete.prepagado_miami_by_user.nombre %><% end %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
 <%# ── Tabla de packages ── %>
 <div class="wr-section">
   <table class="wr-pkg">
