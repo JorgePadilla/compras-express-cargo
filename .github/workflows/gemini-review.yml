@@ -55,6 +55,14 @@ jobs:
         id: gemini
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # PR title y body se pasan vía env para evitar bash injection
+          # cuando contienen comillas, backticks o caracteres especiales.
+          # Ej: un title `feat: "Cambio de Servicio"` rompía el script al
+          # interpolarse directo en `PR_TITLE="${{ ... }}"`.
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          DIFF_TRUNCATED: ${{ steps.diff.outputs.truncated }}
+          DIFF_SIZE: ${{ steps.diff.outputs.diff_size }}
         run: |
           # Verify API key is set
           if [ -z "$GEMINI_API_KEY" ]; then
@@ -64,14 +72,9 @@ jobs:
           echo "API key length: ${#GEMINI_API_KEY} chars"
           echo "Using model: ${GEMINI_MODEL}"
 
-          PR_TITLE="${{ github.event.pull_request.title }}"
-          PR_BODY=$(cat <<'PRBODY'
-          ${{ github.event.pull_request.body }}
-          PRBODY
-          )
           TRUNCATION_NOTE=""
-          if [ "${{ steps.diff.outputs.truncated }}" = "true" ]; then
-            TRUNCATION_NOTE="NOTE: The diff was truncated to 100K characters. Full diff is ${{ steps.diff.outputs.diff_size }} bytes."
+          if [ "$DIFF_TRUNCATED" = "true" ]; then
+            TRUNCATION_NOTE="NOTE: The diff was truncated to 100K characters. Full diff is ${DIFF_SIZE} bytes."
           fi
 
           DIFF_CONTENT=$(cat /tmp/pr_diff_trimmed.txt)
