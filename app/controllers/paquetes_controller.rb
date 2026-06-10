@@ -355,11 +355,19 @@ class PaquetesController < ApplicationController
                               PreAlertaPaquete.where(paquete_id: paquete.id).first&.pre_alerta : nil)
 
     if pa.present?
+      cli = pa.cliente
       {
         pre_alerta_match: true,
         pre_alerta_numero: ERB::Util.html_escape(pa.numero_documento.to_s),
-        pre_alerta_cliente: ERB::Util.html_escape(pa.cliente&.nombre_completo.to_s),
-        pre_alerta_descripcion: ERB::Util.html_escape((pap&.descripcion || paquete&.descripcion).to_s)
+        pre_alerta_cliente: ERB::Util.html_escape(cli&.nombre_completo.to_s),
+        pre_alerta_descripcion: ERB::Util.html_escape((pap&.descripcion || paquete&.descripcion).to_s),
+        # Fix auto-fill cliente: el frontend usa estos campos para auto-rellenar
+        # el input "Cliente" y dejarlo en read-only (no permitir cambio al
+        # operador, evita errores de tipear código equivocado).
+        cliente_id: cli&.id,
+        cliente_codigo: ERB::Util.html_escape(cli&.codigo.to_s),
+        cliente_nombre: ERB::Util.html_escape(cli&.nombre_completo.to_s),
+        cliente_notas_miami: ERB::Util.html_escape(cli&.notas_miami.to_s)
       }
     else
       { pre_alerta_match: false }
