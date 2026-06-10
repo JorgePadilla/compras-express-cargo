@@ -6,7 +6,8 @@ export default class extends Controller {
     "trackingSecundario", "trackingSecundarioContainer",
     "trackingSecundarioToggle", "trackingSecundarioToggleLabel",
     "clienteInput", "clienteId", "clienteDropdown",
-    "clienteNombre", "notasBanner", "notasTexto",
+    "clienteNombre", "clienteLockHint", "descripcion",
+    "notasBanner", "notasTexto",
     "preAlertaBanner", "preAlertaNumero", "preAlertaCliente", "preAlertaDescripcion",
     "duplicateModal", "duplicateInfo", "duplicateNewBtn", "duplicateNewHint",
     "cajasModal", "cajasInput", "cantidadPaquetesHidden",
@@ -260,11 +261,73 @@ export default class extends Controller {
     if (this.hasPreAlertaClienteTarget) this.preAlertaClienteTarget.textContent = data.pre_alerta_cliente || ""
     if (this.hasPreAlertaDescripcionTarget) this.preAlertaDescripcionTarget.textContent = data.pre_alerta_descripcion || ""
     this.preAlertaBannerTarget.classList.remove("hidden")
+
+    // Auto-fill cliente cuando el JSON trae los campos. Queda editable
+    // por si el operador necesita cambiarlo (Jorge), pero con pill
+    // informativa indicando que vino de la PA.
+    if (data.cliente_id) this._fillClienteFromPreAlerta(data)
+
+    // Auto-fill descripción desde la PA (editable, NO se bloquea — Miami
+    // a veces descubre que el contenido real difiere del declarado).
+    // Solo rellena si el operador no escribió nada para no pisar input.
+    if (data.pre_alerta_descripcion && this.hasDescripcionTarget &&
+        this.descripcionTarget.value.trim() === "") {
+      this.descripcionTarget.value = data.pre_alerta_descripcion
+    }
   }
 
   _hidePreAlertaBanner() {
     if (!this.hasPreAlertaBannerTarget) return
     this.preAlertaBannerTarget.classList.add("hidden")
+  }
+
+  _fillClienteFromPreAlerta(data) {
+    if (this.hasClienteIdTarget) this.clienteIdTarget.value = data.cliente_id
+    if (this.hasClienteInputTarget) {
+      // Mostrar "CEC-006 — Maria Lopez" todo junto en el input cuando viene
+      // de PA. Queda editable — si el operador necesita cambiar, Ctrl+A o
+      // borrar y escribir el nuevo código dispara el dropdown de búsqueda.
+      const codigo = data.cliente_codigo || ""
+      const nombre = data.cliente_nombre || ""
+      this.clienteInputTarget.value = nombre ? `${codigo} — ${nombre}` : codigo
+      // Ring teal sutil indica origen PA, pero sin cursor-not-allowed.
+      this.clienteInputTarget.classList.add(
+        "bg-cec-teal/5", "dark:bg-cec-teal/15", "ring-1", "ring-cec-teal/40"
+      )
+    }
+    // El `<p>` separado de nombre completo deja de tener sentido cuando el
+    // código+nombre ya están juntos en el input. Lo escondemos.
+    if (this.hasClienteNombreTarget) {
+      this.clienteNombreTarget.textContent = ""
+      this.clienteNombreTarget.classList.add("hidden")
+    }
+    if (this.hasClienteLockHintTarget) {
+      this.clienteLockHintTarget.classList.remove("hidden")
+    }
+    this.hideDropdown()
+
+    // Si el cliente tiene notas Miami, mostrar banner + sonido alerta —
+    // misma lógica que selectCliente() para mantener consistencia.
+    const notas = (data.cliente_notas_miami || "").trim()
+    if (notas !== "") {
+      if (this.hasNotasTextoTarget) this.notasTextoTarget.textContent = notas
+      if (this.hasNotasBannerTarget) this.notasBannerTarget.classList.remove("hidden")
+      this.dispatch("clienteNotas")
+    }
+  }
+
+  // Limpia los estilos visuales del input cliente que ponemos cuando viene
+  // de PA (anillo teal + pill informativa). Lo usa clearForm (F2) y se podría
+  // disparar también si el operador empieza a editar el código manualmente.
+  _resetClienteFromPreAlertaStyling() {
+    if (this.hasClienteInputTarget) {
+      this.clienteInputTarget.classList.remove(
+        "bg-cec-teal/5", "dark:bg-cec-teal/15", "ring-1", "ring-cec-teal/40"
+      )
+    }
+    if (this.hasClienteLockHintTarget) {
+      this.clienteLockHintTarget.classList.add("hidden")
+    }
   }
 
   _openDuplicateModal(data) {
@@ -352,6 +415,7 @@ export default class extends Controller {
     this.clienteNombreTarget.classList.add("hidden")
     this.notasBannerTarget.classList.add("hidden")
     this.duplicateModalTarget.classList.add("hidden")
+    this._resetClienteFromPreAlertaStyling()
     this._hidePreAlertaBanner()
     this._closeCajasModal()
     this._resetCantidadPaquetes()
