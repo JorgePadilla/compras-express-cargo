@@ -78,7 +78,7 @@ end %>
 <div data-controller="etiquetar audio"
      data-etiquetar-check-url-value="<%= check_tracking_paquetes_path %>"
      data-etiquetar-buscar-url-value="<%= buscar_clientes_path %>"
-     data-action="etiquetar:success->audio#success etiquetar:clienteNotas->audio#alert etiquetar:preAlertaMatch->audio#notify click@document->etiquetar#clickOutsideDropdown">
+     data-action="etiquetar:success->audio#success etiquetar:clienteNotas->audio#alert etiquetar:preAlertaMatch->audio#speakPreAlerta click@document->etiquetar#clickOutsideDropdown">
 
   <%# ── Banner de sesión activa ── coloreado según el servicio (mismo acento
       que las tarjetas), con ícono avión/camión. Reemplaza al flash. %>
