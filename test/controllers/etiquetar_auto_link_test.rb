@@ -4,6 +4,8 @@ class EtiquetarAutoLinkTest < ActionDispatch::IntegrationTest
   setup do
     @digitador = users(:digitador)
     post session_url, params: { email_address: @digitador.email_address, password: "password123" }
+    # Etiquetar requiere una sesión de tipo de envío activa.
+    post iniciar_sesion_etiquetar_url, params: { tipo_envio_id: tipo_envios(:aereo).id }
   end
 
   test "creating a paquete auto-links matching pre_alerta_paquete" do

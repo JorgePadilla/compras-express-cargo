@@ -1,0 +1,42 @@
+<%# Contenido de tarjeta de tipo de envío: iconografía + significado.
+    Compartido por el wizard de pre-alerta (cliente) y el selector de sesión
+    de /etiquetar. Cada vista provee su propio wrapper (radio / button_to).
+    Locals: tipo (TipoEnvio), extra_note (String, opcional). %>
+<% accent = tipo_envio_accent(tipo) %>
+<% note = local_assigns[:extra_note] %>
+<% show_precio = local_assigns.fetch(:show_precio, true) %>
+<% show_badge = local_assigns.fetch(:show_badge, true) %>
+<div class="flex items-start gap-3">
+  <div class="shrink-0 w-11 h-11 rounded-xl <%= accent[:icon_bg] %> flex items-center justify-center">
+    <%= heroicon tipo_envio_icono(tipo), variant: :outline,
+        options: { class: "w-6 h-6 #{accent[:text]}" } %>
+  </div>
+  <div class="flex-1 min-w-0">
+    <div class="flex items-center gap-2 flex-wrap">
+      <p class="font-bold text-cec-navy dark:text-cec-gold text-base"><%= tipo.nombre %></p>
+      <% if show_badge && tipo.single_package? %>
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 ring-1 ring-red-200 uppercase tracking-wide">
+          1 paquete
+        </span>
+      <% end %>
+    </div>
+    <% if (desc = tipo_envio_descripcion(tipo)).present? %>
+      <p class="text-xs text-gray-600 dark:text-gray-300 mt-0.5 leading-snug"><%= desc %></p>
+    <% end %>
+    <% if show_precio && tipo.precio_libra.present? %>
+      <p class="text-sm font-semibold <%= accent[:text] %> mt-1">$<%= "%.2f" % tipo.precio_libra %><span class="text-xs text-gray-500 dark:text-gray-400 font-normal">/lb</span></p>
+    <% end %>
+    <% if tipo.sla.present? %>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 inline-flex items-center gap-1">
+        <%= heroicon "clock", variant: :outline, options: { class: "w-3 h-3" } %>
+        <%= tipo.sla %>
+      </p>
+    <% end %>
+    <% if note.present? %>
+      <p class="text-xs text-red-600 mt-1 inline-flex items-center gap-1">
+        <%= heroicon "exclamation-triangle", variant: :outline, options: { class: "w-3 h-3" } %>
+        <%= note %>
+      </p>
+    <% end %>
+  </div>
+</div>

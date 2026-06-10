@@ -14,15 +14,6 @@
     ({ label: step2_label, status: status_for.call(2) } if show_consolidacion),
     { label: "Datos del paquete", status: status_for.call(3) }
   ].compact
-
-  # Canonical v4 service descriptions (short one-liners per pre_alerta_v4.docx)
-  servicio_descripciones = {
-    "express" => "Aéreo express — sale los viernes. El más rápido.",
-    "cer"     => "Aéreo estándar. Balance entre precio y tiempo.",
-    "cem"     => "Marítimo. La opción más económica con reempaque.",
-    "cka"     => "Aéreo sin reempaque. Tu caja llega tal como la enviaste.",
-    "ckm"     => "Marítimo sin reempaque. Económico y sin manipulación."
-  }
 %>
 
 <%= render PageHeaderComponent.new(title: "Nueva Pre-Alerta", subtitle: "Sigue los pasos para crear tu pre-alerta") %>
@@ -62,16 +53,6 @@
             </div>
             <div class="p-4 space-y-3">
               <% con_reempaque_tipos.each do |tipo| %>
-                <%
-                  codigo = tipo.codigo.to_s.downcase
-                  accent = case codigo
-                           when "express" then { bg: "bg-cec-gold/10", text: "text-cec-gold",      icon_bg: "bg-cec-gold/15" }
-                           when "cer"     then { bg: "bg-cec-teal/10", text: "text-cec-teal",      icon_bg: "bg-cec-teal/15" }
-                           when "cem"     then { bg: "bg-cec-navy/5",  text: "text-cec-navy",      icon_bg: "bg-cec-navy/10" }
-                           else                { bg: "bg-slate-50",    text: "text-slate-600",     icon_bg: "bg-slate-100" }
-                           end
-                  is_maritimo = tipo.modalidad == "maritimo"
-                %>
                 <label class="cursor-pointer group block">
                   <input type="radio" name="tipo_envio_id" value="<%= tipo.id %>" class="peer sr-only"
                          data-single-package="<%= tipo.single_package? %>"
@@ -79,27 +60,7 @@
                   <div class="p-4 rounded-xl border-2 border-gray-200 bg-white
                               peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 peer-checked:ring-2 peer-checked:ring-cec-gold/30
                               hover:shadow-lg hover:border-cec-gold/50 transition-all duration-200">
-                    <div class="flex items-start gap-3">
-                      <div class="shrink-0 w-11 h-11 rounded-xl <%= accent[:icon_bg] %> flex items-center justify-center">
-                        <%= heroicon(is_maritimo ? "truck" : "paper-airplane", variant: :outline,
-                            options: { class: "w-6 h-6 #{accent[:text]}" }) %>
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <p class="font-bold text-cec-navy text-base"><%= tipo.nombre %></p>
-                        <% if (desc = servicio_descripciones[codigo]).present? %>
-                          <p class="text-xs text-gray-600 mt-0.5 leading-snug"><%= desc %></p>
-                        <% end %>
-                        <% if tipo.precio_libra.present? %>
-                          <p class="text-sm font-semibold <%= accent[:text] %> mt-1">$<%= "%.2f" % tipo.precio_libra %><span class="text-xs text-gray-500 font-normal">/lb</span></p>
-                        <% end %>
-                        <% if tipo.sla.present? %>
-                          <p class="text-xs text-gray-500 mt-0.5 inline-flex items-center gap-1">
-                            <%= heroicon "clock", variant: :outline, options: { class: "w-3 h-3" } %>
-                            <%= tipo.sla %>
-                          </p>
-                        <% end %>
-                      </div>
-                    </div>
+                    <%= render "shared/tipo_envio_card", tipo: tipo %>
                   </div>
                 </label>
               <% end %>
@@ -114,10 +75,6 @@
             </div>
             <div class="p-4 space-y-3">
               <% sin_reempaque_tipos.each do |tipo| %>
-                <%
-                  codigo = tipo.codigo.to_s.downcase
-                  is_maritimo = tipo.modalidad == "maritimo"
-                %>
                 <label class="cursor-pointer group block">
                   <input type="radio" name="tipo_envio_id" value="<%= tipo.id %>" class="peer sr-only"
                          data-single-package="<%= tipo.single_package? %>"
@@ -125,40 +82,8 @@
                   <div class="p-4 rounded-xl border-2 border-gray-200 bg-white
                               peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 peer-checked:ring-2 peer-checked:ring-cec-gold/30
                               hover:shadow-lg hover:border-cec-gold/50 transition-all duration-200">
-                    <div class="flex items-start gap-3">
-                      <div class="shrink-0 w-11 h-11 rounded-xl bg-gray-100 flex items-center justify-center">
-                        <%= heroicon(is_maritimo ? "truck" : "paper-airplane", variant: :outline,
-                            options: { class: "w-6 h-6 text-gray-600" }) %>
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 flex-wrap">
-                          <p class="font-bold text-cec-navy text-base"><%= tipo.nombre %></p>
-                          <% if tipo.single_package? %>
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 ring-1 ring-red-200 uppercase tracking-wide">
-                              1 paquete
-                            </span>
-                          <% end %>
-                        </div>
-                        <% if (desc = servicio_descripciones[codigo]).present? %>
-                          <p class="text-xs text-gray-600 mt-0.5 leading-snug"><%= desc %></p>
-                        <% end %>
-                        <% if tipo.precio_libra.present? %>
-                          <p class="text-sm font-semibold text-gray-700 mt-1">$<%= "%.2f" % tipo.precio_libra %><span class="text-xs text-gray-500 font-normal">/lb</span></p>
-                        <% end %>
-                        <% if tipo.sla.present? %>
-                          <p class="text-xs text-gray-500 mt-0.5 inline-flex items-center gap-1">
-                            <%= heroicon "clock", variant: :outline, options: { class: "w-3 h-3" } %>
-                            <%= tipo.sla %>
-                          </p>
-                        <% end %>
-                        <% if tipo.single_package? %>
-                          <p class="text-xs text-red-600 mt-1 inline-flex items-center gap-1">
-                            <%= heroicon "exclamation-triangle", variant: :outline, options: { class: "w-3 h-3" } %>
-                            Solo 1 tracking por pre-alerta
-                          </p>
-                        <% end %>
-                      </div>
-                    </div>
+                    <%= render "shared/tipo_envio_card", tipo: tipo,
+                          extra_note: (tipo.single_package? ? "Solo 1 tracking por pre-alerta" : nil) %>
                   </div>
                 </label>
               <% end %>

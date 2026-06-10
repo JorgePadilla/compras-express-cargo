@@ -263,66 +263,10 @@
       </span>
     </div>
 
-    <%# PR-D3.c (UX rev 2026-05-02): Tercero — cliente final cuando
-        CEC le maneja la carga a otra empresa pequeña.
-        Layout reorganizado: input con icono lupa flex-alineado +
-        pill de "tercero seleccionado" debajo cuando aplica. %>
-    <div class="lg:col-span-3"
-         data-controller="tercero-search"
-         data-tercero-search-url-value="<%= buscar_clientes_path %>">
-      <% tercero_sel = paquete.tercero %>
-
-      <%# Header del campo: label izquierda + descripción + clear button derecha %>
-      <div class="flex items-center justify-between mb-1.5">
-        <div class="flex items-center gap-2">
-          <%= f.label :tercero_id, "Tercero",
-              class: "text-sm font-medium text-gray-700 dark:text-gray-200" %>
-          <span class="text-[11px] text-gray-400 dark:text-gray-500 italic">
-            cliente final, si aplica
-          </span>
-        </div>
-        <button type="button"
-                data-tercero-search-target="clearButton"
-                data-action="tercero-search#clear"
-                class="<%= tercero_sel ? '' : 'hidden ' %>inline-flex items-center gap-1 text-xs text-gray-500 hover:text-red-600 transition-colors">
-          <%= heroicon "x-mark", variant: :outline, options: { class: "w-3.5 h-3.5" } %>
-          <span>Quitar</span>
-        </button>
-      </div>
-
-      <%# Input con icono lupa flex-alineado dentro del input (no absolute hardcoded) %>
-      <div class="relative">
-        <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-          <%= heroicon "magnifying-glass", variant: :outline, options: { class: "w-4 h-4" } %>
-        </span>
-        <input type="text"
-               value="<%= tercero_sel ? "#{tercero_sel.codigo} — #{tercero_sel.nombre_completo}" : '' %>"
-               placeholder="Buscar tercero por código o nombre…"
-               autocomplete="off"
-               data-tercero-search-target="input"
-               data-action="input->tercero-search#search"
-               class="block w-full pl-10 pr-3 py-2.5 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal">
-        <%= f.hidden_field :tercero_id, data: { tercero_search_target: "terceroId" } %>
-
-        <%# Dropdown ancla al input %>
-        <div data-tercero-search-target="dropdown"
-             class="hidden absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl max-h-72 overflow-auto"></div>
-      </div>
-
-      <%# Selected state: pill con datos del tercero asignado %>
-      <% if tercero_sel %>
-        <div class="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-cec-purple/10 dark:bg-cec-purple/20 ring-1 ring-cec-purple/30">
-          <%= heroicon "user-group", variant: :solid, options: { class: "w-3.5 h-3.5 text-cec-purple-dark dark:text-cec-purple-light" } %>
-          <span class="text-[10px] uppercase tracking-wider font-bold text-cec-purple-dark dark:text-cec-purple-light">Asignado:</span>
-          <span class="font-mono text-xs text-cec-navy dark:text-cec-gold"><%= tercero_sel.codigo %></span>
-          <span class="text-xs text-gray-700 dark:text-gray-200"><%= tercero_sel.nombre_completo %></span>
-        </div>
-      <% end %>
-
-      <p class="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
-        Usa esto cuando le manejas la carga a una empresa pequeña que tiene su propio cliente final.
-      </p>
-    </div>
+    <%# PR-D3.c: Tercero — cliente final cuando CEC le maneja la carga a otra
+        empresa pequeña. Extraído a shared/_tercero_field para reusarlo en
+        /etiquetar (mismo patrón tercero-search + buscar_clientes_path). %>
+    <%= render "shared/tercero_field", f: f %>
 
     <div>
       <%= f.label :peso, "Peso (lbs)", class: "block text-sm font-medium text-gray-700 mb-1" %>

@@ -1,5 +1,7 @@
 class EtiquetarController < ApplicationController
   before_action :authorize_etiquetar
+  before_action :load_tipo_envio_sesion
+  before_action :require_tipo_envio_sesion, only: :create
 
   def index
     @paquete = Paquete.new
@@ -7,6 +9,25 @@ class EtiquetarController < ApplicationController
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     @carriers = Carrier.where(activo: true).order(:nombre)
     @motivos_retencion = MotivoRetencion.activos.ordered
+  end
+
+  # El operario elige el tipo de envío que va a trabajar en este lote. Se
+  # guarda en session y aplica a cada paquete que etiquete hasta finalizar.
+  def iniciar_sesion
+    tipo = TipoEnvio.activos.find_by(id: params[:tipo_envio_id])
+    if tipo
+      session[:etiquetar_tipo_envio_id] = tipo.id
+      # Sin flash: el banner de sesión activa ya comunica el tipo elegido.
+      redirect_to etiquetar_path
+    else
+      redirect_to etiquetar_path, alert: "Seleccioná un tipo de envío válido."
+    end
+  end
+
+  # Cierra el lote actual; la próxima visita vuelve a preguntar el tipo.
+  def finalizar_sesion
+    session.delete(:etiquetar_tipo_envio_id)
+    redirect_to etiquetar_path, notice: "Sesión de etiquetado finalizada."
   end
 
   def create
@@ -36,6 +57,8 @@ class EtiquetarController < ApplicationController
     end
     @paquete.estado = "empacado"
     @paquete.user = Current.user
+    # El tipo de envío lo manda la sesión de etiquetado, no el form.
+    @paquete.tipo_envio_id = @tipo_envio_sesion.id
     if (flag = pre_factura_flag_param) != :missing
       @paquete[:pre_factura] = flag
     end
@@ -70,7 +93,8 @@ class EtiquetarController < ApplicationController
   def create_split(total_cajas)
     attrs = paquete_params.except(:cantidad_paquetes, :numero_caja).merge(
       estado: "empacado",
-      user: Current.user
+      user: Current.user,
+      tipo_envio_id: @tipo_envio_sesion.id
     )
     paquetes = Paquete.crear_split!(attrs: attrs, total_cajas: total_cajas)
     if (prov_str = proveedor_string_param) != :missing && prov_str.present?
@@ -116,6 +140,19 @@ class EtiquetarController < ApplicationController
     require_role(:supervisor_miami, :digitador_miami)
   end
 
+  # Tipo de envío activo del lote (puede ser nil → la vista muestra el prompt).
+  def load_tipo_envio_sesion
+    @tipo_envio_sesion = TipoEnvio.activos.find_by(id: session[:etiquetar_tipo_envio_id])
+    session.delete(:etiquetar_tipo_envio_id) if @tipo_envio_sesion.nil?
+  end
+
+  # No se puede etiquetar sin un tipo de envío de sesión activo.
+  def require_tipo_envio_sesion
+    return if @tipo_envio_sesion
+
+    redirect_to etiquetar_path, alert: "Iniciá una sesión de etiquetado primero."
+  end
+
   def paquetes_hoy_count
     Paquete.where(user: Current.user)
       .where(fecha_recibido_miami: Time.current.beginning_of_day..Time.current.end_of_day)
@@ -130,8 +167,9 @@ class EtiquetarController < ApplicationController
   end
 
   def paquete_params
+    # tipo_envio_id NO se permite aquí: lo fija la sesión de etiquetado.
     params.require(:paquete).permit(
-      :tracking, :tracking_secundario, :cliente_id, :tipo_envio_id, :peso,
+      :tracking, :tracking_secundario, :cliente_id, :tercero_id, :peso,
       :alto, :largo, :ancho, :cantidad_productos, :cantidad_paquetes,
       :numero_caja, :descripcion, :remitente, :expedido_por,
       :notas_internas, :notas_retencion, :pre_alerta,

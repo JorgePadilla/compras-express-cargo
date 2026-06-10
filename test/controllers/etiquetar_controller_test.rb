@@ -4,11 +4,80 @@ class EtiquetarControllerTest < ActionDispatch::IntegrationTest
   setup do
     @digitador = users(:digitador)
     post session_url, params: { email_address: @digitador.email_address, password: "password123" }
+    # Casi todos los tests etiquetan, lo cual requiere una sesión de tipo de
+    # envío activa. La arrancamos con :express por defecto.
+    post iniciar_sesion_etiquetar_url, params: { tipo_envio_id: tipo_envios(:express).id }
   end
 
   test "should get index" do
     get etiquetar_url
     assert_response :success
+  end
+
+  # ── Sesión de etiquetado por tipo de envío ──
+
+  test "index sin sesión muestra el prompt de inicio" do
+    delete finalizar_sesion_etiquetar_url
+    get etiquetar_url
+    assert_response :success
+    assert_select "h2", text: /Qué tipo de envío/
+    # Las tarjetas muestran la iconografía + significado (igual que pre-alerta).
+    assert_select "p", text: /Aéreo express/
+  end
+
+  test "iniciar_sesion fija el tipo y redirige" do
+    delete finalizar_sesion_etiquetar_url
+    post iniciar_sesion_etiquetar_url, params: { tipo_envio_id: tipo_envios(:cem).id }
+    assert_redirected_to etiquetar_path
+  end
+
+  test "iniciar_sesion con tipo inválido no arranca sesión" do
+    delete finalizar_sesion_etiquetar_url
+    post iniciar_sesion_etiquetar_url, params: { tipo_envio_id: 0 }
+    assert_redirected_to etiquetar_path
+    # sin sesión activa, crear queda bloqueado
+    assert_no_difference("Paquete.count") do
+      post etiquetar_url, params: { paquete: { tracking: "1Z999NOSESSION1", cliente_id: clientes(:juan).id } }
+    end
+  end
+
+  test "create usa el tipo de envío de la sesión e ignora el del form" do
+    post etiquetar_url, params: { paquete: {
+      tracking: "1Z999SESSIONTIPO1",
+      cliente_id: clientes(:juan).id,
+      tipo_envio_id: tipo_envios(:cem).id, # debe ser ignorado
+      peso: 3.0
+    } }
+    paquete = Paquete.find_by(tracking: "1Z999SESSIONTIPO1")
+    assert_equal tipo_envios(:express).id, paquete.tipo_envio_id
+  end
+
+  test "create sin sesión activa se rechaza" do
+    delete finalizar_sesion_etiquetar_url
+    assert_no_difference("Paquete.count") do
+      post etiquetar_url, params: { paquete: {
+        tracking: "1Z999NOSESSION2", cliente_id: clientes(:juan).id, peso: 2.0
+      } }
+    end
+    assert_redirected_to etiquetar_path
+  end
+
+  test "finalizar_sesion limpia la sesión" do
+    delete finalizar_sesion_etiquetar_url
+    assert_redirected_to etiquetar_path
+    get etiquetar_url
+    assert_select "h2", text: /Qué tipo de envío/
+  end
+
+  test "create asigna tercero_id" do
+    post etiquetar_url, params: { paquete: {
+      tracking: "1Z999TERCERO001",
+      cliente_id: clientes(:juan).id,
+      tercero_id: clientes(:maria).id,
+      peso: 4.0
+    } }
+    paquete = Paquete.find_by(tracking: "1Z999TERCERO001")
+    assert_equal clientes(:maria).id, paquete.tercero_id
   end
 
   test "should create paquete" do

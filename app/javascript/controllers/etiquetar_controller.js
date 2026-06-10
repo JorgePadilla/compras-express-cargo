@@ -19,8 +19,15 @@ export default class extends Controller {
 
   connect() {
     this._searchTimeout = null
+    this._clienteActiveIndex = -1
     this._handleGlobalKeydown = this.handleKeydown.bind(this)
     document.addEventListener("keydown", this._handleGlobalKeydown)
+    // Al cargar /etiquetar (incluida la navegación Turbo tras iniciar sesión),
+    // el cursor arranca en el primer campo: tracking. `autofocus` no es
+    // confiable en visitas Turbo, así que lo forzamos en connect.
+    requestAnimationFrame(() => {
+      if (this.hasTrackingTarget) this.trackingTarget.focus()
+    })
   }
 
   disconnect() {
@@ -102,10 +109,11 @@ export default class extends Controller {
       return
     }
 
-    this.clienteDropdownTarget.innerHTML = clientes.map(c => `
+    this.clienteDropdownTarget.innerHTML = clientes.map((c, i) => `
       <button type="button"
         class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center justify-between"
-        data-action="click->etiquetar#selectCliente"
+        data-action="click->etiquetar#selectCliente mousemove->etiquetar#hoverCliente"
+        data-index="${i}"
         data-id="${c.id}"
         data-codigo="${c.codigo}"
         data-nombre="${c.nombre}"
@@ -119,10 +127,70 @@ export default class extends Controller {
       </button>
     `).join("")
     this.showDropdown()
+    // Cargar el primer ítem como activo para confirmarlo con Enter sin mouse.
+    this._clienteActiveIndex = 0
+    this._highlightActiveCliente()
+  }
+
+  // ── Navegación por teclado del dropdown de cliente ──
+  _clienteItems() {
+    return Array.from(this.clienteDropdownTarget.querySelectorAll("[data-index]"))
+  }
+
+  _highlightActiveCliente() {
+    const items = this._clienteItems()
+    items.forEach((el, i) => {
+      const active = i === this._clienteActiveIndex
+      el.classList.toggle("bg-cec-teal/10", active)
+      if (active) el.scrollIntoView({ block: "nearest" })
+    })
+  }
+
+  _moveCliente(delta) {
+    const items = this._clienteItems()
+    if (items.length === 0) return
+    const next = this._clienteActiveIndex + delta
+    this._clienteActiveIndex = Math.max(0, Math.min(items.length - 1, next))
+    this._highlightActiveCliente()
+  }
+
+  hoverCliente(e) {
+    const idx = parseInt(e.currentTarget.dataset.index, 10)
+    if (Number.isFinite(idx) && idx !== this._clienteActiveIndex) {
+      this._clienteActiveIndex = idx
+      this._highlightActiveCliente()
+    }
+  }
+
+  clienteKeydown(e) {
+    if (this.clienteDropdownTarget.classList.contains("hidden")) return
+    const items = this._clienteItems()
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault()
+      this._moveCliente(1)
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault()
+      this._moveCliente(-1)
+    } else if (e.key === "Enter") {
+      const active = items[this._clienteActiveIndex]
+      if (active) {
+        e.preventDefault() // no enviar el form: solo seleccionar el cliente
+        this._selectClienteEl(active)
+      }
+    } else if (e.key === "Escape") {
+      e.preventDefault()
+      this.hideDropdown()
+    } else if (e.key === "Tab") {
+      this.hideDropdown()
+    }
   }
 
   selectCliente(e) {
-    const btn = e.currentTarget
+    this._selectClienteEl(e.currentTarget)
+  }
+
+  _selectClienteEl(btn) {
     const id = btn.dataset.id
     const codigo = btn.dataset.codigo
     const nombre = btn.dataset.nombre
@@ -148,6 +216,7 @@ export default class extends Controller {
 
   hideDropdown() {
     this.clienteDropdownTarget.classList.add("hidden")
+    this._clienteActiveIndex = -1
   }
 
   showDropdown() {
