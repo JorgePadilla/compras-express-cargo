@@ -98,8 +98,9 @@ end %>
     </div>
   </div>
 
-  <%# Etiquetar form %>
-  <%= form_with model: @paquete, url: etiquetar_path, data: { etiquetar_target: "form" }, class: "bg-white rounded-lg shadow p-6" do |f| %>
+  <%# Etiquetar form (PR-7) — card pattern consistente con /paquetes %>
+  <%= form_with model: @paquete, url: etiquetar_path, data: { etiquetar_target: "form" },
+                class: "bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-200 dark:ring-gray-700 p-6" do |f| %>
     <% if @paquete.errors.any? %>
       <div class="mb-6 p-4 bg-red-50 rounded-lg">
         <div class="flex items-center gap-2 mb-2">
@@ -348,27 +349,17 @@ end %>
       </div>
     </div>
 
-    <%# Action bar %>
-    <div class="mt-6 pt-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <div class="text-xs text-gray-400 hidden sm:flex gap-4">
-        <span><kbd class="px-1.5 py-0.5 bg-gray-100 border rounded text-xs">F2</kbd> Limpiar</span>
-        <span><kbd class="px-1.5 py-0.5 bg-gray-100 border rounded text-xs">F8</kbd> Guardar</span>
-        <span><kbd class="px-1.5 py-0.5 bg-gray-100 border rounded text-xs">F9</kbd> Guardar + Imprimir</span>
-      </div>
-      <div class="flex items-center gap-3">
-        <button type="button" data-action="click->etiquetar#clearForm"
-                class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50">
-          Limpiar
-        </button>
-        <button type="submit" data-etiquetar-target="submitBtn"
-                class="px-4 py-2 text-sm font-medium bg-cec-navy text-white rounded-lg hover:bg-cec-navy-light">
-          Guardar
-        </button>
-        <button type="button" data-action="click->etiquetar#submitFormWithPrint"
-                class="px-4 py-2 text-sm font-medium bg-cec-gold text-cec-navy-dark rounded-lg hover:bg-cec-gold-dark">
-          Guardar + Imprimir
-        </button>
-      </div>
+    <%# Action bar (PR-7) — ButtonComponent muestra el atajo inline %>
+    <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
+      <%= render ButtonComponent.new(variant: :secondary, size: :md,
+            icon: "x-mark", shortcut: "F2",
+            data: { action: "click->etiquetar#clearForm" }) { "Limpiar" } %>
+      <%= render ButtonComponent.new(variant: :primary, size: :md, type: "submit",
+            icon: "check", shortcut: "F8",
+            data: { etiquetar_target: "submitBtn" }) { "Guardar" } %>
+      <%= render ButtonComponent.new(variant: :gold, size: :md,
+            icon: "printer", shortcut: "F9",
+            data: { action: "click->etiquetar#submitFormWithPrint" }) { "Guardar + Imprimir" } %>
     </div>
   <% end %>
 
