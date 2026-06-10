@@ -12,6 +12,10 @@ Rails.application.routes.draw do
   # Etiquetar (Miami labeling)
   get "etiquetar", to: "etiquetar#index"
   post "etiquetar", to: "etiquetar#create"
+  # Sesión de etiquetado por tipo de envío: el operario elige el tipo una vez
+  # al inicio (queda en session) y lo cierra al terminar el lote.
+  post   "etiquetar/sesion", to: "etiquetar#iniciar_sesion",  as: :iniciar_sesion_etiquetar
+  delete "etiquetar/sesion", to: "etiquetar#finalizar_sesion", as: :finalizar_sesion_etiquetar
 
   # PR-6: Entrega Personal — flow separado para paquetes que llegan
   # físicamente al mostrador (sin tracking del courier). Sistema genera

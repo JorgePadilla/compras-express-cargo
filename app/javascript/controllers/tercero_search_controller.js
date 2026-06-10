@@ -20,6 +20,7 @@ export default class extends Controller {
 
   connect() {
     this._timeout = null
+    this._activeIndex = -1
     this.toggleClearButton()
   }
 
@@ -63,11 +64,12 @@ export default class extends Controller {
       return
     }
 
-    clientes.forEach(c => {
+    clientes.forEach((c, i) => {
       const btn = document.createElement("button")
       btn.type = "button"
       btn.className = "w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center justify-between"
-      btn.dataset.action = "click->tercero-search#select"
+      btn.dataset.action = "click->tercero-search#select mousemove->tercero-search#hover"
+      btn.dataset.index = i
       btn.dataset.id = c.id
       btn.dataset.codigo = c.codigo
       btn.dataset.nombre = c.nombre
@@ -87,10 +89,68 @@ export default class extends Controller {
       this.dropdownTarget.appendChild(btn)
     })
     this.showDropdown()
+    // Cargar el primer ítem como activo para confirmarlo con Enter sin mouse.
+    this._activeIndex = 0
+    this._highlightActive()
+  }
+
+  // ── Navegación por teclado ──
+  _items() {
+    return Array.from(this.dropdownTarget.querySelectorAll("[data-index]"))
+  }
+
+  _highlightActive() {
+    this._items().forEach((el, i) => {
+      const active = i === this._activeIndex
+      el.classList.toggle("bg-cec-teal/10", active)
+      if (active) el.scrollIntoView({ block: "nearest" })
+    })
+  }
+
+  _move(delta) {
+    const items = this._items()
+    if (items.length === 0) return
+    this._activeIndex = Math.max(0, Math.min(items.length - 1, this._activeIndex + delta))
+    this._highlightActive()
+  }
+
+  hover(e) {
+    const idx = parseInt(e.currentTarget.dataset.index, 10)
+    if (Number.isFinite(idx) && idx !== this._activeIndex) {
+      this._activeIndex = idx
+      this._highlightActive()
+    }
+  }
+
+  keydown(e) {
+    if (this.dropdownTarget.classList.contains("hidden")) return
+    const items = this._items()
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault()
+      this._move(1)
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault()
+      this._move(-1)
+    } else if (e.key === "Enter") {
+      const active = items[this._activeIndex]
+      if (active) {
+        e.preventDefault() // no enviar el form: solo seleccionar el tercero
+        this._selectEl(active)
+      }
+    } else if (e.key === "Escape") {
+      e.preventDefault()
+      this.hideDropdown()
+    } else if (e.key === "Tab") {
+      this.hideDropdown()
+    }
   }
 
   select(e) {
-    const btn = e.currentTarget
+    this._selectEl(e.currentTarget)
+  }
+
+  _selectEl(btn) {
     this.terceroIdTarget.value = btn.dataset.id
     this.inputTarget.value = `${btn.dataset.codigo} — ${btn.dataset.nombre}`
     if (this.hasNombreTarget) {
@@ -120,6 +180,7 @@ export default class extends Controller {
 
   hideDropdown() {
     this.dropdownTarget.classList.add("hidden")
+    this._activeIndex = -1
   }
 
   showDropdown() {
