@@ -484,3 +484,52 @@ El listado `/paquetes` (admin) tiene un panel "Filtros avanzados" colapsable con
 - Controller: `app/controllers/paquetes_controller.rb` (acción `index`, método privado `apply_filters`).
 - Stimulus: `app/javascript/controllers/client_autocomplete_controller.js`, `app/javascript/controllers/pre_alerta_search_controller.js`, `app/javascript/controllers/f2_clear_controller.js`.
 - Modelo: `app/models/paquete.rb` (scopes `buscar`, `by_cliente`, `by_pre_alerta`, etc.).
+
+---
+
+## Etiquetar — sesión por tipo de envío, tercero y calculadora
+
+Rediseño del mostrador `/etiquetar` (branch `feat/etiquetar-sesion-tercero-calc`). El operario etiqueta lotes de 10 a 1000+ paquetes del mismo tipo de envío, así que el flujo se optimizó para teclado y para elegir el tipo una sola vez por lote.
+
+### Sesión por tipo de envío (server-side, sin tabla)
+- Al entrar sin sesión activa, `/etiquetar` muestra un selector **"¿Qué tipo de envío vas a trabajar?"** con tarjetas ricas (ícono avión/camión, descripción del servicio y SLA) agrupadas en dos columnas (con / sin reempaque) — mismo patrón visual que el wizard de pre-alerta del cliente.
+- Click en una tarjeta → `POST /etiquetar/sesion` (`iniciar_sesion`), que guarda `session[:etiquetar_tipo_envio_id]`. El tipo aplica a **todos** los paquetes del lote; ya **no** hay dropdown de tipo por paquete.
+- Banner de **sesión activa coloreado por servicio** (acento del tipo) + botón **"Finalizar sesión de este tipo de envío"** → `DELETE /etiquetar/sesion` (`finalizar_sesion`).
+- `create` toma `tipo_envio_id` de la sesión (no del form) y rechaza el guardado si no hay sesión activa (`before_action :require_tipo_envio_sesion`).
+
+### Cliente tercero
+- Campo **Tercero** (cliente final, FK `paquetes.tercero_id` → `Cliente`) debajo de Cliente. Partial compartido `shared/_tercero_field` que reusa el controller `tercero-search` + endpoint `/clientes/buscar`. `tercero_id` se permite en `paquete_params`.
+
+### Orden del formulario
+Tracking → Cliente → **Tercero** → Descripción → **Retener** (modal de motivos) → Carrier / Proveedor → Notas internas → **Peso / medidas / Cant. productos** (al final, junto a la calculadora).
+
+### Calculadora 3-formas (solo display, no afluye en precio)
+Una sola medida en **pulgadas** (alto × largo × ancho) → tres representaciones en vivo:
+- **USA → HN · libra o volumen** ("la más común"): `VLbs = pulg³ / 166`, redondeo a ½ libra con umbrales **.10 / .60** (frac < .10 baja, .10–.59 → .50, ≥ .60 sube); **peso a cobrar = max(peso real, VLbs)**.
+- **USA → HN · pie³** (informativo): `pulg³ / 1728`, **ceil** a entero.
+- **China → HN · m³** (informativo): `pulg³ × 16.387064 / 1_000_000`, **ceil a 2 decimales**.
+
+Fuente de verdad testeada: `VolumetricoCalculator` (PORO) con espejo en el Stimulus `calc-volumetrico`. **No** modifica `peso_cobrar` / `peso_volumetrico`; el precio se sigue calculando en Pre-Factura.
+
+### UX y atajos de teclado
+- **Foco inicial en Tracking** al cargar (forzado en `connect`, porque `autofocus` no es confiable en navegación Turbo).
+- Autocompletes (Cliente y Tercero): al desplegar resultados el **primer ítem queda resaltado**; **↓ / ↑** navegan, **Enter** selecciona (con `preventDefault`, no envía el form), **Esc** cierra, **Tab** cierra y avanza. Mismo patrón que los filtros de `/paquetes`.
+- **F2** limpiar · **F3** tracking secundario · **F8** guardar · **F9** guardar + imprimir (modal de cajas).
+
+### Presentación de tipos de envío (compartida con pre-alerta)
+- `TipoEnvioPresentationHelper`: descripciones canónicas v4 + acento por código (`text`/`icon_bg`/`bg`/`ring`) + ícono por modalidad (avión/camión).
+- `shared/_tipo_envio_card` renderiza la tarjeta (ícono + nombre + descripción + SLA, opcional precio/badge). Flags `show_precio` / `show_badge` (default `true`); `/etiquetar` los apaga, el wizard del cliente los deja en `true`.
+- Reusado por `app/views/cuenta/pre_alertas/new.html.erb` (paso 1) y por el selector de `/etiquetar`.
+
+### Endpoints
+- `POST /etiquetar/sesion` → `EtiquetarController#iniciar_sesion` (`iniciar_sesion_etiquetar_path`).
+- `DELETE /etiquetar/sesion` → `EtiquetarController#finalizar_sesion` (`finalizar_sesion_etiquetar_path`).
+
+### Archivos
+- Controller: `app/controllers/etiquetar_controller.rb`.
+- Vistas: `app/views/etiquetar/index.html.erb`, `app/views/shared/_tercero_field.html.erb`, `app/views/shared/_tipo_envio_card.html.erb`, `app/views/cuenta/pre_alertas/new.html.erb` (refactor a partial compartido).
+- Helper: `app/helpers/tipo_envio_presentation_helper.rb`.
+- Servicio: `app/services/volumetrico_calculator.rb` (tests en `test/services/volumetrico_calculator_test.rb`).
+- Stimulus: `app/javascript/controllers/etiquetar_controller.js`, `calc_volumetrico_controller.js`, `tercero_search_controller.js`.
+- Rutas: `config/routes.rb`.
+- Tests: `test/controllers/etiquetar_controller_test.rb`, `test/controllers/etiquetar_auto_link_test.rb`.
