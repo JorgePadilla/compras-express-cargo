@@ -6,7 +6,7 @@ export default class extends Controller {
     "trackingSecundario", "trackingSecundarioContainer",
     "trackingSecundarioToggle", "trackingSecundarioToggleLabel",
     "clienteInput", "clienteId", "clienteDropdown",
-    "clienteNombre", "clienteLockHint", "descripcion",
+    "clienteNombre", "descripcion",
     "notasBanner", "notasTexto",
     "preAlertaBanner", "preAlertaNumero", "preAlertaCliente", "preAlertaDescripcion",
     "duplicateModal", "duplicateInfo", "duplicateNewBtn", "duplicateNewHint",
@@ -301,9 +301,6 @@ export default class extends Controller {
       this.clienteNombreTarget.textContent = ""
       this.clienteNombreTarget.classList.add("hidden")
     }
-    if (this.hasClienteLockHintTarget) {
-      this.clienteLockHintTarget.classList.remove("hidden")
-    }
     this.hideDropdown()
 
     // Si el cliente tiene notas Miami, mostrar banner + sonido alerta —
@@ -324,9 +321,6 @@ export default class extends Controller {
       this.clienteInputTarget.classList.remove(
         "bg-cec-teal/5", "dark:bg-cec-teal/15", "ring-1", "ring-cec-teal/40"
       )
-    }
-    if (this.hasClienteLockHintTarget) {
-      this.clienteLockHintTarget.classList.add("hidden")
     }
   }
 
