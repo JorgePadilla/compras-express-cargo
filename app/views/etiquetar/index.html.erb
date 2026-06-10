@@ -1,3 +1,10 @@
+<%# /etiquetar cambia según el estado de sesión (chooser vs banner + form).
+    Turbo NO debe cachear/previsualizar esta página: un snapshot viejo se
+    combinaba con el render fresco y duplicaba el banner de "Sesión activa". %>
+<% content_for :head do %>
+  <meta name="turbo-cache-control" content="no-cache">
+<% end %>
+
 <%= render PageHeaderComponent.new(title: "Etiquetar Paquetes", subtitle: "Registro de paquetes en Miami") do |header|
   header.with_action do
     tag.span(class: "inline-flex items-center gap-2 text-sm text-gray-600") do
