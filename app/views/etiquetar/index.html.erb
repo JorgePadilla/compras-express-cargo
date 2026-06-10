@@ -244,18 +244,7 @@ end %>
 
       <%# Cliente (autocomplete) %>
       <div class="relative">
-        <div class="flex items-center justify-between mb-1">
-          <label class="block text-sm font-medium text-gray-700">Cliente</label>
-          <%# Hint cuando el cliente fue auto-asignado desde una pre-alerta.
-              El input queda editable — el operador puede borrar y poner otro
-              cliente si necesita corregir. La pill solo indica el origen. %>
-          <span data-etiquetar-target="clienteLockHint"
-                class="hidden inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-cec-teal/15 text-cec-teal-dark ring-1 ring-cec-teal/40"
-                title="Auto-rellenado desde la pre-alerta. Podés editarlo si necesitás cambiar el cliente.">
-            <%= heroicon "information-circle", variant: :solid, options: { class: "w-3 h-3" } %>
-            Pre-Alerta
-          </span>
-        </div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
         <input type="text" placeholder="Buscar por código o nombre..."
                data-etiquetar-target="clienteInput"
                data-action="input->etiquetar#searchCliente keydown->etiquetar#clienteKeydown"
@@ -483,17 +472,28 @@ end %>
       <%= f.hidden_field :cantidad_paquetes, value: 1, data: { etiquetar_target: "cantidadPaquetesHidden" } %>
     </div>
 
-    <%# Action bar (PR-7) — ButtonComponent muestra el atajo inline %>
-    <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
-      <%= render ButtonComponent.new(variant: :secondary, size: :md,
-            icon: "x-mark", shortcut: "F2",
-            data: { action: "click->etiquetar#clearForm" }) { "Limpiar" } %>
-      <%= render ButtonComponent.new(variant: :primary, size: :md, type: "submit",
-            icon: "check", shortcut: "F8",
-            data: { etiquetar_target: "submitBtn" }) { "Guardar" } %>
-      <%= render ButtonComponent.new(variant: :gold, size: :md,
-            icon: "printer", shortcut: "F9",
-            data: { action: "click->etiquetar#submitFormWithPrint" }) { "Guardar + Imprimir" } %>
+    <%# Action bar — leyenda de atajos a la izquierda + botones con palabra y su
+        tecla F (preferencia de Jorge sobre el bar sin leyenda de PR-7). %>
+    <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="text-xs text-gray-400 dark:text-gray-500 hidden sm:flex gap-4">
+        <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F2</kbd> Limpiar</span>
+        <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F8</kbd> Guardar</span>
+        <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F9</kbd> Guardar + Imprimir</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <button type="button" data-action="click->etiquetar#clearForm"
+                class="inline-flex items-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
+          Limpiar <kbd class="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[10px] font-sans">F2</kbd>
+        </button>
+        <button type="submit" data-etiquetar-target="submitBtn"
+                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-cec-navy text-white rounded-lg hover:bg-cec-navy-light">
+          Guardar <kbd class="px-1 py-0.5 bg-white/20 rounded text-[10px] font-sans">F8</kbd>
+        </button>
+        <button type="button" data-action="click->etiquetar#submitFormWithPrint"
+                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-cec-gold text-cec-navy-dark rounded-lg hover:bg-cec-gold-dark">
+          Guardar + Imprimir <kbd class="px-1 py-0.5 bg-black/10 rounded text-[10px] font-sans">F9</kbd>
+        </button>
+      </div>
     </div>
   <% end %>
 
