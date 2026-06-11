@@ -1,12 +1,12 @@
 class ButtonComponent < ViewComponent::Base
   VARIANTS = {
     primary: "bg-gradient-to-r from-cec-navy to-cec-navy-light text-white hover:from-cec-navy-light hover:to-cec-navy shadow-sm",
-    secondary: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 shadow-sm",
+    secondary: "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm",
     danger: "bg-cec-danger text-white hover:bg-red-600 shadow-sm",
     gold: "btn-gold-gradient text-cec-navy-dark font-semibold shadow-sm shadow-cec-gold/25",
     teal: "bg-cec-teal text-white hover:bg-cec-teal-dark shadow-sm",
     purple: "bg-cec-purple text-white hover:bg-cec-purple-dark shadow-sm shadow-cec-purple/25",
-    ghost: "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+    ghost: "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
   }.freeze
 
   SIZES = {
