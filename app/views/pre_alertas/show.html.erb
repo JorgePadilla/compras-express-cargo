@@ -89,6 +89,7 @@
             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tracking</th>
             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripcion</th>
             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Paquete Vinculado</th>
           </tr>
         </thead>
@@ -100,8 +101,14 @@
               <td class="px-4 py-3 text-sm text-gray-500"><%= pap.fecha&.strftime("%d/%m/%Y") || "—" %></td>
               <td class="px-4 py-3">
                 <% if pap.paquete %>
-                  <%= link_to paquete_display_id(pap.paquete), paquete_path(pap.paquete), class: "font-mono text-sm text-cec-navy hover:underline" %>
                   <%= render StatusBadgeComponent.new(status: pap.paquete.estado) %>
+                <% else %>
+                  <%= render StatusBadgeComponent.new(status: "pre_alerta", label: "Pre Alerta") %>
+                <% end %>
+              </td>
+              <td class="px-4 py-3">
+                <% if pap.paquete %>
+                  <%= link_to paquete_display_id(pap.paquete), paquete_path(pap.paquete), class: "font-mono text-sm text-cec-navy hover:underline" %>
                 <% else %>
                   <span class="text-xs text-gray-400">Sin vincular</span>
                 <% end %>

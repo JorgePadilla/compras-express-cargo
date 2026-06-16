@@ -39,6 +39,12 @@ class PreAlertasControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show paquetes table tiene columna Estado" do
+    get pre_alerta_url(@pre_alerta)
+    assert_response :success
+    assert_select "th", text: "Estado"
+  end
+
   # New / Create
   test "should get new" do
     get new_pre_alerta_url
