@@ -194,12 +194,14 @@ end %>
 
     <%# Action bar (PR-7) — ButtonComponent muestra el atajo inline %>
     <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
-      <%= render ButtonComponent.new(variant: :secondary, size: :md,
+      <%# render(...) con paréntesis: si no, el bloque `{ "..." }` se asocia a
+          ButtonComponent.new (no a render) y el texto se pierde. %>
+      <%= render(ButtonComponent.new(variant: :secondary, size: :md,
             icon: "x-mark", shortcut: "F2",
-            data: { action: "click->entrega-personal#clearForm" }) { "Limpiar" } %>
-      <%= render ButtonComponent.new(variant: :gold, size: :md,
+            data: { action: "click->entrega-personal#clearForm" })) { "Limpiar" } %>
+      <%= render(ButtonComponent.new(variant: :gold, size: :md,
             icon: "printer", shortcut: "F9",
-            data: { action: "click->entrega-personal#submitFormWithPrint" }) { "Guardar + Imprimir" } %>
+            data: { action: "click->entrega-personal#submitFormWithPrint" })) { "Guardar + Imprimir" } %>
     </div>
   <% end %>
 
