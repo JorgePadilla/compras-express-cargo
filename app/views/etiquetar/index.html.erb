@@ -116,35 +116,6 @@ end %>
     <% end %>
   </div>
 
-  <%# ── Banner de sesión activa ── coloreado según el servicio (mismo acento
-      que las tarjetas), con ícono avión/camión. Reemplaza al flash. %>
-  <% sesion_accent = tipo_envio_accent(@tipo_envio_sesion) %>
-  <div class="mb-4 flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4 rounded-xl <%= sesion_accent[:bg] %> ring-1 <%= sesion_accent[:ring] %>">
-    <div class="flex items-center gap-3">
-      <div class="shrink-0 w-10 h-10 rounded-xl <%= sesion_accent[:icon_bg] %> flex items-center justify-center">
-        <%= heroicon tipo_envio_icono(@tipo_envio_sesion), variant: :solid,
-            options: { class: "w-5 h-5 #{sesion_accent[:text]}" } %>
-      </div>
-      <div>
-        <p class="text-[10px] uppercase tracking-wider font-bold text-gray-500 dark:text-gray-400">Sesión activa</p>
-        <div class="flex items-center gap-2">
-          <span class="font-bold text-lg <%= sesion_accent[:text] %> dark:text-gray-100"><%= @tipo_envio_sesion.nombre %></span>
-          <span class="inline-flex items-center text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded
-                       <%= @tipo_envio_sesion.modalidad == 'maritimo' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800' %>">
-            <%= @tipo_envio_sesion.modalidad %>
-          </span>
-        </div>
-      </div>
-    </div>
-    <%= button_to finalizar_sesion_etiquetar_path,
-          method: :delete, form_class: "contents",
-          data: { turbo_confirm: "¿Finalizar la sesión de #{@tipo_envio_sesion.nombre}? Vas a poder elegir otro tipo de envío." },
-          class: "inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-full bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 ring-1 ring-gray-300 dark:ring-gray-600 shadow-sm hover:bg-red-600 hover:text-white hover:ring-red-600 transition-colors" do %>
-      <%= heroicon "x-circle", variant: :solid, options: { class: "w-4 h-4" } %>
-      Finalizar sesión de este tipo de envío
-    <% end %>
-  </div>
-
   <%# Flash messages area %>
   <div id="flash-messages" class="mb-4">
     <% if flash[:notice] %>
