@@ -5,6 +5,8 @@ Rails.application.routes.draw do
 
   resource :preferencia_tema, only: [:update], controller: "theme_preferences"
   resource :preferencia_sidebar, only: [:update], controller: "sidebar_preferences"
+  # PR-9.c: on/off + volumen de los tonos de escaneo, por usuario.
+  resource :preferencia_sonido, only: [:update], controller: "sonido_preferences"
 
   # Health check for Render
   get "up" => "rails/health#show", as: :rails_health_check
@@ -55,6 +57,20 @@ Rails.application.routes.draw do
     end
     resources :reempaques, only: [:index, :new, :create, :show]
   end
+
+  # PR-9.a: rutas top-level para tareas que cuelgan del CLIENTE y todavía no
+  # tienen paquete (en /etiquetar el paquete no existe cuando el operario
+  # escanea). Las anidadas bajo :paquetes se mantienen para /paquetes/:id/tareas.
+  resources :tareas, only: [ :new, :create ] do
+    member do
+      post :completar
+      post :reabrir
+    end
+  end
+
+  # PR-9.b: franja de contexto (cliente + tareas + notas) que se carga como
+  # turbo-frame en /etiquetar y /entrega_personal.
+  get "panel_contexto", to: "panel_contexto#show"
 
   resources :sucursales, except: [:show]
 

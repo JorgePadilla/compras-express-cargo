@@ -80,18 +80,54 @@ end %>
       <dd class="mt-1 text-sm text-gray-900"><%= l(@cliente.created_at, format: :long) rescue @cliente.created_at.strftime("%d/%m/%Y %H:%M") %></dd>
     </div>
 
-    <% if @cliente.notas_miami.present? %>
+    <%# PR-9.b: las 4 notas permanentes, no solo Miami/Honduras. `notas_caja`
+        y `notas_sac` existían desde PR-D2 y eran editables, pero esta vista
+        nunca las mostraba. Se listan en orden por departamento
+        (User::NOTAS_DEPARTAMENTO_ORDEN) y filtradas por el área del usuario. %>
+    <% Current.user&.notas_permanentes_visibles&.each do |n| %>
+      <% texto = @cliente.public_send(n[:campo]) %>
+      <% next if texto.blank? %>
       <div class="md:col-span-2">
-        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Notas Miami</dt>
-        <dd class="mt-1 text-sm text-gray-900 bg-amber-50 border border-amber-200 rounded-lg p-3"><%= simple_format(@cliente.notas_miami) %></dd>
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Notas <%= n[:etiqueta] %></dt>
+        <dd class="mt-1 text-sm text-gray-900 bg-amber-50 border border-amber-200 rounded-lg p-3"><%= simple_format(texto) %></dd>
       </div>
     <% end %>
+  </div>
+</div>
 
-    <% if @cliente.notas_honduras.present? %>
-      <div class="md:col-span-2">
-        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Notas Honduras</dt>
-        <dd class="mt-1 text-sm text-gray-900 bg-blue-50 border border-blue-200 rounded-lg p-3"><%= simple_format(@cliente.notas_honduras) %></dd>
-      </div>
+<%# PR-9.b: tareas del cliente — las que cualquier área le deja y que el
+    digitador ve (y marca) en la franja de /etiquetar. %>
+<% tareas_cliente = @cliente.tareas.abiertas.includes(:asignado_a).order(:created_at) %>
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden mt-6">
+  <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3">
+    <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100 inline-flex items-center gap-2">
+      <%= heroicon "clipboard-document-check", variant: :solid, options: { class: "w-5 h-5 text-cec-teal" } %>
+      Tareas pendientes del cliente
+    </h2>
+    <% if Current.user&.rol.in?(TareasController::GESTION_ROLES) || Current.user&.admin? %>
+      <%= render(ButtonComponent.new(variant: :teal, size: :sm, icon: "plus",
+            href: new_tarea_path(cliente_id: @cliente.id))) { "Nueva tarea" } %>
+    <% end %>
+  </div>
+  <div class="px-6 py-4">
+    <% if tareas_cliente.any? %>
+      <ul class="space-y-2">
+        <% tareas_cliente.each do |tarea| %>
+          <li class="flex items-start gap-3 p-3 rounded-lg bg-slate-50 dark:bg-gray-700/50 ring-1 ring-slate-200 dark:ring-gray-600">
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-medium text-gray-900 dark:text-gray-100"><%= tarea.titulo %></p>
+              <% if tarea.descripcion.present? %>
+                <p class="text-xs text-gray-600 dark:text-gray-300 mt-0.5 whitespace-pre-line"><%= tarea.descripcion %></p>
+              <% end %>
+            </div>
+            <span class="shrink-0 inline-flex items-center text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-cec-navy/5 dark:bg-cec-navy/30 text-cec-navy dark:text-cec-gold ring-1 ring-cec-navy/20">
+              <%= tarea.departamento_label %>
+            </span>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="text-xs italic text-gray-400 dark:text-gray-500">— sin tareas pendientes —</p>
     <% end %>
   </div>
 </div>

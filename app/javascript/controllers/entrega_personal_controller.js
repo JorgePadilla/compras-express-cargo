@@ -8,7 +8,7 @@ export default class extends Controller {
   static targets = [
     "form", "clienteInput", "clienteId", "clienteDropdown", "clienteNombre",
     "cajasModal", "cajasInput", "cantidadPaquetesHidden",
-    "event"
+    "event", "panel"
   ]
 
   connect() {
@@ -81,7 +81,22 @@ export default class extends Controller {
     this.clienteInputTarget.value = btn.dataset.codigo
     this.clienteNombreTarget.textContent = btn.dataset.nombre
     this.clienteNombreTarget.classList.remove("hidden")
+    // PR-9.b: jalar tareas + notas del cliente a la franja de la derecha.
+    this.loadPanel(btn.dataset.id)
     this.hideDropdown()
+  }
+
+  // Recarga el turbo-frame de la franja. Sin tracking que pasar: en entrega
+  // personal el tracking lo genera el sistema al guardar (EP-AÑO-SUC-PROV-N).
+  loadPanel(clienteId) {
+    if (!this.hasPanelTarget) return
+
+    const frame = this.panelTarget.querySelector("turbo-frame#panel_contexto")
+    if (!frame) return
+
+    const base = this.panelTarget.dataset.panelUrl
+    const url = clienteId ? `${base}?cliente_id=${encodeURIComponent(clienteId)}` : base
+    if (frame.getAttribute("src") !== url) frame.setAttribute("src", url)
   }
 
   hideDropdown() { this.clienteDropdownTarget.classList.add("hidden") }
@@ -164,6 +179,8 @@ export default class extends Controller {
       this.clienteNombreTarget.textContent = ""
       this.clienteNombreTarget.classList.add("hidden")
     }
+    // PR-9.b: la franja vuelve a su estado vacío junto con el formulario.
+    this.loadPanel(null)
     this._closeCajasModal()
     this._resetCantidadPaquetes()
   }

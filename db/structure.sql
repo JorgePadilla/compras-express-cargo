@@ -2076,7 +2076,7 @@ ALTER SEQUENCE public.tamano_cajas_id_seq OWNED BY public.tamano_cajas.id;
 
 CREATE TABLE public.tareas (
     id bigint NOT NULL,
-    paquete_id bigint NOT NULL,
+    paquete_id bigint,
     asignado_a_id bigint,
     completado_por_id bigint,
     titulo character varying NOT NULL,
@@ -2085,7 +2085,12 @@ CREATE TABLE public.tareas (
     completada_en timestamp(6) without time zone,
     notas text,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    cliente_id bigint,
+    pre_alerta_paquete_id bigint,
+    departamento character varying,
+    origen character varying DEFAULT 'manual'::character varying NOT NULL,
+    bloquea_avance boolean DEFAULT true NOT NULL
 );
 
 
@@ -2236,7 +2241,9 @@ CREATE TABLE public.users (
     iniciales character varying(8),
     sidebar_collapsed boolean DEFAULT true NOT NULL,
     sidebar_pinned boolean DEFAULT false NOT NULL,
-    sidebar_position character varying DEFAULT 'left'::character varying NOT NULL
+    sidebar_position character varying DEFAULT 'left'::character varying NOT NULL,
+    sonido_habilitado boolean DEFAULT true NOT NULL,
+    sonido_volumen integer DEFAULT 60 NOT NULL
 );
 
 
@@ -4338,10 +4345,31 @@ CREATE INDEX index_tareas_on_asignado_a_id ON public.tareas USING btree (asignad
 
 
 --
+-- Name: index_tareas_on_cliente_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tareas_on_cliente_id ON public.tareas USING btree (cliente_id);
+
+
+--
+-- Name: index_tareas_on_cliente_id_and_estado; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tareas_on_cliente_id_and_estado ON public.tareas USING btree (cliente_id, estado);
+
+
+--
 -- Name: index_tareas_on_completado_por_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX index_tareas_on_completado_por_id ON public.tareas USING btree (completado_por_id);
+
+
+--
+-- Name: index_tareas_on_departamento; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tareas_on_departamento ON public.tareas USING btree (departamento);
 
 
 --
@@ -4356,6 +4384,13 @@ CREATE INDEX index_tareas_on_estado ON public.tareas USING btree (estado);
 --
 
 CREATE INDEX index_tareas_on_paquete_id ON public.tareas USING btree (paquete_id);
+
+
+--
+-- Name: index_tareas_on_pre_alerta_paquete_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tareas_on_pre_alerta_paquete_id ON public.tareas USING btree (pre_alerta_paquete_id);
 
 
 --
@@ -4468,6 +4503,14 @@ CREATE INDEX index_warehouse_receipts_on_supplier_id ON public.warehouse_receipt
 --
 
 CREATE INDEX index_warehouse_receipts_on_user_id ON public.warehouse_receipts USING btree (user_id);
+
+
+--
+-- Name: tareas fk_rails_01a5d418f2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tareas
+    ADD CONSTRAINT fk_rails_01a5d418f2 FOREIGN KEY (pre_alerta_paquete_id) REFERENCES public.pre_alerta_paquetes(id);
 
 
 --
@@ -5335,12 +5378,22 @@ ALTER TABLE ONLY public.ep_counters
 
 
 --
+-- Name: tareas fk_rails_fedd0541de; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tareas
+    ADD CONSTRAINT fk_rails_fedd0541de FOREIGN KEY (cliente_id) REFERENCES public.clientes(id);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260801160000'),
+('20260801150000'),
 ('20260528192218'),
 ('20260505061205'),
 ('20260505052442'),

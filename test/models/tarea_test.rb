@@ -95,4 +95,75 @@ class TareaTest < ActiveSupport::TestCase
     paquete.estado = "anulado"
     assert paquete.save
   end
+
+  # --- PR-9.a: tareas de cliente (franja de contexto) ---
+
+  test "tarea puede colgar solo del cliente, sin paquete" do
+    t = Tarea.new(cliente: clientes(:juan), titulo: "Llamar antes de entregar")
+
+    assert t.valid?, t.errors.full_messages.to_sentence
+    assert_nil t.paquete_id
+  end
+
+  test "tarea sin cliente ni paquete es invalida" do
+    t = Tarea.new(titulo: "Huerfana")
+
+    assert_not t.valid?
+    assert_includes t.errors[:base], "la tarea debe pertenecer a un cliente o a un paquete"
+  end
+
+  test "tarea creada desde un paquete hereda su cliente" do
+    paquete = paquetes(:recibido)
+    t = paquete.tareas.create!(titulo: "Revisar contenido")
+
+    assert_equal paquete.cliente_id, t.cliente_id
+  end
+
+  test "departamento invalido es rechazado" do
+    t = Tarea.new(cliente: clientes(:juan), titulo: "X", departamento: "marketing")
+
+    assert_not t.valid?
+    assert_includes t.errors[:departamento], "no esta incluido en la lista"
+  end
+
+  test "visibles_para filtra por departamento del rol" do
+    cliente = clientes(:juan)
+    de_miami = Tarea.create!(cliente: cliente, titulo: "Embolsar", departamento: "miami")
+    de_caja  = Tarea.create!(cliente: cliente, titulo: "Cobrar saldo", departamento: "caja")
+    sin_depto = Tarea.create!(cliente: cliente, titulo: "Para todos", departamento: nil)
+
+    visibles = Tarea.visibles_para(users(:digitador))
+
+    assert_includes visibles, de_miami
+    assert_includes visibles, sin_depto, "las tareas sin departamento las ve cualquiera"
+    assert_not_includes visibles, de_caja
+  end
+
+  test "admin ve tareas de todos los departamentos" do
+    cliente = clientes(:juan)
+    de_caja = Tarea.create!(cliente: cliente, titulo: "Cobrar saldo", departamento: "caja")
+
+    assert_includes Tarea.visibles_para(users(:admin)), de_caja
+  end
+
+  # --- PR-9.a: bloquea_avance ---
+
+  test "tarea con bloquea_avance false no congela el pipeline" do
+    paquete = paquetes(:recibido)
+    paquete.tareas.destroy_all
+    paquete.tareas.create!(titulo: "Instrucciones del cliente", bloquea_avance: false)
+
+    paquete.estado = "empacado"
+    assert paquete.save, paquete.errors.full_messages.to_sentence
+  end
+
+  test "tareas existentes siguen bloqueando por defecto" do
+    paquete = paquetes(:recibido)
+    paquete.tareas.destroy_all
+    tarea = paquete.tareas.create!(titulo: "Revisar")
+
+    assert tarea.bloquea_avance, "el default debe seguir siendo true"
+    paquete.estado = "empacado"
+    assert_not paquete.save
+  end
 end
