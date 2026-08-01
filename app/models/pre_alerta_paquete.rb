@@ -1,6 +1,11 @@
 class PreAlertaPaquete < ApplicationRecord
   belongs_to :pre_alerta
   belongs_to :paquete, optional: true
+  # PR-9.a: las `instrucciones` que el cliente escribe se materializan como
+  # Tarea para que el digitador las vea (y las pueda marcar) en la franja de
+  # /etiquetar. `nullify` para no borrar la evidencia de una tarea ya hecha
+  # si después se elimina la línea de la pre-alerta.
+  has_many :tareas, dependent: :nullify
 
   validates :tracking, presence: true, uniqueness: { scope: :pre_alerta_id, case_sensitive: false }
   # allow_blank: true avoids double error ("can't be blank" + format) when tracking is empty;
@@ -17,7 +22,13 @@ class PreAlertaPaquete < ApplicationRecord
 
   after_create :crear_paquete_esperado
   after_update :sync_paquete_esperado
+  after_save   :sync_tarea_desde_instrucciones
   before_destroy :anular_paquete_esperado
+  # `prepend: true` es obligatorio: el `dependent: :nullify` de `has_many
+  # :tareas` registra su propio before_destroy al declararse la asociación
+  # (arriba), así que sin prepend correría primero y nos dejaría sin
+  # `pre_alerta_paquete_id` con el cual encontrar la tarea abierta.
+  before_destroy :descartar_tarea_abierta, prepend: true
 
   after_destroy_commit :soft_delete_pre_alerta_if_empty
 
@@ -42,9 +53,17 @@ class PreAlertaPaquete < ApplicationRecord
 
     rows = sin_vincular.where("UPPER(tracking) IN (?)", candidatos)
     pre_alerta_ids = rows.pluck(:pre_alerta_id).uniq
+    # PR-9.a: hay que capturar los ids ANTES del update_all — después de
+    # asignar `paquete_id` la relación `sin_vincular` deja de matchearlos.
+    pap_ids = rows.pluck(:id)
     count = rows.update_all(paquete_id: paquete.id)
 
     if count > 0
+      # Las tareas nacidas de `instrucciones` colgaban solo del cliente (o
+      # del paquete esperado). Al llegar el paquete físico las reapuntamos
+      # para que aparezcan también en su historial.
+      Tarea.where(pre_alerta_paquete_id: pap_ids).update_all(paquete_id: paquete.id)
+
       pre_alertas = PreAlerta.where(id: pre_alerta_ids)
 
       # PR-D2: snapshot de notas_grupo de pre-alerta consolidada al
@@ -117,6 +136,47 @@ class PreAlertaPaquete < ApplicationRecord
     return unless p && p.estado == "pre_alerta_estado"
 
     p.update!(tracking: tracking, descripcion: descripcion)
+  end
+
+  # PR-9.a: las instrucciones del cliente ("el celular por Express, la ropa
+  # por marítimo") se vuelven una Tarea real para que el digitador las vea
+  # con checkbox en la franja de /etiquetar en vez de que se pierdan en un
+  # textarea que nadie abre.
+  #
+  # Idempotente por `pre_alerta_paquete_id`: re-guardar la pre-alerta no
+  # duplica la tarea. `bloquea_avance: false` es deliberado — ver el
+  # comentario en la migración 20260801150000.
+  def sync_tarea_desde_instrucciones
+    return unless saved_change_to_instrucciones?
+
+    tarea = Tarea.find_or_initialize_by(pre_alerta_paquete_id: id, origen: "pre_alerta")
+
+    if instrucciones.blank?
+      # El cliente borró las instrucciones: retiramos la tarea si nadie la
+      # completó todavía. Si ya está hecha, se conserva como evidencia.
+      tarea.destroy if tarea.persisted? && !tarea.realizada?
+      return
+    end
+
+    # No reabrimos algo que el operario ya marcó como hecho.
+    return if tarea.persisted? && tarea.realizada?
+
+    tarea.assign_attributes(
+      cliente_id:     pre_alerta.cliente_id,
+      paquete_id:     paquete_id,
+      titulo:         "Instrucciones del cliente — #{tracking}",
+      descripcion:    instrucciones,
+      departamento:   "miami",
+      bloquea_avance: false
+    )
+    tarea.save!
+  end
+
+  # Si se elimina la línea de la pre-alerta, la instrucción dejó de aplicar.
+  # Borramos la tarea solo si sigue abierta; las completadas quedan (con
+  # `pre_alerta_paquete_id` nulificado por el `dependent: :nullify`).
+  def descartar_tarea_abierta
+    tareas.abiertas.where(origen: "pre_alerta").destroy_all
   end
 
   # Si el PAP se elimina (vía nested-attributes _destroy o cascade de

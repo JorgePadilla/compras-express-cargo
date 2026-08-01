@@ -1,7 +1,11 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static values = { enabled: { type: Boolean, default: true } }
+  static values = {
+    enabled: { type: Boolean, default: true },
+    // PR-9.c: 0-100. Antes estaba fijo en 0.3 y en bodega no se oía.
+    volumen: { type: Number, default: 60 }
+  }
 
   connect() {
     this._audioContext = null
@@ -13,11 +17,25 @@ export default class extends Controller {
       this._onVoices = () => this._loadVoices()
       window.speechSynthesis.addEventListener("voiceschanged", this._onVoices)
     }
+
+    // PR-9.c — la causa de "no suena en Tegus": Chrome crea el AudioContext
+    // en estado `suspended` y no lo libera hasta que hay un gesto del
+    // usuario. Antes nunca se llamaba `resume()`, así que en las máquinas
+    // donde el contexto se creaba antes del primer clic los tonos salían
+    // mudos, y el try/catch de _playTone se tragaba el error sin dejar
+    // rastro en consola. Desbloqueamos en el primer gesto real.
+    this._unlock = () => this._resumeContext()
+    document.addEventListener("pointerdown", this._unlock, { once: true })
+    document.addEventListener("keydown", this._unlock, { once: true })
   }
 
   disconnect() {
     if (this._onVoices && window.speechSynthesis) {
       window.speechSynthesis.removeEventListener("voiceschanged", this._onVoices)
+    }
+    if (this._unlock) {
+      document.removeEventListener("pointerdown", this._unlock)
+      document.removeEventListener("keydown", this._unlock)
     }
   }
 
@@ -102,14 +120,34 @@ export default class extends Controller {
 
   _getContext() {
     if (!this._audioContext) {
-      this._audioContext = new (window.AudioContext || window.webkitAudioContext)()
+      const Ctor = window.AudioContext || window.webkitAudioContext
+      if (!Ctor) return null
+      this._audioContext = new Ctor()
     }
+    this._resumeContext()
     return this._audioContext
+  }
+
+  _resumeContext() {
+    const ctx = this._audioContext
+    if (ctx && ctx.state === "suspended") {
+      ctx.resume().catch(e => console.warn("[audio] no se pudo reanudar el AudioContext:", e))
+    }
+  }
+
+  // 0-100 → ganancia. Tope 0.9: por encima el oscilador satura y suena sucio.
+  get _gain() {
+    const pct = Math.min(100, Math.max(0, this.volumenValue)) / 100
+    return Math.max(0.001, pct * 0.9)
   }
 
   _playTone(frequency, duration, callback) {
     try {
       const ctx = this._getContext()
+      if (!ctx) {
+        console.warn("[audio] este navegador no soporta Web Audio")
+        return
+      }
       const oscillator = ctx.createOscillator()
       const gain = ctx.createGain()
 
@@ -117,8 +155,10 @@ export default class extends Controller {
       gain.connect(ctx.destination)
 
       oscillator.frequency.value = frequency
-      oscillator.type = "sine"
-      gain.gain.value = 0.3
+      // `square` corta el ruido de bodega mucho mejor que `sine`, que a
+      // volumen bajo se pierde entre el ruido de fondo (Yusef — Tegus).
+      oscillator.type = "square"
+      gain.gain.value = this._gain
 
       oscillator.start(ctx.currentTime)
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration)
@@ -128,7 +168,9 @@ export default class extends Controller {
         oscillator.onended = callback
       }
     } catch (e) {
-      // Silently fail if audio is not available
+      // Antes esto era un catch mudo: si el audio fallaba, no quedaba ni
+      // rastro y era imposible diagnosticar remoto (el caso de Tegus).
+      console.warn("[audio] no se pudo reproducir el tono:", e)
     }
   }
 }

@@ -22,6 +22,10 @@ class Cliente < ApplicationRecord
   has_many :cotizaciones, dependent: :restrict_with_error
   has_many :financiamientos, dependent: :restrict_with_error
   has_many :entregas, dependent: :restrict_with_error
+  # PR-9.a: tareas que cualquier área le deja al cliente. Se destruyen con
+  # el cliente porque no tienen valor fuera de su contexto (a diferencia de
+  # paquetes o ventas, que son historia contable).
+  has_many :tareas, dependent: :destroy
 
   validates :codigo, presence: true, uniqueness: { case_sensitive: false }
   validates :nombre, presence: true

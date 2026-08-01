@@ -96,6 +96,10 @@ class EntregaPersonalController < ApplicationController
     @paquetes_hoy = paquetes_ep_hoy_count
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     @proveedores_ep = Proveedor.where(tipo: "entrega_personal").activos.ordered
+    # PR-9.b: faltaba `@sucursales_miami` — la vista hace `.any?` sobre él, así
+    # que cualquier error de validación reventaba con un 500 en vez de mostrar
+    # los errores al digitador.
+    @sucursales_miami = Sucursal.activas.where(ubicacion: "miami").where.not(codigo_ep: nil).ordered
     @motivos_retencion = MotivoRetencion.activos.ordered
     flash.now[:alert] = "No se pudo registrar la entrega personal."
     render :new, status: :unprocessable_entity

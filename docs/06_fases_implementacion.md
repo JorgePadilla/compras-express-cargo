@@ -268,7 +268,7 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 4. **Bodega = Sucursal + Sub-localidad.** Sucursales actuales: **Zerón SPS** + **Humuya TGU**. Sub-localidades dentro de cada sucursal (ej. `ZR01` bodega central, `ZR02` bodega CEM). Modelo nuevo `SubLocalidad`. Paquete tiene `sucursal_actual_id` + `sub_localidad_actual_id` (físico, al escanear) y `sucursal_destino_id` (del manifiesto).
 5. **Fecha posible de entrega:** `tipos_envio.dias_estimados` + `fecha_recibido_miami`. Al ir a manifiesto se actualiza con fecha del manifiesto. Override manual via `fecha_posible_entrega_override`.
 6. **Modificar fecha posible:** admin + supervisor_miami + supervisor_prefactura.
-7. **Recolecta:** tarifa fija $35 USD + ISV pre-establecida, editable inline por el cajero. No hay tabla de tarifas todavía (siempre cambia por zona/cantidad).
+7. **Recolecta:** ~~tarifa fija $35 USD~~ → **corregido (Yusef):** la tarifa cambia por zona y cantidad, así que se implementó el modelo **`TarifaRecolecta`** (catálogo configurable con CRUD admin) en vez del monto fijo. Sigue siendo editable inline por el cajero. Ver `paquetes.tarifa_recolecta_id`.
 8. **Audit log access:** **admin + TODOS los supervisores** (`supervisor_miami`, `supervisor_caja`, `supervisor_prefactura`). NO incluye SAC/cajero/digitador/entrega_despacho.
 
 **Respuestas confirmadas para PR-D2 (notas) — 2026-04-29:**
@@ -282,7 +282,7 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 **Respuestas confirmadas para PR-D3 (tercero/proveedor) — 2026-04-29:**
 
 11. **Proveedor:** dropdown con pre-determinados (Amazon, eBay, Walmart, Sams, Target, ENTREGA PERSONAL) + opción **"OTROS"** que activa input de texto libre. Modelo `Proveedor` con CRUD admin.
-12. **ENTREGA PERSONAL:** activa formulario adicional + sistema genera **tracking interno automático** con formato `<SUCURSAL>-<YYYYMMDD>-<correlativo>` (ej. `MIA-20260429-0001`). Tabla `entrega_personal_counters(sucursal_id, fecha, ultimo_numero)`.
+12. **ENTREGA PERSONAL:** ~~formato `<SUCURSAL>-<YYYYMMDD>-<correlativo>`~~ → **corregido (Yusef):** el formato final es **`EP-AÑO-SUC-PROV-NNNNNN`** (ej. `EP-2026-SM-AMZ-000001`) — correlativo **anual**, no diario, con el código del proveedor incluido. Modelo `EpCounter` + `sucursales.codigo_ep` + `proveedores.codigo` (3 letras). Además dejó de ser "formulario adicional" dentro de etiquetar: en PR-6a se separó a su **propia pantalla** `/entrega_personal/new`, porque mezclarlo con el etiquetado normal confundía al digitador.
 14. **Tercero:** **texto libre** (no Cliente registrado). Flujo de revendedor: `cliente_id` = revendedor; `tercero_nombre` = cliente final del revendedor. Etiqueta y WR muestran ambos.
 15. **Cliente vs tercero:** revendedor en `cliente_id` (registrado en CEC), tercero en `tercero_nombre` (texto libre).
 
@@ -407,6 +407,7 @@ Fase 6  ███░░░░░░░░░░░░░░░░░  Reportes +
 Fase 7  ░░░░░░░░░░░░░░░░░░░░  Marketing CRM
 Fase 8  ░░░░░░░░░░░░░░░░░░░░  Inventario
 Fase 9  ░░░░░░░░░░░░░░░░░░░░  Fotos de Paquetes (storage + envio a cliente)
+Fase 10 ████░░░░░░░░░░░░░░░░  Contexto operativo en captura (PR-9)      ← EN CURSO
 ```
 
 **Fases paralelas posibles:**
@@ -533,3 +534,65 @@ Fuente de verdad testeada: `VolumetricoCalculator` (PORO) con espejo en el Stimu
 - Stimulus: `app/javascript/controllers/etiquetar_controller.js`, `calc_volumetrico_controller.js`, `tercero_search_controller.js`.
 - Rutas: `config/routes.rb`.
 - Tests: `test/controllers/etiquetar_controller_test.rb`, `test/controllers/etiquetar_auto_link_test.rb`.
+
+---
+
+## Fase 10: Contexto operativo en captura (PR-9) — EN CURSO (Agosto 2026)
+
+**Objetivo:** que el operario vea el contexto del cliente **mientras captura**, sin salirse de la pantalla. Nace de las dos hojas manuscritas de Yusef del 2026-08-01 (ver `docs/05` — Conversación 4).
+
+| # | Tarea | Módulos | Estado |
+|---|-------|---------|--------|
+| 9.0 | Documentar taxonomía de notas + spec de la franja; corregir entradas obsoletas | docs | ✅ |
+| 9.a | `Tarea` multi-ancla: `cliente_id`, `paquete_id` opcional, `departamento`, `origen`, `bloquea_avance` | 32 | ✅ |
+| 9.b | Franja de contexto (Cliente + Tareas + 5 categorías de Notas) en `/etiquetar` y `/entrega_personal` | 6, 32 | ✅ |
+| 9.c | Sonidos: `AudioContext` suspendido + preferencias por usuario + diálogo de prueba | 6 | ✅ |
+
+**Entregable:** el digitador escanea y ve de inmediato el nombre del cliente, sus tareas pendientes con checkbox, y sus 5 tipos de notas.
+
+**Dependencia:** Fase 1 (etiquetar) + Fase 5 (modelo `Tarea`) + PR-D2 (notas categorizadas) + PR-6 (entrega personal). Todas cumplidas.
+
+### Cambios de modelo (PR-9.a)
+
+`tareas` gana cinco columnas:
+
+| Columna | Tipo | Para qué |
+|---|---|---|
+| `cliente_id` | FK nullable | Una tarea puede colgar del **cliente**, no solo del paquete (en `/etiquetar` el paquete aún no existe cuando el operario escanea) |
+| `pre_alerta_paquete_id` | FK nullable | Idempotencia: evita duplicar la tarea cada vez que se re-guarda la pre-alerta |
+| `departamento` | string | `miami` · `caja` · `honduras` · `sac`. `nil` = visible para todos |
+| `origen` | string | `manual` · `pre_alerta` |
+| `bloquea_avance` | boolean | Si la tarea abierta impide que el paquete avance de estado |
+
+`paquete_id` pasa a **nullable**. Validación nueva: una tarea debe tener `cliente_id` **o** `paquete_id`.
+
+### Reglas clave
+
+- **Las `instrucciones` de la pre-alerta se vuelven tareas.** `PreAlertaPaquete` sincroniza una `Tarea` (`origen: "pre_alerta"`, `departamento: "miami"`) cuando el campo tiene contenido. Al vincular el tracking, `link_tracking!` backfillea `paquete_id` en esas tareas.
+- **`bloquea_avance` protege el pipeline.** `Paquete#no_advance_with_open_tareas` congela el avance de estado si hay tareas abiertas. Auto-crear tareas desde `instrucciones` habría trabado cualquier paquete cuya pre-alerta trajera instrucciones. Por eso las de origen `pre_alerta` nacen con `bloquea_avance: false`, las manuales con `true`, y el backfill deja `true` todo lo preexistente — el comportamiento actual no cambia.
+- **Al completar** se guarda `completado_por` + `completada_en` (ya existía en `Tarea#completar!`) y la tarea desaparece de la franja **para todos**. Reabrir solo desde `/paquetes/:id/tareas`.
+- **Orden de las notas por departamento:** Miami → Caja → Honduras → SAC. Pre-Factura y Entrega comparten `notas_honduras` a propósito; no se les creó columna propia.
+- **La franja es solo lectura.** Los campos de escritura siguen en el formulario.
+
+### Sonidos (PR-9.c) — causa raíz de "no suena en Tegus"
+
+`audio_controller.js` sintetiza los tonos con Web Audio API. Dos problemas, ambos corregidos:
+
+1. **`AudioContext` suspendido.** Chrome lo crea en estado `suspended` hasta que hay un gesto del usuario, y `_getContext()` nunca llamaba `resume()`. Peor: el `try/catch` de `_playTone` **se tragaba el error sin loguear nada**, así que fallaba de forma invisible. Ahora se llama `resume()` y se desbloquea en el primer `pointerdown`/`keydown`, y los fallos se loguean con `console.warn`.
+2. **Volumen.** Ganancia fija `0.3` con onda `sine` se perdía en el ruido de bodega. Ahora la onda es `square` (corta mejor el ruido de fondo) y el volumen es configurable.
+
+Preferencias por usuario: `users.sonido_habilitado` + `users.sonido_volumen` (0-100, default 60), persistidas vía `SonidoPreferencesController` — mismo patrón que `tema` y `sidebar_position`. El control vive en un `<dialog>` que se abre desde el header de ambas pantallas, con botones para probar cada tono (que además sirven de gesto para desbloquear el audio).
+
+### Deuda técnica saldada de paso
+
+- `TareasController` **no tenía ninguna autorización** (`before_action` de rol ausente desde PR #66): cualquier usuario autenticado podía crear, editar o borrar tareas de cualquier paquete. Corregido en PR-9.a con `GESTION_ROLES` (crear/editar/borrar) y `EJECUCION_ROLES` (completar/iniciar).
+- **`EntregaPersonalController#render_create_error` reventaba con un 500.** No recargaba `@sucursales_miami` y la vista hace `.any?` sobre él, así que cualquier error de validación producía `undefined method 'any?' for nil` en vez de mostrarle los errores al digitador. Salió a la luz al escribir el primer test de request de la pantalla.
+- `clientes/show` mostraba solo `notas_miami` y `notas_honduras`; `notas_caja` y `notas_sac` eran editables pero invisibles. Ahora lista las 4, filtradas por área y en orden por departamento.
+- Se agregó `test/controllers/entrega_personal_controller_test.rb` — PR-6a y PR-6b habían salido sin ninguna cobertura de request.
+
+### Deuda técnica detectada, NO saldada aquí
+
+- `paquetes.notas_al_cliente` **nunca llega al cliente** — no viaja en el mailer, ni en PDF, ni en el portal, pese a que el punto 12 de PR-D2 dice que debe ir en el correo de notificación. Requiere PR aparte.
+- `db/schema.rb` es un archivo muerto: `config/application.rb:24` fija `schema_format = :sql`, así que el schema autoritativo es **`db/structure.sql`**. El `schema.rb` quedó congelado en abril y confunde a quien lo lea; conviene borrarlo.
+- `test/system/` está vacío, así que nada del comportamiento Stimulus (F-keys, sonidos, modales, el checkbox de la franja) tiene cobertura automatizada.
+- `rubocop` reporta ~136 ofensas preexistentes en el repo y no corre en CI (el workflow solo ejecuta `rails test`).

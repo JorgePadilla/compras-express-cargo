@@ -466,6 +466,15 @@ class Paquete < ApplicationRecord
     tareas.abiertas.exists?
   end
 
+  # PR-9.a: solo las tareas marcadas `bloquea_avance` congelan el pipeline.
+  # Las auto-creadas desde `pre_alerta_paquetes.instrucciones` nacen con
+  # false, porque `crear_paquete_esperado` ya materializó un Paquete y de
+  # otro modo trabarían la transición pre_alerta_estado → empacado que hace
+  # /etiquetar al recibir el paquete físico.
+  def tareas_bloqueantes_pendientes?
+    tareas.abiertas.where(bloquea_avance: true).exists?
+  end
+
   # Retry on guia collisions (old max+1 generator). numero_recepcion usa una
   # PostgreSQL sequence atomica por sucursal (`nextval`), por lo que nunca
   # debe colisionar para records nuevos — la migracion inicial hizo setval
@@ -490,7 +499,7 @@ class Paquete < ApplicationRecord
     old_idx = ESTADOS_ORDEN.index(estado_was)
     new_idx = ESTADOS_ORDEN.index(estado)
     return unless old_idx && new_idx && new_idx > old_idx
-    return unless tareas.abiertas.exists?
+    return unless tareas_bloqueantes_pendientes?
 
     errors.add(:estado, "no se puede avanzar: el paquete tiene tareas pendientes")
   end

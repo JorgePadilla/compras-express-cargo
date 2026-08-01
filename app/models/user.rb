@@ -29,6 +29,10 @@ class User < ApplicationRecord
   validates :tema, inclusion: { in: %w[light dark], allow_nil: true }
   validates :iniciales, length: { maximum: 8 }, allow_blank: true
   validates :sidebar_position, inclusion: { in: %w[left right] }
+  # PR-9.c: volumen de los tonos de escaneo, 0-100.
+  validates :sonido_volumen, numericality: {
+    only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 100
+  }
 
   # Scopes
   scope :activos, -> { where(activo: true) }
@@ -73,6 +77,12 @@ class User < ApplicationRecord
     parts.map { |p| p[0].to_s.upcase }.join
   end
 
+  # PR-9.a: "las notas se ordenan por la jerarquía de la empresa" (Yusef,
+  # 2026-08-01) → orden por departamento: Miami → Caja → Pre-Factura → SAC
+  # → Entrega. Pre-Factura y Entrega no tienen columna propia: ambas leen
+  # `notas_honduras`, así que el orden efectivo colapsa a estos cuatro.
+  NOTAS_DEPARTAMENTO_ORDEN = %i[notas_miami notas_caja notas_honduras notas_sac].freeze
+
   # PR-D2.b: campos de `Cliente` con notas permanentes que el usuario
   # puede ver según su rol. Admin ve todas; cada rol operativo ve sólo
   # las notas pensadas para su área. Devuelve una lista ordenada para
@@ -96,6 +106,8 @@ class User < ApplicationRecord
       else
         []
       end
-    pares.map { |campo, etiqueta| { campo: campo, etiqueta: etiqueta } }
+    pares
+      .sort_by { |campo, _| NOTAS_DEPARTAMENTO_ORDEN.index(campo) || NOTAS_DEPARTAMENTO_ORDEN.size }
+      .map { |campo, etiqueta| { campo: campo, etiqueta: etiqueta } }
   end
 end

@@ -1451,23 +1451,100 @@ Formato análogo a `numero_recepcion` pero para manifiesto:
 
 **Implementación (PR-D1):** una columna más en la migración de PR-D1 + ajustes mínimos en `Paquete::buscar` y `PreAlertaPaquete.link_tracking!` + form input.
 
-### Preguntas aún pendientes (al cliente)
+### Preguntas del bloque PR-D — todas resueltas
 
-**Bloque PR-D3 — única pendiente:**
-- 14b. **Empresa de transporte (ej. EPN = Pronto Cargo)** cuando un paquete cambia de manifiesto: ¿el detalle del paquete muestra la empresa **del manifiesto actual** (heredamos automático y cambia si el paquete cambia de manifiesto), o la **empresa original** (guardamos en el paquete y queda fija aunque el manifiesto cambie)?
+- 14b. **Empresa de transporte (ej. EPN = Pronto Cargo)** cuando un paquete cambia de manifiesto. ✅ **Resuelta (Yusef):** se **hereda del manifiesto actual**. No se duplica el dato en `paquetes` — si el paquete cambia de manifiesto, muestra la empresa nueva.
+- 15. Re-imprimir etiquetas: ¿todas las cajas o solo la actual? ✅ **Resuelta:** modal de preview con **checkboxes de todas las cajas hermanas**, preseleccionadas por defecto; el digitador desmarca las que no necesita. Una etiqueta por hoja.
+- 16. Botón "Refrescar": ¿F5 o algo específico? ✅ **Resuelta (Yusef, opción B):** refresco **granular vía Turbo Frame**, no F5 — recarga solo la zona dinámica sin perder el scroll. Implementado con `turbo_frame_tag "paquete_dynamic", target: "_top"` + `data: { turbo_frame: "paquete_dynamic" }` en el botón.
+- 17. Manifiesto formato `MM2026000001`. ✅ **Resuelta e implementada** en PR-D1.d con el modelo `ManifiestoCounter` (contador por sucursal/año, análogo a `numero_recepcion_counters`).
 
-**Bloque PR-D4 — botones:**
-- 15. Re-imprimir etiquetas: ¿todas las cajas o solo la actual?
-- 16. Botón "Refrescar": F5 o algo específico (ej. recargar solo la bitácora).
+---
 
-**General:**
-- 17. Manifiesto formato `MM2026000001`: ¿en PR-D1, PR aparte, o postergar?
+## Conversación 4: Franja de contexto operativo (2026-08-01)
+
+**Fuente:** dos hojas manuscritas de Yusef entregadas el 2026-08-01.
+
+### El pedido, textual
+
+> "Jalar: → Nombre → Tareas → y NOTAS."
+> "**Tareas al lado derecho. Checkbox. Recopila el usuario.**"
+> "Esto es en **Etiquetar** y en **Entrega Personal**."
+> "Faltan → Notas: notas permanentes del cliente · notas internas · notas a cliente (es cualquier área que le quiera escribir al cliente) · notas de consolidados · notas especiales. Estas se ordenan por la jerarquía de la empresa."
+> "Revisar sonidos en Tegus."
+
+### El problema
+
+El operario de Miami escanea un tracking y **no ve nada del contexto del cliente**. Para leer sus notas o sus instrucciones tiene que abrir el paquete en otra pantalla — y en `/etiquetar` el paquete todavía no existe. Resultado: las instrucciones del cliente ("el celular por Express, la ropa por marítimo") se pierden en la operación.
+
+### Hallazgo: las notas ya existen, solo no se muestran
+
+Las 5 categorías que Yusef lista como faltantes **ya están en la base de datos** desde PR-D2 (abril 2026). El problema no es que falten — es que ninguna se muestra durante la captura.
+
+| Categoría (hoja de Yusef) | Columna real | Dónde se veía antes de PR-9 |
+|---|---|---|
+| Notas permanentes del cliente | `clientes.notas_miami` · `notas_honduras` · `notas_caja` · `notas_sac` | modal en `paquetes/show`, filtrado por rol |
+| Notas internas | `paquetes.notas_internas` | `paquetes/show` + form |
+| Notas a cliente | `paquetes.notas_al_cliente` + catálogo `PlantillaNotaCliente` | `paquetes/show` + form |
+| Notas de consolidados | `paquetes.notas_consolidacion` (sync desde `pre_alertas.notas_grupo`) | `paquetes/show` |
+| Notas especiales | `pre_alerta_paquetes.instrucciones` | `paquetes/show` |
+
+En `/etiquetar` solo aparecía un banner ámbar con `notas_miami`, hardcodeado en el endpoint `/clientes/buscar`.
+
+Lo mismo con las tareas: el modelo `Tarea` existe desde PR #66/#67 y ya registra `completado_por` + `completada_en`. Nunca se expuso al operario.
+
+### Spec de la franja
+
+Pantalla partida en `/etiquetar` y `/entrega_personal/new`: formulario a la izquierda, **franja de contexto pegada a la derecha** (en móvil cae debajo). La franja se llena sola cuando el operario selecciona un cliente o cuando el tracking escaneado matchea una pre-alerta.
+
+Contiene, en este orden:
+
+1. **Cliente** — nombre, código y categoría de precio. (El "Jalar → Nombre".)
+2. **Tareas** — solo las abiertas y visibles para el área del usuario. Cada una con checkbox. Al marcarla:
+   - se marca `realizada` con **quién** (`completado_por`) y **cuándo** (`completada_en`);
+   - **desaparece de la franja para todos**, no solo para quien la marcó;
+   - queda en el historial del paquete y en la bitácora `paper_trail`;
+   - un supervisor puede reabrirla desde `/paquetes/:id/tareas` (no desde la franja).
+3. **Notas** — las 5 categorías, en solo lectura.
+
+### Decisiones confirmadas (Jorge, 2026-08-01)
+
+1. **Origen de las tareas: cliente + pre-alerta.** Una tarea puede colgar de un cliente (`tareas.cliente_id`, nuevo) o de un paquete (`paquete_id`, ahora opcional). Las `instrucciones` que el cliente escribe en cada línea de su pre-alerta **se convierten en tareas reales** al guardarse, para que el digitador las vea al escanear.
+2. **Al marcar el checkbox:** `realizada` + registro de quién y cuándo. Desaparece para todos. Reabrible por supervisor.
+3. **"Jerarquía de la empresa" = orden por departamento:** Miami → Caja → Pre-Factura → SAC → Entrega.
+4. **Alcance:** franja + notas + sonidos + documentación.
+
+### Decisiones técnicas tomadas al implementar (PR-9)
+
+Resueltas sin consultar por ser detalle de implementación; se documentan para dejar rastro.
+
+- **Pre-Factura y Entrega no reciben columna de notas propia.** El orden confirmado nombra 5 áreas, pero el modelo tiene 4 columnas: Pre-Factura y Entrega leen ambas `notas_honduras`. Orden efectivo: **Miami → Caja → Honduras → SAC**. Partir `notas_honduras` en dos fragmentaría un dato que hoy las dos áreas comparten a propósito.
+- **La franja es solo lectura.** Los campos de escritura (`notas_internas`, `notas_retencion`) ya viven en el formulario de la izquierda. La franja tiene un solo trabajo: dar contexto.
+- **Las tareas de cliente son de un solo uso.** Lo que aplica "siempre" a un cliente son sus notas permanentes; una tarea se limpia y se cierra.
+- **Nueva columna `tareas.bloquea_avance`.** `Paquete#no_advance_with_open_tareas` bloquea el avance de estado si hay tareas abiertas. Auto-crear tareas desde `instrucciones` habría congelado cualquier paquete cuya pre-alerta trajera instrucciones. Las tareas de origen `pre_alerta` nacen con `bloquea_avance: false`; las creadas a mano, `true` (y el backfill deja en `true` todo lo existente, así que el comportamiento actual no cambia).
+- **Preferencia de sonido por usuario**, siguiendo el precedente de `tema` y `sidebar_position`.
+- **`clientes/show` pasa a mostrar las 4 notas permanentes.** Hoy `notas_caja` y `notas_sac` se pueden editar pero nunca se ven — inconsistencia del mismo tema, corregida aquí.
+
+### Sonidos — diagnóstico de "no suena en Tegus"
+
+`audio_controller.js` sintetiza los tonos con Web Audio API (osciladores, sin archivos de audio). Dos causas:
+
+1. **`AudioContext` suspendido.** Chrome lo crea en estado `suspended` hasta que hay un gesto del usuario. El controlador nunca llamaba `resume()`, y el `try/catch` de `_playTone` **se tragaba el error en silencio** — fallaba sin dejar rastro en consola.
+2. **Volumen.** Onda seno pura con ganancia `0.3` es muy poco para una bodega ruidosa.
+
+Corregido con `resume()` + unlock en el primer gesto + logging del fallo + volumen configurable por usuario, con un diálogo desde el header para probar cada tono.
+
+### Pendiente de aclarar con Yusef
+
+Dos cosas de la primera hoja que no entran en PR-9:
+
+- **"Eliminar de la vista: Pre-Alerta y Pre-Factura."** La lectura más probable es que se refiere a los dos checkboxes `pre_alerta` y `pre_factura` del formulario de etiquetar — el digitador no debería estar marcándolos a mano. Confirmar antes de quitarlos.
+- **"⊘ No imp a paquetes"** — no se logró descifrar la nota.
 
 ---
 
 ## Próximos Pasos
 
 1. **Conversación 2:** Login, Logout, Creación de usuarios y roles — por documentar
-2. **Conversación 3:** Detalle de Paquete Interno + Warehouse Receipt — ✅ documentada arriba (en curso, ~6 preguntas pendientes)
-3. **Conversación 4:** Pendiente — visita al cliente
+2. **Conversación 3:** Detalle de Paquete Interno + Warehouse Receipt — ✅ documentada arriba, preguntas del bloque PR-D todas resueltas
+3. **Conversación 4:** ✅ documentada arriba — franja de contexto operativo (PR-9)
 4. Después de las 4 conversaciones: crear plan de implementación completo por módulo

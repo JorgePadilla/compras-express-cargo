@@ -38,3 +38,14 @@ Shein:
   position: 3
   created_at: <%= Time.current %>
   updated_at: <%= Time.current %>
+
+# PR-9.b: proveedor de ENTREGA PERSONAL — necesario para ejercitar el flujo
+# de /entrega_personal (tracking EP-AÑO-SUC-PROV-NNNNNN).
+driver_entrega:
+  nombre: Driver Mostrador
+  codigo: DRV
+  tipo: entrega_personal
+  activo: true
+  position: 4
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>

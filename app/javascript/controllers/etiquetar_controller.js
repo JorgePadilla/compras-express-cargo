@@ -11,7 +11,7 @@ export default class extends Controller {
     "preAlertaBanner", "preAlertaNumero", "preAlertaCliente", "preAlertaDescripcion",
     "duplicateModal", "duplicateInfo", "duplicateNewBtn", "duplicateNewHint",
     "cajasModal", "cajasInput", "cantidadPaquetesHidden",
-    "submitBtn", "event"
+    "submitBtn", "event", "panel"
   ]
   static values = {
     checkUrl: String,
@@ -204,15 +204,38 @@ export default class extends Controller {
     this.clienteNombreTarget.classList.remove("hidden")
 
     if (notas && notas.trim() !== "") {
-      this.notasTextoTarget.textContent = notas
-      this.notasBannerTarget.classList.remove("hidden")
+      if (this.hasNotasTextoTarget) this.notasTextoTarget.textContent = notas
+      if (this.hasNotasBannerTarget) this.notasBannerTarget.classList.remove("hidden")
       // Trigger audio alert for client notes
       this.dispatch("clienteNotas")
-    } else {
+    } else if (this.hasNotasBannerTarget) {
       this.notasBannerTarget.classList.add("hidden")
     }
 
+    // PR-9.b: jalar tareas + notas del cliente a la franja de la derecha.
+    this.loadPanel(id)
+
     this.hideDropdown()
+  }
+
+  // Recarga el turbo-frame de la franja de contexto. Turbo se encarga del
+  // fetch al cambiar el `src`; si el cliente es el mismo no lo tocamos para
+  // no perder el estado de las tareas que el operario acaba de marcar.
+  loadPanel(clienteId) {
+    if (!this.hasPanelTarget) return
+
+    const frame = this.panelTarget.querySelector("turbo-frame#panel_contexto")
+    if (!frame) return
+
+    const base = this.panelTarget.dataset.panelUrl
+    const params = new URLSearchParams()
+    if (clienteId) params.set("cliente_id", clienteId)
+
+    const tracking = this.hasTrackingTarget ? this.trackingTarget.value.trim() : ""
+    if (tracking) params.set("tracking", tracking)
+
+    const url = params.toString() ? `${base}?${params}` : base
+    if (frame.getAttribute("src") !== url) frame.setAttribute("src", url)
   }
 
   hideDropdown() {
@@ -311,6 +334,11 @@ export default class extends Controller {
       if (this.hasNotasBannerTarget) this.notasBannerTarget.classList.remove("hidden")
       this.dispatch("clienteNotas")
     }
+
+    // PR-9.b: con match de pre-alerta la franja además trae las "notas
+    // especiales" (las instrucciones que el cliente escribió para ESTE
+    // tracking) y las tareas que salieron de ellas.
+    this.loadPanel(data.cliente_id)
   }
 
   // Limpia los estilos visuales del input cliente que ponemos cuando viene
@@ -407,8 +435,10 @@ export default class extends Controller {
     this.clienteIdTarget.value = ""
     this.clienteNombreTarget.textContent = ""
     this.clienteNombreTarget.classList.add("hidden")
-    this.notasBannerTarget.classList.add("hidden")
+    if (this.hasNotasBannerTarget) this.notasBannerTarget.classList.add("hidden")
     this.duplicateModalTarget.classList.add("hidden")
+    // PR-9.b: la franja vuelve a su estado vacío junto con el formulario.
+    this.loadPanel(null)
     this._resetClienteFromPreAlertaStyling()
     this._hidePreAlertaBanner()
     this._closeCajasModal()

@@ -7,9 +7,12 @@
       ])
     end
   end
+  header.with_action { render "shared/sonido_config" }
 end %>
 
 <div data-controller="entrega-personal audio"
+     data-audio-enabled-value="<%= Current.user&.sonido_habilitado != false %>"
+     data-audio-volumen-value="<%= Current.user&.sonido_volumen || 60 %>"
      data-action="entrega-personal:success->audio#success">
 
   <%# Flash messages %>
@@ -33,6 +36,11 @@ end %>
       </div>
     </div>
   </div>
+
+  <%# PR-9.b: pantalla partida igual que /etiquetar — formulario izquierda,
+      franja de contexto derecha. %>
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+  <div class="xl:col-span-8">
 
   <%= form_with model: @paquete, url: entrega_personal_index_path,
                 data: { entrega_personal_target: "form" },
@@ -204,6 +212,19 @@ end %>
             data: { action: "click->entrega-personal#submitFormWithPrint" })) { "Guardar + Imprimir" } %>
     </div>
   <% end %>
+
+  </div><%# /columna izquierda %>
+
+    <%# ── Franja de contexto (PR-9.b) ── %>
+    <aside class="xl:col-span-4 xl:sticky xl:top-4" data-entrega-personal-target="panel"
+           data-panel-url="<%= panel_contexto_path %>">
+      <%= turbo_frame_tag "panel_contexto", src: panel_contexto_path, loading: :lazy do %>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-200 dark:ring-gray-700 px-4 py-10 text-center">
+          <p class="text-sm text-gray-400 dark:text-gray-500">Cargando contexto…</p>
+        </div>
+      <% end %>
+    </aside>
+  </div><%# /grid %>
 
   <%# Modal "¿Cuántas cajas?" — mismo patrón que PR-4 %>
   <dialog data-entrega-personal-target="cajasModal"

@@ -14,6 +14,7 @@
       ])
     end
   end
+  header.with_action { render "shared/sonido_config" }
 end %>
 
 <% if @tipo_envio_sesion.nil? %>
@@ -83,6 +84,8 @@ end %>
 
 <% else %>
 <div data-controller="etiquetar audio"
+     data-audio-enabled-value="<%= Current.user&.sonido_habilitado != false %>"
+     data-audio-volumen-value="<%= Current.user&.sonido_volumen || 60 %>"
      data-etiquetar-check-url-value="<%= check_tracking_paquetes_path %>"
      data-etiquetar-buscar-url-value="<%= buscar_clientes_path %>"
      data-action="etiquetar:success->audio#success etiquetar:clienteNotas->audio#alert etiquetar:preAlertaMatch->audio#speakPreAlerta click@document->etiquetar#clickOutsideDropdown">
@@ -199,6 +202,12 @@ end %>
       </div>
     </div>
   </div>
+
+  <%# PR-9.b: pantalla partida — formulario a la izquierda, franja de contexto
+      (cliente + tareas + notas) pegada a la derecha. En pantallas chicas la
+      franja cae debajo del formulario. %>
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+  <div class="xl:col-span-8">
 
   <%# Etiquetar form (PR-7) — card pattern consistente con /paquetes %>
   <%= form_with model: @paquete, url: etiquetar_path, data: { etiquetar_target: "form" },
@@ -503,6 +512,21 @@ end %>
       </div>
     </div>
   <% end %>
+
+  </div><%# /columna izquierda %>
+
+    <%# ── Franja de contexto (PR-9.b) ── el Stimulus le setea el `src` al
+        elegir cliente o al matchear pre-alerta. `sticky` para que siga
+        visible mientras el operario baja por el formulario. %>
+    <aside class="xl:col-span-4 xl:sticky xl:top-4" data-etiquetar-target="panel"
+           data-panel-url="<%= panel_contexto_path %>">
+      <%= turbo_frame_tag "panel_contexto", src: panel_contexto_path, loading: :lazy do %>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-200 dark:ring-gray-700 px-4 py-10 text-center">
+          <p class="text-sm text-gray-400 dark:text-gray-500">Cargando contexto…</p>
+        </div>
+      <% end %>
+    </aside>
+  </div><%# /grid %>
 
   <%# PR-4: Modal "¿Cuántas cajas?" — se abre al presionar F9 / Guardar+Imprimir.
       Default 1, max 26 (límite del sufijo A-Z para duplicados). %>
