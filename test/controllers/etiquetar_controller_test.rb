@@ -25,6 +25,17 @@ class EtiquetarControllerTest < ActionDispatch::IntegrationTest
     assert_select "p", text: /Aéreo express/
   end
 
+  # Regresión: el bloque del banner se duplicó cuatro veces seguidas al mergear
+  # `feat/etiquetar-sesion-tercero-calc` a staging (merges criss-cross que
+  # resolvían "ambos agregaron" y dejaban dos copias idénticas). Este test
+  # falla si vuelve a colarse una segunda copia.
+  test "index con sesión activa muestra el banner una sola vez" do
+    get etiquetar_url
+    assert_response :success
+    assert_select "form[action=?]", finalizar_sesion_etiquetar_path, count: 1
+    assert_select "p", text: "Sesión activa", count: 1
+  end
+
   test "iniciar_sesion fija el tipo y redirige" do
     delete finalizar_sesion_etiquetar_url
     post iniciar_sesion_etiquetar_url, params: { tipo_envio_id: tipo_envios(:cem).id }
