@@ -1,7 +1,7 @@
 <%= render PageHeaderComponent.new(title: "Categorias de Precio") do |h| %>
   <% h.with_action do %>
-    <%= render ButtonComponent.new(href: new_categoria_precio_path, variant: :primary, icon: "plus") do %>
-      Nueva Categoria
+    <%= render ButtonComponent.new(href: new_categoria_precio_path, variant: :primary, icon: "plus", data: { shortcut: "F7" }) do %>
+      Nueva Categoria <span class="ml-1 text-[10px] opacity-70">(F7)</span>
     <% end %>
   <% end %>
 <% end %>
@@ -26,7 +26,7 @@
             <td class="px-6 py-4 text-right text-sm">L. <%= number_with_delimiter(c.precio_libra_maritimo.to_f, precision: 2) %></td>
             <td class="px-6 py-4 text-right text-sm text-gray-500"><%= c.clientes.count %></td>
             <td class="px-6 py-4 text-right text-sm">
-              <%= link_to "Editar", edit_categoria_precio_path(c), class: "text-cec-navy hover:underline" %>
+              <%= render RowActionComponent.new(action: :edit, href: edit_categoria_precio_path(c), label: "Editar categoría") %>
             </td>
           </tr>
         <% end %>

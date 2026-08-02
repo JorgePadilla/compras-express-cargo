@@ -1,0 +1,35 @@
+wb = xlsx_package.workbook
+wb.add_worksheet(name: "Paquetes") do |sheet|
+  bold = wb.styles.add_style(b: true, bg_color: "1B2559", fg_color: "FFFFFF", border: { style: :thin, color: "DDDDDD" })
+  date_style = wb.styles.add_style(format_code: "dd/mm/yyyy")
+
+  sheet.add_row([
+    "F. Recibido", "F. Disponible", "N° Recepción", "Tracking",
+    "Cliente Código", "Cliente Nombre", "Estado", "Tipo Envío",
+    "Sucursal", "Consolidado", "Contenido", "Pre-Alerta",
+    "Pre-Factura", "Factura"
+  ], style: bold)
+
+  paquetes.each do |p|
+    pa = p.pre_alerta_paquetes.first&.pre_alerta
+    sheet.add_row([
+      p.fecha_recibido_miami || p.created_at,
+      p.fecha_disponible,
+      p.numero_recepcion.presence || "—",
+      p.tracking,
+      p.cliente.codigo,
+      p.cliente.nombre_completo,
+      p.estado.humanize,
+      p.tipo_envio&.codigo&.upcase || "—",
+      p.sucursal&.nombre || "—",
+      p.consolidado? ? "Sí" : "No",
+      p.descripcion.to_s,
+      pa&.numero_documento || "—",
+      p.pre_factura&.numero || "—",
+      p.venta&.numero || "—"
+    ], types: [ :date, :date, :string, :string, :string, :string, :string, :string, :string, :string, :string, :string, :string, :string ],
+       style: [ date_style, date_style, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil ])
+  end
+
+  sheet.column_widths 12, 12, 14, 20, 10, 28, 18, 10, 18, 12, 40, 14, 14, 14
+end

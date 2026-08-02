@@ -1,0 +1,24 @@
+<% content_for :title, "Nueva tarea" %>
+
+<%# PR-9.a: la tarea puede colgar de un paquete (flujo original, anidado en
+    /paquetes/:id/tareas) o directo del cliente (nuevo, desde su ficha) —
+    porque en /etiquetar el paquete todavía no existe cuando el operario
+    escanea y necesita ver la tarea. %>
+<div class="max-w-5xl mx-auto space-y-6">
+  <div>
+    <%= link_to tareas_volver_path, class: "text-xs text-gray-500 hover:text-cec-teal inline-flex items-center gap-1" do %>
+      <%= heroicon "arrow-left", variant: :outline, options: { class: "w-3 h-3" } %>
+      <%= @paquete ? "Volver a tareas" : "Volver al cliente" %>
+    <% end %>
+    <h1 class="text-2xl font-bold text-cec-navy mt-1">Nueva tarea</h1>
+    <% if @paquete %>
+      <p class="text-sm text-gray-600">Paquete <span class="font-mono"><%= @paquete.tracking %></span></p>
+    <% elsif @tarea.cliente %>
+      <p class="text-sm text-gray-600">
+        Cliente <span class="font-mono"><%= @tarea.cliente.codigo %></span> — <%= @tarea.cliente.nombre_completo %>
+      </p>
+    <% end %>
+  </div>
+
+  <%= render "form" %>
+</div>

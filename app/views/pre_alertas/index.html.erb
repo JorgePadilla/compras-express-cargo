@@ -29,7 +29,7 @@
     <% end %>
   </summary>
   <div class="px-6 py-4 border-t border-gray-200">
-    <%= form_tag pre_alertas_path, method: :get, class: "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4" do %>
+    <%= form_tag pre_alertas_path, method: :get, class: "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4", data: { controller: "f2-clear", f2_clear_submit_value: "true" } do %>
       <% if params[:q].present? %>
         <%= hidden_field_tag :q, params[:q] %>
       <% end %>
@@ -128,17 +128,14 @@
               <td class="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
                 <span class="text-sm text-gray-500"><%= pa.created_at.strftime("%d/%m/%Y") %></span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right">
+              <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center justify-end gap-2">
-                  <%= link_to edit_pre_alerta_path(pa), class: "text-gray-400 hover:text-cec-navy" do %>
-                    <%= heroicon "pencil-square", variant: :outline, options: { class: "w-5 h-5 inline" } %>
-                  <% end %>
-                  <% unless pa.anulado? %>
-                    <%= button_to anular_pre_alerta_path(pa), method: :delete, class: "text-gray-400 hover:text-red-600",
-                        data: { turbo_confirm: "Anular pre-alerta #{pa.numero_documento}?" } do %>
-                      <%= heroicon "x-circle", variant: :outline, options: { class: "w-5 h-5 inline" } %>
-                    <% end %>
-                  <% end %>
+                  <%= render RowActionComponent.new(action: :view, href: pa, label: "Ver pre-alerta #{pa.numero_documento}") %>
+                  <%= render RowActionComponent.new(action: :edit, href: edit_pre_alerta_path(pa), label: "Editar pre-alerta") %>
+                  <%= render RowActionComponent.new(action: :annul, href: anular_pre_alerta_path(pa),
+                        disabled: pa.anulado?,
+                        confirm: "¿Anular pre-alerta #{pa.numero_documento}? Esta acción no se puede deshacer.",
+                        label: "Anular pre-alerta") %>
                 </div>
               </td>
             </tr>
@@ -149,7 +146,7 @@
   </div>
 
   <div class="mt-4">
-    <%= paginate @pre_alertas %>
+    <%= render PaginationComponent.new(collection: @pre_alertas, label: "pre-alertas") %>
   </div>
 <% else %>
   <%= render EmptyStateComponent.new(

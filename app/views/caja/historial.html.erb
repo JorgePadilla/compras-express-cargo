@@ -43,7 +43,7 @@
       </table>
     </div>
   </div>
-  <div class="mt-4"><%= paginate @aperturas %></div>
+  <div class="mt-4"><%= render PaginationComponent.new(collection: @aperturas, label: "aperturas") %></div>
 <% else %>
   <%= render EmptyStateComponent.new(
     title: "Sin historial",

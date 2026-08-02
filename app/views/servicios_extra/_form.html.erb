@@ -1,0 +1,77 @@
+<%= form_with model: servicio, local: true,
+              class: "space-y-4 bg-white rounded-lg shadow p-6" do |f| %>
+  <% if servicio.errors.any? %>
+    <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+      <ul class="list-disc list-inside">
+        <% servicio.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <%= f.label :codigo, "Código (interno)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.text_field :codigo, required: true, maxlength: 30,
+          placeholder: "Ej. CAMBIO_SERVICIO, PESO_ADIC",
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono uppercase focus:ring-cec-teal focus:border-cec-teal" %>
+      <p class="mt-1 text-xs text-gray-500">Identificador único. Mayúsculas, números o guion bajo.</p>
+    </div>
+
+    <div>
+      <%= f.label :descripcion, class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.text_field :descripcion, required: true,
+          placeholder: "Ej. Cambio de servicio aéreo a marítimo",
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+
+    <div>
+      <%= f.label :costo, "Costo (interno)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.number_field :costo, required: true, step: 0.01, min: 0,
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+
+    <div>
+      <%= f.label :precio_venta, "Precio de venta (al cliente)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.number_field :precio_venta, required: true, step: 0.01, min: 0,
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+
+    <div>
+      <%= f.label :moneda, class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.select :moneda, ServicioExtra::MONEDAS,
+          {}, class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+
+    <div>
+      <%= f.label :position, "Posición", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.number_field :position, min: 0,
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+
+    <div class="md:col-span-2 flex items-center gap-6">
+      <label class="flex items-center gap-2">
+        <%= f.check_box :precio_incluye_isv, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+        <span class="text-sm font-medium text-gray-700">El precio ya incluye ISV</span>
+      </label>
+
+      <label class="flex items-center gap-2">
+        <%= f.check_box :activo, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+        <span class="text-sm font-medium text-gray-700">Activo</span>
+      </label>
+    </div>
+  </div>
+
+  <div>
+    <%= f.label :notas, "Notas internas (opcional)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <%= f.text_area :notas, rows: 2,
+        class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+  </div>
+
+  <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+    <%= link_to "Cancelar (F2)", servicios_extra_path, class: "text-sm text-gray-600 hover:text-gray-900", data: { shortcut: "F2" } %>
+    <%= f.submit servicio.persisted? ? "Guardar" : "Crear",
+        class: "inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-cec-gold text-cec-navy-dark hover:bg-cec-gold-dark transition-colors cursor-pointer" %>
+  </div>
+<% end %>

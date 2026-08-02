@@ -1,0 +1,51 @@
+# PR-D3.a: fixtures de proveedores. Existen también para mapear los
+# valores legacy "Amazon", "Walmart", "Shein", "eBay" que aparecen en
+# paquetes.yml — Rails fixtures interpreta `proveedor: "Amazon"` como
+# referencia al fixture llamado `Amazon` en este archivo (porque
+# Paquete tiene `belongs_to :proveedor`).
+Amazon:
+  nombre: Amazon
+  codigo: AMA
+  tipo: comercio
+  activo: true
+  position: 0
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>
+
+Walmart:
+  nombre: Walmart
+  codigo: WAL
+  tipo: comercio
+  activo: true
+  position: 1
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>
+
+eBay:
+  nombre: eBay
+  codigo: EBA
+  tipo: comercio
+  activo: true
+  position: 2
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>
+
+Shein:
+  nombre: Shein
+  codigo: SHE
+  tipo: comercio
+  activo: true
+  position: 3
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>
+
+# PR-9.b: proveedor de ENTREGA PERSONAL — necesario para ejercitar el flujo
+# de /entrega_personal (tracking EP-AÑO-SUC-PROV-NNNNNN).
+driver_entrega:
+  nombre: Driver Mostrador
+  codigo: DRV
+  tipo: entrega_personal
+  activo: true
+  position: 4
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>

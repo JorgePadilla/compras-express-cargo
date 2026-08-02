@@ -1,0 +1,62 @@
+<% content_for :title, "Re-empaques · #{@paquete.tracking}" %>
+
+<div class="max-w-5xl mx-auto space-y-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <%= link_to @paquete, class: "text-xs text-gray-500 hover:text-cec-teal inline-flex items-center gap-1" do %>
+        <%= heroicon "arrow-left", variant: :outline, options: { class: "w-3 h-3" } %>
+        Volver al paquete
+      <% end %>
+      <h1 class="text-2xl font-bold text-cec-navy mt-1">Re-empaques</h1>
+      <p class="text-sm text-gray-600">Paquete <span class="font-mono"><%= @paquete.tracking %></span> · <%= @paquete.cliente.nombre %></p>
+    </div>
+    <%= link_to "Registrar re-empaque", new_paquete_reempaque_path(@paquete),
+        class: "bg-cec-teal text-white font-semibold px-4 py-2 rounded-lg text-sm hover:bg-cec-teal-dark transition-colors" %>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600">Fecha</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600">Dimensiones</th>
+          <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600">Peso vol antes</th>
+          <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600">Peso vol después</th>
+          <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600">Ahorro vol</th>
+          <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600">Ahorro cobro</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600">Operador</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        <% @reempaques.each do |r| %>
+          <tr>
+            <td class="px-4 py-3 text-xs text-gray-600">
+              <%= r.realizado_en&.strftime("%d/%m/%Y %H:%M") %>
+            </td>
+            <td class="px-4 py-3 text-xs text-gray-700">
+              <span class="text-gray-500"><%= [r.alto_antes, r.largo_antes, r.ancho_antes].compact.join(" x ") %></span>
+              →
+              <span class="font-semibold"><%= [r.alto_despues, r.largo_despues, r.ancho_despues].compact.join(" x ") %></span>
+            </td>
+            <td class="px-4 py-3 text-right text-sm text-gray-700"><%= r.peso_volumetrico_antes || "—" %></td>
+            <td class="px-4 py-3 text-right text-sm text-gray-700"><%= r.peso_volumetrico_despues || "—" %></td>
+            <td class="px-4 py-3 text-right text-sm font-semibold <%= r.ahorro_volumetrico.positive? ? "text-cec-teal" : "text-gray-500" %>">
+              <%= r.ahorro_volumetrico %> lbs
+            </td>
+            <td class="px-4 py-3 text-right text-sm <%= r.ahorro_peso_cobrar.positive? ? "text-cec-teal" : "text-gray-500" %>">
+              <%= r.ahorro_peso_cobrar %> lbs
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-600"><%= r.hecho_por&.nombre || "—" %></td>
+          </tr>
+        <% end %>
+        <% if @reempaques.empty? %>
+          <tr>
+            <td colspan="7" class="px-4 py-8 text-center text-sm text-gray-500">
+              Sin re-empaques registrados. <%= link_to "Registrar el primero", new_paquete_reempaque_path(@paquete), class: "text-cec-teal hover:text-cec-teal-dark font-medium" %>.
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>

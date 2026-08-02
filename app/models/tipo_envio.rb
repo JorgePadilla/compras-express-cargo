@@ -1,4 +1,5 @@
 class TipoEnvio < ApplicationRecord
+  has_paper_trail  # PR-D7: audit log — precio_libra y SLA cambian, afecta facturación
   validates :nombre, presence: true
 
   scope :activos, -> { where(activo: true) }

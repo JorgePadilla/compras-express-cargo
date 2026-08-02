@@ -1,0 +1,245 @@
+<%# Warehouse Receipt — documento principal que el almacén emite al recibir
+    el tracking. Reemplaza la etiqueta minimal anterior. Layout Letter
+    (8.5×11), imprimible vía window.print() cuando ?print=true.
+    Spec: docs/warehouse_receipt_fields.md (entregado por Yusef 2026-04-29). %>
+
+<% packages   = wr_packages_for(paquete) %>
+<% totals     = wr_totals(packages) %>
+<% issuing    = wr_issuing_company %>
+<% issued_on  = (paquete.fecha_recibido_miami || paquete.created_at)&.in_time_zone %>
+<% printed_at = Time.current.in_time_zone %>
+
+<style>
+  .wr-section { margin-bottom: 14px; }
+  .wr-row { display: flex; gap: 16px; }
+  .wr-col { flex: 1; }
+  .wr-h { font-weight: bold; text-transform: uppercase; font-size: 9px; letter-spacing: 0.5px; color: #555; margin-bottom: 2px; }
+  .wr-v { font-size: 12px; line-height: 1.35; }
+  .wr-mono { font-family: "Courier New", Courier, monospace; }
+  .wr-banner { background: #1B2559; color: #fff; padding: 10px 14px; border-radius: 4px; }
+  .wr-divider { border: 0; border-top: 1px solid #d4d4d4; margin: 10px 0; }
+  table.wr-pkg { width: 100%; border-collapse: collapse; font-size: 11px; }
+  table.wr-pkg th, table.wr-pkg td { border: 1px solid #d4d4d4; padding: 5px 6px; text-align: left; }
+  table.wr-pkg thead th { background: #f3f4f6; font-size: 9px; text-transform: uppercase; letter-spacing: 0.4px; }
+  table.wr-totals { width: 100%; font-size: 11px; margin-top: 6px; }
+  table.wr-totals td { padding: 3px 6px; }
+  table.wr-totals td.label { color: #666; text-transform: uppercase; font-size: 9px; letter-spacing: 0.4px; width: 40%; }
+  table.wr-totals td.value { font-weight: bold; text-align: right; }
+  .wr-terms-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 8.5px; line-height: 1.4; color: #444; }
+  .wr-terms-cols .wr-h { font-size: 8.5px; }
+  .wr-footer { margin-top: 14px; padding-top: 10px; border-top: 1px solid #d4d4d4; display: flex; justify-content: space-between; font-size: 9px; color: #666; }
+  .wr-pill { display: inline-block; padding: 2px 8px; border-radius: 9999px; background: #FFB547; color: #1B2559; font-weight: bold; font-size: 10px; }
+</style>
+
+<%# ── Header empresa emisora ── %>
+<div class="wr-section" style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;">
+  <div>
+    <div style="font-size:18px;font-weight:bold;color:#1B2559;letter-spacing:0.5px;"><%= issuing[:name] %></div>
+    <div class="wr-v" style="color:#444;line-height:1.5;">
+      <%= issuing[:street] %><br>
+      <%= issuing[:city] %>, <%= issuing[:state] %> <%= issuing[:postal_code] %>, <%= issuing[:country] %><br>
+      <%= issuing[:phone] %> · <%= issuing[:website] %>
+    </div>
+  </div>
+  <div style="text-align:right;min-width:38%;">
+    <div class="wr-banner">
+      <div style="font-size:9px;letter-spacing:1px;opacity:0.8;">WAREHOUSE RECEIPT</div>
+      <div class="wr-mono" style="font-size:18px;font-weight:bold;letter-spacing:0.5px;margin-top:2px;">
+        <%= paquete_display_id(paquete) %>
+      </div>
+    </div>
+    <div class="wr-v" style="margin-top:6px;color:#444;">
+      <strong>Issued:</strong> <%= issued_on&.strftime("%m/%d/%Y") || "—" %><br>
+      <strong>Printed:</strong> <%= printed_at.strftime("%m/%d/%Y %I:%M:%S %p") %><br>
+      <strong>Printed by:</strong> <%= wr_user_initials(Current.user) %>
+    </div>
+  </div>
+</div>
+
+<hr class="wr-divider">
+
+<% wr        = paquete.warehouse_receipt %>
+<% supplier = wr&.supplier %>
+<% agent    = wr&.agent %>
+
+<%# ── Shipper / Consignee / Agent ── %>
+<div class="wr-row wr-section">
+  <%# Shipper (Supplier / Proveedor) %>
+  <div class="wr-col">
+    <div class="wr-h">Shipper / Proveedor</div>
+    <% if supplier %>
+      <div class="wr-v">
+        <span class="wr-mono" style="color:#1B2559;font-weight:bold;"><%= supplier.codigo %></span>
+        · <strong><%= supplier.nombre %></strong>
+      </div>
+      <div class="wr-v" style="color:#666;">
+        <%= [ supplier.street_address, supplier.city, supplier.state, supplier.postal_code ].compact_blank.join(", ").presence || "—" %>
+      </div>
+    <% elsif paquete.proveedor.present? %>
+      <div class="wr-v" style="font-weight:bold;"><%= paquete.proveedor %></div>
+      <div class="wr-v" style="color:#666;">
+        <% if paquete.expedido_por.present? %>via <%= paquete.expedido_por %><% end %>
+      </div>
+    <% else %>
+      <div class="wr-v" style="color:#999;">—</div>
+    <% end %>
+  </div>
+
+  <%# Consignee (Cliente) — leído del WR si existe, fallback a paquete.cliente %>
+  <% consignee = wr&.consignee || paquete.cliente %>
+  <div class="wr-col">
+    <div class="wr-h">Consignee / Cliente</div>
+    <div class="wr-v">
+      <span class="wr-mono" style="color:#1B2559;font-weight:bold;"><%= consignee.codigo %></span>
+      ·
+      <strong><%= consignee.nombre_completo %></strong>
+    </div>
+    <div class="wr-v" style="color:#666;">
+      <%= [ consignee.ciudad, consignee.departamento ].compact_blank.join(", ").presence || "—" %><br>
+      HONDURAS
+    </div>
+  </div>
+
+  <%# Agent — del WR si lo hay, fallback a Sucursal %>
+  <div class="wr-col">
+    <div class="wr-h">Agent</div>
+    <% if agent %>
+      <div class="wr-v">
+        <span class="wr-mono" style="color:#1B2559;font-weight:bold;"><%= agent.codigo %></span>
+        · <strong><%= agent.nombre %></strong>
+      </div>
+      <div class="wr-v" style="color:#666;">
+        <%= [ agent.destination_city, agent.destination_country ].compact_blank.join(", ").presence || "—" %>
+      </div>
+    <% elsif paquete.sucursal.present? %>
+      <div class="wr-v" style="font-weight:bold;"><%= paquete.sucursal.nombre %></div>
+      <div class="wr-v" style="color:#666;font-family:'Courier New',monospace;font-size:11px;"><%= paquete.sucursal.codigo %></div>
+    <% else %>
+      <div class="wr-v" style="color:#999;">—</div>
+    <% end %>
+  </div>
+</div>
+
+<%# ── Service / declared value / tracking URL ── %>
+<div class="wr-row wr-section" style="background:#f8f9fb;padding:8px 12px;border-radius:4px;">
+  <div class="wr-col">
+    <div class="wr-h">Service</div>
+    <div class="wr-v">
+      <% if paquete.tipo_envio %>
+        <span class="wr-mono" style="font-weight:bold;"><%= paquete.tipo_envio.codigo %></span>
+        · <%= paquete.tipo_envio.nombre %>
+      <% else %>
+        <span style="color:#999;">—</span>
+      <% end %>
+    </div>
+  </div>
+  <div class="wr-col">
+    <div class="wr-h">Declared Value</div>
+    <div class="wr-v wr-mono">$<%= number_with_delimiter(paquete.monto_total.to_f.round(2)) %> USD</div>
+  </div>
+  <div class="wr-col">
+    <div class="wr-h">Tracking</div>
+    <div class="wr-v wr-mono" style="word-break:break-all;"><%= paquete.tracking %></div>
+    <% if paquete.tracking_secundario.present? %>
+      <div class="wr-v wr-mono" style="word-break:break-all;color:#666;font-size:10px;">
+        Alt: <%= paquete.tracking_secundario %>
+      </div>
+    <% end %>
+  </div>
+  <% if paquete.dividido? %>
+    <div class="wr-col" style="text-align:right;">
+      <span class="wr-pill">SPLIT <%= paquete.cantidad_paquetes %> CAJAS</span>
+    </div>
+  <% end %>
+</div>
+
+<%# PR-6b: badge prominente "PREPAGADO EN MIAMI" cuando el cliente pagó
+    al recibir el paquete en Miami. Cuando llega a Honduras, el digitador
+    ve la etiqueta y sabe que solo debe agregar el cobro simbólico. %>
+<% if paquete.prepagado_miami? %>
+  <div class="wr-section" style="margin: 8px 0; padding: 10px 14px; border: 2px solid #047857; background: #ecfdf5; border-radius: 6px; text-align: center;">
+    <div style="font-weight: 800; font-size: 14px; color: #064e3b; letter-spacing: 0.04em;">
+      ✓ PREPAGADO EN MIAMI
+      <% if paquete.prepagado_miami_sucursal %>
+        · SUCURSAL <%= paquete.prepagado_miami_sucursal.codigo_ep || paquete.prepagado_miami_sucursal.codigo %>
+      <% end %>
+    </div>
+    <% if paquete.prepagado_miami_at %>
+      <div style="font-size: 10px; color: #065f46; margin-top: 2px;">
+        <%= paquete.prepagado_miami_at.strftime("%d/%m/%Y") %>
+        <% if paquete.prepagado_miami_by_user %>· por <%= paquete.prepagado_miami_by_user.nombre %><% end %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
+<%# ── Tabla de packages ── %>
+<div class="wr-section">
+  <table class="wr-pkg">
+    <thead>
+      <tr>
+        <th style="width:5%;">#</th>
+        <th style="width:18%;">Dimensiones (in)</th>
+        <th style="width:8%;">Units</th>
+        <th style="width:11%;">Type</th>
+        <th style="width:11%;">Weight (lb)</th>
+        <th>Description</th>
+        <th style="width:18%;">Trackings</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% packages.each_with_index do |pkg, idx| %>
+        <tr>
+          <td><%= pkg.numero_caja.presence || (idx + 1) %></td>
+          <td><%= [ pkg.largo, pkg.ancho, pkg.alto ].map { |v| v ? sprintf("%.2f", v) : "—" }.join(" × ") %></td>
+          <td>1</td>
+          <td>Box</td>
+          <td><%= pkg.peso ? sprintf("%.2f", pkg.peso) : "—" %></td>
+          <td><%= truncate(pkg.descripcion.to_s, length: 45).presence || "PAQUETERIA" %></td>
+          <td class="wr-mono" style="font-size:10px;word-break:break-all;"><%= pkg.tracking %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<%# ── Totales ── %>
+<div class="wr-section">
+  <table class="wr-totals">
+    <tr>
+      <td class="label">Total pieces</td><td class="value"><%= totals[:pieces] %></td>
+      <td class="label">Total weight</td>
+      <td class="value"><%= totals[:weight_lb] %> LB · <%= totals[:weight_kg] %> KG</td>
+    </tr>
+    <tr>
+      <td class="label">Total volumetric weight</td>
+      <td class="value"><%= totals[:vol_weight_lb] %> LB · <%= totals[:vol_weight_kg] %> KG</td>
+      <td class="label">Total volume</td>
+      <td class="value"><%= totals[:volume_cuft] %> ft³ · <%= totals[:volume_m3] %> m³</td>
+    </tr>
+  </table>
+</div>
+
+<% terms_version = wr&.terms_version.presence || wr_terms_version %>
+<%# ── Terms & Conditions bilingüe ── %>
+<div class="wr-section">
+  <div class="wr-h" style="margin-bottom:6px;">Terms & Conditions / Términos y Condiciones — v<%= terms_version %></div>
+  <div class="wr-terms-cols">
+    <div>
+      <div class="wr-h" style="color:#1B2559;">English</div>
+      <div style="white-space:pre-line;"><%= wr_terms(language: :en, version: terms_version) %></div>
+    </div>
+    <div>
+      <div class="wr-h" style="color:#1B2559;">Español</div>
+      <div style="white-space:pre-line;"><%= wr_terms(language: :es, version: terms_version) %></div>
+    </div>
+  </div>
+</div>
+
+<%# ── Footer ── %>
+<div class="wr-footer">
+  <div>
+    User: <strong><%= Current.user&.nombre || "—" %></strong>
+    · Initials: <strong><%= wr_user_initials(Current.user) %></strong>
+  </div>
+</div>

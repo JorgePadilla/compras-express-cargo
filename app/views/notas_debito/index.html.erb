@@ -10,7 +10,7 @@
     Filtros
   </summary>
   <div class="px-6 py-4 border-t border-gray-200">
-    <%= form_tag notas_debito_path, method: :get, class: "grid grid-cols-1 md:grid-cols-3 gap-4" do %>
+    <%= form_tag notas_debito_path, method: :get, class: "grid grid-cols-1 md:grid-cols-3 gap-4", data: { controller: "f2-clear", f2_clear_submit_value: "true" } do %>
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
         <%= select_tag :estado, options_for_select(NotaDebito::ESTADOS.map { |e| [e.humanize, e] }, params[:estado]),
@@ -60,11 +60,13 @@
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 L. <%= number_with_delimiter(nd.total.to_f, precision: 2) %>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right space-x-2">
-                <%= link_to "Ver", nd, class: "text-cec-teal hover:underline text-sm" %>
-                <% if nd.creado? %>
-                  <%= link_to "Editar", edit_nota_debito_path(nd), class: "text-cec-navy hover:underline text-sm" %>
-                <% end %>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex items-center justify-end gap-2">
+                  <%= render RowActionComponent.new(action: :view, href: nd, label: "Ver nota de débito") %>
+                  <% if nd.creado? %>
+                    <%= render RowActionComponent.new(action: :edit, href: edit_nota_debito_path(nd), label: "Editar nota de débito") %>
+                  <% end %>
+                </div>
               </td>
             </tr>
           <% end %>
@@ -72,7 +74,7 @@
       </table>
     </div>
   </div>
-  <div class="mt-4"><%= paginate @notas_debito %></div>
+  <div class="mt-4"><%= render PaginationComponent.new(collection: @notas_debito, label: "notas de débito") %></div>
 <% else %>
   <%= render EmptyStateComponent.new(
     title: "No hay notas de debito",

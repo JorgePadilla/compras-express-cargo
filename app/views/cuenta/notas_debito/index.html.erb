@@ -39,7 +39,7 @@
       </table>
     </div>
   </div>
-  <div class="mt-4"><%= paginate @notas_debito %></div>
+  <div class="mt-4"><%= render PaginationComponent.new(collection: @notas_debito, label: "notas de débito") %></div>
 <% else %>
   <%= render EmptyStateComponent.new(
     title: "Sin notas de debito",

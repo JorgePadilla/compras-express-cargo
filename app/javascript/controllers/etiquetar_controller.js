@@ -2,9 +2,16 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = [
-    "form", "tracking", "clienteInput", "clienteId", "clienteDropdown",
-    "clienteNombre", "notasBanner", "notasTexto", "duplicateModal",
-    "duplicateInfo", "submitBtn", "event"
+    "form", "tipoEnvio", "tracking",
+    "trackingSecundario", "trackingSecundarioContainer",
+    "trackingSecundarioToggle", "trackingSecundarioToggleLabel",
+    "clienteInput", "clienteId", "clienteDropdown",
+    "clienteNombre", "descripcion",
+    "notasBanner", "notasTexto",
+    "preAlertaBanner", "preAlertaNumero", "preAlertaCliente", "preAlertaDescripcion",
+    "duplicateModal", "duplicateInfo", "duplicateNewBtn", "duplicateNewHint",
+    "cajasModal", "cajasInput", "cantidadPaquetesHidden",
+    "submitBtn", "event", "panel"
   ]
   static values = {
     checkUrl: String,
@@ -13,8 +20,15 @@ export default class extends Controller {
 
   connect() {
     this._searchTimeout = null
+    this._clienteActiveIndex = -1
     this._handleGlobalKeydown = this.handleKeydown.bind(this)
     document.addEventListener("keydown", this._handleGlobalKeydown)
+    // Al cargar /etiquetar (incluida la navegación Turbo tras iniciar sesión),
+    // el cursor arranca en el primer campo: tracking. `autofocus` no es
+    // confiable en visitas Turbo, así que lo forzamos en connect.
+    requestAnimationFrame(() => {
+      if (this.hasTrackingTarget) this.trackingTarget.focus()
+    })
   }
 
   disconnect() {
@@ -26,12 +40,44 @@ export default class extends Controller {
     if (e.key === "F2") {
       e.preventDefault()
       this.clearForm()
+    } else if (e.key === "F3") {
+      // F3 = revelar / esconder tracking secundario (solo ~40% lo usa,
+      // por eso lo dejamos detrás de un atajo en vez de visible siempre).
+      // Antes era TAB pero rompía la navegación natural del form.
+      e.preventDefault()
+      this.toggleTrackingSecundario()
     } else if (e.key === "F8") {
       e.preventDefault()
       this.submitForm()
     } else if (e.key === "F9") {
       e.preventDefault()
       this.submitFormWithPrint()
+    }
+  }
+
+  toggleTrackingSecundario() {
+    if (!this.hasTrackingSecundarioContainerTarget) return
+    const container = this.trackingSecundarioContainerTarget
+    if (container.classList.contains("hidden")) {
+      this._showTrackingSecundario()
+      if (this.hasTrackingSecundarioTarget) this.trackingSecundarioTarget.focus()
+    } else {
+      this._hideTrackingSecundario()
+    }
+  }
+
+  _showTrackingSecundario() {
+    this.trackingSecundarioContainerTarget.classList.remove("hidden")
+    if (this.hasTrackingSecundarioToggleLabelTarget) {
+      this.trackingSecundarioToggleLabelTarget.textContent = "− Quitar tracking secundario"
+    }
+  }
+
+  _hideTrackingSecundario() {
+    this.trackingSecundarioContainerTarget.classList.add("hidden")
+    if (this.hasTrackingSecundarioTarget) this.trackingSecundarioTarget.value = ""
+    if (this.hasTrackingSecundarioToggleLabelTarget) {
+      this.trackingSecundarioToggleLabelTarget.textContent = "+ Agregar tracking secundario"
     }
   }
 
@@ -64,10 +110,11 @@ export default class extends Controller {
       return
     }
 
-    this.clienteDropdownTarget.innerHTML = clientes.map(c => `
+    this.clienteDropdownTarget.innerHTML = clientes.map((c, i) => `
       <button type="button"
         class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center justify-between"
-        data-action="click->etiquetar#selectCliente"
+        data-action="click->etiquetar#selectCliente mousemove->etiquetar#hoverCliente"
+        data-index="${i}"
         data-id="${c.id}"
         data-codigo="${c.codigo}"
         data-nombre="${c.nombre}"
@@ -81,10 +128,70 @@ export default class extends Controller {
       </button>
     `).join("")
     this.showDropdown()
+    // Cargar el primer ítem como activo para confirmarlo con Enter sin mouse.
+    this._clienteActiveIndex = 0
+    this._highlightActiveCliente()
+  }
+
+  // ── Navegación por teclado del dropdown de cliente ──
+  _clienteItems() {
+    return Array.from(this.clienteDropdownTarget.querySelectorAll("[data-index]"))
+  }
+
+  _highlightActiveCliente() {
+    const items = this._clienteItems()
+    items.forEach((el, i) => {
+      const active = i === this._clienteActiveIndex
+      el.classList.toggle("bg-cec-teal/10", active)
+      if (active) el.scrollIntoView({ block: "nearest" })
+    })
+  }
+
+  _moveCliente(delta) {
+    const items = this._clienteItems()
+    if (items.length === 0) return
+    const next = this._clienteActiveIndex + delta
+    this._clienteActiveIndex = Math.max(0, Math.min(items.length - 1, next))
+    this._highlightActiveCliente()
+  }
+
+  hoverCliente(e) {
+    const idx = parseInt(e.currentTarget.dataset.index, 10)
+    if (Number.isFinite(idx) && idx !== this._clienteActiveIndex) {
+      this._clienteActiveIndex = idx
+      this._highlightActiveCliente()
+    }
+  }
+
+  clienteKeydown(e) {
+    if (this.clienteDropdownTarget.classList.contains("hidden")) return
+    const items = this._clienteItems()
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault()
+      this._moveCliente(1)
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault()
+      this._moveCliente(-1)
+    } else if (e.key === "Enter") {
+      const active = items[this._clienteActiveIndex]
+      if (active) {
+        e.preventDefault() // no enviar el form: solo seleccionar el cliente
+        this._selectClienteEl(active)
+      }
+    } else if (e.key === "Escape") {
+      e.preventDefault()
+      this.hideDropdown()
+    } else if (e.key === "Tab") {
+      this.hideDropdown()
+    }
   }
 
   selectCliente(e) {
-    const btn = e.currentTarget
+    this._selectClienteEl(e.currentTarget)
+  }
+
+  _selectClienteEl(btn) {
     const id = btn.dataset.id
     const codigo = btn.dataset.codigo
     const nombre = btn.dataset.nombre
@@ -97,19 +204,43 @@ export default class extends Controller {
     this.clienteNombreTarget.classList.remove("hidden")
 
     if (notas && notas.trim() !== "") {
-      this.notasTextoTarget.textContent = notas
-      this.notasBannerTarget.classList.remove("hidden")
+      if (this.hasNotasTextoTarget) this.notasTextoTarget.textContent = notas
+      if (this.hasNotasBannerTarget) this.notasBannerTarget.classList.remove("hidden")
       // Trigger audio alert for client notes
       this.dispatch("clienteNotas")
-    } else {
+    } else if (this.hasNotasBannerTarget) {
       this.notasBannerTarget.classList.add("hidden")
     }
+
+    // PR-9.b: jalar tareas + notas del cliente a la franja de la derecha.
+    this.loadPanel(id)
 
     this.hideDropdown()
   }
 
+  // Recarga el turbo-frame de la franja de contexto. Turbo se encarga del
+  // fetch al cambiar el `src`; si el cliente es el mismo no lo tocamos para
+  // no perder el estado de las tareas que el operario acaba de marcar.
+  loadPanel(clienteId) {
+    if (!this.hasPanelTarget) return
+
+    const frame = this.panelTarget.querySelector("turbo-frame#panel_contexto")
+    if (!frame) return
+
+    const base = this.panelTarget.dataset.panelUrl
+    const params = new URLSearchParams()
+    if (clienteId) params.set("cliente_id", clienteId)
+
+    const tracking = this.hasTrackingTarget ? this.trackingTarget.value.trim() : ""
+    if (tracking) params.set("tracking", tracking)
+
+    const url = params.toString() ? `${base}?${params}` : base
+    if (frame.getAttribute("src") !== url) frame.setAttribute("src", url)
+  }
+
   hideDropdown() {
     this.clienteDropdownTarget.classList.add("hidden")
+    this._clienteActiveIndex = -1
   }
 
   showDropdown() {
@@ -132,35 +263,169 @@ export default class extends Controller {
     })
       .then(r => r.json())
       .then(data => {
+        // PR-2: si el tracking tiene pre-alerta, sonido distintivo + banner verde.
+        // No abrimos el modal de duplicado en ese caso — la pre-alerta NO es un
+        // duplicado, es un "paquete esperado" que el sistema reconciliará al guardar.
+        if (data.pre_alerta_match) {
+          this._showPreAlertaBanner(data)
+          this.dispatch("preAlertaMatch")
+          return
+        }
         if (data.exists && !data.terminal) {
-          const info = this.duplicateInfoTarget
-          info.textContent = ""
-          const lines = [
-            { text: "Tracking duplicado encontrado", cls: "font-medium" },
-            { text: `Guia: ${data.guia}`, cls: "mt-1" },
-            { text: `Cliente: ${data.cliente}`, cls: "" },
-            { text: `Estado: ${data.estado} — Fecha: ${data.fecha}`, cls: "" },
-            { text: `${data.count} paquete(s) con este tracking`, cls: "text-sm text-gray-500 mt-1" }
-          ]
-          lines.forEach(({ text, cls }) => {
-            const p = document.createElement("p")
-            p.textContent = text
-            if (cls) p.className = cls
-            info.appendChild(p)
-          })
-          this.duplicateModalTarget.classList.remove("hidden")
+          this._openDuplicateModal(data)
         }
       })
       .catch(() => {})
   }
 
-  closeDuplicate() {
-    this.duplicateModalTarget.classList.add("hidden")
+  _showPreAlertaBanner(data) {
+    if (!this.hasPreAlertaBannerTarget) return
+    if (this.hasPreAlertaNumeroTarget) this.preAlertaNumeroTarget.textContent = data.pre_alerta_numero || ""
+    if (this.hasPreAlertaClienteTarget) this.preAlertaClienteTarget.textContent = data.pre_alerta_cliente || ""
+    if (this.hasPreAlertaDescripcionTarget) this.preAlertaDescripcionTarget.textContent = data.pre_alerta_descripcion || ""
+    this.preAlertaBannerTarget.classList.remove("hidden")
+
+    // Auto-fill cliente cuando el JSON trae los campos. Queda editable
+    // por si el operador necesita cambiarlo (Jorge), pero con pill
+    // informativa indicando que vino de la PA.
+    if (data.cliente_id) this._fillClienteFromPreAlerta(data)
+
+    // Auto-fill descripción desde la PA (editable, NO se bloquea — Miami
+    // a veces descubre que el contenido real difiere del declarado).
+    // Solo rellena si el operador no escribió nada para no pisar input.
+    if (data.pre_alerta_descripcion && this.hasDescripcionTarget &&
+        this.descripcionTarget.value.trim() === "") {
+      this.descripcionTarget.value = data.pre_alerta_descripcion
+    }
   }
 
-  continueDuplicate() {
+  _hidePreAlertaBanner() {
+    if (!this.hasPreAlertaBannerTarget) return
+    this.preAlertaBannerTarget.classList.add("hidden")
+  }
+
+  _fillClienteFromPreAlerta(data) {
+    if (this.hasClienteIdTarget) this.clienteIdTarget.value = data.cliente_id
+    if (this.hasClienteInputTarget) {
+      // Mostrar "CEC-006 — Maria Lopez" todo junto en el input cuando viene
+      // de PA. Queda editable — si el operador necesita cambiar, Ctrl+A o
+      // borrar y escribir el nuevo código dispara el dropdown de búsqueda.
+      const codigo = data.cliente_codigo || ""
+      const nombre = data.cliente_nombre || ""
+      this.clienteInputTarget.value = nombre ? `${codigo} — ${nombre}` : codigo
+      // Ring teal sutil indica origen PA, pero sin cursor-not-allowed.
+      this.clienteInputTarget.classList.add(
+        "bg-cec-teal/5", "dark:bg-cec-teal/15", "ring-1", "ring-cec-teal/40"
+      )
+    }
+    // El `<p>` separado de nombre completo deja de tener sentido cuando el
+    // código+nombre ya están juntos en el input. Lo escondemos.
+    if (this.hasClienteNombreTarget) {
+      this.clienteNombreTarget.textContent = ""
+      this.clienteNombreTarget.classList.add("hidden")
+    }
+    this.hideDropdown()
+
+    // Si el cliente tiene notas Miami, mostrar banner + sonido alerta —
+    // misma lógica que selectCliente() para mantener consistencia.
+    const notas = (data.cliente_notas_miami || "").trim()
+    if (notas !== "") {
+      if (this.hasNotasTextoTarget) this.notasTextoTarget.textContent = notas
+      if (this.hasNotasBannerTarget) this.notasBannerTarget.classList.remove("hidden")
+      this.dispatch("clienteNotas")
+    }
+
+    // PR-9.b: con match de pre-alerta la franja además trae las "notas
+    // especiales" (las instrucciones que el cliente escribió para ESTE
+    // tracking) y las tareas que salieron de ellas.
+    this.loadPanel(data.cliente_id)
+  }
+
+  // Limpia los estilos visuales del input cliente que ponemos cuando viene
+  // de PA (anillo teal + pill informativa). Lo usa clearForm (F2) y se podría
+  // disparar también si el operador empieza a editar el código manualmente.
+  _resetClienteFromPreAlertaStyling() {
+    if (this.hasClienteInputTarget) {
+      this.clienteInputTarget.classList.remove(
+        "bg-cec-teal/5", "dark:bg-cec-teal/15", "ring-1", "ring-cec-teal/40"
+      )
+    }
+  }
+
+  _openDuplicateModal(data) {
+    // Render info section.
+    const info = this.duplicateInfoTarget
+    info.textContent = ""
+    const lines = [
+      { text: "Este tracking ya está registrado en el sistema:", cls: "font-medium text-gray-800 dark:text-gray-100 mb-2" },
+      { text: `Tracking: ${data.tracking_base || ""}`, cls: "mt-1 font-mono text-sm" },
+      { text: `Cliente: ${data.cliente}`, cls: "" },
+      { text: `Estado: ${data.estado} — Fecha: ${data.fecha}`, cls: "" },
+      { text: `${data.count} paquete(s) con este tracking base`, cls: "text-xs text-gray-500 dark:text-gray-400 mt-1" }
+    ]
+    lines.forEach(({ text, cls }) => {
+      const p = document.createElement("p")
+      p.textContent = text
+      if (cls) p.className = cls
+      info.appendChild(p)
+    })
+
+    // Configure "Es duplicado real" button: requires next_suffix; if exhausted (Z),
+    // disable + explain that needs manual intervention.
+    this._duplicateData = data
+    if (this.hasDuplicateNewBtnTarget) {
+      if (data.next_suffix && data.next_tracking) {
+        this.duplicateNewBtnTarget.disabled = false
+        if (this.hasDuplicateNewHintTarget) {
+          this.duplicateNewHintTarget.textContent =
+            `Crea paquete nuevo con tracking ${data.next_tracking} (sufijo ${data.next_suffix}).`
+        }
+      } else {
+        this.duplicateNewBtnTarget.disabled = true
+        if (this.hasDuplicateNewHintTarget) {
+          this.duplicateNewHintTarget.textContent =
+            "Sufijos A-Z agotados. Pedí intervención manual del supervisor."
+        }
+      }
+    }
+
+    this.duplicateModalTarget.classList.remove("hidden")
+  }
+
+  closeDuplicate() {
     this.duplicateModalTarget.classList.add("hidden")
-    // Focus next field
+    this._duplicateData = null
+  }
+
+  // Opción 1: "Es actualización" — navega al edit del paquete original.
+  // El digitador ajusta lo que ocupe en el form de edit estándar.
+  duplicateAsUpdate() {
+    const data = this._duplicateData
+    if (!data || !data.edit_url) return
+    window.location.href = data.edit_url
+  }
+
+  // PR-5: Opción 2 — "Cambio de Servicio". Navega al show del paquete
+  // original con ?mode=edit&cambio_servicio=1 (no usamos edit_url porque
+  // edit_paquete_path redirige sin preservar query params). El banner amber
+  // se muestra y el flag solicito_cambio_servicio queda pre-marcado.
+  // Al guardar, la Nota de Débito auto se genera en facturar! (pre_factura.rb).
+  duplicateAsCambioServicio() {
+    const data = this._duplicateData
+    if (!data || !data.existing_paquete_id) return
+    window.location.href =
+      `/paquetes/${data.existing_paquete_id}?mode=edit&cambio_servicio=1`
+  }
+
+  // Opción 2: "Es duplicado real" — pre-rellena el tracking del form con
+  // el siguiente sufijo libre (A, B, C…) y cierra el modal. El digitador
+  // termina de llenar los demás campos y guarda normalmente.
+  duplicateAsNew() {
+    const data = this._duplicateData
+    if (!data || !data.next_tracking) return
+    this.trackingTarget.value = data.next_tracking
+    this.duplicateModalTarget.classList.add("hidden")
+    this._duplicateData = null
     this.clienteInputTarget.focus()
   }
 
@@ -170,17 +435,89 @@ export default class extends Controller {
     this.clienteIdTarget.value = ""
     this.clienteNombreTarget.textContent = ""
     this.clienteNombreTarget.classList.add("hidden")
-    this.notasBannerTarget.classList.add("hidden")
+    if (this.hasNotasBannerTarget) this.notasBannerTarget.classList.add("hidden")
     this.duplicateModalTarget.classList.add("hidden")
-    this.trackingTarget.focus()
+    // PR-9.b: la franja vuelve a su estado vacío junto con el formulario.
+    this.loadPanel(null)
+    this._resetClienteFromPreAlertaStyling()
+    this._hidePreAlertaBanner()
+    this._closeCajasModal()
+    this._resetCantidadPaquetes()
+    if (this.hasTrackingSecundarioContainerTarget) this._hideTrackingSecundario()
+    if (this.hasTipoEnvioTarget) {
+      this.tipoEnvioTarget.focus()
+    } else {
+      this.trackingTarget.focus()
+    }
   }
 
   submitForm() {
     this._removePrintField()
+    this._resetCantidadPaquetes()
     this.formTarget.requestSubmit()
   }
 
+  // PR-4: F9 / Guardar+Imprimir abre el modal de "¿cuántas cajas?" antes
+  // de submit. Yusef: "cantidad de paquetes se lo vamos a poner después
+  // de presionar F9". El modal sobrescribe el hidden cantidad_paquetes
+  // y dispara el submit con print=true.
   submitFormWithPrint() {
+    if (!this.hasCajasModalTarget) {
+      // Fallback si por alguna razón el modal no está montado: submit directo.
+      this._submitWithPrint()
+      return
+    }
+    this._resetCantidadPaquetes()
+    if (this.hasCajasInputTarget) {
+      this.cajasInputTarget.value = "1"
+    }
+    if (typeof this.cajasModalTarget.showModal === "function") {
+      this.cajasModalTarget.showModal()
+    } else {
+      this.cajasModalTarget.setAttribute("open", "")
+    }
+    setTimeout(() => {
+      if (this.hasCajasInputTarget) {
+        this.cajasInputTarget.focus()
+        this.cajasInputTarget.select()
+      }
+    }, 50)
+  }
+
+  cancelCajas() {
+    this._closeCajasModal()
+  }
+
+  cajasKeydown(e) {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      this.confirmCajas()
+    } else if (e.key === "Escape") {
+      e.preventDefault()
+      this.cancelCajas()
+    }
+  }
+
+  confirmCajas() {
+    const raw = this.hasCajasInputTarget ? parseInt(this.cajasInputTarget.value, 10) : 1
+    const n = Number.isFinite(raw) ? Math.max(1, Math.min(26, raw)) : 1
+    if (this.hasCantidadPaquetesHiddenTarget) {
+      this.cantidadPaquetesHiddenTarget.value = String(n)
+    }
+    this._closeCajasModal()
+    this._submitWithPrint()
+  }
+
+  _closeCajasModal() {
+    if (!this.hasCajasModalTarget) return
+    if (typeof this.cajasModalTarget.close === "function") {
+      this.cajasModalTarget.close()
+    } else {
+      this.cajasModalTarget.removeAttribute("open")
+    }
+  }
+
+  _submitWithPrint() {
     this._removePrintField()
     const input = document.createElement("input")
     input.type = "hidden"
@@ -189,6 +526,12 @@ export default class extends Controller {
     input.dataset.printField = "true"
     this.formTarget.appendChild(input)
     this.formTarget.requestSubmit()
+  }
+
+  _resetCantidadPaquetes() {
+    if (this.hasCantidadPaquetesHiddenTarget) {
+      this.cantidadPaquetesHiddenTarget.value = "1"
+    }
   }
 
   _removePrintField() {

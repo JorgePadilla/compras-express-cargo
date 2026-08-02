@@ -1,151 +1,512 @@
-<%= render PageHeaderComponent.new(title: "Todos los Paquetes", subtitle: "#{@paquetes.total_count} paquetes") %>
+<div data-controller="paquetes-shortcuts bulk-selection"
+     data-paquetes-shortcuts-export-xlsx-url-value="<%= export_paquetes_path(request.query_parameters.merge(format: :xlsx)) %>"
+     data-paquetes-shortcuts-export-pdf-url-value="<%= export_paquetes_path(request.query_parameters.merge(format: :pdf)) %>"
+     data-bulk-selection-bulk-print-url-value="<%= bulk_print_paquetes_path %>"
+     data-bulk-selection-bulk-export-url-value="<%= bulk_export_paquetes_path %>"
+     data-bulk-selection-export-xlsx-url-value="<%= export_paquetes_path(request.query_parameters.merge(format: :xlsx)) %>"
+     data-bulk-selection-export-pdf-url-value="<%= export_paquetes_path(request.query_parameters.merge(format: :pdf)) %>">
 
-<div class="mb-6">
-  <%= render SearchBarComponent.new(url: paquetes_path, placeholder: "Buscar por tracking, guia o cliente...", value: params[:q]) %>
+<%= render PageHeaderComponent.new(title: "Todos los Paquetes", subtitle: "#{@paquetes.total_count} paquetes") do |header|
+  header.with_action do
+    render ButtonComponent.new(variant: :primary, icon: "arrow-down-tray",
+                               data: { action: "click->bulk-selection#exportXlsx",
+                                       shortcut: "F8" }) do
+      "Excel (F8)"
+    end
+  end
+  header.with_action do
+    render ButtonComponent.new(variant: :primary, icon: "document-arrow-down",
+                               data: { action: "click->bulk-selection#exportPdf",
+                                       shortcut: "F9" }) do
+      "PDF (F9)"
+    end
+  end
+  header.with_action do
+    render ButtonComponent.new(variant: :primary, icon: "printer",
+                               data: { action: "click->bulk-selection#print",
+                                       shortcut: "F4" }) do
+      "Imprimir (F4)"
+    end
+  end
+end %>
+
+<%# Barra de búsqueda — full-width, llega hasta el borde derecho como el botón Imprimir. %>
+<div class="mb-4 flex items-center gap-2 w-full">
+  <div class="flex-1">
+    <%= render SearchBarComponent.new(
+      url: paquetes_path,
+      placeholder: "Buscar por tracking, recepción, cliente, contenido, tipo de envío o manifiesto...",
+      value: params[:q]
+    ) %>
+  </div>
+  <details class="relative">
+    <summary class="list-none cursor-pointer inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-400 hover:text-cec-teal hover:bg-gray-100 dark:hover:text-cec-teal-light dark:hover:bg-gray-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cec-teal transition-colors"
+             aria-label="¿Qué busca esta barra?" title="¿Qué busca esta barra?">
+      <%= heroicon "information-circle", variant: :outline, options: { class: "w-5 h-5" } %>
+    </summary>
+    <div class="absolute left-1/2 -translate-x-1/2 sm:left-auto sm:right-0 sm:translate-x-0 z-20 mt-2 w-72 rounded-xl bg-white dark:bg-gray-800 shadow-lg ring-1 ring-gray-200 dark:ring-gray-700 p-4 text-xs text-gray-700 dark:text-gray-200">
+      <p class="font-semibold text-gray-800 dark:text-gray-100 mb-2">La búsqueda incluye estos campos:</p>
+      <ul class="space-y-1 list-disc list-inside text-gray-600 dark:text-gray-300">
+        <li>Tracking (primario y secundario)</li>
+        <li>N° de recepción (RM/RS/RH-XXXXXX)</li>
+        <li>Cliente: código y nombre</li>
+        <li>Tercero (cuando aplica): código y nombre</li>
+        <li>Contenido / descripción</li>
+        <li>Tipo de envío (CER, CKA, EXP, CEM, CKM)</li>
+        <li>Número de manifiesto</li>
+      </ul>
+      <p class="mt-3 text-[11px] text-gray-500 dark:text-gray-400">Sucursal y estado se filtran desde el panel "Filtros avanzados".</p>
+    </div>
+  </details>
 </div>
 
-<%# Color legend %>
-<div class="mb-4 flex flex-wrap gap-3 text-xs">
-  <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-cec-teal/10 border border-cec-teal/30"></span> Pre-Alerta</span>
-  <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-blue-100 border border-blue-200"></span> Pre-Factura</span>
-  <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-amber-100 border border-amber-200"></span> Cambio Servicio</span>
-  <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-amber-50 border border-amber-200"></span> Retener Miami</span>
+<%# Filtros rápidos — fila inline auto-submit. Yusef 2026-05-08:
+    "filtros rapidos: tipo de envio, estado dropdowns, rango de fechas,
+    codigo de cliente texto libre, nombre de cliente texto libre con trim
+    y multi-palabra (juan perez)". Comparte la misma URL/params que el
+    panel "Filtros avanzados" — submitear cualquiera actualiza el otro al
+    siguiente render porque Rails los lee del query string. %>
+<%
+  qf_tipo_envio  = Array(params[:tipo_envio_ids]).reject(&:blank?).first
+  qf_estado      = Array(params[:estados]).reject(&:blank?).first
+  qf_codigo      = params[:cliente_codigo]
+  qf_nombre      = params[:cliente_nombre]
+  qf_desde       = params[:fecha_desde]
+  qf_hasta       = params[:fecha_hasta]
+%>
+<%= form_tag paquetes_path(anchor: "resultados"), method: :get,
+      class: "mb-4 bg-white dark:bg-gray-800 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm px-4 py-3",
+      data: { controller: "quick-filters", turbo: false } do %>
+
+  <%# Hidden: preservar params que NO controla esta fila %>
+  <%= hidden_field_tag :q, params[:q] if params[:q].present? %>
+  <%= hidden_field_tag :busqueda_avanzada, params[:busqueda_avanzada] if params[:busqueda_avanzada].present? %>
+  <%= hidden_field_tag :pre_alerta_id, params[:pre_alerta_id] if params[:pre_alerta_id].present? %>
+  <% Array(params[:sucursal_ids]).reject(&:blank?).each do |sid| %>
+    <%= hidden_field_tag "sucursal_ids[]", sid %>
+  <% end %>
+  <% %i[solo_facturados incluir_facturados solo_anulados solo_prefactura sin_prealerta incluir_3_12_meses incluir_mas_1_ano].each do |k| %>
+    <%= hidden_field_tag k, "1" if params[k] == "1" %>
+  <% end %>
+
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 items-end">
+    <div>
+      <label for="qf_tipo_envio" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Tipo envío</label>
+      <%= select_tag "tipo_envio_ids[]",
+            options_from_collection_for_select(@tipo_envios, :id, :nombre, qf_tipo_envio),
+            include_blank: "Todos",
+            id: "qf_tipo_envio",
+            class: "w-full h-9 px-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-cec-teal",
+            data: { action: "change->quick-filters#submit" } %>
+    </div>
+
+    <div>
+      <label for="qf_estado" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Estado</label>
+      <%= select_tag "estados[]",
+            options_for_select(@estados_paquete.map { |e| [ e.humanize, e ] }, qf_estado),
+            include_blank: "Todos",
+            id: "qf_estado",
+            class: "w-full h-9 px-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-cec-teal",
+            data: { action: "change->quick-filters#submit" } %>
+    </div>
+
+    <div>
+      <label for="qf_fecha_desde" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Desde</label>
+      <%= date_field_tag :fecha_desde, qf_desde,
+            id: "qf_fecha_desde",
+            class: "w-full h-9 px-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-cec-teal",
+            data: { controller: "flatpickr", action: "change->quick-filters#submit" } %>
+    </div>
+
+    <div>
+      <label for="qf_fecha_hasta" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Hasta</label>
+      <%= date_field_tag :fecha_hasta, qf_hasta,
+            id: "qf_fecha_hasta",
+            class: "w-full h-9 px-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-cec-teal",
+            data: { controller: "flatpickr", action: "change->quick-filters#submit" } %>
+    </div>
+
+    <div>
+      <label for="qf_cliente_codigo" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Código cliente</label>
+      <%= text_field_tag :cliente_codigo, qf_codigo,
+            id: "qf_cliente_codigo",
+            placeholder: "ej. CEC-001",
+            autocomplete: "off",
+            class: "w-full h-9 px-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-cec-teal",
+            data: { action: "input->quick-filters#debouncedSubmit keydown.enter->quick-filters#submit" } %>
+    </div>
+
+    <div>
+      <label for="qf_cliente_nombre" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Nombre cliente</label>
+      <%= text_field_tag :cliente_nombre, qf_nombre,
+            id: "qf_cliente_nombre",
+            placeholder: "ej. juan perez",
+            autocomplete: "off",
+            class: "w-full h-9 px-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-cec-teal",
+            data: { action: "input->quick-filters#debouncedSubmit keydown.enter->quick-filters#submit" } %>
+    </div>
+  </div>
+<% end %>
+
+<%# Leyenda de colores de fila — horizontal, full-width, arriba de filtros.
+    Yusef 2026-05-02: pidió layout horizontal en lugar de cuadro 2x2. %>
+<div class="mb-4 bg-white dark:bg-gray-800 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm px-4 py-2.5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-gray-700 dark:text-gray-200">
+  <span class="inline-flex items-center gap-1.5 text-gray-500 dark:text-gray-400 pr-3 border-r border-gray-200 dark:border-gray-700">
+    <%= heroicon "swatch", variant: :outline, options: { class: "w-4 h-4" } %>
+    <span class="font-semibold uppercase tracking-wider text-[10px]">Leyenda</span>
+  </span>
+  <span class="inline-flex items-center gap-2">
+    <span class="shrink-0 inline-block w-5 h-5 rounded bg-amber-50 dark:bg-amber-900/20 ring-2 ring-amber-300 dark:ring-amber-700 shadow-sm"></span>
+    <span class="font-medium">Retener en Miami</span>
+  </span>
+  <span class="inline-flex items-center gap-2">
+    <span class="shrink-0 inline-block w-5 h-5 rounded bg-amber-100 dark:bg-amber-900/30 ring-2 ring-amber-400 dark:ring-amber-600 shadow-sm"></span>
+    <span class="font-medium">Cambio de servicio</span>
+  </span>
+  <span class="inline-flex items-center gap-2">
+    <span class="shrink-0 inline-block w-5 h-5 rounded bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-300 dark:ring-blue-700 shadow-sm"></span>
+    <span class="font-medium">Con pre-factura</span>
+  </span>
+  <span class="inline-flex items-center gap-2">
+    <span class="shrink-0 inline-block w-5 h-5 rounded bg-cec-teal/10 dark:bg-cec-teal/15 ring-2 ring-cec-teal dark:ring-cec-teal-light shadow-sm"></span>
+    <span class="font-medium">Vinculado a pre-alerta</span>
+  </span>
 </div>
 
-<%# Filters panel %>
-<details class="mb-6 bg-white rounded-lg shadow">
-  <summary class="px-6 py-3 cursor-pointer text-sm font-medium text-gray-700 hover:text-cec-navy flex items-center gap-2">
-    <%= heroicon "funnel", variant: :outline, options: { class: "w-4 h-4" } %>
-    Filtros avanzados
-    <% active_filters = [params[:estado], params[:tipo_envio_id], params[:fecha_desde], params[:fecha_hasta], params[:solo_prefactura], params[:solo_anulados], params[:sin_prealerta], params[:sin_prefactura], params[:incluir_antiguos]].count(&:present?) %>
-    <% if active_filters > 0 %>
-      <span class="bg-cec-navy text-white text-xs px-2 py-0.5 rounded-full"><%= active_filters %></span>
+<%# Panel de filtros avanzados %>
+<% active_filters_count = [
+  Array(params[:estados]).reject(&:blank?).any?,
+  Array(params[:tipo_envio_ids]).reject(&:blank?).any?,
+  Array(params[:sucursal_ids]).reject(&:blank?).any?,
+  params[:pre_alerta_id].present?, params[:busqueda_avanzada].present?,
+  params[:cliente_codigo].present?, params[:cliente_nombre].present?,
+  params[:fecha_desde].present?, params[:fecha_hasta].present?,
+  params[:solo_facturados] == "1", params[:incluir_facturados] == "1",
+  params[:sin_prealerta] == "1",
+  params[:incluir_3_12_meses] == "1", params[:incluir_mas_1_ano] == "1"
+].count(true) %>
+
+<details class="mb-6 group bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-200 dark:ring-gray-700 transition-all open:ring-cec-navy/30 dark:open:ring-cec-gold/40" <%= "open" if active_filters_count.positive? %>>
+  <summary class="list-none px-6 py-3.5 cursor-pointer text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/40 rounded-lg group-open:rounded-b-none group-open:border-b group-open:border-gray-200 dark:group-open:border-gray-700 flex items-center gap-2 transition-colors">
+    <%= heroicon "funnel", variant: :outline, options: { class: "w-4 h-4 text-cec-navy dark:text-cec-gold" } %>
+    <span class="text-cec-navy dark:text-gray-100">Filtros avanzados</span>
+    <% if active_filters_count.positive? %>
+      <span class="bg-cec-navy text-white text-xs px-2 py-0.5 rounded-full"><%= active_filters_count %> activo<%= "s" if active_filters_count > 1 %></span>
     <% end %>
+    <span class="ml-auto text-xs text-gray-500 dark:text-gray-400 group-open:hidden">click para abrir</span>
+    <span class="ml-auto text-xs text-gray-500 dark:text-gray-400 hidden group-open:inline">click para cerrar</span>
+    <svg class="w-4 h-4 text-gray-400 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor">
+      <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06 0L10 10.94l3.71-3.73a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 0-1.04Z" clip-rule="evenodd"/>
+    </svg>
   </summary>
-  <div class="px-6 py-4 border-t border-gray-200">
-    <%= form_tag paquetes_path, method: :get, class: "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4" do %>
+  <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+    <%# data-turbo: false → browser hace navegación clásica y respeta el
+        anchor #resultados. Con Turbo Drive el anchor en GET-forms no
+        siempre dispara el scroll. %>
+    <%= form_tag paquetes_path(anchor: "resultados"), method: :get, class: "space-y-5", data: { controller: "f2-clear", f2_clear_submit_value: "true", turbo: false } do %>
       <% if params[:q].present? %>
-        <input type="hidden" name="q" value="<%= params[:q] %>">
+        <%= hidden_field_tag :q, params[:q] %>
       <% end %>
 
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-        <%= select_tag :estado, options_for_select(Paquete.estados.keys.map { |e| [e.humanize, e] }, params[:estado]),
-            include_blank: "— Todos —",
-            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <%# Tipo envio multi-select %>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Tipo de envío</label>
+          <div class="grid grid-cols-2 gap-2">
+            <% @tipo_envios.each do |te| %>
+              <label class="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-200">
+                <%= check_box_tag "tipo_envio_ids[]", te.id, Array(params[:tipo_envio_ids]).include?(te.id.to_s),
+                    class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+                <span class="font-mono uppercase"><%= te.codigo %></span>
+                <span class="text-gray-500 dark:text-gray-400 truncate"><%= te.nombre %></span>
+              </label>
+            <% end %>
+          </div>
+        </div>
+
+        <%# Sucursal multi-select %>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Sucursal</label>
+          <div class="grid grid-cols-1 gap-2">
+            <% @sucursales.each do |s| %>
+              <label class="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-200">
+                <%= check_box_tag "sucursal_ids[]", s.id, Array(params[:sucursal_ids]).include?(s.id.to_s),
+                    class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+                <span class="font-mono"><%= s.codigo %></span>
+                <span class="text-gray-500 dark:text-gray-400"><%= s.nombre %></span>
+              </label>
+            <% end %>
+          </div>
+        </div>
+
       </div>
 
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Envio</label>
-        <%= select_tag :tipo_envio_id, options_from_collection_for_select(@tipo_envios, :id, :nombre, params[:tipo_envio_id]),
-            include_blank: "— Todos —",
-            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+      <%# Búsqueda avanzada + Pre-Alerta. La búsqueda avanzada reemplazó
+          al autocomplete de Cliente (Yusef 2026-05-08): para filtrar por
+          cliente usá los quick filters arriba (código / nombre). %>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Búsqueda avanzada</label>
+          <%= text_field_tag :busqueda_avanzada, params[:busqueda_avanzada],
+                placeholder: "Observaciones, sucursal, manifiesto, proveedor, remitente…",
+                autocomplete: "off",
+                class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+            Busca en notas (internas, al cliente, retención, consolidación), nombre de sucursal, número de manifiesto, proveedor, remitente y expedido por.
+          </p>
+        </div>
+
+        <div class="relative" data-controller="pre-alerta-search"
+             data-pre-alerta-search-url-value="<%= buscar_pre_alertas_path %>">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Pre-Alerta</label>
+          <input type="text"
+                 placeholder="Número, título o cliente…"
+                 value="<%= @pre_alerta_seleccionada&.numero_documento %>"
+                 data-pre-alerta-search-target="input"
+                 data-action="input->pre-alerta-search#search keydown->pre-alerta-search#onKeydown"
+                 class="block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" />
+          <%= hidden_field_tag :pre_alerta_id, params[:pre_alerta_id], data: { pre_alerta_search_target: "preAlertaId" } %>
+          <div data-pre-alerta-search-target="dropdown"
+               class="hidden absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700 rounded-lg shadow-lg max-h-64 overflow-auto"></div>
+          <p data-pre-alerta-search-target="nombre"
+             class="<%= @pre_alerta_seleccionada ? '' : 'hidden ' %>text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <%= [@pre_alerta_seleccionada&.titulo, @pre_alerta_seleccionada&.cliente&.codigo].compact.reject(&:blank?).join(" · ") %>
+          </p>
+        </div>
       </div>
 
+      <%# Estado multi-select ocupa full width por ser ~15 opciones %>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Desde</label>
-        <%= date_field_tag :fecha_desde, params[:fecha_desde],
-            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal",
-            data: { controller: "flatpickr" } %>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Estado del paquete</label>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <% @estados_paquete.each do |est| %>
+            <label class="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-200">
+              <%= check_box_tag "estados[]", est, Array(params[:estados]).include?(est),
+                  class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+              <span><%= est.humanize %></span>
+            </label>
+          <% end %>
+        </div>
       </div>
 
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
-        <%= date_field_tag :fecha_hasta, params[:fecha_hasta],
-            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal",
-            data: { controller: "flatpickr" } %>
-      </div>
-
-      <div class="md:col-span-3 lg:col-span-4 flex flex-wrap gap-4">
-        <label class="flex items-center gap-2 text-sm">
-          <%= check_box_tag :solo_prefactura, "1", params[:solo_prefactura] == "1", class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-          Solo Pre-Factura
+      <%# Quick toggles %>
+      <div class="flex flex-wrap gap-4 pt-2 border-t border-gray-100 dark:border-gray-700">
+        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+          <%= check_box_tag :solo_facturados, "1", params[:solo_facturados] == "1", class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+          Solo facturados
         </label>
-        <label class="flex items-center gap-2 text-sm">
-          <%= check_box_tag :solo_anulados, "1", params[:solo_anulados] == "1", class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-          Solo Anulados
+        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+          <%= check_box_tag :incluir_facturados, "1", params[:incluir_facturados] == "1", class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+          Incluir facturados
         </label>
-        <label class="flex items-center gap-2 text-sm">
+        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
           <%= check_box_tag :sin_prealerta, "1", params[:sin_prealerta] == "1", class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-          Sin Pre-Alerta
+          Sin pre-alerta
         </label>
-        <label class="flex items-center gap-2 text-sm">
-          <%= check_box_tag :sin_prefactura, "1", params[:sin_prefactura] == "1", class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-          Sin Pre-Factura
+        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+          <%= check_box_tag :incluir_3_12_meses, "1", params[:incluir_3_12_meses] == "1", class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+          Incluir 3-12 meses
         </label>
-        <label class="flex items-center gap-2 text-sm">
-          <%= check_box_tag :incluir_antiguos, "1", params[:incluir_antiguos] == "1", class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-          Incluir Antiguos (+6 meses)
+        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+          <%= check_box_tag :incluir_mas_1_ano, "1", params[:incluir_mas_1_ano] == "1", class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+          Incluir &gt; 1 año
         </label>
       </div>
 
-      <div class="md:col-span-3 lg:col-span-4 flex gap-3">
-        <button type="submit" class="px-4 py-2 text-sm font-medium bg-cec-navy text-white rounded-lg hover:bg-cec-navy-light">
-          Aplicar Filtros
-        </button>
-        <%= link_to "Limpiar", paquetes_path, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900" %>
+      <div class="flex gap-3 pt-2">
+        <button type="submit" class="px-4 py-2 text-sm font-medium bg-cec-navy text-white rounded-lg hover:bg-cec-navy-light">Aplicar filtros</button>
+        <%= link_to "Limpiar", paquetes_path, class: "px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white" %>
       </div>
     <% end %>
   </div>
 </details>
 
+<%# Anchor: el form de filtros submitea a `paquetes_path#resultados` para
+    que tras aplicar, el browser desplace la página hasta acá. %>
+<div id="resultados" class="scroll-mt-4"></div>
+
 <% if @paquetes.any? %>
-  <div class="bg-white rounded-lg shadow overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guia</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tracking</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Tipo Envio</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Peso</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Fecha</th>
-            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+  <%# Indicador de seleccion (sticky top, aparece cuando hay >= 1). Las
+      acciones (Excel/PDF/Imprimir) viven en los botones del header y son
+      "smart": si hay seleccion actuan sobre los IDs, si no exportan el
+      scope filtrado. %>
+  <div data-bulk-selection-target="bar"
+       class="hidden sticky top-0 z-10 mb-3 bg-cec-navy text-white rounded-lg shadow-lg px-4 py-3 flex items-center justify-between gap-3">
+    <div class="text-sm">
+      <span data-bulk-selection-target="counter">0</span> paquete(s) seleccionado(s)
+      <span class="ml-2 text-white/70 text-xs">— Excel/PDF/Imprimir actuan sobre la seleccion</span>
+    </div>
+    <button type="button" data-action="click->bulk-selection#clear" class="text-white/80 hover:text-white text-xs underline">Limpiar selección</button>
+  </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-900">
+            <tr>
+              <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                <input type="checkbox" data-bulk-selection-target="selectAll"
+                       data-action="change->bulk-selection#toggleAll"
+                       class="rounded border-gray-300 text-cec-teal focus:ring-cec-teal"
+                       aria-label="Seleccionar todos">
+              </th>
+            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Fecha de recepción en Miami"><%= sortable_header :fecha_recibido, "F. recibido" %></th>
+            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Fecha disponible para retiro en sucursal"><%= sortable_header :fecha_disponible, "F. disponible" %></th>
+            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Número de recepción (RM/RS/RH-XXXXXX) según sucursal"><%= sortable_header :numero_recepcion, "N° recepción" %></th>
+            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Tracking del transportista"><%= sortable_header :tracking, "Tracking" %></th>
+            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Cliente y código (ej. C123)"><%= sortable_header :cliente, "Cliente" %></th>
+            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Estado actual del paquete"><%= sortable_header :estado, "Estado" %></th>
+            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Tipo de envío (CER, CKA, EXP, CEM, CKM)"><%= sortable_header :tipo_envio, "T.E." %></th>
+            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Consolidado: el paquete pertenece a una pre-alerta consolidada">Cons.</th>
+            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Descripción del contenido del paquete">Contenido</th>
+            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Número de Pre-Alerta · hover muestra el título de referencia">PA</th>
+            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Pre-Factura — link al documento si existe">PF</th>
+            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Factura — link a la venta facturada">FA</th>
+            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Editar paquete (admin / supervisor Miami / supervisor Pre-factura)">Ed.</th>
+            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Borrar paquete (solo admin)">Bo.</th>
+            <th class="px-3 py-3 text-center text-[10px] font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-help" title="Imprimir etiqueta del paquete">Im.</th>
           </tr>
         </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
+        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
           <% @paquetes.each do |paquete| %>
             <%
               row_class = if paquete.retener_miami?
-                "bg-amber-50"
+                "bg-amber-50 dark:bg-amber-900/20"
               elsif paquete.solicito_cambio_servicio?
-                "bg-amber-100/60"
+                "bg-amber-100/60 dark:bg-amber-900/30"
               elsif paquete.pre_factura?
-                "bg-blue-50"
+                "bg-blue-50 dark:bg-blue-900/20"
               elsif paquete.pre_alerta?
-                "bg-cec-teal/5"
+                "bg-cec-teal/5 dark:bg-cec-teal/10"
               else
                 ""
               end
+              pa = paquete.pre_alerta_paquetes.first&.pre_alerta
+              pf = paquete.pre_factura
+              fa = paquete.venta
+              is_consolidado = paquete.consolidado?
             %>
-            <tr class="hover:bg-gray-50 <%= row_class %>">
-              <td class="px-6 py-4 whitespace-nowrap">
-                <%= link_to paquete.guia, paquete, class: "text-sm font-mono font-medium text-cec-navy hover:underline" %>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 <%= row_class %>">
+              <td class="px-3 py-2">
+                <input type="checkbox" value="<%= paquete.id %>"
+                       data-bulk-selection-target="row"
+                       data-tracking="<%= paquete.tracking %>"
+                       data-action="change->bulk-selection#toggleRow"
+                       class="rounded border-gray-300 text-cec-teal focus:ring-cec-teal">
               </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span class="text-sm font-mono text-gray-700"><%= truncate(paquete.tracking, length: 25) %></span>
+              <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-600 dark:text-gray-300">
+                <%= paquete.fecha_recibido_miami&.strftime("%d/%m/%Y") || paquete.created_at.strftime("%d/%m/%Y") %>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span class="text-sm text-gray-700"><%= paquete.cliente.codigo %></span>
-                <span class="text-sm text-gray-500 hidden sm:inline ml-1"><%= paquete.cliente.nombre_completo %></span>
+              <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-600 dark:text-gray-300">
+                <%= paquete.fecha_disponible&.strftime("%d/%m/%Y") || "—" %>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap hidden md:table-cell">
-                <span class="text-sm text-gray-500"><%= paquete.tipo_envio&.nombre || "—" %></span>
+              <td class="px-3 py-2 whitespace-nowrap">
+                <span class="font-mono text-xs font-semibold text-cec-navy dark:text-cec-gold"><%= paquete_display_id(paquete) %></span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
-                <span class="text-sm text-gray-700"><%= paquete.peso_cobrar || "—" %></span>
+              <td class="px-3 py-2 whitespace-nowrap">
+                <div class="flex items-center gap-1.5">
+                  <%= link_to truncate(paquete.tracking, length: 18), paquete, class: "font-mono text-xs text-gray-700 dark:text-gray-200 hover:underline" %>
+                  <% if paquete.dividido? %>
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold font-mono bg-cec-gold-gradient text-white shadow-sm" title="Caja <%= paquete.numero_caja %> de <%= paquete.cantidad_paquetes %>"><%= paquete.etiqueta_secuencia %></span>
+                  <% end %>
+                </div>
+                <% if paquete.tracking_secundario.present? %>
+                  <div class="font-mono text-[10px] text-gray-500 dark:text-gray-400 mt-0.5" title="Tracking secundario">
+                    <%= truncate(paquete.tracking_secundario, length: 22) %>
+                  </div>
+                <% end %>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap">
+              <td class="px-3 py-2 whitespace-nowrap">
+                <p class="text-xs font-medium text-gray-800 dark:text-gray-100 truncate max-w-[180px]"><%= paquete.cliente.nombre_completo %></p>
+                <p class="text-[10px] text-gray-500 font-mono"><%= paquete.cliente.codigo %></p>
+                <% if paquete.tercero %>
+                  <span class="mt-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-cec-purple/10 text-cec-purple-dark dark:bg-cec-purple/20 dark:text-cec-purple-light ring-1 ring-cec-purple/30"
+                        title="3ro: <%= paquete.tercero.nombre_completo %>">
+                    <%= heroicon "user-group", variant: :solid, options: { class: "w-2.5 h-2.5" } %>
+                    <span class="font-mono"><%= paquete.tercero.codigo %></span>
+                  </span>
+                <% end %>
+              </td>
+              <td class="px-3 py-2 whitespace-nowrap">
                 <%= render StatusBadgeComponent.new(status: paquete.estado) %>
+                <% if paquete.disponible_entrega? && paquete.sucursal %>
+                  <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">en <%= paquete.sucursal.nombre %></p>
+                <% end %>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
-                <span class="text-sm text-gray-500"><%= paquete.fecha_recibido_miami&.strftime("%d/%m/%Y") %></span>
+              <td class="px-3 py-2 whitespace-nowrap text-center">
+                <span class="font-mono text-[10px] font-bold text-cec-navy dark:text-cec-gold-light"><%= paquete.tipo_envio&.codigo&.upcase || "—" %></span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right">
-                <%= link_to edit_paquete_path(paquete), class: "text-gray-400 hover:text-cec-navy" do %>
-                  <%= heroicon "pencil-square", variant: :outline, options: { class: "w-5 h-5 inline" } %>
+              <td class="px-3 py-2 whitespace-nowrap text-center">
+                <% if is_consolidado %>
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-cec-teal/10 text-cec-teal-dark dark:bg-cec-teal/20 dark:text-cec-teal-light">Cons.</span>
+                <% else %>
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">—</span>
+                <% end %>
+              </td>
+              <td class="px-3 py-2 whitespace-normal max-w-[200px]">
+                <span class="text-xs text-gray-600 dark:text-gray-300 line-clamp-2"><%= paquete.descripcion.presence || "—" %></span>
+              </td>
+              <td class="px-3 py-2 text-center">
+                <% if pa %>
+                  <%= link_to pa.numero_documento, pre_alerta_path(pa),
+                        class: "font-mono text-[11px] text-cec-teal dark:text-cec-teal-light hover:text-cec-teal-dark hover:underline whitespace-nowrap",
+                        title: pa.titulo.presence || "Ver Pre-Alerta" %>
+                <% else %>
+                  <span class="text-[11px] text-gray-300 dark:text-gray-600" title="Sin pre-alerta">—</span>
+                <% end %>
+              </td>
+              <td class="px-3 py-2 text-center">
+                <% if pf %>
+                  <%= link_to pre_factura_path(pf), class: "inline-flex text-cec-teal dark:text-cec-teal-light hover:text-cec-teal-dark", title: "Ver Pre-Factura" do %>
+                    <%= heroicon "document-text", variant: :solid, options: { class: "w-4 h-4" } %>
+                  <% end %>
+                <% else %>
+                  <span class="inline-flex text-gray-300 dark:text-gray-600" title="Sin pre-factura"><%= heroicon "document-text", variant: :outline, options: { class: "w-4 h-4" } %></span>
+                <% end %>
+              </td>
+              <td class="px-3 py-2 text-center">
+                <% if fa %>
+                  <%= link_to venta_path(fa), class: "inline-flex text-cec-teal dark:text-cec-teal-light hover:text-cec-teal-dark", title: "Ver Factura #{fa.numero}" do %>
+                    <%= heroicon "currency-dollar", variant: :solid, options: { class: "w-4 h-4" } %>
+                  <% end %>
+                <% else %>
+                  <span class="inline-flex text-gray-300 dark:text-gray-600" title="Sin factura"><%= heroicon "currency-dollar", variant: :outline, options: { class: "w-4 h-4" } %></span>
+                <% end %>
+              </td>
+              <td class="px-3 py-2 text-center">
+                <% if can_edit_paquetes? %>
+                  <%= link_to paquete_path(paquete), class: "inline-flex text-gray-400 hover:text-cec-navy dark:hover:text-cec-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cec-teal rounded", title: "Abrir paquete (Editar dentro)" do %>
+                    <%= heroicon "pencil-square", variant: :outline, options: { class: "w-4 h-4" } %>
+                  <% end %>
+                <% else %>
+                  <span class="inline-flex text-gray-300 dark:text-gray-600 cursor-not-allowed"
+                        role="button" aria-disabled="true"
+                        title="Sin permiso para editar (admin / supervisor Miami / supervisor Pre-factura)">
+                    <%= heroicon "pencil-square", variant: :outline, options: { class: "w-4 h-4", "aria-hidden" => "true" } %>
+                    <span class="sr-only">Editar (deshabilitado)</span>
+                  </span>
+                <% end %>
+              </td>
+              <td class="px-3 py-2 text-center">
+                <% if can_delete_paquetes? %>
+                  <%= button_to paquete_path(paquete), method: :delete,
+                      data: { turbo_confirm: "¿Eliminar el paquete #{paquete.tracking}? Esta acción no se puede deshacer." },
+                      class: "inline-flex text-red-400 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 rounded",
+                      title: "Borrar paquete" do %>
+                    <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
+                  <% end %>
+                <% else %>
+                  <span class="inline-flex text-gray-300 dark:text-gray-600 cursor-not-allowed"
+                        role="button" aria-disabled="true"
+                        title="Sin permiso para borrar (solo admin)">
+                    <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4", "aria-hidden" => "true" } %>
+                    <span class="sr-only">Borrar (deshabilitado)</span>
+                  </span>
+                <% end %>
+              </td>
+              <td class="px-3 py-2 text-center">
+                <%= link_to label_paquete_path(paquete), target: "_blank", class: "inline-flex text-gray-400 hover:text-cec-navy dark:hover:text-cec-gold", title: "Imprimir etiqueta" do %>
+                  <%= heroicon "printer", variant: :outline, options: { class: "w-4 h-4" } %>
                 <% end %>
               </td>
             </tr>
@@ -156,12 +517,44 @@
   </div>
 
   <div class="mt-4">
-    <%= paginate @paquetes %>
+    <%= render PaginationComponent.new(collection: @paquetes, label: "paquetes") %>
+  </div>
+
+  <%# Footer bulk actions: preview de paquetes seleccionados + 3 botones
+      duplicados del header. Visible solo cuando hay ≥1 selección. Yusef
+      2026-05-08: "preview abajo con las opciones seleccionadas y los tres
+      botones repetidos debajo de la parte de paginacion". %>
+  <div data-bulk-selection-target="footerBar"
+       class="hidden mt-4 bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700 rounded-lg shadow-sm p-4">
+    <div class="mb-3 flex items-baseline gap-2">
+      <span class="text-sm font-semibold text-gray-800 dark:text-gray-100">
+        <span data-bulk-selection-target="footerCounter">0</span> paquete(s) seleccionado(s)
+      </span>
+      <button type="button" data-action="click->bulk-selection#clear"
+              class="ml-auto text-xs text-gray-500 hover:text-red-600 underline">
+        Limpiar selección
+      </button>
+    </div>
+
+    <%# Lista de trackings (chips) — el Stimulus la rellena dinámicamente. %>
+    <div data-bulk-selection-target="footerPreview"
+         class="mb-3 flex flex-wrap gap-1.5"></div>
+
+    <div class="flex flex-wrap gap-2">
+      <%= render ButtonComponent.new(variant: :primary, icon: "arrow-down-tray",
+              data: { action: "click->bulk-selection#exportXlsx", shortcut: "F8" }) do %>Excel (F8)<% end %>
+      <%= render ButtonComponent.new(variant: :primary, icon: "document-arrow-down",
+              data: { action: "click->bulk-selection#exportPdf", shortcut: "F9" }) do %>PDF (F9)<% end %>
+      <%= render ButtonComponent.new(variant: :primary, icon: "printer",
+              data: { action: "click->bulk-selection#print", shortcut: "F4" }) do %>Imprimir (F4)<% end %>
+    </div>
   </div>
 <% else %>
   <%= render EmptyStateComponent.new(
-    title: params[:q].present? || params[:estado].present? ? "No se encontraron paquetes" : "No hay paquetes registrados",
-    description: params[:q].present? || params[:estado].present? ? "Intenta con otros filtros." : "Los paquetes apareceran aqui cuando se etiqueten.",
+    title: params[:q].present? || active_filters_count.positive? ? "No se encontraron paquetes" : "No hay paquetes registrados",
+    description: params[:q].present? || active_filters_count.positive? ? "Intenta con otros filtros." : "Los paquetes apareceran aqui cuando se etiqueten.",
     icon: "archive-box"
   ) %>
 <% end %>
+
+</div><%# /paquetes-shortcuts %>

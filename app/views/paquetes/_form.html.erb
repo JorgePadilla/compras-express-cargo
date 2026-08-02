@@ -1,4 +1,4 @@
-<%= form_with model: paquete, class: "space-y-6" do |f| %>
+<%= form_with model: paquete, class: "space-y-6", html: { id: "paquete-edit-form" } do |f| %>
   <% if paquete.errors.any? %>
     <div class="p-4 bg-red-50 rounded-lg">
       <div class="flex items-center gap-2 mb-2">
@@ -15,24 +15,205 @@
     </div>
   <% end %>
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-3">
-      <p class="text-sm text-gray-500 mb-1">Guia: <span class="font-mono font-medium text-cec-navy"><%= paquete.guia %></span></p>
+  <%# Selector editable del cliente dueño. Yusef: "ocupamos poder cambiar
+      el nombre o código del cliente si está mal asignado". Si se cambia
+      y el paquete tiene pre-alerta vinculada, el controller la desvincula
+      automáticamente para mantener el invariante (mismo cliente). %>
+  <% cli = paquete.cliente %>
+  <% if cli %>
+    <div data-controller="cliente-search"
+         data-cliente-search-url-value="<%= buscar_clientes_path %>"
+         data-cliente-search-original-id-value="<%= cli.id %>"
+         data-cliente-search-original-codigo-value="<%= cli.codigo %>"
+         data-cliente-search-original-nombre-value="<%= cli.nombre_completo %>"
+         class="rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-gray-800 px-4 py-3 space-y-2">
+
+      <div class="flex items-center gap-3">
+        <span class="inline-flex items-center justify-center w-9 h-9 rounded-full bg-cec-navy/10 dark:bg-cec-gold/20 text-cec-navy dark:text-cec-gold shrink-0">
+          <%= heroicon "user-circle", variant: :solid, options: { class: "w-5 h-5" } %>
+        </span>
+        <div class="min-w-0 flex-1">
+          <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Cliente asignado</div>
+          <div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span class="font-mono text-sm font-bold text-cec-navy dark:text-cec-gold"
+                  data-cliente-search-target="codigoDisplay"><%= cli.codigo %></span>
+            <span class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate"
+                  data-cliente-search-target="nombreDisplay"><%= cli.nombre_completo %></span>
+            <span data-cliente-search-target="changedBadge"
+                  class="hidden text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+              Modificado
+            </span>
+          </div>
+        </div>
+        <button type="button"
+                data-action="click->cliente-search#toggle"
+                data-cliente-search-target="toggleButton"
+                class="text-xs font-medium text-cec-teal hover:text-cec-teal-dark hover:underline cursor-pointer">
+          Cambiar
+        </button>
+        <button type="button"
+                data-action="click->cliente-search#cancelChange"
+                data-cliente-search-target="cancelButton"
+                class="hidden text-xs font-medium text-red-600 hover:text-red-800 hover:underline cursor-pointer">
+          Cancelar cambio
+        </button>
+      </div>
+
+      <%= f.hidden_field :cliente_id, data: { cliente_search_target: "clienteId" } %>
+
+      <div data-cliente-search-target="searchPanel" class="hidden">
+        <label class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
+          Cambiar a otro cliente
+        </label>
+        <div class="relative">
+          <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+            <%= heroicon "magnifying-glass", variant: :solid, options: { class: "w-4 h-4" } %>
+          </span>
+          <input type="text"
+                 placeholder="Código (ej. CEC-010) o nombre…"
+                 data-cliente-search-target="input"
+                 data-action="input->cliente-search#search"
+                 autocomplete="off"
+                 class="block w-full pl-9 pr-3 py-2 rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 dark:text-gray-100 shadow-sm text-sm focus:ring-2 focus:ring-cec-teal/40 focus:border-cec-teal">
+          <div data-cliente-search-target="dropdown"
+               class="hidden absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 rounded-lg shadow-xl max-h-64 overflow-auto"></div>
+        </div>
+        <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+          Mínimo 2 caracteres. Click en un resultado para seleccionarlo.
+        </p>
+      </div>
+
+      <% if paquete.pre_alerta_paquetes.any? %>
+        <p class="text-[11px] text-amber-700 dark:text-amber-300 italic flex items-start gap-1">
+          <%= heroicon "exclamation-triangle", variant: :solid, options: { class: "w-3.5 h-3.5 shrink-0 mt-px" } %>
+          <span>Cambiar el cliente desvinculará el paquete de la pre-alerta actual.</span>
+        </p>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="rounded-lg ring-1 ring-red-300 dark:ring-red-700 bg-red-50 dark:bg-red-900/20 px-4 py-3 flex items-center gap-3">
+      <%= heroicon "exclamation-triangle", variant: :solid, options: { class: "w-5 h-5 text-red-600 shrink-0" } %>
+      <div class="text-sm text-red-800 dark:text-red-200">
+        <strong>Sin cliente asignado.</strong> Este paquete necesita ser vinculado a una pre-alerta.
+      </div>
+    </div>
+  <% end %>
+
+  <%# Selector del Manifiesto. Yusef: "este debe ser cambiable de un
+      manifiesto a otro, y al cambiarlo, las fechas de salida y aduana
+      deben actualizarse al nuevo manifiesto". El sync de fechas lo hace
+      el callback `sync_dates_from_manifiesto` en Paquete. %>
+  <% mani = paquete.manifiesto %>
+  <div data-controller="manifiesto-autocomplete"
+       data-manifiesto-autocomplete-url-value="<%= buscar_manifiestos_path %>"
+       data-manifiesto-autocomplete-original-id-value="<%= mani&.id || 0 %>"
+       data-manifiesto-autocomplete-original-numero-value="<%= mani&.numero.to_s %>"
+       data-manifiesto-autocomplete-original-estado-value="<%= mani&.estado.to_s %>"
+       class="rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 bg-white dark:bg-gray-800 px-4 py-3 space-y-2">
+
+    <div class="flex items-center gap-3">
+      <span class="inline-flex items-center justify-center w-9 h-9 rounded-full bg-cec-teal/10 dark:bg-cec-teal/20 text-cec-teal-dark dark:text-cec-teal-light shrink-0">
+        <%= heroicon "paper-airplane", variant: :solid, options: { class: "w-5 h-5" } %>
+      </span>
+      <div class="min-w-0 flex-1">
+        <div class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Manifiesto</div>
+        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <span class="font-mono text-sm font-bold text-cec-navy dark:text-cec-gold"
+                data-manifiesto-autocomplete-target="numeroDisplay"><%= mani&.numero || "Sin manifiesto" %></span>
+          <% if mani %>
+            <span class="text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+                  data-manifiesto-autocomplete-target="estadoDisplay"><%= mani.estado %></span>
+          <% else %>
+            <span data-manifiesto-autocomplete-target="estadoDisplay" class="hidden"></span>
+          <% end %>
+          <span data-manifiesto-autocomplete-target="changedBadge"
+                class="hidden text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+            Modificado
+          </span>
+        </div>
+      </div>
+      <button type="button"
+              data-action="click->manifiesto-autocomplete#toggle"
+              data-manifiesto-autocomplete-target="toggleButton"
+              class="text-xs font-medium text-cec-teal hover:text-cec-teal-dark hover:underline cursor-pointer">
+        <%= mani ? "Cambiar" : "Asignar" %>
+      </button>
+      <button type="button"
+              data-action="click->manifiesto-autocomplete#cancelChange"
+              data-manifiesto-autocomplete-target="cancelButton"
+              class="hidden text-xs font-medium text-red-600 hover:text-red-800 hover:underline cursor-pointer">
+        Cancelar cambio
+      </button>
     </div>
 
-    <div class="lg:col-span-3">
-      <%= f.label :tracking, class: "block text-sm font-medium text-gray-700 mb-1" %>
-      <%= f.text_field :tracking, required: true,
-          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono
-                 focus:ring-cec-teal focus:border-cec-teal" %>
+    <%= f.hidden_field :manifiesto_id, data: { manifiesto_autocomplete_target: "manifiestoId" } %>
+
+    <div data-manifiesto-autocomplete-target="searchPanel" class="hidden">
+      <label class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
+        Buscar manifiesto
+      </label>
+      <div class="relative">
+        <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+          <%= heroicon "magnifying-glass", variant: :solid, options: { class: "w-4 h-4" } %>
+        </span>
+        <input type="text"
+               placeholder="Número (ej. MM2026000001)…"
+               data-manifiesto-autocomplete-target="input"
+               data-action="input->manifiesto-autocomplete#search focus->manifiesto-autocomplete#search"
+               autocomplete="off"
+               class="block w-full pl-9 pr-3 py-2 rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 dark:text-gray-100 shadow-sm text-sm focus:ring-2 focus:ring-cec-teal/40 focus:border-cec-teal">
+        <div data-manifiesto-autocomplete-target="dropdown"
+             class="hidden absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 rounded-lg shadow-xl max-h-64 overflow-auto"></div>
+      </div>
+      <div class="mt-1 flex items-center justify-between">
+        <p class="text-[11px] text-gray-500 dark:text-gray-400 italic">
+          Cambiar el manifiesto sincroniza fechas de salida y aduana.
+        </p>
+        <% if mani %>
+          <button type="button"
+                  data-action="click->manifiesto-autocomplete#clear"
+                  class="text-[11px] font-medium text-red-600 hover:underline cursor-pointer">
+            Quitar manifiesto
+          </button>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="md:col-span-2">
+        <%= f.label :tracking, class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.text_field :tracking, required: true,
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono
+                   focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+      <div>
+        <%= f.label :tracking_secundario, "Tracking secundario (opcional)",
+            class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.text_field :tracking_secundario,
+            placeholder: "2do tracking (si aplica)",
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono
+                   focus:ring-cec-teal focus:border-cec-teal" %>
+        <p class="text-[11px] text-gray-500 mt-1">Cuando el proveedor da 2 tracking numbers para el mismo paquete.</p>
+      </div>
     </div>
 
     <div>
       <%= f.label :estado, class: "block text-sm font-medium text-gray-700 mb-1" %>
-      <%= f.select :estado, Paquete.estados.keys.map { |e| [e.humanize, e] },
-          {},
-          { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                   focus:ring-cec-teal focus:border-cec-teal" } %>
+      <% if can_change_estado_paquete? %>
+        <%= f.select :estado, Paquete.estados.keys.map { |e| [e.humanize, e] },
+            {},
+            { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                     focus:ring-cec-teal focus:border-cec-teal" } %>
+      <% else %>
+        <%# PR-D7.b: roles operativos no pueden cambiar estado manualmente. %>
+        <div class="block w-full rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-600 px-3 py-2">
+          <%= paquete.estado&.humanize %>
+        </div>
+        <p class="text-[11px] text-gray-500 mt-1">Solo supervisores o admin pueden cambiar el estado.</p>
+        <%= f.hidden_field :estado %>
+      <% end %>
     </div>
 
     <div>
@@ -44,23 +225,48 @@
     </div>
 
     <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Carrier</label>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Carrier</label>
       <%= f.text_field :expedido_por, list: "carriers-list-edit",
-          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+          placeholder: "FedEx, UPS, USPS, DHL…",
+          class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm text-sm
                  focus:ring-cec-teal focus:border-cec-teal" %>
       <datalist id="carriers-list-edit">
         <% @carriers.each do |carrier| %>
           <option value="<%= carrier.nombre %>">
         <% end %>
       </datalist>
+      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 italic">
+        Si escribís un carrier nuevo se agrega al catálogo automáticamente.
+      </p>
     </div>
 
-    <div>
-      <%= f.label :proveedor, class: "block text-sm font-medium text-gray-700 mb-1" %>
-      <%= f.text_field :proveedor,
-          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                 focus:ring-cec-teal focus:border-cec-teal" %>
+    <%# PR-D3.a: autocomplete contra el catálogo de proveedores. %>
+    <div data-controller="proveedor-autocomplete"
+         data-proveedor-autocomplete-url-value="<%= buscar_proveedores_path %>"
+         class="relative">
+      <%= f.label :proveedor_id, "Proveedor", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <% sel = paquete.proveedor %>
+      <input type="text"
+             value="<%= sel&.nombre || paquete[:proveedor].to_s %>"
+             placeholder="Amazon, Walmart, Driver Juan…"
+             autocomplete="off"
+             data-proveedor-autocomplete-target="input"
+             data-action="input->proveedor-autocomplete#search"
+             class="block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal">
+      <%= f.hidden_field :proveedor_id,
+          data: { proveedor_autocomplete_target: "proveedorId" } %>
+      <div data-proveedor-autocomplete-target="dropdown"
+           class="hidden absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-auto"></div>
+      <span data-proveedor-autocomplete-target="nombre"
+            class="<%= sel ? '' : 'hidden ' %>mt-1 block text-xs text-gray-500 font-mono">
+        <%= "(#{sel.codigo})" if sel %>
+      </span>
     </div>
+
+    <%# PR-D3.c: Tercero — cliente final cuando CEC le maneja la carga a otra
+        empresa pequeña. Extraído a shared/_tercero_field para reusarlo en
+        /etiquetar (mismo patrón tercero-search + buscar_clientes_path). %>
+    <%= render "shared/tercero_field", f: f %>
 
     <div>
       <%= f.label :peso, "Peso (lbs)", class: "block text-sm font-medium text-gray-700 mb-1" %>
@@ -119,37 +325,365 @@
                  focus:ring-cec-teal focus:border-cec-teal" %>
     </div>
 
-    <div class="lg:col-span-3 flex flex-wrap gap-6">
-      <div class="flex items-center gap-2">
-        <%= f.check_box :pre_alerta, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-        <%= f.label :pre_alerta, "Pre-Alerta", class: "text-sm font-medium text-gray-700" %>
+    <%# ── Estado de vinculación: Pre-Alerta y Pre-Factura ─────────────
+        Display read-only — el flag boolean se preserva via hidden field.
+        Si el paquete tiene pre-alertas o pre-factura, mostramos link directo. %>
+    <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+      <% pap = paquete.pre_alerta_paquetes.includes(:pre_alerta).first %>
+      <div class="px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-800/50 ring-1 ring-gray-200 dark:ring-gray-700">
+        <span class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Pre-Alerta</span>
+        <% if pap&.pre_alerta %>
+          <%= link_to pap.pre_alerta.numero_documento, pre_alerta_path(pap.pre_alerta),
+              class: "font-mono text-sm font-medium text-cec-navy dark:text-cec-gold hover:underline" %>
+          <span class="text-xs text-gray-600 dark:text-gray-300 ml-1">— <%= pap.pre_alerta.titulo %></span>
+        <% else %>
+          <span class="text-sm text-gray-500 italic">Sin pre-alerta</span>
+        <% end %>
+        <%# Mantener compat con el flag boolean existente. %>
+        <%= f.hidden_field :pre_alerta, value: paquete.pre_alerta %>
       </div>
-      <div class="flex items-center gap-2">
-        <%= f.check_box :pre_factura, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-        <%= f.label :pre_factura, "Pre-Factura", class: "text-sm font-medium text-gray-700" %>
+      <div class="px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-800/50 ring-1 ring-gray-200 dark:ring-gray-700">
+        <span class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Pre-Factura</span>
+        <% if paquete.pre_factura_id %>
+          <%= link_to paquete.pre_factura.numero, pre_factura_path(paquete.pre_factura),
+              class: "font-mono text-sm font-medium text-cec-navy dark:text-cec-gold hover:underline" %>
+        <% else %>
+          <span class="text-sm text-gray-500 italic">Sin pre-factura</span>
+        <% end %>
+        <%# pre_factura es columna boolean (no la asociación FK). Hidden field
+            preserva el valor existente para que el form submit no lo borre. %>
+        <%= hidden_field_tag "paquete[pre_factura]",
+            (ActiveModel::Type::Boolean.new.cast(paquete[:pre_factura]) ? "1" : "0"),
+            id: "paquete_pre_factura_flag" %>
       </div>
-      <div class="flex items-center gap-2">
-        <%= f.check_box :solicito_cambio_servicio, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-        <%= f.label :solicito_cambio_servicio, "Cambio de Servicio", class: "text-sm font-medium text-gray-700" %>
+    </div>
+
+    <%# ── Checkboxes con modal: Cambio de Servicio, Retener Miami, Recolecta ── %>
+    <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+
+      <%# Cambio de Servicio — modal: nuevo tipo + razón. %>
+      <div data-controller="checkbox-modal"
+           class="px-3 py-2 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <%= f.check_box :solicito_cambio_servicio,
+              data: { checkbox_modal_target: "checkbox", action: "change->checkbox-modal#onChange" },
+              class: "rounded border-gray-300 text-amber-600 focus:ring-amber-500" %>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Cambio de Servicio</span>
+          <% if paquete.solicito_cambio_servicio? %>
+            <span class="ml-auto text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">activo</span>
+          <% end %>
+        </label>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Genera cargo automático en pre-factura.</p>
+
+        <dialog data-checkbox-modal-target="dialog"
+                aria-labelledby="modal-cambio-servicio-title"
+                style="margin: auto" class="rounded-xl p-0 w-[32rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-amber-300">
+          <div class="bg-amber-50 px-5 py-3 border-b border-amber-200">
+            <h3 id="modal-cambio-servicio-title" class="text-base font-semibold text-amber-900">Cambio de Servicio</h3>
+          </div>
+          <div class="p-5 space-y-4 bg-white">
+            <p class="text-sm text-gray-700">
+              El cliente solicitó cambio de servicio. Confirmá el nuevo tipo de envío.
+              Pre-Factura agregará automáticamente la línea con el cargo correspondiente.
+            </p>
+            <div>
+              <%= f.label :tipo_envio_id, "Nuevo Tipo de Envío", class: "block text-sm font-medium text-gray-700 mb-1" %>
+              <%= f.collection_select :tipo_envio_id, @tipo_envios, :id, :nombre,
+                    { include_blank: "— Mantener actual —" },
+                    { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-amber-500 focus:border-amber-500" } %>
+            </div>
+            <p class="text-[11px] text-gray-600 italic">
+              Si querés agregar la razón del cambio, escribila en
+              <strong>Notas Internas</strong> (campo abajo del formulario).
+            </p>
+          </div>
+          <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">
+            <button type="button" data-action="checkbox-modal#cancel"
+                    class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900">Cancelar</button>
+            <button type="button" data-action="checkbox-modal#confirm"
+                    class="px-3 py-1.5 text-sm font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700">Confirmar</button>
+          </div>
+        </dialog>
       </div>
+
+      <%# Retener en Miami — modal: motivos[] + nota. %>
+      <div data-controller="checkbox-modal"
+           class="px-3 py-2 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <%= f.check_box :retener_miami,
+              data: { checkbox_modal_target: "checkbox", action: "change->checkbox-modal#onChange" },
+              class: "rounded border-gray-300 text-amber-600 focus:ring-amber-500" %>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Retener en Miami</span>
+          <% if paquete.retener_miami? %>
+            <span class="ml-auto text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">activo</span>
+          <% end %>
+        </label>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Especificá motivo(s) de la retención.</p>
+
+        <dialog data-checkbox-modal-target="dialog"
+                aria-labelledby="modal-retener-miami-title"
+                style="margin: auto" class="rounded-xl p-0 w-[32rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-amber-300">
+          <div class="bg-amber-50 px-5 py-3 border-b border-amber-200">
+            <h3 id="modal-retener-miami-title" class="text-base font-semibold text-amber-900">Retener en Miami</h3>
+          </div>
+          <div class="p-5 space-y-4 bg-white">
+            <div>
+              <span class="block text-sm font-medium text-gray-700 mb-1">Motivos</span>
+              <% motivos = MotivoRetencion.activos.ordered %>
+              <% if motivos.any? %>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <% motivos.each do |m| %>
+                    <label class="flex items-start gap-2 text-sm text-gray-800">
+                      <%= check_box_tag "paquete[motivo_retencion_ids][]", m.id,
+                          paquete.motivo_retencion_ids.include?(m.id),
+                          class: "mt-0.5 rounded border-amber-300 text-amber-600 focus:ring-amber-500" %>
+                      <span><%= m.nombre %></span>
+                    </label>
+                  <% end %>
+                </div>
+                <%= hidden_field_tag "paquete[motivo_retencion_ids][]", "" %>
+              <% else %>
+                <p class="text-xs text-amber-700 italic">No hay motivos configurados todavía.</p>
+              <% end %>
+            </div>
+            <div>
+              <%= f.label :notas_retencion, "Notas de retención (detalle del caso)",
+                  class: "block text-sm font-medium text-gray-700 mb-1" %>
+              <%= f.text_area :notas_retencion, rows: 3,
+                  placeholder: "Detalle adicional. Obligatorio si no seleccionaste motivo.",
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-amber-500 focus:border-amber-500" %>
+            </div>
+          </div>
+          <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">
+            <button type="button" data-action="checkbox-modal#cancel"
+                    class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900">Cancelar</button>
+            <button type="button" data-action="checkbox-modal#confirm"
+                    class="px-3 py-1.5 text-sm font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700">Confirmar</button>
+          </div>
+        </dialog>
+      </div>
+
+      <%# Solicitó Recolecta — modal: zona + monto + moneda. %>
+      <div data-controller="checkbox-modal"
+           class="px-3 py-2 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 hover:bg-cec-teal/5 transition-colors">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <%= f.check_box :recolecta_solicitada,
+              data: { checkbox_modal_target: "checkbox", action: "change->checkbox-modal#onChange" },
+              class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Solicitó Recolecta</span>
+          <% if paquete.recolecta_solicitada? %>
+            <span class="ml-auto text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-cec-teal/10 text-cec-teal-dark">
+              <%= paquete.recolecta_monto.present? ? "#{paquete.recolecta_moneda} #{number_with_delimiter(paquete.recolecta_monto.to_f, precision: 2)}" : "activa" %>
+            </span>
+          <% end %>
+        </label>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Elegí la zona / tarifa.</p>
+
+        <dialog data-checkbox-modal-target="dialog"
+                aria-labelledby="modal-recolecta-title"
+                style="margin: auto" class="rounded-xl p-0 w-[32rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-cec-teal/40">
+          <div class="bg-cec-teal/10 px-5 py-3 border-b border-cec-teal/20">
+            <h3 id="modal-recolecta-title" class="text-base font-semibold text-cec-navy dark:text-cec-gold">Solicitó Recolecta</h3>
+          </div>
+          <div class="p-5 space-y-4 bg-white">
+            <div>
+              <%= f.label :tarifa_recolecta_id, "Zona / Tarifa", class: "block text-sm font-medium text-gray-700 mb-1" %>
+              <%= f.collection_select :tarifa_recolecta_id, @tarifas_recolecta, :id, :to_s,
+                    { include_blank: "— Sin tarifa del catálogo —" },
+                    { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
+              <p class="mt-1 text-xs text-gray-500 italic">Al elegir, monto y moneda se autocompletan al guardar.</p>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <%= f.label :recolecta_monto, "Monto", class: "block text-sm font-medium text-gray-700 mb-1" %>
+                <%= f.number_field :recolecta_monto, step: "0.01", min: 0,
+                    placeholder: "—",
+                    class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+              </div>
+              <div>
+                <%= f.label :recolecta_moneda, "Moneda", class: "block text-sm font-medium text-gray-700 mb-1" %>
+                <%= f.select :recolecta_moneda, [ %w[USD USD], %w[LPS LPS] ],
+                      { include_blank: "—" },
+                      { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
+              </div>
+            </div>
+            <p class="text-xs text-gray-600 italic">Se cobra automáticamente en la pre-factura.</p>
+          </div>
+          <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">
+            <button type="button" data-action="checkbox-modal#cancel"
+                    class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900">Cancelar</button>
+            <button type="button" data-action="checkbox-modal#confirm"
+                    class="px-3 py-1.5 text-sm font-medium bg-cec-teal text-white rounded-lg hover:bg-cec-teal-dark">Confirmar</button>
+          </div>
+        </dialog>
+      </div>
+    </div>
+
+    <%# Sección "Información de la Pre-Alerta" — campos que vienen del
+        cliente al crear la pre-alerta. Editables acá por si el operador
+        necesita corregir o agregar contexto. %>
+    <div class="lg:col-span-3 rounded-lg ring-1 ring-cec-teal/20 dark:ring-cec-teal/30 bg-cec-teal/5 dark:bg-cec-teal/10 px-4 py-3 space-y-3">
       <div class="flex items-center gap-2">
-        <%= f.check_box :retener_miami, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-        <%= f.label :retener_miami, "Retener en Miami", class: "text-sm font-medium text-gray-700" %>
+        <%= heroicon "bell-alert", variant: :solid, options: { class: "w-4 h-4 text-cec-teal" } %>
+        <h3 class="text-sm font-semibold text-cec-teal-dark dark:text-cec-teal-light">
+          Información de la Pre-Alerta
+        </h3>
+        <span class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 italic">
+          del cliente — editable
+        </span>
+      </div>
+
+      <% pap = paquete.pre_alerta_paquetes.first %>
+      <div>
+        <%= label_tag "paquete_pap_instrucciones", "Instrucciones Especiales",
+            class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <% if pap %>
+          <%= text_area_tag "paquete[pap_instrucciones]", pap.instrucciones, rows: 2,
+              id: "paquete_pap_instrucciones",
+              placeholder: "Mensaje del cliente al crear la pre-alerta.",
+              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+          <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400 italic">
+            Guardado en la pre-alerta <strong><%= pap.pre_alerta&.numero_documento %></strong>.
+          </p>
+        <% else %>
+          <textarea disabled rows="2"
+                    placeholder="Vinculá el paquete a una pre-alerta primero (botón 'Asignar a Pre-Alerta' arriba)."
+                    class="block w-full rounded-lg border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500 shadow-sm text-sm cursor-not-allowed"></textarea>
+        <% end %>
+      </div>
+
+      <div>
+        <%= f.label :notas_consolidacion, "Notas de Consolidación",
+            class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <%= f.text_area :notas_consolidacion, rows: 2,
+            placeholder: "Solo si el cliente solicitó consolidación. Se llena automáticamente desde la pre-alerta consolidada al vincular.",
+            class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
       </div>
     </div>
 
     <div class="lg:col-span-3">
-      <%= f.label :notas_internas, "Notas Internas", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.label :notas_internas, "Notas Internas (solo equipo CEC)", class: "block text-sm font-medium text-gray-700 mb-1" %>
       <%= f.text_area :notas_internas, rows: 2,
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
                  focus:ring-cec-teal focus:border-cec-teal" %>
     </div>
+
+    <%# PR-D2: notas categorizadas %>
+    <div class="lg:col-span-3"
+         data-controller="plantilla-picker"
+         data-plantilla-picker-target-selector-value="#paquete_notas_al_cliente">
+      <div class="flex items-baseline justify-between mb-1">
+        <%= f.label :notas_al_cliente, "Notas al Cliente (visibles al cliente)", class: "block text-sm font-medium text-gray-700" %>
+        <% plantillas_activas = PlantillaNotaCliente.activas.ordered %>
+        <% if plantillas_activas.any? %>
+          <span class="text-[11px] text-gray-500">Plantillas:</span>
+        <% end %>
+      </div>
+      <% if plantillas_activas.any? %>
+        <div class="flex flex-wrap gap-1.5 mb-2">
+          <% plantillas_activas.each do |plantilla| %>
+            <button type="button"
+                    data-action="plantilla-picker#insert"
+                    data-text="<%= plantilla.texto %>"
+                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                           bg-cec-teal/10 text-cec-teal hover:bg-cec-teal/20 transition-colors cursor-pointer">
+              <%= plantilla.titulo %>
+            </button>
+          <% end %>
+        </div>
+      <% end %>
+      <%= f.text_area :notas_al_cliente, rows: 2,
+          placeholder: "Mensaje que el cliente verá en su portal / pre-factura.",
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                 focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+
+    <%# El panel de Motivos de Retención + Notas de Retención vive ahora
+        dentro del modal del checkbox "Retener en Miami" (más arriba). %>
   </div>
 
+  <%# PR-D7.m: edición manual de fechas (solo admin / supervisor).
+      `_by_user_id` se actualiza automáticamente en el modelo.
+      Toda edición queda auditada via paper_trail; el timeline marca
+      con badge "modificada" automáticamente. %>
+  <% if can_change_estado_paquete? %>
+    <div class="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6">
+      <div class="flex items-center gap-2 mb-2">
+        <%= heroicon "calendar-days", variant: :solid, options: { class: "w-5 h-5 text-cec-navy dark:text-cec-gold" } %>
+        <h3 class="text-base font-semibold text-gray-800 dark:text-gray-100">Editar Fechas</h3>
+        <span class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">admin / supervisor</span>
+      </div>
+      <div class="flex items-start gap-2 mb-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-xs text-amber-800 dark:text-amber-200">
+        <%= heroicon "exclamation-triangle", variant: :solid, options: { class: "w-4 h-4 shrink-0 mt-px" } %>
+        <span>Las fechas que modifiques registrarán tus iniciales y aparecerán con badge <strong>"modificada"</strong> en la línea de tiempo. Toda edición queda auditada.</span>
+      </div>
+
+      <%
+        # icon = heroicon del paso del timeline; with_time = mostrar selector de hora.
+        fechas_config = [
+          [:fecha_solicito_recolecta,  "Solicitud Recolecta",   "phone-arrow-up-right", false],
+          [:fecha_pre_alerta,          "Pre-Alerta",            "bell-alert",           true],
+          [:fecha_recibido_miami,      "Recibido en Miami",     "inbox-arrow-down",     true],
+          [:fecha_empacado,            "Empacado",              "cube",                 true],
+          [:fecha_enviado,             "Enviado a HND",         "paper-airplane",       true],
+          [:fecha_aduana,              "Aduana",                "shield-check",         true],
+          [:fecha_consolidando,        "Consolidando",          "archive-box",          true],
+          [:fecha_disponible,          "Disponible Entrega",    "check-badge",          true],
+          [:fecha_posible_entrega,     "Fecha Posible Entrega", "calendar",             false],
+          [:fecha_en_reparto,          "En Reparto",            "truck",                true],
+          [:fecha_entregado,           "Entregado",             "hand-thumb-up",        true]
+        ]
+      %>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <% fechas_config.each do |attr, label, icon, with_time| %>
+          <% current_value = paquete.send(attr) %>
+          <% display_value = current_value&.strftime(with_time ? "%Y-%m-%d %H:%M" : "%Y-%m-%d") %>
+          <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 hover:border-cec-teal/40 hover:shadow-sm transition">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-cec-navy/10 dark:bg-cec-gold/15 text-cec-navy dark:text-cec-gold shrink-0">
+                <%= heroicon icon, variant: :solid, options: { class: "w-3.5 h-3.5" } %>
+              </span>
+              <%= f.label attr, label, class: "text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider" %>
+            </div>
+            <div class="relative" data-controller="flatpickr" data-flatpickr-time-value="<%= with_time %>">
+              <%= f.text_field attr,
+                  value: display_value,
+                  placeholder: with_time ? "DD/MM/AAAA HH:MM" : "DD/MM/AAAA",
+                  autocomplete: "off",
+                  data: { flatpickr_target: "input" },
+                  class: "block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm py-2 pl-3 pr-9 focus:ring-cec-teal focus:border-cec-teal" %>
+              <button type="button"
+                      data-action="click->flatpickr#clear"
+                      title="Limpiar fecha"
+                      class="absolute inset-y-0 right-0 flex items-center px-2.5 text-gray-400 hover:text-red-500 focus:outline-none">
+                <%= heroicon "x-mark", variant: :solid, options: { class: "w-4 h-4" } %>
+              </button>
+            </div>
+            <% by_user_id = paquete.send("#{attr}_by_user_id") %>
+            <% if by_user_id && (u = User.find_by(id: by_user_id)) %>
+              <p class="mt-2 text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                <%= heroicon "user", variant: :outline, options: { class: "w-3 h-3" } %>
+                <span>Por:</span>
+                <span class="font-mono font-semibold text-gray-700 dark:text-gray-200"><%= u.iniciales_display %></span>
+                <span class="text-gray-400 truncate">(<%= u.nombre %>)</span>
+              </p>
+            <% else %>
+              <p class="mt-2 text-[11px] italic text-gray-400 dark:text-gray-500">Sin registro</p>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
   <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-    <%= link_to "Cancelar", paquete_path(paquete), class: "text-sm text-gray-600 hover:text-gray-900" %>
-    <%= f.submit "Guardar Cambios",
+    <%= link_to "Cancelar (F2)", paquete_path(paquete),
+        class: "text-sm text-gray-600 hover:text-gray-900",
+        data: { shortcut: "F2" } %>
+    <%= f.submit "Guardar Cambios (F10)",
         class: "inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium
-               bg-cec-gold text-cec-navy-dark hover:bg-cec-gold-dark transition-colors cursor-pointer" %>
+               bg-cec-gold text-cec-navy-dark hover:bg-cec-gold-dark transition-colors cursor-pointer",
+        data: { shortcut: "F10" } %>
   </div>
 <% end %>

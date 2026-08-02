@@ -1,21 +1,21 @@
 <ul class="space-y-1 px-3">
   <%= sidebar_link "Home", root_path, icon: "home" %>
 
-  <% if can_access?(:etiquetar) || can_access?(:manifiestos) || can_access?(:paquetes) %>
+  <% if can_access?(:etiquetar) || can_access?(:manifiestos) || can_access?(:pre_alertas) || can_access?(:paquetes) %>
     <%= sidebar_section "Logistica" do %>
       <%= sidebar_link "Etiquetar", etiquetar_path, icon: "tag" if can_access?(:etiquetar) %>
+      <%= sidebar_link "Entrega Personal", new_entrega_personal_path, icon: "user-plus" if can_access?(:entrega_personal) %>
       <%= sidebar_link "Manifiestos", manifiestos_path, icon: "cube" if can_access?(:manifiestos) %>
+      <%= sidebar_link "Pre-Alertas", pre_alertas_path, icon: "bell-alert" if can_access?(:pre_alertas) %>
       <%= sidebar_link "Todos los Paquetes", paquetes_path, icon: "archive-box" if can_access?(:paquetes) %>
     <% end %>
   <% end %>
 
-  <% if can_access?(:pre_facturas) || can_access?(:pre_alertas) || can_access?(:ventas) || can_access?(:notas_debito) || can_access?(:notas_credito) || can_access?(:cotizaciones) || can_access?(:financiamientos) %>
-    <%= sidebar_section "Caja" do %>
+  <% if can_access?(:pre_facturas) || can_access?(:ventas) || can_access?(:notas_debito) || can_access?(:notas_credito) || can_access?(:cotizaciones) || can_access?(:financiamientos) %>
+    <%= sidebar_section "Facturacion y Cobro" do %>
       <%= sidebar_link "Pre-Facturas", pre_facturas_path, icon: "document-text" if can_access?(:pre_facturas) %>
-      <%= sidebar_link "Pre-Alertas", pre_alertas_path, icon: "bell-alert" if can_access?(:pre_alertas) %>
       <%= sidebar_link "Cotizaciones", cotizaciones_path, icon: "clipboard-document-list" if can_access?(:cotizaciones) %>
-      <%= sidebar_link "Proformas", proformas_path, icon: "document-duplicate" if can_access?(:ventas) %>
-      <%= sidebar_link "Ventas", ventas_path, icon: "currency-dollar" if can_access?(:ventas) %>
+      <%= sidebar_link "Facturas", ventas_path, icon: "currency-dollar" if can_access?(:ventas) %>
       <%= sidebar_link "Recibos", recibos_path, icon: "receipt-percent" if can_access?(:recibos) %>
       <%= sidebar_link "Notas de Debito", notas_debito_path, icon: "document-plus" if can_access?(:notas_debito) %>
       <%= sidebar_link "Notas de Credito", notas_credito_path, icon: "document-minus" if can_access?(:notas_credito) %>
@@ -47,10 +47,17 @@
   <% end %>
 
   <% if admin? %>
-    <%= sidebar_link "Usuarios", users_path, icon: "user-group" %>
-    <%= sidebar_link "Categorias de Precio", categoria_precios_path, icon: "tag" %>
-    <%= sidebar_link "Empresa", empresa_path, icon: "building-office-2" %>
-    <%= sidebar_link "Configuraciones", "#", icon: "cog-6-tooth" %>
-    <%= sidebar_link "Reportes", "#", icon: "table-cells" %>
+    <%= sidebar_section "Configuracion" do %>
+      <%= sidebar_link "Usuarios", users_path, icon: "user-group" %>
+      <%= sidebar_link "Sucursales", sucursales_path, icon: "building-storefront" %>
+      <%= sidebar_link "Categorias de Precio", categoria_precios_path, icon: "swatch" %>
+      <%= sidebar_link "Tarifas de Recolecta", tarifas_recolecta_path, icon: "map-pin" %>
+      <%= sidebar_link "Servicios Extra", servicios_extra_path, icon: "puzzle-piece" %>
+      <%= sidebar_link "Proveedores", proveedores_path, icon: "shopping-bag" %>
+      <%= sidebar_link "Motivos de Retención", motivos_retencion_path, icon: "hand-raised" %>
+      <%= sidebar_link "Plantillas Notas Cliente", plantillas_notas_cliente_path, icon: "clipboard" %>
+      <%= sidebar_link "Empresa", empresa_path, icon: "building-office-2" %>
+      <%= sidebar_link "Reportes", "#", icon: "table-cells" %>
+    <% end %>
   <% end %>
 </ul>

@@ -1,12 +1,15 @@
 class ManifiestosController < ApplicationController
-  before_action :authorize_manifiestos
+  # `buscar` (JSON) lo usan operadores que editan paquetes pero no
+  # necesariamente tienen rol de Miami — se gatea via authorize_edit
+  # del paquete antes de llegar acá.
+  before_action :authorize_manifiestos, except: [ :buscar ]
   before_action :set_manifiesto, only: [ :show, :edit, :update, :add_paquete, :remove_paquete, :enviar ]
 
   def index
     @manifiestos = Manifiesto.activos.includes(:empresa_manifiesto).order(created_at: :desc)
     @manifiestos = @manifiestos.buscar(params[:q]) if params[:q].present?
     @manifiestos = @manifiestos.by_estado(params[:estado]) if params[:estado].present?
-    @manifiestos = @manifiestos.page(params[:page]).per(25)
+    @manifiestos = @manifiestos.page(params[:page]).per(per_page_sanitized)
   end
 
   def show
@@ -66,9 +69,24 @@ class ManifiestosController < ApplicationController
     redirect_to @manifiesto, notice: "Manifiesto #{@manifiesto.numero} enviado exitosamente."
   end
 
-  private
+  # Endpoint JSON para el autocomplete del manifiesto en el form del paquete.
+  def buscar
+    q = params[:q].to_s.strip
+    scope = Manifiesto.activos.includes(:sucursal_origen).order(created_at: :desc).limit(10)
+    scope = scope.buscar(q) if q.present?
+    render json: scope.map { |m|
+      {
+        id: m.id,
+        numero: ERB::Util.html_escape(m.numero),
+        estado: ERB::Util.html_escape(m.estado.to_s),
+        fecha_enviado: m.fecha_enviado&.strftime("%d/%m/%Y %H:%M"),
+        sucursal: ERB::Util.html_escape(m.sucursal_origen&.codigo.to_s),
+        paquetes_count: m.paquetes.count
+      }
+    }
+  end
 
-  def authorize_manifiestos
+  private  def authorize_manifiestos
     require_role(:supervisor_miami, :digitador_miami)
   end
 

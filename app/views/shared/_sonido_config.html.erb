@@ -1,0 +1,83 @@
+<%# PR-9.c: control de sonidos para /etiquetar y /entrega_personal.
+    Yusef pidió poder cambiar los sonidos "en el mismo modal", o sea sin
+    irse a otra pantalla: botón en el header → diálogo con on/off, volumen
+    y prueba de cada tono. Los botones de prueba además sirven de gesto
+    para desbloquear el AudioContext de Chrome. %>
+<% habilitado = Current.user&.sonido_habilitado != false %>
+<% volumen = Current.user&.sonido_volumen || 60 %>
+
+<div data-controller="sonido-config"
+     data-sonido-config-url-value="<%= preferencia_sonido_path %>"
+     class="inline-flex">
+
+  <button type="button" data-action="click->sonido-config#open"
+          title="Configurar sonidos"
+          class="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg ring-1 ring-gray-300 dark:ring-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+    <%= heroicon(habilitado ? "speaker-wave" : "speaker-x-mark", variant: :solid,
+          options: { class: "w-4 h-4 #{habilitado ? 'text-cec-teal' : 'text-gray-400'}" }) %>
+    Sonidos
+  </button>
+
+  <dialog data-sonido-config-target="dialog"
+          aria-labelledby="sonido-config-title"
+          style="margin: auto"
+          class="rounded-xl p-0 w-[26rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-cec-teal/40">
+    <div class="bg-cec-teal/10 px-5 py-3 border-b border-cec-teal/30">
+      <h3 id="sonido-config-title" class="text-base font-semibold text-cec-teal-dark dark:text-cec-teal-light">
+        Sonidos de escaneo
+      </h3>
+    </div>
+
+    <div class="p-5 space-y-5 bg-white dark:bg-gray-800">
+      <label class="flex items-center gap-3">
+        <input type="checkbox" data-sonido-config-target="toggle"
+               data-action="change->sonido-config#cambiar"
+               <%= "checked" if habilitado %>
+               class="rounded border-gray-300 text-cec-teal focus:ring-cec-teal">
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Reproducir sonidos</span>
+      </label>
+
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <label for="sonido-volumen" class="text-sm font-medium text-gray-700 dark:text-gray-200">Volumen</label>
+          <span data-sonido-config-target="valor" class="text-sm font-mono text-gray-500 dark:text-gray-400"><%= volumen %>%</span>
+        </div>
+        <input id="sonido-volumen" type="range" min="0" max="100" step="5" value="<%= volumen %>"
+               data-sonido-config-target="slider"
+               data-action="input->sonido-config#cambiar"
+               class="w-full accent-cec-teal">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Subilo si trabajás en bodega con ruido de fondo.
+        </p>
+      </div>
+
+      <div>
+        <p class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Probar</p>
+        <div class="grid grid-cols-2 gap-2">
+          <% [
+               [ "success", "Guardado" ],
+               [ "notify",  "Pre-alerta" ],
+               [ "alert",   "Notas del cliente" ],
+               [ "error",   "Error" ]
+             ].each do |tono, etiqueta| %>
+            <button type="button" data-action="click->sonido-config#probar" data-tono="<%= tono %>"
+                    class="px-3 py-2 text-xs font-medium rounded-lg ring-1 ring-gray-300 dark:ring-gray-600 text-gray-700 dark:text-gray-200 hover:bg-cec-teal/10 transition-colors">
+              <%= etiqueta %>
+            </button>
+          <% end %>
+        </div>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+          Si no se oye nada, tocá cualquier botón de prueba: algunos navegadores
+          bloquean el audio hasta el primer clic de la sesión.
+        </p>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-end px-5 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+      <button type="button" data-action="click->sonido-config#close"
+              class="px-4 py-1.5 text-sm font-medium bg-cec-gold text-cec-navy-dark rounded-lg hover:bg-cec-gold-dark">
+        Listo
+      </button>
+    </div>
+  </dialog>
+</div>

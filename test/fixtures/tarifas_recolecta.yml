@@ -1,0 +1,27 @@
+san_pedro_centro:
+  zona: San Pedro Sula — Centro
+  monto: 35.00
+  moneda: USD
+  position: 1
+  activo: true
+
+tegucigalpa:
+  zona: Tegucigalpa
+  monto: 50.00
+  moneda: USD
+  position: 2
+  activo: true
+
+la_lima_lps:
+  zona: La Lima
+  monto: 800.00
+  moneda: LPS
+  position: 3
+  activo: true
+
+inactiva:
+  zona: Zona Vieja
+  monto: 25.00
+  moneda: USD
+  position: 99
+  activo: false

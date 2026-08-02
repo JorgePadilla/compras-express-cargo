@@ -1,4 +1,9 @@
 class Cliente < ApplicationRecord
+  # PR-D1.a: audit log. Excluye `password_digest` (BCrypt hash) por
+  # seguridad — aunque es hash y no plaintext, no aporta valor al
+  # log y reduce la superficie ante una brecha del audit_log.
+  has_paper_trail skip: %i[password_digest]
+
   # validations: false because admins create clients without passwords;
   # only clients who opt into portal access get a password set later.
   has_secure_password validations: false
@@ -17,11 +22,16 @@ class Cliente < ApplicationRecord
   has_many :cotizaciones, dependent: :restrict_with_error
   has_many :financiamientos, dependent: :restrict_with_error
   has_many :entregas, dependent: :restrict_with_error
+  # PR-9.a: tareas que cualquier área le deja al cliente. Se destruyen con
+  # el cliente porque no tienen valor fuera de su contexto (a diferencia de
+  # paquetes o ventas, que son historia contable).
+  has_many :tareas, dependent: :destroy
 
   validates :codigo, presence: true, uniqueness: { case_sensitive: false }
   validates :nombre, presence: true
   validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true,
                    uniqueness: { case_sensitive: false, message: "ya esta registrado" }, if: -> { email.present? }
+  validates :tema, inclusion: { in: %w[light dark], allow_nil: true }
 
   scope :activos, -> { where(activo: true) }
   scope :buscar, ->(term) {
@@ -39,10 +49,10 @@ class Cliente < ApplicationRecord
 
   def generate_codigo
     last_number = self.class
-      .where("codigo LIKE 'CEC-%'")
+      .where("codigo ~ '^C[0-9]+$'")
       .pluck(:codigo)
-      .map { |c| c.sub("CEC-", "").to_i }
+      .map { |c| c.sub("C", "").to_i }
       .max || 0
-    self.codigo = "CEC-#{(last_number + 1).to_s.rjust(3, '0')}"
+    self.codigo = "C#{last_number + 1}"
   end
 end

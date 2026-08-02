@@ -1,2 +1,141 @@
-<h1 class="text-2xl font-bold text-gray-800 mb-2">Dashboard</h1>
-<p class="text-gray-600">Bienvenido, <%= Current.user.nombre_completo %></p>
+<% content_for :title, "Dashboard" %>
+
+<div class="space-y-6" data-controller="stagger-reveal" data-stagger-reveal-step-value="80">
+  <%# ── Hero saludo ── %>
+  <%= render DashboardHeroComponent.new(user: Current.user, health_status: @health_status) %>
+
+  <%# ── Shortcuts agrupados por área (role-based) ── %>
+  <% if @shortcut_groups.present? %>
+    <div class="space-y-5">
+      <% @shortcut_groups.each do |group| %>
+        <section data-stagger class="animate-stagger">
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2"><%= group[:area] %></h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            <% group[:cards].each do |c| %>
+              <%= render QuickActionCardComponent.new(
+                    title: c[:title],
+                    subtitle: c[:subtitle],
+                    icon: c[:icon],
+                    href: c[:href],
+                    accent: c[:accent]
+                  ) %>
+            <% end %>
+          </div>
+        </section>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%# ── KPIs del día ── %>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" data-controller="stagger-reveal" data-stagger-reveal-step-value="80">
+    <%= render DashboardKpiCardComponent.new(
+          title:    "Ingresos hoy",
+          value:    @ingresos_hoy.to_f.round(2),
+          decimals: 2,
+          prefix:   "L ",
+          icon:     "banknotes",
+          accent:   :teal,
+          delta:    compute_delta(@ingresos_hoy, @ingresos_ayer),
+          series:   @ingresos_7_dias.map { |d| d[:total] },
+          caption:  "Semana: L #{number_with_delimiter(@ingresos_semana.to_f.round(2))}"
+        ) %>
+    <%= render DashboardKpiCardComponent.new(
+          title:   "Paquetes recibidos",
+          value:   @paquetes_recibidos_hoy,
+          icon:    "archive-box",
+          accent:  :navy,
+          delta:   compute_delta(@paquetes_recibidos_hoy, @paquetes_recibidos_ayer),
+          series:  @paquetes_7_dias.map { |d| d[:paquetes] },
+          caption: "Semana: #{@paquetes_semana} · Mes: #{@paquetes_mes}"
+        ) %>
+    <%= render DashboardKpiCardComponent.new(
+          title:   "Entregas hoy",
+          value:   @entregas_hoy,
+          icon:    "truck",
+          accent:  :gold,
+          delta:   compute_delta(@entregas_hoy, @entregas_ayer),
+          series:  @entregas_7_dias.map { |d| d[:total] },
+          caption: "#{@entregas_en_reparto} en reparto"
+        ) %>
+    <%= render DashboardKpiCardComponent.new(
+          title:   "Pre-alertas hoy",
+          value:   @pre_alertas_hoy,
+          icon:    "bell-alert",
+          accent:  :navy,
+          delta:   compute_delta(@pre_alertas_hoy, @pre_alertas_ayer),
+          series:  @pre_alertas_7_dias.map { |d| d[:total] },
+          caption: "#{@tareas_abiertas} tareas abiertas"
+        ) %>
+  </div>
+
+  <%# ── Pipeline operativo ── %>
+  <div data-stagger class="animate-stagger">
+    <%= render DashboardPipelineComponent.new(
+          en_bodega:   @paquetes_en_bodega,
+          en_transito: @paquetes_en_transito,
+          disponibles: @paquetes_disponibles,
+          pendientes:  @ventas_pendientes
+        ) %>
+  </div>
+
+  <%# ── Tendencia 7 días ── %>
+  <div data-stagger class="animate-stagger">
+    <%= render DashboardChartComponent.new(series: @paquetes_7_dias) %>
+  </div>
+
+  <%# ── Actividad reciente ── %>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4" data-controller="stagger-reveal" data-stagger-reveal-step-value="80">
+    <div data-stagger class="animate-stagger bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100">Paquetes recientes</h3>
+        <%= link_to "Ver todos", paquetes_path,
+            class: "text-xs text-cec-teal hover:text-cec-teal-dark dark:text-cec-teal-light dark:hover:text-cec-teal font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cec-teal rounded" %>
+      </div>
+      <div class="divide-y divide-gray-100 dark:divide-gray-700">
+        <% @paquetes_recientes.each do |p| %>
+          <%= render DashboardActivityItemComponent.new(
+                href: paquete_path(p),
+                avatar_name: p.cliente&.nombre_completo,
+                eyebrow: paquete_display_id(p),
+                title: "#{p.cliente&.nombre_completo} · #{p.tracking}",
+                time: p.created_at
+              ) do |item| %>
+            <% item.with_badge { render StatusBadgeComponent.new(status: p.estado) } %>
+          <% end %>
+        <% end %>
+        <% if @paquetes_recientes.empty? %>
+          <p class="px-4 py-6 text-center text-sm text-gray-400 dark:text-gray-500">Sin paquetes aún. ¡Vamos por el primero!</p>
+        <% end %>
+      </div>
+    </div>
+
+    <div data-stagger class="animate-stagger bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100">Ventas recientes</h3>
+        <%= link_to "Ver todas", ventas_path,
+            class: "text-xs text-cec-teal hover:text-cec-teal-dark dark:text-cec-teal-light dark:hover:text-cec-teal font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cec-teal rounded" %>
+      </div>
+      <div class="divide-y divide-gray-100 dark:divide-gray-700">
+        <% @ventas_recientes.each do |v| %>
+          <%= render DashboardActivityItemComponent.new(
+                href: venta_path(v),
+                avatar_name: v.cliente&.nombre_completo,
+                eyebrow: v.numero,
+                title: v.cliente&.nombre_completo.to_s,
+                time: v.created_at
+              ) do |item| %>
+            <% item.with_badge do %>
+              <div class="text-right">
+                <p class="font-semibold text-cec-navy dark:text-gray-100 text-sm tabular-nums">L <%= number_with_delimiter(v.total.to_f.round(2)) %></p>
+                <p class="text-[10px] text-gray-400 dark:text-gray-500 capitalize"><%= v.estado %></p>
+              </div>
+            <% end %>
+          <% end %>
+        <% end %>
+        <% if @ventas_recientes.empty? %>
+          <p class="px-4 py-6 text-center text-sm text-gray-400 dark:text-gray-500">Aún no hay ventas hoy. Vamos por la primera.</p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,169 +1,930 @@
-<%= render PageHeaderComponent.new(title: @paquete.guia, subtitle: "Paquete") do |header|
-  header.with_action do
-    render ButtonComponent.new(variant: :secondary, href: edit_paquete_path(@paquete), icon: "pencil-square") do
-      "Editar"
+<%# PR-D4.a.2 follow-up: el show entero vive dentro del scope de
+    `mover-pre-alerta-modal` para que el trigger (en PageHeader) y el
+    <dialog> (al final) compartan controlador Stimulus.
+
+    PR-D4.a.3: además envolvemos todo en un <turbo-frame> para que el
+    botón "Refrescar" recargue solo esta zona sin perder scroll. El
+    frame usa `target="_top"` para que el resto de los links naveguen
+    a página completa por defecto; sólo Refrescar opta-in al frame. %>
+<div data-controller="mover-pre-alerta-modal asignar-tercero-modal"
+     data-mover-pre-alerta-modal-search-url-value="<%= buscar_pre_alertas_path %>"
+     data-mover-pre-alerta-modal-paquete-id-value="<%= @paquete.id %>"
+     data-asignar-tercero-modal-search-url-value="<%= buscar_clientes_path %>"
+     data-asignar-tercero-modal-paquete-id-value="<%= @paquete.id %>">
+<%= turbo_frame_tag "paquete_dynamic", target: "_top" do %>
+
+<%= render PageHeaderComponent.new(title: paquete_display_id(@paquete), subtitle: "Paquete") do |header|
+  # ── Pill de Pre-Alerta vinculada (contexto, debajo del título) ──
+  header.with_meta do
+    if @paquete.pre_alerta_paquetes.any?
+      pa = @paquete.pre_alerta_paquetes.first.pre_alerta
+      link_to pre_alerta_path(pa),
+              class: "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-cec-teal/10 dark:bg-cec-teal/20 text-cec-teal-dark dark:text-cec-teal-light ring-1 ring-cec-teal/30 text-xs font-semibold hover:ring-cec-teal/60" do
+        safe_join([
+          heroicon("bell-alert", variant: :solid, options: { class: "w-3.5 h-3.5" }),
+          content_tag(:span, "Pre-Alerta", class: "uppercase tracking-wider text-[10px]"),
+          content_tag(:span, pa.numero_documento, class: "font-mono"),
+          content_tag(:span, "·", class: "text-gray-500 dark:text-gray-400"),
+          content_tag(:span, pa.cliente.codigo)
+        ])
+      end
+    else
+      content_tag :span,
+                  class: "inline-flex items-center gap-1.5 text-xs italic text-gray-500 dark:text-gray-400" do
+        safe_join([
+          heroicon("bell-slash", variant: :solid, options: { class: "w-3.5 h-3.5" }),
+          "Sin pre-alerta vinculada"
+        ])
+      end
+    end
+  end
+
+  # ── Acciones (todas :primary :sm; excepción: Eliminar PA = :danger) ──
+  if @edit_mode
+    header.with_action do
+      render(ButtonComponent.new(variant: :primary, size: :sm, type: "submit",
+                                 form: "paquete-edit-form",
+                                 icon: "check", shortcut: "F10")) { "Guardar" }
+    end
+    header.with_action do
+      render(ButtonComponent.new(variant: :ghost, size: :sm, href: paquete_path(@paquete),
+                                 icon: "x-mark", shortcut: "F2")) { "Cancelar" }
+    end
+  else
+    header.with_action do
+      render(ButtonComponent.new(variant: :primary, size: :sm, href: paquete_path(@paquete, mode: "edit"),
+                                 icon: "pencil-square", shortcut: "F6")) { "Editar" }
     end
   end
   header.with_action do
-    render ButtonComponent.new(variant: :secondary, href: label_paquete_path(@paquete), icon: "printer", target: "_blank") do
-      "Imprimir"
+    count = @paquete.tareas.abiertas.count
+    label = count.positive? ? "Tareas (#{count})" : "Tareas"
+    render(ButtonComponent.new(variant: :primary, size: :sm, href: paquete_tareas_path(@paquete),
+                               icon: "clipboard-document-check")) { label }
+  end
+  header.with_action do
+    render(ButtonComponent.new(variant: :primary, size: :sm, href: paquete_reempaques_path(@paquete),
+                               icon: "cube-transparent")) { "Re-empaque" }
+  end
+  header.with_action do
+    render(ButtonComponent.new(variant: :primary, size: :sm, href: label_paquete_path(@paquete),
+                               icon: "document-text", target: "_blank", shortcut: "F4")) { "Warehouse Receipt" }
+  end
+  if (pf = @paquete.pre_factura)
+    header.with_action do
+      render(ButtonComponent.new(variant: :primary, size: :sm, href: pre_factura_path(pf),
+                                 icon: "document-arrow-down", target: "_blank")) { "Imprimir Pre-Factura" }
+    end
+    header.with_action do
+      render(ButtonComponent.new(variant: :primary, size: :sm, href: pre_factura_path(pf),
+                                 icon: "eye")) { "Ver Pre-Factura" }
+    end
+  end
+  if (vt = @paquete.venta)
+    header.with_action do
+      render(ButtonComponent.new(variant: :primary, size: :sm, href: venta_path(vt),
+                                 icon: "currency-dollar")) { "Ver Factura #{vt.numero}" }
     end
   end
   header.with_action do
-    render ButtonComponent.new(variant: :ghost, href: paquetes_path, icon: "arrow-left") do
-      "Volver"
+    render(ButtonComponent.new(variant: :primary, size: :sm, href: reimprimir_etiquetas_paquete_path(@paquete),
+                               icon: "printer", target: "_blank")) { "Re-imprimir Etiquetas Miami" }
+  end
+
+  # ── Pre-Alerta management (Mover siempre disponible; Eliminar solo si está vinculado) ──
+  mover_label = @paquete.pre_alerta_paquetes.any? ? "Mover a otra Pre-Alerta" : "Asignar a Pre-Alerta"
+  header.with_action do
+    render(ButtonComponent.new(variant: :primary, size: :sm, icon: "arrows-right-left",
+                               type: "button",
+                               data: { action: "click->mover-pre-alerta-modal#open" })) { mover_label }
+  end
+  if @paquete.pre_alerta_paquetes.any?
+    header.with_action do
+      render(ButtonComponent.new(variant: :danger, size: :sm, href: eliminar_de_pre_alerta_paquete_path(@paquete),
+                                 icon: "x-mark",
+                                 data: {
+                                   turbo_method: :delete,
+                                   turbo_confirm: "¿Desvincular este paquete de su pre-alerta? El paquete NO se elimina, sólo se desasocia para poder reasignarlo."
+                                 })) { "Eliminar de Pre-Alerta" }
     end
+  end
+
+  # ── Navegación ──
+  header.with_action do
+    render(ButtonComponent.new(variant: :primary, size: :sm, href: paquete_path(@paquete),
+                               icon: "arrow-path", data: { turbo_frame: "paquete_dynamic" })) { "Refrescar" }
+  end
+  header.with_action do
+    render(ButtonComponent.new(variant: :primary, size: :sm, href: paquetes_path,
+                               icon: "arrow-left", shortcut: "F2")) { "Volver" }
   end
 end %>
 
+<% if @paquete.dividido? %>
+  <%# Banner de paquete dividido (sub-etiqueta) — muestra "1/3" + links a hermanos. %>
+  <div class="mb-4 bg-cec-gold/10 dark:bg-cec-gold/20 border border-cec-gold/30 rounded-lg p-4 flex items-start gap-4">
+    <div class="shrink-0 w-14 h-14 rounded-lg bg-cec-gold-gradient text-white flex flex-col items-center justify-center shadow-sm">
+      <span class="text-[9px] uppercase tracking-wider opacity-80">Caja</span>
+      <span class="text-lg font-bold leading-none"><%= @paquete.etiqueta_secuencia %></span>
+    </div>
+    <div class="min-w-0 flex-1">
+      <p class="text-sm font-semibold text-cec-gold-dark dark:text-cec-gold-light">Tracking dividido en <%= @paquete.cantidad_paquetes %> cajas</p>
+      <p class="text-xs text-gray-600 dark:text-gray-300">Esta es la caja <%= @paquete.numero_caja %> de <%= @paquete.cantidad_paquetes %>. Comparte el tracking <span class="font-mono"><%= @paquete.tracking %></span> con sus hermanos:</p>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <% @paquete.paquetes_hermanos.order(:numero_caja).each do |sib| %>
+          <%= link_to paquete_path(sib),
+                class: "inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white dark:bg-gray-800 ring-1 ring-cec-gold/40 text-xs font-medium text-cec-navy dark:text-gray-100 hover:ring-cec-gold" do %>
+            <%= heroicon "cube", variant: :solid, options: { class: "w-3 h-3 text-cec-gold-dark" } %>
+            <span class="font-mono"><%= paquete_display_id(sib) %></span>
+            <span class="text-gray-500">·</span>
+            <span><%= sib.etiqueta_secuencia %></span>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+<% end %>
+
+<% if @edit_mode %>
+  <%# Modo edición inline (Yusef 2026-05-08): el form de edit se
+      renderiza en el show via `?mode=edit`, eliminando la página
+      separada `/paquetes/:id/edit`. Los modales (Cambio Servicio,
+      Retener Miami, Solicitó Recolecta) y el buscador de Tercero
+      siguen funcionando dentro del form. %>
+  <% if @cambio_servicio_from_rescaneo %>
+    <%# PR-5: Banner cuando el operador llegó acá desde /etiquetar
+        re-escaneando un tracking existente y eligiendo "Cambio de Servicio".
+        El flag solicito_cambio_servicio ya está pre-marcado en memoria;
+        falta que el operador ajuste Tipo de Envío y guarde. %>
+    <div class="mb-4 p-4 bg-amber-50 border border-amber-300 rounded-lg dark:bg-amber-900/20 dark:border-amber-800">
+      <div class="flex items-start gap-2">
+        <%= heroicon "arrow-path", variant: :solid, options: { class: "w-5 h-5 text-amber-600 shrink-0 mt-0.5" } %>
+        <div>
+          <p class="text-sm font-semibold text-amber-900 dark:text-amber-200">
+            Cambio de Servicio detectado por re-escaneo
+          </p>
+          <p class="text-sm text-amber-800 dark:text-amber-300 mt-1">
+            El tracking <span class="font-mono font-bold"><%= @paquete.tracking %></span> ya estaba en el sistema.
+            La marca "Cambio de Servicio" quedó pre-activada — solo ajustá el nuevo Tipo de Envío y guardá.
+            Al facturar, se generará una Nota de Débito automática.
+          </p>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+      <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100">
+        Editar Paquete
+      </h2>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        Cambios se guardan al presionar <strong>Guardar</strong> arriba (F10) o <strong>Cancelar</strong> (F2) para descartar.
+      </p>
+    </div>
+    <div class="px-6 py-4">
+      <%= render "form", paquete: @paquete %>
+    </div>
+  </div>
+<% else %>
+
+<%# PR-6b: Banner verde cuando el paquete fue prepagado en Miami. El
+    digitador de Honduras debe verlo de una vez para no cobrar doble.
+    Al agregar este paquete a una pre-factura, el sistema generará un
+    cobro simbólico automático en lugar del flete completo. %>
+<% if @paquete.prepagado_miami? %>
+  <div class="mb-4 p-4 bg-cec-teal/10 dark:bg-cec-teal/20 border border-cec-teal/40 dark:border-cec-teal/50 rounded-lg">
+    <div class="flex items-start gap-3">
+      <%= heroicon "check-badge", variant: :solid, options: { class: "w-6 h-6 text-cec-teal shrink-0 mt-0.5" } %>
+      <div class="flex-1">
+        <p class="text-base font-bold text-cec-teal-dark dark:text-cec-teal-light">
+          ✓ Este paquete ya fue pagado en Miami
+        </p>
+        <p class="text-sm text-gray-700 dark:text-gray-200 mt-1">
+          <% if @paquete.prepagado_miami_sucursal %>
+            Sucursal <span class="font-mono font-semibold"><%= @paquete.prepagado_miami_sucursal.codigo_ep || @paquete.prepagado_miami_sucursal.codigo %></span> ·
+          <% end %>
+          <% if @paquete.prepagado_miami_at %>
+            <%= @paquete.prepagado_miami_at.strftime("%d/%m/%Y %H:%M") %>
+          <% end %>
+          <% if @paquete.prepagado_miami_by_user %>
+            · Cobrado por <%= @paquete.prepagado_miami_by_user.nombre %>
+          <% end %>
+        </p>
+        <p class="text-xs text-cec-teal-dark dark:text-cec-teal-light mt-2 italic">
+          Al agregarlo a una pre-factura se generará un cobro simbólico automático — no cobres el flete completo otra vez.
+        </p>
+      </div>
+    </div>
+  </div>
+<% end %>
+
 <div class="bg-white rounded-lg shadow overflow-hidden">
-  <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-    <h2 class="text-lg font-semibold text-gray-800">Detalles del Paquete</h2>
-    <%= render StatusBadgeComponent.new(status: @paquete.estado) %>
+  <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Detalles del Paquete</h2>
+      <%# Tag visual "Consolidando" cuando el estado lo indica %>
+      <% if @paquete.estado == "consolidando_honduras" %>
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide bg-cec-gold/15 text-cec-gold-dark dark:bg-cec-gold/25 dark:text-cec-gold-light ring-1 ring-cec-gold/40">
+          <%= heroicon "archive-box", variant: :solid, options: { class: "w-3 h-3" } %>
+          Consolidando
+        </span>
+      <% end %>
+    </div>
+
+    <%# PR-D4.b: Estado como dropdown inline editable. Yusef:
+        "esto debe ser drop down para modificar en caso de un error".
+        PR-D7.b: solo admin/supervisores ven el dropdown; el resto ve el
+        badge solo lectura. El dropdown detecta retrocesos via JS y
+        muestra modal de confirmación antes de mandar el PATCH. %>
+    <% if can_change_estado_paquete? %>
+      <div class="flex items-center gap-2"
+           data-controller="inline-select"
+           data-inline-select-url-value="<%= paquete_path(@paquete) %>"
+           data-inline-select-field-value="estado"
+           data-inline-select-resource-value="paquete">
+        <%= render StatusBadgeComponent.new(status: @paquete.estado) %>
+        <select data-action="change->inline-select#submit"
+                data-inline-select-target="select"
+                aria-label="Cambiar estado del paquete"
+                class="text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:ring-cec-teal focus:border-cec-teal py-1 pr-7">
+          <% Paquete.estados.keys.each do |est| %>
+            <option value="<%= est %>" <%= "selected" if est == @paquete.estado %>><%= est.humanize %></option>
+          <% end %>
+        </select>
+        <span data-inline-select-target="status" class="hidden text-[10px] font-semibold"></span>
+      </div>
+    <% else %>
+      <%= render StatusBadgeComponent.new(status: @paquete.estado) %>
+    <% end %>
   </div>
 
-  <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Guia</dt>
-      <dd class="mt-1 text-sm font-mono font-medium text-cec-navy"><%= @paquete.guia %></dd>
-    </div>
-    <div class="md:col-span-2">
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Tracking</dt>
-      <dd class="mt-1 text-sm font-mono text-gray-900"><%= @paquete.tracking %></dd>
-    </div>
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</dt>
-      <dd class="mt-1 text-sm text-gray-900">
-        <%= link_to @paquete.cliente.codigo, @paquete.cliente, class: "font-mono text-cec-navy hover:underline" %>
-        — <%= @paquete.cliente.nombre_completo %>
-      </dd>
-    </div>
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo de Envio</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @paquete.tipo_envio&.nombre || "—" %></dd>
-    </div>
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Carrier</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @paquete.expedido_por.presence || "—" %></dd>
-    </div>
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @paquete.proveedor.presence || "—" %></dd>
-    </div>
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Remitente</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @paquete.remitente.presence || "—" %></dd>
-    </div>
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Manifiesto</dt>
-      <dd class="mt-1 text-sm text-gray-900">
-        <% if @paquete.manifiesto %>
-          <%= link_to @paquete.manifiesto.numero, @paquete.manifiesto, class: "font-mono text-cec-navy hover:underline" %>
-        <% else %>
-          —
+  <%# Layout 3-filas (Yusef Mayo 4):
+      Fila 1: Cliente+código, Trackings 1+2, Tipo Envío, Cantidad Paquetes
+      Fila 2: Manifiesto+empresa transp, Fecha Posible Entrega,
+              Fecha Recibido Miami, Proveedor
+      Fila 3: Pesos y Dimensiones (peso/alto/largo/ancho/vol/cobrar)
+  %>
+  <%# PR-D7.f: rediseño de "Detalles del Paquete" — 4 secciones con grid
+      consistente de 4 columnas (responsive: 2 cols en mobile), todas
+      alineadas. Cliente y Tracking ocupan 2 columnas para acomodar
+      info jerárquica (Tercero / Tracking 2 / N° Recepción) sin romper
+      el alineamiento del resto. %>
+  <div class="p-6 space-y-6">
+
+    <%# PR-D7.j: layout reorganizado por prioridad descendente (identidad
+        → clasificación/fechas → proveedor/origen → contenido →
+        medidas). Todas las secciones usan md:grid-cols-4 — sin
+        secciones de 3 celdas que dejaban huecos visuales. %>
+
+    <%# ── SECCIÓN 1: Identidad (Cliente + Tracking) ── %>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="col-span-2">
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</dt>
+        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+          <%= link_to @paquete.cliente.codigo, @paquete.cliente, class: "font-mono text-cec-navy dark:text-cec-gold hover:underline" %>
+          — <%= @paquete.cliente.nombre_completo %>
+          <span class="ml-2 inline-flex align-middle" data-controller="clipboard" data-clipboard-text-value="<%= @paquete.cliente.codigo %>">
+            <%= copy_button(label: "Copiar código del cliente") %>
+          </span>
+        </dd>
+        <%# Tercero (PR-D3.c) — siempre visible debajo de Cliente.
+            Asignar/Cambiar/Quitar via modal dedicado (mirror del patrón
+            "Mover a Pre-Alerta"). Reemplaza el flow viejo "Asignar →
+            mode=edit" que confundía a los operadores. %>
+        <dd class="mt-2 text-xs flex items-center gap-1.5 flex-wrap">
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-cec-purple/10 text-cec-purple-dark dark:bg-cec-purple/20 dark:text-cec-purple-light ring-1 ring-cec-purple/30 font-semibold uppercase tracking-wider text-[9px]">
+            <%= heroicon "user-group", variant: :solid, options: { class: "w-3 h-3" } %>
+            Tercero
+          </span>
+          <% if @paquete.tercero %>
+            <%= link_to @paquete.tercero, class: "text-gray-700 dark:text-gray-200 hover:underline" do %>
+              <span class="font-mono text-cec-navy dark:text-cec-gold"><%= @paquete.tercero.codigo %></span>
+              — <%= @paquete.tercero.nombre_completo %>
+            <% end %>
+            <% if can_edit_paquetes? %>
+              <button type="button"
+                      data-action="click->asignar-tercero-modal#open"
+                      class="ml-1 text-cec-teal hover:text-cec-teal-dark hover:underline cursor-pointer">
+                Cambiar
+              </button>
+              <%= button_to quitar_tercero_paquete_path(@paquete),
+                    method: :delete,
+                    form: { data: { turbo_confirm: "¿Quitar el tercero de este paquete?" } },
+                    class: "text-red-600 hover:text-red-800 hover:underline cursor-pointer bg-transparent border-0 p-0 inline" do %>
+                Quitar
+              <% end %>
+            <% end %>
+          <% else %>
+            <span class="text-gray-400 dark:text-gray-500 italic">Sin 3ro asignado</span>
+            <% if can_edit_paquetes? %>
+              <button type="button"
+                      data-action="click->asignar-tercero-modal#open"
+                      class="ml-1 text-cec-teal hover:text-cec-teal-dark hover:underline cursor-pointer">
+                Asignar
+              </button>
+            <% end %>
+          <% end %>
+        </dd>
+      </div>
+      <div class="col-span-2">
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Tracking</dt>
+        <dd class="mt-1 text-sm"><%= copyable(@paquete.tracking, font_mono: true) %></dd>
+        <% if @paquete.tracking_secundario.present? %>
+          <dd class="mt-1 text-xs">
+            <span class="text-gray-500">Tracking 2:</span>
+            <%= copyable(@paquete.tracking_secundario, font_mono: true, css_class: "text-gray-600 dark:text-gray-300 text-xs") %>
+          </dd>
         <% end %>
+        <% if @paquete.numero_recepcion.present? %>
+          <dd class="mt-1 text-xs">
+            <span class="text-gray-500">N° Recepción (madre):</span>
+            <%= copyable(@paquete.numero_recepcion, font_mono: true, css_class: "text-gray-700 dark:text-gray-200 font-medium") %>
+          </dd>
+        <% end %>
+      </div>
+    </div>
+
+    <%# ── SECCIÓN 2: Clasificación + Manifiesto + Fecha Posible ── %>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+      <div>
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo de Envío</dt>
+        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+          <% if (te = @paquete.tipo_envio) %>
+            <span class="font-mono text-xs font-semibold text-cec-navy dark:text-cec-gold"><%= te.codigo&.upcase %></span>
+            <% if te.nombre.present? && te.nombre.to_s.upcase != te.codigo.to_s.upcase %>
+              <span class="block text-[11px] text-gray-500 dark:text-gray-400 mt-0.5"><%= te.nombre %></span>
+            <% end %>
+          <% else %>
+            <span class="text-gray-400">—</span>
+          <% end %>
+        </dd>
+      </div>
+      <div>
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</dt>
+        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+          <%
+            paqs  = @paquete.cantidad_paquetes
+            prods = @paquete.cantidad_productos
+            parts = []
+            parts << "#{paqs} #{'caja'.pluralize(paqs)}" if paqs.present? && paqs.to_i > 0
+            parts << "#{prods} #{'producto'.pluralize(prods)}" if prods.present? && prods.to_i > 0
+          %>
+          <%= parts.any? ? parts.join(" · ").html_safe : "—" %>
+          <% if @paquete.numero_caja.present? %>
+            <span class="ml-1 text-xs text-gray-500">· Caja <%= @paquete.numero_caja %></span>
+          <% end %>
+        </dd>
+      </div>
+      <div>
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Manifiesto</dt>
+        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+          <% if @paquete.manifiesto %>
+            <%= link_to @paquete.manifiesto.numero, @paquete.manifiesto,
+                class: "font-mono text-cec-navy dark:text-cec-gold hover:underline" %>
+            <% if (empresa = @paquete.manifiesto.empresa_manifiesto) %>
+              <span class="block text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                vía <span class="font-medium"><%= empresa.nombre %></span>
+              </span>
+            <% end %>
+          <% else %>
+            <span class="text-gray-400">—</span>
+          <% end %>
+        </dd>
+      </div>
+      <div>
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Posible Entrega</dt>
+        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+          <% if @paquete.fecha_posible_entrega.present? %>
+            <%= @paquete.fecha_posible_entrega.strftime("%d/%m/%Y") %>
+          <% else %>
+            <span class="text-gray-400">—</span>
+          <% end %>
+        </dd>
+      </div>
+    </div>
+
+    <%# ── SECCIÓN 3: Proveedor + Carrier + Remitente ── %>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+      <div class="col-span-2">
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</dt>
+        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+          <% if @paquete.proveedor.is_a?(Proveedor) %>
+            <span class="font-mono text-cec-navy"><%= @paquete.proveedor.codigo %></span>
+            — <%= @paquete.proveedor.nombre %>
+            <% if @paquete.proveedor.entrega_personal? %>
+              <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-900">EP</span>
+            <% end %>
+          <% else %>
+            <%= @paquete[:proveedor].presence || "—" %>
+          <% end %>
+        </dd>
+      </div>
+      <div>
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Carrier</dt>
+        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+          <%= @paquete.expedido_por.presence || content_tag(:span, "—", class: "text-gray-400") %>
+        </dd>
+      </div>
+      <div>
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Remitente</dt>
+        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+          <%= @paquete.remitente.presence || content_tag(:span, "—", class: "text-gray-400") %>
+        </dd>
+      </div>
+    </div>
+
+    <%# ── SECCIÓN 4: Contenido (full width) ── %>
+    <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Contenido</dt>
+      <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+        <%= @paquete.descripcion.presence || content_tag(:span, "—", class: "text-gray-400") %>
       </dd>
     </div>
 
-    <%# Weights and dimensions %>
-    <div class="md:col-span-3 border-t border-gray-200 pt-4 mt-2">
-      <h3 class="text-sm font-semibold text-gray-700 mb-3">Peso y Dimensiones</h3>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div>
-          <dt class="text-xs font-medium text-gray-500 uppercase">Peso</dt>
-          <dd class="mt-1 text-sm text-gray-900"><%= @paquete.peso || "—" %> lbs</dd>
-        </div>
-        <div>
-          <dt class="text-xs font-medium text-gray-500 uppercase">Dimensiones (A x L x An)</dt>
-          <dd class="mt-1 text-sm text-gray-900"><%= [@paquete.alto, @paquete.largo, @paquete.ancho].compact.join(" x ").presence || "—" %></dd>
-        </div>
-        <div>
-          <dt class="text-xs font-medium text-gray-500 uppercase">Peso Volumetrico</dt>
-          <dd class="mt-1 text-sm text-gray-900"><%= @paquete.peso_volumetrico || "—" %> lbs</dd>
-        </div>
-        <div>
-          <dt class="text-xs font-medium text-gray-500 uppercase">Peso a Cobrar</dt>
-          <dd class="mt-1 text-sm font-semibold text-gray-900"><%= @paquete.peso_cobrar || "—" %> lbs</dd>
-        </div>
-      </div>
-    </div>
-
-    <%# Quantities %>
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cant. Productos</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @paquete.cantidad_productos || "—" %></dd>
-    </div>
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cant. Paquetes</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @paquete.cantidad_paquetes || "—" %></dd>
-    </div>
-    <% if @paquete.numero_caja.present? %>
+    <%# ── SECCIÓN 4: Medidas ── %>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 border-t border-gray-200 dark:border-gray-700 pt-4">
       <div>
-        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Caja Numero</dt>
-        <dd class="mt-1 text-sm text-gray-900"><%= @paquete.numero_caja %></dd>
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Peso</dt>
+        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100"><%= @paquete.peso || "—" %> lbs</dd>
       </div>
-    <% end %>
-
-    <%# Description %>
-    <% if @paquete.descripcion.present? %>
-      <div class="md:col-span-3">
-        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Descripcion</dt>
-        <dd class="mt-1 text-sm text-gray-900"><%= @paquete.descripcion %></dd>
+      <div>
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Dimensiones <span class="normal-case font-normal text-gray-400">(A × L × An)</span></dt>
+        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+          <% dims = [@paquete.alto, @paquete.largo, @paquete.ancho].compact %>
+          <%= dims.any? ? "#{dims.join(' × ')} pulg." : "—" %>
+        </dd>
       </div>
-    <% end %>
-
-    <%# Flags %>
-    <div class="md:col-span-3 border-t border-gray-200 pt-4 mt-2">
-      <h3 class="text-sm font-semibold text-gray-700 mb-3">Marcas</h3>
-      <div class="flex flex-wrap gap-3">
-        <span class="inline-flex items-center gap-1 text-sm <%= @paquete.pre_alerta? ? 'text-cec-teal-dark' : 'text-gray-400' %>">
-          <%= heroicon(@paquete.pre_alerta? ? "check-circle" : "x-circle", variant: :outline, options: { class: "w-4 h-4" }) %>
-          Pre-Alerta
-        </span>
-        <span class="inline-flex items-center gap-1 text-sm <%= @paquete.pre_factura? ? 'text-blue-700' : 'text-gray-400' %>">
-          <%= heroicon(@paquete.pre_factura? ? "check-circle" : "x-circle", variant: :outline, options: { class: "w-4 h-4" }) %>
-          Pre-Factura
-        </span>
-        <span class="inline-flex items-center gap-1 text-sm <%= @paquete.solicito_cambio_servicio? ? 'text-amber-700' : 'text-gray-400' %>">
-          <%= heroicon(@paquete.solicito_cambio_servicio? ? "check-circle" : "x-circle", variant: :outline, options: { class: "w-4 h-4" }) %>
-          Cambio Servicio
-        </span>
-        <span class="inline-flex items-center gap-1 text-sm <%= @paquete.retener_miami? ? 'text-amber-700' : 'text-gray-400' %>">
-          <%= heroicon(@paquete.retener_miami? ? "check-circle" : "x-circle", variant: :outline, options: { class: "w-4 h-4" }) %>
-          Retener Miami
-        </span>
+      <div>
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Peso Volumétrico</dt>
+        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100"><%= @paquete.peso_volumetrico || "—" %> lbs</dd>
+      </div>
+      <div>
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Peso a Cobrar</dt>
+        <dd class="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100"><%= @paquete.peso_cobrar || "—" %> lbs</dd>
       </div>
     </div>
 
-    <%# Notes %>
-    <% if @paquete.notas_internas.present? %>
-      <div class="md:col-span-3">
-        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Notas Internas</dt>
-        <dd class="mt-1 text-sm text-gray-900 bg-gray-50 rounded-lg p-3"><%= simple_format(@paquete.notas_internas) %></dd>
+    <%# Sucursal actual + Flags + Recolecta + Retención + Cambio Servicio %>
+    <div class="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
+      <% if @paquete.sucursal_actual %>
+        <div class="text-xs text-gray-600 dark:text-gray-300">
+          <span class="font-semibold">Bodega actual:</span>
+          <%= @paquete.sucursal_actual.nombre %>
+          <% if @paquete.sub_localidad_actual %>
+            · <%= @paquete.sub_localidad_actual.nombre %>
+          <% end %>
+        </div>
+      <% end %>
+      <div class="flex flex-wrap gap-2 items-center">
+        <% if @paquete.consolidado? %>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-cec-gold/15 text-cec-gold-dark ring-1 ring-cec-gold/40">
+            <%= heroicon "archive-box", variant: :solid, options: { class: "w-3 h-3" } %>
+            Consolidando
+          </span>
+        <% end %>
+        <% if @paquete.solicito_cambio_servicio? %>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-900 ring-1 ring-amber-300">
+            <%= heroicon "arrow-path", variant: :solid, options: { class: "w-3 h-3" } %>
+            Cambio de Servicio
+          </span>
+        <% end %>
+        <% if @paquete.retener_miami? %>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-900 ring-1 ring-amber-300">
+            <%= heroicon "exclamation-triangle", variant: :solid, options: { class: "w-3 h-3" } %>
+            Retener Miami
+          </span>
+        <% end %>
+        <% if @paquete.recolecta_solicitada? %>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30">
+            <%= heroicon "truck", variant: :solid, options: { class: "w-3 h-3" } %>
+            Recolecta solicitada
+            <% if @paquete.recolecta_monto.present? %>
+              <span class="ml-1 font-mono"><%= @paquete.recolecta_moneda %> <%= @paquete.recolecta_monto %></span>
+            <% end %>
+          </span>
+        <% end %>
+        <% unless @paquete.solicito_cambio_servicio? || @paquete.retener_miami? || @paquete.recolecta_solicitada? || @paquete.consolidado? %>
+          <span class="text-xs text-gray-400 italic">Sin marcas especiales</span>
+        <% end %>
+      </div>
+      <%# PR-D7.k: Notas de Retención siempre visibles. Estilo amber
+          cuando hay motivo o nota; gris/neutral cuando no hay
+          retención (sin generar falsa alerta visual). %>
+      <% retenido = @paquete.notas_retencion.present? || @paquete.motivos_retencion.any? %>
+      <div class="<%= retenido ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100' : 'bg-gray-50 dark:bg-gray-700/30 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400' %> rounded-lg p-3 border text-xs space-y-1.5">
+        <div class="font-semibold uppercase tracking-wider text-[10px]">Detalles de Retención</div>
+        <% if @paquete.motivos_retencion.any? %>
+          <div class="flex flex-wrap gap-1.5">
+            <% @paquete.motivos_retencion.each do |m| %>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[11px] font-medium border border-amber-300"><%= m.nombre %></span>
+            <% end %>
+          </div>
+        <% end %>
+        <% if @paquete.notas_retencion.present? %>
+          <div><%= simple_format(@paquete.notas_retencion) %></div>
+        <% elsif !retenido %>
+          <div class="italic">— sin retención —</div>
+        <% end %>
+      </div>
+    </div>
+
+    <%# Notas Permanentes del Cliente (PR-D2.b / PR-D7.k).
+        Siempre visible para roles que tienen acceso a algún campo de
+        notas del cliente. Si los campos visibles para el rol están
+        todos vacíos → placeholder. Si el rol no tiene acceso a ningún
+        campo → sección oculta. %>
+    <% campos_visibles = Current.user&.notas_permanentes_visibles.to_a %>
+    <% if campos_visibles.any? %>
+      <% campos_con_contenido = campos_visibles.select { |n| @paquete.cliente.public_send(n[:campo]).to_s.strip.present? } %>
+      <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+        <dt class="text-xs font-medium uppercase tracking-wider text-amber-800 dark:text-amber-200">
+          Notas Permanentes del Cliente
+          <span class="text-[10px] normal-case text-amber-600">(visibles a etiquetar / pre-factura / SAC)</span>
+        </dt>
+        <% if campos_con_contenido.any? %>
+          <dd class="mt-2 space-y-2">
+            <% campos_con_contenido.each do |n| %>
+              <div class="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-900/20 p-2 text-xs">
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-200"><%= n[:etiqueta] %></div>
+                <div class="mt-0.5 text-gray-900 dark:text-gray-100 whitespace-pre-line"><%= @paquete.cliente.public_send(n[:campo]) %></div>
+              </div>
+            <% end %>
+          </dd>
+        <% else %>
+          <dd class="mt-1 text-xs italic text-amber-600 dark:text-amber-400 bg-amber-50/40 dark:bg-amber-900/10 rounded-lg p-3 border border-amber-100 dark:border-amber-900/40">
+            — sin notas permanentes para tus áreas visibles —
+          </dd>
+        <% end %>
       </div>
     <% end %>
 
-    <%# Dates %>
-    <div class="md:col-span-3 border-t border-gray-200 pt-4 mt-2">
-      <h3 class="text-sm font-semibold text-gray-700 mb-3">Fechas</h3>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div>
-          <dt class="text-xs font-medium text-gray-500 uppercase">Recibido Miami</dt>
-          <dd class="mt-1 text-sm text-gray-900"><%= @paquete.fecha_recibido_miami&.strftime("%d/%m/%Y %H:%M") || "—" %></dd>
-        </div>
-        <div>
-          <dt class="text-xs font-medium text-gray-500 uppercase">Enviado</dt>
-          <dd class="mt-1 text-sm text-gray-900"><%= @paquete.fecha_enviado&.strftime("%d/%m/%Y %H:%M") || "—" %></dd>
-        </div>
-        <div>
-          <dt class="text-xs font-medium text-gray-500 uppercase">Llegada HN</dt>
-          <dd class="mt-1 text-sm text-gray-900"><%= @paquete.fecha_llegada_hn&.strftime("%d/%m/%Y %H:%M") || "—" %></dd>
-        </div>
-        <div>
-          <dt class="text-xs font-medium text-gray-500 uppercase">Registrado</dt>
-          <dd class="mt-1 text-sm text-gray-900"><%= @paquete.created_at.strftime("%d/%m/%Y %H:%M") %></dd>
-        </div>
-      </div>
+    <%# Notas categorizadas — 4 secciones (Yusef Mayo 4):
+        Internas | al Cliente | Consolidación | Retención (ya arriba).
+        PR-D7.e: siempre visibles para que el usuario sepa qué hay (o
+        que está vacío) sin tener que entrar al modo edit. %>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">
+        Notas Internas
+        <span class="text-[10px] normal-case text-gray-400">(solo equipo CEC)</span>
+      </dt>
+      <% if @paquete.notas_internas.present? %>
+        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 rounded-lg p-3"><%= simple_format(@paquete.notas_internas) %></dd>
+      <% else %>
+        <dd class="mt-1 text-xs italic text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">— sin nota —</dd>
+      <% end %>
+    </div>
+    <div>
+      <dt class="text-xs font-medium text-blue-700 uppercase tracking-wider">
+        Notas al Cliente
+        <span class="text-[10px] normal-case text-blue-500">(visibles al cliente / en pre-factura)</span>
+      </dt>
+      <% if @paquete.notas_al_cliente.present? %>
+        <dd class="mt-1 text-sm text-gray-900 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800"><%= simple_format(@paquete.notas_al_cliente) %></dd>
+      <% else %>
+        <dd class="mt-1 text-xs italic text-blue-400 dark:text-blue-500 bg-blue-50/40 dark:bg-blue-900/10 rounded-lg p-3 border border-blue-100 dark:border-blue-900/40">— sin nota —</dd>
+      <% end %>
+    </div>
+    <div>
+      <dt class="text-xs font-medium text-cec-teal uppercase tracking-wider">
+        Notas de Consolidación
+        <span class="text-[10px] normal-case text-cec-teal/70">(auto-llenadas desde la pre-alerta consolidada al vincular)</span>
+      </dt>
+      <% if @paquete.notas_consolidacion.present? %>
+        <dd class="mt-1 text-sm text-gray-900 bg-teal-50 dark:bg-teal-900/20 rounded-lg p-3 border border-teal-200 dark:border-teal-800"><%= simple_format(@paquete.notas_consolidacion) %></dd>
+      <% else %>
+        <dd class="mt-1 text-xs italic text-cec-teal/60 bg-teal-50/40 dark:bg-teal-900/10 rounded-lg p-3 border border-teal-100 dark:border-teal-900/40">— sin nota —</dd>
+      <% end %>
+    </div>
+
+    <%# Notas Especiales (instrucciones de la pre-alerta del cliente).
+        PR-D7.k: siempre visibles con placeholder cuando no hay
+        instrucciones. %>
+    <% pap_instrucciones = @paquete.pre_alerta_paquetes
+                                  .where.not(instrucciones: [ nil, "" ])
+                                  .pluck(:instrucciones)
+                                  .compact_blank %>
+    <div>
+      <dt class="text-xs font-medium text-cec-navy uppercase tracking-wider">
+        Notas Especiales
+        <span class="text-[10px] normal-case text-gray-500">(instrucciones del cliente en la pre-alerta)</span>
+      </dt>
+      <% if pap_instrucciones.any? %>
+        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100 bg-cec-navy/5 rounded-lg p-3 border border-cec-navy/20 whitespace-pre-line">
+          <%= pap_instrucciones.join("\n\n") %>
+        </dd>
+      <% else %>
+        <dd class="mt-1 text-xs italic text-gray-400 dark:text-gray-500 bg-cec-navy/[0.02] dark:bg-cec-navy/10 rounded-lg p-3 border border-cec-navy/10 dark:border-cec-navy/30">
+          — sin instrucciones del cliente —
+        </dd>
+      <% end %>
     </div>
   </div>
 </div>
+<% end %><%# /@edit_mode %>
+
+<%# PR-D7.l: mini-módulo de Tareas embebido. Lista read-only para
+    visibilidad rápida — las acciones de flujo (Iniciar / Completar /
+    Reabrir / Editar / Borrar) viven en el botón "Tareas (N)" del
+    header del show que lleva al módulo completo. %>
+<div class="mt-4 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-100 dark:border-gray-700 overflow-hidden">
+  <div class="px-6 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
+    <div class="flex items-center gap-2 min-w-0">
+      <%= heroicon "clipboard-document-check", variant: :outline, options: { class: "w-4 h-4 text-gray-500 shrink-0" } %>
+      <h2 class="text-sm font-bold text-gray-800 dark:text-gray-100">Tareas / Notas</h2>
+      <% pendientes = @paquete.tareas.abiertas.count %>
+      <% realizadas = @paquete.tareas.where(estado: "realizada").count %>
+      <% if @paquete.tareas.any? %>
+        <span class="text-xs text-gray-500 truncate">
+          <%= pendientes %> abierta<%= 's' if pendientes != 1 %>
+          · <%= realizadas %> realizada<%= 's' if realizadas != 1 %>
+        </span>
+      <% else %>
+        <span class="text-xs text-gray-400 italic">sin tareas</span>
+      <% end %>
+    </div>
+    <% if can_edit_paquetes? %>
+      <%= link_to new_paquete_tarea_path(@paquete),
+            class: "shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-cec-teal text-white hover:bg-cec-teal-dark" do %>
+        <%= heroicon "plus", variant: :solid, options: { class: "w-3 h-3" } %>
+        Nueva tarea
+      <% end %>
+    <% end %>
+  </div>
+  <% if @paquete.tareas.any? %>
+    <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+      <% @paquete.tareas.includes(:asignado_a, :completado_por).order(created_at: :desc).each do |t| %>
+        <li class="px-6 py-3">
+          <div class="flex items-start gap-3">
+            <% badge_class = case t.estado
+                             when "pendiente"  then "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+                             when "en_proceso" then "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200"
+                             when "realizada"  then "bg-cec-teal/15 text-cec-teal-dark dark:bg-cec-teal/25 dark:text-cec-teal-light"
+                             end %>
+            <span class="shrink-0 mt-0.5 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider <%= badge_class %>">
+              <%= t.estado.humanize %>
+            </span>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-900 dark:text-gray-100"><%= t.titulo %></p>
+              <% if t.descripcion.present? %>
+                <p class="mt-0.5 text-xs text-gray-600 dark:text-gray-300 whitespace-pre-line"><%= t.descripcion %></p>
+              <% end %>
+              <div class="mt-1 flex flex-wrap items-center gap-x-2 text-[11px] text-gray-500 dark:text-gray-400">
+                <% if t.asignado_a %>
+                  <span>Asignada a: <span class="font-mono"><%= t.asignado_a.iniciales_display %></span></span>
+                <% end %>
+                <% if t.completada_en %>
+                  <span>· Completada: <%= t.completada_en.strftime("%d/%m/%Y") %><% if t.completado_por %> por <span class="font-mono"><%= t.completado_por.iniciales_display %></span><% end %></span>
+                <% else %>
+                  <span>· Creada: <%= t.created_at.strftime("%d/%m/%Y") %></span>
+                <% end %>
+                <% if t.notas.present? %>
+                  <span class="text-gray-400 truncate">· nota: <%= t.notas.truncate(60) %></span>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <div class="px-6 py-6 text-center text-xs italic text-gray-400 dark:text-gray-500">
+      — sin tareas pendientes ni realizadas —
+    </div>
+  <% end %>
+</div>
+
+<%# PR-D1.b: línea de tiempo del paquete con fechas + iniciales del usuario
+    que disparó cada cambio + indicador "(modificada)" cuando hay re-edit. %>
+<% timeline = paquete_timeline_steps(@paquete) %>
+<% if timeline.any? { |s| s[:fecha].present? } %>
+  <div class="mt-4 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="px-6 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
+      <%= heroicon "clock", variant: :outline, options: { class: "w-4 h-4 text-gray-500" } %>
+      <h2 class="text-sm font-bold text-gray-800 dark:text-gray-100">Línea de tiempo</h2>
+    </div>
+    <ol class="divide-y divide-gray-100 dark:divide-gray-700">
+      <% timeline.each do |step| %>
+        <% accent = timeline_accent(step[:accent]) %>
+        <li class="px-6 py-3 flex items-start gap-3 <%= 'opacity-50' unless step[:fecha] %>">
+          <span class="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-full <%= accent[:bg] %> text-white mt-0.5">
+            <%= heroicon step[:icon], variant: :solid, options: { class: "w-4 h-4" } %>
+          </span>
+          <div class="flex-1 min-w-0 space-y-1">
+            <%# Línea 1: label + badge "modificada" si aplica %>
+            <div class="flex items-center gap-2 flex-wrap">
+              <p class="text-sm font-semibold text-gray-800 dark:text-gray-100"><%= step[:label] %></p>
+              <% if step[:modificada] %>
+                <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-cec-gold/15 text-cec-gold-dark dark:bg-cec-gold/25 dark:text-cec-gold-light"
+                      title="Esta fecha fue actualizada después de su captura inicial">
+                  <%= heroicon "pencil-square", variant: :solid, options: { class: "w-3 h-3" } %>
+                  modificada
+                </span>
+              <% end %>
+            </div>
+
+            <% if step[:fecha] %>
+              <%# Línea 2: fecha absoluta + tiempo relativo. %>
+              <p class="text-xs text-gray-600 dark:text-gray-300">
+                <span class="font-mono"><%= step[:fecha].strftime("%d/%m/%Y %H:%M") %></span>
+                <span class="text-gray-400 dark:text-gray-500 italic">· hace <%= time_ago_in_words(step[:fecha]) %></span>
+              </p>
+
+              <%# Línea 3: usuario actual (último que tocó la fecha). %>
+              <% if step[:user] %>
+                <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5 flex-wrap">
+                  <span class="font-mono font-bold text-gray-700 dark:text-gray-100 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-[10px] tracking-wide">
+                    <%= step[:user].iniciales_display %>
+                  </span>
+                  <span><%= step[:user].nombre %></span>
+                  <% if step[:user].rol.present? %>
+                    <span class="text-[10px] text-gray-400 dark:text-gray-500">· <%= step[:user].rol_label %></span>
+                  <% end %>
+                </p>
+              <% end %>
+
+              <%# Línea 4 (solo si modificada): captura original. %>
+              <% if step[:modificada] && step[:first_set] %>
+                <p class="text-[11px] italic text-gray-500 dark:text-gray-400 flex items-start gap-1">
+                  <%= heroicon "clock", variant: :outline, options: { class: "w-3 h-3 mt-0.5 shrink-0" } %>
+                  <span>
+                    Capturada originalmente
+                    <span class="font-mono font-semibold not-italic"><%= step[:first_set][:at].strftime("%d/%m/%Y %H:%M") %></span>
+                    <% if step[:first_set_user] %>
+                      por <span class="font-mono font-semibold not-italic"><%= step[:first_set_user].iniciales_display %></span>
+                      <span class="text-gray-400 dark:text-gray-500">(<%= step[:first_set_user].nombre %>)</span>
+                    <% end %>
+                  </span>
+                </p>
+              <% end %>
+
+              <%# Contexto pills (sin cambios funcionales). %>
+              <% if step[:contexto].present? %>
+                <div class="flex flex-wrap gap-1.5 pt-0.5">
+                  <% step[:contexto].each do |icon_name, text, link_path| %>
+                    <% pill_base = "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200" %>
+                    <% if link_path %>
+                      <%= link_to link_path, class: "#{pill_base} hover:bg-gray-200 dark:hover:bg-gray-600 hover:underline" do %>
+                        <%= heroicon icon_name, variant: :outline, options: { class: "w-3 h-3" } %>
+                        <%= text %>
+                      <% end %>
+                    <% else %>
+                      <span class="<%= pill_base %>">
+                        <%= heroicon icon_name, variant: :outline, options: { class: "w-3 h-3" } %>
+                        <%= text %>
+                      </span>
+                    <% end %>
+                  <% end %>
+                </div>
+              <% end %>
+            <% else %>
+              <p class="text-xs text-gray-400 dark:text-gray-500 italic">Pendiente</p>
+            <% end %>
+          </div>
+        </li>
+      <% end %>
+    </ol>
+  </div>
+<% end %>
+
+<%# Bitácora overhaul (2026-05-02): timeline visual humano con FK
+    resolution + diccionario de columnas. Reemplaza el render manual
+    de PR-D1.a — la lógica vive ahora en BitacoraComponent (compartido
+    con los otros 10 shows). %>
+<%= render BitacoraComponent.new(record: @paquete, label: "paquete") %>
+
+<%# Dialog modal "Mover a Pre-Alerta Existente" — al final del scope Stimulus
+    para que el trigger en el PageHeader y el <dialog> compartan controlador. %>
+<dialog data-mover-pre-alerta-modal-target="dialog"
+        style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0;"
+        class="rounded-xl shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm w-full max-w-lg p-0 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 ring-1 ring-gray-200 dark:ring-gray-700">
+  <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+    <h3 class="text-base font-semibold text-cec-navy dark:text-cec-gold flex items-center gap-2">
+      <%= heroicon "arrows-right-left", variant: :solid, options: { class: "w-5 h-5 text-cec-teal" } %>
+      Mover a Pre-Alerta Existente
+    </h3>
+    <button type="button"
+            data-action="click->mover-pre-alerta-modal#close"
+            class="p-1 rounded text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
+            aria-label="Cerrar">
+      <%= heroicon "x-mark", variant: :solid, options: { class: "w-5 h-5" } %>
+    </button>
+  </div>
+
+  <div class="px-5 py-4 space-y-3">
+    <div>
+      <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
+        Buscar pre-alerta
+      </label>
+      <div class="relative">
+        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+          <%= heroicon "magnifying-glass", variant: :solid, options: { class: "w-4 h-4" } %>
+        </span>
+        <input type="text"
+               data-mover-pre-alerta-modal-target="input"
+               data-action="input->mover-pre-alerta-modal#search"
+               placeholder="Número, título o cliente…"
+               class="w-full pl-10 pr-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-cec-teal/40 focus:border-cec-teal">
+      </div>
+      <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+        Mínimo 2 caracteres. Se incluyen pre-alertas de cualquier cliente.
+      </p>
+    </div>
+
+    <ul data-mover-pre-alerta-modal-target="results"
+        class="max-h-72 overflow-y-auto rounded-md ring-1 ring-gray-200 dark:ring-gray-700 divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+    </ul>
+
+    <div data-mover-pre-alerta-modal-target="selectedSummary" class="hidden"></div>
+  </div>
+
+  <%= form_with url: mover_a_pre_alerta_paquete_path(@paquete),
+                method: :post,
+                local: true,
+                data: { mover_pre_alerta_modal_target: "form" },
+                class: "px-5 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2 bg-gray-50 dark:bg-gray-800/50" do |f| %>
+    <%= f.hidden_field :pre_alerta_id, value: "", data: { mover_pre_alerta_modal_target: "hiddenId" } %>
+    <button type="button"
+            data-action="click->mover-pre-alerta-modal#close"
+            class="px-3 py-1.5 rounded-md text-sm font-medium bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 ring-1 ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600">
+      Cancelar
+    </button>
+    <button type="submit" disabled
+            class="px-3 py-1.5 rounded-md text-sm font-semibold bg-cec-navy text-white hover:bg-cec-navy-dark disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5">
+      <%= heroicon "check", variant: :solid, options: { class: "w-4 h-4" } %>
+      Mover paquete
+    </button>
+  <% end %>
+</dialog>
+
+<%# Dialog modal "Asignar Tercero" — cliente final cuando CEC le maneja
+    la carga a una empresa pequeña con su propio cliente. Reemplaza el
+    flow viejo "Asignar → mode=edit" que aterrizaba al operador en el
+    form completo sin contexto. Sigue el mismo patrón que "Mover a
+    Pre-Alerta" arriba. %>
+<dialog data-asignar-tercero-modal-target="dialog"
+        style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0;"
+        class="rounded-xl shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm w-full max-w-lg p-0 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 ring-1 ring-gray-200 dark:ring-gray-700">
+  <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+    <h3 class="text-base font-semibold text-cec-navy dark:text-cec-gold flex items-center gap-2">
+      <%= heroicon "user-group", variant: :solid, options: { class: "w-5 h-5 text-cec-purple-dark" } %>
+      Asignar Tercero (Cliente Final)
+    </h3>
+    <button type="button"
+            data-action="click->asignar-tercero-modal#close"
+            class="p-1 rounded text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
+            aria-label="Cerrar">
+      <%= heroicon "x-mark", variant: :solid, options: { class: "w-5 h-5" } %>
+    </button>
+  </div>
+
+  <div class="px-5 py-4 space-y-3">
+    <p class="text-xs text-gray-600 dark:text-gray-300">
+      Cliente final cuando CEC le maneja la carga a una empresa pequeña que tiene su propio cliente.
+    </p>
+    <div>
+      <label class="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
+        Buscar cliente
+      </label>
+      <div class="relative">
+        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+          <%= heroicon "magnifying-glass", variant: :solid, options: { class: "w-4 h-4" } %>
+        </span>
+        <input type="text"
+               data-asignar-tercero-modal-target="input"
+               data-action="input->asignar-tercero-modal#search"
+               placeholder="Código o nombre…"
+               class="w-full pl-10 pr-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-cec-teal/40 focus:border-cec-teal">
+      </div>
+      <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+        Mínimo 2 caracteres. Click en el cliente para asignar.
+      </p>
+    </div>
+
+    <ul data-asignar-tercero-modal-target="results"
+        class="max-h-72 overflow-y-auto rounded-md ring-1 ring-gray-200 dark:ring-gray-700 divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+    </ul>
+  </div>
+
+  <%= form_with url: asignar_tercero_paquete_path(@paquete),
+                method: :post,
+                local: true,
+                data: { asignar_tercero_modal_target: "form" },
+                class: "px-5 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2 bg-gray-50 dark:bg-gray-800/50" do |f| %>
+    <%= f.hidden_field :tercero_id, value: "", data: { asignar_tercero_modal_target: "hiddenId" } %>
+    <button type="button"
+            data-action="click->asignar-tercero-modal#close"
+            class="px-3 py-1.5 rounded-md text-sm font-medium bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 ring-1 ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600">
+      Cancelar
+    </button>
+  <% end %>
+</dialog>
+
+<%# PR-D7.b: modal de transición de estado (bloqueo por rol o retroceso).
+    Se renderiza solo cuando el controller setea @estado_transition_block. %>
+<% if @estado_transition_block.present? %>
+  <%= render "estado_transition_modal", paquete: @paquete, block_info: @estado_transition_block %>
+<% end %>
+
+<% end %><%# /turbo-frame "paquete_dynamic" %>
+</div><%# /data-controller="mover-pre-alerta-modal" %>

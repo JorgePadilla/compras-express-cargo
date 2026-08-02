@@ -1,6 +1,6 @@
 <%= render PageHeaderComponent.new(title: "Pre-Facturas", subtitle: "#{@pre_facturas.total_count} pre-facturas") do |h| %>
   <% h.with_action do %>
-    <%= render ButtonComponent.new(href: new_pre_factura_path, variant: :primary, icon: "plus") do %>
+    <%= render ButtonComponent.new(href: new_pre_factura_path, variant: :primary, icon: "plus", shortcut: "F7") do %>
       Nueva Pre-Factura
     <% end %>
   <% end %>
@@ -16,7 +16,7 @@
     Filtros
   </summary>
   <div class="px-6 py-4 border-t border-gray-200">
-    <%= form_tag pre_facturas_path, method: :get, class: "grid grid-cols-1 md:grid-cols-3 gap-4" do %>
+    <%= form_tag pre_facturas_path, method: :get, class: "grid grid-cols-1 md:grid-cols-3 gap-4", data: { controller: "f2-clear", f2_clear_submit_value: "true" } do %>
       <% if params[:q].present? %>
         <input type="hidden" name="q" value="<%= params[:q] %>">
       <% end %>
@@ -75,11 +75,12 @@
               <td class="px-6 py-4 whitespace-nowrap text-right">
                 <span class="text-sm font-medium text-gray-900">L. <%= number_with_delimiter(pf.total.to_f, precision: 2) %></span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right space-x-2">
-                <%= link_to "Ver", pf, class: "text-cec-teal hover:underline text-sm" %>
-                <% unless pf.facturado? || pf.anulado? %>
-                  <%= link_to "Editar", edit_pre_factura_path(pf), class: "text-cec-navy hover:underline text-sm" %>
-                <% end %>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex items-center justify-end gap-2">
+                  <%= render RowActionComponent.new(action: :view, href: pf, label: "Ver pre-factura #{pf.numero}") %>
+                  <%= render RowActionComponent.new(action: :edit, href: edit_pre_factura_path(pf),
+                        disabled: pf.facturado? || pf.anulado?, label: "Editar pre-factura") %>
+                </div>
               </td>
             </tr>
           <% end %>
@@ -87,7 +88,7 @@
       </table>
     </div>
   </div>
-  <div class="mt-4"><%= paginate @pre_facturas %></div>
+  <div class="mt-4"><%= render PaginationComponent.new(collection: @pre_facturas, label: "pre-facturas") %></div>
 <% else %>
   <%= render EmptyStateComponent.new(
     title: "No hay pre-facturas",

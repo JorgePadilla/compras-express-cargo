@@ -1,7 +1,7 @@
 <%= render PageHeaderComponent.new(title: "Usuarios", subtitle: "#{@users.total_count} usuarios registrados") do |header|
   header.with_action do
-    render ButtonComponent.new(variant: :gold, href: new_user_path, icon: "plus") do
-      "Nuevo Usuario"
+    render(ButtonComponent.new(variant: :gold, href: new_user_path, icon: "plus", data: { shortcut: "F7" })) do
+      raw('Nuevo Usuario <span class="ml-1 text-[10px] opacity-70">(F7)</span>')
     end
   end
 end %>
@@ -42,10 +42,11 @@ end %>
               <td class="px-6 py-4 whitespace-nowrap">
                 <%= render StatusBadgeComponent.new(status: user.activo? ? "activo" : "inactivo") %>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right">
-                <%= link_to edit_user_path(user), class: "text-gray-400 hover:text-cec-navy" do %>
-                  <%= heroicon "pencil-square", variant: :outline, options: { class: "w-5 h-5 inline" } %>
-                <% end %>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex items-center justify-end gap-2">
+                  <%= render RowActionComponent.new(action: :view, href: user, label: "Ver usuario") %>
+                  <%= render RowActionComponent.new(action: :edit, href: edit_user_path(user), label: "Editar usuario") %>
+                </div>
               </td>
             </tr>
           <% end %>
@@ -55,7 +56,7 @@ end %>
   </div>
 
   <div class="mt-4">
-    <%= paginate @users %>
+    <%= render PaginationComponent.new(collection: @users, label: "usuarios") %>
   </div>
 <% else %>
   <%= render EmptyStateComponent.new(
@@ -64,7 +65,7 @@ end %>
     icon: "user-group"
   ) do |empty|
     empty.with_action do
-      render ButtonComponent.new(variant: :gold, href: new_user_path, icon: "plus") do
+      render ButtonComponent.new(variant: :gold, href: new_user_path, icon: "plus", shortcut: "F7") do
         "Nuevo Usuario"
       end
     end

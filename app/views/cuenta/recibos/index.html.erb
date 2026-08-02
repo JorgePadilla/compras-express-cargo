@@ -31,7 +31,7 @@
       </tbody>
     </table>
   </div>
-  <div class="mt-4"><%= paginate @recibos %></div>
+  <div class="mt-4"><%= render PaginationComponent.new(collection: @recibos, label: "recibos") %></div>
 <% else %>
   <%= render EmptyStateComponent.new(title: "No hay recibos", description: "Veras tus recibos aqui cuando realices pagos.", icon: "receipt-percent") %>
 <% end %>

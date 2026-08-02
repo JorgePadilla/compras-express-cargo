@@ -1,0 +1,72 @@
+<%= form_with model: @sucursal, class: "space-y-6 max-w-2xl" do |f| %>
+  <% if @sucursal.errors.any? %>
+    <div class="p-4 bg-red-50 dark:bg-red-900/30 rounded-lg text-sm text-red-700 dark:text-red-200">
+      <ul class="list-disc list-inside space-y-1">
+        <% @sucursal.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <%= f.label :codigo, "Código corto", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+      <%= f.text_field :codigo, required: true, maxlength: 8,
+          placeholder: "Ej. MIA, SPS, TGU",
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Identificador único corto en mayúsculas.</p>
+    </div>
+
+    <div>
+      <%= f.label :nombre, class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+      <%= f.text_field :nombre, required: true,
+          placeholder: "Ej. Miami, Zeron SPS, Humuya TGU",
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+
+    <div>
+      <%= f.label :codigo_recepcion_prefix, "Prefijo de recepción", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+      <%= f.text_field :codigo_recepcion_prefix, required: true, maxlength: 4,
+          placeholder: "Ej. RM, RS, RH",
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono uppercase focus:ring-cec-teal focus:border-cec-teal" %>
+      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Se antepondrá al número de recepción (ej. RM-000001).</p>
+    </div>
+
+    <%# PR-D3.b: codigo_ep para tracking auto de paquetes ENTREGA PERSONAL %>
+    <div>
+      <%= f.label :codigo_ep, "Código EP (3 letras)", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+      <%= f.text_field :codigo_ep, maxlength: 3,
+          placeholder: "Ej. SMI, SZR, SHU",
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono uppercase focus:ring-cec-teal focus:border-cec-teal" %>
+      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Se usa en el tracking auto de paquetes ENTREGA PERSONAL (ej. EP-2026-SMI-AMZ-000001).</p>
+    </div>
+
+    <div>
+      <%= f.label :ubicacion, class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+      <%= f.select :ubicacion, Sucursal::UBICACIONES.map { |u| [u.humanize, u] },
+          { include_blank: "— Sin especificar —" },
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+
+    <div>
+      <%= f.label :pais, "País", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+      <%= f.text_field :pais,
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+
+    <div class="flex items-center gap-3 pt-6">
+      <%= f.check_box :activo, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+      <%= f.label :activo, "Sucursal activa", class: "text-sm font-medium text-gray-700 dark:text-gray-200" %>
+    </div>
+  </div>
+
+  <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+    <%= link_to "Cancelar (F2)", sucursales_path,
+        class: "text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300",
+        data: { shortcut: "F2" } %>
+    <%= f.submit "#{@sucursal.persisted? ? 'Guardar' : 'Crear sucursal'} (F10)",
+        class: "bg-cec-gold text-cec-navy-dark font-semibold px-4 py-2 rounded-lg text-sm",
+        data: { shortcut: "F10" } %>
+  </div>
+<% end %>

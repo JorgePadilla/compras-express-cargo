@@ -1,0 +1,26 @@
+<% if @disabled %>
+  <span class="<%= disabled_classes %>"
+        role="button"
+        aria-disabled="true"
+        title="<%= @label %> (sin permiso)">
+    <%= helpers.heroicon icon_name, variant: :outline, options: { class: "w-4 h-4", "aria-hidden" => "true" } %>
+    <span class="sr-only"><%= @label %> (deshabilitado)</span>
+  </span>
+<% elsif needs_button? %>
+  <%= button_to @href,
+        method: @method,
+        class: active_classes,
+        title: @label,
+        aria: { label: @label },
+        data: (@confirm ? { turbo_confirm: @confirm } : {}) do %>
+    <%= helpers.heroicon icon_name, variant: :outline, options: { class: "w-4 h-4", "aria-hidden" => "true" } %>
+  <% end %>
+<% else %>
+  <%= link_to @href,
+        class: active_classes,
+        title: @label,
+        aria: { label: @label },
+        target: @target do %>
+    <%= helpers.heroicon icon_name, variant: :outline, options: { class: "w-4 h-4", "aria-hidden" => "true" } %>
+  <% end %>
+<% end %>

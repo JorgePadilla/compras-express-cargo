@@ -1,0 +1,11 @@
+reempaque_inicial:
+  paquete: recibido
+  alto_antes: 20.0
+  largo_antes: 30.0
+  ancho_antes: 15.0
+  peso_antes: 10.0
+  alto_despues: 10.0
+  largo_despues: 15.0
+  ancho_despues: 10.0
+  peso_despues: 8.0
+  realizado_en: <%= 1.hour.ago %>

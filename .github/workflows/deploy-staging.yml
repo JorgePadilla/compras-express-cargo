@@ -1,0 +1,69 @@
+# Auto-deploy a Render staging cuando hay push (merge) a la branch
+# `staging`. Este workflow es complementario a `autoDeploy: true` del
+# `render.yaml`:
+#
+# - Si Render auto-deploy está activo, este workflow NO duplica
+#   despliegues (Render dedupe internamente — el deploy hook en
+#   progreso no dispara otro).
+# - Si por alguna razón Render auto-deploy quedó desactivado en el
+#   dashboard (config drift), este workflow garantiza que el deploy
+#   ocurre, dejando log visible en GitHub Actions.
+#
+# Setup (una sola vez):
+#   1. Render dashboard → service `cec-staging` → Settings → Deploy Hook
+#      → copiar la URL secreta (formato:
+#      https://api.render.com/deploy/srv-xxxxx?key=yyy).
+#   2. GitHub → repo Settings → Secrets and variables → Actions →
+#      New repository secret:
+#        - Name:  RENDER_STAGING_DEPLOY_HOOK
+#        - Value: la URL completa del paso 1.
+#   3. (Opcional) Repetir para `RENDER_STAGING_WORKER_DEPLOY_HOOK` si
+#      querés que el worker también dispare desde acá.
+#
+# Producción NO está aquí intencionalmente — main → producción es
+# deploy manual desde el dashboard de Render para evitar despliegues
+# accidentales a clientes reales.
+name: Auto-deploy staging
+
+on:
+  push:
+    branches: [staging]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-staging:
+    name: Trigger Render staging deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger web service deploy
+        env:
+          HOOK: ${{ secrets.RENDER_STAGING_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::warning::RENDER_STAGING_DEPLOY_HOOK no está configurado. Skipping."
+            echo "::warning::Setup: Render → Settings → Deploy Hook → guardar URL como repo secret."
+            exit 0
+          fi
+          response=$(curl -s -o /dev/null -w "%{http_code}" "$HOOK")
+          echo "Render deploy hook response: $response"
+          if [ "$response" != "200" ] && [ "$response" != "201" ]; then
+            echo "::error::Render API devolvió $response — ver dashboard para detalles"
+            exit 1
+          fi
+          echo "✓ Deploy disparado a cec-staging"
+
+      - name: Trigger worker deploy (opcional)
+        env:
+          HOOK: ${{ secrets.RENDER_STAGING_WORKER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "Worker deploy hook no configurado — skip."
+            exit 0
+          fi
+          response=$(curl -s -o /dev/null -w "%{http_code}" "$HOOK")
+          echo "Worker deploy hook response: $response"
+          if [ "$response" != "200" ] && [ "$response" != "201" ]; then
+            echo "::warning::Worker hook devolvió $response — el web ya disparó OK, no falla el job"
+          fi

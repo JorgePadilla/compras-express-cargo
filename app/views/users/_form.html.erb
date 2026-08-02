@@ -24,6 +24,14 @@
     </div>
 
     <div>
+      <%= f.label :iniciales, "Iniciales", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.text_field :iniciales, maxlength: 8, placeholder: "Ej: YG, JP, YS",
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono uppercase
+                 focus:ring-cec-teal focus:border-cec-teal" %>
+      <p class="mt-1 text-xs text-gray-500">Hasta 8 caracteres. Aparece en la bitácora y el Warehouse Receipt.</p>
+    </div>
+
+    <div>
       <%= f.label :email_address, "Email", class: "block text-sm font-medium text-gray-700 mb-1" %>
       <%= f.email_field :email_address, required: true,
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
@@ -72,10 +80,12 @@
   </div>
 
   <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-    <%= link_to "Cancelar", user.persisted? ? user_path(user) : users_path,
-        class: "text-sm text-gray-600 hover:text-gray-900" %>
-    <%= f.submit user.persisted? ? "Guardar Cambios" : "Crear Usuario",
+    <%= link_to "Cancelar (F2)", user.persisted? ? user_path(user) : users_path,
+        class: "text-sm text-gray-600 hover:text-gray-900",
+        data: { shortcut: "F2" } %>
+    <%= f.submit "#{user.persisted? ? 'Guardar Cambios' : 'Crear Usuario'} (F10)",
         class: "inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium
-               bg-cec-gold text-cec-navy-dark hover:bg-cec-gold-dark transition-colors cursor-pointer" %>
+               bg-cec-gold text-cec-navy-dark hover:bg-cec-gold-dark transition-colors cursor-pointer",
+        data: { shortcut: "F10" } %>
   </div>
 <% end %>

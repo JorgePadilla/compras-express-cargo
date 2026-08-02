@@ -1,0 +1,67 @@
+<%# Anidada bajo paquete, o top-level cuando la tarea es del cliente. %>
+<%= form_with model: (@paquete ? [ @paquete, @tarea ] : @tarea), class: "space-y-6 max-w-2xl" do |f| %>
+  <% unless @paquete %>
+    <%= f.hidden_field :cliente_id %>
+  <% end %>
+  <% if @tarea.errors.any? %>
+    <div class="p-4 bg-red-50 rounded-lg text-sm text-red-700">
+      <ul class="list-disc list-inside space-y-1">
+        <% @tarea.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div>
+    <%= f.label :titulo, class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <%= f.text_field :titulo, required: true,
+        class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+  </div>
+
+  <div>
+    <%= f.label :descripcion, class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <%= f.text_area :descripcion, rows: 3,
+        class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+  </div>
+
+  <div>
+    <%= f.label :asignado_a_id, "Asignar a", class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <%= f.collection_select :asignado_a_id, @users, :id, :nombre,
+        { include_blank: "— Sin asignar —" },
+        { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
+  </div>
+
+  <%# PR-9.a: el departamento decide qué área ve la tarea en la franja de
+      contexto. En blanco = la ven todas. %>
+  <div>
+    <%= f.label :departamento, "Área que debe verla", class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <%= f.select :departamento,
+        Tarea::DEPARTAMENTOS.map { |d| [ Tarea.new(departamento: d).departamento_label, d ] },
+        { include_blank: "— Todas las áreas —" },
+        { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
+  </div>
+
+  <div>
+    <label class="inline-flex items-start gap-2">
+      <%= f.check_box :bloquea_avance, class: "mt-0.5 rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+      <span class="text-sm text-gray-700">
+        Bloquear el avance del paquete hasta completarla
+        <span class="block text-xs text-gray-500">Si está marcada, el paquete no puede pasar al siguiente estado mientras la tarea siga abierta.</span>
+      </span>
+    </label>
+  </div>
+
+  <div>
+    <%= f.label :notas, class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <%= f.text_area :notas, rows: 2,
+        class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+  </div>
+
+  <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+    <%= link_to "Cancelar (F2)", tareas_volver_path,
+        class: "text-sm text-gray-600 hover:text-gray-900", data: { shortcut: "F2" } %>
+    <%= f.submit @tarea.persisted? ? "Guardar" : "Crear tarea",
+        class: "bg-cec-gold text-cec-navy-dark font-semibold px-4 py-2 rounded-lg text-sm" %>
+  </div>
+<% end %>

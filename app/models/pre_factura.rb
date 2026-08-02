@@ -1,7 +1,15 @@
 class PreFactura < ApplicationRecord
   include CurrencyAware
+  has_paper_trail  # PR-D1.a: audit log
 
   ISV_RATE = BigDecimal("0.15")
+
+  # PR-6b: cuando un paquete fue prepagado en Miami (entrega personal),
+  # NO se cobra el flete completo en Honduras — solo un monto simbólico
+  # editable para control contable. Yusef: "la factura la va a hacer por
+  # un dólar más impuesto". Constante por ahora; cuando Yusef confirme
+  # el valor exacto puede moverse a un EmpresaSetting.
+  PREPAGADO_MIAMI_SIMBOLICO = BigDecimal("1.00")
 
   belongs_to :cliente
   belongs_to :creado_por, class_name: "User", optional: true
@@ -55,6 +63,13 @@ class PreFactura < ApplicationRecord
   end
 
   attr_reader :nota_debito_auto
+
+  # PR-6b: lista de paquetes con prepagado_miami que se detectaron al
+  # construir la pre-factura. El controller los usa para mostrar un
+  # flash al cajero ("X paquetes prepagados — agregué cobro simbólico").
+  def prepagados_miami_detected
+    @prepagados_miami_detected || []
+  end
 
   def facturar!
     return false if facturado? || anulado?
@@ -139,7 +154,25 @@ class PreFactura < ApplicationRecord
     )
 
     paquetes = cliente.paquetes.where(id: paquete_ids).includes(:tipo_envio)
+    prepagados_miami = []
+
     paquetes.each do |paquete|
+      if paquete.prepagado_miami?
+        # PR-6b: paquete pre-pagado en Miami — línea simbólica editable
+        # en vez de flete completo. La marcamos como `manual` para que
+        # el cajero pueda ajustar el monto antes de facturar.
+        prepagados_miami << paquete
+        pre_factura.pre_factura_items.build(
+          paquete: paquete,
+          concepto: "Flete #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia} (PREPAGADO EN MIAMI)",
+          peso_cobrar: paquete.peso_cobrar || BigDecimal("0"),
+          precio_libra: BigDecimal("0"),
+          subtotal: PREPAGADO_MIAMI_SIMBOLICO,
+          origen: "manual"
+        )
+        next
+      end
+
       precio = cliente.categoria_precio&.precio_para(paquete.tipo_envio) ||
                paquete.tipo_envio&.precio_libra ||
                BigDecimal("0")
@@ -151,11 +184,62 @@ class PreFactura < ApplicationRecord
         concepto: "Flete #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia}",
         peso_cobrar: peso,
         precio_libra: precio,
-        subtotal: subtotal
+        subtotal: subtotal,
+        origen: "manual"
       )
     end
 
+    # PR-6b: exponemos los paquetes prepagados para que el controller
+    # pueda mostrar un flash/banner avisando al cajero. (Análogo al
+    # patrón de `nota_debito_auto` para cambio de servicio.)
+    pre_factura.instance_variable_set(:@prepagados_miami_detected, prepagados_miami)
+
+    # PR-D6.b: cargos automáticos por flags del paquete.
+    paquetes.each { |p| pre_factura.aplicar_cobros_automaticos_para(p) }
+
     pre_factura
+  end
+
+  # PR-D6.b: agrega líneas auto al pre_factura por cada flag activo en
+  # el paquete (recolecta_solicitada, solicito_cambio_servicio).
+  # Idempotente: si ya hay líneas auto para ese paquete, no las duplica
+  # (el caller debe limpiar antes con `pre_factura_items.auto.destroy_all`
+  # si quiere re-generar desde cero).
+  def aplicar_cobros_automaticos_para(paquete)
+    if paquete.recolecta_solicitada? && paquete.recolecta_monto.to_d.positive?
+      ya_existe = pre_factura_items.any? { |i|
+        i.origen == "auto_recolecta" && i.paquete_id == paquete.id && !i.marked_for_destruction?
+      }
+      unless ya_existe
+        pre_factura_items.build(
+          paquete: paquete,
+          concepto: "Recolecta - #{paquete.guia}",
+          subtotal: paquete.recolecta_monto,
+          origen: "auto_recolecta"
+        )
+      end
+    end
+
+    if paquete.solicito_cambio_servicio?
+      servicio = ServicioExtra.activos.find_by(codigo: "CAMBIO_SERVICIO")
+      if servicio
+        ya_existe = pre_factura_items.any? { |i|
+          i.origen == "auto_servicio_extra" &&
+            i.paquete_id == paquete.id &&
+            i.servicio_extra_id == servicio.id &&
+            !i.marked_for_destruction?
+        }
+        unless ya_existe
+          pre_factura_items.build(
+            paquete: paquete,
+            servicio_extra: servicio,
+            concepto: "#{servicio.descripcion} - #{paquete.guia}",
+            subtotal: servicio.precio_venta,
+            origen: "auto_servicio_extra"
+          )
+        end
+      end
+    end
   end
 
   private

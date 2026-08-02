@@ -1,0 +1,53 @@
+<div data-stagger class="group animate-stagger relative bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 <%= palette[:glow] %>">
+  <div class="p-4">
+    <div class="flex items-start justify-between gap-3">
+      <div class="min-w-0 flex-1">
+        <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"><%= title %></p>
+        <p class="mt-1 text-2xl sm:text-3xl font-bold text-cec-navy dark:text-gray-100 tabular-nums"
+           data-controller="count-up"
+           data-count-up-target-value="<%= value %>"
+           data-count-up-decimals-value="<%= decimals %>"
+           data-count-up-prefix-value="<%= prefix %>"
+           data-count-up-suffix-value="<%= suffix %>">
+          <%= prefix %>0<%= suffix %>
+        </p>
+      </div>
+      <span class="icon-pill shrink-0 inline-flex items-center justify-center w-10 h-10 text-white <%= palette[:icon_bg] %>">
+        <%= helpers.heroicon icon, variant: :solid, options: { class: "w-5 h-5" } %>
+      </span>
+    </div>
+
+    <div class="mt-3 flex items-center justify-between gap-2">
+      <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold <%= delta_classes %>">
+        <span aria-hidden="true"><%= delta_arrow %></span>
+        <span><%= delta[:label_short] %></span>
+        <% unless delta[:label_short] == "nuevo" || delta[:label_short] == "—" %>
+          <span class="text-[10px] font-normal opacity-75">vs ayer</span>
+        <% end %>
+      </div>
+      <% if sparkline_d %>
+        <svg viewBox="0 0 80 24" class="w-20 h-6 shrink-0" aria-hidden="true">
+          <defs>
+            <linearGradient id="kpi-grad-<%= @accent %>-<%= object_id %>" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stop-color="<%= palette[:fill] %>" stop-opacity="0.45" />
+              <stop offset="100%" stop-color="<%= palette[:fill] %>" stop-opacity="0" />
+            </linearGradient>
+          </defs>
+          <%# area fill: cierra el polígono al baseline %>
+          <polygon points="<%= sparkline_d %> 78,22 2,22"
+                   fill="url(#kpi-grad-<%= @accent %>-<%= object_id %>)" />
+          <polyline points="<%= sparkline_d %>"
+                    fill="none"
+                    stroke="<%= palette[:stroke] %>"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round" />
+        </svg>
+      <% end %>
+    </div>
+
+    <% if caption.present? %>
+      <p class="mt-2 text-[11px] text-gray-400 dark:text-gray-500"><%= caption %></p>
+    <% end %>
+  </div>
+</div>

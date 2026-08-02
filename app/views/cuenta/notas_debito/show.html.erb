@@ -55,7 +55,7 @@
   </table>
 
   <div class="flex gap-3 print:hidden">
-    <%= link_to "Descargar PDF", pdf_cuenta_nota_debito_path(@nota_debito), class: "px-4 py-2 bg-cec-navy text-white rounded-lg text-sm font-medium" %>
-    <%= link_to "Volver", cuenta_notas_debito_path, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900" %>
+    <%= link_to "Descargar PDF (F9)", pdf_cuenta_nota_debito_path(@nota_debito), class: "px-4 py-2 bg-cec-navy text-white rounded-lg text-sm font-medium", data: { shortcut: "F9" } %>
+    <%= link_to "Volver (F2)", cuenta_notas_debito_path, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900", data: { shortcut: "F2" } %>
   </div>
 </div>

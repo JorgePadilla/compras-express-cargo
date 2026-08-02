@@ -1,4 +1,5 @@
 class IngresoCaja < ApplicationRecord
+  has_paper_trail  # PR-D7: audit log — ingresos de caja (sensible)
   self.table_name = "ingresos_caja"
 
   METODOS_PAGO = %w[efectivo tarjeta transferencia].freeze

@@ -1,0 +1,120 @@
+<%# PR-D4.a + PR-D4.review v2: vista para re-imprimir etiquetas Miami.
+    Yusef pidió "modal con checkboxes preseleccionados de las cajas
+    hermanas". Cada checkbox arranca tildado.
+
+    Al click "Imprimir seleccionadas" submitea como GET a
+    `etiquetas_combinadas_paquetes_path` que renderiza las N etiquetas
+    elegidas en UNA sola pestaña con saltos de página y auto-print.
+    Reemplaza el flow anterior de "N pop-ups" que requería autorización
+    del browser. %>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Re-imprimir Etiquetas — <%= @paquete.tracking %></title>
+  <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div class="max-w-3xl mx-auto py-8 px-4">
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <div class="flex items-baseline justify-between mb-4 border-b border-gray-200 pb-4">
+        <div>
+          <h1 class="text-xl font-bold text-cec-navy">Re-imprimir Etiquetas Miami</h1>
+          <p class="text-sm text-gray-500 mt-1">
+            Tracking <span class="font-mono text-gray-700"><%= @paquete.tracking %></span>
+            · <%= @hermanas.size %> caja<%= 's' if @hermanas.size != 1 %> en el split
+          </p>
+        </div>
+        <%= link_to "← Volver al paquete", paquete_path(@paquete),
+              class: "text-sm text-cec-teal hover:text-cec-teal-dark font-medium" %>
+      </div>
+
+      <p class="text-xs text-gray-500 mb-4 italic">
+        Las cajas vienen pre-seleccionadas. Destildá las que NO querés imprimir
+        y hacé click en <strong>Imprimir seleccionadas</strong> — se abrirá UNA
+        sola pestaña con todas las etiquetas y el diálogo de impresión.
+      </p>
+
+      <%= form_with url: etiquetas_combinadas_paquetes_path, method: :get,
+                    html: { id: "reimprimir-form", target: "_blank" },
+                    class: "space-y-3" do %>
+        <%# Toggle "Seleccionar todas / ninguna" %>
+        <div class="flex items-center justify-between bg-gray-50 px-3 py-2 rounded">
+          <label class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-600">
+            <input type="checkbox" id="toggle-all" checked
+                   class="w-4 h-4 rounded border-gray-300 text-cec-teal focus:ring-cec-teal">
+            Seleccionar todas
+          </label>
+          <span class="text-xs text-gray-500">
+            <span id="selected-count"><%= @hermanas.size %></span> de <%= @hermanas.size %> seleccionadas
+          </span>
+        </div>
+
+        <ul class="divide-y divide-gray-200 ring-1 ring-gray-200 rounded">
+          <% @hermanas.each do |caja| %>
+            <li class="flex items-center gap-3 px-3 py-3 hover:bg-gray-50">
+              <input type="checkbox" name="paquete_ids[]" value="<%= caja.id %>" checked
+                     class="caja-checkbox w-4 h-4 shrink-0 rounded border-gray-300 text-cec-teal focus:ring-cec-teal">
+
+              <span class="shrink-0 w-12 h-12 rounded-lg bg-cec-gold-gradient text-white flex flex-col items-center justify-center shadow-sm">
+                <span class="text-[9px] uppercase opacity-80">Caja</span>
+                <span class="text-base font-bold leading-none"><%= caja.etiqueta_secuencia %></span>
+              </span>
+              <div class="flex-1 min-w-0">
+                <p class="font-mono text-sm font-semibold text-cec-navy truncate"><%= paquete_display_id(caja) %></p>
+                <p class="text-xs text-gray-500">Peso <%= caja.peso || '—' %> lbs</p>
+              </div>
+              <%= link_to label_paquete_path(caja), target: "_blank",
+                    class: "shrink-0 text-xs text-cec-teal hover:text-cec-teal-dark font-medium inline-flex items-center gap-1 px-2 py-1 rounded hover:bg-cec-teal/10",
+                    title: "Imprimir solo esta caja" do %>
+                Solo esta
+                <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/><path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"/></svg>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <%= link_to "Cancelar", paquete_path(@paquete),
+                class: "px-3 py-1.5 rounded text-sm font-medium text-gray-700 hover:bg-gray-100" %>
+          <button type="submit" id="print-selected"
+                  class="px-4 py-1.5 rounded text-sm font-semibold bg-cec-navy text-white hover:bg-cec-navy-dark shadow-sm inline-flex items-center gap-2">
+            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/><path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"/></svg>
+            Imprimir seleccionadas
+          </button>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const form     = document.getElementById("reimprimir-form")
+      const toggle   = document.getElementById("toggle-all")
+      const counter  = document.getElementById("selected-count")
+      const printBtn = document.getElementById("print-selected")
+      const boxes    = () => Array.from(form.querySelectorAll(".caja-checkbox"))
+
+      function refreshCount () {
+        const total = boxes().filter(b => b.checked).length
+        counter.textContent = total
+        printBtn.disabled = total === 0
+        printBtn.classList.toggle("opacity-50", total === 0)
+        printBtn.classList.toggle("cursor-not-allowed", total === 0)
+        toggle.checked = total === boxes().length && total > 0
+      }
+
+      toggle.addEventListener("change", () => {
+        boxes().forEach(b => { b.checked = toggle.checked })
+        refreshCount()
+      })
+
+      form.addEventListener("change", e => {
+        if (e.target.classList.contains("caja-checkbox")) refreshCount()
+      })
+
+      refreshCount()
+    })()
+  </script>
+</body>
+</html>

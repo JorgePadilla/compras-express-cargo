@@ -107,6 +107,8 @@
           class: "px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm font-medium",
           data: { turbo_confirm: "¿Cancelar este financiamiento?" } %>
     <% end %>
-    <%= link_to "Volver", financiamientos_path, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900" %>
+    <%= link_to "Volver (F2)", financiamientos_path, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900", data: { shortcut: "F2" } %>
   </div>
 </div>
+
+<%= render "shared/bitacora", record: @financiamiento, label: "Financiamiento" %>

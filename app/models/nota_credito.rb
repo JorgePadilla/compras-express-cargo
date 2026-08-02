@@ -1,4 +1,5 @@
 class NotaCredito < ApplicationRecord
+  has_paper_trail  # PR-D7: audit log
   self.table_name = "notas_credito"
   include CurrencyAware
 

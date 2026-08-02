@@ -1,5 +1,6 @@
 class PreAlerta < ApplicationRecord
   self.table_name = "pre_alertas"
+  has_paper_trail  # PR-D1.a: audit log
 
   belongs_to :cliente
   belongs_to :tipo_envio
@@ -50,6 +51,8 @@ class PreAlerta < ApplicationRecord
   before_validation :assign_default_tipo_envio, on: :create
   before_validation :generate_numero_documento, on: :create, if: -> { numero_documento.blank? }
 
+  after_update :cascade_anular_a_paquetes, if: :saved_change_to_estado?
+
   PAQUETE_TO_PRE_ALERTA_ESTADO = {
     "recibido_miami"     => "recibido",
     "empacado"           => "recibido",
@@ -98,6 +101,21 @@ class PreAlerta < ApplicationRecord
     consolidado? && !finalizado?
   end
 
+  # Estados where a linked paquete being at this estado or later locks notas_grupo editing.
+  # Mirrors the "BLOCKED" row of the move/delete rules matrix.
+  ESTADOS_QUE_BLOQUEAN_NOTAS = %w[
+    en_aduana disponible_entrega pre_facturado facturado en_reparto entregado
+    retenido retornado desechado anulado
+  ].freeze
+
+  def notas_editables?
+    return false unless consolidando?
+
+    pre_alerta_paquetes.includes(:paquete).none? do |pap|
+      pap.paquete && ESTADOS_QUE_BLOQUEAN_NOTAS.include?(pap.paquete.estado)
+    end
+  end
+
   def append_historial!(entry)
     current = historial.to_s
     new_historial = current.present? ? "#{current}\n#{entry}" : entry
@@ -135,8 +153,20 @@ class PreAlerta < ApplicationRecord
   end
 
   def generate_numero_documento
-    next_number = (self.class.where("numero_documento LIKE 'PA-%'")
+    next_number = (self.class.where("numero_documento ~ '^PA-[0-9]+$'")
       .maximum(Arel.sql("CAST(SUBSTRING(numero_documento FROM 4) AS INTEGER)")) || 0) + 1
     self.numero_documento = "PA-#{next_number.to_s.rjust(6, '0')}"
+  end
+
+  # Cuando la PA pasa a `anulado`, anular en cascada los paquetes
+  # esperados (los que aún no han llegado físicamente a Miami).
+  # Usa update_all para saltar callbacks — la PA ya está anulada y no
+  # debe re-sincronizarse desde sus paquetes.
+  def cascade_anular_a_paquetes
+    return unless estado == "anulado"
+    paquete_ids = pre_alerta_paquetes.pluck(:paquete_id).compact
+    return if paquete_ids.empty?
+    Paquete.where(id: paquete_ids, estado: "pre_alerta_estado")
+           .update_all(estado: "anulado", updated_at: Time.current)
   end
 end

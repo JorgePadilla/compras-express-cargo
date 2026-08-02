@@ -9,6 +9,22 @@ User.find_or_create_by!(email_address: "admin@comprasexpresscargo.com") do |u|
 end
 puts "  ✓ Admin user"
 
+# ── Sucursales iniciales ──
+[
+  { codigo: "MIA", codigo_ep: "SMI", nombre: "Miami",      pais: "USA",      ubicacion: "miami",    codigo_recepcion_prefix: "RMI" },
+  { codigo: "SPS", codigo_ep: "SZR", nombre: "Zeron SPS",  pais: "Honduras", ubicacion: "honduras", codigo_recepcion_prefix: "RZE" },
+  { codigo: "TGU", codigo_ep: "SHU", nombre: "Humuya TGU", pais: "Honduras", ubicacion: "honduras", codigo_recepcion_prefix: "RHU" },
+  { codigo: "SAM", codigo_ep: "SSM", nombre: "San Manuel", pais: "Honduras", ubicacion: "honduras", codigo_recepcion_prefix: "RSM" }
+].each do |attrs|
+  Sucursal.find_or_create_by!(codigo: attrs[:codigo]) do |s|
+    s.assign_attributes(attrs)
+  end
+  # Backfill defensivo para sucursales que ya existían sin codigo_ep.
+  s = Sucursal.find_by(codigo: attrs[:codigo])
+  s.update_column(:codigo_ep, attrs[:codigo_ep]) if s && s.codigo_ep.blank?
+end
+puts "  ✓ #{Sucursal.count} sucursales"
+
 # ── Tipos de envio (v4.0 — ver docs/approved/pre_alerta_v4.docx) ──
 [
   { nombre: "EXPRESS", codigo: "express", con_reempaque: true,  consolidable: true,
@@ -28,8 +44,11 @@ puts "  ✓ Admin user"
   te.save!
 end
 
-# Eliminar legacy tipos de envio (safety-net para staging/production)
-TipoEnvio.where(codigo: %w[aereo aereo-express ckm-maritimo cka-estandard cer-legacy cem-legacy]).destroy_all
+# Marcar legacy tipos de envio como inactivos (no borrar — pueden estar
+# referenciados por paquetes existentes y `destroy_all` violaría la FK).
+# Quedan ocultos del listado activo pero conservan integridad referencial.
+TipoEnvio.where(codigo: %w[aereo aereo-express ckm-maritimo cka-estandard cer-legacy cem-legacy])
+         .update_all(activo: false)
 
 puts "  ✓ #{TipoEnvio.activos.count} tipos de envio v4"
 
@@ -82,6 +101,170 @@ puts "  ✓ #{CategoriaPrecio.count} categorias de precio"
   end
 end
 puts "  ✓ #{Configuracion.count} configuraciones"
+
+# ── Suppliers (PR-5c.5) ──
+puts "Seeding suppliers..."
+[
+  { codigo: "AMZN",     nombre: "AMAZON LLC",      tipo: "comercio",         city: "Seattle",     state: "WA", country: "USA" },
+  { codigo: "EBAY",     nombre: "EBAY INC",        tipo: "comercio",         city: "San Jose",    state: "CA", country: "USA" },
+  { codigo: "WMT",      nombre: "WALMART",         tipo: "comercio",         city: "Bentonville", state: "AR", country: "USA" },
+  { codigo: "SAMS",     nombre: "SAMS CLUB",       tipo: "comercio",         city: "Bentonville", state: "AR", country: "USA" },
+  { codigo: "TGT",      nombre: "TARGET",          tipo: "comercio",         city: "Minneapolis", state: "MN", country: "USA" },
+  { codigo: "EP",       nombre: "ENTREGA PERSONAL", tipo: "entrega_personal", country: "USA" },
+  { codigo: "OTROS",    nombre: "OTROS",           tipo: "otros",            country: "USA" }
+].each_with_index do |attrs, idx|
+  Supplier.find_or_create_by!(codigo: attrs[:codigo]) do |s|
+    s.nombre        = attrs[:nombre]
+    s.tipo          = attrs[:tipo]
+    s.city          = attrs[:city]
+    s.state         = attrs[:state]
+    s.country       = attrs[:country]
+    s.position      = idx
+  end
+end
+puts "  ✓ #{Supplier.count} suppliers"
+
+# ── Terms (T&C bilingues, PR-5c.5) ──
+puts "Seeding terms..."
+TERMS_ES = <<~ES.strip.freeze
+  1. La empresa transportará la mercancía descrita en este recibo bajo las condiciones aquí establecidas.
+  2. El cliente declara que la información del contenido es verídica. La empresa no se responsabiliza por declaraciones falsas o incompletas.
+  3. Los pesos y dimensiones son verificados al recibir; la facturación final usa el peso facturable mayor entre real y volumétrico.
+  4. La mercancía no reclamada en un plazo de 30 días naturales se considerará abandonada.
+  5. La empresa no se hace responsable de daños por embalaje insuficiente, mercancía prohibida o contenido perecedero.
+  6. La firma o aceptación electrónica de este recibo constituye conformidad con los términos.
+ES
+
+TERMS_EN = <<~EN.strip.freeze
+  1. The carrier shall transport the merchandise described herein under the conditions set forth.
+  2. The customer warrants that the content information is true and accurate. Carrier is not liable for false or incomplete declarations.
+  3. Weights and dimensions are verified upon receipt; billing uses the chargeable weight (greater of actual and volumetric).
+  4. Goods unclaimed within 30 calendar days will be deemed abandoned.
+  5. Carrier shall not be liable for damages caused by insufficient packaging, prohibited items, or perishable content.
+  6. Signature or electronic acceptance of this receipt constitutes agreement with the terms.
+EN
+
+[
+  { version: "2026-01", language: "es", body: TERMS_ES },
+  { version: "2026-01", language: "en", body: TERMS_EN }
+].each do |attrs|
+  Term.find_or_create_by!(version: attrs[:version], language: attrs[:language]) do |t|
+    t.body           = attrs[:body]
+    t.effective_from = Date.new(2026, 1, 1)
+  end
+end
+puts "  ✓ #{Term.count} terms (#{Term.distinct.pluck(:version).join(', ')})"
+
+# ── Sub-Localidades (PR-D1.c) ──
+# Bodegas internas / áreas terceras dentro de cada sucursal HND. Yusef
+# 2026-04-29: "ZR01 (bodega central), ZR02 (bodega CEM)".
+puts "Seeding sub_localidades..."
+zeron  = Sucursal.find_by(codigo: "SPS")
+humuya = Sucursal.find_by(codigo: "TGU")
+[
+  { sucursal: zeron,  codigo: "ZR01", nombre: "Zerón Bodega Central",        position: 0 },
+  { sucursal: zeron,  codigo: "ZR02", nombre: "Zerón Bodega CEM (Marítimo)", position: 1 },
+  { sucursal: humuya, codigo: "HM01", nombre: "Humuya Bodega Central",       position: 0 }
+].each do |attrs|
+  next if attrs[:sucursal].nil?
+  SubLocalidad.find_or_create_by!(sucursal: attrs[:sucursal], codigo: attrs[:codigo]) do |s|
+    s.nombre = attrs[:nombre]
+    s.position = attrs[:position]
+  end
+end
+puts "  ✓ #{SubLocalidad.count} sub-localidades"
+
+# ── Plantillas Notas al Cliente (PR-D2) ──
+puts "Seeding plantillas_notas_cliente..."
+[
+  { titulo: "Falta declaración de aduana",   texto: "Estimado cliente, para procesar su paquete necesitamos la declaración de aduana firmada. Por favor envíela a info@comprasexpresscargo.com.", position: 0 },
+  { titulo: "Pago pendiente",                texto: "Estimado cliente, su paquete está listo en bodega. Para procesar la entrega favor cancelar el saldo pendiente en sucursal o vía transferencia.", position: 1 },
+  { titulo: "Confirmar dirección de entrega", texto: "Estimado cliente, necesitamos que confirme la dirección de entrega para programar el reparto. Responda este correo o llame a la sucursal.", position: 2 },
+  { titulo: "Paquete listo para retiro",     texto: "Estimado cliente, su paquete está disponible en sucursal. Horario de atención: lunes a viernes 8am-5pm, sábado 8am-1pm.", position: 3 }
+].each do |attrs|
+  PlantillaNotaCliente.find_or_create_by!(titulo: attrs[:titulo]) do |p|
+    p.texto    = attrs[:texto]
+    p.position = attrs[:position]
+  end
+end
+puts "  ✓ #{PlantillaNotaCliente.count} plantillas notas al cliente"
+
+# ── Motivos de Retención (PR-D2) ──
+puts "Seeding motivos_retencion..."
+[
+  { nombre: "Paquete dañado",                descripcion: "Llegó con daños visibles", position: 0 },
+  { nombre: "Confirmar tipo de envío",       descripcion: "El cliente debe confirmar si va aéreo, marítimo o express", position: 1 },
+  { nombre: "Mercancía prohibida",           descripcion: "Contenido no permitido por aduana o por nuestras políticas", position: 2 },
+  { nombre: "Falta declaración del cliente", descripcion: "Cliente debe enviar declaración de contenido", position: 3 },
+  { nombre: "Contenido perecedero",          descripcion: "Requiere manejo especial o no se acepta", position: 4 },
+  { nombre: "Pago pendiente",                descripcion: "Saldo pendiente que bloquea la entrega",       position: 5 }
+].each do |attrs|
+  MotivoRetencion.find_or_create_by!(nombre: attrs[:nombre]) do |m|
+    m.descripcion = attrs[:descripcion]
+    m.position    = attrs[:position]
+  end
+end
+puts "  ✓ #{MotivoRetencion.count} motivos de retención"
+
+# ── Proveedores (PR-D3.a) ──
+# Yusef 2026-04-30: lista inicial de comercios recurrentes (Walmart,
+# Whole Foods, Amazon, eBay, Target, Sams, Costco, etc.). Drivers
+# privados (entrega_personal) los agregan los operadores conforme
+# aparecen. El `codigo` se autogenera del nombre (ver Proveedor.generar_codigo_desde).
+puts "Seeding proveedores..."
+[
+  { nombre: "Amazon",      tipo: "comercio", position: 0 },
+  { nombre: "Walmart",     tipo: "comercio", position: 1 },
+  { nombre: "Target",      tipo: "comercio", position: 2 },
+  { nombre: "eBay",        tipo: "comercio", position: 3 },
+  { nombre: "Sams Club",   tipo: "comercio", position: 4 },
+  { nombre: "Costco",      tipo: "comercio", position: 5 },
+  { nombre: "Whole Foods", tipo: "comercio", position: 6 }
+].each do |attrs|
+  Proveedor.find_or_create_by!(nombre: attrs[:nombre]) do |p|
+    p.tipo     = attrs[:tipo]
+    p.position = attrs[:position]
+    p.activo   = true
+  end
+end
+puts "  ✓ #{Proveedor.count} proveedores"
+
+# ── Tarifas de Recolecta (PR-D6.a) ──
+# Yusef 2026-05-01: tabla configurable por zona en lugar de tarifa fija.
+# Estos seeds son ejemplos razonables — admin los edita en /tarifas_recolecta.
+puts "Seeding tarifas de recolecta..."
+[
+  { zona: "SPS Centro",          monto: 30.00, moneda: "USD", position: 0 },
+  { zona: "SPS Periférico",      monto: 35.00, moneda: "USD", position: 1 },
+  { zona: "Tegucigalpa Centro",  monto: 35.00, moneda: "USD", position: 2 },
+  { zona: "Tegucigalpa Suyapa",  monto: 40.00, moneda: "USD", position: 3 },
+  { zona: "La Ceiba",            monto: 50.00, moneda: "USD", position: 4 },
+  { zona: "Otra zona / cotizar", monto: 40.00, moneda: "USD", position: 9 }
+].each do |attrs|
+  TarifaRecolecta.find_or_create_by!(zona: attrs[:zona]) do |t|
+    t.assign_attributes(attrs.merge(activo: true))
+  end
+end
+puts "  ✓ #{TarifaRecolecta.count} tarifas de recolecta"
+
+# ── Servicios Extra (PR-D6.a) ──
+# Yusef 2026-05-01: catálogo de servicios/productos que se agregan
+# automáticamente a la pre-factura cuando el paquete tiene el flag
+# correspondiente (cambio de servicio, etc.). Precio incluye ISV.
+puts "Seeding servicios extra..."
+[
+  { codigo: "CAMBIO_SERVICIO", descripcion: "Cambio de servicio (aéreo↔marítimo, con/sin reempaque)",
+    costo: 0, precio_venta: 15.00, moneda: "USD", precio_incluye_isv: true, position: 0 },
+  { codigo: "PESO_ADICIONAL",  descripcion: "Peso adicional declarado vs medido",
+    costo: 0, precio_venta: 0,     moneda: "USD", precio_incluye_isv: true, position: 1 },
+  { codigo: "MANEJO_ESPECIAL", descripcion: "Manejo especial (frágil, voluminoso, perecedero)",
+    costo: 0, precio_venta: 10.00, moneda: "USD", precio_incluye_isv: true, position: 2 }
+].each do |attrs|
+  ServicioExtra.find_or_create_by!(codigo: attrs[:codigo]) do |s|
+    s.assign_attributes(attrs.merge(activo: true))
+  end
+end
+puts "  ✓ #{ServicioExtra.count} servicios extra"
 
 # ── Sample data (dev/staging only) ──
 if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
@@ -139,32 +322,64 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   Cliente.where(password_digest: nil).find_each { |c| c.update!(password: "Cliente123!") }
   puts "  ✓ #{Cliente.count} clientes"
 
-  # Demo paquetes
+  # Demo paquetes con transiciones progresivas (Yusef 2026-05-12):
+  # Cada paquete arranca en `recibido_miami` y avanza estado a estado para
+  # que el callback `track_estado_fecha_y_user` setee fecha+user en cada
+  # paso. Después backdatean los fechas con update_columns para que la
+  # línea de tiempo se vea realista en demos.
   digitador = User.find_by!(email_address: "digitador@cec.com")
+  Current.session = Session.new(user: digitador)
   aereo = TipoEnvio.find_by!(codigo: "cer")
   maritimo = TipoEnvio.find_by!(codigo: "cem")
+  tarifa_demo = (TarifaRecolecta.respond_to?(:activos) ? TarifaRecolecta.activos.first : nil) || TarifaRecolecta.first
   clientes = Cliente.all.to_a
   carriers = %w[FedEx DHL UPS USPS Amazon]
-  proveedores = %w[Amazon eBay Shein Walmart Target Nike Zara]
-  estados = %w[recibido_miami empacado empacado empacado empacado empacado enviado_honduras disponible_entrega pre_facturado entregado]
+  proveedores = Proveedor.all.to_a
 
-  20.times do |i|
+  # Orden del pipeline. La progresión se detiene al `final` de cada profile.
+  estado_pipeline = %w[recibido_miami empacado enviado_honduras en_aduana
+                       consolidando_honduras disponible_entrega en_reparto entregado]
+
+  # 20 perfiles distribuidos en el pipeline para que el demo refleje el
+  # ciclo completo (incluyendo paquetes detenidos en cada hito).
+  profiles = [
+    { final: "recibido_miami",        dias_recibido: 1 },
+    { final: "recibido_miami",        dias_recibido: 3 },
+    { final: "empacado",              dias_recibido: 5 },
+    { final: "empacado",              dias_recibido: 6 },
+    { final: "empacado",              dias_recibido: 8 },
+    { final: "enviado_honduras",      dias_recibido: 10 },
+    { final: "enviado_honduras",      dias_recibido: 12 },
+    { final: "en_aduana",             dias_recibido: 14 },
+    { final: "en_aduana",             dias_recibido: 15 },
+    { final: "consolidando_honduras", dias_recibido: 18, recolecta: true },
+    { final: "consolidando_honduras", dias_recibido: 20 },
+    { final: "disponible_entrega",    dias_recibido: 22 },
+    { final: "disponible_entrega",    dias_recibido: 24, recolecta: true },
+    { final: "disponible_entrega",    dias_recibido: 25 },
+    { final: "en_reparto",            dias_recibido: 27 },
+    { final: "en_reparto",            dias_recibido: 28, recolecta: true },
+    { final: "entregado",             dias_recibido: 30 },
+    { final: "entregado",             dias_recibido: 35 },
+    { final: "entregado",             dias_recibido: 40, recolecta: true },
+    { final: "entregado",             dias_recibido: 45 }
+  ]
+
+  profiles.each_with_index do |profile, i|
     tracking = "1Z999TEST#{(i + 1).to_s.rjust(6, '0')}"
     next if Paquete.exists?(tracking: tracking)
 
-    estado = estados[i % estados.length]
-    peso = rand(1.0..50.0).round(2)
-    alto = rand(5.0..30.0).round(2)
-    largo = rand(5.0..40.0).round(2)
-    ancho = rand(5.0..30.0).round(2)
+    recibido_at = profile[:dias_recibido].days.ago
 
-    Paquete.create!(
+    paquete = Paquete.create!(
       tracking: tracking,
       cliente: clientes[i % clientes.length],
       tipo_envio: i.even? ? aereo : maritimo,
-      estado: estado,
-      peso: peso,
-      alto: alto, largo: largo, ancho: ancho,
+      estado: "recibido_miami",
+      peso: rand(1.0..50.0).round(2),
+      alto: rand(5.0..30.0).round(2),
+      largo: rand(5.0..40.0).round(2),
+      ancho: rand(5.0..30.0).round(2),
       cantidad_productos: rand(1..5),
       cantidad_paquetes: 1,
       descripcion: ["Ropa variada", "Zapatos Nike", "Electronica", "Suplementos", "Libros", "Juguetes", "Cosmeticos", "Accesorios"][i % 8],
@@ -172,10 +387,34 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
       expedido_por: carriers[i % carriers.length],
       pre_alerta: i % 5 == 0,
       solicito_cambio_servicio: i == 3,
-      retener_miami: i == 7,
-      user: digitador,
-      fecha_recibido_miami: rand(1..30).days.ago
+      retener_miami: i == 7 && profile[:final] == "recibido_miami",
+      user: digitador
     )
+    paquete.update_columns(fecha_recibido_miami: recibido_at)
+
+    if profile[:recolecta] && tarifa_demo
+      paquete.update_columns(
+        recolecta_solicitada: true,
+        tarifa_recolecta_id: tarifa_demo.id,
+        recolecta_monto: tarifa_demo.monto,
+        recolecta_moneda: tarifa_demo.moneda,
+        fecha_solicito_recolecta: recibido_at + 12.hours,
+        fecha_solicito_recolecta_by_user_id: digitador.id
+      )
+    end
+
+    next if profile[:final] == "recibido_miami"
+
+    # Avanzar por cada estado intermedio hasta `final`. Cada update!
+    # dispara el callback (fecha+user via Time.current); luego backdatea.
+    final_idx = estado_pipeline.index(profile[:final])
+    estados_a_transitar = estado_pipeline[1..final_idx]
+    estados_a_transitar.each_with_index do |estado, paso|
+      paquete.update!(estado: estado)
+      fecha_attr = Paquete::ESTADO_FECHA_MAP[estado]
+      next unless fecha_attr
+      paquete.update_columns(fecha_attr => recibido_at + (paso + 1).days)
+    end
   end
   puts "  ✓ #{Paquete.count} paquetes"
 
@@ -261,6 +500,374 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   end
 
   puts "  ✓ #{PreAlerta.count} pre-alertas"
+
+  # Demo data para el modal "Buscar Paquetes" en /cuenta/pre_alertas/:id/edit
+  # Crea paquetes sueltos + 2 PAs CER consolidando + 1 PA CKA (para verificar bloqueo)
+  load Rails.root.join("db/seeds/buscar_paquetes_demo.rb")
+
+  # ── Demo Pre-Factura + Venta (PR-D6.b) ──
+  # Permite probar:
+  #   - Vista de pre-factura con cargos auto (recolecta + cambio servicio).
+  #   - Link "Imprimir Pre-Factura" desde el detalle del paquete.
+  #   - Link "Ver Factura" desde el paquete cuando ya fue facturado.
+  puts "Seeding pre-facturas + venta demo..."
+  juan_demo = Cliente.find_by!(nombre: "Juan", apellido: "Perez")
+  cer_envio = TipoEnvio.find_by!(codigo: "cer")
+  amz_proveedor = Proveedor.find_by(nombre: "Amazon")
+
+  # Helper local: prepara un paquete listo para entrar a pre-factura.
+  # Si tiene recolecta_solicitada, también setea fecha + tarifa para que
+  # el step "Solicitud Recolecta" aparezca en la línea de tiempo.
+  Current.session = Session.new(user: digitador)
+  tarifa_pf_demo = (TarifaRecolecta.respond_to?(:activos) ? TarifaRecolecta.activos.first : nil) || TarifaRecolecta.first
+  crear_paquete_facturable = ->(tracking, **flags) {
+    p = Paquete.find_or_initialize_by(tracking: tracking)
+    p.assign_attributes(
+      cliente: juan_demo,
+      tipo_envio: cer_envio,
+      sucursal: Sucursal.find_by(codigo: "MIA"),
+      estado: "disponible_entrega",
+      peso: 12.5, alto: 20, largo: 30, ancho: 25,
+      cantidad_paquetes: 1, cantidad_productos: 1,
+      descripcion: flags.delete(:descripcion) || "Demo PR-D6.b",
+      proveedor: amz_proveedor,
+      expedido_por: "UPS",
+      fecha_recibido_miami: 7.days.ago
+    )
+    flags.each { |k, v| p[k] = v }
+    p.recolecta_moneda ||= "USD" if flags[:recolecta_solicitada]
+    p.save!
+    if flags[:recolecta_solicitada] && tarifa_pf_demo
+      p.update_columns(
+        tarifa_recolecta_id: tarifa_pf_demo.id,
+        fecha_solicito_recolecta: 7.days.ago + 4.hours,
+        fecha_solicito_recolecta_by_user_id: digitador.id
+      )
+    end
+    p
+  }
+
+  pkg_pf1 = crear_paquete_facturable.call(
+    "1Z999PFDEMO00001",
+    descripcion: "Demo paquete con recolecta",
+    recolecta_solicitada: true, recolecta_monto: 35.00
+  )
+  pkg_pf2 = crear_paquete_facturable.call(
+    "1Z999PFDEMO00002",
+    descripcion: "Demo paquete con cambio de servicio",
+    solicito_cambio_servicio: true
+  )
+  pkg_pf3 = crear_paquete_facturable.call(
+    "1Z999PFDEMO00003",
+    descripcion: "Demo paquete con AMBOS cargos auto",
+    recolecta_solicitada: true, recolecta_monto: 50.00,
+    solicito_cambio_servicio: true
+  )
+  pkg_facturado = crear_paquete_facturable.call(
+    "1Z999PFDEMO00004",
+    descripcion: "Demo paquete que ya está facturado",
+    recolecta_solicitada: true, recolecta_monto: 30.00
+  )
+
+  # Pre-factura 1: estado "creado" — todavía sin facturar.
+  pf_creado = PreFactura.where(cliente: juan_demo).where("numero LIKE 'PF-%'")
+                        .order(:id).first
+  if pf_creado.nil? || pf_creado.pre_factura_items.where(paquete: [ pkg_pf1, pkg_pf2, pkg_pf3 ]).empty?
+    pf_creado = PreFactura.build_from_paquetes(juan_demo, [ pkg_pf1.id, pkg_pf2.id, pkg_pf3.id ])
+    pf_creado.save!
+    [ pkg_pf1, pkg_pf2, pkg_pf3 ].each { |p| p.update_column(:pre_factura_id, pf_creado.id) }
+  end
+
+  # Pre-factura 2: facturada → genera Venta + link "Ver Factura".
+  pf_facturada = PreFactura.joins(:pre_factura_items)
+                           .where(pre_factura_items: { paquete_id: pkg_facturado.id })
+                           .first
+  if pf_facturada.nil?
+    pf_facturada = PreFactura.build_from_paquetes(juan_demo, [ pkg_facturado.id ])
+    pf_facturada.save!
+    pkg_facturado.update_column(:pre_factura_id, pf_facturada.id)
+    pf_facturada.confirmar!
+    pf_facturada.facturar!
+  end
+
+  puts "  ✓ #{PreFactura.count} pre-facturas (1 creado, 1 facturada)"
+  puts "  ✓ #{Venta.count} ventas demo"
+  puts "    → Probar PF en: /pre_facturas/#{pf_creado.id}"
+  puts "    → Probar Venta en: /ventas/#{Venta.last&.id}"
+  puts "    → Detalle paquete con link a PF: /paquetes/#{pkg_pf3.id}"
+  puts "    → Detalle paquete con link a Venta: /paquetes/#{pkg_facturado.id}"
+
+  # ── 4 paquetes "demo completo" — todos los campos llenos (PR-D7.n) ──
+  # Para revisar todas las features juntas: notas (5 tipos), tareas (3
+  # estados), recolecta, retención, manifest, pre-factura, fechas
+  # editables, etc.
+  puts "Seeding 4 paquetes demo completos..."
+  Current.session = Session.new(user: digitador)
+  juan      = Cliente.find_by!(nombre: "Juan",  apellido: "Perez")
+  maria     = Cliente.find_by!(nombre: "Maria", apellido: "Lopez")
+  sofia     = Cliente.find_by(nombre: "Sofia", apellido: "Garcia") || juan
+  ana       = Cliente.find_by(nombre: "Ana",    apellido: "Martinez") || maria
+  cer       = TipoEnvio.find_by!(codigo: "cer")
+  cem       = TipoEnvio.find_by!(codigo: "cem")
+  exp_envio = TipoEnvio.find_by(codigo: "exp") || cer
+  amz       = Proveedor.find_by(nombre: "Amazon")
+  wmt       = Proveedor.find_by(nombre: "Walmart") || amz
+  tgt       = Proveedor.find_by(nombre: "Target") || amz
+  ebay      = Proveedor.find_by(nombre: "eBay") || amz
+  tarifa_sps  = TarifaRecolecta.find_by(zona: "SPS Centro") || TarifaRecolecta.first
+  sucursal_sps = Sucursal.find_by(codigo_ep: "SZR") || Sucursal.first
+
+  motivo_dano = MotivoRetencion.find_or_create_by!(nombre: "Caja dañada") { |m| m.activo = true }
+  motivo_pago = MotivoRetencion.find_or_create_by!(nombre: "Pago pendiente") { |m| m.activo = true }
+
+  juan.update!(
+    notas_miami:    juan.notas_miami.presence    || "Cliente VIP. Re-empacar todo en cajas nuevas con stickers.",
+    notas_honduras: juan.notas_honduras.presence || "Entrega solo entre 9am-12pm. Tel: 9999-0000.",
+    notas_caja:     juan.notas_caja.presence     || "Acepta L. en cualquier denominación.",
+    notas_sac:      juan.notas_sac.presence      || "Prefiere comunicación vía WhatsApp."
+  )
+
+  # ── Paquete 1: ENTREGADO — pipeline completo + recolecta + tareas ──
+  pkg1 = Paquete.find_or_initialize_by(tracking: "1Z999FULL-DEMO-001")
+  if pkg1.new_record?
+    pkg1.assign_attributes(
+      cliente: juan, tercero: maria,
+      tipo_envio: cer, proveedor: amz, expedido_por: "UPS",
+      tracking_secundario: "9400111899560FULL0001",
+      remitente: "Walmart Logistics LLC",
+      sucursal: Sucursal.find_by(codigo: "MIA"),
+      sucursal_actual: sucursal_sps,
+      estado: "recibido_miami",
+      peso: 18.5, alto: 25, largo: 35, ancho: 30,
+      cantidad_paquetes: 2, cantidad_productos: 5,
+      descripcion: "Ropa deportiva: 3 conjuntos Nike + 2 pares de tenis Adidas. Total 5 productos divididos en 2 cajas (12x12x10 + 18x18x14).",
+      notas_internas: "Cliente VIP, priorizar empaque rápido. Etiquetar como FRÁGIL las dos cajas. Coordinar con repartidor.",
+      notas_al_cliente: "Su pedido fue empacado con cuidado adicional. Cualquier consulta puede contactarnos vía WhatsApp al 9999-0000.",
+      notas_consolidacion: "Paquete pertenece a pre-alerta consolidada de marzo. Esperar consolidación completa antes de despachar.",
+      notas_retencion: "",
+      pre_alerta: true,
+      recolecta_solicitada: true,
+      tarifa_recolecta: tarifa_sps,
+      recolecta_monto: tarifa_sps.monto, recolecta_moneda: tarifa_sps.moneda,
+      user: digitador
+    )
+    pkg1.save!
+    pkg1.update_columns(
+      fecha_solicito_recolecta: 25.days.ago,
+      fecha_solicito_recolecta_by_user_id: digitador.id,
+      fecha_recibido_miami: 20.days.ago,
+      fecha_recibido_miami_by_user_id: digitador.id
+    )
+    # Avanzar por todo el pipeline
+    %w[empacado enviado_honduras en_aduana consolidando_honduras disponible_entrega en_reparto entregado].each_with_index do |estado, i|
+      pkg1.update!(estado: estado)
+      attr = Paquete::ESTADO_FECHA_MAP[estado]
+      pkg1.update_columns(attr => 20.days.ago + (i + 2).days) if attr
+    end
+    pkg1.update_columns(fecha_posible_entrega: 12.days.ago)
+  end
+
+  # Pre-alerta + tareas para pkg1
+  pa1_full = PreAlerta.find_or_create_by!(numero_documento: "PA-FULL-001") do |pa|
+    pa.cliente = juan
+    pa.tipo_envio = cer
+    pa.titulo = "Compra Nike + Adidas marzo"
+    pa.con_reempaque = true
+    pa.consolidado = true
+    pa.creado_por_tipo = "cliente"
+    pa.creado_por_id = juan.id
+  end
+  PreAlertaPaquete.find_or_create_by!(pre_alerta: pa1_full, tracking: pkg1.tracking) do |pap|
+    pap.paquete = pkg1
+    pap.descripcion = pkg1.descripcion
+    pap.instrucciones = "Si el calzado viene en caja original, NO la abran. Si la talla del pantalón es L, contactarme antes de empacar."
+    pap.fecha = 28.days.ago.to_date
+  end
+  if pkg1.tareas.none?
+    Tarea.create!(paquete: pkg1, titulo: "Confirmar tallas con cliente", descripcion: "Verificar talla L vs M en pantalones.", asignado_a: digitador, estado: "realizada", completado_por: digitador, completada_en: 18.days.ago, notas: "Cliente confirmó L para todo.")
+    Tarea.create!(paquete: pkg1, titulo: "Llamar para coordinar entrega", asignado_a: digitador, estado: "realizada", completado_por: digitador, completada_en: 10.days.ago)
+  end
+
+  # ── Paquete 2: EN ADUANA — retenido + cambio servicio + sin recolecta ──
+  pkg2 = Paquete.find_or_initialize_by(tracking: "1Z999FULL-DEMO-002")
+  if pkg2.new_record?
+    pkg2.assign_attributes(
+      cliente: maria, tercero: nil,
+      tipo_envio: cem, proveedor: wmt, expedido_por: "FedEx",
+      tracking_secundario: nil,
+      remitente: "Walmart e-commerce",
+      sucursal: Sucursal.find_by(codigo: "MIA"),
+      estado: "recibido_miami",
+      peso: 45.0, alto: 50, largo: 60, ancho: 55,
+      cantidad_paquetes: 1, cantidad_productos: 3,
+      descripcion: "Electrodomésticos: licuadora, batidora, tostadora. Caja exterior con daño.",
+      notas_internas: "Caja exterior abollada al recibir — fotografiado para reclamo a Walmart. Revisar contenido antes de enviar.",
+      notas_al_cliente: "Estimado/a cliente, su paquete llegó con daño en la caja exterior. Estamos verificando el contenido antes de despachar. Le contactaremos si hay algún problema.",
+      notas_consolidacion: "",
+      retener_miami: true,
+      notas_retencion: "Caja exterior abollada en transporte FedEx. Confirmar con cliente si desea proceder o reclamar. Fotos en carpeta /miami/danados/2026-05/",
+      solicito_cambio_servicio: true,
+      pre_alerta: true,
+      recolecta_solicitada: false,
+      user: digitador
+    )
+    pkg2.save!
+    pkg2.motivos_retencion << motivo_dano unless pkg2.motivos_retencion.include?(motivo_dano)
+    pkg2.update_columns(
+      fecha_recibido_miami: 8.days.ago,
+      fecha_recibido_miami_by_user_id: digitador.id
+    )
+    %w[empacado enviado_honduras en_aduana].each_with_index do |estado, i|
+      pkg2.update!(estado: estado)
+      attr = Paquete::ESTADO_FECHA_MAP[estado]
+      pkg2.update_columns(attr => 8.days.ago + (i + 2).days) if attr
+    end
+    pkg2.update_columns(fecha_posible_entrega: 3.days.from_now)
+  end
+
+  # Pre-alerta + tareas para pkg2
+  pa2_full = PreAlerta.find_or_create_by!(numero_documento: "PA-FULL-002") do |pa|
+    pa.cliente = maria
+    pa.tipo_envio = cem
+    pa.titulo = "Electrodomésticos cocina"
+    pa.con_reempaque = false
+    pa.consolidado = false
+    pa.creado_por_tipo = "usuario"
+    pa.creado_por_id = digitador.id
+  end
+  PreAlertaPaquete.find_or_create_by!(pre_alerta: pa2_full, tracking: pkg2.tracking) do |pap|
+    pap.paquete = pkg2
+    pap.descripcion = pkg2.descripcion
+    pap.instrucciones = "Por favor verificar que los 3 productos vengan completos. La licuadora es la prioridad."
+    pap.fecha = 10.days.ago.to_date
+  end
+  if pkg2.tareas.none?
+    Tarea.create!(paquete: pkg2, titulo: "Subir fotos del daño", descripcion: "Fotografiar la caja desde varios ángulos para reclamo.", asignado_a: digitador, estado: "realizada", completado_por: digitador, completada_en: 7.days.ago)
+    Tarea.create!(paquete: pkg2, titulo: "Llamar al cliente para autorización", descripcion: "Cliente decide si proceder o reclamar.", asignado_a: digitador, estado: "en_proceso", notas: "Dejé mensaje en WhatsApp, esperando respuesta.")
+    Tarea.create!(paquete: pkg2, titulo: "Coordinar cambio de servicio a CEM", asignado_a: digitador, estado: "pendiente")
+  end
+
+  # ── Paquete 3: RECIBIDO MIAMI — recién llegado con tareas pendientes ──
+  pkg3 = Paquete.find_or_initialize_by(tracking: "1Z999FULL-DEMO-003")
+  if pkg3.new_record?
+    pkg3.assign_attributes(
+      cliente: sofia, tercero: nil,
+      tipo_envio: exp_envio, proveedor: tgt, expedido_por: "USPS",
+      remitente: "Target Distribution",
+      sucursal: Sucursal.find_by(codigo: "MIA"),
+      estado: "recibido_miami",
+      peso: 5.2, alto: 15, largo: 20, ancho: 18,
+      cantidad_paquetes: 3, cantidad_productos: 12,
+      descripcion: "Productos de bebé: 6 mamilas, 4 chupones, 2 sets de cobijas.",
+      notas_internas: "Cliente nuevo. Confirmar dirección de entrega antes de despachar.",
+      notas_al_cliente: "¡Bienvenido/a! Su primer envío con CEC. Le contactaremos cuando esté listo para retiro.",
+      notas_consolidacion: "Cliente solicitó consolidación con próximo envío si llega antes del 25/05.",
+      pre_alerta: true,
+      user: digitador
+    )
+    pkg3.save!
+    pkg3.update_columns(
+      fecha_recibido_miami: 1.day.ago,
+      fecha_recibido_miami_by_user_id: digitador.id
+    )
+  end
+
+  pa3_full = PreAlerta.find_or_create_by!(numero_documento: "PA-FULL-003") do |pa|
+    pa.cliente = sofia
+    pa.tipo_envio = exp_envio
+    pa.titulo = "Ajuar bebé Target"
+    pa.con_reempaque = true
+    pa.consolidado = true
+    pa.creado_por_tipo = "cliente"
+    pa.creado_por_id = sofia.id
+  end
+  PreAlertaPaquete.find_or_create_by!(pre_alerta: pa3_full, tracking: pkg3.tracking) do |pap|
+    pap.paquete = pkg3
+    pap.descripcion = pkg3.descripcion
+    pap.instrucciones = "Las mamilas vienen en bolsas individuales — por favor NO las saquen del empaque original."
+    pap.fecha = 2.days.ago.to_date
+  end
+  if pkg3.tareas.none?
+    Tarea.create!(paquete: pkg3, titulo: "Confirmar dirección de entrega", descripcion: "Cliente nuevo — verificar dirección y horario.", asignado_a: digitador, estado: "pendiente")
+    Tarea.create!(paquete: pkg3, titulo: "Verificar consolidación", descripcion: "Revisar si tiene otros envíos pendientes antes del 25/05.", estado: "pendiente")
+  end
+
+  # ── Paquete 4: ENTREGADO simple — flujo limpio sin retención ni recolecta ──
+  pkg4 = Paquete.find_or_initialize_by(tracking: "1Z999FULL-DEMO-004")
+  if pkg4.new_record?
+    pkg4.assign_attributes(
+      cliente: ana, tercero: nil,
+      tipo_envio: cer, proveedor: ebay, expedido_por: "DHL",
+      remitente: "eBay Seller — JoesCollectibles",
+      sucursal: Sucursal.find_by(codigo: "MIA"),
+      sucursal_actual: sucursal_sps,
+      estado: "recibido_miami",
+      peso: 2.8, alto: 10, largo: 15, ancho: 12,
+      cantidad_paquetes: 1, cantidad_productos: 1,
+      descripcion: "Reloj vintage Rolex (réplica) coleccionable.",
+      notas_internas: "Producto coleccionable — manipular con extremo cuidado. Cliente quiere fotos antes de empacar.",
+      notas_al_cliente: "Gracias por su compra. Adjuntamos foto del producto antes del empaque para su tranquilidad.",
+      notas_consolidacion: "",
+      user: digitador
+    )
+    pkg4.save!
+    pkg4.update_columns(
+      fecha_recibido_miami: 30.days.ago,
+      fecha_recibido_miami_by_user_id: digitador.id
+    )
+    %w[empacado enviado_honduras en_aduana disponible_entrega en_reparto entregado].each_with_index do |estado, i|
+      pkg4.update!(estado: estado)
+      attr = Paquete::ESTADO_FECHA_MAP[estado]
+      pkg4.update_columns(attr => 30.days.ago + (i + 2).days) if attr
+    end
+    pkg4.update_columns(fecha_posible_entrega: 24.days.ago)
+  end
+
+  if pkg4.tareas.none?
+    Tarea.create!(paquete: pkg4, titulo: "Tomar foto pre-empaque", descripcion: "Cliente solicitó foto del producto antes de empacar.", asignado_a: digitador, estado: "realizada", completado_por: digitador, completada_en: 28.days.ago)
+    Tarea.create!(paquete: pkg4, titulo: "Confirmar entrega con cliente", asignado_a: digitador, estado: "realizada", completado_por: digitador, completada_en: 25.days.ago)
+    Tarea.create!(paquete: pkg4, titulo: "Encuesta de satisfacción", asignado_a: digitador, estado: "realizada", completado_por: digitador, completada_en: 23.days.ago, notas: "5/5 estrellas. Cliente muy contento.")
+  end
+
+  # Manifiestos demo — linkear pkg1, pkg2, pkg4 a manifiestos reales
+  # para que el operador vea trazabilidad. pkg3 queda sin manifiesto
+  # porque su estado es recibido_miami (aún no empacado).
+  empresa_pronto = EmpresaManifiesto.find_by!(nombre: "PRONTO CARGO")
+
+  mani_full_a = Manifiesto.find_or_create_by!(numero: "MA-FULL-001") do |m|
+    m.empresa_manifiesto = empresa_pronto
+    m.tipo_envio = "CER"
+    m.estado = "enviado"
+    m.fecha_enviado = 18.days.ago
+    m.fecha_aduana = 17.days.ago
+    m.user = digitador
+  end
+
+  mani_full_b = Manifiesto.find_or_create_by!(numero: "MA-FULL-002") do |m|
+    m.empresa_manifiesto = empresa_pronto
+    m.tipo_envio = "CER"
+    m.estado = "enviado"
+    m.fecha_enviado = 4.days.ago
+    m.fecha_aduana = 3.days.ago
+    m.user = digitador
+  end
+
+  # Idempotente: solo asignar si está sin manifiesto. update_column
+  # bypasea el callback sync_dates_from_manifiesto (las fechas ya
+  # están seteadas correctamente por el state walk; no queremos que
+  # el callback las sobrescriba con los millis del manifiesto demo).
+  { pkg1 => mani_full_a, pkg2 => mani_full_b, pkg4 => mani_full_a }.each do |paq, mani|
+    paq.update_column(:manifiesto_id, mani.id) if paq.manifiesto_id.nil?
+  end
+
+  mani_full_a.recalculate_totals!
+  mani_full_b.recalculate_totals!
+
+  puts "  ✓ 4 paquetes demo completos creados:"
+  puts "    → /paquetes/#{pkg1.id} — Entregado · pipeline completo + recolecta + 2 tareas · #{mani_full_a.numero}"
+  puts "    → /paquetes/#{pkg2.id} — En aduana · retenido + cambio servicio + 3 tareas · #{mani_full_b.numero}"
+  puts "    → /paquetes/#{pkg3.id} — Recibido Miami · cliente nuevo + 2 tareas pendientes · sin manifiesto"
+  puts "    → /paquetes/#{pkg4.id} — Entregado simple · 3 tareas realizadas · #{mani_full_a.numero}"
 end
 
 # ── Empresa singleton (datos fiscales para PDFs y mailers) ──

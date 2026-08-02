@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "./flatpickr.css";
 
+/* Dark mode: activado por clase .dark en <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   /* Brand colors */
   --color-cec-navy: #1B2559;
@@ -12,6 +15,13 @@
   --color-cec-teal: #00B4D8;
   --color-cec-teal-light: #48CAE4;
   --color-cec-teal-dark: #0096C7;
+
+  /* Accent purple — Yusef 2026-05-02 pidió un morado para acciones
+     secundarias del header (Excel/PDF/Imprimir). Hue moderna (~violeta
+     Stripe/Linear) que combina con cec-navy y cec-teal sin chocar. */
+  --color-cec-purple: #7C3AED;
+  --color-cec-purple-light: #A78BFA;
+  --color-cec-purple-dark: #5B21B6;
 
   /* Semantic colors (aliases pointing at brand tones — no new palette) */
   --color-cec-success: var(--color-cec-teal);
@@ -25,11 +35,29 @@
 
   /* Animations */
   --animate-fade-in-up: fade-in-up 0.6s ease-out both;
+  --animate-dot-pulse: dot-pulse 2s ease-in-out infinite;
+  --animate-draw-line: draw-line 1.1s ease-out both;
+  --animate-shimmer: shimmer 1.6s linear infinite;
 }
 
 @keyframes fade-in-up {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dot-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.35); opacity: 0.6; }
+}
+
+@keyframes draw-line {
+  from { stroke-dashoffset: var(--draw-length, 600); opacity: 0; }
+  to   { stroke-dashoffset: 0; opacity: 1; }
+}
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
 }
 
 /* Sidebar gradient */
@@ -51,4 +79,255 @@
   background: rgb(255 255 255 / 0.8);
   backdrop-filter: blur(8px);
   box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+/* Dark mode overrides para clases custom */
+.dark .glass-card {
+  background: rgb(30 41 59 / 0.8);
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+}
+
+/* ─── Dashboard "Mission Control" utilities ───
+   Composición de tokens existentes (no introduce paleta nueva). */
+
+/* Hero gradient: navy oscuro → navy → teal-dark con halo gold sutil */
+.bg-cec-hero {
+  background:
+    radial-gradient(140% 120% at 100% 0%, rgb(0 150 199 / 0.25), transparent 55%),
+    radial-gradient(120% 100% at 0% 100%, rgb(255 181 71 / 0.18), transparent 55%),
+    linear-gradient(135deg, var(--color-cec-navy-dark) 0%, var(--color-cec-navy) 55%, var(--color-cec-navy-light) 100%);
+}
+
+/* Gradients lineales para icon pills, KPIs, chips */
+.bg-cec-teal-gradient { background: linear-gradient(135deg, var(--color-cec-teal-light), var(--color-cec-teal-dark)); }
+.bg-cec-gold-gradient { background: linear-gradient(135deg, var(--color-cec-gold-light), var(--color-cec-gold-dark)); }
+.bg-cec-navy-gradient { background: linear-gradient(135deg, var(--color-cec-navy-light), var(--color-cec-navy-dark)); }
+.bg-cec-red-gradient  { background: linear-gradient(135deg, #F87171, #DC2626); }
+
+/* Colored shadows: dan profundidad sin sumar paleta nueva */
+.shadow-cec-teal-glow { box-shadow: 0 8px 24px -8px rgb(0 180 216 / 0.45), 0 2px 6px -2px rgb(0 180 216 / 0.20); }
+.shadow-cec-gold-glow { box-shadow: 0 8px 24px -8px rgb(255 181 71 / 0.55), 0 2px 6px -2px rgb(255 181 71 / 0.25); }
+.shadow-cec-navy-glow { box-shadow: 0 8px 24px -8px rgb(27 37 89 / 0.45), 0 2px 6px -2px rgb(27 37 89 / 0.25); }
+.shadow-cec-red-glow  { box-shadow: 0 8px 24px -8px rgb(239 68 68 / 0.45), 0 2px 6px -2px rgb(239 68 68 / 0.20); }
+
+/* Icon pill polish: subtle inner highlight + rounded-xl con tamaño consistente */
+.icon-pill {
+  border-radius: 0.625rem; /* rounded-[10px] */
+  box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.20),
+              0 1px 2px 0 rgb(0 0 0 / 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.group:hover .icon-pill { transform: scale(1.06) rotate(-2deg); }
+@media (prefers-reduced-motion: reduce) {
+  .group:hover .icon-pill { transform: none; }
+  .icon-pill { transition: none; }
+}
+
+/* Health pulse dots */
+.dot-pulse { animation: var(--animate-dot-pulse); }
+
+/* SVG line draw-in */
+.animate-draw-line {
+  stroke-dasharray: var(--draw-length, 600);
+  animation: var(--animate-draw-line);
+}
+
+/* Stagger reveal: combina fade-in-up con delay manejado por JS via inline style */
+.animate-stagger { animation: var(--animate-fade-in-up); animation-fill-mode: both; }
+
+/* Avatar gradients deterministicos (3 variantes) */
+.avatar-gradient-navy { background: linear-gradient(135deg, var(--color-cec-navy), var(--color-cec-navy-light)); }
+.avatar-gradient-teal { background: linear-gradient(135deg, var(--color-cec-teal-dark), var(--color-cec-teal-light)); }
+.avatar-gradient-gold { background: linear-gradient(135deg, var(--color-cec-gold-dark), var(--color-cec-gold-light)); }
+
+/* Accesibilidad: respetar prefers-reduced-motion en animaciones custom */
+@media (prefers-reduced-motion: reduce) {
+  .btn-gold-gradient { transition: none; }
+  .animate-fade-in-up,
+  .animate-stagger,
+  .animate-draw-line,
+  .dot-pulse { animation: none !important; }
+  .animate-draw-line { stroke-dashoffset: 0 !important; opacity: 1 !important; }
+}
+
+/* ─── Dark mode: reglas globales para form inputs y elementos base ───
+   Cubre inputs que en modo dark quedarian con texto oscuro sobre fondo
+   oscuro o placeholders invisibles. Se aplica a todo input/textarea/select
+   que no tenga un dark:bg-* explicito. */
+.dark input:not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+.dark textarea,
+.dark select {
+  background-color: rgb(31 41 55); /* gray-800 */
+  color: rgb(243 244 246);         /* gray-100 */
+  border-color: rgb(55 65 81);     /* gray-700 */
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: rgb(156 163 175);         /* gray-400 */
+  opacity: 1;
+}
+
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus,
+.dark textarea:-webkit-autofill,
+.dark select:-webkit-autofill {
+  -webkit-text-fill-color: rgb(243 244 246);
+  -webkit-box-shadow: 0 0 0px 1000px rgb(31 41 55) inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.dark hr {
+  border-color: rgb(55 65 81);     /* gray-700 */
+}
+
+.dark ::selection {
+  background-color: rgb(14 116 144 / 0.5); /* cec-teal tint */
+  color: rgb(243 244 246);
+}
+
+/* ─── Dark mode shim ───
+   Mapea las clases Tailwind mas usadas a valores dark automaticamente.
+   Se pone en @layer components para que cualquier `dark:bg-*` / `dark:text-*`
+   explicito en una vista (que vive en la capa utilities) siempre gane.
+   Esto cubre las vistas que aun no recibieron variantes dark explicitas. */
+@layer components {
+  /* Backgrounds */
+  :where(.dark) .bg-white              { background-color: rgb(31 41 55); }   /* gray-800 */
+  :where(.dark) .bg-slate-50           { background-color: rgb(17 24 39); }   /* gray-900 */
+  :where(.dark) .bg-gray-50            { background-color: rgb(17 24 39); }
+  :where(.dark) .bg-gray-100           { background-color: rgb(31 41 55); }
+  :where(.dark) .bg-amber-50           { background-color: rgba(120, 53, 15, 0.35); }
+  :where(.dark) .bg-red-50             { background-color: rgba(127, 29, 29, 0.35); }
+  :where(.dark) .bg-emerald-50         { background-color: rgba(6, 78, 59, 0.35); }
+  :where(.dark) .bg-indigo-50          { background-color: rgba(49, 46, 129, 0.35); }
+
+  /* Text colors — oscuros → claros */
+  :where(.dark) .text-gray-900         { color: rgb(243 244 246); }           /* gray-100 */
+  :where(.dark) .text-gray-800         { color: rgb(229 231 235); }           /* gray-200 */
+  :where(.dark) .text-gray-700         { color: rgb(209 213 219); }           /* gray-300 */
+  :where(.dark) .text-gray-600         { color: rgb(156 163 175); }           /* gray-400 */
+  :where(.dark) .text-gray-500         { color: rgb(156 163 175); }
+  :where(.dark) .text-gray-400         { color: rgb(107 114 128); }           /* gray-500 */
+  :where(.dark) .text-cec-navy         { color: rgb(243 244 246); }
+  :where(.dark) .text-cec-navy-dark    { color: rgb(243 244 246); }
+
+  /* Bordes y divisores */
+  :where(.dark) .border-gray-100       { border-color: rgb(55 65 81); }
+  :where(.dark) .border-gray-200       { border-color: rgb(55 65 81); }
+  :where(.dark) .border-gray-300       { border-color: rgb(75 85 99); }
+  :where(.dark) .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: rgb(55 65 81); }
+  :where(.dark) .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: rgb(55 65 81); }
+
+  /* Hover backgrounds que desaparecen en dark */
+  :where(.dark) .hover\:bg-gray-50:hover   { background-color: rgba(55, 65, 81, 0.5); }
+  :where(.dark) .hover\:bg-gray-100:hover  { background-color: rgba(55, 65, 81, 0.7); }
+}
+
+/* ─── Sidebar nav: scrollbar oculto (clean rail) ───
+   El overflow-y-auto sigue activo en el <nav> → wheel / touch /
+   teclado scrollean normal; solo se oculta el indicador visual de
+   la barra para que el rail (sobre todo colapsado en 64px) se vea
+   limpio. Patrón macOS / Slack / Discord. */
+aside#sidebar nav { scrollbar-width: none; -ms-overflow-style: none; }
+aside#sidebar nav::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+/* ─── Sidebar hover-expand + pin + position ───
+   Las clases las controla Stimulus (sidebar_controller.js) en el <aside>:
+     .is-collapsed → ancho 64px, esconde labels.
+     .is-pinned    → no auto-colapsa al sacar mouse.
+     .is-right     → cambia anclaje de izq a der.
+
+   En mobile (<lg) la lógica de hover-expand se desactiva — el sidebar
+   sigue siendo el drawer clásico con `-translate-x-full`. */
+@media (min-width: 1024px) {
+  aside#sidebar.is-collapsed { width: 4rem; }
+  aside#sidebar.is-collapsed .sidebar-label { display: none; }
+  aside#sidebar.is-collapsed .sidebar-icon-only { display: block !important; }
+  aside#sidebar:not(.is-collapsed) { width: 16rem; }
+  aside#sidebar:not(.is-collapsed) .sidebar-icon-only { display: none !important; }
+
+  /* Pin button visual: solid icon cuando pinned, outline cuando no. */
+  aside#sidebar.is-pinned .sidebar-pin-on  { display: inline-block; }
+  aside#sidebar.is-pinned .sidebar-pin-off { display: none; }
+
+  /* Posición a la derecha. */
+  aside#sidebar.is-right { left: auto; right: 0; }
+
+  /* Main compensa margin según estado actual del sidebar.
+     Cuando está pinned, main pierde el ancho completo del sidebar.
+     Cuando NO está pinned (overlay), main solo deja espacio para los
+     íconos colapsados (4rem). */
+  body.sidebar-collapsed:not(.sidebar-right) main      { margin-left: 4rem; margin-right: 0; }
+  body.sidebar-pinned:not(.sidebar-collapsed):not(.sidebar-right) main { margin-left: 16rem; margin-right: 0; }
+  body.sidebar-right.sidebar-collapsed main            { margin-right: 4rem; margin-left: 0; }
+  body.sidebar-right.sidebar-pinned:not(.sidebar-collapsed) main { margin-right: 16rem; margin-left: 0; }
+
+  /* Iconic rail: cuando está colapsado (≥lg), centramos íconos,
+     reemplazamos border-left por glow, mostramos dividers entre
+     secciones y apilamos botones del footer. */
+  aside#sidebar.is-collapsed nav li > a.sidebar-link {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  aside#sidebar.is-collapsed .sidebar-section {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  aside#sidebar.is-collapsed .sidebar-section:first-of-type {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  /* Active link: glow gold sutil en lugar del border-left de 3px que
+     se ve offset cuando el ícono está centrado. */
+  aside#sidebar.is-collapsed nav li > a.active-link {
+    border-left-width: 0 !important;
+    box-shadow: 0 0 0 1px rgba(255, 181, 71, 0.5),
+                0 0 12px -2px rgba(255, 181, 71, 0.4);
+  }
+
+  /* Hover ambient ring para feedback visual extra. */
+  aside#sidebar.is-collapsed nav li > a.sidebar-link:not(.active-link):hover {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+
+  /* Footer: en colapsado escondemos pin y position toggle (Yusef:
+     ocupan espacio innecesario en el rail). Solo queda logout
+     centrado. Al expandir reaparecen los 3 botones en row. */
+  aside#sidebar.is-collapsed .sidebar-collapsed-hide { display: none; }
+
+  /* Logout queda centrado solo. */
+  aside#sidebar.is-collapsed .sidebar-footer-buttons {
+    justify-content: center;
+  }
+  aside#sidebar.is-collapsed .sidebar-footer-buttons > a {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ─── Print stylesheet ───
+   Oculta sidebar, topbar mobile y elementos de UI no-contenido al imprimir.
+   Aplica a window.print() (atajo F4) y al print del navegador. Las clases
+   .no-print se pueden agregar puntualmente a otros elementos. */
+@media print {
+  aside, [data-controller="sidebar"] aside,
+  header.lg\:hidden, .no-print, details, [data-controller="auto-dismiss"] {
+    display: none !important;
+  }
+  /* Reset color a fondo blanco / texto negro para que el PDF / impresion
+     no use el dark theme aunque la pagina lo tenga activo. */
+  html, body { background: #fff !important; color: #000 !important; }
+  html.dark, html.dark body { background: #fff !important; color: #000 !important; }
+  /* Tabla compacta, sin hover background. */
+  table { font-size: 9pt; }
+  thead { background: #f3f4f6 !important; color: #000 !important; }
+  /* No expandir paginacion ni botones. */
+  nav.pagination, button[type="submit"], [data-bulk-selection-target="bar"] { display: none !important; }
 }

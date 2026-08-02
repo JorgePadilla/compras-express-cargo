@@ -1,5 +1,6 @@
 class User < ApplicationRecord
   has_secure_password
+  has_paper_trail skip: %i[password_digest]
   has_many :sessions, dependent: :destroy
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
@@ -25,6 +26,13 @@ class User < ApplicationRecord
   validates :nombre, presence: true
   validates :email_address, presence: true, uniqueness: true
   validates :rol, presence: true
+  validates :tema, inclusion: { in: %w[light dark], allow_nil: true }
+  validates :iniciales, length: { maximum: 8 }, allow_blank: true
+  validates :sidebar_position, inclusion: { in: %w[left right] }
+  # PR-9.c: volumen de los tonos de escaneo, 0-100.
+  validates :sonido_volumen, numericality: {
+    only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 100
+  }
 
   # Scopes
   scope :activos, -> { where(activo: true) }
@@ -55,5 +63,51 @@ class User < ApplicationRecord
 
   def nombre_completo
     nombre
+  end
+
+  # PR-D1.b: iniciales para mostrar en bitácora, WR, y cualquier campo
+  # tipo "(YS)" en la UI. Si admin no asignó iniciales custom, computa
+  # automáticamente desde el nombre como fallback razonable. La preferencia
+  # es la columna explícita (Yusef pidió alias custom porque hay nombres
+  # repetidos como "Juan").
+  def iniciales_display
+    return iniciales.upcase if iniciales.present?
+    parts = nombre.to_s.split(/\s+/).reject(&:blank?).first(2)
+    return "—" if parts.empty?
+    parts.map { |p| p[0].to_s.upcase }.join
+  end
+
+  # PR-9.a: "las notas se ordenan por la jerarquía de la empresa" (Yusef,
+  # 2026-08-01) → orden por departamento: Miami → Caja → Pre-Factura → SAC
+  # → Entrega. Pre-Factura y Entrega no tienen columna propia: ambas leen
+  # `notas_honduras`, así que el orden efectivo colapsa a estos cuatro.
+  NOTAS_DEPARTAMENTO_ORDEN = %i[notas_miami notas_caja notas_honduras notas_sac].freeze
+
+  # PR-D2.b: campos de `Cliente` con notas permanentes que el usuario
+  # puede ver según su rol. Admin ve todas; cada rol operativo ve sólo
+  # las notas pensadas para su área. Devuelve una lista ordenada para
+  # renderizar el modal "Notas del cliente" en el detalle del paquete.
+  def notas_permanentes_visibles
+    pares =
+      case rol
+      when "admin"
+        [ %i[notas_miami Miami], %i[notas_honduras Honduras],
+          %i[notas_caja Caja], %i[notas_sac SAC] ]
+      when "supervisor_miami", "digitador_miami"
+        [ %i[notas_miami Miami] ]
+      when "supervisor_caja", "cajero"
+        [ %i[notas_caja Caja], %i[notas_honduras Honduras] ]
+      when "supervisor_prefactura"
+        [ %i[notas_honduras Honduras] ]
+      when "sac"
+        [ %i[notas_sac SAC], %i[notas_honduras Honduras] ]
+      when "entrega_despacho"
+        [ %i[notas_honduras Honduras] ]
+      else
+        []
+      end
+    pares
+      .sort_by { |campo, _| NOTAS_DEPARTAMENTO_ORDEN.index(campo) || NOTAS_DEPARTAMENTO_ORDEN.size }
+      .map { |campo, etiqueta| { campo: campo, etiqueta: etiqueta } }
   end
 end

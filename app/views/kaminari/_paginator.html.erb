@@ -1,0 +1,16 @@
+<%# Kaminari paginator — CEC custom, Tailwind 4. %>
+<%= paginator.render do %>
+  <nav role="navigation" aria-label="Paginación" class="inline-flex items-center gap-1">
+    <%= prev_page_tag %>
+    <%= first_page_tag unless current_page.first? || current_page.try(:near_to_first_page?) %>
+    <% each_page do |page| %>
+      <% if page.left_outer? || page.right_outer? || page.inside_window? %>
+        <%= page_tag page %>
+      <% elsif !page.was_truncated? %>
+        <%= gap_tag %>
+      <% end %>
+    <% end %>
+    <%= last_page_tag unless current_page.last? || current_page.try(:near_to_last_page?) %>
+    <%= next_page_tag %>
+  </nav>
+<% end %>

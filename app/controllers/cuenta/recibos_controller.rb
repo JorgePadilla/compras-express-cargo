@@ -4,7 +4,7 @@ module Cuenta
 
     def index
       @recibos = current_cliente.recibos.includes(:venta, :pago).recientes
-      @recibos = @recibos.page(params[:page]).per(12)
+      @recibos = @recibos.page(params[:page]).per(per_page_sanitized)
     end
 
     def show

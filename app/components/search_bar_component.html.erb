@@ -1,11 +1,26 @@
-<%= form_with url: @url, method: :get, data: { turbo_frame: "_top" }, class: "w-full sm:max-w-md" do |f| %>
-  <div class="relative">
-    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-      <%= helpers.heroicon "magnifying-glass", variant: :outline, options: { class: "w-5 h-5 text-gray-400" } %>
+<%= form_with url: @url, method: :get, data: { turbo_frame: "_top" }, class: "w-full" do |f| %>
+  <div class="flex items-center gap-1">
+    <div class="relative flex-1">
+      <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <%= helpers.heroicon "magnifying-glass", variant: :outline, options: { class: "w-5 h-5 text-gray-400" } %>
+      </div>
+      <%= f.text_field @param, value: @value, placeholder: @placeholder,
+          class: "block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm
+                 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal",
+          autocomplete: "off" %>
     </div>
-    <%= f.text_field @param, value: @value, placeholder: @placeholder,
-        class: "block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm
-               placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal",
-        autocomplete: "off" %>
+    <% if @value.present? %>
+      <%# Botón Limpiar al lado del input (sibling). F2 lo dispara
+          (convención global del sistema). %>
+      <%= link_to @url,
+          class: "shrink-0 inline-flex items-center gap-1.5 px-3 h-9 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 border border-red-600 hover:border-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 transition-colors",
+          title: "Limpiar búsqueda (F2)",
+          aria: { label: "Limpiar búsqueda" },
+          data: { turbo_frame: "_top", shortcut: "F2" } do %>
+        <%= helpers.heroicon "x-mark", variant: :outline, options: { class: "w-4 h-4" } %>
+        <span>Limpiar</span>
+        <kbd class="ml-1 px-1.5 py-0.5 text-[10px] font-mono font-semibold text-white bg-red-700/60 border border-white/40 rounded">F2</kbd>
+      <% end %>
+    <% end %>
   </div>
 <% end %>

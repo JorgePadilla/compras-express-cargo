@@ -11,7 +11,7 @@ class RecibosController < ApplicationController
     if params[:fecha_hasta].present? && (fecha_hasta = Date.parse(params[:fecha_hasta]) rescue nil)
       @recibos = @recibos.where(created_at: ..fecha_hasta.end_of_day)
     end
-    @recibos = @recibos.page(params[:page]).per(25)
+    @recibos = @recibos.page(params[:page]).per(per_page_sanitized)
   end
 
   def show
@@ -24,9 +24,7 @@ class RecibosController < ApplicationController
               disposition: "inline"
   end
 
-  private
-
-  def require_feature_access
+  private  def require_feature_access
     redirect_to(root_path, alert: "No tienes permiso para acceder a esta seccion.") unless can_access?(:recibos)
   end
 

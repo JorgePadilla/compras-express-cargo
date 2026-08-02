@@ -1,4 +1,5 @@
 class Cotizacion < ApplicationRecord
+  has_paper_trail  # PR-D7: audit log
   self.table_name = "cotizaciones"
   include CurrencyAware
 
@@ -66,34 +67,6 @@ class Cotizacion < ApplicationRecord
 
     update!(estado: "rechazada", rechazada_at: Time.current)
     true
-  end
-
-  def generar_proforma!(user: nil)
-    return nil unless aceptada?
-    return venta if venta.present?
-
-    proforma = nil
-    transaction do
-      proforma = Venta.new(
-        cliente: cliente,
-        creado_por: user,
-        moneda: moneda,
-        estado: "proforma",
-        notas: "Generada desde cotizacion #{numero}"
-      )
-      cotizacion_items.each do |item|
-        proforma.venta_items.build(
-          paquete: item.paquete,
-          concepto: item.concepto,
-          peso_cobrar: item.peso_cobrar,
-          precio_libra: item.precio_libra,
-          subtotal: item.subtotal
-        )
-      end
-      proforma.save!
-      update!(venta: proforma)
-    end
-    proforma
   end
 
   def self.marcar_expiradas!

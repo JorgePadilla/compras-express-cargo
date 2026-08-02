@@ -1,0 +1,5 @@
+<%# Wrapper hacia BitacoraComponent (overhaul 2026-05-02).
+    Mantiene la API de los 10+ shows que ya hacen
+      render "shared/bitacora", record: @x, label: "..."
+    para no romper nada. La lógica visual vive en el componente. %>
+<%= render BitacoraComponent.new(record: record, label: local_assigns[:label]) %>

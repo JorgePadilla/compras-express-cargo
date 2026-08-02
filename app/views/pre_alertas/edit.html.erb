@@ -124,7 +124,7 @@
                 </td>
                 <td class="px-4 py-2 text-center">
                   <% if pap.paquete %>
-                    <%= link_to pap.paquete.guia, paquete_path(pap.paquete), class: "font-mono text-xs text-cec-navy hover:underline", target: "_blank" %>
+                    <%= link_to paquete_display_id(pap.paquete), paquete_path(pap.paquete), class: "font-mono text-xs text-cec-navy hover:underline", target: "_blank" %>
                   <% else %>
                     <span class="text-xs text-gray-400">—</span>
                   <% end %>

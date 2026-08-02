@@ -1,0 +1,38 @@
+<%# Reusable confirm modal. Driven by confirm-modal Stimulus controller.
+    Registers window.cecConfirm(message, { title, danger, confirmLabel, cancelLabel })
+    which returns a Promise<boolean>. %>
+<div data-controller="confirm-modal" data-confirm-modal-target="root"
+     class="hidden fixed inset-0 z-[60] flex items-center justify-center">
+  <div data-action="click->confirm-modal#cancel"
+       class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"></div>
+
+  <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
+      <div data-confirm-modal-target="icon"
+           class="w-10 h-10 rounded-full flex items-center justify-center bg-red-50 text-red-600">
+        <%= heroicon "exclamation-triangle", variant: :outline, options: { class: "w-5 h-5" } %>
+      </div>
+      <h3 data-confirm-modal-target="title" class="text-sm font-bold text-gray-800">
+        Confirmar
+      </h3>
+    </div>
+
+    <div class="px-6 py-4">
+      <p data-confirm-modal-target="message" class="text-sm text-gray-700 leading-relaxed"></p>
+    </div>
+
+    <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+      <button type="button" data-action="click->confirm-modal#cancel"
+              data-confirm-modal-target="cancelBtn"
+              class="text-gray-600 hover:text-gray-800 text-sm font-medium px-4 py-2">
+        Cancelar
+      </button>
+      <button type="button" data-action="click->confirm-modal#confirm"
+              data-confirm-modal-target="confirmBtn"
+              class="bg-red-600 text-white font-semibold px-6 py-2 rounded-lg text-sm
+                     hover:bg-red-700 transition-colors">
+        Confirmar
+      </button>
+    </div>
+  </div>
+</div>

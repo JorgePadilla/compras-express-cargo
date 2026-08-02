@@ -1,23 +1,43 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["form", "paquetesBody", "template", "counter", "addButton", "limitMessage"]
+  static targets = ["form", "paquetesBody", "template", "counter", "addButton", "limitMessage", "status", "saveButton", "savedModal"]
   static values = {
     maxPaquetes: { type: Number, default: -1 },
     cancelUrl: { type: String, default: "" },
-    consolidado: { type: Boolean, default: false }
+    consolidado: { type: Boolean, default: false },
+    autosaveUrl: { type: String, default: "" },
+    autoAdd: { type: Boolean, default: false }
   }
 
   _newIndex = Date.now()
+  _autosaveTimer = null
+  _saving = false
+  _statusTimer = null
 
   connect() {
     this._handleGlobalKeydown = this.handleKeydown.bind(this)
     document.addEventListener("keydown", this._handleGlobalKeydown)
     this.updateCounter()
+
+    if (this.consolidadoValue && this.autosaveUrlValue) {
+      this._handleInput = this.scheduleAutosave.bind(this)
+      this.formTarget.addEventListener("input", this._handleInput)
+    }
+
+    if (this.autoAddValue) {
+      this.addPaquete()
+    }
   }
 
   disconnect() {
     document.removeEventListener("keydown", this._handleGlobalKeydown)
+    if (this._handleInput) {
+      this.formTarget.removeEventListener("input", this._handleInput)
+    }
+    clearTimeout(this._autosaveTimer)
+    clearTimeout(this._statusTimer)
+    clearTimeout(this._savedModalTimer)
   }
 
   handleKeydown(e) {
@@ -32,7 +52,7 @@ export default class extends Controller {
       this.save()
     } else if (e.key === "F9") {
       e.preventDefault()
-      this.saveAndNotify()
+      this.finalizar()
     }
   }
 
@@ -65,14 +85,34 @@ export default class extends Controller {
     this.updateCounter()
   }
 
-  removePaquete(e) {
+  async removePaquete(e) {
     const row = e.currentTarget.closest(".paquete-row")
+    const visibleRows = this.paquetesBodyTarget.querySelectorAll(".paquete-row:not(.hidden)").length
+    const esUltimo = visibleRows <= 1
+
+    const mensaje = esUltimo
+      ? "¿Eliminar este paquete? Es el último de la pre-alerta; la pre-alerta quedará vacía y será eliminada."
+      : "¿Eliminar este paquete?"
+
+    const ask = typeof window.cecConfirm === "function"
+      ? window.cecConfirm
+      : (m) => Promise.resolve(window.confirm(m))
+
+    const ok = await ask(mensaje, {
+      title: esUltimo ? "Eliminar paquete y pre-alerta" : "Eliminar paquete",
+      confirmLabel: "Eliminar",
+      danger: true,
+    })
+    if (!ok) return
+
     const destroyField = row.querySelector("[data-pre-alerta-editor-target='destroyField']")
 
     if (destroyField) {
       // Existing record: mark for destruction
       destroyField.value = "1"
       row.classList.add("hidden")
+      // Auto-save immediately so deletion persists
+      this.autosave()
     } else {
       // New record: remove from DOM
       row.remove()
@@ -81,36 +121,224 @@ export default class extends Controller {
     this.updateCounter()
   }
 
-  save() {
-    this._removeNotifyField()
-    this.formTarget.requestSubmit()
+  // ── Auto-save ──
+
+  scheduleAutosave() {
+    clearTimeout(this._autosaveTimer)
+    this._autosaveTimer = setTimeout(() => this.autosave(), 1500)
   }
 
-  saveAndNotify() {
-    this._removeNotifyField()
-    const notifyInput = document.createElement("input")
-    notifyInput.type = "hidden"
-    notifyInput.name = "notificar"
-    notifyInput.value = "true"
-    notifyInput.dataset.notifyField = "true"
-    this.formTarget.appendChild(notifyInput)
+  async autosave() {
+    clearTimeout(this._autosaveTimer)
 
-    if (this.consolidadoValue) {
-      this._removeFinalizarField()
-      const finalizarInput = document.createElement("input")
-      finalizarInput.type = "hidden"
-      finalizarInput.name = "finalizar"
-      finalizarInput.value = "true"
-      finalizarInput.dataset.finalizarField = "true"
-      this.formTarget.appendChild(finalizarInput)
+    if (this._saving || !this.autosaveUrlValue) return false
+
+    const formData = this._buildAutosaveFormData()
+    if (!formData) return false
+
+    this._saving = true
+    this._showStatus("Guardando...", "text-gray-400")
+
+    try {
+      const csrfToken = document.querySelector("meta[name='csrf-token']")?.content
+      const response = await fetch(this.autosaveUrlValue, {
+        method: "PATCH",
+        headers: {
+          "Accept": "application/json",
+          "X-CSRF-Token": csrfToken
+        },
+        body: formData
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.redirect) {
+          window.location.href = data.redirect
+          return true
+        }
+        this._injectNewPaqueteIds(data.new_paquetes || {})
+        this._removeDestroyedRows()
+        this.updateCounter()
+        this._showStatus("Guardado \u2713", "text-cec-teal", 3000)
+        return true
+      } else if (response.status === 422) {
+        const data = await response.json()
+        const errors = Array.isArray(data.errors) && data.errors.length > 0 ? data.errors : null
+        const message = errors ? `Error al guardar: ${errors.join(". ")}` : "Error al guardar"
+        this._showStatus(message, "text-red-500", 8000)
+        return false
+      } else {
+        this._showStatus("Error de conexión", "text-red-500", 5000)
+        return false
+      }
+    } catch (error) {
+      this._showStatus("Error de conexión", "text-red-500", 5000)
+      return false
+    } finally {
+      this._saving = false
+    }
+  }
+
+  _buildAutosaveFormData() {
+    const formData = new FormData(this.formTarget)
+    formData.append("autosave", "true")
+
+    // Skip new paquete rows that are not fully filled. Tracking + descripcion
+    // are both required server-side, so sending a partial row triggers a 422
+    // while the user is still typing. Only include the row once both are set.
+    const rows = this.paquetesBodyTarget.querySelectorAll(".paquete-row:not(.hidden)")
+    const keysToDelete = []
+
+    rows.forEach(row => {
+      if (!row.dataset.newRecord) return
+
+      // Find the index from the input name pattern
+      const input = row.querySelector("input[name*='[tracking]']")
+      if (!input) return
+      const match = input.name.match(/\[(\d+)\]/)
+      if (!match) return
+      const index = match[1]
+
+      const tracking = formData.get(`pre_alerta[pre_alerta_paquetes_attributes][${index}][tracking]`) || ""
+      const descripcion = formData.get(`pre_alerta[pre_alerta_paquetes_attributes][${index}][descripcion]`) || ""
+
+      if (tracking.trim() === "" || descripcion.trim() === "") {
+        // Remove this incomplete row's fields from formData
+        keysToDelete.push(index)
+      }
+    })
+
+    keysToDelete.forEach(index => {
+      const prefix = `pre_alerta[pre_alerta_paquetes_attributes][${index}]`
+      for (const key of [...formData.keys()]) {
+        if (key.startsWith(prefix)) {
+          formData.delete(key)
+        }
+      }
+    })
+
+    return formData
+  }
+
+  _injectNewPaqueteIds(newPaquetes) {
+    // newPaquetes is { "formIndex": dbId, ... }
+    for (const [index, dbId] of Object.entries(newPaquetes)) {
+      const row = this._findRowByIndex(index)
+      if (!row) continue
+
+      // Remove the data-new-record flag
+      delete row.dataset.newRecord
+
+      // Give it an ID for DOM reference
+      row.id = `paquete_row_${dbId}`
+
+      const firstTd = row.querySelector("td")
+
+      // Inject hidden id field
+      const idInput = document.createElement("input")
+      idInput.type = "hidden"
+      idInput.name = `pre_alerta[pre_alerta_paquetes_attributes][${index}][id]`
+      idInput.value = dbId
+      firstTd.prepend(idInput)
+
+      // Inject hidden _destroy field + target so removePaquete works
+      const destroyInput = document.createElement("input")
+      destroyInput.type = "hidden"
+      destroyInput.name = `pre_alerta[pre_alerta_paquetes_attributes][${index}][_destroy]`
+      destroyInput.value = "0"
+      destroyInput.dataset.preAlertaEditorTarget = "destroyField"
+      firstTd.prepend(destroyInput)
+    }
+  }
+
+  _findRowByIndex(index) {
+    const input = this.formTarget.querySelector(`input[name*='[${index}][tracking]']`)
+    if (!input) return null
+    return input.closest(".paquete-row")
+  }
+
+  _removeDestroyedRows() {
+    const hiddenRows = this.paquetesBodyTarget.querySelectorAll(".paquete-row.hidden")
+    hiddenRows.forEach(row => row.remove())
+  }
+
+  static STATUS_COLORS = ["text-gray-400", "text-cec-teal", "text-red-500"]
+
+  _showStatus(message, colorClass, fadeAfterMs = 0) {
+    if (!this.hasStatusTarget) return
+
+    clearTimeout(this._statusTimer)
+    const el = this.statusTarget
+    el.textContent = message
+    // Swap only the color class, preserving base classes from the template
+    this.constructor.STATUS_COLORS.forEach(c => el.classList.remove(c))
+    el.classList.add(colorClass)
+    el.style.opacity = "1"
+
+    if (fadeAfterMs > 0) {
+      this._statusTimer = setTimeout(() => {
+        el.style.opacity = "0"
+      }, fadeAfterMs)
+    }
+  }
+
+  // ── Manual save (flush + confirm modal) ──
+
+  async save() {
+    // Cancel any pending debounced autosave
+    clearTimeout(this._autosaveTimer)
+
+    // Wait for any in-flight autosave to finish before flushing a new one
+    if (this._saving) {
+      await this._waitForSaveComplete()
     }
 
-    this.formTarget.requestSubmit()
+    const ok = await this.autosave()
+    if (ok) this._showSavedModal()
   }
 
-  _removeNotifyField() {
-    const existing = this.formTarget.querySelector("[data-notify-field]")
-    if (existing) existing.remove()
+  _waitForSaveComplete() {
+    return new Promise(resolve => {
+      const check = () => {
+        if (!this._saving) return resolve()
+        setTimeout(check, 100)
+      }
+      check()
+    })
+  }
+
+  _showSavedModal() {
+    if (!this.hasSavedModalTarget) return
+    clearTimeout(this._savedModalTimer)
+    this.savedModalTarget.classList.remove("hidden")
+    this._savedModalTimer = setTimeout(() => {
+      this.savedModalTarget.classList.add("hidden")
+    }, 3000)
+  }
+
+  // ── Finalize ──
+
+  async finalizar() {
+    // Wait for any in-flight auto-save to finish
+    if (this._saving) {
+      await new Promise(resolve => {
+        const check = () => {
+          if (!this._saving) return resolve()
+          setTimeout(check, 100)
+        }
+        check()
+      })
+    }
+
+    this._removeFinalizarField()
+    const finalizarInput = document.createElement("input")
+    finalizarInput.type = "hidden"
+    finalizarInput.name = "finalizar"
+    finalizarInput.value = "true"
+    finalizarInput.dataset.finalizarField = "true"
+    this.formTarget.appendChild(finalizarInput)
+
+    this.formTarget.requestSubmit()
   }
 
   _removeFinalizarField() {

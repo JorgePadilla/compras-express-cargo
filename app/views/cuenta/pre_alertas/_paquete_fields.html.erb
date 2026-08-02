@@ -7,18 +7,22 @@
       <% if pap.paquete_id.present? %>
         <span class="font-mono text-sm text-gray-700"><%= pap.tracking %></span>
         <%= pf.hidden_field :tracking %>
-      <% else %>
-        <% if @pre_alerta.consolidando? %>
+      <% elsif puede_editar?(pap) %>
+        <div data-controller="tracking-input">
           <%= pf.text_field :tracking, placeholder: "Tracking (opcional)",
+              pattern: "[A-Za-z0-9\\-]+",
+              title: "Solo letras, números y guiones. Sin espacios ni símbolos.",
+              data: { tracking_input_target: "input", action: "input->tracking-input#sanitize" },
               class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
                      focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
-        <% else %>
-          <span class="font-mono text-sm text-gray-700"><%= pap.tracking.presence || "—" %></span>
-        <% end %>
+          <p data-tracking-input-target="error" class="hidden text-xs text-red-600 mt-1"></p>
+        </div>
+      <% else %>
+        <span class="font-mono text-sm text-gray-700"><%= pap.tracking.presence || "—" %></span>
       <% end %>
     </td>
     <td class="px-4 py-2">
-      <% if @pre_alerta.consolidando? %>
+      <% if puede_editar?(pap) %>
         <%= pf.text_field :descripcion, placeholder: "Descripcion",
             class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
                    focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
@@ -27,7 +31,7 @@
       <% end %>
     </td>
     <td class="px-4 py-2">
-      <% if @pre_alerta.consolidando? %>
+      <% if puede_editar?(pap) %>
         <%= pf.text_area :instrucciones, placeholder: "Instrucciones", rows: 2,
             class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
                    focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
@@ -57,14 +61,18 @@
       <% end %>
     </td>
     <td class="px-4 py-2 text-center">
-      <% unless pap.paquete_id.present? || @pre_alerta.finalizado? %>
+      <% if puede_eliminar?(pap) %>
+        <% es_ultimo_paquete = @pre_alerta.pre_alerta_paquetes.size == 1 %>
+        <% sufijo_ultimo = es_ultimo_paquete ? " Es el último paquete: la pre-alerta quedará vacía y será eliminada." : "" %>
         <% if pap.persisted? && !@pre_alerta.consolidando? %>
+          <%# Unlinked + not consolidando: server delete %>
           <%= button_to eliminar_paquete_cuenta_pre_alerta_path(@pre_alerta, pre_alerta_paquete_id: pap.id),
                 method: :delete, class: "text-red-400 hover:text-red-600",
-                data: { turbo_confirm: "¿Eliminar este paquete?" } do %>
+                data: { turbo_confirm: "¿Eliminar este paquete?#{sufijo_ultimo}" } do %>
             <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
           <% end %>
         <% else %>
+          <%# Unlinked + consolidando (or new row): JS-side remove keeps editor state %>
           <input type="hidden" name="pre_alerta[pre_alerta_paquetes_attributes][<%= index %>][_destroy]" value="0" data-pre-alerta-editor-target="destroyField">
           <button type="button" data-action="click->pre-alerta-editor#removePaquete"
                   class="text-red-400 hover:text-red-600">

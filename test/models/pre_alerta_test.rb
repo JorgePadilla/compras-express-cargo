@@ -369,6 +369,47 @@ class PreAlertaTest < ActiveSupport::TestCase
     assert_not pa.consolidando?
   end
 
+  # ── notas_editables? ──
+  test "notas_editables? false when not consolidando" do
+    pa = pre_alertas(:activa) # not consolidado
+    assert_not pa.notas_editables?
+  end
+
+  test "notas_editables? false when finalizado" do
+    pa = pre_alertas(:finalizada)
+    assert_not pa.notas_editables?
+  end
+
+  test "notas_editables? true when consolidando and no linked paquete" do
+    pa = pre_alertas(:consolidada_destino) # consolidado=true, finalizado=false, pap_destino unlinked
+    assert pa.notas_editables?
+  end
+
+  test "notas_editables? true when consolidando and all linked paquetes in movible estado" do
+    pa = pre_alertas(:consolidada_destino)
+    # Link a paquete in recibido_miami to this PA
+    paquete = paquetes(:recibido) # estado: recibido_miami
+    pa.pre_alerta_paquetes.create!(tracking: "MOVIBLE-TEST-001", descripcion: "Test", paquete: paquete)
+    assert pa.reload.notas_editables?
+  end
+
+  test "notas_editables? false when any linked paquete is in en_aduana" do
+    pa = pre_alertas(:consolidada_destino)
+    paquete = Paquete.create!(
+      tracking: "ADUANA-TEST-001", cliente: @cliente,
+      estado: "en_aduana", peso: 5, peso_cobrar: 5
+    )
+    pa.pre_alerta_paquetes.create!(tracking: paquete.tracking, descripcion: "Test", paquete: paquete)
+    assert_not pa.reload.notas_editables?
+  end
+
+  test "notas_editables? false when any linked paquete is in entregado" do
+    pa = pre_alertas(:consolidada_destino)
+    paquete = paquetes(:entregado) # estado: entregado
+    pa.pre_alerta_paquetes.create!(tracking: "ENTREGADO-TEST-001", descripcion: "Test", paquete: paquete)
+    assert_not pa.reload.notas_editables?
+  end
+
   test "append_historial! appends to nil historial" do
     pa = pre_alertas(:activa)
     assert_nil pa.historial
@@ -410,5 +451,68 @@ class PreAlertaTest < ActiveSupport::TestCase
       ]
     )
     assert pa.valid?
+  end
+
+  # Eager-creation: crear PA con N items materializa N Paquetes en
+  # estado pre_alerta_estado (visibles en /paquetes inmediatamente).
+  test "creating PA with nested PAPs creates Paquetes in pre_alerta_estado" do
+    cer = tipo_envios(:cer)
+    assert_difference -> { Paquete.where(estado: "pre_alerta_estado").count }, +2 do
+      PreAlerta.create!(
+        cliente: @cliente,
+        tipo_envio: cer,
+        titulo: "Eager test",
+        creado_por_tipo: "cliente",
+        creado_por_id: @cliente.id,
+        pre_alerta_paquetes_attributes: [
+          { tracking: "EAGERPA001", descripcion: "Uno" },
+          { tracking: "EAGERPA002", descripcion: "Dos" }
+        ]
+      )
+    end
+  end
+
+  # Cuando la PA pasa a anulada, los paquetes esperados se cascadean a anulado.
+  test "anular cascades to esperado paquetes" do
+    cer = tipo_envios(:cer)
+    pa = PreAlerta.create!(
+      cliente: @cliente,
+      tipo_envio: cer,
+      titulo: "Cascade test",
+      creado_por_tipo: "cliente",
+      creado_por_id: @cliente.id,
+      pre_alerta_paquetes_attributes: [
+        { tracking: "CASCANUL001", descripcion: "A" },
+        { tracking: "CASCANUL002", descripcion: "B" }
+      ]
+    )
+    paquetes = pa.pre_alerta_paquetes.map(&:paquete).compact
+    assert_equal 2, paquetes.size
+
+    pa.anular!
+
+    paquetes.each { |p| assert_equal "anulado", p.reload.estado }
+  end
+
+  # Cuando un paquete ya fue recibido en Miami (no está en pre_alerta_estado),
+  # anular la PA NO debe tocarlo.
+  test "anular does NOT cascade to paquetes already past pre_alerta_estado" do
+    cer = tipo_envios(:cer)
+    pa = PreAlerta.create!(
+      cliente: @cliente,
+      tipo_envio: cer,
+      titulo: "Partial cascade",
+      creado_por_tipo: "cliente",
+      creado_por_id: @cliente.id,
+      pre_alerta_paquetes_attributes: [
+        { tracking: "PARTCASC001", descripcion: "Recibido" }
+      ]
+    )
+    p = pa.pre_alerta_paquetes.first.paquete
+    p.update!(estado: "empacado")
+
+    pa.anular!
+
+    assert_equal "empacado", p.reload.estado
   end
 end

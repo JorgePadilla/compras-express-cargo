@@ -38,8 +38,9 @@
               class="text-gray-600 hover:text-gray-800 text-sm font-medium px-4 py-2">
         Cancelar
       </button>
+      <% confirm_vacia = pre_alerta.pre_alerta_paquetes.size == 1 ? "Es el último paquete de esta pre-alerta. Si continuás, la pre-alerta quedará vacía y será eliminada. ¿Confirmás?" : nil %>
       <%= form_with url: mover_paquete_cuenta_pre_alerta_path(pre_alerta), method: :post,
-            data: { pre_alerta_mover_target: "form" }, class: "inline" do |f| %>
+            data: { pre_alerta_mover_target: "form", turbo_confirm: confirm_vacia }, class: "inline" do |f| %>
         <input type="hidden" name="pre_alerta_paquete_id" data-pre-alerta-mover-target="papIdField" value="">
         <input type="hidden" name="destino_id" data-pre-alerta-mover-target="destinoField" value="">
         <button type="submit" data-pre-alerta-mover-target="confirmBtn"

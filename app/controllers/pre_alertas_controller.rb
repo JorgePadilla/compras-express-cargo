@@ -4,11 +4,32 @@ class PreAlertasController < ApplicationController
   def index
     @pre_alertas = base_scope.includes(:cliente, :tipo_envio, :pre_alerta_paquetes).recientes
     @pre_alertas = apply_filters(@pre_alertas)
-    @pre_alertas = @pre_alertas.page(params[:page]).per(25)
+    @pre_alertas = @pre_alertas.page(params[:page]).per(per_page_sanitized)
     @tipo_envios = TipoEnvio.activos.order(:nombre)
   end
 
   def show
+  end
+
+  # PR-D4.a.2: endpoint JSON para el modal "Mover a Pre-Alerta Existente".
+  # Devuelve PAs activas que matchean el query (numero_documento, titulo
+  # o nombre del cliente). Limit 12 resultados.
+  def buscar
+    term = params[:q].to_s.strip
+    @resultados = PreAlerta.includes(:cliente).activas
+                            .buscar(term)
+                            .order(created_at: :desc)
+                            .limit(12)
+    render json: @resultados.map { |pa|
+      {
+        id: pa.id,
+        numero: pa.numero_documento,
+        titulo: pa.titulo.presence || "(sin título)",
+        cliente: "#{pa.cliente.codigo} — #{pa.cliente.nombre_completo}",
+        consolidado: pa.consolidado,
+        estado: pa.estado
+      }
+    }
   end
 
   def new
@@ -62,9 +83,7 @@ class PreAlertasController < ApplicationController
     redirect_to pre_alertas_path, notice: "#{count} pre-alertas vacias eliminadas."
   end
 
-  private
-
-  def set_pre_alerta
+  private  def set_pre_alerta
     @pre_alerta = PreAlerta.find(params[:id])
   end
 

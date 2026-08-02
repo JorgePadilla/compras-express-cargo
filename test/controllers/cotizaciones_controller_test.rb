@@ -61,14 +61,6 @@ class CotizacionesControllerTest < ActionDispatch::IntegrationTest
     assert ct.reload.rechazada?
   end
 
-  test "generar_proforma creates venta" do
-    ct = cotizaciones(:aceptada_juan)
-    assert_difference "Venta.count", 1 do
-      post generar_proforma_cotizacion_url(ct)
-    end
-    assert_redirected_to proforma_url(ct.reload.venta)
-  end
-
   test "pdf responds with application/pdf" do
     get pdf_cotizacion_url(@cotizacion)
     assert_response :success
