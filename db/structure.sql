@@ -1626,7 +1626,8 @@ CREATE TABLE public.pre_factura_items (
     updated_at timestamp(6) without time zone NOT NULL,
     origen character varying DEFAULT 'manual'::character varying NOT NULL,
     tarifa_recolecta_id bigint,
-    servicio_extra_id bigint
+    servicio_extra_id bigint,
+    minimo_aplicado boolean DEFAULT false NOT NULL
 );
 
 
@@ -5556,6 +5557,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260802160000'),
 ('20260802150000'),
 ('20260801160000'),
 ('20260801150000'),

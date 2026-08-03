@@ -3,7 +3,7 @@ class Venta < ApplicationRecord
   include CurrencyAware
   has_paper_trail  # PR-D1.a: audit log
 
-  ISV_RATE = BigDecimal("0.15")
+  include IsvAware
 
   belongs_to :cliente
   belongs_to :pre_factura, optional: true
@@ -150,7 +150,7 @@ class Venta < ApplicationRecord
     sub = venta_items.reject(&:marked_for_destruction?)
                      .sum { |i| i.subtotal.to_d }
     self.subtotal = sub
-    self.impuesto = (sub * ISV_RATE).round(2)
+    self.impuesto = (sub * isv_rate).round(2, BigDecimal::ROUND_HALF_UP)
     self.total    = (sub + impuesto).round(2)
 
     self.saldo_pendiente = total if new_record?

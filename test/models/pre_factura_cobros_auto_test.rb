@@ -35,13 +35,27 @@ class PreFacturaCobrosAutoTest < ActiveSupport::TestCase
     assert_match(/Recolecta/, rec.concepto)
   end
 
+  # PR-10.a: `precio_incluye_isv` se ignoraba, así que a un servicio con el
+  # impuesto ya adentro se le volvía a aplicar el 15% al totalizar. Ahora la
+  # línea lleva el neto y el ISV se suma una sola vez.
   test "agrega línea auto_servicio_extra cuando solicito_cambio_servicio" do
     p = crear_paquete(solicito_cambio_servicio: true)
     pf = PreFactura.build_from_paquetes(@cliente, [ p.id ])
     serv = pf.pre_factura_items.find { |i| i.origen == "auto_servicio_extra" }
     assert serv
-    assert_equal @servicio.precio_venta.to_d, serv.subtotal.to_d
+    assert_equal @servicio.precio_venta_sin_isv, serv.subtotal.to_d
     assert_equal @servicio.id, serv.servicio_extra_id
+  end
+
+  test "el servicio con ISV incluido termina cobrandose por su precio de lista" do
+    assert @servicio.precio_incluye_isv?, "la fixture debe traer el ISV incluido"
+    p = crear_paquete(solicito_cambio_servicio: true, peso: nil)
+    pf = PreFactura.build_from_paquetes(@cliente, [ p.id ])
+    serv = pf.pre_factura_items.find { |i| i.origen == "auto_servicio_extra" }
+
+    # neto + 15% debe devolver el precio que Yusef cargó en el catálogo
+    con_isv = (serv.subtotal.to_d * (1 + IsvAware.rate)).round(2, BigDecimal::ROUND_HALF_UP)
+    assert_equal @servicio.precio_venta.to_d, con_isv
   end
 
   test "ambos flags activos generan dos líneas auto distintas" do

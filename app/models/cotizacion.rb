@@ -3,7 +3,7 @@ class Cotizacion < ApplicationRecord
   self.table_name = "cotizaciones"
   include CurrencyAware
 
-  ISV_RATE = Venta::ISV_RATE
+  include IsvAware
 
   ESTADOS = %w[borrador enviada aceptada rechazada expirada].freeze
 
@@ -87,7 +87,7 @@ class Cotizacion < ApplicationRecord
     sub = cotizacion_items.reject(&:marked_for_destruction?)
                           .sum { |i| i.subtotal.to_d }
     self.subtotal = sub
-    self.impuesto = (sub * ISV_RATE).round(2)
+    self.impuesto = (sub * isv_rate).round(2, BigDecimal::ROUND_HALF_UP)
     self.total    = (sub + impuesto).round(2)
   end
 

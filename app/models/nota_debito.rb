@@ -3,7 +3,7 @@ class NotaDebito < ApplicationRecord
   self.table_name = "notas_debito"
   include CurrencyAware
 
-  ISV_RATE = Venta::ISV_RATE
+  include IsvAware
 
   ESTADOS = %w[creado emitido anulado].freeze
   MOTIVOS = %w[cambio_servicio peso_adicional ajuste_manual otro].freeze
@@ -115,7 +115,7 @@ class NotaDebito < ApplicationRecord
     sub = nota_debito_items.reject(&:marked_for_destruction?)
                            .sum { |i| i.subtotal.to_d }
     self.subtotal = sub
-    self.impuesto = (sub * ISV_RATE).round(2)
+    self.impuesto = (sub * isv_rate).round(2, BigDecimal::ROUND_HALF_UP)
     self.total    = (sub + impuesto).round(2)
   end
 end

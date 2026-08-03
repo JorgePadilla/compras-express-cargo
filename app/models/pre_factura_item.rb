@@ -25,8 +25,13 @@ class PreFacturaItem < ApplicationRecord
 
   private
 
+  # PR-10.a: `minimo_aplicado` protege los dos casos donde el subtotal NO sale
+  # de peso × precio — el cobro mínimo de servicio y el simbólico de prepagado
+  # en Miami. Sin ese guard, este callback los pisaba en silencio.
   def calculate_subtotal_from_peso
+    return if minimo_aplicado?
     return unless peso_cobrar.present? && precio_libra.present?
-    self.subtotal = (peso_cobrar.to_d * precio_libra.to_d).round(2)
+
+    self.subtotal = (peso_cobrar.to_d * precio_libra.to_d).round(2, BigDecimal::ROUND_HALF_UP)
   end
 end

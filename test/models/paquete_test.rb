@@ -46,13 +46,17 @@ class PaqueteTest < ActiveSupport::TestCase
     assert_not_nil paquete.fecha_recibido_miami
   end
 
-  test "calculates peso_volumetrico" do
+  # PR-10.a: el peso volumétrico se redondea a ½ libra con umbrales .10/.60
+  # (la regla del spreadsheet de Yusef, en VolumetricoCalculator), no con
+  # `.round(2)`. Antes la calculadora de /etiquetar mostraba un peso y la
+  # pre-factura cobraba otro.
+  test "calculates peso_volumetrico redondeando a media libra" do
     paquete = Paquete.create!(
       tracking: "1Z999VOL", cliente: clientes(:juan),
       alto: 10.0, largo: 12.0, ancho: 8.0
     )
-    expected = (10.0 * 12.0 * 8.0 / 166.0).round(2)
-    assert_equal expected, paquete.peso_volumetrico.to_f
+    # 960 pulg³ / 166 = 5.783 → frac .783 ≥ .60 → sube a 6.0
+    assert_equal 6.0, paquete.peso_volumetrico.to_f
   end
 
   test "calculates peso_cobrar as max of peso and peso_volumetrico" do
@@ -60,8 +64,17 @@ class PaqueteTest < ActiveSupport::TestCase
       tracking: "1Z999COBRAR", cliente: clientes(:juan),
       peso: 2.0, alto: 20.0, largo: 20.0, ancho: 20.0
     )
-    vol = (20.0 * 20.0 * 20.0 / 166.0).round(2)
-    assert_equal vol, paquete.peso_cobrar.to_f
+    # 8000 pulg³ / 166 = 48.19 → frac .19 entre .10 y .59 → 48.5
+    assert_equal 48.5, paquete.peso_cobrar.to_f
+  end
+
+  test "peso_volumetrico baja cuando la fraccion es menor a .10" do
+    paquete = Paquete.create!(
+      tracking: "1Z999VOLBAJA", cliente: clientes(:juan),
+      alto: 8.0, largo: 9.0, ancho: 9.0
+    )
+    # 648 pulg³ / 166 = 3.903 → frac .903 ≥ .60 → 4.0 (antes facturaba 3.90)
+    assert_equal 4.0, paquete.peso_volumetrico.to_f
   end
 
   test "peso_cobrar uses peso when greater than volumetric" do

@@ -2,7 +2,7 @@ class PreFactura < ApplicationRecord
   include CurrencyAware
   has_paper_trail  # PR-D1.a: audit log
 
-  ISV_RATE = BigDecimal("0.15")
+  include IsvAware
 
   # PR-6b: cuando un paquete fue prepagado en Miami (entrega personal),
   # NO se cobra el flete completo en Honduras — solo un monto simbólico
@@ -162,29 +162,60 @@ class PreFactura < ApplicationRecord
         # en vez de flete completo. La marcamos como `manual` para que
         # el cajero pueda ajustar el monto antes de facturar.
         prepagados_miami << paquete
+        # PR-10.a: `peso_cobrar` y `precio_libra` van en nil a propósito. Si
+        # se mandan, `PreFacturaItem#calculate_subtotal_from_peso` corre en
+        # before_validation y sobrescribe el monto simbólico con `peso × 0 = 0`
+        # — el cobro de $1.00 se perdía en silencio desde PR-6b.
         pre_factura.pre_factura_items.build(
           paquete: paquete,
           concepto: "Flete #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia} (PREPAGADO EN MIAMI)",
-          peso_cobrar: paquete.peso_cobrar || BigDecimal("0"),
+          peso_cobrar: paquete.peso_cobrar,
           precio_libra: BigDecimal("0"),
           subtotal: PREPAGADO_MIAMI_SIMBOLICO,
+          minimo_aplicado: true,
           origen: "manual"
         )
         next
       end
 
-      precio = cliente.categoria_precio&.precio_para(paquete.tipo_envio) ||
-               paquete.tipo_envio&.precio_libra ||
-               BigDecimal("0")
-      peso = paquete.peso_cobrar || BigDecimal("0")
-      subtotal = (BigDecimal(peso.to_s) * BigDecimal(precio.to_s)).round(2)
+      peso   = paquete.peso_cobrar || BigDecimal("0")
+      tarifa = Tarifa.resolver(
+        tipo_envio: paquete.tipo_envio,
+        peso: peso,
+        cliente: cliente,
+        # `proveedor` es a la vez columna string y nombre de asociación — se
+        # busca por id para no depender de cuál gana el reader.
+        proveedor: (Proveedor.find_by(id: paquete.proveedor_id) if paquete.proveedor_id),
+        sucursal: paquete.sucursal
+      )
+
+      if tarifa
+        cobro          = tarifa.cobro_para(peso)
+        precio         = tarifa.precio_libra
+        subtotal       = cobro[:subtotal]
+        peso_fac       = cobro[:peso_facturado]
+        aplico_minimo  = cobro[:aplico_minimo]
+        concepto = "Flete #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia}"
+        concepto += " (mínimo de servicio)" if aplico_minimo
+      else
+        # Sin tarifa cargada caemos al comportamiento previo, para que un
+        # servicio recién creado no facture en cero sin aviso.
+        precio        = cliente.categoria_precio&.precio_para(paquete.tipo_envio) ||
+                        paquete.tipo_envio&.precio_libra ||
+                        BigDecimal("0")
+        peso_fac      = peso
+        subtotal      = (BigDecimal(peso.to_s) * BigDecimal(precio.to_s)).round(2, BigDecimal::ROUND_HALF_UP)
+        aplico_minimo = false
+        concepto      = "Flete #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia}"
+      end
 
       pre_factura.pre_factura_items.build(
         paquete: paquete,
-        concepto: "Flete #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia}",
-        peso_cobrar: peso,
+        concepto: concepto,
+        peso_cobrar: peso_fac,
         precio_libra: precio,
         subtotal: subtotal,
+        minimo_aplicado: aplico_minimo,
         origen: "manual"
       )
     end
@@ -234,7 +265,10 @@ class PreFactura < ApplicationRecord
             paquete: paquete,
             servicio_extra: servicio,
             concepto: "#{servicio.descripcion} - #{paquete.guia}",
-            subtotal: servicio.precio_venta,
+            # PR-10.a: `precio_incluye_isv` existía en la tabla y se ignoraba,
+            # así que a un servicio con el ISV ya adentro se le volvía a
+            # aplicar el 15% al totalizar. Se guarda el neto.
+            subtotal: servicio.precio_venta_sin_isv,
             origen: "auto_servicio_extra"
           )
         end
@@ -254,7 +288,7 @@ class PreFactura < ApplicationRecord
     sub = pre_factura_items.reject(&:marked_for_destruction?)
                            .sum { |i| i.subtotal.to_d }
     self.subtotal = sub
-    self.impuesto = (sub * ISV_RATE).round(2)
+    self.impuesto = (sub * isv_rate).round(2, BigDecimal::ROUND_HALF_UP)
     self.total    = (sub + impuesto).round(2)
   end
 end

@@ -34,4 +34,14 @@ class ServicioExtra < ApplicationRecord
   def margen
     precio_venta - costo
   end
+
+  # PR-10.a: el ISV se aplica UNA sola vez, al totalizar la pre-factura. Si
+  # este servicio ya trae el impuesto adentro (`precio_incluye_isv`, que es el
+  # default y lo que Yusef describió: "ya incluye ISV"), hay que meter el neto
+  # a la línea — antes se metía el bruto y se le volvía a aplicar el 15%.
+  def precio_venta_sin_isv
+    return precio_venta.to_d unless precio_incluye_isv?
+
+    (precio_venta.to_d / (1 + IsvAware.rate)).round(2, BigDecimal::ROUND_HALF_UP)
+  end
 end

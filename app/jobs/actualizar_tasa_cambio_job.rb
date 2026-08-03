@@ -1,3 +1,11 @@
+# ⚠️ PR-10.a: este job está DESAGENDADO en `config/recurring.yml`.
+#
+# Yusef confirmó el 2026-08-02 que la tasa de cambio es **fija** y la carga un
+# admin desde Configuración. Mientras este job corría (todos los días a las
+# 6am en producción) le sobrescribía esa tasa con la de floatrates.com.
+#
+# Se conserva el código por si vuelven a la tasa automática; para reactivarlo
+# basta con descomentar la entrada en `recurring.yml`.
 class ActualizarTasaCambioJob < ApplicationJob
   queue_as :default
 
