@@ -62,21 +62,32 @@ class Tarifa < ApplicationRecord
 
   # Calcula el cobro del flete para un peso dado.
   # Devuelve { subtotal:, moneda:, peso_facturado:, aplico_minimo: }.
+  #
+  # Ojo con la moneda del resultado: cuando se aplica el mínimo, se devuelve
+  # **en la moneda del mínimo**, no en la del precio. Convertirlo acá y que el
+  # caller lo vuelva a convertir hacía un round-trip que perdía centavos — un
+  # mínimo de L.173.91 sobre una tarifa en USD volvía como L.173.95.
   def cobro_para(peso_cobrar)
     peso = BigDecimal(peso_cobrar.to_s)
     peso = redondear_al_incremento(peso)
     peso = [ peso, minimo_libras.to_d ].max if minimo_libras.present?
 
     subtotal = (peso * precio_libra.to_d).round(2, BigDecimal::ROUND_HALF_UP)
-    aplico   = false
 
+    # La comparación sí necesita una moneda común. Si el redondeo de esa
+    # conversión mueve el resultado, solo cambia qué rama gana justo en el
+    # límite — el monto que se cobra sale sin round-trip.
     piso = minimo_monto_en(moneda)
     if piso && subtotal < piso
-      subtotal = piso
-      aplico   = true
+      return {
+        subtotal: minimo_monto.to_d,
+        moneda: minimo_moneda || moneda,
+        peso_facturado: peso,
+        aplico_minimo: true
+      }
     end
 
-    { subtotal: subtotal, moneda: moneda, peso_facturado: peso, aplico_minimo: aplico }
+    { subtotal: subtotal, moneda: moneda, peso_facturado: peso, aplico_minimo: false }
   end
 
   # El mínimo se GUARDA sin ISV. Yusef: "L.173.91 más ISV (queda en L.200.00

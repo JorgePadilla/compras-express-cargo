@@ -31,7 +31,9 @@ class PreFacturaCobrosAutoTest < ActiveSupport::TestCase
     pf = PreFactura.build_from_paquetes(@cliente, [ p.id ])
     rec = pf.pre_factura_items.find { |i| i.origen == "auto_recolecta" }
     assert rec, "debe haber una línea auto_recolecta"
-    assert_equal 35.0.to_d, rec.subtotal.to_d
+    # PR-10.a: la tarifa de recolecta se carga en USD y el documento es en
+    # Lempiras — antes el monto entraba crudo y se mostraba como "L. 35.00".
+    assert_equal CurrencyAware.convertir(35.0, de: "USD", a: "LPS"), rec.subtotal.to_d
     assert_match(/Recolecta/, rec.concepto)
   end
 
@@ -43,7 +45,8 @@ class PreFacturaCobrosAutoTest < ActiveSupport::TestCase
     pf = PreFactura.build_from_paquetes(@cliente, [ p.id ])
     serv = pf.pre_factura_items.find { |i| i.origen == "auto_servicio_extra" }
     assert serv
-    assert_equal @servicio.precio_venta_sin_isv, serv.subtotal.to_d
+    esperado = CurrencyAware.convertir(@servicio.precio_venta_sin_isv, de: @servicio.moneda, a: "LPS")
+    assert_equal esperado, serv.subtotal.to_d
     assert_equal @servicio.id, serv.servicio_extra_id
   end
 
@@ -53,9 +56,11 @@ class PreFacturaCobrosAutoTest < ActiveSupport::TestCase
     pf = PreFactura.build_from_paquetes(@cliente, [ p.id ])
     serv = pf.pre_factura_items.find { |i| i.origen == "auto_servicio_extra" }
 
-    # neto + 15% debe devolver el precio que Yusef cargó en el catálogo
+    # neto + 15%, de vuelta a la moneda del catálogo, debe devolver el precio
+    # que Yusef cargó.
     con_isv = (serv.subtotal.to_d * (1 + IsvAware.rate)).round(2, BigDecimal::ROUND_HALF_UP)
-    assert_equal @servicio.precio_venta.to_d, con_isv
+    en_catalogo = CurrencyAware.convertir(con_isv, de: "LPS", a: @servicio.moneda)
+    assert_in_delta @servicio.precio_venta.to_f, en_catalogo.to_f, 0.02
   end
 
   test "ambos flags activos generan dos líneas auto distintas" do

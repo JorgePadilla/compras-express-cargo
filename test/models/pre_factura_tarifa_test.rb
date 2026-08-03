@@ -24,13 +24,41 @@ class PreFacturaTarifaTest < ActiveSupport::TestCase
     pf.pre_factura_items.find { |i| i.concepto.to_s.start_with?("Flete") }
   end
 
-  test "usa la tarifa de lista cuando no hay nada mas especifico" do
+  # Las tarifas están en USD y la pre-factura en Lempiras, así que los montos
+  # esperados se expresan como conversión y no como números mágicos.
+  def tasa = CurrencyAware.tasa_vigente
+  def a_lps(usd) = CurrencyAware.convertir(usd, de: "USD", a: "LPS")
+
+  test "la pre-factura nace en Lempiras" do
     Tarifa.create!(tipo_envio: tipo_envios(:cer), precio_libra: 4.50, moneda: "USD")
     p = paquete_con(peso: 10)
 
     pf = PreFactura.build_from_paquetes(@cliente, [ p.id ], user: @user)
+    pf.save!
 
-    assert_equal BigDecimal("45.00"), item_de_flete(pf).subtotal
+    assert_equal "LPS", pf.moneda
+    assert_equal tasa, pf.tasa_cambio_aplicada.to_d, "la tasa queda congelada en el documento"
+  end
+
+  test "convierte el precio en dolares a la moneda del documento" do
+    Tarifa.create!(tipo_envio: tipo_envios(:cer), precio_libra: 4.50, moneda: "USD")
+    p = paquete_con(peso: 10)
+
+    pf = PreFactura.build_from_paquetes(@cliente, [ p.id ], user: @user)
+    item = item_de_flete(pf)
+
+    assert_equal a_lps(4.50), item.precio_libra,
+                 "antes guardaba 4.50 y lo mostraba como si fueran Lempiras"
+    assert_equal (BigDecimal("10") * a_lps(4.50)).round(2), item.subtotal
+  end
+
+  test "la factura cuadra a la vista del cliente: peso x precio = subtotal" do
+    Tarifa.create!(tipo_envio: tipo_envios(:cer), precio_libra: 4.50, moneda: "USD")
+    p = paquete_con(peso: 7)
+
+    item = item_de_flete(PreFactura.build_from_paquetes(@cliente, [ p.id ], user: @user))
+
+    assert_equal (item.peso_cobrar.to_d * item.precio_libra.to_d).round(2), item.subtotal.to_d
   end
 
   test "aplica el minimo de monto y lo deja anotado en el concepto" do
@@ -41,7 +69,7 @@ class PreFacturaTarifaTest < ActiveSupport::TestCase
     pf = PreFactura.build_from_paquetes(@cliente, [ p.id ], user: @user)
     item = item_de_flete(pf)
 
-    assert_equal BigDecimal("20.00"), item.subtotal
+    assert_equal a_lps(20.00), item.subtotal
     assert_includes item.concepto, "mínimo de servicio"
     assert item.minimo_aplicado
   end
@@ -54,8 +82,20 @@ class PreFacturaTarifaTest < ActiveSupport::TestCase
     pf = PreFactura.build_from_paquetes(@cliente, [ p.id ], user: @user)
     pf.save!
 
-    assert_equal BigDecimal("20.00"), item_de_flete(pf.reload).subtotal,
+    assert_equal a_lps(20.00), item_de_flete(pf.reload).subtotal,
                  "el callback recalculaba 1 × 4.50 y borraba el minimo"
+  end
+
+  test "un minimo en Lempiras con precio en dolares no se convierte dos veces" do
+    # El caso real: CER cobra $4.50/lb con mínimo de L.200 (neto L.173.91).
+    Tarifa.create!(tipo_envio: tipo_envios(:cer), precio_libra: 4.50, moneda: "USD",
+                   minimo_monto: 173.91, minimo_moneda: "LPS")
+    p = paquete_con(peso: 1)
+
+    item = item_de_flete(PreFactura.build_from_paquetes(@cliente, [ p.id ], user: @user))
+
+    assert_equal BigDecimal("173.91"), item.subtotal,
+                 "el mínimo ya estaba en Lempiras: debe llegar tal cual al documento"
   end
 
   test "aplica el minimo de libras — el caso CEM/CKM" do
@@ -67,7 +107,7 @@ class PreFacturaTarifaTest < ActiveSupport::TestCase
     item = item_de_flete(pf)
 
     assert_equal BigDecimal("20.0"), item.peso_cobrar
-    assert_equal BigDecimal("30.00"), item.subtotal
+    assert_equal (BigDecimal("20") * a_lps(1.50)).round(2), item.subtotal
   end
 
   test "el precio especial del cliente gana sobre el de lista" do
@@ -78,17 +118,17 @@ class PreFacturaTarifaTest < ActiveSupport::TestCase
 
     pf = PreFactura.build_from_paquetes(@cliente, [ p.id ], user: @user)
 
-    assert_equal BigDecimal("20.00"), item_de_flete(pf).subtotal
+    assert_equal (BigDecimal("10") * a_lps(2.00)).round(2), item_de_flete(pf).subtotal
   end
 
-  test "sin ninguna tarifa cargada cae al comportamiento anterior" do
+  test "sin ninguna tarifa cargada cae al comportamiento anterior, ya convertido" do
     p = paquete_con(peso: 10)
 
     pf = PreFactura.build_from_paquetes(@cliente, [ p.id ], user: @user)
 
-    esperado = @cliente.categoria_precio&.precio_para(tipo_envios(:cer)) ||
-               tipo_envios(:cer).precio_libra
-    assert_equal (BigDecimal("10") * esperado.to_d).round(2), item_de_flete(pf).subtotal
+    precio_usd = @cliente.categoria_precio&.precio_para(tipo_envios(:cer)) ||
+                 tipo_envios(:cer).precio_libra
+    assert_equal (BigDecimal("10") * a_lps(precio_usd)).round(2), item_de_flete(pf).subtotal
   end
 
   # ── Prepagado en Miami (PR-6b, sin cobertura hasta ahora) ──
@@ -101,7 +141,7 @@ class PreFacturaTarifaTest < ActiveSupport::TestCase
     pf.save!
 
     item = item_de_flete(pf.reload)
-    assert_equal PreFactura::PREPAGADO_MIAMI_SIMBOLICO, item.subtotal,
+    assert_equal a_lps(PreFactura::PREPAGADO_MIAMI_SIMBOLICO), item.subtotal,
                  "se guardaba en 0 porque el callback hacia peso × 0"
     assert_includes item.concepto, "PREPAGADO EN MIAMI"
   end
@@ -113,6 +153,6 @@ class PreFacturaTarifaTest < ActiveSupport::TestCase
     pf = PreFactura.build_from_paquetes(@cliente, [ p.id ], user: @user)
     pf.save!
 
-    assert_equal PreFactura::PREPAGADO_MIAMI_SIMBOLICO, pf.reload.subtotal
+    assert_equal a_lps(PreFactura::PREPAGADO_MIAMI_SIMBOLICO), pf.reload.subtotal
   end
 end

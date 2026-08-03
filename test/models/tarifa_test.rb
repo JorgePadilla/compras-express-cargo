@@ -63,14 +63,15 @@ class TarifaTest < ActiveSupport::TestCase
     assert_not r[:aplico_minimo]
   end
 
-  test "convierte el minimo cuando esta en otra moneda que el precio" do
+  test "el minimo en otra moneda se devuelve SIN convertir, para no perder centavos" do
     Configuracion.set("tasa_cambio", "25.0", tipo: "decimal")
-    # Mínimo L.250 = $10 a tasa 25. Precio $4.50/lb.
+    # Mínimo L.250 = $10 a tasa 25. Precio $4.50/lb → 4.50 < 10 → aplica.
     t = crear(precio_libra: 4.50, minimo_monto: 250.00, minimo_moneda: "LPS", moneda: "USD")
 
     r = t.cobro_para(1)
 
-    assert_equal BigDecimal("10.00"), r[:subtotal]
+    assert_equal BigDecimal("250.00"), r[:subtotal]
+    assert_equal "LPS", r[:moneda], "el caller convierte una sola vez, desde acá"
     assert r[:aplico_minimo]
   end
 

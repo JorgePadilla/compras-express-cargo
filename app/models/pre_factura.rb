@@ -171,7 +171,9 @@ class PreFactura < ApplicationRecord
           concepto: "Flete #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia} (PREPAGADO EN MIAMI)",
           peso_cobrar: paquete.peso_cobrar,
           precio_libra: BigDecimal("0"),
-          subtotal: PREPAGADO_MIAMI_SIMBOLICO,
+          # "la factura la va a hacer por un dólar más impuesto" — el
+          # simbólico está en USD, el documento en Lempiras.
+          subtotal: pre_factura.convertir_a_moneda(PREPAGADO_MIAMI_SIMBOLICO, "USD"),
           minimo_aplicado: true,
           origen: "manual"
         )
@@ -191,20 +193,30 @@ class PreFactura < ApplicationRecord
 
       if tarifa
         cobro          = tarifa.cobro_para(peso)
-        precio         = tarifa.precio_libra
-        subtotal       = cobro[:subtotal]
         peso_fac       = cobro[:peso_facturado]
         aplico_minimo  = cobro[:aplico_minimo]
+        # PR-10.a: las tarifas están en USD y el documento en Lempiras. Se
+        # convierte el precio unitario y el subtotal se recalcula sobre él,
+        # para que la factura cuadre a la vista del cliente (peso × precio =
+        # subtotal). El mínimo es un total, así que ese se convierte directo.
+        precio   = pre_factura.convertir_a_moneda(tarifa.precio_libra, tarifa.moneda)
+        subtotal = if aplico_minimo
+          pre_factura.convertir_a_moneda(cobro[:subtotal], cobro[:moneda])
+        else
+          (peso_fac * precio).round(2, BigDecimal::ROUND_HALF_UP)
+        end
         concepto = "Flete #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia}"
         concepto += " (mínimo de servicio)" if aplico_minimo
       else
         # Sin tarifa cargada caemos al comportamiento previo, para que un
-        # servicio recién creado no facture en cero sin aviso.
-        precio        = cliente.categoria_precio&.precio_para(paquete.tipo_envio) ||
+        # servicio recién creado no facture en cero sin aviso. Esos precios
+        # también son USD.
+        precio_origen = cliente.categoria_precio&.precio_para(paquete.tipo_envio) ||
                         paquete.tipo_envio&.precio_libra ||
                         BigDecimal("0")
+        precio        = pre_factura.convertir_a_moneda(precio_origen, "USD")
         peso_fac      = peso
-        subtotal      = (BigDecimal(peso.to_s) * BigDecimal(precio.to_s)).round(2, BigDecimal::ROUND_HALF_UP)
+        subtotal      = (BigDecimal(peso.to_s) * precio).round(2, BigDecimal::ROUND_HALF_UP)
         aplico_minimo = false
         concepto      = "Flete #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia}"
       end
@@ -231,6 +243,25 @@ class PreFactura < ApplicationRecord
     pre_factura
   end
 
+  # PR-10.a: convierte un monto a la moneda de ESTA pre-factura, usando la
+  # tasa congelada si ya existe (documento viejo) o la vigente si es nueva.
+  #
+  # Es el arreglo del bug mas caro que tenia el sistema: los precios de
+  # `tarifas` / `tipo_envios` estan en dolares, la pre-factura nace en
+  # Lempiras, y nadie convertia — `CurrencyAware#convertir` existia y no se
+  # llamaba desde ningun lado. Un CER de 10 lb salia "L. 45.00" cuando son
+  # $45, o sea unas 25 veces menos de lo que corresponde cobrar.
+  def convertir_a_moneda(monto, desde)
+    return BigDecimal("0") if monto.blank?
+
+    CurrencyAware.convertir(
+      monto,
+      de: desde.to_s.presence || moneda,
+      a: moneda,
+      tasa: tasa_cambio_aplicada || CurrencyAware.tasa_vigente
+    )
+  end
+
   # PR-D6.b: agrega líneas auto al pre_factura por cada flag activo en
   # el paquete (recolecta_solicitada, solicito_cambio_servicio).
   # Idempotente: si ya hay líneas auto para ese paquete, no las duplica
@@ -245,7 +276,9 @@ class PreFactura < ApplicationRecord
         pre_factura_items.build(
           paquete: paquete,
           concepto: "Recolecta - #{paquete.guia}",
-          subtotal: paquete.recolecta_monto,
+          # La tarifa de recolecta se carga en USD por default.
+          subtotal: convertir_a_moneda(paquete.recolecta_monto, paquete.recolecta_moneda),
+          minimo_aplicado: true, # es un monto fijo, no sale de peso × precio
           origen: "auto_recolecta"
         )
       end
@@ -267,8 +300,10 @@ class PreFactura < ApplicationRecord
             concepto: "#{servicio.descripcion} - #{paquete.guia}",
             # PR-10.a: `precio_incluye_isv` existía en la tabla y se ignoraba,
             # así que a un servicio con el ISV ya adentro se le volvía a
-            # aplicar el 15% al totalizar. Se guarda el neto.
-            subtotal: servicio.precio_venta_sin_isv,
+            # aplicar el 15% al totalizar. Se guarda el neto, convertido a la
+            # moneda del documento (el catálogo se carga en USD).
+            subtotal: convertir_a_moneda(servicio.precio_venta_sin_isv, servicio.moneda),
+            minimo_aplicado: true, # monto fijo del catálogo
             origen: "auto_servicio_extra"
           )
         end
