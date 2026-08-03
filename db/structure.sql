@@ -10,6 +10,20 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+--
+-- Name: pg_trgm; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION pg_trgm; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION pg_trgm IS 'text similarity measurement and index searching based on trigrams';
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -3462,10 +3476,24 @@ CREATE UNIQUE INDEX index_clientes_on_codigo ON public.clientes USING btree (cod
 
 
 --
+-- Name: index_clientes_on_codigo_normalizado; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_clientes_on_codigo_normalizado ON public.clientes USING btree (ltrim(regexp_replace((codigo)::text, '\D'::text, ''::text, 'g'::text), '0'::text));
+
+
+--
 -- Name: index_clientes_on_email; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX index_clientes_on_email ON public.clientes USING btree (email);
+
+
+--
+-- Name: index_clientes_on_nombre_completo_trgm; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_clientes_on_nombre_completo_trgm ON public.clientes USING gin (((((nombre)::text || ' '::text) || (COALESCE(apellido, ''::character varying))::text)) public.gin_trgm_ops);
 
 
 --
@@ -5557,6 +5585,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260802170000'),
 ('20260802160000'),
 ('20260802150000'),
 ('20260801160000'),
