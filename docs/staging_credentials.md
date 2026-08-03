@@ -33,6 +33,11 @@ dashboard, clientes land on `/cuenta`.
 | Pedro Mejia | pedro.mejia@yahoo.com | Cliente123! |
 | Carmen Santos | carmen.s@hotmail.com | Cliente123! |
 
+> ⚠️ Los códigos `CEC-00x` son datos históricos de staging. Los seeds **no**
+> fijan el código, así que un re-seed genera el formato real del sistema:
+> `C1`, `C2`, `C3`… — que es el que usa Yusef en producción (su etiqueta
+> anotada muestra `C6`). Si re-sembrás, estos códigos cambian.
+>
 > All demo clientes share the same password. Carlos Reyes is **inactive** and cannot log in.
 
 ## Demo Data

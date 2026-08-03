@@ -1,6 +1,6 @@
 # CEC — Fases de Implementacion
 
-39 modulos · 39 modelos · 670 tests · Rails 8 + Hotwire + Tailwind CSS 4 + PostgreSQL 17
+56 modelos · 101 migraciones · 1270 tests · Rails 8 + Hotwire + Tailwind CSS 4 + PostgreSQL 17
 
 ```
 Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pago → Entrega
