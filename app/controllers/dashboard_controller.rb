@@ -67,14 +67,29 @@ class DashboardController < ApplicationController
     # la pantalla que el operario ve todos los dias. Se reactiva en la Fase 7.
 
     if admin?
+      # Catálogos que mantiene el negocio. Van aparte de Configuración porque
+      # son las pantallas que Yusef usa a diario ("entre más cosas nos dejes
+      # crear, menos te molestaremos") — estaban solo en el sidebar y no se
+      # encontraban desde el home.
+      groups << {
+        area: "Catálogos",
+        cards: [
+          card("Tabla de Servicios",     "Precios, escalones y mínimos", "currency-dollar",         servicios_path,                 :gold),
+          card("Categorías de Precio",   nil, "tag",                     categoria_precios_path,    :gold),
+          card("Tarifas de Recolecta",   nil, "truck",                   tarifas_recolecta_path,    :gold),
+          card("Servicios Extra",        nil, "sparkles",                servicios_extra_path,      :gold),
+          card("Proveedores",            nil, "building-storefront",     proveedores_path,          :gold),
+          card("Motivos de Retención",   nil, "hand-raised",             motivos_retencion_path,    :gold),
+          card("Plantillas de Notas",    nil, "document-duplicate",      plantillas_notas_cliente_path, :gold)
+        ]
+      }
+
       groups << {
         area: "Configuración",
         cards: [
-          card("Usuarios",             nil, "user-group",            users_path,            :red),
-          card("Sucursales",           nil, "building-storefront",   sucursales_path,       :red),
-          card("Categorías de Precio", nil, "tag",                   categoria_precios_path, :red),
-          card("Tabla de Servicios",   nil, "currency-dollar",       servicios_path,        :red),
-          card("Empresa",              nil, "building-office-2",     empresa_path,          :red)
+          card("Usuarios",   nil, "user-group",          users_path,      :red),
+          card("Sucursales", nil, "building-storefront", sucursales_path, :red),
+          card("Empresa",    nil, "building-office-2",   empresa_path,    :red)
           # "Reportes" apuntaba a "#" — se agrega cuando exista (Fase 6).
         ]
       }
