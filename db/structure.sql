@@ -2114,6 +2114,52 @@ ALTER SEQUENCE public.tareas_id_seq OWNED BY public.tareas.id;
 
 
 --
+-- Name: tarifas; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.tarifas (
+    id bigint NOT NULL,
+    tipo_envio_id bigint NOT NULL,
+    categoria_precio_id bigint,
+    cliente_id bigint,
+    sucursal_id bigint,
+    proveedor_id bigint,
+    desde_libras numeric(10,2) DEFAULT 0.0 NOT NULL,
+    hasta_libras numeric(10,2),
+    precio_libra numeric(10,2) NOT NULL,
+    moneda character varying DEFAULT 'USD'::character varying NOT NULL,
+    minimo_monto numeric(10,2),
+    minimo_moneda character varying,
+    minimo_libras numeric(10,2),
+    aplica_minimo boolean DEFAULT true NOT NULL,
+    incremento_libras numeric(4,2),
+    activo boolean DEFAULT true NOT NULL,
+    notas text,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: tarifas_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.tarifas_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: tarifas_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.tarifas_id_seq OWNED BY public.tarifas.id;
+
+
+--
 -- Name: tarifas_recolecta; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2697,6 +2743,13 @@ ALTER TABLE ONLY public.tareas ALTER COLUMN id SET DEFAULT nextval('public.tarea
 
 
 --
+-- Name: tarifas id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarifas ALTER COLUMN id SET DEFAULT nextval('public.tarifas_id_seq'::regclass);
+
+
+--
 -- Name: tarifas_recolecta id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -3174,6 +3227,14 @@ ALTER TABLE ONLY public.tamano_cajas
 
 ALTER TABLE ONLY public.tareas
     ADD CONSTRAINT tareas_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tarifas tarifas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarifas
+    ADD CONSTRAINT tarifas_pkey PRIMARY KEY (id);
 
 
 --
@@ -4394,6 +4455,69 @@ CREATE INDEX index_tareas_on_pre_alerta_paquete_id ON public.tareas USING btree 
 
 
 --
+-- Name: index_tarifas_on_categoria_precio_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tarifas_on_categoria_precio_id ON public.tarifas USING btree (categoria_precio_id);
+
+
+--
+-- Name: index_tarifas_on_cliente_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tarifas_on_cliente_id ON public.tarifas USING btree (cliente_id);
+
+
+--
+-- Name: index_tarifas_on_proveedor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tarifas_on_proveedor_id ON public.tarifas USING btree (proveedor_id);
+
+
+--
+-- Name: index_tarifas_on_sucursal_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tarifas_on_sucursal_id ON public.tarifas USING btree (sucursal_id);
+
+
+--
+-- Name: index_tarifas_on_tipo_envio_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tarifas_on_tipo_envio_id ON public.tarifas USING btree (tipo_envio_id);
+
+
+--
+-- Name: index_tarifas_por_categoria; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tarifas_por_categoria ON public.tarifas USING btree (categoria_precio_id, tipo_envio_id, desde_libras);
+
+
+--
+-- Name: index_tarifas_por_cliente; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tarifas_por_cliente ON public.tarifas USING btree (cliente_id, tipo_envio_id, desde_libras);
+
+
+--
+-- Name: index_tarifas_por_proveedor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tarifas_por_proveedor ON public.tarifas USING btree (proveedor_id, tipo_envio_id, desde_libras);
+
+
+--
+-- Name: index_tarifas_por_servicio; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tarifas_por_servicio ON public.tarifas USING btree (tipo_envio_id, desde_libras);
+
+
+--
 -- Name: index_tarifas_recolecta_on_activo; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5002,6 +5126,14 @@ ALTER TABLE ONLY public.financiamientos
 
 
 --
+-- Name: tarifas fk_rails_87d4d1c656; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarifas
+    ADD CONSTRAINT fk_rails_87d4d1c656 FOREIGN KEY (proveedor_id) REFERENCES public.proveedores(id);
+
+
+--
 -- Name: egresos_caja fk_rails_8acd1a6009; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5039,6 +5171,14 @@ ALTER TABLE ONLY public.tareas
 
 ALTER TABLE ONLY public.notas_debito
     ADD CONSTRAINT fk_rails_959289c6e4 FOREIGN KEY (venta_id) REFERENCES public.ventas(id);
+
+
+--
+-- Name: tarifas fk_rails_9927b9907d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarifas
+    ADD CONSTRAINT fk_rails_9927b9907d FOREIGN KEY (sucursal_id) REFERENCES public.sucursales(id);
 
 
 --
@@ -5274,6 +5414,22 @@ ALTER TABLE ONLY public.warehouse_receipts
 
 
 --
+-- Name: tarifas fk_rails_dc0714622a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarifas
+    ADD CONSTRAINT fk_rails_dc0714622a FOREIGN KEY (tipo_envio_id) REFERENCES public.tipo_envios(id);
+
+
+--
+-- Name: tarifas fk_rails_df00b19ef7; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarifas
+    ADD CONSTRAINT fk_rails_df00b19ef7 FOREIGN KEY (cliente_id) REFERENCES public.clientes(id);
+
+
+--
 -- Name: manifiestos fk_rails_e55f679c59; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5311,6 +5467,14 @@ ALTER TABLE ONLY public.financiamiento_cuotas
 
 ALTER TABLE ONLY public.paquetes
     ADD CONSTRAINT fk_rails_eeda9f916d FOREIGN KEY (venta_id) REFERENCES public.ventas(id);
+
+
+--
+-- Name: tarifas fk_rails_ef8d8e2d31; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarifas
+    ADD CONSTRAINT fk_rails_ef8d8e2d31 FOREIGN KEY (categoria_precio_id) REFERENCES public.categoria_precios(id);
 
 
 --
@@ -5392,6 +5556,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260802150000'),
 ('20260801160000'),
 ('20260801150000'),
 ('20260528192218'),
