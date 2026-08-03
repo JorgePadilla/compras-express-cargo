@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <title>Etiqueta — <%= @paquete&.numero_recepcion.presence || @paquete&.tracking %></title>
+  <meta charset="UTF-8">
+  <style>
+    /* PR-10.d: Dymo 2.25 × 1.25 in — el formato que Yusef confirmó para
+       ETIQUETAR. El Warehouse Receipt sigue en carta con su propio layout;
+       son dos documentos distintos que hasta ahora eran el mismo archivo. */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    @page { size: 2.25in 1.25in; margin: 0; }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      color: #000;
+      -webkit-font-smoothing: none;
+    }
+
+    .etq {
+      width: 2.25in;
+      height: 1.25in;
+      padding: 0.05in 0.07in;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+
+    /* Una etiqueta por hoja física. */
+    .etq + .etq { page-break-before: always; break-before: page; }
+
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .no-print { display: none !important; }
+    }
+
+    /* En pantalla se muestra el contorno para poder revisar el diseño sin
+       gastar etiquetas. */
+    @media screen {
+      body { background: #e5e7eb; padding: 24px; }
+      .etq {
+        background: #fff;
+        outline: 1px dashed #9ca3af;
+        margin: 0 auto 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.12);
+      }
+    }
+  </style>
+</head>
+<body>
+  <%= yield %>
+
+  <script>
+    if (new URL(window.location.href).searchParams.get("print") === "true") {
+      window.onload = function () { window.print(); }
+    }
+  </script>
+</body>
+</html>

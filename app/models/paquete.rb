@@ -73,6 +73,19 @@ class Paquete < ApplicationRecord
   ESTADO_FECHA_INMUTABLE = %i[].freeze
 
   validates :tracking, presence: true
+  # PR-10.d: `PreAlertaPaquete` ya validaba el formato y `Paquete` no, pese a
+  # que la spec lo pide (docs/05). El tracking se imprime en la etiqueta y
+  # alimenta el código de barras, así que se acota en el modelo.
+  #
+  # A propósito NO es tan estricta como la de `PreAlertaPaquete`: acá el valor
+  # lo teclea el digitador con un tracking real de carrier, y una regex de más
+  # lo dejaría sin poder guardar el paquete. Lo que sí se corta es el
+  # whitespace y los caracteres de markup — que es lo único que importaba.
+  TRACKING_FORMATO = /\A[A-Za-z0-9._\-\/]+\z/
+  validates :tracking, format: {
+    with: TRACKING_FORMATO,
+    message: "no permite espacios ni símbolos (solo letras, números, . _ - /)"
+  }, allow_blank: true
   validates :guia, presence: true, uniqueness: { case_sensitive: false }
   validates :estado, presence: true
   validates :peso, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true

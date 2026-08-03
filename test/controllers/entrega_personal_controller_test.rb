@@ -27,6 +27,25 @@ class EntregaPersonalControllerTest < ActionDispatch::IntegrationTest
     assert_match "data-entrega-personal-target=\"panel\"", response.body
   end
 
+  # PR-10.b: Yusef pidió "copiar básicamente peso, medidas y cálculo en
+  # entrega personal" más el valor a pagar.
+  test "monta la calculadora volumetrica" do
+    get new_entrega_personal_url
+
+    assert_response :success
+    assert_match "calc-volumetrico", response.body
+    assert_match "Peso a cobrar", response.body
+    assert_match "Medidas (pulgadas)", response.body
+  end
+
+  test "monta el bloque de valor a pagar apuntando al cotizador" do
+    get new_entrega_personal_url
+
+    assert_response :success
+    assert_match "Valor a pagar", response.body
+    assert_match "data-cotizador-url-value=\"/cotizador\"", response.body
+  end
+
   test "crea el paquete con tracking EP generado" do
     assert_difference("Paquete.count") do
       post entrega_personal_index_url, params: { paquete: {

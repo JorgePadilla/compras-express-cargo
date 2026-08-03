@@ -117,34 +117,10 @@ end %>
         </div>
       </div>
 
-      <%# Sección 3: Peso + Dimensiones %>
-      <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <div>
-          <%= f.label :peso, "Peso (lbs)", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
-          <%= f.number_field :peso, step: 0.01, min: 0, placeholder: "0.00",
-              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
-        </div>
-        <div>
-          <%= f.label :alto, class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
-          <%= f.number_field :alto, step: 0.01, min: 0, placeholder: "0",
-              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
-        </div>
-        <div>
-          <%= f.label :largo, class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
-          <%= f.number_field :largo, step: 0.01, min: 0, placeholder: "0",
-              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
-        </div>
-        <div>
-          <%= f.label :ancho, class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
-          <%= f.number_field :ancho, step: 0.01, min: 0, placeholder: "0",
-              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
-        </div>
-        <div>
-          <%= f.label :cantidad_productos, "Cant. Productos", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
-          <%= f.number_field :cantidad_productos, min: 0, placeholder: "1",
-              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
-        </div>
-      </div>
+      <%# Sección 3: Peso, medidas y cálculo — partial compartido con /etiquetar.
+          En EP además muestra el valor a pagar (PR-10.b). %>
+      <%= render "shared/peso_medidas_calc", f: f,
+            valor_a_pagar: true, cotizador_url: cotizador_path %>
 
       <%# Sección 4: Contenido + Remitente %>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -200,15 +176,18 @@ end %>
           data: { entrega_personal_target: "cantidadPaquetesHidden" } %>
     </div>
 
-    <%# Action bar (PR-7) — ButtonComponent muestra el atajo inline %>
+    <%# Action bar (PR-7) — ButtonComponent muestra el atajo inline.
+        `shortcut_label_only`: esta pantalla ya escucha F2/F9 en su propio
+        Stimulus, asi que el handler global no debe tambien clickear el boton
+        (PR-10.c — el doble disparo reventaba el <dialog> de cajas). %>
     <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
       <%# render(...) con paréntesis: si no, el bloque `{ "..." }` se asocia a
           ButtonComponent.new (no a render) y el texto se pierde. %>
       <%= render(ButtonComponent.new(variant: :primary, size: :md,
-            shortcut: "F2",
+            shortcut: "F2", shortcut_label_only: true,
             data: { action: "click->entrega-personal#clearForm" })) { "Limpiar" } %>
       <%= render(ButtonComponent.new(variant: :gold, size: :md,
-            icon: "printer", shortcut: "F9",
+            icon: "printer", shortcut: "F9", shortcut_label_only: true,
             data: { action: "click->entrega-personal#submitFormWithPrint" })) { "Guardar + Imprimir" } %>
     </div>
   <% end %>

@@ -20,6 +20,9 @@ class DashboardController < ApplicationController
 
     log = []
     log << card("Etiquetar",          "Recibir paquetes",           "tag",                    etiquetar_path,    :navy) if can_access?(:etiquetar)
+    # PR-10.c: faltaba la card de Entrega Personal, aunque la pantalla existe
+    # desde PR-6a y esta en el sidebar.
+    log << card("Entrega Personal",   "Paquetes traídos al mostrador", "user-plus",          new_entrega_personal_path, :navy) if can_access?(:entrega_personal)
     log << card("Manifiestos",        "Empaque y envío",            "cube",                   manifiestos_path,  :navy) if can_access?(:manifiestos)
     log << card("Pre-Alertas",        "Recepciones esperadas",      "bell-alert",             pre_alertas_path,  :navy) if can_access?(:pre_alertas)
     log << card("Todos los Paquetes", "Búsqueda y reportes",        "archive-box",            paquetes_path,     :navy) if can_access?(:paquetes)
@@ -59,16 +62,9 @@ class DashboardController < ApplicationController
       }
     end
 
-    if can_access?(:marketing) || admin?
-      groups << {
-        area: "Marketing",
-        cards: [
-          card("Correos",  nil, "envelope",                  "#", :navy),
-          card("WhatsApp", nil, "chat-bubble-left-right",    "#", :navy),
-          card("SMS",      nil, "device-phone-mobile",       "#", :navy)
-        ]
-      }
-    end
+    # PR-10.c: el grupo de Marketing queda oculto hasta que exista el modulo.
+    # Las 3 cards apuntaban a "#" y no hacian nada al clickearlas — ruido en
+    # la pantalla que el operario ve todos los dias. Se reactiva en la Fase 7.
 
     if admin?
       groups << {
@@ -77,8 +73,9 @@ class DashboardController < ApplicationController
           card("Usuarios",             nil, "user-group",            users_path,            :red),
           card("Sucursales",           nil, "building-storefront",   sucursales_path,       :red),
           card("Categorías de Precio", nil, "tag",                   categoria_precios_path, :red),
-          card("Empresa",              nil, "building-office-2",     empresa_path,          :red),
-          card("Reportes",             nil, "table-cells",           "#",                   :red)
+          card("Tabla de Servicios",   nil, "currency-dollar",       servicios_path,        :red),
+          card("Empresa",              nil, "building-office-2",     empresa_path,          :red)
+          # "Reportes" apuntaba a "#" — se agrega cuando exista (Fase 6).
         ]
       }
     end

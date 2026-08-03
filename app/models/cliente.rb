@@ -34,9 +34,39 @@ class Cliente < ApplicationRecord
   validates :tema, inclusion: { in: %w[light dark], allow_nil: true }
 
   scope :activos, -> { where(activo: true) }
+  # PR-10.c: búsqueda combinada de código y nombre. Antes hacía un `OR` sobre
+  # columnas sueltas con el término completo, así que fallaba en los dos casos
+  # que más usa el operario:
+  #
+  #   "Juan Perez"  → 0 resultados (ninguna columna sola contiene esa cadena)
+  #   "C002"        → 0 resultados (el código real es C2)
+  #
+  # Yusef: "cuando hago búsquedas por código, quitar los ceros" y "a veces
+  # llegan las etiquetas rotas: solo dicen 234 y después dice Pérez Hernández".
+  #
+  # Cada palabra del término tiene que matchear algo (AND entre palabras, OR
+  # entre campos), así "2 María" encuentra a María con código C2.
   scope :buscar, ->(term) {
-    where("codigo ILIKE :q OR nombre ILIKE :q OR apellido ILIKE :q OR email ILIKE :q",
-          q: "%#{sanitize_sql_like(term)}%")
+    tokens = term.to_s.strip.split(/\s+/).reject(&:blank?)
+    next all if tokens.empty?
+
+    tokens.reduce(all) do |rel, token|
+      condiciones = [
+        "clientes.codigo ILIKE :like",
+        "(clientes.nombre || ' ' || COALESCE(clientes.apellido, '')) ILIKE :like",
+        "clientes.email ILIKE :like"
+      ]
+      valores = { like: "%#{sanitize_sql_like(token)}%" }
+
+      # Los ceros a la izquierda se ignoran a ambos lados: C002 == C2 == 2.
+      normalizado = token.gsub(/\D/, "").sub(/\A0+/, "").presence
+      if normalizado
+        condiciones << "ltrim(regexp_replace(clientes.codigo, '\\D', '', 'g'), '0') = :codigo"
+        valores[:codigo] = normalizado
+      end
+
+      rel.where(condiciones.join(" OR "), valores)
+    end
   }
 
   before_validation :generate_codigo, on: :create, if: -> { codigo.blank? }

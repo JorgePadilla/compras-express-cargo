@@ -34,6 +34,9 @@ Rails.application.routes.draw do
   resources :paquetes, except: [:new] do
     member do
       get :label
+      # PR-10.d: la etiqueta fisica (Dymo 2.25x1.25). `label` es el Warehouse
+      # Receipt en carta — son dos documentos distintos.
+      get :etiqueta
       get :reimprimir_etiquetas
       delete :eliminar_de_pre_alerta
       post :mover_a_pre_alerta
@@ -76,6 +79,9 @@ Rails.application.routes.draw do
 
   # PR-10.a: "la tabla de servicios" — precios por libra, escalones y mínimos.
   resources :servicios, only: %i[index new create edit update destroy]
+
+  # PR-10.b: cotización de flete en vivo (JSON) para el "valor a pagar".
+  get "cotizador", to: "cotizador#show"
 
   # PR-D6.a: catálogos de cobros automáticos en pre-factura.
   resources :tarifas_recolecta, only: %i[index new create edit update],

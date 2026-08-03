@@ -100,8 +100,29 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     assert_includes areas, "Entregas"
     assert_includes areas, "Caja Diaria"
     assert_includes areas, "Clientes"
-    assert_includes areas, "Marketing"
     assert_includes areas, "Configuración"
+    # PR-10.c: "Marketing" se oculta hasta que exista el módulo — sus 3 cards
+    # apuntaban a "#" y no hacían nada.
+    assert_not_includes areas, "Marketing"
+  end
+
+  test "no quedan cards muertas apuntando a #" do
+    login_as users(:admin)
+    get root_url
+
+    hrefs = @controller.instance_variable_get(:@shortcut_groups).flat_map { |g| g[:cards] }.map { |c| c[:href] }
+
+    assert_not_includes hrefs, "#", "una card que no lleva a ningún lado es ruido para el operario"
+  end
+
+  test "el dashboard incluye Entrega Personal" do
+    login_as users(:admin)
+    get root_url
+
+    titulos = @controller.instance_variable_get(:@shortcut_groups).flat_map { |g| g[:cards] }.map { |c| c[:title] }
+
+    assert_includes titulos, "Entrega Personal"
+    assert_includes titulos, "Tabla de Servicios"
   end
 
   test "supervisor_miami ve Logística + Clientes pero no Facturación/Caja Diaria/Configuración" do

@@ -1,0 +1,7 @@
+<%# PR-10.d: la etiqueta física (Dymo 2.25×1.25). Distinta del Warehouse
+    Receipt, que vive en `label.html.erb` y se imprime en carta.
+    Ruta del partial explícita para que resuelva igual desde el controller
+    que desde un renderer suelto. %>
+<% (@paquetes || [@paquete]).each do |p| %>
+  <%= render "paquetes/etiqueta", paquete: p %>
+<% end %>
