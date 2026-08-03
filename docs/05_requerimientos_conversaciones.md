@@ -1610,8 +1610,18 @@ Hoy el sistema solo tiene Regular, VIP y Mayorista. ⬜ **Faltan los precios de 
 **Reglas confirmadas por escrito:**
 
 - Los L.200 son **con el ISV adentro**: *"L.173.91 más ISV (queda en L.200.00 ya con ISV)"*. El sistema guarda el neto y muestra ambos valores.
+- El mínimo de EXPRESS, en cambio, es **sin ISV**: *"$10 **más** impuesto de venta"*. Los dos casos conviven en la misma tabla — es por eso que `minimo_monto` guarda siempre el neto y el CRUD pregunta por el monto con impuesto.
 - El mínimo es **por concepto, no por factura**: *"El flete lleva su mínimo dependiendo el servicio, así como las recolectas."*
 - **Todo tiene que ser editable**: *"TODOS ESTOS PRECIOS DEBEN PODER CAMBIAR"* — incluida la moneda del mínimo, porque *"puedo variar de valor o pasar a base dólares"*.
+
+Las tres reglas quedaron fijadas como tests en `test/models/tarifa_reglas_yusef_test.rb`, con las citas textuales.
+
+> ⚠️ **CKM cae en dos reglas que se contradicen** — y la contradicción está dentro del mismo audio:
+>
+> *"Los servicios **serie CK** son 200 lempiras ya con ISV"* → aplica a CKA **y CKM**
+> *"El **marítimo** lo tenemos estipulado en cantidad de libras… mínimo 3 o 4 libras"* → aplica a CEM **y CKM**
+>
+> CKM es de la serie CK **y** es marítimo, así que entra en las dos. Falta saber cuál manda para CKM: el mínimo de L.200, el de libras, o los dos y gana el que resulte mayor. (El modelo soporta las tres opciones; es una decisión de negocio.)
 
 ### La tasa de cambio es fija
 
