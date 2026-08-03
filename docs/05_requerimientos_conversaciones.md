@@ -1668,6 +1668,20 @@ Hoy el sistema no imprime una etiqueta: imprime un **Warehouse Receipt** en hoja
 
 El valor a pagar se muestra **en dólares y en lempiras**. El cliente puede pagar **en Miami o en Honduras** — las dos opciones ya existen en la pantalla.
 
+**En Entrega Personal — proveedor y driver son dos cosas distintas.** Yusef corrigió el formulario:
+
+> "Aquí tenés mal: aquí es proveedor y aquí es el driver."
+> Jorge: "Viene Walmart y te manda el driver, ¿verdad?" — Yusef: "Sí, correcto."
+> "Es donde tiene que ser editable, que es el driver."
+> "Remitente o quien envía está bien, pero igual **otro driver** para poner el nombre del driver, en caso de tenerlo, **por el rótulo**."
+
+- **Proveedor** = la empresa que mandó el paquete (Walmart, Amazon…). Es el catálogo `Proveedor`, recurrente.
+- **Driver** = la persona que lo trajo físicamente. **Texto libre, no catálogo**, porque cambia en cada entrega.
+- **Remitente** se queda como está — es un tercer dato, no se pisa con el driver.
+- El driver **se imprime en la etiqueta**; para eso lo pidió.
+
+Yusef además va a crear un proveedor llamado "Entrega local / personal" desde el CRUD. Hoy no hay ninguno de tipo `entrega_personal` cargado, así que la pantalla muestra el aviso de que falta configurarlos.
+
 **En Etiquetar:**
 - **Buscar el código ignorando los ceros**: hoy si el operario escribe `C002` no encuentra a `C2`. *"Cuando hago búsquedas por código, quitar los ceros."* El formato del código no cambia — `C6` está bien.
 - **Búsqueda combinada de código y nombre**: poder escribir `"2 María"` y que aparezca. *"A veces llegan las etiquetas rotas, solo dicen 234 y después dice Pérez Hernández."*

@@ -52,6 +52,14 @@
     </div>
   <% end %>
 
+  <%# ── Driver ── "otro driver para poner el nombre del driver, en caso de
+      tenerlo, POR EL RÓTULO" (Yusef). Solo aparece si se capturó. %>
+  <% if paquete.driver.present? %>
+    <div style="font-size:7pt; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+      <span style="font-weight:bold;">Driver:</span> <%= paquete.driver.to_s.upcase %>
+    </div>
+  <% end %>
+
   <%# ── Sucursal donde retira + ubicación del cliente ──
       Con encabezado explícito: el "¿qué es San Pedro Soda?" salía de que este
       dato aparecía truncado y bajo la palabra inglesa "Agent". %>

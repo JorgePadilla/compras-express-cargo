@@ -1486,7 +1486,8 @@ CREATE TABLE public.paquetes (
     prepagado_miami boolean DEFAULT false NOT NULL,
     prepagado_miami_sucursal_id bigint,
     prepagado_miami_at timestamp(6) without time zone,
-    prepagado_miami_by_user_id bigint
+    prepagado_miami_by_user_id bigint,
+    driver character varying
 );
 
 
@@ -5585,6 +5586,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260802180000'),
 ('20260802170000'),
 ('20260802160000'),
 ('20260802150000'),
