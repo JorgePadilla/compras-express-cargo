@@ -1,0 +1,146 @@
+<%= form_with model: @tarifa, url: (@tarifa.persisted? ? servicio_path(@tarifa) : servicios_path),
+              class: "space-y-6 max-w-3xl" do |f| %>
+  <% if @tarifa.errors.any? %>
+    <div class="p-4 bg-red-50 rounded-lg text-sm text-red-700">
+      <ul class="list-disc list-inside space-y-1">
+        <% @tarifa.errors.full_messages.each { |m| %><li><%= m %></li><% } %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-200 dark:ring-gray-700 p-6 space-y-5">
+    <div>
+      <%= f.label :tipo_envio_id, "Servicio", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+      <%= f.collection_select :tipo_envio_id, @tipo_envios, :id, ->(t) { "#{t.codigo.to_s.upcase} — #{t.nombre}" },
+            { prompt: "Elegí el servicio" },
+            { required: true, class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
+    </div>
+
+    <%# ── A quién aplica ── la cascada. Solo uno de los tres debería llenarse. %>
+    <fieldset class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+      <legend class="text-xs font-bold uppercase tracking-wider text-gray-500 px-2">¿A quién aplica?</legend>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+        Dejá los tres en blanco para el <strong>precio de lista</strong>. Si llenás más de uno,
+        gana el más específico: cliente → proveedor → categoría.
+      </p>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <%= f.label :categoria_precio_id, "Categoría", class: "block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%= f.collection_select :categoria_precio_id, @categorias, :id, :nombre,
+                { include_blank: "— ninguna —" },
+                { class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm" } %>
+        </div>
+        <div>
+          <%= f.label :proveedor_id, "Proveedor / promoción", class: "block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%= f.collection_select :proveedor_id, @proveedores, :id, :nombre,
+                { include_blank: "— ninguno —" },
+                { class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm" } %>
+          <p class="text-[11px] text-gray-400 mt-1">Shein, Temu, doTERRA…</p>
+        </div>
+        <div>
+          <%= f.label :sucursal_id, "Solo en sucursal", class: "block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%= f.collection_select :sucursal_id, @sucursales, :id, :nombre,
+                { include_blank: "— todas —" },
+                { class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm" } %>
+        </div>
+      </div>
+      <div class="mt-3">
+        <%= f.label :cliente_id, "Precio especial para un cliente puntual (ID)", class: "block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <%= f.number_field :cliente_id, placeholder: "dejar vacío salvo que sea una excepción de un solo cliente",
+              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm" %>
+      </div>
+    </fieldset>
+
+    <%# ── Precio y escalón ── %>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div>
+        <%= f.label :precio_libra, "Precio por libra", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <%= f.number_field :precio_libra, step: 0.01, min: 0, required: true,
+              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm font-mono" %>
+      </div>
+      <div>
+        <%= f.label :moneda, class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <%= f.select :moneda, Tarifa::MONEDAS, {},
+              { class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm" } %>
+      </div>
+      <div>
+        <%= f.label :desde_libras, "Desde (lb)", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <%= f.number_field :desde_libras, step: 0.01, min: 0,
+              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm font-mono" %>
+      </div>
+      <div>
+        <%= f.label :hasta_libras, "Hasta (lb)", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <%= f.number_field :hasta_libras, step: 0.01, min: 0, placeholder: "sin tope",
+              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm font-mono" %>
+      </div>
+    </div>
+    <p class="text-xs text-gray-500 dark:text-gray-400 -mt-3">
+      Para un precio escalonado, cargá una tarifa por escalón: por ejemplo 0–3 lb a un precio y 3 en adelante a otro.
+    </p>
+
+    <%# ── Mínimos ── %>
+    <fieldset class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+      <legend class="text-xs font-bold uppercase tracking-wider text-gray-500 px-2">Cobro mínimo</legend>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <%= label_tag "tarifa[minimo_monto_con_isv]", "Monto mínimo (con ISV)",
+                class: "block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%= number_field_tag "tarifa[minimo_monto_con_isv]", @tarifa.minimo_monto_con_isv,
+                step: 0.01, min: 0, placeholder: "ej. 200.00",
+                class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm font-mono" %>
+          <p class="text-[11px] text-gray-400 mt-1">
+            Escribilo como lo cobrás, con impuesto adentro.
+            <% if @tarifa.minimo_monto.present? %>
+              Se guarda neto: <span class="font-mono"><%= number_with_delimiter(@tarifa.minimo_monto.to_f, precision: 2) %></span>
+            <% end %>
+          </p>
+        </div>
+        <div>
+          <%= f.label :minimo_moneda, "Moneda del mínimo", class: "block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%= f.select :minimo_moneda, Tarifa::MONEDAS, { include_blank: "— sin mínimo —" },
+                { class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm" } %>
+        </div>
+        <div>
+          <%= f.label :minimo_libras, "Mínimo de libras", class: "block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%= f.number_field :minimo_libras, step: 0.01, min: 0, placeholder: "ej. 20",
+                class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm font-mono" %>
+        </div>
+      </div>
+
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+        <label class="inline-flex items-start gap-2">
+          <%= f.check_box :aplica_minimo, class: "mt-0.5 rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+          <span class="text-sm text-gray-700 dark:text-gray-200">
+            Aplicar el monto mínimo
+            <span class="block text-xs text-gray-500">Desmarcalo para las categorías que cobran por libra sin piso.</span>
+          </span>
+        </label>
+        <div>
+          <%= f.label :incremento_libras, "Cobrar en incrementos de", class: "block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%= f.select :incremento_libras,
+                options_for_select([ [ "Peso exacto (sin redondeo)", "" ], [ "Media libra", "0.5" ], [ "Libra entera", "1.0" ] ],
+                                   @tarifa.incremento_libras&.to_f&.to_s),
+                {}, { class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm" } %>
+          <p class="text-[11px] text-gray-400 mt-1">Redondea hacia arriba.</p>
+        </div>
+      </div>
+    </fieldset>
+
+    <div>
+      <%= f.label :notas, class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+      <%= f.text_area :notas, rows: 2,
+            class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm" %>
+    </div>
+
+    <label class="inline-flex items-center gap-2">
+      <%= f.check_box :activo, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+      <span class="text-sm text-gray-700 dark:text-gray-200">Activa</span>
+    </label>
+  </div>
+
+  <div class="flex items-center justify-end gap-3">
+    <%= link_to "Cancelar", servicios_path, class: "text-sm text-gray-600 hover:text-gray-900" %>
+    <%= f.submit(@tarifa.persisted? ? "Guardar" : "Crear tarifa",
+          class: "bg-cec-gold text-cec-navy-dark font-semibold px-4 py-2 rounded-lg text-sm cursor-pointer") %>
+  </div>
+<% end %>

@@ -407,7 +407,9 @@ Fase 6  ███░░░░░░░░░░░░░░░░░  Reportes +
 Fase 7  ░░░░░░░░░░░░░░░░░░░░  Marketing CRM
 Fase 8  ░░░░░░░░░░░░░░░░░░░░  Inventario
 Fase 9  ░░░░░░░░░░░░░░░░░░░░  Fotos de Paquetes (storage + envio a cliente)
-Fase 10 ████░░░░░░░░░░░░░░░░  Contexto operativo en captura (PR-9)      ← EN CURSO
+Fase 10 ████████████████████  Contexto operativo en captura (PR-9)        ✅
+Fase 11 ██░░░░░░░░░░░░░░░░░░  Tarifas y calculo de cobro (PR-10)        ← EN CURSO
+Fase 12 ░░░░░░░░░░░░░░░░░░░░  Escaneo al empacar + pre-etiqueta de caja
 ```
 
 **Fases paralelas posibles:**
@@ -596,3 +598,112 @@ Preferencias por usuario: `users.sonido_habilitado` + `users.sonido_volumen` (0-
 - `db/schema.rb` es un archivo muerto: `config/application.rb:24` fija `schema_format = :sql`, así que el schema autoritativo es **`db/structure.sql`**. El `schema.rb` quedó congelado en abril y confunde a quien lo lea; conviene borrarlo.
 - `test/system/` está vacío, así que nada del comportamiento Stimulus (F-keys, sonidos, modales, el checkbox de la franja) tiene cobertura automatizada.
 - `rubocop` reporta ~136 ofensas preexistentes en el repo y no corre en CI (el workflow solo ejecuta `rails test`).
+
+---
+
+## Fase 11: Tarifas y cálculo de cobro (PR-10) — EN CURSO (Agosto 2026)
+
+**Objetivo:** que el sistema sepa cobrar. Hoy conoce el precio por libra y nada más: ni mínimos, ni escalones, ni excepciones, ni la moneda correcta. Nace de las 4 páginas manuscritas de Yusef y los 3 audios del 2026-08-02 (ver `docs/05` — Conversación 5).
+
+| # | Tarea | Módulos | Estado |
+|---|-------|---------|--------|
+| 10.0 | Documentar tarifas, mínimos, flujo de Miami y spec de etiqueta | docs | ✅ |
+| 10.a | Modelo `Tarifa` (cascada + escalones + mínimos) · fix de moneda · CRUD `/servicios` | 9, 11 | 🔄 |
+| 10.b | Entrega Personal: peso/medidas/cálculo + valor a pagar en USD y LPS | 6 | ⬜ |
+| 10.c | Rutinas de UX en etiquetar (F4 tercero, búsquedas, modal, layout) | 6 | ⬜ |
+| 10.d | Etiqueta Dymo 2.25×1.25 con código de barras | 6, 7 | ⬜ |
+
+**Dependencia:** Fase 3a (billing) + PR-D6 (tarifas de recolecta y servicios extra). Cumplidas.
+
+**Bloqueo:** sembrar `tarifas` requiere la tabla de precios por categoría, que Yusef quedó de enviar. El modelo, el CRUD y los tests se construyen sin ella.
+
+### Hallazgos de la exploración
+
+| # | Hallazgo | Gravedad |
+|---|---|---|
+| 1 | **Los montos USD se guardan y muestran como Lempiras.** `build_from_paquetes` nunca setea `moneda` → queda `'LPS'` por default; los precios de `tipo_envios` son USD; `CurrencyAware#convertir` **jamás se invoca en todo el repo**; las vistas imprimen `"L. "` hardcodeado. Un CER de 10 lb sale "L. 45.00" cuando son $45 (≈ L.1,118 a la tasa vigente). | 🔴 |
+| 2 | **No existe ningún mínimo de cobro.** Cero columnas, cero constantes, pese a estar especificados en `docs/05:503-538` desde abril. | 🔴 |
+| 3 | **El cobro simbólico de prepagado en Miami se pierde.** `PreFacturaItem#calculate_subtotal_from_peso` corre en `before_validation` y sobrescribe el `$1.00` con `peso × 0 = 0`, porque `precio_libra: 0` cuenta como *present*. Cero tests lo cubren — PR-6b salió sin cobertura. | 🔴 |
+| 4 | **`CategoriaPrecio` colapsa 5 servicios en 2 modalidades** (`precio_libra_aereo` / `precio_libra_maritimo`). Un cliente con categoría paga lo mismo en EXPRESS que en CER. Además `precio_volumen` es una columna muerta que ningún cálculo lee. | 🟡 |
+| 5 | **`TipoEnvio` no tiene CRUD admin** — la "tabla de servicios" que Yusef pide. Los precios se sembraron a mano. | 🟡 |
+| 6 | **`VolumetricoCalculator` está desconectado de `Paquete`.** La pantalla de etiquetar redondea a ½ libra (regla del spreadsheet de Yusef) pero `calculate_peso_volumetrico` factura con `.round(2)`. `8×9×9 = 648 pulg³` factura **3.90 lb** cuando debería ser **4.0**. | 🟡 |
+| 7 | `ISV_RATE` duplicada en 5 modelos + `empresas.isv_rate` + `configuracions["iva_porcentaje"]`. Solo la constante calcula; `empresa.isv_rate` únicamente se imprime en los PDFs, así que cambiarla desalinea el documento del cálculo. | 🟡 |
+| 8 | `servicios_extra.precio_incluye_isv` se ignora en `aplicar_cobros_automaticos_para` → **doble ISV** en servicios extra. | 🟡 |
+| 9 | En el documento impreso, el encabezado **`Agent`** cae a `paquete.sucursal.nombre` cuando no hay agent (el caso normal) — el "San Pedro Soda". | 🟡 |
+| 10 | La etiqueta **es** el Warehouse Receipt (carta 8.5×11 con T&C). Antes era térmica 4×6. **No hay código de barras ni QR en todo el repo** pese a que Yusef los da por existentes. | 🟡 |
+
+### Modelo `Tarifa` (PR-10.a)
+
+Una fila por combinación de reglas. Resolución en cascada — gana la más específica:
+
+1. `cliente` + `tipo_envio` — *"el precio especial que está sobre todos los anteriores"*
+2. `proveedor` + `tipo_envio` — promociones de Shein / Temu / doTERRA / Farmasi
+3. `categoria_precio` + `tipo_envio`
+4. `tipo_envio` solo — precio de lista
+
+Dentro del nivel que gane, se elige el escalón `[desde_libras, hasta_libras)` que contiene el peso. Si existe una fila con `sucursal_id` que matchea, esa gana sobre la de sucursal nula (sobrecosto de transporte).
+
+| Columna | Para qué |
+|---|---|
+| `precio_libra` · `moneda` | El precio del escalón |
+| `desde_libras` · `hasta_libras` | Precio escalonado (`nil` en hasta = sin tope) |
+| `minimo_monto` · `minimo_moneda` | Cobro mínimo. **Se guarda SIN ISV**: Yusef escribe 200, se guarda 173.91 |
+| `minimo_libras` | Mínimo expresado en peso (CEM, CKM) |
+| `aplica_minimo` | `false` para Exchange/Chain, que cobra por libra sin mínimo |
+| `incremento_libras` | `0.5` = cobro por media libra |
+| `cliente_id` · `proveedor_id` · `categoria_precio_id` · `sucursal_id` | Los ejes de la cascada |
+
+`Tarifa#cobro_para(peso)` devuelve `{ subtotal, moneda, aplico_minimo }` aplicando, en orden: redondeo al `incremento_libras`, piso de `minimo_libras`, multiplicación por `precio_libra`, y piso de `minimo_monto` convertido a la moneda del cobro.
+
+### Reglas de redondeo (ya estaban definidas, se aplican tal cual)
+
+- **Peso volumétrico:** `VLbs = pulg³/166`, redondeo a **½ libra** con umbrales **.10/.60**; peso a cobrar = `max(peso real, VLbs)`. Vive en `VolumetricoCalculator`; PR-10.a hace que `Paquete` lo use.
+- **Montos:** **half-up al segundo decimal** con `BigDecimal`, sobre el resultado final de cada línea. Regla del contador (Yusef, 2026-05-04).
+
+### Decisiones confirmadas
+
+- **Tasa de cambio fija**, la fija un admin → se **desactiva `ActualizarTasaCambioJob`** (hoy corre `every day at 6am` en producción y sobrescribiría la tasa manual).
+- **El valor a pagar en Entrega Personal es solo display**, no se persiste.
+- **El mínimo es por concepto** (flete, recolecta), no un mínimo global de factura.
+- **Fuente única de ISV = `empresas.isv_rate`**; se eliminan las 5 constantes y la clave muerta de `configuracions`.
+- La **cantidad de cajas se queda en el modal de F9** — Yusef revisó y confirmó.
+
+### Etiqueta (PR-10.d)
+
+Cuatro formatos distintos en la operación; **solo se rediseña el de ETIQUETAR**:
+
+| Operación | Tamaño | Marca | Se pega |
+|---|---|---|---|
+| **ETIQUETAR** | **2.25 × 1.25 in** | Dymo | Una por paquete |
+| MANIFIESTO | 4 × 6 in | FreeX | Una por caja o paquete |
+| PRE-FACTURA (SPS) | 4 × 6 in | FreeX | Por paquete; puede llevar varios tracking |
+| MANIFIESTO NACIONAL | 4 × 6 in | FreeX | Por fuera; varias pre-facturas |
+
+Se separa la etiqueta del Warehouse Receipt. Código de barras **Code 128** del número de recepción vía `barby` + `chunky_png` como data-URI PNG (server-side, más confiable para impresión que una librería JS).
+
+### Deuda técnica que se salda de paso
+
+- El cobro simbólico de prepagado en Miami (#3), hoy silenciosamente en $0.
+- `Paquete` pasa a usar `VolumetricoCalculator` (#6) — la pantalla y la factura dejan de discrepar.
+- `ISV_RATE` a fuente única (#7) y `precio_incluye_isv` respetado (#8).
+- En `/entrega_personal`, **F2 y F9 se disparan dos veces** (`ButtonComponent` emite `data-shortcut` y el Stimulus también escucha en `document`) — el segundo `showModal()` sobre un `<dialog>` abierto tira `InvalidStateError`.
+- `Cliente.buscar` no encuentra `"Juan Perez"` (hace `OR` sobre columnas sueltas, nunca concatena nombre y apellido) ni normaliza los ceros del código.
+
+---
+
+## Fase 12: Escaneo al empacar + pre-etiqueta de caja — PLANIFICADA
+
+**No se construye en PR-10.** Yusef pidió explícitamente dejarla diseñada:
+
+> "No quiero que el sistema se complique, pero **quiero que lo planifiquemos aunque lo dejemos por fuera — que quede ya planificado y le dejes los accesos, los campos para amarrarlo**."
+
+**El diseño que describió:**
+1. Se crea una **pre-etiqueta de caja** con tipo de servicio y tamaño de caja (`E`, `mini D`, `mini D doble` — el modelo `TamanoCaja` ya existe), editable después por si la cortan.
+2. El operario escanea cada paquete con un escáner inalámbrico al meterlo a la caja.
+3. **Si el tipo de servicio no concuerda con el de la caja, pita** — es el escenario ya anotado de manifiesto interno con sonidos por tipo de envío.
+4. Al crear el manifiesto se **jalan las cajas empacadas**, no paquetes sueltos.
+5. Botón de "omitir" para no trabar la operación cuando algo no cuadra.
+
+**Motivación:** hoy no saben si una carga salió, y por eso le dan al cliente rangos de "entre lunes y viernes". Yusef está reorganizando las salidas (lunes, jueves y viernes después de mediodía) para acotar eso.
+
+**Enganche existente:** `Manifiesto`, `TamanoCaja` y `EmpresaManifiesto` ya están en el modelo. Falta la entidad de "caja empacada" entre `Paquete` y `Manifiesto`.

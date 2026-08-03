@@ -1,0 +1,11 @@
+<% content_for :title, "Nueva tarifa" %>
+<div class="max-w-4xl mx-auto space-y-6">
+  <div>
+    <%= link_to servicios_path, class: "text-xs text-gray-500 hover:text-cec-teal inline-flex items-center gap-1" do %>
+      <%= heroicon "arrow-left", variant: :outline, options: { class: "w-3 h-3" } %>
+      Volver a la tabla de servicios
+    <% end %>
+    <h1 class="text-2xl font-bold text-cec-navy dark:text-cec-gold mt-1">Nueva tarifa</h1>
+  </div>
+  <%= render "form" %>
+</div>

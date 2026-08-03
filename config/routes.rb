@@ -74,6 +74,9 @@ Rails.application.routes.draw do
 
   resources :sucursales, except: [:show]
 
+  # PR-10.a: "la tabla de servicios" — precios por libra, escalones y mínimos.
+  resources :servicios, only: %i[index new create edit update destroy]
+
   # PR-D6.a: catálogos de cobros automáticos en pre-factura.
   resources :tarifas_recolecta, only: %i[index new create edit update],
             controller: "tarifas_recolecta"

@@ -611,10 +611,17 @@ class Paquete < ApplicationRecord
     self.fecha_recibido_miami = Time.current
   end
 
+  # PR-10.a: pasa a usar `VolumetricoCalculator`, que ya implementaba la regla
+  # real de Yusef (redondeo a ½ libra con umbrales .10/.60, del spreadsheet de
+  # tarifas) y estaba testeada — pero nadie la llamaba. Este método usaba
+  # `.round(2)`, así que la calculadora de /etiquetar le mostraba al operario
+  # un peso a cobrar distinto del que la pre-factura terminaba cobrando:
+  # 8×9×9 = 648 pulg³ facturaba 3.90 lb en vez de 4.0.
   def calculate_peso_volumetrico
-    if alto.present? && largo.present? && ancho.present?
-      self.peso_volumetrico = (alto * largo * ancho / 166.0).round(2)
-    end
+    return unless alto.present? && largo.present? && ancho.present?
+
+    in3 = VolumetricoCalculator.pulgadas_cubicas(alto, largo, ancho)
+    self.peso_volumetrico = VolumetricoCalculator.vlbs(in3)
   end
 
   def calculate_peso_cobrar

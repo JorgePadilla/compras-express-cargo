@@ -232,9 +232,54 @@ class CreateEntregas < ActiveRecord::Migration[8.0]
 end
 ```
 
+### tarifas (PR-10.a — el motor de precios)
+
+Una fila por combinación de reglas. **Reemplaza como fuente de precio a `categoria_precios.precio_libra_*` y a `tipo_envios.precio_libra`**, que quedan solo como respaldo/histórico.
+
+```ruby
+create_table :tarifas do |t|
+  t.references :tipo_envio,       null: false, foreign_key: true
+  t.references :categoria_precio,              foreign_key: true  # nil = precio de lista
+  t.references :cliente,                       foreign_key: true  # precio especial puntual
+  t.references :sucursal,                      foreign_key: true  # nil = todas las sucursales
+  t.references :proveedor,                     foreign_key: true  # promos Shein/Temu/doTERRA
+  t.decimal :desde_libras, precision: 10, scale: 2, null: false, default: 0
+  t.decimal :hasta_libras, precision: 10, scale: 2                # nil = sin tope
+  t.decimal :precio_libra, precision: 10, scale: 2, null: false
+  t.string  :moneda,        null: false, default: "USD"
+  t.decimal :minimo_monto,  precision: 10, scale: 2   # SIN ISV (200 con ISV → 173.91)
+  t.string  :minimo_moneda                            # LPS | USD
+  t.decimal :minimo_libras, precision: 10, scale: 2
+  t.boolean :aplica_minimo,     null: false, default: true
+  t.decimal :incremento_libras, precision: 4, scale: 2, null: false, default: 1.0
+  t.boolean :activo, null: false, default: true
+  t.timestamps
+end
+```
+
+**Resolución** — `Tarifa.resolver` devuelve la fila más específica que aplique, y dentro de ella el escalón `[desde_libras, hasta_libras)` que contiene el peso:
+
+```
+cliente + tipo_envio          →  "el precio especial que está sobre todos"
+proveedor + tipo_envio        →  promociones por merchant
+categoria_precio + tipo_envio →  mayorista, revendedor, familia…
+tipo_envio                    →  precio de lista
+```
+
+En cualquier nivel, una fila con `sucursal_id` que matchea gana sobre la de sucursal nula (sobrecosto de transporte entre sucursales).
+
+**Cobro** — `Tarifa#cobro_para(peso_cobrar)` → `{ subtotal, moneda, aplico_minimo }`:
+1. redondea el peso al `incremento_libras` (1.0 normal · 0.5 para Exchange/Chain)
+2. aplica el piso de `minimo_libras` si existe (CEM, CKM)
+3. multiplica por `precio_libra`
+4. aplica el piso de `minimo_monto` convertido, salvo que `aplica_minimo` sea false
+5. redondea half-up a 2 decimales
+
 ### Tablas de configuración
 ```ruby
 # categorias_precio
+# NOTA (PR-10.a): precio_libra_aereo/maritimo quedan como respaldo — el precio
+# real sale de `tarifas`. `precio_volumen` nunca se usó en ningún cálculo.
 create_table :categorias_precio do |t|
   t.string :nombre, null: false
   t.decimal :precio_libra_aereo, precision: 10, scale: 2

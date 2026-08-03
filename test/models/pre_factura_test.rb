@@ -120,9 +120,11 @@ class PreFacturaTest < ActiveSupport::TestCase
     pf = PreFactura.build_from_paquetes(@cliente, [paquete.id], user: @user)
     assert_equal 1, pf.pre_factura_items.size
     item = pf.pre_factura_items.first
-    assert_equal "3.5".to_d, item.precio_libra.to_d
-    # peso_cobrar = 10 (from fixture), subtotal = 35.00
-    assert_equal "35.00".to_d, item.subtotal.to_d
+    # PR-10.a: los precios estan en USD y la pre-factura en Lempiras.
+    precio_lps = CurrencyAware.convertir("3.5".to_d, de: "USD", a: "LPS")
+    assert_equal precio_lps, item.precio_libra.to_d
+    # peso_cobrar = 10 (from fixture)
+    assert_equal (10.to_d * precio_lps).round(2), item.subtotal.to_d
   end
 
   test "build_from_paquetes falls back to tipo_envio precio" do
@@ -131,8 +133,9 @@ class PreFacturaTest < ActiveSupport::TestCase
     paquete = paquetes(:disponible_entrega_juan)
     pf = PreFactura.build_from_paquetes(@cliente, [paquete.id], user: @user)
     item = pf.pre_factura_items.first
-    # tipo_envios(:aereo).precio_libra = 4.50
-    assert_equal "4.5".to_d, item.precio_libra.to_d
+    # tipo_envios(:aereo).precio_libra = 4.50 USD → convertido a Lempiras
+    assert_equal CurrencyAware.convertir("4.5".to_d, de: "USD", a: "LPS"),
+                 item.precio_libra.to_d
   end
 
   test "scope activas excludes anulado" do
