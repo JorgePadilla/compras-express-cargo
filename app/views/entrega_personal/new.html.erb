@@ -176,15 +176,18 @@ end %>
           data: { entrega_personal_target: "cantidadPaquetesHidden" } %>
     </div>
 
-    <%# Action bar (PR-7) — ButtonComponent muestra el atajo inline %>
+    <%# Action bar (PR-7) — ButtonComponent muestra el atajo inline.
+        `shortcut_label_only`: esta pantalla ya escucha F2/F9 en su propio
+        Stimulus, asi que el handler global no debe tambien clickear el boton
+        (PR-10.c — el doble disparo reventaba el <dialog> de cajas). %>
     <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
       <%# render(...) con paréntesis: si no, el bloque `{ "..." }` se asocia a
           ButtonComponent.new (no a render) y el texto se pierde. %>
       <%= render(ButtonComponent.new(variant: :primary, size: :md,
-            shortcut: "F2",
+            shortcut: "F2", shortcut_label_only: true,
             data: { action: "click->entrega-personal#clearForm" })) { "Limpiar" } %>
       <%= render(ButtonComponent.new(variant: :gold, size: :md,
-            icon: "printer", shortcut: "F9",
+            icon: "printer", shortcut: "F9", shortcut_label_only: true,
             data: { action: "click->entrega-personal#submitFormWithPrint" })) { "Guardar + Imprimir" } %>
     </div>
   <% end %>

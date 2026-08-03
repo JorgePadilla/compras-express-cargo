@@ -325,6 +325,13 @@ class PaquetesController < ApplicationController
         cliente: ERB::Util.html_escape(paquete.cliente.nombre_completo),
         fecha: paquete.fecha_recibido_miami&.strftime("%d/%m/%Y"),
         count: Paquete.where(tracking: tracking).count,
+        # PR-10.c: Yusef sobre el modal de tracking repetido — "aquí solo
+        # agregarle el contenido... el contenido y el tipo de servicio, esas
+        # son las dos cosas que más te faltan ahí". El numero_recepcion ya se
+        # tenía a mano y tampoco se estaba mostrando.
+        descripcion: ERB::Util.html_escape(paquete.descripcion.to_s.truncate(80)),
+        tipo_envio: ERB::Util.html_escape(paquete.tipo_envio&.nombre.to_s),
+        numero_recepcion: ERB::Util.html_escape(paquete.numero_recepcion.to_s),
         # Datos para el flow de duplicado (Yusef 2026-04-25):
         # - existing_paquete_id: para "Es actualización" → cargar edit del original.
         # - tracking_base + next_suffix → para "Es duplicado real" → tracking nuevo.
