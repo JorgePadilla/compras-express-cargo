@@ -1,3 +1,4 @@
+<% sonido_config_html = render("shared/sonido_config") %>
 <%= render PageHeaderComponent.new(title: "Entrega Personal", subtitle: "Paquetes traídos físicamente al mostrador") do |header|
   header.with_action do
     tag.span(class: "inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400") do
@@ -7,7 +8,11 @@
       ])
     end
   end
-  header.with_action { render "shared/sonido_config" }
+  # El partial se renderiza ACA, en el contexto de la vista, y al slot le
+  # llega el HTML ya resuelto. Si se hiciera `with_action { render ... }`, el
+  # bloque corre dentro del ViewComponent, donde los helpers de la app (como
+  # `heroicon`) no existen y revienta con NoMethodError.
+  header.with_action { sonido_config_html }
 end %>
 
 <div data-controller="entrega-personal audio"
