@@ -1,5 +1,5 @@
 class PaquetesController < ApplicationController
-  before_action :set_paquete, only: [ :show, :edit, :update, :label, :destroy, :eliminar_de_pre_alerta, :reimprimir_etiquetas, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero ]
+  before_action :set_paquete, only: [ :show, :edit, :update, :label, :etiqueta, :destroy, :eliminar_de_pre_alerta, :reimprimir_etiquetas, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero ]
   before_action :authorize_tracking_actions, only: [ :check_tracking, :search ]
   before_action :authorize_edit, only: [ :edit, :update, :eliminar_de_pre_alerta, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero ]
   before_action :authorize_delete, only: [ :destroy ]
@@ -125,8 +125,29 @@ class PaquetesController < ApplicationController
     end
   end
 
+  # Warehouse Receipt — hoja carta con términos y condiciones, para el
+  # expediente. NO es lo que se le pega a la caja.
   def label
     render layout: "print"
+  end
+
+  # PR-10.d: la etiqueta física que se pega a la caja. Dymo 2.25 × 1.25 in,
+  # una por paquete. Hasta ahora `label` imprimía el Warehouse Receipt en
+  # carta y se usaba como si fuera la etiqueta — Yusef: "aquí está tirando el
+  # warehouse, no la etiqueta".
+  #
+  # Con ?hermanas=1 imprime las N cajas del mismo tracking de una vez
+  # ("si el tracking se divide en 5 paquetes es una para cada una").
+  def etiqueta
+    @paquetes = if params[:hermanas] == "1" && @paquete.dividido?
+      Paquete.where(tracking: @paquete.tracking)
+             .includes(:cliente, :tercero, :tipo_envio, :sucursal, :user)
+             .order(:numero_caja, :id)
+    else
+      [ @paquete ]
+    end
+
+    render layout: "etiqueta"
   end
 
   # PR-D4.a: desvincula este paquete de TODAS sus pre-alertas (PreAlertaPaquete

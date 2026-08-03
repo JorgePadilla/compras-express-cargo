@@ -408,7 +408,7 @@ Fase 7  ░░░░░░░░░░░░░░░░░░░░  Marketing 
 Fase 8  ░░░░░░░░░░░░░░░░░░░░  Inventario
 Fase 9  ░░░░░░░░░░░░░░░░░░░░  Fotos de Paquetes (storage + envio a cliente)
 Fase 10 ████████████████████  Contexto operativo en captura (PR-9)        ✅
-Fase 11 ██░░░░░░░░░░░░░░░░░░  Tarifas y calculo de cobro (PR-10)        ← EN CURSO
+Fase 11 ████████████████░░░░  Tarifas y calculo de cobro (PR-10)        ← EN CURSO
 Fase 12 ░░░░░░░░░░░░░░░░░░░░  Escaneo al empacar + pre-etiqueta de caja
 ```
 
@@ -611,7 +611,7 @@ Preferencias por usuario: `users.sonido_habilitado` + `users.sonido_volumen` (0-
 | 10.a | Modelo `Tarifa` (cascada + escalones + mínimos) · fix de moneda · CRUD `/servicios` | 9, 11 | ✅ PR #203 |
 | 10.b | Entrega Personal: peso/medidas/cálculo + valor a pagar en USD y LPS | 6 | ✅ |
 | 10.c | Rutinas de UX en etiquetar (F4 tercero, búsquedas, modal, layout) | 6 | ✅ |
-| 10.d | Etiqueta Dymo 2.25×1.25 con código de barras | 6, 7 | ⬜ |
+| 10.d | Etiqueta Dymo 2.25×1.25 con código de barras | 6, 7 | ✅ |
 
 **Dependencia:** Fase 3a (billing) + PR-D6 (tarifas de recolecta y servicios extra). Cumplidas.
 

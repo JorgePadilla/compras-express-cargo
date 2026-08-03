@@ -1,0 +1,86 @@
+<%# PR-10.d: la etiqueta que se pega a la caja — Dymo 2.25 × 1.25 in, una por
+    paquete. Spec: docs/05, Conversación 5 (Yusef anotó la del legacy campo
+    por campo).
+
+    A este tamaño no caben los 11 campos legibles, así que la jerarquía es:
+    lo que el operario lee de lejos en la estantería va grande (número de
+    recepción, cliente, sucursal), y el resto va de apoyo abajo.
+
+    ⬜ Pendiente: Yusef tiene que confirmar cuáles son los imprescindibles.
+    Si dice que sobra alguno, se saca de acá sin tocar nada más. %>
+<div class="etq">
+
+  <%# ── Código de barras del número de recepción ──
+      Antes no había nada escaneable: el tracking se tecleaba a mano. %>
+  <% codigo_barras = paquete.numero_recepcion.presence || paquete.tracking %>
+  <% svg = etiqueta_barcode_svg(codigo_barras) %>
+  <% if svg %>
+    <div style="height:.30in; overflow:hidden; line-height:0;">
+      <div style="width:100%; height:.30in;"><%= svg %></div>
+    </div>
+  <% end %>
+
+  <%# ── Número de recepción + tipo de envío ──
+      El tipo va grande a la derecha porque es la clave visual con la que
+      separan la carga por servicio antes de empacar. %>
+  <div style="display:flex; align-items:baseline; justify-content:space-between; gap:.05in;">
+    <span style="font-family:'Courier New',monospace; font-size:11.5pt; font-weight:bold; letter-spacing:-.01em; white-space:nowrap; overflow:hidden;">
+      <%= codigo_barras %>
+    </span>
+    <% if paquete.tipo_envio %>
+      <span style="font-size:12pt; font-weight:800; letter-spacing:.02em; white-space:nowrap;">
+        <%= paquete.tipo_envio.codigo.to_s.upcase %>
+      </span>
+    <% end %>
+  </div>
+
+  <%# ── Cliente ── código completo + nombre. Yusef: "C6 es mi código de
+      cliente y sí ocupa llevar el código de cliente completo". %>
+  <div style="display:flex; align-items:baseline; gap:.06in; overflow:hidden;">
+    <span style="font-size:10pt; font-weight:bold; font-family:'Courier New',monospace; white-space:nowrap;">
+      <%= paquete.cliente&.codigo %>
+    </span>
+    <span style="font-size:9.5pt; font-weight:600; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+      <%= paquete.cliente&.nombre_completo %>
+    </span>
+  </div>
+
+  <%# ── Tercero ── "agregar nombre de cliente tercero" %>
+  <% if paquete.tercero %>
+    <div style="font-size:7pt; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+      <span style="font-weight:bold;">3ro:</span> <%= paquete.tercero.nombre_completo.to_s.upcase %>
+    </div>
+  <% end %>
+
+  <%# ── Sucursal donde retira + ubicación del cliente ──
+      Con encabezado explícito: el "¿qué es San Pedro Soda?" salía de que este
+      dato aparecía truncado y bajo la palabra inglesa "Agent". %>
+  <div style="display:flex; align-items:baseline; justify-content:space-between; gap:.05in; overflow:hidden;">
+    <span style="font-size:9pt; font-weight:bold; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+      <span style="font-size:6pt; font-weight:normal;">RETIRA EN</span>
+      <%= etiqueta_sucursal(paquete) %>
+    </span>
+    <% if (ubic = etiqueta_ubicacion_cliente(paquete.cliente)) %>
+      <span style="font-size:7pt; white-space:nowrap;"><%= ubic %></span>
+    <% end %>
+  </div>
+
+  <%# ── Tracking ── principal y, si existe, el secundario. %>
+  <div style="font-family:'Courier New',monospace; font-size:7pt; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+    <%= paquete.tracking %><%
+      if paquete.tracking_secundario.present? %> · <%= paquete.tracking_secundario %><% end %>
+  </div>
+
+  <%# ── Pie: n/N · fecha y hora de recepción · iniciales de quien registró ── %>
+  <div style="display:flex; align-items:baseline; justify-content:space-between; gap:.05in; border-top:.5pt solid #000; padding-top:.02in;">
+    <span style="font-size:10pt; font-weight:800;">
+      <%= etiqueta_fraccion(paquete) %>
+    </span>
+    <span style="font-size:6.5pt;">
+      <%= (paquete.fecha_recibido_miami || paquete.created_at)&.strftime("%d-%b-%Y %H:%M") %>
+    </span>
+    <span style="font-size:8pt; font-weight:bold;">
+      <%= paquete.user&.iniciales_display %>
+    </span>
+  </div>
+</div>

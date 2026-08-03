@@ -589,7 +589,10 @@ export default class extends Controller {
       this.dispatch("success")
 
       if (el.dataset.print === "true") {
-        window.open(`/paquetes/${el.dataset.paqueteId}/label`, "_blank")
+        // PR-10.d: la ETIQUETA (Dymo 2.25x1.25), no el Warehouse Receipt.
+        // Yusef: "aqui esta tirando el warehouse, no la etiqueta".
+        // `hermanas=1` saca una por caja cuando el tracking se dividio.
+        window.open(`/paquetes/${el.dataset.paqueteId}/etiqueta?hermanas=1&print=true`, "_blank")
       }
 
       // Clear form after successful save
