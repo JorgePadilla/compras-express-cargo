@@ -5,7 +5,6 @@
   <meta name="turbo-cache-control" content="no-cache">
 <% end %>
 
-<% sonido_config_html = render("shared/sonido_config") %>
 <%= render PageHeaderComponent.new(title: "Etiquetar Paquetes", subtitle: "Registro de paquetes en Miami") do |header|
   header.with_action do
     tag.span(class: "inline-flex items-center gap-2 text-sm text-gray-600") do
@@ -15,11 +14,7 @@
       ])
     end
   end
-  # El partial se renderiza ACA, en el contexto de la vista, y al slot le
-  # llega el HTML ya resuelto. Si se hiciera `with_action { render ... }`, el
-  # bloque corre dentro del ViewComponent, donde los helpers de la app (como
-  # `heroicon`) no existen y revienta con NoMethodError.
-  header.with_action { sonido_config_html }
+  header.with_action { render "shared/sonido_config" }
 end %>
 
 <% if @tipo_envio_sesion.nil? %>
