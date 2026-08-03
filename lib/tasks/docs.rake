@@ -233,10 +233,17 @@ namespace :docs do
           [ "2", "<b>El mínimo por defecto de CEM y CKM.</b> Dijiste que depende del producto o la promoción, pero hace falta uno base para arrancar.", "¿8 y 20 libras como está documentado de abril, u otro?" ],
           [ "3", "<b>El mínimo de EXPRESS.</b> Dijiste que lo cambiaban “para volver más atractivo el servicio”.", "¿A cuánto queda? En abril figuraba $14.95." ],
           [ "4", "<b>Cuáles campos son imprescindibles en la etiqueta.</b> A 2.25 × 1.25 pulgadas no caben los 11 que anotaste.", "Marcalos en la hoja 3 del Excel." ],
-          [ "5", "<b>Qué significa “Label en el celular”</b>, de tus notas.", "Es opción múltiple en el Excel para que no quede ambiguo." ]
         ], anchos: [ 22, 300, 165 ])
 
-      h2(pdf, "Una contradicción que hay que resolver")
+      h2(pdf, "Una nota de tus apuntes que ya quedó resuelta")
+p_(pdf, "En la página 2 escribiste “Label en el celular”. Era sobre la <b>etiqueta rota</b>: " \
+        "cuando llega dañada y solo se alcanzan a leer pedazos, hay que buscar al cliente con " \
+        "lo poco que se ve.")
+cita(pdf, "A veces llegan las etiquetas rotas, solo dicen 234 y después dice Pérez Hernández, entonces uno tiene que andar ahí unificando.")
+p_(pdf, "La búsqueda combinada que se hizo ya apunta a eso, pero se va a afinar para que aguante " \
+        "mejor los pedazos sueltos — que encuentre al cliente aunque solo uno de los fragmentos sea correcto.")
+
+h2(pdf, "Una contradicción que hay que resolver")
       p_(pdf, "En el audio de tarifas decís dos cosas que chocan para el mismo servicio:")
       cita(pdf, "Los servicios serie CK son 200 lempiras ya con ISV.")
       cita(pdf, "El marítimo lo tenemos estipulado en cantidad de libras… mínimo 3 o 4 libras.")
@@ -314,10 +321,6 @@ namespace :docs do
             "La etiqueta de ETIQUETAR mide 2.25 x 1.25 pulgadas (Dymo). A ese tamaño NO caben los 11 campos legibles con el código de barras encima. ¿Cuáles son los 4 o 5 imprescindibles, los que el operario tiene que leer de lejos en la estantería?",
             "Nuestra apuesta: (1) código de barras, (2) número de recepción, (3) código + nombre del cliente, (4) sucursal donde retira, (5) n/N de paquetes. Los 11 campos están listados en la hoja 3.",
             "" ],
-          [ "5", "\"Label en el celular\"",
-            "En tus notas escribiste \"Label en el celular\" pero no aparece en ningún audio. Marcá UNA opción:\n\n(a) imprimir desde el teléfono a una etiquetadora Bluetooth\n(b) que el operario vea la etiqueta en pantalla, sin imprimir\n(c) escanear la etiqueta con el teléfono en vez del pistolete\n(d) que el cliente la vea desde su celular",
-            "Apareció justo cuando comentabas que se te dañó la impresora, así que sospechamos que va por ahí. Si es (d), sale de este bloque de trabajo y se cotiza aparte porque es portal del cliente, no operación de Miami.",
-            "" ]
         ].each do |row|
           s.add_row row, style: [ wrapb, wrap, wrap, gris, llenar ]
         end

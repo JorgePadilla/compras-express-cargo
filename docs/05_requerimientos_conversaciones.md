@@ -1716,13 +1716,20 @@ Lo que describió:
 El motivo real es de servicio al cliente:
 > "Hoy no sabemos si una carga salió. Por eso le decimos al cliente 'entre lunes y viernes', y el cliente te dice: qué rango tan grande, no me estás dando una fecha."
 
+### "Label en el celular" — resuelto (Jorge, 2026-08-02)
+
+La nota de la página 2 no era sobre imprimir ni ver la etiqueta desde el teléfono. Es sobre la **etiqueta física rota**: cuando el paquete llega con la etiqueta dañada, el operario solo alcanza a leer pedazos y tiene que dar con el cliente a partir de esos fragmentos.
+
+> "A veces llegan las etiquetas rotas, solo dicen **234** y después dice **Pérez Hernández**, entonces uno tiene que andar ahí unificando."
+
+La búsqueda combinada de código y nombre (PR-10.c) va en esa dirección, pero **no alcanza**: hoy exige que *todas* las palabras del término matcheen. Con una etiqueta rota eso es justo lo que falla — basta que un fragmento esté mal leído o pertenezca a otro campo para que no devuelva nada. Ver Fase 11, PR-10.f.
+
 ### Lo que falta que Yusef confirme
 
 1. ⭐ **La tabla de precios completa** por categoría y servicio (quedó de enviarla).
 2. El **mínimo por defecto de CEM y CKM**.
 3. El **mínimo de EXPRESS** después del cambio.
 4. **Cuáles de los 11 campos** de la etiqueta son imprescindibles a 2.25 × 1.25 pulgadas.
-5. Qué significa **"Label en el celular"** de la página 2 de las notas — no aparece en ningún audio.
 
 ---
 
