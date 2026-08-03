@@ -612,6 +612,8 @@ Preferencias por usuario: `users.sonido_habilitado` + `users.sonido_volumen` (0-
 | 10.b | Entrega Personal: peso/medidas/cálculo + valor a pagar en USD y LPS | 6 | ✅ |
 | 10.c | Rutinas de UX en etiquetar (F4 tercero, búsquedas, modal, layout) | 6 | ✅ |
 | 10.d | Etiqueta Dymo 2.25×1.25 con código de barras | 6, 7 | ✅ |
+| 10.e | Separar Driver de Proveedor en Entrega Personal | 6 | ✅ |
+| 10.f | Búsqueda por fragmentos de etiqueta rota + acentos | 11 | ✅ |
 
 **Dependencia:** Fase 3a (billing) + PR-D6 (tarifas de recolecta y servicios extra). Cumplidas.
 
