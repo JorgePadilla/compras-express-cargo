@@ -1818,6 +1818,48 @@ Dos decisiones de lectura sobre la hoja:
   Se tomó el patrón de CER (medias libras) para los tres: si no, un paquete de
   100.5 lb caería en un hueco sin tarifa.
 
+### "TARIFA EDITABLE CON AUTORIZACION DE SUPERVISOR O JEFE" es una función del sistema
+
+La nota se repite en casi todas las filas de los tarifarios escalonados. Al
+principio se leyó como una descripción de su proceso interno. **No lo es** —
+Yusef lo aclaró (2026-08-05):
+
+> "Ahí, como es el área de pre-facturación, no hemos entrado ahí, en donde entra
+> ya ciertas cosas que los supervisores o jefes son los que [autorizan el]
+> cambio. Por eso queremos que el área de los precios estén establecidos, listo.
+> **No hay nada más, no se puede hacer más si está todo preestablecido.** Ahora,
+> si lo quieren modificar, ellos tienen que pedir autorización — ahí es donde
+> entra un jefe, un supervisor, y ahí es donde llega y **pone un código especial
+> de él**."
+
+O sea, el circuito completo es:
+
+1. Los precios se cargan una vez en `/servicios` (solo admin). Esa parte ya está.
+2. **En la pre-factura el cajero no puede tocar el precio.** Sale preestablecido
+   de la tabla de tarifas y punto.
+3. Si en el mostrador hay que cambiarlo, el cajero **pide autorización**.
+4. El supervisor o jefe llega, **teclea su código** en la pantalla, y eso
+   destraba la edición de esa línea.
+5. Queda registrado quién autorizó qué.
+
+Lo importante es el punto 2: el precio bloqueado por defecto es el requisito, no
+un detalle de la pantalla. La autorización es la excepción.
+
+> 🔴 **Hoy el sistema hace lo contrario.** `PreFacturasController#pre_factura_params`
+> permite `precio_libra` y `subtotal` en las líneas, así que cualquiera con acceso
+> a pre-facturas edita el monto sin dejar rastro de por qué. Ver Fase 13.
+
+**Preguntas de diseño que quedan** (no bloquean el resto):
+
+- ¿El código es un PIN aparte del usuario, o basta con que el supervisor entre
+  con su contraseña? Un PIN corto es lo que describe ("pone un código especial
+  de él") y es lo práctico en un mostrador con el cajero sentado.
+- ¿Qué más se destraba con ese código además del precio de flete — descuentos,
+  quitar líneas, cambiar el peso a cobrar?
+- ¿Sirve para toda la pre-factura o hay que autorizar línea por línea?
+- ¿Los roles `supervisor_prefactura`, `supervisor_caja` y `admin` que ya existen
+  son los que autorizan, o hay un "jefe" aparte?
+
 ### Lo que sigue abierto de la tabla
 
 1. **El mínimo en libras de CEM y CKM.** El archivo trae mínimos en dinero pero

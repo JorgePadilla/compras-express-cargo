@@ -738,3 +738,66 @@ abierto están en `docs/05` — "La tabla de precios recibida (2026-08-05)".
 **Motivación:** hoy no saben si una carga salió, y por eso le dan al cliente rangos de "entre lunes y viernes". Yusef está reorganizando las salidas (lunes, jueves y viernes después de mediodía) para acotar eso.
 
 **Enganche existente:** `Manifiesto`, `TamanoCaja` y `EmpresaManifiesto` ya están en el modelo. Falta la entidad de "caja empacada" entre `Paquete` y `Manifiesto`.
+
+---
+
+## Fase 13: Precio bloqueado en pre-factura + autorización de supervisor — PLANIFICADA
+
+**No se construye en PR-10.** Sale de la aclaración de Yusef del 2026-08-05 sobre
+la nota `TARIFA EDITABLE CON AUTORIZACION DE SUPERVISOR O JEFE` que repite en
+casi todas las filas de su tabla de precios. Al principio se leyó como una
+descripción de su proceso interno; **es una función del sistema**:
+
+> "Ahí, como es el área de pre-facturación, no hemos entrado ahí, en donde entra ya ciertas cosas que los supervisores o jefes son los que [autorizan el] cambio. Por eso queremos que el área de los precios estén establecidos, listo. **No hay nada más, no se puede hacer más si está todo preestablecido.** Ahora, si lo quieren modificar, ellos tienen que pedir autorización — ahí es donde entra un jefe, un supervisor, y ahí es donde llega y **pone un código especial de él**."
+
+**El circuito:**
+
+1. Los precios se cargan una vez en `/servicios`, solo admin. ✅ ya está (PR-10.a + PR-10.g).
+2. **En la pre-factura el precio sale bloqueado.** El cajero no lo toca.
+3. Si hay que cambiarlo, pide autorización.
+4. El supervisor o jefe **teclea su código** en la pantalla y eso destraba esa línea.
+5. Queda el registro de quién autorizó qué y por qué.
+
+Lo importante es el **punto 2**: el precio bloqueado por defecto es el
+requisito. La autorización es la excepción, no al revés.
+
+### 🔴 Hoy el sistema hace lo contrario
+
+`PreFacturasController#pre_factura_params` permite `precio_libra` y `subtotal`
+en `pre_factura_items_attributes`, y la vista de edición los expone como inputs
+sueltos. Cualquiera con acceso a pre-facturas cambia el monto sin dejar rastro
+de por qué. `paper_trail` guarda el *qué* pero no el motivo ni el autorizante.
+
+### 🔴 Y el preview de paquetes muestra otro precio
+
+`PreFacturasController#facturables` (el JSON que llena la pantalla de selección
+de paquetes) **no pasa por `Tarifa.resolver`**: sigue con la cadena vieja
+`categoria_precio.precio_para || tipo_envio.precio_libra`, sin mínimos, sin
+escalones, y **sin convertir a Lempiras**. Es el mismo bug de moneda que PR-10.a
+arregló en `build_from_paquetes`, en un endpoint que quedó afuera.
+
+Con los precios reales cargados la diferencia se volvió grande: un CER de 0.5 lb
+muestra **$2.25** en la pantalla de selección y la pre-factura cobra **L.173.91**.
+Contradice de frente el "los precios están preestablecidos" — el cajero ve un
+número y el sistema cobra otro.
+
+Se arregla llamando a `CotizadorFlete`, que ya hace exactamente ese cálculo y se
+usa en `/entrega_personal`.
+
+### Preguntas de diseño abiertas
+
+- ¿El código es un **PIN aparte** del usuario o basta la contraseña del
+  supervisor? Un PIN corto es lo que Yusef describe ("pone un código especial de
+  él") y es lo práctico en un mostrador con el cajero sentado enfrente.
+- ¿Qué más destraba ese código además del precio del flete — descuentos, quitar
+  líneas, cambiar el peso a cobrar?
+- ¿Autoriza toda la pre-factura o línea por línea?
+- ¿Alcanzan los roles `supervisor_prefactura`, `supervisor_caja` y `admin` que ya
+  existen, o hay un "jefe" aparte?
+
+### Enganche existente
+
+- Los 8 roles y el concern `Authorization` (`require_role`, `can_access?`).
+- `paper_trail` en `PreFactura` y `Tarifa` — falta el *motivo* y el *autorizante*.
+- `PreFacturaItem#origen` ya distingue `automatico` de `manual`; una línea con
+  precio autorizado sería un tercer origen.

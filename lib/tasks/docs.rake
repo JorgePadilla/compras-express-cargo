@@ -253,6 +253,28 @@ namespace :docs do
       p_(pdf, "<b>En la hoja 2 del Excel está todo lo que quedó cargado</b>, leído directo de la base — es " \
               "literalmente lo que va a cobrar el sistema. Vale la pena que le des una pasada.")
 
+      h2(pdf, "Lo del código del supervisor: entendido")
+      p_(pdf, "En casi todas las filas de tus tarifarios escribiste “tarifa editable con autorización de " \
+              "supervisor o jefe”. Al principio lo leímos como algo de tu proceso interno. Ya quedó claro " \
+              "que <b>es una función del sistema</b>, y así lo dejamos anotado:")
+      cita(pdf, "Por eso queremos que el área de los precios estén establecidos, listo. No hay nada más, no se puede hacer más si está todo preestablecido. Ahora, si lo quieren modificar, ellos tienen que pedir autorización — ahí es donde entra un jefe, un supervisor, y ahí es donde llega y pone un código especial de él.")
+      tabla(pdf,
+        [ "Paso", "Quién", "Estado" ],
+        [
+          [ "Los precios se cargan una sola vez en la tabla de servicios", "Solo admin", "Ya está" ],
+          [ "En la pre-factura el precio sale <b>bloqueado</b>", "El cajero no lo toca", "Falta" ],
+          [ "Si hay que cambiarlo, el cajero pide autorización", "Cajero", "Falta" ],
+          [ "El supervisor teclea <b>su código</b> y destraba esa línea", "Supervisor o jefe", "Falta" ],
+          [ "Queda registrado quién autorizó qué", "El sistema", "Falta" ]
+        ], anchos: [ 230, 145, 112 ])
+      p_(pdf, "Lo importante es el segundo paso: <b>que salga bloqueado por defecto</b>. Hoy el sistema hace " \
+              "lo contrario — cualquiera que entre a pre-facturas puede cambiar el monto de una línea y no " \
+              "queda dicho por qué. Es el próximo bloque de trabajo.")
+      p_(pdf, "Para armarlo necesitamos que nos aclares un par de cosas: si el código es un <b>PIN corto " \
+              "aparte</b> (que es lo práctico con el cajero sentado enfrente) o la contraseña del supervisor; " \
+              "si además del precio destraba otras cosas como descuentos o quitar líneas; y si autoriza toda " \
+              "la pre-factura o línea por línea.")
+
       # ── 5. Pendientes ──
       h1(pdf, "5. Lo que falta que decidas vos")
 
@@ -370,7 +392,11 @@ namespace :docs do
             "Un cliente \"Clientes Amigos\" con 200 libras de CER paga $4.20 la libra ($840) mientras el público paga $3.50 ($700), porque el escalonado solo lo pusiste en el precio de lista. ¿Es así o las categorías también bajan de escalón?",
             "Tu tabla da un solo precio por categoría (columna NORMAL) y los tarifarios escalonados están declarados solo para el Precio Normal. Lo cargamos literal a como lo mandaste.",
             "" ],
-          [ "6", "Etiqueta — qué cabe",
+          [ "6", "Código del supervisor",
+            "Para armar lo del código: ¿es un PIN corto aparte, distinto de la contraseña con la que el supervisor entra al sistema? ¿Destraba solo el precio o también descuentos y quitar líneas? ¿Autoriza toda la pre-factura o línea por línea?",
+            "Nos aclaraste que \"tarifa editable con autorización de supervisor o jefe\" es una función del sistema, no de tu proceso: el precio sale bloqueado en la pre-factura y el supervisor lo destraba con su código. Nuestra apuesta: PIN corto aparte, porque es lo práctico con el cajero sentado enfrente.",
+            "" ],
+          [ "7", "Etiqueta — qué cabe",
             "La etiqueta de ETIQUETAR mide 2.25 x 1.25 pulgadas (Dymo). A ese tamaño NO caben los 11 campos legibles con el código de barras encima. ¿Cuáles son los 4 o 5 imprescindibles, los que el operario tiene que leer de lejos en la estantería?",
             "Nuestra apuesta: (1) código de barras, (2) número de recepción, (3) código + nombre del cliente, (4) sucursal donde retira, (5) n/N de paquetes. Los 11 campos están listados en la hoja 3.",
             "" ]
@@ -775,7 +801,8 @@ namespace :docs do
           [ "<b>Inventario</b>", "Productos y existencias." ],
           [ "<b>Fotos de paquetes</b>", "Tomar foto al recibir y mandársela al cliente." ],
           [ "<b>Reportes</b>", "El módulo de reportes propiamente dicho." ],
-          [ "<b>Escaneo al empacar</b>", "Lo que pediste que quedara planificado: se escanea cada paquete al meterlo a la caja y el sistema pita si el servicio no concuerda. Al armar el manifiesto se jalan las cajas ya empacadas." ]
+          [ "<b>Escaneo al empacar</b>", "Lo que pediste que quedara planificado: se escanea cada paquete al meterlo a la caja y el sistema pita si el servicio no concuerda. Al armar el manifiesto se jalan las cajas ya empacadas." ],
+          [ "<b>Código del supervisor</b>", "Que en la pre-factura el precio salga bloqueado y solo se destrabe cuando un supervisor o jefe teclea su código, dejando registro de quién autorizó. Hoy cualquiera con acceso a pre-facturas puede cambiar el monto." ]
         ], anchos: [ 130, 357 ])
 
       # ══ PARTE 4 ══
@@ -805,8 +832,9 @@ namespace :docs do
           [ "3", "<b>CKM está en dos reglas que se contradicen</b>: es de la serie CK (mínimo L.200) y además es marítimo (mínimo en libras). En tu tabla le pusiste L.173.91, así que cargamos ese. ¿Confirmás?" ],
           [ "4", "<b>Regular y VIP</b> no aparecen en tu tabla y tienen 8 clientes asignados. ¿A cuál de las categorías nuevas los pasamos?" ],
           [ "5", "Las <b>categorías no bajan de escalón</b>: un Clientes Amigos con 200 lb de CER paga $4.20/lb y el público paga $3.50. Es literal a tu tabla — decinos si es lo que querés." ],
-          [ "6", "<b>Cuáles campos</b> son imprescindibles en la etiqueta de 2.25 × 1.25." ],
-          [ "7", "Confirmar la <b>lista de proveedores</b> de entrega personal para dejarlos precargados." ]
+          [ "6", "<b>Cómo funciona el código del supervisor</b> para destrabar un precio en la pre-factura: ¿es un PIN corto aparte de la contraseña? ¿destraba solo el precio o también descuentos? ¿toda la pre-factura o línea por línea?" ],
+          [ "7", "<b>Cuáles campos</b> son imprescindibles en la etiqueta de 2.25 × 1.25." ],
+          [ "8", "Confirmar la <b>lista de proveedores</b> de entrega personal para dejarlos precargados." ]
         ], anchos: [ 22, 465 ])
 
       pdf.move_down 14
