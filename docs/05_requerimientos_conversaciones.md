@@ -1595,7 +1595,7 @@ Dentro de la regla que gane, se usa el escalón de peso que corresponda. Y si ha
 
 Yusef enumeró: **revendedores** (los precios más bajos), **mayoristas** (intermedio), **personal de CEC** (también de los más bajos), **clientes amigos**, **familia**, **Exchange / Chain** (sin mínimo, media libra) y **empresas de carga especial**.
 
-Hoy el sistema solo tiene Regular, VIP y Mayorista. ⬜ **Faltan los precios de cada categoría en cada servicio** — Yusef quedó de enviarlos.
+Hoy el sistema solo tiene Regular, VIP y Mayorista. ✅ **Los precios llegaron el 2026-08-05** — ver "La tabla de precios recibida" más abajo.
 
 ### Los cobros mínimos
 
@@ -1603,9 +1603,9 @@ Hoy el sistema solo tiene Regular, VIP y Mayorista. ⬜ **Faltan los precios de 
 |---|---|---|---|
 | CER | L.200 con ISV | coincide | ✅ |
 | CKA | L.200 con ISV | coincide | ✅ |
-| EXPRESS | $14.95 con ISV | "$10 más ISV" | ⬜ *"Lo cambiamos para volver más atractivo el servicio"* — falta el valor |
-| CEM | 8 libras | "3 o 4 libras" | ⬜ falta el mínimo por defecto |
-| CKM | 20 libras | "3 o 4 libras" | ⬜ falta el mínimo por defecto |
+| EXPRESS | $14.95 con ISV | "$10 más ISV" | ✅ **$10 sin ISV** — confirmado en la tabla del 2026-08-05 |
+| CEM | 8 libras | "3 o 4 libras" | ⬜ la tabla trae mínimo en dinero (L.200 con ISV), no en libras |
+| CKM | 20 libras | "3 o 4 libras" | ⬜ ídem — ver la contradicción de abajo |
 
 **Reglas confirmadas por escrito:**
 
@@ -1726,10 +1726,120 @@ La búsqueda combinada de código y nombre (PR-10.c) va en esa dirección, pero 
 
 ### Lo que falta que Yusef confirme
 
-1. ⭐ **La tabla de precios completa** por categoría y servicio (quedó de enviarla).
-2. El **mínimo por defecto de CEM y CKM**.
-3. El **mínimo de EXPRESS** después del cambio.
+1. ✅ ~~La tabla de precios completa~~ — llegó el 2026-08-05, ver abajo.
+2. El **mínimo por defecto de CEM y CKM** en libras.
+3. ✅ ~~El mínimo de EXPRESS~~ — **$10 sin ISV**.
 4. **Cuáles de los 11 campos** de la etiqueta son imprescindibles a 2.25 × 1.25 pulgadas.
+
+---
+
+## La tabla de precios recibida (2026-08-05)
+
+Yusef mandó `precios por categoria 2026.xlsx`. Es lo que bloqueaba cargar los
+precios de verdad: el motor de tarifas está construido desde PR-10.a pero venía
+corriendo con el backfill de la migración, que solo replicaba el comportamiento
+viejo (un precio plano por servicio, sin mínimos ni escalones).
+
+El archivo trae tres hojas: `Hoja1` (borrador), `ACTUAL` (lo que cobran hoy) y
+**`PROPUESTA`** (lo que quieren cobrar). Se sembró la PROPUESTA — PR-10.g.
+
+### El archivo confirmó el diseño
+
+Yusef llegó por su cuenta a la misma estructura que el modelo:
+
+| En su archivo | En el sistema |
+|---|---|
+| `MONTO EN LPS CON ISV` → 200 | `minimo_monto` guarda el neto **173.91** |
+| `MONTO EN $ MAS ISV` | mínimo neto, el ISV se aplica al totalizar |
+| Columnas NORMAL / MINIMO por categoría | `precio_libra` / `minimo_monto` |
+| `TARIFARIO ESCALONADO` con rangos de libras | `desde_libras` / `hasta_libras` |
+| `SIN COBRO MINIMO` como categoría | `aplica_minimo: false` |
+| `13.5 A 100 LIBRAS EN SPS` vs `EN TGU` | `sucursal_id` |
+
+En la hoja ACTUAL el mínimo figuraba como **6.45 USD** y en la PROPUESTA pasó a
+**173.91** — o sea que adoptó la convención del neto sin ISV por su cuenta.
+
+### Precio por libra y mínimo, por categoría
+
+Montos en USD salvo donde diga lo contrario.
+
+| Servicio | Amigos | doTERRA / Farmasi | Personal CEC | **Lista (público)** | Shein | Sin Cobro Mínimo |
+|---|---|---|---|---|---|---|
+| CER | 4.20 / $5 | 3.50 / $5 | 3.50 / — | **4.50 / L.173.91** | 3.50 / — | 4.50 / sin mínimo |
+| CKA | 3.80 / $5 | 3.50 / $5 | 3.00 / $3 | **4.00 / L.173.91** | 3.50 / — | 4.00 / sin mínimo |
+| EXPRESS | 7.00 / $10 | 7.00 / $10 | 6.50 / — | **7.50 / $10** | 7.00 / — | 7.50 / sin mínimo |
+| CEM | 2.20 / — | 1.70 / — | 1.80 / $1.80 | **2.50 / L.173.91** | 1.75 / — | 2.50 / sin mínimo |
+| CKM | 1.70 / — | 1.70 / — | 1.40 / $1.40 | **1.90 / L.173.91** | 1.75 / — | 1.90 / sin mínimo |
+
+**Un MINIMO en 0 en la hoja significa "sin definir", no "mínimo de cero"** — se
+carga como sin mínimo.
+
+`MAYORISTAS` viene casi entero en cero: el único servicio con precio es **CKM a
+$1.50**. `FAMILIA` y `REVENDEDORES` vienen todos en cero, así que las categorías
+se crearon pero sin tarifas — sus clientes caen al precio de lista.
+
+### Tegucigalpa es sobrecosto por sucursal, no categoría
+
+`Precio Tegus` y `SHEIN TGUS` no son categorías de cliente: son la misma tarifa
+con el costo extra de transporte a Tegucigalpa. Van como fila con `sucursal`, y
+es el sistema el que la aplica cuando el paquete va para allá — el cajero no
+elige nada. Si fueran categorías, al abrir La Ceiba habría que duplicar cada una
+otra vez.
+
+Solo tres precios difieren en Tegucigalpa:
+
+| | SPS y el resto | Tegucigalpa |
+|---|---|---|
+| CKM lista (13.5–100 lb) | $1.90 | **$2.00** |
+| CEM Shein | $1.75 | **$1.90** |
+| CKM Shein | $1.75 | **$1.90** |
+
+### Los tarifarios escalonados
+
+Solo el **precio de lista** tiene escalones; las categorías son precio plano.
+
+| CER | | CEM | | CKM | |
+|---|---|---|---|---|---|
+| 0–50 lb | $4.50 | 0–3 lb | $4.50 | 0–3 lb | $4.00 |
+| 50.5–100 | $4.00 | 3.5–100 | $2.50 | 3.5–13 | $2.50 |
+| 100.5–150 | $3.75 | 100.5–200 | $2.20 | 13.5–100 | $1.90 · **TGU $2.00** |
+| 150.5+ | $3.50 | 200.5+ | $2.00 | 100.5–200 | $1.75 |
+| | | | | 200.5+ | $1.65 |
+
+CKA y EXPRESS no tienen escalonado: precio plano.
+
+Dos decisiones de lectura sobre la hoja:
+
+- El primer tramo de cada tarifario (`DE 0 A 1 LBS → L.200 CON ISV`) no es un
+  precio por libra sino **el mínimo**, y el mínimo ya va en toda la fila. Queda
+  absorbido en el tramo siguiente: a 1 lb de CER el cálculo da $4.50 ≈ L.112,
+  por debajo del mínimo, y se cobra L.173.91 igual (L.200.00 con ISV).
+- Los cortes de CEM y CKM dicen `101` y `201` donde CER dice `100.5` y `150.5`.
+  Se tomó el patrón de CER (medias libras) para los tres: si no, un paquete de
+  100.5 lb caería en un hueco sin tarifa.
+
+### Lo que sigue abierto de la tabla
+
+1. **El mínimo en libras de CEM y CKM.** El archivo trae mínimos en dinero pero
+   no el de libras que Yusef mencionó ("3 o 4 libras"). En la práctica el
+   escalonado ya lo cubre — el tramo chico de CEM cobra $4.50/lb, así que un
+   paquete de 2 lb paga $9 — pero conviene confirmarlo.
+2. **La contradicción de CKM sigue en pie.** El archivo le pone el mínimo de
+   L.173.91, lo que sugiere que manda el monto sobre las libras. Confirmar.
+3. **`Regular` y `VIP` no aparecen en el archivo**, y tienen 8 clientes
+   asignados. Hay que decidir si se migran a alguna de las categorías nuevas o
+   se retiran. Mientras tanto se quedan con los precios viejos.
+4. **`MAYORISTAS` solo tiene CKM definido.** Sus otros cuatro servicios siguen
+   con los valores del backfill de PR-10.a.
+5. **Las categorías no bajan de escalón.** Un cliente `Clientes Amigos` con 200
+   lb de CER paga $4.20/lb ($840) mientras el público paga $3.50/lb ($700) —
+   porque su columna es un precio plano y el escalonado está declarado solo para
+   el precio de lista. Es literal a la hoja, pero hay que preguntarle si es lo
+   que quiere.
+6. **Los 16 cargos que no son flete** (CAMBIO DE SERVICIO, RECOLECTA MIAMI,
+   RETENIDO MIAMI, ENTREGA NACIONAL, MANEJO Y GASTOS, FLETE MEXICO…) son
+   `ServicioExtra`, otro modelo con su propia pantalla. Varios ya existen con
+   otros valores, así que reconciliarlos va en su propio PR.
 
 ---
 

@@ -13,7 +13,8 @@ class ServiciosController < ApplicationController
   def index
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     @tarifas = Tarifa.includes(:tipo_envio, :categoria_precio, :cliente, :sucursal, :proveedor)
-                     .order(:tipo_envio_id, :categoria_precio_id, :desde_libras)
+                     .to_a
+                     .sort_by { |t| orden_de_lectura(t) }
                      .group_by(&:tipo_envio_id)
   end
 
@@ -60,6 +61,23 @@ class ServiciosController < ApplicationController
 
   def require_admin
     redirect_to(root_path, alert: "Solo admin.") unless admin?
+  end
+
+  # PR-10.g: con los precios reales cargados esto pasó de 20 filas a ~60, y el
+  # orden por id dejaba el precio de lista hasta abajo (en Postgres los NULL
+  # ordenan al final). Se lee como una tabla de precios: primero el público,
+  # después las excepciones, y dentro de cada una los escalones por peso con
+  # la fila general antes que la de sucursal.
+  def orden_de_lectura(t)
+    nivel = if t.cliente_id          then 3
+    elsif t.proveedor_id             then 2
+    elsif t.categoria_precio_id      then 1
+    else                                  0
+    end
+
+    # `downcase` para que "doTERRA" no caiga después de "VIP".
+    [ nivel, t.categoria_precio&.nombre.to_s.downcase, t.desde_libras.to_f,
+      t.sucursal&.nombre.to_s ]
   end
 
   def set_tarifa

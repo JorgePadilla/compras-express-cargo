@@ -65,14 +65,14 @@
               </td>
               <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 font-mono"><%= t.escalon_label %></td>
               <td class="px-4 py-3 text-right text-sm font-mono font-medium">
-                <%= t.moneda == "USD" ? "$" : "L." %><%= number_with_delimiter(t.precio_libra.to_f, precision: 2) %>
+                <%= t.moneda == "USD" ? "$" : "L." %><%= number_with_precision(t.precio_libra, precision: 2, delimiter: ",") %>
               </td>
               <td class="px-4 py-3 text-right text-sm font-mono">
                 <% if t.minimo_monto.present? %>
                   <span class="<%= "line-through text-gray-400" unless t.aplica_minimo %>">
-                    <%= t.minimo_moneda == "USD" ? "$" : "L." %><%= number_with_delimiter(t.minimo_monto_con_isv.to_f, precision: 2) %>
+                    <%= t.minimo_moneda == "USD" ? "$" : "L." %><%= number_with_precision(t.minimo_monto_con_isv, precision: 2, delimiter: ",") %>
                   </span>
-                  <span class="block text-[10px] text-gray-400">neto <%= number_with_delimiter(t.minimo_monto.to_f, precision: 2) %></span>
+                  <span class="block text-[10px] text-gray-400">neto <%= number_with_precision(t.minimo_monto, precision: 2, delimiter: ",") %></span>
                 <% else %>
                   <span class="text-gray-300">—</span>
                 <% end %>

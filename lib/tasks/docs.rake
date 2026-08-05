@@ -223,38 +223,64 @@ namespace :docs do
           [ "<b>La tasa del dólar se sobrescribía sola</b>", "Un proceso automático la cambiaba todas las mañanas a las 6am. Ya se desactivó: ahora la tasa la fijás vos." ]
         ], anchos: [ 175, 312 ])
 
-      # ── 4. Pendientes ──
-      h1(pdf, "4. Lo que falta que decidas vos")
+      # ── 4. Precios cargados ──
+      h1(pdf, "4. Tus precios ya están cargados")
 
-      pdf.fill_color ROJO
-      pdf.text "Sin esto no podemos cargar los precios reales al sistema.", size: 10, style: :bold
-      pdf.fill_color "000000"
-      pdf.move_down 8
+      p_(pdf, "La tabla que mandaste (<b>precios por categoria 2026.xlsx</b>, hoja PROPUESTA) ya está en el " \
+              "sistema. Era lo único que faltaba para que cobrara de verdad: hasta ahora corría con un precio " \
+              "plano por servicio, sin mínimos ni escalones.")
+
+      p_(pdf, "Tu archivo confirmó el diseño punto por punto — llegaste por tu cuenta a la misma estructura " \
+              "que ya tenía el sistema: precio y mínimo por categoría, tarifario escalonado por rangos de " \
+              "libras, una fila aparte para Tegucigalpa, y una categoría sin cobro mínimo. Hasta el " \
+              "<b>L.173.91</b>: en la hoja ACTUAL figuraba como $6.45 y en la PROPUESTA lo pasaste al neto " \
+              "sin ISV, que es exactamente como lo guarda el sistema.")
 
       tabla(pdf,
-        [ "#", "Qué se necesita", "Estado" ],
+        [ "Qué se cargó", "Detalle" ],
         [
-          [ "1", "<b>La tabla de precios completa</b> — por cada categoría (revendedores, mayoristas, personal CEC, amigos, familia, Exchange, carga especial) y cada servicio: precio por libra, escalones si los hay, y mínimo.", "Quedaste de enviarla. Va en el Excel que acompaña a este documento." ],
-          [ "2", "<b>El mínimo por defecto de CEM y CKM.</b> Dijiste que depende del producto o la promoción, pero hace falta uno base para arrancar.", "¿8 y 20 libras como está documentado de abril, u otro?" ],
-          [ "3", "<b>El mínimo de EXPRESS.</b> Dijiste que lo cambiaban “para volver más atractivo el servicio”.", "¿A cuánto queda? En abril figuraba $14.95." ],
-          [ "4", "<b>Cuáles campos son imprescindibles en la etiqueta.</b> A 2.25 × 1.25 pulgadas no caben los 11 que anotaste.", "Marcalos en el Excel." ]
-        ], anchos: [ 22, 300, 165 ])
+          [ "<b>7 categorías nuevas</b>", "Clientes Amigos, doTERRA / Farmasi, Personal CEC, Shein, Sin Cobro Mínimo, Familia y Revendedores." ],
+          [ "<b>Los escalonados</b>", "CER, CEM y CKM cobran distinto según el peso, tal como los definiste." ],
+          [ "<b>Tegucigalpa</b>", "El sobrecosto de transporte se aplica <b>solo</b> cuando el paquete va para allá. No es una categoría de cliente y el cajero no elige nada." ],
+          [ "<b>Mínimo de EXPRESS</b>", "Queda en <b>$10 sin ISV</b>, como lo pusiste. Con eso se cierra la pregunta que teníamos de abril." ]
+        ], anchos: [ 118, 369 ])
 
-      h2(pdf, "Una nota de tus apuntes que ya quedó resuelta")
-p_(pdf, "En la página 2 escribiste “Label en el celular”. Era sobre la <b>etiqueta rota</b>: " \
-        "cuando llega dañada y solo se alcanzan a leer pedazos, hay que buscar al cliente con " \
-        "lo poco que se ve.")
-cita(pdf, "A veces llegan las etiquetas rotas, solo dicen 234 y después dice Pérez Hernández, entonces uno tiene que andar ahí unificando.")
-p_(pdf, "La búsqueda combinada que se hizo ya apunta a eso, pero se va a afinar para que aguante " \
-        "mejor los pedazos sueltos — que encuentre al cliente aunque solo uno de los fragmentos sea correcto.")
+      p_(pdf, "<b>Familia</b> y <b>Revendedores</b> venían todos en cero, así que sus clientes pagan precio de " \
+              "lista por ahora. De <b>Mayoristas</b> solo vino el precio de CKM. Los <b>16 cargos que no son " \
+              "flete</b> (recolecta, retenido, entrega nacional, manejo y gastos…) no se cargaron todavía: son " \
+              "otro módulo y varios ya existen con otros valores, así que hay que reconciliarlos aparte.")
 
-h2(pdf, "Una contradicción que hay que resolver")
+      p_(pdf, "<b>En la hoja 2 del Excel está todo lo que quedó cargado</b>, leído directo de la base — es " \
+              "literalmente lo que va a cobrar el sistema. Vale la pena que le des una pasada.")
+
+      # ── 5. Pendientes ──
+      h1(pdf, "5. Lo que falta que decidas vos")
+
+      tabla(pdf,
+        [ "#", "Qué se necesita", "Por qué" ],
+        [
+          [ "1", "<b>¿Hace falta todavía un mínimo en LIBRAS para CEM y CKM?</b>", "Tu tabla trae el mínimo en dinero pero no el de libras. En la práctica el escalonado ya cubre el paquete chico: un CEM de 2 libras paga $4.50 la libra." ],
+          [ "2", "<b>Para CKM, ¿cuál mínimo manda</b> — los L.200, el de libras, o el mayor de los dos?", "CKM es de la serie CK <b>y</b> es marítimo, así que entra en las dos reglas que diste. En tu tabla le pusiste L.173.91, así que cargamos ese." ],
+          [ "3", "<b>Regular y VIP no aparecen en tu tabla</b> y tienen 8 clientes asignados. ¿A cuál de las nuevas los pasamos?", "Por ahora se quedaron con los precios viejos, que son más bajos que los de lista." ],
+          [ "4", "<b>Las categorías no bajan de escalón.</b> Un Clientes Amigos con 200 lb de CER paga $4.20/lb ($840) y el público paga $3.50 ($700).", "Tu tabla da un solo precio por categoría y el escalonado está declarado solo para el precio de lista. Lo cargamos literal — decinos si es lo que querés." ],
+          [ "5", "<b>Cuáles campos son imprescindibles en la etiqueta.</b> A 2.25 × 1.25 pulgadas no caben los 11 que anotaste.", "Marcalos en la hoja 3 del Excel." ]
+        ], anchos: [ 22, 250, 215 ])
+
+      h2(pdf, "De dónde sale la pregunta 2")
       p_(pdf, "En el audio de tarifas decís dos cosas que chocan para el mismo servicio:")
       cita(pdf, "Los servicios serie CK son 200 lempiras ya con ISV.")
       cita(pdf, "El marítimo lo tenemos estipulado en cantidad de libras… mínimo 3 o 4 libras.")
-      p_(pdf, "<b>CKM es de la serie CK y además es marítimo</b>, así que entra en las dos reglas. " \
-              "¿Cuál manda para CKM: el mínimo de L.200, el de libras, o los dos y gana el que resulte mayor? " \
-              "El sistema soporta las tres opciones — es decisión tuya.")
+      p_(pdf, "<b>CKM es de la serie CK y además es marítimo</b>, así que entra en las dos. El sistema " \
+              "soporta las tres opciones — que mande el monto, que mande las libras, o que gane el mayor.")
+
+      h2(pdf, "Una nota de tus apuntes que ya quedó resuelta")
+      p_(pdf, "En la página 2 escribiste “Label en el celular”. Era sobre la <b>etiqueta rota</b>: " \
+              "cuando llega dañada y solo se alcanzan a leer pedazos, hay que buscar al cliente con " \
+              "lo poco que se ve.")
+      cita(pdf, "A veces llegan las etiquetas rotas, solo dicen 234 y después dice Pérez Hernández, entonces uno tiene que andar ahí unificando.")
+      p_(pdf, "Ya está: la búsqueda aguanta los pedazos sueltos. Si escribís “234 Pérez Hernández” y solo " \
+              "uno de los fragmentos es correcto, igual aparece el cliente — y los que coinciden en más " \
+              "pedazos salen primero. Los acentos tampoco importan.")
 
       h2(pdf, "Propuesta: dejar los proveedores de Entrega Personal precargados")
       p_(pdf, "Hoy no hay ninguno cargado, así que la pantalla de Entrega Personal avisa que faltan " \
@@ -317,26 +343,34 @@ h2(pdf, "Una contradicción que hay que resolver")
       # Hoja 1 — Preguntas
       # ─────────────────────────────────────────────────────────────
       wb.add_worksheet(name: "1. Preguntas") do |s|
-        s.add_row [ "Preguntas para Yusef — 2026-08-02" ], style: titulo
+        s.add_row [ "Preguntas para Yusef — 2026-08-05" ], style: titulo
         s.add_row [ "Llená solo la columna amarilla. Lo demás es contexto para que no tengas que acordarte." ], style: nota
         s.add_row []
         s.add_row [ "#", "Tema", "Pregunta", "Lo que sabemos hoy", "TU RESPUESTA" ],
                   style: [ navy, navy, navy, navy, gold ]
 
         [
-          [ "1", "Tabla de precios",
-            "La tabla completa de precios por categoría y servicio. Está en la hoja 2 de este archivo — es lo único que bloquea que podamos sembrar el sistema.",
-            "Dijiste: \"esta te la envío mañana\". Enumeraste estas categorías: revendedores (los más bajos), mayoristas (intermedio), personal de CEC (también de los más bajos), clientes amigos, familia, Exchange/Chain, y empresas de carga especial. Hoy el sistema solo tiene Regular, VIP y Mayorista.",
-            "→ Ver hoja 2" ],
-          [ "2", "Mínimo CEM y CKM",
-            "¿Cuál es el mínimo POR DEFECTO de CEM y CKM, para arrancar? Después le agregamos las excepciones por promoción.",
-            "Dijiste: \"ni sé cuál es el mínimo exacto, porque depende del tipo de producto o promoción, como Shein, Temu, doTERRA o Farmasi\". Documentado en abril: CEM = 8 libras, CKM = 20 libras. En el audio dijiste 3 o 4 libras.",
+          [ "1", "Precios cargados",
+            "Ya cargamos tu tabla PROPUESTA al sistema. En la hoja 2 está TODO lo que quedó cargado, exactamente como lo va a cobrar el sistema. ¿Está bien?",
+            "Tomamos la hoja PROPUESTA de \"precios por categoria 2026.xlsx\". Los 16 cargos que no son flete (recolecta, retenido, entrega nacional, manejo…) NO se cargaron todavía: son otro módulo del sistema y varios ya existen con otros valores, así que los vamos a reconciliar aparte.",
             "" ],
-          [ "3", "Mínimo EXPRESS",
-            "¿A cuánto queda el mínimo de EXPRESS?",
-            "Dijiste: \"lo cambiamos para volver más atractivo el servicio\". Documentado en abril: $14.95 con ISV incluido. En el audio mencionaste $10 más ISV.",
+          [ "2", "Mínimo CEM y CKM en libras",
+            "¿Hace falta todavía un mínimo en LIBRAS para CEM y CKM, o con el mínimo en dinero de la tabla ya está?",
+            "Tu tabla trae el mínimo en dinero (L.200 con ISV) pero no el de libras. En la práctica el escalonado ya cubre el paquete chico: un CEM de 2 libras paga 4.50/lb = $9. Documentado en abril: CEM = 8 libras, CKM = 20 libras. En el audio dijiste 3 o 4 libras.",
             "" ],
-          [ "4", "Etiqueta — qué cabe",
+          [ "3", "CKM cae en dos reglas",
+            "Para CKM, ¿cuál mínimo manda: los L.200, el de libras, o el que resulte MAYOR de los dos?",
+            "En el audio dijiste \"los servicios serie CK son 200 lempiras ya con ISV\" (aplica a CKA y CKM) y también \"el marítimo lo tenemos estipulado en cantidad de libras\" (aplica a CEM y CKM). CKM es las dos cosas. En tu tabla le pusiste L.173.91, así que cargamos ese — confirmalo.",
+            "" ],
+          [ "4", "Categorías que no vinieron",
+            "En el sistema hay 8 clientes en las categorías \"Regular\" y \"VIP\", que no aparecen en tu tabla. ¿A cuál de las nuevas los pasamos, o los dejamos como están?",
+            "Las categorías de tu tabla son: Clientes Amigos, doTERRA/Farmasi, Familia, Mayoristas, Personal de CEC, Shein, Revendedores y Sin Cobro Mínimo. Familia y Revendedores vinieron en cero, así que por ahora sus clientes pagan precio de lista. Mayoristas solo trae el precio de CKM.",
+            "" ],
+          [ "5", "Descuento y escalones",
+            "Un cliente \"Clientes Amigos\" con 200 libras de CER paga $4.20 la libra ($840) mientras el público paga $3.50 ($700), porque el escalonado solo lo pusiste en el precio de lista. ¿Es así o las categorías también bajan de escalón?",
+            "Tu tabla da un solo precio por categoría (columna NORMAL) y los tarifarios escalonados están declarados solo para el Precio Normal. Lo cargamos literal a como lo mandaste.",
+            "" ],
+          [ "6", "Etiqueta — qué cabe",
             "La etiqueta de ETIQUETAR mide 2.25 x 1.25 pulgadas (Dymo). A ese tamaño NO caben los 11 campos legibles con el código de barras encima. ¿Cuáles son los 4 o 5 imprescindibles, los que el operario tiene que leer de lejos en la estantería?",
             "Nuestra apuesta: (1) código de barras, (2) número de recepción, (3) código + nombre del cliente, (4) sucursal donde retira, (5) n/N de paquetes. Los 11 campos están listados en la hoja 3.",
             "" ]
@@ -349,75 +383,67 @@ h2(pdf, "Una contradicción que hay que resolver")
       end
 
       # ─────────────────────────────────────────────────────────────
-      # Hoja 2 — Tarifas (la plantilla que necesitamos llena)
+      # Hoja 2 — Tarifas cargadas
+      #
+      # Dejó de ser una plantilla que Yusef llena: él ya mandó su tabla y está
+      # sembrada (PR-10.g). Ahora la hoja LEE lo que quedó en la base, para que
+      # confirme que el sistema va a cobrar lo que él quiso decir.
       # ─────────────────────────────────────────────────────────────
-      SERVICIOS = TipoEnvio.activos.order(:precio_libra).reverse_order.map { |t|
-        { codigo: t.codigo.to_s.upcase, nombre: t.nombre, precio: t.precio_libra, modalidad: t.modalidad }
-      }
-
-      EXISTENTES = CategoriaPrecio.order(:id).map { |c|
-        { nombre: c.nombre, aereo: c.precio_libra_aereo, maritimo: c.precio_libra_maritimo }
-      }
-
-      NUEVAS = [ "Revendedores", "Personal CEC", "Clientes amigos", "Familia", "Exchange / Chain", "Carga especial" ]
-
-      MINIMOS_DOC = {
-        "CER"     => { monto: "200.00", moneda: "LPS", isv: "Sí", libras: "" },
-        "CKA"     => { monto: "200.00", moneda: "LPS", isv: "Sí", libras: "" },
-        "EXPRESS" => { monto: "14.95",  moneda: "USD", isv: "Sí", libras: "" },
-        "CEM"     => { monto: "",       moneda: "",    isv: "",   libras: "8" },
-        "CKM"     => { monto: "",       moneda: "",    isv: "",   libras: "20" }
-      }
-
-      wb.add_worksheet(name: "2. Tarifas") do |s|
-        s.add_row [ "Tabla de precios — llenar y devolver" ], style: titulo
-        s.add_row [ "Una fila por servicio y categoría. Si un servicio tiene precio ESCALONADO por peso (\"de 1 a 3 libras vale tanto, de 3 en adelante vale tanto\"), agregá una fila más por cada escalón usando las columnas Desde/Hasta." ], style: nota
-        s.add_row [ "Las celdas amarillas son las que necesitamos. Las grises son lo que el sistema tiene hoy, para referencia." ], style: nota
+      wb.add_worksheet(name: "2. Tarifas cargadas") do |s|
+        s.add_row [ "Precios cargados en el sistema — revisar y confirmar" ], style: titulo
+        s.add_row [ "Esto es lo que hay HOY en el sistema, leído directo de la base. Es exactamente lo que va a cobrar." ], style: nota
+        s.add_row [ "Gana la regla más específica: precio del cliente → promoción del proveedor → categoría → precio de lista. Dentro de la que gane, se usa el escalón de peso que corresponda, y si hay una fila para la sucursal esa manda." ], style: nota
+        s.add_row [ "El mínimo se muestra en los dos valores: lo que le cobrás al cliente (con ISV) y el neto que guarda el sistema. Si algo está mal, escribilo en la última columna." ], style: nota
         s.add_row []
         s.add_row [
-          "Servicio", "Categoría de cliente", "Desde (lb)", "Hasta (lb)",
-          "Precio x libra", "Moneda", "Mínimo (monto)", "Moneda del mínimo",
-          "¿El mínimo ya trae ISV?", "Mínimo (libras)", "¿Aplica mínimo?",
-          "Incremento (lb)", "Notas"
-        ], style: navy
+          "Servicio", "Aplica a", "Sucursal", "Desde (lb)", "Hasta (lb)",
+          "Precio x libra", "Mínimo (le cobrás)", "Mínimo (neto)",
+          "¿Aplica mínimo?", "Cobro", "¿ESTÁ BIEN? / corrección"
+        ], style: [ navy, navy, navy, navy, navy, navy, navy, navy, navy, navy, gold ]
 
-        SERVICIOS.each do |srv|
-          m = MINIMOS_DOC.fetch(srv[:codigo], { monto: "", moneda: "", isv: "", libras: "" })
+        simbolo = ->(moneda) { moneda == "USD" ? "$" : "L." }
 
-          # Fila de lista (precio público) — pre-llenada con lo que hay hoy
-          s.add_row [
-            "#{srv[:codigo]} — #{srv[:nombre]}", "(precio de lista / público)", 0, "",
-            srv[:precio], "USD", m[:monto], m[:moneda], m[:isv], m[:libras], "Sí", 1,
-            "Precio actual del sistema. Mínimos según lo documentado en abril — confirmar."
-          ], style: [ wrapb, gris, llenar, llenar, llenar, llenar, llenar, llenar, llenar, llenar, llenar, llenar, wrap ]
+        TipoEnvio.activos.order(:nombre).each do |te|
+          filas = Tarifa.where(tipo_envio_id: te.id)
+                        .includes(:categoria_precio, :cliente, :proveedor, :sucursal)
+                        .to_a
+                        .sort_by { |t|
+                          nivel = t.cliente_id ? 3 : (t.proveedor_id ? 2 : (t.categoria_precio_id ? 1 : 0))
+                          [ nivel, t.categoria_precio&.nombre.to_s.downcase,
+                            t.desde_libras.to_f, t.sucursal&.nombre.to_s ]
+                        }
+          next if filas.empty?
 
-          # Categorías que ya existen
-          EXISTENTES.each do |cat|
-            actual = srv[:modalidad] == "maritimo" ? cat[:maritimo] : cat[:aereo]
-            alerta = if actual && srv[:precio] && actual < srv[:precio]
-              "⚠ Hoy paga #{actual} cuando la lista es #{srv[:precio]} — el sistema no distingue entre servicios de la misma modalidad."
-            end
+          nombre_servicio = te.codigo.to_s.upcase == te.nombre.to_s.upcase ?
+                              te.nombre : "#{te.codigo.to_s.upcase} — #{te.nombre}"
+
+          filas.each do |t|
+            aplica = t.cliente&.nombre_completo || t.proveedor&.nombre ||
+                     t.categoria_precio&.nombre || "Precio de lista (público)"
+            # Las filas que no vienen de su tabla son sobras del arranque del
+            # sistema — conviene que las vea marcadas y no mezcladas.
+            heredada = t.notas.to_s.start_with?("Backfill") ?
+                         "⚠ No venía en tu tabla — quedó del arranque" : ""
+
             s.add_row [
-              "#{srv[:codigo]} — #{srv[:nombre]}", cat[:nombre], 0, "",
-              actual, "USD", "", "", "", "", "Sí", 1, alerta
-            ], style: [ wrapb, gris, llenar, llenar, llenar, llenar, llenar, llenar, llenar, llenar, llenar, llenar, nota ]
-          end
-
-          # Categorías nuevas que mencionaste en el audio
-          NUEVAS.each do |nom|
-            nota_cat = if nom.start_with?("Exchange")
-              "Dijiste que acá NO aplica el mínimo y que se cobra por libra o MEDIA libra → poné \"No\" en aplica mínimo e \"0.5\" en incremento."
-            end
-            s.add_row [
-              "#{srv[:codigo]} — #{srv[:nombre]}", nom, 0, "",
-              "", "USD", "", "", "", "", "", 1, nota_cat
-            ], style: [ wrapb, gris, llenar, llenar, llenar, llenar, llenar, llenar, llenar, llenar, llenar, llenar, nota ]
+              nombre_servicio,
+              aplica,
+              t.sucursal&.nombre || "todas",
+              t.desde_libras.to_f,
+              t.hasta_libras ? t.hasta_libras.to_f : "en adelante",
+              "#{simbolo.(t.moneda)}#{'%.2f' % t.precio_libra}",
+              t.minimo_monto ? "#{simbolo.(t.minimo_moneda)}#{'%.2f' % t.minimo_monto_con_isv}" : "—",
+              t.minimo_monto ? "#{simbolo.(t.minimo_moneda)}#{'%.2f' % t.minimo_monto}" : "—",
+              t.aplica_minimo ? "Sí" : "NO",
+              t.incremento_libras ? "por #{t.incremento_libras.to_f} lb" : "peso exacto",
+              heredada
+            ], style: [ wrapb, wrap, wrap, wrap, wrap, wrap, wrap, gris, wrap, wrap, llenar ]
           end
 
           s.add_row []
         end
 
-        s.column_widths 26, 22, 11, 11, 14, 9, 14, 15, 16, 14, 13, 13, 52
+        s.column_widths 24, 26, 16, 11, 13, 14, 18, 14, 14, 13, 30
       end
 
       # ─────────────────────────────────────────────────────────────
@@ -576,21 +602,39 @@ h2(pdf, "Una contradicción que hay que resolver")
           [ "2ª", "Promoción del <b>proveedor</b>", "Todo lo que venga de Shein" ],
           [ "3ª", "<b>Categoría</b> del cliente", "Mayorista, revendedor, familia" ],
           [ "4ª", "Precio de <b>lista</b>", "El público" ]
-        ], anchos: [ 55, 240, 192 ])
+        ], anchos: [ 62, 233, 192 ])
       p_(pdf, "Dentro de la regla que gane, se usa el <b>escalón de peso</b> que corresponda. Y si hay una " \
               "tarifa para esa <b>sucursal</b>, esa pisa a la general — por el costo extra de transporte.")
 
       h2(pdf, "Los cobros mínimos")
+      p_(pdf, "Esto es lo que quedó cargado de tu tabla 2026, para el precio de lista:")
       tabla(pdf,
         [ "Servicio", "Mínimo", "Cómo lo aplica" ],
         [
-          [ "<b>Serie CK</b>", "L.200 <b>con</b> ISV", "Guarda L.173.91 y al facturar vuelve a dar L.200." ],
-          [ "<b>Marítimo</b>", "3 o 4 libras", "Un paquete de 1.5 lb se cobra como si pesara 4." ],
-          [ "<b>Express</b>", "$10 <b>más</b> ISV", "Cobra $10 y el impuesto se suma aparte." ]
-        ], anchos: [ 80, 105, 302 ])
+          [ "<b>CER, CKA, CEM, CKM</b>", "L.200 <b>con</b> ISV", "Guarda L.173.91 y al facturar vuelve a dar los L.200 que cobrás." ],
+          [ "<b>EXPRESS</b>", "$10 <b>más</b> ISV", "Cobra $10 y el impuesto se suma aparte." ]
+        ], anchos: [ 110, 100, 277 ])
+      p_(pdf, "El mínimo es <b>por concepto, no por factura</b>: el flete lleva el suyo, la recolecta el suyo.")
       p_(pdf, "Hay dos formas de mínimo y el sistema maneja las dos: <b>por monto</b> (un piso en dinero) y " \
-              "<b>por libras</b> (se factura un peso mínimo). Algunas categorías, como Exchange/Shein, " \
-              "<b>no llevan mínimo</b> y cobran por libra o media libra.")
+              "<b>por libras</b> (se factura un peso mínimo). Tu tabla trae solo mínimos por monto. La " \
+              "categoría <b>Sin Cobro Mínimo</b> no lleva ninguno: cobra el peso real por chico que sea.")
+
+      h2(pdf, "El precio baja según el peso")
+      p_(pdf, "CER, CEM y CKM tienen tarifario escalonado — mientras más pesa, más barata la libra. CKA y " \
+              "EXPRESS son precio plano. Esto aplica al <b>precio de lista</b>; las categorías tienen un " \
+              "precio único.")
+      tabla(pdf,
+        [ "CER", "$/lb", "CEM", "$/lb", "CKM", "$/lb" ],
+        [
+          [ "0 – 50 lb",   "4.50", "0 – 3 lb",     "4.50", "0 – 3 lb",      "4.00" ],
+          [ "50.5 – 100",  "4.00", "3.5 – 100",    "2.50", "3.5 – 13",      "2.50" ],
+          [ "100.5 – 150", "3.75", "100.5 – 200",  "2.20", "13.5 – 100",    "1.90" ],
+          [ "150.5 +",     "3.50", "200.5 +",      "2.00", "100.5 – 200",   "1.75" ],
+          [ "",            "",     "",             "",     "200.5 +",       "1.65" ]
+        ], anchos: [ 90, 45, 92, 45, 100, 45 ])
+      p_(pdf, "En <b>Tegucigalpa</b> el CKM de 13.5 a 100 libras cuesta <b>$2.00</b> en vez de $1.90, por el " \
+              "costo extra de transporte. Lo aplica el sistema solo, según a dónde va el paquete — el cajero " \
+              "no elige nada. Lo mismo con Shein: su marítimo sube de $1.75 a $1.90 en Tegucigalpa.")
 
       h2(pdf, "Peso: cuál se cobra")
       p_(pdf, "Se compara el <b>peso real</b> contra el <b>peso volumétrico</b> y se cobra el mayor.")
@@ -717,7 +761,7 @@ h2(pdf, "Una contradicción que hay que resolver")
           [ "<b>5c. Detalle y WR</b>", "Warehouse Receipt, sucursales, notas por categoría, catálogo de proveedores, bitácora de cambios.", "Listo" ],
           [ "<b>6. Dashboard</b>", "Indicadores del día y accesos rápidos.", "Parcial" ],
           [ "<b>10. Contexto</b>", "La franja de tareas y notas del cliente mientras se captura.", "Listo" ],
-          [ "<b>11. Tarifas</b>", "Todo lo de la parte 2: precios, mínimos, escalones y la moneda.", "En curso" ],
+          [ "<b>11. Tarifas</b>", "Todo lo de la parte 2: precios, mínimos, escalones y la moneda. Tu tabla de precios 2026 ya está cargada.", "Listo" ],
           [ "<b>12. Escaneo al empacar</b>", "Pre-etiqueta de caja y verificación al empacar.", "Planificada" ]
         ], anchos: [ 118, 300, 69 ])
 
@@ -756,12 +800,13 @@ h2(pdf, "Una contradicción que hay que resolver")
       tabla(pdf,
         [ "#", "Qué se necesita" ],
         [
-          [ "1", "<b>La tabla de precios completa</b> por categoría y servicio. Es lo único que bloquea cargar los precios reales." ],
-          [ "2", "El <b>mínimo por defecto</b> de CEM y CKM." ],
-          [ "3", "El <b>mínimo de EXPRESS</b> después del cambio." ],
-          [ "4", "<b>Cuáles campos</b> son imprescindibles en la etiqueta de 2.25 × 1.25." ],
-          [ "5", "<b>CKM está en dos reglas que se contradicen</b>: es de la serie CK (mínimo L.200) y además es marítimo (mínimo en libras). ¿Cuál manda, o aplican las dos y gana la mayor?" ],
-          [ "6", "Confirmar la <b>lista de proveedores</b> de entrega personal para dejarlos precargados." ]
+          [ "1", "<b>Revisar los precios que se cargaron</b> de tu tabla. Están en la hoja 2 del Excel, leídos directo de la base — es literalmente lo que va a cobrar el sistema." ],
+          [ "2", "¿Hace falta todavía un <b>mínimo en libras</b> para CEM y CKM? Tu tabla trae el mínimo en dinero pero no el de libras." ],
+          [ "3", "<b>CKM está en dos reglas que se contradicen</b>: es de la serie CK (mínimo L.200) y además es marítimo (mínimo en libras). En tu tabla le pusiste L.173.91, así que cargamos ese. ¿Confirmás?" ],
+          [ "4", "<b>Regular y VIP</b> no aparecen en tu tabla y tienen 8 clientes asignados. ¿A cuál de las categorías nuevas los pasamos?" ],
+          [ "5", "Las <b>categorías no bajan de escalón</b>: un Clientes Amigos con 200 lb de CER paga $4.20/lb y el público paga $3.50. Es literal a tu tabla — decinos si es lo que querés." ],
+          [ "6", "<b>Cuáles campos</b> son imprescindibles en la etiqueta de 2.25 × 1.25." ],
+          [ "7", "Confirmar la <b>lista de proveedores</b> de entrega personal para dejarlos precargados." ]
         ], anchos: [ 22, 465 ])
 
       pdf.move_down 14

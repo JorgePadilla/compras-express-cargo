@@ -614,10 +614,11 @@ Preferencias por usuario: `users.sonido_habilitado` + `users.sonido_volumen` (0-
 | 10.d | Etiqueta Dymo 2.25×1.25 con código de barras | 6, 7 | ✅ |
 | 10.e | Separar Driver de Proveedor en Entrega Personal | 6 | ✅ |
 | 10.f | Búsqueda por fragmentos de etiqueta rota + acentos | 11 | ✅ |
+| 10.g | Sembrar la tabla de precios real (PROPUESTA 2026) | 9, 11 | ✅ |
 
 **Dependencia:** Fase 3a (billing) + PR-D6 (tarifas de recolecta y servicios extra). Cumplidas.
 
-**Bloqueo:** sembrar `tarifas` requiere la tabla de precios por categoría, que Yusef quedó de enviar. El modelo, el CRUD y los tests se construyen sin ella.
+**Bloqueo:** ~~sembrar `tarifas` requiere la tabla de precios por categoría~~ — llegó el 2026-08-05 y se sembró en PR-10.g.
 
 ### Hallazgos de la exploración
 
@@ -682,6 +683,34 @@ Cuatro formatos distintos en la operación; **solo se rediseña el de ETIQUETAR*
 | MANIFIESTO NACIONAL | 4 × 6 in | FreeX | Por fuera; varias pre-facturas |
 
 Se separa la etiqueta del Warehouse Receipt. Código de barras **Code 128** del número de recepción vía `barby` + `chunky_png` como data-URI PNG (server-side, más confiable para impresión que una librería JS).
+
+### Sembrado de precios reales (PR-10.g)
+
+Los números viven en `lib/tarifas_propuesta_2026.rb` como constantes que espejan
+la hoja de Yusef, y se aplican con:
+
+```bash
+bin/rails tarifas:sembrar_propuesta_2026
+```
+
+Tarea aparte y no dentro de `db/seeds.rb` (aunque el seed también la llama)
+porque los precios cambian con el negocio y `seeds` se corre entero: una
+corrección de precios tiene que poder aplicarse sola. Es idempotente — la llave
+natural es `(tipo_envio, categoría, sucursal, desde_libras)` y las filas se
+actualizan en vez de duplicarse.
+
+Qué siembra: 7 categorías nuevas (`Clientes Amigos`, `doTERRA / Farmasi`,
+`Personal CEC`, `Shein`, `Sin Cobro Mínimo`, `Familia`, `Revendedores`), ~44
+tarifas entre precio de lista escalonado, precios por categoría y los tres
+sobrecostos de Tegucigalpa. `Regular` y `VIP` **no se tocan** — no están en el
+archivo de Yusef y tienen 8 clientes colgando.
+
+De paso sincroniza `tipo_envios.precio_libra`, que es el fallback cuando no hay
+tarifa cargada y había quedado desalineado (**EXPRESS 8.00 → 7.50**, **CKM 1.50
+→ 1.90**). Un fallback que cobra distinto que la tarifa es peor que no tenerlo.
+
+El detalle de la tabla, las decisiones de lectura del archivo y lo que sigue
+abierto están en `docs/05` — "La tabla de precios recibida (2026-08-05)".
 
 ### Deuda técnica que se salda de paso
 

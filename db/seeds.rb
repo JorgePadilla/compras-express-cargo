@@ -28,7 +28,7 @@ puts "  ✓ #{Sucursal.count} sucursales"
 # ── Tipos de envio (v4.0 — ver docs/approved/pre_alerta_v4.docx) ──
 [
   { nombre: "EXPRESS", codigo: "express", con_reempaque: true,  consolidable: true,
-    precio_libra: 8.00, modalidad: "aereo",    sla: "3-7 dias habiles",   max_paquetes_por_accion: nil },
+    precio_libra: 7.50, modalidad: "aereo",    sla: "3-7 dias habiles",   max_paquetes_por_accion: nil },
   { nombre: "CER",     codigo: "cer",     con_reempaque: true,  consolidable: true,
     precio_libra: 4.50, modalidad: "aereo",    sla: "6-10 dias habiles",  max_paquetes_por_accion: nil },
   { nombre: "CEM",     codigo: "cem",     con_reempaque: true,  consolidable: true,
@@ -36,7 +36,7 @@ puts "  ✓ #{Sucursal.count} sucursales"
   { nombre: "CKA",     codigo: "cka",     con_reempaque: false, consolidable: false,
     precio_libra: 4.00, modalidad: "aereo",    sla: "6-10 dias habiles",  max_paquetes_por_accion: 1 },
   { nombre: "CKM",     codigo: "ckm",     con_reempaque: false, consolidable: false,
-    precio_libra: 1.50, modalidad: "maritimo", sla: "14-17 dias habiles", max_paquetes_por_accion: 1 }
+    precio_libra: 1.90, modalidad: "maritimo", sla: "14-17 dias habiles", max_paquetes_por_accion: 1 }
 ].each do |attrs|
   te = TipoEnvio.find_or_initialize_by(codigo: attrs[:codigo])
   te.assign_attributes(attrs)
@@ -86,6 +86,13 @@ puts "  ✓ #{EmpresaManifiesto.count} empresas de manifiesto"
   end
 end
 puts "  ✓ #{CategoriaPrecio.count} categorias de precio"
+
+# ── Tarifas reales (PR-10.g) ──
+# Crea el resto de las categorías (Clientes Amigos, doTERRA, Shein, Personal
+# CEC, Sin Cobro Mínimo…) y las tarifas de la hoja PROPUESTA de Yusef.
+# Vive en `lib/tarifas_propuesta_2026.rb` para poder re-aplicarse sola cuando
+# manden una corrección de precios: `bin/rails tarifas:sembrar_propuesta_2026`.
+TarifasPropuesta2026.sembrar!(verbose: true)
 
 # ── Configuraciones ──
 {

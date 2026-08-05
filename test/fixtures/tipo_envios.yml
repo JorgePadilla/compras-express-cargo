@@ -4,7 +4,7 @@ express:
   activo: true
   con_reempaque: true
   consolidable: true
-  precio_libra: 8.00
+  precio_libra: 7.50
   modalidad: aereo
   sla: 3-7 dias habiles
 
@@ -45,7 +45,7 @@ ckm:
   activo: true
   con_reempaque: false
   consolidable: false
-  precio_libra: 1.50
+  precio_libra: 1.90
   modalidad: maritimo
   sla: 14-17 dias habiles
   max_paquetes_por_accion: 1
