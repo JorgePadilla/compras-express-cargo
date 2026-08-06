@@ -60,12 +60,21 @@ class NotasDebitoController < ApplicationController
     end
   end
 
+  # PR-13.e: emitir es el momento en que el cliente pasa a deber más. La nota se
+  # arma libre —su propósito es ajustar a mano— y el control va acá, donde el
+  # saldo cambia. Además, un `cajero` puede crear notas de débito, así que los
+  # cuatro ojos importan: la emite otro.
   def emitir
-    if @nota_debito.emitir!
+    autorizacion = Autorizacion.emitir_nota!(
+      nota: @nota_debito, solicitado_por: Current.user, attrs: autorizacion_params
+    )
+
+    if autorizacion.persisted?
       NotaDebitoMailer.emitida(@nota_debito).deliver_later if @nota_debito.cliente.email.present?
-      redirect_to @nota_debito, notice: "Nota de debito emitida."
+      redirect_to @nota_debito,
+                  notice: "Nota de debito emitida, autorizada por #{autorizacion.autorizado_por.nombre}."
     else
-      redirect_to @nota_debito, alert: "No se pudo emitir (estado actual: #{@nota_debito.estado})."
+      redirect_to @nota_debito, alert: autorizacion.errors.full_messages.to_sentence
     end
   end
 
@@ -93,7 +102,19 @@ class NotasDebitoController < ApplicationController
     end
   end
 
-  private  def require_feature_access
+  rate_limit to: 5, within: 5.minutes,
+             by: -> { params.dig(:autorizacion, :autorizado_por_id).to_s },
+             with: -> { redirect_to nota_debito_path(params[:id]),
+                                    alert: "Demasiados intentos con ese PIN. Espera unos minutos." },
+             only: :emitir
+
+  private
+
+  def autorizacion_params
+    params.fetch(:autorizacion, {}).permit(:autorizado_por_id, :pin, :motivo)
+  end
+
+  def require_feature_access
     redirect_to(root_path, alert: "No tienes permiso para acceder a esta seccion.") unless can_access?(:notas_debito)
   end
 

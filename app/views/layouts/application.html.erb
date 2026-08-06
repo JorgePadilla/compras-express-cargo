@@ -91,7 +91,14 @@
           <div class="p-3 border-t border-white/10 space-y-2">
             <div class="text-xs text-gray-400 sidebar-label whitespace-nowrap overflow-hidden">
               <%= Current.user.nombre_completo %>
-              <span class="block text-gray-500"><%= Current.user.rol.humanize %></span>
+              <span class="block text-gray-500"><%= Current.user.rol_label %></span>
+              <%# PR-13.c: solo lo ven los roles que autorizan con PIN. %>
+              <% if Current.user.rol_autorizante? %>
+                <%= link_to edit_mi_pin_path,
+                      class: "block mt-1 #{Current.user.pin_sin_cambiar? ? 'text-amber-400' : 'text-gray-500 hover:text-gray-300'}" do %>
+                  <%= Current.user.pin_sin_cambiar? ? "Cambiá tu PIN" : "Mi PIN" %>
+                <% end %>
+              <% end %>
             </div>
 
             <%# Wrapper con clase `sidebar-footer-buttons` — el CSS

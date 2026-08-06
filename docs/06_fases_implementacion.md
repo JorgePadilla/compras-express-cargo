@@ -685,6 +685,73 @@ Cuatro formatos distintos en la operación; **solo se rediseña el de ETIQUETAR*
 
 Se separa la etiqueta del Warehouse Receipt. Código de barras **Code 128** del número de recepción vía `barby` + `chunky_png` como data-URI PNG (server-side, más confiable para impresión que una librería JS).
 
+#### ✅ Qué campos van — resuelto (2026-08-06)
+
+> "No creo cambiar el tamaño de la etiqueta. **Allí es letra pequeña unas y otras grandes.**" — Yusef
+
+La pregunta era cuáles de los 11 campos recortar. La respuesta fue que **no se recorta ninguno**: van los 11 y lo que cambia es el cuerpo de letra. El tamaño de 2.25 × 1.25 in se queda.
+
+| | Campos |
+|---|---|
+| **Grande** — se lee de lejos en la estantería | Número de recepción, tipo de envío, código y nombre del cliente, sucursal donde retira, n/N de paquetes |
+| **Chico** — solo hace falta tenerlo a mano | Tracking principal y secundario, tercero, driver, ciudad del cliente, fecha y hora, iniciales |
+
+#### La jerarquía, del mockup anotado (PR-10.d.2)
+
+Yusef mandó su etiqueta vieja marcada campo por campo. Lo que hoy estaba chico
+era lo que él quiere grande — el **tracking** sobre todo, que es lo que el
+operario compara contra la caja que tiene en la mano.
+
+Los tamaños viven en variables CSS (`--t1 … --t7`) en `layouts/etiqueta.html.erb`
+para poder escalarlos de un solo lugar:
+
+| | Campos |
+|---|---|
+| `--t1` 21pt | Tipo de envío — **lo más grande de la etiqueta** |
+| `--t2` 12pt | Número de recepción |
+| `--t3` 11pt | Código del cliente · n/N |
+| `--t4` 9.5pt | Nombre del cliente · sucursal |
+| `--t5` 7.5pt | Tracking y secundario |
+| `--t6` 6.5pt | Fecha y hora · iniciales |
+| `--t7` 6pt | Ubicación · tercero · driver |
+
+**Lo que hace que quepa es el bloque de dos columnas de abajo**, que es la
+estructura de su mockup: `C6` + `1/2` y la sucursal a la izquierda, el tipo de
+envío enorme a la derecha. Así el elemento más grande no cuesta un renglón.
+
+#### Que quepa es un test, no una cuenta
+
+`test/system/etiqueta_cabe_test.rb` abre la etiqueta en **Chrome de verdad** y
+compara `scrollHeight` contra `clientHeight` — el único modo de ver un recorte
+de CSS. Con eso el ciclo es: fijar la jerarquía, medir, bajar los escalones si
+no entra.
+
+> ⚠️ **Dos trampas que costaron sangre acá:**
+>
+> 1. La primera versión del test **no tenía dientes**: pasaba aun con `--t1` en
+>    40pt. Los hijos de un flex se **encogen** por defecto, así que en vez de
+>    desbordar se comprimían y el texto se recortaba *adentro* de cada caja —
+>    `scrollHeight` nunca crecía. Se arregló con `.etq > * { flex: 0 0 auto; }`,
+>    que además es lo correcto para la impresión.
+> 2. Con la medición ya funcionando, la configuración que yo había calculado a
+>    mano en el turno anterior **no cabía** (121px contra 120px disponibles).
+>
+> Holgura real hoy: **16px de 120** con todos los campos llenos.
+
+#### Dos cosas que salieron de mirar la etiqueta renderizada
+
+- **El tipo de envío se abrevia a 3 letras.** El mockup dice `EXP`, no
+  `EXPRESS`. No es cosmético: completo se come más de la mitad del ancho y deja
+  la sucursal en **`SAN PED…`** — el "¿qué es San Pedro Soda?" reapareciendo.
+- **La fecha no se encoge.** El driver le estaba robando el ancho y salía
+  `27-Jul-2026 …` sin la hora. En la jerarquía de Yusef la fecha está por
+  encima del driver, que ni figura en su mockup; ahora el que se recorta es el
+  driver.
+
+Lo que ningún test cubre: **que el código de barras siga escaneando**. Está en
+0.20 in, que es el piso práctico para escáneres de mano. Eso se prueba
+imprimiendo.
+
 ### Sembrado de precios reales (PR-10.g)
 
 Los números viven en `lib/tarifas_propuesta_2026.rb` como constantes que espejan
@@ -748,8 +815,9 @@ abierto están en `docs/05` — "La tabla de precios recibida (2026-08-05)".
 |---|-------|--------|
 | 13.a | Notas de débito/crédito por `Tarifa.resolver` + el mínimo sobrevive a facturar | ✅ |
 | 13.b | Descuento como campo propio (monto o %, ISV sobre el neto) | ✅ |
-| 13.c | Rol `supervisor_sac` + PIN de 4 dígitos | ⬜ |
-| 13.d | Autorización por línea y el candado | ⬜ |
+| 13.c | Rol `supervisor_sac` + PIN de 4 dígitos | ✅ |
+| 13.d | Autorización por línea y el candado | ✅ |
+| 13.e | Emitir notas de débito/crédito pide PIN + cuatro ojos | ✅ |
 
 Sale de la aclaración de Yusef del 2026-08-05 sobre
 la nota `TARIFA EDITABLE CON AUTORIZACION DE SUPERVISOR O JEFE` que repite en
@@ -769,12 +837,99 @@ descripción de su proceso interno; **es una función del sistema**:
 Lo importante es el **punto 2**: el precio bloqueado por defecto es el
 requisito. La autorización es la excepción, no al revés.
 
-### 🔴 Hoy el sistema hace lo contrario
+### ✅ El candado — PR-13.d
 
-`PreFacturasController#pre_factura_params` permite `precio_libra` y `subtotal`
-en `pre_factura_items_attributes`, y la vista de edición los expone como inputs
-sueltos. Cualquiera con acceso a pre-facturas cambia el monto sin dejar rastro
-de por qué. `paper_trail` guarda el *qué* pero no el motivo ni el autorizante.
+`pre_factura_params` permitía `precio_libra`, `peso_cobrar`, `subtotal` y
+`_destroy`, y la vista los exponía como inputs sueltos: cualquiera con acceso a
+pre-facturas cambiaba el monto sin dejar dicho por qué. Ahora **solo permite
+`concepto`** (la descripción, no el monto), y los cinco campos que mueven plata
+van por `AutorizacionesLineaController`.
+
+Aplica **a todos, incluido el admin**. Si el admin puede editar suelto, el
+registro tiene un agujero y deja de servir como prueba.
+
+#### Autorizar y cambiar son el mismo acto
+
+No existe un modo "desbloqueado". El supervisor está parado en el mostrador, así
+que el modal recoge **el cambio y el PIN juntos** y `AutorizacionLinea.aplicar!`
+hace las dos cosas en una transacción o ninguna.
+
+La alternativa —el PIN abre una ventana de edición— tiene dos problemas: el
+registro puede quedar desalineado del cambio, y la ventana queda abierta cuando
+el supervisor ya se fue.
+
+#### El registro
+
+`autorizaciones_linea` guarda quién autorizó, quién pidió, la acción, el valor
+**anterior y nuevo**, el motivo (obligatorio) y un snapshot del `concepto`.
+
+- `pre_factura_id` va aparte de `pre_factura_item_id` porque una de las acciones
+  es eliminar la línea: el item desaparece (`nullify`) y el registro sobrevive.
+- `valor_nuevo` se lee del item **después** de aplicar, no del formulario: con un
+  descuento capturado como "10%" lo que hay que registrar es el monto que
+  resultó (L.111.83). Guardar el 10 haría que el total de la bitácora sumara
+  porcentajes con lempiras.
+
+#### El límite de intentos
+
+`rate_limit to: 5, within: 5.minutes`, **por supervisor y no por IP** (que es el
+default de Rails): en un mostrador todos comparten la IP, así que por IP el
+primero en equivocarse dejaría afuera a los demás y el cajero legítimo se
+comería el bloqueo.
+
+> ⚠️ El entorno de test corría con `cache_store = :null_store`, y `rate_limit`
+> cuenta ahí — o sea que **un límite de intentos habría pasado los tests sin
+> existir**. Se le puso `config.action_controller.cache_store = :memory_store`
+> al entorno de test, y `test_helper` lo limpia antes de cada test: el contador
+> vive en el proceso, y el `rate_limit` del login de `SessionsController` es por
+> IP, así que sin limpiarlo los tests se caían solos a partir del undécimo.
+
+### ✅ Las notas de débito y crédito — PR-13.e
+
+**El control va en otro lado, y a propósito.** La nota **no saca su monto de la
+tabla de tarifas** — ajustar a mano es su propósito. Trabar cada línea sería
+trabar justamente lo que el documento viene a hacer.
+
+Así que el PIN se pide **al emitir**, que es el momento en que el saldo del
+cliente cambia. Antes de eso la nota vive en `creado` y no mueve plata.
+
+| | |
+|---|---|
+| Pre-factura | El precio viene de una tarifa → candado **por línea** |
+| Nota | El monto es manual por diseño → PIN **al emitir** |
+
+#### Cuatro ojos
+
+Quien arma la nota **no puede emitirla él mismo**; el dropdown ni lo ofrece. Es
+el control clásico contra el autoservicio, y acá pesa más que en la pre-factura:
+una nota de crédito es plata que se le devuelve al cliente, y un `cajero` puede
+crear notas de débito.
+
+> La validación va como `validate` y no como un chequeo suelto antes de
+> `valid?`: **`valid?` limpia los errores**, así que un `errors.add` previo se
+> perdía en silencio y la nota se emitía igual. Lo encontró el test.
+
+#### Una sola bitácora
+
+`AutorizacionLinea` pasó a ser `Autorizacion` con `documento` polimórfico
+(`PreFactura` · `NotaCredito` · `NotaDebito`). Es el mismo hecho de negocio —
+plata que se movió sin una tarifa detrás— y en dos pantallas separadas nadie
+sumaría las dos.
+
+La bitácora muestra aparte el **total devuelto por notas de crédito**, que se
+lee distinto del descuento.
+
+> `has_many :autorizaciones` necesitó una regla de inflexión: el inflector
+> inglés singulariza a `Autorizacione`. El repo ya resuelve así el resto de los
+> nombres en español.
+
+#### La bitácora — `/autorizaciones`
+
+Qué se autorizó, quién, contra qué valor y por qué, con el **total descontado**
+del período arriba. La ven los mismos roles que pueden autorizar.
+
+Sin una pantalla donde mirarlo, todo el mecanismo es solo fricción en el
+mostrador: se registra pero nadie lo lee.
 
 ### El descuento como dato propio (PR-13.b)
 
@@ -897,17 +1052,56 @@ fallan.
 | ¿Alcance? | **Por línea.** No se autoriza la pre-factura entera |
 | ¿Quién autoriza? | `admin`, `supervisor_prefactura`, `supervisor_caja` y **`supervisor_sac`** |
 
-#### El rol que falta
+#### ✅ El rol `supervisor_sac` y el PIN — PR-13.c
 
-`sac` ya existe — es el agente de servicio al cliente. Lo que falta es **su
-supervisor**, que Yusef cuenta también como jefe:
+`sac` ya existía (el agente de servicio al cliente); lo que faltaba era **su
+supervisor**, que Yusef cuenta también como jefe. Ve lo mismo que su equipo
+(`:marketing` y las notas de SAC) y entra al dashboard como los otros
+supervisores.
 
 ```ruby
-supervisor_sac: "supervisor_sac"   # "Supervisor de Servicio al Cliente"
+has_secure_password :pin, validations: false          # → pin_digest, authenticate_pin
+has_paper_trail skip: %i[password_digest pin_digest]
+
+validates :pin, format: { with: /\A\d{4}\z/ }, confirmation: true, if: -> { pin.present? }
+
+ROLES_AUTORIZANTES = %w[admin supervisor_prefactura supervisor_caja supervisor_sac].freeze
+scope :autorizantes, -> { activos.where(rol: ROLES_AUTORIZANTES).where.not(pin_digest: nil) }
+
+def puede_autorizar?
+  activo? && pin_digest.present? && rol.in?(ROLES_AUTORIZANTES)
+end
 ```
 
-Hay que definirle sus permisos en `Authorization` (como mínimo, todo lo que hoy
-puede `sac`), y sumarlo a los cuatro roles que pueden autorizar.
+Columnas en `users`: `pin_digest`, `pin_cambiado_at`. `:pin` va a
+`filter_parameters` — cuatro dígitos que mueven plata no pueden quedar en el log.
+
+**Autorizar no es un permiso de pantalla**, y por eso `puede_autorizar?` no pasa
+por `can_access?`. El supervisor **nunca inicia sesión** para esto: el cajero
+sigue logueado y el supervisor solo teclea cuatro dígitos parado en el mostrador.
+Pedirle que cierre y abra sesión con el cliente enfrente no es viable.
+
+**El PIN y la contraseña son credenciales distintas**: el PIN no sirve para
+entrar al sistema y la contraseña no sirve para autorizar. Hay un test que lo
+fija, porque es fácil que alguien "simplifique" eso más adelante.
+
+**El circuito del PIN inicial:**
+
+- El admin lo asigna en `/users` (`app/views/users/_form.html.erb`).
+- El supervisor lo cambia en `/mi_pin/edit` (`PinsController`), **dando el
+  actual**: si alguien encuentra una sesión abierta no debería poder dejar al
+  supervisor afuera y quedarse autorizando en su nombre.
+- Nadie se auto-asigna el primero; ese lo pone el admin.
+- Si el admin lo reasigna, `pin_cambiado_at` vuelve a nil.
+
+**No se bloquea autorizar con el PIN inicial** — trabar el mostrador por eso es
+peor que el riesgo. En su lugar hay un aviso en `/mi_pin`, el link del sidebar
+cambia a "Cambiá tu PIN", y `/users` marca "PIN sin cambiar" para que el admin
+insista. Sin eso el admin conoce el PIN con el que otro autoriza, y el registro
+de "quién autorizó" deja de probar nada.
+
+El seed le pone PIN a los cuatro roles autorizantes (`1111` pre-factura, `2222`
+SAC, `3333` caja) para poder probar el flujo.
 
 #### Lo que implica el "por línea"
 
@@ -926,25 +1120,23 @@ puede haber movido después, y sin ese dato la auditoría no reconstruye nada.
 |---|---|
 | Precio | `pre_factura_items.precio_libra` |
 | Peso a cobrar | `pre_factura_items.peso_cobrar` |
-| Descuento | ⚠️ **no existe** como columna — hoy un descuento se hace bajando el precio a mano |
+| Descuento | ✅ `pre_factura_items.descuento_monto` (PR-13.b) |
 | Quitar líneas | `_destroy` en `pre_factura_items_attributes` |
-
-El descuento es el que falta modelar. Bajarlo del precio, como se hace hoy,
-esconde la información: la factura sale sin decir que hubo descuento, ni de
-cuánto, ni quién lo dio.
 
 #### Un PIN de 4 dígitos hay que tratarlo como credencial
 
-Solo 10 000 combinaciones: se adivina en minutos a fuerza bruta. No alcanza con
-guardarlo — hay que ponerle límite de intentos por usuario y por terminal, y
-`bcrypt` como el password (nunca en claro, nunca comparado con `==`). Es el
-único punto de todo el sistema donde 4 dígitos habilitan cambiar plata.
+Solo 10 000 combinaciones: se adivina en minutos a fuerza bruta. Ya va con
+`bcrypt` y fuera del log (PR-13.c); **falta el límite de intentos**, que va con
+el endpoint de autorización en PR-13.d — `rate_limit` por supervisor, no por IP,
+porque en un mostrador todos comparten la IP y por IP el límite se lo comería el
+cajero legítimo.
+
+Es el único punto de todo el sistema donde 4 dígitos habilitan cambiar plata.
 
 ### Enganche existente
 
-- Los 8 roles y el concern `Authorization` (`require_role`, `can_access?`).
-- `has_secure_password` en `User` — el PIN puede ir como un segundo
-  `has_secure_password :pin`, que Rails soporta desde 7.1.
+- Los 9 roles y el concern `Authorization` (`require_role`, `can_access?`).
 - `paper_trail` en `PreFactura` y `Tarifa` — falta el *motivo* y el *autorizante*.
 - `PreFacturaItem#origen` ya distingue `automatico` de `manual`; una línea con
   precio autorizado sería un tercer origen.
+- `SessionsController:5` ya usa `rate_limit` — mismo patrón para el PIN.

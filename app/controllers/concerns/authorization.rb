@@ -59,7 +59,9 @@ module Authorization
     when :usuarios, :configuraciones, :reportes, :empleados
       false
     when :marketing
-      role.in?(%w[sac])
+      # PR-13.c: el supervisor de SAC ve lo mismo que su equipo. Autorizar
+      # cambios de precio es aparte — va por PIN, no por esta tabla.
+      role.in?(%w[sac supervisor_sac])
     else
       false
     end

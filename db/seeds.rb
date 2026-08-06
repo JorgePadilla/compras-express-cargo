@@ -282,6 +282,13 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
     { nombre: "Supervisor Caja", email: "sup_caja@cec.com", rol: "supervisor_caja", ubicacion: "honduras" },
     { nombre: "Cajero Honduras", email: "cajero@cec.com", rol: "cajero", ubicacion: "honduras" },
     { nombre: "SAC", email: "sac@cec.com", rol: "sac", ubicacion: "honduras" },
+    # PR-13.c: los tres supervisores que autorizan cambios de precio arrancan
+    # con PIN para poder probar el flujo. `pin_cambiado_at` queda en nil a
+    # propósito: es exactamente el estado "el admin te lo asignó, cambialo".
+    { nombre: "Supervisor Pre-Factura", email: "sup_prefactura@cec.com",
+      rol: "supervisor_prefactura", ubicacion: "honduras", pin: "1111" },
+    { nombre: "Supervisor SAC", email: "sup_sac@cec.com",
+      rol: "supervisor_sac", ubicacion: "honduras", pin: "2222" },
     { nombre: "Entrega", email: "entrega@cec.com", rol: "entrega_despacho", ubicacion: "honduras" }
   ].each do |attrs|
     user = User.find_or_initialize_by(email_address: attrs[:email])
@@ -289,8 +296,11 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
     user.rol = attrs[:rol]
     user.ubicacion = attrs[:ubicacion]
     user.password = "Demo123!"
+    user.pin = attrs[:pin] if attrs[:pin]
     user.save!
   end
+  # Al Supervisor Caja que ya existía también, para tener los cuatro roles.
+  User.find_by(email_address: "sup_caja@cec.com")&.update!(pin: "3333")
   puts "  ✓ #{User.count} users total (including demo)"
 
   # Demo clients

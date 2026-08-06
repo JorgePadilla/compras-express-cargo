@@ -7,6 +7,8 @@ Rails.application.routes.draw do
   resource :preferencia_sidebar, only: [:update], controller: "sidebar_preferences"
   # PR-9.c: on/off + volumen de los tonos de escaneo, por usuario.
   resource :preferencia_sonido, only: [:update], controller: "sonido_preferences"
+  # PR-13.c: el supervisor cambia el PIN con el que autoriza cambios de precio.
+  resource :mi_pin, only: %i[edit update], controller: "pins"
 
   # Health check for Render
   get "up" => "rails/health#show", as: :rails_health_check
@@ -127,7 +129,15 @@ Rails.application.routes.draw do
       post   :facturar
       delete :anular
     end
+    # PR-13.d: el supervisor autoriza un cambio sobre UNA línea. Anidado bajo el
+    # item porque el alcance es por línea, no por pre-factura.
+    resources :items, only: [], controller: "pre_facturas" do
+      resource :autorizacion, only: [ :create ], controller: "autorizaciones"
+    end
   end
+
+  # Bitácora de lo que se autorizó — sin esto el mecanismo es solo fricción.
+  resources :autorizaciones, only: [ :index ], controller: "bitacora_autorizaciones"
 
   resources :ventas, except: %i[new create destroy] do
     member do

@@ -1667,7 +1667,27 @@ Yusef mandó la etiqueta del sistema actual con cada campo anotado. **Es la prim
 | PRE-FACTURA (SPS) | 4 × 6 in | FreeX | Por paquete; un paquete puede llevar varios tracking |
 | MANIFIESTO NACIONAL | 4 × 6 in | FreeX | Por fuera; lleva varias pre-facturas, que llevan varios tracking |
 
-⚠️ **Solo se va a rediseñar la de ETIQUETAR.** Mide 2.25 × 1.25 pulgadas, así que los 11 campos no caben todos legibles con el código de barras encima. ⬜ Falta que Yusef marque cuáles son los imprescindibles.
+⚠️ **Solo se va a rediseñar la de ETIQUETAR.**
+
+✅ **Resuelto (2026-08-06).** Yusef cerró las dos cosas que faltaban:
+
+> "No creo cambiar el tamaño de la etiqueta. **Allí es letra pequeña unas y otras grandes.**"
+
+O sea que la respuesta no era recortar campos: **van los 11**, y lo que cambia es el cuerpo de letra. El tamaño de 2.25 × 1.25 in se queda.
+
+La jerarquía quedó así:
+
+| | Campos |
+|---|---|
+| **Grande** — se lee de lejos en la estantería | Número de recepción, tipo de envío, código y nombre del cliente, sucursal donde retira, n/N de paquetes |
+| **Chico** — solo hace falta tenerlo a mano | Tracking principal y secundario, tercero, driver, ciudad del cliente, fecha y hora, iniciales |
+
+> El presupuesto vertical es de 1.15 in de contenido y con los 11 campos queda
+> al filo. `overflow:hidden` recorta **en silencio**, así que tercero y driver
+> comparten renglón (el caso de Entrega Personal, que suele traer los dos) y el
+> interlineado va apretado a mano. Cualquier campo que se agregue de acá en
+> adelante hay que imprimirlo para verificar: ningún test atrapa un recorte de
+> CSS.
 
 Hoy el sistema no imprime una etiqueta: imprime un **Warehouse Receipt** en hoja carta con términos y condiciones, que es el documento equivocado para pegarle a una caja. Se van a separar: la etiqueta para la caja, el Warehouse Receipt para el expediente.
 
@@ -1729,7 +1749,7 @@ La búsqueda combinada de código y nombre (PR-10.c) va en esa dirección, pero 
 1. ✅ ~~La tabla de precios completa~~ — llegó el 2026-08-05, ver abajo.
 2. El **mínimo por defecto de CEM y CKM** en libras.
 3. ✅ ~~El mínimo de EXPRESS~~ — **$10 sin ISV**.
-4. **Cuáles de los 11 campos** de la etiqueta son imprescindibles a 2.25 × 1.25 pulgadas.
+4. ✅ ~~Cuáles de los 11 campos de la etiqueta son imprescindibles~~ — van los 11, con jerarquía de cuerpos de letra, y el tamaño no cambia.
 
 ---
 

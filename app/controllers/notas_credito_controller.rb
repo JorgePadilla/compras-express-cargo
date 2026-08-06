@@ -60,12 +60,21 @@ class NotasCreditoController < ApplicationController
     end
   end
 
+  # PR-13.e: emitir es el momento en que el saldo del cliente baja — una nota de
+  # crédito es plata que se devuelve. Por eso el PIN va acá y no trabando cada
+  # línea: la nota no saca su monto de una tarifa, su propósito es ajustar a
+  # mano.
   def emitir
-    if @nota_credito.emitir!
+    autorizacion = Autorizacion.emitir_nota!(
+      nota: @nota_credito, solicitado_por: Current.user, attrs: autorizacion_params
+    )
+
+    if autorizacion.persisted?
       NotaCreditoMailer.emitida(@nota_credito).deliver_later if @nota_credito.cliente.email.present?
-      redirect_to @nota_credito, notice: "Nota de credito emitida."
+      redirect_to @nota_credito,
+                  notice: "Nota de credito emitida, autorizada por #{autorizacion.autorizado_por.nombre}."
     else
-      redirect_to @nota_credito, alert: "No se pudo emitir (estado actual: #{@nota_credito.estado})."
+      redirect_to @nota_credito, alert: autorizacion.errors.full_messages.to_sentence
     end
   end
 
@@ -93,8 +102,22 @@ class NotasCreditoController < ApplicationController
     end
   end
 
-  private  def require_feature_access
+  # Mismo límite que en la pre-factura: por supervisor y no por IP, porque en un
+  # mostrador todos comparten la IP.
+  rate_limit to: 5, within: 5.minutes,
+             by: -> { params.dig(:autorizacion, :autorizado_por_id).to_s },
+             with: -> { redirect_to nota_credito_path(params[:id]),
+                                    alert: "Demasiados intentos con ese PIN. Espera unos minutos." },
+             only: :emitir
+
+  private
+
+  def require_feature_access
     redirect_to(root_path, alert: "No tienes permiso para acceder a esta seccion.") unless can_access?(:notas_credito)
+  end
+
+  def autorizacion_params
+    params.fetch(:autorizacion, {}).permit(:autorizado_por_id, :pin, :motivo)
   end
 
   def set_nota_credito

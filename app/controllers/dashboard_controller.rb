@@ -1,5 +1,7 @@
 class DashboardController < ApplicationController
-  DASHBOARD_ROLES = %w[admin supervisor_miami supervisor_caja supervisor_prefactura].freeze
+  # PR-13.c: `supervisor_sac` entra al dashboard como los otros supervisores.
+  DASHBOARD_ROLES = %w[admin supervisor_miami supervisor_caja supervisor_prefactura
+                       supervisor_sac].freeze
 
   before_action :redirect_cliente_to_portal
   before_action :require_dashboard_access

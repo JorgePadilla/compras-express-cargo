@@ -81,9 +81,10 @@
 
     <% if @nota_debito.creado? %>
       <%= link_to "Editar (F6)", edit_nota_debito_path(@nota_debito), class: "px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50", data: { shortcut: "F6" } %>
-      <%= button_to "Emitir", emitir_nota_debito_path(@nota_debito), method: :post,
-          class: "px-4 py-2 bg-cec-teal text-white rounded-lg text-sm font-medium hover:bg-cec-teal-dark",
-          data: { turbo_confirm: "Al emitir se afecta el saldo del cliente y se envia email. Continuar?" } %>
+      <%= render "shared/emitir_nota_modal",
+            nota: @nota_debito,
+            url: emitir_nota_debito_path(@nota_debito),
+            advertencia: "Al emitir, el cliente pasa a deber este monto y se le envia un email." %>
     <% end %>
 
     <% if @nota_debito.emitido? %>

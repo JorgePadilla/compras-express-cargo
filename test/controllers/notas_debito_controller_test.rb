@@ -55,10 +55,26 @@ class NotasDebitoControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Updated", @nd.reload.notas
   end
 
-  test "emitir transitions to emitido" do
-    post emitir_nota_debito_url(@nd)
+  # PR-13.e: emitir pasa a pedir el PIN de un supervisor — es cuando el cliente
+  # pasa a deber más. El detalle está en `emision_nota_autorizada_test.rb`.
+  test "emitir transitions to emitido con autorizacion" do
+    supervisor = User.create!(
+      nombre: "Supervisora ND", email_address: "supnd@cec.test", password: "password123",
+      rol: "supervisor_caja", ubicacion: "honduras", pin: "1234"
+    )
+
+    post emitir_nota_debito_url(@nd), params: { autorizacion: {
+      autorizado_por_id: supervisor.id, pin: "1234", motivo: "Ajuste aprobado"
+    } }
+
     assert_equal "emitido", @nd.reload.estado
     assert_redirected_to nota_debito_url(@nd)
+  end
+
+  test "emitir sin autorizacion no hace nada" do
+    post emitir_nota_debito_url(@nd)
+
+    assert_equal "creado", @nd.reload.estado
   end
 
   test "anular transitions from emitido" do

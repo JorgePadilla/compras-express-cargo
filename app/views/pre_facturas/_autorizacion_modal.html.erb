@@ -1,0 +1,91 @@
+<%# PR-13.d: el modal donde el supervisor pone su PIN.
+    Recoge el cambio Y el PIN juntos — no hay un "desbloquear y después editar".
+    El servidor los aplica en una transacción o en ninguna, así que el registro
+    no puede quedar desalineado de lo que se cambió. %>
+<dialog data-autorizacion-modal-target="dialog"
+        class="rounded-lg shadow-xl p-0 w-full max-w-md backdrop:bg-black/40">
+  <%= form_with url: "#", method: :post, data: { autorizacion_modal_target: "form" },
+                class: "divide-y divide-gray-200" do %>
+    <div class="px-6 py-4">
+      <h3 class="text-base font-semibold text-cec-navy">Autorizar cambio</h3>
+      <p class="mt-1 text-sm text-gray-600" data-autorizacion-modal-target="concepto"></p>
+      <p class="mt-0.5 text-xs text-gray-500 font-mono" data-autorizacion-modal-target="actual"></p>
+    </div>
+
+    <div class="px-6 py-4 space-y-4">
+      <div>
+        <span class="block text-sm font-medium text-gray-700 mb-1">Qué cambiar</span>
+        <div class="grid grid-cols-2 gap-2">
+          <% [ [ "descuento", "Descuento" ], [ "precio", "Precio/lb" ],
+               [ "peso", "Peso a cobrar" ], [ "eliminar", "Quitar la línea" ] ].each_with_index do |(valor, etiqueta), i| %>
+            <label class="flex items-center gap-2 text-sm text-gray-700">
+              <%= radio_button_tag "autorizacion[accion]", valor, i.zero?,
+                    data: { autorizacion_modal_target: "accion",
+                            action: "change->autorizacion-modal#cambiarAccion" },
+                    class: "text-cec-teal focus:ring-cec-teal" %>
+              <%= etiqueta %>
+            </label>
+          <% end %>
+        </div>
+      </div>
+
+      <div data-autorizacion-modal-target="campoValor">
+        <%= label_tag "autorizacion[valor]", "Valor", class: "block text-sm font-medium text-gray-700 mb-1",
+              data: { autorizacion_modal_target: "etiquetaValor" } %>
+        <div class="flex gap-2">
+          <%= number_field_tag "autorizacion[valor]", nil, step: 0.01, min: 0,
+                data: { autorizacion_modal_target: "valor" },
+                class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                       focus:ring-cec-teal focus:border-cec-teal" %>
+          <%= select_tag "autorizacion[modo]",
+                options_for_select([ [ "%", "porcentaje" ], [ "L.", "monto" ] ]),
+                data: { autorizacion_modal_target: "modo" },
+                class: "rounded-lg border-gray-300 shadow-sm text-sm
+                       focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+      </div>
+
+      <div>
+        <%= label_tag "autorizacion[autorizado_por_id]", "Supervisor", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <% autorizantes = User.autorizantes.order(:nombre) %>
+        <% if autorizantes.any? %>
+          <%= select_tag "autorizacion[autorizado_por_id]",
+                options_from_collection_for_select(autorizantes, :id, ->(u) { "#{u.nombre} — #{u.rol_label}" }),
+                include_blank: "— Seleccionar —", required: true,
+                class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                       focus:ring-cec-teal focus:border-cec-teal" %>
+        <% else %>
+          <p class="text-sm text-amber-700">
+            Todavia no hay ningun supervisor con PIN asignado. Un administrador
+            tiene que asignarlos desde la pantalla de usuarios.
+          </p>
+        <% end %>
+      </div>
+
+      <div>
+        <%= label_tag "autorizacion[pin]", "PIN (4 digitos)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= password_field_tag "autorizacion[pin]", nil, inputmode: "numeric", maxlength: 4,
+              autocomplete: "off", required: true,
+              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm tracking-widest
+                     focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+
+      <div>
+        <%= label_tag "autorizacion[motivo]", "Motivo", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= text_field_tag "autorizacion[motivo]", nil, required: true,
+              placeholder: "Por que se autoriza este cambio",
+              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                     focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+    </div>
+
+    <div class="px-6 py-3 flex justify-end gap-3 bg-gray-50">
+      <button type="button" data-action="click->autorizacion-modal#cerrar"
+              class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Cancelar</button>
+      <button type="submit"
+              class="px-4 py-2 bg-cec-navy text-white rounded-lg hover:bg-cec-navy-light text-sm font-medium">
+        Aplicar
+      </button>
+    </div>
+  <% end %>
+</dialog>

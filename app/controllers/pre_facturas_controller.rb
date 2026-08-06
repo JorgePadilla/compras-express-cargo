@@ -55,12 +55,14 @@ class PreFacturasController < ApplicationController
   end
 
   def edit
+    cargar_autorizaciones
   end
 
   def update
     if @pre_factura.update(pre_factura_params)
       redirect_to edit_pre_factura_path(@pre_factura), notice: "Pre-factura actualizada."
     else
+      cargar_autorizaciones
       render :edit, status: :unprocessable_entity
     end
   end
@@ -131,6 +133,15 @@ class PreFacturasController < ApplicationController
     @pre_factura = PreFactura.find(params[:id])
   end
 
+  # PR-13.d: qué líneas llevan un cambio autorizado, para marcarlas.
+  def cargar_autorizaciones
+    @autorizaciones_por_item = @pre_factura.autorizaciones
+                                           .includes(:autorizado_por)
+                                           .order(:created_at)
+                                           .group_by(&:pre_factura_item_id)
+    @autorizaciones_por_item.default = []
+  end
+
   # PR-10.h: lo que se le va a cobrar a cada paquete, indexado por id.
   #
   # Antes esta pantalla y el JSON calculaban el precio con la cadena vieja
@@ -173,15 +184,23 @@ class PreFacturasController < ApplicationController
     scope
   end
 
+  # PR-13.d: **el candado**. Yusef: "queremos que el área de los precios estén
+  # establecidos, listo. No hay nada más, no se puede hacer más si está todo
+  # preestablecido."
+  #
+  # `precio_libra`, `peso_cobrar`, `subtotal`, `descuento_monto` y `_destroy`
+  # salieron de acá: los cinco cambian lo que se le cobra al cliente y ahora van
+  # por `AutorizacionesLineaController`, que pide el PIN de un supervisor y deja
+  # registro de quién autorizó qué y contra qué valor.
+  #
+  # Aplica **a todos, incluido el admin**. Si el admin puede editar suelto, el
+  # registro tiene un agujero y deja de servir como prueba.
+  #
+  # `concepto` se queda editable: es la descripción de la línea, no el monto.
   def pre_factura_params
     params.require(:pre_factura).permit(
       :notas, :fecha_trabajo,
-      pre_factura_items_attributes: [
-        :id, :concepto, :precio_libra, :peso_cobrar, :subtotal, :origen, :_destroy,
-        # PR-13.b: por ahora entran libres. En PR-13.d el descuento —y el resto
-        # de estos campos— salen de acá y pasan a pedir el PIN del supervisor.
-        :descuento_monto, :descuento_motivo
-      ]
+      pre_factura_items_attributes: [ :id, :concepto ]
     )
   end
 end

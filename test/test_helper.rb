@@ -17,6 +17,15 @@ module ActiveSupport
       end
     end
 
+    # PR-13.d: el cache de ActionController dejó de ser `:null_store` para que
+    # `rate_limit` pueda contar — sin eso un límite de intentos pasaría los
+    # tests sin existir, y el único que protege un PIN de 4 dígitos es ese.
+    #
+    # Pero el contador vive en el proceso, así que sin limpiarlo los intentos se
+    # acumulan entre tests: el `rate_limit` del login es por IP y todos los
+    # tests salen de 127.0.0.1, así que a partir del test 11 se caían solos.
+    setup { ActionController::Base.cache_store.clear }
+
     # Add more helper methods to be used by all tests here...
   end
 end

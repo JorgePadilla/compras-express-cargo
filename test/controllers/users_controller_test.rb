@@ -129,4 +129,46 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     get users_url
     assert_redirected_to new_session_url
   end
+
+  # --- PIN de autorizacion (PR-13.c) ---
+
+  test "el admin le asigna el PIN inicial a un supervisor" do
+    supervisor = User.create!(
+      nombre: "Sup", email_address: "sup13c@cec.test", password: "password123",
+      rol: "supervisor_prefactura", ubicacion: "honduras"
+    )
+
+    patch user_url(supervisor), params: { user: { pin: "4321", pin_confirmation: "4321" } }
+
+    supervisor.reload
+    assert supervisor.authenticate_pin("4321")
+    assert supervisor.pin_sin_cambiar?, "recien asignado por el admin, todavia no lo cambio el"
+  end
+
+  test "un PIN vacio mantiene el que ya tenia" do
+    supervisor = User.create!(
+      nombre: "Sup2", email_address: "sup13c2@cec.test", password: "password123",
+      rol: "supervisor_caja", ubicacion: "honduras", pin: "1111"
+    )
+
+    patch user_url(supervisor), params: { user: { nombre: "Sup2 editada", pin: "", pin_confirmation: "" } }
+
+    supervisor.reload
+    assert_equal "Sup2 editada", supervisor.nombre
+    assert supervisor.authenticate_pin("1111"), "no debio borrarse por venir vacio"
+  end
+
+  test "reasignar el PIN lo vuelve a marcar como sin cambiar" do
+    supervisor = User.create!(
+      nombre: "Sup3", email_address: "sup13c3@cec.test", password: "password123",
+      rol: "supervisor_caja", ubicacion: "honduras", pin: "1111",
+      pin_cambiado_at: Time.current
+    )
+    assert_not supervisor.pin_sin_cambiar?
+
+    patch user_url(supervisor), params: { user: { pin: "2222", pin_confirmation: "2222" } }
+
+    assert supervisor.reload.pin_sin_cambiar?,
+           "si el admin lo reasigna, vuelve a conocerlo hasta que el supervisor lo cambie"
+  end
 end

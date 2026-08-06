@@ -8,6 +8,9 @@ class PreFacturaItem < ApplicationRecord
   ORIGENES = %w[manual auto_recolecta auto_servicio_extra].freeze
 
   belongs_to :pre_factura, inverse_of: :pre_factura_items
+  # PR-13.d: `nullify` y no `destroy` — si se elimina la línea, el registro de
+  # que un supervisor autorizó eliminarla tiene que quedar.
+  has_many :autorizaciones, dependent: :nullify
   belongs_to :paquete, optional: true
   belongs_to :tarifa_recolecta, optional: true
   belongs_to :servicio_extra, optional: true
