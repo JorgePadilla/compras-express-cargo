@@ -246,9 +246,31 @@ namespace :docs do
         ], anchos: [ 118, 369 ])
 
       p_(pdf, "<b>Familia</b> y <b>Revendedores</b> venían todos en cero, así que sus clientes pagan precio de " \
-              "lista por ahora. De <b>Mayoristas</b> solo vino el precio de CKM. Los <b>16 cargos que no son " \
-              "flete</b> (recolecta, retenido, entrega nacional, manejo y gastos…) no se cargaron todavía: son " \
-              "otro módulo y varios ya existen con otros valores, así que hay que reconciliarlos aparte.")
+              "lista por ahora. De <b>Mayoristas</b> solo vino el precio de CKM.")
+
+      h2(pdf, "Los cargos que no son flete")
+      p_(pdf, "De las 16 filas que no son tipos de envío, <b>cargamos cinco</b> — los que tu propia hoja deja " \
+              "claros sin que tengamos que interpretar nada:")
+      tabla(pdf,
+        [ "Cargo", "Precio", "Cómo lo supimos" ],
+        [
+          [ "<b>Entrega nacional</b>", "L.86.96", "El título dice L100, y 86.96 más ISV da L.100.00 exactos." ],
+          [ "<b>Compra online</b>", "$1.00", "Tu nota: “ponerlo $1 más ISV”." ],
+          [ "<b>Manejo y gastos de destino</b>", "L.1.00", "Tu nota: “ponerlo lps1 más ISV”." ],
+          [ "<b>Flete internacional UPS</b>", "$1.00", "El título de la fila dice “$1”." ],
+          [ "<b>Retornado en Miami</b>", "$5.00", "Tu nota: “todo en $”." ]
+        ], anchos: [ 150, 60, 277 ])
+
+      p_(pdf, "<b>Los otros diez no los cargamos, y te pedimos que nos digas la moneda.</b> En tu hoja pusiste " \
+              "una leyenda de colores —“precios en $” y “precios en lempiras”— pero <b>las celdas de precio " \
+              "quedaron sin colorear</b>, así que viendo solo el número no hay cómo saber si un 5 son cinco " \
+              "dólares o cinco lempiras. Preferimos preguntarte antes que adivinar: son montos que se le cobran " \
+              "al cliente.")
+
+      p_(pdf, "Hay uno que conviene mirar primero: el <b>cambio de servicio</b>. En tu hoja el título dice L100, " \
+              "el valor dice 5 y anotaste “pasarlo a dólares” — y en el sistema está cargado hoy en <b>$15</b>. " \
+              "Ese cargo se genera <b>solo</b>, en una nota de débito, cada vez que se factura un paquete al que " \
+              "le cambiaron el servicio. Así que mientras no lo confirmemos, sigue cobrando los $15.")
 
       p_(pdf, "<b>En la hoja 2 del Excel está todo lo que quedó cargado</b>, leído directo de la base — es " \
               "literalmente lo que va a cobrar el sistema. Vale la pena que le des una pasada.")
@@ -413,7 +435,7 @@ namespace :docs do
         [
           [ "1", "Precios cargados",
             "Ya cargamos tu tabla PROPUESTA al sistema. En la hoja 2 está TODO lo que quedó cargado, exactamente como lo va a cobrar el sistema. ¿Está bien?",
-            "Tomamos la hoja PROPUESTA de \"precios por categoria 2026.xlsx\". Los 16 cargos que no son flete (recolecta, retenido, entrega nacional, manejo…) NO se cargaron todavía: son otro módulo del sistema y varios ya existen con otros valores, así que los vamos a reconciliar aparte.",
+            "Tomamos la hoja PROPUESTA de \"precios por categoria 2026.xlsx\". De los 16 cargos que no son flete cargamos 5 (entrega nacional, compra online, manejo y gastos, flete internacional UPS y retornado en Miami); los otros 10 estan en la hoja 4 esperando que nos digas la moneda.",
             "" ],
           [ "2", "Mínimo CEM y CKM en libras",
             "¿Hace falta todavía un mínimo en LIBRAS para CEM y CKM, o con el mínimo en dinero de la tabla ya está?",
@@ -545,6 +567,51 @@ namespace :docs do
         ].each { |r| s.add_row r, style: [ wrapb, wrap, wrap, wrap, nota ] }
 
         s.column_widths 5, 34, 26, 46, 26
+      end
+
+      # ─────────────────────────────────────────────────────────────
+      # Hoja 4 — Los cargos que no son flete
+      #
+      # De los 16 se cargaron 5, los que su propio texto define. Los otros 10
+      # necesitan la moneda: la leyenda de colores de su hoja nunca se aplicó a
+      # las celdas, así que un "5" no dice si son dólares o lempiras.
+      # ─────────────────────────────────────────────────────────────
+      wb.add_worksheet(name: "4. Cargos") do |s|
+        s.add_row [ "Cargos que no son flete — nos falta la moneda" ], style: titulo
+        s.add_row [ "En tu hoja pusiste la leyenda \"precios en $\" y \"precios en lempiras\", pero las celdas de precio quedaron sin colorear. Viendo solo el numero no hay como saber si un 5 son cinco dolares o cinco lempiras, y preferimos preguntarte antes que adivinar: son montos que se le cobran al cliente." ], style: nota
+        s.add_row []
+
+        s.add_row [ "YA CARGADOS — estos los dejaste claros en la misma hoja" ], style: wrapb
+        s.add_row [ "Cargo", "Precio", "Moneda", "Como lo supimos", "" ], style: navy
+        [
+          [ "Entrega nacional",           "86.96", "LPS", "El titulo dice L100, y 86.96 mas ISV da L.100.00 exactos" ],
+          [ "Compra online",              "1.00",  "USD", "Tu nota: \"ponerlo $1 mas isv\"" ],
+          [ "Manejo y gastos de destino", "1.00",  "LPS", "Tu nota: \"ponerlo lps1 mas isv\"" ],
+          [ "Flete internacional UPS",    "1.00",  "USD", "El titulo de la fila dice \"$1\"" ],
+          [ "Retornado en Miami",         "5.00",  "USD", "Tu nota: \"todo en $\"" ]
+        ].each { |r| s.add_row r + [ "" ], style: [ wrapb, wrap, wrap, gris, wrap ] }
+
+        s.add_row []
+        s.add_row [ "NOS FALTAN ESTOS — escribi la moneda en la columna amarilla" ], style: wrapb
+        s.add_row [ "Cargo", "Valor en tu hoja", "Que anotaste", "Nuestra duda", "MONEDA ($ o LPS)" ],
+                  style: [ navy, navy, navy, navy, gold ]
+        [
+          [ "Cambio de servicio", "5 (titulo dice L100)", "pasarlo a dolares",
+            "OJO: hoy el sistema lo tiene en $15 y se cobra SOLO, en nota de debito, cada vez que se factura un paquete al que le cambiaron el servicio. Mientras no confirmes sigue cobrando $15." ],
+          [ "Retenido Miami", "5", "pasarlo a dolares", "El 5 ya es dolares, o todavia hay que convertirlo?" ],
+          [ "Servicio de entrada y salida", "10 (minimo 5)", "pasarlo a dolares", "Misma duda" ],
+          [ "Recolecta Miami", "35 (minimo 35)", "—",
+            "Vos mismo pediste que la recolecta fuera por ZONA y no $35 fijos, y asi esta hecho. Dejamos la tabla por zona o la cambiamos a 35 plano?" ],
+          [ "Ajuste", "1", "—", "En que moneda, y que ajusta exactamente?" ],
+          [ "Entrega local", "1 (titulo dice L1)", "—", "El titulo dice L1 pero no hay nota que lo confirme" ],
+          [ "Consolidando en Miami", "1", "—", "En que moneda?" ],
+          [ "Flete Mexico", "5 (minimo 6)", "—", "En que moneda?" ],
+          [ "Flete", "0", "—", "Este es el flete del paquete, que ya sale de la tabla de tarifas. Lo dejamos fuera; confirmanos si te parece." ],
+          [ "Producto ejemplo (y en dolares)", "4 y 10", "—", "Los tomamos como datos de prueba. Confirmanos que no van." ]
+        ].each { |r| s.add_row r + [ "" ], style: [ wrapb, wrap, wrap, gris, llenar ] }
+
+        s.column_widths 30, 20, 20, 62, 20
+        s.rows[6..].each { |r| r.height = 34 }
       end
 
       pkg.serialize(destino.to_s)
@@ -845,7 +912,7 @@ namespace :docs do
           [ "<b>Fotos de paquetes</b>", "Tomar foto al recibir y mandársela al cliente." ],
           [ "<b>Reportes</b>", "El módulo de reportes propiamente dicho." ],
           [ "<b>Escaneo al empacar</b>", "Lo que pediste que quedara planificado: se escanea cada paquete al meterlo a la caja y el sistema pita si el servicio no concuerda. Al armar el manifiesto se jalan las cajas ya empacadas." ],
-          [ "<b>Los 16 cargos que no son flete</b>", "Recolecta, retenido en Miami, entrega nacional, manejo y gastos de destino, flete México… están en tu tabla de precios pero viven en otro módulo del sistema, y varios ya existen cargados con otros valores. Hay que reconciliarlos." ]
+          [ "<b>Los 10 cargos que faltan</b>", "De los 16 que no son flete ya cargamos 5. Los otros 10 esperan a que nos digas la moneda: en tu hoja los numeros no dicen si son dolares o lempiras. Estan en la hoja 4 del Excel." ]
         ], anchos: [ 130, 357 ])
 
       # ══ PARTE 4 ══

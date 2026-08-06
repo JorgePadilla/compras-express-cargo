@@ -271,6 +271,13 @@ puts "Seeding servicios extra..."
     s.assign_attributes(attrs.merge(activo: true))
   end
 end
+
+# ── Cargos de la hoja de Yusef (PR-10.i) ──
+# Solo los cinco que su propio texto define sin ambigüedad. Los otros diez
+# necesitan que confirme la moneda — la tarea imprime cuáles y por qué:
+#   bin/rails tarifas:sembrar_cargos_2026
+ServiciosExtraPropuesta2026.sembrar!(verbose: true)
+
 puts "  ✓ #{ServicioExtra.count} servicios extra"
 
 # ── Sample data (dev/staging only) ──
