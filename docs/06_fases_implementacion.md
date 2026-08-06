@@ -615,6 +615,7 @@ Preferencias por usuario: `users.sonido_habilitado` + `users.sonido_volumen` (0-
 | 10.e | Separar Driver de Proveedor en Entrega Personal | 6 | ✅ |
 | 10.f | Búsqueda por fragmentos de etiqueta rota + acentos | 11 | ✅ |
 | 10.g | Sembrar la tabla de precios real (PROPUESTA 2026) | 9, 11 | ✅ |
+| 10.h | El preview de paquetes muestra el precio que se va a cobrar | 3a | ✅ |
 
 **Dependencia:** Fase 3a (billing) + PR-D6 (tarifas de recolecta y servicios extra). Cumplidas.
 
@@ -768,21 +769,30 @@ en `pre_factura_items_attributes`, y la vista de edición los expone como inputs
 sueltos. Cualquiera con acceso a pre-facturas cambia el monto sin dejar rastro
 de por qué. `paper_trail` guarda el *qué* pero no el motivo ni el autorizante.
 
-### 🔴 Y el preview de paquetes muestra otro precio
+### ✅ El preview de paquetes mostraba otro precio — arreglado en PR-10.h
 
-`PreFacturasController#facturables` (el JSON que llena la pantalla de selección
-de paquetes) **no pasa por `Tarifa.resolver`**: sigue con la cadena vieja
-`categoria_precio.precio_para || tipo_envio.precio_libra`, sin mínimos, sin
-escalones, y **sin convertir a Lempiras**. Es el mismo bug de moneda que PR-10.a
-arregló en `build_from_paquetes`, en un endpoint que quedó afuera.
+La pantalla de selección de paquetes (`/pre_facturas/new`) y el JSON de
+`PreFacturasController#facturables` **no pasaban por `Tarifa.resolver`**: seguían
+con la cadena vieja `categoria_precio.precio_para || tipo_envio.precio_libra`,
+sin mínimos, sin escalones y **sin convertir a Lempiras** — pero la vista lo
+imprimía con "L." adelante. Es el mismo bug de moneda que PR-10.a arregló en
+`build_from_paquetes`, en el camino que quedó afuera.
 
-Con los precios reales cargados la diferencia se volvió grande: un CER de 0.5 lb
-muestra **$2.25** en la pantalla de selección y la pre-factura cobra **L.173.91**.
-Contradice de frente el "los precios están preestablecidos" — el cajero ve un
-número y el sistema cobra otro.
+Mientras las tarifas eran un backfill plano la diferencia no se notaba. Con los
+precios reales de PR-10.g se volvió grande: un CER de 0.5 lb mostraba **$2.25**
+rotulado como Lempiras y la pre-factura cobraba **L.173.91**. Contradice de
+frente el "los precios están preestablecidos" — el cajero veía un número y el
+sistema cobraba otro.
 
-Se arregla llamando a `CotizadorFlete`, que ya hace exactamente ese cálculo y se
-usa en `/entrega_personal`.
+Se arregló llamando a `CotizadorFlete`, el mismo servicio que usa
+`/entrega_personal`, desde un único `#cotizar` que alimenta la vista y el JSON.
+La pantalla ahora marca además cuándo el monto salió del mínimo del servicio.
+
+El guard está en `test/controllers/pre_factura_preview_precio_test.rb`, y no
+compara contra números escritos a mano sino contra lo que devuelve
+`PreFactura.build_from_paquetes` para el mismo paquete — que es la invariante
+que se rompió. Verificado reintroduciendo el cálculo viejo: 3 de los 4 tests
+fallan.
 
 ### Especificación (respondida por Yusef, 2026-08-05)
 

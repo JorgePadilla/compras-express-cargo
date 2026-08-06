@@ -17,8 +17,9 @@ class PreFacturasController < ApplicationController
       @cliente = Cliente.find(params[:cliente_id])
       @paquetes_facturables = @cliente.paquetes
         .facturables
-        .includes(:tipo_envio)
+        .includes(:tipo_envio, :sucursal)
         .order(:created_at)
+      @cotizaciones = cotizar(@cliente, @paquetes_facturables)
     end
   end
 
@@ -101,27 +102,64 @@ class PreFacturasController < ApplicationController
 
   def facturables
     cliente = Cliente.find(params[:cliente_id])
-    paquetes = cliente.paquetes.facturables.includes(:tipo_envio)
+    paquetes = cliente.paquetes.facturables.includes(:tipo_envio, :sucursal)
+    cotizaciones = cotizar(cliente, paquetes)
+
     render json: paquetes.map { |p|
-      precio = cliente.categoria_precio&.precio_para(p.tipo_envio) || p.tipo_envio&.precio_libra
+      c = cotizaciones[p.id]
       {
         id: p.id,
         guia: ERB::Util.html_escape(p.guia),
         tracking: ERB::Util.html_escape(p.tracking),
         tipo_envio: ERB::Util.html_escape(p.tipo_envio&.nombre.to_s),
         peso_cobrar: p.peso_cobrar.to_f,
-        precio_libra: precio.to_f,
-        subtotal: ((p.peso_cobrar || 0).to_d * (precio || 0).to_d).round(2).to_f
+        precio_libra: c.precio_libra.to_f,
+        subtotal: c.subtotal.to_f,
+        moneda: c.moneda,
+        aplico_minimo: c.aplico_minimo
       }
     }
   end
 
-  private  def require_feature_access
+  private
+
+  def require_feature_access
     redirect_to(root_path, alert: "No tienes permiso para acceder a esta seccion.") unless can_access?(:pre_facturas)
   end
 
   def set_pre_factura
     @pre_factura = PreFactura.find(params[:id])
+  end
+
+  # PR-10.h: lo que se le va a cobrar a cada paquete, indexado por id.
+  #
+  # Antes esta pantalla y el JSON calculaban el precio con la cadena vieja
+  # (`categoria_precio.precio_para || tipo_envio.precio_libra`): sin mínimos,
+  # sin escalones y sin convertir a Lempiras — pero rotulado "L.". Es el mismo
+  # bug de moneda que PR-10.a arregló en `build_from_paquetes`, en el camino que
+  # quedó afuera. Con los precios reales cargados la diferencia dejó de ser
+  # cosmética: un CER de 0.5 lb mostraba $2.25 y la pre-factura cobraba L.173.91.
+  #
+  # Yusef: "queremos que el área de los precios estén establecidos, listo". Mal
+  # puede estar preestablecido si la pantalla dice un número y el sistema cobra
+  # otro.
+  #
+  # `CotizadorFlete` es el mismo servicio que usa /entrega_personal, y hay un
+  # test que verifica que su resultado coincida con el de la pre-factura.
+  def cotizar(cliente, paquetes)
+    paquetes.index_by(&:id).transform_values do |p|
+      CotizadorFlete.call(
+        tipo_envio: p.tipo_envio,
+        cliente: cliente,
+        # `proveedor` es a la vez columna string y nombre de asociación — se
+        # busca por id para no depender de cuál gana el reader.
+        proveedor: (Proveedor.find_by(id: p.proveedor_id) if p.proveedor_id),
+        sucursal: p.sucursal,
+        # `peso_cobrar` ya es el mayor entre el real y el volumétrico, así que
+        # no se le pasan las medidas: recalcularlas daría lo mismo.
+        peso: p.peso_cobrar
+      )
+    end
   end
 
   def apply_filters(scope)
