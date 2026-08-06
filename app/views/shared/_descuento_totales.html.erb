@@ -1,0 +1,18 @@
+<%# PR-13.b: las dos filas del descuento en el bloque de totales.
+    Se muestra el importe gravado porque si no, no hay cómo verificar de dónde
+    sale el ISV — se calcula sobre el neto, no sobre el subtotal.
+    Solo aparece cuando hay descuento. %>
+<% if documento.descuento.to_d.positive? %>
+  <tr>
+    <td colspan="<%= colspan %>" class="px-4 py-2 text-right text-sm text-amber-700 dark:text-amber-400">Descuento</td>
+    <td class="px-4 py-2 text-right text-sm text-amber-700 dark:text-amber-400">
+      −L. <%= number_with_precision(documento.descuento, precision: 2, delimiter: ",") %>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="<%= colspan %>" class="px-4 py-2 text-right text-sm text-gray-700 dark:text-gray-300">Importe gravado</td>
+    <td class="px-4 py-2 text-right text-sm text-gray-900 dark:text-gray-100">
+      L. <%= number_with_precision(documento.subtotal.to_d - documento.descuento.to_d, precision: 2, delimiter: ",") %>
+    </td>
+  </tr>
+<% end %>

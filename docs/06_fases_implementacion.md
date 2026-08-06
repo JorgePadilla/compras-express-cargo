@@ -747,7 +747,7 @@ abierto están en `docs/05` — "La tabla de precios recibida (2026-08-05)".
 | # | Tarea | Estado |
 |---|-------|--------|
 | 13.a | Notas de débito/crédito por `Tarifa.resolver` + el mínimo sobrevive a facturar | ✅ |
-| 13.b | Descuento como campo propio (monto o %, ISV sobre el neto) | ⬜ |
+| 13.b | Descuento como campo propio (monto o %, ISV sobre el neto) | ✅ |
 | 13.c | Rol `supervisor_sac` + PIN de 4 dígitos | ⬜ |
 | 13.d | Autorización por línea y el candado | ⬜ |
 
@@ -775,6 +775,47 @@ requisito. La autorización es la excepción, no al revés.
 en `pre_factura_items_attributes`, y la vista de edición los expone como inputs
 sueltos. Cualquiera con acceso a pre-facturas cambia el monto sin dejar rastro
 de por qué. `paper_trail` guarda el *qué* pero no el motivo ni el autorizante.
+
+### El descuento como dato propio (PR-13.b)
+
+Hasta acá un descuento se hacía **bajándole el precio a la línea**, así que era
+invisible: la factura salía con un precio más bajo y nada decía que hubo
+descuento, ni de cuánto, ni quién lo dio. La vista de pre-factura hasta lo
+documentaba — el input de subtotal tenía el tooltip *"Editable para descuentos
+autorizados"*.
+
+Mal se puede autorizar con un PIN algo que después no queda registrado.
+
+**Columnas.** `descuento_monto` (autoritativo — es el que suma y el que se
+imprime), `descuento_porcentaje` (nullable, solo si se capturó como %, para
+poder imprimir "Descuento (10%)") y `descuento_motivo`, en
+`pre_factura_items` y `venta_items`. Más `descuento` acumulado en `pre_facturas`
+y `ventas` para el bloque de totales.
+
+Guardar el monto calculado en vez de derivarlo del % en cada lectura evita un
+segundo redondeo sobre un número que ya está en la factura. Y el descuento
+**no se recalcula** si después cambia el subtotal: uno que se mueve solo después
+de que un supervisor lo autorizó deja de ser lo que se autorizó.
+
+**El ISV va sobre el neto** — confirmado por Jorge. Es el orden contable normal:
+el impuesto se calcula sobre lo que realmente se le cobra al cliente.
+
+```
+Subtotal          L. 1,118.30
+Descuento (10%)  -L.   111.83
+Importe gravado   L. 1,006.47
+ISV (15%)         L.   150.97
+Total             L. 1,157.44
+```
+
+Sobre el bruto el ISV daría L.167.75 — L.16.78 de más al cliente.
+
+El documento muestra el **importe gravado** siempre que haya descuento: sin esa
+línea no hay cómo verificar de dónde sale el ISV.
+
+`PreFactura#calculate_totals` y `Venta#calculate_totals` son gemelos y cambiaron
+igual. Con `descuento` en 0 el resultado es idéntico al anterior — hay un test
+que lo fija, porque era el riesgo real de tocar esa función.
 
 ### ✅ El mínimo no sobrevivía a facturar — arreglado en PR-13.a
 

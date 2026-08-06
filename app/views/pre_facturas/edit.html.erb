@@ -18,6 +18,7 @@
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
           <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Peso</th>
           <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio/Lb</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Descuento</th>
           <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
         </tr>
       </thead>
@@ -47,24 +48,68 @@
                 <%= item_f.number_field :precio_libra, step: 0.01, class: "w-24 rounded border-gray-300 text-sm text-right" %>
               <% end %>
             </td>
+            <%# PR-13.b: el descuento como dato propio. Antes se hacía bajándole
+                el precio a la línea y no quedaba constancia de nada. En 13.d
+                este input pasa a ser el modal de autorización. %>
+            <td class="px-6 py-3 text-right text-sm">
+              <% if @pre_factura.facturado? || @pre_factura.anulado? %>
+                <% if it.descuento? %>
+                  <span class="text-amber-700 font-medium">
+                    −L. <%= number_with_precision(it.descuento_monto, precision: 2, delimiter: ",") %>
+                  </span>
+                  <% if it.descuento_porcentaje.present? %>
+                    <span class="block text-[10px] text-gray-500"><%= it.descuento_label %></span>
+                  <% end %>
+                <% else %>
+                  <span class="text-gray-300">—</span>
+                <% end %>
+              <% else %>
+                <%= item_f.number_field :descuento_monto, step: 0.01, min: 0,
+                      class: "w-24 rounded border-gray-300 text-sm text-right" %>
+                <%= item_f.text_field :descuento_motivo, placeholder: "Motivo",
+                      class: "mt-1 w-24 rounded border-gray-300 text-[11px] text-right" %>
+              <% end %>
+              <% if it.descuento_motivo.present? && (@pre_factura.facturado? || @pre_factura.anulado?) %>
+                <span class="block text-[10px] text-gray-400" title="<%= it.descuento_motivo %>">
+                  <%= truncate(it.descuento_motivo, length: 24) %>
+                </span>
+              <% end %>
+            </td>
             <td class="px-6 py-3 text-right text-sm font-medium">
-              L. <%= number_with_delimiter(it.subtotal.to_f, precision: 2) %>
+              L. <%= number_with_precision(it.total_linea, precision: 2, delimiter: ",") %>
+              <% if it.descuento? %>
+                <span class="block text-[10px] text-gray-400 line-through">
+                  L. <%= number_with_precision(it.subtotal, precision: 2, delimiter: ",") %>
+                </span>
+              <% end %>
             </td>
           </tr>
         <% end %>
       </tbody>
       <tfoot class="bg-gray-50">
         <tr>
-          <td colspan="3" class="px-6 py-3 text-right text-sm font-medium">Subtotal</td>
-          <td class="px-6 py-3 text-right text-sm font-medium">L. <%= number_with_delimiter(@pre_factura.subtotal.to_f, precision: 2) %></td>
+          <td colspan="4" class="px-6 py-3 text-right text-sm font-medium">Subtotal</td>
+          <td class="px-6 py-3 text-right text-sm font-medium">L. <%= number_with_precision(@pre_factura.subtotal, precision: 2, delimiter: ",") %></td>
+        </tr>
+        <%# Con descuento hay que mostrar la base gravada: si no, no se puede
+            verificar de dónde sale el ISV. %>
+        <% if @pre_factura.descuento.to_d.positive? %>
+          <tr>
+            <td colspan="4" class="px-6 py-3 text-right text-sm font-medium text-amber-700">Descuento</td>
+            <td class="px-6 py-3 text-right text-sm font-medium text-amber-700">−L. <%= number_with_precision(@pre_factura.descuento, precision: 2, delimiter: ",") %></td>
+          </tr>
+          <tr>
+            <td colspan="4" class="px-6 py-3 text-right text-sm font-medium">Importe gravado</td>
+            <td class="px-6 py-3 text-right text-sm font-medium">L. <%= number_with_precision(@pre_factura.subtotal.to_d - @pre_factura.descuento.to_d, precision: 2, delimiter: ",") %></td>
+          </tr>
+        <% end %>
+        <tr>
+          <td colspan="4" class="px-6 py-3 text-right text-sm font-medium">ISV (<%= (IsvAware.rate * 100).to_i %>%)</td>
+          <td class="px-6 py-3 text-right text-sm font-medium">L. <%= number_with_precision(@pre_factura.impuesto, precision: 2, delimiter: ",") %></td>
         </tr>
         <tr>
-          <td colspan="3" class="px-6 py-3 text-right text-sm font-medium">ISV (15%)</td>
-          <td class="px-6 py-3 text-right text-sm font-medium">L. <%= number_with_delimiter(@pre_factura.impuesto.to_f, precision: 2) %></td>
-        </tr>
-        <tr>
-          <td colspan="3" class="px-6 py-3 text-right text-base font-bold">Total</td>
-          <td class="px-6 py-3 text-right text-base font-bold text-cec-navy">L. <%= number_with_delimiter(@pre_factura.total.to_f, precision: 2) %></td>
+          <td colspan="4" class="px-6 py-3 text-right text-base font-bold">Total</td>
+          <td class="px-6 py-3 text-right text-base font-bold text-cec-navy">L. <%= number_with_precision(@pre_factura.total, precision: 2, delimiter: ",") %></td>
         </tr>
       </tfoot>
     </table>

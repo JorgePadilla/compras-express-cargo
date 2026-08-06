@@ -97,7 +97,12 @@ class PreFactura < ApplicationRecord
           # PR-13.a: sin esto `VentaItem` recalcula peso × precio y pisa el
           # mínimo de servicio y el simbólico de prepagado en Miami. La
           # pre-factura decía una cosa y la factura cobraba otra.
-          minimo_aplicado: item.minimo_aplicado
+          minimo_aplicado: item.minimo_aplicado,
+          # PR-13.b: si el descuento no viaja, se le cobra al cliente lo que la
+          # pre-factura ya le había descontado.
+          descuento_monto: item.descuento_monto,
+          descuento_porcentaje: item.descuento_porcentaje,
+          descuento_motivo: item.descuento_motivo
         )
       end
       venta.save!
@@ -323,11 +328,19 @@ class PreFactura < ApplicationRecord
     self.numero = "PF-#{next_number.to_s.rjust(6, '0')}"
   end
 
+  # PR-13.b: el descuento reduce la base del ISV, que es el orden contable
+  # normal — el impuesto se calcula sobre lo que realmente se le cobra al
+  # cliente, no sobre el bruto. Con `descuento` en 0 el resultado es idéntico
+  # al de antes, así que ninguna pre-factura existente se mueve.
   def calculate_totals
-    sub = pre_factura_items.reject(&:marked_for_destruction?)
-                           .sum { |i| i.subtotal.to_d }
-    self.subtotal = sub
-    self.impuesto = (sub * isv_rate).round(2, BigDecimal::ROUND_HALF_UP)
-    self.total    = (sub + impuesto).round(2)
+    vivos = pre_factura_items.reject(&:marked_for_destruction?)
+    sub  = vivos.sum { |i| i.subtotal.to_d }
+    desc = vivos.sum { |i| i.descuento_monto.to_d }
+    base = sub - desc
+
+    self.subtotal  = sub
+    self.descuento = desc
+    self.impuesto  = (base * isv_rate).round(2, BigDecimal::ROUND_HALF_UP)
+    self.total     = (base + impuesto).round(2, BigDecimal::ROUND_HALF_UP)
   end
 end

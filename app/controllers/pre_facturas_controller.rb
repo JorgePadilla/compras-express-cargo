@@ -179,7 +179,10 @@ class PreFacturasController < ApplicationController
     params.require(:pre_factura).permit(
       :notas, :fecha_trabajo,
       pre_factura_items_attributes: [
-        :id, :concepto, :precio_libra, :peso_cobrar, :subtotal, :origen, :_destroy
+        :id, :concepto, :precio_libra, :peso_cobrar, :subtotal, :origen, :_destroy,
+        # PR-13.b: por ahora entran libres. En PR-13.d el descuento —y el resto
+        # de estos campos— salen de acá y pasan a pedir el PIN del supervisor.
+        :descuento_monto, :descuento_motivo
       ]
     )
   end

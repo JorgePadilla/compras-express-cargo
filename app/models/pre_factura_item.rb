@@ -1,4 +1,6 @@
 class PreFacturaItem < ApplicationRecord
+  include Descontable
+
   # PR-D6.b: origen de la línea para distinguir cargos auto de manuales.
   # `manual` = línea de paquete o agregada por el cajero a mano.
   # `auto_recolecta` = generada desde paquete.recolecta_solicitada.

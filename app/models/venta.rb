@@ -146,12 +146,18 @@ class Venta < ApplicationRecord
     self.numero = "VT-#{next_number.to_s.rjust(6, '0')}"
   end
 
+  # PR-13.b: gemelo de `PreFactura#calculate_totals` — el descuento reduce la
+  # base del ISV.
   def calculate_totals
-    sub = venta_items.reject(&:marked_for_destruction?)
-                     .sum { |i| i.subtotal.to_d }
-    self.subtotal = sub
-    self.impuesto = (sub * isv_rate).round(2, BigDecimal::ROUND_HALF_UP)
-    self.total    = (sub + impuesto).round(2)
+    vivos = venta_items.reject(&:marked_for_destruction?)
+    sub  = vivos.sum { |i| i.subtotal.to_d }
+    desc = vivos.sum { |i| i.descuento_monto.to_d }
+    base = sub - desc
+
+    self.subtotal  = sub
+    self.descuento = desc
+    self.impuesto  = (base * isv_rate).round(2, BigDecimal::ROUND_HALF_UP)
+    self.total     = (base + impuesto).round(2, BigDecimal::ROUND_HALF_UP)
 
     self.saldo_pendiente = total if new_record?
   end

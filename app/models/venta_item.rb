@@ -1,4 +1,6 @@
 class VentaItem < ApplicationRecord
+  include Descontable
+
   belongs_to :venta, inverse_of: :venta_items
   belongs_to :paquete, optional: true
 
