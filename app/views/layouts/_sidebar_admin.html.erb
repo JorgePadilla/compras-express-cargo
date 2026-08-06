@@ -38,13 +38,9 @@
     <% end %>
   <% end %>
 
-  <% if can_access?(:marketing) || admin? %>
-    <%= sidebar_section "Marketing" do %>
-      <%= sidebar_link "Correos", "#", icon: "envelope" %>
-      <%= sidebar_link "WhatsApp", "#", icon: "chat-bubble-left-right" %>
-      <%= sidebar_link "SMS", "#", icon: "device-phone-mobile" %>
-    <% end %>
-  <% end %>
+  <%# El bloque de Marketing queda oculto hasta que exista el módulo: los tres
+      links apuntaban a "#" y no hacían nada. Se reactiva en la Fase 7, igual
+      que sus cards del dashboard. %>
 
   <% if admin? %>
     <%= sidebar_section "Configuracion" do %>
@@ -58,7 +54,7 @@
       <%= sidebar_link "Motivos de Retención", motivos_retencion_path, icon: "hand-raised" %>
       <%= sidebar_link "Plantillas Notas Cliente", plantillas_notas_cliente_path, icon: "clipboard" %>
       <%= sidebar_link "Empresa", empresa_path, icon: "building-office-2" %>
-      <%= sidebar_link "Reportes", "#", icon: "table-cells" %>
+      <%# "Reportes" apuntaba a "#" — se agrega cuando exista (Fase 6). %>
     <% end %>
   <% end %>
 </ul>

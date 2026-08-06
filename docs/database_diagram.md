@@ -1,6 +1,17 @@
 # Database Diagram — Compras Express Cargo
 
-> Auto-generated from `db/schema.rb` (version `2026_03_31_051755`)
+> ⚠️ **DIAGRAMA DESACTUALIZADO — no usar como referencia.**
+>
+> Fue autogenerado desde `db/schema.rb` en marzo de 2026. Ese archivo hoy
+> está **muerto**: `config/application.rb` fija `schema_format = :sql`, así que
+> el esquema autoritativo es **`db/structure.sql`**.
+>
+> El diagrama refleja 11 tablas de las 60 que existen hoy — le faltan, entre
+> otras, `tarifas`, `tareas`, `sucursales`, `proveedores`, `warehouse_receipts`,
+> `plantillas_notas_cliente` y `motivos_retencion`.
+>
+> Para el modelo de datos vigente, ver `docs/02_modelos_base_datos.md` o
+> directamente `db/structure.sql`.
 
 ```mermaid
 erDiagram

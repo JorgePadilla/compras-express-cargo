@@ -64,7 +64,10 @@ end %>
       <%# Sección 1: Proveedor EP + Sucursal — define el prefijo del tracking %>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <%= f.label :proveedor_id, "Proveedor / Driver", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%# Yusef: "aqui es proveedor y aqui es el driver" — el proveedor es la
+              EMPRESA que mando el paquete ("viene Walmart y te manda el driver").
+              El driver es la persona y vive en su propio campo, mas abajo. %>
+          <%= f.label :proveedor_id, "Proveedor", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
           <% if @proveedores_ep.any? %>
             <%= f.collection_select :proveedor_id, @proveedores_ep, :id, :nombre,
                 { include_blank: "— Seleccionar proveedor EP —" },
@@ -122,9 +125,9 @@ end %>
       <%= render "shared/peso_medidas_calc", f: f,
             valor_a_pagar: true, cotizador_url: cotizador_path %>
 
-      <%# Sección 4: Contenido + Remitente %>
+      <%# Sección 4: Contenido + Remitente + Driver %>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
+        <div class="md:col-span-2">
           <%= f.label :descripcion, "Contenido", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
           <%= f.text_area :descripcion, rows: 2, placeholder: "Descripción del contenido…",
               class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
@@ -133,6 +136,15 @@ end %>
           <%= f.label :remitente, "Remitente / Quien lo envía", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
           <%= f.text_field :remitente, placeholder: "Nombre del remitente",
               class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <div>
+          <%# "Igual otro driver para poner el nombre del driver, en caso de
+              tenerlo, por el rótulo." Texto libre y no catálogo: cambia en cada
+              entrega — "es donde tiene que ser editable, que es el driver". %>
+          <%= f.label :driver, "Driver / Quien lo trajo", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%= f.text_field :driver, placeholder: "Nombre del conductor (opcional)",
+              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Se imprime en la etiqueta.</p>
         </div>
       </div>
 

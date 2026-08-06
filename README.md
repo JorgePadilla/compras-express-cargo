@@ -31,7 +31,7 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 | 3c | Cotizaciones + Proformas + Financiamientos + Dual Currency | ✅ |
 | 4 | Entregas + Caja Diaria | ✅ |
 
-**37 modelos, 57 migraciones, 8 mailers, 6 PDFs, 14 Stimulus controllers, 583 tests.**
+**56 modelos, 101 migraciones, 6 mailers, 6 PDFs, 40 Stimulus controllers, 16 ViewComponents, 1270 tests.**
 
 Ver detalle completo en [`docs/06_fases_implementacion.md`](docs/06_fases_implementacion.md).
 

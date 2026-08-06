@@ -18,6 +18,19 @@ class ServiciosControllerTest < ActionDispatch::IntegrationTest
     assert_match "CER", response.body
   end
 
+  # PR-10.g: con los precios reales son ~60 filas. El orden por id dejaba el
+  # precio público hasta abajo de cada servicio (los NULL ordenan al final en
+  # Postgres), que es justo lo primero que uno busca.
+  test "index muestra el precio de lista antes que las excepciones" do
+    TarifasPropuesta2026.sembrar!
+
+    get servicios_url
+
+    assert_response :success
+    assert_operator response.body.index("Público"), :<, response.body.index("Clientes Amigos"),
+                    "el precio público tiene que salir arriba de las categorías"
+  end
+
   test "crea una tarifa convirtiendo el minimo con ISV al neto" do
     assert_difference("Tarifa.count") do
       post servicios_url, params: { tarifa: {

@@ -1595,7 +1595,7 @@ Dentro de la regla que gane, se usa el escalón de peso que corresponda. Y si ha
 
 Yusef enumeró: **revendedores** (los precios más bajos), **mayoristas** (intermedio), **personal de CEC** (también de los más bajos), **clientes amigos**, **familia**, **Exchange / Chain** (sin mínimo, media libra) y **empresas de carga especial**.
 
-Hoy el sistema solo tiene Regular, VIP y Mayorista. ⬜ **Faltan los precios de cada categoría en cada servicio** — Yusef quedó de enviarlos.
+Hoy el sistema solo tiene Regular, VIP y Mayorista. ✅ **Los precios llegaron el 2026-08-05** — ver "La tabla de precios recibida" más abajo.
 
 ### Los cobros mínimos
 
@@ -1603,15 +1603,25 @@ Hoy el sistema solo tiene Regular, VIP y Mayorista. ⬜ **Faltan los precios de 
 |---|---|---|---|
 | CER | L.200 con ISV | coincide | ✅ |
 | CKA | L.200 con ISV | coincide | ✅ |
-| EXPRESS | $14.95 con ISV | "$10 más ISV" | ⬜ *"Lo cambiamos para volver más atractivo el servicio"* — falta el valor |
-| CEM | 8 libras | "3 o 4 libras" | ⬜ falta el mínimo por defecto |
-| CKM | 20 libras | "3 o 4 libras" | ⬜ falta el mínimo por defecto |
+| EXPRESS | $14.95 con ISV | "$10 más ISV" | ✅ **$10 sin ISV** — confirmado en la tabla del 2026-08-05 |
+| CEM | 8 libras | "3 o 4 libras" | ⬜ la tabla trae mínimo en dinero (L.200 con ISV), no en libras |
+| CKM | 20 libras | "3 o 4 libras" | ⬜ ídem — ver la contradicción de abajo |
 
 **Reglas confirmadas por escrito:**
 
 - Los L.200 son **con el ISV adentro**: *"L.173.91 más ISV (queda en L.200.00 ya con ISV)"*. El sistema guarda el neto y muestra ambos valores.
+- El mínimo de EXPRESS, en cambio, es **sin ISV**: *"$10 **más** impuesto de venta"*. Los dos casos conviven en la misma tabla — es por eso que `minimo_monto` guarda siempre el neto y el CRUD pregunta por el monto con impuesto.
 - El mínimo es **por concepto, no por factura**: *"El flete lleva su mínimo dependiendo el servicio, así como las recolectas."*
 - **Todo tiene que ser editable**: *"TODOS ESTOS PRECIOS DEBEN PODER CAMBIAR"* — incluida la moneda del mínimo, porque *"puedo variar de valor o pasar a base dólares"*.
+
+Las tres reglas quedaron fijadas como tests en `test/models/tarifa_reglas_yusef_test.rb`, con las citas textuales.
+
+> ⚠️ **CKM cae en dos reglas que se contradicen** — y la contradicción está dentro del mismo audio:
+>
+> *"Los servicios **serie CK** son 200 lempiras ya con ISV"* → aplica a CKA **y CKM**
+> *"El **marítimo** lo tenemos estipulado en cantidad de libras… mínimo 3 o 4 libras"* → aplica a CEM **y CKM**
+>
+> CKM es de la serie CK **y** es marítimo, así que entra en las dos. Falta saber cuál manda para CKM: el mínimo de L.200, el de libras, o los dos y gana el que resulte mayor. (El modelo soporta las tres opciones; es una decisión de negocio.)
 
 ### La tasa de cambio es fija
 
@@ -1668,6 +1678,20 @@ Hoy el sistema no imprime una etiqueta: imprime un **Warehouse Receipt** en hoja
 
 El valor a pagar se muestra **en dólares y en lempiras**. El cliente puede pagar **en Miami o en Honduras** — las dos opciones ya existen en la pantalla.
 
+**En Entrega Personal — proveedor y driver son dos cosas distintas.** Yusef corrigió el formulario:
+
+> "Aquí tenés mal: aquí es proveedor y aquí es el driver."
+> Jorge: "Viene Walmart y te manda el driver, ¿verdad?" — Yusef: "Sí, correcto."
+> "Es donde tiene que ser editable, que es el driver."
+> "Remitente o quien envía está bien, pero igual **otro driver** para poner el nombre del driver, en caso de tenerlo, **por el rótulo**."
+
+- **Proveedor** = la empresa que mandó el paquete (Walmart, Amazon…). Es el catálogo `Proveedor`, recurrente.
+- **Driver** = la persona que lo trajo físicamente. **Texto libre, no catálogo**, porque cambia en cada entrega.
+- **Remitente** se queda como está — es un tercer dato, no se pisa con el driver.
+- El driver **se imprime en la etiqueta**; para eso lo pidió.
+
+Yusef además va a crear un proveedor llamado "Entrega local / personal" desde el CRUD. Hoy no hay ninguno de tipo `entrega_personal` cargado, así que la pantalla muestra el aviso de que falta configurarlos.
+
 **En Etiquetar:**
 - **Buscar el código ignorando los ceros**: hoy si el operario escribe `C002` no encuentra a `C2`. *"Cuando hago búsquedas por código, quitar los ceros."* El formato del código no cambia — `C6` está bien.
 - **Búsqueda combinada de código y nombre**: poder escribir `"2 María"` y que aparezca. *"A veces llegan las etiquetas rotas, solo dicen 234 y después dice Pérez Hernández."*
@@ -1692,13 +1716,186 @@ Lo que describió:
 El motivo real es de servicio al cliente:
 > "Hoy no sabemos si una carga salió. Por eso le decimos al cliente 'entre lunes y viernes', y el cliente te dice: qué rango tan grande, no me estás dando una fecha."
 
+### "Label en el celular" — resuelto (Jorge, 2026-08-02)
+
+La nota de la página 2 no era sobre imprimir ni ver la etiqueta desde el teléfono. Es sobre la **etiqueta física rota**: cuando el paquete llega con la etiqueta dañada, el operario solo alcanza a leer pedazos y tiene que dar con el cliente a partir de esos fragmentos.
+
+> "A veces llegan las etiquetas rotas, solo dicen **234** y después dice **Pérez Hernández**, entonces uno tiene que andar ahí unificando."
+
+La búsqueda combinada de código y nombre (PR-10.c) va en esa dirección, pero **no alcanza**: hoy exige que *todas* las palabras del término matcheen. Con una etiqueta rota eso es justo lo que falla — basta que un fragmento esté mal leído o pertenezca a otro campo para que no devuelva nada. Ver Fase 11, PR-10.f.
+
 ### Lo que falta que Yusef confirme
 
-1. ⭐ **La tabla de precios completa** por categoría y servicio (quedó de enviarla).
-2. El **mínimo por defecto de CEM y CKM**.
-3. El **mínimo de EXPRESS** después del cambio.
+1. ✅ ~~La tabla de precios completa~~ — llegó el 2026-08-05, ver abajo.
+2. El **mínimo por defecto de CEM y CKM** en libras.
+3. ✅ ~~El mínimo de EXPRESS~~ — **$10 sin ISV**.
 4. **Cuáles de los 11 campos** de la etiqueta son imprescindibles a 2.25 × 1.25 pulgadas.
-5. Qué significa **"Label en el celular"** de la página 2 de las notas — no aparece en ningún audio.
+
+---
+
+## La tabla de precios recibida (2026-08-05)
+
+Yusef mandó `precios por categoria 2026.xlsx`. Es lo que bloqueaba cargar los
+precios de verdad: el motor de tarifas está construido desde PR-10.a pero venía
+corriendo con el backfill de la migración, que solo replicaba el comportamiento
+viejo (un precio plano por servicio, sin mínimos ni escalones).
+
+El archivo trae tres hojas: `Hoja1` (borrador), `ACTUAL` (lo que cobran hoy) y
+**`PROPUESTA`** (lo que quieren cobrar). Se sembró la PROPUESTA — PR-10.g.
+
+### El archivo confirmó el diseño
+
+Yusef llegó por su cuenta a la misma estructura que el modelo:
+
+| En su archivo | En el sistema |
+|---|---|
+| `MONTO EN LPS CON ISV` → 200 | `minimo_monto` guarda el neto **173.91** |
+| `MONTO EN $ MAS ISV` | mínimo neto, el ISV se aplica al totalizar |
+| Columnas NORMAL / MINIMO por categoría | `precio_libra` / `minimo_monto` |
+| `TARIFARIO ESCALONADO` con rangos de libras | `desde_libras` / `hasta_libras` |
+| `SIN COBRO MINIMO` como categoría | `aplica_minimo: false` |
+| `13.5 A 100 LIBRAS EN SPS` vs `EN TGU` | `sucursal_id` |
+
+En la hoja ACTUAL el mínimo figuraba como **6.45 USD** y en la PROPUESTA pasó a
+**173.91** — o sea que adoptó la convención del neto sin ISV por su cuenta.
+
+### Precio por libra y mínimo, por categoría
+
+Montos en USD salvo donde diga lo contrario.
+
+| Servicio | Amigos | doTERRA / Farmasi | Personal CEC | **Lista (público)** | Shein | Sin Cobro Mínimo |
+|---|---|---|---|---|---|---|
+| CER | 4.20 / $5 | 3.50 / $5 | 3.50 / — | **4.50 / L.173.91** | 3.50 / — | 4.50 / sin mínimo |
+| CKA | 3.80 / $5 | 3.50 / $5 | 3.00 / $3 | **4.00 / L.173.91** | 3.50 / — | 4.00 / sin mínimo |
+| EXPRESS | 7.00 / $10 | 7.00 / $10 | 6.50 / — | **7.50 / $10** | 7.00 / — | 7.50 / sin mínimo |
+| CEM | 2.20 / — | 1.70 / — | 1.80 / $1.80 | **2.50 / L.173.91** | 1.75 / — | 2.50 / sin mínimo |
+| CKM | 1.70 / — | 1.70 / — | 1.40 / $1.40 | **1.90 / L.173.91** | 1.75 / — | 1.90 / sin mínimo |
+
+**Un MINIMO en 0 en la hoja significa "sin definir", no "mínimo de cero"** — se
+carga como sin mínimo.
+
+`MAYORISTAS` viene casi entero en cero: el único servicio con precio es **CKM a
+$1.50**. `FAMILIA` y `REVENDEDORES` vienen todos en cero, así que las categorías
+se crearon pero sin tarifas — sus clientes caen al precio de lista.
+
+### Tegucigalpa es sobrecosto por sucursal, no categoría
+
+`Precio Tegus` y `SHEIN TGUS` no son categorías de cliente: son la misma tarifa
+con el costo extra de transporte a Tegucigalpa. Van como fila con `sucursal`, y
+es el sistema el que la aplica cuando el paquete va para allá — el cajero no
+elige nada. Si fueran categorías, al abrir La Ceiba habría que duplicar cada una
+otra vez.
+
+Solo tres precios difieren en Tegucigalpa:
+
+| | SPS y el resto | Tegucigalpa |
+|---|---|---|
+| CKM lista (13.5–100 lb) | $1.90 | **$2.00** |
+| CEM Shein | $1.75 | **$1.90** |
+| CKM Shein | $1.75 | **$1.90** |
+
+### Los tarifarios escalonados
+
+Solo el **precio de lista** tiene escalones; las categorías son precio plano.
+
+| CER | | CEM | | CKM | |
+|---|---|---|---|---|---|
+| 0–50 lb | $4.50 | 0–3 lb | $4.50 | 0–3 lb | $4.00 |
+| 50.5–100 | $4.00 | 3.5–100 | $2.50 | 3.5–13 | $2.50 |
+| 100.5–150 | $3.75 | 100.5–200 | $2.20 | 13.5–100 | $1.90 · **TGU $2.00** |
+| 150.5+ | $3.50 | 200.5+ | $2.00 | 100.5–200 | $1.75 |
+| | | | | 200.5+ | $1.65 |
+
+CKA y EXPRESS no tienen escalonado: precio plano.
+
+Dos decisiones de lectura sobre la hoja:
+
+- El primer tramo de cada tarifario (`DE 0 A 1 LBS → L.200 CON ISV`) no es un
+  precio por libra sino **el mínimo**, y el mínimo ya va en toda la fila. Queda
+  absorbido en el tramo siguiente: a 1 lb de CER el cálculo da $4.50 ≈ L.112,
+  por debajo del mínimo, y se cobra L.173.91 igual (L.200.00 con ISV).
+- Los cortes de CEM y CKM dicen `101` y `201` donde CER dice `100.5` y `150.5`.
+  Se tomó el patrón de CER (medias libras) para los tres: si no, un paquete de
+  100.5 lb caería en un hueco sin tarifa.
+
+### "TARIFA EDITABLE CON AUTORIZACION DE SUPERVISOR O JEFE" es una función del sistema
+
+La nota se repite en casi todas las filas de los tarifarios escalonados. Al
+principio se leyó como una descripción de su proceso interno. **No lo es** —
+Yusef lo aclaró (2026-08-05):
+
+> "Ahí, como es el área de pre-facturación, no hemos entrado ahí, en donde entra
+> ya ciertas cosas que los supervisores o jefes son los que [autorizan el]
+> cambio. Por eso queremos que el área de los precios estén establecidos, listo.
+> **No hay nada más, no se puede hacer más si está todo preestablecido.** Ahora,
+> si lo quieren modificar, ellos tienen que pedir autorización — ahí es donde
+> entra un jefe, un supervisor, y ahí es donde llega y **pone un código especial
+> de él**."
+
+O sea, el circuito completo es:
+
+1. Los precios se cargan una vez en `/servicios` (solo admin). Esa parte ya está.
+2. **En la pre-factura el cajero no puede tocar el precio.** Sale preestablecido
+   de la tabla de tarifas y punto.
+3. Si en el mostrador hay que cambiarlo, el cajero **pide autorización**.
+4. El supervisor o jefe llega, **teclea su código** en la pantalla, y eso
+   destraba la edición de esa línea.
+5. Queda registrado quién autorizó qué.
+
+Lo importante es el punto 2: el precio bloqueado por defecto es el requisito, no
+un detalle de la pantalla. La autorización es la excepción.
+
+> 🔴 **Hoy el sistema hace lo contrario.** `PreFacturasController#pre_factura_params`
+> permite `precio_libra` y `subtotal` en las líneas, así que cualquiera con acceso
+> a pre-facturas edita el monto sin dejar rastro de por qué. Ver Fase 13.
+
+**El detalle, respondido el mismo día:**
+
+| | |
+|---|---|
+| **El código** | Un **PIN de 4 dígitos**, aparte de la contraseña del supervisor |
+| **Qué destraba** | **Todo**: precio, descuento, quitar líneas y cambiar el peso a cobrar |
+| **Alcance** | **Por línea** — no se autoriza la pre-factura completa |
+| **Quién autoriza** | `admin`, `supervisor_prefactura`, `supervisor_caja` y **`supervisor_sac`** |
+
+**Falta un rol.** `sac` ya existe (el agente de servicio al cliente); lo que no
+está es **su supervisor**, que Yusef cuenta también como jefe. Hay que agregar
+`supervisor_sac` y darle sus permisos.
+
+Dos cosas que salen de esas respuestas y hay que resolver al construirlo:
+
+- **El descuento no existe como dato.** Hoy un descuento se hace bajándole el
+  precio a la línea, así que la factura sale sin decir que hubo descuento, ni de
+  cuánto, ni quién lo dio. Si el PIN va a autorizar descuentos, el descuento
+  tiene que ser una columna.
+- **Un PIN de 4 dígitos son 10 000 combinaciones.** Es el único punto del
+  sistema donde cuatro números habilitan cambiar plata, así que va con `bcrypt`
+  y con límite de intentos, no guardado en claro.
+
+El detalle técnico está en `docs/06` — Fase 13.
+
+### Lo que sigue abierto de la tabla
+
+1. **El mínimo en libras de CEM y CKM.** El archivo trae mínimos en dinero pero
+   no el de libras que Yusef mencionó ("3 o 4 libras"). En la práctica el
+   escalonado ya lo cubre — el tramo chico de CEM cobra $4.50/lb, así que un
+   paquete de 2 lb paga $9 — pero conviene confirmarlo.
+2. **La contradicción de CKM sigue en pie.** El archivo le pone el mínimo de
+   L.173.91, lo que sugiere que manda el monto sobre las libras. Confirmar.
+3. **`Regular` y `VIP` no aparecen en el archivo**, y tienen 8 clientes
+   asignados. Hay que decidir si se migran a alguna de las categorías nuevas o
+   se retiran. Mientras tanto se quedan con los precios viejos.
+4. **`MAYORISTAS` solo tiene CKM definido.** Sus otros cuatro servicios siguen
+   con los valores del backfill de PR-10.a.
+5. **Las categorías no bajan de escalón.** Un cliente `Clientes Amigos` con 200
+   lb de CER paga $4.20/lb ($840) mientras el público paga $3.50/lb ($700) —
+   porque su columna es un precio plano y el escalonado está declarado solo para
+   el precio de lista. Es literal a la hoja, pero hay que preguntarle si es lo
+   que quiere.
+6. **Los 16 cargos que no son flete** (CAMBIO DE SERVICIO, RECOLECTA MIAMI,
+   RETENIDO MIAMI, ENTREGA NACIONAL, MANEJO Y GASTOS, FLETE MEXICO…) son
+   `ServicioExtra`, otro modelo con su propia pantalla. Varios ya existen con
+   otros valores, así que reconciliarlos va en su propio PR.
 
 ---
 

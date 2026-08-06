@@ -47,27 +47,86 @@ class Cliente < ApplicationRecord
   # Cada palabra del término tiene que matchear algo (AND entre palabras, OR
   # entre campos), así "2 María" encuentra a María con código C2.
   scope :buscar, ->(term) {
-    tokens = term.to_s.strip.split(/\s+/).reject(&:blank?)
+    tokens = Cliente.fragmentos_de(term)
     next all if tokens.empty?
 
-    tokens.reduce(all) do |rel, token|
-      condiciones = [
-        "clientes.codigo ILIKE :like",
-        "(clientes.nombre || ' ' || COALESCE(clientes.apellido, '')) ILIKE :like",
-        "clientes.email ILIKE :like"
-      ]
-      valores = { like: "%#{sanitize_sql_like(token)}%" }
-
-      # Los ceros a la izquierda se ignoran a ambos lados: C002 == C2 == 2.
-      normalizado = token.gsub(/\D/, "").sub(/\A0+/, "").presence
-      if normalizado
-        condiciones << "ltrim(regexp_replace(clientes.codigo, '\\D', '', 'g'), '0') = :codigo"
-        valores[:codigo] = normalizado
-      end
-
-      rel.where(condiciones.join(" OR "), valores)
-    end
+    tokens.reduce(all) { |rel, token| rel.where(Cliente.condicion_fragmento(token)) }
   }
+
+  # PR-10.f: la búsqueda que usan los autocompletes cuando el operario tiene
+  # una etiqueta rota en la mano.
+  #
+  # Yusef: "a veces llegan las etiquetas rotas, solo dicen 234 y después dice
+  # Pérez Hernández, entonces uno tiene que andar ahí unificando".
+  #
+  # `buscar` exige que TODAS las palabras matcheen, y con una etiqueta rota eso
+  # es justo lo que falla: basta que un fragmento esté mal leído o pertenezca a
+  # otro campo para que devuelva cero — peor que devolver algo aproximado.
+  #
+  # Primero intenta la estricta (idéntico a hoy en el caso normal, una sola
+  # query). Solo si esa da cero cae a buscar por fragmentos sueltos.
+  scope :buscar_flexible, ->(term) {
+    estricta = buscar(term)
+    # Con una sola palabra la estricta y la de fragmentos son equivalentes.
+    next estricta if Cliente.fragmentos_de(term).size <= 1
+    next estricta if estricta.exists?
+
+    buscar_por_fragmentos(term)
+  }
+
+  # Trae los que matcheen AL MENOS UN fragmento, ordenados por cuántos
+  # matchean. Con "234 Pérez Hernández", el cliente C234 Juan Pérez matchea 2
+  # de 3 y queda arriba de los que solo matchean el apellido.
+  scope :buscar_por_fragmentos, ->(term) {
+    tokens = Cliente.fragmentos_de(term)
+    next all if tokens.empty?
+
+    condiciones = tokens.map { |t| Cliente.condicion_fragmento(t) }
+    puntaje = condiciones.map { |c| "(CASE WHEN #{c} THEN 1 ELSE 0 END)" }.join(" + ")
+
+    where(condiciones.join(" OR "))
+      .order(Arel.sql("(#{puntaje}) DESC"), :codigo)
+  }
+
+  def self.fragmentos_de(term)
+    term.to_s.strip.split(/\s+/).reject(&:blank?)
+  end
+
+  # Condición SQL para un fragmento suelto. Devuelve un string ya sanitizado,
+  # apto para concatenarse con OR o envolverse en un CASE.
+  def self.condicion_fragmento(token)
+    like = "%#{sanitize_sql_like(token)}%"
+
+    condiciones = [
+      sanitize_sql_array([ "#{sin_acentos('clientes.codigo')} ILIKE #{sin_acentos('?')}", like ]),
+      sanitize_sql_array([ "#{sin_acentos(NOMBRE_COMPLETO_SQL)} ILIKE #{sin_acentos('?')}", like ]),
+      sanitize_sql_array([ "clientes.email ILIKE ?", like ])
+    ]
+
+    # Los ceros a la izquierda se ignoran a ambos lados: C002 == C2 == 2.
+    normalizado = token.gsub(/\D/, "").sub(/\A0+/, "").presence
+    if normalizado
+      condiciones << sanitize_sql_array(
+        [ "ltrim(regexp_replace(clientes.codigo, '\\D', '', 'g'), '0') = ?", normalizado ]
+      )
+    end
+
+    "(#{condiciones.join(' OR ')})"
+  end
+
+  NOMBRE_COMPLETO_SQL = "(clientes.nombre || ' ' || COALESCE(clientes.apellido, ''))".freeze
+
+  # PR-10.f: en Postgres `ILIKE` NO ignora acentos — 'Perez' ILIKE '%Pérez%' es
+  # false. La base tiene los nombres sin tilde y el operario los teclea con
+  # tilde (o al revés), así que sin esto la búsqueda falla en el caso más común.
+  #
+  # `translate` en vez de la extensión `unaccent` a propósito: es SQL puro, no
+  # depende de que el entorno permita instalar extensiones, y se comporta igual
+  # en local que en Render. Una búsqueda que difiere entre entornos es peor que
+  # una limitada.
+  def self.sin_acentos(expresion)
+    "translate(#{expresion}, 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUN')"
+  end
 
   before_validation :generate_codigo, on: :create, if: -> { codigo.blank? }
 

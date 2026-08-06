@@ -125,6 +125,50 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     assert_includes titulos, "Tabla de Servicios"
   end
 
+  # El home es el punto de entrada del admin. Si una pantalla solo se llega
+  # desde el sidebar, en la práctica no existe para quien no lo explora.
+  test "el dashboard llega a todos los catalogos que el negocio mantiene" do
+    login_as users(:admin)
+    get root_url
+
+    hrefs = @controller.instance_variable_get(:@shortcut_groups).flat_map { |g| g[:cards] }.map { |c| c[:href] }
+
+    [
+      servicios_path, categoria_precios_path, tarifas_recolecta_path,
+      servicios_extra_path, proveedores_path, motivos_retencion_path,
+      plantillas_notas_cliente_path
+    ].each do |ruta|
+      assert_includes hrefs, ruta, "#{ruta} solo se alcanzaba desde el sidebar"
+    end
+  end
+
+  # Guard contra la desincronización que ya pasó una vez: se quitaron las
+  # cards muertas del dashboard y quedaron vivas en el sidebar.
+  test "el sidebar tampoco tiene links muertos" do
+    login_as users(:admin)
+    get root_url
+
+    sidebar = response.body[/<aside[^>]*id="sidebar".*?<\/aside>/m]
+    assert sidebar, "no se encontro el sidebar"
+
+    muertos = sidebar.scan(/<a[^>]+href="#"/)
+    assert_empty muertos, "el sidebar tiene #{muertos.size} link(s) que no llevan a ningun lado"
+  end
+
+  test "cada card del dashboard apunta a una ruta que existe" do
+    login_as users(:admin)
+    get root_url
+
+    hrefs = @controller.instance_variable_get(:@shortcut_groups).flat_map { |g| g[:cards] }.map { |c| c[:href] }
+
+    hrefs.each do |href|
+      assert Rails.application.routes.recognize_path(href),
+             "#{href} no corresponde a ninguna ruta"
+    rescue ActionController::RoutingError
+      flunk "#{href} no corresponde a ninguna ruta"
+    end
+  end
+
   test "supervisor_miami ve Logística + Clientes pero no Facturación/Caja Diaria/Configuración" do
     sup = User.create!(nombre: "Sup M", email_address: "sup_m_dash@test.com", password: "password123",
                        rol: "supervisor_miami", ubicacion: "miami", activo: true)

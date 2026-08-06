@@ -657,7 +657,7 @@ class PaquetesController < ApplicationController
     params.require(:paquete).permit(
       :tracking, :tracking_secundario, :cliente_id, :tipo_envio_id, :estado, :peso,
       :alto, :largo, :ancho, :cantidad_productos, :cantidad_paquetes,
-      :numero_caja, :descripcion, :remitente, :expedido_por, :proveedor, :proveedor_id,
+      :numero_caja, :descripcion, :remitente, :driver, :expedido_por, :proveedor, :proveedor_id,
       :tercero_id,
       :notas_internas, :notas_al_cliente, :notas_consolidacion, :notas_retencion,
       :pre_alerta,

@@ -43,10 +43,11 @@
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
               <% @paquetes_facturables.each do |p| %>
-                <%
-                  precio = @cliente.categoria_precio&.precio_para(p.tipo_envio) || p.tipo_envio&.precio_libra || 0
-                  subtotal = ((p.peso_cobrar || 0).to_d * precio.to_d).round(2)
-                %>
+                <%# PR-10.h: el precio sale de `CotizadorFlete`, el mismo cálculo
+                    que va a hacer la pre-factura. Antes se calculaba acá con la
+                    cadena vieja y se imprimía con "L." un monto que estaba en
+                    dólares. %>
+                <% cot = @cotizaciones[p.id] %>
                 <tr class="hover:bg-gray-50 <%= 'bg-cec-teal/5' if p.prepagado_miami? %>">
                   <td class="px-4 py-3">
                     <%= check_box_tag "paquete_ids[]", p.id, false, id: "paquete_#{p.id}", class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
@@ -72,14 +73,17 @@
                     <% if p.prepagado_miami? %>
                       <span class="text-cec-teal-dark italic">simbólico</span>
                     <% else %>
-                      L. <%= number_with_delimiter(precio.to_f, precision: 2) %>
+                      L. <%= number_with_precision(cot.precio_libra, precision: 2, delimiter: ",") %>
+                      <% if cot.aplico_minimo %>
+                        <span class="block text-[10px] text-amber-700 uppercase tracking-wide">mínimo</span>
+                      <% end %>
                     <% end %>
                   </td>
                   <td class="px-6 py-3 text-right text-sm font-medium">
                     <% if p.prepagado_miami? %>
                       <span class="text-cec-teal-dark">$<%= PreFactura::PREPAGADO_MIAMI_SIMBOLICO %></span>
                     <% else %>
-                      L. <%= number_with_delimiter(subtotal.to_f, precision: 2) %>
+                      L. <%= number_with_precision(cot.subtotal, precision: 2, delimiter: ",") %>
                     <% end %>
                   </td>
                 </tr>

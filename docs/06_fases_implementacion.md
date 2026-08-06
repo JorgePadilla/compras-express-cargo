@@ -1,6 +1,6 @@
 # CEC — Fases de Implementacion
 
-39 modulos · 39 modelos · 670 tests · Rails 8 + Hotwire + Tailwind CSS 4 + PostgreSQL 17
+56 modelos · 101 migraciones · 1270 tests · Rails 8 + Hotwire + Tailwind CSS 4 + PostgreSQL 17
 
 ```
 Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pago → Entrega
@@ -612,10 +612,14 @@ Preferencias por usuario: `users.sonido_habilitado` + `users.sonido_volumen` (0-
 | 10.b | Entrega Personal: peso/medidas/cálculo + valor a pagar en USD y LPS | 6 | ✅ |
 | 10.c | Rutinas de UX en etiquetar (F4 tercero, búsquedas, modal, layout) | 6 | ✅ |
 | 10.d | Etiqueta Dymo 2.25×1.25 con código de barras | 6, 7 | ✅ |
+| 10.e | Separar Driver de Proveedor en Entrega Personal | 6 | ✅ |
+| 10.f | Búsqueda por fragmentos de etiqueta rota + acentos | 11 | ✅ |
+| 10.g | Sembrar la tabla de precios real (PROPUESTA 2026) | 9, 11 | ✅ |
+| 10.h | El preview de paquetes muestra el precio que se va a cobrar | 3a | ✅ |
 
 **Dependencia:** Fase 3a (billing) + PR-D6 (tarifas de recolecta y servicios extra). Cumplidas.
 
-**Bloqueo:** sembrar `tarifas` requiere la tabla de precios por categoría, que Yusef quedó de enviar. El modelo, el CRUD y los tests se construyen sin ella.
+**Bloqueo:** ~~sembrar `tarifas` requiere la tabla de precios por categoría~~ — llegó el 2026-08-05 y se sembró en PR-10.g.
 
 ### Hallazgos de la exploración
 
@@ -681,6 +685,34 @@ Cuatro formatos distintos en la operación; **solo se rediseña el de ETIQUETAR*
 
 Se separa la etiqueta del Warehouse Receipt. Código de barras **Code 128** del número de recepción vía `barby` + `chunky_png` como data-URI PNG (server-side, más confiable para impresión que una librería JS).
 
+### Sembrado de precios reales (PR-10.g)
+
+Los números viven en `lib/tarifas_propuesta_2026.rb` como constantes que espejan
+la hoja de Yusef, y se aplican con:
+
+```bash
+bin/rails tarifas:sembrar_propuesta_2026
+```
+
+Tarea aparte y no dentro de `db/seeds.rb` (aunque el seed también la llama)
+porque los precios cambian con el negocio y `seeds` se corre entero: una
+corrección de precios tiene que poder aplicarse sola. Es idempotente — la llave
+natural es `(tipo_envio, categoría, sucursal, desde_libras)` y las filas se
+actualizan en vez de duplicarse.
+
+Qué siembra: 7 categorías nuevas (`Clientes Amigos`, `doTERRA / Farmasi`,
+`Personal CEC`, `Shein`, `Sin Cobro Mínimo`, `Familia`, `Revendedores`), ~44
+tarifas entre precio de lista escalonado, precios por categoría y los tres
+sobrecostos de Tegucigalpa. `Regular` y `VIP` **no se tocan** — no están en el
+archivo de Yusef y tienen 8 clientes colgando.
+
+De paso sincroniza `tipo_envios.precio_libra`, que es el fallback cuando no hay
+tarifa cargada y había quedado desalineado (**EXPRESS 8.00 → 7.50**, **CKM 1.50
+→ 1.90**). Un fallback que cobra distinto que la tarifa es peor que no tenerlo.
+
+El detalle de la tabla, las decisiones de lectura del archivo y lo que sigue
+abierto están en `docs/05` — "La tabla de precios recibida (2026-08-05)".
+
 ### Deuda técnica que se salda de paso
 
 - El cobro simbólico de prepagado en Miami (#3), hoy silenciosamente en $0.
@@ -707,3 +739,118 @@ Se separa la etiqueta del Warehouse Receipt. Código de barras **Code 128** del 
 **Motivación:** hoy no saben si una carga salió, y por eso le dan al cliente rangos de "entre lunes y viernes". Yusef está reorganizando las salidas (lunes, jueves y viernes después de mediodía) para acotar eso.
 
 **Enganche existente:** `Manifiesto`, `TamanoCaja` y `EmpresaManifiesto` ya están en el modelo. Falta la entidad de "caja empacada" entre `Paquete` y `Manifiesto`.
+
+---
+
+## Fase 13: Precio bloqueado en pre-factura + autorización de supervisor — PLANIFICADA
+
+**No se construye en PR-10.** Sale de la aclaración de Yusef del 2026-08-05 sobre
+la nota `TARIFA EDITABLE CON AUTORIZACION DE SUPERVISOR O JEFE` que repite en
+casi todas las filas de su tabla de precios. Al principio se leyó como una
+descripción de su proceso interno; **es una función del sistema**:
+
+> "Ahí, como es el área de pre-facturación, no hemos entrado ahí, en donde entra ya ciertas cosas que los supervisores o jefes son los que [autorizan el] cambio. Por eso queremos que el área de los precios estén establecidos, listo. **No hay nada más, no se puede hacer más si está todo preestablecido.** Ahora, si lo quieren modificar, ellos tienen que pedir autorización — ahí es donde entra un jefe, un supervisor, y ahí es donde llega y **pone un código especial de él**."
+
+**El circuito:**
+
+1. Los precios se cargan una vez en `/servicios`, solo admin. ✅ ya está (PR-10.a + PR-10.g).
+2. **En la pre-factura el precio sale bloqueado.** El cajero no lo toca.
+3. Si hay que cambiarlo, pide autorización.
+4. El supervisor o jefe **teclea su código** en la pantalla y eso destraba esa línea.
+5. Queda el registro de quién autorizó qué y por qué.
+
+Lo importante es el **punto 2**: el precio bloqueado por defecto es el
+requisito. La autorización es la excepción, no al revés.
+
+### 🔴 Hoy el sistema hace lo contrario
+
+`PreFacturasController#pre_factura_params` permite `precio_libra` y `subtotal`
+en `pre_factura_items_attributes`, y la vista de edición los expone como inputs
+sueltos. Cualquiera con acceso a pre-facturas cambia el monto sin dejar rastro
+de por qué. `paper_trail` guarda el *qué* pero no el motivo ni el autorizante.
+
+### ✅ El preview de paquetes mostraba otro precio — arreglado en PR-10.h
+
+La pantalla de selección de paquetes (`/pre_facturas/new`) y el JSON de
+`PreFacturasController#facturables` **no pasaban por `Tarifa.resolver`**: seguían
+con la cadena vieja `categoria_precio.precio_para || tipo_envio.precio_libra`,
+sin mínimos, sin escalones y **sin convertir a Lempiras** — pero la vista lo
+imprimía con "L." adelante. Es el mismo bug de moneda que PR-10.a arregló en
+`build_from_paquetes`, en el camino que quedó afuera.
+
+Mientras las tarifas eran un backfill plano la diferencia no se notaba. Con los
+precios reales de PR-10.g se volvió grande: un CER de 0.5 lb mostraba **$2.25**
+rotulado como Lempiras y la pre-factura cobraba **L.173.91**. Contradice de
+frente el "los precios están preestablecidos" — el cajero veía un número y el
+sistema cobraba otro.
+
+Se arregló llamando a `CotizadorFlete`, el mismo servicio que usa
+`/entrega_personal`, desde un único `#cotizar` que alimenta la vista y el JSON.
+La pantalla ahora marca además cuándo el monto salió del mínimo del servicio.
+
+El guard está en `test/controllers/pre_factura_preview_precio_test.rb`, y no
+compara contra números escritos a mano sino contra lo que devuelve
+`PreFactura.build_from_paquetes` para el mismo paquete — que es la invariante
+que se rompió. Verificado reintroduciendo el cálculo viejo: 3 de los 4 tests
+fallan.
+
+### Especificación (respondida por Yusef, 2026-08-05)
+
+| Pregunta | Respuesta |
+|---|---|
+| ¿Cómo es el código? | **PIN de 4 dígitos**, aparte de la contraseña con la que el supervisor entra al sistema |
+| ¿Qué destraba? | **Todo**: precio, descuento, quitar líneas y cambiar el peso a cobrar |
+| ¿Alcance? | **Por línea.** No se autoriza la pre-factura entera |
+| ¿Quién autoriza? | `admin`, `supervisor_prefactura`, `supervisor_caja` y **`supervisor_sac`** |
+
+#### El rol que falta
+
+`sac` ya existe — es el agente de servicio al cliente. Lo que falta es **su
+supervisor**, que Yusef cuenta también como jefe:
+
+```ruby
+supervisor_sac: "supervisor_sac"   # "Supervisor de Servicio al Cliente"
+```
+
+Hay que definirle sus permisos en `Authorization` (como mínimo, todo lo que hoy
+puede `sac`), y sumarlo a los cuatro roles que pueden autorizar.
+
+#### Lo que implica el "por línea"
+
+Que el PIN no abre una sesión de edición: **autoriza una línea concreta y queda
+pegado a ella**. Si el cajero toca otra línea, se pide de nuevo. Eso hace que el
+registro sea útil — se sabe qué línea se cambió, quién la autorizó y contra qué
+valor original.
+
+Lo mínimo a guardar por línea autorizada: quién autorizó, cuándo, el valor
+anterior y el motivo. El valor anterior importa porque el precio de la tarifa se
+puede haber movido después, y sin ese dato la auditoría no reconstruye nada.
+
+#### Las cuatro cosas que destraba
+
+| Qué | Dónde está hoy |
+|---|---|
+| Precio | `pre_factura_items.precio_libra` |
+| Peso a cobrar | `pre_factura_items.peso_cobrar` |
+| Descuento | ⚠️ **no existe** como columna — hoy un descuento se hace bajando el precio a mano |
+| Quitar líneas | `_destroy` en `pre_factura_items_attributes` |
+
+El descuento es el que falta modelar. Bajarlo del precio, como se hace hoy,
+esconde la información: la factura sale sin decir que hubo descuento, ni de
+cuánto, ni quién lo dio.
+
+#### Un PIN de 4 dígitos hay que tratarlo como credencial
+
+Solo 10 000 combinaciones: se adivina en minutos a fuerza bruta. No alcanza con
+guardarlo — hay que ponerle límite de intentos por usuario y por terminal, y
+`bcrypt` como el password (nunca en claro, nunca comparado con `==`). Es el
+único punto de todo el sistema donde 4 dígitos habilitan cambiar plata.
+
+### Enganche existente
+
+- Los 8 roles y el concern `Authorization` (`require_role`, `can_access?`).
+- `has_secure_password` en `User` — el PIN puede ir como un segundo
+  `has_secure_password :pin`, que Rails soporta desde 7.1.
+- `paper_trail` en `PreFactura` y `Tarifa` — falta el *motivo* y el *autorizante*.
+- `PreFacturaItem#origen` ya distingue `automatico` de `manual`; una línea con
+  precio autorizado sería un tercer origen.
