@@ -30,6 +30,15 @@ class UsersController < ApplicationController
   def update
     filtered = user_params
     filtered = filtered.except(:password, :password_confirmation) if filtered[:password].blank?
+    # PR-13.c: el PIN se deja como está si el campo viene vacío — igual que la
+    # contraseña. Si el admin escribe uno nuevo, se reinicia `pin_cambiado_at`:
+    # vuelve a ser "el que puso el admin" hasta que el supervisor lo cambie.
+    if filtered[:pin].blank?
+      filtered = filtered.except(:pin, :pin_confirmation)
+    else
+      @user.pin_cambiado_at = nil
+    end
+
     if @user.update(filtered)
       redirect_to @user, notice: "Usuario actualizado exitosamente."
     else
@@ -37,14 +46,19 @@ class UsersController < ApplicationController
     end
   end
 
-  private  def set_user
+  private
+
+  def set_user
     @user = User.find(params[:id])
   end
 
   def user_params
     params.require(:user).permit(
       :nombre, :iniciales, :email_address, :password, :password_confirmation,
-      :rol, :ubicacion, :activo
+      :rol, :ubicacion, :activo,
+      # PR-13.c: el admin asigna el PIN inicial; el supervisor lo cambia desde
+      # /mi_pin. Ver el comentario en `User#pin_sin_cambiar?`.
+      :pin, :pin_confirmation
     )
   end
 end

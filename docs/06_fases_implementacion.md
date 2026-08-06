@@ -748,7 +748,7 @@ abierto están en `docs/05` — "La tabla de precios recibida (2026-08-05)".
 |---|-------|--------|
 | 13.a | Notas de débito/crédito por `Tarifa.resolver` + el mínimo sobrevive a facturar | ✅ |
 | 13.b | Descuento como campo propio (monto o %, ISV sobre el neto) | ✅ |
-| 13.c | Rol `supervisor_sac` + PIN de 4 dígitos | ⬜ |
+| 13.c | Rol `supervisor_sac` + PIN de 4 dígitos | ✅ |
 | 13.d | Autorización por línea y el candado | ⬜ |
 
 Sale de la aclaración de Yusef del 2026-08-05 sobre
@@ -897,17 +897,56 @@ fallan.
 | ¿Alcance? | **Por línea.** No se autoriza la pre-factura entera |
 | ¿Quién autoriza? | `admin`, `supervisor_prefactura`, `supervisor_caja` y **`supervisor_sac`** |
 
-#### El rol que falta
+#### ✅ El rol `supervisor_sac` y el PIN — PR-13.c
 
-`sac` ya existe — es el agente de servicio al cliente. Lo que falta es **su
-supervisor**, que Yusef cuenta también como jefe:
+`sac` ya existía (el agente de servicio al cliente); lo que faltaba era **su
+supervisor**, que Yusef cuenta también como jefe. Ve lo mismo que su equipo
+(`:marketing` y las notas de SAC) y entra al dashboard como los otros
+supervisores.
 
 ```ruby
-supervisor_sac: "supervisor_sac"   # "Supervisor de Servicio al Cliente"
+has_secure_password :pin, validations: false          # → pin_digest, authenticate_pin
+has_paper_trail skip: %i[password_digest pin_digest]
+
+validates :pin, format: { with: /\A\d{4}\z/ }, confirmation: true, if: -> { pin.present? }
+
+ROLES_AUTORIZANTES = %w[admin supervisor_prefactura supervisor_caja supervisor_sac].freeze
+scope :autorizantes, -> { activos.where(rol: ROLES_AUTORIZANTES).where.not(pin_digest: nil) }
+
+def puede_autorizar?
+  activo? && pin_digest.present? && rol.in?(ROLES_AUTORIZANTES)
+end
 ```
 
-Hay que definirle sus permisos en `Authorization` (como mínimo, todo lo que hoy
-puede `sac`), y sumarlo a los cuatro roles que pueden autorizar.
+Columnas en `users`: `pin_digest`, `pin_cambiado_at`. `:pin` va a
+`filter_parameters` — cuatro dígitos que mueven plata no pueden quedar en el log.
+
+**Autorizar no es un permiso de pantalla**, y por eso `puede_autorizar?` no pasa
+por `can_access?`. El supervisor **nunca inicia sesión** para esto: el cajero
+sigue logueado y el supervisor solo teclea cuatro dígitos parado en el mostrador.
+Pedirle que cierre y abra sesión con el cliente enfrente no es viable.
+
+**El PIN y la contraseña son credenciales distintas**: el PIN no sirve para
+entrar al sistema y la contraseña no sirve para autorizar. Hay un test que lo
+fija, porque es fácil que alguien "simplifique" eso más adelante.
+
+**El circuito del PIN inicial:**
+
+- El admin lo asigna en `/users` (`app/views/users/_form.html.erb`).
+- El supervisor lo cambia en `/mi_pin/edit` (`PinsController`), **dando el
+  actual**: si alguien encuentra una sesión abierta no debería poder dejar al
+  supervisor afuera y quedarse autorizando en su nombre.
+- Nadie se auto-asigna el primero; ese lo pone el admin.
+- Si el admin lo reasigna, `pin_cambiado_at` vuelve a nil.
+
+**No se bloquea autorizar con el PIN inicial** — trabar el mostrador por eso es
+peor que el riesgo. En su lugar hay un aviso en `/mi_pin`, el link del sidebar
+cambia a "Cambiá tu PIN", y `/users` marca "PIN sin cambiar" para que el admin
+insista. Sin eso el admin conoce el PIN con el que otro autoriza, y el registro
+de "quién autorizó" deja de probar nada.
+
+El seed le pone PIN a los cuatro roles autorizantes (`1111` pre-factura, `2222`
+SAC, `3333` caja) para poder probar el flujo.
 
 #### Lo que implica el "por línea"
 
@@ -926,25 +965,23 @@ puede haber movido después, y sin ese dato la auditoría no reconstruye nada.
 |---|---|
 | Precio | `pre_factura_items.precio_libra` |
 | Peso a cobrar | `pre_factura_items.peso_cobrar` |
-| Descuento | ⚠️ **no existe** como columna — hoy un descuento se hace bajando el precio a mano |
+| Descuento | ✅ `pre_factura_items.descuento_monto` (PR-13.b) |
 | Quitar líneas | `_destroy` en `pre_factura_items_attributes` |
-
-El descuento es el que falta modelar. Bajarlo del precio, como se hace hoy,
-esconde la información: la factura sale sin decir que hubo descuento, ni de
-cuánto, ni quién lo dio.
 
 #### Un PIN de 4 dígitos hay que tratarlo como credencial
 
-Solo 10 000 combinaciones: se adivina en minutos a fuerza bruta. No alcanza con
-guardarlo — hay que ponerle límite de intentos por usuario y por terminal, y
-`bcrypt` como el password (nunca en claro, nunca comparado con `==`). Es el
-único punto de todo el sistema donde 4 dígitos habilitan cambiar plata.
+Solo 10 000 combinaciones: se adivina en minutos a fuerza bruta. Ya va con
+`bcrypt` y fuera del log (PR-13.c); **falta el límite de intentos**, que va con
+el endpoint de autorización en PR-13.d — `rate_limit` por supervisor, no por IP,
+porque en un mostrador todos comparten la IP y por IP el límite se lo comería el
+cajero legítimo.
+
+Es el único punto de todo el sistema donde 4 dígitos habilitan cambiar plata.
 
 ### Enganche existente
 
-- Los 8 roles y el concern `Authorization` (`require_role`, `can_access?`).
-- `has_secure_password` en `User` — el PIN puede ir como un segundo
-  `has_secure_password :pin`, que Rails soporta desde 7.1.
+- Los 9 roles y el concern `Authorization` (`require_role`, `can_access?`).
 - `paper_trail` en `PreFactura` y `Tarifa` — falta el *motivo* y el *autorizante*.
 - `PreFacturaItem#origen` ya distingue `automatico` de `manual`; una línea con
   precio autorizado sería un tercer origen.
+- `SessionsController:5` ya usa `rate_limit` — mismo patrón para el PIN.

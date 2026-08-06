@@ -35,6 +35,16 @@ end %>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <span class="text-sm text-gray-700"><%= user.rol_label %></span>
+                <%# PR-13.c: mientras el supervisor no cambie el PIN que le
+                    asignó el admin, el admin puede autorizar en su nombre.
+                    No bloquea nada — es para poder insistirle. %>
+                <% if user.pin_sin_cambiar? %>
+                  <span class="block text-[10px] text-amber-700" title="Todavia usa el PIN que le asigno el administrador">
+                    PIN sin cambiar
+                  </span>
+                <% elsif user.puede_autorizar? %>
+                  <span class="block text-[10px] text-gray-400">Autoriza con PIN</span>
+                <% end %>
               </td>
               <td class="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
                 <span class="text-sm text-gray-500"><%= user.ubicacion&.humanize || "—" %></span>

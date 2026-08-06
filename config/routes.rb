@@ -7,6 +7,8 @@ Rails.application.routes.draw do
   resource :preferencia_sidebar, only: [:update], controller: "sidebar_preferences"
   # PR-9.c: on/off + volumen de los tonos de escaneo, por usuario.
   resource :preferencia_sonido, only: [:update], controller: "sonido_preferences"
+  # PR-13.c: el supervisor cambia el PIN con el que autoriza cambios de precio.
+  resource :mi_pin, only: %i[edit update], controller: "pins"
 
   # Health check for Render
   get "up" => "rails/health#show", as: :rails_health_check

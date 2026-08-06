@@ -2316,7 +2316,9 @@ CREATE TABLE public.users (
     sidebar_pinned boolean DEFAULT false NOT NULL,
     sidebar_position character varying DEFAULT 'left'::character varying NOT NULL,
     sonido_habilitado boolean DEFAULT true NOT NULL,
-    sonido_volumen integer DEFAULT 60 NOT NULL
+    sonido_volumen integer DEFAULT 60 NOT NULL,
+    pin_digest character varying,
+    pin_cambiado_at timestamp(6) without time zone
 );
 
 
@@ -5597,6 +5599,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260805210000'),
 ('20260805200000'),
 ('20260805190000'),
 ('20260802180000'),
