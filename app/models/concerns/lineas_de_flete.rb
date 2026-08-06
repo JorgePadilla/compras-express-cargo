@@ -24,15 +24,18 @@ module LineasDeFlete
     # `moneda` es la del documento: `CotizadorFlete` siempre calcula en
     # Lempiras, así que si la nota va en dólares hay que convertir.
     def lineas_de_flete(cliente:, paquete_ids:, moneda:, concepto_prefijo:)
-      paquetes = cliente.paquetes.where(id: paquete_ids).includes(:tipo_envio, :sucursal)
+      # `paquetes.proveedor` es a la vez columna varchar (el nombre suelto que
+      # se tecleaba antes del catálogo) y `belongs_to`. Gana el reader de la
+      # asociación — `Paquete#entrega_personal_sin_tracking?` ya depende de eso
+      # —, así que se puede precargar en vez de hacer un find_by por paquete.
+      paquetes = cliente.paquetes.where(id: paquete_ids)
+                        .includes(:tipo_envio, :sucursal, :proveedor)
 
       paquetes.map do |paquete|
         cotizacion = CotizadorFlete.call(
           tipo_envio: paquete.tipo_envio,
           cliente: cliente,
-          # `proveedor` es a la vez columna string y nombre de asociación — se
-          # busca por id para no depender de cuál gana el reader.
-          proveedor: (Proveedor.find_by(id: paquete.proveedor_id) if paquete.proveedor_id),
+          proveedor: paquete.proveedor,
           sucursal: paquete.sucursal,
           # `peso_cobrar` ya es el mayor entre el real y el volumétrico.
           peso: paquete.peso_cobrar

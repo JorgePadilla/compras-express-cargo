@@ -17,7 +17,7 @@ class PreFacturasController < ApplicationController
       @cliente = Cliente.find(params[:cliente_id])
       @paquetes_facturables = @cliente.paquetes
         .facturables
-        .includes(:tipo_envio, :sucursal)
+        .includes(:tipo_envio, :sucursal, :proveedor)
         .order(:created_at)
       @cotizaciones = cotizar(@cliente, @paquetes_facturables)
     end
@@ -102,7 +102,7 @@ class PreFacturasController < ApplicationController
 
   def facturables
     cliente = Cliente.find(params[:cliente_id])
-    paquetes = cliente.paquetes.facturables.includes(:tipo_envio, :sucursal)
+    paquetes = cliente.paquetes.facturables.includes(:tipo_envio, :sucursal, :proveedor)
     cotizaciones = cotizar(cliente, paquetes)
 
     render json: paquetes.map { |p|
@@ -151,9 +151,7 @@ class PreFacturasController < ApplicationController
       CotizadorFlete.call(
         tipo_envio: p.tipo_envio,
         cliente: cliente,
-        # `proveedor` es a la vez columna string y nombre de asociación — se
-        # busca por id para no depender de cuál gana el reader.
-        proveedor: (Proveedor.find_by(id: p.proveedor_id) if p.proveedor_id),
+        proveedor: p.proveedor,
         sucursal: p.sucursal,
         # `peso_cobrar` ya es el mayor entre el real y el volumétrico, así que
         # no se le pasan las medidas: recalcularlas daría lo mismo.

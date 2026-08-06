@@ -19,7 +19,10 @@
           <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Peso</th>
           <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio/Lb</th>
           <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Descuento</th>
-          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
+          <%# La columna muestra el neto de la línea, así que no se llama
+              "Subtotal": el Subtotal del pie es el bruto y los números no
+              cerrarían. %>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total línea</th>
         </tr>
       </thead>
       <tbody class="bg-white divide-y divide-gray-200">

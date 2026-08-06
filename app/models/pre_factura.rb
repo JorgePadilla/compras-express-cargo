@@ -162,7 +162,8 @@ class PreFactura < ApplicationRecord
       fecha_trabajo: Date.current
     )
 
-    paquetes = cliente.paquetes.where(id: paquete_ids).includes(:tipo_envio)
+    paquetes = cliente.paquetes.where(id: paquete_ids)
+                      .includes(:tipo_envio, :sucursal, :proveedor)
     prepagados_miami = []
 
     paquetes.each do |paquete|
@@ -194,9 +195,7 @@ class PreFactura < ApplicationRecord
         tipo_envio: paquete.tipo_envio,
         peso: peso,
         cliente: cliente,
-        # `proveedor` es a la vez columna string y nombre de asociación — se
-        # busca por id para no depender de cuál gana el reader.
-        proveedor: (Proveedor.find_by(id: paquete.proveedor_id) if paquete.proveedor_id),
+        proveedor: paquete.proveedor,
         sucursal: paquete.sucursal
       )
 

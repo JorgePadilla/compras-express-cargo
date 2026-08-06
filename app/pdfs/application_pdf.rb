@@ -77,12 +77,22 @@ class ApplicationPdf
     move_down 10
   end
 
-  # PR-13.b: la columna Descuento solo aparece si alguna línea trae uno. Una
-  # columna de guiones en toda factura sin descuento es ruido, y a esta tabla
-  # ya le sobra poco ancho.
+  # PR-13.b: con descuento la tabla pasa de 4 a 5 columnas.
+  #
+  # La columna Descuento solo aparece si alguna línea trae uno: una columna de
+  # guiones en toda factura sin descuento es ruido, y a esta tabla ya le sobra
+  # poco ancho.
+  #
+  # Y cuando aparece, la última columna **deja de llamarse "Subtotal"**: pasa a
+  # mostrar el neto de la línea, y bajo ese encabezado los números no cerraban.
+  # Se llama "Total linea", que es lo que es. El bruto de cada línea sigue
+  # siendo `peso × precio/lb`, las dos columnas de al lado.
+  #
+  # Mostrar las dos —bruto y neto— daría seis columnas y a este ancho el
+  # concepto se parte en tres líneas; se probó y queda peor que el problema.
   def tabla_items(items, columnas: %w[Concepto Peso Precio/lb Subtotal])
     con_descuento = items.any? { |i| i.respond_to?(:descuento?) && i.descuento? }
-    columnas = columnas[0..-2] + [ "Descuento", columnas.last ] if con_descuento
+    columnas = columnas[0..-2] + [ "Descuento", "Total linea" ] if con_descuento
 
     rows = [ columnas ]
     items.each do |item|
