@@ -742,9 +742,16 @@ abierto están en `docs/05` — "La tabla de precios recibida (2026-08-05)".
 
 ---
 
-## Fase 13: Precio bloqueado en pre-factura + autorización de supervisor — PLANIFICADA
+## Fase 13: Precio bloqueado en pre-factura + autorización de supervisor — EN CURSO (Agosto 2026)
 
-**No se construye en PR-10.** Sale de la aclaración de Yusef del 2026-08-05 sobre
+| # | Tarea | Estado |
+|---|-------|--------|
+| 13.a | Notas de débito/crédito por `Tarifa.resolver` + el mínimo sobrevive a facturar | ✅ |
+| 13.b | Descuento como campo propio (monto o %, ISV sobre el neto) | ⬜ |
+| 13.c | Rol `supervisor_sac` + PIN de 4 dígitos | ⬜ |
+| 13.d | Autorización por línea y el candado | ⬜ |
+
+Sale de la aclaración de Yusef del 2026-08-05 sobre
 la nota `TARIFA EDITABLE CON AUTORIZACION DE SUPERVISOR O JEFE` que repite en
 casi todas las filas de su tabla de precios. Al principio se leyó como una
 descripción de su proceso interno; **es una función del sistema**:
@@ -768,6 +775,52 @@ requisito. La autorización es la excepción, no al revés.
 en `pre_factura_items_attributes`, y la vista de edición los expone como inputs
 sueltos. Cualquiera con acceso a pre-facturas cambia el monto sin dejar rastro
 de por qué. `paper_trail` guarda el *qué* pero no el motivo ni el autorizante.
+
+### ✅ El mínimo no sobrevivía a facturar — arreglado en PR-13.a
+
+🔴 **El peor de los que aparecieron, y no estaba planificado.**
+
+PR-10.a le puso a `pre_factura_items` la bandera `minimo_aplicado` para que su
+`before_validation` no pisara el subtotal cuando este no sale de peso × precio.
+**Los otros tres documentos de cobro tienen el mismo callback y nunca
+recibieron el guard**: `VentaItem`, `NotaCreditoItem` y `NotaDebitoItem`.
+
+Como `PreFactura#facturar!` copia las líneas a `venta_items`, el callback de
+`VentaItem` recalculaba y pisaba el monto en el documento que **efectivamente
+cobra**:
+
+| Caso | Pre-factura | Factura emitida |
+|---|---|---|
+| CER de 0.5 lb (mínimo de servicio) | L.173.91 | **L.55.92** |
+| Prepagado en Miami (simbólico $1) | L.24.85 | **L.0.00** |
+
+O sea que el arreglo del simbólico de prepagado en PR-10.a quedó a medias — del
+lado de la pre-factura, no del de la venta.
+
+Mientras las tarifas eran el backfill plano de PR-10.a no había ningún mínimo
+cargado y esto no se notaba. Con la tabla real de Yusef (PR-10.g) **todo paquete
+chico se facturaba de menos**.
+
+Arreglado con la columna en las tres tablas, el mismo guard en los tres modelos
+y `facturar!` propagando la bandera. Tests en
+`test/models/notas_precio_real_test.rb`, verificados quitando el guard: 3
+fallan.
+
+### ✅ Las notas usaban la tabla de precios vieja — arreglado en PR-13.a
+
+`NotaCredito.build_from_paquetes` y `NotaDebito.build_from_paquetes` armaban sus
+líneas con la cadena que PR-10.a vino a reemplazar
+(`categoria_precio.precio_para || tipo_envio.precio_libra`): sin mínimos, sin
+escalones y **sin convertir a Lempiras**, pero sus documentos se imprimen en
+Lempiras.
+
+No era teórico: la nota de débito **se auto-genera** en `facturar!` para todo
+paquete con `solicito_cambio_servicio`.
+
+Ahora las dos pasan por `CotizadorFlete`, vía el concern
+`app/models/concerns/lineas_de_flete.rb`. Con eso se cierra la cadena vieja: los
+únicos `precio_para(` que quedan son el fallback documentado de `PreFactura` y
+`CotizadorFlete`, que sí convierten.
 
 ### ✅ El preview de paquetes mostraba otro precio — arreglado en PR-10.h
 

@@ -2,8 +2,8 @@ class NotaDebito < ApplicationRecord
   has_paper_trail  # PR-D7: audit log
   self.table_name = "notas_debito"
   include CurrencyAware
-
   include IsvAware
+  include LineasDeFlete
 
   ESTADOS = %w[creado emitido anulado].freeze
   MOTIVOS = %w[cambio_servicio peso_adicional ajuste_manual otro].freeze
@@ -83,22 +83,9 @@ class NotaDebito < ApplicationRecord
       creado_por: user
     )
 
-    paquetes = cliente.paquetes.where(id: paquete_ids).includes(:tipo_envio)
-    paquetes.each do |paquete|
-      precio = cliente.categoria_precio&.precio_para(paquete.tipo_envio) ||
-               paquete.tipo_envio&.precio_libra ||
-               BigDecimal("0")
-      peso = paquete.peso_cobrar || BigDecimal("0")
-      subtotal = (BigDecimal(peso.to_s) * BigDecimal(precio.to_s)).round(2)
-
-      nd.nota_debito_items.build(
-        paquete: paquete,
-        concepto: "Ajuste #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia}",
-        peso_cobrar: peso,
-        precio_libra: precio,
-        subtotal: subtotal
-      )
-    end
+    lineas_de_flete(cliente: cliente, paquete_ids: paquete_ids,
+                    moneda: nd.moneda, concepto_prefijo: "Ajuste")
+      .each { |attrs| nd.nota_debito_items.build(attrs) }
 
     nd
   end

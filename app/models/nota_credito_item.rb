@@ -9,9 +9,12 @@ class NotaCreditoItem < ApplicationRecord
 
   private
 
+  # PR-13.a: ver `VentaItem`. Sin el guard, una nota por un paquete que se
+  # cobró al mínimo acredita menos de lo que se cobró.
   def calculate_subtotal
+    return if minimo_aplicado?
     return unless paquete_id.present? && peso_cobrar.present? && precio_libra.present?
 
-    self.subtotal = (peso_cobrar.to_d * precio_libra.to_d).round(2)
+    self.subtotal = (peso_cobrar.to_d * precio_libra.to_d).round(2, BigDecimal::ROUND_HALF_UP)
   end
 end

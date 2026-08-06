@@ -760,7 +760,8 @@ CREATE TABLE public.venta_items (
     precio_libra numeric(10,2),
     subtotal numeric(10,2) DEFAULT 0.0 NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    minimo_aplicado boolean DEFAULT false NOT NULL
 );
 
 
@@ -1117,7 +1118,8 @@ CREATE TABLE public.nota_credito_items (
     precio_libra numeric(10,2),
     subtotal numeric(10,2) DEFAULT 0.0 NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    minimo_aplicado boolean DEFAULT false NOT NULL
 );
 
 
@@ -1153,7 +1155,8 @@ CREATE TABLE public.nota_debito_items (
     precio_libra numeric(10,2),
     subtotal numeric(10,2) DEFAULT 0.0 NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    minimo_aplicado boolean DEFAULT false NOT NULL
 );
 
 
@@ -5586,6 +5589,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260805190000'),
 ('20260802180000'),
 ('20260802170000'),
 ('20260802160000'),

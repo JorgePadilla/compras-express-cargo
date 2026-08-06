@@ -93,7 +93,11 @@ class PreFactura < ApplicationRecord
           concepto: item.concepto,
           peso_cobrar: item.peso_cobrar,
           precio_libra: item.precio_libra,
-          subtotal: item.subtotal
+          subtotal: item.subtotal,
+          # PR-13.a: sin esto `VentaItem` recalcula peso × precio y pisa el
+          # mínimo de servicio y el simbólico de prepagado en Miami. La
+          # pre-factura decía una cosa y la factura cobraba otra.
+          minimo_aplicado: item.minimo_aplicado
         )
       end
       venta.save!
