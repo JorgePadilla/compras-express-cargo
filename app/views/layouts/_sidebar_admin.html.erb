@@ -42,6 +42,15 @@
       links apuntaban a "#" y no hacían nada. Se reactiva en la Fase 7, igual
       que sus cards del dashboard. %>
 
+  <%# PR-13.d: la bitácora de lo que un supervisor autorizó. La ven los mismos
+      que pueden autorizar — sin pantalla donde mirarlo, el PIN es solo
+      fricción en el mostrador. %>
+  <% if Current.user&.rol_autorizante? %>
+    <%= sidebar_section "Control" do %>
+      <%= sidebar_link "Autorizaciones", autorizaciones_path, icon: "key" %>
+    <% end %>
+  <% end %>
+
   <% if admin? %>
     <%= sidebar_section "Configuracion" do %>
       <%= sidebar_link "Usuarios", users_path, icon: "user-group" %>

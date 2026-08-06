@@ -1,0 +1,105 @@
+<%= render PageHeaderComponent.new(
+      title: "Autorizaciones",
+      subtitle: "Cambios de precio, descuentos y lineas quitadas que un supervisor autorizo") %>
+
+<%# El total descontado es el dato que uno viene a buscar acá: cuánto se regaló
+    en el período que se está mirando. %>
+<div class="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+  <div class="bg-white rounded-lg shadow p-4">
+    <p class="text-xs uppercase tracking-wider text-gray-500">Descontado</p>
+    <p class="mt-1 text-2xl font-bold text-amber-700">
+      L. <%= number_with_precision(@total_descontado || 0, precision: 2, delimiter: ",") %>
+    </p>
+  </div>
+  <div class="bg-white rounded-lg shadow p-4">
+    <p class="text-xs uppercase tracking-wider text-gray-500">Autorizaciones</p>
+    <p class="mt-1 text-2xl font-bold text-cec-navy"><%= @autorizaciones.total_count %></p>
+  </div>
+</div>
+
+<%= form_with url: autorizaciones_path, method: :get, class: "mb-4 flex flex-wrap gap-3 items-end" do %>
+  <div>
+    <%= label_tag :accion, "Accion", class: "block text-xs font-medium text-gray-600 mb-1" %>
+    <%= select_tag :accion,
+          options_for_select(AutorizacionLinea::ACCIONES.map { |a| [ a.humanize, a ] }, params[:accion]),
+          include_blank: "Todas",
+          class: "rounded-lg border-gray-300 shadow-sm text-sm" %>
+  </div>
+  <div>
+    <%= label_tag :autorizado_por_id, "Supervisor", class: "block text-xs font-medium text-gray-600 mb-1" %>
+    <%= select_tag :autorizado_por_id,
+          options_from_collection_for_select(User.autorizantes.order(:nombre), :id, :nombre, params[:autorizado_por_id]),
+          include_blank: "Todos",
+          class: "rounded-lg border-gray-300 shadow-sm text-sm" %>
+  </div>
+  <div>
+    <%= label_tag :desde, "Desde", class: "block text-xs font-medium text-gray-600 mb-1" %>
+    <%= date_field_tag :desde, params[:desde], class: "rounded-lg border-gray-300 shadow-sm text-sm" %>
+  </div>
+  <button type="submit" class="px-4 py-2 bg-cec-navy text-white rounded-lg hover:bg-cec-navy-light text-sm font-medium">
+    Filtrar
+  </button>
+  <%= link_to "Limpiar", autorizaciones_path, class: "px-3 py-2 text-sm text-gray-600 hover:text-gray-900" %>
+<% end %>
+
+<% if @autorizaciones.any? %>
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cuando</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pre-Factura</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Linea</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cambio</th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Antes → Despues</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Autorizo</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Motivo</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @autorizaciones.each do |a| %>
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                <%= l a.created_at, format: :short %>
+              </td>
+              <td class="px-4 py-3 text-sm">
+                <%= link_to a.pre_factura.numero, edit_pre_factura_path(a.pre_factura),
+                      class: "font-mono text-cec-teal hover:text-cec-teal-dark" %>
+                <span class="block text-[11px] text-gray-500"><%= a.pre_factura.cliente.codigo %></span>
+              </td>
+              <td class="px-4 py-3 text-sm text-gray-700"><%= truncate(a.concepto, length: 34) %></td>
+              <td class="px-4 py-3 text-sm">
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase
+                             <%= a.accion == "eliminar" ? "bg-red-50 text-red-700" : "bg-amber-100 text-amber-900" %>">
+                  <%= a.accion_label %>
+                </span>
+                <% if a.detalle.present? %>
+                  <span class="block text-[11px] text-gray-500"><%= a.detalle %></span>
+                <% end %>
+              </td>
+              <td class="px-4 py-3 text-sm text-right font-mono whitespace-nowrap">
+                <%= a.valor_anterior.present? ? number_with_precision(a.valor_anterior, precision: 2, delimiter: ",") : "—" %>
+                →
+                <%= a.valor_nuevo.present? ? number_with_precision(a.valor_nuevo, precision: 2, delimiter: ",") : "—" %>
+              </td>
+              <td class="px-4 py-3 text-sm">
+                <span class="text-gray-800"><%= a.autorizado_por.nombre %></span>
+                <span class="block text-[11px] text-gray-500">pidio <%= a.solicitado_por.nombre %></span>
+              </td>
+              <td class="px-4 py-3 text-sm text-gray-600"><%= truncate(a.motivo, length: 40) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <%= render PaginationComponent.new(collection: @autorizaciones) %>
+<% else %>
+  <%= render EmptyStateComponent.new(
+        title: "Sin autorizaciones",
+        description: "Cuando un supervisor autorice un cambio de precio, descuento o quite una linea, va a aparecer aca.",
+        icon: "key"
+      ) %>
+<% end %>

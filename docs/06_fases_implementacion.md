@@ -749,7 +749,7 @@ abierto están en `docs/05` — "La tabla de precios recibida (2026-08-05)".
 | 13.a | Notas de débito/crédito por `Tarifa.resolver` + el mínimo sobrevive a facturar | ✅ |
 | 13.b | Descuento como campo propio (monto o %, ISV sobre el neto) | ✅ |
 | 13.c | Rol `supervisor_sac` + PIN de 4 dígitos | ✅ |
-| 13.d | Autorización por línea y el candado | ⬜ |
+| 13.d | Autorización por línea y el candado | ✅ |
 
 Sale de la aclaración de Yusef del 2026-08-05 sobre
 la nota `TARIFA EDITABLE CON AUTORIZACION DE SUPERVISOR O JEFE` que repite en
@@ -769,12 +769,60 @@ descripción de su proceso interno; **es una función del sistema**:
 Lo importante es el **punto 2**: el precio bloqueado por defecto es el
 requisito. La autorización es la excepción, no al revés.
 
-### 🔴 Hoy el sistema hace lo contrario
+### ✅ El candado — PR-13.d
 
-`PreFacturasController#pre_factura_params` permite `precio_libra` y `subtotal`
-en `pre_factura_items_attributes`, y la vista de edición los expone como inputs
-sueltos. Cualquiera con acceso a pre-facturas cambia el monto sin dejar rastro
-de por qué. `paper_trail` guarda el *qué* pero no el motivo ni el autorizante.
+`pre_factura_params` permitía `precio_libra`, `peso_cobrar`, `subtotal` y
+`_destroy`, y la vista los exponía como inputs sueltos: cualquiera con acceso a
+pre-facturas cambiaba el monto sin dejar dicho por qué. Ahora **solo permite
+`concepto`** (la descripción, no el monto), y los cinco campos que mueven plata
+van por `AutorizacionesLineaController`.
+
+Aplica **a todos, incluido el admin**. Si el admin puede editar suelto, el
+registro tiene un agujero y deja de servir como prueba.
+
+#### Autorizar y cambiar son el mismo acto
+
+No existe un modo "desbloqueado". El supervisor está parado en el mostrador, así
+que el modal recoge **el cambio y el PIN juntos** y `AutorizacionLinea.aplicar!`
+hace las dos cosas en una transacción o ninguna.
+
+La alternativa —el PIN abre una ventana de edición— tiene dos problemas: el
+registro puede quedar desalineado del cambio, y la ventana queda abierta cuando
+el supervisor ya se fue.
+
+#### El registro
+
+`autorizaciones_linea` guarda quién autorizó, quién pidió, la acción, el valor
+**anterior y nuevo**, el motivo (obligatorio) y un snapshot del `concepto`.
+
+- `pre_factura_id` va aparte de `pre_factura_item_id` porque una de las acciones
+  es eliminar la línea: el item desaparece (`nullify`) y el registro sobrevive.
+- `valor_nuevo` se lee del item **después** de aplicar, no del formulario: con un
+  descuento capturado como "10%" lo que hay que registrar es el monto que
+  resultó (L.111.83). Guardar el 10 haría que el total de la bitácora sumara
+  porcentajes con lempiras.
+
+#### El límite de intentos
+
+`rate_limit to: 5, within: 5.minutes`, **por supervisor y no por IP** (que es el
+default de Rails): en un mostrador todos comparten la IP, así que por IP el
+primero en equivocarse dejaría afuera a los demás y el cajero legítimo se
+comería el bloqueo.
+
+> ⚠️ El entorno de test corría con `cache_store = :null_store`, y `rate_limit`
+> cuenta ahí — o sea que **un límite de intentos habría pasado los tests sin
+> existir**. Se le puso `config.action_controller.cache_store = :memory_store`
+> al entorno de test, y `test_helper` lo limpia antes de cada test: el contador
+> vive en el proceso, y el `rate_limit` del login de `SessionsController` es por
+> IP, así que sin limpiarlo los tests se caían solos a partir del undécimo.
+
+#### La bitácora — `/autorizaciones`
+
+Qué se autorizó, quién, contra qué valor y por qué, con el **total descontado**
+del período arriba. La ven los mismos roles que pueden autorizar.
+
+Sin una pantalla donde mirarlo, todo el mecanismo es solo fricción en el
+mostrador: se registra pero nadie lo lee.
 
 ### El descuento como dato propio (PR-13.b)
 

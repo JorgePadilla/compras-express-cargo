@@ -232,6 +232,46 @@ CREATE TABLE public.ar_internal_metadata (
 
 
 --
+-- Name: autorizaciones_linea; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.autorizaciones_linea (
+    id bigint NOT NULL,
+    pre_factura_id bigint NOT NULL,
+    pre_factura_item_id bigint,
+    autorizado_por_id bigint NOT NULL,
+    solicitado_por_id bigint NOT NULL,
+    accion character varying NOT NULL,
+    concepto character varying NOT NULL,
+    valor_anterior numeric(10,2),
+    valor_nuevo numeric(10,2),
+    detalle character varying,
+    motivo text NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: autorizaciones_linea_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.autorizaciones_linea_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: autorizaciones_linea_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.autorizaciones_linea_id_seq OWNED BY public.autorizaciones_linea.id;
+
+
+--
 -- Name: carriers; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2464,6 +2504,13 @@ ALTER TABLE ONLY public.aperturas_caja ALTER COLUMN id SET DEFAULT nextval('publ
 
 
 --
+-- Name: autorizaciones_linea id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.autorizaciones_linea ALTER COLUMN id SET DEFAULT nextval('public.autorizaciones_linea_id_seq'::regclass);
+
+
+--
 -- Name: carriers id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -2880,6 +2927,14 @@ ALTER TABLE ONLY public.aperturas_caja
 
 ALTER TABLE ONLY public.ar_internal_metadata
     ADD CONSTRAINT ar_internal_metadata_pkey PRIMARY KEY (key);
+
+
+--
+-- Name: autorizaciones_linea autorizaciones_linea_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.autorizaciones_linea
+    ADD CONSTRAINT autorizaciones_linea_pkey PRIMARY KEY (id);
 
 
 --
@@ -3459,6 +3514,48 @@ CREATE UNIQUE INDEX index_aperturas_caja_on_fecha ON public.aperturas_caja USING
 --
 
 CREATE UNIQUE INDEX index_aperturas_caja_on_numero ON public.aperturas_caja USING btree (numero);
+
+
+--
+-- Name: index_autorizaciones_linea_on_accion; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_autorizaciones_linea_on_accion ON public.autorizaciones_linea USING btree (accion);
+
+
+--
+-- Name: index_autorizaciones_linea_on_autorizado_por_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_autorizaciones_linea_on_autorizado_por_id ON public.autorizaciones_linea USING btree (autorizado_por_id);
+
+
+--
+-- Name: index_autorizaciones_linea_on_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_autorizaciones_linea_on_created_at ON public.autorizaciones_linea USING btree (created_at);
+
+
+--
+-- Name: index_autorizaciones_linea_on_pre_factura_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_autorizaciones_linea_on_pre_factura_id ON public.autorizaciones_linea USING btree (pre_factura_id);
+
+
+--
+-- Name: index_autorizaciones_linea_on_pre_factura_item_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_autorizaciones_linea_on_pre_factura_item_id ON public.autorizaciones_linea USING btree (pre_factura_item_id);
+
+
+--
+-- Name: index_autorizaciones_linea_on_solicitado_por_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_autorizaciones_linea_on_solicitado_por_id ON public.autorizaciones_linea USING btree (solicitado_por_id);
 
 
 --
@@ -4881,6 +4978,14 @@ ALTER TABLE ONLY public.warehouse_receipts
 
 
 --
+-- Name: autorizaciones_linea fk_rails_34206603fe; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.autorizaciones_linea
+    ADD CONSTRAINT fk_rails_34206603fe FOREIGN KEY (solicitado_por_id) REFERENCES public.users(id);
+
+
+--
 -- Name: warehouse_receipts fk_rails_35c83da0a8; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5161,11 +5266,27 @@ ALTER TABLE ONLY public.notas_credito
 
 
 --
+-- Name: autorizaciones_linea fk_rails_820b608747; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.autorizaciones_linea
+    ADD CONSTRAINT fk_rails_820b608747 FOREIGN KEY (pre_factura_id) REFERENCES public.pre_facturas(id);
+
+
+--
 -- Name: financiamientos fk_rails_8536c7615a; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.financiamientos
     ADD CONSTRAINT fk_rails_8536c7615a FOREIGN KEY (cliente_id) REFERENCES public.clientes(id);
+
+
+--
+-- Name: autorizaciones_linea fk_rails_8544995dca; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.autorizaciones_linea
+    ADD CONSTRAINT fk_rails_8544995dca FOREIGN KEY (pre_factura_item_id) REFERENCES public.pre_factura_items(id) ON DELETE SET NULL;
 
 
 --
@@ -5326,6 +5447,14 @@ ALTER TABLE ONLY public.paquete_motivos_retencion
 
 ALTER TABLE ONLY public.warehouse_receipts
     ADD CONSTRAINT fk_rails_bd11b17ab6 FOREIGN KEY (consignee_id) REFERENCES public.clientes(id);
+
+
+--
+-- Name: autorizaciones_linea fk_rails_bdec106815; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.autorizaciones_linea
+    ADD CONSTRAINT fk_rails_bdec106815 FOREIGN KEY (autorizado_por_id) REFERENCES public.users(id);
 
 
 --
@@ -5599,6 +5728,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260805220000'),
 ('20260805210000'),
 ('20260805200000'),
 ('20260805190000'),

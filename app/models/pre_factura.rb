@@ -14,6 +14,8 @@ class PreFactura < ApplicationRecord
   belongs_to :cliente
   belongs_to :creado_por, class_name: "User", optional: true
   has_many :pre_factura_items, dependent: :destroy, inverse_of: :pre_factura
+  # PR-13.d: los cambios que un supervisor autorizó sobre sus líneas.
+  has_many :autorizaciones_linea, class_name: "AutorizacionLinea", dependent: :destroy
   has_many :paquetes, -> { distinct }, through: :pre_factura_items
 
   accepts_nested_attributes_for :pre_factura_items, allow_destroy: true
