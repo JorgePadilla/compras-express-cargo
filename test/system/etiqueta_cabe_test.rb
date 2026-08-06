@@ -59,6 +59,31 @@ class EtiquetaCabeTest < ApplicationSystemTestCase
     assert_operator medir("scrollHeight"), :<=, medir("clientHeight")
   end
 
+  # El "¿qué es San Pedro Soda?" fue exactamente esto: la sucursal saliendo
+  # cortada. Ya se truncó dos veces al agregar campos a su derecha —el tipo de
+  # envío completo y después el código del proveedor—, así que va como test y
+  # no como cosa a revisar de vista.
+  test "la sucursal donde retira nunca sale truncada" do
+    # El caso largo, que es el que importa: sin sucursal asignada el campo cae a
+    # la ciudad del cliente, y "San Pedro Sula" es justo el nombre que salía
+    # cortado en la etiqueta vieja.
+    @paquete.update!(sucursal: nil)
+    @paquete.cliente.update!(ciudad: "San Pedro Sula")
+
+    visit etiqueta_paquete_path(@paquete)
+
+    recorte = page.evaluate_script(<<~JS)
+      (function () {
+        var el = document.querySelector("[data-campo=sucursal]");
+        return [ el.scrollWidth, el.clientWidth, el.textContent.trim() ];
+      })()
+    JS
+
+    assert_operator recorte[0], :<=, recorte[1],
+                    "\"#{recorte[2]}\" no entra: necesita #{recorte[0]}px y tiene #{recorte[1]}px. " \
+                    "Algo a su derecha le esta robando ancho."
+  end
+
   test "el tipo de envio es el texto mas grande de la etiqueta" do
     # La jerarquía de Yusef: "lo más importante es lo que se lee primero". Si
     # alguien reordena los escalones, esto lo agarra.

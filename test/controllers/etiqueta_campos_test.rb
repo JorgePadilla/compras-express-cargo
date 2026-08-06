@@ -42,7 +42,8 @@ class EtiquetaCamposTest < ActionDispatch::IntegrationTest
     assert_match clientes(:maria).nombre_completo.upcase, cuerpo
     # 5. Fecha y hora de recepción
     assert_match(/\d{2}-\w{3}-\d{4}/, cuerpo, "falta la fecha de recepcion")
-    # 6. Iniciales de quien registró
+    # 6. Iniciales de quien registró, rotuladas — Yusef preguntó "¿qué es DM?"
+    assert_match "Reg: <b", cuerpo
     assert_match users(:digitador).iniciales_display, cuerpo
     # 7. Código del cliente, completo
     assert_match @paquete.cliente.codigo, cuerpo
@@ -51,9 +52,12 @@ class EtiquetaCamposTest < ActionDispatch::IntegrationTest
     # 9. Número y cantidad de paquetes — sale también cuando es una sola caja.
     assert_match ">1/1</span>", cuerpo, "falta el n/N de paquetes"
     # 10. Tipo de envío, abreviado a 3 letras como en el mockup (EXP, no EXPRESS)
-    assert_match ">\n          #{@paquete.tipo_envio.codigo.first(3).upcase}\n        <", cuerpo
-    # 11. Driver — Yusef lo pidió "por el rótulo"
-    assert_match "MARVIN LOPEZ", cuerpo
+    assert_equal @paquete.tipo_envio.codigo.first(3).upcase, campo(cuerpo, "tipo-envio")
+    # 11. Driver, solo iniciales y rotulado: "solo usamos iniciales" (Yusef)
+    assert_match "Drv: <b>ML</b>", cuerpo
+    assert_no_match(/MARVIN LOPEZ/, cuerpo, "el driver va en iniciales, no completo")
+    # 12. De dónde viene — el comercio, con su código de 3 letras
+    assert_equal @paquete.proveedor.codigo.upcase, campo(cuerpo, "proveedor")
   end
 
   test "el tamano de la etiqueta no cambia" do
@@ -73,8 +77,7 @@ class EtiquetaCamposTest < ActionDispatch::IntegrationTest
 
     get etiqueta_paquete_url(@paquete)
 
-    assert_match ">\n          EXP\n        <", response.body
-    assert_no_match(/>\s*EXPRESS\s*</, response.body)
+    assert_equal "EXP", campo(response.body, "tipo-envio")
   end
 
   test "la sucursal sale completa y con encabezado en espanol" do
@@ -85,6 +88,13 @@ class EtiquetaCamposTest < ActionDispatch::IntegrationTest
 
     assert_match "RETIRA EN", response.body
     assert_match etiqueta_sucursal(@paquete), response.body
+  end
+
+  # El contenido de un campo por su `data-campo`, sin depender de la
+  # indentación del ERB: la primera versión de estos asserts comparaba contra
+  # el whitespace exacto y se rompía con cualquier reacomodo del markup.
+  def campo(cuerpo, nombre)
+    cuerpo[/data-campo="#{nombre}"[^>]*>(.*?)</m, 1]&.strip
   end
 
   test "sin tercero ni driver la etiqueta igual sale completa" do

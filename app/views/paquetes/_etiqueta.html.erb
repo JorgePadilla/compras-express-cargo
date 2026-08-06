@@ -72,13 +72,15 @@
     <span style="font-size:var(--t6); font-weight:bold; flex:0 0 auto; white-space:nowrap;">
       <%= (paquete.fecha_recibido_miami || paquete.created_at)&.strftime("%d-%b-%Y %H:%M") %>
     </span>
+    <%# Los dos juegos de iniciales van rotulados. Sin rótulo Yusef preguntó
+        "¿qué es DM?", y con dos sueltos sería peor. %>
     <% if paquete.driver.present? %>
-      <span class="t" style="font-size:var(--t7);">
-        <b>Driver:</b> <%= paquete.driver.to_s.upcase %>
+      <span style="font-size:var(--t7); white-space:nowrap;">
+        Drv: <b><%= etiqueta_iniciales(paquete.driver) %></b>
       </span>
     <% end %>
-    <span style="font-size:var(--t6); font-weight:bold; margin-left:auto; white-space:nowrap;">
-      <%= paquete.user&.iniciales_display %>
+    <span style="font-size:var(--t7); margin-left:auto; white-space:nowrap;">
+      Reg: <b style="font-size:var(--t6);"><%= paquete.user&.iniciales_display %></b>
     </span>
   </div>
 
@@ -105,7 +107,8 @@
           y no se corte: en la etiqueta vieja salía truncado y bajo la palabra
           inglesa "Agent". %>
       <div style="font-size:var(--t7); line-height:1;">RETIRA EN</div>
-      <div class="t" style="font-size:var(--t4); font-weight:bold; font-style:italic; text-transform:uppercase;">
+      <div class="t" data-campo="sucursal"
+           style="font-size:var(--t4); font-weight:bold; font-style:italic; text-transform:uppercase;">
         <%= etiqueta_sucursal(paquete) %>
       </div>
     </div>
@@ -118,12 +121,27 @@
 
       <%# Tipo de envío — lo más grande de toda la etiqueta. Es la clave visual
           con la que separan la carga por servicio antes de empacar. %>
-      <% if (envio = etiqueta_tipo_envio(paquete)) %>
-        <div data-campo="tipo-envio"
-             style="font-size:var(--t1); font-weight:800; line-height:.95; letter-spacing:-.02em; white-space:nowrap;">
-          <%= envio %>
-        </div>
-      <% end %>
+      <%# De dónde viene (el comercio) y a qué servicio va, uno al lado del
+          otro. Yusef: "¿creés que quepa de dónde viene?" — con el código de 3
+          letras del catálogo de proveedores sí. %>
+      <div style="display:flex; align-items:baseline; gap:.05in; justify-content:flex-end;">
+        <%# Va más chico que el tipo de envío a propósito: a la par de EXP le
+            robaba el ancho a la sucursal y la dejaba en "SAN PEDRO S…", que es
+            el problema que este rediseño vino a arreglar. Lo cuida el test
+            "la sucursal donde retira nunca sale truncada". %>
+        <% if (origen = etiqueta_proveedor(paquete)) %>
+          <span data-campo="proveedor"
+                style="font-size:var(--t6); font-weight:bold; white-space:nowrap;">
+            <%= origen %>
+          </span>
+        <% end %>
+        <% if (envio = etiqueta_tipo_envio(paquete)) %>
+          <span data-campo="tipo-envio"
+                style="font-size:var(--t1); font-weight:800; line-height:.95; letter-spacing:-.02em; white-space:nowrap;">
+            <%= envio %>
+          </span>
+        <% end %>
+      </div>
     </div>
   </div>
 </div>

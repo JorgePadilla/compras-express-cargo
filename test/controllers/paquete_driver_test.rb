@@ -55,15 +55,19 @@ class PaqueteDriverTest < ActionDispatch::IntegrationTest
     assert_equal "Tienda Walmart", p.remitente, "el remitente no se pisa con el driver"
   end
 
-  test "el driver sale impreso en la etiqueta" do
+  # PR-10.d.2: Yusef pidió que el driver vaya en iniciales — "solo usamos
+  # iniciales". El nombre completo le comía el ancho a la fecha, que en su
+  # jerarquía está por encima.
+  test "el driver sale en la etiqueta, en iniciales" do
     p = paquetes(:recibido)
     p.update!(driver: "Juan Carlos Mejia")
 
     get etiqueta_paquete_url(p)
 
     assert_response :success
-    assert_match "Driver:", response.body
-    assert_match "JUAN CARLOS MEJIA", response.body
+    assert_match "Drv: <b>JC</b>", response.body
+    assert_no_match(/JUAN CARLOS MEJIA/, response.body,
+                    "el nombre completo del driver ya no va en la etiqueta")
   end
 
   test "sin driver la etiqueta no muestra la fila vacia" do

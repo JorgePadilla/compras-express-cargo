@@ -74,4 +74,27 @@ module EtiquetaHelper
   def etiqueta_tipo_envio(paquete)
     paquete.tipo_envio&.codigo.to_s.first(3).upcase.presence
   end
+
+  # De dónde viene el paquete: el comercio donde se compró, con el código de 3
+  # letras del catálogo de proveedores (AMZ, WMT, TAR). Yusef pidió que fuera al
+  # lado del tipo de envío — "¿creés que quepa de dónde viene?" — y con tres
+  # letras entra sin robarle ancho al EXP.
+  #
+  # Se usa el código y no el nombre porque va grande: "Amazon" o "Sams Club"
+  # completos dejarían la sucursal truncada otra vez.
+  def etiqueta_proveedor(paquete)
+    paquete.proveedor&.codigo.presence&.upcase
+  end
+
+  # Iniciales de un nombre libre, con el mismo criterio que
+  # `User#iniciales_display`: las primeras letras de las dos primeras palabras.
+  #
+  # Yusef sobre el driver: "solo usamos iniciales". El nombre completo se comía
+  # el ancho de la fecha, que en su jerarquía está por encima.
+  def etiqueta_iniciales(texto)
+    partes = texto.to_s.split(/\s+/).reject(&:blank?).first(2)
+    return nil if partes.empty?
+
+    partes.map { |p| p[0].to_s.upcase }.join
+  end
 end
