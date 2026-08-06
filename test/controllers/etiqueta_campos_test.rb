@@ -10,6 +10,8 @@ require "test_helper"
 # recorte lo hace `overflow:hidden` en CSS y ningún test de Rails lo ve. Eso se
 # comprueba imprimiendo una.
 class EtiquetaCamposTest < ActionDispatch::IntegrationTest
+  include EtiquetaHelper
+
   setup do
     post session_url, params: { email_address: users(:digitador).email_address,
                                 password: "password123" }
@@ -47,9 +49,9 @@ class EtiquetaCamposTest < ActionDispatch::IntegrationTest
     # 8. Sucursal donde retira, con encabezado en español
     assert_match "RETIRA EN", cuerpo
     # 9. Número y cantidad de paquetes — sale también cuando es una sola caja.
-    assert_match ">\n      1/1\n    <", cuerpo, "falta el n/N de paquetes"
-    # 10. Tipo de envío
-    assert_match @paquete.tipo_envio.codigo.upcase, cuerpo
+    assert_match ">1/1</span>", cuerpo, "falta el n/N de paquetes"
+    # 10. Tipo de envío, abreviado a 3 letras como en el mockup (EXP, no EXPRESS)
+    assert_match ">\n          #{@paquete.tipo_envio.codigo.first(3).upcase}\n        <", cuerpo
     # 11. Driver — Yusef lo pidió "por el rótulo"
     assert_match "MARVIN LOPEZ", cuerpo
   end
@@ -62,17 +64,27 @@ class EtiquetaCamposTest < ActionDispatch::IntegrationTest
     assert_match "2.25in 1.25in", response.body
   end
 
-  test "tercero y driver comparten renglon" do
-    # En dos renglones se comian la linea del pie: el presupuesto vertical son
-    # 1.15 in y con los 11 campos queda al filo.
+  test "el tipo de envio se abrevia a tres letras" do
+    # En el mockup de Yusef dice EXP, no EXPRESS. No es cosmético: es el texto
+    # más grande de la etiqueta, y completo se come más de la mitad del ancho y
+    # deja la sucursal truncada en "SAN PED…" — el "¿qué es San Pedro Soda?"
+    # que este rediseño vino a arreglar.
+    @paquete.update!(tipo_envio: tipo_envios(:express))
+
     get etiqueta_paquete_url(@paquete)
 
-    tercero_pos = response.body.index("3ro:")
-    driver_pos  = response.body.index("Driver:")
-    entre_medio = response.body[tercero_pos...driver_pos]
+    assert_match ">\n          EXP\n        <", response.body
+    assert_no_match(/>\s*EXPRESS\s*</, response.body)
+  end
 
-    assert_no_match(/<div/, entre_medio,
-                    "tercero y driver no deben abrir divs separados")
+  test "la sucursal sale completa y con encabezado en espanol" do
+    # El campo que provocó el "¿qué es San Pedro Soda?": salía truncado y bajo
+    # la palabra inglesa "Agent". El encabezado va en renglón propio para que el
+    # nombre tenga todo el ancho de la columna.
+    get etiqueta_paquete_url(@paquete)
+
+    assert_match "RETIRA EN", response.body
+    assert_match etiqueta_sucursal(@paquete), response.body
   end
 
   test "sin tercero ni driver la etiqueta igual sale completa" do

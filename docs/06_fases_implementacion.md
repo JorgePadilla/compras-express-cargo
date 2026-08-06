@@ -696,14 +696,61 @@ La pregunta era cuáles de los 11 campos recortar. La respuesta fue que **no se 
 | **Grande** — se lee de lejos en la estantería | Número de recepción, tipo de envío, código y nombre del cliente, sucursal donde retira, n/N de paquetes |
 | **Chico** — solo hace falta tenerlo a mano | Tracking principal y secundario, tercero, driver, ciudad del cliente, fecha y hora, iniciales |
 
-Dos ajustes que salieron de confirmar que van los 11:
+#### La jerarquía, del mockup anotado (PR-10.d.2)
 
-- **Tercero y driver comparten renglón.** En dos renglones se comían la línea del pie. Un paquete de Entrega Personal suele traer los dos, así que era el caso real, no el borde.
-- **`etiqueta_fraccion` devuelve `1/1`** en vez de vacío cuando el tracking trae una sola caja. El espacio ya estaba reservado —no cuesta nada— y en blanco es ambiguo: el operario no sabe si hay una caja o si el dato no se imprimió.
+Yusef mandó su etiqueta vieja marcada campo por campo. Lo que hoy estaba chico
+era lo que él quiere grande — el **tracking** sobre todo, que es lo que el
+operario compara contra la caja que tiene en la mano.
 
-> ⚠️ El presupuesto vertical son **1.15 in de contenido** y con los 11 campos queda al filo. `overflow:hidden` recorta **en silencio**.
+Los tamaños viven en variables CSS (`--t1 … --t7`) en `layouts/etiqueta.html.erb`
+para poder escalarlos de un solo lugar:
+
+| | Campos |
+|---|---|
+| `--t1` 21pt | Tipo de envío — **lo más grande de la etiqueta** |
+| `--t2` 12pt | Número de recepción |
+| `--t3` 11pt | Código del cliente · n/N |
+| `--t4` 9.5pt | Nombre del cliente · sucursal |
+| `--t5` 7.5pt | Tracking y secundario |
+| `--t6` 6.5pt | Fecha y hora · iniciales |
+| `--t7` 6pt | Ubicación · tercero · driver |
+
+**Lo que hace que quepa es el bloque de dos columnas de abajo**, que es la
+estructura de su mockup: `C6` + `1/2` y la sucursal a la izquierda, el tipo de
+envío enorme a la derecha. Así el elemento más grande no cuesta un renglón.
+
+#### Que quepa es un test, no una cuenta
+
+`test/system/etiqueta_cabe_test.rb` abre la etiqueta en **Chrome de verdad** y
+compara `scrollHeight` contra `clientHeight` — el único modo de ver un recorte
+de CSS. Con eso el ciclo es: fijar la jerarquía, medir, bajar los escalones si
+no entra.
+
+> ⚠️ **Dos trampas que costaron sangre acá:**
 >
-> `test/controllers/etiqueta_campos_test.rb` fija que los 11 salgan en el HTML, pero **ningún test de Rails ve un recorte de CSS**. Que quepan solo se verifica imprimiendo una — y el caso a probar es un paquete con tercero **y** driver, que es el que más campos lleva.
+> 1. La primera versión del test **no tenía dientes**: pasaba aun con `--t1` en
+>    40pt. Los hijos de un flex se **encogen** por defecto, así que en vez de
+>    desbordar se comprimían y el texto se recortaba *adentro* de cada caja —
+>    `scrollHeight` nunca crecía. Se arregló con `.etq > * { flex: 0 0 auto; }`,
+>    que además es lo correcto para la impresión.
+> 2. Con la medición ya funcionando, la configuración que yo había calculado a
+>    mano en el turno anterior **no cabía** (121px contra 120px disponibles).
+>
+> Holgura real hoy: **16px de 120** con todos los campos llenos.
+
+#### Dos cosas que salieron de mirar la etiqueta renderizada
+
+- **El tipo de envío se abrevia a 3 letras.** El mockup dice `EXP`, no
+  `EXPRESS`. No es cosmético: completo se come más de la mitad del ancho y deja
+  la sucursal en **`SAN PED…`** — el "¿qué es San Pedro Soda?" reapareciendo.
+- **La fecha no se encoge.** El driver le estaba robando el ancho y salía
+  `27-Jul-2026 …` sin la hora. En la jerarquía de Yusef la fecha está por
+  encima del driver, que ni figura en su mockup; ahora el que se recorta es el
+  driver.
+
+Lo que ningún test cubre: **que el código de barras siga escaneando**. Está en
+0.20 in, que es el piso práctico para escáneres de mano. Eso se prueba
+imprimiendo.
 
 ### Sembrado de precios reales (PR-10.g)
 

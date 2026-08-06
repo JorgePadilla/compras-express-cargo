@@ -61,4 +61,17 @@ module EtiquetaHelper
   def etiqueta_sucursal(paquete)
     paquete.sucursal&.nombre.presence || paquete.cliente&.ciudad.presence
   end
+
+  # El tipo de envío va a tres letras: en el mockup de Yusef dice **EXP**, no
+  # EXPRESS. No es cosmético — es el texto más grande de la etiqueta, y con
+  # "EXPRESS" completo a ese cuerpo se come más de la mitad del ancho y deja la
+  # sucursal truncada en "S…", que es exactamente el "¿qué es San Pedro Soda?"
+  # que este rediseño vino a arreglar.
+  #
+  # CER, CEM, CKA y CKM ya son de tres letras; el único que se acorta es
+  # EXPRESS. Si algún día entran dos servicios que arranquen igual, hay que
+  # mapearlos a mano acá.
+  def etiqueta_tipo_envio(paquete)
+    paquete.tipo_envio&.codigo.to_s.first(3).upcase.presence
+  end
 end
