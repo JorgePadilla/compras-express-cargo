@@ -135,7 +135,7 @@ class PreFacturasController < ApplicationController
 
   # PR-13.d: qué líneas llevan un cambio autorizado, para marcarlas.
   def cargar_autorizaciones
-    @autorizaciones_por_item = @pre_factura.autorizaciones_linea
+    @autorizaciones_por_item = @pre_factura.autorizaciones
                                            .includes(:autorizado_por)
                                            .order(:created_at)
                                            .group_by(&:pre_factura_item_id)

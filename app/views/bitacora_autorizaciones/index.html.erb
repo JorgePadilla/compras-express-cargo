@@ -12,6 +12,13 @@
     </p>
   </div>
   <div class="bg-white rounded-lg shadow p-4">
+    <p class="text-xs uppercase tracking-wider text-gray-500">Notas de credito emitidas</p>
+    <p class="mt-1 text-2xl font-bold text-red-700">
+      L. <%= number_with_precision(@total_notas_credito || 0, precision: 2, delimiter: ",") %>
+    </p>
+    <p class="text-[11px] text-gray-500">plata que se le devolvio al cliente</p>
+  </div>
+  <div class="bg-white rounded-lg shadow p-4">
     <p class="text-xs uppercase tracking-wider text-gray-500">Autorizaciones</p>
     <p class="mt-1 text-2xl font-bold text-cec-navy"><%= @autorizaciones.total_count %></p>
   </div>
@@ -21,7 +28,7 @@
   <div>
     <%= label_tag :accion, "Accion", class: "block text-xs font-medium text-gray-600 mb-1" %>
     <%= select_tag :accion,
-          options_for_select(AutorizacionLinea::ACCIONES.map { |a| [ a.humanize, a ] }, params[:accion]),
+          options_for_select(Autorizacion::ACCIONES.map { |a| [ a.humanize, a ] }, params[:accion]),
           include_blank: "Todas",
           class: "rounded-lg border-gray-300 shadow-sm text-sm" %>
   </div>
@@ -49,8 +56,8 @@
         <thead class="bg-gray-50">
           <tr>
             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cuando</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pre-Factura</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Linea</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Documento</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cambio</th>
             <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Antes → Despues</th>
             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Autorizo</th>
@@ -64,9 +71,9 @@
                 <%= l a.created_at, format: :short %>
               </td>
               <td class="px-4 py-3 text-sm">
-                <%= link_to a.pre_factura.numero, edit_pre_factura_path(a.pre_factura),
+                <%= link_to a.documento.numero, a.documento,
                       class: "font-mono text-cec-teal hover:text-cec-teal-dark" %>
-                <span class="block text-[11px] text-gray-500"><%= a.pre_factura.cliente.codigo %></span>
+                <span class="block text-[11px] text-gray-500"><%= a.documento.cliente.codigo %></span>
               </td>
               <td class="px-4 py-3 text-sm text-gray-700"><%= truncate(a.concepto, length: 34) %></td>
               <td class="px-4 py-3 text-sm">

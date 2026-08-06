@@ -1,14 +1,21 @@
-# PR-13.d: la bitácora de lo que se autorizó.
+# PR-13.d/e: la bitácora de lo que se autorizó.
 #
 # Sin una pantalla donde mirarlo, todo el mecanismo del PIN es solo fricción en
 # el mostrador: se registra pero nadie lo lee. Acá es donde se ve cuánto se
 # regaló, quién lo autorizó y por qué.
-class AutorizacionesLineaListadoController < ApplicationController
+#
+# Muestra los dos casos juntos —cambios de línea en pre-factura y emisión de
+# notas— porque son el mismo hecho: plata que se movió sin una tarifa detrás. Si
+# estuvieran en dos pantallas, nadie sumaría las dos.
+class BitacoraAutorizacionesController < ApplicationController
   before_action :require_supervisor
 
   def index
-    @autorizaciones = AutorizacionLinea
-                      .includes(:autorizado_por, :solicitado_por, pre_factura: :cliente)
+    # `preload` y no `includes` para `documento`: es polimórfico y no se puede
+    # resolver con un JOIN — Rails tira `EagerLoadPolymorphicError`.
+    @autorizaciones = Autorizacion
+                      .includes(:autorizado_por, :solicitado_por)
+                      .preload(:documento)
                       .recientes
     @autorizaciones = @autorizaciones.by_accion(params[:accion]) if params[:accion].present?
     @autorizaciones = @autorizaciones.by_autorizante(params[:autorizado_por_id]) if params[:autorizado_por_id].present?
@@ -17,6 +24,11 @@ class AutorizacionesLineaListadoController < ApplicationController
     end
 
     @total_descontado = @autorizaciones.by_accion("descuento").sum(:valor_nuevo)
+    # Las notas de crédito son plata que se devuelve; van aparte del descuento
+    # porque salen de otro documento y se leen distinto.
+    @total_notas_credito = @autorizaciones.by_accion("emitir")
+                                          .where(documento_type: "NotaCredito")
+                                          .sum(:valor_nuevo)
     @autorizaciones = @autorizaciones.page(params[:page]).per(per_page_sanitized)
   end
 

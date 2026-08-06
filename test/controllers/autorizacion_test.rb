@@ -6,7 +6,7 @@ require "test_helper"
 # nada más, no se puede hacer más si está todo preestablecido. Ahora, si lo
 # quieren modificar, ellos tienen que pedir autorización — ahí es donde entra un
 # jefe, un supervisor, y ahí es donde llega y pone un código especial de él."
-class AutorizacionLineaTest < ActionDispatch::IntegrationTest
+class AutorizacionTest < ActionDispatch::IntegrationTest
   setup do
     TarifasPropuesta2026.sembrar!
     @cliente = clientes(:juan)
@@ -74,7 +74,7 @@ class AutorizacionLineaTest < ActionDispatch::IntegrationTest
   # ── Autorizar y cambiar son el mismo acto ───────────────────────────────
 
   test "con PIN correcto aplica el descuento y lo registra" do
-    assert_difference("AutorizacionLinea.count", 1) do
+    assert_difference("Autorizacion.count", 1) do
       autorizar(accion: "descuento", valor: 10, modo: "porcentaje", motivo: "Cliente frecuente")
     end
 
@@ -84,7 +84,7 @@ class AutorizacionLineaTest < ActionDispatch::IntegrationTest
     assert_equal "Cliente frecuente", @item.descuento_motivo
     assert_equal BigDecimal("111.83"), @pf.reload.descuento, "los totales se recalculan"
 
-    a = AutorizacionLinea.last
+    a = Autorizacion.last
     assert_equal @supervisor, a.autorizado_por
     assert_equal @cajero, a.solicitado_por
     assert_equal BigDecimal("0"), a.valor_anterior
@@ -92,7 +92,7 @@ class AutorizacionLineaTest < ActionDispatch::IntegrationTest
   end
 
   test "con PIN incorrecto no cambia nada ni deja registro" do
-    assert_no_difference("AutorizacionLinea.count") do
+    assert_no_difference("Autorizacion.count") do
       autorizar(accion: "precio", valor: 1.00, motivo: "Nada", pin: "9999")
     end
 
@@ -106,7 +106,7 @@ class AutorizacionLineaTest < ActionDispatch::IntegrationTest
       rol: "cajero", ubicacion: "honduras", pin: "5555"
     )
 
-    assert_no_difference("AutorizacionLinea.count") do
+    assert_no_difference("Autorizacion.count") do
       autorizar(accion: "precio", valor: 1.00, motivo: "Nada",
                 autorizado_por_id: otro.id, pin: "5555")
     end
@@ -114,7 +114,7 @@ class AutorizacionLineaTest < ActionDispatch::IntegrationTest
   end
 
   test "sin motivo no se autoriza — es el punto del registro" do
-    assert_no_difference("AutorizacionLinea.count") do
+    assert_no_difference("Autorizacion.count") do
       autorizar(accion: "precio", valor: 1.00, motivo: "")
     end
     assert_equal BigDecimal("111.83"), @item.reload.precio_libra
@@ -124,7 +124,7 @@ class AutorizacionLineaTest < ActionDispatch::IntegrationTest
     autorizar(accion: "precio", valor: 90.00, motivo: "Ajuste pactado")
 
     assert_equal BigDecimal("90.00"), @item.reload.precio_libra
-    a = AutorizacionLinea.last
+    a = Autorizacion.last
     assert_equal BigDecimal("111.83"), a.valor_anterior,
                  "sin el valor original la auditoria no reconstruye nada"
     assert_equal BigDecimal("90.00"), a.valor_nuevo
@@ -143,10 +143,10 @@ class AutorizacionLineaTest < ActionDispatch::IntegrationTest
       autorizar(accion: "eliminar", motivo: "Se entrego por aparte")
     end
 
-    a = AutorizacionLinea.last
+    a = Autorizacion.last
     assert_nil a.pre_factura_item_id, "la linea ya no existe"
     assert_equal concepto, a.concepto, "pero el registro guarda de cual se trataba"
-    assert_equal @pf, a.pre_factura
+    assert_equal @pf, a.documento
   end
 
   # ── Fuerza bruta ────────────────────────────────────────────────────────

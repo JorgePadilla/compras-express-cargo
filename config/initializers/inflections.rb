@@ -43,4 +43,6 @@ ActiveSupport::Inflector.inflections(:en) do |inflect|
   inflect.irregular "motivo_retencion", "motivos_retencion"
   inflect.irregular "paquete_motivo_retencion", "paquete_motivos_retencion"
   inflect.irregular "plantilla_nota_cliente", "plantillas_notas_cliente"
+  # PR-13.d: sin esto `has_many :autorizaciones` busca la clase `Autorizacione`.
+  inflect.irregular "autorizacion", "autorizaciones"
 end

@@ -750,6 +750,7 @@ abierto están en `docs/05` — "La tabla de precios recibida (2026-08-05)".
 | 13.b | Descuento como campo propio (monto o %, ISV sobre el neto) | ✅ |
 | 13.c | Rol `supervisor_sac` + PIN de 4 dígitos | ✅ |
 | 13.d | Autorización por línea y el candado | ✅ |
+| 13.e | Emitir notas de débito/crédito pide PIN + cuatro ojos | ✅ |
 
 Sale de la aclaración de Yusef del 2026-08-05 sobre
 la nota `TARIFA EDITABLE CON AUTORIZACION DE SUPERVISOR O JEFE` que repite en
@@ -815,6 +816,45 @@ comería el bloqueo.
 > al entorno de test, y `test_helper` lo limpia antes de cada test: el contador
 > vive en el proceso, y el `rate_limit` del login de `SessionsController` es por
 > IP, así que sin limpiarlo los tests se caían solos a partir del undécimo.
+
+### ✅ Las notas de débito y crédito — PR-13.e
+
+**El control va en otro lado, y a propósito.** La nota **no saca su monto de la
+tabla de tarifas** — ajustar a mano es su propósito. Trabar cada línea sería
+trabar justamente lo que el documento viene a hacer.
+
+Así que el PIN se pide **al emitir**, que es el momento en que el saldo del
+cliente cambia. Antes de eso la nota vive en `creado` y no mueve plata.
+
+| | |
+|---|---|
+| Pre-factura | El precio viene de una tarifa → candado **por línea** |
+| Nota | El monto es manual por diseño → PIN **al emitir** |
+
+#### Cuatro ojos
+
+Quien arma la nota **no puede emitirla él mismo**; el dropdown ni lo ofrece. Es
+el control clásico contra el autoservicio, y acá pesa más que en la pre-factura:
+una nota de crédito es plata que se le devuelve al cliente, y un `cajero` puede
+crear notas de débito.
+
+> La validación va como `validate` y no como un chequeo suelto antes de
+> `valid?`: **`valid?` limpia los errores**, así que un `errors.add` previo se
+> perdía en silencio y la nota se emitía igual. Lo encontró el test.
+
+#### Una sola bitácora
+
+`AutorizacionLinea` pasó a ser `Autorizacion` con `documento` polimórfico
+(`PreFactura` · `NotaCredito` · `NotaDebito`). Es el mismo hecho de negocio —
+plata que se movió sin una tarifa detrás— y en dos pantallas separadas nadie
+sumaría las dos.
+
+La bitácora muestra aparte el **total devuelto por notas de crédito**, que se
+lee distinto del descuento.
+
+> `has_many :autorizaciones` necesitó una regla de inflexión: el inflector
+> inglés singulariza a `Autorizacione`. El repo ya resuelve así el resto de los
+> nombres en español.
 
 #### La bitácora — `/autorizaciones`
 

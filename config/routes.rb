@@ -132,12 +132,12 @@ Rails.application.routes.draw do
     # PR-13.d: el supervisor autoriza un cambio sobre UNA línea. Anidado bajo el
     # item porque el alcance es por línea, no por pre-factura.
     resources :items, only: [], controller: "pre_facturas" do
-      resource :autorizacion, only: [ :create ], controller: "autorizaciones_linea"
+      resource :autorizacion, only: [ :create ], controller: "autorizaciones"
     end
   end
 
   # Bitácora de lo que se autorizó — sin esto el mecanismo es solo fricción.
-  resources :autorizaciones, only: [ :index ], controller: "autorizaciones_linea_listado"
+  resources :autorizaciones, only: [ :index ], controller: "bitacora_autorizaciones"
 
   resources :ventas, except: %i[new create destroy] do
     member do

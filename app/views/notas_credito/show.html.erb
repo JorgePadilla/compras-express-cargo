@@ -81,9 +81,10 @@
 
     <% if @nota_credito.creado? %>
       <%= link_to "Editar (F6)", edit_nota_credito_path(@nota_credito), class: "px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50", data: { shortcut: "F6" } %>
-      <%= button_to "Emitir", emitir_nota_credito_path(@nota_credito), method: :post,
-          class: "px-4 py-2 bg-cec-teal text-white rounded-lg text-sm font-medium hover:bg-cec-teal-dark",
-          data: { turbo_confirm: "Al emitir se reduce el saldo pendiente del cliente y se envia email. Continuar?" } %>
+      <%= render "shared/emitir_nota_modal",
+            nota: @nota_credito,
+            url: emitir_nota_credito_path(@nota_credito),
+            advertencia: "Al emitir se reduce el saldo pendiente del cliente y se le envia un email." %>
     <% end %>
 
     <% if @nota_credito.emitido? %>

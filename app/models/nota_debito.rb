@@ -11,6 +11,8 @@ class NotaDebito < ApplicationRecord
   belongs_to :venta
   belongs_to :cliente
   belongs_to :creado_por, class_name: "User", optional: true
+  # PR-13.e: la autorizacion con la que un supervisor la emitio.
+  has_many :autorizaciones, as: :documento, dependent: :destroy
   has_many :nota_debito_items, dependent: :destroy, inverse_of: :nota_debito
   has_many :paquetes, -> { distinct }, through: :nota_debito_items
 

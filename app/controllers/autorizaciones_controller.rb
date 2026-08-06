@@ -1,8 +1,8 @@
 # PR-13.d: el endpoint donde el supervisor pone su PIN y el cambio se aplica.
 #
 # No hay un "desbloquear y después editar": llega el cambio y el PIN juntos, y
-# `AutorizacionLinea.aplicar!` hace las dos cosas en una transacción o ninguna.
-class AutorizacionesLineaController < ApplicationController
+# `Autorizacion.aplicar_a_linea!` hace las dos cosas en una transacción o ninguna.
+class AutorizacionesController < ApplicationController
   before_action :require_feature_access
   before_action :set_item
 
@@ -18,7 +18,7 @@ class AutorizacionesLineaController < ApplicationController
              only: :create
 
   def create
-    @autorizacion = AutorizacionLinea.aplicar!(
+    @autorizacion = Autorizacion.aplicar_a_linea!(
       item: @item,
       solicitado_por: Current.user,
       attrs: autorizacion_params
@@ -28,8 +28,6 @@ class AutorizacionesLineaController < ApplicationController
       redirect_to edit_pre_factura_path(@pre_factura),
                   notice: "Cambio autorizado por #{@autorizacion.autorizado_por.nombre}."
     else
-      # El mensaje se mantiene genérico a propósito: no decirle a quien prueba
-      # si falló el PIN o el rol.
       rechazar(@autorizacion.errors.full_messages.to_sentence)
     end
   end
