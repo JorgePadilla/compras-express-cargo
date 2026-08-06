@@ -23,7 +23,8 @@ class VentaPdf < ApplicationPdf
       total:    @venta.total,
       saldo:    @venta.saldo_pendiente,
       moneda:   @venta.moneda,
-      tasa_cambio: @venta.tasa_cambio_aplicada
+      tasa_cambio: @venta.tasa_cambio_aplicada,
+      descuento: @venta.descuento
     )
 
     if @venta.notas.present?

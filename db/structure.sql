@@ -760,7 +760,11 @@ CREATE TABLE public.venta_items (
     precio_libra numeric(10,2),
     subtotal numeric(10,2) DEFAULT 0.0 NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    minimo_aplicado boolean DEFAULT false NOT NULL,
+    descuento_monto numeric(10,2) DEFAULT 0.0 NOT NULL,
+    descuento_porcentaje numeric(5,2),
+    descuento_motivo character varying
 );
 
 
@@ -806,7 +810,8 @@ CREATE TABLE public.ventas (
     email_pendiente_enviado_at timestamp(6) without time zone,
     email_pagada_enviado_at timestamp(6) without time zone,
     tasa_cambio_aplicada numeric(10,4),
-    financiamiento_id bigint
+    financiamiento_id bigint,
+    descuento numeric(10,2) DEFAULT 0.0 NOT NULL
 );
 
 
@@ -1117,7 +1122,8 @@ CREATE TABLE public.nota_credito_items (
     precio_libra numeric(10,2),
     subtotal numeric(10,2) DEFAULT 0.0 NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    minimo_aplicado boolean DEFAULT false NOT NULL
 );
 
 
@@ -1153,7 +1159,8 @@ CREATE TABLE public.nota_debito_items (
     precio_libra numeric(10,2),
     subtotal numeric(10,2) DEFAULT 0.0 NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    minimo_aplicado boolean DEFAULT false NOT NULL
 );
 
 
@@ -1642,7 +1649,10 @@ CREATE TABLE public.pre_factura_items (
     origen character varying DEFAULT 'manual'::character varying NOT NULL,
     tarifa_recolecta_id bigint,
     servicio_extra_id bigint,
-    minimo_aplicado boolean DEFAULT false NOT NULL
+    minimo_aplicado boolean DEFAULT false NOT NULL,
+    descuento_monto numeric(10,2) DEFAULT 0.0 NOT NULL,
+    descuento_porcentaje numeric(5,2),
+    descuento_motivo character varying
 );
 
 
@@ -1685,7 +1695,8 @@ CREATE TABLE public.pre_facturas (
     facturado_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    tasa_cambio_aplicada numeric(10,4)
+    tasa_cambio_aplicada numeric(10,4),
+    descuento numeric(10,2) DEFAULT 0.0 NOT NULL
 );
 
 
@@ -5586,6 +5597,8 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260805200000'),
+('20260805190000'),
 ('20260802180000'),
 ('20260802170000'),
 ('20260802160000'),

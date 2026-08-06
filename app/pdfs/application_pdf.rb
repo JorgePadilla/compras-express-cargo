@@ -77,33 +77,65 @@ class ApplicationPdf
     move_down 10
   end
 
+  # PR-13.b: con descuento la tabla pasa de 4 a 5 columnas.
+  #
+  # La columna Descuento solo aparece si alguna línea trae uno: una columna de
+  # guiones en toda factura sin descuento es ruido, y a esta tabla ya le sobra
+  # poco ancho.
+  #
+  # Y cuando aparece, la última columna **deja de llamarse "Subtotal"**: pasa a
+  # mostrar el neto de la línea, y bajo ese encabezado los números no cerraban.
+  # Se llama "Total linea", que es lo que es. El bruto de cada línea sigue
+  # siendo `peso × precio/lb`, las dos columnas de al lado.
+  #
+  # Mostrar las dos —bruto y neto— daría seis columnas y a este ancho el
+  # concepto se parte en tres líneas; se probó y queda peor que el problema.
   def tabla_items(items, columnas: %w[Concepto Peso Precio/lb Subtotal])
-    rows = [columnas]
+    con_descuento = items.any? { |i| i.respond_to?(:descuento?) && i.descuento? }
+    columnas = columnas[0..-2] + [ "Descuento", "Total linea" ] if con_descuento
+
+    rows = [ columnas ]
     items.each do |item|
-      rows << [
+      fila = [
         sanitize_text(item.concepto),
         item.peso_cobrar.present? ? format("%.2f", item.peso_cobrar) : "-",
-        item.precio_libra.present? ? format("%.2f", item.precio_libra) : "-",
-        format_money(item.subtotal || 0)
+        item.precio_libra.present? ? format("%.2f", item.precio_libra) : "-"
       ]
+      if con_descuento
+        fila << (item.descuento? ? "-#{format_money(item.descuento_monto)}#{descuento_pct(item)}" : "-")
+        fila << format_money(item.total_linea)
+      else
+        fila << format_money(item.subtotal || 0)
+      end
+      rows << fila
     end
 
+    ultima = rows.first.length - 1
     table(rows, header: true, width: bounds.width) do
       row(0).font_style = :bold
       row(0).background_color = "EEEEEE"
-      columns(1..3).align = :right
+      columns(1..ultima).align = :right
       cells.padding = 6
-      cells.borders = [:bottom]
-      row(0).borders = [:bottom]
+      cells.borders = [ :bottom ]
+      row(0).borders = [ :bottom ]
     end
     move_down 10
   end
 
-  def bloque_totales(subtotal:, impuesto:, total:, saldo: nil, moneda: "LPS", tasa_cambio: nil)
-    data = [
-      ["Subtotal:", format_money(subtotal, moneda)],
-      ["ISV (#{(empresa.isv_rate * 100).to_i}%):", format_money(impuesto, moneda)],
-      ["Total:", format_money(total, moneda)]
+  def bloque_totales(subtotal:, impuesto:, total:, saldo: nil, moneda: "LPS",
+                     tasa_cambio: nil, descuento: nil)
+    data = [ [ "Subtotal:", format_money(subtotal, moneda) ] ]
+
+    # Con descuento hay que mostrar la base gravada: si no, el cliente no puede
+    # verificar de dónde sale el ISV.
+    if descuento.to_d.positive?
+      data << [ "Descuento:", "-#{format_money(descuento, moneda)}" ]
+      data << [ "Importe gravado:", format_money(subtotal.to_d - descuento.to_d, moneda) ]
+    end
+
+    data += [
+      [ "ISV (#{(empresa.isv_rate * 100).to_i}%):", format_money(impuesto, moneda) ],
+      [ "Total:", format_money(total, moneda) ]
     ]
     data << ["Saldo Pendiente:", format_money(saldo, moneda)] if saldo
     data << ["Tasa de cambio:", "#{tasa_cambio} LPS/USD"] if moneda == "USD" && tasa_cambio.present?
@@ -118,6 +150,13 @@ class ApplicationPdf
       end
     end
     move_down 10
+  end
+
+  # " (10%)" cuando el descuento se capturó como porcentaje.
+  def descuento_pct(item)
+    return "" if item.descuento_porcentaje.blank?
+
+    " (#{item.descuento_porcentaje.to_d.to_i}%)"
   end
 
   def footer_terminos
