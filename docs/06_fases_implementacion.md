@@ -784,20 +784,63 @@ número y el sistema cobra otro.
 Se arregla llamando a `CotizadorFlete`, que ya hace exactamente ese cálculo y se
 usa en `/entrega_personal`.
 
-### Preguntas de diseño abiertas
+### Especificación (respondida por Yusef, 2026-08-05)
 
-- ¿El código es un **PIN aparte** del usuario o basta la contraseña del
-  supervisor? Un PIN corto es lo que Yusef describe ("pone un código especial de
-  él") y es lo práctico en un mostrador con el cajero sentado enfrente.
-- ¿Qué más destraba ese código además del precio del flete — descuentos, quitar
-  líneas, cambiar el peso a cobrar?
-- ¿Autoriza toda la pre-factura o línea por línea?
-- ¿Alcanzan los roles `supervisor_prefactura`, `supervisor_caja` y `admin` que ya
-  existen, o hay un "jefe" aparte?
+| Pregunta | Respuesta |
+|---|---|
+| ¿Cómo es el código? | **PIN de 4 dígitos**, aparte de la contraseña con la que el supervisor entra al sistema |
+| ¿Qué destraba? | **Todo**: precio, descuento, quitar líneas y cambiar el peso a cobrar |
+| ¿Alcance? | **Por línea.** No se autoriza la pre-factura entera |
+| ¿Quién autoriza? | `admin`, `supervisor_prefactura`, `supervisor_caja` y **`supervisor_sac`** |
+
+#### El rol que falta
+
+`sac` ya existe — es el agente de servicio al cliente. Lo que falta es **su
+supervisor**, que Yusef cuenta también como jefe:
+
+```ruby
+supervisor_sac: "supervisor_sac"   # "Supervisor de Servicio al Cliente"
+```
+
+Hay que definirle sus permisos en `Authorization` (como mínimo, todo lo que hoy
+puede `sac`), y sumarlo a los cuatro roles que pueden autorizar.
+
+#### Lo que implica el "por línea"
+
+Que el PIN no abre una sesión de edición: **autoriza una línea concreta y queda
+pegado a ella**. Si el cajero toca otra línea, se pide de nuevo. Eso hace que el
+registro sea útil — se sabe qué línea se cambió, quién la autorizó y contra qué
+valor original.
+
+Lo mínimo a guardar por línea autorizada: quién autorizó, cuándo, el valor
+anterior y el motivo. El valor anterior importa porque el precio de la tarifa se
+puede haber movido después, y sin ese dato la auditoría no reconstruye nada.
+
+#### Las cuatro cosas que destraba
+
+| Qué | Dónde está hoy |
+|---|---|
+| Precio | `pre_factura_items.precio_libra` |
+| Peso a cobrar | `pre_factura_items.peso_cobrar` |
+| Descuento | ⚠️ **no existe** como columna — hoy un descuento se hace bajando el precio a mano |
+| Quitar líneas | `_destroy` en `pre_factura_items_attributes` |
+
+El descuento es el que falta modelar. Bajarlo del precio, como se hace hoy,
+esconde la información: la factura sale sin decir que hubo descuento, ni de
+cuánto, ni quién lo dio.
+
+#### Un PIN de 4 dígitos hay que tratarlo como credencial
+
+Solo 10 000 combinaciones: se adivina en minutos a fuerza bruta. No alcanza con
+guardarlo — hay que ponerle límite de intentos por usuario y por terminal, y
+`bcrypt` como el password (nunca en claro, nunca comparado con `==`). Es el
+único punto de todo el sistema donde 4 dígitos habilitan cambiar plata.
 
 ### Enganche existente
 
 - Los 8 roles y el concern `Authorization` (`require_role`, `can_access?`).
+- `has_secure_password` en `User` — el PIN puede ir como un segundo
+  `has_secure_password :pin`, que Rails soporta desde 7.1.
 - `paper_trail` en `PreFactura` y `Tarifa` — falta el *motivo* y el *autorizante*.
 - `PreFacturaItem#origen` ya distingue `automatico` de `manual`; una línea con
   precio autorizado sería un tercer origen.

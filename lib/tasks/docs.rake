@@ -270,10 +270,24 @@ namespace :docs do
       p_(pdf, "Lo importante es el segundo paso: <b>que salga bloqueado por defecto</b>. Hoy el sistema hace " \
               "lo contrario — cualquiera que entre a pre-facturas puede cambiar el monto de una línea y no " \
               "queda dicho por qué. Es el próximo bloque de trabajo.")
-      p_(pdf, "Para armarlo necesitamos que nos aclares un par de cosas: si el código es un <b>PIN corto " \
-              "aparte</b> (que es lo práctico con el cajero sentado enfrente) o la contraseña del supervisor; " \
-              "si además del precio destraba otras cosas como descuentos o quitar líneas; y si autoriza toda " \
-              "la pre-factura o línea por línea.")
+      p_(pdf, "Ya nos pasaste el detalle y con eso alcanza para construirlo:")
+      tabla(pdf,
+        [ "Punto", "Como quedó" ],
+        [
+          [ "<b>El código</b>", "Un <b>PIN de 4 dígitos</b>, aparte de la contraseña con la que el supervisor entra al sistema." ],
+          [ "<b>Qué destraba</b>", "Todo: <b>precio, descuento, quitar líneas y cambiar el peso a cobrar</b>." ],
+          [ "<b>Alcance</b>", "<b>Por línea.</b> No se autoriza la pre-factura entera de una." ],
+          [ "<b>Quién autoriza</b>", "Administrador, Supervisor Pre-Factura, Supervisor Caja y <b>Supervisor de Servicio al Cliente</b>." ]
+        ], anchos: [ 118, 369 ])
+      p_(pdf, "Nos falta crear el rol de <b>Supervisor de Servicio al Cliente</b>: hoy existe “Servicio al " \
+              "Cliente” pero no su supervisor.")
+      p_(pdf, "Dos cosas que salen de ahí y conviene que sepas. Primero: <b>el descuento hoy no existe como " \
+              "dato</b>. Cuando alguien hace un descuento, le baja el precio a la línea, así que la factura " \
+              "sale sin decir que hubo descuento ni de cuánto. Si el PIN va a autorizar descuentos, el " \
+              "descuento tiene que ser un campo propio — así queda a la vista en el documento y en los " \
+              "reportes. Segundo: un PIN de 4 dígitos son 10.000 combinaciones, y es el único lugar del " \
+              "sistema donde cuatro números habilitan cambiar plata, así que lo vamos a guardar cifrado y con " \
+              "<b>límite de intentos</b>, igual que una contraseña.")
 
       # ── 5. Pendientes ──
       h1(pdf, "5. Lo que falta que decidas vos")
@@ -392,9 +406,9 @@ namespace :docs do
             "Un cliente \"Clientes Amigos\" con 200 libras de CER paga $4.20 la libra ($840) mientras el público paga $3.50 ($700), porque el escalonado solo lo pusiste en el precio de lista. ¿Es así o las categorías también bajan de escalón?",
             "Tu tabla da un solo precio por categoría (columna NORMAL) y los tarifarios escalonados están declarados solo para el Precio Normal. Lo cargamos literal a como lo mandaste.",
             "" ],
-          [ "6", "Código del supervisor",
-            "Para armar lo del código: ¿es un PIN corto aparte, distinto de la contraseña con la que el supervisor entra al sistema? ¿Destraba solo el precio o también descuentos y quitar líneas? ¿Autoriza toda la pre-factura o línea por línea?",
-            "Nos aclaraste que \"tarifa editable con autorización de supervisor o jefe\" es una función del sistema, no de tu proceso: el precio sale bloqueado en la pre-factura y el supervisor lo destraba con su código. Nuestra apuesta: PIN corto aparte, porque es lo práctico con el cajero sentado enfrente.",
+          [ "6", "Descuento como campo propio",
+            "Para el código del supervisor ya nos diste todo (PIN de 4 dígitos, por línea, destraba precio/descuento/quitar líneas/peso). Solo queda esto: hoy el descuento NO existe como dato — se hace bajándole el precio a la línea. ¿Lo convertimos en un campo propio, para que la factura diga que hubo descuento y de cuánto?",
+            "Como está hoy, un descuento es invisible: la factura sale con un precio más bajo y nada dice que fue un descuento, ni de cuánto, ni quién lo dio. Si el PIN va a autorizar descuentos, conviene que el descuento se vea.",
             "" ],
           [ "7", "Etiqueta — qué cabe",
             "La etiqueta de ETIQUETAR mide 2.25 x 1.25 pulgadas (Dymo). A ese tamaño NO caben los 11 campos legibles con el código de barras encima. ¿Cuáles son los 4 o 5 imprescindibles, los que el operario tiene que leer de lejos en la estantería?",
@@ -802,7 +816,7 @@ namespace :docs do
           [ "<b>Fotos de paquetes</b>", "Tomar foto al recibir y mandársela al cliente." ],
           [ "<b>Reportes</b>", "El módulo de reportes propiamente dicho." ],
           [ "<b>Escaneo al empacar</b>", "Lo que pediste que quedara planificado: se escanea cada paquete al meterlo a la caja y el sistema pita si el servicio no concuerda. Al armar el manifiesto se jalan las cajas ya empacadas." ],
-          [ "<b>Código del supervisor</b>", "Que en la pre-factura el precio salga bloqueado y solo se destrabe cuando un supervisor o jefe teclea su código, dejando registro de quién autorizó. Hoy cualquiera con acceso a pre-facturas puede cambiar el monto." ]
+          [ "<b>Código del supervisor</b>", "Que en la pre-factura la línea salga bloqueada y solo se destrabe cuando un supervisor teclea su PIN de 4 dígitos, dejando registro de quién autorizó qué. Hoy cualquiera con acceso a pre-facturas puede cambiar el monto sin dejar rastro del porqué. Incluye el rol nuevo de Supervisor de Servicio al Cliente." ]
         ], anchos: [ 130, 357 ])
 
       # ══ PARTE 4 ══
@@ -832,7 +846,7 @@ namespace :docs do
           [ "3", "<b>CKM está en dos reglas que se contradicen</b>: es de la serie CK (mínimo L.200) y además es marítimo (mínimo en libras). En tu tabla le pusiste L.173.91, así que cargamos ese. ¿Confirmás?" ],
           [ "4", "<b>Regular y VIP</b> no aparecen en tu tabla y tienen 8 clientes asignados. ¿A cuál de las categorías nuevas los pasamos?" ],
           [ "5", "Las <b>categorías no bajan de escalón</b>: un Clientes Amigos con 200 lb de CER paga $4.20/lb y el público paga $3.50. Es literal a tu tabla — decinos si es lo que querés." ],
-          [ "6", "<b>Cómo funciona el código del supervisor</b> para destrabar un precio en la pre-factura: ¿es un PIN corto aparte de la contraseña? ¿destraba solo el precio o también descuentos? ¿toda la pre-factura o línea por línea?" ],
+          [ "6", "<b>El descuento hoy no existe como dato</b> — se hace bajándole el precio a la línea, así que la factura no dice que hubo descuento. Si el PIN va a autorizar descuentos, ¿lo convertimos en un campo propio?" ],
           [ "7", "<b>Cuáles campos</b> son imprescindibles en la etiqueta de 2.25 × 1.25." ],
           [ "8", "Confirmar la <b>lista de proveedores</b> de entrega personal para dejarlos precargados." ]
         ], anchos: [ 22, 465 ])

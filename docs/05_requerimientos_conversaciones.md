@@ -1849,16 +1849,30 @@ un detalle de la pantalla. La autorización es la excepción.
 > permite `precio_libra` y `subtotal` en las líneas, así que cualquiera con acceso
 > a pre-facturas edita el monto sin dejar rastro de por qué. Ver Fase 13.
 
-**Preguntas de diseño que quedan** (no bloquean el resto):
+**El detalle, respondido el mismo día:**
 
-- ¿El código es un PIN aparte del usuario, o basta con que el supervisor entre
-  con su contraseña? Un PIN corto es lo que describe ("pone un código especial
-  de él") y es lo práctico en un mostrador con el cajero sentado.
-- ¿Qué más se destraba con ese código además del precio de flete — descuentos,
-  quitar líneas, cambiar el peso a cobrar?
-- ¿Sirve para toda la pre-factura o hay que autorizar línea por línea?
-- ¿Los roles `supervisor_prefactura`, `supervisor_caja` y `admin` que ya existen
-  son los que autorizan, o hay un "jefe" aparte?
+| | |
+|---|---|
+| **El código** | Un **PIN de 4 dígitos**, aparte de la contraseña del supervisor |
+| **Qué destraba** | **Todo**: precio, descuento, quitar líneas y cambiar el peso a cobrar |
+| **Alcance** | **Por línea** — no se autoriza la pre-factura completa |
+| **Quién autoriza** | `admin`, `supervisor_prefactura`, `supervisor_caja` y **`supervisor_sac`** |
+
+**Falta un rol.** `sac` ya existe (el agente de servicio al cliente); lo que no
+está es **su supervisor**, que Yusef cuenta también como jefe. Hay que agregar
+`supervisor_sac` y darle sus permisos.
+
+Dos cosas que salen de esas respuestas y hay que resolver al construirlo:
+
+- **El descuento no existe como dato.** Hoy un descuento se hace bajándole el
+  precio a la línea, así que la factura sale sin decir que hubo descuento, ni de
+  cuánto, ni quién lo dio. Si el PIN va a autorizar descuentos, el descuento
+  tiene que ser una columna.
+- **Un PIN de 4 dígitos son 10 000 combinaciones.** Es el único punto del
+  sistema donde cuatro números habilitan cambiar plata, así que va con `bcrypt`
+  y con límite de intentos, no guardado en claro.
+
+El detalle técnico está en `docs/06` — Fase 13.
 
 ### Lo que sigue abierto de la tabla
 
