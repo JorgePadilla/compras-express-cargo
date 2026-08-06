@@ -426,47 +426,73 @@ namespace :docs do
       # Hoja 1 — Preguntas
       # ─────────────────────────────────────────────────────────────
       wb.add_worksheet(name: "1. Preguntas") do |s|
-        s.add_row [ "Preguntas para Yusef — 2026-08-05" ], style: titulo
-        s.add_row [ "Llená solo la columna amarilla. Lo demás es contexto para que no tengas que acordarte." ], style: nota
+        s.add_row [ "Preguntas para Yusef — #{I18n.l(Date.current, format: '%d de %B de %Y')}" ], style: titulo
+        s.add_row [ "Llená solo la columna amarilla. Lo demás es contexto para que no tengas que acordarte de nada." ], style: nota
+        s.add_row [ "Están en orden de urgencia: las primeras son las que hoy hacen que el sistema cobre distinto de lo que vos querés." ], style: nota
         s.add_row []
-        s.add_row [ "#", "Tema", "Pregunta", "Lo que sabemos hoy", "TU RESPUESTA" ],
-                  style: [ navy, navy, navy, navy, gold ]
+        s.add_row [ "#", "Urgencia", "Tema", "Pregunta", "Lo que sabemos hoy", "TU RESPUESTA" ],
+                  style: [ navy, navy, navy, navy, navy, gold ]
 
         [
-          [ "1", "Precios cargados",
-            "Ya cargamos tu tabla PROPUESTA al sistema. En la hoja 2 está TODO lo que quedó cargado, exactamente como lo va a cobrar el sistema. ¿Está bien?",
-            "Tomamos la hoja PROPUESTA de \"precios por categoria 2026.xlsx\". De los 16 cargos que no son flete cargamos 5 (entrega nacional, compra online, manejo y gastos, flete internacional UPS y retornado en Miami); los otros 10 estan en la hoja 4 esperando que nos digas la moneda.",
+          # ── Lo que hoy cobra distinto de lo que él quiere ──
+          [ "1", "ALTA", "Cambio de servicio",
+            "En tu hoja el cambio de servicio dice 5 y el titulo dice L100, con la nota \"pasarlo a dolares\". En el sistema esta cargado en $15. ¿Cual queda?",
+            "Este cargo se genera SOLO, en una nota de debito, cada vez que se factura un paquete al que le cambiaron el servicio. Mientras no nos digas, sigue cobrando los $15 — que es el triple de los 5 de tu hoja.",
             "" ],
-          [ "2", "Mínimo CEM y CKM en libras",
-            "¿Hace falta todavía un mínimo en LIBRAS para CEM y CKM, o con el mínimo en dinero de la tabla ya está?",
-            "Tu tabla trae el mínimo en dinero (L.200 con ISV) pero no el de libras. En la práctica el escalonado ya cubre el paquete chico: un CEM de 2 libras paga 4.50/lb = $9. Documentado en abril: CEM = 8 libras, CKM = 20 libras. En el audio dijiste 3 o 4 libras.",
+          [ "2", "ALTA", "Moneda de 10 cargos",
+            "Necesitamos la moneda de 10 cargos de tu hoja. Estan en la HOJA 4 con la duda de cada uno y una columna para que escribas $ o LPS.",
+            "En tu hoja pusiste la leyenda \"precios en $\" y \"precios en lempiras\" pero las celdas de precio quedaron sin colorear, asi que un 5 no dice si son 5 dolares o 5 lempiras. Ya cargamos los 5 que si dejaste claros con una nota escrita.",
             "" ],
-          [ "3", "CKM cae en dos reglas",
-            "Para CKM, ¿cuál mínimo manda: los L.200, el de libras, o el que resulte MAYOR de los dos?",
-            "En el audio dijiste \"los servicios serie CK son 200 lempiras ya con ISV\" (aplica a CKA y CKM) y también \"el marítimo lo tenemos estipulado en cantidad de libras\" (aplica a CEM y CKM). CKM es las dos cosas. En tu tabla le pusiste L.173.91, así que cargamos ese — confirmalo.",
+          [ "3", "ALTA", "Recolecta: ¿zona o plano?",
+            "Vos pediste que la recolecta se cobrara POR ZONA en vez de $35 fijos, y asi esta hecho. Pero tu hoja nueva dice 35 plano. ¿Cual mandamos?",
+            "Hoy el sistema tiene una tabla de tarifas de recolecta por zona/distancia, que es lo que pediste en su momento. Si mandamos el 35 plano, esa tabla deja de usarse.",
             "" ],
-          [ "4", "Categorías que no vinieron",
-            "En el sistema hay 8 clientes en las categorías \"Regular\" y \"VIP\", que no aparecen en tu tabla. ¿A cuál de las nuevas los pasamos, o los dejamos como están?",
-            "Las categorías de tu tabla son: Clientes Amigos, doTERRA/Farmasi, Familia, Mayoristas, Personal de CEC, Shein, Revendedores y Sin Cobro Mínimo. Familia y Revendedores vinieron en cero, así que por ahora sus clientes pagan precio de lista. Mayoristas solo trae el precio de CKM.",
+
+          # ── Revisar lo que ya quedó cargado ──
+          [ "4", "MEDIA", "Revisar los precios cargados",
+            "En la HOJA 2 esta TODO lo que quedo cargado de tu tabla, leido directo del sistema. Es literalmente lo que va a cobrar. ¿Esta bien?",
+            "Tomamos la hoja PROPUESTA de \"precios por categoria 2026.xlsx\". Si algo esta mal, escribilo en la ultima columna de esa hoja.",
             "" ],
-          [ "5", "Descuento y escalones",
-            "Un cliente \"Clientes Amigos\" con 200 libras de CER paga $4.20 la libra ($840) mientras el público paga $3.50 ($700), porque el escalonado solo lo pusiste en el precio de lista. ¿Es así o las categorías también bajan de escalón?",
-            "Tu tabla da un solo precio por categoría (columna NORMAL) y los tarifarios escalonados están declarados solo para el Precio Normal. Lo cargamos literal a como lo mandaste.",
+          [ "5", "MEDIA", "Las categorías no bajan de escalón",
+            "Un cliente \"Clientes Amigos\" con 200 libras de CER paga $4.20 la libra ($840) mientras el publico paga $3.50 ($700). ¿Es asi, o las categorias tambien deberian bajar de escalon?",
+            "Tu tabla da un solo precio por categoria (columna NORMAL) y los tarifarios escalonados los declaraste solo para el Precio Normal. Lo cargamos literal a como lo mandaste, pero el resultado es que un amigo paga mas que un cliente de mostrador en paquetes grandes.",
             "" ],
-          [ "6", "PINs de los supervisores",
-            "El código del supervisor ya está funcionando. Falta que nos digas a quiénes les asignamos PIN — cualquiera de estos cuatro roles puede tener uno: Administrador, Supervisor Caja, Supervisor Pre-Factura y Supervisor de Servicio al Cliente.",
-            "Un administrador se los asigna desde la pantalla de usuarios y después cada supervisor lo cambia por uno que solo él sepa. Mientras no lo cambie, el administrador conoce el PIN con el que ese supervisor autoriza — la pantalla de usuarios marca a quiénes les falta cambiarlo.",
+          [ "6", "MEDIA", "CKM cae en dos reglas",
+            "Para CKM, ¿cual minimo manda: los L.200, el de libras, o el que resulte MAYOR de los dos?",
+            "En el audio dijiste \"los servicios serie CK son 200 lempiras ya con ISV\" (aplica a CKA y CKM) y tambien \"el maritimo lo tenemos estipulado en cantidad de libras\" (aplica a CEM y CKM). CKM es las dos cosas. En tu tabla le pusiste L.173.91, asi que cargamos ese.",
             "" ],
-          [ "7", "Etiqueta — qué cabe",
-            "La etiqueta de ETIQUETAR mide 2.25 x 1.25 pulgadas (Dymo). A ese tamaño NO caben los 11 campos legibles con el código de barras encima. ¿Cuáles son los 4 o 5 imprescindibles, los que el operario tiene que leer de lejos en la estantería?",
-            "Nuestra apuesta: (1) código de barras, (2) número de recepción, (3) código + nombre del cliente, (4) sucursal donde retira, (5) n/N de paquetes. Los 11 campos están listados en la hoja 3.",
+          [ "7", "MEDIA", "Mínimo en libras de CEM y CKM",
+            "¿Hace falta todavia un minimo en LIBRAS para CEM y CKM, o con el minimo en dinero de tu tabla ya esta?",
+            "Tu tabla trae el minimo en dinero (L.200 con ISV) pero no el de libras. En la practica el escalonado ya cubre el paquete chico: un CEM de 2 libras paga $4.50 la libra. Documentado en abril: CEM = 8 libras, CKM = 20 libras. En el audio dijiste 3 o 4 libras.",
+            "" ],
+          [ "8", "MEDIA", "Regular y VIP",
+            "Hay 8 clientes en las categorias \"Regular\" y \"VIP\", que no aparecen en tu tabla. ¿A cual de las nuevas los pasamos, o los dejamos como estan?",
+            "Por ahora se quedaron con los precios viejos, que son mas bajos que los de lista. Las categorias de tu tabla son: Clientes Amigos, doTERRA/Farmasi, Familia, Mayoristas, Personal de CEC, Shein, Revendedores y Sin Cobro Minimo.",
+            "" ],
+          [ "9", "MEDIA", "Mayoristas incompleto",
+            "De MAYORISTAS solo vino el precio de CKM ($1.50). Los otros cuatro servicios vinieron en cero. ¿Que cobran los mayoristas en CER, CKA, EXPRESS y CEM?",
+            "Mientras tanto esos cuatro siguen con los valores viejos del sistema, que no salieron de tu tabla. FAMILIA y REVENDEDORES vinieron todos en cero, asi que sus clientes pagan precio de lista.",
+            "" ],
+
+          # ── Operación ──
+          [ "10", "MEDIA", "PINs de los supervisores",
+            "El codigo del supervisor ya esta funcionando. ¿A quienes les asignamos PIN? Pueden tenerlo: Administrador, Supervisor Caja, Supervisor Pre-Factura y Supervisor de Servicio al Cliente.",
+            "Un administrador se los asigna desde la pantalla de usuarios y despues cada supervisor lo cambia por uno que solo el sepa. Mientras no lo cambie, el administrador conoce el PIN con el que ese supervisor autoriza — la pantalla de usuarios marca a quienes les falta cambiarlo.",
+            "" ],
+          [ "11", "MEDIA", "Probar la etiqueta impresa",
+            "Imprimi una etiqueta y decinos dos cosas: (1) si no se corta nada, sobre todo en un paquete que traiga tercero Y driver, que es el que mas campos lleva; (2) si el lector escanea bien el codigo de barras.",
+            "Los 11 campos van con la jerarquia de tamanos que marcaste. El codigo de barras quedo en 0.20 pulgadas de alto, que es el minimo practico para lectores de mano — es lo unico que no podemos probar nosotros. Los campos estan en la hoja 3.",
+            "" ],
+          [ "12", "BAJA", "Proveedores de entrega personal",
+            "¿Confirmas esta lista para dejarla precargada? Entrega local / personal, Uber o delivery, Driver particular, Courier local.",
+            "Hoy no hay ninguno cargado, asi que la pantalla de Entrega Personal avisa que faltan configurar. En cualquier caso los podes crear, editar o desactivar vos mismo desde Catalogos → Proveedores.",
             "" ]
         ].each do |row|
-          s.add_row row, style: [ wrapb, wrap, wrap, gris, llenar ]
+          s.add_row row, style: [ wrapb, wrapb, wrap, wrap, gris, llenar ]
         end
 
-        s.column_widths 4, 18, 52, 58, 34
-        s.rows[3..].each { |r| r.height = 90 }
+        s.column_widths 4, 10, 20, 50, 56, 32
+        s.rows[4..].each { |r| r.height = 78 }
       end
 
       # ─────────────────────────────────────────────────────────────
