@@ -258,36 +258,47 @@ namespace :docs do
               "supervisor o jefe”. Al principio lo leímos como algo de tu proceso interno. Ya quedó claro " \
               "que <b>es una función del sistema</b>, y así lo dejamos anotado:")
       cita(pdf, "Por eso queremos que el área de los precios estén establecidos, listo. No hay nada más, no se puede hacer más si está todo preestablecido. Ahora, si lo quieren modificar, ellos tienen que pedir autorización — ahí es donde entra un jefe, un supervisor, y ahí es donde llega y pone un código especial de él.")
+      p_(pdf, "<b>Ya está construido, con el detalle que nos pasaste:</b>")
       tabla(pdf,
         [ "Paso", "Quién", "Estado" ],
         [
-          [ "Los precios se cargan una sola vez en la tabla de servicios", "Solo admin", "Ya está" ],
-          [ "En la pre-factura el precio sale <b>bloqueado</b>", "El cajero no lo toca", "Falta" ],
-          [ "Si hay que cambiarlo, el cajero pide autorización", "Cajero", "Falta" ],
-          [ "El supervisor teclea <b>su código</b> y destraba esa línea", "Supervisor o jefe", "Falta" ],
-          [ "Queda registrado quién autorizó qué", "El sistema", "Falta" ]
-        ], anchos: [ 230, 145, 112 ])
-      p_(pdf, "Lo importante es el segundo paso: <b>que salga bloqueado por defecto</b>. Hoy el sistema hace " \
-              "lo contrario — cualquiera que entre a pre-facturas puede cambiar el monto de una línea y no " \
-              "queda dicho por qué. Es el próximo bloque de trabajo.")
-      p_(pdf, "Ya nos pasaste el detalle y con eso alcanza para construirlo:")
-      tabla(pdf,
-        [ "Punto", "Como quedó" ],
-        [
-          [ "<b>El código</b>", "Un <b>PIN de 4 dígitos</b>, aparte de la contraseña con la que el supervisor entra al sistema." ],
-          [ "<b>Qué destraba</b>", "Todo: <b>precio, descuento, quitar líneas y cambiar el peso a cobrar</b>." ],
-          [ "<b>Alcance</b>", "<b>Por línea.</b> No se autoriza la pre-factura entera de una." ],
-          [ "<b>Quién autoriza</b>", "Administrador, Supervisor Pre-Factura, Supervisor Caja y <b>Supervisor de Servicio al Cliente</b>." ]
-        ], anchos: [ 118, 369 ])
-      p_(pdf, "Nos falta crear el rol de <b>Supervisor de Servicio al Cliente</b>: hoy existe “Servicio al " \
-              "Cliente” pero no su supervisor.")
-      p_(pdf, "Dos cosas que salen de ahí y conviene que sepas. Primero: <b>el descuento hoy no existe como " \
-              "dato</b>. Cuando alguien hace un descuento, le baja el precio a la línea, así que la factura " \
-              "sale sin decir que hubo descuento ni de cuánto. Si el PIN va a autorizar descuentos, el " \
-              "descuento tiene que ser un campo propio — así queda a la vista en el documento y en los " \
-              "reportes. Segundo: un PIN de 4 dígitos son 10.000 combinaciones, y es el único lugar del " \
-              "sistema donde cuatro números habilitan cambiar plata, así que lo vamos a guardar cifrado y con " \
-              "<b>límite de intentos</b>, igual que una contraseña.")
+          [ "Los precios se cargan una sola vez en la tabla de servicios", "Solo admin", "Listo" ],
+          [ "En la pre-factura el precio sale <b>bloqueado</b>", "Nadie lo edita suelto", "Listo" ],
+          [ "Si hay que cambiarlo, el cajero pide autorización", "Cajero", "Listo" ],
+          [ "El supervisor teclea <b>su PIN de 4 dígitos</b> y se aplica el cambio", "Supervisor o jefe", "Listo" ],
+          [ "Queda registrado quién autorizó qué, contra qué monto y por qué", "El sistema", "Listo" ]
+        ], anchos: [ 250, 130, 107 ])
+
+      p_(pdf, "El PIN destraba las cuatro cosas que pediste — <b>precio, descuento, quitar líneas y el peso a " \
+              "cobrar</b> — y es <b>por línea</b>, no por pre-factura completa. Autorizan Administrador, " \
+              "Supervisor Caja, Supervisor Pre-Factura y el rol nuevo de <b>Supervisor de Servicio al " \
+              "Cliente</b>.")
+
+      p_(pdf, "El supervisor <b>no tiene que iniciar sesión</b>: el cajero se queda en su pantalla y el " \
+              "supervisor solo teclea sus cuatro dígitos parado ahí. El PIN se guarda cifrado y con límite de " \
+              "intentos — son 10.000 combinaciones y es el único lugar del sistema donde cuatro números " \
+              "mueven plata.")
+
+      h2(pdf, "El descuento ahora se ve en la factura")
+      p_(pdf, "Antes, cuando alguien hacía un descuento le bajaba el precio a la línea: la factura salía más " \
+              "barata y <b>nada decía que hubo descuento</b>, ni de cuánto, ni quién lo dio. Ahora es un campo " \
+              "propio y sale impreso, en monto o en porcentaje según como lo capturen. El ISV se calcula sobre " \
+              "el neto, después del descuento, que es como corresponde.")
+
+      h2(pdf, "Las notas de débito y crédito")
+      p_(pdf, "Acá el control quedó en otro lado, y a propósito: la nota <b>no saca su monto de la tabla de " \
+              "tarifas</b> — ajustar a mano es justamente para lo que sirve. Trabar cada línea sería trabar lo " \
+              "que el documento viene a hacer.")
+      p_(pdf, "Entonces el PIN se pide <b>al emitir</b>, que es el momento en que el saldo del cliente cambia. " \
+              "Y con una regla más: <b>quien arma la nota no puede emitirla él mismo</b>, la tiene que " \
+              "autorizar otra persona. Una nota de crédito es plata que se le devuelve al cliente, así que " \
+              "vale que pasen dos por ahí.")
+
+      h2(pdf, "Dónde ver lo autorizado")
+      p_(pdf, "Hay una pantalla nueva, <b>Autorizaciones</b>, donde se ve todo junto: qué se cambió, contra " \
+              "qué monto estaba antes, quién lo autorizó y por qué. Arriba sale el <b>total descontado</b> y " \
+              "el <b>total devuelto en notas de crédito</b> del período que estés viendo. La ven los mismos " \
+              "que pueden autorizar.")
 
       # ── 5. Pendientes ──
       h1(pdf, "5. Lo que falta que decidas vos")
@@ -406,9 +417,9 @@ namespace :docs do
             "Un cliente \"Clientes Amigos\" con 200 libras de CER paga $4.20 la libra ($840) mientras el público paga $3.50 ($700), porque el escalonado solo lo pusiste en el precio de lista. ¿Es así o las categorías también bajan de escalón?",
             "Tu tabla da un solo precio por categoría (columna NORMAL) y los tarifarios escalonados están declarados solo para el Precio Normal. Lo cargamos literal a como lo mandaste.",
             "" ],
-          [ "6", "Descuento como campo propio",
-            "Para el código del supervisor ya nos diste todo (PIN de 4 dígitos, por línea, destraba precio/descuento/quitar líneas/peso). Solo queda esto: hoy el descuento NO existe como dato — se hace bajándole el precio a la línea. ¿Lo convertimos en un campo propio, para que la factura diga que hubo descuento y de cuánto?",
-            "Como está hoy, un descuento es invisible: la factura sale con un precio más bajo y nada dice que fue un descuento, ni de cuánto, ni quién lo dio. Si el PIN va a autorizar descuentos, conviene que el descuento se vea.",
+          [ "6", "PINs de los supervisores",
+            "El código del supervisor ya está funcionando. Falta que nos digas a quiénes les asignamos PIN — cualquiera de estos cuatro roles puede tener uno: Administrador, Supervisor Caja, Supervisor Pre-Factura y Supervisor de Servicio al Cliente.",
+            "Un administrador se los asigna desde la pantalla de usuarios y después cada supervisor lo cambia por uno que solo él sepa. Mientras no lo cambie, el administrador conoce el PIN con el que ese supervisor autoriza — la pantalla de usuarios marca a quiénes les falta cambiarlo.",
             "" ],
           [ "7", "Etiqueta — qué cabe",
             "La etiqueta de ETIQUETAR mide 2.25 x 1.25 pulgadas (Dymo). A ese tamaño NO caben los 11 campos legibles con el código de barras encima. ¿Cuáles son los 4 o 5 imprescindibles, los que el operario tiene que leer de lejos en la estantería?",
@@ -745,7 +756,10 @@ namespace :docs do
           [ "<b>Cargos automáticos</b>", "La recolecta y el cambio de servicio se agregan solos a la pre-factura." ],
           [ "<b>Cambio de servicio</b>", "Genera nota de débito al facturar. El monto es ajustable en la pre-factura." ],
           [ "<b>Prepagado en Miami</b>", "Si pagó allá, en Honduras solo se hace una factura simbólica de $1 más impuesto." ],
-          [ "<b>Tareas abiertas</b>", "Un paquete con tareas pendientes no avanza de etapa." ]
+          [ "<b>Tareas abiertas</b>", "Un paquete con tareas pendientes no avanza de etapa." ],
+          [ "<b>El precio sale bloqueado</b>", "En la pre-factura nadie edita el monto suelto. Precio, peso, descuento y quitar una línea piden el PIN de un supervisor, y queda registrado quién autorizó y por qué." ],
+          [ "<b>Descuento a la vista</b>", "El descuento es un campo propio y sale impreso en la factura, en monto o en porcentaje. El ISV se calcula sobre el neto, después del descuento." ],
+          [ "<b>Emitir una nota lleva dos firmas</b>", "Las notas de débito y crédito se arman libres, pero al emitirlas —que es cuando cambia el saldo del cliente— piden el PIN de un supervisor distinto de quien la creó." ]
         ], anchos: [ 140, 347 ])
 
       h2(pdf, "Entrega Personal")
@@ -802,7 +816,8 @@ namespace :docs do
           [ "<b>6. Dashboard</b>", "Indicadores del día y accesos rápidos.", "Parcial" ],
           [ "<b>10. Contexto</b>", "La franja de tareas y notas del cliente mientras se captura.", "Listo" ],
           [ "<b>11. Tarifas</b>", "Todo lo de la parte 2: precios, mínimos, escalones y la moneda. Tu tabla de precios 2026 ya está cargada.", "Listo" ],
-          [ "<b>12. Escaneo al empacar</b>", "Pre-etiqueta de caja y verificación al empacar.", "Planificada" ]
+          [ "<b>12. Escaneo al empacar</b>", "Pre-etiqueta de caja y verificación al empacar.", "Planificada" ],
+          [ "<b>13. Autorizaciones</b>", "El precio bloqueado en la pre-factura, el PIN del supervisor, el descuento como campo propio y la pantalla donde se revisa todo lo autorizado.", "Listo" ]
         ], anchos: [ 118, 300, 69 ])
 
       pdf.start_new_page
@@ -816,7 +831,7 @@ namespace :docs do
           [ "<b>Fotos de paquetes</b>", "Tomar foto al recibir y mandársela al cliente." ],
           [ "<b>Reportes</b>", "El módulo de reportes propiamente dicho." ],
           [ "<b>Escaneo al empacar</b>", "Lo que pediste que quedara planificado: se escanea cada paquete al meterlo a la caja y el sistema pita si el servicio no concuerda. Al armar el manifiesto se jalan las cajas ya empacadas." ],
-          [ "<b>Código del supervisor</b>", "Que en la pre-factura la línea salga bloqueada y solo se destrabe cuando un supervisor teclea su PIN de 4 dígitos, dejando registro de quién autorizó qué. Hoy cualquiera con acceso a pre-facturas puede cambiar el monto sin dejar rastro del porqué. Incluye el rol nuevo de Supervisor de Servicio al Cliente." ]
+          [ "<b>Los 16 cargos que no son flete</b>", "Recolecta, retenido en Miami, entrega nacional, manejo y gastos de destino, flete México… están en tu tabla de precios pero viven en otro módulo del sistema, y varios ya existen cargados con otros valores. Hay que reconciliarlos." ]
         ], anchos: [ 130, 357 ])
 
       # ══ PARTE 4 ══
@@ -846,7 +861,7 @@ namespace :docs do
           [ "3", "<b>CKM está en dos reglas que se contradicen</b>: es de la serie CK (mínimo L.200) y además es marítimo (mínimo en libras). En tu tabla le pusiste L.173.91, así que cargamos ese. ¿Confirmás?" ],
           [ "4", "<b>Regular y VIP</b> no aparecen en tu tabla y tienen 8 clientes asignados. ¿A cuál de las categorías nuevas los pasamos?" ],
           [ "5", "Las <b>categorías no bajan de escalón</b>: un Clientes Amigos con 200 lb de CER paga $4.20/lb y el público paga $3.50. Es literal a tu tabla — decinos si es lo que querés." ],
-          [ "6", "<b>El descuento hoy no existe como dato</b> — se hace bajándole el precio a la línea, así que la factura no dice que hubo descuento. Si el PIN va a autorizar descuentos, ¿lo convertimos en un campo propio?" ],
+          [ "6", "<b>A quiénes les asignamos PIN de autorización.</b> Pueden tenerlo Administrador, Supervisor Caja, Supervisor Pre-Factura y Supervisor de Servicio al Cliente." ],
           [ "7", "<b>Cuáles campos</b> son imprescindibles en la etiqueta de 2.25 × 1.25." ],
           [ "8", "Confirmar la <b>lista de proveedores</b> de entrega personal para dejarlos precargados." ]
         ], anchos: [ 22, 465 ])
