@@ -34,9 +34,14 @@ module EtiquetaHelper
   end
 
   # "1/2" — número de caja sobre el total. Solo cuando el tracking se dividió.
+  # "Número y cantidad de paquetes" — el campo 9 de la lista de Yusef.
+  #
+  # Devuelve "1/1" cuando el tracking trae una sola caja, y no en blanco como
+  # antes: el espacio ya está reservado en la etiqueta, así que no cuesta nada,
+  # y en blanco es ambiguo — el operario no sabe si hay una sola caja o si el
+  # dato no se imprimió. Con "1/1" sabe que no tiene que buscar más.
   def etiqueta_fraccion(paquete)
-    total = paquete.cantidad_paquetes.to_i
-    return nil unless total > 1
+    total = [ paquete.cantidad_paquetes.to_i, 1 ].max
 
     "#{paquete.numero_caja.presence || 1}/#{total}"
   end

@@ -685,6 +685,26 @@ Cuatro formatos distintos en la operación; **solo se rediseña el de ETIQUETAR*
 
 Se separa la etiqueta del Warehouse Receipt. Código de barras **Code 128** del número de recepción vía `barby` + `chunky_png` como data-URI PNG (server-side, más confiable para impresión que una librería JS).
 
+#### ✅ Qué campos van — resuelto (2026-08-06)
+
+> "No creo cambiar el tamaño de la etiqueta. **Allí es letra pequeña unas y otras grandes.**" — Yusef
+
+La pregunta era cuáles de los 11 campos recortar. La respuesta fue que **no se recorta ninguno**: van los 11 y lo que cambia es el cuerpo de letra. El tamaño de 2.25 × 1.25 in se queda.
+
+| | Campos |
+|---|---|
+| **Grande** — se lee de lejos en la estantería | Número de recepción, tipo de envío, código y nombre del cliente, sucursal donde retira, n/N de paquetes |
+| **Chico** — solo hace falta tenerlo a mano | Tracking principal y secundario, tercero, driver, ciudad del cliente, fecha y hora, iniciales |
+
+Dos ajustes que salieron de confirmar que van los 11:
+
+- **Tercero y driver comparten renglón.** En dos renglones se comían la línea del pie. Un paquete de Entrega Personal suele traer los dos, así que era el caso real, no el borde.
+- **`etiqueta_fraccion` devuelve `1/1`** en vez de vacío cuando el tracking trae una sola caja. El espacio ya estaba reservado —no cuesta nada— y en blanco es ambiguo: el operario no sabe si hay una caja o si el dato no se imprimió.
+
+> ⚠️ El presupuesto vertical son **1.15 in de contenido** y con los 11 campos queda al filo. `overflow:hidden` recorta **en silencio**.
+>
+> `test/controllers/etiqueta_campos_test.rb` fija que los 11 salgan en el HTML, pero **ningún test de Rails ve un recorte de CSS**. Que quepan solo se verifica imprimiendo una — y el caso a probar es un paquete con tercero **y** driver, que es el que más campos lleva.
+
 ### Sembrado de precios reales (PR-10.g)
 
 Los números viven en `lib/tarifas_propuesta_2026.rb` como constantes que espejan

@@ -2,12 +2,24 @@
     paquete. Spec: docs/05, Conversación 5 (Yusef anotó la del legacy campo
     por campo).
 
-    A este tamaño no caben los 11 campos legibles, así que la jerarquía es:
-    lo que el operario lee de lejos en la estantería va grande (número de
-    recepción, cliente, sucursal), y el resto va de apoyo abajo.
+    Yusef (2026-08-06) confirmó las dos cosas que faltaban: **no se cambia el
+    tamaño** de la etiqueta, y **van los 11 campos** — "allí es letra pequeña
+    unas y otras grandes". O sea que la respuesta no era recortar campos sino
+    graduar el cuerpo de letra.
 
-    ⬜ Pendiente: Yusef tiene que confirmar cuáles son los imprescindibles.
-    Si dice que sobra alguno, se saca de acá sin tocar nada más. %>
+    La jerarquía queda así:
+      GRANDE  lo que el operario lee de lejos en la estantería — número de
+              recepción, tipo de envío, código y nombre del cliente, sucursal
+              donde retira, y el n/N de paquetes.
+      CHICO   lo que solo hace falta tener a mano — tracking(s), tercero,
+              driver, ciudad del cliente, fecha y hora, iniciales.
+
+    ⚠️ El presupuesto vertical es 1.15 in de contenido y con los 11 campos
+    queda al filo. `overflow:hidden` recorta en silencio, así que tercero y
+    driver comparten renglón cuando existen los dos (el caso de Entrega
+    Personal) y el interlineado va apretado a mano. Cualquier campo que se
+    agregue de acá en adelante hay que imprimirlo para verificar: no hay test
+    que atrape un recorte de CSS. %>
 <div class="etq">
 
   <%# ── Código de barras del número de recepción ──
@@ -45,18 +57,23 @@
     </span>
   </div>
 
-  <%# ── Tercero ── "agregar nombre de cliente tercero" %>
-  <% if paquete.tercero %>
-    <div style="font-size:7pt; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-      <span style="font-weight:bold;">3ro:</span> <%= paquete.tercero.nombre_completo.to_s.upcase %>
-    </div>
-  <% end %>
+  <%# ── Tercero y driver ── "agregar nombre de cliente tercero" y "otro driver
+      para poner el nombre del driver, en caso de tenerlo, POR EL RÓTULO".
 
-  <%# ── Driver ── "otro driver para poner el nombre del driver, en caso de
-      tenerlo, POR EL RÓTULO" (Yusef). Solo aparece si se capturó. %>
-  <% if paquete.driver.present? %>
-    <div style="font-size:7pt; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-      <span style="font-weight:bold;">Driver:</span> <%= paquete.driver.to_s.upcase %>
+      Comparten renglón: un paquete de Entrega Personal suele traer los dos, y
+      en dos renglones se comía la línea del pie sin avisar. %>
+  <% if paquete.tercero || paquete.driver.present? %>
+    <div style="display:flex; gap:.07in; font-size:7pt; overflow:hidden;">
+      <% if paquete.tercero %>
+        <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;">
+          <span style="font-weight:bold;">3ro:</span> <%= paquete.tercero.nombre_completo.to_s.upcase %>
+        </span>
+      <% end %>
+      <% if paquete.driver.present? %>
+        <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;">
+          <span style="font-weight:bold;">Driver:</span> <%= paquete.driver.to_s.upcase %>
+        </span>
+      <% end %>
     </div>
   <% end %>
 

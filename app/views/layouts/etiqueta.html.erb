@@ -25,6 +25,11 @@
       flex-direction: column;
       justify-content: space-between;
       overflow: hidden;
+      /* Yusef confirmó que van los 11 campos y que el tamaño de la etiqueta no
+         cambia, así que el presupuesto vertical (1.15in de contenido) queda al
+         filo. El interlineado normal de Arial (~1.15) se comía la última línea
+         cuando el paquete traía tercero y driver. */
+      line-height: 1.05;
     }
 
     /* Una etiqueta por hoja física. */

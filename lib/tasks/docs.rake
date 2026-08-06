@@ -310,8 +310,22 @@ namespace :docs do
           [ "2", "<b>Para CKM, ¿cuál mínimo manda</b> — los L.200, el de libras, o el mayor de los dos?", "CKM es de la serie CK <b>y</b> es marítimo, así que entra en las dos reglas que diste. En tu tabla le pusiste L.173.91, así que cargamos ese." ],
           [ "3", "<b>Regular y VIP no aparecen en tu tabla</b> y tienen 8 clientes asignados. ¿A cuál de las nuevas los pasamos?", "Por ahora se quedaron con los precios viejos, que son más bajos que los de lista." ],
           [ "4", "<b>Las categorías no bajan de escalón.</b> Un Clientes Amigos con 200 lb de CER paga $4.20/lb ($840) y el público paga $3.50 ($700).", "Tu tabla da un solo precio por categoría y el escalonado está declarado solo para el precio de lista. Lo cargamos literal — decinos si es lo que querés." ],
-          [ "5", "<b>Cuáles campos son imprescindibles en la etiqueta.</b> A 2.25 × 1.25 pulgadas no caben los 11 que anotaste.", "Marcalos en la hoja 3 del Excel." ]
+          [ "5", "<b>A quiénes les asignamos PIN de autorización.</b>", "Pueden tenerlo Administrador, Supervisor Caja, Supervisor Pre-Factura y Supervisor de Servicio al Cliente." ]
         ], anchos: [ 22, 250, 215 ])
+
+      h2(pdf, "La etiqueta ya quedó")
+      p_(pdf, "Nos dijiste que <b>no cambia de tamaño</b> y que “allí es letra pequeña unas y otras grandes”. " \
+              "Con eso quedó claro que no había que recortar campos sino graduar el tamaño de letra, así que " \
+              "<b>van los 11</b>:")
+      tabla(pdf,
+        [ "Tamaño", "Qué lleva" ],
+        [
+          [ "<b>Grande</b> — se lee de lejos en la estantería", "Número de recepción, tipo de envío, código y nombre del cliente, sucursal donde retira, y el n/N de paquetes." ],
+          [ "<b>Chico</b> — solo hace falta tenerlo a mano", "Tracking principal y el secundario, tercero, driver, ciudad del cliente, fecha y hora, e iniciales de quien la registró." ]
+        ], anchos: [ 175, 312 ])
+      p_(pdf, "A ese tamaño va justo, así que cuando la impriman <b>revisá que no se corte la última línea</b> " \
+              "(la del n/N, la fecha y las iniciales) en un paquete que traiga tercero y driver a la vez, que " \
+              "es el que más campos lleva. Si algo se corta, avisanos y ajustamos.")
 
       h2(pdf, "De dónde sale la pregunta 2")
       p_(pdf, "En el audio de tarifas decís dos cosas que chocan para el mismo servicio:")
@@ -502,9 +516,9 @@ namespace :docs do
       # ─────────────────────────────────────────────────────────────
       wb.add_worksheet(name: "3. Etiqueta") do |s|
         s.add_row [ "Etiqueta de ETIQUETAR — 2.25 x 1.25 pulgadas (Dymo)" ], style: titulo
-        s.add_row [ "Estos son los 11 campos que anotaste en la etiqueta que mandaste. Marcá con una X los que SÍ o SÍ tienen que ir, sabiendo que a ese tamaño no caben todos." ], style: nota
+        s.add_row [ "Los 11 campos que anotaste. Nos dijiste que el tamaño de la etiqueta no cambia y que \"allí es letra pequeña unas y otras grandes\", así que van los 11 con jerarquía de tamaño. Esta hoja queda de referencia: si algo sale mal impreso, marcalo en la última columna." ], style: nota
         s.add_row []
-        s.add_row [ "#", "Campo", "Ejemplo", "Tu nota", "¿Imprescindible? (X)" ], style: [ navy, navy, navy, navy, gold ]
+        s.add_row [ "#", "Campo", "Ejemplo", "Tu nota", "¿Sale bien impreso?" ], style: [ navy, navy, navy, navy, gold ]
 
         [
           [ 1,  "Código de barras del número de recepción", "(barras)", "No existe hoy en el sistema — hay que agregarlo" ],
@@ -862,7 +876,7 @@ namespace :docs do
           [ "4", "<b>Regular y VIP</b> no aparecen en tu tabla y tienen 8 clientes asignados. ¿A cuál de las categorías nuevas los pasamos?" ],
           [ "5", "Las <b>categorías no bajan de escalón</b>: un Clientes Amigos con 200 lb de CER paga $4.20/lb y el público paga $3.50. Es literal a tu tabla — decinos si es lo que querés." ],
           [ "6", "<b>A quiénes les asignamos PIN de autorización.</b> Pueden tenerlo Administrador, Supervisor Caja, Supervisor Pre-Factura y Supervisor de Servicio al Cliente." ],
-          [ "7", "<b>Cuáles campos</b> son imprescindibles en la etiqueta de 2.25 × 1.25." ],
+          [ "7", "<b>Imprimir una etiqueta y revisar que no se corte nada</b>, sobre todo en un paquete que traiga tercero y driver a la vez — es el que más campos lleva." ],
           [ "8", "Confirmar la <b>lista de proveedores</b> de entrega personal para dejarlos precargados." ]
         ], anchos: [ 22, 465 ])
 
