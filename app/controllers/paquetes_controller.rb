@@ -1,5 +1,5 @@
 class PaquetesController < ApplicationController
-  before_action :set_paquete, only: [ :show, :edit, :update, :label, :etiqueta, :destroy, :eliminar_de_pre_alerta, :reimprimir_etiquetas, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero ]
+  before_action :set_paquete, only: [ :show, :edit, :update, :warehouse_receipt, :etiqueta, :destroy, :eliminar_de_pre_alerta, :reimprimir_etiquetas, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero ]
   before_action :authorize_tracking_actions, only: [ :check_tracking, :search ]
   before_action :authorize_edit, only: [ :edit, :update, :eliminar_de_pre_alerta, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero ]
   before_action :authorize_delete, only: [ :destroy ]
@@ -127,7 +127,13 @@ class PaquetesController < ApplicationController
 
   # Warehouse Receipt — hoja carta con términos y condiciones, para el
   # expediente. NO es lo que se le pega a la caja.
-  def label
+  # El Warehouse Receipt: hoja carta con términos y condiciones, para el
+  # expediente. NO es la etiqueta que se pega a la caja — esa es `#etiqueta`.
+  #
+  # PR-10.d.3: se llamaba `#label`. El nombre venía del legacy, cuando este
+  # documento se usaba como si fuera la etiqueta — que es justo lo que Yusef
+  # reportó: "aquí está tirando el warehouse, no la etiqueta".
+  def warehouse_receipt
     render layout: "print"
   end
 
@@ -232,7 +238,9 @@ class PaquetesController < ApplicationController
       @hermanas.sort_by!(&:numero_caja)
       render layout: false # modal partial
     else
-      redirect_to label_paquete_path(@paquete)
+      # PR-10.d.3: iba al Warehouse Receipt. Esta acción se llama
+      # "reimprimir_etiquetas" y sacaba la hoja carta.
+      redirect_to etiqueta_paquete_path(@paquete)
     end
   end
 
@@ -246,14 +254,16 @@ class PaquetesController < ApplicationController
       redirect_to paquetes_path, alert: "Selecciona al menos una caja para imprimir."
       return
     end
-    @paquetes = Paquete.where(id: ids).includes(:cliente, :sucursal, :tipo_envio,
-                                                 warehouse_receipt: %i[supplier agent consignee])
+    # PR-10.d.3: las asociaciones son las de la etiqueta, no las del Warehouse
+    # Receipt — esto renderizaba warehouse receipts en carta.
+    @paquetes = Paquete.where(id: ids)
+                       .includes(:cliente, :tercero, :sucursal, :tipo_envio, :proveedor, :user)
                        .order(:numero_caja, :id)
     if @paquetes.empty?
       redirect_to paquetes_path, alert: "No se encontraron paquetes con los IDs solicitados."
       return
     end
-    render layout: "print"
+    render layout: "etiqueta"
   end
 
   def destroy

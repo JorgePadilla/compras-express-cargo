@@ -505,7 +505,10 @@ end %>
                 <% end %>
               </td>
               <td class="px-3 py-2 text-center">
-                <%= link_to label_paquete_path(paquete), target: "_blank", class: "inline-flex text-gray-400 hover:text-cec-navy dark:hover:text-cec-gold", title: "Imprimir etiqueta" do %>
+                <%# PR-10.d.3: apuntaba al Warehouse Receipt aunque el tooltip
+                    dijera "Imprimir etiqueta". El WR sigue a un click, desde el
+                    detalle del paquete. %>
+                <%= link_to etiqueta_paquete_path(paquete), target: "_blank", class: "inline-flex text-gray-400 hover:text-cec-navy dark:hover:text-cec-gold", title: "Imprimir etiqueta" do %>
                   <%= heroicon "printer", variant: :outline, options: { class: "w-4 h-4" } %>
                 <% end %>
               </td>

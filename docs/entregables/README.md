@@ -17,7 +17,7 @@ Fuente: `lib/tasks/docs.rake`.
 |---|---|
 | `resumen_para_yusef.pdf` | Resumen en lenguaje de negocio de lo construido en las Fases 10 y 11, los errores de facturación que se encontraron, y lo que falta que él decida. 5 páginas. |
 | `historia_y_reglas.pdf` | El documento largo: el recorrido de un paquete, **todas las reglas de negocio que el sistema aplica**, la historia por etapas y las decisiones tomadas. La parte 2 es la que hay que revisar — si una regla está mal, se cobra mal. 7 páginas. |
-| `preguntas_para_yusef.xlsx` | Hoja 1: las preguntas abiertas, con su contexto, para que las conteste en la columna amarilla. Hoja 2: **todas las tarifas cargadas, leídas de la base** — lo que el sistema va a cobrar, para que lo confirme. Hoja 3: los 11 campos de la etiqueta, para que marque los imprescindibles. |
+| `preguntas_para_yusef.xlsx` | **Hoja 1:** las 12 preguntas abiertas, ordenadas por urgencia — las tres primeras son las que hoy hacen que el sistema cobre distinto de lo que él quiere. **Hoja 2:** todas las tarifas cargadas, leídas de la base. **Hoja 3:** los 11 campos de la etiqueta. **Hoja 4:** los cargos que no son flete, con la moneda que falta definir. |
 
 ## Cuándo regenerarlos
 

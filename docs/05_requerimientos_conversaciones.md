@@ -1912,10 +1912,47 @@ El detalle técnico está en `docs/06` — Fase 13.
    porque su columna es un precio plano y el escalonado está declarado solo para
    el precio de lista. Es literal a la hoja, pero hay que preguntarle si es lo
    que quiere.
-6. **Los 16 cargos que no son flete** (CAMBIO DE SERVICIO, RECOLECTA MIAMI,
-   RETENIDO MIAMI, ENTREGA NACIONAL, MANEJO Y GASTOS, FLETE MEXICO…) son
-   `ServicioExtra`, otro modelo con su propia pantalla. Varios ya existen con
-   otros valores, así que reconciliarlos va en su propio PR.
+6. **Los 16 cargos que no son flete** — parcialmente resuelto, ver abajo.
+
+### Los cargos que no son flete (PR-10.i)
+
+De las 16 filas que no son tipos de envío, **se cargaron cinco**: los que el
+propio texto de la hoja define sin dejar dudas.
+
+| Cargo | Precio | De dónde sale la certeza |
+|---|---|---|
+| Entrega nacional | **L.86.96** | El título dice `L100` y 86.96 + ISV = L.100.00 exactos |
+| Compra online | **$1.00** | Su nota: *"ponerlo $1 más ISV"* |
+| Manejo y gastos de destino | **L.1.00** | Su nota: *"ponerlo lps1 más ISV"* |
+| Flete internacional UPS | **$1.00** | El título dice `FLETE INTERNACIONAL UPS $1` |
+| Retornado en Miami | **$5.00** | Su nota: *"todo en $"* |
+
+Ninguno lleva el ISV adentro: la fila 30 de la hoja dice
+`**PRECIOS NO INCLUYEN IMPUESTOS`, y eso sí aplica a todo.
+
+#### ⬜ Los otros diez esperan a que Yusef confirme la moneda
+
+**La hoja tiene una leyenda de colores que nunca se aplicó.** Las filas 31 y 32
+declaran `**PRECIOS EN $` y `**PRECIOS EN LEMPIRAS` con su color, pero al leer
+los rellenos del XLSX **todas las celdas de precio tienen relleno nulo**. O sea
+que el número solo no dice en qué moneda está.
+
+Cargarlos adivinando sería peor que no cargarlos — son montos que se le cobran
+al cliente.
+
+| Cargo | Por qué no se cargó |
+|---|---|
+| **Cambio de servicio** | El título dice `L100`, el valor es `5` y la nota *"pasarlo a dólares"*. Y **ya existe cargado a $15**, que es 3× lo que dice su hoja. Es el que se **auto-genera** en nota de débito al facturar, así que tocarlo a ciegas cambia lo que se cobra solo |
+| Retenido Miami | Valor `5` con *"pasarlo a dólares"*: no se sabe si el 5 ya es dólares o falta convertirlo |
+| Servicio de entrada y salida | Valor `10` / mínimo `5`, misma nota, misma duda |
+| Recolecta Miami | Choca con `TarifaRecolecta`, que Yusef mismo pidió **por zona** en vez de los $35 fijos |
+| Ajuste · Entrega local · Consolidando en Miami | Valor `1` sin moneda |
+| Flete México | Valor `5` / mínimo `6` sin moneda |
+| Flete | Es el flete del paquete, que vive en `Tarifa` — no es un servicio extra |
+| Producto ejemplo (×2) | Datos de prueba, ya confirmado |
+
+Se aplican con `bin/rails tarifas:sembrar_cargos_2026`, que además **imprime los
+diez pendientes con su motivo** para que no se pierdan de vista.
 
 ---
 

@@ -246,9 +246,31 @@ namespace :docs do
         ], anchos: [ 118, 369 ])
 
       p_(pdf, "<b>Familia</b> y <b>Revendedores</b> venían todos en cero, así que sus clientes pagan precio de " \
-              "lista por ahora. De <b>Mayoristas</b> solo vino el precio de CKM. Los <b>16 cargos que no son " \
-              "flete</b> (recolecta, retenido, entrega nacional, manejo y gastos…) no se cargaron todavía: son " \
-              "otro módulo y varios ya existen con otros valores, así que hay que reconciliarlos aparte.")
+              "lista por ahora. De <b>Mayoristas</b> solo vino el precio de CKM.")
+
+      h2(pdf, "Los cargos que no son flete")
+      p_(pdf, "De las 16 filas que no son tipos de envío, <b>cargamos cinco</b> — los que tu propia hoja deja " \
+              "claros sin que tengamos que interpretar nada:")
+      tabla(pdf,
+        [ "Cargo", "Precio", "Cómo lo supimos" ],
+        [
+          [ "<b>Entrega nacional</b>", "L.86.96", "El título dice L100, y 86.96 más ISV da L.100.00 exactos." ],
+          [ "<b>Compra online</b>", "$1.00", "Tu nota: “ponerlo $1 más ISV”." ],
+          [ "<b>Manejo y gastos de destino</b>", "L.1.00", "Tu nota: “ponerlo lps1 más ISV”." ],
+          [ "<b>Flete internacional UPS</b>", "$1.00", "El título de la fila dice “$1”." ],
+          [ "<b>Retornado en Miami</b>", "$5.00", "Tu nota: “todo en $”." ]
+        ], anchos: [ 150, 60, 277 ])
+
+      p_(pdf, "<b>Los otros diez no los cargamos, y te pedimos que nos digas la moneda.</b> En tu hoja pusiste " \
+              "una leyenda de colores —“precios en $” y “precios en lempiras”— pero <b>las celdas de precio " \
+              "quedaron sin colorear</b>, así que viendo solo el número no hay cómo saber si un 5 son cinco " \
+              "dólares o cinco lempiras. Preferimos preguntarte antes que adivinar: son montos que se le cobran " \
+              "al cliente.")
+
+      p_(pdf, "Hay uno que conviene mirar primero: el <b>cambio de servicio</b>. En tu hoja el título dice L100, " \
+              "el valor dice 5 y anotaste “pasarlo a dólares” — y en el sistema está cargado hoy en <b>$15</b>. " \
+              "Ese cargo se genera <b>solo</b>, en una nota de débito, cada vez que se factura un paquete al que " \
+              "le cambiaron el servicio. Así que mientras no lo confirmemos, sigue cobrando los $15.")
 
       p_(pdf, "<b>En la hoja 2 del Excel está todo lo que quedó cargado</b>, leído directo de la base — es " \
               "literalmente lo que va a cobrar el sistema. Vale la pena que le des una pasada.")
@@ -404,47 +426,73 @@ namespace :docs do
       # Hoja 1 — Preguntas
       # ─────────────────────────────────────────────────────────────
       wb.add_worksheet(name: "1. Preguntas") do |s|
-        s.add_row [ "Preguntas para Yusef — 2026-08-05" ], style: titulo
-        s.add_row [ "Llená solo la columna amarilla. Lo demás es contexto para que no tengas que acordarte." ], style: nota
+        s.add_row [ "Preguntas para Yusef — #{I18n.l(Date.current, format: '%d de %B de %Y')}" ], style: titulo
+        s.add_row [ "Llená solo la columna amarilla. Lo demás es contexto para que no tengas que acordarte de nada." ], style: nota
+        s.add_row [ "Están en orden de urgencia: las primeras son las que hoy hacen que el sistema cobre distinto de lo que vos querés." ], style: nota
         s.add_row []
-        s.add_row [ "#", "Tema", "Pregunta", "Lo que sabemos hoy", "TU RESPUESTA" ],
-                  style: [ navy, navy, navy, navy, gold ]
+        s.add_row [ "#", "Urgencia", "Tema", "Pregunta", "Lo que sabemos hoy", "TU RESPUESTA" ],
+                  style: [ navy, navy, navy, navy, navy, gold ]
 
         [
-          [ "1", "Precios cargados",
-            "Ya cargamos tu tabla PROPUESTA al sistema. En la hoja 2 está TODO lo que quedó cargado, exactamente como lo va a cobrar el sistema. ¿Está bien?",
-            "Tomamos la hoja PROPUESTA de \"precios por categoria 2026.xlsx\". Los 16 cargos que no son flete (recolecta, retenido, entrega nacional, manejo…) NO se cargaron todavía: son otro módulo del sistema y varios ya existen con otros valores, así que los vamos a reconciliar aparte.",
+          # ── Lo que hoy cobra distinto de lo que él quiere ──
+          [ "1", "ALTA", "Cambio de servicio",
+            "En tu hoja el cambio de servicio dice 5 y el titulo dice L100, con la nota \"pasarlo a dolares\". En el sistema esta cargado en $15. ¿Cual queda?",
+            "Este cargo se genera SOLO, en una nota de debito, cada vez que se factura un paquete al que le cambiaron el servicio. Mientras no nos digas, sigue cobrando los $15 — que es el triple de los 5 de tu hoja.",
             "" ],
-          [ "2", "Mínimo CEM y CKM en libras",
-            "¿Hace falta todavía un mínimo en LIBRAS para CEM y CKM, o con el mínimo en dinero de la tabla ya está?",
-            "Tu tabla trae el mínimo en dinero (L.200 con ISV) pero no el de libras. En la práctica el escalonado ya cubre el paquete chico: un CEM de 2 libras paga 4.50/lb = $9. Documentado en abril: CEM = 8 libras, CKM = 20 libras. En el audio dijiste 3 o 4 libras.",
+          [ "2", "ALTA", "Moneda de 10 cargos",
+            "Necesitamos la moneda de 10 cargos de tu hoja. Estan en la HOJA 4 con la duda de cada uno y una columna para que escribas $ o LPS.",
+            "En tu hoja pusiste la leyenda \"precios en $\" y \"precios en lempiras\" pero las celdas de precio quedaron sin colorear, asi que un 5 no dice si son 5 dolares o 5 lempiras. Ya cargamos los 5 que si dejaste claros con una nota escrita.",
             "" ],
-          [ "3", "CKM cae en dos reglas",
-            "Para CKM, ¿cuál mínimo manda: los L.200, el de libras, o el que resulte MAYOR de los dos?",
-            "En el audio dijiste \"los servicios serie CK son 200 lempiras ya con ISV\" (aplica a CKA y CKM) y también \"el marítimo lo tenemos estipulado en cantidad de libras\" (aplica a CEM y CKM). CKM es las dos cosas. En tu tabla le pusiste L.173.91, así que cargamos ese — confirmalo.",
+          [ "3", "ALTA", "Recolecta: ¿zona o plano?",
+            "Vos pediste que la recolecta se cobrara POR ZONA en vez de $35 fijos, y asi esta hecho. Pero tu hoja nueva dice 35 plano. ¿Cual mandamos?",
+            "Hoy el sistema tiene una tabla de tarifas de recolecta por zona/distancia, que es lo que pediste en su momento. Si mandamos el 35 plano, esa tabla deja de usarse.",
             "" ],
-          [ "4", "Categorías que no vinieron",
-            "En el sistema hay 8 clientes en las categorías \"Regular\" y \"VIP\", que no aparecen en tu tabla. ¿A cuál de las nuevas los pasamos, o los dejamos como están?",
-            "Las categorías de tu tabla son: Clientes Amigos, doTERRA/Farmasi, Familia, Mayoristas, Personal de CEC, Shein, Revendedores y Sin Cobro Mínimo. Familia y Revendedores vinieron en cero, así que por ahora sus clientes pagan precio de lista. Mayoristas solo trae el precio de CKM.",
+
+          # ── Revisar lo que ya quedó cargado ──
+          [ "4", "MEDIA", "Revisar los precios cargados",
+            "En la HOJA 2 esta TODO lo que quedo cargado de tu tabla, leido directo del sistema. Es literalmente lo que va a cobrar. ¿Esta bien?",
+            "Tomamos la hoja PROPUESTA de \"precios por categoria 2026.xlsx\". Si algo esta mal, escribilo en la ultima columna de esa hoja.",
             "" ],
-          [ "5", "Descuento y escalones",
-            "Un cliente \"Clientes Amigos\" con 200 libras de CER paga $4.20 la libra ($840) mientras el público paga $3.50 ($700), porque el escalonado solo lo pusiste en el precio de lista. ¿Es así o las categorías también bajan de escalón?",
-            "Tu tabla da un solo precio por categoría (columna NORMAL) y los tarifarios escalonados están declarados solo para el Precio Normal. Lo cargamos literal a como lo mandaste.",
+          [ "5", "MEDIA", "Las categorías no bajan de escalón",
+            "Un cliente \"Clientes Amigos\" con 200 libras de CER paga $4.20 la libra ($840) mientras el publico paga $3.50 ($700). ¿Es asi, o las categorias tambien deberian bajar de escalon?",
+            "Tu tabla da un solo precio por categoria (columna NORMAL) y los tarifarios escalonados los declaraste solo para el Precio Normal. Lo cargamos literal a como lo mandaste, pero el resultado es que un amigo paga mas que un cliente de mostrador en paquetes grandes.",
             "" ],
-          [ "6", "PINs de los supervisores",
-            "El código del supervisor ya está funcionando. Falta que nos digas a quiénes les asignamos PIN — cualquiera de estos cuatro roles puede tener uno: Administrador, Supervisor Caja, Supervisor Pre-Factura y Supervisor de Servicio al Cliente.",
-            "Un administrador se los asigna desde la pantalla de usuarios y después cada supervisor lo cambia por uno que solo él sepa. Mientras no lo cambie, el administrador conoce el PIN con el que ese supervisor autoriza — la pantalla de usuarios marca a quiénes les falta cambiarlo.",
+          [ "6", "MEDIA", "CKM cae en dos reglas",
+            "Para CKM, ¿cual minimo manda: los L.200, el de libras, o el que resulte MAYOR de los dos?",
+            "En el audio dijiste \"los servicios serie CK son 200 lempiras ya con ISV\" (aplica a CKA y CKM) y tambien \"el maritimo lo tenemos estipulado en cantidad de libras\" (aplica a CEM y CKM). CKM es las dos cosas. En tu tabla le pusiste L.173.91, asi que cargamos ese.",
             "" ],
-          [ "7", "Etiqueta — qué cabe",
-            "La etiqueta de ETIQUETAR mide 2.25 x 1.25 pulgadas (Dymo). A ese tamaño NO caben los 11 campos legibles con el código de barras encima. ¿Cuáles son los 4 o 5 imprescindibles, los que el operario tiene que leer de lejos en la estantería?",
-            "Nuestra apuesta: (1) código de barras, (2) número de recepción, (3) código + nombre del cliente, (4) sucursal donde retira, (5) n/N de paquetes. Los 11 campos están listados en la hoja 3.",
+          [ "7", "MEDIA", "Mínimo en libras de CEM y CKM",
+            "¿Hace falta todavia un minimo en LIBRAS para CEM y CKM, o con el minimo en dinero de tu tabla ya esta?",
+            "Tu tabla trae el minimo en dinero (L.200 con ISV) pero no el de libras. En la practica el escalonado ya cubre el paquete chico: un CEM de 2 libras paga $4.50 la libra. Documentado en abril: CEM = 8 libras, CKM = 20 libras. En el audio dijiste 3 o 4 libras.",
+            "" ],
+          [ "8", "MEDIA", "Regular y VIP",
+            "Hay 8 clientes en las categorias \"Regular\" y \"VIP\", que no aparecen en tu tabla. ¿A cual de las nuevas los pasamos, o los dejamos como estan?",
+            "Por ahora se quedaron con los precios viejos, que son mas bajos que los de lista. Las categorias de tu tabla son: Clientes Amigos, doTERRA/Farmasi, Familia, Mayoristas, Personal de CEC, Shein, Revendedores y Sin Cobro Minimo.",
+            "" ],
+          [ "9", "MEDIA", "Mayoristas incompleto",
+            "De MAYORISTAS solo vino el precio de CKM ($1.50). Los otros cuatro servicios vinieron en cero. ¿Que cobran los mayoristas en CER, CKA, EXPRESS y CEM?",
+            "Mientras tanto esos cuatro siguen con los valores viejos del sistema, que no salieron de tu tabla. FAMILIA y REVENDEDORES vinieron todos en cero, asi que sus clientes pagan precio de lista.",
+            "" ],
+
+          # ── Operación ──
+          [ "10", "MEDIA", "PINs de los supervisores",
+            "El codigo del supervisor ya esta funcionando. ¿A quienes les asignamos PIN? Pueden tenerlo: Administrador, Supervisor Caja, Supervisor Pre-Factura y Supervisor de Servicio al Cliente.",
+            "Un administrador se los asigna desde la pantalla de usuarios y despues cada supervisor lo cambia por uno que solo el sepa. Mientras no lo cambie, el administrador conoce el PIN con el que ese supervisor autoriza — la pantalla de usuarios marca a quienes les falta cambiarlo.",
+            "" ],
+          [ "11", "MEDIA", "Probar la etiqueta impresa",
+            "Imprimi una etiqueta y decinos dos cosas: (1) si no se corta nada, sobre todo en un paquete que traiga tercero Y driver, que es el que mas campos lleva; (2) si el lector escanea bien el codigo de barras.",
+            "Los 11 campos van con la jerarquia de tamanos que marcaste. El codigo de barras quedo en 0.20 pulgadas de alto, que es el minimo practico para lectores de mano — es lo unico que no podemos probar nosotros. Los campos estan en la hoja 3.",
+            "" ],
+          [ "12", "BAJA", "Proveedores de entrega personal",
+            "¿Confirmas esta lista para dejarla precargada? Entrega local / personal, Uber o delivery, Driver particular, Courier local.",
+            "Hoy no hay ninguno cargado, asi que la pantalla de Entrega Personal avisa que faltan configurar. En cualquier caso los podes crear, editar o desactivar vos mismo desde Catalogos → Proveedores.",
             "" ]
         ].each do |row|
-          s.add_row row, style: [ wrapb, wrap, wrap, gris, llenar ]
+          s.add_row row, style: [ wrapb, wrapb, wrap, wrap, gris, llenar ]
         end
 
-        s.column_widths 4, 18, 52, 58, 34
-        s.rows[3..].each { |r| r.height = 90 }
+        s.column_widths 4, 10, 20, 50, 56, 32
+        s.rows[4..].each { |r| r.height = 78 }
       end
 
       # ─────────────────────────────────────────────────────────────
@@ -545,6 +593,51 @@ namespace :docs do
         ].each { |r| s.add_row r, style: [ wrapb, wrap, wrap, wrap, nota ] }
 
         s.column_widths 5, 34, 26, 46, 26
+      end
+
+      # ─────────────────────────────────────────────────────────────
+      # Hoja 4 — Los cargos que no son flete
+      #
+      # De los 16 se cargaron 5, los que su propio texto define. Los otros 10
+      # necesitan la moneda: la leyenda de colores de su hoja nunca se aplicó a
+      # las celdas, así que un "5" no dice si son dólares o lempiras.
+      # ─────────────────────────────────────────────────────────────
+      wb.add_worksheet(name: "4. Cargos") do |s|
+        s.add_row [ "Cargos que no son flete — nos falta la moneda" ], style: titulo
+        s.add_row [ "En tu hoja pusiste la leyenda \"precios en $\" y \"precios en lempiras\", pero las celdas de precio quedaron sin colorear. Viendo solo el numero no hay como saber si un 5 son cinco dolares o cinco lempiras, y preferimos preguntarte antes que adivinar: son montos que se le cobran al cliente." ], style: nota
+        s.add_row []
+
+        s.add_row [ "YA CARGADOS — estos los dejaste claros en la misma hoja" ], style: wrapb
+        s.add_row [ "Cargo", "Precio", "Moneda", "Como lo supimos", "" ], style: navy
+        [
+          [ "Entrega nacional",           "86.96", "LPS", "El titulo dice L100, y 86.96 mas ISV da L.100.00 exactos" ],
+          [ "Compra online",              "1.00",  "USD", "Tu nota: \"ponerlo $1 mas isv\"" ],
+          [ "Manejo y gastos de destino", "1.00",  "LPS", "Tu nota: \"ponerlo lps1 mas isv\"" ],
+          [ "Flete internacional UPS",    "1.00",  "USD", "El titulo de la fila dice \"$1\"" ],
+          [ "Retornado en Miami",         "5.00",  "USD", "Tu nota: \"todo en $\"" ]
+        ].each { |r| s.add_row r + [ "" ], style: [ wrapb, wrap, wrap, gris, wrap ] }
+
+        s.add_row []
+        s.add_row [ "NOS FALTAN ESTOS — escribi la moneda en la columna amarilla" ], style: wrapb
+        s.add_row [ "Cargo", "Valor en tu hoja", "Que anotaste", "Nuestra duda", "MONEDA ($ o LPS)" ],
+                  style: [ navy, navy, navy, navy, gold ]
+        [
+          [ "Cambio de servicio", "5 (titulo dice L100)", "pasarlo a dolares",
+            "OJO: hoy el sistema lo tiene en $15 y se cobra SOLO, en nota de debito, cada vez que se factura un paquete al que le cambiaron el servicio. Mientras no confirmes sigue cobrando $15." ],
+          [ "Retenido Miami", "5", "pasarlo a dolares", "El 5 ya es dolares, o todavia hay que convertirlo?" ],
+          [ "Servicio de entrada y salida", "10 (minimo 5)", "pasarlo a dolares", "Misma duda" ],
+          [ "Recolecta Miami", "35 (minimo 35)", "—",
+            "Vos mismo pediste que la recolecta fuera por ZONA y no $35 fijos, y asi esta hecho. Dejamos la tabla por zona o la cambiamos a 35 plano?" ],
+          [ "Ajuste", "1", "—", "En que moneda, y que ajusta exactamente?" ],
+          [ "Entrega local", "1 (titulo dice L1)", "—", "El titulo dice L1 pero no hay nota que lo confirme" ],
+          [ "Consolidando en Miami", "1", "—", "En que moneda?" ],
+          [ "Flete Mexico", "5 (minimo 6)", "—", "En que moneda?" ],
+          [ "Flete", "0", "—", "Este es el flete del paquete, que ya sale de la tabla de tarifas. Lo dejamos fuera; confirmanos si te parece." ],
+          [ "Producto ejemplo (y en dolares)", "4 y 10", "—", "Los tomamos como datos de prueba. Confirmanos que no van." ]
+        ].each { |r| s.add_row r + [ "" ], style: [ wrapb, wrap, wrap, gris, llenar ] }
+
+        s.column_widths 30, 20, 20, 62, 20
+        s.rows[6..].each { |r| r.height = 34 }
       end
 
       pkg.serialize(destino.to_s)
@@ -845,7 +938,7 @@ namespace :docs do
           [ "<b>Fotos de paquetes</b>", "Tomar foto al recibir y mandársela al cliente." ],
           [ "<b>Reportes</b>", "El módulo de reportes propiamente dicho." ],
           [ "<b>Escaneo al empacar</b>", "Lo que pediste que quedara planificado: se escanea cada paquete al meterlo a la caja y el sistema pita si el servicio no concuerda. Al armar el manifiesto se jalan las cajas ya empacadas." ],
-          [ "<b>Los 16 cargos que no son flete</b>", "Recolecta, retenido en Miami, entrega nacional, manejo y gastos de destino, flete México… están en tu tabla de precios pero viven en otro módulo del sistema, y varios ya existen cargados con otros valores. Hay que reconciliarlos." ]
+          [ "<b>Los 10 cargos que faltan</b>", "De los 16 que no son flete ya cargamos 5. Los otros 10 esperan a que nos digas la moneda: en tu hoja los numeros no dicen si son dolares o lempiras. Estan en la hoja 4 del Excel." ]
         ], anchos: [ 130, 357 ])
 
       # ══ PARTE 4 ══
