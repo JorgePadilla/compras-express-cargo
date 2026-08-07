@@ -67,7 +67,7 @@
                                icon: "cube-transparent")) { "Re-empaque" }
   end
   header.with_action do
-    render(ButtonComponent.new(variant: :primary, size: :sm, href: label_paquete_path(@paquete),
+    render(ButtonComponent.new(variant: :primary, size: :sm, href: warehouse_receipt_paquete_path(@paquete),
                                icon: "document-text", target: "_blank", shortcut: "F4")) { "Warehouse Receipt" }
   end
   if (pf = @paquete.pre_factura)

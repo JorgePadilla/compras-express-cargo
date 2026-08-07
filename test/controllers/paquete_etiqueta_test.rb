@@ -67,9 +67,73 @@ class PaqueteEtiquetaTest < ActionDispatch::IntegrationTest
   end
 
   test "el warehouse receipt sigue existiendo aparte" do
-    get label_paquete_url(@paquete)
+    get warehouse_receipt_paquete_url(@paquete)
 
     assert_response :success
     assert_match "WAREHOUSE RECEIPT", response.body
+    assert_match(/T.RMINOS|TERMS/i, response.body,
+                 "el WR lleva terminos y condiciones — es el documento del expediente")
+  end
+
+  # ── PR-10.d.3: los caminos que decían "etiqueta" e imprimían el WR ──
+  #
+  # Yusef lo reportó una vez —"aquí está tirando el warehouse, no la etiqueta"—
+  # y se arregló solo en /etiquetar. Todos los demás caminos siguieron sacando
+  # la hoja carta, incluido el botón que se llama "Re-imprimir Etiquetas Miami".
+
+  test "el icono de imprimir del listado saca la etiqueta, no el warehouse" do
+    get paquetes_url
+
+    assert_response :success
+    assert_match etiqueta_paquete_path(@paquete), response.body
+  end
+
+  test "reimprimir de un paquete sin dividir lleva a la etiqueta" do
+    assert_not @paquete.dividido?
+
+    get reimprimir_etiquetas_paquete_url(@paquete)
+
+    assert_redirected_to etiqueta_paquete_path(@paquete)
+  end
+
+  test "las etiquetas combinadas son etiquetas, no warehouse receipts" do
+    hermanas = crear_hermanas(3)
+
+    get etiquetas_combinadas_paquetes_url(paquete_ids: hermanas.map(&:id))
+
+    assert_response :success
+    assert_equal 3, response.body.scan(/class="etq"/).size
+    assert_no_match(/WAREHOUSE RECEIPT/, response.body,
+                    "esta pantalla se llama re-imprimir ETIQUETAS")
+  end
+
+  test "ningun flujo de etiqueta imprime el warehouse receipt" do
+    # Un solo guard para los cuatro caminos: si alguno vuelve a apuntar al
+    # documento equivocado, se cae acá.
+    hermanas = crear_hermanas(2)
+
+    urls = [
+      etiqueta_paquete_url(@paquete),
+      etiquetas_combinadas_paquetes_url(paquete_ids: hermanas.map(&:id))
+    ]
+
+    urls.each do |url|
+      get url
+      assert_no_match(/WAREHOUSE RECEIPT/, response.body, "#{url} imprime el documento equivocado")
+    end
+  end
+
+  private
+
+  def crear_hermanas(n)
+    (1..n).map do |i|
+      Paquete.create!(
+        tracking: @paquete.tracking, guia: "COMB-#{i}-#{SecureRandom.hex(3)}",
+        cliente: @paquete.cliente, tipo_envio: @paquete.tipo_envio,
+        estado: @paquete.estado, peso: 5, peso_cobrar: 5,
+        cantidad_productos: 1, cantidad_paquetes: n, numero_caja: i,
+        descripcion: "Caja #{i}", user: users(:digitador)
+      )
+    end
   end
 end

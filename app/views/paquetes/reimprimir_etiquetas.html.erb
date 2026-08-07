@@ -64,7 +64,9 @@
                 <p class="font-mono text-sm font-semibold text-cec-navy truncate"><%= paquete_display_id(caja) %></p>
                 <p class="text-xs text-gray-500">Peso <%= caja.peso || '—' %> lbs</p>
               </div>
-              <%= link_to label_paquete_path(caja), target: "_blank",
+              <%# PR-10.d.3: iba al Warehouse Receipt dentro de la pantalla de
+                  re-imprimir etiquetas. %>
+              <%= link_to etiqueta_paquete_path(caja), target: "_blank",
                     class: "shrink-0 text-xs text-cec-teal hover:text-cec-teal-dark font-medium inline-flex items-center gap-1 px-2 py-1 rounded hover:bg-cec-teal/10",
                     title: "Imprimir solo esta caja" do %>
                 Solo esta

@@ -1,21 +1,17 @@
-<%# PR-D4.review v2: vista combinada que renderiza N warehouse receipts
-    en una sola pestaña con saltos de página entre cada una. Reemplaza
-    el flow anterior de "abrir N pop-ups" que dependía del navegador
-    autorizar pop-ups. Yusef: "queremos un flow más simple que no requiera
-    autorizar pop-ups".
+<%# Las etiquetas de las cajas seleccionadas, en una sola pestaña.
+    Reemplazó el flow de "abrir N pop-ups" que dependía de que el navegador los
+    autorizara — Yusef: "queremos un flow más simple que no requiera autorizar
+    pop-ups".
 
-    Auto-trigger window.print() al cargar para que el usuario vea el
-    diálogo de impresión con todas las páginas listas. %>
-<style>
-  @media print {
-    .wr-page-break { page-break-after: always; break-after: page; }
-  }
-</style>
+    PR-10.d.3: renderizaba N **warehouse receipts** en carta, no etiquetas. La
+    pantalla se llama "Re-imprimir Etiquetas Miami" y sacaba el documento
+    equivocado — el mismo problema que Yusef reportó ("aquí está tirando el
+    warehouse, no la etiqueta") y que solo se había arreglado en /etiquetar.
 
-<% @paquetes.each_with_index do |p, idx| %>
-  <div class="<%= 'wr-page-break' if idx < @paquetes.size - 1 %>">
-    <%= render "label", paquete: p %>
-  </div>
+    El salto de página lo pone `.etq + .etq` en el layout de etiqueta, así que
+    acá no hace falta nada. %>
+<% @paquetes.each do |p| %>
+  <%= render "paquetes/etiqueta", paquete: p %>
 <% end %>
 
 <script>

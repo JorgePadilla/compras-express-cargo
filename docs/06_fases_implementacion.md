@@ -752,6 +752,39 @@ Lo que ningún test cubre: **que el código de barras siga escaneando**. Está e
 0.20 in, que es el piso práctico para escáneres de mano. Eso se prueba
 imprimiendo.
 
+#### 🔴 La etiqueta no se usaba en ningún lado — PR-10.d.3
+
+Jorge vio `/label` en la aplicación y pidió que dijera `etiqueta`. Buscando de
+dónde salía apareció algo más grande: **`/label` no es la etiqueta, es el
+Warehouse Receipt**, y la etiqueta Dymo que rediseñamos **solo era alcanzable
+desde `/etiquetar` con F9**. Ningún otro camino la imprimía.
+
+| Dónde | Decía | Imprimía |
+|---|---|---|
+| Icono de impresora del listado | `title: "Imprimir etiqueta"` | Warehouse Receipt |
+| `#reimprimir_etiquetas` (paquete no dividido) | — | Warehouse Receipt |
+| "Solo esta" en el modal de cajas | — | Warehouse Receipt |
+| `#etiquetas_combinadas` | *"renderiza N warehouse receipts"* | N Warehouse Receipts |
+
+O sea que **"Re-imprimir Etiquetas Miami"** sacaba hojas carta. Es exactamente
+lo que Yusef reportó —*"aquí está tirando el warehouse, no la etiqueta"*— y que
+solo se había arreglado en `/etiquetar`.
+
+**El rename va al revés de lo pedido, a propósito:** `/label` pasa a
+`/warehouse_receipt`, no a `/etiqueta`. Renombrarlo a `etiqueta` habría dejado
+la confusión fija para siempre. El helper ya se llamaba
+`warehouse_receipt_helper.rb` con métodos `wr_*`, así que el nombre correcto ya
+estaba establecido en el código; solo la ruta, la acción y las vistas venían del
+legacy.
+
+Los dos documentos siguen separados, como pidió Yusef: *"la etiqueta para la
+caja, el Warehouse Receipt para el expediente"*. El WR conserva su vista, su
+helper, sus términos y su botón en el detalle del paquete.
+
+> Un detalle que costó: renombrar la acción sin tocar el `before_action
+> :set_paquete, only: [...]` dejó **todo el controlador en 404**, no solo el WR.
+> Los tests lo agarraron al instante.
+
 ### Sembrado de precios reales (PR-10.g)
 
 Los números viven en `lib/tarifas_propuesta_2026.rb` como constantes que espejan
