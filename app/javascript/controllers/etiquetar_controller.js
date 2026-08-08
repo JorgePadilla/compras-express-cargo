@@ -53,13 +53,82 @@ export default class extends Controller {
       // recibimos 20% por mucho". Funciona en cualquier momento del form.
       e.preventDefault()
       this.toggleTercero()
-    } else if (e.key === "F8") {
+    } else if (e.key === "F8" || e.key === "F10") {
+      // F10 es guardar en todo el resto del sistema (pre-facturas, ventas,
+      // caja, financiamientos) y Yusef lo apretó sin pensarlo. F8 se queda de
+      // alias mientras Miami se acostumbra — allá ya lo tienen en el dedo.
       e.preventDefault()
       this.submitForm()
     } else if (e.key === "F9") {
       e.preventDefault()
       this.submitFormWithPrint()
     }
+  }
+
+  // ── Enter = siguiente campo, nunca guardar ────────────────────────────
+  //
+  // Yusef, 2026-08-08: "el enter es como el siguiente campo". Y sobre los
+  // dropdowns: "grabar, no grabar — **seleccionar**".
+  //
+  // No es una preferencia: **la pistola de código de barras dispara Enter** al
+  // terminar de leer, y eso no es configurable en la práctica — hay varias
+  // pistolas, con cable y sin, y todas vienen así. Miami trabaja solo con
+  // teclado: "nosotros solo teclado porque usamos las manos para trabajar".
+  //
+  // Sin este handler gana el default del navegador y Enter envía el form, que
+  // es de donde salían los paquetes grabados a medias apenas se escaneaba el
+  // tracking.
+  formKeydown(e) {
+    if (e.key !== "Enter") return
+
+    // El dropdown de cliente y el modal de cajas ya resolvieron su Enter
+    // (seleccionar el ítem activo / confirmar). No pisarlos.
+    if (e.defaultPrevented) return
+
+    const el = e.target
+    if (!el || !el.tagName) return
+
+    // La descripción y las notas son textarea: ahí Enter es un salto de línea.
+    if (el.tagName === "TEXTAREA") return
+
+    // En un botón, Enter es "apretarlo". Dejarlo pasar.
+    if (el.tagName === "BUTTON" || el.type === "submit" || el.type === "button") return
+
+    // Todo lo demás: avanzar, jamás enviar.
+    e.preventDefault()
+    this._focusSiguiente(el)
+  }
+
+  // Los campos que se pueden enfocar, en el orden en que están en el DOM.
+  // Se recalcula en cada Enter a propósito: F3 y F4 muestran y esconden
+  // campos, así que una lista cacheada quedaría desactualizada.
+  _camposEnfocables() {
+    const selector = [
+      "input:not([type=hidden])",
+      "select",
+      "textarea"
+    ].join(", ")
+
+    return Array.from(this.formTarget.querySelectorAll(selector)).filter((el) => {
+      if (el.disabled || el.readOnly) return false
+      if (el.tabIndex < 0) return false
+      // `offsetParent` es null cuando el campo o alguno de sus contenedores
+      // está oculto — que es como viven el tercero (F4) y el tracking
+      // secundario (F3) hasta que alguien los revela.
+      return el.offsetParent !== null
+    })
+  }
+
+  _focusSiguiente(actual) {
+    const campos = this._camposEnfocables()
+    const i = campos.indexOf(actual)
+    if (i === -1) return
+
+    const siguiente = campos[i + 1]
+    if (!siguiente) return   // en el último campo, Enter no hace nada
+
+    siguiente.focus()
+    if (siguiente.select) siguiente.select()
   }
 
   toggleTrackingSecundario() {
@@ -469,7 +538,7 @@ export default class extends Controller {
 
   // Form actions
   clearForm() {
-    this.formTarget.reset()
+    this._limpiarCampos()
     this.clienteIdTarget.value = ""
     this.clienteNombreTarget.textContent = ""
     this.clienteNombreTarget.classList.add("hidden")
@@ -491,6 +560,35 @@ export default class extends Controller {
     } else {
       this.trackingTarget.focus()
     }
+  }
+
+  // F2 tiene que dejar el formulario en blanco, siempre. Yusef: "todo, todo.
+  // Porque se equivocó y lo mejor es F2 y volvemos a empezar".
+  //
+  // Antes esto era `formTarget.reset()`, y ahí estaba el bug que reportó como
+  // "le doy F2 y no limpia": `reset()` no vacía el formulario — lo devuelve a
+  // los valores **renderizados**. Cuando el submit fallaba y el servidor
+  // re-renderizaba con 422, esos valores eran los que él acababa de escribir,
+  // así que F2 "limpiaba" de vuelta a lo mismo.
+  //
+  // No es problema de foco: el listener de F2 es a nivel `document`.
+  _limpiarCampos() {
+    // Los `hidden` quedan afuera a propósito: ahí viven el token CSRF y el
+    // `_method` de Rails. Los dos que sí hay que limpiar (`cliente_id` y
+    // `cantidad_paquetes`) los maneja `clearForm` explícitamente.
+    const campos = this.formTarget.querySelectorAll(
+      "input:not([type=hidden]), select, textarea"
+    )
+
+    campos.forEach((el) => {
+      if (el.type === "checkbox" || el.type === "radio") {
+        el.checked = false
+      } else if (el.tagName === "SELECT") {
+        el.selectedIndex = 0
+      } else {
+        el.value = ""
+      }
+    })
   }
 
   submitForm() {
