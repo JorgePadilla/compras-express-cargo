@@ -189,9 +189,38 @@ class Paquete < ApplicationRecord
   end
 
   scope :activos, -> { where.not(estado: %w[anulado entregado retornado desechado]) }
+  # Un código escaneado de una caja de split viene como `RMI0002026000042-2`:
+  # el número madre más el número de caja. Sin esto, `numero_recepcion ILIKE`
+  # no matchea nada — la recepción guardada es `RMI0002026000042` a secas —
+  # y escanear en San Pedro devolvería cero resultados.
+  #
+  # Devuelve `[numero_madre, numero_caja]`, o nil si el término no tiene esa
+  # forma. Se exige que el prefijo termine en dígitos para no partir un
+  # tracking que traiga guiones (`TBA123-456` no es una caja).
+  ESCANEO_DE_CAJA = /\A(?<madre>.*\d)-(?<caja>\d{1,3})\z/
+  def self.parsear_codigo_de_caja(term)
+    m = ESCANEO_DE_CAJA.match(term.to_s.strip)
+    return nil if m.nil?
+
+    [ m[:madre], m[:caja].to_i ]
+  end
+
   scope :buscar, ->(term) {
     term = term.to_s.strip
     return all if term.empty?
+
+    # Escaneo de una caja concreta: cae directo en ella, no en sus hermanas.
+    if (parsed = parsear_codigo_de_caja(term))
+      madre, caja = parsed
+      exacta = where(numero_recepcion: madre, numero_caja: caja)
+      return exacta if exacta.exists?
+
+      # No existe esa caja. Puede ser una etiqueta de una caja que se eliminó,
+      # o un tracking que casualmente termina en `-2`. En vez de devolver
+      # vacío, se busca por la parte de adelante: si es un número madre trae
+      # sus hermanas, y si era un tracking lo encuentra igual.
+      term = madre
+    end
 
     q = "%#{sanitize_sql_like(term)}%"
     left_joins(:cliente, :tipo_envio, :manifiesto)

@@ -2164,7 +2164,7 @@ dos que sí hay que limpiar (`cliente_id` y `cantidad_paquetes`) ya los maneja
 
 ---
 
-### A1-04 · El código de barras no distingue caja 1 de caja 2 — **BUG confirmado**
+### A1-04 · El código de barras no distinguía caja 1 de caja 2 — ✅ **ARREGLADO** (PR-C6.6)
 
 Este es el centro de la reunión y el que más plata mueve, porque de acá cuelga
 el inventario.
@@ -2192,6 +2192,22 @@ Lo que pidió: que el código lleve el sufijo de caja — `7-1`, `7-2`.
 
 > "Donde vos se lo vas a tener que poner es aquí: acordate que aquí va el 6 —
 > bueno, aquí sería 7-1, 7-2."
+
+**Arreglo (PR-C6.6).** `etiqueta_codigo_barras` arma el payload con dos reglas:
+
+1. **Es el warehouse, nunca el tracking.** Sin número de recepción devuelve
+   `nil` y **no se imprime barcode**, en vez de caer al tracking como antes.
+   Una etiqueta sin código es un problema visible; una con el código
+   equivocado se escanea mal en San Pedro y nadie se entera.
+2. **Lleva el sufijo de caja** cuando el tracking se dividió. El mismo texto va
+   impreso debajo, para poder teclearlo si la etiqueta viene rayada.
+
+⚠️ **Y lo que hubiera cambiado un bug por otro:** el scope de búsqueda usa
+`numero_recepcion ILIKE`, así que escanear `RMI0002026000042-2` daba **cero
+resultados** contra la recepción `RMI0002026000042`. `Paquete.buscar` ahora
+parsea el sufijo y cae **en la caja exacta**. Si esa caja no existe, busca por
+el número madre en vez de devolver vacío — puede ser una etiqueta de una caja
+que se eliminó, o un tracking que casualmente termina en `-2`.
 
 Y la contraparte, igual de importante:
 
@@ -2657,7 +2673,7 @@ revisar sobre el sistema andando que sobre un diagrama.
 | ~~A1-01~~ | ~~Enter envía el formulario en vez de avanzar de campo~~ ✅ **arreglado** | `etiquetar_controller.js` `formKeydown` |
 | ~~A1-02~~ | ~~En `/paquetes` el tracking salía dos veces seguidas~~ ✅ **arreglado** | `index.html.erb` col. "N° recepción" — era la vista, no los datos |
 | ~~A1-03~~ | ~~F2 no limpia después de un Enter~~ ✅ **arreglado** | era `formTarget.reset()`, no el foco |
-| A1-04 | El código de barras no distingue caja 1 de caja 2 | `_etiqueta.html.erb:29` + `paquete.rb:367-395` |
+| ~~A1-04~~ | ~~El código de barras no distingue caja 1 de caja 2~~ ✅ **arreglado** | `etiqueta_codigo_barras` + parseo en `Paquete.buscar` |
 | A1-06 | Cambiar la cantidad de cajas no elimina ni crea las sobrantes | `crear_split!` solo crea |
 | A1-08 | "Cambio de servicio" no pregunta a cuál, y no aplica | `/etiquetar` |
 | ~~A1-11~~ | ~~La ventana de impresión no se cierra~~ ✅ **arreglado** | `layouts/etiqueta.html.erb` |
@@ -2680,7 +2696,7 @@ revisar sobre el sistema andando que sobre un diagrama.
 
 | ID | Qué |
 |---|---|
-| A1-05 | Que el sufijo `-1`/`-2` **nunca** toque el tracking |
+| ~~A1-05~~ | ~~Que el sufijo `-1`/`-2` **nunca** toque el tracking~~ ✅ **con test de regresión** |
 | ~~A1-13~~ | ~~Unificar guardar en F10~~ ✅ **arreglado** (F8 queda de alias) |
 | A1-16 | Que el tercero de texto libre no esté creando clientes |
 | A1-23 | `paper_trail` más allá de `Paquete` |

@@ -26,19 +26,21 @@
       Antes no había nada escaneable: el tracking se tecleaba a mano.
       Ojo al bajarle el alto: abajo de ~0.20in los escáneres de mano empiezan
       a fallar, y eso no se ve en la etiqueta impresa. %>
-  <% codigo_barras = paquete.numero_recepcion.presence || paquete.tracking %>
-  <% svg = etiqueta_barcode_svg(codigo_barras) %>
+  <% codigo_barras = etiqueta_codigo_barras(paquete) %>
+  <% svg = codigo_barras && etiqueta_barcode_svg(codigo_barras) %>
   <% if svg %>
-    <div style="height:.20in; overflow:hidden; line-height:0;">
+    <div style="height:.20in; overflow:hidden; line-height:0;" data-campo="barcode">
       <div style="width:100%; height:.20in;"><%= svg %></div>
     </div>
   <% end %>
 
   <%# ── Número de recepción ── el más grande después del tipo de envío.
-      Trae el n/N adentro (RE0000577711-2-1/2) y aun así el n/N va otra vez
-      suelto abajo: Jorge lo confirmó, es como está en el mockup. %>
-  <div class="t mono" style="font-size:var(--t2); font-weight:bold;">
-    <%= codigo_barras %>
+      Lleva el sufijo de caja cuando el tracking se dividió (`…-1`, `…-2`),
+      igual que el barcode: es lo que se teclea cuando la etiqueta viene
+      rayada y el lector no la lee. El n/N va otra vez suelto abajo — Jorge lo
+      confirmó, es como está en el mockup. %>
+  <div class="t mono" style="font-size:var(--t2); font-weight:bold;" data-campo="numero-recepcion">
+    <%= codigo_barras || "—" %>
   </div>
 
   <%# ── Tracking ── Yusef lo tiene como el segundo más grande, en negrita: es
