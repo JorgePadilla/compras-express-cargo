@@ -1537,7 +1537,8 @@ CREATE TABLE public.paquetes (
     prepagado_miami_by_user_id bigint,
     driver character varying,
     sucursal_recepcion_id bigint,
-    tipo_envio_anterior_id bigint
+    tipo_envio_anterior_id bigint,
+    tercero_nombre character varying
 );
 
 
@@ -5755,6 +5756,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260808154651'),
 ('20260808145727'),
 ('20260808143148'),
 ('20260808073755'),

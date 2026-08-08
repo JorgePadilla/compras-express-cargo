@@ -401,7 +401,7 @@ class EtiquetarController < ApplicationController
   def paquete_params
     # tipo_envio_id NO se permite aquí: lo fija la sesión de etiquetado.
     params.require(:paquete).permit(
-      :tracking, :tracking_secundario, :cliente_id, :tercero_id, :peso,
+      :tracking, :tracking_secundario, :cliente_id, :tercero_id, :tercero_nombre, :peso,
       :alto, :largo, :ancho, :cantidad_productos, :cantidad_paquetes,
       :numero_caja, :descripcion, :remitente, :expedido_por,
       :notas_internas, :notas_retencion,

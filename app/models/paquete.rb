@@ -378,6 +378,21 @@ class Paquete < ApplicationRecord
     self.solicito_cambio_servicio = true
   end
 
+  # El nombre del tercero para mostrar — venga del catálogo o escrito a mano.
+  #
+  # PR-C6.14. Yusef fue tajante sobre quién digita en Miami: "solo se guarda en
+  # esa guía... **no queda grabado en ninguna base de datos de clientes**",
+  # porque "el que está digitando ahí no tiene ni voz ni voto para guardar" y
+  # "ellos se pueden equivocar y pueden hacer este relajo".
+  #
+  # Por eso hay dos fuentes y **el catálogo manda**: si alguien eligió un
+  # cliente de verdad, ese nombre es el bueno. El texto libre es para el
+  # tercero que no está en ninguna cartera, que es el caso normal — "nosotros
+  # no tenemos la base de datos completa de los clientes terceros".
+  def tercero_display
+    tercero&.nombre_completo.presence || tercero_nombre.presence
+  end
+
   # "CER → CKM", para mostrarlo en el detalle y en la pre-factura.
   def cambio_servicio_label
     return nil unless solicito_cambio_servicio? && tipo_envio_anterior

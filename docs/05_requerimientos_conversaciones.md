@@ -2499,7 +2499,7 @@ Lo revisaron campo por campo:
 
 ---
 
-### A1-16 · El cliente tercero no se guarda en ninguna base de datos — **regla, YA ESTÁ verificar**
+### A1-16 · El cliente tercero no se guarda en ninguna base de datos — ✅ **HECHO** (PR-C6.14)
 
 Yusef fue enfático porque es un tema de integridad de datos:
 
@@ -2520,9 +2520,24 @@ propia cartera de terceros, y ahí sí sale el dropdown con los suyos:
 O sea: texto libre por defecto; dropdown solo si el cliente titular es
 revendedor y tiene terceros registrados.
 
-⚠️ **Cruzar con PR-10.c**: hoy existe `tercero_search_controller.js` y el paquete
-tiene `belongs_to :tercero`. Hay que verificar que el texto libre **no** esté
-creando registros de cliente.
+**El diagnóstico de este doc estaba a medias.** Decía "verificar que el texto
+libre no esté creando clientes". La verificación pasa —`tercero_id` solo se
+asigna eligiendo un `Cliente` que ya existe— pero **el texto libre no existía**,
+así que a un tercero fuera de la cartera no se le podía poner el nombre en la
+etiqueta. Y ese es el caso normal.
+
+**Arreglo (PR-C6.14):** columna `paquetes.tercero_nombre`. Lo que se escribe
+vive en **ese paquete** y no crea ningún cliente — hay un test que mide
+`Cliente.count` para fijarlo.
+
+`tercero_display` resuelve las dos fuentes con el catálogo mandando: si alguien
+eligió un cliente de verdad, ese nombre es el bueno. En el detalle se muestra
+**sin link ni código y con la aclaración "solo en este paquete"**: no es un
+`Cliente` y no debe parecerlo.
+
+Queda pendiente la cartera del revendedor (el caso Carlos Reyes): hoy no existe
+ni el flag `revendedor` ni la cartera, y el buscador actual mira **todos** los
+clientes.
 
 ---
 
@@ -2767,7 +2782,7 @@ revisar sobre el sistema andando que sobre un diagrama.
 |---|---|
 | ~~A1-05~~ | ~~Que el sufijo `-1`/`-2` **nunca** toque el tracking~~ ✅ **con test de regresión** |
 | ~~A1-13~~ | ~~Unificar guardar en F10~~ ✅ **arreglado** (F8 queda de alias) |
-| A1-16 | Que el tercero de texto libre no esté creando clientes |
+| ~~A1-16~~ | ~~Que el tercero de texto libre no esté creando clientes~~ ✅ **hecho** — no existía, se construyó |
 | A1-23 | `paper_trail` más allá de `Paquete` |
 | A1-24 | **No** meter PIN en `/etiquetar` |
 

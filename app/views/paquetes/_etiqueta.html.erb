@@ -57,9 +57,9 @@
     <span class="t" style="font-size:var(--t4); text-transform:uppercase;">
       <%= paquete.cliente&.nombre_completo %>
     </span>
-    <% if paquete.tercero %>
-      <span class="t" style="font-size:var(--t7); margin-left:auto;">
-        <b>3ro:</b> <%= paquete.tercero.nombre_completo.to_s.upcase %>
+    <% if paquete.tercero_display %>
+      <span class="t" style="font-size:var(--t7); margin-left:auto;" data-campo="tercero">
+        <b>3ro:</b> <%= paquete.tercero_display.to_s.upcase %>
       </span>
     <% end %>
   </div>
