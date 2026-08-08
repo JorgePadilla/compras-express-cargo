@@ -113,12 +113,23 @@ end %>
      data-audio-volumen-value="<%= Current.user&.sonido_volumen || 60 %>"
      data-etiquetar-check-url-value="<%= check_tracking_paquetes_path %>"
      data-etiquetar-buscar-url-value="<%= buscar_clientes_path %>"
-     data-action="etiquetar:success->audio#success etiquetar:clienteNotas->audio#alert etiquetar:preAlertaMatch->audio#speakPreAlerta click@document->etiquetar#clickOutsideDropdown">
+     data-etiquetar-tipo-envio-sesion-value="<%= @tipo_envio_sesion.id %>"
+     data-etiquetar-tipo-envio-sesion-nombre-value="<%= @tipo_envio_sesion.nombre %>"
+     <%# PR-C6.9: tres sonidos, no uno. Yusef: "pita para dos razones... pita,
+         te decía, pre-alerta" y "el otro pito es porque te tira que ya
+         existía". Más el feo, para cuando el paquete no es de esta sesión. %>
+     data-action="etiquetar:success->audio#success
+                  etiquetar:clienteNotas->audio#alert
+                  etiquetar:preAlertaMatch->audio#speakPreAlerta
+                  etiquetar:trackingYaExiste->audio#notify
+                  etiquetar:tipoEnvioDistinto->audio#error
+                  click@document->etiquetar#clickOutsideDropdown">
 
   <%# ── Banner de sesión activa ── coloreado según el servicio (mismo acento
       que las tarjetas), con ícono avión/camión. Reemplaza al flash. %>
   <% sesion_accent = tipo_envio_accent(@tipo_envio_sesion) %>
-  <div class="mb-4 flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4 rounded-xl <%= sesion_accent[:bg] %> ring-1 <%= sesion_accent[:ring] %>">
+  <div data-banner="sesion-activa"
+       class="mb-4 flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4 rounded-xl <%= sesion_accent[:bg] %> ring-1 <%= sesion_accent[:ring] %>">
     <div class="flex items-center gap-3">
       <div class="shrink-0 w-10 h-10 rounded-xl <%= sesion_accent[:icon_bg] %> flex items-center justify-center">
         <%= heroicon tipo_envio_icono(@tipo_envio_sesion), variant: :solid,
@@ -152,6 +163,31 @@ end %>
     <% if flash[:alert] %>
       <div class="p-3 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm" data-controller="auto-dismiss"><%= flash[:alert] %></div>
     <% end %>
+  </div>
+
+  <%# ── Conflicto de tipo de envío ──
+      El paquete escaneado tiene pre-alerta de otro servicio. El servidor lo
+      rechaza igual; esto es para que el operario no siga llenando campos.
+      Yusef con Julián: "no te va a permitir grabarlo... el chavo no hizo
+      nada, no pudo hacer nada". %>
+  <div data-etiquetar-target="conflictoSesion" class="hidden mb-4 p-4 bg-red-50 border-2 border-red-300 rounded-lg">
+    <div class="flex items-start gap-3">
+      <%= heroicon "exclamation-triangle", variant: :solid, options: { class: "w-6 h-6 text-red-600 shrink-0" } %>
+      <div class="flex-1">
+        <p class="text-sm font-bold text-red-800">Este paquete es de otro tipo de envío</p>
+        <p data-etiquetar-target="conflictoSesionTexto" class="text-sm text-red-700 mt-0.5"></p>
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+          <%= button_to finalizar_sesion_etiquetar_path, method: :delete, form_class: "contents",
+                class: "inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700" do %>
+            Finalizar sesión y elegir el correcto
+          <% end %>
+          <button type="button" data-action="click->etiquetar#clearForm"
+                  class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-white text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50">
+            Dejarlo de lado y seguir <kbd class="px-1 py-0.5 bg-gray-100 border rounded text-[10px]">F2</kbd>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <%# Client notes banner (hidden by default) %>

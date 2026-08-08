@@ -2313,7 +2313,7 @@ Dos detalles que se resolvieron implementándolo:
 
 ---
 
-### A1-09 · Alerta cuando el paquete no es del tipo de envío de la sesión — **NUEVO**
+### A1-09 · Alerta cuando el paquete no es del tipo de envío de la sesión — ✅ **HECHO** (PR-C6.9)
 
 La sesión por tipo de envío **ya existe** (`etiquetar_controller.rb:3-4,
 16, 28, 144-151`: `iniciar_sesion`, `finalizar_sesion`,
@@ -2338,6 +2338,21 @@ La clave: en ningún caso se puede grabar bajo el tipo equivocado.
 
 Julián lo confirmó: mejor que lo obligue a cerrar la sesión.
 
+⚠️ **Lo que este doc no había visto: hoy se grababa bajo el tipo equivocado, en
+silencio.** `create_single` hace `@paquete.tipo_envio_id = @tipo_envio_sesion.id`
+**incondicional**, así que un paquete con pre-alerta CEM escaneado en sesión CER
+se guardaba como CER sin que nadie se enterara. El modal es la mitad visible;
+**el rechazo del servidor es la mitad que cobra bien**.
+
+**Arreglo (PR-C6.9):** `conflicto_con_la_sesion` rechaza en el servidor, y el
+front avisa antes con sonido feo y un banner con las dos salidas acordadas. El
+**cambio de servicio (A1-08) es la excepción explícita** — ahí el operario
+declaró que el paquete sale de la sesión.
+
+Los sonidos que entraron con esto (A1-10): el pito de **"ya existía"** (el modal
+de duplicado abría mudo) y el **feo** para el conflicto de tipo. `audio#error`
+ya existía sin cablear.
+
 > **Yusef:** "Si es CKM ya sabemos que se lo va a llevar tu papá. Como tienen el
 > relajo en la mesa, los va a obligar a hacer los que son correctos."
 
@@ -2358,8 +2373,8 @@ El mapa completo que pidió:
 | Terminó de escanear y ya revisó pre-alertas — "podés seguir" | pin agradable | ✅ existe |
 | Seleccionó el código de cliente | pin | ✅ existe |
 | El paquete **tiene pre-alerta** | voz grabada | ⏳ falta la grabación |
-| El tracking **ya existía / ya fue usado** | pito distinto | ❌ falta |
-| **Error** — tipo de envío distinto al de la sesión | sonido feo | ❌ falta |
+| El tracking **ya existía / ya fue usado** | pito distinto | ✅ PR-C6.9 |
+| **Error** — tipo de envío distinto al de la sesión | sonido feo | ✅ PR-C6.9 |
 | **Antes** de que salga cualquier modal | pin | ❌ falta |
 
 Son **dos** pitos distintos, no uno. Yusef lo dijo así:
@@ -2703,7 +2718,7 @@ revisar sobre el sistema andando que sobre un diagrama.
 | ID | Qué |
 |---|---|
 | A1-07 | Actualizar desde `/etiquetar` con el formulario pre-cargado |
-| A1-09 | Modal + sonido cuando el tipo de envío no es el de la sesión |
+| ~~A1-09~~ | ~~Modal + sonido cuando el tipo de envío no es el de la sesión~~ ✅ **hecho** |
 | A1-10 | Pito de "ya existía", sonido de error, pin antes de los modales, voz de pre-alerta |
 | A1-12 | Atajos arriba y abajo |
 | A1-15 | Reordenar campos y flujo de Tab |

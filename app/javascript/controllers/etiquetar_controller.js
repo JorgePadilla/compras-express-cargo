@@ -12,11 +12,16 @@ export default class extends Controller {
     "duplicateModal", "duplicateInfo", "duplicateNewBtn", "duplicateNewHint",
     "cajasModal", "cajasInput", "cantidadPaquetesHidden",
     "submitBtn", "event", "panel",
-    "terceroContainer", "terceroToggle"
+    "terceroContainer", "terceroToggle",
+    "conflictoSesion", "conflictoSesionTexto"
   ]
   static values = {
     checkUrl: String,
-    buscarUrl: String
+    buscarUrl: String,
+    // PR-C6.9: el tipo de envío del lote, para poder comparar contra el de la
+    // pre-alerta sin otra vuelta al servidor.
+    tipoEnvioSesion: String,
+    tipoEnvioSesionNombre: String
   }
 
   connect() {
@@ -371,6 +376,10 @@ export default class extends Controller {
         if (data.pre_alerta_match) {
           this._showPreAlertaBanner(data)
           this.dispatch("preAlertaMatch")
+          // PR-C6.9: si la pre-alerta pide otro tipo de envío que el de la
+          // sesión, avisar YA — antes de que el operario siga llenando campos
+          // que el servidor va a rechazar igual.
+          this._avisarConflictoDeSesion(data)
           return
         }
         if (data.exists && !data.terminal) {
@@ -378,6 +387,29 @@ export default class extends Controller {
         }
       })
       .catch(() => {})
+  }
+
+  // El paquete escaneado pertenece a otro tipo de envío. Se avisa fuerte pero
+  // NO se decide acá: el rechazo lo hace el servidor (`conflicto_con_la_sesion`),
+  // porque el modal se puede saltar y el cobro no.
+  //
+  // Yusef lo consultó con Julián por videollamada y quedaron en las dos
+  // salidas: finalizar la sesión para abrir la del tipo correcto, o seguir en
+  // la misma y dejar el paquete de lado. En ninguna se graba.
+  _avisarConflictoDeSesion(data) {
+    const sesion = this.hasTipoEnvioSesionValue ? this.tipoEnvioSesionValue : null
+    if (!sesion || !data.pre_alerta_tipo_envio_id) return
+    if (String(data.pre_alerta_tipo_envio_id) === String(sesion)) return
+
+    this.dispatch("tipoEnvioDistinto")
+    if (this.hasConflictoSesionTarget) {
+      if (this.hasConflictoSesionTextoTarget) {
+        this.conflictoSesionTextoTarget.textContent =
+          `Este paquete tiene pre-alerta de ${data.pre_alerta_tipo_envio}, ` +
+          `y estás trabajando ${this.tipoEnvioSesionNombreValue}. No se puede guardar así.`
+      }
+      this.conflictoSesionTarget.classList.remove("hidden")
+    }
   }
 
   _showPreAlertaBanner(data) {
@@ -496,6 +528,10 @@ export default class extends Controller {
       }
     }
 
+    // PR-C6.9: el modal de duplicado abría mudo. Yusef: "pita para dos
+    // razones... pita, te decía, pre-alerta" y "el otro pito es porque te
+    // tira que **ya existía**". Son dos avisos distintos, no uno.
+    this.dispatch("trackingYaExiste")
     this.duplicateModalTarget.classList.remove("hidden")
   }
 
@@ -552,6 +588,7 @@ export default class extends Controller {
     }
     this._resetClienteFromPreAlertaStyling()
     this._hidePreAlertaBanner()
+    if (this.hasConflictoSesionTarget) this.conflictoSesionTarget.classList.add("hidden")
     this._closeCajasModal()
     this._resetCantidadPaquetes()
     if (this.hasTrackingSecundarioContainerTarget) this._hideTrackingSecundario()

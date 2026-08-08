@@ -32,7 +32,11 @@ class EtiquetarControllerTest < ActionDispatch::IntegrationTest
   test "index con sesión activa muestra el banner una sola vez" do
     get etiquetar_url
     assert_response :success
-    assert_select "form[action=?]", finalizar_sesion_etiquetar_path, count: 1
+    # Se cuenta el banner por su marca y no los formularios que apuntan a
+    # `finalizar_sesion`: desde PR-C6.9 el aviso de "este paquete es de otro
+    # tipo de envío" tiene su propio botón para cerrar la sesión, y contar
+    # formularios agarraba ese también.
+    assert_select "[data-banner=?]", "sesion-activa", count: 1
     assert_select "p", text: "Sesión activa", count: 1
   end
 
