@@ -1966,8 +1966,8 @@ Se entrega en tres partes:
 
 | Parte | Estado |
 |---|---|
-| **Audio 1** — prueba de `/etiquetar` y `/paquetes` | ✅ documentada abajo |
-| **Audio 2** | ⏳ pendiente de recibir |
+| **Audio 1** — prueba de `/etiquetar` y `/paquetes` | ✅ documentada abajo (`A1-nn`) |
+| **Audio 2** — monedas, cargos extra y escalonado | ✅ documentada abajo (`A2-nn`) |
 | **Imágenes** | ⏳ pendientes de recibir |
 
 Los items van con ID `A1-nn` para poder cruzarlos cuando lleguen las otras dos
@@ -2613,10 +2613,361 @@ por tipo de envío (A1-09 parcial), F4 tercero (A1-15).
 
 ---
 
+## Conversación 6 · Audio 2 — monedas, cargos extra y escalonado
+
+Yusef recorriendo su hoja de precios cargo por cargo. **Este audio contesta la
+pregunta más grande que teníamos abierta**: la moneda de los diez cargos que
+PR-10.i dejó sin cargar porque la leyenda de colores de la hoja nunca se aplicó
+a las celdas.
+
+---
+
+### A2-01 · Los precios los ingresa Yusef, no Jorge — **cambia la estrategia**
+
+Lo más importante del audio para el plan de trabajo:
+
+> "No es necesario que vos me crees aquí con los precios. **Los precios los
+> ingresamos nosotros.**"
+
+Jorge solo carga **los cuatro** que hacen falta para poder probar:
+
+> "Vos ingresás estos cuatro que están acá. ¿Por qué? Para que podamos usar el
+> sistema y probarlo. Después vos me decís que ingresemos los demás nosotros,
+> entonces yo pongo a Vanessa o a alguien y lo ingresamos nosotros. Porque eso
+> es demasiado trabajo para meterlo vos."
+
+O sea que la respuesta a "faltan 10 cargos por cargar" **no es cargarlos** — es
+que el CRUD esté completo y ellos los metan. Mismo patrón de siempre:
+[[feedback_yusef_crud_first]].
+
+Esto **cierra** la pregunta ALTA *"la moneda de 10 cargos"* del Excel: ya no
+bloquea nada de código.
+
+---
+
+### A2-02 · Regla de fondo: el flete internacional va en dólares, los mínimos en Lempiras
+
+> "Casi todo lo que tiene que ver con servicios de flete, los fletes
+> internacionales nuestros... casi todo está en dólares. **A excepción de cuatro
+> mínimos**, que están en lempiras."
+
+Y el porqué es competitivo, no contable:
+
+> "Así es la competencia... el que le sigue, que cobra más barato, cobra
+> doscientos más impuestos. Yo cobro ciento setenta y tres 91 centavos, o sea
+> haciendo 200."
+
+| | Competencia | Compras Express |
+|---|---|---|
+| Precio de lista | L.200 | L.173.91 |
+| + ISV 15% | L.30 | L.26.09 |
+| **Total al cliente** | **L.230** | **L.200** |
+
+Por eso el mínimo es **L.173.91** y no un número redondo: es L.200 exactos ya con
+impuesto. Confirma que el mínimo está bien cargado y que la regla del ISV
+(precio neto, ISV encima) es la correcta.
+
+---
+
+### A2-03 · Monedas de los cargos — **RESUELTAS**
+
+Lo que dijo de cada uno, cruzado contra lo que hay cargado hoy:
+
+| Cargo | Yusef (audio 2) | En el sistema | |
+|---|---|---|---|
+| **Ajuste** | **USD** — "aquí dice un lempira pero yo lo puse a dólares" | no cargado | ✅ resuelto |
+| **Cambio de servicio** | **L.100** — "son los 100 lempiras, yo te lo puse que eran 5" | **$15 USD** | 🔴 ver A2-04 |
+| **Compras online** | **USD** — "ponerlo 1 USD más impuesto" | USD 1.00 | ✅ coincide |
+| **Consolidado en Miami** | **sin costo** — "eso no tiene ningún costo, en cero. Le pusimos algo pero es porque me equivoqué" | no cargado | ✅ resuelto |
+| **Entrega local** | **variable** — "a veces hay entregas especiales que no sabemos el costo" | no cargado | ✅ manual |
+| **Entrega nacional** | **LPS** — "servicios convencionales, es decir lempiras" | LPS 86.96 | ✅ coincide |
+| **Flete** (genérico) | **variable** — "un flete X que hagamos, que no sepamos cómo ingresar" | no cargado | ✅ manual |
+| **Flete internacional UPS** | **USD** — "esa es las exportaciones" | USD 1.00 | ✅ coincide |
+| **Flete México** | de México a Honduras, "ya le puse los precios" | no cargado | ⚠️ moneda no dicha |
+| **Manejo y gastos de destino** | "igual parecido al de ajuste" (y ajuste es USD) | **LPS** 1.00 | ⚠️ ver abajo |
+| **Producto ejemplo** ×2 | **borrar** — "no existe" | no cargado | ✅ correcto |
+| **Recolecta Miami** | **$35 USD**, con descuentos por cliente | choca con `TarifaRecolecta` | ⚠️ ver A2-06 |
+| **Retenido en Miami** | **NO cuesta** — ver A2-05 | no cargado | ✅ resuelto |
+| **Retornado de Miami** | **USD**, $5 mínimo / $15 típico | USD 5.00 | ✅ coincide |
+| **Servicio de entrada y salida** | **$5 a $10 USD** por paquete | no cargado | ✅ resuelto |
+
+⚠️ **Manejo y gastos de destino** es el único donde el audio y la hoja se
+contradicen. La hoja dice textual *"ponerlo lps1 mas isv"* (por eso está en LPS)
+y en el audio dice que es *"parecido al de ajuste"*, que es USD. Puede que
+"parecido" se refiera a la **naturaleza** del cargo (un trámite variable) y no a
+la moneda. **No lo cambié.** Va a la lista de confirmar.
+
+---
+
+### A2-04 · Cambio de servicio: está cobrando 3.7× de más, y se auto-genera — 🔴 **URGENTE**
+
+| | |
+|---|---|
+| Yusef en el audio | **L.100** |
+| En la hoja | 5 |
+| **En el sistema hoy** | **$15 USD ≈ L.373** |
+
+Y no es un cargo que alguien elige a mano: **se auto-genera en nota de débito**
+al facturar un paquete con `solicito_cambio_servicio`. O sea que hoy sale solo,
+a casi cuatro veces lo que Yusef dice que vale.
+
+Él mismo dijo que lo va a ajustar:
+
+> "Como esto es editable, nosotros lo vamos a cambiar de acuerdo a lo que
+> cuadremos al final."
+
+**No lo toqué** — es su número y dijo que lo pone él. Pero mientras tanto está
+cobrando de más solo, así que o lo bajás a L.100 ya, o se desactiva la
+auto-generación hasta que él lo confirme.
+
+Esto **cierra** la pregunta ALTA *"cambio de servicio: su hoja dice 5, el sistema
+cobra $15"* del Excel.
+
+---
+
+### A2-05 · Retener en Miami **no** tiene costo — **corrección**
+
+> "El retener **no tiene un cobro**. Lo que en realidad tiene un cobro es el
+> proceso que le hagamos."
+
+Y el $5 que aparecía era deliberado, pero ya no lo quiere:
+
+> "Fue un error que se dejó. Que cobrábamos $5 por retener en Miami **para que la
+> gente se asustara** cuando leyera."
+
+Para qué usan retener de verdad: el cliente quiere saber cuánto mide y pesa
+antes de decidir si lo manda aéreo o marítimo. **Medir y pesar no se cobra.**
+
+Lo que sí se cobra es lo que venga después (retornar, entrada y salida, etc.).
+
+Y mencionó que el servicio de consolidación (**CONT**) sí va a existir: el
+cliente acumula en Miami y pide que se lo manden todo junto.
+
+---
+
+### A2-06 · Los cargos que faltan definir bien
+
+| Cargo | Lo que dijo | Falta |
+|---|---|---|
+| **Retornado de Miami** | $5 es el **mínimo**. Con trámite y llevada al correo sube. Si es **USPS** hay que pagar motorista aparte → **$15** | ¿$5 mínimo con escalones, o dos cargos? |
+| **Entrada y salida (IN & OUT)** | El cliente recibe en Miami y lo recoge él mismo. "$5 cada uno" por paquete, "de 10 a 5 depende" | El rango — ¿de qué depende? |
+| **Recolecta Miami** | "$35 normal, pero hay clientes que tienen descuentos" | Choca con [[project_recolecta_tabla_tarifas]], donde pidió tabla **por zona**. ¿Son dos cosas distintas — recolecta en Miami vs. en Honduras? |
+| **Etiqueta internacional** | Servicio que existe dentro de los retornados de Miami | **No está en la hoja ni en el sistema.** "¿La vas a poder agregar después?" → "Sí, necesitamos poder agregar" |
+
+---
+
+### A2-07 · El CRUD de tarifas ya hace lo que pidió — ✅ **YA ESTÁ**
+
+Yusef describió lo que necesita mostrando el sistema viejo:
+
+> "Cuando lo crees, que yo pueda seleccionar cómo es el cobro: si lempiras o
+> dólares."
+
+Y su queja concreta del sistema viejo:
+
+> "Cada vez que queremos modificar un precio mínimo tenemos que modificarlo en
+> dólares, y los dólares no cuadran. Yo tengo que venir y cuadrar 173.91."
+
+**Eso ya está resuelto** en `/servicios` (`app/views/servicios/_form.html.erb`):
+
+| Lo que pidió | Dónde está |
+|---|---|
+| Moneda del precio | `f.select :moneda` — LPS/USD |
+| **Moneda del mínimo, independiente** | `f.select :minimo_moneda` |
+| Monto mínimo **en el idioma de Yusef** | `minimo_monto_con_isv` — él escribe **200**, la columna guarda **173.91** |
+| Si incluye impuestos | `precio_incluye_isv` |
+| Mínimo de libras | `minimo_libras` |
+
+El accessor de `tarifa.rb:96-107` es justo el que le quita el dolor de cabeza:
+convierte de/hacia el ISV para que nunca tenga que calcular el neto a mano.
+
+Vale enseñárselo en la próxima llamada — él no sabía que ya estaba, y opinó:
+
+> "Yo veo el tuyo mejor en eso, mucho mejor en un montón de cosas."
+
+---
+
+### A2-08 · A los servicios extra les falta el mínimo — **NUEVO**
+
+En el sistema viejo el mínimo era **obligatorio** en cada servicio:
+
+> "Precio mínimo a cobrar, lo tiene obligado."
+
+`Tarifa` sí tiene `minimo_monto` / `minimo_moneda`. **`ServicioExtra` no tiene
+ningún campo de mínimo** — sus columnas son `codigo, descripcion, costo,
+precio_venta, moneda, precio_incluye_isv, position, activo, notas`.
+
+Y hace falta de verdad: el **retornado de Miami** es exactamente eso — *"$5 es
+como un precio mínimo que cobramos"*.
+
+El CRUD de `/servicios_extra` ya tiene moneda y el check de ISV; solo falta el
+mínimo.
+
+---
+
+### A2-09 · Escalonado — la regla de redondeo, **confirmada**
+
+La tabla de escalones va en hoja aparte:
+
+> "No supe cómo ponértelo ahí, entonces mejor lo metí acá abajo."
+
+Columnas: **desde – hasta libras · monto en Lempiras con impuesto**. Mínimo
+L.200 con impuesto en todas: *"es mínimo doscientos, doscientos, doscientos"*.
+
+Y confirmó la regla de redondeo de libras, que ya teníamos anotada:
+
+> "El uno punto cero nueve **sigue siendo uno**. Uno punto uno ya es **uno y
+> medio**. Uno y medio pues uno y medio. Y de **uno punto seis ya sube**."
+
+| Peso real | Se cobra |
+|---|---|
+| 1.00 – 1.09 | **1.0** |
+| 1.10 – 1.59 | **1.5** |
+| 1.60 – 2.09 | **2.0** |
+
+Coincide con la regla `.10/.60` de [[project_etiquetar_sesion_y_calc]].
+
+**Se cruzó contra el código y hay dos cosas.**
+
+**1. Hoy el redondeo no se aplica.** `incremento_libras` está en `nil` en las
+58 tarifas cargadas, y `redondear_al_incremento` (`tarifa.rb:131-136`) devuelve
+el peso tal cual cuando está vacío. O sea que se cobra el peso exacto: 1.09 lb
+se cobran como 1.09.
+
+**2. Cuando se active, no va a redondear como Yusef dijo.** La implementación es
+un `ceil` puro al múltiplo:
+
+```ruby
+((peso / inc).ceil * inc).round(2)
+```
+
+Un `ceil` no tiene tolerancia, y la regla de Yusef sí: el `.10` y el `.60` son
+justamente los umbrales donde recién sube. Con `incremento_libras = 0.5`:
+
+| Peso | El código | Yusef | |
+|---|---|---|---|
+| 1.05 | 1.5 | **1.0** | 🔴 cobra de más |
+| 1.09 | 1.5 | **1.0** | 🔴 cobra de más |
+| 1.10 | 1.5 | 1.5 | ok |
+| 1.50 | 1.5 | 1.5 | ok |
+| 1.55 | 2.0 | **1.5** | 🔴 cobra de más |
+| 1.59 | 2.0 | **1.5** | 🔴 cobra de más |
+| 1.60 | 2.0 | 2.0 | ok |
+
+Falla en dos bandas — `.01–.09` y `.51–.59` — y **siempre hacia arriba**. Sobre
+un CER de 1.05 lb con mínimo de por medio no se nota, pero sobre un paquete de
+40.05 lb son media libra de más cobrada.
+
+Es una **mina**, no un incendio: mientras `incremento_libras` siga en `nil` no
+cobra de más. Muerde el día que Yusef active el escalonado — el mismo patrón de
+los cuatro errores de plata de PR-10, que estuvieron latentes hasta que se
+cargaron las tarifas reales.
+
+La fórmula que sí da la regla de Yusef es un ceil con tolerancia de 0.09:
+
+```ruby
+(((peso - Rational(9, 100)) / inc).ceil * inc).round(2)
+```
+
+**PREGUNTA antes de implementarla:** Yusef describió la regla solo para
+incrementos de media libra. Si mañana crea una tarifa con incremento de 1 lb,
+¿la tolerancia sigue siendo 0.09, o es proporcional? No lo inventamos.
+
+---
+
+### A2-10 · Faltan EXPRESS y CKA en la tabla de escalones — **Yusef los agrega**
+
+> "Aquí me faltó el exprés, porque el exprés no lo hemos creado, pero vos debés
+> crearlo para yo podérselo agregar."
+> "Y aquí faltó el CKA también, que no lo tengo analizado."
+
+No hay que esperarlos: con el CRUD de `/servicios` andando, él los mete. Lo que
+sí hay que confirmar es que el catálogo de **tipos de envío** tenga EXPRESS y
+CKA dados de alta para poder colgarles tarifas.
+
+---
+
+### A2-11 · Tarifa editable: supervisor **y** área administrativa — **matiz de Fase 13**
+
+> "Tarifa editable con autorización de supervisor o jefe **cuando están en
+> prefactura**, pero también eso es **editable por el área administrativa**."
+
+Son dos caminos distintos y conviene no confundirlos:
+
+| Quién | Dónde | Cómo |
+|---|---|---|
+| Supervisor / jefe | En la **pre-factura**, sobre una línea concreta | **PIN** + queda la autorización registrada (Fase 13) |
+| Área administrativa | En el **catálogo** `/servicios` | Edición normal del precio de lista, sin PIN |
+
+Lo que Fase 13 protege es el precio **de una venta**, no el catálogo.
+
+---
+
+### Preguntas que este audio CERRÓ
+
+| Pregunta del Excel | Cómo quedó |
+|---|---|
+| Moneda de los 10 cargos | ✅ Resueltas casi todas (A2-03). Y ya no bloquea: los carga Yusef (A2-01) |
+| Cambio de servicio: ¿5 o $15? | ✅ **L.100**, editable por ellos (A2-04) |
+| Redondeo de libras | ✅ Confirmada la regla `.10/.60` — y el código **no** la cumple (A2-09) |
+
+### Preguntas que quedan (se suman a las de audio 1)
+
+7. **Manejo y gastos de destino** — la hoja dice LPS, el audio sugiere USD (A2-03)
+8. **Recolecta** — ¿el $35 de Miami y la tabla por zona son dos cosas distintas? (A2-06)
+9. **Retornado de Miami** — ¿$5 mínimo con escalones, o $5 y $15 son dos cargos? (A2-06)
+10. **Entrada y salida** — ¿de qué depende que sea $5 o $10? (A2-06)
+11. **Flete México** — ¿en qué moneda? (A2-03)
+12. **Etiqueta internacional** — ¿precio y en qué moneda? (A2-06)
+13. **Tolerancia del redondeo** — el `.10/.60` es para incrementos de media
+    libra. Si crea una tarifa con incremento de 1 lb, ¿la tolerancia sigue
+    siendo 0.09 o es proporcional? (A2-09)
+
+---
+
+### Audio 2 — cambios que se ocupan
+
+**Urgente**
+
+| ID | Qué |
+|---|---|
+| A2-04 | **Cambio de servicio cobra $15 (≈L.373) cuando vale L.100, y se auto-genera** |
+| A2-09 | **El redondeo de libras cobra de más en `.01–.09` y `.51–.59`** — latente hasta que se active `incremento_libras` |
+
+**Nuevo**
+
+| ID | Qué |
+|---|---|
+| A2-08 | Campo de **mínimo** en `ServicioExtra` (+ en su CRUD) |
+| A2-06 | Dar de alta **etiqueta internacional** como servicio |
+| A2-10 | Confirmar que EXPRESS y CKA existen como tipo de envío |
+
+**Corregir el catálogo** (lo hace Yusef, pero hay que dejarle el camino)
+
+| ID | Qué |
+|---|---|
+| A2-05 | Retener en Miami **no** cuesta — quitar el cobro |
+| A2-03 | Consolidado en Miami en **cero** |
+| A2-03 | Borrar los "producto ejemplo" |
+
+**Verificar**
+
+| ID | Qué |
+|---|---|
+| A2-11 | Que el PIN cubra la línea de pre-factura y **no** el catálogo |
+
+**Ya está** — A2-07 (el CRUD de tarifas con moneda + mínimo con ISV ya hace todo
+lo que pidió; solo hay que enseñárselo).
+
+**Ya no aplica** — cargar los 10 cargos pendientes de PR-10.i: los mete Yusef
+(A2-01).
+
+---
+
 ## Próximos Pasos
 
 1. **Conversación 2:** Login, Logout, Creación de usuarios y roles — por documentar
 2. **Conversación 3:** Detalle de Paquete Interno + Warehouse Receipt — ✅ documentada arriba, preguntas del bloque PR-D todas resueltas
 3. **Conversación 4:** ✅ documentada arriba — franja de contexto operativo (PR-9)
 4. **Conversación 5:** ✅ documentada arriba — tarifas, mínimos y etiqueta (PR-10)
-5. **Conversación 6:** 🔶 Audio 1 documentado arriba (prueba en vivo de `/etiquetar`, items `A1-01` … `A1-28`). Faltan el **audio 2** y las **imágenes** antes de armar el plan de PRs y de actualizar `preguntas_para_yusef.xlsx`
+5. **Conversación 6:** 🔶 Audios 1 y 2 documentados arriba (`A1-01` … `A1-28` y `A2-01` … `A2-11`). Faltan las **imágenes** antes de armar el plan de PRs y de actualizar `preguntas_para_yusef.xlsx`
