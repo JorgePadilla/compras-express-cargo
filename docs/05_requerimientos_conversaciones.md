@@ -2225,7 +2225,7 @@ El tracking es del courier y no se toca. La única excepción es el sufijo
 
 ---
 
-### A1-06 · Cambiar la cantidad de paquetes no elimina ni crea los sobrantes — **BUG**
+### A1-06 · Cambiar la cantidad de cajas no eliminaba las sobrantes — ✅ **ARREGLADO** (PR-C6.7)
 
 Yusef lo reprodujo dos veces en vivo:
 
@@ -2241,8 +2241,17 @@ La regla que acordaron es simple: la cantidad nueva manda.
 > **Jorge:** "Si tienes cinco y lo quieres cambiar a dos, solo deberían quedar los dos."
 > **Yusef:** "Eliminar lo otro. Ajá."
 
-Ojo al implementarlo: eliminar cajas que ya estén facturadas o entregadas no
-puede ser silencioso.
+**Arreglo (PR-C6.7):** `Paquete.ajustar_split!`. Bajar elimina las cajas de
+`numero_caja` mayor; subir crea las nuevas con el mismo número madre.
+
+**Guarda dura, confirmada por Jorge:** si alguna caja a eliminar ya está
+facturada, pre-facturada o entregada, la operación falla **entera** y no toca
+nada — borrarla descuadraría la venta en silencio. Mira el estado **y** los FKs
+de cobro, porque un paquete puede tener `pre_factura_id` sin que su estado lo
+diga todavía.
+
+Qué hacer en ese caso sigue siendo pregunta abierta de Yusef; hasta que
+conteste, bloquear con un error explícito es lo conservador.
 
 ---
 
@@ -2709,7 +2718,7 @@ revisar sobre el sistema andando que sobre un diagrama.
 | ~~A1-02~~ | ~~En `/paquetes` el tracking salía dos veces seguidas~~ ✅ **arreglado** | `index.html.erb` col. "N° recepción" — era la vista, no los datos |
 | ~~A1-03~~ | ~~F2 no limpia después de un Enter~~ ✅ **arreglado** | era `formTarget.reset()`, no el foco |
 | ~~A1-04~~ | ~~El código de barras no distingue caja 1 de caja 2~~ ✅ **arreglado** | `etiqueta_codigo_barras` + parseo en `Paquete.buscar` |
-| A1-06 | Cambiar la cantidad de cajas no elimina ni crea las sobrantes | `crear_split!` solo crea |
+| ~~A1-06~~ | ~~Cambiar la cantidad de cajas no elimina ni crea las sobrantes~~ ✅ **arreglado** | `Paquete.ajustar_split!` |
 | ~~A1-08~~ | ~~"Cambio de servicio" no pregunta a cuál, y no aplica~~ ✅ **arreglado** | modal + `aplicar_cambio_servicio` |
 | ~~A1-11~~ | ~~La ventana de impresión no se cierra~~ ✅ **arreglado** | `layouts/etiqueta.html.erb` |
 

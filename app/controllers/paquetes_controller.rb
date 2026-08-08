@@ -99,6 +99,25 @@ class PaquetesController < ApplicationController
       @paquete.pre_alerta_paquetes.destroy_all
     end
 
+    # PR-C6.7: cambiar la cantidad de cajas de un split crea o elimina las que
+    # correspondan. Antes solo se actualizaba el número en cada fila y los
+    # registros viejos quedaban dando vueltas — Yusef lo reprodujo bajando de
+    # 3 a 2 y viendo que quedaban las 3.
+    #
+    # Va **antes** del save: si alguna caja a eliminar ya está cobrada, la
+    # operación falla entera y no se guarda nada.
+    nueva_cantidad = paquete_params[:cantidad_paquetes].to_i
+    if ajusta_cajas?(nueva_cantidad)
+      begin
+        Paquete.ajustar_split!(@paquete, nueva_cantidad)
+        @paquete.reload
+      rescue Paquete::CajaNoEliminable => e
+        flash.now[:alert] = e.message
+        render_show_with_edit_assigns(status: :unprocessable_entity)
+        return
+      end
+    end
+
     @paquete.assign_attributes(paquete_params)
     # `paquete[:pre_factura]` es columna boolean; el accessor normal lo
     # interpreta como la asociación belongs_to :pre_factura. Lo escribimos
@@ -548,6 +567,24 @@ class PaquetesController < ApplicationController
     end
 
     nil
+  end
+
+  # ¿El form está pidiendo cambiar la cantidad de cajas de verdad?
+  #
+  # Solo aplica a paquetes que YA son un split o que pasan a serlo. Un paquete
+  # suelto que se edita sin tocar el campo no debe entrar acá — y menos uno
+  # que llega con `cantidad_paquetes` en blanco, que es el default de muchos
+  # formularios.
+  def ajusta_cajas?(nueva_cantidad)
+    return false unless paquete_params.key?(:cantidad_paquetes)
+    return false if nueva_cantidad < 1
+
+    actual = @paquete.cantidad_paquetes.to_i
+    return false if nueva_cantidad == actual
+
+    # Pasar de 1 a N sobre un paquete que nunca fue split lo convierte en uno;
+    # `ajustar_split!` lo maneja creando las cajas que faltan.
+    actual > 1 || nueva_cantidad > 1
   end
 
   def render_show_with_edit_assigns(status:)
