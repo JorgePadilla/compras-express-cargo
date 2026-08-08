@@ -2811,6 +2811,70 @@ cliente acumula en Miami y pide que se lo manden todo junto.
 
 ---
 
+### A2-12 · La hoja "actualizada" del 7 de agosto no trae nada nuevo
+
+Yusef mandó `precios por categoria 2026 (1).xlsx` diciendo que era la versión
+actualizada. **No lo es.** Se comparó celda por celda contra la del 5 de agosto:
+
+| | Vieja (5 ago) | Nueva (7 ago) |
+|---|---|---|
+| Valores de las 3 hojas (`Hoja1`, `ACTUAL`, `PROPUESTA`) | idénticos | idénticos |
+| Rellenos de las celdas de precio | `theme0` (blanco) | `theme0` (blanco) |
+| Celdas de la leyenda D31/D32 | `theme9` / `theme7` | `theme9` / `theme7` |
+| `dcterms:modified` | 2026-08-05 21:31 | 2026-08-07 02:20 |
+
+Lo abrió y lo volvió a guardar; los bytes cambian porque Excel reescribe todo,
+pero **ninguna celda cambió**.
+
+⚠️ **La leyenda de colores sigue sin aplicarse.** Era la esperanza de que esta
+versión resolviera la moneda de los cargos: las celdas de precio siguen en
+blanco (`theme0`), y los colores solo están en las dos celdas de la leyenda.
+Menos mal que el audio 2 la resolvió hablando (A2-03).
+
+También se confirmó que **la matriz de categorías y los tres tarifarios
+escalonados (CER, CEM, CKM) coinciden exactamente** con lo que ya está sembrado
+en `lib/tarifas_propuesta_2026.rb`, incluido el split de CKM 13.5–100 lb entre
+SPS ($1.90) y TGU ($2.00).
+
+Y siguen faltando **EXPRESS y CKA** en los tarifarios escalonados, tal como
+Yusef dijo en el audio (A2-10).
+
+---
+
+### A2-13 · Lo que la hoja sí tenía y nunca habíamos extraído
+
+Revisándola a fondo aparecieron tres cargos con datos **por categoría** que solo
+se habían leído de la columna "Precio Normal".
+
+**Recolecta Miami — los descuentos están en la hoja** (fila 24). Esto le pone
+números al *"$35 normal, pero hay clientes que tienen descuentos"* del audio:
+
+| Categoría | Precio |
+|---|---|
+| Precio Normal · Precio Tegus · Shein · Shein TGUS | **35** |
+| Clientes Amigos · doTERRA/Farmasi · Mayoristas · Revendedores | **25** |
+| Familia · Personal CEC · Sin Cobro Mínimo | 0 |
+
+⚠️ Ojo con los ceros: en esta hoja un 0 viene significando *"sin definir"*, no
+*"gratis"* — así está documentado para los mínimos. Pero **Personal CEC sí tiene
+precios en todo lo demás**, así que su 0 en recolecta podría ser un descuento
+del 100% para el personal. Va a preguntas.
+
+**Servicio de entrada y salida** (fila 27): precio **10**, mínimo **5**, igual
+para todas las categorías que pagan. O sea que el *"de 10 a 5 depende"* del
+audio **no depende de la categoría** — el 10 es el precio y el 5 el piso. De qué
+depende que baje sigue abierto.
+
+**Flete México** (fila 20): solo Precio Normal y Precio Tegus, con precio **5**
+y mínimo **6**. ⚠️ El mínimo es **mayor que el precio**, lo cual no tiene
+sentido — o el 5 es por libra y el 6 el piso del envío, o hay un error de
+tipeo. Va a preguntas.
+
+Nada de esto se carga todavía: la moneda de los tres sigue sin confirmarse, y
+además **los precios los mete Yusef** (A2-01).
+
+---
+
 ### A2-07 · El CRUD de tarifas ya hace lo que pidió — ✅ **YA ESTÁ**
 
 Yusef describió lo que necesita mostrando el sistema viejo:
@@ -2977,6 +3041,12 @@ Lo que Fase 13 protege es el precio **de una venta**, no el catálogo.
 13. **Tolerancia del redondeo** — el `.10/.60` es para incrementos de media
     libra. Si crea una tarifa con incremento de 1 lb, ¿la tolerancia sigue
     siendo 0.09 o es proporcional? (A2-09)
+14. **Recolecta: el 0 de Personal CEC** — ¿es descuento del 100% o "sin
+    definir"? Tiene precios en todo lo demás (A2-13)
+15. **Flete México** — el mínimo (6) es mayor que el precio (5). ¿El 5 es por
+    libra y el 6 el piso del envío, o hay un error de tipeo? (A2-13)
+16. **La hoja de precios** — la versión del 7 de agosto es idéntica a la del 5.
+    Si pensaba mandar cambios, no llegaron (A2-12)
 
 ---
 
