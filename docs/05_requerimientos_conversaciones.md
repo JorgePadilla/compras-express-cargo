@@ -2031,22 +2031,69 @@ en pre-alerta sí lo hay, y Yusef marcó la diferencia:
 
 ---
 
-### A1-02 · El número de recepción sale igual al tracking — **BUG (síntoma)**
+### A1-02 · En /paquetes el tracking salía dos veces seguidas — ✅ **ARREGLADO**
 
-> "El número de recepción que le grabó, el mismo que el tracking."
+Minuto **41:02**, viendo el listado:
 
-Es el mismo problema de A1-01, no un bug del generador. El formato anual sí
-está bien implementado (`numero_recepcion_counter.rb`,
-`paquete.rb:555-570`): `<PREFIX><AÑO><CONTADOR>`, contador atómico con
-`SELECT FOR UPDATE`, reinicia cada enero.
+> "Esto está malo... porque te está poniendo el tracking y el número de recepción."
+> "Es que el número de recepción es como el número de registro."
 
-Lo que pasa es que las vistas caen a `numero_recepcion.presence || tracking`
-(`_etiqueta.html.erb:29`, `layouts/etiqueta.html.erb:4`,
-`listado_pdf.rb:46`). Un paquete grabado a medias por el Enter no tiene
-recepción, así que **muestra el tracking en su lugar**.
+Y en **38:53**: *"el primer error es el número de recepción"*.
 
-Se arregla con A1-01. Pero el fallback también hay que revisarlo: mostrar el
-tracking rotulado como recepción es precisamente lo que confundió a Yusef.
+**No era un problema de datos.** En la base hay **cero** paquetes con
+`numero_recepcion = tracking`. Se verificó:
+
+| | |
+|---|---|
+| Paquetes totales | 54 |
+| Con `numero_recepcion = tracking` grabado | **0** |
+| Sin `numero_recepcion` | 45 |
+| Sin sucursal | 45 |
+
+Era la **vista**. Las columnas "N° recepción" y "Tracking" son vecinas, y la
+primera usaba `paquete_display_id`, que cae al tracking cuando no hay
+recepción:
+
+```ruby
+# paquetes_helper.rb:43
+paquete.numero_recepcion.presence || paquete.tracking
+```
+
+Y no hay recepción en 45 de 54 paquetes porque `generate_numero_recepcion`
+(`paquete.rb:556`) sale temprano con `return if sucursal.nil?`. Resultado: el
+mismo texto en dos celdas pegadas.
+
+Detalle que lo confirma: **el Excel y el PDF del mismo listado ya ponían "—"**
+en ese caso (`paquetes_controller.rb:471`, `export.xlsx.axlsx:18`,
+`listado_pdf.rb:46` sí usa el fallback). La pantalla era la que mentía.
+
+**Arreglo:** la columna muestra el `numero_recepcion` o guión. Nunca el
+tracking. `paquete_display_id` **no se tocó** — como identificador de un título
+el fallback sirve; el problema era usarlo en una columna que se llama
+"N° recepción" con el tracking pegado al lado.
+
+Cubierto por `test/controllers/paquete_numero_recepcion_columna_test.rb`
+(3 tests; verificados reintroduciendo el bug a propósito — caen 2 de 3 con el
+mensaje `"N° recepción" y "Tracking" muestran lo mismo`).
+
+El formato anual del número **está bien** y no se tocó
+(`numero_recepcion_counter.rb`): `<PREFIX><AÑO><CONTADOR-6>`, contador atómico
+con `SELECT FOR UPDATE`, reinicia cada enero. Ej. `RM0002026000010`. Es el
+número del Warehouse Receipt. Lo único pendiente ahí es el **mes** que pidió
+Yusef → ver preguntas.
+
+⚠️ **Queda la causa raíz:** que 45 de 54 paquetes no tengan sucursal. Eso es
+A1-01 (el Enter que graba incompleto) más data sembrada. El arreglo de la
+columna hace que el problema **se vea** (una fila de guiones) en vez de
+disfrazarse de tracking.
+
+⚠️ **Y queda un caso peor con el mismo fallback:** `_etiqueta.html.erb:29`
+codifica `numero_recepcion.presence || tracking` **en el código de barras**. Si
+el paquete no tiene recepción, la etiqueta sale con un barcode del tracking —
+justo lo que Yusef prohibió (*"el código de barra que está aquí es el warehouse,
+no es el tracking"*, minuto 42:19). Se atiende junto con A1-04, porque la
+decisión no es obvia: sin recepción, o no se imprime barcode, o no se debería
+poder etiquetar el paquete.
 
 ---
 
@@ -2528,7 +2575,7 @@ revisar sobre el sistema andando que sobre un diagrama.
 | ID | Qué | Dónde |
 |---|---|---|
 | A1-01 | Enter envía el formulario en vez de avanzar de campo | `etiquetar_controller.js:38-63`, `index.html.erb:213` |
-| A1-02 | El número de recepción se muestra como el tracking | consecuencia de A1-01 + fallbacks `.presence \|\| tracking` |
+| ~~A1-02~~ | ~~En `/paquetes` el tracking salía dos veces seguidas~~ ✅ **arreglado** | `index.html.erb` col. "N° recepción" — era la vista, no los datos |
 | A1-03 | F2 no limpia después de un Enter | consecuencia de A1-01 (foco) |
 | A1-04 | El código de barras no distingue caja 1 de caja 2 | `_etiqueta.html.erb:29` + `paquete.rb:367-395` |
 | A1-06 | Cambiar la cantidad de cajas no elimina ni crea las sobrantes | `crear_split!` solo crea |

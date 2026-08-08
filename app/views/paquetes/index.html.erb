@@ -400,10 +400,23 @@ end %>
               <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-600 dark:text-gray-300">
                 <%= paquete.fecha_disponible&.strftime("%d/%m/%Y") || "—" %>
               </td>
-              <td class="px-3 py-2 whitespace-nowrap">
-                <span class="font-mono text-xs font-semibold text-cec-navy dark:text-cec-gold"><%= paquete_display_id(paquete) %></span>
+              <%# N° recepción — Yusef 2026-08-08: "esto está malo, porque te está
+                  poniendo el tracking y el número de recepción... el número de
+                  recepción es como el número de registro".
+                  Salía el MISMO valor en esta columna y en la de al lado: el
+                  paquete no tenía recepción generada (sin sucursal no se genera)
+                  y `paquete_display_id` cae al tracking. Como identificador de
+                  un título ese fallback está bien; acá, en la columna que se
+                  llama "N° recepción" y con el tracking pegado a la derecha,
+                  miente. Sin recepción va guión — igual que el Excel y el PDF. %>
+              <td class="px-3 py-2 whitespace-nowrap" data-campo="numero-recepcion">
+                <% if paquete.numero_recepcion.present? %>
+                  <span class="font-mono text-xs font-semibold text-cec-navy dark:text-cec-gold"><%= paquete.numero_recepcion %></span>
+                <% else %>
+                  <span class="font-mono text-xs text-gray-400 dark:text-gray-500" title="Sin número de recepción: el paquete se guardó sin sucursal">—</span>
+                <% end %>
               </td>
-              <td class="px-3 py-2 whitespace-nowrap">
+              <td class="px-3 py-2 whitespace-nowrap" data-campo="tracking">
                 <div class="flex items-center gap-1.5">
                   <%= link_to truncate(paquete.tracking, length: 18), paquete, class: "font-mono text-xs text-gray-700 dark:text-gray-200 hover:underline" %>
                   <% if paquete.dividido? %>
