@@ -2701,7 +2701,7 @@ Lo que dijo de cada uno, cruzado contra lo que hay cargado hoy:
 | Cargo | Yusef (audio 2) | En el sistema | |
 |---|---|---|---|
 | **Ajuste** | **USD** — "aquí dice un lempira pero yo lo puse a dólares" | no cargado | ✅ resuelto |
-| **Cambio de servicio** | **L.100** — "son los 100 lempiras, yo te lo puse que eran 5" | **$15 USD** | 🔴 ver A2-04 |
+| **Cambio de servicio** | **L.100** — "son los 100 lempiras, yo te lo puse que eran 5" | L.100 | ✅ arreglado (A2-04) |
 | **Compras online** | **USD** — "ponerlo 1 USD más impuesto" | USD 1.00 | ✅ coincide |
 | **Consolidado en Miami** | **sin costo** — "eso no tiene ningún costo, en cero. Le pusimos algo pero es porque me equivoqué" | no cargado | ✅ resuelto |
 | **Entrega local** | **variable** — "a veces hay entregas especiales que no sabemos el costo" | no cargado | ✅ manual |
@@ -2724,7 +2724,7 @@ la moneda. **No lo cambié.** Va a la lista de confirmar.
 
 ---
 
-### A2-04 · Cambio de servicio: está cobrando 3.7× de más, y se auto-genera — 🔴 **URGENTE**
+### A2-04 · Cambio de servicio: cobraba 3.7× de más — ✅ **ARREGLADO** (PR-C6.1)
 
 | | |
 |---|---|
@@ -2741,12 +2741,42 @@ a casi cuatro veces lo que Yusef dice que vale.
 > "Como esto es editable, nosotros lo vamos a cambiar de acuerdo a lo que
 > cuadremos al final."
 
-**No lo toqué** — es su número y dijo que lo pone él. Pero mientras tanto está
-cobrando de más solo, así que o lo bajás a L.100 ya, o se desactiva la
-auto-generación hasta que él lo confirme.
-
 Esto **cierra** la pregunta ALTA *"cambio de servicio: su hoja dice 5, el sistema
 cobra $15"* del Excel.
+
+**Arreglo (PR-C6.1).** Queda en `L.100 LPS` con el ISV **adentro**:
+
+| | neto | + ISV |
+|---|---|---|
+| Antes ($15 USD) | L.324.04 | **L.372.65** |
+| Ahora (L.100) | L.86.96 | **L.100.00** exactos |
+
+Va con el ISV adentro al revés que los cinco cargos de la hoja, y es a
+propósito: los de la hoja van netos porque ahí dice *"PRECIOS NO INCLUYEN
+IMPUESTOS"*, y este número vino del **audio**, donde Yusef habla del precio
+final que paga el cliente. Con el flag en `true` el CRUD le muestra **100** —
+su número — y `precio_venta_sin_isv` mete los 86.96 a la línea. Es el mismo
+criterio que `Tarifa#minimo_monto_con_isv`, que lo deja escribir 200 y guarda
+173.91.
+
+Él lo sigue ajustando desde el CRUD: *"como esto es editable, nosotros lo vamos
+a cambiar de acuerdo a lo que cuadremos al final"*.
+
+⚠️ **El seed no alcanzaba.** `db/seeds.rb` usa `find_or_create_by!`, así que
+corregirlo no toca la fila donde el cargo ya existe — que es justamente donde
+importa. Va con `ServiciosExtraPropuesta2026.corregir_cambio_servicio!`, que
+`tarifas:sembrar_cargos_2026` ya invoca (y hay tarea suelta
+`tarifas:corregir_cambio_servicio` por si hace falta).
+
+**Corrección a lo que decía este doc:** la `NotaDebito` que se auto-crea al
+facturar con motivo `cambio_servicio` **no contiene el cargo** — sus líneas son
+un *ajuste de flete*. Los L.100 viven en la pre-factura y en la venta, que es
+donde se cobra. Quedó un test para que nadie lo asuma al revés y termine
+cobrándolo dos veces.
+
+Cubierto por `test/models/cambio_servicio_precio_test.rb` (4 tests) y 5 más en
+`servicios_extra_propuesta_2026_test.rb`. Verificado reintroduciendo el $15 —
+caen 5.
 
 ---
 
@@ -2956,7 +2986,7 @@ Lo que Fase 13 protege es el precio **de una venta**, no el catálogo.
 
 | ID | Qué |
 |---|---|
-| A2-04 | **Cambio de servicio cobra $15 (≈L.373) cuando vale L.100, y se auto-genera** |
+| ~~A2-04~~ | ~~Cambio de servicio cobraba $15 (≈L.373)~~ ✅ **arreglado** — L.100 exactos |
 | A2-09 | **El redondeo de libras cobra de más en `.01–.09` y `.51–.59`** — latente hasta que se active `incremento_libras` |
 
 **Nuevo**

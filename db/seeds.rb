@@ -260,8 +260,19 @@ puts "  ✓ #{TarifaRecolecta.count} tarifas de recolecta"
 # correspondiente (cambio de servicio, etc.). Precio incluye ISV.
 puts "Seeding servicios extra..."
 [
+  # Yusef 2026-08-08, en el audio de precios: "es un ajuste que se le hace por
+  # hacer cambio de servicio que son los **100 lempiras**. Yo te lo puse que
+  # eran 5". Estaba cargado en $15 USD, que son ~L.373 — 3.7× de más, y este
+  # cargo **se auto-genera** en nota de débito al facturar.
+  #
+  # Va con el ISV adentro a propósito, distinto de los cinco de la hoja
+  # (`ServiciosExtraPropuesta2026`, que van netos porque la hoja dice "PRECIOS
+  # NO INCLUYEN IMPUESTOS"). Este número no vino de la hoja sino del audio, y
+  # ahí Yusef habla del precio final: los 100 son lo que paga el cliente. Con
+  # el flag en true el CRUD le muestra **100**, que es su número, y
+  # `precio_venta_sin_isv` guarda los 86.96 que van a la línea.
   { codigo: "CAMBIO_SERVICIO", descripcion: "Cambio de servicio (aéreo↔marítimo, con/sin reempaque)",
-    costo: 0, precio_venta: 15.00, moneda: "USD", precio_incluye_isv: true, position: 0 },
+    costo: 0, precio_venta: 100.00, moneda: "LPS", precio_incluye_isv: true, position: 0 },
   { codigo: "PESO_ADICIONAL",  descripcion: "Peso adicional declarado vs medido",
     costo: 0, precio_venta: 0,     moneda: "USD", precio_incluye_isv: true, position: 1 },
   { codigo: "MANEJO_ESPECIAL", descripcion: "Manejo especial (frágil, voluminoso, perecedero)",
