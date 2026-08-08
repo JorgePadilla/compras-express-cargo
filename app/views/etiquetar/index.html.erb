@@ -294,6 +294,30 @@ end %>
       </div>
     <% end %>
 
+    <%# ── Atajos, arriba ──
+        PR-C6.11. Yusef: "estos botones los dejaste abajo y a veces se ocupan
+        acá arriba. En ambos lados. A veces le arregla mejor a ambos lados". %>
+    <div data-barra="atajos"
+         class="mb-5 pb-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-end gap-3">
+      <div class="mr-auto text-xs text-gray-400 dark:text-gray-500 hidden sm:flex gap-4">
+        <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F2</kbd> Limpiar</span>
+        <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F10</kbd> Guardar</span>
+        <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F9</kbd> Guardar + Imprimir</span>
+      </div>
+      <button type="button" data-action="click->etiquetar#clearForm"
+              class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium border border-cec-navy text-cec-navy hover:bg-cec-navy/5 dark:border-cec-navy-light dark:text-cec-navy-light dark:hover:bg-cec-navy-light/10 rounded-lg">
+        Limpiar <kbd class="px-1 py-0.5 bg-cec-navy/10 text-cec-navy dark:bg-cec-navy-light/20 dark:text-cec-navy-light rounded text-[10px] font-sans">F2</kbd>
+      </button>
+      <button type="submit"
+              class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-cec-navy text-white rounded-lg hover:bg-cec-navy-light">
+        Guardar <kbd class="px-1 py-0.5 bg-white/20 rounded text-[10px] font-sans">F10</kbd>
+      </button>
+      <button type="button" data-action="click->etiquetar#submitFormWithPrint"
+              class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-cec-gold text-cec-navy-dark rounded-lg hover:bg-cec-gold-dark">
+        Guardar + Imprimir <kbd class="px-1 py-0.5 bg-black/10 rounded text-[10px] font-sans">F9</kbd>
+      </button>
+    </div>
+
     <% if @paquete.errors.any? %>
       <div class="mb-6 p-4 bg-red-50 rounded-lg">
         <div class="flex items-center gap-2 mb-2">
@@ -446,14 +470,11 @@ end %>
         </div>
 
         <div class="flex flex-wrap items-center gap-6 px-1">
-          <div class="flex items-center gap-2">
-            <%= f.check_box :pre_alerta, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-            <%= f.label :pre_alerta, "Pre-Alerta", class: "text-sm font-medium text-gray-700" %>
-          </div>
-          <div class="flex items-center gap-2">
-            <%= f.check_box :pre_factura, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-            <%= f.label :pre_factura, "Pre-Factura", class: "text-sm font-medium text-gray-700" %>
-          </div>
+          <%# PR-C6.11: se fueron los checkboxes Pre-Alerta y Pre-Factura.
+              Yusef: "esto de prealerta, prefactura... esto no, esto no tiene
+              nada que ver con ellos". Jorge confirmó que habían quedado del
+              inicio del proyecto. La pre-alerta la vincula el sistema solo al
+              reconciliar el tracking; la pre-factura se arma en Honduras. %>
           <%# PR-C6.8: marcar el flag no alcanzaba — Yusef eligió CKM, guardó, y
               el paquete se quedó en CER. Ahora abre un modal que pregunta a
               cuál, con el mismo patrón `checkbox-modal` que ya usa Retener.
@@ -498,6 +519,20 @@ end %>
         </div>
       </div>
 
+      <%# ── Notas internas ──
+          PR-C6.11: sube acá, arriba del cuadro de carrier/proveedor/remitente.
+          Yusef: "notas internas, aquí es donde creo yo que esto lo deberíamos
+          de poner acá arriba, arriba de esto". %>
+      <div class="lg:col-span-3">
+        <%= f.label :notas_internas, "Notas Internas", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.text_area :notas_internas, rows: 2, placeholder: "Notas internas sobre el paquete...",
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                   focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+
+      <%# ── De dónde viene el paquete ── carrier, proveedor y remitente.
+          Yusef: "move carrier, proveedor y remitente en este cuadro que está
+          acá abajo, porque es parte de lo que van a llenar". %>
       <%# Carrier + Proveedor %>
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Carrier</label>
@@ -532,14 +567,6 @@ end %>
                    shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
       </div>
 
-      <%# Notas internas %>
-      <div class="lg:col-span-3">
-        <%= f.label :notas_internas, "Notas Internas", class: "block text-sm font-medium text-gray-700 mb-1" %>
-        <%= f.text_area :notas_internas, rows: 2, placeholder: "Notas internas sobre el paquete...",
-            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                   focus:ring-cec-teal focus:border-cec-teal" %>
-      </div>
-
       <%= render "shared/peso_medidas_calc", f: f, wrapper_class: "lg:col-span-3" %>
 
       <%# Cant. de Cajas se pregunta en un modal post-F9 (PR-4). Hidden con
@@ -549,7 +576,8 @@ end %>
 
     <%# Action bar — leyenda de atajos a la izquierda + botones con palabra y su
         tecla F (preferencia de Jorge sobre el bar sin leyenda de PR-7). %>
-    <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div data-barra="atajos"
+         class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4">
       <div class="text-xs text-gray-400 dark:text-gray-500 hidden sm:flex gap-4">
         <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F2</kbd> Limpiar</span>
         <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F10</kbd> Guardar</span>

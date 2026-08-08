@@ -92,9 +92,6 @@ class EtiquetarController < ApplicationController
     end
 
     @paquete.assign_attributes(paquete_params.except(:cantidad_paquetes))
-    if (flag = pre_factura_flag_param) != :missing
-      @paquete[:pre_factura] = flag
-    end
     if (prov_str = proveedor_string_param) != :missing
       @paquete[:proveedor] = prov_str
     end
@@ -162,9 +159,6 @@ class EtiquetarController < ApplicationController
     if (conflicto = conflicto_con_la_sesion(@paquete))
       render_create_error(conflicto)
       return
-    end
-    if (flag = pre_factura_flag_param) != :missing
-      @paquete[:pre_factura] = flag
     end
     if (prov_str = proveedor_string_param) != :missing
       @paquete[:proveedor] = prov_str
@@ -410,21 +404,16 @@ class EtiquetarController < ApplicationController
       :tracking, :tracking_secundario, :cliente_id, :tercero_id, :peso,
       :alto, :largo, :ancho, :cantidad_productos, :cantidad_paquetes,
       :numero_caja, :descripcion, :remitente, :expedido_por,
-      :notas_internas, :notas_retencion, :pre_alerta,
+      :notas_internas, :notas_retencion,
       :solicito_cambio_servicio, :retener_miami,
       motivo_retencion_ids: []
     )
   end
 
-  # `pre_factura` es columna boolean Y a la vez el name de la asociación
-  # belongs_to :pre_factura. Para evitar AssociationTypeMismatch al asignar
-  # "0"/"1" desde el form, se escribe vía column accessor `paquete[:pre_factura]`.
-  def pre_factura_flag_param
-    return :missing unless params.dig(:paquete)&.key?(:pre_factura)
-
-    ActiveModel::Type::Boolean.new.cast(params[:paquete][:pre_factura])
-  end
-
+  # PR-C6.11: `pre_factura_flag_param` vivía acá. Se fue con los checkboxes de
+  # Pre-Alerta y Pre-Factura que Yusef mandó sacar de /etiquetar — "esto no
+  # tiene nada que ver con ellos". Dejar el lector de un param que nadie manda
+  # solo confunde al que venga después.
   # `proveedor` (string legacy) Y a la vez el name de la asociación
   # belongs_to :proveedor (PR-D3.a catálogo). Mismo conflicto que pre_factura:
   # asignar un string desde el form dispara AssociationTypeMismatch. Se escribe
