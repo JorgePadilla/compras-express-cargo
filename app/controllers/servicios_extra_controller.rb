@@ -44,7 +44,8 @@ class ServiciosExtraController < ApplicationController
   def servicio_params
     params.require(:servicio_extra).permit(
       :codigo, :descripcion, :costo, :precio_venta, :moneda,
-      :precio_incluye_isv, :position, :activo, :notas
+      :precio_incluye_isv, :position, :activo, :notas,
+      :minimo_monto, :minimo_moneda
     )
   end
 end

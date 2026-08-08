@@ -1938,7 +1938,9 @@ CREATE TABLE public.servicios_extra (
     activo boolean DEFAULT true NOT NULL,
     notas text,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    minimo_monto numeric(10,2),
+    minimo_moneda character varying
 );
 
 
@@ -5753,6 +5755,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260808145727'),
 ('20260808143148'),
 ('20260808073755'),
 ('20260806100000'),
