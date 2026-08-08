@@ -16,6 +16,11 @@ Rails.application.routes.draw do
   # Etiquetar (Miami labeling)
   get "etiquetar", to: "etiquetar#index"
   post "etiquetar", to: "etiquetar#create"
+  # PR-C6.10: Miami actualiza sus datos en la MISMA hoja donde los llenó, no
+  # en /paquetes. Yusef: "me mandaste a editar y yo no quiero editar mi
+  # paquete... que te cargue aquí la lista, esto te lo vuelve a llenar tal
+  # cual como quedó".
+  patch "etiquetar/:id", to: "etiquetar#update", as: :actualizar_etiquetar
   # Sesión de etiquetado por tipo de envío: el operario elige el tipo una vez
   # al inicio (queda en session) y lo cierra al terminar el lote.
   post   "etiquetar/sesion", to: "etiquetar#iniciar_sesion",  as: :iniciar_sesion_etiquetar
