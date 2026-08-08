@@ -55,8 +55,6 @@ class ServiciosExtraPropuesta2026
   # Los que quedan afuera, con el motivo. Se imprimen al correr la tarea para
   # que no se pierdan de vista.
   PENDIENTES = {
-    "CAMBIO DE SERVICIO" => 'el titulo dice L100 pero el valor es 5 y la nota "pasarlo a dolares" — ' \
-                            "ademas ya existe cargado a $15, que es 3x. Es el que se auto-genera en nota de debito",
     "RETENIDO MIAMI" => 'valor 5 con nota "pasarlo a dolares": no se sabe si el 5 ya es dolares o falta convertirlo',
     "SERVICIO DE ENTRADA Y SALIDA" => 'valor 10 / minimo 5 con nota "pasarlo a dolares" — misma duda',
     "RECOLECTA MIAMI" => "choca con `TarifaRecolecta`, que Yusef mismo pidio por zona en vez de los $35 fijos",
@@ -69,6 +67,55 @@ class ServiciosExtraPropuesta2026
   }.freeze
 
   NOTA = "Cargos PROPUESTA 2026 (Yusef, precios por categoria 2026.xlsx)".freeze
+
+  # ── Cambio de servicio ──────────────────────────────────────────────────
+  #
+  # Este no salió de la hoja: salió del audio del 2026-08-08, donde Yusef lo
+  # dijo con todas las letras.
+  #
+  #   "Es un ajuste que se le hace por hacer cambio de servicio que son los
+  #    **100 lempiras**. Yo te lo puse que eran 5."
+  #
+  # Estaba cargado en **$15 USD**, o sea ~L.373 con ISV: **3.7× de más**. Y no
+  # es un cargo que alguien elige a mano — `PreFactura` lo agrega solo cuando
+  # el paquete trae `solicito_cambio_servicio`, y de ahí pasa a la nota de
+  # débito al facturar. Salía solo, a casi cuatro veces su precio.
+  #
+  # Va con el ISV **adentro**, al revés que los cinco de `CARGOS`. No es un
+  # descuido: los de la hoja van netos porque la hoja dice "PRECIOS NO INCLUYEN
+  # IMPUESTOS", y este vino del audio, donde Yusef habla del precio final que
+  # paga el cliente. Con el flag en true el CRUD le muestra **100** — su número
+  # — y `precio_venta_sin_isv` mete los 86.96 a la línea. Es el mismo criterio
+  # que `Tarifa#minimo_monto_con_isv`, que lo deja escribir 200 y guarda 173.91.
+  #
+  # Yusef puede seguir ajustándolo desde el CRUD: "como esto es editable,
+  # nosotros lo vamos a cambiar de acuerdo a lo que cuadremos al final".
+  CAMBIO_SERVICIO = {
+    codigo: "CAMBIO_SERVICIO",
+    precio: 100.00,
+    moneda: "LPS",
+    incluye_isv: true
+  }.freeze
+
+  # Corrige la fila que YA existe. El seed usa `find_or_create_by!`, así que
+  # editarlo no toca las bases donde el cargo ya está cargado — que es
+  # justamente donde importa.
+  def self.corregir_cambio_servicio!(verbose: false)
+    s = ServicioExtra.find_by(codigo: CAMBIO_SERVICIO[:codigo])
+    return { corregido: false, motivo: :no_existe } if s.nil?
+
+    antes = "#{s.precio_venta} #{s.moneda}"
+    s.assign_attributes(
+      precio_venta: CAMBIO_SERVICIO[:precio],
+      moneda: CAMBIO_SERVICIO[:moneda],
+      precio_incluye_isv: CAMBIO_SERVICIO[:incluye_isv]
+    )
+    return { corregido: false, motivo: :ya_estaba } unless s.changed?
+
+    s.save!
+    puts "  ✓ cambio de servicio: #{antes} → #{s.precio_venta} #{s.moneda} (Yusef 2026-08-08)" if verbose
+    { corregido: true, antes: antes }
+  end
 
   def self.sembrar!(verbose: false)
     creados = actualizados = 0
@@ -93,12 +140,17 @@ class ServiciosExtraPropuesta2026
       nuevo ? creados += 1 : actualizados += 1
     end
 
+    # Va acá y no en una tarea aparte para que el deploy no dependa de que
+    # alguien se acuerde de correr dos comandos.
+    cambio = corregir_cambio_servicio!(verbose: verbose)
+
     if verbose
       puts "  ✓ cargos: #{creados} creados, #{actualizados} actualizados"
       puts "  ⬜ #{PENDIENTES.size} quedan pendientes de que Yusef confirme:"
       PENDIENTES.each { |nombre, motivo| puts "     · #{nombre}: #{motivo}" }
     end
 
-    { creados: creados, actualizados: actualizados, pendientes: PENDIENTES.size }
+    { creados: creados, actualizados: actualizados, pendientes: PENDIENTES.size,
+      cambio_servicio: cambio }
   end
 end

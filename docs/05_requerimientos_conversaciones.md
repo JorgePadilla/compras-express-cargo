@@ -2701,7 +2701,7 @@ Lo que dijo de cada uno, cruzado contra lo que hay cargado hoy:
 | Cargo | Yusef (audio 2) | En el sistema | |
 |---|---|---|---|
 | **Ajuste** | **USD** — "aquí dice un lempira pero yo lo puse a dólares" | no cargado | ✅ resuelto |
-| **Cambio de servicio** | **L.100** — "son los 100 lempiras, yo te lo puse que eran 5" | **$15 USD** | 🔴 ver A2-04 |
+| **Cambio de servicio** | **L.100** — "son los 100 lempiras, yo te lo puse que eran 5" | L.100 | ✅ arreglado (A2-04) |
 | **Compras online** | **USD** — "ponerlo 1 USD más impuesto" | USD 1.00 | ✅ coincide |
 | **Consolidado en Miami** | **sin costo** — "eso no tiene ningún costo, en cero. Le pusimos algo pero es porque me equivoqué" | no cargado | ✅ resuelto |
 | **Entrega local** | **variable** — "a veces hay entregas especiales que no sabemos el costo" | no cargado | ✅ manual |
@@ -2724,7 +2724,7 @@ la moneda. **No lo cambié.** Va a la lista de confirmar.
 
 ---
 
-### A2-04 · Cambio de servicio: está cobrando 3.7× de más, y se auto-genera — 🔴 **URGENTE**
+### A2-04 · Cambio de servicio: cobraba 3.7× de más — ✅ **ARREGLADO** (PR-C6.1)
 
 | | |
 |---|---|
@@ -2741,12 +2741,42 @@ a casi cuatro veces lo que Yusef dice que vale.
 > "Como esto es editable, nosotros lo vamos a cambiar de acuerdo a lo que
 > cuadremos al final."
 
-**No lo toqué** — es su número y dijo que lo pone él. Pero mientras tanto está
-cobrando de más solo, así que o lo bajás a L.100 ya, o se desactiva la
-auto-generación hasta que él lo confirme.
-
 Esto **cierra** la pregunta ALTA *"cambio de servicio: su hoja dice 5, el sistema
 cobra $15"* del Excel.
+
+**Arreglo (PR-C6.1).** Queda en `L.100 LPS` con el ISV **adentro**:
+
+| | neto | + ISV |
+|---|---|---|
+| Antes ($15 USD) | L.324.04 | **L.372.65** |
+| Ahora (L.100) | L.86.96 | **L.100.00** exactos |
+
+Va con el ISV adentro al revés que los cinco cargos de la hoja, y es a
+propósito: los de la hoja van netos porque ahí dice *"PRECIOS NO INCLUYEN
+IMPUESTOS"*, y este número vino del **audio**, donde Yusef habla del precio
+final que paga el cliente. Con el flag en `true` el CRUD le muestra **100** —
+su número — y `precio_venta_sin_isv` mete los 86.96 a la línea. Es el mismo
+criterio que `Tarifa#minimo_monto_con_isv`, que lo deja escribir 200 y guarda
+173.91.
+
+Él lo sigue ajustando desde el CRUD: *"como esto es editable, nosotros lo vamos
+a cambiar de acuerdo a lo que cuadremos al final"*.
+
+⚠️ **El seed no alcanzaba.** `db/seeds.rb` usa `find_or_create_by!`, así que
+corregirlo no toca la fila donde el cargo ya existe — que es justamente donde
+importa. Va con `ServiciosExtraPropuesta2026.corregir_cambio_servicio!`, que
+`tarifas:sembrar_cargos_2026` ya invoca (y hay tarea suelta
+`tarifas:corregir_cambio_servicio` por si hace falta).
+
+**Corrección a lo que decía este doc:** la `NotaDebito` que se auto-crea al
+facturar con motivo `cambio_servicio` **no contiene el cargo** — sus líneas son
+un *ajuste de flete*. Los L.100 viven en la pre-factura y en la venta, que es
+donde se cobra. Quedó un test para que nadie lo asuma al revés y termine
+cobrándolo dos veces.
+
+Cubierto por `test/models/cambio_servicio_precio_test.rb` (4 tests) y 5 más en
+`servicios_extra_propuesta_2026_test.rb`. Verificado reintroduciendo el $15 —
+caen 5.
 
 ---
 
@@ -2778,6 +2808,70 @@ cliente acumula en Miami y pide que se lo manden todo junto.
 | **Entrada y salida (IN & OUT)** | El cliente recibe en Miami y lo recoge él mismo. "$5 cada uno" por paquete, "de 10 a 5 depende" | El rango — ¿de qué depende? |
 | **Recolecta Miami** | "$35 normal, pero hay clientes que tienen descuentos" | Choca con [[project_recolecta_tabla_tarifas]], donde pidió tabla **por zona**. ¿Son dos cosas distintas — recolecta en Miami vs. en Honduras? |
 | **Etiqueta internacional** | Servicio que existe dentro de los retornados de Miami | **No está en la hoja ni en el sistema.** "¿La vas a poder agregar después?" → "Sí, necesitamos poder agregar" |
+
+---
+
+### A2-12 · La hoja "actualizada" del 7 de agosto no trae nada nuevo
+
+Yusef mandó `precios por categoria 2026 (1).xlsx` diciendo que era la versión
+actualizada. **No lo es.** Se comparó celda por celda contra la del 5 de agosto:
+
+| | Vieja (5 ago) | Nueva (7 ago) |
+|---|---|---|
+| Valores de las 3 hojas (`Hoja1`, `ACTUAL`, `PROPUESTA`) | idénticos | idénticos |
+| Rellenos de las celdas de precio | `theme0` (blanco) | `theme0` (blanco) |
+| Celdas de la leyenda D31/D32 | `theme9` / `theme7` | `theme9` / `theme7` |
+| `dcterms:modified` | 2026-08-05 21:31 | 2026-08-07 02:20 |
+
+Lo abrió y lo volvió a guardar; los bytes cambian porque Excel reescribe todo,
+pero **ninguna celda cambió**.
+
+⚠️ **La leyenda de colores sigue sin aplicarse.** Era la esperanza de que esta
+versión resolviera la moneda de los cargos: las celdas de precio siguen en
+blanco (`theme0`), y los colores solo están en las dos celdas de la leyenda.
+Menos mal que el audio 2 la resolvió hablando (A2-03).
+
+También se confirmó que **la matriz de categorías y los tres tarifarios
+escalonados (CER, CEM, CKM) coinciden exactamente** con lo que ya está sembrado
+en `lib/tarifas_propuesta_2026.rb`, incluido el split de CKM 13.5–100 lb entre
+SPS ($1.90) y TGU ($2.00).
+
+Y siguen faltando **EXPRESS y CKA** en los tarifarios escalonados, tal como
+Yusef dijo en el audio (A2-10).
+
+---
+
+### A2-13 · Lo que la hoja sí tenía y nunca habíamos extraído
+
+Revisándola a fondo aparecieron tres cargos con datos **por categoría** que solo
+se habían leído de la columna "Precio Normal".
+
+**Recolecta Miami — los descuentos están en la hoja** (fila 24). Esto le pone
+números al *"$35 normal, pero hay clientes que tienen descuentos"* del audio:
+
+| Categoría | Precio |
+|---|---|
+| Precio Normal · Precio Tegus · Shein · Shein TGUS | **35** |
+| Clientes Amigos · doTERRA/Farmasi · Mayoristas · Revendedores | **25** |
+| Familia · Personal CEC · Sin Cobro Mínimo | 0 |
+
+⚠️ Ojo con los ceros: en esta hoja un 0 viene significando *"sin definir"*, no
+*"gratis"* — así está documentado para los mínimos. Pero **Personal CEC sí tiene
+precios en todo lo demás**, así que su 0 en recolecta podría ser un descuento
+del 100% para el personal. Va a preguntas.
+
+**Servicio de entrada y salida** (fila 27): precio **10**, mínimo **5**, igual
+para todas las categorías que pagan. O sea que el *"de 10 a 5 depende"* del
+audio **no depende de la categoría** — el 10 es el precio y el 5 el piso. De qué
+depende que baje sigue abierto.
+
+**Flete México** (fila 20): solo Precio Normal y Precio Tegus, con precio **5**
+y mínimo **6**. ⚠️ El mínimo es **mayor que el precio**, lo cual no tiene
+sentido — o el 5 es por libra y el 6 el piso del envío, o hay un error de
+tipeo. Va a preguntas.
+
+Nada de esto se carga todavía: la moneda de los tres sigue sin confirmarse, y
+además **los precios los mete Yusef** (A2-01).
 
 ---
 
@@ -2947,6 +3041,12 @@ Lo que Fase 13 protege es el precio **de una venta**, no el catálogo.
 13. **Tolerancia del redondeo** — el `.10/.60` es para incrementos de media
     libra. Si crea una tarifa con incremento de 1 lb, ¿la tolerancia sigue
     siendo 0.09 o es proporcional? (A2-09)
+14. **Recolecta: el 0 de Personal CEC** — ¿es descuento del 100% o "sin
+    definir"? Tiene precios en todo lo demás (A2-13)
+15. **Flete México** — el mínimo (6) es mayor que el precio (5). ¿El 5 es por
+    libra y el 6 el piso del envío, o hay un error de tipeo? (A2-13)
+16. **La hoja de precios** — la versión del 7 de agosto es idéntica a la del 5.
+    Si pensaba mandar cambios, no llegaron (A2-12)
 
 ---
 
@@ -2956,7 +3056,7 @@ Lo que Fase 13 protege es el precio **de una venta**, no el catálogo.
 
 | ID | Qué |
 |---|---|
-| A2-04 | **Cambio de servicio cobra $15 (≈L.373) cuando vale L.100, y se auto-genera** |
+| ~~A2-04~~ | ~~Cambio de servicio cobraba $15 (≈L.373)~~ ✅ **arreglado** — L.100 exactos |
 | A2-09 | **El redondeo de libras cobra de más en `.01–.09` y `.51–.59`** — latente hasta que se active `incremento_libras` |
 
 **Nuevo**

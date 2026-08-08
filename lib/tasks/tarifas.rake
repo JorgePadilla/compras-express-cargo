@@ -10,4 +10,15 @@ namespace :tarifas do
     puts "Sembrando cargos PROPUESTA 2026..."
     ServiciosExtraPropuesta2026.sembrar!(verbose: true)
   end
+
+  # El seed usa `find_or_create_by!`, asi que corregir `db/seeds.rb` no toca la
+  # fila donde el cargo YA existe — que es justamente donde importa. Esta tarea
+  # esta suelta por si hay que correr solo la correccion; `sembrar_cargos_2026`
+  # ya la incluye.
+  desc "Corrige el cambio de servicio a L.100 (Yusef 2026-08-08). Estaba en $15."
+  task corregir_cambio_servicio: :environment do
+    puts "Corrigiendo cambio de servicio..."
+    r = ServiciosExtraPropuesta2026.corregir_cambio_servicio!(verbose: true)
+    puts "  · sin cambios (#{r[:motivo]})" unless r[:corregido]
+  end
 end
