@@ -167,7 +167,7 @@ export default class extends Controller {
     if (this._searchTimeout) clearTimeout(this._searchTimeout)
 
     const query = this.clienteInputTarget.value.trim()
-    if (query.length < 2) {
+    if (!this._buscaCliente(query)) {
       this.hideDropdown()
       return
     }
@@ -180,6 +180,23 @@ export default class extends Controller {
         .then(clientes => this.renderDropdown(clientes))
         .catch(() => this.hideDropdown())
     }, 300)
+  }
+
+  // ¿Alcanza lo tecleado para buscar?
+  //
+  // PR-C6.16. Había un mínimo de 2 caracteres, y eso bloqueaba justo la forma
+  // en que Miami trabaja. Yusef:
+  //
+  //   > "Solo le ponían el dos, ponele que el mío es el seis, solo poníamos el
+  //   >  seis o el dos y ya con eso cae."
+  //
+  // Un dígito suelto es una búsqueda legítima —`2` cae en `CEC-002`, que el
+  // backend ya pone primero (PR-C6.14b)— pero una letra suelta no: buscar "a"
+  // devolvería la cartera entera y el dropdown sería ruido.
+  _buscaCliente(query) {
+    if (query.length >= 2) return true
+
+    return /^\d$/.test(query)
   }
 
   renderDropdown(clientes) {
@@ -658,6 +675,12 @@ export default class extends Controller {
     if (this.hasCajasInputTarget) {
       this.cajasInputTarget.value = "1"
     }
+    // PR-C6.16: pin antes de que salga el modal. Yusef, después de darle F9:
+    // "aquí debería de ser otro PIN cuando tires el modal... ese PIN lo ocupo
+    // ANTES más bien, en el modal". Es el aviso de que el sistema ya reaccionó
+    // y hay algo que contestar — en Miami no miran la pantalla todo el tiempo.
+    this.dispatch("modalAbierto")
+
     if (typeof this.cajasModalTarget.showModal === "function") {
       this.cajasModalTarget.showModal()
     } else {

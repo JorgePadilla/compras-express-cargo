@@ -2398,7 +2398,7 @@ El mapa completo que pidió:
 | El paquete **tiene pre-alerta** | voz grabada | ⏳ falta la grabación |
 | El tracking **ya existía / ya fue usado** | pito distinto | ✅ PR-C6.9 |
 | **Error** — tipo de envío distinto al de la sesión | sonido feo | ✅ PR-C6.9 |
-| **Antes** de que salga cualquier modal | pin | ❌ falta |
+| **Antes** de que salga cualquier modal | pin | ✅ PR-C6.16 |
 
 Son **dos** pitos distintos, no uno. Yusef lo dijo así:
 
@@ -2494,6 +2494,17 @@ de 5 dígitos, teclear `6` trae decenas y el que uno quiere queda enterrado.
 No inventa política: hace confiable exactamente lo que él describió. Y solo
 aplica cuando el término trae dígitos — buscar por nombre queda como estaba.
 
+⚠️ **Faltaba la mitad del front (PR-C6.16).** El autocomplete tenía un mínimo
+de **2 caracteres**, así que teclear un solo `2` nunca abría la lista — que es
+exactamente lo que Yusef describió. Lo encontró Jorge probándolo: *"veo que si
+pongo 2 no me sale María"*.
+
+Ahora un **dígito** suelto busca; una **letra** suelta no, porque buscar "a"
+devolvería la cartera entera y el dropdown sería ruido.
+
+La preselección que Yusef pidió **ya estaba**: `renderDropdown` deja el primer
+ítem activo, así que Enter lo toma sin tocar el mouse.
+
 ---
 
 ### A1-15 · Orden de campos y navegación — ✅ **HECHO** (PR-C6.11)
@@ -2552,7 +2563,7 @@ clientes.
 
 ---
 
-### A1-17 · Peso y medidas por caja, no una sola línea — **NUEVO**
+### A1-17 · Peso y medidas por caja — ⚠️ **BLOQUEADO: dos cosas que dijo se contradicen**
 
 > "Sinceramente sí se ocuparía hacerle esa mejora: ponerle cantidad dos y aquí
 > te pregunta dos veces."
@@ -2567,6 +2578,28 @@ Dos formas, y dejó elegir:
 
 > "Como le importa que son dos, te da esa opción para dos. Al menos vos lo
 > cambias a tres."
+
+⚠️ **Esto choca con algo que él mismo aprobó antes**, y por eso no se
+implementó adivinando.
+
+La cantidad de cajas **se pregunta en el modal de F9**, después de llenar todo
+— eso es PR-4 y salió de él: *"cantidad de paquetes se lo vamos a poner después
+de presionar F9"*. Pero acá señala un lugar **en el formulario**: *"acá al revés
+sería cantidad de paquetes o productos **acá**, y aquí el peso de cada quien"*.
+
+Si la cantidad recién se sabe al apretar F9, no se pueden pedir N pesos antes.
+Las salidas posibles son tres, y las tres cambian un flujo que ya está andando:
+
+1. **Mover la cantidad al formulario** y mostrar N filas de peso debajo. Es lo
+   que él señaló, pero deshace el modal de F9 que aprobó.
+2. **Pedir los N pesos dentro del modal de F9**, después de la cantidad.
+   Respeta las dos cosas, pero engorda el modal — y sobre eso pidió lo
+   contrario: *"que no cargue y que sea rápido"*.
+3. **El botón "agregar"** que él mismo describió como *"lo que hacen otros"*.
+
+Jorge en la reunión: *"voy a analizar un poco eso"*. Queda para esa decisión.
+Es la única cosa de la reunión que no se implementó por elección, no por falta
+de tiempo.
 
 ---
 
