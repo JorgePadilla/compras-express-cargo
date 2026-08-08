@@ -7,26 +7,48 @@ class EtiquetarController < ApplicationController
     @paquete = Paquete.new
     @paquetes_hoy = paquetes_hoy_count
     @tipo_envios = TipoEnvio.activos.order(:nombre)
+    # Las que pueden emitir número de recepción. Si hay una sola, la vista no
+    # pregunta nada y la manda en un hidden.
+    @sucursales_recepcion = sucursales_recepcion_posibles
+    @sucursal_recepcion_sugerida = @sucursal_recepcion_sesion || sucursal_recepcion_por_defecto
     @carriers = Carrier.where(activo: true).order(:nombre)
     @motivos_retencion = MotivoRetencion.activos.ordered
   end
 
-  # El operario elige el tipo de envío que va a trabajar en este lote. Se
-  # guarda en session y aplica a cada paquete que etiquete hasta finalizar.
+  # El operario elige el tipo de envío que va a trabajar en este lote, y en
+  # qué sucursal está recibiendo. Los dos quedan en session y aplican a cada
+  # paquete que etiquete hasta finalizar.
+  #
+  # PR-C6.5: la sucursal de recepción es lo que le da número de recepción al
+  # paquete. Antes `/etiquetar` no asignaba ninguna sucursal —ni una sola
+  # mención en el controller ni en la vista— así que **ningún paquete
+  # etiquetado tenía número**, y su etiqueta terminaba imprimiendo el tracking
+  # en el código de barras. Yusef: "el código de barra que está aquí es el
+  # warehouse, no es el tracking".
+  #
+  # Va en la sesión y no en el formulario porque no cambia paquete a paquete:
+  # el que recibe está parado en un lugar. Yusef lo describió así — "está
+  # alguien en Miami recibiendo, o en Panamá, o en China".
   def iniciar_sesion
     tipo = TipoEnvio.activos.find_by(id: params[:tipo_envio_id])
-    if tipo
-      session[:etiquetar_tipo_envio_id] = tipo.id
-      # Sin flash: el banner de sesión activa ya comunica el tipo elegido.
-      redirect_to etiquetar_path
-    else
-      redirect_to etiquetar_path, alert: "Seleccioná un tipo de envío válido."
+    return redirect_to(etiquetar_path, alert: "Seleccioná un tipo de envío válido.") if tipo.nil?
+
+    sucursal = Sucursal.find_by(id: params[:sucursal_recepcion_id]) || sucursal_recepcion_por_defecto
+    if sucursal.nil?
+      return redirect_to etiquetar_path,
+                         alert: "Seleccioná en qué sucursal estás recibiendo."
     end
+
+    session[:etiquetar_tipo_envio_id] = tipo.id
+    session[:etiquetar_sucursal_recepcion_id] = sucursal.id
+    # Sin flash: el banner de sesión activa ya comunica el tipo elegido.
+    redirect_to etiquetar_path
   end
 
   # Cierra el lote actual; la próxima visita vuelve a preguntar el tipo.
   def finalizar_sesion
     session.delete(:etiquetar_tipo_envio_id)
+    session.delete(:etiquetar_sucursal_recepcion_id)
     redirect_to etiquetar_path, notice: "Sesión de etiquetado finalizada."
   end
 
@@ -59,6 +81,10 @@ class EtiquetarController < ApplicationController
     @paquete.user = Current.user
     # El tipo de envío lo manda la sesión de etiquetado, no el form.
     @paquete.tipo_envio_id = @tipo_envio_sesion.id
+    # PR-C6.5: y la sucursal donde se está recibiendo, que es de donde sale el
+    # número de recepción. Sin esto el paquete nace sin número y su etiqueta
+    # imprime el tracking en el código de barras.
+    @paquete.sucursal_recepcion = @sucursal_recepcion_sesion
     if (flag = pre_factura_flag_param) != :missing
       @paquete[:pre_factura] = flag
     end
@@ -94,7 +120,9 @@ class EtiquetarController < ApplicationController
     attrs = paquete_params.except(:cantidad_paquetes, :numero_caja).merge(
       estado: "empacado",
       user: Current.user,
-      tipo_envio_id: @tipo_envio_sesion.id
+      tipo_envio_id: @tipo_envio_sesion.id,
+      # Las N cajas comparten el número madre, y ese número sale de acá.
+      sucursal_recepcion: @sucursal_recepcion_sesion
     )
     paquetes = Paquete.crear_split!(attrs: attrs, total_cajas: total_cajas)
     if (prov_str = proveedor_string_param) != :missing && prov_str.present?
@@ -129,6 +157,10 @@ class EtiquetarController < ApplicationController
 
   def render_create_error
     @tipo_envios = TipoEnvio.activos.order(:nombre)
+    # Las que pueden emitir número de recepción. Si hay una sola, la vista no
+    # pregunta nada y la manda en un hidden.
+    @sucursales_recepcion = sucursales_recepcion_posibles
+    @sucursal_recepcion_sugerida = @sucursal_recepcion_sesion || sucursal_recepcion_por_defecto
     @carriers = Carrier.where(activo: true).order(:nombre)
     @motivos_retencion = MotivoRetencion.activos.ordered
     @paquetes_hoy = paquetes_hoy_count
@@ -144,6 +176,33 @@ class EtiquetarController < ApplicationController
   def load_tipo_envio_sesion
     @tipo_envio_sesion = TipoEnvio.activos.find_by(id: session[:etiquetar_tipo_envio_id])
     session.delete(:etiquetar_tipo_envio_id) if @tipo_envio_sesion.nil?
+
+    @sucursal_recepcion_sesion = Sucursal.find_by(id: session[:etiquetar_sucursal_recepcion_id])
+    # Sesiones abiertas antes de PR-C6.5 no traen sucursal. En vez de
+    # obligarlos a cerrar y volver a abrir en medio de un lote, se cae al
+    # default — que es la misma sucursal donde ya estaban recibiendo.
+    @sucursal_recepcion_sesion ||= sucursal_recepcion_por_defecto if @tipo_envio_sesion
+  end
+
+  # Las sucursales que pueden emitir número de recepción — o sea, las que
+  # tienen prefijo (`RMI`, `RZE`, `RHU`, `RSM`). Una sin prefijo no puede
+  # numerar nada, así que ofrecerla sería ofrecer un paquete sin número.
+  #
+  # Se acotan a la ubicación del usuario: quien recibe está parado en un
+  # lugar. Hoy `/etiquetar` es solo para Miami, así que queda una sola y la
+  # vista no pregunta nada; el día que abran Panamá o China aparece el select
+  # sin tocar código.
+  def sucursales_recepcion_posibles
+    scope = Sucursal.where.not(codigo_recepcion_prefix: [ nil, "" ])
+    por_ubicacion = Current.user&.ubicacion.present? ? scope.where(ubicacion: Current.user.ubicacion) : scope
+    # Si la ubicación del usuario no matchea ninguna, mejor ofrecer todas que
+    # dejarlo sin poder abrir sesión.
+    (por_ubicacion.any? ? por_ubicacion : scope).order(:id).to_a
+  end
+
+  # Dónde recibe este usuario, cuando no eligió explícitamente.
+  def sucursal_recepcion_por_defecto
+    sucursales_recepcion_posibles.first
   end
 
   # No se puede etiquetar sin un tipo de envío de sesión activo.
