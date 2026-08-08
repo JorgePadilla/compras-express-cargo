@@ -2445,7 +2445,7 @@ al llegar el evento la ventana se cierre. **Queda para verificación manual en
 
 ---
 
-### A1-12 · Los atajos también arriba, no solo abajo — **NUEVO**
+### A1-12 · Los atajos también arriba, no solo abajo — ✅ **HECHO** (PR-C6.11)
 
 > "Estos botones los dejaste abajo y a veces se ocupan acá arriba. En ambos lados."
 
@@ -2485,7 +2485,7 @@ de coincidencias. ¿Sufijo puro, o sufijo priorizado con match exacto primero?
 
 ---
 
-### A1-15 · Orden de campos y navegación — **NUEVO**
+### A1-15 · Orden de campos y navegación — ✅ **HECHO** (PR-C6.11)
 
 Lo revisaron campo por campo:
 
@@ -2583,7 +2583,7 @@ documento donde se pusieron:
 
 ---
 
-### A1-20 · En el detalle del paquete, las notas más arriba — **NUEVO**
+### A1-20 · En el detalle del paquete, las notas más arriba — ✅ **HECHO** (PR-C6.11)
 
 > "Acá proveedor, carrier, remitente... es más importante que diga notas."
 
@@ -2743,12 +2743,12 @@ revisar sobre el sistema andando que sobre un diagrama.
 | ~~A1-07~~ | ~~Actualizar desde `/etiquetar` con el formulario pre-cargado~~ ✅ **hecho** |
 | ~~A1-09~~ | ~~Modal + sonido cuando el tipo de envío no es el de la sesión~~ ✅ **hecho** |
 | A1-10 | Pito de "ya existía", sonido de error, pin antes de los modales, voz de pre-alerta |
-| A1-12 | Atajos arriba y abajo |
-| A1-15 | Reordenar campos y flujo de Tab |
+| ~~A1-12~~ | ~~Atajos arriba y abajo~~ ✅ **hecho** |
+| ~~A1-15~~ | ~~Reordenar campos y flujo de Tab~~ ✅ **hecho** |
 | A1-17 | Peso y medidas por caja |
 | A1-18 | CRUD de motivos de retención |
 | A1-19 | Notas predeterminadas en pre-factura, facturación y caja |
-| A1-20 | Notas arriba en el detalle del paquete |
+| ~~A1-20~~ | ~~Notas arriba en el detalle del paquete~~ ✅ **hecho** |
 
 **Verificar / decidir**
 
