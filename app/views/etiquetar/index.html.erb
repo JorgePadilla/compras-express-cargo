@@ -400,9 +400,46 @@ end %>
             <%= f.check_box :pre_factura, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
             <%= f.label :pre_factura, "Pre-Factura", class: "text-sm font-medium text-gray-700" %>
           </div>
-          <div class="flex items-center gap-2">
-            <%= f.check_box :solicito_cambio_servicio, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+          <%# PR-C6.8: marcar el flag no alcanzaba — Yusef eligió CKM, guardó, y
+              el paquete se quedó en CER. Ahora abre un modal que pregunta a
+              cuál, con el mismo patrón `checkbox-modal` que ya usa Retener.
+              Yusef sobre la forma: "no sé, lo que funcione bien: solo darle
+              click, yo doy click y click y ya va... que no cargue y que sea
+              rápido". %>
+          <div class="flex items-center gap-2" data-controller="checkbox-modal">
+            <%= f.check_box :solicito_cambio_servicio,
+                data: { checkbox_modal_target: "checkbox", action: "change->checkbox-modal#onChange" },
+                class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
             <%= f.label :solicito_cambio_servicio, "Cambio de Servicio", class: "text-sm font-medium text-gray-700" %>
+
+            <dialog data-checkbox-modal-target="dialog"
+                    aria-labelledby="modal-cambio-servicio-title"
+                    style="margin: auto" class="rounded-xl p-0 w-[26rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-cec-teal/40">
+              <div class="bg-cec-teal/10 px-5 py-3 border-b border-cec-teal/30">
+                <h3 id="modal-cambio-servicio-title" class="text-base font-semibold text-cec-teal-dark">Cambio de servicio</h3>
+                <p class="text-xs text-gray-600 mt-0.5">
+                  Este paquete se está trabajando como <b><%= @tipo_envio_sesion.codigo.to_s.upcase %></b>. ¿A cuál cambia?
+                </p>
+              </div>
+              <div class="p-5 bg-white">
+                <%= label_tag "paquete[tipo_envio_destino_id]", "Nuevo tipo de envío",
+                      class: "block text-sm font-medium text-gray-700 mb-1" %>
+                <%= select_tag "paquete[tipo_envio_destino_id]",
+                      options_from_collection_for_select(
+                        @tipo_envios.reject { |t| t.id == @tipo_envio_sesion.id }, :id, :nombre),
+                      include_blank: "— elegí el servicio —",
+                      class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+                <p class="mt-2 text-xs text-gray-500">
+                  Genera un cargo automático en la pre-factura.
+                </p>
+              </div>
+              <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">
+                <button type="button" data-action="checkbox-modal#cancel"
+                        class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900">Cancelar</button>
+                <button type="button" data-action="checkbox-modal#confirm"
+                        class="px-3 py-1.5 text-sm font-medium bg-cec-teal text-white rounded-lg hover:bg-cec-teal-dark">Confirmar</button>
+              </div>
+            </dialog>
           </div>
         </div>
       </div>
