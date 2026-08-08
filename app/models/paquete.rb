@@ -8,6 +8,7 @@ class Paquete < ApplicationRecord
   belongs_to :pre_factura, optional: true
   belongs_to :venta, optional: true
   belongs_to :entrega, optional: true
+  belongs_to :tipo_envio_anterior,  class_name: "TipoEnvio",   optional: true  # PR-C6.8: de qué servicio venía al cambiarlo
   belongs_to :sucursal, optional: true                                           # dónde RETIRA el cliente
   belongs_to :sucursal_recepcion,   class_name: "Sucursal",      optional: true  # PR-C6.5: dónde se RECIBIÓ — manda el número de recepción
   belongs_to :sucursal_actual,      class_name: "Sucursal",      optional: true  # PR-D1.c: ubicación física actual
@@ -353,6 +354,34 @@ class Paquete < ApplicationRecord
 
   def estado_terminal?
     entregado? || anulado? || retornado? || desechado?
+  end
+
+  # Aplica un cambio de servicio: deja el tipo nuevo y guarda de cuál venía.
+  #
+  # Yusef, 2026-08-08, reproduciendo el caso: marcó "cambio de servicio",
+  # eligió CKM, guardó — y el paquete **se quedó en CER**. En las notas de
+  # Jorge quedó escrito así: *"cambio de servicio → CER a CKM no funciona"*.
+  #
+  # El flag solo decía "alguien pidió el cambio"; nada aplicaba el destino, y
+  # nada dejaba rastro de cuál era el servicio anterior. Eso último importa
+  # porque el cambio **genera un cargo automático** en la pre-factura: cuando
+  # el cliente reclama, hay que poder decirle de qué a qué se movió.
+  #
+  # No hace `save`: el caller decide cuándo persistir, para poder aplicarlo
+  # junto con el resto del formulario en un solo `save`.
+  def aplicar_cambio_servicio(nuevo_tipo)
+    return if nuevo_tipo.nil?
+    return if nuevo_tipo.id == tipo_envio_id
+
+    self.tipo_envio_anterior_id = tipo_envio_id
+    self.tipo_envio = nuevo_tipo
+    self.solicito_cambio_servicio = true
+  end
+
+  # "CER → CKM", para mostrarlo en el detalle y en la pre-factura.
+  def cambio_servicio_label
+    return nil unless solicito_cambio_servicio? && tipo_envio_anterior
+    "#{tipo_envio_anterior.codigo.to_s.upcase} → #{tipo_envio&.codigo.to_s.upcase}"
   end
 
   # ¿Esta caja ya entró a cobro o salió del almacén? Si sí, borrarla
