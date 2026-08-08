@@ -424,7 +424,12 @@ class PaquetesController < ApplicationController
         cliente_id: cli&.id,
         cliente_codigo: ERB::Util.html_escape(cli&.codigo.to_s),
         cliente_nombre: ERB::Util.html_escape(cli&.nombre_completo.to_s),
-        cliente_notas_miami: ERB::Util.html_escape(cli&.notas_miami.to_s)
+        cliente_notas_miami: ERB::Util.html_escape(cli&.notas_miami.to_s),
+        # PR-C6.9: el tipo de envío que el cliente pidió en su pre-alerta. Si
+        # no coincide con el de la sesión de etiquetado, el front avisa antes
+        # de que el operario siga escribiendo — y el servidor lo rechaza igual.
+        pre_alerta_tipo_envio_id: pa.tipo_envio_id,
+        pre_alerta_tipo_envio: ERB::Util.html_escape(pa.tipo_envio&.nombre.to_s)
       }
     else
       { pre_alerta_match: false }

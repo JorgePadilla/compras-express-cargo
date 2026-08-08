@@ -92,6 +92,10 @@ class EtiquetarController < ApplicationController
       render_create_error("Marcaste cambio de servicio: elegí a qué tipo de envío cambia.")
       return
     end
+    if (conflicto = conflicto_con_la_sesion(@paquete))
+      render_create_error(conflicto)
+      return
+    end
     if (flag = pre_factura_flag_param) != :missing
       @paquete[:pre_factura] = flag
     end
@@ -131,6 +135,12 @@ class EtiquetarController < ApplicationController
       # Las N cajas comparten el número madre, y ese número sale de acá.
       sucursal_recepcion: @sucursal_recepcion_sesion
     )
+    # Mismo guard que el single: no se graban cajas bajo el tipo equivocado.
+    if (conflicto = conflicto_con_la_sesion(Paquete.new(paquete_params)))
+      @paquete = Paquete.new(paquete_params)
+      return render_create_error(conflicto)
+    end
+
     # El cambio de servicio aplica a las N cajas por igual: es el mismo
     # tracking, no se parte en dos servicios distintos.
     if ActiveModel::Type::Boolean.new.cast(paquete_params[:solicito_cambio_servicio])
@@ -208,6 +218,47 @@ class EtiquetarController < ApplicationController
 
     paquete.aplicar_cambio_servicio(destino)
     true
+  end
+
+  # ¿Este paquete pertenece a otro tipo de envío que el de la sesión?
+  #
+  # Devuelve el mensaje de error, o nil si está todo bien.
+  #
+  # **Esto es la mitad que cobra bien.** El modal del front es la mitad
+  # visible; sin el rechazo del servidor un paquete con pre-alerta CKM
+  # escaneado en sesión CER **se guardaba como CER en silencio**, porque
+  # `create_single` hace `tipo_envio_id = @tipo_envio_sesion.id` sin preguntar.
+  #
+  # Yusef lo consultó con Julián (Miami) por videollamada en la reunión y
+  # quedaron en que no se puede guardar bajo el tipo equivocado:
+  #
+  #   > "No te va a permitir grabarlo. No vas a poder hacerlo... el chavo no
+  #   >  hizo nada, no pudo hacer nada."
+  #
+  # El cambio de servicio (PR-C6.8) es la **excepción explícita**: ahí el
+  # operario declaró que el paquete sale de la sesión, así que no hay
+  # conflicto que reportar.
+  def conflicto_con_la_sesion(paquete)
+    return nil if paquete.solicito_cambio_servicio?
+
+    tipo_pa = tipo_envio_de_la_pre_alerta(paquete.tracking)
+    return nil if tipo_pa.nil?
+    return nil if tipo_pa.id == @tipo_envio_sesion.id
+
+    "Este paquete tiene pre-alerta de #{tipo_pa.nombre} y estás trabajando " \
+    "#{@tipo_envio_sesion.nombre}. Finalizá la sesión y abrí una de " \
+    "#{tipo_pa.nombre}, o marcá cambio de servicio."
+  end
+
+  # El tipo de envío que el cliente pidió en su pre-alerta, si hay una sin
+  # vincular con este tracking.
+  def tipo_envio_de_la_pre_alerta(tracking)
+    return nil if tracking.blank?
+
+    PreAlertaPaquete.sin_vincular
+                    .where("UPPER(tracking) = ?", tracking.to_s.strip.upcase)
+                    .includes(:pre_alerta)
+                    .first&.pre_alerta&.tipo_envio
   end
 
   def authorize_etiquetar
