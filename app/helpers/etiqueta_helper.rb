@@ -33,6 +33,44 @@ module EtiquetaHelper
     nil
   end
 
+  # Lo que va adentro del código de barras — y también impreso debajo, para
+  # poder teclearlo cuando la etiqueta viene rayada.
+  #
+  # Dos reglas de Yusef, las dos del 2026-08-08:
+  #
+  # **1. Es el warehouse, nunca el tracking.**
+  #
+  #   > "El código de barra que está aquí es el warehouse, no es el tracking."
+  #
+  # Por eso devuelve `nil` cuando no hay número de recepción, en vez de caer al
+  # tracking como hacía antes: una etiqueta sin barcode es un problema visible;
+  # una con el barcode equivocado se escanea mal en San Pedro y nadie se entera.
+  #
+  # **2. Lleva el sufijo de caja cuando el tracking se dividió.**
+  #
+  #   > "Si yo escaneo esto no sé si es el paquete uno o el paquete dos."
+  #   > "Aquí sería 7-1, 7-2."
+  #
+  # Las N cajas de un split comparten el `numero_recepcion` (el número madre),
+  # y se diferencian por `numero_caja` — el índice único es compuesto. Sin el
+  # sufijo las dos cajas llevan el MISMO código impreso, y al recibir en San
+  # Pedro no se puede saber cuál llegó ni cuál falta. Eso es lo que rompe el
+  # rebaje de inventario:
+  #
+  #   > "Esa etiqueta selecciona del inventario... el paquete que sí vino, y
+  #   >  que falta el otro. De esa manera él rebaja."
+  #
+  # El sufijo va en la **recepción**, jamás en el tracking. Ese fue el error
+  # del sistema viejo: "el tracking él le agregaba un 2, y al warehouse él le
+  # agregaba un 2 y el 1".
+  def etiqueta_codigo_barras(paquete)
+    recepcion = paquete.numero_recepcion_visible
+    return nil if recepcion.blank?
+    return recepcion unless paquete.dividido? && paquete.numero_caja.to_i.positive?
+
+    "#{recepcion}-#{paquete.numero_caja}"
+  end
+
   # "1/2" — número de caja sobre el total. Solo cuando el tracking se dividió.
   # "Número y cantidad de paquetes" — el campo 9 de la lista de Yusef.
   #
