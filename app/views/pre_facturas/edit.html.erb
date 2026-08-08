@@ -11,14 +11,22 @@
     </div>
   <% end %>
 
-  <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+  <div class="bg-white rounded-lg shadow overflow-hidden mb-6"
+       data-controller="autorizacion-modal"
+       data-autorizacion-modal-url-template-value="<%= pre_factura_item_autorizacion_path(@pre_factura, 'ITEM_ID') %>">
+    <%= render "autorizacion_modal" %>
     <table class="min-w-full divide-y divide-gray-200">
       <thead class="bg-gray-50">
         <tr>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th>
           <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Peso</th>
           <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio/Lb</th>
-          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Descuento</th>
+          <%# La columna muestra el neto de la línea, así que no se llama
+              "Subtotal": el Subtotal del pie es el bruto y los números no
+              cerrarían. %>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total línea</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase"></th>
         </tr>
       </thead>
       <tbody class="bg-white divide-y divide-gray-200">
@@ -27,44 +35,99 @@
           <tr<%= ' class="bg-cec-teal/5"'.html_safe if it.auto? %>>
             <td class="px-6 py-3">
               <%= item_f.hidden_field :id %>
-              <%= item_f.hidden_field :origen %>
               <%= item_f.text_field :concepto, class: "w-full rounded border-gray-300 text-sm", readonly: @pre_factura.facturado? || @pre_factura.anulado? %>
+              <% autorizada = @autorizaciones_por_item[it.id] %>
+              <% if autorizada.present? %>
+                <span class="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-900"
+                      title="<%= autorizada.map { |a| "#{a.accion_label}: #{a.motivo} (#{a.autorizado_por.nombre})" }.join(" · ") %>">
+                  Autorizado por <%= autorizada.last.autorizado_por.nombre %>
+                </span>
+              <% end %>
               <% if it.origen == "auto_recolecta" %>
                 <span class="mt-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-cec-teal/10 text-cec-teal">Auto · Recolecta</span>
               <% elsif it.origen == "auto_servicio_extra" %>
                 <span class="mt-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-900">Auto · Servicio</span>
               <% end %>
             </td>
-            <td class="px-6 py-3">
-              <%= item_f.number_field :peso_cobrar, step: 0.01, class: "w-24 rounded border-gray-300 text-sm text-right" unless it.auto? %>
+            <%# PR-13.d: peso, precio y descuento son texto. Cambiarlos pasa por
+                el modal de autorización, que pide el PIN de un supervisor. %>
+            <td class="px-6 py-3 text-right text-sm font-mono text-gray-700">
+              <%= it.peso_cobrar.present? ? number_with_precision(it.peso_cobrar, precision: 2) : "—" %>
             </td>
-            <td class="px-6 py-3">
-              <% if it.auto? %>
-                <%= item_f.number_field :subtotal, step: 0.01, min: 0,
-                    class: "w-24 rounded border-gray-300 text-sm text-right",
-                    title: "Editable para descuentos autorizados" %>
+            <td class="px-6 py-3 text-right text-sm font-mono text-gray-700">
+              <%= it.precio_libra.present? ? "L. #{number_with_precision(it.precio_libra, precision: 2, delimiter: ',')}" : "—" %>
+            </td>
+            <td class="px-6 py-3 text-right text-sm">
+              <% if it.descuento? %>
+                <span class="text-amber-700 font-medium">
+                  −L. <%= number_with_precision(it.descuento_monto, precision: 2, delimiter: ",") %>
+                </span>
+                <% if it.descuento_porcentaje.present? %>
+                  <span class="block text-[10px] text-gray-500"><%= it.descuento_label %></span>
+                <% end %>
+                <% if it.descuento_motivo.present? %>
+                  <span class="block text-[10px] text-gray-400" title="<%= it.descuento_motivo %>">
+                    <%= truncate(it.descuento_motivo, length: 24) %>
+                  </span>
+                <% end %>
               <% else %>
-                <%= item_f.number_field :precio_libra, step: 0.01, class: "w-24 rounded border-gray-300 text-sm text-right" %>
+                <span class="text-gray-300">—</span>
               <% end %>
             </td>
             <td class="px-6 py-3 text-right text-sm font-medium">
-              L. <%= number_with_delimiter(it.subtotal.to_f, precision: 2) %>
+              L. <%= number_with_precision(it.total_linea, precision: 2, delimiter: ",") %>
+              <% if it.descuento? %>
+                <span class="block text-[10px] text-gray-400 line-through">
+                  L. <%= number_with_precision(it.subtotal, precision: 2, delimiter: ",") %>
+                </span>
+              <% end %>
+            </td>
+            <td class="px-6 py-3 text-right">
+              <% unless @pre_factura.facturado? || @pre_factura.anulado? %>
+                <button type="button"
+                        class="text-xs font-medium text-cec-teal hover:text-cec-teal-dark"
+                        data-action="click->autorizacion-modal#abrir"
+                        data-autorizacion-modal-item-id-param="<%= it.id %>"
+                        data-autorizacion-modal-concepto-param="<%= it.concepto %>"
+                        data-autorizacion-modal-precio-param="<%= it.precio_libra.to_f %>"
+                        data-autorizacion-modal-peso-param="<%= it.peso_cobrar.to_f %>"
+                        data-autorizacion-modal-subtotal-param="<%= it.subtotal.to_f %>">
+                  Autorizar cambio
+                </button>
+              <% end %>
             </td>
           </tr>
         <% end %>
       </tbody>
       <tfoot class="bg-gray-50">
         <tr>
-          <td colspan="3" class="px-6 py-3 text-right text-sm font-medium">Subtotal</td>
-          <td class="px-6 py-3 text-right text-sm font-medium">L. <%= number_with_delimiter(@pre_factura.subtotal.to_f, precision: 2) %></td>
+          <td colspan="4" class="px-6 py-3 text-right text-sm font-medium">Subtotal</td>
+          <td class="px-6 py-3 text-right text-sm font-medium">L. <%= number_with_precision(@pre_factura.subtotal, precision: 2, delimiter: ",") %></td>
+          <td></td>
+        </tr>
+        <%# Con descuento hay que mostrar la base gravada: si no, no se puede
+            verificar de dónde sale el ISV. %>
+        <% if @pre_factura.descuento.to_d.positive? %>
+          <tr>
+            <td colspan="4" class="px-6 py-3 text-right text-sm font-medium text-amber-700">Descuento</td>
+            <td class="px-6 py-3 text-right text-sm font-medium text-amber-700">−L. <%= number_with_precision(@pre_factura.descuento, precision: 2, delimiter: ",") %></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td colspan="4" class="px-6 py-3 text-right text-sm font-medium">Importe gravado</td>
+            <td class="px-6 py-3 text-right text-sm font-medium">L. <%= number_with_precision(@pre_factura.subtotal.to_d - @pre_factura.descuento.to_d, precision: 2, delimiter: ",") %></td>
+            <td></td>
+          </tr>
+        <% end %>
+        <tr>
+          <td colspan="4" class="px-6 py-3 text-right text-sm font-medium">ISV (<%= (IsvAware.rate * 100).to_i %>%)</td>
+          <td class="px-6 py-3 text-right text-sm font-medium">L. <%= number_with_precision(@pre_factura.impuesto, precision: 2, delimiter: ",") %></td>
+          <td></td>
         </tr>
         <tr>
-          <td colspan="3" class="px-6 py-3 text-right text-sm font-medium">ISV (15%)</td>
-          <td class="px-6 py-3 text-right text-sm font-medium">L. <%= number_with_delimiter(@pre_factura.impuesto.to_f, precision: 2) %></td>
-        </tr>
-        <tr>
-          <td colspan="3" class="px-6 py-3 text-right text-base font-bold">Total</td>
-          <td class="px-6 py-3 text-right text-base font-bold text-cec-navy">L. <%= number_with_delimiter(@pre_factura.total.to_f, precision: 2) %></td>
+          <td colspan="4" class="px-6 py-3 text-right text-base font-bold">Total</td>
+          <td class="px-6 py-3 text-right text-base font-bold text-cec-navy">L. <%= number_with_precision(@pre_factura.total, precision: 2, delimiter: ",") %></td>
+          <td></td>
         </tr>
       </tfoot>
     </table>

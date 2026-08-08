@@ -3,7 +3,7 @@ class Venta < ApplicationRecord
   include CurrencyAware
   has_paper_trail  # PR-D1.a: audit log
 
-  ISV_RATE = BigDecimal("0.15")
+  include IsvAware
 
   belongs_to :cliente
   belongs_to :pre_factura, optional: true
@@ -146,12 +146,18 @@ class Venta < ApplicationRecord
     self.numero = "VT-#{next_number.to_s.rjust(6, '0')}"
   end
 
+  # PR-13.b: gemelo de `PreFactura#calculate_totals` — el descuento reduce la
+  # base del ISV.
   def calculate_totals
-    sub = venta_items.reject(&:marked_for_destruction?)
-                     .sum { |i| i.subtotal.to_d }
-    self.subtotal = sub
-    self.impuesto = (sub * ISV_RATE).round(2)
-    self.total    = (sub + impuesto).round(2)
+    vivos = venta_items.reject(&:marked_for_destruction?)
+    sub  = vivos.sum { |i| i.subtotal.to_d }
+    desc = vivos.sum { |i| i.descuento_monto.to_d }
+    base = sub - desc
+
+    self.subtotal  = sub
+    self.descuento = desc
+    self.impuesto  = (base * isv_rate).round(2, BigDecimal::ROUND_HALF_UP)
+    self.total     = (base + impuesto).round(2, BigDecimal::ROUND_HALF_UP)
 
     self.saldo_pendiente = total if new_record?
   end

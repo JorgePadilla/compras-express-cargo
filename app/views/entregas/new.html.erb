@@ -12,7 +12,7 @@
     <% end %>
 
     <% if params[:q].present? %>
-      <% clientes = Cliente.activos.buscar(params[:q]).limit(10) %>
+      <% clientes = Cliente.activos.buscar_flexible(params[:q]).limit(10) %>
       <% if clientes.any? %>
         <ul class="mt-4 divide-y divide-gray-200">
           <% clientes.each do |c| %>

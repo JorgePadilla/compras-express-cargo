@@ -122,7 +122,7 @@ class EntregaPersonalController < ApplicationController
     params.require(:paquete).permit(
       :cliente_id, :tipo_envio_id, :proveedor_id, :sucursal_id, :peso,
       :alto, :largo, :ancho, :cantidad_productos, :cantidad_paquetes,
-      :numero_caja, :descripcion, :remitente,
+      :numero_caja, :descripcion, :remitente, :driver,
       :notas_internas, :notas_retencion,
       :retener_miami,
       motivo_retencion_ids: []

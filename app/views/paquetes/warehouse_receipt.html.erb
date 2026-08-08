@@ -1,0 +1,5 @@
+<%# El Warehouse Receipt del paquete — hoja carta con términos y condiciones,
+    para el expediente. La etiqueta que se pega a la caja es otra cosa y vive
+    en `etiqueta.html.erb`.
+    El layout `print` lo aplica el controller. %>
+<%= render "warehouse_receipt", paquete: @paquete %>

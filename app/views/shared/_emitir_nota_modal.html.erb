@@ -1,0 +1,72 @@
+<%# PR-13.e: emitir una nota pide el PIN de un supervisor.
+    La nota se arma libre —su monto no sale de una tarifa, ajustar a mano es su
+    propósito— y el control va acá, que es cuando el saldo del cliente cambia.
+
+    `nota`, `url` y `advertencia` los pasa el caller. %>
+<div data-controller="emitir-nota-modal">
+  <button type="button" data-action="click->emitir-nota-modal#abrir"
+          class="px-4 py-2 bg-cec-teal text-white rounded-lg text-sm font-medium hover:bg-cec-teal-dark">
+    Emitir
+  </button>
+
+  <dialog data-emitir-nota-modal-target="dialog"
+          class="rounded-lg shadow-xl p-0 w-full max-w-md backdrop:bg-black/40">
+    <%= form_with url: url, method: :post, class: "divide-y divide-gray-200" do %>
+      <div class="px-6 py-4">
+        <h3 class="text-base font-semibold text-cec-navy">Emitir <%= nota.numero %></h3>
+        <p class="mt-1 text-sm text-gray-600"><%= advertencia %></p>
+        <p class="mt-2 text-lg font-bold text-cec-navy">
+          L. <%= number_with_precision(nota.total, precision: 2, delimiter: ",") %>
+        </p>
+      </div>
+
+      <div class="px-6 py-4 space-y-4">
+        <% autorizantes = User.autorizantes.where.not(id: nota.creado_por_id).order(:nombre) %>
+        <% if autorizantes.any? %>
+          <div>
+            <%= label_tag "autorizacion[autorizado_por_id]", "Autoriza", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= select_tag "autorizacion[autorizado_por_id]",
+                  options_from_collection_for_select(autorizantes, :id, ->(u) { "#{u.nombre} — #{u.rol_label}" }),
+                  include_blank: "— Seleccionar —", required: true,
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                         focus:ring-cec-teal focus:border-cec-teal" %>
+            <%# Cuatro ojos: quien la armó no aparece en la lista. %>
+            <p class="mt-1 text-xs text-gray-500">
+              Tiene que autorizarla alguien distinto de quien creo la nota.
+            </p>
+          </div>
+
+          <div>
+            <%= label_tag "autorizacion[pin]", "PIN (4 digitos)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= password_field_tag "autorizacion[pin]", nil, inputmode: "numeric", maxlength: 4,
+                  autocomplete: "off", required: true,
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm tracking-widest
+                         focus:ring-cec-teal focus:border-cec-teal" %>
+          </div>
+
+          <div>
+            <%= label_tag "autorizacion[motivo]", "Motivo", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= text_field_tag "autorizacion[motivo]", nil, required: true,
+                  placeholder: "Por que se emite esta nota",
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                         focus:ring-cec-teal focus:border-cec-teal" %>
+          </div>
+        <% else %>
+          <p class="text-sm text-amber-700">
+            No hay ningun supervisor con PIN que pueda autorizar esta nota. Un
+            administrador tiene que asignar PINs desde la pantalla de usuarios.
+          </p>
+        <% end %>
+      </div>
+
+      <div class="px-6 py-3 flex justify-end gap-3 bg-gray-50">
+        <button type="button" data-action="click->emitir-nota-modal#cerrar"
+                class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Cancelar</button>
+        <button type="submit" <%= "disabled" if autorizantes.empty? %>
+                class="px-4 py-2 bg-cec-teal text-white rounded-lg hover:bg-cec-teal-dark text-sm font-medium disabled:opacity-50">
+          Emitir
+        </button>
+      </div>
+    <% end %>
+  </dialog>
+</div>

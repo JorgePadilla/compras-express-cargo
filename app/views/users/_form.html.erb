@@ -63,6 +63,48 @@
                  focus:ring-cec-teal focus:border-cec-teal" } %>
     </div>
 
+    <%# PR-13.c: el PIN de 4 dígitos con el que autoriza cambios de precio en la
+        pre-factura. Solo para los roles que pueden autorizar; el resto no tiene
+        para qué tener uno. El admin asigna el inicial y el supervisor lo cambia
+        desde su pantalla — mientras no lo cambie, el admin conoce el PIN con el
+        que él autoriza y el registro deja de probar nada. %>
+    <div class="sm:col-span-2 p-4 rounded-lg bg-cec-navy/5 border border-cec-navy/20">
+      <div class="flex items-start gap-2 mb-3">
+        <%= heroicon "key", variant: :solid, options: { class: "w-5 h-5 text-cec-navy shrink-0 mt-0.5" } %>
+        <div class="text-sm text-gray-700">
+          <strong>PIN de autorizacion</strong> — solo aplica a
+          Administrador, Supervisor Caja, Supervisor Pre-Factura y Supervisor de
+          Servicio al Cliente. Con el destraban cambios de precio en la
+          pre-factura sin tener que iniciar sesion.
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <%= f.label :pin, "PIN (4 digitos)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= f.password_field :pin, inputmode: "numeric", maxlength: 4, autocomplete: "off",
+              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm tracking-widest
+                     focus:ring-cec-teal focus:border-cec-teal" %>
+          <p class="mt-1 text-xs text-gray-500">
+            <%= user.pin_digest.present? ? "Dejar vacio para mantener el PIN actual" : "Se lo entregas al supervisor para que el lo cambie" %>
+          </p>
+        </div>
+        <div>
+          <%= f.label :pin_confirmation, "Confirmar PIN", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= f.password_field :pin_confirmation, inputmode: "numeric", maxlength: 4, autocomplete: "off",
+              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm tracking-widest
+                     focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+      </div>
+
+      <% if user.pin_sin_cambiar? %>
+        <p class="mt-3 text-xs text-amber-700">
+          Este usuario todavia tiene el PIN que vos le asignaste. Hasta que lo
+          cambie, vos podes autorizar en su nombre.
+        </p>
+      <% end %>
+    </div>
+
     <div>
       <%= f.label :ubicacion, class: "block text-sm font-medium text-gray-700 mb-1" %>
       <%= f.select :ubicacion, [["Miami", "miami"], ["Honduras", "honduras"]],

@@ -1,4 +1,6 @@
 class PreFacturaItem < ApplicationRecord
+  include Descontable
+
   # PR-D6.b: origen de la línea para distinguir cargos auto de manuales.
   # `manual` = línea de paquete o agregada por el cajero a mano.
   # `auto_recolecta` = generada desde paquete.recolecta_solicitada.
@@ -6,6 +8,9 @@ class PreFacturaItem < ApplicationRecord
   ORIGENES = %w[manual auto_recolecta auto_servicio_extra].freeze
 
   belongs_to :pre_factura, inverse_of: :pre_factura_items
+  # PR-13.d: `nullify` y no `destroy` — si se elimina la línea, el registro de
+  # que un supervisor autorizó eliminarla tiene que quedar.
+  has_many :autorizaciones, dependent: :nullify
   belongs_to :paquete, optional: true
   belongs_to :tarifa_recolecta, optional: true
   belongs_to :servicio_extra, optional: true
@@ -25,8 +30,13 @@ class PreFacturaItem < ApplicationRecord
 
   private
 
+  # PR-10.a: `minimo_aplicado` protege los dos casos donde el subtotal NO sale
+  # de peso × precio — el cobro mínimo de servicio y el simbólico de prepagado
+  # en Miami. Sin ese guard, este callback los pisaba en silencio.
   def calculate_subtotal_from_peso
+    return if minimo_aplicado?
     return unless peso_cobrar.present? && precio_libra.present?
-    self.subtotal = (peso_cobrar.to_d * precio_libra.to_d).round(2)
+
+    self.subtotal = (peso_cobrar.to_d * precio_libra.to_d).round(2, BigDecimal::ROUND_HALF_UP)
   end
 end

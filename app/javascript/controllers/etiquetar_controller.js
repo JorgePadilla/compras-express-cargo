@@ -11,7 +11,8 @@ export default class extends Controller {
     "preAlertaBanner", "preAlertaNumero", "preAlertaCliente", "preAlertaDescripcion",
     "duplicateModal", "duplicateInfo", "duplicateNewBtn", "duplicateNewHint",
     "cajasModal", "cajasInput", "cantidadPaquetesHidden",
-    "submitBtn", "event", "panel"
+    "submitBtn", "event", "panel",
+    "terceroContainer", "terceroToggle"
   ]
   static values = {
     checkUrl: String,
@@ -46,6 +47,12 @@ export default class extends Controller {
       // Antes era TAB pero rompía la navegación natural del form.
       e.preventDefault()
       this.toggleTrackingSecundario()
+    } else if (e.key === "F4") {
+      // PR-10.c: Yusef — "funcion F4 para agregar un tercero, y que sea
+      // oculto por defecto, porque confunde si no. De clientes tercero
+      // recibimos 20% por mucho". Funciona en cualquier momento del form.
+      e.preventDefault()
+      this.toggleTercero()
     } else if (e.key === "F8") {
       e.preventDefault()
       this.submitForm()
@@ -238,6 +245,32 @@ export default class extends Controller {
     if (frame.getAttribute("src") !== url) frame.setAttribute("src", url)
   }
 
+  // Muestra/esconde el bloque de tercero y le pone el foco. Al esconderlo
+  // limpia la seleccion, para no mandar un tercero que el operario ya no ve.
+  toggleTercero() {
+    if (!this.hasTerceroContainerTarget) return
+
+    const oculto = this.terceroContainerTarget.classList.toggle("hidden")
+    if (oculto) {
+      const hidden = this.terceroContainerTarget.querySelector("input[name*='tercero_id']")
+      const texto = this.terceroContainerTarget.querySelector("input[type='text']")
+      if (hidden) hidden.value = ""
+      if (texto) texto.value = ""
+    } else {
+      const texto = this.terceroContainerTarget.querySelector("input[type='text']")
+      if (texto) texto.focus()
+    }
+    this._syncTerceroToggleLabel()
+  }
+
+  _syncTerceroToggleLabel() {
+    if (!this.hasTerceroToggleTarget || !this.hasTerceroContainerTarget) return
+    const oculto = this.terceroContainerTarget.classList.contains("hidden")
+    this.terceroToggleTarget.innerHTML = oculto
+      ? '+ Agregar tercero <kbd class="px-1 py-0.5 bg-gray-100 border rounded text-[10px]">F4</kbd>'
+      : '- Quitar tercero <kbd class="px-1 py-0.5 bg-gray-100 border rounded text-[10px]">F4</kbd>'
+  }
+
   hideDropdown() {
     this.clienteDropdownTarget.classList.add("hidden")
     this._clienteActiveIndex = -1
@@ -361,6 +394,11 @@ export default class extends Controller {
       { text: `Tracking: ${data.tracking_base || ""}`, cls: "mt-1 font-mono text-sm" },
       { text: `Cliente: ${data.cliente}`, cls: "" },
       { text: `Estado: ${data.estado} — Fecha: ${data.fecha}`, cls: "" },
+      // PR-10.c: Yusef — "aqui solo agregarle el contenido... el contenido y
+      // el tipo de servicio, esas son las dos cosas que mas te faltan ahi".
+      { text: `Contenido: ${data.descripcion || "—"}`, cls: "mt-1" },
+      { text: `Servicio: ${data.tipo_envio || "—"}`, cls: "" },
+      { text: `Recepcion: ${data.numero_recepcion || "—"}`, cls: "font-mono text-xs text-gray-500 dark:text-gray-400" },
       { text: `${data.count} paquete(s) con este tracking base`, cls: "text-xs text-gray-500 dark:text-gray-400 mt-1" }
     ]
     lines.forEach(({ text, cls }) => {
@@ -439,6 +477,10 @@ export default class extends Controller {
     this.duplicateModalTarget.classList.add("hidden")
     // PR-9.b: la franja vuelve a su estado vacío junto con el formulario.
     this.loadPanel(null)
+    if (this.hasTerceroContainerTarget) {
+      this.terceroContainerTarget.classList.add("hidden")
+      this._syncTerceroToggleLabel()
+    }
     this._resetClienteFromPreAlertaStyling()
     this._hidePreAlertaBanner()
     this._closeCajasModal()
@@ -547,7 +589,10 @@ export default class extends Controller {
       this.dispatch("success")
 
       if (el.dataset.print === "true") {
-        window.open(`/paquetes/${el.dataset.paqueteId}/label`, "_blank")
+        // PR-10.d: la ETIQUETA (Dymo 2.25x1.25), no el Warehouse Receipt.
+        // Yusef: "aqui esta tirando el warehouse, no la etiqueta".
+        // `hermanas=1` saca una por caja cuando el tracking se dividio.
+        window.open(`/paquetes/${el.dataset.paqueteId}/etiqueta?hermanas=1&print=true`, "_blank")
       }
 
       // Clear form after successful save

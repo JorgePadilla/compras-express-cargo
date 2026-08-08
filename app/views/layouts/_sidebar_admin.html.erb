@@ -38,11 +38,16 @@
     <% end %>
   <% end %>
 
-  <% if can_access?(:marketing) || admin? %>
-    <%= sidebar_section "Marketing" do %>
-      <%= sidebar_link "Correos", "#", icon: "envelope" %>
-      <%= sidebar_link "WhatsApp", "#", icon: "chat-bubble-left-right" %>
-      <%= sidebar_link "SMS", "#", icon: "device-phone-mobile" %>
+  <%# El bloque de Marketing queda oculto hasta que exista el módulo: los tres
+      links apuntaban a "#" y no hacían nada. Se reactiva en la Fase 7, igual
+      que sus cards del dashboard. %>
+
+  <%# PR-13.d: la bitácora de lo que un supervisor autorizó. La ven los mismos
+      que pueden autorizar — sin pantalla donde mirarlo, el PIN es solo
+      fricción en el mostrador. %>
+  <% if Current.user&.rol_autorizante? %>
+    <%= sidebar_section "Control" do %>
+      <%= sidebar_link "Autorizaciones", autorizaciones_path, icon: "key" %>
     <% end %>
   <% end %>
 
@@ -50,6 +55,7 @@
     <%= sidebar_section "Configuracion" do %>
       <%= sidebar_link "Usuarios", users_path, icon: "user-group" %>
       <%= sidebar_link "Sucursales", sucursales_path, icon: "building-storefront" %>
+      <%= sidebar_link "Tabla de Servicios", servicios_path, icon: "currency-dollar" %>
       <%= sidebar_link "Categorias de Precio", categoria_precios_path, icon: "swatch" %>
       <%= sidebar_link "Tarifas de Recolecta", tarifas_recolecta_path, icon: "map-pin" %>
       <%= sidebar_link "Servicios Extra", servicios_extra_path, icon: "puzzle-piece" %>
@@ -57,7 +63,7 @@
       <%= sidebar_link "Motivos de Retención", motivos_retencion_path, icon: "hand-raised" %>
       <%= sidebar_link "Plantillas Notas Cliente", plantillas_notas_cliente_path, icon: "clipboard" %>
       <%= sidebar_link "Empresa", empresa_path, icon: "building-office-2" %>
-      <%= sidebar_link "Reportes", "#", icon: "table-cells" %>
+      <%# "Reportes" apuntaba a "#" — se agrega cuando exista (Fase 6). %>
     <% end %>
   <% end %>
 </ul>

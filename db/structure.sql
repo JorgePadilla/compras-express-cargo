@@ -10,6 +10,20 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+--
+-- Name: pg_trgm; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION pg_trgm; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION pg_trgm IS 'text similarity measurement and index searching based on trigrams';
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -215,6 +229,47 @@ CREATE TABLE public.ar_internal_metadata (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
 );
+
+
+--
+-- Name: autorizaciones; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.autorizaciones (
+    id bigint NOT NULL,
+    pre_factura_item_id bigint,
+    autorizado_por_id bigint NOT NULL,
+    solicitado_por_id bigint NOT NULL,
+    accion character varying NOT NULL,
+    concepto character varying NOT NULL,
+    valor_anterior numeric(10,2),
+    valor_nuevo numeric(10,2),
+    detalle character varying,
+    motivo text NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    documento_type character varying NOT NULL,
+    documento_id bigint NOT NULL
+);
+
+
+--
+-- Name: autorizaciones_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.autorizaciones_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: autorizaciones_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.autorizaciones_id_seq OWNED BY public.autorizaciones.id;
 
 
 --
@@ -746,7 +801,11 @@ CREATE TABLE public.venta_items (
     precio_libra numeric(10,2),
     subtotal numeric(10,2) DEFAULT 0.0 NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    minimo_aplicado boolean DEFAULT false NOT NULL,
+    descuento_monto numeric(10,2) DEFAULT 0.0 NOT NULL,
+    descuento_porcentaje numeric(5,2),
+    descuento_motivo character varying
 );
 
 
@@ -792,7 +851,8 @@ CREATE TABLE public.ventas (
     email_pendiente_enviado_at timestamp(6) without time zone,
     email_pagada_enviado_at timestamp(6) without time zone,
     tasa_cambio_aplicada numeric(10,4),
-    financiamiento_id bigint
+    financiamiento_id bigint,
+    descuento numeric(10,2) DEFAULT 0.0 NOT NULL
 );
 
 
@@ -1103,7 +1163,8 @@ CREATE TABLE public.nota_credito_items (
     precio_libra numeric(10,2),
     subtotal numeric(10,2) DEFAULT 0.0 NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    minimo_aplicado boolean DEFAULT false NOT NULL
 );
 
 
@@ -1139,7 +1200,8 @@ CREATE TABLE public.nota_debito_items (
     precio_libra numeric(10,2),
     subtotal numeric(10,2) DEFAULT 0.0 NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    minimo_aplicado boolean DEFAULT false NOT NULL
 );
 
 
@@ -1472,7 +1534,8 @@ CREATE TABLE public.paquetes (
     prepagado_miami boolean DEFAULT false NOT NULL,
     prepagado_miami_sucursal_id bigint,
     prepagado_miami_at timestamp(6) without time zone,
-    prepagado_miami_by_user_id bigint
+    prepagado_miami_by_user_id bigint,
+    driver character varying
 );
 
 
@@ -1626,7 +1689,11 @@ CREATE TABLE public.pre_factura_items (
     updated_at timestamp(6) without time zone NOT NULL,
     origen character varying DEFAULT 'manual'::character varying NOT NULL,
     tarifa_recolecta_id bigint,
-    servicio_extra_id bigint
+    servicio_extra_id bigint,
+    minimo_aplicado boolean DEFAULT false NOT NULL,
+    descuento_monto numeric(10,2) DEFAULT 0.0 NOT NULL,
+    descuento_porcentaje numeric(5,2),
+    descuento_motivo character varying
 );
 
 
@@ -1669,7 +1736,8 @@ CREATE TABLE public.pre_facturas (
     facturado_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    tasa_cambio_aplicada numeric(10,4)
+    tasa_cambio_aplicada numeric(10,4),
+    descuento numeric(10,2) DEFAULT 0.0 NOT NULL
 );
 
 
@@ -2114,6 +2182,52 @@ ALTER SEQUENCE public.tareas_id_seq OWNED BY public.tareas.id;
 
 
 --
+-- Name: tarifas; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.tarifas (
+    id bigint NOT NULL,
+    tipo_envio_id bigint NOT NULL,
+    categoria_precio_id bigint,
+    cliente_id bigint,
+    sucursal_id bigint,
+    proveedor_id bigint,
+    desde_libras numeric(10,2) DEFAULT 0.0 NOT NULL,
+    hasta_libras numeric(10,2),
+    precio_libra numeric(10,2) NOT NULL,
+    moneda character varying DEFAULT 'USD'::character varying NOT NULL,
+    minimo_monto numeric(10,2),
+    minimo_moneda character varying,
+    minimo_libras numeric(10,2),
+    aplica_minimo boolean DEFAULT true NOT NULL,
+    incremento_libras numeric(4,2),
+    activo boolean DEFAULT true NOT NULL,
+    notas text,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: tarifas_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.tarifas_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: tarifas_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.tarifas_id_seq OWNED BY public.tarifas.id;
+
+
+--
 -- Name: tarifas_recolecta; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2243,7 +2357,9 @@ CREATE TABLE public.users (
     sidebar_pinned boolean DEFAULT false NOT NULL,
     sidebar_position character varying DEFAULT 'left'::character varying NOT NULL,
     sonido_habilitado boolean DEFAULT true NOT NULL,
-    sonido_volumen integer DEFAULT 60 NOT NULL
+    sonido_volumen integer DEFAULT 60 NOT NULL,
+    pin_digest character varying,
+    pin_cambiado_at timestamp(6) without time zone
 );
 
 
@@ -2386,6 +2502,13 @@ ALTER TABLE ONLY public.agents ALTER COLUMN id SET DEFAULT nextval('public.agent
 --
 
 ALTER TABLE ONLY public.aperturas_caja ALTER COLUMN id SET DEFAULT nextval('public.aperturas_caja_id_seq'::regclass);
+
+
+--
+-- Name: autorizaciones id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.autorizaciones ALTER COLUMN id SET DEFAULT nextval('public.autorizaciones_id_seq'::regclass);
 
 
 --
@@ -2697,6 +2820,13 @@ ALTER TABLE ONLY public.tareas ALTER COLUMN id SET DEFAULT nextval('public.tarea
 
 
 --
+-- Name: tarifas id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarifas ALTER COLUMN id SET DEFAULT nextval('public.tarifas_id_seq'::regclass);
+
+
+--
 -- Name: tarifas_recolecta id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -2798,6 +2928,14 @@ ALTER TABLE ONLY public.aperturas_caja
 
 ALTER TABLE ONLY public.ar_internal_metadata
     ADD CONSTRAINT ar_internal_metadata_pkey PRIMARY KEY (key);
+
+
+--
+-- Name: autorizaciones autorizaciones_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.autorizaciones
+    ADD CONSTRAINT autorizaciones_pkey PRIMARY KEY (id);
 
 
 --
@@ -3177,6 +3315,14 @@ ALTER TABLE ONLY public.tareas
 
 
 --
+-- Name: tarifas tarifas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarifas
+    ADD CONSTRAINT tarifas_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: tarifas_recolecta tarifas_recolecta_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3372,6 +3518,48 @@ CREATE UNIQUE INDEX index_aperturas_caja_on_numero ON public.aperturas_caja USIN
 
 
 --
+-- Name: index_autorizaciones_on_accion; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_autorizaciones_on_accion ON public.autorizaciones USING btree (accion);
+
+
+--
+-- Name: index_autorizaciones_on_autorizado_por_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_autorizaciones_on_autorizado_por_id ON public.autorizaciones USING btree (autorizado_por_id);
+
+
+--
+-- Name: index_autorizaciones_on_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_autorizaciones_on_created_at ON public.autorizaciones USING btree (created_at);
+
+
+--
+-- Name: index_autorizaciones_on_documento_type_and_documento_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_autorizaciones_on_documento_type_and_documento_id ON public.autorizaciones USING btree (documento_type, documento_id);
+
+
+--
+-- Name: index_autorizaciones_on_pre_factura_item_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_autorizaciones_on_pre_factura_item_id ON public.autorizaciones USING btree (pre_factura_item_id);
+
+
+--
+-- Name: index_autorizaciones_on_solicitado_por_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_autorizaciones_on_solicitado_por_id ON public.autorizaciones USING btree (solicitado_por_id);
+
+
+--
 -- Name: index_cliente_sessions_on_cliente_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3400,10 +3588,24 @@ CREATE UNIQUE INDEX index_clientes_on_codigo ON public.clientes USING btree (cod
 
 
 --
+-- Name: index_clientes_on_codigo_normalizado; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_clientes_on_codigo_normalizado ON public.clientes USING btree (ltrim(regexp_replace((codigo)::text, '\D'::text, ''::text, 'g'::text), '0'::text));
+
+
+--
 -- Name: index_clientes_on_email; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX index_clientes_on_email ON public.clientes USING btree (email);
+
+
+--
+-- Name: index_clientes_on_nombre_completo_trgm; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_clientes_on_nombre_completo_trgm ON public.clientes USING gin (((((nombre)::text || ' '::text) || (COALESCE(apellido, ''::character varying))::text)) public.gin_trgm_ops);
 
 
 --
@@ -4394,6 +4596,69 @@ CREATE INDEX index_tareas_on_pre_alerta_paquete_id ON public.tareas USING btree 
 
 
 --
+-- Name: index_tarifas_on_categoria_precio_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tarifas_on_categoria_precio_id ON public.tarifas USING btree (categoria_precio_id);
+
+
+--
+-- Name: index_tarifas_on_cliente_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tarifas_on_cliente_id ON public.tarifas USING btree (cliente_id);
+
+
+--
+-- Name: index_tarifas_on_proveedor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tarifas_on_proveedor_id ON public.tarifas USING btree (proveedor_id);
+
+
+--
+-- Name: index_tarifas_on_sucursal_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tarifas_on_sucursal_id ON public.tarifas USING btree (sucursal_id);
+
+
+--
+-- Name: index_tarifas_on_tipo_envio_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tarifas_on_tipo_envio_id ON public.tarifas USING btree (tipo_envio_id);
+
+
+--
+-- Name: index_tarifas_por_categoria; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tarifas_por_categoria ON public.tarifas USING btree (categoria_precio_id, tipo_envio_id, desde_libras);
+
+
+--
+-- Name: index_tarifas_por_cliente; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tarifas_por_cliente ON public.tarifas USING btree (cliente_id, tipo_envio_id, desde_libras);
+
+
+--
+-- Name: index_tarifas_por_proveedor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tarifas_por_proveedor ON public.tarifas USING btree (proveedor_id, tipo_envio_id, desde_libras);
+
+
+--
+-- Name: index_tarifas_por_servicio; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tarifas_por_servicio ON public.tarifas USING btree (tipo_envio_id, desde_libras);
+
+
+--
 -- Name: index_tarifas_recolecta_on_activo; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4714,6 +4979,14 @@ ALTER TABLE ONLY public.warehouse_receipts
 
 
 --
+-- Name: autorizaciones fk_rails_34206603fe; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.autorizaciones
+    ADD CONSTRAINT fk_rails_34206603fe FOREIGN KEY (solicitado_por_id) REFERENCES public.users(id);
+
+
+--
 -- Name: warehouse_receipts fk_rails_35c83da0a8; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5002,6 +5275,22 @@ ALTER TABLE ONLY public.financiamientos
 
 
 --
+-- Name: autorizaciones fk_rails_8544995dca; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.autorizaciones
+    ADD CONSTRAINT fk_rails_8544995dca FOREIGN KEY (pre_factura_item_id) REFERENCES public.pre_factura_items(id) ON DELETE SET NULL;
+
+
+--
+-- Name: tarifas fk_rails_87d4d1c656; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarifas
+    ADD CONSTRAINT fk_rails_87d4d1c656 FOREIGN KEY (proveedor_id) REFERENCES public.proveedores(id);
+
+
+--
 -- Name: egresos_caja fk_rails_8acd1a6009; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5039,6 +5328,14 @@ ALTER TABLE ONLY public.tareas
 
 ALTER TABLE ONLY public.notas_debito
     ADD CONSTRAINT fk_rails_959289c6e4 FOREIGN KEY (venta_id) REFERENCES public.ventas(id);
+
+
+--
+-- Name: tarifas fk_rails_9927b9907d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarifas
+    ADD CONSTRAINT fk_rails_9927b9907d FOREIGN KEY (sucursal_id) REFERENCES public.sucursales(id);
 
 
 --
@@ -5143,6 +5440,14 @@ ALTER TABLE ONLY public.paquete_motivos_retencion
 
 ALTER TABLE ONLY public.warehouse_receipts
     ADD CONSTRAINT fk_rails_bd11b17ab6 FOREIGN KEY (consignee_id) REFERENCES public.clientes(id);
+
+
+--
+-- Name: autorizaciones fk_rails_bdec106815; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.autorizaciones
+    ADD CONSTRAINT fk_rails_bdec106815 FOREIGN KEY (autorizado_por_id) REFERENCES public.users(id);
 
 
 --
@@ -5274,6 +5579,22 @@ ALTER TABLE ONLY public.warehouse_receipts
 
 
 --
+-- Name: tarifas fk_rails_dc0714622a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarifas
+    ADD CONSTRAINT fk_rails_dc0714622a FOREIGN KEY (tipo_envio_id) REFERENCES public.tipo_envios(id);
+
+
+--
+-- Name: tarifas fk_rails_df00b19ef7; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarifas
+    ADD CONSTRAINT fk_rails_df00b19ef7 FOREIGN KEY (cliente_id) REFERENCES public.clientes(id);
+
+
+--
 -- Name: manifiestos fk_rails_e55f679c59; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5311,6 +5632,14 @@ ALTER TABLE ONLY public.financiamiento_cuotas
 
 ALTER TABLE ONLY public.paquetes
     ADD CONSTRAINT fk_rails_eeda9f916d FOREIGN KEY (venta_id) REFERENCES public.ventas(id);
+
+
+--
+-- Name: tarifas fk_rails_ef8d8e2d31; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarifas
+    ADD CONSTRAINT fk_rails_ef8d8e2d31 FOREIGN KEY (categoria_precio_id) REFERENCES public.categoria_precios(id);
 
 
 --
@@ -5392,6 +5721,15 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260806100000'),
+('20260805220000'),
+('20260805210000'),
+('20260805200000'),
+('20260805190000'),
+('20260802180000'),
+('20260802170000'),
+('20260802160000'),
+('20260802150000'),
 ('20260801160000'),
 ('20260801150000'),
 ('20260528192218'),

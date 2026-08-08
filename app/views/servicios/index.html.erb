@@ -1,0 +1,107 @@
+<%# PR-10.a: la "tabla de servicios". Se agrupa por servicio porque es la
+    unidad mental del negocio; cada fila de abajo es una regla de precio. %>
+<%= render PageHeaderComponent.new(title: "Tabla de Servicios",
+                                   subtitle: "Precios por libra, escalones y cobros mínimos") do |h| %>
+  <% h.with_action do %>
+    <%= render ButtonComponent.new(href: new_servicio_path, variant: :primary, icon: "plus", shortcut: "F7") do %>
+      Nueva Tarifa
+    <% end %>
+  <% end %>
+<% end %>
+
+<div class="mb-4 p-4 bg-cec-navy/5 dark:bg-cec-navy/20 border border-cec-navy/20 rounded-lg">
+  <div class="flex items-start gap-2">
+    <%= heroicon "information-circle", variant: :solid, options: { class: "w-5 h-5 text-cec-navy dark:text-cec-gold shrink-0 mt-0.5" } %>
+    <div class="text-sm text-gray-700 dark:text-gray-200">
+      Al cobrar, gana la regla <strong>más específica</strong> que aplique:
+      <span class="font-mono text-xs">cliente → proveedor → categoría → lista</span>.
+      Dentro de cada nivel, una tarifa con sucursal pisa a la general, y se usa el escalón que contiene el peso del paquete.
+    </div>
+  </div>
+</div>
+
+<% @tipo_envios.each do |te| %>
+  <% filas = @tarifas[te.id] || [] %>
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden mb-5">
+    <div class="px-6 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3">
+      <div class="flex items-baseline gap-2">
+        <span class="font-mono font-bold text-cec-navy dark:text-cec-gold"><%= te.codigo.to_s.upcase %></span>
+        <span class="text-sm text-gray-600 dark:text-gray-300"><%= te.nombre %></span>
+        <span class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-slate-300">
+          <%= te.modalidad %>
+        </span>
+      </div>
+      <%= link_to "+ Agregar tarifa", new_servicio_path(tipo_envio_id: te.id),
+            class: "text-xs font-medium text-cec-teal hover:text-cec-teal-dark" %>
+    </div>
+
+    <% if filas.any? %>
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-900">
+          <tr>
+            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Aplica a</th>
+            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Escalón</th>
+            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio/lb</th>
+            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Mínimo</th>
+            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Mín. libras</th>
+            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cobro</th>
+            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          <% filas.each do |t| %>
+            <tr class="<%= "opacity-50" unless t.activo %> hover:bg-gray-50 dark:hover:bg-gray-700/40">
+              <td class="px-4 py-3 text-sm">
+                <span class="inline-flex items-center text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded
+                             <%= t.cliente_id ? 'bg-cec-gold/20 text-cec-gold-dark' : 'bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-slate-300' %>">
+                  <%= t.nivel %>
+                </span>
+                <span class="ml-1 text-gray-800 dark:text-gray-100">
+                  <%= t.cliente&.nombre_completo || t.proveedor&.nombre || t.categoria_precio&.nombre || "Público" %>
+                </span>
+                <% if t.sucursal %>
+                  <span class="block text-[11px] text-gray-500">solo <%= t.sucursal.nombre %></span>
+                <% end %>
+              </td>
+              <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 font-mono"><%= t.escalon_label %></td>
+              <td class="px-4 py-3 text-right text-sm font-mono font-medium">
+                <%= t.moneda == "USD" ? "$" : "L." %><%= number_with_precision(t.precio_libra, precision: 2, delimiter: ",") %>
+              </td>
+              <td class="px-4 py-3 text-right text-sm font-mono">
+                <% if t.minimo_monto.present? %>
+                  <span class="<%= "line-through text-gray-400" unless t.aplica_minimo %>">
+                    <%= t.minimo_moneda == "USD" ? "$" : "L." %><%= number_with_precision(t.minimo_monto_con_isv, precision: 2, delimiter: ",") %>
+                  </span>
+                  <span class="block text-[10px] text-gray-400">neto <%= number_with_precision(t.minimo_monto, precision: 2, delimiter: ",") %></span>
+                <% else %>
+                  <span class="text-gray-300">—</span>
+                <% end %>
+              </td>
+              <td class="px-4 py-3 text-right text-sm font-mono">
+                <%= t.minimo_libras.present? ? "#{t.minimo_libras.to_f} lb" : "—" %>
+              </td>
+              <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-300">
+                <% if t.incremento_libras.present? %>
+                  por <%= t.incremento_libras.to_f == 0.5 ? "media libra" : "#{t.incremento_libras.to_f} lb" %>
+                <% else %>
+                  peso exacto
+                <% end %>
+                <% unless t.aplica_minimo %>
+                  <span class="block text-[10px] text-amber-700">sin mínimo</span>
+                <% end %>
+              </td>
+              <td class="px-4 py-3 text-right text-sm">
+                <%= link_to "Editar", edit_servicio_path(t), class: "text-cec-teal hover:text-cec-teal-dark font-medium" %>
+                <%= button_to "Eliminar", servicio_path(t), method: :delete,
+                      form: { class: "inline ml-2", data: { turbo_confirm: "¿Eliminar esta tarifa?" } },
+                      class: "text-red-600 hover:text-red-800 text-sm" %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% else %>
+      <p class="px-6 py-4 text-sm italic text-gray-400">— sin tarifas cargadas; se cobra el precio base del servicio —</p>
+    <% end %>
+  </div>
+<% end %>

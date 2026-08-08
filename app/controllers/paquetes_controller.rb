@@ -1,5 +1,5 @@
 class PaquetesController < ApplicationController
-  before_action :set_paquete, only: [ :show, :edit, :update, :label, :destroy, :eliminar_de_pre_alerta, :reimprimir_etiquetas, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero ]
+  before_action :set_paquete, only: [ :show, :edit, :update, :warehouse_receipt, :etiqueta, :destroy, :eliminar_de_pre_alerta, :reimprimir_etiquetas, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero ]
   before_action :authorize_tracking_actions, only: [ :check_tracking, :search ]
   before_action :authorize_edit, only: [ :edit, :update, :eliminar_de_pre_alerta, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero ]
   before_action :authorize_delete, only: [ :destroy ]
@@ -125,8 +125,35 @@ class PaquetesController < ApplicationController
     end
   end
 
-  def label
+  # Warehouse Receipt — hoja carta con términos y condiciones, para el
+  # expediente. NO es lo que se le pega a la caja.
+  # El Warehouse Receipt: hoja carta con términos y condiciones, para el
+  # expediente. NO es la etiqueta que se pega a la caja — esa es `#etiqueta`.
+  #
+  # PR-10.d.3: se llamaba `#label`. El nombre venía del legacy, cuando este
+  # documento se usaba como si fuera la etiqueta — que es justo lo que Yusef
+  # reportó: "aquí está tirando el warehouse, no la etiqueta".
+  def warehouse_receipt
     render layout: "print"
+  end
+
+  # PR-10.d: la etiqueta física que se pega a la caja. Dymo 2.25 × 1.25 in,
+  # una por paquete. Hasta ahora `label` imprimía el Warehouse Receipt en
+  # carta y se usaba como si fuera la etiqueta — Yusef: "aquí está tirando el
+  # warehouse, no la etiqueta".
+  #
+  # Con ?hermanas=1 imprime las N cajas del mismo tracking de una vez
+  # ("si el tracking se divide en 5 paquetes es una para cada una").
+  def etiqueta
+    @paquetes = if params[:hermanas] == "1" && @paquete.dividido?
+      Paquete.where(tracking: @paquete.tracking)
+             .includes(:cliente, :tercero, :tipo_envio, :sucursal, :user)
+             .order(:numero_caja, :id)
+    else
+      [ @paquete ]
+    end
+
+    render layout: "etiqueta"
   end
 
   # PR-D4.a: desvincula este paquete de TODAS sus pre-alertas (PreAlertaPaquete
@@ -211,7 +238,9 @@ class PaquetesController < ApplicationController
       @hermanas.sort_by!(&:numero_caja)
       render layout: false # modal partial
     else
-      redirect_to label_paquete_path(@paquete)
+      # PR-10.d.3: iba al Warehouse Receipt. Esta acción se llama
+      # "reimprimir_etiquetas" y sacaba la hoja carta.
+      redirect_to etiqueta_paquete_path(@paquete)
     end
   end
 
@@ -225,14 +254,16 @@ class PaquetesController < ApplicationController
       redirect_to paquetes_path, alert: "Selecciona al menos una caja para imprimir."
       return
     end
-    @paquetes = Paquete.where(id: ids).includes(:cliente, :sucursal, :tipo_envio,
-                                                 warehouse_receipt: %i[supplier agent consignee])
+    # PR-10.d.3: las asociaciones son las de la etiqueta, no las del Warehouse
+    # Receipt — esto renderizaba warehouse receipts en carta.
+    @paquetes = Paquete.where(id: ids)
+                       .includes(:cliente, :tercero, :sucursal, :tipo_envio, :proveedor, :user)
                        .order(:numero_caja, :id)
     if @paquetes.empty?
       redirect_to paquetes_path, alert: "No se encontraron paquetes con los IDs solicitados."
       return
     end
-    render layout: "print"
+    render layout: "etiqueta"
   end
 
   def destroy
@@ -325,6 +356,13 @@ class PaquetesController < ApplicationController
         cliente: ERB::Util.html_escape(paquete.cliente.nombre_completo),
         fecha: paquete.fecha_recibido_miami&.strftime("%d/%m/%Y"),
         count: Paquete.where(tracking: tracking).count,
+        # PR-10.c: Yusef sobre el modal de tracking repetido — "aquí solo
+        # agregarle el contenido... el contenido y el tipo de servicio, esas
+        # son las dos cosas que más te faltan ahí". El numero_recepcion ya se
+        # tenía a mano y tampoco se estaba mostrando.
+        descripcion: ERB::Util.html_escape(paquete.descripcion.to_s.truncate(80)),
+        tipo_envio: ERB::Util.html_escape(paquete.tipo_envio&.nombre.to_s),
+        numero_recepcion: ERB::Util.html_escape(paquete.numero_recepcion.to_s),
         # Datos para el flow de duplicado (Yusef 2026-04-25):
         # - existing_paquete_id: para "Es actualización" → cargar edit del original.
         # - tracking_base + next_suffix → para "Es duplicado real" → tracking nuevo.
@@ -629,7 +667,7 @@ class PaquetesController < ApplicationController
     params.require(:paquete).permit(
       :tracking, :tracking_secundario, :cliente_id, :tipo_envio_id, :estado, :peso,
       :alto, :largo, :ancho, :cantidad_productos, :cantidad_paquetes,
-      :numero_caja, :descripcion, :remitente, :expedido_por, :proveedor, :proveedor_id,
+      :numero_caja, :descripcion, :remitente, :driver, :expedido_por, :proveedor, :proveedor_id,
       :tercero_id,
       :notas_internas, :notas_al_cliente, :notas_consolidacion, :notas_retencion,
       :pre_alerta,

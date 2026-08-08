@@ -28,7 +28,7 @@ puts "  ✓ #{Sucursal.count} sucursales"
 # ── Tipos de envio (v4.0 — ver docs/approved/pre_alerta_v4.docx) ──
 [
   { nombre: "EXPRESS", codigo: "express", con_reempaque: true,  consolidable: true,
-    precio_libra: 8.00, modalidad: "aereo",    sla: "3-7 dias habiles",   max_paquetes_por_accion: nil },
+    precio_libra: 7.50, modalidad: "aereo",    sla: "3-7 dias habiles",   max_paquetes_por_accion: nil },
   { nombre: "CER",     codigo: "cer",     con_reempaque: true,  consolidable: true,
     precio_libra: 4.50, modalidad: "aereo",    sla: "6-10 dias habiles",  max_paquetes_por_accion: nil },
   { nombre: "CEM",     codigo: "cem",     con_reempaque: true,  consolidable: true,
@@ -36,7 +36,7 @@ puts "  ✓ #{Sucursal.count} sucursales"
   { nombre: "CKA",     codigo: "cka",     con_reempaque: false, consolidable: false,
     precio_libra: 4.00, modalidad: "aereo",    sla: "6-10 dias habiles",  max_paquetes_por_accion: 1 },
   { nombre: "CKM",     codigo: "ckm",     con_reempaque: false, consolidable: false,
-    precio_libra: 1.50, modalidad: "maritimo", sla: "14-17 dias habiles", max_paquetes_por_accion: 1 }
+    precio_libra: 1.90, modalidad: "maritimo", sla: "14-17 dias habiles", max_paquetes_por_accion: 1 }
 ].each do |attrs|
   te = TipoEnvio.find_or_initialize_by(codigo: attrs[:codigo])
   te.assign_attributes(attrs)
@@ -86,6 +86,13 @@ puts "  ✓ #{EmpresaManifiesto.count} empresas de manifiesto"
   end
 end
 puts "  ✓ #{CategoriaPrecio.count} categorias de precio"
+
+# ── Tarifas reales (PR-10.g) ──
+# Crea el resto de las categorías (Clientes Amigos, doTERRA, Shein, Personal
+# CEC, Sin Cobro Mínimo…) y las tarifas de la hoja PROPUESTA de Yusef.
+# Vive en `lib/tarifas_propuesta_2026.rb` para poder re-aplicarse sola cuando
+# manden una corrección de precios: `bin/rails tarifas:sembrar_propuesta_2026`.
+TarifasPropuesta2026.sembrar!(verbose: true)
 
 # ── Configuraciones ──
 {
@@ -264,6 +271,13 @@ puts "Seeding servicios extra..."
     s.assign_attributes(attrs.merge(activo: true))
   end
 end
+
+# ── Cargos de la hoja de Yusef (PR-10.i) ──
+# Solo los cinco que su propio texto define sin ambigüedad. Los otros diez
+# necesitan que confirme la moneda — la tarea imprime cuáles y por qué:
+#   bin/rails tarifas:sembrar_cargos_2026
+ServiciosExtraPropuesta2026.sembrar!(verbose: true)
+
 puts "  ✓ #{ServicioExtra.count} servicios extra"
 
 # ── Sample data (dev/staging only) ──
@@ -275,6 +289,13 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
     { nombre: "Supervisor Caja", email: "sup_caja@cec.com", rol: "supervisor_caja", ubicacion: "honduras" },
     { nombre: "Cajero Honduras", email: "cajero@cec.com", rol: "cajero", ubicacion: "honduras" },
     { nombre: "SAC", email: "sac@cec.com", rol: "sac", ubicacion: "honduras" },
+    # PR-13.c: los tres supervisores que autorizan cambios de precio arrancan
+    # con PIN para poder probar el flujo. `pin_cambiado_at` queda en nil a
+    # propósito: es exactamente el estado "el admin te lo asignó, cambialo".
+    { nombre: "Supervisor Pre-Factura", email: "sup_prefactura@cec.com",
+      rol: "supervisor_prefactura", ubicacion: "honduras", pin: "1111" },
+    { nombre: "Supervisor SAC", email: "sup_sac@cec.com",
+      rol: "supervisor_sac", ubicacion: "honduras", pin: "2222" },
     { nombre: "Entrega", email: "entrega@cec.com", rol: "entrega_despacho", ubicacion: "honduras" }
   ].each do |attrs|
     user = User.find_or_initialize_by(email_address: attrs[:email])
@@ -282,8 +303,11 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
     user.rol = attrs[:rol]
     user.ubicacion = attrs[:ubicacion]
     user.password = "Demo123!"
+    user.pin = attrs[:pin] if attrs[:pin]
     user.save!
   end
+  # Al Supervisor Caja que ya existía también, para tener los cuatro roles.
+  User.find_by(email_address: "sup_caja@cec.com")&.update!(pin: "3333")
   puts "  ✓ #{User.count} users total (including demo)"
 
   # Demo clients

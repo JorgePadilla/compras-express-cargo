@@ -2,8 +2,8 @@ class NotaCredito < ApplicationRecord
   has_paper_trail  # PR-D7: audit log
   self.table_name = "notas_credito"
   include CurrencyAware
-
-  ISV_RATE = Venta::ISV_RATE
+  include IsvAware
+  include LineasDeFlete
 
   ESTADOS = %w[creado emitido anulado].freeze
   MOTIVOS = %w[devolucion descuento error_facturacion otro].freeze
@@ -11,6 +11,8 @@ class NotaCredito < ApplicationRecord
   belongs_to :venta
   belongs_to :cliente
   belongs_to :creado_por, class_name: "User", optional: true
+  # PR-13.e: la autorizacion con la que un supervisor la emitio.
+  has_many :autorizaciones, as: :documento, dependent: :destroy
   has_many :nota_credito_items, dependent: :destroy, inverse_of: :nota_credito
   has_many :paquetes, -> { distinct }, through: :nota_credito_items
 
@@ -83,22 +85,9 @@ class NotaCredito < ApplicationRecord
       creado_por: user
     )
 
-    paquetes = cliente.paquetes.where(id: paquete_ids).includes(:tipo_envio)
-    paquetes.each do |paquete|
-      precio = cliente.categoria_precio&.precio_para(paquete.tipo_envio) ||
-               paquete.tipo_envio&.precio_libra ||
-               BigDecimal("0")
-      peso = paquete.peso_cobrar || BigDecimal("0")
-      subtotal = (BigDecimal(peso.to_s) * BigDecimal(precio.to_s)).round(2)
-
-      nc.nota_credito_items.build(
-        paquete: paquete,
-        concepto: "Credito #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia}",
-        peso_cobrar: peso,
-        precio_libra: precio,
-        subtotal: subtotal
-      )
-    end
+    lineas_de_flete(cliente: cliente, paquete_ids: paquete_ids,
+                    moneda: nc.moneda, concepto_prefijo: "Credito")
+      .each { |attrs| nc.nota_credito_items.build(attrs) }
 
     nc
   end
@@ -115,7 +104,7 @@ class NotaCredito < ApplicationRecord
     sub = nota_credito_items.reject(&:marked_for_destruction?)
                             .sum { |i| i.subtotal.to_d }
     self.subtotal = sub
-    self.impuesto = (sub * ISV_RATE).round(2)
+    self.impuesto = (sub * isv_rate).round(2, BigDecimal::ROUND_HALF_UP)
     self.total    = (sub + impuesto).round(2)
   end
 end

@@ -73,6 +73,19 @@ class Paquete < ApplicationRecord
   ESTADO_FECHA_INMUTABLE = %i[].freeze
 
   validates :tracking, presence: true
+  # PR-10.d: `PreAlertaPaquete` ya validaba el formato y `Paquete` no, pese a
+  # que la spec lo pide (docs/05). El tracking se imprime en la etiqueta y
+  # alimenta el código de barras, así que se acota en el modelo.
+  #
+  # A propósito NO es tan estricta como la de `PreAlertaPaquete`: acá el valor
+  # lo teclea el digitador con un tracking real de carrier, y una regex de más
+  # lo dejaría sin poder guardar el paquete. Lo que sí se corta es el
+  # whitespace y los caracteres de markup — que es lo único que importaba.
+  TRACKING_FORMATO = /\A[A-Za-z0-9._\-\/]+\z/
+  validates :tracking, format: {
+    with: TRACKING_FORMATO,
+    message: "no permite espacios ni símbolos (solo letras, números, . _ - /)"
+  }, allow_blank: true
   validates :guia, presence: true, uniqueness: { case_sensitive: false }
   validates :estado, presence: true
   validates :peso, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
@@ -611,10 +624,17 @@ class Paquete < ApplicationRecord
     self.fecha_recibido_miami = Time.current
   end
 
+  # PR-10.a: pasa a usar `VolumetricoCalculator`, que ya implementaba la regla
+  # real de Yusef (redondeo a ½ libra con umbrales .10/.60, del spreadsheet de
+  # tarifas) y estaba testeada — pero nadie la llamaba. Este método usaba
+  # `.round(2)`, así que la calculadora de /etiquetar le mostraba al operario
+  # un peso a cobrar distinto del que la pre-factura terminaba cobrando:
+  # 8×9×9 = 648 pulg³ facturaba 3.90 lb en vez de 4.0.
   def calculate_peso_volumetrico
-    if alto.present? && largo.present? && ancho.present?
-      self.peso_volumetrico = (alto * largo * ancho / 166.0).round(2)
-    end
+    return unless alto.present? && largo.present? && ancho.present?
+
+    in3 = VolumetricoCalculator.pulgadas_cubicas(alto, largo, ancho)
+    self.peso_volumetrico = VolumetricoCalculator.vlbs(in3)
   end
 
   def calculate_peso_cobrar

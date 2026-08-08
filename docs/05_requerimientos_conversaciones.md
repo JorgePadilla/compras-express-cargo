@@ -1542,9 +1542,423 @@ Dos cosas de la primera hoja que no entran en PR-9:
 
 ---
 
+## Conversación 5: Tarifas, mínimos y etiqueta (2026-08-02)
+
+> **Para revisión de Yusef.** Esta sección recoge lo hablado en las 3 reuniones grabadas del 2026-08-02, las 4 páginas de notas manuscritas y la etiqueta anotada. Si algo quedó mal entendido, corregirlo acá.
+
+### El problema de fondo: el sistema no sabe cobrar
+
+Los precios por libra sí están cargados (EXPRESS $8.00, CER $4.50, CEM $2.50, CKA $4.00, CKM $1.50), pero **el sistema no conoce ninguna de las reglas reales del negocio**:
+
+- No existen los **cobros mínimos**. Un CKM de 2 libras hoy se factura por 2 libras, sin aplicar ningún mínimo.
+- No existen los **precios escalonados** por rango de peso.
+- No existen las **excepciones** por categoría de cliente o por promoción.
+- Los precios están en **dólares** pero las facturas se muestran en **Lempiras sin convertir**, así que un CER de 10 libras aparece como "L. 45.00" cuando en realidad son $45.
+- La categoría de precio del cliente solo distingue **aéreo o marítimo**, no el servicio. Por eso hoy un cliente "Regular" paga lo mismo en EXPRESS que en CER, cuando la lista dice $8.00 y $4.50.
+
+Yusef lo resumió así:
+
+> "**No tenés todavía la tabla de servicio. Creo que las puse a mano.** Hay que agregarlo al final de todo lo que estás haciendo."
+
+### Las cuatro reglas de precio que hoy se manejan a mano
+
+**1. Precio escalonado por peso**
+> "Queremos hacer un precio escalonado: que de una a tres libras vale tanto, de tres a tal vale tanto. En la categoría hay que crearle eso."
+
+**2. Precio especial por cliente y servicio** — por encima de la categoría
+> "En el reempacado él es cliente amigo y se lo damos a $2, pero en el marítimo se lo voy a dar a $1.50. Solo le pongo que en el marítimo le voy a dar esa tarifa, y **esa es la excepción que arranca arriba de la tabla, pero solo en un servicio**."
+
+Confirmado después por escrito:
+> "Está el precio normal, precio por ser mayorista/familia etc., y está el **precio especial que está sobre todos los anteriores**."
+
+**3. Categorías y promociones que anulan el mínimo**
+> "Digamos Chain [Shein]: el mínimo de nosotros es 200 lempiras, pero en Chain solo es la libra o la media libra — inclusive le cobran media libra cuando es una cosita tan chiquitita. **Ahí es donde entran excepciones a las reglas normales del sistema.** En el instante que activamos esto, el sistema sabe que ya no existe la regla aquella."
+
+Y sobre de qué depende el mínimo:
+> "Ni sé cuál es el mínimo exacto, porque **depende del tipo de producto o promoción** — Shein, Temu, y otros como doTERRA o Farmasi."
+
+**4. Cobro por media libra** en esos mismos casos, en vez de libra entera.
+
+### Cómo se resuelve el precio de un paquete
+
+Gana la regla **más específica** que aplique:
+
+1. **Precio especial del cliente** para ese servicio
+2. **Promoción del proveedor** (Shein, Temu, doTERRA, Farmasi…)
+3. **Categoría de precio** del cliente
+4. **Precio de lista** (público)
+
+Dentro de la regla que gane, se usa el escalón de peso que corresponda. Y si hay una tarifa específica para la sucursal, esa manda sobre la general — porque:
+> "En algunas sucursales manejan el mismo precio y en otras hay una pequeña diferencia (**costo extra de transporte**)."
+
+### Las categorías de cliente
+
+Yusef enumeró: **revendedores** (los precios más bajos), **mayoristas** (intermedio), **personal de CEC** (también de los más bajos), **clientes amigos**, **familia**, **Exchange / Chain** (sin mínimo, media libra) y **empresas de carga especial**.
+
+Hoy el sistema solo tiene Regular, VIP y Mayorista. ✅ **Los precios llegaron el 2026-08-05** — ver "La tabla de precios recibida" más abajo.
+
+### Los cobros mínimos
+
+| Servicio | Documentado en abril | Lo dicho en el audio | Estado |
+|---|---|---|---|
+| CER | L.200 con ISV | coincide | ✅ |
+| CKA | L.200 con ISV | coincide | ✅ |
+| EXPRESS | $14.95 con ISV | "$10 más ISV" | ✅ **$10 sin ISV** — confirmado en la tabla del 2026-08-05 |
+| CEM | 8 libras | "3 o 4 libras" | ⬜ la tabla trae mínimo en dinero (L.200 con ISV), no en libras |
+| CKM | 20 libras | "3 o 4 libras" | ⬜ ídem — ver la contradicción de abajo |
+
+**Reglas confirmadas por escrito:**
+
+- Los L.200 son **con el ISV adentro**: *"L.173.91 más ISV (queda en L.200.00 ya con ISV)"*. El sistema guarda el neto y muestra ambos valores.
+- El mínimo de EXPRESS, en cambio, es **sin ISV**: *"$10 **más** impuesto de venta"*. Los dos casos conviven en la misma tabla — es por eso que `minimo_monto` guarda siempre el neto y el CRUD pregunta por el monto con impuesto.
+- El mínimo es **por concepto, no por factura**: *"El flete lleva su mínimo dependiendo el servicio, así como las recolectas."*
+- **Todo tiene que ser editable**: *"TODOS ESTOS PRECIOS DEBEN PODER CAMBIAR"* — incluida la moneda del mínimo, porque *"puedo variar de valor o pasar a base dólares"*.
+
+Las tres reglas quedaron fijadas como tests en `test/models/tarifa_reglas_yusef_test.rb`, con las citas textuales.
+
+> ⚠️ **CKM cae en dos reglas que se contradicen** — y la contradicción está dentro del mismo audio:
+>
+> *"Los servicios **serie CK** son 200 lempiras ya con ISV"* → aplica a CKA **y CKM**
+> *"El **marítimo** lo tenemos estipulado en cantidad de libras… mínimo 3 o 4 libras"* → aplica a CEM **y CKM**
+>
+> CKM es de la serie CK **y** es marítimo, así que entra en las dos. Falta saber cuál manda para CKM: el mínimo de L.200, el de libras, o los dos y gana el que resulte mayor. (El modelo soporta las tres opciones; es una decisión de negocio.)
+
+### La tasa de cambio es fija
+
+El dólar **no se jala automático**: lo fija un administrador en el sistema. (Hoy hay un proceso que lo actualiza solo todas las mañanas desde internet — se desactiva, porque le sobrescribiría la tasa que Yusef ponga.)
+
+### Flujo operativo de Miami
+
+Documentado por primera vez, del audio:
+
+1. Llega el camión y entrega la carga
+2. **Se separa por tipo de servicio** mientras se recibe
+3. Pasa al área de mesas: se **etiqueta y digita**
+4. Se coloca en **estantería**
+5. Se **empaca** en las cajas de salida (tamaños predeterminados: **E**, **mini D**, **mini D doble**)
+6. ⬜ **Falta el escaneo al empacar** — ver "Pendiente de diseño" abajo
+
+### La etiqueta
+
+Yusef mandó la etiqueta del sistema actual con cada campo anotado. **Es la primera vez que queda documentado qué lleva la etiqueta física** — el spec anterior (`docs/warehouse_receipt_fields.md`) ya no está en el repo.
+
+| # | Campo | Ejemplo | Observación |
+|---|---|---|---|
+| 1 | Código de barras del número de recepción | — | 🆕 no existe hoy |
+| 2 | Número de recepción | `RE0000577711-2-1/2` | |
+| 3 | Tracking original | `TBA333187639911-2-1` | 🆕 falta agregar el secundario |
+| 4 | Nombre del cliente | `YUSEF SAMARA` | 🆕 falta agregar el nombre del tercero |
+| 5 | Fecha y hora de recepción | `30-jul.-2026 08:50 a.m.` | |
+| 6 | Iniciales de quien registró | `Y.G.` | ya existe |
+| 7 | Código del cliente | `C6` | va **completo** |
+| 8 | Sucursal donde retira el cliente | `SAN PEDRO SU` | ⚠️ sale truncado y sin encabezado |
+| 9 | Número y cantidad de paquetes | `1/2` | |
+| 10 | Tipo de envío | `EXP` | |
+| 11 | Departamento y ciudad del cliente | `Cortés · San Pedro Sula` | departamento abreviado + ciudad o pueblo |
+
+**El problema del "San Pedro Soda":** en el documento que imprime el sistema hoy, la sucursal aparece bajo un encabezado en inglés (`Agent`) que nadie entiende, y el nombre sale cortado. Con Ceiba y la nueva sucursal de Tegucigalpa en camino, eso deja de ser un detalle.
+
+**Hay cuatro etiquetas distintas**, una por operación:
+
+| Operación | Tamaño | Marca | Dónde se pega |
+|---|---|---|---|
+| **ETIQUETAR** | **2.25 × 1.25 in** | Dymo | Una **por paquete** (si el tracking se divide en 5, van 5 etiquetas) |
+| MANIFIESTO | 4 × 6 in | FreeX | Una por caja o paquete |
+| PRE-FACTURA (SPS) | 4 × 6 in | FreeX | Por paquete; un paquete puede llevar varios tracking |
+| MANIFIESTO NACIONAL | 4 × 6 in | FreeX | Por fuera; lleva varias pre-facturas, que llevan varios tracking |
+
+⚠️ **Solo se va a rediseñar la de ETIQUETAR.**
+
+✅ **Resuelto (2026-08-06).** Yusef cerró las dos cosas que faltaban:
+
+> "No creo cambiar el tamaño de la etiqueta. **Allí es letra pequeña unas y otras grandes.**"
+
+O sea que la respuesta no era recortar campos: **van los 11**, y lo que cambia es el cuerpo de letra. El tamaño de 2.25 × 1.25 in se queda.
+
+La jerarquía quedó así:
+
+| | Campos |
+|---|---|
+| **Grande** — se lee de lejos en la estantería | Número de recepción, tipo de envío, código y nombre del cliente, sucursal donde retira, n/N de paquetes |
+| **Chico** — solo hace falta tenerlo a mano | Tracking principal y secundario, tercero, driver, ciudad del cliente, fecha y hora, iniciales |
+
+> El presupuesto vertical es de 1.15 in de contenido y con los 11 campos queda
+> al filo. `overflow:hidden` recorta **en silencio**, así que tercero y driver
+> comparten renglón (el caso de Entrega Personal, que suele traer los dos) y el
+> interlineado va apretado a mano. Cualquier campo que se agregue de acá en
+> adelante hay que imprimirlo para verificar: ningún test atrapa un recorte de
+> CSS.
+
+Hoy el sistema no imprime una etiqueta: imprime un **Warehouse Receipt** en hoja carta con términos y condiciones, que es el documento equivocado para pegarle a una caja. Se van a separar: la etiqueta para la caja, el Warehouse Receipt para el expediente.
+
+### Otros ajustes pedidos
+
+**En Entrega Personal** — falta el cálculo del cobro:
+> "Hay que agregarle para poder [ver] el valor a pagar. Copiar básicamente peso, medidas y cálculo. De acuerdo a la tarifa que tiene el cliente asignado."
+
+El valor a pagar se muestra **en dólares y en lempiras**. El cliente puede pagar **en Miami o en Honduras** — las dos opciones ya existen en la pantalla.
+
+**En Entrega Personal — proveedor y driver son dos cosas distintas.** Yusef corrigió el formulario:
+
+> "Aquí tenés mal: aquí es proveedor y aquí es el driver."
+> Jorge: "Viene Walmart y te manda el driver, ¿verdad?" — Yusef: "Sí, correcto."
+> "Es donde tiene que ser editable, que es el driver."
+> "Remitente o quien envía está bien, pero igual **otro driver** para poner el nombre del driver, en caso de tenerlo, **por el rótulo**."
+
+- **Proveedor** = la empresa que mandó el paquete (Walmart, Amazon…). Es el catálogo `Proveedor`, recurrente.
+- **Driver** = la persona que lo trajo físicamente. **Texto libre, no catálogo**, porque cambia en cada entrega.
+- **Remitente** se queda como está — es un tercer dato, no se pisa con el driver.
+- El driver **se imprime en la etiqueta**; para eso lo pidió.
+
+Yusef además va a crear un proveedor llamado "Entrega local / personal" desde el CRUD. Hoy no hay ninguno de tipo `entrega_personal` cargado, así que la pantalla muestra el aviso de que falta configurarlos.
+
+**En Etiquetar:**
+- **Buscar el código ignorando los ceros**: hoy si el operario escribe `C002` no encuentra a `C2`. *"Cuando hago búsquedas por código, quitar los ceros."* El formato del código no cambia — `C6` está bien.
+- **Búsqueda combinada de código y nombre**: poder escribir `"2 María"` y que aparezca. *"A veces llegan las etiquetas rotas, solo dicen 234 y después dice Pérez Hernández."*
+- **F4 para agregar un tercero**, oculto por defecto: *"Que sea oculto, porque confunde si no. De clientes tercero recibimos 20% por mucho."*
+- **En el modal de tracking repetido**, mostrar el **contenido y el tipo de servicio**: *"esas son las dos cosas que más te faltan ahí."*
+- **Remitente** baja junto a Carrier y Proveedor.
+- La **cantidad de cajas se queda en el modal** al imprimir. Yusef lo revisó y lo confirmó: *"Ya no me acordaba de eso, pero fíjate que al final está mejor. Me parece bien esto."*
+
+### Pendiente de diseño (no se construye todavía)
+
+**Escaneo al empacar y pre-etiqueta de caja.** Yusef pidió explícitamente dejarlo planificado:
+
+> "No quiero que el sistema se complique, pero **quiero que lo planifiquemos aunque lo dejemos por fuera — que quede ya planificado y le dejes los accesos, los campos para amarrarlo**."
+
+Lo que describió:
+- Se crea una **pre-etiqueta de caja** con el tipo de servicio y el tamaño de caja, editable después por si la cortan.
+- El operario escanea cada paquete con un escáner inalámbrico al meterlo a la caja.
+- **Si el tipo de servicio no concuerda con el de la caja, el sistema pita.**
+- Al crear el manifiesto se **jalan las cajas ya empacadas**, no paquetes sueltos.
+- Con un botón de "omitir" para no trabar la operación.
+
+El motivo real es de servicio al cliente:
+> "Hoy no sabemos si una carga salió. Por eso le decimos al cliente 'entre lunes y viernes', y el cliente te dice: qué rango tan grande, no me estás dando una fecha."
+
+### "Label en el celular" — resuelto (Jorge, 2026-08-02)
+
+La nota de la página 2 no era sobre imprimir ni ver la etiqueta desde el teléfono. Es sobre la **etiqueta física rota**: cuando el paquete llega con la etiqueta dañada, el operario solo alcanza a leer pedazos y tiene que dar con el cliente a partir de esos fragmentos.
+
+> "A veces llegan las etiquetas rotas, solo dicen **234** y después dice **Pérez Hernández**, entonces uno tiene que andar ahí unificando."
+
+La búsqueda combinada de código y nombre (PR-10.c) va en esa dirección, pero **no alcanza**: hoy exige que *todas* las palabras del término matcheen. Con una etiqueta rota eso es justo lo que falla — basta que un fragmento esté mal leído o pertenezca a otro campo para que no devuelva nada. Ver Fase 11, PR-10.f.
+
+### Lo que falta que Yusef confirme
+
+1. ✅ ~~La tabla de precios completa~~ — llegó el 2026-08-05, ver abajo.
+2. El **mínimo por defecto de CEM y CKM** en libras.
+3. ✅ ~~El mínimo de EXPRESS~~ — **$10 sin ISV**.
+4. ✅ ~~Cuáles de los 11 campos de la etiqueta son imprescindibles~~ — van los 11, con jerarquía de cuerpos de letra, y el tamaño no cambia.
+
+---
+
+## La tabla de precios recibida (2026-08-05)
+
+Yusef mandó `precios por categoria 2026.xlsx`. Es lo que bloqueaba cargar los
+precios de verdad: el motor de tarifas está construido desde PR-10.a pero venía
+corriendo con el backfill de la migración, que solo replicaba el comportamiento
+viejo (un precio plano por servicio, sin mínimos ni escalones).
+
+El archivo trae tres hojas: `Hoja1` (borrador), `ACTUAL` (lo que cobran hoy) y
+**`PROPUESTA`** (lo que quieren cobrar). Se sembró la PROPUESTA — PR-10.g.
+
+### El archivo confirmó el diseño
+
+Yusef llegó por su cuenta a la misma estructura que el modelo:
+
+| En su archivo | En el sistema |
+|---|---|
+| `MONTO EN LPS CON ISV` → 200 | `minimo_monto` guarda el neto **173.91** |
+| `MONTO EN $ MAS ISV` | mínimo neto, el ISV se aplica al totalizar |
+| Columnas NORMAL / MINIMO por categoría | `precio_libra` / `minimo_monto` |
+| `TARIFARIO ESCALONADO` con rangos de libras | `desde_libras` / `hasta_libras` |
+| `SIN COBRO MINIMO` como categoría | `aplica_minimo: false` |
+| `13.5 A 100 LIBRAS EN SPS` vs `EN TGU` | `sucursal_id` |
+
+En la hoja ACTUAL el mínimo figuraba como **6.45 USD** y en la PROPUESTA pasó a
+**173.91** — o sea que adoptó la convención del neto sin ISV por su cuenta.
+
+### Precio por libra y mínimo, por categoría
+
+Montos en USD salvo donde diga lo contrario.
+
+| Servicio | Amigos | doTERRA / Farmasi | Personal CEC | **Lista (público)** | Shein | Sin Cobro Mínimo |
+|---|---|---|---|---|---|---|
+| CER | 4.20 / $5 | 3.50 / $5 | 3.50 / — | **4.50 / L.173.91** | 3.50 / — | 4.50 / sin mínimo |
+| CKA | 3.80 / $5 | 3.50 / $5 | 3.00 / $3 | **4.00 / L.173.91** | 3.50 / — | 4.00 / sin mínimo |
+| EXPRESS | 7.00 / $10 | 7.00 / $10 | 6.50 / — | **7.50 / $10** | 7.00 / — | 7.50 / sin mínimo |
+| CEM | 2.20 / — | 1.70 / — | 1.80 / $1.80 | **2.50 / L.173.91** | 1.75 / — | 2.50 / sin mínimo |
+| CKM | 1.70 / — | 1.70 / — | 1.40 / $1.40 | **1.90 / L.173.91** | 1.75 / — | 1.90 / sin mínimo |
+
+**Un MINIMO en 0 en la hoja significa "sin definir", no "mínimo de cero"** — se
+carga como sin mínimo.
+
+`MAYORISTAS` viene casi entero en cero: el único servicio con precio es **CKM a
+$1.50**. `FAMILIA` y `REVENDEDORES` vienen todos en cero, así que las categorías
+se crearon pero sin tarifas — sus clientes caen al precio de lista.
+
+### Tegucigalpa es sobrecosto por sucursal, no categoría
+
+`Precio Tegus` y `SHEIN TGUS` no son categorías de cliente: son la misma tarifa
+con el costo extra de transporte a Tegucigalpa. Van como fila con `sucursal`, y
+es el sistema el que la aplica cuando el paquete va para allá — el cajero no
+elige nada. Si fueran categorías, al abrir La Ceiba habría que duplicar cada una
+otra vez.
+
+Solo tres precios difieren en Tegucigalpa:
+
+| | SPS y el resto | Tegucigalpa |
+|---|---|---|
+| CKM lista (13.5–100 lb) | $1.90 | **$2.00** |
+| CEM Shein | $1.75 | **$1.90** |
+| CKM Shein | $1.75 | **$1.90** |
+
+### Los tarifarios escalonados
+
+Solo el **precio de lista** tiene escalones; las categorías son precio plano.
+
+| CER | | CEM | | CKM | |
+|---|---|---|---|---|---|
+| 0–50 lb | $4.50 | 0–3 lb | $4.50 | 0–3 lb | $4.00 |
+| 50.5–100 | $4.00 | 3.5–100 | $2.50 | 3.5–13 | $2.50 |
+| 100.5–150 | $3.75 | 100.5–200 | $2.20 | 13.5–100 | $1.90 · **TGU $2.00** |
+| 150.5+ | $3.50 | 200.5+ | $2.00 | 100.5–200 | $1.75 |
+| | | | | 200.5+ | $1.65 |
+
+CKA y EXPRESS no tienen escalonado: precio plano.
+
+Dos decisiones de lectura sobre la hoja:
+
+- El primer tramo de cada tarifario (`DE 0 A 1 LBS → L.200 CON ISV`) no es un
+  precio por libra sino **el mínimo**, y el mínimo ya va en toda la fila. Queda
+  absorbido en el tramo siguiente: a 1 lb de CER el cálculo da $4.50 ≈ L.112,
+  por debajo del mínimo, y se cobra L.173.91 igual (L.200.00 con ISV).
+- Los cortes de CEM y CKM dicen `101` y `201` donde CER dice `100.5` y `150.5`.
+  Se tomó el patrón de CER (medias libras) para los tres: si no, un paquete de
+  100.5 lb caería en un hueco sin tarifa.
+
+### "TARIFA EDITABLE CON AUTORIZACION DE SUPERVISOR O JEFE" es una función del sistema
+
+La nota se repite en casi todas las filas de los tarifarios escalonados. Al
+principio se leyó como una descripción de su proceso interno. **No lo es** —
+Yusef lo aclaró (2026-08-05):
+
+> "Ahí, como es el área de pre-facturación, no hemos entrado ahí, en donde entra
+> ya ciertas cosas que los supervisores o jefes son los que [autorizan el]
+> cambio. Por eso queremos que el área de los precios estén establecidos, listo.
+> **No hay nada más, no se puede hacer más si está todo preestablecido.** Ahora,
+> si lo quieren modificar, ellos tienen que pedir autorización — ahí es donde
+> entra un jefe, un supervisor, y ahí es donde llega y **pone un código especial
+> de él**."
+
+O sea, el circuito completo es:
+
+1. Los precios se cargan una vez en `/servicios` (solo admin). Esa parte ya está.
+2. **En la pre-factura el cajero no puede tocar el precio.** Sale preestablecido
+   de la tabla de tarifas y punto.
+3. Si en el mostrador hay que cambiarlo, el cajero **pide autorización**.
+4. El supervisor o jefe llega, **teclea su código** en la pantalla, y eso
+   destraba la edición de esa línea.
+5. Queda registrado quién autorizó qué.
+
+Lo importante es el punto 2: el precio bloqueado por defecto es el requisito, no
+un detalle de la pantalla. La autorización es la excepción.
+
+> 🔴 **Hoy el sistema hace lo contrario.** `PreFacturasController#pre_factura_params`
+> permite `precio_libra` y `subtotal` en las líneas, así que cualquiera con acceso
+> a pre-facturas edita el monto sin dejar rastro de por qué. Ver Fase 13.
+
+**El detalle, respondido el mismo día:**
+
+| | |
+|---|---|
+| **El código** | Un **PIN de 4 dígitos**, aparte de la contraseña del supervisor |
+| **Qué destraba** | **Todo**: precio, descuento, quitar líneas y cambiar el peso a cobrar |
+| **Alcance** | **Por línea** — no se autoriza la pre-factura completa |
+| **Quién autoriza** | `admin`, `supervisor_prefactura`, `supervisor_caja` y **`supervisor_sac`** |
+
+**Falta un rol.** `sac` ya existe (el agente de servicio al cliente); lo que no
+está es **su supervisor**, que Yusef cuenta también como jefe. Hay que agregar
+`supervisor_sac` y darle sus permisos.
+
+Dos cosas que salen de esas respuestas y hay que resolver al construirlo:
+
+- **El descuento no existe como dato.** Hoy un descuento se hace bajándole el
+  precio a la línea, así que la factura sale sin decir que hubo descuento, ni de
+  cuánto, ni quién lo dio. Si el PIN va a autorizar descuentos, el descuento
+  tiene que ser una columna.
+- **Un PIN de 4 dígitos son 10 000 combinaciones.** Es el único punto del
+  sistema donde cuatro números habilitan cambiar plata, así que va con `bcrypt`
+  y con límite de intentos, no guardado en claro.
+
+El detalle técnico está en `docs/06` — Fase 13.
+
+### Lo que sigue abierto de la tabla
+
+1. **El mínimo en libras de CEM y CKM.** El archivo trae mínimos en dinero pero
+   no el de libras que Yusef mencionó ("3 o 4 libras"). En la práctica el
+   escalonado ya lo cubre — el tramo chico de CEM cobra $4.50/lb, así que un
+   paquete de 2 lb paga $9 — pero conviene confirmarlo.
+2. **La contradicción de CKM sigue en pie.** El archivo le pone el mínimo de
+   L.173.91, lo que sugiere que manda el monto sobre las libras. Confirmar.
+3. **`Regular` y `VIP` no aparecen en el archivo**, y tienen 8 clientes
+   asignados. Hay que decidir si se migran a alguna de las categorías nuevas o
+   se retiran. Mientras tanto se quedan con los precios viejos.
+4. **`MAYORISTAS` solo tiene CKM definido.** Sus otros cuatro servicios siguen
+   con los valores del backfill de PR-10.a.
+5. **Las categorías no bajan de escalón.** Un cliente `Clientes Amigos` con 200
+   lb de CER paga $4.20/lb ($840) mientras el público paga $3.50/lb ($700) —
+   porque su columna es un precio plano y el escalonado está declarado solo para
+   el precio de lista. Es literal a la hoja, pero hay que preguntarle si es lo
+   que quiere.
+6. **Los 16 cargos que no son flete** — parcialmente resuelto, ver abajo.
+
+### Los cargos que no son flete (PR-10.i)
+
+De las 16 filas que no son tipos de envío, **se cargaron cinco**: los que el
+propio texto de la hoja define sin dejar dudas.
+
+| Cargo | Precio | De dónde sale la certeza |
+|---|---|---|
+| Entrega nacional | **L.86.96** | El título dice `L100` y 86.96 + ISV = L.100.00 exactos |
+| Compra online | **$1.00** | Su nota: *"ponerlo $1 más ISV"* |
+| Manejo y gastos de destino | **L.1.00** | Su nota: *"ponerlo lps1 más ISV"* |
+| Flete internacional UPS | **$1.00** | El título dice `FLETE INTERNACIONAL UPS $1` |
+| Retornado en Miami | **$5.00** | Su nota: *"todo en $"* |
+
+Ninguno lleva el ISV adentro: la fila 30 de la hoja dice
+`**PRECIOS NO INCLUYEN IMPUESTOS`, y eso sí aplica a todo.
+
+#### ⬜ Los otros diez esperan a que Yusef confirme la moneda
+
+**La hoja tiene una leyenda de colores que nunca se aplicó.** Las filas 31 y 32
+declaran `**PRECIOS EN $` y `**PRECIOS EN LEMPIRAS` con su color, pero al leer
+los rellenos del XLSX **todas las celdas de precio tienen relleno nulo**. O sea
+que el número solo no dice en qué moneda está.
+
+Cargarlos adivinando sería peor que no cargarlos — son montos que se le cobran
+al cliente.
+
+| Cargo | Por qué no se cargó |
+|---|---|
+| **Cambio de servicio** | El título dice `L100`, el valor es `5` y la nota *"pasarlo a dólares"*. Y **ya existe cargado a $15**, que es 3× lo que dice su hoja. Es el que se **auto-genera** en nota de débito al facturar, así que tocarlo a ciegas cambia lo que se cobra solo |
+| Retenido Miami | Valor `5` con *"pasarlo a dólares"*: no se sabe si el 5 ya es dólares o falta convertirlo |
+| Servicio de entrada y salida | Valor `10` / mínimo `5`, misma nota, misma duda |
+| Recolecta Miami | Choca con `TarifaRecolecta`, que Yusef mismo pidió **por zona** en vez de los $35 fijos |
+| Ajuste · Entrega local · Consolidando en Miami | Valor `1` sin moneda |
+| Flete México | Valor `5` / mínimo `6` sin moneda |
+| Flete | Es el flete del paquete, que vive en `Tarifa` — no es un servicio extra |
+| Producto ejemplo (×2) | Datos de prueba, ya confirmado |
+
+Se aplican con `bin/rails tarifas:sembrar_cargos_2026`, que además **imprime los
+diez pendientes con su motivo** para que no se pierdan de vista.
+
+---
+
 ## Próximos Pasos
 
 1. **Conversación 2:** Login, Logout, Creación de usuarios y roles — por documentar
 2. **Conversación 3:** Detalle de Paquete Interno + Warehouse Receipt — ✅ documentada arriba, preguntas del bloque PR-D todas resueltas
 3. **Conversación 4:** ✅ documentada arriba — franja de contexto operativo (PR-9)
-4. Después de las 4 conversaciones: crear plan de implementación completo por módulo
+4. **Conversación 5:** ✅ documentada arriba — tarifas, mínimos y etiqueta (PR-10)

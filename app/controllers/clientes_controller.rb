@@ -25,7 +25,11 @@ class ClientesController < ApplicationController
   end
 
   def buscar
-    clientes = Cliente.activos.buscar(params[:q]).includes(:categoria_precio).limit(10)
+    # PR-10.f: `buscar_flexible` y no `buscar` — este es el autocomplete que
+    # usa el operario con la etiqueta rota en la mano, así que prioriza
+    # encontrar algo por encima de la precisión. El filtro del listado
+    # (#index) se queda con la estricta.
+    clientes = Cliente.activos.buscar_flexible(params[:q]).includes(:categoria_precio).limit(10)
     render json: clientes.map { |c|
       {
         id: c.id,

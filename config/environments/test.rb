@@ -22,6 +22,15 @@ Rails.application.configure do
   config.consider_all_requests_local = true
   config.cache_store = :null_store
 
+  # PR-13.d: `rate_limit` cuenta los intentos en el cache store de
+  # ActionController, y con `:null_store` no cuenta nada — o sea que un límite
+  # de intentos pasaría los tests sin existir. El de fragmentos sigue apagado
+  # por `perform_caching = false`, así que esto solo habilita el contador.
+  #
+  # Importa: el único límite que protege un PIN de 4 dígitos (10 000
+  # combinaciones) es ese.
+  config.action_controller.cache_store = :memory_store
+
   # Render exception templates for rescuable exceptions and raise for other exceptions.
   config.action_dispatch.show_exceptions = :rescuable
 

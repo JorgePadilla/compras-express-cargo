@@ -325,6 +325,16 @@
                  focus:ring-cec-teal focus:border-cec-teal" %>
     </div>
 
+    <%# PR-10.e: el driver es la persona que trajo el paquete, distinta del
+        proveedor (la empresa que lo mandó). Se captura en /entrega_personal;
+        acá se puede corregir después. Sale impreso en la etiqueta. %>
+    <div>
+      <%= f.label :driver, "Driver / Quien lo trajo", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.text_field :driver, placeholder: "Nombre del conductor",
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                 focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+
     <%# ── Estado de vinculación: Pre-Alerta y Pre-Factura ─────────────
         Display read-only — el flag boolean se preserva via hidden field.
         Si el paquete tiene pre-alertas o pre-factura, mostramos link directo. %>

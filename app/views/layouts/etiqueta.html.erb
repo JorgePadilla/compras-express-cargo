@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <title>Etiqueta — <%= @paquete&.numero_recepcion.presence || @paquete&.tracking %></title>
+  <meta charset="UTF-8">
+  <style>
+    /* PR-10.d: Dymo 2.25 × 1.25 in — el formato que Yusef confirmó para
+       ETIQUETAR. El Warehouse Receipt sigue en carta con su propio layout;
+       son dos documentos distintos que hasta ahora eran el mismo archivo. */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    @page { size: 2.25in 1.25in; margin: 0; }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      color: #000;
+      -webkit-font-smoothing: none;
+    }
+
+    /* PR-10.d.2: la jerarquía de tamaños que marcó Yusef sobre su etiqueta
+       vieja — "hay unas con letra más grande y negrita porque es lo más
+       importante, lo que se lee primero, y tenemos los de pequeñas para
+       información adicional que se ocupa de vez en cuando".
+
+       Los tamaños viven acá y no en cada elemento para poder escalarlos todos
+       de un solo lugar: con los 11 campos a 2.25 × 1.25 in el alto queda al
+       filo, y `test/system/etiqueta_cabe_test.rb` mide en Chrome de verdad si
+       el contenido entra. Si no entra, se bajan estos números — no se sacan
+       campos, que fue lo que Yusef pidió expresamente. */
+    .etq {
+      --t1: 21pt;   /* tipo de envío — lo más grande de la etiqueta */
+      --t2: 12pt;   /* número de recepción                          */
+      --t3: 11pt;   /* código del cliente · n/N                     */
+      --t4: 9.5pt;  /* nombre del cliente · sucursal                */
+      --t5: 7.5pt;    /* tracking y secundario                        */
+      --t6: 6.5pt;  /* fecha y hora · iniciales                     */
+      --t7: 6pt;    /* ubicación · tercero · driver                 */
+
+      width: 2.25in;
+      height: 1.25in;
+      padding: 0.04in 0.06in;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      /* El interlineado normal de Arial (~1.15) se come una línea entera. */
+      line-height: 1.03;
+    }
+
+    /* Los hijos NO se encogen. Con el `flex-shrink: 1` que trae flex por
+       defecto, cuando el contenido no cabe las cajas se comprimen y el texto se
+       recorta adentro de cada una — se ve mal impreso pero `scrollHeight`
+       sigue igual al alto de la etiqueta, así que la medición del system test
+       daba "cabe" aunque no cupiera. Con esto el desborde es real y medible. */
+    .etq > * { flex: 0 0 auto; }
+
+    /* Una línea que no puede crecer ni partirse: si el dato es largo se
+       recorta con puntos suspensivos en vez de empujar el resto afuera. */
+    .etq .r { display: flex; align-items: baseline; gap: .05in; min-width: 0; }
+    .etq .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    .etq .mono { font-family: 'Courier New', monospace; letter-spacing: -.01em; }
+
+    /* Una etiqueta por hoja física. */
+    .etq + .etq { page-break-before: always; break-before: page; }
+
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .no-print { display: none !important; }
+    }
+
+    /* En pantalla se muestra el contorno para poder revisar el diseño sin
+       gastar etiquetas. */
+    @media screen {
+      body { background: #e5e7eb; padding: 24px; }
+      .etq {
+        background: #fff;
+        outline: 1px dashed #9ca3af;
+        margin: 0 auto 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.12);
+      }
+    }
+  </style>
+</head>
+<body>
+  <%= yield %>
+
+  <script>
+    if (new URL(window.location.href).searchParams.get("print") === "true") {
+      window.onload = function () { window.print(); }
+    }
+  </script>
+</body>
+</html>

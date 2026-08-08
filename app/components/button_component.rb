@@ -15,12 +15,22 @@ class ButtonComponent < ViewComponent::Base
     lg: "px-6 py-3 text-base"
   }.freeze
 
-  def initialize(variant: :primary, size: :md, href: nil, icon: nil, shortcut: nil, **attrs)
+  # `shortcut_label_only`: muestra "(F2)" pero NO registra `data-shortcut`.
+  #
+  # PR-10.c: hace falta cuando la pantalla ya escucha esa tecla por su cuenta.
+  # `keyboard_shortcuts_controller` (montado en <body>) le hace click a
+  # cualquier elemento con `data-shortcut`, así que si el Stimulus de la
+  # pantalla también la escucha, la acción corre DOS veces — en
+  # /entrega_personal el segundo `showModal()` sobre un <dialog> ya abierto
+  # tiraba `InvalidStateError`.
+  def initialize(variant: :primary, size: :md, href: nil, icon: nil,
+                 shortcut: nil, shortcut_label_only: false, **attrs)
     @variant = variant.to_sym
     @size = size.to_sym
     @href = href
     @icon = icon
-    @shortcut = shortcut # ej. "F10" — agrega data-shortcut + label visual "(F10)"
+    @shortcut = shortcut # ej. "F10" — label visual "(F10)"
+    @shortcut_label_only = shortcut_label_only
     @attrs = attrs
   end
 
@@ -28,7 +38,7 @@ class ButtonComponent < ViewComponent::Base
     classes = "inline-flex items-center gap-2 rounded-lg font-medium transition-all duration-200 #{VARIANTS[@variant]} #{SIZES[@size]} #{@attrs.delete(:class)}"
 
     # Si hay shortcut, mergearlo en el data-attrs sin pisar otros data-* del caller.
-    if @shortcut.present?
+    if @shortcut.present? && !@shortcut_label_only
       existing_data = @attrs.delete(:data) || {}
       @attrs[:data] = existing_data.merge(shortcut: @shortcut)
     end

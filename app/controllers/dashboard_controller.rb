@@ -1,5 +1,7 @@
 class DashboardController < ApplicationController
-  DASHBOARD_ROLES = %w[admin supervisor_miami supervisor_caja supervisor_prefactura].freeze
+  # PR-13.c: `supervisor_sac` entra al dashboard como los otros supervisores.
+  DASHBOARD_ROLES = %w[admin supervisor_miami supervisor_caja supervisor_prefactura
+                       supervisor_sac].freeze
 
   before_action :redirect_cliente_to_portal
   before_action :require_dashboard_access
@@ -20,6 +22,9 @@ class DashboardController < ApplicationController
 
     log = []
     log << card("Etiquetar",          "Recibir paquetes",           "tag",                    etiquetar_path,    :navy) if can_access?(:etiquetar)
+    # PR-10.c: faltaba la card de Entrega Personal, aunque la pantalla existe
+    # desde PR-6a y esta en el sidebar.
+    log << card("Entrega Personal",   "Paquetes traídos al mostrador", "user-plus",          new_entrega_personal_path, :navy) if can_access?(:entrega_personal)
     log << card("Manifiestos",        "Empaque y envío",            "cube",                   manifiestos_path,  :navy) if can_access?(:manifiestos)
     log << card("Pre-Alertas",        "Recepciones esperadas",      "bell-alert",             pre_alertas_path,  :navy) if can_access?(:pre_alertas)
     log << card("Todos los Paquetes", "Búsqueda y reportes",        "archive-box",            paquetes_path,     :navy) if can_access?(:paquetes)
@@ -59,26 +64,35 @@ class DashboardController < ApplicationController
       }
     end
 
-    if can_access?(:marketing) || admin?
-      groups << {
-        area: "Marketing",
-        cards: [
-          card("Correos",  nil, "envelope",                  "#", :navy),
-          card("WhatsApp", nil, "chat-bubble-left-right",    "#", :navy),
-          card("SMS",      nil, "device-phone-mobile",       "#", :navy)
-        ]
-      }
-    end
+    # PR-10.c: el grupo de Marketing queda oculto hasta que exista el modulo.
+    # Las 3 cards apuntaban a "#" y no hacian nada al clickearlas — ruido en
+    # la pantalla que el operario ve todos los dias. Se reactiva en la Fase 7.
 
     if admin?
+      # Catálogos que mantiene el negocio. Van aparte de Configuración porque
+      # son las pantallas que Yusef usa a diario ("entre más cosas nos dejes
+      # crear, menos te molestaremos") — estaban solo en el sidebar y no se
+      # encontraban desde el home.
+      groups << {
+        area: "Catálogos",
+        cards: [
+          card("Tabla de Servicios",     "Precios, escalones y mínimos", "currency-dollar",         servicios_path,                 :gold),
+          card("Categorías de Precio",   nil, "tag",                     categoria_precios_path,    :gold),
+          card("Tarifas de Recolecta",   nil, "truck",                   tarifas_recolecta_path,    :gold),
+          card("Servicios Extra",        nil, "sparkles",                servicios_extra_path,      :gold),
+          card("Proveedores",            nil, "building-storefront",     proveedores_path,          :gold),
+          card("Motivos de Retención",   nil, "hand-raised",             motivos_retencion_path,    :gold),
+          card("Plantillas de Notas",    nil, "document-duplicate",      plantillas_notas_cliente_path, :gold)
+        ]
+      }
+
       groups << {
         area: "Configuración",
         cards: [
-          card("Usuarios",             nil, "user-group",            users_path,            :red),
-          card("Sucursales",           nil, "building-storefront",   sucursales_path,       :red),
-          card("Categorías de Precio", nil, "tag",                   categoria_precios_path, :red),
-          card("Empresa",              nil, "building-office-2",     empresa_path,          :red),
-          card("Reportes",             nil, "table-cells",           "#",                   :red)
+          card("Usuarios",   nil, "user-group",          users_path,      :red),
+          card("Sucursales", nil, "building-storefront", sucursales_path, :red),
+          card("Empresa",    nil, "building-office-2",   empresa_path,    :red)
+          # "Reportes" apuntaba a "#" — se agrega cuando exista (Fase 6).
         ]
       }
     end

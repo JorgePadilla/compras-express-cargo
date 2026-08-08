@@ -1,6 +1,18 @@
 class User < ApplicationRecord
   has_secure_password
-  has_paper_trail skip: %i[password_digest]
+
+  # PR-13.c: el PIN de 4 dígitos con el que un supervisor autoriza un cambio de
+  # precio en la pre-factura. Aparte de la contraseña a propósito: el supervisor
+  # NO inicia sesión — el cajero sigue logueado y el supervisor solo teclea
+  # cuatro dígitos parado en el mostrador.
+  #
+  # `validations: false` porque la mayoría de los usuarios no lleva PIN; las
+  # reglas propias van abajo.
+  has_secure_password :pin, validations: false
+
+  # `pin_digest` va al skip junto con `password_digest`: es un hash, pero no
+  # aporta nada al audit log y reduce la superficie ante una brecha.
+  has_paper_trail skip: %i[password_digest pin_digest]
   has_many :sessions, dependent: :destroy
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
@@ -14,6 +26,10 @@ class User < ApplicationRecord
     supervisor_prefactura: "supervisor_prefactura",
     cajero: "cajero",
     sac: "sac",
+    # PR-13.c: `sac` es el agente de servicio al cliente; este es su
+    # supervisor, que Yusef cuenta también como jefe y por eso autoriza
+    # cambios de precio en la pre-factura.
+    supervisor_sac: "supervisor_sac",
     entrega_despacho: "entrega_despacho"
   }
 
@@ -34,6 +50,36 @@ class User < ApplicationRecord
     only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 100
   }
 
+  validates :pin, format: { with: /\A\d{4}\z/, message: "deben ser exactamente 4 digitos" },
+                  confirmation: true, if: -> { pin.present? }
+
+  # PR-13.c: quiénes pueden autorizar un cambio en una línea de pre-factura.
+  # Yusef: "ahí es donde entra un jefe, un supervisor". Los cuatro que nombró.
+  #
+  # Ojo: autorizar NO es un permiso de pantalla y por eso no pasa por
+  # `can_access?`. El supervisor nunca entra al sistema para esto — el cajero
+  # está logueado y el supervisor solo pone su PIN.
+  ROLES_AUTORIZANTES = %w[admin supervisor_prefactura supervisor_caja supervisor_sac].freeze
+
+  scope :autorizantes, -> { activos.where(rol: ROLES_AUTORIZANTES).where.not(pin_digest: nil) }
+
+  def puede_autorizar?
+    activo? && pin_digest.present? && rol.in?(ROLES_AUTORIZANTES)
+  end
+
+  # Puede tener PIN, aunque todavía no se lo hayan asignado.
+  def rol_autorizante?
+    rol.in?(ROLES_AUTORIZANTES)
+  end
+
+  # Todavía tiene el que le puso el admin. No bloquea nada —trabar el mostrador
+  # por esto sería peor que el riesgo— pero se le avisa, porque mientras no lo
+  # cambie el admin conoce el PIN con el que él autoriza, y el registro de
+  # "quién autorizó" deja de probar nada.
+  def pin_sin_cambiar?
+    pin_digest.present? && pin_cambiado_at.nil?
+  end
+
   # Scopes
   scope :activos, -> { where(activo: true) }
   scope :por_rol, ->(rol) { where(rol: rol) }
@@ -50,6 +96,7 @@ class User < ApplicationRecord
     "supervisor_prefactura" => { label: "Supervisor Pre-Factura", descripcion: "Supervisa generacion de pre-facturas y notas de debito." },
     "cajero" => { label: "Cajero", descripcion: "Procesa pagos de clientes, ventas y recibos en Honduras." },
     "sac" => { label: "Servicio al Cliente (SAC)", descripcion: "Atencion al cliente, consultas, reclamos y marketing." },
+    "supervisor_sac" => { label: "Supervisor de Servicio al Cliente", descripcion: "Supervisa al equipo de SAC y autoriza cambios de precio en pre-factura." },
     "entrega_despacho" => { label: "Entrega y Despacho", descripcion: "Gestiona entregas finales de paquetes al cliente en Honduras." }
   }.freeze
 
@@ -99,7 +146,7 @@ class User < ApplicationRecord
         [ %i[notas_caja Caja], %i[notas_honduras Honduras] ]
       when "supervisor_prefactura"
         [ %i[notas_honduras Honduras] ]
-      when "sac"
+      when "sac", "supervisor_sac"
         [ %i[notas_sac SAC], %i[notas_honduras Honduras] ]
       when "entrega_despacho"
         [ %i[notas_honduras Honduras] ]

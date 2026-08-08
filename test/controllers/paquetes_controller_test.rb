@@ -68,8 +68,8 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert @paquete.solicito_cambio_servicio?
   end
 
-  test "should get label" do
-    get label_paquete_url(@paquete)
+  test "should get warehouse receipt" do
+    get warehouse_receipt_paquete_url(@paquete)
     assert_response :success
   end
 
@@ -522,14 +522,19 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_select "input#toggle-all[checked]"
   end
 
-  test "reimprimir_etiquetas para paquete individual redirige al label" do
+  # PR-10.d.3: redirigia al Warehouse Receipt — la hoja carta del expediente —
+  # desde una accion que se llama "reimprimir_etiquetas".
+  test "reimprimir_etiquetas para paquete individual redirige a la etiqueta" do
     get reimprimir_etiquetas_paquete_url(@paquete)
-    assert_redirected_to label_paquete_path(@paquete)
+    assert_redirected_to etiqueta_paquete_path(@paquete)
   end
 
   # PR-D4.review v2 — etiquetas_combinadas renderiza N etiquetas en una sola
-  # pestaña con saltos de página, evitando el flow de N pop-ups.
-  test "etiquetas_combinadas renderiza varios paquetes con page-breaks" do
+  # pestaña, evitando el flow de N pop-ups.
+  #
+  # PR-10.d.3: renderizaba N warehouse receipts. El salto de pagina ahora lo
+  # pone `.etq + .etq` en el layout de etiqueta, no un div envolvente.
+  test "etiquetas_combinadas renderiza varios paquetes" do
     paquete = paquetes(:recibido)
     paquete.update_columns(cantidad_paquetes: 2, numero_caja: 1)
     hermano = Paquete.create!(tracking: paquete.tracking, cliente: paquete.cliente,
@@ -537,8 +542,8 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
 
     get etiquetas_combinadas_paquetes_url(paquete_ids: [ paquete.id, hermano.id ])
     assert_response :success
-    # Debe haber UN page-break entre los 2 (no después del último).
-    assert_select "div.wr-page-break", count: 1
+    assert_equal 2, response.body.scan(/class="etq"/).size
+    assert_no_match(/WAREHOUSE RECEIPT/, response.body)
     # Auto-print en JS al cargar.
     assert_match(/window\.print/, response.body)
   end

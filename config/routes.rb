@@ -7,6 +7,8 @@ Rails.application.routes.draw do
   resource :preferencia_sidebar, only: [:update], controller: "sidebar_preferences"
   # PR-9.c: on/off + volumen de los tonos de escaneo, por usuario.
   resource :preferencia_sonido, only: [:update], controller: "sonido_preferences"
+  # PR-13.c: el supervisor cambia el PIN con el que autoriza cambios de precio.
+  resource :mi_pin, only: %i[edit update], controller: "pins"
 
   # Health check for Render
   get "up" => "rails/health#show", as: :rails_health_check
@@ -33,7 +35,15 @@ Rails.application.routes.draw do
 
   resources :paquetes, except: [:new] do
     member do
-      get :label
+      # PR-10.d.3: se llamaba `label`, que era el único nombre en inglés que
+      # quedaba y encima nombraba mal lo que hace — esta ruta imprime el
+      # **Warehouse Receipt** (carta, con términos y condiciones), no la
+      # etiqueta. Yusef los llama así y el helper ya era `warehouse_receipt_helper`.
+      get :warehouse_receipt
+      # La etiqueta física que se pega a la caja (Dymo 2.25×1.25). Son dos
+      # documentos distintos: "la etiqueta para la caja, el Warehouse Receipt
+      # para el expediente" (Yusef).
+      get :etiqueta
       get :reimprimir_etiquetas
       delete :eliminar_de_pre_alerta
       post :mover_a_pre_alerta
@@ -73,6 +83,12 @@ Rails.application.routes.draw do
   get "panel_contexto", to: "panel_contexto#show"
 
   resources :sucursales, except: [:show]
+
+  # PR-10.a: "la tabla de servicios" — precios por libra, escalones y mínimos.
+  resources :servicios, only: %i[index new create edit update destroy]
+
+  # PR-10.b: cotización de flete en vivo (JSON) para el "valor a pagar".
+  get "cotizador", to: "cotizador#show"
 
   # PR-D6.a: catálogos de cobros automáticos en pre-factura.
   resources :tarifas_recolecta, only: %i[index new create edit update],
@@ -118,7 +134,15 @@ Rails.application.routes.draw do
       post   :facturar
       delete :anular
     end
+    # PR-13.d: el supervisor autoriza un cambio sobre UNA línea. Anidado bajo el
+    # item porque el alcance es por línea, no por pre-factura.
+    resources :items, only: [], controller: "pre_facturas" do
+      resource :autorizacion, only: [ :create ], controller: "autorizaciones"
+    end
   end
+
+  # Bitácora de lo que se autorizó — sin esto el mecanismo es solo fricción.
+  resources :autorizaciones, only: [ :index ], controller: "bitacora_autorizaciones"
 
   resources :ventas, except: %i[new create destroy] do
     member do
