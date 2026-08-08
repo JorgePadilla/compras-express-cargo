@@ -2255,7 +2255,7 @@ conteste, bloquear con un error explícito es lo conservador.
 
 ---
 
-### A1-07 · Miami actualiza desde /etiquetar, no desde /paquetes — **NUEVO**
+### A1-07 · Miami actualiza desde /etiquetar, no desde /paquetes — ✅ **HECHO** (PR-C6.10)
 
 Hoy, cuando escanean un tracking que ya existe y eligen "actualización", el
 sistema los manda a `/paquetes/:id/edit`. Yusef no quiere eso:
@@ -2284,6 +2284,20 @@ mejor en la misma hoja donde llenan.
 Motivo de fondo: hoy actualizar 2 cajas cuesta ir a editar → guardar → volver →
 re-imprimir → seleccionar. Yusef contó los pasos en voz alta y ahí se le acabó
 la paciencia.
+
+**Arreglo (PR-C6.10):** `/etiquetar?paquete_id=X` recarga el mismo formulario
+con lo que el paquete ya tiene, y F9/F10 guardan encima. "Es actualización"
+deja de navegar a `/paquetes/:id/edit`.
+
+**La línea divisoria se respeta en el servidor**, no solo en la UI:
+`paquete_params` no permite `estado`, y hay un test que lo fija. Cambiar la
+cantidad de cajas delega en `ajustar_split!` (A1-06), con su bloqueo si alguna
+ya se cobró.
+
+**Decisión tomada, confirmada por Jorge:** al actualizar **la sesión no le pisa
+el tipo de envío** al paquete. Si es CEM y el operario está en sesión CER,
+corregirle el peso no puede convertirlo en CER — la sesión manda al *crear*.
+El cambio de servicio sigue siendo la excepción explícita.
 
 ---
 
@@ -2726,7 +2740,7 @@ revisar sobre el sistema andando que sobre un diagrama.
 
 | ID | Qué |
 |---|---|
-| A1-07 | Actualizar desde `/etiquetar` con el formulario pre-cargado |
+| ~~A1-07~~ | ~~Actualizar desde `/etiquetar` con el formulario pre-cargado~~ ✅ **hecho** |
 | ~~A1-09~~ | ~~Modal + sonido cuando el tipo de envío no es el de la sesión~~ ✅ **hecho** |
 | A1-10 | Pito de "ya existía", sonido de error, pin antes de los modales, voz de pre-alerta |
 | A1-12 | Atajos arriba y abajo |

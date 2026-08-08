@@ -4,7 +4,11 @@ class EtiquetarController < ApplicationController
   before_action :require_tipo_envio_sesion, only: :create
 
   def index
-    @paquete = Paquete.new
+    # PR-C6.10: `?paquete_id=` recarga el formulario con lo que el paquete ya
+    # tiene, para actualizarlo acá mismo. Yusef: "me mandaste a editar y yo no
+    # quiero editar mi paquete... que te cargue aquí la lista".
+    @paquete = paquete_a_actualizar || Paquete.new
+    @modo_actualizacion = @paquete.persisted?
     @paquetes_hoy = paquetes_hoy_count
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     # Las que pueden emitir número de recepción. Si hay una sola, la vista no
@@ -50,6 +54,69 @@ class EtiquetarController < ApplicationController
     session.delete(:etiquetar_tipo_envio_id)
     session.delete(:etiquetar_sucursal_recepcion_id)
     redirect_to etiquetar_path, notice: "Sesión de etiquetado finalizada."
+  end
+
+  # Actualiza un paquete SIN salir de /etiquetar.
+  #
+  # La línea divisoria la definió Yusef y se respeta en el servidor:
+  #
+  #   > "Si ellos entran a actualizar acá es porque van a actualizar **datos
+  #   >  del paquete**, de lo que ellos ingresan." · "Si van a actualizar un
+  #   >  **estado** actual del paquete, eso sí lo van a tener que hacer en
+  #   >  todos los paquetes."
+  #
+  # Por eso `paquete_params` no permite `estado` — y hay un test que lo fija.
+  #
+  # El tipo de envío **no** se pisa con el de la sesión al actualizar. Si el
+  # paquete es CEM y el operario está en sesión CER, corregirle el peso no
+  # puede convertirlo en CER. La sesión manda al crear; acá solo si pidió
+  # cambio de servicio explícito.
+  def update
+    @paquete = Paquete.find(params[:id])
+    @modo_actualizacion = true
+
+    unless aplicar_cambio_servicio(@paquete)
+      return render_create_error("Marcaste cambio de servicio: elegí a qué tipo de envío cambia.")
+    end
+
+    # La cantidad de cajas se delega al ajuste de split, que crea o elimina
+    # las que correspondan (PR-C6.7) y bloquea si alguna ya se cobró.
+    nueva_cantidad = paquete_params[:cantidad_paquetes].to_i
+    if ajusta_cajas?(nueva_cantidad)
+      begin
+        Paquete.ajustar_split!(@paquete, nueva_cantidad)
+        @paquete.reload
+      rescue Paquete::CajaNoEliminable => e
+        return render_create_error(e.message)
+      end
+    end
+
+    @paquete.assign_attributes(paquete_params.except(:cantidad_paquetes))
+    if (flag = pre_factura_flag_param) != :missing
+      @paquete[:pre_factura] = flag
+    end
+    if (prov_str = proveedor_string_param) != :missing
+      @paquete[:proveedor] = prov_str
+    end
+
+    if @paquete.save
+      @paquetes_hoy = paquetes_hoy_count
+      respond_to do |format|
+        format.turbo_stream do
+          render turbo_stream: [
+            turbo_stream.prepend("flash-messages", partial: "shared/flash",
+                                 locals: { notice: "Paquete #{@paquete.tracking} actualizado." }),
+            turbo_stream.append("etiquetar-events",
+                                "<div data-etiquetar-target='event' data-action='paquete-saved' " \
+                                "data-guia='#{@paquete.guia}' data-print='#{params[:print]}' " \
+                                "data-paquete-id='#{@paquete.id}'></div>")
+          ]
+        end
+        format.html { redirect_to etiquetar_path, notice: "Paquete #{@paquete.tracking} actualizado." }
+      end
+    else
+      render_create_error("No se pudo actualizar el paquete.")
+    end
   end
 
   def create
@@ -259,6 +326,25 @@ class EtiquetarController < ApplicationController
                     .where("UPPER(tracking) = ?", tracking.to_s.strip.upcase)
                     .includes(:pre_alerta)
                     .first&.pre_alerta&.tipo_envio
+  end
+
+  # El paquete que se está actualizando, si vino por `?paquete_id=`.
+  def paquete_a_actualizar
+    return nil if params[:paquete_id].blank?
+
+    Paquete.find_by(id: params[:paquete_id])
+  end
+
+  # ¿El form pide cambiar la cantidad de cajas de verdad? Mismo criterio que
+  # `PaquetesController`: solo cuando ya es un split o pasa a serlo.
+  def ajusta_cajas?(nueva_cantidad)
+    return false unless paquete_params.key?(:cantidad_paquetes)
+    return false if nueva_cantidad < 1
+
+    actual = @paquete.cantidad_paquetes.to_i
+    return false if nueva_cantidad == actual
+
+    actual > 1 || nueva_cantidad > 1
   end
 
   def authorize_etiquetar

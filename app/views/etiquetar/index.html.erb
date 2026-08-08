@@ -274,9 +274,26 @@ end %>
   <%# El `keydown` acá es lo que impide que Enter envíe el formulario: la
       pistola dispara Enter al terminar de leer, y en Miami trabajan solo con
       teclado. Enter avanza de campo (`formKeydown`); guardar es F9 o F10. %>
-  <%= form_with model: @paquete, url: etiquetar_path,
+  <%# PR-C6.10: el mismo formulario sirve para crear y para actualizar. En modo
+      actualización va PATCH al paquete y F9/F10 guardan encima, sin salir de
+      /etiquetar. Yusef: "que te cargue aquí la lista, esto te lo vuelve a
+      llenar tal cual como quedó, y actualizan todo lo que quieran". %>
+  <%= form_with model: @paquete,
+                url: @modo_actualizacion ? actualizar_etiquetar_path(@paquete) : etiquetar_path,
+                method: @modo_actualizacion ? :patch : :post,
                 data: { etiquetar_target: "form", action: "keydown->etiquetar#formKeydown" },
                 class: "bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-200 dark:ring-gray-700 p-6" do |f| %>
+    <% if @modo_actualizacion %>
+      <div class="mb-6 p-3 rounded-lg bg-cec-gold/15 ring-1 ring-cec-gold/40 flex flex-wrap items-center justify-between gap-2">
+        <p class="text-sm text-cec-navy dark:text-cec-gold">
+          Actualizando <span class="font-mono font-bold"><%= @paquete.tracking %></span>
+          <span class="text-xs text-gray-600 dark:text-gray-400">· solo se guardan los datos que Miami captura; el estado se cambia en Paquetes</span>
+        </p>
+        <%= link_to "Cancelar", etiquetar_path,
+              class: "text-xs font-semibold px-3 py-1.5 rounded-lg bg-white text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50" %>
+      </div>
+    <% end %>
+
     <% if @paquete.errors.any? %>
       <div class="mb-6 p-4 bg-red-50 rounded-lg">
         <div class="flex items-center gap-2 mb-2">
@@ -327,6 +344,7 @@ end %>
       <div class="relative">
         <label class="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
         <input type="text" placeholder="Buscar por código o nombre..."
+               value="<%= @paquete.cliente&.codigo %>"
                data-etiquetar-target="clienteInput"
                data-action="input->etiquetar#searchCliente keydown->etiquetar#clienteKeydown"
                autocomplete="off"

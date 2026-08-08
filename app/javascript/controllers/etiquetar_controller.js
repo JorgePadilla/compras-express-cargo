@@ -540,12 +540,22 @@ export default class extends Controller {
     this._duplicateData = null
   }
 
-  // Opción 1: "Es actualización" — navega al edit del paquete original.
-  // El digitador ajusta lo que ocupe en el form de edit estándar.
+  // Opción 1: "Es actualización" — recarga ESTE formulario con los datos del
+  // paquete, sin salir de /etiquetar.
+  //
+  // PR-C6.10. Antes mandaba a `/paquetes/:id/edit`, y Yusef lo cortó en seco:
+  //
+  //   > "Me mandaste a editar y yo no quiero editar mi paquete."
+  //   > "Que te cargue aquí la lista. Esto te lo vuelve a llenar tal cual como
+  //   >  quedó, y actualizan todo lo que quieran actualizar, porque eso es lo
+  //   >  que ellos ocupan."
+  //
+  // Contó los pasos en voz alta —editar, guardar, volver, re-imprimir,
+  // seleccionar— y ahí se le acabó la paciencia.
   duplicateAsUpdate() {
     const data = this._duplicateData
-    if (!data || !data.edit_url) return
-    window.location.href = data.edit_url
+    if (!data || !data.existing_paquete_id) return
+    window.location.href = `/etiquetar?paquete_id=${data.existing_paquete_id}`
   }
 
   // PR-5: Opción 2 — "Cambio de Servicio". Navega al show del paquete
