@@ -1998,7 +1998,7 @@ formulario" — es "terminé este campo, seguí".
 
 ---
 
-### A1-01 · Enter guarda el paquete en vez de pasar al siguiente campo — **BUG**
+### A1-01 · Enter guardaba el paquete en vez de pasar al siguiente campo — ✅ **ARREGLADO** (PR-C6.3)
 
 El más grave de todos, y del que cuelgan otros cuatro.
 
@@ -2019,8 +2019,26 @@ Consecuencias que Yusef vio en vivo:
    cuando yo no se lo había puesto a nadie").
 4. Después de ese Enter, **F2 ya no limpia** → A1-03.
 
-Lo que tiene que hacer: Enter = Tab. Avanzar al siguiente campo, y en los
-dropdowns seleccionar el ítem activo. Nunca enviar.
+**Arreglo (PR-C6.3).** `formKeydown` en el form: Enter avanza al siguiente
+campo visible y habilitado, y en los dropdowns deja seleccionar el ítem activo.
+Nunca envía.
+
+Tres cosas del handler que no son obvias:
+
+- **Respeta `e.defaultPrevented`**, para no pisar el Enter del dropdown de
+  cliente ni el del modal de cajas, que ya lo resuelven ellos.
+- **Salta los `textarea`** — en descripción y notas Enter tiene que ser salto de
+  línea.
+- **Recalcula los campos en cada Enter**, porque F3 y F4 muestran y esconden el
+  tracking secundario y el tercero; una lista cacheada quedaría vieja.
+
+Cubierto por `test/system/etiquetar_teclado_test.rb`, que es lo único que puede
+verlo: en un test de integración no hay navegador que decida qué hace un Enter.
+
+El test fiel usa un tracking **con pre-alerta**, y ahí está la gracia: al salir
+del campo, `checkTracking` auto-rellena el cliente, y con tracking + cliente el
+paquete ya pasa las validaciones. Sin pre-alerta el test no probaría nada,
+porque el guardado fallaría igual.
 
 > "Grabar con tab o enter — o sea, grabar no, **seleccionar**."
 
@@ -2113,17 +2131,27 @@ poder etiquetar el paquete.
 
 ---
 
-### A1-03 · Después de un Enter, F2 no limpia — **BUG**
+### A1-03 · Después de un Enter, F2 no limpiaba — ✅ **ARREGLADO** (PR-C6.3)
 
 > "Le doy F2 y no limpia. Le doy enter y presiono F2, no lo borra."
-
-Confirmado por el propio Yusef que es consecuencia del Enter: sin Enter previo,
-F2 sí limpia. Es problema de foco — el submit mueve el foco fuera del scope del
-controller Stimulus.
 
 F2 tiene que limpiar **todo**, siempre:
 
 > "Todo, todo. Porque se equivocó y lo mejor es F2 y volvemos a empezar."
+
+**El diagnóstico de este doc estaba mal.** Decía "problema de foco", pero el
+listener de F2 es a nivel `document` (`etiquetar_controller.js:26`), así que el
+foco no puede ser la causa.
+
+Lo real: `clearForm` usaba `formTarget.reset()`, y **`reset()` no vacía un
+formulario** — lo devuelve a los valores *renderizados*. Cuando el submit del
+Enter fallaba y el servidor re-renderizaba con 422, esos valores eran los que
+Yusef acababa de escribir. F2 "limpiaba" de vuelta a lo mismo.
+
+**Arreglo (PR-C6.3):** `_limpiarCampos` vacía campo por campo. Los `hidden`
+quedan afuera a propósito — ahí viven el token CSRF y el `_method` de Rails; los
+dos que sí hay que limpiar (`cliente_id` y `cantidad_paquetes`) ya los maneja
+`clearForm` explícitamente.
 
 ---
 
@@ -2325,7 +2353,7 @@ paquete. Jorge ya sabe qué hacer:
 
 ---
 
-### A1-13 · En /etiquetar guardar es F8, en el resto del sistema es F10 — **inconsistencia**
+### A1-13 · Guardar es F10, como en el resto del sistema — ✅ **ARREGLADO** (PR-C6.3)
 
 Yusef presionó **F10** para guardar sin pensarlo. Y tiene razón por costumbre:
 F10 es guardar en pre-facturas, ventas, egresos, ingresos, financiamientos y
@@ -2333,8 +2361,11 @@ re-empaques. `/etiquetar` es el único que usa F8
 (`etiquetar_controller.js:56`, `index.html.erb:435,445`), donde F8 en el resto
 del sistema es *exportar a Excel*.
 
-Hay que unificar. **PREGUNTA menor**: si se mueve a F10, hay que avisarle al
-equipo de Miami que ya tiene el F8 en el dedo.
+**Arreglo (PR-C6.3):** F10 guarda, y **F8 queda de alias** mientras Miami se
+acostumbra — allá ya lo tienen en el dedo. Los `<kbd>` de la pantalla muestran
+F10.
+
+Queda la parte que no es código: **avisarle al equipo de Miami**.
 
 ---
 
@@ -2599,9 +2630,9 @@ revisar sobre el sistema andando que sobre un diagrama.
 
 | ID | Qué | Dónde |
 |---|---|---|
-| A1-01 | Enter envía el formulario en vez de avanzar de campo | `etiquetar_controller.js:38-63`, `index.html.erb:213` |
+| ~~A1-01~~ | ~~Enter envía el formulario en vez de avanzar de campo~~ ✅ **arreglado** | `etiquetar_controller.js` `formKeydown` |
 | ~~A1-02~~ | ~~En `/paquetes` el tracking salía dos veces seguidas~~ ✅ **arreglado** | `index.html.erb` col. "N° recepción" — era la vista, no los datos |
-| A1-03 | F2 no limpia después de un Enter | consecuencia de A1-01 (foco) |
+| ~~A1-03~~ | ~~F2 no limpia después de un Enter~~ ✅ **arreglado** | era `formTarget.reset()`, no el foco |
 | A1-04 | El código de barras no distingue caja 1 de caja 2 | `_etiqueta.html.erb:29` + `paquete.rb:367-395` |
 | A1-06 | Cambiar la cantidad de cajas no elimina ni crea las sobrantes | `crear_split!` solo crea |
 | A1-08 | "Cambio de servicio" no pregunta a cuál, y no aplica | `/etiquetar` |
@@ -2626,7 +2657,7 @@ revisar sobre el sistema andando que sobre un diagrama.
 | ID | Qué |
 |---|---|
 | A1-05 | Que el sufijo `-1`/`-2` **nunca** toque el tracking |
-| A1-13 | Unificar guardar en F10 |
+| ~~A1-13~~ | ~~Unificar guardar en F10~~ ✅ **arreglado** (F8 queda de alias) |
 | A1-16 | Que el tercero de texto libre no esté creando clientes |
 | A1-23 | `paper_trail` más allá de `Paquete` |
 | A1-24 | **No** meter PIN en `/etiquetar` |

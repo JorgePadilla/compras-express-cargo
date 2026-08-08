@@ -210,7 +210,11 @@ end %>
   <div class="xl:col-span-8">
 
   <%# Etiquetar form (PR-7) — card pattern consistente con /paquetes %>
-  <%= form_with model: @paquete, url: etiquetar_path, data: { etiquetar_target: "form" },
+  <%# El `keydown` acá es lo que impide que Enter envíe el formulario: la
+      pistola dispara Enter al terminar de leer, y en Miami trabajan solo con
+      teclado. Enter avanza de campo (`formKeydown`); guardar es F9 o F10. %>
+  <%= form_with model: @paquete, url: etiquetar_path,
+                data: { etiquetar_target: "form", action: "keydown->etiquetar#formKeydown" },
                 class: "bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-200 dark:ring-gray-700 p-6" do |f| %>
     <% if @paquete.errors.any? %>
       <div class="mb-6 p-4 bg-red-50 rounded-lg">
@@ -432,7 +436,7 @@ end %>
     <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4">
       <div class="text-xs text-gray-400 dark:text-gray-500 hidden sm:flex gap-4">
         <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F2</kbd> Limpiar</span>
-        <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F8</kbd> Guardar</span>
+        <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F10</kbd> Guardar</span>
         <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F9</kbd> Guardar + Imprimir</span>
       </div>
       <div class="flex items-center gap-3">
@@ -442,7 +446,7 @@ end %>
         </button>
         <button type="submit" data-etiquetar-target="submitBtn"
                 class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-cec-navy text-white rounded-lg hover:bg-cec-navy-light">
-          Guardar <kbd class="px-1 py-0.5 bg-white/20 rounded text-[10px] font-sans">F8</kbd>
+          Guardar <kbd class="px-1 py-0.5 bg-white/20 rounded text-[10px] font-sans">F10</kbd>
         </button>
         <button type="button" data-action="click->etiquetar#submitFormWithPrint"
                 class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-cec-gold text-cec-navy-dark rounded-lg hover:bg-cec-gold-dark">
