@@ -2063,18 +2063,34 @@ Y no hay recepción en 45 de 54 paquetes porque `generate_numero_recepcion`
 (`paquete.rb:556`) sale temprano con `return if sucursal.nil?`. Resultado: el
 mismo texto en dos celdas pegadas.
 
-Detalle que lo confirma: **el Excel y el PDF del mismo listado ya ponían "—"**
-en ese caso (`paquetes_controller.rb:471`, `export.xlsx.axlsx:18`,
-`listado_pdf.rb:46` sí usa el fallback). La pantalla era la que mentía.
+**El PDF del listado tenía exactamente el mismo bug** (`listado_pdf.rb:46`):
+mismas dos columnas vecinas, mismo fallback. Los dos Excel
+(`paquetes_controller.rb:471`, `export.xlsx.axlsx:18`) sí ponían "—".
 
-**Arreglo:** la columna muestra el `numero_recepcion` o guión. Nunca el
-tracking. `paquete_display_id` **no se tocó** — como identificador de un título
-el fallback sirve; el problema era usarlo en una columna que se llama
+**Y hay un segundo camino al mismo síntoma** que la base local no puede
+reproducir: filas viejas con la recepción **guardada** igual al tracking. Jorge
+lo dijo en el audio:
+
+> "Estos están hechos porque yo los metí en la base de datos en este formato."
+
+En local eso da 0 filas, pero **la reunión fue sobre staging**, así que el
+arreglo cubre los dos casos.
+
+**Arreglo:** `Paquete#numero_recepcion_visible` devuelve `nil` cuando no hay una
+recepción de verdad — en blanco **o** igual al tracking — y las cuatro
+superficies del listado (pantalla, PDF y los dos Excel) ponen guión.
+
+Se puede comparar contra el tracking sin miedo a falsos positivos porque una
+recepción real es siempre `<PREFIX><AÑO 7><CORRELATIVO 6>` (`RM0002026000010`),
+que no se parece a ningún tracking de courier.
+
+`paquete_display_id` **no se tocó** — como identificador de un título el
+fallback sirve; el problema era usarlo en una columna que se llama
 "N° recepción" con el tracking pegado al lado.
 
 Cubierto por `test/controllers/paquete_numero_recepcion_columna_test.rb`
-(3 tests; verificados reintroduciendo el bug a propósito — caen 2 de 3 con el
-mensaje `"N° recepción" y "Tracking" muestran lo mismo`).
+(5 tests, incluido el del PDF; verificados reintroduciendo cada guard a
+propósito).
 
 El formato anual del número **está bien** y no se tocó
 (`numero_recepcion_counter.rb`): `<PREFIX><AÑO><CONTADOR-6>`, contador atómico

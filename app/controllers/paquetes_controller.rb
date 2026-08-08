@@ -468,7 +468,7 @@ class PaquetesController < ApplicationController
         sheet.add_row([
           p.fecha_recibido_miami&.to_date || p.created_at.to_date,
           p.fecha_disponible&.to_date,
-          p.numero_recepcion.presence || "—",
+          p.numero_recepcion_visible || "—",
           p.tracking.to_s,
           p.cliente.codigo.to_s,
           p.cliente.nombre_completo.to_s,

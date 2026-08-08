@@ -410,8 +410,8 @@ end %>
                   llama "N° recepción" y con el tracking pegado a la derecha,
                   miente. Sin recepción va guión — igual que el Excel y el PDF. %>
               <td class="px-3 py-2 whitespace-nowrap" data-campo="numero-recepcion">
-                <% if paquete.numero_recepcion.present? %>
-                  <span class="font-mono text-xs font-semibold text-cec-navy dark:text-cec-gold"><%= paquete.numero_recepcion %></span>
+                <% if paquete.numero_recepcion_visible %>
+                  <span class="font-mono text-xs font-semibold text-cec-navy dark:text-cec-gold"><%= paquete.numero_recepcion_visible %></span>
                 <% else %>
                   <span class="font-mono text-xs text-gray-400 dark:text-gray-500" title="Sin número de recepción: el paquete se guardó sin sucursal">—</span>
                 <% end %>

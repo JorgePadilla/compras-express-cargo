@@ -40,6 +40,37 @@ class PaqueteNumeroRecepcionColumnaTest < ActionDispatch::IntegrationTest
     assert_includes celda, "—"
   end
 
+  test "con la recepcion GRABADA igual al tracking tampoco la repite" do
+    # El otro camino al mismo síntoma, y el que no se puede reproducir en la
+    # base local: filas viejas donde la recepción quedó guardada igual al
+    # tracking. Jorge en el audio: "estos están hechos porque yo los metí en la
+    # base de datos en este formato".
+    #
+    # Se detecta sin riesgo de falso positivo porque una recepción real es
+    # siempre `<PREFIX><AÑO><CORRELATIVO>` y jamás se parece a un tracking.
+    @paquete.update_columns(numero_recepcion: @paquete.tracking)
+
+    get paquetes_url, params: { q: @paquete.tracking }
+    assert_response :success
+
+    celda = columna_recepcion(response.body)
+    assert_not_includes celda, @paquete.tracking
+    assert_includes celda, "—"
+  end
+
+  test "el PDF del listado tampoco repite el tracking" do
+    # Mismo listado, mismas dos columnas vecinas ("N° Recepción" / "Tracking"),
+    # mismo fallback. Si se arregla solo la pantalla, el PDF sigue mintiendo.
+    @paquete.update_columns(numero_recepcion: nil)
+
+    fila = Paquetes::ListadoPdf.new([ @paquete ]).send(:row_for, @paquete)
+
+    recepcion, tracking = fila[2], fila[3]
+    assert_not_equal tracking, recepcion,
+                     "el PDF imprime el tracking en la columna de recepción"
+    assert_equal "—", recepcion
+  end
+
   test "con numero de recepcion la columna lo muestra" do
     @paquete.update_columns(numero_recepcion: "RM0002026000042")
 
