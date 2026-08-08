@@ -355,6 +355,15 @@ class Paquete < ApplicationRecord
     entregado? || anulado? || retornado? || desechado?
   end
 
+  # ¿Esta caja ya entró a cobro o salió del almacén? Si sí, borrarla
+  # descuadraría una venta o dejaría un entregado sin registro.
+  # Se mira el estado **y** los FKs: un paquete puede tener `pre_factura_id`
+  # sin que su estado lo diga todavía.
+  def cobrada_o_entregada?
+    pre_factura_id.present? || venta_id.present? || entrega_id.present? ||
+      pre_facturado? || facturado? || entregado? || en_reparto?
+  end
+
   # ── Sub-etiquetas / split de tracking en N bultos ──
   # `numero_caja` (1..N) + `cantidad_paquetes` (total) reusados del módulo 36.
   # Un paquete dividido es un bulto físico identificado como "1/3", "2/3", etc.
@@ -466,6 +475,74 @@ class Paquete < ApplicationRecord
         ))
       end
     end
+  end
+
+  # Error de negocio: se quiso borrar una caja que ya entró a cobro o salió.
+  class CajaNoEliminable < StandardError; end
+
+  # Cambia un split de N cajas a M. `crear_split!` solo sabía **crear**, así
+  # que subir o bajar la cantidad dejaba los registros viejos mezclados con
+  # los nuevos. Yusef lo reprodujo dos veces:
+  #
+  #   · 3 cajas → lo bajó a 2 → quedaron las 3.
+  #   · Después lo subió a 5 → "aquí dice dos y aquí dice que son cinco".
+  #
+  # La regla que acordaron es simple, la cantidad nueva manda:
+  #
+  #   > **Jorge:** "Si tienes cinco y lo querés cambiar a dos, solo deberían
+  #   >  quedar los dos."
+  #   > **Yusef:** "Eliminar lo otro. Ajá."
+  #
+  # **Guarda dura**: si alguna de las cajas a eliminar ya está facturada,
+  # pre-facturada o entregada, la operación falla **entera** y no toca nada.
+  # Borrar una caja que ya se cobró descuadraría la venta en silencio. Qué
+  # hacer en ese caso es pregunta abierta de Yusef; hasta que conteste,
+  # bloquear es lo conservador.
+  #
+  # Devuelve las cajas que quedan, ordenadas por `numero_caja`.
+  def self.ajustar_split!(paquete, nueva_cantidad)
+    m = nueva_cantidad.to_i
+    raise ArgumentError, "la cantidad debe ser >= 1" if m < 1
+
+    transaction do
+      hermanas = cajas_del_mismo_split(paquete).to_a
+      n = hermanas.size
+
+      if m < n
+        sobrantes = hermanas.select { |c| c.numero_caja.to_i > m }
+        bloqueadas = sobrantes.select { |c| c.cobrada_o_entregada? }
+        if bloqueadas.any?
+          raise CajaNoEliminable,
+                "No se puede bajar a #{m} cajas: " \
+                "#{bloqueadas.map { |c| "la caja #{c.numero_caja} está #{c.estado.humanize.downcase}" }.join(', ')}."
+        end
+        sobrantes.each(&:destroy!)
+        hermanas -= sobrantes
+      elsif m > n
+        attrs = hermanas.first.attributes.except(
+          "id", "created_at", "updated_at", "guia", "numero_caja",
+          "cantidad_paquetes", "pre_factura_id", "venta_id", "entrega_id"
+        )
+        ((n + 1)..m).each do |i|
+          hermanas << create!(attrs.merge("numero_caja" => i, "cantidad_paquetes" => m))
+        end
+      end
+
+      # `update_column` a propósito: `cantidad_paquetes` es un contador, no un
+      # cambio de negocio, y pasarlo por validaciones acá dispararía callbacks
+      # de estado sobre cajas que no cambiaron de estado.
+      hermanas.each { |c| c.update_column(:cantidad_paquetes, m) }
+      hermanas.sort_by { |c| c.numero_caja.to_i }
+    end
+  end
+
+  # Las cajas que comparten número madre. Ojo: NO se agrupa por tracking —
+  # dos splits distintos pueden compartir tracking (el courier recicla
+  # números), y el índice único es `(numero_recepcion, numero_caja)`.
+  def self.cajas_del_mismo_split(paquete)
+    return where(id: paquete.id) if paquete.numero_recepcion.blank?
+
+    where(numero_recepcion: paquete.numero_recepcion).order(:numero_caja)
   end
 
   # Construye un WarehouseReceipt para el split. Solo se crea cuando hay
