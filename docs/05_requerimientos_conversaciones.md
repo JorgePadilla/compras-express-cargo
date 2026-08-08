@@ -1956,9 +1956,620 @@ diez pendientes con su motivo** para que no se pierdan de vista.
 
 ---
 
+## Conversación 6 (2026-08-08): Prueba en vivo de /etiquetar
+
+Yusef sentado frente al sistema nuevo, probándolo campo por campo con Jorge al
+lado. Es la primera vez que **opera** `/etiquetar` en vez de opinar sobre
+capturas, y por eso salieron cosas que ninguna revisión de diseño iba a agarrar.
+
+Se entrega en tres partes:
+
+| Parte | Estado |
+|---|---|
+| **Audio 1** — prueba de `/etiquetar` y `/paquetes` | ✅ documentada abajo |
+| **Audio 2** | ⏳ pendiente de recibir |
+| **Imágenes** | ⏳ pendientes de recibir |
+
+Los items van con ID `A1-nn` para poder cruzarlos cuando lleguen las otras dos
+partes. Cada uno lleva su estado:
+
+- **BUG** — reportado por Yusef y confirmado leyendo el código
+- **YA ESTÁ** — Yusef lo pidió y ya existe (o existe a medias)
+- **NUEVO** — no está y hay que hacerlo
+- **PREGUNTA** — no se puede implementar sin que Yusef defina algo
+- **FUTURO** — lo quiere, pero no ahora
+
+---
+
+### El tema de fondo: el teclado es la herramienta
+
+Yusef lo dijo dos veces y explica la mitad de la lista:
+
+> "Nosotros solo teclado porque usamos las manos para trabajar."
+
+Y sobre el Enter:
+
+> "El enter es como el siguiente campo."
+
+La pistola de código de barras **dispara Enter** al terminar de leer. Eso no es
+configurable en la práctica: hay varias pistolas, unas con cable y otras sin, y
+todas vienen así. O sea que en `/etiquetar` el Enter no es "aceptar el
+formulario" — es "terminé este campo, seguí".
+
+---
+
+### A1-01 · Enter guarda el paquete en vez de pasar al siguiente campo — **BUG**
+
+El más grave de todos, y del que cuelgan otros cuatro.
+
+> "El error está en el enter, el enter es el que hace todo el carnal."
+
+`etiquetar/index.html.erb:213` es un `form_with` normal y
+`etiquetar_controller.js:41-63` solo intercepta F2/F3/F4/F8/F9. **No hay ningún
+handler de Enter**, así que gana el comportamiento por defecto del navegador:
+Enter en un input de texto envía el formulario.
+
+Consecuencias que Yusef vio en vivo:
+
+1. El paquete **se graba incompleto** apenas escanea el tracking.
+2. Al grabarse sin sucursal, `generate_numero_recepcion`
+   (`paquete.rb:555-556`) sale temprano por el `return if sucursal.nil?` y el
+   `numero_recepcion` queda vacío → ver A1-02.
+3. Se le asignó a un usuario que él no eligió ("se lo asignó a María López
+   cuando yo no se lo había puesto a nadie").
+4. Después de ese Enter, **F2 ya no limpia** → A1-03.
+
+Lo que tiene que hacer: Enter = Tab. Avanzar al siguiente campo, y en los
+dropdowns seleccionar el ítem activo. Nunca enviar.
+
+> "Grabar con tab o enter — o sea, grabar no, **seleccionar**."
+
+Y explícitamente: en `/etiquetar` **no hay autoguardado**. Jorge preguntó porque
+en pre-alerta sí lo hay, y Yusef marcó la diferencia:
+
+> "Sí, pero no en editar. Hay campos obligatorios, no lo puede grabar sin los campos."
+
+---
+
+### A1-02 · El número de recepción sale igual al tracking — **BUG (síntoma)**
+
+> "El número de recepción que le grabó, el mismo que el tracking."
+
+Es el mismo problema de A1-01, no un bug del generador. El formato anual sí
+está bien implementado (`numero_recepcion_counter.rb`,
+`paquete.rb:555-570`): `<PREFIX><AÑO><CONTADOR>`, contador atómico con
+`SELECT FOR UPDATE`, reinicia cada enero.
+
+Lo que pasa es que las vistas caen a `numero_recepcion.presence || tracking`
+(`_etiqueta.html.erb:29`, `layouts/etiqueta.html.erb:4`,
+`listado_pdf.rb:46`). Un paquete grabado a medias por el Enter no tiene
+recepción, así que **muestra el tracking en su lugar**.
+
+Se arregla con A1-01. Pero el fallback también hay que revisarlo: mostrar el
+tracking rotulado como recepción es precisamente lo que confundió a Yusef.
+
+---
+
+### A1-03 · Después de un Enter, F2 no limpia — **BUG**
+
+> "Le doy F2 y no limpia. Le doy enter y presiono F2, no lo borra."
+
+Confirmado por el propio Yusef que es consecuencia del Enter: sin Enter previo,
+F2 sí limpia. Es problema de foco — el submit mueve el foco fuera del scope del
+controller Stimulus.
+
+F2 tiene que limpiar **todo**, siempre:
+
+> "Todo, todo. Porque se equivocó y lo mejor es F2 y volvemos a empezar."
+
+---
+
+### A1-04 · El código de barras no distingue caja 1 de caja 2 — **BUG confirmado**
+
+Este es el centro de la reunión y el que más plata mueve, porque de acá cuelga
+el inventario.
+
+`_etiqueta.html.erb:29` codifica el `numero_recepcion` pelado. Pero
+`crear_split!` (`paquete.rb:367-395`) le asigna a las N cajas **el mismo**
+`numero_recepcion` — el número madre — y las diferencia solo por `numero_caja`
+(el unique index es compuesto: `(numero_recepcion, numero_caja)`).
+
+O sea que las dos cajas de un tracking dividido **llevan el mismo código de
+barras impreso**. Escanear no dice cuál es cuál:
+
+> "Si yo escaneo esto no sé si es el paquete uno o el paquete dos."
+
+El `n/N` sí sale impreso como texto (`etiqueta_fraccion`), pero no va adentro
+del código escaneable, que es lo único que se lee en San Pedro.
+
+Por qué importa: al recibir en San Pedro se escanea para **rebajar del
+inventario**, y ahí hay que saber cuál de las N cajas llegó y cuál falta.
+
+> "Esa etiqueta selecciona del inventario... el paquete que sí vino, y que falta
+> el otro. De esa manera él rebaja."
+
+Lo que pidió: que el código lleve el sufijo de caja — `7-1`, `7-2`.
+
+> "Donde vos se lo vas a tener que poner es aquí: acordate que aquí va el 6 —
+> bueno, aquí sería 7-1, 7-2."
+
+Y la contraparte, igual de importante:
+
+### A1-05 · El sufijo `-1`, `-2` va en la recepción, **nunca** en el tracking — **regla**
+
+Es el error que arrastraba el sistema viejo y que confundió a todo el mundo:
+
+> "El tracking él le agregaba un 2, y al warehouse él le agregaba un 2 y el 1."
+
+> "Este -1 y -2 al tracking no es necesario ponérselo."
+
+El tracking es del courier y no se toca. La única excepción es el sufijo
+`A`/`B`/`C` para trackings **duplicados de verdad**, que es otra cosa
+(`next_duplicate_suffix`).
+
+---
+
+### A1-06 · Cambiar la cantidad de paquetes no elimina ni crea los sobrantes — **BUG**
+
+Yusef lo reprodujo dos veces en vivo:
+
+- Un paquete con 3 cajas → lo editó a 2 → **quedaron las 3**.
+- Después lo subió a 5 → quedaron los registros viejos mezclados con los
+  nuevos: "aquí dice dos y aquí dice que son cinco".
+
+`crear_split!` solo sabe **crear** N cajas. No hay una operación de *ajustar* de
+N a M sobre un split que ya existe.
+
+La regla que acordaron es simple: la cantidad nueva manda.
+
+> **Jorge:** "Si tienes cinco y lo quieres cambiar a dos, solo deberían quedar los dos."
+> **Yusef:** "Eliminar lo otro. Ajá."
+
+Ojo al implementarlo: eliminar cajas que ya estén facturadas o entregadas no
+puede ser silencioso.
+
+---
+
+### A1-07 · Miami actualiza desde /etiquetar, no desde /paquetes — **NUEVO**
+
+Hoy, cuando escanean un tracking que ya existe y eligen "actualización", el
+sistema los manda a `/paquetes/:id/edit`. Yusef no quiere eso:
+
+> "Me mandaste a editar y yo no quiero editar mi paquete."
+
+Lo que quiere: que el formulario de `/etiquetar` **se recargue con los datos que
+ya tiene** el paquete, y ahí mismo lo corrijan y le den F9.
+
+> "Que te cargue aquí la lista. Esto te lo vuelve a llenar tal cual como quedó,
+> y actualizan todo lo que quieran actualizar, porque eso es lo que ellos ocupan."
+
+La línea divisoria la definió él mismo, y es limpia:
+
+| Qué cambia | Dónde |
+|---|---|
+| Datos que Miami **captura** — tracking secundario, tercero, courier, proveedor, medidas, peso, cantidad de cajas, tipo de servicio | `/etiquetar` |
+| **Estado** del paquete — "lo escanearon que se iba y al final ya no se va" | `/paquetes` |
+
+> "Si ellos entran a actualizar acá es porque van a actualizar datos del paquete,
+> de lo que ellos ingresan."
+
+Lo confirmó con Julián (Miami) por videollamada durante la reunión: sí, siempre
+mejor en la misma hoja donde llenan.
+
+Motivo de fondo: hoy actualizar 2 cajas cuesta ir a editar → guardar → volver →
+re-imprimir → seleccionar. Yusef contó los pasos en voz alta y ahí se le acabó
+la paciencia.
+
+---
+
+### A1-08 · Marcar "cambio de servicio" no pregunta a cuál — **BUG**
+
+> "En etiquetar, al marcar cambio de servicio no está, no pregunta qué tipo de
+> servicio."
+
+Y cuando lo forzó por otro camino y guardó, **el tipo de envío no cambió**: se
+quedó en CER. O sea que además de no preguntar, no aplica.
+
+Jorge propuso un modal. Yusef no se casa con la forma, sí con la velocidad:
+
+> "No sé, lo que funcione bien: solo darle click, yo doy click y click y ya va.
+> Lo que vos creas que te funcione bien, que no cargue y que sea rápido."
+
+---
+
+### A1-09 · Alerta cuando el paquete no es del tipo de envío de la sesión — **NUEVO**
+
+La sesión por tipo de envío **ya existe** (`etiquetar_controller.rb:3-4,
+16, 28, 144-151`: `iniciar_sesion`, `finalizar_sesion`,
+`require_tipo_envio_sesion`). Lo que falta es qué pasa cuando el paquete
+escaneado no corresponde.
+
+Yusef llamó a Julián (Miami) por video en plena reunión para decidirlo, y
+quedó así:
+
+Al escanear un paquete cuya pre-alerta tiene un tipo de envío distinto al de la
+sesión → **sonido feo + modal** con dos opciones:
+
+| Opción | Qué hace |
+|---|---|
+| **Cambiar de sesión** | Manda a finalizar sesión y volver a escoger tipo de envío |
+| **Seguir en la misma sesión** | Limpia el formulario. El paquete **no se ingresa** |
+
+La clave: en ningún caso se puede grabar bajo el tipo equivocado.
+
+> "No te va a permitir grabarlo. No vas a poder hacerlo... el chavo no hizo nada,
+> no pudo hacer nada."
+
+Julián lo confirmó: mejor que lo obligue a cerrar la sesión.
+
+> **Yusef:** "Si es CKM ya sabemos que se lo va a llevar tu papá. Como tienen el
+> relajo en la mesa, los va a obligar a hacer los que son correctos."
+
+---
+
+### A1-10 · Sonidos — **YA ESTÁ a medias**
+
+Existe el `audio_controller` cableado a tres eventos
+(`etiquetar/index.html.erb:91`): `success`, `clienteNotas`, `speakPreAlerta`.
+Yusef aprobó el que ya suena:
+
+> "Ese pin está bien. Se oye amigable, no se oye así como que lo querés apagar."
+
+El mapa completo que pidió:
+
+| Cuándo | Sonido | Estado |
+|---|---|---|
+| Terminó de escanear y ya revisó pre-alertas — "podés seguir" | pin agradable | ✅ existe |
+| Seleccionó el código de cliente | pin | ✅ existe |
+| El paquete **tiene pre-alerta** | voz grabada | ⏳ falta la grabación |
+| **Error** — tipo de envío distinto al de la sesión | sonido feo | ❌ falta |
+| **Antes** de que salga cualquier modal | pin | ❌ falta |
+
+Sobre el pin de confirmación, la razón no es cosmética:
+
+> "Ahorita el sistema es bolazón, pero más adelante pueda que tenga un pequeño
+> lag de milisegundos... Ocupamos la confirmación para que ellos puedan estar
+> seguros de que pueden seguir."
+
+La voz de pre-alerta es la de su señora, grabada en 2022-2023 para el sistema
+viejo. Va a mandar grabaciones nuevas. Del sonido de error, Jorge le va a pasar
+una lista para que elija.
+
+---
+
+### A1-11 · La ventana de impresión queda abierta — **BUG**
+
+F9 abre la etiqueta en ventana nueva y ahí se queda. Tiene que **cerrarse sola**
+al imprimir y devolver el foco a un `/etiquetar` limpio, listo para el siguiente
+paquete. Jorge ya sabe qué hacer:
+
+> "Cerrar y te tiro una limpia."
+
+---
+
+### A1-12 · Los atajos también arriba, no solo abajo — **NUEVO**
+
+> "Estos botones los dejaste abajo y a veces se ocupan acá arriba. En ambos lados."
+
+---
+
+### A1-13 · En /etiquetar guardar es F8, en el resto del sistema es F10 — **inconsistencia**
+
+Yusef presionó **F10** para guardar sin pensarlo. Y tiene razón por costumbre:
+F10 es guardar en pre-facturas, ventas, egresos, ingresos, financiamientos y
+re-empaques. `/etiquetar` es el único que usa F8
+(`etiquetar_controller.js:56`, `index.html.erb:435,445`), donde F8 en el resto
+del sistema es *exportar a Excel*.
+
+Hay que unificar. **PREGUNTA menor**: si se mueve a F10, hay que avisarle al
+equipo de Miami que ya tiene el F8 en el dedo.
+
+---
+
+### A1-14 · Buscar cliente por los últimos dígitos del código — **PREGUNTA**
+
+> "El rollo de los códigos de cliente actuales es que tienen el `C00002867`.
+> Actualmente el sistema lee de derecha a izquierda."
+
+En el sistema viejo escriben solo `2867`, o hasta un solo dígito, y cae. Es
+búsqueda por **sufijo**, no por prefijo.
+
+> "Eso es algo que ya trabajan así, y si se los cambio... solo le ponían el dos."
+
+Contexto: los códigos viejos son de 4 dígitos y los nuevos de 5. **Los viejos no
+se migran** — se quedan como están.
+
+**PREGUNTA:** con 5 dígitos y miles de clientes, teclear `6` va a traer cientos
+de coincidencias. ¿Sufijo puro, o sufijo priorizado con match exacto primero?
+
+---
+
+### A1-15 · Orden de campos y navegación — **NUEVO**
+
+Lo revisaron campo por campo:
+
+| Cambio | Detalle |
+|---|---|
+| **Notas internas** sube | Arriba del cuadro de carrier/proveedor/remitente |
+| **Carrier, proveedor y remitente** bajan | Al cuadro de abajo — "es parte de lo que van a llenar" |
+| **Pre-alerta y pre-factura** se van de `/etiquetar` | "Eso no tiene nada que ver con ellos" — Jorge confirmó que quedaron del inicio |
+| Tab desde **tercero** → descripción | Y si no activó tercero, de cliente → descripción directo |
+| **F4** activa el tercero | ✅ ya está (`etiquetar_controller.js:50-55`) |
+
+---
+
+### A1-16 · El cliente tercero no se guarda en ninguna base de datos — **regla, YA ESTÁ verificar**
+
+Yusef fue enfático porque es un tema de integridad de datos:
+
+> "Solo se guarda en esa guía... Queda guardado en ese warehouse receipt, pero
+> no queda grabado en ninguna base de datos de clientes."
+
+Dos razones:
+
+1. **Autoridad**: quien digita en Miami no decide quién es cliente.
+   > "El que está digitando ahí no tiene ni voz ni voto para guardar."
+2. **Errores**: "ellos se pueden equivocar y pueden hacer este relajo."
+
+La excepción son los **revendedores**. Un cliente como Carlos Reyes tiene su
+propia cartera de terceros, y ahí sí sale el dropdown con los suyos:
+
+> "Él en su lista tiene su cartera de terceros... ahí sí me van a salir los de él."
+
+O sea: texto libre por defecto; dropdown solo si el cliente titular es
+revendedor y tiene terceros registrados.
+
+⚠️ **Cruzar con PR-10.c**: hoy existe `tercero_search_controller.js` y el paquete
+tiene `belongs_to :tercero`. Hay que verificar que el texto libre **no** esté
+creando registros de cliente.
+
+---
+
+### A1-17 · Peso y medidas por caja, no una sola línea — **NUEVO**
+
+> "Sinceramente sí se ocuparía hacerle esa mejora: ponerle cantidad dos y aquí
+> te pregunta dos veces."
+
+Si son 2 cajas, el formulario tiene que pedir peso y medidas **de cada una**. Hoy
+solo pide una línea.
+
+Dos formas, y dejó elegir:
+
+- N líneas de una vez, según la cantidad
+- Un botón "agregar" que va sumando de a uno y limpia entre cada uno
+
+> "Como le importa que son dos, te da esa opción para dos. Al menos vos lo
+> cambias a tres."
+
+---
+
+### A1-18 · Motivos de retención editables — **NUEVO + falta lista**
+
+Hoy los motivos están fijos (paquete dañado, mercancía prohibida…). Yusef quiere
+un CRUD:
+
+> "¿Hay algún lugar donde nosotros podamos agregarlos, o te los tendremos que
+> estar dando a vos?"
+
+Ya sabe que falta al menos uno: *"solicitado por el cliente para retorno"*. Va a
+mandar la lista completa.
+
+Es el mismo patrón de siempre — [[feedback_yusef_crud_first]].
+
+---
+
+### A1-19 · Notas predeterminadas en pre-factura, facturación y caja — **NUEVO**
+
+El modal de motivos que ya existe en `/etiquetar` (retener) lo quiere replicado
+en las áreas de cobro:
+
+> "Ese mismo lo vas a crear para que existan predeterminados en prefactura, en caja."
+
+Para qué:
+
+> "Siempre tenemos, digamos, no cumple el mínimo y se le cobró tarifa tal."
+
+Otros ejemplos que dio: *"ese paquete fue enviado al cliente vía KAEX Logistics"*,
+*"retirado al crédito por Nilmo Peña"*.
+
+Un clic en vez de escribirlo a mano cada vez. Con opción de detallar manual
+también, como el de Miami.
+
+Y esas notas tienen que **verse en el detalle del paquete**, no quedarse en el
+documento donde se pusieron:
+
+> "Esa información me tiene que aparecer si yo entro aquí."
+
+---
+
+### A1-20 · En el detalle del paquete, las notas más arriba — **NUEVO**
+
+> "Acá proveedor, carrier, remitente... es más importante que diga notas."
+
+---
+
+### A1-21 · /paquetes muestra la madre y las hijas — **cerrado, no se toca**
+
+Se discutió largo y **quedó como está**. Jorge lo dejó separado (madre + N
+hijas) y Yusef lo aceptó:
+
+> "Que quede así como está. Solo tenés que corregir el número de recepción."
+
+La razón para mantenerlo separado la dio él mismo: puede llegar una caja y la
+otra no.
+
+Opcional, si sobra tiempo: colapsar en una fila con un expander.
+
+> "Que alguien pueda presionar en algún lado y se baje y saque la segunda línea."
+
+---
+
+### A1-22 · Aviso al retroceder en el pipeline — **YA ESTÁ, aprobado**
+
+Yusef pasó un paquete de "empacado" a "recibido en Miami" y le salió el aviso:
+
+> "Excelente que lo estás previniendo."
+
+---
+
+### A1-23 · Auditoría incompleta — **revisar**
+
+Notó que en algunos campos no aparece quién cambió qué, y en otros sí. Cruza con
+[[project_paper_trail_global]]: PR-D1.a solo cubrió `Paquete`.
+
+---
+
+### A1-24 · El PIN **no** va en /etiquetar — **límite de alcance**
+
+Importante dejarlo escrito ahora que Fase 13 está fresca. Jorge preguntó y Yusef
+cortó:
+
+> **Jorge:** "¿Este no ocupa PIN?"
+> **Yusef:** "No. El PIN es para prefactura. De momento no recuerdo algo que
+> ocupe PIN ahí."
+
+Nadie extienda `Autorizacion` a `/etiquetar`.
+
+---
+
+### A1-25 · Origen del paquete (China / Estados Unidos) — **PREGUNTA**
+
+Campo ya marcado en pantalla, sin definir.
+
+> "Lo que marca acá, si es de China no sé qué. Eso es algo que tenemos que ver...
+> Como ahorita estamos en Estados Unidos, pero ya va a abrir China."
+
+---
+
+### A1-26 · Tracking secundario — **YA ESTÁ, verificado en vivo**
+
+Se guarda, se muestra en el detalle y **se puede buscar en los filtros**. Yusef
+lo probó durante la llamada y funcionó.
+
+---
+
+### A1-27 · Cámara con IA que llene el formulario — **FUTURO**
+
+Es lo que más quiere del proyecto, en sus palabras:
+
+> "Cuando me vayas a trabajar en la inteligencia artificial, lo primero que yo
+> quiero es que estos chavos, encima de la mesa de trabajo, tengan la cámara...
+> La cosa es que lea la etiqueta y llene este formulario. Es lo que más quiero."
+
+Una cámara colgada de un cable sobre la mesa, que se acerca a la caja, lee la
+etiqueta del courier (FedEx, Amazon, etc.) y llena `/etiquetar` solo.
+
+No es para ahora. Sí conviene que el formulario quede alimentable por algo que
+no sea un humano tecleando.
+
+---
+
+### A1-28 · Fechas del proyecto — **contexto**
+
+| Cuándo | Qué |
+|---|---|
+| **Noviembre 2026** | Sistema terminado, "solo con los últimos detalles" |
+| **Diciembre 2026** | **No** se arranca — es temporada alta |
+| **Enero 2027** | Arranque real, jalando la base de datos que quede de diciembre |
+
+> "Yo sé que para noviembre vas a tener eso, pero mentira que en diciembre vamos
+> a iniciarlo. En enero, que baja un poquito."
+
+También pidió cambiar el formato de trabajo:
+
+> "Prefiero que vos vengas. Por eso te dije: hagamos videollamadas, porque en las
+> videollamadas estoy obligado a atenderte."
+
+Y Jorge propuso diagramas de proceso, que Yusef aceptó a medias — prefiere
+revisar sobre el sistema andando que sobre un diagrama.
+
+---
+
+### Lo que Yusef quedó de mandar
+
+| Qué | Para qué |
+|---|---|
+| Lista completa de **motivos de retención** | A1-18 |
+| Lista de **notas predeterminadas** por área (pre-factura, caja, SAC) | A1-19 |
+| **Formato exacto del número de recepción** con el mes | Ver preguntas |
+| **Grabaciones de voz** para pre-alerta | A1-10 |
+| Elección del **sonido de error** de la lista que le pase Jorge | A1-10 |
+
+---
+
+### Preguntas nuevas para Yusef (se suman al Excel después del envío 3)
+
+1. **Formato del número de recepción.** Dijo que le falta el mes y que ya lo
+   había mandado, pero no lo encontró en la llamada:
+   > "Lo que le faltaba era el mes en que se recibió... o sea, era la fecha:
+   > recibido en Miami tal fecha 2026."
+
+   Hoy es `<PREFIX><AÑO><CONTADOR-6>`. **No se inventa el formato**: hay que
+   pedirle el que mandó. Y ojo — cambiarlo toca `NumeroRecepcionCounter`, el
+   índice único y todos los números ya generados en staging.
+
+2. **Búsqueda de cliente por sufijo** (A1-14) — con 5 dígitos, ¿cómo desempata?
+
+3. **Origen del paquete** (A1-25) — ¿qué orígenes y qué cambia según el origen?
+
+4. **F8 → F10** (A1-13) — ¿avisamos a Miami del cambio de atajo?
+
+5. **Peso por caja** (A1-17) — ¿N líneas de una vez o botón "agregar"?
+
+6. **Eliminar cajas al bajar la cantidad** (A1-06) — ¿qué pasa si alguna de las
+   que se van ya está facturada o entregada?
+
+---
+
+### Cambios que se ocupan — resumen
+
+**BUGs (confirmados en código)**
+
+| ID | Qué | Dónde |
+|---|---|---|
+| A1-01 | Enter envía el formulario en vez de avanzar de campo | `etiquetar_controller.js:38-63`, `index.html.erb:213` |
+| A1-02 | El número de recepción se muestra como el tracking | consecuencia de A1-01 + fallbacks `.presence \|\| tracking` |
+| A1-03 | F2 no limpia después de un Enter | consecuencia de A1-01 (foco) |
+| A1-04 | El código de barras no distingue caja 1 de caja 2 | `_etiqueta.html.erb:29` + `paquete.rb:367-395` |
+| A1-06 | Cambiar la cantidad de cajas no elimina ni crea las sobrantes | `crear_split!` solo crea |
+| A1-08 | "Cambio de servicio" no pregunta a cuál, y no aplica | `/etiquetar` |
+| A1-11 | La ventana de impresión no se cierra | `etiquetar_controller.js` (F9) |
+
+**Nuevo**
+
+| ID | Qué |
+|---|---|
+| A1-07 | Actualizar desde `/etiquetar` con el formulario pre-cargado |
+| A1-09 | Modal + sonido cuando el tipo de envío no es el de la sesión |
+| A1-10 | Sonido de error, pin antes de los modales, voz de pre-alerta |
+| A1-12 | Atajos arriba y abajo |
+| A1-15 | Reordenar campos y flujo de Tab |
+| A1-17 | Peso y medidas por caja |
+| A1-18 | CRUD de motivos de retención |
+| A1-19 | Notas predeterminadas en pre-factura, facturación y caja |
+| A1-20 | Notas arriba en el detalle del paquete |
+
+**Verificar / decidir**
+
+| ID | Qué |
+|---|---|
+| A1-05 | Que el sufijo `-1`/`-2` **nunca** toque el tracking |
+| A1-13 | Unificar guardar en F10 |
+| A1-16 | Que el tercero de texto libre no esté creando clientes |
+| A1-23 | `paper_trail` más allá de `Paquete` |
+| A1-24 | **No** meter PIN en `/etiquetar` |
+
+**Ya está** — A1-22 (aviso de retroceso), A1-26 (tracking secundario), sesión
+por tipo de envío (A1-09 parcial), F4 tercero (A1-15).
+
+**Futuro** — A1-27 (cámara con IA).
+
+---
+
 ## Próximos Pasos
 
 1. **Conversación 2:** Login, Logout, Creación de usuarios y roles — por documentar
 2. **Conversación 3:** Detalle de Paquete Interno + Warehouse Receipt — ✅ documentada arriba, preguntas del bloque PR-D todas resueltas
 3. **Conversación 4:** ✅ documentada arriba — franja de contexto operativo (PR-9)
 4. **Conversación 5:** ✅ documentada arriba — tarifas, mínimos y etiqueta (PR-10)
+5. **Conversación 6:** 🔶 Audio 1 documentado arriba (prueba en vivo de `/etiquetar`, items `A1-01` … `A1-28`). Faltan el **audio 2** y las **imágenes** antes de armar el plan de PRs y de actualizar `preguntas_para_yusef.xlsx`
