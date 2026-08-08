@@ -43,7 +43,9 @@ module Paquetes
       [
         paquete.fecha_recibido_miami&.strftime("%d/%m/%Y") || paquete.created_at.strftime("%d/%m/%Y"),
         paquete.fecha_disponible&.strftime("%d/%m/%Y") || "—",
-        paquete.numero_recepcion.presence || paquete.tracking,
+        # Mismo caso que la pantalla: "N° Recepción" y "Tracking" son columnas
+        # vecinas, así que caer al tracking imprime el mismo dato dos veces.
+        paquete.numero_recepcion_visible || "—",
         truncate(paquete.tracking, 22),
         "#{paquete.cliente.codigo} · #{truncate(paquete.cliente.nombre_completo, 28)}",
         paquete.estado.humanize,

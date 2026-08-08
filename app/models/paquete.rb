@@ -334,6 +334,31 @@ class Paquete < ApplicationRecord
     cantidad_paquetes.to_i > 1
   end
 
+  # El número de recepción para MOSTRAR. Devuelve nil cuando no hay uno de
+  # verdad, para que la vista ponga guión en vez de caer al tracking.
+  #
+  # Yusef, 2026-08-08, viendo el listado: "esto está malo, porque te está
+  # poniendo el tracking y el número de recepción... el número de recepción es
+  # como el número de registro". Las columnas son vecinas y salía lo mismo
+  # en las dos.
+  #
+  # Dos formas de no tener recepción de verdad:
+  #
+  #   1. En blanco — `generate_numero_recepcion` sale temprano cuando el
+  #      paquete se guarda sin sucursal.
+  #   2. Guardada igual al tracking — data vieja. Jorge: "estos están hechos
+  #      porque yo los metí en la base de datos en este formato".
+  #
+  # El caso 2 se puede detectar sin miedo a falsos positivos: una recepción
+  # real es SIEMPRE `<PREFIX><AÑO 7><CORRELATIVO 6>` (ej. `RM0002026000010`),
+  # que no se parece a ningún tracking de courier.
+  def numero_recepcion_visible
+    return nil if numero_recepcion.blank?
+    return nil if numero_recepcion.casecmp?(tracking.to_s)
+
+    numero_recepcion
+  end
+
   # Devuelve "1/3" cuando el paquete está dividido; nil cuando no.
   # Se muestra en etiqueta impresa, detalle y badges del listado.
   def etiqueta_secuencia
