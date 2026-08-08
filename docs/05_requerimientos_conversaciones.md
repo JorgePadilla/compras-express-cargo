@@ -2977,7 +2977,7 @@ Vale enseñárselo en la próxima llamada — él no sabía que ya estaba, y opi
 
 ---
 
-### A2-08 · A los servicios extra les falta el mínimo — **NUEVO**
+### A2-08 · A los servicios extra les faltaba el mínimo — ✅ **HECHO** (PR-C6.12)
 
 En el sistema viejo el mínimo era **obligatorio** en cada servicio:
 
@@ -2990,8 +2990,22 @@ precio_venta, moneda, precio_incluye_isv, position, activo, notas`.
 Y hace falta de verdad: el **retornado de Miami** es exactamente eso — *"$5 es
 como un precio mínimo que cobramos"*.
 
-El CRUD de `/servicios_extra` ya tiene moneda y el check de ISV; solo falta el
+El CRUD de `/servicios_extra` ya tenía moneda y el check de ISV; faltaba el
 mínimo.
+
+**Arreglo (PR-C6.12):** `minimo_monto` + `minimo_moneda`, con la moneda del
+piso **independiente de la del precio** — mismo criterio que `Tarifa`, donde el
+flete se cotiza en dólares y el piso vive en Lempiras porque así lo pone la
+competencia.
+
+`ServicioExtra#cobro_para` aplica el piso y lo usa la línea automática de la
+pre-factura. Un detalle que importa: el mínimo **se compara sin ISV** cuando el
+precio lo trae adentro. Yusef habla del mínimo como precio final (los L.200 son
+con impuesto); comparar el bruto contra un subtotal neto habría dejado el piso
+un 15% más alto de lo que él dijo.
+
+Esto desbloquea que Yusef cargue bien los cargos (A2-01): el **retornado de
+Miami** es exactamente un mínimo.
 
 ---
 
@@ -3134,7 +3148,7 @@ Lo que Fase 13 protege es el precio **de una venta**, no el catálogo.
 
 | ID | Qué |
 |---|---|
-| A2-08 | Campo de **mínimo** en `ServicioExtra` (+ en su CRUD) |
+| ~~A2-08~~ | ~~Campo de **mínimo** en `ServicioExtra`~~ ✅ **hecho** |
 | A2-06 | Dar de alta **etiqueta internacional** como servicio |
 | A2-10 | Confirmar que EXPRESS y CKA existen como tipo de envío |
 

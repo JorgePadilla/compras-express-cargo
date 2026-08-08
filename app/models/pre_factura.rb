@@ -312,7 +312,12 @@ class PreFactura < ApplicationRecord
             # así que a un servicio con el ISV ya adentro se le volvía a
             # aplicar el 15% al totalizar. Se guarda el neto, convertido a la
             # moneda del documento (el catálogo se carga en USD).
-            subtotal: convertir_a_moneda(servicio.precio_venta_sin_isv, servicio.moneda),
+            #
+            # PR-C6.12: y con el piso aplicado. `cobro_para` devuelve el neto
+            # ya en la moneda del documento, así que no hay round-trip: el
+            # mínimo de un cargo en USD con piso en Lempiras se compara en
+            # Lempiras una sola vez.
+            subtotal: servicio.cobro_para(1, en: moneda),
             minimo_aplicado: true, # monto fijo del catálogo
             origen: "auto_servicio_extra"
           )
