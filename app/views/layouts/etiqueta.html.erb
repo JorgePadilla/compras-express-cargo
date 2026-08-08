@@ -92,18 +92,16 @@
     (function () {
       if (new URL(window.location.href).searchParams.get("print") !== "true") return;
 
-      // Solo se cierran las ventanas que abrió el sistema (F9 usa
-      // `window.open`, que deja `opener` seteado). Si alguien llega acá
-      // pegando la URL, se queda mirando la etiqueta.
+      // `window.close()` a secas: el navegador **ya** se niega a cerrar
+      // pestañas que no abrió por script, así que cuando alguien llega acá
+      // pegando la URL no pasa nada (solo un warning en consola).
       //
-      // El navegador ya se niega a cerrar pestañas que no abrió por script,
-      // así que esto es cinturón sobre tirantes: deja la intención escrita y
-      // evita el warning en consola. Un test no puede distinguir las dos
-      // protecciones — quitando esta línea el comportamiento no cambia.
-      var laAbrimosNosotros = !!window.opener;
-
+      // Hubo un chequeo de `window.opener` acá. Se sacó por dos razones: no
+      // cambiaba el comportamiento —se verificó quitándolo y ningún test
+      // falla— y hacía creer que el fix no servía cuando se probaba pegando
+      // el link en la barra de direcciones.
       function cerrar() {
-        if (laAbrimosNosotros) window.close();
+        window.close();
       }
 
       window.onload = function () {
