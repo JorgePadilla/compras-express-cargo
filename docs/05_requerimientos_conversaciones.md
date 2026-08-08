@@ -2337,13 +2337,28 @@ una lista para que elija.
 
 ---
 
-### A1-11 · La ventana de impresión queda abierta — **BUG**
+### A1-11 · La ventana de impresión queda abierta — ✅ **ARREGLADO** (PR-C6.4)
 
-F9 abre la etiqueta en ventana nueva y ahí se queda. Tiene que **cerrarse sola**
-al imprimir y devolver el foco a un `/etiquetar` limpio, listo para el siguiente
-paquete. Jorge ya sabe qué hacer:
+F9 abre la etiqueta en pestaña nueva y ahí se quedaba. En un lote de 100
+paquetes se juntaban 100 pestañas.
 
-> "Cerrar y te tiro una limpia."
+> **Yusef:** "Esto que ves acá debería de cerrarse."
+> **Jorge:** "Cerrar y te tiro una limpia."
+
+**Arreglo:** el layout de la etiqueta escucha `afterprint` y cierra. Cierra
+tanto si imprimió como si canceló — lo que Yusef quiere es volver a escanear,
+no decidir. Lleva un fallback por `matchMedia("print")` para el Safari viejo,
+que no dispara `afterprint`.
+
+El `clearForm` post-guardado ya existía, así que con esto queda el ciclo
+completo que pidió: **F9 → imprime → se cierra → `/etiquetar` limpio**.
+
+⚠️ **Lo que el test cubre y lo que no.** Chrome headless dispara `beforeprint`
+pero **nunca `afterprint`** — no hay diálogo que cerrar; se verificó con una
+prueba directa. Así que el ciclo real no se puede observar en CI. Lo que sí se
+prueba es todo lo que es código nuestro: que el listener quede registrado y que
+al llegar el evento la ventana se cierre. **Queda para verificación manual en
+`:3090`**: imprimir de verdad y ver la pestaña desaparecer.
 
 ---
 
@@ -2636,7 +2651,7 @@ revisar sobre el sistema andando que sobre un diagrama.
 | A1-04 | El código de barras no distingue caja 1 de caja 2 | `_etiqueta.html.erb:29` + `paquete.rb:367-395` |
 | A1-06 | Cambiar la cantidad de cajas no elimina ni crea las sobrantes | `crear_split!` solo crea |
 | A1-08 | "Cambio de servicio" no pregunta a cuál, y no aplica | `/etiquetar` |
-| A1-11 | La ventana de impresión no se cierra | `etiquetar_controller.js` (F9) |
+| ~~A1-11~~ | ~~La ventana de impresión no se cierra~~ ✅ **arreglado** | `layouts/etiqueta.html.erb` |
 
 **Nuevo**
 
