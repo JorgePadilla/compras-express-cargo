@@ -3067,7 +3067,7 @@ Miami** es exactamente un mínimo.
 
 ---
 
-### A2-09 · Escalonado — la regla de redondeo, **confirmada**
+### A2-09 · Escalonado — la regla de redondeo — ✅ **ARREGLADO** (PR-C6.2)
 
 La tabla de escalones va en hoja aparte:
 
@@ -3125,15 +3125,20 @@ cobra de más. Muerde el día que Yusef active el escalonado — el mismo patró
 los cuatro errores de plata de PR-10, que estuvieron latentes hasta que se
 cargaron las tarifas reales.
 
-La fórmula que sí da la regla de Yusef es un ceil con tolerancia de 0.09:
+**Arreglo (PR-C6.2):** `Tarifa::TOLERANCIA_LIBRAS = 9/100`, y el redondeo le
+resta la tolerancia antes del ceil. Los `.10` y `.60` son justamente esos
+umbrales: la báscula tiembla y no se le cobra media libra a alguien por 30
+gramos.
 
-```ruby
-(((peso - Rational(9, 100)) / inc).ceil * inc).round(2)
-```
+Va con un guard para que un peso menor que la tolerancia no se vuelva
+negativo — un peso negativo en una factura es peor que uno mal redondeado.
 
-**PREGUNTA antes de implementarla:** Yusef describió la regla solo para
-incrementos de media libra. Si mañana crea una tarifa con incremento de 1 lb,
-¿la tolerancia sigue siendo 0.09, o es proporcional? No lo inventamos.
+⚠️ **La tolerancia queda fija en 0.09**, que es la lectura literal del audio.
+Yusef describió la regla **solo para incrementos de media libra**; si algún día
+crea una tarifa con incremento de 1 lb hay que preguntarle si sigue igual o es
+proporcional. Hay un test que **documenta el comportamiento actual** para ese
+caso, de modo que cambiarlo sea deliberado y no un efecto colateral. Sigue
+como pregunta ALTA en el Excel.
 
 ---
 
@@ -3200,7 +3205,7 @@ Lo que Fase 13 protege es el precio **de una venta**, no el catálogo.
 | ID | Qué |
 |---|---|
 | ~~A2-04~~ | ~~Cambio de servicio cobraba $15 (≈L.373)~~ ✅ **arreglado** — L.100 exactos |
-| A2-09 | **El redondeo de libras cobra de más en `.01–.09` y `.51–.59`** — latente hasta que se active `incremento_libras` |
+| ~~A2-09~~ | ~~El redondeo de libras cobra de más en `.01–.09` y `.51–.59`~~ ✅ **arreglado** |
 
 **Nuevo**
 
