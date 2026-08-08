@@ -1968,7 +1968,7 @@ Se entrega en tres partes:
 |---|---|
 | **Audio 1** — prueba de `/etiquetar` y `/paquetes` | ✅ documentada abajo (`A1-nn`) |
 | **Audio 2** — monedas, cargos extra y escalonado | ✅ documentada abajo (`A2-nn`) |
-| **Imágenes** | ⏳ pendientes de recibir |
+| **Imágenes** — 3 páginas de notas a mano de Jorge | ✅ cruzadas abajo (`N-nn`) |
 
 Los items van con ID `A1-nn` para poder cruzarlos cuando lleguen las otras dos
 partes. Cada uno lleva su estado:
@@ -2269,8 +2269,17 @@ El mapa completo que pidió:
 | Terminó de escanear y ya revisó pre-alertas — "podés seguir" | pin agradable | ✅ existe |
 | Seleccionó el código de cliente | pin | ✅ existe |
 | El paquete **tiene pre-alerta** | voz grabada | ⏳ falta la grabación |
+| El tracking **ya existía / ya fue usado** | pito distinto | ❌ falta |
 | **Error** — tipo de envío distinto al de la sesión | sonido feo | ❌ falta |
 | **Antes** de que salga cualquier modal | pin | ❌ falta |
+
+Son **dos** pitos distintos, no uno. Yusef lo dijo así:
+
+> "Pita para dos razones... pita, te decía, pre-alerta, para que te fijaras que
+> tiene pre-alerta." · "El otro pito es porque te tira que **ya existía**."
+
+Y las notas de Jorge de esa misma reunión lo listan igual: *"pita — 1) pre-alerta
+2) que ya existía"*.
 
 Sobre el pin de confirmación, la razón no es cosmética:
 
@@ -2588,7 +2597,7 @@ revisar sobre el sistema andando que sobre un diagrama.
 |---|---|
 | A1-07 | Actualizar desde `/etiquetar` con el formulario pre-cargado |
 | A1-09 | Modal + sonido cuando el tipo de envío no es el de la sesión |
-| A1-10 | Sonido de error, pin antes de los modales, voz de pre-alerta |
+| A1-10 | Pito de "ya existía", sonido de error, pin antes de los modales, voz de pre-alerta |
 | A1-12 | Atajos arriba y abajo |
 | A1-15 | Reordenar campos y flujo de Tab |
 | A1-17 | Peso y medidas por caja |
@@ -2964,10 +2973,164 @@ lo que pidió; solo hay que enseñárselo).
 
 ---
 
+## Conversación 6 · Imágenes — las notas a mano de Jorge
+
+Tres páginas escritas **durante la misma reunión**, mientras Yusef probaba el
+sistema. No son requerimientos nuevos: son el apunte de Jorge en el momento, lo
+que las vuelve un contraste independiente contra lo que se sacó de los audios.
+
+**El cruce da 1:1.** Todo lo que está en las notas aparece en `A1-nn`, y aparece
+**un solo item nuevo** (el segundo pito), que ya quedó incorporado a A1-10.
+
+---
+
+### Página 1 — el teclado
+
+Transcripción:
+
+```
+pág 1
+1) /etiquetar
+2) código cliente
+   leer de derecha a izq
+Y
+el ~~Tab~~ presiona enter → moverse al siguiente
+
+3) quitar Pre-Alerta, Pre-Factura
+
+   pita
+   1) pre-alerta
+   2) que ya existía
+
+poner ambos lados  Botones
+pistola enter
+F2 → limpiar todo el formulario
+→ No autograbar etiqueta
+```
+
+| Nota | Item |
+|---|---|
+| `código cliente leer de derecha a izq` | **A1-14** |
+| `el ~~Tab~~ presiona enter → moverse al siguiente` | **A1-01** |
+| `pistola enter` | **A1-01** |
+| `No autograbar etiqueta` | **A1-01** |
+| `F2 → limpiar todo el formulario` | **A1-03** |
+| `quitar Pre-Alerta, Pre-Factura` | **A1-15** |
+| `poner ambos lados — Botones` | **A1-12** |
+| `pita: 1) pre-alerta 2) que ya existía` | **A1-10** ← el único item nuevo |
+
+Detalle que vale: Jorge **tachó "Tab" y escribió "enter"** en el momento. Eso
+fija que la regla no es "que Tab funcione" sino que **Enter haga lo que hace
+Tab** — que es exactamente donde está el bug (A1-01).
+
+Y el punto 1 dice `/etiquetar`, no `/label`: es el apunte del que salió el
+renombre que ya se hizo.
+
+---
+
+### Página 2 — dropdowns, tercero y la columna de warehouse
+
+Transcripción:
+
+```
+pág 2   seleccionar
+→ ~~Grabar~~ con tab o enter
+  de los dropdowns
+
+Tercero
+  2 formas de crear
+  etiquetas → warehouse receipts
+→ Texto
+→ o selección
+
+Tab Tercero → que pase Descripción
+Notas → arriba de carrier
+
+columna de warehouse
+No de recepción
+```
+
+| Nota | Item |
+|---|---|
+| `~~Grabar~~ seleccionar con tab o enter de los dropdowns` | **A1-01** |
+| `Tercero: texto o selección` | **A1-16** |
+| `Tab Tercero → que pase Descripción` | **A1-15** |
+| `Notas → arriba de carrier` | **A1-15** |
+| `columna de warehouse / No de recepción` | **A1-02** ✅ ya arreglado |
+
+Acá también hay una tachadura que dice todo: Jorge escribió **"Grabar"**, lo
+tachó y puso **"seleccionar"**. Es la corrección que Yusef le hizo en voz alta:
+
+> "O sea, grabar, no grabar — **seleccionar**."
+
+Y `columna de warehouse / No de recepción` es exactamente el bug que se arregló
+en este bloque: la columna tenía que mostrar el número de warehouse y estaba
+mostrando el tracking.
+
+`etiquetas → warehouse receipts` bajo "Tercero" es la regla A1-16: el tercero
+escrito a mano vive **en el warehouse receipt** y no se guarda en ninguna base
+de datos de clientes.
+
+---
+
+### Página 3 — impresión, cambio de servicio y sonidos
+
+Transcripción:
+
+```
+página 3
+etiquetar
+→ cerrar ventana y regresar etiquetar
+────────────
+cambio de servicio → CER a CKM  no funciona
+
+→ Cambio de servicio → ¿?
+  pregunte qué servicio → modal
+
+→ Rebajar
+Nota
+────────────
+Audios / sonidos → cuando se escanea
+                   escanea
+                   código de cliente
+→ Diff session tiene que tener una alerta sonido
+```
+
+| Nota | Item |
+|---|---|
+| `cerrar ventana y regresar etiquetar` | **A1-11** |
+| `cambio de servicio → CER a CKM no funciona` | **A1-08** |
+| `pregunte qué servicio → modal` | **A1-08** |
+| `Rebajar` | **A1-04** — el rebaje de inventario al escanear en San Pedro |
+| `Nota` | **A1-19 / A1-20** |
+| `sonidos: cuando se escanea · código de cliente` | **A1-10** |
+| `Diff session tiene que tener una alerta sonido` | **A1-09 + A1-10** |
+
+`CER a CKM no funciona` es el caso exacto que Yusef reprodujo: marcó el cambio,
+guardó, y el tipo de envío se quedó en CER. Sirve como caso de prueba concreto
+cuando se arregle A1-08.
+
+---
+
+### Lo que el cruce confirma
+
+1. **No se perdió nada de los audios.** Los 15 apuntes de las tres páginas caen
+   todos dentro de `A1-01` … `A1-20`.
+2. **Un solo item nuevo:** el segundo pito (`que ya existía`), incorporado a
+   A1-10.
+3. **Las notas no contradicen nada** de lo documentado.
+4. Las tachaduras (`Tab`→`enter`, `Grabar`→`seleccionar`) son las dos
+   correcciones que Yusef hizo en vivo, y las dos apuntan al mismo bug: **A1-01**.
+
+Y una lectura de prioridad que sale sola: de los 15 apuntes, **cinco** son A1-01
+o su consecuencia directa. Es el que hay que arreglar primero.
+
+---
+
 ## Próximos Pasos
 
 1. **Conversación 2:** Login, Logout, Creación de usuarios y roles — por documentar
 2. **Conversación 3:** Detalle de Paquete Interno + Warehouse Receipt — ✅ documentada arriba, preguntas del bloque PR-D todas resueltas
 3. **Conversación 4:** ✅ documentada arriba — franja de contexto operativo (PR-9)
 4. **Conversación 5:** ✅ documentada arriba — tarifas, mínimos y etiqueta (PR-10)
-5. **Conversación 6:** 🔶 Audios 1 y 2 documentados arriba (`A1-01` … `A1-28` y `A2-01` … `A2-11`). Faltan las **imágenes** antes de armar el plan de PRs y de actualizar `preguntas_para_yusef.xlsx`
+5. **Conversación 6:** ✅ documentada completa — audios 1 y 2 más las 3 páginas de notas (`A1-01` … `A1-28`, `A2-01` … `A2-11`, cruce `N`). Sigue: armar el plan de PRs y llevarle las 13 preguntas a Yusef
