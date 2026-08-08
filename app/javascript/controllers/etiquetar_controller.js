@@ -13,7 +13,8 @@ export default class extends Controller {
     "cajasModal", "cajasInput", "cantidadPaquetesHidden",
     "submitBtn", "event", "panel",
     "terceroContainer", "terceroToggle",
-    "conflictoSesion", "conflictoSesionTexto"
+    "conflictoSesion", "conflictoSesionTexto",
+    "cajasDetalle", "cajasFilas"
   ]
   static values = {
     checkUrl: String,
@@ -675,6 +676,7 @@ export default class extends Controller {
     if (this.hasCajasInputTarget) {
       this.cajasInputTarget.value = "1"
     }
+    this._pintarFilasDeCajas()
     // PR-C6.16: pin antes de que salga el modal. Yusef, después de darle F9:
     // "aquí debería de ser otro PIN cuando tires el modal... ese PIN lo ocupo
     // ANTES más bien, en el modal". Es el aviso de que el sistema ya reaccionó
@@ -698,6 +700,12 @@ export default class extends Controller {
     this._closeCajasModal()
   }
 
+  // Repinta las filas cuando cambia la cantidad. Va en `input` y no en
+  // `change` para que las filas aparezcan mientras teclea, no al salir.
+  cajasCantidadInput() {
+    this._pintarFilasDeCajas()
+  }
+
   cajasKeydown(e) {
     if (e.key === "Enter") {
       e.preventDefault()
@@ -706,6 +714,58 @@ export default class extends Controller {
       e.preventDefault()
       this.cancelCajas()
     }
+  }
+
+  // Una fila de peso/medidas por caja, precargadas con lo que ya escribió en
+  // el formulario. Con una sola caja no se muestra nada: el formulario ya lo
+  // preguntó y repetirlo sería un paso de más.
+  _pintarFilasDeCajas() {
+    if (!this.hasCajasFilasTarget || !this.hasCajasDetalleTarget) return
+
+    const n = this._cantidadDeCajas()
+    if (n < 2) {
+      this.cajasDetalleTarget.classList.add("hidden")
+      this.cajasFilasTarget.innerHTML = ""
+      return
+    }
+
+    const base = this._medidasDelFormulario()
+    const filas = []
+    for (let i = 1; i <= n; i++) {
+      filas.push(`
+        <div class="grid grid-cols-[2.5rem_1fr_1fr_1fr_1fr] gap-1.5 items-center">
+          <span class="text-xs font-mono font-bold text-cec-navy dark:text-cec-gold">${i}/${n}</span>
+          ${this._inputDeCaja(i, "peso",  "peso",  base.peso)}
+          ${this._inputDeCaja(i, "alto",  "alto",  base.alto)}
+          ${this._inputDeCaja(i, "largo", "largo", base.largo)}
+          ${this._inputDeCaja(i, "ancho", "ancho", base.ancho)}
+        </div>
+      `)
+    }
+    this.cajasFilasTarget.innerHTML = filas.join("")
+    this.cajasDetalleTarget.classList.remove("hidden")
+  }
+
+  _inputDeCaja(indice, campo, placeholder, valor) {
+    return `<input type="number" step="0.01" min="0"
+                   name="paquete[cajas][${indice}][${campo}]"
+                   value="${valor}"
+                   placeholder="${placeholder}"
+                   class="block w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700
+                          dark:text-gray-100 text-xs px-1.5 py-1 focus:ring-cec-teal focus:border-cec-teal">`
+  }
+
+  _medidasDelFormulario() {
+    const leer = (nombre) => {
+      const el = this.formTarget.querySelector(`[name="paquete[${nombre}]"]`)
+      return el && el.value ? el.value : ""
+    }
+    return { peso: leer("peso"), alto: leer("alto"), largo: leer("largo"), ancho: leer("ancho") }
+  }
+
+  _cantidadDeCajas() {
+    const raw = this.hasCajasInputTarget ? parseInt(this.cajasInputTarget.value, 10) : 1
+    return Number.isFinite(raw) ? Math.max(1, Math.min(26, raw)) : 1
   }
 
   confirmCajas() {

@@ -487,7 +487,14 @@ class Paquete < ApplicationRecord
   #   - Si el save de cualquiera falla, la transacción hace rollback.
   #
   # Devuelve un array con los paquetes creados (en orden 1..N).
-  def self.crear_split!(attrs:, total_cajas:)
+  # `por_caja` lleva los datos que difieren entre cajas: `{1 => {peso: 5},
+  # 2 => {peso: 8}}`. Lo que no venga ahí se hereda de `attrs`.
+  #
+  # PR-C6.17. Yusef: "acá sería cantidad de paquetes o productos, y aquí el
+  # peso de cada quien". Antes las N cajas nacían con el MISMO peso, así que un
+  # tracking con una caja de 5 lb y otra de 30 se facturaba como dos de 5 —
+  # o como dos de 30, según cuál hubieran escrito.
+  def self.crear_split!(attrs:, total_cajas:, por_caja: {})
     n = total_cajas.to_i
     raise ArgumentError, "total_cajas debe ser >= 2" if n < 2
 
@@ -511,7 +518,8 @@ class Paquete < ApplicationRecord
       wr&.save!
 
       (1..n).map do |i|
-        Paquete.create!(attrs.merge(
+        propios = (por_caja[i] || por_caja[i.to_s] || {}).symbolize_keys
+        Paquete.create!(attrs.merge(propios).merge(
           numero_caja: i,
           cantidad_paquetes: n,
           numero_recepcion: numero_madre,
