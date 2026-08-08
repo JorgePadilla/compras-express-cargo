@@ -25,6 +25,18 @@
     </button>
   </div>
 
+  <%# ── Texto libre ── PR-C6.14.
+      Es el caso normal, no la excepción: "nosotros no tenemos la base de datos
+      completa de los clientes terceros". Lo que se escriba acá vive en ESTE
+      paquete y no crea ningún cliente — Yusef: "el que está digitando ahí no
+      tiene ni voz ni voto para guardar".
+      El buscador de abajo queda para cuando el tercero SÍ está en la cartera
+      (el caso del revendedor), y si se elige uno, ese manda. %>
+  <%= f.text_field :tercero_nombre,
+      placeholder: "Nombre del tercero (se guarda solo en este paquete)",
+      class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm text-sm mb-2
+             focus:ring-cec-teal focus:border-cec-teal" %>
+
   <%# Input con icono lupa flex-alineado dentro del input (no absolute hardcoded) %>
   <div class="relative">
     <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">

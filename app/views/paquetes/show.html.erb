@@ -315,6 +315,19 @@ end %>
                 Quitar
               <% end %>
             <% end %>
+          <% elsif @paquete.tercero_nombre.present? %>
+            <%# PR-C6.14: tercero escrito a mano en Miami. No es un Cliente y no
+                debe parecerlo — sin link ni código, con la aclaración de que
+                vive solo en este paquete. %>
+            <span class="text-gray-700 dark:text-gray-200"><%= @paquete.tercero_nombre %></span>
+            <span class="ml-1 text-[10px] uppercase tracking-wider text-gray-400">solo en este paquete</span>
+            <% if can_edit_paquetes? %>
+              <button type="button"
+                      data-action="click->asignar-tercero-modal#open"
+                      class="ml-1 text-cec-teal hover:text-cec-teal-dark hover:underline cursor-pointer">
+                Vincular a un cliente
+              </button>
+            <% end %>
           <% else %>
             <span class="text-gray-400 dark:text-gray-500 italic">Sin 3ro asignado</span>
             <% if can_edit_paquetes? %>
