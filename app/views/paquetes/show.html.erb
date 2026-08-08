@@ -417,6 +417,61 @@ end %>
       </div>
     </div>
 
+    <%# ── Historial de cambios ──
+        PR-C6.15. Yusef, revisando un paquete: "auditar quién... en este no,
+        fíjate, pero en otros campos sí".
+
+        Tenía razón a medias. `paper_trail` venía guardando todo desde PR-D1.a
+        —está en 41 modelos— pero nadie lo mostraba. Lo único con "quién"
+        visible eran los cambios de estado, que llevan su propia columna
+        `fecha_<estado>_by_user_id`. Por eso unos campos sí y otros no.
+
+        Se muestran los últimos 15: más que eso es ruido, y el que necesita
+        más ya está haciendo una investigación, no mirando un paquete. %>
+    <% versiones = @paquete.versions.reorder(created_at: :desc).limit(15).to_a %>
+    <% versiones = versiones.reject { |v| auditoria_cambios(v).empty? } %>
+    <% if versiones.any? %>
+      <div class="lg:col-span-3">
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+          Historial de cambios
+          <span class="text-[10px] normal-case text-gray-400">(últimos <%= versiones.size %>)</span>
+        </dt>
+        <dd class="overflow-x-auto">
+          <table class="min-w-full text-xs" data-tabla="auditoria">
+            <thead>
+              <tr class="text-left text-gray-500 dark:text-gray-400">
+                <th class="py-1 pr-3 font-medium">Cuándo</th>
+                <th class="py-1 pr-3 font-medium">Quién</th>
+                <th class="py-1 pr-3 font-medium">Qué cambió</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+              <% versiones.each do |version| %>
+                <tr class="align-top">
+                  <td class="py-1.5 pr-3 whitespace-nowrap text-gray-500 dark:text-gray-400">
+                    <%= l version.created_at, format: :short %>
+                  </td>
+                  <td class="py-1.5 pr-3 whitespace-nowrap font-medium text-gray-700 dark:text-gray-200">
+                    <%= auditoria_quien(version) %>
+                  </td>
+                  <td class="py-1.5 pr-3 text-gray-700 dark:text-gray-200">
+                    <% auditoria_cambios(version).each do |etiqueta, antes, despues| %>
+                      <div>
+                        <span class="font-medium"><%= etiqueta %>:</span>
+                        <span class="text-gray-400 line-through"><%= antes %></span>
+                        <span class="text-gray-400">→</span>
+                        <span><%= despues %></span>
+                      </div>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </dd>
+      </div>
+    <% end %>
+
     <%# ── Notas de los documentos de cobro ──
         PR-C6.13, la segunda mitad de lo que pidió Yusef: las notas que se
         ponen en pre-factura o en la factura tienen que verse desde el paquete.

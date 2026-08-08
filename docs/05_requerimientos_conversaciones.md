@@ -2639,10 +2639,24 @@ Yusef pasó un paquete de "empacado" a "recibido en Miami" y le salió el aviso:
 
 ---
 
-### A1-23 · Auditoría incompleta — **revisar**
+### A1-23 · Auditoría incompleta — ✅ **HECHO** (PR-C6.15)
 
-Notó que en algunos campos no aparece quién cambió qué, y en otros sí. Cruza con
-[[project_paper_trail_global]]: PR-D1.a solo cubrió `Paquete`.
+> "Auditar quién... en este no, fíjate, pero en otros campos sí. No sé si es
+> que se lo quitó o no había."
+
+**Tenía razón a medias, y este doc lo diagnosticó al revés.** Decía que faltaba
+extender `paper_trail` más allá de `Paquete`. **La captura no era el problema**:
+`has_paper_trail` está en **41 modelos**. Lo que faltaba era *verlo*.
+
+Lo único con "quién" visible eran los cambios de **estado**, que llevan su
+propia columna `fecha_<estado>_by_user_id`. Por eso unos campos sí y otros no —
+exactamente lo que él notó.
+
+**Arreglo (PR-C6.15):** sección "Historial de cambios" en el detalle del
+paquete, con cuándo, quién y qué cambió. Los ids se resuelven a nombres (un
+`tipo_envio_id: 4 → 7` no le dice nada a nadie), los campos derivados y
+`updated_at` se filtran, y un cambio sin usuario dice "Sistema" en vez de un id
+suelto.
 
 ---
 
@@ -2783,7 +2797,7 @@ revisar sobre el sistema andando que sobre un diagrama.
 | ~~A1-05~~ | ~~Que el sufijo `-1`/`-2` **nunca** toque el tracking~~ ✅ **con test de regresión** |
 | ~~A1-13~~ | ~~Unificar guardar en F10~~ ✅ **arreglado** (F8 queda de alias) |
 | ~~A1-16~~ | ~~Que el tercero de texto libre no esté creando clientes~~ ✅ **hecho** — no existía, se construyó |
-| A1-23 | `paper_trail` más allá de `Paquete` |
+| ~~A1-23~~ | ~~`paper_trail` más allá de `Paquete`~~ ✅ **hecho** — faltaba mostrarlo, no capturarlo |
 | A1-24 | **No** meter PIN en `/etiquetar` |
 
 **Ya está** — A1-22 (aviso de retroceso), A1-26 (tracking secundario), sesión
