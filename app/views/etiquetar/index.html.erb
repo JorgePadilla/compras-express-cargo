@@ -634,12 +634,33 @@ end %>
         </label>
         <input id="cajas-input" type="number" min="1" max="26" value="1"
                data-etiquetar-target="cajasInput"
-               data-action="keydown->etiquetar#cajasKeydown"
+               data-action="keydown->etiquetar#cajasKeydown input->etiquetar#cajasCantidadInput"
                class="block w-full text-2xl text-center font-mono rounded-lg border-gray-300 shadow-sm
                       focus:ring-cec-teal focus:border-cec-teal dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100">
         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
           Cada caja recibe su propia etiqueta (1/N, 2/N…). Máximo 26.
         </p>
+      </div>
+
+      <%# ── Peso y medidas de cada caja ── PR-C6.17.
+          Yusef: "ponerle cantidad dos y aquí te pregunta dos veces... acá
+          sería cantidad de paquetes o productos, y aquí el peso de cada
+          quien. Como le importa que son dos, te da esa opción para dos".
+
+          Va acá y no en el formulario porque la cantidad recién se sabe al
+          apretar F9 — así estaba aprobado desde PR-4 y él lo revalidó en esta
+          misma reunión ("le voy a poner dos, ahí está una y dos, excelente").
+          Meter la cantidad arriba habría deshecho ese flujo.
+
+          Las filas nacen con los valores del formulario, así que si las cajas
+          son parecidas basta con Enter: el operario solo toca las que
+          difieren. %>
+      <div data-etiquetar-target="cajasDetalle" class="hidden">
+        <p class="text-xs font-medium text-gray-700 dark:text-gray-200 mb-2">
+          Peso y medidas de cada caja
+          <span class="font-normal text-gray-500 dark:text-gray-400">— vienen del formulario, cambiá solo las que difieran</span>
+        </p>
+        <div data-etiquetar-target="cajasFilas" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
       </div>
     </div>
     <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">

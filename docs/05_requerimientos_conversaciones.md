@@ -2563,7 +2563,7 @@ clientes.
 
 ---
 
-### A1-17 · Peso y medidas por caja — ⚠️ **BLOQUEADO: dos cosas que dijo se contradicen**
+### A1-17 · Peso y medidas por caja — ✅ **HECHO** (PR-C6.17)
 
 > "Sinceramente sí se ocuparía hacerle esa mejora: ponerle cantidad dos y aquí
 > te pregunta dos veces."
@@ -2579,27 +2579,29 @@ Dos formas, y dejó elegir:
 > "Como le importa que son dos, te da esa opción para dos. Al menos vos lo
 > cambias a tres."
 
-⚠️ **Esto choca con algo que él mismo aprobó antes**, y por eso no se
-implementó adivinando.
+**Parecía chocar con el modal de F9**, y por eso quedó documentado antes de
+implementarse: la cantidad recién se sabe al apretar F9, así que no se pueden
+pedir N pesos antes.
 
-La cantidad de cajas **se pregunta en el modal de F9**, después de llenar todo
-— eso es PR-4 y salió de él: *"cantidad de paquetes se lo vamos a poner después
-de presionar F9"*. Pero acá señala un lugar **en el formulario**: *"acá al revés
-sería cantidad de paquetes o productos **acá**, y aquí el peso de cada quien"*.
+**La contradicción se disuelve pidiéndolos en ese mismo modal.** Ahí ya se
+pregunta la cantidad, y Yusef revalidó ese flujo en esta misma reunión — *"le
+voy a poner dos, ahí está una y dos, excelente"*. Así no se deshace nada de lo
+aprobado en PR-4.
 
-Si la cantidad recién se sabe al apretar F9, no se pueden pedir N pesos antes.
-Las salidas posibles son tres, y las tres cambian un flujo que ya está andando:
+**Arreglo (PR-C6.17):** al poner una cantidad mayor a 1, el modal de F9 muestra
+una fila de peso/alto/largo/ancho por caja, **precargadas con lo que ya escribió
+en el formulario**. Si las cajas son parecidas basta con Enter; el operario solo
+toca las que difieren.
 
-1. **Mover la cantidad al formulario** y mostrar N filas de peso debajo. Es lo
-   que él señaló, pero deshace el modal de F9 que aprobó.
-2. **Pedir los N pesos dentro del modal de F9**, después de la cantidad.
-   Respeta las dos cosas, pero engorda el modal — y sobre eso pidió lo
-   contrario: *"que no cargue y que sea rápido"*.
-3. **El botón "agregar"** que él mismo describió como *"lo que hacen otros"*.
+Del lado del servidor, `crear_split!` acepta `por_caja:` con overrides. Solo se
+aceptan esos cuatro campos: el resto del paquete es el mismo para todas —mismo
+tracking, mismo cliente, mismo contenido— y lo único que cambia físicamente es
+cuánto pesa y mide cada bulto. Va con test.
 
-Jorge en la reunión: *"voy a analizar un poco eso"*. Queda para esa decisión.
-Es la única cosa de la reunión que no se implementó por elección, no por falta
-de tiempo.
+Lo que arreglaba de fondo: antes las N cajas nacían con el **mismo peso**, así
+que un tracking con una caja de 5 lb y otra de 30 se facturaba como dos de 5 —
+o como dos de 30, según cuál hubieran escrito. Las dos están mal, y el peso
+volumétrico salía igual de mal porque es derivado de las medidas.
 
 ---
 

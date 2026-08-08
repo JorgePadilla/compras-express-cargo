@@ -216,7 +216,8 @@ class EtiquetarController < ApplicationController
       )
     end
 
-    paquetes = Paquete.crear_split!(attrs: attrs, total_cajas: total_cajas)
+    paquetes = Paquete.crear_split!(attrs: attrs, total_cajas: total_cajas,
+                                    por_caja: medidas_por_caja)
     if (prov_str = proveedor_string_param) != :missing && prov_str.present?
       paquetes.each { |p| p.update_column(:proveedor, prov_str) }
     end
@@ -320,6 +321,24 @@ class EtiquetarController < ApplicationController
                     .where("UPPER(tracking) = ?", tracking.to_s.strip.upcase)
                     .includes(:pre_alerta)
                     .first&.pre_alerta&.tipo_envio
+  end
+
+  # Peso y medidas propios de cada caja, desde el modal de F9.
+  #
+  # PR-C6.17. Llegan como `paquete[cajas][1][peso]`. Solo se aceptan estos
+  # cuatro campos: el resto del paquete es el mismo para todas las cajas — es
+  # el mismo tracking, el mismo cliente y el mismo contenido; lo único que
+  # cambia físicamente es cuánto pesa y mide cada bulto.
+  CAMPOS_POR_CAJA = %w[peso alto largo ancho].freeze
+
+  def medidas_por_caja
+    crudo = params.dig(:paquete, :cajas)
+    return {} if crudo.blank?
+
+    crudo.to_unsafe_h.each_with_object({}) do |(indice, valores), acc|
+      limpios = valores.slice(*CAMPOS_POR_CAJA).reject { |_k, v| v.to_s.strip.empty? }
+      acc[indice.to_i] = limpios.symbolize_keys if limpios.any?
+    end
   end
 
   # El paquete que se está actualizando, si vino por `?paquete_id=`.
