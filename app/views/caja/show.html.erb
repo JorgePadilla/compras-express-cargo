@@ -20,6 +20,7 @@
       </div>
       <div>
         <label for="notas_apertura" class="block text-sm font-medium text-gray-700 mb-1">Notas (opcional)</label>
+        <%= render "shared/plantillas_notas", selector: "#notas_apertura" %>
         <%= f.text_area :notas_apertura, value: "", rows: 2, id: "notas_apertura",
             class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
       </div>

@@ -404,6 +404,33 @@ end %>
       </div>
     </div>
 
+    <%# ── Notas de los documentos de cobro ──
+        PR-C6.13, la segunda mitad de lo que pidió Yusef: las notas que se
+        ponen en pre-factura o en la factura tienen que verse desde el paquete.
+
+          > "Esa información me tiene que aparecer si yo entro aquí."
+
+        Es lo que servicio al cliente necesita cuando el cliente llama y
+        pregunta por qué le cobraron algo. %>
+    <% notas_cobro = [
+         [ "Pre-Factura #{@paquete.pre_factura&.numero}", @paquete.pre_factura&.notas ],
+         [ "Factura #{@paquete.venta&.numero}",           @paquete.venta&.notas ]
+       ].select { |_titulo, texto| texto.present? } %>
+    <% if notas_cobro.any? %>
+      <div class="lg:col-span-3">
+        <dt class="text-xs font-medium text-cec-gold-dark uppercase tracking-wider">
+          Notas de facturación
+          <span class="text-[10px] normal-case text-gray-400">(puestas en pre-factura o caja)</span>
+        </dt>
+        <% notas_cobro.each do |titulo, texto| %>
+          <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 border border-amber-200 dark:border-amber-800">
+            <span class="block text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-1"><%= titulo %></span>
+            <%= simple_format(texto) %>
+          </dd>
+        <% end %>
+      </div>
+    <% end %>
+
     <%# ── Notas ── PR-C6.11: suben por encima de proveedor/carrier/remitente.
         Yusef, mirando el detalle: "acá proveedor, carrier, remitente... es más
         importante que diga **notas**". Es lo que servicio al cliente lee

@@ -2559,7 +2559,7 @@ Es el mismo patrón de siempre — [[feedback_yusef_crud_first]].
 
 ---
 
-### A1-19 · Notas predeterminadas en pre-factura, facturación y caja — **NUEVO**
+### A1-19 · Notas predeterminadas en pre-factura, facturación y caja — ✅ **HECHO** (PR-C6.13)
 
 El modal de motivos que ya existe en `/etiquetar` (retener) lo quiere replicado
 en las áreas de cobro:
@@ -2580,6 +2580,17 @@ Y esas notas tienen que **verse en el detalle del paquete**, no quedarse en el
 documento donde se pusieron:
 
 > "Esa información me tiene que aparecer si yo entro aquí."
+
+**Arreglo (PR-C6.13):** el picker `shared/_plantillas_notas` se renderiza en
+pre-factura (alta y edición) y en la apertura de caja, y el detalle del paquete
+muestra una sección **"Notas de facturación"** con lo que se escribió en su
+pre-factura y en su factura.
+
+Lo segundo es lo que importa para servicio al cliente: es lo que necesitan
+cuando el cliente llama a preguntar por qué le cobraron algo.
+
+El CRUD de plantillas (`PlantillaNotaCliente`) y el `plantilla_picker`
+**ya existían** — faltaba usarlos en cobros.
 
 ---
 
@@ -2747,7 +2758,7 @@ revisar sobre el sistema andando que sobre un diagrama.
 | ~~A1-15~~ | ~~Reordenar campos y flujo de Tab~~ ✅ **hecho** |
 | A1-17 | Peso y medidas por caja |
 | A1-18 | CRUD de motivos de retención |
-| A1-19 | Notas predeterminadas en pre-factura, facturación y caja |
+| ~~A1-19~~ | ~~Notas predeterminadas en pre-factura, facturación y caja~~ ✅ **hecho** |
 | ~~A1-20~~ | ~~Notas arriba en el detalle del paquete~~ ✅ **hecho** |
 
 **Verificar / decidir**
