@@ -8,7 +8,8 @@ class Paquete < ApplicationRecord
   belongs_to :pre_factura, optional: true
   belongs_to :venta, optional: true
   belongs_to :entrega, optional: true
-  belongs_to :sucursal, optional: true
+  belongs_to :sucursal, optional: true                                           # dónde RETIRA el cliente
+  belongs_to :sucursal_recepcion,   class_name: "Sucursal",      optional: true  # PR-C6.5: dónde se RECIBIÓ — manda el número de recepción
   belongs_to :sucursal_actual,      class_name: "Sucursal",      optional: true  # PR-D1.c: ubicación física actual
   belongs_to :sub_localidad_actual, class_name: "SubLocalidad",  optional: true  # PR-D1.c: bodega interna actual
   belongs_to :warehouse_receipt, optional: true  # PR-5c.5p2 — fuente rica del numero_recepcion (madre)
@@ -281,7 +282,7 @@ class Paquete < ApplicationRecord
   }
 
   before_validation :generate_guia, on: :create, if: -> { guia.blank? }
-  before_validation :generate_numero_recepcion, on: :create, if: -> { numero_recepcion.blank? && sucursal_id.present? }
+  before_validation :generate_numero_recepcion, on: :create, if: -> { numero_recepcion.blank? && sucursal_del_numero.present? }
   # Trigger si: (a) marcó recolecta y aún no hay monto, o (b) cambió la
   # tarifa elegida (el cajero corrige zona) → re-sincronizamos monto+moneda.
   before_validation :default_recolecta_monto,
@@ -332,6 +333,21 @@ class Paquete < ApplicationRecord
   # True si el paquete pertenece a un tracking dividido en >1 bulto.
   def dividido?
     cantidad_paquetes.to_i > 1
+  end
+
+  # De qué sucursal sale el prefijo del número de recepción.
+  #
+  # `sucursal_recepcion` es **dónde se recibió** el paquete — Miami, Panamá,
+  # China. `sucursal` es **dónde lo retira el cliente**, y es lo que sale en la
+  # etiqueta y lo que usa la búsqueda de tarifa. Son distintas: se recibe en
+  # Miami y se retira en Zeron SPS.
+  #
+  # El fallback a `sucursal` no es pereza: hay flujos que crean paquetes sin
+  # pasar por `/etiquetar` (alta manual desde `/paquetes`, seeds, fixtures) y
+  # ahí la única sucursal que hay es esa. Sin el fallback esos paquetes se
+  # quedarían sin número, que es exactamente el bug que este PR viene a cerrar.
+  def sucursal_del_numero
+    sucursal_recepcion || sucursal
   end
 
   # El número de recepción para MOSTRAR. Devuelve nil cuando no hay uno de
@@ -395,7 +411,12 @@ class Paquete < ApplicationRecord
 
     sucursal     = attrs[:sucursal]     || Sucursal.find_by(id: attrs[:sucursal_id])
     cliente      = attrs[:cliente]      || Cliente.find_by(id: attrs[:cliente_id])
-    numero_madre = generate_numero_recepcion_madre(sucursal: sucursal, attrs: attrs)
+    # El número sale de dónde se RECIBIÓ, no de dónde retira el cliente.
+    # Mismo fallback que `Paquete#sucursal_del_numero`.
+    recepcion    = attrs[:sucursal_recepcion] ||
+                   Sucursal.find_by(id: attrs[:sucursal_recepcion_id]) ||
+                   sucursal
+    numero_madre = generate_numero_recepcion_madre(sucursal: recepcion, attrs: attrs)
 
     transaction do
       # PR-5c.5p2: crea el WR madre antes de los paquetes y los enlaza.
@@ -578,12 +599,13 @@ class Paquete < ApplicationRecord
   # el retry en `save` cubre colisiones con data legacy que no pasó por
   # el counter.
   def generate_numero_recepcion
-    return if sucursal.nil?
-    prefix = sucursal.codigo_recepcion_prefix
+    origen = sucursal_del_numero
+    return if origen.nil?
+    prefix = origen.codigo_recepcion_prefix
     return if prefix.blank?
 
     anio = (fecha_recibido_miami&.year || Time.zone.now.year)
-    next_number = NumeroRecepcionCounter.next_for!(sucursal: sucursal, anio: anio)
+    next_number = NumeroRecepcionCounter.next_for!(sucursal: origen, anio: anio)
 
     self.numero_recepcion = format(
       "%<prefix>s%<anio>07d%<num>06d",

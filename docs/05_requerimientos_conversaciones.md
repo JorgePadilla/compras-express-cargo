@@ -2116,10 +2116,19 @@ con `SELECT FOR UPDATE`, reinicia cada enero. Ej. `RM0002026000010`. Es el
 número del Warehouse Receipt. Lo único pendiente ahí es el **mes** que pidió
 Yusef → ver preguntas.
 
-⚠️ **Queda la causa raíz:** que 45 de 54 paquetes no tengan sucursal. Eso es
-A1-01 (el Enter que graba incompleto) más data sembrada. El arreglo de la
-columna hace que el problema **se vea** (una fila de guiones) en vez de
-disfrazarse de tracking.
+✅ **La causa raíz se cerró en PR-C6.5.** Y no era el Enter como decía este
+doc: **`/etiquetar` nunca asignaba sucursal** — cero menciones en el controller
+y cero en la vista. Como `generate_numero_recepcion` sale temprano sin
+sucursal, la correlación en la base era perfecta: 45 sin sucursal, los mismos
+45 sin número.
+
+Debajo había un choque de significados. `paquetes.sucursal_id` era a la vez
+"dónde retira el cliente" (etiqueta, listado, y la **búsqueda de tarifa** en
+`pre_factura.rb:201`) y "de dónde sale el prefijo del número" (`RMI` = Recibido
+Miami). Un paquete se recibe en Miami y se retira en Zeron SPS; una columna no
+puede ser las dos, y por eso `/etiquetar` no podía asignar ninguna.
+
+Se separó en `paquetes.sucursal_recepcion_id`. `sucursal_id` no se tocó.
 
 ⚠️ **Y queda un caso peor con el mismo fallback:** `_etiqueta.html.erb:29`
 codifica `numero_recepcion.presence || tracking` **en el código de barras**. Si

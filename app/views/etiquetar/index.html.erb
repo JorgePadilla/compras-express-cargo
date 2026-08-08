@@ -35,46 +35,71 @@ end %>
     </div>
 
     <% if @tipo_envios.any? %>
-      <%# Mismo layout que el wizard de pre-alerta del cliente: dos columnas
-          (con / sin reempaque) con tarjetas ricas. Click en la tarjeta inicia
-          la sesión (button_to). %>
+      <%# PR-C6.5: antes cada tarjeta era su propio `button_to`. Ahora es UN
+          form con un submit por tarjeta (`name="tipo_envio_id"`), para que el
+          select de "recibiendo en" viaje junto con la elección sin necesidad
+          de JS. El layout no cambia. %>
       <% con_reempaque = @tipo_envios.select(&:con_reempaque) %>
       <% sin_reempaque = @tipo_envios.reject(&:con_reempaque) %>
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <%# Grupo: con reempaque + opción a consolidar %>
-        <div class="rounded-2xl border border-cec-navy/10 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800 shadow-sm">
-          <div class="bg-gradient-to-r from-cec-navy to-cec-navy-light px-5 py-3">
-            <p class="text-sm font-bold text-white">Con reempaque unitario</p>
-            <p class="text-xs text-white/70 mt-0.5">+ opción a consolidar</p>
-          </div>
-          <div class="p-4 space-y-3">
-            <% con_reempaque.each do |t| %>
-              <%= button_to iniciar_sesion_etiquetar_path,
-                    method: :post, params: { tipo_envio_id: t.id }, form_class: "block",
-                    class: "w-full text-left p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-lg hover:border-cec-gold/50 transition-all duration-200" do %>
-                <%= render "shared/tipo_envio_card", tipo: t, show_precio: false, show_badge: false %>
-              <% end %>
-            <% end %>
-          </div>
-        </div>
+      <%= form_with url: iniciar_sesion_etiquetar_path, method: :post, class: "block" do %>
 
-        <%# Grupo: sin reempaque — sin consolidar %>
-        <div class="rounded-2xl border border-slate-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800 shadow-sm">
-          <div class="bg-slate-50 dark:bg-gray-900 border-b border-slate-200 dark:border-gray-700 px-5 py-3">
-            <p class="text-sm font-bold text-slate-700 dark:text-gray-200">Sin reempaque</p>
-            <p class="text-xs text-slate-500 dark:text-gray-400 mt-0.5">sin consolidar</p>
+        <%# ── Dónde estás recibiendo ──
+            De acá sale el número de recepción del paquete (`RMI…`, `RZE…`).
+            Solo se pregunta cuando hay más de una opción: el que recibe está
+            parado en un lugar, no lo elige paquete a paquete. Yusef: "está
+            alguien en Miami recibiendo, o en Panamá, o en China". %>
+        <% if @sucursales_recepcion.size > 1 %>
+          <div class="mb-6 max-w-sm mx-auto">
+            <%= label_tag :sucursal_recepcion_id, "¿Dónde estás recibiendo?",
+                  class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1 text-center" %>
+            <%= select_tag :sucursal_recepcion_id,
+                  options_from_collection_for_select(@sucursales_recepcion, :id, :nombre, @sucursal_recepcion_sugerida&.id),
+                  class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 text-center">
+              De acá sale el número de recepción de cada paquete.
+            </p>
           </div>
-          <div class="p-4 space-y-3">
-            <% sin_reempaque.each do |t| %>
-              <%= button_to iniciar_sesion_etiquetar_path,
-                    method: :post, params: { tipo_envio_id: t.id }, form_class: "block",
-                    class: "w-full text-left p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-lg hover:border-cec-gold/50 transition-all duration-200" do %>
-                <%= render "shared/tipo_envio_card", tipo: t, show_precio: false, show_badge: false %>
+        <% elsif @sucursal_recepcion_sugerida %>
+          <%= hidden_field_tag :sucursal_recepcion_id, @sucursal_recepcion_sugerida.id %>
+          <p class="text-center text-xs text-gray-500 dark:text-gray-400 mb-6">
+            Recibiendo en <span class="font-semibold text-gray-700 dark:text-gray-200"><%= @sucursal_recepcion_sugerida.nombre %></span>
+          </p>
+        <% end %>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <%# Grupo: con reempaque + opción a consolidar %>
+          <div class="rounded-2xl border border-cec-navy/10 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800 shadow-sm">
+            <div class="bg-gradient-to-r from-cec-navy to-cec-navy-light px-5 py-3">
+              <p class="text-sm font-bold text-white">Con reempaque unitario</p>
+              <p class="text-xs text-white/70 mt-0.5">+ opción a consolidar</p>
+            </div>
+            <div class="p-4 space-y-3">
+              <% con_reempaque.each do |t| %>
+                <button type="submit" name="tipo_envio_id" value="<%= t.id %>"
+                        class="w-full text-left p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-lg hover:border-cec-gold/50 transition-all duration-200">
+                  <%= render "shared/tipo_envio_card", tipo: t, show_precio: false, show_badge: false %>
+                </button>
               <% end %>
-            <% end %>
+            </div>
+          </div>
+
+          <%# Grupo: sin reempaque — sin consolidar %>
+          <div class="rounded-2xl border border-slate-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800 shadow-sm">
+            <div class="bg-slate-50 dark:bg-gray-900 border-b border-slate-200 dark:border-gray-700 px-5 py-3">
+              <p class="text-sm font-bold text-slate-700 dark:text-gray-200">Sin reempaque</p>
+              <p class="text-xs text-slate-500 dark:text-gray-400 mt-0.5">sin consolidar</p>
+            </div>
+            <div class="p-4 space-y-3">
+              <% sin_reempaque.each do |t| %>
+                <button type="submit" name="tipo_envio_id" value="<%= t.id %>"
+                        class="w-full text-left p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-lg hover:border-cec-gold/50 transition-all duration-200">
+                  <%= render "shared/tipo_envio_card", tipo: t, show_precio: false, show_badge: false %>
+                </button>
+              <% end %>
+            </div>
           </div>
         </div>
-      </div>
+      <% end %>
     <% else %>
       <p class="text-center text-sm text-amber-700 italic">
         No hay tipos de envío activos. Pedile a un admin que los cargue.
