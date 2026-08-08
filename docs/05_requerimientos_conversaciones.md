@@ -3056,6 +3056,38 @@ Yusef dijo en el audio (A2-10).
 
 ---
 
+### A2-14 · La hoja del 8 de agosto — esta sí trae cambios
+
+Tercera versión (`precios por categoria 2026 (2).xlsx`, modificada 16:56). A
+diferencia de la del 7, **esta sí cambió celdas**. Solo la hoja PROPUESTA;
+`ACTUAL` y `Hoja1` siguen idénticas.
+
+**1. Consolidando en Miami pasa de 1 a 0** (Precio Normal y Precio Tegus).
+
+Es Yusef corrigiendo en la hoja lo que ya había dicho en el audio: *"eso no
+tiene ningún costo, en cero. Eso le pusimos aquí algo, pero es porque me
+equivoqué"*. No hay nada que cargar — el cargo no estaba sembrado.
+
+**2. El primer escalón pasa de "DE 0 A 1 LBS" a "DE 0 A 1.1 LBS"**, en los tres
+tarifarios (CER, CEM, CKM).
+
+**No requiere cambio de código: confirma la tolerancia que ya está
+implementada.** El `.10` de `TOLERANCIA_LIBRAS` es exactamente ese límite —
+todo lo que redondea a 1.0 lb (o sea, por debajo de 1.10) cae en ese escalón y
+paga el mínimo de L.200.
+
+El label queda un poco holgado —estrictamente sería "hasta 1.09"— pero su regla
+hablada manda y coincide: *"uno punto uno ya es uno y medio"*. La diferencia
+práctica entre tolerancia 0.09 y 0.10 es un solo peso: **exactamente 1.10 lb**.
+Vale confirmárselo en una línea, pero el audio ya lo resuelve.
+
+⚠️ **La leyenda de colores sigue sin aplicarse.** Tercera versión seguida con
+los precios en `theme0` (blanco) y los colores solo en las dos celdas de la
+leyenda. Las monedas de los cargos que faltan siguen dependiendo de que él las
+cargue por el CRUD (A2-01), que para eso ya está completo.
+
+---
+
 ### A2-13 · Lo que la hoja sí tenía y nunca habíamos extraído
 
 Revisándola a fondo aparecieron tres cargos con datos **por categoría** que solo
