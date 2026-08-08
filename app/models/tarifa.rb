@@ -126,13 +126,49 @@ class Tarifa < ApplicationRecord
     BigDecimal("0.15")
   end
 
-  # Redondea HACIA ARRIBA al múltiplo del incremento. nil = sin redondeo,
-  # que es el comportamiento histórico y el default.
+  # Cuánto se le perdona al peso antes de que suba al siguiente escalón.
+  #
+  # Yusef, 2026-08-08, dictando la regla:
+  #
+  #   > "El uno punto cero nueve **sigue siendo uno**. Uno punto uno ya es
+  #   >  **uno y medio**. Uno y medio pues uno y medio. Y de **uno punto seis
+  #   >  ya sube**."
+  #
+  # O sea que los umbrales son `.10` y `.60`, no `.01` y `.51`. Hay una
+  # tolerancia de 9 centésimas de libra: la báscula tiembla y no se le cobra
+  # media libra a alguien por 30 gramos.
+  TOLERANCIA_LIBRAS = Rational(9, 100)
+
+  # Redondea HACIA ARRIBA al múltiplo del incremento, perdonando la tolerancia.
+  # nil = sin redondeo, que es el comportamiento histórico y el default.
+  #
+  # **Esto era un `ceil` puro y cobraba de más.** Un ceil no tiene tolerancia,
+  # así que fallaba en dos bandas — y siempre hacia arriba:
+  #
+  #   | peso | ceil puro | Yusef |
+  #   |------|-----------|-------|
+  #   | 1.05 | 1.5       | 1.0   |
+  #   | 1.09 | 1.5       | 1.0   |
+  #   | 1.55 | 2.0       | 1.5   |
+  #   | 1.59 | 2.0       | 1.5   |
+  #
+  # Estaba latente porque `incremento_libras` viene en `nil` en las 58 tarifas
+  # cargadas. Muerde el día que Yusef active el escalonado — y lo va a activar
+  # él mismo, porque los precios los carga su equipo.
+  #
+  # ⚠️ La tolerancia es **fija en 0.09**, que es la lectura literal del audio.
+  # Yusef describió la regla solo para incrementos de **media libra**; si algún
+  # día crea una tarifa con incremento de 1 lb, hay que preguntarle si la
+  # tolerancia sigue siendo 0.09 o es proporcional. Está como pregunta ALTA en
+  # `docs/entregables/preguntas_para_yusef.xlsx`.
   def redondear_al_incremento(peso)
     inc = incremento_libras.to_d
     return peso if incremento_libras.blank? || inc <= 0
 
-    ((peso / inc).ceil * inc).round(2)
+    ajustado = peso - TOLERANCIA_LIBRAS
+    return BigDecimal("0") if ajustado <= 0
+
+    ((ajustado / inc).ceil * inc).round(2)
   end
 
   # Convierte el mínimo a la moneda del cobro. Devuelve nil cuando esta
