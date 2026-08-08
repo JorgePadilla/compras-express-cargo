@@ -2278,7 +2278,7 @@ la paciencia.
 
 ---
 
-### A1-08 · Marcar "cambio de servicio" no pregunta a cuál — **BUG**
+### A1-08 · Marcar "cambio de servicio" no preguntaba a cuál — ✅ **ARREGLADO** (PR-C6.8)
 
 > "En etiquetar, al marcar cambio de servicio no está, no pregunta qué tipo de
 > servicio."
@@ -2290,6 +2290,26 @@ Jorge propuso un modal. Yusef no se casa con la forma, sí con la velocidad:
 
 > "No sé, lo que funcione bien: solo darle click, yo doy click y click y ya va.
 > Lo que vos creas que te funcione bien, que no cargue y que sea rápido."
+
+**Arreglo (PR-C6.8):** el checkbox adopta el patrón `checkbox-modal` que ya usa
+Retener — el propio `checkbox_modal_controller.js` lo tenía documentado como
+patrón para "Cambio de Servicio". Al marcarlo abre un `<dialog>` que pregunta
+el destino, y al guardar **el tipo de envío cambia de verdad**.
+
+Se agregó `paquetes.tipo_envio_anterior_id` para dejar rastro. No es adorno: el
+cambio **genera un cargo automático** en la pre-factura, y cuando el cliente
+reclame hay que poder decirle de qué a qué se movió (`cambio_servicio_label`
+devuelve `"CER → CKM"`).
+
+Dos detalles que se resolvieron implementándolo:
+
+- **No se usa `errors.add`** para el caso "marcó el flag y no eligió destino":
+  el `valid?` que corre adentro de `save` limpia los errores, así que el
+  paquete se guardaba igual — a medias, con el flag prendido sobre el tipo
+  viejo. Se corta antes de guardar. Es el mismo tropiezo que ya había pasado
+  con el cuatro-ojos de las notas.
+- **Elegir el mismo servicio de la sesión no marca cambio**: no es un cambio,
+  así que no cobra cargo ni ensucia el rastro.
 
 ---
 
@@ -2675,7 +2695,7 @@ revisar sobre el sistema andando que sobre un diagrama.
 | ~~A1-03~~ | ~~F2 no limpia después de un Enter~~ ✅ **arreglado** | era `formTarget.reset()`, no el foco |
 | ~~A1-04~~ | ~~El código de barras no distingue caja 1 de caja 2~~ ✅ **arreglado** | `etiqueta_codigo_barras` + parseo en `Paquete.buscar` |
 | A1-06 | Cambiar la cantidad de cajas no elimina ni crea las sobrantes | `crear_split!` solo crea |
-| A1-08 | "Cambio de servicio" no pregunta a cuál, y no aplica | `/etiquetar` |
+| ~~A1-08~~ | ~~"Cambio de servicio" no pregunta a cuál, y no aplica~~ ✅ **arreglado** | modal + `aplicar_cambio_servicio` |
 | ~~A1-11~~ | ~~La ventana de impresión no se cierra~~ ✅ **arreglado** | `layouts/etiqueta.html.erb` |
 
 **Nuevo**

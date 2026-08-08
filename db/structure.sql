@@ -1536,7 +1536,8 @@ CREATE TABLE public.paquetes (
     prepagado_miami_at timestamp(6) without time zone,
     prepagado_miami_by_user_id bigint,
     driver character varying,
-    sucursal_recepcion_id bigint
+    sucursal_recepcion_id bigint,
+    tipo_envio_anterior_id bigint
 );
 
 
@@ -4205,6 +4206,13 @@ CREATE INDEX index_paquetes_on_tercero_id ON public.paquetes USING btree (tercer
 
 
 --
+-- Name: index_paquetes_on_tipo_envio_anterior_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_paquetes_on_tipo_envio_anterior_id ON public.paquetes USING btree (tipo_envio_anterior_id);
+
+
+--
 -- Name: index_paquetes_on_tipo_envio_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5691,6 +5699,14 @@ ALTER TABLE ONLY public.paquetes
 
 
 --
+-- Name: paquetes fk_rails_f7efb7501a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_f7efb7501a FOREIGN KEY (tipo_envio_anterior_id) REFERENCES public.tipo_envios(id);
+
+
+--
 -- Name: financiamiento_cuotas fk_rails_f9c6e674df; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5737,6 +5753,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260808143148'),
 ('20260808073755'),
 ('20260806100000'),
 ('20260805220000'),

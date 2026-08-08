@@ -85,6 +85,13 @@ class EtiquetarController < ApplicationController
     # número de recepción. Sin esto el paquete nace sin número y su etiqueta
     # imprime el tracking en el código de barras.
     @paquete.sucursal_recepcion = @sucursal_recepcion_sesion
+    # PR-C6.8: si marcó cambio de servicio, el destino pisa al de la sesión.
+    # Antes el flag quedaba marcado y el tipo se quedaba en el de la sesión —
+    # "cambio de servicio → CER a CKM no funciona".
+    unless aplicar_cambio_servicio(@paquete)
+      render_create_error("Marcaste cambio de servicio: elegí a qué tipo de envío cambia.")
+      return
+    end
     if (flag = pre_factura_flag_param) != :missing
       @paquete[:pre_factura] = flag
     end
@@ -124,6 +131,20 @@ class EtiquetarController < ApplicationController
       # Las N cajas comparten el número madre, y ese número sale de acá.
       sucursal_recepcion: @sucursal_recepcion_sesion
     )
+    # El cambio de servicio aplica a las N cajas por igual: es el mismo
+    # tracking, no se parte en dos servicios distintos.
+    if ActiveModel::Type::Boolean.new.cast(paquete_params[:solicito_cambio_servicio])
+      destino = TipoEnvio.activos.find_by(id: params.dig(:paquete, :tipo_envio_destino_id))
+      unless destino
+        @paquete = Paquete.new(paquete_params)
+        return render_create_error("Marcaste cambio de servicio: elegí a qué tipo de envío cambia.")
+      end
+      attrs = attrs.merge(
+        tipo_envio_id: destino.id,
+        tipo_envio_anterior_id: @tipo_envio_sesion.id
+      )
+    end
+
     paquetes = Paquete.crear_split!(attrs: attrs, total_cajas: total_cajas)
     if (prov_str = proveedor_string_param) != :missing && prov_str.present?
       paquetes.each { |p| p.update_column(:proveedor, prov_str) }
@@ -155,7 +176,7 @@ class EtiquetarController < ApplicationController
     render_create_error
   end
 
-  def render_create_error
+  def render_create_error(mensaje = "No se pudo guardar el paquete.")
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     # Las que pueden emitir número de recepción. Si hay una sola, la vista no
     # pregunta nada y la manda en un hidden.
@@ -164,8 +185,29 @@ class EtiquetarController < ApplicationController
     @carriers = Carrier.where(activo: true).order(:nombre)
     @motivos_retencion = MotivoRetencion.activos.ordered
     @paquetes_hoy = paquetes_hoy_count
-    flash.now[:alert] = "No se pudo guardar el paquete."
+    flash.now[:alert] = mensaje
     render :index, status: :unprocessable_entity
+  end
+
+  # Aplica el destino del cambio de servicio, si lo pidieron.
+  #
+  # El tipo de envío normalmente lo manda la sesión de etiquetado. El cambio
+  # de servicio es la **excepción explícita**: el paquete sale de la sesión en
+  # la que se está trabajando, y por eso se registra de dónde venía.
+  #
+  # Devuelve false si marcó el flag y no eligió destino, para que el caller
+  # corte antes de guardar. **No** se usa `errors.add` acá: el `valid?` que
+  # corre adentro de `save` limpia los errores, así que el paquete se
+  # guardaría igual — a medias, con el flag prendido sobre el tipo viejo, que
+  # es justo lo que pasaba antes.
+  def aplicar_cambio_servicio(paquete)
+    return true unless ActiveModel::Type::Boolean.new.cast(paquete_params[:solicito_cambio_servicio])
+
+    destino = TipoEnvio.activos.find_by(id: params.dig(:paquete, :tipo_envio_destino_id))
+    return false if destino.nil?
+
+    paquete.aplicar_cambio_servicio(destino)
+    true
   end
 
   def authorize_etiquetar
