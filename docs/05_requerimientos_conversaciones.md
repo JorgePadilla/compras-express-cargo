@@ -2467,7 +2467,7 @@ Queda la parte que no es código: **avisarle al equipo de Miami**.
 
 ---
 
-### A1-14 · Buscar cliente por los últimos dígitos del código — **PREGUNTA**
+### A1-14 · Buscar cliente por los últimos dígitos del código — ✅ **HECHO** (PR-C6.14b)
 
 > "El rollo de los códigos de cliente actuales es que tienen el `C00002867`.
 > Actualmente el sistema lee de derecha a izquierda."
@@ -2480,8 +2480,19 @@ búsqueda por **sufijo**, no por prefijo.
 Contexto: los códigos viejos son de 4 dígitos y los nuevos de 5. **Los viejos no
 se migran** — se quedan como están.
 
-**PREGUNTA:** con 5 dígitos y miles de clientes, teclear `6` va a traer cientos
-de coincidencias. ¿Sufijo puro, o sufijo priorizado con match exacto primero?
+**Encontrar ya funcionaba** desde PR-10.f: `codigo ILIKE '%2867%'` matchea el
+sufijo, y los ceros a la izquierda ya se ignoraban (`C002 == C2 == 2`). Lo que
+faltaba era el **orden** — que era justamente la pregunta abierta: con códigos
+de 5 dígitos, teclear `6` trae decenas y el que uno quiere queda enterrado.
+
+**Arreglo (PR-C6.14b):** `Cliente.priorizar_codigo` ordena por
+
+1. el código que **es** ese número, ignorando ceros (`6` → `C00006`),
+2. el que **termina** en ese número (`2867` → `C00002867`),
+3. el resto.
+
+No inventa política: hace confiable exactamente lo que él describió. Y solo
+aplica cuando el término trae dígitos — buscar por nombre queda como estaba.
 
 ---
 

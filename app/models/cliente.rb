@@ -68,11 +68,41 @@ class Cliente < ApplicationRecord
   scope :buscar_flexible, ->(term) {
     estricta = buscar(term)
     # Con una sola palabra la estricta y la de fragmentos son equivalentes.
-    next estricta if Cliente.fragmentos_de(term).size <= 1
-    next estricta if estricta.exists?
+    next estricta.then { |r| Cliente.priorizar_codigo(r, term) } if Cliente.fragmentos_de(term).size <= 1
+    next Cliente.priorizar_codigo(estricta, term) if estricta.exists?
 
-    buscar_por_fragmentos(term)
+    Cliente.priorizar_codigo(buscar_por_fragmentos(term), term)
   }
+
+  # PR-C6.14b: pone primero al que el operario está buscando de verdad.
+  #
+  # Yusef, 2026-08-08, sobre cómo trabajan hoy: los códigos son `C00002867` y
+  # "el sistema lee de derecha a izquierda... solo le ponían el dos, ponele que
+  # el mío es el seis, solo poníamos el seis o el dos y ya con eso cae".
+  #
+  # **Encontrar ya funcionaba** — `codigo ILIKE '%2867%'` matchea el sufijo, y
+  # los ceros a la izquierda ya se ignoran. Lo que faltaba era el **orden**:
+  # con códigos de 5 dígitos, teclear `6` trae decenas y el que uno quiere
+  # queda enterrado. Esa era la pregunta abierta del Excel.
+  #
+  # El desempate no inventa política, solo hace confiable lo que él describió:
+  #
+  #   1. el código que **es** ese número (ignorando ceros): `6` → `C00006`
+  #   2. el que **termina** en ese número: `2867` → `C00002867`
+  #   3. el resto
+  def self.priorizar_codigo(relacion, term)
+    digitos = term.to_s.gsub(/\D/, "").sub(/\A0+/, "").presence
+    return relacion if digitos.nil?
+
+    solo_digitos = "ltrim(regexp_replace(clientes.codigo, '\\D', '', 'g'), '0')"
+    relacion.order(Arel.sql(sanitize_sql_array([ <<~SQL, digitos, digitos ])))
+      CASE
+        WHEN #{solo_digitos} = ?              THEN 0
+        WHEN #{solo_digitos} LIKE '%%' || ?   THEN 1
+        ELSE 2
+      END
+    SQL
+  end
 
   # Trae los que matcheen AL MENOS UN fragmento, ordenados por cuántos
   # matchean. Con "234 Pérez Hernández", el cliente C234 Juan Pérez matchea 2
