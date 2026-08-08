@@ -14,7 +14,7 @@
 <% valor_a_pagar = false unless defined?(valor_a_pagar) %>
 
 <div class="<%= wrapper_class %> pt-2 border-t border-gray-100 dark:border-gray-700"
-     data-controller="calc-volumetrico<%= " cotizador" if valor_a_pagar %>"
+     data-controller="calc-volumetrico cajas<%= " cotizador" if valor_a_pagar %>"
      <% if valor_a_pagar %>data-cotizador-url-value="<%= cotizador_url %>"<% end %>>
   <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
     Peso, medidas y cálculo
@@ -27,7 +27,7 @@
         <div>
           <%= f.label :peso, "Peso real (lbs)", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
           <%= f.number_field :peso, step: 0.01, min: 0, placeholder: "0.00",
-              data: { calc_volumetrico_target: "peso",
+              data: { calc_volumetrico_target: "peso", cajas_target: "peso",
                       action: "input->calc-volumetrico#recalcular#{' input->cotizador#cotizar' if valor_a_pagar}" },
               class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100
                      shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
@@ -40,12 +40,34 @@
         </div>
       </div>
 
+      <%# ── Cantidad de cajas ──
+          PR-C6.18b. Antes esto se preguntaba en un modal al apretar F9, y
+          Jorge lo probó: "el F9 era como confuso" — el campo visible decía
+          "Cant. Productos" y parecía el que mandaba, mientras el que de
+          verdad manda estaba detrás de una tecla.
+
+          Va acá, al lado de los productos, que es donde Yusef lo señaló:
+          "acá sería cantidad de paquetes o productos, y aquí el peso de cada
+          quien".
+
+          Ojo con la diferencia, que es la que confundía:
+            · Cant. Productos → cuántos artículos vienen adentro
+            · Cant. Cajas     → en cuántos bultos FÍSICOS se divide %>
+      <div>
+        <%= f.label :cantidad_paquetes, "Cant. Cajas", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <%= f.number_field :cantidad_paquetes, min: 1, max: 26, value: (f.object.cantidad_paquetes.presence || 1),
+            data: { cajas_target: "cantidad", action: "input->cajas#pintar" },
+            class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100
+                   shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        <p class="text-[11px] text-gray-400 mt-1">Bultos físicos. Cada uno recibe su etiqueta (1/N).</p>
+      </div>
+
       <div>
         <span class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Medidas (pulgadas)</span>
         <div class="grid grid-cols-3 gap-2">
           <% %i[alto largo ancho].each do |dim| %>
             <%= f.number_field dim, step: 0.01, min: 0, placeholder: dim.to_s,
-                data: { calc_volumetrico_target: dim.to_s,
+                data: { calc_volumetrico_target: dim.to_s, cajas_target: dim.to_s,
                         action: "input->calc-volumetrico#recalcular#{' input->cotizador#cotizar' if valor_a_pagar}" },
                 class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100
                        shadow-sm text-sm text-center focus:ring-cec-teal focus:border-cec-teal" %>
@@ -54,6 +76,18 @@
         <p class="mt-1 text-[11px] text-gray-400">
           alto × largo × ancho · volumen: <span data-calc-volumetrico-target="in3" class="font-mono">—</span> pulg³
         </p>
+      </div>
+
+      <%# ── Peso y medidas de cada caja ──
+          Aparecen solas cuando hay más de una. Nacen con los valores de
+          arriba: si las cajas son parecidas basta con Enter, y el operario
+          solo toca las que difieren. %>
+      <div data-cajas-target="detalle" class="hidden">
+        <p class="text-xs font-medium text-gray-700 dark:text-gray-200 mb-2">
+          Peso y medidas de cada caja
+          <span class="font-normal text-gray-400">— cambiá solo las que difieran</span>
+        </p>
+        <div data-cajas-target="filas" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
       </div>
     </div>
 

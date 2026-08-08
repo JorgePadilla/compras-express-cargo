@@ -10,11 +10,9 @@ export default class extends Controller {
     "notasBanner", "notasTexto",
     "preAlertaBanner", "preAlertaNumero", "preAlertaCliente", "preAlertaDescripcion",
     "duplicateModal", "duplicateInfo", "duplicateNewBtn", "duplicateNewHint",
-    "cajasModal", "cajasInput", "cantidadPaquetesHidden",
     "submitBtn", "event", "panel",
     "terceroContainer", "terceroToggle",
-    "conflictoSesion", "conflictoSesionTexto",
-    "cajasDetalle", "cajasFilas"
+    "conflictoSesion", "conflictoSesionTexto"
   ]
   static values = {
     checkUrl: String,
@@ -617,8 +615,6 @@ export default class extends Controller {
     this._resetClienteFromPreAlertaStyling()
     this._hidePreAlertaBanner()
     if (this.hasConflictoSesionTarget) this.conflictoSesionTarget.classList.add("hidden")
-    this._closeCajasModal()
-    this._resetCantidadPaquetes()
     if (this.hasTrackingSecundarioContainerTarget) this._hideTrackingSecundario()
     if (this.hasTipoEnvioTarget) {
       this.tipoEnvioTarget.focus()
@@ -658,7 +654,6 @@ export default class extends Controller {
 
   submitForm() {
     this._removePrintField()
-    this._resetCantidadPaquetes()
     this.formTarget.requestSubmit()
   }
 
@@ -666,126 +661,21 @@ export default class extends Controller {
   // de submit. Yusef: "cantidad de paquetes se lo vamos a poner después
   // de presionar F9". El modal sobrescribe el hidden cantidad_paquetes
   // y dispara el submit con print=true.
+  // F9 = guardar e imprimir, sin preguntar nada.
+  //
+  // PR-C6.18b. Acá vivía un modal que preguntaba "¿cuántas cajas?" antes de
+  // enviar (PR-4). Jorge lo probó y fue directo: **"el F9 era como confuso"**
+  // — la cantidad de cajas es un dato del paquete, no un paso de impresión, y
+  // esconderla detrás de una tecla hacía que el campo visible del formulario
+  // ("Cant. Productos") pareciera el que mandaba.
+  //
+  // Ahora vive en el formulario, junto al peso y las medidas, con las filas
+  // por caja debajo (`cajas_controller.js`).
   submitFormWithPrint() {
-    if (!this.hasCajasModalTarget) {
-      // Fallback si por alguna razón el modal no está montado: submit directo.
-      this._submitWithPrint()
-      return
-    }
-    this._resetCantidadPaquetes()
-    if (this.hasCajasInputTarget) {
-      this.cajasInputTarget.value = "1"
-    }
-    this._pintarFilasDeCajas()
-    // PR-C6.16: pin antes de que salga el modal. Yusef, después de darle F9:
-    // "aquí debería de ser otro PIN cuando tires el modal... ese PIN lo ocupo
-    // ANTES más bien, en el modal". Es el aviso de que el sistema ya reaccionó
-    // y hay algo que contestar — en Miami no miran la pantalla todo el tiempo.
-    this.dispatch("modalAbierto")
-
-    if (typeof this.cajasModalTarget.showModal === "function") {
-      this.cajasModalTarget.showModal()
-    } else {
-      this.cajasModalTarget.setAttribute("open", "")
-    }
-    setTimeout(() => {
-      if (this.hasCajasInputTarget) {
-        this.cajasInputTarget.focus()
-        this.cajasInputTarget.select()
-      }
-    }, 50)
-  }
-
-  cancelCajas() {
-    this._closeCajasModal()
-  }
-
-  // Repinta las filas cuando cambia la cantidad. Va en `input` y no en
-  // `change` para que las filas aparezcan mientras teclea, no al salir.
-  cajasCantidadInput() {
-    this._pintarFilasDeCajas()
-  }
-
-  cajasKeydown(e) {
-    if (e.key === "Enter") {
-      e.preventDefault()
-      this.confirmCajas()
-    } else if (e.key === "Escape") {
-      e.preventDefault()
-      this.cancelCajas()
-    }
-  }
-
-  // Una fila de peso/medidas por caja, precargadas con lo que ya escribió en
-  // el formulario. Con una sola caja no se muestra nada: el formulario ya lo
-  // preguntó y repetirlo sería un paso de más.
-  _pintarFilasDeCajas() {
-    if (!this.hasCajasFilasTarget || !this.hasCajasDetalleTarget) return
-
-    const n = this._cantidadDeCajas()
-    if (n < 2) {
-      this.cajasDetalleTarget.classList.add("hidden")
-      this.cajasFilasTarget.innerHTML = ""
-      return
-    }
-
-    const base = this._medidasDelFormulario()
-    const filas = []
-    for (let i = 1; i <= n; i++) {
-      filas.push(`
-        <div class="grid grid-cols-[2.5rem_1fr_1fr_1fr_1fr] gap-1.5 items-center">
-          <span class="text-xs font-mono font-bold text-cec-navy dark:text-cec-gold">${i}/${n}</span>
-          ${this._inputDeCaja(i, "peso",  "peso",  base.peso)}
-          ${this._inputDeCaja(i, "alto",  "alto",  base.alto)}
-          ${this._inputDeCaja(i, "largo", "largo", base.largo)}
-          ${this._inputDeCaja(i, "ancho", "ancho", base.ancho)}
-        </div>
-      `)
-    }
-    this.cajasFilasTarget.innerHTML = filas.join("")
-    this.cajasDetalleTarget.classList.remove("hidden")
-  }
-
-  _inputDeCaja(indice, campo, placeholder, valor) {
-    return `<input type="number" step="0.01" min="0"
-                   name="paquete[cajas][${indice}][${campo}]"
-                   value="${valor}"
-                   placeholder="${placeholder}"
-                   class="block w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700
-                          dark:text-gray-100 text-xs px-1.5 py-1 focus:ring-cec-teal focus:border-cec-teal">`
-  }
-
-  _medidasDelFormulario() {
-    const leer = (nombre) => {
-      const el = this.formTarget.querySelector(`[name="paquete[${nombre}]"]`)
-      return el && el.value ? el.value : ""
-    }
-    return { peso: leer("peso"), alto: leer("alto"), largo: leer("largo"), ancho: leer("ancho") }
-  }
-
-  _cantidadDeCajas() {
-    const raw = this.hasCajasInputTarget ? parseInt(this.cajasInputTarget.value, 10) : 1
-    return Number.isFinite(raw) ? Math.max(1, Math.min(26, raw)) : 1
-  }
-
-  confirmCajas() {
-    const raw = this.hasCajasInputTarget ? parseInt(this.cajasInputTarget.value, 10) : 1
-    const n = Number.isFinite(raw) ? Math.max(1, Math.min(26, raw)) : 1
-    if (this.hasCantidadPaquetesHiddenTarget) {
-      this.cantidadPaquetesHiddenTarget.value = String(n)
-    }
-    this._closeCajasModal()
     this._submitWithPrint()
   }
 
-  _closeCajasModal() {
-    if (!this.hasCajasModalTarget) return
-    if (typeof this.cajasModalTarget.close === "function") {
-      this.cajasModalTarget.close()
-    } else {
-      this.cajasModalTarget.removeAttribute("open")
-    }
-  }
+
 
   _submitWithPrint() {
     this._removePrintField()
@@ -798,11 +688,6 @@ export default class extends Controller {
     this.formTarget.requestSubmit()
   }
 
-  _resetCantidadPaquetes() {
-    if (this.hasCantidadPaquetesHiddenTarget) {
-      this.cantidadPaquetesHiddenTarget.value = "1"
-    }
-  }
 
   _removePrintField() {
     const existing = this.formTarget.querySelector("[data-print-field]")
