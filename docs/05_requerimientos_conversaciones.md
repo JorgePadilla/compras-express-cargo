@@ -2588,10 +2588,35 @@ pregunta la cantidad, y Yusef revalidó ese flujo en esta misma reunión — *"l
 voy a poner dos, ahí está una y dos, excelente"*. Así no se deshace nada de lo
 aprobado en PR-4.
 
-**Arreglo (PR-C6.17):** al poner una cantidad mayor a 1, el modal de F9 muestra
-una fila de peso/alto/largo/ancho por caja, **precargadas con lo que ya escribió
-en el formulario**. Si las cajas son parecidas basta con Enter; el operario solo
-toca las que difieren.
+**Primer arreglo (PR-C6.17):** las filas se pusieron dentro del modal de F9,
+que es donde se preguntaba la cantidad.
+
+**Corrección (PR-C6.18b).** Jorge lo probó y fue directo: **"el F9 era como
+confuso"**. Tenía razón, y el motivo se ve al mirar la pantalla: el formulario
+mostraba **"Cant. Productos"** —que es cuántos artículos vienen adentro— y
+parecía el campo que mandaba, mientras el que de verdad divide el tracking en
+bultos estaba escondido detrás de una tecla.
+
+Son dos campos distintos y nadie lo podía adivinar:
+
+| Campo | Qué es |
+|---|---|
+| **Cant. Productos** | cuántos artículos vienen adentro — dato de contenido |
+| **Cant. Cajas** | en cuántos bultos **físicos** se divide el tracking |
+
+Ahora la cantidad de cajas vive **en el formulario**, junto al peso y las
+medidas, con las filas por caja debajo — que es exactamente donde Yusef la
+señaló: *"acá sería cantidad de paquetes o productos, y aquí el peso de cada
+quien"*. **F9 vuelve a ser solo guardar e imprimir.**
+
+Las filas nacen precargadas con lo que ya escribió arriba: si las cajas son
+parecidas basta con Enter, y solo se tocan las que difieren.
+
+Vive en `cajas_controller.js` y no dentro de `etiquetar` porque el partial
+`shared/_peso_medidas_calc` se usa en **dos** pantallas —`/etiquetar` y
+`/entrega_personal`— y las dos crean splits. Jorge preguntó si se podía unificar
+el componente: **ya lo estaba** desde PR-10.b; lo que faltaba era que el campo
+de cajas viviera ahí.
 
 Del lado del servidor, `crear_split!` acepta `por_caja:` con overrides. Solo se
 aceptan esos cuatro campos: el resto del paquete es el mismo para todas —mismo
