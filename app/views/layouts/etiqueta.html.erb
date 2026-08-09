@@ -28,11 +28,19 @@
        el contenido entra. Si no entra, se bajan estos números — no se sacan
        campos, que fue lo que Yusef pidió expresamente. */
     .etq {
-      --t1: 21pt;   /* tipo de envío — lo más grande de la etiqueta */
-      --t2: 12pt;   /* número de recepción                          */
-      --t3: 11pt;   /* código del cliente · n/N                     */
+      /* PR-C6.27: bajaron --t1 (21→19), --t2 (12→11), --t3 (11→10.5) y --t5
+         (7.5→7) para hacerle lugar al tracking secundario, que ahora va en su
+         propia línea en vez de concatenado y recortado.
+
+         El presupuesto de alto es fijo: si entra una línea más, algo tiene que
+         ceder. Cedió el tamaño, no un campo — que es lo que Yusef pidió
+         expresamente. El número de recepción es el que más aflojó porque va
+         impreso dos veces: en el código de barras y abajo en texto. */
+      --t1: 19pt;   /* tipo de envío — lo más grande de la etiqueta */
+      --t2: 11pt;   /* número de recepción                          */
+      --t3: 10.5pt; /* código del cliente · n/N                     */
       --t4: 9.5pt;  /* nombre del cliente · sucursal                */
-      --t5: 7.5pt;    /* tracking y secundario                        */
+      --t5: 7pt;    /* tracking y secundario                        */
       --t6: 6.5pt;  /* fecha y hora · iniciales                     */
       --t7: 6pt;    /* ubicación · tercero · driver                 */
 
@@ -59,6 +67,24 @@
     .etq .r { display: flex; align-items: baseline; gap: .05in; min-width: 0; }
     .etq .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
     .etq .mono { font-family: 'Courier New', monospace; letter-spacing: -.01em; }
+
+    /* PR-C6.27: los trackings son la excepción a la regla de arriba.
+       Yusef lo escribió en rojo sobre la etiqueta impresa:
+
+         "LOS TRACKING DEBEN CABER COMPLETOS"
+
+       Un tracking recortado con `…` no sirve para nada: no se puede comparar
+       contra la caja ni teclear en el sistema del carrier. Un nombre largo
+       recortado todavía se entiende; un tracking, no. Así que en vez de
+       recortarse, se parte — el desborde vertical que eso pueda causar sí lo
+       mide `test/system/etiqueta_cabe_test.rb`, que es donde queremos que
+       aparezca el problema. */
+    .etq .trk {
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-all;
+      min-width: 0;
+    }
 
     /* Una etiqueta por hoja física. */
     .etq + .etq { page-break-before: always; break-before: page; }
