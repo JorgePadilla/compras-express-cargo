@@ -377,15 +377,39 @@ export default class extends Controller {
   }
 
   // Duplicate tracking detection
+  //
+  // PR-C6.21: el `fetch` iba suelto — sin cancelar el anterior, sin verificar
+  // al volver que el campo siguiera diciendo lo mismo, y con un `catch` vacío
+  // que se tragaba todo. La pistola manda Enter sola, así que escanear A y
+  // enseguida B dejaba la respuesta de A pisando el formulario de B: banner de
+  // pre-alerta equivocado, cliente auto-llenado equivocado, pito equivocado.
+  //
+  // Yusef, viéndolo: "le di enter y no lo reconoce... le di enter rápido y
+  // mete rápido, aquí es donde tenés que ver cómo integrar eso. **Tiene que
+  // ser rápido.**" — de ahí que la salida sea descartar respuestas viejas y no
+  // meter un debounce, que sería justo lo contrario de lo que pidió.
   checkTracking() {
     const tracking = this.trackingTarget.value.trim()
     if (tracking.length < 5) return
+
+    // Enter mueve el foco y el blur vuelve a disparar esto con el mismo valor.
+    // Una consulta por escaneo, no dos.
+    if (tracking === this._ultimoConsultado) return
+    this._ultimoConsultado = tracking
+
+    const consulta = (this._consultaSeq = (this._consultaSeq || 0) + 1)
 
     fetch(`${this.checkUrlValue}?tracking=${encodeURIComponent(tracking)}`, {
       headers: { "Accept": "application/json" }
     })
       .then(r => r.json())
       .then(data => {
+        // Llegó tarde: ya salió otra consulta, o el operario ya está en otro
+        // paquete. En los dos casos esta respuesta habla de algo que ya no
+        // está en pantalla.
+        if (consulta !== this._consultaSeq) return
+        if (this.trackingTarget.value.trim() !== tracking) return
+
         // PR-2: si el tracking tiene pre-alerta, sonido distintivo + banner verde.
         // No abrimos el modal de duplicado en ese caso — la pre-alerta NO es un
         // duplicado, es un "paquete esperado" que el sistema reconciliará al guardar.
@@ -402,7 +426,13 @@ export default class extends Controller {
           this._openDuplicateModal(data)
         }
       })
-      .catch(() => {})
+      .catch((e) => {
+        // No se puede seguir en silencio: si la consulta falla, el operario
+        // cree que el tracking está limpio y graba un duplicado. Se permite
+        // reintentar (el mismo valor vuelve a consultar) y queda registrado.
+        if (consulta === this._consultaSeq) this._ultimoConsultado = null
+        console.error("[etiquetar] falló la consulta del tracking", e)
+      })
   }
 
   // El paquete escaneado pertenece a otro tipo de envío. Se avisa fuerte pero
@@ -650,6 +680,11 @@ export default class extends Controller {
         el.value = ""
       }
     })
+
+    // PR-C6.21: el formulario en blanco empieza un paquete nuevo, así que el
+    // dedupe de consultas arranca de cero. Sin esto, re-escanear el mismo
+    // tracking después de un F2 no volvería a consultarlo.
+    this._ultimoConsultado = null
   }
 
   submitForm() {

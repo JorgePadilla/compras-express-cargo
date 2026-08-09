@@ -357,7 +357,10 @@ class PaquetesController < ApplicationController
 
   def check_tracking
     tracking = params[:tracking].to_s
-    paquete = Paquete.where(tracking: tracking).order(created_at: :desc).first
+    # PR-C6.21: antes era `where(tracking: tracking)` — exacto y case-sensitive
+    # sobre una sola columna. Ahora entra por la escalera del modelo, que
+    # además cubre el secundario y el código largo que escupe la pistola.
+    paquete = Paquete.buscar_escaneado(tracking).order(created_at: :desc).first
 
     # PR-2: detectar match con pre-alerta. Caso (a): el paquete ya existe en
     # estado `pre_alerta_estado` (lo creó PreAlertaPaquete#crear_paquete_esperado).
@@ -365,7 +368,12 @@ class PaquetesController < ApplicationController
     pre_alerta_match_info = detect_pre_alerta_match(tracking, paquete)
 
     if paquete
-      next_suffix = Paquete.next_duplicate_suffix(tracking)
+      # PR-C6.21: el duplicado se calcula sobre el tracking **guardado**, no
+      # sobre lo que entró por la pistola. Si el match vino por sufijo (USPS)
+      # o por el secundario, lo escaneado no es el tracking del paquete, y
+      # sufijar eso generaría un duplicado con un tracking que no existe.
+      tracking_base = paquete.tracking
+      next_suffix = Paquete.next_duplicate_suffix(tracking_base)
 
       render json: {
         exists: true,
@@ -374,7 +382,7 @@ class PaquetesController < ApplicationController
         estado: ERB::Util.html_escape(paquete.estado),
         cliente: ERB::Util.html_escape(paquete.cliente.nombre_completo),
         fecha: paquete.fecha_recibido_miami&.strftime("%d/%m/%Y"),
-        count: Paquete.where(tracking: tracking).count,
+        count: Paquete.where(tracking: tracking_base).count,
         # PR-10.c: Yusef sobre el modal de tracking repetido — "aquí solo
         # agregarle el contenido... el contenido y el tipo de servicio, esas
         # son las dos cosas que más te faltan ahí". El numero_recepcion ya se
@@ -388,9 +396,9 @@ class PaquetesController < ApplicationController
         # - next_suffix nil cuando se agotó A-Z (intervención manual).
         existing_paquete_id: paquete.id,
         edit_url: edit_paquete_path(paquete),
-        tracking_base: tracking,
+        tracking_base: tracking_base,
         next_suffix: next_suffix,
-        next_tracking: next_suffix ? "#{tracking}#{next_suffix}" : nil,
+        next_tracking: next_suffix ? "#{tracking_base}#{next_suffix}" : nil,
         **pre_alerta_match_info
       }
     else
@@ -404,8 +412,10 @@ class PaquetesController < ApplicationController
   def detect_pre_alerta_match(tracking, paquete)
     return { pre_alerta_match: false } if tracking.blank?
 
-    pap_query = PreAlertaPaquete.sin_vincular
-                                .where("UPPER(tracking) = ?", tracking.strip.upcase)
+    # PR-C6.21: por la misma escalera que el paquete. Antes era solo el match
+    # exacto en mayúsculas, así que el código largo de USPS encontraba el
+    # paquete y perdía su pre-alerta.
+    pap_query = PreAlertaPaquete.sin_vincular.buscar_escaneado(tracking)
 
     pap = pap_query.includes(:pre_alerta).first
     pa = pap&.pre_alerta || (paquete && paquete.estado == "pre_alerta_estado" ?

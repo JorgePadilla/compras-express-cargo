@@ -132,12 +132,27 @@ class EtiquetarController < ApplicationController
     # Reconciliación: si ya existe un paquete "esperado" creado desde una
     # pre-alerta con este tracking, lo transicionamos en lugar de crear
     # uno nuevo (evita duplicados).
-    existing = Paquete.where(estado: "pre_alerta_estado")
-                      .find_by("UPPER(tracking) = ?", paquete_params[:tracking].to_s.strip.upcase)
+    #
+    # PR-C6.21: por la escalera de `buscar_escaneado`, no por match exacto. La
+    # pistola lee el código completo del carrier y el cliente pre-alertó solo
+    # la cola ("el tracking de USPS solo es desde donde dice 92"), así que el
+    # exacto fallaba y el paquete esperado quedaba huérfano mientras nacía uno
+    # nuevo al lado.
+    escaneado = paquete_params[:tracking].to_s.strip
+    existing = Paquete.where(estado: "pre_alerta_estado").buscar_escaneado(escaneado).first
 
     if existing
       @paquete = existing
+      # Cuando el match vino por sufijo, el tracking del cliente es el que ya
+      # estaba: es el que él tiene en la mano y por el que va a preguntar. Se
+      # conserva, y lo que escupió la pistola se guarda como secundario para
+      # que el mismo escaneo lo vuelva a encontrar.
+      tracking_del_cliente = existing.tracking.to_s
       @paquete.assign_attributes(paquete_params)
+      unless escaneado.casecmp?(tracking_del_cliente)
+        @paquete.tracking = tracking_del_cliente
+        @paquete.tracking_secundario = escaneado if @paquete.tracking_secundario.blank?
+      end
     else
       @paquete = Paquete.new(paquete_params)
     end
@@ -317,8 +332,11 @@ class EtiquetarController < ApplicationController
   def tipo_envio_de_la_pre_alerta(tracking)
     return nil if tracking.blank?
 
+    # PR-C6.21: misma escalera que el resto del escaneo. Si acá no encuentra la
+    # pre-alerta, el aviso de "este paquete es de otro tipo de envío" no sale y
+    # el paquete se graba bajo el servicio equivocado — eso es plata.
     PreAlertaPaquete.sin_vincular
-                    .where("UPPER(tracking) = ?", tracking.to_s.strip.upcase)
+                    .buscar_escaneado(tracking)
                     .includes(:pre_alerta)
                     .first&.pre_alerta&.tipo_envio
   end
