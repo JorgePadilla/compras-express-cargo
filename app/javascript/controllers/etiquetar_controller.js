@@ -604,16 +604,29 @@ export default class extends Controller {
     window.location.href = `/etiquetar?paquete_id=${data.existing_paquete_id}`
   }
 
-  // PR-5: Opción 2 — "Cambio de Servicio". Navega al show del paquete
-  // original con ?mode=edit&cambio_servicio=1 (no usamos edit_url porque
-  // edit_paquete_path redirige sin preservar query params). El banner amber
-  // se muestra y el flag solicito_cambio_servicio queda pre-marcado.
-  // Al guardar, la Nota de Débito auto se genera en facturar! (pre_factura.rb).
+  // Opción 2: "Cambio de Servicio" — igual que la de arriba, sin salir de
+  // /etiquetar.
+  //
+  // PR-C6.23. Antes navegaba a `/paquetes/:id?mode=edit&cambio_servicio=1`, y
+  // eso es literalmente lo que Yusef reportó:
+  //
+  //   > "Cambio de servicio **envía donde no es**."
+  //   > "Para mí que si hacemos cambio de servicio nada más al producto, nos
+  //   >  tire de un solo a esta ventana. Si yo presiono cambio de servicio,
+  //   >  **me tire aquí de un solo a esto**."
+  //   > "Es que ellos no manejan la página de paquetes."
+  //
+  // Es la misma queja que ya había hecho por "Es actualización" (PR-C6.10):
+  // Miami trabaja en /etiquetar y /paquetes es una pantalla ajena. Quedó a
+  // medias porque solo se arregló una de las dos opciones del modal.
+  //
+  // El `cambio_servicio=1` hace que el index marque el checkbox y abra el
+  // modal del tipo de envío destino de una vez — sin un clic de más.
   duplicateAsCambioServicio() {
     const data = this._duplicateData
     if (!data || !data.existing_paquete_id) return
     window.location.href =
-      `/paquetes/${data.existing_paquete_id}?mode=edit&cambio_servicio=1`
+      `/etiquetar?paquete_id=${data.existing_paquete_id}&cambio_servicio=1`
   }
 
   // Opción 2: "Es duplicado real" — pre-rellena el tracking del form con

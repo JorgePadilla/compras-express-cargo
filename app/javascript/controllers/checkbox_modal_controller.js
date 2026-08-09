@@ -20,8 +20,23 @@ import { Controller } from "@hotwired/stimulus"
 //
 // Si el checkbox arranca marcado (ya estaba flagged en DB), el dialog
 // NO se abre solo. Solo cuando el usuario lo marca explícitamente.
+//
+// La excepción es explícita y por valor: `abrir-al-cargar-value="true"`, para
+// cuando la pantalla se abrió *para* eso. PR-C6.23: el modal de duplicado de
+// /etiquetar tiene un botón "Cambio de servicio", y Yusef pidió que "me tire
+// aquí de un solo a esto" — o sea que llegar y tener que marcar el check otra
+// vez es el clic que él estaba contando.
 export default class extends Controller {
   static targets = ["checkbox", "dialog"]
+  static values = { abrirAlCargar: Boolean }
+
+  connect() {
+    if (!this.abrirAlCargarValue) return
+    if (!this.hasCheckboxTarget) return
+
+    this.checkboxTarget.checked = true
+    this.openDialog()
+  }
 
   onChange() {
     if (this.checkboxTarget.checked) {

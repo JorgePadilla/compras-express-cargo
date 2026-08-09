@@ -482,7 +482,12 @@ end %>
               Yusef sobre la forma: "no sé, lo que funcione bien: solo darle
               click, yo doy click y click y ya va... que no cargue y que sea
               rápido". %>
-          <div class="flex items-center gap-2" data-controller="checkbox-modal">
+          <%# PR-C6.23: si se llegó acá desde el botón "Cambio de servicio" del
+              modal de duplicado, el check ya viene marcado y el modal abierto.
+              Yusef: "si yo presiono cambio de servicio, me tire aquí de un
+              solo a esto". %>
+          <div class="flex items-center gap-2" data-controller="checkbox-modal"
+               data-checkbox-modal-abrir-al-cargar-value="<%= @abrir_cambio_servicio ? "true" : "false" %>">
             <%= f.check_box :solicito_cambio_servicio,
                 data: { checkbox_modal_target: "checkbox", action: "change->checkbox-modal#onChange" },
                 class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
