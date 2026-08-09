@@ -1,6 +1,9 @@
-import { Controller } from "@hotwired/stimulus"
+import ClienteAutocomplete from "controllers/cliente_autocomplete"
 
-export default class extends Controller {
+// PR-C6.32: la búsqueda de cliente vive en `ClienteAutocomplete`, compartida
+// con /entrega_personal. Acá solo queda lo propio de etiquetar: el banner de
+// notas de Miami, vía el gancho `_alSeleccionarCliente`.
+export default class extends ClienteAutocomplete {
   static targets = [
     "form", "tipoEnvio", "tracking",
     "trackingSecundario", "trackingSecundarioContainer",
@@ -161,158 +164,19 @@ export default class extends Controller {
     }
   }
 
-  // Client autocomplete
-  searchCliente() {
-    if (this._searchTimeout) clearTimeout(this._searchTimeout)
-
-    const query = this.clienteInputTarget.value.trim()
-    if (!this._buscaCliente(query)) {
-      this.hideDropdown()
-      return
-    }
-
-    this._searchTimeout = setTimeout(() => {
-      fetch(`${this.buscarUrlValue}?q=${encodeURIComponent(query)}`, {
-        headers: { "Accept": "application/json" }
-      })
-        .then(r => r.json())
-        .then(clientes => this.renderDropdown(clientes))
-        .catch(() => this.hideDropdown())
-    }, 300)
-  }
-
-  // ¿Alcanza lo tecleado para buscar?
-  //
-  // PR-C6.16. Había un mínimo de 2 caracteres, y eso bloqueaba justo la forma
-  // en que Miami trabaja. Yusef:
-  //
-  //   > "Solo le ponían el dos, ponele que el mío es el seis, solo poníamos el
-  //   >  seis o el dos y ya con eso cae."
-  //
-  // Un dígito suelto es una búsqueda legítima —`2` cae en `CEC-002`, que el
-  // backend ya pone primero (PR-C6.14b)— pero una letra suelta no: buscar "a"
-  // devolvería la cartera entera y el dropdown sería ruido.
-  _buscaCliente(query) {
-    if (query.length >= 2) return true
-
-    return /^\d$/.test(query)
-  }
-
-  renderDropdown(clientes) {
-    if (clientes.length === 0) {
-      this.clienteDropdownTarget.innerHTML = `
-        <div class="px-4 py-3 text-sm text-gray-500">No se encontraron clientes</div>
-      `
-      this.showDropdown()
-      return
-    }
-
-    this.clienteDropdownTarget.innerHTML = clientes.map((c, i) => `
-      <button type="button"
-        class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center justify-between"
-        data-action="click->etiquetar#selectCliente mousemove->etiquetar#hoverCliente"
-        data-index="${i}"
-        data-id="${c.id}"
-        data-codigo="${c.codigo}"
-        data-nombre="${c.nombre}"
-        data-notas="${c.notas_miami || ''}"
-        data-categoria="${c.categoria_precio || ''}">
-        <div>
-          <span class="font-mono text-sm font-medium text-cec-navy">${c.codigo}</span>
-          <span class="ml-2 text-sm text-gray-700">${c.nombre}</span>
-        </div>
-        ${c.categoria_precio ? `<span class="text-xs text-gray-500">${c.categoria_precio}</span>` : ''}
-      </button>
-    `).join("")
-    this.showDropdown()
-    // Cargar el primer ítem como activo para confirmarlo con Enter sin mouse.
-    this._clienteActiveIndex = 0
-    this._highlightActiveCliente()
-  }
-
-  // ── Navegación por teclado del dropdown de cliente ──
-  _clienteItems() {
-    return Array.from(this.clienteDropdownTarget.querySelectorAll("[data-index]"))
-  }
-
-  _highlightActiveCliente() {
-    const items = this._clienteItems()
-    items.forEach((el, i) => {
-      const active = i === this._clienteActiveIndex
-      el.classList.toggle("bg-cec-teal/10", active)
-      if (active) el.scrollIntoView({ block: "nearest" })
-    })
-  }
-
-  _moveCliente(delta) {
-    const items = this._clienteItems()
-    if (items.length === 0) return
-    const next = this._clienteActiveIndex + delta
-    this._clienteActiveIndex = Math.max(0, Math.min(items.length - 1, next))
-    this._highlightActiveCliente()
-  }
-
-  hoverCliente(e) {
-    const idx = parseInt(e.currentTarget.dataset.index, 10)
-    if (Number.isFinite(idx) && idx !== this._clienteActiveIndex) {
-      this._clienteActiveIndex = idx
-      this._highlightActiveCliente()
-    }
-  }
-
-  clienteKeydown(e) {
-    if (this.clienteDropdownTarget.classList.contains("hidden")) return
-    const items = this._clienteItems()
-
-    if (e.key === "ArrowDown") {
-      e.preventDefault()
-      this._moveCliente(1)
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault()
-      this._moveCliente(-1)
-    } else if (e.key === "Enter") {
-      const active = items[this._clienteActiveIndex]
-      if (active) {
-        e.preventDefault() // no enviar el form: solo seleccionar el cliente
-        this._selectClienteEl(active)
-      }
-    } else if (e.key === "Escape") {
-      e.preventDefault()
-      this.hideDropdown()
-    } else if (e.key === "Tab") {
-      this.hideDropdown()
-    }
-  }
-
-  selectCliente(e) {
-    this._selectClienteEl(e.currentTarget)
-  }
-
-  _selectClienteEl(btn) {
-    const id = btn.dataset.id
-    const codigo = btn.dataset.codigo
-    const nombre = btn.dataset.nombre
-    const notas = btn.dataset.notas
-    const categoria = btn.dataset.categoria
-
-    this.clienteIdTarget.value = id
-    this.clienteInputTarget.value = codigo
-    this.clienteNombreTarget.textContent = `${nombre}${categoria ? ` — ${categoria}` : ''}`
-    this.clienteNombreTarget.classList.remove("hidden")
-
+  // Lo que etiquetar hace de más al elegir un cliente: avisar de sus notas de
+  // Miami. La franja de contexto la carga `loadPanel`, que acá además manda el
+  // tracking del paquete.
+  _alSeleccionarCliente({ id, notas }) {
     if (notas && notas.trim() !== "") {
       if (this.hasNotasTextoTarget) this.notasTextoTarget.textContent = notas
       if (this.hasNotasBannerTarget) this.notasBannerTarget.classList.remove("hidden")
-      // Trigger audio alert for client notes
       this.dispatch("clienteNotas")
     } else if (this.hasNotasBannerTarget) {
       this.notasBannerTarget.classList.add("hidden")
     }
 
-    // PR-9.b: jalar tareas + notas del cliente a la franja de la derecha.
     this.loadPanel(id)
-
-    this.hideDropdown()
   }
 
   // Recarga el turbo-frame de la franja de contexto. Turbo se encarga del
@@ -359,21 +223,6 @@ export default class extends Controller {
     this.terceroToggleTarget.innerHTML = oculto
       ? '+ Agregar tercero <kbd class="px-1 py-0.5 bg-gray-100 border rounded text-[10px]">F4</kbd>'
       : '- Quitar tercero <kbd class="px-1 py-0.5 bg-gray-100 border rounded text-[10px]">F4</kbd>'
-  }
-
-  hideDropdown() {
-    this.clienteDropdownTarget.classList.add("hidden")
-    this._clienteActiveIndex = -1
-  }
-
-  showDropdown() {
-    this.clienteDropdownTarget.classList.remove("hidden")
-  }
-
-  clickOutsideDropdown(e) {
-    if (!this.clienteDropdownTarget.contains(e.target) && e.target !== this.clienteInputTarget) {
-      this.hideDropdown()
-    }
   }
 
   // Duplicate tracking detection

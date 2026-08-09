@@ -1,10 +1,10 @@
-import { Controller } from "@hotwired/stimulus"
+import ClienteAutocomplete from "controllers/cliente_autocomplete"
 
 // PR-6: flow separado para entrega personal. Versión simplificada del
 // etiquetar_controller — no necesita lookup de duplicado de tracking
 // (el tracking se genera automático EP-YYYY-SUC-PROV-NNNNNN) ni
 // detección de pre-alerta. Reutiliza el patrón de modal cantidad cajas.
-export default class extends Controller {
+export default class extends ClienteAutocomplete {
   static targets = [
     "form", "clienteInput", "clienteId", "clienteDropdown", "clienteNombre",
     "event", "panel"
@@ -31,58 +31,12 @@ export default class extends Controller {
     }
   }
 
-  // Client autocomplete — mismo patrón que etiquetar.
-  searchCliente() {
-    if (this._searchTimeout) clearTimeout(this._searchTimeout)
-
-    const query = this.clienteInputTarget.value.trim()
-    if (query.length < 2) {
-      this.hideDropdown()
-      return
-    }
-
-    this._searchTimeout = setTimeout(() => {
-      fetch(`/clientes/buscar?q=${encodeURIComponent(query)}`, {
-        headers: { "Accept": "application/json" }
-      })
-        .then(r => r.json())
-        .then(clientes => this.renderDropdown(clientes))
-        .catch(() => this.hideDropdown())
-    }, 300)
-  }
-
-  renderDropdown(clientes) {
-    if (clientes.length === 0) {
-      this.clienteDropdownTarget.innerHTML = `<div class="px-4 py-3 text-sm text-gray-500">No se encontraron clientes</div>`
-      this.showDropdown()
-      return
-    }
-
-    this.clienteDropdownTarget.innerHTML = clientes.map(c => `
-      <button type="button"
-        class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between"
-        data-action="click->entrega-personal#selectCliente"
-        data-id="${c.id}"
-        data-codigo="${c.codigo}"
-        data-nombre="${c.nombre}">
-        <div>
-          <span class="font-mono text-sm font-medium text-cec-navy dark:text-cec-gold">${c.codigo}</span>
-          <span class="ml-2 text-sm text-gray-700 dark:text-gray-200">${c.nombre}</span>
-        </div>
-      </button>
-    `).join("")
-    this.showDropdown()
-  }
-
-  selectCliente(e) {
-    const btn = e.currentTarget
-    this.clienteIdTarget.value = btn.dataset.id
-    this.clienteInputTarget.value = btn.dataset.codigo
-    this.clienteNombreTarget.textContent = btn.dataset.nombre
-    this.clienteNombreTarget.classList.remove("hidden")
-    // PR-9.b: jalar tareas + notas del cliente a la franja de la derecha.
-    this.loadPanel(btn.dataset.id)
-    this.hideDropdown()
+  // Lo único que Entrega Personal hace de más al elegir un cliente: jalar sus
+  // tareas y notas a la franja de la derecha (PR-9.b). El resto —búsqueda de
+  // un dígito, preselección, flechas y Enter— es igual que en /etiquetar y
+  // vive en `ClienteAutocomplete`.
+  _alSeleccionarCliente({ id }) {
+    this.loadPanel(id)
   }
 
   // Recarga el turbo-frame de la franja. Sin tracking que pasar: en entrega
@@ -98,8 +52,6 @@ export default class extends Controller {
     if (frame.getAttribute("src") !== url) frame.setAttribute("src", url)
   }
 
-  hideDropdown() { this.clienteDropdownTarget.classList.add("hidden") }
-  showDropdown() { this.clienteDropdownTarget.classList.remove("hidden") }
 
   // Submit + modal de cajas (mismo patrón de PR-4 etiquetar).
 // PR-C6.31: F9 guarda e imprime, y nada mas.
