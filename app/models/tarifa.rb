@@ -39,6 +39,37 @@ class Tarifa < ApplicationRecord
   def self.resolver(tipo_envio:, peso:, cliente: nil, proveedor: nil, sucursal: nil)
     return nil if tipo_envio.nil?
 
+    elegida = buscar_para_peso(peso, tipo_envio: tipo_envio, cliente: cliente,
+                                     proveedor: proveedor, sucursal: sucursal)
+    return nil if elegida.nil?
+
+    # ── El escalón se elige con el peso que se va a COBRAR ────────────────
+    #
+    # Antes se elegía con el peso crudo y el precio se aplicaba al redondeado,
+    # y eso cobraba de más justo debajo de cada frontera. Un CER de 50.2 lb
+    # caía en el tramo `[0, 50.5)` a $4.50, redondeaba a 50.5 y cobraba
+    # 50.5 × 4.50 = **$227.25** — cuando la hoja de Yusef dice que 50.5 lb van
+    # en el tramo de $4.00, o sea **$202.00**. $25.25 de más, y siempre a
+    # nuestro favor porque los tramos de arriba son más baratos por libra.
+    #
+    # Pasa en toda la banda `(frontera − 0.41, frontera)`: 50.5/100.5/150.5 en
+    # CER, y 3.5/13.5/100.5/200.5 en los marítimos. No es un borde raro.
+    #
+    # Estaba dormido porque `incremento_libras` viene en nil en las 58 tarifas
+    # cargadas — se despierta el día que se active el escalonado.
+    facturable = elegida.peso_facturable(peso)
+    return elegida if facturable == peso.to_d
+
+    # Una segunda pasada, y una sola: el redondeo nunca baja más de la
+    # tolerancia y las fronteras son múltiplos del incremento, así que el peso
+    # facturable no puede volver a caerse fuera del escalón que le toca.
+    buscar_para_peso(facturable, tipo_envio: tipo_envio, cliente: cliente,
+                                 proveedor: proveedor, sucursal: sucursal) || elegida
+  end
+
+  # La tarifa aplicable a un peso concreto, sin redondear nada. Es el cuerpo
+  # que `resolver` usa en sus dos pasadas.
+  def self.buscar_para_peso(peso, tipo_envio:, cliente:, proveedor:, sucursal:)
     base = activas.para_peso(peso).where(tipo_envio_id: tipo_envio.id)
 
     niveles = [
@@ -67,6 +98,19 @@ class Tarifa < ApplicationRecord
   # **en la moneda del mínimo**, no en la del precio. Convertirlo acá y que el
   # caller lo vuelva a convertir hacía un round-trip que perdía centavos — un
   # mínimo de L.173.91 sobre una tarifa en USD volvía como L.173.95.
+  # El peso por el que esta tarifa va a facturar: el de la báscula redondeado
+  # al incremento, con la tolerancia de Yusef (`.10/.60`).
+  #
+  # Público porque `resolver` lo necesita para elegir el escalón con el peso
+  # que se va a cobrar de verdad (PR-C6.18), y el simulador de impacto también.
+  #
+  # No aplica `minimo_libras`: ese es un piso sobre el **cobro**, no una
+  # reclasificación del paquete. Además Yusef lo cerró — "manda el escalonado",
+  # sin mínimo en libras — y viene nil en todas las tarifas cargadas.
+  def peso_facturable(peso)
+    redondear_al_incremento(BigDecimal(peso.to_s))
+  end
+
   def cobro_para(peso_cobrar)
     peso = BigDecimal(peso_cobrar.to_s)
     peso = redondear_al_incremento(peso)
