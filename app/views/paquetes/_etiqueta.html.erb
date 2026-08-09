@@ -43,13 +43,25 @@
     <%= codigo_barras || "—" %>
   </div>
 
-  <%# ── Tracking ── Yusef lo tiene como el segundo más grande, en negrita: es
-      lo que el operario compara contra la caja que tiene en la mano. Antes
-      estaba entre los más chicos. %>
-  <div class="t mono" style="font-size:var(--t5); font-weight:bold;">
-    <%= paquete.tracking %><%
-      if paquete.tracking_secundario.present? %> · <%= paquete.tracking_secundario %><% end %>
+  <%# ── Trackings ── Yusef los tiene como lo segundo más grande, en negrita:
+      es lo que el operario compara contra la caja que tiene en la mano.
+
+      PR-C6.27: uno por línea, y completos. Antes iban concatenados con " · "
+      dentro de un solo `.t`, que recorta con `…` — así que lo que se perdía
+      era siempre el final del secundario. Yusef mandó la etiqueta impresa con
+      un recuadro rojo para cada uno y la regla escrita arriba:
+
+        "LOS TRACKING DEBEN CABER COMPLETOS"
+
+      Se usa `.trk` en vez de `.t`: parte antes que recortar. %>
+  <div class="trk mono" style="font-size:var(--t5); font-weight:bold;" data-campo="tracking">
+    <%= paquete.tracking %>
   </div>
+  <% if paquete.tracking_secundario.present? %>
+    <div class="trk mono" style="font-size:var(--t5); font-weight:bold;" data-campo="tracking-secundario">
+      <%= paquete.tracking_secundario %>
+    </div>
+  <% end %>
 
   <%# ── Cliente ── grande y en peso normal, como en el mockup. El tercero va
       chico al lado: "agregar nombre de cliente tercero". %>
