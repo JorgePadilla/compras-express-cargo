@@ -206,6 +206,55 @@ class Paquete < ApplicationRecord
     [ m[:madre], m[:caja].to_i ]
   end
 
+  # PR-C6.21: cómo se resuelve un tracking que entró por la pistola.
+  #
+  # Yusef, 2026-08-08, escaneando paquetes reales de los cuatro carriers:
+  #
+  #   > "El tracking de USPS **solo es desde donde dice 92**... esto es lo que
+  #   >  el cliente recibe de tracking y **esto es lo que le escanea el
+  #   >  sistema**."
+  #   > "Ahora el sistema debe buscar en esto también [el secundario], debe
+  #   >  buscar en la base, y **eso no estaba**."
+  #
+  # Antes era `where(tracking: valor)`: exacto, case-sensitive y sobre una
+  # sola columna. Tres formas de no encontrar un paquete que sí existe, y las
+  # tres las vio en vivo.
+  #
+  # La escalera va de lo más específico a lo más laxo y corta en la primera
+  # que pega, para que un match exacto nunca quede tapado por uno difuso.
+  #
+  # El escalón 3 es el del USPS: la pistola lee el código completo del carrier
+  # y el cliente pre-alertó solo la cola. Se acepta que lo guardado sea
+  # **sufijo** de lo escaneado, nunca al revés — si el operario teclea cuatro
+  # dígitos sueltos no puede caer en un paquete cualquiera. De ahí el piso de
+  # `ESCANEO_LARGO_MINIMO` en los dos lados. Sale sin hardcodear el "92", así
+  # que cubre igual los de UPS y FedEx.
+  ESCANEO_LARGO_MINIMO = 10
+
+  # `all.where` y no `where` a secas: así se puede encadenar
+  # (`Paquete.sin_manifiesto.buscar_escaneado(x)`) y cada escalón se prueba
+  # **dentro** del alcance del que llama. Con `where` pelado, un exacto fuera
+  # del alcance cortaría la escalera y el sufijo nunca se probaría.
+  def self.buscar_escaneado(valor)
+    termino = valor.to_s.strip.upcase
+    return none if termino.blank?
+
+    exacto = all.where("UPPER(paquetes.tracking) = ?", termino)
+    return exacto if exacto.exists?
+
+    secundario = all.where("UPPER(paquetes.tracking_secundario) = ?", termino)
+    return secundario if secundario.exists?
+
+    return none if termino.length < ESCANEO_LARGO_MINIMO
+
+    # `RIGHT(?, LENGTH(...))` y no un `LIKE '%' || tracking`: es comparación
+    # exacta de sufijo, así un tracking con `%` o `_` adentro no se convierte
+    # en comodín. Cuesta un seq scan, pero solo se llega acá cuando los dos
+    # escalones exactos ya fallaron.
+    all.where("UPPER(paquetes.tracking) = RIGHT(?, LENGTH(paquetes.tracking))", termino)
+       .where("LENGTH(paquetes.tracking) >= ?", ESCANEO_LARGO_MINIMO)
+  end
+
   scope :buscar, ->(term) {
     term = term.to_s.strip
     return all if term.empty?

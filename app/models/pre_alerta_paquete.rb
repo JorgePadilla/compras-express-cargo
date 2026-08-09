@@ -17,6 +17,24 @@ class PreAlertaPaquete < ApplicationRecord
   scope :sin_vincular, -> { where(paquete_id: nil) }
   scope :vinculados, -> { where.not(paquete_id: nil) }
 
+  # PR-C6.21: la misma escalera que `Paquete.buscar_escaneado`, del lado de la
+  # pre-alerta. Va acá también porque el paquete de Miami y su pre-alerta se
+  # buscan con el MISMO escaneo: si un lado tolera el código largo del carrier
+  # y el otro no, la pistola encuentra la pre-alerta y pierde el paquete (o al
+  # revés) sobre el mismo bulto.
+  def self.buscar_escaneado(valor)
+    termino = valor.to_s.strip.upcase
+    return none if termino.blank?
+
+    exacto = all.where("UPPER(pre_alerta_paquetes.tracking) = ?", termino)
+    return exacto if exacto.exists?
+
+    return none if termino.length < Paquete::ESCANEO_LARGO_MINIMO
+
+    all.where("UPPER(pre_alerta_paquetes.tracking) = RIGHT(?, LENGTH(pre_alerta_paquetes.tracking))", termino)
+       .where("LENGTH(pre_alerta_paquetes.tracking) >= ?", Paquete::ESCANEO_LARGO_MINIMO)
+  end
+
   before_validation :set_default_fecha
   before_validation :normalize_tracking
 
