@@ -13,7 +13,8 @@ end %>
 <div data-controller="entrega-personal audio"
      data-audio-enabled-value="<%= Current.user&.sonido_habilitado != false %>"
      data-audio-volumen-value="<%= Current.user&.sonido_volumen || 60 %>"
-     data-action="entrega-personal:success->audio#success">
+     data-action="entrega-personal:success->audio#success
+                  click@document->entrega-personal#clickOutsideDropdown">
 
   <%# Flash messages %>
   <div id="flash-messages" class="mb-4">
@@ -102,9 +103,13 @@ end %>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="relative">
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Cliente</label>
+          <%# PR-C6.32: mismo cableado que /etiquetar — `keydown` es lo que
+              habilita flechas y Enter sobre el preseleccionado. Sin él, el
+              dropdown solo se podía usar con el mouse. %>
           <input type="text" placeholder="Buscar por código o nombre..."
                  data-entrega-personal-target="clienteInput"
-                 data-action="input->entrega-personal#searchCliente"
+                 data-action="input->entrega-personal#searchCliente
+                              keydown->entrega-personal#clienteKeydown"
                  autocomplete="off"
                  class="block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal">
           <%= f.hidden_field :cliente_id, data: { entrega_personal_target: "clienteId" } %>
