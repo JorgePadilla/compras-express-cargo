@@ -26,6 +26,11 @@ class EtiquetarController < ApplicationController
     # quiero editar mi paquete... que te cargue aquí la lista".
     @paquete = paquete_a_actualizar || Paquete.new
     @modo_actualizacion = @paquete.persisted?
+    # PR-C6.23: `?cambio_servicio=1` viene del botón "Cambio de servicio" del
+    # modal de duplicado. Marca el check y abre el modal del destino de una
+    # vez. Yusef: "si yo presiono cambio de servicio, me tire aquí de un solo
+    # a esto" — antes ese botón mandaba a /paquetes, "envía donde no es".
+    @abrir_cambio_servicio = @modo_actualizacion && params[:cambio_servicio].present?
     @paquetes_hoy = paquetes_hoy_count
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     # Las que pueden emitir número de recepción. Si hay una sola, la vista no
@@ -289,6 +294,13 @@ class EtiquetarController < ApplicationController
     @carriers = Carrier.where(activo: true).order(:nombre)
     @motivos_retencion = MotivoRetencion.activos.ordered
     @paquetes_hoy = paquetes_hoy_count
+    # PR-C6.23: si el rechazo fue justamente por no haber elegido el destino
+    # del cambio de servicio, el modal vuelve abierto. Antes el 422
+    # re-renderizaba con el check marcado y el modal cerrado, así que el
+    # mensaje pedía elegir algo que no estaba a la vista.
+    @abrir_cambio_servicio = ActiveModel::Type::Boolean.new.cast(
+      paquete_params[:solicito_cambio_servicio]
+    ) && params.dig(:paquete, :tipo_envio_destino_id).blank?
     flash.now[:alert] = mensaje
     render :index, status: :unprocessable_entity
   end
