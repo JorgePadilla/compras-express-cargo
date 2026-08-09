@@ -36,7 +36,16 @@ class ClientesController < ApplicationController
         codigo: ERB::Util.html_escape(c.codigo),
         nombre: ERB::Util.html_escape(c.nombre_completo),
         notas_miami: ERB::Util.html_escape(c.notas_miami.to_s),
-        categoria_precio: ERB::Util.html_escape(c.categoria_precio&.nombre.to_s)
+        categoria_precio: ERB::Util.html_escape(c.categoria_precio&.nombre.to_s),
+        # PR-C6.24: dónde va a retirar. Miami lo necesita apenas elige el
+        # cliente, para separar la caja en la bolsa de esa sucursal. Yusef:
+        # "que le salga en rojo 'se entregará en Tegucigalpa'".
+        #
+        # Ojo: hoy esto es la **ciudad del cliente**, texto libre — es lo mismo
+        # que termina imprimiendo la etiqueta en `RETIRA EN`. No hay sucursal
+        # de retiro estructurada, así que el aviso es tan confiable como ese
+        # texto. Queda como pregunta para Yusef.
+        sucursal_retiro: ERB::Util.html_escape(c.ciudad.to_s)
       }
     }
   end

@@ -26,7 +26,8 @@ export default class ClienteAutocomplete extends BusquedaAutocomplete {
             data-codigo="${c.codigo}"
             data-nombre="${c.nombre}"
             data-notas="${c.notas_miami || ""}"
-            data-categoria="${c.categoria_precio || ""}">
+            data-categoria="${c.categoria_precio || ""}"
+            data-sucursal-retiro="${c.sucursal_retiro || ""}">
         <div>
           <span class="font-mono text-sm font-medium text-cec-navy dark:text-cec-gold">${c.codigo}</span>
           <span class="ml-2 text-sm text-gray-700 dark:text-gray-200">${c.nombre}</span>

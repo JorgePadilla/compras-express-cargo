@@ -15,7 +15,8 @@ export default class extends ClienteAutocomplete {
     "duplicateModal", "duplicateInfo", "duplicateNewBtn", "duplicateNewHint",
     "submitBtn", "event", "panel",
     "terceroContainer", "terceroToggle",
-    "conflictoSesion", "conflictoSesionTexto"
+    "conflictoSesion", "conflictoSesionTexto",
+    "sucursalBanner", "sucursalTexto", "sucursalModal", "sucursalModalTexto"
   ]
   static values = {
     checkUrl: String,
@@ -167,7 +168,45 @@ export default class extends ClienteAutocomplete {
   // Lo que etiquetar hace de más al elegir un cliente: avisar de sus notas de
   // Miami. La franja de contexto la carga `loadPanel`, que acá además manda el
   // tracking del paquete.
-  _alSeleccionarCliente({ id, notas }) {
+  // PR-C6.24: a qué sucursal va la caja. Se muestra apenas se elige el
+  // cliente, no al guardar: es una decisión física —en qué bolsa cae— y si se
+  // entera tarde hay que volver a abrir la bolsa.
+  _mostrarSucursal(sucursal) {
+    this._sucursalActual = (sucursal || "").trim()
+
+    if (!this.hasSucursalBannerTarget) return
+    if (this._sucursalActual === "") {
+      this.sucursalBannerTarget.classList.add("hidden")
+      return
+    }
+
+    if (this.hasSucursalTextoTarget) this.sucursalTextoTarget.textContent = this._sucursalActual
+    this.sucursalBannerTarget.classList.remove("hidden")
+  }
+
+  // El segundo aviso: "solo quiero un modal al principio y uno al final".
+  // Sale después de imprimir, que es cuando el operario tiene la etiqueta en
+  // la mano y va a guardar la caja.
+  _avisarSucursalAlFinal() {
+    if (!this._sucursalActual || !this.hasSucursalModalTarget) return
+
+    if (this.hasSucursalModalTextoTarget) {
+      this.sucursalModalTextoTarget.textContent = this._sucursalActual
+    }
+    if (this.sucursalModalTarget.showModal) this.sucursalModalTarget.showModal()
+    else this.sucursalModalTarget.classList.remove("hidden")
+  }
+
+  cerrarSucursalModal() {
+    if (!this.hasSucursalModalTarget) return
+
+    if (this.sucursalModalTarget.close) this.sucursalModalTarget.close()
+    else this.sucursalModalTarget.classList.add("hidden")
+  }
+
+  _alSeleccionarCliente({ id, notas, sucursalRetiro }) {
+    this._mostrarSucursal(sucursalRetiro)
+
     if (notas && notas.trim() !== "") {
       if (this.hasNotasTextoTarget) this.notasTextoTarget.textContent = notas
       if (this.hasNotasBannerTarget) this.notasBannerTarget.classList.remove("hidden")
@@ -547,6 +586,10 @@ export default class extends ClienteAutocomplete {
     // dedupe de consultas arranca de cero. Sin esto, re-escanear el mismo
     // tracking después de un F2 no volvería a consultarlo.
     this._ultimoConsultado = null
+
+    // PR-C6.24: y el aviso de sucursal se va con el paquete que lo trajo. Si
+    // quedara puesto, el siguiente bulto se guardaría en la bolsa anterior.
+    this._mostrarSucursal(null)
   }
 
   submitForm() {
@@ -603,6 +646,8 @@ export default class extends ClienteAutocomplete {
         // Yusef: "aqui esta tirando el warehouse, no la etiqueta".
         // `hermanas=1` saca una por caja cuando el tracking se dividio.
         window.open(`/paquetes/${el.dataset.paqueteId}/etiqueta?hermanas=1&print=true`, "_blank")
+        // PR-C6.24: el segundo aviso, con la etiqueta ya en la mano.
+        this._avisarSucursalAlFinal()
       }
 
       // Clear form after successful save
