@@ -63,7 +63,10 @@ class ManifiestosControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to manifiesto_url(@manifiesto)
     paquete.reload
     assert_nil paquete.manifiesto_id
-    assert_equal "empacado", paquete.estado
+    # PR-C6.22: vuelve a recibido. Con el módulo de empaque sin existir,
+    # `empacado` no lo asigna ninguna pantalla — devolver ahí dejaba el
+    # paquete en un estado del que nadie es dueño.
+    assert_equal "recibido_miami", paquete.estado
   end
 
   test "should enviar manifiesto" do

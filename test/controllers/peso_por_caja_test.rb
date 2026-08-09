@@ -100,7 +100,7 @@ class PesoPorCajaTest < ActionDispatch::IntegrationTest
     caja2 = Paquete.order(:id).last(2).max_by(&:numero_caja)
     assert_equal 30.0, caja2.peso.to_f
     assert_equal "Paquete de prueba", caja2.descripcion
-    assert_equal "empacado", caja2.estado
+    assert_equal "recibido_miami", caja2.estado
   end
 
   test "el peso volumetrico se calcula por caja" do

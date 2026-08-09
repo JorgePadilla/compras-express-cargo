@@ -106,7 +106,9 @@ class EtiquetarControllerTest < ActionDispatch::IntegrationTest
       } }
     end
     paquete = Paquete.last
-    assert_equal "empacado", paquete.estado
+    # PR-C6.22: etiquetar recibe, no empaca. "Empacado dice, y empacado no es
+    # lo que sigue... queda aquí en recibido, porque apenas se recibió."
+    assert_equal "recibido_miami", paquete.estado
     assert_equal @digitador, paquete.user
     assert_redirected_to etiquetar_url
   end
@@ -163,7 +165,7 @@ class EtiquetarControllerTest < ActionDispatch::IntegrationTest
     paquetes = Paquete.where(tracking: "1Z999SPLITCTRL001").order(:numero_caja)
     assert_equal [ 1, 2, 3 ], paquetes.map(&:numero_caja)
     assert paquetes.all? { |p| p.cantidad_paquetes == 3 }
-    assert paquetes.all? { |p| p.estado == "empacado" }
+    assert paquetes.all? { |p| p.estado == "recibido_miami" }
     assert_redirected_to etiquetar_url
   end
 
@@ -205,7 +207,7 @@ class EtiquetarControllerTest < ActionDispatch::IntegrationTest
     end
 
     esperado.reload
-    assert_equal "empacado", esperado.estado
+    assert_equal "recibido_miami", esperado.estado
     assert_equal 7.5, esperado.peso.to_f
     assert_equal "Updated by digitador", esperado.descripcion
   end
