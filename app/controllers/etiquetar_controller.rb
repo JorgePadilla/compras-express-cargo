@@ -1,4 +1,21 @@
 class EtiquetarController < ApplicationController
+  # PR-C6.22: etiquetar es **recibir**, no empacar.
+  #
+  # Yusef, 2026-08-08, revisando la bitácora de un paquete recién etiquetado:
+  #
+  #   > "**Empacado dice, y empacado no es lo que sigue.** Queda aquí en
+  #   >  recibido, porque apenas se recibió y se tiene ahí. Cuando hagamos lo
+  #   >  que hablamos del empaque, ahí sí va a decir empacado, porque ya lo
+  #   >  escaneamos, lo agregamos y lo metimos."
+  #
+  # `empacado` queda reservado para el módulo de empaque, que todavía no
+  # existe — él mismo lo difirió en esa misma reunión. Mientras tanto la
+  # columna `fecha_empacado` se queda vacía a propósito: es el registro de un
+  # paso que nadie dio.
+  #
+  # Precedente en el repo: `EntregaPersonalController` ya recibe así.
+  ESTADO_AL_ETIQUETAR = "recibido_miami".freeze
+
   before_action :authorize_etiquetar
   before_action :load_tipo_envio_sesion
   before_action :require_tipo_envio_sesion, only: :create
@@ -156,7 +173,7 @@ class EtiquetarController < ApplicationController
     else
       @paquete = Paquete.new(paquete_params)
     end
-    @paquete.estado = "empacado"
+    @paquete.estado = ESTADO_AL_ETIQUETAR
     @paquete.user = Current.user
     # El tipo de envío lo manda la sesión de etiquetado, no el form.
     @paquete.tipo_envio_id = @tipo_envio_sesion.id
@@ -205,7 +222,7 @@ class EtiquetarController < ApplicationController
   # numero_caja 1..N. Imprime N etiquetas si se pidió print.
   def create_split(total_cajas)
     attrs = paquete_params.except(:cantidad_paquetes, :numero_caja).merge(
-      estado: "empacado",
+      estado: ESTADO_AL_ETIQUETAR,
       user: Current.user,
       tipo_envio_id: @tipo_envio_sesion.id,
       # Las N cajas comparten el número madre, y ese número sale de acá.

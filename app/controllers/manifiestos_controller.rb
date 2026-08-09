@@ -59,7 +59,11 @@ class ManifiestosController < ApplicationController
 
   def remove_paquete
     paquete = @manifiesto.paquetes.find(params[:paquete_id])
-    paquete.update!(manifiesto: nil, estado: "empacado")
+    # PR-C6.22: sacar del manifiesto devuelve a **recibido**, no a empacado.
+    # Con el módulo de empaque todavía sin existir, nadie asigna `empacado`,
+    # así que devolver ahí dejaba el paquete en un estado sin dueño: no lo
+    # produce ninguna pantalla y no lo consume ningún flujo.
+    paquete.update!(manifiesto: nil, estado: EtiquetarController::ESTADO_AL_ETIQUETAR)
     @manifiesto.recalculate_totals!
     respond_to_paquete_change("Paquete #{paquete.guia} removido del manifiesto.")
   end
