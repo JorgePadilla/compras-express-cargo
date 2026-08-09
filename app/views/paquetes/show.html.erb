@@ -922,7 +922,8 @@ end %>
         </span>
         <input type="text"
                data-mover-pre-alerta-modal-target="input"
-               data-action="input->mover-pre-alerta-modal#search"
+               data-action="input->mover-pre-alerta-modal#search
+                            keydown->mover-pre-alerta-modal#onKeydown"
                placeholder="Número, título o cliente…"
                class="w-full pl-10 pr-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-cec-teal/40 focus:border-cec-teal">
       </div>
@@ -992,7 +993,8 @@ end %>
         </span>
         <input type="text"
                data-asignar-tercero-modal-target="input"
-               data-action="input->asignar-tercero-modal#search"
+               data-action="input->asignar-tercero-modal#search
+                            keydown->asignar-tercero-modal#onKeydown"
                placeholder="Código o nombre…"
                class="w-full pl-10 pr-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-cec-teal/40 focus:border-cec-teal">
       </div>
