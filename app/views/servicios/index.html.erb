@@ -31,8 +31,30 @@
           <%= te.modalidad %>
         </span>
       </div>
-      <%= link_to "+ Agregar tarifa", new_servicio_path(tipo_envio_id: te.id),
-            class: "text-xs font-medium text-cec-teal hover:text-cec-teal-dark" %>
+      <div class="flex items-center gap-3">
+        <%# PR-C6.20: el interruptor del cobro en medias libras, para todas las
+            filas del servicio de un solo clic. Yusef: "préndanlo ya" y "todo".
+            Editar 58 filas a mano es donde se olvida una y una categoría
+            termina facturando distinto. %>
+        <% activo = filas.any? && filas.all? { |t| t.incremento_libras.present? } %>
+        <% parcial = filas.any? { |t| t.incremento_libras.present? } && !activo %>
+        <span class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded
+                     <%= activo ? "bg-cec-teal/15 text-cec-teal-dark" : "bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-slate-300" %>"
+              data-marca="estado-redondeo-<%= te.codigo %>">
+          <%= activo ? "medias libras" : (parcial ? "medias libras a medias" : "peso exacto") %>
+        </span>
+        <% if filas.any? %>
+          <%= button_to (activo ? "Volver al peso exacto" : "Cobrar en medias libras"),
+                redondeo_servicio_path(te), method: :patch,
+                params: { activar: activo ? "0" : "1" },
+                class: "text-xs font-medium text-cec-teal hover:text-cec-teal-dark",
+                form: { data: { turbo_confirm: activo ?
+                        "Esto hace que #{te.codigo.to_s.upcase} vuelva a cobrar el peso exacto de la báscula. ¿Confirmás?" :
+                        "Esto cambia lo que se le cobra a los clientes de #{te.codigo.to_s.upcase}: el peso sube a la media libra más cercana. ¿Confirmás?" } } %>
+        <% end %>
+        <%= link_to "+ Agregar tarifa", new_servicio_path(tipo_envio_id: te.id),
+              class: "text-xs font-medium text-cec-teal hover:text-cec-teal-dark" %>
+      </div>
     </div>
 
     <% if filas.any? %>
