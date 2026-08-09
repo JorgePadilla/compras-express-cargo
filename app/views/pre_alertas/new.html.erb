@@ -13,7 +13,13 @@
       <h3 class="text-sm font-bold text-gray-800">Cliente</h3>
       <div data-controller="client-autocomplete" data-client-autocomplete-url-value="<%= buscar_clientes_path %>">
         <div class="relative">
-          <input type="text" data-client-autocomplete-target="input" data-action="input->client-autocomplete#search"
+          <%# PR-C6.33: faltaba el `keydown`. El controller siempre supo manejar
+              flechas y Enter, pero acá nadie se los mandaba — así que en esta
+              pantalla el dropdown solo se podía usar con el mouse. Eso es lo
+              que Yusef pidió como "preseleccionar de los dropdown" (A3-10). %>
+          <input type="text" data-client-autocomplete-target="input"
+                 data-action="input->client-autocomplete#search
+                              keydown->client-autocomplete#onKeydown"
                  placeholder="Buscar por codigo o nombre..."
                  autocomplete="off"
                  class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
