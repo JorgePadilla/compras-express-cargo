@@ -24,8 +24,15 @@ class AuditoriaVisibleTest < ActionDispatch::IntegrationTest
     get paquete_url(@paquete)
 
     assert_match(/Historial de cambios/, response.body)
-    assert_match @user.nombre, response.body
     assert_match "contenido corregido", response.body
+
+    # PR-C6.30: el nombre se busca DENTRO de la tabla. Buscándolo en
+    # `response.body` este assert pasaba aunque el historial dijera "Sistema"
+    # — el nombre del usuario sale en el menú de arriba. Y decía "Sistema":
+    # `whodunnit` venía nil en todo el sistema. Mismo error de alcance que el
+    # test de más abajo ya documentaba para los ids.
+    tabla = response.body[/data-tabla="auditoria".*?<\/table>/m].to_s
+    assert_match @user.nombre, tabla
   end
 
   test "muestra el valor viejo y el nuevo" do
