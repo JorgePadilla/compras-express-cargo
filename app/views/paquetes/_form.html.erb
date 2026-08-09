@@ -72,7 +72,11 @@
           <input type="text"
                  placeholder="Código (ej. CEC-010) o nombre…"
                  data-cliente-search-target="input"
-                 data-action="input->cliente-search#search"
+                 <%# PR-C6.33: el `keydown` faltaba acá también. Tercera vista
+                     con el mismo hueco — el controller sabía navegar, la vista
+                     nunca le mandó las teclas. %>
+                 data-action="input->cliente-search#search
+                              keydown->cliente-search#onKeydown"
                  autocomplete="off"
                  class="block w-full pl-9 pr-3 py-2 rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 dark:text-gray-100 shadow-sm text-sm focus:ring-2 focus:ring-cec-teal/40 focus:border-cec-teal">
           <div data-cliente-search-target="dropdown"
@@ -251,7 +255,10 @@
              placeholder="Amazon, Walmart, Driver Juan…"
              autocomplete="off"
              data-proveedor-autocomplete-target="input"
-             data-action="input->proveedor-autocomplete#search"
+             <%# PR-C6.33: faltaba el `keydown`, igual que en /pre_alertas/new.
+                 Sin él este dropdown solo se podía usar con el mouse. %>
+             data-action="input->proveedor-autocomplete#search
+                          keydown->proveedor-autocomplete#onKeydown"
              class="block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal">
       <%= f.hidden_field :proveedor_id,
           data: { proveedor_autocomplete_target: "proveedorId" } %>

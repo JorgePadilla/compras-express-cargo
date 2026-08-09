@@ -1,20 +1,65 @@
-import { Controller } from "@hotwired/stimulus"
+import BusquedaAutocomplete from "controllers/busqueda_autocomplete"
 
 // Modal para asignar / cambiar el Tercero (cliente final) de un paquete.
-// Mirror del patrón de mover_pre_alerta_modal: search → select → submit.
-// Reemplaza el flow viejo de "Asignar → edit mode" que confundía a los
+// Reemplaza el flow viejo de "Asignar → edit mode", que confundía a los
 // operadores porque aterrizaban en el form completo sin contexto.
-export default class extends Controller {
+//
+// PR-C6.33: la búsqueda de adentro era una de las ocho copias, y la más pobre
+// de todas — 2 caracteres, sin preselección y **sin teclado**: dentro de un
+// modal, donde lo natural es teclear y confirmar con Enter, había que soltar
+// el teclado y buscar el mouse. Ahora hereda de `BusquedaAutocomplete`.
+//
+// Lo propio de esta pantalla, que se conserva:
+//   · la lista vive en un `<ul>` adentro de un `<dialog>`, así que las filas
+//     van envueltas en `<li>` y no hay nada que mostrar/ocultar
+//   · elegir **envía el formulario al instante**. Yusef: el paso intermedio de
+//     "seleccionar + click en Asignar" se sentía trabado
+export default class extends BusquedaAutocomplete {
   static values = { searchUrl: String, paqueteId: Number }
-  static targets = ["dialog", "input", "results", "hiddenId", "form", "selectedSummary"]
+  static targets = [ "dialog", "input", "results", "hiddenId", "form", "selectedSummary" ]
+
+  get _lista() { return this.resultsTarget }
+  get _oculto() { return this.hasHiddenIdTarget ? this.hiddenIdTarget : null }
+  get _url() { return this.searchUrlValue }
+  get _envoltorio() { return "li" }
+
+  _textoVacio() { return "Sin resultados — probá con otra búsqueda." }
+
+  // La lista está adentro del `<dialog>`: se vacía, no se esconde.
+  abrir() {}
+  cerrar() { this._activo = -1 }
+
+  _filaHtml(c) {
+    return `data-id="${c.id}"
+            data-codigo="${c.codigo}"
+            data-nombre="${c.nombre}">
+        <div class="min-w-0">
+          <div class="font-mono text-sm font-semibold text-cec-navy dark:text-cec-gold">${c.codigo}</div>
+          <div class="text-xs text-gray-700 dark:text-gray-200 truncate">${c.nombre}</div>
+        </div>
+        ${c.categoria_precio ? `<span class="text-[10px] uppercase tracking-wider text-gray-500 shrink-0">${c.categoria_precio}</span>` : ""}`
+  }
+
+  // Elegir = asignar. No hay paso intermedio.
+  _alSeleccionar(datos) {
+    const btn = this._items()[this._activo]
+    if (btn) {
+      btn.disabled = true
+      btn.classList.add("opacity-60")
+      btn.innerHTML = `<span class="text-sm italic text-cec-purple-dark">Asignando ${datos.codigo} — ${datos.nombre}…</span>`
+    }
+    if (this.hasFormTarget) this.formTarget.requestSubmit()
+  }
+
+  // ── El modal, que sí es propio ──
 
   open(e) {
     e.preventDefault()
-    if (this.hasDialogTarget) {
-      if (this.dialogTarget.showModal) this.dialogTarget.showModal()
-      else this.dialogTarget.classList.remove("hidden")
-      this.inputTarget?.focus()
-    }
+    if (!this.hasDialogTarget) return
+
+    if (this.dialogTarget.showModal) this.dialogTarget.showModal()
+    else this.dialogTarget.classList.remove("hidden")
+    this.inputTarget?.focus()
   }
 
   close(e) {
@@ -24,85 +69,6 @@ export default class extends Controller {
       else this.dialogTarget.classList.add("hidden")
     }
     this.clearSelection()
-  }
-
-  search() {
-    if (this._timeout) clearTimeout(this._timeout)
-
-    const query = this.inputTarget.value.trim()
-    if (query.length < 2) {
-      this.resultsTarget.replaceChildren()
-      return
-    }
-
-    this._timeout = setTimeout(() => {
-      fetch(`${this.searchUrlValue}?q=${encodeURIComponent(query)}`, {
-        headers: { "Accept": "application/json" }
-      })
-        .then(r => r.json())
-        .then(items => this.renderResults(items))
-        .catch(() => this.renderResults([]))
-    }, 300)
-  }
-
-  renderResults(items) {
-    this.resultsTarget.replaceChildren()
-    if (items.length === 0) {
-      const empty = document.createElement("li")
-      empty.className = "px-4 py-3 text-sm text-gray-500 italic"
-      empty.textContent = "Sin resultados — probá con otra búsqueda."
-      this.resultsTarget.appendChild(empty)
-      return
-    }
-
-    items.forEach(c => {
-      const li = document.createElement("li")
-      const btn = document.createElement("button")
-      btn.type = "button"
-      btn.className = "w-full text-left px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700/50 flex items-start justify-between gap-3 transition-colors"
-      btn.dataset.action = "click->asignar-tercero-modal#select"
-      btn.dataset.id = c.id
-      btn.dataset.codigo = c.codigo
-      btn.dataset.nombre = c.nombre
-
-      const left = document.createElement("div")
-      left.className = "min-w-0"
-      left.innerHTML = `
-        <div class="font-mono text-sm font-semibold text-cec-navy dark:text-cec-gold">${c.codigo}</div>
-        <div class="text-xs text-gray-700 dark:text-gray-200 truncate">${c.nombre}</div>
-      `
-
-      if (c.categoria_precio) {
-        const right = document.createElement("div")
-        right.className = "shrink-0"
-        const badge = document.createElement("span")
-        badge.className = "text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-cec-purple/10 text-cec-purple-dark"
-        badge.textContent = c.categoria_precio
-        right.appendChild(badge)
-        btn.appendChild(left)
-        btn.appendChild(right)
-      } else {
-        btn.appendChild(left)
-      }
-
-      li.appendChild(btn)
-      this.resultsTarget.appendChild(li)
-    })
-  }
-
-  select(e) {
-    const btn = e.currentTarget
-    this.hiddenIdTarget.value = btn.dataset.id
-
-    // Auto-submit on selection: el feedback de Yusef fue que el paso
-    // intermedio "seleccionar + click en botón Asignar" se sentía trabado.
-    // Click en cliente = asignar inmediatamente. Si elige mal, "Cambiar"
-    // re-abre el modal.
-    btn.disabled = true
-    btn.classList.add("opacity-60")
-    btn.innerHTML = `<span class="text-sm italic text-cec-purple-dark">Asignando ${btn.dataset.codigo} — ${btn.dataset.nombre}…</span>`
-
-    if (this.hasFormTarget) this.formTarget.requestSubmit()
   }
 
   clearSelection() {
@@ -118,4 +84,10 @@ export default class extends Controller {
       if (submitBtn) submitBtn.disabled = true
     }
   }
+
+  // ── Alias en el idioma viejo, para no tocar markup que ya funciona ──
+  search() { this.buscar() }
+  onKeydown(e) { this.teclado(e) }
+  select(e) { this.elegir(e) }
+  renderResults(items) { this.pintar(items) }
 }

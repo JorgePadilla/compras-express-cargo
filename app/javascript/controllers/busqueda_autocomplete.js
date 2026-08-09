@@ -46,6 +46,10 @@ export default class BusquedaAutocomplete extends Controller {
 
   _textoVacio() { return "No se encontraron resultados" }
 
+  // Los modales pintan sus resultados en un `<ul>`, así que cada fila va
+  // envuelta en un `<li>`. El resto usa `<div>` y no envuelve nada.
+  get _envoltorio() { return null }
+
   // ── Comportamiento compartido ────────────────────────────────────────────
 
   buscar() {
@@ -85,8 +89,13 @@ export default class BusquedaAutocomplete extends Controller {
   }
 
   pintar(items) {
+    const env = this._envoltorio
+    const envolver = (html) => (env ? `<${env}>${html}</${env}>` : html)
+
     if (!items || items.length === 0) {
-      this._lista.innerHTML = `<div class="px-4 py-3 text-sm text-gray-500">${this._textoVacio()}</div>`
+      this._lista.innerHTML = envolver(
+        `<div class="px-4 py-3 text-sm text-gray-500 italic">${this._textoVacio()}</div>`
+      )
       this.abrir()
       return
     }
