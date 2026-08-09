@@ -2630,7 +2630,7 @@ volumétrico salía igual de mal porque es derivado de las medidas.
 
 ---
 
-### A1-18 · Motivos de retención editables — **NUEVO + falta lista**
+### A1-18 · Motivos de retención editables — ✅ **APROBADO EN VIVO** (A3-11), falta la lista
 
 Hoy los motivos están fijos (paquete dañado, mercancía prohibida…). Yusef quiere
 un CRUD:
@@ -2753,10 +2753,17 @@ Campo ya marcado en pantalla, sin definir.
 
 ---
 
-### A1-26 · Tracking secundario — **YA ESTÁ, verificado en vivo**
+### A1-26 · Tracking secundario — **A MEDIAS** (matizado por A3-09)
 
 Se guarda, se muestra en el detalle y **se puede buscar en los filtros**. Yusef
 lo probó durante la llamada y funcionó.
+
+> ⚠️ **Matizado el 2026-08-08 (A3-09).** Lo que estaba era el *display* y el
+> filtro de `/paquetes`. La **búsqueda del escaneo** no lo miraba:
+> `check_tracking` —el endpoint que usa la pistola en /etiquetar— hacía
+> `where(tracking: valor)` sobre una sola columna. Yusef: *"el sistema debe
+> buscar en esto también, debe buscar en la base, y **eso no estaba**"*. Tenía
+> razón. Arreglado en `PR-C6.21`.
 
 ---
 
@@ -3285,7 +3292,7 @@ como pregunta ALTA en el Excel.
 
 ---
 
-### A2-10 · Faltan EXPRESS y CKA en la tabla de escalones — **Yusef los agrega**
+### A2-10 · Faltan EXPRESS y CKA en la tabla de escalones — ✅ **CONFIRMADO** (RP-14): los manda antes de lanzar
 
 > "Aquí me faltó el exprés, porque el exprés no lo hemos creado, pero vos debés
 > crearlo para yo podérselo agregar."
@@ -3323,21 +3330,32 @@ Lo que Fase 13 protege es el precio **de una venta**, no el catálogo.
 
 ### Preguntas que quedan (se suman a las de audio 1)
 
-7. **Manejo y gastos de destino** — la hoja dice LPS, el audio sugiere USD (A2-03)
-8. **Recolecta** — ¿el $35 de Miami y la tabla por zona son dos cosas distintas? (A2-06)
-9. **Retornado de Miami** — ¿$5 mínimo con escalones, o $5 y $15 son dos cargos? (A2-06)
-10. **Entrada y salida** — ¿de qué depende que sea $5 o $10? (A2-06)
-11. **Flete México** — ¿en qué moneda? (A2-03)
-12. **Etiqueta internacional** — ¿precio y en qué moneda? (A2-06)
+> **Actualizado 2026-08-09** con las respuestas del PDF. Las tachadas quedaron
+> cerradas; ver `RP-nn` más abajo para la respuesta literal.
+
+7. ~~**Manejo y gastos de destino** — la hoja dice LPS, el audio sugiere USD~~
+   ✅ **L.1 + ISV** (RP-05)
+8. **Recolecta** — ¿el $35 de Miami y la tabla por zona son dos cosas distintas?
+   ⚠️ **a medias**: el precio quedó (editable, 35/25 según categoría, como
+   **mínimo**), pero si Miami y Honduras son uno o dos cargos sigue abierto
+   (RP-10)
+9. ~~**Retornado de Miami** — ¿$5 mínimo con escalones, o $5 y $15 son dos cargos?~~
+   ✅ **dos cargos: $5 y $10** — tachó el 15 (RP-11)
+10. ~~**Entrada y salida** — ¿de qué depende que sea $5 o $10?~~
+    ✅ **base $5, sube a criterio por tamaño y complejidad** (RP-12)
+11. ~~**Flete México** — ¿en qué moneda?~~
+    ✅ **$5 por lb o VLb + ISV** (RP-13a)
+12. **Etiqueta internacional** — ¿precio y en qué moneda? — **sigue abierta**,
+    la dejó en blanco (RP-13b)
 13. **Tolerancia del redondeo** — el `.10/.60` es para incrementos de media
     libra. Si crea una tarifa con incremento de 1 lb, ¿la tolerancia sigue
-    siendo 0.09 o es proporcional? (A2-09)
+    siendo 0.09 o es proporcional? (A2-09) — **sigue abierta**
 14. **Recolecta: el 0 de Personal CEC** — ¿es descuento del 100% o "sin
-    definir"? Tiene precios en todo lo demás (A2-13)
-15. **Flete México** — el mínimo (6) es mayor que el precio (5). ¿El 5 es por
-    libra y el 6 el piso del envío, o hay un error de tipeo? (A2-13)
-16. **La hoja de precios** — la versión del 7 de agosto es idéntica a la del 5.
-    Si pensaba mandar cambios, no llegaron (A2-12)
+    definir"? Tiene precios en todo lo demás (A2-13) — **sigue abierta**
+15. ~~**Flete México** — el mínimo (6) es mayor que el precio (5)~~
+    ✅ **el mínimo era el error: no hay** (RP-13a)
+16. ~~**La hoja de precios** — la versión del 7 de agosto es idéntica a la del 5~~
+    ✅ superada: la del 8 sí trajo cambios (A2-14)
 
 ---
 
@@ -3534,10 +3552,716 @@ o su consecuencia directa. Es el que hay que arreglar primero.
 
 ---
 
+## Conversación 6 · Respuestas al PDF de preguntas (recibidas 2026-08-09)
+
+Yusef devolvió el PDF de 23 preguntas (`docs/entregables/preguntas_para_yusef.pdf`)
+contestado a mano. Llegaron fotos de **las páginas 1 a 4**, o sea `P1`–`P16`.
+Jorge confirmó que **sí contestó P17–P23**, pero esas fotos todavía no llegan.
+
+Los ids son `RP-nn`, donde el número **es el de la pregunta en el PDF** —
+trazabilidad 1:1 contra `lib/tasks/docs.rake:1132-1298`. Prefijo distinto de
+`A1-`/`A2-` a propósito: son respuestas a un artefacto nuestro, no items
+extraídos de un audio.
+
+Cada item lleva la **transcripción literal** de lo que marcó o escribió, después
+la lectura, y al final el veredicto.
+
+---
+
+### RP-01 · Un Cliente Amigo puede pagar MÁS que el público — **SIGUE ABIERTA**
+
+Ninguna casilla marcada. Al margen, con una flecha al párrafo:
+
+> "ACTIVA Los Precios del Escalonado"
+
+**Lectura.** La intención es clara: las categorías también van escalonadas. Lo
+que **no** dice es qué se le cobra a un Cliente Amigo **mientras** esas tablas
+no lleguen — y en RP-14 él mismo dice que las de CKA y EXPRESS las manda
+"antes de lanzar sistema". Hoy un Cliente Amigo con 200 lb de CER paga $840 y
+uno de la calle paga $700.
+
+Va a la ronda 2 con la pregunta acotada: ¿precio fijo de la categoría, o el
+menor de los dos, hasta que lleguen las tablas?
+
+---
+
+### RP-02 · Mayoristas: solo vino un precio — **SIGUE ABIERTA**
+
+Ninguna casilla marcada. Escribió:
+
+> "Por que Usamos tarifas Diferentes Para Clientes / tarifario Único."
+
+**Lectura.** No se lee como decisión. Puede querer decir "usamos tarifas
+distintas por cliente, no un tarifario único" o exactamente lo contrario. De
+Mayoristas solo llegó CKM a $1.50; CER, CEM, CKA y EXPRESS vinieron en cero, y
+así no se les puede facturar esos servicios. Se pregunta de nuevo, concreto.
+
+---
+
+### RP-03 · ¿Prendemos el redondeo a media libra? — ✅ **CERRADA**
+
+Marcó:
+
+> ☒ **Préndanlo ya.**
+
+Y **no** marcó "primero quiero ver el número calculado con mis paquetes reales".
+
+**Consecuencia.** Es la autorización que el informe de impacto iba a pedir. Eso
+re-ordena el plan del escalonado: el informe deja de ser compuerta y pasa a ser
+verificación posterior. Lo que **no** cambia es que el bug de frontera
+(`PR-C6.18`) tiene que aterrizar **antes** de que alguien pulse el botón —
+activar es exactamente lo que lo despierta.
+
+---
+
+### RP-04 · ¿Dónde aplica el redondeo? — ✅ **CERRADA**
+
+Marcó:
+
+> ☒ También en las tarifas por categoría: Clientes Amigos, Shein, Personal CEC
+> y las demás.
+
+Y escribió al lado: **"Todo"**.
+
+**Consecuencia.** El botón de activación no necesita selector de alcance: pone
+`incremento_libras` en todas las filas del servicio, lista y categorías.
+
+---
+
+### RP-04b · Cobro por volumen editable por cliente y por servicio — **ALCANCE NUEVO**
+
+En la misma página, suelto abajo, no como respuesta a nada:
+
+> "Formas de cobro
+>  Hay Clientes Que solo se les cobra Volumen en ciertos servicio
+>  (necesita quedar Editable por Kliente y Por servicio)"
+
+**Lectura.** Hoy el peso a cobrar es `max(peso real, peso volumétrico)`
+(`VolumetricoCalculator#peso_a_cobrar`). Esto pide poder forzar **siempre
+volumen** para ciertos clientes en ciertos servicios, aunque el peso real sea
+mayor.
+
+**No se implementa todavía**: no dice quién lo activa, quién lo puede cambiar,
+ni qué clientes son. Va a la ronda 2.
+
+---
+
+### RP-05 · Manejo y gastos de destino: ¿lempiras o dólares? — ✅ **CERRADA**
+
+Marcó:
+
+> ☒ Va como dice la hoja: **L.1 + ISV**.
+
+Cierra la pregunta 7 del registro del audio 2, donde la hoja y el audio se
+contradecían.
+
+---
+
+### RP-06 · CKM: ¿precio fijo o por libra? — ✅ **CERRADA**
+
+Sobre la opción "L.200 con ISV incluido, pese lo que pese" escribió una flecha
+y:
+
+> "Es EL **Mínimo**"
+
+Y debajo, abarcando las dos opciones con una llave:
+
+> "Después es el **Escalonado**"
+
+**Lectura.** L.200 es el piso; pasado ese piso manda la tabla escalonada. Es el
+mismo mecanismo que ya tiene CER — **no hace falta código nuevo**.
+
+---
+
+### RP-07 · Mínimo en libras del marítimo (CEM y CKM) — ✅ **CERRADA**
+
+Ninguna casilla. Escribió:
+
+> "**MANDA el Escalonado**"
+
+**Lectura.** No hay mínimo en libras: el escalonado decide. Cierra la duda
+vieja de "8/20 lb vs 3 o 4 lb".
+
+**Ya se cumple**: `minimo_libras` viene nil en todas las tarifas sembradas y
+`tarifa.rb` solo lo aplicaría si existiera. Solo hace falta verificarlo en
+staging — no se toca código.
+
+---
+
+### RP-08 · Confirmación: ¿el mínimo de CER es L.200 parejo? — ✅ **CERRADA** (y confirma el motor)
+
+Marcó **"No, es así:"** y escribió la aritmética:
+
+```
+tasa 27.10
+4.50 × 1   = 121.95  + ISV = 200      "ya con ISV"
+4.50 × 1.5 = 182.93  + ISV = 210.36   "ya con ISV"
+             ↓ libras
+```
+
+**Lectura, y es la más importante de todo el PDF.** Esa cuenta **confirma que
+el motor de mínimos está bien**: el sistema guarda el mínimo **neto de ISV**
+(CER: `minimo_monto = 173.91 LPS`) y le suma el ISV al final, que es
+exactamente lo que él hizo a mano.
+
+- 1 lb → $4.50 < $6.42 (=173.91/27.10) → aplica el mínimo → 173.91 × 1.15 = **L.200** ✓
+- 1.5 lb → $6.75 > $6.42 → 6.75 × 27.10 = 182.93 → × 1.15 = **L.210.37**
+
+Él escribió **210.36**. El centavo de diferencia es de orden de redondeo: aplicó
+el ISV sobre `182.925` sin redondear, y el motor redondea el subtotal a dos
+decimales antes de convertir. No se cambia sin que él lo pida.
+
+**Y destapó la tasa.** El sistema tenía **24.85** sembrada. Con esa, la segunda
+línea **no reproduce**: 6.75 × 24.85 = L.167.76, debajo del mínimo neto, así que
+el paquete caía en L.200 y no en L.210.37. Jorge decidió fijarla en **27.10**
+(`PR-C6.29`), que además creó la pantalla para que un admin la maneje — hasta
+ese PR la tasa solo se podía cambiar con un deploy.
+
+---
+
+### RP-09 · ¿Qué hacemos con Regular y VIP? — **SIGUE ABIERTA**
+
+Ninguna casilla. Con una flecha al título:
+
+> "→ categorías Actuales del Excel"
+
+**Lectura.** Se entiende que Regular y VIP son lo viejo, pero no dice a qué
+categoría pasan los 8 clientes que hoy están ahí. Sin eso no se pueden migrar.
+
+---
+
+### RP-10 · Recolecta — **(a) CERRADA con matiz · (b) SIGUE ABIERTA**
+
+Una llave abarcando las opciones de precio, y al lado:
+
+> "Editable.
+>  $35 o $25 Dependiendo de la categoría de Precio de cliente
+>  **es el mínimo a cobrar**."
+
+**(a) El precio — cerrada con matiz.** No es tabla por zona ni precio parejo:
+es **editable**, y el 35/25 según la categoría del cliente es el **piso**, no
+el precio final. Eso **contradice** lo documentado en su momento como "tabla de
+tarifas por zona".
+
+**Ojo, es modelado nuevo**: `ServicioExtra` tiene un `minimo_monto` **plano**,
+no uno por categoría de precio. No es carga de datos.
+
+**(b) ¿La recolecta de Miami y la de Honduras son dos cobros distintos?** —
+**quedó sin marcar**. Y bloquea (a): sin saber si son uno o dos cargos no se
+sabe cuántos mínimos hay que modelar.
+
+---
+
+### RP-11 · Retornado de Miami: ¿uno o dos cargos? — ✅ **CERRADA**
+
+Marcó la segunda opción y **tachó el 15**:
+
+> ☒ Son dos cargos separados: Retornado ($5) y Retornado USPS ($~~15~~ **10**).
+
+Al margen:
+
+> "5 + 10 Retorno. **Hay que llevarlo a sucursal**"
+
+**Lectura.** Dos cargos, $5 y $10 USD. La nota del margen es contexto operativo:
+el retorno implica llevar el paquete a una sucursal.
+
+---
+
+### RP-12 · Entrada y salida (IN & OUT): ¿de qué depende? — ✅ **CERRADA**
+
+Sin marcar casilla, escribió sobre las dos:
+
+> "**$5 Paquete pequeño** → sube a consideración de tamaño complejidad"
+
+**Lectura.** Base $5 para paquete pequeño, y de ahí sube **a criterio**, según
+tamaño y complejidad. O sea: no es automático — se cobra $5 y se ajusta a mano
+cuando corresponde.
+
+---
+
+### RP-13 · Flete México y etiqueta internacional — **(a) CERRADA · (b) SIGUE ABIERTA**
+
+Al título, con flecha:
+
+> "→ Precio x Lbs o VLbs"
+
+**(a) Flete México — cerrada.** En "Los buenos son: precio $___ · mínimo $___"
+escribió **5** en el precio, **tachó el mínimo**, y agregó **"+ ISV."**
+
+O sea: **$5 por libra o libra volumétrica, más ISV, sin mínimo**. El "mínimo 6
+mayor que el precio 5" de la hoja era el error, y así se cierran de una las dos
+preguntas viejas sobre este cargo.
+
+**(b) Etiqueta internacional — abierta.** Quedó **en blanco**. Sigue sin precio
+y sin moneda, así que no se puede dar de alta como servicio.
+
+---
+
+### RP-14 · ¿CKA y EXPRESS también llevan escalonado? — ✅ **CERRADA**
+
+Marcó:
+
+> ☒ Sí llevan — les mando las tablas.
+
+Al margen:
+
+> "Si en el Futuro **Antes de Lanzar Sistema**"
+
+**Lectura.** Sí llevan, y las tablas llegan antes del lanzamiento. Cuando
+lleguen es **carga por CRUD** — la hace su equipo, no es un PR.
+
+---
+
+### RP-15 · La leyenda de colores / la moneda de cada cargo — **PENDIENTE DE OFICINA**
+
+Ninguna casilla. Escribió:
+
+> "Expres y CKA
+>  Lo llenaremos Después **los de Oficina**"
+
+**Lectura.** Delegado a su equipo administrativo, sin fecha. La leyenda de
+colores de la hoja de precios —la que dice en qué moneda va cada precio— sigue
+sin aplicarse a las celdas.
+
+---
+
+### RP-16 · Visto bueno final a los precios cargados — **SIGUE ABIERTA**
+
+Escribió:
+
+> "**No Ha Revisado**"
+
+**Lectura.** La hoja 2 del Excel —el detalle completo de lo que el sistema va a
+cobrar— sigue sin revisar. Se le vuelve a mandar junto con el informe de
+impacto del redondeo, para que revise las dos de un solo.
+
+---
+
+### RP-17 … RP-22 — **CONTESTADAS, ESPERANDO FOTO**
+
+Jorge confirmó que Yusef las contestó; faltan las fotos de las páginas 5 a 7.
+Son:
+
+| Id | Pregunta |
+|---|---|
+| RP-17 | El número de recepción: ¿le metemos el mes? |
+| RP-18 | Bajar la cantidad de cajas de un paquete |
+| RP-19 | El campo de origen del paquete (China / Estados Unidos) |
+| RP-20 | El sonido de error del escaneo |
+| RP-21 | ¿Quién lleva PIN de supervisor? |
+| RP-22 | Proveedores de entrega personal |
+
+**RP-21 bloquea trabajo**: `PR-C6.28` le da a un supervisor de Miami la
+facultad de quitar el cobro de cambio de servicio con su PIN, y Julien
+—el supervisor que Yusef nombró— necesita tener uno asignado.
+
+---
+
+### RP-23 · La etiqueta impresa — ✅ **CERRADA de facto**
+
+No la contestó por escrito: **mandó la etiqueta impresa anotada en rojo**, que
+es la respuesta. Se documenta abajo, en su propia sección.
+
+---
+
+### Lo que el PDF cerró
+
+| Pregunta vieja | Cómo quedó |
+|---|---|
+| Manejo y gastos de destino: ¿LPS o USD? | ✅ L.1 + ISV (RP-05) |
+| Retornado: ¿uno o dos cargos? | ✅ dos: $5 y $10 (RP-11) |
+| Entrada y salida: ¿de qué depende? | ✅ base $5, ajuste manual (RP-12) |
+| Flete México: ¿moneda? ¿mínimo mayor que el precio? | ✅ $5/lb o VLb + ISV, sin mínimo (RP-13a) |
+| Mínimo en libras del marítimo (8/20 vs 3-4) | ✅ no hay: manda el escalonado (RP-07) |
+| CKM: ¿fijo o por libra? | ✅ L.200 es el mínimo, después escalonado (RP-06) |
+| ¿Prendemos el redondeo? | ✅ "préndanlo ya" (RP-03) |
+| ¿Dónde aplica el redondeo? | ✅ "todo" (RP-04) |
+| ¿CKA y EXPRESS llevan escalonado? | ✅ sí, tablas antes de lanzar (RP-14) |
+| ¿El mínimo de CER es L.200 parejo? | ✅ confirmado el motor, y destapó la tasa (RP-08) |
+
+### Las que siguen vivas
+
+| Id | Qué falta |
+|---|---|
+| RP-01 | Qué se cobra a las categorías mientras no lleguen sus tablas escalonadas |
+| RP-02 | Mayoristas: qué se les cobra en CER/CEM/CKA/EXPRESS |
+| RP-09 | A qué categoría pasan los 8 clientes de Regular y VIP |
+| RP-10b | ¿La recolecta de Miami y la de Honduras son uno o dos cargos? |
+| RP-13b | Etiqueta internacional: precio y moneda |
+| RP-15 | La leyenda de colores/moneda de la hoja (lo hace su oficina) |
+| RP-16 | El visto bueno a la hoja 2 del Excel |
+| — | Tolerancia del redondeo con incremento de 1 lb (viene del audio 2) |
+| — | El 0 de Personal CEC en recolecta: ¿descuento del 100% o sin definir? |
+
+### Las que nacen
+
+| Id | Qué |
+|---|---|
+| RP-04b | Cobro por volumen forzado, editable por cliente y por servicio |
+| — | La tasa: quién la mantiene y cada cuánto (aviso, no pregunta — ya se fijó en 27.10) |
+
+---
+
+## Conversación 6 · Audio 3 (2026-08-08) — pre-alertas, escaneo y sucursal de retiro
+
+Tercer audio de la **misma reunión** del 2026-08-08: Yusef siguió probando el
+sistema en vivo, esta vez con la pistola de códigos de barras y paquetes
+reales de los cuatro carriers. Ids `A3-nn`, continuando la serie de audios.
+
+---
+
+### A3-01 · Falta el estatus por tracking en `/pre_alertas/edit` — ✅ **PLANIFICADO** (PR-C6.25)
+
+> "Acá no me sale todavía el estatus, mira. ¿Te acordás que **aquí debería ir
+>  el estatus**? Si ya fue recibido, si está en estado prealerta, etcétera."
+
+En `show.html.erb` sí sale (badge con `pap.paquete.estado`); en `edit.html.erb`
+no existe la columna.
+
+---
+
+### A3-02 · La columna "Vinculado" repite el tracking — ✅ **DIAGNOSTICADO** (PR-C6.25)
+
+> "Ahora este **vinculado** es el que no… no entiendo. Yo creo que este ha de
+>  ser la recepción, ¿o no? Si es para poder unirlos. No, porque **este es el
+>  mismo que este**."
+> "Revisá bien ahí y me dejás saber."
+
+**Tenía razón.** La columna usa `paquete_display_id`, que es
+`numero_recepcion.presence || tracking`. Como `crear_paquete_esperado` crea el
+paquete esperado **sin** número de recepción, el link muestra el tracking otra
+vez — la misma columna dos veces.
+
+---
+
+### A3-03 · Tras etiquetar el estado debe ser **recibido**, no empacado — ✅ **ARREGLADO** (PR-C6.22)
+
+> "**Empacado dice, y empacado no es lo que sigue**… queda aquí en recibido,
+>  porque apenas se recibió y se tiene ahí. Cuando hagamos lo que hablamos del
+>  empaque, ahí sí va a decir empacado, porque ya lo escaneamos, lo agregamos y
+>  lo metimos."
+
+Jorge lo había notado esa mañana sin saber qué era: *"yo lo noté ahorita en la
+mañana, pero no sabía que estaba con él"*.
+
+`ESTADOS_ORDEN` es `recibido_miami → empacado → …`, así que el paquete nacía un
+escalón adelantado: el dashboard contaba como empacado lo que sigue en la mesa,
+y `fecha_empacado` guardaba la hora de un paso que nadie dio.
+
+---
+
+### A3-04 · Cambio de servicio "envía donde no es" — ✅ **ARREGLADO** (PR-C6.23)
+
+> "Cambio de servicio **envía donde no es**."
+> "Para mí que si hacemos cambio de servicio nada más al producto, nos tire de
+>  un solo a esta ventana. Si yo presiono cambio de servicio, **me tire aquí de
+>  un solo a esto**."
+> "Es que **ellos no manejan la página de paquetes**."
+
+**La mitad ya estaba resuelta**: marcar el check a mano abre el modal al
+instante, sin ida al servidor. El bug era el botón "Cambio de servicio" del
+modal de **duplicado**, que navegaba a `/paquetes/:id?mode=edit`.
+
+Es la misma queja que ya había hecho por la **otra** opción de ese mismo modal
+(*"me mandaste a editar y yo no quiero editar mi paquete"*, A1-07 / PR-C6.10).
+Quedó a medias: se arregló una de las dos.
+
+---
+
+### A3-05 · "Enter no lo encontró… tiene que ser rápido" — ✅ **ARREGLADO** (PR-C6.21)
+
+> "Le di enter y **no lo reconoce**."
+> "Ahora sí, cuando le di **tap** ya reconoció."
+> "**Le di enter rápido y mete rápido**, aquí es donde tenés que ver cómo
+>  integrar eso."
+> "Tiene que ser **rápido**."
+
+Dos causas distintas, las dos reales:
+
+1. **La búsqueda** era `where(tracking: valor)` — exacto y case-sensitive sobre
+   una sola columna (ver A3-08 y A3-09).
+2. **Una carrera en el navegador**: el `fetch` salía sin cancelar el anterior y
+   su `.then` nunca verificaba que el campo siguiera diciendo lo mismo. La
+   pistola manda Enter sola, así que escanear A y enseguida B dejaba **el
+   cliente de A auto-rellenado sobre el paquete de B**. Eso se factura mal.
+
+El arreglo **no** es un debounce: sería justo lo contrario de lo que pidió.
+
+---
+
+### A3-06 · Quitar el cobro de cambio de servicio, con permiso — **PLANIFICADO** (PR-C6.28)
+
+> "Aquí es donde hay un dilema: si el muchacho mío se equivocó y lo está
+>  cambiando, tenemos que buscar una manera de **poderle quitar ese cambio de
+>  servicio**. Eso sería como que le digan al **supervisor** de ellos allá en
+>  Miami: 'hey, mire, yo me equivoqué, lo ingresé mal y era otro tipo de
+>  envío', y entonces él lo pueda eliminar el cobro."
+> "No estamos hablando de Jordan o Julio, sino que él se llama **Julien**, el
+>  supervisor… que él sí pueda eliminarlo **con el usuario de él**."
+> "Que tenga algo aquí en algún lado, **acá cerca**, que diga que **se le está
+>  cobrando** cambio de servicio, y lo vamos a eliminar."
+
+**Trampa encontrada.** El cobro nace en **dos lugares**: la línea automática de
+la pre-factura y una **NotaDebito aparte** dentro de `facturar!`. La vía que ya
+existe (autorización con PIN → borrar la línea) **no suprime la NotaDebito**.
+Por eso el diseño es apagar el flag `solicito_cambio_servicio`, que suprime las
+dos.
+
+Depende de **RP-21**: Julien necesita PIN asignado.
+
+---
+
+### A3-07 · Empacar por sucursal — **el módulo de empaque queda DIFERIDO**
+
+> "Se me olvidó decirte algo… lo que queremos es **empacar todas las sucursales
+>  en Miami por separado, en caja por separado**. Si dice Tegucigalpa, es
+>  sucursal — o sea, sucursales ajenas a San Pedro."
+> "Hay dos áreas donde yo creo que se ocupa: una en **etiquetar** y dos en
+>  **empacar**."
+> "El de empacar **no sé si lo cargamos ahorita** y después lo vamos a mejorar,
+>  porque pueda que sea complicado hacer tanto de un solo."
+
+Lo que sí quiere ya, en etiquetar:
+
+> "Al mismo instante que les aparezca… que el sistema les diga **sucursal tal**."
+> "Yo opino dos cosas: una es que le salga **en rojo** 'sucursal Tegucigalpa' o
+>  'se entregará en Tegucigalpa' — solo que les diga que eso es de Tegucigalpa."
+> "Solo quiero **un modal al principio y uno al final**."
+
+Y la distinción que remarcó dos veces:
+
+> "Recordá que **la ciudad donde es la persona no es el mismo lugar donde se le
+>  entrega**. La idea es ponerle dónde el hombre va a querer su retiro."
+
+O sea: es la **sucursal de retiro**, que ya existe y ya se imprime en la
+etiqueta (`RETIRA EN …`). **No se agranda el alcance** — el módulo de empaque
+lo difirió él.
+
+Contexto físico que dio: en Miami hay tres estaciones de etiquetado más una en
+la oficina, y bolsas de Amazon para lo no digitado y lo ya etiquetado. Lo que
+pide es una **tercera bolsa por sucursal**.
+
+---
+
+### A3-08 · El escaneo de USPS trae más de lo que el cliente pre-alertó — ✅ **ARREGLADO** (PR-C6.21)
+
+Probó los cuatro carriers con la pistola. Sobre USPS:
+
+> "El tracking de USPS **solo es desde donde dice 92**."
+> "**Esto es lo que el cliente recibe de tracking y esto es lo que le escanea
+>  el sistema.**"
+
+La etiqueta lleva el código completo (`420` + ZIP + servicio + tracking) y el
+cliente pre-alerta solo la cola. Con match exacto, ese escaneo no encontraba
+nada: ni el paquete esperado ni su pre-alerta, y Miami grababa un paquete nuevo
+al lado.
+
+El arreglo acepta que lo guardado sea **sufijo** de lo escaneado, con piso de
+longitud a los dos lados, **sin hardcodear el 92** — así cubre igual UPS y
+FedEx.
+
+---
+
+### A3-09 · Buscar también por el tracking secundario — ✅ **ARREGLADO** (PR-C6.21)
+
+> "Ahora el sistema debe buscar en esto también, debe buscar en la base, y
+>  **eso no estaba**."
+
+Tenía razón: `Paquete.buscar` sí cubría el secundario, pero `check_tracking`
+—el endpoint que usa la pistola— no lo usaba. Matiza **A1-26**, que daba el
+secundario por resuelto: el *display* estaba, la **búsqueda** no.
+
+---
+
+### A3-10 · Pre-alerta admin: autofill, dropdowns y duplicados — **PLANIFICADO** (PR-C6.25 / PR-C6.26)
+
+De la página de notas y del audio:
+
+> "/pre-alertas/new pero rol Admin → **abre tarjetas de crédito en tracking**"
+> "**Preseleccionar** de los dropdown."
+> "Mira, ve, cómo le di enter: ya tiene un error y **no lo detecta que ya
+>  existe**."
+> "Aquí esto **no tiene sentido** porque es consolidado… los servicios son como
+>  si repaque aquí."
+
+Verificado en el código:
+
+- Los inputs de tracking del admin **no tienen** `autocomplete`, `inputmode` ni
+  nada anti-autofill; el portal cliente sí tiene un Stimulus que sanea. De ahí
+  el autofill de tarjetas.
+- El único dropdown que arranca vacío es **Tipo de Envío** (`include_blank`),
+  aunque el modelo backfillea CER al guardar: el default existe pero **no se
+  ve**. Cliente y Proveedor son texto libre, no dropdowns.
+- **No hay detección de duplicado**: la unicidad de tracking está scopeada a
+  `pre_alerta_id`, y `Paquete` no tiene unicidad de tracking. Además
+  `edit.html.erb` **no tiene bloque de errores**, así que un 422 se re-renderiza
+  mudo.
+- Los campos que "no tienen sentido" — **no dijo cuáles**. Se le pregunta antes
+  de tocar nada.
+
+---
+
+### A3-11 · Aprobados en vivo — **no se tocan**
+
+- **Motivos de retención editables** (A1-18): *"aquí le hiciste un cuadro ahí
+  atrás, y todas ahí en motivos de retención. Ah, sí, está perfecto eso. Esa es
+  la idea de lo que queremos: un montón de cosas que nosotros podamos cambiar,
+  porque este es bien cambiante el negocio."* Falta que mande la lista.
+- **El cuadrito de descripción de Miami**: aprobado.
+- **Las iniciales de usuario**: confirmó que las define el admin —
+  *"nosotros creamos nuestras propias iniciales"*, *"el sobrenombre es lo que
+  realmente va"*.
+
+---
+
+### A3-12 · Fuera de alcance
+
+El servidor de Render, la caché y el precio del hosting ocuparon un buen rato
+del audio. No es trabajo de sistema; queda anotado para que no se busque
+después como si fuera un requerimiento.
+
+---
+
+## Conversación 6 · La etiqueta anotada y la página de notas (2026-08-09)
+
+### La etiqueta impresa, anotada en rojo
+
+Yusef imprimió una etiqueta real y le dibujó recuadros encima. La etiqueta
+salió así:
+
+```
+[código de barras]
+RS0002026000001
+9621091390000806743500382574 95791...      ← cortado
+ROBERTO HERNANDEZ
+CEC-005   08-Aug-2026 16:49   1/1  FRA · Tegucigalpa  Reg: A
+RETIRA EN TEGUCIGALPA                             CER
+```
+
+Anotaciones:
+
+| Anotación | Apunta a |
+|---|---|
+| **LOS TRACKING DEBEN CABER COMPLETOS** | regla general, arriba de todo |
+| **TRACKING PRIMARIO** | recuadro sobre `RS0002026000001` |
+| **TRACKING SECUNDARIO** | recuadro **debajo**, o sea en línea propia |
+| **CLIENTE TERCERO** | recuadro con dos líneas a la zona del nombre |
+| **FECHA Y HORA** | recuadro sobre `08-Aug-2026 16:49` |
+
+**Ojo con el vocabulario.** Él llama "tracking primario" al **número de
+recepción** de CEC y "tracking secundario" a los del carrier. No es la
+nomenclatura del sistema, pero lo que pide es claro: cada uno en su lugar y
+completo.
+
+**El hallazgo.** No faltaban campos — la etiqueta ya imprimía los cuatro. El
+`...` era **CSS**: `.t` lleva `text-overflow: ellipsis` y tracking y secundario
+iban **concatenados con `" · "` dentro de un solo elemento**, así que lo que se
+recortaba era siempre el final del segundo.
+
+Arreglado en `PR-C6.27`: líneas propias, sin recorte, y los escalones de letra
+bajaron para hacerle lugar a la línea de más. El tamaño 2.25 × 1.25 in **no se
+toca**, como pidió en su momento.
+
+### La página de notas a mano
+
+Escrita durante la misma reunión:
+
+```
+Pre-alerta
+→ Revisar Vinculado
+→ Etiquetar → Recibido miami
+→ Cambio de servicio envía donde no es.
+→ Cambio de servicio que mande al modal.
+→ Enter no lo encontró
+   ↳ Tracking → Enter.   ↳ tiene que ser Rápido
+/pre-alertas/new pero rol Admin
+→ abre tarjetas de crédito en tracking
+→ preseleccionar de los dropdown.
+```
+
+**El cruce.** Los 8 apuntes caen todos dentro de `A3-01` … `A3-10`. **No hay
+items nuevos** y no contradicen nada del audio — igual que pasó con las tres
+páginas de la conversación anterior.
+
+---
+
+### Lo que salió del código y no estaba en ninguna lista
+
+Dos cosas que aparecieron al implementar y que nadie había reportado:
+
+1. **El botón "Guardar (F8)" de `/pre_alertas/edit` no hace nada.** La vista no
+   setea `autosave-url-value` y el Stimulus corta en seco. Borrar una fila
+   tampoco persiste. Va en `PR-C6.25`.
+2. **El audit log nunca registró quién.** La guarda
+   `respond_to?(:set_paper_trail_whodunnit)` de `ApplicationController` daba
+   `false` siempre —el método viene `protected` y `respond_to?` sin el flag los
+   oculta—, así que el hook nunca corrió y las versiones de los 41 modelos
+   quedaron con `whodunnit` nil. En pantalla se leía "Sistema", que es lo mismo
+   que muestra un cambio hecho por un job, y por eso nadie lo notó. Arreglado en
+   `PR-C6.30`.
+
+---
+
+### Conversación 6 — cambios que se ocupan
+
+**Arreglado**
+
+| ID | Qué | PR |
+|---|---|---|
+| A3-05 / A3-08 / A3-09 | El escaneo no encontraba el paquete, y las respuestas se pisaban entre bultos | C6.21 |
+| A3-03 | Etiquetar dejaba el paquete en `empacado` | C6.22 |
+| A3-04 | Cambio de servicio mandaba a `/paquetes` | C6.23 |
+| RP-23 | Los trackings salían cortados en la etiqueta | C6.27 |
+| — | El escalón se elegía con el peso crudo y el precio se aplicaba al redondeado | C6.18 |
+| RP-08 | La tasa estaba en 24.85; sus cuentas usan 27.10 | C6.29 |
+| — | El audit log no registraba quién | C6.30 |
+
+**Planificado**
+
+| ID | Qué | PR |
+|---|---|---|
+| A3-07 | Aviso de sucursal de retiro en /etiquetar (el empaque queda diferido) | C6.24 |
+| A3-01 / A3-02 | Estatus y columna "Vinculado" en pre-alerta admin, más el F8 muerto | C6.25 |
+| A3-10 | Autofill de tarjetas, dropdowns y aviso de duplicado | C6.26 |
+| A3-06 | Quitar el cobro de cambio de servicio con PIN de Miami | C6.28 |
+| RP-03 / RP-04 | Botón para activar el redondeo a media libra | C6.20 |
+| RP-16 | Informe de impacto del redondeo, para que revise la hoja 2 | C6.19 |
+
+**Bloqueado por una respuesta**
+
+| Qué | Espera |
+|---|---|
+| Mínimo 35/25 por categoría en recolecta | RP-10b |
+| Cobro por volumen editable por cliente y servicio | RP-04b |
+| Etiqueta internacional como servicio | RP-13b |
+| Tarifas escalonadas por categoría y de CKA/EXPRESS | RP-01 / RP-14 (las manda él; es carga por CRUD) |
+
+---
+
 ## Próximos Pasos
 
 1. **Conversación 2:** Login, Logout, Creación de usuarios y roles — por documentar
 2. **Conversación 3:** Detalle de Paquete Interno + Warehouse Receipt — ✅ documentada arriba, preguntas del bloque PR-D todas resueltas
 3. **Conversación 4:** ✅ documentada arriba — franja de contexto operativo (PR-9)
 4. **Conversación 5:** ✅ documentada arriba — tarifas, mínimos y etiqueta (PR-10)
-5. **Conversación 6:** ✅ documentada completa — audios 1 y 2 más las 3 páginas de notas (`A1-01` … `A1-28`, `A2-01` … `A2-11`, cruce `N`). Sigue: armar el plan de PRs y llevarle las 13 preguntas a Yusef
+5. **Conversación 6:** ✅ documentada completa — los tres audios, las 3 páginas
+   de notas de Jorge, las respuestas de Yusef al PDF, su página de notas y la
+   etiqueta anotada (`A1-01`…`A1-28`, `A2-01`…`A2-14`, `A3-01`…`A3-12`,
+   `RP-01`…`RP-23`, cruce `N`).
+
+### Lo que sigue (2026-08-09)
+
+1. **Faltan las fotos de `RP-17`…`RP-22`** (páginas 5 a 7 del PDF). Jorge
+   confirmó que Yusef **sí** las contestó. `RP-21` —quién lleva PIN de
+   supervisor— bloquea `PR-C6.28`.
+2. **Ronda 2 de preguntas**: `RP-01`, `RP-02`, `RP-09`, `RP-10b`, `RP-13b`,
+   `RP-04b`, más los recordatorios de `RP-15` y `RP-16`. Se regenera
+   `docs:preguntas_pdf` cuando lleguen las fotos, para no mandar dos papeles.
+   **No se pisa** `preguntas_para_yusef.pdf` hasta entonces: es el que él
+   contestó.
+3. **La pista de plata**, en este orden y verificando en staging entre paso y
+   paso: `C6.18` (bug de frontera) → `C6.29` (tasa 27.10) → `C6.20` (activar el
+   redondeo) → `C6.19` (informe de impacto). El informe se le lleva junto con
+   la hoja 2 del Excel, que sigue sin revisar (`RP-16`).
+4. **La pista de Miami**: `C6.24`, `C6.25`, `C6.26`, `C6.28`.
+5. **Conversación 2** sigue siendo la única sin documentar.

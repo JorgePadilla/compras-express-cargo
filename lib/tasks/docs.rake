@@ -902,6 +902,22 @@ namespace :docs do
       p_(pdf, "Los cálculos de <b>pie cúbico</b> y <b>metro cúbico</b> que se ven en pantalla son solo " \
               "informativos: no afectan el precio.")
 
+      h2(pdf, "El orden en que se calcula un flete")
+      p_(pdf, "Es uno solo, y cada paso depende del anterior. Si un cobro no cuadra, casi siempre es la " \
+              "tasa o el escalón, no la fórmula.")
+      tabla(pdf,
+        [ "Paso", "Qué pasa" ],
+        [
+          [ "<b>1. Peso</b>",    "El de la báscula se redondea a media libra con la tolerancia de arriba." ],
+          [ "<b>2. Escalón</b>", "Se elige con el peso <b>ya redondeado</b>, no con el crudo. Un paquete de 50.2 lb se cobra como 50.5, y 50.5 cae en el tramo de $4.00." ],
+          [ "<b>3. Mínimo</b>",  "Si el resultado queda por debajo del mínimo del servicio, se cobra el mínimo." ],
+          [ "<b>4. ISV</b>",     "Se suma al final, una sola vez." ]
+        ], anchos: [ 80, 407 ])
+      p_(pdf, "Los mínimos se <b>guardan sin ISV</b> y la pantalla los muestra con ISV incluido. El mínimo " \
+              "de CER son L.173.91 netos, que es lo que usted conoce como los <b>L.200</b>. Por eso un CER " \
+              "de 1 lb paga L.200 (cae en el mínimo) y uno de 1.5 lb paga L.210.37 (ya lo pasó).")
+      p_(pdf, "<b>No hay mínimo en libras.</b> Manda el escalonado, como usted lo dejó dicho.")
+
       h2(pdf, "Dinero e impuesto")
       tabla(pdf,
         [ "Regla", "Detalle" ],
@@ -909,8 +925,22 @@ namespace :docs do
           [ "<b>Todos los precios llevan ISV</b>", "El impuesto se aplica <b>una sola vez</b>, al totalizar la factura." ],
           [ "<b>Redondeo de montos</b>", "Half-up al segundo decimal, sobre el resultado final de cada línea. Regla del contador." ],
           [ "<b>Tarifas en dólares</b>", "El precio por libra es en dólares; la factura sale en Lempiras convertida a la tasa." ],
-          [ "<b>Tasa de cambio fija</b>", "La define un administrador. Ya no se actualiza sola desde internet." ],
+          [ "<b>Tasa de cambio fija</b>", "Está en <b>L.27.10</b> por dólar. La cambia un administrador desde su propia pantalla; no se actualiza sola desde internet. Mover ese número mueve todos los precios en dólares." ],
           [ "<b>El mínimo es por concepto</b>", "El flete lleva su mínimo y la recolecta el suyo. No hay un mínimo global de factura." ]
+        ], anchos: [ 152, 335 ])
+
+      h2(pdf, "Los cargos que no son flete")
+      p_(pdf, "Lo que usted nos definió el 9 de agosto. Lo que falta está marcado.")
+      tabla(pdf,
+        [ "Cargo", "Cómo se cobra" ],
+        [
+          [ "<b>Manejo y gastos de destino</b>", "L.1 + ISV." ],
+          [ "<b>Retornado de Miami</b>", "Dos cargos separados: Retornado <b>$5</b> y Retornado USPS <b>$10</b>." ],
+          [ "<b>Entrada y salida</b>", "Base <b>$5</b> para paquete pequeño; sube a criterio según tamaño y complejidad. Se ajusta a mano." ],
+          [ "<b>Flete México</b>", "<b>$5</b> por libra o libra volumétrica, más ISV. Sin mínimo." ],
+          [ "<b>Cambio de servicio</b>", "L.100 con ISV incluido. Se genera solo cuando el paquete viene marcado." ],
+          [ "<b>Recolecta</b>", "Editable. El mínimo es $35 o $25 según la categoría del cliente. <b>Falta definir</b> si la de Miami y la de Honduras son dos cobros o uno." ],
+          [ "<b>Etiqueta internacional</b>", "<b>Falta el precio y la moneda.</b> Sin eso no se puede dar de alta." ]
         ], anchos: [ 152, 335 ])
 
       pdf.start_new_page
