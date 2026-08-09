@@ -96,7 +96,11 @@ TarifasPropuesta2026.sembrar!(verbose: true)
 
 # ── Configuraciones ──
 {
-  "tasa_cambio" => { valor: "24.85", tipo: "decimal", categoria: "general" },
+  # PR-C6.29: 27.10 es la tasa con la que Yusef hace sus cuentas — la escribió
+  # sobre el PDF de preguntas al confirmar el mínimo de CER (4.50 × 1.5 =
+  # 182.93 + ISV = 210.36). Con la 24.85 que había, ese mismo paquete caía en
+  # el mínimo y daba L.200: sus números no reproducían.
+  "tasa_cambio" => { valor: "27.10", tipo: "decimal", categoria: "moneda" },
   "empresa_nombre" => { valor: "Compras Express Cargo", tipo: "string", categoria: "general" },
   "empresa_email" => { valor: "info@comprasexpresscargo.com", tipo: "string", categoria: "general" },
   "iva_porcentaje" => { valor: "15", tipo: "decimal", categoria: "facturacion" }

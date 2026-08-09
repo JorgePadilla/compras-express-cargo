@@ -199,6 +199,11 @@ Rails.application.routes.draw do
 
   resource :empresa, only: %i[show edit update]
 
+  # PR-C6.29: la tasa multiplica todo lo que se cobra en dólares y hasta ahora
+  # solo se podía cambiar con un deploy. Yusef: "la tasa es FIJA, la fija un
+  # admin" — por eso es un CRUD y no un job.
+  resource :tasa_cambio, only: %i[show update], controller: "tasa_cambio"
+
   resources :categoria_precios, except: :destroy, path: "categorias-precio"
 
   resources :entregas, except: [:destroy] do
