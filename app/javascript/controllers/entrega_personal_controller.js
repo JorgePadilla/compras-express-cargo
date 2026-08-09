@@ -7,7 +7,6 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = [
     "form", "clienteInput", "clienteId", "clienteDropdown", "clienteNombre",
-    "cajasModal", "cajasInput", "cantidadPaquetesHidden",
     "event", "panel"
   ]
 
@@ -103,54 +102,16 @@ export default class extends Controller {
   showDropdown() { this.clienteDropdownTarget.classList.remove("hidden") }
 
   // Submit + modal de cajas (mismo patrón de PR-4 etiquetar).
-  submitFormWithPrint() {
-    if (!this.hasCajasModalTarget) {
-      this._submitWithPrint()
-      return
-    }
-    this._resetCantidadPaquetes()
-    if (this.hasCajasInputTarget) this.cajasInputTarget.value = "1"
-    if (typeof this.cajasModalTarget.showModal === "function") {
-      this.cajasModalTarget.showModal()
-    } else {
-      this.cajasModalTarget.setAttribute("open", "")
-    }
-    setTimeout(() => {
-      if (this.hasCajasInputTarget) {
-        this.cajasInputTarget.focus()
-        this.cajasInputTarget.select()
-      }
-    }, 50)
-  }
-
-  cancelCajas() { this._closeCajasModal() }
-
-  cajasKeydown(e) {
-    if (e.key === "Enter") {
-      e.preventDefault()
-      this.confirmCajas()
-    } else if (e.key === "Escape") {
-      e.preventDefault()
-      this.cancelCajas()
-    }
-  }
-
-  confirmCajas() {
-    const raw = this.hasCajasInputTarget ? parseInt(this.cajasInputTarget.value, 10) : 1
-    const n = Number.isFinite(raw) ? Math.max(1, Math.min(26, raw)) : 1
-    if (this.hasCantidadPaquetesHiddenTarget) this.cantidadPaquetesHiddenTarget.value = String(n)
-    this._closeCajasModal()
-    this._submitWithPrint()
-  }
-
-  _closeCajasModal() {
-    if (!this.hasCajasModalTarget) return
-    if (typeof this.cajasModalTarget.close === "function") {
-      this.cajasModalTarget.close()
-    } else {
-      this.cajasModalTarget.removeAttribute("open")
-    }
-  }
+// PR-C6.31: F9 guarda e imprime, y nada mas.
+//
+// Antes abria un modal "cuantas cajas?" que preguntaba lo MISMO que el campo
+// visible "Cant. Cajas" del formulario — y peor: lo reseteaba a 1 antes de
+// preguntar, asi que pisaba lo que el operario acababa de escribir. Es el
+// mismo modal que se saco de /etiquetar cuando Jorge dijo que "el F9 era
+// como confuso".
+submitFormWithPrint() {
+  this._submitWithPrint()
+}
 
   _submitWithPrint() {
     this._removePrintField()
@@ -161,10 +122,6 @@ export default class extends Controller {
     input.dataset.printField = "true"
     this.formTarget.appendChild(input)
     this.formTarget.requestSubmit()
-  }
-
-  _resetCantidadPaquetes() {
-    if (this.hasCantidadPaquetesHiddenTarget) this.cantidadPaquetesHiddenTarget.value = "1"
   }
 
   _removePrintField() {
@@ -181,8 +138,6 @@ export default class extends Controller {
     }
     // PR-9.b: la franja vuelve a su estado vacío junto con el formulario.
     this.loadPanel(null)
-    this._closeCajasModal()
-    this._resetCantidadPaquetes()
   }
 
   // Handle turbo stream events después del save.

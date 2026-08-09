@@ -1,4 +1,10 @@
 class EntregaPersonalController < ApplicationController
+  # PR-C6.31: el partial de peso y medidas es el mismo que el de /etiquetar,
+  # así que las filas por caja también tienen que leerse igual. Antes esta
+  # pantalla las pintaba y después las tiraba: todas las cajas nacían con el
+  # peso de arriba.
+  include MedidasPorCaja
+
   before_action :authorize_entrega_personal
 
   # PR-6: flow separado para paquetes que llegan FÍSICAMENTE al mostrador
@@ -45,7 +51,8 @@ class EntregaPersonalController < ApplicationController
       estado: "recibido_miami",
       user: Current.user
     )
-    paquetes = Paquete.crear_split!(attrs: attrs, total_cajas: total_cajas)
+    paquetes = Paquete.crear_split!(attrs: attrs, total_cajas: total_cajas,
+                                    por_caja: medidas_por_caja)
     paquetes.each { |p| apply_extra_params(p, save: true) }
     respond_saved(paquetes)
   rescue ActiveRecord::RecordInvalid => e

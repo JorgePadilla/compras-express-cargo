@@ -183,9 +183,15 @@ end %>
             class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
       </div>
 
-      <%# Cantidad de cajas: modal post-F9 (mismo patrón que PR-4 etiquetar) %>
-      <%= f.hidden_field :cantidad_paquetes, value: 1,
-          data: { entrega_personal_target: "cantidadPaquetesHidden" } %>
+      <%# PR-C6.31: acá vivía un `hidden_field :cantidad_paquetes, value: 1`,
+          resto del modal de F9. Como quedaba DESPUÉS del partial compartido,
+          había dos campos con el mismo `name` y Rails se quedaba con el
+          último: el operario ponía 3 cajas, veía las 3 filas, las llenaba, y
+          se grababa **un solo paquete**. Sin error y sin aviso.
+
+          La cantidad ahora se pregunta una sola vez, en el campo visible
+          "Cant. Cajas" del partial — igual que en /etiquetar desde que Jorge
+          reportó que "el F9 era como confuso". %>
     </div>
 
     <%# Action bar (PR-7) — ButtonComponent muestra el atajo inline.
@@ -217,41 +223,11 @@ end %>
     </aside>
   </div><%# /grid %>
 
-  <%# Modal "¿Cuántas cajas?" — mismo patrón que PR-4 %>
-  <dialog data-entrega-personal-target="cajasModal"
-          aria-labelledby="modal-cajas-title"
-          style="margin: auto"
-          class="rounded-xl p-0 w-[28rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-cec-teal/40">
-    <div class="bg-cec-teal/10 px-5 py-3 border-b border-cec-teal/30">
-      <h3 id="modal-cajas-title" class="text-base font-semibold text-cec-teal-dark dark:text-cec-teal-light">
-        ¿Cuántas cajas trae esta entrega personal?
-      </h3>
-    </div>
-    <div class="p-5 space-y-4 bg-white dark:bg-gray-800">
-      <div>
-        <label for="ep-cajas-input" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-          Cantidad de cajas a imprimir
-        </label>
-        <input id="ep-cajas-input" type="number" min="1" max="26" value="1"
-               data-entrega-personal-target="cajasInput"
-               data-action="keydown->entrega-personal#cajasKeydown"
-               class="block w-full text-2xl text-center font-mono rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:ring-cec-teal focus:border-cec-teal">
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          Cada caja recibe su propia etiqueta (1/N, 2/N…). Máximo 26.
-        </p>
-      </div>
-    </div>
-    <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
-      <button type="button" data-action="click->entrega-personal#cancelCajas"
-              class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100">
-        Cancelar
-      </button>
-      <button type="button" data-action="click->entrega-personal#confirmCajas"
-              class="px-4 py-1.5 text-sm font-medium bg-cec-gold text-cec-navy-dark rounded-lg hover:bg-cec-gold-dark">
-        Confirmar e imprimir
-      </button>
-    </div>
-  </dialog>
+<%# PR-C6.31: acá vivía el modal "¿Cuántas cajas?" que abría F9. Preguntaba
+    lo mismo que el campo visible "Cant. Cajas" del formulario, arrancando
+    siempre en 1 y pisando lo que el operario ya había escrito. Es el mismo
+    modal que se sacó de /etiquetar cuando Jorge dijo que "el F9 era como
+    confuso". Ahora F9 es solo guardar e imprimir. %>
 
   <%# Turbo stream events container %>
   <div id="entrega-personal-events"></div>

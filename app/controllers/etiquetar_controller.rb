@@ -16,6 +16,10 @@ class EtiquetarController < ApplicationController
   # Precedente en el repo: `EntregaPersonalController` ya recibe así.
   ESTADO_AL_ETIQUETAR = "recibido_miami".freeze
 
+  # PR-C6.31: el peso y las medidas de cada caja se leen igual acá y en
+  # Entrega Personal, porque las dos pantallas comparten el mismo partial.
+  include MedidasPorCaja
+
   before_action :authorize_etiquetar
   before_action :load_tipo_envio_sesion
   before_action :require_tipo_envio_sesion, only: :create
@@ -368,24 +372,6 @@ class EtiquetarController < ApplicationController
                     .buscar_escaneado(tracking)
                     .includes(:pre_alerta)
                     .first&.pre_alerta&.tipo_envio
-  end
-
-  # Peso y medidas propios de cada caja, desde el modal de F9.
-  #
-  # PR-C6.17. Llegan como `paquete[cajas][1][peso]`. Solo se aceptan estos
-  # cuatro campos: el resto del paquete es el mismo para todas las cajas — es
-  # el mismo tracking, el mismo cliente y el mismo contenido; lo único que
-  # cambia físicamente es cuánto pesa y mide cada bulto.
-  CAMPOS_POR_CAJA = %w[peso alto largo ancho].freeze
-
-  def medidas_por_caja
-    crudo = params.dig(:paquete, :cajas)
-    return {} if crudo.blank?
-
-    crudo.to_unsafe_h.each_with_object({}) do |(indice, valores), acc|
-      limpios = valores.slice(*CAMPOS_POR_CAJA).reject { |_k, v| v.to_s.strip.empty? }
-      acc[indice.to_i] = limpios.symbolize_keys if limpios.any?
-    end
   end
 
   # El paquete que se está actualizando, si vino por `?paquete_id=`.
