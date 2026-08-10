@@ -1,4 +1,7 @@
 <div data-controller="pre-alerta-editor"
+     <%# PR-C6.25: sin este valor el Stimulus cortaba en seco y el boton
+         "Guardar (F8)" no hacia NADA — borrar una fila tampoco persistia. %>
+     data-pre-alerta-editor-autosave-url-value="<%= pre_alerta_path(@pre_alerta) %>"
      data-pre-alerta-editor-cancel-url-value="<%= pre_alertas_path %>">
   <div id="pre_alerta_header">
     <%= render "pre_alertas/header", pre_alerta: @pre_alerta %>
@@ -8,6 +11,21 @@
 
   <%= form_with model: @pre_alerta, url: pre_alerta_path(@pre_alerta), method: :patch,
       data: { pre_alerta_editor_target: "form" }, class: "space-y-6" do |f| %>
+
+    <%# PR-C6.25: esta pantalla no tenía dónde mostrar un error. El `update`
+        re-renderizaba con 422 y el usuario veía la misma página, sin saber por
+        qué no se había guardado — el caso más común es un tracking repetido
+        dentro de la misma pre-alerta. %>
+    <% if @pre_alerta.errors.any? %>
+      <div class="p-4 bg-red-50 border border-red-200 rounded-lg" data-bloque="errores">
+        <p class="text-sm font-medium text-red-800 mb-1">No se pudo guardar:</p>
+        <ul class="list-disc list-inside text-sm text-red-700 space-y-0.5">
+          <% @pre_alerta.errors.full_messages.each do |msg| %>
+            <li><%= msg %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
 
     <%# Info row %>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -91,6 +109,7 @@
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripcion</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Instrucciones</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+              <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
               <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Vinculado</th>
               <th class="px-4 py-2"></th>
             </tr>
@@ -122,9 +141,27 @@
                     <%= pf.date_field :fecha, class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal", data: { controller: "flatpickr" } %>
                   <% end %>
                 </td>
-                <td class="px-4 py-2 text-center">
+                <%# PR-C6.25: el estado por tracking, que solo estaba en `show`.
+                    Yusef: "¿te acordás que aquí debería ir el estatus? Si ya
+                    fue recibido, si está en estado prealerta, etcétera". %>
+                <td class="px-4 py-2 text-center" data-columna="estado">
                   <% if pap.paquete %>
-                    <%= link_to paquete_display_id(pap.paquete), paquete_path(pap.paquete), class: "font-mono text-xs text-cec-navy hover:underline", target: "_blank" %>
+                    <%= render StatusBadgeComponent.new(status: pap.paquete.estado) %>
+                  <% else %>
+                    <%= render StatusBadgeComponent.new(status: "pre_alerta", label: "Pre Alerta") %>
+                  <% end %>
+                </td>
+                <%# PR-C6.25: la columna "Vinculado" mostraba el TRACKING otra
+                    vez. Yusef: "este vinculado es el que no… no, porque este es
+                    el mismo que este". Tenía razón: usaba `paquete_display_id`,
+                    que cae al tracking cuando no hay número de recepción — y el
+                    paquete esperado de una pre-alerta nunca lo tiene todavía.
+                    Ahora muestra el número solo cuando existe. %>
+                <td class="px-4 py-2 text-center" data-columna="vinculado">
+                  <% if pap.paquete&.numero_recepcion.present? %>
+                    <%= link_to pap.paquete.numero_recepcion, paquete_path(pap.paquete), class: "font-mono text-xs text-cec-navy hover:underline", target: "_blank" %>
+                  <% elsif pap.paquete %>
+                    <span class="text-xs text-gray-400 italic">sin recibir</span>
                   <% else %>
                     <span class="text-xs text-gray-400">—</span>
                   <% end %>

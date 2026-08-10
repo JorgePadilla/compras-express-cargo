@@ -65,10 +65,18 @@ class PreAlertasController < ApplicationController
           ]
         end
         format.html { redirect_to pre_alerta_path(@pre_alerta), notice: "Pre-Alerta actualizada." }
+        # PR-C6.25: el editor guarda por fetch (el botón "Guardar (F8)" es
+        # `type=button`, no un submit), así que necesita una respuesta JSON.
+        # Sin esta rama el guardado devolvía HTML y el Stimulus no sabía qué
+        # hacer con él.
+        format.json { render json: { ok: true } }
       end
     else
       @tipo_envios = TipoEnvio.activos.order(:nombre)
-      render :edit, status: :unprocessable_entity
+      respond_to do |format|
+        format.json { render json: { ok: false, errores: @pre_alerta.errors.full_messages }, status: :unprocessable_entity }
+        format.any  { render :edit, status: :unprocessable_entity }
+      end
     end
   end
 
