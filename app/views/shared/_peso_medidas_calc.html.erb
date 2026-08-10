@@ -117,9 +117,22 @@
         <span class="font-mono text-gray-700 dark:text-gray-200"><span data-calc-volumetrico-target="pies">—</span> ft³</span>
       </div>
 
-      <%# (C) metro cúbico — informativo %>
-      <div class="flex items-baseline justify-between text-sm px-1">
-        <span class="text-gray-500">China → HN · m³ <span class="text-[10px] italic text-gray-400">(no afluye en precio)</span></span>
+      <%# (C) metro cúbico
+          PR-C6.39: cuando el paquete viene de China, ESTA es la forma que
+          aplica — Yusef: el origen "se utiliza para el cobro en Entrega
+          Personal o en PreFactura". Las tres se siguen mostrando, pero la que
+          manda deja de verse igual que las informativas. %>
+      <% por_m3 = f.object.respond_to?(:cobra_por_metro_cubico?) && f.object.cobra_por_metro_cubico? %>
+      <div class="flex items-baseline justify-between text-sm px-1 <%= "font-medium text-cec-navy dark:text-cec-gold" if por_m3 %>"
+           data-forma-cobro="metros-cubicos" data-aplica="<%= por_m3 %>">
+        <span class="<%= por_m3 ? "text-cec-navy dark:text-cec-gold" : "text-gray-500" %>">
+          China → HN · m³
+          <% if por_m3 %>
+            <span class="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-cec-teal/15 text-cec-teal-dark">así se cobra</span>
+          <% else %>
+            <span class="text-[10px] italic text-gray-400">(no afluye en precio)</span>
+          <% end %>
+        </span>
         <span class="font-mono text-gray-700 dark:text-gray-200"><span data-calc-volumetrico-target="metros">—</span> m³</span>
       </div>
 

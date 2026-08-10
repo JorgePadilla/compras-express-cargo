@@ -494,6 +494,29 @@ class Paquete < ApplicationRecord
     sucursal_del_numero&.pais
   end
 
+  # PR-C6.39: como se cobra este paquete segun de donde vino.
+  #
+  # Yusef, contestando la pregunta 19: el origen "SE UTILIZA PARA EL COBRO en
+  # Entrega Personal o en PreFactura". PR-C6.38 lo habia dejado como dato
+  # informativo — la derivacion estaba bien, la conclusion no.
+  #
+  # El panel de calculo ya mostraba las tres formas; lo que faltaba era decir
+  # cual aplica en vez de pintarlas todas por igual.
+  #
+  # OJO: esto dice CUAL forma aplica, no cuanto se cobra. El papel dice donde
+  # se usa el origen, no como multiplica — convertirlo en un multiplicador sin
+  # que Yusef lo confirme seria inventar una regla de plata.
+  FORMA_COBRO_POR_ORIGEN = { "China" => :metros_cubicos }.freeze
+  FORMA_COBRO_DEFAULT = :libra_o_volumen
+
+  def forma_de_cobro
+    FORMA_COBRO_POR_ORIGEN.fetch(origen.to_s, FORMA_COBRO_DEFAULT)
+  end
+
+  def cobra_por_metro_cubico?
+    forma_de_cobro == :metros_cubicos
+  end
+
   def sucursal_del_numero
     sucursal_recepcion || sucursal
   end
