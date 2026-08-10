@@ -63,7 +63,28 @@ class PreAlertasController < ApplicationController
     cargar_sugerencias
   end
 
+  # ── Autosave (JSON) ──
+  #
+  # PR-C6.43: esta rama faltaba, y el que faltara **duplicaba paquetes**.
+  #
+  # El editor guarda por fetch mandando `autosave=true`, y espera que la
+  # respuesta le devuelva el `id` que la base le asignó a cada fila nueva
+  # (`_injectNewPaqueteIds`). Con la respuesta vieja —`{ ok: true }`, sin
+  # `new_paquetes`— el bucle del JS no corría nunca: la fila recién creada se
+  # quedaba sin su `id` oculto, y al segundo F8 se reenviaba como si fuera
+  # nueva. `accepts_nested_attributes_for` creaba un SEGUNDO registro, que por
+  # `crear_paquete_esperado` metía un segundo Paquete en bodega.
+  #
+  # F8 es la única forma de guardar en esta pantalla, así que el segundo apretón
+  # era la ruta normal, no un caso raro. El portal del cliente nunca lo tuvo
+  # porque su `update` sí devuelve `new_paquetes` desde el principio.
+  #
+  # La rama `format.json` vieja (`ok`/`errores`) se conserva: el JS siempre manda
+  # `autosave=true`, así que cae acá, y lo otro sigue sirviendo para un PATCH
+  # JSON hecho a mano.
   def update
+    return autosave if params[:autosave] == "true"
+
     if @pre_alerta.update(pre_alerta_params)
       respond_to do |format|
         format.turbo_stream do
@@ -100,7 +121,44 @@ class PreAlertasController < ApplicationController
     redirect_to pre_alertas_path, notice: "#{count} pre-alertas vacias eliminadas."
   end
 
-  private  def set_pre_alerta
+  private
+
+  # El guardado del editor. Espejo de `Cuenta::PreAlertasController#update`.
+  #
+  # `errors` y no `errores`: es la llave que el JS lee
+  # (`Array.isArray(data.errors)`). Con la otra, el operario veía "Error al
+  # guardar" genérico en vez de "el tracking ya existe en esta pre-alerta" —
+  # justo el mensaje que hace falta para arreglarlo.
+  def autosave
+    unless @pre_alerta.update(pre_alerta_params)
+      render json: { status: "error", errors: @pre_alerta.errors.full_messages },
+             status: :unprocessable_entity
+      return
+    end
+
+    render json: { status: "saved", new_paquetes: ids_de_las_filas_nuevas }
+  end
+
+  # `{ indice_del_form => id_en_la_base }` para las filas que acaban de nacer.
+  # Se busca por tracking porque es lo único que el form y la base comparten
+  # antes de que exista el id — el mismo criterio que usa el portal.
+  def ids_de_las_filas_nuevas
+    attrs_por_indice = params.dig(:pre_alerta, :pre_alerta_paquetes_attributes)
+    return {} if attrs_por_indice.blank?
+
+    # `each` y no `each_with_object`: `ActionController::Parameters` dejó de ser
+    # Enumerable en Rails 5.
+    nuevas = {}
+    attrs_por_indice.each do |indice, attrs|
+      next if attrs[:id].present? || attrs[:_destroy] == "1"
+
+      pap = @pre_alerta.pre_alerta_paquetes.find_by(tracking: attrs[:tracking]&.strip&.upcase)
+      nuevas[indice] = pap.id if pap
+    end
+    nuevas
+  end
+
+  def set_pre_alerta
     @pre_alerta = PreAlerta.find(params[:id])
   end
 
