@@ -42,6 +42,9 @@ class EtiquetarController < ApplicationController
     @sucursales_recepcion = sucursales_recepcion_posibles
     @sucursal_recepcion_sugerida = @sucursal_recepcion_sesion || sucursal_recepcion_por_defecto
     @carriers = Carrier.where(activo: true).order(:nombre)
+    # PR-C6.28: quienes pueden quitar el cobro por cambio de servicio.
+    @supervisores_cobro = User.activos.where(rol: QuitarCambioServicio::ROLES)
+                              .where.not(pin_digest: nil).order(:nombre)
     @motivos_retencion = MotivoRetencion.activos.ordered
   end
 
@@ -151,6 +154,29 @@ class EtiquetarController < ApplicationController
       create_single
     end
   end
+
+# PR-C6.28: el supervisor de Miami le quita a un paquete el cobro por cambio
+# de servicio, con su PIN. Yusef: "que le digan al supervisor de ellos allá
+# en Miami... y que él lo pueda eliminar el cobro con el usuario de él".
+#
+# Va acá y no en /paquetes porque es donde el digitador se da cuenta del
+# error: "es que ellos no manejan la página de paquetes".
+def quitar_cambio_servicio
+  paquete = Paquete.find(params[:id])
+
+  QuitarCambioServicio.new(
+    paquete: paquete,
+    supervisor: User.find_by(id: params[:supervisor_id]),
+    pin: params[:pin],
+    motivo: params[:motivo]
+  ).call
+
+  redirect_to etiquetar_path(paquete_id: paquete.id),
+              notice: "Se quitó el cobro por cambio de servicio de #{paquete.tracking}."
+rescue QuitarCambioServicio::NoPermitido, QuitarCambioServicio::PinInvalido,
+       QuitarCambioServicio::YaFacturado => e
+  redirect_to etiquetar_path(paquete_id: params[:id]), alert: e.message
+end
 
   private
 

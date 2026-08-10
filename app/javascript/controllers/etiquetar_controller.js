@@ -16,7 +16,8 @@ export default class extends ClienteAutocomplete {
     "submitBtn", "event", "panel",
     "terceroContainer", "terceroToggle",
     "conflictoSesion", "conflictoSesionTexto",
-    "sucursalBanner", "sucursalTexto", "sucursalModal", "sucursalModalTexto"
+    "sucursalBanner", "sucursalTexto", "sucursalModal", "sucursalModalTexto",
+    "quitarCobroModal"
   ]
   static values = {
     checkUrl: String,
@@ -196,6 +197,23 @@ export default class extends ClienteAutocomplete {
     if (this.sucursalModalTarget.showModal) this.sucursalModalTarget.showModal()
     else this.sucursalModalTarget.classList.remove("hidden")
   }
+
+// PR-C6.28: el modal donde el supervisor pone su PIN para quitarle al
+// paquete el cobro por cambio de servicio.
+abrirQuitarCobro() {
+  if (!this.hasQuitarCobroModalTarget) return
+
+  if (this.quitarCobroModalTarget.showModal) this.quitarCobroModalTarget.showModal()
+  else this.quitarCobroModalTarget.classList.remove("hidden")
+  this.quitarCobroModalTarget.querySelector("select, input")?.focus()
+}
+
+cerrarQuitarCobro() {
+  if (!this.hasQuitarCobroModalTarget) return
+
+  if (this.quitarCobroModalTarget.close) this.quitarCobroModalTarget.close()
+  else this.quitarCobroModalTarget.classList.add("hidden")
+}
 
   cerrarSucursalModal() {
     if (!this.hasSucursalModalTarget) return
