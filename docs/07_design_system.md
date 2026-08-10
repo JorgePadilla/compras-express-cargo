@@ -150,6 +150,30 @@ de un input (ojo de contraseña, limpiar fecha) y las pills de filtro con clases
 interpoladas. Su forma es incompatible con `inline-flex items-center` — pero
 igual llevan anillo de foco y nombre accesible.
 
+### El trinquete — `test/lint/botones_test.rb`
+
+El componente existía desde antes de `PR-BTN.1` y aun así **el 82% de los
+botones se seguía escribiendo a mano**. Por eso hay un lint.
+
+Lleva un **presupuesto por archivo** que falla en las **dos** direcciones:
+
+- **sube** → entró un botón crudo nuevo. Usá `ButtonComponent`.
+- **baja** → migraste y no actualizaste el número. Dejarlo inflado le abre
+  lugar a botones crudos nuevos que el lint no vería entrar.
+
+```
+bin/rails botones:presupuesto     # imprime los hashes listos para pegar
+```
+
+Un segundo presupuesto, `BLANCO_SOBRE_TEAL`, cuenta los `bg-cec-teal` con
+`text-white` en el mismo elemento. Tiene que llegar a `{}` cuando termine la
+migración.
+
+**Si de verdad tiene que ser un botón crudo** —una tarjeta, un CTA de sesión,
+un adorno dentro de un input— corré la tarea, pegá el hash y dejá un comentario
+diciendo por qué. Crudo a propósito sigue contando: su número tampoco puede
+subir solo.
+
 ---
 
 ## Paleta de Colores — Referencia histórica (sistema legacy)
