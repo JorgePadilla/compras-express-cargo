@@ -477,6 +477,23 @@ class Paquete < ApplicationRecord
   # pasar por `/etiquetar` (alta manual desde `/paquetes`, seeds, fixtures) y
   # ahí la única sucursal que hay es esa. Sin el fallback esos paquetes se
   # quedarían sin número, que es exactamente el bug que este PR viene a cerrar.
+  # PR-C6.38: de donde vino el paquete — Estados Unidos, China, Panama.
+  #
+  # Yusef, sobre el campo que el sistema viejo tenia marcado en pantalla:
+  #
+  #   > "Lo que marca aca, si es de China no se que. Eso es algo que tenemos
+  #   >  que ver... como ahorita estamos en Estados Unidos, pero ya va a abrir
+  #   >  China."
+  #
+  # NO se agrega una columna: el dato ya existe. El origen es el pais de la
+  # sucursal donde se RECIBIO, y esa ya se elige al abrir la sesion de
+  # etiquetado — "esta alguien en Miami recibiendo, o en Panama, o en China".
+  # El dia que abran China crean su sucursal y esto funciona solo, sin que
+  # nadie tenga que acordarse de marcar un campo mas.
+  def origen
+    sucursal_del_numero&.pais
+  end
+
   def sucursal_del_numero
     sucursal_recepcion || sucursal
   end

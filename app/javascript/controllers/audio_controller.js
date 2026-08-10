@@ -1,5 +1,9 @@
 import { Controller } from "@hotwired/stimulus"
 
+// Donde se suelta la grabacion de Yusef cuando llegue. Sin archivo, el
+// controller usa la voz sintetica y nadie se entera.
+const GRABACION_PRE_ALERTA = "/sonidos/pre_alerta.mp3"
+
 export default class extends Controller {
   static values = {
     enabled: { type: Boolean, default: true },
@@ -68,10 +72,30 @@ export default class extends Controller {
   // Match con pre-alerta: chime corto de atención + voz femenina (colombiana
   // si está instalada) diciendo "pre alerta". Si TTS no está disponible, el
   // chime ya sonó (degradación elegante).
+  // PR-C6.38: si existe la grabacion, suena esa; si no, la voz sintetica.
+  //
+  // Yusef: la voz de pre-alerta del sistema viejo era la de su senora, grabada
+  // en 2022-2023, y quedo de mandar grabaciones nuevas. Mientras no lleguen, la
+  // sintetica dice "pre alerta" y cumple — pero no hay que tocar codigo el dia
+  // que el mande el archivo: se suelta en `public/sonidos/pre_alerta.mp3` y
+  // empieza a sonar solo.
   speakPreAlerta() {
     if (!this.enabledValue) return
     this.notify()
-    setTimeout(() => this._speak("pre alerta"), 250)
+    setTimeout(() => this._decirPreAlerta(), 250)
+  }
+
+  _decirPreAlerta() {
+    if (this._grabacionRota) return this._speak("pre alerta")
+
+    const audio = new Audio(GRABACION_PRE_ALERTA)
+    audio.volume = (this.volumenValue || 60) / 100
+    audio.play().catch(() => {
+      // No esta el archivo (o el navegador lo bloqueo): se cae a la voz
+      // sintetica y no se vuelve a intentar, para no pedir un 404 por escaneo.
+      this._grabacionRota = true
+      this._speak("pre alerta")
+    })
   }
 
   _speak(text) {
