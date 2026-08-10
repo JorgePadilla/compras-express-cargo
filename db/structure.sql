@@ -340,6 +340,38 @@ ALTER SEQUENCE public.categoria_precios_id_seq OWNED BY public.categoria_precios
 
 
 --
+-- Name: cliente_cobro_volumetricos; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.cliente_cobro_volumetricos (
+    id bigint NOT NULL,
+    cliente_id bigint NOT NULL,
+    tipo_envio_id bigint NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: cliente_cobro_volumetricos_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.cliente_cobro_volumetricos_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: cliente_cobro_volumetricos_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.cliente_cobro_volumetricos_id_seq OWNED BY public.cliente_cobro_volumetricos.id;
+
+
+--
 -- Name: cliente_sessions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2533,6 +2565,13 @@ ALTER TABLE ONLY public.categoria_precios ALTER COLUMN id SET DEFAULT nextval('p
 
 
 --
+-- Name: cliente_cobro_volumetricos id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cliente_cobro_volumetricos ALTER COLUMN id SET DEFAULT nextval('public.cliente_cobro_volumetricos_id_seq'::regclass);
+
+
+--
 -- Name: cliente_sessions id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -2962,6 +3001,14 @@ ALTER TABLE ONLY public.categoria_precios
 
 
 --
+-- Name: cliente_cobro_volumetricos cliente_cobro_volumetricos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cliente_cobro_volumetricos
+    ADD CONSTRAINT cliente_cobro_volumetricos_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: cliente_sessions cliente_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3378,6 +3425,13 @@ ALTER TABLE ONLY public.warehouse_receipts
 
 
 --
+-- Name: idx_cobro_volumetrico_cliente_tipo_envio; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_cobro_volumetrico_cliente_tipo_envio ON public.cliente_cobro_volumetricos USING btree (cliente_id, tipo_envio_id);
+
+
+--
 -- Name: idx_ep_counter_combo; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3557,6 +3611,20 @@ CREATE INDEX index_autorizaciones_on_pre_factura_item_id ON public.autorizacione
 --
 
 CREATE INDEX index_autorizaciones_on_solicitado_por_id ON public.autorizaciones USING btree (solicitado_por_id);
+
+
+--
+-- Name: index_cliente_cobro_volumetricos_on_cliente_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cliente_cobro_volumetricos_on_cliente_id ON public.cliente_cobro_volumetricos USING btree (cliente_id);
+
+
+--
+-- Name: index_cliente_cobro_volumetricos_on_tipo_envio_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cliente_cobro_volumetricos_on_tipo_envio_id ON public.cliente_cobro_volumetricos USING btree (tipo_envio_id);
 
 
 --
@@ -5351,6 +5419,14 @@ ALTER TABLE ONLY public.paquetes
 
 
 --
+-- Name: cliente_cobro_volumetricos fk_rails_91664e000e; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cliente_cobro_volumetricos
+    ADD CONSTRAINT fk_rails_91664e000e FOREIGN KEY (cliente_id) REFERENCES public.clientes(id);
+
+
+--
 -- Name: tareas fk_rails_95011bfdd3; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5548,6 +5624,14 @@ ALTER TABLE ONLY public.pre_factura_items
 
 ALTER TABLE ONLY public.paquetes
     ADD CONSTRAINT fk_rails_cb242c76fb FOREIGN KEY (fecha_disponible_by_user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: cliente_cobro_volumetricos fk_rails_cdfb8d961f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cliente_cobro_volumetricos
+    ADD CONSTRAINT fk_rails_cdfb8d961f FOREIGN KEY (tipo_envio_id) REFERENCES public.tipo_envios(id);
 
 
 --
@@ -5773,6 +5857,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260810073956'),
 ('20260810030000'),
 ('20260810020000'),
 ('20260810010935'),

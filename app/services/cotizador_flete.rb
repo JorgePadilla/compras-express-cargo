@@ -76,10 +76,12 @@ class CotizadorFlete
     )
   end
 
-  # Mismo criterio que `Paquete#calculate_peso_cobrar`: el mayor entre el peso
-  # real y el volumétrico redondeado a ½ libra.
+  # Mismo criterio que `Paquete#calculate_peso_cobrar` — literalmente el mismo
+  # método desde PR-C6.41, para que la cotización y la factura no se separen.
   def peso_cobrar
-    @peso_cobrar ||= [ @peso, vlbs ].max
+    @peso_cobrar ||= VolumetricoCalculator.entre_peso_y_vlbs(
+      @peso, vlbs, solo_volumetrico: @cliente&.cobra_solo_volumetrico?(@tipo_envio)
+    )
   end
 
   def vlbs

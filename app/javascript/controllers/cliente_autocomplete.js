@@ -27,7 +27,8 @@ export default class ClienteAutocomplete extends BusquedaAutocomplete {
             data-nombre="${c.nombre}"
             data-notas="${c.notas_miami || ""}"
             data-categoria="${c.categoria_precio || ""}"
-            data-sucursal-retiro="${c.sucursal_retiro || ""}">
+            data-sucursal-retiro="${c.sucursal_retiro || ""}"
+            data-solo-volumetrico-en="${(c.solo_volumetrico_en || []).join(",")}">
         <div>
           <span class="font-mono text-sm font-medium text-cec-navy dark:text-cec-gold">${c.codigo}</span>
           <span class="ml-2 text-sm text-gray-700 dark:text-gray-200">${c.nombre}</span>
@@ -47,6 +48,23 @@ export default class ClienteAutocomplete extends BusquedaAutocomplete {
   clickOutsideDropdown(e) { this.clickAfuera(e) }
   renderDropdown(items) { this.pintar(items) }
 
-  _alSeleccionar(datos) { this._alSeleccionarCliente(datos) }
+  _alSeleccionar(datos) {
+    this._marcarCobroVolumetrico(datos.soloVolumetricoEn)
+    this._alSeleccionarCliente(datos)
+  }
   _alSeleccionarCliente(_datos) {}
+
+  // PR-C6.41 · RP-04b: le avisa al panel de cálculo en qué servicios este
+  // cliente paga SOLO el volumétrico ("mayoristas o clientes grandes", Yusef).
+  //
+  // Va acá, en la base, y no en cada pantalla: /etiquetar y /entrega_personal
+  // harían exactamente lo mismo, y la duplicación entre esas dos gemelas ya
+  // mordió cuatro veces en este proyecto. Así ninguna se puede olvidar.
+  _marcarCobroVolumetrico(lista) {
+    const calc = this.element.querySelector("[data-controller~='calc-volumetrico']")
+    if (!calc) return
+
+    const ids = (lista || "").split(",").filter(Boolean).map(Number)
+    calc.dataset.calcVolumetricoSoloVolumetricoEnValue = JSON.stringify(ids)
+  }
 }

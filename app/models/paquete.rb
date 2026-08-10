@@ -948,9 +948,15 @@ class Paquete < ApplicationRecord
     self.peso_volumetrico = VolumetricoCalculator.vlbs(in3)
   end
 
+  # PR-C6.41: la regla de qué peso manda sale de `VolumetricoCalculator`, que
+  # es la misma que usa el cotizador de /entrega_personal. Antes esta línea era
+  # una copia suelta del `max`.
   def calculate_peso_cobrar
     if peso.present? || peso_volumetrico.present?
-      self.peso_cobrar = [peso || 0, peso_volumetrico || 0].max
+      self.peso_cobrar = VolumetricoCalculator.entre_peso_y_vlbs(
+        peso || 0, peso_volumetrico || 0,
+        solo_volumetrico: cliente&.cobra_solo_volumetrico?(tipo_envio_id)
+      )
     end
   end
 

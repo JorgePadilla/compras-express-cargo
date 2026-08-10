@@ -7,14 +7,18 @@
       wrapper_class  — clases del contenedor (etiquetar necesita lg:col-span-3)
       valor_a_pagar  — muestra el bloque de cobro estimado (solo EP por ahora)
       cotizador_url  — endpoint JSON del cotizador, requerido si valor_a_pagar
+      tipo_envio_id  — el servicio de la sesión (PR-C6.41). En /etiquetar es fijo;
+                       en /entrega_personal lo reescribe el select.
 
     Una sola medida en pulgadas → tres representaciones en vivo vía
     calc-volumetrico (espejo de VolumetricoCalculator). Solo display. %>
 <% wrapper_class ||= "" %>
 <% valor_a_pagar = false unless defined?(valor_a_pagar) %>
+<% tipo_envio_id = nil unless defined?(tipo_envio_id) %>
 
 <div class="<%= wrapper_class %> pt-2 border-t border-gray-100 dark:border-gray-700"
      data-controller="calc-volumetrico cajas<%= " cotizador" if valor_a_pagar %>"
+     data-calc-volumetrico-tipo-envio-id-value="<%= tipo_envio_id.to_i %>"
      <% if valor_a_pagar %>data-cotizador-url-value="<%= cotizador_url %>"<% end %>>
   <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
     Peso, medidas y cálculo
@@ -109,6 +113,14 @@
             <span data-calc-volumetrico-target="pesoCobrar">—</span> <span class="text-xs font-normal">lbs</span>
           </span>
         </div>
+
+        <%# PR-C6.41: a este cliente, en este servicio, se le cobra SOLO el
+            volumétrico. Sin el aviso el operario ve un número más bajo que la
+            báscula y no sabe si el sistema se equivocó. %>
+        <p data-calc-volumetrico-target="avisoVolumetrico"
+           class="hidden mt-1 text-[11px] font-medium text-cec-teal-dark">
+          A este cliente se le cobra solo el volumetrico en este servicio.
+        </p>
       </div>
 
       <%# (B) pie cúbico — informativo %>

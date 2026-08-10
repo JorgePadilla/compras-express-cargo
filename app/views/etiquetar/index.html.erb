@@ -673,7 +673,8 @@ end %>
                    shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
       </div>
 
-      <%= render "shared/peso_medidas_calc", f: f, wrapper_class: "lg:col-span-3" %>
+      <%= render "shared/peso_medidas_calc", f: f, wrapper_class: "lg:col-span-3",
+            tipo_envio_id: @tipo_envio_sesion.id %>
 
     </div>
 

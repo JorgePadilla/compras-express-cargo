@@ -39,6 +39,16 @@ export default class extends ClienteAutocomplete {
     this.loadPanel(id)
   }
 
+  // PR-C6.41: acá el tipo de envío es un select y puede cambiar después de
+  // elegir al cliente, así que el panel de cálculo tiene que enterarse. En
+  // /etiquetar no hace falta: el servicio es de la sesión y no se mueve.
+  cambioTipoEnvio(e) {
+    const calc = this.element.querySelector("[data-controller~='calc-volumetrico']")
+    if (!calc) return
+
+    calc.dataset.calcVolumetricoTipoEnvioIdValue = parseInt(e.target.value, 10) || 0
+  }
+
   // Recarga el turbo-frame de la franja. Sin tracking que pasar: en entrega
   // personal el tracking lo genera el sistema al guardar (EP-AÑO-SUC-PROV-N).
   loadPanel(clienteId) {

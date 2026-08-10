@@ -12,7 +12,7 @@ class ClientesController < ApplicationController
   end
 
   def new
-    cargar_sucursales
+    cargar_catalogos
     @cliente = Cliente.new
   end
 
@@ -21,7 +21,7 @@ class ClientesController < ApplicationController
     if @cliente.save
       redirect_to @cliente, notice: "Cliente creado exitosamente."
     else
-      cargar_sucursales
+      cargar_catalogos
       render :new, status: :unprocessable_entity
     end
   end
@@ -31,7 +31,8 @@ class ClientesController < ApplicationController
     # usa el operario con la etiqueta rota en la mano, así que prioriza
     # encontrar algo por encima de la precisión. El filtro del listado
     # (#index) se queda con la estricta.
-    clientes = Cliente.activos.buscar_flexible(params[:q]).includes(:categoria_precio).limit(10)
+    clientes = Cliente.activos.buscar_flexible(params[:q])
+                      .includes(:categoria_precio, :cliente_cobro_volumetricos).limit(10)
     render json: clientes.map { |c|
       {
         id: c.id,
@@ -47,30 +48,42 @@ class ClientesController < ApplicationController
         # que termina imprimiendo la etiqueta en `RETIRA EN`. No hay sucursal
         # de retiro estructurada, así que el aviso es tan confiable como ese
         # texto. Queda como pregunta para Yusef.
-        sucursal_retiro: ERB::Util.html_escape(c.sucursal_retiro_nombre.to_s)
+        sucursal_retiro: ERB::Util.html_escape(c.sucursal_retiro_nombre.to_s),
+        # PR-C6.41: en qué servicios se le cobra solo el volumétrico. Viaja la
+        # lista entera y no un booleano porque el tipo de envío puede cambiar
+        # después de elegir al cliente (en /entrega_personal es un select), y
+        # así la respuesta no depende de cuál estaba seleccionado al buscar.
+        solo_volumetrico_en: c.tipo_envio_solo_volumetrico_ids
       }
     }
   end
 
   def edit
-    cargar_sucursales
+    cargar_catalogos
   end
 
   def update
     if @cliente.update(cliente_params)
       redirect_to @cliente, notice: "Cliente actualizado exitosamente."
     else
-      cargar_sucursales
+      cargar_catalogos
       render :edit, status: :unprocessable_entity
     end
   end
 
   private
 
-  # PR-C6.37: las sucursales donde un cliente puede retirar. Las de Miami no
-  # entran: nadie retira alla, es donde se recibe.
-  def cargar_sucursales
+  # Todo lo que el form necesita para pintarse. Va en un método —y no suelto en
+  # `new`/`edit`— porque `create`/`update` re-renderizan ese mismo form cuando
+  # falla una validación, sin pasar por esas acciones. Olvidar uno de los cuatro
+  # caminos revienta la pantalla justo cuando el usuario ya se equivocó, que es
+  # el peor momento. Hay un test por camino.
+  def cargar_catalogos
+    # PR-C6.37: las sucursales donde un cliente puede retirar. Las de Miami no
+    # entran: nadie retira alla, es donde se recibe.
     @sucursales_retiro = Sucursal.activas.where.not(ubicacion: "miami").ordered
+    # PR-C6.41: los servicios donde se le puede cobrar solo el volumétrico.
+    @tipo_envios = TipoEnvio.activos.order(:nombre)
   end
 
   def set_cliente
@@ -87,7 +100,11 @@ class ClientesController < ApplicationController
       :telefono, :telefono_whatsapp, :direccion, :ciudad, :sucursal_retiro_id,
       :departamento, :categoria_precio_id, :activo,
       :notas_miami, :notas_honduras,
-      :notas_caja, :notas_sac
+      :notas_caja, :notas_sac,
+      # PR-C6.41: los servicios donde se le cobra solo el volumétrico. Sin esta
+      # línea el form guarda en silencio — los checks no dan error, simplemente
+      # no pasa nada.
+      tipo_envio_solo_volumetrico_ids: []
     )
   end
 end
