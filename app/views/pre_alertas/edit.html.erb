@@ -1,7 +1,23 @@
+<%# PR-C6.45: el límite de paquetes del servicio. El tipo de envío no se puede
+    cambiar desde acá, así que el valor es fijo y honesto.
+
+    `respect_max_paquetes_por_accion` ya lo valida del lado del servidor; esto
+    es el aviso temprano, para que el operario no llene tres filas de un CKA y
+    se entere recién al guardar. %>
+<% max_paquetes = @pre_alerta.tipo_envio&.max_paquetes_por_accion || -1 %>
 <div data-controller="pre-alerta-editor"
      <%# PR-C6.25: sin este valor el Stimulus cortaba en seco y el boton
          "Guardar (F8)" no hacia NADA — borrar una fila tampoco persistia. %>
      data-pre-alerta-editor-autosave-url-value="<%= pre_alerta_path(@pre_alerta) %>"
+     <%# PR-C6.45: sin ESTE, el debounce del autosave nunca se armaba
+         (`if (this.consolidadoValue && this.autosaveUrlValue)`), así que F8 era
+         lo único que guardaba — y hasta PR-C6.43 apretarlo dos veces duplicaba
+         el paquete.
+
+         Va `consolidando?` y no `consolidado?`: una consolidación ya finalizada
+         no se sigue guardando sola. Es el mismo valor que usa el portal. %>
+     data-pre-alerta-editor-consolidado-value="<%= @pre_alerta.consolidando? %>"
+     data-pre-alerta-editor-max-paquetes-value="<%= max_paquetes %>"
      data-pre-alerta-editor-cancel-url-value="<%= pre_alertas_path %>">
   <div id="pre_alerta_header">
     <%= render "pre_alertas/header", pre_alerta: @pre_alerta %>
@@ -109,7 +125,19 @@
         <h3 class="text-sm font-bold text-gray-800">Paquetes</h3>
         <span data-pre-alerta-editor-target="counter"
               class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500"></span>
+
+        <%# PR-C6.45: el estado del guardado. Sin esto el autosave es invisible
+            y el operario no sabe si lo que escribió quedó. %>
+        <span data-pre-alerta-editor-target="status" class="ml-auto text-xs text-gray-500"></span>
       </div>
+
+      <% if max_paquetes.positive? %>
+        <div data-pre-alerta-editor-target="limitMessage"
+             class="hidden px-4 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-800 flex items-center gap-2">
+          <%= heroicon "information-circle", variant: :outline, options: { class: "w-4 h-4 shrink-0" } %>
+          <span><%= @pre_alerta.tipo_envio.nombre %> solo permite <%= max_paquetes %> paquete<%= "s" if max_paquetes != 1 %> por pre-alerta.</span>
+        </div>
+      <% end %>
 
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
@@ -141,20 +169,36 @@
         f: f, pap: PreAlertaPaquete.new, index: "NEW_INDEX" %>
 </template>
 
-    <%# Action buttons %>
+    <%# Action buttons.
+        Los atajos van con el `<kbd>` adentro del bloque y NUNCA con
+        `shortcut:`: `pre_alerta_editor_controller` ya escucha F2/F6/F8 por su
+        cuenta, y el handler global de `[data-shortcut]` dispararía la acción
+        dos veces. %>
     <div class="flex flex-col sm:flex-row gap-3 justify-end">
-      <%= link_to "Cancelar (F2)", pre_alertas_path,
-          class: "text-gray-600 hover:text-gray-800 text-sm font-medium px-4 py-2.5 text-center" %>
-      <button type="button" data-action="click->pre-alerta-editor#addPaquete"
-              data-pre-alerta-editor-target="addButton"
-              class="inline-flex items-center gap-1.5 border border-cec-teal text-cec-teal font-semibold px-6 py-2.5 rounded-lg text-sm hover:bg-cec-teal/10 transition-colors">
-        <%= heroicon "plus-circle", variant: :outline, options: { class: "w-4 h-4" } %>
+      <%= render ButtonComponent.new(variant: :ghost, href: pre_alertas_path) do %>
+        Cancelar (F2)
+      <% end %>
+      <%= render ButtonComponent.new(variant: :outline_teal, icon: "plus-circle",
+            data: { action: "click->pre-alerta-editor#addPaquete",
+                    pre_alerta_editor_target: "addButton" }) do %>
         Agregar Paquete (F6)
-      </button>
-      <button type="button" data-action="click->pre-alerta-editor#save"
-              class="bg-cec-teal text-white font-semibold px-6 py-2.5 rounded-lg shadow-sm text-sm hover:bg-cec-teal-dark transition-colors">
+      <% end %>
+      <%= render ButtonComponent.new(variant: :teal,
+            data: { action: "click->pre-alerta-editor#save",
+                    pre_alerta_editor_target: "saveButton" }) do %>
         Guardar (F8)
-      </button>
+      <% end %>
     </div>
   <% end %>
+
+  <%# PR-C6.45: el aviso de guardado del portal. Aparece 3 segundos y se va. %>
+  <div data-pre-alerta-editor-target="savedModal"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40">
+    <div class="bg-white rounded-2xl shadow-xl px-8 py-6 text-center">
+      <div class="w-12 h-12 mx-auto rounded-full bg-cec-teal/10 text-cec-teal flex items-center justify-center mb-3">
+        <%= heroicon "check", variant: :outline, options: { class: "w-6 h-6" } %>
+      </div>
+      <p class="text-sm font-semibold text-cec-navy">Cambios guardados</p>
+    </div>
+  </div>
 </div>
