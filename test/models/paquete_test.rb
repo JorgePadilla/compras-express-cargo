@@ -327,21 +327,24 @@ class PaqueteTest < ActiveSupport::TestCase
     assert_not_equal p2.guia, p3.guia
   end
 
-  test "genera numero_recepcion con prefijo de la sucursal y formato anual" do
+  test "genera numero_recepcion con sucursal, ano y mes" do
+    # PR-C6.40: Yusef escribió el formato a mano en la pregunta 17, rotulando
+    # cada parte: R + MIA + 26 + 12 + correlativo.
     p = Paquete.create!(tracking: "1Z999REC1", cliente: clientes(:juan), sucursal: sucursales(:miami))
-    # Formato: <PREFIX><AÑO 7-DIG><CONTADOR 6-DIG>, ej. RMI0002026000001
-    anio = (p.fecha_recibido_miami&.year || Time.zone.now.year)
-    assert_match(/\ARMI\d{7}\d{6}\z/, p.numero_recepcion)
-    assert p.numero_recepcion.start_with?("RMI#{anio.to_s.rjust(7, '0')}")
+    fecha = p.fecha_recibido_miami || Time.zone.now
+
+    assert_match(/\ARMIA\d{2}\d{2}\d{6}\z/, p.numero_recepcion)
+    assert p.numero_recepcion.start_with?(format("RMIA%02d%02d", fecha.year % 100, fecha.month))
   end
 
   test "genera numero_recepcion distinto por prefijo (sucursales distintas)" do
     p1 = Paquete.create!(tracking: "1Z999REC2A", cliente: clientes(:juan), sucursal: sucursales(:miami))
     p2 = Paquete.create!(tracking: "1Z999REC2B", cliente: clientes(:juan), sucursal: sucursales(:zeron_sps))
-    assert p1.numero_recepcion.start_with?("RMI")
-    assert p2.numero_recepcion.start_with?("RZE")
-    assert_match(/\ARMI\d{13}\z/, p1.numero_recepcion)
-    assert_match(/\ARZE\d{13}\z/, p2.numero_recepcion)
+    # PR-C6.40: el código de 3 letras de la sucursal, no el prefijo viejo.
+    assert p1.numero_recepcion.start_with?("RMIA")
+    assert p2.numero_recepcion.start_with?("RSPS")
+    assert_match(/\ARMIA\d{10}\z/, p1.numero_recepcion)
+    assert_match(/\ARSPS\d{10}\z/, p2.numero_recepcion)
   end
 
   test "track_fecha_disponible se setea al pasar a disponible_entrega" do
@@ -373,7 +376,7 @@ class PaqueteTest < ActiveSupport::TestCase
 
     numeros = [ p1, p2, p3 ].map(&:numero_recepcion)
     assert_equal numeros, numeros.uniq, "Se esperaban 3 numeros distintos, se obtuvieron duplicados"
-    numeros.each { |n| assert_match(/\ARMI\d{13}\z/, n) }
+    numeros.each { |n| assert_match(/\ARMIA\d{10}\z/, n) }
   end
 
   # ── Sub-etiquetas / split de tracking (PR-C) ──
@@ -439,7 +442,7 @@ class PaqueteTest < ActiveSupport::TestCase
     # solo por numero_caja (no por numero_recepcion).
     numeros = paquetes.map(&:numero_recepcion).uniq
     assert_equal 1, numeros.size, "las N cajas deben compartir el mismo numero_recepcion (madre)"
-    assert_match(/\ARMI\d{13}\z/, numeros.first)
+    assert_match(/\ARMIA\d{10}\z/, numeros.first)
   end
 
   # ── PR-5c.5p2: integración Paquete ↔ WarehouseReceipt ──
