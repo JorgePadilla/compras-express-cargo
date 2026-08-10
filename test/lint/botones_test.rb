@@ -37,7 +37,7 @@ require "test_helper"
 # accesibilidad — eso lo cubre PR-BTN.3.
 class BotonesTest < ActiveSupport::TestCase
   PRESUPUESTO = {
-    "app/views/etiquetar/index.html.erb"                     => 26,
+    "app/views/etiquetar/index.html.erb"                     => 10,
     "app/views/paquetes/show.html.erb"                       => 15,
     "app/views/paquetes/_form.html.erb"                      => 14,
     "app/views/ventas/show.html.erb"                         => 8,
@@ -144,7 +144,6 @@ class BotonesTest < ActiveSupport::TestCase
     "app/views/entregas/index.html.erb"                    => 1,
     "app/views/entregas/new.html.erb"                      => 1,
     "app/views/entregas/show.html.erb"                     => 1,
-    "app/views/etiquetar/index.html.erb"                   => 1,
     "app/views/financiamientos/show.html.erb"              => 1,
     "app/views/ingresos_caja/index.html.erb"               => 1,
     "app/views/ingresos_caja/new.html.erb"                 => 1,

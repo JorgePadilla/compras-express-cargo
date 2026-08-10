@@ -182,10 +182,10 @@ end %>
                 class: "inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700" do %>
             Finalizar sesión y elegir el correcto
           <% end %>
-          <button type="button" data-action="click->etiquetar#clearForm"
-                  class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-white text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50">
+          <%= render ButtonComponent.new(variant: :secondary, size: :xs,
+                data: { action: "click->etiquetar#clearForm" }) do %>
             Dejarlo de lado y seguir <kbd class="px-1 py-0.5 bg-gray-100 border rounded text-[10px]">F2</kbd>
-          </button>
+          <% end %>
         </div>
       </div>
     </div>
@@ -224,10 +224,10 @@ end %>
       <p class="text-3xl font-bold text-red-800" data-etiquetar-target="sucursalModalTexto"></p>
     </div>
     <div class="flex items-center justify-center px-6 py-3 bg-white border-t border-gray-200">
-      <button type="button" data-action="etiquetar#cerrarSucursalModal"
-              class="px-5 py-2 text-sm font-medium bg-cec-navy text-white rounded-lg hover:bg-cec-navy-light">
+      <%= render ButtonComponent.new(variant: :primary,
+            data: { action: "etiquetar#cerrarSucursalModal" }) do %>
         Listo
-      </button>
+      <% end %>
     </div>
   </dialog>
 
@@ -246,10 +246,10 @@ end %>
         </p>
       </div>
       <% if @supervisores_cobro.any? %>
-        <button type="button" data-action="etiquetar#abrirQuitarCobro"
-                class="px-3 py-1.5 text-sm font-medium bg-white text-amber-900 border border-amber-400 rounded-lg hover:bg-amber-100">
+        <%= render ButtonComponent.new(variant: :secondary, size: :sm,
+              data: { action: "etiquetar#abrirQuitarCobro" }) do %>
           Quitar el cobro
-        </button>
+        <% end %>
       <% else %>
         <span class="text-xs italic text-amber-700">Ningún supervisor tiene PIN asignado todavía.</span>
       <% end %>
@@ -282,10 +282,11 @@ end %>
         </div>
       </div>
       <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">
-        <button type="button" data-action="etiquetar#cerrarQuitarCobro"
-                class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900">Cancelar</button>
-        <%= submit_tag "Quitar el cobro",
-              class: "px-4 py-1.5 text-sm font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700 cursor-pointer" %>
+        <%= render ButtonComponent.new(variant: :ghost, size: :sm,
+              data: { action: "etiquetar#cerrarQuitarCobro" }) do %>Cancelar<% end %>
+        <%= render ButtonComponent.new(variant: :warning, size: :sm, type: "submit") do %>
+          Quitar el cobro
+        <% end %>
       </div>
     <% end %>
   </dialog>
@@ -359,8 +360,8 @@ end %>
       </div>
 
       <div class="flex justify-end">
-        <button type="button" data-action="click->etiquetar#closeDuplicate"
-                class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100">Cancelar</button>
+        <%= render ButtonComponent.new(variant: :ghost,
+              data: { action: "click->etiquetar#closeDuplicate" }) do %>Cancelar<% end %>
       </div>
     </div>
   </div>
@@ -405,18 +406,17 @@ end %>
         <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F10</kbd> Guardar</span>
         <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F9</kbd> Guardar + Imprimir</span>
       </div>
-      <button type="button" data-action="click->etiquetar#clearForm"
-              class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium border border-cec-navy text-cec-navy hover:bg-cec-navy/5 dark:border-cec-navy-light dark:text-cec-navy-light dark:hover:bg-cec-navy-light/10 rounded-lg">
-        Limpiar <kbd class="px-1 py-0.5 bg-cec-navy/10 text-cec-navy dark:bg-cec-navy-light/20 dark:text-cec-navy-light rounded text-[10px] font-sans">F2</kbd>
-      </button>
-      <button type="submit"
-              class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-cec-navy text-white rounded-lg hover:bg-cec-navy-light">
+      <%= render ButtonComponent.new(variant: :outline_navy, size: :xs,
+            data: { action: "click->etiquetar#clearForm" }) do %>
+        Limpiar <kbd class="px-1 py-0.5 bg-cec-navy/10 text-cec-navy dark:bg-cec-gold/20 dark:text-cec-gold rounded text-[10px] font-sans">F2</kbd>
+      <% end %>
+      <%= render ButtonComponent.new(variant: :primary, size: :xs, type: "submit") do %>
         Guardar <kbd class="px-1 py-0.5 bg-white/20 rounded text-[10px] font-sans">F10</kbd>
-      </button>
-      <button type="button" data-action="click->etiquetar#submitFormWithPrint"
-              class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-cec-gold text-cec-navy-dark rounded-lg hover:bg-cec-gold-dark">
+      <% end %>
+      <%= render ButtonComponent.new(variant: :gold, size: :xs,
+            data: { action: "click->etiquetar#submitFormWithPrint" }) do %>
         Guardar + Imprimir <kbd class="px-1 py-0.5 bg-black/10 rounded text-[10px] font-sans">F9</kbd>
-      </button>
+      <% end %>
     </div>
 
     <% if @paquete.errors.any? %>
@@ -441,7 +441,7 @@ end %>
           <button type="button"
                   data-etiquetar-target="trackingSecundarioToggle"
                   data-action="click->etiquetar#toggleTrackingSecundario"
-                  class="text-xs text-cec-teal hover:text-cec-teal-dark font-medium inline-flex items-center gap-1">
+                  class="text-xs text-cec-teal-deep dark:text-cec-teal-light hover:underline font-medium inline-flex items-center gap-1">
             <span data-etiquetar-target="trackingSecundarioToggleLabel">+ Agregar tracking secundario</span>
             <kbd class="px-1 py-0.5 bg-gray-100 border rounded text-[10px]">F3</kbd>
           </button>
@@ -501,7 +501,7 @@ end %>
           <%= f.label :descripcion, class: "block text-sm font-medium text-gray-700" %>
           <button type="button" data-action="click->etiquetar#toggleTercero"
                   data-etiquetar-target="terceroToggle"
-                  class="text-xs text-cec-teal hover:text-cec-teal-dark font-medium">
+                  class="text-xs text-cec-teal-deep dark:text-cec-teal-light hover:underline font-medium">
             + Agregar tercero <kbd class="px-1 py-0.5 bg-gray-100 border rounded text-[10px]">F4</kbd>
           </button>
         </div>
@@ -562,10 +562,10 @@ end %>
               </div>
             </div>
             <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">
-              <button type="button" data-action="checkbox-modal#cancel"
-                      class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900">Cancelar</button>
-              <button type="button" data-action="checkbox-modal#confirm"
-                      class="px-3 py-1.5 text-sm font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700">Confirmar</button>
+              <%= render ButtonComponent.new(variant: :ghost, size: :sm,
+                    data: { action: "checkbox-modal#cancel" }) do %>Cancelar<% end %>
+              <%= render ButtonComponent.new(variant: :warning, size: :sm,
+                    data: { action: "checkbox-modal#confirm" }) do %>Confirmar<% end %>
             </div>
           </dialog>
         </div>
@@ -615,10 +615,10 @@ end %>
                 </p>
               </div>
               <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">
-                <button type="button" data-action="checkbox-modal#cancel"
-                        class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900">Cancelar</button>
-                <button type="button" data-action="checkbox-modal#confirm"
-                        class="px-3 py-1.5 text-sm font-medium bg-cec-teal text-white rounded-lg hover:bg-cec-teal-dark">Confirmar</button>
+                <%= render ButtonComponent.new(variant: :ghost, size: :sm,
+                      data: { action: "checkbox-modal#cancel" }) do %>Cancelar<% end %>
+                <%= render ButtonComponent.new(variant: :teal, size: :sm,
+                      data: { action: "checkbox-modal#confirm" }) do %>Confirmar<% end %>
               </div>
             </dialog>
           </div>
@@ -688,18 +688,18 @@ end %>
         <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F9</kbd> Guardar + Imprimir</span>
       </div>
       <div class="flex items-center gap-3">
-        <button type="button" data-action="click->etiquetar#clearForm"
-                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-cec-navy text-cec-navy hover:bg-cec-navy/5 dark:border-cec-navy-light dark:text-cec-navy-light dark:hover:bg-cec-navy-light/10 rounded-lg">
-          Limpiar <kbd class="px-1 py-0.5 bg-cec-navy/10 text-cec-navy dark:bg-cec-navy-light/20 dark:text-cec-navy-light rounded text-[10px] font-sans">F2</kbd>
-        </button>
-        <button type="submit" data-etiquetar-target="submitBtn"
-                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-cec-navy text-white rounded-lg hover:bg-cec-navy-light">
+        <%= render ButtonComponent.new(variant: :outline_navy,
+              data: { action: "click->etiquetar#clearForm" }) do %>
+          Limpiar <kbd class="px-1 py-0.5 bg-cec-navy/10 text-cec-navy dark:bg-cec-gold/20 dark:text-cec-gold rounded text-[10px] font-sans">F2</kbd>
+        <% end %>
+        <%= render ButtonComponent.new(variant: :primary, type: "submit",
+              data: { etiquetar_target: "submitBtn" }) do %>
           Guardar <kbd class="px-1 py-0.5 bg-white/20 rounded text-[10px] font-sans">F10</kbd>
-        </button>
-        <button type="button" data-action="click->etiquetar#submitFormWithPrint"
-                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-cec-gold text-cec-navy-dark rounded-lg hover:bg-cec-gold-dark">
+        <% end %>
+        <%= render ButtonComponent.new(variant: :gold,
+              data: { action: "click->etiquetar#submitFormWithPrint" }) do %>
           Guardar + Imprimir <kbd class="px-1 py-0.5 bg-black/10 rounded text-[10px] font-sans">F9</kbd>
-        </button>
+        <% end %>
       </div>
     </div>
   <% end %>
