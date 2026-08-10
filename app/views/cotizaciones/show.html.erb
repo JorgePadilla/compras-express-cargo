@@ -85,7 +85,7 @@
 
   <div class="flex flex-wrap gap-3 print:hidden">
     <%= link_to "Descargar PDF (F9)", pdf_cotizacion_path(@cotizacion), class: "px-4 py-2 bg-cec-navy text-white rounded-lg text-sm font-medium", data: { shortcut: "F9" } %>
-    <button onclick="window.print()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50">Imprimir</button>
+    <button type="button" onclick="window.print()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50">Imprimir</button>
 
     <% if @cotizacion.borrador? %>
       <%= link_to "Editar (F6)", edit_cotizacion_path(@cotizacion), class: "px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50", data: { shortcut: "F6" } %>

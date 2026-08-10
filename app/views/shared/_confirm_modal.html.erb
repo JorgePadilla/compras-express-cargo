@@ -3,7 +3,8 @@
     which returns a Promise<boolean>. %>
 <div data-controller="confirm-modal" data-confirm-modal-target="root"
      class="hidden fixed inset-0 z-[60] flex items-center justify-center">
-  <div data-action="click->confirm-modal#cancel"
+  <%# Fondo decorativo: cerrar vive en el boton Cancelar de abajo. %>
+  <div data-action="click->confirm-modal#cancel" aria-hidden="true"
        class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"></div>
 
   <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">

@@ -105,7 +105,8 @@
         <% @pre_alerta.pre_alerta_paquetes.each.with_index do |pap, index| %>
           <div class="paquete-row relative bg-gray-50 rounded-xl p-4 border border-gray-200">
             <button type="button" data-action="click->pre-alerta-editor#removePaquete"
-                    class="absolute top-3 right-3 text-red-400 hover:text-red-600 transition-colors">
+                    aria-label="Quitar este paquete de la pre-alerta"
+                    class="absolute top-3 right-3 rounded foco-cec text-red-500 hover:text-red-600 transition-colors">
               <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
             </button>
             <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
@@ -170,7 +171,8 @@
       <template data-pre-alerta-editor-target="template">
         <div class="paquete-row relative bg-gray-50 rounded-xl p-4 border border-gray-200" data-new-record="true">
           <button type="button" data-action="click->pre-alerta-editor#removePaquete"
-                  class="absolute top-3 right-3 text-red-400 hover:text-red-600 transition-colors">
+                  aria-label="Quitar este paquete de la pre-alerta"
+                  class="absolute top-3 right-3 rounded foco-cec text-red-500 hover:text-red-600 transition-colors">
             <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
           </button>
           <div class="grid grid-cols-1 gap-4">

@@ -181,7 +181,7 @@
                 <td class="px-4 py-2 text-center">
                   <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
                     <input type="hidden" name="pre_alerta[pre_alerta_paquetes_attributes][<%= index %>][_destroy]" value="0" data-pre-alerta-editor-target="destroyField">
-                    <button type="button" data-action="click->pre-alerta-editor#removePaquete" class="text-red-400 hover:text-red-600">
+                    <button type="button" data-action="click->pre-alerta-editor#removePaquete" aria-label="Quitar este paquete de la pre-alerta" class="rounded foco-cec text-red-500 hover:text-red-600">
                       <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
                     </button>
                   <% end %>
@@ -223,7 +223,7 @@
           <span class="text-xs text-gray-400">—</span>
         </td>
         <td class="px-4 py-2 text-center">
-          <button type="button" data-action="click->pre-alerta-editor#removePaquete" class="text-red-400 hover:text-red-600">
+          <button type="button" data-action="click->pre-alerta-editor#removePaquete" aria-label="Quitar este paquete de la pre-alerta" class="rounded foco-cec text-red-500 hover:text-red-600">
             <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
           </button>
         </td>
