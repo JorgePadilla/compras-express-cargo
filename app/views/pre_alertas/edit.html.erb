@@ -5,7 +5,8 @@
     es el aviso temprano, para que el operario no llene tres filas de un CKA y
     se entere recién al guardar. %>
 <% max_paquetes = @pre_alerta.tipo_envio&.max_paquetes_por_accion || -1 %>
-<div data-controller="pre-alerta-editor"
+<div data-controller="pre-alerta-editor pre-alerta-mover"
+     data-pre-alerta-mover-destinos-url-value="<%= destinos_disponibles_pre_alerta_path(@pre_alerta) %>"
      <%# PR-C6.25: sin este valor el Stimulus cortaba en seco y el boton
          "Guardar (F8)" no hacia NADA — borrar una fila tampoco persistia. %>
      data-pre-alerta-editor-autosave-url-value="<%= pre_alerta_path(@pre_alerta) %>"
@@ -171,6 +172,7 @@
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
               <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
               <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Vinculado</th>
+              <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Mover</th>
               <th class="px-4 py-2"></th>
             </tr>
           </thead>
@@ -223,4 +225,9 @@
       <p class="text-sm font-semibold text-cec-navy">Cambios guardados</p>
     </div>
   </div>
+
+  <%# PR-C6.48: mover un paquete a otra pre-alerta sin salir de aca. El modal
+      se comparte con el portal — lo unico que cambia es a donde postea. %>
+  <%= render "shared/mover_paquete_modal",
+        pre_alerta: @pre_alerta, url: mover_paquete_pre_alerta_path(@pre_alerta) %>
 </div>

@@ -1,5 +1,5 @@
 class PreAlertasController < ApplicationController
-  before_action :set_pre_alerta, only: %i[show edit update anular]
+  before_action :set_pre_alerta, only: %i[show edit update anular destinos_disponibles mover_paquete]
 
   def index
     @pre_alertas = base_scope.includes(:cliente, :tipo_envio, :pre_alerta_paquetes).recientes
@@ -110,6 +110,57 @@ class PreAlertasController < ApplicationController
     end
   end
 
+  # PR-C6.48: los destinos posibles para mover un paquete.
+  #
+  # La lista de admin es deliberadamente más ancha que la del portal: **de
+  # cualquier cliente**, y sin exigir que el tipo de envío coincida. Yusef:
+  # *"se permite mover a pre-alerta de cualquier cliente (caso típico: corregir
+  # asignación equivocada)"* — si el paquete cayó en la pre-alerta del cliente
+  # equivocado, el destino correcto es justamente de otro cliente.
+  #
+  # Lo único que se sigue bloqueando es meterlo en una consolidación ya cerrada:
+  # ahí el cliente ya no puede reaccionar.
+  def destinos_disponibles
+    # El `find` es la validación: si la fila no es de esta pre-alerta, levanta
+    # RecordNotFound y no se filtra la lista de nadie.
+    @pre_alerta.pre_alerta_paquetes.find(params[:pre_alerta_paquete_id])
+
+    destinos = PreAlerta.activas
+                        .includes(:cliente, :tipo_envio)
+                        .where.not(id: @pre_alerta.id)
+                        .where(finalizado: false)
+                        .order(created_at: :desc)
+                        .limit(20)
+
+    render json: destinos.map { |pa| destino_json(pa) }
+  end
+
+  def mover_paquete
+    pap = @pre_alerta.pre_alerta_paquetes.find(params[:pre_alerta_paquete_id])
+    destino = PreAlerta.activas.find_by(id: params[:destino_id])
+
+    if destino.nil? || destino.id == @pre_alerta.id
+      redirect_to edit_pre_alerta_path(@pre_alerta), alert: "Destino no válido."
+      return
+    end
+
+    if destino.finalizado?
+      redirect_to edit_pre_alerta_path(@pre_alerta),
+                  alert: "#{destino.numero_documento} ya se finalizó: no se le pueden agregar paquetes."
+      return
+    end
+
+    origen_quedo_vacia = mover!(pap, destino)
+
+    if origen_quedo_vacia
+      redirect_to pre_alertas_path,
+                  notice: "Paquete movido a #{destino.numero_documento}. La pre-alerta origen quedó vacía y fue eliminada."
+    else
+      redirect_to edit_pre_alerta_path(@pre_alerta),
+                  notice: "Paquete movido a #{destino.numero_documento} (#{destino.cliente.codigo})."
+    end
+  end
+
   def anular
     @pre_alerta.anular!
     redirect_to pre_alertas_path, notice: "Pre-Alerta #{@pre_alerta.numero_documento} anulada."
@@ -156,6 +207,59 @@ class PreAlertasController < ApplicationController
       nuevas[indice] = pap.id if pap
     end
     nuevas
+  end
+
+  # El movimiento en sí. Devuelve si la pre-alerta origen quedó vacía.
+  #
+  # Deja rastro en el `historial` de las DOS, igual que el portal: un paquete
+  # que aparece en otra pre-alerta sin explicación es indistinguible de un
+  # error de carga.
+  #
+  # **No manda mail.** Los movimientos del portal los hace el cliente sobre sus
+  # propias pre-alertas; este lo hace el equipo, y avisarle al cliente de una
+  # corrección interna es una decisión de negocio que nadie pidió.
+  def mover!(pap, destino)
+    vacia = false
+
+    PreAlertaPaquete.transaction do
+      sello = Time.current.strftime("%d/%m/%Y %H:%M")
+      quien = Current.user&.nombre || "el equipo"
+      desc = pap.descripcion.presence || pap.tracking.presence || "sin descripcion"
+
+      pap.update!(pre_alerta: destino)
+
+      @pre_alerta.append_historial!(
+        "[#{sello}] #{quien} movió el paquete '#{desc}' (#{pap.tracking}) a #{destino.numero_documento} — #{destino.cliente.codigo}."
+      )
+      destino.append_historial!(
+        "[#{sello}] #{quien} trajo el paquete '#{desc}' (#{pap.tracking}) desde #{@pre_alerta.numero_documento} — #{@pre_alerta.cliente.codigo}."
+      )
+
+      if @pre_alerta.pre_alerta_paquetes.reload.empty?
+        @pre_alerta.soft_delete!
+        vacia = true
+      end
+    end
+
+    vacia
+  end
+
+  def destino_json(pa)
+    te = pa.tipo_envio
+    modalidad = te&.modalidad&.capitalize || "—"
+
+    {
+      id: pa.id,
+      numero_documento: pa.numero_documento,
+      # El código del cliente va en el título porque acá el destino puede ser
+      # de OTRO cliente — es el dato que decide si es el correcto.
+      titulo: "#{pa.cliente.codigo} · #{pa.titulo}",
+      tipo_envio: te&.nombre || "—",
+      tipo_envio_descripcion: te&.con_reempaque ? "#{modalidad} con Reempaque" : "#{modalidad} sin Reempaque",
+      consolidado: pa.consolidado,
+      paquetes_count: pa.pre_alerta_paquetes.size,
+      created_at: pa.created_at.strftime("%d/%m/%Y")
+    }
   end
 
   def set_pre_alerta

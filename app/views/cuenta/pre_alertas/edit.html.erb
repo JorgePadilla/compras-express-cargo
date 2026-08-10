@@ -208,7 +208,8 @@
   </div>
 
   <% unless @pre_alerta.finalizado? %>
-    <%= render "cuenta/pre_alertas/move_modal", pre_alerta: @pre_alerta %>
+    <%= render "shared/mover_paquete_modal",
+            pre_alerta: @pre_alerta, url: mover_paquete_cuenta_pre_alerta_path(@pre_alerta) %>
   <% end %>
 
   <% if puede_buscar? %>

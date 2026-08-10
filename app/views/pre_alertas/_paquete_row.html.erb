@@ -113,6 +113,19 @@
       <% end %>
     </td>
 
+    <%# PR-C6.48: mover el paquete a otra pre-alerta, sin salir del editor.
+        Solo para filas ya guardadas — una que todavía no existe no se puede
+        mover a ningún lado. %>
+    <td class="px-4 py-2 text-center">
+      <% unless nueva %>
+        <%= render ButtonComponent.new(variant: :outline_teal, size: :xs,
+              data: { action: "click->pre-alerta-mover#open",
+                      pap_id: pap.id, tracking: pap.tracking }) do %>
+          Mover
+        <% end %>
+      <% end %>
+    </td>
+
     <td class="px-4 py-2 text-center">
       <%# El `_destroy` va SOLO si la fila ya existe en la base, y es
           load-bearing: `removePaquete` bifurca según exista ese campo. Si
