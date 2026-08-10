@@ -16,7 +16,17 @@
 <% nueva = !pap.persisted? %>
 <% atributos_fila = nueva ? { data: { new_record: true } } : { id: "paquete_row_#{pap.id}" } %>
 
-<tr class="paquete-row" <%= tag.attributes(atributos_fila) %>>
+<%# PR-C6.47: el paquete ya llegó a bodega. El portal directamente no deja
+    tocarlo; admin sí, porque corregir una asignación equivocada es parte del
+    trabajo del equipo — Yusef: "se permite mover a pre-alerta de cualquier
+    cliente (caso típico: corregir asignación equivocada)".
+
+    Así que el candado es visual: se avisa, no se bloquea. Sin `disabled`, sin
+    `readonly`. %>
+<% ya_recibido = pap.paquete.present? && !pap.paquete.pre_alerta_estado? %>
+
+<tr class="paquete-row <%= "ring-1 ring-inset ring-amber-300 bg-amber-50/40" if ya_recibido %>"
+    <%= tag.attributes(atributos_fila) %>>
   <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
     <td class="px-4 py-2">
       <% unless nueva %>
@@ -30,19 +40,31 @@
           `excluir-paquete-id`: cada PreAlertaPaquete materializa un Paquete en
           estado pre_alerta, así que sin esto la fila se avisaría **sobre sí
           misma** apenas el operario toca su propio tracking. %>
-      <div data-controller="tracking-duplicado"
+      <%# `tracking-input` va PRIMERO en el `data-action`: limpia el valor antes
+          de que el otro salga a preguntar, así la consulta no se hace con un
+          espacio de más. Avisa lo que sacó — no se lo traga en silencio. %>
+      <div data-controller="tracking-duplicado tracking-input"
            data-tracking-duplicado-url-value="<%= check_tracking_paquetes_path %>"
            data-tracking-duplicado-excluir-paquete-id-value="<%= pap.paquete_id %>">
         <%= pf.text_field :tracking, placeholder: "Ej. 1Z999AA1...",
             autocomplete: "off", inputmode: "latin", spellcheck: "false",
+            pattern: "[A-Za-z0-9\\-]+",
+            title: "Solo letras, números y guiones. Sin espacios ni símbolos.",
             data: { "1p-ignore": true, lpignore: true, "form-type": "other",
-                    action: "input->tracking-duplicado#buscar" },
+                    tracking_input_target: "input",
+                    action: "input->tracking-input#sanitize input->tracking-duplicado#buscar" },
             class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
                    focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+        <p data-tracking-input-target="error" class="hidden text-xs text-red-600 mt-1"></p>
         <p data-tracking-duplicado-target="aviso"
            class="hidden mt-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
           <span data-tracking-duplicado-target="texto"></span>
         </p>
+        <% if ya_recibido %>
+          <p class="mt-1 text-xs text-amber-800" data-aviso="ya-recibido">
+            Este paquete ya se recibió. Cambiar el tracking lo desvincula.
+          </p>
+        <% end %>
       </div>
     </td>
 
