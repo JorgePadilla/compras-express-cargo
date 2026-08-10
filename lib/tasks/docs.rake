@@ -8,124 +8,17 @@
 #   bin/rails docs:resumen_pdf
 #   bin/rails docs:preguntas_xlsx
 # ── Estilo compartido por los documentos ───────────────────────────────
-# Constantes y helpers a nivel de archivo: si viven dentro de un task, solo
-# existen cuando ESE task corre, y el resto revienta con NameError.
-
-NAVY = "1B2559"
-GOLD = "E69E2E"
-TEAL = "0096C7"
-GRIS = "6B7280"
-ROJO = "B91C1C"
-
-pdf = Prawn::Document.new(page_size: "LETTER", margin: [ 50, 45, 45, 45 ])
-fonts = Rails.root.join("vendor/fonts")
-if File.exist?(fonts.join("DejaVuSans.ttf"))
-  pdf.font_families.update("DejaVu" => {
-    normal: fonts.join("DejaVuSans.ttf").to_s,
-    bold: fonts.join("DejaVuSans-Bold.ttf").to_s
-  })
-  pdf.font "DejaVu"
-end
-
-def h1(pdf, texto)
-  pdf.move_down 6
-  pdf.fill_color NAVY
-  pdf.text texto, size: 15, style: :bold
-  pdf.fill_color "000000"
-  pdf.stroke_color GOLD
-  pdf.stroke_horizontal_rule
-  pdf.stroke_color "000000"
-  pdf.move_down 8
-end
-
-def h2(pdf, texto)
-  pdf.move_down 8
-  pdf.fill_color TEAL
-  pdf.text texto, size: 11.5, style: :bold
-  pdf.fill_color "000000"
-  pdf.move_down 4
-end
-
-def p_(pdf, texto, size: 9.5)
-  pdf.text texto, size: size, leading: 2.5, inline_format: true
-  pdf.move_down 4
-end
-
-def cita(pdf, texto)
-  pdf.indent(14) do
-    pdf.fill_color GRIS
-    pdf.text "“#{texto}”", size: 9, leading: 2
-    pdf.fill_color "000000"
-  end
-  pdf.move_down 5
-end
-
-def tabla(pdf, encabezados, filas, anchos: nil)
-  data = [ encabezados ] + filas
-  # `width` y `column_widths` juntos chocan si no suman igual; se escala la
-  # última columna para que el total dé exactamente el ancho disponible.
-  if anchos
-    anchos = anchos.dup
-    anchos[-1] += pdf.bounds.width - anchos.sum
-  end
-  opciones = { header: true, cell_style: { size: 8.5, padding: [ 5, 6 ],
-                                           border_color: "D4D4D4", inline_format: true } }
-  opciones[anchos ? :column_widths : :width] = anchos || pdf.bounds.width
-
-  pdf.table(data, **opciones) do
-    row(0).background_color = NAVY
-    row(0).text_color = "FFFFFF"
-    row(0).font_style = :bold
-    rows(1..-1).borders = [ :bottom ]
-  end
-  pdf.move_down 8
-end
-
-
-# Una opción que Yusef marca con una X. El cuadrito va dibujado y no como
-# carácter Unicode: en la impresora de la oficina los glifos de caja salen
-# como rombos negros.
-def opcion(pdf, texto)
-  # Si no queda alto para el cuadrito Y su texto, se pasa de página ANTES de
-  # dibujar. Sin esto el rectángulo se pinta al final de la hoja y el texto se
-  # va a la siguiente: queda un cuadrito huérfano sin nada al lado, y una
-  # opción que Yusef no sabe qué está marcando.
-  alto_minimo = 26
-  pdf.start_new_page if pdf.cursor < alto_minimo
-
-  pdf.move_down 2
-  y = pdf.cursor
-  pdf.stroke_color GRIS
-  pdf.stroke_rectangle [ 4, y ], 9, 9
-  pdf.stroke_color "000000"
-  pdf.indent(20) { pdf.text texto, size: 9.5, leading: 2, inline_format: true }
-  pdf.move_down 2
-end
-
-# Una línea para escribir a mano la respuesta.
-def linea(pdf, etiqueta = nil)
-  pdf.move_down 4
-  pdf.fill_color GRIS
-  pdf.text "#{etiqueta} #{'.' * 90}"[0, 110], size: 9 if etiqueta
-  pdf.text "." * 110, size: 9 unless etiqueta
-  pdf.fill_color "000000"
-  pdf.move_down 4
-end
-
-# El bloque de una pregunta: número + título, el cuerpo, y las opciones.
-def pregunta(pdf, numero, titulo)
-  # Un título de pregunta solo al pie, con su cuerpo en la hoja siguiente, se
-  # lee como si no tuviera contenido. Se necesita lugar para el título más las
-  # primeras líneas.
-  pdf.start_new_page if pdf.cursor < 90
-
-  pdf.move_down 10
-  pdf.fill_color NAVY
-  pdf.text "#{numero}. #{titulo}", size: 11, style: :bold
-  pdf.fill_color "000000"
-  pdf.move_down 4
-end
-
+# Las constantes y los helpers viven en `lib/pdf_entregable.rb`.
+#
+# Estaban acá como `def` de nivel de archivo, y eso los hacía invisibles para
+# un test: Minitest no carga los `.rake`. O sea que los tres PDF que se le
+# mandan a Yusef nunca tuvieron ninguna prueba, y un `CannotFit` por anchos de
+# tabla solo se descubría corriendo la tarea.
+#
+# `include` trae métodos Y constantes, así que las llamadas de abajo no
+# cambian: siguen siendo `h1(pdf, "…")`.
+require Rails.root.join("lib/pdf_entregable")
+include PdfEntregable
 
 namespace :docs do
   DESTINO = Rails.root.join("docs/entregables")
@@ -137,6 +30,10 @@ namespace :docs do
 
     destino = DESTINO.join("resumen_para_yusef.pdf")
     FileUtils.mkdir_p(DESTINO)
+
+    # PR: este task usaba el documento de nivel de archivo. Correrlo dos veces
+    # en el mismo proceso escribia sobre el mismo objeto.
+    pdf = documento
 
       # ── Portada ──
       pdf.fill_color NAVY
@@ -750,15 +647,7 @@ namespace :docs do
     destino = DESTINO.join("historia_y_reglas.pdf")
     FileUtils.mkdir_p(DESTINO)
 
-    pdf = Prawn::Document.new(page_size: "LETTER", margin: [ 50, 45, 45, 45 ])
-    fuentes = Rails.root.join("vendor/fonts")
-    if File.exist?(fuentes.join("DejaVuSans.ttf"))
-      pdf.font_families.update("DejaVu" => {
-        normal: fuentes.join("DejaVuSans.ttf").to_s,
-        bold: fuentes.join("DejaVuSans-Bold.ttf").to_s
-      })
-      pdf.font "DejaVu"
-    end
+    pdf = documento
 
       # ── Portada ──
       pdf.fill_color NAVY
@@ -1124,15 +1013,7 @@ namespace :docs do
     destino = DESTINO.join("preguntas_para_yusef.pdf")
     FileUtils.mkdir_p(DESTINO)
 
-    pdf = Prawn::Document.new(page_size: "LETTER", margin: [ 50, 45, 45, 45 ])
-    fuentes = Rails.root.join("vendor/fonts")
-    if File.exist?(fuentes.join("DejaVuSans.ttf"))
-      pdf.font_families.update("DejaVu" => {
-        normal: fuentes.join("DejaVuSans.ttf").to_s,
-        bold: fuentes.join("DejaVuSans-Bold.ttf").to_s
-      })
-      pdf.font "DejaVu"
-    end
+    pdf = documento
 
     # ── Portada ──
     pdf.fill_color NAVY
