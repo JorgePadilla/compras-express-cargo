@@ -16,6 +16,21 @@
   --color-cec-teal-light: #48CAE4;
   --color-cec-teal-dark: #0096C7;
 
+  /* PR-BTN.1 — el teal "de tinta". El mismo hue, oscurecido hasta pasar
+     WCAG AA sobre blanco.
+
+     `cec-teal` es un FONDO: con texto blanco encima da 2.46:1 y como borde
+     sobre blanco da 2.46:1, abajo del 3:1 que pide el criterio 1.4.11.
+     `cec-teal-dark` tampoco alcanza (3.39:1).
+
+     La regla: **cec-teal rellena, cec-teal-deep entinta** — texto, bordes y
+     anillos de foco sobre fondo claro. Ningún fondo cambia de color.
+
+     Sobre blanco 4.81:1 · sobre gray-50 4.61:1 · sobre cec-navy 3.00:1.
+     En oscuro NO sirve como texto (3.05:1 sobre gray-800): ahí va
+     `cec-teal-light` (7.58:1). */
+  --color-cec-teal-deep: #007BA3;
+
   /* Accent purple — Yusef 2026-05-02 pidió un morado para acciones
      secundarias del header (Excel/PDF/Imprimir). Hue moderna (~violeta
      Stripe/Linear) que combina con cec-navy y cec-teal sin chocar. */

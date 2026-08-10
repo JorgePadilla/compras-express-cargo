@@ -77,6 +77,79 @@ Sólo dos gradientes decorativos están autorizados a nivel global:
 Gradientes ad-hoc como `from-emerald-*`, `from-gray-500 to-gray-600` o
 `from-white to-gray-50` decorativos fueron removidos y no deben reintroducirse.
 
+### Contraste — `cec-teal` rellena, `cec-teal-deep` entinta
+
+WCAG AA pide **4.5:1** para texto y **3:1** para elementos de interfaz (bordes,
+iconos, anillos de foco). Dos combinaciones de la paleta **no llegan**, y son
+las que más se usaban:
+
+| combinación | ratio | veredicto |
+|---|---:|---|
+| blanco sobre `cec-teal` `#00B4D8` | **2.46** | falla |
+| `text-cec-teal` sobre blanco | **2.46** | falla |
+| blanco sobre `cec-teal-dark` `#0096C7` | 3.39 | falla para texto |
+| **`cec-navy-dark` sobre `cec-teal`** | **6.69** | ✅ así se usa |
+| **`cec-teal-deep` `#007BA3` sobre blanco** | **4.81** | ✅ así se usa |
+
+Por eso existe `--color-cec-teal-deep`. La regla, en una línea:
+
+> **`cec-teal` es un fondo. `cec-teal-deep` es una tinta.**
+>
+> Si el teal va *detrás* de algo, es `cec-teal` y la letra encima va
+> `cec-navy-dark`. Si el teal *es* lo que se lee —texto, borde, anillo de
+> foco— es `cec-teal-deep`, y en modo oscuro `cec-teal-light` (7.58:1).
+
+Otras que la auditoría de PR-BTN.1 encontró abajo del mínimo y ya no se usan
+en botones: `cec-danger` `#EF4444` con blanco (3.76 → usar `red-600`, 4.83),
+`amber-600` con blanco (3.19 → `amber-700`, 5.02), `text-gray-400` (2.54 →
+`gray-500`, 4.83), `text-red-400` (2.77 → `red-500`, 3.76) y
+`dark:text-cec-navy-light` sobre `gray-900` (**1.69** → `cec-gold`, 10.10).
+
+---
+
+## Botones — `ButtonComponent`
+
+**Un botón nuevo se escribe con `ButtonComponent`, no a mano.** Los variants
+llevan el ratio de contraste en el comentario del código; si alguno se toca,
+el número se recalcula.
+
+| variant | uso | ratio |
+|---|---|---:|
+| `primary` | la acción principal — navy **plano** | 14.43 |
+| `secondary` | acción alterna sobre fondo claro | 7.56 |
+| `ghost` | Cancelar / Volver / Limpiar | 7.56 |
+| `gold` | CTA de cierre (Guardar, Facturar) | 9.39 |
+| `teal` | acción afirmativa; letra `cec-navy-dark`, no blanca | 6.69 |
+| `outline_navy` | secundaria con borde; en oscuro va a **gold** | 10.31 |
+| `outline_teal` | secundaria con borde teal (`-deep`) | 4.81 |
+| `danger` | destructiva — `red-600` | 4.83 |
+| `soft_danger` | destructiva "suave" (Anular) | 5.91 |
+| `warning` | aviso — `amber-700` | 5.02 |
+
+Tamaños: `:xs` `:sm` `:md` (default) `:lg`. El icono sigue al botón (16 / 16 /
+20 / 20 px).
+
+**Lo que el componente garantiza y no hay que volver a escribir:**
+
+- **Anillo de foco visible** en los diez variants. Un variant nuevo sin anillo
+  rompe la suite (`button_component_test.rb`).
+- **`type="button"` por defecto.** Un `<button>` sin type dentro de un `<form>`
+  es `submit` — así, "Limpiar" en `/entrega_personal` reseteaba el formulario
+  **y lo enviaba**.
+- **Nombre accesible obligatorio**: un botón de solo icono sin `label:` levanta
+  `ArgumentError` en vez de quedar mudo para un lector de pantalla.
+- **`disabled:`** con un solo tratamiento (`opacity-50` + `cursor-not-allowed`),
+  y un `<span role="button" aria-disabled>` cuando hay `href` — un `<a>`
+  deshabilitado no existe en HTML.
+- **`method:`** distinto de `:get` sale como `button_to`, no como un `<a>` que
+  depende de Turbo.
+
+**Qué se queda crudo, a propósito:** las tarjetas-botón de tipo de envío en
+`/etiquetar`, los CTA de las pantallas de sesión, los adornos absolutos dentro
+de un input (ojo de contraseña, limpiar fecha) y las pills de filtro con clases
+interpoladas. Su forma es incompatible con `inline-flex items-center` — pero
+igual llevan anillo de foco y nombre accesible.
+
 ---
 
 ## Paleta de Colores — Referencia histórica (sistema legacy)
