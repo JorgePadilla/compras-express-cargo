@@ -1,5 +1,5 @@
 class PaquetesController < ApplicationController
-  before_action :set_paquete, only: [ :show, :edit, :update, :warehouse_receipt, :etiqueta, :destroy, :eliminar_de_pre_alerta, :reimprimir_etiquetas, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero ]
+  before_action :set_paquete, only: [ :show, :edit, :update, :warehouse_receipt, :etiqueta, :destroy, :eliminar_de_pre_alerta, :reimprimir_etiquetas, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero, :bajar_cajas ]
   before_action :authorize_tracking_actions, only: [ :check_tracking, :search ]
   before_action :authorize_edit, only: [ :edit, :update, :eliminar_de_pre_alerta, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero ]
   before_action :authorize_delete, only: [ :destroy ]
@@ -45,6 +45,7 @@ class PaquetesController < ApplicationController
 
   def show
     @edit_mode = params[:mode] == "edit"
+    cargar_supervisores_cajas
     if @edit_mode
       @tipo_envios = TipoEnvio.activos.order(:nombre)
       @carriers = Carrier.where(activo: true).order(:nombre)
@@ -236,6 +237,32 @@ class PaquetesController < ApplicationController
     end
     @paquete.update!(tercero: cliente)
     redirect_to @paquete, notice: "Tercero asignado: #{cliente.codigo} — #{cliente.nombre_completo}."
+  end
+
+  # PR-C6.42 · RP-18: un supervisor destraba con su PIN un split que quedó con
+  # cajas de más. Yusef: "le pusieron 2 y al final es un paquete, y cuando van
+  # a entregar, el sistema no va a querer entregar porque decía que eran dos".
+  #
+  # No lleva `authorize_edit`: igual que el "quitar cobro" de /etiquetar, el que
+  # está en la pantalla es el operario y el supervisor es quien teclea el PIN al
+  # lado. La autorización de verdad la hace `BajarCajasConPin`.
+  def bajar_cajas
+    quedan = BajarCajasConPin.new(
+      paquete: @paquete,
+      cantidad: params[:cantidad],
+      supervisor: User.find_by(id: params[:supervisor_id]),
+      pin: params[:pin],
+      motivo: params[:motivo]
+    ).call
+
+    # Si el supervisor estaba parado justo en una de las cajas que se fueron,
+    # `@paquete` ya no existe — mandarlo ahí sería un 404 después de una
+    # operación exitosa.
+    destino = quedan.find { |c| c.id == @paquete.id } || quedan.first
+    redirect_to destino, notice: "Quedaron #{quedan.size} caja(s) en #{@paquete.tracking}."
+  rescue BajarCajasConPin::NoPermitido, BajarCajasConPin::PinInvalido,
+         BajarCajasConPin::YaFacturado, BajarCajasConPin::NadaQueBajar => e
+    redirect_to @paquete, alert: e.message
   end
 
   def quitar_tercero
@@ -602,7 +629,19 @@ class PaquetesController < ApplicationController
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     @carriers = Carrier.where(activo: true).order(:nombre)
     @tarifas_recolecta = TarifaRecolecta.activas.ordered
+    cargar_supervisores_cajas
     render :show, status: status
+  end
+
+  # PR-C6.42: quién puede destrabar un split con cajas de más.
+  #
+  # Va en un método porque el `show` se renderiza por DOS caminos: la acción
+  # `#show` y el re-render de `#update` cuando algo falla. Justamente por ese
+  # segundo camino se llega acá con "no se puede bajar a N cajas" — o sea, el
+  # momento exacto en que el operario necesita el botón.
+  def cargar_supervisores_cajas
+    @supervisores_cajas = User.activos.where(rol: BajarCajasConPin::ROLES)
+                              .where.not(pin_digest: nil).order(:nombre)
   end
 
   def authorize_delete

@@ -636,12 +636,16 @@ class Paquete < ApplicationRecord
   #
   # **Guarda dura**: si alguna de las cajas a eliminar ya está facturada,
   # pre-facturada o entregada, la operación falla **entera** y no toca nada.
-  # Borrar una caja que ya se cobró descuadraría la venta en silencio. Qué
-  # hacer en ese caso es pregunta abierta de Yusef; hasta que conteste,
-  # bloquear es lo conservador.
+  # Borrar una caja que ya se cobró descuadraría la venta en silencio.
+  #
+  # PR-C6.42: Yusef contestó qué hacer en ese caso —*"que deje hacerlo, pero
+  # solo con PIN de supervisor"*—, y por eso existe `forzar:`. **No lo llames
+  # directo**: la puerta es `BajarCajasConPin`, que pide el PIN y desengancha
+  # la caja de sus documentos antes de borrarla. Acá `forzar: true` solo salta
+  # la guarda.
   #
   # Devuelve las cajas que quedan, ordenadas por `numero_caja`.
-  def self.ajustar_split!(paquete, nueva_cantidad)
+  def self.ajustar_split!(paquete, nueva_cantidad, forzar: false)
     m = nueva_cantidad.to_i
     raise ArgumentError, "la cantidad debe ser >= 1" if m < 1
 
@@ -651,7 +655,7 @@ class Paquete < ApplicationRecord
 
       if m < n
         sobrantes = hermanas.select { |c| c.numero_caja.to_i > m }
-        bloqueadas = sobrantes.select { |c| c.cobrada_o_entregada? }
+        bloqueadas = forzar ? [] : sobrantes.select { |c| c.cobrada_o_entregada? }
         if bloqueadas.any?
           raise CajaNoEliminable,
                 "No se puede bajar a #{m} cajas: " \

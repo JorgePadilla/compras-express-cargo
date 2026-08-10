@@ -4388,6 +4388,28 @@ Y en el audio dio la razón:
 sobrante ya se cobró o entregó (`CajaNoEliminable`). Esa guarda deja paquetes
 trabados en entrega. Pasa a ser: se puede, con PIN.
 
+**IMPLEMENTADO en PR-C6.42.**
+
+- `BajarCajasConPin` (mismo patrón que `QuitarCambioServicio`): lista de roles
+  propia, PIN, y auditado por `paper_trail`. **No se toca `ROLES_AUTORIZANTES`**
+  — esa lista da autorización sobre cualquier línea de pre-factura.
+- Vive en **/paquetes** y no en /etiquetar: el problema aparece en Honduras,
+  *"cuando van a entregar"*.
+- **Desengancha antes de borrar.** Borrar la caja a secas no alcanza:
+  `pre_factura_items` y `venta_items` la referencian con FK, así que el
+  `destroy!` reventaría contra la base. Se le saca la línea a la pre-factura
+  abierta y se recalculan los totales — si no, el cliente seguiría pagando una
+  caja que ya no existe.
+- **Dónde se planta el límite:** una caja ya **facturada**, con **venta**, o ya
+  **entregada** no se baja ni con PIN. Eso es un documento fiscal o un hecho
+  físico, y se corrige con una nota de crédito.
+- **Sin PIN se sigue bloqueando**, con el mismo mensaje de hoy.
+
+**Queda abierto (`RP-21`):** quién lleva este PIN. La lista arranca en
+`admin`, `supervisor_miami`, `supervisor_prefactura` y `supervisor_caja` —
+Miami porque es donde nace el error de digitación, y los dos de facturación
+porque el daño que la guarda protege es contable.
+
 ---
 
 ### RP-19 · El campo de origen (China / Estados Unidos) — ✅ **CERRADA**, y **corrige lo que habíamos hecho**

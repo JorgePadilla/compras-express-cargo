@@ -60,6 +60,11 @@ Rails.application.routes.draw do
       post :mover_a_pre_alerta
       post :asignar_tercero
       delete :quitar_tercero
+      # PR-C6.42: bajar la cantidad de cajas cuando alguna ya entró a cobro.
+      # Va en /paquetes y no en /etiquetar porque el problema aparece **en
+      # Honduras**, al entregar: "el sistema no va a querer entregar porque
+      # decía que eran dos".
+      post :bajar_cajas
     end
     collection do
       get :check_tracking
