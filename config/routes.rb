@@ -23,6 +23,12 @@ Rails.application.routes.draw do
   patch "etiquetar/:id", to: "etiquetar#update", as: :actualizar_etiquetar
   # Sesión de etiquetado por tipo de envío: el operario elige el tipo una vez
   # al inicio (queda en session) y lo cierra al terminar el lote.
+  # PR-C6.28: el supervisor de Miami quita el cobro por cambio de servicio con
+  # su PIN. Va bajo /etiquetar porque es donde el digitador se da cuenta del
+  # error — "es que ellos no manejan la página de paquetes".
+  post "etiquetar/:id/quitar_cambio_servicio", to: "etiquetar#quitar_cambio_servicio",
+       as: :quitar_cambio_servicio_etiquetar
+
   post   "etiquetar/sesion", to: "etiquetar#iniciar_sesion",  as: :iniciar_sesion_etiquetar
   delete "etiquetar/sesion", to: "etiquetar#finalizar_sesion", as: :finalizar_sesion_etiquetar
 
