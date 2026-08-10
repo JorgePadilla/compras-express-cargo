@@ -3867,11 +3867,13 @@ abajo, en la sección del **audio 4**. Resumen:
 | RP-18 | ✅ se puede bajar la cantidad de cajas, **con PIN de supervisor** |
 | RP-19 | ✅ el origen **entra en el cobro** — corrige `PR-C6.38` |
 | RP-20 | ⏳ sin marcar: **las tres opciones de sonido nunca se le mandaron** |
-| RP-21 | ⚠️ a medias: los cuatro roles llevan PIN, pero no dijo **quién** |
+| RP-21 | ✅ los cuatro roles llevan PIN — son los mismos `ROLES_AUTORIZANTES` |
 | RP-22 | ⏳ "llenaremos en oficina" |
 
-**RP-21 sigue bloqueando `PR-C6.28`**: Julien necesita un PIN asignado, y su
-renglón —supervisor de Miami— ni siquiera estaba en el papel.
+**RP-21 no bloquea código.** Los cuatro que marcó ya eran los del sistema; lo
+que falta son los **nombres**, y eso lo carga el admin desde el CRUD de usuarios.
+Lo mismo con el PIN de Julien para `PR-C6.28`: el flujo está listo y el banner
+avisa solo mientras nadie tenga PIN asignado.
 
 ---
 
@@ -4032,7 +4034,9 @@ existe (autorización con PIN → borrar la línea) **no suprime la NotaDebito**
 Por eso el diseño es apagar el flag `solicito_cambio_servicio`, que suprime las
 dos.
 
-Depende de **RP-21**: Julien necesita PIN asignado.
+**No depende de código.** `RP-21` cerró los roles; lo único que falta es que el
+admin le asigne PIN a Julien desde el CRUD de usuarios. Mientras nadie lo tenga,
+el banner lo dice en vez de ofrecer un botón muerto.
 
 ---
 
@@ -4405,10 +4409,12 @@ trabados en entrega. Pasa a ser: se puede, con PIN.
   físico, y se corrige con una nota de crédito.
 - **Sin PIN se sigue bloqueando**, con el mismo mensaje de hoy.
 
-**Queda abierto (`RP-21`):** quién lleva este PIN. La lista arranca en
-`admin`, `supervisor_miami`, `supervisor_prefactura` y `supervisor_caja` —
-Miami porque es donde nace el error de digitación, y los dos de facturación
-porque el daño que la guarda protege es contable.
+**Quién lleva el PIN (`RP-21`, contestado):** la lista se **deriva** de
+`User::ROLES_AUTORIZANTES` —los cuatro renglones que Yusef marcó "SI"— más
+`supervisor_miami`, que es Julien y es donde nace el error de digitación.
+Derivada y no copiada a propósito: la primera versión, armada a criterio, se
+había comido al **Supervisor de SAC**. Hay un test que fija que la lista sale de
+la respuesta y no de un criterio nuestro.
 
 ---
 
@@ -4442,17 +4448,30 @@ algo que no recibió.
 
 ---
 
-### RP-21 · ¿Quién lleva PIN de supervisor? — ⚠️ **a medias**
+### RP-21 · ¿Quién lleva PIN de supervisor? — ✅ **los roles, CERRADOS**
 
 Escribió **"SI"** en los cuatro renglones: Administrador, Supervisor de Caja,
 Supervisor de Pre-Factura, Supervisor de Servicio al Cliente.
 
-**Lectura.** Contestó que los cuatro roles **sí** llevan PIN, pero la pregunta
-pedía **quién** es cada uno, y eso no está. Sin nombres no se le puede asignar
-PIN a nadie.
+**Lectura.** Esos cuatro son **exactamente** `User::ROLES_AUTORIZANTES`, que el
+sistema ya tenía cargados desde `PR-13.c`. O sea que la parte de código de
+`RP-21` **no estaba abierta**: la respuesta confirma lo que ya estaba.
 
-Y falta un renglón que el papel no tenía: el **supervisor de Miami** (Julien),
-que es el que `PR-C6.28` necesita para quitar el cobro por cambio de servicio.
+Lo único que falta son los **nombres** de esas personas, y eso es **carga de
+datos** —el admin les asigna PIN desde el CRUD de usuarios—, no una decisión que
+bloquee ningún PR.
+
+**Consecuencia para `PR-C6.42`:** la lista de `BajarCajasConPin` se **deriva** de
+`ROLES_AUTORIZANTES` en vez de armarse a mano. La primera versión, escrita a
+criterio, se había comido al **Supervisor de SAC** —que Yusef marcó "SI"
+explícitamente—. Hay un test que fija que la lista sale de la respuesta y no de
+un criterio nuestro.
+
+Va aparte un renglón que el papel no tenía: el **supervisor de Miami** (Julien).
+Lleva PIN por `PR-C6.28` —Yusef lo pidió en el audio, no en la hoja— y entra en
+`BajarCajasConPin` porque es donde nace el error de digitación. **No** se le
+agrega a `ROLES_AUTORIZANTES`: eso le daría autorización sobre cualquier línea de
+pre-factura, que es mucho más de lo que pidió.
 
 ---
 
@@ -4545,13 +4564,14 @@ no se pierdan y para que las que son preguntas lleguen a Yusef.
    tiene su pantalla (`PR-C6.29`), pero nadie dijo quién la revisa.
 3. **PIN para Julien.** `PR-C6.28` deja listo que el supervisor de Miami
    quite el cobro por cambio de servicio, pero hoy el banner avisa que nadie
-   puede autorizar. Depende de `RP-21`, que está en las fotos que faltan.
+   puede autorizar. `RP-21` ya llegó y cerró los roles: falta **asignarle el
+   PIN** desde el CRUD de usuarios, no una decisión.
 
 ### Lo que sigue (2026-08-09)
 
-1. **Faltan las fotos de `RP-17`…`RP-22`** (páginas 5 a 7 del PDF). Jorge
-   confirmó que Yusef **sí** las contestó. `RP-21` —quién lleva PIN de
-   supervisor— bloquea `PR-C6.28`.
+1. ~~**Faltan las fotos de `RP-17`…`RP-22`**~~ — **llegaron** (páginas 6/7 y
+   7/7, con el audio 4). `RP-21` quedó cerrada del lado de código: los cuatro
+   roles que marcó ya eran `ROLES_AUTORIZANTES`.
 2. **Ronda 2 de preguntas**: `RP-01`, `RP-02`, `RP-09`, `RP-10b`, `RP-13b`,
    `RP-04b`, más los recordatorios de `RP-15` y `RP-16`. Se regenera
    `docs:preguntas_pdf` cuando lleguen las fotos, para no mandar dos papeles.
