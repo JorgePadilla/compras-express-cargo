@@ -100,25 +100,25 @@ class RowActionComponent < ViewComponent::Base
   end
 
   def base_classes
-    "inline-flex items-center justify-center w-7 h-7 rounded focus-visible:outline-2 focus-visible:outline-offset-2 transition-colors"
+    "inline-flex items-center justify-center w-7 h-7 rounded foco-cec transition-colors"
   end
 
   def disabled_classes
     "#{base_classes} text-gray-300 dark:text-gray-600 cursor-not-allowed"
   end
 
-  # PR-BTN.2: `outline-cec-teal` daba 2.46:1 sobre blanco — este componente era
-  # la referencia de calidad del repo (es el que tenía foco, disabled y aria
+  # PR-BTN.2/3: `outline-cec-teal` daba 2.46:1 sobre blanco — este componente
+  # era la referencia de calidad del repo (el único con foco, disabled y aria
   # cuando `ButtonComponent` no tenía nada) y fallaba justo en el eje que
-  # modela. `cec-teal-deep` da 4.81:1 en claro y `cec-teal-light` 7.58:1 en
-  # oscuro, igual que la base de `ButtonComponent`.
+  # modela. Ahora comparte `foco-cec` con `ButtonComponent`, definido una sola
+  # vez en `application.css`.
+  #
+  # Lo destructivo conserva su anillo rojo: ahí el color del foco es parte del
+  # aviso, no decoración.
   def active_classes
-    focus = if @config[:destructive]
-      "focus-visible:outline-red-500"
-    else
-      "focus-visible:outline-cec-teal-deep dark:focus-visible:outline-cec-teal-light"
-    end
-    "#{base_classes} #{@config[:color]} #{focus}"
+    focus = "focus-visible:outline-red-500" if @config[:destructive]
+
+    "#{base_classes} #{@config[:color]} #{focus}".squish
   end
 
   def icon_name

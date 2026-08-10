@@ -2,7 +2,7 @@
 <div data-pre-alerta-mover-target="modal"
      class="hidden fixed inset-0 z-50 flex items-center justify-center">
   <%# Backdrop %>
-  <div data-action="click->pre-alerta-mover#close"
+  <div data-action="click->pre-alerta-mover#close" aria-hidden="true"
        class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"></div>
 
   <%# Card %>
@@ -12,7 +12,8 @@
         Mover paquete <span data-pre-alerta-mover-target="trackingLabel" class="font-mono text-cec-navy"></span>
       </h3>
       <button type="button" data-action="click->pre-alerta-mover#close"
-              class="text-gray-400 hover:text-gray-600">
+              aria-label="Cerrar"
+              class="rounded foco-cec text-gray-500 hover:text-gray-700">
         <%= heroicon "x-mark", variant: :outline, options: { class: "w-5 h-5" } %>
       </button>
     </div>
@@ -46,7 +47,7 @@
         <button type="submit" data-pre-alerta-mover-target="confirmBtn"
                 disabled
                 class="bg-cec-teal text-white font-semibold px-6 py-2 rounded-lg text-sm
-                       hover:bg-cec-teal-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                       hover:bg-cec-teal-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           Confirmar
         </button>
       <% end %>

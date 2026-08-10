@@ -93,19 +93,17 @@ class ButtonComponent < ViewComponent::Base
 
   # Lo que aplica a TODOS los variants.
   #
-  # El anillo de foco es un solo par de colores para los diez variants, y eso
-  # funciona por el `outline-offset-2`: el anillo cae sobre el **fondo de la
-  # página**, no sobre el botón, así que su contraste depende de la superficie
-  # (blanco/gray-50 en claro, gray-900/gray-800 en oscuro) y nunca del variant.
-  # 4.81:1 en claro, 3.68:1 en oscuro.
+  # `foco-cec` es el anillo de foco del sistema, definido una sola vez en
+  # `app/assets/tailwind/application.css`. Lo comparten este componente,
+  # `RowActionComponent` y los botones que se quedan crudos a propósito — que
+  # es lo que hace que se vean parecidos en toda la app, y no solo los que
+  # pasan por acá.
   #
   # `transition-colors` y no `transition-all`: `transition-all` anima también
   # el ancho del `outline`, y el anillo se ve borroneado al tabular.
   BASE = <<~CSS.squish
     inline-flex items-center justify-center gap-2 rounded-lg font-medium
-    transition-colors duration-200
-    focus-visible:outline-2 focus-visible:outline-offset-2
-    focus-visible:outline-cec-teal-deep dark:focus-visible:outline-cec-teal-light
+    transition-colors duration-200 foco-cec
     disabled:opacity-50 disabled:cursor-not-allowed
     aria-disabled:opacity-50 aria-disabled:cursor-not-allowed
   CSS

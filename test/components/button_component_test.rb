@@ -23,11 +23,24 @@ class ButtonComponentTest < ViewComponent::TestCase
     # escribirle un test. Antes de PR-BTN.1 ninguno lo tenía.
     sin_foco = ButtonComponent::VARIANTS.each_key.reject do |variant|
       render_inline(ButtonComponent.new(variant: variant)) { "Accion" }
-      page.has_selector?("button[class*='focus-visible:outline-2']")
+      page.has_selector?("button.foco-cec")
     end
 
     assert_empty sin_foco,
       "estos variants no muestran dónde está el foco: #{sin_foco.join(', ')}"
+  end
+
+  test "el anillo de foco existe de verdad en el CSS" do
+    # `foco-cec` es una clase propia, no una utilidad de Tailwind: si nadie la
+    # define, el test de arriba pasa y el anillo no se ve en ningún lado.
+    css = File.read(Rails.root.join("app/assets/tailwind/application.css"))
+
+    # Anclado al principio de línea a propósito: `assert_includes` con
+    # ".foco-cec:focus-visible" pasaba de rebote por la regla de `.dark`, que
+    # lo contiene como substring — o sea que renombrar la regla clara no
+    # rompía nada.
+    assert_match(/^\.foco-cec:focus-visible \{/, css)
+    assert_match(/^\.dark \.foco-cec:focus-visible \{/, css)
   end
 
   test "el boton teal lleva tinta navy, no blanca" do

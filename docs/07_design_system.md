@@ -174,6 +174,22 @@ un adorno dentro de un input— corré la tarea, pegá el hash y dejá un coment
 diciendo por qué. Crudo a propósito sigue contando: su número tampoco puede
 subir solo.
 
+### Accesibilidad — `test/lint/botones_accesibles_test.rb`
+
+Crudo a propósito **no** es exento. Un segundo lint, sin lista de excepciones,
+exige de **todos** los `<button>` de la app:
+
+- **Nombre accesible.** Un botón de solo icono necesita `aria-label`. `title`
+  **no alcanza**: es el tooltip del mouse, no aparece con teclado y los
+  lectores de pantalla no lo usan como nombre. Cuando hay texto visible no hace
+  falta — el nombre sale del contenido.
+- **No apagar el foco sin reemplazarlo.** `focus:outline-none` suelto le saca
+  al navegador el único indicador que trae de fábrica. Si hay que cambiarlo, va
+  `foco-cec`.
+
+`ButtonComponent` ya cumple las dos por construcción: `label:` es obligatorio
+cuando no hay contenido, y el anillo viene en la base.
+
 ---
 
 ## Paleta de Colores — Referencia histórica (sistema legacy)

@@ -89,6 +89,28 @@
   background: linear-gradient(135deg, var(--color-cec-gold-light), var(--color-cec-gold));
 }
 
+/* ─── Anillo de foco del sistema (PR-BTN.3) ───
+
+   Una sola definición para TODO lo que se puede enfocar: `ButtonComponent`,
+   `RowActionComponent` y los botones que se quedan crudos a propósito
+   (tarjetas, CTA de sesión, adornos dentro de un input).
+
+   La auditoría encontró **1 de 131 botones crudos** con estilo de foco, y el
+   componente tampoco emitía ninguno. Quien navega con teclado no veía dónde
+   estaba parado.
+
+   El `outline-offset` es lo que deja usar UN solo par de colores para todo:
+   el anillo cae sobre el fondo de la PÁGINA, no sobre el elemento, así que su
+   contraste depende de la superficie y nunca del color del botón.
+   4.81:1 en claro · 3.68:1 en oscuro. */
+.foco-cec:focus-visible {
+  outline: 2px solid var(--color-cec-teal-deep);
+  outline-offset: 2px;
+}
+.dark .foco-cec:focus-visible {
+  outline-color: var(--color-cec-teal-light);
+}
+
 /* Glass card */
 .glass-card {
   background: rgb(255 255 255 / 0.8);

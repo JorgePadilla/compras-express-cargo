@@ -110,8 +110,9 @@
               <button type="button"
                       data-action="click->sidebar#togglePin"
                       data-sidebar-target="pinIcon"
-                      class="sidebar-collapsed-hide p-1.5 rounded-md text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
+                      class="sidebar-collapsed-hide p-1.5 rounded-md foco-cec text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
                       title="<%= sidebar_pinned_init ? 'Desfijar sidebar' : 'Fijar sidebar' %>"
+                      aria-label="<%= sidebar_pinned_init ? 'Desfijar sidebar' : 'Fijar sidebar' %>"
                       aria-pressed="<%= sidebar_pinned_init %>">
                 <%= heroicon "bookmark", variant: :solid, options: { class: "w-4 h-4 sidebar-pin-on hidden" } %>
                 <%= heroicon "bookmark", variant: :outline, options: { class: "w-4 h-4 sidebar-pin-off" } %>
@@ -121,8 +122,9 @@
               <button type="button"
                       data-action="click->sidebar#togglePosition"
                       data-sidebar-target="positionIcon"
-                      class="sidebar-collapsed-hide p-1.5 rounded-md text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
-                      title="<%= sidebar_position_init == 'right' ? 'Mover a la izquierda' : 'Mover a la derecha' %>">
+                      class="sidebar-collapsed-hide p-1.5 rounded-md foco-cec text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
+                      title="<%= sidebar_position_init == 'right' ? 'Mover a la izquierda' : 'Mover a la derecha' %>"
+                      aria-label="<%= sidebar_position_init == 'right' ? 'Mover a la izquierda' : 'Mover a la derecha' %>">
                 <%= heroicon "arrows-right-left", variant: :outline, options: { class: "w-4 h-4" } %>
               </button>
 
@@ -154,7 +156,7 @@
                      <%= 'lg:mr-64'  if sidebar_position_init == 'right' && sidebar_pinned_init %>">
           <%# Top bar (mobile) %>
           <header class="bg-white dark:bg-gray-800 shadow-sm px-4 py-3 flex items-center justify-between lg:hidden">
-            <button data-action="click->sidebar#toggle" class="text-gray-600 dark:text-gray-200 p-1" aria-label="Menu">
+            <button type="button" data-action="click->sidebar#toggle" class="rounded foco-cec text-gray-600 dark:text-gray-200 p-1" aria-label="Menu">
               <%= heroicon "bars-3", variant: :outline, options: { class: "w-6 h-6" } %>
             </button>
             <span class="font-bold text-cec-navy dark:text-cec-gold">CEC</span>
