@@ -62,7 +62,7 @@ class PreAlertasAdminFormTest < ActionDispatch::IntegrationTest
   test "el form avisa si el tracking ya existe" do
     get new_pre_alerta_url
 
-    assert_match(/data-controller="tracking-duplicado"/, response.body)
+    assert_match(/data-controller="[^"]*\btracking-duplicado\b/, response.body)
     assert_match(/data-tracking-duplicado-target="aviso"/, response.body)
     # Rails escapa el `>` del `data-action` como `&gt;`; el navegador lo
     # vuelve a leer bien.

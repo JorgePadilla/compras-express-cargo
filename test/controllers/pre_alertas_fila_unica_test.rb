@@ -48,7 +48,7 @@ class PreAlertasFilaUnicaTest < ActionDispatch::IntegrationTest
   test "en new, la plantilla avisa del tracking repetido igual que la fila del servidor" do
     get new_pre_alerta_url
 
-    assert_match(/data-controller="tracking-duplicado"/, plantilla,
+    assert_match(/data-controller="[^"]*\btracking-duplicado\b/, plantilla,
       "al agregar una fila con el boton, el aviso desaparecia")
   end
 
@@ -56,8 +56,8 @@ class PreAlertasFilaUnicaTest < ActionDispatch::IntegrationTest
     # `edit` no lo tenia en NINGUNA de sus dos copias.
     get edit_pre_alerta_url(@pa)
 
-    assert_match(/data-controller="tracking-duplicado"/, trozo(/<tbody.*?<\/tbody>/m))
-    assert_match(/data-controller="tracking-duplicado"/, plantilla)
+    assert_match(/data-controller="[^"]*\btracking-duplicado\b/, trozo(/<tbody.*?<\/tbody>/m))
+    assert_match(/data-controller="[^"]*\btracking-duplicado\b/, plantilla)
   end
 
   test "en edit las dos filas traen las defensas contra el autofill" do

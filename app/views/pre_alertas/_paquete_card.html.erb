@@ -31,8 +31,11 @@
         <%# PR-C6.26: avisa si el tracking ya existe. Yusef: "ya tiene un error
             y NO LO DETECTA QUE YA EXISTE". Avisa, no bloquea: hay duplicados
             legítimos que se resuelven con sufijo en /etiquetar. %>
+        <%# `tracking-input` va PRIMERO en el `data-action`: limpia el valor
+            antes de que el otro salga a preguntar. Avisa lo que sacó — no se lo
+            traga en silencio. %>
         <div class="sm:col-span-2"
-             data-controller="tracking-duplicado"
+             data-controller="tracking-duplicado tracking-input"
              data-tracking-duplicado-url-value="<%= check_tracking_paquetes_path %>"
              data-tracking-duplicado-excluir-paquete-id-value="<%= pap.paquete_id %>">
           <label class="block text-sm font-semibold text-cec-navy mb-1.5">
@@ -41,10 +44,14 @@
           </label>
           <%= pf.text_field :tracking, placeholder: "Ej. 1Z999AA1...",
               autocomplete: "off", inputmode: "latin", spellcheck: "false",
+              pattern: "[A-Za-z0-9\\-]+",
+              title: "Solo letras, números y guiones. Sin espacios ni símbolos.",
               data: { "1p-ignore": true, lpignore: true, "form-type": "other",
-                      action: "input->tracking-duplicado#buscar" },
+                      tracking_input_target: "input",
+                      action: "input->tracking-input#sanitize input->tracking-duplicado#buscar" },
               class: "block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
                      focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+          <p data-tracking-input-target="error" class="hidden text-xs text-red-600 mt-1"></p>
           <p data-tracking-duplicado-target="aviso"
              class="hidden mt-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
             <span data-tracking-duplicado-target="texto"></span>

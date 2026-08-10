@@ -25,6 +25,28 @@
 
   <div id="flash"></div>
 
+  <%# PR-C6.47: la consolidación ya se cerró.
+      El portal directamente no deja editarla (`Cuenta::PreAlertasController`
+      corta en `finalizado?`). Acá se avisa y se sigue: arreglar lo que quedó
+      mal es parte del trabajo del equipo, y si esta pantalla tampoco dejara,
+      no habría dónde hacerlo.
+
+      Deliberadamente sin `disabled` ni `readonly` — hay un test que lo fija. %>
+  <% if @pre_alerta.finalizado? %>
+    <div class="mb-4 p-4 bg-amber-50 border border-amber-300 rounded-lg" data-banner="finalizada">
+      <div class="flex items-start gap-2">
+        <%= heroicon "lock-closed", variant: :outline, options: { class: "w-5 h-5 text-amber-600 shrink-0 mt-0.5" } %>
+        <div>
+          <p class="text-sm font-semibold text-amber-900">Esta consolidación ya se finalizó</p>
+          <p class="text-xs text-amber-800 mt-0.5">
+            El cliente ya no la puede tocar. Vos sí — pero lo que cambies acá no
+            le avisa a nadie.
+          </p>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
   <%= form_with model: @pre_alerta, url: pre_alerta_path(@pre_alerta), method: :patch,
       data: { pre_alerta_editor_target: "form" }, class: "space-y-6" do |f| %>
 
