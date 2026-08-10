@@ -124,7 +124,7 @@ end %>
       Tareas pendientes del cliente
     </h2>
     <% if Current.user&.rol.in?(TareasController::GESTION_ROLES) || Current.user&.admin? %>
-      <%= render(ButtonComponent.new(variant: :teal, size: :sm, icon: "plus",
+      <%= render(ButtonComponent.new(variant: :teal, size: :xs, icon: "plus",
             href: new_tarea_path(cliente_id: @cliente.id))) { "Nueva tarea" } %>
     <% end %>
   </div>
