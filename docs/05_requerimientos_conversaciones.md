@@ -4249,6 +4249,33 @@ Dos cosas que aparecieron al implementar y que nadie había reportado:
    etiqueta anotada (`A1-01`…`A1-28`, `A2-01`…`A2-14`, `A3-01`…`A3-12`,
    `RP-01`…`RP-23`, cruce `N`).
 
+### Lo que salió implementando (2026-08-09 / 10)
+
+Cosas que **nadie reportó** y aparecieron al tocar el código. Van acá para que
+no se pierdan y para que las que son preguntas lleguen a Yusef.
+
+| Qué | Dónde quedó |
+|---|---|
+| El **audit log nunca registró quién**: `respond_to?` sin el flag de privados devolvía false, así que el hook nunca corría. Los 41 modelos guardaban qué cambió, nunca quién | ✅ `PR-C6.30` |
+| El botón **"Guardar (F8)" de `/pre_alertas/edit` no hacía nada**, y borrar una fila tampoco persistía | ✅ `PR-C6.25` |
+| En **Entrega Personal la cantidad de cajas se perdía**: dos campos con el mismo `name`, ganaba el hidden con valor 1. Y EP nunca aplicó el peso por caja | ✅ `PR-C6.31` |
+| **Ocho copias** de la misma búsqueda con dropdown. Las ocho pedían 2 caracteres, dos preseleccionaban, cuatro tenían flechas | ✅ `PR-C6.32` a `PR-C6.34` |
+| **Tres vistas** cableaban un autocomplete sin mandarle el `keydown`: el JS sabía navegar, la vista nunca le pasaba las teclas | ✅ `PR-C6.34` + lint |
+
+### Preguntas nuevas para Yusef (salieron del código, no de él)
+
+1. **No existe una sucursal de retiro estructurada.** `Cliente` solo tiene
+   `ciudad`, texto libre, y `/etiquetar` nunca setea `paquete.sucursal`. El
+   aviso de "separar por sucursal" (`A3-07`, `PR-C6.24`) muestra ese texto,
+   así que es **tan confiable como él**: si un cliente dice "Tegus" y otro
+   "Tegucigalpa", Miami arma dos bolsas. Para que separar por sucursal
+   funcione de verdad hace falta una sucursal real en el cliente.
+2. **La tasa de cambio: quién la mantiene y cada cuánto.** Ya está en 27.10 y
+   tiene su pantalla (`PR-C6.29`), pero nadie dijo quién la revisa.
+3. **PIN para Julien.** `PR-C6.28` deja listo que el supervisor de Miami
+   quite el cobro por cambio de servicio, pero hoy el banner avisa que nadie
+   puede autorizar. Depende de `RP-21`, que está en las fotos que faltan.
+
 ### Lo que sigue (2026-08-09)
 
 1. **Faltan las fotos de `RP-17`…`RP-22`** (páginas 5 a 7 del PDF). Jorge
