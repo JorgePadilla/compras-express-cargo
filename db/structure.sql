@@ -1323,7 +1323,8 @@ CREATE TABLE public.numero_recepcion_counters (
     anio integer NOT NULL,
     ultimo_numero integer DEFAULT 0 NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    mes integer DEFAULT 0 NOT NULL
 );
 
 
@@ -3419,13 +3420,6 @@ CREATE UNIQUE INDEX idx_rc_counter_combo ON public.rc_counters USING btree (anio
 
 
 --
--- Name: idx_recepcion_counters_sucursal_anio; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_recepcion_counters_sucursal_anio ON public.numero_recepcion_counters USING btree (sucursal_id, anio);
-
-
---
 -- Name: idx_sub_localidades_sucursal_codigo; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4039,6 +4033,13 @@ CREATE INDEX index_notas_debito_on_venta_id ON public.notas_debito USING btree (
 --
 
 CREATE INDEX index_numero_recepcion_counters_on_sucursal_id ON public.numero_recepcion_counters USING btree (sucursal_id);
+
+
+--
+-- Name: index_numero_recepcion_counters_por_mes; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_numero_recepcion_counters_por_mes ON public.numero_recepcion_counters USING btree (sucursal_id, anio, mes);
 
 
 --
@@ -5772,6 +5773,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260810030000'),
 ('20260810020000'),
 ('20260810010935'),
 ('20260809120000'),

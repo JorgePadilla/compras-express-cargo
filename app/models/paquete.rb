@@ -687,14 +687,38 @@ class Paquete < ApplicationRecord
   # el contador 1 vez, no N).
   def self.generate_numero_recepcion_madre(sucursal:, attrs:)
     return nil if sucursal.nil?
-    prefix = sucursal.codigo_recepcion_prefix
-    return nil if prefix.blank?
 
     fecha = attrs[:fecha_recibido_miami] || Time.zone.now
-    anio = fecha.respond_to?(:year) ? fecha.year : Time.zone.now.year
-    next_number = NumeroRecepcionCounter.next_for!(sucursal: sucursal, anio: anio)
+    fecha = Time.zone.now unless fecha.respond_to?(:year)
+    numero_recepcion_para(sucursal: sucursal, fecha: fecha)
+  end
 
-    format("%<prefix>s%<anio>07d%<num>06d", prefix: prefix, anio: anio, num: next_number)
+  # PR-C6.40: el formato del número de recepción, en un solo lugar.
+  #
+  # Yusef lo escribió a mano en la pregunta 17, rotulando cada parte:
+  #
+  #     R        MIA        26     12     ______________
+  #     prefijo  sucursal   año    mes    correlativo
+  #
+  # Antes era `RM` + año de 7 dígitos + correlativo (`RM0002026000010`) y el
+  # correlativo reiniciaba cada 1° de enero. Ahora reinicia **cada mes**.
+  #
+  # El código de 3 letras ya existía (`Sucursal#codigo`), así que
+  # `codigo_recepcion_prefix` (RM, RS, RH…) queda obsoleto.
+  #
+  # Vive acá porque lo usan los dos caminos —el paquete suelto y el número
+  # madre de un split— y tenerlo duplicado es exactamente cómo se separan las
+  # cosas en este proyecto.
+  def self.numero_recepcion_para(sucursal:, fecha:)
+    codigo = sucursal.codigo
+    return nil if codigo.blank?
+
+    anio = fecha.year
+    mes  = fecha.month
+    numero = NumeroRecepcionCounter.next_for!(sucursal: sucursal, anio: anio, mes: mes)
+
+    format("R%<codigo>s%<anio>02d%<mes>02d%<num>06d",
+           codigo: codigo, anio: anio % 100, mes: mes, num: numero)
   end
 
   # Calcula la próxima letra A-Z disponible para distinguir un tracking
@@ -825,17 +849,10 @@ class Paquete < ApplicationRecord
   def generate_numero_recepcion
     origen = sucursal_del_numero
     return if origen.nil?
-    prefix = origen.codigo_recepcion_prefix
-    return if prefix.blank?
 
-    anio = (fecha_recibido_miami&.year || Time.zone.now.year)
-    next_number = NumeroRecepcionCounter.next_for!(sucursal: origen, anio: anio)
-
-    self.numero_recepcion = format(
-      "%<prefix>s%<anio>07d%<num>06d",
-      prefix: prefix,
-      anio:   anio,
-      num:    next_number
+    self.numero_recepcion = self.class.numero_recepcion_para(
+      sucursal: origen,
+      fecha: fecha_recibido_miami || Time.zone.now
     )
   end
 
