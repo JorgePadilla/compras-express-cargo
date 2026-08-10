@@ -28,14 +28,23 @@
 # no un borrado. Lo mismo con una caja ya **entregada**: eso es un hecho
 # físico, no un error de digitación. En esos casos ni el PIN alcanza.
 class BajarCajasConPin
-  # Quién puede. `admin` porque puede todo; `supervisor_miami` porque es donde
-  # nace el error de digitación; los dos de facturación porque el daño que la
-  # guarda protege es contable y son ellos los que lo van a ver.
+  # Quién puede. Yusef dijo *"solo con PIN de supervisor"*, sin calificar el
+  # rol — así que la lista es **quién lleva PIN**, no una selección a mano.
   #
-  # No se toca `User::ROLES_AUTORIZANTES`: esa lista da autorización sobre
-  # cualquier línea de pre-factura, y esto es una cosa puntual. Quién lleva
-  # cada PIN sigue abierto en `RP-21`.
-  ROLES = %w[admin supervisor_miami supervisor_prefactura supervisor_caja].freeze
+  # `RP-21` ya contestó eso: escribió **"SI"** en los cuatro renglones
+  # (Administrador, Supervisor de Caja, Supervisor de Pre-Factura, Supervisor de
+  # SAC), que son exactamente `User::ROLES_AUTORIZANTES`. Lo único que falta de
+  # `RP-21` son los **nombres** de esas personas — carga de datos, no código.
+  #
+  # Se **deriva** de esa constante en vez de copiarla para que no se separen: si
+  # mañana entra un quinto rol con PIN, entra acá solo. Lo que NO se hace es
+  # agregarle roles a `ROLES_AUTORIZANTES` — esa lista da autorización sobre
+  # cualquier línea de pre-factura, y `supervisor_miami` no la tiene.
+  #
+  # `supervisor_miami` entra acá y aparte: es Julien, que ya lleva PIN por
+  # `PR-C6.28`, y es **donde nace el error** — le pusieron 2 cajas a lo que era
+  # una.
+  ROLES = (User::ROLES_AUTORIZANTES + %w[supervisor_miami]).freeze
 
   class NoPermitido   < StandardError; end
   class PinInvalido   < StandardError; end

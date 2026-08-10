@@ -121,6 +121,33 @@ class BajarCajasConPinTest < ActiveSupport::TestCase
     assert_equal 2, Paquete.where(numero_recepcion: cajas.first.numero_recepcion).count
   end
 
+  test "la lista de roles sale de la respuesta de Yusef, no de un criterio nuestro" do
+    # RP-21: escribio "SI" en los cuatro renglones —Administrador, Supervisor de
+    # Caja, Supervisor de Pre-Factura, Supervisor de SAC—, que son exactamente
+    # `ROLES_AUTORIZANTES`. Mas Julien (supervisor_miami), que ya lleva PIN por
+    # PR-C6.28 y es donde nace el error.
+    #
+    # Si alguien vuelve a armarla a mano, este test lo agarra: la primera
+    # version se habia comido a SAC.
+    assert_equal (User::ROLES_AUTORIZANTES + [ "supervisor_miami" ]).sort,
+                 BajarCajasConPin::ROLES.sort
+  end
+
+  test "el supervisor de SAC tambien puede" do
+    # Yusef lo marco "SI" explicitamente y la primera version de la lista lo
+    # dejaba afuera.
+    cajas = crear_split(2)
+    cajas.last.update_columns(estado: "pre_facturado")
+    sac = User.create!(
+      nombre: "Supervisora SAC", email_address: "sac.cajas@test.com",
+      password: "password123", rol: "supervisor_sac", activo: true, pin: "1234"
+    )
+
+    quedan = bajar(cajas.first, 1, supervisor: sac).call
+
+    assert_equal [ 1 ], quedan.map(&:numero_caja)
+  end
+
   test "un rol fuera de la lista no puede" do
     cajas = crear_split(2)
     digitador = users(:digitador)
