@@ -136,6 +136,33 @@ class EtiquetarTecladoTest < ApplicationSystemTestCase
     assert_selector "kbd", text: "F10"
   end
 
+  test "F10 con el foco FUERA de un campo tampoco guarda dos veces" do
+    # PR-BTN.4. Hay dos listeners de F10 sobre `document`:
+    #
+    #   · `etiquetar_controller` — llama a `submitForm()`
+    #   · `keyboard_shortcuts_controller` — le hace click a `[data-shortcut]`
+    #
+    # `preventDefault()` no calla al otro (para eso haría falta
+    # `stopImmediatePropagation`), así que si un botón de esta pantalla llevara
+    # `shortcut: "F10"`, los dos correrían y el paquete se guardaría DOS veces.
+    #
+    # Por eso los botones de /etiquetar migraron con el `<kbd>` adentro del
+    # bloque y nunca con `shortcut:`.
+    #
+    # El foco tiene que estar fuera de un campo: el handler global se abstiene
+    # mientras se está escribiendo (`isEditing`), así que con el cursor en el
+    # tracking este bug no se ve — que es justo lo que lo hace fácil de
+    # reintroducir sin que nadie lo note.
+    espiar_submit
+    campo("paquete_tracking").send_keys("1Z999TECLADO008")
+    page.execute_script("document.activeElement.blur()")
+
+    page.send_keys(:f10)
+
+    assert_equal 1, submits_observados,
+                 "F10 disparó dos veces: algún botón está registrando data-shortcut"
+  end
+
   private
 
   def ingresar(user)
