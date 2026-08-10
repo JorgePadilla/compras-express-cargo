@@ -70,10 +70,40 @@ class BajarCajasConPinTest < ActiveSupport::TestCase
     assert_equal 1, Paquete.where(id: cajas.last.id).count
   end
 
+  test "una caja que paso por una pre-factura ANULADA tambien se puede bajar" do
+    # `PreFactura#anular!` pone `paquete.pre_factura_id` en nil pero DEJA los
+    # items vivos. Ir por `caja.pre_factura` —lo obvio— no los encuentra, y el
+    # `destroy!` revienta contra la FK: 500 en vez del aviso.
+    cajas = crear_split(2)
+    pf = pre_factura_con(cajas.last, subtotal: 500)
+    pf.anular!
+
+    assert PreFacturaItem.exists?(paquete_id: cajas.last.id), "el fixture no reproduce el caso"
+
+    quedan = bajar(cajas.first, 1).call
+
+    assert_equal [ 1 ], quedan.map(&:numero_caja)
+    assert_not PreFacturaItem.exists?(paquete_id: cajas.last.id)
+  end
+
   test "una caja en una pre-factura YA facturada tampoco" do
     cajas = crear_split(2)
     pf = pre_factura_con(cajas.last, subtotal: 500)
     pf.update_columns(estado: "facturado")
+
+    assert_raises(BajarCajasConPin::YaFacturado) { bajar(cajas.first, 1).call }
+    assert_equal 1, Paquete.where(id: cajas.last.id).count
+  end
+
+  test "el limite fiscal se mide por el ITEM, no por la asociacion" do
+    # Defensa en profundidad, y fija la regla: lo que ata la caja al documento
+    # es el `pre_factura_item`, no `paquete.pre_factura_id`. Que los dos lados
+    # se separen ya pasa hoy con `anular!`; si algun dia pasara con una
+    # facturada, mirar solo la asociacion borraria una caja ya facturada.
+    cajas = crear_split(2)
+    pf = pre_factura_con(cajas.last, subtotal: 500)
+    pf.update_columns(estado: "facturado")
+    cajas.last.update_columns(pre_factura_id: nil)
 
     assert_raises(BajarCajasConPin::YaFacturado) { bajar(cajas.first, 1).call }
     assert_equal 1, Paquete.where(id: cajas.last.id).count

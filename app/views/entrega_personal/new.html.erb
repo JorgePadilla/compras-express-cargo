@@ -132,8 +132,13 @@ end %>
 
       <%# Sección 3: Peso, medidas y cálculo — partial compartido con /etiquetar.
           En EP además muestra el valor a pagar (PR-10.b). %>
+      <%# `tipo_envio_id` arranca del objeto y no en blanco: en un form nuevo el
+          select viene vacío y el `change` lo va a llenar, pero en el re-render
+          de un error el select vuelve lleno y ese `change` ya no ocurre — un
+          cliente con cobro solo-volumétrico mostraría el peso viejo. %>
       <%= render "shared/peso_medidas_calc", f: f,
-            valor_a_pagar: true, cotizador_url: cotizador_path %>
+            valor_a_pagar: true, cotizador_url: cotizador_path,
+            tipo_envio_id: f.object.tipo_envio_id %>
 
       <%# Sección 4: Contenido + Remitente + Driver %>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -86,9 +86,18 @@ class BajarCajasConPin
 
   # Lo que ni el PIN destraba: un documento fiscal ya emitido o una entrega
   # que de verdad ocurrió.
+  #
+  # La pre-factura facturada se busca por los **items**, no por
+  # `caja.pre_factura`: los dos lados no siempre están sincronizados (ver
+  # `desenganchar`), y el que manda para la FK es el item.
   def intocable?(caja)
     caja.venta_id.present? || caja.facturado? || caja.entregado? ||
-      caja.pre_factura&.facturado? || VentaItem.exists?(paquete_id: caja.id)
+      VentaItem.exists?(paquete_id: caja.id) ||
+      items_de(caja).joins(:pre_factura).where(pre_facturas: { estado: "facturado" }).exists?
+  end
+
+  def items_de(caja)
+    PreFacturaItem.where(paquete_id: caja.id)
   end
 
   def mensaje_intocables(cajas)
@@ -97,21 +106,27 @@ class BajarCajasConPin
       "con una nota de crédito, no desde acá."
   end
 
-  # Saca la caja fantasma de la pre-factura abierta y de la entrega. Sin esto
-  # el `destroy!` choca contra la FK de `pre_factura_items`, y peor: si
-  # chocara y alguien la borrara igual, el cliente seguiría pagando una caja
-  # que ya no existe.
+  # Saca la caja fantasma de sus pre-facturas y de la entrega. Sin esto el
+  # `destroy!` choca contra la FK de `pre_factura_items`, y peor: si chocara y
+  # alguien la borrara igual, el cliente seguiría pagando una caja que ya no
+  # existe.
+  #
+  # **Va por los items y no por `caja.pre_factura`**, que sería lo obvio: los
+  # dos lados no siempre están sincronizados. `PreFactura#anular!` pone
+  # `paquete.pre_factura_id` en nil pero **deja los items vivos**, así que una
+  # caja que pasó por una pre-factura anulada llega acá con la asociación
+  # vacía y un item colgando. Ese es justo el caso que reventaría contra la FK
+  # con un 500 en vez del aviso.
   #
   # `paper_trail` registra el borrado con el usuario que lo hizo (PR-C6.30
   # arregló el `whodunnit`), así que el "quién bajó esta caja" ya queda.
   def desenganchar(caja)
-    pf = caja.pre_factura
-    if pf.present? && !pf.facturado?
-      borradas = pf.pre_factura_items.where(paquete_id: caja.id).destroy_all.size
-      # Los totales viven en `pre_factura` y se recalculan en su `before_save`,
-      # que no corre al destruir un item suelto.
-      pf.reload.save! if borradas.positive?
-    end
+    afectadas = PreFactura.where(id: items_de(caja).select(:pre_factura_id)).to_a
+    items_de(caja).destroy_all
+
+    # Los totales viven en `pre_factura` y se recalculan en su `before_save`,
+    # que no corre al destruir un item suelto.
+    afectadas.each { |pf| pf.reload.save! }
 
     caja.update_columns(pre_factura_id: nil, entrega_id: nil)
   end
