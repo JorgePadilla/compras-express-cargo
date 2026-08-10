@@ -102,60 +102,9 @@
       </div>
 
       <div data-pre-alerta-editor-target="paquetesBody" class="space-y-4">
-        <% @pre_alerta.pre_alerta_paquetes.each.with_index do |pap, index| %>
-          <div class="paquete-row relative bg-gray-50 rounded-xl p-4 border border-gray-200">
-            <button type="button" data-action="click->pre-alerta-editor#removePaquete"
-                    aria-label="Quitar este paquete de la pre-alerta"
-                    class="absolute top-3 right-3 rounded foco-cec text-red-500 hover:text-red-600 transition-colors">
-              <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
-            </button>
-            <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
-              <div class="grid grid-cols-1 gap-4">
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <%# PR-C6.26: avisa si el tracking ya existe. Yusef: "ya tiene
-                      un error y NO LO DETECTA QUE YA EXISTE". Avisa, no bloquea:
-                      hay duplicados legítimos que se resuelven con sufijo en
-                      /etiquetar. %>
-                  <div class="sm:col-span-2" data-controller="tracking-duplicado"
-                       data-tracking-duplicado-url-value="<%= check_tracking_paquetes_path %>">
-                    <label class="block text-sm font-semibold text-cec-navy mb-1.5">
-                      Tracking o Número de Rastreo
-                      <span class="text-xs font-normal text-red-500 ml-1">Obligatorio (Aquí NO va el Número de Orden)</span>
-                    </label>
-                    <%= pf.text_field :tracking, placeholder: "Ej. 1Z999AA1...",
-                        autocomplete: "off", inputmode: "latin", spellcheck: "false",
-                        data: { "1p-ignore": true, lpignore: true, "form-type": "other",
-                                action: "input->tracking-duplicado#buscar" },
-                        class: "block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
-                    <p data-tracking-duplicado-target="aviso"
-                       class="hidden mt-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
-                      <span data-tracking-duplicado-target="texto"></span>
-                    </p>
-                  </div>
-                  <div>
-                    <label class="block text-sm font-semibold text-cec-navy mb-1.5">Fecha</label>
-                    <%= pf.date_field :fecha, class: "block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal", data: { controller: "flatpickr" } %>
-                  </div>
-                </div>
-                <div>
-                  <label class="block text-sm font-semibold text-cec-navy mb-1.5">
-                    Descripción del Producto
-                    <span class="text-xs font-normal text-red-500 ml-1">Obligatorio</span>
-                  </label>
-                  <%= pf.text_field :descripcion, placeholder: "¿Qué contiene el paquete?",
-                      class: "block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
-                </div>
-                <div>
-                  <label class="block text-sm font-semibold text-cec-navy mb-1.5">
-                    Instrucciones Especiales del Paquete <span class="text-xs font-normal text-gray-500">(opcional)</span>
-                  </label>
-                  <%= pf.text_area :instrucciones, placeholder: "Instrucciones para el procesamiento del paquete...", rows: 2,
-                      class: "block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
-                </div>
-              </div>
-            <% end %>
-          </div>
-        <% end %>
+<% @pre_alerta.pre_alerta_paquetes.each.with_index do |pap, index| %>
+  <%= render "pre_alertas/paquete_card", f: f, pap: pap, index: index %>
+<% end %>
       </div>
 
       <%# Botón Agregar Paquete %>
@@ -168,54 +117,10 @@
         </button>
       </div>
 
-      <template data-pre-alerta-editor-target="template">
-        <div class="paquete-row relative bg-gray-50 rounded-xl p-4 border border-gray-200" data-new-record="true">
-          <button type="button" data-action="click->pre-alerta-editor#removePaquete"
-                  aria-label="Quitar este paquete de la pre-alerta"
-                  class="absolute top-3 right-3 rounded foco-cec text-red-500 hover:text-red-600 transition-colors">
-            <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
-          </button>
-          <div class="grid grid-cols-1 gap-4">
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div class="sm:col-span-2">
-                <label class="block text-sm font-semibold text-cec-navy mb-1.5">
-                  Tracking o Número de Rastreo
-                  <span class="text-xs font-normal text-red-500 ml-1">Obligatorio (Aquí NO va el Número de Orden)</span>
-                </label>
-                <input type="text" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][tracking]"
-                 id="pre_alerta_pre_alerta_paquetes_attributes_NEW_INDEX_tracking"
-                 autocomplete="off" inputmode="latin" spellcheck="false"
-                 data-1p-ignore data-lpignore="true" data-form-type="other"
-                       placeholder="Ej. 1Z999AA1..."
-                       class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
-              </div>
-              <div>
-                <label class="block text-sm font-semibold text-cec-navy mb-1.5">Fecha</label>
-                <input type="date" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][fecha]"
-                       data-controller="flatpickr"
-                       class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
-              </div>
-            </div>
-            <div>
-              <label class="block text-sm font-semibold text-cec-navy mb-1.5">
-                Descripción del Producto
-                <span class="text-xs font-normal text-red-500 ml-1">Obligatorio</span>
-              </label>
-              <input type="text" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][descripcion]"
-                     placeholder="¿Qué contiene el paquete?"
-                     class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
-            </div>
-            <div>
-              <label class="block text-sm font-semibold text-cec-navy mb-1.5">
-                Instrucciones Especiales del Paquete <span class="text-xs font-normal text-gray-500">(opcional)</span>
-              </label>
-              <textarea name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][instrucciones]"
-                        rows="2" placeholder="Instrucciones para el procesamiento del paquete..."
-                        class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"></textarea>
-            </div>
-          </div>
-        </div>
-      </template>
+<template data-pre-alerta-editor-target="template">
+  <%= render "pre_alertas/paquete_card",
+        f: f, pap: PreAlertaPaquete.new, index: "NEW_INDEX" %>
+</template>
     </div>
 
     <%# Actions %>

@@ -1,5 +1,11 @@
+<%# Una fila de paquete del portal.
+    PR-C6.44: este partial pasa a pintar TAMBIÉN el `<template>` de las filas
+    nuevas, renderizándose con `pap: PreAlertaPaquete.new` e
+    `index: "NEW_INDEX"`. Antes el template era HTML escrito a mano, y por eso
+    los arreglos llegaban a una de las dos copias. %>
 <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
-  <tr class="paquete-row" id="<%= "paquete_row_#{pap.id}" if pap.persisted? %>">
+  <% atributos_fila = pap.persisted? ? { id: "paquete_row_#{pap.id}" } : { data: { new_record: true } } %>
+  <tr class="paquete-row" <%= tag.attributes(atributos_fila) %>>
     <% if pap.persisted? %>
       <%= pf.hidden_field :id %>
     <% end %>
@@ -72,8 +78,15 @@
             <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
           <% end %>
         <% else %>
-          <%# Unlinked + consolidando (or new row): JS-side remove keeps editor state %>
-          <input type="hidden" name="pre_alerta[pre_alerta_paquetes_attributes][<%= index %>][_destroy]" value="0" data-pre-alerta-editor-target="destroyField">
+          <%# Unlinked + consolidando (or new row): JS-side remove keeps editor state.
+              El `_destroy` va SOLO si la fila ya existe en la base, y eso es
+              load-bearing: `removePaquete` bifurca según exista ese campo. Si
+              existe, marca la fila y llama a `autosave()`; si no, la saca del
+              DOM. Una fila recién agregada tiene que tomar el segundo camino —
+              con el primero quedaría un <tr> escondido y un PATCH al pedo. %>
+          <% if pap.persisted? %>
+            <input type="hidden" name="pre_alerta[pre_alerta_paquetes_attributes][<%= index %>][_destroy]" value="0" data-pre-alerta-editor-target="destroyField">
+          <% end %>
           <button type="button" data-action="click->pre-alerta-editor#removePaquete"
                   aria-label="Quitar este paquete de la pre-alerta"
                   class="rounded foco-cec text-red-500 hover:text-red-600">

@@ -29,7 +29,13 @@ class PreAlertasAdminFormTest < ActionDispatch::IntegrationTest
     # Si no, el autofill volvía a aparecer apenas se agregaba un tracking más.
     get new_pre_alerta_url
 
-    plantilla = response.body[/NEW_INDEX\]\[tracking\].*?>/m].to_s
+    # PR-C6.44: el corte iba de ADENTRO del `name=` hasta el `>`, y eso pasaba
+    # solo porque el HTML estaba escrito a mano con `name` de primero. Ahora la
+    # plantilla la genera `fields_for`, que renderiza `name` e `id` AL FINAL
+    # (`add_default_name_and_field` corre último), así que ese corte quedaba
+    # vacío y el test pasaba a no verificar nada. Se corta el tag entero, igual
+    # que el helper `campo_tracking` de acá abajo.
+    plantilla = response.body[/<input[^>]*NEW_INDEX\]\[tracking\][^>]*>/].to_s
     assert_match(/autocomplete="off"/, plantilla)
     assert_match(/id="[^"]*NEW_INDEX[^"]*"/, plantilla, "la fila nueva ni siquiera tenía id")
   end

@@ -20,7 +20,11 @@ import { Controller } from "@hotwired/stimulus"
 // hereda su escalera de búsqueda: exacto, secundario y el código largo de USPS.
 export default class extends Controller {
   static targets = [ "aviso", "texto" ]
-  static values = { url: String }
+  // PR-C6.44: `excluirPaqueteId` es el paquete que esta fila ya representa.
+  // Cada `PreAlertaPaquete` materializa un Paquete en estado `pre_alerta`, así
+  // que sin esto, tocar el tracking de una fila guardada se avisaba **sobre sí
+  // misma**. Vale 0 en /etiquetar y en las filas nuevas, y ahí no se manda.
+  static values = { url: String, excluirPaqueteId: Number }
 
   buscar(e) {
     const campo = e.currentTarget
@@ -35,7 +39,12 @@ export default class extends Controller {
   _consultar(tracking, campo) {
     const consulta = (this._seq = (this._seq || 0) + 1)
 
-    fetch(`${this.urlValue}?tracking=${encodeURIComponent(tracking)}`, {
+    const params = new URLSearchParams({ tracking })
+    if (this.excluirPaqueteIdValue > 0) {
+      params.set("excluir_paquete_id", this.excluirPaqueteIdValue)
+    }
+
+    fetch(`${this.urlValue}?${params}`, {
       headers: { "Accept": "application/json" }
     })
       .then(r => r.json())
