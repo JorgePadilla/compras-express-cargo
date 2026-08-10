@@ -37,7 +37,7 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Envio</label>
-          <%= f.select :tipo_envio_id, options_from_collection_for_select(@tipo_envios, :id, :nombre, @pre_alerta.tipo_envio_id),
+          <%= f.select :tipo_envio_id, options_from_collection_for_select(@tipo_envios, :id, :nombre, @pre_alerta.tipo_envio_id || @tipo_envio_sugerido&.id),
               { include_blank: "— Seleccionar —" },
               class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
         </div>
@@ -101,13 +101,25 @@
             <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
               <div class="grid grid-cols-1 gap-4">
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div class="sm:col-span-2">
+                  <%# PR-C6.26: avisa si el tracking ya existe. Yusef: "ya tiene
+                      un error y NO LO DETECTA QUE YA EXISTE". Avisa, no bloquea:
+                      hay duplicados legítimos que se resuelven con sufijo en
+                      /etiquetar. %>
+                  <div class="sm:col-span-2" data-controller="tracking-duplicado"
+                       data-tracking-duplicado-url-value="<%= check_tracking_paquetes_path %>">
                     <label class="block text-sm font-semibold text-cec-navy mb-1.5">
                       Tracking o Número de Rastreo
                       <span class="text-xs font-normal text-red-500 ml-1">Obligatorio (Aquí NO va el Número de Orden)</span>
                     </label>
                     <%= pf.text_field :tracking, placeholder: "Ej. 1Z999AA1...",
+                        autocomplete: "off", inputmode: "latin", spellcheck: "false",
+                        data: { "1p-ignore": true, lpignore: true, "form-type": "other",
+                                action: "input->tracking-duplicado#buscar" },
                         class: "block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+                    <p data-tracking-duplicado-target="aviso"
+                       class="hidden mt-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                      <span data-tracking-duplicado-target="texto"></span>
+                    </p>
                   </div>
                   <div>
                     <label class="block text-sm font-semibold text-cec-navy mb-1.5">Fecha</label>
@@ -159,6 +171,9 @@
                   <span class="text-xs font-normal text-red-500 ml-1">Obligatorio (Aquí NO va el Número de Orden)</span>
                 </label>
                 <input type="text" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][tracking]"
+                 id="pre_alerta_pre_alerta_paquetes_attributes_NEW_INDEX_tracking"
+                 autocomplete="off" inputmode="latin" spellcheck="false"
+                 data-1p-ignore data-lpignore="true" data-form-type="other"
                        placeholder="Ej. 1Z999AA1..."
                        class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
               </div>

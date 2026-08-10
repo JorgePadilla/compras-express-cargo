@@ -36,6 +36,11 @@ class PreAlertasController < ApplicationController
     @pre_alerta = PreAlerta.new
     @pre_alerta.pre_alerta_paquetes.build
     @tipo_envios = TipoEnvio.activos.order(:nombre)
+    # PR-C6.26: el dropdown arrancaba vacío aunque el modelo backfillea CER en
+    # `before_validation on: :create` — el default existía pero no se veía, y
+    # el operario tenía que elegirlo igual. Yusef: "preseleccionar de los
+    # dropdown". Se muestra el mismo que se iba a aplicar.
+    @tipo_envio_sugerido = @tipo_envios.find { |t| t.codigo == "cer" }
   end
 
   def create
