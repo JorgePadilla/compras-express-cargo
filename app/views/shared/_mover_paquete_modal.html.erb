@@ -1,55 +1,59 @@
-<%# Move paquete modal — controlled by pre-alerta-mover Stimulus controller %>
+<%# Mover un paquete a otra pre-alerta.
+    Locals: pre_alerta (la de origen), url (a dónde postea el form).
+
+    PR-C6.48: lo maneja `pre_alerta_mover_controller`, que ya era genérico —
+    pide los destinos a `destinos-url-value` y pinta lo que le devuelvan. Lo
+    único que cambiaba entre el portal y admin era la URL del form, así que el
+    modal se comparte en vez de copiarse.
+
+    El botón Confirmar arranca deshabilitado a propósito: se prende cuando el
+    Stimulus registra un destino elegido. %>
 <div data-pre-alerta-mover-target="modal"
      class="hidden fixed inset-0 z-50 flex items-center justify-center">
-  <%# Backdrop %>
+  <%# Fondo decorativo: cerrar vive en los botones de abajo. %>
   <div data-action="click->pre-alerta-mover#close" aria-hidden="true"
        class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"></div>
 
-  <%# Card %>
   <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
     <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
       <h3 class="text-sm font-bold text-gray-800">
         Mover paquete <span data-pre-alerta-mover-target="trackingLabel" class="font-mono text-cec-navy"></span>
       </h3>
-      <button type="button" data-action="click->pre-alerta-mover#close"
-              aria-label="Cerrar"
-              class="rounded foco-cec text-gray-500 hover:text-gray-700">
-        <%= heroicon "x-mark", variant: :outline, options: { class: "w-5 h-5" } %>
-      </button>
+      <%= render ButtonComponent.new(variant: :ghost, size: :xs, icon: "x-mark",
+            label: "Cerrar", data: { action: "click->pre-alerta-mover#close" }) %>
     </div>
 
     <div data-pre-alerta-mover-target="body" class="px-6 py-4 max-h-80 overflow-y-auto">
-      <%# Loading state %>
       <div data-pre-alerta-mover-target="loading" class="text-center py-8">
         <div class="inline-block w-6 h-6 border-2 border-cec-teal/30 border-t-cec-teal rounded-full animate-spin"></div>
         <p class="text-sm text-gray-500 mt-2">Buscando destinos...</p>
       </div>
 
-      <%# Destination list (populated by Stimulus) %>
+      <%# La lista la pinta el Stimulus con lo que devuelve `destinos-url-value`. %>
       <div data-pre-alerta-mover-target="list" class="hidden space-y-2"></div>
 
-      <%# Empty state %>
       <div data-pre-alerta-mover-target="empty" class="hidden text-center py-8">
         <p class="text-sm text-gray-500">No hay pre-alertas disponibles para mover este paquete.</p>
       </div>
     </div>
 
     <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
-      <button type="button" data-action="click->pre-alerta-mover#close"
-              class="text-gray-600 hover:text-gray-800 text-sm font-medium px-4 py-2">
+      <%= render ButtonComponent.new(variant: :ghost,
+            data: { action: "click->pre-alerta-mover#close" }) do %>
         Cancelar
-      </button>
+      <% end %>
+
+      <%# Si es el último, mover deja la pre-alerta vacía y se elimina sola. %>
       <% confirm_vacia = pre_alerta.pre_alerta_paquetes.size == 1 ? "Es el último paquete de esta pre-alerta. Si continuás, la pre-alerta quedará vacía y será eliminada. ¿Confirmás?" : nil %>
-      <%= form_with url: mover_paquete_cuenta_pre_alerta_path(pre_alerta), method: :post,
+      <%= form_with url: url, method: :post,
             data: { pre_alerta_mover_target: "form", turbo_confirm: confirm_vacia }, class: "inline" do |f| %>
         <input type="hidden" name="pre_alerta_paquete_id" data-pre-alerta-mover-target="papIdField" value="">
         <input type="hidden" name="destino_id" data-pre-alerta-mover-target="destinoField" value="">
-        <button type="submit" data-pre-alerta-mover-target="confirmBtn"
-                disabled
-                class="bg-cec-teal text-white font-semibold px-6 py-2 rounded-lg text-sm
-                       hover:bg-cec-teal-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <%# `teal` con tinta navy: blanco sobre cec-teal daba 2.46:1 (PR-BTN.1). %>
+        <%= render ButtonComponent.new(variant: :teal, type: "submit", disabled: true,
+              data: { pre_alerta_mover_target: "confirmBtn" }) do %>
           Confirmar
-        </button>
+        <% end %>
       <% end %>
     </div>
   </div>

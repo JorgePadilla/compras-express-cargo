@@ -141,7 +141,13 @@ Rails.application.routes.draw do
   end
 
   resources :pre_alertas, except: %i[destroy] do
-    member { delete :anular }
+    member do
+      delete :anular
+      # PR-C6.48: mover un paquete a otra pre-alerta desde el editor. El portal
+      # ya lo tenía; admin solo podía hacerlo desde la ficha del paquete.
+      get  :destinos_disponibles
+      post :mover_paquete
+    end
     collection do
       post :clean_empty
       get :buscar
