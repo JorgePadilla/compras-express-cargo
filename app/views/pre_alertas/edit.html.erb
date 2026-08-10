@@ -121,6 +121,8 @@
                   <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
                     <%= pf.hidden_field :id %>
                     <%= pf.text_field :tracking, placeholder: "Ej. 1Z999AA1...",
+                        autocomplete: "off", inputmode: "latin", spellcheck: "false",
+                        data: { "1p-ignore": true, lpignore: true, "form-type": "other" },
                         class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
                   <% end %>
                 </td>
@@ -186,6 +188,9 @@
       <tr class="paquete-row" data-new-record="true">
         <td class="px-4 py-2">
           <input type="text" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][tracking]"
+                 id="pre_alerta_pre_alerta_paquetes_attributes_NEW_INDEX_tracking"
+                 autocomplete="off" inputmode="latin" spellcheck="false"
+                 data-1p-ignore data-lpignore="true" data-form-type="other"
                  placeholder="Ej. 1Z999AA1..."
                  class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
         </td>

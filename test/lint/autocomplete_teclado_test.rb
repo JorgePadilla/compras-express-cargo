@@ -32,7 +32,12 @@ class AutocompleteTecladoTest < ActiveSupport::TestCase
   # oculto — cada resultado es una acción, no una elección. Meterlos en
   # `BusquedaAutocomplete` sería el error opuesto al que este refactor vino a
   # arreglar: unificar cosas que solo se parecen por fuera.
-  NO_SON_AUTOCOMPLETE = %w[manifiesto-search manifiesto-autocomplete].freeze
+  #
+  # `tracking-duplicado` tampoco: no muestra una lista para elegir, solo avisa
+  # que el tracking ya existe. No hay nada que navegar con flechas.
+  NO_SON_AUTOCOMPLETE = %w[
+    manifiesto-search manifiesto-autocomplete tracking-duplicado
+  ].freeze
 
   test "toda vista con autocomplete le cablea el teclado" do
     huerfanos = []
