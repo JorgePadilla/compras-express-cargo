@@ -36,6 +36,7 @@ class EntregaPersonalController < ApplicationController
   def create_single
     @paquete = Paquete.new(paquete_params)
     apply_extra_params(@paquete)
+    heredar_sucursal_de_retiro(@paquete)
     @paquete.estado = "recibido_miami"
     @paquete.user = Current.user
 
@@ -53,11 +54,22 @@ class EntregaPersonalController < ApplicationController
     )
     paquetes = Paquete.crear_split!(attrs: attrs, total_cajas: total_cajas,
                                     por_caja: medidas_por_caja)
-    paquetes.each { |p| apply_extra_params(p, save: true) }
+    paquetes.each do |p|
+      apply_extra_params(p)
+      heredar_sucursal_de_retiro(p)
+      p.save!
+    end
     respond_saved(paquetes)
   rescue ActiveRecord::RecordInvalid => e
     @paquete = e.record
     render_create_error
+  end
+
+  # PR-C6.37: donde retira el cliente. Ojo con el choque de nombres: en esta
+  # pantalla `sucursal_id` es la de MIAMI donde se recibe (define el prefijo del
+  # tracking EP), asi que la de retiro solo se pone si el form no mando una.
+  def heredar_sucursal_de_retiro(paquete)
+    paquete.sucursal ||= paquete.cliente&.sucursal_retiro
   end
 
   # `prepagado_miami` + sus columnas asociadas se asignan acá porque vienen

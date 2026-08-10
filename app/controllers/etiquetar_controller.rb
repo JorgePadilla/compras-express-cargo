@@ -216,6 +216,10 @@ end
     # número de recepción. Sin esto el paquete nace sin número y su etiqueta
     # imprime el tracking en el código de barras.
     @paquete.sucursal_recepcion = @sucursal_recepcion_sesion
+    # PR-C6.37: la sucursal de RETIRO sale del cliente. El campo del paquete ya
+    # existia ("ese mismo, no es que vas a crear algo mas") pero nadie lo
+    # llenaba, asi que la etiqueta caia al `ciudad` del cliente.
+    @paquete.sucursal ||= @paquete.cliente&.sucursal_retiro
     # PR-C6.8: si marcó cambio de servicio, el destino pisa al de la sesión.
     # Antes el flag quedaba marcado y el tipo se quedaba en el de la sesión —
     # "cambio de servicio → CER a CKM no funciona".
@@ -261,7 +265,12 @@ end
       user: Current.user,
       tipo_envio_id: @tipo_envio_sesion.id,
       # Las N cajas comparten el número madre, y ese número sale de acá.
-      sucursal_recepcion: @sucursal_recepcion_sesion
+      sucursal_recepcion: @sucursal_recepcion_sesion,
+      # PR-C6.37: y la sucursal de RETIRO, que sale del cliente. Va acá y no
+      # solo en `create_single` porque las cajas de un split se guardan por
+      # otro camino — y sin esto heredaban todo menos esto.
+      sucursal_id: paquete_params[:sucursal_id].presence ||
+                   Cliente.find_by(id: paquete_params[:cliente_id])&.sucursal_retiro_id
     )
     # Mismo guard que el single: no se graban cajas bajo el tipo equivocado.
     if (conflicto = conflicto_con_la_sesion(Paquete.new(paquete_params)))

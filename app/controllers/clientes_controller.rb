@@ -3,7 +3,7 @@ class ClientesController < ApplicationController
   before_action :authorize_buscar, only: [ :buscar ]
 
   def index
-    @clientes = Cliente.activos.includes(:categoria_precio).order(created_at: :desc)
+    @clientes = Cliente.activos.includes(:categoria_precio, :sucursal_retiro).order(created_at: :desc)
     @clientes = @clientes.buscar(params[:q]) if params[:q].present?
     @clientes = @clientes.page(params[:page]).per(per_page_sanitized)
   end
@@ -12,6 +12,7 @@ class ClientesController < ApplicationController
   end
 
   def new
+    cargar_sucursales
     @cliente = Cliente.new
   end
 
@@ -20,6 +21,7 @@ class ClientesController < ApplicationController
     if @cliente.save
       redirect_to @cliente, notice: "Cliente creado exitosamente."
     else
+      cargar_sucursales
       render :new, status: :unprocessable_entity
     end
   end
@@ -45,23 +47,33 @@ class ClientesController < ApplicationController
         # que termina imprimiendo la etiqueta en `RETIRA EN`. No hay sucursal
         # de retiro estructurada, así que el aviso es tan confiable como ese
         # texto. Queda como pregunta para Yusef.
-        sucursal_retiro: ERB::Util.html_escape(c.ciudad.to_s)
+        sucursal_retiro: ERB::Util.html_escape(c.sucursal_retiro_nombre.to_s)
       }
     }
   end
 
   def edit
+    cargar_sucursales
   end
 
   def update
     if @cliente.update(cliente_params)
       redirect_to @cliente, notice: "Cliente actualizado exitosamente."
     else
+      cargar_sucursales
       render :edit, status: :unprocessable_entity
     end
   end
 
-  private  def set_cliente
+  private
+
+  # PR-C6.37: las sucursales donde un cliente puede retirar. Las de Miami no
+  # entran: nadie retira alla, es donde se recibe.
+  def cargar_sucursales
+    @sucursales_retiro = Sucursal.activas.where.not(ubicacion: "miami").ordered
+  end
+
+  def set_cliente
     @cliente = Cliente.find(params[:id])
   end
 
@@ -72,7 +84,7 @@ class ClientesController < ApplicationController
   def cliente_params
     params.require(:cliente).permit(
       :codigo, :nombre, :apellido, :identidad, :email,
-      :telefono, :telefono_whatsapp, :direccion, :ciudad,
+      :telefono, :telefono_whatsapp, :direccion, :ciudad, :sucursal_retiro_id,
       :departamento, :categoria_precio_id, :activo,
       :notas_miami, :notas_honduras,
       :notas_caja, :notas_sac

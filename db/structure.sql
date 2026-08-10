@@ -401,7 +401,8 @@ CREATE TABLE public.clientes (
     notificar_facturas boolean DEFAULT true NOT NULL,
     tema character varying,
     notas_caja text,
-    notas_sac text
+    notas_sac text,
+    sucursal_retiro_id bigint
 );
 
 
@@ -3614,6 +3615,13 @@ CREATE INDEX index_clientes_on_nombre_completo_trgm ON public.clientes USING gin
 
 
 --
+-- Name: index_clientes_on_sucursal_retiro_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_clientes_on_sucursal_retiro_id ON public.clientes USING btree (sucursal_retiro_id);
+
+
+--
 -- Name: index_configuracions_on_clave; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5622,6 +5630,14 @@ ALTER TABLE ONLY public.tarifas
 
 
 --
+-- Name: clientes fk_rails_e47c4f7c64; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.clientes
+    ADD CONSTRAINT fk_rails_e47c4f7c64 FOREIGN KEY (sucursal_retiro_id) REFERENCES public.sucursales(id);
+
+
+--
 -- Name: manifiestos fk_rails_e55f679c59; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5756,6 +5772,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260810020000'),
 ('20260810010935'),
 ('20260809120000'),
 ('20260808154651'),
