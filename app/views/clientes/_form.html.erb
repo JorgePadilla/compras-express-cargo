@@ -87,6 +87,23 @@
                  focus:ring-cec-teal focus:border-cec-teal" %>
     </div>
 
+    <%# PR-C6.37: donde retira, que NO es lo mismo que la ciudad donde vive.
+        Yusef: "la ciudad donde es la persona no es el mismo lugar donde se le
+        entrega — la idea es ponerle donde el hombre va a querer su retiro".
+        De aca lo hereda el paquete al etiquetarlo, y es lo que Miami lee para
+        saber en que bolsa va la caja. %>
+    <div>
+      <%= f.label :sucursal_retiro_id, "Sucursal donde retira",
+            class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.collection_select :sucursal_retiro_id, @sucursales_retiro, :id, :nombre,
+            { include_blank: "— sin definir —" },
+            { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                     focus:ring-cec-teal focus:border-cec-teal" } %>
+      <p class="mt-1 text-xs text-gray-500">
+        Miami separa las cajas por esta sucursal. Si queda sin definir, la etiqueta cae a la ciudad.
+      </p>
+    </div>
+
     <div>
       <%= f.label :departamento, class: "block text-sm font-medium text-gray-700 mb-1" %>
       <%= f.text_field :departamento,

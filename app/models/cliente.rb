@@ -10,6 +10,10 @@ class Cliente < ApplicationRecord
   validates :password, length: { minimum: 8 }, confirmation: true, if: -> { password.present? }
 
   belongs_to :categoria_precio, optional: true
+  # PR-C6.37: donde el cliente retira. Yusef: "la ciudad donde es la persona no
+  # es el mismo lugar donde se le entrega — la idea es ponerle donde el hombre
+  # va a querer su retiro". De aca lo hereda el paquete al etiquetarlo.
+  belongs_to :sucursal_retiro, class_name: "Sucursal", optional: true
   has_many :paquetes, dependent: :restrict_with_error
   has_many :cliente_sessions, dependent: :destroy
   has_many :pre_alertas, dependent: :restrict_with_error
@@ -159,6 +163,14 @@ class Cliente < ApplicationRecord
   end
 
   before_validation :generate_codigo, on: :create, if: -> { codigo.blank? }
+
+  # Lo que Miami tiene que leer para saber en que bolsa va la caja. Cae a
+  # `ciudad` mientras queden clientes sin sucursal asignada — es lo que la
+  # etiqueta ya venia imprimiendo, asi que no empeora nada; solo deja de ser lo
+  # unico que hay.
+  def sucursal_retiro_nombre
+    sucursal_retiro&.nombre.presence || ciudad.presence
+  end
 
   def nombre_completo
     [nombre, apellido].compact_blank.join(" ")
