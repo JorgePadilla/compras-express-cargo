@@ -54,8 +54,30 @@ module VolumetricoCalculator
   end
 
   # Peso a cobrar (lo más común): el mayor entre peso real y VLbs.
-  def peso_a_cobrar(peso_real, in3)
-    [ peso_real.to_f, vlbs(in3) ].max
+  def peso_a_cobrar(peso_real, in3, solo_volumetrico: false)
+    entre_peso_y_vlbs(peso_real.to_f, vlbs(in3), solo_volumetrico: solo_volumetrico)
+  end
+
+  # PR-C6.41 · RP-04b: la regla de qué peso manda, en un solo lugar.
+  #
+  # Antes vivía copiada en tres: `Paquete#calculate_peso_cobrar`,
+  # `CotizadorFlete#peso_cobrar` y `peso_a_cobrar` acá (que solo llamaban los
+  # tests). Es la misma duplicación entre pantallas gemelas que ya mordió cuatro
+  # veces en este proyecto, y acá el precio de que se separen es que la
+  # calculadora de /etiquetar le muestre al operario un peso distinto del que
+  # factura la pre-factura.
+  #
+  # **Selecciona, no calcula**: devuelve uno de sus dos argumentos tal cual. El
+  # peso a cobrar es plata y llega como BigDecimal; convertirlo a float acá le
+  # metería ruido de punto flotante a la factura.
+  #
+  # `solo_volumetrico` es el trato de mayorista de Yusef. El guard de cero no es
+  # cosmético: si el operario todavía no tecleó las medidas, el volumétrico es 0
+  # y sin el guard el paquete se cobraría **gratis**.
+  def entre_peso_y_vlbs(peso_real, vlbs, solo_volumetrico: false)
+    return vlbs if solo_volumetrico && vlbs.to_f.positive?
+
+    [ peso_real, vlbs ].max
   end
 
   # (B) Pies cúbicos, SIEMPRE redondeado hacia arriba a entero.

@@ -16,6 +16,13 @@ class Cliente < ApplicationRecord
   belongs_to :sucursal_retiro, class_name: "Sucursal", optional: true
   has_many :paquetes, dependent: :restrict_with_error
   has_many :cliente_sessions, dependent: :destroy
+
+  # PR-C6.41 · RP-04b: en qué servicios se le cobra SOLO el volumétrico.
+  # La fila es el flag — ver `ClienteCobroVolumetrico`. `tipo_envio_solo_volumetrico_ids`
+  # (que Rails deriva de este `has_many :through`) es lo que cablea el form.
+  has_many :cliente_cobro_volumetricos, dependent: :destroy
+  has_many :tipo_envio_solo_volumetricos,
+           through: :cliente_cobro_volumetricos, source: :tipo_envio
   has_many :pre_alertas, dependent: :restrict_with_error
   has_many :pre_facturas, dependent: :restrict_with_error
   has_many :ventas, dependent: :restrict_with_error
@@ -174,6 +181,19 @@ class Cliente < ApplicationRecord
 
   def nombre_completo
     [nombre, apellido].compact_blank.join(" ")
+  end
+
+  # PR-C6.41 · RP-04b: ¿a este cliente se le cobra SOLO el volumétrico en este
+  # servicio? Es lo único que el motor de cobro necesita saber.
+  #
+  # Es **por servicio**, no por cliente: el mismo mayorista puede tener el trato
+  # en CEM y pagar normal en CER. `tipo_envio` puede venir nil (`Paquete` lo
+  # tiene `optional: true`) y ahí no aplica nada.
+  def cobra_solo_volumetrico?(tipo_envio)
+    id = tipo_envio.respond_to?(:id) ? tipo_envio&.id : tipo_envio
+    return false if id.blank?
+
+    tipo_envio_solo_volumetrico_ids.include?(id)
   end
 
   private

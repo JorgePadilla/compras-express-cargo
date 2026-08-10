@@ -12,8 +12,28 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = [
     "peso", "alto", "largo", "ancho",
-    "vlbs", "pesoCobrar", "pies", "metros", "in3"
+    "vlbs", "pesoCobrar", "pies", "metros", "in3", "avisoVolumetrico"
   ]
+
+  // PR-C6.41: el trato de mayorista de Yusef — "solo se les cobra volumen, no
+  // peso" — es por cliente Y por servicio, y los dos cambian en vivo: el
+  // cliente sale del autocomplete y en /entrega_personal el tipo de envío es un
+  // select. Por eso son `values` que la pantalla reescribe, no algo estático.
+  //
+  // Si esto se separara del servidor, el operario vería un peso a cobrar y la
+  // pre-factura le cobraría otro — el defecto que PR-10.a vino a cerrar.
+  static values = {
+    soloVolumetricoEn: { type: Array, default: [] },
+    tipoEnvioId: { type: Number, default: 0 }
+  }
+
+  soloVolumetricoEnValueChanged() { this.recalcular() }
+  tipoEnvioIdValueChanged() { this.recalcular() }
+
+  get _soloVolumetrico() {
+    return this.tipoEnvioIdValue > 0 &&
+      this.soloVolumetricoEnValue.map(Number).includes(this.tipoEnvioIdValue)
+  }
 
   static DIVISOR_LB = 166
   static IN3_PER_FT3 = 1728
@@ -42,16 +62,21 @@ export default class extends Controller {
     if (this.hasIn3Target) this.in3Target.textContent = in3 > 0 ? this._fmt(in3, 0) : "—"
 
     if (in3 <= 0) {
-      // Sin medidas: solo peso real cuenta como peso a cobrar.
+      // Sin medidas: solo peso real cuenta como peso a cobrar. Espejo del guard
+      // de cero de VolumetricoCalculator — ni con el trato de mayorista se
+      // cobra 0 por falta de medidas.
       this._set(this.vlbsTarget, "—")
       this._set(this.piesTarget, "—")
       this._set(this.metrosTarget, "—")
       this._set(this.pesoCobrarTarget, peso > 0 ? this._fmt(peso, 2) : "—")
+      this._marcarVolumetrico(false)
       return
     }
 
     const vlbs = this.halfPound(in3 / this.constructor.DIVISOR_LB)
-    const pesoCobrar = Math.max(peso, vlbs)
+    const soloVolumetrico = this._soloVolumetrico
+    const pesoCobrar = soloVolumetrico ? vlbs : Math.max(peso, vlbs)
+    this._marcarVolumetrico(soloVolumetrico)
 
     this._set(this.vlbsTarget, this._fmt(vlbs, 1))
     this._set(this.pesoCobrarTarget, this._fmt(pesoCobrar, 2))
@@ -78,6 +103,15 @@ export default class extends Controller {
   metrosCubicos(in3) {
     const m3 = (in3 * this.constructor.CM3_PER_IN3) / this.constructor.CM3_PER_M3
     return Math.ceil(Number((m3 * 100).toFixed(6))) / 100
+  }
+
+  // Deja ver POR QUÉ el peso a cobrar no es el de la báscula. Sin el aviso, el
+  // operario lee un número más bajo y no sabe si el sistema se equivocó.
+  _marcarVolumetrico(activo) {
+    this.element.dataset.soloVolumetrico = activo
+    if (this.hasAvisoVolumetricoTarget) {
+      this.avisoVolumetricoTarget.classList.toggle("hidden", !activo)
+    }
   }
 
   _num(target) {

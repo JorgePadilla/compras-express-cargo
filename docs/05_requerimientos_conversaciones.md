@@ -3646,8 +3646,22 @@ En la misma página, suelto abajo, no como respuesta a nada:
 volumen** para ciertos clientes en ciertos servicios, aunque el peso real sea
 mayor.
 
-**No se implementa todavía**: no dice quién lo activa, quién lo puede cambiar,
-ni qué clientes son. Va a la ronda 2.
+**IMPLEMENTADO en PR-C6.41** (ver `A4-01`, que es donde el audio 4 lo cerró).
+
+- Tabla `cliente_cobro_volumetricos` — **la fila es el flag**: si existe
+  `(cliente, tipo_envio)`, ese cliente paga solo volumétrico en ese servicio.
+- Se configura en la ficha del cliente, tarjeta **"Cómo se le cobra"**, donde
+  Yusef dijo: *"cuando creamos el cliente"*.
+- `VolumetricoCalculator.entre_peso_y_vlbs` pasa a ser el único lugar donde se
+  decide qué peso manda; `Paquete` y `CotizadorFlete` lo llaman a él (antes eran
+  dos copias sueltas del `max`).
+- **El mínimo del servicio se sigue aplicando** — decisión de Jorge: es una regla
+  del servicio, no del peso. Vive aguas abajo en `Tarifa#cobro_para` y este PR
+  no lo toca.
+- **Guard de cero**: sin medidas el volumétrico es 0, y ahí se cobra el peso
+  real. Es el único camino por el que la feature podría regalar flete.
+- **Nadie arranca con el flag puesto.** Prenderlo baja lo que se le cobra a ese
+  cliente, así que queda auditado con `paper_trail` en el join.
 
 ---
 
@@ -4243,7 +4257,6 @@ Dos cosas que aparecieron al implementar y que nadie había reportado:
 | Qué | Espera |
 |---|---|
 | Mínimo 35/25 por categoría en recolecta | RP-10b |
-| Cobro por volumen editable por cliente y servicio | RP-04b |
 | Etiqueta internacional como servicio | RP-13b |
 | Tarifas escalonadas por categoría y de CKA/EXPRESS | RP-01 / RP-14 (las manda él; es carga por CRUD) |
 
@@ -4284,8 +4297,12 @@ de envío**, que se pone en la ficha del cliente. Hoy el peso a cobrar es siempr
 `max(peso real, volumétrico)`; esto pide poder forzar **solo volumétrico** para
 ciertos clientes en ciertos servicios.
 
-`RP-04b` deja de estar SIN DEFINIR. Lo que **todavía falta** confirmar antes de
-codificarlo está abajo, en las preguntas nuevas.
+`RP-04b` deja de estar SIN DEFINIR.
+
+**IMPLEMENTADO en PR-C6.41.** Jorge cerró las tres cosas que quedaban abiertas:
+es el **peso volumétrico** (no otra medida), va en la **ficha del cliente** con
+tarjeta propia, y **el mínimo del servicio se sigue aplicando** aunque el
+volumétrico deje el cobro por debajo. El detalle técnico está en `RP-04b`.
 
 ---
 
@@ -4459,8 +4476,10 @@ predeterminadas** y las **grabaciones de voz** para la alerta de pre-alerta.
 1. **¿`RP-19` y `RP-04b` son la misma cosa?** El origen China y el "solo volumen
    por cliente" apuntan los dos al cobro por volumen. ¿El origen lo decide solo,
    o siempre manda la configuración del cliente?
-2. **"Solo volumen": ¿es siempre el volumétrico**, o el mayor entre el
-   volumétrico y algún mínimo?
+2. ~~**"Solo volumen": ¿es siempre el volumétrico**, o el mayor entre el
+   volumétrico y algún mínimo?~~ — **cerrada por Jorge**: es siempre el
+   volumétrico, y el **mínimo del servicio** se sigue aplicando aparte
+   (`PR-C6.41`). Sin medidas se cobra el peso real, nunca cero.
 3. **Los números de recepción viejos**: ¿se re-siembra staging para que todo
    quede con el formato nuevo, o conviven los dos?
 4. **A4-02** (caja sube pero no baja): confirmar, que el transcript viene

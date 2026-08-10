@@ -68,6 +68,25 @@ end %>
       <dd class="mt-1 text-sm text-gray-900"><%= @cliente.categoria_precio&.nombre || "Sin asignar" %></dd>
     </div>
 
+    <%# PR-C6.41: el trato de mayorista tiene que verse sin abrir el form —
+        baja lo que se le cobra a este cliente. %>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cobro solo por volumetrico</dt>
+      <dd class="mt-1 text-sm text-gray-900">
+        <% servicios = @cliente.tipo_envio_solo_volumetricos.order(:nombre) %>
+        <% if servicios.any? %>
+          <div class="flex flex-wrap gap-1">
+            <% servicios.each do |t| %>
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                           bg-cec-teal/15 text-cec-teal-dark"><%= t.nombre %></span>
+            <% end %>
+          </div>
+        <% else %>
+          <span class="text-gray-500">No &mdash; se cobra el mayor entre peso y volumen</span>
+        <% end %>
+      </dd>
+    </div>
+
     <div>
       <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo Pendiente</dt>
       <dd class="mt-1 text-sm font-semibold <%= @cliente.saldo_pendiente.positive? ? 'text-cec-danger' : 'text-gray-900' %>">

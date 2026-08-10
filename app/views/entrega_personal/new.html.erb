@@ -119,9 +119,14 @@ end %>
         </div>
         <div>
           <%= f.label :tipo_envio_id, "Tipo de Envío", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%# PR-C6.41: el cobro solo-volumétrico es por servicio, así que
+              cambiar este select puede cambiar el peso a cobrar. El select vive
+              fuera del panel de cálculo, por eso el controller de la pantalla
+              le reescribe el valor. %>
           <%= f.collection_select :tipo_envio_id, @tipo_envios, :id, :nombre,
               { include_blank: "— Seleccionar —" },
-              { class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
+              { data: { action: "change->entrega-personal#cambioTipoEnvio" },
+                class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
         </div>
       </div>
 
