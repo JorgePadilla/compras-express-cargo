@@ -2744,7 +2744,12 @@ Nadie extienda `Autorizacion` a `/etiquetar`.
 
 ---
 
-### A1-25 · Origen del paquete (China / Estados Unidos) — **PREGUNTA**
+### A1-25 · Origen del paquete (China / Estados Unidos) — ✅ **CERRADA** (RP-19)
+
+> ⚠️ **Ojo con la corrección.** `PR-C6.38` lo resolvió derivándolo de la
+> sucursal de recepción y lo documentó como **informativo**. Yusef contestó que
+> **entra en el cobro** — *"se utiliza para el cobro en Entrega Personal o en
+> PreFactura"*. La derivación estaba bien; la conclusión no. Ver `RP-19`.
 
 Campo ya marcado en pantalla, sin definir.
 
@@ -3837,27 +3842,33 @@ impacto del redondeo, para que revise las dos de un solo.
 
 ---
 
-### RP-17 … RP-22 — **CONTESTADAS, ESPERANDO FOTO**
+### RP-17 … RP-22 — ✅ **CONTESTADAS** (fotos recibidas el 2026-08-10)
 
-Jorge confirmó que Yusef las contestó; faltan las fotos de las páginas 5 a 7.
-Son:
+Llegaron las páginas 6/7 y 7/7. Las respuestas literales y su lectura están
+abajo, en la sección del **audio 4**. Resumen:
 
-| Id | Pregunta |
+| Id | Cómo quedó |
 |---|---|
-| RP-17 | El número de recepción: ¿le metemos el mes? |
-| RP-18 | Bajar la cantidad de cajas de un paquete |
-| RP-19 | El campo de origen del paquete (China / Estados Unidos) |
-| RP-20 | El sonido de error del escaneo |
-| RP-21 | ¿Quién lleva PIN de supervisor? |
-| RP-22 | Proveedores de entrega personal |
+| RP-17 | ✅ escribió el formato con mes: `R` + sucursal + año + mes + correlativo |
+| RP-18 | ✅ se puede bajar la cantidad de cajas, **con PIN de supervisor** |
+| RP-19 | ✅ el origen **entra en el cobro** — corrige `PR-C6.38` |
+| RP-20 | ⏳ sin marcar: **las tres opciones de sonido nunca se le mandaron** |
+| RP-21 | ⚠️ a medias: los cuatro roles llevan PIN, pero no dijo **quién** |
+| RP-22 | ⏳ "llenaremos en oficina" |
 
-**RP-21 bloquea trabajo**: `PR-C6.28` le da a un supervisor de Miami la
-facultad de quitar el cobro de cambio de servicio con su PIN, y Julien
-—el supervisor que Yusef nombró— necesita tener uno asignado.
+**RP-21 sigue bloqueando `PR-C6.28`**: Julien necesita un PIN asignado, y su
+renglón —supervisor de Miami— ni siquiera estaba en el papel.
 
 ---
 
-### RP-23 · La etiqueta impresa — ✅ **CERRADA de facto**
+### RP-23 · La etiqueta impresa — ⏳ **PENDIENTE** (escribió "Pendiente")
+
+> ⚠️ **Corrección.** Acá decía "cerrada de facto" porque mandó la etiqueta
+> anotada en rojo. Esa foto resolvió la **maquetación** (`PR-C6.27`), pero la
+> pregunta 23 pide otra cosa: **imprimir una y probar que el lector agarre el
+> código de barras**. En la página 7 escribió "Pendiente". Y ahora conviene
+> que la imprima **después** de aplicar `RP-17`, porque el número cambia y va
+> justo en el código de barras.
 
 No la contestó por escrito: **mandó la etiqueta impresa anotada en rojo**, que
 es la respuesta. Se documenta abajo, en su propia sección.
@@ -4235,6 +4246,225 @@ Dos cosas que aparecieron al implementar y que nadie había reportado:
 | Cobro por volumen editable por cliente y servicio | RP-04b |
 | Etiqueta internacional como servicio | RP-13b |
 | Tarifas escalonadas por categoría y de CKA/EXPRESS | RP-01 / RP-14 (las manda él; es carga por CRUD) |
+
+---
+
+## Conversación 6 · Audio 4 y páginas 6-7 — el cuestionario cerrado (2026-08-10)
+
+Llegaron las dos piezas que faltaban: el **transcript del audio del 2026-08-08**
+(29 min, Yusef contestando el cuestionario en voz alta mientras Jorge lo iba
+leyendo) y las **fotos de las páginas 6/7 y 7/7** con sus respuestas a mano.
+
+Con eso el cuestionario queda **completo**: las 23 preguntas.
+
+> ⚠️ **Sobre el transcript.** Está hecho con `faster-whisper tiny` y se nota:
+> frases partidas, palabras inventadas, números mal oídos. **Las fotos mandan.**
+> Donde el papel es claro se toma el papel; lo que sale **solo** del audio va
+> marcado *a confirmar* y **no se codifica** sobre esa base sola.
+
+---
+
+### A4-01 · El cobro por volumen se configura al crear el cliente — ✅ **cierra RP-04b**
+
+Es lo primero que dice el audio, y contesta la nota suelta que él había escrito
+al margen del PDF:
+
+> "Clientes que son **mayoristas o clientes grandes**, que en cierto… y en
+>  cierto tipo de envío **solo se les cobra volumen, no peso**. Entonces ahí es
+>  donde nosotros necesitamos esa opción."
+> "Es lo que le creamos al cliente, **cuando creamos el cliente**… que en este
+>  cliente, en estos tipos de envío, va a tener una opción para **seleccionar
+>  varios tipos de envío y en cuál sí y en cuál no**."
+
+Y el papel lo respalda: *"necesita quedar editable **por Kliente y por
+servicio**"*.
+
+**Lectura.** No es un flag global: es una configuración **por cliente y por tipo
+de envío**, que se pone en la ficha del cliente. Hoy el peso a cobrar es siempre
+`max(peso real, volumétrico)`; esto pide poder forzar **solo volumétrico** para
+ciertos clientes en ciertos servicios.
+
+`RP-04b` deja de estar SIN DEFINIR. Lo que **todavía falta** confirmar antes de
+codificarlo está abajo, en las preguntas nuevas.
+
+---
+
+### A4-02 · Caja puede subir un precio, no bajarlo — *a confirmar*
+
+> "Lo de caja no debería de editar. Entonces solo lo hacen los que están en
+>  pre-factura, los que autorizan, supervisor."
+> "Ellos pueden agregar un producto y le pueden poner el precio… entonces, si
+>  estamos que sean ciertos productos que ellos puedan agregar y modificar
+>  precio, **pero para arriba**. Si lo bajan, entonces ya no."
+
+**Lectura.** Caja puede **agregar** ciertos productos y ponerles precio, y puede
+**subirlo**; bajarlo necesita autorización. Es un matiz de la regla de precio
+bloqueado que ya estaba documentada (Fase 13).
+
+Va marcado *a confirmar* porque el pasaje viene entrecortado en el transcript y
+la regla mueve plata. **No se implementa hasta confirmarlo.**
+
+---
+
+### A4-03 · Por qué existe el mínimo de peso — *contexto*
+
+> "El mínimo de ellos es lo que pesa la libra, o sea media libra o algo por el
+>  estilo… la mayoría es una libra, pero para que, si le llega una pluma… le
+>  cobramos media libra nada más, o punto 25, para que al cliente no le cobren
+>  de más."
+
+**Lectura.** El mínimo no es para exprimir al cliente sino lo contrario: evitar
+cobrarle una libra entera a quien manda algo casi sin peso. Confirma el espíritu
+de la tolerancia `.10/.60` que ya está implementada (A2-09).
+
+---
+
+### A4-04 · El formato del número de recepción — respalda RP-17
+
+> "Sería **sucursal donde se recibió**, año y el mes… pero va a poner acá 12, el
+>  mes, y el número."
+
+Coincide con lo que escribió en la página 6. Ver `RP-17`.
+
+---
+
+## Las respuestas de las páginas 6 y 7
+
+### RP-17 · El número de recepción: ¿le metemos el mes? — ✅ **CERRADA**
+
+No marcó ninguna casilla: **escribió el formato**, rotulando cada parte.
+
+```
+R        MIA        26     12     ______________________
+prefijo  sucursal   año    mes    número correlativo recepción
+```
+
+**Lectura.** Hoy es `RM` + `0002026` + `000010` → `RM0002026000010`.
+Queda `R` + código de sucursal de 3 letras + año de 2 dígitos + mes →
+`RMIA2612` + correlativo.
+
+Dos consecuencias:
+
+- El código de 3 letras **ya existe** (`Sucursal#codigo`: `MIA`, `SPS`, `TGU`,
+  `SAM`), así que no hace falta catálogo nuevo. El
+  `codigo_recepcion_prefix` actual (`RM`, `RS`, `RH`, `RSM`) queda obsoleto.
+- El contador pasa a ser por **sucursal + año + mes**; hoy es solo por año.
+
+Él ya sabía el costo — el papel lo decía: *"cambiarlo toca todos los números ya
+generados, por eso no quisimos inventar"* — y aun así escribió el formato nuevo.
+Como **no hay producción todavía**, se puede.
+
+---
+
+### RP-18 · Bajar la cantidad de cajas de un paquete — ✅ **CERRADA**
+
+Marcó:
+
+> ☒ Que deje hacerlo, pero **solo con PIN de supervisor**.
+
+Y en el audio dio la razón:
+
+> "Le pusieron 2 y al final es un paquete, y cuando van a entregar, el sistema
+>  no va a querer entregar porque decía que eran dos. Va a ser un error así."
+
+**Lectura.** Hoy `Paquete.ajustar_split!` **bloquea** el cambio si alguna caja
+sobrante ya se cobró o entregó (`CajaNoEliminable`). Esa guarda deja paquetes
+trabados en entrega. Pasa a ser: se puede, con PIN.
+
+---
+
+### RP-19 · El campo de origen (China / Estados Unidos) — ✅ **CERRADA**, y **corrige lo que habíamos hecho**
+
+No marcó "es solo informativo" ni "quítenlo". Escribió al lado de *"Cambia el
+precio o el proceso"*:
+
+> "Se utiliza para **el cobro** en Entrega Personal o en PreFactura."
+
+**Lectura, y la corrección.** En `PR-C6.38` se concluyó que el origen era
+**informativo** y se dejó derivado de la sucursal de recepción. La derivación
+estaba bien —él nunca pidió un campo para teclear, y en el audio lo confirma:
+*"si es en Miami, donde están recibiendo… si es fuera de ahí, ahí es donde está
+eso"*—. **La conclusión no**: entra en el cobro.
+
+Encaja con algo que ya está en pantalla: el panel de cálculo muestra **tres
+formas** —`USA → HN` por libra o volumen, `USA → HN` por pie³, y **`China → HN`
+por m³**— y hoy las tres se pintan siempre, con dos rotuladas *"no afluye en
+precio"*. El origen es lo que decide **cuál aplica**.
+
+Lo que el papel **no** dice es *cómo* multiplica. Eso queda como pregunta.
+
+---
+
+### RP-20 · El sonido de error del escaneo — ⏳ **abierta, y es deuda nuestra**
+
+**Sin marcar.** El papel dice *"te mandamos tres opciones por WhatsApp para que
+las oigas"* — y **esas tres grabaciones nunca se hicieron**. No puede contestar
+algo que no recibió.
+
+---
+
+### RP-21 · ¿Quién lleva PIN de supervisor? — ⚠️ **a medias**
+
+Escribió **"SI"** en los cuatro renglones: Administrador, Supervisor de Caja,
+Supervisor de Pre-Factura, Supervisor de Servicio al Cliente.
+
+**Lectura.** Contestó que los cuatro roles **sí** llevan PIN, pero la pregunta
+pedía **quién** es cada uno, y eso no está. Sin nombres no se le puede asignar
+PIN a nadie.
+
+Y falta un renglón que el papel no tenía: el **supervisor de Miami** (Julien),
+que es el que `PR-C6.28` necesita para quitar el cobro por cambio de servicio.
+
+---
+
+### RP-22 · Proveedores de entrega personal — ⏳ **pendiente de su oficina**
+
+Escribió sobre la lista: **"Llenaremos en oficina"**. En el audio: *"eso lo puedo
+grabar… por ahora aquí lo voy a dar yo"*.
+
+---
+
+### RP-23 · La etiqueta impresa — ⏳ **pendiente**
+
+Escribió: **"Pendiente"**.
+
+> "Esto es lo único que no podemos probar nosotros desde acá… vamos a poner con
+>  una campaña y lo hago."
+
+**Ojo con el orden**: ahora conviene que la imprima **después** de aplicar
+`RP-17`, porque el número de recepción cambia y **va en el código de barras**.
+Si la imprime antes, hay que repetirlo.
+
+---
+
+### Los tres pendientes que el papel le listaba
+
+Siguen sin llegar, y el papel los nombra: **motivos de retención**, **notas
+predeterminadas** y las **grabaciones de voz** para la alerta de pre-alerta.
+
+---
+
+### Lo que este cierre cambia de lo ya documentado
+
+- **`RP-04b`** deja de estar SIN DEFINIR (A4-01).
+- **`A1-25`** (origen del paquete) queda cerrada, **corrigiendo** la conclusión
+  de `PR-C6.38`: no es informativo, entra en el cobro.
+- **`A1-10`** (sonidos): el sonido feo espera que **nosotros** mandemos las tres
+  opciones. Es deuda nuestra.
+- **`A1-05`** (el sufijo de caja va en la recepción, nunca en el tracking) se
+  mantiene, pero el número que lo lleva cambia de formato — ver `RP-17`.
+
+### Preguntas nuevas que salen de estas respuestas
+
+1. **¿`RP-19` y `RP-04b` son la misma cosa?** El origen China y el "solo volumen
+   por cliente" apuntan los dos al cobro por volumen. ¿El origen lo decide solo,
+   o siempre manda la configuración del cliente?
+2. **"Solo volumen": ¿es siempre el volumétrico**, o el mayor entre el
+   volumétrico y algún mínimo?
+3. **Los números de recepción viejos**: ¿se re-siembra staging para que todo
+   quede con el formato nuevo, o conviven los dos?
+4. **A4-02** (caja sube pero no baja): confirmar, que el transcript viene
+   entrecortado y la regla mueve plata.
 
 ---
 
