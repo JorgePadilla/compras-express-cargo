@@ -36,6 +36,7 @@ class PreAlertasController < ApplicationController
     @pre_alerta = PreAlerta.new
     @pre_alerta.pre_alerta_paquetes.build
     @tipo_envios = TipoEnvio.activos.order(:nombre)
+    cargar_sugerencias
     # PR-C6.26: el dropdown arrancaba vacío aunque el modelo backfillea CER en
     # `before_validation on: :create` — el default existía pero no se veía, y
     # el operario tenía que elegirlo igual. Yusef: "preseleccionar de los
@@ -52,12 +53,14 @@ class PreAlertasController < ApplicationController
       redirect_to pre_alerta_path(@pre_alerta), notice: "Pre-Alerta #{@pre_alerta.numero_documento} creada exitosamente."
     else
       @tipo_envios = TipoEnvio.activos.order(:nombre)
+      cargar_sugerencias
       render :new, status: :unprocessable_entity
     end
   end
 
   def edit
     @tipo_envios = TipoEnvio.activos.order(:nombre)
+    cargar_sugerencias
   end
 
   def update
@@ -78,6 +81,7 @@ class PreAlertasController < ApplicationController
       end
     else
       @tipo_envios = TipoEnvio.activos.order(:nombre)
+      cargar_sugerencias
       respond_to do |format|
         format.json { render json: { ok: false, errores: @pre_alerta.errors.full_messages }, status: :unprocessable_entity }
         format.any  { render :edit, status: :unprocessable_entity }
@@ -99,6 +103,13 @@ class PreAlertasController < ApplicationController
   private  def set_pre_alerta
     @pre_alerta = PreAlerta.find(params[:id])
   end
+
+# PR-C6.36: el catalogo que alimenta el `datalist` del proveedor. Vive en un
+# metodo y no repetido en cada accion porque los re-render de error tambien
+# lo necesitan — y ahi fue justo donde se olvido la primera vez.
+def cargar_sugerencias
+  @proveedores_sugeridos = Proveedor.activos.ordered
+end
 
   def base_scope
     if params[:incluir_anulados] == "1" || params[:solo_anulados] == "1"
