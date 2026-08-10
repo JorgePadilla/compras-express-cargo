@@ -50,7 +50,6 @@ class BotonesTest < ActiveSupport::TestCase
     "app/views/notas_credito/show.html.erb"                  => 4,
     "app/views/notas_debito/show.html.erb"                   => 4,
     "app/views/paquetes/index.html.erb"                      => 4,
-    "app/views/pre_alertas/edit.html.erb"                    => 2,
     "app/views/cuenta/cotizaciones/show.html.erb"            => 3,
     "app/views/cuenta/facturas/index.html.erb"               => 3,
     "app/views/cuenta/pre_alertas/_buscar_modal.html.erb"    => 3,
@@ -150,7 +149,6 @@ class BotonesTest < ActiveSupport::TestCase
     "app/views/manifiestos/show.html.erb"                  => 1,
     "app/views/paquetes/_form.html.erb"                    => 1,
     "app/views/paquetes/show.html.erb"                     => 1,
-    "app/views/pre_alertas/edit.html.erb"                  => 1,
     "app/views/pre_facturas/edit.html.erb"                 => 1,
     "app/views/reempaques/index.html.erb"                  => 1,
     "app/views/tareas/index.html.erb"                      => 1,
@@ -192,7 +190,7 @@ class BotonesTest < ActiveSupport::TestCase
     #
     # Este hash tiene que llegar a {} cuando termine la migración.
     real = BotonesCrudos.censo { |src| BotonesCrudos.contar_blanco_sobre_teal(src) }
-    subieron, bajaron, huerfanos = comparar(BLANCO_SOBRE_TEAL, real)
+    subieron, bajaron, huerfanos = comparar(BLANCO_SOBRE_TEAL, real, que: "blanco sobre teal")
 
     assert_empty huerfanos + subieron, <<~MSG
       Texto blanco sobre `bg-cec-teal` — 2.46:1, ilegible.
@@ -216,7 +214,11 @@ class BotonesTest < ActiveSupport::TestCase
 
   private
 
-  def comparar(esperado, real)
+  # `que` nombra lo que se está contando, porque el mismo comparador sirve para
+  # los botones crudos y para el blanco sobre teal. Sin eso, arreglar un
+  # contraste devolvía "ya no tiene botones crudos" y mandaba a buscar la cosa
+  # equivocada.
+  def comparar(esperado, real, que: "botones crudos")
     subieron = []
     bajaron = []
     huerfanos = []
@@ -235,7 +237,7 @@ class BotonesTest < ActiveSupport::TestCase
     esperado.each_key do |ruta|
       next if real.key?(ruta) || !File.exist?(Rails.root.join(ruta))
 
-      bajaron << "  #{ruta}: ya no tiene botones crudos, sacalo del presupuesto"
+      bajaron << "  #{ruta}: ya no tiene #{que}, sacalo del presupuesto"
     end
 
     [ subieron, bajaron, huerfanos ]
