@@ -125,110 +125,21 @@
             </tr>
           </thead>
           <tbody data-pre-alerta-editor-target="paquetesBody" class="divide-y divide-gray-200">
-            <% @pre_alerta.pre_alerta_paquetes.each.with_index do |pap, index| %>
-              <tr class="paquete-row">
-                <td class="px-4 py-2">
-                  <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
-                    <%= pf.hidden_field :id %>
-                    <%= pf.text_field :tracking, placeholder: "Ej. 1Z999AA1...",
-                        autocomplete: "off", inputmode: "latin", spellcheck: "false",
-                        data: { "1p-ignore": true, lpignore: true, "form-type": "other" },
-                        class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
-                  <% end %>
-                </td>
-                <td class="px-4 py-2">
-                  <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
-                    <%= pf.text_field :descripcion, placeholder: "Descripcion",
-                        class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
-                  <% end %>
-                </td>
-                <td class="px-4 py-2">
-                  <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
-                    <%= pf.text_area :instrucciones, placeholder: "Instrucciones", rows: 2,
-                        class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
-                  <% end %>
-                </td>
-                <td class="px-4 py-2">
-                  <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
-                    <%= pf.date_field :fecha, class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal", data: { controller: "flatpickr" } %>
-                  <% end %>
-                </td>
-                <%# PR-C6.25: el estado por tracking, que solo estaba en `show`.
-                    Yusef: "¿te acordás que aquí debería ir el estatus? Si ya
-                    fue recibido, si está en estado prealerta, etcétera". %>
-                <td class="px-4 py-2 text-center" data-columna="estado">
-                  <% if pap.paquete %>
-                    <%= render StatusBadgeComponent.new(status: pap.paquete.estado) %>
-                  <% else %>
-                    <%= render StatusBadgeComponent.new(status: "pre_alerta", label: "Pre Alerta") %>
-                  <% end %>
-                </td>
-                <%# PR-C6.25: la columna "Vinculado" mostraba el TRACKING otra
-                    vez. Yusef: "este vinculado es el que no… no, porque este es
-                    el mismo que este". Tenía razón: usaba `paquete_display_id`,
-                    que cae al tracking cuando no hay número de recepción — y el
-                    paquete esperado de una pre-alerta nunca lo tiene todavía.
-                    Ahora muestra el número solo cuando existe. %>
-                <td class="px-4 py-2 text-center" data-columna="vinculado">
-                  <% if pap.paquete&.numero_recepcion.present? %>
-                    <%= link_to pap.paquete.numero_recepcion, paquete_path(pap.paquete), class: "font-mono text-xs text-cec-navy hover:underline", target: "_blank" %>
-                  <% elsif pap.paquete %>
-                    <span class="text-xs text-gray-400 italic">sin recibir</span>
-                  <% else %>
-                    <span class="text-xs text-gray-400">—</span>
-                  <% end %>
-                </td>
-                <td class="px-4 py-2 text-center">
-                  <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
-                    <input type="hidden" name="pre_alerta[pre_alerta_paquetes_attributes][<%= index %>][_destroy]" value="0" data-pre-alerta-editor-target="destroyField">
-                    <button type="button" data-action="click->pre-alerta-editor#removePaquete" aria-label="Quitar este paquete de la pre-alerta" class="rounded foco-cec text-red-500 hover:text-red-600">
-                      <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
-                    </button>
-                  <% end %>
-                </td>
-              </tr>
-            <% end %>
+<% @pre_alerta.pre_alerta_paquetes.each.with_index do |pap, index| %>
+  <%= render "pre_alertas/paquete_row", f: f, pap: pap, index: index %>
+<% end %>
           </tbody>
         </table>
       </div>
     </div>
 
-    <%# Template for new rows %>
-    <template data-pre-alerta-editor-target="template">
-      <tr class="paquete-row" data-new-record="true">
-        <td class="px-4 py-2">
-          <input type="text" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][tracking]"
-                 id="pre_alerta_pre_alerta_paquetes_attributes_NEW_INDEX_tracking"
-                 autocomplete="off" inputmode="latin" spellcheck="false"
-                 data-1p-ignore data-lpignore="true" data-form-type="other"
-                 placeholder="Ej. 1Z999AA1..."
-                 class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
-        </td>
-        <td class="px-4 py-2">
-          <input type="text" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][descripcion]"
-                 placeholder="Descripcion"
-                 class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
-        </td>
-        <td class="px-4 py-2">
-          <textarea name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][instrucciones]"
-                    rows="2" placeholder="Instrucciones"
-                    class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"></textarea>
-        </td>
-        <td class="px-4 py-2">
-          <input type="date" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][fecha]"
-                 data-controller="flatpickr"
-                 class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
-        </td>
-        <td class="px-4 py-2 text-center">
-          <span class="text-xs text-gray-400">—</span>
-        </td>
-        <td class="px-4 py-2 text-center">
-          <button type="button" data-action="click->pre-alerta-editor#removePaquete" aria-label="Quitar este paquete de la pre-alerta" class="rounded foco-cec text-red-500 hover:text-red-600">
-            <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
-          </button>
-        </td>
-      </tr>
-    </template>
+<%# PR-C6.44: el template sale del MISMO partial que las filas de arriba.
+    Antes era HTML a mano con SEIS celdas contra siete columnas, asi que
+    cada fila que agregaba el JS salia corrida. %>
+<template data-pre-alerta-editor-target="template">
+  <%= render "pre_alertas/paquete_row",
+        f: f, pap: PreAlertaPaquete.new, index: "NEW_INDEX" %>
+</template>
 
     <%# Action buttons %>
     <div class="flex flex-col sm:flex-row gap-3 justify-end">

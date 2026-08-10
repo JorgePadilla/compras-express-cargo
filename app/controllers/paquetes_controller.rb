@@ -387,7 +387,18 @@ class PaquetesController < ApplicationController
     # PR-C6.21: antes era `where(tracking: tracking)` — exacto y case-sensitive
     # sobre una sola columna. Ahora entra por la escalera del modelo, que
     # además cubre el secundario y el código largo que escupe la pistola.
-    paquete = Paquete.buscar_escaneado(tracking).order(created_at: :desc).first
+    # PR-C6.44: `excluir_paquete_id` deja que una fila pregunte sin avisarse a
+    # sí misma. Cada `PreAlertaPaquete` materializa un Paquete en estado
+    # `pre_alerta`, así que en el editor de pre-alertas tocar el propio tracking
+    # encontraba el propio paquete y avisaba "ya está en el sistema".
+    #
+    # /etiquetar nunca manda el parámetro, así que la pistola de Miami se
+    # comporta exactamente igual que antes.
+    candidatos = Paquete.buscar_escaneado(tracking)
+    if params[:excluir_paquete_id].present?
+      candidatos = candidatos.where.not(id: params[:excluir_paquete_id])
+    end
+    paquete = candidatos.order(created_at: :desc).first
 
     # PR-2: detectar match con pre-alerta. Caso (a): el paquete ya existe en
     # estado `pre_alerta_estado` (lo creó PreAlertaPaquete#crear_paquete_esperado).

@@ -1,0 +1,107 @@
+<%# Una fila de paquete del editor de admin (`/pre_alertas/:id/edit`).
+    Locals: f, pap, index.
+
+    PR-C6.44: este partial pinta las filas del servidor **y** el `<template>`
+    de las filas nuevas. Antes eran dos copias —una en ERB y otra en HTML a
+    mano— y ya habían divergido en dos cosas a la vez:
+
+      · el aviso de tracking duplicado que pidió Yusef ("ya tiene un error y NO
+        LO DETECTA QUE YA EXISTE") no estaba en ninguna de las dos de `edit`
+      · el template tenía SEIS celdas contra siete columnas, así que cada fila
+        que agregaba el JS salía corrida: el "—" caía bajo Estado y la papelera
+        bajo Vinculado
+
+    Todo sale de `pap`; el partial no toma banderas. `pap.persisted?` es lo que
+    distingue una fila guardada de una del template. %>
+<% nueva = !pap.persisted? %>
+<% atributos_fila = nueva ? { data: { new_record: true } } : { id: "paquete_row_#{pap.id}" } %>
+
+<tr class="paquete-row" <%= tag.attributes(atributos_fila) %>>
+  <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
+    <td class="px-4 py-2">
+      <% unless nueva %>
+        <%= pf.hidden_field :id %>
+      <% end %>
+
+      <%# PR-C6.26: avisa si el tracking ya existe. Yusef: "ya tiene un error y
+          NO LO DETECTA QUE YA EXISTE". Avisa, no bloquea: hay duplicados
+          legítimos que se resuelven con sufijo en /etiquetar.
+
+          `excluir-paquete-id`: cada PreAlertaPaquete materializa un Paquete en
+          estado pre_alerta, así que sin esto la fila se avisaría **sobre sí
+          misma** apenas el operario toca su propio tracking. %>
+      <div data-controller="tracking-duplicado"
+           data-tracking-duplicado-url-value="<%= check_tracking_paquetes_path %>"
+           data-tracking-duplicado-excluir-paquete-id-value="<%= pap.paquete_id %>">
+        <%= pf.text_field :tracking, placeholder: "Ej. 1Z999AA1...",
+            autocomplete: "off", inputmode: "latin", spellcheck: "false",
+            data: { "1p-ignore": true, lpignore: true, "form-type": "other",
+                    action: "input->tracking-duplicado#buscar" },
+            class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
+                   focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+        <p data-tracking-duplicado-target="aviso"
+           class="hidden mt-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+          <span data-tracking-duplicado-target="texto"></span>
+        </p>
+      </div>
+    </td>
+
+    <td class="px-4 py-2">
+      <%= pf.text_field :descripcion, placeholder: "Descripcion",
+          class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
+                 focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+    </td>
+
+    <td class="px-4 py-2">
+      <%= pf.text_area :instrucciones, placeholder: "Instrucciones", rows: 2,
+          class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
+                 focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+    </td>
+
+    <td class="px-4 py-2">
+      <%= pf.date_field :fecha, data: { controller: "flatpickr" },
+          class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
+                 focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+    </td>
+
+    <%# PR-C6.25: el estado por tracking, que solo estaba en `show`. Yusef:
+        "¿te acordás que aquí debería ir el estatus? Si ya fue recibido, si
+        está en estado prealerta, etcétera". %>
+    <td class="px-4 py-2 text-center" data-columna="estado">
+      <% if pap.paquete %>
+        <%= render StatusBadgeComponent.new(status: pap.paquete.estado) %>
+      <% else %>
+        <%= render StatusBadgeComponent.new(status: "pre_alerta", label: "Pre Alerta") %>
+      <% end %>
+    </td>
+
+    <%# PR-C6.25: "Vinculado" mostraba el TRACKING otra vez. Yusef: "este
+        vinculado es el que no… no, porque este es el mismo que este". Usaba
+        `paquete_display_id`, que cae al tracking cuando no hay número de
+        recepción — y el paquete esperado de una pre-alerta nunca lo tiene
+        todavía. Muestra el número solo cuando existe. %>
+    <td class="px-4 py-2 text-center" data-columna="vinculado">
+      <% if pap.paquete&.numero_recepcion.present? %>
+        <%= link_to pap.paquete.numero_recepcion, paquete_path(pap.paquete),
+              class: "font-mono text-xs text-cec-navy hover:underline", target: "_blank" %>
+      <% elsif pap.paquete %>
+        <span class="text-xs text-gray-400 italic">sin recibir</span>
+      <% else %>
+        <span class="text-xs text-gray-400">—</span>
+      <% end %>
+    </td>
+
+    <td class="px-4 py-2 text-center">
+      <%# El `_destroy` va SOLO si la fila ya existe en la base, y es
+          load-bearing: `removePaquete` bifurca según exista ese campo. Si
+          existe, la marca y llama a `autosave()`; si no, la saca del DOM. Una
+          fila recién agregada tiene que tomar el segundo camino. %>
+      <% unless nueva %>
+        <input type="hidden" name="pre_alerta[pre_alerta_paquetes_attributes][<%= index %>][_destroy]" value="0" data-pre-alerta-editor-target="destroyField">
+      <% end %>
+      <%= render ButtonComponent.new(variant: :ghost, size: :xs, icon: "trash",
+            label: "Quitar este paquete de la pre-alerta",
+            data: { action: "click->pre-alerta-editor#removePaquete" }) %>
+    </td>
+  <% end %>
+</tr>
