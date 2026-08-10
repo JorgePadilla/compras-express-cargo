@@ -143,6 +143,82 @@ end %>
       </div>
     </div>
   </div>
+
+  <%# ── Bajar la cantidad de cajas con PIN (PR-C6.42 · RP-18) ──
+      Yusef marcó ☒ "que deje hacerlo, pero solo con PIN de supervisor", y dio
+      el caso: "le pusieron 2 y al final es un paquete, y cuando van a entregar,
+      el sistema no va a querer entregar porque decía que eran dos".
+
+      Va acá y no en /etiquetar porque el problema aparece **en Honduras**, al
+      entregar — la caja fantasma no existe, nadie la va a entregar nunca, y sin
+      esto el tracking entero se queda sin poder cerrarse. %>
+  <div data-controller="dialogo"
+       class="mb-4 flex flex-wrap items-center justify-between gap-3 px-4 py-3
+              bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+    <p class="text-xs text-gray-600 dark:text-gray-300">
+      ¿Son menos cajas de las que dice? Un supervisor lo puede corregir con su PIN.
+    </p>
+    <% if @supervisores_cajas.any? %>
+      <button type="button" data-action="dialogo#abrir"
+              class="px-3 py-1.5 text-sm font-medium bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100
+                     border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600">
+        Bajar la cantidad de cajas
+      </button>
+    <% else %>
+      <span class="text-xs italic text-gray-500">Ningún supervisor tiene PIN asignado todavía.</span>
+    <% end %>
+
+    <% if @supervisores_cajas.any? %>
+    <dialog data-dialogo-target="dialogo" style="margin: auto"
+            class="rounded-xl p-0 w-[26rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-gray-300">
+      <%= form_with url: bajar_cajas_paquete_path(@paquete), method: :post do %>
+        <div class="bg-gray-50 px-5 py-3 border-b border-gray-200">
+          <h3 class="text-base font-semibold text-gray-800">Bajar la cantidad de cajas</h3>
+          <p class="text-xs text-gray-600 mt-0.5">
+            Lo autoriza un supervisor con su PIN. Queda registrado quién.
+          </p>
+        </div>
+        <div class="p-5 space-y-3 bg-white">
+          <div>
+            <%= label_tag :cantidad, "Cuántas cajas son en realidad", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= number_field_tag :cantidad, @paquete.cantidad_paquetes.to_i - 1,
+                  min: 1, max: @paquete.cantidad_paquetes.to_i - 1,
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+            <p class="mt-1 text-xs text-gray-500">
+              Hoy dice <%= @paquete.cantidad_paquetes %>. Se eliminan las cajas de más, empezando por la última.
+            </p>
+          </div>
+          <div>
+            <%= label_tag :supervisor_id, "Supervisor", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= select_tag :supervisor_id,
+                  options_from_collection_for_select(@supervisores_cajas, :id, :nombre),
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+          </div>
+          <div>
+            <%= label_tag :pin, "PIN", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= password_field_tag :pin, nil, inputmode: "numeric", autocomplete: "off", maxlength: 4,
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono tracking-widest" %>
+          </div>
+          <div>
+            <%= label_tag :motivo, "Motivo", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= text_field_tag :motivo, nil, placeholder: "Ej. se ingresaron 2 cajas y al final era una",
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+          </div>
+          <p class="text-xs text-gray-500">
+            Si alguna de esas cajas ya está en una pre-factura abierta, se le saca la línea
+            y se recalcula el total. Si ya se facturó o se entregó, no se puede desde acá.
+          </p>
+        </div>
+        <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">
+          <button type="button" data-action="dialogo#cerrar"
+                  class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900">Cancelar</button>
+          <%= submit_tag "Bajar la cantidad",
+                class: "px-4 py-1.5 text-sm font-medium bg-cec-navy text-white rounded-lg hover:bg-cec-navy-dark cursor-pointer" %>
+        </div>
+      <% end %>
+    </dialog>
+    <% end %>
+  </div>
 <% end %>
 
 <% if @edit_mode %>
