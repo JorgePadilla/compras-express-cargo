@@ -23,8 +23,11 @@ class ProcesosPdf
       actor: :fisico, existe: true },
     { titulo: "Etiquetar", quien: "digitador de Miami",
       actor: :persona, ruta: "etiquetar_path", estado: "recibido_miami", existe: true },
-    { titulo: "Empacar", quien: "no hay pantalla todavía",
-      actor: :persona, estado: "empacado", existe: false },
+    # Acá NO va el paso de empacar. Jorge, 2026-08-10: "hasta que terminemos
+    # con etiquetas y entrega personal hagamos preguntas de empaque". El estado
+    # `empacado` existe en el enum pero nadie lo asigna, así que el paquete pasa
+    # de etiquetado directo al manifiesto — el diagrama muestra eso, que es lo
+    # que hoy pasa de verdad. Vuelve como sección propia cuando toque.
     { titulo: "Manifiesto", quien: "supervisor de Miami",
       actor: :persona, ruta: "manifiestos_path", estado: "enviado_honduras", existe: true }
   ].freeze
@@ -172,42 +175,49 @@ class ProcesosPdf
 
   # Las preguntas que salen de los huecos. Siguen la numeración del PDF de
   # servicios, que llegó hasta RP-29.
+  #
+  # **No hay pregunta de empaque**, a propósito: hasta terminar etiquetas y
+  # entrega personal, el empaque no se le pone enfrente a Yusef.
   PREGUNTAS = [
-    { numero: "RP-30", titulo: "Empacar: ¿lo construimos?",
-      cuerpo: "El paso de <b>empacar</b> está en el sistema como estado, pero no hay pantalla que lo haga. " \
-              "Vos mismo lo dejaste para después: «no sé si lo cargamos ahorita». " \
-              "Hoy el paquete pasa de etiquetado directo al manifiesto.",
-      opciones: [ "Sí, constrúyanlo — quiero saber qué caja salió y cuándo",
-                  "Todavía no, seguimos así",
-                  "Solo el escaneo al empacar, sin el módulo completo" ] },
-
-    { numero: "RP-31", titulo: "Aduana y bodega: hoy se cambia el estado a mano",
+    { numero: "RP-30", clave: :aduana, titulo: "Aduana y bodega: hoy se cambia el estado a mano",
       cuerpo: "Entre que sale el manifiesto y que el paquete queda listo para facturar, <b>no hay pantalla</b>. " \
               "Alguien entra a la ficha del paquete y le cambia el estado. Es el hueco más grande que tiene el sistema.",
       opciones: [ "Necesitamos una pantalla para recibir el manifiesto completo de un golpe",
                   "Está bien cambiarlo paquete por paquete",
                   "Que se marque solo cuando llega el manifiesto" ] },
 
-    { numero: "RP-32", titulo: "¿Hace falta firma o foto al entregar?",
+    { numero: "RP-31", clave: :pod, titulo: "¿Hace falta firma o foto al entregar?",
       cuerpo: "Hoy la entrega guarda el nombre y la identidad de quien recibe, pero <b>no hay firma ni foto</b>. " \
               "Nadie lo ha pedido — preguntamos antes de asumir que no hace falta.",
       opciones: [ "Sí, firma en la pantalla del celular",
                   "Sí, una foto del paquete entregado",
                   "Con el nombre y la identidad alcanza" ] },
 
-    { numero: "RP-33", titulo: "¿Las tareas pendientes deberían frenar el manifiesto?",
+    { numero: "RP-32", clave: :manifiesto_tareas, titulo: "¿Las tareas pendientes deberían frenar el manifiesto?",
       cuerpo: "Si un paquete tiene una tarea sin terminar, el sistema <b>no lo deja pasar a pre-factura</b>. " \
               "Pero al manifiesto <b>sí lo deja salir</b>. La misma regla vale en un paso y en el otro no.",
       opciones: [ "Que tampoco lo deje salir en el manifiesto",
                   "Está bien así: el manifiesto no espera a nadie",
                   "Que avise pero deje seguir" ] },
 
-    { numero: "RP-34", titulo: "Con pago parcial, ¿se puede entregar?",
+    { numero: "RP-33", clave: :pago_parcial, titulo: "Con pago parcial, ¿se puede entregar?",
       cuerpo: "Hoy el paquete queda listo para entregar <b>solo cuando la factura se paga completa</b>. " \
               "Con un abono parcial no aparece en la pantalla de entregas.",
       opciones: [ "Está bien: sin pago completo no sale",
                   "Que se pueda entregar con un abono",
                   "Que se pueda, pero con autorización de un supervisor" ] }
+  ].freeze
+
+  # Los símbolos que el documento usa **de verdad**. No hay rombo de decisión:
+  # ningún flujo se parte según una condición, y los que se bifurcan —retorno,
+  # notas— son alternativas, no una pregunta. Explicar un símbolo que no
+  # aparece en ninguna hoja confunde más de lo que ayuda.
+  SIMBOLOS = [
+    [ "Caja de borde entero", "Un paso que ya existe en el sistema" ],
+    [ "Caja celeste", "Lo hace el sistema solo, sin que nadie apriete nada" ],
+    [ "Caja de borde punteado", "Un paso del proceso que <b>todavía no tiene pantalla</b>" ],
+    [ "Varias cajas colgando de una", "Alternativas: pasa una <b>o</b> la otra, nunca las dos" ],
+    [ "Texto chiquito adentro", "Quién lo hace, y en qué estado queda el paquete" ]
   ].freeze
 
   ANCHO_CAJA = 200
@@ -259,7 +269,7 @@ class ProcesosPdf
       p_(pdf, "Este documento dibuja el camino que recorre un paquete y <b>marca dónde se " \
               "termina lo que está construido</b>. Los pasos con borde punteado son los que " \
               "todavía no tienen pantalla.", size: 9.5)
-      p_(pdf, "Al final hay cinco preguntas. Marcá la casilla con una X y mandá la foto.", size: 9.5)
+      p_(pdf, "Al final hay #{en_letras(PREGUNTAS.size)} preguntas. Marcá la casilla con una X y mandá la foto.", size: 9.5)
     end
     pdf.move_down 24
 
@@ -267,13 +277,8 @@ class ProcesosPdf
     pdf.move_down 6
     leyenda(pdf, pdf.cursor)
 
-    pdf.move_down 20
-    tabla(pdf, [ "Símbolo", "Qué significa" ], [
-      [ "Caja de borde entero", "Un paso que ya existe en el sistema" ],
-      [ "Caja de borde punteado", "Un paso del proceso que <b>todavía no tiene pantalla</b>" ],
-      [ "Rombo", "Una decisión: el camino se parte en dos" ],
-      [ "Texto chiquito adentro", "Quién lo hace — una persona, o el sistema solo" ]
-    ], anchos: [ 160, 362 ])
+    pdf.move_down 14
+    tabla(pdf, [ "Símbolo", "Qué significa" ], SIMBOLOS.map(&:dup), anchos: [ 170, 352 ])
   end
 
   def pagina_miami(pdf)
@@ -286,13 +291,19 @@ class ProcesosPdf
     nota(pdf, 290, cajas[3][:y] - 4,
          "Si el tracking coincide con una pre-alerta, el sistema los amarra solo y le avisa al cliente por correo.", ancho: 180)
     nota(pdf, 290, cajas[4][:y] - 4,
-         "Está diseñado (Fase 12) pero no construido. Hoy el paquete pasa de etiquetado directo al manifiesto.", ancho: 180)
+         "También entra acá el paquete que llega en mano, sin pre-alerta: es la hoja de Entrega Personal.", ancho: 180)
 
     pdf.move_cursor_to cajas.last[:y] - cajas.last[:alto] - 30
     h2(pdf, "Una cosa que conviene saber")
     p_(pdf, "Cuando sale el manifiesto, el sistema mueve <b>todos los paquetes de un golpe</b>. " \
             "Y no revisa si alguno tiene tareas pendientes — a diferencia de la pre-factura, que sí las revisa. " \
-            "Es la pregunta <b>RP-33</b> del final.")
+            "Es la pregunta <b>#{numero_de(:manifiesto_tareas)}</b> del final.")
+  end
+
+  # La referencia cruzada, buscada por clave. Escrita a mano se desincroniza
+  # apenas se agrega o se saca una pregunta, que es justo lo que acaba de pasar.
+  def numero_de(clave)
+    PREGUNTAS.find { |q| q[:clave] == clave }.fetch(:numero)
   end
 
   def pagina_honduras(pdf)
@@ -342,9 +353,16 @@ class ProcesosPdf
     [ tronco ] + ramas
   end
 
+  # El documento escribe los números con letra. Como la cantidad de preguntas
+  # sale de la constante, el texto tiene que salir de ahí también: decía "cinco"
+  # cuando ya eran cuatro.
+  NUMEROS = %w[cero una dos tres cuatro cinco seis siete ocho nueve diez].freeze
+
+  def en_letras(n) = NUMEROS.fetch(n, n.to_s)
+
   def pagina_preguntas(pdf)
     h1(pdf, "Lo que necesitamos que decidas")
-    p_(pdf, "Cinco preguntas que salen de los dibujos de atrás. Marcá con una X.")
+    p_(pdf, "#{en_letras(PREGUNTAS.size).capitalize} preguntas que salen de los dibujos de atrás. Marcá con una X.")
 
     PREGUNTAS.each do |q|
       pregunta(pdf, q[:numero], q[:titulo])

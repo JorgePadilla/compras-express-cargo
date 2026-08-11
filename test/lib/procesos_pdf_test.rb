@@ -73,20 +73,29 @@ class ProcesosPdfTest < ActiveSupport::TestCase
 
   # ── Los huecos ──────────────────────────────────────────────────────────
 
-  test "los cuatro huecos salen marcados" do
-    assert_equal [ "Empacar", "Aduana", "Bodega en Honduras", "Firma y foto" ],
+  test "los tres huecos salen marcados" do
+    assert_equal [ "Aduana", "Bodega en Honduras", "Firma y foto" ],
                  @doc.huecos.map { |h| h[:titulo] }
   end
 
-  test "empacar esta marcado como que no existe, y es verdad" do
+  test "de etiquetar se pasa al manifiesto, sin empaque en el medio" do
+    # Jorge, 2026-08-10: "hasta que terminemos con etiquetas y entrega personal
+    # hagamos preguntas de empaque". El empaque queda FUERA del documento —ni
+    # caja ni pregunta— y el diagrama muestra lo que hoy pasa de verdad, que es
+    # etiquetado → manifiesto directo.
+    titulos = ProcesosPdf::CAMINO_MIAMI.map { |p| p[:titulo] }
+
+    assert_equal "Manifiesto", titulos[titulos.index("Etiquetar") + 1]
+    assert_empty @doc.todos_los_pasos.select { |p| p[:estado] == "empacado" }
+    assert_empty ProcesosPdf::PREGUNTAS.select { |q| q[:titulo].match?(/empac/i) }
+  end
+
+  test "el empaque sigue sin tener quien lo asigne" do
     # `empacado` está en el enum y en ESTADOS_ORDEN, pero NINGÚN controller lo
     # asigna: `EtiquetarController` lo dice —"queda reservado para el módulo de
     # empaque, que todavía no existe"— y el manifiesto salta de `recibido_miami`
-    # a `enviado_honduras`. Si algún día alguien construye la pantalla, este
-    # test recuerda actualizar el diagrama.
-    empacar = @doc.todos_los_pasos.find { |p| p[:estado] == "empacado" }
-
-    assert_not empacar[:existe]
+    # a `enviado_honduras`. El día que alguien construya la pantalla, el salto
+    # que dibuja el diagrama deja de ser cierto y esto avisa.
     assert_empty quien_asigna("empacado"),
                  "ya hay código que asigna `empacado`: el diagrama quedó viejo"
   end
@@ -167,7 +176,18 @@ class ProcesosPdfTest < ActiveSupport::TestCase
     # respuestas de Yusef se pisan.
     numeros = ProcesosPdf::PREGUNTAS.map { |q| q[:numero] }
 
-    assert_equal %w[RP-30 RP-31 RP-32 RP-33 RP-34], numeros
+    assert_equal %w[RP-30 RP-31 RP-32 RP-33], numeros
+  end
+
+  test "las referencias cruzadas se buscan por clave, no escritas a mano" do
+    # Sacar la pregunta de empaque corrió toda la numeración: la hoja de Miami
+    # decía "RP-33" y pasó a ser RP-32. Escrita a mano, el documento se
+    # contradice a sí mismo sin que nada falle.
+    assert_equal "RP-32", @doc.send(:numero_de, :manifiesto_tareas)
+
+    claves = ProcesosPdf::PREGUNTAS.map { |q| q[:clave] }
+    assert_equal claves.uniq, claves
+    assert_empty claves.select(&:nil?)
   end
 
   test "cada pregunta ofrece al menos dos caminos" do
@@ -181,6 +201,26 @@ class ProcesosPdfTest < ActiveSupport::TestCase
     # señala un problema sin pedir una decisión. Agregar un hueco obliga a
     # agregar la pregunta.
     assert_operator ProcesosPdf::PREGUNTAS.size, :>=, @doc.huecos.size
+  end
+
+  # ── La portada ──────────────────────────────────────────────────────────
+
+  test "la leyenda deja el cursor abajo de todo lo que dibujo" do
+    # La portada salió con la tabla dibujada ENCIMA del dibujo: `leyenda`
+    # devolvía la altura nueva y confiaba en que quien la llama moviera el
+    # cursor. Ahora lo mueve ella. Un PDF no avisa cuando dos cosas se pisan;
+    # esto sí.
+    pdf = @doc.send(:documento)
+    antes = pdf.cursor
+    @doc.send(:leyenda, pdf, antes)
+
+    assert_operator pdf.cursor, :<, antes - PdfDiagrama::ALTO_CAJA
+  end
+
+  test "la leyenda no explica simbolos que no aparecen en ninguna hoja" do
+    # Explicaba un rombo de decisión — y ningún flujo se parte según una
+    # condición, así que el rombo no sale en ninguna de las 12 hojas.
+    assert_empty ProcesosPdf::SIMBOLOS.select { |nombre, _| nombre.match?(/rombo|decisión/i) }
   end
 
   # ── Que salga ───────────────────────────────────────────────────────────

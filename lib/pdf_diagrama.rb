@@ -166,11 +166,17 @@ module PdfDiagrama
 
   # La leyenda. Es la parte más importante del documento: sin esto, una caja
   # punteada es solo una caja fea.
+  #
+  # **Mueve el cursor** además de devolver la altura. Devolverla y confiar en
+  # que quien llama la use es cómo la portada salió con la tabla dibujada
+  # encima del dibujo.
   def leyenda(pdf, y)
-    caja(pdf, 0, y, 150, titulo: "Un paso que ya existe", quien: "quién lo hace")
-    caja_pendiente(pdf, 186, y, 150, titulo: "Un paso que falta", quien: "todavía no hay pantalla")
-    rombo(pdf, 372, y, 150, pregunta: "Una decisión")
-    y - 70
+    caja(pdf, 0, y, 164, titulo: "Un paso que ya existe", quien: "lo hace una persona")
+    caja(pdf, 179, y, 164, titulo: "Un paso automático", quien: "lo hace el sistema solo", color: TEAL)
+    caja_pendiente(pdf, 358, y, 164, titulo: "Un paso que falta", quien: "todavía no hay pantalla")
+
+    pdf.move_cursor_to y - ALTO_CAJA - 24
+    pdf.cursor
   end
 
   private
