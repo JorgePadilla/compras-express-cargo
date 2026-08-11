@@ -173,39 +173,27 @@ class ProcesosPdf
       notas: [ "La de cambio de servicio la crea el sistema solo al facturar; el cajero decide cuándo emitirla." ] }
   ].freeze
 
-  # Las preguntas que salen de los huecos. Siguen la numeración del PDF de
-  # servicios, que llegó hasta RP-29.
+  # Las preguntas. Siguen la numeración del PDF de servicios, que llegó hasta
+  # RP-29, así que el próximo documento arranca en RP-31.
   #
-  # **No hay pregunta de empaque**, a propósito: hasta terminar etiquetas y
-  # entrega personal, el empaque no se le pone enfrente a Yusef.
+  # **Solo se pregunta por el módulo en el que estamos.** Jorge, 2026-08-11:
+  # "la única pregunta válida ahorita es la 30 porque no hemos llegado a los
+  # otros módulos donde están las otras preguntas". El documento sigue
+  # *mostrando* los huecos de más adelante —firma y foto al entregar, el pago
+  # completo, el manifiesto que no revisa tareas— porque para eso se dibujó;
+  # lo que no hace es pedirle a Yusef que los decida antes de tiempo.
+  #
+  # Las que se sacaron, para cuando toque:
+  #   · firma o foto al entregar        → cuando se arme el módulo de entregas
+  #   · tareas pendientes vs manifiesto → cuando se arme el de manifiestos
+  #   · entregar con pago parcial       → cuando se arme el de caja
   PREGUNTAS = [
     { numero: "RP-30", clave: :aduana, titulo: "Aduana y bodega: hoy se cambia el estado a mano",
       cuerpo: "Entre que sale el manifiesto y que el paquete queda listo para facturar, <b>no hay pantalla</b>. " \
               "Alguien entra a la ficha del paquete y le cambia el estado. Es el hueco más grande que tiene el sistema.",
       opciones: [ "Necesitamos una pantalla para recibir el manifiesto completo de un golpe",
                   "Está bien cambiarlo paquete por paquete",
-                  "Que se marque solo cuando llega el manifiesto" ] },
-
-    { numero: "RP-31", clave: :pod, titulo: "¿Hace falta firma o foto al entregar?",
-      cuerpo: "Hoy la entrega guarda el nombre y la identidad de quien recibe, pero <b>no hay firma ni foto</b>. " \
-              "Nadie lo ha pedido — preguntamos antes de asumir que no hace falta.",
-      opciones: [ "Sí, firma en la pantalla del celular",
-                  "Sí, una foto del paquete entregado",
-                  "Con el nombre y la identidad alcanza" ] },
-
-    { numero: "RP-32", clave: :manifiesto_tareas, titulo: "¿Las tareas pendientes deberían frenar el manifiesto?",
-      cuerpo: "Si un paquete tiene una tarea sin terminar, el sistema <b>no lo deja pasar a pre-factura</b>. " \
-              "Pero al manifiesto <b>sí lo deja salir</b>. La misma regla vale en un paso y en el otro no.",
-      opciones: [ "Que tampoco lo deje salir en el manifiesto",
-                  "Está bien así: el manifiesto no espera a nadie",
-                  "Que avise pero deje seguir" ] },
-
-    { numero: "RP-33", clave: :pago_parcial, titulo: "Con pago parcial, ¿se puede entregar?",
-      cuerpo: "Hoy el paquete queda listo para entregar <b>solo cuando la factura se paga completa</b>. " \
-              "Con un abono parcial no aparece en la pantalla de entregas.",
-      opciones: [ "Está bien: sin pago completo no sale",
-                  "Que se pueda entregar con un abono",
-                  "Que se pueda, pero con autorización de un supervisor" ] }
+                  "Que se marque solo cuando llega el manifiesto" ] }
   ].freeze
 
   # Los símbolos que el documento usa **de verdad**. No hay rombo de decisión:
@@ -269,7 +257,7 @@ class ProcesosPdf
       p_(pdf, "Este documento dibuja el camino que recorre un paquete y <b>marca dónde se " \
               "termina lo que está construido</b>. Los pasos con borde punteado son los que " \
               "todavía no tienen pantalla.", size: 9.5)
-      p_(pdf, "Al final hay #{en_letras(PREGUNTAS.size)} preguntas. Marcá la casilla con una X y mandá la foto.", size: 9.5)
+      p_(pdf, "Al final hay #{frase_preguntas}. Marcá la casilla con una X y mandá la foto.", size: 9.5)
     end
     pdf.move_down 24
 
@@ -295,15 +283,11 @@ class ProcesosPdf
 
     pdf.move_cursor_to cajas.last[:y] - cajas.last[:alto] - 30
     h2(pdf, "Una cosa que conviene saber")
+    # Se queda como dato, sin casilla: el módulo de manifiestos todavía no se
+    # arma, así que no es momento de que Yusef lo decida.
     p_(pdf, "Cuando sale el manifiesto, el sistema mueve <b>todos los paquetes de un golpe</b>. " \
             "Y no revisa si alguno tiene tareas pendientes — a diferencia de la pre-factura, que sí las revisa. " \
-            "Es la pregunta <b>#{numero_de(:manifiesto_tareas)}</b> del final.")
-  end
-
-  # La referencia cruzada, buscada por clave. Escrita a mano se desincroniza
-  # apenas se agrega o se saca una pregunta, que es justo lo que acaba de pasar.
-  def numero_de(clave)
-    PREGUNTAS.find { |q| q[:clave] == clave }.fetch(:numero)
+            "Lo dejamos anotado para cuando toque armar esa pantalla.")
   end
 
   def pagina_honduras(pdf)
@@ -355,14 +339,19 @@ class ProcesosPdf
 
   # El documento escribe los números con letra. Como la cantidad de preguntas
   # sale de la constante, el texto tiene que salir de ahí también: decía "cinco"
-  # cuando ya eran cuatro.
+  # cuando ya eran cuatro, y al quedar una sola decía "hay una preguntas".
   NUMEROS = %w[cero una dos tres cuatro cinco seis siete ocho nueve diez].freeze
 
   def en_letras(n) = NUMEROS.fetch(n, n.to_s)
 
+  def frase_preguntas
+    PREGUNTAS.one? ? "una pregunta" : "#{en_letras(PREGUNTAS.size)} preguntas"
+  end
+
   def pagina_preguntas(pdf)
     h1(pdf, "Lo que necesitamos que decidas")
-    p_(pdf, "#{en_letras(PREGUNTAS.size).capitalize} preguntas que salen de los dibujos de atrás. Marcá con una X.")
+    p_(pdf, PREGUNTAS.one? ? "Una pregunta que sale de los dibujos de atrás. Marcá con una X." :
+                             "#{frase_preguntas.capitalize} que salen de los dibujos de atrás. Marcá con una X.")
 
     PREGUNTAS.each do |q|
       pregunta(pdf, q[:numero], q[:titulo])
@@ -371,6 +360,20 @@ class ProcesosPdf
       opcion(pdf, "Otro:")
       linea(pdf)
     end
+
+    espacio_para_anotar(pdf)
+  end
+
+  # Renglones libres al final. Con una sola pregunta la hoja queda casi vacía, y
+  # este documento se contesta escribiendo encima: el espacio en blanco vale más
+  # que el espacio en blanco sin renglones.
+  RENGLONES_LIBRES = 6
+
+  def espacio_para_anotar(pdf)
+    pdf.move_down 18
+    h2(pdf, "Cualquier otra cosa que quieras anotar")
+    p_(pdf, "Si algo del proceso no es como lo dibujamos, escribilo acá.")
+    RENGLONES_LIBRES.times { linea(pdf); pdf.move_down 8 }
   end
 
   # Dibuja una cadena vertical de pasos y las flechas entre ellos.

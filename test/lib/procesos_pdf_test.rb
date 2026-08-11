@@ -176,31 +176,42 @@ class ProcesosPdfTest < ActiveSupport::TestCase
     # respuestas de Yusef se pisan.
     numeros = ProcesosPdf::PREGUNTAS.map { |q| q[:numero] }
 
-    assert_equal %w[RP-30 RP-31 RP-32 RP-33], numeros
+    assert_equal %w[RP-30], numeros
   end
 
-  test "las referencias cruzadas se buscan por clave, no escritas a mano" do
-    # Sacar la pregunta de empaque corrió toda la numeración: la hoja de Miami
-    # decía "RP-33" y pasó a ser RP-32. Escrita a mano, el documento se
-    # contradice a sí mismo sin que nada falle.
-    assert_equal "RP-32", @doc.send(:numero_de, :manifiesto_tareas)
-
+  test "solo se pregunta por el modulo en el que estamos" do
+    # Jorge, 2026-08-11: "la única pregunta válida ahorita es la 30 porque no
+    # hemos llegado a los otros módulos donde están las otras preguntas". Las
+    # de entregas, manifiestos y caja se sacaron y vuelven cuando toque.
     claves = ProcesosPdf::PREGUNTAS.map { |q| q[:clave] }
+
+    assert_equal [ :aduana ], claves
     assert_equal claves.uniq, claves
     assert_empty claves.select(&:nil?)
+  end
+
+  test "el documento sigue mostrando los huecos que ya no pregunta" do
+    # Sacar la pregunta no es sacar el hueco: el dibujo se hizo justamente para
+    # mostrar hasta dónde llega lo construido. Si alguien borra los huecos junto
+    # con sus preguntas, el documento pierde su razón de ser.
+    sin_pregunta = @doc.huecos.map { |h| h[:titulo] } - [ "Aduana", "Bodega en Honduras" ]
+
+    assert_equal [ "Firma y foto" ], sin_pregunta
+  end
+
+  test "el texto concuerda en numero con la cantidad de preguntas" do
+    # Con una sola pregunta, el texto derivado de `PREGUNTAS.size` decía
+    # "al final hay una preguntas".
+    frase = @doc.send(:frase_preguntas)
+
+    assert_equal ProcesosPdf::PREGUNTAS.one?, frase == "una pregunta"
+    assert_match(/preguntas\z/, frase) unless ProcesosPdf::PREGUNTAS.one?
   end
 
   test "cada pregunta ofrece al menos dos caminos" do
     pobres = ProcesosPdf::PREGUNTAS.reject { |q| q[:opciones].size >= 2 }
 
     assert_empty pobres.map { |q| q[:numero] }
-  end
-
-  test "hay al menos una pregunta por cada hueco" do
-    # Si se marca un hueco en el dibujo y no se pregunta nada, el documento
-    # señala un problema sin pedir una decisión. Agregar un hueco obliga a
-    # agregar la pregunta.
-    assert_operator ProcesosPdf::PREGUNTAS.size, :>=, @doc.huecos.size
   end
 
   # ── La portada ──────────────────────────────────────────────────────────
