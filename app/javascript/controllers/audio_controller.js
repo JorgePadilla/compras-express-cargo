@@ -8,7 +8,14 @@ export default class extends Controller {
   static values = {
     enabled: { type: Boolean, default: true },
     // PR-9.c: 0-100. Antes estaba fijo en 0.3 y en bodega no se oía.
-    volumen: { type: Number, default: 60 }
+    volumen: { type: Number, default: 60 },
+    // RP-20: cuál de las tres opciones de error suena, y cuáles son.
+    // `variantes` lo manda el server desde `SonidosDeError`, que es la misma
+    // constante con la que se rendearon los .wav que se le mandaron a Yusef.
+    // Importmap no tiene build step: si el JS las declarara, serían dos listas
+    // distintas y divergirían.
+    variante: { type: String, default: "grave" },
+    variantes: { type: Array, default: [] }
   }
 
   connect() {
@@ -48,9 +55,48 @@ export default class extends Controller {
     this._playTone(800, 0.15)
   }
 
+  // RP-20: toca la variante elegida. Si el server no mandó ninguna —o mandó
+  // una que no está— cae en el tono de siempre, así que la pantalla nunca se
+  // queda sin sonido de error por un dato mal puesto.
   error() {
     if (!this.enabledValue) return
-    this._playTone(200, 0.3)
+
+    const variante = this._varianteActiva()
+    if (!variante) return this._playTone(200, 0.3)
+
+    this._tocarSecuencia(variante.tonos)
+  }
+
+  // Turbo avisa cómo terminó el submit. Sin esto un guardado fallido es
+  // silencioso, y el operario está mirando la pistola, no la pantalla.
+  submitEnd(event) {
+    if (event?.detail?.success === false) this.error()
+  }
+
+  // Prueba desde el modal de configuración: suena una variante sin cambiar la
+  // elegida, para poder compararlas.
+  probarVariante(id) {
+    if (!this.enabledValue) return
+    const variante = (this.variantesValue || []).find(v => v.id === id)
+    if (variante) this._tocarSecuencia(variante.tonos)
+  }
+
+  _varianteActiva() {
+    const todas = this.variantesValue || []
+    if (todas.length === 0) return null
+    return todas.find(v => v.id === this.varianteValue) || todas[0]
+  }
+
+  // Los tonos van uno detrás del otro. `hz: 0` es un silencio: sirve para
+  // separar pulsos sin inventar otra clave en la constante de Ruby.
+  _tocarSecuencia(tonos, i = 0) {
+    if (!tonos || i >= tonos.length) return
+
+    const { hz, ms } = tonos[i]
+    const seguir = () => this._tocarSecuencia(tonos, i + 1)
+
+    if (!hz) return setTimeout(seguir, ms)
+    this._playTone(hz, ms / 1000, seguir)
   }
 
   alert() {

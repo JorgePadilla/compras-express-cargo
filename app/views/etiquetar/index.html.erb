@@ -109,8 +109,7 @@ end %>
 
 <% else %>
 <div data-controller="etiquetar audio"
-     data-audio-enabled-value="<%= Current.user&.sonido_habilitado != false %>"
-     data-audio-volumen-value="<%= Current.user&.sonido_volumen || 60 %>"
+     <%= tag.attributes(atributos_de_audio) %>
      data-etiquetar-check-url-value="<%= check_tracking_paquetes_path %>"
      data-etiquetar-buscar-url-value="<%= buscar_clientes_path %>"
      data-etiquetar-tipo-envio-sesion-value="<%= @tipo_envio_sesion.id %>"
@@ -124,6 +123,7 @@ end %>
                   etiquetar:trackingYaExiste->audio#notify
                   etiquetar:modalAbierto->audio#notify
                   etiquetar:tipoEnvioDistinto->audio#error
+                  turbo:submit-end->audio#submitEnd
                   click@document->etiquetar#clickOutsideDropdown">
 
   <%# ── Banner de sesión activa ── coloreado según el servicio (mismo acento

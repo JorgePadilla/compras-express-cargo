@@ -49,6 +49,14 @@ class User < ApplicationRecord
   validates :sonido_volumen, numericality: {
     only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 100
   }
+  # RP-20: cuál de las tres opciones del sonido de error. La lista sale de
+  # `SonidosDeError`, que es la misma que toca el navegador y la misma que se
+  # renderea a `.wav` — escribirla acá a mano sería un cuarto lugar donde
+  # desincronizarse.
+  # El lambda difiere la lectura: escrita como constante, `User` obligaría a
+  # cargar `SonidosDeError` al arrancar y crearía un orden de carga que hoy no
+  # hace falta.
+  validates :sonido_error_variante, inclusion: { in: ->(_user) { SonidosDeError::IDS } }
 
   validates :pin, format: { with: /\A\d{4}\z/, message: "deben ser exactamente 4 digitos" },
                   confirmation: true, if: -> { pin.present? }

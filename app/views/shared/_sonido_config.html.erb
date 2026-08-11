@@ -51,6 +51,38 @@
         </p>
       </div>
 
+      <%# RP-20: las tres opciones del sonido de error. Le prometimos a Yusef
+          "tres opciones para que las oigas" y nunca se las mandamos; acá las
+          oye en la pantalla donde se usan, con el ruido de la bodega de fondo,
+          que es donde se juzga un sonido de bodega. La primera es la de hoy:
+          "dejalo como está" tiene que ser una respuesta posible. %>
+      <div>
+        <p class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Sonido de error</p>
+        <div class="space-y-1.5">
+          <% SonidosDeError::VARIANTES.each do |variante| %>
+            <div class="flex items-center gap-2">
+              <label class="flex items-start gap-2 flex-1 cursor-pointer">
+                <input type="radio" name="sonido_error_variante" value="<%= variante[:id] %>"
+                       data-sonido-config-target="variante"
+                       data-action="change->sonido-config#cambiar"
+                       <%= "checked" if variante[:id] == variante_de_error_actual %>
+                       class="mt-0.5 border-gray-300 text-cec-teal focus:ring-cec-teal">
+                <span>
+                  <span class="block text-sm text-gray-700 dark:text-gray-200"><%= variante[:nombre] %></span>
+                  <span class="block text-xs text-gray-500 dark:text-gray-400"><%= variante[:descripcion] %></span>
+                </span>
+              </label>
+              <%= render ButtonComponent.new(
+                    variant: :secondary, size: :xs, label: "Escuchar",
+                    class: "shrink-0",
+                    aria: { label: "Escuchar #{variante[:nombre]}" },
+                    data: { action: "click->sonido-config#probarVariante",
+                            variante: variante[:id] }) %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
       <div>
         <p class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Probar</p>
         <div class="grid grid-cols-2 gap-2">

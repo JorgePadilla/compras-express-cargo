@@ -11,9 +11,13 @@
 end %>
 
 <div data-controller="entrega-personal audio"
-     data-audio-enabled-value="<%= Current.user&.sonido_habilitado != false %>"
-     data-audio-volumen-value="<%= Current.user&.sonido_volumen || 60 %>"
+     <%= tag.attributes(atributos_de_audio) %>
+     <%# RP-20: acá solo estaba `success`. Un guardado que falla dejaba la
+         pantalla muda, y en entrega personal el operario está con el paquete
+         en la mano, no leyendo. `submitEnd` suena el feo cuando Turbo avisa
+         que el submit no pasó. %>
      data-action="entrega-personal:success->audio#success
+                  turbo:submit-end->audio#submitEnd
                   click@document->entrega-personal#clickOutsideDropdown">
 
   <%# Flash messages %>

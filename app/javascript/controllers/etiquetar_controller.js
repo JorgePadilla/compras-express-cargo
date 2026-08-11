@@ -194,6 +194,11 @@ export default class extends ClienteAutocomplete {
     if (this.hasSucursalModalTextoTarget) {
       this.sucursalModalTextoTarget.textContent = this._sucursalActual
     }
+    // RP-20: Yusef pidió "un pin antes de que salga cualquier modal" (A1-10).
+    // La vista escuchaba `modalAbierto` desde `PR-C6.16` y nadie lo disparaba
+    // nunca: este modal y el del PIN abrían mudos, con el operario mirando la
+    // pistola. El cable estaba puesto; le faltaba este extremo.
+    this.dispatch("modalAbierto")
     if (this.sucursalModalTarget.showModal) this.sucursalModalTarget.showModal()
     else this.sucursalModalTarget.classList.remove("hidden")
   }
@@ -203,6 +208,7 @@ export default class extends ClienteAutocomplete {
 abrirQuitarCobro() {
   if (!this.hasQuitarCobroModalTarget) return
 
+  this.dispatch("modalAbierto")
   if (this.quitarCobroModalTarget.showModal) this.quitarCobroModalTarget.showModal()
   else this.quitarCobroModalTarget.classList.remove("hidden")
   this.quitarCobroModalTarget.querySelector("select, input")?.focus()
