@@ -54,9 +54,10 @@ class SonidosCableadosTest < ActiveSupport::TestCase
   # Una línea que abre un modal: `showModal()`, o un target con "Modal" en el
   # nombre al que le sacan el `hidden`. Los banners no cuentan: se ven sin
   # tapar la pantalla.
-  # Insensible a mayúsculas: el target del conflicto de sesión se llama
-  # `conflictoSesionTarget`, con minúscula, y así no hay que acordarse de cómo
-  # se escribió cada uno.
+  # Insensible a mayúsculas para no tener que acordarse de cómo se escribió
+  # cada target. La alternativa `conflictosesion` quedó de cuando el conflicto
+  # de sesión era un banner; desde A7-17 es `conflictoSesionModalTarget` y ya
+  # entra por "modal", pero se deja por si vuelve a haber un aviso así.
   ABRE_UN_MODAL = /\.showModal\(\)|(?:modal|conflictosesion)target\.classList\.remove\("hidden"\)/i
 
   # Un método de JS: `nombre() {` o `_nombre(args) {`. Se excluyen las

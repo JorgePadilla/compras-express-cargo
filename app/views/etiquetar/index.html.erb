@@ -171,22 +171,54 @@ end %>
       rechaza igual; esto es para que el operario no siga llenando campos.
       Yusef con Julián: "no te va a permitir grabarlo... el chavo no hizo
       nada, no pudo hacer nada". %>
-  <div data-etiquetar-target="conflictoSesion" class="hidden mb-4 p-4 bg-red-50 border-2 border-red-300 rounded-lg">
-    <div class="flex items-start gap-3">
-      <%= heroicon "exclamation-triangle", variant: :solid, options: { class: "w-6 h-6 text-red-600 shrink-0" } %>
-      <div class="flex-1">
-        <p class="text-sm font-bold text-red-800">Este paquete es de otro tipo de envío</p>
-        <p data-etiquetar-target="conflictoSesionTexto" class="text-sm text-red-700 mt-0.5"></p>
-        <div class="mt-3 flex flex-wrap items-center gap-2">
-          <%= button_to finalizar_sesion_etiquetar_path, method: :delete, form_class: "contents",
-                class: "inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700" do %>
-            Finalizar sesión y elegir el correcto
-          <% end %>
-          <%= render ButtonComponent.new(variant: :secondary, size: :xs,
-                data: { action: "click->etiquetar#clearForm" }) do %>
-            Dejarlo de lado y seguir <kbd class="px-1 py-0.5 bg-gray-100 border rounded text-[10px]">F2</kbd>
-          <% end %>
-        </div>
+  <%# ── El paquete es de otro tipo de envío ──
+      A7-17. Esto era un banner inline, y Yusef lo cazó probando en vivo: escaneó
+      un paquete con pre-alerta CER estando en una sesión EXPRESS, le salió el
+      aviso rojo… y siguió.
+
+        "Ya me tira esto, pero esto yo me refería que me lo tirara **como
+         modal**. Mira lo que pasa ahora: **yo lo puedo recibir**."
+        "La idea es que esto no te tira. **Te tiene que bloquear la pantalla**,
+         porque tenés que usar una de las opciones obligadas de ahí."
+
+      Por eso no lleva Cancelar ni cierra con Escape ni con clic afuera: las dos
+      opciones SON la salida. El servidor igual rechaza el guardado
+      (`conflicto_con_la_sesion`), pero que el rechazo llegue hasta allá es
+      justamente lo que hace perder el tiempo del operario. %>
+  <div data-etiquetar-target="conflictoSesionModal"
+       role="alertdialog" aria-modal="true" aria-labelledby="conflicto-sesion-titulo"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70 p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full p-6 ring-2 ring-red-400">
+      <div class="flex items-center gap-3 mb-4">
+        <%= heroicon "exclamation-triangle", variant: :solid, options: { class: "w-6 h-6 text-red-600 shrink-0" } %>
+        <h3 id="conflicto-sesion-titulo" class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          Este paquete es de otro tipo de envío
+        </h3>
+      </div>
+
+      <p data-etiquetar-target="conflictoSesionTexto"
+         class="text-sm text-gray-700 dark:text-gray-300 mb-5"></p>
+
+      <p class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-3">¿Qué corresponde hacer?</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <%= button_to finalizar_sesion_etiquetar_path, method: :delete, form_class: "contents",
+              class: "flex flex-col items-start text-left p-4 rounded-lg ring-1 ring-red-400/60 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 transition w-full" do %>
+          <span class="font-semibold text-red-800 dark:text-red-200">Finalizar la sesión</span>
+          <span class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+            Cierra esta sesión para abrir la del tipo correcto y recibirlo ahí.
+          </span>
+        <% end %>
+        <button type="button" data-action="click->etiquetar#descartarPorConflicto"
+                data-etiquetar-target="conflictoSesionDejarBtn"
+                class="flex flex-col items-start text-left p-4 rounded-lg ring-1 ring-cec-navy/30 bg-cec-navy/5 hover:bg-cec-navy/10 dark:bg-cec-navy/20 dark:hover:bg-cec-navy/30 transition">
+          <span class="font-semibold text-cec-navy dark:text-cec-gold">
+            Dejarlo de lado y seguir
+            <kbd class="ml-1 px-1 py-0.5 bg-gray-100 dark:bg-gray-700 border dark:border-gray-600 rounded text-[10px] align-middle">F2</kbd>
+          </span>
+          <span class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+            Limpia el formulario y seguís con la sesión que ya tenías abierta.
+          </span>
+        </button>
       </div>
     </div>
   </div>
