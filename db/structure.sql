@@ -2398,7 +2398,8 @@ CREATE TABLE public.users (
     sonido_habilitado boolean DEFAULT true NOT NULL,
     sonido_volumen integer DEFAULT 60 NOT NULL,
     pin_digest character varying,
-    pin_cambiado_at timestamp(6) without time zone
+    pin_cambiado_at timestamp(6) without time zone,
+    sonido_error_variante character varying DEFAULT 'grave'::character varying NOT NULL
 );
 
 
@@ -5857,6 +5858,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260811162424'),
 ('20260810073956'),
 ('20260810030000'),
 ('20260810020000'),
