@@ -15,7 +15,7 @@ export default class extends ClienteAutocomplete {
     "duplicateModal", "duplicateInfo", "duplicateNewBtn", "duplicateNewHint",
     "submitBtn", "event", "panel",
     "terceroContainer", "terceroToggle",
-    "conflictoSesion", "conflictoSesionTexto",
+    "conflictoSesionModal", "conflictoSesionTexto", "conflictoSesionDejarBtn",
     "sucursalBanner", "sucursalTexto", "sucursalModal", "sucursalModalTexto",
     "quitarCobroModal"
   ]
@@ -347,27 +347,53 @@ cerrarQuitarCobro() {
       })
   }
 
-  // El paquete escaneado pertenece a otro tipo de envío. Se avisa fuerte pero
-  // NO se decide acá: el rechazo lo hace el servidor (`conflicto_con_la_sesion`),
-  // porque el modal se puede saltar y el cobro no.
+  // El paquete escaneado pertenece a otro tipo de envío.
   //
   // Yusef lo consultó con Julián por videollamada y quedaron en las dos
   // salidas: finalizar la sesión para abrir la del tipo correcto, o seguir en
   // la misma y dejar el paquete de lado. En ninguna se graba.
+  //
+  // A7-17: esto avisaba con un banner inline y el operario podía seguir
+  // llenando el formulario igual — Yusef lo hizo delante de Jorge: "mira lo
+  // que pasa ahora: **yo lo puedo recibir**". Ahora es un modal que tapa la
+  // pantalla y obliga a elegir una de las dos.
+  //
+  // El rechazo de verdad lo sigue haciendo el servidor
+  // (`conflicto_con_la_sesion`): el modal es para que el operario se entere
+  // antes de llenar diez campos, no para reemplazar la validación.
   _avisarConflictoDeSesion(data) {
     const sesion = this.hasTipoEnvioSesionValue ? this.tipoEnvioSesionValue : null
     if (!sesion || !data.pre_alerta_tipo_envio_id) return
     if (String(data.pre_alerta_tipo_envio_id) === String(sesion)) return
 
     this.dispatch("tipoEnvioDistinto")
-    if (this.hasConflictoSesionTarget) {
-      if (this.hasConflictoSesionTextoTarget) {
-        this.conflictoSesionTextoTarget.textContent =
-          `Este paquete tiene pre-alerta de ${data.pre_alerta_tipo_envio}, ` +
-          `y estás trabajando ${this.tipoEnvioSesionNombreValue}. No se puede guardar así.`
-      }
-      this.conflictoSesionTarget.classList.remove("hidden")
+    if (!this.hasConflictoSesionModalTarget) return
+
+    if (this.hasConflictoSesionTextoTarget) {
+      this.conflictoSesionTextoTarget.textContent =
+        `Este paquete tiene pre-alerta de ${data.pre_alerta_tipo_envio}, ` +
+        `y estás trabajando ${this.tipoEnvioSesionNombreValue}. No se puede guardar así.`
     }
+    this.conflictoSesionModalTarget.classList.remove("hidden")
+
+    // Se intenta llevar el foco al modal. Va en el frame siguiente porque este
+    // método corre al resolverse el `fetch`, y en ese mismo tick todavía se
+    // están acomodando el auto-llenado del cliente y la navegación con Enter.
+    //
+    // Es un extra, no el bloqueo: lo que impide guardar mal es el overlay —que
+    // tapa el formulario— y, si alguien igual llega a mandar el POST, el
+    // rechazo del servidor (`conflicto_con_la_sesion`), que tiene sus tests.
+    if (this.hasConflictoSesionDejarBtnTarget) {
+      requestAnimationFrame(() => this.conflictoSesionDejarBtnTarget.focus())
+    }
+  }
+
+  // "Dejarlo de lado y seguir" — cierra el modal y limpia el formulario. Es la
+  // misma acción que F2, y por eso pasa por `clearForm`: si algún día F2 hace
+  // algo más, esto no se queda atrás.
+  descartarPorConflicto() {
+    this.clearForm()
+    if (this.hasTrackingTarget) this.trackingTarget.focus()
   }
 
   _showPreAlertaBanner(data) {
@@ -569,7 +595,7 @@ cerrarQuitarCobro() {
     }
     this._resetClienteFromPreAlertaStyling()
     this._hidePreAlertaBanner()
-    if (this.hasConflictoSesionTarget) this.conflictoSesionTarget.classList.add("hidden")
+    if (this.hasConflictoSesionModalTarget) this.conflictoSesionModalTarget.classList.add("hidden")
     if (this.hasTrackingSecundarioContainerTarget) this._hideTrackingSecundario()
     if (this.hasTipoEnvioTarget) {
       this.tipoEnvioTarget.focus()

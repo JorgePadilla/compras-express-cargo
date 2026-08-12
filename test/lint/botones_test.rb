@@ -37,7 +37,12 @@ require "test_helper"
 # accesibilidad — eso lo cubre PR-BTN.3.
 class BotonesTest < ActiveSupport::TestCase
   PRESUPUESTO = {
-    "app/views/etiquetar/index.html.erb"                     => 10,
+    # A7-17: sube de 10 a 11. El aviso de "este paquete es de otro tipo de
+    # envío" dejó de ser un banner y pasó a modal bloqueante, y sus dos salidas
+    # son tarjetas —título arriba, explicación abajo— iguales a las tres del
+    # modal de duplicado que ya estaban crudas en este archivo. Esa forma no
+    # entra en el `inline-flex items-center` del componente.
+    "app/views/etiquetar/index.html.erb"                     => 11,
     # PR-BTN.5: bajó de 15 a 9. Los que quedan crudos lo están a propósito:
     # "Cambiar" / "Asignar" / "Vincular a un cliente" son acciones de texto
     # dentro de una frase —un botón con borde ahí partiría la oración— y los dos

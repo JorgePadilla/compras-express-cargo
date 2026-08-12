@@ -110,6 +110,47 @@ class EtiquetarSesionBloqueoTest < ActionDispatch::IntegrationTest
     assert_equal @otro.nombre, data["pre_alerta_tipo_envio"]
   end
 
+  # A7-17. Yusef escaneó un paquete con pre-alerta CER en una sesión EXPRESS,
+  # le salió el banner rojo, y siguió llenando el formulario:
+  #
+  #   > "Ya me tira esto, pero esto yo me refería que me lo tirara **como
+  #   >  modal**. Mira lo que pasa ahora: **yo lo puedo recibir**."
+  #   > "**Te tiene que bloquear la pantalla**, porque tenés que usar una de las
+  #   >  opciones obligadas de ahí."
+  #
+  # El aviso vive en el HTML aunque arranque oculto —el JS solo le saca el
+  # `hidden`—, así que se puede probar su forma sin navegador.
+  test "el aviso de conflicto tapa la pantalla, no es un banner" do
+    iniciar_sesion_en(@cer)
+    get etiquetar_url
+
+    aviso = css_select("[data-etiquetar-target='conflictoSesionModal']").first
+    assert aviso, "no existe el modal de conflicto de sesión"
+
+    clases = aviso["class"].to_s
+    assert_includes clases, "fixed", "el aviso tiene que tapar la pantalla, no fluir con el formulario"
+    assert_includes clases, "inset-0"
+    assert_includes clases, "hidden", "arranca oculto: lo abre el JS al detectar el conflicto"
+    assert_equal "alertdialog", aviso["role"]
+    assert_equal "true", aviso["aria-modal"]
+  end
+
+  test "el modal de conflicto obliga: las dos salidas y ninguna escapatoria" do
+    iniciar_sesion_en(@cer)
+    get etiquetar_url
+
+    modal = css_select("[data-etiquetar-target='conflictoSesionModal']").first
+    texto = modal.text
+
+    assert_match(/finalizar la sesión/i, texto)
+    assert_match(/dejarlo de lado/i, texto)
+
+    # Sin Cancelar y sin cerrar: las dos opciones SON la salida. Si alguien
+    # agrega una tercera vía de escape, esto falla y hay que volver al audio.
+    refute_match(/cancelar|cerrar/i, texto,
+                 "el modal no lleva escapatoria: Yusef pidió opciones obligadas")
+  end
+
   private
 
   def iniciar_sesion_en(tipo)
