@@ -58,12 +58,15 @@ Sistema actual: `https://cec.rsahn.com/App/Home`
 
 ### Conversaciones con el Cliente
 
-| # | Tema | Estado |
-|---|------|--------|
-| 1 | Pre-alertas, tareas, audio, notas, fotos, volumen | Documentado completo |
-| 2 | Login, Logout, Usuarios y Roles | Parcial — roles definidos, permisos por definir |
-| 3 | Por definir (visita al cliente) | Pendiente |
-| 4 | Por definir (visita al cliente) | Pendiente |
+| # | Fecha | Tema | Estado |
+|---|-------|------|--------|
+| 1 | Mar 2026 | Pre-alertas, tareas, audio, notas, fotos, volumen | ✅ Documentada |
+| 2 | — | Login, Logout, Usuarios y Roles | ⏳ Parcial — los 9 roles están definidos; los permisos por operación llegan en el Excel que Yusef ofreció en `A7-28` (`RP-35`) |
+| 3 | 2026-04-29 | Detalle de Paquete Interno + Warehouse Receipt | ✅ Documentada (bloque `PR-D`) |
+| 4 | 2026-08-01 | Franja de contexto operativo | ✅ Documentada (`PR-9`) |
+| 5 | 2026-08-02 | Tarifas, mínimos y etiqueta | ✅ Documentada (`PR-10`) |
+| 6 | 2026-08-08/10 | Prueba en vivo de `/etiquetar` — 4 audios + 4 anexos | ✅ Documentada (`A1-*`…`A4-*`, `RP-01`…`RP-23`) |
+| 7 | 2026-08-12 | Revisión del PDF de procesos, de punta a punta | ✅ Documentada (`A7-01`…`A7-34`, abre `RP-31`…`RP-36`) |
 
 ---
 
@@ -3990,16 +3993,18 @@ como todas las demás.
 | RP-27 | CKM: ¿la libra vale $1.50 (hoja) o $1.90 (sistema)? | idem |
 | RP-28 | CKM: dos reglas del mismo audio se contradicen — ¿dinero o libras? | idem |
 | RP-29 | El redondeo escalonado sobre el peso de báscula está apagado — ¿se prende? | idem |
-| RP-30 | Aduana y bodega: hoy el estado se cambia a mano — ¿hace falta pantalla? | `lib/procesos_pdf.rb` |
+| ~~RP-30~~ | ~~Aduana y bodega: hoy el estado se cambia a mano — ¿hace falta pantalla?~~ **✅ CERRADA en la Conversación 7**: sí hace falta, y es el escaneo del manifiesto (`A7-03`…`A7-05`). De paso corrigió el orden del diagrama (`A7-01`) | `lib/procesos_pdf.rb` |
 
 **`RP-24`…`RP-29` son plata.** Cada una es una diferencia entre la hoja de abril
 y lo que el sistema cobra hoy: mientras no se contesten, alguna de las dos está
 cobrando mal. Salen en `docs:servicios_pdf`.
 
-**`RP-30`** sale en `docs:procesos_pdf`. Ese documento deliberadamente **no**
-pregunta por empaque, entregas, manifiestos ni caja: hasta terminar etiquetas y
-entrega personal no se le ponen enfrente (Jorge, 2026-08-11). Cuando toque cada
-módulo, esas preguntas arrancan en `RP-31`.
+**`RP-30`** salía en `docs:procesos_pdf` y **la contestó la Conversación 7**: el
+estado no se cambia a mano, se cambia escaneando el manifiesto. El documento
+deliberadamente **no** pregunta por empaque, entregas, manifiestos ni caja: hasta
+terminar etiquetas y entrega personal no se le ponen enfrente (Jorge,
+2026-08-11) — y Yusef lo ratificó por su cuenta en `A7-34`. Las preguntas nuevas
+arrancan en `RP-31`.
 
 ---
 
@@ -4679,9 +4684,631 @@ predeterminadas** y las **grabaciones de voz** para la alerta de pre-alerta.
 
 ---
 
+## Conversación 7 (2026-08-12) — la revisión del PDF de procesos, de punta a punta
+
+1 h 50 min con Yusef y Manalo, repasando `procesos_para_yusef.pdf` página por
+página. **Este audio es la respuesta a ese entregable**: cierra `RP-30`, corrige el
+dibujo donde estaba mal, y de paso abre el frente de roles que llevaba meses
+pendiente.
+
+Alcanzaron a llegar hasta la página 3 de 12 antes de que se acabara el tiempo
+(*"vamos por la página 3 de 12"*), pero Yusef dijo que el resto ya quedaba
+prácticamente cubierto por lo hablado.
+
+> ⚠️ **Sobre el transcript.** `whisper small` sobre audio de reunión con altavoz.
+> Se le entiende bastante mejor que al del audio 4, pero se le van palabras y
+> nombres. Se normalizaron las que no tienen ambigüedad —"onduras" → Honduras,
+> "su cursal" → sucursal, "prefectura" → prefactura, "janear" → escanear— y **lo
+> que no se entiende va marcado, no completado**.
+
+---
+
+### A7-01 · Bodega Honduras va **después** de la prefactura — ✅ **cierra RP-30**
+
+El error más importante del diagrama, y Jorge lo tenía al revés:
+
+> **Yusef:** "Bodega Honduras va después de prefactura."
+> **Jorge:** "Ah, ok, prefactura antes de bodega, ok."
+
+Más adelante lo repite con el porqué, que es lo que hay que documentar:
+
+> **Jorge:** "Yo pensé que se iba a enviar primero y luego en el punto se hacía la
+>  prefactura. ¿Por qué no se va a hacer la prefactura en San Pedro?"
+> **Yusef:** "Porque **aquí tengo el personal para eso**. En Tegucigalpa no tengo,
+>  no voy a tener otra persona haciéndolo."
+
+**Lectura.** La prefactura se hace **siempre en San Pedro**, antes de mandar el
+paquete a cualquier sucursal. No es una preferencia de orden: es que el personal
+de prefactura existe solo en San Pedro. Esto tiene que quedar en el diagrama
+(`lib/procesos_pdf.rb`) **y** hay que verificar que el flujo de estados no asuma
+el orden viejo.
+
+---
+
+### A7-02 · El diagrama arranca en el portal del cliente, y ese es el canal minoritario
+
+> **Yusef:** "El cliente solo hace ni... que **30, 40% de las prealertas**."
+
+Yusef ordena las entradas al sistema:
+
+> "Uno lo ve entrada, proceso, salida. Donde nace el paquete, esa es la entrada de
+>  nuestro sistema. Veo que hay prealerta, escaneándolo en Miami, y hay otra
+>  entrada que es una **digitación manual**, que no necesariamente en Miami, puede
+>  ser desde aquí. Esas son las tres entradas."
+
+**Lectura.** Tres puntos de nacimiento: pre-alerta (cliente o admin), escaneo en
+Miami, y digitación manual — esta última es la etiqueta local que se hace en San
+Pedro cuando en Miami se les escapó escanear. El diagrama solo dibuja el primero.
+
+---
+
+### A7-03 · El hueco entre manifiesto y aduana se llena escaneando la caja — ✅ **PLANIFICADO**
+
+Es el hueco que el propio PDF marcaba con borde punteado:
+
+> **Jorge:** "Acá está el hueco más grande, entre el manifiesto y la aduana. No hay
+>  ninguna pantalla. Alguien entra a la ficha de paquetes y cambia el estado."
+> **Yusef:** "Esto lo va a cambiar al **escanear la etiqueta de manifiesto en
+>  caja**."
+
+Y define el identificador:
+
+> "Le vas a crear **un código QR o lo que vos querás**, el único código único de la
+>  caja."
+
+**Lectura.** Cada caja del manifiesto lleva su propio código. Ojo con
+[[project_barcode_etiqueta_es_el_warehouse]]: el código de la **etiqueta del
+paquete** es el warehouse receipt. Este es otro código, el **de la caja de
+empaque**, y es nuevo.
+
+---
+
+### A7-04 · Se escanea primero la hoja del manifiesto, y eso lo "activa"
+
+> "Vamos a escanear primero el [encabezado] que te va a imprimir el manifiesto en
+>  la hoja principal, donde sale el desglose. Eso **te activa los otros paquetes**
+>  para empezar a escanearlos."
+> "En el instante que se están recibiendo, todos los paquetes que vienen amarrados
+>  en ese manifiesto van marcándose como **aduana**."
+
+**Lectura.** Escanear la hoja del manifiesto cambia el estado a *en aduana* y
+habilita el escaneo de las cajas. Es el mismo gesto que ya existe en la
+pre-factura y la factura (*"es como la prefactura, como la factura"*).
+
+---
+
+### A7-05 · La regla **no bloquea**: avisa y da dos salidas — ✅ **DECIDIDO en el audio**
+
+Jorge preguntó explícitamente qué tan dura era la regla, porque de eso depende si
+entorpece la bodega:
+
+> **Jorge:** "Yo pregunto esto porque dependiendo qué tan dura querés esa regla.
+>  Duro me refiero a que si definitivamente no la escanea y no está activada, **te
+>  bloquea** el otro. Puede llegar a convertirse en un problema en el proceso."
+> **Yusef:** "Fijate que hasta cierto punto tenés razón… **que no lo bloquee**."
+
+Lo que sí hace, al finalizar:
+
+> "Le va a decir: **falta la 2 de 3, falta la 8 de 10**… y te tira un listado."
+> "Te va a dar la opción: **seguir escaneando** o **marcar como recibido con las
+>  pendientes**."
+
+Y queda visible fuera del momento del escaneo:
+
+> "Igual si vos entrás como administrador, ahí deberías poder buscar… ya hay una
+>  pendiente."
+
+**Lectura.** Mismo patrón que el aviso de Miami: alerta con el faltante
+enumerado, dos botones, y el pendiente queda consultable. **No bloquea el paso a
+aduana del resto.**
+
+---
+
+### A7-06 · Miami → San Pedro: se escanean **cajas**, no paquetes
+
+> "Escanearon cada caja, cada etiqueta de manifiesto. **No escanean los paquetes,
+>  solo escanean las cajas.** Ya lo pone todo en aduana y listo, se cierra. Si
+>  falta una caja, manda un correo al correo tal."
+
+**Lectura.** El manifiesto internacional se cuadra a nivel de caja. El paquete
+individual no se escanea acá. El faltante avisa por correo, no en pantalla.
+
+---
+
+### A7-07 · El manifiesto interno de sucursal es igual al oficial
+
+> "Es el de envío nacional, de una sucursal a la otra. Lleva un **manifiesto
+>  interno** y es igualito."
+
+Con su horario y su tamaño:
+
+> "El manifiesto de sucursal, el de Tegucigalpa, **lo recibe entre las nueve y
+>  media y las tres de la tarde**."
+> "Adentro del manifiesto, de uno a… cien paquetes. No creo que llegue a cien, por
+>  cincuenta."
+
+**Lectura.** Confirma [[project_dual_manifiesto_sonidos]]: dos manifiestos, mismo
+comportamiento. El interno mueve el ~20% de la carga (*"el 80% de la carga se
+queda en San Pedro"*).
+
+---
+
+### A7-08 · Escanear el manifiesto de sucursal notifica a todos, con ventana de espera
+
+> **Jorge:** "¿Solo con que escanee el manifiesto le notifique a todos los clientes
+>  en Tegucigalpa, o que escanee paquete por paquete?"
+> **Yusef:** "Con el manifiesto notifique, pero **darle una ventana de media hora,
+>  por ejemplo, o una hora**."
+
+El motivo es operativo:
+
+> "Yo veo que escanean el manifiesto y empiezan a escanear paquete por paquete
+>  para cuadrar el manifiesto."
+
+Y qué se manda:
+
+> "El push del celular, el WhatsApp **o** el SMS —no lo vamos a atacar dos veces— y
+>  el correo. El push y el correo es como permanente."
+
+**Lectura.** Job encolado con retraso configurable (30–60 min) desde que se
+escanea el manifiesto, para que el conteo termine antes de avisarle a la gente.
+WhatsApp y SMS son excluyentes entre sí.
+
+---
+
+### A7-09 · Falta el estado **enviado a sucursal** (F7) — y existe por auditoría
+
+> "Está el **F8** para consolidar en Honduras y el **F9** para notificar. Entonces
+>  tenemos que crear un **F7**… que va para una sucursal."
+
+Lo importante es para qué sirve:
+
+> "¿Por qué va a servir ese status nuevo? **Porque esto sirve de auditoría.** Qué
+>  paquete no escanearon o no enviaron… Se pueden ir a revisar el sistema y decir:
+>  ey, este sale pendiente, hay que buscarlo. Y lo vamos a captar el mismo día o
+>  el día siguiente."
+> "A qué me refiero: que **los errores se corrijan en 24 horas**."
+
+**Lectura.** F7 marca *pendiente de envío a sucursal*. No es cosmético: es el
+gancho que permite detectar el paquete que se quedó sin empacar. Al cerrar el
+manifiesto interno pasa a *enviado a sucursal*, **sin mandar ninguna
+notificación** (*"solo en sistema va a cambiar el estatus"*).
+
+---
+
+### A7-10 · Falta el estado **consolidando Miami**, y detrás hay un servicio nuevo
+
+> "Falta **consolidando Miami**… y eso no lo hemos creado tampoco en el etiquetar."
+
+El porqué:
+
+> "Creamos un servicio que se llama **COM, de consolidación**. Cuando el cliente lo
+>  solicite por ese medio, entonces se queda consolidando en Miami."
+> "La gente quiere consolidar 20 paquetes **allá**, no acá… y aparte quieren
+>  devolver cosas. Dejan en Miami y de ahí devuelven algunas."
+
+Hoy se resuelve a mano:
+
+> "Me mandó 26 tracking… me puse a copiarle uno por uno y crearle la prealerta uno
+>  por uno. Y después cambiar el estado a consolidado, **porque no existe ese
+>  servicio todavía**."
+
+**Lectura.** Un sexto servicio (`COM`) que hoy no existe, más su estado. Nota que
+Yusef aclara que **no lo prende todavía**: *"si lo creo, tengo que tener listo
+todo el personal en Miami… no tengo el espacio"*. Se documenta, no se activa.
+
+---
+
+### A7-11 · **Prefacturado no es un estado** — hay que sacarlo
+
+> **Yusef:** "El prefacturado no sé de dónde lo sacó. Yo creo que lo sacó de los
+>  procesos, **no del estatus. Ese tenés que eliminar.**"
+
+**Lectura.** `prefacturado` está en la lista de estados del paquete y no debería.
+Ojo antes de borrarlo: hay que ver si algún paquete lo tiene puesto y a qué se
+migra.
+
+---
+
+### A7-12 · El dropdown de estados va ordenado por el proceso
+
+> **Yusef:** "Prefacturado y disponible para entrega estaban antes. ¿No debería ser
+>  primero…? A mí me gusta el orden."
+> **Jorge:** "Como el proceso. Pero como ahora los metimos, solo están metidos."
+> **Yusef:** "Hacéme la lista y yo la ordeno."
+
+**Lectura.** Los estados salen en orden de inserción. Van en orden de flujo.
+Yusef se ofrece a ordenar la lista si se la mandan.
+
+---
+
+### A7-13 · **Disponible en sucursal `<nombre>`** — y el porqué es una queja real
+
+Yusef insistió mucho en esto, contra la resistencia de Jorge a alargar la lista:
+
+> "Aquí llaman los clientes que cuándo van a recibir el paquete, y ya dice
+>  *disponible en Honduras*."
+> "Un cliente me dijo: recibí un WhatsApp que ya tengo disponible el producto, pero
+>  entro a la página web y me dice que todavía no, que sale *aduanas* todavía.
+>  **¿Cuál es el estatus real?**"
+> "Han ido a recogerlo a Tegucigalpa y no está ahí."
+
+Y cómo lo quiere:
+
+> "*Disponible en sucursal Tegucigalpa*. *Disponible en sucursal SPS Cerón.*"
+> "Es que recordá que **mi meta es abrir sucursales o puntos de entrega**."
+
+**Lectura.** Dos cosas distintas: (a) el estado que ve el cliente tiene que nombrar
+la sucursal, y (b) **la notificación y el portal se están contradiciendo hoy** —
+eso es un bug, no una mejora. Yusef lo llama *"precontestarle la pregunta al
+cliente"*.
+
+Ojo: esto se cruza con la pregunta abierta de que **no hay sucursal de retiro
+estructurada** (`Cliente` solo tiene `ciudad` en texto libre). Sin eso, el nombre
+de la sucursal en el estado es tan confiable como lo que el cliente escribió.
+
+---
+
+### A7-14 · **Enviado**, no *en camino* — la semántica importa
+
+> **Jorge:** "¿En camino sería mejor?"
+> **Yusef:** "**No, enviado.** Porque *en camino* van a creer que ya va para ahí
+>  ahorita, y van a creer que es ahorita."
+> "Tenés que tener mucho cuidado con eso."
+
+---
+
+### A7-15 · **Entregado** lleva las iniciales de la sucursal; **en reparto** lleva KX o local
+
+> "El entregado sería bueno poner ahí **las iniciales de la sucursal** donde se
+>  entregó. Para no solo manejar nombre, sino unas iniciales para que uno pueda
+>  entender en dónde se entregó."
+> "En reparto había que poner que dijera **KX o local**."
+
+**Lectura.** Las sucursales necesitan **nombre e iniciales** como datos propios.
+KX es el repartidor externo; amarrarlo por API queda explícitamente para después
+(*"eso queda para el futuro"*).
+
+---
+
+### A7-16 · F9 activa fecha **y hora** programada
+
+> "**O** se activa la fecha programada… **fecha y hora** programada. Porque ahora lo
+>  vamos a manejar hasta como hora, por si lo queremos programar para la tarde."
+
+---
+
+### A7-17 · El aviso de tracking existente tiene que ser un **modal que bloquee** — 🐛 **el error que encontró**
+
+Este es el que Yusef anunció al principio (*"te encontramos un errorcito ahí que
+se te quedó"*) y demostró en vivo al final:
+
+> "Ya me tira esto, pero esto yo me refería que **me lo tirara como modal**. La
+>  idea es que esto no te tira: **te tiene que bloquear la pantalla**, porque tenés
+>  que usar una de las opciones obligadas de ahí."
+
+Las opciones son tres:
+
+> "Le da escanear y le preguntan qué vas a hacer: **actualización, cambio de
+>  servicio, o es un duplicado**."
+
+**Lectura.** Hoy el aviso sale inline y deja seguir trabajando. Tiene que ser
+modal bloqueante con las tres acciones. Es chico y es el arreglo más fácil de
+cerrar primero.
+
+---
+
+### A7-18 · El duplicado agrega una letra
+
+> "Cuando es un duplicado le agrega **una letra**. Y si ya tiene otro duplicado,
+>  agrega la [siguiente]."
+
+---
+
+### A7-19 · La pre-alerta se queda desincronizada del paquete — 🐛 **reproducido en vivo**
+
+Lo reprodujeron juntos y les costó entenderlo:
+
+> **Yusef:** "Este tracking está en Express… **la prealerta era CER**, pero tenés
+>  que actualizarla a Express."
+> **Jorge:** "Por eso está haciendo este diagrama, porque **una inconsistencia
+>  entre prealerta y paquete**."
+> **Yusef:** "Ahí es donde tenés que irte a la prealerta y sacarlo de ahí."
+
+**Lectura.** Al cambiar el servicio del paquete en `/etiquetar`, la pre-alerta
+conserva el servicio viejo, y el siguiente escaneo vuelve a proponer el servicio
+equivocado. Hay que decidir si la pre-alerta se actualiza sola o si se marca como
+resuelta.
+
+Yusef también pidió limpiar los datos de prueba: *"tenés que limpiar la base"*,
+*"cuando hagamos pruebas mejor siempre trackings nuevos, para que todo quede
+consistente"*. Ver [[project_base_dev_con_fixtures]].
+
+---
+
+### A7-20 · Entrega Personal: **caja por caja con Agregar**, no plantilla
+
+Jorge propuso poner la cantidad de cajas y que el sistema replicara una plantilla
+editable. Yusef lo rechazó tres veces:
+
+> "**Nunca son iguales.** Las entregas personales nunca, nunca, nunca."
+> "Yo he recibido 30 cajas: 10 son de uno, 5 son de otro, 10 son de otro, 2 son de
+>  otro."
+
+Y explicó por qué, que es lo que decide el diseño:
+
+> "Ellos agarran la caja, miden, y de ahí se van a la computadora. **¿Cuáles cajas
+>  eran? ¿Cuáles fueron las que ya metí?**"
+> "Es **paso por paso**. Es igual el manifiesto de Miami."
+
+**Lectura.** El operador mide una caja física y la mete; no tiene forma de saber
+qué fila de una plantilla le toca. Va: llenar medidas y peso → **Agregar** →
+siguiente. Si el tipo de caja existe en catálogo trae medida predeterminada y
+solo se pide el peso.
+
+Esto **contradice el diseño actual** y hay que rehacerlo.
+
+---
+
+### A7-21 · Las etiquetas salen al final, todas juntas, y sin "1 de N"
+
+> "No creo que debamos crearle una etiqueta a cada uno a medida las vayamos
+>  sacando, sino que **hasta el final tira las cinco etiquetas** y las pegás. Por
+>  si hay algún cambio."
+> "La etiqueta **solo lleva el número, no lleva el uno de dos ni de tres**, porque
+>  no estamos seguros cuántas estamos empacando."
+> "Cuando menos acordás: hey, me salieron cuatro en vez de cinco."
+
+**Lectura.** La cantidad de cajas no se conoce hasta terminar de empacar, así que
+ni la etiqueta lleva "1 de N" ni se imprime sobre la marcha.
+
+---
+
+### A7-22 · **Recolecta es una pre-alerta de Entrega Personal**
+
+La definición más limpia que ha dado del módulo:
+
+> "**La recolecta es como una prealerta de una entrega personal.**"
+> "Acá en la entrega personal le podés dar una opción que diga que va a ser una
+>  recolecta. Antes de proveedores."
+
+Campos, todos aproximados:
+
+> "Le vas a poner la cantidad de cajas que vas a ir a traer y un peso o medida
+>  aproximada. **No necesitás exacto**, no todo es exacto."
+> "El costo de recolecta automáticamente es **35**, y si el cliente tiene precio
+>  especial es **25**."
+
+**Lectura.** Misma pantalla que Entrega Personal con un switch al inicio. Genera
+un *pre* warehouse receipt, no uno normal. El costo confirma
+[[project_recolecta_tabla_tarifas]] con dos niveles.
+
+---
+
+### A7-23 · Recolecta necesita horarios, contacto e instrucciones
+
+> "Hay unos campos que hay que agregar, que es **horarios**… horarios y la persona
+>  encargada con número, información."
+> "El paquete de Jorge Padilla me dijeron que preguntara por Manuel Quiñones, el
+>  número de teléfono es tal, el horario de la empresa trabajan de 9 a 6."
+
+**Lectura.** Tres campos nuevos: ventana horaria, persona de contacto con
+teléfono, e instrucciones libres.
+
+---
+
+### A7-24 · Falta el impuesto de Miami — 💰
+
+> "Nada más le está poniendo el **impuesto de Honduras**. Y ahí creo que hay que
+>  poner el **impuesto de Miami**. Esto van a pagar en Honduras y aquí sería en
+>  Miami."
+
+**Lectura.** Es plata. Va con `RP-24`…`RP-29`.
+
+---
+
+### A7-25 · Hay **dos tablas de precios** que se pisan — ⚠️
+
+Yusef encontró la duplicación navegando:
+
+> "**Ya me acordé.** Yo hice categoría de precios al inicio, y después esta es la
+>  que hice reciente. **Hay unas incongruencias.** No me había fijado que tenías
+>  otra tabla del otro lado."
+> **Jorge:** "Voy a tener que migrar, a ver cómo hago para unificar, porque en
+>  teoría este servicio y la otra categoría **debería ser la misma tabla**."
+
+Y falta lo escalonado en una de las dos:
+
+> "Te falta categoría de precios más el **escalonado**. Porque en la categoría de
+>  precios llevamos también precios escalonados."
+
+**Lectura.** Dos modelos representando lo mismo. Mientras convivan, cuál manda es
+ambiguo — y esto decide cuánto se cobra. Va con el bloque de plata.
+
+---
+
+### A7-26 · El precio especial vive **en el cliente**, y aplica por servicio
+
+> "Ese precio especial para un cliente **debería estar en el cliente**, digo yo.
+>  Entro al [cliente] y le pongo el precio especial."
+> "Le doy descuento en CER y en CEM, **pero no le doy descuento en EXPRESS**."
+> "Si es mayorista, se va a aplicar **solo a los marítimos**."
+
+La forma que acordaron:
+
+> "Para mí tiene que ser un **megacuadro** para el cliente… un cuadro donde vaya
+>  con todas esas, como seleccionamos."
+
+Y la tensión de fondo, que conviene dejar escrita:
+
+> **Manalo:** "Eso de tener un montón de precios siempre es mala idea."
+> **Yusef:** "Lo que pasa es que en este negocio **vos negociás tarifas**."
+> "Tenemos que unificar lo mejor que se pueda… estandarizar la mayoría y crearle
+>  botones para las excepciones."
+
+**Lectura.** Extiende [[project_volumen_editable_por_cliente_servicio]]: la misma
+matriz cliente × servicio que ya existe para el cobro por volumen tiene que servir
+para categoría de precio y descuento.
+
+---
+
+### A7-27 · Sin definir: ¿pie cúbico o libra volumétrica? — ⏳
+
+> **Jorge:** "¿Y si va a ser [pie] cúbico?"
+> **Yusef:** "Eso es lo que hace falta todavía… si el cobro es **por pie cúbico o
+>  por libra volumétrica**."
+
+---
+
+### A7-28 · Arranca la Conversación 2: el **Excel de roles × operaciones**
+
+Lo primero que se habló, y es el frente que llevaba meses sin abrir:
+
+> "Yo voy a crear un Excel donde tenemos arriba **qué roles**, y al costado
+>  izquierdo **todas las operaciones que existen**, y vamos a tener que marcar
+>  cuáles sí pueden hacer y cuáles no, para que vos lo creés."
+> "Los de prefacturas **no pueden facturar**, solo pueden prefacturar. Y los de
+>  facturas no pueden crear prefacturas, solo facturar."
+> "Ahorita vos tenés un usuario de admin que puede hacer todo."
+
+Quién lo hace y con qué expectativa:
+
+> "Que **Evelin** me haga el Excel."
+> "Como no nos vamos a acordar de todo, al final siempre va a irte aumentando. No
+>  es como que te lo vamos a dar y no va a cambiar, **es mentira**."
+
+**Lectura.** Yusef entrega la matriz. Del lado de código el enganche existe: los 9
+roles y el concern `Authorization` (`require_role`, `can_access?`). Esto es lo que
+por fin permite documentar la **Conversación 2**.
+
+---
+
+### A7-29 · Quién es quién
+
+> "Vanessa tiene… los roles altos de administrativos. Ellos pueden hacer y
+>  deshacer **lo mismo que yo**. El rol de ella, el de Vanessa y el mío es el
+>  mismo: caja, prefactura, administrativo, todo."
+> "Supervisor de caja sería **Michel**."
+
+**Lectura.** Cuadra con [[project_quien_lleva_pin_rp21]]. El supervisor de caja es
+un rol distinto del de prefactura y del de entrega: *"como es caja va a ser el
+supervisor de caja, no va a ir el supervisor de prefactura"*.
+
+---
+
+### A7-30 · Pago parcial y crédito piden PIN
+
+> "Siempre pago completo. Rara vez autorizamos pagos parciales, pero **para hacer
+>  pagos parciales o crédito vamos a pedir PIN**, que lo va a poner el supervisor
+>  de caja."
+
+**Lectura.** Un caso nuevo para el candado de la Fase 13, que hoy cubre precio y
+descuento pero no la forma de pago.
+
+---
+
+### A7-31 · "Necesitamos registro de todo" — el caso que lo disparó
+
+Contando un problema real del sistema viejo:
+
+> "Me salió **entregado pero no tenía ni factura ni nada**, no había pagado. Y yo
+>  quise ver quién había dado la orden de entregar algo que no se ha pagado… **no
+>  pude**. No pude ligar la entrega con la proforma que se escaneó."
+> "Lo que necesitamos es poderle dar **seguimiento a cada cambio y cada cosa en
+>  cada proceso, quién lo hizo. Necesitamos registro de todo.**"
+
+**Lectura.** Es del sistema viejo, pero el requerimiento aplica igual. Enlaza con
+[[project_paper_trail_global]] y con [[project_auditoria_whodunnit]]: `paper_trail`
+ya registra quién desde `PR-C6.30`, pero **falta extenderlo** y falta que Entregas
+guarde con qué documento se entregó.
+
+---
+
+### A7-32 · Varias pre-facturas en una sola factura
+
+> **Yusef:** "¿No podés hacer que si al cliente le facturamos tres prefacturas le
+>  haga una sola factura?"
+> **Jorge:** "Podemos. Habría que hacerla bien ordenada la prefactura."
+> **Yusef:** "Es mejor, porque **imprimimos menos papel** y tardamos menos."
+> "Facturás una por una, o **marcás todas y facturás todas**. Y esta la quiero
+>  aparte: entonces son tres marcadas, facturás esas dos y la otra aparte."
+
+---
+
+### A7-33 · Entrega: escanear factura, luego sus paquetes, y **una sola firma**
+
+> "Escanear la primera, pipipe, escanear los paquetes; escanear la segunda, pipipe,
+>  escanear los paquetes… y **una sola firma para todos** esos amarrados."
+
+Y explícitamente **no** mezclarlos:
+
+> **Jorge:** "¿O los cruzan?"
+> **Yusef:** "No creo que sea buena idea, porque **me viene ahí en contra de
+>  errores**."
+
+**Lectura.** Va con el POD pendiente ([[project_pod_firma_entregado]]): la firma
+es una por entrega, no una por factura.
+
+---
+
+### A7-34 · El acuerdo de foco: **terminar Miami antes de seguir**
+
+Cerrando la reunión:
+
+> **Yusef:** "Centrémonos en un área, Jorge. **Es etiquetar. Centrémonos en
+>  Miami.** Terminemos Miami."
+> "Entrada normal, entrega personal, recolecta."
+
+**Lectura.** Confirma la regla que ya está escrita en `docs/entregables/README.md`
+—solo se pregunta por el módulo en el que estamos— y fija el orden de trabajo:
+las tres entradas de Miami antes de abrir prefactura.
+
+Sobre prefactura Yusef fue claro en que todavía no toca:
+
+> "Esta es la pantalla de prefactura, **no hemos llegado ahí**… cuando lleguemos
+>  acá nos vamos a hablar dos meses."
+
+---
+
+### Punch-list de la Conversación 7
+
+| Qué | Estado |
+|---|---|
+| Bodega Honduras después de prefactura (`A7-01`) | ⏳ corregir `lib/procesos_pdf.rb` y verificar el flujo |
+| Modal bloqueante en `/etiquetar` (`A7-17`) | ⏳ **el más fácil, va primero** |
+| Pre-alerta desincronizada del paquete (`A7-19`) | ⏳ bug |
+| Entrega Personal caja por caja (`A7-20`, `A7-21`) | ⏳ rehacer, contradice el diseño actual |
+| Estado `enviado a sucursal` / F7 (`A7-09`) | ⏳ migración + badges |
+| Sacar `prefacturado` de los estados (`A7-11`) | ⏳ ver a qué se migra lo existente |
+| Ordenar el dropdown de estados (`A7-12`) | ⏳ Yusef ordena la lista |
+| `Disponible en sucursal <nombre>` (`A7-13`) | ⏳ bloqueado por la sucursal estructurada |
+| Escaneo de manifiesto con aviso no bloqueante (`A7-03`…`A7-08`) | ⏳ Fase 12 |
+| Recolecta como pre-alerta de EP (`A7-22`, `A7-23`) | ⏳ Fase Miami |
+| Estado + servicio `COM` consolidando Miami (`A7-10`) | 📋 documentado, **no se activa todavía** |
+| Impuesto de Miami (`A7-24`) | 💰 va con `RP-24`…`RP-29` |
+| Dos tablas de precios que se pisan (`A7-25`) | 💰 unificar |
+| Precio especial por cliente y servicio (`A7-26`) | ⏳ extiende `PR-C6.41` |
+| Excel de roles × operaciones (`A7-28`) | ⏸️ lo manda Evelin |
+| Varias prefacturas → una factura (`A7-32`) | 📋 Fase de facturación |
+| Una firma por entrega (`A7-33`) | 📋 va con el POD |
+
+### Las preguntas que abre
+
+| Id | Qué |
+|---|---|
+| `RP-31` | ¿Pie cúbico o libra volumétrica? (`A7-27`) |
+| `RP-32` | ¿De cuánto es la ventana de notificación al escanear el manifiesto de sucursal — media hora, una hora? (`A7-08`) |
+| `RP-33` | Al cambiar el servicio en `/etiquetar`, ¿la pre-alerta se corrige sola o se marca resuelta? (`A7-19`) |
+| `RP-34` | Los paquetes que hoy están en `prefacturado`, ¿a qué estado se migran? (`A7-11`) |
+| `RP-35` | El Excel de roles × operaciones (`A7-28`) — lo hace Evelin |
+| `RP-36` | Nombre e iniciales de cada sucursal, y la sucursal de retiro estructurada en el cliente (`A7-13`, `A7-15`) |
+
+---
+
 ## Próximos Pasos
 
-1. **Conversación 2:** Login, Logout, Creación de usuarios y roles — por documentar
+1. **Conversación 2:** Login, Logout, Creación de usuarios y roles — **arrancó en
+   `A7-28`**: Yusef manda el Excel de roles × operaciones (`RP-35`)
 2. **Conversación 3:** Detalle de Paquete Interno + Warehouse Receipt — ✅ documentada arriba, preguntas del bloque PR-D todas resueltas
 3. **Conversación 4:** ✅ documentada arriba — franja de contexto operativo (PR-9)
 4. **Conversación 5:** ✅ documentada arriba — tarifas, mínimos y etiqueta (PR-10)
@@ -4689,6 +5316,8 @@ predeterminadas** y las **grabaciones de voz** para la alerta de pre-alerta.
    de notas de Jorge, las respuestas de Yusef al PDF, su página de notas y la
    etiqueta anotada (`A1-01`…`A1-28`, `A2-01`…`A2-14`, `A3-01`…`A3-12`,
    `RP-01`…`RP-23`, cruce `N`).
+6. **Conversación 7:** ✅ documentada arriba — la revisión del PDF de procesos
+   (`A7-01`…`A7-34`). Cierra `RP-30` y abre `RP-31`…`RP-36`.
 
 ### Lo que salió implementando (2026-08-09 / 10)
 
@@ -4732,4 +5361,26 @@ no se pierdan y para que las que son preguntas lleguen a Yusef.
    redondeo) → `C6.19` (informe de impacto). El informe se le lleva junto con
    la hoja 2 del Excel, que sigue sin revisar (`RP-16`).
 4. **La pista de Miami**: `C6.24`, `C6.25`, `C6.26`, `C6.28`.
-5. **Conversación 2** sigue siendo la única sin documentar.
+5. ~~**Conversación 2** sigue siendo la única sin documentar.~~ — **arrancó** en
+   `A7-28`: Yusef ofreció el Excel de roles × operaciones (`RP-35`).
+
+### Lo que sigue (2026-08-12, después de la Conversación 7)
+
+Yusef fijó el foco y conviene respetarlo: **terminar Miami antes de abrir
+prefactura** (`A7-34`). El orden que sale de eso:
+
+1. **El modal de `/etiquetar`** (`A7-17`). Es el error que él encontró probando,
+   es chico, y es lo primero que va a volver a mirar.
+2. **La pre-alerta desincronizada** (`A7-19`) — mismo módulo, mismo escaneo.
+3. **Entrega Personal caja por caja** (`A7-20`, `A7-21`). Contradice el diseño
+   actual, así que es rehacer, no ajustar.
+4. **Recolecta** (`A7-22`, `A7-23`) — es la tercera entrada de Miami y la
+   definición ya está completa: es una pre-alerta de Entrega Personal.
+5. **El PDF de procesos corregido** (`A7-01`, `A7-02`) y regenerado, para
+   devolvérselo con el orden bueno.
+
+Los estados (`A7-09`…`A7-16`) son un bloque aparte: tocan migración, badges y el
+dropdown, y varios están bloqueados por la sucursal estructurada (`RP-36`).
+
+**La pista de plata crece**: al bloque `RP-24`…`RP-29` se le suman el impuesto de
+Miami (`A7-24`) y las dos tablas de precios que se pisan (`A7-25`).

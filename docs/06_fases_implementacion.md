@@ -1,10 +1,31 @@
 # CEC — Fases de Implementacion
 
-56 modelos · 101 migraciones · 1270 tests · Rails 8 + Hotwire + Tailwind CSS 4 + PostgreSQL 17
+60 modelos · 116 migraciones · 1879 tests · Rails 8 + Hotwire + Tailwind CSS 4 + PostgreSQL 17
 
 ```
 Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pago → Entrega
 ```
+
+> **Ojo con el orden.** La **pre-factura se hace en San Pedro, antes** de mandar
+> el paquete a cualquier sucursal, porque el personal de prefactura existe solo
+> ahí (`A7-01`, Conversación 7). El diagrama de procesos lo tenía al revés.
+
+---
+
+## Series de PR
+
+Conviven cuatro numeraciones, y no todas se siguen en este archivo. Antes de
+buscar un PR, mirá acá dónde vive:
+
+| Serie | Qué es | Dónde se sigue |
+|---|---|---|
+| `PR-{fase}.{letra}` | El trabajo de una fase numerada: `PR-9.a`, `PR-10.h`, `PR-13.e` | **Este archivo**, en la sección de su fase |
+| `PR-D{n}.{letra}` | Fase 5c — Detalle de Paquete + Warehouse Receipt. La letra es la iteración: `PR-D1.d` es la cuarta pasada de D1 | **Este archivo**, Fase 5c |
+| `PR-C6.{nn}` | Todo lo que salió de la **Conversación 6** — va del `C6.18` al `C6.48`, y es la mayor parte del trabajo de agosto 2026 | **`docs/05`**, no acá. Un solo dueño por dato |
+| `PR-BTN.{n}` | Refactor transversal a `ButtonComponent`. No cuelga de ninguna fase | Historial de git y `docs/07` |
+
+La serie `RP-{nn}` **no son PRs**: son las preguntas al cliente. Viven en
+`docs/05` y salen impresas en `docs/entregables/preguntas_para_yusef.pdf`.
 
 ---
 
@@ -403,14 +424,20 @@ Fase 3c ████████████████████  Cotizacion
 Fase 4  ████████████████████  Entregas + Caja Diaria                      ✅
 Extras  ████████████████████  Users CRUD + Registro + UI polish           ✅
 Fase 5  ████████████████████  Tareas + Re-empaque (5.1–5.5)              ✅
+Fase 5b ████████████████████  Recepcion — Numeracion y Tracking           ✅
+Fase 5c ████████████░░░░░░░░  Detalle de Paquete + WR (PR-D series)     ← EN CURSO
 Fase 6  ███░░░░░░░░░░░░░░░░░  Reportes + Config + Dashboard (6.1 ✅)    ← EN CURSO
 Fase 7  ░░░░░░░░░░░░░░░░░░░░  Marketing CRM
 Fase 8  ░░░░░░░░░░░░░░░░░░░░  Inventario
 Fase 9  ░░░░░░░░░░░░░░░░░░░░  Fotos de Paquetes (storage + envio a cliente)
-Fase 10 ████████████████████  Contexto operativo en captura (PR-9)        ✅
+Fase 10 ████████████████░░░░  Contexto operativo en captura (PR-9)      ← EN CURSO
 Fase 11 ████████████████░░░░  Tarifas y calculo de cobro (PR-10)        ← EN CURSO
-Fase 12 ░░░░░░░░░░░░░░░░░░░░  Escaneo al empacar + pre-etiqueta de caja
+Fase 12 ░░░░░░░░░░░░░░░░░░░░  Escaneo de manifiesto + pre-etiqueta de caja
+Fase 13 ████████████████████  Precio bloqueado + PIN de supervisor        ✅
 ```
+
+> El trabajo de agosto 2026 **no aparece en este cuadro**: es la serie `PR-C6`
+> (del `C6.18` al `C6.48`) y se sigue en `docs/05`. Ver "Series de PR" arriba.
 
 **Fases paralelas posibles:**
 - Fase 5 puede correr en paralelo con Fase 3
@@ -840,6 +867,37 @@ abierto están en `docs/05` — "La tabla de precios recibida (2026-08-05)".
 
 **Enganche existente:** `Manifiesto`, `TamanoCaja` y `EmpresaManifiesto` ya están en el modelo. Falta la entidad de "caja empacada" entre `Paquete` y `Manifiesto`.
 
+### La otra mitad: recibir el manifiesto en Honduras (Conversación 7)
+
+La Fase 12 tenía dibujada la salida —empacar en Miami— pero no la entrada. La
+Conversación 7 la completó, y de paso cerró `RP-30`: el hueco entre *manifiesto*
+y *aduana*, donde hoy alguien entra a la ficha del paquete y cambia el estado a
+mano, se llena escaneando.
+
+**El circuito** (`A7-03`…`A7-08`):
+
+1. Cada caja del manifiesto lleva **su propio código único** — QR o barras. Ojo:
+   no es el código de la etiqueta del paquete, que es el warehouse receipt.
+2. Se escanea **primero la hoja del manifiesto**, y eso lo "activa": habilita el
+   escaneo de las cajas y pasa los paquetes a *en aduana*.
+3. Se escanean **las cajas, no los paquetes** — el manifiesto internacional se
+   cuadra a nivel de caja.
+4. **No bloquea.** Jorge preguntó explícitamente qué tan dura era la regla y
+   Yusef eligió que avise: al finalizar enumera lo que falta (*"falta la 2 de 3,
+   falta la 8 de 10"*) y ofrece **seguir escaneando** o **marcar como recibido
+   con las pendientes**. El pendiente queda consultable para el admin.
+5. Si falta una caja del manifiesto internacional, además **manda correo**.
+
+**El manifiesto interno de sucursal** funciona igual (`A7-07`). Llega a
+Tegucigalpa entre las 9:30 y las 15:00, trae de 1 a ~50 paquetes, y al escanearlo
+**notifica a todos los clientes de golpe** — pero con una **ventana de espera de
+30 a 60 min** (`RP-32`), porque en la práctica escanean el manifiesto y después
+siguen cuadrando paquete por paquete. Push y correo siempre; WhatsApp **o** SMS,
+nunca los dos.
+
+**Depende de** los estados nuevos (`A7-09`, `A7-10`) y del sonido OK/ERROR por
+tipo de envío, que ya tiene su fuente en `lib/sonidos_de_error.rb`.
+
 ---
 
 ## Fase 13: Precio bloqueado en pre-factura + autorización de supervisor — EN CURSO (Agosto 2026)
@@ -1158,11 +1216,16 @@ puede haber movido después, y sin ese dato la auditoría no reconstruye nada.
 
 #### Un PIN de 4 dígitos hay que tratarlo como credencial
 
-Solo 10 000 combinaciones: se adivina en minutos a fuerza bruta. Ya va con
-`bcrypt` y fuera del log (PR-13.c); **falta el límite de intentos**, que va con
-el endpoint de autorización en PR-13.d — `rate_limit` por supervisor, no por IP,
+Solo 10 000 combinaciones: se adivina en minutos a fuerza bruta. Va con `bcrypt`
+y fuera del log (PR-13.c), y **el límite de intentos ya está puesto** en el
+endpoint de autorización (PR-13.d): `rate_limit to: 5, within: 5.minutes` en
+`app/controllers/autorizaciones_controller.rb`. Es por supervisor y no por IP,
 porque en un mostrador todos comparten la IP y por IP el límite se lo comería el
 cajero legítimo.
+
+**Falta un caso**: pagos parciales y crédito también van a pedir PIN, y ese lo
+pone el **supervisor de caja** — un rol distinto del de prefactura y del de
+entrega (`A7-30`, Conversación 7).
 
 Es el único punto de todo el sistema donde 4 dígitos habilitan cambiar plata.
 

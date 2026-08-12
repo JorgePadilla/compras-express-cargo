@@ -1,5 +1,8 @@
 # Database Diagram — Compras Express Cargo
 
+> 📁 **HISTÓRICO — marzo 2026.** Ver
+> [`02_modelos_base_datos.md`](../02_modelos_base_datos.md) y `db/structure.sql`.
+
 > ⚠️ **DIAGRAMA DESACTUALIZADO — no usar como referencia.**
 >
 > Fue autogenerado desde `db/schema.rb` en marzo de 2026. Ese archivo hoy

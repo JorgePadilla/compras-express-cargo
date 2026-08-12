@@ -493,5 +493,5 @@ El sistema actual tiene toggle "Oscuro" en el header. Implementar con Tailwind `
 | Tipografia | Inter (sans) + JetBrains Mono | Moderna, legible, buena en tablas |
 | Paleta | Basada en sistema actual (#262B40 navy + #F5B759 gold) | Continuidad de marca |
 | Dark mode | Tailwind `dark:` variant + Stimulus toggle | Ya existe en sistema actual |
-| Responsive | Mobile-first (ya documentado en 04_diseno_responsive.md) | Clientes usan celular |
+| Responsive | Mobile-first (el planteo original está en `historico/04_diseno_responsive.md`) | Clientes usan celular |
 | Imagenes | Logo PNG existente + Heroicons SVG | Minimo peso, maximo rendimiento |
