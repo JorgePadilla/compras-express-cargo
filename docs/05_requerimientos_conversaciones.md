@@ -2397,8 +2397,29 @@ El mapa completo que pidió:
 | Seleccionó el código de cliente | pin | ✅ existe |
 | El paquete **tiene pre-alerta** | voz grabada | ⏳ falta la grabación |
 | El tracking **ya existía / ya fue usado** | pito distinto | ✅ PR-C6.9 |
-| **Error** — tipo de envío distinto al de la sesión | sonido feo | ✅ PR-C6.9 |
-| **Antes** de que salga cualquier modal | pin | ✅ PR-C6.16 |
+| **Error** — tipo de envío distinto al de la sesión | sonido feo | ✅ PR-C6.9 · tres opciones en `PR-275` |
+| **Antes** de que salga cualquier modal | pin | ✅ **de verdad** desde `PR-275` — ver abajo |
+
+> ⚠️ **Esta última decía ✅ desde `PR-C6.16` y no era cierta.** El evento
+> `etiquetar:modalAbierto` estaba cableado en la vista y **nadie lo disparaba**:
+> el modal de sucursal de retiro y el del PIN del supervisor abrieron mudos
+> durante meses. Un cable suelto en Stimulus no tira error ni ensucia la
+> consola — simplemente no suena, y el operario está mirando la pistola.
+>
+> Es el mismo bug que Yusef ya había reportado una vez (*"el modal de duplicado
+> abría mudo"*), reaparecido en otros dos modales.
+>
+> `PR-275` lo arregla y deja dos lints para que no vuelva:
+> `test/lint/sonidos_cableados_test.rb` verifica que **ningún modal de las
+> pantallas de escaneo abra sin sonar** —método por método, porque con dos
+> modales en el mismo archivo un chequeo global no agarra que le borren el
+> sonido a uno— y que cada `audio#accion` nombre un método que existe.
+>
+> Salió también que el modal de configuración **probaba sonidos que no eran los
+> que suenan**: el botón rotulado "Pre-alerta" tocaba el de «ya existía», y el
+> de pre-alerta de verdad —el que suma la voz— no tenía botón. La lista ahora
+> sale de `SonidosDeEscaneo::BOTONES` y hay lint que la confronta contra el
+> cableado real.
 
 Son **dos** pitos distintos, no uno. Yusef lo dijo así:
 
@@ -3871,7 +3892,7 @@ abajo, en la sección del **audio 4**. Resumen:
 | RP-17 | ✅ escribió el formato con mes: `R` + sucursal + año + mes + correlativo |
 | RP-18 | ✅ se puede bajar la cantidad de cajas, **con PIN de supervisor** |
 | RP-19 | ✅ el origen **entra en el cobro** — corrige `PR-C6.38` |
-| RP-20 | ⏳ sin marcar: **las tres opciones de sonido nunca se le mandaron** |
+| RP-20 | ⏳ sin marcar — pero **la deuda ya se pagó**: las tres existen (`PR-275`) |
 | RP-21 | ✅ los cuatro roles llevan PIN — son los mismos `ROLES_AUTORIZANTES` |
 | RP-22 | ⏳ "llenaremos en oficina" |
 
@@ -3931,7 +3952,7 @@ resolvió la maquetación. Se documenta abajo, en su propia sección.
 | RP-13b | Etiqueta internacional: precio y moneda | Salió en el audio pero el transcript no se entiende (`A4-07`) |
 | RP-15 | La leyenda de colores/moneda de la hoja (lo hace su oficina) | — |
 | RP-16 | El visto bueno a la hoja 2 del Excel | Falta la tabla de EXPRESS: *"llenaremos después"* |
-| RP-20 | Las tres opciones de sonido — **deuda nuestra**, nunca se le mandaron | Describió qué quiere: pitido de error distinto del OK |
+| RP-20 | Que **elija** una de las tres | Ya no es deuda nuestra: las tres existen y se pueden oír (`PR-275`) |
 | RP-22 | Los proveedores de Entrega Personal | Escribió *"llenaremos en oficina"* |
 | RP-23 | Imprimir una etiqueta y probar el lector — **él dijo que lo hace él** | **Desbloqueada**: esperaba a `RP-17`, que salió en `PR-C6.40` |
 | — | Tolerancia del redondeo con incremento de 1 lb (viene del audio 2) | — |
@@ -4546,11 +4567,35 @@ Lo que el papel **no** dice es *cómo* multiplica. Eso queda como pregunta.
 
 ---
 
-### RP-20 · El sonido de error del escaneo — ⏳ **abierta, y es deuda nuestra**
+### RP-20 · El sonido de error del escaneo — ⏳ **abierta, pero ya se puede contestar**
 
 **Sin marcar.** El papel dice *"te mandamos tres opciones por WhatsApp para que
 las oigas"* — y **esas tres grabaciones nunca se hicieron**. No puede contestar
 algo que no recibió.
+
+> ✅ **Pagada (2026-08-11, `PR-275`).** Las tres existen:
+>
+> | Opción | Cómo suena |
+> |---|---|
+> | `grave` | **El que suena hoy.** Un tono bajo y seco de 0.3 s |
+> | `descendente` | 440 → 220. El «respuesta incorrecta» de toda la vida |
+> | `triple` | Tres pulsos cortos. Suena a alarma |
+>
+> Le llegan de dos formas: en `/etiquetar` y `/entrega_personal` —botón
+> **Sonidos**, cada una con su «Escuchar»—, y como archivo en
+> `docs/entregables/sonidos/` (`bin/rails docs:sonidos_wav`), para WhatsApp.
+>
+> Conviene que las oiga **en la pantalla**: un sonido de bodega se elige con el
+> ruido de la bodega de fondo, no en el parlante de un celular.
+>
+> `grave` va primero y es el default a propósito: *"dejalo como está"* tiene que
+> ser una respuesta posible. Cuando elija, se cambia el **default** de
+> `sonido_error_variante` y ahí cambia para todos.
+>
+> **Lo que sigue abierto es solo su respuesta**, no nuestro trabajo.
+
+Y de paso salieron dos cosas que el documento daba por hechas y no eran ciertas
+— ver `A1-10` abajo.
 
 ---
 
