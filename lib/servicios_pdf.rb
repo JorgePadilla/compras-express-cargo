@@ -138,11 +138,22 @@ class ServiciosPdf
     huerfanas = Tarifa.where.not(sucursal_id: nil).where.not(sucursal_id: ids_reales)
     return [] if huerfanas.empty?
 
-    huerfanas.includes(:tipo_envio).map do |t|
+    filas = huerfanas.includes(:tipo_envio).map do |t|
       "tarifa de #{t.tipo_envio&.nombre} (desde #{t.desde_libras.to_f} lb, $#{t.precio_libra.to_f}) " \
         "apunta a sucursal_id=#{t.sucursal_id}, que no existe — ese precio NUNCA se aplica"
     end
+
+    # El diagnóstico va en el aviso y no solo en este comentario: escrito
+    # únicamente acá arriba, el que corre la tarea lee "un precio no se cobra
+    # nunca" y sale a buscar un bug de plata. Pasó dos veces, la segunda a mí.
+    filas << PISTA_DE_FIXTURES
   end
+
+  PISTA_DE_FIXTURES =
+    "↑ antes de salir a buscar: si esto aparece en tu máquina, casi seguro " \
+    "cargaste los fixtures de test en la base de desarrollo — reemplazan las " \
+    "sucursales por otras con ids distintos y dejan las tarifas apuntando al " \
+    "vacío. La FK impide que pase en staging. Confirmalo con `bin/rails db:reset`."
 
   # ── El documento ────────────────────────────────────────────────────────
 

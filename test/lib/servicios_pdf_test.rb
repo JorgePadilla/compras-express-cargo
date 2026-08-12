@@ -133,6 +133,23 @@ class ServiciosPdfTest < ActiveSupport::TestCase
     assert_match(/CKM/, avisos.join("\n"))
   end
 
+  test "el aviso dice qué es lo que casi siempre pasó" do
+    # "ese precio NUNCA se aplica" suena a bug de plata y manda a buscar uno.
+    # No lo es: es la base de desarrollo con los fixtures de test encima. El
+    # diagnóstico vivía solo en un comentario del código, así que la pista se
+    # perdía y el aviso se perseguía de nuevo. Pasó dos veces.
+    ckm = TipoEnvio.find_by(codigo: "ckm")
+    Tarifa.create!(tipo_envio: ckm, sucursal: sucursales(:humuya_tgu), desde_libras: 13.5,
+                   precio_libra: 2.0, moneda: "USD", activo: true)
+
+    assert_match(/fixtures/, @doc.avisos([]).join("\n"))
+  end
+
+  test "sin huerfanas tampoco sale la pista" do
+    # Una pista que sale siempre es ruido, y el aviso pasa a leerse en diagonal.
+    assert_no_match(/fixtures/, @doc.avisos.join("\n"))
+  end
+
   test "avisa de un servicio canonico sin tarifa de lista" do
     cka = TipoEnvio.find_by(codigo: "cka")
     Tarifa.where(tipo_envio_id: cka.id).delete_all
