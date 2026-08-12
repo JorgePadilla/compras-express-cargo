@@ -3633,7 +3633,7 @@ Y escribió al lado: **"Todo"**.
 
 ---
 
-### RP-04b · Cobro por volumen editable por cliente y por servicio — **ALCANCE NUEVO**
+### RP-04b · Cobro por volumen editable por cliente y por servicio — ✅ **CERRADA** (A4-01) e implementada
 
 En la misma página, suelto abajo, no como respuesta a nada:
 
@@ -3738,7 +3738,7 @@ ese PR la tasa solo se podía cambiar con un deploy.
 
 ---
 
-### RP-09 · ¿Qué hacemos con Regular y VIP? — **SIGUE ABIERTA**
+### RP-09 · ¿Qué hacemos con Regular y VIP? — **ABIERTA A MEDIAS** (ver A4-05)
 
 Ninguna casilla. Con una flecha al título:
 
@@ -3746,6 +3746,11 @@ Ninguna casilla. Con una flecha al título:
 
 **Lectura.** Se entiende que Regular y VIP son lo viejo, pero no dice a qué
 categoría pasan los 8 clientes que hoy están ahí. Sin eso no se pueden migrar.
+
+> **Actualización (audio 4).** En el audio dice *"esas categorías ya no van,
+> ahora es el escalonado"* — o sea que **se eliminan**. Lo que falta es solo el
+> destino de los 8 clientes. Ver `A4-05`; sale del audio, así que va *a
+> confirmar* y no se migra nada sobre esa base.
 
 ---
 
@@ -3885,9 +3890,14 @@ avisa solo mientras nadie tenga PIN asignado.
 > código de barras**. En la página 7 escribió "Pendiente". Y ahora conviene
 > que la imprima **después** de aplicar `RP-17`, porque el número cambia y va
 > justo en el código de barras.
+>
+> ✅ **Ya se puede (2026-08-11).** `RP-17` salió en `PR-C6.40` (merge #259): el
+> número de recepción ya lleva sucursal, año y mes. La prueba deja de estar
+> bloqueada. Y en el audio 4 él dijo *"eso lo puedo hacer yo… queda pendiente,
+> pendiente tuyo"*, así que la corre él.
 
 No la contestó por escrito: **mandó la etiqueta impresa anotada en rojo**, que
-es la respuesta. Se documenta abajo, en su propia sección.
+resolvió la maquetación. Se documenta abajo, en su propia sección.
 
 ---
 
@@ -3908,24 +3918,67 @@ es la respuesta. Se documenta abajo, en su propia sección.
 
 ### Las que siguen vivas
 
-| Id | Qué falta |
+> Esta tabla se leyó como el estado real y **estaba vieja**: el audio 4 y las
+> páginas 6-7 cerraron varias y nadie bajó el resultado hasta acá. Reconciliada
+> el 2026-08-11 contra las secciones `A4-*` y `RP-17`…`RP-23`.
+
+| Id | Qué falta | Novedad |
+|---|---|---|
+| RP-01 | Qué se cobra a las categorías mientras no lleguen sus tablas escalonadas | — |
+| RP-02 | Mayoristas: qué se les cobra en CER/CEM/CKA/EXPRESS | — |
+| RP-09 | **Solo** a qué categoría pasan los 8 clientes | El audio dice que Regular y VIP **se eliminan** (`A4-05`, *a confirmar*) |
+| RP-10b | ¿La recolecta de Miami y la de Honduras son uno o dos cargos? | El audio no la contesta; sí agrega que la tarifa la crea un supervisor (`A4-06`) |
+| RP-13b | Etiqueta internacional: precio y moneda | Salió en el audio pero el transcript no se entiende (`A4-07`) |
+| RP-15 | La leyenda de colores/moneda de la hoja (lo hace su oficina) | — |
+| RP-16 | El visto bueno a la hoja 2 del Excel | Falta la tabla de EXPRESS: *"llenaremos después"* |
+| RP-20 | Las tres opciones de sonido — **deuda nuestra**, nunca se le mandaron | Describió qué quiere: pitido de error distinto del OK |
+| RP-22 | Los proveedores de Entrega Personal | Escribió *"llenaremos en oficina"* |
+| RP-23 | Imprimir una etiqueta y probar el lector — **él dijo que lo hace él** | **Desbloqueada**: esperaba a `RP-17`, que salió en `PR-C6.40` |
+| — | Tolerancia del redondeo con incremento de 1 lb (viene del audio 2) | — |
+| — | El 0 de Personal CEC en recolecta: ¿descuento del 100% o sin definir? | — |
+| — | Motivos de retención, notas predeterminadas y grabaciones de voz | Los tres pendientes que el papel le listaba; siguen sin llegar |
+
+### Las que ya cerraron y esta tabla no reflejaba
+
+| Id | Cómo cerró |
 |---|---|
-| RP-01 | Qué se cobra a las categorías mientras no lleguen sus tablas escalonadas |
-| RP-02 | Mayoristas: qué se les cobra en CER/CEM/CKA/EXPRESS |
-| RP-09 | A qué categoría pasan los 8 clientes de Regular y VIP |
-| RP-10b | ¿La recolecta de Miami y la de Honduras son uno o dos cargos? |
-| RP-13b | Etiqueta internacional: precio y moneda |
-| RP-15 | La leyenda de colores/moneda de la hoja (lo hace su oficina) |
-| RP-16 | El visto bueno a la hoja 2 del Excel |
-| — | Tolerancia del redondeo con incremento de 1 lb (viene del audio 2) |
-| — | El 0 de Personal CEC en recolecta: ¿descuento del 100% o sin definir? |
+| RP-04b | ✅ **Contestada** en `A4-01` (por cliente y por servicio) e **implementada** en `PR-C6.41` |
+| RP-17 | ✅ El número de recepción lleva sucursal, año y mes — `PR-C6.40` |
+| RP-18 | ✅ Se puede bajar la cantidad de cajas, con PIN de supervisor |
+| RP-19 | ✅ El origen entra en el cobro — corrige `PR-C6.38` |
+| RP-21 | ✅ Los cuatro roles llevan PIN; falta asignar los PIN desde el CRUD, no es decisión |
 
 ### Las que nacen
 
 | Id | Qué |
 |---|---|
-| RP-04b | Cobro por volumen forzado, editable por cliente y por servicio |
 | — | La tasa: quién la mantiene y cada cuánto (aviso, no pregunta — ya se fijó en 27.10) |
+
+### Las que están escritas pero viven **solo en código**
+
+Estas nunca entraron a este documento porque nacieron dentro de un entregable, y
+por eso preguntar *"¿qué está pendiente?"* leyendo solo este archivo daba una
+lista incompleta. Se anotan acá; las respuestas, cuando lleguen, se documentan
+como todas las demás.
+
+| Id | Qué pregunta | Dónde vive |
+|---|---|---|
+| RP-24 | EXPRESS: ¿la libra vale $8.00 (hoja de abril) o $7.50 (sistema)? | `lib/servicios_pdf.rb` |
+| RP-25 | EXPRESS: ¿el mínimo es $14.95 con ISV o $10.00 más ISV? | idem |
+| RP-26 | CEM: el mínimo de 8 libras no se aplica — ¿manda el dinero o las libras? | idem |
+| RP-27 | CKM: ¿la libra vale $1.50 (hoja) o $1.90 (sistema)? | idem |
+| RP-28 | CKM: dos reglas del mismo audio se contradicen — ¿dinero o libras? | idem |
+| RP-29 | El redondeo escalonado sobre el peso de báscula está apagado — ¿se prende? | idem |
+| RP-30 | Aduana y bodega: hoy el estado se cambia a mano — ¿hace falta pantalla? | `lib/procesos_pdf.rb` |
+
+**`RP-24`…`RP-29` son plata.** Cada una es una diferencia entre la hoja de abril
+y lo que el sistema cobra hoy: mientras no se contesten, alguna de las dos está
+cobrando mal. Salen en `docs:servicios_pdf`.
+
+**`RP-30`** sale en `docs:procesos_pdf`. Ese documento deliberadamente **no**
+pregunta por empaque, entregas, manifiestos ni caja: hasta terminar etiquetas y
+entrega personal no se le ponen enfrente (Jorge, 2026-08-11). Cuando toque cada
+módulo, esas preguntas arrancan en `RP-31`.
 
 ---
 
@@ -4349,6 +4402,59 @@ Coincide con lo que escribió en la página 6. Ver `RP-17`.
 
 ---
 
+### A4-05 · Regular y VIP **se eliminan** — mueve `RP-09`, *a confirmar*
+
+Jorge le lee la pregunta 9 y Yusef contesta de una:
+
+> Jorge: *"¿Qué hacemos con Regular y VIP? Hay 8 clientes en esta categoría."*
+> Yusef: *"**Esas categorías ya no van**… ahora es el escalonado."*
+
+Esto va **más allá** de lo que escribió en el papel, que solo decía
+*"→ categorías actuales del Excel"*. El papel dejaba dudando si Regular y VIP
+seguían existiendo; el audio dice que no: **desaparecen, y manda el escalonado**.
+
+**Lo que sigue faltando** es lo mismo que faltaba: **a qué categoría pasan los 8
+clientes** que hoy están ahí. Sin eso no se pueden migrar, así que `RP-09` no
+cierra — pero deja de ser una pregunta abierta entera y pasa a ser una sola.
+
+> ⚠️ *A confirmar.* Sale **solo del audio**, y el transcript es `tiny`. No se
+> borra ninguna categoría hasta tenerlo por escrito.
+
+---
+
+### A4-06 · La tarifa de recolecta la crea un supervisor — detalle nuevo de `RP-10`
+
+El papel ya había dado el precio (*"$35 o $25 dependiendo de la categoría de
+precio de cliente, **es el mínimo a cobrar**"*). El audio agrega **quién la
+carga**:
+
+> *"…igual es editable… **crea la tarifa, pero por alguien que es supervisor**,
+>  tipo Michelle."*
+
+**Lectura.** Encaja con el patrón que ya usa el sistema en otros lados: el monto
+lo puede mover alguien con autorización, no cualquiera. No cambia el modelado
+que `RP-10` pide, lo acota: la edición del mínimo va detrás de un rol.
+
+**`RP-10b` sigue abierta.** El audio habla de precios y de zonas de Miami, pero
+**nunca contesta** si la recolecta de Miami y la de Honduras son uno o dos
+cargos, que es lo que la pregunta pide.
+
+> ⚠️ *A confirmar.* Solo audio.
+
+---
+
+### A4-07 · El flete de México se habla, pero no se entiende — `RP-13b`
+
+Hay un tramo de casi un minuto sobre el flete de México y el mínimo, y el
+transcript se cae ahí: números sueltos —cinco, seis, siete— sin frase que los
+sostenga, y él mismo diciendo *"ahí fue que me equivoqué"* en el medio.
+
+**No se documenta ningún número.** `RP-13b` (etiqueta internacional: precio y
+moneda) **sigue abierta** y hay que volver a preguntarla. Se anota que el tema
+salió en el audio para que nadie lo busque de nuevo pensando que se perdió.
+
+---
+
 ## Las respuestas de las páginas 6 y 7
 
 ### RP-17 · El número de recepción: ¿le metemos el mes? — ✅ **CERRADA**
@@ -4572,11 +4678,10 @@ no se pierdan y para que las que son preguntas lleguen a Yusef.
 1. ~~**Faltan las fotos de `RP-17`…`RP-22`**~~ — **llegaron** (páginas 6/7 y
    7/7, con el audio 4). `RP-21` quedó cerrada del lado de código: los cuatro
    roles que marcó ya eran `ROLES_AUTORIZANTES`.
-2. **Ronda 2 de preguntas**: `RP-01`, `RP-02`, `RP-09`, `RP-10b`, `RP-13b`,
-   `RP-04b`, más los recordatorios de `RP-15` y `RP-16`. Se regenera
-   `docs:preguntas_pdf` cuando lleguen las fotos, para no mandar dos papeles.
-   **No se pisa** `preguntas_para_yusef.pdf` hasta entonces: es el que él
-   contestó.
+2. **Ronda 2 de preguntas**: `RP-01`, `RP-02`, `RP-09` (solo el destino de los 8
+   clientes), `RP-10b` y `RP-13b`, más los recordatorios de `RP-15` y `RP-16`.
+   `RP-04b` **sale de esta lista**: cerró en `A4-01` y ya está implementada en
+   `PR-C6.41`. **No se pisa** `preguntas_para_yusef.pdf`: es el que él contestó.
 3. **La pista de plata**, en este orden y verificando en staging entre paso y
    paso: `C6.18` (bug de frontera) → `C6.29` (tasa 27.10) → `C6.20` (activar el
    redondeo) → `C6.19` (informe de impacto). El informe se le lleva junto con
