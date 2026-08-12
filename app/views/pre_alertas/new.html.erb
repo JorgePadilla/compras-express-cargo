@@ -1,16 +1,24 @@
-<%= render PageHeaderComponent.new(title: "Nueva Pre-Alerta") %>
+<%# PR-C6.46: el envoltorio se acerca al del portal. Las tarjetas de paquete ya
+    hablaban el mismo idioma desde PR-C6.44; lo que estaba viejo era esto — la
+    tarjeta, el título de sección, el pie suelto.
 
-<div class="max-w-5xl">
-  <%= form_with model: @pre_alerta, url: pre_alertas_path, class: "space-y-6" do |f| %>
+    Los controles NO cambian (decisión de Jorge, 2026-08-12): el select de tipo
+    de envío y los checkboxes se quedan. Quien carga treinta al día va más
+    rápido así, y el wizard de 3 pasos del portal ya se había descartado para
+    admin. Lo que se acerca es cómo se ve, no cómo se opera. %>
+<%= render PageHeaderComponent.new(title: "Nueva Pre-Alerta",
+      subtitle: "Cargá el cliente, el servicio y los paquetes que vienen en camino") %>
+
+<div class="max-w-5xl mx-auto">
+  <%= form_with model: @pre_alerta, url: pre_alertas_path, class: "space-y-6 animate-fade-in-up" do |f| %>
     <% if @pre_alerta.errors.any? %>
-      <div class="p-4 bg-red-50 border border-red-200 rounded-xl">
-        <p class="text-sm font-medium text-red-700"><%= @pre_alerta.errors.full_messages.join(", ") %></p>
+      <div class="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl">
+        <p class="text-sm font-medium text-red-700 dark:text-red-300"><%= @pre_alerta.errors.full_messages.join(", ") %></p>
       </div>
     <% end %>
 
-    <%# Client selector %>
-    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 space-y-4">
-      <h3 class="text-sm font-bold text-gray-800">Cliente</h3>
+    <%= render FormSectionComponent.new(title: "Cliente",
+          subtitle: "A nombre de quién entra esta pre-alerta") do %>
       <div data-controller="client-autocomplete" data-client-autocomplete-url-value="<%= buscar_clientes_path %>">
         <div class="relative">
           <%# PR-C6.33: faltaba el `keydown`. El controller siempre supo manejar
@@ -22,58 +30,54 @@
                               keydown->client-autocomplete#onKeydown"
                  placeholder="Buscar por codigo o nombre..."
                  autocomplete="off"
-                 class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
-                        focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
+                 class="<%= clases_de_input %>">
           <%= f.hidden_field :cliente_id, data: { client_autocomplete_target: "clienteId" } %>
-          <div data-client-autocomplete-target="dropdown" class="hidden absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"></div>
+          <div data-client-autocomplete-target="dropdown" class="hidden absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto"></div>
         </div>
-        <p data-client-autocomplete-target="nombre" class="mt-1 text-sm text-gray-500 hidden"></p>
+        <p data-client-autocomplete-target="nombre" class="mt-1 text-sm text-gray-500 dark:text-gray-400 hidden"></p>
       </div>
-    </div>
+    <% end %>
 
-    <%# Options %>
-    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 space-y-4">
-      <h3 class="text-sm font-bold text-gray-800">Opciones</h3>
+    <%= render FormSectionComponent.new(title: "Servicio",
+          subtitle: "Cómo viaja, y si se agrupa con otros paquetes") do %>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Envio</label>
+          <label class="<%= clases_de_etiqueta %>"><%= etiqueta_de_campo("Tipo de Envío") %></label>
           <%= f.select :tipo_envio_id, options_from_collection_for_select(@tipo_envios, :id, :nombre, @pre_alerta.tipo_envio_id || @tipo_envio_sugerido&.id),
               { include_blank: "— Seleccionar —" },
-              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+              class: clases_de_input %>
         </div>
         <div class="flex flex-col justify-end gap-3">
-          <label class="flex items-center gap-2 text-sm">
-            <%= f.check_box :con_reempaque, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+          <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+            <%= f.check_box :con_reempaque, class: "rounded border-gray-300 dark:border-gray-600 text-cec-teal focus:ring-cec-teal" %>
             Con Reempaque
           </label>
-          <label class="flex items-center gap-2 text-sm">
-            <%= f.check_box :consolidado, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+          <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+            <%= f.check_box :consolidado, class: "rounded border-gray-300 dark:border-gray-600 text-cec-teal focus:ring-cec-teal" %>
             Consolidado
           </label>
         </div>
       </div>
-    </div>
+    <% end %>
 
-    <%# Titulo + Proveedor %>
-    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 space-y-4">
-      <h3 class="text-sm font-bold text-gray-800">Referencia</h3>
+    <%= render FormSectionComponent.new(title: "Referencia",
+          subtitle: "Con qué se va a reconocer este envío") do %>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Título de Referencia</label>
-          <%= f.text_field :titulo, placeholder: "Ej. Televisor, Zapatos...",
-              class: "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
-                     focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+          <label class="<%= clases_de_etiqueta %>"><%= etiqueta_de_campo("Título de Referencia") %></label>
+          <%= f.text_field :titulo, placeholder: "Ej. Televisor, Zapatos...", class: clases_de_input %>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Proveedor / Tienda</label>
+          <label class="<%= clases_de_etiqueta %>">
+            <%= etiqueta_de_campo("Proveedor / Tienda", ayuda: "(opcional)") %>
+          </label>
           <%# PR-C6.36: sugerencias del catalogo de Proveedores, con texto libre.
               Mismo patron que el carrier de /etiquetar, que Yusef ya aprobo:
               "dropdown con texto libre para agregar a la lista". No se migra
               a FK porque `PreAlerta.proveedor` es un string y cambiarlo
               tocaria datos viejos por una pantalla que nadie reporto rota. %>
           <%= f.text_field :proveedor, list: "proveedores-list", placeholder: "Ej. Amazon, Best Buy...",
-              class: "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
-                     focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+              class: clases_de_input %>
           <datalist id="proveedores-list">
             <% @proveedores_sugeridos.each do |p| %>
               <option value="<%= p.nombre %>">
@@ -81,23 +85,22 @@
           </datalist>
         </div>
       </div>
-    </div>
+    <% end %>
 
-    <%# Notas %>
-    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-      <label class="block text-sm font-medium text-gray-700 mb-1.5">Notas del grupo</label>
+    <%= render FormSectionComponent.new(title: "Notas del grupo",
+          subtitle: "Van a toda la pre-alerta, no a un paquete suelto") do %>
       <%= f.text_area :notas_grupo, rows: 2,
-          placeholder: "Notas opcionales...",
-          class: "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
-                 focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
-    </div>
+          placeholder: "Notas opcionales...", class: clases_de_input %>
+    <% end %>
 
-    <%# Paquetes %>
-    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100" data-controller="pre-alerta-editor">
+    <%# La tarjeta ES el elemento de Stimulus: `pre-alerta-editor` vive acá y no
+        en un div de adentro, así que los targets del template y del contador
+        quedan dentro de su alcance. Por eso el componente acepta `data`. %>
+    <%= render FormSectionComponent.new(data: { controller: "pre-alerta-editor" }) do |s| %>
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-2">
-          <h3 class="text-sm font-bold text-gray-800">Paquetes</h3>
-          <span data-pre-alerta-editor-target="counter" class="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-cec-navy/10 text-cec-navy">0</span>
+          <h2 class="text-xl sm:text-2xl font-bold text-cec-navy dark:text-cec-gold">Paquetes</h2>
+          <span data-pre-alerta-editor-target="counter" class="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-cec-navy/10 dark:bg-cec-gold/20 text-cec-navy dark:text-cec-gold">0</span>
         </div>
       </div>
 
@@ -107,30 +110,27 @@
 <% end %>
       </div>
 
-      <%# Botón Agregar Paquete %>
       <div class="mt-4">
-        <button type="button" data-action="click->pre-alerta-editor#addPaquete"
-                data-pre-alerta-editor-target="addButton"
-                class="inline-flex items-center gap-2 border border-cec-teal text-cec-teal font-semibold px-5 py-2.5 rounded-lg hover:bg-cec-teal/10 transition-colors text-sm">
-          <%= heroicon "plus-circle", variant: :outline, options: { class: "w-5 h-5" } %>
-          Agregar Paquete
-        </button>
+        <%= render ButtonComponent.new(variant: :outline_teal, size: :md, icon: "plus-circle",
+              data: { action: "click->pre-alerta-editor#addPaquete",
+                      pre_alerta_editor_target: "addButton" }) do %>Agregar Paquete<% end %>
       </div>
 
 <template data-pre-alerta-editor-target="template">
   <%= render "pre_alertas/paquete_card",
         f: f, pap: PreAlertaPaquete.new, index: "NEW_INDEX" %>
 </template>
-    </div>
 
-    <%# Actions %>
-    <div class="flex flex-col-reverse sm:flex-row sm:justify-between gap-3">
-      <%= render ButtonComponent.new(variant: :ghost, size: :lg, icon: "arrow-left", href: pre_alertas_path) do %>
-        Cancelar
+      <%# El pie va DENTRO de la última tarjeta, como en el portal: suelto abajo
+          se leía como si no perteneciera al formulario. %>
+      <% s.with_footer do %>
+        <%= render ButtonComponent.new(variant: :ghost, size: :lg, icon: "arrow-left", href: pre_alertas_path) do %>
+          Cancelar
+        <% end %>
+        <%= render ButtonComponent.new(variant: :gold, size: :lg, icon: "check-circle", type: "submit") do %>
+          Crear Pre-Alerta
+        <% end %>
       <% end %>
-      <%= render ButtonComponent.new(variant: :gold, size: :lg, icon: "check-circle", type: "submit") do %>
-        Crear Pre-Alerta
-      <% end %>
-    </div>
+    <% end %>
   <% end %>
 </div>

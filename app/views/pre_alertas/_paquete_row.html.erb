@@ -25,7 +25,7 @@
     `readonly`. %>
 <% ya_recibido = pap.paquete.present? && !pap.paquete.pre_alerta_estado? %>
 
-<tr class="paquete-row <%= "ring-1 ring-inset ring-amber-300 bg-amber-50/40" if ya_recibido %>"
+<tr class="paquete-row <%= "ring-1 ring-inset ring-amber-300 bg-amber-50/40 dark:bg-amber-900/20" if ya_recibido %>"
     <%= tag.attributes(atributos_fila) %>>
   <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
     <td class="px-4 py-2">
@@ -53,15 +53,14 @@
             data: { "1p-ignore": true, lpignore: true, "form-type": "other",
                     tracking_input_target: "input",
                     action: "input->tracking-input#sanitize input->tracking-duplicado#buscar" },
-            class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
-                   focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
-        <p data-tracking-input-target="error" class="hidden text-xs text-red-600 mt-1"></p>
+            class: clases_de_input_compacto %>
+        <p data-tracking-input-target="error" class="hidden text-xs text-red-600 dark:text-red-400 mt-1"></p>
         <p data-tracking-duplicado-target="aviso"
-           class="hidden mt-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+           class="hidden mt-1 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded px-2 py-1">
           <span data-tracking-duplicado-target="texto"></span>
         </p>
         <% if ya_recibido %>
-          <p class="mt-1 text-xs text-amber-800" data-aviso="ya-recibido">
+          <p class="mt-1 text-xs text-amber-800 dark:text-amber-300" data-aviso="ya-recibido">
             Este paquete ya se recibió. Cambiar el tracking lo desvincula.
           </p>
         <% end %>
@@ -70,20 +69,17 @@
 
     <td class="px-4 py-2">
       <%= pf.text_field :descripcion, placeholder: "Descripcion",
-          class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
-                 focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+          class: clases_de_input_compacto %>
     </td>
 
     <td class="px-4 py-2">
       <%= pf.text_area :instrucciones, placeholder: "Instrucciones", rows: 2,
-          class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
-                 focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+          class: clases_de_input_compacto %>
     </td>
 
     <td class="px-4 py-2">
       <%= pf.date_field :fecha, data: { controller: "flatpickr" },
-          class: "block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
-                 focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+          class: clases_de_input_compacto %>
     </td>
 
     <%# PR-C6.25: el estado por tracking, que solo estaba en `show`. Yusef:
@@ -105,11 +101,11 @@
     <td class="px-4 py-2 text-center" data-columna="vinculado">
       <% if pap.paquete&.numero_recepcion.present? %>
         <%= link_to pap.paquete.numero_recepcion, paquete_path(pap.paquete),
-              class: "font-mono text-xs text-cec-navy hover:underline", target: "_blank" %>
+              class: "font-mono text-xs text-cec-navy dark:text-cec-teal-light hover:underline", target: "_blank" %>
       <% elsif pap.paquete %>
-        <span class="text-xs text-gray-400 italic">sin recibir</span>
+        <span class="text-xs text-gray-400 dark:text-gray-500 italic">sin recibir</span>
       <% else %>
-        <span class="text-xs text-gray-400">—</span>
+        <span class="text-xs text-gray-400 dark:text-gray-500">—</span>
       <% end %>
     </td>
 

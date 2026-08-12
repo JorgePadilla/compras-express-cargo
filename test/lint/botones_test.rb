@@ -63,7 +63,6 @@ class BotonesTest < ActiveSupport::TestCase
     "app/views/paquetes/_estado_transition_modal.html.erb"   => 3,
     "app/views/paquetes/reimprimir_etiquetas.html.erb"       => 3,
     "app/views/pre_alertas/index.html.erb"                   => 3,
-    "app/views/pre_alertas/new.html.erb"                     => 1,
     "app/views/shared/_emitir_nota_modal.html.erb"           => 3,
     "app/views/cotizaciones/index.html.erb"                  => 2,
     # RP-20: los cuatro botones de probar sonidos pasaron a ButtonComponent.
