@@ -61,8 +61,10 @@ class BotonesTest < ActiveSupport::TestCase
     "app/views/pre_alertas/index.html.erb"                   => 3,
     "app/views/pre_alertas/new.html.erb"                     => 1,
     "app/views/shared/_emitir_nota_modal.html.erb"           => 3,
-    "app/views/shared/_sonido_config.html.erb"               => 3,
     "app/views/cotizaciones/index.html.erb"                  => 2,
+    # RP-20: los cuatro botones de probar sonidos pasaron a ButtonComponent.
+    # Quedan los dos del diálogo (abrir y "Listo").
+    "app/views/shared/_sonido_config.html.erb"               => 2,
     "app/views/cuenta/facturas/show.html.erb"                => 2,
     "app/views/cuenta/pre_alertas/new.html.erb"              => 2,
     "app/views/cuenta/recibos/show.html.erb"                 => 2,

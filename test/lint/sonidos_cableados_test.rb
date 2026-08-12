@@ -80,6 +80,28 @@ class SonidosCableadosTest < ActiveSupport::TestCase
     assert_empty mudos, "abren un modal sin hacer sonar nada:\n#{mudos.join("\n")}"
   end
 
+  test "el modal deja probar exactamente los sonidos que el sistema toca" do
+    # Jorge, de oído: "el modal suena distinto de los reales; los del sistema
+    # están bien, hay que arreglar los del modal".
+    #
+    # Estaba escrito a mano y se había separado: el botón rotulado "Pre-alerta"
+    # tocaba `notify` —que es el «ya existía»— y `speakPreAlerta`, el que suma
+    # la voz, no tenía botón. Probar un sonido que no es el que vas a oír es
+    # peor que no poder probarlo.
+    reales = cableados.map(&:last).uniq - SonidosDeEscaneo::NO_SON_SONIDOS
+
+    assert_equal reales.sort, SonidosDeEscaneo::ACCIONES.sort,
+                 "el modal y las pantallas no ofrecen los mismos sonidos"
+  end
+
+  test "todo boton del modal dice cuando suena ese sonido" do
+    # Sin la ayuda al lado, "Ya existía" y "Notas del cliente" son dos frases
+    # sueltas: hay que apretarlas una por una para saber cuál es cuál.
+    mudos = SonidosDeEscaneo::BOTONES.reject { |b| b[:etiqueta].present? && b[:ayuda].present? }
+
+    assert_empty mudos.map { |b| b[:accion] }
+  end
+
   test "las dos pantallas con escaneo cablean el fallo del guardado" do
     # Un guardado que falla sin sonido es la misma trampa que el modal mudo.
     # /entrega_personal tenía solo `success`.
