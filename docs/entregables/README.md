@@ -12,9 +12,11 @@ bin/rails docs:preguntas_xlsx
 bin/rails docs:preguntas_pdf
 bin/rails docs:servicios_pdf    # estos dos van aparte
 bin/rails docs:procesos_pdf
+bin/rails docs:sonidos_wav      # no es PDF: son los tres sonidos de error
 ```
 
-Fuente: `lib/tasks/docs.rake`, `lib/servicios_pdf.rb` y `lib/procesos_pdf.rb`.
+Fuente: `lib/tasks/docs.rake`, `lib/servicios_pdf.rb`, `lib/procesos_pdf.rb` y
+`lib/sonidos_de_error.rb`.
 El estilo compartido —las constantes, las tablas, la casilla que se marca a
 mano— vive en `lib/pdf_entregable.rb`; las cajas, flechas y bifurcaciones de
 los diagramas, en `lib/pdf_diagrama.rb`.
@@ -26,6 +28,7 @@ los diagramas, en `lib/pdf_diagrama.rb`.
 | `preguntas_para_yusef.pdf` | Las 23 preguntas para contestar **a mano**: casilla dibujada y renglones. Es el formato que volvió contestado y del que salieron los requerimientos `RP-01`…`RP-23`. |
 | `servicios_para_yusef.pdf` | Los cinco servicios: una comparativa, una ficha por cada uno con su escalera de precios y su mínimo, cómo se calcula lo que se cobra, y por dónde pasa un paquete. Los números **salen de la base**, no de la documentación, y donde los dos no coinciden va la pregunta con su casilla (`RP-24`…`RP-29`). 9 páginas. |
 | `procesos_para_yusef.pdf` | Los diagramas de proceso: el camino que recorre un paquete desde la pre-alerta hasta la entrega, más los ocho desvíos (Entrega Personal, consolidación, reempaque, recolecta, retención, cambio de servicio, salidas del camino, notas). Lo que contesta es **hasta dónde llega lo construido**: los pasos sin pantalla van con borde punteado. Una sola pregunta, `RP-30`. 12 páginas. **Solo se pregunta por el módulo en el que estamos** (Jorge, 2026-08-11): el documento muestra los huecos de más adelante —empaque, firma y foto, el pago completo— pero no le pide a Yusef que los decida antes de tiempo. El próximo entregable arranca en `RP-31`. |
+| `sonidos/error_*.wav` | **No es un documento: son tres sonidos.** Las tres opciones del pitido de error, para que Yusef elija una (`RP-20`). Salen de la misma constante que toca el navegador, así que el archivo que se manda por WhatsApp **es** el que suena en la bodega — hay test que lo fija. Conviene que los oiga en `/etiquetar` → botón **Sonidos**, con el ruido de fondo real. Ver `sonidos/README.md`. |
 | `preguntas_para_yusef.xlsx` | **Hoja 1:** las 12 preguntas abiertas, ordenadas por urgencia — las tres primeras son las que hoy hacen que el sistema cobre distinto de lo que él quiere. **Hoja 2:** todas las tarifas cargadas, leídas de la base. **Hoja 3:** los 11 campos de la etiqueta. **Hoja 4:** los cargos que no son flete, con la moneda que falta definir. |
 
 ## Cuándo regenerarlos
