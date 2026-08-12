@@ -68,62 +68,63 @@
 
     <%# Info row %>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-        <p class="text-xs text-gray-500">Numero</p>
-        <p class="font-mono font-bold text-cec-navy"><%= @pre_alerta.numero_documento %></p>
-      </div>
-      <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-        <p class="text-xs text-gray-500">Cliente</p>
-        <p class="font-mono font-medium text-cec-navy"><%= @pre_alerta.cliente.codigo %></p>
-        <p class="text-sm text-gray-600"><%= @pre_alerta.cliente.nombre_completo %></p>
-      </div>
-      <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-        <p class="text-xs text-gray-500">Tipo Envio</p>
-        <p class="font-medium text-gray-800"><%= @pre_alerta.tipo_envio.nombre %></p>
-      </div>
-      <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-        <p class="text-xs text-gray-500">Estado</p>
+      <%# Fichas de dato, no secciones de formulario: van sin titulo y en
+          densidad compacta. Pasan por el componente igual para que compartan
+          tarjeta y tema oscuro con el resto. %>
+      <%= render FormSectionComponent.new(densidad: :compacta) do %>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Numero</p>
+        <p class="font-mono font-bold text-cec-navy dark:text-cec-gold"><%= @pre_alerta.numero_documento %></p>
+      <% end %>
+      <%= render FormSectionComponent.new(densidad: :compacta) do %>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Cliente</p>
+        <p class="font-mono font-medium text-cec-navy dark:text-cec-gold"><%= @pre_alerta.cliente.codigo %></p>
+        <p class="text-sm text-gray-600 dark:text-gray-300"><%= @pre_alerta.cliente.nombre_completo %></p>
+      <% end %>
+      <%= render FormSectionComponent.new(densidad: :compacta) do %>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Tipo Envio</p>
+        <p class="font-medium text-gray-800 dark:text-gray-100"><%= @pre_alerta.tipo_envio.nombre %></p>
+      <% end %>
+      <%= render FormSectionComponent.new(densidad: :compacta) do %>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Estado</p>
         <div class="mt-1">
           <%= f.select :estado, options_for_select(PreAlerta.estados.keys.map { |e| [e.humanize, e] }, @pre_alerta.estado),
-              {},
-              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+              {}, class: clases_de_input %>
         </div>
-      </div>
+      <% end %>
     </div>
 
     <%# Opciones %>
-    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+    <%= render FormSectionComponent.new(title: "Servicio", densidad: :compacta) do %>
       <div class="flex flex-wrap gap-4">
-        <label class="flex items-center gap-2 text-sm">
-          <%= f.check_box :con_reempaque, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+          <%= f.check_box :con_reempaque, class: "rounded border-gray-300 dark:border-gray-600 text-cec-teal focus:ring-cec-teal" %>
           Con Reempaque
         </label>
-        <label class="flex items-center gap-2 text-sm">
-          <%= f.check_box :consolidado, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+          <%= f.check_box :consolidado, class: "rounded border-gray-300 dark:border-gray-600 text-cec-teal focus:ring-cec-teal" %>
           Consolidado
         </label>
       </div>
-    </div>
+    <% end %>
 
     <%# Titulo + Proveedor %>
-    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+    <%= render FormSectionComponent.new(title: "Referencia", densidad: :compacta) do %>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1.5">Título de Referencia</label>
-          <%= f.text_field :titulo, placeholder: "Ej. Televisor, Zapatos...",
-              class: "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
-                     focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+          <label class="<%= clases_de_etiqueta %>"><%= etiqueta_de_campo("Título de Referencia") %></label>
+          <%= f.text_field :titulo, placeholder: "Ej. Televisor, Zapatos...", class: clases_de_input %>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1.5">Proveedor / Tienda</label>
+          <label class="<%= clases_de_etiqueta %>">
+            <%= etiqueta_de_campo("Proveedor / Tienda", ayuda: "(opcional)") %>
+          </label>
           <%# PR-C6.36: sugerencias del catalogo de Proveedores, con texto libre.
               Mismo patron que el carrier de /etiquetar, que Yusef ya aprobo:
               "dropdown con texto libre para agregar a la lista". No se migra
               a FK porque `PreAlerta.proveedor` es un string y cambiarlo
               tocaria datos viejos por una pantalla que nadie reporto rota. %>
           <%= f.text_field :proveedor, list: "proveedores-list", placeholder: "Ej. Amazon, Best Buy...",
-              class: "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
-                     focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+              class: clases_de_input %>
           <datalist id="proveedores-list">
             <% @proveedores_sugeridos.each do |p| %>
               <option value="<%= p.nombre %>">
@@ -131,23 +132,23 @@
           </datalist>
         </div>
       </div>
-    </div>
+    <% end %>
 
     <%# Notas %>
-    <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-      <label class="block text-sm font-medium text-gray-700 mb-1.5">Notas del grupo</label>
+    <%= render FormSectionComponent.new(title: "Notas del grupo", densidad: :compacta) do %>
       <%= f.text_area :notas_grupo, rows: 2,
           placeholder: "Notas opcionales para este grupo de paquetes...",
-          class: "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
-                 focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
-    </div>
+          class: clases_de_input %>
+    <% end %>
 
     <%# Paquetes table %>
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div class="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
-        <h3 class="text-sm font-bold text-gray-800">Paquetes</h3>
+    <%# `al_borde`: la tabla llega a los bordes, así que la tarjeta no pone
+        padding — lo ponen el encabezado y las filas, como hasta ahora. %>
+    <%= render FormSectionComponent.new(densidad: :al_borde) do %>
+      <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
+        <h2 class="text-base font-bold text-cec-navy dark:text-cec-gold">Paquetes</h2>
         <span data-pre-alerta-editor-target="counter"
-              class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500"></span>
+              class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300"></span>
 
         <%# PR-C6.45: el estado del guardado. Sin esto el autosave es invisible
             y el operario no sabe si lo que escribió quedó. %>
@@ -183,7 +184,7 @@
           </tbody>
         </table>
       </div>
-    </div>
+    <% end %>
 
 <%# PR-C6.44: el template sale del MISMO partial que las filas de arriba.
     Antes era HTML a mano con SEIS celdas contra siete columnas, asi que
@@ -218,11 +219,11 @@
   <%# PR-C6.45: el aviso de guardado del portal. Aparece 3 segundos y se va. %>
   <div data-pre-alerta-editor-target="savedModal"
        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40">
-    <div class="bg-white rounded-2xl shadow-xl px-8 py-6 text-center">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl px-8 py-6 text-center">
       <div class="w-12 h-12 mx-auto rounded-full bg-cec-teal/10 text-cec-teal flex items-center justify-center mb-3">
         <%= heroicon "check", variant: :outline, options: { class: "w-6 h-6" } %>
       </div>
-      <p class="text-sm font-semibold text-cec-navy">Cambios guardados</p>
+      <p class="text-sm font-semibold text-cec-navy dark:text-cec-gold">Cambios guardados</p>
     </div>
   </div>
 

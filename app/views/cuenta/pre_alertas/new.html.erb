@@ -36,13 +36,8 @@
     <%= form_with url: cuenta_pre_alertas_path, method: :post, class: "space-y-6 animate-fade-in-up" do |f| %>
       <%= hidden_field_tag :wizard_step, 1 %>
 
-      <div class="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-100">
-        <div class="mb-6">
-          <h2 class="text-xl sm:text-2xl font-bold text-cec-navy mb-2">Elige tu servicio</h2>
-          <p class="text-sm text-gray-600 leading-relaxed">
-            Selecciona cómo quieres que se envíen tus paquetes.
-          </p>
-        </div>
+      <%= render FormSectionComponent.new(title: "Elige tu servicio",
+            subtitle: "Selecciona cómo quieres que se envíen tus paquetes.") do |s| %>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6" data-wizard-target="options">
           <%# ---------- Grupo izquierdo: con reempaque + opción a consolidar ---------- %>
@@ -91,15 +86,14 @@
           </div>
         </div>
 
-        <%# Card footer — back link %>
-        <div class="mt-8 -mx-6 sm:-mx-8 px-6 sm:px-8 pt-5 border-t border-gray-200 flex justify-start">
+        <% s.with_footer do %>
           <%= render ButtonComponent.new(
                 variant: :ghost, size: :lg, icon: "arrow-left",
                 href: cuenta_pre_alertas_path) do %>
             Mis Pre-Alertas
           <% end %>
-        </div>
-      </div>
+        <% end %>
+      <% end %>
     <% end %>
 
   <%# ============================== %>
@@ -108,14 +102,9 @@
   <% elsif step == 2 %>
     <%= form_with url: cuenta_pre_alertas_path, method: :post, class: "space-y-6 animate-fade-in-up" do |f| %>
       <%= hidden_field_tag :wizard_step, 2 %>
-      <div class="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-100">
-        <div class="mb-6">
-          <h2 class="text-xl sm:text-2xl font-bold text-cec-navy mb-2">¿Deseas consolidar?</h2>
-          <p class="text-sm text-gray-600 leading-relaxed">
-            Consolidar agrupa múltiples paquetes en un solo envío para optimizar tu espacio y reducir costos.
-          </p>
-          <p class="text-xs text-gray-500 mt-1">Aplica a EXPRESS · CER · CEM</p>
-        </div>
+      <%= render FormSectionComponent.new(title: "¿Deseas consolidar?",
+            subtitle: "Consolidar agrupa múltiples paquetes en un solo envío para optimizar tu espacio y reducir costos.") do |s| %>
+        <p class="text-xs text-gray-500 dark:text-gray-400 -mt-4 mb-6">Aplica a EXPRESS · CER · CEM</p>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" data-wizard-target="options">
           <label class="cursor-pointer group">
@@ -129,7 +118,7 @@
                   <%= heroicon "squares-plus", variant: :outline, options: { class: "w-7 h-7 text-cec-gold" } %>
                 </div>
                 <div class="flex-1">
-                  <p class="font-bold text-cec-navy">Sí, consolidar</p>
+                  <p class="font-bold text-cec-navy dark:text-cec-gold">Sí, consolidar</p>
                   <p class="text-xs text-gray-500 mt-1">Agrupar paquetes en un solo envío</p>
                 </div>
               </div>
@@ -147,7 +136,7 @@
                   <%= heroicon "archive-box", variant: :outline, options: { class: "w-7 h-7 text-gray-500" } %>
                 </div>
                 <div class="flex-1">
-                  <p class="font-bold text-cec-navy">Sin consolidar</p>
+                  <p class="font-bold text-cec-navy dark:text-cec-gold">Sin consolidar</p>
                   <p class="text-xs text-gray-500 mt-1">Enviar por separado</p>
                 </div>
               </div>
@@ -155,15 +144,14 @@
           </label>
         </div>
 
-        <%# Card footer — back link %>
-        <div class="mt-8 -mx-6 sm:-mx-8 px-6 sm:px-8 pt-5 border-t border-gray-200 flex justify-start">
+        <% s.with_footer do %>
           <%= render ButtonComponent.new(
                 variant: :ghost, size: :lg, icon: "arrow-left",
                 href: new_cuenta_pre_alerta_path(step: 1)) do %>
             Atrás
           <% end %>
-        </div>
-      </div>
+        <% end %>
+      <% end %>
     <% end %>
 
   <%# ============================== %>
@@ -183,41 +171,28 @@
         class: "space-y-6 animate-fade-in-up" do |f| %>
       <%= hidden_field_tag :wizard_step, 3 %>
 
-      <div class="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-100">
-        <div class="mb-6">
-          <h2 class="text-xl sm:text-2xl font-bold text-cec-navy mb-2">Datos del paquete</h2>
-        </div>
+      <%= render FormSectionComponent.new(title: "Datos del paquete") do |s| %>
 
         <div class="grid grid-cols-1 gap-5">
           <%# Titulo de Referencia + Proveedor en fila %>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label class="block">
-              <span class="block text-sm font-semibold text-cec-navy mb-1.5">
-                Título de Referencia
-                <span class="text-xs font-normal text-red-500 ml-1">Obligatorio</span>
-              </span>
+              <span class="<%= clases_de_etiqueta %>"><%= etiqueta_de_campo("Título de Referencia", obligatorio: true) %></span>
               <input type="text" name="titulo" value="<%= h(params[:titulo]) %>" required
                      placeholder="Ej. Televisor, Zapatos..."
-                     class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
-                            focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
+                     class="<%= clases_de_input %>">
             </label>
             <label class="block">
-              <span class="block text-sm font-semibold text-cec-navy mb-1.5">
-                Proveedor / Tienda <span class="text-xs font-normal text-gray-500">(opcional)</span>
-              </span>
+              <span class="<%= clases_de_etiqueta %>"><%= etiqueta_de_campo("Proveedor / Tienda", ayuda: "(opcional)") %></span>
               <input type="text" name="proveedor" value="<%= h(params[:proveedor]) %>"
                      placeholder="Ej. Amazon, Best Buy..."
-                     class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
-                            focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
+                     class="<%= clases_de_input %>">
             </label>
           </div>
 
           <%# Tracking %>
           <label class="block">
-            <span class="block text-sm font-semibold text-cec-navy mb-1.5">
-              Tracking o Número de Rastreo
-              <span class="text-xs font-normal text-red-500 ml-1">Obligatorio (Aquí NO va el Número de Orden)</span>
-            </span>
+            <span class="<%= clases_de_etiqueta %>"><%= etiqueta_de_campo("Tracking o Número de Rastreo", obligatorio: "Obligatorio (Aquí NO va el Número de Orden)") %></span>
             <div data-controller="tracking-input">
               <input type="text" name="tracking" value="<%= h(params[:tracking]) %>" required
                      placeholder="Ej. 1Z999AA1..."
@@ -225,32 +200,24 @@
                      title="Solo letras, números y guiones. Sin espacios ni símbolos."
                      data-tracking-input-target="input"
                      data-action="input->tracking-input#sanitize"
-                     class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
-                            focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
+                     class="<%= clases_de_input %>">
               <p data-tracking-input-target="error" class="hidden text-xs text-red-600 mt-1"></p>
             </div>
           </label>
 
           <%# Descripción del Producto %>
           <label class="block">
-            <span class="block text-sm font-semibold text-cec-navy mb-1.5">
-              Descripción del Producto
-              <span class="text-xs font-normal text-red-500 ml-1">Obligatorio</span>
-            </span>
+            <span class="<%= clases_de_etiqueta %>"><%= etiqueta_de_campo("Descripción del Producto", obligatorio: true) %></span>
             <textarea name="descripcion" rows="2" placeholder="¿Qué contiene el paquete?" required
-                      class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
-                             focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"><%= h(params[:descripcion]) %></textarea>
+                      class="<%= clases_de_input %>"><%= h(params[:descripcion]) %></textarea>
           </label>
 
           <%# Instrucciones Especiales del Paquete %>
           <label class="block">
-            <span class="block text-sm font-semibold text-cec-navy mb-1.5">
-              Instrucciones Especiales del Paquete <span class="text-xs font-normal text-gray-500">(opcional)</span>
-            </span>
+            <span class="<%= clases_de_etiqueta %>"><%= etiqueta_de_campo("Instrucciones Especiales del Paquete", ayuda: "(opcional)") %></span>
             <textarea name="instrucciones" rows="2"
                       placeholder="Instrucciones para el procesamiento del paquete..."
-                      class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm
-                             focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"><%= h(params[:instrucciones]) %></textarea>
+                      class="<%= clases_de_input %>"><%= h(params[:instrucciones]) %></textarea>
           </label>
         </div>
 
@@ -276,8 +243,7 @@
           </div>
         <% end %>
 
-        <%# Card footer — integrated action bar %>
-        <div class="mt-8 -mx-6 sm:-mx-8 px-6 sm:px-8 pt-5 border-t border-gray-200 flex flex-col-reverse sm:flex-row sm:justify-between gap-3">
+        <% s.with_footer do %>
           <%= render ButtonComponent.new(
                 variant: :ghost, size: :lg, icon: "arrow-left",
                 href: new_cuenta_pre_alerta_path(step: back_step)) do %>
@@ -297,8 +263,8 @@
               <%= heroicon "check-circle", variant: :outline, options: { class: "w-5 h-5" } %>
             </button>
           </div>
-        </div>
-      </div>
+        <% end %>
+      <% end %>
     <% end %>
   <% end %>
 </div>

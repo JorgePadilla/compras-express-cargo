@@ -1,0 +1,19 @@
+<%= tag.section(**atributos) do %>
+  <% if @title.present? %>
+    <div class="<%= @densidad[:separacion] %>">
+      <h2 class="<%= clases_del_titulo %>"><%= @title %></h2>
+      <%# Sin bajada no queda un <p> vacío separando: el hueco se nota. %>
+      <% if @subtitle.present? %>
+        <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed"><%= @subtitle %></p>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%= content %>
+
+  <%# El separador se dibuja SOLO si hay pie. Colgando bajo una tarjeta sin
+      botones se lee como si el contenido estuviera cortado. %>
+  <% if footer? %>
+    <div class="<%= clases_del_pie %>"><%= footer %></div>
+  <% end %>
+<% end %>
