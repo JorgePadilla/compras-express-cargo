@@ -159,11 +159,8 @@ end %>
       ¿Son menos cajas de las que dice? Un supervisor lo puede corregir con su PIN.
     </p>
     <% if @supervisores_cajas.any? %>
-      <button type="button" data-action="dialogo#abrir"
-              class="px-3 py-1.5 text-sm font-medium bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100
-                     border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600">
-        Bajar la cantidad de cajas
-      </button>
+      <%= render ButtonComponent.new(variant: :secondary, size: :sm,
+            data: { action: "dialogo#abrir" }) do %>Bajar la cantidad de cajas<% end %>
     <% else %>
       <span class="text-xs italic text-gray-500">Ningún supervisor tiene PIN asignado todavía.</span>
     <% end %>
@@ -210,10 +207,9 @@ end %>
           </p>
         </div>
         <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">
-          <button type="button" data-action="dialogo#cerrar"
-                  class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900">Cancelar</button>
-          <%= submit_tag "Bajar la cantidad",
-                class: "px-4 py-1.5 text-sm font-medium bg-cec-navy text-white rounded-lg hover:bg-cec-navy-dark cursor-pointer" %>
+          <%= render ButtonComponent.new(variant: :ghost, size: :sm,
+                data: { action: "dialogo#cerrar" }) do %>Cancelar<% end %>
+          <%= render ButtonComponent.new(variant: :primary, size: :sm, type: "submit") do %>Bajar la cantidad<% end %>
         </div>
       <% end %>
     </dialog>
@@ -1021,16 +1017,12 @@ end %>
                 data: { mover_pre_alerta_modal_target: "form" },
                 class: "px-5 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2 bg-gray-50 dark:bg-gray-800/50" do |f| %>
     <%= f.hidden_field :pre_alerta_id, value: "", data: { mover_pre_alerta_modal_target: "hiddenId" } %>
-    <button type="button"
-            data-action="click->mover-pre-alerta-modal#close"
-            class="px-3 py-1.5 rounded-md text-sm font-medium bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 ring-1 ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600">
-      Cancelar
-    </button>
-    <button type="submit" disabled
-            class="px-3 py-1.5 rounded-md text-sm font-semibold bg-cec-navy text-white hover:bg-cec-navy-dark disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5">
-      <%= heroicon "check", variant: :solid, options: { class: "w-4 h-4" } %>
-      Mover paquete
-    </button>
+    <%= render ButtonComponent.new(variant: :secondary, size: :sm,
+          data: { action: "click->mover-pre-alerta-modal#close" }) do %>Cancelar<% end %>
+    <%# Arranca deshabilitado; `mover_pre_alerta_modal_controller` lo habilita
+        buscando `button[type=submit]`, asi que el type va explicito. %>
+    <%= render ButtonComponent.new(variant: :primary, size: :sm, type: "submit",
+          icon: "check", disabled: true) do %>Mover paquete<% end %>
   <% end %>
 </dialog>
 
@@ -1090,11 +1082,8 @@ end %>
                 data: { asignar_tercero_modal_target: "form" },
                 class: "px-5 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2 bg-gray-50 dark:bg-gray-800/50" do |f| %>
     <%= f.hidden_field :tercero_id, value: "", data: { asignar_tercero_modal_target: "hiddenId" } %>
-    <button type="button"
-            data-action="click->asignar-tercero-modal#close"
-            class="px-3 py-1.5 rounded-md text-sm font-medium bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 ring-1 ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600">
-      Cancelar
-    </button>
+    <%= render ButtonComponent.new(variant: :secondary, size: :sm,
+          data: { action: "click->asignar-tercero-modal#close" }) do %>Cancelar<% end %>
   <% end %>
 </dialog>
 

@@ -38,7 +38,11 @@ require "test_helper"
 class BotonesTest < ActiveSupport::TestCase
   PRESUPUESTO = {
     "app/views/etiquetar/index.html.erb"                     => 10,
-    "app/views/paquetes/show.html.erb"                       => 15,
+    # PR-BTN.5: bajó de 15 a 9. Los que quedan crudos lo están a propósito:
+    # "Cambiar" / "Asignar" / "Vincular a un cliente" son acciones de texto
+    # dentro de una frase —un botón con borde ahí partiría la oración— y los dos
+    # "Cerrar" son la × del encabezado de un modal.
+    "app/views/paquetes/show.html.erb"                       => 9,
     "app/views/paquetes/_form.html.erb"                      => 14,
     "app/views/ventas/show.html.erb"                         => 8,
     "app/views/cotizaciones/show.html.erb"                   => 7,
