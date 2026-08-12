@@ -6,7 +6,7 @@ Reemplaza el sistema legacy ASP.NET MVC + DevExpress con una aplicacion moderna 
 
 ## Stack
 
-- **Backend:** Ruby 3.3 / Rails 8 / PostgreSQL 16
+- **Backend:** Ruby 3.3.9 / Rails 8 / PostgreSQL 17
 - **Frontend:** Hotwire (Turbo + Stimulus) / Tailwind CSS 4 / ViewComponents
 - **Jobs:** Solid Queue
 - **PDFs:** Prawn
@@ -30,10 +30,23 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 | 3b | Notas D/C + PDFs + Emails | ✅ |
 | 3c | Cotizaciones + Proformas + Financiamientos + Dual Currency | ✅ |
 | 4 | Entregas + Caja Diaria | ✅ |
+| 5 / 5b | Tareas + Re-empaque · Numeracion y Tracking | ✅ |
+| 5c | Detalle de Paquete + Warehouse Receipt (serie `PR-D`) | 🔨 |
+| 6 | Reportes + Configuraciones + Dashboard | 🔨 |
+| 10 | Contexto operativo en captura (serie `PR-9`) | 🔨 |
+| 11 | Tarifas y calculo de cobro (serie `PR-10`) | 🔨 |
+| 12 | Escaneo de manifiesto + pre-etiqueta de caja | 📋 |
+| 13 | Precio bloqueado + PIN de supervisor | ✅ |
+| 7 / 8 / 9 | Marketing CRM · Inventario · Fotos de paquetes | 📋 |
 
-**56 modelos, 101 migraciones, 6 mailers, 6 PDFs, 40 Stimulus controllers, 16 ViewComponents, 1270 tests.**
+El grueso del trabajo de agosto 2026 es la serie `PR-C6`, que sale de las
+conversaciones con el cliente y **se sigue en `docs/05`**, no en la tabla de
+fases. Ver [Series de PR](docs/06_fases_implementacion.md#series-de-pr).
 
-Ver detalle completo en [`docs/06_fases_implementacion.md`](docs/06_fases_implementacion.md).
+**60 modelos, 116 migraciones, 7 mailers, 49 Stimulus controllers, 17 ViewComponents, 1879 tests.**
+
+Ver detalle completo en [`docs/06_fases_implementacion.md`](docs/06_fases_implementacion.md)
+y el indice de la documentacion en [`docs/README.md`](docs/README.md).
 
 ## Setup local
 

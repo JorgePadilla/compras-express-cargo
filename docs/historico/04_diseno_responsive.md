@@ -1,5 +1,10 @@
 # Compras Express Cargo - Diseño Responsive (Mobile-First)
 
+> 📁 **HISTÓRICO — marzo 2026.** La estrategia mobile-first sigue siendo cierta,
+> pero los ejemplos de ERB son de antes de los ViewComponents y ya no
+> representan las vistas reales. Para el diseño vigente:
+> [`07_design_system.md`](../07_design_system.md).
+
 ## Estrategia
 
 Diseño **mobile-first** con Tailwind CSS 4. Tres breakpoints principales:

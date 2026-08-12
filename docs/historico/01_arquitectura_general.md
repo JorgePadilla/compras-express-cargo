@@ -1,5 +1,10 @@
 # Compras Express Cargo - Arquitectura General Rails 8
 
+> 📁 **HISTÓRICO — marzo 2026.** Describe el plan de arranque, no el sistema de
+> hoy. Se conserva por el registro de las decisiones iniciales. Para el estado
+> real: [`docs/README.md`](../README.md) y
+> [`06_fases_implementacion.md`](../06_fases_implementacion.md).
+
 ## Resumen del Proyecto
 
 Servicio de paquetería que recibe paquetes en Miami (USA) y los envía a Honduras. Replicación y mejora del sistema actual en https://cec.rsahn.com usando **Rails 8** con diseño responsive (mobile-first).
