@@ -10,6 +10,19 @@
       Renombrar
     <% end %>
   <% end %>
+  <% h.with_action do %>
+    <%# Deshabilitado en vez de escondido: que se vea que la acción existe y por
+        qué no aplica. `ButtonComponent` con `href` y `disabled` sale como
+        <span role="button" aria-disabled> — un <a> deshabilitado no existe. %>
+    <%= render ButtonComponent.new(
+          href: (categoria_precio_path(@categoria) if @categoria.borrable?),
+          method: :delete, variant: :soft_danger, icon: "trash",
+          disabled: !@categoria.borrable?,
+          title: @categoria.motivo_no_borrable,
+          confirm: (borrar_categoria_confirmacion(@categoria) if @categoria.borrable?)) do %>
+      Eliminar
+    <% end %>
+  <% end %>
 <% end %>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">

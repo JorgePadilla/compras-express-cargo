@@ -46,7 +46,22 @@
             <td class="px-6 py-4"><%= render "tarifas_resumen", categoria: c %></td>
             <td class="px-6 py-4 text-right text-sm text-gray-500 dark:text-gray-400"><%= c.clientes.count %></td>
             <td class="px-6 py-4 text-right text-sm">
-              <%= render RowActionComponent.new(action: :edit, href: edit_categoria_precio_path(c), label: "Editar categoría") %>
+              <div class="inline-flex items-center gap-1">
+                <%= render RowActionComponent.new(action: :edit, href: edit_categoria_precio_path(c), label: "Editar categoría") %>
+                <%# Solo se puede borrar la que no usa nadie. Cuando no se puede, el
+                    motivo va en el `title` en vez de esconder el botón: que el
+                    usuario vea que la acción existe y por qué no aplica. %>
+                <% if c.borrable? %>
+                  <%= render RowActionComponent.new(action: :delete, href: categoria_precio_path(c),
+                        label: "Eliminar categoría",
+                        confirm: borrar_categoria_confirmacion(c)) %>
+                <% else %>
+                  <span class="inline-flex items-center p-1.5 text-gray-300 dark:text-gray-600 cursor-not-allowed"
+                        title="<%= c.motivo_no_borrable %>" aria-label="No se puede eliminar: <%= c.motivo_no_borrable %>">
+                    <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
+                  </span>
+                <% end %>
+              </div>
             </td>
           </tr>
         <% end %>

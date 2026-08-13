@@ -325,8 +325,20 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   puts "  ✓ #{User.count} users total (including demo)"
 
   # Demo clients
-  regular = CategoriaPrecio.find_by!(nombre: "Regular")
-  vip = CategoriaPrecio.find_by!(nombre: "VIP")
+  #
+  # "Regular" y "VIP" eran las categorias de la epoca vieja y ya no existen: la
+  # hoja de precios de Yusef no las declara y `BorrarCategoriasViejasSinUso` las
+  # saco. Los clientes demo usan el mismo criterio que se le aplico a los reales
+  # en PR-C7.08, para que dev se comporte como produccion:
+  #
+  #   los que eran regular -> sin categoria (pagan precio de lista)
+  #   los que eran vip     -> Clientes Amigos
+  #
+  # `find_by` sin bang a proposito: si por lo que sea la categoria no esta
+  # sembrada todavia, los clientes demo se crean igual y sin categoria, en vez de
+  # tumbar el seed entero.
+  regular = nil
+  vip = CategoriaPrecio.find_by(nombre: "Clientes Amigos")
   [
     { nombre: "Juan", apellido: "Perez", identidad: "0801199012345", email: "juan.perez@gmail.com",
       telefono: "99887766", telefono_whatsapp: "99887766", direccion: "Col. Kennedy, Tegucigalpa",

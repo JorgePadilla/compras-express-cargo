@@ -46,4 +46,21 @@ class CategoriaPrecioTest < ActiveSupport::TestCase
     assert_empty categoria_precios(:vip).tarifas_vigentes,
                  "VIP no tiene tarifas: sus clientes pagan precio de lista"
   end
+
+  test "borrable solo cuando no la usa nadie" do
+    libre = CategoriaPrecio.create!(nombre: "Sin uso")
+    assert libre.borrable?
+    assert_nil libre.motivo_no_borrable
+
+    clientes(:juan).update!(categoria_precio: libre)
+    assert_not libre.reload.borrable?
+    assert_match(/cliente/i, libre.motivo_no_borrable)
+  end
+
+  # Las de la hoja vuelven en la próxima siembra; borrarlas no es permanente y
+  # la confirmación lo tiene que decir.
+  test "sabe si la hoja de precios la declara" do
+    assert CategoriaPrecio.new(nombre: "Shein").declarada_en_la_hoja?
+    assert_not CategoriaPrecio.new(nombre: "Inventada").declarada_en_la_hoja?
+  end
 end
