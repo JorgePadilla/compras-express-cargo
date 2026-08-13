@@ -5005,7 +5005,7 @@ cerrar primero.
 
 ---
 
-### A7-19 · La pre-alerta se queda desincronizada del paquete — 🐛 **reproducido en vivo**
+### A7-19 · La pre-alerta se queda desincronizada del paquete — ✅ **ARREGLADO (PR-C7.02)**
 
 Lo reprodujeron juntos y les costó entenderlo:
 
@@ -5017,8 +5017,19 @@ Lo reprodujeron juntos y les costó entenderlo:
 
 **Lectura.** Al cambiar el servicio del paquete en `/etiquetar`, la pre-alerta
 conserva el servicio viejo, y el siguiente escaneo vuelve a proponer el servicio
-equivocado. Hay que decidir si la pre-alerta se actualiza sola o si se marca como
-resuelta.
+equivocado.
+
+**La causa.** `Paquete#aplicar_cambio_servicio` toca solo el paquete, y **nada en
+todo el repo escribía `pre_alertas.tipo_envio_id` después de crearla**. El único
+callback que baja del paquete a la pre-alerta es `sync_pre_alerta_estados`, que
+está condicionado al cambio de *estado* y solo toca el estado.
+
+**Cómo se resolvió (`PR-C7.02`).** La pre-alerta sigue al paquete: un
+`after_save` sobre `tipo_envio_id` que la sincroniza **cuando no hay duda** —si
+todos los paquetes vinculados coinciden. Si divergen (dos cambios de servicio
+distintos en la misma pre-alerta) **no se adivina**: se deja como está y queda
+anotado en el historial, porque elegir uno sería inventarle un servicio al
+cliente. Eso cierra `RP-33`: se corrige sola.
 
 Yusef también pidió limpiar los datos de prueba: *"tenés que limpiar la base"*,
 *"cuando hagamos pruebas mejor siempre trackings nuevos, para que todo quede
@@ -5276,15 +5287,15 @@ Sobre prefactura Yusef fue claro en que todavía no toca:
 |---|---|
 | Bodega Honduras después de prefactura (`A7-01`) | ⏳ corregir `lib/procesos_pdf.rb` y verificar el flujo |
 | Modal bloqueante en `/etiquetar` (`A7-17`) | ⏳ **el más fácil, va primero** |
-| Pre-alerta desincronizada del paquete (`A7-19`) | ⏳ bug |
+| Pre-alerta desincronizada del paquete (`A7-19`) | ✅ `PR-C7.02` — la pre-alerta sigue al paquete |
 | Entrega Personal caja por caja (`A7-20`, `A7-21`) | ✅ `PR-C7.04` — repetidor con Agregar, y la etiqueta sin el `1 de N` |
-| Estado `enviado a sucursal` / F7 (`A7-09`) | ⏳ migración + badges |
-| Sacar `prefacturado` de los estados (`A7-11`) | ⏳ ver a qué se migra lo existente |
-| Ordenar el dropdown de estados (`A7-12`) | ⏳ Yusef ordena la lista |
-| `Disponible en sucursal <nombre>` (`A7-13`) | ⏳ bloqueado por la sucursal estructurada |
+| Estado `enviado a sucursal` / F7 (`A7-09`) | ✅ `PR-C7.03` — con `sucursal_destino_id` y fecha, que es lo que lo hace auditable |
+| Sacar `prefacturado` de los estados (`A7-11`) | ✅ `PR-C7.03` — fuera del dropdown, sigue en el código |
+| Ordenar el dropdown de estados (`A7-12`) | ✅ `PR-C7.03` — orden de proceso, desvíos al final |
+| `Disponible en sucursal <nombre>` (`A7-13`, `A7-14`, `A7-15`) | ✅ `PR-C7.03` — **no estaba bloqueado**: `Cliente#sucursal_retiro` ya existía |
 | Escaneo de manifiesto con aviso no bloqueante (`A7-03`…`A7-08`) | ⏳ Fase 12 |
 | Recolecta como pre-alerta de EP (`A7-22`, `A7-23`) | ⏳ Fase Miami |
-| Estado + servicio `COM` consolidando Miami (`A7-10`) | 📋 documentado, **no se activa todavía** |
+| Estado `consolidando_miami` (`A7-10`) | ✅ `PR-C7.03` — el estado sí; el **servicio `COM` no se activa** |
 | Impuesto de Miami (`A7-24`) | 💰 va con `RP-24`…`RP-29` |
 | Dos tablas de precios que se pisan (`A7-25`) | 💰 unificar |
 | Precio especial por cliente y servicio (`A7-26`) | ⏳ extiende `PR-C6.41` |
@@ -5298,10 +5309,12 @@ Sobre prefactura Yusef fue claro en que todavía no toca:
 |---|---|
 | `RP-31` | ¿Pie cúbico o libra volumétrica? (`A7-27`) |
 | `RP-32` | ¿De cuánto es la ventana de notificación al escanear el manifiesto de sucursal — media hora, una hora? (`A7-08`) |
-| `RP-33` | Al cambiar el servicio en `/etiquetar`, ¿la pre-alerta se corrige sola o se marca resuelta? (`A7-19`) |
-| `RP-34` | Los paquetes que hoy están en `prefacturado`, ¿a qué estado se migran? (`A7-11`) |
+| ~~`RP-33`~~ | ~~Al cambiar el servicio en `/etiquetar`, ¿la pre-alerta se corrige sola o se marca resuelta?~~ **✅ se corrige sola** cuando no hay ambigüedad — `PR-C7.02` |
+| ~~`RP-34`~~ | ~~Los paquetes que hoy están en `prefacturado`, ¿a qué estado se migran?~~ **✅ no se migra ninguno**: el estado se queda, solo deja de poder elegirse a mano — `PR-C7.03` |
 | `RP-35` | El Excel de roles × operaciones (`A7-28`) — lo hace Evelin |
-| `RP-36` | Nombre e iniciales de cada sucursal, y la sucursal de retiro estructurada en el cliente (`A7-13`, `A7-15`) |
+| ~~`RP-36`~~ | ~~Nombre e iniciales de cada sucursal, y la sucursal de retiro estructurada en el cliente~~ **✅ ya existían**: `Sucursal#codigo` son las iniciales y `Cliente#sucursal_retiro_id` está desde antes. El doc que decía lo contrario estaba viejo |
+| `RP-37` | **El impuesto de Miami** (`A7-24`): ¿qué tasa, sobre qué base, en qué servicios? Yusef solo dijo que falta. Y no es agregar una tasa: `impuesto` es una columna escalar en 5 tablas |
+| `RP-38` | **¿Se reordena el pipeline?** Yusef dice *aduana → prefactura → bodega*, y el código tiene *aduana → disponible → prefacturado*, con `Paquete.facturables` exigiendo `disponible_entrega`. Cambiarlo decide **qué paquetes se pueden pre-facturar**, así que no se tocó |
 
 ---
 

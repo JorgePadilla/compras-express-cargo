@@ -85,6 +85,46 @@ class PreAlerta < ApplicationRecord
     update!(estado: ESTADO_PIPELINE[min_idx])
   end
 
+  # A7-19. La contraparte de `Paquete#sync_pre_alerta_tipo_envio`: cuando Miami
+  # recibe el paquete con otro servicio, la pre-alerta lo sigue.
+  #
+  # Se sincroniza **solo cuando no hay duda**. Si todos los paquetes vinculados
+  # coinciden, la pre-alerta toma ese tipo. Si divergen —dos cambios de servicio
+  # distintos dentro de la misma pre-alerta— no se adivina: se deja como está y
+  # queda anotado, porque elegir uno de los dos sería inventarle un servicio al
+  # cliente.
+  #
+  # Va con `update` y no `update!` a propósito: esto corre dentro de un
+  # `after_save` del paquete, y `respect_max_paquetes_por_accion` puede rechazar
+  # el tipo nuevo (por ejemplo CKM, que solo admite un paquete). Que la
+  # pre-alerta no se pueda sincronizar **no puede tumbar la recepción del
+  # paquete** — se anota y se sigue.
+  def sincronizar_tipo_envio_desde_paquetes!
+    return if anulado?
+
+    tipos = pre_alerta_paquetes.where.not(paquete_id: nil).includes(:paquete)
+                               .filter_map { |pap| pap.paquete&.tipo_envio_id }.uniq
+    return if tipos.empty?
+
+    if tipos.size > 1
+      append_historial!("Los paquetes de esta pre-alerta quedaron con tipos de envío distintos; no se sincronizó.")
+      return
+    end
+
+    nuevo_id = tipos.first
+    return if nuevo_id == tipo_envio_id
+
+    anterior = tipo_envio&.nombre || "sin definir"
+    nuevo = TipoEnvio.find_by(id: nuevo_id)
+
+    if update(tipo_envio_id: nuevo_id)
+      append_historial!("Tipo de envío: #{anterior} → #{nuevo&.nombre} (así se recibió el paquete en Miami).")
+    else
+      append_historial!("No se pudo pasar a #{nuevo&.nombre}: #{errors.full_messages.to_sentence}.")
+      reload
+    end
+  end
+
   def anular!
     update!(estado: "anulado")
   end
