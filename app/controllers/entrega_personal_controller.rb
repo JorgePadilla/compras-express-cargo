@@ -19,6 +19,7 @@ class EntregaPersonalController < ApplicationController
     @proveedores_ep = Proveedor.where(tipo: "entrega_personal").activos.ordered
     @sucursales_miami = Sucursal.activas.where(ubicacion: "miami").where.not(codigo_ep: nil).ordered
     @motivos_retencion = MotivoRetencion.activos.ordered
+    @tarifas_recolecta = TarifaRecolecta.activas.ordered
   end
 
   def create
@@ -120,6 +121,7 @@ class EntregaPersonalController < ApplicationController
     # los errores al digitador.
     @sucursales_miami = Sucursal.activas.where(ubicacion: "miami").where.not(codigo_ep: nil).ordered
     @motivos_retencion = MotivoRetencion.activos.ordered
+    @tarifas_recolecta = TarifaRecolecta.activas.ordered
     flash.now[:alert] = "No se pudo registrar la entrega personal."
     render :new, status: :unprocessable_entity
   end
@@ -144,6 +146,9 @@ class EntregaPersonalController < ApplicationController
       :numero_caja, :descripcion, :remitente, :driver,
       :notas_internas, :notas_retencion,
       :retener_miami,
+      # A7-22/A7-23: la recolecta vive en esta misma pantalla.
+      :recolecta_solicitada, :tarifa_recolecta_id, :recolecta_monto, :recolecta_moneda,
+      :recolecta_contacto, :recolecta_telefono, :recolecta_horario, :recolecta_instrucciones,
       motivo_retencion_ids: []
     )
   end
