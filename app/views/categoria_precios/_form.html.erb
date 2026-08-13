@@ -19,10 +19,12 @@
         <%= f.label :precio_libra_maritimo, "Precio Maritimo (LPS/lb)", class: "block text-sm font-medium text-gray-700 mb-1" %>
         <%= f.number_field :precio_libra_maritimo, step: 0.01, class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
       </div>
-      <div>
-        <%= f.label :precio_volumen, "Precio por Volumen", class: "block text-sm font-medium text-gray-700 mb-1" %>
-        <%= f.number_field :precio_volumen, step: 0.001, class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
-      </div>
+      <%# A7-25: acá había un campo "Precio por Volumen" que **no lo leía nadie**.
+          El cobro volumétrico se calcula con el divisor fijo de
+          `VolumetricoCalculator`, no con este número. Un campo editable que no
+          cobra nada es peor que no tenerlo: hace creer que se configuró algo.
+          La columna sigue en la base hasta que se confirme que no hay datos
+          que rescatar. %>
     </div>
   </div>
 

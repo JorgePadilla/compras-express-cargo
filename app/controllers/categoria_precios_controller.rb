@@ -44,6 +44,8 @@ class CategoriaPreciosController < ApplicationController
   end
 
   def categoria_params
-    params.require(:categoria_precio).permit(:nombre, :precio_libra_aereo, :precio_libra_maritimo, :precio_volumen)
+    params.require(:categoria_precio).permit(:nombre, :precio_libra_aereo, :precio_libra_maritimo)
+    # A7-25: `precio_volumen` sale de los permitidos junto con su campo. Ningún
+    # cálculo lo lee — el volumétrico usa el divisor de `VolumetricoCalculator`.
   end
 end
