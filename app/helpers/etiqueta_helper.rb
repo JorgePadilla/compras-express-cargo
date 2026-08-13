@@ -71,17 +71,23 @@ module EtiquetaHelper
     "#{recepcion}-#{paquete.numero_caja}"
   end
 
-  # "1/2" — número de caja sobre el total. Solo cuando el tracking se dividió.
-  # "Número y cantidad de paquetes" — el campo 9 de la lista de Yusef.
+  # El número de caja, solo. **Sin el total.**
   #
-  # Devuelve "1/1" cuando el tracking trae una sola caja, y no en blanco como
-  # antes: el espacio ya está reservado en la etiqueta, así que no cuesta nada,
-  # y en blanco es ambiguo — el operario no sabe si hay una sola caja o si el
-  # dato no se imprimió. Con "1/1" sabe que no tiene que buscar más.
+  # A7-21. Esto era "1/2" y Yusef lo cortó explicando por qué el total no se
+  # puede saber cuando se imprime:
+  #
+  #   > "La etiqueta **solo lleva el número, no lleva el uno de dos ni de
+  #   >  tres**, porque no estamos seguros cuántas estamos empacando."
+  #   > "Cuando menos acordás: hey, me salieron cuatro en vez de cinco."
+  #
+  # Una etiqueta que dice "1/5" sobre una carga que terminó en 4 cajas es peor
+  # que una que no dice nada: manda a buscar un bulto que no existe.
+  #
+  # Ojo: esto NO es el sufijo del código de barras. `etiqueta_codigo_barras`
+  # sigue emitiendo `RM…-2`, que es lo que permite rebajar inventario caja por
+  # caja en San Pedro. Son dos cosas distintas en dos lugares distintos.
   def etiqueta_fraccion(paquete)
-    total = [ paquete.cantidad_paquetes.to_i, 1 ].max
-
-    "#{paquete.numero_caja.presence || 1}/#{total}"
+    (paquete.numero_caja.presence || 1).to_s
   end
 
   # "Departamento abreviado y ciudad o pueblo" (Yusef). El departamento
