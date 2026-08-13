@@ -99,6 +99,15 @@ class Paquete < ApplicationRecord
   validate :no_advance_with_open_tareas
   validate :sub_localidad_pertenece_a_sucursal_actual
   validate :retencion_requiere_motivo_o_notas, if: -> { estado == "retenido" }
+  # A7-09. El estado existe para auditar —"qué paquete no escanearon o no
+  # enviaron"— y sin destino no audita nada.
+  #
+  # El `before_validation` va primero a propósito: en el 100% de los casos el
+  # destino es la sucursal donde el cliente retira, que el paquete ya trae. Sin
+  # ese default, cambiar el estado desde el dropdown de `/paquetes` fallaría con
+  # un error que el operario no sabría cómo arreglar desde esa pantalla.
+  before_validation :heredar_sucursal_destino, if: -> { estado == "enviado_sucursal" }
+  validates :sucursal_destino, presence: true, if: -> { estado == "enviado_sucursal" }
 
   # PR-D1.c: tarifa fija pre-establecida $35 USD + ISV (Yusef 2026-04-29).
   # Editable por el cajero al crear/asignar la recolecta. No hay tabla de
@@ -872,6 +881,13 @@ class Paquete < ApplicationRecord
     return unless tareas_bloqueantes_pendientes?
 
     errors.add(:estado, "no se puede avanzar: el paquete tiene tareas pendientes")
+  end
+
+  # A7-09: si nadie dijo a qué sucursal va, va a la que el cliente eligió para
+  # retirar. Es el caso normal; el destino explícito existe para cuando el
+  # paquete hace una escala en otra sucursal antes de llegar a la suya.
+  def heredar_sucursal_destino
+    self.sucursal_destino ||= sucursal
   end
 
   def sync_pre_alerta_estados

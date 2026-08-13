@@ -57,6 +57,25 @@ class EstadoPaqueteHelperTest < ActionView::TestCase
     assert_equal "Enviado a sucursal #{@tgu.nombre}", estado_de(p)
   end
 
+  # A7-09. El estado sirve para auditar el paquete que se quedó sin enviar, y
+  # sin destino no audita nada. Pero exigirlo a secas rompería el dropdown de
+  # /paquetes, así que primero se hereda el de retiro — que es el caso normal.
+  test "enviado a sucursal hereda el destino del de retiro" do
+    p = Paquete.create!(tracking: "DEST#{SecureRandom.hex(3)}", cliente: @cliente,
+                        sucursal: @tgu, estado: "recibido_miami")
+    p.update!(estado: "enviado_sucursal")
+
+    assert_equal @tgu, p.reload.sucursal_destino
+  end
+
+  test "sin sucursal de retiro ni destino, no se puede marcar enviado a sucursal" do
+    p = Paquete.create!(tracking: "DEST#{SecureRandom.hex(3)}", cliente: @cliente,
+                        sucursal: nil, estado: "recibido_miami")
+
+    refute p.update(estado: "enviado_sucursal")
+    assert_includes p.errors.attribute_names, :sucursal_destino
+  end
+
   # A7-15. "Las iniciales de la sucursal donde se entregó, para que uno pueda
   # entender en dónde se entregó."
   test "entregado lleva las iniciales de la sucursal" do

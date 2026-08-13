@@ -72,7 +72,7 @@ class DashboardMetrics
       ),
 
       # Actividad reciente (preloaded)
-      paquetes_recientes: Paquete.includes(:cliente).order(created_at: :desc).limit(8),
+      paquetes_recientes: Paquete.includes(:cliente, :sucursal, :sucursal_destino).order(created_at: :desc).limit(8),
       ventas_recientes:   Venta.includes(:cliente).order(created_at: :desc).limit(5)
     }
   end

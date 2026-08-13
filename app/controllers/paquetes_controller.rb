@@ -28,7 +28,7 @@ class PaquetesController < ApplicationController
 
   def index
     @paquetes = base_scope
-                  .includes(:cliente, :tercero, :tipo_envio, :sucursal, :manifiesto,
+                  .includes(:cliente, :tercero, :tipo_envio, :sucursal, :sucursal_destino, :manifiesto,
                             :pre_factura, :venta,
                             pre_alerta_paquetes: :pre_alerta)
     @paquetes = apply_filters(@paquetes)
