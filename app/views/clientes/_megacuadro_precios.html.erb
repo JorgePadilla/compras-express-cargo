@@ -1,0 +1,130 @@
+<%# El megacuadro de A7-26 · PR-C7.15.
+
+    Yusef: "ese precio especial para un cliente debería estar en el cliente…
+    entro al cliente y le pongo el precio especial", "le doy descuento en CER y
+    en CEM pero no le doy descuento en EXPRESS", "tiene que ser un megacuadro
+    para el cliente, un cuadro donde vaya con todas esas, como seleccionamos".
+
+    Acá vivían los checkboxes sueltos de "solo volumétrico" (PR-C6.41): eran
+    media matriz cliente × servicio. Ahora es la matriz entera, y los checkboxes
+    están en la fila de su servicio en vez de en una grilla aparte — dejarlos en
+    los dos lugares es el bug recurrente de este repo.
+
+    Las columnas de la izquierda son la mitad que Manalo pedía: se ve el
+    estándar ANTES de pisarlo. Yusef: "estandarizar la mayoría y crearle botones
+    para las excepciones". %>
+<% nuevo = !cliente.persisted? %>
+<div class="md:col-span-2 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 bg-gray-50 dark:bg-gray-900/40 overflow-hidden">
+  <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+    <h3 class="text-sm font-semibold text-cec-navy dark:text-cec-gold">Cómo se le cobra a este cliente</h3>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+      <% if nuevo %>
+        El <strong>cobro por volumen</strong> se puede marcar desde ya. Los precios especiales
+        se cargan después de guardar, cuando ya existe a quién asignárselos.
+      <% else %>
+        Lo normal es que pague lo que dice <strong>Paga hoy</strong>. Llená
+        <strong>Precio especial</strong> solo en los servicios donde se le negoció otra cosa.
+      <% end %>
+    </p>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+      <thead class="bg-white dark:bg-gray-800">
+        <tr>
+          <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Servicio</th>
+          <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Paga hoy</th>
+          <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio especial $/lb</th>
+          <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Mínimo $ (c/ISV)</th>
+          <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Cobrar mínimo</th>
+          <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Solo volumen</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+        <%# Sin esto, destildar el último checkbox no manda nada y la asociación
+            se queda como estaba. `collection_check_boxes` lo hacía solo; acá los
+            checkboxes se emiten a mano, fila por fila. %>
+        <%= hidden_field_tag "cliente[tipo_envio_solo_volumetrico_ids][]", "" %>
+
+        <% filas.each do |fila| %>
+          <% te = fila.tipo_envio %>
+          <tr class="align-middle">
+            <td class="px-4 py-3 whitespace-nowrap">
+              <span class="font-mono font-bold text-sm text-cec-navy dark:text-cec-gold"><%= te.codigo.to_s.upcase %></span>
+              <span class="ml-1 text-xs text-gray-500 dark:text-gray-400"><%= te.modalidad %></span>
+            </td>
+
+            <td class="px-4 py-3 text-sm">
+              <% if fila.sin_excepcion %>
+                <span class="font-mono text-gray-800 dark:text-gray-100">
+                  <%= fila.sin_excepcion.moneda == "USD" ? "$" : "L." %><%= number_with_precision(fila.sin_excepcion.precio_libra, precision: 2) %>/lb
+                </span>
+                <span class="block text-[11px] text-gray-500 dark:text-gray-400">
+                  <%= fila.sin_excepcion.nivel %><%= ": #{fila.sin_excepcion.categoria_precio.nombre}" if fila.sin_excepcion.categoria_precio %>
+                </span>
+              <% else %>
+                <span class="text-gray-300">— sin tarifa cargada —</span>
+              <% end %>
+            </td>
+
+            <% if fila.escalonado? %>
+              <%# Una escalera no cabe en una celda, y ofrecer un número plano la
+                  aplastaría en silencio. %>
+              <td colspan="3" class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                <span class="italic">Escalonado — <%= fila.escalones.size %> tramos.</span>
+                <%= link_to "Editar en la Tabla de Servicios →", servicios_path,
+                      class: "ml-1 text-cec-teal-deep dark:text-cec-teal-light hover:underline" %>
+              </td>
+            <% else %>
+              <td class="px-4 py-3 text-right">
+                <%# Deshabilitado en el alta: un input `disabled` no se manda, así
+                    que no hay forma de que llegue un precio sin cliente al cual
+                    colgarlo. %>
+                <%= number_field_tag "precios_especiales[#{te.id}][precio]", fila.precio_especial,
+                      step: 0.01, min: 0, placeholder: "—", disabled: nuevo,
+                      class: "w-24 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm font-mono text-right disabled:bg-gray-100 disabled:text-gray-400" %>
+                <% if fila.descuento_pct %>
+                  <span class="block text-[11px] font-medium <%= fila.descuento_pct.negative? ? "text-cec-teal-deep dark:text-cec-teal-light" : "text-amber-700 dark:text-amber-400" %>">
+                    <%= "+" unless fila.descuento_pct.negative? %><%= fila.descuento_pct %>% vs <%= fila.sin_excepcion.nivel.downcase %>
+                  </span>
+                <% end %>
+              </td>
+
+              <td class="px-4 py-3 text-right">
+                <%= number_field_tag "precios_especiales[#{te.id}][minimo_con_isv]", fila.minimo_con_isv,
+                      step: 0.01, min: 0, placeholder: "—", disabled: nuevo,
+                      class: "w-24 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm font-mono text-right disabled:bg-gray-100 disabled:text-gray-400" %>
+              </td>
+
+              <td class="px-4 py-3 text-center">
+                <% unless nuevo %>
+                  <%= hidden_field_tag "precios_especiales[#{te.id}][aplica_minimo]", "0" %>
+                <% end %>
+                <%= check_box_tag "precios_especiales[#{te.id}][aplica_minimo]", "1", fila.aplica_minimo?,
+                      disabled: nuevo,
+                      class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal disabled:opacity-40" %>
+              </td>
+            <% end %>
+
+            <td class="px-4 py-3 text-center">
+              <%= check_box_tag "cliente[tipo_envio_solo_volumetrico_ids][]", te.id, fila.solo_volumetrico,
+                    id: "solo_volumen_#{te.id}",
+                    class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 space-y-1">
+    <p class="text-xs text-gray-500 dark:text-gray-400">
+      <strong>Precio especial</strong> le gana al grupo y al precio de lista. Vaciá la celda para quitárselo.
+    </p>
+    <p class="text-xs text-gray-500 dark:text-gray-400">
+      <strong>Solo volumen</strong>: por defecto se cobra el mayor entre el peso real y el volumétrico.
+      Marcado, se cobra solo el volumétrico — y si el paquete todavía no tiene medidas se sigue
+      cobrando el peso real, nunca cero.
+    </p>
+  </div>
+</div>
