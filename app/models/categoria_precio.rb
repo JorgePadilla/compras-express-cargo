@@ -32,6 +32,34 @@ class CategoriaPrecio < ApplicationRecord
     tarifas.activas.includes(:tipo_envio, :sucursal).order("tipo_envios.nombre", :desde_libras)
   end
 
+  # Una categoría se puede borrar cuando no la usa nadie.
+  #
+  # Los dos `dependent: :restrict_with_error` de arriba ya lo impiden a nivel de
+  # base; esto existe para poder **decirlo antes**, en el botón, en vez de que el
+  # usuario descubra la regla a fuerza de errores.
+  def borrable?
+    clientes.empty? && tarifas.empty?
+  end
+
+  # Por qué no se puede, en una frase que sirva tal cual en pantalla y en el
+  # flash. Devuelve nil cuando sí se puede.
+  def motivo_no_borrable
+    return nil if borrable?
+
+    partes = []
+    partes << "#{clientes.count} cliente(s) asignado(s)" if clientes.any?
+    partes << "#{tarifas.count} tarifa(s) cargada(s)"    if tarifas.any?
+
+    "Tiene #{partes.to_sentence}."
+  end
+
+  # Las que declara la hoja de precios de Yusef vuelven a aparecer en la próxima
+  # siembra: borrarlas es válido pero no es permanente, y conviene avisarlo antes
+  # de que le den.
+  def declarada_en_la_hoja?
+    TarifasPropuesta2026::CATEGORIAS.any? { |c| c[:nombre] == nombre }
+  end
+
   def to_s
     nombre
   end

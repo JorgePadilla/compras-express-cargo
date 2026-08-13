@@ -226,7 +226,7 @@ Rails.application.routes.draw do
   # admin" — por eso es un CRUD y no un job.
   resource :tasa_cambio, only: %i[show update], controller: "tasa_cambio"
 
-  resources :categoria_precios, except: :destroy, path: "categorias-precio"
+  resources :categoria_precios, path: "categorias-precio"
 
   resources :entregas, except: [:destroy] do
     collection { get :entregables }

@@ -1,6 +1,6 @@
 class CategoriaPreciosController < ApplicationController
   before_action :require_admin
-  before_action :set_categoria, only: %i[show edit update]
+  before_action :set_categoria, only: %i[show edit update destroy]
 
   def index
     # Se precarga `tarifas` porque la pantalla ahora muestra lo que cada
@@ -33,6 +33,22 @@ class CategoriaPreciosController < ApplicationController
       redirect_to categoria_precios_path, notice: "Categoria de precio actualizada."
     else
       render :edit, status: :unprocessable_entity
+    end
+  end
+
+  # Se puede borrar una categoría que no usa nadie. Los dos
+  # `dependent: :restrict_with_error` del modelo son la guarda real; acá lo que
+  # importa es que, cuando no se puede, el mensaje diga **por qué**.
+  #
+  # Hasta ahora la ruta era `except: :destroy`: no había forma de sacar una
+  # categoría del sistema, y las de la época vieja se quedaban en la lista para
+  # siempre.
+  def destroy
+    if @categoria.destroy
+      redirect_to categoria_precios_path, notice: "Categoria \"#{@categoria.nombre}\" eliminada."
+    else
+      redirect_to categoria_precios_path,
+                  alert: "No se puede eliminar \"#{@categoria.nombre}\". #{@categoria.motivo_no_borrable}"
     end
   end
 

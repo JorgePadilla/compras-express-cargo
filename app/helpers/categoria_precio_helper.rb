@@ -12,6 +12,21 @@ module CategoriaPrecioHelper
     "#{simbolo}#{number_with_precision(tarifa.precio_libra, precision: 2)}/lb"
   end
 
+  # El texto de confirmación antes de borrar.
+  #
+  # Las categorías que declara la hoja de precios de Yusef vuelven a aparecer en
+  # la próxima siembra. Borrarlas es válido, pero no es permanente, y el usuario
+  # tiene que saberlo **antes** de darle — no descubrirlo cuando reaparezcan.
+  def borrar_categoria_confirmacion(categoria)
+    base = "¿Eliminar la categoría \"#{categoria.nombre}\"?"
+
+    if categoria.declarada_en_la_hoja?
+      "#{base} Ojo: está en la hoja de precios, así que va a volver a crearse la próxima vez que se siembren las tarifas."
+    else
+      "#{base} No la usa ningún cliente ni ninguna tarifa."
+    end
+  end
+
   # El tramo de peso al que aplica. `hasta_libras` en nil significa "de ahí para
   # arriba", y decirlo así evita el "0 → " que confundía en /servicios.
   def tarifa_tramo(tarifa)
