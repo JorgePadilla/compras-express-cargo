@@ -56,8 +56,12 @@ class PaqueteEtiquetaTest < ActionDispatch::IntegrationTest
     assert_response :success
     # "si el tracking se divide en 5 paquetes es una para cada una"
     assert_equal 3, response.body.scan(/class="etq"/).size
-    assert_match "1/3", response.body
-    assert_match "3/3", response.body
+    # A7-21: la etiqueta lleva el número de caja, no "1 de 3" — el total no se
+    # sabe hasta terminar de empacar, y una etiqueta que dice "1/3" sobre una
+    # carga que salió en 2 manda a buscar un bulto que no existe.
+    assert_match ">1</span>", response.body
+    assert_match ">3</span>", response.body
+    assert_no_match(/>\d+\/\d+<\/span>/, response.body, "volvió el n/N a la etiqueta")
   end
 
   test "sin hermanas imprime solo la del paquete" do

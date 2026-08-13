@@ -49,8 +49,14 @@ class EtiquetaCamposTest < ActionDispatch::IntegrationTest
     assert_match @paquete.cliente.codigo, cuerpo
     # 8. Sucursal donde retira, con encabezado en español
     assert_match "RETIRA EN", cuerpo
-    # 9. Número y cantidad de paquetes — sale también cuando es una sola caja.
-    assert_match ">1/1</span>", cuerpo, "falta el n/N de paquetes"
+    # 9. Número de caja — **solo el número, sin el total** (A7-21). Yusef:
+    #    "la etiqueta solo lleva el número, no lleva el uno de dos ni de tres,
+    #    porque no estamos seguros cuántas estamos empacando". Una etiqueta que
+    #    dice "1/5" sobre una carga que terminó en 4 manda a buscar un bulto que
+    #    no existe.
+    assert_match ">1</span>", cuerpo, "falta el número de caja"
+    assert_no_match(/>\d+\/\d+<\/span>/, cuerpo,
+                    "volvió el n/N a la etiqueta: el total no se sabe al imprimir")
     # 10. Tipo de envío, abreviado a 3 letras como en el mockup (EXP, no EXPRESS)
     assert_equal @paquete.tipo_envio.codigo.first(3).upcase, campo(cuerpo, "tipo-envio")
     # 11. Driver, solo iniciales y rotulado: "solo usamos iniciales" (Yusef)

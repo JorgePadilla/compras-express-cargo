@@ -5288,7 +5288,7 @@ Sobre prefactura Yusef fue claro en que todavía no toca:
 | Bodega Honduras después de prefactura (`A7-01`) | ⏳ corregir `lib/procesos_pdf.rb` y verificar el flujo |
 | Modal bloqueante en `/etiquetar` (`A7-17`) | ⏳ **el más fácil, va primero** |
 | Pre-alerta desincronizada del paquete (`A7-19`) | ✅ `PR-C7.02` — la pre-alerta sigue al paquete |
-| Entrega Personal caja por caja (`A7-20`, `A7-21`) | ⏳ rehacer, contradice el diseño actual |
+| Entrega Personal caja por caja (`A7-20`, `A7-21`) | ✅ `PR-C7.04` — repetidor con Agregar, y la etiqueta sin el `1 de N` |
 | Estado `enviado a sucursal` / F7 (`A7-09`) | ✅ `PR-C7.03` — con `sucursal_destino_id` y fecha, que es lo que lo hace auditable |
 | Sacar `prefacturado` de los estados (`A7-11`) | ✅ `PR-C7.03` — fuera del dropdown, sigue en el código |
 | Ordenar el dropdown de estados (`A7-12`) | ✅ `PR-C7.03` — orden de proceso, desvíos al final |
