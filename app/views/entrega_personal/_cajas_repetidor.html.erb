@@ -1,0 +1,51 @@
+<%# ── Las cajas, una por una (modo :repetidor, /entrega_personal) ──
+    A7-20. Yusef describió el gesto exacto:
+
+      "Vos vas a poner aquí medida, peso y todo y le vas a dar clic, **agregar**.
+       Si tiene otra caja, le vuelve a poner y le da agregar."
+      "Es **paso por paso**. Es igual el manifiesto de Miami."
+
+    Por eso los campos de arriba (peso y medidas) son los de captura, y Agregar
+    baja la caja a esta lista y los deja limpios para la siguiente. El operario
+    nunca tiene que acordarse de qué fila le tocaba.
+
+    A7-21: las etiquetas salen todas al final, cuando ya se sabe cuántas son —
+    "por si hay algún cambio… cuando menos acordás me salieron cuatro en vez de
+    cinco". Por eso no hay nada que imprima acá. %>
+<div class="rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 p-3">
+  <div class="flex items-center justify-between mb-2">
+    <p class="text-xs font-medium text-gray-700 dark:text-gray-200">
+      Cajas agregadas
+      <span data-cajas-repetidor-target="contador"
+            class="ml-1 font-mono text-gray-500 dark:text-gray-400">0</span>
+    </p>
+    <%= render ButtonComponent.new(variant: :teal, size: :xs, icon: "plus",
+          data: { action: "click->cajas-repetidor#agregar",
+                  cajas_repetidor_target: "agregarBtn" }) do %>
+      Agregar caja (F6)
+    <% end %>
+  </div>
+
+  <p data-cajas-repetidor-target="vacio" class="text-[11px] text-gray-400">
+    Sin cajas agregadas: se guarda como un solo bulto con el peso y las medidas de arriba.
+  </p>
+
+  <ul data-cajas-repetidor-target="lista" class="space-y-1.5 max-h-64 overflow-y-auto pr-1"></ul>
+
+  <%# El template sale de acá y no de un string en el JS: es la misma lección de
+      PR-C6.44, donde el template escrito a mano se desincronizó de las filas y
+      cada fila nueva salía corrida. %>
+  <template data-cajas-repetidor-target="template">
+    <li class="caja-fila flex items-center justify-between gap-2 rounded-md bg-gray-50 dark:bg-gray-900 px-2.5 py-1.5">
+      <span class="text-xs text-gray-700 dark:text-gray-200">
+        <span class="font-semibold" data-caja-numero>Caja</span>
+        <span class="text-gray-500 dark:text-gray-400" data-caja-resumen></span>
+      </span>
+      <button type="button" data-action="click->cajas-repetidor#quitar"
+              class="text-gray-400 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 rounded"
+              aria-label="Quitar esta caja">
+        <%= heroicon "x-mark", variant: :outline, options: { class: "w-4 h-4" } %>
+      </button>
+    </li>
+  </template>
+</div>

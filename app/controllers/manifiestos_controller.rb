@@ -13,7 +13,7 @@ class ManifiestosController < ApplicationController
   end
 
   def show
-    @paquetes = @manifiesto.paquetes.includes(:cliente).order(:created_at)
+    @paquetes = @manifiesto.paquetes.includes(:cliente, :sucursal, :sucursal_destino).order(:created_at)
   end
 
   def new
@@ -99,7 +99,7 @@ class ManifiestosController < ApplicationController
   end
 
   def respond_to_paquete_change(message)
-    @paquetes = @manifiesto.paquetes.includes(:cliente).order(:created_at)
+    @paquetes = @manifiesto.paquetes.includes(:cliente, :sucursal, :sucursal_destino).order(:created_at)
     @manifiesto.reload
     respond_to do |format|
       format.turbo_stream do

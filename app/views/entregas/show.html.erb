@@ -72,7 +72,7 @@
         <tr>
           <td class="px-4 py-2 text-sm font-mono"><%= link_to truncate(p.tracking, length: 25), paquete_path(p), class: "text-cec-navy hover:underline" %></td>
           <td class="px-4 py-2 text-sm"><%= p.descripcion %></td>
-          <td class="px-4 py-2"><%= render StatusBadgeComponent.new(status: p.estado) %></td>
+          <td class="px-4 py-2"><%= render StatusBadgeComponent.new(status: p.estado, label: estado_de(p)) %></td>
           <td class="px-4 py-2 text-sm text-right"><%= p.peso_cobrar %> lbs</td>
         </tr>
       <% end %>

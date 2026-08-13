@@ -14,15 +14,22 @@ require "test_helper"
 # O sea que el operario ponía 3, veía 3 filas, las llenaba, guardaba… y se
 # grababa un solo paquete. Silencioso, y en el flujo donde el cliente está
 # parado enfrente en el mostrador.
+#
+# A7-20: el campo "cantidad de cajas" ya no existe en esta pantalla — las cajas
+# se agregan una por una y **la cantidad sale de contar las filas**. La lección
+# de PR-C6.31 sigue siendo la misma y por eso estos tests siguen acá: si hay dos
+# fuentes para el mismo número, alguna va a mentir. Ahora hay una sola.
 class EntregaPersonalCajasTest < ActionDispatch::IntegrationTest
   setup do
     @user = users(:digitador)
     post session_url, params: { email_address: @user.email_address, password: "password123" }
   end
 
-  test "guarda una caja por cada una que se pidio" do
+  test "guarda una caja por cada fila agregada" do
     assert_difference "Paquete.count", 3 do
-      post entrega_personal_index_url, params: { paquete: attrs.merge(cantidad_paquetes: 3) }
+      post entrega_personal_index_url, params: {
+        paquete: attrs.merge(cajas: { "1" => { peso: 5 }, "2" => { peso: 8 }, "3" => { peso: 12 } })
+      }
     end
 
     assert_equal [ 1, 2, 3 ], Paquete.order(:id).last(3).map(&:numero_caja)
@@ -30,10 +37,7 @@ class EntregaPersonalCajasTest < ActionDispatch::IntegrationTest
 
   test "cada caja guarda su propio peso" do
     post entrega_personal_index_url, params: {
-      paquete: attrs.merge(
-        cantidad_paquetes: 2,
-        cajas: { "1" => { peso: 5 }, "2" => { peso: 30 } }
-      )
+      paquete: attrs.merge(cajas: { "1" => { peso: 5 }, "2" => { peso: 30 } })
     }
 
     pesos = Paquete.order(:id).last(2).sort_by(&:numero_caja).map { |p| p.peso.to_f }
@@ -41,20 +45,34 @@ class EntregaPersonalCajasTest < ActionDispatch::IntegrationTest
                  "las medidas por caja se perdieron: se guardaron todas iguales"
   end
 
-  test "una sola caja sigue guardando un solo paquete" do
+  test "sin agregar ninguna caja se guarda un solo bulto" do
+    # El caso común: una caja, el operario nunca toca Agregar y llena el peso
+    # de arriba.
     assert_difference "Paquete.count", 1 do
-      post entrega_personal_index_url, params: { paquete: attrs.merge(cantidad_paquetes: 1) }
+      post entrega_personal_index_url, params: { paquete: attrs }
     end
   end
 
-  test "el formulario no manda dos veces la cantidad de cajas" do
-    # La causa raíz. Si vuelve a haber dos campos con el mismo `name`, el
-    # último gana y el split se cae en silencio — sin error, sin aviso.
+  test "una sola caja agregada manda sus propios datos" do
+    assert_difference "Paquete.count", 1 do
+      post entrega_personal_index_url, params: {
+        paquete: attrs.merge(peso: 5, cajas: { "1" => { peso: 22 } })
+      }
+    end
+
+    assert_equal 22.0, Paquete.order(:id).last.peso.to_f,
+                 "se guardó el peso de captura en vez del de la caja agregada"
+  end
+
+  test "el formulario ya no tiene un campo de cantidad que pueda mentir" do
+    # La causa raíz de PR-C6.31 era tener dos campos con el mismo `name`: el
+    # último ganaba y el split se caía en silencio. Ahora no hay ninguno — la
+    # cantidad se cuenta de las filas, así que no hay dos fuentes que discrepen.
     get new_entrega_personal_url
 
     campos = response.body.scan(/name="paquete\[cantidad_paquetes\]"/).size
-    assert_equal 1, campos,
-                 "hay #{campos} campos `cantidad_paquetes` en el form; el último pisa al otro"
+    assert_equal 0, campos,
+                 "volvió un campo `cantidad_paquetes` a Entrega Personal; la cantidad sale de las filas"
   end
 
   private

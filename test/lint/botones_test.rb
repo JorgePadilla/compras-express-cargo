@@ -43,6 +43,10 @@ class BotonesTest < ActiveSupport::TestCase
     # modal de duplicado que ya estaban crudas en este archivo. Esa forma no
     # entra en el `inline-flex items-center` del componente.
     "app/views/etiquetar/index.html.erb"                     => 11,
+    # A7-20: la × que quita una caja del repetidor de Entrega Personal. Vive
+    # adentro de un <template> y es un icono de 16px pegado al borde de la fila
+    # — la forma no entra en el `inline-flex items-center` del componente.
+    "app/views/entrega_personal/_cajas_repetidor.html.erb"   => 1,
     # PR-BTN.5: bajó de 15 a 9. Los que quedan crudos lo están a propósito:
     # "Cambiar" / "Asignar" / "Vincular a un cliente" son acciones de texto
     # dentro de una frase —un botón con borde ahí partiría la oración— y los dos

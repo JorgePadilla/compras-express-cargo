@@ -21,9 +21,15 @@ class StatusBadgeComponent < ViewComponent::Base
     "en_proceso" => INFO, "en_miami" => INFO, "en_transito" => INFO,
     "recibido" => INFO, "enviado" => INFO,
     "consolidando_honduras" => INFO, "recoleta_en_proceso" => INFO,
+    # A7-09/A7-10
+    "consolidando_miami" => INFO, "enviado_sucursal" => INFO,
 
     # Warning — pending / held / awaiting action
     "pendiente" => WARNING, "pre_alerta" => WARNING,
+    # `pre_alerta` es el estado de `PreAlerta`; `pre_alerta_estado` es el del
+    # `Paquete` esperado, y faltaba: se pintaba gris por fallback pese a ser
+    # exactamente lo mismo para quien lo mira.
+    "pre_alerta_estado" => WARNING,
     "retenido" => WARNING, "en_aduana" => WARNING,
 
     # Danger
