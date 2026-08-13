@@ -114,28 +114,34 @@ class PreFacturaTest < ActiveSupport::TestCase
     assert_not pf.anular!
   end
 
-  test "build_from_paquetes uses cliente categoria_precio" do
+  # A7-25. Estos dos tests fijaban el fallback a la tabla vieja:
+  # `categoria_precio.precio_para` primero y `tipo_envio.precio_libra` después.
+  # Ese es exactamente el camino que Yusef encontró y mandó a unificar — cobraba
+  # sin mínimo, sin escalonado, y colapsando los cinco servicios a "aéreo o
+  # marítimo".
+  #
+  # Ahora la tabla vieja **no se consulta**. Sin tarifa cargada la línea sale en
+  # cero y lo dice, para que nadie facture con un precio inventado.
+  test "sin tarifa cargada la linea sale en cero y avisa" do
     paquete = paquetes(:disponible_entrega_juan)
-    # juan has categoria regular: aereo=3.50
-    pf = PreFactura.build_from_paquetes(@cliente, [paquete.id], user: @user)
-    assert_equal 1, pf.pre_factura_items.size
+
+    pf = PreFactura.build_from_paquetes(@cliente, [ paquete.id ], user: @user)
     item = pf.pre_factura_items.first
-    # PR-10.a: los precios estan en USD y la pre-factura en Lempiras.
-    precio_lps = CurrencyAware.convertir("3.5".to_d, de: "USD", a: "LPS")
-    assert_equal precio_lps, item.precio_libra.to_d
-    # peso_cobrar = 10 (from fixture)
-    assert_equal (10.to_d * precio_lps).round(2), item.subtotal.to_d
+
+    assert_equal 0, item.subtotal.to_d
+    assert_match(/SIN TARIFA/i, item.concepto)
   end
 
-  test "build_from_paquetes falls back to tipo_envio precio" do
-    # Remove categoria_precio so fallback is used
-    @cliente.update!(categoria_precio: nil)
-    paquete = paquetes(:disponible_entrega_juan)
-    pf = PreFactura.build_from_paquetes(@cliente, [paquete.id], user: @user)
-    item = pf.pre_factura_items.first
-    # tipo_envios(:aereo).precio_libra = 4.50 USD → convertido a Lempiras
-    assert_equal CurrencyAware.convertir("4.5".to_d, de: "USD", a: "LPS"),
-                 item.precio_libra.to_d
+  test "la categoria de precios vieja ya no decide el cobro" do
+    # El cliente tiene categoría con precio_libra_aereo cargado. Si ese número
+    # vuelve a aparecer en una línea, volvió el fallback.
+    precio_viejo = @cliente.categoria_precio&.precio_para(paquetes(:disponible_entrega_juan).tipo_envio)
+    skip "el fixture del cliente no trae categoría con precio" if precio_viejo.blank?
+
+    pf = PreFactura.build_from_paquetes(@cliente, [ paquetes(:disponible_entrega_juan).id ], user: @user)
+
+    assert_not_equal CurrencyAware.convertir(precio_viejo, de: "USD", a: "LPS"),
+                     pf.pre_factura_items.first.precio_libra.to_d
   end
 
   test "scope activas excludes anulado" do

@@ -121,14 +121,18 @@ class PreFacturaTarifaTest < ActiveSupport::TestCase
     assert_equal (BigDecimal("10") * a_lps(2.00)).round(2), item_de_flete(pf).subtotal
   end
 
-  test "sin ninguna tarifa cargada cae al comportamiento anterior, ya convertido" do
+  # A7-25: ya no hay "comportamiento anterior" al que caer. La tabla vieja no se
+  # consulta, así que sin tarifa la línea sale en cero y lo dice en el concepto.
+  test "sin ninguna tarifa cargada la linea sale en cero y avisa" do
     p = paquete_con(peso: 10)
 
     pf = PreFactura.build_from_paquetes(@cliente, [ p.id ], user: @user)
+    # No entra por `item_de_flete`: el concepto ya no arranca con "Flete"
+    # justamente para que salte a la vista.
+    item = pf.pre_factura_items.first
 
-    precio_usd = @cliente.categoria_precio&.precio_para(tipo_envios(:cer)) ||
-                 tipo_envios(:cer).precio_libra
-    assert_equal (BigDecimal("10") * a_lps(precio_usd)).round(2), item_de_flete(pf).subtotal
+    assert_equal 0, item.subtotal
+    assert_match(/SIN TARIFA/i, item.concepto)
   end
 
   # ── Prepagado en Miami (PR-6b, sin cobertura hasta ahora) ──

@@ -5297,8 +5297,8 @@ Sobre prefactura Yusef fue claro en que todavía no toca:
 | Recolecta como pre-alerta de EP (`A7-22`, `A7-23`) | ✅ `PR-C7.05` — switch en `/entrega_personal`; el `$25` sigue en `RP-10b` |
 | Estado `consolidando_miami` (`A7-10`) | ✅ `PR-C7.03` — el estado sí; el **servicio `COM` no se activa** |
 | Impuesto de Miami (`A7-24`) | 💰 va con `RP-24`…`RP-29` |
-| Dos tablas de precios que se pisan (`A7-25`) | 💰 unificar |
-| Precio especial por cliente y servicio (`A7-26`) | ⏳ extiende `PR-C6.41` |
+| Dos tablas de precios que se pisan (`A7-25`) | ✅ `PR-C7.06` — el fallback a la tabla vieja murió; el detector de huérfanas queda en `rake tarifas:huerfanas` |
+| Precio especial por cliente y servicio (`A7-26`) | 🔨 el motor ya lo soporta (`tarifas.cliente_id`); falta moverlo a la ficha del cliente |
 | Excel de roles × operaciones (`A7-28`) | ⏸️ lo manda Evelin |
 | Varias prefacturas → una factura (`A7-32`) | 📋 Fase de facturación |
 | Una firma por entrega (`A7-33`) | 📋 va con el POD |

@@ -51,11 +51,15 @@ class CotizadorFleteTest < ActiveSupport::TestCase
     assert_equal BigDecimal("173.91"), r.subtotal
   end
 
-  test "sin tarifa cargada lo reporta pero igual cotiza" do
+  # A7-25: antes cotizaba con la tabla vieja, o sea mostraba un precio distinto
+  # del que la pre-factura iba a cobrar. Ahora devuelve cero y lo reporta: el
+  # vacío se lee como "falta cargar la tarifa", no como "es gratis".
+  test "sin tarifa cargada cotiza en cero y lo reporta" do
     r = CotizadorFlete.call(tipo_envio: @cer, cliente: @cliente, peso: 10)
 
     assert_not r.tarifa_encontrada?
-    assert r.subtotal.positive?
+    assert r.sin_tarifa
+    assert_equal 0, r.subtotal
   end
 
   # ── La garantía que importa ──
