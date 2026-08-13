@@ -1096,8 +1096,17 @@ class Paquete < ApplicationRecord
   # tracking propio (caso típico: driver privado sin GUID del courier).
   # Si el operador SÍ escribió un tracking (Uber GUID, etc.), se respeta
   # tal cual — no se sobreescribe.
+  # A7-22: `!recolecta_solicitada?` es nuevo y es lo que hace que la recolecta
+  # viva dentro de Entrega Personal sin robarle el prefijo.
+  #
+  # Yusef la definió así: *"la recolecta es como una prealerta de una entrega
+  # personal"* — misma pantalla, un switch al inicio. Pero eso ponía a las dos
+  # reglas a competir: el proveedor sigue siendo de tipo entrega_personal, así
+  # que `ep_tracking_required?` ganaba por orden de callback y la recolecta
+  # salía con tracking **EP**. Ahora si el switch está marcado, manda RC.
   def ep_tracking_required?
     tracking.blank? &&
+      !recolecta_solicitada? &&
       proveedor.present? &&
       proveedor.entrega_personal? &&
       sucursal.present?
@@ -1123,17 +1132,21 @@ class Paquete < ApplicationRecord
     )
   end
 
-  # PR-D4.d: condición para auto-generar tracking RC. Aplica cuando
-  # CEC mandó un motorista propio a recoletar (no es entrega personal
-  # vía driver externo). Mismo formato que EP pero prefijo RC y trigger
-  # distinto: recolecta_solicitada + tracking blank + proveedor presente.
-  # Si el proveedor es entrega_personal, gana EP (chequeado primero
-  # por el orden de los before_validation).
+  # PR-D4.d: condición para auto-generar tracking RC. Aplica cuando CEC mandó un
+  # motorista propio a recolectar. Mismo formato que EP pero prefijo RC.
+  #
+  # A7-22: se le quitó la exclusión `!proveedor.entrega_personal?`. Existía
+  # porque RC y EP se pensaron como mutuamente excluyentes, y la recolecta ahora
+  # vive **dentro** de la pantalla de Entrega Personal — su proveedor es de tipo
+  # entrega_personal casi siempre. Con la exclusión puesta, marcar el switch de
+  # recolecta no hacía nada: el paquete salía con tracking EP.
+  #
+  # Quién gana lo decide ahora `ep_tracking_required?`, que se aparta cuando el
+  # switch está marcado.
   def rc_tracking_required?
     tracking.blank? &&
       recolecta_solicitada? &&
       proveedor.present? &&
-      !proveedor.entrega_personal? &&
       sucursal.present?
   end
 

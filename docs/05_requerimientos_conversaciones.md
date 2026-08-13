@@ -5294,7 +5294,7 @@ Sobre prefactura Yusef fue claro en que todavía no toca:
 | Ordenar el dropdown de estados (`A7-12`) | ✅ `PR-C7.03` — orden de proceso, desvíos al final |
 | `Disponible en sucursal <nombre>` (`A7-13`, `A7-14`, `A7-15`) | ✅ `PR-C7.03` — **no estaba bloqueado**: `Cliente#sucursal_retiro` ya existía |
 | Escaneo de manifiesto con aviso no bloqueante (`A7-03`…`A7-08`) | ⏳ Fase 12 |
-| Recolecta como pre-alerta de EP (`A7-22`, `A7-23`) | ⏳ Fase Miami |
+| Recolecta como pre-alerta de EP (`A7-22`, `A7-23`) | ✅ `PR-C7.05` — switch en `/entrega_personal`; el `$25` sigue en `RP-10b` |
 | Estado `consolidando_miami` (`A7-10`) | ✅ `PR-C7.03` — el estado sí; el **servicio `COM` no se activa** |
 | Impuesto de Miami (`A7-24`) | 💰 va con `RP-24`…`RP-29` |
 | Dos tablas de precios que se pisan (`A7-25`) | 💰 unificar |

@@ -1,0 +1,91 @@
+<%# ── Recolecta ──
+    A7-22. La definición más limpia que ha dado Yusef de este módulo:
+
+      "**La recolecta es como una prealerta de una entrega personal.**"
+      "Acá en la entrega personal le podés dar una opción que diga que va a ser
+       una recolecta. Antes de proveedores."
+
+    Por eso vive acá arriba y no en una pantalla aparte: es el mismo formulario
+    con un switch. Lo que cambia es que los datos son **aproximados** —todavía
+    no se fue a traer nada— y que hacen falta los datos de la visita. %>
+<div data-controller="recolecta"
+     class="rounded-lg ring-1 ring-cec-gold/40 bg-cec-gold/5 dark:bg-cec-gold/10 p-4">
+  <label class="flex items-center gap-2 cursor-pointer">
+    <%= f.check_box :recolecta_solicitada,
+          data: { recolecta_target: "switch", action: "change->recolecta#alternar" },
+          class: "rounded border-gray-300 text-cec-gold focus:ring-cec-gold" %>
+    <span class="text-sm font-semibold text-gray-800 dark:text-gray-100">
+      Es una recolecta — hay que ir a traer la carga
+    </span>
+  </label>
+
+  <div data-recolecta-target="detalle" class="hidden mt-4 space-y-4">
+    <p class="text-[11px] text-gray-600 dark:text-gray-300">
+      Cantidad de cajas, peso y medidas van <strong>aproximados</strong>: se corrigen
+      al recibir la carga.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div>
+        <%= f.label :recolecta_contacto, "¿Por quién preguntar?",
+              class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <%= f.text_field :recolecta_contacto, placeholder: "Manuel Quiñones",
+              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100
+                     shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+      <div>
+        <%= f.label :recolecta_telefono, "Teléfono del contacto",
+              class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <%= f.telephone_field :recolecta_telefono, placeholder: "9999-9999",
+              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100
+                     shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+      <div>
+        <%= f.label :recolecta_horario, "Horario en que atienden",
+              class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <%= f.text_field :recolecta_horario, placeholder: "9:30 a. m. a 6:00 p. m.",
+              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100
+                     shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+    </div>
+
+    <div>
+      <%= f.label :recolecta_instrucciones, "Instrucciones para el motorista",
+            class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+      <%= f.text_area :recolecta_instrucciones, rows: 2,
+            placeholder: "Dónde queda, por dónde entrar, qué preguntar…",
+            class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100
+                   shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+
+    <%# El monto sale de la tabla de tarifas por zona, que ya existe con su CRUD.
+        Yusef mencionó además "$25 si el cliente tiene precio especial", pero eso
+        choca con la tabla por zona y sigue abierto en RP-10b — no se codifica
+        sobre una regla que todavía no está cerrada. %>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div>
+        <%= f.label :tarifa_recolecta_id, "Zona / tarifa",
+              class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <%= f.collection_select :tarifa_recolecta_id, @tarifas_recolecta, :id, :zona,
+              { include_blank: "— Usar la tarifa por defecto —" },
+              { class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100
+                       shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
+        <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+          El monto se copia de la zona al guardar.
+        </p>
+      </div>
+      <div>
+        <%= f.label :recolecta_monto, "Monto a cobrar",
+              class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <div class="flex gap-2">
+          <%= f.number_field :recolecta_monto, step: 0.01, min: 0, placeholder: "35.00",
+                class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100
+                       shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+          <%= f.select :recolecta_moneda, Paquete::RECOLECTA_MONEDAS,
+                {}, class: "rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100
+                           shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

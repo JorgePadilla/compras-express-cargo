@@ -1575,7 +1575,11 @@ CREATE TABLE public.paquetes (
     tercero_nombre character varying,
     sucursal_destino_id bigint,
     fecha_enviado_sucursal timestamp(6) without time zone,
-    fecha_enviado_sucursal_by_user_id bigint
+    fecha_enviado_sucursal_by_user_id bigint,
+    recolecta_horario character varying,
+    recolecta_contacto character varying,
+    recolecta_telefono character varying,
+    recolecta_instrucciones text
 );
 
 
@@ -5891,6 +5895,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260813003045'),
 ('20260813001241'),
 ('20260813001146'),
 ('20260811162424'),
