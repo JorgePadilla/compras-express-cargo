@@ -5163,7 +5163,7 @@ precios escalonados"*) ya funciona igual para todos los niveles: cada fila de
 
 ---
 
-### A7-26 · El precio especial vive **en el cliente**, y aplica por servicio
+### A7-26 · El precio especial vive **en el cliente**, y aplica por servicio — ✅ **HECHO (PR-C7.15)**
 
 > "Ese precio especial para un cliente **debería estar en el cliente**, digo yo.
 >  Entro al [cliente] y le pongo el precio especial."
@@ -5182,9 +5182,35 @@ Y la tensión de fondo, que conviene dejar escrita:
 > "Tenemos que unificar lo mejor que se pueda… estandarizar la mayoría y crearle
 >  botones para las excepciones."
 
-**Lectura.** Extiende [[project_volumen_editable_por_cliente_servicio]]: la misma
-matriz cliente × servicio que ya existe para el cobro por volumen tiene que servir
-para categoría de precio y descuento.
+**Lectura.** Extiende el cobro por volumen de `PR-C6.41`: la misma matriz
+cliente × servicio que ya existía para eso tiene que servir para el precio.
+
+**Cómo se hizo.** El cuadro está en la ficha del cliente, donde él dijo que
+entra, y **es una vista sobre `tarifas`**: escribe las filas de nivel cliente,
+que ya eran el primer nivel de `Tarifa.resolver`. Guardar los precios del cliente
+en otro lado habría vuelto a dejar dos fuentes de verdad para el mismo número —
+o sea `A7-25` otra vez, tres días después de cerrarla.
+
+Una fila por servicio, con cuatro cosas: **qué paga hoy y de dónde sale** (solo
+lectura), **precio especial**, **mínimo** y **solo volumen**. Los checkboxes de
+cobro por volumen se **mudaron** ahí; no quedaron duplicados.
+
+Las dos columnas de la izquierda son la mitad que pedía Manalo. Yusef lo dijo
+como *"estandarizar la mayoría y crearle botones para las excepciones"*: se ve el
+estándar antes de pisarlo, y la excepción muestra cuánto se está bajando
+(`−22% vs lista`). Por eso **no hay columna de descuento**: el descuento *es* el
+precio especial, y una segunda forma de escribir el mismo número es justo lo que
+se acaba de sacar del sistema.
+
+Vaciar una celda **quita** la excepción, igual que en `PR-C7.14`. Y si un
+servicio ya tiene tramos cargados, la fila sale en solo lectura con un link a la
+Tabla de Servicios: una escalera no cabe en una celda, y ofrecer un número plano
+la aplastaría en silencio.
+
+**Lo que sigue abierto de este bloque**: *"si es mayorista, se va a aplicar solo
+a los marítimos"* es una regla de la **categoría**, no del cliente.
+`TarifasHuerfanas::SOLO_MARITIMOS` ya la detecta y la reporta con
+`rake tarifas:huerfanas`; falta decidir si se corrige la data o la regla.
 
 ---
 

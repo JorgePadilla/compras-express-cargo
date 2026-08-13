@@ -129,35 +129,14 @@
       </div>
     <% end %>
 
-    <%# ── Cómo se le cobra (PR-C6.41 · RP-04b) ──
-        Yusef: "clientes que son mayoristas o clientes grandes, que en cierto
-        tipo de envío solo se les cobra volumen, no peso... es lo que le creamos
-        al cliente, CUANDO CREAMOS EL CLIENTE: va a tener una opción para
-        seleccionar varios tipos de envío y en cuál sí y en cuál no".
+    <%# ── El megacuadro (A7-26 · PR-C7.15) ──
+        Acá estaban sueltos los checkboxes de "solo volumétrico" de PR-C6.41,
+        que ya eran media matriz cliente × servicio. Ahora es la matriz entera:
+        precio especial, mínimo y cobro por volumen, servicio por servicio.
 
-        Va acá, pegado a Grupo de clientes, que es el otro campo que decide
-        cómo se le cobra a este cliente. %>
-    <div class="md:col-span-2 rounded-lg ring-1 ring-gray-200 bg-gray-50 p-4">
-      <h3 class="text-sm font-semibold text-cec-navy mb-1">Como se le cobra</h3>
-      <p class="text-xs text-gray-500 mb-3">
-        Por defecto se cobra <b>el mayor</b> entre el peso real y el volumetrico.
-        Marca los servicios donde a este cliente se le cobra <b>solo el volumetrico</b>.
-      </p>
-
-      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        <%= f.collection_check_boxes :tipo_envio_solo_volumetrico_ids, @tipo_envios, :id, :nombre do |b| %>
-          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-            <%= b.check_box class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-            <%= b.text %>
-          </label>
-        <% end %>
-      </div>
-
-      <p class="mt-3 text-xs text-gray-500">
-        Si el paquete todavia no tiene medidas, se sigue cobrando el peso real
-        &mdash; nunca cero.
-      </p>
-    </div>
+        Va pegado a Grupo de clientes, que es el otro campo que decide cómo se
+        le cobra a este cliente. %>
+    <%= render "megacuadro_precios", cliente: cliente, filas: @filas_de_precios %>
 
     <div class="md:col-span-2">
       <%= f.label :notas_miami, "Notas Miami", class: "block text-sm font-medium text-gray-700 mb-1" %>

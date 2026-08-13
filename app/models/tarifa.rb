@@ -87,11 +87,18 @@ class Tarifa < ApplicationRecord
   # Dentro de cada nivel, si hay una fila para la sucursal concreta esa gana
   # sobre la general — "en algunas sucursales hay una pequeña diferencia de
   # precio, costo extra de transporte".
-  def self.resolver(tipo_envio:, peso:, cliente: nil, proveedor: nil, sucursal: nil)
+  # `ignorar_precio_del_cliente` salta el primer nivel y deja el resto igual.
+  # Contesta *"¿qué pagaría este cliente si no tuviera su precio especial?"*, que
+  # es lo que el megacuadro de su ficha necesita para mostrar contra qué se está
+  # negociando (`PR-C7.15`). No lo usa nada que cobre: por default es `false` y
+  # la cascada es la de siempre.
+  def self.resolver(tipo_envio:, peso:, cliente: nil, proveedor: nil, sucursal: nil,
+                    ignorar_precio_del_cliente: false)
     return nil if tipo_envio.nil?
 
     elegida = buscar_para_peso(peso, tipo_envio: tipo_envio, cliente: cliente,
-                                     proveedor: proveedor, sucursal: sucursal)
+                                     proveedor: proveedor, sucursal: sucursal,
+                                     ignorar_precio_del_cliente:)
     return nil if elegida.nil?
 
     # ── El escalón se elige con el peso que se va a COBRAR ────────────────
@@ -115,21 +122,30 @@ class Tarifa < ApplicationRecord
     # tolerancia y las fronteras son múltiplos del incremento, así que el peso
     # facturable no puede volver a caerse fuera del escalón que le toca.
     buscar_para_peso(facturable, tipo_envio: tipo_envio, cliente: cliente,
-                                 proveedor: proveedor, sucursal: sucursal) || elegida
+                                 proveedor: proveedor, sucursal: sucursal,
+                                 ignorar_precio_del_cliente:) || elegida
   end
 
   # La tarifa aplicable a un peso concreto, sin redondear nada. Es el cuerpo
   # que `resolver` usa en sus dos pasadas.
-  def self.buscar_para_peso(peso, tipo_envio:, cliente:, proveedor:, sucursal:)
+  def self.buscar_para_peso(peso, tipo_envio:, cliente:, proveedor:, sucursal:,
+                            ignorar_precio_del_cliente: false)
     base = activas.para_peso(peso).where(tipo_envio_id: tipo_envio.id)
 
-    niveles = [
-      (cliente    && { cliente_id: cliente.id }),
-      (proveedor  && { proveedor_id: proveedor.id, cliente_id: nil }),
-      (cliente&.categoria_precio_id && { categoria_precio_id: cliente.categoria_precio_id,
-                                         cliente_id: nil, proveedor_id: nil }),
-      { cliente_id: nil, proveedor_id: nil, categoria_precio_id: nil }
-    ].compact
+    # Escrito como appends y no como array + `compact` porque saltarse un nivel
+    # con `&&` deja un `false` en el medio, y `compact` solo saca los `nil`.
+    niveles = []
+    # `cliente&.id` y no `cliente`: un cliente sin guardar no tiene tarifas
+    # propias, y filtrar por `cliente_id: nil` no sería "saltarse el nivel" sino
+    # matchear cualquier fila de lista, grupo o proveedor — la primera que
+    # apareciera. El formulario de alta pinta el cuadro con un `Cliente.new`.
+    niveles << { cliente_id: cliente.id } if cliente&.id && !ignorar_precio_del_cliente
+    niveles << { proveedor_id: proveedor.id, cliente_id: nil } if proveedor
+    if cliente&.categoria_precio_id
+      niveles << { categoria_precio_id: cliente.categoria_precio_id,
+                   cliente_id: nil, proveedor_id: nil }
+    end
+    niveles << { cliente_id: nil, proveedor_id: nil, categoria_precio_id: nil }
 
     niveles.each do |filtro|
       candidatas = base.where(filtro)

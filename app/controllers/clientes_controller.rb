@@ -12,8 +12,10 @@ class ClientesController < ApplicationController
   end
 
   def new
-    cargar_catalogos
+    # El orden importa: `cargar_catalogos` arma el megacuadro y necesita saber
+    # de qué cliente se trata, aunque todavía no exista.
     @cliente = Cliente.new
+    cargar_catalogos
   end
 
   def create
@@ -62,10 +64,23 @@ class ClientesController < ApplicationController
     cargar_catalogos
   end
 
+  # PR-C7.15: el megacuadro escribe `tarifas` de nivel cliente, así que guardar
+  # el cliente y guardar sus precios es **una sola operación**. Media negociación
+  # aplicada —el cliente con su grupo nuevo pero sin el precio que lo acompaña—
+  # cobraría mal hasta que alguien se diera cuenta.
   def update
-    if @cliente.update(cliente_params)
+    precios = PreciosEspecialesDelCliente.new(@cliente)
+
+    guardado = ActiveRecord::Base.transaction do
+      @cliente.update(cliente_params) &&
+        precios.aplicar(params[:precios_especiales]) ||
+        raise(ActiveRecord::Rollback)
+    end
+
+    if guardado
       redirect_to @cliente, notice: "Cliente actualizado exitosamente."
     else
+      flash.now[:alert] = precios.errores.to_sentence if precios.errores.any?
       cargar_catalogos
       render :edit, status: :unprocessable_entity
     end
@@ -84,6 +99,11 @@ class ClientesController < ApplicationController
     @sucursales_retiro = Sucursal.activas.where.not(ubicacion: "miami").ordered
     # PR-C6.41: los servicios donde se le puede cobrar solo el volumétrico.
     @tipo_envios = TipoEnvio.activos.order(:nombre)
+    # PR-C7.15 · A7-26: el megacuadro. Una fila por servicio, con lo que paga
+    # hoy, de dónde sale, y su excepción si tiene. También se arma para un
+    # cliente sin guardar: ahí las celdas de precio van deshabilitadas pero el
+    # cobro por volumen se puede marcar desde el alta, que es como Yusef lo pidió.
+    @filas_de_precios = PreciosEspecialesDelCliente.new(@cliente || Cliente.new).filas(@tipo_envios)
   end
 
   def set_cliente
