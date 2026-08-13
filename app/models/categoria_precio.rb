@@ -37,18 +37,23 @@ class CategoriaPrecio < ApplicationRecord
   # Los dos `dependent: :restrict_with_error` de arriba ya lo impiden a nivel de
   # base; esto existe para poder **decirlo antes**, en el botón, en vez de que el
   # usuario descubra la regla a fuerza de errores.
-  def borrable?
-    clientes.empty? && tarifas.empty?
+  #
+  # Los conteos entran como argumento porque la Tabla de Servicios los trae ya
+  # agrupados —dos queries para las 8 categorías— y sin eso la sección de grupos
+  # sería un N+1. `includes(:clientes)` no es alternativa: son 21 mil filas para
+  # contestar si hay cero.
+  def borrable?(clientes_count: clientes.count, tarifas_count: tarifas.count)
+    clientes_count.zero? && tarifas_count.zero?
   end
 
   # Por qué no se puede, en una frase que sirva tal cual en pantalla y en el
   # flash. Devuelve nil cuando sí se puede.
-  def motivo_no_borrable
-    return nil if borrable?
+  def motivo_no_borrable(clientes_count: clientes.count, tarifas_count: tarifas.count)
+    return nil if borrable?(clientes_count:, tarifas_count:)
 
     partes = []
-    partes << "#{clientes.count} cliente(s) asignado(s)" if clientes.any?
-    partes << "#{tarifas.count} tarifa(s) cargada(s)"    if tarifas.any?
+    partes << "#{clientes_count} cliente(s) asignado(s)" if clientes_count.positive?
+    partes << "#{tarifas_count} tarifa(s) cargada(s)"    if tarifas_count.positive?
 
     "Tiene #{partes.to_sentence}."
   end

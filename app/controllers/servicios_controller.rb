@@ -16,6 +16,14 @@ class ServiciosController < ApplicationController
                      .to_a
                      .sort_by { |t| orden_de_lectura(t) }
                      .group_by(&:tipo_envio_id)
+
+    # PR-C7.12: los grupos de clientes se administran acá desde que la pantalla
+    # aparte se fue. `count` en vez de `includes` porque lo único que muestra la
+    # sección son los dos números, y traerse las filas para contarlas sería
+    # cargar las 44 tarifas dos veces.
+    @grupos          = CategoriaPrecio.order(:nombre).to_a
+    @clientes_por_grupo = Cliente.where.not(categoria_precio_id: nil).group(:categoria_precio_id).count
+    @tarifas_por_grupo  = Tarifa.where.not(categoria_precio_id: nil).group(:categoria_precio_id).count
   end
 
   def new
@@ -28,7 +36,7 @@ class ServiciosController < ApplicationController
     @tarifa = Tarifa.new(tarifa_params)
     aplicar_minimo_con_isv
 
-    if @tarifa.save
+    if guardar_con_categoria
       redirect_to servicios_path, notice: "Tarifa creada."
     else
       cargar_catalogos
@@ -44,7 +52,7 @@ class ServiciosController < ApplicationController
     @tarifa.assign_attributes(tarifa_params)
     aplicar_minimo_con_isv
 
-    if @tarifa.save
+    if guardar_con_categoria
       redirect_to servicios_path, notice: "Tarifa actualizada."
     else
       cargar_catalogos
@@ -82,6 +90,33 @@ class ServiciosController < ApplicationController
 
   def set_tarifa
     @tarifa = Tarifa.find(params[:id])
+  end
+
+  # PR-C7.12: el formulario manda el **nombre** de la categoría, y si no existe se
+  # crea. Desde que la pantalla aparte se fue, esta es la única forma de crear un
+  # grupo — y es donde se necesita, porque uno crea el grupo justo cuando le va a
+  # poner precio.
+  #
+  # Va en una transacción a propósito: si la tarifa no pasa validación, la
+  # categoría recién tecleada **no se queda huérfana**. `transaction` devuelve nil
+  # cuando se hace rollback, así que sirve tal cual como "¿se guardó?".
+  def guardar_con_categoria
+    ActiveRecord::Base.transaction do
+      asignar_categoria_por_nombre
+      @tarifa.save || raise(ActiveRecord::Rollback)
+    end
+  end
+
+  # Sin el `key?` no se puede distinguir "no mandó el campo" de "lo dejó vacío", y
+  # la segunda tiene que poder **quitarle** la categoría a una tarifa.
+  def asignar_categoria_por_nombre
+    return unless params[:tarifa]&.key?(:categoria_nombre)
+
+    nombre = params[:tarifa][:categoria_nombre].to_s.strip
+    @tarifa.categoria_nombre = nombre
+    @tarifa.categoria_precio =
+      nombre.presence && (CategoriaPrecio.find_by("LOWER(nombre) = ?", nombre.downcase) ||
+                          CategoriaPrecio.create!(nombre: nombre))
   end
 
   def cargar_catalogos

@@ -14,6 +14,26 @@ class Tarifa < ApplicationRecord
 
   MONEDAS = %w[USD LPS].freeze
 
+  # El formulario manda el **nombre** de la categoría, no su id.
+  #
+  # La pantalla aparte de categorías se fue en `PR-C7.12` (Jorge: *"no le veo
+  # mucho valor"*), así que esta pasó a ser la única forma de crear una — se
+  # teclea acá y se crea sobre la marcha. Mismo patrón que el carrier de
+  # `/etiquetar` que Yusef aprobó: *"dropdown con texto libre para agregar a la
+  # lista"*.
+  #
+  # Quien resuelve el nombre a id es `ServiciosController`, dentro de una
+  # transacción: si la tarifa no pasa validación, la categoría nueva tampoco
+  # queda. Acá solo se guarda lo tecleado para que el formulario lo repinte
+  # cuando hay error.
+  attr_writer :categoria_nombre
+
+  def categoria_nombre
+    return @categoria_nombre if defined?(@categoria_nombre)
+
+    categoria_precio&.nombre
+  end
+
   validates :precio_libra, numericality: { greater_than_or_equal_to: 0 }
   validates :moneda, inclusion: { in: MONEDAS }
   validates :minimo_moneda, inclusion: { in: MONEDAS }, allow_nil: true
@@ -155,10 +175,15 @@ class Tarifa < ApplicationRecord
     "#{desde_libras.to_f} – #{hasta_libras.to_f} lb"
   end
 
+  # PR-C7.12: el nivel de la categoría se rotula **"Grupo"**, igual que el campo
+  # del formulario y la sección de /servicios. Antes decía "Categoría" y la
+  # pantalla decía otra cosa: dos nombres para lo mismo es justo lo que Jorge
+  # reportó. La tabla se sigue llamando `categoria_precios` — el rótulo cambia,
+  # el dato no.
   def nivel
     return "Cliente"    if cliente_id.present?
     return "Proveedor"  if proveedor_id.present?
-    return "Categoría"  if categoria_precio_id.present?
+    return "Grupo"      if categoria_precio_id.present?
     "Lista"
   end
 

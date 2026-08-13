@@ -112,7 +112,10 @@
     </div>
 
     <div>
-      <%= f.label :categoria_precio_id, "Categoria de Precio", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%# PR-C7.12: se llama "Grupo de clientes" en las tres pantallas que lo
+          muestran. Antes acá decía "Categoria de Precio" y en /servicios decía
+          otra cosa; dos nombres para lo mismo es lo que Jorge reportó. %>
+      <%= f.label :categoria_precio_id, "Grupo de clientes", class: "block text-sm font-medium text-gray-700 mb-1" %>
       <%= f.collection_select :categoria_precio_id, CategoriaPrecio.order(:nombre), :id, :nombre,
           { include_blank: "— Seleccionar —" },
           { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
@@ -132,7 +135,7 @@
         al cliente, CUANDO CREAMOS EL CLIENTE: va a tener una opción para
         seleccionar varios tipos de envío y en cuál sí y en cuál no".
 
-        Va acá, pegado a Categoría de Precio, que es el otro campo que decide
+        Va acá, pegado a Grupo de clientes, que es el otro campo que decide
         cómo se le cobra a este cliente. %>
     <div class="md:col-span-2 rounded-lg ring-1 ring-gray-200 bg-gray-50 p-4">
       <h3 class="text-sm font-semibold text-cec-navy mb-1">Como se le cobra</h3>

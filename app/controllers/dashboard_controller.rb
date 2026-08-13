@@ -76,8 +76,9 @@ class DashboardController < ApplicationController
       groups << {
         area: "Catálogos",
         cards: [
-          card("Tabla de Servicios",     "Precios, escalones y mínimos", "currency-dollar",         servicios_path,                 :gold),
-          card("Categorías de Precio",   nil, "tag",                     categoria_precios_path,    :gold),
+          # PR-C7.12: los grupos de clientes ya no tienen tarjeta propia — se
+          # administran dentro de la Tabla de Servicios, que es donde vive su precio.
+          card("Tabla de Servicios",     "Precios, escalones, mínimos y grupos", "currency-dollar", servicios_path,                 :gold),
           card("Tarifas de Recolecta",   nil, "truck",                   tarifas_recolecta_path,    :gold),
           card("Servicios Extra",        nil, "sparkles",                servicios_extra_path,      :gold),
           card("Proveedores",            nil, "building-storefront",     proveedores_path,          :gold),

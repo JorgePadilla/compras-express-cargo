@@ -14,7 +14,7 @@
     <%= heroicon "information-circle", variant: :solid, options: { class: "w-5 h-5 text-cec-navy dark:text-cec-gold shrink-0 mt-0.5" } %>
     <div class="text-sm text-gray-700 dark:text-gray-200">
       Al cobrar, gana la regla <strong>más específica</strong> que aplique:
-      <span class="font-mono text-xs">cliente → proveedor → categoría → lista</span>.
+      <span class="font-mono text-xs">cliente → proveedor → grupo → lista</span>.
       Dentro de cada nivel, una tarifa con sucursal pisa a la general, y se usa el escalón que contiene el peso del paquete.
     </div>
   </div>
@@ -124,3 +124,6 @@
     </div>
   </div>
 <% end %>
+
+<%= render "grupos_de_clientes", grupos: @grupos,
+      clientes_por_grupo: @clientes_por_grupo, tarifas_por_grupo: @tarifas_por_grupo %>

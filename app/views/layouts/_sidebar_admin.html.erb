@@ -55,8 +55,11 @@
     <%= sidebar_section "Configuracion" do %>
       <%= sidebar_link "Usuarios", users_path, icon: "user-group" %>
       <%= sidebar_link "Sucursales", sucursales_path, icon: "building-storefront" %>
+      <%# PR-C7.12: "Categorias de Precio" se fue de acá. Jorge: "no le veo mucho
+          valor". Sonaba a lo mismo que la línea de arriba y era un CRUD de un
+          campo; los grupos de clientes se administran dentro de la Tabla de
+          Servicios, que es donde vive su precio. %>
       <%= sidebar_link "Tabla de Servicios", servicios_path, icon: "currency-dollar" %>
-      <%= sidebar_link "Categorias de Precio", categoria_precios_path, icon: "swatch" %>
       <%= sidebar_link "Tarifas de Recolecta", tarifas_recolecta_path, icon: "map-pin" %>
       <%= sidebar_link "Servicios Extra", servicios_extra_path, icon: "puzzle-piece" %>
       <%= sidebar_link "Proveedores", proveedores_path, icon: "shopping-bag" %>
