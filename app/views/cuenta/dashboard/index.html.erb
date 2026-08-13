@@ -75,7 +75,7 @@
         <% @paquetes_recientes.each do |paquete| %>
           <tr>
             <td class="px-4 py-3 text-sm font-mono text-gray-700 truncate max-w-[260px]"><%= paquete.tracking %></td>
-            <td class="px-4 py-3"><%= render StatusBadgeComponent.new(status: paquete.estado) %></td>
+            <td class="px-4 py-3"><%= render StatusBadgeComponent.new(status: paquete.estado, label: estado_de(paquete)) %></td>
             <td class="px-4 py-3 text-sm text-gray-600"><%= paquete.peso_cobrar ? "#{paquete.peso_cobrar} lbs" : "-" %></td>
           </tr>
         <% end %>

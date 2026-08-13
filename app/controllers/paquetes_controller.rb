@@ -36,7 +36,7 @@ class PaquetesController < ApplicationController
     @paquetes = @paquetes.page(params[:page]).per(per_page_sanitized)
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     @sucursales = Sucursal.activas.ordered
-    @estados_paquete = Paquete.estados.keys
+    @estados_paquete = Paquete::ESTADOS_SELECCIONABLES
     # Pre-fill para el input de autocomplete de Pre-Alerta cuando el filtro
     # viene en la URL. (El de Cliente fue removido — Yusef 2026-05-08:
     # reemplazado por "Búsqueda avanzada" + quick filters de codigo/nombre.)
