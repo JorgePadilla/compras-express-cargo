@@ -395,6 +395,9 @@ class Paquete < ApplicationRecord
   # "entre más cosas nos dejes crear, menos te molestaremos".
   after_save :sync_carrier_catalog, if: :saved_change_to_expedido_por?
   after_save :sync_pre_alerta_estados, if: :saved_change_to_estado?
+  # A7-19: el tipo de envío también baja a la pre-alerta. Ver
+  # `sync_pre_alerta_tipo_envio` abajo.
+  after_save :sync_pre_alerta_tipo_envio, if: :saved_change_to_tipo_envio_id?
   # Yusef: "al cambiar el manifiesto, las fechas de salida/aduana deben
   # actualizarse al nuevo manifiesto". Mejor como callback (no solo
   # controller) para que el flow desde manifiestos#add_paquete también
@@ -841,6 +844,23 @@ class Paquete < ApplicationRecord
   def sync_pre_alerta_estados
     pre_alerta_paquetes.includes(:pre_alerta).each do |pap|
       pap.pre_alerta&.actualizar_estado_from_paquetes!
+    end
+  end
+
+  # A7-19. Yusef lo reprodujo en vivo el 2026-08-12: escaneó un paquete cuya
+  # pre-alerta decía CER, lo ingresó como EXPRESS, y la pre-alerta se quedó
+  # en CER.
+  #
+  #   > "La prealerta era CER, pero tenés que actualizarla a Express."
+  #   > "Ahí es donde tenés que irte a la prealerta y sacarlo de ahí."
+  #
+  # Lo estaba corrigiendo a mano. `aplicar_cambio_servicio` toca solo el
+  # paquete, y **nada en todo el repo escribía `pre_alertas.tipo_envio_id`
+  # después de crearla** — así que el cliente veía el servicio viejo en su
+  # portal para siempre, y el siguiente escaneo volvía a proponerlo.
+  def sync_pre_alerta_tipo_envio
+    pre_alerta_paquetes.includes(:pre_alerta).filter_map(&:pre_alerta).uniq.each do |pa|
+      pa.sincronizar_tipo_envio_desde_paquetes!
     end
   end
 
