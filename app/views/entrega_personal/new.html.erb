@@ -66,6 +66,11 @@ end %>
 
     <div class="px-6 py-4 space-y-6">
 
+      <%# Sección 0: ¿es una recolecta? Va antes de proveedor porque Yusef lo
+          pidió así: "antes de proveedores". Cambia el tracking (RC en vez de
+          EP) y agrega los datos de la visita. %>
+      <%= render "entrega_personal/recolecta", f: f %>
+
       <%# Sección 1: Proveedor EP + Sucursal — define el prefijo del tracking %>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
@@ -140,9 +145,11 @@ end %>
           select viene vacío y el `change` lo va a llenar, pero en el re-render
           de un error el select vuelve lleno y ese `change` ya no ocurre — un
           cliente con cobro solo-volumétrico mostraría el peso viejo. %>
+      <%# A7-20: acá las cajas se agregan una por una. Ver el partial
+          `entrega_personal/_cajas_repetidor` para el porqué. %>
       <%= render "shared/peso_medidas_calc", f: f,
             valor_a_pagar: true, cotizador_url: cotizador_path,
-            tipo_envio_id: f.object.tipo_envio_id %>
+            tipo_envio_id: f.object.tipo_envio_id, modo_cajas: :repetidor %>
 
       <%# Sección 4: Contenido + Remitente + Driver %>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

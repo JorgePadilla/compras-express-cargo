@@ -96,7 +96,10 @@ class EntregasController < ApplicationController
   end
 
   def set_entrega
-    @entrega = Entrega.find(params[:id])
+    # `sucursal` y `sucursal_destino` van precargadas porque el badge de estado
+    # las lee para decir en qué sucursal está el paquete (A7-13/A7-15), y la
+    # vista los recorre en una tabla.
+    @entrega = Entrega.includes(paquetes: [ :sucursal, :sucursal_destino ]).find(params[:id])
   end
 
   def apply_filters(scope)

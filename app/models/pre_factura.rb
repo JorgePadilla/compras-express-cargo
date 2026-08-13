@@ -218,17 +218,29 @@ class PreFactura < ApplicationRecord
         concepto = "Flete #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia}"
         concepto += " (mínimo de servicio)" if aplico_minimo
       else
-        # Sin tarifa cargada caemos al comportamiento previo, para que un
-        # servicio recién creado no facture en cero sin aviso. Esos precios
-        # también son USD.
-        precio_origen = cliente.categoria_precio&.precio_para(paquete.tipo_envio) ||
-                        paquete.tipo_envio&.precio_libra ||
-                        BigDecimal("0")
-        precio        = pre_factura.convertir_a_moneda(precio_origen, "USD")
+        # A7-25. Acá había un fallback: si `Tarifa.resolver` no encontraba nada,
+        # se cobraba con `categoria_precio.precio_para` y, si tampoco, con
+        # `tipo_envio.precio_libra`. O sea, con la tabla vieja — sin mínimo, sin
+        # escalonado, y colapsando los cinco servicios a "aéreo o marítimo".
+        #
+        # Es justo la duplicación que Yusef encontró: *"no me había fijado que
+        # tenías otra tabla del otro lado"*. Un fallback que cobra distinto que
+        # la tarifa es peor que no tener fallback — el propio
+        # `TarifasPropuesta2026` ya lo dice cuando sincroniza
+        # `tipo_envios.precio_libra`.
+        #
+        # Ahora la tabla vieja **no se consulta**. La línea se arma en cero y lo
+        # dice en el concepto, para que el cajero no la pueda pasar por alto y
+        # alguien cargue la tarifa en /servicios.
+        #
+        # Se eligió esto y no cortar con un error porque el cajero tiene al
+        # cliente enfrente: un precio en cero que grita es peor negocio que
+        # facturar, pero mejor que cobrar en silencio con la tabla equivocada.
+        precio        = BigDecimal("0")
         peso_fac      = peso
-        subtotal      = (BigDecimal(peso.to_s) * precio).round(2, BigDecimal::ROUND_HALF_UP)
+        subtotal      = BigDecimal("0")
         aplico_minimo = false
-        concepto      = "Flete #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia}"
+        concepto      = "⚠ SIN TARIFA CARGADA — #{paquete.tipo_envio&.nombre || 'servicio'} - #{paquete.guia}"
       end
 
       pre_factura.pre_factura_items.build(

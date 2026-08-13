@@ -14,7 +14,7 @@ class CotizadorFlete
   Resultado = Struct.new(
     :peso_cobrar, :peso_facturado, :vlbs,
     :precio_libra, :subtotal, :impuesto, :total,
-    :aplico_minimo, :tarifa, :tasa, :moneda,
+    :aplico_minimo, :tarifa, :tasa, :moneda, :sin_tarifa,
     keyword_init: true
   ) do
     def tarifa_encontrada? = tarifa.present?
@@ -57,12 +57,17 @@ class CotizadorFlete
       end
       aplico = cobro[:aplico_minimo]
     else
-      # Mismo fallback que la pre-factura cuando no hay tarifa cargada.
-      precio_origen = @cliente&.categoria_precio&.precio_para(@tipo_envio) ||
-                      @tipo_envio&.precio_libra || BigDecimal("0")
-      precio   = convertir(precio_origen, "USD", tasa)
+      # A7-25. Acá vivía el mismo fallback a la tabla vieja que tenía la
+      # pre-factura, y con el mismo problema: cotizaba con un precio que no es
+      # el que se va a cobrar.
+      #
+      # A diferencia de la pre-factura, esto es **display** — la pantalla de
+      # etiquetar lo muestra mientras el operario captura. Así que no corta:
+      # devuelve cero y avisa, para que el vacío se lea como "falta cargar la
+      # tarifa" y no como "es gratis".
+      precio   = BigDecimal("0")
       peso_fac = peso_cobrar
-      subtotal = (peso_fac * precio).round(2, BigDecimal::ROUND_HALF_UP)
+      subtotal = BigDecimal("0")
       aplico   = false
     end
 
@@ -72,7 +77,8 @@ class CotizadorFlete
       peso_cobrar: peso_cobrar, peso_facturado: peso_fac, vlbs: vlbs,
       precio_libra: precio, subtotal: subtotal, impuesto: impuesto,
       total: (subtotal + impuesto).round(2, BigDecimal::ROUND_HALF_UP),
-      aplico_minimo: aplico, tarifa: tarifa, tasa: tasa, moneda: MONEDA_DOCUMENTO
+      aplico_minimo: aplico, tarifa: tarifa, tasa: tasa, moneda: MONEDA_DOCUMENTO,
+      sin_tarifa: tarifa.nil?
     )
   end
 

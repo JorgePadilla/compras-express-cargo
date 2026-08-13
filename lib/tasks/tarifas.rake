@@ -5,6 +5,48 @@ namespace :tarifas do
     TarifasPropuesta2026.sembrar!(verbose: true)
   end
 
+  desc "Muestra las tarifas de categoria que quedaron del backfill viejo y hoy cobran (A7-25)."
+  task huerfanas: :environment do
+    hallazgos = TarifasHuerfanas.detectar
+
+    if hallazgos.empty?
+      puts "No hay tarifas huerfanas: las de categoria cargadas son todas de la hoja de Yusef."
+      next
+    end
+
+    puts "#{hallazgos.size} tarifas de categoria que la hoja de precios no declara."
+    puts "Estan en el nivel 'categoria', que GANA sobre el precio de lista.\n\n"
+    puts format("%-22s %-8s %8s %10s   %s", "CATEGORIA", "SERVICIO", "COBRA", "SIN ELLA", "POR QUE")
+    puts "-" * 92
+
+    hallazgos.sort_by { |h| [ h.categoria, h.servicio ] }.each do |h|
+      lista = h.precio_si_se_borra ? format("%.2f", h.precio_si_se_borra) : "sin lista"
+      puts format("%-22s %-8s %8.2f %10s   %s",
+                  h.categoria, h.servicio.upcase, h.precio_actual, lista, h.motivo)
+    end
+
+    suben = hallazgos.count { |h| h.precio_si_se_borra && h.precio_si_se_borra > h.precio_actual }
+    puts "\nSi se borran, a #{suben} de #{hallazgos.size} les SUBE el precio."
+    puts "Correr `rake tarifas:limpiar_huerfanas` para borrarlas."
+  end
+
+  desc "Borra las tarifas huerfanas que muestra `tarifas:huerfanas` (A7-25)."
+  task limpiar_huerfanas: :environment do
+    hallazgos = TarifasHuerfanas.detectar
+    if hallazgos.empty?
+      puts "Nada que borrar."
+      next
+    end
+
+    # Una por una y con `destroy`, no `delete_all`: cada fila deja su version de
+    # PaperTrail. Es plata — tiene que quedar quien la borro y cuando.
+    hallazgos.each do |h|
+      puts "borrando #{h.categoria} / #{h.servicio.upcase} (#{h.motivo})"
+      h.tarifa.destroy!
+    end
+    puts "#{hallazgos.size} tarifas borradas."
+  end
+
   desc "Siembra los cargos que NO son flete de la hoja de Yusef, solo los que no tienen ambiguedad."
   task sembrar_cargos_2026: :environment do
     puts "Sembrando cargos PROPUESTA 2026..."

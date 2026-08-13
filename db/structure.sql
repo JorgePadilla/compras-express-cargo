@@ -1572,7 +1572,14 @@ CREATE TABLE public.paquetes (
     driver character varying,
     sucursal_recepcion_id bigint,
     tipo_envio_anterior_id bigint,
-    tercero_nombre character varying
+    tercero_nombre character varying,
+    sucursal_destino_id bigint,
+    fecha_enviado_sucursal timestamp(6) without time zone,
+    fecha_enviado_sucursal_by_user_id bigint,
+    recolecta_horario character varying,
+    recolecta_contacto character varying,
+    recolecta_telefono character varying,
+    recolecta_instrucciones text
 );
 
 
@@ -4189,6 +4196,13 @@ CREATE INDEX index_paquetes_on_fecha_disponible ON public.paquetes USING btree (
 
 
 --
+-- Name: index_paquetes_on_fecha_enviado_sucursal_by_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_paquetes_on_fecha_enviado_sucursal_by_user_id ON public.paquetes USING btree (fecha_enviado_sucursal_by_user_id);
+
+
+--
 -- Name: index_paquetes_on_guia; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4256,6 +4270,13 @@ CREATE INDEX index_paquetes_on_sub_localidad_actual_id ON public.paquetes USING 
 --
 
 CREATE INDEX index_paquetes_on_sucursal_actual_id ON public.paquetes USING btree (sucursal_actual_id);
+
+
+--
+-- Name: index_paquetes_on_sucursal_destino_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_paquetes_on_sucursal_destino_id ON public.paquetes USING btree (sucursal_destino_id);
 
 
 --
@@ -5428,6 +5449,14 @@ ALTER TABLE ONLY public.cliente_cobro_volumetricos
 
 
 --
+-- Name: paquetes fk_rails_94c0fd6de4; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_94c0fd6de4 FOREIGN KEY (fecha_enviado_sucursal_by_user_id) REFERENCES public.users(id);
+
+
+--
 -- Name: tareas fk_rails_95011bfdd3; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5537,6 +5566,14 @@ ALTER TABLE ONLY public.ingresos_caja
 
 ALTER TABLE ONLY public.paquetes
     ADD CONSTRAINT fk_rails_ad55b41320 FOREIGN KEY (fecha_en_reparto_by_user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: paquetes fk_rails_ba1c45b053; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_ba1c45b053 FOREIGN KEY (sucursal_destino_id) REFERENCES public.sucursales(id);
 
 
 --
@@ -5858,6 +5895,10 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260813004928'),
+('20260813003045'),
+('20260813001241'),
+('20260813001146'),
 ('20260811162424'),
 ('20260810073956'),
 ('20260810030000'),

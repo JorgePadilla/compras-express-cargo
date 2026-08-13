@@ -315,19 +315,19 @@ end %>
            data-inline-select-url-value="<%= paquete_path(@paquete) %>"
            data-inline-select-field-value="estado"
            data-inline-select-resource-value="paquete">
-        <%= render StatusBadgeComponent.new(status: @paquete.estado) %>
+        <%= render StatusBadgeComponent.new(status: @paquete.estado, label: estado_de(@paquete)) %>
         <select data-action="change->inline-select#submit"
                 data-inline-select-target="select"
                 aria-label="Cambiar estado del paquete"
                 class="text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:ring-cec-teal focus:border-cec-teal py-1 pr-7">
-          <% Paquete.estados.keys.each do |est| %>
-            <option value="<%= est %>" <%= "selected" if est == @paquete.estado %>><%= est.humanize %></option>
+          <% Paquete::ESTADOS_SELECCIONABLES.each do |est| %>
+            <option value="<%= est %>" <%= "selected" if est == @paquete.estado %>><%= estado_etiqueta(est) %></option>
           <% end %>
         </select>
         <span data-inline-select-target="status" class="hidden text-[10px] font-semibold"></span>
       </div>
     <% else %>
-      <%= render StatusBadgeComponent.new(status: @paquete.estado) %>
+      <%= render StatusBadgeComponent.new(status: @paquete.estado, label: estado_de(@paquete)) %>
     <% end %>
   </div>
 
