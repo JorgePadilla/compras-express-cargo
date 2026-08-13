@@ -137,7 +137,12 @@ class ServiciosController < ApplicationController
 
   def tarifa_params
     params.require(:tarifa).permit(
-      :tipo_envio_id, :categoria_precio_id, :cliente_id, :sucursal_id, :proveedor_id,
+      # `categoria_nombre` no es una columna: es el nombre tecleado en el campo
+      # de grupo, que `asignar_categoria_por_nombre` resuelve a `categoria_precio_id`.
+      # Va permitido para que no ensucie el log con "Unpermitted parameter" en
+      # cada guardado; el `attr_writer` de `Tarifa` lo absorbe sin tocar la base.
+      :tipo_envio_id, :categoria_precio_id, :categoria_nombre,
+      :cliente_id, :sucursal_id, :proveedor_id,
       :desde_libras, :hasta_libras, :precio_libra, :moneda,
       :minimo_moneda, :minimo_libras, :aplica_minimo,
       # `incremento_libras` NO se permite: el redondeo a media libra es la regla,
