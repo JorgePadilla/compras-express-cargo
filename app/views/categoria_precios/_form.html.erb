@@ -10,22 +10,20 @@
       <%= f.label :nombre, class: "block text-sm font-medium text-gray-700 mb-1" %>
       <%= f.text_field :nombre, class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm", required: true %>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div>
-        <%= f.label :precio_libra_aereo, "Precio Aereo (LPS/lb)", class: "block text-sm font-medium text-gray-700 mb-1" %>
-        <%= f.number_field :precio_libra_aereo, step: 0.01, class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
-      </div>
-      <div>
-        <%= f.label :precio_libra_maritimo, "Precio Maritimo (LPS/lb)", class: "block text-sm font-medium text-gray-700 mb-1" %>
-        <%= f.number_field :precio_libra_maritimo, step: 0.01, class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
-      </div>
-      <%# A7-25: acá había un campo "Precio por Volumen" que **no lo leía nadie**.
-          El cobro volumétrico se calcula con el divisor fijo de
-          `VolumetricoCalculator`, no con este número. Un campo editable que no
-          cobra nada es peor que no tenerlo: hace creer que se configuró algo.
-          La columna sigue en la base hasta que se confirme que no hay datos
-          que rescatar. %>
-    </div>
+    <%# Acá había tres campos de precio. Se fueron con la columna.
+
+        Yusef: "la categoría de precio confunde con la tabla de servicios, y está
+        en lempiras la de categoría y el Excel está en dólares". Las dos cosas
+        eran ciertas: los campos decían "(LPS/lb)" sobre números que estaban en
+        dólares —la tabla no tenía columna `moneda`— y desde PR-C7.06 ningún
+        cálculo los leía. Se podían editar y no cambiaba nada de lo que se cobra.
+
+        Una categoría agrupa clientes. El precio vive en `tarifas` y se edita en
+        /servicios, que es la única pantalla que cobra. %>
+    <p class="text-sm text-gray-500">
+      Los precios de esta categoría se cargan en la
+      <%= link_to "Tabla de Servicios", servicios_path, class: "text-cec-teal-deep underline" %>.
+    </p>
   </div>
 
   <div class="mt-6 flex gap-3">

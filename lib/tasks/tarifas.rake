@@ -30,6 +30,61 @@ namespace :tarifas do
     puts "Correr `rake tarifas:limpiar_huerfanas` para borrarlas."
   end
 
+  # Las categorias de la epoca vieja que la hoja de precios de Yusef no declara,
+  # y a donde va cada una.
+  #
+  # Ojo: **cualquier destino les sube el precio**, porque la hoja 2026 es mas
+  # cara que los numeros viejos. El CER mas barato de las seis categorias de
+  # Yusef es $3.50 y VIP venia pagando $3.00. No hay opcion que no suba.
+  #
+  #   Regular -> sin categoria. "Regular" significa el cliente normal, y el
+  #     precio normal hoy ES el de lista. Es ademas donde caen solos cuando
+  #     corre la limpieza de huerfanas.
+  #   VIP -> Clientes Amigos. Es la unica de la hoja que sigue siendo un
+  #     descuento sobre lista ($4.20 vs $4.50 en CER). Conserva la intencion
+  #     -"a estos les hacemos precio"- aunque el descuento sea menor.
+  MIGRACION_CATEGORIAS = {
+    "Regular" => nil,
+    "VIP"     => "Clientes Amigos"
+  }.freeze
+
+  desc "Mueve los clientes de las categorias viejas (Regular, VIP). DRY=1 solo reporta."
+  task migrar_categorias_viejas: :environment do
+    seco = ENV["DRY"] == "1"
+    puts seco ? "MODO SECO: no se guarda nada.\n\n" : ""
+
+    total = 0
+
+    MIGRACION_CATEGORIAS.each do |origen, destino_nombre|
+      categoria = CategoriaPrecio.find_by(nombre: origen)
+      next puts("#{origen}: no existe, nada que mover.") if categoria.nil?
+
+      clientes = Cliente.where(categoria_precio_id: categoria.id).order(:codigo)
+      next puts("#{origen}: sin clientes asignados.") if clientes.empty?
+
+      destino = destino_nombre && CategoriaPrecio.find_by(nombre: destino_nombre)
+      if destino_nombre && destino.nil?
+        puts "#{origen}: la categoria destino \"#{destino_nombre}\" no existe. Sembrala primero."
+        next
+      end
+
+      etiqueta = destino_nombre || "sin categoria (precio de lista)"
+      puts "\n#{origen} -> #{etiqueta}: #{clientes.count} cliente(s)"
+
+      clientes.each do |c|
+        puts "  #{c.codigo.to_s.ljust(12)} #{c.nombre}"
+        next if seco
+
+        # `update!` y no `update_all`: cada cliente deja su version de
+        # PaperTrail. Le esta cambiando el precio a alguien con nombre.
+        c.update!(categoria_precio_id: destino&.id)
+        total += 1
+      end
+    end
+
+    puts seco ? "\nCorrelo sin DRY=1 para aplicarlo." : "\n#{total} cliente(s) movidos."
+  end
+
   desc "Borra las tarifas huerfanas que muestra `tarifas:huerfanas` (A7-25)."
   task limpiar_huerfanas: :environment do
     hallazgos = TarifasHuerfanas.detectar

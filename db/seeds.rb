@@ -74,16 +74,15 @@ end
 puts "  ✓ #{EmpresaManifiesto.count} empresas de manifiesto"
 
 # ── Categorias de precio ──
-[
-  { nombre: "Regular", precio_libra_aereo: 3.50, precio_libra_maritimo: 1.50, precio_volumen: 0.008 },
-  { nombre: "VIP", precio_libra_aereo: 3.00, precio_libra_maritimo: 1.25, precio_volumen: 0.007 },
-  { nombre: "Mayorista", precio_libra_aereo: 2.50, precio_libra_maritimo: 1.00, precio_volumen: 0.006 }
-].each do |attrs|
-  CategoriaPrecio.find_or_create_by!(nombre: attrs[:nombre]) do |cp|
-    cp.precio_libra_aereo = attrs[:precio_libra_aereo]
-    cp.precio_libra_maritimo = attrs[:precio_libra_maritimo]
-    cp.precio_volumen = attrs[:precio_volumen]
-  end
+# Solo el nombre: una categoria agrupa clientes, no guarda precios. Los precios
+# de cada categoria los siembra `TarifasPropuesta2026` sobre `tarifas`, con su
+# moneda explicita.
+#
+# "Regular" y "VIP" son las de la epoca vieja y la hoja de Yusef no las declara;
+# se dejan de sembrar. Los clientes que las tengan asignadas se mueven con
+# `rake tarifas:migrar_categorias_viejas`.
+[ "Mayorista" ].each do |nombre|
+  CategoriaPrecio.find_or_create_by!(nombre: nombre)
 end
 puts "  ✓ #{CategoriaPrecio.count} categorias de precio"
 

@@ -3,7 +3,10 @@ class CategoriaPreciosController < ApplicationController
   before_action :set_categoria, only: %i[show edit update]
 
   def index
-    @categorias = CategoriaPrecio.order(:nombre)
+    # Se precarga `tarifas` porque la pantalla ahora muestra lo que cada
+    # categoría cobra de verdad, y sin esto es un N+1 por fila.
+    @categorias = CategoriaPrecio.includes(tarifas: [ :tipo_envio, :sucursal ])
+                                 .order(:nombre)
   end
 
   def show
@@ -43,9 +46,9 @@ class CategoriaPreciosController < ApplicationController
     @categoria = CategoriaPrecio.find(params[:id])
   end
 
+  # Solo el nombre. Una categoría agrupa clientes; el precio vive en `tarifas`
+  # y se edita en /servicios, que es la única pantalla que cobra.
   def categoria_params
-    params.require(:categoria_precio).permit(:nombre, :precio_libra_aereo, :precio_libra_maritimo)
-    # A7-25: `precio_volumen` sale de los permitidos junto con su campo. Ningún
-    # cálculo lo lee — el volumétrico usa el divisor de `VolumetricoCalculator`.
+    params.require(:categoria_precio).permit(:nombre)
   end
 end

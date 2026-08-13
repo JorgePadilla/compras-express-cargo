@@ -1,11 +1,9 @@
+# Una categoria agrupa clientes; los precios viven en `tarifas` con su moneda.
+# Estas dos son las de la epoca vieja, y siguen acá porque hay clientes de
+# fixtures asignados a ellas y porque `tarifas_huerfanas` las usa como el caso
+# de "categoria que la hoja de precios no declara".
 regular:
   nombre: Regular
-  precio_libra_aereo: 3.50
-  precio_libra_maritimo: 1.50
-  precio_volumen: 0.008
 
 vip:
   nombre: VIP
-  precio_libra_aereo: 3.00
-  precio_libra_maritimo: 1.25
-  precio_volumen: 0.007

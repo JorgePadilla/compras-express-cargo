@@ -312,9 +312,6 @@ ALTER SEQUENCE public.carriers_id_seq OWNED BY public.carriers.id;
 CREATE TABLE public.categoria_precios (
     id bigint NOT NULL,
     nombre character varying NOT NULL,
-    precio_libra_aereo numeric(10,2),
-    precio_libra_maritimo numeric(10,2),
-    precio_volumen numeric(10,2),
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
 );
@@ -5895,6 +5892,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260813011959'),
 ('20260813004928'),
 ('20260813003045'),
 ('20260813001241'),

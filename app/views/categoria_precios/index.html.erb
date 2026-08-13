@@ -1,4 +1,10 @@
-<%= render PageHeaderComponent.new(title: "Categorias de Precio") do |h| %>
+<%= render PageHeaderComponent.new(title: "Categorias de Precio",
+      subtitle: "Agrupan clientes. Los precios se editan en la Tabla de Servicios.") do |h| %>
+  <% h.with_action do %>
+    <%= render ButtonComponent.new(href: servicios_path, variant: :secondary, icon: "currency-dollar") do %>
+      Tabla de Servicios
+    <% end %>
+  <% end %>
   <% h.with_action do %>
     <%= render ButtonComponent.new(href: new_categoria_precio_path, variant: :primary, icon: "plus", data: { shortcut: "F7" }) do %>
       Nueva Categoria <span class="ml-1 text-[10px] opacity-70">(F7)</span>
@@ -6,25 +12,39 @@
   <% end %>
 <% end %>
 
+<%# El aviso va arriba y no al pie porque es justo la confusión que Yusef
+    reportó: dos pantallas con "precio por libra" al lado del mismo nombre. %>
+<div class="mb-4 p-4 rounded-lg bg-cec-navy/5 dark:bg-cec-navy/20 ring-1 ring-cec-navy/20 dark:ring-cec-navy/40">
+  <div class="flex items-start gap-2">
+    <%= heroicon "information-circle", variant: :solid, options: { class: "w-5 h-5 text-cec-navy dark:text-cec-gold shrink-0 mt-0.5" } %>
+    <p class="text-sm text-gray-700 dark:text-gray-200">
+      Una categoría <strong>agrupa clientes</strong>; no guarda precios.
+      Lo que se ve acá sale de la <%= link_to "Tabla de Servicios", servicios_path, class: "text-cec-teal-deep dark:text-cec-teal-light underline" %>,
+      que es donde se edita. Al cobrar gana la regla más específica:
+      <span class="font-mono text-xs">cliente → proveedor → categoría → lista</span>.
+    </p>
+  </div>
+</div>
+
 <% if @categorias.any? %>
-  <div class="bg-white rounded-lg shadow overflow-hidden">
-    <table class="min-w-full divide-y divide-gray-200">
-      <thead class="bg-gray-50">
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden ring-1 ring-gray-200 dark:ring-gray-700">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+      <thead class="bg-gray-50 dark:bg-gray-900">
         <tr>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio Aereo/Lb</th>
-          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio Maritimo/Lb</th>
-          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Clientes</th>
-          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Nombre</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Qué cobra hoy</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Clientes</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Acciones</th>
         </tr>
       </thead>
-      <tbody class="bg-white divide-y divide-gray-200">
+      <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
         <% @categorias.each do |c| %>
-          <tr class="hover:bg-gray-50">
-            <td class="px-6 py-4 text-sm font-medium text-gray-900"><%= c.nombre %></td>
-            <td class="px-6 py-4 text-right text-sm">L. <%= number_with_delimiter(c.precio_libra_aereo.to_f, precision: 2) %></td>
-            <td class="px-6 py-4 text-right text-sm">L. <%= number_with_delimiter(c.precio_libra_maritimo.to_f, precision: 2) %></td>
-            <td class="px-6 py-4 text-right text-sm text-gray-500"><%= c.clientes.count %></td>
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 align-top">
+            <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+              <%= link_to c.nombre, categoria_precio_path(c), class: "hover:underline" %>
+            </td>
+            <td class="px-6 py-4"><%= render "tarifas_resumen", categoria: c %></td>
+            <td class="px-6 py-4 text-right text-sm text-gray-500 dark:text-gray-400"><%= c.clientes.count %></td>
             <td class="px-6 py-4 text-right text-sm">
               <%= render RowActionComponent.new(action: :edit, href: edit_categoria_precio_path(c), label: "Editar categoría") %>
             </td>
@@ -34,5 +54,7 @@
     </table>
   </div>
 <% else %>
-  <%= render EmptyStateComponent.new(title: "No hay categorias", description: "Crea una categoria para asignar precios especiales por cliente.", icon: "tag") %>
+  <%= render EmptyStateComponent.new(title: "No hay categorias",
+        description: "Una categoría agrupa clientes para darles un precio distinto del de lista. El precio se carga después en la Tabla de Servicios.",
+        icon: "tag") %>
 <% end %>

@@ -18,7 +18,7 @@
   <div class="bg-white rounded-lg shadow p-6 mb-6">
     <h2 class="text-lg font-semibold mb-2">Cliente: <%= @cliente.codigo %> — <%= @cliente.nombre_completo %></h2>
     <p class="text-sm text-gray-500">
-      Categoria: <%= @cliente.categoria_precio&.nombre || "Sin categoria (usa precios base del tipo de envio)" %>
+      Categoria: <%= @cliente.categoria_precio&.nombre || "Sin categoria (paga el precio de lista)" %>
     </p>
     <% if @cliente.saldo_pendiente.to_f > 0 %>
       <p class="text-sm text-amber-700 mt-1">Saldo pendiente actual: L. <%= number_with_delimiter(@cliente.saldo_pendiente.to_f, precision: 2) %></p>
