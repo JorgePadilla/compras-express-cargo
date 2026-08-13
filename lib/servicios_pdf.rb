@@ -456,14 +456,14 @@ end
                     "Manda el de libras: mínimo 3 o 4 libras" ] }
     ],
     "general" => [
-      { numero: "RP-29", titulo: "El redondeo escalonado está apagado",
-        cuerpo: "El redondeo que describiste —<b>“de uno punto seis ya sube”</b>— hoy solo se " \
-                "aplica al <b>peso volumétrico</b>. Sobre el peso de la báscula no se aplica: " \
-                "un paquete de 10.3 libras se cobra por 10.3, no por 10.5. " \
-                "Se puede prender, pero cambia lo que se cobra en todos los servicios a la vez.",
-        opciones: [ "Prenderlo: que el peso de la báscula también redondee",
-                    "Dejarlo como está: solo el volumétrico redondea",
-                    "Prenderlo, pero primero quiero ver cuánto cambia" ] }
+      # RP-29 vivia aca y se fue: preguntaba si prender el redondeo escalonado, y
+      # Yusef ya lo habia contestado tres dias antes — RP-03 "Prendanlo ya" y RP-04
+      # "Todo". El PDF se armo leyendo el estado del codigo ("esta apagado") sin
+      # cruzarlo contra las respuestas que ya habian llegado, y termino ofreciendole
+      # las dos opciones que el habia descartado.
+      #
+      # Volver a preguntarle lo que ya cerro le hace perder la confianza en el
+      # documento. El redondeo ya esta puesto (`RedondeoMediaLibraSiempre`).
     ]
   }.freeze
 

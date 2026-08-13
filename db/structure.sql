@@ -2243,7 +2243,7 @@ CREATE TABLE public.tarifas (
     minimo_moneda character varying,
     minimo_libras numeric(10,2),
     aplica_minimo boolean DEFAULT true NOT NULL,
-    incremento_libras numeric(4,2),
+    incremento_libras numeric(4,2) DEFAULT 0.5 NOT NULL,
     activo boolean DEFAULT true NOT NULL,
     notas text,
     created_at timestamp(6) without time zone NOT NULL,
@@ -5892,6 +5892,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260813025449'),
 ('20260813023148'),
 ('20260813011959'),
 ('20260813004928'),

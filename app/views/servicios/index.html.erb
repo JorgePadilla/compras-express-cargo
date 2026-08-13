@@ -31,30 +31,21 @@
           <%= te.modalidad %>
         </span>
       </div>
-      <div class="flex items-center gap-3">
-        <%# PR-C6.20: el interruptor del cobro en medias libras, para todas las
-            filas del servicio de un solo clic. Yusef: "préndanlo ya" y "todo".
-            Editar 58 filas a mano es donde se olvida una y una categoría
-            termina facturando distinto. %>
-        <% activo = filas.any? && filas.all? { |t| t.incremento_libras.present? } %>
-        <% parcial = filas.any? { |t| t.incremento_libras.present? } && !activo %>
-        <span class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded
-                     <%= activo ? "bg-cec-teal/15 text-cec-teal-dark" : "bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-slate-300" %>"
-              data-marca="estado-redondeo-<%= te.codigo %>">
-          <%= activo ? "medias libras" : (parcial ? "medias libras a medias" : "peso exacto") %>
-        </span>
-        <% if filas.any? %>
-          <%= button_to (activo ? "Volver al peso exacto" : "Cobrar en medias libras"),
-                redondeo_servicio_path(te), method: :patch,
-                params: { activar: activo ? "0" : "1" },
-                class: "text-xs font-medium text-cec-teal hover:text-cec-teal-dark",
-                form: { data: { turbo_confirm: activo ?
-                        "Esto hace que #{te.codigo.to_s.upcase} vuelva a cobrar el peso exacto de la báscula. ¿Confirmás?" :
-                        "Esto cambia lo que se le cobra a los clientes de #{te.codigo.to_s.upcase}: el peso sube a la media libra más cercana. ¿Confirmás?" } } %>
-        <% end %>
-        <%= link_to "+ Agregar tarifa", new_servicio_path(tipo_envio_id: te.id),
-              class: "text-xs font-medium text-cec-teal hover:text-cec-teal-dark" %>
-      </div>
+      <%# Acá vivía el interruptor de "peso exacto / cobrar en medias libras".
+          Se fue: el redondeo dejó de ser algo que alguien prende.
+
+          Jorge: "siempre tuvo que estar los redondeos, no era de prender, era
+          de que siempre tuvo que estar ahí". Y Yusef ya lo había ordenado
+          (RP-03 "préndanlo ya", RP-04 "todo"). Ofrecerlo como opción hacía
+          parecer una decisión algo que no lo era — y encima el badge de estado,
+          el botón que reescribía tarifas y el link de agregar compartían fila,
+          tamaño y color, así que se leían como un selector de tres posiciones.
+
+          Ahora la regla se enuncia; no se elige. "Agregar tarifa" se fue al pie
+          de la tabla, lejos de todo lo que toca plata. %>
+      <p class="text-xs text-gray-500 dark:text-gray-400">
+        Se cobra en <strong>medias libras</strong>: de .10 sube a media, de .60 sube a la libra.
+      </p>
     </div>
 
     <% if filas.any? %>
@@ -103,11 +94,9 @@
                 <%= t.minimo_libras.present? ? "#{t.minimo_libras.to_f} lb" : "—" %>
               </td>
               <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-300">
-                <% if t.incremento_libras.present? %>
-                  por <%= t.incremento_libras.to_f == 0.5 ? "media libra" : "#{t.incremento_libras.to_f} lb" %>
-                <% else %>
-                  peso exacto
-                <% end %>
+                <%# Ya no hay caso "peso exacto": la columna es NOT NULL con default
+                    0.5 desde `RedondeoMediaLibraSiempre`. %>
+                por <%= t.incremento_libras.to_f == 0.5 ? "media libra" : "#{t.incremento_libras.to_f} lb" %>
                 <% unless t.aplica_minimo %>
                   <span class="block text-[10px] text-amber-700">sin mínimo</span>
                 <% end %>
@@ -125,5 +114,13 @@
     <% else %>
       <p class="px-6 py-4 text-sm italic text-gray-400">— sin tarifas cargadas; se cobra el precio base del servicio —</p>
     <% end %>
+
+    <%# Al pie y no en la cabecera: cuando estaba arriba compartía fila, tamaño y
+        color con el interruptor de facturación, y los dos se leían como parte
+        del mismo control. %>
+    <div class="px-4 py-2 border-t border-gray-100 dark:border-gray-700">
+      <%= link_to "+ Agregar tarifa a #{te.codigo.to_s.upcase}", new_servicio_path(tipo_envio_id: te.id),
+            class: "text-xs font-medium text-cec-teal-deep dark:text-cec-teal-light hover:underline" %>
+    </div>
   </div>
 <% end %>

@@ -115,13 +115,26 @@
             <span class="block text-xs text-gray-500">Desmarcalo para las categorías que cobran por libra sin piso.</span>
           </span>
         </label>
+        <%# Acá había un select con "Peso exacto (sin redondeo)", "Media libra" y
+            "Libra entera". Se fue entero.
+
+            "Peso exacto" contradice la regla que dictó Yusef y que el sistema
+            ya implementa. Y "Libra entera" tiene una pregunta sin contestar: la
+            tolerancia de 0.09 se dictó **solo** para media libra (ver
+            `Tarifa#redondear_al_incremento`), así que ofrecerla era ofrecer algo
+            indefinido — nadie sabe si con incremento de 1 lb la tolerancia
+            sigue siendo 0.09 o es proporcional.
+
+            El campo se queda en el modelo, con default 0.5 y NOT NULL. %>
         <div>
-          <%= f.label :incremento_libras, "Cobrar en incrementos de", class: "block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1" %>
-          <%= f.select :incremento_libras,
-                options_for_select([ [ "Peso exacto (sin redondeo)", "" ], [ "Media libra", "0.5" ], [ "Libra entera", "1.0" ] ],
-                                   @tarifa.incremento_libras&.to_f&.to_s),
-                {}, { class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm" } %>
-          <p class="text-[11px] text-gray-400 mt-1">Redondea hacia arriba.</p>
+          <span class="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">Cobro por peso</span>
+          <p class="text-sm text-gray-600 dark:text-gray-300">
+            Se cobra en <strong>medias libras</strong>.
+          </p>
+          <p class="text-[11px] text-gray-400 mt-1">
+            De .10 sube a media libra, de .60 sube a la libra. Los primeros 9 centavos
+            de libra se perdonan: la báscula tiembla.
+          </p>
         </div>
       </div>
     </fieldset>
