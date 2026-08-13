@@ -181,33 +181,45 @@ class Tarifa < ApplicationRecord
   # O sea que los umbrales son `.10` y `.60`, no `.01` y `.51`. Hay una
   # tolerancia de 9 centésimas de libra: la báscula tiembla y no se le cobra
   # media libra a alguien por 30 gramos.
+  #
+  # ⚠️ Sirve **solo para incrementos distintos de media libra**, que es la única
+  # rama que quedó usándola. Para media libra —las 44 tarifas cargadas— la regla
+  # vive en `VolumetricoCalculator.redondear_media_libra`; ver abajo por qué.
   TOLERANCIA_LIBRAS = Rational(9, 100)
 
-  # Redondea HACIA ARRIBA al múltiplo del incremento, perdonando la tolerancia.
-  # nil = sin redondeo, que es el comportamiento histórico y el default.
+  # Redondea el peso al múltiplo del incremento. nil = sin redondeo.
   #
-  # **Esto era un `ceil` puro y cobraba de más.** Un ceil no tiene tolerancia,
-  # así que fallaba en dos bandas — y siempre hacia arriba:
+  # **La media libra delega; no reimplementa.** Hasta `PR-C7.11` esto hacía su
+  # propia aritmética —restar `TOLERANCIA_LIBRAS` y `ceil`— y no daba lo mismo
+  # que el volumétrico. Coincidían en todo peso de **dos** decimales, que es lo
+  # único que barría `redondeo_media_libra_coincide_test`, pero restar 0.09 no
+  # es lo mismo que "por debajo de .10" y en el tercero se separaban:
   #
-  #   | peso | ceil puro | Yusef |
-  #   |------|-----------|-------|
-  #   | 1.05 | 1.5       | 1.0   |
-  #   | 1.09 | 1.5       | 1.0   |
-  #   | 1.55 | 2.0       | 1.5   |
-  #   | 1.59 | 2.0       | 1.5   |
+  #   | peso  | esto (antes) | volumétrico | hoja de Yusef |
+  #   |-------|--------------|-------------|---------------|
+  #   | 3.099 | 3.5          | 3.0         | **3**         |
+  #   | 3.599 | 4.0          | 3.5         | **3.50**      |
   #
-  # Estaba latente porque `incremento_libras` viene en `nil` en las 58 tarifas
-  # cargadas. Muerde el día que Yusef active el escalonado — y lo va a activar
-  # él mismo, porque los precios los carga su equipo.
+  # La hoja que Yusef mandó el 2026-08-12 escribe esos dos valores, así que la
+  # buena era la del volumétrico. Era latente mientras `incremento_libras` venía
+  # en nil; `PR-C7.10` lo puso en 0.5 en las 44 tarifas y quedó vivo — los pesos
+  # guardados son `numeric(10,2)`, pero `/cotizador` pasa `params[:peso]` crudo,
+  # así que cotizar 3.099 lb cobraba por 3.5.
   #
-  # ⚠️ La tolerancia es **fija en 0.09**, que es la lectura literal del audio.
-  # Yusef describió la regla solo para incrementos de **media libra**; si algún
-  # día crea una tarifa con incremento de 1 lb, hay que preguntarle si la
-  # tolerancia sigue siendo 0.09 o es proporcional. Está como pregunta ALTA en
-  # `docs/entregables/preguntas_para_yusef.xlsx`.
+  # La duplicación entre dos copias "vigiladas por un test" es el bug recurrente
+  # de este proyecto. Ahora hay una regla y una implementación.
+  #
+  # ⚠️ La rama de otros incrementos se queda con el `ceil` y su tolerancia fija
+  # de 0.09. Yusef describió la regla **solo para media libra**; si algún día
+  # crea una tarifa con incremento de 1 lb, hay que preguntarle si la tolerancia
+  # sigue siendo 0.09 o es proporcional. Está como pregunta ALTA en
+  # `docs/entregables/preguntas_para_yusef.xlsx`. Hoy no hay ninguna tarifa así.
   def redondear_al_incremento(peso)
+    return peso if incremento_libras.blank?
+
     inc = incremento_libras.to_d
-    return peso if incremento_libras.blank? || inc <= 0
+    return peso if inc <= 0
+    return VolumetricoCalculator.redondear_media_libra(peso) if inc == BigDecimal("0.5")
 
     ajustado = peso - TOLERANCIA_LIBRAS
     return BigDecimal("0") if ajustado <= 0

@@ -5163,11 +5163,16 @@ para categoría de precio y descuento.
 
 ---
 
-### A7-27 · Sin definir: ¿pie cúbico o libra volumétrica? — ⏳
+### A7-27 · Sin definir: ¿pie cúbico o libra volumétrica? — ✅ **CONTESTADA (`A8-02`)**
 
 > **Jorge:** "¿Y si va a ser [pie] cúbico?"
 > **Yusef:** "Eso es lo que hace falta todavía… si el cobro es **por pie cúbico o
 >  por libra volumétrica**."
+
+**Contestó el 2026-08-12**, en la hoja de redondeos: el cobro es **por libra
+volumétrica**. El pie cúbico y el metro cúbico llevan escrito al margen *"pero
+**no afluye en precio**"* — se calculan y se muestran, no multiplican. Ver
+`A8-02`.
 
 ---
 
@@ -5307,7 +5312,7 @@ Sobre prefactura Yusef fue claro en que todavía no toca:
 
 | Id | Qué |
 |---|---|
-| `RP-31` | ¿Pie cúbico o libra volumétrica? (`A7-27`) |
+| ~~`RP-31`~~ | ~~¿Pie cúbico o libra volumétrica?~~ (`A7-27`) — **✅ contestada** en la hoja de redondeos del 2026-08-12: **por libra volumétrica**; el pie cúbico *"no afluye en precio"*. Ver `A8-02` |
 | `RP-32` | ¿De cuánto es la ventana de notificación al escanear el manifiesto de sucursal — media hora, una hora? (`A7-08`) |
 | ~~`RP-33`~~ | ~~Al cambiar el servicio en `/etiquetar`, ¿la pre-alerta se corrige sola o se marca resuelta?~~ **✅ se corrige sola** cuando no hay ambigüedad — `PR-C7.02` |
 | ~~`RP-34`~~ | ~~Los paquetes que hoy están en `prefacturado`, ¿a qué estado se migran?~~ **✅ no se migra ninguno**: el estado se queda, solo deja de poder elegirse a mano — `PR-C7.03` |
@@ -5315,6 +5320,138 @@ Sobre prefactura Yusef fue claro en que todavía no toca:
 | ~~`RP-36`~~ | ~~Nombre e iniciales de cada sucursal, y la sucursal de retiro estructurada en el cliente~~ **✅ ya existían**: `Sucursal#codigo` son las iniciales y `Cliente#sucursal_retiro_id` está desde antes. El doc que decía lo contrario estaba viejo |
 | `RP-37` | **El impuesto de Miami** (`A7-24`): ¿qué tasa, sobre qué base, en qué servicios? Yusef solo dijo que falta. Y no es agregar una tasa: `impuesto` es una columna escalar en 5 tablas |
 | `RP-38` | **¿Se reordena el pipeline?** Yusef dice *aduana → prefactura → bodega*, y el código tiene *aduana → disponible → prefacturado*, con `Paquete.facturables` exigiendo `disponible_entrega`. Cambiarlo decide **qué paquetes se pueden pre-facturar**, así que no se tocó |
+
+---
+
+## Conversación 8 (2026-08-12) — las reglas de redondeo, por escrito
+
+No es un audio: son **dos mensajes de Yusef** con las reglas que faltaban, una
+de ellas traída del contador. Van juntas acá porque hasta hoy vivían repartidas
+entre comentarios de Ruby y nadie las podía consultar sin abrir el código.
+
+Son **cuatro reglas distintas**, y confundirlas es fácil porque las cuatro se
+llaman "redondeo".
+
+| # | Qué se redondea | Regla | Código |
+|---|---|---|---|
+| 1 | **Libras y libras volumétricas** | umbrales `.10` y `.60` sobre la fracción | `VolumetricoCalculator.redondear_media_libra` |
+| 2 | **Pies cúbicos** | **siempre hacia arriba** al entero | `VolumetricoCalculator.pies_cubicos` |
+| 3 | **Metros cúbicos** | hacia arriba al **segundo decimal** | `VolumetricoCalculator.metros_cubicos` |
+| 4 | **Dinero (L. y $)** | media redonda al **tercer decimal** | `ROUND_HALF_UP` en todo el cobro |
+
+---
+
+### A8-01 · Libra volumétrica: la regla al tercer decimal — 🐛 **el código no cumplía**
+
+La tabla que mandó, con el ejemplo completo:
+
+> **TARIFA USA A HN — POR LIBRA O VOLUMEN — LA MÁS COMÚN**
+> PESO REAL 5 LBS · MEDIDAS 648 (ancho × largo × profundo, en pulgadas³)
+> **ENTRE 166** → 3.90 VLbs → *"ES IGUAL A **4**"*
+>
+> | VLbs | redondeado |
+> |---|---|
+> | 3.099 | *"es igual"* **3** |
+> | 3.10 | *"es igual a"* **3.50** |
+> | 3.599 | *"es igual"* **3.50** |
+
+Confirma dos cosas que ya estaban: el divisor es **166** y los umbrales son
+`.10` / `.60`. Pero los dos valores de **tres** decimales destaparon un bug.
+
+La regla estaba escrita **dos veces**. `VolumetricoCalculator` la resolvía en
+milésimas con los umbrales literales; `Tarifa#redondear_al_incremento` le
+restaba una tolerancia de `0.09` y hacía `ceil`. **No son equivalentes**: restar
+0.09 y "por debajo de .10" coinciden en todo peso de dos decimales y se separan
+en el tercero.
+
+| peso | `Tarifa` (antes) | `VolumetricoCalculator` | **hoja de Yusef** |
+|---|---|---|---|
+| 3.099 | 3.5 ❌ | 3.0 | **3** |
+| 3.599 | 4.0 ❌ | 3.5 | **3.50** |
+
+Había un test que barría 4001 pesos obligándolas a coincidir — pero **en pasos
+de 0.01**, o sea justo por encima de donde vivía la diferencia.
+
+Estaba latente mientras `incremento_libras` venía en `nil`. `PR-C7.10` lo puso
+en `0.5` en las 44 tarifas y lo volvió alcanzable: los pesos guardados son
+`numeric(10,2)`, pero **`/cotizador` pasa `params[:peso]` crudo**, así que
+cotizar 3.099 lb cobraba por 3.5 — media libra de más, en la pantalla que el
+cliente ve antes de decidir.
+
+**✅ Arreglado en `PR-C7.11`**: una sola implementación —la que valida la hoja—
+y el barrido del test pasa a milésimas.
+
+---
+
+### A8-02 · Pie cúbico y metro cúbico **no afluyen en precio** — ✅ **cierra `A7-27` / `RP-31`**
+
+Las otras dos tablas que mandó, las dos con la misma anotación al margen:
+
+> **TARIFA USA A HN — POR PIE CÚBICO** · *"pero **no afluye en precio**"*
+> 179424 pulgadas³ **entre 1728** → 103.8333 → **104** — *"**este siempre hacia
+> arriba**"* (peso real 1000 lbs)
+>
+> **TARIFA CHINA A HN — POR METRO CÚBICO** · *"pero **no afluye en precio**"*
+> 2.95 m³ · 450 kg
+>
+> | m³ | redondeado |
+> |---|---|
+> | 2.9301 | 2.94 |
+> | 2.9400 | 2.94 |
+> | 2.9401 | 2.95 |
+> | 2.9402 | 2.95 |
+
+Esto contesta la pregunta que quedó abierta en `A7-27` —*"eso es lo que hace
+falta todavía: si el cobro es por pie cúbico o por libra volumétrica"*—:
+**se cobra por libra volumétrica**. El pie cúbico y el metro cúbico se calculan
+y se muestran, pero no multiplican nada.
+
+Dos frases suyas hay que leerlas con cuidado porque están en taquigrafía:
+
+- **"NO AFLUYE EN PRECIO"** = informativo. Se muestra, no se cobra.
+- **"NO SE REDONDEA"** (sobre el metro cúbico) **no** quiere decir que se deje
+  crudo — sus propios cuatro ejemplos suben `2.9301` a `2.94` y `2.9401` a
+  `2.95`. Quiere decir *no se redondea al estilo media libra*: es hacia arriba
+  al segundo decimal. Así estaba implementado desde antes.
+
+El pie cúbico sí es un ceil puro al entero, tal cual dice.
+
+---
+
+### A8-03 · El redondeo del dinero: la respuesta del contador — ✅ **el código ya cumplía**
+
+Venía de una pregunta nuestra sobre una diferencia de 3 centavos:
+
+> **Pregunta:** 4 × 93.98 = 375.92, y con ISV 15% da 432.31. Pero el PDF dice
+> 375.90 y 432.28. La diferencia de 0.03 — ¿cuál es la regla de redondeo?
+>
+> **Yusef:** *"¡Hay papito! Es que el programador anterior no entiende. Pero
+> dejame, hablo con el contador y que me dé las reglas de redondeo."*
+
+Y volvió con ellas:
+
+> **Método de Redondeo — regla estándar**
+> · Si el **tercer decimal** es ≥ 5, se redondea hacia arriba.
+> · Si el tercer decimal es < 5, se redondea hacia abajo.
+> · `L. 100.004 → L. 100.00` · `L. 100.005 → L. 100.01`
+
+Es media redonda al segundo decimal, que es **exactamente lo que hace el sistema
+nuevo**: `ROUND_HALF_UP` en los ~30 puntos donde se calcula plata —subtotales,
+ISV, totales, descuentos, mínimos, notas de crédito y débito.
+
+O sea que **`375.92` y `432.31` eran nuestros números, y estaban bien**. El
+`375.90 / 432.28` del PDF era el sistema viejo **truncando** en vez de
+redondear, y truncar siempre le cobra de menos a la empresa. No hay nada que
+arreglar; quedó escrito para que no se vuelva a preguntar.
+
+---
+
+### Las preguntas que abre la Conversación 8
+
+| Id | Qué |
+|---|---|
+| `RP-39` | La tolerancia de `.10`/`.60` está dictada **solo para media libra**. Si algún día se carga una tarifa con incremento de 1 lb, ¿la tolerancia sigue siendo la misma o es proporcional? Hoy no hay ninguna tarifa así, así que no bloquea nada |
+| `RP-40` | El metro cúbico y el pie cúbico *"no afluyen en precio"* **hoy**. ¿Van a afluir alguna vez —China por m³, marítimo por ft³— o son informativos para siempre? Cambia si hay que guardarlos o basta calcularlos |
 
 ---
 

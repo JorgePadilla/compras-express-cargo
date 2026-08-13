@@ -10,6 +10,27 @@ class VolumetricoCalculatorTest < ActiveSupport::TestCase
     assert_equal 3.5,  VolumetricoCalculator.half_pound_round(3.599), "< .60 → .50"
   end
 
+  # PR-C7.11: `redondear_media_libra` es ahora la **única** implementación de la
+  # regla —`Tarifa#redondear_al_incremento` delega acá— y por eso devuelve
+  # BigDecimal: en el camino de la tarifa el resultado multiplica un precio, y un
+  # Float le mete ruido a la factura. `half_pound_round` es el adaptador para el
+  # camino de pantalla, que trabaja en Float de punta a punta.
+  test "redondear_media_libra devuelve BigDecimal y no pierde exactitud" do
+    r = VolumetricoCalculator.redondear_media_libra(BigDecimal("3.10"))
+
+    assert_kind_of BigDecimal, r
+    assert_equal BigDecimal("3.5"), r
+  end
+
+  test "redondear_media_libra da lo mismo entre en BigDecimal, Float o String" do
+    %w[3.099 3.10 3.599 3.90].each do |s|
+      esperado = VolumetricoCalculator.redondear_media_libra(BigDecimal(s))
+
+      assert_equal esperado, VolumetricoCalculator.redondear_media_libra(s.to_f), "float #{s}"
+      assert_equal esperado, VolumetricoCalculator.redondear_media_libra(s),      "string #{s}"
+    end
+  end
+
   test "half_pound_round es robusto al ruido de float" do
     # 4.1 - 4 = 0.0999999… en float; en milésimas cae limpio en .10 → .50
     assert_equal 4.5, VolumetricoCalculator.half_pound_round(4.1)

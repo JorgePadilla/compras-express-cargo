@@ -37,20 +37,48 @@ module VolumetricoCalculator
   #   frac < .10        → baja al entero
   #   .10 ≤ frac < .60  → .50
   #   frac ≥ .60        → sube al siguiente entero
+  #
+  # **Esta es la única implementación de la regla.** `Tarifa#redondear_al_incremento`
+  # delega acá cuando el incremento es media libra.
+  #
+  # Vivió duplicada hasta `PR-C7.11`: `Tarifa` la resolvía restando una tolerancia
+  # de 0.09 y haciendo `ceil`. Las dos coinciden en todo peso de **dos** decimales
+  # —por eso el barrido de `redondeo_media_libra_coincide_test` nunca las separó—
+  # pero restar 0.09 no es lo mismo que "por debajo de .10", y en el tercer decimal
+  # se iban:
+  #
+  #   | peso  | restando 0.09 | esta | hoja de Yusef |
+  #   |-------|---------------|------|---------------|
+  #   | 3.099 | 3.5           | 3.0  | **3**         |
+  #   | 3.599 | 4.0           | 3.5  | **3.50**      |
+  #
+  # La hoja que Yusef mandó el 2026-08-12 escribe esos dos valores, así que la
+  # buena es esta y la otra se fue.
+  #
   # Se trabaja en milésimas (enteros) para evitar el ruido de punto flotante
   # (p.ej. 4.1 - 4 = 0.0999… en float rompería el umbral .10).
-  def half_pound_round(x)
-    milesimas = (x.to_f * 1000).round
-    entero    = milesimas / 1000
-    frac      = milesimas % 1000
+  #
+  # Devuelve `BigDecimal` porque el resultado va a multiplicar un precio: en el
+  # camino de `Tarifa` esto es plata, y meterle un Float a la factura le mete
+  # ruido. `half_pound_round` es el adaptador para el camino de pantalla.
+  def redondear_media_libra(peso)
+    exacto       = peso.is_a?(BigDecimal) ? peso : BigDecimal(peso.to_s)
+    milesimas    = (exacto * 1000).round
+    entero, frac = milesimas.divmod(1000)
 
     if frac < 100
-      entero.to_f
+      BigDecimal(entero)
     elsif frac < 600
-      entero + 0.5
+      entero + BigDecimal("0.5")
     else
-      entero + 1.0
+      BigDecimal(entero + 1)
     end
+  end
+
+  # La misma regla, en Float. Es lo que consumen la calculadora de `/etiquetar` y
+  # el resto del módulo, que trabajan en Float de punta a punta.
+  def half_pound_round(x)
+    redondear_media_libra(x.to_f).to_f
   end
 
   # Peso a cobrar (lo más común): el mayor entre peso real y VLbs.
