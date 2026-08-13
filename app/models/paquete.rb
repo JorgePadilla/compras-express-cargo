@@ -12,6 +12,7 @@ class Paquete < ApplicationRecord
   belongs_to :sucursal, optional: true                                           # dónde RETIRA el cliente
   belongs_to :sucursal_recepcion,   class_name: "Sucursal",      optional: true  # PR-C6.5: dónde se RECIBIÓ — manda el número de recepción
   belongs_to :sucursal_actual,      class_name: "Sucursal",      optional: true  # PR-D1.c: ubicación física actual
+  belongs_to :sucursal_destino,     class_name: "Sucursal",      optional: true  # A7-09: a qué sucursal va en camino
   belongs_to :sub_localidad_actual, class_name: "SubLocalidad",  optional: true  # PR-D1.c: bodega interna actual
   belongs_to :warehouse_receipt, optional: true  # PR-5c.5p2 — fuente rica del numero_recepcion (madre)
   belongs_to :proveedor, optional: true  # PR-D3.a: catálogo (Amazon, Walmart, drivers privados…)
@@ -38,11 +39,13 @@ class Paquete < ApplicationRecord
   enum :estado, {
     pre_alerta_estado:     "pre_alerta_estado",  # PR-D1.b: paquete creado desde pre-alerta antes de llegar a Miami
     recibido_miami:        "recibido_miami",
+    consolidando_miami:    "consolidando_miami", # A7-10: el cliente pidió consolidar allá, no acá
     empacado:              "empacado",
     enviado_honduras:      "enviado_honduras",
     en_aduana:             "en_aduana",
     consolidando_honduras: "consolidando_honduras",
     disponible_entrega:    "disponible_entrega",
+    enviado_sucursal:      "enviado_sucursal",   # A7-09: va camino a otra sucursal
     pre_facturado:         "pre_facturado",
     facturado:             "facturado",
     en_reparto:            "en_reparto",
@@ -65,6 +68,7 @@ class Paquete < ApplicationRecord
     "en_aduana"          => :fecha_aduana,
     "consolidando_honduras" => :fecha_consolidando,
     "disponible_entrega" => :fecha_disponible,
+    "enviado_sucursal"   => :fecha_enviado_sucursal,
     "en_reparto"         => :fecha_en_reparto,
     "entregado"          => :fecha_entregado
   }.freeze
@@ -95,6 +99,15 @@ class Paquete < ApplicationRecord
   validate :no_advance_with_open_tareas
   validate :sub_localidad_pertenece_a_sucursal_actual
   validate :retencion_requiere_motivo_o_notas, if: -> { estado == "retenido" }
+  # A7-09. El estado existe para auditar —"qué paquete no escanearon o no
+  # enviaron"— y sin destino no audita nada.
+  #
+  # El `before_validation` va primero a propósito: en el 100% de los casos el
+  # destino es la sucursal donde el cliente retira, que el paquete ya trae. Sin
+  # ese default, cambiar el estado desde el dropdown de `/paquetes` fallaría con
+  # un error que el operario no sabría cómo arreglar desde esa pantalla.
+  before_validation :heredar_sucursal_destino, if: -> { estado == "enviado_sucursal" }
+  validates :sucursal_destino, presence: true, if: -> { estado == "enviado_sucursal" }
 
   # PR-D1.c: tarifa fija pre-establecida $35 USD + ISV (Yusef 2026-04-29).
   # Editable por el cajero al crear/asignar la recolecta. No hay tabla de
@@ -110,7 +123,16 @@ class Paquete < ApplicationRecord
   # Estados excepcionales / fuera del pipeline lineal. Las transiciones
   # hacia o desde estos NO se consideran "retroceso" (son rutas
   # alternativas válidas como retención, anulación, consolidación).
-  ESTADOS_EXCEPCIONALES = %w[pre_alerta_estado consolidando_honduras
+  #
+  # A7-09/A7-10: `consolidando_miami` y `enviado_sucursal` entran acá y no en
+  # `ESTADOS_ORDEN` a propósito. Los dos son **desvíos**, no pasos que todo
+  # paquete recorre: consolidar en Miami solo pasa si el cliente lo pidió, y
+  # solo el ~20% de la carga se manda a otra sucursal ("el 80% de la carga se
+  # queda en San Pedro"). Meterlos en el pipeline correría los índices de
+  # `ESTADOS_ORDEN` y con eso la lógica de retroceso, que es de lo poco que
+  # cuida que nadie mueva un paquete hacia atrás sin darse cuenta.
+  ESTADOS_EXCEPCIONALES = %w[pre_alerta_estado consolidando_miami
+                              consolidando_honduras enviado_sucursal
                               recoleta_en_proceso retenido retornado
                               desechado anulado].freeze
 
@@ -136,6 +158,29 @@ class Paquete < ApplicationRecord
     "facturado"        => :venta_id,
     "en_reparto"       => :entrega_id
   }.freeze
+
+  # A7-12. El dropdown de estados salía en orden de declaración del enum, que
+  # es el orden en que se fueron agregando. Yusef, mirándolo:
+  #
+  #   > "Prefacturado y disponible para entrega estaban antes. ¿No debería ser
+  #   >  primero…? **A mí me gusta el orden.**"
+  #   > "Hacéme la lista y yo la ordeno."
+  #
+  # Va en orden de proceso: primero el camino que recorre un paquete normal,
+  # después los desvíos.
+  #
+  # A7-11. `pre_facturado` **no está en esta lista**, a propósito. Yusef:
+  # *"el prefacturado no sé de dónde lo sacó… no del estatus. Ese tenés que
+  # eliminar."* Sigue existiendo como estado —lo escribe `PreFactura#confirmar!`
+  # y de él dependen el candado de bajar cajas y la cadena de retroceso—, pero
+  # **nadie lo pone a mano**: es consecuencia de emitir una pre-factura, no una
+  # decisión de bodega.
+  ESTADOS_SELECCIONABLES = %w[
+    pre_alerta_estado recibido_miami consolidando_miami empacado
+    enviado_honduras en_aduana consolidando_honduras disponible_entrega
+    enviado_sucursal facturado en_reparto entregado
+    recoleta_en_proceso retenido retornado desechado anulado
+  ].freeze
 
   # PR-D7.b: helpers para que controller/JS detecten retrocesos en el
   # pipeline. Yusef pidió advertir con modal cuando un supervisor mueve
@@ -841,6 +886,13 @@ class Paquete < ApplicationRecord
     errors.add(:estado, "no se puede avanzar: el paquete tiene tareas pendientes")
   end
 
+  # A7-09: si nadie dijo a qué sucursal va, va a la que el cliente eligió para
+  # retirar. Es el caso normal; el destino explícito existe para cuando el
+  # paquete hace una escala en otra sucursal antes de llegar a la suya.
+  def heredar_sucursal_destino
+    self.sucursal_destino ||= sucursal
+  end
+
   def sync_pre_alerta_estados
     pre_alerta_paquetes.includes(:pre_alerta).each do |pap|
       pap.pre_alerta&.actualizar_estado_from_paquetes!
@@ -1044,8 +1096,17 @@ class Paquete < ApplicationRecord
   # tracking propio (caso típico: driver privado sin GUID del courier).
   # Si el operador SÍ escribió un tracking (Uber GUID, etc.), se respeta
   # tal cual — no se sobreescribe.
+  # A7-22: `!recolecta_solicitada?` es nuevo y es lo que hace que la recolecta
+  # viva dentro de Entrega Personal sin robarle el prefijo.
+  #
+  # Yusef la definió así: *"la recolecta es como una prealerta de una entrega
+  # personal"* — misma pantalla, un switch al inicio. Pero eso ponía a las dos
+  # reglas a competir: el proveedor sigue siendo de tipo entrega_personal, así
+  # que `ep_tracking_required?` ganaba por orden de callback y la recolecta
+  # salía con tracking **EP**. Ahora si el switch está marcado, manda RC.
   def ep_tracking_required?
     tracking.blank? &&
+      !recolecta_solicitada? &&
       proveedor.present? &&
       proveedor.entrega_personal? &&
       sucursal.present?
@@ -1071,17 +1132,21 @@ class Paquete < ApplicationRecord
     )
   end
 
-  # PR-D4.d: condición para auto-generar tracking RC. Aplica cuando
-  # CEC mandó un motorista propio a recoletar (no es entrega personal
-  # vía driver externo). Mismo formato que EP pero prefijo RC y trigger
-  # distinto: recolecta_solicitada + tracking blank + proveedor presente.
-  # Si el proveedor es entrega_personal, gana EP (chequeado primero
-  # por el orden de los before_validation).
+  # PR-D4.d: condición para auto-generar tracking RC. Aplica cuando CEC mandó un
+  # motorista propio a recolectar. Mismo formato que EP pero prefijo RC.
+  #
+  # A7-22: se le quitó la exclusión `!proveedor.entrega_personal?`. Existía
+  # porque RC y EP se pensaron como mutuamente excluyentes, y la recolecta ahora
+  # vive **dentro** de la pantalla de Entrega Personal — su proveedor es de tipo
+  # entrega_personal casi siempre. Con la exclusión puesta, marcar el switch de
+  # recolecta no hacía nada: el paquete salía con tracking EP.
+  #
+  # Quién gana lo decide ahora `ep_tracking_required?`, que se aparta cuando el
+  # switch está marcado.
   def rc_tracking_required?
     tracking.blank? &&
       recolecta_solicitada? &&
       proveedor.present? &&
-      !proveedor.entrega_personal? &&
       sucursal.present?
   end
 

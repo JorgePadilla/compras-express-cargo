@@ -30,7 +30,7 @@
                 <span class="text-sm text-gray-700"><%= paquete.peso_cobrar || "—" %> lbs</span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <%= render StatusBadgeComponent.new(status: paquete.estado) %>
+                <%= render StatusBadgeComponent.new(status: paquete.estado, label: estado_de(paquete)) %>
               </td>
               <% if manifiesto.creado? %>
                 <td class="px-6 py-4 whitespace-nowrap text-right">

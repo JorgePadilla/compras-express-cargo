@@ -9,15 +9,17 @@
       cotizador_url  — endpoint JSON del cotizador, requerido si valor_a_pagar
       tipo_envio_id  — el servicio de la sesión (PR-C6.41). En /etiquetar es fijo;
                        en /entrega_personal lo reescribe el select.
+      modo_cajas     — :plantilla (default, /etiquetar) o :repetidor (/entrega_personal)
 
     Una sola medida en pulgadas → tres representaciones en vivo vía
     calc-volumetrico (espejo de VolumetricoCalculator). Solo display. %>
 <% wrapper_class ||= "" %>
 <% valor_a_pagar = false unless defined?(valor_a_pagar) %>
 <% tipo_envio_id = nil unless defined?(tipo_envio_id) %>
+<% modo_cajas = :plantilla unless defined?(modo_cajas) %>
 
 <div class="<%= wrapper_class %> pt-2 border-t border-gray-100 dark:border-gray-700"
-     data-controller="calc-volumetrico cajas<%= " cotizador" if valor_a_pagar %>"
+     data-controller="calc-volumetrico <%= modo_cajas == :repetidor ? "cajas-repetidor" : "cajas" %><%= " cotizador" if valor_a_pagar %>"
      data-calc-volumetrico-tipo-envio-id-value="<%= tipo_envio_id.to_i %>"
      <% if valor_a_pagar %>data-cotizador-url-value="<%= cotizador_url %>"<% end %>>
   <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
@@ -44,27 +46,7 @@
         </div>
       </div>
 
-      <%# ── Cantidad de cajas ──
-          PR-C6.18b. Antes esto se preguntaba en un modal al apretar F9, y
-          Jorge lo probó: "el F9 era como confuso" — el campo visible decía
-          "Cant. Productos" y parecía el que mandaba, mientras el que de
-          verdad manda estaba detrás de una tecla.
-
-          Va acá, al lado de los productos, que es donde Yusef lo señaló:
-          "acá sería cantidad de paquetes o productos, y aquí el peso de cada
-          quien".
-
-          Ojo con la diferencia, que es la que confundía:
-            · Cant. Productos → cuántos artículos vienen adentro
-            · Cant. Cajas     → en cuántos bultos FÍSICOS se divide %>
-      <div>
-        <%= f.label :cantidad_paquetes, "Cant. Cajas", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
-        <%= f.number_field :cantidad_paquetes, min: 1, max: 26, value: (f.object.cantidad_paquetes.presence || 1),
-            data: { cajas_target: "cantidad", action: "input->cajas#pintar" },
-            class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100
-                   shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
-        <p class="text-[11px] text-gray-400 mt-1">Bultos físicos. Cada uno recibe su etiqueta (1/N).</p>
-      </div>
+      <%= render "shared/cajas_cantidad", f: f if modo_cajas == :plantilla %>
 
       <div>
         <span class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Medidas (pulgadas)</span>
@@ -82,17 +64,20 @@
         </p>
       </div>
 
-      <%# ── Peso y medidas de cada caja ──
-          Aparecen solas cuando hay más de una. Nacen con los valores de
-          arriba: si las cajas son parecidas basta con Enter, y el operario
-          solo toca las que difieren. %>
-      <div data-cajas-target="detalle" class="hidden">
-        <p class="text-xs font-medium text-gray-700 dark:text-gray-200 mb-2">
-          Peso y medidas de cada caja
-          <span class="font-normal text-gray-400">— cambiá solo las que difieran</span>
-        </p>
-        <div data-cajas-target="filas" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
-      </div>
+      <%# ── Las cajas ──
+          Dos formas, y la diferencia no es de gusto: es de cómo trabaja cada
+          bodega (A7-20).
+
+            · :plantilla — /etiquetar. Las cajas son de un mismo tracking de
+              courier y se parecen entre sí, así que decir "son 5" y corregir
+              las que difieran ahorra tecleo.
+
+            · :repetidor — /entrega_personal. Yusef lo rechazó tres veces:
+              "las entregas personales **nunca, nunca, nunca** son iguales".
+              Y el motivo no es el parecido sino el operario: mide una caja
+              física, va a la computadora, y "¿cuáles cajas eran? ¿cuáles ya
+              metí?". Con plantilla no sabe qué fila le toca. %>
+      <%= render(modo_cajas == :repetidor ? "entrega_personal/cajas_repetidor" : "shared/cajas_plantilla") %>
     </div>
 
     <%# ── Display de cálculo (3 formas) ── %>

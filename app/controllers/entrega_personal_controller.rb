@@ -19,22 +19,30 @@ class EntregaPersonalController < ApplicationController
     @proveedores_ep = Proveedor.where(tipo: "entrega_personal").activos.ordered
     @sucursales_miami = Sucursal.activas.where(ubicacion: "miami").where.not(codigo_ep: nil).ordered
     @motivos_retencion = MotivoRetencion.activos.ordered
+    @tarifas_recolecta = TarifaRecolecta.activas.ordered
   end
 
+  # A7-20. La cantidad de cajas **se deriva de las filas**, no de un campo.
+  #
+  # Antes venía de un `cantidad_paquetes` que el operario tecleaba, y ese
+  # desacople ya había costado un bug: en PR-C6.31 el form mandaba el campo dos
+  # veces, ganaba el hidden con valor 1, y el operario veía tres filas pero se
+  # grababa un solo paquete. Si el número sale de contar las filas, no hay dos
+  # fuentes que puedan discrepar.
   def create
-    cantidad = paquete_params[:cantidad_paquetes].to_i
+    cajas = medidas_por_caja
 
-    if cantidad > 1
-      create_split(cantidad)
-    else
-      create_single
+    case cajas.size
+    when 0 then create_single                          # nunca tocó Agregar: un solo bulto
+    when 1 then create_single(cajas.values.first)      # una caja agregada: sus datos mandan
+    else        create_split(cajas.size)
     end
   end
 
   private
 
-  def create_single
-    @paquete = Paquete.new(paquete_params)
+  def create_single(medidas = {})
+    @paquete = Paquete.new(paquete_params.merge(medidas))
     apply_extra_params(@paquete)
     heredar_sucursal_de_retiro(@paquete)
     @paquete.estado = "recibido_miami"
@@ -120,6 +128,7 @@ class EntregaPersonalController < ApplicationController
     # los errores al digitador.
     @sucursales_miami = Sucursal.activas.where(ubicacion: "miami").where.not(codigo_ep: nil).ordered
     @motivos_retencion = MotivoRetencion.activos.ordered
+    @tarifas_recolecta = TarifaRecolecta.activas.ordered
     flash.now[:alert] = "No se pudo registrar la entrega personal."
     render :new, status: :unprocessable_entity
   end
@@ -144,6 +153,9 @@ class EntregaPersonalController < ApplicationController
       :numero_caja, :descripcion, :remitente, :driver,
       :notas_internas, :notas_retencion,
       :retener_miami,
+      # A7-22/A7-23: la recolecta vive en esta misma pantalla.
+      :recolecta_solicitada, :tarifa_recolecta_id, :recolecta_monto, :recolecta_moneda,
+      :recolecta_contacto, :recolecta_telefono, :recolecta_horario, :recolecta_instrucciones,
       motivo_retencion_ids: []
     )
   end

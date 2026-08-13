@@ -103,7 +103,7 @@ end %>
     <div>
       <label for="qf_estado" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Estado</label>
       <%= select_tag "estados[]",
-            options_for_select(@estados_paquete.map { |e| [ e.humanize, e ] }, qf_estado),
+            options_for_select(@estados_paquete.map { |e| [ estado_etiqueta(e), e ] }, qf_estado),
             include_blank: "Todos",
             id: "qf_estado",
             class: "w-full h-9 px-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-cec-teal",
@@ -283,7 +283,7 @@ end %>
             <label class="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-200">
               <%= check_box_tag "estados[]", est, Array(params[:estados]).include?(est),
                   class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-              <span><%= est.humanize %></span>
+              <span><%= estado_etiqueta(est) %></span>
             </label>
           <% end %>
         </div>
@@ -441,7 +441,7 @@ end %>
                 <% end %>
               </td>
               <td class="px-3 py-2 whitespace-nowrap">
-                <%= render StatusBadgeComponent.new(status: paquete.estado) %>
+                <%= render StatusBadgeComponent.new(status: paquete.estado, label: estado_de(paquete)) %>
                 <% if paquete.disponible_entrega? && paquete.sucursal %>
                   <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">en <%= paquete.sucursal.nombre %></p>
                 <% end %>

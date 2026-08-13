@@ -100,7 +100,7 @@
                 title: "#{p.cliente&.nombre_completo} · #{p.tracking}",
                 time: p.created_at
               ) do |item| %>
-            <% item.with_badge { render StatusBadgeComponent.new(status: p.estado) } %>
+            <% item.with_badge { render StatusBadgeComponent.new(status: p.estado, label: estado_de(p)) } %>
           <% end %>
         <% end %>
         <% if @paquetes_recientes.empty? %>

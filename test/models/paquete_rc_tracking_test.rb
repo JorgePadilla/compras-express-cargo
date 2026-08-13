@@ -33,12 +33,25 @@ class PaqueteRcTrackingTest < ActiveSupport::TestCase
     assert_no_match(/\ARC-/, p.tracking)
   end
 
-  test "EP gana sobre RC cuando proveedor es entrega_personal" do
-    # Aunque recolecta_solicitada esté true, si el proveedor es EP
-    # (driver externo), se genera tracking EP (no RC).
+  # A7-22: esta regla se invirtió, y a propósito.
+  #
+  # Antes EP ganaba sobre RC aunque `recolecta_solicitada` estuviera marcado,
+  # porque RC y EP se pensaron como caminos separados. Pero Yusef metió la
+  # recolecta **adentro** de la pantalla de Entrega Personal —"la recolecta es
+  # como una prealerta de una entrega personal"— y ahí su proveedor es de tipo
+  # entrega_personal casi siempre.
+  #
+  # Con la regla vieja, marcar el switch de recolecta no hacía nada: el paquete
+  # salía con tracking EP. Ahora el switch manda.
+  test "el switch de recolecta gana sobre EP, aunque el proveedor sea entrega_personal" do
     p = crear_paquete(proveedor: @driver, recolecta_solicitada: true, recolecta_monto: 35)
+    assert_match(/\ARC-/, p.tracking)
+    assert_no_match(/\AEP-/, p.tracking)
+  end
+
+  test "sin el switch, un proveedor de entrega personal sigue dando EP" do
+    p = crear_paquete(proveedor: @driver)
     assert_match(/\AEP-/, p.tracking)
-    assert_no_match(/\ARC-/, p.tracking)
   end
 
   test "correlativo RC incrementa entre creaciones secuenciales" do
