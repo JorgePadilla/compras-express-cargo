@@ -224,6 +224,10 @@ Rails.application.routes.draw do
   # admin" — por eso es un CRUD y no un job.
   resource :tasa_cambio, only: %i[show update], controller: "tasa_cambio"
 
+  # `index` y `show` sobreviven solo para redirigir: los grupos de clientes se
+  # administran en /servicios desde `PR-C7.12`, y lo que mostraba el detalle
+  # —qué cobra el grupo— está ahí, fila por fila. Se quedan como rutas en vez de
+  # borrarse para que los bookmarks viejos lleguen a algún lado y no a un 404.
   resources :categoria_precios, path: "categorias-precio"
 
   resources :entregas, except: [:destroy] do

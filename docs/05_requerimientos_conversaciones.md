@@ -5118,7 +5118,7 @@ teléfono, e instrucciones libres.
 
 ---
 
-### A7-25 · Hay **dos tablas de precios** que se pisan — ⚠️
+### A7-25 · Hay **dos tablas de precios** que se pisan — ✅ **CERRADA (PR-C7.08 + PR-C7.12)**
 
 Yusef encontró la duplicación navegando:
 
@@ -5135,6 +5135,31 @@ Y falta lo escalonado en una de las dos:
 
 **Lectura.** Dos modelos representando lo mismo. Mientras convivan, cuál manda es
 ambiguo — y esto decide cuánto se cobra. Va con el bloque de plata.
+
+**Cómo se cerró.** Nunca fueron dos tablas de precios: eran una tabla de precios
+y una de grupos, con la segunda disfrazada de la primera.
+
+`PR-C7.08` le quitó a `categoria_precios` las tres columnas de precio. No eran
+"incongruencias" de contenido: **ningún cálculo las leía** desde `PR-C7.06`, y
+encima las vistas las rotulaban en lempiras sobre números que estaban en dólares
+—la tabla nunca tuvo columna `moneda`—. Se podían editar y no cambiaba nada de
+lo que se cobra.
+
+`PR-C7.12` cerró la otra mitad. Jorge, por segunda vez: *"el área de categoría de
+precio, pensaría que se puede eliminar porque no le veo mucho valor"*. La tabla
+**no** se puede eliminar —los 8 grupos son las 8 columnas de la hoja de Yusef y
+28 de las 44 tarifas cuelgan de ellos; sin ellos el precio de Shein habría que
+copiarlo cliente por cliente—, pero la **pantalla** sí sobraba: un CRUD de un
+campo en el sidebar, justo debajo de "Tabla de Servicios". Se fue, y los grupos
+se administran dentro de la Tabla de Servicios, que es donde vive su precio.
+
+Queda una sola pantalla que cobra, que era el pedido de Yusef. Y un solo rótulo:
+lo que la base llama `categoria_precios` se llama **"grupo de clientes"** en las
+cuatro pantallas que lo muestran.
+
+Lo escalonado que él extrañaba (*"en la categoría de precios llevamos también
+precios escalonados"*) ya funciona igual para todos los niveles: cada fila de
+`tarifas` es un escalón, con o sin grupo.
 
 ---
 
@@ -5532,5 +5557,8 @@ prefactura** (`A7-34`). El orden que sale de eso:
 Los estados (`A7-09`…`A7-16`) son un bloque aparte: tocan migración, badges y el
 dropdown, y varios están bloqueados por la sucursal estructurada (`RP-36`).
 
-**La pista de plata crece**: al bloque `RP-24`…`RP-29` se le suman el impuesto de
-Miami (`A7-24`) y las dos tablas de precios que se pisan (`A7-25`).
+**La pista de plata**: de lo que había abierto el 2026-08-12 quedan el impuesto
+de Miami (`A7-24`, sigue esperando definición) y el bloque `RP-24`…`RP-29`. Las
+dos tablas de precios que se pisaban (`A7-25`) se cerraron el mismo día con
+`PR-C7.08` y `PR-C7.12`, y las reglas de redondeo quedaron escritas y
+verificadas en la Conversación 8.

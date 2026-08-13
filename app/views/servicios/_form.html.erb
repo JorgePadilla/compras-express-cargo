@@ -21,14 +21,27 @@
       <legend class="text-xs font-bold uppercase tracking-wider text-gray-500 px-2">¿A quién aplica?</legend>
       <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
         Dejá los tres en blanco para el <strong>precio de lista</strong>. Si llenás más de uno,
-        gana el más específico: cliente → proveedor → categoría.
+        gana el más específico: cliente → proveedor → grupo.
       </p>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
-          <%= f.label :categoria_precio_id, "Categoría", class: "block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1" %>
-          <%= f.collection_select :categoria_precio_id, @categorias, :id, :nombre,
-                { include_blank: "— ninguna —" },
-                { class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm" } %>
+          <%= f.label :categoria_nombre, "Grupo de clientes", class: "block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%# PR-C7.12: texto libre con sugerencias, no un select cerrado. La
+              pantalla aparte de categorías se fue, así que esta es la única
+              forma de crear un grupo — y es justo donde se necesita, porque uno
+              crea el grupo cuando le va a poner precio.
+
+              Mismo patrón que el carrier de /etiquetar, que Yusef ya aprobó:
+              "dropdown con texto libre para agregar a la lista". %>
+          <%= f.text_field :categoria_nombre, list: "grupos-de-clientes",
+                autocomplete: "off", placeholder: "— ninguno —",
+                class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm" %>
+          <datalist id="grupos-de-clientes">
+            <% @categorias.each do |c| %>
+              <option value="<%= c.nombre %>">
+            <% end %>
+          </datalist>
+          <p class="text-[11px] text-gray-400 mt-1">Shein, Personal CEC… si no existe, se crea.</p>
         </div>
         <div>
           <%= f.label :proveedor_id, "Proveedor / promoción", class: "block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1" %>
@@ -112,7 +125,7 @@
           <%= f.check_box :aplica_minimo, class: "mt-0.5 rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
           <span class="text-sm text-gray-700 dark:text-gray-200">
             Aplicar el monto mínimo
-            <span class="block text-xs text-gray-500">Desmarcalo para las categorías que cobran por libra sin piso.</span>
+            <span class="block text-xs text-gray-500">Desmarcalo para los grupos que cobran por libra sin piso.</span>
           </span>
         </label>
         <%# Acá había un select con "Peso exacto (sin redondeo)", "Media libra" y

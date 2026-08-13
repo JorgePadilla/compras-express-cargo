@@ -133,13 +133,19 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
 
     hrefs = @controller.instance_variable_get(:@shortcut_groups).flat_map { |g| g[:cards] }.map { |c| c[:href] }
 
+    # `categoria_precios_path` salió de la lista en PR-C7.12: los grupos de
+    # clientes dejaron de ser una pantalla y se administran dentro de la Tabla de
+    # Servicios, así que la tarjeta que llega a ellos es la de servicios.
     [
-      servicios_path, categoria_precios_path, tarifas_recolecta_path,
+      servicios_path, tarifas_recolecta_path,
       servicios_extra_path, proveedores_path, motivos_retencion_path,
       plantillas_notas_cliente_path
     ].each do |ruta|
       assert_includes hrefs, ruta, "#{ruta} solo se alcanzaba desde el sidebar"
     end
+
+    assert_not_includes hrefs, categoria_precios_path,
+                        "los grupos de clientes no son una pantalla aparte; se administran en /servicios"
   end
 
   # Guard contra la desincronización que ya pasó una vez: se quitaron las
