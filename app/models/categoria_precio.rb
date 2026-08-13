@@ -1,22 +1,35 @@
+# Una categoría **agrupa clientes**. No guarda precios.
+#
+# Yusef, 2026-08-12: *"la categoría de precio confunde con la tabla de servicios,
+# y está en lempiras la de categoría y el Excel está en dólares"*.
+#
+# Tenía razón por partida doble. La tabla llegó a tener `precio_libra_aereo`,
+# `precio_libra_maritimo` y `precio_volumen`, con las vistas rotulándolos en
+# lempiras — pero **no había columna `moneda`** y los números estaban de facto en
+# dólares (el backfill de `create_tarifas.rb` los copió estampándoles `'USD'`).
+# La etiqueta mentía.
+#
+# Y desde `PR-C7.06` esas columnas ya no las leía nadie: se podían editar y no
+# cambiaba nada de lo que se cobra. Un formulario que promete configurar precios
+# y no configura nada.
+#
+# Lo que sí hace la categoría, y es su única función, es entrar como **llave** en
+# la cascada de `Tarifa.resolver` (`cliente → proveedor → categoría → lista`).
+# El precio sale siempre de `tarifas.precio_libra`, que tiene su moneda explícita.
 class CategoriaPrecio < ApplicationRecord
-  has_paper_trail  # PR-D7: audit log — precios afectan tarifas a clientes
+  # El audit log se queda: cambiarle la categoría a un grupo de clientes les
+  # cambia lo que pagan, aunque el precio no viva acá.
+  has_paper_trail
   has_many :clientes, dependent: :restrict_with_error
+  has_many :tarifas, dependent: :restrict_with_error
 
   validates :nombre, presence: true, uniqueness: { case_sensitive: false }
-  validates :precio_libra_aereo, :precio_libra_maritimo,
-            numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
 
-  # Returns the price per pound for the given tipo_envio, selecting aereo or
-  # maritimo based on the shipment modalidad. Falls back to nil if the
-  # category does not override that modalidad; callers should then use
-  # `tipo_envio.precio_libra` as the default.
-  def precio_para(tipo_envio)
-    return nil if tipo_envio.nil?
-
-    case tipo_envio.modalidad
-    when "aereo"    then precio_libra_aereo
-    when "maritimo" then precio_libra_maritimo
-    end
+  # Lo que esta categoría cobra hoy, leído de donde de verdad vive el precio.
+  # Vacío significa algo concreto y hay que decirlo en pantalla: sus clientes
+  # pagan el precio de lista.
+  def tarifas_vigentes
+    tarifas.activas.includes(:tipo_envio, :sucursal).order("tipo_envios.nombre", :desde_libras)
   end
 
   def to_s

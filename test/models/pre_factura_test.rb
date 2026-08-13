@@ -132,16 +132,18 @@ class PreFacturaTest < ActiveSupport::TestCase
     assert_match(/SIN TARIFA/i, item.concepto)
   end
 
-  test "la categoria de precios vieja ya no decide el cobro" do
-    # El cliente tiene categoría con precio_libra_aereo cargado. Si ese número
-    # vuelve a aparecer en una línea, volvió el fallback.
-    precio_viejo = @cliente.categoria_precio&.precio_para(paquetes(:disponible_entrega_juan).tipo_envio)
-    skip "el fixture del cliente no trae categoría con precio" if precio_viejo.blank?
+  # La categoría ya no puede decidir el cobro ni por accidente: sus columnas de
+  # precio se fueron con `QuitarPreciosDeCategoriaPrecios`. Lo que queda por
+  # cuidar es que el precio salga de `Tarifa` y de ningún otro lado.
+  test "el precio de la linea sale de la tarifa, no de otra fuente" do
+    paquete = paquetes(:disponible_entrega_juan)
+    tarifa = Tarifa.create!(tipo_envio: paquete.tipo_envio, desde_libras: 0,
+                            precio_libra: 7.25, moneda: "USD", activo: true)
 
-    pf = PreFactura.build_from_paquetes(@cliente, [ paquetes(:disponible_entrega_juan).id ], user: @user)
+    pf = PreFactura.build_from_paquetes(@cliente, [ paquete.id ], user: @user)
 
-    assert_not_equal CurrencyAware.convertir(precio_viejo, de: "USD", a: "LPS"),
-                     pf.pre_factura_items.first.precio_libra.to_d
+    assert_equal CurrencyAware.convertir(tarifa.precio_libra, de: "USD", a: "LPS"),
+                 pf.pre_factura_items.first.precio_libra.to_d
   end
 
   test "scope activas excludes anulado" do

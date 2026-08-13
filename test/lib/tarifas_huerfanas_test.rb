@@ -69,10 +69,7 @@ class TarifasHuerfanasTest < ActiveSupport::TestCase
   # Las fixtures ya traen algunas categorías; se reusa la que exista para no
   # chocar con la unicidad del nombre.
   def categoria_llamada(nombre)
-    CategoriaPrecio.find_or_create_by!(nombre: nombre) do |c|
-      c.precio_libra_aereo = 3.50
-      c.precio_libra_maritimo = 1.50
-    end
+    CategoriaPrecio.find_or_create_by!(nombre: nombre)
   end
 
   def crear_tarifa(categoria:, tipo_envio:, precio:)

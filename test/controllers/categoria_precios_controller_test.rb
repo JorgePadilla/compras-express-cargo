@@ -20,10 +20,7 @@ class CategoriaPreciosControllerTest < ActionDispatch::IntegrationTest
   test "should create categoria_precio" do
     assert_difference "CategoriaPrecio.count", 1 do
       post categoria_precios_url, params: {
-        categoria_precio: {
-          nombre: "Nueva", precio_libra_aereo: 5.0,
-          precio_libra_maritimo: 2.0, precio_volumen: 0.01
-        }
+        categoria_precio: { nombre: "Nueva" }
       }
     end
     assert_redirected_to categoria_precios_url
