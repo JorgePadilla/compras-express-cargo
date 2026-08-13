@@ -5285,7 +5285,7 @@ Sobre prefactura Yusef fue claro en que todavía no toca:
 
 | Qué | Estado |
 |---|---|
-| Bodega Honduras después de prefactura (`A7-01`) | ⏳ corregir `lib/procesos_pdf.rb` y verificar el flujo |
+| Bodega Honduras después de prefactura (`A7-01`, `A7-02`) | ✅ `PR-C7.07` — dibujo corregido y regenerado; el pipeline de estados queda en `RP-38` |
 | Modal bloqueante en `/etiquetar` (`A7-17`) | ⏳ **el más fácil, va primero** |
 | Pre-alerta desincronizada del paquete (`A7-19`) | ✅ `PR-C7.02` — la pre-alerta sigue al paquete |
 | Entrega Personal caja por caja (`A7-20`, `A7-21`) | ✅ `PR-C7.04` — repetidor con Agregar, y la etiqueta sin el `1 de N` |

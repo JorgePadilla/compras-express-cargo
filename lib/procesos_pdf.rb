@@ -14,8 +14,20 @@ class ProcesosPdf
   #            :fisico (pasa en el mundo, no en el sistema)
   # `existe` → false marca los pasos que están en el diseño pero no en ninguna
   #            pantalla. Es lo que Jorge pidió ver.
+  # A7-02: el dibujo arrancaba en el portal del cliente, y ese es el canal
+  # **minoritario**. Yusef, viéndolo:
+  #
+  #   > "El cliente solo hace ni... que **30, 40% de las prealertas**."
+  #
+  # Y ordenó las entradas de una forma que conviene respetar tal cual:
+  #
+  #   > "Uno lo ve entrada, proceso, salida. Donde nace el paquete, esa es la
+  #   >  entrada de nuestro sistema. Veo que hay prealerta, escaneándolo en
+  #   >  Miami, y hay otra entrada que es una **digitación manual**, que no
+  #   >  necesariamente en Miami, puede ser desde aquí. Esas son las tres
+  #   >  entradas."
   CAMINO_MIAMI = [
-    { titulo: "Pre-alerta", quien: "el cliente, en su portal",
+    { titulo: "Pre-alerta", quien: "el cliente en su portal, o un admin por él",
       actor: :persona, ruta: "new_cuenta_pre_alerta_path", existe: true },
     { titulo: "Nace el paquete", quien: "el sistema, solo",
       actor: :sistema, estado: "pre_alerta_estado", existe: true },
@@ -32,13 +44,31 @@ class ProcesosPdf
       actor: :persona, ruta: "manifiestos_path", estado: "enviado_honduras", existe: true }
   ].freeze
 
+  # A7-01: **la pre-factura va ANTES de la bodega**, y el dibujo lo tenía al
+  # revés. Yusef lo corrigió en la revisión del 2026-08-12:
+  #
+  #   > "Bodega Honduras va **después** de prefactura."
+  #
+  # Y el porqué, que es lo que hace que no sea negociable:
+  #
+  #   > **Jorge:** "Yo pensé que se iba a enviar primero y luego en el punto se
+  #   >  hacía la prefactura. ¿Por qué no se hace la prefactura en San Pedro?"
+  #   > **Yusef:** "Porque **aquí tengo el personal para eso**. En Tegucigalpa no
+  #   >  tengo, no voy a tener otra persona haciéndolo."
+  #
+  # No es preferencia de orden: la pre-factura se hace en San Pedro porque el
+  # personal de pre-factura existe solo ahí.
+  #
+  # El paso de pre-factura ya **no lleva `estado`**: `pre_facturado` existe en el
+  # sistema pero es consecuencia de emitir el documento, no un estado que alguien
+  # ponga (A7-11).
   CAMINO_HONDURAS = [
     { titulo: "Aduana", quien: "hoy se cambia el estado a mano",
       actor: :persona, estado: "en_aduana", existe: false },
+    { titulo: "Pre-factura", quien: "cajero, en San Pedro",
+      actor: :persona, ruta: "pre_facturas_path", existe: true },
     { titulo: "Bodega en Honduras", quien: "hoy se cambia el estado a mano",
       actor: :persona, estado: "disponible_entrega", existe: false },
-    { titulo: "Pre-factura", quien: "cajero",
-      actor: :persona, ruta: "pre_facturas_path", estado: "pre_facturado", existe: true },
     { titulo: "Factura", quien: "cajero",
       actor: :persona, ruta: "ventas_path", existe: true },
     { titulo: "Pago", quien: "cajero",
@@ -59,6 +89,25 @@ class ProcesosPdf
   # Los ocho desvíos. `engancha` dice dónde se pega al camino principal — sin
   # eso un flujo suelto no se entiende.
   ALTERNATIVOS = [
+    # A7-02. Va primero porque es lo primero que Yusef corrigió del dibujo: el
+    # camino principal arranca en la pre-alerta del cliente, y ese canal es el
+    # minoritario. Sin esto el diagrama describe el 30-40% de la operación.
+    { nombre: "Por dónde entra un paquete al sistema",
+      cuando: "El camino principal dibuja la pre-alerta del cliente, pero \"el cliente solo hace ni... que 30, 40% de las prealertas\" (Yusef).",
+      engancha: "Las tres desembocan en el mismo paquete: de ahí en adelante el camino es uno solo.",
+      pasos: [
+        { titulo: "Pre-alerta", quien: "el cliente o un admin por él", actor: :persona,
+          ruta: "new_cuenta_pre_alerta_path", existe: true },
+        { titulo: "Escaneo en Miami", quien: "digitador, con la pistola", actor: :persona,
+          ruta: "etiquetar_path", existe: true },
+        { titulo: "Digitación manual", quien: "cuando en Miami se les escapó escanear",
+          actor: :persona, ruta: "etiquetar_path", existe: true }
+      ],
+      notas: [
+        "Si el tracking escaneado coincide con una pre-alerta, el sistema los amarra solo.",
+        "Si no coincide con ninguna, el paquete nace ahí mismo.",
+        "La digitación manual es la etiqueta local que se hace en San Pedro cuando en Miami no se escaneó."
+      ] },
     { nombre: "Entrega Personal",
       cuando: "El paquete llega en mano al mostrador de Miami, sin tracking del courier: un driver privado, un Uber, alguien que lo trajo. No hubo pre-alerta.",
       engancha: "Entra directo en «Etiquetar» y de ahí sigue el camino de siempre.",

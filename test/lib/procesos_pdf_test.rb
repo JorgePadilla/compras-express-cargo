@@ -118,8 +118,14 @@ class ProcesosPdfTest < ActiveSupport::TestCase
     assert_empty incompletos.map { |f| f[:nombre] }
   end
 
-  test "estan los ocho desvios" do
-    assert_equal 8, ProcesosPdf::ALTERNATIVOS.size
+  test "estan los ocho desvios, mas las entradas" do
+    # A7-02 sumó "Por dónde entra un paquete al sistema", que no es un desvío
+    # sino las tres puertas de entrada: el camino principal solo dibujaba la
+    # pre-alerta del cliente, que es el 30-40% de los paquetes.
+    assert_equal 9, ProcesosPdf::ALTERNATIVOS.size
+    assert_equal "Por dónde entra un paquete al sistema",
+                 ProcesosPdf::ALTERNATIVOS.first[:nombre],
+                 "las entradas van primero: es lo que se lee antes del camino"
   end
 
   test "los flujos que se bifurcan se dibujan como abanico" do
