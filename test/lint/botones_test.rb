@@ -89,7 +89,9 @@ class BotonesTest < ActiveSupport::TestCase
     "app/views/pre_facturas/_autorizacion_modal.html.erb"    => 2,
     "app/views/pre_facturas/new.html.erb"                    => 2,
     "app/views/recibos/show.html.erb"                        => 2,
-    "app/views/servicios/index.html.erb"                     => 2,
+    # Baja de 2 a 1: se fue el `button_to` del interruptor de redondeo. El que
+    # queda es "Eliminar" de cada fila.
+    "app/views/servicios/index.html.erb"                     => 1,
     "app/views/sessions/new.html.erb"                        => 2,
     "app/views/shared/_confirm_modal.html.erb"               => 2,
     "app/views/bitacora_autorizaciones/index.html.erb"       => 1,

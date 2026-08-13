@@ -53,15 +53,20 @@ class TarifaEscalonFronteraTest < ActiveSupport::TestCase
     assert_equal 202.00, tarifa.cobro_para(50.55)[:subtotal].to_f   # redondea a 50.5
   end
 
-  test "sin escalonado activo el camino es identico" do
-    # La garantía de que este PR no mueve un centavo hoy: con
-    # `incremento_libras` nil, resolver devuelve lo mismo que siempre.
-    Tarifa.where(tipo_envio: @tipo).update_all(incremento_libras: nil)
+  # Este test fijaba que, con `incremento_libras` en nil, el camino fuera el de
+  # siempre — era la garantía de que PR-C6.18 no movía un centavo mientras el
+  # redondeo estuviera apagado.
+  #
+  # Ya no se puede guardar una tarifa así (`RedondeoMediaLibraSiempre` la dejó
+  # NOT NULL con default 0.5), y tampoco haría falta: el redondeo es la regla.
+  # Lo que queda por fijar es el cálculo sin redondeo a nivel del método, sobre
+  # un objeto sin persistir.
+  test "sin escalonado el cobro es el peso exacto" do
+    suelta = Tarifa.new(tipo_envio: @tipo, desde_libras: 0, hasta_libras: 50.5,
+                        precio_libra: 4.50, moneda: "USD", incremento_libras: nil,
+                        aplica_minimo: false)
 
-    tarifa = resolver(50.2)
-
-    assert_equal @caro, tarifa
-    assert_equal 225.90, tarifa.cobro_para(50.2)[:subtotal].to_f   # 50.2 × 4.50, el peso exacto
+    assert_equal 225.90, suelta.cobro_para(50.2)[:subtotal].to_f   # 50.2 × 4.50
   end
 
   test "el peso facturable no aplica el minimo en libras" do

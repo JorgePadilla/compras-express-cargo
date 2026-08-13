@@ -101,12 +101,10 @@ Rails.application.routes.draw do
   resources :sucursales, except: [:show]
 
   # PR-10.a: "la tabla de servicios" — precios por libra, escalones y mínimos.
-  resources :servicios, only: %i[index new create edit update destroy] do
-    # PR-C6.20: prender/apagar el cobro en medias libras en todas las filas de
-    # un servicio. Va sobre el TipoEnvio, no sobre una tarifa — de ahí que el
-    # :id sea el del servicio.
-    member { patch :redondeo }
-  end
+  # El redondeo a media libra ya no se prende ni se apaga: es la regla, y las
+  # tarifas nacen con ella (`RedondeoMediaLibraSiempre`). Por eso se fue el
+  # `member { patch :redondeo }` que existía desde PR-C6.20.
+  resources :servicios, only: %i[index new create edit update destroy]
 
   # PR-10.b: cotización de flete en vivo (JSON) para el "valor a pagar".
   get "cotizador", to: "cotizador#show"

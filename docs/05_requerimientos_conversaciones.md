@@ -3992,7 +3992,7 @@ como todas las demás.
 | RP-26 | CEM: el mínimo de 8 libras no se aplica — ¿manda el dinero o las libras? | idem |
 | RP-27 | CKM: ¿la libra vale $1.50 (hoja) o $1.90 (sistema)? | idem |
 | RP-28 | CKM: dos reglas del mismo audio se contradicen — ¿dinero o libras? | idem |
-| RP-29 | El redondeo escalonado sobre el peso de báscula está apagado — ¿se prende? | idem |
+| ~~RP-29~~ | ~~El redondeo escalonado sobre el peso de báscula está apagado — ¿se prende?~~ **✅ CERRADA POR DUPLICADA**: ya la había contestado en `RP-03` ("préndanlo ya") y `RP-04` ("todo") el 2026-08-09. El PDF se armó leyendo el estado del código sin cruzarlo contra sus respuestas. El redondeo quedó puesto en `PR-C7.10` | idem |
 | ~~RP-30~~ | ~~Aduana y bodega: hoy el estado se cambia a mano — ¿hace falta pantalla?~~ **✅ CERRADA en la Conversación 7**: sí hace falta, y es el escaneo del manifiesto (`A7-03`…`A7-05`). De paso corrigió el orden del diagrama (`A7-01`) | `lib/procesos_pdf.rb` |
 
 **`RP-24`…`RP-29` son plata.** Cada una es una diferencia entre la hoja de abril

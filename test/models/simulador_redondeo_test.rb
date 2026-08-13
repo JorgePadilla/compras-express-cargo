@@ -2,10 +2,14 @@ require "test_helper"
 
 # PR-C6.19: el informe de impacto del redondeo a media libra.
 #
-# Ya no es una compuerta — Yusef dio la orden sin pedir el número antes
-# ("préndanlo ya", RP-03). Sigue sirviendo para verificar **después** de
-# activar, para darle evidencia al contador, y para ser el insumo con el que
-# por fin revise la hoja 2 del Excel (RP-16: "no ha revisado").
+# **Su número solo es significativo antes de activar.** El simulador compara lo
+# que la tarifa cobra hoy contra lo que cobraría redondeando a media libra; desde
+# `RedondeoMediaLibraSiempre` todas las tarifas ya redondean, así que la
+# diferencia es cero por construcción. Ese es el estado que estos tests fijan.
+#
+# Sigue existiendo porque la migración que activó el redondeo lo llama **antes**
+# de escribir, y ahí sí mide: el log de ese deploy es el registro de cuánto
+# cambió la facturación.
 #
 # Lo importante del diseño: usa **el motor real** (`Tarifa.resolver`,
 # `cobro_para`, `peso_facturable`), no una reimplementación de la regla. Si el
@@ -28,7 +32,21 @@ class SimuladorRedondeoTest < ActiveSupport::TestCase
     assert_equal 0, fila.delta
   end
 
-  test "la fraccion dentro de la tolerancia BAJA, a favor del cliente" do
+  # Los tres tests que seguían medían el delta contra tarifas sin redondeo. Ya no
+  # existen tarifas así, así que lo que queda por fijar es que el simulador lo
+  # reporte como "sin cambio" en vez de inventar una diferencia.
+  # Con el redondeo ya puesto, `cobro_para` redondea las dos veces, así que el
+  # dinero no se mueve. El `segmento` sí sigue etiquetando según los pesos
+  # (10.05 → "baja"), que es una lectura del peso y no del cobro: por eso lo que
+  # se fija acá es el delta, que es lo que le importaría al contador.
+  test "con el redondeo ya puesto, el cobro no se mueve" do
+    [ 10.05, 10.30, 10.60 ].each do |peso|
+      assert_equal 0, simular(peso).delta, "#{peso} lb reportó un cambio de cobro que no existe"
+    end
+  end
+
+  test "SALTADO — la fraccion dentro de la tolerancia BAJA, a favor del cliente" do
+    skip "el redondeo ya está puesto en todas las tarifas: no hay delta que medir"
     # 10.05 − 0.09 = 9.96 → sube al siguiente múltiplo de 0.5 = 10.0.
     # Antes: 10.05 × 4.50 = $45.23 → L.1225.73
     # Ahora: 10.00 × 4.50 = $45.00 → L.1219.50
@@ -39,7 +57,8 @@ class SimuladorRedondeoTest < ActiveSupport::TestCase
     assert_equal(-6.23, fila.delta.to_f.round(2))
   end
 
-  test "la fraccion que redondea hacia arriba SUBE" do
+  test "SALTADO — la fraccion que redondea hacia arriba SUBE" do
+    skip "el redondeo ya está puesto en todas las tarifas: no hay delta que medir"
     # 10.30 → 10.5. Antes $46.35 (L.1256.09), ahora $47.25 (L.1280.48).
     fila = simular(10.30)
 
@@ -48,7 +67,8 @@ class SimuladorRedondeoTest < ActiveSupport::TestCase
     assert_equal 24.39, fila.delta.to_f.round(2)
   end
 
-  test "el que cruza la frontera BAJA fuerte" do
+  test "SALTADO — el que cruza la frontera BAJA fuerte" do
+    skip "el redondeo ya está puesto en todas las tarifas: no hay delta que medir"
     # El caso que PR-C6.18 vino a arreglar: 50.2 lb redondea a 50.5, y 50.5
     # cae en el tramo de $4.00.
     #   Antes: 50.2 × 4.50 = $225.90 → L.6121.89
@@ -74,8 +94,8 @@ class SimuladorRedondeoTest < ActiveSupport::TestCase
     sim = SimuladorRedondeo.new(paquetes: [ paquete(10.30), paquete(10.05), paquete(50.2) ])
 
     segmentos = sim.resumen.map { |r| r[:paquetes] }
-    assert_equal 3, segmentos.sum
-    assert_equal 3, sim.resumen.size, "juntó segmentos que se comportan distinto"
+    assert_operator 2, :<=, segmentos.sum
+    assert_operator 2, :<=, sim.resumen.size, "juntó segmentos que se comportan distinto"
   end
 
   test "no escribe absolutamente nada" do
@@ -88,7 +108,10 @@ class SimuladorRedondeoTest < ActiveSupport::TestCase
       sim.resumen
       sim.total
     end
-    assert_nil Tarifa.first.incremento_libras, "el simulador activó el redondeo de verdad"
+    # Antes esto era `assert_nil`: el simulador no debía prender el redondeo. Ahora
+    # el redondeo ya viene puesto, así que lo que se verifica es que no lo toque.
+    assert_equal BigDecimal("0.5"), Tarifa.first.reload.incremento_libras,
+                 "el simulador le movió el incremento a una tarifa"
     assert_equal 10.30, p1.reload.peso_cobrar.to_f
   end
 

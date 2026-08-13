@@ -57,46 +57,7 @@ class ServiciosController < ApplicationController
     redirect_to servicios_path, notice: "Tarifa eliminada."
   end
 
-  # PR-C6.20: prende (o apaga) el redondeo a media libra en TODAS las filas de
-  # un servicio de un solo clic.
-  #
-  # Yusef, contestando el PDF el 2026-08-09:
-  #
-  #   > "☒ **Préndanlo ya.**"
-  #   > "☒ También en las tarifas por categoría: Clientes Amigos, Shein,
-  #   >  Personal CEC y las demás." — y al lado escribió: "**Todo**".
-  #
-  # Por ese "todo" no hay selector de alcance: entra la fila de lista y todas
-  # las de categoría, cliente, proveedor y sucursal. El selector por fila ya
-  # existía en el form, pero editar 58 a mano es donde se olvida una y una
-  # categoría termina facturando distinto.
-  #
-  # `find_each` + `save!` y **no** `update_all`: es plata, así que cada fila
-  # deja su versión de paper_trail y el cambio es reversible y auditable.
-  def redondeo
-    tipo = TipoEnvio.find(params[:id])
-    incremento = ActiveModel::Type::Boolean.new.cast(params[:activar]) ? INCREMENTO_MEDIA_LIBRA : nil
-
-    cambiadas = 0
-    Tarifa.where(tipo_envio_id: tipo.id).find_each do |t|
-      next if t.incremento_libras == incremento
-
-      t.update!(incremento_libras: incremento)
-      cambiadas += 1
-    end
-
-    redirect_to servicios_path,
-                notice: "#{tipo.codigo.to_s.upcase}: #{estado_redondeo(incremento)} " \
-                        "en #{cambiadas} #{'tarifa'.pluralize(cambiadas)}."
-  end
-
   private
-
-  INCREMENTO_MEDIA_LIBRA = BigDecimal("0.5")
-
-  def estado_redondeo(incremento)
-    incremento ? "cobro en medias libras activado" : "vuelve a cobrar el peso exacto"
-  end
 
   def require_admin
     redirect_to(root_path, alert: "Solo admin.") unless admin?
@@ -143,7 +104,9 @@ class ServiciosController < ApplicationController
     params.require(:tarifa).permit(
       :tipo_envio_id, :categoria_precio_id, :cliente_id, :sucursal_id, :proveedor_id,
       :desde_libras, :hasta_libras, :precio_libra, :moneda,
-      :minimo_moneda, :minimo_libras, :aplica_minimo, :incremento_libras,
+      :minimo_moneda, :minimo_libras, :aplica_minimo,
+      # `incremento_libras` NO se permite: el redondeo a media libra es la regla,
+      # no una opcion del formulario. La columna tiene default 0.5 y NOT NULL.
       :activo, :notas
     )
   end
