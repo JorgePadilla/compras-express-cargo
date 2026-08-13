@@ -34,6 +34,37 @@ class Tarifa < ApplicationRecord
     categoria_precio&.nombre
   end
 
+  # El precio especial de un cliente se elige por **código**, no por id.
+  #
+  # Jorge: *"¿se puede hacer lista que sea por código, porque en el sistema no
+  # usamos ID?"*. Tenía razón — era un `number_field :cliente_id`, o sea que
+  # había que saber que "CEC-002" es internamente el 47, un número que no
+  # aparece en ninguna otra pantalla.
+  #
+  # El campo visible guarda `CÓDIGO — Nombre`, que es lo que escribe
+  # `client-autocomplete` al elegir del dropdown.
+  attr_writer :cliente_busqueda
+
+  def cliente_busqueda
+    return @cliente_busqueda if defined?(@cliente_busqueda)
+    return nil unless cliente
+
+    "#{cliente.codigo} — #{cliente.nombre_completo}"
+  end
+
+  # Vaciar el campo tiene que **quitar** el precio especial, y no lo hacía.
+  #
+  # `BusquedaAutocomplete#_elegirEl` solo **escribe** el campo oculto; nunca lo
+  # limpia. En `/pre_alertas/new` da igual —el cliente es obligatorio y la
+  # pantalla es de alta— pero acá el campo es opcional: si alguien borraba el
+  # texto para sacarle el precio especial a una tarifa, el `cliente_id` oculto se
+  # quedaba con el valor viejo y **la tarifa seguía siendo de ese cliente**, en
+  # silencio.
+  #
+  # Por eso manda lo que se ve, no lo que llegó oculto.
+  before_validation :resolver_cliente_buscado
+  validate :cliente_buscado_existe
+
   validates :precio_libra, numericality: { greater_than_or_equal_to: 0 }
   validates :moneda, inclusion: { in: MONEDAS }
   validates :minimo_moneda, inclusion: { in: MONEDAS }, allow_nil: true
@@ -272,5 +303,54 @@ class Tarifa < ApplicationRecord
     return if minimo_monto.blank? || minimo_moneda.present?
 
     errors.add(:minimo_moneda, "es obligatoria cuando hay un monto mínimo")
+  end
+
+  # Reconcilia el cliente con lo que **se ve** en el campo de búsqueda.
+  #
+  #   texto vacío                  → sin cliente, aunque venga un id oculto
+  #   texto + id que le corresponde → ese id, tal cual lo puso el autocomplete
+  #   texto sin id (tecleó y no eligió) → se busca por código
+  #   código que no existe          → error, nunca un nil silencioso
+  #
+  # La última es la que importa: dejarlo en nil convertiría un typo en una tarifa
+  # de precio de lista, que cobra distinto sin que nadie se entere.
+  #
+  # El `defined?` distingue "el formulario no mandó el campo" de "lo mandó
+  # vacío". Sin eso, cualquier `Tarifa.create!(cliente: x)` de los seeds o los
+  # tests se quedaría sin cliente.
+  def resolver_cliente_buscado
+    return unless defined?(@cliente_busqueda)
+
+    @cliente_no_encontrado = nil
+    texto = @cliente_busqueda.to_s.strip
+
+    if texto.blank?
+      self.cliente_id = nil
+      return
+    end
+
+    # `client-autocomplete` deja "CÓDIGO — Nombre"; el código nunca lleva
+    # espacios, así que el primer token es el código.
+    codigo = texto.split(/\s/).first
+    return if cliente && cliente.codigo.to_s.casecmp?(codigo)
+
+    encontrado = Cliente.find_by("LOWER(codigo) = ?", codigo.downcase)
+
+    if encontrado
+      self.cliente = encontrado
+    else
+      self.cliente_id = nil
+      @cliente_no_encontrado = codigo
+    end
+  end
+
+  # A propósito **no** crea el cliente que falta, al revés que `categoria_nombre`:
+  # una categoría nueva es un grupo que alguien está inventando ahora, pero un
+  # cliente que no está es un error de tipeo.
+  def cliente_buscado_existe
+    return if @cliente_no_encontrado.blank?
+
+    errors.add(:base, "No existe un cliente con el código \"#{@cliente_no_encontrado}\". " \
+                      "Buscalo por código o por nombre y elegilo de la lista.")
   end
 end

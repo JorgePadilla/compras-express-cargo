@@ -19,9 +19,13 @@
     <%# ── A quién aplica ── la cascada. Solo uno de los tres debería llenarse. %>
     <fieldset class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
       <legend class="text-xs font-bold uppercase tracking-wider text-gray-500 px-2">¿A quién aplica?</legend>
+      <%# Se nombra lo que hay que dejar en blanco en vez de contarlo: acá hay
+          cuatro campos y "sucursal" no es un nivel de la cascada — es un filtro
+          que se aplica dentro del nivel que sea. %>
       <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
-        Dejá los tres en blanco para el <strong>precio de lista</strong>. Si llenás más de uno,
-        gana el más específico: cliente → proveedor → grupo.
+        Sin grupo, sin proveedor y sin cliente, esta tarifa es el <strong>precio de lista</strong>:
+        la que se le cobra a todo el mundo. Si llenás más de uno, gana el más específico:
+        cliente → proveedor → grupo.
       </p>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
@@ -57,10 +61,43 @@
                 { class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm" } %>
         </div>
       </div>
-      <div class="mt-3">
-        <%= f.label :cliente_id, "Precio especial para un cliente puntual (ID)", class: "block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1" %>
-        <%= f.number_field :cliente_id, placeholder: "dejar vacío salvo que sea una excepción de un solo cliente",
-              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm" %>
+      <%# PR-C7.14: era un `number_field :cliente_id`.
+
+          Jorge: "¿se puede hacer lista que sea por código, porque en el sistema
+          no usamos ID?". Para usarlo había que saber que "CEC-002" es
+          internamente el 47 — un número que no aparece en ninguna otra
+          pantalla. Era el único campo del sistema que pedía un id crudo.
+
+          Se reusa `client-autocomplete` tal cual, el mismo de /pre_alertas/new
+          y del form de paquete: busca por código o por nombre desde un dígito
+          suelto, prioriza el código exacto, y se elige con flechas y Enter.
+
+          El `keydown` no es opcional: `autocomplete_teclado_test` falla la vista
+          sin él, y ese lint existe porque tres vistas cablearon el autocomplete
+          y se olvidaron del teclado. %>
+      <div class="mt-3" data-controller="client-autocomplete"
+           data-client-autocomplete-url-value="<%= buscar_clientes_path %>">
+        <%= f.label :cliente_busqueda, "Precio especial para un cliente", class: "block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <div class="relative">
+          <%# El valor arranca con "CÓDIGO — Nombre", que es exactamente lo que
+              el controller escribe al elegir: así una tarifa que se abre y se
+              guarda sin tocar vuelve idéntica. %>
+          <%= f.text_field :cliente_busqueda,
+                data: { client_autocomplete_target: "input",
+                        action: "input->client-autocomplete#search keydown->client-autocomplete#onKeydown" },
+                placeholder: "Buscar por código o nombre… (vacío = sin precio especial)",
+                autocomplete: "off",
+                class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm" %>
+          <%= f.hidden_field :cliente_id, data: { client_autocomplete_target: "clienteId" } %>
+          <div data-client-autocomplete-target="dropdown"
+               class="hidden absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto"></div>
+        </div>
+        <p data-client-autocomplete-target="nombre" class="mt-1 text-sm text-gray-500 dark:text-gray-400 hidden"></p>
+        <p class="text-[11px] text-gray-400 mt-1">
+          Le gana al grupo, al proveedor y al precio de lista: es lo más específico que hay.
+          Se usa para una tarifa <strong>negociada con un solo cliente</strong>.
+          Borrá el campo para quitársela.
+        </p>
       </div>
     </fieldset>
 
