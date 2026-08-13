@@ -141,8 +141,12 @@ class ServiciosController < ApplicationController
       # de grupo, que `asignar_categoria_por_nombre` resuelve a `categoria_precio_id`.
       # Va permitido para que no ensucie el log con "Unpermitted parameter" en
       # cada guardado; el `attr_writer` de `Tarifa` lo absorbe sin tocar la base.
+      # `cliente_busqueda` tampoco es columna: es lo que se ve en el campo
+      # ("CÓDIGO — Nombre"), y `Tarifa#resolver_cliente_buscado` lo reconcilia
+      # con `cliente_id`. Manda lo que se ve, para que vaciarlo **quite** el
+      # precio especial en vez de dejar el id oculto viejo.
       :tipo_envio_id, :categoria_precio_id, :categoria_nombre,
-      :cliente_id, :sucursal_id, :proveedor_id,
+      :cliente_id, :cliente_busqueda, :sucursal_id, :proveedor_id,
       :desde_libras, :hasta_libras, :precio_libra, :moneda,
       :minimo_moneda, :minimo_libras, :aplica_minimo,
       # `incremento_libras` NO se permite: el redondeo a media libra es la regla,
