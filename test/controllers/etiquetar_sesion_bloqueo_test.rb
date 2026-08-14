@@ -93,7 +93,7 @@ class EtiquetarSesionBloqueoTest < ActionDispatch::IntegrationTest
 
     assert_no_difference -> { Paquete.count } do
       post etiquetar_url, params: {
-        paquete: attrs(tracking: @pap.tracking).merge(cantidad_paquetes: 3)
+        paquete: attrs(tracking: @pap.tracking).merge(cajas: { "1" => { peso: 5 }, "2" => { peso: 5 }, "3" => { peso: 5 } })
       }
     end
 

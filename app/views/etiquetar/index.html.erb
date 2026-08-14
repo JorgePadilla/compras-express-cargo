@@ -705,8 +705,13 @@ end %>
                    shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
       </div>
 
-      <%= render "shared/peso_medidas_calc", f: f, wrapper_class: "lg:col-span-3",
-            tipo_envio_id: @tipo_envio_sesion.id %>
+      <%# PR-C7.17: el mismo componente que /entrega_personal. Acá vivía el
+          partial `shared/_peso_medidas_calc`, cuyo default de `modo_cajas`
+          nunca se aplicaba —`x = v unless defined?(x)` no asigna nunca en
+          Ruby— y por eso esta pantalla se quedó sin campo de cajas y sin poder
+          dividir un paquete. %>
+      <%= render CajasPesoMedidasComponent.new(f: f, wrapper_class: "lg:col-span-3",
+            tipo_envio_id: @tipo_envio_sesion.id) %>
 
     </div>
 

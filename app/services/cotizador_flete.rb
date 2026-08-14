@@ -27,8 +27,10 @@ class CotizadorFlete
 
   def self.call(...) = new(...).call
 
+  # `cajas` cotiza un envío de varios bultos: una lista de hashes con `peso`,
+  # `alto`, `largo` y `ancho`. Cuando viene, las medidas sueltas se ignoran.
   def initialize(tipo_envio:, cliente: nil, proveedor: nil, sucursal: nil,
-                 peso: nil, alto: nil, largo: nil, ancho: nil)
+                 peso: nil, alto: nil, largo: nil, ancho: nil, cajas: nil)
     @tipo_envio = tipo_envio
     @cliente    = cliente
     @proveedor  = proveedor
@@ -37,9 +39,70 @@ class CotizadorFlete
     @alto       = alto
     @largo      = largo
     @ancho      = ancho
+    @cajas      = Array(cajas).reject(&:blank?)
   end
 
   def call
+    return call_por_cajas if @cajas.any?
+
+    call_de_un_bulto
+  end
+
+  # ── El envío de varias cajas ──────────────────────────────────────────────
+  #
+  # PR-C7.17. Se cotiza **caja por caja y se suma**, no se suman las libras para
+  # cotizar una sola vez. No es un detalle: es lo que hace `PreFactura`.
+  #
+  # `PreFactura#build_from_paquetes` recorre `paquetes.each` y arma **una línea
+  # por caja**, y cada una resuelve su propio escalón y compara contra su propio
+  # mínimo. Con las cajas del ejemplo de `A9-03` —que cobran 5, 9 y 163 lb en
+  # CER— la diferencia es real:
+  #
+  #   caja por caja (lo que factura hoy) ... $633.50
+  #   envío entero (177 lb en un escalón) .. $619.50
+  #
+  # Cotizar el envío entero le mostraría al operario **$14 menos de lo que la
+  # factura le va a cobrar al cliente**, que es justo la divergencia que este PR
+  # viene a cerrar.
+  #
+  # Si mañana se decide cobrar por envío, se cambia acá **y** en `PreFactura`, no
+  # en uno solo. Está abierto como `RP-41`.
+  def call_por_cajas
+    partes = @cajas.map { |c| self.class.call(**contexto, **medidas_de(c)) }
+
+    subtotal = partes.sum { |p| p.subtotal }
+    impuesto = (subtotal * IsvAware.rate).round(2, BigDecimal::ROUND_HALF_UP)
+    precios  = partes.map(&:precio_libra).uniq
+
+    Resultado.new(
+      peso_cobrar:    partes.sum { |p| p.peso_cobrar },
+      peso_facturado: partes.sum { |p| p.peso_facturado },
+      vlbs:           partes.sum { |p| p.vlbs },
+      # Con las cajas en escalones distintos no hay "un" precio por libra que
+      # mostrar; el panel lo pinta como "varía" en vez de mentir con el de una.
+      precio_libra:   (precios.size == 1 ? precios.first : nil),
+      subtotal:       subtotal,
+      impuesto:       impuesto,
+      total:          (subtotal + impuesto).round(2, BigDecimal::ROUND_HALF_UP),
+      aplico_minimo:  partes.any?(&:aplico_minimo),
+      tarifa:         partes.first&.tarifa,
+      tasa:           CurrencyAware.tasa_vigente,
+      moneda:         MONEDA_DOCUMENTO,
+      sin_tarifa:     partes.any?(&:sin_tarifa)
+    )
+  end
+
+  def contexto
+    { tipo_envio: @tipo_envio, cliente: @cliente, proveedor: @proveedor, sucursal: @sucursal }
+  end
+
+  def medidas_de(caja)
+    c = caja.respond_to?(:to_unsafe_h) ? caja.to_unsafe_h : caja
+    c = c.symbolize_keys
+    { peso: c[:peso], alto: c[:alto], largo: c[:largo], ancho: c[:ancho] }
+  end
+
+  def call_de_un_bulto
     tasa = CurrencyAware.tasa_vigente
     tarifa = Tarifa.resolver(
       tipo_envio: @tipo_envio, peso: peso_cobrar,

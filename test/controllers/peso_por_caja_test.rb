@@ -32,7 +32,6 @@ class PesoPorCajaTest < ActionDispatch::IntegrationTest
   test "cada caja guarda su propio peso" do
     post etiquetar_url, params: {
       paquete: attrs.merge(
-        cantidad_paquetes: 3,
         cajas: { "1" => { peso: 5 }, "2" => { peso: 30 }, "3" => { peso: 12.5 } }
       )
     }
@@ -44,7 +43,6 @@ class PesoPorCajaTest < ActionDispatch::IntegrationTest
   test "cada caja guarda sus propias medidas" do
     post etiquetar_url, params: {
       paquete: attrs.merge(
-        cantidad_paquetes: 2,
         cajas: {
           "1" => { peso: 5, alto: 10, largo: 10, ancho: 10 },
           "2" => { peso: 5, alto: 40, largo: 30, ancho: 20 }
@@ -61,7 +59,8 @@ class PesoPorCajaTest < ActionDispatch::IntegrationTest
     # Si el operario solo corrige el peso de la caja 2, las medidas de las dos
     # siguen siendo las que escribió arriba.
     post etiquetar_url, params: {
-      paquete: attrs.merge(alto: 15, cantidad_paquetes: 2, cajas: { "2" => { peso: 30 } })
+      paquete: attrs.merge(alto: 15,
+                           cajas: { "1" => { peso: 5 }, "2" => { peso: 30 } })
     }
 
     cajas = Paquete.order(:id).last(2).sort_by(&:numero_caja)
@@ -70,20 +69,49 @@ class PesoPorCajaTest < ActionDispatch::IntegrationTest
   end
 
   test "un campo vacio no pisa el del formulario con nil" do
-    # El modal manda los cuatro inputs siempre; los que el operario deja en
-    # blanco no pueden borrar lo que ya estaba.
+    # Cada fila manda los cuatro campos; los que el operario dejó en blanco no
+    # pueden borrar lo que ya estaba arriba.
     post etiquetar_url, params: {
-      paquete: attrs.merge(peso: 7, cantidad_paquetes: 2,
-                           cajas: { "1" => { peso: "" }, "2" => { peso: "" } })
+      paquete: attrs.merge(peso: 7, alto: 15,
+                           cajas: { "1" => { peso: 5, alto: "" },
+                                    "2" => { peso: 30, alto: "" } })
     }
 
-    assert_equal [ 7.0, 7.0 ], Paquete.order(:id).last(2).map { |p| p.peso.to_f }
+    assert_equal [ 15, 15 ], Paquete.order(:id).last(2).map { |p| p.alto.to_i }
   end
 
-  test "sin datos por caja el split se comporta como antes" do
-    post etiquetar_url, params: { paquete: attrs.merge(peso: 9, cantidad_paquetes: 2) }
+  # PR-C7.17: la cantidad sale de contar las filas, no de un campo.
+  #
+  # Antes salía de `cantidad_paquetes`, y cuando PR-C7.04 le sacó ese campo a
+  # /etiquetar la pantalla dejó de poder dividir un paquete — sin error y sin
+  # aviso. Ahora hay una sola fuente, la misma que usa /entrega_personal.
+  test "sin filas agregadas se guarda un solo bulto" do
+    assert_difference "Paquete.count", 1 do
+      post etiquetar_url, params: { paquete: attrs.merge(peso: 9) }
+    end
 
-    assert_equal [ 9.0, 9.0 ], Paquete.order(:id).last(2).map { |p| p.peso.to_f }
+    assert_equal 9.0, Paquete.order(:id).last.peso.to_f
+  end
+
+  test "cantidad_paquetes ya no decide cuantas cajas se crean" do
+    assert_difference "Paquete.count", 2 do
+      post etiquetar_url, params: {
+        paquete: attrs.merge(cantidad_paquetes: 7,
+                             cajas: { "1" => { peso: 5 }, "2" => { peso: 30 } })
+      }
+    end
+  end
+
+  test "una sola fila agregada guarda un bulto con los datos de esa fila" do
+    assert_difference "Paquete.count", 1 do
+      post etiquetar_url, params: {
+        paquete: attrs.merge(peso: 9, cajas: { "1" => { peso: 22, alto: 3 } })
+      }
+    end
+
+    creado = Paquete.order(:id).last
+    assert_equal 22.0, creado.peso.to_f, "se guardo el peso del formulario, no el de la caja"
+    assert_equal 3, creado.alto.to_i
   end
 
   test "solo se aceptan peso y medidas, no cualquier campo" do
@@ -92,8 +120,8 @@ class PesoPorCajaTest < ActionDispatch::IntegrationTest
     # cuánto pesa y mide cada bulto.
     post etiquetar_url, params: {
       paquete: attrs.merge(
-        cantidad_paquetes: 2,
-        cajas: { "2" => { peso: 30, descripcion: "otra cosa", estado: "entregado" } }
+        cajas: { "1" => { peso: 5 },
+                 "2" => { peso: 30, descripcion: "otra cosa", estado: "entregado" } }
       )
     }
 
@@ -108,7 +136,6 @@ class PesoPorCajaTest < ActionDispatch::IntegrationTest
     # volumétrico también tiene que serlo — de ahí sale el peso a cobrar.
     post etiquetar_url, params: {
       paquete: attrs.merge(
-        cantidad_paquetes: 2,
         cajas: {
           "1" => { peso: 5, alto: 10, largo: 10, ancho: 10 },
           "2" => { peso: 5, alto: 40, largo: 40, ancho: 40 }

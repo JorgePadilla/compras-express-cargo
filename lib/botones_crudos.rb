@@ -65,11 +65,22 @@ module BotonesCrudos
     end
   end
 
-  # Todas las vistas, con su cuenta. `{ruta_relativa => n}`, sin los ceros.
+  # Dónde puede haber un botón crudo.
+  #
+  # `app/components` entró en `PR-C7.17`: hasta entonces el censo solo miraba
+  # `app/views`, así que **el markup que se mueve a un componente dejaba de
+  # lintearse**. Es un agujero que se agranda solo — cada refactor a
+  # ViewComponent le saca vistas de encima al lint— y se notó al mudar el
+  # repetidor de cajas: el presupuesto nombraba el componente y el censo no lo
+  # veía, o sea que su × podía haber sido cualquier cosa.
+  RUTAS = [ "app/views/**/*.erb", "app/components/**/*.erb" ].freeze
+
+  # Todas las vistas y componentes, con su cuenta. `{ruta_relativa => n}`, sin
+  # los ceros.
   def censo(&contador)
     contador ||= method(:contar)
 
-    Dir.glob(Rails.root.join("app/views/**/*.erb")).sort.each_with_object({}) do |ruta, acc|
+    RUTAS.flat_map { |g| Dir.glob(Rails.root.join(g)) }.sort.each_with_object({}) do |ruta, acc|
       n = contador.call(File.read(ruta))
       next if n.zero?
 

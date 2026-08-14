@@ -12,7 +12,9 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = [
     "peso", "alto", "largo", "ancho",
-    "vlbs", "pesoCobrar", "pies", "metros", "in3", "avisoVolumetrico"
+    "vlbs", "pesoCobrar", "pies", "metros", "in3", "avisoVolumetrico",
+    // PR-C7.17: el total del envío, cuando hay cajas cargadas.
+    "totalEnvio", "totalCajas", "totalPeso", "rotuloPeso"
   ]
 
   // PR-C6.41: el trato de mayorista de Yusef — "solo se les cobra volumen, no
@@ -61,6 +63,11 @@ export default class extends Controller {
 
     if (this.hasIn3Target) this.in3Target.textContent = in3 > 0 ? this._fmt(in3, 0) : "—"
 
+    // Va antes del early-return de abajo: el total del envío no depende de que
+    // haya una caja en curso — justamente se mira cuando los campos están
+    // vacíos porque se acaba de agregar una.
+    this.totalizar()
+
     if (in3 <= 0) {
       // Sin medidas: solo peso real cuenta como peso a cobrar. Espejo del guard
       // de cero de VolumetricoCalculator — ni con el trato de mayorista se
@@ -82,6 +89,58 @@ export default class extends Controller {
     this._set(this.pesoCobrarTarget, this._fmt(pesoCobrar, 2))
     this._set(this.piesTarget, String(this.piesCubicos(in3)))
     this._set(this.metrosTarget, this._fmt(this.metrosCubicos(in3), 2))
+  }
+
+  // ── El total del envío ────────────────────────────────────────────────────
+  //
+  // PR-C7.17. Los campos de arriba son los de LA CAJA QUE SE ESTÁ MIDIENDO, y
+  // "Agregar" los vacía. Con dos cajas cargadas el panel mostraba el peso de una
+  // sola y el cobro se desplomaba al mínimo de servicio, como si el envío no
+  // pesara nada.
+  //
+  // La suma es la de Yusef (A9-03): **el mayor de cada caja, individualmente, y
+  // después se suman**. No el mayor de las sumas — con una caja pesada y otra
+  // voluminosa los dos números no coinciden.
+  totalizar() {
+    if (!this.hasTotalEnvioTarget) return
+
+    const cajas = this._cajasCargadas()
+    this.totalEnvioTarget.classList.toggle("hidden", cajas.length === 0)
+
+    // Sin cajas el bloque de arriba es el envío entero y no hace falta aclarar
+    // nada; con cajas pasa a ser "esta caja" y el total manda.
+    if (this.hasRotuloPesoTarget) {
+      this.rotuloPesoTarget.textContent = cajas.length > 0 ? "Esta caja" : "Peso a cobrar"
+    }
+    if (cajas.length === 0) return
+
+    const total = cajas.reduce((suma, caja) => suma + this.pesoDeLaCaja(caja), 0)
+
+    this._set(this.totalCajasTarget, String(cajas.length))
+    this._set(this.totalPesoTarget, this._fmt(total, 2))
+  }
+
+  // El peso a cobrar de UNA caja: el mayor entre real y volumétrico, con el
+  // trato de solo-volumétrico del cliente si aplica. Misma regla que arriba.
+  pesoDeLaCaja({ peso, alto, largo, ancho }) {
+    const real = this._aNumero(peso)
+    const in3 = this._aNumero(alto) * this._aNumero(largo) * this._aNumero(ancho)
+    if (in3 <= 0) return real
+
+    const vlbs = this.halfPound(in3 / this.constructor.DIVISOR_LB)
+    return this._soloVolumetrico ? vlbs : Math.max(real, vlbs)
+  }
+
+  // Las filas las pinta `cajas-repetidor`, que vive en el mismo elemento. Se
+  // leen del DOM y no de su instancia para no acoplar los dos controllers.
+  _cajasCargadas() {
+    return [...this.element.querySelectorAll(".caja-fila")]
+      .map(fila => { try { return JSON.parse(fila.dataset.valores || "{}") } catch { return {} } })
+  }
+
+  _aNumero(v) {
+    const n = parseFloat(v)
+    return Number.isFinite(n) && n > 0 ? n : 0
   }
 
   // ½ libra con umbrales .10/.60, en milésimas para evitar ruido de float.

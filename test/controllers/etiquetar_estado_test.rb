@@ -46,7 +46,7 @@ class EtiquetarEstadoTest < ActionDispatch::IntegrationTest
   end
 
   test "las cajas de un split tambien quedan recibidas" do
-    post etiquetar_url, params: { paquete: attrs.merge(cantidad_paquetes: 3) }
+    post etiquetar_url, params: { paquete: attrs.merge(cajas: { "1" => { peso: 5 }, "2" => { peso: 5 }, "3" => { peso: 5 } }) }
 
     cajas = Paquete.order(:id).last(3)
     assert_equal [ "recibido_miami" ] * 3, cajas.map(&:estado)

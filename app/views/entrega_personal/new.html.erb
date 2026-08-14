@@ -155,9 +155,9 @@ end %>
           cliente con cobro solo-volumétrico mostraría el peso viejo. %>
       <%# A7-20: acá las cajas se agregan una por una. Ver el partial
           `entrega_personal/_cajas_repetidor` para el porqué. %>
-      <%= render "shared/peso_medidas_calc", f: f,
+      <%= render CajasPesoMedidasComponent.new(f: f,
             valor_a_pagar: true, cotizador_url: cotizador_path,
-            tipo_envio_id: f.object.tipo_envio_id, modo_cajas: :repetidor %>
+            tipo_envio_id: f.object.tipo_envio_id) %>
 
       <%# Sección 4: Contenido + Remitente + Driver %>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -37,7 +37,7 @@ class SucursalDeRetiroTest < ActionDispatch::IntegrationTest
   end
 
   test "las cajas de un split la heredan tambien" do
-    post etiquetar_url, params: { paquete: attrs.merge(cantidad_paquetes: 3) }
+    post etiquetar_url, params: { paquete: attrs.merge(cajas: { "1" => { peso: 5 }, "2" => { peso: 5 }, "3" => { peso: 5 } }) }
 
     assert_equal [ @tgu.id ] * 3, Paquete.order(:id).last(3).map(&:sucursal_id)
   end
