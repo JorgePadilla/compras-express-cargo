@@ -5506,6 +5506,105 @@ arreglar; quedó escrito para que no se vuelva a preguntar.
 
 ---
 
+## Conversación 9 (2026-08-13) — la etiqueta y el WR de un envío real, marcados a mano
+
+Yusef mandó por WhatsApp la etiqueta y el Warehouse Receipt de un envío de
+3 cajas (`RMIA2608000001` / `EP-2026-SMI-WAL-000003`), con anotaciones en rojo
+sobre las imágenes y una nota de voz de minuto y medio explicándolas.
+
+> ⚠️ **Sobre el transcript.** `whisper small` sobre nota de voz de WhatsApp. Oye
+> *"World Health Receipt"* donde él dice **Warehouse Receipt**; queda
+> normalizado. Lo demás va como salió.
+
+---
+
+### A9-01 · La etiqueta dice "RETIRA EN MIAMI" — 🐛 ✅ **ARREGLADO (PR-C7.16)**
+
+Anotado sobre el recuadro de la etiqueta:
+
+> *"Retira en la sucursal asignada al cliente, **al igual que etiquetar**."*
+
+Y en el audio: *"la etiqueta solo tiene esos dos defectitos, verdad, que no es
+nada del otro mundo"*.
+
+**Qué pasaba.** `Paquete#sucursal` es, textualmente en el modelo, *"dónde RETIRA
+el cliente"*. `/etiquetar` lo respeta: manda la sucursal donde se está
+recibiendo a `sucursal_recepcion` y deja `sucursal` para heredarla del cliente.
+`/entrega_personal` mandaba la sucursal de Miami como `sucursal_id`, o sea que
+ocupaba el campo del retiro — y la etiqueta imprimía lo que encontraba ahí.
+
+Su comparación con `/etiquetar` era exacta: esa pantalla ya lo hacía bien.
+
+---
+
+### A9-02 · El Warehouse Receipt "solo sale por una caja" — 🐛 ✅ **ARREGLADO (PR-C7.16)**
+
+> *"Dos: el Warehouse Receipt sí está malo, porque **solo sale por una caja**.
+>  Y el Warehouse Receipt es cuando vos le entregás al cliente que recibiste las
+>  tres cajas."*
+
+Y la distinción que hay que tener clara, porque es la que ordena todo el flujo:
+
+> *"Esa etiqueta… es **la etiqueta que nosotros le pegamos a cada caja**, pero
+>  pido tres. Pero al contrario, el Warehouse Receipt es al revés: el Warehouse
+>  Receipt **solo imprimís uno**, donde detalla todo lo que recibiste y toda la
+>  información que ya le pusiste."*
+
+Sobre la imagen, al lado del `-1` del código de barras:
+
+> *"Agregue detalle de 3 cajas, aquí debería crear las etiquetas para 3 cajas y
+>  luego tirar preview del WR."*
+
+**La causa era una sola, y no estaba en el WR.** Los trackings autogenerados
+—`EP-` y `RC-`— salen de un callback cuyo único guard es `tracking.blank?`, y
+`crear_split!` crea las cajas en un loop: cada caja sacaba **su propio número**
+(`…000003`, `…000004`, `…000005`) y el contador avanzaba tres veces.
+
+Y todo lo que agrupa un split lo hace por `tracking` —`paquetes_hermanos`,
+`wr_packages_for`, `etiqueta?hermanas=1`—, así que los hermanos eran **cero**. De
+ahí salía lo que él vio: el WR listaba una fila y `TOTAL PIECES 1` mientras el
+badge de al lado decía `SPLIT 3 CAJAS`.
+
+Contradecía además lo ya decidido: **un tracking, N cajas**.
+
+---
+
+### A9-03 · Al WR le falta el total de libras que se va a cobrar — ✅ **HECHO (PR-C7.16)**
+
+> *"Entonces aquí es donde le tenés que poner la medida de las tres cajas, el
+>  total de las tres cajas, etcétera. El valor total de libras que se le va a
+>  cobrar, etcétera. **No es valor de precios, sino es valor de libras que se le
+>  va a cobrar, el que sea mayor en cada transacción.** O sea, si una caja pesa
+>  más y la otra tiene más volumen, entonces le vas poniendo el de mayor **de
+>  cada una individual**."*
+
+Es **suma de los máximos por caja**, no el máximo de las sumas — y no dan lo
+mismo. Con las tres cajas del ejemplo (5 lb / 8 lb / 2 lb pero 30×30×30):
+
+| | |
+|---|---|
+| Peso real total | 15.0 lb |
+| Volumétrico total | 176.5 lb |
+| **Libras a cobrar** | **177.0 lb** |
+
+El número que factura no aparecía en el documento y no se deducía mirando las
+otras filas. Sale de sumar `peso_cobrar`, que cada caja ya calcula con la regla
+completa.
+
+---
+
+### A9-04 · El resto del WR no se toca: es de pre-factura
+
+> *"La otra: en el servicio… todo esto es parte que va en **prefactura**. Por eso
+>  yo no te he explicado estas partes."*
+> *"De ahí parece que el Warehouse Receipt está bastante bien, que lo vimos una
+>  vez pasada."*
+
+Acota el alcance: el WR lleva **pesos y medidas, no plata**. El precio, el ISV y
+el valor declarado son del documento que viene después.
+
+---
+
 ## Próximos Pasos
 
 1. **Conversación 2:** Login, Logout, Creación de usuarios y roles — **arrancó en

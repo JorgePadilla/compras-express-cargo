@@ -111,9 +111,15 @@
       <div class="wr-v" style="color:#666;">
         <%= [ agent.destination_city, agent.destination_country ].compact_blank.join(", ").presence || "—" %>
       </div>
-    <% elsif paquete.sucursal.present? %>
-      <div class="wr-v" style="font-weight:bold;"><%= paquete.sucursal.nombre %></div>
-      <div class="wr-v" style="color:#666;font-family:'Courier New',monospace;font-size:11px;"><%= paquete.sucursal.codigo %></div>
+    <%# PR-C7.16: `sucursal_del_numero` y no `sucursal`. El Agent es **dónde se
+        recibió** la mercancía, y `paquete.sucursal` es dónde la retira el
+        cliente. Acá decía "Miami" solo porque /entrega_personal metía la
+        sucursal de Miami en el campo equivocado — el mismo bug que hacía que la
+        etiqueta dijera "RETIRA EN MIAMI". Al arreglar la etiqueta, esto habría
+        empezado a decir "Tegucigalpa" si no se movía con ella. %>
+    <% elsif (recepcion = paquete.sucursal_del_numero).present? %>
+      <div class="wr-v" style="font-weight:bold;"><%= recepcion.nombre %></div>
+      <div class="wr-v" style="color:#666;font-family:'Courier New',monospace;font-size:11px;"><%= recepcion.codigo %></div>
     <% else %>
       <div class="wr-v" style="color:#999;">—</div>
     <% end %>
@@ -216,6 +222,20 @@
       <td class="value"><%= totals[:vol_weight_lb] %> LB · <%= totals[:vol_weight_kg] %> KG</td>
       <td class="label">Total volume</td>
       <td class="value"><%= totals[:volume_cuft] %> ft³ · <%= totals[:volume_m3] %> m³</td>
+    </tr>
+    <%# La fila que Yusef pidió: "el valor total de libras que se le va a cobrar
+        — no es valor de precios, sino es valor de libras". Va destacada porque
+        es el número por el que se factura, y es el único de la tabla que no se
+        deduce mirando las filas de arriba: es la suma del mayor de cada caja,
+        no el mayor de los totales. %>
+    <tr>
+      <td class="label" style="font-weight:bold;">Chargeable weight · Libras a cobrar</td>
+      <td class="value" colspan="3" style="font-weight:bold;">
+        <%= totals[:chargeable_lb] %> LB · <%= totals[:chargeable_kg] %> KG
+        <span style="font-weight:normal;color:#666;font-size:10px;">
+          — el mayor entre real y volumétrico, caja por caja
+        </span>
+      </td>
     </tr>
   </table>
 </div>
