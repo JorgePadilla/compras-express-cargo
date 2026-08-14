@@ -145,13 +145,24 @@ class EtiquetarController < ApplicationController
     end
   end
 
+  # PR-C7.17: la cantidad de cajas **sale de contar las filas**, no de un campo.
+  #
+  # Antes salía de `paquete_params[:cantidad_paquetes]`, y cuando `PR-C7.04`
+  # forkeó el bloque de peso y medidas en dos, esta pantalla se quedó sin ese
+  # campo — así que la cantidad era siempre 0 y **nunca se creaba un split**.
+  # Jorge: *"en etiquetar no me deja agregar más cajas como en entrega
+  # personal"*.
+  #
+  # Derivarla de las filas es además lo que `PR-C6.31` dejó escrito: si hay dos
+  # fuentes para el mismo número, alguna va a mentir. Ahora hay una, y es la
+  # misma que usa `/entrega_personal`.
   def create
-    cantidad = paquete_params[:cantidad_paquetes].to_i
+    cajas = medidas_por_caja
 
-    if cantidad > 1
-      create_split(cantidad)
-    else
-      create_single
+    case cajas.size
+    when 0 then create_single                        # nunca agregó: un solo bulto
+    when 1 then create_single(cajas.values.first)    # una caja: sus datos mandan
+    else        create_split(cajas.size)
     end
   end
 
@@ -180,7 +191,9 @@ end
 
   private
 
-  def create_single
+  # `medidas` son las de la única caja agregada, cuando el operario usó Agregar
+  # para una sola. Sin eso, ese peso y esas medidas se perdían.
+  def create_single(medidas = {})
     # Reconciliación: si ya existe un paquete "esperado" creado desde una
     # pre-alerta con este tracking, lo transicionamos en lugar de crear
     # uno nuevo (evita duplicados).
@@ -200,13 +213,13 @@ end
       # conserva, y lo que escupió la pistola se guarda como secundario para
       # que el mismo escaneo lo vuelva a encontrar.
       tracking_del_cliente = existing.tracking.to_s
-      @paquete.assign_attributes(paquete_params)
+      @paquete.assign_attributes(paquete_params.merge(medidas))
       unless escaneado.casecmp?(tracking_del_cliente)
         @paquete.tracking = tracking_del_cliente
         @paquete.tracking_secundario = escaneado if @paquete.tracking_secundario.blank?
       end
     else
-      @paquete = Paquete.new(paquete_params)
+      @paquete = Paquete.new(paquete_params.merge(medidas))
     end
     @paquete.estado = ESTADO_AL_ETIQUETAR
     @paquete.user = Current.user

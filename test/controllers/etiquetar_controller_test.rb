@@ -156,7 +156,7 @@ class EtiquetarControllerTest < ActionDispatch::IntegrationTest
         cliente_id: clientes(:juan).id,
         tipo_envio_id: tipo_envios(:aereo).id,
         peso: 5.0,
-        cantidad_paquetes: 3,
+        cajas: { "1" => { peso: 5 }, "2" => { peso: 5 }, "3" => { peso: 5 } },
         sucursal_id: sucursal.id,
         descripcion: "Split test"
       } }

@@ -66,7 +66,7 @@ class CambioServicioAplicaTest < ActionDispatch::IntegrationTest
   test "las N cajas de un split cambian todas al mismo servicio" do
     # Es el mismo tracking: no se parte en dos servicios distintos.
     post etiquetar_url, params: {
-      paquete: attrs.merge(cantidad_paquetes: 3,
+      paquete: attrs.merge(cajas: { "1" => { peso: 5 }, "2" => { peso: 5 }, "3" => { peso: 5 } },
                            solicito_cambio_servicio: "1",
                            tipo_envio_destino_id: @ckm.id)
     }
@@ -79,7 +79,7 @@ class CambioServicioAplicaTest < ActionDispatch::IntegrationTest
   test "un split con el flag y sin destino tampoco guarda" do
     assert_no_difference -> { Paquete.count } do
       post etiquetar_url, params: {
-        paquete: attrs.merge(cantidad_paquetes: 3, solicito_cambio_servicio: "1")
+        paquete: attrs.merge(cajas: { "1" => { peso: 5 }, "2" => { peso: 5 }, "3" => { peso: 5 } }, solicito_cambio_servicio: "1")
       }
     end
 

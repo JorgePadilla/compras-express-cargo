@@ -93,6 +93,24 @@ export default class extends Controller {
 
     if (this.hasContadorTarget) this.contadorTarget.textContent = String(filas.length)
     if (this.hasVacioTarget) this.vacioTarget.classList.toggle("hidden", filas.length > 0)
+
+    // PR-C7.17: avisar que las cajas cambiaron.
+    //
+    // El panel de cálculo leía solo los campos de captura, que `_limpiarCaptura`
+    // vacía justo acá — así que con dos cajas cargadas mostraba el peso de una y
+    // el cobro se desplomaba al mínimo de servicio. Jorge: *"el cálculo no está
+    // haciendo la suma de las 2 cajas tampoco"*.
+    //
+    // Se emite un evento en vez de llamar al otro controller: los dos viven en
+    // el mismo elemento, pero acoplarlos por nombre haría que este dejara de
+    // funcionar solo.
+    this.dispatch("cambio", { detail: { cajas: filas.length } })
+  }
+
+  // Lo que se cargó, para quien necesite el total del envío.
+  get cajas() {
+    return [...this.listaTarget.querySelectorAll(".caja-fila")]
+      .map(fila => JSON.parse(fila.dataset.valores || "{}"))
   }
 
   _leerCaptura() {

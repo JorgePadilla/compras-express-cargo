@@ -1,0 +1,217 @@
+<div class="<%= wrapper_class %> pt-2 border-t border-gray-100 dark:border-gray-700"
+     data-controller="<%= controllers %>"
+     data-action="<%= accion_al_cambiar_cajas %>"
+     data-calc-volumetrico-tipo-envio-id-value="<%= tipo_envio_id.to_i %>"
+     <% if valor_a_pagar? %>data-cotizador-url-value="<%= cotizador_url %>"<% end %>>
+  <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
+    Peso, medidas y cálculo
+  </h4>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <%# ── Captura ──
+        Estos campos son los de LA CAJA QUE SE ESTÁ MIDIENDO. "Agregar" la baja
+        a la lista y los deja limpios para la siguiente. %>
+    <div class="space-y-3">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <%= f.label :peso, "Peso real (lbs)", class: clases_de_etiqueta %>
+          <%= f.number_field :peso, step: 0.01, min: 0, placeholder: "0.00",
+              data: { calc_volumetrico_target: "peso", action: accion_de_captura },
+              class: clases_de_input %>
+        </div>
+        <div>
+          <%# Ojo con la diferencia, que ya confundió una vez (PR-C6.18b):
+              Cant. Productos son los artículos que vienen ADENTRO; las cajas
+              son los bultos físicos, y esas se agregan abajo. %>
+          <%= f.label :cantidad_productos, "Cant. Productos", class: clases_de_etiqueta %>
+          <%= f.number_field :cantidad_productos, min: 0, placeholder: "1",
+              class: clases_de_input %>
+        </div>
+      </div>
+
+      <div>
+        <span class="<%= clases_de_etiqueta %>">Medidas (pulgadas)</span>
+        <div class="grid grid-cols-3 gap-2">
+          <% CajasPesoMedidasComponent::DIMENSIONES.each do |dim| %>
+            <%= f.number_field dim, step: 0.01, min: 0, placeholder: dim.to_s,
+                data: { calc_volumetrico_target: dim.to_s, action: accion_de_captura },
+                class: clases_de_input("text-center") %>
+          <% end %>
+        </div>
+        <p class="mt-1 text-[11px] text-gray-400">
+          alto × largo × ancho · volumen: <span data-calc-volumetrico-target="in3" class="font-mono">—</span> pulg³
+        </p>
+      </div>
+
+      <%# ── Las cajas, una por una ──
+          A7-20. Yusef describió el gesto exacto:
+
+            "Vos vas a poner aquí medida, peso y todo y le vas a dar clic,
+             **agregar**. Si tiene otra caja, le vuelve a poner y le da agregar."
+
+          A7-21: las etiquetas salen todas al final, cuando ya se sabe cuántas
+          son — "cuando menos acordás me salieron cuatro en vez de cinco". Por
+          eso no hay nada que imprima acá. %>
+      <div class="rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 p-3">
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-xs font-medium text-gray-700 dark:text-gray-200">
+            Cajas agregadas
+            <span data-cajas-repetidor-target="contador"
+                  class="ml-1 font-mono text-gray-500 dark:text-gray-400">0</span>
+          </p>
+          <%= render ButtonComponent.new(variant: :teal, size: :xs, icon: "plus",
+                data: { action: "click->cajas-repetidor#agregar",
+                        cajas_repetidor_target: "agregarBtn" }) do %>
+            Agregar caja (F6)
+          <% end %>
+        </div>
+
+        <p data-cajas-repetidor-target="vacio" class="text-[11px] text-gray-400">
+          Sin cajas agregadas: se guarda como un solo bulto con el peso y las medidas de arriba.
+        </p>
+
+        <ul data-cajas-repetidor-target="lista" class="space-y-1.5 max-h-64 overflow-y-auto pr-1"></ul>
+
+        <%# El template sale de acá y no de un string en el JS: es la lección de
+            PR-C6.44, donde el template escrito a mano se desincronizó de las
+            filas y cada fila nueva salía corrida. %>
+        <template data-cajas-repetidor-target="template">
+          <li class="caja-fila flex items-center justify-between gap-2 rounded-md bg-gray-50 dark:bg-gray-900 px-2.5 py-1.5">
+            <span class="text-xs text-gray-700 dark:text-gray-200">
+              <span class="font-semibold" data-caja-numero>Caja</span>
+              <span class="text-gray-500 dark:text-gray-400" data-caja-resumen></span>
+            </span>
+            <button type="button" data-action="click->cajas-repetidor#quitar"
+                    class="text-gray-400 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 rounded"
+                    aria-label="Quitar esta caja">
+              <%= helpers.heroicon "x-mark", variant: :outline, options: { class: "w-4 h-4" } %>
+            </button>
+          </li>
+        </template>
+      </div>
+    </div>
+
+    <%# ── Display de cálculo ── %>
+    <div class="rounded-lg ring-1 ring-gray-200 bg-gray-50 dark:bg-gray-900 dark:ring-gray-700 p-4 space-y-3">
+      <%# (A) la más común — lo que se está midiendo AHORA %>
+      <div class="rounded-lg bg-white dark:bg-gray-800 ring-1 ring-cec-teal/30 p-3">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs font-semibold text-cec-navy dark:text-cec-gold">USA → HN · libra o volumen</span>
+          <span class="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-cec-teal/15 text-cec-teal-dark">la más común</span>
+        </div>
+        <div class="flex items-baseline justify-between text-sm">
+          <span class="text-gray-500">VLbs (volumétrico)</span>
+          <span class="font-mono text-gray-700 dark:text-gray-200"><span data-calc-volumetrico-target="vlbs">—</span></span>
+        </div>
+        <div class="flex items-baseline justify-between mt-1">
+          <span class="text-sm text-gray-700 dark:text-gray-200 font-medium" data-calc-volumetrico-target="rotuloPeso">Peso a cobrar</span>
+          <span class="font-mono font-bold text-lg text-cec-navy dark:text-cec-gold">
+            <span data-calc-volumetrico-target="pesoCobrar">—</span> <span class="text-xs font-normal">lbs</span>
+          </span>
+        </div>
+
+        <%# PR-C6.41: a este cliente, en este servicio, se le cobra SOLO el
+            volumétrico. Sin el aviso el operario ve un número más bajo que la
+            báscula y no sabe si el sistema se equivocó. %>
+        <p data-calc-volumetrico-target="avisoVolumetrico"
+           class="hidden mt-1 text-[11px] font-medium text-cec-teal-dark">
+          A este cliente se le cobra solo el volumetrico en este servicio.
+        </p>
+      </div>
+
+      <%# ── Total del envío ──
+          Aparece solo cuando hay cajas agregadas, y entonces ES el número que se
+          le dice al cliente: el de arriba pasa a ser "esta caja".
+
+          Jorge, mirando la pantalla con dos cajas de 40 lb: *"el cálculo no está
+          haciendo la suma de las 2 cajas tampoco"*. Tenía razón y era peor —
+          mostraba 40.00 y el cobro se desplomaba al mínimo de servicio.
+
+          La suma es la de Yusef en A9-03: **el mayor de cada caja,
+          individualmente, y después se suman**. No el mayor de las sumas. %>
+      <div data-calc-volumetrico-target="totalEnvio"
+           class="hidden rounded-lg bg-cec-navy/5 dark:bg-cec-navy/25 ring-1 ring-cec-navy/20 p-3">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs font-semibold text-cec-navy dark:text-cec-gold">Total del envío</span>
+          <span class="text-[11px] text-gray-500 dark:text-gray-400">
+            <span data-calc-volumetrico-target="totalCajas">0</span> cajas
+          </span>
+        </div>
+        <div class="flex items-baseline justify-between">
+          <span class="text-sm text-gray-700 dark:text-gray-200 font-medium">Libras a cobrar</span>
+          <span class="font-mono font-bold text-lg text-cec-navy dark:text-cec-gold">
+            <span data-calc-volumetrico-target="totalPeso">—</span> <span class="text-xs font-normal">lbs</span>
+          </span>
+        </div>
+        <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+          El mayor entre real y volumétrico, caja por caja.
+        </p>
+      </div>
+
+      <%# (B) pie cúbico — informativo %>
+      <div class="flex items-baseline justify-between text-sm px-1">
+        <span class="text-gray-500">USA → HN · pie³ <span class="text-[10px] italic text-gray-400">(no afluye en precio)</span></span>
+        <span class="font-mono text-gray-700 dark:text-gray-200"><span data-calc-volumetrico-target="pies">—</span> ft³</span>
+      </div>
+
+      <%# (C) metro cúbico %>
+      <div class="flex items-baseline justify-between text-sm px-1 <%= "font-medium text-cec-navy dark:text-cec-gold" if cobra_por_metro_cubico? %>"
+           data-forma-cobro="metros-cubicos" data-aplica="<%= cobra_por_metro_cubico? %>">
+        <span class="<%= cobra_por_metro_cubico? ? "text-cec-navy dark:text-cec-gold" : "text-gray-500" %>">
+          China → HN · m³
+          <% if cobra_por_metro_cubico? %>
+            <span class="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-cec-teal/15 text-cec-teal-dark">así se cobra</span>
+          <% else %>
+            <span class="text-[10px] italic text-gray-400">(no afluye en precio)</span>
+          <% end %>
+        </span>
+        <span class="font-mono text-gray-700 dark:text-gray-200"><span data-calc-volumetrico-target="metros">—</span> m³</span>
+      </div>
+
+      <%# ── Valor a pagar ──
+          "Valor a pagar → en dólares y lempiras" (Yusef). Es referencia para el
+          operario; el cobro real se calcula en Pre-Factura.
+
+          Con cajas cargadas cotiza el envío entero, y lo hace **caja por caja**
+          porque así es como `PreFactura#build_from_paquetes` arma las líneas:
+          una por caja, cada una con su escalón y su mínimo. Sumar las libras y
+          cotizar una sola vez daría un número más barato que el que la factura
+          va a respetar — con las cajas del ejemplo de A9-03, $619.50 contra los
+          $633.50 que se cobran. Ver RP-41. %>
+      <% if valor_a_pagar? %>
+        <div class="pt-3 border-t border-gray-200 dark:border-gray-700" data-cotizador-target="panel">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-cec-navy dark:text-cec-gold">Valor a pagar</span>
+            <span data-cotizador-target="avisoMinimo"
+                  class="hidden text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-cec-gold/20 text-cec-gold-dark">
+              mínimo de servicio
+            </span>
+          </div>
+
+          <dl class="space-y-1 text-sm">
+            <div class="flex items-baseline justify-between">
+              <dt class="text-gray-500">Precio por libra</dt>
+              <dd class="font-mono text-gray-700 dark:text-gray-200" data-cotizador-target="precio">—</dd>
+            </div>
+            <div class="flex items-baseline justify-between">
+              <dt class="text-gray-500">Subtotal</dt>
+              <dd class="font-mono text-gray-700 dark:text-gray-200" data-cotizador-target="subtotal">—</dd>
+            </div>
+            <div class="flex items-baseline justify-between">
+              <dt class="text-gray-500">ISV</dt>
+              <dd class="font-mono text-gray-700 dark:text-gray-200" data-cotizador-target="isv">—</dd>
+            </div>
+            <div class="flex items-baseline justify-between pt-1 border-t border-gray-200 dark:border-gray-700">
+              <dt class="text-sm font-medium text-gray-700 dark:text-gray-200">Total</dt>
+              <dd class="font-mono font-bold text-lg text-cec-navy dark:text-cec-gold" data-cotizador-target="total">—</dd>
+            </div>
+          </dl>
+
+          <p class="mt-2 text-[11px] text-gray-400" data-cotizador-target="nota">
+            Referencia según la tarifa del cliente. El cobro definitivo se calcula en Pre-Factura.
+          </p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

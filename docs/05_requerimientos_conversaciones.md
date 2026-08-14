@@ -5502,6 +5502,7 @@ arreglar; quedó escrito para que no se vuelva a preguntar.
 | Id | Qué |
 |---|---|
 | `RP-39` | La tolerancia de `.10`/`.60` está dictada **solo para media libra**. Si algún día se carga una tarifa con incremento de 1 lb, ¿la tolerancia sigue siendo la misma o es proporcional? Hoy no hay ninguna tarifa así, así que no bloquea nada |
+| `RP-41` | **¿El flete de un envío de varias cajas se cobra por caja o por envío?** Hoy `PreFactura` arma una línea por caja, y cada una resuelve su propio escalón y su propio mínimo. Con las cajas de `A9-03` —5, 9 y 163 lb en CER— eso da **$633.50**; el mismo envío como 177 lb en un solo escalón daría **$619.50**. Nadie lo escribió, y son **$14.00 de diferencia en un envío**. La pantalla espeja lo que la factura cobra hoy (`PR-C7.17`) hasta que él decida |
 | `RP-40` | El metro cúbico y el pie cúbico *"no afluyen en precio"* **hoy**. ¿Van a afluir alguna vez —China por m³, marítimo por ft³— o son informativos para siempre? Cambia si hay que guardarlos o basta calcularlos |
 
 ---

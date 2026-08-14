@@ -55,7 +55,12 @@ class EtiquetarSucursalRecepcionTest < ActionDispatch::IntegrationTest
     iniciar_sesion_etiquetado
 
     assert_difference -> { Paquete.count }, 3 do
-      post etiquetar_url, params: { paquete: attrs_validos.merge(cantidad_paquetes: 3) }
+      # PR-C7.17: las cajas se agregan una por una; la cantidad sale de contar
+      # las filas, no de un campo.
+      post etiquetar_url, params: {
+        paquete: attrs_validos.merge(cajas: { "1" => { peso: 5 }, "2" => { peso: 8 },
+                                              "3" => { peso: 2 } })
+      }
     end
 
     cajas = Paquete.order(:id).last(3)
@@ -71,7 +76,7 @@ class EtiquetarSucursalRecepcionTest < ActionDispatch::IntegrationTest
     contador = -> { NumeroRecepcionCounter.find_by(sucursal: @miami, anio: Time.zone.now.year)&.ultimo_numero.to_i }
 
     antes = contador.call
-    post etiquetar_url, params: { paquete: attrs_validos.merge(cantidad_paquetes: 4) }
+    post etiquetar_url, params: { paquete: attrs_validos.merge(cajas: { "1" => { peso: 5 }, "2" => { peso: 5 }, "3" => { peso: 5 }, "4" => { peso: 5 } }) }
 
     assert_equal antes + 1, contador.call, "el split consumió 4 números en vez de 1"
   end
