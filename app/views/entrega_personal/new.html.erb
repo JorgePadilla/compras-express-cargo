@@ -94,9 +94,17 @@ end %>
           <% end %>
         </div>
         <div>
-          <%= f.label :sucursal_id, "Sucursal de Miami", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%# PR-C7.16: esto mandaba `sucursal_id`, que en `Paquete` significa
+              **dónde retira el cliente** — por eso la etiqueta salía diciendo
+              "RETIRA EN MIAMI". Yusef: "retira en la sucursal asignada al
+              cliente, al igual que etiquetar".
+
+              /etiquetar siempre lo hizo bien: la sucursal donde se está
+              recibiendo va a `sucursal_recepcion`, y `sucursal` queda libre
+              para heredarse del cliente. Ahora esta pantalla hace lo mismo. %>
+          <%= f.label :sucursal_recepcion_id, "Sucursal de Miami", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
           <% if @sucursales_miami.any? %>
-            <%= f.collection_select :sucursal_id, @sucursales_miami, :id, :nombre,
+            <%= f.collection_select :sucursal_recepcion_id, @sucursales_miami, :id, :nombre,
                 { include_blank: "— Seleccionar sucursal —" },
                 { class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Determina el código de sucursal (SMI, etc.) en el tracking generado.</p>

@@ -19,7 +19,7 @@ module WarehouseReceiptHelper
   # Devuelve un hash con: pieces, weight_lb, weight_kg, vol_weight_lb,
   # vol_weight_kg, volume_cuft, volume_m3.
   def wr_totals(paquetes)
-    pieces      = paquetes.sum { |p| (p.numero_caja.to_i.zero? ? 1 : 1) }
+    pieces      = paquetes.size
     weight_lb   = paquetes.sum { |p| p.peso.to_f }
     vol_lb      = paquetes.sum { |p| p.peso_volumetrico.to_f }
     volume_in3  = paquetes.sum do |p|
@@ -27,12 +27,32 @@ module WarehouseReceiptHelper
     end
     volume_cuft = volume_in3 * IN3_TO_FT3
 
+    # ── El total de libras que se le va a cobrar ────────────────────────────
+    #
+    # Yusef, audio del 2026-08-13: *"el valor total de libras que se le va a
+    # cobrar. **No es valor de precios, sino es valor de libras** que se le va a
+    # cobrar, el que sea mayor en cada transacción. O sea, si una caja pesa más y
+    # la otra tiene más volumen, entonces le vas poniendo el de mayor **de cada
+    # una individual**."*
+    #
+    # O sea: **suma de los máximos por caja**, no el máximo de las sumas. No dan
+    # lo mismo — con una caja de 5 lb (4.5 vol) y otra de 2 lb (163 vol), sumar
+    # los máximos da 177.0 y comparar los totales da 176.5.
+    #
+    # `peso_cobrar` es esa columna: `calculate_peso_cobrar` ya la persiste por
+    # caja con la regla completa (incluido el trato de solo-volumétrico del
+    # cliente). Se **suma**, no se recalcula: reimplementar la regla acá sería
+    # recrear la duplicación que `PR-C7.11` vino a matar.
+    cobrar_lb = paquetes.sum { |p| p.peso_cobrar.to_f }
+
     {
       pieces:        pieces,
       weight_lb:     weight_lb.round(2),
       weight_kg:     (weight_lb * LB_TO_KG).round(2),
       vol_weight_lb: vol_lb.round(2),
       vol_weight_kg: (vol_lb * LB_TO_KG).round(2),
+      chargeable_lb: cobrar_lb.round(2),
+      chargeable_kg: (cobrar_lb * LB_TO_KG).round(2),
       volume_cuft:   volume_cuft.round(2),
       volume_m3:     (volume_cuft * CUFT_TO_M3).round(4)
     }

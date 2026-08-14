@@ -654,14 +654,40 @@ class Paquete < ApplicationRecord
       )
       wr&.save!
 
+      # ── Un tracking, N cajas ──────────────────────────────────────────────
+      #
+      # PR-C7.16. Los trackings autogenerados (EP y RC) salen de un callback
+      # `before_validation on: :create` cuyo único guard es `tracking.blank?`.
+      # En un split eso corría **una vez por caja**: las tres cajas de un mismo
+      # envío salían con `EP-…-000003`, `…000004` y `…000005`, y el contador
+      # avanzaba tres veces.
+      #
+      # Y todo lo que agrupa un split lo hace por `tracking` —
+      # `paquetes_hermanos`, `wr_packages_for`, `etiqueta?hermanas=1`— así que
+      # con tres trackings distintos los hermanos eran **cero**. Yusef lo vio en
+      # el Warehouse Receipt: *"solo sale por una caja"*, con el badge diciendo
+      # "SPLIT 3 CAJAS" al lado.
+      #
+      # Se resuelve acá y no en el callback a propósito: el callback no sabe de
+      # sus hermanas, y meterle conciencia del split a los callbacks del modelo
+      # es lo que `PR-C6.31` dejó escrito que no se hiciera. Quien sabe que hay
+      # un split es este método, así que es este el que fija el tracking común.
+      tracking_comun = attrs[:tracking].presence
+
       (1..n).map do |i|
         propios = (por_caja[i] || por_caja[i.to_s] || {}).symbolize_keys
-        Paquete.create!(attrs.merge(propios).merge(
+        comunes = {
           numero_caja: i,
           cantidad_paquetes: n,
           numero_recepcion: numero_madre,
           warehouse_receipt_id: wr&.id
-        ))
+        }
+        comunes[:tracking] = tracking_comun if tracking_comun
+
+        caja = Paquete.create!(attrs.merge(propios).merge(comunes))
+        # La primera caja es la que dispara el contador; las demás heredan.
+        tracking_comun ||= caja.tracking
+        caja
       end
     end
   end
@@ -1104,12 +1130,20 @@ class Paquete < ApplicationRecord
   # reglas a competir: el proveedor sigue siendo de tipo entrega_personal, así
   # que `ep_tracking_required?` ganaba por orden de callback y la recolecta
   # salía con tracking **EP**. Ahora si el switch está marcado, manda RC.
+  # `sucursal_del_numero` y no `sucursal`: el prefijo del tracking sale de dónde
+  # se **recibió** el paquete, igual que el número de recepción.
+  #
+  # PR-C7.16: antes leía `sucursal`, que es *dónde retira el cliente*. Funcionaba
+  # solo porque `/entrega_personal` metía la sucursal de Miami en ese campo — el
+  # mismo bug que hacía que la etiqueta dijera "RETIRA EN MIAMI". Con la sucursal
+  # de Miami mudada a `sucursal_recepcion`, esto tenía que mudarse con ella o los
+  # EP se quedaban sin tracking.
   def ep_tracking_required?
     tracking.blank? &&
       !recolecta_solicitada? &&
       proveedor.present? &&
       proveedor.entrega_personal? &&
-      sucursal.present?
+      sucursal_del_numero.present?
   end
 
   # Genera tracking con formato EP-AÑO-SUC-PROV-NNNNNN. Se llama desde
@@ -1117,14 +1151,15 @@ class Paquete < ApplicationRecord
   # sucursal no tiene `codigo_ep` configurado, falla limpio con
   # error de validación en lugar de tracking malformado.
   def generate_ep_tracking
-    suc_codigo = sucursal&.codigo_ep
+    recepcion  = sucursal_del_numero
+    suc_codigo = recepcion&.codigo_ep
     if suc_codigo.blank?
-      errors.add(:tracking, "no se puede generar (sucursal #{sucursal&.nombre || sucursal_id} no tiene codigo_ep configurado)")
+      errors.add(:tracking, "no se puede generar (sucursal #{recepcion&.nombre || sucursal_recepcion_id || sucursal_id} no tiene codigo_ep configurado)")
       return
     end
 
     anio = (fecha_recibido_miami&.year || Time.zone.now.year)
-    next_number = EpCounter.next_for!(anio: anio, sucursal: sucursal, proveedor: proveedor)
+    next_number = EpCounter.next_for!(anio: anio, sucursal: recepcion, proveedor: proveedor)
 
     self.tracking = format(
       "EP-%<anio>04d-%<suc>s-%<prov>s-%<num>06d",
@@ -1147,20 +1182,21 @@ class Paquete < ApplicationRecord
     tracking.blank? &&
       recolecta_solicitada? &&
       proveedor.present? &&
-      sucursal.present?
+      sucursal_del_numero.present?
   end
 
   # Genera tracking RC-AÑO-SUC-PROV-NNNNNN. Counter independiente de
   # EpCounter — RC y EP no comparten secuencia.
   def generate_rc_tracking
-    suc_codigo = sucursal&.codigo_ep
+    recepcion  = sucursal_del_numero
+    suc_codigo = recepcion&.codigo_ep
     if suc_codigo.blank?
-      errors.add(:tracking, "no se puede generar (sucursal #{sucursal&.nombre || sucursal_id} no tiene codigo_ep configurado)")
+      errors.add(:tracking, "no se puede generar (sucursal #{recepcion&.nombre || sucursal_recepcion_id || sucursal_id} no tiene codigo_ep configurado)")
       return
     end
 
     anio = (fecha_recibido_miami&.year || Time.zone.now.year)
-    next_number = RcCounter.next_for!(anio: anio, sucursal: sucursal, proveedor: proveedor)
+    next_number = RcCounter.next_for!(anio: anio, sucursal: recepcion, proveedor: proveedor)
 
     self.tracking = format(
       "RC-%<anio>04d-%<suc>s-%<prov>s-%<num>06d",

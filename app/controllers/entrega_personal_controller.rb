@@ -56,7 +56,9 @@ class EntregaPersonalController < ApplicationController
   end
 
   def create_split(total_cajas)
-    attrs = paquete_params.except(:cantidad_paquetes, :numero_caja).merge(
+    attrs = con_sucursal_de_retiro(
+      paquete_params.except(:cantidad_paquetes, :numero_caja)
+    ).merge(
       estado: "recibido_miami",
       user: Current.user
     )
@@ -80,6 +82,17 @@ class EntregaPersonalController < ApplicationController
     paquete.sucursal ||= paquete.cliente&.sucursal_retiro
   end
 
+  # `crear_split!` crea las cajas de una, así que la herencia de la sucursal de
+  # retiro tiene que estar puesta **antes** — si no, la primera caja se valida
+  # con el campo vacío. Por eso viaja en `attrs` y no solo en el `each` de
+  # después.
+  def con_sucursal_de_retiro(attrs)
+    return attrs if attrs[:sucursal_id].present?
+
+    retiro = Cliente.find_by(id: attrs[:cliente_id])&.sucursal_retiro
+    retiro ? attrs.merge(sucursal_id: retiro.id) : attrs
+  end
+
   # `prepagado_miami` + sus columnas asociadas se asignan acá porque vienen
   # como flag + se traduce a múltiples columns (sucursal, user, timestamp).
   def apply_extra_params(paquete, save: false)
@@ -98,18 +111,27 @@ class EntregaPersonalController < ApplicationController
   def respond_saved(paquetes)
     @paquete = paquetes.first
     msg = paquetes.size > 1 ?
-            "Entrega personal registrada — #{paquetes.size} cajas: #{paquetes.map(&:guia).join(', ')}" :
+            "Entrega personal registrada — #{paquetes.size} cajas, tracking #{@paquete.tracking}" :
             "Entrega personal registrada — tracking #{@paquete.tracking}"
 
     respond_to do |format|
       format.turbo_stream do
-        events = paquetes.map do |p|
+        # PR-C7.16: **solo la primera caja dispara la impresión.** Las N cajas de
+        # un split comparten tracking desde `crear_split!`, así que
+        # `etiqueta?hermanas=1` ya saca las N etiquetas en un solo trabajo.
+        # Marcar las tres abría tres ventanas imprimiendo lo mismo tres veces.
+        #
+        # Yusef: "aquí debería crear las etiquetas para 3 cajas y luego tirar
+        # preview del WR" — el WR es uno solo, "al contrario" de la etiqueta.
+        events = paquetes.each_with_index.map do |p, i|
+          imprime = i.zero? && params[:print].to_s == "true"
           "<div data-entrega-personal-target='event' data-action='paquete-saved' " \
-            "data-guia='#{p.guia}' data-print='#{params[:print]}' data-paquete-id='#{p.id}'></div>"
+            "data-guia='#{p.guia}' data-print='#{imprime}' data-paquete-id='#{p.id}'></div>"
         end.join
         render turbo_stream: [
           turbo_stream.update("paquetes-counter", paquetes_ep_hoy_count.to_s),
-          turbo_stream.prepend("flash-messages", partial: "shared/flash", locals: { notice: msg }),
+          turbo_stream.prepend("flash-messages", partial: "shared/flash",
+                                                 locals: { notice: aviso_con_wr(msg) }),
           turbo_stream.append("entrega-personal-events", events)
         ]
       end
@@ -117,6 +139,28 @@ class EntregaPersonalController < ApplicationController
         redirect_to new_entrega_personal_path, notice: msg
       end
     end
+  end
+
+  # El aviso lleva el link al Warehouse Receipt.
+  #
+  # Yusef: *"aquí debería crear las etiquetas para 3 cajas y **luego tirar
+  # preview del WR**"*. El JS lo intenta abrir en una ventana, pero Chrome
+  # permite **un solo popup por gesto del usuario** y ese ya se lo lleva la
+  # ventana de impresión de las etiquetas — que es la que no puede faltar.
+  #
+  # Así que el WR va también acá, donde no depende del permiso de popups. El
+  # texto se escapa; solo el link es HTML.
+  def aviso_con_wr(msg)
+    return msg if @paquete.nil?
+
+    helpers.safe_join([
+      msg,
+      " · ",
+      helpers.link_to("Ver Warehouse Receipt",
+                      warehouse_receipt_paquete_path(@paquete),
+                      target: "_blank", rel: "noopener",
+                      class: "underline font-medium")
+    ])
   end
 
   def render_create_error
@@ -148,7 +192,10 @@ class EntregaPersonalController < ApplicationController
 
   def paquete_params
     params.require(:paquete).permit(
-      :cliente_id, :tipo_envio_id, :proveedor_id, :sucursal_id, :peso,
+      # PR-C7.16: la sucursal de Miami entra como `sucursal_recepcion_id`.
+      # `sucursal_id` sigue permitido porque es **dónde retira el cliente**, y el
+      # form podría llegar a ofrecerlo; hoy lo hereda `heredar_sucursal_de_retiro`.
+      :cliente_id, :tipo_envio_id, :proveedor_id, :sucursal_id, :sucursal_recepcion_id, :peso,
       :alto, :largo, :ancho, :cantidad_productos, :cantidad_paquetes,
       :numero_caja, :descripcion, :remitente, :driver,
       :notas_internas, :notas_retencion,

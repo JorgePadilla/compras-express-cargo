@@ -108,9 +108,19 @@ submitFormWithPrint() {
     this.dispatch("success")
     if (el.dataset.print === "true") {
       // PR-10.d: la ETIQUETA (Dymo 2.25x1.25), no el Warehouse Receipt.
-        // Yusef: "aqui esta tirando el warehouse, no la etiqueta".
-        // `hermanas=1` saca una por caja cuando el tracking se dividio.
-        window.open(`/paquetes/${el.dataset.paqueteId}/etiqueta?hermanas=1&print=true`, "_blank")
+      // Yusef: "aqui esta tirando el warehouse, no la etiqueta".
+      // `hermanas=1` saca una por caja cuando el tracking se dividio.
+      //
+      // PR-C7.16: el controller marca `data-print` solo en la primera caja, asi
+      // que esto corre una vez por tracking y no una por caja.
+      window.open(`/paquetes/${el.dataset.paqueteId}/etiqueta?hermanas=1&print=true`, "_blank")
+
+      // Y despues el Warehouse Receipt, que es uno solo para todo el envio.
+      // Yusef: "la etiqueta es la que le pegamos a cada caja, pero pido tres;
+      // el warehouse receipt es al reves: solo imprimis uno, donde detalla todo
+      // lo que recibiste". Va como preview (sin `print`): el operario decide si
+      // lo imprime o se lo manda al cliente.
+      window.open(`/paquetes/${el.dataset.paqueteId}/warehouse_receipt`, "_blank")
     }
     setTimeout(() => this.clearForm(), 100)
     el.remove()
