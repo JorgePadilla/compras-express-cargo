@@ -180,7 +180,8 @@ class PreFactura < ApplicationRecord
         # — el cobro de $1.00 se perdía en silencio desde PR-6b.
         pre_factura.pre_factura_items.build(
           paquete: paquete,
-          concepto: "Flete #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia} (PREPAGADO EN MIAMI)",
+          concepto: "Flete #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia} " \
+                    "(PREPAGADO EN MIAMI#{paquete.prepago_sufijo})",
           peso_cobrar: paquete.peso_cobrar,
           precio_libra: BigDecimal("0"),
           # "la factura la va a hacer por un dólar más impuesto" — el

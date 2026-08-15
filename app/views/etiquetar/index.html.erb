@@ -657,6 +657,14 @@ end %>
         </div>
       </div>
 
+      <%# ── Pago ── el mismo partial que /entrega_personal.
+          Jorge: "esto es en la parte de Miami — etiquetar y entrega personal —
+          hay que mostrar cómo se pagó". Antes el prepago existía solo en la
+          otra pantalla. %>
+      <div class="lg:col-span-3">
+        <%= render "shared/prepago_miami" %>
+      </div>
+
       <%# ── Notas internas ──
           PR-C6.11: sube acá, arriba del cuadro de carrier/proveedor/remitente.
           Yusef: "notas internas, aquí es donde creo yo que esto lo deberíamos

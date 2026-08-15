@@ -173,6 +173,9 @@
   <div class="wr-section" style="margin: 8px 0; padding: 10px 14px; border: 2px solid #047857; background: #ecfdf5; border-radius: 6px; text-align: center;">
     <div style="font-weight: 800; font-size: 14px; color: #064e3b; letter-spacing: 0.04em;">
       ✓ PREPAGADO EN MIAMI
+      <%# Yusef pidió que se marcara CÓMO se pagó: sin esto el documento dice
+          que ya está pagado y el cajero de Honduras no sabe con qué entró. %>
+      <%= paquete.prepago_sufijo %>
       <% if paquete.prepagado_miami_sucursal %>
         · SUCURSAL <%= paquete.prepagado_miami_sucursal.codigo_ep || paquete.prepagado_miami_sucursal.codigo %>
       <% end %>

@@ -182,33 +182,8 @@ end %>
         </div>
       </div>
 
-      <%# Sección 5: Pago — pre-pagado en Miami o se cobra en Honduras %>
-      <div class="rounded-lg ring-1 ring-cec-teal/30 bg-cec-teal/5 dark:bg-cec-teal/10 dark:ring-cec-teal/40 px-4 py-3">
-        <p class="text-sm font-semibold text-cec-teal-dark dark:text-cec-teal-light mb-2">
-          <%= heroicon "currency-dollar", variant: :solid, options: { class: "w-4 h-4 inline mr-1" } %>
-          Pago
-        </p>
-        <div class="space-y-2">
-          <label class="flex items-start gap-2 cursor-pointer">
-            <%= radio_button_tag "paquete[prepagado_miami]", "0", true,
-                class: "mt-1 border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-            <div>
-              <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Cobrar en Honduras al entregar (default)</span>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Sigue el flujo normal: PreFactura → Factura cuando llegue.</p>
-            </div>
-          </label>
-          <label class="flex items-start gap-2 cursor-pointer">
-            <%= radio_button_tag "paquete[prepagado_miami]", "1", false,
-                class: "mt-1 border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-            <div>
-              <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Pagado aquí en Miami</span>
-              <p class="text-xs text-gray-500 dark:text-gray-400">
-                Sin factura formal. La etiqueta muestra "PREPAGADO EN MIAMI" y Honduras hace factura simbólica editable al recibir.
-              </p>
-            </div>
-          </label>
-        </div>
-      </div>
+      <%# Sección 5: Pago. El partial lo comparte con /etiquetar. %>
+      <%= render "shared/prepago_miami" %>
 
       <%# Sección 6: Notas internas %>
       <div>
