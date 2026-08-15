@@ -139,7 +139,7 @@ class PreFacturaTarifaTest < ActiveSupport::TestCase
 
   test "el cobro simbolico de prepagado en Miami sobrevive al guardado" do
     Tarifa.create!(tipo_envio: tipo_envios(:cer), precio_libra: 4.50, moneda: "USD")
-    p = paquete_con(peso: 10, prepagado_miami: true)
+    p = paquete_con(peso: 10, prepagado_miami: true, prepagado_miami_metodo: "efectivo")
 
     pf = PreFactura.build_from_paquetes(@cliente, [ p.id ], user: @user)
     pf.save!
@@ -152,7 +152,7 @@ class PreFacturaTarifaTest < ActiveSupport::TestCase
 
   test "el paquete prepagado no se cobra por su peso" do
     Tarifa.create!(tipo_envio: tipo_envios(:cer), precio_libra: 4.50, moneda: "USD")
-    p = paquete_con(peso: 10, prepagado_miami: true)
+    p = paquete_con(peso: 10, prepagado_miami: true, prepagado_miami_metodo: "efectivo")
 
     pf = PreFactura.build_from_paquetes(@cliente, [ p.id ], user: @user)
     pf.save!

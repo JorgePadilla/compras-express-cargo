@@ -22,6 +22,38 @@ class Paquete < ApplicationRecord
   # marcado, NO se emite factura formal — solo se anota que ya pagó.
   belongs_to :prepagado_miami_sucursal, class_name: "Sucursal", optional: true
   belongs_to :prepagado_miami_by_user,  class_name: "User",     optional: true
+
+  # Con qué se pagó en Miami. Yusef: *"faltó algo que conversamos: que
+  # escogieran cómo se pagó — efectivo o Zelle o TC"*.
+  #
+  # ── Por qué NO es la lista de la caja ─────────────────────────────────
+  #
+  # `Pago`, `IngresoCaja` y `EgresoCaja` tienen `%w[efectivo tarjeta
+  # transferencia]` — la misma lista, escrita tres veces. Miami necesita
+  # **Zelle**, que en la caja de Honduras no se recibe; meterlo en la lista
+  # compartida lo haría aparecer en tres pantallas donde no aplica. Son dos
+  # listas distintas a propósito, y hay un test que lo fija.
+  METODOS_PREPAGO_MIAMI = %w[efectivo zelle tarjeta].freeze
+
+  ETIQUETAS_METODO_PREPAGO = {
+    "efectivo" => "Efectivo",
+    "zelle"    => "Zelle",
+    "tarjeta"  => "Tarjeta"
+  }.freeze
+
+  # "Zelle", o nil si no se pagó en Miami o es un paquete viejo sin método.
+  def metodo_prepago_label
+    return nil if prepagado_miami_metodo.blank?
+    ETIQUETAS_METODO_PREPAGO.fetch(prepagado_miami_metodo, prepagado_miami_metodo.humanize)
+  end
+
+  # " · ZELLE" para pegarlo detrás de "PREPAGADO EN MIAMI". Formatear esto en
+  # cada lugar que lo muestra es como se terminan viendo distinto el Warehouse
+  # Receipt y la pre-factura.
+  def prepago_sufijo
+    label = metodo_prepago_label
+    label ? " · #{label.upcase}" : ""
+  end
   has_many :pre_alerta_paquetes, dependent: :nullify
   has_many :nota_debito_items,  dependent: :nullify
   has_many :nota_credito_items, dependent: :nullify
@@ -108,6 +140,28 @@ class Paquete < ApplicationRecord
   # un error que el operario no sabría cómo arreglar desde esa pantalla.
   before_validation :heredar_sucursal_destino, if: -> { estado == "enviado_sucursal" }
   validates :sucursal_destino, presence: true, if: -> { estado == "enviado_sucursal" }
+
+  # ── El método de pago, en tres reglas ─────────────────────────────────
+  #
+  # Obligatorio **al marcar** el prepago, no siempre. Los paquetes que ya
+  # estaban prepagados antes de que la columna existiera se quedan en `nil`:
+  # inventarles una forma de pago sería meter un dato falso en el sistema, y
+  # exigírselo los volvería imposibles de guardar desde cualquier pantalla que
+  # no tenga dónde elegirlo. `nil` ahí significa "es de antes, no se sabe".
+  validates :prepagado_miami_metodo, presence: { message: "hay que decir cómo se pagó" },
+            if: -> { prepagado_miami? && (new_record? || prepagado_miami_changed?) }
+
+  validates :prepagado_miami_metodo,
+            inclusion: { in: METODOS_PREPAGO_MIAMI, message: "no es una forma de pago de Miami" },
+            allow_nil: true
+
+  # La dirección que se olvida, y la que ensucia los datos: si alguien marca el
+  # prepago, elige Zelle y después vuelve a "cobrar en Honduras", un método
+  # colgado haría que la pre-factura y el Warehouse Receipt dijeran que se pagó
+  # algo que no se pagó.
+  validates :prepagado_miami_metodo,
+            absence: { message: "solo aplica si el paquete se pagó en Miami" },
+            unless: :prepagado_miami?
 
   # PR-D1.c: tarifa fija pre-establecida $35 USD + ISV (Yusef 2026-04-29).
   # Editable por el cajero al crear/asignar la recolecta. No hay tabla de

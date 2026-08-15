@@ -46,6 +46,7 @@ module AuditoriaHelper
     "retener_miami" => "Retener en Miami",
     "solicito_cambio_servicio" => "Cambio de servicio",
     "prepagado_miami" => "Prepagado en Miami",
+    "prepagado_miami_metodo" => "Forma de pago en Miami",
     "driver" => "Driver"
   }.freeze
 

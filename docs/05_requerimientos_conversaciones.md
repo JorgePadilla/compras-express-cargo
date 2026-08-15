@@ -5688,3 +5688,58 @@ de Miami (`A7-24`, sigue esperando definición) y el bloque `RP-24`…`RP-29`. L
 dos tablas de precios que se pisaban (`A7-25`) se cerraron el mismo día con
 `PR-C7.08` y `PR-C7.12`, y las reglas de redondeo quedaron escritas y
 verificadas en la Conversación 8.
+
+---
+
+## Conversación 10 (2026-08-14) — cómo se recibió el pago en Miami
+
+Jorge, después de probar el prepago en staging:
+
+> *"Ya vi el pagado en Miami, está bien. Solo faltó algo que conversamos: que
+> escogieran **cómo se pagó**. Efectivo o Zelle o TC."*
+
+Y al preguntarle en qué pantallas:
+
+> *"Esto es en la parte de Miami — **etiquetar y entrega personal** — hay que
+> mostrar cómo se pagó."*
+
+### C10-01 · El método de pago del prepago — ✅ **CERRADA e implementada**
+
+`prepagado_miami` guardaba quién, cuándo y en qué sucursal, pero **no con qué**.
+El cajero de Honduras armaba el cobro simbólico sin saber si había entrado
+efectivo, Zelle o tarjeta.
+
+**Lo que se hizo:** columna `prepagado_miami_metodo` con
+`%w[efectivo zelle tarjeta]`, obligatoria al marcar el prepago y prohibida si no.
+Se muestra en la ficha del paquete, en el badge del Warehouse Receipt
+(`✓ PREPAGADO EN MIAMI · ZELLE`) y en el concepto de la línea simbólica de la
+pre-factura.
+
+> **La lista NO es la de la caja.** `Pago`, `IngresoCaja` y `EgresoCaja` comparten
+> `%w[efectivo tarjeta transferencia]` —la misma lista escrita tres veces— y
+> **Zelle no se recibe en Honduras**. Son dos listas distintas a propósito, con
+> un test que lo fija. La triplicación de la otra queda como deuda: consolidarla
+> toca la caja, que es plata en vivo.
+
+### C10-02 · `/etiquetar` no tenía el prepago — ✅ **CERRADA**
+
+Al ir a implementar apareció que **el marcado existía solo en
+`/entrega_personal`**. Las dos pantallas de Miami hacen lo mismo y una se había
+quedado atrás sin que nadie lo decidiera — el bug recurrente de este repo.
+
+Ahora las dos comparten `shared/_prepago_miami` y el concern `PrepagoMiami`, con
+un lint que impide volver a escribirlo a mano en cualquiera de las dos.
+
+**De paso se cerró un hueco viejo:** el sellado solo actuaba en la rama `true`,
+así que **desmarcar el prepago dejaba puestos** la fecha, el usuario y la
+sucursal de un cobro que ya no existía.
+
+### C10-03 · La suma de libras del panel — ⏳ **ABIERTA**
+
+> *"Solo que tiene malo la suma de libras para cobrar."* · Y al ubicarlo:
+> *"en el panel de cálculo mientras cargo"*.
+
+La suma de las cajas **ya agregadas** está bien: es el mayor de cada caja y
+después se suman, que es la regla `A9-03`. Lo que falta es que **la caja que se
+está escribiendo todavía no cuenta** — `calc_volumetrico_controller` lee solo
+las filas `.caja-fila` ya confirmadas. Jorge lo confirmó. Va en su propio PR.

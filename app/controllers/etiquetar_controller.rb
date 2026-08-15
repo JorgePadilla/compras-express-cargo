@@ -1,4 +1,8 @@
 class EtiquetarController < ApplicationController
+  # PR: el prepago de Miami ahora también se marca acá, no solo en
+  # /entrega_personal. El sellado va por el concern para que las dos pantallas
+  # no se separen — que es como llegó a faltar la forma de pago.
+  include PrepagoMiami
   # PR-C6.22: etiquetar es **recibir**, no empacar.
   #
   # Yusef, 2026-08-08, revisando la bitácora de un paquete recién etiquetado:
@@ -124,6 +128,7 @@ class EtiquetarController < ApplicationController
     if (prov_str = proveedor_string_param) != :missing
       @paquete[:proveedor] = prov_str
     end
+    aplicar_prepago_miami(@paquete)
 
     if @paquete.save
       @paquetes_hoy = paquetes_hoy_count
@@ -247,6 +252,7 @@ end
     if (prov_str = proveedor_string_param) != :missing
       @paquete[:proveedor] = prov_str
     end
+    aplicar_prepago_miami(@paquete)
 
     if @paquete.save
       link_pre_alertas(@paquete)
@@ -310,6 +316,9 @@ end
     if (prov_str = proveedor_string_param) != :missing && prov_str.present?
       paquetes.each { |p| p.update_column(:proveedor, prov_str) }
     end
+    # El pago es uno solo para el envío, así que marca las N cajas: el cliente
+    # pagó el tracking, no la caja 2 de 3.
+    paquetes.each { |p| aplicar_prepago_miami(p); p.save! }
     @paquete = paquetes.first
     paquetes.each { |p| link_pre_alertas(p) }
     @paquetes_hoy = paquetes_hoy_count

@@ -4,6 +4,8 @@ class EntregaPersonalController < ApplicationController
   # pantalla las pintaba y después las tiraba: todas las cajas nacían con el
   # peso de arriba.
   include MedidasPorCaja
+  # El sellado del prepago vive en el concern porque /etiquetar hace lo mismo.
+  include PrepagoMiami
 
   before_action :authorize_entrega_personal
 
@@ -93,18 +95,14 @@ class EntregaPersonalController < ApplicationController
     retiro ? attrs.merge(sucursal_id: retiro.id) : attrs
   end
 
-  # `prepagado_miami` + sus columnas asociadas se asignan acá porque vienen
-  # como flag + se traduce a múltiples columns (sucursal, user, timestamp).
+  # `prepagado_miami` se traduce a cinco columnas, así que no puede ir en
+  # `paquete_params`. El sellado lo hace `PrepagoMiami`, compartido con
+  # /etiquetar: escrito acá otra vez, las dos pantallas se separan.
   def apply_extra_params(paquete, save: false)
     if (prov_str = proveedor_string_param) != :missing
       paquete[:proveedor] = prov_str
     end
-    if ActiveModel::Type::Boolean.new.cast(params.dig(:paquete, :prepagado_miami))
-      paquete.prepagado_miami           = true
-      paquete.prepagado_miami_sucursal  = paquete.sucursal
-      paquete.prepagado_miami_by_user   = Current.user
-      paquete.prepagado_miami_at        = Time.current
-    end
+    aplicar_prepago_miami(paquete)
     paquete.save! if save
   end
 

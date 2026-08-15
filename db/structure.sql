@@ -1576,7 +1576,8 @@ CREATE TABLE public.paquetes (
     recolecta_horario character varying,
     recolecta_contacto character varying,
     recolecta_telefono character varying,
-    recolecta_instrucciones text
+    recolecta_instrucciones text,
+    prepagado_miami_metodo character varying
 );
 
 
@@ -5892,6 +5893,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260815032759'),
 ('20260813025449'),
 ('20260813023148'),
 ('20260813011959'),

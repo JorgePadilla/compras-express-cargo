@@ -271,6 +271,9 @@ end %>
       <div class="flex-1">
         <p class="text-base font-bold text-cec-teal-dark dark:text-cec-teal-light">
           ✓ Este paquete ya fue pagado en Miami
+          <% if @paquete.metodo_prepago_label %>
+            <span class="text-sm font-semibold">· <%= @paquete.metodo_prepago_label %></span>
+          <% end %>
         </p>
         <p class="text-sm text-gray-700 dark:text-gray-200 mt-1">
           <% if @paquete.prepagado_miami_sucursal %>
