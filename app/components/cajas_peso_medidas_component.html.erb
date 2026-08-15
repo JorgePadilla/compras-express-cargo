@@ -16,15 +16,22 @@
         <div>
           <%= f.label :peso, "Peso real (lbs)", class: clases_de_etiqueta %>
           <%= f.number_field :peso, step: 0.01, min: 0, placeholder: "0.00",
-              data: { calc_volumetrico_target: "peso", action: accion_de_captura },
+              data: { calc_volumetrico_target: "peso", caja_campo: "peso",
+                      action: accion_de_captura },
               class: clases_de_input %>
         </div>
         <div>
-          <%# Ojo con la diferencia, que ya confundió una vez (PR-C6.18b):
-              Cant. Productos son los artículos que vienen ADENTRO; las cajas
-              son los bultos físicos, y esas se agregan abajo. %>
-          <%= f.label :cantidad_productos, "Cant. Productos", class: clases_de_etiqueta %>
+          <%# PR-C7.19: los productos son **de esta caja**, y bajan con ella.
+              Antes vivían acá pero no se capturaban, así que en un split las N
+              cajas terminaban con el mismo número y el campo se quedaba
+              editable después de agregar. Jorge: "que se pueda cambiar después
+              de agregar cajas se siente raro".
+
+              El rótulo lo dice, porque es la tercera vez que este campo se lee
+              como lo que no es (ver PR-C6.18b). %>
+          <%= f.label :cantidad_productos, "Productos en la caja", class: clases_de_etiqueta %>
           <%= f.number_field :cantidad_productos, min: 0, placeholder: "1",
+              data: { caja_campo: "cantidad_productos" },
               class: clases_de_input %>
         </div>
       </div>
@@ -34,7 +41,8 @@
         <div class="grid grid-cols-3 gap-2">
           <% CajasPesoMedidasComponent::DIMENSIONES.each do |dim| %>
             <%= f.number_field dim, step: 0.01, min: 0, placeholder: dim.to_s,
-                data: { calc_volumetrico_target: dim.to_s, action: accion_de_captura },
+                data: { calc_volumetrico_target: dim.to_s, caja_campo: dim.to_s,
+                        action: accion_de_captura },
                 class: clases_de_input("text-center") %>
           <% end %>
         </div>
