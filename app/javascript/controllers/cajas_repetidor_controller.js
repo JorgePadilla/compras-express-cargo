@@ -22,10 +22,18 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = ["lista", "template", "contador", "vacio", "agregarBtn"]
 
-  // Los campos de captura viven en el partial de arriba, bajo el controller
-  // `calc-volumetrico`. Se leen por su target y no por un id para no depender
-  // de que la vista los nombre.
-  static CAMPOS = ["peso", "alto", "largo", "ancho"]
+  // Los campos de la caja que se está midiendo.
+  //
+  // PR-C7.19: entró `cantidad_productos`, y con él se rompió el atajo que
+  // usaba este controller. Antes buscaba los inputs por el target de **otro**
+  // controller (`data-calc-volumetrico-target`), lo cual funcionaba solo porque
+  // los cuatro campos eran justo los del cálculo. Los productos no pesan y no
+  // entran en el cálculo, así que seguir por ahí obligaba a inventarle un
+  // target falso.
+  //
+  // Ahora los cinco llevan `data-caja-campo` y este controller busca por eso:
+  // deja de depender de cómo el calculador nombra sus cosas.
+  static CAMPOS = ["peso", "alto", "largo", "ancho", "cantidad_productos"]
 
   connect() {
     this._renumerar()
@@ -130,12 +138,15 @@ export default class extends Controller {
   }
 
   _campo(nombre) {
-    return this.element.querySelector(`[data-calc-volumetrico-target="${nombre}"]`)
+    return this.element.querySelector(`[data-caja-campo="${nombre}"]`)
   }
 
-  _resumen({ peso, alto, largo, ancho }) {
+  _resumen({ peso, alto, largo, ancho, cantidad_productos }) {
     const medidas = [alto, largo, ancho].filter(Boolean)
     const dim = medidas.length === 3 ? ` · ${medidas.join(" × ")} pulg` : ""
-    return `${peso} lb${dim}`
+    // Los productos van en el resumen porque son de la caja: si no se ven en la
+    // fila, el operario no tiene forma de saber cuál puso en cuál.
+    const prods = cantidad_productos ? ` · ${cantidad_productos} producto${cantidad_productos === "1" ? "" : "s"}` : ""
+    return `${peso} lb${dim}${prods}`
   }
 }

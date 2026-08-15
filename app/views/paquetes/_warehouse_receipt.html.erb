@@ -224,7 +224,12 @@
         <tr>
           <td><%= pkg.numero_caja.presence || (idx + 1) %></td>
           <td><%= [ pkg.largo, pkg.ancho, pkg.alto ].map { |v| v ? sprintf("%.2f", v) : "—" }.join(" × ") %></td>
-          <td>1</td>
+          <%# PR-C7.19: los productos de ESTA caja. Estaba escrito a mano como
+              `1` desde siempre, así que la columna nunca mostró nada — y es
+              justo la que un Warehouse Receipt usa para decir cuántas piezas
+              lleva cada bulto. El `1` queda de fallback para los paquetes
+              viejos, que se guardaron sin el dato. %>
+          <td><%= pkg.cantidad_productos.presence || 1 %></td>
           <td>Box</td>
           <td><%= pkg.peso ? sprintf("%.2f", pkg.peso) : "—" %></td>
           <%# 10 px, que es lo que él pidió — "even description can be a little

@@ -13,10 +13,20 @@
 module MedidasPorCaja
   extend ActiveSupport::Concern
 
-  # Solo estos cuatro. El resto del paquete es el mismo para todas las cajas:
-  # mismo tracking, mismo cliente, mismo contenido. Lo único que cambia
-  # físicamente es cuánto pesa y mide cada bulto.
-  CAMPOS_POR_CAJA = %w[peso alto largo ancho].freeze
+  # Lo que cambia de una caja a otra. El resto del paquete es el mismo para
+  # todas: mismo tracking, mismo cliente, mismo servicio.
+  #
+  # `cantidad_productos` entró en `PR-C7.19`. Antes vivía en el bloque de
+  # captura pero **no bajaba con la caja**, así que en un split las N cajas
+  # terminaban con el mismo número —el último que quedara escrito— y el campo
+  # seguía ahí, editable, pareciendo de la caja que se estaba midiendo. Jorge:
+  # *"cambio la cantidad de productos y luego agrego… que se pueda cambiar
+  # después de agregar cajas se siente raro"*.
+  #
+  # Encaja con cómo trabaja Yusef: *"recibo 30 cajas: 10 son de uno, 5 son de
+  # otro"*. Y le da contenido a la columna **Units** del Warehouse Receipt, que
+  # hasta ahora estaba escrita a mano como `1`.
+  CAMPOS_POR_CAJA = %w[peso alto largo ancho cantidad_productos].freeze
 
   private
 
