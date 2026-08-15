@@ -1,0 +1,21 @@
+<%# Una fila de caja cargada. Locals: `valores` (hash, puede venir vacío).
+
+    Sale de acá y no de un string en el JS ni de un `<template>` escrito aparte:
+    es la lección de `PR-C6.44`, donde el template a mano se desincronizó de las
+    filas y cada fila nueva salía corrida.
+
+    El número y el resumen los escribe `cajas-repetidor#_renumerar` leyendo
+    `data-valores`, así que una fila pintada por el servidor —cuando el guardado
+    falló y se re-renderiza la pantalla— queda idéntica a una agregada a mano. %>
+<li class="caja-fila flex items-center justify-between gap-2 rounded-md bg-gray-50 dark:bg-gray-900 px-2.5 py-1.5"
+    data-valores="<%= valores.to_json %>">
+  <span class="text-xs text-gray-700 dark:text-gray-200">
+    <span class="font-semibold" data-caja-numero>Caja</span>
+    <span class="text-gray-500 dark:text-gray-400" data-caja-resumen></span>
+  </span>
+  <button type="button" data-action="click->cajas-repetidor#quitar"
+          class="text-gray-400 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 rounded"
+          aria-label="Quitar esta caja">
+    <%= heroicon "x-mark", variant: :outline, options: { class: "w-4 h-4" } %>
+  </button>
+</li>

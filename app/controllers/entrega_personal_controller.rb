@@ -171,6 +171,9 @@ class EntregaPersonalController < ApplicationController
     @sucursales_miami = Sucursal.activas.where(ubicacion: "miami").where.not(codigo_ep: nil).ordered
     @motivos_retencion = MotivoRetencion.activos.ordered
     @tarifas_recolecta = TarifaRecolecta.activas.ordered
+    # Igual que en /etiquetar: las cajas medidas vuelven a la pantalla. Sin
+    # esto, un error de validación las borraba todas.
+    @cajas_cargadas = medidas_por_caja
     flash.now[:alert] = "No se pudo registrar la entrega personal."
     render :new, status: :unprocessable_entity
   end

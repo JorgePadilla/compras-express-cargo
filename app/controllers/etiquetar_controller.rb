@@ -362,6 +362,11 @@ end
     @abrir_cambio_servicio = ActiveModel::Type::Boolean.new.cast(
       paquete_params[:solicito_cambio_servicio]
     ) && params.dig(:paquete, :tipo_envio_destino_id).blank?
+    # Las cajas que venían en el request vuelven a la pantalla. `render :index`
+    # rehace la página entera y las filas las pinta el JS, así que sin esto
+    # CUALQUIER error de validación —falta el cliente, tracking repetido— le
+    # borraba al operario todas las cajas que ya había pesado y medido.
+    @cajas_cargadas = medidas_por_caja
     flash.now[:alert] = mensaje
     render :index, status: :unprocessable_entity
   end

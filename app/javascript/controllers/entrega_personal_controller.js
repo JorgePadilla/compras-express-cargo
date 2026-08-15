@@ -93,6 +93,9 @@ submitFormWithPrint() {
 
   clearForm() {
     this.formTarget.reset()
+    // Las cajas cargadas son de ESTE paquete: se van con él. `reset()` no las
+    // toca porque viven en inputs hidden que el repetidor arma a mano.
+    this.formTarget.dispatchEvent(new CustomEvent("cajas:limpiar", { bubbles: true }))
     if (this.hasClienteIdTarget) this.clienteIdTarget.value = ""
     if (this.hasClienteNombreTarget) {
       this.clienteNombreTarget.textContent = ""

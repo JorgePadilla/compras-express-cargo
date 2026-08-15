@@ -3,8 +3,16 @@
      data-action="<%= accion_al_cambiar_cajas %>"
      data-calc-volumetrico-tipo-envio-id-value="<%= tipo_envio_id.to_i %>"
      <% if valor_a_pagar? %>data-cotizador-url-value="<%= cotizador_url %>"<% end %>>
+  <%# Jorge: "cuando se pone la cantidad, luego se ingresa una caja, se puede
+      volver a poner la cantidad... es confuso". La causa era que estos campos
+      significaban DOS cosas —el paquete si no habías agregado nada, un borrador
+      si sí— y nada lo decía.
+
+      Ahora dicen siempre lo mismo: son LA CAJA QUE SE ESTÁ MIDIENDO, y el
+      número lo pone `cajas-repetidor` al agregar o quitar. %>
   <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
-    Peso, medidas y cálculo
+    <span data-cajas-repetidor-target="rotuloCaja">Caja 1</span>
+    <span class="text-gray-400 dark:text-gray-500 normal-case tracking-normal font-normal">· peso, medidas y cálculo</span>
   </h4>
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -63,7 +71,7 @@
       <div class="rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 p-3">
         <div class="flex items-center justify-between mb-2">
           <p class="text-xs font-medium text-gray-700 dark:text-gray-200">
-            Cajas agregadas
+            Cajas guardadas
             <span data-cajas-repetidor-target="contador"
                   class="ml-1 font-mono text-gray-500 dark:text-gray-400">0</span>
           </p>
@@ -75,26 +83,24 @@
         </div>
 
         <p data-cajas-repetidor-target="vacio" class="text-[11px] text-gray-400">
-          Sin cajas agregadas: se guarda como un solo bulto con el peso y las medidas de arriba.
+          Todavía ninguna. La Caja 1 se guarda con lo de arriba, aunque no le des «Agregar».
         </p>
 
-        <ul data-cajas-repetidor-target="lista" class="space-y-1.5 max-h-64 overflow-y-auto pr-1"></ul>
+        <%# Las cajas que ya venían cargadas. Solo hay alguna cuando el guardado
+            falló y se re-renderizó la pantalla: sin esto, cualquier error de
+            validación borraba TODAS las cajas medidas y había que volver a la
+            bodega a pesarlas. %>
+        <ul data-cajas-repetidor-target="lista" class="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+          <% cajas_cargadas.each_value do |valores| %>
+            <%= helpers.render "shared/caja_fila", valores: valores %>
+          <% end %>
+        </ul>
 
         <%# El template sale de acá y no de un string en el JS: es la lección de
             PR-C6.44, donde el template escrito a mano se desincronizó de las
             filas y cada fila nueva salía corrida. %>
         <template data-cajas-repetidor-target="template">
-          <li class="caja-fila flex items-center justify-between gap-2 rounded-md bg-gray-50 dark:bg-gray-900 px-2.5 py-1.5">
-            <span class="text-xs text-gray-700 dark:text-gray-200">
-              <span class="font-semibold" data-caja-numero>Caja</span>
-              <span class="text-gray-500 dark:text-gray-400" data-caja-resumen></span>
-            </span>
-            <button type="button" data-action="click->cajas-repetidor#quitar"
-                    class="text-gray-400 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 rounded"
-                    aria-label="Quitar esta caja">
-              <%= helpers.heroicon "x-mark", variant: :outline, options: { class: "w-4 h-4" } %>
-            </button>
-          </li>
+          <%= helpers.render "shared/caja_fila", valores: {} %>
         </template>
       </div>
     </div>

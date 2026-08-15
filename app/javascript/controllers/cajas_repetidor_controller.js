@@ -20,7 +20,7 @@ import { Controller } from "@hotwired/stimulus"
 // tocarse. Las filas se renumeran 1..N en cada alta y baja, porque
 // `crear_split!` mapea `por_caja[i]` contra `numero_caja: i`.
 export default class extends Controller {
-  static targets = ["lista", "template", "contador", "vacio", "agregarBtn"]
+  static targets = ["lista", "template", "contador", "vacio", "agregarBtn", "rotuloCaja"]
 
   // Los campos de la caja que se está midiendo.
   //
@@ -38,10 +38,47 @@ export default class extends Controller {
   connect() {
     this._renumerar()
     this.element.addEventListener("keydown", this._atajo)
+
+    // La caja a medio medir se agrega sola al guardar. Antes se descartaba en
+    // silencio si ya había cajas en la lista: el operario escribía peso y
+    // medidas, le daba Guardar sin apretar Agregar, y esa caja se cobraba sin
+    // su peso. Jorge lo llamó "confuso"; además perdía plata.
+    //
+    // Va en el form y no en el botón porque los atajos (F9/F10) y el Enter de
+    // la pistola también terminan en `submit`.
+    this._form = this.element.closest("form")
+    this._form?.addEventListener("submit", this._agregarPendiente)
+
+    // Y cuando el formulario se limpia, las cajas se van con el paquete que
+    // las trajo.
+    //
+    // `clearForm` limpia los inputs visibles y deja afuera los `hidden` a
+    // propósito —ahí viven el CSRF y el `_method`—, pero las filas guardan sus
+    // valores justo en hidden. O sea que sobrevivían al guardado y **el paquete
+    // siguiente heredaba las cajas del anterior**: un split que nadie pidió.
+    //
+    // Se engancha a `cajas:limpiar` y NO a `turbo:submit-end`: cuando el save
+    // falla, `render_create_error` responde 200 y Turbo lo reporta como éxito,
+    // así que por ahí se borraban las cajas de un guardado que no ocurrió. El
+    // evento lo tira `clearForm`, que corre solo cuando de verdad hay que
+    // empezar un paquete nuevo — o cuando el operario aprieta Limpiar (F2).
+    this._form?.addEventListener("cajas:limpiar", this._limpiarTodo)
   }
 
   disconnect() {
     this.element.removeEventListener("keydown", this._atajo)
+    this._form?.removeEventListener("submit", this._agregarPendiente)
+    this._form?.removeEventListener("cajas:limpiar", this._limpiarTodo)
+  }
+
+  _limpiarTodo = () => {
+    this.listaTarget.querySelectorAll(".caja-fila").forEach(fila => fila.remove())
+    this._renumerar()
+  }
+
+  // Sin peso no hay caja que agregar — es el mismo criterio que `agregar`.
+  _agregarPendiente = () => {
+    if (this._leerCaptura().peso) this.agregar()
   }
 
   // F6 = agregar, la misma tecla que usa el editor de pre-alerta para su
@@ -65,7 +102,6 @@ export default class extends Controller {
 
     const fila = this.templateTarget.content.cloneNode(true).querySelector(".caja-fila")
     fila.dataset.valores = JSON.stringify(valores)
-    fila.querySelector("[data-caja-resumen]").textContent = this._resumen(valores)
     this.listaTarget.appendChild(fila)
 
     this._limpiarCaptura()
@@ -86,10 +122,14 @@ export default class extends Controller {
 
     filas.forEach((fila, i) => {
       const n = i + 1
-      fila.querySelector("[data-caja-numero]").textContent = `Caja ${n}`
-      fila.querySelectorAll("input[type=hidden]").forEach(input => input.remove())
-
       const valores = JSON.parse(fila.dataset.valores || "{}")
+
+      fila.querySelector("[data-caja-numero]").textContent = `Caja ${n}`
+      // El resumen se reescribe acá y no solo al agregar: así una fila que
+      // viene pintada por el servidor —cuando el guardado falló y se
+      // re-renderiza la pantalla— queda idéntica a una agregada a mano.
+      fila.querySelector("[data-caja-resumen]").textContent = this._resumen(valores)
+      fila.querySelectorAll("input[type=hidden]").forEach(input => input.remove())
       Object.entries(valores).forEach(([campo, valor]) => {
         const input = document.createElement("input")
         input.type = "hidden"
@@ -101,6 +141,8 @@ export default class extends Controller {
 
     if (this.hasContadorTarget) this.contadorTarget.textContent = String(filas.length)
     if (this.hasVacioTarget) this.vacioTarget.classList.toggle("hidden", filas.length > 0)
+    // El bloque de arriba es la SIGUIENTE caja, no una más de las guardadas.
+    if (this.hasRotuloCajaTarget) this.rotuloCajaTarget.textContent = `Caja ${filas.length + 1}`
 
     // PR-C7.17: avisar que las cajas cambiaron.
     //

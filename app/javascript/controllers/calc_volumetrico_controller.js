@@ -105,14 +105,19 @@ export default class extends Controller {
     if (!this.hasTotalEnvioTarget) return
 
     const cajas = this._cajasCargadas()
-    this.totalEnvioTarget.classList.toggle("hidden", cajas.length === 0)
 
-    // Sin cajas el bloque de arriba es el envío entero y no hace falta aclarar
-    // nada; con cajas pasa a ser "esta caja" y el total manda.
+    // El total aparece desde la SEGUNDA caja. Con una sola sería el mismo
+    // número del bloque de arriba, repetido en otro recuadro: ruido, y encima
+    // haría parpadear un panel apenas se escribe el primer peso.
+    const hayVarias = cajas.length > 1
+    this.totalEnvioTarget.classList.toggle("hidden", !hayVarias)
+
+    // Con una sola caja el bloque de arriba ES el envío; con varias pasa a ser
+    // "esta caja" y el total manda.
     if (this.hasRotuloPesoTarget) {
-      this.rotuloPesoTarget.textContent = cajas.length > 0 ? "Esta caja" : "Peso a cobrar"
+      this.rotuloPesoTarget.textContent = hayVarias ? "Esta caja" : "Peso a cobrar"
     }
-    if (cajas.length === 0) return
+    if (!hayVarias) return
 
     const total = cajas.reduce((suma, caja) => suma + this.pesoDeLaCaja(caja), 0)
 
@@ -133,9 +138,28 @@ export default class extends Controller {
 
   // Las filas las pinta `cajas-repetidor`, que vive en el mismo elemento. Se
   // leen del DOM y no de su instancia para no acoplar los dos controllers.
+  //
+  // Y la caja que se está MIDIENDO cuenta como una más. Jorge: *"tiene malo la
+  // suma de libras para cobrar... en el panel de cálculo mientras cargo"*.
+  // Agregaba dos cajas, empezaba la tercera, y el total seguía diciendo dos —
+  // porque acá solo se leían las filas ya guardadas. Desde que el bloque de
+  // arriba dice "Caja 3", no contarla sería que la pantalla se contradiga.
   _cajasCargadas() {
-    return [...this.element.querySelectorAll(".caja-fila")]
+    const guardadas = [...this.element.querySelectorAll(".caja-fila")]
       .map(fila => { try { return JSON.parse(fila.dataset.valores || "{}") } catch { return {} } })
+
+    const enCurso = this._cajaEnCurso()
+    return enCurso ? [ ...guardadas, enCurso ] : guardadas
+  }
+
+  // Lo que hay escrito arriba, si alcanza para ser una caja. Sin peso no lo es
+  // — mismo criterio que usa `cajas-repetidor` para dejar agregar.
+  _cajaEnCurso() {
+    const leer = (campo) => this.element.querySelector(`[data-caja-campo="${campo}"]`)?.value?.trim()
+    const peso = leer("peso")
+    if (!peso) return null
+
+    return { peso: peso, alto: leer("alto"), largo: leer("largo"), ancho: leer("ancho") }
   }
 
   _aNumero(v) {

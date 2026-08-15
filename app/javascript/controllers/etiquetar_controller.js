@@ -582,6 +582,8 @@ cerrarQuitarCobro() {
   // Form actions
   clearForm() {
     this._limpiarCampos()
+    // Las cajas cargadas son de ESTE paquete: se van con él.
+    this.formTarget.dispatchEvent(new CustomEvent("cajas:limpiar", { bubbles: true }))
     this.clienteIdTarget.value = ""
     this.clienteNombreTarget.textContent = ""
     this.clienteNombreTarget.classList.add("hidden")
