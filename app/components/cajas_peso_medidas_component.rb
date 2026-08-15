@@ -52,16 +52,22 @@ class CajasPesoMedidasComponent < ViewComponent::Base
   # `tipo_envio_id` lo necesita `calc-volumetrico` para saber si a este cliente
   # se le cobra solo el volumétrico en este servicio (`PR-C6.41`). En
   # `/etiquetar` es el de la sesión; en `/entrega_personal` lo reescribe el select.
+  # `cajas_cargadas` son las que ya venían en el request. Normalmente ninguna:
+  # solo hay cuando el guardado falló y el controller re-renderiza la pantalla.
+  # Sin esto, **cualquier error de validación borraba todas las cajas medidas**
+  # —las filas las pinta el JS y el re-render se las lleva— y el operario tenía
+  # que volver a la bodega a pesarlas de nuevo.
   def initialize(f:, tipo_envio_id: nil, wrapper_class: "",
-                 valor_a_pagar: false, cotizador_url: nil)
-    @f             = f
-    @tipo_envio_id = tipo_envio_id
-    @wrapper_class = wrapper_class
-    @valor_a_pagar = valor_a_pagar
-    @cotizador_url = cotizador_url
+                 valor_a_pagar: false, cotizador_url: nil, cajas_cargadas: {})
+    @f              = f
+    @tipo_envio_id  = tipo_envio_id
+    @wrapper_class  = wrapper_class
+    @valor_a_pagar  = valor_a_pagar
+    @cotizador_url  = cotizador_url
+    @cajas_cargadas = cajas_cargadas || {}
   end
 
-  attr_reader :f, :tipo_envio_id, :wrapper_class, :cotizador_url
+  attr_reader :f, :tipo_envio_id, :wrapper_class, :cotizador_url, :cajas_cargadas
 
   def valor_a_pagar? = @valor_a_pagar
 

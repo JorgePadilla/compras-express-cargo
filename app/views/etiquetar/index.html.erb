@@ -718,8 +718,11 @@ end %>
           nunca se aplicaba —`x = v unless defined?(x)` no asigna nunca en
           Ruby— y por eso esta pantalla se quedó sin campo de cajas y sin poder
           dividir un paquete. %>
+      <%# `@cajas_cargadas` solo viene con algo cuando el guardado falló: sin
+          eso, el re-render de la pantalla se llevaba todas las cajas medidas. %>
       <%= render CajasPesoMedidasComponent.new(f: f, wrapper_class: "lg:col-span-3",
-            tipo_envio_id: @tipo_envio_sesion.id) %>
+            tipo_envio_id: @tipo_envio_sesion.id,
+            cajas_cargadas: @cajas_cargadas || {}) %>
 
     </div>
 

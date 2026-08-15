@@ -49,7 +49,10 @@ class BotonesTest < ActiveSupport::TestCase
     #
     # PR-C7.17: se mudó de `entrega_personal/_cajas_repetidor` al componente,
     # que ahora usan las dos pantallas.
-    "app/components/cajas_peso_medidas_component.html.erb"   => 1,
+    # La × de quitar una caja. Se mudó del componente al partial cuando el
+    # <li> pasó a ser uno solo para el <template> y para las filas que pinta
+    # el servidor. Es el mismo botón, en otro archivo.
+    "app/views/shared/_caja_fila.html.erb"                   => 1,
     # PR-C7.17: `app/components` entró al censo con este PR, y este apareció
     # solo. Es legítimo y no puede migrar: `RowActionComponent` **es** la
     # alternativa a los botones crudos, así que envolverlo en `ButtonComponent`
