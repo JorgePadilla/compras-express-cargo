@@ -58,6 +58,9 @@ class WrDespuesDeLaEtiquetaTest < ApplicationSystemTestCase
       assert_selector ".etq", wait: 5
       page.execute_script("window.dispatchEvent(new Event('afterprint'))")
       assert_current_path(/warehouse_receipt/, wait: 5, url: true)
+      # Que la URL cambie no dice que el recibo haya salido: si el WR reventara,
+      # la dirección sería la misma.
+      assert_text "WAREHOUSE RECEIPT", wait: 5
     end
   ensure
     cerrar_pestanas_extra
