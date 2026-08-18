@@ -394,8 +394,13 @@ end %>
                        data-action="change->bulk-selection#toggleRow"
                        class="rounded border-gray-300 text-cec-teal focus:ring-cec-teal">
               </td>
+              <%# Con la hora. Yusef, 2026-08-18: *"aquí ocupamos la hora en
+                  esto"* — estaba mirando esta columna cuando dos cajas del
+                  mismo envío le salieron separadas y no podía ver por qué. %>
               <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-600 dark:text-gray-300">
-                <%= paquete.fecha_recibido_miami&.strftime("%d/%m/%Y") || paquete.created_at.strftime("%d/%m/%Y") %>
+                <% momento = paquete.fecha_recibido_miami || paquete.created_at %>
+                <%= momento.strftime("%d/%m/%Y") %>
+                <span class="block text-[10px] text-gray-400 dark:text-gray-500"><%= momento.strftime("%H:%M") %></span>
               </td>
               <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-600 dark:text-gray-300">
                 <%= paquete.fecha_disponible&.strftime("%d/%m/%Y") || "—" %>

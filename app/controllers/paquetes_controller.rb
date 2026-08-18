@@ -14,8 +14,24 @@ class PaquetesController < ApplicationController
     "cliente"          => "clientes.nombre",
     "estado"           => "paquetes.estado",
     "tipo_envio"       => "tipo_envios.codigo",
-    "created_at"       => "paquetes.created_at"
+    "created_at"       => "paquetes.created_at",
+    "actualizado"      => "paquetes.updated_at"
   }.freeze
+
+  # Por dónde arranca el listado cuando nadie eligió columna.
+  #
+  # Era `created_at`, y Yusef lo cazó el 2026-08-18: las dos cajas de un split
+  # le salían **separadas**. La causa es de `PR-C7.20`: la Caja 1 **es** el
+  # paquete que la pre-alerta dejó esperando, así que conserva la hora en que el
+  # cliente lo anunció (11:11) mientras la Caja 2 nace al etiquetar (11:34).
+  #
+  #   > "Todas las actualizaciones tienen que ir con la última hora… si un
+  #   >  paquete está disponible en Honduras, se tiene que actualizar con la
+  #   >  hora que se marcó que estaba disponible."
+  #
+  # Con `updated_at` las cajas de un envío quedan juntas y lo que se acaba de
+  # tocar sube al tope, que es cómo él lee la pantalla.
+  ORDEN_POR_DEFECTO = "paquetes.updated_at".freeze
 
   EDIT_ROLES   = %w[admin supervisor_miami supervisor_prefactura].freeze
   DELETE_ROLES = %w[admin].freeze
@@ -700,7 +716,7 @@ class PaquetesController < ApplicationController
   def apply_sort(scope)
     sort_param = params[:sort].to_s
     user_picked_sort = SORTABLE_COLUMNS.key?(sort_param)
-    column = user_picked_sort ? SORTABLE_COLUMNS[sort_param] : "paquetes.created_at"
+    column = user_picked_sort ? SORTABLE_COLUMNS[sort_param] : ORDEN_POR_DEFECTO
 
     dir = params[:dir].to_s.downcase
     direction = SORT_DIRECTIONS.include?(dir) ? dir : "desc"
