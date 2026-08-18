@@ -165,8 +165,11 @@ class PaquetesController < ApplicationController
   # Con ?hermanas=1 imprime las N cajas del mismo tracking de una vez
   # ("si el tracking se divide en 5 paquetes es una para cada una").
   def etiqueta
+    # Quiénes son las hermanas lo decide **el modelo**, no esta acción. Acá había
+    # una segunda consulta escrita a mano y por eso las etiquetas y el Warehouse
+    # Receipt podían discrepar: el WR sí pasaba por `paquetes_hermanos`.
     @paquetes = if params[:hermanas] == "1" && @paquete.dividido?
-      Paquete.where(tracking: @paquete.tracking)
+      Paquete.where(id: [ @paquete.id, *@paquete.paquetes_hermanos.ids ])
              .includes(:cliente, :tercero, :tipo_envio, :sucursal, :user)
              .order(:numero_caja, :id)
     else
