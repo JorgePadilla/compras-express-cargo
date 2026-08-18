@@ -38,6 +38,31 @@ export default class extends Controller {
       opts.altFormat = "d/m/Y"
     }
     this.fp = flatpickr(target, opts)
+    this._noEsUnaTarjeta()
+  }
+
+  // Chrome ofrecía **tarjetas de crédito guardadas** al hacer clic en una fecha.
+  // Jorge: *"salen las tarjetas de crédito, como que el campo es de tarjeta
+  // pero es fecha, ¿por qué?"*.
+  //
+  // Por `altInput: true`: flatpickr esconde el input real —el que lleva el
+  // `name`— y crea **otro de texto, visible, sin name y sin autocomplete**.
+  // Chrome ve un campo anónimo que muestra `17/08/2026` dentro de un formulario
+  // y lo clasifica de oído como fecha de vencimiento de tarjeta.
+  //
+  // Va acá y no en la pantalla donde se reportó: el `altInput` lo tienen las
+  // seis fechas de la app, así que arreglarlo en una dejaría las otras cinco
+  // ofreciendo tarjetas.
+  _noEsUnaTarjeta() {
+    const alt = this.fp?.altInput
+    if (!alt) return
+
+    alt.setAttribute("autocomplete", "off")
+    // Los mismos que este repo ya le pone al tracking en `_paquete_card` para
+    // sacarse de encima a 1Password y LastPass.
+    alt.setAttribute("data-1p-ignore", "true")
+    alt.setAttribute("data-lpignore", "true")
+    alt.setAttribute("data-form-type", "other")
   }
 
   disconnect() {
