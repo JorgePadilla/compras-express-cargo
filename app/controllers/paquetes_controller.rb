@@ -173,6 +173,16 @@ class PaquetesController < ApplicationController
       [ @paquete ]
     end
 
+    # Yusef: *"si después de imprimir la etiqueta, te tire automáticamente el
+    # Recibo de Bodega"*. /entrega_personal abría dos ventanas y **Chrome
+    # bloquea la segunda**: un gesto del usuario alcanza para un solo popup.
+    # Ahora se abre una sola y, al terminar de imprimir, esa misma se va al
+    # Warehouse Receipt en vez de cerrarse.
+    #
+    # La URL la arma el servidor a propósito: un parámetro con la dirección de
+    # destino sería un redirect abierto servido desde nuestro propio dominio.
+    @despues_de_imprimir = warehouse_receipt_paquete_path(@paquete) if params[:wr] == "1"
+
     render layout: "etiqueta"
   end
 
