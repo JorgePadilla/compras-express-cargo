@@ -53,4 +53,25 @@ module ReconciliarPreAlerta
 
     [ del_cliente, valor ]
   end
+
+  # El otro tracking del mismo bulto.
+  #
+  # Yusef, 2026-08-18: un paquete llega con **dos** códigos —el del carrier y el
+  # del comercio— y el cliente pre-alerta uno, o el otro, o los dos. Si el
+  # secundario también tenía su pre-alerta, ese esperado quedaba huérfano
+  # exactamente igual que el fantasma de `PR-C7.20`, solo que por la otra
+  # puerta: `paquete_esperado` mira **un** tracking.
+  #
+  #   > "Tiene que jalar esta información, compararlo, venir y unificarlos acá y
+  #   >  eliminarlo de la pre-alerta. **No es vincularlo, eliminarlo**."
+  #
+  # Se llama después de guardar, con el paquete ya en la mano: su pre-alerta se
+  # reapunta a él y el esperado sobrante se borra. Si el esperado del secundario
+  # **es** el mismo que ya se reusó, `absorber!` se aparta solo.
+  def absorber_esperado_del_secundario(paquete)
+    return if paquete.nil? || paquete.tracking_secundario.blank?
+
+    otro = paquete_esperado(paquete.tracking_secundario)
+    paquete.absorber!(otro)
+  end
 end

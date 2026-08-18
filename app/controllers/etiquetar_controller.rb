@@ -291,6 +291,7 @@ end
 
     if @paquete.save
       link_pre_alertas(@paquete)
+      absorber_esperado_del_secundario(@paquete)
       @paquetes_hoy = paquetes_hoy_count
 
       respond_to do |format|
@@ -367,6 +368,9 @@ end
     paquetes.each { |p| aplicar_prepago_miami(p); p.save! }
     @paquete = paquetes.first
     paquetes.each { |p| link_pre_alertas(p) }
+    # El esperado del secundario se absorbe **una vez**, en la Caja 1: es un
+    # solo bulto anunciado dos veces, no uno por caja.
+    absorber_esperado_del_secundario(paquetes.first)
     @paquetes_hoy = paquetes_hoy_count
 
     respond_to do |format|
