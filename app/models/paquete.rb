@@ -163,6 +163,20 @@ class Paquete < ApplicationRecord
             absence: { message: "solo aplica si el paquete se pagó en Miami" },
             unless: :prepagado_miami?
 
+  # ── Contenido, obligatorio en Entrega Personal ────────────────────────
+  #
+  # Yusef: *"entrega personal, es obligatorio poner contenido"*. Un paquete de
+  # courier llega con su descripción del carrier; el que entra al mostrador de
+  # Miami no trae nada escrito, y si nadie lo teclea la etiqueta y el Warehouse
+  # Receipt salen diciendo qué pesa pero no qué es.
+  #
+  # Misma trampa que el método de prepago: los EP que ya están grabados sin
+  # contenido tienen que seguirse pudiendo guardar, si no editar cualquier otro
+  # campo de uno viejo lo traba con un error de algo que nadie tocó. Solo se
+  # exige al crear, o cuando alguien toca el campo — vaciarlo sí es un error.
+  validates :descripcion, presence: { message: "hay que decir qué es (Contenido)" },
+            if: -> { entrega_personal? && (new_record? || descripcion_changed?) }
+
   # PR-D1.c: tarifa fija pre-establecida $35 USD + ISV (Yusef 2026-04-29).
   # Editable por el cajero al crear/asignar la recolecta. No hay tabla de
   # tarifas por zona todavía porque siempre cambia.
@@ -935,6 +949,14 @@ class Paquete < ApplicationRecord
   # /etiquetar al recibir el paquete físico.
   def tareas_bloqueantes_pendientes?
     tareas.abiertas.where(bloquea_avance: true).exists?
+  end
+
+  # ¿Este paquete entró por el mostrador de Miami? La distinción vive en el
+  # catálogo (`Proveedor#tipo`), no en una columna del paquete — decisión de
+  # PR-D3.b. La recolecta también cae acá: vive dentro de la misma pantalla y
+  # su proveedor es de tipo entrega_personal (ver A7-22 en `rc_tracking_required?`).
+  def entrega_personal?
+    proveedor&.entrega_personal? || false
   end
 
   # Retry on guia collisions (old max+1 generator). numero_recepcion usa una

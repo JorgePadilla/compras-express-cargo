@@ -12,7 +12,10 @@ class PaqueteRcTrackingTest < ActiveSupport::TestCase
   end
 
   def crear_paquete(**overrides)
-    defaults = { cliente: @cliente, sucursal: @sucursal, tracking: nil }
+    # `descripcion` va en los defaults porque el proveedor de estas pruebas es
+    # de tipo entrega_personal y el Contenido pasó a ser obligatorio ahí.
+    defaults = { cliente: @cliente, sucursal: @sucursal, tracking: nil,
+                 descripcion: "Carga de prueba" }
     Paquete.create!(defaults.merge(overrides))
   end
 
