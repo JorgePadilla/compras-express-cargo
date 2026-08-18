@@ -300,7 +300,7 @@ end
       # por default) y la pantalla la muestra como sello, sin input. Dejarla
       # permitida haría que "read only" fuera solo de la vista — un request
       # armado a mano podría poner cualquier fecha.
-      pre_alerta_paquetes_attributes: %i[id tracking descripcion instrucciones _destroy]
+      pre_alerta_paquetes_attributes: %i[id tracking descripcion instrucciones retener_miami _destroy]
     )
   end
 end

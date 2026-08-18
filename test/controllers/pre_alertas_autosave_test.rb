@@ -19,7 +19,9 @@ require "test_helper"
 class PreAlertasAutosaveTest < ActionDispatch::IntegrationTest
   setup do
     post session_url, params: { email_address: users(:admin).email_address, password: "password123" }
-    @pa = pre_alertas(:activa)
+    # Consolidada: agregarle paquetes es justo lo que esta pantalla hace, y
+    # sin consolidar la regla nueva lo bloquea (que es lo que Yusef pidió).
+    @pa = pre_alertas(:consolidada_destino)
   end
 
   test "guardar dos veces no duplica el paquete" do

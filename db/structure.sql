@@ -1647,7 +1647,8 @@ CREATE TABLE public.pre_alerta_paquetes (
     fecha date,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    instrucciones text
+    instrucciones text,
+    retener_miami boolean DEFAULT false NOT NULL
 );
 
 
@@ -5893,6 +5894,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260818034108'),
 ('20260815032759'),
 ('20260813025449'),
 ('20260813023148'),

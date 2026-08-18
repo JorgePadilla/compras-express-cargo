@@ -94,6 +94,7 @@ class PreAlertasControllerTest < ActionDispatch::IntegrationTest
         cliente_id: clientes(:juan).id,
         tipo_envio_id: tipo_envios(:aereo).id,
         titulo: "Eager via controller",
+        consolidado: true,  # dos paquetes: la regla nueva pide consolidar
         pre_alerta_paquetes_attributes: {
           "0" => { tracking: "CTRLEAGER001", descripcion: "Uno" },
           "1" => { tracking: "CTRLEAGER002", descripcion: "Dos" }

@@ -25,6 +25,7 @@ class PreAlerta < ApplicationRecord
   validates :estado, presence: true
   validates :titulo, presence: true
   validate :respect_max_paquetes_por_accion
+  validate :sin_consolidar_va_un_solo_paquete
 
   accepts_nested_attributes_for :pre_alerta_paquetes, allow_destroy: true,
     reject_if: ->(attrs) {
@@ -190,6 +191,33 @@ class PreAlerta < ApplicationRecord
     active_paquetes = pre_alerta_paquetes.reject(&:marked_for_destruction?)
     return if active_paquetes.size <= 1
     errors.add(:base, "#{tipo_envio.nombre} solo permite 1 paquete por pre-alerta")
+  end
+
+  # Sin consolidar, una pre-alerta lleva **un** paquete.
+  #
+  # Yusef, probando staging: *"no marqué consolidado y me deja agregar más de 1,
+  # siempre en admin"*. La regla existía pero **solo en la vista del portal**:
+  # el botón «Agregar Otro Paquete» aparece únicamente si consolidaste. Admin no
+  # tenía nada, así que las dos pantallas decían cosas distintas.
+  #
+  # ── Por qué no valida siempre ──────────────────────────────────────────
+  #
+  # Si corriera en cada guardado, las pre-alertas que YA están así —sin
+  # consolidar y con varios paquetes— quedarían imposibles de guardar: abrir una
+  # para corregirle el título la trabaría con un error de algo que nadie tocó.
+  # Es la misma trampa que salió con el método de prepago.
+  #
+  # Corre cuando la pre-alerta es nueva o cuando cambia la cantidad de paquetes,
+  # que es cuando alguien está tomando la decisión.
+  def sin_consolidar_va_un_solo_paquete
+    return if consolidado?
+
+    activos = pre_alerta_paquetes.reject(&:marked_for_destruction?)
+    return if activos.size <= 1
+    return unless new_record? || activos.any? { |p| p.new_record? }
+
+    errors.add(:base, "Sin consolidar, la pre-alerta lleva un solo paquete. " \
+                      "Marcá «Consolidado» para agrupar varios.")
   end
 
   def generate_numero_documento

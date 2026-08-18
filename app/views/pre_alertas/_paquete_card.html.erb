@@ -80,6 +80,20 @@
             class: clases_de_input %>
       </div>
 
+      <%# Yusef: "nos hace falta la opción de Retener en Miami en Pre Alerta de
+          Admin". A veces se sabe antes de que el paquete llegue al mostrador.
+          El motivo se pide al etiquetar, que es cuando se conoce. %>
+      <label class="flex items-start gap-2 cursor-pointer rounded-lg ring-1 ring-amber-200 dark:ring-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2">
+        <%= pf.check_box :retener_miami,
+              class: "mt-0.5 rounded border-gray-300 dark:border-gray-600 text-amber-600 focus:ring-amber-500" %>
+        <span>
+          <span class="block text-sm font-medium text-amber-900 dark:text-amber-200">Retener en Miami</span>
+          <span class="block text-xs text-amber-700 dark:text-amber-300">
+            Llega marcado para no despacharse. El motivo se pide al etiquetarlo.
+          </span>
+        </span>
+      </label>
+
       <div>
         <label class="<%= clases_de_etiqueta %>">
           Instrucciones Especiales del Paquete <span class="text-xs font-normal text-gray-500">(opcional)</span>
