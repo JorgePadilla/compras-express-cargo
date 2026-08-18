@@ -232,18 +232,7 @@ end %>
 
       Va arriba de todo y en rojo porque es una decisión FÍSICA: en qué bolsa
       cae la caja. Si se entera tarde, hay que volver a abrir la bolsa. %>
-  <div data-etiquetar-target="sucursalBanner"
-       class="hidden mb-4 p-4 bg-red-50 border-2 border-red-300 rounded-lg">
-    <div class="flex items-center gap-3">
-      <%= heroicon "building-storefront", variant: :solid, options: { class: "w-6 h-6 text-red-600 shrink-0" } %>
-      <div>
-        <p class="text-xs font-bold uppercase tracking-wider text-red-700">Separar esta caja</p>
-        <p class="text-lg font-bold text-red-800">
-          Se entregará en <span data-etiquetar-target="sucursalTexto"></span>
-        </p>
-      </div>
-    </div>
-  </div>
+  <%= render "shared/aviso_sucursal_retiro", controlador: "etiquetar" %>
 
   <%# El segundo aviso que pidió: "solo quiero un modal al principio y uno al
       final". El del final sale después de imprimir, que es cuando el operario
@@ -489,9 +478,16 @@ end %>
         <div data-etiquetar-target="trackingSecundarioContainer" class="hidden mt-3">
           <%= f.label :tracking_secundario, "Tracking secundario",
               class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%# El secundario se revisa y se limpia igual que el primario. Antes no
+              llevaba ninguna acción: un número ya usado no avisaba, y lo que
+              escupía la pistola entraba crudo, con espacios y símbolos. %>
           <%= f.text_field :tracking_secundario,
               placeholder: "2do tracking (si el proveedor da 2 números para el mismo paquete)",
-              data: { etiquetar_target: "trackingSecundario" },
+              autocomplete: "off", inputmode: "latin", spellcheck: "false",
+              data: { etiquetar_target: "trackingSecundario",
+                      controller: "tracking-input",
+                      tracking_input_target: "input",
+                      action: "input->tracking-input#sanitize blur->etiquetar#checkTrackingSecundario" },
               class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono
                      focus:ring-cec-teal focus:border-cec-teal" %>
         </div>

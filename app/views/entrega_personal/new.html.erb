@@ -20,6 +20,10 @@ end %>
                   turbo:submit-end->audio#submitEnd
                   click@document->entrega-personal#clickOutsideDropdown">
 
+  <%# El aviso de sucursal de retiro, el mismo de /etiquetar. Antes no existía
+      acá: Yusef, "también misma situación no avisa que va a tegus". %>
+  <%= render "shared/aviso_sucursal_retiro", controlador: "entrega-personal" %>
+
   <%# Flash messages %>
   <div id="flash-messages" class="mb-4">
     <% if flash[:notice] %>
