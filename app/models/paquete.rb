@@ -868,6 +868,77 @@ class Paquete < ApplicationRecord
     where(numero_recepcion: paquete.numero_recepcion).order(:numero_caja)
   end
 
+  # ── Los fantasmas que quedaron de antes ─────────────────────────────────
+  #
+  # `PR-C7.20` arregla el origen: /etiquetar ya no deja huérfano el paquete que
+  # la pre-alerta dejó esperando. Pero los que ya están grabados siguen ahí,
+  # sacando una etiqueta de más y contando como pieza en su Warehouse Receipt.
+  #
+  # Un fantasma es un paquete en `pre_alerta_estado` que comparte **tracking y
+  # cliente** con cajas que ya llegaron. Lo del cliente no es adorno: el courier
+  # recicla números de tracking, y sin ese filtro se borraría lo que otro
+  # cliente está esperando de verdad.
+  #
+  # Se reapunta la pre-alerta y las tareas a la caja de menor número, y el
+  # fantasma se borra. Se llama desde una migración, pero vive acá porque un
+  # método se puede testear y un archivo de migración no.
+  #
+  # **No toca nada de usuarios**: ni `user_id` ni los `*_by_user_id`. Quién
+  # registró qué se queda como está.
+  #
+  # Devuelve `{ reconciliados:, saltados: }`, donde `saltados` dice por qué.
+  # Es idempotente: en la segunda pasada no encuentra nada.
+  def self.reconciliar_fantasmas!
+    resultado = { reconciliados: [], saltados: [] }
+
+    where(estado: "pre_alerta_estado").where.not(tracking: [ nil, "" ]).find_each do |fantasma|
+      cajas = where(tracking: fantasma.tracking, cliente_id: fantasma.cliente_id)
+                .where.not(id: fantasma.id)
+                .where.not(estado: NO_SON_CAJAS)
+                # `NULLS LAST` a propósito: en Ruby `nil.to_i` es 0 y una caja
+                # sin número se colaría de primera.
+                .order(Arel.sql("numero_caja ASC NULLS LAST, id ASC"))
+      caja = cajas.first
+      next if caja.nil?
+
+      if (documento = fantasma.documento_que_lo_ata)
+        resultado[:saltados] << [ fantasma.id, documento ]
+        next
+      end
+
+      transaction do
+        PreAlertaPaquete.where(paquete_id: fantasma.id).update_all(paquete_id: caja.id)
+        Tarea.where(paquete_id: fantasma.id).update_all(paquete_id: caja.id)
+        fantasma.destroy!
+      end
+      caja.pre_alerta_paquetes.reload.each { |pap| pap.pre_alerta&.actualizar_estado_from_paquetes! }
+      resultado[:reconciliados] << [ fantasma.id, caja.id ]
+    rescue StandardError => e
+      # Cada fantasma en su propio rescue: esto camina datos viejos, y una fila
+      # sucia no puede tumbar el deploy entero.
+      resultado[:saltados] << [ fantasma.id, "#{e.class}: #{e.message}" ]
+    end
+
+    resultado
+  end
+
+  # Si algo de plata o de papel ya lo nombra, no se borra. Mismo espíritu que
+  # `CajaNoEliminable`: un registro que entró a un documento no desaparece en
+  # silencio.
+  def documento_que_lo_ata
+    {
+      "pre_factura_items"  => PreFacturaItem,
+      "venta_items"        => VentaItem,
+      "nota_debito_items"  => NotaDebitoItem,
+      "nota_credito_items" => NotaCreditoItem,
+      "cotizacion_items"   => CotizacionItem,
+      "reempaques"         => Reempaque
+    }.each do |nombre, modelo|
+      return nombre if modelo.where(paquete_id: id).exists?
+    end
+    nil
+  end
+
   # Construye un WarehouseReceipt para el split. Solo se crea cuando hay
   # cliente+receipt_number+sucursal — ausente en fixtures y tests legacy.
   # Retorna nil cuando faltan datos para no romper esos casos.
