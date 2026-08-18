@@ -21,7 +21,9 @@ class FlatpickrSinTarjetasTest < ApplicationSystemTestCase
   setup { ingresar(users(:digitador)) }
 
   test "el campo visible que crea flatpickr no se ofrece al autofill" do
-    visit new_pre_alerta_path
+    # Se prueba en `/paquetes` y no en la pre-alerta: ahí la fecha pasó a ser un
+    # sello sin input, así que ya no hay flatpickr que probar.
+    visit paquetes_path
     assert_selector "input.flatpickr-input", wait: 5, visible: :all
 
     alt = find("input.form-control.input", match: :first, visible: :all)
@@ -32,9 +34,17 @@ class FlatpickrSinTarjetasTest < ApplicationSystemTestCase
     assert_equal "other", alt["data-form-type"]
   end
 
-  test "vale para todas las fechas, no solo la de la pre-alerta" do
-    # El arreglo vive en el controller de flatpickr, así que las seis fechas de
-    # la app quedan cubiertas. Se prueba en otra pantalla para fijarlo.
+  test "la fecha de la pre-alerta ya no es un campo" do
+    # Jorge la pidió read only y que el Tab la salte. Sin input no hay flatpickr,
+    # no hay autofill y no hay parada de tabulación.
+    visit new_pre_alerta_path
+    assert_selector "form", wait: 5
+
+    assert_no_selector "input[name$='[fecha]']", visible: :all
+    assert_text Date.current.strftime("%d/%m/%Y")
+  end
+
+  test "ninguna fecha visible queda sin proteger" do
     visit paquetes_path
     assert_selector "input.flatpickr-input", wait: 5, visible: :all
 

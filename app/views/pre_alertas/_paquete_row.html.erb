@@ -77,9 +77,13 @@
           class: clases_de_input_compacto %>
     </td>
 
+    <%# Igual que en `new`: la fecha la pone el servidor y no se edita. Es un
+        sello, no un dato que el operario elija — el portal ya la mostraba así.
+        Sin input, el Tab la salta y no hay autofill que la confunda. %>
     <td class="px-4 py-2">
-      <%= pf.date_field :fecha, data: { controller: "flatpickr" },
-          class: clases_de_input_compacto %>
+      <span class="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+        <%= (pap.fecha || Date.current).strftime("%d/%m/%Y") %>
+      </span>
     </td>
 
     <%# PR-C6.25: el estado por tracking, que solo estaba en `show`. Yusef:

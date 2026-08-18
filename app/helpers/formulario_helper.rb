@@ -33,6 +33,21 @@ module FormularioHelper
     clases_de_input.sub("px-3 py-2.5", "px-2 py-1.5")
   end
 
+  # Un dato que se muestra pero no se edita — la fecha de la pre-alerta, que la
+  # pone el servidor.
+  #
+  # Va como `<span>` y NO como `<input readonly>` a propósito: un input
+  # readonly sigue entrando en el orden de tabulación, y Jorge pidió que el Tab
+  # lo salte. En Miami trabajan solo con teclado ("usamos las manos para
+  # trabajar"), así que un campo que no se puede editar y roba un tab es un
+  # estorbo en cada paquete.
+  #
+  # Se ve como un campo para que se lea igual que sus vecinos, pero apagado.
+  def clases_de_campo_sellado
+    "block w-full rounded-lg border border-gray-200 dark:border-gray-700 " \
+      "bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 px-3 py-2.5 text-sm"
+  end
+
   # El input de texto estándar de estas pantallas.
   def clases_de_input
     "block w-full rounded-lg border border-gray-300 dark:border-gray-600 " \

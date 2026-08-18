@@ -296,7 +296,11 @@ end
     params.require(:pre_alerta).permit(
       :cliente_id, :tipo_envio_id, :consolidado, :con_reempaque,
       :notas_grupo, :estado, :titulo, :proveedor,
-      pre_alerta_paquetes_attributes: %i[id tracking descripcion fecha instrucciones _destroy]
+      # `fecha` NO se permite: la pone el servidor (`PreAlertaPaquete` la trae
+      # por default) y la pantalla la muestra como sello, sin input. Dejarla
+      # permitida haría que "read only" fuera solo de la vista — un request
+      # armado a mano podría poner cualquier fecha.
+      pre_alerta_paquetes_attributes: %i[id tracking descripcion instrucciones _destroy]
     )
   end
 end
