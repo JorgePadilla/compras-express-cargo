@@ -126,7 +126,24 @@
       // cambiaba el comportamiento —se verificó quitándolo y ningún test
       // falla— y hacía creer que el fix no servía cuando se probaba pegando
       // el link en la barra de direcciones.
+      // Yusef: *"si después de imprimir la etiqueta, te tire automáticamente
+      // el Recibo de Bodega"*. /entrega_personal lo intentaba con un segundo
+      // `window.open` y **Chrome bloqueaba ese**: un gesto del usuario alcanza
+      // para un popup, no para dos. Reproducido con el bloqueador puesto —
+      // salía la etiqueta y nada más.
+      //
+      // Así que el Warehouse Receipt no abre otra ventana: se lleva ESTA, que
+      // ya está abierta y no le pide permiso a nadie. Solo pasa cuando la
+      // pantalla lo pidió (`wr=1`); el resto de las etiquetas siguen cerrando.
+      var despues = <%= raw((@despues_de_imprimir || "").to_json) %>;
+
       function cerrar() {
+        if (despues) {
+          // `replace` y no `href`: el Atrás del navegador no tiene por qué
+          // volver a una etiqueta que ya se imprimió y se iba a cerrar.
+          window.location.replace(despues);
+          return;
+        }
         window.close();
       }
 
