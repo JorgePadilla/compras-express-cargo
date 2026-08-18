@@ -35,6 +35,25 @@ class PreAlertaPaquete < ApplicationRecord
        .where("LENGTH(pre_alerta_paquetes.tracking) >= ?", Paquete::ESCANEO_LARGO_MINIMO)
   end
 
+  # La fecha nace puesta, no se llena recién al validar.
+  #
+  # Jorge: *"pongamos la fecha que se está haciendo, por defecto en el campo"*.
+  # `set_default_fecha` ya la ponía —o sea que se guardaba bien— pero el campo
+  # salía **vacío** en la pantalla: el operario no sabía qué fecha iba a quedar,
+  # y el dato parecía faltante.
+  #
+  # Va como default del atributo y no como `after_initialize` a propósito: la
+  # API de `attribute` aplica el default **solo a instancias nuevas**. Un
+  # registro viejo con `fecha` nula se sigue leyendo nulo, en vez de que
+  # cualquier lectura le invente una fecha de hoy que nunca tuvo.
+  #
+  # Con esto alcanza para los dos lugares donde nace una fila: el
+  # `pre_alerta_paquetes.build` del controller y el `PreAlertaPaquete.new` del
+  # `<template>` de filas nuevas.
+  attribute :fecha, :date, default: -> { Date.current }
+
+  # Se queda como red: si alguien manda la fecha en blanco explícitamente —un
+  # request a mano, un import— igual entra con la de hoy.
   before_validation :set_default_fecha
   before_validation :normalize_tracking
 
