@@ -35,6 +35,22 @@ class EtiquetarCajasModalTest < ApplicationSystemTestCase
     assert_selector "#paquete_tracking", wait: 5
   end
 
+  # Guardar con impresión abre la etiqueta en otra pestaña. Si se quedan
+  # abiertas, el test siguiente arranca en la pestaña equivocada — y el síntoma
+  # no dice eso: `EtiquetaCierraVentanaTest` empezó a fallar con "no encuentro
+  # el campo email_address", que parece un problema de login.
+  teardown do
+    b = page.driver.browser
+    principal = b.window_handles.first
+    b.window_handles[1..].to_a.each do |h|
+      b.switch_to.window(h)
+      b.close
+    end
+    b.switch_to.window(principal)
+  rescue StandardError
+    # Si el navegador ya se cerró, no hay nada que limpiar.
+  end
+
   test "ya no hay un campo de cantidad de cajas" do
     # `A7-20`. Mientras exista, hay dos fuentes para el mismo número.
     assert_no_selector "#paquete_cantidad_paquetes", visible: :all
