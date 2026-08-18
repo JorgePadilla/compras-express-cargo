@@ -156,7 +156,10 @@ class PreAlertaPaquete < ApplicationRecord
       descripcion: descripcion,
       estado: "pre_alerta_estado",
       user: Current.user,
-      pre_alerta: true
+      pre_alerta: true,
+      # La retención marcada desde la pre-alerta viaja al paquete esperado, así
+      # el que lo recibe en Miami ya lo ve marcado sin tener que acordarse.
+      retener_miami: retener_miami
     )
     update_columns(paquete_id: paquete.id)
   end
@@ -167,12 +170,16 @@ class PreAlertaPaquete < ApplicationRecord
   # tocamos.
   def sync_paquete_esperado
     return unless paquete_id.present?
-    return unless saved_change_to_tracking? || saved_change_to_descripcion?
+    # `retener_miami` entra acá también: si se marca DESPUÉS de crear la
+    # pre-alerta, el paquete esperado tiene que enterarse igual. Sin esto, la
+    # bandera solo funcionaba al crear.
+    return unless saved_change_to_tracking? || saved_change_to_descripcion? ||
+                  saved_change_to_retener_miami?
 
     p = paquete
     return unless p && p.estado == "pre_alerta_estado"
 
-    p.update!(tracking: tracking, descripcion: descripcion)
+    p.update!(tracking: tracking, descripcion: descripcion, retener_miami: retener_miami)
   end
 
   # PR-9.a: las instrucciones del cliente ("el celular por Express, la ropa

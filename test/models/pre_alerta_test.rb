@@ -146,6 +146,7 @@ class PreAlertaTest < ActiveSupport::TestCase
       cliente: @cliente,
       tipo_envio: @tipo_envio,
       titulo: "Test",
+      consolidado: true,  # dos paquetes: la regla nueva pide consolidar
       creado_por_tipo: "cliente",
       creado_por_id: @cliente.id,
       pre_alerta_paquetes_attributes: [
@@ -161,6 +162,7 @@ class PreAlertaTest < ActiveSupport::TestCase
       cliente: @cliente,
       tipo_envio: @tipo_envio,
       titulo: "Test",
+      consolidado: true,  # dos paquetes: la regla nueva pide consolidar
       creado_por_tipo: "cliente",
       creado_por_id: @cliente.id,
       pre_alerta_paquetes_attributes: [
@@ -221,6 +223,7 @@ class PreAlertaTest < ActiveSupport::TestCase
       cliente: @cliente,
       tipo_envio: cka,
       titulo: "Test",
+      consolidado: true,  # dos paquetes: la regla nueva pide consolidar
       creado_por_tipo: "cliente",
       creado_por_id: @cliente.id,
       pre_alerta_paquetes_attributes: [
@@ -238,6 +241,7 @@ class PreAlertaTest < ActiveSupport::TestCase
       cliente: @cliente,
       tipo_envio: ckm,
       titulo: "Test",
+      consolidado: true,  # dos paquetes: la regla nueva pide consolidar
       creado_por_tipo: "cliente",
       creado_por_id: @cliente.id,
       pre_alerta_paquetes_attributes: [
@@ -442,6 +446,7 @@ class PreAlertaTest < ActiveSupport::TestCase
       cliente: @cliente,
       tipo_envio: cer,
       titulo: "Test",
+      consolidado: true,  # dos paquetes: la regla nueva pide consolidar
       creado_por_tipo: "cliente",
       creado_por_id: @cliente.id,
       pre_alerta_paquetes_attributes: [
@@ -462,6 +467,7 @@ class PreAlertaTest < ActiveSupport::TestCase
         cliente: @cliente,
         tipo_envio: cer,
         titulo: "Eager test",
+        consolidado: true,  # dos paquetes: la regla nueva pide consolidar
         creado_por_tipo: "cliente",
         creado_por_id: @cliente.id,
         pre_alerta_paquetes_attributes: [
@@ -479,6 +485,7 @@ class PreAlertaTest < ActiveSupport::TestCase
       cliente: @cliente,
       tipo_envio: cer,
       titulo: "Cascade test",
+      consolidado: true,  # dos paquetes: la regla nueva pide consolidar
       creado_por_tipo: "cliente",
       creado_por_id: @cliente.id,
       pre_alerta_paquetes_attributes: [

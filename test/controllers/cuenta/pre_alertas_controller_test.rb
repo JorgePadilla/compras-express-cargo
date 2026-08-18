@@ -212,6 +212,10 @@ class Cuenta::PreAlertasControllerTest < ActionDispatch::IntegrationTest
 
   # Update
   test "should update pre_alerta with paquetes" do
+    # Agregar un paquete pide consolidar: es la regla que Yusef pidió ("no
+    # marqué consolidado y me deja agregar más de 1").
+    @pre_alerta.update_column(:consolidado, true)
+
     patch cuenta_pre_alerta_url(@pre_alerta), params: {
       pre_alerta: {
         notas_grupo: "Updated notes",
