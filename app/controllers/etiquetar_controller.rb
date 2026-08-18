@@ -3,6 +3,10 @@ class EtiquetarController < ApplicationController
   # /entrega_personal. El sellado va por el concern para que las dos pantallas
   # no se separen — que es como llegó a faltar la forma de pago.
   include PrepagoMiami
+  # Encontrar el paquete que la pre-alerta dejó esperando. Va por concern por lo
+  # mismo: `create_single` lo hacía y `create_split` no, y por esa diferencia un
+  # tracking pre-alertado que llegaba dividido imprimía 3 etiquetas para 2 cajas.
+  include ReconciliarPreAlerta
   # PR-C6.22: etiquetar es **recibir**, no empacar.
   #
   # Yusef, 2026-08-08, revisando la bitácora de un paquete recién etiquetado:
@@ -200,29 +204,18 @@ end
   # para una sola. Sin eso, ese peso y esas medidas se perdían.
   def create_single(medidas = {})
     # Reconciliación: si ya existe un paquete "esperado" creado desde una
-    # pre-alerta con este tracking, lo transicionamos en lugar de crear
-    # uno nuevo (evita duplicados).
-    #
-    # PR-C6.21: por la escalera de `buscar_escaneado`, no por match exacto. La
-    # pistola lee el código completo del carrier y el cliente pre-alertó solo
-    # la cola ("el tracking de USPS solo es desde donde dice 92"), así que el
-    # exacto fallaba y el paquete esperado quedaba huérfano mientras nacía uno
-    # nuevo al lado.
+    # pre-alerta con este tracking, lo transicionamos en lugar de crear uno
+    # nuevo. La regla vive en `ReconciliarPreAlerta` porque `create_split` la
+    # necesita igual — escrita acá otra vez, las dos rutas se separan.
     escaneado = paquete_params[:tracking].to_s.strip
-    existing = Paquete.where(estado: "pre_alerta_estado").buscar_escaneado(escaneado).first
+    esperado = paquete_esperado(escaneado)
+    tracking, secundario = trackings_reconciliados(esperado, escaneado)
 
-    if existing
-      @paquete = existing
-      # Cuando el match vino por sufijo, el tracking del cliente es el que ya
-      # estaba: es el que él tiene en la mano y por el que va a preguntar. Se
-      # conserva, y lo que escupió la pistola se guarda como secundario para
-      # que el mismo escaneo lo vuelva a encontrar.
-      tracking_del_cliente = existing.tracking.to_s
+    if esperado
+      @paquete = esperado
       @paquete.assign_attributes(paquete_params.merge(medidas))
-      unless escaneado.casecmp?(tracking_del_cliente)
-        @paquete.tracking = tracking_del_cliente
-        @paquete.tracking_secundario = escaneado if @paquete.tracking_secundario.blank?
-      end
+      @paquete.tracking = tracking
+      @paquete.tracking_secundario = secundario if secundario && @paquete.tracking_secundario.blank?
     else
       @paquete = Paquete.new(paquete_params.merge(medidas))
     end
@@ -311,8 +304,19 @@ end
       )
     end
 
+    # Lo mismo que hace `create_single`: si la pre-alerta dejó un paquete
+    # esperando con este tracking, ese se vuelve la Caja 1 en vez de quedarse
+    # huérfano al lado. El tracking del cliente manda sobre las N cajas —
+    # comparten uno solo— y lo que escupió la pistola viaja como secundario en
+    # `attrs`, así que cualquiera de ellas se encuentra volviendo a escanear.
+    escaneado = paquete_params[:tracking].to_s.strip
+    esperado = paquete_esperado(escaneado)
+    tracking, secundario = trackings_reconciliados(esperado, escaneado)
+    attrs = attrs.merge(tracking: tracking)
+    attrs = attrs.merge(tracking_secundario: secundario) if secundario && attrs[:tracking_secundario].blank?
+
     paquetes = Paquete.crear_split!(attrs: attrs, total_cajas: total_cajas,
-                                    por_caja: medidas_por_caja)
+                                    por_caja: medidas_por_caja, reusar: esperado)
     if (prov_str = proveedor_string_param) != :missing && prov_str.present?
       paquetes.each { |p| p.update_column(:proveedor, prov_str) }
     end

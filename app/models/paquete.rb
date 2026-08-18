@@ -699,7 +699,16 @@ class Paquete < ApplicationRecord
   # peso de cada quien". Antes las N cajas nacían con el MISMO peso, así que un
   # tracking con una caja de 5 lb y otra de 30 se facturaba como dos de 5 —
   # o como dos de 30, según cuál hubieran escrito.
-  def self.crear_split!(attrs:, total_cajas:, por_caja: {})
+  # `reusar:` es el paquete que la pre-alerta dejó esperando. Cuando viene, la
+  # **Caja 1 no se crea: se transiciona ese registro**. Es lo mismo que
+  # `create_single` hace desde siempre; acá faltaba, y por eso el esperado
+  # quedaba huérfano al lado de las cajas nuevas, con el mismo tracking.
+  #
+  # Reusar la caja **1** y no otra no es casualidad: `ajustar_split!` solo borra
+  # `numero_caja > m`, así que la 1 sobrevive a que Yusef suba y baje la
+  # cantidad de cajas. Cualquier otra se podría borrar y dejar la pre-alerta
+  # apuntando a un registro muerto.
+  def self.crear_split!(attrs:, total_cajas:, por_caja: {}, reusar: nil)
     n = total_cajas.to_i
     raise ArgumentError, "total_cajas debe ser >= 2" if n < 2
 
@@ -752,7 +761,18 @@ class Paquete < ApplicationRecord
         }
         comunes[:tracking] = tracking_comun if tracking_comun
 
-        caja = Paquete.create!(attrs.merge(propios).merge(comunes))
+        todos = attrs.merge(propios).merge(comunes)
+        caja =
+          if i == 1 && reusar
+            # `assign_attributes` + `save!` y no `update!`: `todos` puede venir
+            # como `ActionController::Parameters` permitidos, igual que en el
+            # `create!` de abajo.
+            reusar.assign_attributes(todos)
+            reusar.save!
+            reusar
+          else
+            Paquete.create!(todos)
+          end
         # La primera caja es la que dispara el contador; las demás heredan.
         tracking_comun ||= caja.tracking
         caja
