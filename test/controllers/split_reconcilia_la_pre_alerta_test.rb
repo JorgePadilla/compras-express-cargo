@@ -94,6 +94,31 @@ class SplitReconciliaLaPreAlertaTest < ActionDispatch::IntegrationTest
     assert_nil cajas.first.tracking_secundario
   end
 
+  test "si una caja no valida, el esperado queda como estaba" do
+    # El camino de la falla, que es el que nadie mira. `crear_split!` guarda la
+    # Caja 1 —o sea el esperado— y después las demás, todo adentro de una
+    # transacción. Si la segunda no valida, la base tiene que quedar como si
+    # nadie hubiera tocado nada: el esperado sigue esperando, no a medio
+    # transicionar con `numero_caja 1` puesto.
+    pap = pre_alertar("1Z999CAJAINVALIDA")
+    esperado = pap.paquete
+
+    assert_no_difference "Paquete.count" do
+      post etiquetar_url, params: {
+        paquete: datos_base.merge(tracking: pap.tracking,
+                                  cajas: { "1" => { peso: 12.5 }, "2" => { peso: -5 } })
+      }
+    end
+
+    assert_response :unprocessable_entity
+    esperado.reload
+    assert_equal "pre_alerta_estado", esperado.estado
+    assert_nil esperado.numero_caja
+    assert_nil esperado.numero_recepcion
+    assert_equal esperado.id, pap.reload.paquete_id
+    assert_equal "pre_alerta", pap.pre_alerta.reload.estado
+  end
+
   test "un tracking que ya se recibio NO se reusa: es un duplicado, no un esperado" do
     # Solo se reconcilia contra lo que está **esperando**. Un tracking que ya
     # entró es el caso del modal de repetido —el courier recicla números— y
