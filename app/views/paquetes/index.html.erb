@@ -423,14 +423,19 @@ end %>
               </td>
               <td class="px-3 py-2 whitespace-nowrap" data-campo="tracking">
                 <div class="flex items-center gap-1.5">
-                  <%= link_to truncate(paquete.tracking, length: 18), paquete, class: "font-mono text-xs text-gray-700 dark:text-gray-200 hover:underline" %>
+                  <%# Completo, sin `truncate`. Yusef, 2026-08-18: *"el tracking
+                      necesitamos verlo completo… si no, vamos a tener que estar
+                      entrando a cada tracking para poder encontrar uno"*, y
+                      *"para leérselo al cliente"*. Es la misma regla que ya
+                      valía para la etiqueta impresa y que nunca llegó acá. %>
+                  <%= link_to paquete.tracking, paquete, class: "font-mono text-xs text-gray-700 dark:text-gray-200 hover:underline" %>
                   <% if paquete.dividido? %>
                     <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold font-mono bg-cec-gold-gradient text-white shadow-sm" title="Caja <%= paquete.numero_caja %> de <%= paquete.cantidad_paquetes %>"><%= paquete.etiqueta_secuencia %></span>
                   <% end %>
                 </div>
                 <% if paquete.tracking_secundario.present? %>
                   <div class="font-mono text-[10px] text-gray-500 dark:text-gray-400 mt-0.5" title="Tracking secundario">
-                    <%= truncate(paquete.tracking_secundario, length: 22) %>
+                    <%= paquete.tracking_secundario %>
                   </div>
                 <% end %>
               </td>
@@ -445,11 +450,16 @@ end %>
                   </span>
                 <% end %>
               </td>
+              <%# El rótulo corto, no el del cliente. Yusef pidió el ancho para
+                  el tracking —"necesitamos verlo completo"— y señaló de dónde
+                  sacarlo: "le puedes poner «rep Miami»… «hn», no pones Honduras
+                  sino que «hn»". La frase entera sigue estando, en el `title`.
+
+                  La línea de "en Tegucigalpa" se fue con lo mismo: el rótulo
+                  corto ya se lleva el código de la sucursal pegado. %>
               <td class="px-3 py-2 whitespace-nowrap">
-                <%= render StatusBadgeComponent.new(status: paquete.estado, label: estado_de(paquete)) %>
-                <% if paquete.disponible_entrega? && paquete.sucursal %>
-                  <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">en <%= paquete.sucursal.nombre %></p>
-                <% end %>
+                <%= render StatusBadgeComponent.new(status: paquete.estado,
+                      label: estado_corto(paquete), title: estado_de(paquete)) %>
               </td>
               <td class="px-3 py-2 whitespace-nowrap text-center">
                 <span class="font-mono text-[10px] font-bold text-cec-navy dark:text-cec-gold-light"><%= paquete.tipo_envio&.codigo&.upcase || "—" %></span>

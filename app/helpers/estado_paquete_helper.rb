@@ -70,4 +70,55 @@ module EstadoPaqueteHelper
       base
     end
   end
+
+  # ── El mismo estado, para la tabla del operador ─────────────────────────
+  #
+  # Yusef, 2026-08-18, midiendo el ancho de `/paquetes` con el mouse: *"el
+  # tracking necesitamos verlo completo… si no, vamos a tener que estar entrando
+  # a cada tracking para poder encontrar uno"*. Y de dónde sacar el espacio lo
+  # señaló él mismo: *"le puedes poner «rep Miami»… «hn», no pones Honduras sino
+  # que «hn», cosas así"*.
+  #
+  # **No se toca `ETIQUETAS`.** Esos rótulos largos son los que ve el cliente y
+  # los peleó él mismo en A7-13, contra la resistencia de Jorge a alargarlos:
+  #
+  #   > "Un cliente me dijo: recibí un WhatsApp que ya tengo disponible el
+  #   >  producto, pero entro a la página y me dice que todavía no."
+  #
+  # Son dos audiencias distintas: el cliente necesita la frase entera, el
+  # operario necesita el ancho. El largo sigue estando, en el `title`.
+  CORTAS = {
+    "pre_alerta_estado"     => "PRE-ALERTA",
+    "recibido_miami"        => "REC MIAMI",
+    "consolidando_miami"    => "CONS MIAMI",
+    "empacado"              => "EMPACADO",
+    "enviado_honduras"      => "ENVIADO HN",
+    "en_aduana"             => "ADUANA",
+    "consolidando_honduras" => "CONS HN",
+    "disponible_entrega"    => "DISPONIBLE",
+    "enviado_sucursal"      => "ENVIADO",
+    "pre_facturado"         => "PRE-FACT",
+    "facturado"             => "FACTURADO",
+    "en_reparto"            => "REPARTO",
+    "recoleta_en_proceso"   => "RECOLECTA",
+    "entregado"             => "ENTREGADO",
+    "retenido"              => "RETENIDO",
+    "retornado"             => "RETORNADO",
+    "desechado"             => "DESECHADO",
+    "anulado"               => "ANULADO"
+  }.freeze
+
+  # Los tres estados donde la sucursal **es** el dato que falta se la llevan
+  # pegada, con el código de tres letras que ya existe (`MIA`, `SPS`, `TGU`).
+  # Es lo mismo que hace `estado_de`, pero en tres letras en vez de la frase.
+  ESTADOS_CON_SUCURSAL = %w[disponible_entrega enviado_sucursal entregado].freeze
+
+  def estado_corto(paquete)
+    base = CORTAS[paquete.estado.to_s] || paquete.estado.to_s.upcase
+    return base unless ESTADOS_CON_SUCURSAL.include?(paquete.estado.to_s)
+
+    sucursal = paquete.estado == "enviado_sucursal" ? (paquete.sucursal_destino || paquete.sucursal) : paquete.sucursal
+    codigo = sucursal&.codigo
+    codigo.present? ? "#{base} #{codigo.upcase}" : base
+  end
 end

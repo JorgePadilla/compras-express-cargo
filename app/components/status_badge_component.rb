@@ -40,13 +40,18 @@ class StatusBadgeComponent < ViewComponent::Base
     "inactivo" => NEUTRAL, "retiro_oficina" => NEUTRAL
   }.freeze
 
-  def initialize(status:, label: nil)
+  # `title:` es para cuando el rótulo visible va abreviado — la tabla de
+  # `/paquetes` usa el corto para no comerse el ancho del tracking, y deja el
+  # largo debajo del mouse. Sin él, un `REC MIAMI` sería una sigla y nada más.
+  def initialize(status:, label: nil, title: nil)
     @status = status.to_s
     @label = label || @status.humanize
+    @title = title
   end
 
   def call
     content_tag :span, @label,
+      title: @title,
       class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium #{color_classes}"
   end
 
