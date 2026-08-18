@@ -670,11 +670,27 @@ class Paquete < ApplicationRecord
     "#{numero_caja}/#{cantidad_paquetes}"
   end
 
-  # Otros bultos del mismo tracking dividido (sin incluir self). Útiles
-  # para mostrar "ver hermanos" en el detalle.
+  # Estados en los que el paquete **no es una caja física** que alguien pueda
+  # tener en la mano. `pre_alerta_estado` es lo que el cliente anunció y todavía
+  # no llegó: se le materializa un registro para que aparezca en /paquetes, pero
+  # no se etiqueta ni cuenta como pieza en un Warehouse Receipt.
+  NO_SON_CAJAS = %w[pre_alerta_estado].freeze
+
+  # Las otras cajas del mismo tracking dividido, sin incluirse a sí misma.
+  #
+  # **Este es el único lugar donde se resuelve quiénes son las hermanas.** Antes
+  # estaba escrito también a mano en `PaquetesController#etiqueta`, y por eso un
+  # paquete esperado que compartía tracking se colaba en las etiquetas —salían 3
+  # para 2 cajas— mientras el Warehouse Receipt, que sí pasaba por acá, se
+  # colaba por el mismo lado sin que nadie lo relacionara.
+  #
+  # El filtro por estado es la red de abajo: `PR-C7.20` hace que /etiquetar ya no
+  # deje esperados huérfanos, pero un esperado puede aparecer igual —el cliente
+  # pre-alerta un tracking **después** de que la carga llegó, por ejemplo— y una
+  # etiqueta de más se pega en una caja que no existe.
   def paquetes_hermanos
     return Paquete.none unless dividido? && tracking.present?
-    Paquete.where(tracking: tracking).where.not(id: id)
+    Paquete.where(tracking: tracking).where.not(id: id).where.not(estado: NO_SON_CAJAS)
   end
 
   # Crea N paquetes "hijos" en una sola transacción cuando el digitador
