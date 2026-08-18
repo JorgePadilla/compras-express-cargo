@@ -59,8 +59,15 @@
 
         <div>
           <label class="<%= clases_de_etiqueta %>">Fecha</label>
-          <%= pf.date_field :fecha, data: { controller: "flatpickr" },
-              class: clases_de_input %>
+          <%# La pone el servidor y no se edita: es el sello de cuándo se cargó
+              la pre-alerta, no una fecha que el operario elija. El portal ya la
+              mostraba así —como texto, nunca como campo— y admin era el único
+              lugar donde se podía tocar.
+
+              Como no es un input, el Tab lo salta solo (Jorge lo pidió) y de
+              paso desaparece el autofill de tarjetas que traía flatpickr. El
+              valor no viaja en el form: lo pone el default del atributo. %>
+          <p class="<%= clases_de_campo_sellado %>"><%= (pap.fecha || Date.current).strftime("%d/%m/%Y") %></p>
         </div>
       </div>
 
