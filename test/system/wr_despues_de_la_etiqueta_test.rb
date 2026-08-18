@@ -17,11 +17,14 @@ require "application_system_test_case"
 # `--disable-popup-blocking`. Se comprobó — un `window.open` sin ningún gesto
 # del usuario abría igual, y dos seguidas abrían dos. O sea que el harness de
 # siempre no puede ver este síntoma: da verde pase lo que pase. Por eso esta
-# clase le saca ese switch y corre con un Chrome como el de Miami.
+# clase corre con `:chrome_con_bloqueador_de_popups`, que es un Chrome como el
+# de Miami.
 class WrDespuesDeLaEtiquetaTest < ApplicationSystemTestCase
-  driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1400 ] do |options|
-    options.exclude_switches = [ "disable-popup-blocking" ]
-  end
+  # El driver con el bloqueador puesto vive en `application_system_test_case.rb`.
+  # Tiene nombre propio a propósito: un bloque en `driven_by :selenium` se pierde
+  # en la corrida completa, porque Capybara reusa el navegador de la primera
+  # clase — y ahí este archivo volvía a probar contra un Chrome permisivo.
+  driven_by :chrome_con_bloqueador_de_popups
 
   setup do
     visit new_session_path
@@ -88,6 +91,8 @@ class WrDespuesDeLaEtiquetaTest < ApplicationSystemTestCase
   ensure
     cerrar_pestanas_extra
   end
+
+
 
   private
 
