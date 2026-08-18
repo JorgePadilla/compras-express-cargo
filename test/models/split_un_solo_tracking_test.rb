@@ -26,6 +26,8 @@ class SplitUnSoloTrackingTest < ActiveSupport::TestCase
     Paquete.crear_split!(
       attrs: { cliente: @cliente, tipo_envio: @cer, proveedor: @driver,
                sucursal_recepcion: @miami, user: users(:admin),
+               # El proveedor es de entrega personal: sin Contenido no guarda.
+               descripcion: "Carga de prueba",
                estado: "recibido_miami" }.merge(extra),
       total_cajas: total,
       por_caja: { 1 => { peso: 5, alto: 10, largo: 5,  ancho: 15 },
@@ -87,6 +89,7 @@ class SplitUnSoloTrackingTest < ActiveSupport::TestCase
 
   test "el prefijo sale de la sucursal de recepcion, no de la de retiro" do
     p = Paquete.create!(cliente: @cliente, proveedor: @driver, tracking: nil,
+                        descripcion: "Carga de prueba",
                         sucursal_recepcion: @miami, sucursal: sucursales(:humuya_tgu))
 
     assert_match(/\AEP-\d{4}-SMI-/, p.tracking,
@@ -97,6 +100,7 @@ class SplitUnSoloTrackingTest < ActiveSupport::TestCase
   # de `sucursal_del_numero` los deja andando.
   test "sin sucursal de recepcion cae en la de retiro, como antes" do
     p = Paquete.create!(cliente: @cliente, proveedor: @driver, tracking: nil,
+                        descripcion: "Carga de prueba",
                         sucursal: @miami)
 
     assert_match(/\AEP-\d{4}-SMI-/, p.tracking)

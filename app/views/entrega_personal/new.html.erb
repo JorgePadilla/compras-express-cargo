@@ -149,6 +149,15 @@ end %>
               { data: { action: "change->entrega-personal#cambioTipoEnvio" },
                 class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
         </div>
+        <%# Yusef: "es obligatorio poner contenido, y debería ir más arriba,
+            después de tipo de envío". Estaba hasta abajo del peso y las cajas,
+            así que el que recibía llenaba todo el cálculo antes de toparse con
+            el único campo que dice qué es lo que está midiendo. %>
+        <div class="md:col-span-2">
+          <%= f.label :descripcion, "Contenido", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%= f.text_area :descripcion, rows: 2, placeholder: "Descripción del contenido…", required: true,
+              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
       </div>
 
       <%# Sección 3: Peso, medidas y cálculo — partial compartido con /etiquetar.
@@ -164,13 +173,8 @@ end %>
             tipo_envio_id: f.object.tipo_envio_id,
             cajas_cargadas: @cajas_cargadas || {}) %>
 
-      <%# Sección 4: Contenido + Remitente + Driver %>
+      <%# Sección 4: Remitente + Driver %>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="md:col-span-2">
-          <%= f.label :descripcion, "Contenido", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
-          <%= f.text_area :descripcion, rows: 2, placeholder: "Descripción del contenido…",
-              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
-        </div>
         <div>
           <%= f.label :remitente, "Remitente / Quien lo envía", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
           <%= f.text_field :remitente, placeholder: "Nombre del remitente",
