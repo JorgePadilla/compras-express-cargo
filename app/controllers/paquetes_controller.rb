@@ -473,6 +473,12 @@ class PaquetesController < ApplicationController
         cliente_codigo: ERB::Util.html_escape(cli&.codigo.to_s),
         cliente_nombre: ERB::Util.html_escape(cli&.nombre_completo.to_s),
         cliente_notas_miami: ERB::Util.html_escape(cli&.notas_miami.to_s),
+        # PR: a qué sucursal retira este cliente. Faltaba, y por eso al escanear
+        # un tracking con pre-alerta **no salía el aviso de sucursal** — Yusef,
+        # dos veces: "no me da la información de que es de Sucursal de
+        # Tegucigalpa". Las notas del cliente sí venían: se agregó una y se
+        # olvidó la otra. Misma llave que usa `/clientes/buscar`.
+        cliente_sucursal_retiro: ERB::Util.html_escape(cli&.sucursal_retiro_nombre.to_s),
         # PR-C6.9: el tipo de envío que el cliente pidió en su pre-alerta. Si
         # no coincide con el de la sesión de etiquetado, el front avisa antes
         # de que el operario siga escribiendo — y el servidor lo rechaza igual.

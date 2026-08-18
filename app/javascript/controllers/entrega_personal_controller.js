@@ -7,6 +7,7 @@ import ClienteAutocomplete from "controllers/cliente_autocomplete"
 export default class extends ClienteAutocomplete {
   static targets = [
     "form", "clienteInput", "clienteId", "clienteDropdown", "clienteNombre",
+    "sucursalBanner", "sucursalTexto",
     "event", "panel"
   ]
 
@@ -35,8 +36,24 @@ export default class extends ClienteAutocomplete {
   // tareas y notas a la franja de la derecha (PR-9.b). El resto —búsqueda de
   // un dígito, preselección, flechas y Enter— es igual que en /etiquetar y
   // vive en `ClienteAutocomplete`.
-  _alSeleccionarCliente({ id }) {
+  _alSeleccionarCliente({ id, sucursalRetiro }) {
+    // El mixin siempre mandó la sucursal de retiro; esta pantalla la tiraba, y
+    // por eso nunca avisaba a dónde iba la caja. Yusef: "también misma
+    // situación no avisa que va a tegus".
+    this._mostrarSucursal(sucursalRetiro)
     this.loadPanel(id)
+  }
+
+  // Mismo aviso que /etiquetar, mismo motivo: decide en qué bolsa física cae la
+  // caja, y enterarse tarde significa volver a abrirla (PR-C6.24).
+  _mostrarSucursal(sucursal) {
+    if (!this.hasSucursalBannerTarget) return
+
+    const texto = (sucursal || "").trim()
+    this.sucursalBannerTarget.classList.toggle("hidden", texto === "")
+    if (texto !== "" && this.hasSucursalTextoTarget) {
+      this.sucursalTextoTarget.textContent = texto
+    }
   }
 
   // PR-C6.41: acá el tipo de envío es un select y puede cambiar después de

@@ -300,6 +300,33 @@ cerrarQuitarCobro() {
   // mete rápido, aquí es donde tenés que ver cómo integrar eso. **Tiene que
   // ser rápido.**" — de ahí que la salida sea descartar respuestas viejas y no
   // meter un debounce, que sería justo lo contrario de lo que pidió.
+  // El secundario se revisa igual que el primario.
+  //
+  // Yusef: *"aquí no me dio alerta del Secundario"*. El campo no tenía ninguna
+  // acción cableada: un secundario ya usado no avisaba nada. `buscar_escaneado`
+  // ya lo cubre del lado del server (`paquete.rb:344`) — faltaba preguntarle.
+  //
+  // Solo avisa si YA EXISTE. No auto-rellena cliente ni dispara el flujo de
+  // pre-alerta: el segundo número es del mismo paquete que se está cargando, no
+  // de otro que haya que reconciliar.
+  checkTrackingSecundario() {
+    if (!this.hasTrackingSecundarioTarget) return
+    const valor = this.trackingSecundarioTarget.value.trim()
+    if (valor.length < 5) return
+    if (valor === this._ultimoSecundario) return
+    this._ultimoSecundario = valor
+
+    fetch(`${this.checkUrlValue}?tracking=${encodeURIComponent(valor)}`, {
+      headers: { "Accept": "application/json" }
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (this.trackingSecundarioTarget.value.trim() !== valor) return
+        if (data.exists && !data.terminal) this._openDuplicateModal(data)
+      })
+      .catch(() => { this._ultimoSecundario = null })
+  }
+
   checkTracking() {
     const tracking = this.trackingTarget.value.trim()
     if (tracking.length < 5) return
@@ -444,19 +471,21 @@ cerrarQuitarCobro() {
     }
     this.hideDropdown()
 
-    // Si el cliente tiene notas Miami, mostrar banner + sonido alerta —
-    // misma lógica que selectCliente() para mantener consistencia.
-    const notas = (data.cliente_notas_miami || "").trim()
-    if (notas !== "") {
-      if (this.hasNotasTextoTarget) this.notasTextoTarget.textContent = notas
-      if (this.hasNotasBannerTarget) this.notasBannerTarget.classList.remove("hidden")
-      this.dispatch("clienteNotas")
-    }
-
-    // PR-9.b: con match de pre-alerta la franja además trae las "notas
-    // especiales" (las instrucciones que el cliente escribió para ESTE
-    // tracking) y las tareas que salieron de ellas.
-    this.loadPanel(data.cliente_id)
+    // PR: acá vivía una COPIA de lo que hace `_alSeleccionarCliente` — las
+    // notas y la franja— y el comentario decía "misma lógica que
+    // selectCliente() para mantener consistencia". No lo era: se copiaron las
+    // notas y **se olvidó el aviso de sucursal**, así que al escanear un
+    // tracking con pre-alerta el operario nunca se enteraba de a qué sucursal
+    // iba la caja. Yusef lo reportó dos veces.
+    //
+    // Ahora los dos caminos —elegir el cliente a mano y que lo traiga la
+    // pre-alerta— pasan por el mismo gancho. Lo que se agregue ahí vale para
+    // los dos por construcción, no por acordarse.
+    this._alSeleccionarCliente({
+      id: data.cliente_id,
+      notas: data.cliente_notas_miami,
+      sucursalRetiro: data.cliente_sucursal_retiro
+    })
   }
 
   // Limpia los estilos visuales del input cliente que ponemos cuando viene
