@@ -5743,3 +5743,126 @@ La suma de las cajas **ya agregadas** está bien: es el mayor de cada caja y
 después se suman, que es la regla `A9-03`. Lo que falta es que **la caja que se
 está escribiendo todavía no cuenta** — `calc_volumetrico_controller` lee solo
 las filas `.caja-fila` ya confirmadas. Jorge lo confirmó. Va en su propio PR.
+
+---
+
+## Conversación 11 (2026-08-17) — la tanda de WhatsApp después de probar staging
+
+Yusef probó de punta a punta y mandó una lista. Cerró con *"va agarrando muy muy
+buena forma"*, y confirmó que **funcionan** el escaneo de USPS, el tracking de
+FedEx y el prepago de Entrega Personal.
+
+**Dos cosas de su lista no entraron, porque él mismo se corrigió**: lo de *"F9 no
+me pregunta cuántas etiquetas"* lo cerró con *"ya vi dónde está el clavo… es una
+inconsistencia mía, en cuanto a editar y recibir carga variada sin medir y sin
+pesar"*.
+
+### C11-01 · Los avisos que no avisan — 🐛 ✅ **ARREGLADO (#304)**
+
+Lo reportó **dos veces**: *"no me da la información de que es de Sucursal de
+Tegucigalpa"* y *"también misma situación no avisa que va a tegus"*.
+
+Eran dos causas del mismo tipo de falla. En `/etiquetar`,
+`_fillClienteFromPreAlerta` era una **copia** de `_alSeleccionarCliente`: se
+copiaron las notas del cliente y se olvidó el aviso de sucursal — el comentario
+del propio código decía *"misma lógica para mantener consistencia"* y no lo era.
+En `/entrega_personal` el aviso **no existía**.
+
+Los dos fallaban en silencio: nadie se entera de un aviso que no salió. Ahora
+los tres caminos que fijan cliente pasan por un solo gancho, el aviso sale de un
+partial compartido, y hay lint de las dos cosas.
+
+De la misma tanda: *"aquí no me dio alerta del Secundario"* — el input del
+tracking secundario no tenía **ninguna** acción, así que un repetido no avisaba y
+lo que escupía la pistola entraba crudo.
+
+### C11-02 · La pre-alerta de admin — 🐛 ✅ **ARREGLADO (#305)**
+
+> *"No marqué consolidado y me deja agregar más de 1, siempre en admin."*
+> *"Nos hace falta la opción de Retener en Miami en Pre Alerta de Admin."*
+
+La regla de consolidación existía en el portal pero **solo en la vista**. Pasó a
+ser validación de modelo, y corre solo al crear o cuando cambia la cantidad de
+paquetes: una pre-alerta vieja que ya está así se sigue pudiendo guardar. Es la
+misma trampa del método de prepago.
+
+`retener_miami` es columna nueva en `pre_alerta_paquetes` y viaja al paquete
+esperado. **Va la bandera, sin motivos**: el motivo se sabe cuando el paquete
+llega y se etiqueta, que es donde ya se pide.
+
+> ⏳ **Queda un hueco abierto acá.** El checkbox de retención de `/etiquetar`
+> arranca desmarcado, y un checkbox desmarcado manda `"0"` — así que **el
+> escaneo apaga la bandera** que la pre-alerta acababa de traer. Lo correcto es
+> que el JSON de `detect_pre_alerta_match` traiga la bandera y el autofill marque
+> el checkbox: el operario tiene que poder desmarcarlo. Sin decidir.
+
+### C11-03 · Entrega Personal: el Contenido — ✅ **ARREGLADO (#306)**
+
+> *"Entrega personal, es obligatorio poner contenido, y debería ir más arriba,
+> después de tipo de envío."*
+
+Un paquete de courier llega con la descripción del carrier; el que entra al
+mostrador de Miami no trae nada escrito, y sin eso la etiqueta y el Warehouse
+Receipt dicen cuánto pesa pero no qué es. Obligatorio al crear o al tocar el
+campo —los EP viejos sin contenido se siguen pudiendo guardar— y el campo subió
+a la altura del tipo de envío.
+
+### C11-04 · El Warehouse Receipt que no le salía — 🐛 ✅ **ARREGLADO (#307)**
+
+> *"Falta la observación que te hice: si después de imprimir la etiqueta, te
+> tire automáticamente el Recibo de Bodega."*
+
+El código **sí** lo hacía desde `PR-C7.16`. A Jorge se le abrían las dos
+ventanas; a Yusef no. Jorge pidió no dar por sentado el bloqueador de popups.
+
+**Reproducido**: Chrome le da permiso a un gesto del usuario para **un** popup,
+no para dos — el segundo `window.open` se cae en silencio. A Jorge le funcionaba
+porque su Chrome ya tenía el permiso dado para el sitio.
+
+Ahora se abre una sola ventana y ésa, al terminar de imprimir, **se va** al
+Warehouse Receipt en vez de cerrarse.
+
+> ⚠️ **De paso salió una trampa del harness.** El Chrome de los system tests
+> **no bloquea popups** (chromedriver lo arranca con `--disable-popup-blocking`),
+> así que un test escrito de la forma normal daba verde con el bug puesto. Hay un
+> driver aparte, `:chrome_con_bloqueador_de_popups`, para cuando haga falta.
+
+---
+
+## Revisión integral (2026-08-17) — el paquete fantasma
+
+Salió del repaso de punta a punta que pidió Jorge —pre-alerta → paquetes →
+etiquetas → WR—, no de un reporte de Yusef.
+
+### RI-01 · Un tracking pre-alertado que llega dividido — 🐛 ✅ **ARREGLADO (PR-C7.20 · C7.21 · C7.22)**
+
+`create_single` reconciliaba contra el paquete que la pre-alerta dejó esperando;
+**`create_split` no**. Un tracking pre-alertado que llegaba en varias cajas
+dejaba tres registros con el mismo tracking:
+
+```
+id=…102  estado=pre_alerta_estado  caja=nil  peso=nil     ← el fantasma
+id=…103  estado=recibido_miami     caja=1    peso=12.5
+id=…104  estado=recibido_miami     caja=2    peso=30.0
+```
+
+Y de ahí: **3 etiquetas para 2 cajas** —la de más con `—` donde va el número de
+recepción—, el Warehouse Receipt declarando **3 piezas**, y la pre-alerta
+congelada en `pre_alerta`: el cliente la veía "en camino" con el paquete ya en
+Miami. El cobro no se veía afectado — el fantasma se queda en
+`pre_alerta_estado` y la pre-factura solo agarra paquetes disponibles.
+
+No se reparaba solo: `link_tracking!` filtra por `sin_vincular`
+(`paquete_id: nil`) y esa fila **ya apuntaba** al fantasma — invisible para su
+propio reparador.
+
+**Jorge eligió que el esperado se vuelva la Caja 1** (y no borrarlo y
+re-apuntar): conserva id, guía y bitácora. Reusar la caja 1 y no otra tampoco es
+casualidad — `ajustar_split!` solo borra `numero_caja > m`, así que es la única
+que sobrevive a subir y bajar la cantidad de cajas.
+
+La reconciliación salió a un concern compartido por las dos rutas; quiénes son
+"las hermanas" de una caja se decide en un solo lugar y excluye lo que no llegó;
+y una migración de datos reconcilia los fantasmas que ya estaban grabados,
+saltando y reportando los que ya entraran a una pre-factura, venta, nota o
+reempaque.
