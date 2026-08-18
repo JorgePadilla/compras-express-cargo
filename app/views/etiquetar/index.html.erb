@@ -252,6 +252,43 @@ end %>
     </div>
   </dialog>
 
+  <%# ── ¿Cuántas etiquetas? ──
+      Yusef, 2026-08-18: *"en etiquetar casi nunca medimos y pesamos"*, y por eso
+      *"cuando la cantidad de cajas guardadas sea cero, que pregunte cuántas
+      son"*. Lo repitió tres veces en la llamada, la última al despedirse.
+
+      Solo sale cuando **no hay ninguna caja cargada**. Esa condición es lo que
+      lo distingue del modal que se quitó en `PR-C6.18b` —*"el F9 era como
+      confuso"*—: aquel competía con el campo visible del formulario y había dos
+      fuentes para el mismo número. Acá, si el operario midió aunque sea una
+      caja, este modal ni aparece. %>
+  <dialog data-etiquetar-target="etiquetasModal"
+          style="margin: auto"
+          class="rounded-xl p-0 w-[22rem] max-w-[95vw] backdrop:bg-black/50 ring-2 ring-cec-gold">
+    <div class="bg-cec-navy px-6 py-4 text-center">
+      <p class="text-xs font-bold uppercase tracking-wider text-cec-gold">No se midió ninguna caja</p>
+      <p class="text-sm text-white mt-1">¿Cuántas etiquetas se imprimen?</p>
+    </div>
+    <div class="bg-white px-6 py-5 text-center">
+      <%# `autocomplete=off` y los `data-*-ignore`: es un campo numérico chico y
+          los gestores de contraseñas le ofrecen tarjetas, igual que pasó con las
+          fechas. %>
+      <input type="number" min="1" max="99" value="1" step="1"
+             data-etiquetar-target="etiquetasInput"
+             data-action="keydown->etiquetar#etiquetasKeydown"
+             autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other"
+             aria-label="Cantidad de etiquetas"
+             class="w-28 text-center text-3xl font-bold rounded-lg border-gray-300 text-cec-navy shadow-sm focus:ring-cec-teal focus:border-cec-teal">
+      <p class="text-[11px] text-gray-500 mt-2">Una por caja. Todas comparten el tracking y el número de recepción.</p>
+    </div>
+    <div class="flex items-center justify-end gap-3 px-6 py-3 bg-gray-50 border-t border-gray-200">
+      <%= render ButtonComponent.new(variant: :secondary,
+            data: { action: "etiquetar#cerrarEtiquetas" }) do %>Cancelar<% end %>
+      <%= render ButtonComponent.new(variant: :gold, icon: "printer",
+            data: { action: "etiquetar#confirmarEtiquetas" }) do %>Imprimir<% end %>
+    </div>
+  </dialog>
+
 <%# ── El cobro por cambio de servicio, y cómo sacarlo ──
     PR-C6.28. Yusef: "que tenga algo aquí en algún lado, **acá cerca**, que
     diga que **se le está cobrando** cambio de servicio, y lo vamos a

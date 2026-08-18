@@ -1,22 +1,25 @@
 require "application_system_test_case"
 
-# PR-C6.18b: peso y medidas de cada caja, **en el formulario**.
+# Cuántas cajas trae un tracking, y quién lo dice.
 #
-# La primera versión (PR-C6.17) puso esto adentro del modal de F9, porque ahí
-# era donde se preguntaba la cantidad de cajas. Jorge lo probó y fue directo al
-# punto: **"el F9 era como confuso"**.
+# Esto ya cambió tres veces, y las tres por lo mismo — que haya **una sola
+# fuente** para el número:
 #
-# Tenía razón, y el motivo se ve al mirar la pantalla: el formulario mostraba
-# "Cant. Productos" —que es cuántos artículos vienen adentro— y parecía el
-# campo que mandaba, mientras el que de verdad divide el tracking en bultos
-# estaba escondido detrás de una tecla.
+#   · `PR-C6.17`: un modal en F9 preguntaba "¿cuántas cajas?".
+#   · `PR-C6.18b`: Jorge lo probó y lo mandó a quitar — *"el F9 era como
+#     confuso"*. La cantidad pasó a un campo del formulario, junto al peso.
+#   · `A7-20`: el campo también se fue. Las cajas se agregan **una por una** con
+#     F6, y la cantidad sale de contar las filas: si hay una sola fuente, no hay
+#     dos números que puedan discrepar.
 #
-# Ahora la cantidad de cajas vive junto al peso y las medidas, que es donde
-# Yusef la señaló: "acá sería cantidad de paquetes o productos, y aquí el peso
-# de cada quien". F9 vuelve a ser solo guardar e imprimir.
+# Y ahora vuelve a preguntar, pero **solo cuando no se midió nada**. Yusef,
+# 2026-08-18: *"en etiquetar casi nunca medimos y pesamos… cuando la cantidad de
+# cajas guardadas sea cero, que pregunte cuántas son"*. La condición es lo que lo
+# distingue del modal viejo: si hay aunque sea una caja cargada, ella manda y el
+# modal ni aparece.
 #
-# Va como system test porque las filas las pinta el JS: ningún test de
-# integración puede ver que aparezcan.
+# Va como system test porque las filas y el modal los pinta el JS: ningún test
+# de integración puede verlos.
 class EtiquetarCajasModalTest < ApplicationSystemTestCase
   setup do
     visit new_session_path
@@ -32,70 +35,116 @@ class EtiquetarCajasModalTest < ApplicationSystemTestCase
     assert_selector "#paquete_tracking", wait: 5
   end
 
-  test "la cantidad de cajas esta a la vista, no detras de F9" do
-    assert_selector "#paquete_cantidad_paquetes"
-    assert_text "Cant. Cajas"
+  test "ya no hay un campo de cantidad de cajas" do
+    # `A7-20`. Mientras exista, hay dos fuentes para el mismo número.
+    assert_no_selector "#paquete_cantidad_paquetes", visible: :all
   end
 
-  test "F9 ya no pregunta cuantas cajas" do
-    # Era el paso que confundía. Ahora guarda e imprime directo.
-    assert_no_selector "#cajas-input", visible: :all
+  test "las cajas se agregan una por una" do
+    agregar_caja(peso: 12.5)
+    assert_selector ".caja-fila", count: 1, wait: 3
+
+    agregar_caja(peso: 30)
+    assert_selector ".caja-fila", count: 2
   end
 
-  test "con una sola caja no pide peso por caja" do
-    # El formulario ya lo preguntó; repetirlo sería un paso de más.
-    assert_no_selector "[name='paquete[cajas][1][peso]']"
+  test "cada caja se lleva su propio peso" do
+    agregar_caja(peso: 12.5)
+    agregar_caja(peso: 30)
+
+    pesos = page.all("input[name^='paquete[cajas]'][name$='[peso]']", visible: :all).map { |i| i.value.to_f }
+    assert_equal [ 12.5, 30.0 ], pesos.sort
   end
 
-  test "con dos cajas aparecen dos filas de peso y medidas" do
-    poner_cajas(2)
+  test "sin medir nada, Guardar + Imprimir pregunta cuantas etiquetas" do
+    assert_selector ".caja-fila", count: 0
+    llenar_lo_minimo
 
-    assert_selector "[name='paquete[cajas][1][peso]']", wait: 3
-    assert_selector "[name='paquete[cajas][2][peso]']"
-    assert_selector "[name='paquete[cajas][2][alto]']"
-    assert_no_selector "[name='paquete[cajas][3][peso]']"
+    # Hay dos: la barra de arriba y la de abajo. Cualquiera sirve.
+    first("button", text: "Guardar + Imprimir").click
+
+    assert_selector "[data-etiquetar-target='etiquetasModal'][open]", wait: 3
+    assert_text "¿Cuántas etiquetas se imprimen?"
   end
 
-  test "las filas se precargan con lo del formulario" do
-    # Si las cajas son parecidas basta con Enter: solo se tocan las que
-    # difieren.
-    find("#paquete_peso").set("7.5")
-    find("#paquete_alto").set("12")
-    poner_cajas(2)
+  test "lo que se contesta en el modal es lo que se graba" do
+    # La única prueba de que el JS manda la cantidad y el servidor la lee: los
+    # tests de integración postean `etiquetas` a mano, así que no ven el cable.
+    tracking = "1Z999MODALGRABA1"
+    find("#paquete_tracking").set(tracking)
+    find("[data-etiquetar-target='clienteInput']").set("Juan")
+    find("[data-etiquetar-target='clienteDropdown'] *", match: :first, wait: 5).click
 
-    assert_selector "[name='paquete[cajas][1][peso]']", wait: 3
-    assert_equal "7.5", find("[name='paquete[cajas][2][peso]']").value
-    assert_equal "12",  find("[name='paquete[cajas][2][alto]']").value
+    first("button", text: "Guardar + Imprimir").click
+    assert_selector "[data-etiquetar-target='etiquetasModal'][open]", wait: 3
+    find("[data-etiquetar-target='etiquetasInput']").set("3")
+    click_on "Imprimir"
+
+    # El split avisa con su propio texto, no con el de un paquete solo.
+    assert_text "Tracking dividido en 3 cajas", wait: 10
+    assert_equal 3, Paquete.where(tracking: tracking).count
+    assert_equal [ 1, 2, 3 ], Paquete.where(tracking: tracking).order(:numero_caja).map(&:numero_caja)
   end
 
-  test "cambiar la cantidad repinta las filas" do
-    poner_cajas(3)
-    assert_selector "[name='paquete[cajas][3][peso]']", wait: 3
+  test "la cantidad no se le pega al paquete siguiente" do
+    # El bug de `PR-C6.31`, otra vez y por otra puerta: el campo oculto de la
+    # cantidad vive en el formulario, y `clearForm` no toca los ocultos. Si no
+    # se borra al mandar el siguiente, el paquete de después nace con la
+    # cantidad del anterior — en silencio, que es lo peor.
+    guardar_con_etiquetas("1Z999PEGADA0001", 3)
+    assert_text "Tracking dividido en 3 cajas", wait: 10
 
-    poner_cajas(2)
-    assert_no_selector "[name='paquete[cajas][3][peso]']", wait: 3
-    assert_selector "[name='paquete[cajas][2][peso]']"
+    guardar_con_etiquetas("1Z999PEGADA0002", 1)
+    assert_text "guardado exitosamente", wait: 10
+
+    assert_equal 1, Paquete.where(tracking: "1Z999PEGADA0002").count,
+                 "el segundo paquete se llevó la cantidad del primero"
   end
 
-  test "volver a una sola caja esconde las filas" do
-    poner_cajas(2)
-    assert_selector "[name='paquete[cajas][1][peso]']", wait: 3
+  test "con una caja medida no pregunta nada" do
+    # La condición que separa esto del modal que se quitó: la caja manda.
+    llenar_lo_minimo
+    agregar_caja(peso: 12.5)
+    assert_selector ".caja-fila", count: 1, wait: 3
 
-    poner_cajas(1)
-    assert_no_selector "[name='paquete[cajas][1][peso]']", wait: 3
+    first("button", text: "Guardar + Imprimir").click
+
+    assert_no_selector "[data-etiquetar-target='etiquetasModal'][open]", wait: 2
   end
 
-  test "Cant. Productos y Cant. Cajas son campos distintos" do
+  test "Cant. Productos no divide nada" do
     # La confusión que originó todo esto: productos es el contenido, cajas son
-    # los bultos físicos. Poner 2 productos no divide nada.
+    # los bultos físicos.
     find("#paquete_cantidad_productos").set("2")
 
-    assert_no_selector "[name='paquete[cajas][1][peso]']", wait: 2
+    assert_selector ".caja-fila", count: 0
   end
 
   private
 
-  def poner_cajas(n)
-    find("#paquete_cantidad_paquetes").set(n.to_s)
+  def llenar_lo_minimo
+    find("#paquete_tracking").set("1Z999MODALTEST#{rand(1000)}")
+    find("[data-etiquetar-target='clienteInput']").set("Juan")
+    find("[data-etiquetar-target='clienteDropdown'] *", match: :first, wait: 5).click
+  end
+
+  def guardar_con_etiquetas(tracking, cantidad)
+    # Después de imprimir queda abierto el aviso de "guardar en la bolsa de…",
+    # que tapa el formulario. El operario le da Listo; acá igual.
+    click_on "Listo" if page.has_selector?("[data-etiquetar-target='sucursalModal'][open]", wait: 2)
+
+    find("#paquete_tracking").set(tracking)
+    find("[data-etiquetar-target='clienteInput']").set("Juan")
+    find("[data-etiquetar-target='clienteDropdown'] *", match: :first, wait: 5).click
+
+    first("button", text: "Guardar + Imprimir").click
+    assert_selector "[data-etiquetar-target='etiquetasModal'][open]", wait: 3
+    find("[data-etiquetar-target='etiquetasInput']").set(cantidad.to_s)
+    click_on "Imprimir"
+  end
+
+  def agregar_caja(peso:)
+    find("[data-caja-campo='peso']").set(peso)
+    find("[data-cajas-repetidor-target='agregarBtn']").click
   end
 end
