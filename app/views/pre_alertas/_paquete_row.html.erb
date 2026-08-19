@@ -77,6 +77,14 @@
           class: clases_de_input_compacto %>
     </td>
 
+    <%# La retención también acá. Hasta ahora solo se podía marcar al **crear**
+        la pre-alerta: esta pantalla no la mostraba, así que marcarla por error
+        era irreversible desde la interfaz. El modelo ya llevaba el cambio al
+        paquete esperado desde `#305`; lo que faltaba era dónde tocarlo. %>
+    <td class="px-4 py-2">
+      <%= render RetenerMiamiComponent.new(f: pf, motivos: @motivos_retencion) %>
+    </td>
+
     <%# Igual que en `new`: la fecha la pone el servidor y no se edita. Es un
         sello, no un dato que el operario elija — el portal ya la mostraba así.
         Sin input, el Tab la salta y no hay autofill que la confunda. %>

@@ -66,6 +66,10 @@ class PaquetesController < ApplicationController
       @tipo_envios = TipoEnvio.activos.order(:nombre)
       @carriers = Carrier.where(activo: true).order(:nombre)
       @tarifas_recolecta = TarifaRecolecta.activas.ordered
+      # Los motivos salen del controller, no de la vista. El bloque de retención
+      # los consultaba adentro del ERB —la única de las cuatro pantallas que lo
+      # hacía— y por eso el partial compartido no los podía recibir.
+      @motivos_retencion = MotivoRetencion.activos.ordered
       # PR-5: cuando el digitador re-escanea un tracking existente desde
       # /etiquetar y elige "Cambio de Servicio", llegamos acá con
       # ?cambio_servicio=1. Pre-marcamos el flag en memoria (no se guarda
@@ -512,7 +516,15 @@ class PaquetesController < ApplicationController
         # no coincide con el de la sesión de etiquetado, el front avisa antes
         # de que el operario siga escribiendo — y el servidor lo rechaza igual.
         pre_alerta_tipo_envio_id: pa.tipo_envio_id,
-        pre_alerta_tipo_envio: ERB::Util.html_escape(pa.tipo_envio&.nombre.to_s)
+        pre_alerta_tipo_envio: ERB::Util.html_escape(pa.tipo_envio&.nombre.to_s),
+        # La retención que viene anunciada. Sin esto el formulario arrancaba con
+        # el checkbox desmarcado, y un checkbox desmarcado manda `"0"`: el
+        # escaneo **apagaba** la bandera que la pre-alerta acababa de traer, y
+        # con ella los motivos. O sea que lo que Yusef pidió el 17-ago llegaba al
+        # paquete esperado y se borraba en el momento de recibirlo.
+        retener_miami: pap&.retener_miami? || paquete&.retener_miami? || false,
+        motivo_retencion_ids: paquete&.motivo_retencion_ids || [],
+        notas_retencion: ERB::Util.html_escape(paquete&.notas_retencion.to_s)
       }
     else
       { pre_alerta_match: false }
@@ -675,6 +687,7 @@ class PaquetesController < ApplicationController
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     @carriers = Carrier.where(activo: true).order(:nombre)
     @tarifas_recolecta = TarifaRecolecta.activas.ordered
+    @motivos_retencion = MotivoRetencion.activos.ordered
     cargar_supervisores_cajas
     render :show, status: status
   end
