@@ -5790,11 +5790,16 @@ misma trampa del método de prepago.
 esperado. **Va la bandera, sin motivos**: el motivo se sabe cuando el paquete
 llega y se etiqueta, que es donde ya se pide.
 
-> ⏳ **Queda un hueco abierto acá.** El checkbox de retención de `/etiquetar`
-> arranca desmarcado, y un checkbox desmarcado manda `"0"` — así que **el
-> escaneo apaga la bandera** que la pre-alerta acababa de traer. Lo correcto es
-> que el JSON de `detect_pre_alerta_match` traiga la bandera y el autofill marque
-> el checkbox: el operario tiene que poder desmarcarlo. Sin decidir.
+> ✅ **El hueco que quedaba acá se cerró en `PR-C7.27`.** El checkbox de
+> retención de `/etiquetar` arrancaba desmarcado, y un checkbox desmarcado manda
+> `"0"` — así que **el escaneo apagaba la bandera** que la pre-alerta acababa de
+> traer. Ahora `detect_pre_alerta_match` la devuelve y el autofill la marca en la
+> pantalla; el operario la puede desmarcar, que era la condición.
+>
+> Y la decisión de que la pre-alerta llevara *"la bandera, sin motivos"* también
+> se revirtió ahí: los motivos y la nota se guardan en el **paquete esperado**,
+> que ya tiene esas columnas — la tabla de join que me la había hecho descartar
+> nunca hizo falta. Ver `C13-01`.
 
 ### C11-03 · Entrega Personal: el Contenido — ✅ **ARREGLADO (#306)**
 
@@ -6001,3 +6006,60 @@ tocar nada.
 
 Jorge ya limpió su base local y dijo en la llamada que se le olvidó correrlo en
 staging.
+
+---
+
+## Conversación 13 (2026-08-18) — «Retener en Miami», un solo control
+
+Jorge, mirando `/pre_alertas/new` en staging:
+
+> *"Retener en Miami debería comportarse igual que el de etiquetar y entrega
+> personal, debería ser el mismo componente, reemplazá el de pre-alerta."*
+
+### C13-01 · El control, escrito una sola vez — ✅ **ARREGLADO (PR-C7.27)**
+
+Al ir a buscar ese componente para reusarlo **no existía**. Había cuatro
+pantallas y cuatro respuestas distintas:
+
+| Pantalla | Qué tenía |
+|---|---|
+| `/etiquetar` | El bloque completo — casilla, modal, motivos y nota |
+| `/paquetes` (form) | **Una copia**, ya divergida: consultaba `MotivoRetencion` **adentro de la vista**, y los rótulos y los botones no eran los mismos |
+| `/entrega_personal` | **Nada**, aunque su controller carga los motivos y permite `retener_miami` y `motivo_retencion_ids` desde siempre. Cableado muerto |
+| `/pre_alertas` | Solo la casilla, y **solo al crear** — la pantalla de editar no la mostraba, así que marcarla por error era irreversible |
+
+Ahora es un `RetenerMiamiComponent` que rendericen las cinco (la pre-alerta lo
+pinta dos veces: la tarjeta de crear y la fila de editar), con lint.
+
+**Dónde se guardan los motivos de una pre-alerta: en el paquete esperado**, que
+ya tiene esas columnas. `C11-02` había decidido lo contrario —*"va la bandera,
+sin motivos: el motivo se sabe cuando el paquete llega"*— y la razón real era
+evitar una tabla de join. No hacía falta ninguna.
+
+> ⚠️ **Los motivos no son columnas de `pre_alerta_paquetes` a propósito**, así que
+> el dirty tracking de Rails no los ve: `sync_paquete_esperado` necesita una
+> bandera propia. Sin ella, editar una pre-alerta cambiando **solo** los motivos
+> no sincronizaba nada, en silencio.
+
+### C13-02 · El escaneo ya no borra la retención — ✅ **ARREGLADO (PR-C7.27)**
+
+Venía anotado desde `C11-02` y dejó de ser opcional al entrar los motivos: si el
+escaneo apaga la bandera, se los lleva por delante.
+
+Se marca **en la pantalla** y no se fuerza desde el servidor: el que recibe tiene
+que poder desmarcarlo si al ver el bulto decide que no. Es la misma forma que
+Yusef eligió para el aviso del secundario en `C12-04` — *"lo va a retener, o lo
+va a enviar así"*.
+
+De la misma familia: **desmarcar la retención se lleva sus motivos**. Quedaba un
+paquete sin retención y con «contenido perecedero» colgado, que es el mismo dato
+falso que dejaba el prepago antes de que su concern limpiara la rama `false`.
+Nunca sobre un paquete en estado `retenido`, que es **otra cosa** —un paso del
+pipeline— y ahí el motivo es obligatorio.
+
+### C13-03 · El portal del cliente **no** lleva el control — decisión, no olvido
+
+Retener es una acción operativa de Miami y los motivos son de ellos («paquete
+dañado», «contenido perecedero»). Yusef lo pidió para la pre-alerta de **admin**
+(`C11-02`). Queda fijado en el lint para que nadie lo empareje después creyendo
+que falta.
