@@ -73,7 +73,7 @@ module EtiquetaHelper
 
   # El número de caja, solo. **Sin el total.**
   #
-  # A7-21. Esto era "1/2" y Yusef lo cortó explicando por qué el total no se
+  # A7-21. Esto era "1/2" y Yusef lo cortó, explicando por qué el total no se
   # puede saber cuando se imprime:
   #
   #   > "La etiqueta **solo lleva el número, no lleva el uno de dos ni de
@@ -83,11 +83,31 @@ module EtiquetaHelper
   # Una etiqueta que dice "1/5" sobre una carga que terminó en 4 cajas es peor
   # que una que no dice nada: manda a buscar un bulto que no existe.
   #
+  # 2026-08-19, Jorge sobre una etiqueta de dos cajas: *"el 1 está bien, pero
+  # aquí yo mandé 2 — cuando manda más de una debe llevar el 1/2"*.
+  #
+  # Los dos tienen razón, sobre casos distintos, y por eso la fracción sale
+  # **solo cuando el total está grabado**:
+  #
+  #   · Al **recibir**, la cantidad se fija antes de imprimir — el operario cargó
+  #     las cajas una por una, o contestó cuántas en el modal de `PR-C7.23`. El
+  #     paquete queda con `cantidad_paquetes`, y por eso el código de barras ya
+  #     salía con su `-1`. Ahí el total se sabe y decirlo ayuda.
+  #   · Al **empacar** —el módulo que Yusef difirió— la cantidad va apareciendo
+  #     mientras se empaca. Ahí no hay `cantidad_paquetes` que valga y sale el
+  #     número solo, que es exactamente el caso del que él se quejaba.
+  #
+  # O sea que esto respeta su razón, no su letra. Si algún día el empaque graba
+  # un total provisorio, hay que volver a mirar esta línea.
+  #
   # Ojo: esto NO es el sufijo del código de barras. `etiqueta_codigo_barras`
   # sigue emitiendo `RM…-2`, que es lo que permite rebajar inventario caja por
   # caja en San Pedro. Son dos cosas distintas en dos lugares distintos.
   def etiqueta_fraccion(paquete)
-    (paquete.numero_caja.presence || 1).to_s
+    numero = (paquete.numero_caja.presence || 1).to_s
+    return numero unless paquete.dividido?
+
+    "#{numero}/#{paquete.cantidad_paquetes}"
   end
 
   # "Departamento abreviado y ciudad o pueblo" (Yusef). El departamento

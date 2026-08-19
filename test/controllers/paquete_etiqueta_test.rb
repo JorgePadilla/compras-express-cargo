@@ -56,12 +56,18 @@ class PaqueteEtiquetaTest < ActionDispatch::IntegrationTest
     assert_response :success
     # "si el tracking se divide en 5 paquetes es una para cada una"
     assert_equal 3, response.body.scan(/class="etq"/).size
-    # A7-21: la etiqueta lleva el número de caja, no "1 de 3" — el total no se
-    # sabe hasta terminar de empacar, y una etiqueta que dice "1/3" sobre una
-    # carga que salió en 2 manda a buscar un bulto que no existe.
-    assert_match ">1</span>", response.body
-    assert_match ">3</span>", response.body
-    assert_no_match(/>\d+\/\d+<\/span>/, response.body, "volvió el n/N a la etiqueta")
+    # `A7-21` decía que la etiqueta llevara el número solo, y su razón era del
+    # **empaque**: *"no estamos seguros cuántas estamos empacando"*.
+    #
+    # Al recibir es al revés: la cantidad se fija antes de imprimir —el operario
+    # cargó las cajas o contestó cuántas—, y por eso el código de barras ya salía
+    # con su sufijo. Jorge, con una etiqueta de dos cajas en la mano: *"el 1 está
+    # bien, pero aquí yo mandé 2; cuando manda más de una debe llevar el 1/2"*.
+    #
+    # La fracción sale **solo cuando el total está grabado**; ver
+    # `test/helpers/etiqueta_fraccion_test.rb`.
+    assert_match ">1/3</span>", response.body
+    assert_match ">3/3</span>", response.body
   end
 
   test "sin hermanas imprime solo la del paquete" do
