@@ -177,6 +177,23 @@ class Paquete < ApplicationRecord
   validates :descripcion, presence: { message: "hay que decir qué es (Contenido)" },
             if: -> { entrega_personal? && (new_record? || descripcion_changed?) }
 
+  # ── Apagar la retención se lleva sus motivos ──────────────────────────
+  #
+  # `checkbox-modal` dice explícito que desmarcar la casilla **no** limpia los
+  # campos del modal. Así que quien escanea un paquete que venía anunciado como
+  # retenido, ve los motivos marcados y decide que no hace falta retenerlo,
+  # guardaba `retener_miami: false` **con los motivos colgados**. Un paquete sin
+  # retención y con "contenido perecedero" adentro es un dato falso, igual que
+  # el método de pago que quedaba puesto al desmarcar el prepago.
+  #
+  # Solo en la transición: un paquete que ya estaba sin retener no se toca.
+  #
+  # Y nunca sobre uno en estado `retenido`, que es **otra cosa** —un paso del
+  # pipeline, no la bandera de Miami— y ahí `retencion_requiere_motivo_o_notas`
+  # exige justamente lo que esto borraría.
+  before_save :limpiar_retencion_al_apagarla,
+              if: -> { will_save_change_to_retener_miami? && !retener_miami? && estado != "retenido" }
+
   # PR-D1.c: tarifa fija pre-establecida $35 USD + ISV (Yusef 2026-04-29).
   # Editable por el cajero al crear/asignar la recolecta. No hay tabla de
   # tarifas por zona todavía porque siempre cambia.
@@ -1127,6 +1144,11 @@ class Paquete < ApplicationRecord
   # paquete hace una escala en otra sucursal antes de llegar a la suya.
   def heredar_sucursal_destino
     self.sucursal_destino ||= sucursal
+  end
+
+  def limpiar_retencion_al_apagarla
+    self.motivo_retencion_ids = []
+    self.notas_retencion = nil
   end
 
   def sync_pre_alerta_estados

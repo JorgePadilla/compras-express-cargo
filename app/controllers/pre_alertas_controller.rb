@@ -271,6 +271,11 @@ class PreAlertasController < ApplicationController
 # lo necesitan — y ahi fue justo donde se olvido la primera vez.
 def cargar_sugerencias
   @proveedores_sugeridos = Proveedor.activos.ordered
+  # Los motivos de retención van con las sugerencias porque los pide el mismo
+  # bloque en las tres pantallas donde se arma un renglón: crear, editar y el
+  # re-render de un error. Cargarlo en una sola de ellas es cómo el modal sale
+  # vacío en las otras dos.
+  @motivos_retencion = MotivoRetencion.activos.ordered
 end
 
   def base_scope
@@ -300,7 +305,12 @@ end
       # por default) y la pantalla la muestra como sello, sin input. Dejarla
       # permitida haría que "read only" fuera solo de la vista — un request
       # armado a mano podría poner cualquier fecha.
-      pre_alerta_paquetes_attributes: %i[id tracking descripcion instrucciones retener_miami _destroy]
+      pre_alerta_paquetes_attributes: [
+        :id, :tracking, :descripcion, :instrucciones, :retener_miami,
+        # Los motivos y la nota de la retención. No son columnas de
+        # `pre_alerta_paquetes`: viajan al paquete esperado, que ya las tiene.
+        :notas_retencion, :_destroy, { motivo_retencion_ids: [] }
+      ]
     )
   end
 end

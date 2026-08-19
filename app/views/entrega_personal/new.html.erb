@@ -191,6 +191,12 @@ end %>
         </div>
       </div>
 
+      <%# Retener en Miami. Esta pantalla **nunca lo tuvo**, aunque su controller
+          carga los motivos y permite `retener_miami` y `motivo_retencion_ids`
+          desde siempre: la intención estaba y el marcado nunca se escribió.
+          Salió al buscar el componente para la pre-alerta. %>
+      <%= render RetenerMiamiComponent.new(f: f, motivos: @motivos_retencion) %>
+
       <%# Sección 5: Pago. El partial lo comparte con /etiquetar. %>
       <%= render "shared/prepago_miami" %>
 

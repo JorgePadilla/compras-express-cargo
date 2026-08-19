@@ -1,0 +1,34 @@
+# PR-D2: el catálogo de motivos por los que Miami retiene un paquete. Yusef los
+# nombró en la reunión del 2026-04-29: *"paquete dañado, confirmar tipo de envío,
+# mercancía prohibida, falta declaración, contenido perecedero"*.
+#
+# La tabla no tenía fixtures, y eso hacía que cualquier test sobre la retención
+# se saltara solo por catálogo vacío — un test que se salta es un test que no
+# existe.
+danado:
+  nombre: Paquete dañado
+  position: 0
+  activo: true
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>
+
+perecedero:
+  nombre: Contenido perecedero
+  position: 1
+  activo: true
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>
+
+prohibida:
+  nombre: Mercancía prohibida
+  position: 2
+  activo: true
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>
+
+inactivo:
+  nombre: Motivo dado de baja
+  position: 9
+  activo: false
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>

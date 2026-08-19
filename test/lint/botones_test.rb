@@ -63,7 +63,7 @@ class BotonesTest < ActiveSupport::TestCase
     # dentro de una frase —un botón con borde ahí partiría la oración— y los dos
     # "Cerrar" son la × del encabezado de un modal.
     "app/views/paquetes/show.html.erb"                       => 9,
-    "app/views/paquetes/_form.html.erb"                      => 14,
+    "app/views/paquetes/_form.html.erb"                      => 12,
     "app/views/ventas/show.html.erb"                         => 8,
     "app/views/cotizaciones/show.html.erb"                   => 7,
     "app/views/cuenta/pre_alertas/edit.html.erb"             => 4,

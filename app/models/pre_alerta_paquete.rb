@@ -69,6 +69,41 @@ class PreAlertaPaquete < ApplicationRecord
 
   after_destroy_commit :soft_delete_pre_alerta_if_empty
 
+  # ── Los motivos de la retención ─────────────────────────────────────────
+  #
+  # No son columnas de esta tabla **a propósito**. `crear_paquete_esperado` ya
+  # materializa un `Paquete` por renglón, y `Paquete` ya tiene `motivos_retencion`
+  # y `notas_retencion`. Duplicarlas acá sería una segunda fuente para el mismo
+  # dato, y este repo ya sabe cómo termina eso.
+  #
+  # Así que el renglón las acepta, se las pasa al esperado al crearlo o al
+  # editarlo, y las lee de vuelta desde él para pintar el formulario. La única
+  # fuente sigue siendo el paquete.
+  #
+  # `#305` había decidido que la pre-alerta llevara la bandera y nada más — *"el
+  # motivo se sabe cuando el paquete llega"*. Jorge lo revirtió: *"debería ser el
+  # mismo componente"*. Y tenía razón en lo que a mí me había frenado: no hacía
+  # falta ninguna tabla nueva.
+  def motivo_retencion_ids=(ids)
+    @retencion_tocada = true
+    @motivo_retencion_ids = Array(ids).reject(&:blank?).map(&:to_i)
+  end
+
+  def motivo_retencion_ids
+    @motivo_retencion_ids || paquete&.motivo_retencion_ids || []
+  end
+
+  def notas_retencion=(texto)
+    @retencion_tocada = true
+    @notas_retencion = texto
+  end
+
+  def notas_retencion
+    return @notas_retencion if defined?(@notas_retencion)
+
+    paquete&.notas_retencion
+  end
+
   # Links unlinked pre_alerta_paquetes by tracking to a given paquete.
   # Advances parent pre_alerta estado to "recibido" if still in pre_alerta state.
   # Returns number of rows linked.
@@ -159,7 +194,9 @@ class PreAlertaPaquete < ApplicationRecord
       pre_alerta: true,
       # La retención marcada desde la pre-alerta viaja al paquete esperado, así
       # el que lo recibe en Miami ya lo ve marcado sin tener que acordarse.
-      retener_miami: retener_miami
+      retener_miami: retener_miami,
+      motivo_retencion_ids: motivo_retencion_ids,
+      notas_retencion: notas_retencion
     )
     update_columns(paquete_id: paquete.id)
   end
@@ -173,13 +210,20 @@ class PreAlertaPaquete < ApplicationRecord
     # `retener_miami` entra acá también: si se marca DESPUÉS de crear la
     # pre-alerta, el paquete esperado tiene que enterarse igual. Sin esto, la
     # bandera solo funcionaba al crear.
+    #
+    # `@retencion_tocada` no es un capricho: los motivos y la nota **no son
+    # columnas** de esta tabla —viven en el paquete esperado, que ya las tiene—
+    # así que el dirty tracking de Rails no los ve. Sin esta bandera, editar una
+    # pre-alerta cambiando solo los motivos no sincronizaba nada, en silencio.
     return unless saved_change_to_tracking? || saved_change_to_descripcion? ||
-                  saved_change_to_retener_miami?
+                  saved_change_to_retener_miami? || @retencion_tocada
 
     p = paquete
     return unless p && p.estado == "pre_alerta_estado"
 
-    p.update!(tracking: tracking, descripcion: descripcion, retener_miami: retener_miami)
+    p.update!(tracking: tracking, descripcion: descripcion, retener_miami: retener_miami,
+              motivo_retencion_ids: motivo_retencion_ids, notas_retencion: notas_retencion)
+    @retencion_tocada = false
   end
 
   # PR-9.a: las instrucciones del cliente ("el celular por Express, la ropa

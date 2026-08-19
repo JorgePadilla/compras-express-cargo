@@ -503,6 +503,35 @@ cerrarQuitarCobro() {
         this.descripcionTarget.value.trim() === "") {
       this.descripcionTarget.value = data.pre_alerta_descripcion
     }
+
+    this._marcarRetencionDeLaPreAlerta(data)
+  }
+
+  // La retención que viene anunciada.
+  //
+  // El checkbox arranca desmarcado y un checkbox desmarcado manda `"0"`, así que
+  // el escaneo **apagaba** la bandera que la pre-alerta acababa de traer — y con
+  // ella los motivos. Lo que Yusef pidió el 17-ago llegaba al paquete esperado y
+  // se borraba en el momento de recibirlo.
+  //
+  // Se marca en la pantalla y **no** se fuerza desde el servidor a propósito: el
+  // que recibe tiene que poder desmarcarlo si al ver el bulto decide que no. Es
+  // la misma decisión que tomó para el aviso del secundario — *"lo va a retener,
+  // o lo va a enviar así"*.
+  _marcarRetencionDeLaPreAlerta(data) {
+    if (!data.retener_miami) return
+
+    const check = this.formTarget.querySelector("input[name='paquete[retener_miami]'][type='checkbox']")
+    if (!check || check.checked) return
+    check.checked = true
+
+    const ids = (data.motivo_retencion_ids || []).map(String)
+    this.formTarget
+      .querySelectorAll("input[name='paquete[motivo_retencion_ids][]'][type='checkbox']")
+      .forEach(input => { if (ids.includes(String(input.value))) input.checked = true })
+
+    const notas = this.formTarget.querySelector("[name='paquete[notas_retencion]']")
+    if (notas && notas.value.trim() === "" && data.notas_retencion) notas.value = data.notas_retencion
   }
 
   _hidePreAlertaBanner() {
