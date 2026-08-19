@@ -17,7 +17,8 @@ export default class extends ClienteAutocomplete {
     "terceroContainer", "terceroToggle",
     "conflictoSesionModal", "conflictoSesionTexto", "conflictoSesionDejarBtn",
     "sucursalBanner", "sucursalTexto", "sucursalModal", "sucursalModalTexto",
-    "quitarCobroModal"
+    "quitarCobroModal",
+    "etiquetasModal", "etiquetasInput"
   ]
   static values = {
     checkUrl: String,
@@ -306,9 +307,19 @@ cerrarQuitarCobro() {
   // acción cableada: un secundario ya usado no avisaba nada. `buscar_escaneado`
   // ya lo cubre del lado del server (`paquete.rb:344`) — faltaba preguntarle.
   //
-  // Solo avisa si YA EXISTE. No auto-rellena cliente ni dispara el flujo de
-  // pre-alerta: el segundo número es del mismo paquete que se está cargando, no
-  // de otro que haya que reconciliar.
+  // No auto-rellena cliente: el segundo número es del mismo bulto que se está
+  // cargando, y el cliente ya lo puso el primero.
+  //
+  // 2026-08-18: pero **una pre-alerta no es un duplicado**. Yusef escaneó un
+  // secundario que también tenía la suya y le salió el modal de "¿es una
+  // actualización?":
+  //
+  //   > "Esto, según tus reglas del inicio, no debería pasar… aquí está
+  //   >  agarrando la regla de que existe el tracking y no la regla de que es
+  //   >  una pre-alerta."
+  //
+  // Es la misma divergencia de siempre: `checkTracking` tiene esa rama desde
+  // `PR-2` y acá se copió **solo** el chequeo de duplicado.
   checkTrackingSecundario() {
     if (!this.hasTrackingSecundarioTarget) return
     const valor = this.trackingSecundarioTarget.value.trim()
@@ -322,9 +333,59 @@ cerrarQuitarCobro() {
       .then(r => r.json())
       .then(data => {
         if (this.trackingSecundarioTarget.value.trim() !== valor) return
+        if (data.pre_alerta_match) return this._revisarSecundarioConPreAlerta(data)
         if (data.exists && !data.terminal) this._openDuplicateModal(data)
       })
       .catch(() => { this._ultimoSecundario = null })
+  }
+
+  // El secundario también venía anunciado. Lo que hay que hacer con eso lo
+  // dictó Yusef, y son dos mitades:
+  //
+  //   > "Si los dos tienen pre-alerta pero el tipo de envío está correcto, no
+  //   >  es necesario hacer nada. Ahora, si hay una incongruencia… hay que
+  //   >  avisarle al usuario: hay una diferencia en el tipo de envío."
+  //   > "Cuando tiene nombres diferentes, igual: hay incongruencia en el
+  //   >  nombre, está a nombre de dos personas diferentes."
+  //
+  // Contra qué se compara: el **cliente que ya está en el formulario** (lo puso
+  // el primer escaneo, o el operario a mano) y el **tipo de envío de la
+  // sesión**. Él calcula que en el 80% de los casos solo uno de los dos
+  // trackings trae pre-alerta, así que comparar contra la pre-alerta del
+  // primero no serviría — muchas veces no hay.
+  //
+  // **No marca nada solo.** Jorge se lo preguntó derecho —"¿el sistema va y
+  // marca la casillita?"— y contestó que no: *"ahí mismo le dice: este paquete
+  // tiene dos tipos de envío. Lo va a retener, o lo va a enviar así"*. Decide
+  // el operario.
+  _revisarSecundarioConPreAlerta(data) {
+    this.dispatch("preAlertaMatch")
+
+    const clienteActual = this.hasClienteIdTarget ? this.clienteIdTarget.value : ""
+    const otroCliente = clienteActual && data.cliente_id &&
+                        String(data.cliente_id) !== String(clienteActual)
+
+    if (otroCliente) {
+      return this._avisarIncongruenciaDelSecundario(
+        `El tracking secundario está pre-alertado a nombre de ${data.pre_alerta_cliente}, ` +
+        `y este paquete va a nombre de otro cliente. Revisá antes de guardar: ` +
+        `puede que haya que retenerlo en Miami.`)
+    }
+
+    // La otra mitad ya está escrita para el primario: el tipo de envío de la
+    // pre-alerta contra el de la sesión.
+    this._avisarConflictoDeSesion(data)
+  }
+
+  _avisarIncongruenciaDelSecundario(texto) {
+    this.dispatch("tipoEnvioDistinto")
+    if (!this.hasConflictoSesionModalTarget) return
+
+    if (this.hasConflictoSesionTextoTarget) this.conflictoSesionTextoTarget.textContent = texto
+    this.conflictoSesionModalTarget.classList.remove("hidden")
+    if (this.hasConflictoSesionDejarBtnTarget) {
+      requestAnimationFrame(() => this.conflictoSesionDejarBtnTarget.focus())
+    }
   }
 
   checkTracking() {
@@ -692,13 +753,73 @@ cerrarQuitarCobro() {
   //
   // Ahora vive en el formulario, junto al peso y las medidas, con las filas
   // por caja debajo (`cajas_controller.js`).
+  //
+  // 2026-08-18: y vuelve a preguntar, pero **solo cuando no se midió nada**.
+  // Yusef: *"en etiquetar casi nunca medimos y pesamos… cuando la cantidad de
+  // cajas guardadas sea cero, que pregunte cuántas son"*. Esa condición es la
+  // diferencia con el modal viejo: si hay aunque sea una caja cargada, ella
+  // manda y acá no se pregunta nada — nunca hay dos fuentes para el número.
   submitFormWithPrint() {
-    this._submitWithPrint()
+    if (this._cajasCargadas() > 0) return this._submitWithPrint()
+    if (!this.hasEtiquetasModalTarget) return this._submitWithPrint()
+
+    if (this.hasEtiquetasInputTarget) this.etiquetasInputTarget.value = "1"
+    // A1-10: "un pin antes de que salga cualquier modal". El operario está
+    // mirando la pistola, no la pantalla — un modal mudo se lo pierde.
+    this.dispatch("modalAbierto")
+    this.etiquetasModalTarget.showModal()
+    // `select()` y no solo `focus()`: el operario teclea el número encima sin
+    // tener que borrar el 1.
+    if (this.hasEtiquetasInputTarget) this.etiquetasInputTarget.select()
   }
 
+  // Cuántas filas de caja hay cargadas. Se cuentan las filas y no un contador
+  // aparte: es la misma fuente que usa `cajas-repetidor#_renumerar`, y la
+  // lección de `PR-C6.31` es que dos fuentes para el mismo número terminan
+  // discrepando.
+  _cajasCargadas() {
+    return this.formTarget.querySelectorAll(".caja-fila").length
+  }
 
+  // Enter confirma; Escape cancela. Ojo: acá Enter **sí** actúa, al revés que
+  // en el formulario —donde la pistola dispara Enter y por eso Enter pasa al
+  // campo siguiente—. El modal no es el formulario: no hay campo siguiente y
+  // el operario ya decidió imprimir.
+  etiquetasKeydown(e) {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      this.confirmarEtiquetas()
+    } else if (e.key === "Escape") {
+      e.preventDefault()
+      this.cerrarEtiquetas()
+    }
+  }
 
-  _submitWithPrint() {
+  confirmarEtiquetas() {
+    const cantidad = this._etiquetasPedidas()
+    if (cantidad === null) return
+
+    this.etiquetasModalTarget.close()
+    this._submitWithPrint(cantidad)
+  }
+
+  cerrarEtiquetas() {
+    this.etiquetasModalTarget.close()
+  }
+
+  // Un número mal tecleado no puede grabar 500 paquetes ni tirar 500 etiquetas.
+  // El servidor lo acota igual; esto es para que el operario se entere acá.
+  _etiquetasPedidas() {
+    if (!this.hasEtiquetasInputTarget) return 1
+    const n = parseInt(this.etiquetasInputTarget.value, 10)
+    if (!Number.isInteger(n) || n < 1 || n > 99) {
+      this.etiquetasInputTarget.select()
+      return null
+    }
+    return n
+  }
+
+  _submitWithPrint(etiquetas = null) {
     this._removePrintField()
     const input = document.createElement("input")
     input.type = "hidden"
@@ -706,13 +827,29 @@ cerrarQuitarCobro() {
     input.value = "true"
     input.dataset.printField = "true"
     this.formTarget.appendChild(input)
+
+    // Va suelto y NO como `paquete[cantidad_paquetes]`: el bug de `PR-C6.31`
+    // fue tener dos campos con el mismo `name` —ganaba el último y el split se
+    // caía en silencio—. Con un nombre propio no hay con quién chocar.
+    if (etiquetas && etiquetas > 1) {
+      const cuantas = document.createElement("input")
+      cuantas.type = "hidden"
+      cuantas.name = "etiquetas"
+      cuantas.value = String(etiquetas)
+      cuantas.dataset.printField = "true"
+      this.formTarget.appendChild(cuantas)
+    }
+
     this.formTarget.requestSubmit()
   }
 
 
+  // `querySelectorAll` y no `querySelector`: desde que el modal agrega también
+  // el campo de la cantidad, son dos los que hay que limpiar. Con el singular,
+  // el segundo sobrevivía al guardado y el paquete siguiente heredaba la
+  // cantidad del anterior — exactamente el bug de `PR-C6.31`, otra vez.
   _removePrintField() {
-    const existing = this.formTarget.querySelector("[data-print-field]")
-    if (existing) existing.remove()
+    this.formTarget.querySelectorAll("[data-print-field]").forEach(el => el.remove())
   }
 
   // Handle turbo stream events

@@ -906,12 +906,7 @@ class Paquete < ApplicationRecord
         next
       end
 
-      transaction do
-        PreAlertaPaquete.where(paquete_id: fantasma.id).update_all(paquete_id: caja.id)
-        Tarea.where(paquete_id: fantasma.id).update_all(paquete_id: caja.id)
-        fantasma.destroy!
-      end
-      caja.pre_alerta_paquetes.reload.each { |pap| pap.pre_alerta&.actualizar_estado_from_paquetes! }
+      caja.absorber!(fantasma)
       resultado[:reconciliados] << [ fantasma.id, caja.id ]
     rescue StandardError => e
       # Cada fantasma en su propio rescue: esto camina datos viejos, y una fila
@@ -920,6 +915,38 @@ class Paquete < ApplicationRecord
     end
 
     resultado
+  end
+
+  # Este paquete se queda con lo que el fantasma tenía colgado, y el fantasma se
+  # borra.
+  #
+  # Vive acá y no adentro de `reconciliar_fantasmas!` porque hay **dos** que lo
+  # necesitan: la limpieza masiva de `PR-C7.22`, que camina toda la tabla, y
+  # `/etiquetar` al guardar —cuando el tracking secundario traía su propia
+  # pre-alerta y su propio esperado—. Desde el request no se puede llamar al
+  # batch: recorrería la tabla entera para un caso que ya se sabe cuál es.
+  #
+  # **El orden importa.** `actualizar_estado_from_paquetes!` va al final, después
+  # de reapuntar: `sync_pre_alerta_estados` dispara al guardar el paquete, o sea
+  # antes de que esta pre-alerta le pertenezca, así que sola no avanzaría.
+  #
+  # Y las tareas se mudan **antes** del `destroy!`: `has_many :tareas` es
+  # `dependent: :destroy` y si no, la instrucción que dejó escrita el cliente se
+  # va con el fantasma.
+  #
+  # Devuelve false si no hay nada que absorber o si el fantasma ya está atado a
+  # un documento — un registro que entró a un cobro no desaparece en silencio.
+  def absorber!(fantasma)
+    return false if fantasma.nil? || fantasma.id == id
+    return false if fantasma.documento_que_lo_ata
+
+    self.class.transaction do
+      PreAlertaPaquete.where(paquete_id: fantasma.id).update_all(paquete_id: id)
+      Tarea.where(paquete_id: fantasma.id).update_all(paquete_id: id)
+      fantasma.destroy!
+    end
+    pre_alerta_paquetes.reload.each { |pap| pap.pre_alerta&.actualizar_estado_from_paquetes! }
+    true
   end
 
   # Si algo de plata o de papel ya lo nombra, no se borra. Mismo espíritu que

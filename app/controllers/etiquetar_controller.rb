@@ -169,7 +169,7 @@ class EtiquetarController < ApplicationController
     cajas = medidas_por_caja
 
     case cajas.size
-    when 0 then create_single                        # nunca agregó: un solo bulto
+    when 0 then crear_sin_medir                      # nunca agregó: pregunta cuántas
     when 1 then create_single(cajas.values.first)    # una caja: sus datos mandan
     else        create_split(cajas.size)
     end
@@ -202,6 +202,48 @@ end
 
   # `medidas` son las de la única caja agregada, cuando el operario usó Agregar
   # para una sola. Sin eso, ese peso y esas medidas se perdían.
+  # Sin ninguna caja medida, la cantidad la dice el modal de «¿cuántas
+  # etiquetas?».
+  #
+  # Yusef, 2026-08-18: *"en etiquetar casi nunca medimos y pesamos"*, y por eso
+  # *"cuando la cantidad de cajas guardadas sea cero, que pregunte cuántas son"*.
+  # Tres etiquetas son **tres cajas**, no tres copias del mismo papel: el flete
+  # se cobra por caja, el Warehouse Receipt cuenta piezas y cada etiqueta lleva
+  # su `1/3`. Un envío de tres cajas grabado como un bulto se cobra mal.
+  def crear_sin_medir
+    cantidad = etiquetas_pedidas
+    if cantidad.nil?
+      # `render_create_error` re-renderiza el formulario, y el formulario
+      # necesita un objeto: sin esto el 422 revienta con un 500.
+      @paquete = Paquete.new(paquete_params)
+      return render_create_error("La cantidad de etiquetas va de 1 a #{MAX_ETIQUETAS}.")
+    end
+
+    cantidad > 1 ? create_split(cantidad) : create_single
+  end
+
+  # Cuántas etiquetas pidió el modal. `nil` significa que mandó un número que no
+  # se puede grabar.
+  #
+  # La pistola dispara Enter y el campo es numérico: un dedo de más grabaría
+  # cientos de paquetes y mandaría cientos de etiquetas a la impresora. El tope
+  # está en el navegador (`max="99"`) y otra vez acá, porque el navegador se
+  # puede saltar.
+  #
+  # Va como parámetro suelto y **no** dentro de `paquete[...]`: el bug de
+  # `PR-C6.31` fue tener dos campos declarando la misma cantidad, ganaba el
+  # último y el split se caía en silencio.
+  MAX_ETIQUETAS = 99
+  def etiquetas_pedidas
+    crudo = params[:etiquetas]
+    return 1 if crudo.blank?
+
+    n = Integer(crudo, exception: false)
+    return nil if n.nil? || n < 1 || n > MAX_ETIQUETAS
+
+    n
+  end
+
   def create_single(medidas = {})
     # Reconciliación: si ya existe un paquete "esperado" creado desde una
     # pre-alerta con este tracking, lo transicionamos en lugar de crear uno
@@ -249,6 +291,7 @@ end
 
     if @paquete.save
       link_pre_alertas(@paquete)
+      absorber_esperado_del_secundario(@paquete)
       @paquetes_hoy = paquetes_hoy_count
 
       respond_to do |format|
@@ -325,6 +368,9 @@ end
     paquetes.each { |p| aplicar_prepago_miami(p); p.save! }
     @paquete = paquetes.first
     paquetes.each { |p| link_pre_alertas(p) }
+    # El esperado del secundario se absorbe **una vez**, en la Caja 1: es un
+    # solo bulto anunciado dos veces, no uno por caja.
+    absorber_esperado_del_secundario(paquetes.first)
     @paquetes_hoy = paquetes_hoy_count
 
     respond_to do |format|
