@@ -5866,3 +5866,138 @@ La reconciliación salió a un concern compartido por las dos rutas; quiénes so
 y una migración de datos reconcilia los fantasmas que ya estaban grabados,
 saltando y reportando los que ya entraran a una pre-factura, venta, nota o
 reempaque.
+
+---
+
+## Conversación 12 (2026-08-18) — la videollamada probando staging
+
+42 minutos con la pantalla compartida, probando lo que se había subido el día
+anterior. Transcrita con `whisper small`.
+
+**Lo que dio por bueno, probándolo en vivo:**
+
+| Qué | Lo que dijo |
+|---|---|
+| El paquete fantasma (`RI-01`) | *"Ahora, si te entran dos paquetes, pues dos paquetes te quedan."* |
+| El aviso de sucursal (`C11-01`) | *"Sí me dice el TEGUS, excelente. Esto está bien aquí."* |
+| La retención con motivos | *"Ahí se ha retenido… de esa manera nosotros tenemos menor error al verlo."* |
+| El cambio de servicio | *"Está saliendo bien."* |
+
+Y cerró: *"ahí va agarrando forma… ya hay mejor entendimiento de los dos lados"*.
+
+> El Warehouse Receipt encadenado (`C11-04`) no alcanzó a probarlo: la
+> computadora se le trabó dos veces durante la llamada.
+
+### C12-01 · Si no se midió nada, preguntar cuántas etiquetas — ✅ **ARREGLADO (PR-C7.23)**
+
+Lo repitió **tres veces**, la última al despedirse: *"acordate, no se te olvide
+corregir que si sale cero aquí, pregunte cuántas etiquetas"*.
+
+> *"En etiquetar casi nunca medimos y pesamos."*
+> *"Cuando la cantidad de cajas guardadas sea cero, que pregunte cuántas son."*
+
+El caso normal de Miami es recibir sin medir, y eso grababa **un** bulto y sacaba
+**una** etiqueta aunque el envío trajera tres cajas.
+
+**Tres etiquetas son tres cajas**, no tres copias del mismo papel: el flete se
+cobra por caja, el WR cuenta piezas y cada etiqueta lleva su `1/3`.
+
+Esto ya había cambiado tres veces —`PR-C6.17` lo preguntaba en F9, `PR-C6.18b` lo
+quitó porque *"el F9 era como confuso"*, `A7-20` sacó también el campo del
+formulario— y siempre por lo mismo: que haya **una sola fuente** para el número.
+Vuelve a preguntar con la condición que lo hace distinto: **solo cuando no hay
+ninguna caja cargada**. Jorge lo planteó en la llamada —*"no pueden ser los dos,
+voy a tener dos variables"*— y Yusef aceptó.
+
+### C12-02 · Las cajas de un split salían separadas en el listado — 🐛 ✅ **ARREGLADO (PR-C7.24)**
+
+> *"Lo único que no entiendo es por qué está separado, deberían de estar
+> juntitos. Porque eso puede ocasionar errores."*
+
+Causado por `RI-01`: con la reconciliación, la Caja 1 **es** el paquete esperado
+y conserva la hora en que el cliente lo anunció (11:11), mientras la Caja 2 nace
+al etiquetar (11:34). El listado ordenaba por fecha de creación.
+
+Él lo cerró con una regla más ancha que el síntoma:
+
+> *"Todas las actualizaciones tienen que ir con la última hora… si un paquete
+> está disponible en Honduras, se tiene que actualizar con la hora que se marcó
+> que estaba disponible."*
+
+El orden por defecto pasa a la última actualización, y la primera columna lleva
+la hora — *"aquí ocupamos la hora en esto"*.
+
+### C12-03 · El tracking no se ve completo — ✅ **ARREGLADO (PR-C7.25)**
+
+> *"El tracking necesitamos verlo completo… si no, vamos a tener que estar
+> entrando a cada tracking para poder encontrar uno."* · *"Para querer leérselo
+> al cliente."*
+
+Salía recortado a 18 caracteres y los de USPS pasan de 30. Es la misma regla que
+ya valía para la etiqueta impresa y que nunca había llegado al listado.
+
+El ancho salió de donde él lo señaló: *"le puedes poner «rep Miami»… «hn», no
+pones Honduras sino que «hn», cosas así"*. Los estados de la tabla pasan a un
+rótulo corto.
+
+> ⚠️ **Los rótulos largos no se tocaron.** Son los que ve el cliente y los peleó
+> él mismo en `A7-13`. Son dos audiencias distintas: el cliente necesita la frase
+> entera, el operario necesita el ancho. El largo quedó en el `title`.
+
+### C12-04 · El segundo tracking también anunciado — 🐛 ✅ **ARREGLADO (PR-C7.26)**
+
+Un bulto llega con dos códigos —el del carrier y el del comercio— y el cliente
+pre-alerta uno, o el otro, o los dos. Escaneó el segundo y le salió el modal de
+duplicado:
+
+> *"Esto, según tus reglas del inicio, no debería pasar… aquí está agarrando la
+> regla de que existe el tracking y no la regla de que es una pre-alerta."*
+
+La regla que dictó, con sus dos mitades:
+
+| Lo que compara | Qué pasa |
+|---|---|
+| Mismo cliente **y** mismo tipo de envío | *"No es necesario hacer nada"* |
+| Cliente distinto **o** tipo de envío distinto | *"Hay una diferencia en el tipo de envío"* · *"está a nombre de dos personas diferentes"* |
+
+**El aviso no marca nada solo.** Jorge preguntó derecho —*"¿el sistema va y marca
+la casillita?"*— y contestó que no: *"ahí mismo le dice: este paquete tiene dos
+tipos de envío. Lo va a retener, o lo va a enviar así"*.
+
+Y la otra mitad, la del guardado: *"tiene que jalar esta información,
+compararlo, venir y unificarlos acá y eliminarlo de la pre-alerta. **No es
+vincularlo, eliminarlo**"*. El esperado del secundario quedaba huérfano igual que
+el fantasma de `RI-01`, por la otra puerta.
+
+Frecuencia, según él: *"normalmente va a ser uno o el otro… te voy a dar un 80%
+de los casos"*; el 20% los dos, y *"el 5% le voy a dar que va a haber un error en
+algo"*.
+
+### C12-05 · Mover el aviso de sucursal en la pantalla de Miami — ⏳ **ABIERTA, la cierra él**
+
+> *"Tal vez moverlo… me voy a hablar con el muchacho de Miami, porque ellos
+> cuando escanean voltean a ver esto."*
+
+Primero pregunta él dónde miran los que escanean.
+
+### C12-06 · Una base de terceros — ⏳ **DIFERIDA**
+
+> *"Ese pues a futuro lo vamos a arreglar… ponerle una base de terceros.
+> Todavía solo tenemos la base normal de nosotros, no de un tercero."*
+
+### C12-07 · «Ya recibido en Miami, no debemos poder cambiarla» — ⏳ **HAY QUE PREGUNTARLE**
+
+> *"Ahora, esta información al ya estar recibido en Miami, nosotros no debemos de
+> poderla cambiar."*
+
+Lo dijo de pasada y justo antes de otra cosa. Del transcript no se saca **qué**
+información ni **quién** no debería poder cambiarla — se le pregunta antes de
+tocar nada.
+
+### C12-08 · Data vieja en staging — 🧹 **es de operación, no de código**
+
+> *"Tenés todos los paquetes viejos ahí… la mitad de la información no sirve, es
+> data dañada, hay que borrarlo."*
+
+Jorge ya limpió su base local y dijo en la llamada que se le olvidó correrlo en
+staging.
