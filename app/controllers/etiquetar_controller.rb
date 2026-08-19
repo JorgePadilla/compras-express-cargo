@@ -141,9 +141,19 @@ class EtiquetarController < ApplicationController
           render turbo_stream: [
             turbo_stream.prepend("flash-messages", partial: "shared/flash",
                                  locals: { notice: "Paquete #{@paquete.tracking} actualizado." }),
+            # `data-volver`: al terminar de actualizar, la pantalla tiene que
+            # volver a modo alta.
+            #
+            # Jorge, 2026-08-19: *"«Actualizando 9234690331…» siempre se queda en
+            # la vista, no desaparece al guardar"*. El banner era el síntoma
+            # visible; lo de abajo es peor. El `form` se renderiza en el servidor
+            # con `PATCH /etiquetar/:id`, y `clearForm` limpia los **campos**
+            # pero no la acción del formulario — así que el paquete siguiente
+            # que se escaneara se iba a guardar **encima del anterior**.
             turbo_stream.append("etiquetar-events",
                                 "<div data-etiquetar-target='event' data-action='paquete-saved' " \
                                 "data-guia='#{@paquete.guia}' data-print='#{params[:print]}' " \
+                                "data-volver='true' " \
                                 "data-paquete-id='#{@paquete.id}'></div>")
           ]
         end

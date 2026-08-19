@@ -897,6 +897,23 @@ cerrarQuitarCobro() {
         this._avisarSucursalAlFinal()
       }
 
+      // Al actualizar un paquete existente no alcanza con limpiar los campos:
+      // el `form` viene del servidor apuntando a `PATCH /etiquetar/:id`, y
+      // `clearForm` no toca la acción. El paquete siguiente se guardaría
+      // **encima del anterior**, y el banner de "Actualizando …" quedaba en
+      // pantalla diciéndolo — Jorge lo vio por el banner.
+      //
+      // Volver a `/etiquetar` deja la pantalla en modo alta, que es donde tiene
+      // que estar para el siguiente escaneo. La sesión de etiquetado vive en el
+      // server, así que no se pierde.
+      if (el.dataset.volver === "true") {
+        el.remove()
+        // Después de la ventana de impresión: si se navega antes, el navegador
+        // puede cancelarla.
+        setTimeout(() => Turbo.visit(window.location.pathname), 150)
+        return
+      }
+
       // Clear form after successful save
       setTimeout(() => this.clearForm(), 100)
       el.remove()
