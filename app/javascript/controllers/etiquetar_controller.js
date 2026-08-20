@@ -26,7 +26,9 @@ export default class extends ClienteAutocomplete {
     // PR-C6.9: el tipo de envío del lote, para poder comparar contra el de la
     // pre-alerta sin otra vuelta al servidor.
     tipoEnvioSesion: String,
-    tipoEnvioSesionNombre: String
+    tipoEnvioSesionNombre: String,
+    // El paquete que se está actualizando. Vacío al dar de alta.
+    actualizandoId: String
   }
 
   connect() {
@@ -327,7 +329,7 @@ cerrarQuitarCobro() {
     if (valor === this._ultimoSecundario) return
     this._ultimoSecundario = valor
 
-    fetch(`${this.checkUrlValue}?tracking=${encodeURIComponent(valor)}`, {
+    fetch(this._urlDeConsulta(valor), {
       headers: { "Accept": "application/json" }
     })
       .then(r => r.json())
@@ -388,6 +390,29 @@ cerrarQuitarCobro() {
     }
   }
 
+  // El paquete que se está actualizando NO es un duplicado de sí mismo.
+  //
+  // Jorge, 2026-08-19: *"cuando estamos actualizando hay un comportamiento
+  // raro: cierro el modal y doy click en la forma y se vuelve a abrir el
+  // modal"*. Al entrar por `?paquete_id=` el tracking viene puesto, y el primer
+  // blur salía a preguntar si existía — claro que existía: **era él**. Así que
+  // el operario que entró justamente a actualizarlo recibía "ya está en el
+  // sistema, ¿es una actualización?" sobre el paquete que ya estaba
+  // actualizando, y volvía a salir cada vez que el campo perdía el foco.
+  //
+  // `excluir_paquete_id` ya existe para esto — `PR-C6.44` lo agregó cuando el
+  // editor de pre-alertas se avisaba a sí mismo. El comentario del server decía
+  // *"/etiquetar nunca manda el parámetro"*, y era cierto mientras solo diera
+  // de alta.
+  _urlDeConsulta(valor) {
+    const url = new URL(this.checkUrlValue, window.location.origin)
+    url.searchParams.set("tracking", valor)
+    if (this.hasActualizandoIdValue && this.actualizandoIdValue) {
+      url.searchParams.set("excluir_paquete_id", this.actualizandoIdValue)
+    }
+    return url.pathname + url.search
+  }
+
   checkTracking() {
     const tracking = this.trackingTarget.value.trim()
     if (tracking.length < 5) return
@@ -399,7 +424,7 @@ cerrarQuitarCobro() {
 
     const consulta = (this._consultaSeq = (this._consultaSeq || 0) + 1)
 
-    fetch(`${this.checkUrlValue}?tracking=${encodeURIComponent(tracking)}`, {
+    fetch(this._urlDeConsulta(tracking), {
       headers: { "Accept": "application/json" }
     })
       .then(r => r.json())
