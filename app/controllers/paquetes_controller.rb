@@ -489,8 +489,12 @@ class PaquetesController < ApplicationController
     pap_query = PreAlertaPaquete.sin_vincular.buscar_escaneado(tracking)
 
     pap = pap_query.includes(:pre_alerta).first
-    pa = pap&.pre_alerta || (paquete && paquete.estado == "pre_alerta_estado" ?
-                              PreAlertaPaquete.where(paquete_id: paquete.id).first&.pre_alerta : nil)
+    # El renglón casi nunca está `sin_vincular`: `crear_paquete_esperado` le puso
+    # `paquete_id` al materializar el esperado. Así que sin este segundo intento
+    # `pap` queda en nil y con él se van **las instrucciones que escribió el
+    # cliente** — que es justo lo que hay que mostrarle al que recibe.
+    pap ||= PreAlertaPaquete.includes(:pre_alerta).find_by(paquete_id: paquete.id) if paquete
+    pa = pap&.pre_alerta
 
     if pa.present?
       cli = pa.cliente
@@ -524,12 +528,56 @@ class PaquetesController < ApplicationController
         # paquete esperado y se borraba en el momento de recibirlo.
         retener_miami: pap&.retener_miami? || paquete&.retener_miami? || false,
         motivo_retencion_ids: paquete&.motivo_retencion_ids || [],
-        notas_retencion: ERB::Util.html_escape(paquete&.notas_retencion.to_s)
+        motivo_retencion_nombres: paquete&.motivos_retencion&.map { |m| ERB::Util.html_escape(m.nombre) } || [],
+        notas_retencion: ERB::Util.html_escape(paquete&.notas_retencion.to_s),
+        # Lo que el que recibe **tiene que ver antes de guardar**, no al costado.
+        #
+        # Yusef, 2026-08-19, señalando la franja: *"estas informaciones ellos no
+        # las leen. Esto no lo van a leer, olvídate"* · *"no te voy a mentir,
+        # Jorge: a puro huevos leen esto"*. Digitan de 500 a 1.000 paquetes al
+        # día mirando la pistola, no la pantalla.
+        tareas: tareas_del_cliente(cli),
+        notas: notas_para_el_modal(pa, pap)
       }
     else
       { pre_alerta_match: false }
     end
   end
+  # Las tareas abiertas del cliente, para el modal. Mismo criterio que la franja
+  # de contexto: abiertas y visibles para quien está recibiendo.
+  def tareas_del_cliente(cliente)
+    return [] if cliente.nil?
+
+    Tarea.abiertas
+         .para_cliente(cliente.id)
+         .visibles_para(Current.user)
+         .order(created_at: :asc)
+         .limit(5)
+         .map do |t|
+      { id: t.id, titulo: ERB::Util.html_escape(t.titulo.to_s),
+        url: completar_tarea_path(t) }
+    end
+  end
+
+  # Las notas que escribió el cliente sobre este envío.
+  #
+  # Van las dos: las `instrucciones` de **este** renglón y las `notas_grupo` de
+  # la pre-alerta, que aplican a todo el envío. Yusef: *"aquí están las notas del
+  # grupo y no sale… y el grupo sí tiene notas"*.
+  def notas_para_el_modal(pre_alerta, pap)
+    notas = []
+    if pap&.instrucciones.present?
+      notas << { titulo: "Instrucción del paquete",
+                 texto: ERB::Util.html_escape(pap.instrucciones) }
+    end
+    if pre_alerta&.notas_grupo.present?
+      notas << { titulo: "Nota del grupo",
+                 texto: ERB::Util.html_escape(pre_alerta.notas_grupo) }
+    end
+    notas
+  end
+  private :tareas_del_cliente, :notas_para_el_modal
+
   private :detect_pre_alerta_match
 
   public

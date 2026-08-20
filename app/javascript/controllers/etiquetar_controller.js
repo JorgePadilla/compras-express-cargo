@@ -1,5 +1,14 @@
 import ClienteAutocomplete from "controllers/cliente_autocomplete"
 
+// El color del encabezado según de qué avisa. Yusef: *"el cerebro hasta el color
+// asocia"*. Rojo para lo que frena el paquete, ámbar para lo que hay que hacer,
+// navy para lo que hay que leer.
+const TONOS_DE_AVISO = {
+  retencion: "bg-red-600 text-white",
+  tarea: "bg-cec-gold text-cec-navy",
+  nota: "bg-cec-navy text-white"
+}
+
 // PR-C6.32: la búsqueda de cliente vive en `ClienteAutocomplete`, compartida
 // con /entrega_personal. Acá solo queda lo propio de etiquetar: el banner de
 // notas de Miami, vía el gancho `_alSeleccionarCliente`.
@@ -18,7 +27,9 @@ export default class extends ClienteAutocomplete {
     "conflictoSesionModal", "conflictoSesionTexto", "conflictoSesionDejarBtn",
     "sucursalBanner", "sucursalTexto", "sucursalModal", "sucursalModalTexto",
     "quitarCobroModal",
-    "etiquetasModal", "etiquetasInput"
+    "etiquetasModal", "etiquetasInput",
+    "avisoModal", "avisoEncabezado", "avisoTipo", "avisoTitulo", "avisoTexto",
+    "avisoPrincipal", "avisoSecundario"
   ]
   static values = {
     checkUrl: String,
@@ -533,6 +544,105 @@ cerrarQuitarCobro() {
     }
 
     this._marcarRetencionDeLaPreAlerta(data)
+    this._encolarAvisos(data)
+  }
+
+  // ── Lo que el que recibe TIENE que ver ────────────────────────────────
+  //
+  // Yusef, 2026-08-19, señalando la franja donde esto salía como texto al
+  // costado: *"estas informaciones ellos no las leen… a puro huevos leen esto"*.
+  // Digitan de 500 a 1.000 paquetes al día mirando la pistola.
+  //
+  // **Uno por cosa, no uno con todo**: él arrancó pidiendo uno solo y Jorge
+  // argumentó que cada uno necesita su propia respuesta —retenido / se hizo /
+  // leída—. Salen en fila y solo los que el paquete tiene: si no hay retención
+  // ni tareas ni notas, no sale nada.
+  _encolarAvisos(data) {
+    const cola = []
+
+    if (data.retener_miami) {
+      const motivos = (data.motivo_retencion_nombres || []).join(" · ")
+      cola.push({
+        tipo: "Retener en Miami",
+        titulo: "NO DESPACHAR",
+        texto: [motivos, data.notas_retencion].filter(Boolean).join("\n") ||
+               "Sin motivo anotado.",
+        principal: "Retenido, confirmado",
+        tono: "retencion"
+      })
+    }
+
+    ;(data.tareas || []).forEach(t => cola.push({
+      tipo: "Tarea pendiente",
+      titulo: t.titulo,
+      texto: "",
+      principal: "Se hizo",
+      secundario: "Todavía no",
+      completarUrl: t.url,
+      tono: "tarea"
+    }))
+
+    ;(data.notas || []).forEach(n => cola.push({
+      tipo: n.titulo,
+      titulo: "Nota del cliente",
+      texto: n.texto,
+      principal: "Leída",
+      tono: "nota"
+    }))
+
+    this._colaDeAvisos = cola
+    this._siguienteAviso()
+  }
+
+  _siguienteAviso() {
+    if (!this.hasAvisoModalTarget) return
+    const aviso = (this._colaDeAvisos || []).shift()
+    if (!aviso) return
+
+    this._avisoActual = aviso
+    if (this.hasAvisoTipoTarget) this.avisoTipoTarget.textContent = aviso.tipo
+    if (this.hasAvisoTituloTarget) this.avisoTituloTarget.textContent = aviso.titulo
+    if (this.hasAvisoTextoTarget) this.avisoTextoTarget.textContent = aviso.texto
+    if (this.hasAvisoPrincipalTarget) this.avisoPrincipalTarget.textContent = aviso.principal
+    if (this.hasAvisoSecundarioTarget) {
+      this.avisoSecundarioTarget.textContent = aviso.secundario || ""
+      this.avisoSecundarioTarget.classList.toggle("hidden", !aviso.secundario)
+    }
+    if (this.hasAvisoEncabezadoTarget) {
+      this.avisoEncabezadoTarget.className =
+        `px-6 py-4 text-center ${TONOS_DE_AVISO[aviso.tono] || TONOS_DE_AVISO.nota}`
+    }
+
+    // A1-10: "un pin antes de que salga cualquier modal".
+    this.dispatch("modalAbierto")
+    this.avisoModalTarget.showModal()
+  }
+
+  // "Se hizo" en una tarea la marca de verdad, por donde ya se marcaba: el
+  // endpoint del checkbox de la franja, que registra **quién** la completó. Un
+  // endpoint nuevo sería la gemela separada otra vez.
+  avisoSi() {
+    const aviso = this._avisoActual
+    if (aviso?.completarUrl) {
+      const token = document.querySelector("meta[name='csrf-token']")?.content
+      fetch(aviso.completarUrl, {
+        method: "POST",
+        headers: { "X-CSRF-Token": token, "Accept": "text/vnd.turbo-stream.html" }
+      }).catch(e => console.error("[etiquetar] no se pudo completar la tarea", e))
+    }
+    this._cerrarAviso()
+  }
+
+  avisoNo() {
+    this._cerrarAviso()
+  }
+
+  _cerrarAviso() {
+    this.avisoModalTarget.close()
+    this._avisoActual = null
+    // El siguiente en el frame que viene: dos `showModal()` en el mismo tick
+    // dejan el segundo sin foco.
+    requestAnimationFrame(() => this._siguienteAviso())
   }
 
   // La retención que viene anunciada.
