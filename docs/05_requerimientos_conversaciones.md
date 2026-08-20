@@ -5061,7 +5061,17 @@ Esto **contradice el diseño actual** y hay que rehacerlo.
 
 ---
 
-### A7-21 · Las etiquetas salen al final, todas juntas, y sin "1 de N"
+### A7-21 · Las etiquetas salen al final, todas juntas, y sin "1 de N" — ✏️ **él mismo lo acotó (2026-08-19)**
+
+> ⚠️ **Esto vale para el empaque, no para etiquetar.** Yusef lo corrigió solo en
+> la llamada del 19-ago, sin que nadie se lo preguntara:
+>
+> > *"La etiqueta solo lleva el 1, 2 ni 3 porque no estamos seguros de cuántas
+> > estamos empacando… **y no es en etiquetar. Etiquetar siempre lleva la
+> > cantidad, porque ahí ya sabés cuántas mandás imprimir**."*
+>
+> Al recibir, la cantidad se fija antes de imprimir. Implementado en `PR-C7.28`
+> con esa distinción; ver `C14-01`.
 
 > "No creo que debamos crearle una etiqueta a cada uno a medida las vayamos
 >  sacando, sino que **hasta el final tira las cinco etiquetas** y las pegás. Por
@@ -6063,3 +6073,107 @@ Retener es una acción operativa de Miami y los motivos son de ellos («paquete
 dañado», «contenido perecedero»). Yusef lo pidió para la pre-alerta de **admin**
 (`C11-02`). Queda fijado en el lint para que nadie lo empareje después creyendo
 que falta.
+
+---
+
+## Conversación 14 (2026-08-19) — dos llamadas: /etiquetar y los accesos
+
+31 minutos probando `/etiquetar` con la pantalla compartida, y 13 más sobre los
+clientes. Transcritas con `whisper small`.
+
+**Lo que confirmó de lo del día**, reproduciéndolo en vivo: la franjita de
+«Actualizando» que no se iba y el modal que reaparecía — *"ahí es donde está todo
+el mejengue"*. Los dos ya estaban arreglados (`PR-C7.28`, `PR-C7.29`).
+
+### C14-01 · El `1 de N` — ✏️ se corrigió solo
+
+Ver la nota agregada a `A7-21`. Su regla original valía para el **empaque**;
+etiquetar es otra cosa porque ahí la cantidad se sabe antes de imprimir.
+
+### C14-02 · Los avisos que nadie lee — ✅ **ARREGLADO (PR-C7.31)**
+
+Lo repitió tres veces, señalando la franja de contexto:
+
+> *"No me da la información, **aquí necesitamos un modal**."*
+> *"Estas informaciones **ellos no las leen**. Esto no lo leen, esto no lo van a
+> leer, olvídate."*
+> *"No te voy a mentir, Jorge: **a puro huevos leen esto**."*
+
+Digitan de 500 a 1.000 paquetes al día mirando la pistola. Retención, tarea y
+nota pasan a **un modal cada uno**, con su propia respuesta —retenido / se hizo /
+leída— y solo los que el paquete tiene.
+
+> **Uno por cosa y no uno con todo** lo discutieron ahí mismo: él pidió uno solo,
+> Jorge argumentó que cada uno necesita su respuesta, y él aceptó — *"tenés
+> razón, hacerlo así si querés"*.
+
+De paso salieron dos: las **notas del grupo** nunca se mostraban —*"aquí están
+las notas del grupo y no sale"*— y el renglón de la pre-alerta casi nunca se
+encontraba, así que **las instrucciones que escribe el cliente se perdían
+siempre**.
+
+### C14-03 · El aviso de bolsa del default — ✅ **ARREGLADO (PR-C7.32)**
+
+> *"Esa de San Pedro Sula hay que eliminarlo, porque es el default."*
+> *"El cerebro trabaja en default. Cuando querés que haga una cosa diferente al
+> default, tenés que ponerle la nota que es diferente."*
+
+El 80% de la carga se queda en San Pedro: un aviso que sale siempre deja de
+leerse, y con él el del día que dice Tegucigalpa. Cuál es la de por defecto es
+una columna editable desde `/sucursales`, no una constante.
+
+Pidió además **color por sucursal** cuando abran más — *"el cerebro hasta el
+color asocia"*. Entra cuando exista la tercera.
+
+### C14-04 · Los tres bugs de actualizar — ✅ **ARREGLADO (PR-C7.30)**
+
+Los reprodujo en vivo: la cantidad de etiquetas que se perdía (*"le di cinco y se
+quedó con las primeras tres"*), el cambio de servicio que solo tocaba una caja
+(*"debería de cambiar todas"*) y que actualizar un paquete de otro tipo de envío
+no avisara nada.
+
+### C14-05 · El acceso del cliente — ✅ **ARREGLADO (PR-C7.33)**
+
+> *"Falta el sistema de usuario… lo del acceso de ellos."*
+> *"¿Cuál es la cuenta de acceso de él? Y cambiarle la clave por si se le olvidó."*
+
+El cliente ya podía entrar; lo que no existía era **dónde administrarlo**. El caso
+que mostró: una clienta con **dos correos** a la que no le pueden crear cuenta,
+porque el correo es la llave.
+
+**Entran con el código de casillero o con el correo.** Él lo pidió dos veces —*"es
+que mi correo está lleno"*, *"es que yo no tengo correo"*— y Jorge argumentó que
+hoy es por correo y es lo que funciona. Quedaron en las dos.
+
+> `clientes.codigo` tiene índice único; `email` **no** —la unicidad la pone solo
+> el modelo, o sea que no alcanza a los importados—. Por eso el código es el
+> camino que no miente cuando hay correos repetidos.
+
+Y **cortar el acceso no es dar de baja al cliente**: son dos banderas distintas.
+
+### C14-06 · El nombre y el RTN — ✅ **ARREGLADO (PR-C7.33)**
+
+> *"Tiene que poner mínimo **tres ítems**… por lo menos Jorge y dos apellidos."*
+> *"Imaginate cuántos Jorge Padilla hay."*
+
+Es una regla **de la pantalla donde alguien teclea**, no del modelo entero: hay
+9.000 clientes importados con dos palabras y una validación a secas trabaría la
+migración que sigue pendiente. Al editar, solo si el nombre de verdad cambia.
+
+`rtn` al lado de `identidad`, los dos opcionales — *"eso se va actualizando
+cuando ellos van pidiendo factura"*.
+
+### C14-07 · La ficha del paquete y su historial — ⏳ **DIFERIDO por Jorge**
+
+> *"Esta parte del historial de cambios me le quita lo bonito."*
+
+Y la respuesta de Jorge, que es la que manda acá: *"que no te estrese eso hasta
+que lleguemos a servicio al cliente, porque ellos son los que van a leer eso"*.
+
+### C14-08 · Migrar los 9.000 clientes del sistema viejo — ⏳ **ABIERTA**
+
+> **Jorge:** *"Lo que más me preocupa es mover los clientes."*
+> **Yusef:** *"Yo no tengo cómo este chavo Roger; él hizo tablas y relaciones,
+> eso es lo que yo tengo."*
+
+Sin las tablas del sistema viejo no hay nada que planear.

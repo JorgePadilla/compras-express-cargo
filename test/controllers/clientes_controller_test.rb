@@ -25,7 +25,7 @@ class ClientesControllerTest < ActionDispatch::IntegrationTest
   test "should create cliente" do
     assert_difference("Cliente.count") do
       post clientes_url, params: { cliente: {
-        nombre: "Nuevo", apellido: "Cliente", email: "nuevo@test.com",
+        nombre: "Nuevo", apellido: "Cliente De Prueba", email: "nuevo@test.com",
         telefono: "99998888", ciudad: "Tegucigalpa"
       } }
     end
@@ -50,10 +50,10 @@ class ClientesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should update cliente" do
-    patch cliente_url(@cliente), params: { cliente: { nombre: "Updated" } }
+    patch cliente_url(@cliente), params: { cliente: { nombre: "Updated De Prueba" } }
     assert_redirected_to cliente_url(@cliente)
     @cliente.reload
-    assert_equal "Updated", @cliente.nombre
+    assert_equal "Updated De Prueba", @cliente.nombre
   end
 
   test "should not update with invalid data" do

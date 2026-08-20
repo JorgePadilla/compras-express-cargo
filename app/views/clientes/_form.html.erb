@@ -52,11 +52,26 @@
                  focus:ring-cec-teal focus:border-cec-teal" %>
     </div>
 
+    <%# RTN al lado de la identidad, los dos opcionales. Yusef: *"yo estoy
+        pensando si debería existir la opción de que diga identidad y RTN, para
+        las empresas"*, y sobre no exigirlo: *"eso se va actualizando cuando
+        ellos van pidiendo factura"*. Los 9.000 viejos vienen sin él. %>
     <div>
-      <%= f.label :email, class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.label :rtn, "RTN", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.text_field :rtn, placeholder: "Para facturar a empresas",
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                 focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+
+    <div>
+      <%= f.label :email, "Correo de acceso", class: "block text-sm font-medium text-gray-700 mb-1" %>
       <%= f.email_field :email,
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
                  focus:ring-cec-teal focus:border-cec-teal" %>
+      <p class="text-xs text-gray-500 mt-1">
+        Con este o con su código de casillero entra al portal. Los correos para
+        avisarle van más abajo.
+      </p>
     </div>
 
     <div>
@@ -169,6 +184,58 @@
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
                  focus:ring-cec-teal focus:border-cec-teal" %>
       <p class="mt-1 text-xs text-gray-500">Visibles al equipo de SAC al atender al cliente</p>
+    </div>
+  </div>
+
+  <%# ── El acceso al portal ──
+      Yusef, 2026-08-19: *"falta el sistema de usuario… lo del acceso de ellos"*.
+      El cliente ya podía entrar; lo que no existía era dónde administrarlo:
+      *"¿cuál es la cuenta de acceso de él? Y cambiarle la clave por si se le
+      olvidó"*.
+
+      El caso que mostró: una clienta con **dos correos**, a la que no le podían
+      crear cuenta porque el correo es la llave. Por eso el de arriba es el de
+      acceso y estos son a quién más avisarle. %>
+  <div class="mt-6 pt-4 border-t border-gray-200">
+    <h3 class="text-sm font-bold text-cec-navy dark:text-cec-gold">Acceso al portal</h3>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+      Entra con su código <span class="font-mono"><%= cliente.codigo %></span> o con el correo de acceso.
+    </p>
+
+    <div class="mt-3 flex items-start gap-3 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 px-3 py-2">
+      <%= f.check_box :acceso_habilitado, class: "mt-0.5 rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+      <span>
+        <%= f.label :acceso_habilitado, "Puede entrar al portal",
+              class: "block text-sm font-medium text-gray-700 dark:text-gray-200" %>
+        <span class="block text-xs text-gray-500 dark:text-gray-400">
+          Quitarlo le corta el acceso sin darlo de baja como cliente — son dos cosas distintas.
+        </span>
+      </span>
+    </div>
+
+    <%# Los correos de aviso. Uno por renglón, y se agregan los que hagan falta:
+        *"correos a notificar y correos al usuario"* · *"números a segundo,
+        números a tercero… ya no es problema"*. %>
+    <div class="mt-4" data-controller="correos-repetidor">
+      <p class="text-sm font-medium text-gray-700 dark:text-gray-200">Correos para avisarle</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+        Además del de acceso. No sirven para entrar.
+      </p>
+
+      <div data-correos-repetidor-target="lista" class="space-y-2">
+        <%= f.fields_for :cliente_correos do |cf| %>
+          <%= render "clientes/correo_fila", cf: cf %>
+        <% end %>
+      </div>
+
+      <template data-correos-repetidor-target="template">
+        <%= f.fields_for :cliente_correos, ClienteCorreo.new, child_index: "NEW_INDEX" do |cf| %>
+          <%= render "clientes/correo_fila", cf: cf %>
+        <% end %>
+      </template>
+
+      <%= render(ButtonComponent.new(variant: :outline_teal, size: :sm, icon: "plus-circle",
+            data: { action: "click->correos-repetidor#agregar" })) { "Agregar correo" } %>
     </div>
   </div>
 

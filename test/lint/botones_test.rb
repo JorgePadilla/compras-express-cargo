@@ -53,6 +53,10 @@ class BotonesTest < ActiveSupport::TestCase
     # <li> pasó a ser uno solo para el <template> y para las filas que pinta
     # el servidor. Es el mismo botón, en otro archivo.
     "app/views/shared/_caja_fila.html.erb"                   => 1,
+    # La × de quitar un correo de aviso de la ficha del cliente. Mismo botón y
+    # mismo motivo que el de la caja: un icono chico adentro de una fila que se
+    # repite, con su `aria-label`.
+    "app/views/clientes/_correo_fila.html.erb"               => 1,
     # PR-C7.17: `app/components` entró al censo con este PR, y este apareció
     # solo. Es legítimo y no puede migrar: `RowActionComponent` **es** la
     # alternativa a los botones crudos, así que envolverlo en `ButtonComponent`

@@ -14,7 +14,7 @@ class SessionsController < ApplicationController
     if user = User.authenticate_by(email_address: email, password: password)
       start_new_session_for user
       redirect_to after_authentication_url
-    elsif cliente = Cliente.activos.authenticate_by(email: email, password: password)
+    elsif cliente = Cliente.autenticar(email, password)
       start_new_cliente_session_for(cliente)
       redirect_to after_cliente_authentication_url
     else
