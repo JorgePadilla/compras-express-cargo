@@ -1,0 +1,16 @@
+<%# Un correo de aviso. Locals: `cf` (el form builder anidado).
+
+    Sale de acá y no de un string en el JS: un `<template>` escrito a mano se
+    desincroniza de la fila y cada una nueva sale distinta — la lección de
+    `PR-C6.44`. %>
+<div class="correo-fila flex items-center gap-2">
+  <%= cf.hidden_field :id %>
+  <%= cf.email_field :correo, placeholder: "otro@correo.com",
+      class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+  <%= cf.hidden_field :_destroy, data: { correos_repetidor_target: "destruir" } %>
+  <button type="button" data-action="click->correos-repetidor#quitar"
+          class="text-gray-400 hover:text-red-600 rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+          aria-label="Quitar este correo">
+    <%= heroicon "x-mark", variant: :outline, options: { class: "w-4 h-4" } %>
+  </button>
+</div>

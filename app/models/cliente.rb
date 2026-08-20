@@ -37,6 +37,10 @@ class Cliente < ApplicationRecord
   # el cliente porque no tienen valor fuera de su contexto (a diferencia de
   # paquetes o ventas, que son historia contable).
   has_many :tareas, dependent: :destroy
+  # Los correos a los que además hay que avisarle. El de **acceso** es `email`.
+  has_many :cliente_correos, dependent: :destroy
+  accepts_nested_attributes_for :cliente_correos, allow_destroy: true,
+                                reject_if: ->(a) { a[:correo].blank? }
 
   validates :codigo, presence: true, uniqueness: { case_sensitive: false }
   validates :nombre, presence: true
@@ -44,7 +48,38 @@ class Cliente < ApplicationRecord
                    uniqueness: { case_sensitive: false, message: "ya esta registrado" }, if: -> { email.present? }
   validates :tema, inclusion: { in: %w[light dark], allow_nil: true }
 
+  # ── El nombre completo lleva por lo menos tres palabras ─────────────────
+  #
+  # Yusef, 2026-08-19: *"tiene que poner mínimo **tres ítems**… por ejemplo yo me
+  # llamo Alejandro Federico, tres nombres y mis dos apellidos. Entonces por lo
+  # menos tenés que tener Jorge y dos apellidos"*. Y el porqué: *"imaginate
+  # cuántos Jorge Padilla hay"*.
+  #
+  # En Honduras el nombre es el desempate cuando el casillero se lee mal — y las
+  # etiquetas llegan rotas: *"a veces solo dicen 234 y después dice Pérez
+  # Hernández"*.
+  #
+  # **Es una regla de la pantalla, no del modelo entero.** Hay 9.000 clientes
+  # importados del sistema viejo y muchos vienen con dos palabras; una validación
+  # a secas los volvería imposibles de guardar y trabaría la migración que Jorge
+  # tiene pendiente —*"lo que más me preocupa es mover los clientes"*—.
+  #
+  # Corre solo cuando alguien está **tecleando** el nombre en `/clientes`, que es
+  # donde Yusef la pidió. El importador, los seeds y las pruebas que solo
+  # necesitan un cliente cualquiera no se enteran.
+  attr_accessor :exigir_nombre_completo
+
+  # Y además: **solo si el nombre de verdad cambió**. Guardar la ficha de un
+  # cliente viejo reenviando su mismo nombre —que es lo que hace el formulario de
+  # precios especiales— no puede trabarse por dos palabras que nadie tocó.
+  validate :nombre_completo_lleva_tres_palabras,
+           if: -> { exigir_nombre_completo && (new_record? || nombre_changed? || apellido_changed?) }
+
   scope :activos, -> { where(activo: true) }
+  # Los que pueden entrar al portal. `activo` es "es cliente nuestro";
+  # `acceso_habilitado` es "puede entrar". Son dos cosas distintas: se le corta
+  # el acceso a alguien que sigue siendo cliente.
+  scope :con_acceso, -> { activos.where(acceso_habilitado: true) }
   # PR-10.c: búsqueda combinada de código y nombre. Antes hacía un `OR` sobre
   # columnas sueltas con el término completo, así que fallaba en los dos casos
   # que más usa el operario:
@@ -191,6 +226,39 @@ class Cliente < ApplicationRecord
   # sabe a dónde va, y ahí el aviso sirve.
   def retira_en_la_de_por_defecto?
     sucursal_retiro.present? && sucursal_retiro.retiro_por_defecto?
+  end
+
+  # El cliente entra con su **código de casillero o con su correo**.
+  #
+  # Yusef, 2026-08-19, dos veces: *"es que mi correo está lleno"*, *"es que yo no
+  # tengo correo"*. En Honduras el correo no es el identificador que la gente
+  # recuerda; el número de casillero sí, porque lo usan todos los días.
+  #
+  # Jorge argumentó que hoy la autenticación es por correo y es lo que funciona,
+  # y quedaron en las dos: el correo sigue sirviendo para entrar, para notificar
+  # y para recuperar la clave.
+  #
+  # `codigo` tiene índice único en la base, así que entrar por ahí es sólido.
+  # `email` **no** —la unicidad la pone solo el modelo, o sea que no alcanza a
+  # los 9.000 importados—, y por eso el de correo va segundo: si hay repetidos,
+  # el código es el camino que no miente.
+  #
+  # `con_acceso` y no `activos`: se le puede cortar el acceso a alguien que sigue
+  # siendo cliente.
+  def self.autenticar(identificador, password)
+    valor = identificador.to_s.strip
+    return nil if valor.blank?
+
+    con_acceso.authenticate_by(codigo: valor, password: password) ||
+      con_acceso.authenticate_by(email: valor.downcase, password: password)
+  end
+
+  PALABRAS_MINIMAS_DEL_NOMBRE = 3
+
+  def nombre_completo_lleva_tres_palabras
+    return if nombre_completo.to_s.split.size >= PALABRAS_MINIMAS_DEL_NOMBRE
+
+    errors.add(:nombre, "va con nombre y dos apellidos (al menos #{PALABRAS_MINIMAS_DEL_NOMBRE} palabras)")
   end
 
   def nombre_completo

@@ -41,7 +41,7 @@ class ClienteCobroVolumetricoFormTest < ActionDispatch::IntegrationTest
   test "crear un cliente ya con el flag puesto" do
     assert_difference "Cliente.count", 1 do
       post clientes_url, params: { cliente: {
-        nombre: "Mayorista", apellido: "Grande",
+        nombre: "Mayorista", apellido: "Grande Hernández",
         tipo_envio_solo_volumetrico_ids: [ @cem.id, @cer.id ]
       } }
     end

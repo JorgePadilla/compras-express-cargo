@@ -20,6 +20,11 @@ class ClientesController < ApplicationController
 
   def create
     @cliente = Cliente.new(cliente_params)
+    # Acá alguien está **tecleando** el nombre, y es donde Yusef pidió los tres
+    # ítems: *"por lo menos tenés que tener Jorge y dos apellidos… imaginate
+    # cuántos Jorge Padilla hay"*. El importador de los 9.000 viejos no pasa por
+    # esta pantalla y no se entera.
+    @cliente.exigir_nombre_completo = true
     if @cliente.save
       redirect_to @cliente, notice: "Cliente creado exitosamente."
     else
@@ -75,6 +80,12 @@ class ClientesController < ApplicationController
   def update
     precios = PreciosEspecialesDelCliente.new(@cliente)
 
+    # Al editar, **solo si están tocando el nombre**. Los 9.000 viejos vienen con
+    # dos palabras: abrir uno para corregirle el teléfono no puede trabarse por
+    # algo que nadie tocó. Es la misma trampa del método de prepago y la del
+    # consolidado.
+    @cliente.exigir_nombre_completo = cliente_params.key?(:nombre) || cliente_params.key?(:apellido)
+
     guardado = ActiveRecord::Base.transaction do
       @cliente.update(cliente_params) &&
         precios.aplicar(params[:precios_especiales]) ||
@@ -120,7 +131,9 @@ class ClientesController < ApplicationController
 
   def cliente_params
     params.require(:cliente).permit(
-      :codigo, :nombre, :apellido, :identidad, :email,
+      :codigo, :nombre, :apellido, :identidad, :rtn, :email,
+      # El acceso al portal: se corta sin dar de baja al cliente.
+      :acceso_habilitado,
       :telefono, :telefono_whatsapp, :direccion, :ciudad, :sucursal_retiro_id,
       :departamento, :categoria_precio_id, :activo,
       :notas_miami, :notas_honduras,
@@ -128,7 +141,9 @@ class ClientesController < ApplicationController
       # PR-C6.41: los servicios donde se le cobra solo el volumétrico. Sin esta
       # línea el form guarda en silencio — los checks no dan error, simplemente
       # no pasa nada.
-      tipo_envio_solo_volumetrico_ids: []
+      tipo_envio_solo_volumetrico_ids: [],
+      # Los correos a los que además hay que avisarle.
+      cliente_correos_attributes: %i[id correo _destroy]
     )
   end
 end
