@@ -179,6 +179,20 @@ class Cliente < ApplicationRecord
     sucursal_retiro&.nombre.presence || ciudad.presence
   end
 
+  # ¿La carga de este cliente va a donde va casi toda?
+  #
+  # Yusef, 2026-08-19: *"esa de San Pedro Sula hay que eliminarlo, porque es el
+  # default… el cerebro trabaja en default; cuando querés que haga una cosa
+  # diferente, tenés que ponerle la nota que es diferente"*. El 80% de la carga
+  # se queda en San Pedro, y un aviso que sale siempre deja de leerse — y con él
+  # el del día que dice Tegucigalpa, que era el único que importaba.
+  #
+  # Un cliente **sin** sucursal asignada no cuenta como default: de ese no se
+  # sabe a dónde va, y ahí el aviso sirve.
+  def retira_en_la_de_por_defecto?
+    sucursal_retiro.present? && sucursal_retiro.retiro_por_defecto?
+  end
+
   def nombre_completo
     [nombre, apellido].compact_blank.join(" ")
   end

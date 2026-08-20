@@ -189,8 +189,17 @@ export default class extends ClienteAutocomplete {
   // PR-C6.24: a qué sucursal va la caja. Se muestra apenas se elige el
   // cliente, no al guardar: es una decisión física —en qué bolsa cae— y si se
   // entera tarde hay que volver a abrir la bolsa.
-  _mostrarSucursal(sucursal) {
+  _mostrarSucursal(sucursal, esLaDeSiempre = false) {
     this._sucursalActual = (sucursal || "").trim()
+    // Yusef: *"esa de San Pedro Sula hay que eliminarlo, porque es el default…
+    // el cerebro trabaja en default; cuando querés que haga una cosa diferente,
+    // tenés que ponerle la nota que es diferente"*. El 80% de la carga se queda
+    // ahí: un aviso que sale siempre deja de leerse, y con él el del día que
+    // dice Tegucigalpa — que era el único que importaba.
+    //
+    // El banner sí se queda: es pasivo y no interrumpe a nadie. Lo que deja de
+    // salir para la de siempre es el **modal** del final, que tapa la pantalla.
+    this._avisarLaBolsa = this._sucursalActual !== "" && !esLaDeSiempre
 
     if (!this.hasSucursalBannerTarget) return
     if (this._sucursalActual === "") {
@@ -207,6 +216,7 @@ export default class extends ClienteAutocomplete {
   // la mano y va a guardar la caja.
   _avisarSucursalAlFinal() {
     if (!this._sucursalActual || !this.hasSucursalModalTarget) return
+    if (!this._avisarLaBolsa) return
 
     if (this.hasSucursalModalTextoTarget) {
       this.sucursalModalTextoTarget.textContent = this._sucursalActual
@@ -245,8 +255,8 @@ cerrarQuitarCobro() {
     else this.sucursalModalTarget.classList.add("hidden")
   }
 
-  _alSeleccionarCliente({ id, notas, sucursalRetiro }) {
-    this._mostrarSucursal(sucursalRetiro)
+  _alSeleccionarCliente({ id, notas, sucursalRetiro, retiroPorDefecto }) {
+    this._mostrarSucursal(sucursalRetiro, retiroPorDefecto === "true" || retiroPorDefecto === true)
 
     if (notas && notas.trim() !== "") {
       if (this.hasNotasTextoTarget) this.notasTextoTarget.textContent = notas
@@ -712,7 +722,8 @@ cerrarQuitarCobro() {
     this._alSeleccionarCliente({
       id: data.cliente_id,
       notas: data.cliente_notas_miami,
-      sucursalRetiro: data.cliente_sucursal_retiro
+      sucursalRetiro: data.cliente_sucursal_retiro,
+      retiroPorDefecto: data.cliente_retiro_por_defecto
     })
   }
 
