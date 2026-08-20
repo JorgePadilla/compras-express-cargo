@@ -117,6 +117,11 @@ end %>
      <%# El paquete que se está actualizando, para que la consulta de duplicado
          no se encuentre a sí mismo. Vacío al dar de alta. %>
      data-etiquetar-actualizando-id-value="<%= @modo_actualizacion ? @paquete.id : "" %>"
+     <%# Cuántas cajas tiene ya. El modal de «¿cuántas etiquetas?» arranca acá y
+         no en 1: con el 1, actualizar un envío de tres cajas y darle Enter
+         —que es lo que hace el que va rápido— las bajaría a una, y el PIN de
+         supervisor solo cuida las que ya se cobraron. %>
+     data-etiquetar-cajas-actuales-value="<%= @modo_actualizacion ? @paquete.cantidad_paquetes.to_i : 0 %>"
      <%# PR-C6.9: tres sonidos, no uno. Yusef: "pita para dos razones... pita,
          te decía, pre-alerta" y "el otro pito es porque te tira que ya
          existía". Más el feo, para cuando el paquete no es de esta sesión. %>

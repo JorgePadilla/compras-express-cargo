@@ -859,6 +859,14 @@ class Paquete < ApplicationRecord
         sobrantes.each(&:destroy!)
         hermanas -= sobrantes
       elsif m > n
+        # Un bulto suelto que se vuelve split **es la caja 1**.
+        #
+        # Yusef, 2026-08-19: ingresó un paquete normal y después lo actualizó a
+        # tres. Salían las cajas 2 y 3 y la original se quedaba con
+        # `numero_caja` en nulo — o sea con una etiqueta sin número y fuera del
+        # orden de todo lo que agrupa por caja.
+        hermanas.first.update_column(:numero_caja, 1) if hermanas.first.numero_caja.blank?
+
         attrs = hermanas.first.attributes.except(
           "id", "created_at", "updated_at", "guia", "numero_caja",
           "cantidad_paquetes", "pre_factura_id", "venta_id", "entrega_id"

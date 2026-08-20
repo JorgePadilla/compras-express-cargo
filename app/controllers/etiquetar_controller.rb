@@ -116,9 +116,21 @@ class EtiquetarController < ApplicationController
       return render_create_error("Marcaste cambio de servicio: elegí a qué tipo de envío cambia.")
     end
 
+    # Avisa, no bloquea. Yusef, 2026-08-19: *"es exprés y me está dejando
+    # actualizar en CER"*. `conflicto_con_la_sesion` se llamaba en las dos rutas
+    # de alta y no acá.
+    #
+    # No se rechaza a propósito: corregirle el peso a un CEM desde una sesión CER
+    # no puede convertirlo en CER, y por eso al actualizar el tipo de envío
+    # **nunca** se pisa con el de la sesión. Lo que faltaba era decirlo. Jorge lo
+    # planteó así en la llamada —*"es correcto que si el paquete tiene otro tipo
+    # de envío del que estamos trabajando, sí te tiene que tirar"*— y Yusef dijo
+    # que sí.
+    @aviso_de_otro_tipo = aviso_de_tipo_distinto(@paquete)
+
     # La cantidad de cajas se delega al ajuste de split, que crea o elimina
     # las que correspondan (PR-C6.7) y bloquea si alguna ya se cobró.
-    nueva_cantidad = paquete_params[:cantidad_paquetes].to_i
+    nueva_cantidad = cantidad_de_cajas_pedida
     if ajusta_cajas?(nueva_cantidad)
       begin
         Paquete.ajustar_split!(@paquete, nueva_cantidad)
@@ -135,12 +147,13 @@ class EtiquetarController < ApplicationController
     aplicar_prepago_miami(@paquete)
 
     if @paquete.save
+      propagar_cambio_de_servicio(@paquete)
       @paquetes_hoy = paquetes_hoy_count
       respond_to do |format|
         format.turbo_stream do
           render turbo_stream: [
             turbo_stream.prepend("flash-messages", partial: "shared/flash",
-                                 locals: { notice: "Paquete #{@paquete.tracking} actualizado." }),
+                                 locals: { notice: aviso_de_actualizacion }),
             # `data-volver`: al terminar de actualizar, la pantalla tiene que
             # volver a modo alta.
             #
@@ -157,7 +170,7 @@ class EtiquetarController < ApplicationController
                                 "data-paquete-id='#{@paquete.id}'></div>")
           ]
         end
-        format.html { redirect_to etiquetar_path, notice: "Paquete #{@paquete.tracking} actualizado." }
+        format.html { redirect_to etiquetar_path, notice: aviso_de_actualizacion }
       end
     else
       render_create_error("No se pudo actualizar el paquete.")
@@ -452,6 +465,30 @@ end
     true
   end
 
+  # El cambio de servicio es del **envío**, no de una caja.
+  #
+  # Yusef, 2026-08-19, después de cambiar un envío de CER a EXPRESS: *"el tercero
+  # lo reconoce como exprés y los otros dos como CER… debería de cambiar
+  # todas"*. Un envío repartido en dos servicios no existe: se cobra con dos
+  # tarifas distintas y viaja en dos manifiestos.
+  #
+  # Al dar de alta ya salía bien —`create_split` mete el destino en los `attrs`
+  # de las N cajas—; el que quedaba corto era el update, que solo tocaba la caja
+  # abierta en pantalla.
+  #
+  # `cajas_del_mismo_split` y no las hermanas por tracking: la clave del split es
+  # el número madre, y dos splits distintos pueden compartir tracking porque el
+  # courier recicla números.
+  def propagar_cambio_de_servicio(paquete)
+    return unless paquete.saved_change_to_tipo_envio_id?
+
+    hermanas = Paquete.cajas_del_mismo_split(paquete).where.not(id: paquete.id)
+    hermanas.find_each do |caja|
+      caja.aplicar_cambio_servicio(paquete.tipo_envio)
+      caja.save
+    end
+  end
+
   # ¿Este paquete pertenece a otro tipo de envío que el de la sesión?
   #
   # Devuelve el mensaje de error, o nil si está todo bien.
@@ -505,8 +542,56 @@ end
 
   # ¿El form pide cambiar la cantidad de cajas de verdad? Mismo criterio que
   # `PaquetesController`: solo cuando ya es un split o pasa a serlo.
+  # ¿El paquete que se está actualizando es de otro servicio que el de la sesión?
+  #
+  # Es **otra pregunta** que la de `conflicto_con_la_sesion`, que mira el tipo que
+  # pidió la **pre-alerta** — sirve al dar de alta, cuando el paquete todavía no
+  # tiene tipo propio. Acá el paquete ya existe y tiene el suyo, que es
+  # justamente lo que Yusef vio: *"es exprés y me está dejando actualizar en
+  # CER"*.
+  #
+  # Devuelve el texto del aviso, o nil. **No bloquea**: corregirle el peso a un
+  # CEM desde una sesión CER no puede convertirlo en CER ni puede impedirse.
+  def aviso_de_tipo_distinto(paquete)
+    return nil if @tipo_envio_sesion.nil? || paquete.tipo_envio_id.nil?
+    return nil if paquete.tipo_envio_id == @tipo_envio_sesion.id
+
+    "Ojo: es de #{paquete.tipo_envio.nombre} y estás trabajando " \
+    "#{@tipo_envio_sesion.nombre}."
+  end
+
+  # El aviso que ve el que actualizó. Lleva pegado el del tipo de envío distinto
+  # cuando lo hay — no bloquea el guardado, pero tiene que enterarse.
+  def aviso_de_actualizacion
+    base = "Paquete #{@paquete.tracking} actualizado."
+    @aviso_de_otro_tipo.present? ? "#{base} #{@aviso_de_otro_tipo}" : base
+  end
+
+  # Cuántas cajas pidió el que está actualizando.
+  #
+  # Yusef, 2026-08-19: *"le digo que son dos etiquetas… solo te va a tirar una"*,
+  # y *"le di cinco y se quedó con las primeras tres"*.
+  #
+  # Esto leía `paquete_params[:cantidad_paquetes]`, un campo que `A7-20` **quitó
+  # del formulario**, y nunca miraba el `etiquetas` que manda el modal de
+  # `PR-C7.23`. O sea que `ajustar_split!` no se llamaba nunca y la respuesta del
+  # operario se tiraba en silencio.
+  #
+  # El `cantidad_paquetes` se sigue leyendo primero por si alguna pantalla vuelve
+  # a mandarlo; hoy no lo manda ninguna.
+  #
+  # **Si no vino ninguno de los dos, devuelve 0 y no se toca nada.** Ojo con esto:
+  # `etiquetas_pedidas` contesta `1` cuando el parámetro falta —que es lo correcto
+  # al dar de alta—, y ese `1` acá significaría "bajá este envío a una sola caja".
+  # Guardar un split de tres sin tocar la cantidad le borraría dos.
+  def cantidad_de_cajas_pedida
+    return paquete_params[:cantidad_paquetes].to_i if paquete_params.key?(:cantidad_paquetes)
+    return 0 if params[:etiquetas].blank?
+
+    etiquetas_pedidas.to_i
+  end
+
   def ajusta_cajas?(nueva_cantidad)
-    return false unless paquete_params.key?(:cantidad_paquetes)
     return false if nueva_cantidad < 1
 
     actual = @paquete.cantidad_paquetes.to_i
