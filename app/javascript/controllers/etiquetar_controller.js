@@ -28,7 +28,10 @@ export default class extends ClienteAutocomplete {
     tipoEnvioSesion: String,
     tipoEnvioSesionNombre: String,
     // El paquete que se está actualizando. Vacío al dar de alta.
-    actualizandoId: String
+    actualizandoId: String,
+    // Cuántas cajas tiene ya, para que el modal no arranque en 1 y borrarlas
+    // quede a un Enter de distancia.
+    cajasActuales: Number
   }
 
   connect() {
@@ -817,7 +820,7 @@ cerrarQuitarCobro() {
     if (this._cajasCargadas() > 0) return this._submitWithPrint()
     if (!this.hasEtiquetasModalTarget) return this._submitWithPrint()
 
-    if (this.hasEtiquetasInputTarget) this.etiquetasInputTarget.value = "1"
+    if (this.hasEtiquetasInputTarget) this.etiquetasInputTarget.value = String(this._etiquetasPorDefecto())
     // A1-10: "un pin antes de que salga cualquier modal". El operario está
     // mirando la pistola, no la pantalla — un modal mudo se lo pierde.
     this.dispatch("modalAbierto")
@@ -825,6 +828,18 @@ cerrarQuitarCobro() {
     // `select()` y no solo `focus()`: el operario teclea el número encima sin
     // tener que borrar el 1.
     if (this.hasEtiquetasInputTarget) this.etiquetasInputTarget.select()
+  }
+
+  // Con qué número arranca el modal.
+  //
+  // Al dar de alta, 1. **Al actualizar, las que el paquete ya tiene**: con el 1
+  // de siempre, abrir un envío de tres cajas y darle Enter lo bajaría a una, y
+  // `ajustar_split!` borra las sobrantes sin preguntar —el PIN de supervisor
+  // solo cuida las que ya se cobraron—. Yusef estaba subiendo de 3 a 5; bajar
+  // estaba a un Enter de distancia.
+  _etiquetasPorDefecto() {
+    const actuales = this.hasCajasActualesValue ? this.cajasActualesValue : 0
+    return actuales > 1 ? actuales : 1
   }
 
   // Cuántas filas de caja hay cargadas. Se cuentan las filas y no un contador

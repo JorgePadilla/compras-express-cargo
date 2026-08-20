@@ -128,6 +128,27 @@ class EtiquetarCajasModalTest < ApplicationSystemTestCase
     assert_no_selector "[data-etiquetar-target='etiquetasModal'][open]", wait: 2
   end
 
+  test "actualizando, el modal arranca en las cajas que ya tiene" do
+    # Con el 1 de siempre, abrir un envío de tres cajas y darle Enter las bajaba
+    # a una — y `ajustar_split!` borra las sobrantes sin preguntar: el PIN de
+    # supervisor solo cuida las que ya se cobraron. Yusef estaba subiendo de 3 a
+    # 5; bajar estaba a un Enter de distancia.
+    cajas = Paquete.crear_split!(
+      attrs: { cliente: clientes(:juan), tipo_envio: tipo_envios(:cer),
+               tracking: "1ZMODALDEFECTO01", descripcion: "Tres cajas",
+               estado: "recibido_miami", user: users(:digitador),
+               sucursal_recepcion: sucursales(:miami) },
+      total_cajas: 3, por_caja: {})
+
+    visit etiquetar_path(paquete_id: cajas.first.id)
+    assert_selector "#paquete_tracking", wait: 5
+
+    first("button", text: "Guardar + Imprimir").click
+    assert_selector "[data-etiquetar-target='etiquetasModal'][open]", wait: 3
+
+    assert_equal "3", find("[data-etiquetar-target='etiquetasInput']").value
+  end
+
   test "Cant. Productos no divide nada" do
     # La confusión que originó todo esto: productos es el contenido, cajas son
     # los bultos físicos.
