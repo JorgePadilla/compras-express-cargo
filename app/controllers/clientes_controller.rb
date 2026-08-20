@@ -51,6 +51,10 @@ class ClientesController < ApplicationController
         # de retiro estructurada, así que el aviso es tan confiable como ese
         # texto. Queda como pregunta para Yusef.
         sucursal_retiro: ERB::Util.html_escape(c.sucursal_retiro_nombre.to_s),
+        # Si retira donde retira casi todo el mundo, el aviso de bolsa no sale.
+        # Va acá **y** en `detect_pre_alerta_match`: los dos caminos fijan el
+        # cliente en la pantalla, y ya se separaron una vez por olvidar uno.
+        retiro_por_defecto: c.retira_en_la_de_por_defecto?,
         # PR-C6.41: en qué servicios se le cobra solo el volumétrico. Viaja la
         # lista entera y no un booleano porque el tipo de envío puede cambiar
         # después de elegir al cliente (en /entrega_personal es un select), y

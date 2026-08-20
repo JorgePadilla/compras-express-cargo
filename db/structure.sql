@@ -2086,7 +2086,8 @@ CREATE TABLE public.sucursales (
     activo boolean DEFAULT true NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    codigo_ep character varying(3)
+    codigo_ep character varying(3),
+    retiro_por_defecto boolean DEFAULT false NOT NULL
 );
 
 
@@ -5894,6 +5895,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260820061746'),
 ('20260818052309'),
 ('20260818034108'),
 ('20260815032759'),

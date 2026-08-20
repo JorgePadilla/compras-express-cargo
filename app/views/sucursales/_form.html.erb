@@ -59,6 +59,23 @@
       <%= f.check_box :activo, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
       <%= f.label :activo, "Sucursal activa", class: "text-sm font-medium text-gray-700 dark:text-gray-200" %>
     </div>
+
+    <%# A dónde va la carga si nadie dice lo contrario.
+        Yusef: *"esa de San Pedro Sula hay que eliminarlo, porque es el
+        default"*. Miami deja de recibir el aviso de bolsa para esta sucursal —
+        el 80% de la carga se queda ahí, y un aviso que sale siempre deja de
+        leerse. Cuando abran otra y se corra el peso, se cambia acá. %>
+    <div class="md:col-span-2 flex items-start gap-3 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 px-3 py-2">
+      <%= f.check_box :retiro_por_defecto, class: "mt-0.5 rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+      <span>
+        <%= f.label :retiro_por_defecto, "Es la sucursal de retiro por defecto",
+              class: "block text-sm font-medium text-gray-700 dark:text-gray-200" %>
+        <span class="block text-xs text-gray-500 dark:text-gray-400">
+          A Miami no se le avisa la bolsa cuando la caja va acá: es a donde va casi todo.
+          El aviso queda para las demás, que es cuando sirve.
+        </span>
+      </span>
+    </div>
   </div>
 
   <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">

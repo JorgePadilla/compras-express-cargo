@@ -516,6 +516,7 @@ class PaquetesController < ApplicationController
         # Tegucigalpa". Las notas del cliente sí venían: se agregó una y se
         # olvidó la otra. Misma llave que usa `/clientes/buscar`.
         cliente_sucursal_retiro: ERB::Util.html_escape(cli&.sucursal_retiro_nombre.to_s),
+        cliente_retiro_por_defecto: cli&.retira_en_la_de_por_defecto? || false,
         # PR-C6.9: el tipo de envío que el cliente pidió en su pre-alerta. Si
         # no coincide con el de la sesión de etiquetado, el front avisa antes
         # de que el operario siga escribiendo — y el servidor lo rechaza igual.
