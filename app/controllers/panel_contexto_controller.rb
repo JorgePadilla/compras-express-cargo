@@ -45,11 +45,21 @@ class PanelContextoController < ApplicationController
            .first
   end
 
-  # "Notas especiales" = las `instrucciones` que el cliente escribió en su
-  # pre-alerta. Con tracking se acota a esa línea; sin tracking se muestran
-  # las de sus pre-alertas todavía sin vincular, que es justo lo que el
-  # digitador necesita saber antes de recibir.
+  # "Notas especiales" = lo que el cliente escribió sobre lo que viene.
+  #
+  # Son **dos** cosas y hasta ahora salía una sola. Las `instrucciones` van por
+  # renglón —"el celular por Express"— y las `notas_grupo` aplican a todo el
+  # envío. Yusef, 2026-08-19, con la pre-alerta abierta al lado: *"aquí están las
+  # notas del grupo y no sale… y el grupo **sí** tiene notas"*.
+  #
+  # Con tracking se acota a esa línea; sin tracking se muestran las de sus
+  # pre-alertas todavía sin vincular, que es justo lo que el digitador necesita
+  # saber antes de recibir.
   def notas_especiales
+    instrucciones_del_renglon + notas_del_grupo
+  end
+
+  def instrucciones_del_renglon
     scope = PreAlertaPaquete.joins(:pre_alerta)
                             .where(pre_alertas: { cliente_id: @cliente.id })
                             .where.not(instrucciones: [ nil, "" ])
@@ -61,5 +71,21 @@ class PanelContextoController < ApplicationController
     end
 
     scope.limit(5).pluck(:tracking, :instrucciones)
+  end
+
+  # La nota que aplica a todo el envío. Se acota a las pre-alertas del renglón
+  # que se está recibiendo; sin tracking, a las que todavía no llegaron.
+  def notas_del_grupo
+    scope = PreAlerta.activas.where(cliente_id: @cliente.id)
+                     .where.not(notas_grupo: [ nil, "" ])
+
+    scope = if @tracking.present?
+      scope.joins(:pre_alerta_paquetes)
+           .where("UPPER(pre_alerta_paquetes.tracking) = ?", @tracking)
+    else
+      scope.where(estado: "pre_alerta")
+    end
+
+    scope.distinct.limit(5).pluck(:numero_documento, :notas_grupo)
   end
 end

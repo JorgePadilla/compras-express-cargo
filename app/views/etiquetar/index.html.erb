@@ -260,6 +260,47 @@ end %>
     </div>
   </dialog>
 
+  <%# ── Lo que el que recibe TIENE que ver ──
+      Yusef, 2026-08-19, señalando la franja de contexto donde esto salía como
+      texto al costado:
+
+        "No me da la información, **aquí necesitamos un modal**."
+        "Estas informaciones **ellos no las leen**. Esto no lo leen, esto no lo
+         van a leer, olvídate."
+        "No te voy a mentir, Jorge: **a puro huevos leen esto**."
+
+      Digitan de 500 a 1.000 paquetes al día mirando la pistola, no la pantalla.
+
+      **Uno por cosa, no uno con todo.** Él arrancó pidiendo uno solo; Jorge
+      argumentó que cada uno necesita su propia respuesta —retenido / se hizo /
+      leída— y él aceptó: *"tenés razón, hacerlo así si querés"*. Salen en fila,
+      y solo los que el paquete tiene. %>
+  <dialog data-etiquetar-target="avisoModal"
+          style="margin: auto"
+          class="rounded-xl p-0 w-[30rem] max-w-[95vw] backdrop:bg-black/60">
+    <div class="px-6 py-4 text-center" data-etiquetar-target="avisoEncabezado">
+      <p class="text-xs font-bold uppercase tracking-wider" data-etiquetar-target="avisoTipo"></p>
+      <p class="text-2xl font-bold mt-1" data-etiquetar-target="avisoTitulo"></p>
+    </div>
+    <div class="bg-white px-6 py-5">
+      <p class="text-base text-gray-800 whitespace-pre-line" data-etiquetar-target="avisoTexto"></p>
+    </div>
+    <div class="flex items-center justify-end gap-3 px-6 py-3 bg-gray-50 border-t border-gray-200">
+      <%# El de la izquierda solo sale cuando hay dos respuestas posibles (la
+          tarea: se hizo o no se hizo). El texto lo escribe el JS según el
+          aviso; el que va acá es el que se lee si algo falla, y el `label` es
+          el nombre accesible — un botón cuyo texto llega por JS nace vacío para
+          el lector de pantalla. %>
+      <%= render(ButtonComponent.new(variant: :secondary, size: :sm,
+            label: "Responder que no",
+            data: { etiquetar_target: "avisoSecundario", action: "etiquetar#avisoNo" },
+            class: "hidden")) { "Todavía no" } %>
+      <%= render(ButtonComponent.new(variant: :primary, size: :md,
+            label: "Confirmar el aviso",
+            data: { etiquetar_target: "avisoPrincipal", action: "etiquetar#avisoSi" })) { "Entendido" } %>
+    </div>
+  </dialog>
+
   <%# ── ¿Cuántas etiquetas? ──
       Yusef, 2026-08-18: *"en etiquetar casi nunca medimos y pesamos"*, y por eso
       *"cuando la cantidad de cajas guardadas sea cero, que pregunte cuántas
