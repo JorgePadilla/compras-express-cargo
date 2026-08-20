@@ -114,6 +114,9 @@ end %>
      data-etiquetar-buscar-url-value="<%= buscar_clientes_path %>"
      data-etiquetar-tipo-envio-sesion-value="<%= @tipo_envio_sesion.id %>"
      data-etiquetar-tipo-envio-sesion-nombre-value="<%= @tipo_envio_sesion.nombre %>"
+     <%# El paquete que se está actualizando, para que la consulta de duplicado
+         no se encuentre a sí mismo. Vacío al dar de alta. %>
+     data-etiquetar-actualizando-id-value="<%= @modo_actualizacion ? @paquete.id : "" %>"
      <%# PR-C6.9: tres sonidos, no uno. Yusef: "pita para dos razones... pita,
          te decía, pre-alerta" y "el otro pito es porque te tira que ya
          existía". Más el feo, para cuando el paquete no es de esta sesión. %>
