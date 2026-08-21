@@ -20,7 +20,8 @@ module Cuenta
         if tipo
           session[:pre_alerta_wizard] = {
             "tipo_envio_id" => tipo.id,
-            "con_reempaque" => tipo.con_reempaque,
+            # `con_reempaque` ya no viaja en el wizard: lo deriva el modelo del
+            # servicio. Una clave muerta en la sesión confunde al que la lea después.
             "consolidado"   => params[:consolidado] == "1"
           }
         end
@@ -28,7 +29,7 @@ module Cuenta
 
       @pre_alerta = current_cliente.pre_alertas.build
       @wizard = session[:pre_alerta_wizard] || {}
-      @pre_alerta.con_reempaque = @wizard["con_reempaque"]
+      # `con_reempaque` sale del servicio; lo pone el modelo.
       @pre_alerta.consolidado = @wizard["consolidado"]
       @pre_alerta.tipo_envio_id = @wizard["tipo_envio_id"]
 
@@ -431,7 +432,8 @@ module Cuenta
 
     def pre_alerta_params
       params.require(:pre_alerta).permit(
-        :tipo_envio_id, :consolidado, :con_reempaque, :notas_grupo, :titulo, :proveedor,
+        # `con_reempaque` lo deriva el modelo del servicio; ver `PreAlerta`.
+        :tipo_envio_id, :consolidado, :notas_grupo, :titulo, :proveedor,
         pre_alerta_paquetes_attributes: [:id, :tracking, :descripcion, :instrucciones, :_destroy]
       )
     end
@@ -446,7 +448,6 @@ module Cuenta
         return redirect_to(new_cuenta_pre_alerta_path(step: 1), alert: "Selecciona un servicio") unless tipo
 
         session[:pre_alerta_wizard]["tipo_envio_id"] = tipo.id
-        session[:pre_alerta_wizard]["con_reempaque"] = tipo.con_reempaque
 
         if tipo.consolidable
           redirect_to new_cuenta_pre_alerta_path(step: 2)
@@ -464,7 +465,6 @@ module Cuenta
         wizard = session[:pre_alerta_wizard]
         @pre_alerta = current_cliente.pre_alertas.build(
           tipo_envio_id:   wizard["tipo_envio_id"],
-          con_reempaque:   wizard["con_reempaque"],
           consolidado:     wizard["consolidado"],
           titulo:          params[:titulo],
           proveedor:       params[:proveedor],

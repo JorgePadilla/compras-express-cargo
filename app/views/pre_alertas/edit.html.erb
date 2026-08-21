@@ -93,18 +93,12 @@
       <% end %>
     </div>
 
-    <%# Opciones %>
+    <%# Las reglas del servicio — el mismo partial que /pre_alertas/new. Acá el
+        servicio ya no se elige (arriba sale como texto), así que va sin select:
+        lo que importa es que la pantalla diga lo mismo que la otra. %>
     <%= render FormSectionComponent.new(title: "Servicio", densidad: :compacta) do %>
-      <div class="flex flex-wrap gap-4">
-        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
-          <%= f.check_box :con_reempaque, class: "rounded border-gray-300 dark:border-gray-600 text-cec-teal focus:ring-cec-teal" %>
-          Con Reempaque
-        </label>
-        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
-          <%= f.check_box :consolidado, class: "rounded border-gray-300 dark:border-gray-600 text-cec-teal focus:ring-cec-teal" %>
-          Consolidado
-        </label>
-      </div>
+      <%= render "pre_alertas/reglas_del_servicio", f: f, tipo_envios: nil,
+            seleccionado: @pre_alerta.tipo_envio %>
     <% end %>
 
     <%# Titulo + Proveedor %>

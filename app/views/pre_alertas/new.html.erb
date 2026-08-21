@@ -9,7 +9,14 @@
 <%= render PageHeaderComponent.new(title: "Nueva Pre-Alerta",
       subtitle: "Cargá el cliente, el servicio y los paquetes que vienen en camino") %>
 
-<div class="max-w-5xl mx-auto">
+<%# El `pre-alerta-editor` vive en el div de afuera y no en la tarjeta de
+    paquetes: el select del servicio tiene que poder cambiarle el límite de
+    tarjetas cuando el operario elige CKA, y para eso los dos tienen que estar
+    en el mismo alcance. En `/pre_alertas/:id/edit` ya estaba así. %>
+<% max_paquetes = (@pre_alerta.tipo_envio || @tipo_envio_sugerido)&.max_paquetes_por_accion || -1 %>
+<div class="max-w-5xl mx-auto"
+     data-controller="pre-alerta-editor"
+     data-pre-alerta-editor-max-paquetes-value="<%= max_paquetes %>">
   <%= form_with model: @pre_alerta, url: pre_alertas_path, class: "space-y-6 animate-fade-in-up" do |f| %>
     <% if @pre_alerta.errors.any? %>
       <div class="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl">
@@ -40,24 +47,8 @@
 
     <%= render FormSectionComponent.new(title: "Servicio",
           subtitle: "Cómo viaja, y si se agrupa con otros paquetes") do %>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label class="<%= clases_de_etiqueta %>"><%= etiqueta_de_campo("Tipo de Envío") %></label>
-          <%= f.select :tipo_envio_id, options_from_collection_for_select(@tipo_envios, :id, :nombre, @pre_alerta.tipo_envio_id || @tipo_envio_sugerido&.id),
-              { include_blank: "— Seleccionar —" },
-              class: clases_de_input %>
-        </div>
-        <div class="flex flex-col justify-end gap-3">
-          <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
-            <%= f.check_box :con_reempaque, class: "rounded border-gray-300 dark:border-gray-600 text-cec-teal focus:ring-cec-teal" %>
-            Con Reempaque
-          </label>
-          <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
-            <%= f.check_box :consolidado, class: "rounded border-gray-300 dark:border-gray-600 text-cec-teal focus:ring-cec-teal" %>
-            Consolidado
-          </label>
-        </div>
-      </div>
+      <%= render "pre_alertas/reglas_del_servicio", f: f, tipo_envios: @tipo_envios,
+            seleccionado: @pre_alerta.tipo_envio || @tipo_envio_sugerido %>
     <% end %>
 
     <%= render FormSectionComponent.new(title: "Referencia",
@@ -93,10 +84,7 @@
           placeholder: "Notas opcionales...", class: clases_de_input %>
     <% end %>
 
-    <%# La tarjeta ES el elemento de Stimulus: `pre-alerta-editor` vive acá y no
-        en un div de adentro, así que los targets del template y del contador
-        quedan dentro de su alcance. Por eso el componente acepta `data`. %>
-    <%= render FormSectionComponent.new(data: { controller: "pre-alerta-editor" }) do |s| %>
+    <%= render FormSectionComponent.new do |s| %>
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-2">
           <h2 class="text-xl sm:text-2xl font-bold text-cec-navy dark:text-cec-gold">Paquetes</h2>
@@ -109,6 +97,14 @@
   <%= render "pre_alertas/paquete_card", f: f, pap: pap, index: index %>
 <% end %>
       </div>
+
+      <%# El aviso del límite. `/edit` ya lo tenía y esta pantalla no: el servidor
+          rechazaba con `respect_max_paquetes_por_accion` y el operario se
+          enteraba después de llenar todo. %>
+      <p data-pre-alerta-editor-target="limitMessage"
+         class="hidden mt-3 text-sm text-amber-800 dark:text-amber-300">
+        Este servicio lleva un solo tracking por pre-alerta.
+      </p>
 
       <div class="mt-4">
         <%= render ButtonComponent.new(variant: :outline_teal, size: :md, icon: "plus-circle",

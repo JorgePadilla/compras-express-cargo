@@ -73,9 +73,20 @@ class PreAlertaTest < ActiveSupport::TestCase
     assert_equal false, pa.consolidado
   end
 
-  test "defaults con_reempaque to false" do
-    pa = PreAlerta.create!(cliente: @cliente, tipo_envio: @tipo_envio, titulo: "Test", creado_por_tipo: "cliente", creado_por_id: @cliente.id)
-    assert_equal false, pa.con_reempaque
+  # `con_reempaque` **ya no arranca en false**: sale del servicio.
+  #
+  # Jorge, 2026-08-20: *"faltan las reglas de servicio… revisá la parte de
+  # cliente y aplicale las reglas al admin"*. El portal ya lo derivaba
+  # (`wizard["con_reempaque"] = tipo.con_reempaque`) y admin lo dejaba elegir, así
+  # que las dos pantallas podían grabar cosas distintas sobre el mismo servicio.
+  test "con_reempaque sale del servicio, no de un default" do
+    con = PreAlerta.create!(cliente: @cliente, tipo_envio: tipo_envios(:cer), titulo: "Test",
+                            creado_por_tipo: "cliente", creado_por_id: @cliente.id)
+    assert con.con_reempaque, "CER reempaca"
+
+    sin = PreAlerta.create!(cliente: @cliente, tipo_envio: tipo_envios(:cka), titulo: "Test",
+                            creado_por_tipo: "cliente", creado_por_id: @cliente.id)
+    assert_not sin.con_reempaque, "CKA no reempaca"
   end
 
   test "defaults notificado to false" do

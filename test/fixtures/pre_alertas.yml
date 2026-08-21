@@ -1,3 +1,7 @@
+# ⚠️ Estas filas traían la contradicción que `PR-C7.34` vino a arreglar:
+# `con_reempaque: false` sobre servicios que **sí** reempacan. Era el dato que
+# producía la casilla libre de admin. Ahora la bandera sale del servicio, así
+# que las fixtures también tienen que cuadrar con el suyo.
 activa:
   numero_documento: PA-000001
   cliente: juan
@@ -15,7 +19,7 @@ recibida:
   cliente: juan
   tipo_envio: aereo
   consolidado: true
-  con_reempaque: false
+  con_reempaque: true
   estado: recibido
   notificado: true
   titulo: Ropa variada
@@ -27,7 +31,7 @@ consolidada_destino:
   cliente: juan
   tipo_envio: aereo
   consolidado: true
-  con_reempaque: false
+  con_reempaque: true
   estado: pre_alerta
   notificado: false
   titulo: Zapatos Nike
@@ -51,7 +55,7 @@ finalizada:
   cliente: juan
   tipo_envio: aereo
   consolidado: true
-  con_reempaque: false
+  con_reempaque: true
   estado: pre_alerta
   notificado: true
   finalizado: true
@@ -64,7 +68,7 @@ maria_pa:
   cliente: maria
   tipo_envio: maritimo
   consolidado: false
-  con_reempaque: false
+  con_reempaque: true
   estado: pre_alerta
   notificado: false
   titulo: Laptop Dell
