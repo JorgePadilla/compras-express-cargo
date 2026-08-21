@@ -26,6 +26,22 @@ class PreAlerta < ApplicationRecord
   validates :titulo, presence: true
   validate :respect_max_paquetes_por_accion
   validate :sin_consolidar_va_un_solo_paquete
+  # ── Las reglas del servicio ──────────────────────────────────────────────
+  #
+  # Jorge, 2026-08-20: *"faltan las reglas de servicio, que son importantísimas,
+  # con respecto a si se puede con reempaque y consolidación. Revisá la parte de
+  # cliente y aplicale las reglas al admin"*.
+  #
+  # El portal las respetaba las tres y admin ninguna, así que **admin podía
+  # grabar lo que el portal hace imposible**: una CKA marcada «con reempaque» y
+  # «consolidado», cuando CKA ni reempaca ni consolida.
+  #
+  # Van en el modelo y no en la vista porque una regla que vive en una pantalla
+  # es una regla que la otra no tiene — que es exactamente cómo llegamos acá.
+  before_validation :heredar_reempaque_del_servicio,
+                    if: -> { new_record? || tipo_envio_id_changed? }
+  validate :consolidado_solo_si_el_servicio_lo_permite,
+           if: -> { new_record? || consolidado_changed? || tipo_envio_id_changed? }
 
   accepts_nested_attributes_for :pre_alerta_paquetes, allow_destroy: true,
     reject_if: ->(attrs) {
@@ -184,6 +200,79 @@ class PreAlerta < ApplicationRecord
   def assign_default_tipo_envio
     return if tipo_envio_id.present? || tipo_envio.present?
     self.tipo_envio = TipoEnvio.activos.find_by(codigo: "cer")
+  end
+
+  # `con_reempaque` **no es una decisión, es una consecuencia**.
+  #
+  # El portal ya lo hacía —`wizard["con_reempaque"] = tipo.con_reempaque`— y el
+  # propio `tipo_envio_descripcion` de acá abajo ya lo asumía: dice «con
+  # Reempaque» leyendo el flag **del servicio**, no el de la fila. O sea que la
+  # columna y la descripción podían contradecirse sobre la misma pre-alerta.
+  #
+  # Se recalcula al crear y al cambiar de servicio, no en cada guardado: reescribir
+  # el dato de una pre-alerta vieja porque alguien le corrigió el título sería
+  # tocar historia que nadie pidió tocar.
+  def heredar_reempaque_del_servicio
+    return if tipo_envio.nil?
+
+    self.con_reempaque = tipo_envio.con_reempaque
+  end
+
+  # Consolidar es del servicio, no del que llena el formulario.
+  #
+  # En el portal el paso de consolidación **no existe** para los que no lo
+  # permiten (`cuenta/pre_alertas_controller`: si no es `consolidable`, fuerza
+  # `consolidado = false` y salta al paso 3). En admin era una casilla suelta.
+  #
+  # Con el guard de siempre: al crear, o cuando cambian el flag o el servicio.
+  # Una pre-alerta vieja que ya quedó así se sigue pudiendo editar — es la trampa
+  # del método de prepago y la del consolidado.
+  def consolidado_solo_si_el_servicio_lo_permite
+    return unless consolidado?
+    return if tipo_envio.nil? || tipo_envio.consolidable?
+
+    errors.add(:consolidado, "no aplica: #{tipo_envio.nombre} no se consolida")
+  end
+
+  # ── Las que ya estaban grabadas ──────────────────────────────────────────
+  #
+  # Antes de que las reglas existieran, admin podía marcar «con reempaque» y
+  # «consolidado» sobre cualquier servicio. Este método las alinea con el suyo.
+  #
+  # Vive acá y no adentro del archivo de migración por lo mismo que
+  # `Paquete.reconciliar_fantasmas!`: un método se puede testear —incluida la
+  # idempotencia, llamándolo dos veces— y un archivo de migración no.
+  #
+  # **No toca las anuladas, las facturadas ni las borradas.** Ahí el dato es
+  # historia de lo que se cobró, no una bandera que corregir.
+  #
+  # Devuelve `[[numero_documento, qué se corrigió], …]`.
+  ESTADOS_QUE_NO_SE_CORRIGEN = %w[anulado facturado].freeze
+
+  def self.alinear_con_su_servicio!
+    corregidas = []
+
+    where(deleted_at: nil)
+      .where.not(estado: ESTADOS_QUE_NO_SE_CORRIGEN)
+      .includes(:tipo_envio)
+      .find_each do |pa|
+      te = pa.tipo_envio
+      next if te.nil?
+
+      arreglos = []
+      arreglos << "reempaque: #{pa.con_reempaque} → #{te.con_reempaque}" if pa.con_reempaque? != te.con_reempaque?
+      arreglos << "consolidado: sí → no" if pa.consolidado? && !te.consolidable?
+      next if arreglos.empty?
+
+      # `update_columns` a propósito: esto **corrige** el dato para que cuadre
+      # con su servicio, y pasarlo por las validaciones nuevas lo rechazaría
+      # justamente por estar mal — que es lo que se viene a arreglar.
+      pa.update_columns(con_reempaque: te.con_reempaque,
+                        consolidado: pa.consolidado? && te.consolidable?)
+      corregidas << [ pa.numero_documento, arreglos.join(" · ") ]
+    end
+
+    corregidas
   end
 
   def respect_max_paquetes_por_accion

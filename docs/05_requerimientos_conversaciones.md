@@ -6177,3 +6177,53 @@ que lleguemos a servicio al cliente, porque ellos son los que van a leer eso"*.
 > eso es lo que yo tengo."*
 
 Sin las tablas del sistema viejo no hay nada que planear.
+
+---
+
+## Conversación 15 (2026-08-20) — las reglas del servicio, iguales en las dos pantallas
+
+Jorge, comparando `/pre_alertas/new` con el portal del cliente:
+
+> *"El área de pre-alerta para los admin y clientes es muy diferente; faltan las
+> reglas de servicio, que son importantísimas, con respecto a si se puede con
+> reempaque y consolidación. Revisá la parte de cliente y aplicale las reglas al
+> admin."*
+
+### C15-01 · Admin podía grabar lo que el portal hace imposible — 🐛 ✅ **ARREGLADO (PR-C7.34)**
+
+Las reglas son tres columnas de `tipo_envios`, y el portal las respeta las tres:
+
+| Regla | Portal | Admin (antes) |
+|---|---|---|
+| `con_reempaque` | sale del servicio | casilla libre |
+| `consolidable` | el paso 2 **no existe** si no lo es | casilla libre |
+| `max_paquetes_por_accion` | lo dice la tarjeta del servicio | no lo decía |
+
+O sea que admin podía crear una **CKA marcada «con reempaque» y «consolidada»**,
+y CKA ni reempaca ni consolida. El modelo tampoco lo impedía: solo cubría el
+tercero.
+
+> ⚠️ **Ya había dos fuentes para el mismo hecho, y no coincidían.**
+> `PreAlerta#tipo_envio_descripcion` decía «con Reempaque» leyendo el flag **del
+> servicio**, mientras el badge «R» del listado leía el **de la fila**. Podían
+> decir cosas distintas del mismo envío. Hasta las fixtures traían la
+> contradicción: `con_reempaque: false` sobre servicios que sí reempacan.
+
+**Decisión de Jorge**: `con_reempaque` pasa a ser **derivado y no editable** —sale
+del servicio, como en el portal— y las pre-alertas viejas que se contradigan se
+corrigen con una migración que informa cuáles tocó.
+
+Las reglas viven en el **modelo**, no en la vista: una regla que vive en una
+pantalla es una regla que la otra no tiene, que es exactamente cómo se llegó acá.
+Y el campo derivado sale del `permit` de los dos controllers — aceptarlo por
+parámetro es la puerta por la que vuelve la contradicción.
+
+> **El admin no lleva el wizard**, y eso no cambió: sigue vigente lo decidido el
+> 2026-08-12 —*"los controles NO cambian… el wizard de 3 pasos del portal ya se
+> había descartado para admin"*—. Lo que se emparejó son **las reglas**, no los
+> pasos.
+
+De paso: la pantalla de alta nunca le pasaba el límite de paquetes al
+`pre-alerta-editor` —que sabe deshabilitar «Agregar Paquete» desde siempre—,
+así que el operario llenaba todo y el servidor lo rechazaba después. `/edit` sí
+lo pasaba: la gemela otra vez.

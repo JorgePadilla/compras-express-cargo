@@ -299,7 +299,10 @@ end
 
   def pre_alerta_params
     params.require(:pre_alerta).permit(
-      :cliente_id, :tipo_envio_id, :consolidado, :con_reempaque,
+      # `con_reempaque` **no** se permite: lo deriva el modelo del servicio. Un
+      # campo derivado que se sigue aceptando por parámetro es la puerta por la
+      # que vuelve la contradicción.
+      :cliente_id, :tipo_envio_id, :consolidado,
       :notas_grupo, :estado, :titulo, :proveedor,
       # `fecha` NO se permite: la pone el servidor (`PreAlertaPaquete` la trae
       # por default) y la pantalla la muestra como sello, sin input. Dejarla
