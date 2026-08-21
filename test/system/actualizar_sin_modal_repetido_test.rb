@@ -44,6 +44,33 @@ class ActualizarSinModalRepetidoTest < ApplicationSystemTestCase
     assert_no_selector "[data-etiquetar-target='duplicateModal']:not(.hidden)"
   end
 
+  test "actualizando una caja de un split, sus hermanas tampoco lo disparan" do
+    # Jorge, 2026-08-21: *"cuando estoy actualizando un tracking y le voy a dar
+    # click a un campo, el modal lo sigue tirando"*.
+    #
+    # El arreglo de `PR-C7.29` excluía **la fila** y quedó corto: las cajas de un
+    # split comparten tracking, así que al actualizar la Caja 1 el sistema
+    # encontraba la Caja 2. Con un paquete suelto no pasaba — y por eso el test de
+    # entonces, que usaba uno suelto, lo dio por bueno.
+    cajas = Paquete.crear_split!(
+      attrs: { cliente: clientes(:juan), tipo_envio: tipo_envios(:cer),
+               tracking: "1ZSPLITSINMODAL1", descripcion: "Dos cajas",
+               estado: "recibido_miami", user: users(:digitador),
+               sucursal_recepcion: sucursales(:miami) },
+      total_cajas: 2, por_caja: {})
+
+    visit etiquetar_path(paquete_id: cajas.first.id)
+    assert_selector "#paquete_tracking", wait: 5
+
+    find("#paquete_tracking").click
+    find("#paquete_descripcion").click
+
+    # Con tiempo para que vuelva la consulta: `assert_no_selector` a secas
+    # devuelve antes de eso y pasaría con el bug puesto.
+    sleep 2
+    assert_no_selector "[data-etiquetar-target='duplicateModal']:not(.hidden)"
+  end
+
   test "el de otro paquete si lo dispara, que es para lo que existe" do
     # Excluirse a sí mismo no puede volverse ciego a los duplicados de verdad.
     otro = Paquete.create!(cliente: clientes(:juan), tipo_envio: tipo_envios(:cer),
