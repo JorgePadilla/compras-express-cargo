@@ -425,12 +425,11 @@ class PaquetesController < ApplicationController
     # `pre_alerta`, así que en el editor de pre-alertas tocar el propio tracking
     # encontraba el propio paquete y avisaba "ya está en el sistema".
     #
-    # /etiquetar nunca manda el parámetro, así que la pistola de Miami se
-    # comporta exactamente igual que antes.
+    # `PR-C7.29` lo empezó a mandar también desde /etiquetar al actualizar, por lo
+    # mismo: el tracking viene puesto y el primer blur se encontraba a sí mismo.
     candidatos = Paquete.buscar_escaneado(tracking)
-    if params[:excluir_paquete_id].present?
-      candidatos = candidatos.where.not(id: params[:excluir_paquete_id])
-    end
+    excluidos = ids_del_mismo_envio(params[:excluir_paquete_id])
+    candidatos = candidatos.where.not(id: excluidos) if excluidos.any?
     paquete = candidatos.order(created_at: :desc).first
 
     # PR-2: detectar match con pre-alerta. Caso (a): el paquete ya existe en
@@ -453,7 +452,9 @@ class PaquetesController < ApplicationController
         estado: ERB::Util.html_escape(paquete.estado),
         cliente: ERB::Util.html_escape(paquete.cliente.nombre_completo),
         fecha: paquete.fecha_recibido_miami&.strftime("%d/%m/%Y"),
-        count: Paquete.where(tracking: tracking_base).count,
+        # Sin las hermanas propias. Con un envío dividido, contarlas le decía al
+        # operario «ya hay 3» cuando eran sus dos cajas más un ajeno.
+        count: Paquete.where(tracking: tracking_base).where.not(id: excluidos).count,
         # PR-10.c: Yusef sobre el modal de tracking repetido — "aquí solo
         # agregarle el contenido... el contenido y el tipo de servicio, esas
         # son las dos cosas que más te faltan ahí". El numero_recepcion ya se
@@ -544,6 +545,34 @@ class PaquetesController < ApplicationController
       { pre_alerta_match: false }
     end
   end
+  # Las cajas que **son el mismo envío** que el que está preguntando.
+  #
+  # Jorge, 2026-08-21: *"cuando estoy actualizando un tracking y le voy a dar
+  # click a un campo, el modal lo sigue tirando"*.
+  #
+  # `PR-C7.29` excluyó *la fila* y quedó corto: las hermanas de un split
+  # **comparten el tracking**, así que al actualizar la Caja 1 el sistema
+  # encontraba la Caja 2 y avisaba «ya existe» sobre el mismo envío que se estaba
+  # editando. Con un paquete de una sola caja no pasaba, y por eso la prueba de
+  # entonces lo dio por arreglado.
+  #
+  # `cajas_del_mismo_split` agrupa por **número de recepción** y no por tracking
+  # —el courier recicla números, y dos envíos distintos pueden compartirlo—, así
+  # que esto **no** ciega el aviso frente a un duplicado ajeno, que es para lo
+  # único que el modal existe.
+  #
+  # Un id que no existe —un formulario viejo, un paquete borrado— no excluye nada
+  # y no revienta.
+  def ids_del_mismo_envio(id)
+    return [] if id.blank?
+
+    paquete = Paquete.find_by(id: id)
+    return [ id ] if paquete.nil?
+
+    Paquete.cajas_del_mismo_split(paquete).ids
+  end
+  private :ids_del_mismo_envio
+
   # Las tareas abiertas del cliente, para el modal. Mismo criterio que la franja
   # de contexto: abiertas y visibles para quien está recibiendo.
   def tareas_del_cliente(cliente)

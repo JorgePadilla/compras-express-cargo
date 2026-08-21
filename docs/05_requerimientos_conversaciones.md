@@ -6085,6 +6085,12 @@ clientes. Transcritas con `whisper small`.
 «Actualizando» que no se iba y el modal que reaparecía — *"ahí es donde está todo
 el mejengue"*. Los dos ya estaban arreglados (`PR-C7.28`, `PR-C7.29`).
 
+> ⚠️ **`PR-C7.29` quedó corto.** Excluía *la fila* y no *el envío*, así que al
+> actualizar **una caja de un split** las hermanas —que comparten el tracking—
+> seguían disparando el modal. Jorge lo volvió a ver el 21-ago: *"actualizar no
+> está aún al 100"*. Completado en `PR-C7.35`. La prueba de entonces usaba un
+> paquete de una sola caja, y por eso lo dio por bueno.
+
 ### C14-01 · El `1 de N` — ✏️ se corrigió solo
 
 Ver la nota agregada a `A7-21`. Su regla original valía para el **empaque**;
