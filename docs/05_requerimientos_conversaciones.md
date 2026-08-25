@@ -6160,9 +6160,8 @@ no avisara nada.
 >
 > Completado en `PR-C7.37`: la clave se pone y se cambia desde la ficha, el link
 > de recuperación funciona para cliente —por correo **y** por código— y el campo
-> del login dejó de ser `type="email"`. **Queda abierto** que la ficha todavía no
-> muestra `rtn` ni la sucursal de retiro, y que `/registro` se salta la regla de
-> los tres nombres de `C14-06`.
+> del login dejó de ser `type="email"`. Lo de `/registro` se cerró en `PR-C7.38`.
+> **Queda abierto** que la ficha todavía no muestra `rtn` ni la sucursal de retiro.
 
 > *"Falta el sistema de usuario… lo del acceso de ellos."*
 > *"¿Cuál es la cuenta de acceso de él? Y cambiarle la clave por si se le olvidó."*
@@ -6181,7 +6180,21 @@ hoy es por correo y es lo que funciona. Quedaron en las dos.
 
 Y **cortar el acceso no es dar de baja al cliente**: son dos banderas distintas.
 
-### C14-06 · El nombre y el RTN — ✅ **ARREGLADO (PR-C7.33)**
+### C14-06 · El nombre y el RTN — ✅ **ARREGLADO (PR-C7.33 + PR-C7.38)**
+
+> ⚠️ **La regla llegó a una pantalla y no a la gemela.** `PR-C7.33` la puso en
+> `/clientes` y se olvidó de `/registro` —pública, sin autenticar y linkeada
+> desde el login—, así que ahí un "Jorge Padilla" pasaba tranquilo. Y los tests
+> de esa pantalla usaban nombres de dos palabras **afirmando que se guardaban**:
+> congelaban el agujero en vez de avisarlo.
+>
+> Tampoco había test de la mitad que enforza al editar —solo del caso de *no*
+> tocar el nombre—, así que borrar la línea del `#update` dejaba la suite en
+> verde.
+>
+> Cerrado en `PR-C7.38`, con un lint (`test/lint/regla_del_nombre_test.rb`) que
+> falla cuando aparece **una tercera pantalla** que construye clientes sin
+> encender la bandera. Es el bug recurrente del repo y ahora tiene trinquete.
 
 > *"Tiene que poner mínimo **tres ítems**… por lo menos Jorge y dos apellidos."*
 > *"Imaginate cuántos Jorge Padilla hay."*

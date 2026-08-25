@@ -140,6 +140,31 @@ class AccesoDelClienteTest < ActionDispatch::IntegrationTest
     assert_equal "9999-8888", @cliente.reload.telefono
   end
 
+  # La otra mitad de la regla al editar, que no tenía ni un test: sin esto,
+  # borrar la línea de `exigir_nombre_completo` del `#update` dejaba la suite
+  # entera en verde. Solo se probaba el caso de NO tocar el nombre.
+  test "pero si le cambian el nombre a dos palabras, ahi si se traba" do
+    delete session_url
+    post session_url, params: { email_address: users(:admin).email_address, password: "password123" }
+    @cliente.update_columns(nombre: "Juan Carlos", apellido: "Perez Lopez")
+
+    patch cliente_url(@cliente), params: { cliente: { nombre: "Juan", apellido: "Perez" } }
+
+    assert_response :unprocessable_entity
+    assert_equal "Juan Carlos", @cliente.reload.nombre
+  end
+
+  test "y corregirle una tilde al nombre no lo traba, porque sigue teniendo tres" do
+    delete session_url
+    post session_url, params: { email_address: users(:admin).email_address, password: "password123" }
+    @cliente.update_columns(nombre: "Juan Carlos", apellido: "Perez Lopez")
+
+    patch cliente_url(@cliente), params: { cliente: { nombre: "Juan Carlos", apellido: "Pérez López" } }
+
+    assert_redirected_to cliente_url(@cliente)
+    assert_equal "Pérez López", @cliente.reload.apellido
+  end
+
   test "el importador tampoco se entera de la regla" do
     # La regla es de la pantalla donde alguien teclea, no del modelo entero: si
     # no, la migración de los 9.000 se cae de una.
