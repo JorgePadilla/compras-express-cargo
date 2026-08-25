@@ -227,6 +227,7 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     assert_includes areas, "Entregas"
     assert_includes areas, "Clientes"
     assert_not_includes areas, "Configuración"
+    assert_not_includes areas, "Miami", "el mostrador de Miami no es de este rol"
   end
 
   test "supervisor_prefactura ve Facturación pero no Caja Diaria ni Configuración" do
@@ -242,6 +243,7 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes areas, "Caja Diaria"
     assert_not_includes areas, "Entregas"
     assert_not_includes areas, "Configuración"
+    assert_not_includes areas, "Miami", "el mostrador de Miami no es de este rol"
   end
 
   test "shortcut_groups omite áreas vacías" do
