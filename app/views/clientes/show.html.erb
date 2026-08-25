@@ -114,6 +114,94 @@ end %>
   </div>
 </div>
 
+<%# ── Acceso al portal ──────────────────────────────────────────────────────
+    PR-C7.37. Yusef, 2026-08-19, parado en esta pantalla:
+
+      *"Yo me voy a clientes, a mi listado de clientes, y administro su usuario."*
+      *"Aquí está cuál es la cuenta de acceso de él. Eso es todo. Y cambiarle la
+       clave por si se le olvidó."*
+
+    `PR-C7.33` dejó el modelo entero —entra con código o con correo, el acceso se
+    corta sin dar de baja, los correos de aviso van aparte— pero nada de eso se
+    veía acá, y la clave no se podía poner desde ningún lado. Un cliente creado
+    por el admin nacía sin clave y no entraba nunca. %>
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-200 dark:ring-gray-700 p-6 mt-6">
+  <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Acceso al portal</h2>
+
+  <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 mt-4">
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cuenta de acceso</dt>
+      <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+        <%= @cliente.email.presence || "— sin correo —" %>
+      </dd>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        O con su código <span class="font-mono"><%= @cliente.codigo %></span>, que sirve igual.
+      </p>
+    </div>
+
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Puede entrar</dt>
+      <dd class="mt-1 text-sm">
+        <% if !@cliente.activo? %>
+          <span class="font-semibold text-cec-danger">No — está dado de baja como cliente</span>
+        <% elsif !@cliente.acceso_habilitado? %>
+          <span class="font-semibold text-cec-danger">No — tiene el acceso cortado</span>
+        <% elsif !@cliente.tiene_clave? %>
+          <span class="font-semibold text-cec-danger">No — todavía no tiene clave</span>
+        <% else %>
+          <span class="font-semibold text-cec-success">Sí</span>
+        <% end %>
+      </dd>
+    </div>
+
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Clave</dt>
+      <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+        <% if @cliente.tiene_clave? %>
+          Puesta<%= " · actualizada #{l(@cliente.clave_actualizada_at.to_date)}" if @cliente.clave_actualizada_at %>
+        <% else %>
+          <span class="text-cec-danger">Sin poner</span>
+        <% end %>
+      </dd>
+    </div>
+
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Correos para avisarle</dt>
+      <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+        <% correos = @cliente.cliente_correos.map(&:correo) %>
+        <%= correos.any? ? correos.join(" · ") : "—" %>
+      </dd>
+    </div>
+  </dl>
+
+  <%# La clave, en su propio formulario: no pasa por `cliente_params`, que lo
+      guardan media docena de pantallas. %>
+  <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+    <%= form_with url: clave_cliente_path(@cliente), method: :patch, scope: :cliente,
+                  class: "flex flex-col sm:flex-row sm:items-end gap-3" do |f| %>
+      <div class="flex-1">
+        <%= f.label :password, @cliente.tiene_clave? ? "Cambiarle la clave" : "Ponerle una clave",
+              class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <%= f.password_field :password, autocomplete: "new-password", maxlength: 72,
+              placeholder: "Mínimo 8 caracteres",
+              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                     focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+      <div class="flex-1">
+        <%= f.label :password_confirmation, "Repetirla",
+              class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <%= f.password_field :password_confirmation, autocomplete: "new-password", maxlength: 72,
+              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                     focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+      <%= render(ButtonComponent.new(variant: :primary, type: "submit", icon: "key")) { "Guardar clave" } %>
+    <% end %>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+      Se la decís al cliente y él la cambia cuando entre. Queda registrado en la bitácora.
+    </p>
+  </div>
+</div>
+
 <%# PR-9.b: tareas del cliente — las que cualquier área le deja y que el
     digitador ve (y marca) en la franja de /etiquetar. %>
 <% tareas_cliente = @cliente.tareas.abiertas.includes(:asignado_a).order(:created_at) %>

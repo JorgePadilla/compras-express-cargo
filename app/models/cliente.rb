@@ -253,6 +253,41 @@ class Cliente < ApplicationRecord
       con_acceso.authenticate_by(email: valor.downcase, password: password)
   end
 
+  # ¿Ya le pusieron clave? Sin esto, `acceso_habilitado` miente: la casilla puede
+  # estar marcada y el cliente igual no entra, porque el admin lo creó desde
+  # `/clientes` y ahí nunca hubo dónde ponerle una.
+  #
+  # Yusef, 2026-08-19, mostrando el caso: *"ella tiene dos correos, **yo no le
+  # puedo crear una cuenta aquí**"*.
+  def tiene_clave?
+    password_digest.present?
+  end
+
+  # A quién le corresponde el link de "olvidé mi contraseña".
+  #
+  # Busca por las **mismas dos llaves** con las que se entra (`autenticar`): si
+  # solo mirara el correo, el cliente que Yusef describe —*"es que yo no tengo
+  # correo"*— quedaría afuera justo del camino que existe para él.
+  #
+  # Devuelve al cliente aunque no tenga clave puesta: recuperarla es también
+  # **estrenarla**, y es la salida para el que el admin creó sin cuenta.
+  def self.para_recuperar(identificador)
+    valor = identificador.to_s.strip
+    return nil if valor.blank?
+
+    con_acceso.find_by(codigo: valor) || con_acceso.find_by(email: valor.downcase)
+  end
+
+  # Le pone (o le cambia) la clave. `clave_actualizada_at` es lo que deja la
+  # huella: `has_paper_trail` saltea `password_digest`, así que sin esta columna
+  # el cambio no aparecería en ninguna bitácora.
+  def cambiar_clave(nueva, confirmacion)
+    self.password = nueva
+    self.password_confirmation = confirmacion
+    self.clave_actualizada_at = Time.current
+    save
+  end
+
   PALABRAS_MINIMAS_DEL_NOMBRE = 3
 
   def nombre_completo_lleva_tres_palabras
