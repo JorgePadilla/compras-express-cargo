@@ -177,6 +177,7 @@ module AuditLogHelper
     "nombre"             => "Nombre",
     "apellido"           => "Apellido",
     "identidad"          => "Identidad / DNI",
+    "rtn"                => "RTN",
     "email"              => "Email",
     "telefono"           => "Teléfono",
     "telefono_whatsapp"  => "WhatsApp",

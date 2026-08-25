@@ -33,6 +33,14 @@ end %>
       <dd class="mt-1 text-sm text-gray-900"><%= @cliente.identidad.presence || "—" %></dd>
     </div>
 
+    <%# PR-C7.39: el RTN se escribía en el form y no se veía en ningún lado — solo
+        reabriendo el formulario. Yusef lo pidió para *"cuando ellos van pidiendo
+        factura"*, o sea para que alguien en caja lo **lea**. %>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">RTN</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @cliente.rtn.presence || "—" %></dd>
+    </div>
+
     <div>
       <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Email</dt>
       <dd class="mt-1 text-sm text-gray-900"><%= @cliente.email.presence || "—" %></dd>
@@ -56,6 +64,20 @@ end %>
     <div>
       <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Ciudad</dt>
       <dd class="mt-1 text-sm text-gray-900"><%= @cliente.ciudad.presence || "—" %></dd>
+    </div>
+
+    <%# Dónde retira, que NO es lo mismo que la ciudad donde vive (PR-C6.37) y es
+        lo que Miami lee para saber en qué bolsa va la caja. Se elegía en el form
+        y tampoco se veía acá. %>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Sucursal de retiro</dt>
+      <dd class="mt-1 text-sm text-gray-900">
+        <% if @cliente.sucursal_retiro %>
+          <%= @cliente.sucursal_retiro.nombre %>
+        <% else %>
+          <span class="text-gray-500">— sin definir, la etiqueta cae a la ciudad —</span>
+        <% end %>
+      </dd>
     </div>
 
     <div>

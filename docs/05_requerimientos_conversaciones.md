@@ -6160,8 +6160,8 @@ no avisara nada.
 >
 > Completado en `PR-C7.37`: la clave se pone y se cambia desde la ficha, el link
 > de recuperación funciona para cliente —por correo **y** por código— y el campo
-> del login dejó de ser `type="email"`. Lo de `/registro` se cerró en `PR-C7.38`.
-> **Queda abierto** que la ficha todavía no muestra `rtn` ni la sucursal de retiro.
+> del login dejó de ser `type="email"`. Lo de `/registro` se cerró en `PR-C7.38`, y
+> lo que la ficha no mostraba —`rtn` y la sucursal de retiro— en `PR-C7.39`.
 
 > *"Falta el sistema de usuario… lo del acceso de ellos."*
 > *"¿Cuál es la cuenta de acceso de él? Y cambiarle la clave por si se le olvidó."*

@@ -3,7 +3,19 @@ class ClientesController < ApplicationController
   before_action :authorize_buscar, only: [ :buscar ]
 
   def index
-    @clientes = Cliente.activos.includes(:categoria_precio, :sucursal_retiro).order(created_at: :desc)
+    # PR-C7.39: el listado filtraba `activos` a secas y no había forma de ver los
+    # demás, así que **dar de baja a un cliente lo hacía desaparecer para
+    # siempre** — ni buscándolo por código aparecía, y no había cómo reactivarlo
+    # salvo por consola.
+    #
+    # Es la trampa que deja abierta la decisión de las dos banderas (`PR-C7.33`):
+    # la que corta el acceso es `acceso_habilitado`, y quien use `activo` por
+    # error se queda sin vuelta atrás. Por defecto se siguen viendo solo los
+    # activos, que es lo que el mostrador quiere el 99% del tiempo.
+    @incluir_inactivos = params[:inactivos] == "1"
+
+    @clientes = (@incluir_inactivos ? Cliente.all : Cliente.activos)
+                  .includes(:categoria_precio, :sucursal_retiro).order(created_at: :desc)
     @clientes = @clientes.buscar(params[:q]) if params[:q].present?
     @clientes = @clientes.page(params[:page]).per(per_page_sanitized)
   end
