@@ -465,7 +465,8 @@ CREATE TABLE public.clientes (
     notas_sac text,
     sucursal_retiro_id bigint,
     acceso_habilitado boolean DEFAULT true NOT NULL,
-    rtn character varying
+    rtn character varying,
+    clave_actualizada_at timestamp(6) without time zone
 );
 
 
@@ -5966,6 +5967,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260825180000'),
 ('20260821013143'),
 ('20260820062518'),
 ('20260820062517'),

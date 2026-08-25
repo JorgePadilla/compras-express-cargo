@@ -6138,7 +6138,31 @@ quedó con las primeras tres"*), el cambio de servicio que solo tocaba una caja
 (*"debería de cambiar todas"*) y que actualizar un paquete de otro tipo de envío
 no avisara nada.
 
-### C14-05 · El acceso del cliente — ✅ **ARREGLADO (PR-C7.33)**
+### C14-05 · El acceso del cliente — ✅ **ARREGLADO (PR-C7.33 + PR-C7.37)**
+
+> ⚠️ **`PR-C7.33` quedó corto: dejó el modelo y no la pantalla.** Auditando el
+> audio contra el código el 25-ago salieron dos cosas que se habían dado por
+> hechas y no lo estaban:
+>
+> 1. **Un cliente creado por el admin no podía entrar nunca.** `cliente_params`
+>    no permitía `:password`, el formulario no tenía campo de clave y
+>    `PasswordsController` era solo de `User`. Nacía con `password_digest` nulo,
+>    le salía "contraseña incorrecta" para siempre, y "olvidé mi contraseña" le
+>    contestaba en silencio. Si además intentaba registrarse solo en `/registro`,
+>    la unicidad del correo lo rebotaba. Era exactamente lo que él estaba
+>    describiendo —*"yo no le puedo crear una cuenta aquí"*— y se leyó como el
+>    caso de los dos correos.
+> 2. **Entrar con el código estaba en el modelo pero la pantalla no lo dejaba.**
+>    `Cliente.autenticar` acepta las dos llaves, pero el campo del login era un
+>    `email_field` con `required`: el navegador rechaza `C2867` antes de enviar.
+>    Los 15 tests pasaban porque postean directo al controller, y no había ningún
+>    system test del login.
+>
+> Completado en `PR-C7.37`: la clave se pone y se cambia desde la ficha, el link
+> de recuperación funciona para cliente —por correo **y** por código— y el campo
+> del login dejó de ser `type="email"`. **Queda abierto** que la ficha todavía no
+> muestra `rtn` ni la sucursal de retiro, y que `/registro` se salta la regla de
+> los tres nombres de `C14-06`.
 
 > *"Falta el sistema de usuario… lo del acceso de ellos."*
 > *"¿Cuál es la cuenta de acceso de él? Y cambiarle la clave por si se le olvidó."*

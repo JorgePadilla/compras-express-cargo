@@ -1,5 +1,5 @@
 class ClientesController < ApplicationController
-  before_action :set_cliente, only: [ :show, :edit, :update ]
+  before_action :set_cliente, only: [ :show, :edit, :update, :clave ]
   before_action :authorize_buscar, only: [ :buscar ]
 
   def index
@@ -98,6 +98,29 @@ class ClientesController < ApplicationController
       flash.now[:alert] = precios.errores.to_sentence if precios.errores.any?
       cargar_catalogos
       render :edit, status: :unprocessable_entity
+    end
+  end
+
+  # Le pone la clave del portal, o se la cambia si se le olvidó.
+  #
+  # Yusef, 2026-08-19, señalando la ficha del cliente: *"¿cuál es la cuenta de
+  # acceso de él? Eso es todo. Y **cambiarle la clave** por si se le olvidó"*.
+  #
+  # Hasta acá no existía en ningún lado: `cliente_params` no permite `:password`
+  # y `PasswordsController` era solo de `User`, así que **un cliente creado por
+  # el admin nacía sin clave y no podía entrar nunca** — le salía "contraseña
+  # incorrecta" para siempre, que es justo el problema que él estaba describiendo.
+  def clave
+    nueva = params.dig(:cliente, :password)
+
+    if nueva.blank?
+      return redirect_to @cliente, alert: "Escribí la clave nueva."
+    end
+
+    if @cliente.cambiar_clave(nueva, params.dig(:cliente, :password_confirmation))
+      redirect_to @cliente, notice: "Clave del portal actualizada."
+    else
+      redirect_to @cliente, alert: @cliente.errors.full_messages.to_sentence
     end
   end
 

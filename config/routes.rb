@@ -42,6 +42,11 @@ Rails.application.routes.draw do
 
   resources :clientes, except: [:destroy] do
     collection { get :buscar }
+    # PR-C7.37: ponerle o cambiarle la clave del portal desde la ficha. Yusef:
+    # *"¿cuál es la cuenta de acceso de él? Y cambiarle la clave por si se le
+    # olvidó"*. Va como acción propia y NO como un campo más de `cliente_params`
+    # porque esa misma lista la guardan media docena de pantallas.
+    member { patch :clave }
   end
 
   resources :paquetes, except: [:new] do
