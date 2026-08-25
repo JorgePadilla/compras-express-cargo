@@ -20,12 +20,21 @@ class DashboardController < ApplicationController
   def build_shortcut_groups
     groups = []
 
-    log = []
-    log << card("Etiquetar",          "Recibir paquetes",           "tag",                    etiquetar_path,    :navy) if can_access?(:etiquetar)
-    # PR-10.c: faltaba la card de Entrega Personal, aunque la pantalla existe
+    # PR-C7.36: lo que se hace en el mostrador de Miami sale de "Logística" y
+    # tiene bloque propio. La separación ya estaba en `can_access?` — estas tres
+    # las ven los mismos dos roles (`supervisor_miami`, `digitador_miami`) y las
+    # otras dos las ve cualquiera—, pero la pantalla las mostraba revueltas.
+    # "Miami" tampoco es nombre nuevo: así lo dibuja el mock de `docs/07`.
+    #
+    # PR-10.c: la card de Entrega Personal faltaba, aunque la pantalla existe
     # desde PR-6a y esta en el sidebar.
-    log << card("Entrega Personal",   "Paquetes traídos al mostrador", "user-plus",          new_entrega_personal_path, :navy) if can_access?(:entrega_personal)
-    log << card("Manifiestos",        "Empaque y envío",            "cube",                   manifiestos_path,  :navy) if can_access?(:manifiestos)
+    mia = []
+    mia << card("Etiquetar",          "Recibir paquetes",           "tag",                    etiquetar_path,            :navy) if can_access?(:etiquetar)
+    mia << card("Entrega Personal",   "Paquetes traídos al mostrador", "user-plus",          new_entrega_personal_path, :navy) if can_access?(:entrega_personal)
+    mia << card("Manifiestos",        "Empaque y envío",            "cube",                   manifiestos_path,          :navy) if can_access?(:manifiestos)
+    groups << { area: "Miami", cards: mia } if mia.any?
+
+    log = []
     log << card("Pre-Alertas",        "Recepciones esperadas",      "bell-alert",             pre_alertas_path,  :navy) if can_access?(:pre_alertas)
     log << card("Todos los Paquetes", "Búsqueda y reportes",        "archive-box",            paquetes_path,     :navy) if can_access?(:paquetes)
     groups << { area: "Logística", cards: log } if log.any?

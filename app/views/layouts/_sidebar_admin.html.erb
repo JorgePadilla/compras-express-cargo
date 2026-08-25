@@ -1,11 +1,22 @@
 <ul class="space-y-1 px-3">
   <%= sidebar_link "Home", root_path, icon: "home" %>
 
-  <% if can_access?(:etiquetar) || can_access?(:manifiestos) || can_access?(:pre_alertas) || can_access?(:paquetes) %>
-    <%= sidebar_section "Logistica" do %>
+  <%# PR-C7.36: el mostrador de Miami tiene bloque propio. Las tres las autoriza
+      `can_access?` al mismo par de roles (supervisor_miami, digitador_miami);
+      Pre-Alertas y Paquetes los ve cualquiera, y por eso se quedan en Logistica.
+      El guard viejo preguntaba por :etiquetar, :manifiestos, :pre_alertas y
+      :paquetes — se habia olvidado de :entrega_personal, aunque su link vivia
+      adentro. No se notaba porque los tres permisos de Miami van juntos. %>
+  <% if can_access?(:etiquetar) || can_access?(:entrega_personal) || can_access?(:manifiestos) %>
+    <%= sidebar_section "Miami" do %>
       <%= sidebar_link "Etiquetar", etiquetar_path, icon: "tag" if can_access?(:etiquetar) %>
       <%= sidebar_link "Entrega Personal", new_entrega_personal_path, icon: "user-plus" if can_access?(:entrega_personal) %>
       <%= sidebar_link "Manifiestos", manifiestos_path, icon: "cube" if can_access?(:manifiestos) %>
+    <% end %>
+  <% end %>
+
+  <% if can_access?(:pre_alertas) || can_access?(:paquetes) %>
+    <%= sidebar_section "Logistica" do %>
       <%= sidebar_link "Pre-Alertas", pre_alertas_path, icon: "bell-alert" if can_access?(:pre_alertas) %>
       <%= sidebar_link "Todos los Paquetes", paquetes_path, icon: "archive-box" if can_access?(:paquetes) %>
     <% end %>
