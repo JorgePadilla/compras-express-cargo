@@ -95,6 +95,7 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     groups = @controller.instance_variable_get(:@shortcut_groups)
     areas = groups.map { |g| g[:area] }
+    assert_includes areas, "Miami"
     assert_includes areas, "Logística"
     assert_includes areas, "Facturación y Cobro"
     assert_includes areas, "Entregas"
@@ -175,7 +176,7 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "supervisor_miami ve Logística + Clientes pero no Facturación/Caja Diaria/Configuración" do
+  test "supervisor_miami ve Miami + Logística + Clientes pero no Facturación/Caja Diaria/Configuración" do
     sup = User.create!(nombre: "Sup M", email_address: "sup_m_dash@test.com", password: "password123",
                        rol: "supervisor_miami", ubicacion: "miami", activo: true)
     login_as sup
@@ -183,12 +184,34 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     groups = @controller.instance_variable_get(:@shortcut_groups)
     areas = groups.map { |g| g[:area] }
+    assert_includes areas, "Miami"
+    # Logística le sigue apareciendo, pero ya no por Etiquetar: le quedan
+    # Pre-Alertas y Todos los Paquetes, que `can_access?` deja ver a cualquiera.
     assert_includes areas, "Logística"
     assert_includes areas, "Clientes"
     assert_not_includes areas, "Facturación y Cobro"
     assert_not_includes areas, "Caja Diaria"
     assert_not_includes areas, "Entregas"
     assert_not_includes areas, "Configuración"
+  end
+
+  # PR-C7.36. Los tests de arriba solo miran los nombres de las áreas, y con
+  # `assert_includes` "Logística" seguía pasando tuviera adentro lo que tuviera.
+  # Este fija la intención: qué card cae en qué bloque. Sin él, alguien devuelve
+  # Etiquetar a Logística y la suite no se entera.
+  test "el mostrador de Miami vive en su propio bloque, no adentro de Logística" do
+    login_as users(:admin)
+    get root_url
+
+    grupos = @controller.instance_variable_get(:@shortcut_groups).index_by { |g| g[:area] }
+    titulos = ->(area) { grupos.fetch(area)[:cards].map { |c| c[:title] } }
+
+    assert_equal ["Etiquetar", "Entrega Personal", "Manifiestos"], titulos.call("Miami")
+    assert_equal ["Pre-Alertas", "Todos los Paquetes"], titulos.call("Logística")
+
+    areas = grupos.keys
+    assert_operator areas.index("Miami"), :<, areas.index("Logística"),
+                    "Miami es la operación diaria: va primero en el home"
   end
 
   test "supervisor_caja ve Facturación + Caja Diaria + Entregas pero no Configuración" do
