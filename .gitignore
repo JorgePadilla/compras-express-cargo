@@ -41,3 +41,10 @@
 tools/**/.env
 tools/**/.venv/
 tools/**/__pycache__/
+
+# El repo usa `structure.sql` (config.active_record.schema_format = :sql).
+# `db/schema.rb` quedo versionado y pinneado en abril de 2026, sin `rtn`,
+# `acceso_habilitado`, `tema`, `sucursal_retiro_id`, `notas_caja` ni `notas_sac`:
+# quien corriera `db:schema:load` con ese archivo armaba una base rota. Rails ni
+# lo consulta con este formato, asi que lo unico que podia hacer era mentir.
+/db/schema.rb

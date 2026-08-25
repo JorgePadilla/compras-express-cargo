@@ -8,6 +8,21 @@ end %>
 
 <div class="mb-6">
   <%= render SearchBarComponent.new(url: clientes_path, placeholder: "Buscar por codigo, nombre o email...", value: params[:q]) %>
+
+  <%# Sin esto, dar de baja a un cliente lo borraba de la pantalla para siempre.
+      El link conserva la busqueda: si no, apagar el filtro tiraba lo tecleado. %>
+  <div class="mt-2 text-sm">
+    <% if @incluir_inactivos %>
+      <%= link_to clientes_path(q: params[:q]), class: "text-cec-teal hover:text-cec-teal-dark" do %>
+        Ver solo los activos
+      <% end %>
+      <span class="text-gray-500 dark:text-gray-400">· estas viendo tambien los dados de baja</span>
+    <% else %>
+      <%= link_to clientes_path(q: params[:q], inactivos: "1"), class: "text-cec-teal hover:text-cec-teal-dark" do %>
+        Incluir los dados de baja
+      <% end %>
+    <% end %>
+  </div>
 </div>
 
 <% if @clientes.any? %>
