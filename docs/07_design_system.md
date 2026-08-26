@@ -235,26 +235,32 @@ cuando no hay contenido, y el anillo viene en la base.
 
 ### Colores de Estado de Paquete
 
-Estos son los colores usados en la leyenda del listado de paquetes:
+Los estados **no tienen color propio**: pasan por `StatusBadgeComponent`, que
+los mapea a las cinco familias de arriba (`COLORS` en
+`app/components/status_badge_component.rb`). En los listados de operación el
+rótulo va corto (`EstadoPaqueteHelper::CORTAS`, `PR-C7.25`) y el largo queda en
+el `title`; el cliente sigue viendo el largo.
 
-| Estado | Color fondo | Color texto | Tailwind classes |
-|--------|-------------|-------------|------------------|
-| PRE-ALERTA | Amarillo claro | Texto oscuro | `bg-yellow-100 text-yellow-800` |
-| FACTURADO | Verde claro | Texto oscuro | `bg-green-100 text-green-800` |
-| ADUANA | Azul claro | Texto oscuro | `bg-blue-100 text-blue-800` |
-| DISPONIBLE | Verde solido | Blanco | `bg-emerald-600 text-white` |
-| ENTREGADO | Gris | Texto oscuro | `bg-gray-100 text-gray-600` |
-| ANULADO | Rojo claro | Texto rojo | `bg-red-100 text-red-700` |
-| EN MANIFIESTO | Indigo claro | Texto oscuro | `bg-indigo-100 text-indigo-800` |
+> La tabla que vivía acá (`bg-yellow-100`, `bg-emerald-600`, `bg-indigo-100`…)
+> era del sistema viejo y usaba tonos que `test/lint/banned_colors_test.rb`
+> prohíbe. Se quitó el 2026-08-25 (`C16-07`).
 
-### Flags Especiales (leyenda paquetes)
+### Flags de la fila (leyenda de `/paquetes`)
 
-| Flag | Color | Significado |
-|------|-------|-------------|
-| P.A. | Badge azul | Pre-Alerta vinculada |
-| P.F. | Badge verde | Pre-Factura generada |
-| Amarillo | Fila amarilla | Solicito Cambio de Servicio |
-| Azul | Fila azul | Retener en Miami |
+Lo que dice `app/views/paquetes/index.html.erb` hoy, en el orden en que gana
+(es un `elsif`: una fila lleva un solo fondo):
+
+| Flag | Fila | Significado |
+|------|------|-------------|
+| Retener en Miami | ámbar claro `bg-amber-50` | la bandera `retener_miami` (no el estado `retenido`, que es de Honduras) |
+| Cambio de servicio | ámbar `bg-amber-100/60` | `solicito_cambio_servicio` |
+| Pre-Factura | azul claro `bg-blue-50` | ya entró a una pre-factura |
+| Pre-Alerta | teal `bg-cec-teal/5` | vino anunciado |
+
+Y en la **etiqueta impresa**, el retenido en Miami dice **`RTE`** donde va el
+servicio (`etiqueta_tipo_envio`, `C16-07`): es el texto más grande de la
+etiqueta porque es con lo que separan la carga antes de empacar, y una caja
+retenida no se empaca.
 
 ---
 

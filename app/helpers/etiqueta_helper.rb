@@ -135,7 +135,19 @@ module EtiquetaHelper
   # CER, CEM, CKA y CKM ya son de tres letras; el único que se acorta es
   # EXPRESS. Si algún día entran dos servicios que arranquen igual, hay que
   # mapearlos a mano acá.
+  #
+  # C16-07 · El retenido en Miami imprime **RTE** en ese mismo lugar. Yusef,
+  # 2026-08-25, con las tres etiquetas de un paquete retenido en la mano: *"y
+  # sigue saliendo el CER aquí. Mirá, sería así: retenido"*; y la abreviatura,
+  # después: *"el de retener me dijiste RT, me va. RT, RT, RT"*. Jorge lo fijó:
+  # en lugar del servicio, RTE. Es el texto más grande de la etiqueta porque es
+  # con lo que separan la carga antes de empacar — y una caja retenida no se
+  # empaca. El servicio vuelve a imprimirse cuando se libera la retención
+  # (`reimprimir_etiquetas`). Es la bandera `retener_miami`, no el estado
+  # `retenido` (que es otra cosa: un paso del pipeline en Honduras).
   def etiqueta_tipo_envio(paquete)
+    return "RTE" if paquete.retener_miami?
+
     paquete.tipo_envio&.codigo.to_s.first(3).upcase.presence
   end
 
