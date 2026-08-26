@@ -6397,7 +6397,7 @@ cliente de la ficha del paquete (Shift+Tab no elige).
 > cierra `RP-44` sin preguntarle: es la regla «Enter no guarda» que él mismo
 > dictó en la Conversación 6, llegando a la pantalla que le faltaba.
 
-### C16-05 · El secundario ya avisado no volvió a avisar — 🐛 ⏳ **ABIERTA**
+### C16-05 · El secundario ya avisado no volvió a avisar — 🐛 ✅ **ARREGLADO (PR-C7.44)**
 
 Metió un paquete cuyo secundario estaba pre-alertado a nombre de otra clienta:
 avisó. Le dio «Dejarlo de lado y seguir», metió otro paquete con **el mismo
@@ -6413,13 +6413,23 @@ Jorge: *"El problema es que queda como la sesión abierta, no se limpia… lo
 mismo que estaba pasando."* Al finalizar la sesión de verdad —que recarga la
 pantalla— volvió a avisar.
 
-**Qué pasa.** «Dejarlo de lado» limpia el formulario **sin recargar**, y la
-limpieza reinicia la memoria del tracking principal (`PR-C6.21`) pero no la del
-secundario: el segundo paquete ni siquiera vuelve a consultar. Y hay una segunda
-capa: el secundario está **arriba** del cliente en la pantalla, así que en el
-orden natural se revisa con el cliente todavía vacío y la comparación no tiene
-contra qué comparar — la primera vez avisó porque la pre-alerta del principal
-ya había puesto al cliente.
+**Qué pasaba.** «Dejarlo de lado» limpia el formulario **sin recargar**, y la
+limpieza reiniciaba la memoria del tracking principal (`PR-C6.21`) pero no la
+del secundario: el segundo paquete ni siquiera volvía a consultar. Y había una
+segunda capa: el secundario está **arriba** del cliente en la pantalla, así que
+en el orden natural se revisa con el cliente todavía vacío y la comparación no
+tenía contra qué comparar — la primera vez avisó porque la pre-alerta del
+principal ya había puesto al cliente.
+
+**Qué cambió.** La memoria se reinicia donde se vacía el campo, que cubre F3,
+F2 y «Dejarlo de lado» de una vez. Lo que dijo el servidor del secundario se
+guarda y **se vuelve a comparar cuando el cliente aparece** (elegido a mano o
+traído por la pre-alerta del principal). La consulta del secundario gana el
+mismo guard de respuesta tardía que la del principal. Y del lado del servidor,
+un paquete con dos renglones vinculados —el suyo y el del secundario que
+absorbió— devolvía el `cliente_id` del que saliera; ahora prefiere el renglón
+cuyo tracking es el escaneado. Lo que **no** cambió es que guardar consuma la
+pre-alerta del otro cliente: eso es `RP-42`.
 
 ### C16-06 · Clientes para Miami, en modo consulta — ⏳ **ABIERTA**
 
@@ -6462,6 +6472,22 @@ dijiste RT, me va. RT, RT, RT."*
 > **Jorge (2026-08-25):** es en la etiqueta impresa — donde va el servicio, en
 > lugar de `CER`, tiene que decir **`RTE`**. La caja retenida no se despacha, y
 > el servicio se vuelve a imprimir cuando se libera.
+
+### C16-08 · El aviso de bolsa de San Pedro volvió a salir — 🐛 ✅ **ARREGLADO (PR-C7.44)**
+
+Jorge, esa misma noche, probando staging: *"el modal guardar en San Pedro Sula
+no debería salir al final luego de imprimir las etiquetas, y acaba de
+aparecer"*.
+
+`C14-03` (`PR-C7.32`) lo había sacado para la sucursal de siempre, y la
+migración marcó cuál era **con los datos de ese momento**. Pero `db/seeds.rb`
+crea las sucursales sin la bandera, así que una base que se reseedea después
+—staging lo fue— queda sin ninguna «de siempre», y el aviso vuelve a salir
+para todos. El código no cambió: cambió la base.
+
+Dos arreglos: en staging se marca «Zeron SPS» desde `/sucursales` (es la
+columna editable que `C14-03` dejó a propósito), y el seed pone la bandera en
+SPS **solo si ninguna la tiene** — la que elijan desde la pantalla manda.
 
 ### Lo que no es código
 

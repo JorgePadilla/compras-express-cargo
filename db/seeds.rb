@@ -23,7 +23,16 @@ puts "  ✓ Admin user"
   s = Sucursal.find_by(codigo: attrs[:codigo])
   s.update_column(:codigo_ep, attrs[:codigo_ep]) if s && s.codigo_ep.blank?
 end
-puts "  ✓ #{Sucursal.count} sucursales"
+# La sucursal de retiro «de siempre» (PR-C7.32). La migración la backfilleó con
+# los datos, pero una base que se reseedea después nacía sin ninguna, y ahí el
+# aviso de bolsa vuelve a salir para San Pedro — Jorge lo vio en staging el
+# 2026-08-25: *"el modal guardar en San Pedro Sula no debería salir al final…
+# y acaba de aparecer"*. Solo si no hay ninguna: la que elijan desde
+# `/sucursales` manda.
+unless Sucursal.exists?(retiro_por_defecto: true)
+  Sucursal.find_by(codigo: "SPS")&.update_column(:retiro_por_defecto, true)
+end
+puts "  ✓ #{Sucursal.count} sucursales (por defecto: #{Sucursal.find_by(retiro_por_defecto: true)&.nombre || 'ninguna'})"
 
 # ── Tipos de envio (v4.0 — ver docs/approved/pre_alerta_v4.docx) ──
 [
