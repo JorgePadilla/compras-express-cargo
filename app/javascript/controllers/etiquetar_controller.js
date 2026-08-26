@@ -113,6 +113,15 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
   _hideTrackingSecundario() {
     this.trackingSecundarioContainerTarget.classList.add("hidden")
     if (this.hasTrackingSecundarioTarget) this.trackingSecundarioTarget.value = ""
+    // C16-05: el campo se vacía por F3, por F2 y por «Dejarlo de lado», y los
+    // tres son un secundario nuevo. La memoria que evita consultar dos veces
+    // el mismo valor (`_ultimoSecundario`) se quedaba puesta, así que volver a
+    // usar el mismo tracking secundario en el paquete siguiente **ni siquiera
+    // consultaba** — Yusef: *"ya lo había detectado, y se quedó esto así,
+    // mirá: no lo limpió"*. El primario ya lo hacía desde PR-C6.21; el
+    // secundario no.
+    this._ultimoSecundario = null
+    this._secundarioPreAlerta = null
     if (this.hasTrackingSecundarioToggleLabelTarget) {
       this.trackingSecundarioToggleLabelTarget.textContent = "+ Agregar tracking secundario"
     }
@@ -210,6 +219,7 @@ cerrarQuitarCobro() {
     }
 
     this.loadPanel(id)
+    this._revisarSecundarioPendiente()
   }
 
   // Recarga el turbo-frame de la franja de contexto. Turbo se encarga del
@@ -296,16 +306,21 @@ cerrarQuitarCobro() {
     if (valor === this._ultimoSecundario) return
     this._ultimoSecundario = valor
 
+    // El mismo guard que `checkTracking` (PR-C6.21): la respuesta que llega
+    // tarde habla de un valor que ya no está en pantalla.
+    const consulta = (this._secundarioSeq = (this._secundarioSeq || 0) + 1)
+
     fetch(this._urlDeConsulta(valor), {
       headers: { "Accept": "application/json" }
     })
       .then(r => r.json())
       .then(data => {
+        if (consulta !== this._secundarioSeq) return
         if (this.trackingSecundarioTarget.value.trim() !== valor) return
         if (data.pre_alerta_match) return this._revisarSecundarioConPreAlerta(data)
         if (data.exists && !data.terminal) this._openDuplicateModal(data)
       })
-      .catch(() => { this._ultimoSecundario = null })
+      .catch(() => { if (consulta === this._secundarioSeq) this._ultimoSecundario = null })
   }
 
   // El secundario también venía anunciado. Lo que hay que hacer con eso lo
@@ -330,20 +345,45 @@ cerrarQuitarCobro() {
   _revisarSecundarioConPreAlerta(data) {
     this.dispatch("preAlertaMatch")
 
-    const clienteActual = this.hasClienteIdTarget ? this.clienteIdTarget.value : ""
-    const otroCliente = clienteActual && data.cliente_id &&
-                        String(data.cliente_id) !== String(clienteActual)
-
-    if (otroCliente) {
-      return this._avisarIncongruenciaDelSecundario(
-        `El tracking secundario está pre-alertado a nombre de ${data.pre_alerta_cliente}, ` +
-        `y este paquete va a nombre de otro cliente. Revisá antes de guardar: ` +
-        `puede que haya que retenerlo en Miami.`)
-    }
+    // C16-05: el secundario está **arriba** del cliente en el formulario, así
+    // que en el orden natural esto corre con el cliente todavía vacío y la
+    // comparación no tiene contra qué comparar — la primera vez que Yusef lo
+    // probó avisó solo porque la pre-alerta del primario ya había puesto al
+    // cliente. Se guarda lo que dijo el servidor y se vuelve a comparar cuando
+    // el cliente aparezca (`_alSeleccionarCliente`).
+    this._secundarioPreAlerta = data
+    const hayCliente = this.hasClienteIdTarget && this.clienteIdTarget.value !== ""
+    if (hayCliente && this._avisarSiEsDeOtroCliente(data)) return
 
     // La otra mitad ya está escrita para el primario: el tipo de envío de la
     // pre-alerta contra el de la sesión.
     this._avisarConflictoDeSesion(data)
+  }
+
+  // ¿El secundario está pre-alertado a nombre de otro cliente que el del
+  // formulario? Avisa y devuelve `true`. No suena la voz de pre-alerta acá:
+  // eso ya sonó cuando el servidor contestó, y volver a llamarlo cada vez que
+  // se cambia el cliente la repetiría.
+  _avisarSiEsDeOtroCliente(data) {
+    const clienteActual = this.hasClienteIdTarget ? this.clienteIdTarget.value : ""
+    const otroCliente = clienteActual && data.cliente_id &&
+                        String(data.cliente_id) !== String(clienteActual)
+    if (!otroCliente) return false
+
+    this._avisarIncongruenciaDelSecundario(
+      `El tracking secundario está pre-alertado a nombre de ${data.pre_alerta_cliente}, ` +
+      `y este paquete va a nombre de otro cliente. Revisá antes de guardar: ` +
+      `puede que haya que retenerlo en Miami.`)
+    return true
+  }
+
+  // El secundario que se revisó con el cliente vacío, ahora que hay cliente.
+  _revisarSecundarioPendiente() {
+    const data = this._secundarioPreAlerta
+    if (!data) return
+    if (!this.hasTrackingSecundarioTarget || this.trackingSecundarioTarget.value.trim() === "") return
+
+    this._avisarSiEsDeOtroCliente(data)
   }
 
   _avisarIncongruenciaDelSecundario(texto) {
@@ -839,6 +879,14 @@ cerrarQuitarCobro() {
     this._hidePreAlertaBanner()
     if (this.hasConflictoSesionModalTarget) this.conflictoSesionModalTarget.classList.add("hidden")
     if (this.hasTrackingSecundarioContainerTarget) this._hideTrackingSecundario()
+    // C16-05: lo demás que era de ESTE paquete y sobrevivía a la limpieza — la
+    // cola de avisos pendientes, el aviso abierto y lo que el modal de
+    // duplicado tenía cargado. Un aviso en cola es un modal que le sale al
+    // paquete siguiente hablando del anterior.
+    this._colaDeAvisos = []
+    this._avisoActual = null
+    this._duplicateData = null
+    if (this.hasAvisoModalTarget && this.avisoModalTarget.open) this.avisoModalTarget.close()
     if (this.hasTipoEnvioTarget) {
       this.tipoEnvioTarget.focus()
     } else {

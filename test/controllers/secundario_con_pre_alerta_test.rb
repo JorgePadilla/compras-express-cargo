@@ -84,6 +84,28 @@ class SecundarioConPreAlertaTest < ActionDispatch::IntegrationTest
                  "la pre-alerta del secundario no se reapuntó"
   end
 
+  test "el JSON del secundario absorbido trae el cliente de SU pre-alerta, no el del otro renglon" do
+    # C16-05: después de guardar, el paquete tiene dos renglones vinculados —el
+    # del primario y el del secundario absorbido—. `find_by(paquete_id:)` sin
+    # orden devolvía cualquiera, y la pantalla comparaba contra el cliente
+    # equivocado: el aviso de «está a nombre de otro» se callaba al azar.
+    principal = pre_alertar("1ZPRINCIPAL00009")
+    secundario = pre_alertar("1ZSEGUNDO0000009", cliente: clientes(:maria))
+
+    post etiquetar_url, params: { paquete: {
+      tracking: principal.tracking, tracking_secundario: secundario.tracking,
+      cliente_id: clientes(:juan).id, descripcion: "x", peso: 10
+    } }
+    paquete = Paquete.find_by(tracking: principal.tracking)
+    assert_equal 2, PreAlertaPaquete.where(paquete_id: paquete.id).count, "el secundario no se absorbió"
+
+    get check_tracking_paquetes_url(tracking: secundario.tracking), as: :json
+    assert_equal clientes(:maria).id, JSON.parse(response.body)["cliente_id"]
+
+    get check_tracking_paquetes_url(tracking: principal.tracking), as: :json
+    assert_equal clientes(:juan).id, JSON.parse(response.body)["cliente_id"]
+  end
+
   test "las dos pre-alertas quedan al dia" do
     principal = pre_alertar("1ZPRINCIPAL00002")
     secundario = pre_alertar("1ZSEGUNDO0000002")
@@ -156,8 +178,8 @@ class SecundarioConPreAlertaTest < ActionDispatch::IntegrationTest
 
   private
 
-  def pre_alertar(tracking)
-    pa = PreAlerta.create!(cliente: clientes(:juan), tipo_envio: tipo_envios(:cer),
+  def pre_alertar(tracking, cliente: clientes(:juan))
+    pa = PreAlerta.create!(cliente: cliente, tipo_envio: tipo_envios(:cer),
                            titulo: "Anunciado", estado: "pre_alerta")
     pa.pre_alerta_paquetes.create!(tracking: tracking, descripcion: "Lo que viene")
   end

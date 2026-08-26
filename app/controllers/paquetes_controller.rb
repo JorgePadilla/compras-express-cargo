@@ -494,7 +494,16 @@ class PaquetesController < ApplicationController
     # `paquete_id` al materializar el esperado. Así que sin este segundo intento
     # `pap` queda en nil y con él se van **las instrucciones que escribió el
     # cliente** — que es justo lo que hay que mostrarle al que recibe.
-    pap ||= PreAlertaPaquete.includes(:pre_alerta).find_by(paquete_id: paquete.id) if paquete
+    #
+    # C16-05: un paquete puede tener **más de un** renglón vinculado —el suyo y
+    # el del secundario que absorbió al guardar—, y `find_by` sin orden devolvía
+    # el que saliera. El JSON llevaba entonces el `cliente_id` de cualquiera de
+    # los dos, y la pantalla comparaba contra el equivocado. Primero el renglón
+    # cuyo tracking es el escaneado; si no hay, el más viejo, siempre el mismo.
+    if paquete && pap.nil?
+      vinculados = PreAlertaPaquete.includes(:pre_alerta).where(paquete_id: paquete.id)
+      pap = vinculados.buscar_escaneado(tracking).first || vinculados.order(:id).first
+    end
     pa = pap&.pre_alerta
 
     if pa.present?
