@@ -92,7 +92,13 @@ Rails.application.routes.draw do
   # PR-9.a: rutas top-level para tareas que cuelgan del CLIENTE y todavía no
   # tienen paquete (en /etiquetar el paquete no existe cuando el operario
   # escanea). Las anidadas bajo :paquetes se mantienen para /paquetes/:id/tareas.
-  resources :tareas, only: [ :new, :create ] do
+  #
+  # PR-C7.40: y `:index`, que es la bandeja — todas las tareas abiertas del área
+  # de uno. Hasta acá solo existían las de UN paquete (`/paquetes/:id/tareas`) o
+  # las de UN cliente, o sea que había que saber de antemano dónde estaba la
+  # tarea para poder verla. Por eso tampoco estaba en el menú: no había a dónde
+  # apuntar.
+  resources :tareas, only: [ :index, :new, :create ] do
     member do
       post :completar
       post :reabrir

@@ -14,8 +14,28 @@ class TareasController < ApplicationController
   before_action :set_paquete
   before_action :set_tarea, only: [ :edit, :update, :destroy, :iniciar, :completar, :reabrir ]
 
+  # Anidada bajo paquete: las de ese paquete, como siempre.
+  # Top-level: la bandeja — lo que el área de uno tiene abierto, sin tener que
+  # saber de antemano en qué paquete está la tarea.
   def index
-    @tareas = @paquete.tareas.includes(:asignado_a, :completado_por).order(created_at: :desc)
+    return tareas_del_paquete if @paquete
+
+    @solo_mias = params[:mias] == "1"
+    @incluir_realizadas = params[:realizadas] == "1"
+
+    # `visibles_para` es la misma segmentación por área que usan las notas
+    # permanentes: un digitador no tiene por qué ver la cola de Caja.
+    tareas = Tarea.visibles_para(Current.user)
+    tareas = tareas.abiertas unless @incluir_realizadas
+    tareas = tareas.where(asignado_a: Current.user) if @solo_mias
+
+    # Las empezadas primero: son las que alguien dejó a medias.
+    @tareas = tareas.includes(:asignado_a, :completado_por, :cliente, paquete: :cliente)
+                    .order(Arel.sql("CASE estado WHEN 'en_proceso' THEN 0 WHEN 'pendiente' THEN 1 ELSE 2 END"),
+                           created_at: :asc)
+                    .page(params[:page]).per(per_page_sanitized)
+
+    render :bandeja
   end
 
   def new
@@ -82,6 +102,10 @@ class TareasController < ApplicationController
   end
 
   private
+
+  def tareas_del_paquete
+    @tareas = @paquete.tareas.includes(:asignado_a, :completado_por).order(created_at: :desc)
+  end
 
   # Anidada bajo paquete → cuelga del paquete. Top-level → tarea de cliente
   # (la que cualquier área le deja al cliente y el digitador ve al escanear).
