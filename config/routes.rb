@@ -98,7 +98,10 @@ Rails.application.routes.draw do
   # las de UN cliente, o sea que había que saber de antemano dónde estaba la
   # tarea para poder verla. Por eso tampoco estaba en el menú: no había a dónde
   # apuntar.
-  resources :tareas, only: [ :index, :new, :create ] do
+  #
+  # C17-01: y `edit/update/destroy`, porque una tarea de cliente —sin paquete—
+  # no se podía editar ni borrar desde ninguna pantalla.
+  resources :tareas, only: [ :index, :new, :create, :edit, :update, :destroy ] do
     member do
       post :completar
       post :reabrir

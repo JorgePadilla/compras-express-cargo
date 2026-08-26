@@ -219,7 +219,7 @@ end %>
       <%= heroicon "clipboard-document-check", variant: :solid, options: { class: "w-5 h-5 text-cec-teal" } %>
       Tareas pendientes del cliente
     </h2>
-    <% if Current.user&.rol.in?(TareasController::GESTION_ROLES) || Current.user&.admin? %>
+    <% if can_crear_tareas? %>
       <%= render(ButtonComponent.new(variant: :teal, size: :xs, icon: "plus",
             href: new_tarea_path(cliente_id: @cliente.id))) { "Nueva tarea" } %>
     <% end %>

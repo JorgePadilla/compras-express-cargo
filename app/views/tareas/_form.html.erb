@@ -1,7 +1,51 @@
 <%# Anidada bajo paquete, o top-level cuando la tarea es del cliente. %>
+<% clases_de_campo = "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
 <%= form_with model: (@paquete ? [ @paquete, @tarea ] : @tarea), class: "space-y-6 max-w-2xl" do |f| %>
   <% unless @paquete %>
-    <%= f.hidden_field :cliente_id %>
+    <% if @tarea.cliente_id.present? %>
+      <%# Viene fijo desde la ficha del cliente (`?cliente_id=`), o ya se eligió
+          y el form volvió con un error: se muestra a quién apunta. %>
+      <%= f.hidden_field :cliente_id %>
+      <% if @tarea.cliente %>
+        <div>
+          <span class="block text-sm font-medium text-gray-700 mb-1">Cliente</span>
+          <p class="text-sm text-gray-900 dark:text-gray-100">
+            <span class="font-mono"><%= @tarea.cliente.codigo %></span> — <%= @tarea.cliente.nombre_completo %>
+          </p>
+        </div>
+      <% end %>
+    <% else %>
+      <%# C17-01: `/tareas/new` a secas era un callejón sin salida — el cliente
+          solo llegaba por la URL y sin él la tarea no se podía guardar. Mismo
+          autocomplete que `pre_alertas/new`; el controller escribe el oculto
+          al elegir. %>
+      <div data-controller="client-autocomplete" data-client-autocomplete-url-value="<%= buscar_clientes_path %>">
+        <%= f.label :cliente_id, "Cliente", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <div class="relative">
+          <input type="text" data-client-autocomplete-target="input"
+                 data-action="input->client-autocomplete#search
+                              keydown->client-autocomplete#onKeydown"
+                 placeholder="Buscar por código o nombre..."
+                 autocomplete="off"
+                 class="<%= clases_de_campo %>">
+          <%= f.hidden_field :cliente_id, data: { client_autocomplete_target: "clienteId" } %>
+          <div data-client-autocomplete-target="dropdown" class="hidden absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto"></div>
+        </div>
+        <p data-client-autocomplete-target="nombre" class="mt-1 text-sm text-gray-500 dark:text-gray-400 hidden"></p>
+      </div>
+    <% end %>
+
+    <% if @tarea.new_record? %>
+      <%# El tracking se resuelve en el servidor y la tarea cuelga de ese
+          paquete (Caja 1 si es un split). Sin él, queda del cliente. %>
+      <div>
+        <%= label_tag "tarea_tracking", "Tracking (opcional)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= text_field_tag "tarea[tracking]", params.dig(:tarea, :tracking), id: "tarea_tracking",
+              placeholder: "Si es de un paquete en particular", autocomplete: "off",
+              class: "#{clases_de_campo} font-mono" %>
+        <p class="mt-1 text-xs text-gray-500">Con tracking, la tarea queda en ese paquete y puede bloquear su avance. Sin tracking, queda en el cliente.</p>
+      </div>
+    <% end %>
   <% end %>
   <% if @tarea.errors.any? %>
     <div class="p-4 bg-red-50 rounded-lg text-sm text-red-700">

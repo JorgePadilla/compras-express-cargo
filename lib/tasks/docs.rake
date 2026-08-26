@@ -879,7 +879,7 @@ namespace :docs do
           [ "<b>Cargos automáticos</b>", "La recolecta y el cambio de servicio se agregan solos a la pre-factura." ],
           [ "<b>Cambio de servicio</b>", "Genera nota de débito al facturar. El monto es ajustable en la pre-factura." ],
           [ "<b>Prepagado en Miami</b>", "Si pagó allá, en Honduras solo se hace una factura simbólica de $1 más impuesto." ],
-          [ "<b>Tareas abiertas</b>", "Un paquete con tareas pendientes no avanza de etapa." ],
+          [ "<b>Tareas abiertas</b>", "Un paquete con tareas pendientes marcadas como bloqueantes no avanza de etapa. Las tareas las deja el personal —desde la bandeja, desde el paquete o desde el cliente—, nunca el cliente." ],
           [ "<b>El precio sale bloqueado</b>", "En la pre-factura nadie edita el monto suelto. Precio, peso, descuento y quitar una línea piden el PIN de un supervisor, y queda registrado quién autorizó y por qué." ],
           [ "<b>Descuento a la vista</b>", "El descuento es un campo propio y sale impreso en la factura, en monto o en porcentaje. El ISV se calcula sobre el neto, después del descuento." ],
           [ "<b>Emitir una nota lleva dos firmas</b>", "Las notas de débito y crédito se arman libres, pero al emitirlas —que es cuando cambia el saldo del cliente— piden el PIN de un supervisor distinto de quien la creó." ]

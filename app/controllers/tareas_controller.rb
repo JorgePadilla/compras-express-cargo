@@ -4,12 +4,20 @@ class TareasController < ApplicationController
   # tareas de cualquier paquete. Se cierra ahora que la franja de contexto
   # expone `completar` a los operarios.
   #
-  # Crear/editar/borrar: quien define el trabajo (supervisores + SAC).
+  # Editar/borrar: quien define el trabajo (supervisores + SAC).
   # Completar/iniciar: además los operarios que lo ejecutan.
+  # Crear: los mismos que ejecutan (C17-01, Jorge 2026-08-26). Hasta acá crear
+  # era de GESTION_ROLES y el que estaba en la pistola —el digitador— podía
+  # marcar una tarea hecha pero no dejar una. Yusef solo dijo *"el cliente no
+  # puede poner una tarea, solo nosotros"* (C16-01) y nunca quién de nosotros:
+  # queda como respuesta provisoria en `RP-45`. Si dice que no, esta constante
+  # vuelve a `GESTION_ROLES` y con ella `can_crear_tareas?` y un test.
   GESTION_ROLES  = %w[supervisor_miami supervisor_caja supervisor_prefactura sac].freeze
   EJECUCION_ROLES = (GESTION_ROLES + %w[digitador_miami cajero entrega_despacho]).freeze
+  CREACION_ROLES  = EJECUCION_ROLES
 
-  before_action :authorize_gestion,   only: [ :new, :create, :edit, :update, :destroy ]
+  before_action :authorize_creacion,  only: [ :new, :create ]
+  before_action :authorize_gestion,   only: [ :edit, :update, :destroy ]
   before_action :authorize_ejecucion, only: [ :index, :iniciar, :completar, :reabrir ]
   before_action :set_paquete
   before_action :set_tarea, only: [ :edit, :update, :destroy, :iniciar, :completar, :reabrir ]
@@ -41,16 +49,33 @@ class TareasController < ApplicationController
   def new
     @tarea = nueva_tarea
     @tarea.cliente_id ||= params[:cliente_id]
+    # El área del que la crea, no «todas»: si un digitador la deja en blanco
+    # la ve cualquiera, pero lo normal es que sea para los suyos.
+    @tarea.departamento ||= departamento_por_defecto
     @users = User.where(activo: true).order(:nombre)
   end
 
   def create
     @tarea = nueva_tarea(tarea_params)
+
+    # C17-01: desde la bandeja la tarea puede colgar de un paquete escribiendo
+    # su tracking. Se resuelve acá y no por `paquete_id` en los params: el
+    # operario tiene el tracking en la mano, no un id, y aceptar el id por
+    # parámetro es la puerta para colgarla de cualquier paquete.
+    tracking = params.dig(:tarea, :tracking).to_s.strip
+    if @paquete.nil? && tracking.present?
+      @tarea.paquete = paquete_del_tracking(tracking, @tarea.cliente_id)
+      if @tarea.paquete.nil?
+        @tarea.valid? # `errors.add` antes de `valid?` se pierde
+        @tarea.errors.add(:base, "No hay ningún paquete con el tracking #{tracking}")
+        return render_fallo(:new)
+      end
+    end
+
     if @tarea.save
       redirect_to destino_post_guardado, notice: "Tarea creada."
     else
-      @users = User.where(activo: true).order(:nombre)
-      render :new, status: :unprocessable_entity
+      render_fallo(:new)
     end
   end
 
@@ -62,8 +87,7 @@ class TareasController < ApplicationController
     if @tarea.update(tarea_params)
       redirect_to destino_post_guardado, notice: "Tarea actualizada."
     else
-      @users = User.where(activo: true).order(:nombre)
-      render :edit, status: :unprocessable_entity
+      render_fallo(:edit)
     end
   end
 
@@ -113,8 +137,35 @@ class TareasController < ApplicationController
     @paquete ? @paquete.tareas.new(attrs) : Tarea.new(attrs)
   end
 
+  # A donde la tarea está pegada: al paquete si lo tiene —también cuando llegó
+  # por la ruta top-level con un tracking—, si no a la ficha del cliente.
   def destino_post_guardado
-    @paquete ? paquete_tareas_path(@paquete) : cliente_path(@tarea.cliente_id)
+    destino = @paquete || @tarea.paquete
+    destino ? paquete_tareas_path(destino) : cliente_path(@tarea.cliente_id)
+  end
+
+  def render_fallo(vista)
+    @users = User.where(activo: true).order(:nombre)
+    render vista, status: :unprocessable_entity
+  end
+
+  # El paquete de ese tracking, **del cliente elegido**: los couriers reciclan
+  # trackings y el mismo código puede estar en dos clientes. Sin cliente, sin
+  # scope, y `derivar_cliente_desde_paquete` lo completa desde el paquete. En
+  # un split va a la Caja 1 (`NULLS LAST`: una caja sin número no se cuela
+  # primera). El bloqueo de avance es por caja —la pre-factura avanza caja por
+  # caja con `update!`— y el manifiesto no lo mira (`update_all`).
+  def paquete_del_tracking(tracking, cliente_id)
+    scope = cliente_id.present? ? Paquete.where(cliente_id: cliente_id) : Paquete.all
+    scope.buscar_escaneado(tracking)
+         .order(Arel.sql("numero_caja ASC NULLS LAST, id ASC"))
+         .first
+  end
+
+  def departamento_por_defecto
+    return nil if Current.user&.admin?
+
+    Tarea::DEPARTAMENTOS_POR_ROL[Current.user&.rol]&.first
   end
 
   # Cuántas tareas abiertas le quedan a este cliente para el área del
@@ -134,6 +185,10 @@ class TareasController < ApplicationController
     else
       redirect_back fallback_location: root_path, notice: mensaje
     end
+  end
+
+  def authorize_creacion
+    require_role(*CREACION_ROLES)
   end
 
   def authorize_gestion
