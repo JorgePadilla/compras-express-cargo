@@ -49,6 +49,14 @@ class DashboardController < ApplicationController
     fac << card("Financiamientos",   nil, "banknotes",                financiamientos_path, :teal) if can_access?(:financiamientos)
     groups << { area: "Facturación y Cobro", cards: fac } if fac.any?
 
+    # PR-C7.40: las tareas no tenían tarjeta ni link — la pantalla se alcanzaba
+    # solo desde adentro de un paquete o de un cliente, o sea que había que saber
+    # de antemano dónde estaba la tarea para poder verla.
+    tar = []
+    tar << card("Tareas", "Lo que tu área tiene abierto", "clipboard-document-check",
+                tareas_path, :teal) if can_access?(:tareas)
+    groups << { area: "Tareas", cards: tar } if tar.any?
+
     ent = []
     ent << card("Entregas", "Despachos y rutas", "truck", entregas_path, :gold) if can_access?(:entregas)
     groups << { area: "Entregas", cards: ent } if ent.any?

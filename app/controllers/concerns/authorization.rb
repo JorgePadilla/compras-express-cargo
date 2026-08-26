@@ -56,6 +56,11 @@ module Authorization
       role.in?(%w[entrega_despacho supervisor_caja])
     when :clientes, :pre_alertas, :paquetes
       true
+    # PR-C7.40: la bandeja de tareas la ve quien las ejecuta, que es la misma
+    # lista que ya usaba `TareasController`. Derivarla y no reescribirla: dos
+    # copias de una lista de roles se desincronizan sin que nadie lo vea.
+    when :tareas
+      role.in?(TareasController::EJECUCION_ROLES)
     when :usuarios, :configuraciones, :reportes, :empleados
       false
     when :marketing

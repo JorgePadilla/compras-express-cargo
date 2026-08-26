@@ -36,6 +36,15 @@
 
   <%= sidebar_link "Clientes", clientes_path, icon: "users" if can_access?(:clientes) %>
 
+  <%# PR-C7.40: la bandeja de tareas. Jorge: *"veo que falta la parte de tareas…
+      faltan los links del menú"*. La pantalla no estaba porque no existía ruta
+      global: solo se veían las de UN paquete o las de UN cliente. Va suelta y no
+      en una sección de área porque las tareas cruzan las áreas — cada una trae
+      su departamento y `visibles_para` ya filtra lo que a uno le toca. %>
+  <% if can_access?(:tareas) %>
+    <%= sidebar_link "Tareas", tareas_path, icon: "clipboard-document-check" %>
+  <% end %>
+
   <% if can_access?(:entregas) %>
     <%= sidebar_link "Entregas", entregas_path, icon: "truck" %>
   <% end %>
