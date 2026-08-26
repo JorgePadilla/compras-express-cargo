@@ -2402,8 +2402,8 @@ El mapa completo que pidió:
 
 | Cuándo | Sonido | Estado |
 |---|---|---|
-| Terminó de escanear y ya revisó pre-alertas — "podés seguir" | pin agradable | ~~✅ existe~~ **nunca existió** — ver `C16-02` |
-| Seleccionó el código de cliente | pin | ~~✅ existe~~ **nunca existió** — ver `C16-02` |
+| Terminó de escanear y ya revisó pre-alertas — "podés seguir" | pin agradable | ~~✅ existe~~ **nunca existió** — ✅ `PR-C7.42` (`C16-02`) |
+| Seleccionó el código de cliente | pin | ~~✅ existe~~ **nunca existió** — ✅ `PR-C7.42` (`C16-02`) |
 | El paquete **tiene pre-alerta** | voz grabada | ⏳ falta la grabación |
 | El tracking **ya existía / ya fue usado** | pito distinto | ✅ PR-C6.9 |
 | **Error** — tipo de envío distinto al de la sesión | sonido feo | ✅ PR-C6.9 · tres opciones en `PR-275` |
@@ -6339,7 +6339,7 @@ modal: él dijo que el cliente no las pone, no que no existan.
 > bandeja `/tareas`, con su link—. Con la conversión quitada, lo que va a
 > encontrar ahí son solo tareas del personal.
 
-### C16-02 · El pito de «podés seguir» — ⏳ **ABIERTA**
+### C16-02 · El pito de «podés seguir» — ✅ **ARREGLADO (PR-C7.42)**
 
 > *"Cuando yo hago esto y no tiene pre-alerta, debe pitar, acordate."*
 > *"¿Cuándo escuchás el pip? Cuando el sistema buscó en los paquetes y vio que
@@ -6353,9 +6353,18 @@ Jorge, mirándolo: *"Ay, no está pitando."*
 
 Son dos pitos de **listo**: cuando el chequeo del tracking vuelve limpio —ni
 duplicado ni pre-alerta— y cuando el autocomplete de cliente encuentra a
-alguien. El pin de guardado (`success`) es el único «podés seguir» que existe, y
-suena **solo al grabar**. ⚠️ La tabla de `A1-10` daba estos dos por «✅ existe» y
-**nunca fue cierto** — ver la corrección ahí.
+alguien. El pin de guardado (`success`) era el único «podés seguir» que existía,
+y sonaba **solo al grabar**. ⚠️ La tabla de `A1-10` daba estos dos por «✅
+existe» y **nunca fue cierto** — ver la corrección ahí.
+
+Los dos usan **el mismo pin** que el guardado, el que él aprobó en la
+Conversación 6 (*"se oye amigable"*): son tres momentos de una sola cosa. El
+del cliente vive en la base que comparten `/etiquetar` y `/entrega_personal`,
+así que suena en las dos; el del tracking no aplica a Entrega Personal, que no
+chequea trackings. No suena al entrar a actualizar un paquete: ahí el tracking
+viene puesto y el primer blur no es un escaneo. Y el lint de sonidos aprendió a
+seguir los `import`: el `dispatch` de una base cuenta para la pantalla que la
+hereda.
 
 ### C16-03 · «Le da Enter y se queda ahí» — ⏳ **ABIERTA, va con C16-02 y C16-04**
 

@@ -16,7 +16,11 @@ end %>
          pantalla muda, y en entrega personal el operario está con el paquete
          en la mano, no leyendo. `submitEnd` suena el feo cuando Turbo avisa
          que el submit no pasó. %>
+     <%# C16-02: el cliente que aparece en el autocomplete pita igual que en
+         /etiquetar — mismo pin de «podés seguir». Acá no hay chequeo de
+         tracking, así que `trackingLibre` no aplica. %>
      data-action="entrega-personal:success->audio#success
+                  entrega-personal:clienteEncontrado->audio#success
                   turbo:submit-end->audio#submitEnd
                   click@document->entrega-personal#clickOutsideDropdown">
 

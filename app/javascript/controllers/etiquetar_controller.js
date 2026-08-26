@@ -473,7 +473,9 @@ cerrarQuitarCobro() {
         }
         if (data.exists && !data.terminal) {
           this._openDuplicateModal(data)
+          return
         }
+        this._avisarTrackingLibre()
       })
       .catch((e) => {
         // No se puede seguir en silencio: si la consulta falla, el operario
@@ -482,6 +484,23 @@ cerrarQuitarCobro() {
         if (consulta === this._consultaSeq) this._ultimoConsultado = null
         console.error("[etiquetar] falló la consulta del tracking", e)
       })
+  }
+
+  // El pin de «podés seguir» cuando el chequeo vuelve limpio: ni duplicado ni
+  // pre-alerta. Yusef, 2026-08-25 (C16-02): *"¿cuándo escuchás el pip? Cuando
+  // el sistema buscó en los paquetes y vio que no existía"* · *"siempre hay
+  // pitos para decir: ok, podés seguir"*. El operario mira la pistola, no la
+  // pantalla, y sin este pito no sabe si el chequeo terminó.
+  //
+  // Un tracking terminal (entregado, anulado) también está libre: se puede
+  // volver a usar, y PR-C6.9 ya lo deja pasar sin modal.
+  //
+  // No suena al actualizar: ahí el tracking viene puesto desde el servidor y
+  // el primer blur no es un escaneo — pitaría sin que nadie hubiera hecho
+  // nada.
+  _avisarTrackingLibre() {
+    if (this.hasActualizandoIdValue && this.actualizandoIdValue) return
+    this.dispatch("trackingLibre")
   }
 
   // El paquete escaneado pertenece a otro tipo de envío.

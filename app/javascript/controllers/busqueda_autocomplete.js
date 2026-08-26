@@ -44,6 +44,11 @@ export default class BusquedaAutocomplete extends Controller {
   // Qué hacer cuando el operario elige uno. Recibe el `dataset` del botón.
   _alSeleccionar(_datos) {}
 
+  // Qué hacer cuando llegaron resultados y el primero ya quedó activo. La base
+  // no hace nada; el autocomplete de cliente pita (C16-02). No corre con la
+  // lista vacía: «no se encontraron resultados» no es un «podés seguir».
+  _alPintar(_items) {}
+
   _textoVacio() { return "No se encontraron resultados" }
 
   // Los modales pintan sus resultados en un `<ul>`, así que cada fila va
@@ -118,6 +123,7 @@ export default class BusquedaAutocomplete extends Controller {
     // Miami trabaja solo con teclado, "usamos las manos para trabajar".
     this._activo = 0
     this._resaltar()
+    this._alPintar(items)
   }
 
   // ── Navegación con teclado ───────────────────────────────────────────────

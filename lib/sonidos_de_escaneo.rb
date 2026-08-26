@@ -20,8 +20,11 @@ module SonidosDeEscaneo
   # En el orden en que aparecen escaneando, no en el orden en que se
   # programaron: primero lo que suena siempre, al final lo que suena mal.
   BOTONES = [
-    { accion: "success", etiqueta: "Guardado",
-      ayuda: "Cuando el paquete quedó grabado" },
+    # C16-02: el mismo pin dice «podés seguir» en tres momentos. Yusef lo
+    # aprobó en la Conversación 6 —"se oye amigable"— y pidió los otros dos
+    # el 2026-08-25: "siempre hay pitos para decir: ok, podés seguir".
+    { accion: "success", etiqueta: "Podés seguir",
+      ayuda: "El paquete quedó grabado, el tracking está libre, o el cliente apareció en la lista" },
     { accion: "speakPreAlerta", etiqueta: "Pre-alerta",
       ayuda: "El pito y la voz. Es el sonido completo, no solo el pito" },
     { accion: "notify", etiqueta: "Ya existía",
