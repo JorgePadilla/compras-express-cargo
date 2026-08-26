@@ -6431,7 +6431,7 @@ absorbió— devolvía el `cliente_id` del que saliera; ahora prefiere el rengl�
 cuyo tracking es el escaneado. Lo que **no** cambió es que guardar consuma la
 pre-alerta del otro cliente: eso es `RP-42`.
 
-### C16-06 · Clientes para Miami, en modo consulta — ⏳ **ABIERTA**
+### C16-06 · Clientes para Miami, en modo consulta — ✅ **ARREGLADO (PR-C7.45)**
 
 Mirando el bloque Miami del menú:
 
@@ -6456,9 +6456,18 @@ así que C10 aparece enterrado; el autocomplete de `/etiquetar` usa la flexible,
 que pone el código primero. Es la misma búsqueda dos veces, distinta.
 
 > **Decisión de Jorge (2026-08-25):** solo `digitador_miami` queda en consulta;
-> `supervisor_miami` sigue editando. Hoy **todos** los roles pueden crear y
-> editar clientes — la restricción no existía. Qué de la ficha no debe **ver**
+> `supervisor_miami` sigue editando. Hasta acá **todos** los roles podían crear
+> y editar clientes — la restricción no existía. Qué de la ficha no debe **ver**
 > Miami queda en `RP-43`.
+
+**Qué cambió.** «Clientes» entra al bloque Miami del menú (el link suelto se
+queda para los roles sin mostrador). `ClientesController` gana `EDICION_ROLES`
+—todos menos el digitador— y un guard sobre crear, editar y poner la clave del
+portal; la lista y la ficha esconden «Nuevo cliente», «Editar» y el formulario
+de la clave para quien no puede (se van enteros, no en gris: llevan atajo F7/F6
+y el atajo global clickea lo que encuentre). Y la lista busca **como el
+autocomplete** —`buscar_flexible` con el código primero, la fecha de alta solo
+desempata—, así que «10» pone a C10 arriba.
 
 ### C16-07 · La etiqueta del retenido dice **RTE** — ⏳ **ABIERTA**
 

@@ -7,11 +7,18 @@
       El guard viejo preguntaba por :etiquetar, :manifiestos, :pre_alertas y
       :paquetes — se habia olvidado de :entrega_personal, aunque su link vivia
       adentro. No se notaba porque los tres permisos de Miami van juntos. %>
-  <% if can_access?(:etiquetar) || can_access?(:entrega_personal) || can_access?(:manifiestos) %>
+  <% bloque_miami = can_access?(:etiquetar) || can_access?(:entrega_personal) || can_access?(:manifiestos) %>
+  <% if bloque_miami %>
     <%= sidebar_section "Miami" do %>
       <%= sidebar_link "Etiquetar", etiquetar_path, icon: "tag" if can_access?(:etiquetar) %>
       <%= sidebar_link "Entrega Personal", new_entrega_personal_path, icon: "user-plus" if can_access?(:entrega_personal) %>
       <%= sidebar_link "Manifiestos", manifiestos_path, icon: "cube" if can_access?(:manifiestos) %>
+      <%# C16-06 · Yusef, leyendo este bloque: *"falta Clientes para Miami, para
+          que ellos lo puedan ver… a veces buscan un cliente para tratar de
+          encontrar cuál es el número correcto"*. El link suelto de abajo ya lo
+          tenían, pero leyeron el bloque y pararon. Acá va, y el suelto se queda
+          para los roles que no tienen mostrador. %>
+      <%= sidebar_link "Clientes", clientes_path, icon: "users" if can_access?(:clientes) %>
     <% end %>
   <% end %>
 
@@ -34,7 +41,7 @@
     <% end %>
   <% end %>
 
-  <%= sidebar_link "Clientes", clientes_path, icon: "users" if can_access?(:clientes) %>
+  <%= sidebar_link "Clientes", clientes_path, icon: "users" if can_access?(:clientes) && !bloque_miami %>
 
   <%# PR-C7.40: la bandeja de tareas. Jorge: *"veo que falta la parte de tareas…
       faltan los links del menú"*. La pantalla no estaba porque no existía ruta

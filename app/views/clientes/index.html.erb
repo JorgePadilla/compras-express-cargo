@@ -1,7 +1,12 @@
+<%# C16-06: el digitador de Miami consulta y no crea. El botón se va entero y
+    no en gris: lleva `shortcut: "F7"`, y el atajo global clickea cualquier
+    `[data-shortcut]` que encuentre. %>
 <%= render PageHeaderComponent.new(title: "Clientes", subtitle: "#{@clientes.total_count} clientes registrados") do |header|
-  header.with_action do
-    render ButtonComponent.new(variant: :gold, href: new_cliente_path, icon: "plus", shortcut: "F7") do
-      "Nuevo Cliente"
+  if can_edit_clientes?
+    header.with_action do
+      render ButtonComponent.new(variant: :gold, href: new_cliente_path, icon: "plus", shortcut: "F7") do
+        "Nuevo Cliente"
+      end
     end
   end
 end %>
@@ -49,7 +54,9 @@ end %>
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center justify-end gap-2">
                   <%= render RowActionComponent.new(action: :view, href: cliente, label: "Ver cliente #{cliente.codigo}") %>
-                  <%= render RowActionComponent.new(action: :edit, href: edit_cliente_path(cliente), label: "Editar cliente") %>
+                  <%= render RowActionComponent.new(action: :edit, href: edit_cliente_path(cliente),
+                        label: can_edit_clientes? ? "Editar cliente" : "Sin permiso para editar (Honduras o supervisor de Miami)",
+                        disabled: !can_edit_clientes?) %>
                 </div>
               </td>
             </tr>
@@ -68,9 +75,11 @@ end %>
     description: params[:q].present? ? "Intenta con otro termino de busqueda." : "Crea el primer cliente para comenzar.",
     icon: "users"
   ) do |empty|
-    empty.with_action do
-      render ButtonComponent.new(variant: :gold, href: new_cliente_path, icon: "plus", shortcut: "F7") do
-        "Nuevo Cliente"
+    if can_edit_clientes?
+      empty.with_action do
+        render ButtonComponent.new(variant: :gold, href: new_cliente_path, icon: "plus", shortcut: "F7") do
+          "Nuevo Cliente"
+        end
       end
     end
   end %>
