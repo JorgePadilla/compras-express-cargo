@@ -1,4 +1,6 @@
 class TareasController < ApplicationController
+  include ResuelveLaFranja
+
   # PR-9.a: este controller venía SIN ningún filtro de autorización desde
   # PR #66 — cualquier usuario autenticado podía crear, editar o borrar
   # tareas de cualquier paquete. Se cierra ahora que la franja de contexto
@@ -63,7 +65,7 @@ class TareasController < ApplicationController
     # operario tiene el tracking en la mano, no un id, y aceptar el id por
     # parámetro es la puerta para colgarla de cualquier paquete.
     tracking = params.dig(:tarea, :tracking).to_s.strip
-    if @paquete.nil? && tracking.present?
+    if @paquete.nil? && tracking.present? && !desde_franja?
       @tarea.paquete = paquete_del_tracking(tracking, @tarea.cliente_id)
       if @tarea.paquete.nil?
         @tarea.valid? # `errors.add` antes de `valid?` se pierde
@@ -71,10 +73,18 @@ class TareasController < ApplicationController
         return render_fallo(:new)
       end
     end
+    # C17-02: desde la franja el paquete casi nunca existe todavía —se está
+    # recibiendo—, así que el tracking se guarda en la tarea y
+    # `Tarea.atar_al_paquete!` la re-apunta cuando el paquete se guarda.
+    @tarea.tracking = tracking if desde_franja? && @paquete.nil?
 
     if @tarea.save
+      return responder_a_la_franja if desde_franja?
+
       redirect_to destino_post_guardado, notice: "Tarea creada."
     else
+      return responder_a_la_franja_con_errores if desde_franja?
+
       render_fallo(:new)
     end
   end
@@ -149,6 +159,42 @@ class TareasController < ApplicationController
     render vista, status: :unprocessable_entity
   end
 
+  # El mini-form de la franja manda `desde_franja=1`. Hace falta un
+  # discriminador propio: Turbo manda `Accept: text/vnd.turbo-stream.html` en
+  # **todo** POST de formulario, así que un `respond_to` a secas atraparía
+  # también el `/tareas/new` de página completa.
+  def desde_franja?
+    params[:desde_franja] == "1"
+  end
+
+  # Se reemplaza el bloque entero de tareas —no se agrega una fila—: el `<ul>`
+  # solo existe cuando hay tareas, y el badge cambia de color con ellas. Un
+  # `prepend` fallaría justo en el caso más común, la primera tarea. El
+  # tracking para re-pintar es el **fresco** que acaba de mandar el JS, no el
+  # que tenía la franja al cargar (ver `ResuelveLaFranja`).
+  def responder_a_la_franja
+    cliente = @tarea.cliente
+    tracking = params.dig(:tarea, :tracking).to_s.strip.upcase.presence || @paquete&.tracking
+    paquete = @paquete || paquete_de_la_franja(cliente, tracking)
+
+    render turbo_stream: [
+      turbo_stream.replace("tareas-de-la-franja", partial: "panel_contexto/tareas",
+                           locals: { cliente: cliente, tareas: tareas_de_la_franja(cliente),
+                                     paquete: paquete, tracking: tracking }),
+      turbo_stream.prepend("flash-messages", partial: "shared/flash",
+                           locals: { notice: "Tarea dejada para #{@tarea.departamento_label}." })
+    ]
+  end
+
+  # Solo el form, con sus errores, para que el diálogo siga abierto. Turbo
+  # procesa las respuestas turbo_stream con cualquier status.
+  def responder_a_la_franja_con_errores
+    render turbo_stream: turbo_stream.replace(
+      "tarea-desde-franja-form", partial: "panel_contexto/tarea_desde_franja_form",
+      locals: { tarea: @tarea, paquete: @paquete }
+    ), status: :unprocessable_entity
+  end
+
   # El paquete de ese tracking, **del cliente elegido**: los couriers reciclan
   # trackings y el mismo código puede estar en dos clientes. Sin cliente, sin
   # scope, y `derivar_cliente_desde_paquete` lo completa desde el paquete. En
@@ -163,9 +209,7 @@ class TareasController < ApplicationController
   end
 
   def departamento_por_defecto
-    return nil if Current.user&.admin?
-
-    Tarea::DEPARTAMENTOS_POR_ROL[Current.user&.rol]&.first
+    helpers.departamento_por_defecto_de(Current.user)
   end
 
   # Cuántas tareas abiertas le quedan a este cliente para el área del
@@ -213,7 +257,7 @@ class TareasController < ApplicationController
   def tarea_params
     params.require(:tarea).permit(
       :titulo, :descripcion, :asignado_a_id, :notas,
-      :cliente_id, :departamento, :bloquea_avance
+      :cliente_id, :departamento, :bloquea_avance, :tracking
     )
   end
 end

@@ -1,0 +1,23 @@
+<%# locals: (cliente:, paquete: nil, tracking: nil) %>
+<%# C17-02 · Jorge: *"nos falta formas de agregar tareas"*. La franja era solo
+    lectura (PR-9) aunque #324 dice que las tareas de Miami «nacen en
+    /etiquetar». El diálogo abre por click del operario —ya está mirando—, no
+    por escaneo: no lleva sonido. %>
+<div data-controller="dialogo" class="mt-2">
+  <%= render(ButtonComponent.new(variant: :outline_teal, size: :xs, icon: "plus", type: :button,
+        data: { action: "dialogo#abrir" })) { "Dejar una tarea" } %>
+
+  <dialog data-dialogo-target="dialogo"
+          class="rounded-xl p-0 w-full max-w-md shadow-xl backdrop:bg-black/50 dark:bg-gray-800 dark:text-gray-100">
+    <div class="p-5">
+      <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Dejar una tarea</h3>
+      <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+        Para <%= cliente.nombre_completo %><% if paquete %>, en el paquete <span class="font-mono"><%= paquete.tracking %></span><% elsif tracking.present? %>; se ata al paquete <span class="font-mono"><%= tracking %></span> al guardarlo<% end %>.
+      </p>
+      <%= render "panel_contexto/tarea_desde_franja_form",
+            tarea: Tarea.new(cliente_id: cliente.id, tracking: tracking,
+                             departamento: departamento_por_defecto_de(Current.user)),
+            paquete: paquete %>
+    </div>
+  </dialog>
+</div>

@@ -6602,11 +6602,20 @@ borran. Los tres botones viejos pasan a `can_crear_tareas?` /
 > caja por caja— y **el manifiesto no lo mira** (`update_all`). Una tarea en la
 > Caja 1 frena esa caja en la pre-factura y nada más.
 
-### C17-02 · Dejar una tarea desde la franja, sin salir de la pantalla — ⏳ **ABIERTA (PR-C7.48)**
+### C17-02 · Dejar una tarea desde la franja, sin salir de la pantalla — ✅ **HECHO (PR-C7.48)**
 
-Mini-form en la franja (título + área), que crea sin recargar y se ata al
-paquete al guardarlo por el tracking. En Entrega Personal queda del cliente: el
-tracking se genera al guardar.
+«+ Dejar una tarea» en la franja de `/etiquetar` y `/entrega_personal` (es un
+solo partial: la gemela por construcción): título + área, en un diálogo que
+abre por click —no lleva sonido, el operario ya está mirando—. Crea sin
+recargar: el bloque de tareas se reemplaza entero por `turbo_stream` con el
+tracking **fresco** que mandó el JS, y en el 422 solo se re-pinta el form con
+sus errores, con el diálogo abierto. Si la franja ya conoce el paquete (el
+esperado de una pre-alerta, o el paquete en modo actualización) postea al
+paquete; si no, al cliente con el tracking que había en pantalla, y
+`Tarea.atar_al_paquete!` la re-apunta al guardar la caja —también por el
+secundario, por el caso USPS—. En un split va a la Caja 1. En Entrega Personal
+queda del cliente: el tracking se genera al guardar y no hay por dónde
+atarla.
 
 ### Las preguntas que abre
 

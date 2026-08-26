@@ -314,6 +314,9 @@ end
 
     if @paquete.save
       link_pre_alertas(@paquete)
+      # C17-02: la tarea que se dejó desde la franja mientras se recibía esta
+      # caja pasa a colgar de ella.
+      Tarea.atar_al_paquete!(@paquete)
       absorber_esperado_del_secundario(@paquete)
       @paquetes_hoy = paquetes_hoy_count
 
@@ -394,6 +397,8 @@ end
     # El esperado del secundario se absorbe **una vez**, en la Caja 1: es un
     # solo bulto anunciado dos veces, no uno por caja.
     absorber_esperado_del_secundario(paquetes.first)
+    # C17-02: una vez, a la Caja 1 — el bloqueo por tareas es por caja.
+    Tarea.atar_al_paquete!(paquetes.first)
     @paquetes_hoy = paquetes_hoy_count
 
     respond_to do |format|

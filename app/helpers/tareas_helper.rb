@@ -25,4 +25,12 @@ module TareasHelper
 
     Current.user.admin? || TareasController::GESTION_ROLES.include?(Current.user.rol)
   end
+
+  # El área de una tarea nueva: la del que la crea. Para admin, ninguna
+  # («todas las áreas»). Lo usan `/tareas/new` y el mini-form de la franja.
+  def departamento_por_defecto_de(user)
+    return nil if user.nil? || user.admin?
+
+    Tarea::DEPARTAMENTOS_POR_ROL[user.rol]&.first
+  end
 end

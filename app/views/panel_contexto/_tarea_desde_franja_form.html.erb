@@ -1,0 +1,40 @@
+<%# locals: (tarea:, paquete: nil) %>
+<%# El form solo, con `id`, para poder reemplazarlo con sus errores sin cerrar
+    el diálogo. A dónde postea lo decide el servidor: al paquete si ya existe
+    (el esperado de una pre-alerta, o el paquete en modo actualización), si no
+    al cliente con el tracking que había en pantalla —y el JS lo refresca al
+    enviar, porque el operario pudo corregirlo después de que cargó la franja. %>
+<% clases_de_campo = "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+<%= form_with model: tarea, url: (paquete ? paquete_tareas_path(paquete) : tareas_path), scope: :tarea,
+      id: "tarea-desde-franja-form", class: "mt-4 space-y-3",
+      data: { controller: "tarea-desde-franja", action: "submit->tarea-desde-franja#refrescarTracking" } do |f| %>
+  <%= hidden_field_tag :desde_franja, "1" %>
+  <% unless paquete %>
+    <%= f.hidden_field :cliente_id %>
+    <%= f.hidden_field :tracking, data: { tarea_desde_franja_target: "tracking" } %>
+  <% end %>
+
+  <% if tarea.errors.any? %>
+    <div class="p-3 bg-red-50 dark:bg-red-900/30 rounded-lg text-sm text-red-700 dark:text-red-200">
+      <%= tarea.errors.full_messages.to_sentence %>
+    </div>
+  <% end %>
+
+  <div>
+    <%= f.label :titulo, "Qué hay que hacer", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+    <%= f.text_field :titulo, required: true, autocomplete: "off", class: clases_de_campo %>
+  </div>
+
+  <div>
+    <%= f.label :departamento, "Para quién", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+    <%= f.select :departamento,
+          Tarea::DEPARTAMENTOS.map { |d| [ Tarea.new(departamento: d).departamento_label, d ] },
+          { include_blank: "— Todas las áreas —" },
+          { class: clases_de_campo } %>
+  </div>
+
+  <div class="flex items-center justify-end gap-2 pt-1">
+    <%= render(ButtonComponent.new(variant: :ghost, type: :button, data: { action: "dialogo#cerrar" })) { "Cancelar" } %>
+    <%= render(ButtonComponent.new(variant: :gold, type: :submit)) { "Dejar la tarea" } %>
+  </div>
+<% end %>

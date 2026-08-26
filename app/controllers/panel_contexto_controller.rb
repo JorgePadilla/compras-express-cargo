@@ -4,9 +4,12 @@
 #
 # Se carga como turbo-frame: los controllers Stimulus de ambas pantallas le
 # setean el `src` cuando el operario elige un cliente o cuando el tracking
-# escaneado matchea una pre-alerta. Es de solo lectura salvo el checkbox de
-# las tareas, que pega en TareasController#completar.
+# escaneado matchea una pre-alerta. Era de solo lectura salvo el checkbox de
+# las tareas, que pega en TareasController#completar; desde C17-02 también se
+# deja una tarea desde acá (el mini-form pega en TareasController#create).
 class PanelContextoController < ApplicationController
+  include ResuelveLaFranja
+
   before_action :authorize_panel
 
   def show
@@ -15,13 +18,8 @@ class PanelContextoController < ApplicationController
 
     return render :show if @cliente.nil?
 
-    @tareas = Tarea.abiertas
-                   .para_cliente(@cliente.id)
-                   .visibles_para(Current.user)
-                   .includes(:asignado_a)
-                   .order(created_at: :asc)
-
-    @paquete = paquete_del_tracking
+    @tareas = tareas_de_la_franja(@cliente)
+    @paquete = paquete_de_la_franja(@cliente, @tracking)
     @notas_especiales = notas_especiales
 
     render :show
@@ -31,18 +29,6 @@ class PanelContextoController < ApplicationController
 
   def authorize_panel
     require_role(:supervisor_miami, :digitador_miami)
-  end
-
-  # El paquete solo existe si el tracking ya fue recibido antes o si venía de
-  # una pre-alerta (`crear_paquete_esperado`). Cuando no existe, la franja
-  # muestra únicamente cliente + tareas + notas permanentes.
-  def paquete_del_tracking
-    return nil if @tracking.blank?
-
-    Paquete.where(cliente_id: @cliente.id)
-           .where("UPPER(tracking) = :t OR UPPER(tracking_secundario) = :t", t: @tracking)
-           .order(created_at: :desc)
-           .first
   end
 
   # "Notas especiales" = lo que el cliente escribió sobre lo que viene.

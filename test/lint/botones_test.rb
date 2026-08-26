@@ -134,7 +134,7 @@ class BotonesTest < ActiveSupport::TestCase
     "app/views/notas_debito/_form.html.erb"                  => 1,
     "app/views/notas_debito/index.html.erb"                  => 1,
     "app/views/notas_debito/new.html.erb"                    => 1,
-    "app/views/panel_contexto/show.html.erb"                 => 1,
+    "app/views/panel_contexto/_tareas.html.erb"              => 1,
     "app/views/passwords/new.html.erb"                       => 1,
     "app/views/pins/edit.html.erb"                           => 1,
     "app/views/plantillas_notas_cliente/_form.html.erb"      => 1,

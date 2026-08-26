@@ -106,6 +106,11 @@ class EntregaPersonalController < ApplicationController
     paquete.save! if save
   end
 
+  # C17-02: acá **no** se llama a `Tarea.atar_al_paquete!`, a propósito. El
+  # tracking de una entrega personal se genera al guardar (EP-AÑO-SUC-PROV-N),
+  # así que la tarea que se deja desde la franja no tiene tracking y no hay por
+  # dónde atarla; «la última que dejó este usuario» falla apenas se intercalan
+  # dos tareas o dos paquetes. Queda del cliente y sale en la bandeja.
   def respond_saved(paquetes)
     @paquete = paquetes.first
     msg = paquetes.size > 1 ?
