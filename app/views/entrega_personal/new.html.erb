@@ -55,8 +55,10 @@ end %>
   <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
   <div class="xl:col-span-8">
 
+  <%# C16-04: Enter avanza de campo y nunca envía — la misma regla de
+      /etiquetar («Enter no guarda»), que esta gemela no tenía. %>
   <%= form_with model: @paquete, url: entrega_personal_index_path,
-                data: { entrega_personal_target: "form" },
+                data: { entrega_personal_target: "form", action: "keydown->entrega-personal#formKeydown" },
                 class: "bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden" do |f| %>
     <% if @paquete.errors.any? %>
       <div class="m-6 p-4 bg-red-50 dark:bg-red-900/30 rounded-lg">

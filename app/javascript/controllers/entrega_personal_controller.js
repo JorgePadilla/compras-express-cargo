@@ -1,10 +1,11 @@
 import ClienteAutocomplete from "controllers/cliente_autocomplete"
+import { conEnterAvanza } from "controllers/enter_avanza"
 
 // PR-6: flow separado para entrega personal. Versión simplificada del
 // etiquetar_controller — no necesita lookup de duplicado de tracking
 // (el tracking se genera automático EP-YYYY-SUC-PROV-NNNNNN) ni
 // detección de pre-alerta. Reutiliza el patrón de modal cantidad cajas.
-export default class extends ClienteAutocomplete {
+export default class extends conEnterAvanza(ClienteAutocomplete) {
   static targets = [
     "form", "clienteInput", "clienteId", "clienteDropdown", "clienteNombre",
     "sucursalBanner", "sucursalTexto",
@@ -36,6 +37,12 @@ export default class extends ClienteAutocomplete {
   // tareas y notas a la franja de la derecha (PR-9.b). El resto —búsqueda de
   // un dígito, preselección, flechas y Enter— es igual que en /etiquetar y
   // vive en `ClienteAutocomplete`.
+  // C16-04: elegir el cliente con el teclado avanza de campo, igual que en
+  // /etiquetar. El resto de la navegación por Enter viene del mixin.
+  _despuesDeElegirConTeclado(e) {
+    this._focusSiguiente(e.target)
+  }
+
   _alSeleccionarCliente({ id, sucursalRetiro }) {
     // El mixin siempre mandó la sucursal de retiro; esta pantalla la tiraba, y
     // por eso nunca avisaba a dónde iba la caja. Yusef: "también misma

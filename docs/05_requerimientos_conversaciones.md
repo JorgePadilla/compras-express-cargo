@@ -6366,7 +6366,7 @@ viene puesto y el primer blur no es un escaneo. Y el lint de sonidos aprendió a
 seguir los `import`: el `dispatch` de una base cuenta para la pantalla que la
 hereda.
 
-### C16-03 · «Le da Enter y se queda ahí» — ⏳ **ABIERTA, va con C16-02 y C16-04**
+### C16-03 · «Le da Enter y se queda ahí» — ✅ **ARREGLADO (PR-C7.42 + PR-C7.43)**
 
 > *"El día que uno viene y le hace así, le da Enter, y mirá: se queda ahí… no
 > sé cómo podemos hacer algún bloqueíto ahí."*
@@ -6380,13 +6380,22 @@ duplicado abre **sin llevarse el foco**, así que el Enter siguiente cae en el
 formulario de atrás. No se hace ningún «bloqueíto»: él mismo dijo en la
 Conversación 6 que el escaneo *"tiene que ser rápido"*.
 
-### C16-04 · Elegir el cliente y pasar, con la misma tecla — ⏳ **ABIERTA**
+### C16-04 · Elegir el cliente y pasar, con la misma tecla — ✅ **ARREGLADO (PR-C7.43)**
 
 > *"Mirá a ver si lo podés lograr que quede al mismo Tab: que vos lo
 > seleccionás, se pase."*
 
-Hoy Enter sobre el cliente elige y **se queda** en el campo; Tab pasa pero
-**sin elegir**. Las dos teclas tienen que elegir y pasar.
+Enter sobre el cliente elegía y **se quedaba** en el campo; Tab pasaba pero
+**sin elegir**. Ahora las dos eligen y pasan. Tab-elige vive en la base de los
+autocompletes, así que aplica también a tercero, proveedor, pre-alerta y al
+cliente de la ficha del paquete (Shift+Tab no elige).
+
+> **De paso se emparejó la gemela.** `/entrega_personal` no tenía la
+> navegación por Enter de `/etiquetar` —Enter todavía **enviaba** el
+> formulario— y con Tab-elige habría quedado con Tab avanzando y Enter no. La
+> navegación se sacó a un mixin (`conEnterAvanza`) que mezclan las dos. Eso
+> cierra `RP-44` sin preguntarle: es la regla «Enter no guarda» que él mismo
+> dictó en la Conversación 6, llegando a la pantalla que le faltaba.
 
 ### C16-05 · El secundario ya avisado no volvió a avisar — 🐛 ⏳ **ABIERTA**
 
@@ -6494,4 +6503,4 @@ Se marcan, no se completan (la disciplina de siempre):
 |---|---|
 | `RP-42` | Al guardar un paquete del cliente A cuyo **secundario** está pre-alertado por el cliente B, hoy el sistema vincula la pre-alerta de B al paquete de A y borra el esperado de B, **sin avisar**. `C12-04` decidió eso para el **mismo** cliente (*"no es vincularlo, eliminarlo"*); para clientes distintos él solo dijo *"lo va a retener, o lo va a enviar así"*. ¿Qué pasa con la pre-alerta de B? |
 | `RP-43` | *"Restricciones de ver"* (`C16-06`): ¿qué de la ficha del cliente **no** debe ver Miami? Las notas ya se filtran por rol; los precios especiales, los correos y el acceso al portal viven en el formulario de edición, que el digitador deja de abrir |
-| `RP-44` | En `/entrega_personal` Enter todavía envía el formulario (no tiene la navegación por Enter de `/etiquetar`). Él dijo en la Conversación 4 *"esto es en Etiquetar y en Entrega Personal"* — ¿se empareja? |
+| ~~`RP-44`~~ | ~~En `/entrega_personal` Enter todavía envía el formulario~~ — **✅ emparejada en `PR-C7.43`**: la regla «Enter no guarda» ya era suya (Conversación 6) y él mismo había dicho *"esto es en Etiquetar y en Entrega Personal"* |

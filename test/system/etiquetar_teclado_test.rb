@@ -131,6 +131,51 @@ class EtiquetarTecladoTest < ApplicationSystemTestCase
                  "Enter envió el formulario: cada escaneo grabaría un paquete a medias"
   end
 
+  # C16-04 · Yusef, 2026-08-25: "mirá a ver si lo podés lograr que quede al
+  # mismo Tab: que vos lo seleccionás, se pase". Enter sobre el cliente elegía
+  # y se quedaba; Tab pasaba pero sin elegir. Las dos teclas eligen y pasan.
+  test "Enter sobre el cliente elige y pasa al siguiente campo" do
+    cliente = find("[data-etiquetar-target=clienteInput]")
+    cliente.send_keys("2")
+    assert_selector "[data-index]", wait: 5
+
+    cliente.send_keys(:enter)
+
+    assert_equal clientes(:maria).id.to_s, cliente_id_elegido
+    assert_not foco_en_el_cliente?, "eligió pero el foco se quedó en el cliente"
+  end
+
+  test "Tab sobre el cliente tambien elige, y pasa" do
+    cliente = find("[data-etiquetar-target=clienteInput]")
+    cliente.send_keys("2")
+    assert_selector "[data-index]", wait: 5
+
+    cliente.send_keys(:tab)
+
+    assert_equal clientes(:maria).id.to_s, cliente_id_elegido,
+                 "Tab cerró la lista sin elegir: el operario perdió el cliente que tenía resaltado"
+    assert_not foco_en_el_cliente?
+  end
+
+  test "el modal de duplicado abre con el foco adentro" do
+    # C16-03 · "le da Enter y se queda ahí". El overlay tapaba la pantalla pero
+    # el cursor seguía en el formulario de atrás.
+    #
+    # Un paquete sin pre-alerta a propósito: el fixture `recibido` está
+    # vinculado a una, y con pre-alerta lo que sale es el banner, no este modal.
+    otro = Paquete.create!(cliente: clientes(:juan), tipo_envio: tipo_envios(:cer),
+                           tracking: "1ZYAEXISTEFOCO01", descripcion: "y",
+                           estado: "recibido_miami", user: users(:digitador),
+                           sucursal_recepcion: sucursales(:miami))
+
+    campo("paquete_tracking").send_keys(otro.tracking, :enter)
+    assert_selector "[data-etiquetar-target=duplicateModal]:not(.hidden)", wait: 5
+
+    assert page.evaluate_script(<<~JS), "el foco no entró al modal de duplicado"
+      document.activeElement === document.querySelector("[data-etiquetar-target=duplicateUpdateBtn]")
+    JS
+  end
+
   test "el atajo visible dice F10" do
     assert_text "Guardar"
     assert_selector "kbd", text: "F10"
@@ -189,6 +234,16 @@ class EtiquetarTecladoTest < ApplicationSystemTestCase
 
   def foco_actual
     page.evaluate_script("document.activeElement && document.activeElement.id")
+  end
+
+  def cliente_id_elegido
+    page.evaluate_script("document.querySelector('[data-etiquetar-target=clienteId]').value")
+  end
+
+  def foco_en_el_cliente?
+    page.evaluate_script(
+      "document.activeElement === document.querySelector('[data-etiquetar-target=clienteInput]')"
+    )
   end
 
   # Cuenta los `submit` del formulario sin dejar que salgan: así el test mide

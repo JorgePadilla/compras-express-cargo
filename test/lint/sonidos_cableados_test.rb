@@ -130,7 +130,7 @@ class SonidosCableadosTest < ActiveSupport::TestCase
     return vistos if vistos.include?(archivo) || !archivo.exist?
 
     vistos << archivo
-    archivo.read.scan(/^import\s+\w+\s+from\s+"controllers\/([\w\/]+)"/).flatten.each do |nombre|
+    archivo.read.scan(/^import\s+.+?\s+from\s+"controllers\/([\w\/]+)"/).flatten.each do |nombre|
       archivo_y_sus_bases(CONTROLLERS_JS.join("#{nombre}.js"), vistos)
     end
     vistos
