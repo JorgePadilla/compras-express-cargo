@@ -2239,7 +2239,8 @@ CREATE TABLE public.tareas (
     pre_alerta_paquete_id bigint,
     departamento character varying,
     origen character varying DEFAULT 'manual'::character varying NOT NULL,
-    bloquea_avance boolean DEFAULT true NOT NULL
+    bloquea_avance boolean DEFAULT true NOT NULL,
+    tracking character varying
 );
 
 
@@ -4778,6 +4779,13 @@ CREATE INDEX index_tareas_on_pre_alerta_paquete_id ON public.tareas USING btree 
 
 
 --
+-- Name: index_tareas_on_tracking; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tareas_on_tracking ON public.tareas USING btree (tracking) WHERE (tracking IS NOT NULL);
+
+
+--
 -- Name: index_tarifas_on_categoria_precio_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5967,6 +5975,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260826040000'),
 ('20260825210000'),
 ('20260825180000'),
 ('20260821013143'),

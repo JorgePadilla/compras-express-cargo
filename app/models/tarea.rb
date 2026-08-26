@@ -47,6 +47,7 @@ class Tarea < ApplicationRecord
   validate  :requiere_cliente_o_paquete
 
   before_validation :derivar_cliente_desde_paquete
+  before_validation :normalizar_tracking
 
   scope :abiertas, -> { where.not(estado: "realizada") }
   scope :por_paquete, ->(paquete_id) { where(paquete_id: paquete_id) }
@@ -70,6 +71,23 @@ class Tarea < ApplicationRecord
     nacidas = where(origen: "pre_alerta").abiertas.order(:id).to_a
     nacidas.each(&:destroy!)
     nacidas.map(&:titulo)
+  end
+
+  # C17-02: las tareas que se dejaron desde la franja de /etiquetar mientras
+  # se recibía este paquete —con su tracking y todavía sin paquete— pasan a
+  # colgar de él. También por el secundario: `trackings_reconciliados` mueve
+  # el escaneado al secundario cuando el esperado tenía otro tracking (el caso
+  # USPS), y lo que la franja guardó fue el escaneado. Espejo de
+  # `PreAlertaPaquete.link_tracking!`. Devuelve cuántas ató.
+  def self.atar_al_paquete!(paquete)
+    return 0 if paquete.nil? || paquete.cliente_id.nil?
+
+    trackings = [ paquete.tracking, paquete.tracking_secundario ]
+                  .compact_blank.map { |t| t.to_s.strip.upcase }.uniq
+    return 0 if trackings.empty?
+
+    where(cliente_id: paquete.cliente_id, paquete_id: nil, tracking: trackings)
+      .update_all(paquete_id: paquete.id)
   end
 
   def completar!(user)
@@ -96,6 +114,10 @@ class Tarea < ApplicationRecord
   # encuentre por `cliente_id` sin tener que hacer join.
   def derivar_cliente_desde_paquete
     self.cliente_id ||= paquete&.cliente_id
+  end
+
+  def normalizar_tracking
+    self.tracking = tracking.to_s.strip.upcase.presence
   end
 
   def requiere_cliente_o_paquete
