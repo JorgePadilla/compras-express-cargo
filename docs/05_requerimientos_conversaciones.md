@@ -6469,7 +6469,7 @@ y el atajo global clickea lo que encuentre). Y la lista busca **como el
 autocomplete** —`buscar_flexible` con el código primero, la fecha de alta solo
 desempata—, así que «10» pone a C10 arriba.
 
-### C16-07 · La etiqueta del retenido dice **RTE** — ⏳ **ABIERTA**
+### C16-07 · La etiqueta del retenido dice **RTE** — ✅ **ARREGLADO (PR-C7.46)**
 
 Guardó un paquete retenido con tres etiquetas y, mirándolas:
 
@@ -6481,6 +6481,13 @@ dijiste RT, me va. RT, RT, RT."*
 > **Jorge (2026-08-25):** es en la etiqueta impresa — donde va el servicio, en
 > lugar de `CER`, tiene que decir **`RTE`**. La caja retenida no se despacha, y
 > el servicio se vuelve a imprimir cuando se libera.
+
+Es un solo lugar (`etiqueta_tipo_envio`), y el mismo partial sirve a la
+etiqueta, a las combinadas y a la reimpresión, así que las N cajas de un split
+retenido dicen RTE todas. Es la bandera `retener_miami`, no el estado
+`retenido` de Honduras. Sigue siendo el texto más grande de la etiqueta —la
+jerarquía que fijó `A9`— porque es con lo que separan la carga antes de
+empacar, y una caja retenida no se empaca.
 
 ### C16-08 · El aviso de bolsa de San Pedro volvió a salir — 🐛 ✅ **ARREGLADO (PR-C7.44)**
 

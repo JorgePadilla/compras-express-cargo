@@ -35,6 +35,43 @@ class PaqueteEtiquetaTest < ActionDispatch::IntegrationTest
     assert_match "RETIRA EN", body, "la sucursal necesita encabezado (el 'San Pedro Soda')"
   end
 
+  # C16-07 · Yusef, con las etiquetas de un retenido en la mano: "y sigue
+  # saliendo el CER aquí. Mirá, sería así: retenido" · "el de retener me
+  # dijiste RT, me va". Jorge: en lugar del servicio, RTE.
+  test "un retenido en Miami imprime RTE donde iba el servicio" do
+    @paquete.update!(retener_miami: true, notas_retencion: "Caja abierta")
+
+    get etiqueta_paquete_url(@paquete)
+
+    servicio = response.body[/data-campo="tipo-envio"[^>]*>\s*([A-Z]{3})\s*</, 1]
+    assert_equal "RTE", servicio
+    assert_no_match(/>\s*CER\s*</, response.body, "el servicio no puede salir al lado: RTE lo reemplaza")
+  end
+
+  test "sin retencion sigue saliendo el servicio" do
+    @paquete.update!(tipo_envio: tipo_envios(:cer))
+    assert_not @paquete.retener_miami?
+
+    get etiqueta_paquete_url(@paquete)
+
+    servicio = response.body[/data-campo="tipo-envio"[^>]*>\s*([A-Z]{3})\s*</, 1]
+    assert_equal "CER", servicio
+  end
+
+  test "con hermanas=1 todas las cajas del retenido dicen RTE" do
+    cajas = Paquete.crear_split!(
+      attrs: { tracking: "1ZRTEHERMANAS001", cliente: @paquete.cliente, tipo_envio: tipo_envios(:cer),
+               descripcion: "Dos cajas retenidas", estado: "recibido_miami", user: users(:digitador),
+               sucursal_recepcion: sucursales(:miami), retener_miami: true, notas_retencion: "Mojado" },
+      total_cajas: 2
+    )
+
+    get etiqueta_paquete_url(cajas.first, hermanas: 1)
+
+    servicios = response.body.scan(/data-campo="tipo-envio"[^>]*>\s*([A-Z]{3})\s*</).flatten
+    assert_equal %w[RTE RTE], servicios
+  end
+
   test "no lleva terminos y condiciones ni precios" do
     get etiqueta_paquete_url(@paquete)
 
