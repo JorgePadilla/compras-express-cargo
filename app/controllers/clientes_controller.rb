@@ -1,10 +1,34 @@
 class ClientesController < ApplicationController
+  # C16-06 · Yusef, 2026-08-25: *"Miami no va a poder ver todo… vamos a
+  # sectorizar las cosas. Aquí van a tener restricciones de ver y de modificar,
+  # sobre todo"*. Miami busca clientes —*"llegó un paquete a nombre de Carmen,
+  # con el código cortado… empiezan a escribir, a buscar quién aparece"*— pero
+  # la ficha es data de Honduras. Hasta acá **nadie** tenía guard: cualquier
+  # rol creaba y editaba.
+  #
+  # Lista positiva, como `PaquetesController::EDIT_ROLES`. Jorge (2026-08-25):
+  # solo el digitador queda en consulta; el supervisor de Miami sigue editando.
+  # Qué de la ficha **no** debe ver Miami queda en `RP-43`.
+  EDICION_ROLES = %w[admin supervisor_miami supervisor_caja supervisor_prefactura
+                     cajero sac supervisor_sac entrega_despacho].freeze
+
   before_action :set_cliente, only: [ :show, :edit, :update, :clave ]
   before_action :authorize_buscar, only: [ :buscar ]
+  before_action :authorize_edicion, only: [ :new, :create, :edit, :update, :clave ]
 
   def index
-    @clientes = Cliente.activos.includes(:categoria_precio, :sucursal_retiro).order(created_at: :desc)
-    @clientes = @clientes.buscar(params[:q]) if params[:q].present?
+    base = Cliente.activos.includes(:categoria_precio, :sucursal_retiro)
+    # C16-06: la lista buscaba con la estricta y ordenaba por fecha de alta
+    # **antes** de buscar, así que «10» traía C10, C100, C210… con C10 hundido
+    # donde cayera; el autocomplete de /etiquetar usaba la flexible, que pone el
+    # código primero. Yusef probó la lista con «1» y «10» y Jorge: *"ese filtro
+    # no lo tengo así como lo querés"*. Una sola búsqueda de cliente
+    # (PR-C6.32): la del autocomplete, y la fecha de alta solo desempata.
+    @clientes = if params[:q].present?
+      base.buscar_flexible(params[:q]).order(created_at: :desc)
+    else
+      base.order(created_at: :desc)
+    end
     @clientes = @clientes.page(params[:page]).per(per_page_sanitized)
   end
 
@@ -36,8 +60,8 @@ class ClientesController < ApplicationController
   def buscar
     # PR-10.f: `buscar_flexible` y no `buscar` — este es el autocomplete que
     # usa el operario con la etiqueta rota en la mano, así que prioriza
-    # encontrar algo por encima de la precisión. El filtro del listado
-    # (#index) se queda con la estricta.
+    # encontrar algo por encima de la precisión. Desde C16-06 el listado
+    # (#index) busca igual.
     clientes = Cliente.activos.buscar_flexible(params[:q])
                       .includes(:categoria_precio, :cliente_cobro_volumetricos).limit(10)
     render json: clientes.map { |c|
@@ -150,6 +174,17 @@ class ClientesController < ApplicationController
 
   def authorize_buscar
     require_role(:supervisor_miami, :digitador_miami, :supervisor_prefactura, :supervisor_caja, :cajero)
+  end
+
+  # Redirige a la lista y no a `root_path` como `require_role`: para el
+  # digitador el home a su vez redirige a /etiquetar con otro alert, y el
+  # mensaje se perdería en la segunda vuelta.
+  def authorize_edicion
+    return if Current.user&.admin?
+    return if EDICION_ROLES.include?(Current.user&.rol)
+
+    redirect_to clientes_path,
+                alert: "Tu rol solo consulta clientes. Crear y editar es de Honduras y del supervisor de Miami."
   end
 
   def cliente_params

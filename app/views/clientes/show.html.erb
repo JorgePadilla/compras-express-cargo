@@ -1,7 +1,12 @@
+<%# C16-06: el digitador de Miami consulta la ficha y no la edita. El botón se
+    va entero (lleva `shortcut: "F6"`, y el atajo global clickea cualquier
+    `[data-shortcut]`). %>
 <%= render PageHeaderComponent.new(title: @cliente.nombre_completo, subtitle: @cliente.codigo) do |header|
-  header.with_action do
-    render ButtonComponent.new(variant: :secondary, href: edit_cliente_path(@cliente), icon: "pencil-square", shortcut: "F6") do
-      "Editar"
+  if can_edit_clientes?
+    header.with_action do
+      render ButtonComponent.new(variant: :secondary, href: edit_cliente_path(@cliente), icon: "pencil-square", shortcut: "F6") do
+        "Editar"
+      end
     end
   end
   header.with_action do
@@ -174,6 +179,8 @@ end %>
     </div>
   </dl>
 
+  <%# C16-06: ponerle la clave es editar. El digitador de Miami no lo ve. %>
+  <% if can_edit_clientes? %>
   <%# La clave, en su propio formulario: no pasa por `cliente_params`, que lo
       guardan media docena de pantallas. %>
   <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -200,6 +207,7 @@ end %>
       Se la decís al cliente y él la cambia cuando entre. Queda registrado en la bitácora.
     </p>
   </div>
+  <% end %>
 </div>
 
 <%# PR-9.b: tareas del cliente — las que cualquier área le deja y que el
