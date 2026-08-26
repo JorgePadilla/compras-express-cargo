@@ -51,12 +51,36 @@ class EtiquetarSonidosTest < ActionDispatch::IntegrationTest
     assert_match(/etiquetar:modalAbierto->audio#notify/, @body)
   end
 
-  test "estan cableados los seis eventos" do
+  test "el tracking que vuelve limpio suena a «podés seguir»" do
+    # C16-02 · Yusef, 2026-08-25: "¿cuándo escuchás el pip? Cuando el sistema
+    # buscó en los paquetes y vio que no existía." Es el mismo pin del guardado,
+    # el que él aprobó: son tres momentos de una sola cosa, "podés seguir".
+    assert_match(/etiquetar:trackingLibre->audio#success/, @body)
+  end
+
+  test "el cliente que aparece en la lista tambien" do
+    # "Cuando yo presiono tres, acá, él debe pitar para que yo presione Enter."
+    assert_match(/etiquetar:clienteEncontrado->audio#success/, @body)
+  end
+
+  test "estan cableados los ocho eventos" do
     metodos = @body.scan(/etiquetar:(\w+)->audio#(\w+)/).to_h
 
-    assert_equal %w[success clienteNotas preAlertaMatch trackingYaExiste modalAbierto tipoEnvioDistinto].sort,
+    assert_equal %w[success trackingLibre clienteEncontrado clienteNotas preAlertaMatch
+                    trackingYaExiste modalAbierto tipoEnvioDistinto].sort,
                  metodos.keys.sort,
                  "faltó cablear algún evento de sonido"
+  end
+
+  test "el pito de tracking libre no suena al entrar a actualizar" do
+    # Al entrar por `?paquete_id=` el tracking viene puesto y el primer blur
+    # no es un escaneo: pitaría sin que nadie hubiera hecho nada.
+    js = Rails.root.join("app/javascript/controllers/etiquetar_controller.js").read
+    metodo = js[/_avisarTrackingLibre\(\) \{.*?\n  \}/m]
+
+    assert metodo, "falta _avisarTrackingLibre en etiquetar_controller.js"
+    assert_includes metodo, "actualizandoIdValue"
+    assert_includes metodo, %(dispatch("trackingLibre"))
   end
 
   test "los avisos que tienen que distinguirse no se pisan" do

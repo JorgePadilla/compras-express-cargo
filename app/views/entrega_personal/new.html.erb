@@ -16,7 +16,11 @@ end %>
          pantalla muda, y en entrega personal el operario está con el paquete
          en la mano, no leyendo. `submitEnd` suena el feo cuando Turbo avisa
          que el submit no pasó. %>
+     <%# C16-02: el cliente que aparece en el autocomplete pita igual que en
+         /etiquetar — mismo pin de «podés seguir». Acá no hay chequeo de
+         tracking, así que `trackingLibre` no aplica. %>
      data-action="entrega-personal:success->audio#success
+                  entrega-personal:clienteEncontrado->audio#success
                   turbo:submit-end->audio#submitEnd
                   click@document->entrega-personal#clickOutsideDropdown">
 
@@ -51,8 +55,10 @@ end %>
   <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
   <div class="xl:col-span-8">
 
+  <%# C16-04: Enter avanza de campo y nunca envía — la misma regla de
+      /etiquetar («Enter no guarda»), que esta gemela no tenía. %>
   <%= form_with model: @paquete, url: entrega_personal_index_path,
-                data: { entrega_personal_target: "form" },
+                data: { entrega_personal_target: "form", action: "keydown->entrega-personal#formKeydown" },
                 class: "bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden" do |f| %>
     <% if @paquete.errors.any? %>
       <div class="m-6 p-4 bg-red-50 dark:bg-red-900/30 rounded-lg">

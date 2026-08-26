@@ -26,8 +26,10 @@ class SonidosCableadosTest < ActiveSupport::TestCase
       archivo = CONTROLLERS_JS.join("#{controller.tr('-', '_')}_controller.js")
       next "#{vista}: no existe #{archivo.basename}" unless archivo.exist?
 
-      unless archivo.read.include?(%(dispatch("#{evento}")))
-        "#{vista}: `#{controller}:#{evento}` — nadie hace dispatch(\"#{evento}\") en #{archivo.basename}"
+      fuentes = archivo_y_sus_bases(archivo)
+      unless fuentes.any? { |f| f.read.include?(%(dispatch("#{evento}"))) }
+        "#{vista}: `#{controller}:#{evento}` — nadie hace dispatch(\"#{evento}\") en " \
+          "#{fuentes.map(&:basename).join(' ni en ')}"
       end
     end
 
@@ -114,6 +116,25 @@ class SonidosCableadosTest < ActiveSupport::TestCase
   end
 
   private
+
+  # El archivo del controller y las clases de las que hereda, siguiendo cada
+  # `import X from "controllers/<archivo>"`.
+  #
+  # C16-02: `dispatch("clienteEncontrado")` vive en `cliente_autocomplete.js`,
+  # la base que comparten /etiquetar y /entrega_personal — Stimulus lo emite
+  # con el `identifier` del controller concreto, así que la vista lo cablea
+  # como `etiquetar:clienteEncontrado`. Mirar solo `etiquetar_controller.js`
+  # lo daba por huérfano, y la alternativa era copiar el dispatch en las dos
+  # pantallas: la duplicación que la base existe para evitar.
+  def archivo_y_sus_bases(archivo, vistos = [])
+    return vistos if vistos.include?(archivo) || !archivo.exist?
+
+    vistos << archivo
+    archivo.read.scan(/^import\s+.+?\s+from\s+"controllers\/([\w\/]+)"/).flatten.each do |nombre|
+      archivo_y_sus_bases(CONTROLLERS_JS.join("#{nombre}.js"), vistos)
+    end
+    vistos
+  end
 
   # { nombre del método => su cuerpo }, solo los que abren un modal.
   #

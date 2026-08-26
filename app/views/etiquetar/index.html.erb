@@ -126,6 +126,8 @@ end %>
          te decía, pre-alerta" y "el otro pito es porque te tira que ya
          existía". Más el feo, para cuando el paquete no es de esta sesión. %>
      data-action="etiquetar:success->audio#success
+                  etiquetar:trackingLibre->audio#success
+                  etiquetar:clienteEncontrado->audio#success
                   etiquetar:clienteNotas->audio#alert
                   etiquetar:preAlertaMatch->audio#speakPreAlerta
                   etiquetar:trackingYaExiste->audio#notify
@@ -449,6 +451,7 @@ end %>
       <p class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-3">¿Qué corresponde hacer?</p>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
         <button type="button" data-action="click->etiquetar#duplicateAsUpdate"
+                data-etiquetar-target="duplicateUpdateBtn"
                 class="flex flex-col items-start text-left p-4 rounded-lg ring-1 ring-cec-teal/40 bg-cec-teal/5 hover:bg-cec-teal/10 dark:bg-cec-teal/10 dark:hover:bg-cec-teal/20 transition">
           <span class="font-semibold text-cec-teal-dark dark:text-cec-teal-light">Es actualización</span>
           <span class="text-xs text-gray-600 dark:text-gray-400 mt-1">Cargar la recepción original para corregir tipo de envío, cliente u otros datos.</span>

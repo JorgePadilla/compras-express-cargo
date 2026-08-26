@@ -44,6 +44,16 @@ export default class BusquedaAutocomplete extends Controller {
   // Qué hacer cuando el operario elige uno. Recibe el `dataset` del botón.
   _alSeleccionar(_datos) {}
 
+  // Qué hacer cuando llegaron resultados y el primero ya quedó activo. La base
+  // no hace nada; el autocomplete de cliente pita (C16-02). No corre con la
+  // lista vacía: «no se encontraron resultados» no es un «podés seguir».
+  _alPintar(_items) {}
+
+  // Qué hacer después de elegir un ítem **con Enter**. Recibe el keydown. La
+  // base no hace nada; las pantallas de escaneo avanzan de campo (C16-04). Con
+  // Tab no hace falta: el navegador ya mueve el foco solo.
+  _despuesDeElegirConTeclado(_e) {}
+
   _textoVacio() { return "No se encontraron resultados" }
 
   // Los modales pintan sus resultados en un `<ul>`, así que cada fila va
@@ -118,6 +128,7 @@ export default class BusquedaAutocomplete extends Controller {
     // Miami trabaja solo con teclado, "usamos las manos para trabajar".
     this._activo = 0
     this._resaltar()
+    this._alPintar(items)
   }
 
   // ── Navegación con teclado ───────────────────────────────────────────────
@@ -162,12 +173,23 @@ export default class BusquedaAutocomplete extends Controller {
       if (activo) {
         e.preventDefault() // no enviar el form: solo elegir
         this._elegirEl(activo)
+        this._despuesDeElegirConTeclado(e)
       }
     } else if (e.key === "Escape") {
       e.preventDefault()
       this.cerrar()
     } else if (e.key === "Tab") {
-      this.cerrar()
+      // C16-04 · Yusef: "nosotros presionamos entre Tab y Enter: es la misma
+      // cosa para nosotros". Tab cerraba la lista **sin elegir**, así que el
+      // que tabulaba perdía el cliente que ya tenía resaltado. Ahora elige el
+      // activo y deja pasar el Tab, que mueve el foco solo. Shift+Tab (volver
+      // atrás) no elige nada.
+      const activo = this._items()[this._activo]
+      if (activo && !e.shiftKey) {
+        this._elegirEl(activo)
+      } else {
+        this.cerrar()
+      }
     }
   }
 

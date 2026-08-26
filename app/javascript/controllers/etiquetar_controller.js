@@ -1,4 +1,5 @@
 import ClienteAutocomplete from "controllers/cliente_autocomplete"
+import { conEnterAvanza } from "controllers/enter_avanza"
 
 // El color del encabezado según de qué avisa. Yusef: *"el cerebro hasta el color
 // asocia"*. Rojo para lo que frena el paquete, ámbar para lo que hay que hacer,
@@ -12,7 +13,7 @@ const TONOS_DE_AVISO = {
 // PR-C6.32: la búsqueda de cliente vive en `ClienteAutocomplete`, compartida
 // con /entrega_personal. Acá solo queda lo propio de etiquetar: el banner de
 // notas de Miami, vía el gancho `_alSeleccionarCliente`.
-export default class extends ClienteAutocomplete {
+export default class extends conEnterAvanza(ClienteAutocomplete) {
   static targets = [
     "form", "tipoEnvio", "tracking",
     "trackingSecundario", "trackingSecundarioContainer",
@@ -21,7 +22,7 @@ export default class extends ClienteAutocomplete {
     "clienteNombre", "descripcion",
     "notasBanner", "notasTexto",
     "preAlertaBanner", "preAlertaNumero", "preAlertaCliente", "preAlertaDescripcion",
-    "duplicateModal", "duplicateInfo", "duplicateNewBtn", "duplicateNewHint",
+    "duplicateModal", "duplicateInfo", "duplicateUpdateBtn", "duplicateNewBtn", "duplicateNewHint",
     "submitBtn", "event", "panel",
     "terceroContainer", "terceroToggle",
     "conflictoSesionModal", "conflictoSesionTexto", "conflictoSesionDejarBtn",
@@ -89,72 +90,6 @@ export default class extends ClienteAutocomplete {
       e.preventDefault()
       this.submitFormWithPrint()
     }
-  }
-
-  // ── Enter = siguiente campo, nunca guardar ────────────────────────────
-  //
-  // Yusef, 2026-08-08: "el enter es como el siguiente campo". Y sobre los
-  // dropdowns: "grabar, no grabar — **seleccionar**".
-  //
-  // No es una preferencia: **la pistola de código de barras dispara Enter** al
-  // terminar de leer, y eso no es configurable en la práctica — hay varias
-  // pistolas, con cable y sin, y todas vienen así. Miami trabaja solo con
-  // teclado: "nosotros solo teclado porque usamos las manos para trabajar".
-  //
-  // Sin este handler gana el default del navegador y Enter envía el form, que
-  // es de donde salían los paquetes grabados a medias apenas se escaneaba el
-  // tracking.
-  formKeydown(e) {
-    if (e.key !== "Enter") return
-
-    // El dropdown de cliente y el modal de cajas ya resolvieron su Enter
-    // (seleccionar el ítem activo / confirmar). No pisarlos.
-    if (e.defaultPrevented) return
-
-    const el = e.target
-    if (!el || !el.tagName) return
-
-    // La descripción y las notas son textarea: ahí Enter es un salto de línea.
-    if (el.tagName === "TEXTAREA") return
-
-    // En un botón, Enter es "apretarlo". Dejarlo pasar.
-    if (el.tagName === "BUTTON" || el.type === "submit" || el.type === "button") return
-
-    // Todo lo demás: avanzar, jamás enviar.
-    e.preventDefault()
-    this._focusSiguiente(el)
-  }
-
-  // Los campos que se pueden enfocar, en el orden en que están en el DOM.
-  // Se recalcula en cada Enter a propósito: F3 y F4 muestran y esconden
-  // campos, así que una lista cacheada quedaría desactualizada.
-  _camposEnfocables() {
-    const selector = [
-      "input:not([type=hidden])",
-      "select",
-      "textarea"
-    ].join(", ")
-
-    return Array.from(this.formTarget.querySelectorAll(selector)).filter((el) => {
-      if (el.disabled || el.readOnly) return false
-      if (el.tabIndex < 0) return false
-      // `offsetParent` es null cuando el campo o alguno de sus contenedores
-      // está oculto — que es como viven el tercero (F4) y el tracking
-      // secundario (F3) hasta que alguien los revela.
-      return el.offsetParent !== null
-    })
-  }
-
-  _focusSiguiente(actual) {
-    const campos = this._camposEnfocables()
-    const i = campos.indexOf(actual)
-    if (i === -1) return
-
-    const siguiente = campos[i + 1]
-    if (!siguiente) return   // en el último campo, Enter no hace nada
-
-    siguiente.focus()
-    if (siguiente.select) siguiente.select()
   }
 
   toggleTrackingSecundario() {
@@ -253,6 +188,14 @@ cerrarQuitarCobro() {
 
     if (this.sucursalModalTarget.close) this.sucursalModalTarget.close()
     else this.sucursalModalTarget.classList.add("hidden")
+  }
+
+  // C16-04 · Yusef, 2026-08-25: "mirá a ver si lo podés lograr que quede al
+  // mismo Tab: que vos lo seleccionás, se pase". Enter sobre el cliente elegía
+  // y se quedaba en el campo; el segundo Enter recién avanzaba. Ahora elegir
+  // con el teclado ya es avanzar, como en cualquier otro campo.
+  _despuesDeElegirConTeclado(e) {
+    this._focusSiguiente(e.target)
   }
 
   _alSeleccionarCliente({ id, notas, sucursalRetiro, retiroPorDefecto }) {
@@ -473,7 +416,9 @@ cerrarQuitarCobro() {
         }
         if (data.exists && !data.terminal) {
           this._openDuplicateModal(data)
+          return
         }
+        this._avisarTrackingLibre()
       })
       .catch((e) => {
         // No se puede seguir en silencio: si la consulta falla, el operario
@@ -482,6 +427,23 @@ cerrarQuitarCobro() {
         if (consulta === this._consultaSeq) this._ultimoConsultado = null
         console.error("[etiquetar] falló la consulta del tracking", e)
       })
+  }
+
+  // El pin de «podés seguir» cuando el chequeo vuelve limpio: ni duplicado ni
+  // pre-alerta. Yusef, 2026-08-25 (C16-02): *"¿cuándo escuchás el pip? Cuando
+  // el sistema buscó en los paquetes y vio que no existía"* · *"siempre hay
+  // pitos para decir: ok, podés seguir"*. El operario mira la pistola, no la
+  // pantalla, y sin este pito no sabe si el chequeo terminó.
+  //
+  // Un tracking terminal (entregado, anulado) también está libre: se puede
+  // volver a usar, y PR-C6.9 ya lo deja pasar sin modal.
+  //
+  // No suena al actualizar: ahí el tracking viene puesto desde el servidor y
+  // el primer blur no es un escaneo — pitaría sin que nadie hubiera hecho
+  // nada.
+  _avisarTrackingLibre() {
+    if (this.hasActualizandoIdValue && this.actualizandoIdValue) return
+    this.dispatch("trackingLibre")
   }
 
   // El paquete escaneado pertenece a otro tipo de envío.
@@ -785,6 +747,16 @@ cerrarQuitarCobro() {
     // tira que **ya existía**". Son dos avisos distintos, no uno.
     this.dispatch("trackingYaExiste")
     this.duplicateModalTarget.classList.remove("hidden")
+
+    // C16-03 · Yusef: "le da Enter y se queda ahí". El overlay tapaba la
+    // pantalla pero el cursor seguía en el campo de atrás, así que el Enter
+    // siguiente —el de la pistola, o el del operario— caía en el formulario y
+    // el modal ni se enteraba. Mismo patrón que el modal de conflicto: el foco
+    // va a la opción de siempre, «Es actualización», en el frame siguiente
+    // porque esto corre al resolverse el `fetch`.
+    if (this.hasDuplicateUpdateBtnTarget) {
+      requestAnimationFrame(() => this.duplicateUpdateBtnTarget.focus())
+    }
   }
 
   closeDuplicate() {

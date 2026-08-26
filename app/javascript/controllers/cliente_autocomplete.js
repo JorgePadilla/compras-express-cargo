@@ -55,6 +55,20 @@ export default class ClienteAutocomplete extends BusquedaAutocomplete {
   }
   _alSeleccionarCliente(_datos) {}
 
+  // C16-02 · Yusef, 2026-08-25: *"cuando yo presiono tres, acá, él debe pitar
+  // para que yo presione Enter"* · *"sí la selecciona, pero nosotros tenemos
+  // que esperar el pito para presionar Enter"*. El pito dice que el primero
+  // de la lista ya quedó activo y Enter lo va a tomar.
+  //
+  // Va acá y no en la base: `dispatch` usa el `identifier` del controller
+  // concreto, así que sale como `etiquetar:clienteEncontrado` o
+  // `entrega-personal:clienteEncontrado` según la pantalla — las dos gemelas
+  // de un solo golpe— y los otros autocompletes (tercero, proveedor,
+  // pre-alerta) siguen mudos, que es lo que Yusef pidió.
+  _alPintar(_items) {
+    this.dispatch("clienteEncontrado")
+  }
+
   // PR-C6.41 · RP-04b: le avisa al panel de cálculo en qué servicios este
   // cliente paga SOLO el volumétrico ("mayoristas o clientes grandes", Yusef).
   //
