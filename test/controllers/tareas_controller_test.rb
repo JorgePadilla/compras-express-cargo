@@ -52,7 +52,11 @@ class TareasControllerTest < ActionDispatch::IntegrationTest
 
   # --- Autorización ---
 
-  test "un digitador puede completar pero no crear tareas" do
+  test "un digitador completa y crea tareas, pero no las edita ni las borra" do
+    # C17-01 (Jorge, 2026-08-26): crea quien ejecuta. Hasta acá el que estaba
+    # en la pistola podía marcar una tarea hecha y no dejar una. Editar y
+    # borrar siguen siendo de supervisores y SAC. Es la respuesta provisoria a
+    # `RP-45`; si Yusef dice que no, vuelve `GESTION_ROLES` en `CREACION_ROLES`.
     login_as users(:digitador)
     tarea = Tarea.create!(cliente: @cliente, titulo: "Embolsar", departamento: "miami")
 
@@ -60,7 +64,12 @@ class TareasControllerTest < ActionDispatch::IntegrationTest
     assert_predicate tarea.reload, :realizada?
 
     get new_tarea_url(cliente_id: @cliente.id)
-    assert_redirected_to root_path, "crear tareas es de supervisores/SAC, no del digitador"
+    assert_response :success
+
+    get edit_tarea_url(tarea)
+    assert_redirected_to root_path, "editar es de supervisores/SAC, no del digitador"
+
+    assert_no_difference("Tarea.count") { delete tarea_url(tarea) }
   end
 
   test "un supervisor de Miami puede crear una tarea de cliente" do

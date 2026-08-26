@@ -818,7 +818,9 @@ end %>
         <span class="text-xs text-gray-400 italic">sin tareas</span>
       <% end %>
     </div>
-    <% if can_edit_paquetes? %>
+    <%# C17-01: la lista de quién crea tareas es la de tareas, no la de quién
+        edita paquetes — con la otra, supervisor_caja y SAC no veían el botón. %>
+    <% if can_crear_tareas? %>
       <%= link_to new_paquete_tarea_path(@paquete),
             class: "shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-cec-teal text-white hover:bg-cec-teal-dark" do %>
         <%= heroicon "plus", variant: :solid, options: { class: "w-3 h-3" } %>

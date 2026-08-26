@@ -11,9 +11,21 @@
     por qué cargar con la cola de Caja. %>
 <% content_for :title, "Tareas" %>
 
+<%# C17-01 · Jorge: *"creo que nos falta formas de agregar tareas"*. La bandeja
+    nació para ver y cerrar (PR-C7.40) y mandaba a crear «desde la ficha de un
+    paquete o de un cliente». Ahora se crea desde acá: cliente por autocomplete
+    y tracking opcional. %>
 <%= render PageHeaderComponent.new(
       title: "Tareas",
-      subtitle: "#{@tareas.total_count} #{@incluir_realizadas ? 'en total' : 'abiertas'} en tu área") %>
+      subtitle: "#{@tareas.total_count} #{@incluir_realizadas ? 'en total' : 'abiertas'} en tu área") do |header|
+  if can_crear_tareas?
+    header.with_action do
+      render ButtonComponent.new(variant: :gold, href: new_tarea_path, icon: "plus", shortcut: "F7") do
+        "Nueva tarea"
+      end
+    end
+  end
+end %>
 
 <div class="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
   <%# Los links conservan el otro filtro: apagar uno no puede resetear el otro. %>
@@ -99,10 +111,20 @@
                   paquete todavía no existe— solo se podía cerrar si alguien
                   volvía a escanear a ese cliente. %>
               <td class="px-4 py-3 text-right">
-                <% unless tarea.realizada? %>
-                  <%= render(ButtonComponent.new(variant: :outline_teal, size: :xs, icon: "check",
-                        href: completar_tarea_path(tarea), method: :post)) { "Hecha" } %>
-                <% end %>
+                <div class="flex items-center justify-end gap-2">
+                  <% unless tarea.realizada? %>
+                    <%= render(ButtonComponent.new(variant: :outline_teal, size: :xs, icon: "check",
+                          href: completar_tarea_path(tarea), method: :post)) { "Hecha" } %>
+                  <% end %>
+                  <%# El lápiz va a donde la tarea está pegada, como el link de «De
+                      quién»: la ruta anidada si tiene paquete, la top-level si no.
+                      Las de cliente no se podían editar desde ningún lado. %>
+                  <% if can_gestionar_tareas? %>
+                    <%= render RowActionComponent.new(action: :edit,
+                          href: tarea.paquete ? edit_paquete_tarea_path(tarea.paquete, tarea) : edit_tarea_path(tarea),
+                          label: "Editar tarea") %>
+                  <% end %>
+                </div>
               </td>
             </tr>
           <% end %>
@@ -117,6 +139,14 @@
 <% else %>
   <%= render EmptyStateComponent.new(
         title: @solo_mias ? "No tenés tareas asignadas" : "No hay tareas abiertas en tu área",
-        description: "Las tareas se crean desde la ficha de un paquete o de un cliente.",
-        icon: "clipboard-document-check") %>
+        description: can_crear_tareas? ? "Dejá una desde acá, o desde la ficha de un paquete o de un cliente." : "Las tareas las deja el personal desde la bandeja, un paquete o un cliente.",
+        icon: "clipboard-document-check") do |empty|
+    if can_crear_tareas?
+      empty.with_action do
+        render ButtonComponent.new(variant: :gold, href: new_tarea_path, icon: "plus", shortcut: "F7") do
+          "Nueva tarea"
+        end
+      end
+    end
+  end %>
 <% end %>

@@ -6546,3 +6546,70 @@ Se marcan, no se completan (la disciplina de siempre):
 | `RP-42` | Al guardar un paquete del cliente A cuyo **secundario** está pre-alertado por el cliente B, hoy el sistema vincula la pre-alerta de B al paquete de A y borra el esperado de B, **sin avisar**. `C12-04` decidió eso para el **mismo** cliente (*"no es vincularlo, eliminarlo"*); para clientes distintos él solo dijo *"lo va a retener, o lo va a enviar así"*. ¿Qué pasa con la pre-alerta de B? |
 | `RP-43` | *"Restricciones de ver"* (`C16-06`): ¿qué de la ficha del cliente **no** debe ver Miami? Las notas ya se filtran por rol; los precios especiales, los correos y el acceso al portal viven en el formulario de edición, que el digitador deja de abrir |
 | ~~`RP-44`~~ | ~~En `/entrega_personal` Enter todavía envía el formulario~~ — **✅ emparejada en `PR-C7.43`**: la regla «Enter no guarda» ya era suya (Conversación 6) y él mismo había dicho *"esto es en Etiquetar y en Entrega Personal"* |
+
+---
+
+## Conversación 17 (2026-08-26) — «nos falta formas de agregar tareas»
+
+Jorge, después de cerrar la Conversación 16:
+
+> *"Creo que nos falta formas de agregar tareas."*
+
+Tenía razón, y el repo lo decía solo: `PR-C7.40` (#324) construyó la bandeja
+para **ver** y **cerrar** tareas, y su estado vacío rezaba *"las tareas se
+crean desde la ficha de un paquete o de un cliente"*. `PR-C7.41` quitó la
+única creación automática (`C16-01`). Lo que quedaba:
+
+| Dónde | Qué pasaba |
+|---|---|
+| `/tareas/new` a secas | callejón sin salida: el cliente solo llegaba por `?cliente_id=`, y sin él la tarea no se guardaba — por eso la bandeja no tenía «Nueva» |
+| `/paquetes/:id/tareas` | «Nueva tarea», «Editar» y «Borrar» salían **para todos**; el digitador clickeaba y rebotaba al home |
+| Ficha del paquete | «+ Nueva tarea» con la lista de quién edita **paquetes**: `supervisor_caja` y SAC podían crear y no veían el botón |
+| Tareas de cliente | no se podían editar ni borrar desde ninguna pantalla |
+| La franja de `/etiquetar` y `/entrega_personal` | solo lectura (decisión de PR-9), aunque `#324` dice que las tareas de Miami *"nacen en /etiquetar"* |
+| Quién crea | solo supervisores y SAC: **el que está en la pistola podía marcar una tarea hecha pero no dejar una** |
+
+Y detrás de todo, la pregunta de marzo que nunca se cerró (`docs/05`, *"Tareas
+y Re-empaque (pendiente de reunión)"*): *¿quién asigna las tareas? ¿el
+digitador al etiquetar? ¿el supervisor?* — Yusef: *"prefiere explicarlo en
+reunión directa"*. Lo único que dijo después es `C16-01`: *"el cliente no puede
+poner una tarea, solo nosotros"*. Quién de nosotros, nunca.
+
+**Decisiones de Jorge (2026-08-26):**
+
+1. **Crea quien ejecuta** (`EJECUCION_ROLES`: se suman digitador, cajero y
+   entrega). Editar y borrar siguen siendo de supervisores y SAC.
+2. **La franja crea**, en las dos pantallas.
+3. **La tarea que se deja mientras se recibe un paquete se ata a ese paquete
+   al guardarlo.**
+
+Y una de implementación: el área por defecto de una tarea nueva es **la del que
+la crea**, no «todas» — si fuera «Honduras», el digitador no vería en su propia
+franja la tarea que acaba de dejar (`visibles_para` filtra por área).
+
+### C17-01 · Crear desde la bandeja, y desde donde se la ve — ✅ **HECHO (PR-C7.47)**
+
+`/tareas/new` gana el autocomplete de cliente de `pre_alertas/new` y un campo
+**tracking opcional** que el servidor resuelve con la escalera de siempre
+(`buscar_escaneado`), **dentro del cliente elegido** —los couriers reciclan
+trackings—; con tracking la tarea cuelga del paquete (la Caja 1 si es un
+split), sin él queda del cliente. La bandeja gana «Nueva tarea» (F7) y el lápiz
+(que va a donde la tarea está pegada). Las tareas de cliente se editan y se
+borran. Los tres botones viejos pasan a `can_crear_tareas?` /
+`can_gestionar_tareas?`, una sola fuente.
+
+> ⚠️ El bloqueo de avance por tareas es **por caja** —la pre-factura avanza
+> caja por caja— y **el manifiesto no lo mira** (`update_all`). Una tarea en la
+> Caja 1 frena esa caja en la pre-factura y nada más.
+
+### C17-02 · Dejar una tarea desde la franja, sin salir de la pantalla — ⏳ **ABIERTA (PR-C7.48)**
+
+Mini-form en la franja (título + área), que crea sin recargar y se ata al
+paquete al guardarlo por el tracking. En Entrega Personal queda del cliente: el
+tracking se genera al guardar.
+
+### Las preguntas que abre
+
+| Id | Qué |
+|---|---|
+| `RP-45` | **¿Quién puede dejar una tarea?** Es la pregunta de marzo (*"¿quién asigna las tareas?"*) que quedó para *"reunión directa"* y nunca se cerró. Respuesta provisoria de Jorge: **la deja cualquiera del personal que las ejecuta** (Miami, caja, entrega); editar y borrar solo supervisores y SAC; el cliente nunca. Si Yusef dice otra cosa —o cuando llegue el Excel de roles (`RP-35`)—, el cambio es una constante (`CREACION_ROLES`), un helper y un test. Y un síntoma para que lo reconozca: **el jefe de SAC (`supervisor_sac`) hoy no ve la cola de SAC** — no está en ninguna lista de tareas ni en la segmentación por área |

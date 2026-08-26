@@ -614,7 +614,7 @@ Preferencias por usuario: `users.sonido_habilitado` + `users.sonido_volumen` (0-
 
 ### Deuda técnica saldada de paso
 
-- `TareasController` **no tenía ninguna autorización** (`before_action` de rol ausente desde PR #66): cualquier usuario autenticado podía crear, editar o borrar tareas de cualquier paquete. Corregido en PR-9.a con `GESTION_ROLES` (crear/editar/borrar) y `EJECUCION_ROLES` (completar/iniciar).
+- `TareasController` **no tenía ninguna autorización** (`before_action` de rol ausente desde PR #66): cualquier usuario autenticado podía crear, editar o borrar tareas de cualquier paquete. Corregido en PR-9.a con `GESTION_ROLES` (crear/editar/borrar) y `EJECUCION_ROLES` (completar/iniciar). **Desde `PR-C7.47` (`C17-01`) crear es de `CREACION_ROLES` = los que ejecutan**; editar/borrar sigue en `GESTION_ROLES`. Queda en `RP-45` para que Yusef lo confirme.
 - **`EntregaPersonalController#render_create_error` reventaba con un 500.** No recargaba `@sucursales_miami` y la vista hace `.any?` sobre él, así que cualquier error de validación producía `undefined method 'any?' for nil` en vez de mostrarle los errores al digitador. Salió a la luz al escribir el primer test de request de la pantalla.
 - `clientes/show` mostraba solo `notas_miami` y `notas_honduras`; `notas_caja` y `notas_sac` eran editables pero invisibles. Ahora lista las 4, filtradas por área y en orden por departamento.
 - Se agregó `test/controllers/entrega_personal_controller_test.rb` — PR-6a y PR-6b habían salido sin ninguna cobertura de request.
