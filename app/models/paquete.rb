@@ -1102,10 +1102,10 @@ class Paquete < ApplicationRecord
   end
 
   # PR-9.a: solo las tareas marcadas `bloquea_avance` congelan el pipeline.
-  # Las auto-creadas desde `pre_alerta_paquetes.instrucciones` nacen con
-  # false, porque `crear_paquete_esperado` ya materializó un Paquete y de
-  # otro modo trabarían la transición pre_alerta_estado → empacado que hace
-  # /etiquetar al recibir el paquete físico.
+  # La bandera nació para que las tareas que se auto-creaban desde
+  # `pre_alerta_paquetes.instrucciones` no trabaran la transición
+  # pre_alerta_estado → empacado. Esa auto-creación se quitó en `PR-C7.41`
+  # (`C16-01`); la bandera se queda como control manual de cada tarea.
   def tareas_bloqueantes_pendientes?
     tareas.abiertas.where(bloquea_avance: true).exists?
   end

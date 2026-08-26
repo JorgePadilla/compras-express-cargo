@@ -867,8 +867,9 @@ namespace :docs do
           [ "<b>De consolidación</b>", "Vienen de la pre-alerta consolidada." ],
           [ "<b>Especiales</b>", "Las instrucciones que el cliente escribió en su pre-alerta." ]
         ], anchos: [ 148, 339 ])
-      p_(pdf, "Las instrucciones del cliente además <b>se vuelven tareas</b> con casilla de verificación, " \
-              "para que no se pierdan en un cuadro de texto. Al marcarlas queda registrado quién y cuándo.")
+      p_(pdf, "Las instrucciones del cliente son una <b>nota</b>: el que recibe las ve en un aviso al escanear, " \
+              "en la franja de contexto y en la ficha del paquete. <b>No son tareas</b> — las tareas las crea " \
+              "solo el personal, y al marcarlas queda registrado quién y cuándo.")
 
       h2(pdf, "Facturación")
       tabla(pdf,
