@@ -1512,6 +1512,12 @@ Contiene, en este orden:
 ### Decisiones confirmadas (Jorge, 2026-08-01)
 
 1. **Origen de las tareas: cliente + pre-alerta.** Una tarea puede colgar de un cliente (`tareas.cliente_id`, nuevo) o de un paquete (`paquete_id`, ahora opcional). Las `instrucciones` que el cliente escribe en cada línea de su pre-alerta **se convierten en tareas reales** al guardarse, para que el digitador las vea al escanear.
+   > ⚠️ **Revertido el 2026-08-25 (`C16-01`, `PR-C7.41`).** Yusef, viendo la
+   > tarea salir en el modal: *"el cliente no puede poner una tarea, solo
+   > nosotros"*. Las instrucciones son **nota**, no tarea — que es como él
+   > mismo las había clasificado en su tabla («notas especiales»). Una tarea
+   > puede seguir colgando de un cliente; lo que ya no pasa es que el cliente la
+   > cree desde el portal.
 2. **Al marcar el checkbox:** `realizada` + registro de quién y cuándo. Desaparece para todos. Reabrible por supervisor.
 3. **"Jerarquía de la empresa" = orden por departamento:** Miami → Caja → Pre-Factura → SAC → Entrega.
 4. **Alcance:** franja + notas + sonidos + documentación.
@@ -2396,14 +2402,21 @@ El mapa completo que pidió:
 
 | Cuándo | Sonido | Estado |
 |---|---|---|
-| Terminó de escanear y ya revisó pre-alertas — "podés seguir" | pin agradable | ✅ existe |
-| Seleccionó el código de cliente | pin | ✅ existe |
+| Terminó de escanear y ya revisó pre-alertas — "podés seguir" | pin agradable | ~~✅ existe~~ **nunca existió** — ver `C16-02` |
+| Seleccionó el código de cliente | pin | ~~✅ existe~~ **nunca existió** — ver `C16-02` |
 | El paquete **tiene pre-alerta** | voz grabada | ⏳ falta la grabación |
 | El tracking **ya existía / ya fue usado** | pito distinto | ✅ PR-C6.9 |
 | **Error** — tipo de envío distinto al de la sesión | sonido feo | ✅ PR-C6.9 · tres opciones en `PR-275` |
 | **Antes** de que salga cualquier modal | pin | ✅ **de verdad** desde `PR-275` — ver abajo |
 
-> ⚠️ **Esta última decía ✅ desde `PR-C6.16` y no era cierta.** El evento
+> ⚠️ **Las dos primeras decían ✅ desde que se escribió esta tabla y nunca lo
+> fueron.** El único «podés seguir» que existe es el pin de guardado
+> (`dispatch("success")`, desde abril), y suena **solo al grabar**: el chequeo
+> del tracking que vuelve limpio y el cliente que aparece en el autocomplete
+> abren mudos. Yusef lo agarró con la pistola en la mano el 2026-08-25
+> (`C16-02`). Es el mismo drift doc-vs-código que denuncia el párrafo de abajo.
+>
+> ⚠️ **La última decía ✅ desde `PR-C6.16` y no era cierta.** El evento
 > `etiquetar:modalAbierto` estaba cableado en la vista y **nadie lo disparaba**:
 > el modal de sucursal de retiro y el del PIN del supervisor abrieron mudos
 > durante meses. Un cable suelto en Stimulus no tira error ni ensucia la
@@ -6270,3 +6283,206 @@ De paso: la pantalla de alta nunca le pasaba el límite de paquetes al
 `pre-alerta-editor` —que sabe deshabilitar «Agregar Paquete» desde siempre—,
 así que el operario llenaba todo y el servidor lo rechazaba después. `/edit` sí
 lo pasaba: la gemela otra vez.
+
+---
+
+## Conversación 16 (2026-08-25) — la pistola en la mano: lo que suena, lo que avisa y lo que no era una tarea
+
+30 minutos con la pantalla compartida, escaneando en staging después de
+`PR-C7.36`. Transcrita con `whisper small`. Arrancó él fijando el foco: *"los
+detallitos yo casi que no les paro mucha bola… me interesa más ahorita terminar
+el proceso"* — y cerró pidiendo reuniones cortas: *"15 minutos, 20 minutos y
+avanzamos en algo… cuando me hacés mucho, me confundo"*.
+
+**Lo que dio por bueno, probándolo en vivo:**
+
+| Qué | Lo que dijo |
+|---|---|
+| El secundario pre-alertado a otro cliente (`C12-04`) | *"Detectó la diferencia de cliente… ahí lograste dos cosas"* |
+| Cambio de servicio + cantidad de etiquetas en el mismo paquete | *"Todo está bien, no tenía cambio de servicio ni pre-alerta ni nada, pero yo lo hice solo por molestar"* |
+| Finalizar sesión / dejarlo de lado | *"De momento está bien. No te puedo decir otra cosa porque es algo nuevo"* |
+| Un tracking sin pre-alerta | *"No tiene pre-alerta, por eso no la tiró, y estamos bien"* |
+| El bloque Miami del menú (`PR-C7.36`) | *"Ya, ya, ya: etiquetar, entrega personal, manifiestos"* — y de ahí salió `C16-06` |
+
+### C16-01 · Las instrucciones del cliente salían como **tarea** — 🐛 ✅ **ARREGLADO (PR-C7.41)**
+
+Escaneó un CER con pre-alerta. Salió el modal de la instrucción (*"ya salió el
+modal, ya va bien"*) y detrás **otro**, rotulado tarea, con el mismo texto:
+
+> *"No, pero el cliente no puede poner una tarea, solo nosotros."*
+> *"Punto importante: el cliente no puede poner una tarea."*
+> *"En el menú no está en ningún lado, pero yo lo hice, yo sé."*
+
+Se fue a buscar de dónde había salido —la ficha del cliente, el home, «Todos los
+paquetes»— y quedaron en que *"hay que revisar la parte de tareas y la nota"*.
+
+**Qué pasaba.** `PR-9` (2026-08-01) convertía las `instrucciones` de cada
+renglón de pre-alerta en una `Tarea` real (`sync_tarea_desde_instrucciones`),
+para que el digitador las viera con checkbox en la franja. Era una **decisión de
+Jorge** —está anotada así arriba, en *"Decisiones confirmadas (Jorge,
+2026-08-01)"*—; Yusef siempre las había llamado **notas especiales**. Después
+`PR-C7.31` (`C14-02`) puso la instrucción en un modal de **nota**, que es lo que
+él pidió. Nadie quitó la conversión: dos modales por la misma instrucción, y el
+operario "completaba" —con su nombre y hora— una tarea que había creado el
+cliente desde el portal.
+
+La instrucción ya le llega al que recibe por tres caminos que no pasan por
+`Tarea`: el modal de nota, la franja de contexto y la ficha del paquete. Se quita
+la conversión y una migración borra las tareas **abiertas** de ese origen
+(informando cuántas); las ya realizadas se quedan como evidencia, con quién las
+marcó. Las tareas **internas** —las que crea el personal— siguen saliendo en el
+modal: él dijo que el cliente no las pone, no que no existan.
+
+> El índice global de tareas que él buscó en el menú **no existía**: solo se
+> veían las de un paquete o las de un cliente, y por eso tampoco había a dónde
+> apuntar desde el menú. Lo construyó `PR-C7.40` (#324) ese mismo día —la
+> bandeja `/tareas`, con su link—. Con la conversión quitada, lo que va a
+> encontrar ahí son solo tareas del personal.
+
+### C16-02 · El pito de «podés seguir» — ⏳ **ABIERTA**
+
+> *"Cuando yo hago esto y no tiene pre-alerta, debe pitar, acordate."*
+> *"¿Cuándo escuchás el pip? Cuando el sistema buscó en los paquetes y vio que
+> no existía."*
+> *"Ahí, cuando yo presiono tres, acá, él debe pitar para que yo presione
+> Enter."* · *"Sí la selecciona, pero nosotros tenemos que esperar el pito para
+> presionar Enter."*
+> *"Siempre hay pitos para decir: ok, podés seguir."*
+
+Jorge, mirándolo: *"Ay, no está pitando."*
+
+Son dos pitos de **listo**: cuando el chequeo del tracking vuelve limpio —ni
+duplicado ni pre-alerta— y cuando el autocomplete de cliente encuentra a
+alguien. El pin de guardado (`success`) es el único «podés seguir» que existe, y
+suena **solo al grabar**. ⚠️ La tabla de `A1-10` daba estos dos por «✅ existe» y
+**nunca fue cierto** — ver la corrección ahí.
+
+### C16-03 · «Le da Enter y se queda ahí» — ⏳ **ABIERTA, va con C16-02 y C16-04**
+
+> *"El día que uno viene y le hace así, le da Enter, y mirá: se queda ahí… no
+> sé cómo podemos hacer algún bloqueíto ahí."*
+> *"Cuando le damos Enter, normalmente de un solo se pasa acá abajo. No le tengo
+> que dar dos veces."*
+> *"Nosotros presionamos entre Tab y Enter: es la misma cosa para nosotros."*
+
+Enter **sí** avanza al siguiente campo (es de `A1-01`, y hay test). Lo que no
+hay es la señal de que el chequeo terminó —eso es `C16-02`— y el modal de
+duplicado abre **sin llevarse el foco**, así que el Enter siguiente cae en el
+formulario de atrás. No se hace ningún «bloqueíto»: él mismo dijo en la
+Conversación 6 que el escaneo *"tiene que ser rápido"*.
+
+### C16-04 · Elegir el cliente y pasar, con la misma tecla — ⏳ **ABIERTA**
+
+> *"Mirá a ver si lo podés lograr que quede al mismo Tab: que vos lo
+> seleccionás, se pase."*
+
+Hoy Enter sobre el cliente elige y **se queda** en el campo; Tab pasa pero
+**sin elegir**. Las dos teclas tienen que elegir y pasar.
+
+### C16-05 · El secundario ya avisado no volvió a avisar — 🐛 ⏳ **ABIERTA**
+
+Metió un paquete cuyo secundario estaba pre-alertado a nombre de otra clienta:
+avisó. Le dio «Dejarlo de lado y seguir», metió otro paquete con **el mismo
+secundario**, y:
+
+> *"No, pero aquí lo puse a nombre de alguien más. No lo detectó, mirá. Ahora
+> no lo detectó."*
+> *"Es el mismo tracking, lo agarré, lo volví a usar… ya lo había detectado, y
+> se quedó esto así, mirá: **no lo limpió**."*
+> *"Cuando queda aquí algo, ahí está la razón."*
+
+Jorge: *"El problema es que queda como la sesión abierta, no se limpia… lo
+mismo que estaba pasando."* Al finalizar la sesión de verdad —que recarga la
+pantalla— volvió a avisar.
+
+**Qué pasa.** «Dejarlo de lado» limpia el formulario **sin recargar**, y la
+limpieza reinicia la memoria del tracking principal (`PR-C6.21`) pero no la del
+secundario: el segundo paquete ni siquiera vuelve a consultar. Y hay una segunda
+capa: el secundario está **arriba** del cliente en la pantalla, así que en el
+orden natural se revisa con el cliente todavía vacío y la comparación no tiene
+contra qué comparar — la primera vez avisó porque la pre-alerta del principal
+ya había puesto al cliente.
+
+### C16-06 · Clientes para Miami, en modo consulta — ⏳ **ABIERTA**
+
+Mirando el bloque Miami del menú:
+
+> *"Falta Clientes para Miami, para que ellos lo puedan ver."*
+> *"Recordá que Miami no va a poder ver todo lo que mira [el admin]… vamos a
+> sectorizar las cosas. Aquí van a tener restricciones de ver y de modificar,
+> sobre todo."*
+
+El porqué:
+
+> *"A veces buscan un cliente para tratar de encontrar cuál es el número
+> correcto; si sale repetido; hay clientes que ponen el código de cliente
+> equivocado."*
+> *"Llegó un paquete a nombre de Carmen, con el código cortado… y entonces ellos
+> vienen y empiezan a escribir, a buscar quién aparece con eso."*
+> *"Este código con el nombre no me sale igual, entonces se van y buscan el
+> nombre… se equivocó por un número o por dos."*
+
+Y probando la lista con «1» y «10»: Jorge — *"ese filtro no lo tengo así como lo
+querés"*. La lista busca con la variante estricta y ordena por fecha de alta,
+así que C10 aparece enterrado; el autocomplete de `/etiquetar` usa la flexible,
+que pone el código primero. Es la misma búsqueda dos veces, distinta.
+
+> **Decisión de Jorge (2026-08-25):** solo `digitador_miami` queda en consulta;
+> `supervisor_miami` sigue editando. Hoy **todos** los roles pueden crear y
+> editar clientes — la restricción no existía. Qué de la ficha no debe **ver**
+> Miami queda en `RP-43`.
+
+### C16-07 · La etiqueta del retenido dice **RTE** — ⏳ **ABIERTA**
+
+Guardó un paquete retenido con tres etiquetas y, mirándolas:
+
+> *"Y sigue saliendo el CER aquí. Mirá, sería así: retenido."*
+
+Jorge: *"Ay, ese se me olvidó."* Y la abreviatura, más tarde: *"El de retener me
+dijiste RT, me va. RT, RT, RT."*
+
+> **Jorge (2026-08-25):** es en la etiqueta impresa — donde va el servicio, en
+> lugar de `CER`, tiene que decir **`RTE`**. La caja retenida no se despacha, y
+> el servicio se vuelve a imprimir cuando se libera.
+
+### Lo que no es código
+
+**El arranque va por Express.**
+
+> *"Vamos a empezar por el Express, que es el que tiene menos paquetes, es el
+> que más rápido viene… le vamos a saber más rápido cualquier falla."*
+> *"Dejamos de usar el otro para Express y solo usamos el tuyo para el Express,
+> pero ya tiene que estar listo hasta poder facturarle al cliente."*
+
+**Lo único que ve complicado: las pre-alertas del sistema viejo.**
+
+> *"Cómo pasar ese montón de pre-alertas que van a haber en el sistema, que no
+> las teníamos en el anterior… cómo bajo esa lista y vos la vas a subir. Es la
+> única lista que veo complicada."*
+
+Jorge: *"La estoy viendo complicada yo también."* Va con `C14-08`: sin las
+tablas del sistema viejo no hay nada que planear.
+
+**Las instrucciones se repiten en todo el sistema.** *"Todo esto vos lo vas a
+ver, más unas cuantas más… el que más tiene es prefactura, el que le sigue es
+Miami y el último es Caja. Y de ahí van las entregas nacionales."*
+
+**Cuándo no está:** 2–4 sep (Tegucigalpa), 12–16 sep (El Salvador), 3–11 nov.
+
+### Dudosos del transcript
+
+Se marcan, no se completan (la disciplina de siempre):
+
+- *"Una y dos… eso era lo otro que me había dicho"* y *"esto de [¿la etiqueta?]
+  ahorita está bien, pero acuérdate que solo es al que queramos que aparezca"* —
+  suena a confirmar `C14-03` (el aviso de bolsa solo para la que no es default),
+  pero el audio no lo deja claro.
+- *"El [número] quedaría también en… 60, antes tenía 054"* — ininteligible.
+
+### Las preguntas que abre
+
+| Id | Qué |
+|---|---|
+| `RP-42` | Al guardar un paquete del cliente A cuyo **secundario** está pre-alertado por el cliente B, hoy el sistema vincula la pre-alerta de B al paquete de A y borra el esperado de B, **sin avisar**. `C12-04` decidió eso para el **mismo** cliente (*"no es vincularlo, eliminarlo"*); para clientes distintos él solo dijo *"lo va a retener, o lo va a enviar así"*. ¿Qué pasa con la pre-alerta de B? |
+| `RP-43` | *"Restricciones de ver"* (`C16-06`): ¿qué de la ficha del cliente **no** debe ver Miami? Las notas ya se filtran por rol; los precios especiales, los correos y el acceso al portal viven en el formulario de edición, que el digitador deja de abrir |
+| `RP-44` | En `/entrega_personal` Enter todavía envía el formulario (no tiene la navegación por Enter de `/etiquetar`). Él dijo en la Conversación 4 *"esto es en Etiquetar y en Entrega Personal"* — ¿se empareja? |

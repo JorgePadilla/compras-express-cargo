@@ -67,6 +67,10 @@ class AvisosQueSiSeLeenTest < ActionDispatch::IntegrationTest
     textos = json["notas"].map { |n| n["texto"] }
     assert_includes textos, "El celular por Express"
     assert_includes textos, "Todo esto va junto a Tegucigalpa"
+
+    # C16-01: la instrucción es una nota, no una tarea — *"el cliente no puede
+    # poner una tarea, solo nosotros"*. Salía dos veces: como nota y como tarea.
+    assert_empty json["tareas"], "la instrucción del cliente no puede salir también como tarea"
   end
 
   test "un paquete sin nada no trae avisos" do

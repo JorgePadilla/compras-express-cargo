@@ -35,6 +35,9 @@ class Tarea < ApplicationRecord
     "entrega_despacho"      => %w[honduras]
   }.freeze
 
+  # `pre_alerta` ya no se escribe: era el origen de las tareas que nacían de
+  # las `instrucciones` del cliente, quitado en `PR-C7.41` (`C16-01`). Sigue en
+  # la lista por las filas históricas ya realizadas.
   ORIGENES = %w[manual pre_alerta].freeze
 
   validates :titulo, presence: true
@@ -55,6 +58,19 @@ class Tarea < ApplicationRecord
     deptos = DEPARTAMENTOS_POR_ROL.fetch(user&.rol, [])
     where(departamento: deptos + [ nil ])
   }
+
+  # Las tareas que nacieron de las `instrucciones` del cliente (`PR-9`) y nadie
+  # marcó como hechas. Yusef, 2026-08-25: *"el cliente no puede poner una
+  # tarea, solo nosotros"*. Las ya realizadas se quedan: llevan quién y cuándo
+  # las marcó, y esa evidencia no se toca. `destroy!` y no `delete_all` para
+  # que paper_trail guarde la versión de cada una.
+  #
+  # Devuelve los títulos borrados, para que la migración informe cuáles tocó.
+  def self.borrar_las_nacidas_de_instrucciones!
+    nacidas = where(origen: "pre_alerta").abiertas.order(:id).to_a
+    nacidas.each(&:destroy!)
+    nacidas.map(&:titulo)
+  end
 
   def completar!(user)
     update!(estado: "realizada", completado_por: user, completada_en: Time.current)
