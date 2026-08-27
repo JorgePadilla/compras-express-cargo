@@ -39,6 +39,20 @@ class EtiquetarActualizarTest < ActionDispatch::IntegrationTest
     )
   end
 
+  test "actualizar un paquete sin numero le pone uno, con la sucursal de la sesion" do
+    # C18-04: `update` nunca asignaba la sucursal de recepción y el número solo
+    # se generaba al crear, así que un paquete nacido en /paquetes salía de
+    # /etiquetar tan sin número como entró.
+    @paquete.update_columns(numero_recepcion: nil, sucursal_recepcion_id: nil, warehouse_receipt_id: nil)
+
+    patch actualizar_etiquetar_url(@paquete), params: { paquete: { descripcion: "descripción nueva" } }
+
+    @paquete.reload
+    assert_equal @miami, @paquete.sucursal_recepcion
+    assert @paquete.numero_recepcion.present?, "salió sin número"
+    assert @paquete.warehouse_receipt.present?, "salió sin WR"
+  end
+
   test "el formulario se recarga con los datos del paquete" do
     get etiquetar_url, params: { paquete_id: @paquete.id }
 

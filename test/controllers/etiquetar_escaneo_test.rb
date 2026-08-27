@@ -114,6 +114,10 @@ class EtiquetarEscaneoTest < ActionDispatch::IntegrationTest
     end
 
     assert_equal esperado.id, Paquete.order(:updated_at).last.id
+    # C18-04: el esperado reusado se recibe como update, y el número solo se
+    # generaba al crear: salía sin número y la etiqueta sin código de barras.
+    assert esperado.reload.numero_recepcion.present?, "el esperado recibido tiene que numerarse"
+    assert esperado.warehouse_receipt_id.present?, "y tener su Warehouse Receipt"
   end
 
   test "el tracking del cliente se conserva y el escaneo queda de secundario" do

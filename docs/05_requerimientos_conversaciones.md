@@ -6469,7 +6469,7 @@ y el atajo global clickea lo que encuentre). Y la lista busca **como el
 autocomplete** —`buscar_flexible` con el código primero, la fecha de alta solo
 desempata—, así que «10» pone a C10 arriba.
 
-### C16-07 · La etiqueta del retenido dice **RTE** — ✅ **ARREGLADO (PR-C7.46)**
+### C16-07 · La etiqueta del retenido dice **RET** — ✅ **ARREGLADO (PR-C7.46, corregido en PR-C7.49)**
 
 Guardó un paquete retenido con tres etiquetas y, mirándolas:
 
@@ -6479,12 +6479,13 @@ Jorge: *"Ay, ese se me olvidó."* Y la abreviatura, más tarde: *"El de retener 
 dijiste RT, me va. RT, RT, RT."*
 
 > **Jorge (2026-08-25):** es en la etiqueta impresa — donde va el servicio, en
-> lugar de `CER`, tiene que decir **`RTE`**. La caja retenida no se despacha, y
+> lugar de `CER`, tiene que decir **`RET`** (salió `RTE` y él lo corrigió al día
+> siguiente: *"las primeras tres letras"*, `C18-01`). La caja retenida no se despacha, y
 > el servicio se vuelve a imprimir cuando se libera.
 
 Es un solo lugar (`etiqueta_tipo_envio`), y el mismo partial sirve a la
 etiqueta, a las combinadas y a la reimpresión, así que las N cajas de un split
-retenido dicen RTE todas. Es la bandera `retener_miami`, no el estado
+retenido dicen RET todas. Es la bandera `retener_miami`, no el estado
 `retenido` de Honduras. Sigue siendo el texto más grande de la etiqueta —la
 jerarquía que fijó `A9`— porque es con lo que separan la carga antes de
 empacar, y una caja retenida no se empaca.
@@ -6622,3 +6623,150 @@ atarla.
 | Id | Qué |
 |---|---|
 | `RP-45` | **¿Quién puede dejar una tarea?** Es la pregunta de marzo (*"¿quién asigna las tareas?"*) que quedó para *"reunión directa"* y nunca se cerró. Respuesta provisoria de Jorge: **la deja cualquiera del personal que las ejecuta** (Miami, caja, entrega); editar y borrar solo supervisores y SAC; el cliente nunca. Si Yusef dice otra cosa —o cuando llegue el Excel de roles (`RP-35`)—, el cambio es una constante (`CREACION_ROLES`), un helper y un test. Y un síntoma para que lo reconozca: **el jefe de SAC (`supervisor_sac`) hoy no ve la cola de SAC** — no está en ninguna lista de tareas ni en la segmentación por área |
+
+---
+
+## Conversación 18 (2026-08-26) — la segunda pasada con la pistola: RET, la sucursal al revés, la etiqueta sin número, y «enviado según política»
+
+47 minutos, Yusef desde su oficina (con escalera, ingeniero de cámaras y
+perfumes de por medio) probando `/etiquetar` en staging con lo de la
+Conversación 16 ya adentro. Transcrita con `whisper small`.
+
+**Lo que dio por bueno, probándolo en vivo:**
+
+| Qué | Lo que dijo |
+|---|---|
+| El secundario de otro cliente **y** otro tipo (`C12-04`, `C16-05`) | *"Como tiene dos personas diferentes y dos tipos de envío diferentes, lo correcto es dejarlo a un lado porque hay un error, y volver a empezar."* |
+| El mismo cliente con otro tipo | *"No tiró error porque detectó que estaba el mismo cliente… sí te lo dice, y te dice que es diferente tipo de servicio, pero te está diciendo que es el mismo cliente. Está bien."* |
+| El orden del listado (`C12-02`) | *"Sí, lo está haciendo: este es el más reciente."* |
+| Las tres notas: renglón, grupo, cliente (`C14-02`) | *"Este botón va a las dos notas… y la tercera del agrupado. Excelente, todo salió bien."* |
+| Cambio de servicio + cantidad de etiquetas | *"Todo está bien, no tenía cambio de servicio ni pre-alerta, pero yo lo hice solo por molestar."* |
+
+Y de paso, el diagnóstico de negocio: *"todos los que he comprado, ustedes son
+unos botes bien sólidos… los mandan sin nada de protección"* — el perfume es lo
+que más se retiene, *"paquete dañado, lo más común"*.
+
+### C18-01 · RET, no RTE — ✅ **ARREGLADO (PR-C7.49)**
+
+> *"Me dijiste RTEBA… RET. Sí, **las primeras tres letras**."*
+
+`C16-07` salió como `RTE` y él lo corrigió al día siguiente. Es un solo lugar
+(`etiqueta_tipo_envio`); ver la nota en `C16-07`.
+
+### C18-02 · La sucursal de recepción está al revés — ⏳ **ABIERTA (PR-C7.50)**
+
+Al cerrar sesión para abrir otro tipo de envío, el chooser le ofreció San
+Pedro, Tegucigalpa y San Manuel:
+
+> *"Aquí te falta Miami."*
+> *"¿Dónde se está recibiendo el paquete? No es a dónde va."*
+> *"Debería de ser las sucursales donde **recibimos** carga, no donde
+> entregamos carga. En este momento en la historia solo es Miami… futuramente
+> posiblemente Los Ángeles, Panamá, México."*
+> *"Básicamente debería invertir lo que está: el que está oculto es el que va a
+> recibir."*
+> *"Sería bueno tener otro como de prueba, tipo México."*
+
+**Qué pasa.** El chooser filtra por la **ubicación del usuario** — y el admin
+de Yusef está en `honduras`, así que ve las tres de Honduras y no Miami. Por lo
+mismo el número de recepción de la etiqueta salió `RSPS…`: la sesión se abrió
+con San Pedro porque era la primera de esa lista. No existe ningún concepto
+«sucursal que recibe carga»: `ubicacion` es miami/honduras/otros y ningún
+usuario puede ser `otros`, así que México no le saldría a nadie. Y
+`/entrega_personal` usa otro filtro distinto (Miami a mano) — la gemela.
+
+Al costado: *"la administración está amarrada a SPS… ahí vamos a amarrar al
+usuario de dónde es"*. Hoy el usuario tiene `ubicacion` (Miami/Honduras) y nada
+más fino.
+
+> **Decisión de Jorge (2026-08-26):** un checkbox **«recibe carga»** en
+> `/sucursales`, Miami marcada; México la crea y la marca Yusef.
+
+### C18-03 · «Sale algo escrito alrededor» de la etiqueta — 🧹 **no es código**
+
+> *"De ahorita te puedo decir solo la etiqueta: el error de que sale algo
+> escrito alrededor. Tendría que probar el sistema en Miami para enseñarte cómo
+> sale en la impresora [Dymo]."*
+
+La etiqueta ya declara `2.25in × 1.25in` con margen cero. Lo que sale alrededor
+en una impresora de hojas es lo que el **navegador** agrega en el diálogo de
+impresión (título, URL, fecha, «1/1»): se apaga ahí («Encabezados y pies de
+página»). Con la Dymo no aparece. *"Son bien escasas… 10.000 etiquetas al mes."*
+
+### C18-04 · La etiqueta sin código de barras ni número — 🐛 ✅ **ARREGLADO (PR-C7.49)**
+
+> *"Al etiquetar todo con RT, pero mirá: algo falló ahí. No tiene el código de
+> barras ni el número de recepción ni nada."*
+> *"Yo estaba probando con dos, tres, cuatro, cinco, hasta seis… pero **la única
+> que probé con una fue la que falló**."*
+
+**Qué pasaba.** Con una sola etiqueta y un tracking que tenía pre-alerta,
+`/etiquetar` reusa el paquete esperado —que nació **sin ninguna sucursal**— y lo
+guarda como actualización. El número de recepción solo se generaba **al crear**,
+así que el esperado se recibía sin número, sin Warehouse Receipt, y la etiqueta
+salía sin código de barras y con `—` donde va el número. Con dos o más etiquetas
+el split asigna el número a mano: por eso esas sí salían. El mismo agujero tenía
+**actualizar** un paquete desde `/etiquetar`. El síntoma ya estaba escrito en el
+código desde `PR-C7.20` (*"una con — donde va el número"*), como otra cosa.
+
+Ahora el número (y el WR) se generan también al **recibirse** un paquete ya
+grabado — solo entonces: un esperado que alguien edite desde `/paquetes` sigue
+sin número, porque no llegó. Y una migración numera los que ya quedaron así en
+staging, informando cuáles.
+
+### C18-05 · El modal de «¿cuántas etiquetas?» con las cajas ya puestas — ✅ **ARREGLADO (PR-C7.49)**
+
+> *"Yo puse que eran dos cajas… que agregué dos cajas en pesos y medidas. Y me
+> las tiró aquí con su código de barras y todo bien bonito. Y me tiró siempre la
+> [pregunta]."*
+
+Jorge, en la llamada: *"es una maña ahí para que escoja quién domina"*. Yusef:
+*"son cositas… que te las busco para que ya lo dejes arreglando"*.
+
+Dos formas de llegar ahí. Al **actualizar** un paquete el modal sale siempre, a
+propósito: es donde se cambia la cantidad de cajas (`C14-04`), y arranca en las
+que ya tiene. Y al dar de alta, si se **teclea el peso arriba sin darle
+«Agregar»** —que es lo que la pantalla misma dice que se puede hacer— el modal
+contaba solo las filas y preguntaba igual.
+
+> **Decisión de Jorge (2026-08-26):** la caja tecleada sin «Agregar» cuenta; el
+> modo actualización sigue preguntando.
+
+### C18-06 · «Enviado según política de envío» — ⏳ **ABIERTA (PR-C7.51)**
+
+> *"Hay una cuestión que le queríamos agregar, pero a mí se me olvidó de un
+> principio… es lo mismo que vos tenés como cuando retenés. Como una nota de por
+> qué se le envió [así]."*
+> *"El paquete no llegó identificado con tipo de envío. Antes nos poníamos a
+> preguntarle a la gente qué tipo de envío quiere. Ahora los enviamos nosotros…
+> de acuerdo a las políticas."*
+> *"Necesitamos una listita igual como la otra: se le marca el checkbox y te
+> despliega."*
+> *"No es para retener. Se dan como 100 paquetes al mes."*
+
+Las frases que hoy copian y pegan del sistema viejo: *"Enviado según política
+de envío por falta de identificación o pre-alerta"* · *"Sellado y enviado según
+políticas de envío por falta de identificación"* · *"Desconocido"* (sin etiqueta,
+sin nada) · *"Etiqueta incompleta"* · *"Nombre incompleto: solo se lee Juan"*.
+Y el porqué de fondo: *"hay dos Kenias Maya… la gente no pone el código"*.
+
+No supo cómo llamarlo: *"¿acción? notas me confunde… no se retuvo por
+política"*. Es una explicación al cliente de por qué su paquete se mandó como se
+mandó.
+
+⚠️ La «nota al cliente» que él asume que existe **no le llega al cliente**: no
+viaja en el correo de recibido, no hay detalle de paquete en el portal, no sale
+en el WR (deuda escrita en `docs/06` desde abril). Y el correo de recibido solo
+se manda cuando el tracking tenía pre-alerta — justo lo que estos paquetes no
+tienen.
+
+> **Decisiones de Jorge (2026-08-26):** la listita se compone en
+> `notas_al_cliente` y **va en el correo de recibido**; el correo se manda
+> cuando hay pre-alerta **o** nota de política; el checkbox va en Etiquetar,
+> Entrega Personal y el form de `/paquetes` (para corregir después).
+
+### Dudosos del transcript
+
+- *"Estamos en pre-alerta y hay que cambiar en cliente la parte donde está, si
+  el cliente en [portal] tiene que ver lo mismo…"* (minuto 0, se corta).
+- *"Ahí vamos a amarrar al usuario de dónde es"* — ver `C18-02`.

@@ -141,6 +141,10 @@ class EtiquetarController < ApplicationController
     end
 
     @paquete.assign_attributes(paquete_params.except(:cantidad_paquetes))
+    # C18-04: un paquete que llega acá sin sucursal de recepción —nació en
+    # /paquetes, o es un esperado— toma la de la sesión: sin ella no hay número
+    # de recepción ni Warehouse Receipt. No se pisa la que ya tenga.
+    @paquete.sucursal_recepcion ||= @sucursal_recepcion_sesion
     if (prov_str = proveedor_string_param) != :missing
       @paquete[:proveedor] = prov_str
     end

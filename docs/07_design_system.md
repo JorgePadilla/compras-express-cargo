@@ -257,7 +257,7 @@ Lo que dice `app/views/paquetes/index.html.erb` hoy, en el orden en que gana
 | Pre-Factura | azul claro `bg-blue-50` | ya entró a una pre-factura |
 | Pre-Alerta | teal `bg-cec-teal/5` | vino anunciado |
 
-Y en la **etiqueta impresa**, el retenido en Miami dice **`RTE`** donde va el
+Y en la **etiqueta impresa**, el retenido en Miami dice **`RET`** donde va el
 servicio (`etiqueta_tipo_envio`, `C16-07`): es el texto más grande de la
 etiqueta porque es con lo que separan la carga antes de empacar, y una caja
 retenida no se empaca.

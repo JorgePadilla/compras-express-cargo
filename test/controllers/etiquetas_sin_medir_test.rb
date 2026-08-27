@@ -103,6 +103,31 @@ class EtiquetasSinMedirTest < ActionDispatch::IntegrationTest
     assert_equal cajas.first.id, pap.reload.paquete_id
   end
 
+  test "con pre-alerta y UNA etiqueta, el esperado recibido sale con numero, WR y codigo de barras" do
+    # C18-04 · Yusef, 2026-08-26: "no tiene el código de barras ni el número de
+    # recepción ni nada… la única que probé con una fue la que falló". Con una
+    # etiqueta `create_single` reusa el esperado —persistido, sin sucursal— y
+    # el número solo se generaba al crear.
+    pa = PreAlerta.create!(cliente: clientes(:juan), tipo_envio: tipo_envios(:cer),
+                           titulo: "Una sola caja", estado: "pre_alerta")
+    pap = pa.pre_alerta_paquetes.create!(tracking: "1Z999SINMEDIR008", descripcion: "Lo que viene")
+    esperado = pap.paquete
+    assert_nil esperado.numero_recepcion
+
+    post etiquetar_url, params: { print: "true", etiquetas: "1", paquete: datos("1Z999SINMEDIR008") }
+
+    esperado.reload
+    assert_equal "recibido_miami", esperado.estado
+    assert_equal sucursales(:miami), esperado.sucursal_recepcion
+    assert esperado.numero_recepcion.present?, "sin número no hay código de barras"
+    assert esperado.numero_recepcion.start_with?("R#{sucursales(:miami).codigo}")
+    assert esperado.warehouse_receipt.present?, "sin WR no se cobra"
+
+    get etiqueta_paquete_url(esperado)
+    assert_match(/data-campo="barcode"/, response.body, "la etiqueta salía sin código de barras")
+    assert_no_match(/data-campo="numero-recepcion"[^>]*>\s*—\s*</, response.body)
+  end
+
   test "el formulario no tiene ningun otro campo que declare cantidad" do
     # La causa raíz de `PR-C6.31`: dos campos con el mismo `name`, ganaba el
     # último y el split se caía en silencio. El campo del modal se llama
