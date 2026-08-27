@@ -7,6 +7,7 @@ class EtiquetarController < ApplicationController
   # mismo: `create_single` lo hacía y `create_split` no, y por esa diferencia un
   # tracking pre-alertado que llegaba dividido imprimía 3 etiquetas para 2 cajas.
   include ReconciliarPreAlerta
+  include NotificaRecibido
   # PR-C6.22: etiquetar es **recibir**, no empacar.
   #
   # Yusef, 2026-08-08, revisando la bitácora de un paquete recién etiquetado:
@@ -54,6 +55,7 @@ class EtiquetarController < ApplicationController
     @supervisores_cobro = User.activos.where(rol: QuitarCambioServicio::ROLES)
                               .where.not(pin_digest: nil).order(:nombre)
     @motivos_retencion = MotivoRetencion.activos.ordered
+    @motivos_envio_politica = MotivoEnvioPolitica.activos.ordered
   end
 
   # El operario elige el tipo de envío que va a trabajar en este lote, y en
@@ -154,6 +156,11 @@ class EtiquetarController < ApplicationController
     aplicar_prepago_miami(@paquete)
 
     if @paquete.save
+      # C18-06: marcar «enviado según política» al re-escanear es la misma
+      # transición que en /paquetes: el cliente se entera igual (gemela).
+      if @paquete.saved_change_to_enviado_por_politica? && @paquete.enviado_por_politica?
+        notificar_recibido(@paquete, pre_alerta_vinculada: false)
+      end
       propagar_cambio_de_servicio(@paquete)
       @paquetes_hoy = paquetes_hoy_count
       respond_to do |format|
@@ -320,11 +327,12 @@ end
     aplicar_prepago_miami(@paquete)
 
     if @paquete.save
-      link_pre_alertas(@paquete)
+      vinculadas = link_pre_alertas(@paquete)
       # C17-02: la tarea que se dejó desde la franja mientras se recibía esta
       # caja pasa a colgar de ella.
       Tarea.atar_al_paquete!(@paquete)
       absorber_esperado_del_secundario(@paquete)
+      notificar_recibido(@paquete, pre_alerta_vinculada: vinculadas > 0)
       @paquetes_hoy = paquetes_hoy_count
 
       respond_to do |format|
@@ -400,12 +408,14 @@ end
     # pagó el tracking, no la caja 2 de 3.
     paquetes.each { |p| aplicar_prepago_miami(p); p.save! }
     @paquete = paquetes.first
-    paquetes.each { |p| link_pre_alertas(p) }
+    vinculadas = paquetes.sum { |p| link_pre_alertas(p) }
     # El esperado del secundario se absorbe **una vez**, en la Caja 1: es un
     # solo bulto anunciado dos veces, no uno por caja.
     absorber_esperado_del_secundario(paquetes.first)
     # C17-02: una vez, a la Caja 1 — el bloqueo por tareas es por caja.
     Tarea.atar_al_paquete!(paquetes.first)
+    # Un correo por envío, no uno por caja.
+    notificar_recibido(paquetes.first, pre_alerta_vinculada: vinculadas > 0)
     @paquetes_hoy = paquetes_hoy_count
 
     respond_to do |format|
@@ -439,6 +449,7 @@ end
     @sucursal_recepcion_sugerida = @sucursal_recepcion_sesion || sucursal_recepcion_por_defecto
     @carriers = Carrier.where(activo: true).order(:nombre)
     @motivos_retencion = MotivoRetencion.activos.ordered
+    @motivos_envio_politica = MotivoEnvioPolitica.activos.ordered
     @paquetes_hoy = paquetes_hoy_count
     # PR-C6.23: si el rechazo fue justamente por no haber elegido el destino
     # del cambio de servicio, el modal vuelve abierto. Antes el 422
@@ -666,11 +677,11 @@ end
       .count
   end
 
+  # Vincula y devuelve cuántas. El correo ya no sale de acá: lo manda
+  # `notificar_recibido` (C18-06), un solo sitio, para que un paquete
+  # pre-alertado y con política no reciba dos.
   def link_pre_alertas(paquete)
-    linked = PreAlertaPaquete.link_tracking!(paquete.tracking, paquete)
-    if linked > 0
-      PreAlertaMailer.paquete_recibido(paquete.cliente, paquete).deliver_later
-    end
+    PreAlertaPaquete.link_tracking!(paquete.tracking, paquete)
   end
 
   def paquete_params
@@ -681,7 +692,8 @@ end
       :numero_caja, :descripcion, :remitente, :expedido_por,
       :notas_internas, :notas_retencion,
       :solicito_cambio_servicio, :retener_miami,
-      motivo_retencion_ids: []
+      :enviado_por_politica, :notas_envio_politica,
+      motivo_retencion_ids: [], motivo_envio_politica_ids: []
     )
   end
 

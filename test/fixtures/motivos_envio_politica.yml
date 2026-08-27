@@ -1,0 +1,25 @@
+# C18-06: el catálogo de «enviado según política». Las frases son las que Yusef
+# leyó del sistema viejo.
+sin_prealerta:
+  nombre: Sin pre-alerta ni identificación
+  texto_al_cliente: Enviado según política de envío por falta de identificación o pre-alerta.
+  position: 0
+  activo: true
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>
+
+etiqueta_incompleta:
+  nombre: Etiqueta incompleta
+  texto_al_cliente: "Enviado según política de envío: la etiqueta llegó incompleta."
+  position: 1
+  activo: true
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>
+
+inactivo:
+  nombre: Motivo dado de baja
+  texto_al_cliente: No debería salir.
+  position: 9
+  activo: false
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>

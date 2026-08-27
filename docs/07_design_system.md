@@ -254,6 +254,7 @@ Lo que dice `app/views/paquetes/index.html.erb` hoy, en el orden en que gana
 |------|------|-------------|
 | Retener en Miami | ámbar claro `bg-amber-50` | la bandera `retener_miami` (no el estado `retenido`, que es de Honduras) |
 | Cambio de servicio | ámbar `bg-amber-100/60` | `solicito_cambio_servicio` |
+| Enviado según política | navy `bg-cec-navy/5` | `enviado_por_politica` (`C18-06`): llegó sin identificación y se mandó por la política por defecto; la explicación le llega al cliente |
 | Pre-Factura | azul claro `bg-blue-50` | ya entró a una pre-factura |
 | Pre-Alerta | teal `bg-cec-teal/5` | vino anunciado |
 
@@ -350,76 +351,85 @@ gem "heroicon"
 gem "view_component"
 ```
 
-### Catalogo de Componentes
+### Catálogo de componentes
 
-#### 1. Layout Components
+Son los que existen en `app/components/` (**20**, 2026-08-26). El
+catálogo anterior era el del diseño original y listaba componentes que nunca
+se construyeron (`DataTableComponent`, `Sidebar::LinkComponent`,
+`ConfirmDialogComponent`…): lo que hace falta se construye cuando hace falta,
+y **se agrega acá** cuando nace. Los props son la firma real de `initialize`.
 
-| Componente | Proposito | Props |
-|------------|-----------|-------|
-| `Sidebar::LinkComponent` | Link individual del sidebar | `label:, path:, icon:, active:, badge_count:` |
-| `Sidebar::SectionComponent` | Grupo colapsable del sidebar | `title:, icon:, expanded:` |
-| `PageHeaderComponent` | Titulo + breadcrumb + botones accion | `title:, breadcrumbs:, actions:` |
-| `EmptyStateComponent` | Mensaje cuando no hay datos | `title:, description:, icon:, action_path:` |
+| Componente | Para qué | Props |
+|---|---|---|
+| `BitacoraComponent` | Bitácora (paper_trail) de un registro, en su ficha | `record:, label: nil, limit: 50` |
+| `ButtonComponent` | **El** botón (ver «Botones»); el lint `botones_test` lo hace cumplir | `variant: :primary, size: :md, href: nil, icon: nil, type: nil, disabled: false, method: nil, label: nil, confirm: nil, form: nil, form_class: nil, params: nil, shortcut: nil, shortcut_label_only: false, **attrs` |
+| `CajasPesoMedidasComponent` | Peso y medidas por caja con el repetidor; lo comparten `/etiquetar` y `/entrega_personal` | `f:, tipo_envio_id: nil, wrapper_class: "", valor_a_pagar: false, cotizador_url: nil, cajas_cargadas: {}` |
+| `DashboardActivityItemComponent` | Renglón de la actividad reciente del dashboard | `href:, avatar_name:, eyebrow:, title:, time: nil` |
+| `DashboardChartComponent` | Gráfica del dashboard | `series:` |
+| `DashboardHeroComponent` | Encabezado con los números grandes del dashboard | `user:, health_status:, time: Time.zone.now` |
+| `DashboardKpiCardComponent` | KPI card del dashboard | `title:, value:, icon:, accent:, delta:, series: [], decimals: 0, prefix: "", suffix: "", caption: nil, inverse_delta: false` |
+| `DashboardPipelineComponent` | Embudo de estados del dashboard | `en_bodega:, en_transito:, disponibles:, pendientes:` |
+| `EmptyStateComponent` | Mensaje cuando no hay datos | `title:, description: nil, icon: "inbox"` |
+| `EnviadoPorPoliticaComponent` | «Enviado según política» (`C18-06`): casilla + listita de motivos + detalle, compuesto en `notas_al_cliente`; gemelo de retener, lint `enviado_por_politica_compartido_test` | `f:, motivos:` |
+| `FormSectionComponent` | Sección de formulario con título y descripción | `title: nil, subtitle: nil, densidad: :comoda, alineacion_del_pie: "sm:justify-between", **attrs` |
+| `PageHeaderComponent` | Título + breadcrumb + acciones | `title:, subtitle: nil` |
+| `PaginationComponent` | Paginación (Pagy) | `collection:, label: "registros", per_page_options: DEFAULT_PER_PAGE_OPTIONS` |
+| `PreAlertaCardComponent` | Card de pre-alerta en el portal | `pre_alerta:` |
+| `QuickActionCardComponent` | Card de acceso rápido del dashboard | `title:, href:, icon:, subtitle: nil, accent: :teal` |
+| `RetenerMiamiComponent` | «Retener en Miami» (`C11`): casilla + motivos del catálogo + nota; lint `retener_compartido_test` | `f:, motivos:` |
+| `RowActionComponent` | Acción por fila de tabla | `action:, href:, label: nil, disabled: false, confirm: nil, method: nil, target: nil` |
+| `SearchBarComponent` | Barra de búsqueda | `url:, placeholder: "Buscar...", value: nil, param: :q` |
+| `StatusBadgeComponent` | Badge de estado; colapsa los estados a 5 cubetas (ver arriba) | `status:, label: nil, title: nil` |
+| `StepperComponent` | Pasos de un flujo (wizard) | `steps:` |
 
-#### 2. Data Display Components
-
-| Componente | Proposito | Props |
-|------------|-----------|-------|
-| `DataTableComponent` | Tabla con headers + sorting | `columns:, records:, sortable:` |
-| `StatusBadgeComponent` | Badge de estado con color | `status:, size:` |
-| `PackageFlagComponent` | Flag P.A./P.F./Amarillo/Azul | `flag_type:` |
-| `CardComponent` | Card generico (mobile paquetes) | `title:, subtitle:, body:, footer:` |
-| `StatCardComponent` | KPI card para dashboard | `label:, value:, icon:, trend:` |
-
-#### 3. Form Components
-
-| Componente | Proposito | Props |
-|------------|-----------|-------|
-| `FilterPanelComponent` | Panel de filtros colapsable | `filters:, collapsible:` |
-| `SearchBarComponent` | Barra busqueda con placeholder | `placeholder:, url:, method:` |
-| `DateRangeComponent` | Par fecha inicio/fin | `start_name:, end_name:` |
-| `ClientAutocompleteComponent` | Autocomplete cliente por codigo | `name:, url:` |
-| `ToggleFilterComponent` | Toggle switch para filtros | `label:, name:, checked:` |
-
-#### 4. Action Components
-
-| Componente | Proposito | Props |
-|------------|-----------|-------|
-| `ButtonComponent` | Boton reutilizable (primary/secondary/danger) | `label:, variant:, icon:, size:, href:, method:` |
-| `ActionMenuComponent` | Menu acciones por fila de tabla | `actions:` |
-| `ConfirmDialogComponent` | Modal de confirmacion | `title:, message:, confirm_text:, cancel_text:` |
-| `FlashMessageComponent` | Notificacion flash | `type:, message:, dismissible:` |
-
-#### 5. Domain-Specific Components
-
-| Componente | Proposito | Props |
-|------------|-----------|-------|
-| `PackageCardComponent` | Card paquete (mobile view) | `package:` |
-| `PreAlertaCardComponent` | Card pre-alerta (client grid) | `pre_alerta:` |
-| `ManifiestoRowComponent` | Fila de tabla manifiesto | `manifiesto:` |
-| `TrackingInputComponent` | Input tracking con validacion duplicado | `name:, client_code:` |
-| `LeyendaComponent` | Leyenda de colores paquetes | — |
+Los dos de «marcar el paquete con una explicación» —retener y enviado según
+política— son copias deliberadas uno del otro: misma casilla que despliega,
+mismo catálogo administrable por un admin, mismo lint que exige que las tres
+pantallas (`/etiquetar`, `/entrega_personal`, `paquetes/_form`) rendericen el
+componente y ninguna escriba los motivos a mano.
 
 ### Estructura de archivos
 
 ```
 app/components/
-  sidebar/
-    link_component.rb
-    link_component.html.erb
-    section_component.rb
-    section_component.html.erb
-  page_header_component.rb
-  page_header_component.html.erb
-  status_badge_component.rb
-  status_badge_component.html.erb
+  bitacora_component.html.erb
+  bitacora_component.rb
   button_component.rb
-  button_component.html.erb
-  data_table_component.rb
-  data_table_component.html.erb
-  filter_panel_component.rb
-  filter_panel_component.html.erb
-  ...
+  cajas_peso_medidas_component.html.erb
+  cajas_peso_medidas_component.rb
+  dashboard_activity_item_component.html.erb
+  dashboard_activity_item_component.rb
+  dashboard_chart_component.html.erb
+  dashboard_chart_component.rb
+  dashboard_hero_component.html.erb
+  dashboard_hero_component.rb
+  dashboard_kpi_card_component.html.erb
+  dashboard_kpi_card_component.rb
+  dashboard_pipeline_component.html.erb
+  dashboard_pipeline_component.rb
+  empty_state_component.html.erb
+  empty_state_component.rb
+  enviado_por_politica_component.html.erb
+  enviado_por_politica_component.rb
+  form_section_component.html.erb
+  form_section_component.rb
+  page_header_component.html.erb
+  page_header_component.rb
+  pagination_component.html.erb
+  pagination_component.rb
+  pre_alerta_card_component.html.erb
+  pre_alerta_card_component.rb
+  quick_action_card_component.html.erb
+  quick_action_card_component.rb
+  retener_miami_component.html.erb
+  retener_miami_component.rb
+  row_action_component.html.erb
+  row_action_component.rb
+  search_bar_component.html.erb
+  search_bar_component.rb
+  status_badge_component.rb
+  stepper_component.html.erb
+  stepper_component.rb
 ```
 
 ---

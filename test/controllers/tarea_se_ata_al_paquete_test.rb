@@ -55,9 +55,13 @@ class TareaSeAtaAlPaqueteTest < ActionDispatch::IntegrationTest
                      as: :turbo_stream
     tarea = Tarea.last
 
-    post entrega_personal_index_url, params: { paquete: { cliente_id: @cliente.id, descripcion: "Traído al mostrador",
-                                                          tipo_envio_id: tipo_envios(:cer).id, peso: 2,
-                                                          sucursal_id: sucursales(:miami).id } }
+    assert_difference("Paquete.count") do
+      post entrega_personal_index_url, params: { paquete: { cliente_id: @cliente.id, descripcion: "Traído al mostrador",
+                                                            tipo_envio_id: tipo_envios(:cer).id, peso: 2,
+                                                            proveedor_id: proveedores(:driver_entrega).id,
+                                                            sucursal_id: sucursales(:miami).id,
+                                                            sucursal_recepcion_id: sucursales(:miami).id } }
+    end
 
     assert_nil tarea.reload.paquete_id
     get tareas_url

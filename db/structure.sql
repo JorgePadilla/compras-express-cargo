@@ -1182,6 +1182,40 @@ ALTER SEQUENCE public.manifiestos_id_seq OWNED BY public.manifiestos.id;
 
 
 --
+-- Name: motivos_envio_politica; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.motivos_envio_politica (
+    id bigint NOT NULL,
+    nombre character varying NOT NULL,
+    texto_al_cliente text NOT NULL,
+    "position" integer DEFAULT 0 NOT NULL,
+    activo boolean DEFAULT true NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: motivos_envio_politica_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.motivos_envio_politica_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: motivos_envio_politica_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.motivos_envio_politica_id_seq OWNED BY public.motivos_envio_politica.id;
+
+
+--
 -- Name: motivos_retencion; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1489,6 +1523,38 @@ ALTER SEQUENCE public.pagos_id_seq OWNED BY public.pagos.id;
 
 
 --
+-- Name: paquete_motivos_envio_politica; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.paquete_motivos_envio_politica (
+    id bigint NOT NULL,
+    paquete_id bigint NOT NULL,
+    motivo_envio_politica_id bigint NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: paquete_motivos_envio_politica_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.paquete_motivos_envio_politica_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: paquete_motivos_envio_politica_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.paquete_motivos_envio_politica_id_seq OWNED BY public.paquete_motivos_envio_politica.id;
+
+
+--
 -- Name: paquete_motivos_retencion; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1612,7 +1678,9 @@ CREATE TABLE public.paquetes (
     recolecta_contacto character varying,
     recolecta_telefono character varying,
     recolecta_instrucciones text,
-    prepagado_miami_metodo character varying
+    prepagado_miami_metodo character varying,
+    enviado_por_politica boolean DEFAULT false NOT NULL,
+    notas_envio_politica text
 );
 
 
@@ -2743,6 +2811,13 @@ ALTER TABLE ONLY public.manifiestos ALTER COLUMN id SET DEFAULT nextval('public.
 
 
 --
+-- Name: motivos_envio_politica id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.motivos_envio_politica ALTER COLUMN id SET DEFAULT nextval('public.motivos_envio_politica_id_seq'::regclass);
+
+
+--
 -- Name: motivos_retencion id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -2789,6 +2864,13 @@ ALTER TABLE ONLY public.numero_recepcion_counters ALTER COLUMN id SET DEFAULT ne
 --
 
 ALTER TABLE ONLY public.pagos ALTER COLUMN id SET DEFAULT nextval('public.pagos_id_seq'::regclass);
+
+
+--
+-- Name: paquete_motivos_envio_politica id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquete_motivos_envio_politica ALTER COLUMN id SET DEFAULT nextval('public.paquete_motivos_envio_politica_id_seq'::regclass);
 
 
 --
@@ -3221,6 +3303,14 @@ ALTER TABLE ONLY public.manifiestos
 
 
 --
+-- Name: motivos_envio_politica motivos_envio_politica_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.motivos_envio_politica
+    ADD CONSTRAINT motivos_envio_politica_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: motivos_retencion motivos_retencion_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3274,6 +3364,14 @@ ALTER TABLE ONLY public.numero_recepcion_counters
 
 ALTER TABLE ONLY public.pagos
     ADD CONSTRAINT pagos_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: paquete_motivos_envio_politica paquete_motivos_envio_politica_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquete_motivos_envio_politica
+    ADD CONSTRAINT paquete_motivos_envio_politica_pkey PRIMARY KEY (id);
 
 
 --
@@ -3510,6 +3608,20 @@ CREATE UNIQUE INDEX idx_fin_cuotas_unique ON public.financiamiento_cuotas USING 
 --
 
 CREATE UNIQUE INDEX idx_manifiesto_counters_sucursal_anio ON public.manifiesto_counters USING btree (sucursal_id, anio);
+
+
+--
+-- Name: idx_on_motivo_envio_politica_id_954fdf1517; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_motivo_envio_politica_id_954fdf1517 ON public.paquete_motivos_envio_politica USING btree (motivo_envio_politica_id);
+
+
+--
+-- Name: idx_paquete_motivos_envio_politica_pair; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_paquete_motivos_envio_politica_pair ON public.paquete_motivos_envio_politica USING btree (paquete_id, motivo_envio_politica_id);
 
 
 --
@@ -4059,6 +4171,20 @@ CREATE INDEX index_manifiestos_on_user_id ON public.manifiestos USING btree (use
 
 
 --
+-- Name: index_motivos_envio_politica_on_activo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_motivos_envio_politica_on_activo ON public.motivos_envio_politica USING btree (activo);
+
+
+--
+-- Name: index_motivos_envio_politica_on_nombre; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_motivos_envio_politica_on_nombre ON public.motivos_envio_politica USING btree (nombre);
+
+
+--
 -- Name: index_motivos_retencion_on_activo; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4217,6 +4343,13 @@ CREATE INDEX index_pagos_on_registrado_por_id ON public.pagos USING btree (regis
 --
 
 CREATE INDEX index_pagos_on_venta_id ON public.pagos USING btree (venta_id);
+
+
+--
+-- Name: index_paquete_motivos_envio_politica_on_paquete_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_paquete_motivos_envio_politica_on_paquete_id ON public.paquete_motivos_envio_politica USING btree (paquete_id);
 
 
 --
@@ -4978,6 +5111,14 @@ ALTER TABLE ONLY public.pre_alerta_paquetes
 
 
 --
+-- Name: paquete_motivos_envio_politica fk_rails_0678c767a8; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquete_motivos_envio_politica
+    ADD CONSTRAINT fk_rails_0678c767a8 FOREIGN KEY (paquete_id) REFERENCES public.paquetes(id) ON DELETE CASCADE;
+
+
+--
 -- Name: recibos fk_rails_0984618e5f; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5239,6 +5380,14 @@ ALTER TABLE ONLY public.pre_facturas
 
 ALTER TABLE ONLY public.paquetes
     ADD CONSTRAINT fk_rails_498bb416af FOREIGN KEY (fecha_aduana_by_user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: paquete_motivos_envio_politica fk_rails_49f5079290; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquete_motivos_envio_politica
+    ADD CONSTRAINT fk_rails_49f5079290 FOREIGN KEY (motivo_envio_politica_id) REFERENCES public.motivos_envio_politica(id) ON DELETE RESTRICT;
 
 
 --
@@ -5976,6 +6125,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260826220000'),
 ('20260826210000'),
 ('20260826200000'),
 ('20260826040000'),

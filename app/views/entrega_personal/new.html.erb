@@ -202,6 +202,7 @@ end %>
           desde siempre: la intención estaba y el marcado nunca se escribió.
           Salió al buscar el componente para la pre-alerta. %>
       <%= render RetenerMiamiComponent.new(f: f, motivos: @motivos_retencion) %>
+        <%= render EnviadoPorPoliticaComponent.new(f: f, motivos: @motivos_envio_politica) %>
 
       <%# Sección 5: Pago. El partial lo comparte con /etiquetar. %>
       <%= render "shared/prepago_miami" %>

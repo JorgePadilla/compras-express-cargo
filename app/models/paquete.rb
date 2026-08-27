@@ -67,6 +67,14 @@ class Paquete < ApplicationRecord
   has_many :motivos_retencion,
            through: :paquete_motivos_retencion,
            source:  :motivo_retencion
+  # C18-06: por qué se mandó por la política de envío por defecto. Mismo
+  # esqueleto que la retención.
+  has_many :paquete_motivos_envio_politica,
+           class_name: "PaqueteMotivoEnvioPolitica",
+           dependent: :destroy
+  has_many :motivos_envio_politica,
+           through: :paquete_motivos_envio_politica,
+           source:  :motivo_envio_politica
 
   enum :estado, {
     pre_alerta_estado:     "pre_alerta_estado",  # PR-D1.b: paquete creado desde pre-alerta antes de llegar a Miami
@@ -193,6 +201,17 @@ class Paquete < ApplicationRecord
   # exige justamente lo que esto borraría.
   before_save :limpiar_retencion_al_apagarla,
               if: -> { will_save_change_to_retener_miami? && !retener_miami? && estado != "retenido" }
+
+  # C18-06 · «Enviado según política». Al marcarla, la explicación al cliente
+  # —los textos de los motivos elegidos más el detalle libre— se compone en
+  # `notas_al_cliente`, que es el canal documentado (*"Etiquetar la INGRESA al
+  # recibir… viaja en el correo de notificación"*) y lo que ve /paquetes. Solo
+  # en la transición, y sin pisar lo que ya hubiera; al desmarcarla se van los
+  # motivos y el detalle, como con la retención.
+  before_save :componer_nota_de_politica,
+              if: -> { enviado_por_politica? && will_save_change_to_enviado_por_politica? }
+  before_save :limpiar_politica_al_apagarla,
+              if: -> { will_save_change_to_enviado_por_politica? && !enviado_por_politica? }
 
   # PR-D1.c: tarifa fija pre-establecida $35 USD + ISV (Yusef 2026-04-29).
   # Editable por el cajero al crear/asignar la recolecta. No hay tabla de
@@ -1200,6 +1219,30 @@ class Paquete < ApplicationRecord
   def limpiar_retencion_al_apagarla
     self.motivo_retencion_ids = []
     self.notas_retencion = nil
+  end
+
+  # La explicación al cliente de por qué se mandó por la política: los textos
+  # de los motivos elegidos, y el detalle libre si lo hay. Por ids y no por la
+  # asociación: en un registro nuevo la colección `through` todavía no existe.
+  def nota_de_politica
+    textos = MotivoEnvioPolitica.where(id: motivo_envio_politica_ids).ordered.pluck(:texto_al_cliente)
+    textos << notas_envio_politica.to_s.strip if notas_envio_politica.present?
+    textos.map(&:strip).reject(&:blank?).join("\n")
+  end
+
+  def componer_nota_de_politica
+    nota = nota_de_politica
+    return if nota.blank?
+
+    actual = notas_al_cliente.to_s.strip
+    return if actual.include?(nota)
+
+    self.notas_al_cliente = [ actual.presence, nota ].compact.join("\n\n")
+  end
+
+  def limpiar_politica_al_apagarla
+    self.motivo_envio_politica_ids = []
+    self.notas_envio_politica = nil
   end
 
   def sync_pre_alerta_estados

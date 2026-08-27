@@ -633,6 +633,7 @@ end %>
           /entrega_personal, el form de /paquetes y las dos de la pre-alerta. %>
       <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-3">
         <%= render RetenerMiamiComponent.new(f: f, motivos: @motivos_retencion) %>
+        <%= render EnviadoPorPoliticaComponent.new(f: f, motivos: @motivos_envio_politica) %>
 
         <div class="flex flex-wrap items-center gap-6 px-1">
           <%# PR-C6.11: se fueron los checkboxes Pre-Alerta y Pre-Factura.

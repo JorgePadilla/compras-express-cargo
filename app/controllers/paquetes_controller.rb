@@ -1,4 +1,5 @@
 class PaquetesController < ApplicationController
+  include NotificaRecibido
   before_action :set_paquete, only: [ :show, :edit, :update, :warehouse_receipt, :etiqueta, :destroy, :eliminar_de_pre_alerta, :reimprimir_etiquetas, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero, :bajar_cajas ]
   before_action :authorize_tracking_actions, only: [ :check_tracking, :search ]
   before_action :authorize_edit, only: [ :edit, :update, :eliminar_de_pre_alerta, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero ]
@@ -70,6 +71,7 @@ class PaquetesController < ApplicationController
       # los consultaba adentro del ERB —la única de las cuatro pantallas que lo
       # hacía— y por eso el partial compartido no los podía recibir.
       @motivos_retencion = MotivoRetencion.activos.ordered
+    @motivos_envio_politica = MotivoEnvioPolitica.activos.ordered
       # PR-5: cuando el digitador re-escanea un tracking existente desde
       # /etiquetar y elige "Cambio de Servicio", llegamos acá con
       # ?cambio_servicio=1. Pre-marcamos el flag en memoria (no se guarda
@@ -148,6 +150,13 @@ class PaquetesController < ApplicationController
     end
 
     if @paquete.save
+      # C18-06: marcar «enviado según política» después —"para corregir
+      # después"— es la misma transición que al recibir: el cliente se entera
+      # igual. Un modelo que compone la nota y nadie la manda sería la listita
+      # que nadie lee.
+      if @paquete.saved_change_to_enviado_por_politica? && @paquete.enviado_por_politica?
+        notificar_recibido(@paquete, pre_alerta_vinculada: false)
+      end
       # Persistir instrucciones de la pre-alerta si el operador las editó
       # desde el form del paquete. Va a la primera PAP vinculada (caso
       # normal: 1 paquete vive en 1 pre-alerta).
@@ -775,6 +784,7 @@ class PaquetesController < ApplicationController
     @carriers = Carrier.where(activo: true).order(:nombre)
     @tarifas_recolecta = TarifaRecolecta.activas.ordered
     @motivos_retencion = MotivoRetencion.activos.ordered
+    @motivos_envio_politica = MotivoEnvioPolitica.activos.ordered
     cargar_supervisores_cajas
     render :show, status: status
   end
@@ -909,6 +919,7 @@ class PaquetesController < ApplicationController
       :notas_internas, :notas_al_cliente, :notas_consolidacion, :notas_retencion,
       :pre_alerta,
       :solicito_cambio_servicio, :retener_miami,
+      :enviado_por_politica, :notas_envio_politica,
       :recolecta_solicitada, :recolecta_monto, :recolecta_moneda, :tarifa_recolecta_id,
       # PR-D7.m: fechas editables manualmente (admin/supervisor). El gate
       # de permisos lo hace `authorize_edit` antes; el callback del modelo
@@ -919,7 +930,7 @@ class PaquetesController < ApplicationController
       # Reasignación de manifiesto desde el form. El callback
       # `sync_dates_from_manifiesto` se encarga de actualizar las fechas.
       :manifiesto_id,
-      motivo_retencion_ids: []
+      motivo_retencion_ids: [], motivo_envio_politica_ids: []
     )
   end
 

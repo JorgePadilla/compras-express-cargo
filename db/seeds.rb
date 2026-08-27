@@ -225,6 +225,23 @@ puts "Seeding motivos_retencion..."
 end
 puts "  ✓ #{MotivoRetencion.count} motivos de retención"
 
+# ── Motivos de envío por política (C18-06) ──
+# Las frases que Yusef leyó del sistema viejo, donde las copian y pegan.
+puts "Seeding motivos_envio_politica..."
+[
+  { nombre: "Sin pre-alerta ni identificación", texto_al_cliente: "Enviado según política de envío por falta de identificación o pre-alerta.", position: 0 },
+  { nombre: "Etiqueta incompleta",             texto_al_cliente: "Enviado según política de envío: la etiqueta llegó incompleta y no identificaba el servicio.", position: 1 },
+  { nombre: "Nombre incompleto",               texto_al_cliente: "Enviado según política de envío: el nombre en la etiqueta estaba incompleto.", position: 2 },
+  { nombre: "Sellado y enviado",               texto_al_cliente: "Sellado y enviado según políticas de envío por falta de identificación.", position: 3 },
+  { nombre: "Desconocido",                     texto_al_cliente: "Paquete recibido sin etiqueta ni identificación; se registró como desconocido y se envió según política.", position: 4 }
+].each do |attrs|
+  MotivoEnvioPolitica.find_or_create_by!(nombre: attrs[:nombre]) do |m|
+    m.texto_al_cliente = attrs[:texto_al_cliente]
+    m.position         = attrs[:position]
+  end
+end
+puts "  ✓ #{MotivoEnvioPolitica.count} motivos de envío por política"
+
 # ── Proveedores (PR-D3.a) ──
 # Yusef 2026-04-30: lista inicial de comercios recurrentes (Walmart,
 # Whole Foods, Amazon, eBay, Target, Sams, Costco, etc.). Drivers
