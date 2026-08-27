@@ -2185,13 +2185,14 @@ CREATE TABLE public.sucursales (
     nombre character varying NOT NULL,
     pais character varying,
     ubicacion character varying,
-    codigo_recepcion_prefix character varying NOT NULL,
+    codigo_recepcion_prefix character varying,
     activo boolean DEFAULT true NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     codigo_ep character varying(3),
     retiro_por_defecto boolean DEFAULT false NOT NULL,
-    recibe_carga boolean DEFAULT false NOT NULL
+    recibe_carga boolean DEFAULT false NOT NULL,
+    recepcion_por_defecto boolean DEFAULT false NOT NULL
 );
 
 
@@ -2511,7 +2512,8 @@ CREATE TABLE public.users (
     sonido_volumen integer DEFAULT 60 NOT NULL,
     pin_digest character varying,
     pin_cambiado_at timestamp(6) without time zone,
-    sonido_error_variante character varying DEFAULT 'grave'::character varying NOT NULL
+    sonido_error_variante character varying DEFAULT 'grave'::character varying NOT NULL,
+    sucursal_id bigint
 );
 
 
@@ -5025,6 +5027,13 @@ CREATE INDEX index_users_on_rol ON public.users USING btree (rol);
 
 
 --
+-- Name: index_users_on_sucursal_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_users_on_sucursal_id ON public.users USING btree (sucursal_id);
+
+
+--
 -- Name: index_users_on_ubicacion; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5831,6 +5840,14 @@ ALTER TABLE ONLY public.nota_credito_items
 
 
 --
+-- Name: users fk_rails_bf7bc7f661; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT fk_rails_bf7bc7f661 FOREIGN KEY (sucursal_id) REFERENCES public.sucursales(id);
+
+
+--
 -- Name: paquetes fk_rails_c06a4ad9ac; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6125,6 +6142,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260827000000'),
 ('20260826220000'),
 ('20260826210000'),
 ('20260826200000'),

@@ -157,8 +157,9 @@ class ClientesController < ApplicationController
   # el peor momento. Hay un test por camino.
   def cargar_catalogos
     # PR-C6.37: las sucursales donde un cliente puede retirar. Las de Miami no
-    # entran: nadie retira alla, es donde se recibe.
-    @sucursales_retiro = Sucursal.activas.where.not(ubicacion: "miami").ordered
+    # entran: nadie retira alla, es donde se recibe. Ni ninguna que reciba
+    # carga (una México de prueba aparecía acá — seguimiento de C18-02).
+    @sucursales_retiro = Sucursal.de_retiro
     # PR-C6.41: los servicios donde se le puede cobrar solo el volumétrico.
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     # PR-C7.15 · A7-26: el megacuadro. Una fila por servicio, con lo que paga

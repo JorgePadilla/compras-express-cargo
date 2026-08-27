@@ -15,7 +15,7 @@
       <%= f.text_field :codigo, required: true, maxlength: 8,
           placeholder: "Ej. MIA, SPS, TGU",
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
-      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Identificador único corto en mayúsculas.</p>
+      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Identificador único corto en mayúsculas. Con él se arma el número de recepción (R<%= @sucursal.codigo.presence || "MIA" %><%= Date.current.strftime("%y%m") %>000001).</p>
     </div>
 
     <div>
@@ -23,14 +23,6 @@
       <%= f.text_field :nombre, required: true,
           placeholder: "Ej. Miami, Zeron SPS, Humuya TGU",
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
-    </div>
-
-    <div>
-      <%= f.label :codigo_recepcion_prefix, "Prefijo de recepción", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
-      <%= f.text_field :codigo_recepcion_prefix, required: true, maxlength: 4,
-          placeholder: "Ej. RM, RS, RH",
-          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono uppercase focus:ring-cec-teal focus:border-cec-teal" %>
-      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Se antepondrá al número de recepción (ej. RM-000001).</p>
     </div>
 
     <%# PR-D3.b: codigo_ep para tracking auto de paquetes ENTREGA PERSONAL %>
@@ -89,6 +81,22 @@
         <span class="block text-xs text-gray-500 dark:text-gray-400">
           Aparece al abrir sesión en Etiquetar y en Entrega Personal. Hoy Miami; el día que
           abran Los Ángeles, Panamá o México, se marca acá y ya está.
+        </span>
+      </span>
+    </div>
+
+    <%# Seguimiento de C18-02 (2026-08-27). Con dos que reciben, el orden por
+        nombre ponía «DF México» antes que «Miami» y le robaba el default al
+        admin de Honduras. Esta es la que queda preseleccionada si el usuario
+        no tiene sucursal propia (/users). Solo puede haber una. %>
+    <div class="md:col-span-2 flex items-start gap-3 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 px-3 py-2">
+      <%= f.check_box :recepcion_por_defecto, class: "mt-0.5 rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+      <span>
+        <%= f.label :recepcion_por_defecto, "Es la sucursal de recepción por defecto",
+              class: "block text-sm font-medium text-gray-700 dark:text-gray-200" %>
+        <span class="block text-xs text-gray-500 dark:text-gray-400">
+          La que queda preseleccionada al abrir sesión en Etiquetar y Entrega Personal cuando el
+          usuario no tiene una sucursal asignada. Solo una: marcar esta desmarca la otra.
         </span>
       </span>
     </div>

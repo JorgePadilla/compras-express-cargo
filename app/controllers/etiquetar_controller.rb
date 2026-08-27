@@ -654,14 +654,10 @@ end
     Sucursal.de_recepcion.to_a
   end
 
-  # Dónde recibe este usuario, cuando no eligió explícitamente: la de su
-  # ubicación si hay una, si no la primera. Yusef: *"ahí vamos a amarrar al
-  # usuario de dónde es"* — con lo que hay (`users.ubicacion` es miami/honduras);
-  # el día que haya dos sucursales de recepción en la misma ubicación va a
-  # hacer falta una sucursal por usuario.
+  # Dónde recibe este usuario cuando no eligió: la regla vive en `Sucursal`
+  # porque /entrega_personal la comparte (seguimiento de C18-02, 2026-08-27).
   def sucursal_recepcion_por_defecto
-    posibles = sucursales_recepcion_posibles
-    posibles.find { |s| s.ubicacion == Current.user&.ubicacion } || posibles.first
+    Sucursal.recepcion_por_defecto_para(Current.user, entre: sucursales_recepcion_posibles)
   end
 
   # No se puede etiquetar sin un tipo de envío de sesión activo.

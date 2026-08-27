@@ -6623,6 +6623,7 @@ atarla.
 | Id | Qué |
 |---|---|
 | `RP-45` | **¿Quién puede dejar una tarea?** Es la pregunta de marzo (*"¿quién asigna las tareas?"*) que quedó para *"reunión directa"* y nunca se cerró. Respuesta provisoria de Jorge: **la deja cualquiera del personal que las ejecuta** (Miami, caja, entrega); editar y borrar solo supervisores y SAC; el cliente nunca. Si Yusef dice otra cosa —o cuando llegue el Excel de roles (`RP-35`)—, el cambio es una constante (`CREACION_ROLES`), un helper y un test. Y un síntoma para que lo reconozca: **el jefe de SAC (`supervisor_sac`) hoy no ve la cola de SAC** — no está en ninguna lista de tareas ni en la segmentación por área |
+| `RP-46` | **Cuando se reciba fuera de Miami.** DF México ya se puede recibir (`C18-02`, seguimiento). Tres cosas siguen atadas a Miami y se decidió no tocarlas sin preguntar: (a) el estado se llama **«Recibido en Miami»** (`recibido_miami`, en la ficha, el listado y el timeline) aunque el paquete se haya recibido en México — ¿pasa a «Recibido en bodega» con el nombre de la sucursal, o Miami es la palabra que usan para "ya lo tenemos"?; (b) el **flete México** (`RP-13a`: $5 por libra o volumétrica + ISV) hoy es un cargo que se agrega a mano en la pre-factura — ¿debería salir solo cuando el origen es México, como el escalonado sale solo para USA?; (c) los **manifiestos** hoy no llevan sucursal de origen (todos numeran `MA-…`) — ¿un manifiesto por sucursal que recibe, con su propio número?
 
 ---
 
@@ -6688,9 +6689,37 @@ Panamá, México — se crean y se marcan desde `/sucursales`, sin tocar código
 El chooser de `/etiquetar` y el select de `/entrega_personal` salen del mismo
 scope (`Sucursal.de_recepcion`), y EP además pide código EP. Si hay una sola,
 no se pregunta; si hay varias, queda preseleccionada la de la ubicación del
-usuario. Un id que no esté en la lista cae al default. Lo que quedó como deuda:
+usuario. Un id que no esté en la lista cae al default. ~~Lo que quedó como deuda:
 `codigo_recepcion_prefix` sigue siendo obligatorio en el form aunque el número
-lo arme `Sucursal#codigo` desde `RP-17`.
+lo arme `Sucursal#codigo` desde `RP-17`.~~ (saldado abajo)
+
+**Seguimiento 2026-08-27 (PR-C7.52).** Jorge, mirando el chooser: *"aquí
+podemos seleccionar 'Recibiendo en Miami'; Miami es el default pero podría ser
+DF México, ¿tenemos cómo ingresarlo?"*. Ingresarla ya se podía; lo que no había
+era una regla para el default: con dos que reciben, un usuario de Honduras —el
+admin de Yusef— no coincidía con ninguna y caía a la primera **por nombre**, y
+«DF México» ordena antes que «Miami». Es lo de *"ahí vamos a amarrar al usuario
+de dónde es"*.
+
+> **Decisión de Jorge (2026-08-27):** sucursal por usuario **y** «recepción por
+> defecto» en `/sucursales`; DF México queda sembrada como prueba; el orden por
+> nombre nunca decide.
+
+**La regla del default, en cuatro escalones** (`Sucursal.recepcion_por_defecto_para`,
+la comparten `/etiquetar` y `/entrega_personal`, que antes ni preseleccionaba):
+la **sucursal donde trabaja** el usuario (campo nuevo en `/users`, opcional) si
+recibe carga → la marcada **«recepción por defecto»** (checkbox en `/sucursales`,
+solo una: marcar una desmarca la otra; Miami quedó marcada con los datos) → la
+de la ubicación del usuario → la primera. De paso: el prefijo de recepción dejó
+de pedirse (el número es `R<código>AAMM000001`, y el índice de `/sucursales` lo
+muestra así, con badges de «Recibe carga» / «Recepción por defecto» / «Retiro
+por defecto»); una sucursal que recibe carga ya no se ofrece como lugar de
+**retiro** del cliente; el correo de recibido dice *"bodega de DF México"*
+cuando corresponde (y Miami para los viejos); «DF México» (`DFM`, EP `SDF`,
+país México) está en los seeds — se desactiva desde `/sucursales` cuando
+estorbe.
+
+**Lo que sigue diciendo Miami a propósito** —es pregunta, no bug— va en `RP-46`.
 
 ### C18-03 · «Sale algo escrito alrededor» de la etiqueta — 🧹 **no es código**
 

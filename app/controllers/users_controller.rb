@@ -1,6 +1,7 @@
 class UsersController < ApplicationController
   before_action :require_admin
   before_action :set_user, only: [ :show, :edit, :update ]
+  before_action :cargar_sucursales, only: [ :new, :create, :edit, :update ]
 
   def index
     @users = User.order(created_at: :desc)
@@ -52,10 +53,15 @@ class UsersController < ApplicationController
     @user = User.find(params[:id])
   end
 
+  # Todas las activas, no solo las que reciben: un cajero trabaja en SPS.
+  def cargar_sucursales
+    @sucursales = Sucursal.activas.ordered
+  end
+
   def user_params
     params.require(:user).permit(
       :nombre, :iniciales, :email_address, :password, :password_confirmation,
-      :rol, :ubicacion, :activo,
+      :rol, :ubicacion, :activo, :sucursal_id,
       # PR-13.c: el admin asigna el PIN inicial; el supervisor lo cambia desde
       # /mi_pin. Ver el comentario en `User#pin_sin_cambiar?`.
       :pin, :pin_confirmation

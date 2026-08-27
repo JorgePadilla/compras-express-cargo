@@ -61,7 +61,7 @@ class ServiciosExtraPropuesta2026
     "AJUSTE" => "valor 1 sin moneda ni definicion de que ajusta",
     "ENTREGA LOCAL" => "valor 1 sin moneda; el titulo dice L1 pero no hay nota que lo confirme",
     "CONSOLIDANDO EN MIAMI" => "valor 1 sin moneda",
-    "FLETE MEXICO" => "valor 5 / minimo 6 sin moneda",
+    "FLETE MEXICO" => "RP-13a lo cerro: $5 por libra o libra volumetrica + ISV, sin minimo; lo carga el equipo por /servicios_extra",
     "FLETE" => "es el flete del paquete, que vive en `Tarifa` — no es un servicio extra",
     "PRODUCTO EJEMPLO / EN DOLARES" => "datos de prueba, Jorge ya lo confirmo"
   }.freeze

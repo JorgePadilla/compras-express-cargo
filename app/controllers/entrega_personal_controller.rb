@@ -16,11 +16,13 @@ class EntregaPersonalController < ApplicationController
   # callback que ya existe (PR-D3.b).
 
   def new
-    @paquete = Paquete.new
+    @sucursales_recepcion = sucursales_de_recepcion_con_ep
+    # La misma preselección que /etiquetar (gemelas): la sucursal del usuario,
+    # si no la de recepción por defecto. Antes el select nacía en blanco.
+    @paquete = Paquete.new(sucursal_recepcion: Sucursal.recepcion_por_defecto_para(Current.user, entre: @sucursales_recepcion))
     @paquetes_hoy = paquetes_ep_hoy_count
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     @proveedores_ep = Proveedor.where(tipo: "entrega_personal").activos.ordered
-    @sucursales_recepcion = sucursales_de_recepcion_con_ep
     @motivos_retencion = MotivoRetencion.activos.ordered
     @motivos_envio_politica = MotivoEnvioPolitica.activos.ordered
     @tarifas_recolecta = TarifaRecolecta.activas.ordered

@@ -206,7 +206,51 @@ class EtiquetarSucursalRecepcionTest < ActionDispatch::IntegrationTest
            "el número salió de dónde retira en vez de dónde se recibió"
   end
 
+  # ── Seguimiento de C18-02 (2026-08-27) ──────────────────────────────────
+  # Jorge: *"Miami es el default pero podría ser DF México"*. Con dos que
+  # reciben, `posibles.first` era el orden por nombre: «DF México» antes que
+  # «Miami», y el admin de Honduras (Yusef) la veía preseleccionada.
+
+  test "el admin de Honduras con Miami y DF Mexico ve Miami preseleccionada, no la primera por nombre" do
+    mexico = crear_df_mexico
+    entrar users(:admin)
+
+    get etiquetar_url
+
+    assert_match(/<select[^>]*name="sucursal_recepcion_id"/, response.body)
+    assert_match(/<option selected="selected" value="#{@miami.id}"/, response.body,
+                 "«DF México» ordena antes que «Miami» y le robaba el default")
+    assert_no_match(/<option selected="selected" value="#{mexico.id}"/, response.body)
+  end
+
+  test "un usuario con DF Mexico asignada la ve preseleccionada aunque Miami sea la de por defecto" do
+    mexico = crear_df_mexico
+    @user.update!(sucursal: mexico)
+
+    get etiquetar_url
+
+    assert_match(/<option selected="selected" value="#{mexico.id}"/, response.body)
+  end
+
+  test "un usuario cuya sucursal no recibe carga cae a la de por defecto" do
+    crear_df_mexico
+    @user.update!(sucursal: sucursales(:zeron_sps))
+
+    get etiquetar_url
+
+    assert_match(/<option selected="selected" value="#{@miami.id}"/, response.body)
+  end
+
   private
+
+  def crear_df_mexico
+    Sucursal.create!(codigo: "DFM", codigo_ep: "SDF", nombre: "DF México", pais: "México",
+                     ubicacion: "otros", activo: true, recibe_carga: true)
+  end
+
+  def entrar(user)
+    post session_url, params: { email_address: user.email_address, password: "password123" }
+  end
 
   def iniciar_sesion_etiquetado
     post iniciar_sesion_etiquetar_url,

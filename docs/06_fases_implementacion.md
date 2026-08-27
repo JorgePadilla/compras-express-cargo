@@ -622,6 +622,7 @@ Preferencias por usuario: `users.sonido_habilitado` + `users.sonido_volumen` (0-
 ### Deuda técnica detectada, NO saldada aquí
 
 - `paquetes.notas_al_cliente` ~~**nunca llega al cliente**~~ — desde `PR-C7.51` (`C18-06`) viaja en el correo de recibido (`PreAlertaMailer#paquete_recibido`, html y texto), que se manda cuando hay pre-alerta o «enviado según política». Sigue sin ir en PDF ni en el portal (no hay detalle de paquete): es lo que falta.
+- **`Manifiesto#sucursal_origen` nunca se asigna** (ningún controller lo setea): la numeración anual `M<letra><año><000001>` de PR-D1.d está muerta y todos los manifiestos caen al formato legacy `MA-…`. Y el día que se use, dos sucursales con la misma inicial (MIA y una MEX) chocarían en `index_manifiestos_on_numero`. Detectado en el seguimiento de `C18-02` (2026-08-27); queda en `RP-46`.
 - `db/schema.rb` es un archivo muerto: `config/application.rb:24` fija `schema_format = :sql`, así que el schema autoritativo es **`db/structure.sql`**. El `schema.rb` quedó congelado en abril y confunde a quien lo lea; conviene borrarlo.
 - `test/system/` está vacío, así que nada del comportamiento Stimulus (F-keys, sonidos, modales, el checkbox de la franja) tiene cobertura automatizada.
 - `rubocop` reporta ~136 ofensas preexistentes en el repo y no corre en CI (el workflow solo ejecuta `rails test`).

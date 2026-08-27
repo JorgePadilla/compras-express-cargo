@@ -14,6 +14,10 @@ class User < ApplicationRecord
   # aporta nada al audit log y reduce la superficie ante una brecha.
   has_paper_trail skip: %i[password_digest pin_digest]
   has_many :sessions, dependent: :destroy
+  # Seguimiento de C18-02: la sucursal donde trabaja. Yusef: *"ahí vamos a
+  # amarrar al usuario de dónde es"*. Opcional; si recibe carga, /etiquetar y
+  # /entrega_personal la preseleccionan (`Sucursal.recepcion_por_defecto_para`).
+  belongs_to :sucursal, optional: true
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
 
