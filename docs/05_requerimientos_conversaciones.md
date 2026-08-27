@@ -6789,6 +6789,17 @@ corregirlo después desde `/paquetes` también avisa. Sin correo del cliente
 la nota queda igual en la ficha. El portal no tiene detalle de paquete: es lo
 que sigue.
 
+**Seguimiento 2026-08-27 (PR-C7.53).** Jorge: *"pongamos unas seeds ahí con dos
+ejemplos"*. Los seeds quedan con los **dos** motivos que Yusef leyó textuales
+del sistema viejo («Sin pre-alerta ni identificación» → *Enviado según política
+de envío por falta de identificación o pre-alerta*; «Sellado y enviado» →
+*Sellado y enviado según políticas de envío por falta de identificación*). Lo
+demás que mencionó —etiqueta incompleta, «solo se lee Juan», desconocido— es el
+contenido de cada caso, no una frase estándar: va en el detalle libre, o lo
+agregan al catálogo desde `/motivos_envio_politica`. En staging el catálogo
+nació vacío porque el deploy solo migra (`render.yaml`), nunca siembra: hay que
+correr los seeds una vez.
+
 ### Dudosos del transcript
 
 - *"Estamos en pre-alerta y hay que cambiar en cliente la parte donde está, si
