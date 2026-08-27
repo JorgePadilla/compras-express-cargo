@@ -76,6 +76,22 @@
         </span>
       </span>
     </div>
+
+    <%# C18-02 · Dónde se recibe carga, que no es dónde se entrega. Yusef:
+        *"debería ser las sucursales donde recibimos carga… en este momento
+        solo es Miami; futuramente Los Ángeles, Panamá, México"*. Es lo que
+        /etiquetar y /entrega_personal ofrecen al abrir sesión. %>
+    <div class="md:col-span-2 flex items-start gap-3 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 px-3 py-2">
+      <%= f.check_box :recibe_carga, class: "mt-0.5 rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+      <span>
+        <%= f.label :recibe_carga, "Acá se recibe carga",
+              class: "block text-sm font-medium text-gray-700 dark:text-gray-200" %>
+        <span class="block text-xs text-gray-500 dark:text-gray-400">
+          Aparece al abrir sesión en Etiquetar y en Entrega Personal. Hoy Miami; el día que
+          abran Los Ángeles, Panamá o México, se marca acá y ya está.
+        </span>
+      </span>
+    </div>
   </div>
 
   <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">

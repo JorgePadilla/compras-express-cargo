@@ -74,7 +74,10 @@ class EtiquetarController < ApplicationController
     tipo = TipoEnvio.activos.find_by(id: params[:tipo_envio_id])
     return redirect_to(etiquetar_path, alert: "Seleccioná un tipo de envío válido.") if tipo.nil?
 
-    sucursal = Sucursal.find_by(id: params[:sucursal_recepcion_id]) || sucursal_recepcion_por_defecto
+    # Solo una de las ofrecidas: un id de otra sucursal —inactiva, o una que no
+    # recibe— cae al default en vez de aceptarse.
+    sucursal = sucursales_recepcion_posibles.find { |s| s.id == params[:sucursal_recepcion_id].to_i } ||
+               sucursal_recepcion_por_defecto
     if sucursal.nil?
       return redirect_to etiquetar_path,
                          alert: "Seleccioná en qué sucursal estás recibiendo."
@@ -625,25 +628,29 @@ end
     @sucursal_recepcion_sesion ||= sucursal_recepcion_por_defecto if @tipo_envio_sesion
   end
 
-  # Las sucursales que pueden emitir número de recepción — o sea, las que
-  # tienen prefijo (`RMI`, `RZE`, `RHU`, `RSM`). Una sin prefijo no puede
-  # numerar nada, así que ofrecerla sería ofrecer un paquete sin número.
+  # Las sucursales donde se **recibe** carga (`Sucursal.de_recepcion`, el
+  # checkbox de /sucursales). Hoy es Miami sola y la vista no pregunta nada; el
+  # día que abran Panamá o México aparece el select sin tocar código.
   #
-  # Se acotan a la ubicación del usuario: quien recibe está parado en un
-  # lugar. Hoy `/etiquetar` es solo para Miami, así que queda una sola y la
-  # vista no pregunta nada; el día que abran Panamá o China aparece el select
-  # sin tocar código.
+  # C18-02: esto filtraba por la **ubicación del usuario** —"quien recibe está
+  # parado en un lugar"— y el admin de Yusef está en Honduras: le ofrecía San
+  # Pedro, Tegucigalpa y San Manuel y le escondía Miami. *"¿Dónde se está
+  # recibiendo el paquete? No es a dónde va… el que está oculto es el que va a
+  # recibir."* El número de recepción de su etiqueta salió `RSPS…` por lo mismo.
+  # El guard del prefijo se fue con él: la columna es `NOT NULL` y el número
+  # sale de `Sucursal#codigo` desde RP-17.
   def sucursales_recepcion_posibles
-    scope = Sucursal.where.not(codigo_recepcion_prefix: [ nil, "" ])
-    por_ubicacion = Current.user&.ubicacion.present? ? scope.where(ubicacion: Current.user.ubicacion) : scope
-    # Si la ubicación del usuario no matchea ninguna, mejor ofrecer todas que
-    # dejarlo sin poder abrir sesión.
-    (por_ubicacion.any? ? por_ubicacion : scope).order(:id).to_a
+    Sucursal.de_recepcion.to_a
   end
 
-  # Dónde recibe este usuario, cuando no eligió explícitamente.
+  # Dónde recibe este usuario, cuando no eligió explícitamente: la de su
+  # ubicación si hay una, si no la primera. Yusef: *"ahí vamos a amarrar al
+  # usuario de dónde es"* — con lo que hay (`users.ubicacion` es miami/honduras);
+  # el día que haya dos sucursales de recepción en la misma ubicación va a
+  # hacer falta una sucursal por usuario.
   def sucursal_recepcion_por_defecto
-    sucursales_recepcion_posibles.first
+    posibles = sucursales_recepcion_posibles
+    posibles.find { |s| s.ubicacion == Current.user&.ubicacion } || posibles.first
   end
 
   # No se puede etiquetar sin un tipo de envío de sesión activo.

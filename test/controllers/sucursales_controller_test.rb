@@ -73,4 +73,14 @@ class SucursalesControllerTest < ActionDispatch::IntegrationTest
     end
     assert_redirected_to root_path
   end
+
+  test "el checkbox de recibe carga se guarda" do
+    # C18-02: es dato, no regla escondida. Yusef crea México y la marca.
+    post session_url, params: { email_address: users(:admin).email_address, password: "password123" }
+
+    post sucursales_url, params: { sucursal: { codigo: "MEX", nombre: "México", pais: "México", ubicacion: "otros",
+                                               codigo_recepcion_prefix: "RMX", activo: "1", recibe_carga: "1" } }
+
+    assert_predicate Sucursal.find_by!(codigo: "MEX"), :recibe_carga?
+  end
 end

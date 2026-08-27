@@ -109,7 +109,7 @@ class WrDespuesDeLaEtiquetaTest < ApplicationSystemTestCase
     select Proveedor.where(tipo: "entrega_personal").activos.ordered.first.nombre,
            from: "paquete[proveedor_id]"
     # Sin la sucursal de Miami no hay `codigo_ep` y el tracking EP no se genera.
-    select Sucursal.activas.where(ubicacion: "miami").where.not(codigo_ep: nil).first.nombre,
+    select Sucursal.de_recepcion.con_codigo_ep.first.nombre,
            from: "paquete[sucursal_recepcion_id]"
     select TipoEnvio.activos.order(:nombre).first.nombre, from: "paquete[tipo_envio_id]"
     fill_in "paquete[descripcion]", with: "Dos pares de zapatos"
