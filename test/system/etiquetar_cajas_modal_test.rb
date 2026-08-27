@@ -128,6 +128,26 @@ class EtiquetarCajasModalTest < ApplicationSystemTestCase
     assert_no_selector "[data-etiquetar-target='etiquetasModal'][open]", wait: 2
   end
 
+  test "con peso tecleado y sin Agregar, F9 no pregunta y guarda una sola caja con ese peso" do
+    # C18-05 · Yusef, 2026-08-26: "yo puse que eran dos cajas… y me tiró
+    # siempre la pregunta". La pantalla dice que la Caja 1 se guarda con lo de
+    # arriba aunque no le des «Agregar», pero el modal contaba solo las filas.
+    # Las dos mitades: no pregunta, Y la caja pendiente se agrega al enviar.
+    tracking = "1Z999SINAGREGAR1"
+    find("#paquete_tracking").set(tracking)
+    find("[data-etiquetar-target='clienteInput']").set("Juan")
+    find("[data-etiquetar-target='clienteDropdown'] *", match: :first, wait: 5).click
+    find("[data-caja-campo='peso']").set(7.5)
+    assert_selector ".caja-fila", count: 0
+
+    first("button", text: "Guardar + Imprimir").click
+
+    assert_no_selector "[data-etiquetar-target='etiquetasModal'][open]", wait: 2
+    assert_text "guardado exitosamente", wait: 10
+    assert_equal 1, Paquete.where(tracking: tracking).count
+    assert_equal 7.5, Paquete.find_by(tracking: tracking).peso.to_f
+  end
+
   test "actualizando, el modal arranca en las cajas que ya tiene" do
     # Con el 1 de siempre, abrir un envío de tres cajas y darle Enter las bajaba
     # a una — y `ajustar_split!` borra las sobrantes sin preguntar: el PIN de

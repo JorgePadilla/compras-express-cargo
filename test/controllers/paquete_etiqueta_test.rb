@@ -37,15 +37,16 @@ class PaqueteEtiquetaTest < ActionDispatch::IntegrationTest
 
   # C16-07 · Yusef, con las etiquetas de un retenido en la mano: "y sigue
   # saliendo el CER aquí. Mirá, sería así: retenido" · "el de retener me
-  # dijiste RT, me va". Jorge: en lugar del servicio, RTE.
-  test "un retenido en Miami imprime RTE donde iba el servicio" do
+  # dijiste RT, me va". Jorge: en lugar del servicio, las primeras tres letras
+  # de RETENIDO. Salió RTE y Yusef lo corrigió al día siguiente (C18-01).
+  test "un retenido en Miami imprime RET donde iba el servicio" do
     @paquete.update!(retener_miami: true, notas_retencion: "Caja abierta")
 
     get etiqueta_paquete_url(@paquete)
 
     servicio = response.body[/data-campo="tipo-envio"[^>]*>\s*([A-Z]{3})\s*</, 1]
-    assert_equal "RTE", servicio
-    assert_no_match(/>\s*CER\s*</, response.body, "el servicio no puede salir al lado: RTE lo reemplaza")
+    assert_equal "RET", servicio
+    assert_no_match(/>\s*CER\s*</, response.body, "el servicio no puede salir al lado: RET lo reemplaza")
   end
 
   test "sin retencion sigue saliendo el servicio" do
@@ -58,7 +59,7 @@ class PaqueteEtiquetaTest < ActionDispatch::IntegrationTest
     assert_equal "CER", servicio
   end
 
-  test "con hermanas=1 todas las cajas del retenido dicen RTE" do
+  test "con hermanas=1 todas las cajas del retenido dicen RET" do
     cajas = Paquete.crear_split!(
       attrs: { tracking: "1ZRTEHERMANAS001", cliente: @paquete.cliente, tipo_envio: tipo_envios(:cer),
                descripcion: "Dos cajas retenidas", estado: "recibido_miami", user: users(:digitador),
@@ -69,7 +70,7 @@ class PaqueteEtiquetaTest < ActionDispatch::IntegrationTest
     get etiqueta_paquete_url(cajas.first, hermanas: 1)
 
     servicios = response.body.scan(/data-campo="tipo-envio"[^>]*>\s*([A-Z]{3})\s*</).flatten
-    assert_equal %w[RTE RTE], servicios
+    assert_equal %w[RET RET], servicios
   end
 
   test "no lleva terminos y condiciones ni precios" do

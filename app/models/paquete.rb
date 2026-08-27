@@ -491,7 +491,11 @@ class Paquete < ApplicationRecord
   }
 
   before_validation :generate_guia, on: :create, if: -> { guia.blank? }
-  before_validation :generate_numero_recepcion, on: :create, if: -> { numero_recepcion.blank? && sucursal_del_numero.present? }
+  # Al crear, y también al **recibirse** un paquete ya grabado — ver
+  # `debe_generar_numero_recepcion?`. Una sola registración a propósito: Rails
+  # deduplica los callbacks por método, y registrar `generate_numero_recepcion`
+  # dos veces (`on: :create` y `on: :update`) deja viva solo la segunda.
+  before_validation :generate_numero_recepcion, if: :debe_generar_numero_recepcion?
   # Trigger si: (a) marcó recolecta y aún no hay monto, o (b) cambió la
   # tarifa elegida (el cajero corrige zona) → re-sincronizamos monto+moneda.
   before_validation :default_recolecta_monto,
@@ -505,6 +509,12 @@ class Paquete < ApplicationRecord
   # recolecta_solicitada + tracking blank + proveedor (comercio) presente.
   before_validation :generate_rc_tracking, on: :create, if: :rc_tracking_required?
   after_create :ensure_warehouse_receipt, if: -> { warehouse_receipt_id.nil? && numero_recepcion.present? && cliente_id.present? }
+  # C18-04: y el Warehouse Receipt cuando el número recién se acuñó en un
+  # update (el caso de arriba). Acotado al cambio del número a propósito: un
+  # `after_save` ancho dispararía sobre filas viejas cuyo número es el tracking
+  # (`numero_recepcion_visible`) y acuñaría un WR con un tracking de courier.
+  after_update :ensure_warehouse_receipt,
+               if: -> { saved_change_to_numero_recepcion? && warehouse_receipt_id.nil? && numero_recepcion.present? && cliente_id.present? }
   before_save :set_fecha_recibido, if: -> { fecha_recibido_miami.blank? && new_record? }
   before_save :calculate_peso_volumetrico
   before_save :calculate_peso_cobrar
@@ -913,6 +923,39 @@ class Paquete < ApplicationRecord
   #
   # Devuelve `{ reconciliados:, saltados: }`, donde `saltados` dice por qué.
   # Es idempotente: en la segunda pasada no encuentra nada.
+  # C18-04, la limpieza: los paquetes que ya se recibieron sin número —los
+  # esperados recibidos con una etiqueta, y los que pasaron por actualizar—.
+  # Se guardan uno por uno para que corran los callbacks de arriba (número y
+  # WR). Una fila vieja puede no pasar las validaciones de hoy (tracking con
+  # espacios, sin descripción…): ahí se acuña el número a mano y se guarda sin
+  # validar —`save!(validate: false)` **no** corre `before_validation`, por eso
+  # el `send`— y el `after_update` sigue disparando el WR. Los recibidos sin
+  # sucursal de recepción no se tocan: no hay de dónde numerar, se informan.
+  #
+  # Devuelve `{ numerados:, saltados:, sin_sucursal: }`. Idempotente.
+  def self.numerar_recibidos_sin_numero!
+    resultado = { numerados: [], saltados: [], sin_sucursal: [] }
+
+    sin_numero = where(numero_recepcion: nil).where.not(estado: NO_SON_CAJAS)
+    sin_numero.where(sucursal_recepcion_id: nil).find_each do |p|
+      resultado[:sin_sucursal] << [ p.id, p.tracking ]
+    end
+
+    sin_numero.where.not(sucursal_recepcion_id: nil).find_each do |paquete|
+      begin
+        paquete.save!
+      rescue ActiveRecord::RecordInvalid
+        paquete.send(:generate_numero_recepcion)
+        paquete.save!(validate: false)
+      end
+      resultado[:numerados] << [ paquete.id, paquete.tracking, paquete.numero_recepcion ]
+    rescue StandardError => e
+      resultado[:saltados] << [ paquete.id, "#{e.class}: #{e.message}" ]
+    end
+
+    resultado
+  end
+
   def self.reconciliar_fantasmas!
     resultado = { reconciliados: [], saltados: [] }
 
@@ -1211,6 +1254,22 @@ class Paquete < ApplicationRecord
   # El unique index en paquetes.numero_recepcion es la salvaguarda final;
   # el retry en `save` cubre colisiones con data legacy que no pasó por
   # el counter.
+  # Al crear: si hay de dónde numerar (recepción, o retiro como fallback
+  # legacy). Al actualizar, solo al **recibirse**: C18-04 — el esperado de una
+  # pre-alerta nace sin ninguna sucursal, y cuando /etiquetar lo recibe con UNA
+  # etiqueta (`create_single`) lo reusa ya persistido, así que el `save` es un
+  # update y el número nunca se generaba: salía sin número y la etiqueta sin
+  # código de barras. Con dos o más etiquetas `crear_split!` lo asigna a mano,
+  # por eso esas sí salían. Lo mismo le pasaba a lo que pasara por
+  # `EtiquetarController#update`. Un esperado que alguien edite desde /paquetes
+  # con la sucursal de retiro **no** se numera: no llegó.
+  def debe_generar_numero_recepcion?
+    return false if numero_recepcion.present?
+    return sucursal_del_numero.present? if new_record?
+
+    sucursal_recepcion.present? && NO_SON_CAJAS.exclude?(estado)
+  end
+
   def generate_numero_recepcion
     origen = sucursal_del_numero
     return if origen.nil?

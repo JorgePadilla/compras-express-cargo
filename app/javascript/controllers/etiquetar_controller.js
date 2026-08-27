@@ -988,7 +988,22 @@ cerrarQuitarCobro() {
   // lección de `PR-C6.31` es que dos fuentes para el mismo número terminan
   // discrepando.
   _cajasCargadas() {
-    return this.formTarget.querySelectorAll(".caja-fila").length
+    const filas = this.formTarget.querySelectorAll(".caja-fila").length
+    return filas + this._cajaTecleadaSinAgregar()
+  }
+
+  // C18-05 · Yusef, 2026-08-26: *"yo puse que eran dos cajas… y me tiró siempre
+  // la pregunta"*. Tecleó peso y medidas arriba sin darle «Agregar» —la
+  // pantalla misma le dice que no hace falta— y el repetidor agrega esa caja
+  // recién al enviar (`_agregarPendiente`), después de que acá ya se decidió
+  // preguntar. Si hay peso tecleado, esa caja cuenta. Solo al dar de alta: al
+  // actualizar el campo viene pre-llenado con el peso del paquete, y ahí el
+  // modal se queda a propósito (es donde se cambia la cantidad).
+  _cajaTecleadaSinAgregar() {
+    if (this.hasActualizandoIdValue && this.actualizandoIdValue) return 0
+
+    const captura = this.formTarget.querySelector("[data-caja-campo='peso']")
+    return captura && captura.value.trim() !== "" ? 1 : 0
   }
 
   // Enter confirma; Escape cancela. Ojo: acá Enter **sí** actúa, al revés que
