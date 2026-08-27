@@ -7,6 +7,7 @@ miami:
   codigo_recepcion_prefix: RMI
   activo: true
   recibe_carga: true
+  recepcion_por_defecto: true
 
 zeron_sps:
   codigo: SPS

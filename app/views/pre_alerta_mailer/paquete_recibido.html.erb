@@ -1,6 +1,6 @@
 <h2>Hola <%= @cliente.nombre %>,</h2>
 
-<p>Tu paquete con tracking <strong><%= @paquete.tracking %></strong> ha sido recibido en nuestra bodega de Miami.</p>
+<p>Tu paquete con tracking <strong><%= @paquete.tracking %></strong> ha sido recibido en nuestra bodega de <%= @sucursal %>.</p>
 
 <% if @nota %>
   <p><strong>Nota sobre este paquete:</strong></p>

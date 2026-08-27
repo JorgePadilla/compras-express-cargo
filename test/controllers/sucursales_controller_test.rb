@@ -16,7 +16,7 @@ class SucursalesControllerTest < ActionDispatch::IntegrationTest
     assert_difference("Sucursal.count", 1) do
       post sucursales_url, params: { sucursal: {
         codigo: "LAX", nombre: "Los Angeles", pais: "USA",
-        ubicacion: "miami", codigo_recepcion_prefix: "RLA", activo: true
+        ubicacion: "miami", activo: true
       } }
     end
     assert_redirected_to sucursales_url
@@ -46,7 +46,7 @@ class SucursalesControllerTest < ActionDispatch::IntegrationTest
     login_as users(:cajero)
     assert_no_difference("Sucursal.count") do
       post sucursales_url, params: { sucursal: {
-        codigo: "ZZZ", nombre: "Hack", codigo_recepcion_prefix: "RZ"
+        codigo: "ZZZ", nombre: "Hack"
       } }
     end
     assert_redirected_to root_path
@@ -74,12 +74,31 @@ class SucursalesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
   end
 
+  test "se crea sin prefijo de recepcion, y marcar recepcion por defecto desmarca la otra" do
+    # Seguimiento de C18-02: crear DF México no puede exigir inventar un prefijo
+    # que nadie lee desde RP-17; y solo una es la de por defecto.
+    login_as users(:admin)
+    assert_difference("Sucursal.count") do
+      post sucursales_url, params: { sucursal: { codigo: "DFM", nombre: "DF México", pais: "México", ubicacion: "otros",
+                                                 activo: "1", recibe_carga: "1", recepcion_por_defecto: "1" } }
+    end
+    mexico = Sucursal.find_by!(codigo: "DFM")
+    assert_nil mexico.codigo_recepcion_prefix
+    assert_predicate mexico, :recepcion_por_defecto?
+    assert_not sucursales(:miami).reload.recepcion_por_defecto?
+
+    get sucursales_url
+    assert_match "Recepción por defecto", response.body
+    assert_match "Recibe carga", response.body
+    assert_match "RDFM#{Date.current.strftime('%y%m')}000001", response.body
+    assert_no_match(/RMI-XXXXXX/, response.body)
+  end
+
   test "el checkbox de recibe carga se guarda" do
     # C18-02: es dato, no regla escondida. Yusef crea México y la marca.
     post session_url, params: { email_address: users(:admin).email_address, password: "password123" }
 
-    post sucursales_url, params: { sucursal: { codigo: "MEX", nombre: "México", pais: "México", ubicacion: "otros",
-                                               codigo_recepcion_prefix: "RMX", activo: "1", recibe_carga: "1" } }
+    post sucursales_url, params: { sucursal: { codigo: "MEX", nombre: "México", pais: "México", ubicacion: "otros", activo: "1", recibe_carga: "1" } }
 
     assert_predicate Sucursal.find_by!(codigo: "MEX"), :recibe_carga?
   end

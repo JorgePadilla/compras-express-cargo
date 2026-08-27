@@ -7,6 +7,19 @@ class ClientesControllerTest < ActionDispatch::IntegrationTest
     @cliente = clientes(:juan)
   end
 
+  test "una sucursal que recibe carga no se ofrece como sucursal de retiro" do
+    # Seguimiento de C18-02: la lista filtraba `ubicacion != miami`, y una
+    # México de prueba (`otros`, recibe carga) salía como lugar de retiro.
+    mexico = Sucursal.create!(codigo: "DFM", nombre: "DF México", pais: "México", ubicacion: "otros",
+                              activo: true, recibe_carga: true)
+
+    get new_cliente_url
+
+    assert_select "select[name='cliente[sucursal_retiro_id]'] option[value=?]", mexico.id.to_s, count: 0
+    assert_select "select[name='cliente[sucursal_retiro_id]'] option[value=?]", sucursales(:zeron_sps).id.to_s
+    assert_select "select[name='cliente[sucursal_retiro_id]'] option[value=?]", sucursales(:miami).id.to_s, count: 0
+  end
+
   test "should get index" do
     get clientes_url
     assert_response :success

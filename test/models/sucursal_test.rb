@@ -1,12 +1,14 @@
 require "test_helper"
 
 class SucursalTest < ActiveSupport::TestCase
-  test "requiere codigo, nombre y codigo_recepcion_prefix" do
+  test "requiere codigo y nombre; el prefijo de recepcion ya no (RP-17)" do
+    # Seguimiento de C18-02: el número sale de `codigo`; crear DF México no
+    # puede exigir inventar un prefijo que nadie lee.
     s = Sucursal.new
     assert_not s.valid?
     assert_includes s.errors.attribute_names, :codigo
     assert_includes s.errors.attribute_names, :nombre
-    assert_includes s.errors.attribute_names, :codigo_recepcion_prefix
+    assert_not_includes s.errors.attribute_names, :codigo_recepcion_prefix
   end
 
   test "codigo se normaliza a mayusculas" do

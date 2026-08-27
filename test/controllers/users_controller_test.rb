@@ -8,6 +8,21 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
 
   # --- Admin access ---
 
+  test "el admin asigna la sucursal donde trabaja, y la ficha la muestra" do
+    # Seguimiento de C18-02. Yusef: "ahí vamos a amarrar al usuario de dónde es".
+    mexico = Sucursal.create!(codigo: "DFM", nombre: "DF México", pais: "México", ubicacion: "otros",
+                              activo: true, recibe_carga: true)
+
+    patch user_url(users(:digitador)), params: { user: { sucursal_id: mexico.id } }
+    assert_equal mexico, users(:digitador).reload.sucursal
+
+    get user_url(users(:digitador))
+    assert_match "DF México", response.body
+
+    get edit_user_url(users(:digitador))
+    assert_select "select[name='user[sucursal_id]'] option[selected][value=?]", mexico.id.to_s
+  end
+
   test "admin should get index" do
     get users_url
     assert_response :success

@@ -33,6 +33,19 @@ class EntregaPersonalControllerTest < ActionDispatch::IntegrationTest
     assert_select "select[name='paquete[sucursal_recepcion_id]'] option[value=?]", sucursales(:zeron_sps).id.to_s, count: 0
   end
 
+  test "preselecciona la misma sucursal que /etiquetar: la del usuario, si no la de por defecto" do
+    # Seguimiento de C18-02: el select nacía en blanco. Gemela de /etiquetar.
+    mexico = Sucursal.create!(codigo: "DFM", codigo_ep: "SDF", nombre: "DF México", pais: "México",
+                              ubicacion: "otros", activo: true, recibe_carga: true)
+
+    get new_entrega_personal_url
+    assert_select "select[name='paquete[sucursal_recepcion_id]'] option[selected][value=?]", sucursales(:miami).id.to_s
+
+    users(:digitador).update!(sucursal: mexico)
+    get new_entrega_personal_url
+    assert_select "select[name='paquete[sucursal_recepcion_id]'] option[selected][value=?]", mexico.id.to_s
+  end
+
   test "monta la franja de contexto" do
     get new_entrega_personal_url
 

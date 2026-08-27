@@ -5,7 +5,7 @@
   <meta name="turbo-cache-control" content="no-cache">
 <% end %>
 
-<%= render PageHeaderComponent.new(title: "Etiquetar Paquetes", subtitle: "Registro de paquetes en Miami") do |header|
+<%= render PageHeaderComponent.new(title: "Etiquetar Paquetes", subtitle: "Registro de paquetes al recibir la carga") do |header|
   header.with_action do
     tag.span(class: "inline-flex items-center gap-2 text-sm text-gray-600") do
       safe_join([
@@ -44,7 +44,7 @@ end %>
       <%= form_with url: iniciar_sesion_etiquetar_path, method: :post, class: "block" do %>
 
         <%# ── Dónde estás recibiendo ──
-            De acá sale el número de recepción del paquete (`RMI…`, `RZE…`).
+            De acá sale el número de recepción del paquete (`RMIA2608000001`).
             Solo se pregunta cuando hay más de una opción: el que recibe está
             parado en un lugar, no lo elige paquete a paquete. Yusef: "está
             alguien en Miami recibiendo, o en Panamá, o en China". %>

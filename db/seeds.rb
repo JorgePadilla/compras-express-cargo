@@ -11,10 +11,16 @@ puts "  ✓ Admin user"
 
 # ── Sucursales iniciales ──
 [
-  { codigo: "MIA", codigo_ep: "SMI", nombre: "Miami",      pais: "USA",      ubicacion: "miami",    codigo_recepcion_prefix: "RMI" },
+  { codigo: "MIA", codigo_ep: "SMI", nombre: "Miami",      pais: "USA",      ubicacion: "miami",    codigo_recepcion_prefix: "RMI", recibe_carga: true, recepcion_por_defecto: true },
   { codigo: "SPS", codigo_ep: "SZR", nombre: "Zeron SPS",  pais: "Honduras", ubicacion: "honduras", codigo_recepcion_prefix: "RZE" },
   { codigo: "TGU", codigo_ep: "SHU", nombre: "Humuya TGU", pais: "Honduras", ubicacion: "honduras", codigo_recepcion_prefix: "RHU" },
-  { codigo: "SAM", codigo_ep: "SSM", nombre: "San Manuel", pais: "Honduras", ubicacion: "honduras", codigo_recepcion_prefix: "RSM" }
+  { codigo: "SAM", codigo_ep: "SSM", nombre: "San Manuel", pais: "Honduras", ubicacion: "honduras", codigo_recepcion_prefix: "RSM" },
+  # C18-02, seguimiento del 2026-08-27. Yusef: *"Sería bueno tener otro como de
+  # prueba, tipo México"*. Recibe carga y no es la de por defecto: el chooser
+  # de /etiquetar pregunta, con Miami preseleccionada. Sin prefijo: el número
+  # sale del código (RDFM2608000001). Se desactiva desde /sucursales cuando
+  # estorbe.
+  { codigo: "DFM", codigo_ep: "SDF", nombre: "DF México",  pais: "México",   ubicacion: "otros",    recibe_carga: true }
 ].each do |attrs|
   Sucursal.find_or_create_by!(codigo: attrs[:codigo]) do |s|
     s.assign_attributes(attrs)
@@ -32,7 +38,18 @@ end
 unless Sucursal.exists?(retiro_por_defecto: true)
   Sucursal.find_by(codigo: "SPS")&.update_column(:retiro_por_defecto, true)
 end
-puts "  ✓ #{Sucursal.count} sucursales (por defecto: #{Sucursal.find_by(retiro_por_defecto: true)&.nombre || 'ninguna'})"
+# Y lo mismo para recibir (C18-02): una base re-sembrada nacía sin ninguna
+# sucursal que recibiera carga —el backfill vivía solo en la migración— y
+# /etiquetar no ofrecía nada. Sin «recepción por defecto», el orden por nombre
+# decidía. Miami si recibe; si no, la primera que reciba.
+unless Sucursal.de_recepcion.exists?
+  Sucursal.find_by(codigo: "MIA")&.update_column(:recibe_carga, true)
+end
+unless Sucursal.exists?(recepcion_por_defecto: true)
+  (Sucursal.de_recepcion.find_by(ubicacion: "miami") || Sucursal.de_recepcion.first)&.update_column(:recepcion_por_defecto, true)
+end
+puts "  ✓ #{Sucursal.count} sucursales (retiro por defecto: #{Sucursal.find_by(retiro_por_defecto: true)&.nombre || 'ninguna'}; " \
+     "recepción por defecto: #{Sucursal.find_by(recepcion_por_defecto: true)&.nombre || 'ninguna'})"
 
 # ── Tipos de envio (v4.0 — ver docs/approved/pre_alerta_v4.docx) ──
 [
