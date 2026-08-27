@@ -6653,7 +6653,7 @@ que más se retiene, *"paquete dañado, lo más común"*.
 `C16-07` salió como `RTE` y él lo corrigió al día siguiente. Es un solo lugar
 (`etiqueta_tipo_envio`); ver la nota en `C16-07`.
 
-### C18-02 · La sucursal de recepción está al revés — ⏳ **ABIERTA (PR-C7.50)**
+### C18-02 · La sucursal de recepción está al revés — ✅ **ARREGLADO (PR-C7.50)**
 
 Al cerrar sesión para abrir otro tipo de envío, el chooser le ofreció San
 Pedro, Tegucigalpa y San Manuel:
@@ -6681,6 +6681,16 @@ más fino.
 
 > **Decisión de Jorge (2026-08-26):** un checkbox **«recibe carga»** en
 > `/sucursales`, Miami marcada; México la crea y la marca Yusef.
+
+**La regla, que nunca estuvo escrita:** *de recepción* son las sucursales
+marcadas «acá se recibe carga» (activas). Hoy Miami; mañana Los Ángeles,
+Panamá, México — se crean y se marcan desde `/sucursales`, sin tocar código.
+El chooser de `/etiquetar` y el select de `/entrega_personal` salen del mismo
+scope (`Sucursal.de_recepcion`), y EP además pide código EP. Si hay una sola,
+no se pregunta; si hay varias, queda preseleccionada la de la ubicación del
+usuario. Un id que no esté en la lista cae al default. Lo que quedó como deuda:
+`codigo_recepcion_prefix` sigue siendo obligatorio en el form aunque el número
+lo arme `Sucursal#codigo` desde `RP-17`.
 
 ### C18-03 · «Sale algo escrito alrededor» de la etiqueta — 🧹 **no es código**
 

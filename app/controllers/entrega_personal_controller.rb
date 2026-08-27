@@ -19,7 +19,7 @@ class EntregaPersonalController < ApplicationController
     @paquetes_hoy = paquetes_ep_hoy_count
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     @proveedores_ep = Proveedor.where(tipo: "entrega_personal").activos.ordered
-    @sucursales_miami = Sucursal.activas.where(ubicacion: "miami").where.not(codigo_ep: nil).ordered
+    @sucursales_recepcion = sucursales_de_recepcion_con_ep
     @motivos_retencion = MotivoRetencion.activos.ordered
     @tarifas_recolecta = TarifaRecolecta.activas.ordered
   end
@@ -166,14 +166,21 @@ class EntregaPersonalController < ApplicationController
     ])
   end
 
+  # C18-02: las mismas que ofrece /etiquetar (`Sucursal.de_recepcion`), y de
+  # ellas las que tienen código EP —sin él no se genera el tracking
+  # EP-AÑO-SUC-…—. Acá decía `where(ubicacion: "miami")` a mano: la gemela
+  # separada, y México (`otros`) tampoco habría salido.
+  def sucursales_de_recepcion_con_ep
+    Sucursal.de_recepcion.con_codigo_ep
+  end
+
   def render_create_error
     @paquetes_hoy = paquetes_ep_hoy_count
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     @proveedores_ep = Proveedor.where(tipo: "entrega_personal").activos.ordered
-    # PR-9.b: faltaba `@sucursales_miami` — la vista hace `.any?` sobre él, así
-    # que cualquier error de validación reventaba con un 500 en vez de mostrar
-    # los errores al digitador.
-    @sucursales_miami = Sucursal.activas.where(ubicacion: "miami").where.not(codigo_ep: nil).ordered
+    # PR-9.b: faltaba esto — la vista hace `.any?` sobre él, así que cualquier
+    # error de validación reventaba con un 500 en vez de mostrar los errores.
+    @sucursales_recepcion = sucursales_de_recepcion_con_ep
     @motivos_retencion = MotivoRetencion.activos.ordered
     @tarifas_recolecta = TarifaRecolecta.activas.ordered
     # Igual que en /etiquetar: las cajas medidas vuelven a la pantalla. Sin

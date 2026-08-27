@@ -34,8 +34,8 @@ class EtiquetarSucursalRecepcionTest < ActionDispatch::IntegrationTest
     p = Paquete.order(:id).last
     assert_equal @miami, p.sucursal_recepcion
     assert p.numero_recepcion.present?, "el paquete nació sin número de recepción"
-    assert p.numero_recepcion.start_with?(@miami.codigo_recepcion_prefix),
-           "el número no lleva el prefijo de la sucursal donde se recibió"
+    assert p.numero_recepcion.start_with?("R#{@miami.codigo}"),
+           "el número no lleva el código de la sucursal donde se recibió"
   end
 
   test "recibir NO define donde retira el cliente" do
@@ -93,21 +93,62 @@ class EtiquetarSucursalRecepcionTest < ActionDispatch::IntegrationTest
                     "con una sola opción no hay nada que preguntar")
   end
 
-  test "una sucursal sin prefijo no se ofrece para recibir" do
-    # Sin prefijo no se puede numerar nada, así que ofrecerla sería ofrecer un
-    # paquete sin número — el bug que este PR cierra.
-    #
-    # Al dejar Miami en blanco, la ubicación del usuario se queda sin
-    # candidatas y entra el fallback "mejor ofrecer todas que dejarlo sin
-    # poder abrir sesión": aparecen las tres de Honduras y con ellas el select.
-    @miami.update_column(:codigo_recepcion_prefix, "")
+  # ── C18-02 · dónde se recibe carga, no dónde está el usuario ──────────
+
+  test "un admin de Honduras ve Miami, no San Pedro" do
+    # El caso de Yusef: su admin está en `honduras` y el chooser filtraba por la
+    # ubicación del usuario, así que le ofrecía las tres de Honduras y le
+    # escondía Miami. "Aquí te falta Miami… el que está oculto es el que va a
+    # recibir." Y el número de su etiqueta salió `RSPS…`.
+    admin = users(:admin)
+    assert_equal "honduras", admin.ubicacion, "el test necesita un usuario de Honduras"
+    post session_url, params: { email_address: admin.email_address, password: "password123" }
 
     get etiquetar_url
     assert_response :success
+    assert_match(/name="sucursal_recepcion_id"[^>]*value="#{@miami.id}"|value="#{@miami.id}"[^>]*name="sucursal_recepcion_id"/,
+                 response.body, "Miami tiene que ser la de recepción, aunque el usuario esté en Honduras")
+    assert_no_match(/value="#{sucursales(:zeron_sps).id}"[^>]*name="sucursal_recepcion_id"|name="sucursal_recepcion_id"[^>]*value="#{sucursales(:zeron_sps).id}"/,
+                    response.body, "San Pedro entrega, no recibe")
 
-    assert_match(/<select[^>]*name="sucursal_recepcion_id"/, response.body)
-    assert_no_match(/<option value="#{@miami.id}"/, response.body,
-                    "Miami no puede numerar: no debería ofrecerse")
+    post iniciar_sesion_etiquetar_url, params: { tipo_envio_id: @tipo.id }
+    post etiquetar_url, params: { paquete: attrs_validos }
+    p = Paquete.order(:id).last
+    assert_equal @miami, p.sucursal_recepcion
+    assert p.numero_recepcion.start_with?("R#{@miami.codigo}"), "el número salió de Honduras: #{p.numero_recepcion}"
+  end
+
+  test "una sucursal de otro pais marcada como recibe carga aparece, y la del usuario queda preseleccionada" do
+    # "Sería bueno tener otro como de prueba, tipo México." México es `otros`,
+    # ubicación que ningún usuario tiene: por eso no puede derivarse de la
+    # ubicación, tiene que ser el checkbox.
+    mexico = Sucursal.create!(codigo: "MEX", nombre: "México", pais: "México", ubicacion: "otros",
+                              codigo_recepcion_prefix: "RMX", activo: true, recibe_carga: true)
+
+    get etiquetar_url
+    assert_response :success
+    assert_match(/<select[^>]*name="sucursal_recepcion_id"/, response.body, "con dos, hay que preguntar")
+    assert_match(/<option[^>]*value="#{mexico.id}"/, response.body)
+    assert_match(/<option selected="selected" value="#{@miami.id}"/, response.body,
+                 "el digitador está en Miami: esa va preseleccionada")
+  end
+
+  test "una sucursal inactiva no se ofrece aunque reciba carga" do
+    Sucursal.create!(codigo: "MEX", nombre: "México", pais: "México", ubicacion: "otros",
+                     codigo_recepcion_prefix: "RMX", activo: false, recibe_carga: true)
+
+    get etiquetar_url
+    assert_no_match(/<select[^>]*name="sucursal_recepcion_id"/, response.body)
+  end
+
+  test "un id de una sucursal que no recibe cae al default" do
+    # San Pedro existe y está activa, pero entrega, no recibe: posteada a mano
+    # no puede abrir sesión ahí.
+    post iniciar_sesion_etiquetar_url,
+         params: { tipo_envio_id: @tipo.id, sucursal_recepcion_id: sucursales(:zeron_sps).id }
+
+    post etiquetar_url, params: { paquete: attrs_validos }
+    assert_equal @miami, Paquete.order(:id).last.sucursal_recepcion
   end
 
   test "un sucursal_recepcion_id invalido cae al default en vez de reventar" do
@@ -148,7 +189,7 @@ class EtiquetarSucursalRecepcionTest < ActionDispatch::IntegrationTest
     )
 
     assert p.numero_recepcion.present?
-    assert p.numero_recepcion.start_with?(@miami.codigo_recepcion_prefix)
+    assert p.numero_recepcion.start_with?("R#{@miami.codigo}")
   end
 
   test "la sucursal de recepcion manda sobre la de retiro" do
@@ -161,7 +202,7 @@ class EtiquetarSucursalRecepcionTest < ActionDispatch::IntegrationTest
       user: @user
     )
 
-    assert p.numero_recepcion.start_with?(@miami.codigo_recepcion_prefix),
+    assert p.numero_recepcion.start_with?("R#{@miami.codigo}"),
            "el número salió de dónde retira en vez de dónde se recibió"
   end
 

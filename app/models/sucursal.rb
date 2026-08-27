@@ -25,6 +25,14 @@ class Sucursal < ApplicationRecord
 
   scope :activas, -> { where(activo: true) }
   scope :ordered, -> { order(:nombre) }
+  # C18-02: dónde se **recibe** carga, que no es dónde se entrega. Yusef: *"en
+  # este momento solo es Miami; futuramente Los Ángeles, Panamá, México"*. Es
+  # un checkbox en /sucursales y no una regla escondida en un controller
+  # (`ubicacion != honduras` habría dejado afuera a México, que es `otros`).
+  # Lo usan el chooser de /etiquetar y /entrega_personal — las dos, el mismo.
+  scope :de_recepcion, -> { activas.where(recibe_carga: true).ordered }
+  # Las que pueden generar tracking de Entrega Personal (EP-AÑO-SUC-…).
+  scope :con_codigo_ep, -> { where.not(codigo_ep: [ nil, "" ]) }
 
   def to_s
     nombre

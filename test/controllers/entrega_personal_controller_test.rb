@@ -19,6 +19,20 @@ class EntregaPersonalControllerTest < ActionDispatch::IntegrationTest
     assert_match "Entrega Personal", response.body
   end
 
+  test "la sucursal del select es la que recibe carga, no «la de Miami» a mano" do
+    # C18-02: acá decía `where(ubicacion: "miami")` escrito a mano — la gemela
+    # separada de /etiquetar. Una sucursal que reciba carga en otro país tiene
+    # que salir, y San Pedro (que entrega, y tiene código EP) no.
+    mexico = Sucursal.create!(codigo: "MEX", codigo_ep: "SMX", nombre: "México", pais: "México",
+                              ubicacion: "otros", codigo_recepcion_prefix: "RMX", activo: true, recibe_carga: true)
+
+    get new_entrega_personal_url
+
+    assert_select "select[name='paquete[sucursal_recepcion_id]'] option[value=?]", mexico.id.to_s
+    assert_select "select[name='paquete[sucursal_recepcion_id]'] option[value=?]", sucursales(:miami).id.to_s
+    assert_select "select[name='paquete[sucursal_recepcion_id]'] option[value=?]", sucursales(:zeron_sps).id.to_s, count: 0
+  end
+
   test "monta la franja de contexto" do
     get new_entrega_personal_url
 

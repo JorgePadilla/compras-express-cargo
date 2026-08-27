@@ -6,6 +6,7 @@ miami:
   ubicacion: miami
   codigo_recepcion_prefix: RMI
   activo: true
+  recibe_carga: true
 
 zeron_sps:
   codigo: SPS
