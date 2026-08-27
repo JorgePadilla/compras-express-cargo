@@ -596,7 +596,7 @@ end %>
     <div>
       <dt class="text-xs font-medium text-blue-700 uppercase tracking-wider">
         Notas al Cliente
-        <span class="text-[10px] normal-case text-blue-500">(visibles al cliente / en pre-factura)</span>
+        <span class="text-[10px] normal-case text-blue-500">(le llegan en el correo de recibido)</span>
       </dt>
       <% if @paquete.notas_al_cliente.present? %>
         <dd class="mt-1 text-sm text-gray-900 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800"><%= simple_format(@paquete.notas_al_cliente) %></dd>
@@ -708,6 +708,13 @@ end %>
             Retener Miami
           </span>
         <% end %>
+        <% if @paquete.enviado_por_politica? %>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-cec-navy/5 text-cec-navy ring-1 ring-cec-navy/20 dark:bg-cec-navy/40 dark:text-gray-100"
+                title="<%= @paquete.motivos_envio_politica.map(&:nombre).join(" · ") %>">
+            <%= heroicon "paper-airplane", variant: :solid, options: { class: "w-3 h-3" } %>
+            Enviado según política
+          </span>
+        <% end %>
         <% if @paquete.recolecta_solicitada? %>
           <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30">
             <%= heroicon "truck", variant: :solid, options: { class: "w-3 h-3" } %>
@@ -717,7 +724,7 @@ end %>
             <% end %>
           </span>
         <% end %>
-        <% unless @paquete.solicito_cambio_servicio? || @paquete.retener_miami? || @paquete.recolecta_solicitada? || @paquete.consolidado? %>
+        <% unless @paquete.solicito_cambio_servicio? || @paquete.retener_miami? || @paquete.recolecta_solicitada? || @paquete.consolidado? || @paquete.enviado_por_politica? %>
           <span class="text-xs text-gray-400 italic">Sin marcas especiales</span>
         <% end %>
       </div>

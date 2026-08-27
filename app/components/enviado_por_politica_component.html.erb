@@ -1,0 +1,60 @@
+<%# ⚠️ Nada acá lleva `required`: vive adentro de un `<dialog>` cerrado, y un
+    campo obligatorio dentro de un contenedor oculto hace que Chrome se niegue a
+    enviar el formulario sin decir por qué (`#306`). %>
+<div data-controller="checkbox-modal"
+     class="px-3 py-2 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 hover:bg-cec-navy/5 dark:hover:bg-cec-navy/30 transition-colors">
+  <label class="flex items-center gap-2 cursor-pointer">
+    <%= f.check_box :enviado_por_politica,
+        data: { checkbox_modal_target: "checkbox", action: "change->checkbox-modal#onChange" },
+        class: "rounded border-gray-300 text-cec-navy focus:ring-cec-navy" %>
+    <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Enviado según política</span>
+    <% if activo? %>
+      <span class="ml-auto text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-cec-navy/10 text-cec-navy dark:bg-cec-navy/40 dark:text-cec-gold">activo</span>
+    <% end %>
+  </label>
+  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Llegó sin identificación de servicio: explicale al cliente por qué se mandó así.</p>
+
+  <dialog data-checkbox-modal-target="dialog"
+          aria-label="Enviado según política"
+          style="margin: auto" class="rounded-xl p-0 w-[32rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-cec-navy/30">
+    <div class="bg-cec-navy px-5 py-3">
+      <h3 class="text-base font-semibold text-white">Enviado según política</h3>
+      <p class="text-xs text-white/70 mt-0.5">Lo que marques le llega al cliente en el correo de recibido y queda en sus notas.</p>
+    </div>
+    <div class="p-5 space-y-4 bg-white dark:bg-gray-800">
+      <div>
+        <span class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Por qué</span>
+        <% if hay_motivos? %>
+          <%# `collection_check_boxes` y no una lista a mano: si mañana agregan un
+              motivo al catálogo tiene que salir solo, sin tocar esto. %>
+          <div class="grid grid-cols-1 gap-2">
+            <%= f.collection_check_boxes :motivo_envio_politica_ids, motivos, :id, :nombre do |b| %>
+              <label class="flex items-start gap-2 text-sm text-gray-800 dark:text-gray-100">
+                <%= b.check_box(class: "mt-0.5 rounded border-gray-300 text-cec-navy focus:ring-cec-navy") %>
+                <span><%= b.text %></span>
+              </label>
+            <% end %>
+          </div>
+        <% else %>
+          <p class="text-xs text-cec-navy dark:text-cec-gold italic">
+            No hay motivos configurados todavía. Pedile a un admin que los cargue en
+            <%= link_to "Motivos de envío por política", motivos_envio_politica_path, class: "underline" %>.
+          </p>
+        <% end %>
+      </div>
+      <div>
+        <%= f.label :notas_envio_politica, "Detalle para el cliente (opcional)",
+            class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <%= f.text_area :notas_envio_politica, rows: 2,
+            placeholder: "Por ejemplo: solo se leía «Juan» en la etiqueta.",
+            class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm text-sm focus:ring-cec-navy focus:border-cec-navy" %>
+      </div>
+    </div>
+    <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+      <%= render ButtonComponent.new(variant: :ghost, size: :sm,
+            data: { action: "checkbox-modal#cancel" }) do %>Cancelar<% end %>
+      <%= render ButtonComponent.new(variant: :primary, size: :sm,
+            data: { action: "checkbox-modal#confirm" }) do %>Confirmar<% end %>
+    </div>
+  </dialog>
+</div>

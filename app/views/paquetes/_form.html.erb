@@ -427,6 +427,7 @@
           **copiado** de /etiquetar y ya había divergido — consultaba el catálogo
           de motivos adentro de la vista y cambiaban los rótulos y los botones. %>
       <%= render RetenerMiamiComponent.new(f: f, motivos: @motivos_retencion) %>
+        <%= render EnviadoPorPoliticaComponent.new(f: f, motivos: @motivos_envio_politica) %>
 
       <%# Solicitó Recolecta — modal: zona + monto + moneda. %>
       <div data-controller="checkbox-modal"
@@ -538,7 +539,7 @@
          data-controller="plantilla-picker"
          data-plantilla-picker-target-selector-value="#paquete_notas_al_cliente">
       <div class="flex items-baseline justify-between mb-1">
-        <%= f.label :notas_al_cliente, "Notas al Cliente (visibles al cliente)", class: "block text-sm font-medium text-gray-700" %>
+        <%= f.label :notas_al_cliente, "Notas al Cliente (le llegan en el correo de recibido)", class: "block text-sm font-medium text-gray-700" %>
         <% plantillas_activas = PlantillaNotaCliente.activas.ordered %>
         <% if plantillas_activas.any? %>
           <span class="text-[11px] text-gray-500">Plantillas:</span>

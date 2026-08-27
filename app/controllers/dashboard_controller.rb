@@ -100,6 +100,7 @@ class DashboardController < ApplicationController
           card("Servicios Extra",        nil, "sparkles",                servicios_extra_path,      :gold),
           card("Proveedores",            nil, "building-storefront",     proveedores_path,          :gold),
           card("Motivos de Retención",   nil, "hand-raised",             motivos_retencion_path,    :gold),
+          card("Envío por Política",     "Por qué se mandó sin identificación", "paper-airplane", motivos_envio_politica_path, :gold),
           card("Plantillas de Notas",    nil, "document-duplicate",      plantillas_notas_cliente_path, :gold)
         ]
       }

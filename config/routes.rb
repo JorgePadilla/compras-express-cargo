@@ -134,6 +134,9 @@ Rails.application.routes.draw do
             controller: "motivos_retencion"
   resources :plantillas_notas_cliente, only: %i[index new create edit update],
             controller: "plantillas_notas_cliente"
+  # C18-06: el catálogo de «enviado según política», gemelo del de retención.
+  resources :motivos_envio_politica, only: %i[index new create edit update],
+            controller: "motivos_envio_politica"
 
   # PR-D3.a: catálogo de proveedores con autocomplete público para el
   # form del paquete; CRUD restringido a admin (controller-level guard).

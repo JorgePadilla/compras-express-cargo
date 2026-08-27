@@ -140,7 +140,7 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     [
       servicios_path, tarifas_recolecta_path,
       servicios_extra_path, proveedores_path, motivos_retencion_path,
-      plantillas_notas_cliente_path
+      plantillas_notas_cliente_path, motivos_envio_politica_path
     ].each do |ruta|
       assert_includes hrefs, ruta, "#{ruta} solo se alcanzaba desde el sidebar"
     end

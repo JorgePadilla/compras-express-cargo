@@ -6,6 +6,7 @@ class EntregaPersonalController < ApplicationController
   include MedidasPorCaja
   # El sellado del prepago vive en el concern porque /etiquetar hace lo mismo.
   include PrepagoMiami
+  include NotificaRecibido
 
   before_action :authorize_entrega_personal
 
@@ -21,6 +22,7 @@ class EntregaPersonalController < ApplicationController
     @proveedores_ep = Proveedor.where(tipo: "entrega_personal").activos.ordered
     @sucursales_recepcion = sucursales_de_recepcion_con_ep
     @motivos_retencion = MotivoRetencion.activos.ordered
+    @motivos_envio_politica = MotivoEnvioPolitica.activos.ordered
     @tarifas_recolecta = TarifaRecolecta.activas.ordered
   end
 
@@ -113,6 +115,9 @@ class EntregaPersonalController < ApplicationController
   # dos tareas o dos paquetes. Queda del cliente y sale en la bandeja.
   def respond_saved(paquetes)
     @paquete = paquetes.first
+    # C18-06: en Entrega Personal no hay pre-alerta; el correo sale solo si se
+    # marcó «enviado según política».
+    notificar_recibido(@paquete, pre_alerta_vinculada: false)
     msg = paquetes.size > 1 ?
             "Entrega personal registrada — #{paquetes.size} cajas, tracking #{@paquete.tracking}" :
             "Entrega personal registrada — tracking #{@paquete.tracking}"
@@ -182,6 +187,7 @@ class EntregaPersonalController < ApplicationController
     # error de validación reventaba con un 500 en vez de mostrar los errores.
     @sucursales_recepcion = sucursales_de_recepcion_con_ep
     @motivos_retencion = MotivoRetencion.activos.ordered
+    @motivos_envio_politica = MotivoEnvioPolitica.activos.ordered
     @tarifas_recolecta = TarifaRecolecta.activas.ordered
     # Igual que en /etiquetar: las cajas medidas vuelven a la pantalla. Sin
     # esto, un error de validación las borraba todas.
@@ -212,11 +218,11 @@ class EntregaPersonalController < ApplicationController
       :alto, :largo, :ancho, :cantidad_productos, :cantidad_paquetes,
       :numero_caja, :descripcion, :remitente, :driver,
       :notas_internas, :notas_retencion,
-      :retener_miami,
+      :retener_miami, :enviado_por_politica, :notas_envio_politica,
       # A7-22/A7-23: la recolecta vive en esta misma pantalla.
       :recolecta_solicitada, :tarifa_recolecta_id, :recolecta_monto, :recolecta_moneda,
       :recolecta_contacto, :recolecta_telefono, :recolecta_horario, :recolecta_instrucciones,
-      motivo_retencion_ids: []
+      motivo_retencion_ids: [], motivo_envio_politica_ids: []
     )
   end
 

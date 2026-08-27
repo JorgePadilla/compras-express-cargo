@@ -2,6 +2,11 @@
 
 <p>Tu paquete con tracking <strong><%= @paquete.tracking %></strong> ha sido recibido en nuestra bodega de Miami.</p>
 
+<% if @nota %>
+  <p><strong>Nota sobre este paquete:</strong></p>
+  <%= simple_format(@nota) %>
+<% end %>
+
 <p>Sera incluido en el proximo envio disponible.</p>
 
 <p>Gracias por usar Compras Express Cargo.</p>

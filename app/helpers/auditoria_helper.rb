@@ -44,6 +44,8 @@ module AuditoriaHelper
     "notas_al_cliente" => "Notas al cliente",
     "notas_retencion" => "Notas de retención",
     "retener_miami" => "Retener en Miami",
+    "enviado_por_politica" => "Enviado según política",
+    "notas_envio_politica" => "Detalle del envío por política",
     "solicito_cambio_servicio" => "Cambio de servicio",
     "prepagado_miami" => "Prepagado en Miami",
     "prepagado_miami_metodo" => "Forma de pago en Miami",

@@ -6742,7 +6742,7 @@ contaba solo las filas y preguntaba igual.
 > **Decisión de Jorge (2026-08-26):** la caja tecleada sin «Agregar» cuenta; el
 > modo actualización sigue preguntando.
 
-### C18-06 · «Enviado según política de envío» — ⏳ **ABIERTA (PR-C7.51)**
+### C18-06 · «Enviado según política de envío» — ✅ **HECHO (PR-C7.51)**
 
 > *"Hay una cuestión que le queríamos agregar, pero a mí se me olvidó de un
 > principio… es lo mismo que vos tenés como cuando retenés. Como una nota de por
@@ -6774,6 +6774,20 @@ tienen.
 > `notas_al_cliente` y **va en el correo de recibido**; el correo se manda
 > cuando hay pre-alerta **o** nota de política; el checkbox va en Etiquetar,
 > Entrega Personal y el form de `/paquetes` (para corregir después).
+
+**Qué se hizo.** Una copia deliberada de «Retener en Miami»: catálogo
+`Motivos de Envío por Política` (nombre para el operario, **texto al cliente**
+que es lo que le llega; admin, con card y link), el componente con la casilla,
+la listita y el detalle libre, en las tres pantallas, con su lint gemelo. Al
+marcarla, los textos de los motivos elegidos y el detalle se componen en
+`notas_al_cliente` —una vez, sin pisar lo que había—; al desmarcarla se van
+los motivos y el detalle, no lo que ya se le dijo al cliente. Badge «Enviado
+según política» en la ficha y fondo navy en `/paquetes`. Y el correo de
+recibido **lleva la nota** y sale de un solo lugar (`NotificaRecibido`) cuando
+hay pre-alerta o política — un pre-alertado con política manda uno, no dos;
+corregirlo después desde `/paquetes` también avisa. Sin correo del cliente
+la nota queda igual en la ficha. El portal no tiene detalle de paquete: es lo
+que sigue.
 
 ### Dudosos del transcript
 

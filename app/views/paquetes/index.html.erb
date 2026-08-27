@@ -164,6 +164,10 @@ end %>
     <span class="font-medium">Cambio de servicio</span>
   </span>
   <span class="inline-flex items-center gap-2">
+    <span class="shrink-0 inline-block w-5 h-5 rounded bg-cec-navy/5 dark:bg-cec-navy/30 ring-2 ring-cec-navy/30 dark:ring-cec-navy shadow-sm"></span>
+    <span class="font-medium">Enviado según política</span>
+  </span>
+  <span class="inline-flex items-center gap-2">
     <span class="shrink-0 inline-block w-5 h-5 rounded bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-300 dark:ring-blue-700 shadow-sm"></span>
     <span class="font-medium">Con pre-factura</span>
   </span>
@@ -374,6 +378,8 @@ end %>
                 "bg-amber-50 dark:bg-amber-900/20"
               elsif paquete.solicito_cambio_servicio?
                 "bg-amber-100/60 dark:bg-amber-900/30"
+              elsif paquete.enviado_por_politica?
+                "bg-cec-navy/5 dark:bg-cec-navy/30"
               elsif paquete.pre_factura?
                 "bg-blue-50 dark:bg-blue-900/20"
               elsif paquete.pre_alerta?
