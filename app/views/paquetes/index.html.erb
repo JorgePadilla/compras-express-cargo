@@ -406,7 +406,10 @@ end %>
               <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-600 dark:text-gray-300">
                 <% momento = paquete.fecha_recibido_miami || paquete.created_at %>
                 <%= momento.strftime("%d/%m/%Y") %>
-                <span class="block text-[10px] text-gray-400 dark:text-gray-500"><%= momento.strftime("%H:%M") %></span>
+                <%# C19-05: con segundos. Yusef: "cuando revisamos cámaras, en un
+                    segundo pueden pasar tres o cuatro paquetes… ese segundo es
+                    como el paquete exacto". %>
+                <span class="block text-[10px] text-gray-400 dark:text-gray-500"><%= momento.strftime("%H:%M:%S") %></span>
               </td>
               <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-600 dark:text-gray-300">
                 <%= paquete.fecha_disponible&.strftime("%d/%m/%Y") || "—" %>
