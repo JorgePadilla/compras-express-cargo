@@ -6850,7 +6850,7 @@ por ratos la atribuyen a la red interna de Miami (*"estamos analizando lo de
 las cámaras en Miami… saturan la red interna. Voy a hacer unos cambios yo en
 Miami a ver si me funcionan"*), no al sistema.
 
-### C19-01 · EP: el Warehouse Receipt no sale en versión para imprimir
+### C19-01 · EP: el Warehouse Receipt no sale en versión para imprimir — 🐛 ✅ **ARREGLADO (PR-C7.55)**
 
 > *"Después de hacer todo esto, yo le doy [F]9… me imprimen la etiqueta, me
 > tira el warehouse, pero mirá cómo me lo tira."*
@@ -6881,6 +6881,12 @@ Y el scroll, aparte:
 pestaña de impresión **roba el foco de la ventana**, y al cerrarse nadie
 re-enfoca el campo. En `/entrega_personal` es peor: su `clearForm()` no enfoca
 nada. Y ninguna de las dos pantallas maneja el scroll.
+
+**La mitad de EP salió en `PR-C7.55`**: `clearForm()` vuelve al `[autofocus]`
+(el proveedor) al guardar, y con el WR cerrándose solo el foco regresa a la
+pantalla lista para el siguiente. La mitad de `/etiquetar` —re-enfocar el
+tracking cuando la pestaña de impresión devuelve la ventana, y el scroll— es
+`PR-C7.56`.
 
 ### C19-03 · Recolecta: campo de dirección
 
