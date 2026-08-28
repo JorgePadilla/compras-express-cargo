@@ -1,0 +1,9 @@
+<%# Tipo de envío — lo más grande de toda la etiqueta (jerarquía de Yusef).
+    Es la clave visual con la que separan la carga por servicio antes de
+    empacar, y también la bandera: RET cuando está retenido. %>
+<% if etiqueta_plantilla.visible?("tipo_envio") && (envio = etiqueta_tipo_envio(paquete)) %>
+  <span data-campo="tipo-envio"
+        style="font-size:var(--fs-tipo-envio); font-weight:800; line-height:.95; letter-spacing:-.02em; white-space:nowrap;">
+    <%= envio %>
+  </span>
+<% end %>

@@ -1,0 +1,7 @@
+<%# Los dos juegos de iniciales van rotulados. Sin rótulo Yusef preguntó
+    "¿qué es DM?", y con dos sueltos sería peor. %>
+<% if etiqueta_plantilla.visible?("driver") && paquete.driver.present? %>
+  <span style="font-size:var(--fs-driver); white-space:nowrap;" data-campo="driver">
+    <%= etiqueta_plantilla.texto("driver") %> <b><%= etiqueta_iniciales(paquete.driver) %></b>
+  </span>
+<% end %>

@@ -1,0 +1,7 @@
+<%# El tercero va chico al lado del cliente: "agregar nombre de cliente
+    tercero". %>
+<% if etiqueta_plantilla.visible?("tercero") && paquete.tercero_display %>
+  <span class="t" style="font-size:var(--fs-tercero); margin-left:auto;" data-campo="tercero">
+    <b><%= etiqueta_plantilla.texto("tercero") %></b> <%= paquete.tercero_display.to_s.upcase %>
+  </span>
+<% end %>

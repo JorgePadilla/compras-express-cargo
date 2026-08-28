@@ -854,6 +854,37 @@ ALTER SEQUENCE public.ep_counters_id_seq OWNED BY public.ep_counters.id;
 
 
 --
+-- Name: etiqueta_plantillas; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.etiqueta_plantillas (
+    id bigint NOT NULL,
+    definicion jsonb DEFAULT '{}'::jsonb NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: etiqueta_plantillas_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.etiqueta_plantillas_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: etiqueta_plantillas_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.etiqueta_plantillas_id_seq OWNED BY public.etiqueta_plantillas.id;
+
+
+--
 -- Name: venta_items; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2806,6 +2837,13 @@ ALTER TABLE ONLY public.ep_counters ALTER COLUMN id SET DEFAULT nextval('public.
 
 
 --
+-- Name: etiqueta_plantillas id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.etiqueta_plantillas ALTER COLUMN id SET DEFAULT nextval('public.etiqueta_plantillas_id_seq'::regclass);
+
+
+--
 -- Name: financiamiento_cuotas id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -3280,6 +3318,14 @@ ALTER TABLE ONLY public.entregas
 
 ALTER TABLE ONLY public.ep_counters
     ADD CONSTRAINT ep_counters_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: etiqueta_plantillas etiqueta_plantillas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.etiqueta_plantillas
+    ADD CONSTRAINT etiqueta_plantillas_pkey PRIMARY KEY (id);
 
 
 --
@@ -6199,6 +6245,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260828202244'),
 ('20260828191512'),
 ('20260828182540'),
 ('20260828182026'),

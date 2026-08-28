@@ -1,5 +1,5 @@
-<%# PR-10.d.2: la etiqueta que se pega a la caja — Dymo 2.25 × 1.25 in, una por
-    paquete.
+<%# PR-10.d.2 → C19-06: la etiqueta que se pega a la caja — Dymo 2.25 × 1.25 in
+    de fábrica, una por paquete.
 
     La jerarquía es la que Yusef marcó sobre su etiqueta vieja, campo por campo:
 
@@ -7,155 +7,50 @@
        que se lee primero. Y tenemos los de pequeñas para información adicional
        que se ocupa de vez en cuando."
 
-    Van los 11 campos —"no creo cambiar el tamaño de la etiqueta, allí es letra
-    pequeña unas y otras grandes"—, así que lo que se gradúa es el cuerpo de
-    letra, no la cantidad de datos. Los escalones (--t1 … --t7) están en el
-    layout.
+    Desde C19-06 el ORDEN, los tamaños y los textos fijos salen de la
+    plantilla (`EtiquetaPlantilla`, editable en /ajustes_etiqueta; sin
+    registro rige la de fábrica, que es esta etiqueta 1:1). Cada campo vive en
+    su partial bajo `paquetes/etiqueta_campos/` con su lógica condicional y su
+    `data-campo` — este archivo solo recorre las filas.
 
     El bloque de abajo es de DOS COLUMNAS, y es lo que hace que quepa: el tipo
     de envío —lo más grande de la etiqueta— vive a la derecha ocupando el alto
     de las tres líneas de la izquierda, así que no cuesta un renglón propio. Es
-    la estructura del mockup de Yusef.
+    la estructura del mockup de Yusef, y por eso el bloque está sellado: las
+    subfilas se reordenan adentro de su columna, pero ningún campo entra ni
+    sale de él.
 
     ⚠️ El alto queda al filo y `overflow:hidden` recorta en silencio. Que quepa
     lo mide `test/system/etiqueta_cabe_test.rb` en Chrome de verdad; ningún test
     de Rails ve un recorte de CSS. %>
 <div class="etq">
-
-  <%# ── Código de barras del número de recepción ──
-      Antes no había nada escaneable: el tracking se tecleaba a mano.
-      Ojo al bajarle el alto: abajo de ~0.20in los escáneres de mano empiezan
-      a fallar, y eso no se ve en la etiqueta impresa. %>
-  <% codigo_barras = etiqueta_codigo_barras(paquete) %>
-  <% svg = codigo_barras && etiqueta_barcode_svg(codigo_barras) %>
-  <% if svg %>
-    <div style="height:.20in; overflow:hidden; line-height:0;" data-campo="barcode">
-      <div style="width:100%; height:.20in;"><%= svg %></div>
-    </div>
-  <% end %>
-
-  <%# ── Número de recepción ── el más grande después del tipo de envío.
-      Lleva el sufijo de caja cuando el tracking se dividió (`…-1`, `…-2`),
-      igual que el barcode: es lo que se teclea cuando la etiqueta viene
-      rayada y el lector no la lee. El n/N va otra vez suelto abajo — Jorge lo
-      confirmó, es como está en el mockup. %>
-  <div class="t mono" style="font-size:var(--t2); font-weight:bold;" data-campo="numero-recepcion">
-    <%= codigo_barras || "—" %>
-  </div>
-
-  <%# ── Trackings ── Yusef los tiene como lo segundo más grande, en negrita:
-      es lo que el operario compara contra la caja que tiene en la mano.
-
-      PR-C6.27: uno por línea, y completos. Antes iban concatenados con " · "
-      dentro de un solo `.t`, que recorta con `…` — así que lo que se perdía
-      era siempre el final del secundario. Yusef mandó la etiqueta impresa con
-      un recuadro rojo para cada uno y la regla escrita arriba:
-
-        "LOS TRACKING DEBEN CABER COMPLETOS"
-
-      Se usa `.trk` en vez de `.t`: parte antes que recortar. %>
-  <div class="trk mono" style="font-size:var(--t5); font-weight:bold;" data-campo="tracking">
-    <%= paquete.tracking %>
-  </div>
-  <% if paquete.tracking_secundario.present? %>
-    <div class="trk mono" style="font-size:var(--t5); font-weight:bold;" data-campo="tracking-secundario">
-      <%= paquete.tracking_secundario %>
-    </div>
-  <% end %>
-
-  <%# ── Cliente ── grande y en peso normal, como en el mockup. El tercero va
-      chico al lado: "agregar nombre de cliente tercero". %>
-  <div class="r">
-    <span class="t" style="font-size:var(--t4); text-transform:uppercase;">
-      <%= paquete.cliente&.nombre_completo %>
-    </span>
-    <% if paquete.tercero_display %>
-      <span class="t" style="font-size:var(--t7); margin-left:auto;" data-campo="tercero">
-        <b>3ro:</b> <%= paquete.tercero_display.to_s.upcase %>
-      </span>
+  <% etiqueta_plantilla.filas.each do |fila| %>
+    <% if fila["tipo"] == "dos_columnas" %>
+      <div style="display:flex; align-items:flex-end; gap:.06in; min-width:0;">
+        <div style="flex:1; min-width:0;">
+          <% fila["izquierda"].each do |sub| %>
+            <%= etiqueta_fila(sub, paquete) %>
+          <% end %>
+        </div>
+        <div style="text-align:right; min-width:0;">
+          <% fila["derecha"].each do |sub| %>
+            <% if sub.size > 1 %>
+              <%# La subfila de la derecha alinea por baseline y empuja a la
+                  derecha — es el renglón proveedor + tipo de envío del mockup. %>
+              <% piezas = sub.map { |c| etiqueta_campo(c, paquete) }.select { |h| h.present? && h.strip.present? } %>
+              <% if piezas.any? %>
+                <div style="display:flex; align-items:baseline; gap:.05in; justify-content:flex-end;">
+                  <%= safe_join(piezas) %>
+                </div>
+              <% end %>
+            <% else %>
+              <%= etiqueta_campo(sub.first, paquete) %>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    <% else %>
+      <%= etiqueta_fila(fila["campos"], paquete) %>
     <% end %>
-  </div>
-
-  <%# ── Fecha y hora · driver · iniciales ── un renglón de apoyo.
-      El driver va acá porque Yusef lo pidió "por el rótulo" pero no es de lo
-      que se lee primero. %>
-  <div class="r">
-    <%# La fecha no se encoge: en la jerarquía de Yusef está por encima del
-        driver, que ni siquiera aparece en su mockup. Si falta espacio, el que
-        se recorta es el driver. %>
-    <span style="font-size:var(--t6); font-weight:bold; flex:0 0 auto; white-space:nowrap;">
-      <%= (paquete.fecha_recibido_miami || paquete.created_at)&.strftime("%d-%b-%Y %H:%M") %>
-    </span>
-    <%# Los dos juegos de iniciales van rotulados. Sin rótulo Yusef preguntó
-        "¿qué es DM?", y con dos sueltos sería peor. %>
-    <% if paquete.driver.present? %>
-      <span style="font-size:var(--t7); white-space:nowrap;">
-        Drv: <b><%= etiqueta_iniciales(paquete.driver) %></b>
-      </span>
-    <% end %>
-    <span style="font-size:var(--t7); margin-left:auto; white-space:nowrap;">
-      Reg: <b style="font-size:var(--t6);"><%= paquete.user&.iniciales_display %></b>
-    </span>
-  </div>
-
-  <%# ── Bloque de dos columnas ──
-      Izquierda: código del cliente, sucursal donde retira, n/N.
-      Derecha: ciudad del cliente arriba y el tipo de envío enorme abajo. %>
-  <div style="display:flex; align-items:flex-end; gap:.06in; min-width:0;">
-
-    <div style="flex:1; min-width:0;">
-      <%# Código del cliente y n/N comparten renglón: los dos son cortos y los
-          dos van grandes. Apilados, la columna izquierda se volvía la más alta
-          de la etiqueta y dejaba la sucursal truncada en "SAN PED…" — que es
-          exactamente el "¿qué es San Pedro Soda?" que esto viene a arreglar.
-
-          "C6 es mi código de cliente y sí ocupa llevar el código de cliente
-          completo" (Yusef). %>
-      <div class="r" style="font-size:var(--t3); font-weight:bold;">
-        <span class="t mono"><%= paquete.cliente&.codigo %></span>
-        <span style="margin-left:auto; white-space:nowrap;"><%= etiqueta_fraccion(paquete) %></span>
-      </div>
-
-      <%# Sucursal donde retira, en itálica como el mockup. El encabezado va en
-          su propio renglón para que el nombre tenga todo el ancho de la columna
-          y no se corte: en la etiqueta vieja salía truncado y bajo la palabra
-          inglesa "Agent". %>
-      <div style="font-size:var(--t7); line-height:1;">RETIRA EN</div>
-      <div class="t" data-campo="sucursal"
-           style="font-size:var(--t4); font-weight:bold; font-style:italic; text-transform:uppercase;">
-        <%= etiqueta_sucursal(paquete) %>
-      </div>
-    </div>
-
-    <div style="text-align:right; min-width:0;">
-      <%# "Departamento abreviado y ciudad o pueblo" (Yusef). %>
-      <% if (ubic = etiqueta_ubicacion_cliente(paquete.cliente)) %>
-        <div class="t" style="font-size:var(--t7); font-style:italic;"><%= ubic %></div>
-      <% end %>
-
-      <%# Tipo de envío — lo más grande de toda la etiqueta. Es la clave visual
-          con la que separan la carga por servicio antes de empacar. %>
-      <%# De dónde viene (el comercio) y a qué servicio va, uno al lado del
-          otro. Yusef: "¿creés que quepa de dónde viene?" — con el código de 3
-          letras del catálogo de proveedores sí. %>
-      <div style="display:flex; align-items:baseline; gap:.05in; justify-content:flex-end;">
-        <%# Va más chico que el tipo de envío a propósito: a la par de EXP le
-            robaba el ancho a la sucursal y la dejaba en "SAN PEDRO S…", que es
-            el problema que este rediseño vino a arreglar. Lo cuida el test
-            "la sucursal donde retira nunca sale truncada". %>
-        <% if (origen = etiqueta_proveedor(paquete)) %>
-          <span data-campo="proveedor"
-                style="font-size:var(--t6); font-weight:bold; white-space:nowrap;">
-            <%= origen %>
-          </span>
-        <% end %>
-        <% if (envio = etiqueta_tipo_envio(paquete)) %>
-          <span data-campo="tipo-envio"
-                style="font-size:var(--t1); font-weight:800; line-height:.95; letter-spacing:-.02em; white-space:nowrap;">
-            <%= envio %>
-          </span>
-        <% end %>
-      </div>
-    </div>
-  </div>
+  <% end %>
 </div>

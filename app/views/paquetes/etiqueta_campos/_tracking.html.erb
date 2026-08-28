@@ -1,0 +1,15 @@
+<%# ── Tracking ── Yusef lo tiene como lo segundo más grande, en negrita: es
+    lo que el operario compara contra la caja que tiene en la mano.
+
+    PR-C6.27: uno por línea, y completos. Yusef mandó la etiqueta impresa con
+    un recuadro rojo y la regla escrita arriba:
+
+      "LOS TRACKING DEBEN CABER COMPLETOS"
+
+    `.trk` en vez de `.t`: parte antes que recortar. Va hardcodeado acá a
+    propósito — la plantilla no puede quitarlo. %>
+<% if etiqueta_plantilla.visible?("tracking") %>
+  <div class="trk mono" style="font-size:var(--fs-tracking); font-weight:bold;" data-campo="tracking">
+    <%= paquete.tracking %>
+  </div>
+<% end %>
