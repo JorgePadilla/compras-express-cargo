@@ -6834,3 +6834,154 @@ correr los seeds una vez.
 - *"Estamos en pre-alerta y hay que cambiar en cliente la parte donde está, si
   el cliente en [portal] tiene que ver lo mismo…"* (minuto 0, se corta).
 - *"Ahí vamos a amarrar al usuario de dónde es"* — ver `C18-02`.
+
+---
+
+## Conversación 19 (2026-08-28) — el papel de su equipo: el WR para imprimir, el foco al tracking, sellado, y los segundos
+
+~20 minutos. Yusef leyó **un papel que le preparó su equipo** — *"la izquierda
+era para ellos, y el lado derecho era para vos"* — con lo que juntaron usando
+staging con la pistola. Transcrita con `whisper small`.
+
+Antes de los ítems, dos cosas que dio por buenas: los listados de razones
+(retenido, política, casillero) se los va a pasar su equipo — los CRUDs ya
+existen, *"ese está para agregar y quitar vos"* —, y la lentitud que sienten
+por ratos la atribuyen a la red interna de Miami (*"estamos analizando lo de
+las cámaras en Miami… saturan la red interna. Voy a hacer unos cambios yo en
+Miami a ver si me funcionan"*), no al sistema.
+
+### C19-01 · EP: el Warehouse Receipt no sale en versión para imprimir
+
+> *"Después de hacer todo esto, yo le doy [F]9… me imprimen la etiqueta, me
+> tira el warehouse, pero mirá cómo me lo tira."*
+> *"Ocupás que esté como versión para imprimir… que es de un solo… le doy a
+> imprimir, y al darle a imprimir, como hice con la etiqueta, me regresa acá."*
+
+**Qué pasa.** El mecanismo ya existe a medias: `/entrega_personal` abre la
+etiqueta con `?wr=1` y, tras imprimirse, la misma pestaña navega al WR
+(`PR-C7.28`: Chrome permite un popup por gesto, no dos). Pero navega **sin**
+`print=true`, así que el WR cae como vista previa —la hoja gris con el botón—
+y la pestaña queda abierta. La etiqueta sí hace el ciclo completo: imprime,
+cierra, devuelve el foco. Él quiere el WR igual.
+
+### C19-02 · Tras imprimir, el foco vuelve al tracking
+
+> *"Después de darle F9, sale la etiqueta, imprime… lo que le hace falta es que
+> el cursor… regrese a donde está el [campo de] tracking."*
+> *"No sé dónde va, se queda como en el aire… la ventaja de eso es que ellos ya
+> solo vienen y escanean el siguiente."*
+
+Y el scroll, aparte:
+
+> *"Era que se fue para arriba… debería siempre dejar esto así como más a la
+> vista de ellos… que se mantenga en el área donde ellos en realidad se
+> mueven."*
+
+**Qué pasa.** `clearForm()` en `/etiquetar` sí enfoca el tracking — pero la
+pestaña de impresión **roba el foco de la ventana**, y al cerrarse nadie
+re-enfoca el campo. En `/entrega_personal` es peor: su `clearForm()` no enfoca
+nada. Y ninguna de las dos pantallas maneja el scroll.
+
+### C19-03 · Recolecta: campo de dirección
+
+> *"En entrega [personal]… lo único que vimos que hace falta ahorita es que
+> pongamos un campo que diga dirección. Dirección de la recolecta."*
+> *"Ya hay instrucciones, y en caso de que sea para llevarlo a otro lado se lo
+> agregamos en instrucciones al motorista… son raras, es una de cada 100."*
+
+**Qué pasa.** La recolecta guarda contacto, teléfono, horario e instrucciones
+— pero no tiene dónde poner la dirección, así que hoy se cuela en el textarea
+de instrucciones (el placeholder mismo dice *"Dónde queda, por dónde
+entrar…"*). Y un hallazgo al costado: esos cuatro campos se guardan y **no se
+muestran en ninguna pantalla** — el que maneja no tiene dónde leerlos.
+
+### C19-04 · Checkbox «Sellado» (y «Compra chino») para la descripción
+
+> *"Si aquí en la descripción del contenido les podemos poner un check nada más
+> que diga sellado… para que llegue en la descripción y diga paquete sellado."*
+> *"Mira, hay dos cosas: sellado y compra chino. Son más comunes. ¿Pudieras
+> poner algo para ellos? Aquí, a la parte de descripción: sellado, compra
+> chino."*
+
+El porqué: muchos paquetes no se abren (*"nosotros hay muchos paquetes que no
+los abrimos"*), y en el viejo escriben "sellado" a mano mil veces al día.
+
+> **Decisión de Jorge (2026-08-28):** catálogo CRUD como las plantillas de
+> notas —no dos botones fijos—, sembrado con los dos que dictó. Es su
+> filosofía de siempre: *"entre más cosas nos dejés crear, menos te
+> molestaremos"*.
+
+Regla de las gemelas: el campo descripción vive en `/etiquetar`, en
+`/entrega_personal` (donde se llama «Contenido» y es obligatorio) y en el form
+de `/paquetes`. Las tres.
+
+### C19-05 · Los segundos del F9, donde se buscan las cámaras
+
+> *"Lo que ocupo son los segundos… cuando revisamos cámaras, en un segundo
+> pueden pasar tres o cuatro paquetes… entonces no sabemos cuál segundo es
+> donde ellos salvaron, le dieron ingresado, o sea, el F9. Ese segundo es como
+> el paquete exacto."*
+> *"Roger le quitó los segundos por una mala interpretación de él… es que los
+> segundos los ocupamos nosotros para ver cámaras."*
+> *"Nosotros como administradores, o como sistema, sí necesitamos esa
+> información. El cliente no la necesita."*
+
+**Qué pasa.** El momento existe con precisión de microsegundos
+(`fecha_recibido_miami`, seteado en el save del F9) — pero ninguna pantalla
+del admin muestra los segundos: el listado y el timeline cortan en `%H:%M`, y
+el modal de duplicado de `/etiquetar` da solo la fecha. El único lugar de todo
+el sistema que imprime segundos es el pie del WR. Peor: el `datetime-local`
+del form de `/paquetes` envía sin segundos, así que **cualquier** edición
+posterior del paquete borra el segundo exacto en silencio.
+
+Lo del cliente quedó abierto a propósito — ver `RP-48`.
+
+### C19-06 · La etiqueta corrida, y los márgenes los ajusta él
+
+> *"Solo centrarla un poquito más hacia adentro… lo único que hay que hacer es
+> correr este lado, del lado izquierdo hacia la derecha; el lado derecho
+> déjalo tal cual."*
+
+Las impresoras se van de lado con el uso — *"como arrancamos etiquetas a
+morir, créeme que más de alguna tira que se va de lado; en San Pedro tengo esa
+situación y le tuve que poner una tuerca"*. Y la parte que más le importa:
+
+> *"¿Vos no tenés en el sistema donde yo pueda cambiarlas yo? El tamaño… a mí
+> me habían dado esto [en el sistema viejo] para hacer eso, para no molestar…
+> con eso yo te quito a vos, [que] te estás molestando para hacer estas
+> cosas."*
+
+> **Decisión de Jorge (2026-08-28):** las dos cosas. El corrimiento ya —margen
+> izquierdo arriba, el derecho tal cual— y una pantalla de ajustes de etiqueta
+> (patrón `/tasa_cambio`: claves en `Configuracion`, historial, solo admin)
+> para que él mismo la corra cuando la impresora se desvíe.
+
+### C19-07 · «Todas estas ciudades» en /etiquetar — ✅ ya existe, es dato
+
+> *"De hecho, lo que hay que [hacer es] quitar todas estas ciudades por solo
+> dejar una sucursal… que solo salgan las que tenemos activadas."*
+> *"Si podés ponerle una opción en algún lado donde uno pueda escoger qué
+> sucursal está activa."*
+
+Era el chooser «¿Dónde estás recibiendo?», que desde `PR-C7.52` ofrece Miami y
+DF México (la de prueba). Lo pedido ya está: el chooser sale de
+`Sucursal.de_recepcion` —solo activas que reciben carga— y `/sucursales` tiene
+el toggle de activa. Desactivando DF México el chooser desaparece entero (solo
+se pregunta cuando hay más de una). No es código; queda documentado para
+cuando le estorbe.
+
+### Las preguntas que abre
+
+| Id | Qué |
+|---|---|
+| `RP-47` | **La «incongruencia del paquete ingresado»** que traía en el papel. En vivo no la reprodujo: grabó un tracking que ya existía (*"grabé un tracking que ya existía… y no me lo reconoció"*), pero al revisar, el paquete **sí** estaba recibido hacía 3 minutos, y el código sí avisa (el modal de duplicado sale cuando el tracking existe y no está terminal). *"Voy a hablar con los mensajeros en Miami que me recuerden qué era esa incongruencia… creo que eran unas notas o algo que salían."* Esperar su detalle antes de tocar nada |
+| `RP-48` | **Qué detalle de fecha/hora ve el cliente.** *"El cliente no la necesita. Ellos con el día que se les diga… lo más que les podemos dar es el disponible en Honduras… con hora."* Y ahí mismo: *"ya son cositas que tengo que decidir con el personal… acaba de regresar hoy [de vacaciones]"*. El portal hoy casi no muestra horas de paquetes. **No tocar el portal** hasta que decida con su gente |
+
+### Dudosos del transcript
+
+- *"Hablando de México, no he recibido notificaciones, eso ya me levantó
+  alerta"* (min ~2, se corta) — ¿correos de la bodega DF México? Preguntar
+  antes de asumir.
+- *"Me lo tenés predeterminado, Miami… no hay problema, solo que después
+  podamos activarlo cuando activemos más cosas"* — parece el default de
+  recepción de `PR-C7.52`, conforme.
