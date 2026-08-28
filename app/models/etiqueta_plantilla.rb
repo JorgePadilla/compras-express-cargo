@@ -29,4 +29,27 @@ class EtiquetaPlantilla < ApplicationRecord
   def self.restaurar_original!
     first&.destroy!
   end
+
+  # El paquete del preview: 100% en memoria (nada se guarda, nada consulta),
+  # determinístico, y con TODOS los opcionales puestos — el preview tiene que
+  # mostrar la etiqueta más llena posible, que es la que puede no caber.
+  # `fecha_recibido_miami` va explícita: un Paquete sin persistir no tiene
+  # `created_at` y la fecha saldría vacía.
+  def self.paquete_de_muestra
+    Paquete.new(
+      tracking: "TBA333187639911",
+      tracking_secundario: "1Z999AA10123456784",
+      numero_recepcion: "RMIA2608000123",
+      numero_caja: 1, cantidad_paquetes: 2,
+      fecha_recibido_miami: Time.current,
+      driver: "Marvin Lopez",
+      tercero_nombre: "Maria Fernanda Lopez",
+      cliente: Cliente.new(codigo: "C6", nombre: "Kenia Isabel", apellido: "Maya Rodriguez",
+                           ciudad: "San Pedro Sula", departamento: "Cortés"),
+      sucursal: Sucursal.new(nombre: "San Pedro Sula"),
+      tipo_envio: TipoEnvio.new(codigo: "exp", nombre: "EXPRESS"),
+      proveedor: Proveedor.new(codigo: "AMZ"),
+      user: User.new(iniciales: "DM", nombre: "Digitador Miami")
+    )
+  end
 end

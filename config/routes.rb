@@ -243,8 +243,14 @@ Rails.application.routes.draw do
   # solo se podía cambiar con un deploy. Yusef: "la tasa es FIJA, la fija un
   # admin" — por eso es un CRUD y no un job.
   resource :tasa_cambio, only: %i[show update], controller: "tasa_cambio"
-  # C19-06: los márgenes de la etiqueta, ajustables por admin sin deploy.
-  resource :ajustes_etiqueta, only: %i[show update], controller: "ajustes_etiqueta"
+  # C19-06: los márgenes y la plantilla de la etiqueta, ajustables por admin
+  # sin deploy. La plantilla se guarda/restaura entera; el preview renderiza
+  # una candidata sin persistirla.
+  resource :ajustes_etiqueta, only: %i[show update], controller: "ajustes_etiqueta" do
+    patch  :plantilla, action: :guardar_plantilla
+    delete :plantilla, action: :restaurar_plantilla
+    post   :preview
+  end
 
   # `index` y `show` sobreviven solo para redirigir: los grupos de clientes se
   # administran en /servicios desde `PR-C7.12`, y lo que mostraba el detalle
