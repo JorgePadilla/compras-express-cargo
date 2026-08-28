@@ -163,6 +163,8 @@ end %>
           <%= f.label :descripcion, "Contenido", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
           <%= f.text_area :descripcion, rows: 2, placeholder: "Descripción del contenido…", required: true,
               class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+          <%# C19-04: la gemela de /etiquetar — mismos chips, mismo campo. %>
+          <%= render "shared/plantillas_descripcion", selector: "#paquete_descripcion" %>
         </div>
       </div>
 

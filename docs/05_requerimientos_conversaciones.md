@@ -6913,7 +6913,7 @@ prefill del cliente a propósito: la recolecta puede ser en la bodega de un
 proveedor. Y la ficha ganó el bloque «Datos de la Recolecta» con dirección,
 contacto, teléfono, horario e instrucciones — que hasta hoy eran write-only.
 
-### C19-04 · Checkbox «Sellado» (y «Compra chino») para la descripción
+### C19-04 · Checkbox «Sellado» (y «Compra chino») para la descripción — ✅ **HECHO (PR-C7.58)**
 
 > *"Si aquí en la descripción del contenido les podemos poner un check nada más
 > que diga sellado… para que llegue en la descripción y diga paquete sellado."*
@@ -6933,7 +6933,14 @@ Regla de las gemelas: el campo descripción vive en `/etiquetar`, en
 `/entrega_personal` (donde se llama «Contenido» y es obligatorio) y en el form
 de `/paquetes`. Las tres.
 
-### C19-05 · Los segundos del F9, donde se buscan las cámaras
+**Qué se hizo (`PR-C7.58`).** Catálogo `Plantillas de Descripción` calcado de
+las plantillas de notas: CRUD admin (`/plantillas_descripcion`, link en el
+sidebar), chips con el mismo `plantilla-picker` (reemplaza si vacío, agrega si
+no) junto al campo en las tres gemelas, y seeds con los dos que dictó —
+«Sellado» y «Compra chino». En staging hay que correr `db:seed` una vez: el
+deploy solo migra, nunca siembra.
+
+### C19-05 · Los segundos del F9, donde se buscan las cámaras — ✅ **HECHO (PR-C7.59)**
 
 > *"Lo que ocupo son los segundos… cuando revisamos cámaras, en un segundo
 > pueden pasar tres o cuatro paquetes… entonces no sabemos cuál segundo es
@@ -6953,6 +6960,15 @@ del form de `/paquetes` envía sin segundos, así que **cualquier** edición
 posterior del paquete borra el segundo exacto en silencio.
 
 Lo del cliente quedó abierto a propósito — ver `RP-48`.
+
+**Qué se hizo (`PR-C7.59`).** Solo admin: la columna del listado (la que él ya
+usa: *"aquí ocupamos la hora en esto"*), la línea de tiempo de la ficha (todas
+las fechas — *"igual el enviado"*) y la fecha del modal de duplicado pasan a
+llevar segundos. Y la protección que faltaba: el flatpickr del form edita al
+minuto, así que guardar cualquier corrección re-parseaba la fecha con :00 —
+ahora, si el minuto no cambió, se conserva el momento original con su segundo
+(y paper_trail no registra un cambio que no fue). La etiqueta impresa queda
+`%H:%M`: el ancho está al filo y el WR ya imprime segundos.
 
 ### C19-06 · La etiqueta corrida, y los márgenes los ajusta él — ✅ **HECHO (PR-C7.60)**
 

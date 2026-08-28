@@ -469,7 +469,9 @@ class PaquetesController < ApplicationController
         guia: ERB::Util.html_escape(paquete.guia),
         estado: ERB::Util.html_escape(paquete.estado),
         cliente: ERB::Util.html_escape(paquete.cliente.nombre_completo),
-        fecha: paquete.fecha_recibido_miami&.strftime("%d/%m/%Y"),
+        # C19-05: con hora y segundos — el modal no distinguía el paquete
+        # recibido hace 10 minutos del de las 8am.
+        fecha: paquete.fecha_recibido_miami&.strftime("%d/%m/%Y %H:%M:%S"),
         # Sin las hermanas propias. Con un envío dividido, contarlas le decía al
         # operario «ya hay 3» cuando eran sus dos cajas más un ajeno.
         count: Paquete.where(tracking: tracking_base).where.not(id: excluidos).count,

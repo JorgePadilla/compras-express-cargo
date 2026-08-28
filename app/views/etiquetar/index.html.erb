@@ -626,6 +626,8 @@ end %>
             data: { etiquetar_target: "descripcion" },
             class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
                    focus:ring-cec-teal focus:border-cec-teal" %>
+        <%# C19-04: "sellado y compra chino, son más comunes". %>
+        <%= render "shared/plantillas_descripcion", selector: "#paquete_descripcion" %>
       </div>
 
       <%# Retener Miami + toggles (después de descripción). El bloque de
