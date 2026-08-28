@@ -47,6 +47,9 @@ ActiveSupport::Inflector.inflections(:en) do |inflect|
   inflect.irregular "motivo_envio_politica", "motivos_envio_politica"
   inflect.irregular "paquete_motivo_envio_politica", "paquete_motivos_envio_politica"
   inflect.irregular "plantilla_nota_cliente", "plantillas_notas_cliente"
+  # C19-04: sin esto singular y plural empatan y las rutas del catálogo de
+  # descripciones salen como `plantillas_descripcion_index_path`.
+  inflect.irregular "plantilla_descripcion", "plantillas_descripcion"
   # PR-13.d: sin esto `has_many :autorizaciones` busca la clase `Autorizacione`.
   inflect.irregular "autorizacion", "autorizaciones"
 end

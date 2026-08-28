@@ -1,0 +1,33 @@
+<%# C19-04: chips de descripciones frecuentes del contenido, junto al campo.
+
+    Yusef, 2026-08-28: "si aquí en la descripción del contenido les podemos
+    poner un check nada más que diga sellado… para que llegue en la
+    descripción y diga paquete sellado". El porqué: muchos paquetes no se
+    abren, y en el sistema viejo escriben "sellado" y "compra chino" a mano
+    mil veces al día.
+
+    Gemelo de shared/_plantillas_notas — mismo `plantilla-picker`: reemplaza
+    si el campo está vacío, agrega al final si no, y deja el foco en el campo.
+
+    Uso:
+      <%%= render "shared/plantillas_descripcion", selector: "#paquete_descripcion" %> %>
+<% plantillas = PlantillaDescripcion.activas.ordered %>
+<% if plantillas.any? %>
+  <div data-controller="plantilla-picker"
+       data-plantilla-picker-target-selector-value="<%= selector %>"
+       class="mt-1">
+    <span class="text-[11px] text-gray-500 dark:text-gray-400 mr-1">Frecuentes:</span>
+    <div class="inline-flex flex-wrap gap-1.5 align-middle">
+      <% plantillas.each do |plantilla| %>
+        <button type="button"
+                data-action="plantilla-picker#insert"
+                data-text="<%= plantilla.texto %>"
+                title="<%= plantilla.texto %>"
+                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                       bg-cec-teal/10 text-cec-teal hover:bg-cec-teal/20 transition-colors cursor-pointer">
+          <%= plantilla.titulo %>
+        </button>
+      <% end %>
+    </div>
+  </div>
+<% end %>

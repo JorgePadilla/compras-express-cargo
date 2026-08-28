@@ -225,6 +225,20 @@ puts "Seeding plantillas_notas_cliente..."
 end
 puts "  ✓ #{PlantillaNotaCliente.count} plantillas notas al cliente"
 
+# ── Plantillas de Descripción (C19-04, PR-C7.58) ──
+# Yusef, 2026-08-28: "hay dos cosas: sellado y compra chino, son más comunes".
+puts "Seeding plantillas_descripcion..."
+[
+  { titulo: "Sellado",     texto: "Sellado",     position: 0 },
+  { titulo: "Compra chino", texto: "Compra chino", position: 1 }
+].each do |attrs|
+  PlantillaDescripcion.find_or_create_by!(titulo: attrs[:titulo]) do |p|
+    p.texto    = attrs[:texto]
+    p.position = attrs[:position]
+  end
+end
+puts "  ✓ #{PlantillaDescripcion.count} plantillas de descripción"
+
 # ── Motivos de Retención (PR-D2) ──
 puts "Seeding motivos_retencion..."
 [
