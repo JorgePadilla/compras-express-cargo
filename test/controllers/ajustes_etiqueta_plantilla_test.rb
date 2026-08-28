@@ -107,6 +107,37 @@ class AjustesEtiquetaPlantillaTest < ActionDispatch::IntegrationTest
     assert_match "Drv: <b>ML</b>", response.body, "el texto pasado de largo también"
   end
 
+  # PR-C7.66: el orden de las filas rige el orden del HTML impreso.
+  test "reordenar filas cambia el orden de la etiqueta" do
+    filas = EtiquetaPlantilla::Definicion::DEFAULT["filas"].map(&:deep_dup)
+    recepcion = filas.index { |f| f["id"] == "f-recepcion" }
+    tracking  = filas.index { |f| f["id"] == "f-tracking" }
+    filas[recepcion], filas[tracking] = filas[tracking], filas[recepcion]
+
+    patch plantilla_ajustes_etiqueta_url, params: {
+      definicion_json: { filas: filas }.to_json
+    }
+
+    get etiqueta_paquete_url(paquetes(:disponible_entrega_juan))
+    cuerpo = response.body
+    assert_operator cuerpo.index('data-campo="tracking"'), :<, cuerpo.index('data-campo="numero-recepcion"'),
+                    "el tracking tenía que salir antes que el número"
+  end
+
+  test "un orden que no cubre todos los campos vuelve al de fábrica" do
+    sin_tracking = EtiquetaPlantilla::Definicion::DEFAULT["filas"].reject { |f| f["id"] == "f-tracking" }
+
+    patch plantilla_ajustes_etiqueta_url, params: {
+      definicion_json: { filas: sin_tracking }.to_json
+    }
+
+    get etiqueta_paquete_url(paquetes(:disponible_entrega_juan))
+    cuerpo = response.body
+    assert_match 'data-campo="tracking"', cuerpo, "el tracking no puede desaparecer por un orden roto"
+    assert_operator cuerpo.index('data-campo="numero-recepcion"'), :<, cuerpo.index('data-campo="tracking"'),
+                    "con el orden roto rige el de fábrica"
+  end
+
   test "non-admin no toca la plantilla" do
     delete session_url
     post session_url, params: {

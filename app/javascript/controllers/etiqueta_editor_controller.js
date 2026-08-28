@@ -62,6 +62,69 @@ export default class extends Controller {
     }
   }
 
+  // ── PR-C7.66: las flechas de la card de Orden. Mueven nodos del DOM y
+  // re-serializan — el preview muestra el orden nuevo al instante. ──
+
+  filaArriba(e) {
+    const fila = e.target.closest("[data-orden-fila]")
+    const previa = fila?.previousElementSibling
+    if (previa) fila.parentElement.insertBefore(fila, previa)
+    this.cambio()
+  }
+
+  filaAbajo(e) {
+    const fila = e.target.closest("[data-orden-fila]")
+    const siguiente = fila?.nextElementSibling
+    if (siguiente) fila.parentElement.insertBefore(siguiente, fila)
+    this.cambio()
+  }
+
+  // Las subfilas del bloque de dos columnas: adentro de su columna, nada más.
+  subfilaArriba(e) {
+    const sub = e.target.closest("[data-orden-subfila]")
+    const previa = sub?.previousElementSibling
+    if (previa) sub.parentElement.insertBefore(sub, previa)
+    this.cambio()
+  }
+
+  subfilaAbajo(e) {
+    const sub = e.target.closest("[data-orden-subfila]")
+    const siguiente = sub?.nextElementSibling
+    if (siguiente) sub.parentElement.insertBefore(siguiente, sub)
+    this.cambio()
+  }
+
+  campoIzq(e) {
+    const chip = e.target.closest("[data-orden-campo]")
+    const previo = chip?.previousElementSibling
+    if (previo) chip.parentElement.insertBefore(chip, previo)
+    this.cambio()
+  }
+
+  campoDer(e) {
+    const chip = e.target.closest("[data-orden-campo]")
+    const siguiente = chip?.nextElementSibling
+    if (siguiente) chip.parentElement.insertBefore(siguiente, chip)
+    this.cambio()
+  }
+
+  // A la fila normal de arriba/abajo. El bloque de dos columnas se salta:
+  // está sellado — ningún campo entra ni sale de él.
+  campoArriba(e) { this._campoAFila(e, "previousElementSibling") }
+  campoAbajo(e)  { this._campoAFila(e, "nextElementSibling") }
+
+  _campoAFila(e, direccion) {
+    const chip = e.target.closest("[data-orden-campo]")
+    let fila = chip?.closest("[data-orden-fila]")
+    if (!chip || !fila) return
+
+    do { fila = fila[direccion] } while (fila && fila.dataset.tipo === "dos_columnas")
+    if (!fila) return
+
+    fila.querySelector("[data-chips]")?.appendChild(chip)
+    this.cambio()
+  }
+
   // ── privados ──
 
   // El DOM es la fuente: cada input lleva `data-def-path` ("campos.tipo_envio.pt")
@@ -82,6 +145,22 @@ export default class extends Controller {
       camino.slice(0, -1).forEach(k => { nodo = (nodo[k] ||= {}) })
       nodo[camino[camino.length - 1]] = valor
     })
+    // PR-C7.66: la card de Orden ES la fuente de `filas` — se lee el DOM tal
+    // como quedó después de las flechas. Sin card (por si algún día no está),
+    // no se manda `filas` y el server usa las que tenga.
+    const filas = this.element.querySelectorAll("[data-orden-fila]")
+    if (filas.length) {
+      def.filas = Array.from(filas).map(f => {
+        if (f.dataset.tipo === "dos_columnas") {
+          const lado = col => Array.from(f.querySelectorAll(`[data-col='${col}'] [data-orden-subfila]`))
+            .map(sf => Array.from(sf.querySelectorAll("[data-orden-campo]")).map(c => c.dataset.ordenCampo))
+          return { id: f.dataset.filaId, tipo: "dos_columnas", izquierda: lado("izquierda"), derecha: lado("derecha") }
+        }
+        return { id: f.dataset.filaId,
+                 campos: Array.from(f.querySelectorAll("[data-orden-campo]")).map(c => c.dataset.ordenCampo) }
+      })
+    }
+
     this._def = def
     if (this.hasJsonTarget) this.jsonTarget.value = JSON.stringify(def)
   }
