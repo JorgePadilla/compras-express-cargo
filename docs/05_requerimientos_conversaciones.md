@@ -6864,7 +6864,7 @@ etiqueta con `?wr=1` y, tras imprimirse, la misma pestaña navega al WR
 y la pestaña queda abierta. La etiqueta sí hace el ciclo completo: imprime,
 cierra, devuelve el foco. Él quiere el WR igual.
 
-### C19-02 · Tras imprimir, el foco vuelve al tracking
+### C19-02 · Tras imprimir, el foco vuelve al tracking — ✅ **ARREGLADO (PR-C7.55 · PR-C7.56)**
 
 > *"Después de darle F9, sale la etiqueta, imprime… lo que le hace falta es que
 > el cursor… regrese a donde está el [campo de] tracking."*
@@ -6884,9 +6884,14 @@ nada. Y ninguna de las dos pantallas maneja el scroll.
 
 **La mitad de EP salió en `PR-C7.55`**: `clearForm()` vuelve al `[autofocus]`
 (el proveedor) al guardar, y con el WR cerrándose solo el foco regresa a la
-pantalla lista para el siguiente. La mitad de `/etiquetar` —re-enfocar el
-tracking cuando la pestaña de impresión devuelve la ventana, y el scroll— es
-`PR-C7.56`.
+pantalla lista para el siguiente. **La de `/etiquetar` en `PR-C7.56`**, que
+encontró la tercera vía de fuga: el modal rojo de la bolsa (`showModal` hace
+inerte la página, así que el `focus()` de `clearForm` moría en silencio, y el
+modal al cerrarse no devolvía el foco). Ahora las tres vías vuelven al
+tracking —tras limpiar, al cerrar el modal, y cuando la pestaña de impresión
+devuelve la ventana— con `scrollIntoView` para que la vista se quede "en el
+área donde ellos en realidad se mueven". El listener de window "focus" quedó
+también en EP, apuntando a su `[autofocus]`.
 
 ### C19-03 · Recolecta: campo de dirección
 

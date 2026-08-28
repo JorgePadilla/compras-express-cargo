@@ -197,6 +197,9 @@ cerrarQuitarCobro() {
 
     if (this.sucursalModalTarget.close) this.sucursalModalTarget.close()
     else this.sucursalModalTarget.classList.add("hidden")
+    // C19-02: `showModal()` se llevó el foco; al cerrar, de vuelta al
+    // tracking para el siguiente escaneo.
+    this._volverAlTracking()
   }
 
   // C16-04 · Yusef, 2026-08-25: "mirá a ver si lo podés lograr que quede al
@@ -887,11 +890,30 @@ cerrarQuitarCobro() {
     this._avisoActual = null
     this._duplicateData = null
     if (this.hasAvisoModalTarget && this.avisoModalTarget.open) this.avisoModalTarget.close()
-    if (this.hasTipoEnvioTarget) {
-      this.tipoEnvioTarget.focus()
-    } else {
-      this.trackingTarget.focus()
-    }
+    // C19-02: al tracking, que es donde escanea el siguiente. (El branch que
+    // prefería `tipoEnvio` era de cuando el form tenía ese select; con la
+    // sesión por tipo de envío el target ya no existe en la vista.)
+    this._volverAlTracking()
+  }
+
+  // C19-02. Yusef: "el cursor… regrese a donde está el [campo de] tracking…
+  // se queda como en el aire… ellos ya solo vienen y escanean el siguiente".
+  // Y el scroll aparte: "era que se fue para arriba… que se mantenga en el
+  // área donde ellos en realidad se mueven".
+  //
+  // Si el modal rojo de la bolsa está abierto, el resto de la página es
+  // inerte y un focus() acá no hace nada — el foco lo devuelve
+  // `cerrarSucursalModal()`. El guard de `isConnected` es por el listener de
+  // window "focus" del flujo de actualización: `Turbo.visit` reemplaza la
+  // página y ese listener puede disparar sobre un controller ya muerto.
+  _volverAlTracking() {
+    if (!this.element.isConnected) return
+    if (this.hasSucursalModalTarget && this.sucursalModalTarget.open) return
+    if (this.hasAvisoModalTarget && this.avisoModalTarget.open) return
+    if (!this.hasTrackingTarget) return
+
+    this.trackingTarget.focus()
+    this.trackingTarget.scrollIntoView({ block: "center" })
   }
 
   // F2 tiene que dejar el formulario en blanco, siempre. Yusef: "todo, todo.
@@ -1089,6 +1111,10 @@ cerrarQuitarCobro() {
         // Yusef: "aqui esta tirando el warehouse, no la etiqueta".
         // `hermanas=1` saca una por caja cuando el tracking se dividio.
         window.open(`/paquetes/${el.dataset.paqueteId}/etiqueta?hermanas=1&print=true`, "_blank")
+        // C19-02: la pestaña de impresión se lleva el foco de la ventana; al
+        // cerrarse (afterprint → window.close) la ventana vuelve, y acá se
+        // vuelve al tracking. {once}: es un viaje por impresión.
+        window.addEventListener("focus", () => this._volverAlTracking(), { once: true })
         // PR-C6.24: el segundo aviso, con la etiqueta ya en la mano.
         this._avisarSucursalAlFinal()
       }
