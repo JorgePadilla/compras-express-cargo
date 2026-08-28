@@ -46,7 +46,13 @@
 
       width: 2.25in;
       height: 1.25in;
-      padding: 0.04in 0.06in;
+      /* C19-06: los márgenes horizontales salen de /ajustes_etiqueta (claves
+         en Configuracion; EtiquetaAjustes pone el default y el tope). Yusef:
+         "correr este lado, del lado izquierdo hacia la derecha; el lado
+         derecho déjalo tal cual" — las Dymo se van de lado con el uso y él
+         los corrige solo, sin deploy. El padding vertical no se toca: el alto
+         está al filo y lo mide etiqueta_cabe_test. */
+      padding: 0.04in <%= EtiquetaAjustes.margen_der_mm %>mm 0.04in <%= EtiquetaAjustes.margen_izq_mm %>mm;
       display: flex;
       flex-direction: column;
       justify-content: space-between;

@@ -1,0 +1,84 @@
+<%# C19-06: Yusef ajusta los márgenes de la etiqueta él mismo cuando la Dymo
+    se va de lado — "con eso yo te quito a vos". %>
+<%= render PageHeaderComponent.new(
+      title: "Ajustes de Etiqueta",
+      subtitle: "Los margenes horizontales de la etiqueta Dymo (2.25 × 1.25 in)") %>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+    <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Márgenes vigentes</p>
+    <p class="text-4xl font-bold text-cec-navy dark:text-cec-gold font-mono mb-6">
+      <%= number_with_precision(@margen_izq, precision: 1) %> mm
+      <span class="text-base font-normal text-gray-500">izquierdo</span>
+      <span class="mx-2 text-gray-300">·</span>
+      <%= number_with_precision(@margen_der, precision: 1) %> mm
+      <span class="text-base font-normal text-gray-500">derecho</span>
+    </p>
+
+    <div class="p-3 rounded-lg bg-amber-50 border border-amber-200 mb-6">
+      <p class="text-sm text-amber-900">
+        <b>Ojo:</b> subir un margen le quita ancho al contenido, y los trackings
+        <b>deben caber completos</b>. Movete de a poco (0.5 mm por vez) y
+        reimprimí una etiqueta para ver el corrimiento. Si la impresora se va
+        hacia la izquierda, subí el margen <b>izquierdo</b> y dejá el derecho
+        tal cual.
+      </p>
+    </div>
+
+    <%= form_with url: ajustes_etiqueta_path, method: :patch, class: "flex flex-wrap items-end gap-3" do %>
+      <div>
+        <%= label_tag :margen_izq_mm, "Margen izquierdo (mm)",
+              class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <%= text_field_tag :margen_izq_mm, number_with_precision(@margen_izq, precision: 1),
+              inputmode: "decimal", autocomplete: "off",
+              class: "block w-40 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900
+                     dark:text-gray-100 shadow-sm text-sm font-mono
+                     focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+      <div>
+        <%= label_tag :margen_der_mm, "Margen derecho (mm)",
+              class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <%= text_field_tag :margen_der_mm, number_with_precision(@margen_der, precision: 1),
+              inputmode: "decimal", autocomplete: "off",
+              class: "block w-40 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900
+                     dark:text-gray-100 shadow-sm text-sm font-mono
+                     focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+      <%= submit_tag "Guardar márgenes",
+            class: "px-4 py-2 bg-cec-navy text-white rounded-lg text-sm font-medium hover:bg-cec-navy-light cursor-pointer" %>
+    <% end %>
+    <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+      Entre 0 y <%= EtiquetaAjustes::MAX_MM %> mm. Aplica a la siguiente etiqueta
+      que se imprima — las ya impresas no cambian.
+    </p>
+  </div>
+
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+    <p class="text-xs text-gray-500 uppercase tracking-wider mb-3">Últimos cambios</p>
+    <% if @historial.any? %>
+      <table class="min-w-full text-sm" data-tabla="historial-etiqueta">
+        <thead>
+          <tr class="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
+            <th class="py-2 pr-4">Cuando</th>
+            <th class="py-2 pr-4">Quien</th>
+            <th class="py-2">Quedo en</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @historial.each do |v| %>
+            <tr class="border-b border-gray-100 dark:border-gray-700">
+              <td class="py-2 pr-4 whitespace-nowrap text-xs"><%= l(v.created_at, format: :short) %></td>
+              <td class="py-2 pr-4 text-xs"><%= User.find_by(id: v.whodunnit)&.nombre || "Sistema" %></td>
+              <td class="py-2 font-mono text-xs">
+                <%= v.item&.clave == EtiquetaAjustes::CLAVE_DER ? "der" : "izq" %>:
+                <%= v.changeset&.dig("valor")&.last || "—" %> mm
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% else %>
+      <p class="text-sm text-gray-500 italic">Todavía con los valores de fábrica.</p>
+    <% end %>
+  </div>
+</div>
