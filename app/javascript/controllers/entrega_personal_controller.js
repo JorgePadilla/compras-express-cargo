@@ -29,6 +29,10 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
       this.clearForm()
     } else if (e.key === "F9") {
       e.preventDefault()
+      // C19-08, la gemela: mientras haya una pregunta abierta (la listita de
+      // retener, la de política — cualquier <dialog>), F9 no guarda. Se
+      // contesta con un Enter y se sigue; F2 queda libre.
+      if (document.querySelector("dialog[open]")) return
       this.submitFormWithPrint()
     }
   }

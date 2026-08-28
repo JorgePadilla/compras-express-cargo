@@ -66,7 +66,14 @@ class EtiquetarPitoPodesSeguirTest < ApplicationSystemTestCase
   def abrir_etiquetar
     visit etiquetar_path
     if page.has_text?("¿Qué tipo de envío vas a trabajar?", wait: 3)
-      first("form[action='#{iniciar_sesion_etiquetar_path}'] button").click
+      # C19-08: la sesión se abre en el tipo de la pre-alerta que se escanea.
+      # Antes se clickeaba el primer botón —que no es CER Legacy— y el match
+      # sonaba igual **con el modal de conflicto en pantalla**: el beep alegre
+      # sobre un paquete que no se podía guardar. Ahora el conflicto lo
+      # silencia (suena solo el error), así que este test tiene que escanear
+      # en la sesión correcta para escuchar el match de verdad.
+      find("form[action='#{iniciar_sesion_etiquetar_path}'] button",
+           text: tipo_envios(:aereo).nombre).click
     end
     assert_selector "#paquete_tracking", wait: 5
   end

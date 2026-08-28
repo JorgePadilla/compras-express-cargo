@@ -7020,6 +7020,48 @@ el toggle de activa. Desactivando DF México el chooser desaparece entero (solo
 se pregunta cuando hay más de una). No es código; queda documentado para
 cuando le estorbe.
 
+### C19-08 · Los modales salen montados — 🐛 ✅ **ARREGLADO (PR-C7.62)**
+
+Jorge, el mismo día, probando con lo del audio ya adentro:
+
+> *"¿Podemos hacer que los modales salgan en orden? Actualmente salen
+> montados… pensaría que no tiene sentido que aparezca el modal [de aviso
+> junto a] 'Este paquete es de otro tipo de envío'."*
+> *"Si hay varias notas y alertas como la del paquete de otro tipo de envío
+> hay que mostrarlas en orden y no montadas, el orden que haga más sentido."*
+
+**Qué pasaba.** El conflicto de sesión es un overlay (`div` con z-index) y los
+avisos de retención/tareas/notas son `<dialog>` nativos — top-layer, que pinta
+**encima de cualquier z-index**. Al escanear un tracking con pre-alerta de
+otro tipo salían las dos cosas a la vez: el beep alegre de match, la fila de
+avisos tapando al conflicto, y el foco peleado (el `showModal` hace inerte el
+resto de la página, así que el foco que el conflicto pedía moría en
+silencio). La incongruencia del secundario tenía el mismo montaje por otra
+vía: se teclea con los avisos del primario ya saliendo.
+
+**El orden con sentido (decisión de Jorge, 2026-08-28).** El conflicto decide
+**primero y sale solo**: sus dos salidas —finalizar la sesión o dejarlo de
+lado— abandonan el paquete en esta sesión, así que los avisos no tienen
+"después" acá. No se pierden: vuelven a salir **enteros** al escanear el
+paquete en la sesión que corresponde, que es donde se contestan de verdad.
+Con el conflicto suena solo el error — el beep de match sobre un paquete que
+no se puede guardar le mentía al oído del operario (cambia lo de `PR-C6.9`,
+que mandaba los dos sonidos juntos).
+
+**Y la regla general que evita todo montaje:** mientras haya una pregunta en
+pantalla sin contestar —un aviso en fila, el conflicto, el duplicado, la
+listita de retener o política, el PIN, el «¿cuántas etiquetas?»— las teclas
+de guardar (F8/F9/F10) no actúan. Contestar cuesta un Enter; guardar por
+encima costaba un paquete con la pregunta sin responder. F2 queda libre: es
+la salida que los propios modales ofrecen. La gemela de EP lleva la misma
+regla con sus listitas.
+
+De paso, cazado en el mismo arreglo: el comentario ERB del partial de chips
+(`PR-C7.58`) filtraba un `%>` a la pantalla — y su molde,
+`shared/_plantillas_notas`, filtraba **la frase entera del comentario** en
+`/pre_facturas`, `/caja` y el form de `/paquetes` desde `PR-C6.13`: el primer
+cierre de tag adentro de un `<%#` lo termina, y lo que sigue se imprime.
+
 ### Las preguntas que abre
 
 | Id | Qué |
