@@ -48,6 +48,24 @@ class AjustesEtiquetaEditorTest < ApplicationSystemTestCase
     assert_selector "[data-etiqueta-editor-target='estado']", text: /Se recortan \d+px/, wait: 10
   end
 
+  test "apagar un campo y cambiar un rotulo se ven en el preview" do
+    assert_selector "[data-etiqueta-editor-target='estado']", text: "Cabe ✓", wait: 10
+    esperar { page.evaluate_script(srcdoc_js).to_s.include?('data-campo="tercero"') }
+
+    page.execute_script(%(document.querySelector("[data-def-path='campos.tercero.visible']").click()))
+    esperar { !page.evaluate_script(srcdoc_js).to_s.include?('data-campo="tercero"') }
+    assert_not_includes page.evaluate_script(srcdoc_js).to_s, 'data-campo="tercero"',
+                        "el tercero apagado siguió saliendo en el preview"
+
+    page.execute_script(<<~JS)
+      const texto = document.querySelector("[data-def-path='campos.sucursal.texto']")
+      texto.value = "AGENCIA"
+      texto.dispatchEvent(new Event("input", { bubbles: true }))
+    JS
+    esperar { page.evaluate_script(srcdoc_js).to_s.include?("AGENCIA") }
+    assert_includes page.evaluate_script(srcdoc_js).to_s, "AGENCIA"
+  end
+
   private
 
   def srcdoc_js
