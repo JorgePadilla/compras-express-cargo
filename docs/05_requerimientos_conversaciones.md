@@ -6970,7 +6970,7 @@ ahora, si el minuto no cambió, se conserva el momento original con su segundo
 (y paper_trail no registra un cambio que no fue). La etiqueta impresa queda
 `%H:%M`: el ancho está al filo y el WR ya imprime segundos.
 
-### C19-06 · La etiqueta corrida, y los márgenes los ajusta él
+### C19-06 · La etiqueta corrida, y los márgenes los ajusta él — ✅ **HECHO (PR-C7.60)**
 
 > *"Solo centrarla un poquito más hacia adentro… lo único que hay que hacer es
 > correr este lado, del lado izquierdo hacia la derecha; el lado derecho
@@ -6989,6 +6989,16 @@ situación y le tuve que poner una tuerca"*. Y la parte que más le importa:
 > izquierdo arriba, el derecho tal cual— y una pantalla de ajustes de etiqueta
 > (patrón `/tasa_cambio`: claves en `Configuracion`, historial, solo admin)
 > para que él mismo la corra cuando la impresora se desvíe.
+
+**Qué se hizo (`PR-C7.60`).** Los márgenes horizontales de la etiqueta salen
+de `Configuracion` (`EtiquetaAjustes`, en milímetros): izquierdo 2.5mm —1mm
+corrido a la derecha respecto del 0.06in de antes—, derecho 1.5mm, tal cual.
+`/ajustes_etiqueta` (solo admin, con historial) los edita entre 0 y 10mm; un
+valor fuera de rango cae al default en vez de irse a la impresora, porque
+subir el margen le quita ancho a los trackings, que deben caber completos —
+los tests que miden en Chrome real pasan con el default nuevo. Aplica a la
+siguiente etiqueta que se imprima, en los dos render paths (etiqueta y
+combinadas), sin deploy.
 
 ### C19-07 · «Todas estas ciudades» en /etiquetar — ✅ ya existe, es dato
 

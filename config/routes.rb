@@ -243,6 +243,8 @@ Rails.application.routes.draw do
   # solo se podía cambiar con un deploy. Yusef: "la tasa es FIJA, la fija un
   # admin" — por eso es un CRUD y no un job.
   resource :tasa_cambio, only: %i[show update], controller: "tasa_cambio"
+  # C19-06: los márgenes de la etiqueta, ajustables por admin sin deploy.
+  resource :ajustes_etiqueta, only: %i[show update], controller: "ajustes_etiqueta"
 
   # `index` y `show` sobreviven solo para redirigir: los grupos de clientes se
   # administran en /servicios desde `PR-C7.12`, y lo que mostraba el detalle
