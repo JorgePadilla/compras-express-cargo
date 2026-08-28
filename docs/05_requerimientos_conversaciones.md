@@ -6940,6 +6940,12 @@ no) junto al campo en las tres gemelas, y seeds con los dos que dictó —
 «Sellado» y «Compra chino». En staging hay que correr `db:seed` una vez: el
 deploy solo migra, nunca siembra.
 
+**Seguimiento 2026-08-28 (PR-C7.61).** Jorge: *"pon la seed en la migración
+para que se corra"*. Las dos plantillas viajan ahora en una migración de
+datos —idempotente por título, en SQL, como la de la tasa— así el deploy de
+staging las siembra solo y el paso a mano desaparece. `db/seeds.rb` las
+conserva igual para levantar un dev desde cero.
+
 ### C19-05 · Los segundos del F9, donde se buscan las cámaras — ✅ **HECHO (PR-C7.59)**
 
 > *"Lo que ocupo son los segundos… cuando revisamos cámaras, en un segundo
