@@ -1,0 +1,7 @@
+<%# Quién registró, en iniciales rotuladas. El rótulo va un punto más chico
+    que el valor — los dos tamaños son de la plantilla. %>
+<% if etiqueta_plantilla.visible?("reg") %>
+  <span style="font-size:var(--fs-reg-rotulo); margin-left:auto; white-space:nowrap;" data-campo="reg">
+    <%= etiqueta_plantilla.texto("reg") %> <b style="font-size:var(--fs-reg);"><%= paquete.user&.iniciales_display %></b>
+  </span>
+<% end %>

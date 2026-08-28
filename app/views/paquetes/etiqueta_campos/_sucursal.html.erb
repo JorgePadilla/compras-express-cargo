@@ -1,0 +1,11 @@
+<%# Sucursal donde retira, en itálica como el mockup. El encabezado (texto
+    fijo de la plantilla, «RETIRA EN» de fábrica) va en su propio renglón para
+    que el nombre tenga todo el ancho de la columna y no se corte: en la
+    etiqueta vieja salía truncado y bajo la palabra inglesa "Agent". %>
+<% if etiqueta_plantilla.visible?("sucursal") %>
+  <div style="font-size:var(--fs-sucursal-rotulo); line-height:1;"><%= etiqueta_plantilla.texto("sucursal") %></div>
+  <div class="t" data-campo="sucursal"
+       style="font-size:var(--fs-sucursal); font-weight:bold; font-style:italic; text-transform:uppercase;">
+    <%= etiqueta_sucursal(paquete) %>
+  </div>
+<% end %>

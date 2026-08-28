@@ -4,12 +4,14 @@
   <title>Etiqueta — <%= @paquete&.numero_recepcion.presence || @paquete&.tracking %></title>
   <meta charset="UTF-8">
   <style>
-    /* PR-10.d: Dymo 2.25 × 1.25 in — el formato que Yusef confirmó para
-       ETIQUETAR. El Warehouse Receipt sigue en carta con su propio layout;
-       son dos documentos distintos que hasta ahora eran el mismo archivo. */
+    /* PR-10.d: Dymo 2.25 × 1.25 in de fábrica — el formato que Yusef
+       confirmó para ETIQUETAR. El Warehouse Receipt sigue en carta con su
+       propio layout; son dos documentos distintos que hasta ahora eran el
+       mismo archivo. C19-06: las dimensiones salen de la plantilla
+       (/ajustes_etiqueta), con rangos acotados y fallback al de fábrica. */
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    @page { size: 2.25in 1.25in; margin: 0; }
+    @page { size: <%= etiqueta_num(etiqueta_plantilla.ancho_in) %>in <%= etiqueta_num(etiqueta_plantilla.alto_in) %>in; margin: 0; }
 
     body {
       font-family: Arial, Helvetica, sans-serif;
@@ -22,30 +24,18 @@
        importante, lo que se lee primero, y tenemos los de pequeñas para
        información adicional que se ocupa de vez en cuando".
 
-       Los tamaños viven acá y no en cada elemento para poder escalarlos todos
-       de un solo lugar: con los 11 campos a 2.25 × 1.25 in el alto queda al
-       filo, y `test/system/etiqueta_cabe_test.rb` mide en Chrome de verdad si
-       el contenido entra. Si no entra, se bajan estos números — no se sacan
-       campos, que fue lo que Yusef pidió expresamente. */
+       C19-06: los tamaños ya no están escritos acá — salen de la plantilla
+       (una var `--fs-*` por campo, pt × escala; los de fábrica son los
+       --t1..--t7 históricos, fijados en `EtiquetaPlantilla::Definicion` con
+       su porqué). El presupuesto de alto sigue igual de al filo:
+       `test/system/etiqueta_cabe_test.rb` mide en Chrome de verdad con el
+       default; lo que Yusef cambie en /ajustes_etiqueta se mide en el preview
+       de esa pantalla, con la misma cuenta. */
     .etq {
-      /* PR-C6.27: bajaron --t1 (21→19), --t2 (12→11), --t3 (11→10.5) y --t5
-         (7.5→7) para hacerle lugar al tracking secundario, que ahora va en su
-         propia línea en vez de concatenado y recortado.
+      <%= etiqueta_font_vars %>
 
-         El presupuesto de alto es fijo: si entra una línea más, algo tiene que
-         ceder. Cedió el tamaño, no un campo — que es lo que Yusef pidió
-         expresamente. El número de recepción es el que más aflojó porque va
-         impreso dos veces: en el código de barras y abajo en texto. */
-      --t1: 19pt;   /* tipo de envío — lo más grande de la etiqueta */
-      --t2: 11pt;   /* número de recepción                          */
-      --t3: 10.5pt; /* código del cliente · n/N                     */
-      --t4: 9.5pt;  /* nombre del cliente · sucursal                */
-      --t5: 7pt;    /* tracking y secundario                        */
-      --t6: 6.5pt;  /* fecha y hora · iniciales                     */
-      --t7: 6pt;    /* ubicación · tercero · driver                 */
-
-      width: 2.25in;
-      height: 1.25in;
+      width: <%= etiqueta_num(etiqueta_plantilla.ancho_in) %>in;
+      height: <%= etiqueta_num(etiqueta_plantilla.alto_in) %>in;
       /* C19-06: los márgenes horizontales salen de /ajustes_etiqueta (claves
          en Configuracion; EtiquetaAjustes pone el default y el tope). Yusef:
          "correr este lado, del lado izquierdo hacia la derecha; el lado

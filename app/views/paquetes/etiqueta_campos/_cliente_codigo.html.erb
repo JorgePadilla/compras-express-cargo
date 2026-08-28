@@ -1,0 +1,5 @@
+<%# "C6 es mi código de cliente y sí ocupa llevar el código de cliente
+    completo" (Yusef). %>
+<% if etiqueta_plantilla.visible?("cliente_codigo") %>
+  <span class="t mono" style="font-size:var(--fs-cliente-codigo); font-weight:bold;" data-campo="cliente-codigo"><%= paquete.cliente&.codigo %></span>
+<% end %>

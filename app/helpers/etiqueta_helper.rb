@@ -176,4 +176,57 @@ module EtiquetaHelper
 
     partes.map { |p| p[0].to_s.upcase }.join
   end
+
+  # ── C19-06: la plantilla que rige la etiqueta ──
+
+  # Memoizada por request: layout y partial comparten el view context, y
+  # `etiquetas_combinadas` renderiza N etiquetas — una consulta, no N.
+  # El preview del editor la pisa (`@etiqueta_plantilla = candidata`) para
+  # renderizar una definición sin guardar.
+  def etiqueta_plantilla
+    @etiqueta_plantilla ||= EtiquetaPlantilla.vigente
+  end
+
+  # Una fila de campos: si es un solo campo, el partial trae su propio bloque;
+  # si son varios, van juntos en un renglón `.r` — que solo se emite si algún
+  # campo rindió algo (igual que hoy: sin secundario no hay div vacío).
+  def etiqueta_fila(campos, paquete)
+    piezas = campos.filter_map do |campo|
+      html = etiqueta_campo(campo, paquete)
+      html if html.present? && html.strip.present?
+    end
+    return "".html_safe if piezas.empty?
+    return piezas.first if campos.size == 1
+
+    content_tag(:div, safe_join(piezas), class: "r")
+  end
+
+  def etiqueta_campo(campo, paquete)
+    return "".html_safe unless EtiquetaPlantilla::Definicion::CAMPOS.key?(campo)
+
+    render("paquetes/etiqueta_campos/#{campo}", paquete: paquete)
+  end
+
+  # Las variables CSS de tamaño, una por campo (`--fs-tipo-envio: 19pt`),
+  # ya multiplicadas por la escala. El barcode no tiene: su alto es fijo
+  # (abajo de ~0.15in los escáneres fallan y no se ve en la impresión).
+  def etiqueta_font_vars
+    plantilla = etiqueta_plantilla
+    lineas = EtiquetaPlantilla::Definicion::CAMPOS.keys.filter_map do |campo|
+      fs = plantilla.fs(campo)
+      next if fs.zero?
+
+      linea = "--fs-#{campo.tr('_', '-')}: #{etiqueta_num(fs)}pt;"
+      if (fsr = plantilla.fs_rotulo(campo)).positive?
+        linea += "\n      --fs-#{campo.tr('_', '-')}-rotulo: #{etiqueta_num(fsr)}pt;"
+      end
+      linea
+    end
+    lineas.join("\n      ").html_safe
+  end
+
+  # 19.0 → "19", 10.5 → "10.5", 2.25 → "2.25" — como estaban escritos a mano.
+  def etiqueta_num(n)
+    (n % 1).zero? ? n.to_i.to_s : n.to_s
+  end
 end

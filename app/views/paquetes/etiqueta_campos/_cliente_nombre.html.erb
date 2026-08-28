@@ -1,0 +1,6 @@
+<%# ── Cliente ── grande y en peso normal, como en el mockup. %>
+<% if etiqueta_plantilla.visible?("cliente_nombre") %>
+  <span class="t" style="font-size:var(--fs-cliente-nombre); text-transform:uppercase;">
+    <%= paquete.cliente&.nombre_completo %>
+  </span>
+<% end %>
