@@ -127,6 +127,12 @@ submitFormWithPrint() {
     }
     // PR-9.b: la franja vuelve a su estado vacío junto con el formulario.
     this.loadPanel(null)
+
+    // C19-02: acá no se enfocaba nada y el cursor quedaba "como en el aire".
+    // Vuelve al mismo campo que arranca la pantalla (el [autofocus], hoy el
+    // proveedor), para encadenar el siguiente paquete sin agarrar el mouse.
+    const primero = this.formTarget.querySelector("[autofocus]")
+    if (primero) primero.focus()
   }
 
   // Handle turbo stream events después del save.
@@ -144,8 +150,9 @@ submitFormWithPrint() {
       // Y despues el Warehouse Receipt, que es uno solo para todo el envio.
       // Yusef: "la etiqueta es la que le pegamos a cada caja, pero pido tres;
       // el warehouse receipt es al reves: solo imprimis uno, donde detalla todo
-      // lo que recibiste". Va como preview (sin `print`): el operario decide si
-      // lo imprime o se lo manda al cliente.
+      // lo que recibiste". Iba como preview y lo cambió probándolo (C19-01):
+      // ahora imprime de un solo y la pestaña se cierra, como la etiqueta; el
+      // preview queda en el botón «Ver WR» de la ficha y el link del flash.
       //
       // `wr=1` y **una sola ventana**: esto eran dos `window.open` seguidas y
       // Chrome bloqueaba la segunda —un gesto del usuario da permiso para un

@@ -213,7 +213,16 @@ class PaquetesController < ApplicationController
     #
     # La URL la arma el servidor a propósito: un parámetro con la dirección de
     # destino sería un redirect abierto servido desde nuestro propio dominio.
-    @despues_de_imprimir = warehouse_receipt_paquete_path(@paquete) if params[:wr] == "1"
+    #
+    # C19-01: el WR iba como preview —"el operario decide si lo imprime o se lo
+    # manda al cliente"— y Yusef lo cambió probándolo: "ocupás que esté como
+    # versión para imprimir… le doy a imprimir y, como hice con la etiqueta, me
+    # regresa acá". Ahora hace el mismo ciclo que la etiqueta: `print` lo
+    # auto-imprime y `cerrar` cierra la pestaña al salir del diálogo. El botón
+    # «Ver WR» de la ficha y el link del flash siguen abriendo el preview.
+    if params[:wr] == "1"
+      @despues_de_imprimir = warehouse_receipt_paquete_path(@paquete, print: "true", cerrar: "1")
+    end
 
     render layout: "etiqueta"
   end

@@ -57,11 +57,48 @@ class WrDespuesDeLaEtiquetaTest < ApplicationSystemTestCase
     en_la_ventana_de_la_etiqueta do
       assert_selector ".etq", wait: 5
       page.execute_script("window.dispatchEvent(new Event('afterprint'))")
-      assert_current_path(/warehouse_receipt/, wait: 5, url: true)
+      # C19-01: llega con `print` y `cerrar` — versión para imprimir, no preview.
+      assert_current_path(/warehouse_receipt\?cerrar=1&print=true/, wait: 5, url: true)
       # Que la URL cambie no dice que el recibo haya salido: si el WR reventara,
       # la dirección sería la misma.
       assert_text "WAREHOUSE RECEIPT", wait: 5
     end
+  ensure
+    cerrar_pestanas_extra
+  end
+
+  test "y el Warehouse Receipt, al imprimirse, se cierra y devuelve el foco" do
+    # C19-01. Yusef: "le doy a imprimir y, como hice con la etiqueta, me
+    # regresa acá". El `afterprint` se dispara a mano igual que arriba:
+    # headless no tiene diálogo de impresión.
+    guardar_con_impresion
+
+    en_la_ventana_de_la_etiqueta do
+      assert_selector ".etq", wait: 5
+      page.execute_script("window.dispatchEvent(new Event('afterprint'))")
+      assert_text "WAREHOUSE RECEIPT", wait: 5
+      page.execute_script("window.dispatchEvent(new Event('afterprint'))")
+    end
+
+    b = page.driver.browser
+    cerrada = 50.times.any? { b.window_handles.size == 1 || (sleep 0.1) && false }
+    assert cerrada, "la pestaña del Warehouse Receipt quedó abierta"
+  ensure
+    cerrar_pestanas_extra
+  end
+
+  test "despues de guardar, el foco queda en el primer campo para el siguiente" do
+    # C19-02, la mitad de Entrega Personal: `clearForm()` no enfocaba nada y el
+    # cursor quedaba "como en el aire". Vuelve al [autofocus] (el proveedor).
+    guardar_con_impresion
+
+    activo = nil
+    50.times do
+      activo = page.evaluate_script("document.activeElement && document.activeElement.name")
+      break if activo == "paquete[proveedor_id]"
+      sleep 0.1
+    end
+    assert_equal "paquete[proveedor_id]", activo, "el foco quedó en: #{activo.inspect}"
   ensure
     cerrar_pestanas_extra
   end

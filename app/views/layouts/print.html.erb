@@ -22,9 +22,34 @@
     <%= yield %>
   </div>
   <script>
-    if (new URL(window.location.href).searchParams.get("print") === "true") {
-      window.onload = function() { window.print(); }
-    }
+    // C19-01: el WR que llega encadenado desde la etiqueta (`?print=true&cerrar=1`)
+    // hace el mismo ciclo que ella: imprime y se cierra solo. Yusef: "le doy a
+    // imprimir y, como hice con la etiqueta, me regresa acá". Sin `cerrar` —el
+    // botón «Ver WR» de la ficha, el link del flash— queda el preview de siempre.
+    // El cierre es el mismo portado de layouts/etiqueta.html.erb: `afterprint`
+    // dispara tanto si imprimió como si canceló (los dos casos vuelven a
+    // escanear), y el media query es el fallback para Safari viejo, que no
+    // dispara `afterprint`. `window.close()` sobre una pestaña que no abrió un
+    // script no hace nada, así que pegar la URL a mano sigue siendo inofensivo.
+    (function () {
+      var params = new URL(window.location.href).searchParams;
+      if (params.get("print") !== "true") return;
+
+      var cerrar = params.get("cerrar") === "1";
+
+      window.onload = function () {
+        if (cerrar) {
+          window.addEventListener("afterprint", function () { window.close(); }, { once: true });
+
+          var mq = window.matchMedia("print");
+          if (mq && mq.addEventListener) {
+            mq.addEventListener("change", function (e) { if (!e.matches) window.close(); });
+          }
+        }
+
+        window.print();
+      };
+    })();
   </script>
 </body>
 </html>
