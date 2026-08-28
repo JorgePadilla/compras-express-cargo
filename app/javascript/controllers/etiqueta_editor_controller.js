@@ -74,6 +74,8 @@ export default class extends Controller {
       if (el.dataset.defTipo === "num") {
         valor = parseFloat(String(valor).replace(",", "."))
         if (Number.isNaN(valor)) return
+      } else if (el.dataset.defTipo === "bool") {
+        valor = el.checked
       }
       const camino = el.dataset.defPath.split(".")
       let nodo = def

@@ -143,6 +143,51 @@
         </p>
       </div>
 
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Campos y textos fijos</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          Los campos de identidad —el código de barras, el número de recepción,
+          el tracking y el tipo de envío (que es también la bandera RET)—
+          <b>salen siempre</b>: sin ellos la caja no se escanea ni se compara.
+          Los textos fijos son los rótulos; los datos los pone el sistema.
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+          <% EtiquetaPlantilla::Definicion::CAMPOS.each do |campo, meta| %>
+            <div class="flex items-center gap-2">
+              <% if meta[:apagable] %>
+                <label class="flex items-center gap-2 flex-1 cursor-pointer">
+                  <input type="checkbox" <%= "checked" if @plantilla.visible?(campo) %>
+                         data-def-path="campos.<%= campo %>.visible" data-def-tipo="bool"
+                         data-action="change->etiqueta-editor#cambio"
+                         class="rounded border-gray-300 text-cec-teal focus:ring-cec-teal">
+                  <span class="text-sm text-gray-700 dark:text-gray-200"><%= meta[:nombre] %></span>
+                </label>
+              <% else %>
+                <span class="flex-1 text-sm text-gray-400 dark:text-gray-500 pl-6"><%= meta[:nombre] %> · <span class="text-[10px] uppercase tracking-wider">siempre</span></span>
+              <% end %>
+              <% if meta[:texto] %>
+                <input type="text" value="<%= @plantilla.texto(campo) %>"
+                       maxlength="<%= EtiquetaPlantilla::Definicion::TEXTO_MAX %>"
+                       autocomplete="off" aria-label="Texto fijo de <%= meta[:nombre] %>"
+                       data-def-path="campos.<%= campo %>.texto"
+                       data-action="input->etiqueta-editor#cambio"
+                       class="w-28 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal">
+              <% end %>
+            </div>
+            <% if campo == "tracking_secundario" %>
+              <p class="text-[11px] text-amber-700 dark:text-amber-300 md:col-span-1">
+                Ojo al apagarlo: como el 40% de los envíos trae segundo tracking,
+                y en la etiqueta es donde el operario lo compara.
+              </p>
+            <% end %>
+          <% end %>
+        </div>
+        <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+          Un texto vacío o de más de <%= EtiquetaPlantilla::Definicion::TEXTO_MAX %>
+          caracteres vuelve al de fábrica al guardar.
+        </p>
+      </div>
+
       <div class="flex items-center gap-3">
         <%= submit_tag "Guardar plantilla",
               class: "px-4 py-2 bg-cec-gold text-cec-navy-dark rounded-lg text-sm font-medium hover:bg-cec-gold-dark cursor-pointer" %>

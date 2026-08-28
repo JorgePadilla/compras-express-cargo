@@ -70,6 +70,43 @@ class AjustesEtiquetaPlantillaTest < ActionDispatch::IntegrationTest
     assert_equal 19.0, EtiquetaPlantilla.vigente.pt("tipo_envio")
   end
 
+  # PR-C7.65: on/off y textos fijos, de punta a punta por el flujo real.
+  test "apagar un campo lo saca de la etiqueta; la identidad no se apaga" do
+    patch plantilla_ajustes_etiqueta_url, params: {
+      definicion_json: { campos: { tercero: { visible: false },
+                                   ubicacion: { visible: false },
+                                   tracking: { visible: false },
+                                   barcode: { visible: false } } }.to_json
+    }
+
+    paquete = paquetes(:disponible_entrega_juan)
+    paquete.update!(tercero: clientes(:maria), tracking_secundario: "TBA999888777")
+    get etiqueta_paquete_url(paquete)
+
+    assert_response :success
+    assert_no_match(/data-campo="tercero"/, response.body, "tercero quedó apagado")
+    assert_no_match(/data-campo="ubicacion"/, response.body)
+    assert_match 'data-campo="tracking"', response.body, "el tracking no se apaga ni pidiéndolo"
+    assert_match 'data-campo="barcode"', response.body, "el barcode tampoco"
+  end
+
+  test "el texto fijo cambiado sale; vacío o larguísimo vuelve al de fábrica" do
+    patch plantilla_ajustes_etiqueta_url, params: {
+      definicion_json: { campos: { sucursal: { texto: "AGENCIA" },
+                                   reg: { texto: "" },
+                                   driver: { texto: "x" * 30 } } }.to_json
+    }
+
+    paquete = paquetes(:disponible_entrega_juan)
+    paquete.update!(driver: "Marvin Lopez")
+    get etiqueta_paquete_url(paquete)
+
+    assert_match "AGENCIA", response.body
+    assert_no_match(/RETIRA EN/, response.body)
+    assert_match "Reg: <b", response.body, "el texto vacío volvió al de fábrica"
+    assert_match "Drv: <b>ML</b>", response.body, "el texto pasado de largo también"
+  end
+
   test "non-admin no toca la plantilla" do
     delete session_url
     post session_url, params: {

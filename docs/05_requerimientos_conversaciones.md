@@ -7031,8 +7031,16 @@ impresión. El estado «Cabe ✓ / Se recortan Xpx» mide lo mismo que
 `etiqueta_cabe_test`; guardar en rojo pide confirmación, no bloquea — la
 etiqueta es de Yusef. Warning si el tipo de envío deja de ser lo más grande.
 Y «Restaurar la original» desde el primer PR que puede guardar: la válvula de
-escape existe antes que el riesgo. Falta: on/off + textos (`PR-C7.65`) y
-reordenar (`PR-C7.66`).
+escape existe antes que el riesgo.
+
+**Seguimiento (PR-C7.65).** Campos on/off y textos fijos en el editor. Los de
+identidad —barcode, nº recepción, tracking, tipo de envío/RET— **salen
+siempre** (la pantalla lo dice y el server lo fuerza aunque el payload pida
+otra cosa); los demás se apagan con su checkbox, con aviso junto al
+secundario (el ~40% de los envíos trae segundo tracking). Los rótulos
+(«RETIRA EN», «Reg:», «Drv:», «3ro:») se editan; vacío o pasado de largo
+vuelve al de fábrica al guardar. Todo se ve en el preview al instante.
+Falta: reordenar (`PR-C7.66`).
 
 ### C19-07 · «Todas estas ciudades» en /etiquetar — ✅ ya existe, es dato
 
