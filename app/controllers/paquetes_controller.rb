@@ -930,6 +930,7 @@ class PaquetesController < ApplicationController
       :solicito_cambio_servicio, :retener_miami,
       :enviado_por_politica, :notas_envio_politica,
       :recolecta_solicitada, :recolecta_monto, :recolecta_moneda, :tarifa_recolecta_id,
+      :recolecta_direccion,
       # PR-D7.m: fechas editables manualmente (admin/supervisor). El gate
       # de permisos lo hace `authorize_edit` antes; el callback del modelo
       # `track_fecha_by_user_on_manual_edit` se encarga de _by_user_id.

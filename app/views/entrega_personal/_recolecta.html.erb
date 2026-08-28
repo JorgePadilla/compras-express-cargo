@@ -49,11 +49,25 @@
       </div>
     </div>
 
+    <%# C19-03. Yusef: "lo único que hace falta es que pongamos un campo que
+        diga dirección. Dirección de la recolecta". Antes se colaba en las
+        instrucciones — el placeholder mismo decía "Dónde queda…". Sin prefill
+        del cliente a propósito: la recolecta puede ser en la bodega de un
+        proveedor, no en la casa de quien la pide. %>
+    <div>
+      <%= f.label :recolecta_direccion, "Dirección de la recolecta",
+            class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+      <%= f.text_area :recolecta_direccion, rows: 2,
+            placeholder: "Dónde queda: calle, local, referencia…",
+            class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100
+                   shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+
     <div>
       <%= f.label :recolecta_instrucciones, "Instrucciones para el motorista",
             class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
       <%= f.text_area :recolecta_instrucciones, rows: 2,
-            placeholder: "Dónde queda, por dónde entrar, qué preguntar…",
+            placeholder: "Por dónde entrar, qué preguntar…",
             class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100
                    shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
     </div>

@@ -1680,7 +1680,8 @@ CREATE TABLE public.paquetes (
     recolecta_instrucciones text,
     prepagado_miami_metodo character varying,
     enviado_por_politica boolean DEFAULT false NOT NULL,
-    notas_envio_politica text
+    notas_envio_politica text,
+    recolecta_direccion text
 );
 
 
@@ -6142,6 +6143,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260828182026'),
 ('20260827000000'),
 ('20260826220000'),
 ('20260826210000'),
