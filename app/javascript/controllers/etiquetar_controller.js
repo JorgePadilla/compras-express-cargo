@@ -85,11 +85,33 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
       // caja, financiamientos) y Yusef lo apretó sin pensarlo. F8 se queda de
       // alias mientras Miami se acostumbra — allá ya lo tienen en el dedo.
       e.preventDefault()
+      if (this._preguntaAbierta()) return
       this.submitForm()
     } else if (e.key === "F9") {
       e.preventDefault()
+      if (this._preguntaAbierta()) return
       this.submitFormWithPrint()
     }
+  }
+
+  // C19-08 · Jorge: "podemos hacer que los modales salgan en orden,
+  // actualmente salen montados". La regla que lo garantiza: mientras haya una
+  // pregunta en pantalla sin contestar, las teclas de guardar no actúan — así
+  // ningún modal nuevo (¿cuántas etiquetas?, la bolsa) se abre encima del que
+  // espera respuesta. CUALQUIER <dialog> abierto cuenta a propósito: el aviso
+  // en fila, el de etiquetas, el PIN, las listitas de retener/política — todos
+  // son preguntas. F2 queda libre: es la salida que los propios modales
+  // ofrecen. Contestar cuesta un Enter; guardar por encima costaba un error.
+  _preguntaAbierta() {
+    if (document.querySelector("dialog[open]")) return true
+    if (this._conflictoVisible()) return true
+    return this.hasDuplicateModalTarget &&
+           !this.duplicateModalTarget.classList.contains("hidden")
+  }
+
+  _conflictoVisible() {
+    return this.hasConflictoSesionModalTarget &&
+           !this.conflictoSesionModalTarget.classList.contains("hidden")
   }
 
   toggleTrackingSecundario() {
@@ -390,14 +412,10 @@ cerrarQuitarCobro() {
   }
 
   _avisarIncongruenciaDelSecundario(texto) {
-    this.dispatch("tipoEnvioDistinto")
-    if (!this.hasConflictoSesionModalTarget) return
-
-    if (this.hasConflictoSesionTextoTarget) this.conflictoSesionTextoTarget.textContent = texto
-    this.conflictoSesionModalTarget.classList.remove("hidden")
-    if (this.hasConflictoSesionDejarBtnTarget) {
-      requestAnimationFrame(() => this.conflictoSesionDejarBtnTarget.focus())
-    }
+    // C19-08: por el camino único del conflicto — que además cierra el aviso
+    // que estuviera en pantalla, porque el secundario se teclea con los
+    // avisos del primario ya saliendo y acá se montaban.
+    this._mostrarConflicto(texto)
   }
 
   // El paquete que se está actualizando NO es un duplicado de sí mismo.
@@ -450,11 +468,29 @@ cerrarQuitarCobro() {
         // duplicado, es un "paquete esperado" que el sistema reconciliará al guardar.
         if (data.pre_alerta_match) {
           this._showPreAlertaBanner(data)
+          // C19-08 · Jorge: "si hay varias notas y alertas como la del paquete
+          // de otro tipo de envío hay que mostrarlas en orden y no montadas,
+          // el orden que haga más sentido". El orden con sentido es que el
+          // conflicto de sesión decide PRIMERO — y como sus dos salidas
+          // (finalizar la sesión / dejarlo de lado) abandonan el paquete en
+          // esta sesión, no hay "después": los avisos de retención, tareas y
+          // notas pertenecen a la sesión donde el paquete sí se va a recibir,
+          // y vuelven a salir enteros al escanearlo ahí. Antes acá salían el
+          // beep de match, la fila de avisos Y el conflicto, montados: el
+          // aviso (un <dialog>, top-layer) tapaba al conflicto (un overlay).
+          //
+          // El banner y el auto-fill sí quedan: dicen QUÉ pre-alerta es, que
+          // es contexto para decidir. Y suena solo el error — el beep alegre
+          // de match sobre un paquete que no se puede guardar era mentirle al
+          // oído del operario (cambia lo de PR-C6.9, que mandaba los dos).
+          if (this._hayConflictoDeSesion(data)) {
+            this._mostrarConflicto(
+              `Este paquete tiene pre-alerta de ${data.pre_alerta_tipo_envio}, ` +
+              `y estás trabajando ${this.tipoEnvioSesionNombreValue}. No se puede guardar así.`)
+            return
+          }
           this.dispatch("preAlertaMatch")
-          // PR-C6.9: si la pre-alerta pide otro tipo de envío que el de la
-          // sesión, avisar YA — antes de que el operario siga llenando campos
-          // que el servidor va a rechazar igual.
-          this._avisarConflictoDeSesion(data)
+          this._encolarAvisos(data)
           return
         }
         if (data.exists && !data.terminal) {
@@ -503,28 +539,39 @@ cerrarQuitarCobro() {
   // El rechazo de verdad lo sigue haciendo el servidor
   // (`conflicto_con_la_sesion`): el modal es para que el operario se entere
   // antes de llenar diez campos, no para reemplazar la validación.
-  _avisarConflictoDeSesion(data) {
+  _hayConflictoDeSesion(data) {
     const sesion = this.hasTipoEnvioSesionValue ? this.tipoEnvioSesionValue : null
-    if (!sesion || !data.pre_alerta_tipo_envio_id) return
-    if (String(data.pre_alerta_tipo_envio_id) === String(sesion)) return
+    if (!sesion || !data.pre_alerta_tipo_envio_id) return false
+    return String(data.pre_alerta_tipo_envio_id) !== String(sesion)
+  }
 
+  // C19-08: el único lugar que abre el modal de conflicto — lo comparten el
+  // tipo de envío distinto y la incongruencia del secundario. El conflicto
+  // MANDA: si había un aviso en pantalla o en fila (el secundario se teclea
+  // con el paquete ya escaneado y sus avisos ya saliendo), se cierran y la
+  // cola muere ANTES de abrir — el `close()` directo no pasa por
+  // `_cerrarAviso`, así que nada la vuelve a avanzar. Los avisos no se
+  // pierden: vuelven a salir enteros al escanear el paquete en la sesión
+  // que corresponde.
+  _mostrarConflicto(texto) {
     this.dispatch("tipoEnvioDistinto")
     if (!this.hasConflictoSesionModalTarget) return
 
-    if (this.hasConflictoSesionTextoTarget) {
-      this.conflictoSesionTextoTarget.textContent =
-        `Este paquete tiene pre-alerta de ${data.pre_alerta_tipo_envio}, ` +
-        `y estás trabajando ${this.tipoEnvioSesionNombreValue}. No se puede guardar así.`
-    }
+    this._colaDeAvisos = []
+    this._avisoActual = null
+    if (this.hasAvisoModalTarget && this.avisoModalTarget.open) this.avisoModalTarget.close()
+
+    if (this.hasConflictoSesionTextoTarget) this.conflictoSesionTextoTarget.textContent = texto
     this.conflictoSesionModalTarget.classList.remove("hidden")
 
-    // Se intenta llevar el foco al modal. Va en el frame siguiente porque este
-    // método corre al resolverse el `fetch`, y en ese mismo tick todavía se
-    // están acomodando el auto-llenado del cliente y la navegación con Enter.
+    // Se intenta llevar el foco al modal. Va en el frame siguiente porque esto
+    // corre al resolverse el `fetch`, y en ese mismo tick todavía se están
+    // acomodando el auto-llenado del cliente y la navegación con Enter.
     //
     // Es un extra, no el bloqueo: lo que impide guardar mal es el overlay —que
-    // tapa el formulario— y, si alguien igual llega a mandar el POST, el
-    // rechazo del servidor (`conflicto_con_la_sesion`), que tiene sus tests.
+    // tapa el formulario, y desde C19-08 también apaga F8/F9/F10— y, si
+    // alguien igual llega a mandar el POST, el rechazo del servidor
+    // (`conflicto_con_la_sesion`), que tiene sus tests.
     if (this.hasConflictoSesionDejarBtnTarget) {
       requestAnimationFrame(() => this.conflictoSesionDejarBtnTarget.focus())
     }
@@ -559,7 +606,6 @@ cerrarQuitarCobro() {
     }
 
     this._marcarRetencionDeLaPreAlerta(data)
-    this._encolarAvisos(data)
   }
 
   // ── Lo que el que recibe TIENE que ver ────────────────────────────────
@@ -611,6 +657,13 @@ cerrarQuitarCobro() {
 
   _siguienteAviso() {
     if (!this.hasAvisoModalTarget) return
+    // C19-08: con el conflicto en pantalla la fila muere — un aviso abriéndose
+    // encima (es un <dialog>: top-layer, tapa cualquier overlay) era
+    // exactamente el "salen montados" de Jorge.
+    if (this._conflictoVisible()) {
+      this._colaDeAvisos = []
+      return
+    }
     const aviso = (this._colaDeAvisos || []).shift()
     if (!aviso) return
 

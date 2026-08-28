@@ -36,6 +36,8 @@ class EtiquetarFocoAlTrackingTest < ApplicationSystemTestCase
     cerrar_aviso_de_bolsa_si_salio
 
     assert_foco_en_tracking
+
+    esperar_pestana_de_impresion
   ensure
     cerrar_pestanas_extra
   end
@@ -101,6 +103,14 @@ class EtiquetarFocoAlTrackingTest < ApplicationSystemTestCase
   def esperar(segundos: 10)
     limite = Process.clock_gettime(Process::CLOCK_MONOTONIC) + segundos
     sleep 0.15 until yield || Process.clock_gettime(Process::CLOCK_MONOTONIC) > limite
+  end
+
+  # C19-08 (el test de modales lo cazó): el window.open de la impresión es
+  # asíncrono y la pestaña puede nacer DESPUÉS de que el ensure cerró — la
+  # huérfana le queda al siguiente test del worker, que arranca con 2
+  # ventanas y Capybara mirando la equivocada. Se la espera antes de cerrar.
+  def esperar_pestana_de_impresion
+    esperar(segundos: 5) { page.driver.browser.window_handles.size > 1 }
   end
 
   def cerrar_pestanas_extra

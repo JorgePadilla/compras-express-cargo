@@ -9,8 +9,8 @@
     Gemelo de shared/_plantillas_notas — mismo `plantilla-picker`: reemplaza
     si el campo está vacío, agrega al final si no, y deja el foco en el campo.
 
-    Uso:
-      <%%= render "shared/plantillas_descripcion", selector: "#paquete_descripcion" %> %>
+    Uso (el selector apunta al campo que recibe el texto):
+      render "shared/plantillas_descripcion", selector: "#paquete_descripcion" %>
 <% plantillas = PlantillaDescripcion.activas.ordered %>
 <% if plantillas.any? %>
   <div data-controller="plantilla-picker"

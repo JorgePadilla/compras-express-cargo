@@ -15,11 +15,13 @@
     paquete fue enviado al cliente vía KAEX Logistics", "retirado al crédito
     por Nilmo Peña".
 
-    Uso:
-      <%%= render "shared/plantillas_notas", selector: "#pre_factura_notas" %>
+    Uso — el `selector` apunta al textarea que recibe el texto, y
+    `plantilla-picker` inserta al final de lo que ya haya, así se encadenan:
+      render "shared/plantillas_notas", selector: "#pre_factura_notas"
 
-    El `selector` apunta al textarea que recibe el texto. `plantilla-picker`
-    inserta al final de lo que ya haya escrito, así se pueden encadenar varias. %>
+    ⚠️ Sin ERB adentro del comentario: el primer «cierre de tag» que aparezca
+    lo termina, y lo que siga se imprime en la página — así estuvo saliendo
+    esta misma frase en /pre_facturas, /caja y el form de /paquetes. %>
 <% plantillas = PlantillaNotaCliente.activas.ordered %>
 <% if plantillas.any? %>
   <div data-controller="plantilla-picker"
