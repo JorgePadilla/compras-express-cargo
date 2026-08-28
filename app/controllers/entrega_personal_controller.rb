@@ -224,6 +224,7 @@ class EntregaPersonalController < ApplicationController
       # A7-22/A7-23: la recolecta vive en esta misma pantalla.
       :recolecta_solicitada, :tarifa_recolecta_id, :recolecta_monto, :recolecta_moneda,
       :recolecta_contacto, :recolecta_telefono, :recolecta_horario, :recolecta_instrucciones,
+      :recolecta_direccion,
       motivo_retencion_ids: [], motivo_envio_politica_ids: []
     )
   end
