@@ -138,6 +138,9 @@ class BotonesTest < ActiveSupport::TestCase
     "app/views/passwords/new.html.erb"                       => 1,
     "app/views/pins/edit.html.erb"                           => 1,
     "app/views/plantillas_notas_cliente/_form.html.erb"      => 1,
+    # C19-04: copia deliberada del _form de plantillas de notas — el mismo
+    # f.submit crudo, por la misma razón.
+    "app/views/plantillas_descripcion/_form.html.erb"        => 1,
     "app/views/pre_facturas/index.html.erb"                  => 1,
     "app/views/pre_facturas/show.html.erb"                   => 1,
     "app/views/proveedores/_form.html.erb"                   => 1,
@@ -148,6 +151,9 @@ class BotonesTest < ActiveSupport::TestCase
     "app/views/servicios/_form.html.erb"                     => 1,
     "app/views/servicios_extra/_form.html.erb"               => 1,
     "app/views/shared/_plantillas_notas.html.erb"            => 1,
+    # C19-04: el chip de descripción es el mismo chip de notas — un botón
+    # píldora adentro del form, no un botón de acción.
+    "app/views/shared/_plantillas_descripcion.html.erb"      => 1,
     "app/views/shared/_tercero_field.html.erb"               => 1,
     "app/views/shared/_theme_toggle.html.erb"                => 1,
     "app/views/sucursales/_form.html.erb"                    => 1,

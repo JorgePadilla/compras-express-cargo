@@ -323,6 +323,8 @@
       <%= f.text_area :descripcion, rows: 2,
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
                  focus:ring-cec-teal focus:border-cec-teal" %>
+      <%# C19-04: la tercera gemela, para corregir después. %>
+      <%= render "shared/plantillas_descripcion", selector: "#paquete_descripcion" %>
     </div>
 
     <div>

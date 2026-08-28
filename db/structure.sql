@@ -1680,7 +1680,8 @@ CREATE TABLE public.paquetes (
     recolecta_instrucciones text,
     prepagado_miami_metodo character varying,
     enviado_por_politica boolean DEFAULT false NOT NULL,
-    notas_envio_politica text
+    notas_envio_politica text,
+    recolecta_direccion text
 );
 
 
@@ -1701,6 +1702,40 @@ CREATE SEQUENCE public.paquetes_id_seq
 --
 
 ALTER SEQUENCE public.paquetes_id_seq OWNED BY public.paquetes.id;
+
+
+--
+-- Name: plantillas_descripcion; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.plantillas_descripcion (
+    id bigint NOT NULL,
+    titulo character varying NOT NULL,
+    texto text NOT NULL,
+    activo boolean DEFAULT true NOT NULL,
+    "position" integer DEFAULT 0 NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: plantillas_descripcion_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.plantillas_descripcion_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: plantillas_descripcion_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.plantillas_descripcion_id_seq OWNED BY public.plantillas_descripcion.id;
 
 
 --
@@ -2890,6 +2925,13 @@ ALTER TABLE ONLY public.paquetes ALTER COLUMN id SET DEFAULT nextval('public.paq
 
 
 --
+-- Name: plantillas_descripcion id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.plantillas_descripcion ALTER COLUMN id SET DEFAULT nextval('public.plantillas_descripcion_id_seq'::regclass);
+
+
+--
 -- Name: plantillas_notas_cliente id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -3390,6 +3432,14 @@ ALTER TABLE ONLY public.paquete_motivos_retencion
 
 ALTER TABLE ONLY public.paquetes
     ADD CONSTRAINT paquetes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: plantillas_descripcion plantillas_descripcion_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.plantillas_descripcion
+    ADD CONSTRAINT plantillas_descripcion_pkey PRIMARY KEY (id);
 
 
 --
@@ -4548,6 +4598,13 @@ CREATE INDEX index_paquetes_on_user_id ON public.paquetes USING btree (user_id);
 --
 
 CREATE INDEX index_paquetes_on_venta_id ON public.paquetes USING btree (venta_id);
+
+
+--
+-- Name: index_plantillas_descripcion_on_activo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_plantillas_descripcion_on_activo ON public.plantillas_descripcion USING btree (activo);
 
 
 --
@@ -6142,6 +6199,8 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260828182540'),
+('20260828182026'),
 ('20260827000000'),
 ('20260826220000'),
 ('20260826210000'),

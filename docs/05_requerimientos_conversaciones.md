@@ -6906,7 +6906,7 @@ de instrucciones (el placeholder mismo dice *"Dónde queda, por dónde
 entrar…"*). Y un hallazgo al costado: esos cuatro campos se guardan y **no se
 muestran en ninguna pantalla** — el que maneja no tiene dónde leerlos.
 
-### C19-04 · Checkbox «Sellado» (y «Compra chino») para la descripción
+### C19-04 · Checkbox «Sellado» (y «Compra chino») para la descripción — ✅ **HECHO (PR-C7.58)**
 
 > *"Si aquí en la descripción del contenido les podemos poner un check nada más
 > que diga sellado… para que llegue en la descripción y diga paquete sellado."*
@@ -6925,6 +6925,13 @@ los abrimos"*), y en el viejo escriben "sellado" a mano mil veces al día.
 Regla de las gemelas: el campo descripción vive en `/etiquetar`, en
 `/entrega_personal` (donde se llama «Contenido» y es obligatorio) y en el form
 de `/paquetes`. Las tres.
+
+**Qué se hizo (`PR-C7.58`).** Catálogo `Plantillas de Descripción` calcado de
+las plantillas de notas: CRUD admin (`/plantillas_descripcion`, link en el
+sidebar), chips con el mismo `plantilla-picker` (reemplaza si vacío, agrega si
+no) junto al campo en las tres gemelas, y seeds con los dos que dictó —
+«Sellado» y «Compra chino». En staging hay que correr `db:seed` una vez: el
+deploy solo migra, nunca siembra.
 
 ### C19-05 · Los segundos del F9, donde se buscan las cámaras
 

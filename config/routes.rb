@@ -134,6 +134,9 @@ Rails.application.routes.draw do
             controller: "motivos_retencion"
   resources :plantillas_notas_cliente, only: %i[index new create edit update],
             controller: "plantillas_notas_cliente"
+  # C19-04: descripciones frecuentes del contenido (Sellado, Compra chino…).
+  resources :plantillas_descripcion, only: %i[index new create edit update],
+            controller: "plantillas_descripcion"
   # C18-06: el catálogo de «enviado según política», gemelo del de retención.
   resources :motivos_envio_politica, only: %i[index new create edit update],
             controller: "motivos_envio_politica"
