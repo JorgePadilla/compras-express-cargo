@@ -66,6 +66,27 @@ class AjustesEtiquetaEditorTest < ApplicationSystemTestCase
     assert_includes page.evaluate_script(srcdoc_js).to_s, "AGENCIA"
   end
 
+  test "las flechas reordenan y el preview lo muestra" do
+    assert_selector "[data-etiqueta-editor-target='estado']", text: "Cabe ✓", wait: 10
+    esperar { page.evaluate_script(srcdoc_js).to_s.include?("data-campo") }
+
+    # De fábrica el número va antes que el tracking; la flecha lo invierte.
+    antes = page.evaluate_script(srcdoc_js).to_s
+    assert_operator antes.index('data-campo="numero-recepcion"'), :<, antes.index('data-campo="tracking"')
+
+    find("[data-fila-id='f-tracking'] button[title='Subir la fila']").click
+
+    esperar do
+      doc = page.evaluate_script(srcdoc_js).to_s
+      t = doc.index('data-campo="tracking"')
+      n = doc.index('data-campo="numero-recepcion"')
+      t && n && t < n
+    end
+    despues = page.evaluate_script(srcdoc_js).to_s
+    assert_operator despues.index('data-campo="tracking"'), :<, despues.index('data-campo="numero-recepcion"'),
+                    "el preview no reflejó el orden nuevo"
+  end
+
   private
 
   def srcdoc_js

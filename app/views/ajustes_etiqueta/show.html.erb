@@ -188,6 +188,88 @@
         </p>
       </div>
 
+      <%# ── Orden (PR-C7.66): esta card ES la fuente — el serializer lee el
+          DOM y arma `filas`. Flechas, no drag: testeable y suficiente. %>
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Orden de los campos</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          Las flechas <b>⇑⇓</b> mueven la fila entera; <b>◀▶</b> mueven un
+          campo adentro de su fila y <b>↑↓</b> lo pasan a la fila de arriba o
+          de abajo. El bloque de dos columnas es lo que hace que todo quepa:
+          sus renglones se mueven adentro de su columna, y ningún campo entra
+          ni sale de él.
+        </p>
+        <div class="space-y-2">
+          <% campos_meta = EtiquetaPlantilla::Definicion::CAMPOS %>
+          <% @plantilla.filas.each do |fila| %>
+            <% if fila["tipo"] == "dos_columnas" %>
+              <div data-orden-fila data-tipo="dos_columnas" data-fila-id="<%= fila["id"] %>"
+                   class="rounded-lg ring-1 ring-cec-gold/40 bg-cec-gold/5 dark:bg-cec-gold/10 p-2">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="flex-1 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Bloque de dos columnas (sellado)</span>
+                  <button type="button" data-action="etiqueta-editor#filaArriba" title="Subir la fila" aria-label="Subir el bloque"
+                          class="px-1.5 text-xs rounded hover:bg-black/10 cursor-pointer">⇑</button>
+                  <button type="button" data-action="etiqueta-editor#filaAbajo" title="Bajar la fila" aria-label="Bajar el bloque"
+                          class="px-1.5 text-xs rounded hover:bg-black/10 cursor-pointer">⇓</button>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <% { "izquierda" => fila["izquierda"], "derecha" => fila["derecha"] }.each do |col, subfilas| %>
+                    <div data-col="<%= col %>" class="space-y-1">
+                      <% subfilas.each do |sub| %>
+                        <div data-orden-subfila class="flex items-center gap-1 rounded bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700 p-1">
+                          <button type="button" data-action="etiqueta-editor#subfilaArriba" title="Subir el renglón" aria-label="Subir el renglón"
+                                  class="px-1 text-[10px] rounded hover:bg-black/10 cursor-pointer">⇑</button>
+                          <button type="button" data-action="etiqueta-editor#subfilaAbajo" title="Bajar el renglón" aria-label="Bajar el renglón"
+                                  class="px-1 text-[10px] rounded hover:bg-black/10 cursor-pointer">⇓</button>
+                          <span class="flex flex-wrap gap-1" data-chips>
+                            <% sub.each do |c| %>
+                              <span data-orden-campo="<%= c %>" class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-cec-teal/10 text-cec-teal-dark dark:text-cec-teal text-[11px]">
+                                <%= campos_meta[c][:nombre] %>
+                                <button type="button" data-action="etiqueta-editor#campoIzq" title="Mover a la izquierda" aria-label="Mover <%= campos_meta[c][:nombre] %> a la izquierda"
+                                        class="px-0.5 rounded hover:bg-black/10 cursor-pointer">◀</button>
+                                <button type="button" data-action="etiqueta-editor#campoDer" title="Mover a la derecha" aria-label="Mover <%= campos_meta[c][:nombre] %> a la derecha"
+                                        class="px-0.5 rounded hover:bg-black/10 cursor-pointer">▶</button>
+                              </span>
+                            <% end %>
+                          </span>
+                        </div>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            <% else %>
+              <div data-orden-fila data-fila-id="<%= fila["id"] %>"
+                   class="flex items-center gap-2 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 p-2">
+                <button type="button" data-action="etiqueta-editor#filaArriba" title="Subir la fila" aria-label="Subir la fila"
+                        class="px-1.5 text-xs rounded hover:bg-black/10 cursor-pointer">⇑</button>
+                <button type="button" data-action="etiqueta-editor#filaAbajo" title="Bajar la fila" aria-label="Bajar la fila"
+                        class="px-1.5 text-xs rounded hover:bg-black/10 cursor-pointer">⇓</button>
+                <span class="flex flex-wrap gap-1 flex-1" data-chips>
+                  <% fila["campos"].each do |c| %>
+                    <span data-orden-campo="<%= c %>" class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-cec-teal/10 text-cec-teal-dark dark:text-cec-teal text-[11px]">
+                      <%= campos_meta[c][:nombre] %>
+                      <button type="button" data-action="etiqueta-editor#campoIzq" title="Antes en la fila" aria-label="Mover <%= campos_meta[c][:nombre] %> antes"
+                              class="px-0.5 rounded hover:bg-black/10 cursor-pointer">◀</button>
+                      <button type="button" data-action="etiqueta-editor#campoDer" title="Después en la fila" aria-label="Mover <%= campos_meta[c][:nombre] %> después"
+                              class="px-0.5 rounded hover:bg-black/10 cursor-pointer">▶</button>
+                      <button type="button" data-action="etiqueta-editor#campoArriba" title="A la fila de arriba" aria-label="Mover <%= campos_meta[c][:nombre] %> a la fila de arriba"
+                              class="px-0.5 rounded hover:bg-black/10 cursor-pointer">↑</button>
+                      <button type="button" data-action="etiqueta-editor#campoAbajo" title="A la fila de abajo" aria-label="Mover <%= campos_meta[c][:nombre] %> a la fila de abajo"
+                              class="px-0.5 rounded hover:bg-black/10 cursor-pointer">↓</button>
+                    </span>
+                  <% end %>
+                </span>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+        <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+          Una fila que quede vacía no imprime nada — sirve para dejar aire.
+          Si el orden guardado no cubre todos los campos, vuelve el de fábrica.
+        </p>
+      </div>
+
       <div class="flex items-center gap-3">
         <%= submit_tag "Guardar plantilla",
               class: "px-4 py-2 bg-cec-gold text-cec-navy-dark rounded-lg text-sm font-medium hover:bg-cec-gold-dark cursor-pointer" %>

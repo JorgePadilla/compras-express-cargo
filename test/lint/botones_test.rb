@@ -161,10 +161,11 @@ class BotonesTest < ActiveSupport::TestCase
     "app/views/tareas/_form.html.erb"                        => 1,
     "app/views/tarifas_recolecta/_form.html.erb"             => 1,
     "app/views/tasa_cambio/show.html.erb"                    => 1,
-    # C19-06: copia deliberada de la pantalla de la tasa — el mismo submit_tag
-    # crudo, por la misma razón. Sube a 2 con el editor de la plantilla
-    # (PR-C7.64): el segundo es «Guardar plantilla», mismo patrón.
-    "app/views/ajustes_etiqueta/show.html.erb"               => 2,
+    # C19-06: los 2 submit_tag copiados de la pantalla de la tasa, más las 12
+    # flechas de la card de Orden (PR-C7.66) — ⇑⇓/◀▶/↑↓ adentro de los chips:
+    # son adorno de control del editor, no botones de acción; ButtonComponent
+    # a ese tamaño sería más ruido que botón.
+    "app/views/ajustes_etiqueta/show.html.erb"               => 14,
     "app/views/users/_form.html.erb"                         => 1,
     "app/views/ventas/edit.html.erb"                         => 1,
     "app/views/ventas/index.html.erb"                        => 1

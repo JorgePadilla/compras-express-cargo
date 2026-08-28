@@ -7040,7 +7040,17 @@ otra cosa); los demás se apagan con su checkbox, con aviso junto al
 secundario (el ~40% de los envíos trae segundo tracking). Los rótulos
 («RETIRA EN», «Reg:», «Drv:», «3ro:») se editan; vacío o pasado de largo
 vuelve al de fábrica al guardar. Todo se ve en el preview al instante.
-Falta: reordenar (`PR-C7.66`).
+
+**Seguimiento (PR-C7.66) — la serie queda completa.** Reordenar por filas con
+flechas (⇑⇓ la fila, ◀▶ el campo adentro de su fila, ↑↓ a la fila de
+arriba/abajo), la card de Orden como fuente: el serializer lee el DOM tal
+como quedó. El bloque de dos columnas sigue **sellado** —sus renglones se
+mueven adentro de su columna y ningún campo entra ni sale de él, porque es lo
+que hace que la etiqueta quepa—. Un orden que no cubra todos los campos
+vuelve al de fábrica entero; una fila vacía no imprime nada (sirve para dejar
+aire). Con esto C19-06 queda entregado completo: márgenes, dimensiones,
+escala, letra por campo, on/off, textos fijos, orden, preview en vivo y
+restaurar — todo desde `/ajustes_etiqueta`, sin deploy.
 
 ### C19-07 · «Todas estas ciudades» en /etiquetar — ✅ ya existe, es dato
 
