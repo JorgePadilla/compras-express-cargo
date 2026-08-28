@@ -535,6 +535,13 @@ class Paquete < ApplicationRecord
   after_update :ensure_warehouse_receipt,
                if: -> { saved_change_to_numero_recepcion? && warehouse_receipt_id.nil? && numero_recepcion.present? && cliente_id.present? }
   before_save :set_fecha_recibido, if: -> { fecha_recibido_miami.blank? && new_record? }
+  # C19-05: el flatpickr del form de /paquetes edita las fechas **al minuto**
+  # (`%Y-%m-%d %H:%M`), así que cualquier guardado desde ahí re-parseaba la
+  # fecha con :00 — y el segundo exacto del F9, el que se busca en cámaras, se
+  # borraba en silencio la primera vez que alguien editaba el paquete por otra
+  # cosa. Si el minuto no cambió, el "cambio" es solo la pérdida del segundo:
+  # se conserva el momento original.
+  before_save :preservar_segundos_de_fechas
   before_save :calculate_peso_volumetrico
   before_save :calculate_peso_cobrar
   before_save :track_fecha_disponible, if: :will_save_change_to_estado?
@@ -1377,6 +1384,23 @@ class Paquete < ApplicationRecord
 
   def set_fecha_recibido
     self.fecha_recibido_miami = Time.current
+  end
+
+  # C19-05: ver el comentario del callback. Compara al minuto: si el valor
+  # nuevo cae en el mismo minuto que el guardado, se restaura el guardado (con
+  # sus segundos). Un cambio deliberado a otro minuto sí entra, con :00.
+  # Restaurar el valor idéntico además saca el atributo del diff de
+  # paper_trail, así el historial no se llena de "cambios" que no lo eran.
+  def preservar_segundos_de_fechas
+    FECHAS_EDITABLES.each do |attr|
+      next unless will_save_change_to_attribute?(attr.to_s)
+
+      viejo = attribute_in_database(attr.to_s)
+      nuevo = self[attr]
+      next unless viejo && nuevo
+
+      self[attr] = viejo if nuevo.to_i / 60 == viejo.to_i / 60
+    end
   end
 
   # PR-10.a: pasa a usar `VolumetricoCalculator`, que ya implementaba la regla

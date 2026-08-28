@@ -929,7 +929,9 @@ end %>
             <% if step[:fecha] %>
               <%# Línea 2: fecha absoluta + tiempo relativo. %>
               <p class="text-xs text-gray-600 dark:text-gray-300">
-                <span class="font-mono"><%= step[:fecha].strftime("%d/%m/%Y %H:%M") %></span>
+                <%# C19-05: los segundos son la búsqueda en cámaras — "igual el
+                    enviado… como administradores sí necesitamos esa información". %>
+                <span class="font-mono"><%= step[:fecha].strftime("%d/%m/%Y %H:%M:%S") %></span>
                 <span class="text-gray-400 dark:text-gray-500 italic">· hace <%= time_ago_in_words(step[:fecha]) %></span>
               </p>
 
@@ -952,7 +954,7 @@ end %>
                   <%= heroicon "clock", variant: :outline, options: { class: "w-3 h-3 mt-0.5 shrink-0" } %>
                   <span>
                     Capturada originalmente
-                    <span class="font-mono font-semibold not-italic"><%= step[:first_set][:at].strftime("%d/%m/%Y %H:%M") %></span>
+                    <span class="font-mono font-semibold not-italic"><%= step[:first_set][:at].strftime("%d/%m/%Y %H:%M:%S") %></span>
                     <% if step[:first_set_user] %>
                       por <span class="font-mono font-semibold not-italic"><%= step[:first_set_user].iniciales_display %></span>
                       <span class="text-gray-400 dark:text-gray-500">(<%= step[:first_set_user].nombre %>)</span>
