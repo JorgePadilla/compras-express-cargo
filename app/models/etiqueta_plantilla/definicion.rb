@@ -117,6 +117,25 @@ class EtiquetaPlantilla < ApplicationRecord
       v.present? && v.length <= TEXTO_MAX ? v : campo_default(campo)["texto"]
     end
 
+    # El hash limpio que se persiste: todo pasado por los clamps, con la
+    # identidad forzada visible y la version puesta. Lo que el editor mande de
+    # más se cae; lo que falte queda en su default.
+    def normalizada
+      {
+        "version"    => VERSION,
+        "dim"        => { "ancho_in" => ancho_in, "alto_in" => alto_in },
+        "escala_pct" => escala_pct,
+        "filas"      => filas,
+        "campos"     => CAMPOS.keys.index_with do |campo|
+          d = { "visible" => visible?(campo) }
+          d["pt"]        = pt(campo)        if pt(campo)
+          d["pt_rotulo"] = pt_rotulo(campo) if pt_rotulo(campo)
+          d["texto"]     = texto(campo)     if texto(campo)
+          d
+        end
+      }
+    end
+
     # Las filas rigen el orden. Estructura irreconocible —o que no cubra
     # exactamente los campos conocidos, sin duplicar— cae a las filas de
     # fábrica enteras: media plantilla ordenada no existe.

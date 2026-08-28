@@ -7021,6 +7021,19 @@ partial con su lógica y su `data-campo`; identidad no apagable (barcode, nº
 recepción, tracking, tipo de envío/RET); todo clamp cae al default — basura
 nunca llega a la impresora. El editor en sí viene en `PR-C7.64…66`.
 
+**Seguimiento (PR-C7.64).** `/ajustes_etiqueta` ya es el editor: dimensiones
+(con el aviso «solo si cambiaste el rollo»), escala 70–130% y tamaño por campo
+—con el **efectivo** (pt × escala) al lado, que es el que imprime—, todo con
+**vista previa en vivo**: un iframe renderiza la etiqueta de muestra (un
+paquete en memoria con todos los opcionales — la etiqueta más llena es la que
+puede no caber) con la candidata sin guardar, por el layout real de
+impresión. El estado «Cabe ✓ / Se recortan Xpx» mide lo mismo que
+`etiqueta_cabe_test`; guardar en rojo pide confirmación, no bloquea — la
+etiqueta es de Yusef. Warning si el tipo de envío deja de ser lo más grande.
+Y «Restaurar la original» desde el primer PR que puede guardar: la válvula de
+escape existe antes que el riesgo. Falta: on/off + textos (`PR-C7.65`) y
+reordenar (`PR-C7.66`).
+
 ### C19-07 · «Todas estas ciudades» en /etiquetar — ✅ ya existe, es dato
 
 > *"De hecho, lo que hay que [hacer es] quitar todas estas ciudades por solo

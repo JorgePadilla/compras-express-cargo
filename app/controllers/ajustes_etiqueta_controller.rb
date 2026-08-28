@@ -13,11 +13,54 @@ class AjustesEtiquetaController < ApplicationController
   def show
     @margen_izq = EtiquetaAjustes.margen_izq_mm
     @margen_der = EtiquetaAjustes.margen_der_mm
+    @plantilla = EtiquetaPlantilla.vigente
+    @plantilla_personalizada = EtiquetaPlantilla.exists?
     ids = Configuracion.where(clave: [ EtiquetaAjustes::CLAVE_IZQ, EtiquetaAjustes::CLAVE_DER ]).pluck(:id)
     @historial = PaperTrail::Version
                    .where(item_type: "Configuracion", item_id: ids)
                    .order(created_at: :desc)
                    .limit(10)
+    @historial_plantilla = PaperTrail::Version
+                             .where(item_type: "EtiquetaPlantilla")
+                             .order(created_at: :desc)
+                             .limit(10)
+  end
+
+  # C19-06, la plantilla completa. El payload llega como UN json (el editor lo
+  # arma del DOM); `Definicion` clampa todo y fuerza la identidad visible —
+  # lo que se persiste ya está limpio, así el path de impresión nunca depende
+  # de que el editor se haya portado bien.
+  def guardar_plantilla
+    candidata = definicion_candidata
+    if candidata.nil?
+      redirect_to ajustes_etiqueta_path, alert: "No se pudo leer la plantilla — no se guardó nada."
+      return
+    end
+
+    EtiquetaPlantilla.singleton.update!(definicion: candidata.normalizada)
+    redirect_to ajustes_etiqueta_path,
+                notice: "Plantilla guardada. Aplica a la siguiente etiqueta que se imprima."
+  end
+
+  # "Tengo que grabar las originales" (Yusef, del legacy): acá la original ES
+  # el código, así que restaurar es borrar el registro. paper_trail conserva
+  # lo que había, por si hay que mirar atrás.
+  def restaurar_plantilla
+    EtiquetaPlantilla.restaurar_original!
+    redirect_to ajustes_etiqueta_path, notice: "Volvió la etiqueta original de fábrica."
+  end
+
+  # El preview en vivo: renderiza la etiqueta de MUESTRA (un paquete en
+  # memoria con todos los opcionales — la etiqueta más llena es la que puede
+  # no caber) con la definición candidata, SIN guardarla. Devuelve el
+  # documento completo con el layout real de impresión: lo que se ve es lo
+  # que sale de la Dymo. El auto-print del layout no corre (va gated por
+  # `?print=true`).
+  def preview
+    @etiqueta_plantilla = definicion_candidata || EtiquetaPlantilla::Definicion.new(nil)
+    @paquete = EtiquetaPlantilla.paquete_de_muestra
+    @paquetes = [ @paquete ]
+    render "paquetes/etiqueta", layout: "etiqueta"
   end
 
   def update
@@ -40,6 +83,17 @@ class AjustesEtiquetaController < ApplicationController
 
   def require_admin
     redirect_to(root_path, alert: "Solo admin puede ajustar la etiqueta.") unless Current.user&.admin?
+  end
+
+  def definicion_candidata
+    hash = JSON.parse(params[:definicion_json].to_s)
+    return nil unless hash.is_a?(Hash)
+
+    # La version la pone el server: el editor manda contenido, no contrato.
+    hash["version"] = EtiquetaPlantilla::Definicion::VERSION
+    EtiquetaPlantilla::Definicion.new(hash)
+  rescue JSON::ParserError
+    nil
   end
 
   def leer_mm(crudo)

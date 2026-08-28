@@ -162,8 +162,9 @@ class BotonesTest < ActiveSupport::TestCase
     "app/views/tarifas_recolecta/_form.html.erb"             => 1,
     "app/views/tasa_cambio/show.html.erb"                    => 1,
     # C19-06: copia deliberada de la pantalla de la tasa — el mismo submit_tag
-    # crudo, por la misma razón.
-    "app/views/ajustes_etiqueta/show.html.erb"               => 1,
+    # crudo, por la misma razón. Sube a 2 con el editor de la plantilla
+    # (PR-C7.64): el segundo es «Guardar plantilla», mismo patrón.
+    "app/views/ajustes_etiqueta/show.html.erb"               => 2,
     "app/views/users/_form.html.erb"                         => 1,
     "app/views/ventas/edit.html.erb"                         => 1,
     "app/views/ventas/index.html.erb"                        => 1
