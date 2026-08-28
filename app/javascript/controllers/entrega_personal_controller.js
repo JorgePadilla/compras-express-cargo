@@ -160,6 +160,15 @@ submitFormWithPrint() {
       // ventana de la etiqueta, al terminar de imprimir, se va al Warehouse
       // Receipt en vez de cerrarse (ver `layouts/etiqueta.html.erb`).
       window.open(`/paquetes/${el.dataset.paqueteId}/etiqueta?hermanas=1&print=true&wr=1`, "_blank")
+      // C19-02: la pestaña de impresión se lleva el foco de la ventana; cuando
+      // el WR se cierra y la ventana vuelve, de regreso al primer campo — el
+      // mismo viaje que hace /etiquetar con el tracking. El guard de
+      // isConnected es por si Turbo reemplazó la página en el medio.
+      window.addEventListener("focus", () => {
+        if (!this.element.isConnected) return
+        const primero = this.formTarget.querySelector("[autofocus]")
+        if (primero) primero.focus()
+      }, { once: true })
     }
     setTimeout(() => this.clearForm(), 100)
     el.remove()
