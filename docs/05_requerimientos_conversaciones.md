@@ -7006,6 +7006,21 @@ los tests que miden en Chrome real pasan con el default nuevo. Aplica a la
 siguiente etiqueta que se imprima, en los dos render paths (etiqueta y
 combinadas), sin deploy.
 
+**Seguimiento 2026-08-28 (PR-C7.63 → serie de la plantilla).** Jorge: *"¿y con
+respecto a hacer editable la plantilla de las etiquetas? ¿se hizo algo?"* — el
+pedido completo de Yusef era más que los márgenes, y Jorge cerró el alcance:
+escala de letra, letra por campo, dimensiones, campos on/off, **mover campos
+por filas** (no canvas libre: el desborde sigue siendo medible) y textos
+fijos, con vista previa en vivo y «restaurar la original» (que en el legacy
+Yusef resolvía "grabando las originales"). `PR-C7.63` puso los cimientos sin
+cambiar un pixel: la etiqueta ahora se renderiza desde una **plantilla**
+(`EtiquetaPlantilla`, singleton jsonb; sin registro rige la de fábrica, que
+vive en el código y es la etiqueta de hoy **1:1** — los seis tests de etiqueta
+pasan sin tocarse, incluido el que mide en Chrome). Cada campo vive en su
+partial con su lógica y su `data-campo`; identidad no apagable (barcode, nº
+recepción, tracking, tipo de envío/RET); todo clamp cae al default — basura
+nunca llega a la impresora. El editor en sí viene en `PR-C7.64…66`.
+
 ### C19-07 · «Todas estas ciudades» en /etiquetar — ✅ ya existe, es dato
 
 > *"De hecho, lo que hay que [hacer es] quitar todas estas ciudades por solo
