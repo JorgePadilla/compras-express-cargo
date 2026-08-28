@@ -473,6 +473,14 @@
                       { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
               </div>
             </div>
+            <%# C19-03: la dirección también acá, para corregir una recolecta
+                ya creada. Los demás datos de la visita se editan en EP. %>
+            <div>
+              <%= f.label :recolecta_direccion, "Dirección de la recolecta", class: "block text-sm font-medium text-gray-700 mb-1" %>
+              <%= f.text_area :recolecta_direccion, rows: 2,
+                    placeholder: "Dónde queda: calle, local, referencia…",
+                    class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+            </div>
             <p class="text-xs text-gray-600 italic">Se cobra automáticamente en la pre-factura.</p>
           </div>
           <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">

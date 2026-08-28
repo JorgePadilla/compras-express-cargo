@@ -747,6 +747,25 @@ end %>
           <div class="italic">— sin retención —</div>
         <% end %>
       </div>
+
+      <%# C19-03: los datos de la visita de recolecta se guardaban desde EP y no
+          se mostraban en NINGUNA pantalla — el que va a traer la carga no tenía
+          dónde leerlos. Salen acá, con la dirección nueva incluida. %>
+      <% datos_recolecta = {
+           "Dirección"     => @paquete.recolecta_direccion,
+           "Contacto"      => @paquete.recolecta_contacto,
+           "Teléfono"      => @paquete.recolecta_telefono,
+           "Horario"       => @paquete.recolecta_horario,
+           "Instrucciones" => @paquete.recolecta_instrucciones
+         }.select { |_, v| v.to_s.strip.present? } %>
+      <% if @paquete.recolecta_solicitada? && datos_recolecta.any? %>
+        <div class="bg-cec-teal/5 dark:bg-cec-teal/10 rounded-lg p-3 border border-cec-teal/30 text-xs space-y-1.5 text-gray-800 dark:text-gray-100">
+          <div class="font-semibold uppercase tracking-wider text-[10px] text-cec-teal-dark dark:text-cec-teal">Datos de la Recolecta</div>
+          <% datos_recolecta.each do |etiqueta, valor| %>
+            <div><span class="font-medium"><%= etiqueta %>:</span> <%= valor %></div>
+          <% end %>
+        </div>
+      <% end %>
     </div>
 
     <%# Notas Permanentes del Cliente (PR-D2.b / PR-D7.k).

@@ -6893,7 +6893,7 @@ devuelve la ventana— con `scrollIntoView` para que la vista se quede "en el
 área donde ellos en realidad se mueven". El listener de window "focus" quedó
 también en EP, apuntando a su `[autofocus]`.
 
-### C19-03 · Recolecta: campo de dirección
+### C19-03 · Recolecta: campo de dirección — ✅ **HECHO (PR-C7.57)**
 
 > *"En entrega [personal]… lo único que vimos que hace falta ahorita es que
 > pongamos un campo que diga dirección. Dirección de la recolecta."*
@@ -6905,6 +6905,13 @@ también en EP, apuntando a su `[autofocus]`.
 de instrucciones (el placeholder mismo dice *"Dónde queda, por dónde
 entrar…"*). Y un hallazgo al costado: esos cuatro campos se guardan y **no se
 muestran en ninguna pantalla** — el que maneja no tiene dónde leerlos.
+
+**Qué se hizo (`PR-C7.57`).** `recolecta_direccion` en el paquete, con su
+campo en EP (arriba de las instrucciones, que dejaron de pedir "dónde queda")
+y en el modal de recolecta del form de `/paquetes` para corregir después. Sin
+prefill del cliente a propósito: la recolecta puede ser en la bodega de un
+proveedor. Y la ficha ganó el bloque «Datos de la Recolecta» con dirección,
+contacto, teléfono, horario e instrucciones — que hasta hoy eran write-only.
 
 ### C19-04 · Checkbox «Sellado» (y «Compra chino») para la descripción
 
