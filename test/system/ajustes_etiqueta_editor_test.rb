@@ -87,6 +87,24 @@ class AjustesEtiquetaEditorTest < ApplicationSystemTestCase
                     "el preview no reflejó el orden nuevo"
   end
 
+  test "elegir la alineacion del barcode se ve en el preview" do
+    # C20-02: los cuatro radios comparten `data-def-path`; sin el guard de
+    # `checked` en el serializer gana el último y se guarda cualquier cosa.
+    assert_selector "[data-etiqueta-editor-target='estado']", text: "Cabe ✓", wait: 10
+    esperar { page.evaluate_script(srcdoc_js).to_s.include?('data-alineacion="justificado"') }
+
+    page.execute_script(%(document.querySelector("input[name='barcode_alineacion'][value='centro']").click()))
+
+    esperar { page.evaluate_script(srcdoc_js).to_s.include?('data-alineacion="centro"') }
+    doc = page.evaluate_script(srcdoc_js).to_s
+    assert_includes doc, "justify-content:center"
+    assert_includes doc, 'data-alineacion="centro"'
+
+    json = JSON.parse(page.evaluate_script("document.querySelector(\"[data-etiqueta-editor-target='json']\").value"))
+    assert_equal "centro", json.dig("campos", "barcode", "alineacion"),
+                 "el serializer mandó el radio equivocado"
+  end
+
   private
 
   def srcdoc_js

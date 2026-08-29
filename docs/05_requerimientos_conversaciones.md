@@ -7167,7 +7167,7 @@ caminos de error del update —destino de cambio de servicio faltante, caja ya
 cobrada, paquete que no valida— tienen su test, que sin el arreglo revienta
 con el mismo `undefined method 'any?' for nil` de los logs.
 
-### C20-02 · El código de barras que la pistola no lee — 🐛 pendiente (`PR-C7.68`)
+### C20-02 · El código de barras que la pistola no lee — 🐛 ✅ **ARREGLADO (PR-C7.68)**
 
 El problema grande de la etiqueta, encontrado en vivo:
 
@@ -7196,6 +7196,18 @@ Justificado —el barcode estirado al ancho disponible— pasa a ser el
 Izquierda, centro y derecha quedan como opciones en la plantilla, que es lo
 que Jorge pidió por chat: *"ponle que se pueda justificar, mover al lado
 izquierdo, derecho y centrar el código de barra"*.
+
+**Qué se hizo.** El SVG de Barby ya venía con `viewBox` y
+`preserveAspectRatio="none"`, así que alcanzó con cambiarle el ancho fijo del
+tag de apertura por `100%`: el dibujo se acomoda al ancho que haya y ningún
+margen se lo puede comer. Las otras tres alineaciones conservan el ancho
+natural —el operario elige, y la pantalla le dice el riesgo con todas las
+letras—. La alineación vive en la plantilla (`campos.barcode.alineacion`), con
+la regla madre de siempre: un valor desconocido cae a justificado, que es el
+único que no se corta. En el editor va como control segmentado con su
+explicación, y el preview lo muestra al instante. De paso salió un bug del
+editor que no se había visto: los cuatro radios comparten `data-def-path` y el
+serializador se quedaba con el último del grupo en vez del elegido.
 
 ### C20-03 · Restablecer los ajustes — pendiente (`PR-C7.69`)
 

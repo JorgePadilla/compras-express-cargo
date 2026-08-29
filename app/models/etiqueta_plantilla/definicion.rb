@@ -16,6 +16,13 @@ class EtiquetaPlantilla < ApplicationRecord
     ALTO_RANGO   = (1.0..3.0)
     TEXTO_MAX    = 20
     VERSION      = 1
+    # C20-02: cómo se acomoda el código de barras en su renglón. «Justificado»
+    # —estirado a todo el ancho disponible— es el default y la única que no se
+    # puede cortar: el SVG de Barby trae ancho fijo en píxeles, así que con las
+    # otras tres el margen le puede comer la última barra y la etiqueta sale
+    # ilegible sin que se note. Yusef eligió justificado sabiendo el costo:
+    # *"se hace un poquito más pequeño, pero la pistola lo va a leer"*.
+    ALINEACIONES = %w[justificado izquierda centro derecha].freeze
 
     # Qué es cada campo. `apagable: false` = identidad operativa (el barcode
     # escaneable, el número que se teclea cuando viene rayada, el tracking que
@@ -24,7 +31,7 @@ class EtiquetaPlantilla < ApplicationRecord
     # cosa. `texto:` es el rótulo fijo editable; `pt_rotulo:` el tamaño del
     # rótulo cuando va aparte del dato.
     CAMPOS = {
-      "barcode"             => { nombre: "Código de barras",     apagable: false, pt: false },
+      "barcode"             => { nombre: "Código de barras",     apagable: false, pt: false, alineacion: true },
       "numero_recepcion"    => { nombre: "Número de recepción",  apagable: false },
       "tracking"            => { nombre: "Tracking",             apagable: false },
       "tracking_secundario" => { nombre: "Tracking secundario",  apagable: true },
@@ -64,7 +71,7 @@ class EtiquetaPlantilla < ApplicationRecord
           "derecha"   => [ [ "ubicacion" ], [ "proveedor", "tipo_envio" ] ] }
       ],
       "campos" => {
-        "barcode"             => { "visible" => true },
+        "barcode"             => { "visible" => true, "alineacion" => "justificado" },
         "numero_recepcion"    => { "visible" => true, "pt" => 11.0 },
         "tracking"            => { "visible" => true, "pt" => 7.0 },
         "tracking_secundario" => { "visible" => true, "pt" => 7.0 },
@@ -117,6 +124,14 @@ class EtiquetaPlantilla < ApplicationRecord
       v.present? && v.length <= TEXTO_MAX ? v : campo_default(campo)["texto"]
     end
 
+    # Cualquier cosa que no sea una de las cuatro cae a la de fábrica, que es
+    # la que no se corta: un valor raro no puede terminar en una etiqueta que
+    # no se escanea.
+    def alineacion(campo)
+      v = campo_def(campo)["alineacion"].to_s
+      ALINEACIONES.include?(v) ? v : campo_default(campo)["alineacion"]
+    end
+
     # El hash limpio que se persiste: todo pasado por los clamps, con la
     # identidad forzada visible y la version puesta. Lo que el editor mande de
     # más se cae; lo que falte queda en su default.
@@ -131,6 +146,7 @@ class EtiquetaPlantilla < ApplicationRecord
           d["pt"]        = pt(campo)        if pt(campo)
           d["pt_rotulo"] = pt_rotulo(campo) if pt_rotulo(campo)
           d["texto"]     = texto(campo)     if texto(campo)
+          d["alineacion"] = alineacion(campo) if CAMPOS[campo][:alineacion]
           d
         end
       }

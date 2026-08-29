@@ -17,7 +17,33 @@ module EtiquetaHelper
   # SVG en vez de PNG a propósito: es vectorial, así que imprime nítido tanto
   # en la Dymo de 203 dpi como en cualquier otra, y no necesita una gema de
   # imágenes.
-  def etiqueta_barcode_svg(texto, height: 34, xdim: 1)
+  # C20-02: `estirar` es lo que hace que la pistola pueda leerlo siempre.
+  #
+  # Barby emite el SVG con **ancho fijo en píxeles** (el que le toque al
+  # código: 211px para un número de recepción con sufijo). La etiqueta mide
+  # 2.25in y los márgenes le comen ancho, así que cuando el código no entra,
+  # `overflow:hidden` le corta la última barra **en silencio** — la etiqueta se
+  # ve bien y no se escanea. Yusef, probándolo en vivo: *"sí, le cortó la
+  # última, la derecha… le faltan rayitas"*, y el diagnóstico es suyo: *"la
+  # idea de ese margen es que lo corre para la derecha; el problema es que como
+  # ya no hay espacio, donde lo corre para la derecha se corta"*.
+  #
+  # Estirado, el ancho lo pone el contenedor y el dibujo se acomoda:
+  #
+  #   > "Si lo justificás, lo que va a pasar es que se hace un poquito más
+  #   >  pequeño el código de barra, **pero la pistola lo va a leer**. Eso es
+  #   >  lo que hay que hacer."
+  #
+  # Y es cierto: Code 128 se lee por la **proporción** entre barras y espacios,
+  # no por su ancho absoluto, así que escalar parejo no lo rompe.
+  #
+  # El SVG de Barby ya trae `viewBox` y `preserveAspectRatio="none"`, o sea que
+  # alcanza con cambiarle el ancho y el alto del tag de apertura — nada de
+  # reescribir el dibujo. `sub` y no `gsub`: adentro van decenas de `<rect>`
+  # con su propio width/height, y ésos no se tocan. Si algún día Barby cambia
+  # de forma y el patrón no engancha, sale el SVG tal cual: se degrada al
+  # comportamiento de antes, nunca a una etiqueta sin código.
+  def etiqueta_barcode_svg(texto, height: 34, xdim: 1, estirar: true)
     valor = texto.to_s.strip
     return nil if valor.blank?
 
@@ -25,12 +51,32 @@ module EtiquetaHelper
     svg = Barby::SvgOutputter.new(barcode)
       .to_svg(height: height, margin: 0, xdim: xdim)
       .sub(/<\?xml[^>]*\?>\s*/, "") # inline: sin prolog XML
+    if estirar
+      svg = svg.sub(/\A\s*<svg\b[^>]*>/) do |tag|
+        tag.sub(/\bwidth="[^"]*"/, 'width="100%"').sub(/\bheight="[^"]*"/, 'height="100%"')
+      end
+    end
     svg.html_safe
   rescue StandardError => e
     # Un carácter fuera de Code128B no puede tumbar la impresión de la
     # etiqueta — se degrada a solo texto.
     Rails.logger.warn "[etiqueta] no se pudo generar el codigo de barras para #{valor.inspect}: #{e.message}"
     nil
+  end
+
+  # El renglón donde vive el código de barras.
+  #
+  # C20-02: justificado no necesita alinear nada —el dibujo ya ocupa todo el
+  # ancho— y por eso va como bloque pelado, que es el camino que tenía la
+  # etiqueta desde siempre. Las otras tres van con flex, empujando un SVG que
+  # conserva su ancho natural.
+  POSICION_DEL_BARCODE = { "centro" => "center", "derecha" => "flex-end" }.freeze
+
+  def etiqueta_barcode_estilo(alineacion)
+    base = "width:100%; height:.20in;"
+    return base if alineacion == "justificado"
+
+    "#{base} display:flex; justify-content:#{POSICION_DEL_BARCODE.fetch(alineacion, 'flex-start')};"
   end
 
   # Lo que va adentro del código de barras — y también impreso debajo, para
