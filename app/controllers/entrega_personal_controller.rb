@@ -35,17 +35,45 @@ class EntregaPersonalController < ApplicationController
   # veces, ganaba el hidden con valor 1, y el operario veía tres filas pero se
   # grababa un solo paquete. Si el número sale de contar las filas, no hay dos
   # fuentes que puedan discrepar.
+  # C20-07: …y cuando no midió ninguna, la cantidad la contesta el modal.
+  #
+  # Es la gemela de `/etiquetar` (`PR-C7.23`), y acá hacía más falta: en Entrega
+  # Personal casi nunca se pesa ni se mide, así que un envío de tres bultos no
+  # tenía forma de pedir tres etiquetas — siempre se grababa uno. Jorge: *"esta
+  # lógica de las cajas que hicimos para etiquetar también hay que aplicarla en
+  # entrega personal"*.
+  #
+  # Las filas siguen mandando cuando existen: el modal ni aparece, así que
+  # nunca hay dos fuentes para el mismo número.
+  MAX_ETIQUETAS = 99
+
   def create
     cajas = medidas_por_caja
 
     case cajas.size
-    when 0 then create_single                          # nunca tocó Agregar: un solo bulto
+    when 0 then crear_sin_medir                        # nunca tocó Agregar
     when 1 then create_single(cajas.values.first)      # una caja agregada: sus datos mandan
     else        create_split(cajas.size)
     end
   end
 
   private
+
+  def crear_sin_medir
+    cantidad = etiquetas_pedidas
+    return render_create_error("La cantidad de etiquetas va entre 1 y #{MAX_ETIQUETAS}.") if cantidad.nil?
+
+    cantidad > 1 ? create_split(cantidad) : create_single
+  end
+
+  # Sin el parámetro es 1 —el operario le dio a guardar sin contestar nada—, y
+  # fuera de rango es nil para que el caller avise en vez de grabar 500 bultos.
+  def etiquetas_pedidas
+    return 1 if params[:etiquetas].blank?
+
+    n = params[:etiquetas].to_i
+    n.between?(1, MAX_ETIQUETAS) ? n : nil
+  end
 
   def create_single(medidas = {})
     @paquete = Paquete.new(paquete_params.merge(medidas))
@@ -181,7 +209,15 @@ class EntregaPersonalController < ApplicationController
     Sucursal.de_recepcion.con_codigo_ep
   end
 
-  def render_create_error
+  # C20-07: acepta un mensaje, como la gemela de /etiquetar. Sin él, un rechazo
+  # que no viene de las validaciones del modelo —la cantidad de etiquetas fuera
+  # de rango— no tenía cómo explicarse.
+  def render_create_error(mensaje = "No se pudo registrar la entrega personal.")
+    # Un rechazo que no nace de un `save` no trae paquete —la cantidad de
+    # etiquetas fuera de rango, por ejemplo—, y la vista lo necesita. Se arma
+    # con lo que el operario había tecleado, que además es lo que hay que
+    # devolverle a la pantalla.
+    @paquete ||= Paquete.new(paquete_params)
     @paquetes_hoy = paquetes_ep_hoy_count
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     @proveedores_ep = Proveedor.where(tipo: "entrega_personal").activos.ordered
@@ -194,7 +230,7 @@ class EntregaPersonalController < ApplicationController
     # Igual que en /etiquetar: las cajas medidas vuelven a la pantalla. Sin
     # esto, un error de validación las borraba todas.
     @cajas_cargadas = medidas_por_caja
-    flash.now[:alert] = "No se pudo registrar la entrega personal."
+    flash.now[:alert] = mensaje
     render :new, status: :unprocessable_entity
   end
 

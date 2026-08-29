@@ -7344,7 +7344,53 @@ limpieza de formulario—, pero la impresión se marca una sola vez, en la
 primera caja, que es la que trae a todas sus hermanas. El navegador deja de
 ser lo único que nos separaba del papel de más.
 
-### C20-07 · El paquete pre-alertado que no se puede actualizar — 🐛 pendiente (`PR-C7.74`)
+### C20-07 · Las cajas de Entrega Personal — ✅ **HECHO (PR-C7.74)**
+
+Jorge, viendo lo que se arregló en `/etiquetar`:
+
+> *"Esta lógica de las cajas que hicimos para etiquetar también hay que
+> aplicarla en entrega personal."*
+
+**Qué pasaba.** En Entrega Personal la cantidad de cajas salía **solo** de las
+filas que el operario agregara — y ahí casi nunca se pesa ni se mide. Un envío
+de tres bultos no tenía forma de pedir tres etiquetas: se grababa uno. El
+modal de «¿cuántas etiquetas?» existía en `/etiquetar` desde `PR-C7.23` y acá
+hacía más falta que allá.
+
+Ahora es la misma regla en las dos pantallas: si midió cajas, mandan las filas
+—el modal ni aparece, así que nunca hay dos fuentes para el mismo número—; si
+no midió ninguna, el modal pregunta. De paso, `render_create_error` de esta
+pantalla aprendió a llevar mensaje: un rechazo que no viene de las validaciones
+del modelo no tenía cómo explicarse.
+
+### C20-08 · La etiqueta de Entrega Personal dice si viene pagada — ✅ **HECHO (PR-C7.74)**
+
+> *"Sí, es la misma la etiqueta, idénticas, no cambia, pero en la entrega
+> personal y recolectas va **si va bien pagada o no viene pagada**, si le
+> marcamos la opción de que se pagó o no se pagó."*
+
+Se imprimen los **dos** estados, no solo el pagado: el que entrega en Honduras
+tiene que poder leer «NO PAGADO» y cobrar — un renglón en blanco diría lo
+mismo que una etiqueta vieja, y ahí es donde se pierde la plata. El NO PAGADO
+va en negativo, que es lo que se ve de más lejos. Solo sale en entrega personal
+y recolectas (que comparten proveedor); el resto de la carga se cobra por la
+pre-factura y decirlo en cada etiqueta sería ruido — *"es la misma etiqueta,
+no cambia"*.
+
+Dónde ponerlo lo decidió la medición: en su propio renglón la etiqueta se
+desbordaba **13px**, y con recuadro todavía **2px**. Viaja en el renglón del
+registro —ahí cuesta ancho, que sobra— y el énfasis es fondo, no borde, porque
+el borde suma alto. Hay un test que mide en Chrome la etiqueta de EP con
+todos los campos, para que el próximo campo que alguien agregue no lo descubra
+en la impresora.
+
+Y de paso, la plantilla dejó de resetearse: antes exigía que el orden guardado
+cubriera **exactamente** los campos conocidos, así que agregar uno nuevo
+—como éste— le borraba en silencio el orden que el operario hubiera armado.
+Ahora se reconcilia: lo que ya no existe se descarta y lo que falta entra
+donde lo pone la de fábrica.
+
+### C20-09 · El paquete pre-alertado que no se puede actualizar — 🐛 pendiente (`PR-C7.75`)
 
 Un paquete que llegó por pre-alerta y **ya se recibió** no tiene forma de
 volver a modo actualización escaneándolo: el aviso verde de pre-alerta se

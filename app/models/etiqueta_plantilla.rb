@@ -44,11 +44,16 @@ class EtiquetaPlantilla < ApplicationRecord
       fecha_recibido_miami: Time.current,
       driver: "Marvin Lopez",
       tercero_nombre: "Maria Fernanda Lopez",
+      # C20-08: la muestra es de entrega personal y SIN pagar a propósito. El
+      # renglón «NO PAGADO» solo sale en esas —y es el estado más ancho—, así
+      # que sin esto el preview medía una etiqueta que no es la más llena y su
+      # «Cabe ✓» habría dejado pasar tamaños que desbordan cada etiqueta de EP.
+      prepagado_miami: false,
       cliente: Cliente.new(codigo: "C6", nombre: "Kenia Isabel", apellido: "Maya Rodriguez",
                            ciudad: "San Pedro Sula", departamento: "Cortés"),
       sucursal: Sucursal.new(nombre: "San Pedro Sula"),
       tipo_envio: TipoEnvio.new(codigo: "exp", nombre: "EXPRESS"),
-      proveedor: Proveedor.new(codigo: "AMZ"),
+      proveedor: Proveedor.new(codigo: "AMZ", tipo: "entrega_personal"),
       user: User.new(iniciales: "DM", nombre: "Digitador Miami")
     )
   end

@@ -39,6 +39,24 @@ class EtiquetaCabeTest < ApplicationSystemTestCase
                     "Baja los escalones --t1..--t7 en layouts/etiqueta.html.erb."
   end
 
+  # C20-08: la etiqueta de Entrega Personal lleva un renglón MÁS —«PAGADO» o
+  # «NO PAGADO», que Yusef pidió para esa pantalla y las recolectas—, así que
+  # es la que más apretada queda. Si esta falla, se bajan los escalones; no se
+  # saca el renglón, que es el que dice si hay que cobrar.
+  test "la etiqueta de entrega personal, con el renglón del pago, tampoco se desborda" do
+    @paquete.update!(proveedor: Proveedor.where(tipo: "entrega_personal").activos.first,
+                     prepagado_miami: false)
+
+    visit etiqueta_paquete_path(@paquete)
+    assert_selector "[data-campo=pago]", visible: :all
+
+    contenido = medir("scrollHeight")
+    etiqueta  = medir("clientHeight")
+
+    assert_operator contenido, :<=, etiqueta,
+                    "con el renglón del pago se recortan #{contenido - etiqueta}px por abajo."
+  end
+
   test "la etiqueta sin tercero ni driver tampoco se desborda" do
     @paquete.update!(tercero: nil, driver: nil, tracking_secundario: nil)
 

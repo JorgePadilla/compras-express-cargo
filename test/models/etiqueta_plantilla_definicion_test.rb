@@ -86,13 +86,39 @@ class EtiquetaPlantillaDefinicionTest < ActiveSupport::TestCase
     assert_not d.visible?("tercero"), "los opcionales sí se apagan"
   end
 
-  test "filas rotas o incompletas caen a las de fábrica enteras" do
-    sin_tracking = DEF::DEFAULT["filas"].reject { |f| f["id"] == "f-tracking" }
-    [ "basura", [ { "campos" => "no-array" } ], sin_tracking,
-      DEF::DEFAULT["filas"] + [ { "campos" => [ "tracking" ] } ] ].each do |filas|
+  test "filas rotas caen a las de fábrica enteras" do
+    [ "basura", [ { "campos" => "no-array" } ], [ { "tipo" => "dos_columnas" } ] ].each do |filas|
       d = DEF.new(DEF::DEFAULT.merge("filas" => filas))
       assert_equal DEF::DEFAULT["filas"], d.filas,
                    "no cayó al default con filas=#{filas.inspect[0, 60]}"
+    end
+  end
+
+  # C20-08: lo que falta o sobra se reconcilia. Antes se exigía cobertura
+  # exacta, y eso convertía cada campo nuevo del sistema en un reseteo
+  # silencioso del orden que el operario había armado.
+  test "un campo que falta vuelve, sin tirar el orden que el operario armó" do
+    sin_tracking = DEF::DEFAULT["filas"].reject { |f| f["id"] == "f-tracking" }
+    d = DEF.new(DEF::DEFAULT.merge("filas" => sin_tracking))
+
+    campos = campos_de(d.filas)
+    assert_equal DEF::CAMPOS.keys.sort, campos.sort, "se perdió un campo"
+    # Y el orden propio se respeta: el barcode sigue primero.
+    assert_equal "barcode", campos.first
+  end
+
+  test "un campo repetido o desconocido se descarta, y el resto queda" do
+    con_basura = DEF::DEFAULT["filas"] + [ { "id" => "x", "campos" => [ "tracking", "inventado" ] } ]
+    d = DEF.new(DEF::DEFAULT.merge("filas" => con_basura))
+
+    campos = campos_de(d.filas)
+    assert_equal DEF::CAMPOS.keys.sort, campos.sort
+    assert_equal campos.uniq, campos, "quedó un campo repetido"
+  end
+
+  def campos_de(filas)
+    filas.flat_map do |f|
+      f["tipo"] == "dos_columnas" ? (f["izquierda"] + f["derecha"]).flatten : f["campos"]
     end
   end
 
