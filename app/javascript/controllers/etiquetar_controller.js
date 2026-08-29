@@ -1131,7 +1131,20 @@ cerrarQuitarCobro() {
     // Va suelto y NO como `paquete[cantidad_paquetes]`: el bug de `PR-C6.31`
     // fue tener dos campos con el mismo `name` —ganaba el último y el split se
     // caía en silencio—. Con un nombre propio no hay con quién chocar.
-    if (etiquetas && etiquetas > 1) {
+    //
+    // C20-04: y va SIEMPRE que el operario haya contestado, incluido el 1.
+    // Con el `> 1` de antes, confirmar «1» no mandaba nada: el servidor no
+    // recibía cantidad, no ajustaba el split, y el paquete seguía en tres
+    // cajas mientras la pantalla decía "actualizado" y salían tres etiquetas.
+    // Bajar un envío a una sola caja era **inexpresable** — justo el caso que
+    // Yusef describió: *"ese celular hay que devolverlo, entonces ya pasa de
+    // ser 3 a 2"*, y de 2 a 1 igual.
+    //
+    // Al dar de alta `etiquetas=1` es lo mismo que no mandarlo
+    // (`etiquetas_pedidas` contesta 1 cuando falta), así que ese camino no
+    // cambia. Y el modal arranca en la cantidad actual, así que un Enter sin
+    // tocar nada manda N==actual y el servidor no ajusta nada.
+    if (etiquetas) {
       const cuantas = document.createElement("input")
       cuantas.type = "hidden"
       cuantas.name = "etiquetas"
