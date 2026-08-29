@@ -7225,7 +7225,7 @@ no es cero, aunque el rango lo permita: el margen **es la zona muda** del
 Code 128, así que un código pegado al borde tampoco se lee aunque salga
 completo — lo dice la pantalla, al lado del botón.
 
-### C20-04 · Actualizar la cantidad de cajas: las reglas — 🐛 pendiente (`PR-C7.70` · `PR-C7.71`)
+### C20-04 · Actualizar la cantidad de cajas: las reglas — 🐛 ✅ **ARREGLADO (PR-C7.70 · PR-C7.71)**
 
 La regla, dicha por Yusef y que hoy el sistema no cumple:
 
@@ -7269,6 +7269,21 @@ Y por qué se reimprimen todas:
   abre la caja más nueva; si desde ahí se baja la cantidad, esa caja se borra
   y el servidor sigue trabajando con un registro que ya no existe → 500. Hoy
   se alcanza; con lo de arriba arreglado sería el caso común.
+
+**Qué se hizo en `PR-C7.70`** (el orden; el modal es `PR-C7.71`). Primero el
+número, después las hermanas: `ajustar_split!` acuña el número madre si falta
+—igual que `crear_split!` desde siempre— y recién ahí busca el grupo, así que
+las cajas nuevas nacen con el número del envío y un solo Warehouse Receipt. El
+acuñado escribe **solo** esas columnas y no un `save` entero, porque el
+paquete llega con cambios en memoria que todavía no toca guardar. Sobre un
+esperado no se ajusta nada y se lo dice con todas las letras: *se recibe
+escaneándolo*, que es el camino que sí sabe convertirlo. Al reducir, el
+formulario se re-ancla a una caja que quedó viva —la que se editaba puede ser
+justo la que se va— y el peso y las medidas que venían de la caja borrada no
+se le pegan a la sobreviviente. Y todo adentro de una transacción: el contrato
+viejo *"si una caja ya se cobró, no se guarda nada"* se cumplía por orden pero
+no al revés — un `save` fallido después de ajustar dejaba las cajas creadas o
+borradas igual.
 
 ### C20-05 · Lo que cambia es del envío, no de una caja — 🐛 pendiente (`PR-C7.72`)
 

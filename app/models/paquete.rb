@@ -715,6 +715,36 @@ class Paquete < ApplicationRecord
     numero_recepcion
   end
 
+  # C20-04: acuña el número de recepción —y con él el Warehouse Receipt— si al
+  # paquete le falta y ya le corresponde tenerlo.
+  #
+  # Es lo que `crear_split!` hace de entrada con el número madre (`:791`) y
+  # `ajustar_split!` no tenía. Sin esto, ajustar la cantidad sobre un paquete
+  # todavía sin número deja el envío roto de dos maneras: las hermanas se
+  # agrupan **por número madre**, así que un envío sin número no tiene
+  # hermanas que encontrar, y las cajas nuevas nacen copiando ese vacío hasta
+  # que cada una se acuña el suyo — y ahí ya no hay forma de volver a
+  # juntarlas.
+  #
+  # Escribe **solo** las dos columnas del número, no un `save` entero: el
+  # paquete llega acá con cambios en memoria que todavía no toca guardar (el
+  # tipo de envío del cambio de servicio, entre otros), y persistirlos de
+  # rebote se los comería del `saved_changes` que el controller mira después.
+  #
+  # El `rescue` es el de `numerar_recibidos_sin_numero!`: una fila vieja puede
+  # no pasar las validaciones de hoy, y dejarla sin número sería peor.
+  def asegurar_numero_recepcion!
+    return if numero_recepcion.present?
+    return if NO_SON_CAJAS.include?(estado) || sucursal_del_numero.blank?
+
+    generate_numero_recepcion
+    return if numero_recepcion.blank?
+
+    update_columns(numero_recepcion: numero_recepcion,
+                   sucursal_recepcion_id: sucursal_recepcion_id)
+    ensure_warehouse_receipt if warehouse_receipt_id.nil? && cliente_id.present?
+  end
+
   # Devuelve "1/3" cuando el paquete está dividido; nil cuando no.
   # Se muestra en etiqueta impresa, detalle y badges del listado.
   def etiqueta_secuencia
@@ -881,6 +911,13 @@ class Paquete < ApplicationRecord
     raise ArgumentError, "la cantidad debe ser >= 1" if m < 1
 
     transaction do
+      # C20-04: primero el número, después las hermanas. Al revés —que es como
+      # estaba— un paquete sin número no se encuentra a sí mismo en el grupo
+      # (se agrupa por número madre), así que un split real quedaba invisible
+      # y las cajas nuevas nacían sin número, cada una acuñándose el suyo
+      # después. Es el mismo orden que `crear_split!`.
+      paquete.asegurar_numero_recepcion!
+
       hermanas = cajas_del_mismo_split(paquete).to_a
       n = hermanas.size
 
