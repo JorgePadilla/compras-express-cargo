@@ -42,6 +42,16 @@ class AjustesEtiquetaController < ApplicationController
                 notice: "Plantilla guardada. Aplica a la siguiente etiqueta que se imprima."
   end
 
+  # C20-03: los márgenes también vuelven a fábrica. Jorge: *"ponle un
+  # restablecer a los ajustes de etiqueta"*. Mismo criterio que la plantilla:
+  # la original es el código, así que se borran las claves y `EtiquetaAjustes`
+  # vuelve a sus defaults solo. paper_trail conserva lo que había.
+  def restablecer_margenes
+    Configuracion.where(clave: [ EtiquetaAjustes::CLAVE_IZQ, EtiquetaAjustes::CLAVE_DER ]).destroy_all
+    redirect_to ajustes_etiqueta_path,
+                notice: "Márgenes restablecidos: #{EtiquetaAjustes::IZQ_DEFAULT_MM} mm de cada lado."
+  end
+
   # "Tengo que grabar las originales" (Yusef, del legacy): acá la original ES
   # el código, así que restaurar es borrar el registro. paper_trail conserva
   # lo que había, por si hay que mirar atrás.

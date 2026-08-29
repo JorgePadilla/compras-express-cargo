@@ -7209,13 +7209,21 @@ explicación, y el preview lo muestra al instante. De paso salió un bug del
 editor que no se había visto: los cuatro radios comparten `data-def-path` y el
 serializador se quedaba con el último del grupo en vez del elegido.
 
-### C20-03 · Restablecer los ajustes — pendiente (`PR-C7.69`)
+### C20-03 · Restablecer los ajustes — ✅ **HECHO (PR-C7.69)**
 
 Jorge: *"ponle un restablecer a los ajustes de etiqueta"*. La plantilla ya
 tiene «Restaurar la original» (`C19-06`); los márgenes no. Y de paso el
 margen izquierdo vuelve a 1.5mm: el corrimiento de `C19-06` compensaba la
 deriva de **una** impresora, hoy eso se ajusta desde la pantalla sin deploy, y
 con el barcode justificado ya no hace falta pagar ancho por él.
+
+**Qué se hizo.** «Restablecer márgenes» borra las dos claves y
+`EtiquetaAjustes` vuelve a sus defaults solo — mismo criterio que la
+plantilla: la original es el código, y paper_trail conserva lo que había. El
+default queda en **1.5mm de cada lado**, que es el valor histórico. Y el piso
+no es cero, aunque el rango lo permita: el margen **es la zona muda** del
+Code 128, así que un código pegado al borde tampoco se lee aunque salga
+completo — lo dice la pantalla, al lado del botón.
 
 ### C20-04 · Actualizar la cantidad de cajas: las reglas — 🐛 pendiente (`PR-C7.70` · `PR-C7.71`)
 
