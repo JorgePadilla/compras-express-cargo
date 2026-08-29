@@ -1,0 +1,28 @@
+<%# ── Pagado / No pagado ──
+    C20-08. Yusef, sobre la etiqueta de entrega personal y recolectas:
+
+      "Sí, es la misma la etiqueta, idénticas, no cambia, pero en la entrega
+       personal y recolectas va **si va bien pagada o no viene pagada**, si le
+       marcamos la opción de que se pagó o no se pagó."
+
+    Los dos estados se imprimen, no solo el pagado: el que entrega en Honduras
+    tiene que poder leer «NO PAGADO» y cobrar. Un renglón en blanco diría lo
+    mismo que una etiqueta vieja, y ahí es donde se pierde la plata.
+
+    Va en el renglón del registro y no en uno propio: la etiqueta está al filo
+    —medido en Chrome, una fila más la desborda 13px— y acá cuesta ancho, que
+    sobra. El NO PAGADO va en negativo (fondo negro) y no con recuadro: el
+    borde sumaba 1pt arriba y otro abajo, y con eso volvía a desbordar por 2px;
+    un fondo pinta sin ocupar alto. Y de paso es lo que se ve de más lejos, que
+    para eso está.
+
+    Solo sale en entrega personal y recolecta (`Paquete#entrega_personal?`, que
+    mira el tipo del proveedor): el resto de la carga se cobra en Honduras por
+    la pre-factura y decirlo en cada etiqueta sería ruido. %>
+<% if etiqueta_plantilla.visible?("pago") && paquete.entrega_personal? %>
+  <span data-campo="pago"
+        style="font-size:var(--fs-pago); font-weight:800; white-space:nowrap; flex:0 0 auto;
+               <%= paquete.prepagado_miami? ? "" : "background:#000; color:#fff; padding:0 .03in;" %>">
+    <%= paquete.prepagado_miami? ? "PAGADO" : "NO PAGADO" %>
+  </span>
+<% end %>

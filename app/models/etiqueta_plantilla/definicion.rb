@@ -45,7 +45,11 @@ class EtiquetaPlantilla < ApplicationRecord
       "sucursal"            => { nombre: "Sucursal donde retira", apagable: true, texto: true, pt_rotulo: true },
       "ubicacion"           => { nombre: "Ciudad del cliente",   apagable: true },
       "proveedor"           => { nombre: "Proveedor (origen)",   apagable: true },
-      "tipo_envio"          => { nombre: "Tipo de envío",        apagable: false }
+      "tipo_envio"          => { nombre: "Tipo de envío",        apagable: false },
+      # C20-08: solo sale en entrega personal y recolectas. Yusef: *"es la
+      # misma etiqueta, idénticas, no cambia, pero en la entrega personal y
+      # recolectas va si va bien pagada o no viene pagada"*.
+      "pago"                => { nombre: "Pagado / No pagado (entrega personal)", apagable: true }
     }.freeze
 
     # La etiqueta de hoy, 1:1. Los `pt` vienen de los tiers --t1..--t7 que
@@ -65,7 +69,10 @@ class EtiquetaPlantilla < ApplicationRecord
         { "id" => "f-tracking",  "campos" => [ "tracking" ] },
         { "id" => "f-tracking2", "campos" => [ "tracking_secundario" ] },
         { "id" => "f-cliente",   "campos" => [ "cliente_nombre", "tercero" ] },
-        { "id" => "f-registro",  "campos" => [ "fecha", "driver", "reg" ] },
+        # C20-08: el pago viaja en el renglón del registro y NO en uno propio.
+        # La etiqueta está al filo: medido en Chrome, una fila más la desborda
+        # 13px. Acá cuesta ancho —que sobra— y no alto.
+        { "id" => "f-registro",  "campos" => [ "pago", "fecha", "driver", "reg" ] },
         { "id" => "bloque-inferior", "tipo" => "dos_columnas",
           "izquierda" => [ [ "cliente_codigo", "fraccion" ], [ "sucursal" ] ],
           "derecha"   => [ [ "ubicacion" ], [ "proveedor", "tipo_envio" ] ] }
@@ -85,7 +92,8 @@ class EtiquetaPlantilla < ApplicationRecord
         "sucursal"            => { "visible" => true, "pt" => 9.5, "pt_rotulo" => 6.0, "texto" => "RETIRA EN" },
         "ubicacion"           => { "visible" => true, "pt" => 6.0 },
         "proveedor"           => { "visible" => true, "pt" => 6.5 },
-        "tipo_envio"          => { "visible" => true, "pt" => 19.0 }
+        "tipo_envio"          => { "visible" => true, "pt" => 19.0 },
+        "pago"                => { "visible" => true, "pt" => 6.5 }
       }
     }.freeze
 
@@ -152,14 +160,20 @@ class EtiquetaPlantilla < ApplicationRecord
       }
     end
 
-    # Las filas rigen el orden. Estructura irreconocible —o que no cubra
-    # exactamente los campos conocidos, sin duplicar— cae a las filas de
+    # Las filas rigen el orden. Una estructura irreconocible cae a las de
     # fábrica enteras: media plantilla ordenada no existe.
+    #
+    # C20-08: pero lo que falta o sobra se **reconcilia** en vez de tirar todo.
+    # Antes se exigía cobertura exacta, y eso convertía cada campo nuevo en un
+    # reseteo silencioso del orden que el operario había armado — justo lo que
+    # habría pasado hoy al agregar «pago». Un campo que ya no existe se
+    # descarta; uno nuevo entra en la fila donde lo pone la de fábrica.
     def filas
       dadas = @def["filas"]
-      return DEFAULT["filas"] unless filas_validas?(dadas)
+      return DEFAULT["filas"] unless estructura_de_filas_ok?(dadas)
 
-      dadas
+      reconciliadas = descartar_desconocidos(dadas)
+      agregar_faltantes(reconciliadas)
     end
 
     private
@@ -185,13 +199,51 @@ class EtiquetaPlantilla < ApplicationRecord
       v && rango.cover?(v) ? v : default
     end
 
-    def filas_validas?(filas)
+    # Solo la forma: que sean filas y que ninguna esté rota por dentro.
+    def estructura_de_filas_ok?(filas)
       return false unless filas.is_a?(Array)
 
-      vistos = filas.flat_map { |f| campos_de_fila(f) }
-      return false if vistos.include?(nil)
+      !filas.flat_map { |f| campos_de_fila(f) }.include?(nil)
+    end
 
-      vistos.sort == CAMPOS.keys.sort
+    # Fuera lo que no conocemos, y sin repetidos: la primera aparición gana.
+    def descartar_desconocidos(filas)
+      vistos = []
+      limpiar = lambda do |lista|
+        lista.select { |c| CAMPOS.key?(c) && !vistos.include?(c) && vistos.push(c) }
+      end
+
+      filas.map do |fila|
+        if fila["tipo"] == "dos_columnas"
+          fila.merge(
+            "izquierda" => fila["izquierda"].map { |sub| limpiar.call(sub) },
+            "derecha"   => fila["derecha"].map { |sub| limpiar.call(sub) }
+          )
+        else
+          fila.merge("campos" => limpiar.call(fila["campos"]))
+        end
+      end
+    end
+
+    # Los que la plantilla guardada no menciona entran donde los pone la de
+    # fábrica: si su fila original sigue existiendo, ahí; si no, en una propia
+    # al final.
+    def agregar_faltantes(filas)
+      presentes = filas.flat_map { |f| campos_de_fila(f) }
+      faltantes = CAMPOS.keys - presentes
+      return filas if faltantes.empty?
+
+      DEFAULT["filas"].each_with_object(filas.dup) do |fila_default, acc|
+        pendientes = campos_de_fila(fila_default) & faltantes
+        next if pendientes.empty?
+
+        destino = acc.find { |f| f["id"] == fila_default["id"] && f["tipo"] != "dos_columnas" }
+        if destino
+          destino["campos"] = destino["campos"] + pendientes
+        else
+          acc << { "id" => fila_default["id"], "campos" => pendientes }
+        end
+      end
     end
 
     # Los campos que nombra una fila — nil marca estructura rota.

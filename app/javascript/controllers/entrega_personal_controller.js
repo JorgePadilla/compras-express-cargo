@@ -9,6 +9,7 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
   static targets = [
     "form", "clienteInput", "clienteId", "clienteDropdown", "clienteNombre",
     "sucursalBanner", "sucursalTexto",
+    "etiquetasModal", "etiquetasInput",
     "event", "panel"
   ]
 
@@ -92,18 +93,75 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
 
 
   // Submit + modal de cajas (mismo patrón de PR-4 etiquetar).
-// PR-C6.31: F9 guarda e imprime, y nada mas.
+// PR-C6.31 sacó de acá un modal "¿cuántas cajas?" que preguntaba lo MISMO que
+// el campo visible del formulario —y peor: lo reseteaba a 1 antes de
+// preguntar—. Ese modal estaba mal, y sigue estándolo.
 //
-// Antes abria un modal "cuantas cajas?" que preguntaba lo MISMO que el campo
-// visible "Cant. Cajas" del formulario — y peor: lo reseteaba a 1 antes de
-// preguntar, asi que pisaba lo que el operario acababa de escribir. Es el
-// mismo modal que se saco de /etiquetar cuando Jorge dijo que "el F9 era
-// como confuso".
+// C20-07 trae el de /etiquetar (PR-C7.23), que es otra cosa: solo aparece
+// cuando NO se midió ninguna caja, así que nunca compite con las filas. Y acá
+// hacía más falta que allá, porque en Entrega Personal casi nunca se mide: sin
+// esto, un envío de tres bultos no tenía forma de pedir tres etiquetas. Jorge:
+// "esta lógica de las cajas que hicimos para etiquetar también hay que
+// aplicarla en entrega personal".
 submitFormWithPrint() {
-  this._submitWithPrint()
+  if (this._cajasCargadas() > 0) return this._submitWithPrint()
+  if (!this.hasEtiquetasModalTarget) return this._submitWithPrint()
+
+  if (this.hasEtiquetasInputTarget) this.etiquetasInputTarget.value = "1"
+  this.dispatch("modalAbierto")
+  this.etiquetasModalTarget.showModal()
+  // `select()` y no solo `focus()`: el operario teclea el número encima sin
+  // tener que borrar el 1.
+  if (this.hasEtiquetasInputTarget) this.etiquetasInputTarget.select()
 }
 
-  _submitWithPrint() {
+  // Cuántas filas de caja hay cargadas. Se cuentan las filas —la misma fuente
+  // que usa el repetidor—, más la que se esté tecleando arriba sin haberle
+  // dado «Agregar», que es lo que la pantalla misma dice que se puede hacer
+  // (C18-05).
+  _cajasCargadas() {
+    const filas = this.formTarget.querySelectorAll(".caja-fila").length
+    const captura = this.formTarget.querySelector("[data-caja-campo='peso']")
+    return filas + (captura && captura.value.trim() !== "" ? 1 : 0)
+  }
+
+  // Enter confirma; Escape cancela. Acá Enter SÍ actúa, al revés que en el
+  // formulario —donde la pistola dispara Enter y por eso pasa al campo
+  // siguiente—: el modal no es el formulario y el operario ya decidió imprimir.
+  etiquetasKeydown(e) {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      this.confirmarEtiquetas()
+    } else if (e.key === "Escape") {
+      e.preventDefault()
+      this.cerrarEtiquetas()
+    }
+  }
+
+  confirmarEtiquetas() {
+    const cantidad = this._etiquetasPedidas()
+    if (cantidad === null) return
+
+    this.etiquetasModalTarget.close()
+    this._submitWithPrint(cantidad)
+  }
+
+  cerrarEtiquetas() {
+    this.etiquetasModalTarget.close()
+  }
+
+  // Un número mal tecleado no puede grabar 500 paquetes ni tirar 500
+  // etiquetas: el server tiene el mismo tope, esto es para avisar antes.
+  _etiquetasPedidas() {
+    const n = parseInt(this.etiquetasInputTarget.value, 10)
+    if (!Number.isInteger(n) || n < 1 || n > 99) {
+      this.etiquetasInputTarget.select()
+      return null
+    }
+    return n
+  }
+
+  _submitWithPrint(etiquetas = null) {
     this._removePrintField()
     const input = document.createElement("input")
     input.type = "hidden"
@@ -111,12 +169,27 @@ submitFormWithPrint() {
     input.value = "true"
     input.dataset.printField = "true"
     this.formTarget.appendChild(input)
+
+    // Suelto y NO como `paquete[cantidad_paquetes]`: el bug de PR-C6.31 fue
+    // tener dos campos con el mismo `name`.
+    if (etiquetas) {
+      const cuantas = document.createElement("input")
+      cuantas.type = "hidden"
+      cuantas.name = "etiquetas"
+      cuantas.value = String(etiquetas)
+      cuantas.dataset.printField = "true"
+      this.formTarget.appendChild(cuantas)
+    }
+
     this.formTarget.requestSubmit()
   }
 
+  // `querySelectorAll` y no `querySelector`: desde que el modal agrega también
+  // la cantidad son dos. Con el singular, el segundo sobrevivía al guardado y
+  // el paquete siguiente heredaba la cantidad del anterior — el bug de
+  // PR-C6.31, que en /etiquetar ya se pagó una vez.
   _removePrintField() {
-    const existing = this.formTarget.querySelector("[data-print-field]")
-    if (existing) existing.remove()
+    this.formTarget.querySelectorAll("[data-print-field]").forEach(el => el.remove())
   }
 
   clearForm() {

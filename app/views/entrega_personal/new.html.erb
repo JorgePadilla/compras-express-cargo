@@ -263,5 +263,39 @@ end %>
     confuso". Ahora F9 es solo guardar e imprimir. %>
 
   <%# Turbo stream events container %>
+  <%# ── ¿Cuántas etiquetas? ──
+      C20-07: la gemela de /etiquetar (`PR-C7.23`). Acá la cantidad de cajas
+      salía SOLO de las filas que el operario agregara, así que un envío de
+      tres bultos sin medir no tenía cómo pedir tres etiquetas — y en Entrega
+      Personal casi nunca se mide. Jorge: *"esta lógica de las cajas que
+      hicimos para etiquetar también hay que aplicarla en entrega personal"*.
+
+      Igual que allá, solo sale cuando **no hay ninguna caja cargada**: si
+      midió aunque sea una, mandan las filas y no hay dos fuentes para el
+      mismo número. %>
+  <dialog data-entrega-personal-target="etiquetasModal"
+          style="margin: auto"
+          class="rounded-xl p-0 w-[22rem] max-w-[95vw] backdrop:bg-black/50 ring-2 ring-cec-gold">
+    <div class="bg-cec-navy px-6 py-4 text-center">
+      <p class="text-xs font-bold uppercase tracking-wider text-cec-gold">No se midió ninguna caja</p>
+      <p class="text-sm text-white mt-1">¿Cuántas etiquetas se imprimen?</p>
+    </div>
+    <div class="bg-white px-6 py-5 text-center">
+      <input type="number" min="1" max="99" value="1" step="1"
+             data-entrega-personal-target="etiquetasInput"
+             data-action="keydown->entrega-personal#etiquetasKeydown"
+             autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other"
+             aria-label="Cantidad de etiquetas"
+             class="w-28 text-center text-3xl font-bold rounded-lg border-gray-300 text-cec-navy shadow-sm focus:ring-cec-teal focus:border-cec-teal">
+      <p class="text-[11px] text-gray-500 mt-2">Una por caja. Todas comparten el tracking y el número de recepción.</p>
+    </div>
+    <div class="flex items-center justify-end gap-3 px-6 py-3 bg-gray-50 border-t border-gray-200">
+      <%= render ButtonComponent.new(variant: :secondary,
+            data: { action: "entrega-personal#cerrarEtiquetas" }) do %>Cancelar<% end %>
+      <%= render ButtonComponent.new(variant: :gold, icon: "printer",
+            data: { action: "entrega-personal#confirmarEtiquetas" }) do %>Imprimir<% end %>
+    </div>
+  </dialog>
+
   <div id="entrega-personal-events"></div>
 </div>

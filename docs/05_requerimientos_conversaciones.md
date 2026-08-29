@@ -5382,6 +5382,52 @@ Sobre prefactura Yusef fue claro en que todavía no toca:
 | Varias prefacturas → una factura (`A7-32`) | 📋 Fase de facturación |
 | Una firma por entrega (`A7-33`) | 📋 va con el POD |
 
+### C20-07 · Las cajas de Entrega Personal — ✅ **HECHO (PR-C7.74)**
+
+Jorge, viendo lo que se arregló en `/etiquetar`:
+
+> *"Esta lógica de las cajas que hicimos para etiquetar también hay que
+> aplicarla en entrega personal."*
+
+**Qué pasaba.** En Entrega Personal la cantidad de cajas salía **solo** de las
+filas que el operario agregara — y ahí casi nunca se pesa ni se mide. Un envío
+de tres bultos no tenía forma de pedir tres etiquetas: se grababa uno. El
+modal de «¿cuántas etiquetas?» existía en `/etiquetar` desde `PR-C7.23` y acá
+hacía más falta que allá.
+
+Ahora es la misma regla en las dos pantallas: si midió cajas, mandan las filas
+—el modal ni aparece, así que nunca hay dos fuentes para el mismo número—; si
+no midió ninguna, el modal pregunta. De paso, `render_create_error` de esta
+pantalla aprendió a llevar mensaje: un rechazo que no viene de las validaciones
+del modelo no tenía cómo explicarse.
+
+### C20-08 · La etiqueta de Entrega Personal dice si viene pagada — ✅ **HECHO (PR-C7.74)**
+
+> *"Sí, es la misma la etiqueta, idénticas, no cambia, pero en la entrega
+> personal y recolectas va **si va bien pagada o no viene pagada**, si le
+> marcamos la opción de que se pagó o no se pagó."*
+
+Se imprimen los **dos** estados, no solo el pagado: el que entrega en Honduras
+tiene que poder leer «NO PAGADO» y cobrar — un renglón en blanco diría lo
+mismo que una etiqueta vieja, y ahí es donde se pierde la plata. El NO PAGADO
+va en negativo, que es lo que se ve de más lejos. Solo sale en entrega personal
+y recolectas (que comparten proveedor); el resto de la carga se cobra por la
+pre-factura y decirlo en cada etiqueta sería ruido — *"es la misma etiqueta,
+no cambia"*.
+
+Dónde ponerlo lo decidió la medición: en su propio renglón la etiqueta se
+desbordaba **13px**, y con recuadro todavía **2px**. Viaja en el renglón del
+registro —ahí cuesta ancho, que sobra— y el énfasis es fondo, no borde, porque
+el borde suma alto. Hay un test que mide en Chrome la etiqueta de EP con
+todos los campos, para que el próximo campo que alguien agregue no lo descubra
+en la impresora.
+
+Y de paso, la plantilla dejó de resetearse: antes exigía que el orden guardado
+cubriera **exactamente** los campos conocidos, así que agregar uno nuevo
+—como éste— le borraba en silencio el orden que el operario hubiera armado.
+Ahora se reconcilia: lo que ya no existe se descarta y lo que falta entra
+donde lo pone la de fábrica.
+
 ### Las preguntas que abre
 
 | Id | Qué |
@@ -5519,6 +5565,52 @@ redondear, y truncar siempre le cobra de menos a la empresa. No hay nada que
 arreglar; quedó escrito para que no se vuelva a preguntar.
 
 ---
+
+### C20-07 · Las cajas de Entrega Personal — ✅ **HECHO (PR-C7.74)**
+
+Jorge, viendo lo que se arregló en `/etiquetar`:
+
+> *"Esta lógica de las cajas que hicimos para etiquetar también hay que
+> aplicarla en entrega personal."*
+
+**Qué pasaba.** En Entrega Personal la cantidad de cajas salía **solo** de las
+filas que el operario agregara — y ahí casi nunca se pesa ni se mide. Un envío
+de tres bultos no tenía forma de pedir tres etiquetas: se grababa uno. El
+modal de «¿cuántas etiquetas?» existía en `/etiquetar` desde `PR-C7.23` y acá
+hacía más falta que allá.
+
+Ahora es la misma regla en las dos pantallas: si midió cajas, mandan las filas
+—el modal ni aparece, así que nunca hay dos fuentes para el mismo número—; si
+no midió ninguna, el modal pregunta. De paso, `render_create_error` de esta
+pantalla aprendió a llevar mensaje: un rechazo que no viene de las validaciones
+del modelo no tenía cómo explicarse.
+
+### C20-08 · La etiqueta de Entrega Personal dice si viene pagada — ✅ **HECHO (PR-C7.74)**
+
+> *"Sí, es la misma la etiqueta, idénticas, no cambia, pero en la entrega
+> personal y recolectas va **si va bien pagada o no viene pagada**, si le
+> marcamos la opción de que se pagó o no se pagó."*
+
+Se imprimen los **dos** estados, no solo el pagado: el que entrega en Honduras
+tiene que poder leer «NO PAGADO» y cobrar — un renglón en blanco diría lo
+mismo que una etiqueta vieja, y ahí es donde se pierde la plata. El NO PAGADO
+va en negativo, que es lo que se ve de más lejos. Solo sale en entrega personal
+y recolectas (que comparten proveedor); el resto de la carga se cobra por la
+pre-factura y decirlo en cada etiqueta sería ruido — *"es la misma etiqueta,
+no cambia"*.
+
+Dónde ponerlo lo decidió la medición: en su propio renglón la etiqueta se
+desbordaba **13px**, y con recuadro todavía **2px**. Viaja en el renglón del
+registro —ahí cuesta ancho, que sobra— y el énfasis es fondo, no borde, porque
+el borde suma alto. Hay un test que mide en Chrome la etiqueta de EP con
+todos los campos, para que el próximo campo que alguien agregue no lo descubra
+en la impresora.
+
+Y de paso, la plantilla dejó de resetearse: antes exigía que el orden guardado
+cubriera **exactamente** los campos conocidos, así que agregar uno nuevo
+—como éste— le borraba en silencio el orden que el operario hubiera armado.
+Ahora se reconcilia: lo que ya no existe se descarta y lo que falta entra
+donde lo pone la de fábrica.
 
 ### Las preguntas que abre la Conversación 8
 
@@ -6540,6 +6632,52 @@ Se marcan, no se completan (la disciplina de siempre):
   pero el audio no lo deja claro.
 - *"El [número] quedaría también en… 60, antes tenía 054"* — ininteligible.
 
+### C20-07 · Las cajas de Entrega Personal — ✅ **HECHO (PR-C7.74)**
+
+Jorge, viendo lo que se arregló en `/etiquetar`:
+
+> *"Esta lógica de las cajas que hicimos para etiquetar también hay que
+> aplicarla en entrega personal."*
+
+**Qué pasaba.** En Entrega Personal la cantidad de cajas salía **solo** de las
+filas que el operario agregara — y ahí casi nunca se pesa ni se mide. Un envío
+de tres bultos no tenía forma de pedir tres etiquetas: se grababa uno. El
+modal de «¿cuántas etiquetas?» existía en `/etiquetar` desde `PR-C7.23` y acá
+hacía más falta que allá.
+
+Ahora es la misma regla en las dos pantallas: si midió cajas, mandan las filas
+—el modal ni aparece, así que nunca hay dos fuentes para el mismo número—; si
+no midió ninguna, el modal pregunta. De paso, `render_create_error` de esta
+pantalla aprendió a llevar mensaje: un rechazo que no viene de las validaciones
+del modelo no tenía cómo explicarse.
+
+### C20-08 · La etiqueta de Entrega Personal dice si viene pagada — ✅ **HECHO (PR-C7.74)**
+
+> *"Sí, es la misma la etiqueta, idénticas, no cambia, pero en la entrega
+> personal y recolectas va **si va bien pagada o no viene pagada**, si le
+> marcamos la opción de que se pagó o no se pagó."*
+
+Se imprimen los **dos** estados, no solo el pagado: el que entrega en Honduras
+tiene que poder leer «NO PAGADO» y cobrar — un renglón en blanco diría lo
+mismo que una etiqueta vieja, y ahí es donde se pierde la plata. El NO PAGADO
+va en negativo, que es lo que se ve de más lejos. Solo sale en entrega personal
+y recolectas (que comparten proveedor); el resto de la carga se cobra por la
+pre-factura y decirlo en cada etiqueta sería ruido — *"es la misma etiqueta,
+no cambia"*.
+
+Dónde ponerlo lo decidió la medición: en su propio renglón la etiqueta se
+desbordaba **13px**, y con recuadro todavía **2px**. Viaja en el renglón del
+registro —ahí cuesta ancho, que sobra— y el énfasis es fondo, no borde, porque
+el borde suma alto. Hay un test que mide en Chrome la etiqueta de EP con
+todos los campos, para que el próximo campo que alguien agregue no lo descubra
+en la impresora.
+
+Y de paso, la plantilla dejó de resetearse: antes exigía que el orden guardado
+cubriera **exactamente** los campos conocidos, así que agregar uno nuevo
+—como éste— le borraba en silencio el orden que el operario hubiera armado.
+Ahora se reconcilia: lo que ya no existe se descarta y lo que falta entra
+donde lo pone la de fábrica.
+
 ### Las preguntas que abre
 
 | Id | Qué |
@@ -6617,6 +6755,52 @@ paquete; si no, al cliente con el tracking que había en pantalla, y
 secundario, por el caso USPS—. En un split va a la Caja 1. En Entrega Personal
 queda del cliente: el tracking se genera al guardar y no hay por dónde
 atarla.
+
+### C20-07 · Las cajas de Entrega Personal — ✅ **HECHO (PR-C7.74)**
+
+Jorge, viendo lo que se arregló en `/etiquetar`:
+
+> *"Esta lógica de las cajas que hicimos para etiquetar también hay que
+> aplicarla en entrega personal."*
+
+**Qué pasaba.** En Entrega Personal la cantidad de cajas salía **solo** de las
+filas que el operario agregara — y ahí casi nunca se pesa ni se mide. Un envío
+de tres bultos no tenía forma de pedir tres etiquetas: se grababa uno. El
+modal de «¿cuántas etiquetas?» existía en `/etiquetar` desde `PR-C7.23` y acá
+hacía más falta que allá.
+
+Ahora es la misma regla en las dos pantallas: si midió cajas, mandan las filas
+—el modal ni aparece, así que nunca hay dos fuentes para el mismo número—; si
+no midió ninguna, el modal pregunta. De paso, `render_create_error` de esta
+pantalla aprendió a llevar mensaje: un rechazo que no viene de las validaciones
+del modelo no tenía cómo explicarse.
+
+### C20-08 · La etiqueta de Entrega Personal dice si viene pagada — ✅ **HECHO (PR-C7.74)**
+
+> *"Sí, es la misma la etiqueta, idénticas, no cambia, pero en la entrega
+> personal y recolectas va **si va bien pagada o no viene pagada**, si le
+> marcamos la opción de que se pagó o no se pagó."*
+
+Se imprimen los **dos** estados, no solo el pagado: el que entrega en Honduras
+tiene que poder leer «NO PAGADO» y cobrar — un renglón en blanco diría lo
+mismo que una etiqueta vieja, y ahí es donde se pierde la plata. El NO PAGADO
+va en negativo, que es lo que se ve de más lejos. Solo sale en entrega personal
+y recolectas (que comparten proveedor); el resto de la carga se cobra por la
+pre-factura y decirlo en cada etiqueta sería ruido — *"es la misma etiqueta,
+no cambia"*.
+
+Dónde ponerlo lo decidió la medición: en su propio renglón la etiqueta se
+desbordaba **13px**, y con recuadro todavía **2px**. Viaja en el renglón del
+registro —ahí cuesta ancho, que sobra— y el énfasis es fondo, no borde, porque
+el borde suma alto. Hay un test que mide en Chrome la etiqueta de EP con
+todos los campos, para que el próximo campo que alguien agregue no lo descubra
+en la impresora.
+
+Y de paso, la plantilla dejó de resetearse: antes exigía que el orden guardado
+cubriera **exactamente** los campos conocidos, así que agregar uno nuevo
+—como éste— le borraba en silencio el orden que el operario hubiera armado.
+Ahora se reconcilia: lo que ya no existe se descarta y lo que falta entra
+donde lo pone la de fábrica.
 
 ### Las preguntas que abre
 
@@ -7108,6 +7292,52 @@ De paso, cazado en el mismo arreglo: el comentario ERB del partial de chips
 `/pre_facturas`, `/caja` y el form de `/paquetes` desde `PR-C6.13`: el primer
 cierre de tag adentro de un `<%#` lo termina, y lo que sigue se imprime.
 
+### C20-07 · Las cajas de Entrega Personal — ✅ **HECHO (PR-C7.74)**
+
+Jorge, viendo lo que se arregló en `/etiquetar`:
+
+> *"Esta lógica de las cajas que hicimos para etiquetar también hay que
+> aplicarla en entrega personal."*
+
+**Qué pasaba.** En Entrega Personal la cantidad de cajas salía **solo** de las
+filas que el operario agregara — y ahí casi nunca se pesa ni se mide. Un envío
+de tres bultos no tenía forma de pedir tres etiquetas: se grababa uno. El
+modal de «¿cuántas etiquetas?» existía en `/etiquetar` desde `PR-C7.23` y acá
+hacía más falta que allá.
+
+Ahora es la misma regla en las dos pantallas: si midió cajas, mandan las filas
+—el modal ni aparece, así que nunca hay dos fuentes para el mismo número—; si
+no midió ninguna, el modal pregunta. De paso, `render_create_error` de esta
+pantalla aprendió a llevar mensaje: un rechazo que no viene de las validaciones
+del modelo no tenía cómo explicarse.
+
+### C20-08 · La etiqueta de Entrega Personal dice si viene pagada — ✅ **HECHO (PR-C7.74)**
+
+> *"Sí, es la misma la etiqueta, idénticas, no cambia, pero en la entrega
+> personal y recolectas va **si va bien pagada o no viene pagada**, si le
+> marcamos la opción de que se pagó o no se pagó."*
+
+Se imprimen los **dos** estados, no solo el pagado: el que entrega en Honduras
+tiene que poder leer «NO PAGADO» y cobrar — un renglón en blanco diría lo
+mismo que una etiqueta vieja, y ahí es donde se pierde la plata. El NO PAGADO
+va en negativo, que es lo que se ve de más lejos. Solo sale en entrega personal
+y recolectas (que comparten proveedor); el resto de la carga se cobra por la
+pre-factura y decirlo en cada etiqueta sería ruido — *"es la misma etiqueta,
+no cambia"*.
+
+Dónde ponerlo lo decidió la medición: en su propio renglón la etiqueta se
+desbordaba **13px**, y con recuadro todavía **2px**. Viaja en el renglón del
+registro —ahí cuesta ancho, que sobra— y el énfasis es fondo, no borde, porque
+el borde suma alto. Hay un test que mide en Chrome la etiqueta de EP con
+todos los campos, para que el próximo campo que alguien agregue no lo descubra
+en la impresora.
+
+Y de paso, la plantilla dejó de resetearse: antes exigía que el orden guardado
+cubriera **exactamente** los campos conocidos, así que agregar uno nuevo
+—como éste— le borraba en silencio el orden que el operario hubiera armado.
+Ahora se reconcilia: lo que ya no existe se descarta y lo que falta entra
+donde lo pone la de fábrica.
+
 ### Las preguntas que abre
 
 | Id | Qué |
@@ -7353,6 +7583,52 @@ nunca abre. Peor: si el operario llena y guarda igual, el sistema **crea un
 paquete nuevo** con el mismo tracking, sin avisar. Es candidato a explicar la
 `RP-47` de la conversación pasada (la «incongruencia» que Yusef no pudo
 reproducir).
+
+### C20-07 · Las cajas de Entrega Personal — ✅ **HECHO (PR-C7.74)**
+
+Jorge, viendo lo que se arregló en `/etiquetar`:
+
+> *"Esta lógica de las cajas que hicimos para etiquetar también hay que
+> aplicarla en entrega personal."*
+
+**Qué pasaba.** En Entrega Personal la cantidad de cajas salía **solo** de las
+filas que el operario agregara — y ahí casi nunca se pesa ni se mide. Un envío
+de tres bultos no tenía forma de pedir tres etiquetas: se grababa uno. El
+modal de «¿cuántas etiquetas?» existía en `/etiquetar` desde `PR-C7.23` y acá
+hacía más falta que allá.
+
+Ahora es la misma regla en las dos pantallas: si midió cajas, mandan las filas
+—el modal ni aparece, así que nunca hay dos fuentes para el mismo número—; si
+no midió ninguna, el modal pregunta. De paso, `render_create_error` de esta
+pantalla aprendió a llevar mensaje: un rechazo que no viene de las validaciones
+del modelo no tenía cómo explicarse.
+
+### C20-08 · La etiqueta de Entrega Personal dice si viene pagada — ✅ **HECHO (PR-C7.74)**
+
+> *"Sí, es la misma la etiqueta, idénticas, no cambia, pero en la entrega
+> personal y recolectas va **si va bien pagada o no viene pagada**, si le
+> marcamos la opción de que se pagó o no se pagó."*
+
+Se imprimen los **dos** estados, no solo el pagado: el que entrega en Honduras
+tiene que poder leer «NO PAGADO» y cobrar — un renglón en blanco diría lo
+mismo que una etiqueta vieja, y ahí es donde se pierde la plata. El NO PAGADO
+va en negativo, que es lo que se ve de más lejos. Solo sale en entrega personal
+y recolectas (que comparten proveedor); el resto de la carga se cobra por la
+pre-factura y decirlo en cada etiqueta sería ruido — *"es la misma etiqueta,
+no cambia"*.
+
+Dónde ponerlo lo decidió la medición: en su propio renglón la etiqueta se
+desbordaba **13px**, y con recuadro todavía **2px**. Viaja en el renglón del
+registro —ahí cuesta ancho, que sobra— y el énfasis es fondo, no borde, porque
+el borde suma alto. Hay un test que mide en Chrome la etiqueta de EP con
+todos los campos, para que el próximo campo que alguien agregue no lo descubra
+en la impresora.
+
+Y de paso, la plantilla dejó de resetearse: antes exigía que el orden guardado
+cubriera **exactamente** los campos conocidos, así que agregar uno nuevo
+—como éste— le borraba en silencio el orden que el operario hubiera armado.
+Ahora se reconcilia: lo que ya no existe se descarta y lo que falta entra
+donde lo pone la de fábrica.
 
 ### Las preguntas que abre
 
