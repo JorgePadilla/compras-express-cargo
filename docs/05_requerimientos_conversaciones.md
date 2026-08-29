@@ -7330,7 +7330,7 @@ en vez de L.100**. Ahora las hermanas heredan el tipo de envío nuevo pero el
 cargo lo lleva una sola caja, que es lo que dice el propio código desde
 siempre: *el cambio de servicio es del envío, no de una caja*.
 
-### C20-06 · Una etiqueta por caja, no N por N — 🐛 pendiente (`PR-C7.73`)
+### C20-06 · Una etiqueta por caja, no N por N — 🐛 ✅ **ARREGLADO (PR-C7.73)**
 
 Al dar de alta un tracking dividido, el sistema pide **una ventana de
 impresión por caja**, y cada ventana imprime **todas** las etiquetas del
@@ -7338,6 +7338,11 @@ envío: dos cajas son cuatro etiquetas, tres son nueve. Hoy no se nota porque
 el bloqueador de ventanas emergentes de Chrome deja pasar una sola —el mismo
 límite que ya conocíamos de `PR-C7.28`—, así que el día que alguien le dé
 permiso al sitio en la estación de Miami, empieza a salir papel de más.
+
+**Qué se hizo.** Los N eventos se quedan —cada uno dispara su sonido y su
+limpieza de formulario—, pero la impresión se marca una sola vez, en la
+primera caja, que es la que trae a todas sus hermanas. El navegador deja de
+ser lo único que nos separaba del papel de más.
 
 ### C20-07 · El paquete pre-alertado que no se puede actualizar — 🐛 pendiente (`PR-C7.74`)
 

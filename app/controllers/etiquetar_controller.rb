@@ -457,9 +457,22 @@ end
 
     respond_to do |format|
       format.turbo_stream do
-        events = paquetes.map do |p|
+        # C20-06: un evento por caja, pero **una sola impresión**.
+        #
+        # Cada evento con `data-print` abre su propia pestaña, y cada pestaña
+        # imprime TODAS las hermanas (`?hermanas=1`) — o sea N pestañas × N
+        # etiquetas: dos cajas son cuatro etiquetas, tres son nueve. Hoy no se
+        # nota porque Chrome deja pasar un solo popup por gesto del usuario
+        # (el mismo límite de `PR-C7.28`), así que el día que alguien le dé
+        # permiso al sitio en la estación de Miami empieza a salir papel de
+        # más.
+        #
+        # Los N eventos se quedan: cada uno dispara su sonido y su limpieza de
+        # formulario. Lo que se marca una sola vez es la impresión.
+        events = paquetes.each_with_index.map do |p, i|
+          imprime = i.zero? ? params[:print] : nil
           "<div data-etiquetar-target='event' data-action='paquete-saved' " \
-            "data-guia='#{p.guia}' data-print='#{params[:print]}' data-paquete-id='#{p.id}'></div>"
+            "data-guia='#{p.guia}' data-print='#{imprime}' data-paquete-id='#{p.id}'></div>"
         end.join
 
         render turbo_stream: [
