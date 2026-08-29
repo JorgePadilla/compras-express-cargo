@@ -466,7 +466,10 @@ CREATE TABLE public.clientes (
     sucursal_retiro_id bigint,
     acceso_habilitado boolean DEFAULT true NOT NULL,
     rtn character varying,
-    clave_actualizada_at timestamp(6) without time zone
+    clave_actualizada_at timestamp(6) without time zone,
+    codigo_digitos text GENERATED ALWAYS AS (ltrim(regexp_replace((codigo)::text, '\D'::text, ''::text, 'g'::text), '0'::text)) STORED,
+    busqueda_codigo text GENERATED ALWAYS AS (translate((codigo)::text, 'áéíóúüñÁÉÍÓÚÜÑ'::text, 'aeiouunAEIOUUN'::text)) STORED,
+    busqueda_nombre text GENERATED ALWAYS AS (translate((((nombre)::text || ' '::text) || (COALESCE(apellido, ''::character varying))::text), 'áéíóúüñÁÉÍÓÚÜÑ'::text, 'aeiouunAEIOUUN'::text)) STORED
 );
 
 
@@ -3926,6 +3929,20 @@ CREATE INDEX index_clientes_on_activo ON public.clientes USING btree (activo);
 
 
 --
+-- Name: index_clientes_on_busqueda_codigo_trgm; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_clientes_on_busqueda_codigo_trgm ON public.clientes USING gin (busqueda_codigo public.gin_trgm_ops);
+
+
+--
+-- Name: index_clientes_on_busqueda_nombre_trgm; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_clientes_on_busqueda_nombre_trgm ON public.clientes USING gin (busqueda_nombre public.gin_trgm_ops);
+
+
+--
 -- Name: index_clientes_on_categoria_precio_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3940,10 +3957,10 @@ CREATE UNIQUE INDEX index_clientes_on_codigo ON public.clientes USING btree (cod
 
 
 --
--- Name: index_clientes_on_codigo_normalizado; Type: INDEX; Schema: public; Owner: -
+-- Name: index_clientes_on_codigo_digitos; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX index_clientes_on_codigo_normalizado ON public.clientes USING btree (ltrim(regexp_replace((codigo)::text, '\D'::text, ''::text, 'g'::text), '0'::text));
+CREATE INDEX index_clientes_on_codigo_digitos ON public.clientes USING btree (codigo_digitos);
 
 
 --
@@ -3954,10 +3971,10 @@ CREATE INDEX index_clientes_on_email ON public.clientes USING btree (email);
 
 
 --
--- Name: index_clientes_on_nombre_completo_trgm; Type: INDEX; Schema: public; Owner: -
+-- Name: index_clientes_on_email_trgm; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX index_clientes_on_nombre_completo_trgm ON public.clientes USING gin (((((nombre)::text || ' '::text) || (COALESCE(apellido, ''::character varying))::text)) public.gin_trgm_ops);
+CREATE INDEX index_clientes_on_email_trgm ON public.clientes USING gin (((email)::text) public.gin_trgm_ops);
 
 
 --
@@ -6245,6 +6262,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260829202846'),
 ('20260828202244'),
 ('20260828191512'),
 ('20260828182540'),
