@@ -7400,6 +7400,79 @@ paquete nuevo** con el mismo tracking, sin avisar. Es candidato a explicar la
 `RP-47` de la conversación pasada (la «incongruencia» que Yusef no pudo
 reproducir).
 
+### C20-10 · El dropdown le gana al teclado — 🐛 ✅ **ARREGLADO (PR-C7.76 · PR-C7.77 · PR-C7.78)**
+
+> *"Cuando ingresamos número, por ejemplo 6, en cliente tiene que buscarlo y
+> seleccionarlo rápido. Actualmente si se hace rápido, el dropdown tarda mucho
+> y se queda pegado."*
+> *"Cuando el cliente escribe 6 y luego Enter rápido, es más rápido que el
+> dropdown — y encima el dropdown se queda guindado porque el teclado es más
+> rápido."*
+
+**Qué pasaba.** El autocomplete nunca recibió el guard que el escaneo de
+tracking tiene desde `PR-C6.21` —el mismo que en el repo está escrito tres
+veces—, así que arrastraba tres carreras a la vez:
+
+- **El Enter que le gana al dropdown.** La lista todavía no estaba pintada, así
+  que el autocomplete dejaba pasar el Enter sin tocarlo, se lo quedaba el
+  mixin que avanza de campo, y **el paquete se iba con el cliente vacío**. Dos
+  décimas después la respuesta llegaba igual: el dropdown se abría solo bajo un
+  campo que ya nadie miraba, movía la página, y **sonaba el pito de «cliente
+  encontrado»**. El operario lo oía, creía que había quedado puesto, y F9
+  grababa sin cliente. El pito mentía.
+- **La lista vieja eligiendo sola.** El campo decía `63` y la lista seguía
+  siendo la de `6`: Enter tomaba CEC-006 en silencio.
+- **Las respuestas fuera de orden**: dos consultas en vuelo y la vieja pintaba
+  encima de la nueva.
+
+Y el «tarda mucho» era real, con dos sumandos medidos: 300ms de debounce fijos
+**más** 35-55ms de CPU en Postgres por tecla.
+
+> **Decisión de Jorge (2026-08-29):** el Enter que llega antes **queda anotado
+> y toma el primero**. No es regla nueva — es la que ya rige con la lista
+> abierta, donde el primero viene preseleccionado justamente para confirmarlo
+> con Enter; lo único que cambia es que deja de depender de quién fue más
+> rápido. Y atacar los dos sumandos de la lentitud, no uno.
+
+**Qué se hizo.** `PR-C7.76` puso la plomería sin cambiar una sola tecla de lo
+que Miami ya tiene en el dedo: cada búsqueda lleva número y se descarta si ya
+salió otra o si el campo cambió; la lista recuerda de qué valor es; y el cancel
+se centralizó en `cerrar()`, que ya era el punto por donde pasan todas las
+salidas — de paso los dos modales de `<dialog>`, que lo sobreescribían entero,
+lo ganaron gratis. Ahí mismo se fueron tres fugas: el `super.disconnect()` que
+faltaba (una búsqueda pendiente disparaba después de cambiar de página), el
+estado muerto desde `PR-C6.32`, y F2, que limpiaba el cliente pero dejaba la
+búsqueda viva y repintaba encima del formulario ya limpio.
+
+`PR-C7.77` trajo el Enter anotado, con sus bordes: sin resultados no elige nada
+y el foco avanza igual; si el operario sigue tecleando se olvida; y hay una
+válvula de 1200ms para que el foco nunca quede trabado si la respuesta no
+llega. El debounce bajó a 120ms. El pito **se quedó donde estaba** y ahora dice
+la verdad: como el pintado huérfano dejó de existir, pitar al pintar es pitar
+al resolverse — sigue siendo el *"esperá el pito para dar Enter"* de `C16-02`
+cuando el operario espera, y es la confirmación de que quedó puesto cuando no.
+
+`PR-C7.78` fue la otra mitad, y ahí el diagnóstico obvio estaba **mal**: los
+índices ya existían desde `PR-10.c`, y ninguno servía. El de código vive
+adentro de un `OR` de cuatro ramas —son las cuatro o ninguna—, y el de nombre
+estaba **muerto desde `PR-10.f`**, que le puso un `translate()` encima para
+ignorar acentos y con eso la expresión dejó de coincidir con la del índice:
+meses manteniéndolo en cada escritura sin que lo usara nadie, y sin forma de
+notarlo porque los resultados seguían siendo correctos. Agregar índices tampoco
+era la respuesta: para el caso real de Miami —*"solo poníamos el seis o el dos
+y ya con eso cae"*— `pg_trgm` no puede ayudar, porque con uno o dos caracteres
+no hay trigramas. La palanca era el **costo por fila**: tres columnas
+calculadas al guardar y los cuatro índices realineados a ellas.
+
+De regalo salieron dos cosas viejas: la tabla de acentos tenía 14 caracteres de
+origen y **13 de destino**, así que la `Ü` se volvía `N` y la `Ñ` desaparecía
+(*Ñandú* → *andu*) — no rompía la búsqueda porque los dos lados usaban la misma
+tabla, y se destapó recién al guardar el resultado en una columna; y
+`db/schema.rb`, que está versionado, Rails no usa y llevaba meses mintiendo,
+quedó con una advertencia en vez de contenido: es lo que hizo que el primer
+diagnóstico de performance concluyera que faltaban índices que existían hace
+meses.
+
 ### Las preguntas que abre
 
 | Id | Qué |
@@ -7409,14 +7482,16 @@ reproducir).
 
 ### Dudosos del transcript
 
-- *"Cuando se hace rápido el ingreso, el UI queda [ligado] para hacer el
-  siguiente y **queda seleccionado** porque se hizo muy rápido"* (nota de las
-  12:28). Suena a que el cliente del paquete anterior queda elegido para el
-  siguiente cuando se escanea muy seguido — pero sin repro. Preguntar antes de
-  tocar el autocomplete.
+- ~~*"Cuando se hace rápido el ingreso… **queda seleccionado** porque se hizo
+  muy rápido"*~~ — **dejó de ser dudoso**: es `C20-10`. Era la lista vieja
+  eligiendo sola (el campo decía `63` y la lista era la de `6`), o el pito
+  huérfano haciendo creer que el cliente había quedado puesto. Los dos con
+  repro y con test.
 - *"Se quedó ahí cuando le dije F2, no limpió"* (probando cambio de servicio).
-  Puede ser el mismo 500 de `C20-01` dejando la pantalla a medias; verificar
-  con el arreglo puesto antes de abrir un ítem propio.
+  **La mitad estaba en `C20-10`**: F2 limpiaba el cliente pero dejaba el
+  dropdown abierto y la búsqueda en vuelo, que después repintaba encima del
+  formulario ya limpio. La otra mitad puede seguir siendo el 500 de `C20-01`;
+  verificar con los dos arreglos puestos antes de abrir un ítem propio.
 - El recorrido del manifiesto y el empaque en Miami (nota de las 12:24) es
   material del módulo que viene, no un pedido de hoy: la etiqueta 4×6 del
   bulto, el consignatario, la palabra «PRIORITY», y el código del documento
