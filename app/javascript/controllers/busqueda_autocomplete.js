@@ -65,7 +65,16 @@ export default class BusquedaAutocomplete extends Controller {
   // Cuánto se espera antes de salir a buscar. Es un getter y no una constante
   // para que un autocomplete con un endpoint caro pueda darse más aire sin
   // tocar a los otros siete.
-  get _esperaMs() { return 300 }
+  //
+  // C20-10: baja de 300 a 120. Los 300 eran casi la mitad de la queja de Jorge
+  // —*"el dropdown tarda mucho"*—, y agrupar el tecleo sigue funcionando: 120ms
+  // es más de lo que tarda una tecla y menos de lo que el operario espera.
+  get _esperaMs() { return 120 }
+
+  // Cuánto aguanta un Enter anotado antes de rendirse. Si la respuesta nunca
+  // llega, el operario no puede quedarse con el foco congelado en el campo: se
+  // degrada a lo de antes (avanzar sin elegir) en vez de trabarse.
+  get _pacienciaMs() { return 1200 }
 
   buscar() {
     if (this._timeout) clearTimeout(this._timeout)
@@ -79,6 +88,9 @@ export default class BusquedaAutocomplete extends Controller {
     // C20-10: cada búsqueda lleva número. Es el mismo guard que `checkTracking`
     // usa desde `PR-C6.21` —y que este archivo nunca recibió—: sin él, dos
     // consultas en vuelo se pisan y **la vieja pinta encima de la nueva**.
+    // Siguió tecleando: el Enter que estaba anotado hablaba de otra búsqueda.
+    this._olvidarPendiente()
+
     const consulta = (this._seq = (this._seq || 0) + 1)
     this._enVuelo = query
 
@@ -121,8 +133,18 @@ export default class BusquedaAutocomplete extends Controller {
   pintar(items) {
     const env = this._envoltorio
     const envolver = (html) => (env ? `<${env}>${html}</${env}>` : html)
+    // C20-10: ¿había un Enter esperando esta lista?
+    const pendiente = this._cobrarPendiente()
 
     if (!items || items.length === 0) {
+      if (pendiente) {
+        // Sin resultados no hay a quién elegir. Se hace lo mismo que con la
+        // lista abierta diciendo «no se encontraron»: no se elige nada y el
+        // foco avanza. Y no se pinta: el foco ya se va, quedaría guindada.
+        this.cerrar()
+        this._despuesDeElegirConTeclado(pendiente.evento)
+        return
+      }
       this._lista.innerHTML = envolver(
         `<div class="px-4 py-3 text-sm text-gray-500 italic">${this._textoVacio()}</div>`
       )
@@ -152,19 +174,29 @@ export default class BusquedaAutocomplete extends Controller {
     // El primero queda activo para confirmarlo con Enter sin tocar el mouse:
     // Miami trabaja solo con teclado, "usamos las manos para trabajar".
     this._activo = 0
-    this._resaltar()
+    // Con un Enter esperando, la lista se cierra en este mismo tick: hacer
+    // scroll hacia una fila que va a desaparecer es puro salto visual.
+    this._resaltar({ scroll: !pendiente })
     this._alPintar(items)
+
+    if (!pendiente) return
+
+    // Se cobra el Enter que llegó antes que la lista: EL PRIMERO, que es
+    // exactamente el que habría elegido de haber esperado. Y el foco avanza
+    // acá, que es lo que no pudo hacer cuando se lo quitamos al mixin.
+    this._elegirEl(this._items()[0])
+    this._despuesDeElegirConTeclado(pendiente.evento)
   }
 
   // ── Navegación con teclado ───────────────────────────────────────────────
 
   _items() { return Array.from(this._lista.querySelectorAll("[data-index]")) }
 
-  _resaltar() {
+  _resaltar({ scroll = true } = {}) {
     this._items().forEach((el, i) => {
       const activo = i === this._activo
       el.classList.toggle("bg-cec-teal/10", activo)
-      if (activo) el.scrollIntoView({ block: "nearest" })
+      if (activo && scroll) el.scrollIntoView({ block: "nearest" })
     })
   }
 
@@ -196,7 +228,7 @@ export default class BusquedaAutocomplete extends Controller {
   }
 
   teclado(e) {
-    if (!this._listaAlDia()) return
+    if (!this._listaAlDia()) return this._tecladoSinLista(e)
 
     if (e.key === "ArrowDown") {
       e.preventDefault()
@@ -210,6 +242,12 @@ export default class BusquedaAutocomplete extends Controller {
         e.preventDefault() // no enviar el form: solo elegir
         this._elegirEl(activo)
         this._despuesDeElegirConTeclado(e)
+      } else {
+        // La lista abierta que dice «no se encontraron» no tiene qué elegir, y
+        // el Enter sigue de largo hacia quien avance el foco. Se cierra ACÁ: si
+        // no, el foco se va y la lista queda guindada sin nadie que la pueda
+        // cerrar, porque Escape y Tab viven en el keydown de este campo.
+        this.cerrar()
       }
     } else if (e.key === "Escape") {
       e.preventDefault()
@@ -227,6 +265,64 @@ export default class BusquedaAutocomplete extends Controller {
         this.cerrar()
       }
     }
+  }
+
+  // Lo que pasa cuando el operario le gana al dropdown.
+  //
+  // C20-10. Antes acá había un `return` seco: el Enter salía sin
+  // `preventDefault`, se lo quedaba el mixin que avanza de campo, y el paquete
+  // se iba a guardar **sin cliente** mientras el dropdown se abría solo dos
+  // décimas después. Jorge: *"es más rápido que el dropdown, y encima el
+  // dropdown se queda guindado"*.
+  //
+  // Ahora el Enter se **anota** y se cobra cuando la lista llegue. La regla es
+  // la misma que ya rige con la lista abierta —elegir el primero—, solo que
+  // deja de depender de quién fue más rápido.
+  _tecladoSinLista(e) {
+    if (e.key === "Escape" || e.key === "Tab") {
+      // Se fue del campo a propósito: lo que venga en camino ya no es suyo.
+      // Sin `preventDefault`, que Tab tiene que seguir moviendo el foco.
+      this.cerrar()
+      return
+    }
+    if (e.key !== "Enter") return
+    // Nada en vuelo (campo vacío, o lo tecleado no alcanza para buscar): el
+    // Enter es del formulario, como siempre.
+    if (!this._enVuelo) return
+
+    // Se le quita el Enter a quien avanza el foco: avanzar ahora dejaría el
+    // cliente vacío. El avance lo hace `_despuesDeElegirConTeclado` cuando
+    // esto se resuelva.
+    e.preventDefault()
+    this._pendiente = {
+      valor: this._campo.value.trim(),
+      evento: e,
+      reloj: setTimeout(() => {
+        const p = this._pendiente
+        this.cerrar()
+        // La respuesta no llegó: se hace lo de antes —avanzar sin elegir— en
+        // vez de dejar al operario con el foco trabado.
+        if (p) this._despuesDeElegirConTeclado(p.evento)
+      }, this._pacienciaMs)
+    }
+  }
+
+  _cobrarPendiente() {
+    const p = this._pendiente
+    if (!p) return null
+
+    this._pendiente = null
+    clearTimeout(p.reloj)
+    // Si el campo cambió, ese Enter ya no habla de esta lista. (`buscar()`
+    // normalmente ya lo olvidó; esto es el cinturón.)
+    return p.valor === this._campo.value.trim() ? p : null
+  }
+
+  _olvidarPendiente() {
+    if (!this._pendiente) return
+
+    clearTimeout(this._pendiente.reloj)
+    this._pendiente = null
   }
 
   elegir(e) { this._elegirEl(e.currentTarget) }
@@ -272,6 +368,7 @@ export default class BusquedaAutocomplete extends Controller {
     // Bumpear el número invalida lo que ya salió: cuando vuelva, se descarta.
     this._seq = (this._seq || 0) + 1
     this._enVuelo = null
+    this._olvidarPendiente()
   }
 
   abrir() { this._lista.classList.remove("hidden") }
