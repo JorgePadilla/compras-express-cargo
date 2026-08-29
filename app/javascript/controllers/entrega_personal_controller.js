@@ -14,14 +14,16 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
   ]
 
   connect() {
-    this._searchTimeout = null
+    // C20-10: `_searchTimeout` era estado muerto — el debounce vive en la base.
     this._handleGlobalKeydown = this.handleKeydown.bind(this)
     document.addEventListener("keydown", this._handleGlobalKeydown)
   }
 
   disconnect() {
     document.removeEventListener("keydown", this._handleGlobalKeydown)
-    if (this._searchTimeout) clearTimeout(this._searchTimeout)
+    // La gemela: sin el `super` la búsqueda pendiente sobrevivía a la
+    // navegación.
+    super.disconnect()
   }
 
   handleKeydown(e) {
@@ -193,6 +195,9 @@ submitFormWithPrint() {
   }
 
   clearForm() {
+    // C20-10, la gemela: sin esto F2 dejaba viva la búsqueda y el dropdown
+    // repintaba sobre el formulario limpio.
+    this.cerrar()
     this.formTarget.reset()
     // Las cajas cargadas son de ESTE paquete: se van con él. `reset()` no las
     // toca porque viven en inputs hidden que el repetidor arma a mano.

@@ -47,8 +47,10 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
   }
 
   connect() {
-    this._searchTimeout = null
-    this._clienteActiveIndex = -1
+    // C20-10: acá vivían `_searchTimeout` y `_clienteActiveIndex`, muertos
+    // desde PR-C6.32 — el timeout y el índice reales viven en la base
+    // (`_timeout`, `_activo`). Peor que inútiles: el `disconnect` de abajo
+    // limpiaba el muerto y dejaba vivo el de verdad.
     this._handleGlobalKeydown = this.handleKeydown.bind(this)
     document.addEventListener("keydown", this._handleGlobalKeydown)
     // Al cargar /etiquetar (incluida la navegación Turbo tras iniciar sesión),
@@ -61,7 +63,10 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
 
   disconnect() {
     document.removeEventListener("keydown", this._handleGlobalKeydown)
-    if (this._searchTimeout) clearTimeout(this._searchTimeout)
+    // La base cancela el debounce y lo que esté en vuelo. Sin este `super`
+    // —que faltaba— una búsqueda pendiente disparaba después de que Turbo ya
+    // había cambiado de página.
+    super.disconnect()
   }
 
   handleKeydown(e) {
@@ -917,6 +922,11 @@ cerrarQuitarCobro() {
 
   // Form actions
   clearForm() {
+    // C20-10: primero el dropdown. F2 limpiaba el cliente pero dejaba la lista
+    // abierta y la búsqueda en vuelo viva, así que a los 300ms repintaba
+    // encima del formulario ya limpio — y volvía a pitar, sobre un cliente que
+    // ya no estaba puesto.
+    this.cerrar()
     this._limpiarCampos()
     // Las cajas cargadas son de ESTE paquete: se van con él.
     this.formTarget.dispatchEvent(new CustomEvent("cajas:limpiar", { bubbles: true }))

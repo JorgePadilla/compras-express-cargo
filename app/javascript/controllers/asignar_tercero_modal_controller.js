@@ -26,8 +26,13 @@ export default class extends BusquedaAutocomplete {
   _textoVacio() { return "Sin resultados — probá con otra búsqueda." }
 
   // La lista está adentro del `<dialog>`: se vacía, no se esconde.
+  //
+  // C20-10: esto sobreescribía `cerrar()` entero, así que se perdía el cancel
+  // de la búsqueda en vuelo que la base hace ahí. Ahora solo se sobreescribe
+  // el ocultar —que acá no aplica— y el cancel llega igual: una respuesta
+  // tardía ya no puede repintar la lista después de elegir.
   abrir() {}
-  cerrar() { this._activo = -1 }
+  _ocultarLista() {}
 
   _filaHtml(c) {
     return `data-id="${c.id}"
