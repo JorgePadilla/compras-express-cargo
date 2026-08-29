@@ -23,4 +23,57 @@ end
 
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1400 ]
+
+  # ── Hacer observable una carrera ────────────────────────────────────────
+  #
+  # El servidor de test contesta más rápido de lo que Capybara teclea, así que
+  # las carreras entre el teclado y una respuesta **no existen** salvo que se
+  # las provoque. Estos dos helpers monkeypatchean `window.fetch` para eso.
+  #
+  # Salieron de `etiquetar_escaneo_rapido_test` (PR-C6.21), donde ya había uno
+  # así para el tracking; C20-10 los necesitó también para el autocomplete, y
+  # duplicarlos habría sido la tercera copia de la misma idea.
+
+  # Todas las respuestas que matcheen `patron` llegan tarde. Es la latencia de
+  # verdad: sirve para adelantársele al dropdown con el teclado.
+  def demorar(patron, ms: 800)
+    page.execute_script(<<~JS, patron, ms)
+      const patron = arguments[0], ms = arguments[1]
+      const original = window.fetch
+      window.fetch = function (...args) {
+        const promesa = original.apply(this, args)
+        if (!String(args[0]).includes(patron)) return promesa
+        return promesa.then((r) => new Promise((resolver) => setTimeout(() => resolver(r), ms)))
+      }
+    JS
+  end
+
+  # Solo la PRIMERA respuesta llega tarde, y avisa cuando la suelta. Es el
+  # orden de llegada invertido: la vieja aterriza después de la nueva.
+  def retener_la_primera(patron, ms: 1500)
+    page.execute_script(<<~JS, patron, ms)
+      const patron = arguments[0], ms = arguments[1]
+      window.__respuestaTardia = false
+      const original = window.fetch
+      let consultas = 0
+      window.fetch = function (...args) {
+        const promesa = original.apply(this, args)
+        if (!String(args[0]).includes(patron)) return promesa
+        consultas += 1
+        if (consultas !== 1) return promesa
+        return promesa.then((r) => new Promise((resolver) => {
+          setTimeout(() => { window.__respuestaTardia = true; resolver(r) }, ms)
+        }))
+      }
+    JS
+  end
+
+  def esperar_respuesta_tardia(segundos: 5)
+    limite = Process.clock_gettime(Process::CLOCK_MONOTONIC) + segundos
+    until page.evaluate_script("window.__respuestaTardia === true")
+      break if Process.clock_gettime(Process::CLOCK_MONOTONIC) > limite
+
+      sleep 0.1
+    end
+  end
 end

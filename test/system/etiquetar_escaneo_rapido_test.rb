@@ -97,23 +97,11 @@ class EtiquetarEscaneoRapidoTest < ApplicationSystemTestCase
     find("##{id}")
   end
 
-  # Retiene la PRIMERA consulta de tracking hasta que la segunda ya volvió, y
-  # avisa cuando por fin la suelta. Es el orden de llegada que produce la
-  # latencia real; sin esto la carrera no es observable desde Selenium.
+  # C20-10: esto vivía acá y ahora es compartido —el autocomplete necesitó la
+  # misma idea, y duplicarla habría sido la tercera copia—. El comportamiento
+  # es el mismo: retiene la PRIMERA consulta de tracking hasta que la segunda
+  # ya volvió, que es el orden de llegada que produce la latencia real.
   def retener_la_primera_respuesta
-    page.execute_script(<<~JS)
-      window.__respuestaTardia = false
-      const original = window.fetch
-      let consultas = 0
-      window.fetch = function (...args) {
-        const promesa = original.apply(this, args)
-        if (!String(args[0]).includes("check_tracking")) return promesa
-        consultas += 1
-        if (consultas !== 1) return promesa
-        return promesa.then((r) => new Promise((resolver) => {
-          setTimeout(() => { window.__respuestaTardia = true; resolver(r) }, 1500)
-        }))
-      }
-    JS
+    retener_la_primera("check_tracking")
   end
 end

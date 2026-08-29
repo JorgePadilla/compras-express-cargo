@@ -62,6 +62,11 @@ export default class BusquedaAutocomplete extends Controller {
 
   // ── Comportamiento compartido ────────────────────────────────────────────
 
+  // Cuánto se espera antes de salir a buscar. Es un getter y no una constante
+  // para que un autocomplete con un endpoint caro pueda darse más aire sin
+  // tocar a los otros siete.
+  get _esperaMs() { return 300 }
+
   buscar() {
     if (this._timeout) clearTimeout(this._timeout)
 
@@ -71,14 +76,29 @@ export default class BusquedaAutocomplete extends Controller {
       return
     }
 
+    // C20-10: cada búsqueda lleva número. Es el mismo guard que `checkTracking`
+    // usa desde `PR-C6.21` —y que este archivo nunca recibió—: sin él, dos
+    // consultas en vuelo se pisan y **la vieja pinta encima de la nueva**.
+    const consulta = (this._seq = (this._seq || 0) + 1)
+    this._enVuelo = query
+
     this._timeout = setTimeout(() => {
       fetch(`${this._url}?q=${encodeURIComponent(query)}`, {
         headers: { "Accept": "application/json" }
       })
         .then(r => r.json())
-        .then(items => this.pintar(items))
-        .catch(() => this.cerrar())
-    }, 300)
+        .then(items => {
+          // Llegó tarde: ya salió otra consulta.
+          if (consulta !== this._seq) return
+          // O habla de un valor que el operario ya cambió. Las dos guardas son
+          // las mismas de `checkTracking`, por el mismo motivo.
+          if (this._campo.value.trim() !== query) return
+
+          this._enVuelo = null
+          this.pintar(items)
+        })
+        .catch(() => { if (consulta === this._seq) this.cerrar() })
+    }, this._esperaMs)
   }
 
   // ¿Alcanza lo tecleado para buscar?
@@ -106,6 +126,7 @@ export default class BusquedaAutocomplete extends Controller {
       this._lista.innerHTML = envolver(
         `<div class="px-4 py-3 text-sm text-gray-500 italic">${this._textoVacio()}</div>`
       )
+      this._listaDe = this._campo.value.trim()
       this.abrir()
       return
     }
@@ -122,6 +143,10 @@ export default class BusquedaAutocomplete extends Controller {
         ${this._filaHtml(item)}
       </button>
     `).join("")
+
+    // C20-10: de qué valor del campo es esta lista. Lo que se pintó para «6»
+    // no puede elegir por el operario cuando el campo ya dice «63».
+    this._listaDe = this._campo.value.trim()
 
     this.abrir()
     // El primero queda activo para confirmarlo con Enter sin tocar el mouse:
@@ -159,8 +184,19 @@ export default class BusquedaAutocomplete extends Controller {
     }
   }
 
+  // ¿La lista que está en pantalla habla del valor que el campo tiene AHORA?
+  //
+  // C20-10. Antes alcanzaba con que no estuviera oculta, y por eso el campo
+  // podía decir «63» mientras la lista seguía siendo la de «6»: Enter elegía
+  // CEC-006 en silencio. Es el «queda seleccionado porque se hizo muy rápido»
+  // de la nota de audio.
+  _listaAlDia() {
+    return !this._lista.classList.contains("hidden") &&
+           this._listaDe === this._campo.value.trim()
+  }
+
   teclado(e) {
-    if (this._lista.classList.contains("hidden")) return
+    if (!this._listaAlDia()) return
 
     if (e.key === "ArrowDown") {
       e.preventDefault()
@@ -213,9 +249,29 @@ export default class BusquedaAutocomplete extends Controller {
 
   // Al cerrarla se olvida cuál estaba activo: si no, el próximo Enter sobre
   // una lista recién abierta tomaría el índice de la búsqueda anterior.
+  //
+  // C20-10: y se cancela lo que venía en camino. `cerrar()` ya era el punto
+  // por donde pasan TODAS las salidas —elegir, Escape, Tab, el click afuera,
+  // la query que se quedó corta—, así que centralizar acá el cancel hace que
+  // ninguna deje una búsqueda viva que después pinte sola.
+  //
+  // Se parte en dos porque hay quien no oculta nada: los modales pintan en un
+  // `<ul>` que vive dentro de un `<dialog>` y solo limpian el resaltado. Antes
+  // sobreescribían `cerrar()` entero y por eso se quedaban sin el cancel.
   cerrar() {
-    this._lista.classList.add("hidden")
+    this._ocultarLista()
     this._activo = -1
+    this._listaDe = null
+    this._cancelarBusqueda()
+  }
+
+  _ocultarLista() { this._lista.classList.add("hidden") }
+
+  _cancelarBusqueda() {
+    if (this._timeout) { clearTimeout(this._timeout); this._timeout = null }
+    // Bumpear el número invalida lo que ya salió: cuando vuelva, se descarta.
+    this._seq = (this._seq || 0) + 1
+    this._enVuelo = null
   }
 
   abrir() { this._lista.classList.remove("hidden") }
@@ -225,6 +281,6 @@ export default class BusquedaAutocomplete extends Controller {
   }
 
   disconnect() {
-    if (this._timeout) clearTimeout(this._timeout)
+    this._cancelarBusqueda()
   }
 }
