@@ -7296,7 +7296,7 @@ cantidad actual para que un Enter distraído no baje un split de tres a uno.
 Con eso las etiquetas se reimprimen todas con el `n/N` nuevo, que es lo que
 él pidió.
 
-### C20-05 · Lo que cambia es del envío, no de una caja — 🐛 pendiente (`PR-C7.72`)
+### C20-05 · Lo que cambia es del envío, no de una caja — 🐛 ✅ **ARREGLADO (PR-C7.72)**
 
 Reproducido en vivo, sobre un envío de dos cajas a nombre de Diego:
 
@@ -7313,6 +7313,22 @@ prepago— se queda en la caja que se tocó. `crear_split!` sí reparte esos
 datos entre las N cajas al dar de alta; el update nunca aprendió a hacerlo.
 Es la misma familia del *"el tercero lo reconoce como exprés y los otros dos
 como CER… debería de cambiar todas"* de la Conversación 14.
+
+**Qué se hizo.** Al actualizar una caja, lo que vino en el formulario y es del
+envío se escribe en todas sus hermanas: cliente, tercero, trackings,
+retención con sus motivos y notas, política, contenido, remitente, prepago,
+proveedor. El peso y las medidas no — ésos sí son de cada caja. Se escribe lo
+que vino, **sin mirar qué cambió**: los motivos son asociaciones y no
+aparecerían en el diff, y reescribir aunque "no cambió" hace que actualizar
+cualquier caja **converja** un envío que ya quedó partido — el de Diego y
+Sofía se arregla tocando cualquiera de las dos, sin adivinar cuál quedó bien.
+
+Y de paso salió un cobro mal. El cambio de servicio se propagaba prendiendo
+la bandera en cada hermana, y la pre-factura arma un ítem **por paquete
+marcado**: un envío de tres cajas que pasaba de CER a CEM se cobraba **L.300
+en vez de L.100**. Ahora las hermanas heredan el tipo de envío nuevo pero el
+cargo lo lleva una sola caja, que es lo que dice el propio código desde
+siempre: *el cambio de servicio es del envío, no de una caja*.
 
 ### C20-06 · Una etiqueta por caja, no N por N — 🐛 pendiente (`PR-C7.73`)
 
