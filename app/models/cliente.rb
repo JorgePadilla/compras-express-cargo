@@ -140,8 +140,10 @@ class Cliente < ApplicationRecord
     digitos = term.to_s.gsub(/\D/, "").sub(/\A0+/, "").presence
     return relacion if digitos.nil?
 
-    solo_digitos = "ltrim(regexp_replace(clientes.codigo, '\\D', '', 'g'), '0')"
-    relacion.order(Arel.sql(sanitize_sql_array([ <<~SQL, digitos, digitos ])))
+    # C20-10: sobre la columna calculada. Antes era un `regexp_replace` por
+    # fila, o sea que ordenar costaba tanto como filtrar.
+    solo_digitos = "clientes.codigo_digitos"
+    relacion.order(Arel.sql(sanitize_sql_array([ <<~SQL, digitos, digitos ])), :codigo)
       CASE
         WHEN #{solo_digitos} = ?              THEN 0
         WHEN #{solo_digitos} LIKE '%%' || ?   THEN 1
@@ -173,18 +175,28 @@ class Cliente < ApplicationRecord
   def self.condicion_fragmento(token)
     like = "%#{sanitize_sql_like(token)}%"
 
+    # C20-10: las columnas ya vienen sin acentos desde la base (calculadas al
+    # guardar), así que acá no se envuelve nada — que es justamente lo que
+    # mataba al índice: un índice de expresión solo se usa cuando la expresión
+    # aparece IDÉNTICA en el WHERE, y `PR-10.f` le agregó un `translate()`
+    # encima sin que nadie se enterara.
+    #
+    # El `sin_acentos` del lado del PATRÓN se queda: la columna está
+    # normalizada, así que 'Pérez' tiene que llegar como 'Perez'. Postgres lo
+    # pliega a constante al planear, así que no le estorba al índice. Ojo con
+    # "simplificarlo" normalizando en Ruby: la única garantía de que los dos
+    # lados normalicen igual es que los dos usen el mismo `translate` de
+    # Postgres.
     condiciones = [
-      sanitize_sql_array([ "#{sin_acentos('clientes.codigo')} ILIKE #{sin_acentos('?')}", like ]),
-      sanitize_sql_array([ "#{sin_acentos(NOMBRE_COMPLETO_SQL)} ILIKE #{sin_acentos('?')}", like ]),
+      sanitize_sql_array([ "clientes.busqueda_codigo ILIKE #{sin_acentos('?')}", like ]),
+      sanitize_sql_array([ "clientes.busqueda_nombre ILIKE #{sin_acentos('?')}", like ]),
       sanitize_sql_array([ "clientes.email ILIKE ?", like ])
     ]
 
     # Los ceros a la izquierda se ignoran a ambos lados: C002 == C2 == 2.
     normalizado = token.gsub(/\D/, "").sub(/\A0+/, "").presence
     if normalizado
-      condiciones << sanitize_sql_array(
-        [ "ltrim(regexp_replace(clientes.codigo, '\\D', '', 'g'), '0') = ?", normalizado ]
-      )
+      condiciones << sanitize_sql_array([ "clientes.codigo_digitos = ?", normalizado ])
     end
 
     "(#{condiciones.join(' OR ')})"
@@ -200,8 +212,19 @@ class Cliente < ApplicationRecord
   # depende de que el entorno permita instalar extensiones, y se comporta igual
   # en local que en Render. Una búsqueda que difiere entre entornos es peor que
   # una limitada.
+  # C20-10: la tabla tenía 14 caracteres de origen y **13 de destino**, así que
+  # `translate` corría el mapeo del final: la `Ü` se volvía `N` y la `Ñ`
+  # desaparecía. `Ñandú ÜBER` salía como `andu NBER`.
+  #
+  # No rompía la búsqueda —los dos lados de la comparación usaban la misma
+  # tabla, así que se seguían encontrando entre ellos— y por eso nadie lo vio.
+  # Se destapó al guardar el resultado en una columna, donde el dato queda a la
+  # vista.
+  ACENTOS_ORIGEN  = "áéíóúüñÁÉÍÓÚÜÑ".freeze
+  ACENTOS_DESTINO = "aeiouunAEIOUUN".freeze
+
   def self.sin_acentos(expresion)
-    "translate(#{expresion}, 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUN')"
+    "translate(#{expresion}, '#{ACENTOS_ORIGEN}', '#{ACENTOS_DESTINO}')"
   end
 
   before_validation :generate_codigo, on: :create, if: -> { codigo.blank? }
