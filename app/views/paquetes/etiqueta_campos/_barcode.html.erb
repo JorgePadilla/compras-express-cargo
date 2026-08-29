@@ -2,13 +2,20 @@
     Antes no había nada escaneable: el tracking se tecleaba a mano.
     Ojo al bajarle el alto: abajo de ~0.20in los escáneres de mano empiezan
     a fallar, y eso no se ve en la etiqueta impresa. Por eso el alto es FIJO
-    e inmune a la escala de la plantilla. %>
+    e inmune a la escala de la plantilla.
+
+    C20-02: y el ANCHO es el otro lado del mismo problema. Justificado —el
+    default— estira el dibujo al ancho que haya, así que ningún margen se lo
+    puede comer. Las otras tres lo dejan en su ancho natural, que es lo que
+    hacía que se cortara la última barra cuando el margen apretaba: quedan
+    como opción, y la pantalla de ajustes lo advierte. %>
 <% if etiqueta_plantilla.visible?("barcode") %>
   <% codigo_barras = etiqueta_codigo_barras(paquete) %>
-  <% svg = codigo_barras && etiqueta_barcode_svg(codigo_barras) %>
+  <% alineacion = etiqueta_plantilla.alineacion("barcode") %>
+  <% svg = codigo_barras && etiqueta_barcode_svg(codigo_barras, estirar: alineacion == "justificado") %>
   <% if svg %>
-    <div style="height:.20in; overflow:hidden; line-height:0;" data-campo="barcode">
-      <div style="width:100%; height:.20in;"><%= svg %></div>
+    <div style="height:.20in; overflow:hidden; line-height:0;" data-campo="barcode" data-alineacion="<%= alineacion %>">
+      <div style="<%= etiqueta_barcode_estilo(alineacion) %>"><%= svg %></div>
     </div>
   <% end %>
 <% end %>

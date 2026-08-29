@@ -143,6 +143,38 @@
         </p>
       </div>
 
+      <%# C20-02: cómo se acomoda el código de barras. Es lo único de la
+          etiqueta que decide si la caja se escanea o no, así que va en su
+          propia card y con el porqué a la vista. %>
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Código de barras</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          <b>Justificado</b> lo estira a todo el ancho: se ve un poco más
+          chico, pero <b>nunca se corta</b>, por más que se muevan los
+          márgenes. Con las otras tres conserva su tamaño natural y, si el
+          margen aprieta, se le puede cortar la última barra — y una etiqueta
+          cortada se ve bien pero no se escanea.
+        </p>
+        <div class="inline-flex rounded-lg ring-1 ring-gray-300 dark:ring-gray-600 overflow-hidden">
+          <% EtiquetaPlantilla::Definicion::ALINEACIONES.each do |opcion| %>
+            <label class="cursor-pointer">
+              <%# El estado lo pinta `peer-checked`, no el servidor: así el
+                  botón se marca al instante, igual que el preview. %>
+              <input type="radio" name="barcode_alineacion" value="<%= opcion %>"
+                     <%= "checked" if @plantilla.alineacion("barcode") == opcion %>
+                     data-def-path="campos.barcode.alineacion"
+                     data-action="change->etiqueta-editor#cambio"
+                     class="sr-only peer">
+              <span class="block px-3 py-1.5 text-sm capitalize border-r last:border-r-0 border-gray-300 dark:border-gray-600
+                           text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700
+                           peer-checked:bg-cec-navy peer-checked:text-white peer-checked:font-medium">
+                <%= opcion %>
+              </span>
+            </label>
+          <% end %>
+        </div>
+      </div>
+
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Campos y textos fijos</p>
         <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">

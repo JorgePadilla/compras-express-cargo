@@ -133,6 +133,12 @@ export default class extends Controller {
   _serializar() {
     const def = {}
     this.element.querySelectorAll("[data-def-path]").forEach(el => {
+      // C20-02: los cuatro radios de la alineación comparten `data-def-path`.
+      // Sin esto ganaba el último del grupo y el valor guardado no era el
+      // elegido — el server lo clampearía a justificado y el operario vería
+      // que "no le hace caso".
+      if (el.type === "radio" && !el.checked) return
+
       let valor = el.value
       if (el.dataset.defTipo === "num") {
         valor = parseFloat(String(valor).replace(",", "."))
