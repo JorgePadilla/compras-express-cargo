@@ -44,18 +44,7 @@ class EtiquetarController < ApplicationController
     # vez. Yusef: "si yo presiono cambio de servicio, me tire aquí de un solo
     # a esto" — antes ese botón mandaba a /paquetes, "envía donde no es".
     @abrir_cambio_servicio = @modo_actualizacion && params[:cambio_servicio].present?
-    @paquetes_hoy = paquetes_hoy_count
-    @tipo_envios = TipoEnvio.activos.order(:nombre)
-    # Las que pueden emitir número de recepción. Si hay una sola, la vista no
-    # pregunta nada y la manda en un hidden.
-    @sucursales_recepcion = sucursales_recepcion_posibles
-    @sucursal_recepcion_sugerida = @sucursal_recepcion_sesion || sucursal_recepcion_por_defecto
-    @carriers = Carrier.where(activo: true).order(:nombre)
-    # PR-C6.28: quienes pueden quitar el cobro por cambio de servicio.
-    @supervisores_cobro = User.activos.where(rol: QuitarCambioServicio::ROLES)
-                              .where.not(pin_digest: nil).order(:nombre)
-    @motivos_retencion = MotivoRetencion.activos.ordered
-    @motivos_envio_politica = MotivoEnvioPolitica.activos.ordered
+    assigns_del_formulario
   end
 
   # El operario elige el tipo de envío que va a trabajar en este lote, y en
@@ -441,16 +430,36 @@ end
     render_create_error
   end
 
-  def render_create_error(mensaje = "No se pudo guardar el paquete.")
+  # Todo lo que la pantalla necesita para dibujarse, venga de un GET limpio o
+  # de un 422.
+  #
+  # C20-01: vivía copiado en `index` y en `render_create_error`, y las copias
+  # se desincronizaron: `@supervisores_cobro` (PR-C6.28) se agregó solo en
+  # `index`. La vista lo usa en el banner del cobro por cambio de servicio, que
+  # sale cuando `@modo_actualizacion && solicito_cambio_servicio?` — o sea que
+  # **cualquier** error al actualizar un paquete con cambio de servicio moría
+  # con `undefined method 'any?' for nil` y le tapaba al operario el mensaje
+  # que explicaba qué había que corregir. Yusef lo vio como "ahí tira el rojo".
+  #
+  # Un solo lugar: la próxima ivar que se agregue no puede volver a faltarle a
+  # la mitad de los caminos.
+  def assigns_del_formulario
+    @paquetes_hoy = paquetes_hoy_count
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     # Las que pueden emitir número de recepción. Si hay una sola, la vista no
     # pregunta nada y la manda en un hidden.
     @sucursales_recepcion = sucursales_recepcion_posibles
     @sucursal_recepcion_sugerida = @sucursal_recepcion_sesion || sucursal_recepcion_por_defecto
     @carriers = Carrier.where(activo: true).order(:nombre)
+    # PR-C6.28: quienes pueden quitar el cobro por cambio de servicio.
+    @supervisores_cobro = User.activos.where(rol: QuitarCambioServicio::ROLES)
+                              .where.not(pin_digest: nil).order(:nombre)
     @motivos_retencion = MotivoRetencion.activos.ordered
     @motivos_envio_politica = MotivoEnvioPolitica.activos.ordered
-    @paquetes_hoy = paquetes_hoy_count
+  end
+
+  def render_create_error(mensaje = "No se pudo guardar el paquete.")
+    assigns_del_formulario
     # PR-C6.23: si el rechazo fue justamente por no haber elegido el destino
     # del cambio de servicio, el modal vuelve abierto. Antes el 422
     # re-renderizaba con el check marcado y el modal cerrado, así que el

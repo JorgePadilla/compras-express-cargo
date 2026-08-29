@@ -7123,3 +7123,189 @@ cierre de tag adentro de un `<%#` lo termina, y lo que sigue se imprime.
 - *"Me lo tenés predeterminado, Miami… no hay problema, solo que después
   podamos activarlo cuando activemos más cosas"* — parece el default de
   recepción de `PR-C7.52`, conforme.
+
+---
+
+## Conversación 20 (2026-08-29) — el update de punta a punta, y el barcode que la pistola no leía
+
+Cinco audios: la videollamada de la mañana (23 min, Jorge y Yusef probando
+staging con la pantalla compartida) y cuatro notas del mediodía. Transcritas
+con `whisper small`. Más los **logs de Render** que Jorge pegó en el chat, que
+resultaron ser la pieza que faltaba.
+
+Yusef lo resumió al final: *"si es que eso es lo que estoy [viendo], porque no
+ha hecho nada… hemos avanzado ya poquitos, vamos bien"*.
+
+### C20-01 · «Ahí tira el rojo»: el error que se volvía 500 — 🐛 ✅ **ARREGLADO (PR-C7.67)**
+
+Probando actualizaciones con cambio de servicio, Yusef chocó dos veces con una
+pantalla de error donde tenía que haber un aviso:
+
+> *"Mira acá… estoy agregando un tracking que ya existe, le di cambio de
+> servicio, le di a express, le dije que sí, le di grabar… ahí tira el rojo."*
+> *"¿Será que hay una validación?"*
+
+**Qué pasaba.** Los logs lo dijeron con nombre y apellido:
+
+```
+ActionView::Template::Error (undefined method `any?' for nil)
+app/controllers/etiquetar_controller.rb:467:in `render_create_error'
+```
+
+`index` y `render_create_error` tenían **dos copias del mismo bloque de
+assigns**, y una se quedó atrás: `@supervisores_cobro` (`PR-C6.28`) se agregó
+solo en `index`. La vista lo usa en el banner del cobro por cambio de
+servicio, que sale justo cuando `@modo_actualizacion &&
+solicito_cambio_servicio?`. O sea que **cualquier** error legítimo al
+actualizar un paquete con cambio de servicio moría en la vista: el 422 con el
+mensaje que explicaba qué corregir nunca llegaba a la pantalla. Los dos
+estaban viendo el humo, no el fuego.
+
+Los assigns viven ahora en un solo método (`assigns_del_formulario`): la
+próxima ivar no puede volver a faltarle a la mitad de los caminos. Y los tres
+caminos de error del update —destino de cambio de servicio faltante, caja ya
+cobrada, paquete que no valida— tienen su test, que sin el arreglo revienta
+con el mismo `undefined method 'any?' for nil` de los logs.
+
+### C20-02 · El código de barras que la pistola no lee — 🐛 pendiente (`PR-C7.68`)
+
+El problema grande de la etiqueta, encontrado en vivo:
+
+> *"Sí, sí, sí, le cortó la última, la derecha."* · *"Le faltan rayitas."*
+> *"Yo creo que es el margen que movimos… si regresás ese dos punto [cinco] al
+> por defecto, que creo que sería a uno punto cinco, el de la izquierda."*
+
+Y el diagnóstico, que es de él:
+
+> *"La idea de ese margen es que lo corre para la derecha; el problema es que
+> como ya no hay espacio, donde lo corre para la derecha **se corta**."*
+
+**Qué pasa.** El margen izquierdo de 2.5mm (`C19-06`) le quita ancho al SVG
+del código de barras, que tiene ancho fijo en píxeles: lo que sobra lo recorta
+`overflow:hidden`, en silencio. Una etiqueta que se ve bien y **no se
+escanea** — el peor de los dos mundos, porque el error aparece en San Pedro.
+
+> **Decisión de Yusef, en la llamada:** *"Es que si lo justificás, lo que va a
+> pasar es que se hace un poquito más pequeño el código de barra, **pero la
+> pistola lo va a leer**. Eso es lo que hay que hacer."* (Y lo respalda con su
+> equipo: *"yo uso equipo usado, pero uso marca Motorola o Symbol, o sea de
+> buena calidad"*.)
+
+Justificado —el barcode estirado al ancho disponible— pasa a ser el
+**default**: nunca más un recorte silencioso, cualquiera sea el margen.
+Izquierda, centro y derecha quedan como opciones en la plantilla, que es lo
+que Jorge pidió por chat: *"ponle que se pueda justificar, mover al lado
+izquierdo, derecho y centrar el código de barra"*.
+
+### C20-03 · Restablecer los ajustes — pendiente (`PR-C7.69`)
+
+Jorge: *"ponle un restablecer a los ajustes de etiqueta"*. La plantilla ya
+tiene «Restaurar la original» (`C19-06`); los márgenes no. Y de paso el
+margen izquierdo vuelve a 1.5mm: el corrimiento de `C19-06` compensaba la
+deriva de **una** impresora, hoy eso se ajusta desde la pantalla sin deploy, y
+con el barcode justificado ya no hace falta pagar ancho por él.
+
+### C20-04 · Actualizar la cantidad de cajas: las reglas — 🐛 pendiente (`PR-C7.70` · `PR-C7.71`)
+
+La regla, dicha por Yusef y que hoy el sistema no cumple:
+
+> *"Imprimir la etiqueta tiene que actualizarte la… **en impresión de
+> etiquetas es el que te marca la cantidad de cajas**."*
+
+Los dos casos reales, con sus palabras:
+
+> **De 3 a 2** — *"ese caso tiene 3 etiquetas porque se lo retuvimos por
+> alguna razón; ella viene y nos confirma: fíjese que el paquete lleva un
+> celular… ese celular hay que devolverlo, entonces ya pasa de ser 3 a 2."*
+> **De 1 a 3** — *"era un paquete, porque solo estaba en un solo bulto, pero
+> cuando lo queremos empacar **no cabe**. Entonces nos vamos a mesa,
+> actualizamos, lo reempacamos diferente en 2 bultos o 3."*
+
+Con detalle y sin detalle son dos cosas distintas:
+
+> *"Si tiene cajas así, con medidas y todo, entonces hay que detenerse,
+> analizar… **tiene que actualizarlo completo**. En el otro solo va a
+> actualizar las cajas que tiene."* · *"Como normalmente no hay detalle, vos
+> **reducís la última**."*
+
+Y por qué se reimprimen todas:
+
+> *"Tenés que imprimirlas todas, porque si no, en San Pedro también ocasiona
+> malentendido: ellos creen, ah, si son tres… **pero este dice cuatro y usted
+> dice tres**."*
+
+**Qué pasa hoy.** Tres cosas, encontradas siguiendo el flujo:
+
+- **Pedir 1 no hace nada.** El modal manda la cantidad al servidor solo
+  cuando es mayor que 1, así que confirmar «1» se descarta en silencio: el
+  split sigue en 3, el sistema dice "actualizado" y salen 3 etiquetas. Bajar
+  a una sola caja es hoy **inexpresable**.
+- **El split se ajusta antes de que el paquete tenga número.** Sobre un
+  esperado de pre-alerta, las cajas nuevas nacen con el estado de esperado y
+  la impresión no las ve (una etiqueta para M cajas), o cada una se acuña su
+  propio número y Warehouse Receipt — y entonces el envío queda partido para
+  siempre, porque las cajas se agrupan justamente por ese número.
+- **Reducir editando la última caja revienta.** Al re-escanear, el sistema
+  abre la caja más nueva; si desde ahí se baja la cantidad, esa caja se borra
+  y el servidor sigue trabajando con un registro que ya no existe → 500. Hoy
+  se alcanza; con lo de arriba arreglado sería el caso común.
+
+### C20-05 · Lo que cambia es del envío, no de una caja — 🐛 pendiente (`PR-C7.72`)
+
+Reproducido en vivo, sobre un envío de dos cajas a nombre de Diego:
+
+> *"Yo recibí dos paquetes a nombre de Diego. Después vine yo y lo actualicé y
+> lo cambié al nombre de Sofía."*
+> *"Mira, aquí hay una cuestión: **quedó a nombre de Diego uno y el otro quedó
+> a nombre de Sofía**."*
+
+Lo mismo con la retención: *"mira que decía RET… **solo uno te metió RET**"*.
+
+Al actualizar una caja, lo que es del **envío** —el cliente, el tercero, la
+retención y sus motivos, la política, el cambio de servicio, el contenido, el
+prepago— se queda en la caja que se tocó. `crear_split!` sí reparte esos
+datos entre las N cajas al dar de alta; el update nunca aprendió a hacerlo.
+Es la misma familia del *"el tercero lo reconoce como exprés y los otros dos
+como CER… debería de cambiar todas"* de la Conversación 14.
+
+### C20-06 · Una etiqueta por caja, no N por N — 🐛 pendiente (`PR-C7.73`)
+
+Al dar de alta un tracking dividido, el sistema pide **una ventana de
+impresión por caja**, y cada ventana imprime **todas** las etiquetas del
+envío: dos cajas son cuatro etiquetas, tres son nueve. Hoy no se nota porque
+el bloqueador de ventanas emergentes de Chrome deja pasar una sola —el mismo
+límite que ya conocíamos de `PR-C7.28`—, así que el día que alguien le dé
+permiso al sitio en la estación de Miami, empieza a salir papel de más.
+
+### C20-07 · El paquete pre-alertado que no se puede actualizar — 🐛 pendiente (`PR-C7.74`)
+
+Un paquete que llegó por pre-alerta y **ya se recibió** no tiene forma de
+volver a modo actualización escaneándolo: el aviso verde de pre-alerta se
+adelanta y el modal de duplicado —donde vive el botón «Es actualización»—
+nunca abre. Peor: si el operario llena y guarda igual, el sistema **crea un
+paquete nuevo** con el mismo tracking, sin avisar. Es candidato a explicar la
+`RP-47` de la conversación pasada (la «incongruencia» que Yusef no pudo
+reproducir).
+
+### Las preguntas que abre
+
+| Id | Qué |
+|---|---|
+| `RP-49` | **Registro y reporte de errores del sistema.** Yusef, viendo la pantalla de error: *"cuando te pasa algo así… ¿cómo lo reportás? ¿Venís y lo grabás, un videíto?"* · *"Normalmente en una empresa grande hay como un equipo que está grabando todos los errores… lo más bonito sería llegar a eso y que mande un reporte."* Y para qué lo quiere: *"más que el reporte, es para poder ir a devolverme yo… que te diga qué estaba haciendo"* — o sea contexto, no solo el stack. Es una serie propia (esbozo: `solid_errors` + contexto de usuario/URL, o tabla propia con pantalla de admin). Decidir alcance antes de arrancar |
+| `RP-50` | **Estandarizar F8 / F9 / F10.** Yusef: *"F8 es guardar y F9 es guardar y notificar… ahorita en etiquetar es guardar e imprimir. ¿Por qué no lo estandarizamos todos?"*. Jorge: *"hay opciones donde no queremos imprimir"*. La propuesta que quedó sonando: F8/F10 guardar (+notificar) y F9 guardar + imprimir, **notificando al final** para *"que no te atrase el de Miami y quede en cola la notificación"*. Tocar los atajos es tocar el dedo de Miami: se decide antes, no en el camino |
+
+### Dudosos del transcript
+
+- *"Cuando se hace rápido el ingreso, el UI queda [ligado] para hacer el
+  siguiente y **queda seleccionado** porque se hizo muy rápido"* (nota de las
+  12:28). Suena a que el cliente del paquete anterior queda elegido para el
+  siguiente cuando se escanea muy seguido — pero sin repro. Preguntar antes de
+  tocar el autocomplete.
+- *"Se quedó ahí cuando le dije F2, no limpió"* (probando cambio de servicio).
+  Puede ser el mismo 500 de `C20-01` dejando la pantalla a medias; verificar
+  con el arreglo puesto antes de abrir un ítem propio.
+- El recorrido del manifiesto y el empaque en Miami (nota de las 12:24) es
+  material del módulo que viene, no un pedido de hoy: la etiqueta 4×6 del
+  bulto, el consignatario, la palabra «PRIORITY», y el código del documento
+  de manifiesto para *"rebajarlo… el sistema te va a decir: ya se recibieron
+  las cinco, falta una"*.
