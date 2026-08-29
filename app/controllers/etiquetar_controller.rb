@@ -124,59 +124,103 @@ class EtiquetarController < ApplicationController
 
     # La cantidad de cajas se delega al ajuste de split, que crea o elimina
     # las que correspondan (PR-C6.7) y bloquea si alguna ya se cobró.
+    #
+    # C20-04, la regla que puso Yusef: *"en impresión de etiquetas es el que te
+    # marca la cantidad de cajas"* — o sea que lo que el operario conteste acá
+    # manda, para arriba y para abajo.
     nueva_cantidad = cantidad_de_cajas_pedida
-    if ajusta_cajas?(nueva_cantidad)
-      begin
-        Paquete.ajustar_split!(@paquete, nueva_cantidad)
-        @paquete.reload
-      rescue Paquete::CajaNoEliminable => e
-        return render_create_error(e.message)
-      end
+
+    # Sobre un esperado no se ajusta nada: todavía no llegó, no tiene número, y
+    # sus "cajas" nuevas nacerían con el estado de esperado —invisibles para la
+    # impresión, que las filtra—. Recibirlo es escanearlo, que es el camino que
+    # sí sabe convertirlo (`crear_split!` con `reusar:`).
+    if ajusta_cajas?(nueva_cantidad) && Paquete::NO_SON_CAJAS.include?(@paquete.estado)
+      return render_create_error(
+        "Este paquete todavía es un esperado de una pre-alerta: se recibe escaneándolo, no actualizándolo."
+      )
     end
 
-    @paquete.assign_attributes(paquete_params.except(:cantidad_paquetes))
-    # C18-04: un paquete que llega acá sin sucursal de recepción —nació en
-    # /paquetes, o es un esperado— toma la de la sesión: sin ella no hay número
-    # de recepción ni Warehouse Receipt. No se pisa la que ya tenga.
-    @paquete.sucursal_recepcion ||= @sucursal_recepcion_sesion
-    if (prov_str = proveedor_string_param) != :missing
-      @paquete[:proveedor] = prov_str
-    end
-    aplicar_prepago_miami(@paquete)
+    begin
+      # Todo o nada. El contrato viejo —"si una caja a eliminar ya se cobró,
+      # no se guarda nada"— se cumplía por orden, pero al revés no: si el
+      # ajuste pasaba y el `save` de después fallaba, las cajas creadas o
+      # borradas ya quedaban. La transacción cubre los dos lados.
+      Paquete.transaction do
+        # C18-04: un paquete que llega acá sin sucursal de recepción —nació en
+        # /paquetes, o es un esperado— toma la de la sesión: sin ella no hay
+        # número de recepción ni Warehouse Receipt. No se pisa la que ya tenga.
+        #
+        # C20-04: y va ANTES del ajuste, porque el ajuste necesita el número
+        # —que sale de esta sucursal— para saber quiénes son las hermanas.
+        @paquete.sucursal_recepcion ||= @sucursal_recepcion_sesion
 
-    if @paquete.save
-      # C18-06: marcar «enviado según política» al re-escanear es la misma
-      # transición que en /paquetes: el cliente se entera igual (gemela).
-      if @paquete.saved_change_to_enviado_por_politica? && @paquete.enviado_por_politica?
-        notificar_recibido(@paquete, pre_alerta_vinculada: false)
-      end
-      propagar_cambio_de_servicio(@paquete)
-      @paquetes_hoy = paquetes_hoy_count
-      respond_to do |format|
-        format.turbo_stream do
-          render turbo_stream: [
-            turbo_stream.prepend("flash-messages", partial: "shared/flash",
-                                 locals: { notice: aviso_de_actualizacion }),
-            # `data-volver`: al terminar de actualizar, la pantalla tiene que
-            # volver a modo alta.
-            #
-            # Jorge, 2026-08-19: *"«Actualizando 9234690331…» siempre se queda en
-            # la vista, no desaparece al guardar"*. El banner era el síntoma
-            # visible; lo de abajo es peor. El `form` se renderiza en el servidor
-            # con `PATCH /etiquetar/:id`, y `clearForm` limpia los **campos**
-            # pero no la acción del formulario — así que el paquete siguiente
-            # que se escaneara se iba a guardar **encima del anterior**.
-            turbo_stream.append("etiquetar-events",
-                                "<div data-etiquetar-target='event' data-action='paquete-saved' " \
-                                "data-guia='#{@paquete.guia}' data-print='#{params[:print]}' " \
-                                "data-volver='true' " \
-                                "data-paquete-id='#{@paquete.id}'></div>")
-          ]
+        if ajusta_cajas?(nueva_cantidad)
+          restantes = Paquete.ajustar_split!(@paquete, nueva_cantidad)
+          # Al reducir, la caja que se está editando puede ser una de las que
+          # se van: al re-escanear se abre la más nueva, y ésa es justamente la
+          # que `ajustar_split!` borra primero. Seguir con ella era un
+          # `RecordNotFound` en la cara del operario, así que el formulario
+          # pasa a hablar de una caja que sí quedó.
+          @paquete = restantes.find { |c| c.id == @paquete.id } || restantes.first
+          @reanclado = @paquete.id != params[:id].to_i
         end
-        format.html { redirect_to etiquetar_path, notice: aviso_de_actualizacion }
+
+        # Lo que el formulario traía de peso y medidas era de la caja que se
+        # fue; no se le pega a la que sobrevivió.
+        cambios = paquete_params.except(:cantidad_paquetes)
+        cambios = cambios.except(*MedidasPorCaja::CAMPOS_POR_CAJA) if @reanclado
+        @paquete.assign_attributes(cambios)
+
+        if (prov_str = proveedor_string_param) != :missing
+          @paquete[:proveedor] = prov_str
+        end
+        aplicar_prepago_miami(@paquete)
+        @paquete.save!
       end
-    else
-      render_create_error("No se pudo actualizar el paquete.")
+    rescue Paquete::CajaNoEliminable => e
+      return render_create_error(e.message)
+    rescue ActiveRecord::RecordInvalid
+      return render_create_error("No se pudo actualizar el paquete.")
+    end
+
+    # Lo de acá abajo va fuera de la transacción a propósito: son avisos y
+    # pantalla, no datos. Un correo no se manda dos veces si algo se reintenta.
+    #
+    # C18-06: marcar «enviado según política» al re-escanear es la misma
+    # transición que en /paquetes: el cliente se entera igual (gemela).
+    if @paquete.saved_change_to_enviado_por_politica? && @paquete.enviado_por_politica?
+      notificar_recibido(@paquete, pre_alerta_vinculada: false)
+    end
+    propagar_cambio_de_servicio(@paquete)
+    @paquetes_hoy = paquetes_hoy_count
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: [
+          turbo_stream.prepend("flash-messages", partial: "shared/flash",
+                               locals: { notice: aviso_de_actualizacion }),
+          # `data-volver`: al terminar de actualizar, la pantalla tiene que
+          # volver a modo alta.
+          #
+          # Jorge, 2026-08-19: *"«Actualizando 9234690331…» siempre se queda en
+          # la vista, no desaparece al guardar"*. El banner era el síntoma
+          # visible; lo de abajo es peor. El `form` se renderiza en el servidor
+          # con `PATCH /etiquetar/:id`, y `clearForm` limpia los **campos**
+          # pero no la acción del formulario — así que el paquete siguiente
+          # que se escaneara se iba a guardar **encima del anterior**.
+          #
+          # C20-04: el id es el del paquete que quedó, que puede no ser el que
+          # entró — al reducir, la caja que se editaba puede ser la que se fue.
+          # De ahí sale la impresión de TODAS las etiquetas del envío, que es
+          # lo que Yusef pidió: *"tenés que imprimirlas todas, porque si no en
+          # San Pedro… este dice cuatro y usted dice tres"*.
+          turbo_stream.append("etiquetar-events",
+                              "<div data-etiquetar-target='event' data-action='paquete-saved' " \
+                              "data-guia='#{@paquete.guia}' data-print='#{params[:print]}' " \
+                              "data-volver='true' " \
+                              "data-paquete-id='#{@paquete.id}'></div>")
+        ]
+      end
+      format.html { redirect_to etiquetar_path, notice: aviso_de_actualizacion }
     end
   end
 
