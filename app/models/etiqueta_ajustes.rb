@@ -12,10 +12,20 @@ module EtiquetaAjustes
   CLAVE_IZQ = "etiqueta_margen_izq_mm".freeze
   CLAVE_DER = "etiqueta_margen_der_mm".freeze
 
-  # C19-06: "correr este lado, del lado izquierdo hacia la derecha; el lado
-  # derecho déjalo tal cual". El default viejo era 0.06in (~1.5mm) parejo;
-  # el izquierdo arranca corrido 1mm a la derecha.
-  IZQ_DEFAULT_MM = 2.5
+  # C19-06 los dejó en 2.5/1.5: "correr este lado, del lado izquierdo hacia la
+  # derecha; el lado derecho déjalo tal cual".
+  #
+  # C20-03 los devuelve a 1.5 parejo, que era el valor histórico, y la vuelta
+  # atrás es deliberada. Ese milímetro compensaba la deriva de UNA impresora
+  # —"en San Pedro le tuve que poner una tuerca"— y desde C19-06 eso se ajusta
+  # desde la pantalla, sin deploy: no tiene por qué ser el default de todas.
+  # Peor: el ancho que le quitaba era justo el que le faltaba al código de
+  # barras para no cortarse (C20-02).
+  #
+  # Y el piso no es cero: el margen ES la zona muda del Code 128. Un barcode
+  # pegado al borde tampoco se lee, aunque esté completo — por eso restablecer
+  # cae a 1.5/1.5 y no a 0.
+  IZQ_DEFAULT_MM = 1.5
   DER_DEFAULT_MM = 1.5
   MAX_MM = 10
 

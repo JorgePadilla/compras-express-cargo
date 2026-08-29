@@ -249,6 +249,7 @@ Rails.application.routes.draw do
   resource :ajustes_etiqueta, only: %i[show update], controller: "ajustes_etiqueta" do
     patch  :plantilla, action: :guardar_plantilla
     delete :plantilla, action: :restaurar_plantilla
+    delete :margenes, action: :restablecer_margenes
     post   :preview
   end
 
