@@ -163,6 +163,10 @@ class EtiquetarController < ApplicationController
           # pasa a hablar de una caja que sí quedó.
           @paquete = restantes.find { |c| c.id == @paquete.id } || restantes.first
           @reanclado = @paquete.id != params[:id].to_i
+          # `ajustar_split!` relee las cajas de la base, así que el objeto que
+          # queda no trae el cambio de servicio que se aplicó en memoria más
+          # arriba. Se vuelve a aplicar sobre el que de verdad se va a guardar.
+          aplicar_cambio_servicio(@paquete)
         end
 
         # Lo que el formulario traía de peso y medidas era de la caja que se
@@ -176,6 +180,7 @@ class EtiquetarController < ApplicationController
         end
         aplicar_prepago_miami(@paquete)
         @paquete.save!
+        propagar_envio_a_hermanas(@paquete)
       end
     rescue Paquete::CajaNoEliminable => e
       return render_create_error(e.message)
@@ -191,7 +196,6 @@ class EtiquetarController < ApplicationController
     if @paquete.saved_change_to_enviado_por_politica? && @paquete.enviado_por_politica?
       notificar_recibido(@paquete, pre_alerta_vinculada: false)
     end
-    propagar_cambio_de_servicio(@paquete)
     @paquetes_hoy = paquetes_hoy_count
     respond_to do |format|
       format.turbo_stream do
@@ -555,13 +559,54 @@ end
   # `cajas_del_mismo_split` y no las hermanas por tracking: la clave del split es
   # el número madre, y dos splits distintos pueden compartir tracking porque el
   # courier recicla números.
-  def propagar_cambio_de_servicio(paquete)
-    return unless paquete.saved_change_to_tipo_envio_id?
+  # Lo que se corrige al actualizar una caja es del ENVÍO, no de esa caja.
+  #
+  # C20-05. Probado en vivo sobre un envío de dos cajas a nombre de Diego:
+  # *"después vine yo y lo actualicé y lo cambié al nombre de Sofía"* → *"aquí
+  # hay una cuestión: quedó a nombre de Diego uno y el otro quedó a nombre de
+  # Sofía"*. Lo mismo con la retención: *"mira que decía RET… solo uno te metió
+  # RET"*. `crear_split!` sí reparte estos datos entre las N cajas al dar de
+  # alta; el update nunca aprendió a hacerlo.
+  #
+  # Es la misma familia del *"el tercero lo reconoce como exprés y los otros dos
+  # como CER… debería de cambiar todas"* de la Conversación 14, que se había
+  # arreglado solo para el tipo de envío.
+  #
+  # **Se escribe lo que vino en el formulario, sin mirar `saved_changes`**, por
+  # dos razones. Una: los motivos son `has_many through` y no aparecen ahí, así
+  # que la retención nunca se habría propagado. Y dos: reescribir el valor
+  # aunque "no cambió" hace que actualizar cualquier caja **converja** un envío
+  # que ya estaba partido — el de Diego y Sofía se arregla tocando cualquiera
+  # de las dos, sin tener que adivinar cuál quedó bien.
+  ATRIBUTOS_DEL_ENVIO = %i[
+    tracking tracking_secundario cliente_id tercero_id tercero_nombre
+    descripcion remitente expedido_por notas_internas
+    retener_miami notas_retencion enviado_por_politica notas_envio_politica
+    motivo_retencion_ids motivo_envio_politica_ids
+  ].freeze
 
-    hermanas = Paquete.cajas_del_mismo_split(paquete).where.not(id: paquete.id)
-    hermanas.find_each do |caja|
-      caja.aplicar_cambio_servicio(paquete.tipo_envio)
-      caja.save
+  def propagar_envio_a_hermanas(paquete)
+    hermanas = Paquete.cajas_del_mismo_split(paquete).where.not(id: paquete.id).to_a
+    return if hermanas.empty?
+
+    del_envio = paquete_params.to_h.symbolize_keys.slice(*ATRIBUTOS_DEL_ENVIO)
+    prov_str = proveedor_string_param
+
+    hermanas.each do |caja|
+      caja.assign_attributes(del_envio)
+      if caja.tipo_envio_id != paquete.tipo_envio_id
+        caja.aplicar_cambio_servicio(paquete.tipo_envio)
+        # …pero el CARGO es del envío, y lo lleva la caja que el operario
+        # tocó. `aplicar_cambio_servicio` prende el flag de paso, y la
+        # pre-factura arma un ítem **por paquete marcado** — con las tres
+        # marcadas, un cambio de CER a CEM se cobraba L.300 en vez de L.100.
+        # Solo se apaga acá, donde lo prendimos nosotros: un flag que la caja
+        # ya traía de antes no se toca.
+        caja.solicito_cambio_servicio = false
+      end
+      caja[:proveedor] = prov_str if prov_str != :missing
+      aplicar_prepago_miami(caja)
+      caja.save!
     end
   end
 
