@@ -15,35 +15,18 @@ require "application_system_test_case"
 # de controllers).
 class EtiquetarPesarAlPartirTest < ApplicationSystemTestCase
   setup do
-    visit new_session_path
-    fill_in "email_address", with: users(:digitador).email_address
-    fill_in "password", with: "password123"
-    click_on "Iniciar Sesion"
-    assert_no_current_path new_session_path, wait: 5
+    ingresar(users(:digitador))
 
-    visit etiquetar_path
-    if page.has_text?("¿Qué tipo de envío vas a trabajar?", wait: 3)
-      first("form[action='#{iniciar_sesion_etiquetar_path}'] button").click
-    end
-    assert_selector "#paquete_tracking", wait: 5
+    abrir_sesion_etiquetar(TipoEnvio.activos.order(:nombre).first)
     # El paquete tiene que ser del tipo de la sesión: si no, el aviso de «otro
     # tipo de envío» se pone adelante del modal.
     @tipo = TipoEnvio.find(find("[data-etiquetar-tipo-envio-sesion-value]", visible: :all)["data-etiquetar-tipo-envio-sesion-value"])
   end
 
-  # Imprimir abre la etiqueta en otra pestaña; si queda abierta, el test
-  # siguiente arranca en la pestaña equivocada (ver `etiquetar_cajas_modal_test`).
-  teardown do
-    b = page.driver.browser
-    principal = b.window_handles.first
-    b.window_handles[1..].to_a.each do |h|
-      b.switch_to.window(h)
-      b.close
-    end
-    b.switch_to.window(principal)
-  rescue StandardError
-    # Si el navegador ya se cerró, no hay nada que limpiar.
-  end
+  # Este archivo tenía acá su propia copia del cierre de pestañas, en un
+  # `teardown`. Se fue: la clase base lo hace en `setup`, y en `setup` agarra
+  # también la pestaña que nace tarde —el `window.open` sale del turbo-stream
+  # del guardado—, que era justo la que se le escapaba al `teardown`.
 
   test "partir una caja con peso pide el peso de cada una, y no imprime sin todos" do
     paquete = crear_recibido(peso: 5)

@@ -11,11 +11,7 @@ require "application_system_test_case"
 # Espejo de `etiquetar_teclado_test.rb` a propósito.
 class EntregaPersonalTecladoTest < ApplicationSystemTestCase
   setup do
-    visit new_session_path
-    fill_in "email_address", with: users(:digitador).email_address
-    fill_in "password", with: "password123"
-    click_on "Iniciar Sesion"
-    assert_no_current_path new_session_path, wait: 5
+    ingresar(users(:digitador))
 
     visit new_entrega_personal_path
     assert_selector "[data-entrega-personal-target=clienteInput]", wait: 5

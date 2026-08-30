@@ -10,17 +10,9 @@ require "application_system_test_case"
 # test de integración puede ver un modal abrirse.
 class ActualizarSinModalRepetidoTest < ApplicationSystemTestCase
   setup do
-    visit new_session_path
-    fill_in "email_address", with: users(:digitador).email_address
-    fill_in "password", with: "password123"
-    click_on "Iniciar Sesion"
-    assert_no_current_path new_session_path, wait: 8
+    ingresar(users(:digitador))
 
-    visit etiquetar_path
-    if page.has_text?("¿Qué tipo de envío vas a trabajar?", wait: 3)
-      first("button[name='tipo_envio_id']").click
-    end
-    assert_selector "#paquete_tracking", wait: 8
+    abrir_sesion_etiquetar(TipoEnvio.activos.order(:nombre).first)
 
     @paquete = Paquete.create!(cliente: clientes(:juan), tipo_envio: tipo_envios(:cer),
                                tracking: "1ZSINMODALREPE01", descripcion: "x",

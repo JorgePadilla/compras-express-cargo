@@ -61,20 +61,9 @@ class EtiquetarFocoAlTrackingTest < ApplicationSystemTestCase
 
   private
 
-  def ingresar(user)
-    visit new_session_path
-    fill_in "email_address", with: user.email_address
-    fill_in "password", with: "password123"
-    click_on "Iniciar Sesion"
-    assert_no_current_path new_session_path, wait: 5
-  end
 
   def abrir_etiquetar
-    visit etiquetar_path
-    if page.has_text?("¿Qué tipo de envío vas a trabajar?", wait: 3)
-      first("form[action='#{iniciar_sesion_etiquetar_path}'] button").click
-    end
-    assert_selector "#paquete_tracking", wait: 5
+    abrir_sesion_etiquetar(TipoEnvio.activos.order(:nombre).first)
   end
 
   def elegir_cliente
@@ -103,23 +92,5 @@ class EtiquetarFocoAlTrackingTest < ApplicationSystemTestCase
   def esperar(segundos: 10)
     limite = Process.clock_gettime(Process::CLOCK_MONOTONIC) + segundos
     sleep 0.15 until yield || Process.clock_gettime(Process::CLOCK_MONOTONIC) > limite
-  end
-
-  # C19-08 (el test de modales lo cazó): el window.open de la impresión es
-  # asíncrono y la pestaña puede nacer DESPUÉS de que el ensure cerró — la
-  # huérfana le queda al siguiente test del worker, que arranca con 2
-  # ventanas y Capybara mirando la equivocada. Se la espera antes de cerrar.
-  def esperar_pestana_de_impresion
-    esperar(segundos: 5) { page.driver.browser.window_handles.size > 1 }
-  end
-
-  def cerrar_pestanas_extra
-    b = page.driver.browser
-    principal = b.window_handles.first
-    b.window_handles[1..].to_a.each do |h|
-      b.switch_to.window(h)
-      b.close
-    end
-    b.switch_to.window(principal)
   end
 end

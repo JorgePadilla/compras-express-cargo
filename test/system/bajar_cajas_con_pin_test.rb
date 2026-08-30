@@ -17,11 +17,7 @@ class BajarCajasConPinSistemaTest < ApplicationSystemTestCase
     # La caja 2 ya entró a cobro: sin PIN, el sistema no la deja bajar.
     @cajas.last.update_columns(estado: "pre_facturado")
 
-    visit new_session_path
-    fill_in "email_address", with: @supervisor.email_address
-    fill_in "password", with: "password123"
-    click_on "Iniciar Sesion"
-    assert_no_current_path new_session_path, wait: 5
+    ingresar(@supervisor)
   end
 
   test "el supervisor baja la cantidad desde el modal" do

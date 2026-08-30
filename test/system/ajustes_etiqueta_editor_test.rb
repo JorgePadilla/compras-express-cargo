@@ -7,11 +7,7 @@ require "application_system_test_case"
 # Yusef ve al ajustar es lo mismo que vigila la suite con el default.
 class AjustesEtiquetaEditorTest < ApplicationSystemTestCase
   setup do
-    visit new_session_path
-    fill_in "email_address", with: users(:admin).email_address, wait: 10
-    fill_in "password", with: "password123"
-    click_on "Iniciar Sesion"
-    assert_no_current_path new_session_path, wait: 8
+    ingresar(users(:admin))
 
     visit ajustes_etiqueta_path
     assert_selector "[data-etiqueta-editor-target='iframe']", wait: 5

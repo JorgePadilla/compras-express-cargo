@@ -97,13 +97,6 @@ class EtiquetaCierraVentanaTest < ApplicationSystemTestCase
 
   private
 
-  def ingresar(user)
-    visit new_session_path
-    fill_in "email_address", with: user.email_address
-    fill_in "password", with: "password123"
-    click_on "Iniciar Sesion"
-    assert_no_current_path new_session_path, wait: 5
-  end
 
   # Replica lo que hace `eticarquetar_controller.js#eventTargetConnected`:
   # `window.open(..., "_blank")`, que es lo que deja `window.opener` seteado.
@@ -142,15 +135,5 @@ class EtiquetaCierraVentanaTest < ApplicationSystemTestCase
 
   def sleep_corto
     sleep 1.5
-  end
-
-  def cerrar_pestanas_extra
-    b = page.driver.browser
-    principal = b.window_handles.first
-    b.window_handles[1..].to_a.each do |h|
-      b.switch_to.window(h)
-      b.close
-    end
-    b.switch_to.window(principal)
   end
 end

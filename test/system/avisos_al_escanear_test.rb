@@ -12,21 +12,13 @@ require "application_system_test_case"
 # propio archivo.
 class AvisosAlEscanearTest < ApplicationSystemTestCase
   setup do
-    visit new_session_path
-    fill_in "email_address", with: users(:digitador).email_address
-    fill_in "password", with: "password123"
-    click_on "Iniciar Sesion"
-    assert_no_current_path new_session_path, wait: 8
+    ingresar(users(:digitador))
 
-    visit etiquetar_path
-    if page.has_text?("¿Qué tipo de envío vas a trabajar?", wait: 3)
-      # La sesión en el tipo de las pre-alertas del archivo (CER), por `value`.
-      # `first(...)` tomaba el primer botón —que ya no era CER— y desde
-      # PR-C7.62 el conflicto de sesión sale antes que cualquier aviso: cinco de
-      # los seis llevaban tiempo rojos sin que el CI los corriera.
-      find("button[name='tipo_envio_id'][value='#{tipo_envios(:cer).id}']").click
-    end
-    assert_selector "#paquete_tracking", wait: 8
+    # La sesión en el tipo de las pre-alertas del archivo (CER), por `value`.
+    # `first(...)` tomaba el primer botón —que ya no era CER— y desde
+    # PR-C7.62 el conflicto de sesión sale antes que cualquier aviso: cinco de
+    # los seis llevaban tiempo rojos sin que el CI los corriera.
+    abrir_sesion_etiquetar(TipoEnvio.find(tipo_envios(:cer).id))
   end
 
   test "la retencion tapa la pantalla al escanear" do

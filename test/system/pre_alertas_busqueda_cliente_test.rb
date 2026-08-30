@@ -19,11 +19,7 @@ require "application_system_test_case"
 # paralelo.
 class PreAlertasBusquedaClienteTest < ApplicationSystemTestCase
   setup do
-    visit new_session_path
-    fill_in "email_address", with: users(:admin).email_address
-    fill_in "password", with: "password123"
-    click_on "Iniciar Sesion"
-    assert_no_current_path new_session_path, wait: 5
+    ingresar(users(:admin))
 
     visit new_pre_alerta_path
     assert_selector "[data-client-autocomplete-target=input]", wait: 5
