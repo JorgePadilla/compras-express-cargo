@@ -7955,7 +7955,7 @@ Que es lo mismo que anotó a mano sobre el bloque de Pronto Cargo del impreso:
 
 ---
 
-### C21-09 · El documento impreso: cuatro correcciones — 🆕 **PLANIFICADO**
+### C21-09 · El documento impreso: cuatro correcciones — ✅ **IMPLEMENTADO en PR-M9**
 
 De las anotaciones a mano sobre las dos copias:
 
@@ -7971,6 +7971,35 @@ De las anotaciones a mano sobre las dos copias:
 3. **Faltan `# tel` y `persona encargada`** en el bloque del transportista.
 4. **La letra es muy chica**: *"esto está muy pequeño, ni lo vemos cuando lo
    queremos ver en la pantalla"*.
+
+**IMPLEMENTADO en PR-M9.** El documento **no existía**: es papel nuevo, no un
+arreglo. Vive en `GET /manifiestos/:id/documento` y usa el mismo
+`layout: "print"` del Warehouse Receipt — que es lo que él mismo propuso:
+*"ese número va a ir igual que el recibo de warehouse; esto es relativamente un
+warehouse, solo que es un manifiesto"*. De ahí sale gratis la cadena de
+`?print=true`.
+
+Las cuatro, una por una:
+
+1. El encabezado sale de `wr_issuing_company`, la constante que ya usa el WR:
+   **COMPRAS EXPRESS LOGISTICS LLC**, 8109 NW 60th Street, y el teléfono.
+2. El número lleva el año desde `PR-M2` (`MM2026000001`).
+3. **`# tel` y `persona encargada`** salen del catálogo de `EmpresaManifiesto`
+   (`PR-M1`). Si están vacíos se imprime «—» y los llena el equipo por el CRUD;
+   no hizo falta ninguna migración.
+4. La base pasa a **12px** y el número del manifiesto a **26px**, contra los
+   9-11px del WR.
+
+Lleva además el bloque del consignatario, los rótulos de `C21-02` («del
+proveedor» vs «nuestro», y «Recibido en Honduras» en lugar de «Aduana»), la
+tabla de bultos con código, tamaño, medidas, volumen y peso, los cuatro totales
+y las dos firmas. El botón «Imprimir manifiesto» va en la pantalla del
+manifiesto, **aparte** de «Finalizar e Imprimir», que saca las etiquetas 4×6 de
+los bultos: son dos papeles distintos.
+
+De paso, el `<title>` del layout `print` estaba fijo en «Warehouse Receipt»; la
+pestaña del manifiesto decía «Warehouse Receipt - 1 cajas». Ahora cada vista
+pone el suyo con `content_for :titulo_print`.
 
 ---
 
@@ -8058,8 +8087,12 @@ O sea: la misma lógica de sufijos que ya usan nuestras cajas de un split.
 
 ### Dudosos del transcript
 
-- El teléfono del encabezado se oye **305-848-79-90** en el audio y está escrito
-  **305-848-0990** a mano. Se toma el escrito; confirmar antes de imprimirlo.
+- ~~El teléfono del encabezado se oye **305-848-79-90** en el audio y está
+  escrito **305-848-0990** a mano.~~ **RESUELTO al construir `PR-M9`:** el
+  repo ya tenía `305-848-0990` en `WR_ISSUING_COMPANY_DEFAULT`, que sale de
+  `warehouse_receipt_fields.md` — la spec que **Yusef entregó él mismo el
+  2026-04-29**. Dos fuentes suyas, de meses distintos, dicen lo mismo; el audio
+  es el que se oye mal. Se imprime `+1 305-848-0990`.
 - Habló de que los del perfil de pre-factura *"me los tengo que quitar"* de
   recibir carga — no quedó claro si es un cambio de proceso que quiere o un
   desahogo. No se documenta como pedido.

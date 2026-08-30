@@ -1,0 +1,191 @@
+<%# C21-09 · El manifiesto impreso.
+
+    Yusef anotó a mano dos copias del impreso del legacy y de ahí salen las
+    cuatro correcciones que este documento aplica:
+
+      1. El encabezado decía «Compras Express Miami» y tiene que decir
+         **Compras Express Logistics LLC**, con el teléfono **305-848-0990**.
+         Sale de `wr_issuing_company`, que es la misma constante que ya usa el
+         Warehouse Receipt y que trae ese número desde la spec que él mismo
+         entregó en abril — o sea que el escrito a mano queda confirmado por
+         una segunda fuente, y el "305-848-79-90" que se oye en el audio es un
+         mal entendido del audio.
+      2. El número lleva el año: `MM2026000001`, vivo desde PR-M2. Él mismo lo
+         comparó: *"ese número va a ir igual que el recibo de warehouse"*.
+      3. Faltaban **# tel** y **persona encargada** en el bloque del
+         transportista. Salen del catálogo de `EmpresaManifiesto` (PR-M1); si
+         están vacíos se imprime «—» y los llena el equipo por el CRUD.
+      4. *"Esto está muy pequeño, ni lo vemos"* → la base va en 12px y el
+         número del manifiesto en 26px, contra los 9-11px del WR.
+
+    Los rótulos son los de C21-02: «Tipo de envío del proveedor» vs «nuestro»,
+    y «Aduana» se imprime como «Recibido en Honduras». %>
+
+<% content_for :titulo_print, "Manifiesto #{@manifiesto.numero}" %>
+
+<% issuing   = wr_issuing_company %>
+<% empresa   = @manifiesto.empresa_manifiesto %>
+<% printed_at = Time.current.in_time_zone %>
+
+<style>
+  .mf-section { margin-bottom: 16px; }
+  .mf-row { display: flex; gap: 18px; }
+  .mf-col { flex: 1; }
+  .mf-h { font-weight: bold; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; color: #555; margin-bottom: 3px; }
+  .mf-v { font-size: 13px; line-height: 1.4; }
+  .mf-mono { font-family: "Courier New", Courier, monospace; }
+  .mf-banner { background: #1B2559; color: #fff; padding: 12px 16px; border-radius: 4px; }
+  .mf-divider { border: 0; border-top: 1px solid #d4d4d4; margin: 12px 0; }
+  .mf-box { border: 1px solid #d4d4d4; border-radius: 4px; padding: 10px 12px; }
+  table.mf-t { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.mf-t th, table.mf-t td { border: 1px solid #d4d4d4; padding: 6px 7px; text-align: left; }
+  table.mf-t thead th { background: #f3f4f6; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; }
+  table.mf-t td.num { text-align: right; font-family: "Courier New", Courier, monospace; }
+  table.mf-tot { width: 100%; font-size: 13px; margin-top: 8px; }
+  table.mf-tot td { padding: 4px 7px; }
+  table.mf-tot td.label { color: #666; text-transform: uppercase; font-size: 10px; letter-spacing: 0.4px; width: 30%; }
+  table.mf-tot td.value { font-weight: bold; text-align: right; }
+  .mf-pill { display: inline-block; padding: 3px 10px; border-radius: 9999px; background: #FFB547; color: #1B2559; font-weight: bold; font-size: 11px; letter-spacing: 0.5px; }
+  .mf-footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid #d4d4d4; display: flex; justify-content: space-between; font-size: 10px; color: #666; }
+  .mf-firma { margin-top: 22px; display: flex; gap: 40px; }
+  .mf-firma div { flex: 1; border-top: 1px solid #555; padding-top: 5px; font-size: 10px; color: #555; text-align: center; }
+</style>
+
+<%# ── 1 · Encabezado: la empresa emisora + el número con año ── %>
+<div class="mf-section" style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;">
+  <div>
+    <div style="font-size:20px;font-weight:bold;color:#1B2559;letter-spacing:0.5px;"><%= issuing[:name] %></div>
+    <div class="mf-v" style="color:#444;line-height:1.5;">
+      <%= issuing[:street] %><br>
+      <%= issuing[:city] %>, <%= issuing[:state] %> <%= issuing[:postal_code] %>, <%= issuing[:country] %><br>
+      <strong><%= issuing[:phone] %></strong> · <%= issuing[:website] %>
+    </div>
+  </div>
+  <div style="text-align:right;min-width:38%;">
+    <div class="mf-banner">
+      <div style="font-size:10px;letter-spacing:1px;opacity:0.85;">MANIFIESTO DE CARGA</div>
+      <div class="mf-mono" style="font-size:26px;font-weight:bold;letter-spacing:0.5px;margin-top:3px;">
+        <%= @manifiesto.numero %>
+      </div>
+    </div>
+    <div class="mf-v" style="margin-top:7px;color:#444;">
+      <strong>Enviado:</strong> <%= @manifiesto.fecha_enviado&.strftime("%d/%m/%Y") || "—" %><br>
+      <strong>Impreso:</strong> <%= printed_at.strftime("%d/%m/%Y %H:%M") %><br>
+      <strong>Imprimió:</strong> <%= wr_user_initials(Current.user) %>
+    </div>
+    <% if @manifiesto.es_prioridad? %>
+      <div style="margin-top:7px;"><span class="mf-pill">ES PRIORIDAD</span></div>
+    <% end %>
+  </div>
+</div>
+
+<hr class="mf-divider">
+
+<%# ── 2 · El transportista, con # tel y encargado (corrección 3) ── %>
+<div class="mf-row mf-section">
+  <div class="mf-col mf-box">
+    <div class="mf-h">Empresa transportadora</div>
+    <div class="mf-v" style="font-weight:bold;font-size:14px;"><%= empresa&.nombre || "—" %></div>
+    <div class="mf-v" style="color:#666;">
+      <%= empresa&.direccion.presence || "—" %><br>
+      <strong># tel:</strong> <%= empresa&.telefono.presence || "—" %><br>
+      <strong>Persona encargada:</strong> <%= empresa&.encargado.presence || "—" %>
+    </div>
+  </div>
+
+  <div class="mf-col mf-box">
+    <div class="mf-h">Consignatario</div>
+    <div class="mf-v" style="font-weight:bold;font-size:14px;">
+      <%= @manifiesto.consignatario&.nombre || "—" %>
+    </div>
+    <div class="mf-v" style="color:#666;">
+      <%= @manifiesto.consignatario&.direccion.presence || "—" %><br>
+      <strong>Entrega en:</strong> <%= @manifiesto.sucursal_entrega&.nombre || "—" %>
+    </div>
+  </div>
+</div>
+
+<%# ── 3 · Los campos del encabezado (C21-02), con los rótulos que pidió ── %>
+<div class="mf-row mf-section">
+  <div class="mf-col">
+    <div class="mf-h">Tipo de envío del proveedor</div>
+    <div class="mf-v"><%= @manifiesto.tipo_envio_del_proveedor.presence || "—" %></div>
+  </div>
+  <div class="mf-col">
+    <div class="mf-h">Tipo de envío nuestro</div>
+    <div class="mf-v"><%= @manifiesto.tipos_envio_nuestros.presence || "—" %></div>
+  </div>
+  <div class="mf-col">
+    <div class="mf-h">No. de guía (del proveedor)</div>
+    <div class="mf-v mf-mono"><%= @manifiesto.numeros_de_guia.join(" · ").presence || "—" %></div>
+  </div>
+  <div class="mf-col">
+    <%# C21-02: Yusef lo mandó a quitar y se retractó en la misma llamada.
+        *"Es por la fecha de recibido en aduana en Honduras… que es que nosotros
+        lo recibimos."* Por eso el rótulo no dice «Aduana». %>
+    <div class="mf-h">Recibido en Honduras</div>
+    <div class="mf-v"><%= @manifiesto.fecha_aduana&.strftime("%d/%m/%Y") || "—" %></div>
+  </div>
+</div>
+
+<hr class="mf-divider">
+
+<%# ── 4 · Las casas ── %>
+<div class="mf-section">
+  <div class="mf-h" style="font-size:12px;margin-bottom:6px;">Bultos (<%= @cajas.size %>)</div>
+  <% if @cajas.any? %>
+    <table class="mf-t">
+      <thead>
+        <tr>
+          <th style="width:5%;">#</th>
+          <th style="width:20%;">Código</th>
+          <th>Tamaño</th>
+          <th>Medidas (alto × largo × ancho)</th>
+          <th style="width:12%;">Volumen</th>
+          <th style="width:12%;">Peso (lb)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @cajas.each_with_index do |caja, i| %>
+          <tr>
+            <td><%= i + 1 %></td>
+            <td class="mf-mono"><%= caja.codigo %></td>
+            <td><%= caja.tamano_caja&.nombre || "—" %></td>
+            <td class="mf-mono">
+              <%= [ caja.alto, caja.largo, caja.ancho ].map { |m| m.presence || "—" }.join(" × ") %>
+            </td>
+            <td class="num"><%= caja.volumen.present? ? number_with_precision(caja.volumen, precision: 2) : "—" %></td>
+            <td class="num"><%= caja.peso.present? ? number_with_precision(caja.peso, precision: 2) : "—" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% else %>
+    <div class="mf-v" style="color:#999;">Este manifiesto todavía no tiene bultos empacados.</div>
+  <% end %>
+
+  <table class="mf-tot">
+    <tr>
+      <td class="label">Cantidad de bultos</td>
+      <td class="value"><%= @manifiesto.cantidad_bultos %></td>
+      <td class="label">Cantidad de paquetes</td>
+      <td class="value"><%= @manifiesto.cantidad_paquetes %></td>
+    </tr>
+    <tr>
+      <td class="label">Peso total</td>
+      <td class="value"><%= number_with_precision(@manifiesto.peso_total.to_f, precision: 2) %> LB</td>
+      <td class="label">Volumen total</td>
+      <td class="value"><%= number_with_precision(@manifiesto.volumen_total.to_f, precision: 2) %></td>
+    </tr>
+  </table>
+</div>
+
+<div class="mf-firma">
+  <div>Entregado por (Miami)</div>
+  <div>Recibido por (Honduras)</div>
+</div>
+
+<div class="mf-footer">
+  <div><%= issuing[:name] %> · <%= issuing[:phone] %></div>
+  <div><%= @manifiesto.numero %> · pág. 1</div>
+</div>

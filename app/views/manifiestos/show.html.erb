@@ -6,6 +6,14 @@
       "Editar"
     end
   end
+  # C21-09 · El manifiesto impreso. Va aparte de «Finalizar e Imprimir», que
+  # saca las etiquetas 4×6 de los bultos: son dos papeles distintos.
+  header.with_action do
+    render ButtonComponent.new(variant: :secondary, href: documento_manifiesto_path(@manifiesto),
+                               icon: "printer", target: "_blank") do
+      "Imprimir manifiesto"
+    end
+  end
   header.with_action do
     render ButtonComponent.new(variant: :ghost, href: manifiestos_path, icon: "arrow-left") do
       "Volver"
