@@ -940,12 +940,28 @@ class Paquete < ApplicationRecord
         # orden de todo lo que agrupa por caja.
         hermanas.first.update_column(:numero_caja, 1) if hermanas.first.numero_caja.blank?
 
+        # Una caja nueva no está cobrada ni entregada: los enlaces a pre-factura,
+        # venta y entrega no se heredan — ni el flag legacy `pre_factura`, que
+        # además es una de las dos columnas del párrafo de abajo.
         attrs = hermanas.first.attributes.except(
           "id", "created_at", "updated_at", "guia", "numero_caja",
-          "cantidad_paquetes", "pre_factura_id", "venta_id", "entrega_id"
+          "cantidad_paquetes", "pre_factura", "pre_factura_id", "venta_id", "entrega_id"
         )
+        # C20-11. `proveedor` es columna string legacy Y el nombre de
+        # `belongs_to :proveedor` (PR-D3.a). Rails le da `proveedor=` a la
+        # asociación, así que por `create!` el string iba al writer equivocado:
+        # con NULL pasaba de casualidad; con "" —que es lo que deja cualquier
+        # update— o con "Amazon", `AssociationTypeMismatch`. Jorge lo vio en
+        # staging *"al actualizar varias veces"*: la segunda subida de cajas era
+        # la que reventaba. Se copia por column accessor, como en el resto del
+        # repo (`EtiquetarController#proveedor_string_param`). Es dato del
+        # envío, así que las cajas nuevas lo heredan igual que el cliente.
+        proveedor_legacy = attrs.delete("proveedor")
         ((n + 1)..m).each do |i|
-          hermanas << create!(attrs.merge("numero_caja" => i, "cantidad_paquetes" => m))
+          caja = new(attrs.merge("numero_caja" => i, "cantidad_paquetes" => m))
+          caja[:proveedor] = proveedor_legacy
+          caja.save!
+          hermanas << caja
         end
       end
 
