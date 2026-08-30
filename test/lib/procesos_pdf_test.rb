@@ -79,25 +79,24 @@ class ProcesosPdfTest < ActiveSupport::TestCase
   end
 
   test "de etiquetar se pasa al manifiesto, sin empaque en el medio" do
-    # Jorge, 2026-08-10: "hasta que terminemos con etiquetas y entrega personal
-    # hagamos preguntas de empaque". El empaque queda FUERA del documento —ni
-    # caja ni pregunta— y el diagrama muestra lo que hoy pasa de verdad, que es
-    # etiquetado → manifiesto directo.
+    # C21-01 · Hasta la Conversación 21 el empaque estaba FUERA del documento:
+    # Jorge, 2026-08-10, *"hasta que terminemos con etiquetas y entrega personal
+    # hagamos preguntas de empaque"*, y el diagrama mostraba lo que de verdad
+    # pasaba —etiquetado → manifiesto directo—. Ahora la pantalla existe, así que
+    # el paso entra en medio, que es donde va.
     titulos = ProcesosPdf::CAMINO_MIAMI.map { |p| p[:titulo] }
 
-    assert_equal "Manifiesto", titulos[titulos.index("Etiquetar") + 1]
-    assert_empty @doc.todos_los_pasos.select { |p| p[:estado] == "empacado" }
-    assert_empty ProcesosPdf::PREGUNTAS.select { |q| q[:titulo].match?(/empac/i) }
+    assert_equal "Empacar", titulos[titulos.index("Etiquetar") + 1]
+    assert_equal "Manifiesto", titulos[titulos.index("Empacar") + 1]
   end
 
-  test "el empaque sigue sin tener quien lo asigne" do
-    # `empacado` está en el enum y en ESTADOS_ORDEN, pero NINGÚN controller lo
-    # asigna: `EtiquetarController` lo dice —"queda reservado para el módulo de
-    # empaque, que todavía no existe"— y el manifiesto salta de `recibido_miami`
-    # a `enviado_honduras`. El día que alguien construya la pantalla, el salto
-    # que dibuja el diagrama deja de ser cierto y esto avisa.
-    assert_empty quien_asigna("empacado"),
-                 "ya hay código que asigna `empacado`: el diagrama quedó viejo"
+  # El reverso del test que había: antes fijaba que NADIE asignara `empacado`
+  # —para avisar el día que alguien construyera la pantalla—. Ese día llegó con
+  # `C21-01`, así que ahora fija lo contrario: que el paso dibujado tenga quien
+  # lo escriba de verdad.
+  test "el empaque ya tiene quien lo asigne, y es la pantalla que lo dibuja" do
+    assert_not_empty quien_asigna("empacado"),
+                     "el diagrama dibuja el paso de empacar, pero nadie escribe el estado"
   end
 
   test "un hueco no tiene ruta, porque no hay pantalla" do

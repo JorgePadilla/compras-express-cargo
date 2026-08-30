@@ -35,11 +35,13 @@ class ProcesosPdf
       actor: :fisico, existe: true },
     { titulo: "Etiquetar", quien: "digitador de Miami",
       actor: :persona, ruta: "etiquetar_path", estado: "recibido_miami", existe: true },
-    # Acá NO va el paso de empacar. Jorge, 2026-08-10: "hasta que terminemos
-    # con etiquetas y entrega personal hagamos preguntas de empaque". El estado
-    # `empacado` existe en el enum pero nadie lo asigna, así que el paquete pasa
-    # de etiquetado directo al manifiesto — el diagrama muestra eso, que es lo
-    # que hoy pasa de verdad. Vuelve como sección propia cuando toque.
+    # C21-01 · El paso de empacar **volvió**, que es lo que este comentario
+    # decía que pasaría "cuando toque". Yusef lo pidió mostrando la bodega en
+    # vivo: *"ahí están empacando, mirá… y aquí es donde hace falta, es el pip
+    # pip pip"*. Es también el primer lugar del sistema que escribe `empacado`,
+    # un estado que vivía en el enum sin dueño.
+    { titulo: "Empacar", quien: "digitador de Miami, con la pistola",
+      actor: :persona, ruta: "manifiestos_path", estado: "empacado", existe: true },
     { titulo: "Manifiesto", quien: "supervisor de Miami",
       actor: :persona, ruta: "manifiestos_path", estado: "enviado_honduras", existe: true }
   ].freeze

@@ -51,7 +51,10 @@ class SonidosCableadosTest < ActiveSupport::TestCase
   # Las pantallas de escaneo: el operario está con la pistola y el paquete en
   # la mano, no leyendo. El diálogo de configuración de sonidos NO entra —ese
   # lo abre el operario con un clic, o sea que ya está mirando.
-  CONTROLLERS_DE_ESCANEO = %w[etiquetar entrega_personal].freeze
+  # C21-01: `empaque` entra acá el día que existe. Si no, la regla de «ningún
+  # aviso sale mudo» no cubriría la pantalla nueva — que es exactamente el
+  # agujero que este lint existe para tapar: el operario mira la pistola.
+  CONTROLLERS_DE_ESCANEO = %w[etiquetar entrega_personal empaque].freeze
 
   # Una línea que abre un modal: `showModal()`, o un target con "Modal" en el
   # nombre al que le sacan el `hidden`. Los banners no cuentan: se ven sin

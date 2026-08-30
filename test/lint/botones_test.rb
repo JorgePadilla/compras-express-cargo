@@ -95,6 +95,11 @@ class BotonesTest < ActiveSupport::TestCase
     "app/views/cuenta/facturas/show.html.erb"                => 2,
     "app/views/cuenta/pre_alertas/new.html.erb"              => 2,
     "app/views/cuenta/recibos/show.html.erb"                 => 2,
+    # C21-01 · No es un botón: es el selector de en qué caja se está empacando,
+    # una tarjeta por caja con su letra, su código y cuántos paquetes lleva.
+    # `ButtonComponent` no expresa una tarjeta seleccionable, y el mismo patrón
+    # ya vive en el prompt de tipo de envío de /etiquetar.
+    "app/views/empaque/show.html.erb"                        => 1,
     "app/views/entregas/index.html.erb"                      => 2,
     "app/views/entregas/new.html.erb"                        => 2,
     "app/views/financiamientos/show.html.erb"                => 2,
