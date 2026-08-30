@@ -8170,6 +8170,25 @@ Y explicó la forma con el ejemplo del impreso (`286441-1`, `-2`, `-3`):
 
 O sea: la misma lógica de sufijos que ya usan nuestras cajas de un split.
 
+**Cómo se cargan, desde `PR-U2`.** Arrancaron como **tres renglones vacíos
+fijos**, con el argumento de que *"alcanzan para el caso normal y no obligan a
+nadie a pelear con un botón de «agregar»"*. El problema estaba del otro lado:
+con cuatro guías había que guardar, volver a entrar y llenar la cuarta, y las
+tres casillas vacías ocupaban la pantalla siempre. Jorge, 2026-08-30: *"veo que
+hay 3 guías por defecto, esto debería ser un poco más dinámico"*.
+
+Ahora las filas se agregan y se quitan sin recargar, con el patrón que el repo
+ya tenía en los correos del cliente: el `<template>` se genera **del mismo
+partial** que las filas del servidor, con `child_index: "NEW_INDEX"`. Sin guías
+todavía, arranca con una fila lista para escribir — entrar y tener que apretar
+«Agregar» antes de poder teclear sería un paso de más en la pantalla que existe
+justamente para teclear guías.
+
+El orden sale del `id`, no de `position`: las guías se cargan en orden y
+`order(:position, :id)` con todo en cero da orden de inserción, que es lo que se
+quiere para `286441-1, -2, -3`. Escribir `position` pediría renumerar en JS en
+cada alta y baja, para un caso —reordenar a mano— que no tiene pantalla.
+
 ---
 
 ### C21-12 · Los permisos de los roles, editables por ellos — 🆕 **PLANIFICADO**

@@ -137,6 +137,69 @@ class GuiasAduanaTest < ActionDispatch::IntegrationTest
     assert_equal Date.new(2026, 8, 30), @manifiesto.reload.fecha_aduana.to_date
   end
 
+  # ── El `<template>` de la fila nueva ─────────────────────────────────────
+  #
+  # `PR-C6.44` se pagó caro: la fila de pre-alerta estaba escrita seis veces y
+  # el `<template>` a mano tenía SEIS celdas contra siete columnas, así que cada
+  # fila que agregaba el JS salía corrida. El arreglo no fue copiar mejor: fue
+  # que el template **se genere del mismo partial**. Estos tests cuidan eso.
+  #
+  # Ojo con el regex: `fields_for` renderiza `name` e `id` **al final** del tag,
+  # así que un corte que asuma `name` primero pasa vacío y el test deja de
+  # verificar en silencio (`pre_alertas_admin_form_test.rb:28-41`). Se corta el
+  # tag entero.
+  test "el template sale del mismo partial que las filas" do
+    @manifiesto.guias.create!(numero: "286441-1")
+    ingresar(users(:supervisor_prefactura))
+    get edit_guias_aduana_url(@manifiesto)
+
+    assert_match(/NEW_INDEX/, plantilla, "el template tiene que traer el marcador")
+    assert_match(/class="guia-fila/, plantilla, "y la misma clase que la fila real")
+    assert_match(/guias-repetidor#quitar/, plantilla, "con su botón de quitar")
+  end
+
+  # El `[id]` del template va **presente y vacío**, no ausente. Dos razones:
+  # Rails trata un `id` en blanco como registro nuevo (no sale a buscarlo), y el
+  # Stimulus lo usa para decidir si al quitar hay que marcar `_destroy` —fila ya
+  # guardada— o sacar el nodo del DOM —fila nueva—. Sin el campo, una fila nueva
+  # y una vieja se ven iguales.
+  test "el template trae el id vacío, que es como el JS distingue fila nueva" do
+    ingresar(users(:supervisor_prefactura))
+    get edit_guias_aduana_url(@manifiesto)
+
+    campo_id = plantilla[/<input[^>]*NEW_INDEX\]\[id\][^>]*>/].to_s
+    assert campo_id.present?, "el campo id tiene que estar"
+    assert_no_match(/\bvalue="[^"]+"/, campo_id, "y tiene que salir sin valor")
+  end
+
+  test "hay botón de agregar, y ya no tres renglones vacíos fijos" do
+    ingresar(users(:supervisor_prefactura))
+    get edit_guias_aduana_url(@manifiesto)
+
+    assert_select "button", text: /Agregar guía/
+    assert_no_match(/guias_attributes\]\[nueva[0-9]/, response.body,
+                    "los tres renglones fijos se fueron")
+  end
+
+  # Sin ninguna guía, una fila lista para escribir: entrar y tener que apretar
+  # «Agregar» antes de poder teclear es un paso de más en la pantalla que existe
+  # justamente para teclear guías.
+  test "sin guías arranca con una fila vacía" do
+    assert_empty @manifiesto.guias
+    ingresar(users(:supervisor_prefactura))
+    get edit_guias_aduana_url(@manifiesto)
+
+    assert_equal 1, cuerpo_del_form.scan(/class="guia-fila/).size
+  end
+
+  test "con guías cargadas no agrega una vacía de más" do
+    @manifiesto.guias.create!(numero: "286441-1")
+    ingresar(users(:supervisor_prefactura))
+    get edit_guias_aduana_url(@manifiesto)
+
+    assert_equal 1, cuerpo_del_form.scan(/class="guia-fila/).size
+  end
+
   test "la pantalla de edición no muestra los campos de Miami" do
     ingresar(users(:supervisor_prefactura))
     get edit_guias_aduana_url(@manifiesto)
@@ -145,5 +208,17 @@ class GuiasAduanaTest < ActionDispatch::IntegrationTest
     assert_select "select[name='manifiesto[consignatario_id]']", 0
     assert_select "input[name='manifiesto[es_prioridad]']", 0
     assert_select "input[name='manifiesto[fecha_aduana]']"
+  end
+
+  private
+
+  def plantilla
+    response.body[/<template[^>]*>.*?<\/template>/m].to_s
+  end
+
+  # El form **sin** el `<template>`: si no, la fila de adentro del template
+  # cuenta como una fila más y los conteos salen de a dos.
+  def cuerpo_del_form
+    response.body.sub(/<template[^>]*>.*?<\/template>/m, "")
   end
 end

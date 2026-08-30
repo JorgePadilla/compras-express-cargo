@@ -1,0 +1,25 @@
+<%# C21-11 · Una guía del proveedor. Locals: `gf` (el form builder anidado).
+
+    Sale de acá y no de un string en el JS: un `<template>` escrito a mano se
+    desincroniza de la fila y cada una nueva sale distinta — la lección de
+    `PR-C6.44`, que se pagó con un template de seis celdas contra una tabla de
+    siete columnas.
+
+    La pantalla es táctil (`PR-U2`): la fila va a 44 px de alto y el botón de
+    quitar es un cuadrado de 44, no una casilla de 13 al lado del campo. %>
+<div class="guia-fila flex items-center gap-2">
+  <%= gf.hidden_field :id %>
+  <%= gf.text_field :numero, placeholder: "Número de guía",
+        class: "block w-full min-h-11 rounded-lg border-gray-300 shadow-sm font-mono " \
+               "focus:ring-cec-teal focus:border-cec-teal" %>
+  <%= gf.hidden_field :_destroy, data: { guias_repetidor_target: "destruir" } %>
+  <button type="button" data-action="click->guias-repetidor#quitar"
+          class="shrink-0 w-11 h-11 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 foco-cec"
+          aria-label="Quitar esta guía">
+    <%# `disable_default_class` porque si no el `h-6 w-6` del gem gana en el CSS
+        y el icono sale a 24 px sin importar lo que diga la clase de acá. Es la
+        misma razón por la que `ButtonComponent` lo pasa. %>
+    <%= heroicon "x-mark", variant: :outline,
+          options: { class: "w-5 h-5", disable_default_class: true } %>
+  </button>
+</div>

@@ -52,30 +52,46 @@ end %>
     </div>
 
     <%# C21-11 · *"El número de guía termina siendo varios"*, con la forma de
-        nuestros splits: 286441-1, -2, -3. %>
-    <div class="mt-6">
+        nuestros splits: 286441-1, -2, -3.
+
+        `PR-U2`: eran tres renglones vacíos fijos. Con cuatro guías había que
+        guardar, volver a entrar y llenar la cuarta; y las tres casillas vacías
+        ocupaban la pantalla siempre. Jorge: *"veo que hay 3 guías por defecto,
+        esto debería ser un poco más dinámico"*.
+
+        El `<template>` se genera **del mismo partial** que las filas de arriba,
+        con `child_index: "NEW_INDEX"`. Y va `ManifiestoGuia.new` y no
+        `guias.build`: `build` agrega a la asociación y pintaría una fila
+        fantasma de más. %>
+    <div class="mt-6 max-w-md" data-controller="guias-repetidor">
       <span class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Números de guía del proveedor</span>
       <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
         Pueden ser varios — como <span class="font-mono">286441-1</span>, <span class="font-mono">-2</span>, <span class="font-mono">-3</span>.
       </p>
-      <div class="space-y-2 max-w-md">
+
+      <div data-guias-repetidor-target="lista" class="space-y-2">
         <%= f.fields_for :guias do |g| %>
-          <div class="flex items-center gap-2">
-            <%= g.text_field :numero, placeholder: "Número de guía",
-                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono focus:ring-cec-teal focus:border-cec-teal" %>
-            <% if g.object.persisted? %>
-              <label class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                <%= g.check_box :_destroy, class: "rounded border-gray-300 text-red-600 focus:ring-red-500" %> Quitar
-              </label>
-            <% end %>
-          </div>
+          <%= render "guias_aduana/guia_fila", gf: g %>
         <% end %>
-        <%# PR-U2 reemplaza estos tres renglones fijos por filas dinámicas. %>
-        <% (@manifiesto.guias.size...(@manifiesto.guias.size + 3)).each do |i| %>
-          <%= text_field_tag "manifiesto[guias_attributes][nueva#{i}][numero]", nil,
-                placeholder: "Número de guía",
-                class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono focus:ring-cec-teal focus:border-cec-teal" %>
+        <%# Sin ninguna guía todavía, una fila lista para escribir: entrar y
+            tener que apretar «Agregar» antes de poder teclear es un paso de más
+            en la pantalla que existe justamente para teclear guías. %>
+        <% if @manifiesto.guias.empty? %>
+          <%= f.fields_for :guias, ManifiestoGuia.new, child_index: "nueva" do |g| %>
+            <%= render "guias_aduana/guia_fila", gf: g %>
+          <% end %>
         <% end %>
+      </div>
+
+      <template data-guias-repetidor-target="template">
+        <%= f.fields_for :guias, ManifiestoGuia.new, child_index: "NEW_INDEX" do |g| %>
+          <%= render "guias_aduana/guia_fila", gf: g %>
+        <% end %>
+      </template>
+
+      <div class="mt-3">
+        <%= render(ButtonComponent.new(variant: :outline_teal, size: :lg, icon: "plus-circle",
+              data: { action: "click->guias-repetidor#agregar" })) { "Agregar guía" } %>
       </div>
     </div>
 
