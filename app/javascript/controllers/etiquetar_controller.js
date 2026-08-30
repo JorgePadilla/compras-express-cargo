@@ -28,11 +28,14 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
     "conflictoSesionModal", "conflictoSesionTexto", "conflictoSesionDejarBtn",
     "sucursalBanner", "sucursalTexto", "sucursalModal", "sucursalModalTexto",
     "quitarCobroModal",
-    "etiquetasModal", "etiquetasInput",
+    "etiquetasModal", "etiquetasInput", "pesosSeccion", "pesosAviso", "pesosLista",
     "avisoModal", "avisoEncabezado", "avisoTipo", "avisoTitulo", "avisoTexto",
     "avisoPrincipal", "avisoSecundario"
   ]
   static values = {
+    // C20-12: el envío ya tiene peso → subir cajas exige pesar cada una.
+    envioPesado: Boolean,
+    pesosActuales: Object,
     checkUrl: String,
     buscarUrl: String,
     // PR-C6.9: el tipo de envío del lote, para poder comparar contra el de la
@@ -1049,6 +1052,7 @@ cerrarQuitarCobro() {
     if (this.hasEtiquetasInputTarget) this.etiquetasInputTarget.value = String(this._etiquetasPorDefecto())
     // A1-10: "un pin antes de que salga cualquier modal". El operario está
     // mirando la pistola, no la pantalla — un modal mudo se lo pierde.
+    this._ocultarPesos()
     this.dispatch("modalAbierto")
     this.etiquetasModalTarget.showModal()
     // `select()` y no solo `focus()`: el operario teclea el número encima sin
@@ -1109,12 +1113,140 @@ cerrarQuitarCobro() {
     const cantidad = this._etiquetasPedidas()
     if (cantidad === null) return
 
+    // C20-12: el segundo paso. Si hay que pesar y todavía no se mostró, se
+    // muestra; si ya está a la vista, no sale sin los N pesos.
+    let pesos = null
+    if (this._hayQuePesar(cantidad)) {
+      if (!this._pesosVisibles()) return this._mostrarPesos(cantidad)
+      pesos = this._pesosCompletos(cantidad)
+      if (!pesos) return
+    }
+
     this.etiquetasModalTarget.close()
-    this._submitWithPrint(cantidad)
+    this._submitWithPrint(cantidad, pesos)
   }
 
   cerrarEtiquetas() {
+    this._ocultarPesos()
     this.etiquetasModalTarget.close()
+  }
+
+  // ── C20-12 · pesar al partir ──────────────────────────────────────────────
+  //
+  // Yusef, 2026-08-30: *"si no tiene pesos, pues los ponemos sin pesos; pero si
+  // ya tiene pesos tenemos que obligarlo a llenar, para evitar esta
+  // incoherencia"*. La incoherencia: una caja de 5 lb partida en tres eran tres
+  // cajas de 5 lb. Solo al subir sobre un envío que ya tiene peso: el peso de
+  // una caja sola era el del envío entero, así que al partir 1→N los N campos
+  // van vacíos; en un split que ya venía pesado caja por caja, las que existen
+  // traen el suyo y las nuevas van vacías. Todos obligatorios — y el servidor
+  // lo exige igual (`EtiquetarController#update`).
+  _hayQuePesar(cantidad) {
+    return this.envioPesadoValue && cantidad > this._etiquetasPorDefecto()
+  }
+
+  _pesosVisibles() {
+    return this.hasPesosSeccionTarget && !this.pesosSeccionTarget.classList.contains("hidden")
+  }
+
+  // Si el operario corrige la cantidad con los pesos a la vista, las filas se
+  // rehacen sin perder lo que ya tecleó — y sin robarle el foco.
+  etiquetasCambiadas() {
+    if (!this._pesosVisibles()) return
+    const n = parseInt(this.etiquetasInputTarget.value, 10)
+    if (Number.isInteger(n) && this._hayQuePesar(n)) this._mostrarPesos(n, { enfocar: false })
+    else this._ocultarPesos()
+  }
+
+  _mostrarPesos(cantidad, { enfocar = true } = {}) {
+    if (!this.hasPesosSeccionTarget) return
+    const tecleados = this._leerPesos()
+    const actuales = this._etiquetasPorDefecto()
+    const prellenar = actuales > 1 ? (this.pesosActualesValue || {}) : {}
+
+    this.pesosListaTarget.replaceChildren()
+    for (let i = 1; i <= cantidad; i++) {
+      const fila = document.createElement("label")
+      fila.className = "flex items-center gap-2 text-sm"
+      const nombre = document.createElement("span")
+      nombre.className = "w-14 text-gray-600"
+      nombre.textContent = `Caja ${i}`
+      const input = document.createElement("input")
+      input.type = "number"
+      input.step = "0.01"
+      input.min = "0.01"
+      input.value = tecleados[i] ?? prellenar[i] ?? ""
+      input.dataset.cajaPeso = String(i)
+      input.dataset.action = "keydown->etiquetar#pesosKeydown"
+      input.setAttribute("autocomplete", "off")
+      input.setAttribute("aria-label", `Peso de la caja ${i}`)
+      input.className = "w-24 text-right rounded-lg border-gray-300 text-sm text-cec-navy shadow-sm focus:ring-cec-teal focus:border-cec-teal"
+      const unidad = document.createElement("span")
+      unidad.className = "text-xs text-gray-500"
+      unidad.textContent = "lb"
+      fila.append(nombre, input, unidad)
+      this.pesosListaTarget.appendChild(fila)
+    }
+
+    this.pesosAvisoTarget.textContent = actuales > 1
+      ? "El envío ya tiene peso: pesá las cajas nuevas."
+      : `La caja tenía ${this._pesoActualTexto()} lb. Pesá cada una de las ${cantidad}.`
+    this.pesosSeccionTarget.classList.remove("hidden")
+    if (enfocar) this._primerPesoVacio()?.focus()
+  }
+
+  _ocultarPesos() {
+    if (!this.hasPesosSeccionTarget) return
+    this.pesosSeccionTarget.classList.add("hidden")
+    this.pesosListaTarget.replaceChildren()
+  }
+
+  _leerPesos() {
+    const pesos = {}
+    if (!this.hasPesosListaTarget) return pesos
+    this.pesosListaTarget.querySelectorAll("[data-caja-peso]").forEach((el) => {
+      if (el.value.trim() !== "") pesos[el.dataset.cajaPeso] = el.value.trim()
+    })
+    return pesos
+  }
+
+  // Los N pesos, o null — y el foco en el primero que falta.
+  _pesosCompletos(cantidad) {
+    const pesos = this._leerPesos()
+    for (let i = 1; i <= cantidad; i++) {
+      if (!(parseFloat(pesos[i]) > 0)) {
+        this._primerPesoVacio()?.focus()
+        return null
+      }
+    }
+    return pesos
+  }
+
+  _primerPesoVacio() {
+    if (!this.hasPesosListaTarget) return null
+    return Array.from(this.pesosListaTarget.querySelectorAll("[data-caja-peso]"))
+      .find((el) => !(parseFloat(el.value) > 0)) || null
+  }
+
+  _pesoActualTexto() {
+    const pesos = this.pesosActualesValue || {}
+    const primero = pesos[1] ?? Object.values(pesos)[0]
+    return primero == null ? "" : String(primero)
+  }
+
+  // Enter en un peso: al siguiente que falte; si no falta ninguno, confirma.
+  // Sobre uno vacío no avanza — es justamente el que hay que llenar.
+  pesosKeydown(e) {
+    if (e.key === "Escape") {
+      e.preventDefault()
+      return this.cerrarEtiquetas()
+    }
+    if (e.key !== "Enter") return
+    e.preventDefault()
+    const falta = this._primerPesoVacio()
+    if (falta === e.target) return
+    if (falta) return falta.focus()
+    this.confirmarEtiquetas()
   }
 
   // Un número mal tecleado no puede grabar 500 paquetes ni tirar 500 etiquetas.
@@ -1129,7 +1261,7 @@ cerrarQuitarCobro() {
     return n
   }
 
-  _submitWithPrint(etiquetas = null) {
+  _submitWithPrint(etiquetas = null, pesos = null) {
     this._removePrintField()
     const input = document.createElement("input")
     input.type = "hidden"
@@ -1161,6 +1293,19 @@ cerrarQuitarCobro() {
       cuantas.value = String(etiquetas)
       cuantas.dataset.printField = "true"
       this.formTarget.appendChild(cuantas)
+    }
+
+    // C20-12: el peso de cada caja, con el nombre que `MedidasPorCaja` ya lee.
+    // Con `data-print-field` para que `_removePrintField` los limpie después.
+    if (pesos) {
+      Object.entries(pesos).forEach(([i, peso]) => {
+        const campo = document.createElement("input")
+        campo.type = "hidden"
+        campo.name = `paquete[cajas][${i}][peso]`
+        campo.value = peso
+        campo.dataset.printField = "true"
+        this.formTarget.appendChild(campo)
+      })
     }
 
     this.formTarget.requestSubmit()

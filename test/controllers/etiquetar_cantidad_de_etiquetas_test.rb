@@ -47,11 +47,15 @@ class EtiquetarCantidadDeEtiquetasTest < ActionDispatch::IntegrationTest
   test "de 1 a 3 — el reempaque que no cabía" do
     paquete = crear_recibido
 
-    actualizar(paquete, etiquetas: 3)
+    # C20-12: la caja tenía 5 lb, así que al partirla se pesa cada una — es
+    # lo que el modal manda en su segundo paso. Sin los pesos, el servidor la
+    # rechaza (`etiquetar_pesar_al_partir_test`).
+    actualizar(paquete, etiquetas: 3, pesos: { 1 => "2", 2 => "2", 3 => "1.5" })
 
     quedan = del_envio(paquete)
     assert_equal [ 1, 2, 3 ], quedan.map(&:numero_caja)
     assert_equal 1, quedan.map(&:numero_recepcion).uniq.size
+    assert_equal [ 2.0, 2.0, 1.5 ], quedan.map { |c| c.peso.to_f }, "el 5 de la caja sola ya no vale"
   end
 
   test "contestar la misma cantidad no toca nada" do
@@ -84,9 +88,11 @@ class EtiquetarCantidadDeEtiquetasTest < ActionDispatch::IntegrationTest
 
   private
 
-  def actualizar(paquete, etiquetas:, print: nil)
+  def actualizar(paquete, etiquetas:, print: nil, pesos: nil)
+    cajas = pesos&.to_h { |i, peso| [ i.to_s, { peso: peso } ] }
     patch actualizar_etiquetar_url(paquete),
-          params: { etiquetas: etiquetas, print: print, paquete: { descripcion: "Perfumes" } }.compact,
+          params: { etiquetas: etiquetas, print: print,
+                    paquete: { descripcion: "Perfumes", cajas: cajas }.compact }.compact,
           headers: { "Accept" => "text/vnd.turbo-stream.html" }
   end
 

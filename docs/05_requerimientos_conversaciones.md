@@ -7515,7 +7515,50 @@ Cubre las tres pantallas que pasan por `ajustar_split!`: /etiquetar, /paquetes
 y el re-escaneo de un paquete EP. **Entrega Personal no tiene update de cajas**
 —solo crea, por `crear_split!`, que va por otro camino— así que ahí no pegaba.
 Lo que sí salió de mirar esto es `RP-51`: las cajas nuevas heredan también el
-peso y las medidas de la caja 1.
+peso y las medidas de la caja 1. Yusef contestó al día siguiente: `C20-12`.
+
+### C20-12 · «Si ya tiene peso, obligarlo a llenar»: pesar al partir — ✅ **HECHO (PR-C7.81)**
+
+> Yusef, 2026-08-30, cuando Jorge le llevó `RP-51`: *"Si no tiene pesos, pues
+> los ponemos sin pesos. Pero si ya tiene pesos, tenemos que obligarlo a
+> llenar, para evitar esta incoherencia."*
+
+**De dónde sale.** Al arreglar `C20-11` apareció que, al subir cajas, las
+nuevas heredaban **también el peso y las medidas** de la caja 1 (desde
+`PR-C6.7`): una caja de 5 lb reempacada en tres nacía como tres cajas de 5 lb
+— y el flete se cobra por caja. Se le llevó como pregunta con dos opciones
+(dejar que hereden, o que nazcan sin peso y avisar al cobrar) y Yusef contestó
+con una tercera, mejor que las dos: **nunca copiar, y exigir el peso en el
+momento**.
+
+**La regla.**
+- Las cajas nuevas **no heredan nada de lo que es de cada caja**: ni peso, ni
+  medidas, ni cantidad de productos. Si el envío no tenía peso, nacen sin peso
+  y no se pregunta nada.
+- Si el envío **ya tiene peso** y se piden más cajas de las que hay, hay que
+  pesar **cada una, la original incluida**: el peso de una caja sola era el del
+  envío entero, y después de reempacar ya no vale. Al partir 1→N los N campos
+  van vacíos; en un split que ya venía pesado caja por caja (3→5), las que
+  existen traen el suyo y las nuevas van vacías. Todos obligatorios.
+- Bajar cajas no pide nada: no cambia el peso de nadie.
+
+**Qué se hizo.** El modal de «¿cuántas etiquetas?» —que en modo actualización
+es, por diseño, el único lugar donde se cambia la cantidad— gana un segundo
+paso solo en ese caso: tecleás 3 y aparecen tres pesos. Enter pasa al
+siguiente que falte y confirma cuando están todos; sobre uno vacío no avanza.
+Los pesos viajan como `paquete[cajas][i][peso]`, que `MedidasPorCaja` ya sabía
+leer, y `ajustar_split!` los aplica con `por_caja:` —igual que `crear_split!`—
+a todas las cajas. El servidor exige lo mismo por su cuenta (422 con mensaje)
+por si alguien salta el JS, y cuida que el peso pre-llenado del formulario no
+pise el nuevo de la caja 1. `CAMPOS_POR_CAJA` pasó a vivir en `Paquete`: es
+un hecho del dominio, no del formulario.
+
+**Alcance, para que no vuelva como bug.** En `/paquetes` (que Miami no usa:
+*"ellos no manejan la página de paquetes"*) aplica solo la mitad del modelo
+—subir cajas ya no copia el peso— pero **no** el obligar: ahí cada caja se
+edita después por separado. Al dar de alta no cambia nada: las cajas se pesan
+una por una con F6 y la incoherencia no puede darse. Entrega Personal no tiene
+actualización de cajas.
 
 ### Las preguntas que abre
 
@@ -7523,7 +7566,7 @@ peso y las medidas de la caja 1.
 |---|---|
 | `RP-49` | **Registro y reporte de errores del sistema.** Yusef, viendo la pantalla de error: *"cuando te pasa algo así… ¿cómo lo reportás? ¿Venís y lo grabás, un videíto?"* · *"Normalmente en una empresa grande hay como un equipo que está grabando todos los errores… lo más bonito sería llegar a eso y que mande un reporte."* Y para qué lo quiere: *"más que el reporte, es para poder ir a devolverme yo… que te diga qué estaba haciendo"* — o sea contexto, no solo el stack. Es una serie propia (esbozo: `solid_errors` + contexto de usuario/URL, o tabla propia con pantalla de admin). Decidir alcance antes de arrancar |
 | `RP-50` | **Estandarizar F8 / F9 / F10.** Yusef: *"F8 es guardar y F9 es guardar y notificar… ahorita en etiquetar es guardar e imprimir. ¿Por qué no lo estandarizamos todos?"*. Jorge: *"hay opciones donde no queremos imprimir"*. La propuesta que quedó sonando: F8/F10 guardar (+notificar) y F9 guardar + imprimir, **notificando al final** para *"que no te atrase el de Miami y quede en cola la notificación"*. Tocar los atajos es tocar el dedo de Miami: se decide antes, no en el camino |
-| `RP-51` | **Al subir cajas, ¿las nuevas heredan el peso y las medidas de la caja 1?** Hoy sí (desde `PR-C6.7`, `ajustar_split!` copia todo lo de la caja 1): una caja de 5 lb que se parte en 3 nace como tres cajas de 5 lb si nadie las re-pesa — y el flete se cobra por caja (`RP-41`). Salió al arreglar `C20-11`; no se tocó porque es plata. Confirmar con Yusef si al reempacar siempre se pesa cada bulto; si no, que nazcan sin peso ni medidas |
+| ~~`RP-51`~~ | ~~Al subir cajas, ¿las nuevas heredan el peso y las medidas de la caja 1?~~ **✅ contestada el 2026-08-30**: *"si no tiene pesos, los ponemos sin pesos; si ya tiene pesos, obligarlo a llenar"* — nunca se copia, y al partir un envío pesado se pesa cada caja en el momento. Ver `C20-12` — `PR-C7.81` |
 
 ### Dudosos del transcript
 

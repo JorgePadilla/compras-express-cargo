@@ -122,6 +122,11 @@ end %>
          —que es lo que hace el que va rápido— las bajaría a una, y el PIN de
          supervisor solo cuida las que ya se cobraron. %>
      data-etiquetar-cajas-actuales-value="<%= @modo_actualizacion ? @paquete.cantidad_paquetes.to_i : 0 %>"
+     <%# C20-12: si el envío ya tiene peso, subir cajas exige pesar cada una.
+         El modal necesita saberlo, y qué pesa hoy cada caja para pre-llenar
+         las que ya venían pesadas. Vacío al dar de alta. %>
+     data-etiquetar-envio-pesado-value="<%= @pesos_actuales.to_h.any? %>"
+     data-etiquetar-pesos-actuales-value="<%= @pesos_actuales.to_h.to_json %>"
      <%# PR-C6.9: tres sonidos, no uno. Yusef: "pita para dos razones... pita,
          te decía, pre-alerta" y "el otro pito es porque te tira que ya
          existía". Más el feo, para cuando el paquete no es de esta sesión. %>
@@ -326,11 +331,21 @@ end %>
           fechas. %>
       <input type="number" min="1" max="99" value="1" step="1"
              data-etiquetar-target="etiquetasInput"
-             data-action="keydown->etiquetar#etiquetasKeydown"
+             data-action="keydown->etiquetar#etiquetasKeydown input->etiquetar#etiquetasCambiadas"
              autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other"
              aria-label="Cantidad de etiquetas"
              class="w-28 text-center text-3xl font-bold rounded-lg border-gray-300 text-cec-navy shadow-sm focus:ring-cec-teal focus:border-cec-teal">
       <p class="text-[11px] text-gray-500 mt-2">Una por caja. Todas comparten el tracking y el número de recepción.</p>
+      <%# C20-12 · el segundo paso: solo cuando el envío ya tiene peso y se piden
+          más cajas de las que hay. Yusef: "si ya tiene pesos tenemos que
+          obligarlo a llenar, para evitar esta incoherencia". Las filas las pinta
+          el JS; los pesos viajan como `paquete[cajas][i][peso]`, que
+          `MedidasPorCaja` ya sabe leer. %>
+      <div data-etiquetar-target="pesosSeccion" class="hidden mt-4 pt-3 text-left border-t border-gray-200">
+        <p class="text-xs font-semibold text-cec-navy" data-etiquetar-target="pesosAviso"></p>
+        <p class="text-[11px] text-gray-500 mt-0.5">Después de reempacar, el peso de cada caja es el que manda. Enter pasa a la siguiente.</p>
+        <div data-etiquetar-target="pesosLista" class="mt-2 space-y-1.5 max-h-56 overflow-y-auto pr-1"></div>
+      </div>
     </div>
     <div class="flex items-center justify-end gap-3 px-6 py-3 bg-gray-50 border-t border-gray-200">
       <%= render ButtonComponent.new(variant: :secondary,

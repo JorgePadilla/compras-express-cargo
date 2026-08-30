@@ -759,6 +759,14 @@ class Paquete < ApplicationRecord
   # no se etiqueta ni cuenta como pieza en un Warehouse Receipt.
   NO_SON_CAJAS = %w[pre_alerta_estado].freeze
 
+  # Lo que cambia de una caja a otra dentro de un mismo envío. El resto del
+  # paquete es el mismo para todas: mismo tracking, mismo cliente, mismo
+  # servicio. `crear_split!` y `ajustar_split!` lo reparten caja por caja
+  # (`por_caja:`), y al subir cajas **no se hereda** de la caja 1 (C20-12).
+  # Yusef: *"el peso de cada quien"*. `cantidad_productos` entró en `PR-C7.19`
+  # — ver `MedidasPorCaja`, que lee estos campos del formulario.
+  CAMPOS_POR_CAJA = %w[peso alto largo ancho cantidad_productos].freeze
+
   # Las otras cajas del mismo tracking dividido, sin incluirse a sí misma.
   #
   # **Este es el único lugar donde se resuelve quiénes son las hermanas.** Antes
@@ -905,8 +913,13 @@ class Paquete < ApplicationRecord
   # la caja de sus documentos antes de borrarla. Acá `forzar: true` solo salta
   # la guarda.
   #
+  # C20-12: `por_caja:` trae lo que es de cada caja —`{ 1 => { peso: "2" } }`,
+  # igual que en `crear_split!`— y se aplica a **todas**, la original incluida:
+  # el peso de una caja sola era el del envío entero, y después de reempacar
+  # ya no vale. Exigirlo es cosa de quien llama (`EtiquetarController#update`).
+  #
   # Devuelve las cajas que quedan, ordenadas por `numero_caja`.
-  def self.ajustar_split!(paquete, nueva_cantidad, forzar: false)
+  def self.ajustar_split!(paquete, nueva_cantidad, forzar: false, por_caja: {})
     m = nueva_cantidad.to_i
     raise ArgumentError, "la cantidad debe ser >= 1" if m < 1
 
@@ -943,9 +956,16 @@ class Paquete < ApplicationRecord
         # Una caja nueva no está cobrada ni entregada: los enlaces a pre-factura,
         # venta y entrega no se heredan — ni el flag legacy `pre_factura`, que
         # además es una de las dos columnas del párrafo de abajo.
+        #
+        # C20-12: y tampoco hereda lo que es **de cada caja** —peso, medidas,
+        # productos—. Una caja de 5 lb partida en tres nacía como tres cajas de
+        # 5 lb. Yusef: *"si no tiene pesos, pues los ponemos sin pesos; pero si
+        # ya tiene pesos tenemos que obligarlo a llenar"*. Las nuevas nacen sin
+        # nada; lo suyo entra por `por_caja:`, más abajo.
         attrs = hermanas.first.attributes.except(
           "id", "created_at", "updated_at", "guia", "numero_caja",
-          "cantidad_paquetes", "pre_factura", "pre_factura_id", "venta_id", "entrega_id"
+          "cantidad_paquetes", "pre_factura", "pre_factura_id", "venta_id", "entrega_id",
+          *CAMPOS_POR_CAJA
         )
         # C20-11. `proveedor` es columna string legacy Y el nombre de
         # `belongs_to :proveedor` (PR-D3.a). Rails le da `proveedor=` a la
@@ -963,6 +983,17 @@ class Paquete < ApplicationRecord
           caja.save!
           hermanas << caja
         end
+      end
+
+      # C20-12: lo que es de cada caja, caja por caja. Se recorta acá y no se
+      # confía en quien llama: viene de params. `update!` y no `update_column`:
+      # el peso es un cambio de negocio, con validación y con historial.
+      por_caja.each do |numero, valores|
+        caja = hermanas.find { |c| (c.numero_caja || 1).to_i == numero.to_i }
+        next if caja.nil?
+
+        propios = valores.to_h.transform_keys(&:to_s).slice(*CAMPOS_POR_CAJA)
+        caja.update!(propios) if propios.any?
       end
 
       # `update_column` a propósito: `cantidad_paquetes` es un contador, no un

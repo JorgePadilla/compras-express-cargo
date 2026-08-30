@@ -178,6 +178,48 @@ class SplitAjustableTest < ActiveSupport::TestCase
                  "va al writer de la asociación. Mirá cómo `ajustar_split!` trata a `proveedor`."
   end
 
+  # ── C20-12 · «si ya tiene peso, obligarlo a llenar» ──────────────────────
+  #
+  # Yusef, 2026-08-30, cuando Jorge le llevó `RP-51`: *"si no tiene pesos, pues
+  # los ponemos sin pesos; pero si ya tiene pesos tenemos que obligarlo a
+  # llenar, para evitar esta incoherencia"*. La incoherencia: una caja de 5 lb
+  # partida en tres nacía como tres cajas de 5 lb. Acá va la mitad del modelo:
+  # las cajas nuevas no copian nada de lo que es de cada caja, y `por_caja:`
+  # pesa cada una. Obligar es cosa del controller.
+
+  test "subir cajas no copia el peso ni las medidas de la caja 1" do
+    cajas = crear_split(2)
+    cajas.first.update_columns(peso: 5, alto: 10, largo: 20, ancho: 30, cantidad_productos: 3)
+
+    quedan = Paquete.ajustar_split!(cajas.first, 4)
+
+    nuevas = quedan.select { |c| c.numero_caja > 2 }.map(&:reload)
+    Paquete::CAMPOS_POR_CAJA.each do |campo|
+      assert nuevas.all? { |c| c[campo].nil? }, "la caja nueva heredó #{campo}: tres cajas de 5 lb"
+    end
+    assert_equal 5, cajas.first.reload.peso.to_i, "la caja 1 no pierde lo suyo"
+  end
+
+  test "por_caja pesa cada caja, la original incluida" do
+    cajas = crear_split(2)
+    cajas.first.update_columns(peso: 5)
+
+    quedan = Paquete.ajustar_split!(cajas.first, 3,
+                                    por_caja: { 1 => { peso: "2" }, 2 => { peso: "2" }, 3 => { peso: "1.5" } })
+
+    assert_equal [ 2.0, 2.0, 1.5 ], quedan.map { |c| c.reload.peso.to_f },
+                 "el peso de la caja sola era el del envío: después de reempacar ya no vale"
+  end
+
+  test "por_caja solo acepta lo que es de cada caja" do
+    cajas = crear_split(2)
+
+    Paquete.ajustar_split!(cajas.first, 2, por_caja: { "2" => { "peso" => "3", "descripcion" => "pisada" } })
+
+    assert_equal 3.0, cajas.last.reload.peso.to_f
+    assert_equal "Split de prueba", cajas.last.descripcion, "un dato del envío entró por la puerta de la caja"
+  end
+
   private
 
   def crear_split(n)

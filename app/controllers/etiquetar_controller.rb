@@ -129,6 +129,9 @@ class EtiquetarController < ApplicationController
     # marca la cantidad de cajas"* — o sea que lo que el operario conteste acá
     # manda, para arriba y para abajo.
     nueva_cantidad = cantidad_de_cajas_pedida
+    # C20-12: el peso de cada caja, si el modal lo mandó (`paquete[cajas][i][peso]`).
+    por_caja = medidas_por_caja
+    pesos_aplicados = false
 
     # Sobre un esperado no se ajusta nada: todavía no llegó, no tiene número, y
     # sus "cajas" nuevas nacerían con el estado de esperado —invisibles para la
@@ -137,6 +140,17 @@ class EtiquetarController < ApplicationController
     if ajusta_cajas?(nueva_cantidad) && Paquete::NO_SON_CAJAS.include?(@paquete.estado)
       return render_create_error(
         "Este paquete todavía es un esperado de una pre-alerta: se recibe escaneándolo, no actualizándolo."
+      )
+    end
+
+    # C20-12, el «obligar». Yusef, 2026-08-30: *"si no tiene pesos, pues los
+    # ponemos sin pesos; pero si ya tiene pesos tenemos que obligarlo a llenar,
+    # para evitar esta incoherencia"* — una caja de 5 lb partida en tres eran
+    # tres cajas de 5 lb. El modal lo pide en pantalla; acá se exige igual por
+    # si alguien lo salta. Solo al subir: bajar no cambia el peso de nadie.
+    if sube_cajas?(nueva_cantidad) && envio_pesado?(@paquete) && !pesos_completos?(por_caja, nueva_cantidad)
+      return render_create_error(
+        "Este envío ya tiene peso: para partirlo en #{nueva_cantidad} cajas hay que pesar cada una."
       )
     end
 
@@ -155,7 +169,8 @@ class EtiquetarController < ApplicationController
         @paquete.sucursal_recepcion ||= @sucursal_recepcion_sesion
 
         if ajusta_cajas?(nueva_cantidad)
-          restantes = Paquete.ajustar_split!(@paquete, nueva_cantidad)
+          restantes = Paquete.ajustar_split!(@paquete, nueva_cantidad, por_caja: por_caja)
+          pesos_aplicados = por_caja.any?
           # Al reducir, la caja que se está editando puede ser una de las que
           # se van: al re-escanear se abre la más nueva, y ésa es justamente la
           # que `ajustar_split!` borra primero. Seguir con ella era un
@@ -172,7 +187,11 @@ class EtiquetarController < ApplicationController
         # Lo que el formulario traía de peso y medidas era de la caja que se
         # fue; no se le pega a la que sobrevivió.
         cambios = paquete_params.except(:cantidad_paquetes)
-        cambios = cambios.except(*MedidasPorCaja::CAMPOS_POR_CAJA) if @reanclado
+        #
+        # C20-12: y si el modal pesó cada caja, el peso pre-llenado del formulario
+        # tampoco — pisaría el nuevo de la caja 1. Solo cuando de verdad se
+        # aplicaron: una corrección de peso normal, sin tocar la cantidad, entra.
+        cambios = cambios.except(*MedidasPorCaja::CAMPOS_POR_CAJA) if @reanclado || pesos_aplicados
         @paquete.assign_attributes(cambios)
 
         if (prov_str = proveedor_string_param) != :missing
@@ -517,6 +536,8 @@ end
                               .where.not(pin_digest: nil).order(:nombre)
     @motivos_retencion = MotivoRetencion.activos.ordered
     @motivos_envio_politica = MotivoEnvioPolitica.activos.ordered
+    # C20-12: qué pesa hoy cada caja, para que el modal exija pesar al partir.
+    @pesos_actuales = pesos_actuales_del_envio
   end
 
   def render_create_error(mensaje = "No se pudo guardar el paquete.")
@@ -732,6 +753,31 @@ end
     return false if nueva_cantidad == actual
 
     actual > 1 || nueva_cantidad > 1
+  end
+
+  # C20-12. Subir es la única dirección que crea cajas — y por eso la única
+  # que puede inventar pesos.
+  def sube_cajas?(nueva_cantidad)
+    ajusta_cajas?(nueva_cantidad) && nueva_cantidad > [ @paquete.cantidad_paquetes.to_i, 1 ].max
+  end
+
+  def envio_pesado?(paquete)
+    Paquete.cajas_del_mismo_split(paquete).where("peso > 0").exists?
+  end
+
+  def pesos_completos?(por_caja, cantidad)
+    (1..cantidad).all? { |i| por_caja.dig(i, :peso).to_s.to_d.positive? }
+  end
+
+  # Para el modal: qué pesa hoy cada caja del envío que se está actualizando.
+  # Vacío al dar de alta. Va por `assigns_del_formulario` y no solo por `index`
+  # por la lección de `C20-01`: el 422 vuelve a pintar el formulario, y sin
+  # esto el modal olvidaría la regla después de un error.
+  def pesos_actuales_del_envio
+    return {} unless @modo_actualizacion && @paquete&.persisted?
+
+    Paquete.cajas_del_mismo_split(@paquete).where("peso > 0")
+           .map { |c| [ (c.numero_caja || 1).to_i, c.peso.to_f ] }.to_h
   end
 
   def authorize_etiquetar

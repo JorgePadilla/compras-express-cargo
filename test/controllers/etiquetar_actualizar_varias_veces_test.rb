@@ -68,7 +68,10 @@ class EtiquetarActualizarVariasVecesTest < ActionDispatch::IntegrationTest
     Paquete.create!(
       tracking: "VAR#{SecureRandom.hex(4)}", cliente: clientes(:juan), tipo_envio: @cer,
       sucursal_recepcion: @miami, estado: "recibido_miami", descripcion: "Perfumes",
-      peso: 5, user: @user
+      # Sin peso a propósito: desde C20-12, subir las cajas de un envío pesado
+      # exige pesar cada una (`etiquetar_pesar_al_partir_test`). Acá el tema es
+      # el proveedor legacy, no el peso.
+      peso: nil, user: @user
     )
   end
 end
