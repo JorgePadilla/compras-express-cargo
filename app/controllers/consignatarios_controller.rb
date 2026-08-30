@@ -35,10 +35,11 @@ class ConsignatariosController < ApplicationController
   private
 
   def authorize_catalogos
-    # El mismo par que ya manda en /manifiestos y en /etiquetar: los tres
-    # permisos de Miami van juntos, y separarlos acá haría que el link del
-    # sidebar apareciera para gente que después choca con un redirect.
-    require_role(:supervisor_miami, :digitador_miami)
+    # Miami y nada más. Se deriva de `Manifiesto::ROLES_DE_MIAMI` en vez de
+    # escribirse cinco veces: esta misma línea estaba copiada en los cinco
+    # controllers del portal, y `:manifiestos` —que era su llave— dejó de ser
+    # solo de Miami cuando San Pedro entró a llenar la guía (`C21-02`).
+    require_role(*Manifiesto::ROLES_DE_MIAMI)
   end
 
   def set_registro

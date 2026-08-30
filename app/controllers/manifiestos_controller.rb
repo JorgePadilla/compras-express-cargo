@@ -3,6 +3,7 @@ class ManifiestosController < ApplicationController
   # necesariamente tienen rol de Miami — se gatea via authorize_edit
   # del paquete antes de llegar acá.
   before_action :authorize_manifiestos, except: [ :buscar ]
+  before_action :authorize_acciones_de_miami
   before_action :set_manifiesto, only: %i[show edit update add_paquete remove_paquete finalizar documento]
 
   def index
@@ -123,8 +124,20 @@ class ManifiestosController < ApplicationController
     }
   end
 
+  # C21-02 · Miami arma el manifiesto; San Pedro le pone después la guía del
+  # proveedor y la fecha de recibido en Honduras. Las dos mitades entran a la
+  # sección, y `manifiesto_params` recorta lo que cada una puede escribir.
+  #
+  # Lo que es **solo de Miami** —crear, armar cajas, meter paquetes, empacar y
+  # finalizar— va con su propio filtro más abajo.
+  SOLO_MIAMI = %i[new create add_paquete remove_paquete finalizar].freeze
+
   private def authorize_manifiestos
-    require_role(:supervisor_miami, :digitador_miami)
+    require_role(*Manifiesto::ROLES_DE_MIAMI, *Authorization::ROLES_DE_SAN_PEDRO)
+  end
+
+  def authorize_acciones_de_miami
+    require_role(*Manifiesto::ROLES_DE_MIAMI) if SOLO_MIAMI.include?(action_name.to_sym)
   end
 
   def set_manifiesto

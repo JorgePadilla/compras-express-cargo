@@ -25,6 +25,17 @@ supervisor_miami:
   ubicacion: miami
   activo: true
 
+# PR-M10 · La encargada de operaciones en San Pedro Sula (`C21-02`): entra al
+# manifiesto para ponerle la guía del proveedor y la fecha de recibido en
+# Honduras, y **nada más**.
+supervisor_prefactura:
+  nombre: Supervisor Pre-Factura
+  email_address: supervisor.prefactura@test.com
+  password_digest: <%= BCrypt::Password.create("password123") %>
+  rol: supervisor_prefactura
+  ubicacion: honduras
+  activo: true
+
 cajero:
   nombre: Cajero Honduras
   email_address: cajero@test.com

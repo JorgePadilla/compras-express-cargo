@@ -21,21 +21,29 @@ class DashboardController < ApplicationController
     groups = []
 
     # PR-C7.36: lo que se hace en el mostrador de Miami sale de "Logística" y
-    # tiene bloque propio. La separación ya estaba en `can_access?` — estas tres
-    # las ven los mismos dos roles (`supervisor_miami`, `digitador_miami`) y las
-    # otras dos las ve cualquiera—, pero la pantalla las mostraba revueltas.
-    # "Miami" tampoco es nombre nuevo: así lo dibuja el mock de `docs/07`.
+    # tiene bloque propio. "Miami" tampoco es nombre nuevo: así lo dibuja el
+    # mock de `docs/07`.
     #
     # PR-10.c: la card de Entrega Personal faltaba, aunque la pantalla existe
     # desde PR-6a y esta en el sidebar.
+    #
+    # PR-M10: **Miami es el mostrador** —recibir el paquete y entregarlo en
+    # mano— y **mover la carga es Logística**. Jorge: *"hay que mover los links
+    # de mover carga al grupo de logística"*. El manifiesto estaba acá y ya no
+    # encajaba: desde `C21-02` lo termina San Pedro, así que "Miami" mentía
+    # sobre quién lo usa, y a esos roles se les prendía el bloque entero.
     mia = []
     mia << card("Etiquetar",          "Recibir paquetes",           "tag",                    etiquetar_path,            :navy) if can_access?(:etiquetar)
     mia << card("Entrega Personal",   "Paquetes traídos al mostrador", "user-plus",          new_entrega_personal_path, :navy) if can_access?(:entrega_personal)
-    mia << card("Manifiestos",        "Empaque y envío",            "cube",                   manifiestos_path,          :navy) if can_access?(:manifiestos)
     groups << { area: "Miami", cards: mia } if mia.any?
 
+    # Mover la carga: se arma en Miami, se recibe en Honduras, y es un solo
+    # recorrido. "Recibir Carga" además **no tenía card**: la pantalla existe
+    # desde `PR-M7` y al dashboard nunca llegó.
     log = []
     log << card("Pre-Alertas",        "Recepciones esperadas",      "bell-alert",             pre_alertas_path,  :navy) if can_access?(:pre_alertas)
+    log << card("Manifiestos",        "Empaque y envío",            "cube",                   manifiestos_path,  :navy) if can_access?(:manifiestos)
+    log << card("Recibir Carga",      "Escanear las cajas que llegan", "truck",               recepcion_carga_index_path, :navy) if can_access?(:recibir_carga)
     log << card("Todos los Paquetes", "Búsqueda y reportes",        "archive-box",            paquetes_path,     :navy) if can_access?(:paquetes)
     groups << { area: "Logística", cards: log } if log.any?
 
@@ -141,12 +149,12 @@ class DashboardController < ApplicationController
     return if DASHBOARD_ROLES.include?(Current.user&.rol)
 
     fallback = case Current.user&.rol
-               when "cajero"           then caja_path
-               when "digitador_miami"  then etiquetar_path
-               when "entrega_despacho" then entregas_path
-               when "sac"              then paquetes_path
-               else new_session_path
-               end
+    when "cajero"           then caja_path
+    when "digitador_miami"  then etiquetar_path
+    when "entrega_despacho" then entregas_path
+    when "sac"              then paquetes_path
+    else new_session_path
+    end
 
     redirect_to fallback, alert: "No tienes permiso para acceder al dashboard."
   end

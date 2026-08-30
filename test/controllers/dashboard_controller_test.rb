@@ -206,8 +206,13 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     grupos = @controller.instance_variable_get(:@shortcut_groups).index_by { |g| g[:area] }
     titulos = ->(area) { grupos.fetch(area)[:cards].map { |c| c[:title] } }
 
-    assert_equal ["Etiquetar", "Entrega Personal", "Manifiestos"], titulos.call("Miami")
-    assert_equal ["Pre-Alertas", "Todos los Paquetes"], titulos.call("Logística")
+    # PR-M10 · Miami es **el mostrador** —recibir el paquete y entregarlo en
+    # mano—; **mover la carga es Logística**. El manifiesto se fue de acá
+    # (Jorge: *"hay que mover los links de mover carga al grupo de logística"*)
+    # y «Recibir Carga», que nunca había tenido card, entró con él.
+    assert_equal [ "Etiquetar", "Entrega Personal" ], titulos.call("Miami")
+    assert_equal [ "Pre-Alertas", "Manifiestos", "Recibir Carga", "Todos los Paquetes" ],
+                 titulos.call("Logística")
 
     areas = grupos.keys
     assert_operator areas.index("Miami"), :<, areas.index("Logística"),
@@ -228,6 +233,18 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     assert_includes areas, "Clientes"
     assert_not_includes areas, "Configuración"
     assert_not_includes areas, "Miami", "el mostrador de Miami no es de este rol"
+  end
+
+  # C21-02 · San Pedro le pone al manifiesto la guía del proveedor y la fecha de
+  # recibido en Honduras, así que llega a la pantalla — pero por Logística, no
+  # por el mostrador de Miami.
+  test "el jefe de Honduras ve el manifiesto en Logística y no ve Miami" do
+    login_as users(:supervisor_prefactura)
+    get root_url
+
+    grupos = @controller.instance_variable_get(:@shortcut_groups).index_by { |g| g[:area] }
+    assert_includes grupos.fetch("Logística")[:cards].map { |c| c[:title] }, "Manifiestos"
+    assert_not_includes grupos.keys, "Miami"
   end
 
   test "supervisor_prefactura ve Facturación pero no Caja Diaria ni Configuración" do

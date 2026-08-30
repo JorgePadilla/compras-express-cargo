@@ -7866,6 +7866,43 @@ terminar y se le preguntó cuál era el segundo.
 > **Yusef, 2026-08-30: *"por hoy solo será supervisor Miami."*** → se queda como
 > está. El segundo rol queda para cuando lo pida.
 
+#### El organigrama, que es lo que decide los permisos
+
+Preguntando por Michelle salió el escalafón, en palabras de Yusef (audio del
+2026-08-30, con partes que no se entienden):
+
+| Nivel | Quién | Qué puede |
+|---|---|---|
+| Yusef | — | todo |
+| dos abajo | **Manal** (su hermana) y **Vanesa** | *"tienen todos los poderes en el sistema relativamente… no estoy ni seguro qué poderes no tienen ellas que sí tengo yo"* → en el sistema son **admin** |
+| abajo de Manal | **Michelle** | *"Sub-Jefa de área de Caja y SAC"* |
+| abajo de Michelle | **Bessy** | *"Supervisora de Caja y SAC"* |
+
+Esto contesta dos cosas que parecían contradecirse:
+
+- **C21-08** dice que el portal de catálogos existe para poder delegar —*"andate
+  al área donde dice empresa, agregame esta empresa"*— y ahí Yusef nombró a
+  Michelle. Pero preguntado derecho el 2026-08-30 dijo que **Michelle no carga
+  catálogos**. Con el escalafón puesto no hay contradicción: quien delega y
+  carga son **Manal y Vanesa**, que en el sistema son admin y ya tienen todo.
+- **Michelle sí edita el manifiesto**, porque es de las de San Pedro que le
+  ponen la guía del proveedor y la fecha de recibido en Honduras (`C21-02`).
+
+**Cómo quedó, en `PR-M10`:**
+
+| Sección | Quién |
+|---|---|
+| Catálogos del manifiesto | admin + `ROLES_DE_MIAMI` (llave propia, `:catalogos_manifiesto`) |
+| Manifiestos (entrar y ver) | `ROLES_DE_MIAMI` + los jefes de Honduras |
+| Campos de Miami del manifiesto | solo `ROLES_DE_MIAMI` — y si está cerrado, solo el supervisor |
+| `CAMPOS_DE_SAN_PEDRO` | los jefes de Honduras, abierto o cerrado |
+| Crear, empacar, meter paquetes, finalizar | solo `ROLES_DE_MIAMI` |
+
+La lista de jefes de Honduras **se deriva de `User::ROLES_AUTORIZANTES`**, que
+el repo ya tenía —es la misma que decide quién lleva PIN—, y por eso cubre a
+Michelle sin depender de si su usuario dice `supervisor_caja` o
+`supervisor_sac`.
+
 **Y qué pasa si un paquete tiene una tarea abierta al finalizar.** `PR-M6` lo
 dejó del lado permisivo —los trabados se listaban y el manifiesto cerraba sin
 ellos, copiando la forma de `A7-05`— y se le preguntó a Jorge.
