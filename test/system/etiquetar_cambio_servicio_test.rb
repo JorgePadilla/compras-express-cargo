@@ -14,7 +14,11 @@ require "application_system_test_case"
 class EtiquetarCambioServicioTest < ApplicationSystemTestCase
   setup do
     ingresar(users(:digitador))
-    @existente = paquetes(:recibido)
+    # Un recibido SIN pre-alerta, a propósito. El fixture `recibido` está
+    # vinculado a `PA-000002`, y un pre-alertado ya recibido no entra al modal
+    # de duplicado: el escaneo lo resuelve como pre-alerta encontrada (`C20-09`,
+    # diferido). Este test es del botón del modal de duplicado, no de eso.
+    @existente = crear_recibido
     abrir_etiquetar
   end
 
@@ -68,11 +72,24 @@ class EtiquetarCambioServicioTest < ApplicationSystemTestCase
     assert_no_current_path new_session_path, wait: 5
   end
 
+  # La sesión se abre en el tipo de envío del paquete que se va a escanear.
+  # Desde `PR-C7.62` los modales salen de a uno y **el conflicto de sesión
+  # manda**: con la sesión en otro tipo, lo que sale es «este paquete es de
+  # otro tipo de envío», nunca el de duplicado — y este test se quedaba
+  # esperándolo.
   def abrir_etiquetar
     visit etiquetar_path
     if page.has_text?("¿Qué tipo de envío vas a trabajar?", wait: 3)
-      first("form[action='#{iniciar_sesion_etiquetar_path}'] button").click
+      find("button[name='tipo_envio_id'][value='#{@existente.tipo_envio_id}']").click
     end
     assert_selector "#paquete_tracking", wait: 5
+  end
+
+  def crear_recibido
+    Paquete.create!(
+      tracking: "1Z999CAMBIO#{SecureRandom.hex(3).upcase}", cliente: clientes(:juan),
+      tipo_envio: tipo_envios(:cer), sucursal_recepcion: sucursales(:miami),
+      estado: "recibido_miami", descripcion: "Perfumes", user: users(:digitador)
+    )
   end
 end
