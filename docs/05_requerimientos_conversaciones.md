@@ -7649,3 +7649,381 @@ queda abierto es `RP-52`.
   bulto, el consignatario, la palabra «PRIORITY», y el código del documento
   de manifiesto para *"rebajarlo… el sistema te va a decir: ya se recibieron
   las cinco, falta una"*.
+
+---
+
+## Conversación 21 (2026-08-29, tarde) — el manifiesto de punta a punta
+
+Videollamada de 95 minutos con la pantalla compartida desde Miami, más un audio
+corto de la mañana (6 min) que resultó ser el preámbulo de la llamada ya
+documentada en la `Conversación 20`. Transcritas con `faster-whisper small`.
+
+Y algo que no había pasado antes: **Yusef mandó seis fotos** — una hoja de notas
+de Jorge, un diagrama de flujo de su puño, **dos copias del manifiesto impreso
+del sistema viejo anotadas a mano**, la etiqueta 4×6 del bulto también anotada, y
+una nota sobre el cambio de estatus. Más la captura de la pantalla de Manifiesto
+del legacy que Jorge mandó como referencia de diseño. Las anotaciones a mano son
+la fuente más precisa de esta conversación: dicen **campo por campo quién lo
+llena y qué significa**.
+
+Arrancó sin rodeos: *"vamos a empezar hoy con manifiesto"*, y para explicarlo se
+fue a la cámara de la bodega — *"quiero mostrarte cuándo empacamos… ahí están
+empacando, mirá"*.
+
+La motivación, en una línea:
+
+> *"Hay que ordenarlo, porque lo podés tener así como están haciendo, pero vas a
+> tener siempre el problema: **no ves dónde está la carga**."*
+
+### El estado del módulo hoy (verificado en el código)
+
+`Manifiesto`, `ManifiestoCounter` y `EmpresaManifiesto` existen desde la Fase 1,
+con CRUD, rutas, permisos y bitácora. El enum ya tiene `en_aduana` y `recibido`,
+y `fecha_aduana` ya es columna — **la mitad de recepción entra sin migración**.
+
+Lo que está muerto adentro: `sucursal_origen` no lo asigna ningún controller, así
+que la numeración anual `MM2026000001` de `PR-D1.d` **nunca corre** y todo cae al
+legacy `MA-000001` (es `RP-46`); `en_aduana`, `recibido` y `activo` no tienen
+quién los escriba; `TamanoCaja` y `Consignatario` son **modelos huérfanos** —sin
+seeds, sin pantallas, sin asociaciones—; y el estado `empacado` del paquete no lo
+asigna nadie (`ESTADO_AL_ETIQUETAR = "recibido_miami"`, con el comentario de
+`PR-C6.22`: *"`empacado` queda reservado para el módulo de empaque, que todavía
+no existe"*).
+
+Falta entera la entidad **«caja empacada»** entre `Paquete` y `Manifiesto` — de
+ella cuelga todo lo de abajo. Y la etiqueta 4×6 **no se puede expresar**:
+`EtiquetaPlantilla` es singleton y su `ALTO_RANGO` topa en 3 pulgadas.
+
+---
+
+### C21-01 · Crear el manifiesto **primero**, y sacar las pre-etiquetas de los bultos — 🆕 **PLANIFICADO**
+
+El cambio de fondo. Hoy:
+
+> *"El de ahorita, manifiesto ahorita, es **empacar todo, o casi todo**… y luego
+> ingresar en manifiesto."*
+
+Lo que quiere:
+
+> *"El cambio que yo quiero hacer es: **crear manifiesto** → la pre-etiqueta."*
+> *"Es la **misma etiqueta**, antes de empezar a amarrarle paquetes."*
+> *"Imprimir una pre-etiqueta **para los bultos**."*
+
+Y la pregunta que abre todo el módulo:
+
+> *"¿Qué otra forma puedo hacer para empezar a decir que **estos paquetes van en
+> esa caja**?"*
+
+Mostrando la bodega en vivo, señaló lo que falta: *"aquí es donde hace falta, es
+el **pip pip pip**"* — el escaneo del paquete al meterlo a la caja, que es lo que
+la `Fase 12` ya tenía dibujado.
+
+**Se mantienen los dos caminos.** La etiqueta **con escaneo** es lo que quiere, y
+la **sin escaneo** —*"que es lo que está actualmente, como actual"*— se queda,
+*"porque a veces no da tiempo"*.
+
+Contexto de por qué empacan como empacan: *"nosotros dividimos cargas, las que
+tienen descuento y las que no, porque con este proveedor nos sale más caro"*.
+
+---
+
+### C21-02 · Los campos del encabezado: quién llena qué — 🆕 **PLANIFICADO**
+
+Esto sale de las **anotaciones a mano sobre el manifiesto impreso**, que es donde
+quedó más claro que en el audio:
+
+| Campo | Quién lo llena | Qué significa |
+|---|---|---|
+| `Consignatario` | **Miami** | La empresa o persona que recibe. Ej: Corporación Karsam |
+| `No. Guía` | **SPS, después** | **Del proveedor.** Editable, **no obligatorio**, pueden ser **varias** |
+| `Aduana` (fecha) | **SPS** | **Recibido en HN** — ver abajo |
+| `T. Envío` | **Miami** | El **del proveedor** |
+| `Fecha Enviado` | **automático** | Cuando **salió de Miami** |
+| `ES PRIORIDAD` | **Miami** | Checkbox |
+| `Empresa` | **Miami** | El proveedor: SERCARGO, PRONTO CARGO, GENESIS |
+
+Sobre la guía:
+
+> *"El número de guía de proveedor es editable… pero **no obligatorio**… lo
+> ingresan después… le ingresa **la encargada de operaciones en San Pedro Sula**."*
+
+**El campo «Aduana»: lo mandó a quitar y se retractó en la misma llamada.**
+Primero: *"aduana sinceramente… al final eso nunca se [usa], eso está ahí hasta de
+más"* · Jorge: *"si está de más, quitémoslo"* · Yusef: *"sí… nunca lo has usado"*.
+Más adelante, mirando el impreso: *"esto de aduana, **aquí sí va**… si lo puso, lo
+agregamos. Pero es por la fecha de **recibido en aduana en Honduras**, o sea en
+aduana que es que **nosotros lo recibimos**; lo otro ya lo tenemos, ya pasó aduana
+más bien"*. Coincide con lo que anotó a mano: **«Recibido en HN»**.
+
+→ **Se queda, rotulado como la fecha en que nosotros lo recibimos en Honduras.**
+
+**Y los nombres actuales lo confunden** — esto lo dijo con molestia:
+
+> *"Los nombres son malos… dice «tipo de envío de manifiesto»; tengo que
+> aprenderme que el tipo de envío del manifiesto es **el del proveedor**. Aquí me
+> pierdo."*
+> *"[Me costó] hasta un año, porque nunca me explicó dónde era que yo tenía que
+> poner el tipo de envío."*
+
+→ Rotular explícito: **«Tipo de envío del proveedor»** vs **«Tipo de envío
+nuestro»**.
+
+---
+
+### C21-03 · Tipo de envío nuestro: selección múltiple, mínimo 1 — 🆕 **PLANIFICADO**
+
+> *"Aquí es **tipo de envío nuestro**, el interno nuestro… aquí es **selección
+> múltiple**… podés seleccionar todos los cinco tipos de servicio que tengo
+> actuales. ¿Por qué seleccionás todo? **Porque a veces combinás todo y lo
+> mandás**."*
+> *"**No puede ser sin ninguno**, tiene que llevar uno mínimo."*
+
+→ **Mínimo 1, máximo todos, y obligatorio.** Los cinco: CER, CKA, CEM, CKM, EXP.
+
+Va junto con la **sucursal de entrega**, que hoy no existe en el manifiesto:
+
+> *"Vas a empacar sucursal también, acuérdate que va a la sucursal por separado…
+> le va a preguntar sucursal, ¿**sucursal a entregar**?… ahorita tenemos
+> Tegu[cigalpa], SPS."*
+
+---
+
+### C21-04 · Las casas: tamaño pre-definido, medidas editables, volumen ÷166 — 🆕 **PLANIFICADO**
+
+La pantalla vieja tiene diez tamaños pre-definidos —**Especificar, EH, D, 22
+Cubo, 18 Cubo, D G, EH G, E, Mini D, Mini D Doble**— y se elige **uno a la vez**.
+La `Fase 12` solo tenía anotados tres (`E`, `mini D`, `mini D doble`): los otros
+siete son información nueva.
+
+**Las medidas siguen siendo editables**, y por una razón concreta:
+
+> *"Ellos vienen y marcan EH y le modifican una medida, **porque la cortan**… le
+> decimos **«EH cortada»**."*
+
+Al elegir el tamaño, el cursor va directo al peso: *"te ponen solo el cursor a
+peso, porque es lo que le vas a meter a ingresar, que es lo que hace falta"*.
+
+**Por qué la medida real importa: el proveedor cobra por ese reporte.**
+
+> *"Es porque tenés que reportarlo a tu proveedor… yo agarro el reporte y **ellos
+> me cobran [según] el reporte**. Y eso le facilita a ellos: cuando llega la
+> carga, la ingresan así como ingresamos nosotros —como la entrega personal— y
+> ponemos una por una."*
+
+El volumen sale de alto × largo × ancho ÷ **166**, que es exactamente el
+`595.78` que muestra la pantalla vieja para `46×43×50`. **Ya está en el repo**:
+`VolumetricoCalculator::DIVISOR_LB = 166.0`.
+
+Cada casa queda en la tabla con: `#`, letra (A/B/C), **NO. DOC** (`DM7155`), los
+tipos de envío que lleva (`CER,CKA`), alto, largo, ancho, volumen y peso; y por
+fila, borrar e imprimir. Los botones: **Solo Agregar (F5)** y **Agregar/Imprimir
+(F9)**.
+
+Sin tope de cantidad: *"a veces son 50… hemos pegado 20 pico, 30 cajas"*.
+
+---
+
+### C21-05 · La etiqueta 4×6 del bulto — 🆕 **PLANIFICADO**
+
+Lo que ya trae, según la foto: la letra, `Lbs. 131.0`, `23x23x36`, `EXP`, `AEREO
+EXPRESS`, **PRIORITY**, el consignatario, el barcode, la fecha y `DM7155`.
+
+**La corrección que escribió a mano:**
+
+> **«Falta el número del manifiesto.»**
+
+Y al lado del barcode:
+
+> **«Se escanea al recibir en HN»** → **«Actualiza estatus de paquetes de ENVIADO
+> → ADUANA.»**
+
+Ojo con el formato: la etiqueta de `/etiquetar` es Dymo **2.25 × 1.25 in** y la
+plantilla es **singleton** con el alto topado en 3 pulgadas — **la 4×6 es un
+formato nuevo, no un ajuste**. Se reusan el barcode (`etiqueta_barcode_svg`,
+Code128) y la mecánica de impresión (`layouts/etiqueta`, el patrón de
+`etiquetas_combinadas`). `A7-03` decía *"un código QR o lo que vos querás"*; el
+repo **no tiene generador de QR** (necesitaría gema), y las pistolas de hoy leen
+Code128.
+
+---
+
+### C21-06 · Finalizar: todo a ENVIADO, y el manifiesto se bloquea — 🆕 **PLANIFICADO**
+
+De su diagrama: **«Finalizar e imprimir todos los paquetes con el tipo de envío
+nuestro seleccionado» → cambia estatus a ENVIADO.** La pantalla vieja tiene los
+dos botones: **Solo Finalizar** y **Finalizar e Imprimir**.
+
+Y una regla que no estaba escrita:
+
+> *"Cuando termino el manifiesto **se bloquea**… se bloquea para que nadie lo
+> [toque]. Sí es editable, **pero tiene el botón de editar**."*
+
+**Quién puede editarlo después:** *"solo los que están en Miami; lo hace
+normalmente Julien, el supervisor. **Tendrían que ser dos de ellos mínimo**: el
+supervisor de Miami y… es que es un etiquetador el otro"*.
+
+Las horas de corte, que explican por qué a veces sobra o falta carga: *"el corte
+del marítimo es el jueves al mediodía… y el siguiente sale el lunes temprano"* ·
+*"a veces metemos más, a veces metemos menos, pero rara vez metemos menos;
+también metemos un par de paquetes más porque hay que [llenar] un espacio"*. En
+aéreo tratan de meter todo *"porque tiene mayor prioridad de tiempo"*; en
+marítimo *"un día más un día menos no afecta"*.
+
+---
+
+### C21-07 · Recibir la carga en Honduras: la pantallita y el aparatito — 🆕 **PLANIFICADO**
+
+Esto **completa** el circuito que la `Conversación 7` dejó decidido
+(`A7-03`…`A7-08`) y le pone quién y con qué.
+
+**Quién lo hace:**
+
+> **Jorge:** *"¿En el sistema qué perfil es el que hace eso?"*
+> **Yusef:** *"**Los de prefactura**, ellos son los que se encargan de recibir
+> carga."*
+
+Cómo es hoy: *"viene el camión, agarran el montacargas, empiezan a descargar, y
+adentro de la bodega está otro chavo con **esta hoja marcando cuál llegó**, y
+después se van a sistema"*. Lo hace el supervisor *"pero rota"*.
+
+**Lo que pide:**
+
+> *"Es mejor **una pantallita** que ahí buscara y que **solo le aparezca lo que
+> tiene que meter**."*
+> *"Solo lo que está como **enviado**… **las cajas** que están como enviados."*
+> *"Aquí es donde yo te digo que quiero **el aparatito**: que vengan ellos, llegan
+> a recibir carga, y **escanean la caja** y automáticamente el sistema lo [pone]."*
+
+Con pistola también (*"¿esto es pistola?" — "también"*), y el volumen es chico:
+*"como solo son **5 o 10 cajas** lo más que se recibe"*.
+
+**El efecto**, que es lo que también escribió a mano:
+
+> *"Al recibir el manifiesto, **los paquetes amarrados cambian estatus** … lo
+> tenemos como **aduana**."*
+> *"**Al completar el manifiesto pone todo en aduana.**"*
+
+Y de ahí sigue la cadena: *"ya de aquí el paquete va a cambiar cuando ingresemos
+a la **prefactura**"*.
+
+**Recepción parcial** (confirma `A7-05`): *"a veces no viene todo… hay que marcar
+todo como que está acá. Pero todavía le pone una opción de marcar todo el
+manifiesto"*.
+
+**Cómo llamarlo, sin cerrar:** Jorge preguntó el término y Yusef dio tres —
+*"para que me le den **entrada**. Así se le dice: dar la **entrada al almacén**"* ·
+*"vos le das entrada al **inventario**"* · *"nosotros le decimos… que hoy
+**recibimos carga**"*. Queda en `RP-56`.
+
+---
+
+### C21-08 · Un CRUD para **todo** lo del manifiesto — 🆕 **PLANIFICADO**
+
+Pedido explícito, y repetido dos veces en la llamada:
+
+> *"Lo que yo te digo: **que un CRUD para todo, para todo lo del manifiesto**."*
+> *"Si vos creás una [pantalla] donde yo pueda crear **las empresas, los tipos de
+> envío que manejamos, la empresa que lo envía, qué consignatario somos
+> nosotros**… que pueda yo crear estos, **las cajas, los tamaños de las cajas**, en
+> un solo [lugar]."*
+> *"Como **un portal**, por decirte algo, que te diga: bueno, estas son las
+> empresas, estos son los tipos de envío. Pero que **todo esté ahí**, porque así
+> uno no tiene que andar buscando."*
+> *"Todo eso tengo que ingresar a donde te dije, que creemos **una plantilla**…
+> donde voy a ingresar **las medidas de las cajas, los tipos de envío nuestros y
+> todo**."*
+
+Para qué, con nombre propio: poder decirle a Michelle *"andate al área donde dice
+empresa, agregame esta empresa que voy a usar"* — nombró una encomendera y
+«Carolina Cargo» de ejemplo. Es exactamente la filosofía de
+[[feedback_yusef_crud_first]]: *"entre más cosas nos dejes crear, menos te
+molestaremos"*.
+
+**Cubre los cuatro catálogos que hoy están huérfanos o incompletos:**
+`EmpresaManifiesto` (hoy solo `nombre` + `activo`), el tipo de envío del
+proveedor, `Consignatario` (tabla vacía, sin pantalla) y `TamanoCaja` (tabla
+vacía, sin pantalla).
+
+**Y a la empresa proveedora le faltan campos:**
+
+> *"La **dirección** es tal, porque sale la dirección en la información de la
+> empresa. Va la dirección **y número**, y si es posible hasta **un encargado**."*
+> *"**Número de teléfono. La persona encargada**… del proveedor."*
+
+Que es lo mismo que anotó a mano sobre el bloque de Pronto Cargo del impreso:
+**«# tel»** y **«persona encargada»**.
+
+---
+
+### C21-09 · El documento impreso: cuatro correcciones — 🆕 **PLANIFICADO**
+
+De las anotaciones a mano sobre las dos copias:
+
+1. **El encabezado dice «Compras Express Miami»** y tiene que decir **Compras
+   Express *Logistics LLC*** y llevar el **teléfono 305-848-0990** (el número se
+   entiende a medias en el audio; el escrito a mano es claro).
+2. **El número de manifiesto tiene que llevar el año** — hoy es `MA00001469`.
+   Por qué: *"para poder limpiar el año, poder ordenar cosas, saber de qué año
+   es"*. Y lo comparó con lo que ya tenemos: *"ese número va a ir **igual que el
+   recibo de warehouse**; esto es relativamente un warehouse, solo que es un
+   manifiesto"*. → **Esto valida la numeración anual `MM2026000001` que hoy está
+   muerta (`RP-46`).**
+3. **Faltan `# tel` y `persona encargada`** en el bloque del transportista.
+4. **La letra es muy chica**: *"esto está muy pequeño, ni lo vemos cuando lo
+   queremos ver en la pantalla"*.
+
+---
+
+### C21-10 · La pre-factura se amarra al **manifiesto**, no a la guía — 🆕 **PLANIFICADO**
+
+Arrancó diciendo guía y **se corrigió solo**:
+
+> *"Ese número de guía, cuando creemos las prefacturas, nosotros vamos a
+> seleccionar de alguna manera que esa es la guía que vamos a trabajar."*
+
+y unos minutos después:
+
+> *"Ahí **no va la guía**; en la prefactura va **el manifiesto**, la caja del
+> manifiesto."*
+> *"**Está malo**… porque no es la guía del proveedor, **es el manifiesto**."*
+> *"Lo que vamos a seleccionar, de que estamos procesando, **es el manifiesto**…
+> ahí es donde deberíamos amarrar el manifiesto, no la guía, sino que es el
+> número."*
+
+Hoy lo hacen **a mano**: *"le ponen esa guía, se la ponen manual"*.
+
+**Verificado: hoy no existe ningún vínculo** entre `PreFactura` y `Manifiesto` —
+ni columna, ni scope, ni filtro.
+
+---
+
+### C21-11 · Varias guías por manifiesto, y son como nuestros splits — 🆕 **PLANIFICADO**
+
+> *"El número de guía **termina siendo varios**."*
+
+Y explicó la forma con el ejemplo del impreso (`286441-1`, `-2`, `-3`):
+
+> *"Es el **mismo número**, solo tiene el 1, el 2 y el 3. Es **el mismo que
+> nosotros, la misma teoría**."*
+
+O sea: la misma lógica de sufijos que ya usan nuestras cajas de un split.
+
+---
+
+### Las preguntas que abre
+
+| Id | Qué |
+|---|---|
+| `RP-53` | **¿Dónde vive el consignatario?** El modelo `Consignatario` existe y está **vacío** (sin seeds, sin pantalla, sin asociaciones), y es el nombre semánticamente correcto. Pero «CORPORACION KARSAM» hoy vive en `Agent` —el bloque *Agent* del Warehouse Receipt—, que significa «agente de destino». ¿Se puebla `Consignatario` y se deja `Agent` como está, o son la misma cosa con dos nombres? |
+| `RP-54` | **El código de la caja: ¿barras o QR?** `A7-03` dejó abierto *"un código QR o lo que vos querás"*. El repo solo genera Code128 (`barby`), que es lo que ya leen las pistolas; QR necesitaría gema nueva. Confirmar antes de imprimir 4×6 en producción |
+| `RP-55` | **¿Qué se hace con los manifiestos viejos?** Jorge lo preguntó derecho. Hoy hay manifiestos numerados `MA-…` (formato legacy) porque la numeración anual nunca corrió. Al despertarla, ¿se renumeran, se dejan conviviendo, o se cierra el formato viejo en una fecha? |
+| `RP-56` | **Cómo se llama la pantalla de recepción.** Yusef dio tres nombres en la misma frase: *"dar entrada al almacén"*, *"entrada al inventario"* y *"recibir carga"*. Elegir uno antes de que Miami y SPS le pongan cada quien el suyo |
+| `RP-57` | **Retención y peso de la data.** *"Lo mínimo son seis años: cinco para atrás más el año en curso"*, pero *"yo lo que ocupo es el año en curso y un año antes"*. Su idea: *"crear reportes automáticos, cierre anual, cierre mensual… lo mandás al bucket y ahí guarda todos los reportes del año"*. Es una discusión propia, no del manifiesto |
+
+### Dudosos del transcript
+
+- El teléfono del encabezado se oye **305-848-79-90** en el audio y está escrito
+  **305-848-0990** a mano. Se toma el escrito; confirmar antes de imprimirlo.
+- Habló de que los del perfil de pre-factura *"me los tengo que quitar"* de
+  recibir carga — no quedó claro si es un cambio de proceso que quiere o un
+  desahogo. No se documenta como pedido.
