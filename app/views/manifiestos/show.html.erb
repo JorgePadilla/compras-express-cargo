@@ -29,16 +29,30 @@ end %>
       <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.empresa_manifiesto&.nombre || "—" %></dd>
     </div>
     <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo de Envio</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.tipo_envio.presence || "—" %></dd>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">T. envío del proveedor</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.tipo_envio_del_proveedor || "—" %></dd>
+    </div>
+    <%# C21-03: los NUESTROS, que son los que deciden qué paquetes salen. %>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">T. envío nuestros</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.tipos_envio_nuestros.presence || "—" %></dd>
     </div>
     <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Numero Guia</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.numero_guia.presence || "—" %></dd>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Consignatario</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.consignatario&.nombre || "—" %></dd>
     </div>
     <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Numero Caja</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.numero_caja.presence || "—" %></dd>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Se entrega en</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.sucursal_entrega&.nombre || "—" %></dd>
+    </div>
+    <%# C21-11: son varias, y las llena San Pedro Sula después. %>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Guías del proveedor</dt>
+      <dd class="mt-1 text-sm font-mono text-gray-900"><%= @manifiesto.numeros_de_guia.join(" · ").presence || "—" %></dd>
+    </div>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Recibido en Honduras</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.fecha_aduana&.strftime("%d/%m/%Y") || "—" %></dd>
     </div>
     <div>
       <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Expedido Por</dt>
@@ -56,6 +70,12 @@ end %>
       <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Enviado</dt>
       <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.fecha_enviado&.strftime("%d/%m/%Y %H:%M") || "—" %></dd>
     </div>
+    <% if @manifiesto.es_prioridad? %>
+      <div>
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Prioridad</dt>
+        <dd class="mt-1"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-cec-gold/20 text-cec-navy">ES PRIORIDAD</span></dd>
+      </div>
+    <% end %>
   </div>
 </div>
 

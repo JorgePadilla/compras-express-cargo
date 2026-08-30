@@ -125,7 +125,6 @@ class BotonesTest < ActiveSupport::TestCase
     "app/views/ingresos_caja/index.html.erb"                 => 1,
     "app/views/ingresos_caja/new.html.erb"                   => 1,
     "app/views/layouts/cuenta.html.erb"                      => 1,
-    "app/views/manifiestos/_form.html.erb"                   => 1,
     "app/views/manifiestos/show.html.erb"                    => 1,
     "app/views/motivos_retencion/_form.html.erb"             => 1,
     "app/views/notas_credito/_form.html.erb"                 => 1,

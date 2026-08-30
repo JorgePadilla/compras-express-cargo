@@ -1175,6 +1175,71 @@ ALTER SEQUENCE public.manifiesto_counters_id_seq OWNED BY public.manifiesto_coun
 
 
 --
+-- Name: manifiesto_guias; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.manifiesto_guias (
+    id bigint NOT NULL,
+    manifiesto_id bigint NOT NULL,
+    numero character varying NOT NULL,
+    "position" integer DEFAULT 0 NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: manifiesto_guias_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.manifiesto_guias_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: manifiesto_guias_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.manifiesto_guias_id_seq OWNED BY public.manifiesto_guias.id;
+
+
+--
+-- Name: manifiesto_tipo_envios; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.manifiesto_tipo_envios (
+    id bigint NOT NULL,
+    manifiesto_id bigint NOT NULL,
+    tipo_envio_id bigint NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: manifiesto_tipo_envios_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.manifiesto_tipo_envios_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: manifiesto_tipo_envios_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.manifiesto_tipo_envios_id_seq OWNED BY public.manifiesto_tipo_envios.id;
+
+
+--
 -- Name: manifiestos; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1196,7 +1261,11 @@ CREATE TABLE public.manifiestos (
     activo boolean DEFAULT true,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    sucursal_origen_id bigint
+    sucursal_origen_id bigint,
+    consignatario_id bigint,
+    tipo_envio_proveedor_id bigint,
+    sucursal_entrega_id bigint,
+    es_prioridad boolean DEFAULT false NOT NULL
 );
 
 
@@ -2921,6 +2990,20 @@ ALTER TABLE ONLY public.manifiesto_counters ALTER COLUMN id SET DEFAULT nextval(
 
 
 --
+-- Name: manifiesto_guias id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manifiesto_guias ALTER COLUMN id SET DEFAULT nextval('public.manifiesto_guias_id_seq'::regclass);
+
+
+--
+-- Name: manifiesto_tipo_envios id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manifiesto_tipo_envios ALTER COLUMN id SET DEFAULT nextval('public.manifiesto_tipo_envios_id_seq'::regclass);
+
+
+--
 -- Name: manifiestos id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -3434,6 +3517,22 @@ ALTER TABLE ONLY public.manifiesto_counters
 
 
 --
+-- Name: manifiesto_guias manifiesto_guias_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manifiesto_guias
+    ADD CONSTRAINT manifiesto_guias_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: manifiesto_tipo_envios manifiesto_tipo_envios_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manifiesto_tipo_envios
+    ADD CONSTRAINT manifiesto_tipo_envios_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: manifiestos manifiestos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3763,6 +3862,13 @@ CREATE UNIQUE INDEX idx_fin_cuotas_unique ON public.financiamiento_cuotas USING 
 --
 
 CREATE UNIQUE INDEX idx_manifiesto_counters_sucursal_anio ON public.manifiesto_counters USING btree (sucursal_id, anio);
+
+
+--
+-- Name: idx_on_manifiesto_id_tipo_envio_id_346dda09c9; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_on_manifiesto_id_tipo_envio_id_346dda09c9 ON public.manifiesto_tipo_envios USING btree (manifiesto_id, tipo_envio_id);
 
 
 --
@@ -4305,6 +4411,41 @@ CREATE INDEX index_manifiesto_counters_on_sucursal_id ON public.manifiesto_count
 
 
 --
+-- Name: index_manifiesto_guias_on_manifiesto_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_manifiesto_guias_on_manifiesto_id ON public.manifiesto_guias USING btree (manifiesto_id);
+
+
+--
+-- Name: index_manifiesto_guias_on_manifiesto_id_and_numero; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_manifiesto_guias_on_manifiesto_id_and_numero ON public.manifiesto_guias USING btree (manifiesto_id, numero);
+
+
+--
+-- Name: index_manifiesto_tipo_envios_on_manifiesto_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_manifiesto_tipo_envios_on_manifiesto_id ON public.manifiesto_tipo_envios USING btree (manifiesto_id);
+
+
+--
+-- Name: index_manifiesto_tipo_envios_on_tipo_envio_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_manifiesto_tipo_envios_on_tipo_envio_id ON public.manifiesto_tipo_envios USING btree (tipo_envio_id);
+
+
+--
+-- Name: index_manifiestos_on_consignatario_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_manifiestos_on_consignatario_id ON public.manifiestos USING btree (consignatario_id);
+
+
+--
 -- Name: index_manifiestos_on_empresa_manifiesto_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4326,10 +4467,24 @@ CREATE UNIQUE INDEX index_manifiestos_on_numero ON public.manifiestos USING btre
 
 
 --
+-- Name: index_manifiestos_on_sucursal_entrega_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_manifiestos_on_sucursal_entrega_id ON public.manifiestos USING btree (sucursal_entrega_id);
+
+
+--
 -- Name: index_manifiestos_on_sucursal_origen_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX index_manifiestos_on_sucursal_origen_id ON public.manifiestos USING btree (sucursal_origen_id);
+
+
+--
+-- Name: index_manifiestos_on_tipo_envio_proveedor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_manifiestos_on_tipo_envio_proveedor_id ON public.manifiestos USING btree (tipo_envio_proveedor_id);
 
 
 --
@@ -5285,6 +5440,14 @@ CREATE INDEX index_warehouse_receipts_on_user_id ON public.warehouse_receipts US
 
 
 --
+-- Name: manifiesto_tipo_envios fk_rails_00f8a61e20; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manifiesto_tipo_envios
+    ADD CONSTRAINT fk_rails_00f8a61e20 FOREIGN KEY (manifiesto_id) REFERENCES public.manifiestos(id);
+
+
+--
 -- Name: tareas fk_rails_01a5d418f2; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5354,6 +5517,14 @@ ALTER TABLE ONLY public.cotizaciones
 
 ALTER TABLE ONLY public.pagos
     ADD CONSTRAINT fk_rails_0cf0314e3c FOREIGN KEY (cliente_id) REFERENCES public.clientes(id);
+
+
+--
+-- Name: manifiestos fk_rails_0d0684c10b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manifiestos
+    ADD CONSTRAINT fk_rails_0d0684c10b FOREIGN KEY (consignatario_id) REFERENCES public.consignatarios(id);
 
 
 --
@@ -5509,6 +5680,14 @@ ALTER TABLE ONLY public.autorizaciones
 
 
 --
+-- Name: manifiestos fk_rails_34e6176d23; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manifiestos
+    ADD CONSTRAINT fk_rails_34e6176d23 FOREIGN KEY (sucursal_entrega_id) REFERENCES public.sucursales(id);
+
+
+--
 -- Name: warehouse_receipts fk_rails_35c83da0a8; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5586,6 +5765,14 @@ ALTER TABLE ONLY public.paquete_motivos_envio_politica
 
 ALTER TABLE ONLY public.reempaques
     ADD CONSTRAINT fk_rails_4c184d921a FOREIGN KEY (paquete_id) REFERENCES public.paquetes(id);
+
+
+--
+-- Name: manifiesto_guias fk_rails_4ea5f51fc2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manifiesto_guias
+    ADD CONSTRAINT fk_rails_4ea5f51fc2 FOREIGN KEY (manifiesto_id) REFERENCES public.manifiestos(id);
 
 
 --
@@ -5733,6 +5920,14 @@ ALTER TABLE ONLY public.paquetes
 
 
 --
+-- Name: manifiesto_tipo_envios fk_rails_756c5d4ad5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manifiesto_tipo_envios
+    ADD CONSTRAINT fk_rails_756c5d4ad5 FOREIGN KEY (tipo_envio_id) REFERENCES public.tipo_envios(id);
+
+
+--
 -- Name: sessions fk_rails_758836b4f0; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5810,6 +6005,14 @@ ALTER TABLE ONLY public.financiamientos
 
 ALTER TABLE ONLY public.autorizaciones
     ADD CONSTRAINT fk_rails_8544995dca FOREIGN KEY (pre_factura_item_id) REFERENCES public.pre_factura_items(id) ON DELETE SET NULL;
+
+
+--
+-- Name: manifiestos fk_rails_876d96f150; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manifiestos
+    ADD CONSTRAINT fk_rails_876d96f150 FOREIGN KEY (tipo_envio_proveedor_id) REFERENCES public.tipo_envio_proveedores(id);
 
 
 --
@@ -6323,6 +6526,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260830061904'),
 ('20260830060300'),
 ('20260829202846'),
 ('20260828202244'),

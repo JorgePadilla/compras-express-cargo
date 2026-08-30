@@ -1,76 +1,143 @@
-<%= form_with model: manifiesto, class: "space-y-6" do |f| %>
+<%# C21-02 · El encabezado del manifiesto, separado por **quién llena qué**.
+    Es lo que Yusef anotó a mano sobre las dos copias del impreso: consignatario,
+    tipo de envío del proveedor y «es prioridad» los pone Miami; la guía y la
+    fecha de aduana las pone después la encargada de operaciones en San Pedro
+    Sula. Separarlo en dos bloques evita la pregunta de todos los días —«¿esto lo
+    lleno yo?»— sin que nadie tenga que acordarse.
+
+    Y los rótulos van explícitos: hasta hoy el campo decía «Tipo de Envio» y se
+    llenaba con NUESTRO catálogo, cuando el dato que va ahí es el del proveedor.
+    Yusef: *"tengo que aprenderme que el tipo de envío del manifiesto es el del
+    proveedor. Aquí me pierdo"*. %>
+<%= form_with model: manifiesto, local: true, class: "space-y-6" do |f| %>
   <% if manifiesto.errors.any? %>
-    <div class="p-4 bg-red-50 rounded-lg">
-      <div class="flex items-center gap-2 mb-2">
-        <%= heroicon "exclamation-triangle", variant: :outline, options: { class: "w-5 h-5 text-red-600" } %>
-        <h3 class="text-sm font-medium text-red-800">
-          Se encontraron <%= manifiesto.errors.count %> error(es) al guardar:
-        </h3>
-      </div>
-      <ul class="list-disc list-inside text-sm text-red-700 space-y-1">
-        <% manifiesto.errors.full_messages.each do |msg| %>
-          <li><%= msg %></li>
-        <% end %>
+    <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+      <ul class="list-disc list-inside">
+        <% manifiesto.errors.full_messages.each do |msg| %><li><%= msg %></li><% end %>
       </ul>
     </div>
   <% end %>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <div>
-      <%= f.label :numero, class: "block text-sm font-medium text-gray-700 mb-1" %>
-      <% if manifiesto.persisted? %>
-        <p class="text-sm font-mono font-medium text-cec-navy py-2"><%= manifiesto.numero %></p>
-      <% else %>
-        <%= f.text_field :numero, placeholder: "Auto-generado si se deja vacio",
-            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                   focus:ring-cec-teal focus:border-cec-teal" %>
-        <p class="mt-1 text-xs text-gray-500">Dejar vacio para generar automaticamente (MA-XXXXXX)</p>
+  <%= render FormSectionComponent.new(title: "Lo que se llena en Miami") do %>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <%= f.label :consignatario_id, "Consignatario", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.collection_select :consignatario_id, @consignatarios, :id, :nombre,
+              { include_blank: "— Seleccionar —" },
+              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        <p class="text-xs text-gray-500 mt-1">A quién va consignada la carga.</p>
+      </div>
+
+      <div>
+        <%= f.label :empresa_manifiesto_id, "Empresa proveedora", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.collection_select :empresa_manifiesto_id, @empresas, :id, :nombre,
+              { include_blank: "— Seleccionar —" },
+              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        <p class="text-xs text-gray-500 mt-1">Quién mueve la carga.</p>
+      </div>
+
+      <div>
+        <%= f.label :tipo_envio_proveedor_id, "Tipo de envío del proveedor", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.collection_select :tipo_envio_proveedor_id, @tipos_proveedor, :id, :nombre,
+              { include_blank: "— Seleccionar —" },
+              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        <p class="text-xs text-gray-500 mt-1">El servicio <b>de ellos</b> — AEREO EXPRESS, CKM MARITIMO. No es el nuestro.</p>
+      </div>
+
+      <div>
+        <%= f.label :sucursal_entrega_id, "Sucursal donde se entrega", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.collection_select :sucursal_entrega_id, @sucursales_entrega, :id, :nombre,
+              { include_blank: "— Seleccionar —" },
+              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        <p class="text-xs text-gray-500 mt-1">A dónde llega en Honduras.</p>
+      </div>
+
+      <% if @sucursales_origen.many? %>
+        <div>
+          <%= f.label :sucursal_origen_id, "Sucursal de origen", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= f.collection_select :sucursal_origen_id, @sucursales_origen, :id, :nombre,
+                { include_blank: "— La de mi sesión —" },
+                class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+          <p class="text-xs text-gray-500 mt-1">De dónde sale. Es lo que le da el número del año.</p>
+        </div>
       <% end %>
+
+      <div>
+        <%= f.label :expedido_por, "Expedido por", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.text_field :expedido_por,
+              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
     </div>
 
-    <div>
-      <%= f.label :empresa_manifiesto_id, "Empresa", class: "block text-sm font-medium text-gray-700 mb-1" %>
-      <%= f.collection_select :empresa_manifiesto_id, @empresas, :id, :nombre,
-          { include_blank: "— Seleccionar —" },
-          { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                   focus:ring-cec-teal focus:border-cec-teal" } %>
+    <label class="flex items-center gap-2 mt-4">
+      <%= f.check_box :es_prioridad, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+      <span class="text-sm font-medium text-gray-700">Es prioridad</span>
+    </label>
+
+    <%# C21-03 · *"Aquí es selección múltiple… podés seleccionar todos los cinco
+        tipos de servicio que tengo actuales… no puede ser sin ninguno, tiene
+        que llevar uno mínimo."* %>
+    <fieldset class="mt-5">
+      <legend class="text-sm font-medium text-gray-700 mb-1">Tipos de envío <b>nuestros</b> que van adentro</legend>
+      <p class="text-xs text-gray-500 mb-2">Mínimo uno, máximo todos — a veces se combina todo y se manda junto. Es lo que decide qué paquetes salen al finalizar.</p>
+      <div class="flex flex-wrap gap-x-6 gap-y-2">
+        <% @tipo_envios.each do |tipo| %>
+          <label class="flex items-center gap-2">
+            <%= check_box_tag "manifiesto[tipo_envio_ids][]", tipo.id,
+                  manifiesto.tipo_envio_ids.include?(tipo.id),
+                  id: "manifiesto_tipo_envio_#{tipo.id}",
+                  class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+            <span class="text-sm text-gray-700"><%= tipo.nombre %></span>
+          </label>
+        <% end %>
+      </div>
+      <%= hidden_field_tag "manifiesto[tipo_envio_ids][]", "" %>
+    </fieldset>
+  <% end %>
+
+  <%# C21-02 · *"Es editable… pero no obligatorio… lo ingresan después… le
+      ingresa la encargada de operaciones en San Pedro Sula."* %>
+  <%= render FormSectionComponent.new(title: "Lo que llena San Pedro Sula, después") do %>
+    <p class="text-xs text-gray-500 mb-3">Nada de esto es obligatorio para crear el manifiesto: se completa cuando la carga llega.</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <%= f.label :fecha_aduana, "Recibido en Honduras", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.date_field :fecha_aduana,
+              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        <p class="text-xs text-gray-500 mt-1">La fecha en que <b>nosotros</b> la recibimos.</p>
+      </div>
     </div>
 
-    <div>
-      <%= f.label :tipo_envio, "Tipo de Envio", class: "block text-sm font-medium text-gray-700 mb-1" %>
-      <%= f.select :tipo_envio, @tipo_envios.map { |t| [t.nombre, t.nombre] },
-          { include_blank: "— Seleccionar —" },
-          { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                   focus:ring-cec-teal focus:border-cec-teal" } %>
+    <%# C21-11 · *"El número de guía termina siendo varios."* %>
+    <div class="mt-4">
+      <span class="block text-sm font-medium text-gray-700 mb-1">Números de guía del proveedor</span>
+      <p class="text-xs text-gray-500 mb-2">Pueden ser varios — como <span class="font-mono">286441-1</span>, <span class="font-mono">-2</span>, <span class="font-mono">-3</span>.</p>
+      <div class="space-y-2">
+        <%= f.fields_for :guias do |g| %>
+          <div class="flex items-center gap-2">
+            <%= g.text_field :numero, placeholder: "Número de guía",
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono focus:ring-cec-teal focus:border-cec-teal" %>
+            <% if g.object.persisted? %>
+              <label class="flex items-center gap-1 text-xs text-gray-500 whitespace-nowrap">
+                <%= g.check_box :_destroy, class: "rounded border-gray-300 text-red-600 focus:ring-red-500" %> Quitar
+              </label>
+            <% end %>
+          </div>
+        <% end %>
+        <%# Tres renglones vacíos: alcanzan para el caso normal y no obligan a
+            nadie a pelear con un botón de «agregar». %>
+        <% (manifiesto.guias.size...(manifiesto.guias.size + 3)).each do |i| %>
+          <%= text_field_tag "manifiesto[guias_attributes][nueva#{i}][numero]", nil,
+                placeholder: "Número de guía",
+                class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono focus:ring-cec-teal focus:border-cec-teal" %>
+        <% end %>
+      </div>
     </div>
-
-    <div>
-      <%= f.label :expedido_por, class: "block text-sm font-medium text-gray-700 mb-1" %>
-      <%= f.text_field :expedido_por,
-          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                 focus:ring-cec-teal focus:border-cec-teal" %>
-    </div>
-
-    <div>
-      <%= f.label :numero_caja, "Numero de Caja", class: "block text-sm font-medium text-gray-700 mb-1" %>
-      <%= f.text_field :numero_caja,
-          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                 focus:ring-cec-teal focus:border-cec-teal" %>
-    </div>
-
-    <div>
-      <%= f.label :numero_guia, "Numero de Guia", class: "block text-sm font-medium text-gray-700 mb-1" %>
-      <%= f.text_field :numero_guia,
-          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                 focus:ring-cec-teal focus:border-cec-teal" %>
-    </div>
-  </div>
+  <% end %>
 
   <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-    <%= link_to "Cancelar (F2)", manifiesto.persisted? ? manifiesto_path(manifiesto) : manifiestos_path,
-        class: "text-sm text-gray-600 hover:text-gray-900", data: { shortcut: "F2" } %>
-    <%= f.submit manifiesto.persisted? ? "Guardar Cambios" : "Crear Manifiesto",
-        class: "inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium
-               bg-cec-gold text-cec-navy-dark hover:bg-cec-gold-dark transition-colors cursor-pointer" %>
+    <%= link_to "Cancelar", manifiestos_path, class: "text-sm text-gray-600 hover:text-gray-900" %>
+    <%= render(ButtonComponent.new(variant: :gold, type: :submit, shortcut: "F10")) { manifiesto.persisted? ? "Guardar" : "Crear manifiesto" } %>
   </div>
 <% end %>

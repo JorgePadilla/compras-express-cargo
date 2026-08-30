@@ -6,6 +6,26 @@ class Manifiesto < ApplicationRecord
   belongs_to :user, optional: true
   has_many :paquetes, dependent: :nullify
 
+  # C21-02 · El encabezado que Yusef anotó a mano, campo por campo.
+  belongs_to :consignatario, optional: true
+  belongs_to :tipo_envio_proveedor, optional: true
+  # C21-03 · *"Le va a preguntar sucursal, ¿sucursal a entregar?… ahorita
+  # tenemos Tegu[cigalpa], SPS"*. A dónde llega la carga en Honduras.
+  belongs_to :sucursal_entrega, class_name: "Sucursal", optional: true
+
+  # C21-03 · Los tipos de envío **nuestros** que van adentro, en selección
+  # múltiple: *"a veces combinás todo y lo mandás"*. No confundir con
+  # `tipo_envio_proveedor`, que es el servicio del proveedor.
+  has_many :manifiesto_tipo_envios, dependent: :destroy
+  has_many :tipo_envios, through: :manifiesto_tipo_envios
+
+  # C21-11 · *"El número de guía termina siendo varios"* — y con la forma de
+  # nuestros splits: `286441-1`, `-2`, `-3`.
+  has_many :guias, -> { order(:position, :id) },
+           class_name: "ManifiestoGuia", dependent: :destroy, inverse_of: :manifiesto
+  accepts_nested_attributes_for :guias, allow_destroy: true,
+                                reject_if: ->(a) { a[:numero].blank? }
+
   enum :estado, {
     creado: "creado",
     enviado: "enviado",
@@ -15,10 +35,20 @@ class Manifiesto < ApplicationRecord
 
   validates :numero, presence: true, uniqueness: { case_sensitive: false }
   validates :estado, presence: true
+  # C21-03, con sus palabras: *"no puede ser sin ninguno, tiene que llevar uno
+  # mínimo"*. Es lo que decide qué paquetes salen al finalizar, así que un
+  # manifiesto sin ningún tipo no tendría a quién mandar.
+  validate :al_menos_un_tipo_de_envio_nuestro
 
   scope :activos, -> { where(activo: true) }
+  # C21-11: las guías se mudaron a su propia tabla. Sin el `left_joins` la
+  # búsqueda dejaría de encontrar manifiestos por guía **en silencio**, que es
+  # justo por donde los busca el autocomplete del formulario de paquete.
   scope :buscar, ->(term) {
-    where("numero ILIKE :q OR numero_guia ILIKE :q", q: "%#{sanitize_sql_like(term)}%")
+    left_joins(:guias)
+      .where("manifiestos.numero ILIKE :q OR manifiestos.numero_guia ILIKE :q OR manifiesto_guias.numero ILIKE :q",
+             q: "%#{sanitize_sql_like(term)}%")
+      .distinct
   }
   scope :by_estado, ->(estado) { where(estado: estado) }
 
@@ -49,7 +79,33 @@ class Manifiesto < ApplicationRecord
     end
   end
 
+  # El tipo de envío del proveedor, para mostrar. Lee las dos formas: la
+  # asociación nueva y el varchar viejo de los manifiestos que ya estaban.
+  def tipo_envio_del_proveedor
+    tipo_envio_proveedor&.nombre.presence || tipo_envio.presence
+  end
+
+  # Los tipos NUESTROS que van adentro, en una línea: «CER, CKA».
+  def tipos_envio_nuestros
+    tipo_envios.map(&:nombre).join(", ")
+  end
+
+  # Los números de guía del proveedor, para mostrar. Lee las dos formas: la
+  # tabla nueva y el varchar viejo de los manifiestos que ya estaban.
+  def numeros_de_guia
+    de_la_tabla = guias.map(&:numero)
+    return de_la_tabla if de_la_tabla.any?
+
+    [ numero_guia ].compact_blank
+  end
+
   private
+
+  def al_menos_un_tipo_de_envio_nuestro
+    return if manifiesto_tipo_envios.reject(&:marked_for_destruction?).any?
+
+    errors.add(:tipo_envios, "hay que elegir al menos un tipo de envío nuestro")
+  end
 
   # PR-D1.d: nuevo formato anual `M<letra-sucursal><año 4-dig><contador 6-dig>`.
   # Ejemplos: MM2026000001 (Miami), MS2026000042 (SPS), MT2026000001 (Humuya).

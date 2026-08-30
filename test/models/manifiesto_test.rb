@@ -1,29 +1,41 @@
 require "test_helper"
 
 class ManifiestoTest < ActiveSupport::TestCase
+  # C21-03 · Desde la Conversación 21 un manifiesto sin ningún tipo de envío
+  # NUESTRO no es válido: *"no puede ser sin ninguno, tiene que llevar uno
+  # mínimo"*. Es lo que decide qué paquetes salen al finalizar. Estos tests son
+  # de la numeración, así que el tipo va por el helper y no estorba la lectura.
+  def crear_manifiesto(**attrs)
+    Manifiesto.create!(**attrs, tipo_envios: [ tipo_envios(:cer) ])
+  end
+
+  def nuevo_manifiesto(**attrs)
+    Manifiesto.new(**attrs, tipo_envios: [ tipo_envios(:cer) ])
+  end
+
   test "valid manifiesto with required fields" do
-    manifiesto = Manifiesto.new(numero: "MA-999999")
+    manifiesto = nuevo_manifiesto(numero: "MA-999999")
     assert manifiesto.valid?
   end
 
   test "requires unique numero" do
-    manifiesto = Manifiesto.new(numero: "MA-000001")
+    manifiesto = nuevo_manifiesto(numero: "MA-000001")
     assert_not manifiesto.valid?
     assert_includes manifiesto.errors[:numero], "ya esta en uso"
   end
 
   test "auto-generates numero on create" do
-    manifiesto = Manifiesto.create!
+    manifiesto = crear_manifiesto
     assert_match /\AMA-\d{6}\z/, manifiesto.numero
   end
 
   test "auto-generated numero increments" do
-    manifiesto = Manifiesto.create!
+    manifiesto = crear_manifiesto
     assert_equal "MA-000003", manifiesto.numero
   end
 
   test "default estado is creado" do
-    manifiesto = Manifiesto.new
+    manifiesto = nuevo_manifiesto
     assert_equal "creado", manifiesto.estado
   end
 
@@ -64,14 +76,14 @@ class ManifiestoTest < ActiveSupport::TestCase
   end
 
   test "save retries on numero collision" do
-    m1 = Manifiesto.create!
+    m1 = crear_manifiesto
     expected_next = m1.numero.sub("MA-", "").to_i + 1
 
     # Manually take the next slot
-    m2 = Manifiesto.create!(numero: "MA-#{expected_next.to_s.rjust(6, '0')}")
+    m2 = crear_manifiesto(numero: "MA-#{expected_next.to_s.rjust(6, '0')}")
 
     # Should still succeed via retry
-    m3 = Manifiesto.create!
+    m3 = crear_manifiesto
     assert_match /\AMA-\d{6}\z/, m3.numero
     assert_not_equal m2.numero, m3.numero
   end
