@@ -14,6 +14,28 @@ digitador:
   ubicacion: miami
   activo: true
 
+# PR-M10: el candado del manifiesto finalizado se abre solo para este rol
+# (Yusef, 2026-08-30: *"por hoy solo será supervisor Miami"*). Sin la fixture
+# no había forma de probar el lado que sí puede.
+supervisor_miami:
+  nombre: Supervisor Miami
+  email_address: supervisor.miami@test.com
+  password_digest: <%= BCrypt::Password.create("password123") %>
+  rol: supervisor_miami
+  ubicacion: miami
+  activo: true
+
+# PR-M10 · La encargada de operaciones en San Pedro Sula (`C21-02`): entra al
+# manifiesto para ponerle la guía del proveedor y la fecha de recibido en
+# Honduras, y **nada más**.
+supervisor_prefactura:
+  nombre: Supervisor Pre-Factura
+  email_address: supervisor.prefactura@test.com
+  password_digest: <%= BCrypt::Password.create("password123") %>
+  rol: supervisor_prefactura
+  ubicacion: honduras
+  activo: true
+
 cajero:
   nombre: Cajero Honduras
   email_address: cajero@test.com

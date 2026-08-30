@@ -115,8 +115,38 @@ class Manifiesto < ApplicationRecord
   # Sula"* (`C21-02`). Un candado total las dejaría afuera.
   CAMPOS_DE_SAN_PEDRO = %w[fecha_aduana guias_attributes].freeze
 
+  # Quiénes son «Miami» para el manifiesto: los que lo arman.
+  ROLES_DE_MIAMI = %w[supervisor_miami digitador_miami].freeze
+
+  # Y quién abre el candado de uno ya cerrado. Yusef: *"solo los que están en
+  # Miami; lo hace normalmente Julien, el supervisor. Tendrían que ser dos de
+  # ellos mínimo: el supervisor de Miami y… es que es un etiquetador el otro"* —
+  # la frase quedó a medias y se le preguntó cuál era el segundo:
+  #
+  #   > **2026-08-30: "por hoy solo será supervisor Miami."**
+  #
+  # Así que la lista es de uno: el digitador arma manifiestos, pero **no puede
+  # reabrir uno cerrado**.
+  ROLES_QUE_ABREN_EL_CANDADO = %w[admin supervisor_miami].freeze
+
   def bloqueado?
     !creado?
+  end
+
+  # ¿Este usuario puede tocar **lo que llena Miami**?
+  #
+  # Dos reglas, no una. La de arriba es la de siempre: Miami arma el manifiesto.
+  # La de abajo es el candado: cerrado, solo el supervisor lo reabre.
+  #
+  # San Pedro **no entra por acá nunca**, ni con el manifiesto abierto. Lo suyo
+  # son `CAMPOS_DE_SAN_PEDRO` y nada más — la guía del proveedor y la fecha de
+  # recibido en Honduras (`C21-02`).
+  def editable_por?(user)
+    rol = user&.rol
+    return true if rol == "admin"
+    return false unless rol.in?(ROLES_DE_MIAMI)
+
+    !bloqueado? || rol.in?(ROLES_QUE_ABREN_EL_CANDADO)
   end
 
   # El tipo de envío del proveedor, para mostrar. Lee las dos formas: la

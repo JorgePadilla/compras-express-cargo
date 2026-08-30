@@ -3,6 +3,7 @@ class ManifiestosController < ApplicationController
   # necesariamente tienen rol de Miami — se gatea via authorize_edit
   # del paquete antes de llegar acá.
   before_action :authorize_manifiestos, except: [ :buscar ]
+  before_action :authorize_acciones_de_miami
   before_action :set_manifiesto, only: %i[show edit update add_paquete remove_paquete finalizar documento]
 
   def index
@@ -75,11 +76,17 @@ class ManifiestosController < ApplicationController
   def finalizar
     resultado = @manifiesto.finalizar!(user: Current.user)
 
-    aviso = "Manifiesto #{@manifiesto.numero} finalizado: #{resultado.enviados.size} paquete(s) a enviado."
-    if resultado.trabados.any?
+    # C21-06 · Jorge, 2026-08-30: *"bloquear cierre"*. Un paquete trabado no
+    # deja finalizar a ninguno — el manifiesto queda igual que estaba y hay que
+    # resolver la tarea antes de volver a darle.
+    if resultado.bloqueado?
       trabados = resultado.trabados.map { |paquete, motivo| "#{paquete.numero_recepcion_visible} (#{motivo})" }
-      flash[:alert] = "No pasaron #{resultado.trabados.size}: #{trabados.join(' · ')}"
+      redirect_to @manifiesto,
+                  alert: "No se finalizó #{@manifiesto.numero}: #{resultado.trabados.size} paquete(s) con tareas abiertas. #{trabados.join(' · ')}"
+      return
     end
+
+    aviso = "Manifiesto #{@manifiesto.numero} finalizado: #{resultado.enviados.size} paquete(s) a enviado."
 
     if params[:imprimir].present? && @manifiesto.cajas.any?
       redirect_to etiquetas_manifiesto_cajas_path(@manifiesto, print: true), notice: aviso
@@ -117,8 +124,20 @@ class ManifiestosController < ApplicationController
     }
   end
 
+  # C21-02 · Miami arma el manifiesto; San Pedro le pone después la guía del
+  # proveedor y la fecha de recibido en Honduras. Las dos mitades entran a la
+  # sección, y `manifiesto_params` recorta lo que cada una puede escribir.
+  #
+  # Lo que es **solo de Miami** —crear, armar cajas, meter paquetes, empacar y
+  # finalizar— va con su propio filtro más abajo.
+  SOLO_MIAMI = %i[new create add_paquete remove_paquete finalizar].freeze
+
   private def authorize_manifiestos
-    require_role(:supervisor_miami, :digitador_miami)
+    require_role(*Manifiesto::ROLES_DE_MIAMI, *Authorization::ROLES_DE_SAN_PEDRO)
+  end
+
+  def authorize_acciones_de_miami
+    require_role(*Manifiesto::ROLES_DE_MIAMI) if SOLO_MIAMI.include?(action_name.to_sym)
   end
 
   def set_manifiesto
@@ -142,7 +161,21 @@ class ManifiestosController < ApplicationController
   # C21-02 · Lo que la pantalla puede mandar. Las columnas viejas `tipo_envio`,
   # `numero_guia` y `numero_caja` **salen de acá**: dejan de escribirse y quedan
   # solo para leer lo que ya está grabado.
+  # C21-06 · El candado, aplicado. `CAMPOS_DE_SAN_PEDRO` estaba **declarado y
+  # sin usar**: un manifiesto cerrado aceptaba que le cambiaran cualquier campo
+  # de Miami, desde cualquiera de los dos roles que ven la sección.
+  #
+  # Ahora, cerrado el manifiesto, solo pasan los campos que San Pedro llena
+  # después —la fecha de recibido en Honduras y las guías del proveedor
+  # (`C21-02`)— salvo que quien edita sea de los que abren el candado.
   def manifiesto_params
+    permitidos = manifiesto_params_permitidos
+    return permitidos if @manifiesto.nil? || @manifiesto.editable_por?(Current.user)
+
+    permitidos.slice(*Manifiesto::CAMPOS_DE_SAN_PEDRO)
+  end
+
+  def manifiesto_params_permitidos
     params.require(:manifiesto).permit(
       :numero, :expedido_por, :empresa_manifiesto_id,
       # El encabezado que Yusef anotó campo por campo sobre el impreso.
