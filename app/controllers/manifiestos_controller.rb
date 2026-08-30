@@ -3,7 +3,7 @@ class ManifiestosController < ApplicationController
   # necesariamente tienen rol de Miami — se gatea via authorize_edit
   # del paquete antes de llegar acá.
   before_action :authorize_manifiestos, except: [ :buscar ]
-  before_action :set_manifiesto, only: [ :show, :edit, :update, :add_paquete, :remove_paquete, :enviar ]
+  before_action :set_manifiesto, only: %i[show edit update add_paquete remove_paquete finalizar]
 
   def index
     @manifiestos = Manifiesto.activos.includes(:empresa_manifiesto).order(created_at: :desc)
@@ -68,9 +68,26 @@ class ManifiestosController < ApplicationController
     respond_to_paquete_change("Paquete #{paquete.guia} removido del manifiesto.")
   end
 
-  def enviar
-    @manifiesto.enviar!
-    redirect_to @manifiesto, notice: "Manifiesto #{@manifiesto.numero} enviado exitosamente."
+  # C21-06 · «Solo Finalizar» y «Finalizar e Imprimir». Los paquetes de los
+  # tipos seleccionados pasan a ENVIADO, uno por uno; los que tienen una tarea
+  # abierta no pasan y salen listados, sin trabar a los demás — la misma forma
+  # que `A7-05` eligió para la recepción parcial.
+  def finalizar
+    resultado = @manifiesto.finalizar!(user: Current.user)
+
+    aviso = "Manifiesto #{@manifiesto.numero} finalizado: #{resultado.enviados.size} paquete(s) a enviado."
+    if resultado.trabados.any?
+      trabados = resultado.trabados.map { |paquete, motivo| "#{paquete.numero_recepcion_visible} (#{motivo})" }
+      flash[:alert] = "No pasaron #{resultado.trabados.size}: #{trabados.join(' · ')}"
+    end
+
+    if params[:imprimir].present? && @manifiesto.cajas.any?
+      redirect_to etiquetas_manifiesto_cajas_path(@manifiesto, print: true), notice: aviso
+    else
+      redirect_to @manifiesto, notice: aviso
+    end
+  rescue ArgumentError => e
+    redirect_to @manifiesto, alert: e.message
   end
 
   # Endpoint JSON para el autocomplete del manifiesto en el form del paquete.

@@ -175,7 +175,9 @@ Rails.application.routes.draw do
     member do
       post :add_paquete
       delete "remove_paquete/:paquete_id", action: :remove_paquete, as: :remove_paquete
-      patch :enviar
+      # C21-06: «enviar» pasa a llamarse «finalizar», que es la palabra que usa
+      # Yusef y la que dice el botón de la pantalla vieja.
+      patch :finalizar
     end
     collection do
       get :buscar
