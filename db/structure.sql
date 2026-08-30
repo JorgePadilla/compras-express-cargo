@@ -290,7 +290,9 @@ CREATE TABLE public.caja_manifiestos (
     peso numeric(10,2),
     volumen numeric(10,2),
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    recibida_at timestamp(6) without time zone,
+    recibida_por_id bigint
 );
 
 
@@ -1310,7 +1312,8 @@ CREATE TABLE public.manifiestos (
     cantidad_bultos integer DEFAULT 0 NOT NULL,
     ultima_letra integer DEFAULT 0 NOT NULL,
     finalizado_por_id bigint,
-    finalizado_at timestamp(6) without time zone
+    finalizado_at timestamp(6) without time zone,
+    recepcion_finalizada_at timestamp(6) without time zone
 );
 
 
@@ -4129,6 +4132,13 @@ CREATE UNIQUE INDEX index_caja_manifiestos_on_manifiesto_id_and_letra ON public.
 
 
 --
+-- Name: index_caja_manifiestos_on_recibida_por_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_caja_manifiestos_on_recibida_por_id ON public.caja_manifiestos USING btree (recibida_por_id);
+
+
+--
 -- Name: index_caja_manifiestos_on_tamano_caja_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6270,6 +6280,14 @@ ALTER TABLE ONLY public.entregas
 
 
 --
+-- Name: caja_manifiestos fk_rails_a264c8d117; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.caja_manifiestos
+    ADD CONSTRAINT fk_rails_a264c8d117 FOREIGN KEY (recibida_por_id) REFERENCES public.users(id);
+
+
+--
 -- Name: cotizaciones fk_rails_a6a86a6366; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6676,6 +6694,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260830071615'),
 ('20260830070141'),
 ('20260830063353'),
 ('20260830061904'),
