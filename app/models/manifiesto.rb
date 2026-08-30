@@ -115,8 +115,28 @@ class Manifiesto < ApplicationRecord
   # Sula"* (`C21-02`). Un candado total las dejaría afuera.
   CAMPOS_DE_SAN_PEDRO = %w[fecha_aduana guias_attributes].freeze
 
+  # Quién abre el candado. Yusef: *"solo los que están en Miami; lo hace
+  # normalmente Julien, el supervisor. Tendrían que ser dos de ellos mínimo: el
+  # supervisor de Miami y… es que es un etiquetador el otro"* — la frase quedó
+  # a medias y se le preguntó cuál era el segundo:
+  #
+  #   > **2026-08-30: "por hoy solo será supervisor Miami."**
+  #
+  # Así que la lista es de uno, y se escribe una sola vez: el digitador de
+  # Miami llega hasta acá porque puede armar manifiestos, pero **no puede
+  # reabrir uno cerrado**.
+  ROLES_QUE_ABREN_EL_CANDADO = %w[admin supervisor_miami].freeze
+
   def bloqueado?
     !creado?
+  end
+
+  # ¿Este usuario puede tocar lo que llena Miami en un manifiesto ya cerrado?
+  # Un manifiesto abierto lo edita cualquiera que tenga la sección.
+  def editable_por?(user)
+    return true unless bloqueado?
+
+    user&.rol.in?(ROLES_QUE_ABREN_EL_CANDADO)
   end
 
   # El tipo de envío del proveedor, para mostrar. Lee las dos formas: la

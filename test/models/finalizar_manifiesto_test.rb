@@ -43,20 +43,60 @@ class FinalizarManifiestoTest < ActiveSupport::TestCase
                  "y quién lo mandó, que con update_all quedaba en nil"
   end
 
-  # La guarda que el `update_all` se saltaba. Y no puede trabar a los demás:
-  # misma forma que `A7-05` eligió para la recepción parcial — avisar con el
-  # faltante enumerado, no bloquear.
-  test "un paquete con tarea abierta no pasa, y no traba a los demás" do
+  # La guarda que el `update_all` se saltaba, y la decisión de Jorge sobre qué
+  # hacer con ella: *"bloquear cierre"*. No es como `A7-05` —una caja que no
+  # aparece en la recepción ya está perdida y no cerrar no la trae—; acá el
+  # paquete está en la bodega y la tarea abierta avisa que algo le falta antes
+  # de subirse al camión.
+  test "un paquete con tarea abierta traba el cierre entero" do
     trabado = crear_paquete(tipo_envios(:cer))
     Tarea.create!(paquete: trabado, titulo: "Falta la factura", estado: "pendiente",
                   bloquea_avance: true)
 
     resultado = @manifiesto.finalizar!(user: users(:digitador))
 
-    assert_includes resultado.enviados, @cer, "los demás pasaron igual"
+    assert resultado.bloqueado?
+    assert_empty resultado.enviados, "no pasa ninguno"
     assert_equal 1, resultado.trabados.size
     assert_equal trabado, resultado.trabados.first.first
+  end
+
+  test "el que sí podía pasar se revierte con el trabado" do
+    trabado = crear_paquete(tipo_envios(:cer))
+    Tarea.create!(paquete: trabado, titulo: "Falta la factura", estado: "pendiente",
+                  bloquea_avance: true)
+
+    @manifiesto.finalizar!(user: users(:digitador))
+
+    assert_equal "recibido_miami", @cer.reload.estado, "el sano no se movió"
     assert_equal "recibido_miami", trabado.reload.estado
+  end
+
+  test "el manifiesto no se bloquea si el cierre se trabó" do
+    trabado = crear_paquete(tipo_envios(:cer))
+    Tarea.create!(paquete: trabado, titulo: "Falta la factura", estado: "pendiente",
+                  bloquea_avance: true)
+
+    @manifiesto.finalizar!(user: users(:digitador))
+    @manifiesto.reload
+
+    assert @manifiesto.creado?, "sigue abierto para que se pueda arreglar y volver a darle"
+    assert_nil @manifiesto.finalizado_at
+  end
+
+  # Resuelta la tarea, el cierre pasa. Es la salida del bloqueo.
+  test "cerrada la tarea, finalizar pasa" do
+    trabado = crear_paquete(tipo_envios(:cer))
+    tarea = Tarea.create!(paquete: trabado, titulo: "Falta la factura", estado: "pendiente",
+                          bloquea_avance: true)
+    assert @manifiesto.finalizar!(user: users(:digitador)).bloqueado?
+
+    tarea.update!(estado: "realizada")
+    resultado = @manifiesto.reload.finalizar!(user: users(:digitador))
+
+    assert_not resultado.bloqueado?
+    assert_equal 2, resultado.enviados.size
+    assert_equal "enviado", @manifiesto.reload.estado
   end
 
   test "el manifiesto queda bloqueado, y guarda quién lo finalizó" do

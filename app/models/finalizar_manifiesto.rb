@@ -19,12 +19,26 @@
 #     `lib/procesos_pdf.rb` dice que se salda *"cuando se arme el de
 #     manifiestos"* — o sea acá.
 #
-# El precio de saldarla: ahora un paquete con tarea abierta **no pasa**. Y no
-# puede trabar al resto, así que se devuelve la lista y la pantalla la muestra —
-# la misma forma que `A7-05` ya eligió para la recepción parcial: avisar con el
-# faltante enumerado, no bloquear.
+# El precio de saldarla: un paquete con tarea abierta **no pasa**.
+#
+# Y **traba el cierre entero** (Jorge, 2026-08-30, contestando la pregunta que
+# quedó abierta al armar el módulo: *"bloquear cierre"*). Arrancó al revés —los
+# trabados se listaban y el manifiesto cerraba sin ellos, copiando la forma de
+# `A7-05`—, pero no es el mismo problema. En la recepción una caja que no
+# aparece **ya está perdida** y no cerrar no la trae; acá el paquete está en la
+# bodega, en la mano, y la tarea abierta es justo el aviso de que **algo le
+# falta antes de subirse al camión**. Cerrar sin él lo deja fuera del manifiesto
+# con el camión saliendo.
+#
+# Así que si hay uno solo trabado no se mueve nada: la transacción se revierte
+# entera y la pantalla enumera cuáles y por qué.
 class FinalizarManifiesto
-  Resultado = Struct.new(:enviados, :trabados, keyword_init: true)
+  Resultado = Struct.new(:enviados, :trabados, keyword_init: true) do
+    # Nada pasó y nada se movió: hay que resolver las tareas y volver a darle.
+    def bloqueado?
+      trabados.any?
+    end
+  end
 
   def initialize(manifiesto, user: nil)
     @manifiesto = manifiesto
@@ -50,6 +64,12 @@ class FinalizarManifiesto
         else
           trabados << [ paquete, paquete.errors.full_messages.to_sentence ]
         end
+      end
+
+      # Uno solo trabado revierte todo, incluidos los que sí habían pasado.
+      if trabados.any?
+        enviados = []
+        raise ActiveRecord::Rollback
       end
 
       @manifiesto.update!(estado: "enviado", fecha_enviado: Time.current,

@@ -7847,7 +7847,7 @@ Code128.
 
 ---
 
-### C21-06 · Finalizar: todo a ENVIADO, y el manifiesto se bloquea — ✅ **IMPLEMENTADO en PR-M6**
+### C21-06 · Finalizar: todo a ENVIADO, y el manifiesto se bloquea — ✅ **IMPLEMENTADO en PR-M6 · corregido en PR-M10**
 
 De su diagrama: **«Finalizar e imprimir todos los paquetes con el tipo de envío
 nuestro seleccionado» → cambia estatus a ENVIADO.** La pantalla vieja tiene los
@@ -7860,7 +7860,24 @@ Y una regla que no estaba escrita:
 
 **Quién puede editarlo después:** *"solo los que están en Miami; lo hace
 normalmente Julien, el supervisor. **Tendrían que ser dos de ellos mínimo**: el
-supervisor de Miami y… es que es un etiquetador el otro"*.
+supervisor de Miami y… es que es un etiquetador el otro"* — la frase quedó sin
+terminar y se le preguntó cuál era el segundo.
+
+> **Yusef, 2026-08-30: *"por hoy solo será supervisor Miami."*** → se queda como
+> está. El segundo rol queda para cuando lo pida.
+
+**Y qué pasa si un paquete tiene una tarea abierta al finalizar.** `PR-M6` lo
+dejó del lado permisivo —los trabados se listaban y el manifiesto cerraba sin
+ellos, copiando la forma de `A7-05`— y se le preguntó a Jorge.
+
+> **Jorge, 2026-08-30: *"bloquear cierre."*** → **IMPLEMENTADO en PR-M10.** Un
+> solo paquete trabado revierte el cierre entero: no se mueve nada, el
+> manifiesto sigue abierto y la pantalla enumera cuáles y por qué.
+
+No es el mismo caso que `A7-05`: en la recepción una caja que no aparece **ya
+está perdida** y no cerrar no la trae; acá el paquete está en la bodega, en la
+mano, y la tarea abierta es justo el aviso de que le falta algo **antes de
+subirse al camión**. Cerrar sin él lo deja fuera con el camión saliendo.
 
 Las horas de corte, que explican por qué a veces sobra o falta carga: *"el corte
 del marítimo es el jueves al mediodía… y el siguiente sale el lunes temprano"* ·
@@ -8080,9 +8097,9 @@ O sea: la misma lógica de sufijos que ya usan nuestras cajas de un split.
 | Id | Qué |
 |---|---|
 | ~~`RP-53`~~ | **✅ CERRADA por Jorge (2026-08-30): se puebla `Consignatario` y `Agent` se queda como está** para el Warehouse Receipt. Implementado en `PR-M1`. ~~¿Dónde vive el consignatario? El modelo `Consignatario` existe y está **vacío** (sin seeds, sin pantalla, sin asociaciones), y es el nombre semánticamente correcto. Pero «CORPORACION KARSAM» hoy vive en `Agent` —el bloque *Agent* del Warehouse Receipt—, que significa «agente de destino». ¿Se puebla `Consignatario` y se deja `Agent` como está, o son la misma cosa con dos nombres?~~ |
-| `RP-54` | **El código de la caja: ¿barras o QR?** `A7-03` dejó abierto *"un código QR o lo que vos querás"*. El repo solo genera Code128 (`barby`), que es lo que ya leen las pistolas; QR necesitaría gema nueva. Confirmar antes de imprimir 4×6 en producción |
+| ~~`RP-54`~~ | **✅ CERRADA por Yusef (2026-08-30): código QR.** *"Habría que instalar la gema necesaria"* — o sea que acepta el costo. ~~El código de la caja: ¿barras o QR? `A7-03` dejó abierto *"un código QR o lo que vos querás"*. El repo solo genera Code128 (`barby`), que es lo que ya leen las pistolas; QR necesitaría gema nueva. Confirmar antes de imprimir 4×6 en producción~~ |
 | ~~`RP-55`~~ | **✅ CERRADA por Jorge (2026-08-30): se borran.** Eran 2 de prueba y no hay producción. Implementado en `PR-M2`. ~~¿Qué se hace con los manifiestos viejos? Jorge lo preguntó derecho. Hoy hay manifiestos numerados `MA-…` (formato legacy) porque la numeración anual nunca corrió. Al despertarla, ¿se renumeran, se dejan conviviendo, o se cierra el formato viejo en una fecha?~~ |
-| `RP-56` | **Cómo se llama la pantalla de recepción.** Yusef dio tres nombres en la misma frase: *"dar entrada al almacén"*, *"entrada al inventario"* y *"recibir carga"*. Elegir uno antes de que Miami y SPS le pongan cada quien el suyo |
+| ~~`RP-56`~~ | **✅ CERRADA por Yusef (2026-08-30): «Recibir carga».** ~~Cómo se llama la pantalla de recepción. Yusef dio tres nombres en la misma frase: *"dar entrada al almacén"*, *"entrada al inventario"* y *"recibir carga"*. Elegir uno antes de que Miami y SPS le pongan cada quien el suyo~~ |
 | `RP-57` | **Retención y peso de la data.** *"Lo mínimo son seis años: cinco para atrás más el año en curso"*, pero *"yo lo que ocupo es el año en curso y un año antes"*. Su idea: *"crear reportes automáticos, cierre anual, cierre mensual… lo mandás al bucket y ahí guarda todos los reportes del año"*. Es una discusión propia, no del manifiesto |
 
 ### Dudosos del transcript
@@ -8095,4 +8112,5 @@ O sea: la misma lógica de sufijos que ya usan nuestras cajas de un split.
   es el que se oye mal. Se imprime `+1 305-848-0990`.
 - Habló de que los del perfil de pre-factura *"me los tengo que quitar"* de
   recibir carga — no quedó claro si es un cambio de proceso que quiere o un
-  desahogo. No se documenta como pedido.
+  desahogo. **Preguntado el 2026-08-30: era desahogo.** `PR-M7` deja
+  `/recibir-carga` autorizada a los roles de pre-factura, como está.

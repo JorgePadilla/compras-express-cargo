@@ -118,8 +118,10 @@ end %>
         Las guías del proveedor y la fecha de recibido en Honduras se siguen pudiendo llenar.
       </p>
     </div>
-    <%= render ButtonComponent.new(variant: :secondary, icon: "pencil-square",
-          href: edit_manifiesto_path(@manifiesto)) do %>Editar igual<% end %>
+    <% if @manifiesto.editable_por?(Current.user) %>
+      <%= render ButtonComponent.new(variant: :secondary, icon: "pencil-square",
+            href: edit_manifiesto_path(@manifiesto)) do %>Editar igual<% end %>
+    <% end %>
   </div>
 <% end %>
 
