@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <title>Warehouse Receipt - <%= @paquete&.numero_recepcion.presence || @paquete&.tracking || "#{@paquetes&.size || 0} cajas" %></title>
+  <%# C21-09: el layout dejó de ser solo del Warehouse Receipt cuando entró el
+      manifiesto impreso. Cada vista pone su título con `content_for
+      :titulo_print`; sin eso queda el del WR, que es como venía. %>
+  <title><%= content_for?(:titulo_print) ? yield(:titulo_print) : "Warehouse Receipt - #{@paquete&.numero_recepcion.presence || @paquete&.tracking || "#{@paquetes&.size || 0} cajas"}" %></title>
   <meta charset="UTF-8">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }

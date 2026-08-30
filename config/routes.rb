@@ -178,6 +178,11 @@ Rails.application.routes.draw do
       # C21-06: «enviar» pasa a llamarse «finalizar», que es la palabra que usa
       # Yusef y la que dice el botón de la pantalla vieja.
       patch :finalizar
+      # C21-09 · El manifiesto impreso. Yusef lo comparó él mismo con el
+      # documento que ya existe: *"ese número va a ir igual que el recibo de
+      # warehouse; esto es relativamente un warehouse, solo que es un
+      # manifiesto"*. Así que va por el mismo `layout: "print"`.
+      get :documento
     end
     collection do
       get :buscar

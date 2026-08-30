@@ -3,7 +3,7 @@ class ManifiestosController < ApplicationController
   # necesariamente tienen rol de Miami — se gatea via authorize_edit
   # del paquete antes de llegar acá.
   before_action :authorize_manifiestos, except: [ :buscar ]
-  before_action :set_manifiesto, only: %i[show edit update add_paquete remove_paquete finalizar]
+  before_action :set_manifiesto, only: %i[show edit update add_paquete remove_paquete finalizar documento]
 
   def index
     @manifiestos = Manifiesto.activos.includes(:empresa_manifiesto).order(created_at: :desc)
@@ -88,6 +88,16 @@ class ManifiestosController < ApplicationController
     end
   rescue ArgumentError => e
     redirect_to @manifiesto, alert: e.message
+  end
+
+  # C21-09 · El manifiesto impreso. Las cuatro correcciones que Yusef anotó a
+  # mano sobre las dos copias del legacy viven en la vista; acá solo se arma la
+  # data. El `layout: "print"` es el mismo del Warehouse Receipt, que trae de
+  # regalo la cadena de `?print=true` (imprime y, con `cerrar=1`, se cierra).
+  def documento
+    @cajas = @manifiesto.cajas.includes(:tamano_caja)
+    @paquetes = @manifiesto.paquetes.includes(:cliente, :tipo_envio).order(:id)
+    render layout: "print"
   end
 
   # Endpoint JSON para el autocomplete del manifiesto en el form del paquete.

@@ -432,7 +432,7 @@ Fase 8  ░░░░░░░░░░░░░░░░░░░░  Inventario
 Fase 9  ░░░░░░░░░░░░░░░░░░░░  Fotos de Paquetes (storage + envio a cliente)
 Fase 10 ████████████████░░░░  Contexto operativo en captura (PR-9)      ← EN CURSO
 Fase 11 ████████████████░░░░  Tarifas y calculo de cobro (PR-10)        ← EN CURSO
-Fase 12 ██████████████████░░  Manifiesto de punta a punta (PR-M)        ← EN CURSO
+Fase 12 ████████████████████  Manifiesto de punta a punta (PR-M1–M9)      ✅
 Fase 13 ████████████████████  Precio bloqueado + PIN de supervisor        ✅
 ```
 
@@ -851,10 +851,10 @@ abierto están en `docs/05` — "La tabla de precios recibida (2026-08-05)".
 
 ---
 
-## Fase 12: Manifiesto de punta a punta — EN CURSO (serie PR-M)
+## Fase 12: Manifiesto de punta a punta — ✅ COMPLETA (serie PR-M)
 
-> **2026-08-30 · la serie `PR-M`.** El diseño de la Conversación 21 se está
-> construyendo en nueve PRs que mergean solos. Ocho entraron el mismo día.
+> **2026-08-30 · la serie `PR-M`, completa.** El diseño de la Conversación 21
+> se construyó en nueve PRs que mergearon solos, todos el mismo día.
 
 | PR | Qué | Ítem de `docs/05` | Estado |
 |---|---|---|---|
@@ -866,7 +866,7 @@ abierto están en `docs/05` — "La tabla de precios recibida (2026-08-05)".
 | `PR-M6` | Finalizar manda todo a ENVIADO, y el manifiesto queda bloqueado | `C21-06` | ✅ #372 |
 | `PR-M7` | Recibir la carga en Honduras escaneando cajas | `C21-07` | ✅ #373 |
 | `PR-M8` | La pre-factura se amarra al manifiesto | `C21-10` | ✅ |
-| `PR-M9` | El documento impreso — encabezado, teléfono, encargado y letra más grande | `C21-09` | ⏳ |
+| `PR-M9` | El documento impreso — encabezado, teléfono, encargado y letra más grande | `C21-09` | ✅ |
 
 **Lo que se cerró de paso:** `RP-30` (aduana ya tiene pantalla y quién escriba el
 estado — `PR-M7` es el **primer escritor de `en_aduana` en todo el sistema**),
