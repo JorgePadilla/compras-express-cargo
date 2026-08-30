@@ -432,7 +432,7 @@ Fase 8  ░░░░░░░░░░░░░░░░░░░░  Inventario
 Fase 9  ░░░░░░░░░░░░░░░░░░░░  Fotos de Paquetes (storage + envio a cliente)
 Fase 10 ████████████████░░░░  Contexto operativo en captura (PR-9)      ← EN CURSO
 Fase 11 ████████████████░░░░  Tarifas y calculo de cobro (PR-10)        ← EN CURSO
-Fase 12 ░░░░░░░░░░░░░░░░░░░░  Escaneo de manifiesto + pre-etiqueta de caja
+Fase 12 ░░░░░░░░░░░░░░░░░░░░  Manifiesto de punta a punta (diseño cerrado, C21)
 Fase 13 ████████████████████  Precio bloqueado + PIN de supervisor        ✅
 ```
 
@@ -851,7 +851,37 @@ abierto están en `docs/05` — "La tabla de precios recibida (2026-08-05)".
 
 ---
 
-## Fase 12: Escaneo al empacar + pre-etiqueta de caja — PLANIFICADA
+## Fase 12: Manifiesto de punta a punta — DISEÑO CERRADO (Conversación 21)
+
+> **2026-08-29 · la Conversación 21 la cerró.** Yusef dedicó una videollamada de
+> 95 minutos con la pantalla compartida desde Miami, mandó **seis fotos** —dos de
+> ellas el manifiesto impreso del legacy **anotado campo por campo**— y Jorge sumó
+> la captura de la pantalla vieja. El detalle está en `docs/05`, `C21-01` a
+> `C21-11`. Lo de abajo es el diseño previo, que sigue siendo correcto: la
+> Conversación 21 lo **completa**, no lo contradice.
+
+**Lo que agrega la Conversación 21**, en corto: crear el manifiesto **primero** y
+sacar de ahí las pre-etiquetas de los bultos; el encabezado con quién llena cada
+campo (Miami vs SPS) y los rótulos explícitos «tipo de envío del proveedor» vs
+«nuestro»; el tipo de envío nuestro en selección múltiple obligatoria; los diez
+tamaños de caja con medidas editables (*«EH cortada»*) y volumen ÷166; la etiqueta
+**4×6** del bulto —que necesita el número de manifiesto y es un **formato nuevo**,
+porque la plantilla actual es singleton y topa en 3 pulgadas de alto—; el bloqueo
+del manifiesto al finalizar; la **pantalla de recibir carga** en Honduras (la hacen
+los de pre-factura, escanean cajas, 5-10 por vez); un **CRUD único** para los
+catálogos; y el amarre de la **pre-factura al manifiesto**, no a la guía.
+
+**El enganche, verificado en el código (2026-08-30):** `Manifiesto`,
+`ManifiestoCounter` y `EmpresaManifiesto` funcionan desde la Fase 1. El enum ya
+tiene `en_aduana` y `recibido` y `fecha_aduana` ya es columna — **la mitad de
+recepción entra sin migración**. Está muerto: `sucursal_origen` (nadie lo asigna →
+la numeración anual `MM2026000001` nunca corre, `RP-46`), `TamanoCaja` y
+`Consignatario` (tablas vacías, sin pantallas), y el estado `empacado`. **Sigue
+faltando la entidad «caja empacada»**, que es de la que cuelga todo.
+
+---
+
+### El diseño previo (Conversación 5) — sigue vigente
 
 **No se construye en PR-10.** Yusef pidió explícitamente dejarla diseñada:
 
