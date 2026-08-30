@@ -7099,8 +7099,9 @@ pantalla sin contestar —un aviso en fila, el conflicto, el duplicado, la
 listita de retener o política, el PIN, el «¿cuántas etiquetas?»— las teclas
 de guardar (F8/F9/F10) no actúan. Contestar cuesta un Enter; guardar por
 encima costaba un paquete con la pregunta sin responder. F2 queda libre: es
-la salida que los propios modales ofrecen. La gemela de EP lleva la misma
-regla con sus listitas.
+la salida que los propios modales ofrecen. La gemela de EP lleva la misma regla con sus listitas. `C20-13` extiende la
+regla al duplicado y a cualquier `<dialog>` abierto: no se abre una pregunta
+encima de otra, se pospone.
 
 De paso, cazado en el mismo arreglo: el comentario ERB del partial de chips
 (`PR-C7.58`) filtraba un `%>` a la pantalla — y su molde,
@@ -7560,6 +7561,68 @@ edita después por separado. Al dar de alta no cambia nada: las cajas se pesan
 una por una con F6 y la incoherencia no puede darse. Entrega Personal no tiene
 actualización de cajas.
 
+### C20-13 · Retención y «Tracking ya existe» salían montados — 🐛 ✅ **ARREGLADO (PR-C7.82)**
+
+> Jorge, 2026-08-30: *"Hay veces que retener en Miami y el cuadro de tracking
+> ya existe en el sistema salen los dos. Hagamos que el que tenga más sentido
+> salga primero: solo permitamos un modal a la vez."*
+
+**Qué pasaba.** Una sola respuesta de `check_tracking` nunca abre los dos: la
+rama de pre-alerta —la que trae retención, tareas y notas— retorna antes de
+mirar si el tracking existe. El montaje venía de **dos consultas en vuelo**,
+cada una con su guarda de secuencia y ninguna guarda cruzada: el tracking
+primario pre-alertado (→ aviso rojo NO DESPACHAR, un `<dialog>` top-layer) y
+el secundario que ya existía (→ «Tracking ya existe», un overlay). El caso
+típico es un pre-alertado **ya recibido** (`C20-09`) que se vuelve a escanear:
+el primario cae en la rama de pre-alerta y el secundario, ya guardado en ese
+paquete, cae en «existe». `C19-08` ordenó solo al conflicto de sesión frente a
+los avisos; **el duplicado no participaba en ninguna dirección** — ni miraba
+qué había abierto, ni nadie lo miraba antes de abrir. Según cuál respuesta
+llegara primero, el aviso salía encima del duplicado (con dos pitos) o el
+duplicado se abría debajo del aviso.
+
+> **Decisión de Jorge (2026-08-30): conflicto > avisos (retención → tareas →
+> notas) > duplicado. Uno a la vez.** Los avisos van antes que el duplicado
+> porque, a diferencia del conflicto —cuyos avisos *vuelven a salir enteros*
+> en la sesión correcta—, después de «Es actualización» la página recarga en
+> modo actualización y ahí **no sale ningún aviso**: poner el duplicado
+> primero perdería el NO DESPACHAR, justo el que Yusef pidió como modal
+> porque *"ellos no las leen"* (`C14-02`). Y los avisos son del paquete y del
+> cliente: valen igual se resuelva el duplicado como se resuelva.
+
+**La regla, extendida.** `C19-08` decía: mientras haya una pregunta abierta,
+F8/F9/F10 no actúan. `C20-13` agrega: **mientras haya una pregunta abierta,
+no se abre otra — se pospone.** El conflicto mata todo lo demás (ahora
+también al duplicado, en pantalla o pospuesto); un aviso que llega con el
+duplicado en pantalla lo hace a un lado y el duplicado vuelve solo cuando la
+fila se vacía; un duplicado que llega con un aviso abierto espera; y la fila
+espera también a cualquier otro `<dialog>` (la listita de retener abierta a
+mano, el cambio de servicio que abre solo con `?cambio_servicio=1`, «¿cuántas
+etiquetas?») y sigue al cerrarse. Cada modal pita al salir, no al llegar: se
+acabó el doble pito. Y **Escape no contesta un aviso**: las salidas son sus
+botones y F2 (`C14-02`); si el navegador fuerza el cierre, la fila sigue
+igual — cuenta como «todavía no».
+
+**De paso, dos cosas viejas.** El aviso de «otro tipo de envío» del tracking
+**secundario** estaba muerto desde `PR-C7.62`: ese PR partió la comparación en
+pregunta + modal y la renombró solo en el primario; el secundario seguía
+llamando al nombre viejo y el `TypeError` caía en el `catch` del fetch —que
+además borraba la marca de «ya consultado», así que el mismo secundario se
+volvía a consultar y a decir «pre alerta» en cada blur. Vuelve, como aviso y
+no como bloqueo: el servidor solo rechaza por el tipo del primario, y Yusef
+dejó esa decisión en el operario (*"lo va a retener, o lo va a enviar
+así"*). Y «Es duplicado real» sobre un secundario que ya existía escribía el
+sufijo **en el primario**; ahora va al campo que lo escaneó.
+
+**Lo que este arreglo destapó.** Dos archivos de system tests llevaban tiempo
+rojos sin que nadie lo viera —el CI no los corre—: `avisos_al_escanear_test`
+(cinco de seis) y `etiquetar_cambio_servicio_test`, los dos por lo mismo: abrían la
+sesión con el primer tipo del prompt en vez del de sus pre-alertas, y desde
+`C19-08` el conflicto sale antes que cualquier aviso. Arreglados en el camino.
+
+**Alcance.** Solo /etiquetar: Entrega Personal no tiene estos modales. Lo que
+queda abierto es `RP-52`.
+
 ### Las preguntas que abre
 
 | Id | Qué |
@@ -7567,6 +7630,7 @@ actualización de cajas.
 | `RP-49` | **Registro y reporte de errores del sistema.** Yusef, viendo la pantalla de error: *"cuando te pasa algo así… ¿cómo lo reportás? ¿Venís y lo grabás, un videíto?"* · *"Normalmente en una empresa grande hay como un equipo que está grabando todos los errores… lo más bonito sería llegar a eso y que mande un reporte."* Y para qué lo quiere: *"más que el reporte, es para poder ir a devolverme yo… que te diga qué estaba haciendo"* — o sea contexto, no solo el stack. Es una serie propia (esbozo: `solid_errors` + contexto de usuario/URL, o tabla propia con pantalla de admin). Decidir alcance antes de arrancar |
 | `RP-50` | **Estandarizar F8 / F9 / F10.** Yusef: *"F8 es guardar y F9 es guardar y notificar… ahorita en etiquetar es guardar e imprimir. ¿Por qué no lo estandarizamos todos?"*. Jorge: *"hay opciones donde no queremos imprimir"*. La propuesta que quedó sonando: F8/F10 guardar (+notificar) y F9 guardar + imprimir, **notificando al final** para *"que no te atrase el de Miami y quede en cola la notificación"*. Tocar los atajos es tocar el dedo de Miami: se decide antes, no en el camino |
 | ~~`RP-51`~~ | ~~Al subir cajas, ¿las nuevas heredan el peso y las medidas de la caja 1?~~ **✅ contestada el 2026-08-30**: *"si no tiene pesos, los ponemos sin pesos; si ya tiene pesos, obligarlo a llenar"* — nunca se copia, y al partir un envío pesado se pesa cada caja en el momento. Ver `C20-12` — `PR-C7.81` |
+| `RP-52` | **Al entrar en modo actualización no sale ningún aviso del paquete** — ni el NO DESPACHAR de uno ya retenido, ni sus tareas o notas: solo quedan el checkbox marcado y el RET en la etiqueta. Salió al decidir el orden de `C20-13`, y es el mismo nudo que `C20-09` (el paquete que ya existe). Decidir si el servidor arma los avisos del paquete que se actualiza y el JS los encola al cargar, igual que al escanear |
 
 ### Dudosos del transcript
 

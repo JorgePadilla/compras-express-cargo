@@ -55,14 +55,16 @@ class SecundarioConPreAlertaTest < ActionDispatch::IntegrationTest
   test "y compara el cliente y el tipo de envio antes de dejarlo pasar" do
     # Las dos incongruencias que dictó: *"hay una diferencia en el tipo de
     # envío"* y *"está a nombre de dos personas diferentes"*. La del tipo de
-    # envío se reusa de `_avisarConflictoDeSesion`, que ya la hace para el
-    # primario — escribirla de nuevo sería la separación de siempre.
+    # envío se reusa de `_hayConflictoDeSesion`, que ya la hace para el
+    # primario — escribirla de nuevo sería la separación de siempre. (C20-13:
+    # acá decía `_avisarConflictoDeSesion`, el nombre que PR-C7.62 se llevó, y
+    # el test seguía verde mientras el navegador tiraba TypeError.)
     src = Rails.root.join("app/javascript/controllers/etiquetar_controller.js").read
     revision = src[/_revisarSecundarioConPreAlerta\(data\)\s*\{.*?\n  \}/m]
     assert revision, "no se encontró la revisión del secundario"
 
     assert_includes revision, "clienteIdTarget", "no compara contra el cliente del formulario"
-    assert_includes revision, "_avisarConflictoDeSesion", "no reusa la comparación del tipo de envío"
+    assert_includes revision, "_hayConflictoDeSesion", "no reusa la comparación del tipo de envío"
   end
 
   # ── Lo que pasa al guardar ──────────────────────────────────────────────
