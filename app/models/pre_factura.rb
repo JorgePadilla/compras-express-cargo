@@ -13,10 +13,27 @@ class PreFactura < ApplicationRecord
 
   belongs_to :cliente
   belongs_to :creado_por, class_name: "User", optional: true
+
+  # C21-10. *"Lo que vamos a seleccionar, de que estamos procesando, es el
+  # manifiesto… ahí es donde deberíamos amarrar el manifiesto, no la guía."*
+  # Opcional: una pre-factura de recolecta no viene de ningún manifiesto.
+  belongs_to :manifiesto, optional: true
   has_many :pre_factura_items, dependent: :destroy, inverse_of: :pre_factura
   # PR-13.d: los cambios que un supervisor autorizó sobre sus líneas.
   has_many :autorizaciones, as: :documento, dependent: :destroy
   has_many :paquetes, -> { distinct }, through: :pre_factura_items
+
+  # PR-M8. `paquetes.pre_factura_id` lo leen tres lugares —`Paquete.facturables`,
+  # `Paquete#cobrada_o_entregada?` y el bloqueo de borrar del controller— y lo
+  # limpian dos (`anular!` y `BajarCajasConPin`). **Nadie lo escribía**: solo
+  # los seeds. O sea que el mismo paquete podía entrar en dos pre-facturas
+  # borrador a la vez, y que `Manifiesto.con_carga_por_facturar` siguiera
+  # listando un manifiesto ya facturado entero.
+  #
+  # Se estampa al guardar, no al confirmar: un borrador ya reserva el paquete.
+  # Se salta cuando el documento está anulado, porque `anular!` acaba de
+  # ponerlo en nil y este callback corre después de su `update!`.
+  after_save :vincular_paquetes
 
   accepts_nested_attributes_for :pre_factura_items, allow_destroy: true
 
@@ -164,7 +181,7 @@ class PreFactura < ApplicationRecord
       fecha_trabajo: Date.current
     )
 
-    paquetes = cliente.paquetes.where(id: paquete_ids)
+    paquetes = cliente.paquetes.facturables.where(id: paquete_ids)
                       .includes(:tipo_envio, :sucursal, :proveedor)
     prepagados_miami = []
 
@@ -345,6 +362,27 @@ class PreFactura < ApplicationRecord
     next_number = (self.class.where("numero LIKE 'PF-%'")
                     .maximum(Arel.sql("CAST(SUBSTRING(numero FROM 4) AS INTEGER)")) || 0) + 1
     self.numero = "PF-#{next_number.to_s.rjust(6, '0')}"
+  end
+
+  def vincular_paquetes
+    return if anulado?
+
+    ids = paquetes.reload.ids
+    return if ids.empty?
+
+    # `IS DISTINCT FROM` y no `where.not`: con la columna en NULL —que es el
+    # caso de todo paquete que entra por primera vez— `pre_factura_id != :id`
+    # evalúa a NULL, no a TRUE, y el UPDATE no tocaba ni una fila. Con el
+    # guardia puesto bien, la segunda y siguientes guardadas de la misma
+    # pre-factura no escriben nada.
+    #
+    # Va por `update_all` a propósito: `update!` correría las validaciones del
+    # paquete, y en esta bodega hay paquetes guardados incompletos — una
+    # validación que falle acá reventaría el guardado de la pre-factura entera.
+    # Es el mismo criterio que ya usan `BajarCajasConPin` y los seeds.
+    Paquete.where(id: ids)
+           .where("pre_factura_id IS DISTINCT FROM ?", id)
+           .update_all(pre_factura_id: id)
   end
 
   # PR-13.b: el descuento reduce la base del ISV, que es el orden contable

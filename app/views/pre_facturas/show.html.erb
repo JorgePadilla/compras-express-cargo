@@ -22,6 +22,15 @@
     <div class="text-right">
       <p class="text-gray-500">Fecha de Trabajo</p>
       <p class="font-medium"><%= @pre_factura.fecha_trabajo&.strftime("%d/%m/%Y") || "—" %></p>
+      <%# C21-10: el manifiesto que se trabajó. Antes se tipeaba en las notas. %>
+      <p class="text-gray-500 mt-2">Manifiesto</p>
+      <p class="font-medium font-mono">
+        <% if @pre_factura.manifiesto %>
+          <%= link_to @pre_factura.manifiesto.numero, @pre_factura.manifiesto, class: "text-cec-navy hover:underline" %>
+        <% else %>
+          —
+        <% end %>
+      </p>
     </div>
   </div>
 

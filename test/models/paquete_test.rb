@@ -258,6 +258,23 @@ class PaqueteTest < ActiveSupport::TestCase
     assert_not_includes results, paquetes(:empacado)
   end
 
+  # PR-M8. Desde que PR-M7 le dio quién escriba `en_aduana`, ahí es donde
+  # espera la carga a que la trabajen. Yusef: *"ya de aquí el paquete va a
+  # cambiar cuando ingresemos a la prefactura"*. Si este scope no lo incluye,
+  # la pantalla de pre-factura sale vacía para todo lo que llegó por manifiesto.
+  test "scope facturables incluye en_aduana" do
+    p = paquetes(:disponible_entrega_juan)
+    p.update_column(:estado, "en_aduana")
+    assert_includes Paquete.facturables, p.reload
+  end
+
+  # `consolidando_honduras` es un desvío, no un paso del pipeline: queda afuera.
+  test "scope facturables excluye consolidando_honduras" do
+    p = paquetes(:disponible_entrega_juan)
+    p.update_column(:estado, "consolidando_honduras")
+    assert_not_includes Paquete.facturables, p.reload
+  end
+
   test "scope facturables excludes paquetes with venta_id (already invoiced)" do
     p = paquetes(:disponible_entrega_juan)
     venta = Venta.create!(cliente: clientes(:juan), estado: "pendiente", moneda: "LPS",

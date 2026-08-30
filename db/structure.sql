@@ -2074,7 +2074,8 @@ CREATE TABLE public.pre_facturas (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     tasa_cambio_aplicada numeric(10,4),
-    descuento numeric(10,2) DEFAULT 0.0 NOT NULL
+    descuento numeric(10,2) DEFAULT 0.0 NOT NULL,
+    manifiesto_id bigint
 );
 
 
@@ -5133,6 +5134,13 @@ CREATE INDEX index_pre_facturas_on_estado ON public.pre_facturas USING btree (es
 
 
 --
+-- Name: index_pre_facturas_on_manifiesto_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pre_facturas_on_manifiesto_id ON public.pre_facturas USING btree (manifiesto_id);
+
+
+--
 -- Name: index_pre_facturas_on_numero; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6344,6 +6352,14 @@ ALTER TABLE ONLY public.ingresos_caja
 
 
 --
+-- Name: pre_facturas fk_rails_acdec97a15; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pre_facturas
+    ADD CONSTRAINT fk_rails_acdec97a15 FOREIGN KEY (manifiesto_id) REFERENCES public.manifiestos(id);
+
+
+--
 -- Name: paquetes fk_rails_ad55b41320; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6694,6 +6710,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260830113111'),
 ('20260830071615'),
 ('20260830070141'),
 ('20260830063353'),
