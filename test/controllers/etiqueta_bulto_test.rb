@@ -1,0 +1,82 @@
+require "test_helper"
+
+# C21-05 · La etiqueta 4×6 del bulto.
+#
+# Yusef mandó la foto de la etiqueta impresa con dos anotaciones a mano. La
+# primera dice qué le falta:
+#
+#   > **«Falta el número del manifiesto.»**
+#
+# Y la segunda, al lado del código de barras, para qué sirve:
+#
+#   > *«Se escanea al recibir en HN → actualiza estatus de paquetes de ENVIADO
+#   >  → ADUANA.»*
+class EtiquetaBultoTest < ActionDispatch::IntegrationTest
+  setup do
+    post session_url, params: { email_address: users(:digitador).email_address, password: "password123" }
+    @manifiesto = manifiestos(:creado)
+    @manifiesto.update!(consignatario: Consignatario.create!(nombre: "CORPORACION KARSAM"),
+                        tipo_envio_proveedor: TipoEnvioProveedor.create!(nombre: "AEREO EXPRESS"),
+                        es_prioridad: true)
+    @caja = @manifiesto.cajas.create!(alto: 23, largo: 23, ancho: 36, peso: 131)
+  end
+
+  test "la etiqueta del bulto lleva el número del manifiesto" do
+    get etiqueta_manifiesto_caja_path(@manifiesto, @caja)
+
+    assert_response :success
+    assert_includes response.body, @manifiesto.numero,
+                    "es lo que Yusef anotó a mano que faltaba"
+  end
+
+  test "lleva lo que ya traía: letra, libras, medidas, consignatario y PRIORITY" do
+    get etiqueta_manifiesto_caja_path(@manifiesto, @caja)
+
+    assert_includes response.body, ">#{@caja.letra}<"
+    assert_includes response.body, "131"
+    assert_includes response.body, "23x23x36"
+    assert_includes response.body, "CORPORACION KARSAM"
+    assert_includes response.body, "AEREO EXPRESS"
+    assert_includes response.body, "PRIORITY"
+  end
+
+  test "sin prioridad no dice PRIORITY" do
+    @manifiesto.update!(es_prioridad: false)
+
+    get etiqueta_manifiesto_caja_path(@manifiesto, @caja)
+
+    assert_not_includes response.body, "PRIORITY"
+  end
+
+  # El barcode es lo que se escanea en Honduras, así que tiene que ser el código
+  # de la caja — no el del manifiesto ni el del paquete.
+  test "el código de barras es el de la caja, y es único entre bultos" do
+    otra = @manifiesto.cajas.create!(alto: 13, largo: 13, ancho: 16, peso: 19)
+
+    assert_not_equal @caja.codigo, otra.codigo
+
+    get etiqueta_manifiesto_caja_path(@manifiesto, @caja)
+    assert_includes response.body, @caja.codigo
+    assert_not_includes response.body, otra.codigo
+  end
+
+  test "se imprimen todas las del manifiesto de un tiro, una por página" do
+    @manifiesto.cajas.create!(alto: 13, largo: 13, ancho: 16, peso: 19)
+
+    get etiquetas_manifiesto_cajas_path(@manifiesto)
+
+    assert_response :success
+    assert_equal 2, response.body.scan(/class="bulto"/).size
+  end
+
+  # La Dymo de /etiquetar es 2.25 × 1.25 y su plantilla es singleton, con el
+  # alto topado en 3 pulgadas — ese tope es la red de `etiqueta_cabe_test`. La
+  # 4×6 es un formato aparte a propósito; este test lo fija para que nadie las
+  # junte después sin darse cuenta.
+  test "la 4×6 no usa la plantilla de la Dymo" do
+    get etiqueta_manifiesto_caja_path(@manifiesto, @caja)
+
+    assert_includes response.body, "size: 4in 6in"
+    assert_not_includes response.body, "2.25in"
+  end
+end

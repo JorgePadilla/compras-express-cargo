@@ -9,7 +9,14 @@
       <h2 class="text-lg font-semibold text-gray-900">Casas del manifiesto</h2>
       <p class="text-xs text-gray-500 mt-0.5">El volumen sale de alto × largo × ancho ÷ 166 — es el reporte por el que cobra el proveedor.</p>
     </div>
-    <span class="text-sm text-gray-500"><%= manifiesto.cajas.size %> bulto(s)</span>
+    <div class="flex items-center gap-3">
+      <span class="text-sm text-gray-500"><%= manifiesto.cajas.size %> bulto(s)</span>
+      <% if manifiesto.cajas.any? %>
+        <%= render ButtonComponent.new(variant: :secondary, size: :sm, icon: "printer",
+              href: etiquetas_manifiesto_cajas_path(manifiesto, print: true),
+              target: "_blank") do %>Imprimir las 4×6<% end %>
+      <% end %>
+    </div>
   </div>
 
   <div class="p-6 border-b border-gray-200">
@@ -95,6 +102,9 @@
             <td class="px-4 py-3 text-sm text-right font-mono text-gray-700"><%= caja.volumen || "—" %></td>
             <td class="px-4 py-3 text-sm text-right font-mono text-gray-700"><%= caja.peso || "—" %></td>
             <td class="px-4 py-3 text-right">
+              <%= render ButtonComponent.new(variant: :secondary, size: :xs, icon: "printer",
+                    href: etiqueta_manifiesto_caja_path(manifiesto, caja, print: true),
+                    target: "_blank", label: "Imprimir la etiqueta de la caja #{caja.letra}") %>
               <%= render ButtonComponent.new(variant: :danger, size: :xs, icon: "trash",
                     href: manifiesto_caja_path(manifiesto, caja), method: :delete,
                     confirm: "Se elimina la caja #{caja.letra}. La letra no se reusa: si ya imprimiste su etiqueta, esa etiqueta queda sin caja. ¿Seguro?",

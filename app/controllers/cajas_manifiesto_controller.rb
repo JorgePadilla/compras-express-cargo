@@ -11,7 +11,24 @@
 class CajasManifiestoController < ApplicationController
   before_action :authorize_manifiestos
   before_action :set_manifiesto
-  before_action :set_caja, only: %i[update destroy]
+  before_action :set_caja, only: %i[update destroy etiqueta]
+
+  # C21-05 · La 4×6 del bulto. Yusef escribió a mano sobre la etiqueta impresa
+  # lo que le faltaba —**«Falta el número del manifiesto»**— y, junto al código
+  # de barras, para qué sirve: *«se escanea al recibir en HN → actualiza estatus
+  # de paquetes de ENVIADO → ADUANA»*.
+  def etiqueta
+    @cajas = [ @caja ]
+    render "manifiestos/cajas/etiqueta", layout: "etiqueta_4x6"
+  end
+
+  # Todas las del manifiesto de un tiro, con el mismo patrón de
+  # `PaquetesController#etiquetas_combinadas`: N etiquetas en una sola pestaña,
+  # una por página.
+  def etiquetas
+    @cajas = @manifiesto.cajas.ordenadas
+    render "manifiestos/cajas/etiqueta", layout: "etiqueta_4x6"
+  end
 
   def create
     @caja = @manifiesto.cajas.new(caja_params)
