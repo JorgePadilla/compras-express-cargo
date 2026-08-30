@@ -37,9 +37,16 @@
             <% end %>
           </div>
         <% else %>
+          <%# El link solo para quien puede: el portal se fue a Configuración
+              (admin-only) el 2026-08-30, y Miami arma manifiestos sin cargar
+              catálogos. Mostrárselo sería mandarlo a un redirect. %>
           <p class="text-sm text-gray-500">
             No hay tamaños cargados todavía.
-            <%= link_to "Agregalos en Catálogos del Manifiesto", catalogos_manifiesto_path(tab: "tamanos"), class: "text-cec-teal hover:underline" %>.
+            <% if can_access?(:catalogos_manifiesto) %>
+              <%= link_to "Agregalos en Catálogos del Manifiesto", catalogos_manifiesto_path(tab: "tamanos"), class: "text-cec-teal-deep hover:underline" %>.
+            <% else %>
+              Pedile a un administrador que los cargue en Configuración.
+            <% end %>
           </p>
         <% end %>
       </div>

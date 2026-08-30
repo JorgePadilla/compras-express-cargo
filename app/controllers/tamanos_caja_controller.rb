@@ -35,11 +35,11 @@ class TamanosCajaController < ApplicationController
   private
 
   def authorize_catalogos
-    # Miami y nada más. Se deriva de `Manifiesto::ROLES_DE_MIAMI` en vez de
-    # escribirse cinco veces: esta misma línea estaba copiada en los cinco
-    # controllers del portal, y `:manifiestos` —que era su llave— dejó de ser
-    # solo de Miami cuando San Pedro entró a llenar la guía (`C21-02`).
-    require_role(*Manifiesto::ROLES_DE_MIAMI)
+    # C21-08 · El portal vive en **Configuración** desde 2026-08-30, y ese
+    # bloque es admin-only. Va por `can_access?` y no por una lista de roles
+    # escrita acá: la misma línea estaba copiada en los cinco controllers del
+    # portal y así fue como se desincronizaron antes.
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:catalogos_manifiesto)
   end
 
   def set_registro

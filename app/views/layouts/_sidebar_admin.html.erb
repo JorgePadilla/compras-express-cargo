@@ -12,17 +12,11 @@
       fue a Logística (Jorge, 2026-08-30: *"hay que mover los links de mover
       carga al grupo de logística"*). Con San Pedro entrando al manifiesto,
       dejarlo en «Miami» además mentía sobre quién lo usa. %>
-  <% bloque_miami = can_access?(:etiquetar) || can_access?(:entrega_personal) || can_access?(:catalogos_manifiesto) %>
+  <% bloque_miami = can_access?(:etiquetar) || can_access?(:entrega_personal) %>
   <% if bloque_miami %>
     <%= sidebar_section "Miami" do %>
       <%= sidebar_link "Etiquetar", etiquetar_path, icon: "tag" if can_access?(:etiquetar) %>
       <%= sidebar_link "Entrega Personal", new_entrega_personal_path, icon: "user-plus" if can_access?(:entrega_personal) %>
-      <%# C21-08 · El portal de catálogos cuelga de Miami y no de Configuración
-          a propósito: el pedido de Yusef era poder delegarlo —*"andate al área
-          donde dice empresa, agregame esta empresa que voy a usar"*—, y el bloque
-          de Configuración es admin-only. Llave propia: quien arma el manifiesto
-          no es necesariamente quien carga los catálogos. %>
-      <%= sidebar_link "Catálogos del Manifiesto", catalogos_manifiesto_path, icon: "rectangle-stack" if can_access?(:catalogos_manifiesto) %>
       <%# C16-06 · Yusef, leyendo este bloque: *"falta Clientes para Miami, para
           que ellos lo puedan ver… a veces buscan un cliente para tratar de
           encontrar cuál es el número correcto"*. El link suelto de abajo ya lo
@@ -100,6 +94,12 @@
     <%= sidebar_section "Configuracion" do %>
       <%= sidebar_link "Usuarios", users_path, icon: "user-group" %>
       <%= sidebar_link "Sucursales", sucursales_path, icon: "building-storefront" %>
+      <%# C21-08 · El portal de catálogos del manifiesto —empresas
+          transportadoras, tipos de envío del proveedor, consignatarios y
+          tamaños de caja—. Jorge lo mandó acá el 2026-08-30; antes colgaba de
+          Miami. Es un CRUD de catálogos como Sucursales, y quien los carga
+          —Manal y Vanesa— es admin. %>
+      <%= sidebar_link "Catálogos del Manifiesto", catalogos_manifiesto_path, icon: "rectangle-stack" %>
       <%# PR-C7.12: "Categorias de Precio" se fue de acá. Jorge: "no le veo mucho
           valor". Sonaba a lo mismo que la línea de arriba y era un CRUD de un
           campo; los grupos de clientes se administran dentro de la Tabla de
