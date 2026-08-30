@@ -1,0 +1,58 @@
+<%# C19-02 / PR-C7.73 · El auto-imprimir-y-cerrar de las etiquetas.
+    Vive en un partial porque lo comparten la Dymo 2.25×1.25 de /etiquetar y
+    la 4×6 del bulto (C21-05). Son ~40 líneas de conocimiento caro sobre
+    `afterprint`, `window.close()` y el bloqueador de popups de Chrome:
+    duplicarlas es garantizar que diverjan. %>
+  <script>
+    // Yusef, 2026-08-08: "esto que ves acá debería de cerrarse". Con F9 la
+    // etiqueta se abre en pestaña nueva, se imprime, y quedaba abierta —
+    // así que en un lote de 100 paquetes se le juntaban 100 pestañas.
+    // Tiene que cerrarse sola y devolver el foco a /etiquetar limpio.
+    (function () {
+      if (new URL(window.location.href).searchParams.get("print") !== "true") return;
+
+      // `window.close()` a secas: el navegador **ya** se niega a cerrar
+      // pestañas que no abrió por script, así que cuando alguien llega acá
+      // pegando la URL no pasa nada (solo un warning en consola).
+      //
+      // Hubo un chequeo de `window.opener` acá. Se sacó por dos razones: no
+      // cambiaba el comportamiento —se verificó quitándolo y ningún test
+      // falla— y hacía creer que el fix no servía cuando se probaba pegando
+      // el link en la barra de direcciones.
+      // Yusef: *"si después de imprimir la etiqueta, te tire automáticamente
+      // el Recibo de Bodega"*. /entrega_personal lo intentaba con un segundo
+      // `window.open` y **Chrome bloqueaba ese**: un gesto del usuario alcanza
+      // para un popup, no para dos. Reproducido con el bloqueador puesto —
+      // salía la etiqueta y nada más.
+      //
+      // Así que el Warehouse Receipt no abre otra ventana: se lleva ESTA, que
+      // ya está abierta y no le pide permiso a nadie. Solo pasa cuando la
+      // pantalla lo pidió (`wr=1`); el resto de las etiquetas siguen cerrando.
+      var despues = <%= raw((@despues_de_imprimir || "").to_json) %>;
+
+      function cerrar() {
+        if (despues) {
+          // `replace` y no `href`: el Atrás del navegador no tiene por qué
+          // volver a una etiqueta que ya se imprimió y se iba a cerrar.
+          window.location.replace(despues);
+          return;
+        }
+        window.close();
+      }
+
+      window.onload = function () {
+        // `afterprint` dispara tanto si imprimió como si canceló. Los dos
+        // casos cierran: lo que Yusef quiere es volver a escanear.
+        window.addEventListener("afterprint", cerrar, { once: true });
+
+        // Safari viejo no dispara `afterprint`; el media query sí avisa
+        // cuando se sale del modo impresión.
+        var mq = window.matchMedia("print");
+        if (mq && mq.addEventListener) {
+          mq.addEventListener("change", function (e) { if (!e.matches) cerrar(); });
+        }
+
+        window.print();
+      };
+    })();
+  </script>

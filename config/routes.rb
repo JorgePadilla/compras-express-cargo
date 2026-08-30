@@ -163,7 +163,10 @@ Rails.application.routes.draw do
   resources :manifiestos, except: [ :destroy ] do
     # C21-04 · Las casas del manifiesto. Cuelgan del manifiesto porque el
     # manifiesto ya existe cuando se empaca: ése es el cambio de C21-01.
-    resources :cajas, only: %i[create update destroy], controller: "cajas_manifiesto"
+    resources :cajas, only: %i[create update destroy], controller: "cajas_manifiesto" do
+      member     { get :etiqueta }   # C21-05: la 4×6 de un bulto
+      collection { get :etiquetas }  # C21-05: las de todo el manifiesto, de un tiro
+    end
     member do
       post :add_paquete
       delete "remove_paquete/:paquete_id", action: :remove_paquete, as: :remove_paquete

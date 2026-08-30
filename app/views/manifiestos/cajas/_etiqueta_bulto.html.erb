@@ -1,0 +1,44 @@
+<%# C21-05 · La etiqueta 4×6 del bulto.
+    El contenido sale de la foto que mandó Yusef: la letra, las libras, las
+    medidas, el servicio, PRIORITY, el consignatario, el código de barras, la
+    fecha y el DM. Más lo que él anotó a mano al lado: **«Falta el número del
+    manifiesto»**.
+
+    Y junto al código de barras escribió el otro pedido: *«se escanea al
+    recibir en HN → actualiza estatus de paquetes de ENVIADO → ADUANA»*. Por eso
+    el barcode lleva el código de la caja y no otra cosa. %>
+<div class="bulto">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+    <span class="letra"><%= caja.letra %></span>
+    <span class="lbs">Lbs. <%= caja.peso ? etiqueta_num(caja.peso) : "—" %></span>
+  </div>
+
+  <div class="medidas"><%= caja.medidas || "—" %></div>
+
+  <% if caja.tipos_envio_adentro.present? %>
+    <div class="servicio"><%= caja.tipos_envio_adentro %></div>
+  <% end %>
+
+  <% if caja.manifiesto.tipo_envio_del_proveedor.present? %>
+    <div class="proveedor"><%= caja.manifiesto.tipo_envio_del_proveedor.upcase %></div>
+  <% end %>
+
+  <% if caja.manifiesto.es_prioridad? %>
+    <div class="priority">PRIORITY</div>
+  <% end %>
+
+  <% if caja.manifiesto.consignatario.present? %>
+    <div class="consig"><%= caja.manifiesto.consignatario.nombre.upcase %></div>
+  <% end %>
+
+  <div class="barcode"><%= etiqueta_barcode_svg(caja.codigo, height: 60, xdim: 2) %></div>
+  <div class="codigo"><%= caja.codigo %></div>
+
+  <div class="pie">
+    <div>
+      <div class="manifiesto"><%= caja.manifiesto.numero %></div>
+      <div class="fecha"><%= caja.created_at.strftime("%d/%m/%Y %H:%M") %></div>
+    </div>
+    <div class="doc"><%= caja.numero_doc.presence || caja.letra %></div>
+  </div>
+</div>

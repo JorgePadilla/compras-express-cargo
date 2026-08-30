@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <title>Bulto — <%= @caja&.codigo %></title>
+  <meta charset="UTF-8">
+  <style>
+    /* C21-05 · La etiqueta del BULTO: 4 × 6 in, FreeX. No es la Dymo de
+       /etiquetar (2.25 × 1.25) — son dos documentos distintos, con dos
+       impresoras distintas, y `docs/05` los tiene tabulados así desde la
+       Conversación 5.
+
+       Por qué un layout propio y no la plantilla de /ajustes_etiqueta:
+       `EtiquetaPlantilla` es **singleton** y su `ALTO_RANGO` topa en 3
+       pulgadas — ese tope es la red que protege a la Dymo, que va al filo y
+       tiene `test/system/etiqueta_cabe_test.rb` midiéndola en Chrome de
+       verdad. Ensancharlo para que entren 6 pulgadas le quitaría la guarda a
+       la etiqueta que sí la necesita. Que esta también se pueda ajustar sin
+       deploy queda para después, cuando el layout se estabilice con
+       impresiones reales. */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    @page { size: 4in 6in; margin: 0; }
+
+    body { font-family: Arial, Helvetica, sans-serif; color: #000; -webkit-font-smoothing: none; }
+
+    .bulto {
+      width: 4in;
+      height: 6in;
+      padding: .18in .16in;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .bulto + .bulto { page-break-before: always; }
+
+    .letra   { font-size: 58pt; font-weight: 700; line-height: 1; }
+    .lbs     { font-size: 26pt; font-weight: 700; text-align: right; }
+    .medidas { font-size: 22pt; font-weight: 700; margin-top: .04in; }
+    .servicio{ font-size: 20pt; font-style: italic; margin-top: .04in; }
+    .proveedor { font-size: 17pt; font-weight: 700; margin-top: .03in; }
+    .priority{ font-size: 30pt; font-weight: 900; letter-spacing: .02em; margin-top: .04in; }
+    .consig  { font-size: 15pt; font-weight: 700; margin-top: .06in; }
+    .barcode { margin-top: .08in; }
+    .barcode svg { width: 100%; height: .85in; }
+    .codigo  { font-size: 12pt; font-family: "Courier New", monospace; }
+    .pie     { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; }
+    .fecha   { font-size: 10pt; }
+    .doc     { font-size: 24pt; font-weight: 700; }
+    /* C21-05 · «Falta el número del manifiesto» — la corrección que Yusef
+       escribió a mano sobre la etiqueta impresa. */
+    .manifiesto { font-size: 15pt; font-weight: 700; font-family: "Courier New", monospace; }
+
+    @media screen {
+      body { background: #f3f4f6; padding: 24px; }
+      .bulto { background: #fff; margin: 0 auto 16px; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+    }
+  </style>
+</head>
+<body>
+  <%= yield %>
+  <%= render "layouts/etiqueta_autoprint" %>
+</body>
+</html>
