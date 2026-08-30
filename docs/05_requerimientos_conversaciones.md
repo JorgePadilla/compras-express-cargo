@@ -8016,6 +8016,13 @@ Dos cosas salieron de acá porque no se sostenían sin ellas:
 2. **`PreFactura.build_from_paquetes` ahora filtra por `facturables`.** El
    comentario decía «must be in bodega Honduras» y el código tomaba cualquier
    id del cliente: la lista de la pantalla filtraba, el `create` no.
+3. **`paquetes.pre_factura_id` no lo escribía nadie.** Lo leen tres lugares
+   —`Paquete.facturables`, `Paquete#cobrada_o_entregada?` y el bloqueo de
+   borrar del controller— y lo limpian dos (`anular!`, `BajarCajasConPin`),
+   pero el único que lo ponía eran los seeds: el mismo paquete podía entrar en
+   dos pre-facturas borrador a la vez. Ahora se estampa al guardar y **se
+   suelta al morir su última línea** — sin ese contrapeso, quitar una línea con
+   PIN dejaba el paquete estampado para siempre.
 
 **Consecuencia conocida, no es regresión:** el contador «paquetes disponibles»
 del dashboard (`DashboardMetrics#paquetes_disponibles`, que cuenta

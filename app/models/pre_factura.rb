@@ -368,6 +368,14 @@ class PreFactura < ApplicationRecord
     return if anulado?
 
     ids = paquetes.reload.ids
+
+    # Soltar lo que ya no está en el documento. Cubre el caso en que la línea
+    # se quita por `accepts_nested_attributes_for … allow_destroy` y la
+    # pre-factura se vuelve a guardar en el mismo request.
+    sobrantes = Paquete.where(pre_factura_id: id)
+    sobrantes = sobrantes.where.not(id: ids) if ids.any?
+    sobrantes.update_all(pre_factura_id: nil)
+
     return if ids.empty?
 
     # `IS DISTINCT FROM` y no `where.not`: con la columna en NULL —que es el

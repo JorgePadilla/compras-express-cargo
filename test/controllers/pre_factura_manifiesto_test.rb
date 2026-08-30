@@ -111,6 +111,38 @@ class PreFacturaManifiestoTest < ActionDispatch::IntegrationTest
     assert_includes Paquete.facturables, @dentro
   end
 
+  # El contrapeso del estampado: si se quita la línea, el paquete se suelta.
+  # Sin esto quedaba estampado para siempre — fuera de `facturables`, con
+  # `cobrada_o_entregada?` en true, y sin poder facturarse ni borrarse.
+  test "quitar la línea del paquete lo devuelve a facturables" do
+    post pre_facturas_url, params: {
+      cliente_id: @cliente.id, manifiesto_id: @manifiesto.id, paquete_ids: [ @dentro.id ]
+    }
+    pf = PreFactura.order(:id).last
+    assert_equal pf.id, @dentro.reload.pre_factura_id
+
+    pf.pre_factura_items.find_by(paquete_id: @dentro.id).destroy!
+
+    assert_nil @dentro.reload.pre_factura_id
+    assert_includes Paquete.facturables, @dentro
+  end
+
+  # Un paquete puede llevar varias líneas en el mismo documento —el flete y sus
+  # cargos automáticos—. Que muera una auto no lo saca del cobro.
+  test "borrar una línea auto no suelta el paquete si le queda el flete" do
+    @dentro.update_columns(recolecta_solicitada: true, recolecta_monto: 35.0, recolecta_moneda: "USD")
+    post pre_facturas_url, params: {
+      cliente_id: @cliente.id, manifiesto_id: @manifiesto.id, paquete_ids: [ @dentro.id ]
+    }
+    pf = PreFactura.order(:id).last
+    auto = pf.pre_factura_items.auto.find_by(paquete_id: @dentro.id)
+    assert auto, "la línea auto de recolecta debería existir"
+
+    auto.destroy!
+
+    assert_equal pf.id, @dentro.reload.pre_factura_id
+  end
+
   test "el index filtra por manifiesto" do
     pf = pre_facturas(:borrador_juan)
     pf.update_column(:manifiesto_id, @manifiesto.id)
