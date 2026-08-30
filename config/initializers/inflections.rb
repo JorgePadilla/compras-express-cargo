@@ -50,6 +50,10 @@ ActiveSupport::Inflector.inflections(:en) do |inflect|
   # C19-04: sin esto singular y plural empatan y las rutas del catálogo de
   # descripciones salen como `plantillas_descripcion_index_path`.
   inflect.irregular "plantilla_descripcion", "plantillas_descripcion"
+  # C21-11: «guia» cae en la regla Latin -a → -um igual que `pre_alerta`, así
+  # que `ManifiestoGuia`.tableize daba `manifiesto_guia` (singular) y el
+  # `has_many :guias` consultaba una tabla que no existe.
+  inflect.irregular "manifiesto_guia", "manifiesto_guias"
   # PR-13.d: sin esto `has_many :autorizaciones` busca la clase `Autorizacione`.
   inflect.irregular "autorizacion", "autorizaciones"
 end

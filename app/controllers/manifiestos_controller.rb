@@ -18,34 +18,32 @@ class ManifiestosController < ApplicationController
 
   def new
     @manifiesto = Manifiesto.new
-    @empresas = EmpresaManifiesto.activos.order(:nombre)
-    @tipo_envios = TipoEnvio.activos.order(:nombre)
+    assigns_del_formulario
   end
 
   def create
-    @manifiesto = Manifiesto.new(manifiesto_params)
+    atributos = manifiesto_params
+    @manifiesto = Manifiesto.new(atributos)
+    @manifiesto.sucursal_origen_id = sucursal_origen_para(atributos)
     @manifiesto.user = Current.user
 
     if @manifiesto.save
       redirect_to @manifiesto, notice: "Manifiesto #{@manifiesto.numero} creado exitosamente."
     else
-      @empresas = EmpresaManifiesto.activos.order(:nombre)
-      @tipo_envios = TipoEnvio.activos.order(:nombre)
+      assigns_del_formulario
       render :new, status: :unprocessable_entity
     end
   end
 
   def edit
-    @empresas = EmpresaManifiesto.activos.order(:nombre)
-    @tipo_envios = TipoEnvio.activos.order(:nombre)
+    assigns_del_formulario
   end
 
   def update
     if @manifiesto.update(manifiesto_params)
       redirect_to @manifiesto, notice: "Manifiesto actualizado exitosamente."
     else
-      @empresas = EmpresaManifiesto.activos.order(:nombre)
-      @tipo_envios = TipoEnvio.activos.order(:nombre)
+      assigns_del_formulario
       render :edit, status: :unprocessable_entity
     end
   end
@@ -90,7 +88,7 @@ class ManifiestosController < ApplicationController
     }
   end
 
-  private  def authorize_manifiestos
+  private def authorize_manifiestos
     require_role(:supervisor_miami, :digitador_miami)
   end
 
@@ -112,10 +110,39 @@ class ManifiestosController < ApplicationController
     end
   end
 
+  # C21-02 · Lo que la pantalla puede mandar. Las columnas viejas `tipo_envio`,
+  # `numero_guia` y `numero_caja` **salen de acá**: dejan de escribirse y quedan
+  # solo para leer lo que ya está grabado.
   def manifiesto_params
     params.require(:manifiesto).permit(
-      :numero, :numero_caja, :numero_guia, :empresa_manifiesto_id,
-      :tipo_envio, :expedido_por
+      :numero, :expedido_por, :empresa_manifiesto_id,
+      # El encabezado que Yusef anotó campo por campo sobre el impreso.
+      :consignatario_id, :tipo_envio_proveedor_id, :sucursal_entrega_id, :es_prioridad,
+      # `sucursal_origen_id` es lo que despierta la numeración anual. Estaba
+      # fuera de esta lista, y por eso `MM2026000001` no corría nunca (RP-46).
+      :sucursal_origen_id,
+      # La fecha en que NOSOTROS lo recibimos en Honduras. La llena SPS después.
+      :fecha_aduana,
+      tipo_envio_ids: [],
+      guias_attributes: %i[id numero position _destroy]
     )
+  end
+
+  # C21-02 · La sucursal de origen es lo que le da número anual al manifiesto.
+  # Si la pantalla no la manda, se usa la misma regla que /etiquetar y
+  # /entrega_personal — vive en `Sucursal` justamente para que no se separen.
+  def sucursal_origen_para(atributos)
+    return atributos[:sucursal_origen_id] if atributos[:sucursal_origen_id].present?
+
+    Sucursal.recepcion_por_defecto_para(Current.user)&.id
+  end
+
+  def assigns_del_formulario
+    @empresas          = EmpresaManifiesto.activos.order(:nombre)
+    @tipo_envios       = TipoEnvio.activos.order(:nombre)
+    @tipos_proveedor   = TipoEnvioProveedor.activos.ordered
+    @consignatarios    = Consignatario.activos.ordered
+    @sucursales_origen = Sucursal.de_recepcion
+    @sucursales_entrega = Sucursal.de_retiro
   end
 end
