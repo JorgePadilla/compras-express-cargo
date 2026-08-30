@@ -1,0 +1,74 @@
+<%# C21-02 · La bandeja de San Pedro: lo que salió de Miami y todavía no tiene
+    su guía del proveedor o su fecha de recibido en Honduras. %>
+<%= render PageHeaderComponent.new(
+      title: "Guías y aduana",
+      subtitle: @todos ? "Toda la carga que salió de Miami" : "Lo que falta completar") do |header|
+  header.with_action do
+    render ButtonComponent.new(
+      variant: @todos ? :secondary : :ghost,
+      href: @todos ? guias_aduana_index_path : guias_aduana_index_path(todos: 1),
+      icon: @todos ? "funnel" : "list-bullet") do
+      @todos ? "Ver solo lo pendiente" : "Ver todos"
+    end
+  end
+end %>
+
+<% if @manifiestos.any? %>
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Manifiestos</h2>
+      <span class="text-sm text-gray-500 dark:text-gray-400">
+        <%= @pendientes %> pendiente<%= "s" unless @pendientes == 1 %>
+      </span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-900">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Manifiesto</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Empresa</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Guías del proveedor</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Recibido en Honduras</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+          <% @manifiestos.each do |m| %>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="font-mono font-medium text-cec-navy dark:text-cec-gold"><%= m.numero %></span>
+                <div class="mt-1"><%= render StatusBadgeComponent.new(status: m.estado) %></div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-200">
+                <%= m.empresa_manifiesto&.nombre || "—" %>
+              </td>
+              <td class="px-6 py-4 text-sm">
+                <% if m.numeros_de_guia.any? %>
+                  <span class="font-mono text-gray-700 dark:text-gray-200"><%= m.numeros_de_guia.join(" · ") %></span>
+                <% else %>
+                  <span class="text-amber-700 dark:text-amber-500 font-medium">Falta</span>
+                <% end %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <% if m.fecha_aduana %>
+                  <span class="text-gray-700 dark:text-gray-200"><%= m.fecha_aduana.strftime("%d/%m/%Y") %></span>
+                <% else %>
+                  <span class="text-amber-700 dark:text-amber-500 font-medium">Falta</span>
+                <% end %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-right">
+                <%= render ButtonComponent.new(variant: :secondary, size: :lg, icon: "pencil-square",
+                      href: edit_guias_aduana_path(m)) do %>Completar<% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% else %>
+  <%= render EmptyStateComponent.new(
+        title: @todos ? "Todavía no salió carga de Miami" : "No falta nada por completar",
+        description: @todos ? "Cuando Miami finalice un manifiesto va a aparecer acá." : "Toda la carga que salió tiene su guía del proveedor y su fecha de recibido.",
+        icon: "document-text") %>
+<% end %>

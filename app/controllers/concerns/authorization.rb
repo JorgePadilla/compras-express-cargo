@@ -82,7 +82,13 @@ module Authorization
     # cajero que escanea las cajas no tiene por qué entrar a la pantalla del
     # manifiesto — hay un test viejo que lo afirma y sigue teniendo razón.
     when :manifiestos
-      role.in?(Manifiesto::ROLES_DE_MIAMI + ROLES_DE_SAN_PEDRO)
+      role.in?(Manifiesto::ROLES_DE_MIAMI)
+    # C21-02 · La pantalla de San Pedro. `PR-M10` había metido a los jefes de
+    # Honduras dentro de `:manifiestos` para que pudieran llenar la guía y la
+    # fecha; con pantalla propia, `:manifiestos` vuelve a ser de Miami y cada
+    # lado entra a lo suyo por su puerta.
+    when :guias_aduana
+      role.in?(ROLES_DE_SAN_PEDRO)
     when :caja, :ventas, :recibos
       role.in?(%w[supervisor_caja cajero])
     when :notas_debito

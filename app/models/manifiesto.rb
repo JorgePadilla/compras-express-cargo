@@ -133,21 +133,33 @@ class Manifiesto < ApplicationRecord
     !creado?
   end
 
-  # ¿Este usuario puede tocar **lo que llena Miami**?
+  # ¿Este usuario puede reabrir un manifiesto ya cerrado?
   #
-  # Dos reglas, no una. La de arriba es la de siempre: Miami arma el manifiesto.
-  # La de abajo es el candado: cerrado, solo el supervisor lo reabre.
-  #
-  # San Pedro **no entra por acá nunca**, ni con el manifiesto abierto. Lo suyo
-  # son `CAMPOS_DE_SAN_PEDRO` y nada más — la guía del proveedor y la fecha de
-  # recibido en Honduras (`C21-02`).
+  # Desde `PR-U1` esto es **solo el candado**: quién entra a `/manifiestos` lo
+  # decide `can_access?(:manifiestos)`, que volvió a ser de Miami, y lo que llena
+  # San Pedro tiene su propia pantalla. Ya no hay que preguntarse si el usuario
+  # es de Miami acá adentro.
   def editable_por?(user)
-    rol = user&.rol
-    return true if rol == "admin"
-    return false unless rol.in?(ROLES_DE_MIAMI)
+    return true unless bloqueado?
 
-    !bloqueado? || rol.in?(ROLES_QUE_ABREN_EL_CANDADO)
+    user&.rol.in?(ROLES_QUE_ABREN_EL_CANDADO)
   end
+
+  # C21-02 · Lo que la pantalla de San Pedro tiene para trabajar: la carga que ya
+  # salió de Miami y todavía no tiene su guía del proveedor **o** su fecha de
+  # recibido en Honduras.
+  #
+  # Se deriva de los datos y no del estado: un manifiesto se queda en la lista
+  # hasta que efectivamente le pusieron las dos cosas, sin importar en qué punto
+  # del recorrido esté.
+  # `where.not(id: subconsulta)` y no `where.missing(:guias)`: `missing` agrega un
+  # LEFT JOIN y `.or` rechaza dos relations que no son estructuralmente iguales.
+  # La subconsulta es segura porque `manifiesto_guias.manifiesto_id` es NOT NULL.
+  scope :esperando_datos_de_san_pedro, -> {
+    salidos = where(estado: %w[enviado en_aduana recibido])
+    salidos.where(fecha_aduana: nil)
+           .or(salidos.where.not(id: ManifiestoGuia.select(:manifiesto_id)))
+  }
 
   # El tipo de envío del proveedor, para mostrar. Lee las dos formas: la
   # asociación nueva y el varchar viejo de los manifiestos que ya estaban.

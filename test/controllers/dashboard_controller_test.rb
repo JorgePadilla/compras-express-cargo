@@ -211,7 +211,7 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     # (Jorge: *"hay que mover los links de mover carga al grupo de logística"*)
     # y «Recibir Carga», que nunca había tenido card, entró con él.
     assert_equal [ "Etiquetar", "Entrega Personal" ], titulos.call("Miami")
-    assert_equal [ "Pre-Alertas", "Manifiestos", "Recibir Carga", "Todos los Paquetes" ],
+    assert_equal [ "Pre-Alertas", "Manifiestos", "Recibir Carga", "Guías y aduana", "Todos los Paquetes" ],
                  titulos.call("Logística")
 
     areas = grupos.keys
@@ -236,14 +236,16 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
   end
 
   # C21-02 · San Pedro le pone al manifiesto la guía del proveedor y la fecha de
-  # recibido en Honduras, así que llega a la pantalla — pero por Logística, no
-  # por el mostrador de Miami.
-  test "el jefe de Honduras ve el manifiesto en Logística y no ve Miami" do
+  # recibido en Honduras. Desde `PR-U1` eso tiene pantalla propia: ve «Guías y
+  # aduana» en Logística, **no** «Manifiestos», y tampoco el mostrador de Miami.
+  test "el jefe de Honduras ve Guías y aduana, no Manifiestos ni Miami" do
     login_as users(:supervisor_prefactura)
     get root_url
 
     grupos = @controller.instance_variable_get(:@shortcut_groups).index_by { |g| g[:area] }
-    assert_includes grupos.fetch("Logística")[:cards].map { |c| c[:title] }, "Manifiestos"
+    titulos = grupos.fetch("Logística")[:cards].map { |c| c[:title] }
+    assert_includes titulos, "Guías y aduana"
+    assert_not_includes titulos, "Manifiestos"
     assert_not_includes grupos.keys, "Miami"
   end
 

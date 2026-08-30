@@ -1,0 +1,87 @@
+<%# C21-02 · Los dos campos de San Pedro y nada más.
+
+    Deliberadamente **no** están los campos de Miami: mientras compartían
+    formulario, San Pedro los editaba y el controller se los descartaba en
+    silencio. Lo de Miami se muestra de solo lectura, para saber de qué
+    manifiesto se está hablando. %>
+<%= render PageHeaderComponent.new(title: @manifiesto.numero, subtitle: "Guías y aduana") do |header|
+  header.with_action do
+    render ButtonComponent.new(variant: :ghost, href: guias_aduana_index_path, icon: "arrow-left") do
+      "Volver"
+    end
+  end
+end %>
+
+<%# Lo que puso Miami, para ubicarse. No se edita desde acá. %>
+<div class="bg-gray-50 dark:bg-gray-900 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 p-4 mb-6">
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+    <div>
+      <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Empresa</p>
+      <p class="font-medium text-gray-800 dark:text-gray-100"><%= @manifiesto.empresa_manifiesto&.nombre || "—" %></p>
+    </div>
+    <div>
+      <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Consignatario</p>
+      <p class="font-medium text-gray-800 dark:text-gray-100"><%= @manifiesto.consignatario&.nombre || "—" %></p>
+    </div>
+    <div>
+      <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">T. envío del proveedor</p>
+      <p class="font-medium text-gray-800 dark:text-gray-100"><%= @manifiesto.tipo_envio_del_proveedor.presence || "—" %></p>
+    </div>
+    <div>
+      <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Fecha enviado</p>
+      <p class="font-medium text-gray-800 dark:text-gray-100"><%= @manifiesto.fecha_enviado&.strftime("%d/%m/%Y") || "—" %></p>
+    </div>
+  </div>
+</div>
+
+<%= form_with model: @manifiesto, url: guias_aduana_path(@manifiesto), method: :patch, local: true do |f| %>
+  <% if @manifiesto.errors.any? %>
+    <div class="mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800 p-4">
+      <ul class="list-disc list-inside text-sm text-red-800 dark:text-red-200">
+        <% @manifiesto.errors.full_messages.each do |msg| %><li><%= msg %></li><% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <%= render FormSectionComponent.new(title: "Lo que llena San Pedro Sula") do |section| %>
+    <div class="max-w-md">
+      <%= f.label :fecha_aduana, "Recibido en Honduras", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+      <%= f.date_field :fecha_aduana,
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">La fecha en que <b>nosotros</b> la recibimos.</p>
+    </div>
+
+    <%# C21-11 · *"El número de guía termina siendo varios"*, con la forma de
+        nuestros splits: 286441-1, -2, -3. %>
+    <div class="mt-6">
+      <span class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Números de guía del proveedor</span>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+        Pueden ser varios — como <span class="font-mono">286441-1</span>, <span class="font-mono">-2</span>, <span class="font-mono">-3</span>.
+      </p>
+      <div class="space-y-2 max-w-md">
+        <%= f.fields_for :guias do |g| %>
+          <div class="flex items-center gap-2">
+            <%= g.text_field :numero, placeholder: "Número de guía",
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono focus:ring-cec-teal focus:border-cec-teal" %>
+            <% if g.object.persisted? %>
+              <label class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                <%= g.check_box :_destroy, class: "rounded border-gray-300 text-red-600 focus:ring-red-500" %> Quitar
+              </label>
+            <% end %>
+          </div>
+        <% end %>
+        <%# PR-U2 reemplaza estos tres renglones fijos por filas dinámicas. %>
+        <% (@manifiesto.guias.size...(@manifiesto.guias.size + 3)).each do |i| %>
+          <%= text_field_tag "manifiesto[guias_attributes][nueva#{i}][numero]", nil,
+                placeholder: "Número de guía",
+                class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono focus:ring-cec-teal focus:border-cec-teal" %>
+        <% end %>
+      </div>
+    </div>
+
+    <% section.with_footer do %>
+      <%= link_to "Cancelar", guias_aduana_index_path, class: "text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white self-center" %>
+      <%= render(ButtonComponent.new(variant: :gold, size: :lg, type: :submit, shortcut: "F10")) { "Guardar" } %>
+    <% end %>
+  <% end %>
+<% end %>

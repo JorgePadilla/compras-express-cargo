@@ -192,6 +192,13 @@ Rails.application.routes.draw do
   # C21-07 · Recibir la carga en Honduras — «la pantallita» y «el aparatito».
   # Cierra el hueco que `procesos_pdf` marcaba con "hoy se cambia el estado a
   # mano" y que preguntaba `RP-30`.
+  # C21-02 · Lo que llena San Pedro después: la guía del proveedor y la fecha de
+  # recibido en Honduras. Tiene pantalla propia y no una sección del formulario
+  # del manifiesto —Jorge, 2026-08-30: *"hay que hacer dos accesos, links,
+  # iconos"*— y sobre todo porque compartir el formulario hacía que San Pedro
+  # editara campos de Miami que el controller después descartaba en silencio.
+  resources :guias_aduana, only: %i[index edit update], path: "guias-y-aduana"
+
   resources :recepcion_carga, only: %i[index show], path: "recibir-carga" do
     member do
       post :escanear

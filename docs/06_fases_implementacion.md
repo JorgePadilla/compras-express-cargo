@@ -868,6 +868,18 @@ abierto están en `docs/05` — "La tabla de precios recibida (2026-08-05)".
 | `PR-M8` | La pre-factura se amarra al manifiesto | `C21-10` | ✅ |
 | `PR-M9` | El documento impreso — encabezado, teléfono, encargado y letra más grande | `C21-09` | ✅ |
 
+Y lo que salió de mirar el resultado (2026-08-30):
+
+| PR | Qué | Estado |
+|---|---|---|
+| `PR-M10` | Una tarea abierta **traba el cierre**; el candado se aplica de verdad; los catálogos nacen sembrados; mover carga sale de Miami a Logística | ✅ #376 |
+| `PR-M11` | La etiqueta del bulto lleva **QR** en vez de código de barras (`RP-54`) | ✅ #377 |
+| `PR-U1` | La guía del proveedor y la fecha de aduana se van a **`/guias-y-aduana`**, con su link e icono | ✅ |
+| `PR-U2` | Las guías, con filas dinámicas en vez de tres renglones fijos | ⏳ |
+| `PR-U3` | El date picker del proyecto en todas las fechas, con lint | ⏳ |
+| `PR-U4` | El manifiesto, para dedos | ⏳ |
+| `PR-U5` | Empacar y las casas, para dedos | ⏳ |
+
 **Lo que se cerró de paso:** `RP-30` (aduana ya tiene pantalla y quién escriba el
 estado — `PR-M7` es el **primer escritor de `en_aduana` en todo el sistema**),
 `RP-46(c)` (manifiesto por sucursal con su número anual), `RP-53` y `RP-55`
