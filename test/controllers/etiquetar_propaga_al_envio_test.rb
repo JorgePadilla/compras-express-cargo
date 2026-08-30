@@ -77,10 +77,13 @@ class EtiquetarPropagaAlEnvioTest < ActionDispatch::IntegrationTest
   # `saved_changes`: el número se persiste antes del save principal y se come
   # el cambio de tipo_envio.
   test "cambio de servicio Y cantidad en el mismo request: todas con el tipo nuevo" do
+    # C20-12: el envío ya pesa, así que subir a 3 lleva el peso de cada caja
+    # —las dos que había con el suyo, la nueva con el de la balanza—.
     patch actualizar_etiquetar_url(@cajas.first), params: {
       etiquetas: 3,
       paquete: { solicito_cambio_servicio: "1", tipo_envio_destino_id: @cem.id,
-                 descripcion: "Perfumes" }
+                 descripcion: "Perfumes",
+                 cajas: { "1" => { peso: "5" }, "2" => { peso: "5" }, "3" => { peso: "2" } } }
     }
 
     cajas = Paquete.where(tracking: @cajas.first.tracking).order(:numero_caja)

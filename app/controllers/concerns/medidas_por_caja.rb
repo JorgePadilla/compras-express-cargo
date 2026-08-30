@@ -26,7 +26,11 @@ module MedidasPorCaja
   # Encaja con cómo trabaja Yusef: *"recibo 30 cajas: 10 son de uno, 5 son de
   # otro"*. Y le da contenido a la columna **Units** del Warehouse Receipt, que
   # hasta ahora estaba escrita a mano como `1`.
-  CAMPOS_POR_CAJA = %w[peso alto largo ancho cantidad_productos].freeze
+  #
+  # C20-12: la lista vive en `Paquete`, porque el modelo también la necesita
+  # —al subir cajas, lo que es de cada caja NO se hereda de la caja 1—. Acá
+  # queda el alias para quien ya la leía por este nombre.
+  CAMPOS_POR_CAJA = Paquete::CAMPOS_POR_CAJA
 
   private
 
