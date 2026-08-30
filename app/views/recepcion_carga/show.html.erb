@@ -1,0 +1,80 @@
+<%# C21-07 · «El aparatito»: *"que vengan ellos, llegan a recibir carga, y
+    escanean la caja y automáticamente el sistema lo [pone]"*. Se escanean
+    **cajas, no paquetes** (`A7-06`), y al completar todo pasa a aduana. %>
+<div data-controller="recepcion-carga audio"
+     data-recepcion-carga-escanear-url-value="<%= escanear_recepcion_carga_path(@manifiesto) %>"
+     data-action="recepcion-carga:ok->audio#success
+                  recepcion-carga:noEsDeAqui->audio#error
+                  recepcion-carga:yaRecibida->audio#alert">
+
+  <%= render PageHeaderComponent.new(title: "Recibir #{@manifiesto.numero}",
+                                     subtitle: "Escaneá cada caja al bajarla del camión") do |h| %>
+    <% h.with_action do %>
+      <%= render ButtonComponent.new(href: recepcion_carga_index_path, variant: :secondary, icon: "arrow-left") do %>
+        Volver
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <div class="bg-white rounded-lg shadow mb-6 p-6">
+    <%= label_tag :codigo_caja, "Escaneá la caja", class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <%= text_field_tag :codigo_caja, nil, placeholder: "Escanear la etiqueta 4×6 del bulto…",
+          autocomplete: "off", autofocus: true,
+          data: { recepcion_carga_target: "codigo", action: "keydown->recepcion-carga#teclado" },
+          class: "block w-full rounded-lg border-gray-300 shadow-sm font-mono focus:ring-cec-teal focus:border-cec-teal" %>
+    <p class="text-xs text-gray-500 mt-1">
+      Cada caja recibida manda sus paquetes a <b>aduana</b>. Se escanean cajas, no paquetes.
+    </p>
+    <div data-recepcion-carga-target="aviso" class="hidden mt-4 rounded-lg p-3 text-sm"></div>
+  </div>
+
+  <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+    <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-gray-900">Cajas del manifiesto</h2>
+      <span class="text-sm text-gray-500" data-recepcion-carga-target="contador">
+        <%= @cajas.count { |c| c.recibida_at.present? } %> de <%= @cajas.size %> recibidas
+      </span>
+    </div>
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Caja</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Paquetes</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        <% @cajas.each do |caja| %>
+          <tr data-caja-fila="<%= caja.id %>">
+            <td class="px-6 py-3 text-sm font-bold text-gray-900"><%= caja.letra %></td>
+            <td class="px-6 py-3 text-sm font-mono text-gray-500"><%= caja.codigo %></td>
+            <td class="px-6 py-3 text-sm text-right text-gray-700"><%= caja.paquetes.size %></td>
+            <td class="px-6 py-3 text-sm" data-caja-estado="<%= caja.id %>">
+              <% if caja.recibida_at %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal">Recibida</span>
+              <% else %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Falta</span>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <%# `A7-05` · Las dos salidas. Jorge preguntó qué tan dura era la regla y
+      Yusef eligió *"que no lo bloquee"*: seguir escaneando, o marcar recibido
+      con las pendientes. %>
+  <div class="flex flex-wrap items-center gap-3">
+    <%= render ButtonComponent.new(variant: :primary, icon: "check",
+          href: finalizar_recepcion_carga_path(@manifiesto), method: :patch) do %>
+      Terminar la recepción
+    <% end %>
+    <%= render ButtonComponent.new(variant: :secondary, icon: "exclamation-triangle",
+          href: finalizar_recepcion_carga_path(@manifiesto, con_faltantes: true), method: :patch,
+          confirm: "Se marca #{@manifiesto.numero} como recibido aunque falten cajas. Los paquetes que iban adentro pasan a aduana igual, y sale un correo con lo que faltó. ¿Seguro?") do %>
+      Marcar recibido con las pendientes
+    <% end %>
+  </div>
+</div>

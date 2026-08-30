@@ -38,7 +38,10 @@ module Authorization
     case feature
     when :etiquetar, :manifiestos, :entrega_personal
       role.in?(%w[supervisor_miami digitador_miami])
-    when :pre_facturas
+    # C21-07 · *"Los de prefactura, ellos son los que se encargan de recibir
+    # carga."* Es el mismo grupo que la pre-factura, y va junto a propósito:
+    # separarlos haría aparecer el link para gente que después choca.
+    when :pre_facturas, :recibir_carga
       role.in?(%w[supervisor_prefactura supervisor_caja cajero])
     when :caja, :ventas, :recibos
       role.in?(%w[supervisor_caja cajero])

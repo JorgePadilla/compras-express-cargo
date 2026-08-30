@@ -54,7 +54,7 @@ class SonidosCableadosTest < ActiveSupport::TestCase
   # C21-01: `empaque` entra acá el día que existe. Si no, la regla de «ningún
   # aviso sale mudo» no cubriría la pantalla nueva — que es exactamente el
   # agujero que este lint existe para tapar: el operario mira la pistola.
-  CONTROLLERS_DE_ESCANEO = %w[etiquetar entrega_personal empaque].freeze
+  CONTROLLERS_DE_ESCANEO = %w[etiquetar entrega_personal empaque recepcion_carga].freeze
 
   # Una línea que abre un modal: `showModal()`, o un target con "Modal" en el
   # nombre al que le sacan el `hidden`. Los banners no cuentan: se ven sin

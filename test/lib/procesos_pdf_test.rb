@@ -73,8 +73,11 @@ class ProcesosPdfTest < ActiveSupport::TestCase
 
   # ── Los huecos ──────────────────────────────────────────────────────────
 
-  test "los tres huecos salen marcados" do
-    assert_equal [ "Aduana", "Bodega en Honduras", "Firma y foto" ],
+  # C21-07 · Aduana dejó de ser un hueco: la pantalla de recibir carga existe y
+  # escribe `en_aduana` escaneando las cajas del manifiesto. Era el más grande
+  # de los tres, el que preguntaba `RP-30`.
+  test "quedan dos huecos, y Aduana ya no es uno" do
+    assert_equal [ "Bodega en Honduras", "Firma y foto" ],
                  @doc.huecos.map { |h| h[:titulo] }
   end
 
@@ -176,32 +179,28 @@ class ProcesosPdfTest < ActiveSupport::TestCase
 
   # ── Las preguntas ───────────────────────────────────────────────────────
 
-  test "las preguntas siguen la numeracion del PDF de servicios" do
-    # Ese llegó hasta RP-29. Si dos documentos usan el mismo número, las
-    # respuestas de Yusef se pisan.
-    numeros = ProcesosPdf::PREGUNTAS.map { |q| q[:numero] }
-
-    assert_equal %w[RP-30], numeros
+  # C21-07 · `RP-30` era la única que quedaba, y está contestada: Yusef eligió
+  # la pantalla que recibe el manifiesto completo escaneando sus cajas, y ya
+  # existe. Las preguntas abiertas del módulo viven en `docs/05` y son de
+  # detalle —barras o QR, cómo se llama la pantalla—, no de proceso.
+  test "no quedan preguntas de proceso abiertas" do
+    assert_empty ProcesosPdf::PREGUNTAS
   end
 
-  test "solo se pregunta por el modulo en el que estamos" do
-    # Jorge, 2026-08-11: "la única pregunta válida ahorita es la 30 porque no
-    # hemos llegado a los otros módulos donde están las otras preguntas". Las
-    # de entregas, manifiestos y caja se sacaron y vuelven cuando toque.
-    claves = ProcesosPdf::PREGUNTAS.map { |q| q[:clave] }
+  # La numeración se comparte con el PDF de servicios, que llegó hasta RP-29:
+  # si dos documentos usan el mismo número, las respuestas de Yusef se pisan.
+  # Cuando vuelva a haber preguntas acá, tienen que arrancar arriba de eso.
+  test "si vuelve a haber preguntas, no pisan la numeracion del PDF de servicios" do
+    numeros = ProcesosPdf::PREGUNTAS.map { |q| q[:numero].to_s[/\d+/].to_i }
 
-    assert_equal [ :aduana ], claves
-    assert_equal claves.uniq, claves
-    assert_empty claves.select(&:nil?)
+    assert_empty numeros.select { |n| n <= 29 }
   end
 
   test "el documento sigue mostrando los huecos que ya no pregunta" do
     # Sacar la pregunta no es sacar el hueco: el dibujo se hizo justamente para
     # mostrar hasta dónde llega lo construido. Si alguien borra los huecos junto
     # con sus preguntas, el documento pierde su razón de ser.
-    sin_pregunta = @doc.huecos.map { |h| h[:titulo] } - [ "Aduana", "Bodega en Honduras" ]
-
-    assert_equal [ "Firma y foto" ], sin_pregunta
+    assert_equal [ "Bodega en Honduras", "Firma y foto" ], @doc.huecos.map { |h| h[:titulo] }
   end
 
   test "el texto concuerda en numero con la cantidad de preguntas" do

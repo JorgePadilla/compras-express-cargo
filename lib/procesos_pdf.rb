@@ -65,8 +65,14 @@ class ProcesosPdf
   # sistema pero es consecuencia de emitir el documento, no un estado que alguien
   # ponga (A7-11).
   CAMINO_HONDURAS = [
-    { titulo: "Aduana", quien: "hoy se cambia el estado a mano",
-      actor: :persona, estado: "en_aduana", existe: false },
+    # C21-07 · Éste era **el hueco más grande del sistema**: no había pantalla y
+    # alguien entraba a la ficha del paquete a cambiarle el estado a mano. Es lo
+    # que preguntaba `RP-30` y lo que Yusef contestó en la Conversación 7 —*"esto
+    # lo va a cambiar al escanear la etiqueta de manifiesto en caja"*— y detalló
+    # en la 21: *"los de prefactura, ellos son los que se encargan de recibir
+    # carga"*, con *"una pantallita"* que muestra solo lo enviado.
+    { titulo: "Aduana", quien: "pre-factura, escaneando las cajas del manifiesto",
+      actor: :persona, ruta: "recepcion_carga_index_path", estado: "en_aduana", existe: true },
     { titulo: "Pre-factura", quien: "cajero, en San Pedro",
       actor: :persona, ruta: "pre_facturas_path", existe: true },
     { titulo: "Bodega en Honduras", quien: "hoy se cambia el estado a mano",
@@ -238,14 +244,11 @@ class ProcesosPdf
   #   · firma o foto al entregar        → cuando se arme el módulo de entregas
   #   · tareas pendientes vs manifiesto → cuando se arme el de manifiestos
   #   · entregar con pago parcial       → cuando se arme el de caja
-  PREGUNTAS = [
-    { numero: "RP-30", clave: :aduana, titulo: "Aduana y bodega: hoy se cambia el estado a mano",
-      cuerpo: "Entre que sale el manifiesto y que el paquete queda listo para facturar, <b>no hay pantalla</b>. " \
-              "Alguien entra a la ficha del paquete y le cambia el estado. Es el hueco más grande que tiene el sistema.",
-      opciones: [ "Necesitamos una pantalla para recibir el manifiesto completo de un golpe",
-                  "Está bien cambiarlo paquete por paquete",
-                  "Que se marque solo cuando llega el manifiesto" ] }
-  ].freeze
+  # C21-07 · `RP-30` está **contestada**: Yusef eligió la pantalla que recibe el
+  # manifiesto completo escaneando sus cajas, y ya existe. El documento sale sin
+  # preguntas abiertas; las que quedan del módulo de manifiestos viven en
+  # `docs/05` (`RP-54`, `RP-56`, `RP-57`) y son de detalle, no de proceso.
+  PREGUNTAS = [].freeze
 
   # Los símbolos que el documento usa **de verdad**. No hay rombo de decisión:
   # ningún flujo se parte según una condición, y los que se bifurcan —retorno,

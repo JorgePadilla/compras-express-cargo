@@ -19,6 +19,8 @@ class CajaManifiesto < ApplicationRecord
   belongs_to :manifiesto
   belongs_to :tamano_caja, optional: true   # nulo = «Especificar», se mide a mano
   belongs_to :user, optional: true
+  # C21-07: quién la recibió en Honduras al escanearla.
+  belongs_to :recibida_por, class_name: "User", optional: true
   has_many :paquetes, dependent: :nullify
 
   validates :letra, presence: true, uniqueness: { scope: :manifiesto_id }

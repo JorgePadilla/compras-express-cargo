@@ -1,0 +1,41 @@
+<%# C21-07 · *"Es mejor una pantallita que ahí buscara y que **solo le aparezca
+    lo que tiene que meter**… solo lo que está como enviado."* %>
+<%= render PageHeaderComponent.new(title: "Recibir Carga",
+                                   subtitle: "Los manifiestos que vienen en camino, para escanear sus cajas al descargar") %>
+
+<% if @manifiestos.any? %>
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Manifiesto</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Consignatario</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Salió de Miami</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Cajas</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase"></th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        <% @manifiestos.each do |m| %>
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 text-sm font-mono font-medium text-cec-navy"><%= m.numero %></td>
+            <td class="px-6 py-4 text-sm text-gray-700"><%= m.consignatario&.nombre || "—" %></td>
+            <td class="px-6 py-4 text-sm text-gray-500"><%= m.fecha_enviado&.strftime("%d/%m/%Y") || "—" %></td>
+            <td class="px-6 py-4 text-sm text-right text-gray-700">
+              <%= m.cajas.where.not(recibida_at: nil).count %> / <%= m.cajas.size %>
+            </td>
+            <td class="px-6 py-4 text-sm"><%= render StatusBadgeComponent.new(status: m.estado) %></td>
+            <td class="px-6 py-4 text-right">
+              <%= render ButtonComponent.new(variant: :primary, size: :sm, icon: "qr-code",
+                    href: recepcion_carga_path(m)) do %>Recibir<% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <%= render EmptyStateComponent.new(title: "No hay carga en camino",
+        description: "Acá aparecen los manifiestos que Miami ya finalizó y todavía no se recibieron.", icon: "truck") %>
+<% end %>

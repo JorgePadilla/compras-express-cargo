@@ -184,6 +184,16 @@ Rails.application.routes.draw do
     end
   end
 
+  # C21-07 · Recibir la carga en Honduras — «la pantallita» y «el aparatito».
+  # Cierra el hueco que `procesos_pdf` marcaba con "hoy se cambia el estado a
+  # mano" y que preguntaba `RP-30`.
+  resources :recepcion_carga, only: %i[index show], path: "recibir-carga" do
+    member do
+      post :escanear
+      patch :finalizar
+    end
+  end
+
   resources :pre_alertas, except: %i[destroy] do
     member do
       delete :anular

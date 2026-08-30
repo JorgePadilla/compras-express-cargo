@@ -37,6 +37,10 @@
   <% if can_access?(:pre_facturas) || can_access?(:ventas) || can_access?(:notas_debito) || can_access?(:notas_credito) || can_access?(:cotizaciones) || can_access?(:financiamientos) %>
     <%= sidebar_section "Facturacion y Cobro" do %>
       <%= sidebar_link "Pre-Facturas", pre_facturas_path, icon: "document-text" if can_access?(:pre_facturas) %>
+      <%# C21-07 · Recibir la carga que llega de Miami. Lo hacen los de
+          pre-factura —*"ellos son los que se encargan de recibir carga"*—, así que
+          va con ellos y no en un bloque aparte. %>
+      <%= sidebar_link "Recibir Carga", recepcion_carga_index_path, icon: "truck" if can_access?(:recibir_carga) %>
       <%= sidebar_link "Cotizaciones", cotizaciones_path, icon: "clipboard-document-list" if can_access?(:cotizaciones) %>
       <%= sidebar_link "Facturas", ventas_path, icon: "currency-dollar" if can_access?(:ventas) %>
       <%= sidebar_link "Recibos", recibos_path, icon: "receipt-percent" if can_access?(:recibos) %>
