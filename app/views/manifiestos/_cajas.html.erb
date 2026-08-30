@@ -1,0 +1,108 @@
+<%# C21-04 · Las casas del manifiesto.
+    El tamaño pre-definido pre-llena las medidas y el foco salta al peso —
+    *"te ponen solo el cursor a peso, porque es lo que le vas a meter a
+    ingresar, que es lo que hace falta"*—, pero las medidas quedan editables,
+    porque a veces cortan la caja: *"le decimos «EH cortada»"*. %>
+<div class="bg-white rounded-lg shadow mb-6" data-controller="caja-manifiesto">
+  <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+    <div>
+      <h2 class="text-lg font-semibold text-gray-900">Casas del manifiesto</h2>
+      <p class="text-xs text-gray-500 mt-0.5">El volumen sale de alto × largo × ancho ÷ 166 — es el reporte por el que cobra el proveedor.</p>
+    </div>
+    <span class="text-sm text-gray-500"><%= manifiesto.cajas.size %> bulto(s)</span>
+  </div>
+
+  <div class="p-6 border-b border-gray-200">
+    <%= form_with model: [ manifiesto, CajaManifiesto.new ], url: manifiesto_cajas_path(manifiesto),
+                  local: true, class: "space-y-4" do |f| %>
+      <div>
+        <span class="block text-sm font-medium text-gray-700 mb-2">Tamaño</span>
+        <% if @tamanos.any? %>
+          <div class="flex flex-wrap gap-2">
+            <% @tamanos.each do |tamano| %>
+              <label class="cursor-pointer">
+                <%= f.radio_button :tamano_caja_id, tamano.id, class: "peer sr-only",
+                      data: { caja_manifiesto_target: "tamano",
+                              alto: tamano.alto, largo: tamano.largo, ancho: tamano.ancho,
+                              action: "change->caja-manifiesto#elegirTamano" } %>
+                <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm ring-1 ring-gray-300 text-gray-700 peer-checked:bg-cec-navy peer-checked:text-white peer-checked:ring-cec-navy transition"><%= tamano.nombre %></span>
+              </label>
+            <% end %>
+          </div>
+        <% else %>
+          <p class="text-sm text-gray-500">
+            No hay tamaños cargados todavía.
+            <%= link_to "Agregalos en Catálogos del Manifiesto", catalogos_manifiesto_path(tab: "tamanos"), class: "text-cec-teal hover:underline" %>.
+          </p>
+        <% end %>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div>
+          <%= f.label :alto, "Alto", class: "block text-xs font-medium text-gray-600 mb-1" %>
+          <%= f.number_field :alto, step: "0.01", min: 0, data: { caja_manifiesto_target: "alto", action: "input->caja-manifiesto#medidaCambiada" },
+                class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <div>
+          <%= f.label :largo, "Largo", class: "block text-xs font-medium text-gray-600 mb-1" %>
+          <%= f.number_field :largo, step: "0.01", min: 0, data: { caja_manifiesto_target: "largo", action: "input->caja-manifiesto#medidaCambiada" },
+                class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <div>
+          <%= f.label :ancho, "Ancho", class: "block text-xs font-medium text-gray-600 mb-1" %>
+          <%= f.number_field :ancho, step: "0.01", min: 0, data: { caja_manifiesto_target: "ancho", action: "input->caja-manifiesto#medidaCambiada" },
+                class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <div>
+          <span class="block text-xs font-medium text-gray-600 mb-1">Volumen</span>
+          <p class="text-sm font-mono text-gray-500 py-2" data-caja-manifiesto-target="volumen">—</p>
+        </div>
+        <div>
+          <%= f.label :peso, "Peso (lbs)", class: "block text-xs font-medium text-gray-600 mb-1" %>
+          <%= f.number_field :peso, step: "0.01", min: 0, data: { caja_manifiesto_target: "peso" },
+                class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+      </div>
+
+      <div class="flex justify-end">
+        <%= render(ButtonComponent.new(variant: :primary, type: :submit, icon: "plus", shortcut: "F5")) { "Agregar caja" } %>
+      </div>
+    <% end %>
+  </div>
+
+  <% if manifiesto.cajas.any? %>
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tamaño</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">T. envío</th>
+          <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Medidas</th>
+          <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Volumen</th>
+          <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Peso</th>
+          <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        <% manifiesto.cajas.each_with_index do |caja, i| %>
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 text-sm text-gray-500"><%= i + 1 %></td>
+            <td class="px-4 py-3 text-sm font-mono font-medium text-cec-navy"><%= caja.codigo %></td>
+            <td class="px-4 py-3 text-sm text-gray-700"><%= caja.tamano_caja&.nombre || "Especificar" %></td>
+            <td class="px-4 py-3 text-sm text-gray-500"><%= caja.tipos_envio_adentro.presence || "—" %></td>
+            <td class="px-4 py-3 text-sm text-right font-mono text-gray-500"><%= caja.medidas || "—" %></td>
+            <td class="px-4 py-3 text-sm text-right font-mono text-gray-700"><%= caja.volumen || "—" %></td>
+            <td class="px-4 py-3 text-sm text-right font-mono text-gray-700"><%= caja.peso || "—" %></td>
+            <td class="px-4 py-3 text-right">
+              <%= render ButtonComponent.new(variant: :danger, size: :xs, icon: "trash",
+                    href: manifiesto_caja_path(manifiesto, caja), method: :delete,
+                    confirm: "Se elimina la caja #{caja.letra}. La letra no se reusa: si ya imprimiste su etiqueta, esa etiqueta queda sin caja. ¿Seguro?",
+                    label: "Eliminar caja #{caja.letra}") %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</div>

@@ -13,6 +13,8 @@ class ManifiestosController < ApplicationController
   end
 
   def show
+    # C21-04: los tamaños pre-definidos con los que se arma una casa.
+    @tamanos = TamanoCaja.activos.ordered
     @paquetes = @manifiesto.paquetes.includes(:cliente, :sucursal, :sucursal_destino).order(:created_at)
   end
 

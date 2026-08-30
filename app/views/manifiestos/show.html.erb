@@ -95,7 +95,9 @@ end %>
   <div class="bg-white rounded-lg shadow overflow-hidden mb-6" data-controller="manifiesto-search"
        data-manifiesto-search-url-value="<%= search_paquetes_path %>"
        data-manifiesto-search-manifiesto-id-value="<%= @manifiesto.id %>">
-    <div class="px-6 py-4 border-b border-gray-200">
+    <%= render "manifiestos/cajas", manifiesto: @manifiesto %>
+
+<div class="px-6 py-4 border-b border-gray-200">
       <h2 class="text-lg font-semibold text-gray-800">Agregar Paquetes</h2>
     </div>
     <div class="p-6">

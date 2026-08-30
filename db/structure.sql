@@ -273,6 +273,47 @@ ALTER SEQUENCE public.autorizaciones_id_seq OWNED BY public.autorizaciones.id;
 
 
 --
+-- Name: caja_manifiestos; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.caja_manifiestos (
+    id bigint NOT NULL,
+    manifiesto_id bigint NOT NULL,
+    tamano_caja_id bigint,
+    user_id bigint,
+    letra character varying NOT NULL,
+    codigo character varying NOT NULL,
+    numero_doc character varying,
+    alto numeric(8,2),
+    largo numeric(8,2),
+    ancho numeric(8,2),
+    peso numeric(10,2),
+    volumen numeric(10,2),
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: caja_manifiestos_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.caja_manifiestos_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: caja_manifiestos_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.caja_manifiestos_id_seq OWNED BY public.caja_manifiestos.id;
+
+
+--
 -- Name: carriers; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1265,7 +1306,9 @@ CREATE TABLE public.manifiestos (
     consignatario_id bigint,
     tipo_envio_proveedor_id bigint,
     sucursal_entrega_id bigint,
-    es_prioridad boolean DEFAULT false NOT NULL
+    es_prioridad boolean DEFAULT false NOT NULL,
+    cantidad_bultos integer DEFAULT 0 NOT NULL,
+    ultima_letra integer DEFAULT 0 NOT NULL
 );
 
 
@@ -1788,7 +1831,8 @@ CREATE TABLE public.paquetes (
     prepagado_miami_metodo character varying,
     enviado_por_politica boolean DEFAULT false NOT NULL,
     notas_envio_politica text,
-    recolecta_direccion text
+    recolecta_direccion text,
+    caja_manifiesto_id bigint
 );
 
 
@@ -2843,6 +2887,13 @@ ALTER TABLE ONLY public.autorizaciones ALTER COLUMN id SET DEFAULT nextval('publ
 
 
 --
+-- Name: caja_manifiestos id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.caja_manifiestos ALTER COLUMN id SET DEFAULT nextval('public.caja_manifiestos_id_seq'::regclass);
+
+
+--
 -- Name: carriers id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -3330,6 +3381,14 @@ ALTER TABLE ONLY public.ar_internal_metadata
 
 ALTER TABLE ONLY public.autorizaciones
     ADD CONSTRAINT autorizaciones_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: caja_manifiestos caja_manifiestos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.caja_manifiestos
+    ADD CONSTRAINT caja_manifiestos_pkey PRIMARY KEY (id);
 
 
 --
@@ -4047,6 +4106,41 @@ CREATE INDEX index_autorizaciones_on_solicitado_por_id ON public.autorizaciones 
 
 
 --
+-- Name: index_caja_manifiestos_on_codigo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_caja_manifiestos_on_codigo ON public.caja_manifiestos USING btree (codigo);
+
+
+--
+-- Name: index_caja_manifiestos_on_manifiesto_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_caja_manifiestos_on_manifiesto_id ON public.caja_manifiestos USING btree (manifiesto_id);
+
+
+--
+-- Name: index_caja_manifiestos_on_manifiesto_id_and_letra; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_caja_manifiestos_on_manifiesto_id_and_letra ON public.caja_manifiestos USING btree (manifiesto_id, letra);
+
+
+--
+-- Name: index_caja_manifiestos_on_tamano_caja_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_caja_manifiestos_on_tamano_caja_id ON public.caja_manifiestos USING btree (tamano_caja_id);
+
+
+--
+-- Name: index_caja_manifiestos_on_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_caja_manifiestos_on_user_id ON public.caja_manifiestos USING btree (user_id);
+
+
+--
 -- Name: index_cliente_cobro_volumetricos_on_cliente_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4688,6 +4782,13 @@ CREATE INDEX index_paquete_motivos_retencion_on_motivo_retencion_id ON public.pa
 --
 
 CREATE INDEX index_paquete_motivos_retencion_on_paquete_id ON public.paquete_motivos_retencion USING btree (paquete_id);
+
+
+--
+-- Name: index_paquetes_on_caja_manifiesto_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_paquetes_on_caja_manifiesto_id ON public.paquetes USING btree (caja_manifiesto_id);
 
 
 --
@@ -5736,6 +5837,14 @@ ALTER TABLE ONLY public.pagos
 
 
 --
+-- Name: caja_manifiestos fk_rails_466466f740; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.caja_manifiestos
+    ADD CONSTRAINT fk_rails_466466f740 FOREIGN KEY (tamano_caja_id) REFERENCES public.tamano_cajas(id);
+
+
+--
 -- Name: pre_facturas fk_rails_4771dee5f9; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6056,6 +6165,14 @@ ALTER TABLE ONLY public.paquetes
 
 
 --
+-- Name: paquetes fk_rails_8ec4c48be9; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_8ec4c48be9 FOREIGN KEY (caja_manifiesto_id) REFERENCES public.caja_manifiestos(id);
+
+
+--
 -- Name: cliente_cobro_volumetricos fk_rails_91664e000e; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6104,11 +6221,27 @@ ALTER TABLE ONLY public.active_storage_variant_records
 
 
 --
+-- Name: caja_manifiestos fk_rails_995d7d1199; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.caja_manifiestos
+    ADD CONSTRAINT fk_rails_995d7d1199 FOREIGN KEY (manifiesto_id) REFERENCES public.manifiestos(id);
+
+
+--
 -- Name: pagos fk_rails_99c87016a7; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.pagos
     ADD CONSTRAINT fk_rails_99c87016a7 FOREIGN KEY (apertura_caja_id) REFERENCES public.aperturas_caja(id);
+
+
+--
+-- Name: caja_manifiestos fk_rails_9d078d06f0; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.caja_manifiestos
+    ADD CONSTRAINT fk_rails_9d078d06f0 FOREIGN KEY (user_id) REFERENCES public.users(id);
 
 
 --
@@ -6526,6 +6659,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260830063353'),
 ('20260830061904'),
 ('20260830060300'),
 ('20260829202846'),

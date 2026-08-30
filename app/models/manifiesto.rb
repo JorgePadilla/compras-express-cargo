@@ -19,6 +19,11 @@ class Manifiesto < ApplicationRecord
   has_many :manifiesto_tipo_envios, dependent: :destroy
   has_many :tipo_envios, through: :manifiesto_tipo_envios
 
+  # C21-04 · Las casas que se arman en Miami. De ellas cuelgan la etiqueta 4×6,
+  # el escaneo al empacar y el escaneo al recibir en Honduras.
+  has_many :cajas, -> { ordenadas }, class_name: "CajaManifiesto",
+           dependent: :destroy, inverse_of: :manifiesto
+
   # C21-11 · *"El número de guía termina siendo varios"* — y con la forma de
   # nuestros splits: `286441-1`, `-2`, `-3`.
   has_many :guias, -> { order(:position, :id) },
@@ -64,11 +69,18 @@ class Manifiesto < ApplicationRecord
     retry
   end
 
+  # C21-04 · Con casas armadas, el peso y el volumen salen **de las casas** —
+  # que es el reporte por el que el proveedor cobra: *"yo agarro el reporte y
+  # ellos me cobran [según] el reporte"*. Sin casas cae a la suma de paquetes,
+  # que es como venía, para no cambiarle el número a lo que ya está grabado.
   def recalculate_totals!
+    con_cajas = cajas.any?
+
     update!(
       cantidad_paquetes: paquetes.count,
-      peso_total: paquetes.sum(:peso_cobrar),
-      volumen_total: paquetes.sum(:volumen)
+      cantidad_bultos: cajas.count,
+      peso_total: con_cajas ? cajas.sum(:peso) : paquetes.sum(:peso_cobrar),
+      volumen_total: con_cajas ? cajas.sum(:volumen) : paquetes.sum(:volumen)
     )
   end
 

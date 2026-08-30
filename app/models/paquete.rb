@@ -3,6 +3,10 @@ class Paquete < ApplicationRecord
 
   belongs_to :cliente
   belongs_to :manifiesto, optional: true
+  # C21-04: en qué casa del manifiesto va empacado. Opcional a propósito —
+  # el camino sin escaneo mete paquetes al manifiesto sin pasar por una caja,
+  # y Yusef lo quiso mantener: *"a veces no da tiempo"*.
+  belongs_to :caja_manifiesto, optional: true
   belongs_to :tipo_envio, optional: true
   belongs_to :user, optional: true
   belongs_to :pre_factura, optional: true
