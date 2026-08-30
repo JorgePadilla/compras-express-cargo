@@ -7615,10 +7615,21 @@ así"*). Y «Es duplicado real» sobre un secundario que ya existía escribía e
 sufijo **en el primario**; ahora va al campo que lo escaneó.
 
 **Lo que este arreglo destapó.** Dos archivos de system tests llevaban tiempo
-rojos sin que nadie lo viera —el CI no los corre—: `avisos_al_escanear_test`
+rojos sin que nadie lo viera —el CI no los corría—: `avisos_al_escanear_test`
 (cinco de seis) y `etiquetar_cambio_servicio_test`, los dos por lo mismo: abrían la
 sesión con el primer tipo del prompt en vez del de sus pre-alertas, y desde
 `C19-08` el conflicto sale antes que cualquier aviso. Arreglados en el camino.
+
+> **Cerrado el 2026-08-30.** Jorge: *"sí, agreguemos al CI"*. El workflow estrena
+> el job **`System Tests`**, aparte del de `Tests`. Antes de poder prenderlo hubo
+> que matar los flakes, que eran **tres mecanismos y ninguno era timing**: la
+> sesión de `/etiquetar` que sobraba del test anterior (trece copias del mismo
+> `abrir_etiquetar` con un `if` que no corría), la **ventana de impresión que
+> `Capybara.reset_sessions!` nunca cierra** —con dos ventanas Chrome congela el
+> reloj de animaciones de la de atrás y `animate-fade-in-up` deja el campo en
+> `opacity: 0`—, y que el `confirm` de la app **no es el del navegador** sino el
+> modal de HTML de `Turbo.setConfirmMethod`. Los helpers viven ahora en
+> `test/application_system_test_case.rb`, uno solo de cada uno.
 
 **Alcance.** Solo /etiquetar: Entrega Personal no tiene estos modales. Lo que
 queda abierto es `RP-52`.
