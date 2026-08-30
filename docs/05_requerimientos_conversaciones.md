@@ -7768,6 +7768,15 @@ más bien"*. Coincide con lo que anotó a mano: **«Recibido en HN»**.
 
 → **Se queda, rotulado como la fecha en que nosotros lo recibimos en Honduras.**
 
+**IMPLEMENTADO en `PR-U1`: los dos campos de San Pedro tienen pantalla propia.**
+Jorge, 2026-08-30: *"veo que en manifiesto tenemos dos secciones, lo que se
+llena en Miami y lo que se llena en San Pedro Sula: me parece que hay que hacer
+dos accesos, links, iconos"*. Es `/guias-y-aduana`, con su link e icono en
+Logística: lista lo que salió de Miami y todavía no tiene guía **o** fecha
+—*"solo le aparece lo que tiene que meter"*—, con un `?todos=1` para volver
+sobre lo ya completo. El manifiesto puede estar finalizado y bloqueado: es
+exactamente para lo que existe `CAMPOS_DE_SAN_PEDRO`.
+
 **Y los nombres actuales lo confunden** — esto lo dijo con molestia:
 
 > *"Los nombres son malos… dice «tipo de envío de manifiesto»; tengo que
@@ -7899,15 +7908,26 @@ Esto contesta dos cosas que parecían contradecirse:
 - **Michelle sí edita el manifiesto**, porque es de las de San Pedro que le
   ponen la guía del proveedor y la fecha de recibido en Honduras (`C21-02`).
 
-**Cómo quedó, en `PR-M10`:**
+**Cómo quedó, después de `PR-U1`:**
 
 | Sección | Quién |
 |---|---|
 | Catálogos del manifiesto | admin + `ROLES_DE_MIAMI` (llave propia, `:catalogos_manifiesto`) |
-| Manifiestos (entrar y ver) | `ROLES_DE_MIAMI` + los jefes de Honduras |
-| Campos de Miami del manifiesto | solo `ROLES_DE_MIAMI` — y si está cerrado, solo el supervisor |
-| `CAMPOS_DE_SAN_PEDRO` | los jefes de Honduras, abierto o cerrado |
-| Crear, empacar, meter paquetes, finalizar | solo `ROLES_DE_MIAMI` |
+| `/manifiestos` — entrar, crear, empacar, meter paquetes, finalizar | solo `ROLES_DE_MIAMI` |
+| Reabrir un manifiesto cerrado | `ROLES_QUE_ABREN_EL_CANDADO` (admin + supervisor de Miami) |
+| `/guias-y-aduana` — la guía del proveedor y la fecha | `ROLES_DE_SAN_PEDRO` (llave propia, `:guias_aduana`) |
+
+`PR-M10` había metido a los jefes de Honduras dentro de `:manifiestos` para que
+pudieran llenar sus dos campos. **Eso destapó el problema de fondo**, que se
+arregla en `PR-U1`: el recorte por rol era 100 % del controller y
+`_form.html.erb` no tenía ni un `if`. San Pedro veía los campos de Miami
+**habilitados**, los editaba, guardaba, y `manifiesto_params` los recortaba en
+silencio contestando *«Manifiesto actualizado exitosamente»*.
+
+Con pantalla propia no hay nada que recortar —la de San Pedro tiene dos campos y
+son los suyos—, `:manifiestos` vuelve a ser de Miami, y el que no puede reabrir
+un manifiesto cerrado **se entera**: se le contesta con un aviso en vez de
+aceptarle el formulario para descartárselo callado.
 
 La lista de jefes de Honduras **se deriva de `User::ROLES_AUTORIZANTES`**, que
 el repo ya tenía —es la misma que decide quién lleva PIN—, y por eso cubre a

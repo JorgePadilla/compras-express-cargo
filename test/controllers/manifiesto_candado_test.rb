@@ -43,8 +43,10 @@ class ManifiestoCandadoTest < ActionDispatch::IntegrationTest
     assert manifiestos(:creado).editable_por?(users(:digitador))
   end
 
-  # El bug de fondo: el candado no frenaba nada.
-  test "el digitador no puede cambiar un campo de Miami en uno cerrado" do
+  # El bug de fondo era doble: el candado no frenaba nada, y cuando `PR-M10` lo
+  # hizo frenar, lo hacía **en silencio** —recortando los params y contestando
+  # «actualizado exitosamente»—. Desde `PR-U1` el que no puede se entera.
+  test "el digitador no puede cambiar un campo de Miami en uno cerrado, y se entera" do
     ingresar(users(:digitador))
     assert_nil @manifiesto.consignatario_id, "la fixture arranca sin consignatario"
 
@@ -54,18 +56,7 @@ class ManifiestoCandadoTest < ActionDispatch::IntegrationTest
 
     assert_nil @manifiesto.reload.consignatario_id, "el candado no lo dejó entrar"
     assert_not @manifiesto.es_prioridad?
-  end
-
-  # Y lo que San Pedro llena después sí pasa — si no, la encargada de
-  # operaciones no podría meter la guía ni la fecha (C21-02).
-  test "el digitador sí puede llenar lo de San Pedro en uno cerrado" do
-    ingresar(users(:digitador))
-
-    patch manifiesto_url(@manifiesto), params: {
-      manifiesto: { fecha_aduana: "2026-08-30" }
-    }
-
-    assert_equal Date.new(2026, 8, 30), @manifiesto.reload.fecha_aduana.to_date
+    assert_match(/finalizado/, flash[:alert], "y no se le contesta que se guardó")
   end
 
   test "el supervisor de Miami sí puede cambiar un campo de Miami en uno cerrado" do
@@ -78,64 +69,19 @@ class ManifiestoCandadoTest < ActionDispatch::IntegrationTest
     assert_equal @consignatario.id, @manifiesto.reload.consignatario_id
   end
 
-  # C21-02 · Michelle. Yusef, 2026-08-30: *"Sub-Jefa de área de Caja y SAC"* —
-  # o sea de San Pedro, no de Miami — y es de las que llenan la guía del
-  # proveedor y la fecha de recibido en Honduras.
+  # C21-02 · **San Pedro ya no entra acá.** `PR-M10` los había metido a
+  # `/manifiestos` para que pudieran llenar la guía y la fecha, y eso dejaba el
+  # agujero de fondo: veían los campos de Miami habilitados y el controller les
+  # descartaba los cambios en silencio. Desde `PR-U1` tienen `/guias-y-aduana`,
+  # y esta pantalla volvió a ser de Miami.
   #
-  # `CAMPOS_DE_SAN_PEDRO` existía para eso desde PR-M6 y su gente **no podía
-  # abrir la pantalla**: la sección era de Miami y nada más.
-  #
-  # La lista se deriva de `User::ROLES_AUTORIZANTES` justamente para que dé
-  # igual si su usuario dice `supervisor_caja` o `supervisor_sac`.
-  test "la lista de San Pedro cubre a los tres jefes de Honduras" do
-    assert_equal %w[supervisor_prefactura supervisor_caja supervisor_sac].sort,
-                 Authorization::ROLES_DE_SAN_PEDRO.sort
-  end
-
-  test "la supervisora de San Pedro entra al manifiesto" do
+  # Lo que pueden hacer se prueba en `guias_aduana_test.rb`.
+  test "la supervisora de San Pedro ya no entra al manifiesto" do
     ingresar(users(:supervisor_prefactura))
     get manifiesto_url(@manifiesto)
-    assert_response :success
-  end
-
-  test "y llena la fecha de recibido en Honduras y las guías" do
-    ingresar(users(:supervisor_prefactura))
-
-    patch manifiesto_url(@manifiesto), params: {
-      manifiesto: { fecha_aduana: "2026-08-30" }
-    }
-
-    assert_equal Date.new(2026, 8, 30), @manifiesto.reload.fecha_aduana.to_date
-  end
-
-  # Entrar no le da los campos de Miami — ni con el manifiesto abierto.
-  test "pero no toca lo de Miami, ni en un manifiesto abierto" do
-    abierto = manifiestos(:creado)
-    assert_not abierto.bloqueado?
-    ingresar(users(:supervisor_prefactura))
-
-    patch manifiesto_url(abierto), params: {
-      manifiesto: { consignatario_id: @consignatario.id, es_prioridad: true }
-    }
-
-    assert_nil abierto.reload.consignatario_id
-    assert_not abierto.es_prioridad?
-  end
-
-  # Lo que es de Miami de punta a punta: armar y cerrar.
-  test "San Pedro no finaliza manifiestos" do
-    ingresar(users(:supervisor_prefactura))
-    patch finalizar_manifiesto_url(manifiestos(:creado))
     assert_redirected_to root_path
   end
 
-  test "San Pedro no crea manifiestos" do
-    ingresar(users(:supervisor_prefactura))
-    get new_manifiesto_url
-    assert_redirected_to root_path
-  end
-
-  # El cajero recibe las cajas, pero no entra a la pantalla del manifiesto.
   test "el cajero sigue afuera" do
     ingresar(users(:cajero))
     get manifiesto_url(@manifiesto)

@@ -90,17 +90,16 @@ class ManifiestosControllerTest < ActionDispatch::IntegrationTest
   # el mismo número, solo tiene el 1, el 2 y el 3. Es el mismo que nosotros, la
   # misma teoría"*. Y no son obligatorias al crear: las llena después San Pedro
   # Sula.
-  test "un manifiesto lleva varias guías del proveedor" do
+  # C21-11 · Las guías ya **no se mandan desde acá**: son de San Pedro y viven en
+  # `/guias-y-aduana` desde `PR-U1`. Este test verifica lo contrario de lo que
+  # verificaba: que la pantalla de Miami las ignore.
+  test "la pantalla de Miami ya no acepta guías del proveedor" do
     post manifiestos_url, params: { manifiesto: {
       tipo_envio_ids: [ tipo_envios(:cer).id ],
-      guias_attributes: {
-        "0" => { numero: "286441-1" }, "1" => { numero: "286441-2" }, "2" => { numero: "" }
-      }
+      guias_attributes: { "0" => { numero: "286441-1" } }
     } }
 
-    manifiesto = Manifiesto.last
-    assert_equal %w[286441-1 286441-2], manifiesto.numeros_de_guia,
-                 "el renglón vacío no puede convertirse en una guía en blanco"
+    assert_empty Manifiesto.last.numeros_de_guia
   end
 
   test "la búsqueda encuentra el manifiesto por la guía del proveedor" do

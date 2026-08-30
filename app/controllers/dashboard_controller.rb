@@ -44,6 +44,7 @@ class DashboardController < ApplicationController
     log << card("Pre-Alertas",        "Recepciones esperadas",      "bell-alert",             pre_alertas_path,  :navy) if can_access?(:pre_alertas)
     log << card("Manifiestos",        "Empaque y envío",            "cube",                   manifiestos_path,  :navy) if can_access?(:manifiestos)
     log << card("Recibir Carga",      "Escanear las cajas que llegan", "truck",               recepcion_carga_index_path, :navy) if can_access?(:recibir_carga)
+    log << card("Guías y aduana",     "La guía del proveedor y la fecha", "document-text",   guias_aduana_index_path, :navy) if can_access?(:guias_aduana)
     log << card("Todos los Paquetes", "Búsqueda y reportes",        "archive-box",            paquetes_path,     :navy) if can_access?(:paquetes)
     groups << { area: "Logística", cards: log } if log.any?
 
