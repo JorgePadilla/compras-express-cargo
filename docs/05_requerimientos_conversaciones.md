@@ -7912,7 +7912,7 @@ Esto contesta dos cosas que parecían contradecirse:
 
 | Sección | Quién |
 |---|---|
-| Catálogos del manifiesto | admin + `ROLES_DE_MIAMI` (llave propia, `:catalogos_manifiesto`) |
+| Catálogos del manifiesto | **solo admin** — vive en la sección Configuración desde 2026-08-30 |
 | `/manifiestos` — entrar, crear, empacar, meter paquetes, finalizar | solo `ROLES_DE_MIAMI` |
 | Reabrir un manifiesto cerrado | `ROLES_QUE_ABREN_EL_CANDADO` (admin + supervisor de Miami) |
 | `/guias-y-aduana` — la guía del proveedor y la fecha | `ROLES_DE_SAN_PEDRO` (llave propia, `:guias_aduana`) |
@@ -8023,6 +8023,18 @@ empresa, agregame esta empresa que voy a usar"* — nombró una encomendera y
 «Carolina Cargo» de ejemplo. Es exactamente la filosofía de
 [[feedback_yusef_crud_first]]: *"entre más cosas nos dejes crear, menos te
 molestaremos"*.
+
+**Dónde vive, y por qué cambió.** `PR-M1` lo colgó del bloque **Miami**,
+razonando que un portal admin-only *"cumpliría la letra y fallaría el
+propósito"*, porque el pedido era poder delegar. Jorge lo movió a
+**Configuración** el 2026-08-30, y ese bloque es admin-only.
+
+No hay contradicción: el organigrama que dictó Yusef ese mismo día muestra que
+**a quien delega es a Manal y Vanesa**, que *"tienen todos los poderes en el
+sistema"* y en el sistema son admin. Michelle —el nombre que aparece en la cita
+de arriba— está dos niveles abajo, y preguntado derecho dijo que **no carga
+catálogos**. O sea que el portal admin-only es exactamente para la gente a la
+que se lo quería delegar.
 
 **Cubre los cuatro catálogos que hoy están huérfanos o incompletos:**
 `EmpresaManifiesto` (hoy solo `nombre` + `activo`), el tipo de envío del

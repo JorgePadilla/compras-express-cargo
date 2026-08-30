@@ -17,8 +17,10 @@ require "test_helper"
 # —el tipo de envío del PROVEEDOR— no existía en ninguna forma.
 class CatalogosManifiestoTest < ActionDispatch::IntegrationTest
   setup do
+    # El portal es admin-only desde que se fue a Configuración (2026-08-30).
+    # `@miami` se queda para el test que verifica que ya **no** entra.
     @miami = users(:digitador)
-    ingresar(@miami)
+    ingresar(users(:admin))
   end
 
   test "el portal muestra los cuatro catálogos en una sola pantalla" do
@@ -41,23 +43,47 @@ class CatalogosManifiestoTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  # El pedido es poder DELEGAR: *"andate al área donde dice empresa, agregame
-  # esta empresa que voy a usar"*. Un portal admin-only cumpliría la letra y
-  # fallaría el propósito, así que lo abre el supervisor de Miami.
-  test "el equipo de Miami entra sin ser admin" do
-    assert_not @miami.admin?
-
+  # El pedido era poder DELEGAR: *"andate al área donde dice empresa, agregame
+  # esta empresa que voy a usar"*, y por eso el portal arrancó abierto al
+  # supervisor de Miami — este test decía que un portal admin-only *"cumpliría
+  # la letra y fallaría el propósito"*.
+  #
+  # **Se dio vuelta el 2026-08-30**, y no por capricho: Jorge lo mandó a la
+  # sección de Configuración, que es admin-only, y el organigrama que dictó
+  # Yusef ese mismo día muestra que no falla ningún propósito. A quien delega es
+  # a **Manal y Vanesa** —*"tienen todos los poderes en el sistema… no estoy ni
+  # seguro qué poderes no tienen ellas que sí tengo yo"*—, o sea admin.
+  # Michelle, que es el nombre que aparece en la cita de arriba, está dos
+  # niveles abajo y él mismo dijo que **no carga catálogos**.
+  test "el portal es admin-only, como el resto de Configuración" do
+    ingresar(users(:admin))
     get catalogos_manifiesto_path
-
     assert_response :success
   end
 
-  test "quien no es de Miami no entra" do
+  test "el equipo de Miami ya no entra" do
+    assert_not @miami.admin?
+    ingresar(@miami)
+
+    get catalogos_manifiesto_path
+
+    assert_redirected_to root_path
+  end
+
+  test "el cajero tampoco, como siempre" do
     ingresar(users(:cajero))
 
     get catalogos_manifiesto_path
 
     assert_redirected_to root_path
+  end
+
+  # El link vive en Configuración, que ya se dibuja solo para admin.
+  test "el link está en Configuración y no en Miami" do
+    ingresar(users(:admin))
+    get root_path
+
+    assert_select "a[href=?]", catalogos_manifiesto_path
   end
 
   # ── Los cuatro CRUD ────────────────────────────────────────────────────

@@ -56,13 +56,6 @@ module Authorization
     case feature
     when :etiquetar, :entrega_personal
       role.in?(Manifiesto::ROLES_DE_MIAMI)
-    # C21-08 · El portal de catálogos es **de Miami y nada más**. Tiene llave
-    # propia y no la de `:manifiestos` porque las dos se separaron: San Pedro
-    # entra al manifiesto a poner la guía y la fecha, pero no carga catálogos
-    # (Jorge, 2026-08-30, sobre Michelle). Compartir la llave le habría
-    # mostrado el link para después rebotarla en el controller.
-    when :catalogos_manifiesto
-      role.in?(Manifiesto::ROLES_DE_MIAMI)
     # C21-07 · *"Los de prefactura, ellos son los que se encargan de recibir
     # carga."* Es el mismo grupo que la pre-factura, y va junto a propósito:
     # separarlos haría aparecer el link para gente que después choca.
@@ -110,7 +103,16 @@ module Authorization
     # copias de una lista de roles se desincronizan sin que nadie lo vea.
     when :tareas
       role.in?(TareasController::EJECUCION_ROLES)
-    when :usuarios, :configuraciones, :reportes, :empleados
+    # C21-08 · El portal de catálogos del manifiesto vive en **Configuración**
+    # desde que Jorge lo pidió el 2026-08-30, y ese bloque es admin-only.
+    #
+    # Suena a que contradice el pedido original —*"andate al área donde dice
+    # empresa, agregame esta empresa que voy a usar"*, o sea poder delegarlo—,
+    # pero el organigrama que dictó Yusef lo reconcilia: a quien delega es a
+    # **Manal y Vanesa**, que *"tienen todos los poderes en el sistema"* y en
+    # el sistema **son admin**. Michelle, que era el nombre en esa cita, está
+    # dos niveles abajo y ya se dijo que no carga catálogos.
+    when :usuarios, :configuraciones, :reportes, :empleados, :catalogos_manifiesto
       false
     when :marketing
       # PR-13.c: el supervisor de SAC ve lo mismo que su equipo. Autorizar
