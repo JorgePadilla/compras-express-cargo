@@ -64,13 +64,6 @@ class EtiquetarCambioServicioTest < ApplicationSystemTestCase
     assert_selector "[data-etiquetar-target=duplicateModal]:not(.hidden)", wait: 5
   end
 
-  def ingresar(user)
-    visit new_session_path
-    fill_in "email_address", with: user.email_address
-    fill_in "password", with: "password123"
-    click_on "Iniciar Sesion"
-    assert_no_current_path new_session_path, wait: 5
-  end
 
   # La sesión se abre en el tipo de envío del paquete que se va a escanear.
   # Desde `PR-C7.62` los modales salen de a uno y **el conflicto de sesión
@@ -78,11 +71,7 @@ class EtiquetarCambioServicioTest < ApplicationSystemTestCase
   # otro tipo de envío», nunca el de duplicado — y este test se quedaba
   # esperándolo.
   def abrir_etiquetar
-    visit etiquetar_path
-    if page.has_text?("¿Qué tipo de envío vas a trabajar?", wait: 3)
-      find("button[name='tipo_envio_id'][value='#{@existente.tipo_envio_id}']").click
-    end
-    assert_selector "#paquete_tracking", wait: 5
+    abrir_sesion_etiquetar(TipoEnvio.find(@existente.tipo_envio_id))
   end
 
   def crear_recibido

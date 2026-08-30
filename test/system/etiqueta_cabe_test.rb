@@ -128,13 +128,6 @@ class EtiquetaCabeTest < ApplicationSystemTestCase
 
   # Los system tests no comparten la sesión de los de integración: hay que
   # pasar por el formulario.
-  def ingresar(user)
-    visit new_session_path
-    fill_in "email_address", with: user.email_address
-    fill_in "password", with: "password123"
-    click_on "Iniciar Sesion"
-    assert_no_current_path new_session_path, wait: 5
-  end
 
   def medir(propiedad)
     page.evaluate_script("document.querySelector('.etq').#{propiedad}")

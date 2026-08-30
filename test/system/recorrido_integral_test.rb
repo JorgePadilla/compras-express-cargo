@@ -119,22 +119,9 @@ class RecorridoIntegralTest < ApplicationSystemTestCase
     sleep 0.15 until yield || Process.clock_gettime(Process::CLOCK_MONOTONIC) > limite
   end
 
-  def ingresar(user)
-    visit new_session_path
-    fill_in "email_address", with: user.email_address
-    fill_in "password", with: "password123"
-    click_on "Iniciar Sesion"
-    assert_no_current_path new_session_path, wait: 8
-  end
 
-  def abrir_etiquetar
-    visit etiquetar_path
-    if page.has_text?("¿Qué tipo de envío vas a trabajar?", wait: 3)
-      # La sesión arranca en CER **a propósito**: la pre-alerta de este test es
-      # CER, y si la sesión fuera otra el sistema abriría el modal de conflicto
-      # — que es justo lo que tiene que hacer, pero no es lo que se prueba acá.
-      find("button[name='tipo_envio_id'][value='#{tipo_envios(:cer).id}']").click
-    end
-    assert_selector "#paquete_tracking", wait: 5
-  end
+  # La sesión arranca en CER **a propósito**: la pre-alerta de este test es CER,
+  # y si la sesión fuera otra el sistema abriría el modal de conflicto — que es
+  # justo lo que tiene que hacer, pero no es lo que se prueba acá.
+  def abrir_etiquetar = abrir_sesion_etiquetar(tipo_envios(:cer))
 end

@@ -22,17 +22,9 @@ require "application_system_test_case"
 # de integración puede verlos.
 class EtiquetarCajasModalTest < ApplicationSystemTestCase
   setup do
-    visit new_session_path
-    fill_in "email_address", with: users(:digitador).email_address
-    fill_in "password", with: "password123"
-    click_on "Iniciar Sesion"
-    assert_no_current_path new_session_path, wait: 5
+    ingresar(users(:digitador))
 
-    visit etiquetar_path
-    if page.has_text?("¿Qué tipo de envío vas a trabajar?", wait: 3)
-      first("form[action='#{iniciar_sesion_etiquetar_path}'] button").click
-    end
-    assert_selector "#paquete_tracking", wait: 5
+    abrir_sesion_etiquetar(TipoEnvio.activos.order(:nombre).first)
   end
 
   # Guardar con impresión abre la etiqueta en otra pestaña. Si se quedan
@@ -100,6 +92,10 @@ class EtiquetarCajasModalTest < ApplicationSystemTestCase
     assert_text "Tracking dividido en 3 cajas", wait: 10
     assert_equal 3, Paquete.where(tracking: tracking).count
     assert_equal [ 1, 2, 3 ], Paquete.where(tracking: tracking).order(:numero_caja).map(&:numero_caja)
+
+    esperar_pestana_de_impresion
+  ensure
+    cerrar_pestanas_extra
   end
 
   test "la cantidad no se le pega al paquete siguiente" do
@@ -115,6 +111,10 @@ class EtiquetarCajasModalTest < ApplicationSystemTestCase
 
     assert_equal 1, Paquete.where(tracking: "1Z999PEGADA0002").count,
                  "el segundo paquete se llevó la cantidad del primero"
+
+    esperar_pestana_de_impresion
+  ensure
+    cerrar_pestanas_extra
   end
 
   test "con una caja medida no pregunta nada" do
@@ -126,6 +126,10 @@ class EtiquetarCajasModalTest < ApplicationSystemTestCase
     first("button", text: "Guardar + Imprimir").click
 
     assert_no_selector "[data-etiquetar-target='etiquetasModal'][open]", wait: 2
+
+    esperar_pestana_de_impresion
+  ensure
+    cerrar_pestanas_extra
   end
 
   test "con peso tecleado y sin Agregar, F9 no pregunta y guarda una sola caja con ese peso" do
@@ -146,6 +150,10 @@ class EtiquetarCajasModalTest < ApplicationSystemTestCase
     assert_text "guardado exitosamente", wait: 10
     assert_equal 1, Paquete.where(tracking: tracking).count
     assert_equal 7.5, Paquete.find_by(tracking: tracking).peso.to_f
+
+    esperar_pestana_de_impresion
+  ensure
+    cerrar_pestanas_extra
   end
 
   test "actualizando, el modal arranca en las cajas que ya tiene" do

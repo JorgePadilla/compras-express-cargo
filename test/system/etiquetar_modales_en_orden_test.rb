@@ -292,49 +292,14 @@ class EtiquetarModalesEnOrdenTest < ApplicationSystemTestCase
                     descripcion: "Perfumes", user: users(:digitador))
   end
 
-  def ingresar(user)
-    visit new_session_path
-    # `wait` largo: el default de Capybara son 2s y el primer render en frío
-    # los pierde — el login del test del WR ya andaba con `wait: 8` por esto.
-    fill_in "email_address", with: user.email_address, wait: 10
-    fill_in "password", with: "password123"
-    click_on "Iniciar Sesion"
-    assert_no_current_path new_session_path, wait: 8
-  end
 
-  def abrir_etiquetar(tipo)
-    visit etiquetar_path
-    if page.has_text?("¿Qué tipo de envío vas a trabajar?", wait: 3)
-      # Por `value` y no por texto: «CER» también matchea «CER Legacy».
-      find("button[name='tipo_envio_id'][value='#{tipo.id}']").click
-    end
-    assert_selector "#paquete_tracking", wait: 5
-  end
+  # Por `value` y no por texto: «CER» también matchea «CER Legacy».
+  def abrir_etiquetar(tipo) = abrir_sesion_etiquetar(tipo)
 
   def campo(id) = find("##{id}")
 
   def esperar(segundos: 10)
     limite = Process.clock_gettime(Process::CLOCK_MONOTONIC) + segundos
     sleep 0.15 until yield || Process.clock_gettime(Process::CLOCK_MONOTONIC) > limite
-  end
-
-  # El window.open de la impresión es asíncrono: dispara con el turbo-stream
-  # del guardado y la pestaña puede nacer DESPUÉS de que el ensure cerró las
-  # que había. Esa huérfana le queda al siguiente test del worker — que
-  # arranca con 2 ventanas y Capybara mirando la equivocada (así se cazó:
-  # "ventanas=2" con el login sin campo de email). Todo test que guarda con
-  # impresión la espera antes de cerrar.
-  def esperar_pestana_de_impresion
-    esperar(segundos: 5) { page.driver.browser.window_handles.size > 1 }
-  end
-
-  def cerrar_pestanas_extra
-    b = page.driver.browser
-    principal = b.window_handles.first
-    b.window_handles[1..].to_a.each do |h|
-      b.switch_to.window(h)
-      b.close
-    end
-    b.switch_to.window(principal)
   end
 end

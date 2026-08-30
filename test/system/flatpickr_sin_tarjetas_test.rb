@@ -58,12 +58,4 @@ class FlatpickrSinTarjetasTest < ApplicationSystemTestCase
   end
 
   private
-
-  def ingresar(user)
-    visit new_session_path
-    fill_in "email_address", with: user.email_address
-    fill_in "password", with: "password123"
-    click_on "Iniciar Sesion"
-    assert_no_current_path new_session_path, wait: 8
-  end
 end

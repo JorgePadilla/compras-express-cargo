@@ -114,12 +114,4 @@ class EtiquetaTrackingsCompletosTest < ApplicationSystemTestCase
   def alto(selector)
     page.evaluate_script("document.querySelector('#{selector}').offsetHeight")
   end
-
-  def ingresar(user)
-    visit new_session_path
-    fill_in "email_address", with: user.email_address
-    fill_in "password", with: "password123"
-    click_on "Iniciar Sesion"
-    assert_no_current_path new_session_path, wait: 5
-  end
 end

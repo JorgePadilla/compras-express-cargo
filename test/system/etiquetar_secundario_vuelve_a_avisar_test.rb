@@ -109,20 +109,9 @@ class EtiquetarSecundarioVuelveAAvisarTest < ApplicationSystemTestCase
     assert_text "a nombre de otro cliente"
   end
 
-  def ingresar(user)
-    visit new_session_path
-    fill_in "email_address", with: user.email_address
-    fill_in "password", with: "password123"
-    click_on "Iniciar Sesion"
-    assert_no_current_path new_session_path, wait: 5
-  end
 
   def abrir_etiquetar
-    visit etiquetar_path
-    if page.has_text?("¿Qué tipo de envío vas a trabajar?", wait: 3)
-      find("button[name='tipo_envio_id'][value='#{tipo_envios(:cer).id}']").click
-    end
-    assert_selector "#paquete_tracking", wait: 5
+    abrir_sesion_etiquetar(TipoEnvio.find(tipo_envios(:cer).id))
     page.execute_script(<<~JS)
       window.__preAlertaMatch = false
       document.addEventListener("etiquetar:preAlertaMatch", function () { window.__preAlertaMatch = true })

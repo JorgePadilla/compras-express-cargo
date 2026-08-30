@@ -4,17 +4,9 @@ require "application_system_test_case"
 # y sin salir de la pantalla.
 class EtiquetarDejarTareaTest < ApplicationSystemTestCase
   setup do
-    visit new_session_path
-    fill_in "email_address", with: users(:digitador).email_address
-    fill_in "password", with: "password123"
-    click_on "Iniciar Sesion"
-    assert_no_current_path new_session_path, wait: 5
+    ingresar(users(:digitador))
 
-    visit etiquetar_path
-    if page.has_text?("¿Qué tipo de envío vas a trabajar?", wait: 3)
-      find("button[name='tipo_envio_id'][value='#{tipo_envios(:cer).id}']").click
-    end
-    assert_selector "#paquete_tracking", wait: 5
+    abrir_sesion_etiquetar(TipoEnvio.find(tipo_envios(:cer).id))
   end
 
   test "se deja una tarea desde la franja y aparece ahi mismo, con el tracking de la pantalla" do
