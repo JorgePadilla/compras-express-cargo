@@ -64,6 +64,43 @@ module EtiquetaHelper
     nil
   end
 
+  # C21-05 / RP-54 · El QR del bulto.
+  #
+  # `A7-03` dejó la puerta abierta —*"un código QR o lo que vos querás"*— y
+  # `RP-54` la preguntó, avisando que el repo solo generaba Code128 y que QR
+  # pedía gema nueva. Yusef eligió el 2026-08-30: *"código QR, habría que
+  # instalar la gema necesaria"*, o sea aceptando el costo.
+  #
+  # Va **solo en la etiqueta del bulto**. El warehouse del paquete sigue en
+  # Code128 (`etiqueta_barcode_svg`), que es lo que leen las pistolas de hoy;
+  # cambiar los dos de un saque dejaría a Miami sin poder escanear nada.
+  #
+  # `use_path: true` + `viewbox: true` para que el SVG escale con su caja en vez
+  # de traer un ancho fijo en píxeles, que es lo que rompe al imprimir a 4×6.
+  #
+  # 1.7in de lado: la 4×6 tenía espacio de sobra donde antes iba el Code128 a
+  # todo el ancho, y un QR grande es un QR que la pistola agarra de lejos y
+  # torcido. Va alineado a la izquierda como todo lo demás de la etiqueta.
+  # Y el mismo degradado que el barcode: si algo revienta sale sin código, nunca
+  # una excepción en medio de una impresión.
+  def etiqueta_qr_svg(texto, tamano: "1.7in")
+    valor = texto.to_s.strip
+    return nil if valor.blank?
+
+    svg = RQRCode::QRCode.new(valor)
+      .as_svg(module_size: 4, use_path: true, viewbox: true, standalone: true)
+      .sub(/<\?xml[^>]*\?>\s*/, "")
+
+    # Con `viewbox: true` el SVG sale **sin** `width` ni `height` — se insertan,
+    # no se sustituyen. Sustituirlos era un no-op silencioso: el QR salía con el
+    # tamaño que le diera la caja contenedora, que en 4×6 es todo el ancho.
+    svg = svg.sub(/\A\s*<svg\b/, %(<svg width="#{tamano}" height="#{tamano}"))
+    svg.html_safe
+  rescue StandardError => e
+    Rails.logger.warn "[etiqueta] no se pudo generar el QR para #{valor.inspect}: #{e.message}"
+    nil
+  end
+
   # El renglón donde vive el código de barras.
   #
   # C20-02: justificado no necesita alinear nada —el dibujo ya ocupa todo el

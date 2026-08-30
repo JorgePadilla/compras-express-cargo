@@ -72,3 +72,9 @@ group :test do
 end
 
 gem "barby", "~> 0.6"
+
+# C21-05 / RP-54 · El QR de la etiqueta 4×6 del bulto. Yusef eligió QR sobre
+# Code128 el 2026-08-30 —*"código QR, habría que instalar la gema necesaria"*—,
+# o sea aceptando el costo. `barby` se queda: el warehouse del paquete sigue en
+# Code128, que es lo que leen las pistolas de hoy.
+gem "rqrcode", "~> 3.0"
