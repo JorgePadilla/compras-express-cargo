@@ -114,6 +114,19 @@ Rails.application.routes.draw do
 
   resources :sucursales, except: [:show]
 
+  # C21-08 · El portal de catálogos del manifiesto. Yusef: *"que un CRUD para
+  # todo, para todo lo del manifiesto… como un portal, pero que todo esté ahí,
+  # porque así uno no tiene que andar buscando"*. El hub es una sola pantalla
+  # con solapas; los cuatro CRUD no tienen `index` propio porque volver al
+  # portal ES el requisito.
+  resource  :catalogos_manifiesto,  only: :show, controller: "catalogos_manifiesto"
+  resources :empresas_manifiesto,   only: %i[new create edit update]
+  resources :tipos_envio_proveedor, only: %i[new create edit update],
+            path: "tipos-envio-proveedor"
+  resources :consignatarios,        only: %i[new create edit update]
+  resources :tamanos_caja,          only: %i[new create edit update],
+            path: "tamanos-caja"
+
   # PR-10.a: "la tabla de servicios" — precios por libra, escalones y mínimos.
   # El redondeo a media libra ya no se prende ni se apaga: es la regla, y las
   # tarifas nacen con ella (`RedondeoMediaLibraSiempre`). Por eso se fue el

@@ -1,0 +1,30 @@
+<%= render layout: "catalogos_manifiesto/formulario", locals: { registro: registro, url: url, tab: "tamanos" } do |f| %>
+  <div>
+    <%= f.label :nombre, "Nombre", class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <%= f.text_field :nombre, required: true,
+        class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+  </div>
+  <div class="grid grid-cols-3 gap-4">
+  <div>
+    <%= f.label :alto, "Alto (pulgadas)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <%= f.number_field :alto, step: "0.01", min: 0,
+        class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+  </div>
+  <div>
+    <%= f.label :largo, "Largo (pulgadas)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <%= f.number_field :largo, step: "0.01", min: 0,
+        class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+  </div>
+  <div>
+    <%= f.label :ancho, "Ancho (pulgadas)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <%= f.number_field :ancho, step: "0.01", min: 0,
+        class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+  </div>
+  </div>
+  <div>
+    <%= f.label :position, "Posición", class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <%= f.number_field :position, min: 0,
+        class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+  </div>
+  <p class="text-xs text-gray-500">Las medidas son el punto de partida: al armar la caja se pueden corregir, porque a veces las cortan. Dejalas vacías para un tamaño que siempre se mide a mano.</p>
+<% end %>

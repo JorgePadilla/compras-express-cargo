@@ -13,6 +13,11 @@
       <%= sidebar_link "Etiquetar", etiquetar_path, icon: "tag" if can_access?(:etiquetar) %>
       <%= sidebar_link "Entrega Personal", new_entrega_personal_path, icon: "user-plus" if can_access?(:entrega_personal) %>
       <%= sidebar_link "Manifiestos", manifiestos_path, icon: "cube" if can_access?(:manifiestos) %>
+      <%# C21-08 · El portal de catálogos cuelga de Miami y no de Configuración
+          a propósito: el pedido de Yusef era poder delegarlo —*"andate al área
+          donde dice empresa, agregame esta empresa que voy a usar"*—, y el bloque
+          de Configuración es admin-only. %>
+      <%= sidebar_link "Catálogos del Manifiesto", catalogos_manifiesto_path, icon: "rectangle-stack" if can_access?(:manifiestos) %>
       <%# C16-06 · Yusef, leyendo este bloque: *"falta Clientes para Miami, para
           que ellos lo puedan ver… a veces buscan un cliente para tratar de
           encontrar cuál es el número correcto"*. El link suelto de abajo ya lo
