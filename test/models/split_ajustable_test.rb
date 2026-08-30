@@ -123,6 +123,61 @@ class SplitAjustableTest < ActiveSupport::TestCase
     assert_equal [ 1, 2 ], quedan.map(&:numero_caja)
   end
 
+  # ── C20-11 · las dos columnas que se llaman como una asociación ──────────
+  #
+  # Jorge, 2026-08-29, con los logs de staging: *"al actualizar varias veces da
+  # error, cuando actualizamos el número de etiquetas a más y más"*.
+  #
+  # `paquetes.proveedor` (string legacy) y `paquetes.pre_factura` (boolean
+  # legacy) se llaman igual que `belongs_to :proveedor` y `belongs_to
+  # :pre_factura`. Rails le da `proveedor=` a la asociación, así que copiar
+  # `attributes` por `create!` mandaba el string al writer equivocado: con NULL
+  # pasaba de casualidad, con "" o con "Amazon" era `AssociationTypeMismatch`.
+  # Y el update escribe "" en esa columna cada vez, así que la *segunda*
+  # subida de cajas era la que reventaba.
+
+  test "subir cajas hereda el proveedor legacy, por la puerta correcta" do
+    cajas = crear_split(2)
+    cajas.first.update_column(:proveedor, "Amazon")
+
+    quedan = Paquete.ajustar_split!(cajas.first, 4)
+
+    # Las que faltaban nacen de la caja 1; a las hermanas que ya existían las
+    # pone al día el controller (`propagar_envio_a_hermanas`), no este método.
+    nuevas = quedan.select { |c| c.numero_caja > 2 }.map(&:reload)
+    assert_equal [ "Amazon", "Amazon" ], nuevas.map { |c| c[:proveedor] },
+                 "las cajas nuevas perdieron el origen que sale en la etiqueta"
+    assert nuevas.all? { |c| c.proveedor.nil? }, "el string legacy no es un Proveedor del catálogo"
+  end
+
+  test "el \"\" que deja cualquier update en la columna legacy no revienta la subida" do
+    # El caso exacto de staging (paquetes 182 y 195 del 2026-08-29).
+    cajas = crear_split(2)
+    cajas.first.update_column(:proveedor, "")
+
+    assert_nothing_raised { Paquete.ajustar_split!(cajas.first, 3) }
+    assert_equal 3, Paquete.where(numero_recepcion: cajas.first.numero_recepcion).count
+  end
+
+  test "el flag legacy pre_factura no se hereda, igual que pre_factura_id" do
+    cajas = crear_split(2)
+    cajas.first.update_column(:pre_factura, true)
+
+    quedan = Paquete.ajustar_split!(cajas.first, 3)
+
+    nueva = quedan.last.reload
+    assert_equal false, nueva[:pre_factura], "una caja nueva no está pre-facturada"
+    assert_nil nueva.pre_factura_id
+  end
+
+  test "las columnas que chocan con una asociación son exactamente las que ajustar_split! maneja a mano" do
+    chocan = Paquete.column_names & Paquete.reflect_on_all_associations.map { |a| a.name.to_s }
+
+    assert_equal %w[pre_factura proveedor], chocan.sort,
+                 "apareció otra columna con nombre de asociación: por `create!(attributes)` " \
+                 "va al writer de la asociación. Mirá cómo `ajustar_split!` trata a `proveedor`."
+  end
+
   private
 
   def crear_split(n)

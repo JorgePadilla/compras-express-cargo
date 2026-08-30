@@ -7473,12 +7473,57 @@ quedó con una advertencia en vez de contenido: es lo que hizo que el primer
 diagnóstico de performance concluyera que faltaban índices que existían hace
 meses.
 
+### C20-11 · «Al actualizar varias veces»: el split heredaba el proveedor por la puerta equivocada — 🐛 ✅ **ARREGLADO (PR-C7.80)**
+
+> Jorge, 2026-08-29, con los logs de staging en la mano: *"En etiquetar —y
+> probablemente entrega personal— al actualizar varias veces da error, cuando
+> actualizamos el número de etiquetas a más y más."*
+
+**Qué pasaba.** `PATCH /etiquetar/:id` con más etiquetas que cajas era un 500:
+`AssociationTypeMismatch (Proveedor expected, got "")` en
+`Paquete.ajustar_split!`. La tabla `paquetes` tiene dos «proveedor»: la columna
+string legacy (el campo *"Amazon, eBay…"* de /etiquetar) y `belongs_to
+:proveedor` (el catálogo de `PR-D3.a`, por `proveedor_id`). Rails le da
+`proveedor=` a la **asociación**, y todo el repo lo sabe: escribe el string por
+column accessor. `ajustar_split!` no: copiaba `hermanas.first.attributes` a
+`create!` (desde `PR-C6.7`), y por ahí el string iba al writer equivocado. Con
+`NULL` pasaba de casualidad; con `""` o con *Amazon*, reventaba.
+
+Por qué «al actualizar varias veces»: al **crear**, el string se graba solo si
+viene con algo, así que las cajas nacen con `NULL`. Al **actualizar** se
+escribe siempre, aunque sea `""` — en la caja editada, o en la caja 1 si el
+formulario se reancló al bajar cajas. La secuencia de los logs cuadra paso a
+paso: 3→5 pasó (la caja 1 aún en `NULL`), 5→4 borró la caja editada y le
+escribió `""` a la 1, y 4→7 copió ese `""`. Con un proveedor tipeado al
+recibir, reventaba a la **primera** subida. No era regresión de hoy: tres
+semanas latente, y se destapó porque hoy la actualización de cajas se usó de
+verdad.
+
+Y había una segunda colisión dormida: `pre_factura`, boolean legacy (el
+checkbox viejo de /paquetes) que también se llama como `belongs_to
+:pre_factura`. `false` pasaba; `true` era el mismo 500.
+
+**Qué se hizo.** En `ajustar_split!` el `proveedor` legacy sale del hash antes
+del `create!` y se escribe en la caja nueva por column accessor — las cajas
+nuevas lo **heredan**, porque es dato del envío igual que el cliente. El flag
+`pre_factura` **no se hereda**, igual que `pre_factura_id`: una caja nueva no
+está pre-facturada. Un test fija que las columnas que chocan con una
+asociación son exactamente esas dos, para que una tercera no llegue callada.
+Sin migración: el `""` que ya quedó grabado en staging ahora se tolera.
+
+Cubre las tres pantallas que pasan por `ajustar_split!`: /etiquetar, /paquetes
+y el re-escaneo de un paquete EP. **Entrega Personal no tiene update de cajas**
+—solo crea, por `crear_split!`, que va por otro camino— así que ahí no pegaba.
+Lo que sí salió de mirar esto es `RP-51`: las cajas nuevas heredan también el
+peso y las medidas de la caja 1.
+
 ### Las preguntas que abre
 
 | Id | Qué |
 |---|---|
 | `RP-49` | **Registro y reporte de errores del sistema.** Yusef, viendo la pantalla de error: *"cuando te pasa algo así… ¿cómo lo reportás? ¿Venís y lo grabás, un videíto?"* · *"Normalmente en una empresa grande hay como un equipo que está grabando todos los errores… lo más bonito sería llegar a eso y que mande un reporte."* Y para qué lo quiere: *"más que el reporte, es para poder ir a devolverme yo… que te diga qué estaba haciendo"* — o sea contexto, no solo el stack. Es una serie propia (esbozo: `solid_errors` + contexto de usuario/URL, o tabla propia con pantalla de admin). Decidir alcance antes de arrancar |
 | `RP-50` | **Estandarizar F8 / F9 / F10.** Yusef: *"F8 es guardar y F9 es guardar y notificar… ahorita en etiquetar es guardar e imprimir. ¿Por qué no lo estandarizamos todos?"*. Jorge: *"hay opciones donde no queremos imprimir"*. La propuesta que quedó sonando: F8/F10 guardar (+notificar) y F9 guardar + imprimir, **notificando al final** para *"que no te atrase el de Miami y quede en cola la notificación"*. Tocar los atajos es tocar el dedo de Miami: se decide antes, no en el camino |
+| `RP-51` | **Al subir cajas, ¿las nuevas heredan el peso y las medidas de la caja 1?** Hoy sí (desde `PR-C6.7`, `ajustar_split!` copia todo lo de la caja 1): una caja de 5 lb que se parte en 3 nace como tres cajas de 5 lb si nadie las re-pesa — y el flete se cobra por caja (`RP-41`). Salió al arreglar `C20-11`; no se tocó porque es plata. Confirmar con Yusef si al reempacar siempre se pesa cada bulto; si no, que nazcan sin peso ni medidas |
 
 ### Dudosos del transcript
 
