@@ -56,6 +56,16 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
     // limpiaba el muerto y dejaba vivo el de verdad.
     this._handleGlobalKeydown = this.handleKeydown.bind(this)
     document.addEventListener("keydown", this._handleGlobalKeydown)
+    // C20-13: una pregunta a la vez. Cualquier <dialog> que se cierre —el
+    // aviso, el de etiquetas, el PIN, las listitas de retener/política, el de
+    // cambio de servicio que abre solo al llegar con ?cambio_servicio=1,
+    // «Dejar una tarea» en la franja— deja pasar a lo que estaba esperando:
+    // el siguiente aviso en fila, y después el duplicado pospuesto. `close`
+    // no burbujea: va en captura sobre el elemento del controller, que los
+    // envuelve a todos, franja incluida. Un frame después: el `open` ya se
+    // fue, pero dos `showModal()` en el mismo tick dejan el segundo sin foco.
+    this._alCerrarseUnaPregunta = () => requestAnimationFrame(() => this._siguienteAviso())
+    this.element.addEventListener("close", this._alCerrarseUnaPregunta, true)
     // Al cargar /etiquetar (incluida la navegación Turbo tras iniciar sesión),
     // el cursor arranca en el primer campo: tracking. `autofocus` no es
     // confiable en visitas Turbo, así que lo forzamos en connect.
@@ -66,6 +76,7 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
 
   disconnect() {
     document.removeEventListener("keydown", this._handleGlobalKeydown)
+    this.element.removeEventListener("close", this._alCerrarseUnaPregunta, true)
     // La base cancela el debounce y lo que esté en vuelo. Sin este `super`
     // —que faltaba— una búsqueda pendiente disparaba después de que Turbo ya
     // había cambiado de página.
@@ -113,13 +124,22 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
   _preguntaAbierta() {
     if (document.querySelector("dialog[open]")) return true
     if (this._conflictoVisible()) return true
-    return this.hasDuplicateModalTarget &&
-           !this.duplicateModalTarget.classList.contains("hidden")
+    if (this._duplicadoVisible()) return true
+    // C20-13: lo que está esperando turno también es una pregunta sin
+    // contestar — entre el `close()` de un aviso y el frame siguiente no hay
+    // nada en pantalla, y F9 se colaba.
+    return (this._colaDeAvisos || []).length > 0 || this._avisoActual != null ||
+           this._duplicadoPospuesto != null
   }
 
   _conflictoVisible() {
     return this.hasConflictoSesionModalTarget &&
            !this.conflictoSesionModalTarget.classList.contains("hidden")
+  }
+
+  _duplicadoVisible() {
+    return this.hasDuplicateModalTarget &&
+           !this.duplicateModalTarget.classList.contains("hidden")
   }
 
   toggleTrackingSecundario() {
@@ -351,7 +371,7 @@ cerrarQuitarCobro() {
         if (consulta !== this._secundarioSeq) return
         if (this.trackingSecundarioTarget.value.trim() !== valor) return
         if (data.pre_alerta_match) return this._revisarSecundarioConPreAlerta(data)
-        if (data.exists && !data.terminal) this._openDuplicateModal(data)
+        if (data.exists && !data.terminal) this._openDuplicateModal(data, "secundario")
       })
       .catch(() => { if (consulta === this._secundarioSeq) this._ultimoSecundario = null })
   }
@@ -389,8 +409,22 @@ cerrarQuitarCobro() {
     if (hayCliente && this._avisarSiEsDeOtroCliente(data)) return
 
     // La otra mitad ya está escrita para el primario: el tipo de envío de la
-    // pre-alerta contra el de la sesión.
-    this._avisarConflictoDeSesion(data)
+    // pre-alerta contra el de la sesión (`_hayConflictoDeSesion`).
+    //
+    // C20-13: esto llamaba a `_avisarConflictoDeSesion`, que PR-C7.62 partió
+    // en pregunta + modal y renombró — solo en el primario. El TypeError caía
+    // en el `catch` del fetch, que además borraba `_ultimoSecundario`: el
+    // aviso no salía nunca y el mismo secundario se volvía a consultar —y a
+    // decir «pre alerta»— en cada blur. Va como aviso y no como «no se puede
+    // guardar»: el servidor solo rechaza por el tipo del primario
+    // (`conflicto_con_la_sesion`), y Yusef dejó la decisión en el operario —
+    // *"lo va a retener, o lo va a enviar así"*.
+    if (this._hayConflictoDeSesion(data)) {
+      this._avisarIncongruenciaDelSecundario(
+        `El tracking secundario tiene pre-alerta de ${data.pre_alerta_tipo_envio}, ` +
+        `y estás trabajando ${this.tipoEnvioSesionNombreValue}. Revisá antes de guardar: ` +
+        `puede que haya que retenerlo en Miami.`)
+    }
   }
 
   // ¿El secundario está pre-alertado a nombre de otro cliente que el del
@@ -560,7 +594,8 @@ cerrarQuitarCobro() {
   // cola muere ANTES de abrir — el `close()` directo no pasa por
   // `_cerrarAviso`, así que nada la vuelve a avanzar. Los avisos no se
   // pierden: vuelven a salir enteros al escanear el paquete en la sesión
-  // que corresponde.
+  // que corresponde. C20-13: se lleva también al duplicado, en pantalla o
+  // pospuesto — sus dos salidas abandonan el paquete igual.
   _mostrarConflicto(texto) {
     this.dispatch("tipoEnvioDistinto")
     if (!this.hasConflictoSesionModalTarget) return
@@ -568,6 +603,8 @@ cerrarQuitarCobro() {
     this._colaDeAvisos = []
     this._avisoActual = null
     if (this.hasAvisoModalTarget && this.avisoModalTarget.open) this.avisoModalTarget.close()
+    this._ocultarDuplicado()
+    this._duplicadoPospuesto = null
 
     if (this.hasConflictoSesionTextoTarget) this.conflictoSesionTextoTarget.textContent = texto
     this.conflictoSesionModalTarget.classList.remove("hidden")
@@ -667,13 +704,38 @@ cerrarQuitarCobro() {
     if (!this.hasAvisoModalTarget) return
     // C19-08: con el conflicto en pantalla la fila muere — un aviso abriéndose
     // encima (es un <dialog>: top-layer, tapa cualquier overlay) era
-    // exactamente el "salen montados" de Jorge.
+    // exactamente el "salen montados" de Jorge. C20-13: y el duplicado
+    // pospuesto muere con ella.
     if (this._conflictoVisible()) {
       this._colaDeAvisos = []
+      this._avisoActual = null
+      this._duplicadoPospuesto = null
       return
     }
+    // C20-13: con cualquier otra pregunta abierta —la listita de retener que
+    // el operario abrió a mano, el cambio de servicio que abre solo con
+    // ?cambio_servicio=1, «¿cuántas etiquetas?»— la fila espera; el `close`
+    // que escucha `connect` la vuelve a llamar. (El propio aviso cerrándose
+    // llega acá con el `open` ya quitado.)
+    if (document.querySelector("dialog[open]")) return
+
+    // Un aviso cerrado por fuera de sus botones (Escape: `avisoCancelar` lo
+    // frena una vez, el navegador deja pasar el segundo seguido) no marca
+    // nada — cuenta como «todavía no» y la fila sigue.
+    this._avisoActual = null
     const aviso = (this._colaDeAvisos || []).shift()
-    if (!aviso) return
+    if (!aviso) {
+      this._mostrarDuplicadoPospuesto()
+      return
+    }
+
+    // C20-13 · Jorge: "hay veces que retener en Miami y el cuadro de tracking
+    // ya existe en el sistema salen los dos". Los avisos van antes: si el
+    // operario después elige «Es actualización», la página recarga y los
+    // avisos ya no vuelven a salir — y el NO DESPACHAR es justo el que Yusef
+    // pidió como modal (C14-02). El duplicado que ya estaba en pantalla se
+    // hace a un lado y vuelve cuando la fila se vacía.
+    this._posponerDuplicadoVisible()
 
     this._avisoActual = aviso
     if (this.hasAvisoTipoTarget) this.avisoTipoTarget.textContent = aviso.tipo
@@ -714,11 +776,46 @@ cerrarQuitarCobro() {
   }
 
   _cerrarAviso() {
-    this.avisoModalTarget.close()
     this._avisoActual = null
-    // El siguiente en el frame que viene: dos `showModal()` en el mismo tick
-    // dejan el segundo sin foco.
-    requestAnimationFrame(() => this._siguienteAviso())
+    // El siguiente lo saca el `close` del dialog (ver `connect`), en el frame
+    // que viene: un solo camino para avanzar la fila — Enter, clic, Escape o
+    // el conflicto que la cierra pasan todos por ahí.
+    this.avisoModalTarget.close()
+  }
+
+  // C20-13 · Escape no contesta un aviso. C14-02: *"ellos no las leen"* — las
+  // salidas son sus botones y F2. Frena el primer Escape; el navegador deja
+  // pasar un segundo seguido (sin activación de usuario entre medio), y para
+  // eso está la red de `_siguienteAviso`: la fila no se traba.
+  avisoCancelar(e) {
+    e.preventDefault()
+  }
+
+  // El duplicado que estaba en pantalla cuando llegó un aviso: se guarda y se
+  // oculta. Vuelve solo, cuando la fila se vacíe.
+  _posponerDuplicadoVisible() {
+    if (!this._duplicadoVisible()) return
+    this._duplicadoPospuesto = { data: this._duplicateData, desde: this._duplicadoDesde }
+    this._ocultarDuplicado()
+  }
+
+  _mostrarDuplicadoPospuesto() {
+    const pospuesto = this._duplicadoPospuesto
+    if (!pospuesto) return
+    this._duplicadoPospuesto = null
+    this._openDuplicateModal(pospuesto.data, pospuesto.desde)
+  }
+
+  _ocultarDuplicado() {
+    if (this.hasDuplicateModalTarget) this.duplicateModalTarget.classList.add("hidden")
+    this._duplicateData = null
+  }
+
+  // ¿Hay algo que tenga que salir antes que el duplicado? Un aviso en
+  // pantalla, avisos esperando, o cualquier otro <dialog> abierto.
+  _hayPreguntaAntesDelDuplicado() {
+    if (document.querySelector("dialog[open]")) return true
+    return (this._colaDeAvisos || []).length > 0 || this._avisoActual != null
   }
 
   // La retención que viene anunciada.
@@ -804,7 +901,19 @@ cerrarQuitarCobro() {
     }
   }
 
-  _openDuplicateModal(data) {
+  _openDuplicateModal(data, desde = "primario") {
+    // C19-08 / C20-13: el conflicto manda, también sobre el duplicado — sus
+    // salidas abandonan el paquete en esta sesión, no hay a quién contestarle
+    // «¿es actualización?». Y suena solo el error.
+    if (this._conflictoVisible()) return
+    // C20-13: con una pregunta en pantalla o en fila, el duplicado se pospone:
+    // sale —con su pito— cuando la fila se vacíe (`_mostrarDuplicadoPospuesto`).
+    if (this._hayPreguntaAntesDelDuplicado()) {
+      this._duplicadoPospuesto = { data, desde }
+      return
+    }
+    this._duplicadoDesde = desde
+
     // Render info section.
     const info = this.duplicateInfoTarget
     info.textContent = ""
@@ -864,8 +973,8 @@ cerrarQuitarCobro() {
   }
 
   closeDuplicate() {
-    this.duplicateModalTarget.classList.add("hidden")
-    this._duplicateData = null
+    this._ocultarDuplicado()
+    this._duplicadoPospuesto = null
   }
 
   // Opción 1: "Es actualización" — recarga ESTE formulario con los datos del
@@ -917,9 +1026,15 @@ cerrarQuitarCobro() {
   duplicateAsNew() {
     const data = this._duplicateData
     if (!data || !data.next_tracking) return
-    this.trackingTarget.value = data.next_tracking
-    this.duplicateModalTarget.classList.add("hidden")
-    this._duplicateData = null
+    // C20-13: el sufijo va al campo que lo escaneó. Sobre un secundario que ya
+    // existía, esto escribía `SECUNDARIO+A` en el PRIMARIO — y el primario de
+    // verdad se perdía.
+    const campo = this._duplicadoDesde === "secundario" && this.hasTrackingSecundarioTarget
+      ? this.trackingSecundarioTarget
+      : this.trackingTarget
+    campo.value = data.next_tracking
+    this._ocultarDuplicado()
+    this._duplicadoPospuesto = null
     this.clienteInputTarget.focus()
   }
 
@@ -937,7 +1052,8 @@ cerrarQuitarCobro() {
     this.clienteNombreTarget.textContent = ""
     this.clienteNombreTarget.classList.add("hidden")
     if (this.hasNotasBannerTarget) this.notasBannerTarget.classList.add("hidden")
-    this.duplicateModalTarget.classList.add("hidden")
+    this._ocultarDuplicado()
+    this._duplicadoPospuesto = null
     // PR-9.b: la franja vuelve a su estado vacío junto con el formulario.
     this.loadPanel(null)
     if (this.hasTerceroContainerTarget) {
@@ -954,7 +1070,6 @@ cerrarQuitarCobro() {
     // paquete siguiente hablando del anterior.
     this._colaDeAvisos = []
     this._avisoActual = null
-    this._duplicateData = null
     if (this.hasAvisoModalTarget && this.avisoModalTarget.open) this.avisoModalTarget.close()
     // C19-02: al tracking, que es donde escanea el siguiente. (El branch que
     // prefería `tipoEnvio` era de cuando el form tenía ese select; con la

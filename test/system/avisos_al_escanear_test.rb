@@ -20,7 +20,11 @@ class AvisosAlEscanearTest < ApplicationSystemTestCase
 
     visit etiquetar_path
     if page.has_text?("¿Qué tipo de envío vas a trabajar?", wait: 3)
-      first("button[name='tipo_envio_id']").click
+      # La sesión en el tipo de las pre-alertas del archivo (CER), por `value`.
+      # `first(...)` tomaba el primer botón —que ya no era CER— y desde
+      # PR-C7.62 el conflicto de sesión sale antes que cualquier aviso: cinco de
+      # los seis llevaban tiempo rojos sin que el CI los corriera.
+      find("button[name='tipo_envio_id'][value='#{tipo_envios(:cer).id}']").click
     end
     assert_selector "#paquete_tracking", wait: 8
   end
