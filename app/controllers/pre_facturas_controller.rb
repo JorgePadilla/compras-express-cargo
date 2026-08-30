@@ -3,7 +3,7 @@ class PreFacturasController < ApplicationController
   before_action :set_pre_factura, only: %i[show edit update confirmar facturar anular]
 
   def index
-    @pre_facturas = PreFactura.includes(:cliente, :creado_por).recientes
+    @pre_facturas = PreFactura.includes(:cliente, :creado_por, :manifiesto).recientes
     @pre_facturas = apply_filters(@pre_facturas)
     @pre_facturas = @pre_facturas.page(params[:page]).per(per_page_sanitized)
   end
@@ -13,12 +13,11 @@ class PreFacturasController < ApplicationController
 
   def new
     @pre_factura = PreFactura.new
+    @manifiestos = Manifiesto.con_carga_por_facturar
+    @manifiesto = @manifiestos.find_by(id: params[:manifiesto_id])
     if params[:cliente_id].present?
       @cliente = Cliente.find(params[:cliente_id])
-      @paquetes_facturables = @cliente.paquetes
-        .facturables
-        .includes(:tipo_envio, :sucursal, :proveedor)
-        .order(:created_at)
+      @paquetes_facturables = paquetes_facturables_de(@cliente, @manifiesto)
       @cotizaciones = cotizar(@cliente, @paquetes_facturables)
     end
   end
@@ -35,6 +34,9 @@ class PreFacturasController < ApplicationController
 
     @pre_factura = PreFactura.build_from_paquetes(cliente, paquete_ids, user: Current.user)
     @pre_factura.notas = params.dig(:pre_factura, :notas)
+    # C21-10: el manifiesto que se está trabajando queda guardado en la
+    # pre-factura. Hasta hoy el número se tipeaba a mano en las notas.
+    @pre_factura.manifiesto_id = params[:manifiesto_id].presence
     prepagados = @pre_factura.prepagados_miami_detected
 
     if @pre_factura.save
@@ -49,7 +51,10 @@ class PreFacturasController < ApplicationController
       redirect_to edit_pre_factura_path(@pre_factura), notice: notice
     else
       @cliente = cliente
-      @paquetes_facturables = cliente.paquetes.facturables.includes(:tipo_envio)
+      @manifiestos = Manifiesto.con_carga_por_facturar
+      @manifiesto = @manifiestos.find_by(id: params[:manifiesto_id])
+      @paquetes_facturables = paquetes_facturables_de(cliente, @manifiesto)
+      @cotizaciones = cotizar(cliente, @paquetes_facturables)
       render :new, status: :unprocessable_entity
     end
   end
@@ -104,7 +109,8 @@ class PreFacturasController < ApplicationController
 
   def facturables
     cliente = Cliente.find(params[:cliente_id])
-    paquetes = cliente.paquetes.facturables.includes(:tipo_envio, :sucursal, :proveedor)
+    manifiesto = Manifiesto.find_by(id: params[:manifiesto_id])
+    paquetes = paquetes_facturables_de(cliente, manifiesto)
     cotizaciones = cotizar(cliente, paquetes)
 
     render json: paquetes.map { |p|
@@ -171,8 +177,20 @@ class PreFacturasController < ApplicationController
     end
   end
 
+  # C21-10. Un solo lugar arma la lista, para que la pantalla, el JSON del
+  # preview y el re-render de error no se separen — que es el bug recurrente
+  # de este repo.
+  def paquetes_facturables_de(cliente, manifiesto)
+    paquetes = cliente.paquetes
+      .facturables
+      .includes(:tipo_envio, :sucursal, :proveedor)
+      .order(:created_at)
+    manifiesto ? paquetes.where(manifiesto_id: manifiesto.id) : paquetes
+  end
+
   def apply_filters(scope)
     scope = scope.buscar(params[:q]) if params[:q].present?
+    scope = scope.where(manifiesto_id: params[:manifiesto_id]) if params[:manifiesto_id].present?
     scope = scope.by_estado(params[:estado]) if params[:estado].present?
     scope = scope.by_cliente(params[:cliente_id]) if params[:cliente_id].present?
     if params[:fecha_desde].present? && (fecha_desde = Date.parse(params[:fecha_desde]) rescue nil)

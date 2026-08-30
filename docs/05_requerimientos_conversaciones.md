@@ -6623,7 +6623,7 @@ atarla.
 | Id | Qué |
 |---|---|
 | `RP-45` | **¿Quién puede dejar una tarea?** Es la pregunta de marzo (*"¿quién asigna las tareas?"*) que quedó para *"reunión directa"* y nunca se cerró. Respuesta provisoria de Jorge: **la deja cualquiera del personal que las ejecuta** (Miami, caja, entrega); editar y borrar solo supervisores y SAC; el cliente nunca. Si Yusef dice otra cosa —o cuando llegue el Excel de roles (`RP-35`)—, el cambio es una constante (`CREACION_ROLES`), un helper y un test. Y un síntoma para que lo reconozca: **el jefe de SAC (`supervisor_sac`) hoy no ve la cola de SAC** — no está en ninguna lista de tareas ni en la segmentación por área |
-| `RP-46` | **Cuando se reciba fuera de Miami.** DF México ya se puede recibir (`C18-02`, seguimiento). Tres cosas siguen atadas a Miami y se decidió no tocarlas sin preguntar: (a) el estado se llama **«Recibido en Miami»** (`recibido_miami`, en la ficha, el listado y el timeline) aunque el paquete se haya recibido en México — ¿pasa a «Recibido en bodega» con el nombre de la sucursal, o Miami es la palabra que usan para "ya lo tenemos"?; (b) el **flete México** (`RP-13a`: $5 por libra o volumétrica + ISV) hoy es un cargo que se agrega a mano en la pre-factura — ¿debería salir solo cuando el origen es México, como el escalonado sale solo para USA?; (c) los **manifiestos** hoy no llevan sucursal de origen (todos numeran `MA-…`) — ¿un manifiesto por sucursal que recibe, con su propio número?
+| `RP-46` | **Cuando se reciba fuera de Miami.** DF México ya se puede recibir (`C18-02`, seguimiento). Tres cosas siguen atadas a Miami y se decidió no tocarlas sin preguntar: (a) el estado se llama **«Recibido en Miami»** (`recibido_miami`, en la ficha, el listado y el timeline) aunque el paquete se haya recibido en México — ¿pasa a «Recibido en bodega» con el nombre de la sucursal, o Miami es la palabra que usan para "ya lo tenemos"?; (b) el **flete México** (`RP-13a`: $5 por libra o volumétrica + ISV) hoy es un cargo que se agrega a mano en la pre-factura — ¿debería salir solo cuando el origen es México, como el escalonado sale solo para USA?; ~~(c) los **manifiestos** hoy no llevan sucursal de origen (todos numeran `MA-…`) — ¿un manifiesto por sucursal que recibe, con su propio número?~~ **(c) ✅ RESUELTA en `PR-M2`**: el manifiesto lleva `sucursal_origen` y numera `MM2026000001` (sucursal + año + correlativo). **(a) y (b) siguen abiertas.**
 
 ---
 
@@ -7696,7 +7696,7 @@ ella cuelga todo lo de abajo. Y la etiqueta 4×6 **no se puede expresar**:
 
 ---
 
-### C21-01 · Crear el manifiesto **primero**, y sacar las pre-etiquetas de los bultos — 🆕 **PLANIFICADO**
+### C21-01 · Crear el manifiesto **primero**, y sacar las pre-etiquetas de los bultos — ✅ **IMPLEMENTADO en PR-M3 / PR-M4**
 
 El cambio de fondo. Hoy:
 
@@ -7727,7 +7727,7 @@ tienen descuento y las que no, porque con este proveedor nos sale más caro"*.
 
 ---
 
-### C21-02 · Los campos del encabezado: quién llena qué — 🆕 **PLANIFICADO**
+### C21-02 · Los campos del encabezado: quién llena qué — ✅ **IMPLEMENTADO en PR-M2**
 
 Esto sale de las **anotaciones a mano sobre el manifiesto impreso**, que es donde
 quedó más claro que en el audio:
@@ -7770,7 +7770,7 @@ nuestro»**.
 
 ---
 
-### C21-03 · Tipo de envío nuestro: selección múltiple, mínimo 1 — 🆕 **PLANIFICADO**
+### C21-03 · Tipo de envío nuestro: selección múltiple, mínimo 1 — ✅ **IMPLEMENTADO en PR-M2**
 
 > *"Aquí es **tipo de envío nuestro**, el interno nuestro… aquí es **selección
 > múltiple**… podés seleccionar todos los cinco tipos de servicio que tengo
@@ -7788,7 +7788,7 @@ Va junto con la **sucursal de entrega**, que hoy no existe en el manifiesto:
 
 ---
 
-### C21-04 · Las casas: tamaño pre-definido, medidas editables, volumen ÷166 — 🆕 **PLANIFICADO**
+### C21-04 · Las casas: tamaño pre-definido, medidas editables, volumen ÷166 — ✅ **IMPLEMENTADO en PR-M3**
 
 La pantalla vieja tiene diez tamaños pre-definidos —**Especificar, EH, D, 22
 Cubo, 18 Cubo, D G, EH G, E, Mini D, Mini D Doble**— y se elige **uno a la vez**.
@@ -7823,7 +7823,7 @@ Sin tope de cantidad: *"a veces son 50… hemos pegado 20 pico, 30 cajas"*.
 
 ---
 
-### C21-05 · La etiqueta 4×6 del bulto — 🆕 **PLANIFICADO**
+### C21-05 · La etiqueta 4×6 del bulto — ✅ **IMPLEMENTADO en PR-M4**
 
 Lo que ya trae, según la foto: la letra, `Lbs. 131.0`, `23x23x36`, `EXP`, `AEREO
 EXPRESS`, **PRIORITY**, el consignatario, el barcode, la fecha y `DM7155`.
@@ -7847,7 +7847,7 @@ Code128.
 
 ---
 
-### C21-06 · Finalizar: todo a ENVIADO, y el manifiesto se bloquea — 🆕 **PLANIFICADO**
+### C21-06 · Finalizar: todo a ENVIADO, y el manifiesto se bloquea — ✅ **IMPLEMENTADO en PR-M6**
 
 De su diagrama: **«Finalizar e imprimir todos los paquetes con el tipo de envío
 nuestro seleccionado» → cambia estatus a ENVIADO.** La pantalla vieja tiene los
@@ -7871,7 +7871,7 @@ marítimo *"un día más un día menos no afecta"*.
 
 ---
 
-### C21-07 · Recibir la carga en Honduras: la pantallita y el aparatito — 🆕 **PLANIFICADO**
+### C21-07 · Recibir la carga en Honduras: la pantallita y el aparatito — ✅ **IMPLEMENTADO en PR-M7**
 
 Esto **completa** el circuito que la `Conversación 7` dejó decidido
 (`A7-03`…`A7-08`) y le pone quién y con qué.
@@ -7917,7 +7917,7 @@ manifiesto"*.
 
 ---
 
-### C21-08 · Un CRUD para **todo** lo del manifiesto — 🆕 **PLANIFICADO**
+### C21-08 · Un CRUD para **todo** lo del manifiesto — ✅ **IMPLEMENTADO en PR-M1**
 
 Pedido explícito, y repetido dos veces en la llamada:
 
@@ -7974,7 +7974,7 @@ De las anotaciones a mano sobre las dos copias:
 
 ---
 
-### C21-10 · La pre-factura se amarra al **manifiesto**, no a la guía — 🆕 **PLANIFICADO**
+### C21-10 · La pre-factura se amarra al **manifiesto**, no a la guía — ✅ **IMPLEMENTADO en PR-M8**
 
 Arrancó diciendo guía y **se corrigió solo**:
 
@@ -7995,9 +7995,45 @@ Hoy lo hacen **a mano**: *"le ponen esa guía, se la ponen manual"*.
 **Verificado: hoy no existe ningún vínculo** entre `PreFactura` y `Manifiesto` —
 ni columna, ni scope, ni filtro.
 
+**IMPLEMENTADO en PR-M8.** `pre_facturas.manifiesto_id` (nullable — una
+recolecta no viene de ningún manifiesto). El selector va en el paso 1 de
+`/pre_facturas/new`, al lado del cliente, y la lista sale de
+`Manifiesto.con_carga_por_facturar`: se deriva de los paquetes, no del estado
+del manifiesto, así que **se vacía sola** a medida que se factura. Elegido el
+manifiesto, la pantalla, el JSON del preview y el re-render de error filtran
+por el mismo helper, y el número queda guardado, visible en el índice y en la
+ficha, y filtrable.
+
+Dos cosas salieron de acá porque no se sostenían sin ellas:
+
+1. **`Paquete.facturables` se ensanchó a `en_aduana`.** Desde `PR-M7` la carga
+   que llega por manifiesto aterriza en `en_aduana`, y **nadie escribe
+   `disponible_entrega`** — la bodega en Honduras sigue siendo un hueco. Sin
+   ensancharlo, la pantalla de pre-factura salía vacía para toda la carga real.
+   Coincide con lo que dijo Yusef mirando la pantalla —*"ya de aquí el paquete
+   va a cambiar cuando ingresemos a la prefactura"*— y con `docs/05:1201`.
+   `consolidando_honduras` **no** entró: es un desvío, no un paso del pipeline.
+2. **`PreFactura.build_from_paquetes` ahora filtra por `facturables`.** El
+   comentario decía «must be in bodega Honduras» y el código tomaba cualquier
+   id del cliente: la lista de la pantalla filtraba, el `create` no.
+3. **`paquetes.pre_factura_id` no lo escribía nadie.** Lo leen tres lugares
+   —`Paquete.facturables`, `Paquete#cobrada_o_entregada?` y el bloqueo de
+   borrar del controller— y lo limpian dos (`anular!`, `BajarCajasConPin`),
+   pero el único que lo ponía eran los seeds: el mismo paquete podía entrar en
+   dos pre-facturas borrador a la vez. Ahora se estampa al guardar y **se
+   suelta al morir su última línea** — sin ese contrapeso, quitar una línea con
+   PIN dejaba el paquete estampado para siempre.
+
+**Consecuencia conocida, no es regresión:** el contador «paquetes disponibles»
+del dashboard (`DashboardMetrics#paquetes_disponibles`, que cuenta
+`disponible_entrega`) va a quedar cerca de cero hasta que exista el módulo de
+bodega en Honduras. Y `PreFactura#anular!` devuelve los paquetes a
+`disponible_entrega` aunque hayan entrado desde `en_aduana` — siguen siendo
+facturables, así que el flujo no se rompe, pero el salto queda anotado.
+
 ---
 
-### C21-11 · Varias guías por manifiesto, y son como nuestros splits — 🆕 **PLANIFICADO**
+### C21-11 · Varias guías por manifiesto, y son como nuestros splits — ✅ **IMPLEMENTADO en PR-M2**
 
 > *"El número de guía **termina siendo varios**."*
 
@@ -8014,9 +8050,9 @@ O sea: la misma lógica de sufijos que ya usan nuestras cajas de un split.
 
 | Id | Qué |
 |---|---|
-| `RP-53` | **¿Dónde vive el consignatario?** El modelo `Consignatario` existe y está **vacío** (sin seeds, sin pantalla, sin asociaciones), y es el nombre semánticamente correcto. Pero «CORPORACION KARSAM» hoy vive en `Agent` —el bloque *Agent* del Warehouse Receipt—, que significa «agente de destino». ¿Se puebla `Consignatario` y se deja `Agent` como está, o son la misma cosa con dos nombres? |
+| ~~`RP-53`~~ | **✅ CERRADA por Jorge (2026-08-30): se puebla `Consignatario` y `Agent` se queda como está** para el Warehouse Receipt. Implementado en `PR-M1`. ~~¿Dónde vive el consignatario? El modelo `Consignatario` existe y está **vacío** (sin seeds, sin pantalla, sin asociaciones), y es el nombre semánticamente correcto. Pero «CORPORACION KARSAM» hoy vive en `Agent` —el bloque *Agent* del Warehouse Receipt—, que significa «agente de destino». ¿Se puebla `Consignatario` y se deja `Agent` como está, o son la misma cosa con dos nombres?~~ |
 | `RP-54` | **El código de la caja: ¿barras o QR?** `A7-03` dejó abierto *"un código QR o lo que vos querás"*. El repo solo genera Code128 (`barby`), que es lo que ya leen las pistolas; QR necesitaría gema nueva. Confirmar antes de imprimir 4×6 en producción |
-| `RP-55` | **¿Qué se hace con los manifiestos viejos?** Jorge lo preguntó derecho. Hoy hay manifiestos numerados `MA-…` (formato legacy) porque la numeración anual nunca corrió. Al despertarla, ¿se renumeran, se dejan conviviendo, o se cierra el formato viejo en una fecha? |
+| ~~`RP-55`~~ | **✅ CERRADA por Jorge (2026-08-30): se borran.** Eran 2 de prueba y no hay producción. Implementado en `PR-M2`. ~~¿Qué se hace con los manifiestos viejos? Jorge lo preguntó derecho. Hoy hay manifiestos numerados `MA-…` (formato legacy) porque la numeración anual nunca corrió. Al despertarla, ¿se renumeran, se dejan conviviendo, o se cierra el formato viejo en una fecha?~~ |
 | `RP-56` | **Cómo se llama la pantalla de recepción.** Yusef dio tres nombres en la misma frase: *"dar entrada al almacén"*, *"entrada al inventario"* y *"recibir carga"*. Elegir uno antes de que Miami y SPS le pongan cada quien el suyo |
 | `RP-57` | **Retención y peso de la data.** *"Lo mínimo son seis años: cinco para atrás más el año en curso"*, pero *"yo lo que ocupo es el año en curso y un año antes"*. Su idea: *"crear reportes automáticos, cierre anual, cierre mensual… lo mandás al bucket y ahí guarda todos los reportes del año"*. Es una discusión propia, no del manifiesto |
 

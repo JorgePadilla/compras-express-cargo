@@ -11,6 +11,23 @@
             include_blank: "— Selecciona un cliente —",
             class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
       </div>
+      <%# C21-10. Yusef: *"lo que vamos a seleccionar, de que estamos
+          procesando, es el manifiesto"*. Va opcional a propósito: una
+          recolecta, o un paquete que entró por otra vía, no tiene manifiesto. %>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Manifiesto que se está trabajando</label>
+        <%= select_tag :manifiesto_id,
+            options_from_collection_for_select(@manifiestos, :id, ->(m) { "#{m.numero} — #{m.cantidad_paquetes} paquete(s)" }, params[:manifiesto_id]),
+            include_blank: "— Todos los manifiestos —",
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        <p class="text-xs text-gray-500 mt-1">
+          <% if @manifiestos.any? %>
+            Filtra los paquetes del cliente a los que vinieron en ese manifiesto, y lo deja guardado en la pre-factura.
+          <% else %>
+            No hay manifiestos con carga por facturar todavía.
+          <% end %>
+        </p>
+      </div>
       <button type="submit" class="px-4 py-2 bg-cec-navy text-white rounded-lg hover:bg-cec-navy-light text-sm font-medium" data-shortcut="F10">Continuar (F10)</button>
     <% end %>
   </div>
@@ -23,11 +40,20 @@
     <% if @cliente.saldo_pendiente.to_f > 0 %>
       <p class="text-sm text-amber-700 mt-1">Saldo pendiente actual: L. <%= number_with_delimiter(@cliente.saldo_pendiente.to_f, precision: 2) %></p>
     <% end %>
+    <p class="text-sm mt-1">
+      <% if @manifiesto %>
+        Manifiesto: <span class="font-mono font-semibold text-cec-navy"><%= @manifiesto.numero %></span>
+        <%= link_to "cambiar", new_pre_factura_path, class: "text-xs text-cec-teal hover:underline ml-1" %>
+      <% else %>
+        <span class="text-gray-500">Sin manifiesto — se ven todos los paquetes facturables del cliente.</span>
+      <% end %>
+    </p>
   </div>
 
   <% if @paquetes_facturables.any? %>
     <%= form_tag pre_facturas_path, method: :post do %>
       <%= hidden_field_tag :cliente_id, @cliente.id %>
+      <%= hidden_field_tag :manifiesto_id, @manifiesto&.id %>
       <div class="bg-white rounded-lg shadow overflow-hidden">
         <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200">
@@ -107,7 +133,7 @@
   <% else %>
     <%= render EmptyStateComponent.new(
       title: "Sin paquetes facturables",
-      description: "Este cliente no tiene paquetes en bodega Honduras disponibles para facturar.",
+      description: @manifiesto ? "Este cliente no tiene paquetes por facturar en el manifiesto #{@manifiesto.numero}." : "Este cliente no tiene paquetes en bodega Honduras disponibles para facturar.",
       icon: "archive-box"
     ) %>
   <% end %>

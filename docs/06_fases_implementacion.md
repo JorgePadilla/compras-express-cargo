@@ -432,7 +432,7 @@ Fase 8  ░░░░░░░░░░░░░░░░░░░░  Inventario
 Fase 9  ░░░░░░░░░░░░░░░░░░░░  Fotos de Paquetes (storage + envio a cliente)
 Fase 10 ████████████████░░░░  Contexto operativo en captura (PR-9)      ← EN CURSO
 Fase 11 ████████████████░░░░  Tarifas y calculo de cobro (PR-10)        ← EN CURSO
-Fase 12 ░░░░░░░░░░░░░░░░░░░░  Manifiesto de punta a punta (diseño cerrado, C21)
+Fase 12 ██████████████████░░  Manifiesto de punta a punta (PR-M)        ← EN CURSO
 Fase 13 ████████████████████  Precio bloqueado + PIN de supervisor        ✅
 ```
 
@@ -851,7 +851,37 @@ abierto están en `docs/05` — "La tabla de precios recibida (2026-08-05)".
 
 ---
 
-## Fase 12: Manifiesto de punta a punta — DISEÑO CERRADO (Conversación 21)
+## Fase 12: Manifiesto de punta a punta — EN CURSO (serie PR-M)
+
+> **2026-08-30 · la serie `PR-M`.** El diseño de la Conversación 21 se está
+> construyendo en nueve PRs que mergean solos. Ocho entraron el mismo día.
+
+| PR | Qué | Ítem de `docs/05` | Estado |
+|---|---|---|---|
+| `PR-M1` | El portal de catálogos del manifiesto — empresas, tipos del proveedor, consignatarios y tamaños | `C21-08` | ✅ #367 |
+| `PR-M2` | El encabezado que Yusef anotó a mano, y el número que por fin lleva el año (`MM2026000001`) | `C21-02`, `C21-03`, `C21-11` | ✅ #368 |
+| `PR-M3` | Las casas del manifiesto — tamaño, medidas editables y volumen ÷166 | `C21-04` | ✅ #369 |
+| `PR-M4` | La etiqueta 4×6 del bulto, con el número de manifiesto que faltaba | `C21-05` | ✅ #370 |
+| `PR-M5` | El pip pip pip — escanear el paquete al meterlo a la caja | `C21-01` | ✅ #371 |
+| `PR-M6` | Finalizar manda todo a ENVIADO, y el manifiesto queda bloqueado | `C21-06` | ✅ #372 |
+| `PR-M7` | Recibir la carga en Honduras escaneando cajas | `C21-07` | ✅ #373 |
+| `PR-M8` | La pre-factura se amarra al manifiesto | `C21-10` | ✅ |
+| `PR-M9` | El documento impreso — encabezado, teléfono, encargado y letra más grande | `C21-09` | ⏳ |
+
+**Lo que se cerró de paso:** `RP-30` (aduana ya tiene pantalla y quién escriba el
+estado — `PR-M7` es el **primer escritor de `en_aduana` en todo el sistema**),
+`RP-46(c)` (manifiesto por sucursal con su número anual), `RP-53` y `RP-55`
+(los dos los contestó Jorge).
+
+**Lo que sigue siendo hueco:** la **bodega en Honduras**. Nadie escribe
+`disponible_entrega`, así que la carga que entra por manifiesto se queda en
+`en_aduana` hasta que la pre-factura la mueve. `PR-M8` ensanchó
+`Paquete.facturables` para que eso funcione; el módulo de bodega sigue sin
+construirse y `lib/procesos_pdf.rb` lo dibuja con `existe: false`.
+
+---
+
+### El diseño original (Conversación 21)
 
 > **2026-08-29 · la Conversación 21 la cerró.** Yusef dedicó una videollamada de
 > 95 minutos con la pantalla compartida desde Miami, mandó **seis fotos** —dos de

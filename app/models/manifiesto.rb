@@ -5,6 +5,7 @@ class Manifiesto < ApplicationRecord
   belongs_to :sucursal_origen, class_name: "Sucursal", optional: true  # PR-D1.d
   belongs_to :user, optional: true
   has_many :paquetes, dependent: :nullify
+  has_many :pre_facturas, dependent: :nullify   # C21-10
 
   # C21-02 · El encabezado que Yusef anotó a mano, campo por campo.
   belongs_to :consignatario, optional: true
@@ -56,6 +57,14 @@ class Manifiesto < ApplicationRecord
       .distinct
   }
   scope :by_estado, ->(estado) { where(estado: estado) }
+
+  # PR-M8 / C21-10. Los manifiestos que todavía tienen carga sin facturar.
+  # Se deriva de los paquetes, no del estado del manifiesto: así la lista se
+  # vacía sola a medida que se factura, sin tener que adivinar en qué estado
+  # lo dejó `RecibirManifiesto#finalizar!`.
+  scope :con_carga_por_facturar, -> {
+    joins(:paquetes).merge(Paquete.facturables).distinct.order(numero: :desc)
+  }
 
   before_validation :generate_numero, on: :create, if: -> { numero.blank? }
 

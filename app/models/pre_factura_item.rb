@@ -24,6 +24,30 @@ class PreFacturaItem < ApplicationRecord
 
   before_validation :calculate_subtotal_from_peso
 
+  # PR-M8. Contrapeso de `PreFactura#vincular_paquetes`. Desde que el paquete
+  # queda estampado con `pre_factura_id`, borrar su línea sin soltarlo lo dejaba
+  # fuera de `facturables` **para siempre**: `cobrada_o_entregada?` seguía en
+  # true y ni se podía volver a facturar ni borrar.
+  #
+  # Se borra una línea por dos vías, y las dos pasan por acá: la autorización
+  # con PIN (`Autorizacion#aplicar`, acción «eliminar») y el `dependent:
+  # :destroy` de la pre-factura.
+  #
+  # El `exists?` importa: un paquete puede tener **varias** líneas en el mismo
+  # documento —el flete y sus cargos automáticos de recolecta o cambio de
+  # servicio—, y `PreFactura#aplicar_cobros_automaticos_para` las borra y
+  # rearma. Soltar el paquete al morir una línea auto lo sacaría del cobro con
+  # su flete todavía puesto.
+  after_destroy :soltar_paquete_si_quedo_sin_lineas
+
+  private def soltar_paquete_si_quedo_sin_lineas
+    return if paquete_id.blank?
+    return if PreFacturaItem.where(pre_factura_id: pre_factura_id, paquete_id: paquete_id).exists?
+
+    Paquete.where(id: paquete_id, pre_factura_id: pre_factura_id).update_all(pre_factura_id: nil)
+  end
+  public
+
   def auto?
     origen.to_s.start_with?("auto_")
   end

@@ -499,7 +499,19 @@ class Paquete < ApplicationRecord
   scope :by_sucursal, ->(ids) { where(sucursal_id: Array(ids).compact_blank) }
   scope :recibidos_hoy, -> { where(fecha_recibido_miami: Time.current.beginning_of_day..Time.current.end_of_day) }
   scope :sin_manifiesto, -> { where(manifiesto_id: nil).where.not(estado: %w[anulado entregado retornado desechado]) }
-  scope :facturables, -> { where(estado: "disponible_entrega", pre_factura_id: nil, venta_id: nil) }
+  # PR-M8. `en_aduana` entra acá desde que PR-M7 le dio quién lo escriba. Es
+  # el estado en el que la carga espera a que la trabajen, y de ahí sale por
+  # la pre-factura — Yusef, mirando la pantalla: *"ya de aquí el paquete va a
+  # cambiar cuando ingresemos a la prefactura"*. `docs/05:1201` dice lo mismo:
+  # *"mientras espera la fecha programada, el paquete queda en estado aduana"*.
+  #
+  # `disponible_entrega` se queda: es a donde `PreFactura#anular!` y
+  # `Venta#anular!` devuelven los paquetes, y donde vive la data vieja.
+  # `consolidando_honduras` **no** entra: es un desvío
+  # (`ESTADOS_EXCEPCIONALES`), no un paso que la carga recorra.
+  ESTADOS_FACTURABLES = %w[en_aduana disponible_entrega].freeze
+
+  scope :facturables, -> { where(estado: ESTADOS_FACTURABLES, pre_factura_id: nil, venta_id: nil) }
   scope :entregables, -> { where(estado: "facturado", entrega_id: nil) }
   # Paquetes sin vincular a ninguna pre_alerta_paquete (sueltos en bodega)
   scope :sin_pre_alerta, -> {
