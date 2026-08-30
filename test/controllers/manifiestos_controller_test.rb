@@ -150,12 +150,12 @@ class ManifiestosControllerTest < ActionDispatch::IntegrationTest
     assert_equal "recibido_miami", paquete.estado
   end
 
-  test "should enviar manifiesto" do
+  test "should finalizar manifiesto" do
     paquete = paquetes(:empacado)
     paquete.update!(manifiesto: @manifiesto)
     @manifiesto.recalculate_totals!
 
-    patch enviar_manifiesto_url(@manifiesto)
+    patch finalizar_manifiesto_url(@manifiesto)
     assert_redirected_to manifiesto_url(@manifiesto)
     @manifiesto.reload
     assert_equal "enviado", @manifiesto.estado

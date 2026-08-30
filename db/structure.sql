@@ -1308,7 +1308,9 @@ CREATE TABLE public.manifiestos (
     sucursal_entrega_id bigint,
     es_prioridad boolean DEFAULT false NOT NULL,
     cantidad_bultos integer DEFAULT 0 NOT NULL,
-    ultima_letra integer DEFAULT 0 NOT NULL
+    ultima_letra integer DEFAULT 0 NOT NULL,
+    finalizado_por_id bigint,
+    finalizado_at timestamp(6) without time zone
 );
 
 
@@ -4554,6 +4556,13 @@ CREATE INDEX index_manifiestos_on_estado ON public.manifiestos USING btree (esta
 
 
 --
+-- Name: index_manifiestos_on_finalizado_por_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_manifiestos_on_finalizado_por_id ON public.manifiestos USING btree (finalizado_por_id);
+
+
+--
 -- Name: index_manifiestos_on_numero; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5957,6 +5966,14 @@ ALTER TABLE ONLY public.venta_items
 
 
 --
+-- Name: manifiestos fk_rails_626cce3fcb; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manifiestos
+    ADD CONSTRAINT fk_rails_626cce3fcb FOREIGN KEY (finalizado_por_id) REFERENCES public.users(id);
+
+
+--
 -- Name: pre_factura_items fk_rails_640d1bf992; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6659,6 +6676,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260830070141'),
 ('20260830063353'),
 ('20260830061904'),
 ('20260830060300'),

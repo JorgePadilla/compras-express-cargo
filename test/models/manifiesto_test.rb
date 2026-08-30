@@ -49,19 +49,22 @@ class ManifiestoTest < ActiveSupport::TestCase
     assert_includes results, manifiestos(:creado)
   end
 
-  test "enviar! transitions manifest and paquetes to enviado" do
-    manifiesto = manifiestos(:creado)
-    paquete = paquetes(:empacado)
-    paquete.update!(manifiesto: manifiesto)
-    manifiesto.recalculate_totals!
+  # C21-06 · `enviar!` se retiró: movía los paquetes con `update_all`, que
+  # saltea la bitácora, el `fecha_enviado_by_user_id` y la guarda de tareas
+  # abiertas. Lo reemplaza `finalizar!`, que los mueve uno por uno — su
+  # contrato vive en `test/models/finalizar_manifiesto_test.rb`.
+  test "finalizar! manda los paquetes a enviado_honduras" do
+    manifiesto = crear_manifiesto
+    paquete = Paquete.create!(
+      tracking: "1ZFINAL0000001", cliente: clientes(:juan), tipo_envio: tipo_envios(:cer),
+      sucursal_recepcion: sucursales(:miami), estado: "recibido_miami",
+      descripcion: "Perfumes", user: users(:digitador), manifiesto: manifiesto
+    )
 
-    manifiesto.enviar!
+    manifiesto.finalizar!(user: users(:digitador))
 
-    manifiesto.reload
-    paquete.reload
-    assert_equal "enviado", manifiesto.estado
-    assert_not_nil manifiesto.fecha_enviado
-    assert_equal "enviado_honduras", paquete.estado
+    assert_equal "enviado", manifiesto.reload.estado
+    assert_equal "enviado_honduras", paquete.reload.estado
   end
 
   test "recalculate_totals! updates counts" do

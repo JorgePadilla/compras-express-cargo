@@ -84,11 +84,30 @@ class Manifiesto < ApplicationRecord
     )
   end
 
-  def enviar!
-    transaction do
-      update!(estado: "enviado", fecha_enviado: Time.current)
-      paquetes.update_all(estado: "enviado_honduras", fecha_enviado: Time.current)
-    end
+  belongs_to :finalizado_por, class_name: "User", optional: true
+
+  # C21-06 · Finalizar vive en `FinalizarManifiesto`, que mueve los paquetes
+  # **uno por uno**. `enviar!` los movía con `update_all` y eso salteaba la
+  # bitácora, el `fecha_enviado_by_user_id` y la guarda de tareas abiertas —la
+  # deuda que `docs/05` anotó y que `procesos_pdf.rb` decía que se saldaba
+  # *"cuando se arme el de manifiestos"*.
+  def finalizar!(user: nil)
+    raise ArgumentError, "el manifiesto #{numero} ya se finalizó" unless creado?
+
+    FinalizarManifiesto.new(self, user: user).call
+  end
+
+  # C21-06 · *"Cuando termino el manifiesto se bloquea… se bloquea para que
+  # nadie lo [toque]. Sí es editable, pero tiene el botón de editar."*
+  #
+  # El candado cubre **lo que llena Miami**. Las guías del proveedor y la fecha
+  # de recibido en Honduras siguen escribiéndose después de que la carga salió:
+  # *"lo ingresan después… le ingresa la encargada de operaciones en San Pedro
+  # Sula"* (`C21-02`). Un candado total las dejaría afuera.
+  CAMPOS_DE_SAN_PEDRO = %w[fecha_aduana guias_attributes].freeze
+
+  def bloqueado?
+    !creado?
   end
 
   # El tipo de envío del proveedor, para mostrar. Lee las dos formas: la
