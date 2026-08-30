@@ -48,8 +48,38 @@ class EtiquetaBultoTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, "PRIORITY"
   end
 
-  # El barcode es lo que se escanea en Honduras, así que tiene que ser el código
-  # de la caja — no el del manifiesto ni el del paquete.
+  # RP-54 · El código de la caja va en **QR**, no en barras. `A7-03` había
+  # dejado *"un código QR o lo que vos querás"* y Yusef eligió el 2026-08-30:
+  # *"código QR, habría que instalar la gema necesaria"*.
+  test "el código de la caja va en QR" do
+    get etiqueta_manifiesto_caja_path(@manifiesto, @caja)
+
+    assert_select "div.qr svg", 1
+    assert_select "div.barcode", 0, "el bulto ya no lleva Code128"
+  end
+
+  # Y el QR **no se estira**: un Code128 aplastado se sigue leyendo por la
+  # proporción entre barras, un QR deformado no lo lee nadie.
+  test "el QR sale cuadrado" do
+    get etiqueta_manifiesto_caja_path(@manifiesto, @caja)
+
+    svg = response.body[/<svg[^>]*>/]
+    ancho = svg[/width="([^"]+)"/, 1]
+    alto  = svg[/height="([^"]+)"/, 1]
+    assert_equal ancho, alto
+  end
+
+  # La etiqueta del paquete **no** cambió: el warehouse sigue en Code128, que es
+  # lo que leen las pistolas de Miami hoy.
+  test "la etiqueta del paquete sigue con su código de barras" do
+    paquete = paquetes(:disponible_entrega_juan)
+    get etiqueta_paquete_path(paquete)
+
+    assert_select "div.qr", 0
+  end
+
+  # El código es lo que se escanea en Honduras, así que tiene que ser el de la
+  # caja — no el del manifiesto ni el del paquete.
   test "el código de barras es el de la caja, y es único entre bultos" do
     otra = @manifiesto.cajas.create!(alto: 13, largo: 13, ancho: 16, peso: 19)
 

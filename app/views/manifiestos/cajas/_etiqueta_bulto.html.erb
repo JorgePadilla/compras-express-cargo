@@ -6,7 +6,13 @@
 
     Y junto al código de barras escribió el otro pedido: *«se escanea al
     recibir en HN → actualiza estatus de paquetes de ENVIADO → ADUANA»*. Por eso
-    el barcode lleva el código de la caja y no otra cosa. %>
+    el código lleva el de la caja y no otra cosa.
+
+    RP-54 · Y es **QR**, no barras: `A7-03` había dejado *"un código QR o lo que
+    vos querás"* y Yusef lo confirmó el 2026-08-30 —*"código QR, habría que
+    instalar la gema necesaria"*—. La etiqueta del paquete sigue en Code128;
+    acá el QR aguanta el código completo en un cuadrado chico y deja libre el
+    ancho de la 4×6. %>
 <div class="bulto">
   <div style="display:flex; justify-content:space-between; align-items:flex-start;">
     <span class="letra"><%= caja.letra %></span>
@@ -31,7 +37,7 @@
     <div class="consig"><%= caja.manifiesto.consignatario.nombre.upcase %></div>
   <% end %>
 
-  <div class="barcode"><%= etiqueta_barcode_svg(caja.codigo, height: 60, xdim: 2) %></div>
+  <div class="qr"><%= etiqueta_qr_svg(caja.codigo) %></div>
   <div class="codigo"><%= caja.codigo %></div>
 
   <div class="pie">

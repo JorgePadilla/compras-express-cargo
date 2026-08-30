@@ -8129,13 +8129,63 @@ O sea: la misma lógica de sufijos que ya usan nuestras cajas de un split.
 
 ---
 
+### C21-12 · Los permisos de los roles, editables por ellos — 🆕 **PLANIFICADO**
+
+Salió el 2026-08-30, leyendo la tabla de quién puede qué que dejó `PR-M10`. Le
+gustó, **y por eso mismo pidió poder moverla él**:
+
+> *"Siempre necesitamos que nosotros podamos editar el rol y los roles que tiene
+> [cada puesto]… editar el título del rol y lo que ellos puedan y no puedan."*
+
+El costo de no tenerlo, dicho por él:
+
+> *"Si no, te vamos a estar molestando con que necesitamos quitar y poner:
+> «fíjate, quitale a este título de caja que no puedan hacer [esto], ponele que
+> puedan hacer esto otro», y te vamos a tener en ese relajo."*
+> *"No es lo mismo tu sistema con el otro, y hay cositas que se nos van a
+> escapar y vamos a estar ahí en fría y fría."*
+> *"Hay cosas que hacemos cambios, o les queremos dar o quitar cosas que tal vez
+> podían y no podían hacer."*
+
+O sea: no es un pedido de una pantalla más, es que **el mapa de permisos se va a
+mover seguido** —porque el sistema viejo repartía distinto y porque la
+estructura de la empresa cambia— y hoy cada movimiento es un PR.
+
+**La posición de Jorge, en la misma conversación:** hacerlo **muy granular es
+muy complicado**. Le recomendó dos formas más baratas:
+
+1. **Una persona puede tener varios roles.** Hoy `users.rol` es un enum de uno
+   solo. Con varios, «Sub-Jefa de Caja y SAC» deja de necesitar un rol nuevo:
+   se le dan los dos que ya existen. Cubre buena parte de los casos que él
+   describe sin tocar el mapa.
+2. **Encender y apagar secciones por rol.** El mapa ya está cortado en
+   secciones (`can_access?` tiene 15 llaves: `:etiquetar`, `:manifiestos`,
+   `:pre_facturas`, `:caja`…). Volverlo data en vez de un `case` deja que se
+   prenda y apague desde una pantalla, **sin** bajar al nivel de «puede editar
+   el precio pero no el peso».
+
+**Lo que hay hoy, para dimensionar:** `users.rol` es un enum de 9 valores;
+`Authorization#can_access?` es un `case` con 15 llaves; hay **22** `require_role`
+repartidos en los controllers y **59** usos de `can_access?` entre controllers y
+vistas. Los `require_role` son el problema real: son la regla escrita a mano en
+cada controller, y una pantalla de permisos que no los cubra miente. El camino
+sería que todos pasen por una llave de `can_access?` primero — que es la
+dirección en la que `PR-M10` ya empujó al darle llave propia a
+`:catalogos_manifiesto` y derivar las listas en vez de escribirlas.
+
+**No se construye todavía.** Queda como `RP-58` porque hay que elegir entre las
+dos formas —o las dos— antes de tocar 81 lugares.
+
+---
+
 ### Las preguntas que abre
 
 | Id | Qué |
 |---|---|
 | ~~`RP-53`~~ | **✅ CERRADA por Jorge (2026-08-30): se puebla `Consignatario` y `Agent` se queda como está** para el Warehouse Receipt. Implementado en `PR-M1`. ~~¿Dónde vive el consignatario? El modelo `Consignatario` existe y está **vacío** (sin seeds, sin pantalla, sin asociaciones), y es el nombre semánticamente correcto. Pero «CORPORACION KARSAM» hoy vive en `Agent` —el bloque *Agent* del Warehouse Receipt—, que significa «agente de destino». ¿Se puebla `Consignatario` y se deja `Agent` como está, o son la misma cosa con dos nombres?~~ |
-| ~~`RP-54`~~ | **✅ CERRADA por Yusef (2026-08-30): código QR.** *"Habría que instalar la gema necesaria"* — o sea que acepta el costo. ~~El código de la caja: ¿barras o QR? `A7-03` dejó abierto *"un código QR o lo que vos querás"*. El repo solo genera Code128 (`barby`), que es lo que ya leen las pistolas; QR necesitaría gema nueva. Confirmar antes de imprimir 4×6 en producción~~ |
+| ~~`RP-54`~~ | **✅ CERRADA por Yusef (2026-08-30): código QR** — *"habría que instalar la gema necesaria"*, o sea aceptando el costo. **IMPLEMENTADO en `PR-M11`** con `rqrcode`, solo en la 4×6 del bulto: la etiqueta del paquete sigue en Code128, que es lo que leen las pistolas de Miami hoy. ~~El código de la caja: ¿barras o QR? `A7-03` dejó abierto *"un código QR o lo que vos querás"*. El repo solo genera Code128 (`barby`), que es lo que ya leen las pistolas; QR necesitaría gema nueva. Confirmar antes de imprimir 4×6 en producción~~ |
 | ~~`RP-55`~~ | **✅ CERRADA por Jorge (2026-08-30): se borran.** Eran 2 de prueba y no hay producción. Implementado en `PR-M2`. ~~¿Qué se hace con los manifiestos viejos? Jorge lo preguntó derecho. Hoy hay manifiestos numerados `MA-…` (formato legacy) porque la numeración anual nunca corrió. Al despertarla, ¿se renumeran, se dejan conviviendo, o se cierra el formato viejo en una fecha?~~ |
+| `RP-58` | **¿Cómo se editan los permisos sin un PR?** (`C21-12`) Yusef quiere mover el mapa de roles él —*"editar el título del rol y lo que ellos puedan y no puedan"*—. Jorge descartó lo granular y propuso dos caminos: **(a)** varios roles por persona, **(b)** prender y apagar secciones por rol. Falta elegir, y decidir qué se hace con los 22 `require_role` escritos a mano en los controllers, que hoy quedarían fuera de cualquier pantalla |
 | ~~`RP-56`~~ | **✅ CERRADA por Yusef (2026-08-30): «Recibir carga».** ~~Cómo se llama la pantalla de recepción. Yusef dio tres nombres en la misma frase: *"dar entrada al almacén"*, *"entrada al inventario"* y *"recibir carga"*. Elegir uno antes de que Miami y SPS le pongan cada quien el suyo~~ |
 | `RP-57` | **Retención y peso de la data.** *"Lo mínimo son seis años: cinco para atrás más el año en curso"*, pero *"yo lo que ocupo es el año en curso y un año antes"*. Su idea: *"crear reportes automáticos, cierre anual, cierre mensual… lo mandás al bucket y ahí guarda todos los reportes del año"*. Es una discusión propia, no del manifiesto |
 

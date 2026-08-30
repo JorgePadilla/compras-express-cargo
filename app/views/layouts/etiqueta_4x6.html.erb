@@ -42,6 +42,12 @@
     .consig  { font-size: 15pt; font-weight: 700; margin-top: .06in; }
     .barcode { margin-top: .08in; }
     .barcode svg { width: 100%; height: .85in; }
+    <%# RP-54 · El QR **no se estira**. El barcode de arriba sí —Code128 se lee
+        por la proporción entre barras, no por el ancho—, pero un QR deformado
+        no lo lee nadie: va centrado y cuadrado, con el tamaño que le pone el
+        helper. %>
+    .qr { margin-top: .08in; }
+    .qr svg { display: block; }
     .codigo  { font-size: 12pt; font-family: "Courier New", monospace; }
     .pie     { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; }
     .fecha   { font-size: 10pt; }
