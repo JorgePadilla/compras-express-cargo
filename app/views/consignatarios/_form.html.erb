@@ -1,0 +1,17 @@
+<%= render layout: "catalogos_manifiesto/formulario", locals: { registro: registro, url: url, tab: "consignatarios" } do |f| %>
+  <div>
+    <%= f.label :nombre, "Nombre", class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <%= f.text_field :nombre, required: true,
+        class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+  </div>
+  <div>
+    <%= f.label :identidad, "Identidad / RTN", class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <%= f.text_field :identidad,
+        class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+  </div>
+  <div>
+    <%= f.label :direccion, "Dirección", class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <%= f.text_field :direccion,
+        class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+  </div>
+<% end %>

@@ -536,7 +536,8 @@ CREATE TABLE public.consignatarios (
     identidad character varying,
     direccion text,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    activo boolean DEFAULT true NOT NULL
 );
 
 
@@ -704,7 +705,10 @@ CREATE TABLE public.empresa_manifiestos (
     nombre character varying NOT NULL,
     activo boolean DEFAULT true,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    direccion character varying,
+    telefono character varying,
+    encargado character varying
 );
 
 
@@ -2335,7 +2339,9 @@ CREATE TABLE public.tamano_cajas (
     ancho numeric(8,2),
     alto numeric(8,2),
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    activo boolean DEFAULT true NOT NULL,
+    "position" integer DEFAULT 0 NOT NULL
 );
 
 
@@ -2517,6 +2523,39 @@ CREATE SEQUENCE public.terms_id_seq
 --
 
 ALTER SEQUENCE public.terms_id_seq OWNED BY public.terms.id;
+
+
+--
+-- Name: tipo_envio_proveedores; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.tipo_envio_proveedores (
+    id bigint NOT NULL,
+    nombre character varying NOT NULL,
+    activo boolean DEFAULT true NOT NULL,
+    "position" integer DEFAULT 0 NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: tipo_envio_proveedores_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.tipo_envio_proveedores_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: tipo_envio_proveedores_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.tipo_envio_proveedores_id_seq OWNED BY public.tipo_envio_proveedores.id;
 
 
 --
@@ -3106,6 +3145,13 @@ ALTER TABLE ONLY public.terms ALTER COLUMN id SET DEFAULT nextval('public.terms_
 
 
 --
+-- Name: tipo_envio_proveedores id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tipo_envio_proveedores ALTER COLUMN id SET DEFAULT nextval('public.tipo_envio_proveedores_id_seq'::regclass);
+
+
+--
 -- Name: tipo_envios id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -3649,6 +3695,14 @@ ALTER TABLE ONLY public.tarifas_recolecta
 
 ALTER TABLE ONLY public.terms
     ADD CONSTRAINT terms_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tipo_envio_proveedores tipo_envio_proveedores_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tipo_envio_proveedores
+    ADD CONSTRAINT tipo_envio_proveedores_pkey PRIMARY KEY (id);
 
 
 --
@@ -5126,6 +5180,13 @@ CREATE INDEX index_terms_on_activo ON public.terms USING btree (activo);
 
 
 --
+-- Name: index_tipo_envio_proveedores_on_nombre; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_tipo_envio_proveedores_on_nombre ON public.tipo_envio_proveedores USING btree (nombre);
+
+
+--
 -- Name: index_users_on_activo; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6262,6 +6323,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260830060300'),
 ('20260829202846'),
 ('20260828202244'),
 ('20260828191512'),

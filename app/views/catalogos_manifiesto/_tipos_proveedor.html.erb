@@ -1,0 +1,32 @@
+<%= render "catalogos_manifiesto/encabezado",
+      ayuda: "El servicio con el que viaja la carga según el proveedor — «AEREO EXPRESS», «CKM MARITIMO». No es el nuestro.",
+      href_nuevo: new_tipos_envio_proveedor_path, titulo_nuevo: "Nuevo tipo" %>
+
+<% if @tipos_proveedor.any? %>
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Posición</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        <% @tipos_proveedor.each do |t| %>
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 text-sm text-gray-500"><%= t.position %></td>
+            <td class="px-6 py-4 text-sm font-medium text-gray-900"><%= t.nombre %></td>
+            <td class="px-6 py-4 text-sm"><%= render "catalogos_manifiesto/estado", activo: t.activo %></td>
+            <td class="px-6 py-4 text-right text-sm">
+              <%= render RowActionComponent.new(action: :edit, href: edit_tipos_envio_proveedor_path(t), label: "Editar tipo de envío del proveedor") %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <%= render EmptyStateComponent.new(title: "Todavía no hay tipos de envío del proveedor", description: "Agregá los que usa tu proveedor, como AEREO EXPRESS o CKM MARITIMO.", icon: "paper-airplane") %>
+<% end %>
