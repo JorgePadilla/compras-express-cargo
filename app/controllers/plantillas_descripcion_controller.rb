@@ -2,7 +2,7 @@
 # Calcado de PlantillasNotasClienteController; el picker (Stimulus) las
 # inyecta en `paquete.descripcion` en las tres pantallas gemelas.
 class PlantillasDescripcionController < ApplicationController
-  before_action :require_admin
+  before_action :solo_admin
   before_action :set_plantilla, only: %i[edit update]
 
   def index
@@ -35,9 +35,6 @@ class PlantillasDescripcionController < ApplicationController
 
   private
 
-  def require_admin
-    redirect_to(root_path, alert: "Solo admin.") unless admin?
-  end
 
   def set_plantilla
     @plantilla = PlantillaDescripcion.find(params[:id])
@@ -45,5 +42,11 @@ class PlantillasDescripcionController < ApplicationController
 
   def plantilla_params
     params.require(:plantilla_descripcion).permit(:titulo, :texto, :position, :activo)
+  end
+  # `RP-58` · Va por `can_access?` y no por `require_admin`: toda regla de rol
+  # tiene que pasar por el mismo lugar, o una pantalla de permisos diría que se
+  # puede algo que este controller después niega.
+  def solo_admin
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:plantillas_descripcion)
   end
 end

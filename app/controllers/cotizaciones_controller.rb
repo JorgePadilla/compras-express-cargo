@@ -87,7 +87,7 @@ class CotizacionesController < ApplicationController
     end
   end
 
-  private  def require_feature_access
+  private def require_feature_access
     redirect_to(root_path, alert: "No tienes permiso para acceder a esta seccion.") unless can_access?(:cotizaciones)
   end
 

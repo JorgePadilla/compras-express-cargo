@@ -8,7 +8,7 @@
 # deploy. Patrón calcado de /tasa_cambio: claves en Configuracion (sin
 # migración), historial de paper_trail, solo admin.
 class AjustesEtiquetaController < ApplicationController
-  before_action :require_admin
+  before_action :solo_admin
 
   def show
     @margen_izq = EtiquetaAjustes.margen_izq_mm
@@ -91,9 +91,6 @@ class AjustesEtiquetaController < ApplicationController
 
   private
 
-  def require_admin
-    redirect_to(root_path, alert: "Solo admin puede ajustar la etiqueta.") unless Current.user&.admin?
-  end
 
   def definicion_candidata
     hash = JSON.parse(params[:definicion_json].to_s)
@@ -111,5 +108,11 @@ class AjustesEtiquetaController < ApplicationController
     return nil if valor.nil? || valor.negative? || valor > EtiquetaAjustes::MAX_MM
 
     valor
+  end
+  # `RP-58` · Va por `can_access?` y no por `require_admin`: toda regla de rol
+  # tiene que pasar por el mismo lugar, o una pantalla de permisos diría que se
+  # puede algo que este controller después niega.
+  def solo_admin
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:ajustes_etiqueta)
   end
 end

@@ -61,7 +61,7 @@ module Cuenta
     def update
       if @pre_alerta.finalizado?
         if params[:autosave] == "true"
-          render json: { status: "error", errors: ["Esta pre-alerta ya fue finalizada."] }, status: :unprocessable_entity
+          render json: { status: "error", errors: [ "Esta pre-alerta ya fue finalizada." ] }, status: :unprocessable_entity
           return
         end
         redirect_to edit_cuenta_pre_alerta_path(@pre_alerta), alert: "Esta pre-alerta ya fue finalizada y no se puede modificar."
@@ -434,7 +434,7 @@ module Cuenta
       params.require(:pre_alerta).permit(
         # `con_reempaque` lo deriva el modelo del servicio; ver `PreAlerta`.
         :tipo_envio_id, :consolidado, :notas_grupo, :titulo, :proveedor,
-        pre_alerta_paquetes_attributes: [:id, :tracking, :descripcion, :instrucciones, :_destroy]
+        pre_alerta_paquetes_attributes: [ :id, :tracking, :descripcion, :instrucciones, :_destroy ]
       )
     end
 
@@ -470,7 +470,7 @@ module Cuenta
           proveedor:       params[:proveedor],
           creado_por_tipo: "cliente",
           creado_por_id:   current_cliente.id,
-          pre_alerta_paquetes_attributes: [paquete_attrs_from_params]
+          pre_alerta_paquetes_attributes: [ paquete_attrs_from_params ]
         )
 
         if @pre_alerta.save

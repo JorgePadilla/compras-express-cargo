@@ -728,7 +728,7 @@ class PaquetesController < ApplicationController
   end
 
   def authorize_tracking_actions
-    require_role(:supervisor_miami, :digitador_miami, :supervisor_prefactura, :supervisor_caja, :cajero)
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:operacion)
   end
 
   def authorize_edit

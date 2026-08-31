@@ -13,7 +13,7 @@
 # hace tecleando el nombre en la tarifa (`ServiciosController`), que es el único
 # momento en que un grupo sirve: uno sin tarifa no cobra nada.
 class CategoriaPreciosController < ApplicationController
-  before_action :require_admin
+  before_action :solo_admin
   before_action :set_categoria, only: %i[edit update destroy]
 
   # Las URLs viejas siguen vivas para los bookmarks, pero mandan a donde ahora se
@@ -68,9 +68,6 @@ class CategoriaPreciosController < ApplicationController
 
   private
 
-  def require_admin
-    redirect_to(root_path, alert: "Solo admin.") unless admin?
-  end
 
   def set_categoria
     @categoria = CategoriaPrecio.find(params[:id])
@@ -80,5 +77,11 @@ class CategoriaPreciosController < ApplicationController
   # y se edita en /servicios, que es la única pantalla que cobra.
   def categoria_params
     params.require(:categoria_precio).permit(:nombre)
+  end
+  # `RP-58` · Va por `can_access?` y no por `require_admin`: toda regla de rol
+  # tiene que pasar por el mismo lugar, o una pantalla de permisos diría que se
+  # puede algo que este controller después niega.
+  def solo_admin
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:categoria_precios)
   end
 end

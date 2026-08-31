@@ -235,7 +235,7 @@ class EntregaPersonalController < ApplicationController
   end
 
   def authorize_entrega_personal
-    require_role(:supervisor_miami, :digitador_miami)
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:entrega_personal)
   end
 
   def paquetes_ep_hoy_count

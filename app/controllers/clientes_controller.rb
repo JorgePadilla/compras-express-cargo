@@ -174,7 +174,7 @@ class ClientesController < ApplicationController
   end
 
   def authorize_buscar
-    require_role(:supervisor_miami, :digitador_miami, :supervisor_prefactura, :supervisor_caja, :cajero)
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:operacion)
   end
 
   # Redirige a la lista y no a `root_path` como `require_role`: para el

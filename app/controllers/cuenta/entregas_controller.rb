@@ -1,6 +1,6 @@
 module Cuenta
   class EntregasController < BaseController
-    before_action :set_entrega, only: [:show]
+    before_action :set_entrega, only: [ :show ]
 
     def index
       @entregas = current_cliente.entregas.includes(:repartidor, :paquetes).recientes

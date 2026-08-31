@@ -1,6 +1,6 @@
 class RecibosController < ApplicationController
   before_action :require_feature_access
-  before_action :set_recibo, only: [:show, :pdf]
+  before_action :set_recibo, only: [ :show, :pdf ]
 
   def index
     @recibos = Recibo.includes(:cliente, :venta, :pago).recientes
@@ -24,7 +24,7 @@ class RecibosController < ApplicationController
               disposition: "inline"
   end
 
-  private  def require_feature_access
+  private def require_feature_access
     redirect_to(root_path, alert: "No tienes permiso para acceder a esta seccion.") unless can_access?(:recibos)
   end
 

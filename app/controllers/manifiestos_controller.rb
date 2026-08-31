@@ -134,7 +134,7 @@ class ManifiestosController < ApplicationController
   # `SOLO_MIAMI` y el segundo `before_action` que hacían falta para eso se
   # fueron con la sección.
   private def authorize_manifiestos
-    require_role(*Manifiesto::ROLES_DE_MIAMI)
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:manifiestos)
   end
 
   def set_manifiesto

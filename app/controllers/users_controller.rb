@@ -1,5 +1,5 @@
 class UsersController < ApplicationController
-  before_action :require_admin
+  before_action :solo_admin
   before_action :set_user, only: [ :show, :edit, :update ]
   before_action :cargar_sucursales, only: [ :new, :create, :edit, :update ]
 
@@ -66,5 +66,11 @@ class UsersController < ApplicationController
       # /mi_pin. Ver el comentario en `User#pin_sin_cambiar?`.
       :pin, :pin_confirmation
     )
+  end
+  # `RP-58` · Va por `can_access?` y no por `require_admin`: toda regla de rol
+  # tiene que pasar por el mismo lugar, o una pantalla de permisos diría que se
+  # puede algo que este controller después niega.
+  def solo_admin
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:usuarios)
   end
 end

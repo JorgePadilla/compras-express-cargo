@@ -1,6 +1,6 @@
 module Cuenta
   class RecibosController < BaseController
-    before_action :set_recibo, only: [:show, :pdf]
+    before_action :set_recibo, only: [ :show, :pdf ]
 
     def index
       @recibos = current_cliente.recibos.includes(:venta, :pago).recientes
