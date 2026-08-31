@@ -93,62 +93,18 @@ puts "  ✓ #{TipoEnvio.activos.count} tipos de envio v4"
 end
 puts "  ✓ #{Carrier.count} carriers"
 
-# ── Empresas de manifiesto ──
-%w[PRONTO\ CARGO SERCARGO GENESIS].each do |nombre|
-  EmpresaManifiesto.find_or_create_by!(nombre: nombre) { |e| e.activo = true }
-end
+# ── Los catálogos del manifiesto (C21-08) ──
+#
+# La lista vive en `lib/catalogos_del_manifiesto.rb` y no acá: el deploy de
+# staging solo migra, así que hay una **migración de datos** que siembra lo
+# mismo, y dos copias de la misma lista se separan solas. Es idempotente y no
+# pisa lo que haya cargado el equipo por el CRUD.
+require Rails.root.join("lib/catalogos_del_manifiesto")
+CatalogosDelManifiesto.sembrar!
 puts "  ✓ #{EmpresaManifiesto.count} empresas de manifiesto"
-
-# ── Catálogos del manifiesto (C21-08) ──
-#
-# El deploy de staging **solo migra, no siembra**, así que sin esto los cuatro
-# catálogos que estrenó `PR-M1` nacen vacíos y lo primero que ve Yusef del
-# portal son pestañas en blanco.
-#
-# Es **semilla de arranque, no verdad**: los nombres salen de la pantalla vieja
-# y de lo que él nombró en la reunión, y el equipo los ajusta por el CRUD —
-# *"entre más cosas nos dejes crear, menos te molestaremos"*.
-
-# Los diez tamaños de la pantalla vieja, en su orden. Las medidas van en nil a
-# propósito salvo la que se pudo derivar: la pantalla vieja muestra 595.78 de
-# volumen para 46×43×50, que es exactamente lo que da `VolumetricoCalculator`
-# con su divisor de 166. Las otras nueve las carga Miami con la cinta métrica,
-# y de todos modos se editan caja por caja (*"EH cortada"*).
-[
-  { nombre: "Especificar",  position: 1 },   # sin medidas a propósito
-  { nombre: "EH",           position: 2 },
-  { nombre: "D",            position: 3 },
-  { nombre: "22 Cubo",      position: 4 },
-  { nombre: "18 Cubo",      position: 5 },
-  { nombre: "D G",          position: 6 },
-  { nombre: "EH G",         position: 7 },
-  { nombre: "E",            position: 8 },
-  { nombre: "Mini D",       position: 9, alto: 46, largo: 43, ancho: 50 },
-  { nombre: "Mini D Doble", position: 10 }
-].each do |attrs|
-  TamanoCaja.find_or_create_by!(nombre: attrs[:nombre]) do |t|
-    t.position = attrs[:position]
-    t.alto  = attrs[:alto]
-    t.largo = attrs[:largo]
-    t.ancho = attrs[:ancho]
-    t.activo = true
-  end
-end
-puts "  ✓ #{TamanoCaja.count} tamaños de caja"
-
-# El tipo de envío DEL PROVEEDOR — no confundir con `TipoEnvio`, que es el
-# nuestro. Los dos que nombró Yusef mirando el impreso.
-[ "AEREO EXPRESS", "CKM MARITIMO" ].each.with_index(1) do |nombre, i|
-  TipoEnvioProveedor.find_or_create_by!(nombre: nombre) do |t|
-    t.position = i
-    t.activo = true
-  end
-end
 puts "  ✓ #{TipoEnvioProveedor.count} tipos de envío del proveedor"
-
-# El consignatario que nombró: *"qué consignatario somos nosotros"*.
-Consignatario.find_or_create_by!(nombre: "CORPORACION KARSAM") { |c| c.activo = true }
 puts "  ✓ #{Consignatario.count} consignatarios"
+puts "  ✓ #{TamanoCaja.count} tamaños de caja"
 
 # ── Categorias de precio ──
 # Solo el nombre: una categoria agrupa clientes, no guarda precios. Los precios
