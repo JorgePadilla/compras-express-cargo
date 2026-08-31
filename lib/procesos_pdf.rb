@@ -91,7 +91,12 @@ class ProcesosPdf
       actor: :persona, ruta: "recibos_path", estado: "facturado", existe: true },
     { titulo: "Entrega", quien: "despacho",
       actor: :persona, ruta: "entregas_path", estado: "entregado", existe: true },
-    { titulo: "Firma y foto", quien: "nadie lo ha pedido todavía",
+    # `A7-33` · Decía «nadie lo ha pedido todavía», y era falso: Yusef lo pidió
+    # con el detalle puesto —*"escanear la primera, pipipe, escanear los
+    # paquetes… y **una sola firma para todos** esos amarrados"*—, o sea una
+    # firma **por entrega**, no una por factura. El dibujo llegaba a la reunión
+    # diciendo que el cliente no había pedido lo que el cliente sí pidió.
+    { titulo: "Firma y foto", quien: "pedido (A7-33): una firma por entrega",
       actor: :persona, existe: false }
   ].freeze
 
