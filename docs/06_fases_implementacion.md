@@ -878,7 +878,7 @@ Y lo que salió de mirar el resultado (2026-08-30):
 | `PR-U2` | Las guías, con filas dinámicas en vez de tres renglones fijos | ✅ |
 | `PR-U3` | El date picker del proyecto en todas las fechas, con lint | ✅ |
 | `PR-U4` | El manifiesto, para dedos — y el estándar táctil de `docs/07` | ✅ |
-| `PR-U5` | Empacar y las casas, para dedos | ⏳ |
+| `PR-U5` | Empacar y las casas, para dedos | ✅ |
 
 **Lo que se cerró de paso:** `RP-30` (aduana ya tiene pantalla y quién escriba el
 estado — `PR-M7` es el **primer escritor de `en_aduana` en todo el sistema**),

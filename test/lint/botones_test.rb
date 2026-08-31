@@ -95,11 +95,12 @@ class BotonesTest < ActiveSupport::TestCase
     "app/views/cuenta/facturas/show.html.erb"                => 2,
     "app/views/cuenta/pre_alertas/new.html.erb"              => 2,
     "app/views/cuenta/recibos/show.html.erb"                 => 2,
-    # C21-01 · No es un botón: es el selector de en qué caja se está empacando,
-    # una tarjeta por caja con su letra, su código y cuántos paquetes lleva.
-    # `ButtonComponent` no expresa una tarjeta seleccionable, y el mismo patrón
-    # ya vive en el prompt de tipo de envío de /etiquetar.
-    "app/views/empaque/show.html.erb"                        => 1,
+    # C21-01 / PR-U5 · El selector de caja de `empaque/show` **salió de acá**, y
+    # conviene decir por qué para que nadie crea que desapareció un botón: el
+    # `link_to` sigue ahí, pero al volverse tarjeta táctil pasó de `px-3 py-2` a
+    # `p-4`, y el contador exige `px-` **y** `py-` **y** `rounded` en el mismo
+    # tag. O sea que dejó de contarse por la forma de las clases, no porque el
+    # markup se haya vuelto más limpio.
     # C21-11 · La × de quitar una guía. Es un botón de solo icono dentro de una
     # fila de formulario, con su `aria-label`; `ButtonComponent` lo envolvería en
     # `inline-flex items-center gap-2` con padding propio y rompería la

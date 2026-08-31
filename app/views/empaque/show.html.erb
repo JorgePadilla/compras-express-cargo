@@ -30,26 +30,39 @@
           description: "Armá al menos una caja en el manifiesto para poder empacar en ella.", icon: "cube") %>
   <% else %>
     <div class="bg-white rounded-lg shadow mb-6 p-6">
-      <span class="block text-sm font-medium text-gray-700 mb-2">¿En qué caja estás empacando?</span>
-      <div class="flex flex-wrap gap-2">
+      <span class="block text-base font-medium text-gray-700 dark:text-gray-200 mb-3">¿En qué caja estás empacando?</span>
+      <%# PR-U5 · Eran chips de `px-3 py-2` —unos 34 px— y esto se toca con el
+          dedo, en la bodega, con la pistola en la otra mano. Ahora la letra se
+          lee de lejos y el bloque entero es el área de toque.
+
+          Sigue siendo `link_to` y no una tarjeta `peer sr-only`: elegir caja
+          **navega**, no es un campo del formulario.
+
+          Ojo con el lint de botones: al pasar de `px-3 py-2` a `p-4` dejó de
+          contarse como botón crudo —el contador exige `px-` y `py-` juntos— y
+          hubo que sacar la entrada del presupuesto. El link no se fue; cambió
+          la forma de sus clases. %>
+      <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
         <% @cajas.each do |caja| %>
+          <% activa = caja == @caja %>
           <%= link_to manifiesto_empacar_path(@manifiesto, caja_id: caja.id),
-                class: "inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm ring-1 transition #{caja == @caja ? 'bg-cec-navy text-white ring-cec-navy' : 'ring-gray-300 text-gray-700 hover:bg-gray-50'}" do %>
-            <span class="font-bold"><%= caja.letra %></span>
-            <span class="font-mono text-xs opacity-80"><%= caja.codigo %></span>
-            <span class="text-xs opacity-70"><%= caja.paquetes.size %> pqt</span>
+                class: "min-h-11 p-4 rounded-xl border-2 flex flex-col items-center gap-1 text-center transition foco-cec " \
+                       "#{activa ? 'border-cec-gold bg-cec-gold/5 ring-2 ring-cec-gold/30' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-lg hover:border-cec-gold/50'}" do %>
+            <span class="text-3xl font-bold leading-none text-cec-navy dark:text-cec-gold"><%= caja.letra %></span>
+            <span class="font-mono text-xs text-gray-500 dark:text-gray-400"><%= caja.codigo %></span>
+            <span class="text-xs text-gray-600 dark:text-gray-300"><%= caja.paquetes.size %> pqt</span>
           <% end %>
         <% end %>
       </div>
     </div>
 
     <div class="bg-white rounded-lg shadow mb-6 p-6">
-      <%= label_tag :codigo_empaque, "Escaneá el paquete", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= label_tag :codigo_empaque, "Escaneá el paquete", class: "block text-base font-medium text-gray-700 dark:text-gray-200 mb-1" %>
       <%= text_field_tag :codigo_empaque, nil,
             placeholder: "Escanear la etiqueta del paquete…",
             autocomplete: "off", autofocus: true,
             data: { empaque_target: "codigo", action: "keydown->empaque#teclado" },
-            class: "block w-full rounded-lg border-gray-300 shadow-sm font-mono focus:ring-cec-teal focus:border-cec-teal" %>
+            class: "block w-full min-h-11 py-4 text-xl rounded-lg border-gray-300 shadow-sm font-mono focus:ring-cec-teal focus:border-cec-teal" %>
       <p class="text-xs text-gray-500 mt-1">
         Va a la caja <b><%= @caja.letra %></b> — <span class="font-mono"><%= @caja.codigo %></span>.
         El manifiesto lleva <b><%= @manifiesto.tipos_envio_nuestros %></b>.

@@ -25,14 +25,31 @@
       <div>
         <span class="block text-sm font-medium text-gray-700 mb-2">Tamaño</span>
         <% if @tamanos.any? %>
-          <div class="flex flex-wrap gap-2">
+          <%# PR-U5 · Eran chips de `px-3 py-1.5` —unos 30 px— y esto se elige
+              parado frente a la caja. Ahora son tarjetas de 44, con el patrón
+              y la firma de selección de `docs/07`.
+
+              Debajo del nombre van las medidas del tamaño, que es lo que hace
+              falta saber para elegir; «Especificar» no las tiene a propósito y
+              lo dice. Al elegir, el cursor sigue yendo al peso — eso ya estaba
+              y es lo que pidió Yusef: *"te ponen solo el cursor a peso, porque
+              es lo que le vas a meter a ingresar"*. %>
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <% @tamanos.each do |tamano| %>
-              <label class="cursor-pointer">
+              <label class="cursor-pointer group">
                 <%= f.radio_button :tamano_caja_id, tamano.id, class: "peer sr-only",
                       data: { caja_manifiesto_target: "tamano",
                               alto: tamano.alto, largo: tamano.largo, ancho: tamano.ancho,
                               action: "change->caja-manifiesto#elegirTamano" } %>
-                <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm ring-1 ring-gray-300 text-gray-700 peer-checked:bg-cec-navy peer-checked:text-white peer-checked:ring-cec-navy transition"><%= tamano.nombre %></span>
+                <span class="block h-full min-h-11 px-3 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800
+                             peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 peer-checked:ring-2 peer-checked:ring-cec-gold/30
+                             peer-focus-visible:ring-2 peer-focus-visible:ring-cec-teal-deep
+                             hover:shadow-lg hover:border-cec-gold/50 transition-all duration-200 text-center">
+                  <span class="block font-bold text-base text-cec-navy dark:text-cec-gold"><%= tamano.nombre %></span>
+                  <span class="block text-xs font-mono text-gray-500 dark:text-gray-400 mt-0.5">
+                    <%= tamano.medidas_completas? ? "#{etiqueta_num(tamano.alto)}×#{etiqueta_num(tamano.largo)}×#{etiqueta_num(tamano.ancho)}" : "a medida" %>
+                  </span>
+                </span>
               </label>
             <% end %>
           </div>
@@ -53,33 +70,33 @@
 
       <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div>
-          <%= f.label :alto, "Alto", class: "block text-xs font-medium text-gray-600 mb-1" %>
+          <%= f.label :alto, "Alto", class: "block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1" %>
           <%= f.number_field :alto, step: "0.01", min: 0, data: { caja_manifiesto_target: "alto", action: "input->caja-manifiesto#medidaCambiada" },
-                class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+                class: "block w-full min-h-11 py-3 text-center text-xl font-mono rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
         </div>
         <div>
-          <%= f.label :largo, "Largo", class: "block text-xs font-medium text-gray-600 mb-1" %>
+          <%= f.label :largo, "Largo", class: "block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1" %>
           <%= f.number_field :largo, step: "0.01", min: 0, data: { caja_manifiesto_target: "largo", action: "input->caja-manifiesto#medidaCambiada" },
-                class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+                class: "block w-full min-h-11 py-3 text-center text-xl font-mono rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
         </div>
         <div>
-          <%= f.label :ancho, "Ancho", class: "block text-xs font-medium text-gray-600 mb-1" %>
+          <%= f.label :ancho, "Ancho", class: "block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1" %>
           <%= f.number_field :ancho, step: "0.01", min: 0, data: { caja_manifiesto_target: "ancho", action: "input->caja-manifiesto#medidaCambiada" },
-                class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+                class: "block w-full min-h-11 py-3 text-center text-xl font-mono rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
         </div>
         <div>
-          <span class="block text-xs font-medium text-gray-600 mb-1">Volumen</span>
-          <p class="text-sm font-mono text-gray-500 py-2" data-caja-manifiesto-target="volumen">—</p>
+          <span class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Volumen</span>
+          <p class="min-h-11 flex items-center justify-center text-xl font-mono text-gray-500 dark:text-gray-400" data-caja-manifiesto-target="volumen">—</p>
         </div>
         <div>
-          <%= f.label :peso, "Peso (lbs)", class: "block text-xs font-medium text-gray-600 mb-1" %>
+          <%= f.label :peso, "Peso (lbs)", class: "block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1" %>
           <%= f.number_field :peso, step: "0.01", min: 0, data: { caja_manifiesto_target: "peso" },
-                class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+                class: "block w-full min-h-11 py-3 text-center text-xl font-mono rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
         </div>
       </div>
 
       <div class="flex justify-end">
-        <%= render(ButtonComponent.new(variant: :primary, type: :submit, icon: "plus", shortcut: "F5")) { "Agregar caja" } %>
+        <%= render(ButtonComponent.new(variant: :primary, size: :lg, type: :submit, icon: "plus", shortcut: "F5")) { "Agregar caja" } %>
       </div>
     <% end %>
   </div>
