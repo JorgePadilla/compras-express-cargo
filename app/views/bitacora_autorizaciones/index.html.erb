@@ -41,7 +41,9 @@
   </div>
   <div>
     <%= label_tag :desde, "Desde", class: "block text-xs font-medium text-gray-600 mb-1" %>
-    <%= date_field_tag :desde, params[:desde], class: "rounded-lg border-gray-300 shadow-sm text-sm" %>
+    <%= date_field_tag :desde, params[:desde],
+          class: "rounded-lg border-gray-300 shadow-sm text-sm",
+          data: { controller: "flatpickr" } %>
   </div>
   <button type="submit" class="px-4 py-2 bg-cec-navy text-white rounded-lg hover:bg-cec-navy-light text-sm font-medium">
     Filtrar

@@ -54,6 +54,7 @@ export default class extends Controller {
 
     if (root.tagName === "FORM") {
       root.reset()
+      this._limpiarFlatpickrs(root)
       const firstInput = root.querySelector("input:not([type='hidden']), textarea, select")
       firstInput?.focus()
       if (this.submitValue) root.requestSubmit?.()
@@ -67,6 +68,29 @@ export default class extends Controller {
       this.fieldTargets.forEach(el => this._clearField(el))
       this.fieldTargets[0]?.focus()
     }
+  }
+
+  // Cinturón, no un bug abierto — vale la aclaración para no confundir al que
+  // lo lea después.
+  //
+  // `form.reset()` **no alcanza para una fecha con flatpickr**: le esconde el
+  // input real y pinta uno de texto al lado (`altInput`), así que el reset
+  // devuelve el real a su valor por defecto pero flatpickr no se entera y el
+  // visible —el que ve el operario— queda con lo de antes.
+  //
+  // Hoy eso **no se ve**, porque los nueve formularios que usan este controller
+  // llevan `f2_clear_submit_value: "true"` y la página recarga enseguida. Se
+  // revisó uno por uno al montar el picker del proyecto en todas las fechas
+  // (`PR-U3`). Queda puesto para el primero que use el modo sin submit, o la
+  // acción `f2-clear#clear` colgada de un botón: ahí sí se vería, y el síntoma
+  // —una fecha que "no se borra"— no se parece en nada a su causa.
+  //
+  // flatpickr deja su instancia colgada del elemento como `_flatpickr`, así que
+  // no hace falta que este controller sepa nada del otro.
+  _limpiarFlatpickrs(root) {
+    root.querySelectorAll("input").forEach((input) => {
+      input._flatpickr?.clear()
+    })
   }
 
   _clearField(el) {
