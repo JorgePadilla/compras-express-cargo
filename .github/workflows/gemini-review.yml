@@ -79,26 +79,6 @@ jobs:
 
           DIFF_CONTENT=$(cat /tmp/pr_diff_trimmed.txt)
 
-          # Build the prompt
-          cat > /tmp/prompt.json << PROMPT_EOF
-          {
-            "system_instruction": {
-              "parts": [{
-                "text": "You are the code auditor for Compras Express Cargo (CEC), a Rails 8 + Hotwire + Tailwind CSS 4 cargo/shipping logistics system.\n\nReview the PR diff and check for:\n1. **Security**: SQL injection, XSS, CSRF, mass assignment, auth bypass\n2. **Rails conventions**: Follow Rails 8 patterns, proper use of Hotwire/Turbo\n3. **Performance**: N+1 queries, missing indexes, inefficient scopes\n4. **Test coverage**: Missing test cases, edge cases\n5. **Architecture**: Separation of concerns, proper patterns\n6. **Bugs**: Logic errors, missing validations, edge cases\n\nFormat: Use bullet points grouped by file or topic. Rate severity:\n- 🔴 Critical — must fix before merge\n- 🟡 Warning — should fix\n- 🟢 Suggestion — nice to have\n\nEnd with: \"APPROVED ✅\" or \"CHANGES REQUESTED ❌\" with specific items.\n\nKeep the review concise and actionable. Skip boilerplate/generated files (Gemfile.lock, schema.rb, error pages, .keep files). Focus on custom code."
-              }]
-            },
-            "contents": [{
-              "parts": [{
-                "text": "Review this Pull Request:\n\n**Title:** ${PR_TITLE}\n\n**Description:**\n${PR_BODY}\n\n${TRUNCATION_NOTE}\n\n**Diff:**\n\`\`\`diff\n${DIFF_CONTENT}\n\`\`\`"
-              }]
-            }],
-            "generationConfig": {
-              "temperature": 0.3,
-              "maxOutputTokens": 4096
-            }
-          }
-          PROMPT_EOF
-
           # Use jq to properly escape the content into JSON
           jq -n \
             --arg system "You are the code auditor for Compras Express Cargo (CEC), a Rails 8 + Hotwire + Tailwind CSS 4 cargo/shipping logistics system.
@@ -129,19 +109,80 @@ jobs:
               generationConfig: { temperature: 0.3, maxOutputTokens: 8192 }
             }' > /tmp/request.json
 
-          # Call Gemini API
-          RESPONSE=$(curl -s -X POST \
-            "https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}" \
-            -H "Content-Type: application/json" \
-            -d @/tmp/request.json)
+          # Cuerpo y código HTTP por separado. El código es lo único que
+          # distingue "no revisó" de "revisó y no encontró nada", y antes se
+          # tiraba a la basura.
+          pedir_review() {
+            curl -sS -X POST \
+              "https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}" \
+              -H "Content-Type: application/json" \
+              -d @/tmp/request.json \
+              -o /tmp/response.json \
+              -w '%{http_code}'
+          }
 
-          # Extract the review text
-          REVIEW=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text // "Error: Could not generate review. API response: \(.)"')
+          CODIGO=$(pedir_review || true)
+          if [ -z "$CODIGO" ]; then CODIGO="000"; fi
 
-          # Save to file (avoid delimiter issues)
-          echo "$REVIEW" > /tmp/review.txt
+          # El free tier tiene dos cuotas: una por ritmo y una por día. La de
+          # ritmo se agota sola cuando caen tres PR seguidos, y la API dice
+          # cuánto esperar — esa sí se reintenta. La diaria no: reintentar solo
+          # gasta un minuto para fallar igual.
+          if [ "$CODIGO" = "429" ]; then
+            CUOTAS=$(jq -r '[.error.details[]?.violations[]?.quotaId // empty] | join(",")' /tmp/response.json 2>/dev/null || true)
+            if printf '%s' "$CUOTAS" | grep -q "PerDay"; then
+              echo "::warning::Cuota diaria de Gemini agotada; reintentar no sirve."
+            else
+              ESPERA=$(jq -r '[.error.details[]? | select((."@type" // "") | test("RetryInfo")) | .retryDelay // empty] | first // "30s"' /tmp/response.json 2>/dev/null || echo "30s")
+              ESPERA=${ESPERA%s}
+              ESPERA=${ESPERA%.*}
+              case "$ESPERA" in ""|*[!0-9]*) ESPERA=30 ;; esac
+              if [ "$ESPERA" -gt 120 ]; then ESPERA=120; fi
+              echo "::warning::Gemini respondió 429 por cuota de ritmo. Reintento en $((ESPERA + 2))s."
+              sleep $((ESPERA + 2))
+              CODIGO=$(pedir_review || true)
+              if [ -z "$CODIGO" ]; then CODIGO="000"; fi
+            fi
+          fi
+
+          REVIEW=$(jq -r '.candidates[0].content.parts[0].text // empty' /tmp/response.json 2>/dev/null || true)
+          FIN=$(jq -r '.candidates[0].finishReason // empty' /tmp/response.json 2>/dev/null || true)
+
+          if [ -n "$REVIEW" ]; then
+            printf '%s\n' "$REVIEW" > /tmp/review.txt
+            # Truncado es media revisión: se avisa, pero no se rompe.
+            if [ "$FIN" = "MAX_TOKENS" ]; then
+              {
+                echo ""
+                echo "> ⚠️ **El review quedó cortado** al llegar al tope de tokens."
+                echo "> Lo que viene después del corte no se revisó."
+              } >> /tmp/review.txt
+              echo "::warning::Review truncado (finishReason=MAX_TOKENS)."
+            fi
+            echo "estado=ok" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # No hubo review. Que se vea: un PR sin revisar no puede quedar igual
+          # que uno revisado y aprobado.
+          MOTIVO=$(jq -r '.error.message // .promptFeedback.blockReason // "sin detalle"' /tmp/response.json 2>/dev/null || echo "respuesta ilegible")
+          {
+            echo "**No se generó review.** El check queda en rojo a propósito: un PR"
+            echo "sin revisar no puede verse igual que uno revisado y aprobado."
+            echo ""
+            echo "- **HTTP:** \`${CODIGO}\`"
+            echo "- **Motivo:** ${MOTIVO}"
+            echo ""
+            echo "Si es la cuota diaria del free tier no hay nada que arreglar en el"
+            echo "código: se espera al reset, o se activa billing y se sube"
+            echo "\`GEMINI_MODEL\`. **El merge no está bloqueado** — el único check"
+            echo "requerido en \`staging\` es \`Tests\`."
+          } > /tmp/review.txt
+          echo "estado=fallo" >> "$GITHUB_OUTPUT"
+          echo "::error::Gemini no generó review (HTTP ${CODIGO}): ${MOTIVO}"
 
       - name: Post review comment
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -156,3 +197,11 @@ jobs:
           } > /tmp/comment.md
 
           gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/comment.md
+
+      # Ultimo, no primero: asi el comentario con el motivo ya esta puesto en el
+      # PR cuando el check se pone rojo.
+      - name: Sin review, el check queda rojo
+        if: steps.gemini.outputs.estado == 'fallo'
+        run: |
+          echo "Gemini no generó review. El motivo quedó comentado en el PR."
+          exit 1
