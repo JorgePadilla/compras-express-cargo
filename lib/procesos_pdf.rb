@@ -35,14 +35,22 @@ class ProcesosPdf
       actor: :fisico, existe: true },
     { titulo: "Etiquetar", quien: "digitador de Miami",
       actor: :persona, ruta: "etiquetar_path", estado: "recibido_miami", existe: true },
-    # C21-01 · El paso de empacar **volvió**, que es lo que este comentario
-    # decía que pasaría "cuando toque". Yusef lo pidió mostrando la bodega en
-    # vivo: *"ahí están empacando, mirá… y aquí es donde hace falta, es el pip
-    # pip pip"*. Es también el primer lugar del sistema que escribe `empacado`,
-    # un estado que vivía en el enum sin dueño.
+    # C21-01 · **El manifiesto va primero, y después se empaca adentro.** Ése es
+    # el cambio que pidió Yusef: *"el cambio que yo quiero hacer es: crear
+    # manifiesto → la pre-etiqueta"*, y de ahí *"imprimir una pre-etiqueta para
+    # los bultos"* para escanearles los paquetes — *"aquí es donde hace falta,
+    # es el pip pip pip"*.
+    #
+    # El dibujo tenía el orden viejo (empacar y después ingresar al manifiesto),
+    # que es justo lo que él describió como el problema a resolver.
+    #
+    # **Y son dos caminos, no uno.** El de abajo los tiene enteros; acá va el
+    # principal, que es el que quiere que se use.
+    { titulo: "Manifiesto", quien: "supervisor de Miami",
+      actor: :persona, ruta: "manifiestos_path", existe: true },
     { titulo: "Empacar", quien: "digitador de Miami, con la pistola",
       actor: :persona, ruta: "manifiestos_path", estado: "empacado", existe: true },
-    { titulo: "Manifiesto", quien: "supervisor de Miami",
+    { titulo: "Finalizar", quien: "supervisor de Miami",
       actor: :persona, ruta: "manifiestos_path", estado: "enviado_honduras", existe: true }
   ].freeze
 
@@ -115,6 +123,24 @@ class ProcesosPdf
         "Si el tracking escaneado coincide con una pre-alerta, el sistema los amarra solo.",
         "Si no coincide con ninguna, el paquete nace ahí mismo.",
         "La digitación manual es la etiqueta local que se hace en San Pedro cuando en Miami no se escaneó."
+      ] },
+    # C21-01 · Los dos caminos del manifiesto. Es lo primero que Jorge notó que
+    # faltaba al leer el flujograma (2026-08-30): *"en el flujograma manifiesto
+    # tiene dos flujos, con pre-manifiesto y sin pre-manifiesto, no veo esa
+    # lógica"*. Estaban los dos vivos en el código y ninguno dibujado.
+    { nombre: "Con escaneo y sin escaneo",
+      cuando: "Yusef dejó los dos vivos a propósito. El de escaneo es el que quiere; el otro \"es lo que está actualmente, como actual\" y se queda \"porque a veces no da tiempo\".",
+      engancha: "Los dos terminan en el mismo Finalizar: los paquetes del tipo seleccionado pasan a ENVIADO y el manifiesto se bloquea.",
+      pasos: [
+        { titulo: "Con escaneo", quien: "manifiesto → pre-etiquetas 4×6 → pistola",
+          actor: :persona, ruta: "manifiestos_path", estado: "empacado", existe: true },
+        { titulo: "Sin escaneo", quien: "se le meten los paquetes al manifiesto derecho",
+          actor: :persona, ruta: "manifiestos_path", existe: true }
+      ],
+      notas: [
+        "Con escaneo, cada paquete queda adentro de una caja y en `empacado`; el pito avisa si el tipo de envío no concuerda.",
+        "Sin escaneo no hay cajas, así que en Honduras no hay etiqueta 4×6 que leer: esos paquetes pasan a aduana al terminar la recepción.",
+        "Los dos llegan a la pre-factura por el mismo lado; lo único que cambia es si hubo pistola."
       ] },
     { nombre: "Entrega Personal",
       cuando: "El paquete llega en mano al mostrador de Miami, sin tracking del courier: un driver privado, un Uber, alguien que lo trajo. No hubo pre-alerta.",

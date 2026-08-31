@@ -135,4 +135,75 @@ class RecepcionCargaTest < ActionDispatch::IntegrationTest
   end
 
   def json = JSON.parse(response.body)
+  # ── El camino sin escaneo (C21-01) ──────────────────────────────────────
+  #
+  # Yusef dejó **dos caminos vivos** a propósito: el nuevo —crear el manifiesto,
+  # sacar las pre-etiquetas de los bultos y escanear cada paquete adentro— y el
+  # de siempre, *"que es lo que está actualmente"*, que se queda *"porque a
+  # veces no da tiempo"*: se le meten los paquetes al manifiesto derecho, sin
+  # cajas y sin pistola.
+  #
+  # Jorge lo notó leyendo el flujograma (2026-08-30): *"manifiesto tiene dos
+  # flujos, con pre-manifiesto y sin pre-manifiesto, no veo esa lógica"*. Y al
+  # mirarlo apareció que el segundo **estaba roto de punta a punta**: la
+  # recepción solo movía `caja.paquetes`, así que un manifiesto sin cajas
+  # cerraba bien y sus paquetes se quedaban en `enviado_honduras` para siempre.
+  test "un manifiesto sin cajas manda igual sus paquetes a aduana" do
+    manifiesto = manifiestos(:enviado)
+    suelto = crear_paquete_suelto(manifiesto)
+
+    patch finalizar_recepcion_carga_url(manifiesto)
+
+    assert_equal "en_aduana", suelto.reload.estado
+    assert_equal "recibido", manifiesto.reload.estado
+  end
+
+  # Y de ahí sigue el recorrido: si no llegan a aduana, tampoco llegan a la
+  # pre-factura, porque `Paquete.facturables` arranca en `en_aduana`.
+  test "y de ahí siguen a la pre-factura" do
+    manifiesto = manifiestos(:enviado)
+    suelto = crear_paquete_suelto(manifiesto)
+
+    patch finalizar_recepcion_carga_url(manifiesto)
+
+    assert_includes Paquete.facturables, suelto.reload
+  end
+
+  # La pantalla no puede decir «0 de 0 recibidas» sobre un manifiesto con carga.
+  test "la pantalla avisa de los paquetes sin caja" do
+    manifiesto = manifiestos(:enviado)
+    crear_paquete_suelto(manifiesto)
+
+    get recepcion_carga_url(manifiesto)
+
+    assert_response :success
+    assert_match(/sin caja/, response.body)
+  end
+
+  # Con cajas Y sueltos —un manifiesto que se empezó a escanear y se terminó a
+  # mano— tienen que salir los dos.
+  test "con cajas y sueltos, pasan los dos" do
+    manifiesto = manifiestos(:enviado)
+    suelto = crear_paquete_suelto(manifiesto)
+    caja = manifiesto.cajas.create!(alto: 10, largo: 10, ancho: 10, peso: 5)
+    en_caja = crear_paquete_suelto(manifiesto)
+    en_caja.update!(caja_manifiesto: caja)
+
+    post escanear_recepcion_carga_url(manifiesto), params: { codigo: caja.codigo }, as: :json
+    patch finalizar_recepcion_carga_url(manifiesto)
+
+    assert_equal "en_aduana", en_caja.reload.estado, "el escaneado"
+    assert_equal "en_aduana", suelto.reload.estado, "y el suelto"
+  end
+
+  private
+
+  def crear_paquete_suelto(manifiesto)
+    Paquete.create!(
+      tracking: "SINCAJA#{SecureRandom.hex(4).upcase}",
+      cliente: clientes(:juan), tipo_envio: tipo_envios(:cer),
+      sucursal_recepcion: sucursales(:miami),
+      estado: "enviado_honduras", manifiesto: manifiesto
+    )
+  end
 end

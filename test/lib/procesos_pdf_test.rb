@@ -81,16 +81,30 @@ class ProcesosPdfTest < ActiveSupport::TestCase
                  @doc.huecos.map { |h| h[:titulo] }
   end
 
-  test "de etiquetar se pasa al manifiesto, sin empaque en el medio" do
-    # C21-01 · Hasta la Conversación 21 el empaque estaba FUERA del documento:
-    # Jorge, 2026-08-10, *"hasta que terminemos con etiquetas y entrega personal
-    # hagamos preguntas de empaque"*, y el diagrama mostraba lo que de verdad
-    # pasaba —etiquetado → manifiesto directo—. Ahora la pantalla existe, así que
-    # el paso entra en medio, que es donde va.
+  # C21-01 · **El manifiesto va antes de empacar**, y ése es el cambio entero
+  # que pidió Yusef: *"el cambio que yo quiero hacer es: crear manifiesto → la
+  # pre-etiqueta"*, para después escanearle los paquetes a cada bulto.
+  #
+  # El dibujo tenía el orden viejo —empacar y después ingresar al manifiesto—,
+  # que es justo lo que él describió como el problema. Este test decía
+  # «sin empaque en el medio» y afirmaba ese orden viejo.
+  test "el manifiesto se crea primero, y después se empaca adentro" do
     titulos = ProcesosPdf::CAMINO_MIAMI.map { |p| p[:titulo] }
 
-    assert_equal "Empacar", titulos[titulos.index("Etiquetar") + 1]
-    assert_equal "Manifiesto", titulos[titulos.index("Empacar") + 1]
+    assert_equal "Manifiesto", titulos[titulos.index("Etiquetar") + 1]
+    assert_equal "Empacar", titulos[titulos.index("Manifiesto") + 1]
+    assert_equal "Finalizar", titulos[titulos.index("Empacar") + 1]
+  end
+
+  # C21-01 · Los dos caminos, que estaban vivos en el código y sin dibujar.
+  # Jorge lo notó leyendo el flujograma (2026-08-30): *"manifiesto tiene dos
+  # flujos, con pre-manifiesto y sin pre-manifiesto, no veo esa lógica"*.
+  test "el diagrama muestra los dos caminos del manifiesto" do
+    desvio = ProcesosPdf::ALTERNATIVOS.find { |a| a[:nombre] == "Con escaneo y sin escaneo" }
+
+    assert desvio, "el desvío de los dos caminos tiene que estar"
+    assert_equal [ "Con escaneo", "Sin escaneo" ], desvio[:pasos].map { |p| p[:titulo] }
+    assert desvio[:pasos].all? { |p| p[:existe] }, "los dos caminos están construidos"
   end
 
   # El reverso del test que había: antes fijaba que NADIE asignara `empacado`
@@ -124,7 +138,9 @@ class ProcesosPdfTest < ActiveSupport::TestCase
     # A7-02 sumó "Por dónde entra un paquete al sistema", que no es un desvío
     # sino las tres puertas de entrada: el camino principal solo dibujaba la
     # pre-alerta del cliente, que es el 30-40% de los paquetes.
-    assert_equal 9, ProcesosPdf::ALTERNATIVOS.size
+    # Y C21-01 sumó los dos caminos del manifiesto, que estaban vivos en el
+    # código y sin dibujar.
+    assert_equal 10, ProcesosPdf::ALTERNATIVOS.size
     assert_equal "Por dónde entra un paquete al sistema",
                  ProcesosPdf::ALTERNATIVOS.first[:nombre],
                  "las entradas van primero: es lo que se lee antes del camino"

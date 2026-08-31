@@ -28,6 +28,9 @@ class RecepcionCargaController < ApplicationController
 
   def show
     @cajas = @manifiesto.cajas.ordenadas
+    # C21-01 · Los que viajaron sin caja, del camino sin escaneo. Sin esto la
+    # pantalla decía «0 de 0 recibidas» sobre un manifiesto lleno de paquetes.
+    @sin_caja = RecibirManifiesto.new(@manifiesto).paquetes_sin_caja.includes(:cliente).to_a
   end
 
   # Se escanean **cajas, no paquetes** (`A7-06`): *"escanearon cada caja, cada
