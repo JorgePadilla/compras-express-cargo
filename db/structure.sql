@@ -1861,6 +1861,39 @@ ALTER SEQUENCE public.paquetes_id_seq OWNED BY public.paquetes.id;
 
 
 --
+-- Name: permisos_de_rol; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.permisos_de_rol (
+    id bigint NOT NULL,
+    rol character varying NOT NULL,
+    seccion character varying NOT NULL,
+    permitido boolean NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: permisos_de_rol_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.permisos_de_rol_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: permisos_de_rol_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.permisos_de_rol_id_seq OWNED BY public.permisos_de_rol.id;
+
+
+--
 -- Name: plantillas_descripcion; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3145,6 +3178,13 @@ ALTER TABLE ONLY public.paquetes ALTER COLUMN id SET DEFAULT nextval('public.paq
 
 
 --
+-- Name: permisos_de_rol id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.permisos_de_rol ALTER COLUMN id SET DEFAULT nextval('public.permisos_de_rol_id_seq'::regclass);
+
+
+--
 -- Name: plantillas_descripcion id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -3691,6 +3731,14 @@ ALTER TABLE ONLY public.paquete_motivos_retencion
 
 ALTER TABLE ONLY public.paquetes
     ADD CONSTRAINT paquetes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: permisos_de_rol permisos_de_rol_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.permisos_de_rol
+    ADD CONSTRAINT permisos_de_rol_pkey PRIMARY KEY (id);
 
 
 --
@@ -4991,6 +5039,13 @@ CREATE INDEX index_paquetes_on_user_id ON public.paquetes USING btree (user_id);
 --
 
 CREATE INDEX index_paquetes_on_venta_id ON public.paquetes USING btree (venta_id);
+
+
+--
+-- Name: index_permisos_de_rol_on_rol_and_seccion; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_permisos_de_rol_on_rol_and_seccion ON public.permisos_de_rol USING btree (rol, seccion);
 
 
 --
@@ -6710,6 +6765,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260831050354'),
 ('20260831004458'),
 ('20260830113111'),
 ('20260830071615'),
