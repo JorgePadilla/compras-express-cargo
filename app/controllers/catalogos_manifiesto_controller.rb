@@ -15,10 +15,16 @@
 # sueltas del menú. Cada solapa es una tabla; crear y editar van a su CRUD y
 # vuelven acá con la solapa puesta.
 #
-# **No es admin-only a propósito.** El pedido es poder delegar —*"andate al área
-# donde dice empresa, agregame esta empresa que voy a usar"*, dicho sobre alguien
-# de su equipo—, así que un portal que solo abre el admin cumpliría la letra y
-# fallaría el propósito.
+# **Es admin-only, y vive en Configuración** desde que Jorge lo mandó ahí el
+# 2026-08-30. Arrancó abierto al equipo de Miami, razonando que el pedido era
+# poder delegar —*"andate al área donde dice empresa, agregame esta empresa que
+# voy a usar"*— y que un portal admin-only *"cumpliría la letra y fallaría el
+# propósito"*.
+#
+# Lo que cerró el círculo fue el organigrama que Yusef dictó ese mismo día: a
+# quien delega es a **Manal y Vanesa**, que *"tienen todos los poderes en el
+# sistema"* — o sea admin. Michelle, el nombre que aparece en la cita, está dos
+# niveles abajo y él mismo dijo que no carga catálogos.
 class CatalogosManifiestoController < ApplicationController
   before_action :authorize_catalogos
 
