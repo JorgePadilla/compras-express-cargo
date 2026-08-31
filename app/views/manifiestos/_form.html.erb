@@ -21,57 +21,73 @@
   <%= render FormSectionComponent.new(title: "Lo que se llena en Miami") do %>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
-        <%= f.label :consignatario_id, "Consignatario", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.label :consignatario_id, "Consignatario", class: "block text-base font-medium text-gray-700 dark:text-gray-200 mb-1" %>
         <%= f.collection_select :consignatario_id, @consignatarios, :id, :nombre,
               { include_blank: "— Seleccionar —" },
-              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+              class: "block w-full min-h-11 py-3 rounded-lg border-gray-300 shadow-sm text-base focus:ring-cec-teal focus:border-cec-teal" %>
         <p class="text-xs text-gray-500 mt-1">A quién va consignada la carga.</p>
       </div>
 
       <div>
-        <%= f.label :empresa_manifiesto_id, "Empresa proveedora", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.label :empresa_manifiesto_id, "Empresa proveedora", class: "block text-base font-medium text-gray-700 dark:text-gray-200 mb-1" %>
         <%= f.collection_select :empresa_manifiesto_id, @empresas, :id, :nombre,
               { include_blank: "— Seleccionar —" },
-              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+              class: "block w-full min-h-11 py-3 rounded-lg border-gray-300 shadow-sm text-base focus:ring-cec-teal focus:border-cec-teal" %>
         <p class="text-xs text-gray-500 mt-1">Quién mueve la carga.</p>
       </div>
 
       <div>
-        <%= f.label :tipo_envio_proveedor_id, "Tipo de envío del proveedor", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.label :tipo_envio_proveedor_id, "Tipo de envío del proveedor", class: "block text-base font-medium text-gray-700 dark:text-gray-200 mb-1" %>
         <%= f.collection_select :tipo_envio_proveedor_id, @tipos_proveedor, :id, :nombre,
               { include_blank: "— Seleccionar —" },
-              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+              class: "block w-full min-h-11 py-3 rounded-lg border-gray-300 shadow-sm text-base focus:ring-cec-teal focus:border-cec-teal" %>
         <p class="text-xs text-gray-500 mt-1">El servicio <b>de ellos</b> — AEREO EXPRESS, CKM MARITIMO. No es el nuestro.</p>
       </div>
 
       <div>
-        <%= f.label :sucursal_entrega_id, "Sucursal donde se entrega", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.label :sucursal_entrega_id, "Sucursal donde se entrega", class: "block text-base font-medium text-gray-700 dark:text-gray-200 mb-1" %>
         <%= f.collection_select :sucursal_entrega_id, @sucursales_entrega, :id, :nombre,
               { include_blank: "— Seleccionar —" },
-              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+              class: "block w-full min-h-11 py-3 rounded-lg border-gray-300 shadow-sm text-base focus:ring-cec-teal focus:border-cec-teal" %>
         <p class="text-xs text-gray-500 mt-1">A dónde llega en Honduras.</p>
       </div>
 
       <% if @sucursales_origen.many? %>
         <div>
-          <%= f.label :sucursal_origen_id, "Sucursal de origen", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= f.label :sucursal_origen_id, "Sucursal de origen", class: "block text-base font-medium text-gray-700 dark:text-gray-200 mb-1" %>
           <%= f.collection_select :sucursal_origen_id, @sucursales_origen, :id, :nombre,
                 { include_blank: "— La de mi sesión —" },
-                class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+                class: "block w-full min-h-11 py-3 rounded-lg border-gray-300 shadow-sm text-base focus:ring-cec-teal focus:border-cec-teal" %>
           <p class="text-xs text-gray-500 mt-1">De dónde sale. Es lo que le da el número del año.</p>
         </div>
       <% end %>
 
       <div>
-        <%= f.label :expedido_por, "Expedido por", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.label :expedido_por, "Expedido por", class: "block text-base font-medium text-gray-700 dark:text-gray-200 mb-1" %>
         <%= f.text_field :expedido_por,
-              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+              class: "block w-full min-h-11 py-3 rounded-lg border-gray-300 shadow-sm text-base focus:ring-cec-teal focus:border-cec-teal" %>
       </div>
     </div>
 
-    <label class="flex items-center gap-2 mt-4">
-      <%= f.check_box :es_prioridad, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-      <span class="text-sm font-medium text-gray-700">Es prioridad</span>
+    <%# PR-U4 · La misma tarjeta que los tipos de envío, en chico: es un
+        interruptor que se toca con el dedo, no una casilla de 13 px. Va la
+        leyenda PRIORITY porque es lo que después sale impreso en la 4×6. %>
+    <label class="cursor-pointer group block mt-5 max-w-sm">
+      <%= f.check_box :es_prioridad, class: "peer sr-only" %>
+      <div class="min-h-11 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800
+                  peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 peer-checked:ring-2 peer-checked:ring-cec-gold/30
+                  peer-focus-visible:ring-2 peer-focus-visible:ring-cec-teal-deep
+                  hover:shadow-lg hover:border-cec-gold/50 transition-all duration-200
+                  flex items-center gap-3">
+        <span class="shrink-0 w-11 h-11 rounded-xl bg-cec-gold/15 flex items-center justify-center">
+          <%= heroicon "bolt", variant: :outline,
+                options: { class: "w-6 h-6 text-cec-gold", disable_default_class: true } %>
+        </span>
+        <span class="flex-1">
+          <span class="block font-bold text-base text-cec-navy dark:text-cec-gold">Es prioridad</span>
+          <span class="block text-xs text-gray-500 dark:text-gray-400">Sale <b>PRIORITY</b> en la etiqueta del bulto</span>
+        </span>
+      </div>
     </label>
 
     <%# C21-03 · *"Aquí es selección múltiple… podés seleccionar todos los cinco
@@ -80,14 +96,40 @@
     <fieldset class="mt-5">
       <legend class="text-sm font-medium text-gray-700 mb-1">Tipos de envío <b>nuestros</b> que van adentro</legend>
       <p class="text-xs text-gray-500 mb-2">Mínimo uno, máximo todos — a veces se combina todo y se manda junto. Es lo que decide qué paquetes salen al finalizar.</p>
-      <div class="flex flex-wrap gap-x-6 gap-y-2">
+      <%# PR-U4 · Eran checkboxes de 13 px en una pantalla que se usa con el
+          dedo, parado en la bodega. Ahora son tarjetas, con el patrón de
+          selección del sistema (`docs/07`): `peer sr-only` + `div`, que además
+          no cuenta como botón crudo en el lint.
+
+          Va `checkbox` y no `radio` —es selección múltiple, *"mínimo uno,
+          máximo todos"*— y ésa es la única diferencia con el selector de tipo
+          de envío de `/etiquetar`.
+
+          Se muestra la **modalidad** y no el precio ni el SLA: en un manifiesto
+          lo que importa es qué viaja junto, no qué cuesta. El ícono ya sale de
+          ahí — avión para aéreo, camión para marítimo. %>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <% @tipo_envios.each do |tipo| %>
-          <label class="flex items-center gap-2">
+          <% accent = tipo_envio_accent(tipo) %>
+          <label class="cursor-pointer group">
             <%= check_box_tag "manifiesto[tipo_envio_ids][]", tipo.id,
                   manifiesto.tipo_envio_ids.include?(tipo.id),
                   id: "manifiesto_tipo_envio_#{tipo.id}",
-                  class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-            <span class="text-sm text-gray-700"><%= tipo.nombre %></span>
+                  class: "peer sr-only" %>
+            <div class="h-full min-h-11 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800
+                        peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 peer-checked:ring-2 peer-checked:ring-cec-gold/30
+                        peer-focus-visible:ring-2 peer-focus-visible:ring-cec-teal-deep
+                        hover:shadow-lg hover:border-cec-gold/50 transition-all duration-200
+                        flex flex-col items-center gap-2 text-center">
+              <span class="shrink-0 w-11 h-11 rounded-xl <%= accent[:icon_bg] %> flex items-center justify-center">
+                <%= heroicon tipo_envio_icono(tipo), variant: :outline,
+                      options: { class: "w-6 h-6 #{accent[:text]}", disable_default_class: true } %>
+              </span>
+              <span class="font-bold text-base text-cec-navy dark:text-cec-gold"><%= tipo.nombre %></span>
+              <span class="text-xs text-gray-500 dark:text-gray-400">
+                <%= tipo.modalidad == "maritimo" ? "Marítimo" : "Aéreo" %>
+              </span>
+            </div>
           </label>
         <% end %>
       </div>
@@ -106,6 +148,6 @@
 
   <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
     <%= link_to "Cancelar", manifiestos_path, class: "text-sm text-gray-600 hover:text-gray-900" %>
-    <%= render(ButtonComponent.new(variant: :gold, type: :submit, shortcut: "F10")) { manifiesto.persisted? ? "Guardar" : "Crear manifiesto" } %>
+    <%= render(ButtonComponent.new(variant: :gold, size: :lg, type: :submit, shortcut: "F10")) { manifiesto.persisted? ? "Guardar" : "Crear manifiesto" } %>
   </div>
 <% end %>
