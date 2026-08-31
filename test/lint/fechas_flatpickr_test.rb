@@ -21,8 +21,49 @@ class FechasFlatpickrTest < ActiveSupport::TestCase
   # corta el **tag ERB entero** —de `<%` a `%>`— y se busca adentro.
   TAG_ERB = /<%=?.*?%>/m
 
-  # `date_field` cubre también `date_field_tag`; `datetime_field`, sus dos.
-  LLAMADA_DE_FECHA = /\b(date_field|datetime_field|date_field_tag|datetime_field_tag)\b/
+  # Todos los helpers que terminan dibujando un picker del navegador. La lista
+  # arrancó con `date_field` y sus variantes, y le faltaba **`datetime_local_field`**:
+  # `\bdate_field\b` no matchea adentro de `datetime_local_field` —la palabra es
+  # otra—, así que el helper que más se parece al nativo era justo el que se
+  # colaba. Hoy no hay ninguno escrito, y la idea es que siga así.
+  HELPERS = %w[
+    date_field date_field_tag
+    datetime_field datetime_field_tag
+    datetime_local_field datetime_local_field_tag
+    time_field time_field_tag
+    month_field month_field_tag
+    week_field week_field_tag
+  ].freeze
+  LLAMADA_DE_FECHA = /\b(#{HELPERS.join("|")})\b/
+
+  # Y el `<input>` escrito a mano, que no pasa por ningún helper.
+  INPUT_CRUDO = /<input[^>]*\btype=["'](date|datetime-local|time|month|week)["'][^>]*>/i
+
+  test "ningún <input type=date> escrito a mano se salta el picker" do
+    sueltos = []
+
+    Dir.glob(VISTAS.join("**/*.erb")).sort.each do |archivo|
+      File.read(archivo).scan(INPUT_CRUDO) do
+        tag = Regexp.last_match(0)
+        next if tag.include?("flatpickr")
+
+        sueltos << "#{Pathname.new(archivo).relative_path_from(Rails.root)}: #{tag[0, 90]}"
+      end
+    end
+
+    assert_empty sueltos, "Estos `<input>` de fecha van sin el picker del proyecto:\n#{sueltos.join("\n")}"
+  end
+
+  test "la lista de helpers cubre las formas que Rails ofrece" do
+    # `datetime_local_field` faltaba y no lo agarraba nadie. Este test fija la
+    # lista para que agregar un helper nuevo sea una decisión, no un olvido.
+    assert_includes HELPERS, "datetime_local_field",
+                    "el que se colaba: `\\bdate_field\\b` no matchea adentro de `datetime_local_field`"
+    assert_match LLAMADA_DE_FECHA, "f.datetime_local_field :cuando"
+    assert_match LLAMADA_DE_FECHA, "date_field_tag :desde"
+    refute_match LLAMADA_DE_FECHA, "f.text_field :fecha_a_mano",
+                 "un campo de texto no es un picker nativo"
+  end
 
   test "ninguna fecha usa el picker nativo del navegador" do
     sueltas = []

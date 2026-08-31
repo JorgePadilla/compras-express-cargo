@@ -76,9 +76,20 @@ end %>
         <% end %>
         <%# Sin ninguna guía todavía, una fila lista para escribir: entrar y
             tener que apretar «Agregar» antes de poder teclear es un paso de más
-            en la pantalla que existe justamente para teclear guías. %>
+            en la pantalla que existe justamente para teclear guías.
+
+            **El `child_index` tiene que ser un número.** Acá decía `"nueva"`, y
+            Rails **tiraba la fila entera en silencio**: `permit` solo reconoce
+            una colección anidada cuando la llave matchea `/\A-?\d+\z/`
+            (`Parameters.nested_attribute?`). Con una llave de texto,
+            `guias_attributes` llegaba al modelo como `{}` — se escribía la
+            guía, salía «guardado.» y no quedaba nada. Jorge: *"siempre sale que
+            faltan guías de proveedor aunque se ponga algo"*.
+
+            El `<template>` de abajo sí puede llevar texto porque el JS lo
+            reemplaza por `Date.now()` antes de que exista en el DOM. %>
         <% if @manifiesto.guias.empty? %>
-          <%= f.fields_for :guias, ManifiestoGuia.new, child_index: "nueva" do |g| %>
+          <%= f.fields_for :guias, ManifiestoGuia.new, child_index: 0 do |g| %>
             <%= render "guias_aduana/guia_fila", gf: g %>
           <% end %>
         <% end %>
