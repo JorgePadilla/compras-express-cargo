@@ -34,20 +34,42 @@ class RecibirManifiesto
   end
 
   # «Terminar la recepción», con o sin faltantes. Marca lo que falta y cierra.
+  #
+  # C21-01 · **Al cerrar se barre el manifiesto entero, no solo las cajas.**
+  # Yusef dejó dos caminos vivos a propósito: el nuevo —crear el manifiesto,
+  # sacar las pre-etiquetas de los bultos y escanear cada paquete adentro— y el
+  # de siempre, *"que es lo que está actualmente"*, que se queda *"porque a
+  # veces no da tiempo"*: se le meten los paquetes al manifiesto derecho, sin
+  # cajas y sin pistola.
+  #
+  # Este método solo miraba `caja.paquetes`. Un manifiesto armado por el camino
+  # viejo llega a Honduras **sin una sola caja**, así que la pantalla decía
+  # «0 de 0 recibidas», «Terminar» salía bien, el manifiesto quedaba `recibido`
+  # — y sus paquetes se quedaban en `enviado_honduras` para siempre. No llegaban
+  # a aduana, y por lo tanto tampoco a la pre-factura.
+  #
+  # Peor que un hueco: quedaba **inconsistente y callado**, con el manifiesto
+  # diciendo una cosa y sus paquetes otra.
   def finalizar!(con_faltantes: false)
     faltantes = @manifiesto.cajas.where(recibida_at: nil).to_a
     return Resultado.new(recibidas: recibidas, faltantes: faltantes, paquetes: 0) if faltantes.any? && !con_faltantes
 
     paquetes = 0
     Manifiesto.transaction do
-      if con_faltantes
-        faltantes.each { |caja| caja.paquetes.each { |p| paquetes += 1 if mover_a_aduana(p) } }
-      end
+      pendientes = con_faltantes ? @manifiesto.paquetes : paquetes_sin_caja
+      pendientes.each { |p| paquetes += 1 if mover_a_aduana(p) }
+
       @manifiesto.update!(estado: "recibido", fecha_aduana: @manifiesto.fecha_aduana || Time.current,
                           recepcion_finalizada_at: Time.current)
     end
 
     Resultado.new(recibidas: recibidas, faltantes: faltantes, paquetes: paquetes)
+  end
+
+  # Los que viajaron sin caja: el camino sin escaneo. Se cuentan aparte para que
+  # la pantalla pueda decir cuántos son en vez de mostrar una tabla vacía.
+  def paquetes_sin_caja
+    @manifiesto.paquetes.where(caja_manifiesto_id: nil)
   end
 
   def recibidas = @manifiesto.cajas.where.not(recibida_at: nil).to_a

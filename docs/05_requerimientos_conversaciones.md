@@ -7733,6 +7733,28 @@ la `Fase 12` ya tenía dibujado.
 la **sin escaneo** —*"que es lo que está actualmente, como actual"*— se queda,
 *"porque a veces no da tiempo"*.
 
+> **El segundo camino estaba roto, y se descubrió leyendo el dibujo.** Jorge,
+> 2026-08-31: *"en el flujograma manifiesto tiene dos flujos, con pre-manifiesto
+> y sin pre-manifiesto, no veo esa lógica"*.
+>
+> Los dos estaban vivos en el código —se le pueden meter paquetes al manifiesto
+> derecho, sin cajas— pero **la recepción en Honduras solo movía
+> `caja.paquetes`**. Un manifiesto armado sin escaneo llegaba sin una sola caja:
+> la pantalla decía *«0 de 0 recibidas»*, «Terminar la recepción» salía bien, el
+> manifiesto quedaba `recibido`… y sus paquetes se quedaban en
+> `enviado_honduras` **para siempre**. No llegaban a aduana y por lo tanto
+> tampoco a la pre-factura, porque `Paquete.facturables` arranca en `en_aduana`.
+>
+> Peor que un hueco: quedaba **inconsistente y callado**, con el manifiesto
+> diciendo una cosa y sus paquetes otra.
+>
+> Arreglado: al cerrar la recepción se barre el manifiesto entero, no solo las
+> cajas. La pantalla avisa cuántos paquetes vienen sin caja y por qué no hay
+> etiqueta que escanear, y la tabla de cajas no se dibuja vacía. El flujograma
+> estrena el desvío «Con escaneo y sin escaneo» — y de paso `CAMINO_MIAMI` deja
+> de mostrar el orden viejo (empacar y **después** el manifiesto), que es
+> justamente el problema que `C21-01` vino a resolver.
+
 Contexto de por qué empacan como empacan: *"nosotros dividimos cargas, las que
 tienen descuento y las que no, porque con este proveedor nos sale más caro"*.
 

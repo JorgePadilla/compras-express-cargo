@@ -28,6 +28,35 @@
     <div data-recepcion-carga-target="aviso" class="hidden mt-4 rounded-lg p-3 text-sm"></div>
   </div>
 
+  <%# C21-01 · El camino sin escaneo. Yusef dejó los dos vivos: el nuevo —crear
+      el manifiesto, sacar las pre-etiquetas y escanear cada paquete adentro— y
+      el de siempre, que se queda *"porque a veces no da tiempo"*. Un manifiesto
+      armado así llega sin una sola caja, y esta pantalla decía «0 de 0
+      recibidas» sobre algo que traía carga. %>
+  <% if @sin_caja.any? %>
+    <div class="bg-cec-gold/10 ring-1 ring-cec-gold/40 rounded-lg p-4 mb-6">
+      <p class="text-sm font-medium text-cec-navy">
+        Este manifiesto trae <%= @sin_caja.size %> paquete<%= "s" unless @sin_caja.size == 1 %> sin caja.
+      </p>
+      <p class="text-xs text-gray-700 mt-1">
+        Se empacaron sin escanear, así que no hay etiqueta 4×6 que leer.
+        <b>Pasan a aduana al terminar la recepción.</b>
+      </p>
+      <ul class="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+        <% @sin_caja.first(12).each do |paquete| %>
+          <li class="font-mono text-xs text-gray-600"><%= paquete.numero_recepcion_visible.presence || paquete.tracking %></li>
+        <% end %>
+        <% if @sin_caja.size > 12 %>
+          <li class="text-xs text-gray-500">y <%= @sin_caja.size - 12 %> más</li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <%# La tarjeta de cajas solo si hay cajas: una tabla vacía con «0 de 0
+      recibidas» encima era justo lo que hacía parecer que no había nada que
+      recibir en un manifiesto del camino sin escaneo. %>
+  <% if @cajas.any? %>
   <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
     <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
       <h2 class="text-lg font-semibold text-gray-900">Cajas del manifiesto</h2>
@@ -62,6 +91,7 @@
       </tbody>
     </table>
   </div>
+  <% end %>
 
   <%# `A7-05` · Las dos salidas. Jorge preguntó qué tan dura era la regla y
       Yusef eligió *"que no lo bloquee"*: seguir escaneando, o marcar recibido
