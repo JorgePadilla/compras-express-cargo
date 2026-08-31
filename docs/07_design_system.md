@@ -434,6 +434,51 @@ app/components/
 
 ---
 
+## Tamaño táctil — 44 px de lado en las pantallas de bodega
+
+**Regla:** en las pantallas que se usan con el dedo, todo lo que se toca mide
+**44 px de alto como mínimo**. En Tailwind: `min-h-11` (2.75rem), o
+`ButtonComponent size: :lg` (`px-6 py-3 text-base`).
+
+Jorge, 2026-08-30: *"esta pantalla es táctil, así que debería ser fácil poder
+seleccionar con los dedos… siento que ocupa mucho amor esta pantalla"*. Hasta
+ese día **no había ninguna regla escrita**, y se notaba: los tipos de envío del
+manifiesto eran checkboxes de 13 px y la casilla de «Quitar» de una guía era más
+chica que la yema de un dedo.
+
+**Cuáles son táctiles:**
+
+| Pantalla | Qué se hace ahí |
+|---|---|
+| `/etiquetar` · `/entrega_personal` | Mostrador de Miami, con pistola |
+| `/manifiestos` (new/edit y las casas) | Armar el manifiesto parado en la bodega |
+| `/manifiestos/:id/empacar` | Escanear paquetes a la caja |
+| `/recibir-carga` | Bajar el camión en Honduras |
+| `/guias-y-aduana` | San Pedro, cargando guías |
+
+**El patrón de selección**, para no reinventarlo cada vez: `<label>` con un
+`<input class="peer sr-only">` adentro y un `<div>` estilado al lado. La firma
+visual del sistema es
+
+```
+peer-checked:border-cec-gold peer-checked:bg-cec-gold/5
+peer-checked:ring-2 peer-checked:ring-cec-gold/30
+```
+
+sobre una tarjeta `p-4 rounded-xl border-2 border-gray-200`. El ejemplo completo
+está en `app/views/cuenta/pre_alertas/new.html.erb`.
+
+Dos ventajas sobre un `<button>`: el navegador maneja el estado y el teclado
+solo, y **no cuenta como botón crudo** en `test/lint/botones_test.rb`, así que
+una pantalla se puede volver táctil sin pelear con el presupuesto.
+
+**Lo que no cambia de tamaño:** los `<select>` de catálogos que crecen —
+consignatario, empresa, tipos del proveedor— se quedan como selects. Convertir
+en tarjetas una lista que el equipo va a llenar por el CRUD es fabricar una
+pantalla que no escala. Suben a `py-3 text-base` y listo.
+
+---
+
 ## Fechas — siempre `flatpickr`, nunca el picker del navegador
 
 **Regla:** ningún `date_field` / `date_field_tag` sin
