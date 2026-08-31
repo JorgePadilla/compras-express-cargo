@@ -100,6 +100,12 @@ class BotonesTest < ActiveSupport::TestCase
     # `ButtonComponent` no expresa una tarjeta seleccionable, y el mismo patrón
     # ya vive en el prompt de tipo de envío de /etiquetar.
     "app/views/empaque/show.html.erb"                        => 1,
+    # C21-11 · La × de quitar una guía. Es un botón de solo icono dentro de una
+    # fila de formulario, con su `aria-label`; `ButtonComponent` lo envolvería en
+    # `inline-flex items-center gap-2` con padding propio y rompería la
+    # alineación con el input de al lado. Es la misma excepción que ya tiene la
+    # × de limpiar fecha en `paquetes/_form`.
+    "app/views/guias_aduana/_guia_fila.html.erb"             => 1,
     "app/views/entregas/index.html.erb"                      => 2,
     "app/views/entregas/new.html.erb"                        => 2,
     "app/views/financiamientos/show.html.erb"                => 2,

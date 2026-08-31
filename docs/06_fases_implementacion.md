@@ -875,7 +875,7 @@ Y lo que salió de mirar el resultado (2026-08-30):
 | `PR-M10` | Una tarea abierta **traba el cierre**; el candado se aplica de verdad; los catálogos nacen sembrados; mover carga sale de Miami a Logística | ✅ #376 |
 | `PR-M11` | La etiqueta del bulto lleva **QR** en vez de código de barras (`RP-54`) | ✅ #377 |
 | `PR-U1` | La guía del proveedor y la fecha de aduana se van a **`/guias-y-aduana`**, con su link e icono | ✅ |
-| `PR-U2` | Las guías, con filas dinámicas en vez de tres renglones fijos | ⏳ |
+| `PR-U2` | Las guías, con filas dinámicas en vez de tres renglones fijos | ✅ |
 | `PR-U3` | El date picker del proyecto en todas las fechas, con lint | ⏳ |
 | `PR-U4` | El manifiesto, para dedos | ⏳ |
 | `PR-U5` | Empacar y las casas, para dedos | ⏳ |
