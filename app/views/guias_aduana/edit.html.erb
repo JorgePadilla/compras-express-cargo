@@ -47,7 +47,8 @@ end %>
     <div class="max-w-md">
       <%= f.label :fecha_aduana, "Recibido en Honduras", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
       <%= f.date_field :fecha_aduana,
-            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+            class: "block w-full min-h-11 rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal",
+            data: { controller: "flatpickr" } %>
       <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">La fecha en que <b>nosotros</b> la recibimos.</p>
     </div>
 

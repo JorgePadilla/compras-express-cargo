@@ -39,7 +39,9 @@
     </div>
     <div>
       <%= f.label :fecha_inicio, "Fecha de Inicio", class: "block text-sm font-medium text-gray-700 mb-1" %>
-      <%= f.date_field :fecha_inicio, class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+      <%= f.date_field :fecha_inicio,
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm",
+            data: { controller: "flatpickr" } %>
     </div>
     <div class="md:col-span-2">
       <%= f.label :notas, class: "block text-sm font-medium text-gray-700 mb-1" %>

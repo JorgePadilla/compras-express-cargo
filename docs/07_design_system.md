@@ -434,6 +434,43 @@ app/components/
 
 ---
 
+## Fechas — siempre `flatpickr`, nunca el picker del navegador
+
+**Regla:** ningún `date_field` / `date_field_tag` sin
+`data: { controller: "flatpickr" }`. Lo hace cumplir
+`test/lint/fechas_flatpickr_test.rb`.
+
+Jorge, 2026-08-30, mirando el manifiesto: *"el date picker no es el que estamos
+usando en el proyecto"*. Eran nueve campos y **ocho estaban con el nativo**: se
+fueron quedando así, nadie decidió que fueran distintos.
+
+No es solo estética. `app/javascript/controllers/flatpickr_controller.js` va con:
+
+- **`disableMobile: true`** — fuerza su propio calendario en vez del nativo. En
+  una tablet, el picker de Chrome en Android es la ruleta chiquita del sistema, y
+  estas pantallas se usan con el dedo.
+- **`locale: Spanish`** y `altFormat: d/m/Y` — se ve `30/08/2026` y se manda
+  `2026-08-30`. El nativo muestra `yyyy-mm-dd` y cada navegador lo dibuja distinto.
+- Un parche anti-autofill: el input visible que crea `altInput` no tiene `name`,
+  y Chrome lo clasificaba como fecha de vencimiento de tarjeta.
+
+**Las dos formas de montarlo:**
+
+| | Cuándo | Ejemplo |
+|---|---|---|
+| Directo sobre el input | Filtros y campos simples | `app/views/paquetes/index.html.erb` |
+| Wrapper + `flatpickr_target` + botón de limpiar | Cuando hace falta una × para vaciar | `app/views/paquetes/_form.html.erb` |
+
+**Ojo con F2.** `f2-clear` hace `form.reset()`, que devuelve el input real a su
+valor por defecto — pero flatpickr no se entera y el visible queda con lo de
+antes. Hoy no se ve, porque los nueve formularios que usan ese controller
+recargan la página al limpiar; `f2_clear_controller` igual avisa a las
+instancias (`input._flatpickr?.clear()`) para el primero que use el modo sin
+submit. Si aparece otro controller que limpie un formulario, tiene que hacer lo
+mismo.
+
+---
+
 ## Patrones UI Estandar
 
 ### Patron: Pagina Lista (Admin)
