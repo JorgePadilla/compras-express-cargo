@@ -28,7 +28,7 @@ class PanelContextoController < ApplicationController
   private
 
   def authorize_panel
-    require_role(:supervisor_miami, :digitador_miami)
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:etiquetar)
   end
 
   # "Notas especiales" = lo que el cliente escribió sobre lo que viene.

@@ -71,7 +71,7 @@ class EmpaqueController < ApplicationController
   private
 
   def authorize_manifiestos
-    require_role(:supervisor_miami, :digitador_miami)
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:manifiestos)
   end
 
   def set_manifiesto

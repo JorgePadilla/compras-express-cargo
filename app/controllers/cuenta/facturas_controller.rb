@@ -1,6 +1,6 @@
 module Cuenta
   class FacturasController < BaseController
-    before_action :set_factura, only: [:show, :pdf]
+    before_action :set_factura, only: [ :show, :pdf ]
 
     def index
       @ventas = current_cliente.ventas.includes(:venta_items).activas.recientes

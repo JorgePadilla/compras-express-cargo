@@ -16,7 +16,7 @@
 class TasaCambioController < ApplicationController
   CLAVE = "tasa_cambio".freeze
 
-  before_action :require_admin
+  before_action :solo_admin
 
   def show
     @tasa = CurrencyAware.tasa_vigente
@@ -43,9 +43,6 @@ class TasaCambioController < ApplicationController
 
   private
 
-  def require_admin
-    redirect_to(root_path, alert: "Solo admin puede cambiar la tasa.") unless Current.user&.admin?
-  end
 
   def registro
     @registro ||= Configuracion.find_by(clave: CLAVE)
@@ -67,5 +64,11 @@ class TasaCambioController < ApplicationController
       aplico_minimo: cobro[:aplico_minimo] }
   rescue StandardError
     nil
+  end
+  # `RP-58` · Va por `can_access?` y no por `require_admin`: toda regla de rol
+  # tiene que pasar por el mismo lugar, o una pantalla de permisos diría que se
+  # puede algo que este controller después niega.
+  def solo_admin
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:tasa_cambio)
   end
 end

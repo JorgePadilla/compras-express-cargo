@@ -6,6 +6,13 @@ module Authorization
   # desincronizan sin que nadie lo vea.
   ROLES_DE_HONDURAS = %w[supervisor_prefactura supervisor_caja cajero].freeze
 
+  # Todo el que **toca carga**: los dos mostradores. Aparecía escrita a mano,
+  # con sus cinco roles, en tres controllers distintos —el autocomplete de
+  # clientes, el cotizador de flete y las acciones sobre el tracking de un
+  # paquete—. Son las herramientas compartidas de los dos mostradores, no una
+  # sección de nadie.
+  ROLES_OPERATIVOS = (Manifiesto::ROLES_DE_MIAMI + ROLES_DE_HONDURAS).freeze
+
   # C21-02 · Los que le ponen al manifiesto lo que Miami no puede: la guía del
   # proveedor y la fecha de recibido en Honduras.
   #
@@ -82,6 +89,13 @@ module Authorization
     # lado entra a lo suyo por su puerta.
     when :guias_aduana
       role.in?(ROLES_DE_SAN_PEDRO)
+    # Las herramientas compartidas de los dos mostradores: buscar un cliente,
+    # cotizar un flete, tocar el tracking de un paquete. No es una pantalla del
+    # menú, pero sí una llave: `RP-58` necesita que **todo** chequeo de rol pase
+    # por acá, o una pantalla de permisos diría que se puede algo que el
+    # controller después niega.
+    when :operacion
+      role.in?(ROLES_OPERATIVOS)
     when :caja, :ventas, :recibos
       role.in?(%w[supervisor_caja cajero])
     when :notas_debito
@@ -92,8 +106,6 @@ module Authorization
       role.in?(%w[supervisor_caja supervisor_prefactura cajero])
     when :financiamientos
       role.in?(%w[supervisor_caja cajero])
-    when :empresa_settings
-      false
     when :entregas
       role.in?(%w[entrega_despacho supervisor_caja])
     when :clientes, :pre_alertas, :paquetes
@@ -112,7 +124,16 @@ module Authorization
     # **Manal y Vanesa**, que *"tienen todos los poderes en el sistema"* y en
     # el sistema **son admin**. Michelle, que era el nombre en esa cita, está
     # dos niveles abajo y ya se dijo que no carga catálogos.
-    when :usuarios, :configuraciones, :reportes, :empleados, :catalogos_manifiesto
+    # Configuración: admin y nadie más. Van **una llave por pantalla** y no una
+    # sola para todas, porque así es como se ven en el menú y así es como Yusef
+    # va a querer prenderlas y apagarlas: *"quitale a este título de caja que no
+    # puedan hacer esto"*. Todas contestan `false` y el admin entra por el
+    # cortocircuito de arriba.
+    when :usuarios, :configuraciones, :reportes, :empleados, :catalogos_manifiesto,
+         :empresa_settings, :sucursales, :tarifas_recolecta, :servicios_extra,
+         :servicios, :proveedores, :motivos_retencion, :motivos_envio_politica,
+         :plantillas_notas_cliente, :plantillas_descripcion, :categoria_precios,
+         :tasa_cambio, :ajustes_etiqueta
       false
     when :marketing
       # PR-13.c: el supervisor de SAC ve lo mismo que su equipo. Autorizar

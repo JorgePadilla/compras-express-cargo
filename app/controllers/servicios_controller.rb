@@ -7,7 +7,7 @@
 # Se llama /servicios y no /tarifas porque para el negocio la unidad mental es
 # el servicio (EXPRESS, CER, CEM…) y las tarifas son sus filas.
 class ServiciosController < ApplicationController
-  before_action :require_admin
+  before_action :solo_admin
   before_action :set_tarifa, only: %i[edit update destroy]
 
   def index
@@ -67,9 +67,6 @@ class ServiciosController < ApplicationController
 
   private
 
-  def require_admin
-    redirect_to(root_path, alert: "Solo admin.") unless admin?
-  end
 
   # PR-10.g: con los precios reales cargados esto pasó de 20 filas a ~60, y el
   # orden por id dejaba el precio de lista hasta abajo (en Postgres los NULL
@@ -153,5 +150,11 @@ class ServiciosController < ApplicationController
       # no una opcion del formulario. La columna tiene default 0.5 y NOT NULL.
       :activo, :notas
     )
+  end
+  # `RP-58` · Va por `can_access?` y no por `require_admin`: toda regla de rol
+  # tiene que pasar por el mismo lugar, o una pantalla de permisos diría que se
+  # puede algo que este controller después niega.
+  def solo_admin
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:servicios)
   end
 end

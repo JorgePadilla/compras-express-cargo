@@ -781,7 +781,7 @@ end
   end
 
   def authorize_etiquetar
-    require_role(:supervisor_miami, :digitador_miami)
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:etiquetar)
   end
 
   # Tipo de envío activo del lote (puede ser nil → la vista muestra el prompt).

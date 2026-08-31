@@ -61,7 +61,11 @@ class SucursalesController < ApplicationController
       return
     end
 
-    return if Current.user.admin?
+    # `RP-58` · Por `can_access?` y no por `admin?` a secas: toda regla de rol
+    # tiene que pasar por el mismo lugar, o una pantalla de permisos diría que
+    # se puede algo que este controller después niega. La llave contesta
+    # `false` y el admin entra por el cortocircuito.
+    return if can_access?(:sucursales)
 
     # 403-equivalente: redirige con alert y aborta la accion.
     redirect_to root_path, alert: "Solo administradores pueden gestionar sucursales."

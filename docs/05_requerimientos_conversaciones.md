@@ -8257,8 +8257,57 @@ sería que todos pasen por una llave de `can_access?` primero — que es la
 dirección en la que `PR-M10` ya empujó al darle llave propia a
 `:catalogos_manifiesto` y derivar las listas en vez de escribirlas.
 
-**No se construye todavía.** Queda como `RP-58` porque hay que elegir entre las
-dos formas —o las dos— antes de tocar 81 lugares.
+**La decisión, 2026-08-31.** Jorge eligió **la tabla de permisos, en dos pasos**,
+y descartó «varios roles por persona» como sustituto: eso resuelve el caso de
+Michelle —Sub-Jefa de Caja **y** SAC— pero **no** es lo que pidió Yusef, que fue
+poder *quitarle* cosas a un puesto.
+
+### Paso 0 — una sola fuente de verdad ✅ **HECHO**
+
+Antes de cualquier pantalla había que juntar las reglas: **27 chequeos de rol
+vivían escritos a mano en los controllers**, fuera de `can_access?`. Una pantalla
+que solo leyera la tabla habría dicho que un rol puede algo que el controller le
+niega.
+
+Se separaron en dos clases, que no son lo mismo:
+
+| Clase | Qué pregunta | Dónde vive |
+|---|---|---|
+| **De sección** | *¿entrás a esta pantalla?* | `can_access?`, que es lo que la pantalla de permisos va a leer |
+| **De acción** | *adentro, ¿podés hacer esto?* — editar un cliente, cambiarle el estado a un paquete, borrarlo, crear una tarea | En código, pero **siempre contra una constante con nombre** |
+
+Lo que cambió:
+
+- Las **14 pantallas de Configuración** estrenan una llave cada una, y no una
+  sola para todas: así se ven en el menú y así las va a querer prender y apagar.
+- **`ROLES_OPERATIVOS`** (Miami + Honduras) sale a la luz: los mismos cinco roles
+  estaban copiados a mano en tres controllers — el autocomplete de clientes, el
+  cotizador de flete y las acciones sobre el tracking. Son las herramientas
+  compartidas de los dos mostradores, y ahora tienen llave: `:operacion`.
+- **Doce métodos `require_admin` muertos** se borraron: quedaron sin llamador al
+  pasar todo por `can_access?`.
+- `test/lint/permisos_en_una_sola_fuente_test.rb` traba las dos reglas, y lleva
+  su propio contra-test para no morirse en silencio si el regex deja de
+  enganchar.
+
+**Ojo con el cortocircuito de admin**: `can_access?` hace `return true if
+admin?` **antes** de mirar la sección. Eso se queda en código y no baja a la
+tabla — si no, alguien puede dejarse afuera a sí mismo. La pantalla tampoco
+puede dibujarlo como una fila de casillas marcadas, porque no lo es.
+
+### Paso 1 — la tabla y la pantalla ⏳
+
+Tabla `rol × sección` sembrada del `case` actual —misma conducta el día uno— y
+`can_access?` leyéndola. La pantalla va en Configuración, con la forma de la
+matriz que ya se generó. Las 25 llaves son símbolos literales, ninguna
+calculada, así que el conjunto es cerrado y conocido.
+
+### Paso 2 — lo que queda para después ⏳
+
+Varios roles por persona (el caso de Michelle) y el **título del rol editable**,
+que es la otra mitad de lo que pidió Yusef y que convierte los roles en data en
+vez de un enum. Y el segundo escalón: las reglas de acción, que necesitan otra
+forma de tabla — rol × acción, no rol × sección.
 
 ---
 

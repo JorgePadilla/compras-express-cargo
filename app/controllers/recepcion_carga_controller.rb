@@ -75,7 +75,7 @@ class RecepcionCargaController < ApplicationController
 
   # *"Los de prefactura, ellos son los que se encargan de recibir carga."*
   def authorize_recepcion
-    require_role(:supervisor_prefactura, :supervisor_caja, :cajero)
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:recibir_carga)
   end
 
   def set_manifiesto
