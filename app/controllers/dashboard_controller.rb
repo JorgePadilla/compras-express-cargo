@@ -142,21 +142,47 @@ class DashboardController < ApplicationController
     redirect_to cuenta_root_path
   end
 
+  # A dónde mandar a cada rol que no ve el dashboard. En orden: se toma **la
+  # primera que el usuario pueda abrir de verdad**.
+  #
+  # `RP-58` · Antes era un `case` que mandaba al cajero a `/caja` y listo. Con la
+  # pantalla de permisos eso se volvió un **bucle de redirecciones**: si un admin
+  # le quita Caja Diaria al cajero, `/` lo manda a `/caja`, `/caja` lo devuelve a
+  # `/`, y el navegador corta con ERR_TOO_MANY_REDIRECTS. El usuario queda sin
+  # puerta de entrada y sin explicación.
+  #
+  # Apareció en el QA del paso 1, quitándole Caja al cajero — que es exactamente
+  # lo primero que alguien va a probar en esa pantalla.
+  DESTINOS_POR_ROL = {
+    "cajero"           => %i[caja pre_facturas paquetes],
+    "digitador_miami"  => %i[etiquetar entrega_personal paquetes],
+    "entrega_despacho" => %i[entregas paquetes],
+    "sac"              => %i[paquetes clientes]
+  }.freeze
+
+  RUTAS = {
+    caja: :caja_path, pre_facturas: :pre_facturas_path, paquetes: :paquetes_path,
+    etiquetar: :etiquetar_path, entrega_personal: :new_entrega_personal_path,
+    entregas: :entregas_path, clientes: :clientes_path
+  }.freeze
+
   # Requiere que el usuario autenticado tenga un rol con acceso al dashboard
-  # admin (admin + supervisores). Otros roles son redirigidos a su sección
-  # apropiada.
+  # admin (admin + supervisores). Otros roles van a su sección apropiada.
   def require_dashboard_access
     return if Current.user&.admin?
     return if DASHBOARD_ROLES.include?(Current.user&.rol)
 
-    fallback = case Current.user&.rol
-    when "cajero"           then caja_path
-    when "digitador_miami"  then etiquetar_path
-    when "entrega_despacho" then entregas_path
-    when "sac"              then paquetes_path
-    else new_session_path
-    end
+    destino = primera_seccion_alcanzable
+    return render("dashboard/sin_accesos", status: :forbidden) if destino.nil?
 
-    redirect_to fallback, alert: "No tienes permiso para acceder al dashboard."
+    redirect_to destino, alert: "No tienes permiso para acceder al dashboard."
+  end
+
+  # `nil` si no puede abrir ninguna. **No se redirige a ningún lado en ese
+  # caso**: se le dice qué pasa. Un redirect sin destino posible es el bucle.
+  def primera_seccion_alcanzable
+    llaves = DESTINOS_POR_ROL[Current.user&.rol] || []
+    llave = llaves.find { |k| can_access?(k) }
+    llave && send(RUTAS.fetch(llave))
   end
 end

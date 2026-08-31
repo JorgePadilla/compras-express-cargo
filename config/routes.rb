@@ -199,6 +199,10 @@ Rails.application.routes.draw do
   # editara campos de Miami que el controller después descartaba en silencio.
   resources :guias_aduana, only: %i[index edit update], path: "guias-y-aduana"
 
+  # `RP-58` · La pantalla donde se mueve el mapa de permisos. Singular porque es
+  # una sola grilla que se guarda de un tiro, no un CRUD de filas.
+  resource :permisos, only: %i[show update], controller: "permisos"
+
   resources :recepcion_carga, only: %i[index show], path: "recibir-carga" do
     member do
       post :escanear

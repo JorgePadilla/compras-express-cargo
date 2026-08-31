@@ -37,6 +37,27 @@ class PermisosEnUnaSolaFuenteTest < ActiveSupport::TestCase
   LISTA_SUELTA = /\brequire_role\(\s*:|\brequire_admin\b/
   CON_CONSTANTE = /[A-Z][A-Z0-9_]*_ROLES\b/
 
+  # Las llaves que el `case` de `PermisosDelSistema.politica` realmente decide.
+  # Se leen del archivo y no del objeto porque un `case` no se puede introspectar
+  # — y leerlo es lo que hace que el lint note cuando alguien agrega un `when`.
+  def llaves_del_case
+    fuente = File.read(Rails.root.join("app/models/permisos_del_sistema.rb"))
+    cuerpo = fuente[fuente.index("def politica")..fuente.index("\n  def editable?")]
+
+    llaves, en_when = Set.new, false
+    cuerpo.each_line do |linea|
+      limpia = linea.split("#").first.to_s
+      # Una línea que era solo comentario no corta el `when`: las llaves de
+      # Configuración vienen con una explicación en el medio de la lista.
+      next if limpia.strip.empty?
+
+      en_when = true if limpia.match?(/^\s*when /)
+      llaves.merge(limpia.scan(/:([a-z_]+)/).flatten) if en_when
+      en_when = false unless limpia.rstrip.end_with?(",") || limpia.match?(/^\s*when /)
+    end
+    llaves
+  end
+
   def lineas_de_permiso
     Dir.glob(CONTROLLERS.join("**/*.rb")).sort.flat_map do |archivo|
       next [] if archivo.end_with?("concerns/authorization.rb")
@@ -77,6 +98,27 @@ class PermisosEnUnaSolaFuenteTest < ActiveSupport::TestCase
     assert_includes con_constante.map { |l| l[:archivo] },
                     "app/controllers/tareas_controller.rb",
                     "las tres de tareas son el ejemplo canónico"
+  end
+
+  # `RP-58` paso 1 · El registro y el código no se pueden separar, en **ninguna**
+  # de las dos direcciones:
+  #
+  #   · una llave en el registro que el código no conoce → cae en el `else`,
+  #     contesta siempre `false`, y la fila de la pantalla queda muerta;
+  #   · una llave en el código que el registro no tiene → **desaparece de la
+  #     pantalla**, y nadie se entera hasta que alguien pregunta por qué no
+  #     puede prender algo que ve en el menú.
+  #
+  # La segunda es la peligrosa, porque no rompe nada: simplemente esa sección
+  # deja de poder moverse.
+  test "el registro de secciones y la política del código dicen lo mismo" do
+    del_codigo = llaves_del_case
+    del_registro = SeccionesDelSistema::TODAS.keys.map(&:to_s).to_set
+
+    assert_empty del_registro - del_codigo,
+                 "están en SeccionesDelSistema y el código no las conoce: caen en el `else`"
+    assert_empty del_codigo - del_registro,
+                 "el código las decide y no salen en la pantalla de permisos"
   end
 
   # Una llave inventada cae en el `else` y devuelve `false`: la pantalla quedaría

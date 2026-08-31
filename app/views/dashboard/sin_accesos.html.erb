@@ -1,0 +1,23 @@
+<%# `RP-58` · El usuario quedó sin ninguna sección habilitada.
+
+    Antes esto era un bucle de redirecciones —`/` mandaba a `/caja`, `/caja`
+    devolvía a `/`— y el navegador cortaba con un error que no explica nada.
+    Es mejor decirle qué pasó y a quién pedírselo. %>
+<div class="max-w-lg mx-auto mt-16 text-center">
+  <div class="mx-auto w-14 h-14 rounded-2xl bg-cec-gold/15 flex items-center justify-center mb-4">
+    <%= heroicon "lock-closed", variant: :outline,
+          options: { class: "w-7 h-7 text-cec-gold", disable_default_class: true } %>
+  </div>
+  <h1 class="text-xl font-bold text-cec-navy dark:text-cec-gold">Tu usuario no tiene secciones habilitadas</h1>
+  <p class="text-sm text-gray-600 dark:text-gray-300 mt-2">
+    Pedile a un administrador que te habilite lo que necesitás desde
+    <span class="font-medium">Configuración → Permisos por rol</span>.
+  </p>
+  <p class="text-xs text-gray-500 dark:text-gray-400 mt-4">
+    Tu puesto es <span class="font-mono"><%= Current.user&.rol&.tr("_", " ") %></span>.
+  </p>
+  <div class="mt-6">
+    <%= render ButtonComponent.new(variant: :secondary, href: session_path,
+          method: :delete, icon: "arrow-left-on-rectangle") do %>Cerrar sesión<% end %>
+  </div>
+</div>

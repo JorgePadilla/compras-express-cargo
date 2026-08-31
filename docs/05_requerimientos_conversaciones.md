@@ -8295,12 +8295,43 @@ admin?` **antes** de mirar la sección. Eso se queda en código y no baja a la
 tabla — si no, alguien puede dejarse afuera a sí mismo. La pantalla tampoco
 puede dibujarlo como una fila de casillas marcadas, porque no lo es.
 
-### Paso 1 — la tabla y la pantalla ⏳
+### Paso 1 — la tabla y la pantalla ✅ **HECHO**
 
-Tabla `rol × sección` sembrada del `case` actual —misma conducta el día uno— y
-`can_access?` leyéndola. La pantalla va en Configuración, con la forma de la
-matriz que ya se generó. Las 25 llaves son símbolos literales, ninguna
-calculada, así que el conjunto es cerrado y conocido.
+`/permisos`, en Configuración: la grilla de 8 roles × 39 secciones, agrupada
+como el menú, y un solo Guardar.
+
+**Guarda solo las excepciones, no la matriz entera.** El plan decía «sembrada
+del `case`»; al construirlo quedó claro que es peor. Con **cero filas la
+conducta es idéntica por construcción** —verificado: matriz igual, cero filas—,
+no hace falta migración de datos que la mantenga, y evita que cambiar la
+política en el código no cambie nada **en silencio** porque cada celda tendría
+su fila pisándola. La celda que nadie tocó sigue al código para siempre; borrar
+una fila es el «deshacer».
+
+**Tres capas, en orden:** admin (cortocircuito, nunca baja a la base) → la
+excepción → el código (`PermisosDelSistema.politica`, que salió del controller a
+una función pura para que la pantalla pueda mostrar el default de cada celda).
+
+**Lo que no se puede mover:** `:permisos` y `:usuarios`. Concederle la primera a
+un rol le deja darse todo lo demás en el siguiente clic; la segunda es el mismo
+agujero por la puerta de al lado — quien administra usuarios se pone `admin`.
+
+**Dos cosas que aparecieron construyendo, y que la pantalla hace posibles:**
+
+1. **Un rol sin ninguna casilla tildada era indistinguible de «no vino en el
+   formulario»**, y el servicio le borraba todos los accesos en vez de
+   negárselos. Va con un marcador oculto por columna — el mismo truco del hidden
+   que Rails pone antes de cada checkbox.
+2. **El bucle de redirecciones.** Quitarle Caja Diaria al cajero —lo primero que
+   alguien va a probar— dejaba `/` mandando a `/caja` y `/caja` devolviendo a
+   `/`: ERR_TOO_MANY_REDIRECTS, sin puerta de entrada y sin explicación. Ahora el
+   dashboard busca **la primera sección que el usuario pueda abrir de verdad**, y
+   si no hay ninguna le dice qué pasa y a quién pedírselo, en vez de redirigirlo
+   a la nada.
+
+Las dos garantías van en tests ejecutables: una fila que le niegue algo al admin
+no valida —y metida por SQL tampoco hace nada—, y `:permisos`/`:usuarios` no se
+pueden conceder.
 
 ### Paso 2 — lo que queda para después ⏳
 

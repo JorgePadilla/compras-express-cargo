@@ -93,6 +93,9 @@
   <% if admin? %>
     <%= sidebar_section "Configuracion" do %>
       <%= sidebar_link "Usuarios", users_path, icon: "user-group" %>
+      <%# `RP-58` · Qué pantalla ve cada puesto. Va junto a Usuarios: uno dice
+          quién es cada quien y el otro qué puede. %>
+      <%= sidebar_link "Permisos por rol", permisos_path, icon: "lock-closed" %>
       <%= sidebar_link "Sucursales", sucursales_path, icon: "building-storefront" %>
       <%# C21-08 · El portal de catálogos del manifiesto —empresas
           transportadoras, tipos de envío del proveedor, consignatarios y
