@@ -121,29 +121,50 @@ jobs:
               -w '%{http_code}'
           }
 
-          CODIGO=$(pedir_review || true)
-          if [ -z "$CODIGO" ]; then CODIGO="000"; fi
+          # Se reintenta lo que de verdad puede salir distinto la próxima vez:
+          #   · 429 por ritmo — el free tier se agota solo cuando caen tres PR
+          #     seguidos, y la API dice cuánto esperar en `RetryInfo`.
+          #   · 503 "high demand" y 5xx — el propio Gemini contesta "try again
+          #     later"; es el modo de falla que salió en `PR-389`.
+          #   · 000 — curl ni llegó (corte de red).
+          # No se reintenta la cuota **diaria** (`quotaId` dice `…PerDay…`) ni un
+          # 4xx de credencial o request mal armado: ahí insistir solo gasta
+          # minutos para fallar igual.
+          INTENTOS=0
+          MAXIMO=3
+          while :; do
+            CODIGO=$(pedir_review || true)
+            if [ -z "$CODIGO" ]; then CODIGO="000"; fi
+            INTENTOS=$((INTENTOS + 1))
 
-          # El free tier tiene dos cuotas: una por ritmo y una por día. La de
-          # ritmo se agota sola cuando caen tres PR seguidos, y la API dice
-          # cuánto esperar — esa sí se reintenta. La diaria no: reintentar solo
-          # gasta un minuto para fallar igual.
-          if [ "$CODIGO" = "429" ]; then
-            CUOTAS=$(jq -r '[.error.details[]?.violations[]?.quotaId // empty] | join(",")' /tmp/response.json 2>/dev/null || true)
-            if printf '%s' "$CUOTAS" | grep -q "PerDay"; then
-              echo "::warning::Cuota diaria de Gemini agotada; reintentar no sirve."
-            else
-              ESPERA=$(jq -r '[.error.details[]? | select((."@type" // "") | test("RetryInfo")) | .retryDelay // empty] | first // "30s"' /tmp/response.json 2>/dev/null || echo "30s")
-              ESPERA=${ESPERA%s}
-              ESPERA=${ESPERA%.*}
-              case "$ESPERA" in ""|*[!0-9]*) ESPERA=30 ;; esac
-              if [ "$ESPERA" -gt 120 ]; then ESPERA=120; fi
-              echo "::warning::Gemini respondió 429 por cuota de ritmo. Reintento en $((ESPERA + 2))s."
-              sleep $((ESPERA + 2))
-              CODIGO=$(pedir_review || true)
-              if [ -z "$CODIGO" ]; then CODIGO="000"; fi
-            fi
-          fi
+            if [ "$CODIGO" = "200" ]; then break; fi
+            if [ "$INTENTOS" -ge "$MAXIMO" ]; then break; fi
+
+            ESPERA=0
+            case "$CODIGO" in
+              429)
+                CUOTAS=$(jq -r '[.error.details[]?.violations[]?.quotaId // empty] | join(",")' /tmp/response.json 2>/dev/null || true)
+                if printf '%s' "$CUOTAS" | grep -q "PerDay"; then
+                  echo "::warning::Cuota diaria de Gemini agotada; reintentar no sirve."
+                  break
+                fi
+                ESPERA=$(jq -r '[.error.details[]? | select((."@type" // "") | test("RetryInfo")) | .retryDelay // empty] | first // "30s"' /tmp/response.json 2>/dev/null || echo "30s")
+                ESPERA=${ESPERA%s}
+                ESPERA=${ESPERA%.*}
+                ;;
+              000|500|502|503|504)
+                ESPERA=$((INTENTOS * 15))
+                ;;
+              *)
+                break
+                ;;
+            esac
+
+            case "$ESPERA" in ""|*[!0-9]*) ESPERA=15 ;; esac
+            if [ "$ESPERA" -gt 120 ]; then ESPERA=120; fi
+            echo "::warning::Gemini respondió ${CODIGO}. Reintento ${INTENTOS}/$((MAXIMO - 1)) en $((ESPERA + 2))s."
+            sleep $((ESPERA + 2))
+          done
 
           REVIEW=$(jq -r '.candidates[0].content.parts[0].text // empty' /tmp/response.json 2>/dev/null || true)
           FIN=$(jq -r '.candidates[0].finishReason // empty' /tmp/response.json 2>/dev/null || true)
@@ -173,10 +194,19 @@ jobs:
             echo "- **HTTP:** \`${CODIGO}\`"
             echo "- **Motivo:** ${MOTIVO}"
             echo ""
-            echo "Si es la cuota diaria del free tier no hay nada que arreglar en el"
-            echo "código: se espera al reset, o se activa billing y se sube"
-            echo "\`GEMINI_MODEL\`. **El merge no está bloqueado** — el único check"
-            echo "requerido en \`staging\` es \`Tests\`."
+            echo "- **Intentos:** ${INTENTOS}"
+            echo ""
+            case "$CODIGO" in
+              429) echo "Es cuota del free tier: se espera al reset, o se activa billing y se" ;
+                   echo "sube \`GEMINI_MODEL\`. No hay nada que arreglar en el código." ;;
+              5*|000) echo "Es un problema del lado de Gemini o de la red, no del PR. Con" ;
+                      echo "**Re-run jobs** suele alcanzar." ;;
+              *) echo "Un 4xx no se arregla reintentando: revisar \`GEMINI_API_KEY\` y el" ;
+                 echo "modelo configurado en \`GEMINI_MODEL\`." ;;
+            esac
+            echo ""
+            echo "**El merge no está bloqueado** — el único check requerido en"
+            echo "\`staging\` es \`Tests\`."
           } > /tmp/review.txt
           echo "estado=fallo" >> "$GITHUB_OUTPUT"
           echo "::error::Gemini no generó review (HTTP ${CODIGO}): ${MOTIVO}"
