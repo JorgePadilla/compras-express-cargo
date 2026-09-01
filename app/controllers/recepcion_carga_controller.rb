@@ -27,6 +27,13 @@ class RecepcionCargaController < ApplicationController
   end
 
   def show
+    # `A7-08` · El interno se cuadra **paquete por paquete**: no lleva casas.
+    if @manifiesto.tipo_interno?
+      @pendientes = servicio.paquetes_pendientes.includes(:cliente).to_a
+      @recibidos = @manifiesto.paquetes.where(estado: "disponible_entrega").includes(:cliente).to_a
+      return
+    end
+
     @cajas = @manifiesto.cajas.ordenadas
     # C21-01 · Los que viajaron sin caja, del camino sin escaneo. Sin esto la
     # pantalla decía «0 de 0 recibidas» sobre un manifiesto lleno de paquetes.
@@ -36,6 +43,8 @@ class RecepcionCargaController < ApplicationController
   # Se escanean **cajas, no paquetes** (`A7-06`): *"escanearon cada caja, cada
   # etiqueta de manifiesto. No escanean los paquetes, solo escanean las cajas"*.
   def escanear
+    return escanear_paquete if @manifiesto.tipo_interno?
+
     codigo = params[:codigo].to_s.strip
     caja = @manifiesto.cajas.find_by("UPPER(codigo) = ?", codigo.upcase)
 
@@ -58,20 +67,58 @@ class RecepcionCargaController < ApplicationController
     resultado = servicio.finalizar!(con_faltantes: params[:con_faltantes].present?)
 
     if resultado.faltantes.any? && params[:con_faltantes].blank?
-      faltan = resultado.faltantes.map(&:letra).join(", ")
-      redirect_to recepcion_carga_path(@manifiesto),
-                  alert: "Faltan #{resultado.faltantes.size} de #{@manifiesto.cajas.size}: caja(s) #{faltan}. " \
-                         "Podés seguir escaneando, o marcarlo recibido con las pendientes."
+      redirect_to recepcion_carga_path(@manifiesto), alert: aviso_de_faltantes(resultado)
       return
     end
 
-    ManifiestoMailer.cajas_faltantes(@manifiesto, resultado.faltantes).deliver_later if resultado.faltantes.any?
+    # `A7-06` · El correo es del **internacional**: *"si falta una caja, manda un
+    # correo al correo tal"*. En el interno el faltante no se pierde de vista —
+    # se queda en `enviado_sucursal`, que es el señalamiento que pidió `A7-09`.
+    if resultado.faltantes.any? && @manifiesto.tipo_oficial?
+      ManifiestoMailer.cajas_faltantes(@manifiesto, resultado.faltantes).deliver_later
+    end
 
     redirect_to recepcion_carga_index_path,
                 notice: "#{@manifiesto.numero} recibido#{" con #{resultado.faltantes.size} caja(s) pendiente(s)" if resultado.faltantes.any?}."
   end
 
   private
+
+  # `A7-08` · En el interno la pistola lee el **paquete**, no la caja. Acepta el
+  # tracking o el número de recepción, que es lo que la etiqueta lleva impreso.
+  def escanear_paquete
+    codigo = params[:codigo].to_s.strip
+    paquete = @manifiesto.paquetes.buscar(codigo).first
+
+    if paquete.nil?
+      return render json: { resultado: "no_es_de_aqui",
+                            mensaje: "«#{codigo}» no viene en #{@manifiesto.numero}." }
+    end
+
+    unless paquete.estado == "enviado_sucursal"
+      return render json: { resultado: "ya_recibida",
+                            mensaje: "#{paquete.tracking} ya estaba recibido." }
+    end
+
+    servicio.recibir_paquete!(paquete)
+    render json: { resultado: "ok", paquete_id: paquete.id, tracking: paquete.tracking,
+                   mensaje: "#{paquete.tracking} recibido en #{@manifiesto.sucursal_entrega&.nombre}.",
+                   faltan: servicio.paquetes_pendientes.count }
+  end
+
+  # El faltante se cuenta en su propia unidad: cajas en el oficial, paquetes en
+  # el interno. Con el texto de cajas, el interno decía «faltan 3 cajas» sobre un
+  # manifiesto que no tiene ninguna.
+  def aviso_de_faltantes(resultado)
+    if @manifiesto.tipo_interno?
+      "Faltan #{resultado.faltantes.size} de #{@manifiesto.paquetes.size} paquete(s). " \
+        "Podés seguir escaneando, o cerrarlo y dejarlos señalados como pendientes."
+    else
+      faltan = resultado.faltantes.map(&:letra).join(", ")
+      "Faltan #{resultado.faltantes.size} de #{@manifiesto.cajas.size}: caja(s) #{faltan}. " \
+        "Podés seguir escaneando, o marcarlo recibido con las pendientes."
+    end
+  end
 
   # *"Los de prefactura, ellos son los que se encargan de recibir carga."*
   def authorize_recepcion

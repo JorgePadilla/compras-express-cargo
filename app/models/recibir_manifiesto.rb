@@ -33,6 +33,32 @@ class RecibirManifiesto
     end
   end
 
+  # `A7-08` · En el **interno** se escanean paquetes, no cajas.
+  #
+  # Yusef, describiendo lo que ya hacen: *"yo veo que escanean el manifiesto y
+  # empiezan a **escanear paquete por paquete** para cuadrar el manifiesto"*. El
+  # interno lleva carga suelta, no casas armadas.
+  #
+  # «Escaneado» no necesita columna nueva: el paquete **se mueve al escanearlo**,
+  # igual que en el oficial una caja mueve a los suyos en el acto. Lo que no se
+  # escaneó se reconoce solo, porque sigue en `enviado_sucursal`.
+  #
+  # Y a dónde va: `disponible_entrega` **en la sucursal destino**. La carga llegó
+  # a donde el cliente la retira, que es lo que `A7-13` pide que se le muestre —
+  # *"Disponible en sucursal Tegucigalpa"*.
+  def recibir_paquete!(paquete)
+    Paquete.transaction do
+      paquete.update!(estado: "disponible_entrega",
+                      sucursal_actual: @manifiesto.sucursal_entrega)
+      @manifiesto.update!(estado: "en_aduana") if @manifiesto.enviado?
+    end
+  end
+
+  # Los que el manifiesto interno trajo y todavía nadie escaneó.
+  def paquetes_pendientes
+    @manifiesto.paquetes.where(estado: "enviado_sucursal")
+  end
+
   # «Terminar la recepción», con o sin faltantes. Marca lo que falta y cierra.
   #
   # C21-01 · **Al cerrar se barre el manifiesto entero, no solo las cajas.**
@@ -51,6 +77,8 @@ class RecibirManifiesto
   # Peor que un hueco: quedaba **inconsistente y callado**, con el manifiesto
   # diciendo una cosa y sus paquetes otra.
   def finalizar!(con_faltantes: false)
+    return finalizar_interno!(con_faltantes: con_faltantes) if @manifiesto.tipo_interno?
+
     faltantes = @manifiesto.cajas.where(recibida_at: nil).to_a
     return Resultado.new(recibidas: recibidas, faltantes: faltantes, paquetes: 0) if faltantes.any? && !con_faltantes
 
@@ -64,6 +92,30 @@ class RecibirManifiesto
     end
 
     Resultado.new(recibidas: recibidas, faltantes: faltantes, paquetes: paquetes)
+  end
+
+  # `A7-09` · Cerrar el **interno**, y acá hay una diferencia de fondo con el
+  # oficial que vale escribir, porque la forma obvia sería copiarlo y estaría mal.
+  #
+  # El oficial, al cerrar «con faltantes», **mueve igual todos** los paquetes a
+  # aduana: la caja que no apareció ya está perdida y no cerrar no la trae.
+  #
+  # En el interno **el que no se escaneó se queda en `enviado_sucursal`**, y eso
+  # es justamente el producto: *"¿por qué va a servir ese status nuevo? Porque
+  # esto sirve de auditoría. Qué paquete no escanearon o no enviaron… ey, este
+  # sale pendiente, hay que buscarlo"* (`A7-09`).
+  #
+  # Marcarlo `disponible_entrega` sería **decirle al cliente que venga a retirar
+  # algo que no llegó**. El manifiesto se cierra; el paquete queda señalado.
+  def finalizar_interno!(con_faltantes: false)
+    faltantes = paquetes_pendientes.to_a
+    return Resultado.new(recibidas: [], faltantes: faltantes, paquetes: 0) if faltantes.any? && !con_faltantes
+
+    recibidos = @manifiesto.paquetes.where(estado: "disponible_entrega").count
+
+    @manifiesto.update!(estado: "recibido", recepcion_finalizada_at: Time.current)
+
+    Resultado.new(recibidas: [], faltantes: faltantes, paquetes: recibidos)
   end
 
   # Los que viajaron sin caja: el camino sin escaneo. Se cuentan aparte para que
