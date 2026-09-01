@@ -149,18 +149,53 @@ class User < ApplicationRecord
     "entrega_despacho" => { label: "Entrega y Despacho", descripcion: "Gestiona entregas finales de paquetes al cliente en Honduras." }
   }.freeze
 
+  # `RP-58` paso 2b · **El único lugar donde se resuelve cómo se lee un rol.**
+  #
+  # La cadena es: lo que alguien renombró desde `/roles` → lo que trae el código
+  # → el código del rol humanizado. Todo lo que muestre un rol pasa por acá; si
+  # algo lo esquivara, renombrar dejaría la mitad de las pantallas diciendo el
+  # nombre viejo — que es la forma en que este repo se lastima.
+  #
+  # La bitácora sale gratis: `paper_trail` guarda **códigos**, así que una
+  # versión vieja de un rol renombrado se lee con el nombre de hoy, no con uno
+  # que ya nadie reconoce.
+  def self.titulo_de_rol(rol)
+    codigo = rol.to_s
+    TituloDeRol.mapa.dig(codigo, :label).presence ||
+      ROL_DESCRIPTIONS.dig(codigo, :label).presence ||
+      codigo.presence&.humanize
+  end
+
+  def self.descripcion_de_rol(rol)
+    codigo = rol.to_s
+    TituloDeRol.mapa.dig(codigo, :descripcion).presence ||
+      ROL_DESCRIPTIONS.dig(codigo, :descripcion)
+  end
+
+  # Lo que trae el **código**, sin mirar lo renombrado. Lo usa `/roles` para
+  # ofrecer «volver al del sistema» y para no guardar una fila que diga lo mismo.
+  def self.titulo_del_sistema(rol)
+    ROL_DESCRIPTIONS.dig(rol.to_s, :label) || rol.to_s.humanize
+  end
+
+  def self.descripcion_del_sistema(rol)
+    ROL_DESCRIPTIONS.dig(rol.to_s, :descripcion)
+  end
+
   def self.rol_options_for_select
-    ROL_DESCRIPTIONS.map { |key, info| ["#{info[:label]} — #{info[:descripcion]}", key] }
+    # El **value sigue siendo el código**: renombrar cambia lo que se lee, nunca
+    # lo que el formulario manda.
+    rols.keys.map { |key| [ "#{titulo_de_rol(key)} — #{descripcion_de_rol(key)}", key ] }
   end
 
   def rol_label
-    ROL_DESCRIPTIONS.dig(rol, :label) || rol&.humanize
+    User.titulo_de_rol(rol)
   end
 
   # `RP-58` paso 2a · Cómo se lee el puesto completo de alguien con dos roles:
   # «Supervisor Caja + SAC». Lo usan las pantallas que muestran el puesto.
   def roles_label
-    roles.map { |r| ROL_DESCRIPTIONS.dig(r, :label) || r.humanize }.join(" + ")
+    roles.map { |r| User.titulo_de_rol(r) }.join(" + ")
   end
 
   # Los adicionales que se pueden elegir en el formulario: todos menos `admin`

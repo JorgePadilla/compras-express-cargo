@@ -7,6 +7,10 @@ class Current < ActiveSupport::CurrentAttributes
   # por llamada. `CurrentAttributes` se limpia solo entre requests.
   attribute :permisos
 
+  # `RP-58` paso 2b · Los títulos renombrados, por la misma razón: `rol_label` se
+  # llama por fila en los listados, y una consulta por llamada sería absurda.
+  attribute :titulos
+
   delegate :user, to: :session, allow_nil: true
   delegate :cliente, to: :cliente_session, allow_nil: true
 end

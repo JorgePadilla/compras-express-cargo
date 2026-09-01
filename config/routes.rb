@@ -203,6 +203,12 @@ Rails.application.routes.draw do
   # una sola grilla que se guarda de un tiro, no un CRUD de filas.
   resource :permisos, only: %i[show update], controller: "permisos"
 
+  # `RP-58` paso 2b · Cómo se lee cada rol. Singular y sin `new`/`destroy` a
+  # propósito: los roles **no se crean ni se borran** —sus códigos viven en el
+  # enum, en `PermisosDelSistema.politica` y en las constantes `*_ROLES`—, acá
+  # solo se renombran los nueve que hay.
+  resource :roles, only: %i[show update], controller: "roles"
+
   resources :recepcion_carga, only: %i[index show], path: "recibir-carga" do
     member do
       post :escanear

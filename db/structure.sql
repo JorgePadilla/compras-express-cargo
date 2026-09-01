@@ -2782,6 +2782,39 @@ ALTER SEQUENCE public.tipo_envios_id_seq OWNED BY public.tipo_envios.id;
 
 
 --
+-- Name: titulos_de_rol; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.titulos_de_rol (
+    id bigint NOT NULL,
+    rol character varying NOT NULL,
+    titulo character varying NOT NULL,
+    descripcion character varying,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: titulos_de_rol_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.titulos_de_rol_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: titulos_de_rol_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.titulos_de_rol_id_seq OWNED BY public.titulos_de_rol.id;
+
+
+--
 -- Name: users; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3378,6 +3411,13 @@ ALTER TABLE ONLY public.tipo_envios ALTER COLUMN id SET DEFAULT nextval('public.
 
 
 --
+-- Name: titulos_de_rol id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.titulos_de_rol ALTER COLUMN id SET DEFAULT nextval('public.titulos_de_rol_id_seq'::regclass);
+
+
+--
 -- Name: users id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -3970,6 +4010,14 @@ ALTER TABLE ONLY public.tipo_envio_proveedores
 
 ALTER TABLE ONLY public.tipo_envios
     ADD CONSTRAINT tipo_envios_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: titulos_de_rol titulos_de_rol_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.titulos_de_rol
+    ADD CONSTRAINT titulos_de_rol_pkey PRIMARY KEY (id);
 
 
 --
@@ -5586,6 +5634,13 @@ CREATE UNIQUE INDEX index_tipo_envio_proveedores_on_nombre ON public.tipo_envio_
 
 
 --
+-- Name: index_titulos_de_rol_on_rol; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_titulos_de_rol_on_rol ON public.titulos_de_rol USING btree (rol);
+
+
+--
 -- Name: index_users_on_activo; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6834,6 +6889,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260831234500'),
 ('20260831222808'),
 ('20260831210417'),
 ('20260831050354'),

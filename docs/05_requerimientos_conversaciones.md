@@ -8413,15 +8413,49 @@ Tres cosas que aparecieron construyendo:
    ninguno»: los roles se quedaban puestos. Es el mismo agujero que el `Paso 1`
    tuvo que tapar acá al lado, con la misma forma.
 
-### Paso 2b — el título del rol editable ⏳
+### Paso 2b — el título del rol editable ✅ **HECHO**
 
-La otra mitad de lo que pidió Yusef: *"editar el título del rol"*. Convierte el
-nombre del rol en data — hoy sale de `User::ROL_DESCRIPTIONS`, una constante.
+La otra mitad de lo que pidió Yusef: *"editar el título del rol"*. `/roles`, en
+Configuración, al lado de `/permisos` — son las dos cosas que dijo en la misma
+frase.
 
-**Los códigos se quedan en el código.** `ROLES_QUE_ABREN_EL_CANDADO`, el `case`
-de `PermisosDelSistema.politica` y las constantes `*_ROLES` hablan de códigos
-(`supervisor_caja`), no de títulos. Lo que se vuelve editable es **cómo se lee**,
-no qué significa — y por eso el paso 2a no necesitó una tabla de roles.
+**Los códigos se quedan en el código**, y es lo que hace que esto sea chico:
+`ROLES_QUE_ABREN_EL_CANDADO`, el `case` de `PermisosDelSistema.politica` y las
+constantes `*_ROLES` hablan de códigos (`supervisor_caja`), no de títulos. Lo
+editable es **cómo se lee**, no qué significa — por eso no hizo falta una tabla
+de roles, ni acá ni en el paso 2a.
+
+**No es un CRUD, y la diferencia importa.** Los roles **no se crean ni se
+borran**: un rol nuevo hecho desde una pantalla quedaría fuera del enum, del
+`case` de `politica` y de cada constante `*_ROLES` — un rol que ninguna regla del
+sistema conoce. La pantalla renombra los nueve que hay, y hay un test que fija
+que el controller no tenga `new`, `create` ni `destroy`: la puerta no existe.
+
+**Guarda solo lo renombrado**, como `permisos_de_rol` y por lo mismo: con cero
+filas la conducta es idéntica a hoy por construcción, vaciar el campo es «volver
+al nombre del sistema», y un título **igual** al del código no deja fila — si la
+dejara, cambiar el nombre por defecto en el código no se vería nunca, tapado en
+silencio por una fila que dice lo que el código decía el día que se guardó.
+
+**El admin sí aparece acá**, al revés que en `/permisos`. Allá se lo excluye
+porque no se le pueden quitar accesos; cómo se lee su puesto sí es suyo.
+
+**El riesgo era el de siempre: que el nombre nuevo llegara a la mitad de las
+pantallas.** Todo lo que muestra un rol pasa por `User.titulo_de_rol`, un solo
+punto con la cadena *renombrado → código → humanizado*. Al rutear los sitios que
+lo esquivaban aparecieron **dos que mostraban el código crudo**: el encabezado de
+columna de `/permisos` —justo la pantalla que Yusef mira— decía «supervisor
+caja», y la de «no tenés accesos» también. El test recorre las cuatro pantallas
+que lo muestran.
+
+Dos cosas que se dejaron dichas porque se leen mal solas:
+
+- **Renombrar no cambia lo que el puesto puede hacer.** Hay dos tests que lo
+  fijan: la política y quién autoriza siguen resolviéndose por código.
+- **El dropdown sigue mandando el código.** Se lee «Sub-Jefa de Caja» y se
+  guarda `cajero`.
+- **La bitácora sale gratis**: `paper_trail` guarda códigos, así que una versión
+  vieja se lee con el nombre de hoy y no con uno que ya nadie reconoce.
 
 ### El segundo escalón — las reglas de acción ⏳
 
@@ -8437,7 +8471,7 @@ Necesita otra tabla; son ~10 constantes.
 | ~~`RP-53`~~ | **✅ CERRADA por Jorge (2026-08-30): se puebla `Consignatario` y `Agent` se queda como está** para el Warehouse Receipt. Implementado en `PR-M1`. ~~¿Dónde vive el consignatario? El modelo `Consignatario` existe y está **vacío** (sin seeds, sin pantalla, sin asociaciones), y es el nombre semánticamente correcto. Pero «CORPORACION KARSAM» hoy vive en `Agent` —el bloque *Agent* del Warehouse Receipt—, que significa «agente de destino». ¿Se puebla `Consignatario` y se deja `Agent` como está, o son la misma cosa con dos nombres?~~ |
 | ~~`RP-54`~~ | **✅ CERRADA por Yusef (2026-08-30): código QR** — *"habría que instalar la gema necesaria"*, o sea aceptando el costo. **IMPLEMENTADO en `PR-M11`** con `rqrcode`, solo en la 4×6 del bulto: la etiqueta del paquete sigue en Code128, que es lo que leen las pistolas de Miami hoy. ~~El código de la caja: ¿barras o QR? `A7-03` dejó abierto *"un código QR o lo que vos querás"*. El repo solo genera Code128 (`barby`), que es lo que ya leen las pistolas; QR necesitaría gema nueva. Confirmar antes de imprimir 4×6 en producción~~ |
 | ~~`RP-55`~~ | **✅ CERRADA por Jorge (2026-08-30): se borran.** Eran 2 de prueba y no hay producción. Implementado en `PR-M2`. ~~¿Qué se hace con los manifiestos viejos? Jorge lo preguntó derecho. Hoy hay manifiestos numerados `MA-…` (formato legacy) porque la numeración anual nunca corrió. Al despertarla, ¿se renumeran, se dejan conviviendo, o se cierra el formato viejo en una fecha?~~ |
-| `RP-58` | **✅ ELEGIDA por Jorge (2026-08-31): la tabla de permisos, en dos pasos.** **Paso 1 ✅ `PR-388`**: `/permisos` mueve las secciones por rol, guardando **solo las excepciones**. **Paso 2a ✅**: varios roles por persona —el caso de Michelle, que es Caja *y* SAC—; los roles **suman** y las excepciones se resuelven rol por rol, que es donde estaba el bug silencioso. **Paso 2b ⏳**: el título del rol editable, o sea el nombre como dato (los **códigos** se quedan en el código, así que no hace falta una tabla de roles). Y sigue abierto el segundo escalón, que es lo único que ninguna de las dos formas cubre: las reglas de **acción** escritas a mano son otra cosa que la pantalla no toca, y necesitan otra tabla — `rol × acción`. **No son 22**, como decía acá: contadas contra el código son **~10** — `EDIT_ROLES`, `ESTADO_CHANGE_ROLES` y `DELETE_ROLES` en paquetes; `EDICION_ROLES` en clientes; las tres de tareas; y las que viven en modelos (`Manifiesto::ROLES_QUE_ABREN_EL_CANDADO`, `BajarCajasConPin::ROLES`, `QuitarCambioServicio::ROLES`). `require_role` en sí aparece 6 veces. ~~¿Cómo se editan los permisos sin un PR? (`C21-12`) Yusef quiere mover el mapa de roles él —*"editar el título del rol y lo que ellos puedan y no puedan"*—~~ |
+| `RP-58` | **✅ ELEGIDA por Jorge (2026-08-31): la tabla de permisos, en dos pasos.** **Paso 1 ✅ `PR-388`**: `/permisos` mueve las secciones por rol, guardando **solo las excepciones**. **Paso 2a ✅**: varios roles por persona —el caso de Michelle, que es Caja *y* SAC—; los roles **suman** y las excepciones se resuelven rol por rol, que es donde estaba el bug silencioso. **Paso 2b ✅**: `/roles` renombra los nueve puestos —los **códigos** se quedan en el código, así que renombrar no cambia lo que un puesto puede hacer—. Con eso `RP-58` queda **cerrada** salvo el segundo escalón. Y sigue abierto el segundo escalón, que es lo único que ninguna de las dos formas cubre: las reglas de **acción** escritas a mano son otra cosa que la pantalla no toca, y necesitan otra tabla — `rol × acción`. **No son 22**, como decía acá: contadas contra el código son **~10** — `EDIT_ROLES`, `ESTADO_CHANGE_ROLES` y `DELETE_ROLES` en paquetes; `EDICION_ROLES` en clientes; las tres de tareas; y las que viven en modelos (`Manifiesto::ROLES_QUE_ABREN_EL_CANDADO`, `BajarCajasConPin::ROLES`, `QuitarCambioServicio::ROLES`). `require_role` en sí aparece 6 veces. ~~¿Cómo se editan los permisos sin un PR? (`C21-12`) Yusef quiere mover el mapa de roles él —*"editar el título del rol y lo que ellos puedan y no puedan"*—~~ |
 | ~~`RP-56`~~ | **✅ CERRADA por Yusef (2026-08-30): «Recibir carga».** ~~Cómo se llama la pantalla de recepción. Yusef dio tres nombres en la misma frase: *"dar entrada al almacén"*, *"entrada al inventario"* y *"recibir carga"*. Elegir uno antes de que Miami y SPS le pongan cada quien el suyo~~ |
 | `RP-57` | **Retención y peso de la data.** *"Lo mínimo son seis años: cinco para atrás más el año en curso"*, pero *"yo lo que ocupo es el año en curso y un año antes"*. Su idea: *"crear reportes automáticos, cierre anual, cierre mensual… lo mandás al bucket y ahí guarda todos los reportes del año"*. Es una discusión propia, no del manifiesto |
 

@@ -87,7 +87,7 @@
                   user.roles_adicionales_lista.include?(codigo),
                   id: "user_rol_adicional_#{codigo}",
                   class: "mt-0.5 rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-            <span class="text-sm text-gray-700"><%= User::ROL_DESCRIPTIONS.dig(codigo, :label) || codigo.humanize %></span>
+            <span class="text-sm text-gray-700"><%= User.titulo_de_rol(codigo) %></span>
           </label>
         <% end %>
       </div>
