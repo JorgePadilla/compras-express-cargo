@@ -8391,3 +8391,124 @@ forma de tabla — rol × acción, no rol × sección.
   recibir carga — no quedó claro si es un cambio de proceso que quiere o un
   desahogo. **Preguntado el 2026-08-30: era desahogo.** `PR-M7` deja
   `/recibir-carga` autorizada a los roles de pre-factura, como está.
+
+---
+
+## Conversación 22 (2026-08-31) — el limpiar que no limpiaba al actualizar
+
+Audio corto, **2 minutos 7 segundos**, transcrito con `whisper small`. Yusef
+operando `/etiquetar` con Jorge escuchando, y arranca literalmente diciendo que
+lo está grabando para que quede.
+
+Dos cosas salieron, y la segunda salió de la primera.
+
+> ⚠️ **Sobre el transcript.** Audio corto pero con la misma sordina de siempre:
+> se le van palabras. Se cita lo que está limpio y **lo dudoso se marca en vez
+> de completarlo**. Un ejemplo de lo que no se usa: *"ya le te quedo
+> actualizando"*, que es ruido de whisper sobre lo que evidentemente es «ya te
+> queda actualizando».
+
+---
+
+### C22-01 · Al actualizar un paquete, F2 no limpia — ✅ **ARREGLADO**
+
+> "Ya estoy grabando entonces. La sección de etiquetar, en la parte **cuando
+>  vamos a actualizar un paquete, el limpiar no está limpiando**."
+> "Sí, entonces ahorita lo voy a hacer, ¿verdad? Y ya está, le doy a actualizar y
+>  digo no, no me equivoqué, era eso. **F2 se queda.** […] Y se queda esto,
+>  **tiene que limpiar todo**."
+
+Y la excepción, que la puso Jorge y Yusef ratificó en el acto:
+
+> **Jorge:** "¿A excepción de la sesión, verdad?" · **Yusef:** "Sí, excepción
+>  correcto."
+
+**La causa.** En modo actualización el formulario lo renderiza el servidor
+apuntando a `PATCH /etiquetar/:id`. `clearForm` vaciaba los **campos** y no
+tocaba la **acción** del formulario, ni el `_method` (que `_limpiarCampos`
+excluye junto al CSRF), ni el banner amarillo, ni el value `actualizandoId`. El
+formulario quedaba en blanco a la vista y apuntando al paquete anterior por
+dentro: **el siguiente escaneo se guardaba encima de él**.
+
+Lo notable es que el repo ya sabía esto **para el otro camino**. Cuando Jorge
+reportó en agosto que el banner «Actualizando …» no se iba al guardar
+(`C20-04`), el arreglo fue volver a `/etiquetar` con `Turbo.visit`, y el
+comentario que quedó en el código lo explica con todas las letras — *"`clearForm`
+limpia los campos pero no la acción del formulario, así que el paquete siguiente
+que se escaneara se iba a guardar encima del anterior"*. **F2 nunca recibió ese
+tratamiento.** El mismo bug tenía dos salidas y solo una se arregló: es la
+duplicación entre caminos, la misma forma que el bug recurrente entre pantallas
+gemelas.
+
+**Cómo quedó.** F2 —y el botón Limpiar, y «Dejarlo de lado», que comparten
+`clearForm`— vuelve a `/etiquetar` cuando hay un paquete en actualización. La
+sesión sobrevive porque vive en `session[:etiquetar_tipo_envio_id]`, del lado del
+servidor: recargar no la toca, solo la borra «Finalizar sesión». **En modo alta
+no se recarga nada**, que ahí F2 es el atajo del escaneo rápido y una vuelta al
+servidor por limpieza sería un arreglo peor que el bug.
+
+Yusef, sobre por qué esto importa ahora y no después:
+
+> "Yo creería que está bien, hasta que no lo pongamos a trote ahí, no vamos a
+>  saberlo." · "Tiene que quedar **lo más pulidito ahorita**."
+
+---
+
+### C22-02 · Una tecla para finalizar sesión — ✅ **IMPLEMENTADO (F11)**
+
+Salió de lo anterior, sin transición:
+
+> "¿Sabés qué deberíamos de crear? Tal vez **una función para finalizar**."
+> **Jorge:** "Pero ahí está, o finalizar sesión ahorita." · **Yusef:** "No, no,
+>  una función, **un F**."
+> "Tal vez **F11** o algo así, no sé si lo tenés ya agarrado, no creo." · "Ya que
+>  le vas a hacer un cambio, si podés ponerle un F11."
+
+**Con confirmación** — decisión de Jorge, 2026-08-31. La tecla dispara el botón
+que ya existe en vez de pegarle al endpoint, así que hereda su «¿Finalizar la
+sesión de X? Vas a poder elegir otro tipo de envío». El razonamiento: finalizar
+deja al operario eligiendo tipo de envío en medio de un lote, y un roce de tecla
+no puede provocar eso.
+
+**Por qué F11 y no otra.** Jorge pidió *"otro que esté libre pues"* por si el
+navegador se quedaba con la tecla — y al buscarla apareció que casi no quedan:
+`keyboard_shortcuts_controller.js` documenta una convención de todo el sistema
+(F2 limpiar, F4 imprimir, F6 editar, **F7 nuevo**, F8 Excel, F9 PDF, F10
+guardar) y `/etiquetar` además ocupa F3. Contra eso, libres quedaban F1, F5, F11
+y F12: **F12** no se puede interceptar, **F5** es el reflejo de refrescar (sería
+un reflejo que destruye la sesión) y **F1** abre la ayuda del navegador si el
+`preventDefault` no gana. F11 —la que él nombró— era la única sin conflicto
+dentro del sistema.
+
+**Verificado en Chrome de verdad, no solo en los tests:** el `keydown` de F11
+llega a la página y el `preventDefault` frena la pantalla completa (la ventana no
+cambió de alto). El system test **no puede probar esto** —en headless no hay
+pantalla completa que robar—, así que se probó a mano. La salvedad honesta: se
+probó en Chrome sobre macOS; si en las máquinas de Miami se comporta distinto, la
+tecla se cambia sin tocar nada más.
+
+**No** se usó el `data-shortcut` genérico del sistema por dos razones concretas:
+ese controller **ignora toda tecla que no sea F2 cuando el foco está en un
+input**, y en `/etiquetar` el foco vive en el campo de tracking; y cuando
+`ButtonComponent` emite `data-shortcut` y un controller propio escucha la misma
+tecla, se dispara dos veces — ya pasó en `/entrega_personal` con F2 y F9.
+
+---
+
+### Lo que salió de mirar el resto, y no se arregló acá
+
+Buscando el bug apareció que **en modo alta hay más cosas que `clearForm` no
+limpia**. No las reportó Yusef y no entran en este PR, pero quedan anotadas
+porque son la misma familia —«limpiar no limpia»— y una de ellas guarda datos
+mal en silencio:
+
+| Qué sobrevive a F2 en modo alta | Consecuencia |
+|---|---|
+| **`paquete[tercero_id]`** (hidden, `shared/_tercero_field`) | El campo visible del tercero se vacía y **el id se queda**: el paquete siguiente se guarda con el tercero del anterior, sin que nada lo muestre en pantalla. Es el más grave de la lista |
+| Los campos `data-print-field` (`print`, `etiquetas`, pesos) | Solo los quita `_removePrintField`, al empezar el siguiente guardado |
+| Los radios de prepago Miami | `_limpiarCampos` los desmarca a todos, y con eso **se pierde el default «Cobrar en Honduras»**; además el panel del método queda visible porque nadie dispara el `change` |
+| `_duplicadoDesde` | Único memo del controller que ninguna de las cuatro rutas de limpieza reinicia |
+| Los textos de los banners escondidos (notas, pre-alerta, sucursal, duplicado) | Se esconde el contenedor, no se borra el contenido |
+
+En modo actualización **todos** quedan resueltos de arrastre, porque recargar
+deja el estado en cero por construcción. En modo alta siguen vivos.
