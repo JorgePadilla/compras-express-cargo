@@ -2,14 +2,14 @@
 
 <%= render PageHeaderComponent.new(title: @manifiesto.numero, subtitle: "Manifiesto") do |header|
   header.with_action do
-    render ButtonComponent.new(variant: :secondary, href: edit_manifiesto_path(@manifiesto), icon: "pencil-square", shortcut: "F6") do
+    render ButtonComponent.new(variant: :outline_navy, href: edit_manifiesto_path(@manifiesto), icon: "pencil-square", shortcut: "F6") do
       "Editar"
     end
   end
   # C21-09 · El manifiesto impreso. Va aparte de «Finalizar e Imprimir», que
   # saca las etiquetas 4×6 de los bultos: son dos papeles distintos.
   header.with_action do
-    render ButtonComponent.new(variant: :secondary, href: documento_manifiesto_path(@manifiesto),
+    render ButtonComponent.new(variant: :outline_navy, href: documento_manifiesto_path(@manifiesto),
                                icon: "printer", target: "_blank") do
       "Imprimir manifiesto"
     end
@@ -87,32 +87,65 @@ end %>
   </div>
 </div>
 
-<%# C21-06 · Los cierres del manifiesto. El bloque vive en su partial para que
-    `add_paquete` y `remove_paquete` puedan refrescarlo por turbo_stream: los
-    botones dependen de `paquetes.any?` y antes no se enteraban. %>
-<div id="manifiesto-acciones">
+<%# ── La pantalla sigue el orden del trabajo ────────────────────────────────
+
+    Jorge, mirándola: *"no estoy seguro que siga el orden del flujograma"*, y
+    tenía razón — **«Finalizar» estaba arriba de todo lo que hay que hacer
+    antes**, y los pasos reales quedaban debajo. La página iba al revés.
+
+    Ahora va: detalles → casas → agregar paquetes → los paquetes → finalizar.
+
+    Los cierres van **arriba y abajo**, que es lo que pidió: *"solo finalizar y
+    finalizar e imprimir también debería estar abajo"*. Es la misma razón por la
+    que la barra de atajos de `/etiquetar` está en los dos lados —Yusef:
+    *"estos botones los dejaste abajo y a veces se ocupan acá arriba"*—: con la
+    tabla llena, el de arriba queda a una pantalla de distancia. %>
+<div id="manifiesto-acciones-arriba">
   <%= render "manifiestos/acciones", manifiesto: @manifiesto, paquetes: @paquetes %>
 </div>
 
-<%# Add packages section (only for creado manifests) %>
 <% if @manifiesto.creado? %>
-  <div class="bg-white rounded-lg shadow overflow-hidden mb-6" data-controller="manifiesto-search"
-       data-manifiesto-search-url-value="<%= search_paquetes_path %>"
-       data-manifiesto-search-manifiesto-id-value="<%= @manifiesto.id %>">
-    <%= render "manifiestos/cajas", manifiesto: @manifiesto %>
+  <%# Paso 1 · Las casas. Va antes de agregar paquetes porque en el camino con
+      pre-etiqueta **es** cómo entran: se arma la caja, se imprime su 4×6 y se
+      escanea cada paquete al meterlo. Estaba metida adentro de la misma tarjeta
+      que «Agregar paquetes», y por eso las dos se leían como una sola cosa. %>
+  <%= render "manifiestos/cajas", manifiesto: @manifiesto %>
 
-<div class="px-6 py-4 border-b border-gray-200">
-      <h2 class="text-lg font-semibold text-gray-800">Agregar Paquetes</h2>
+  <%# Paso 2 · Agregar paquetes sueltos — el camino sin pre-etiqueta. %>
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden mb-6"
+       data-controller="manifiesto-search"
+       data-manifiesto-search-url-value="<%= search_paquetes_path %>"
+       data-manifiesto-search-manifiesto-id-value="<%= @manifiesto.id %>"
+       data-manifiesto-search-agregar-url-value="<%= add_paquete_manifiesto_path(@manifiesto) %>">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+      <div class="flex items-baseline gap-3">
+        <span class="shrink-0 w-7 h-7 rounded-full bg-cec-navy/10 text-cec-navy dark:bg-cec-gold/20 dark:text-cec-gold
+                     flex items-center justify-center text-sm font-bold">2</span>
+        <div>
+          <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Agregar paquetes</h2>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            Escaneá y entra solo. Es el camino sin pre-etiqueta: los paquetes van sueltos, sin casa.
+          </p>
+        </div>
+      </div>
     </div>
     <div class="p-6">
-      <div class="flex gap-3">
-        <input type="text" placeholder="Buscar por tracking o número de recepción..."
-               data-manifiesto-search-target="input"
-               data-action="input->manifiesto-search#search"
-               class="flex-1 rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal">
-      </div>
-      <div data-manifiesto-search-target="results" class="mt-3 hidden">
-      </div>
+      <%# La pistola dispara Enter al terminar de leer, así que Enter **agrega**
+          en vez de solo buscar: el operario escanea uno atrás de otro sin soltar
+          la pistola ni tocar el mouse. Jorge: *"la parte de agregar paquetes
+          tiene que ser rápida, escanear"*. %>
+      <%= label_tag :buscar_paquete, "Escaneá el paquete", class: "block text-base font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+      <input type="text" id="buscar_paquete"
+             placeholder="Escanear la etiqueta, o buscar por tracking o número de recepción…"
+             autocomplete="off"
+             data-manifiesto-search-target="input"
+             data-action="input->manifiesto-search#search keydown->manifiesto-search#teclado"
+             class="block w-full min-h-11 py-4 text-xl rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 shadow-sm font-mono focus:ring-cec-teal focus:border-cec-teal">
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        Enter lo agrega directo. Si lo que escribiste devuelve varios, salen abajo para elegir.
+      </p>
+      <div data-manifiesto-search-target="aviso" class="hidden mt-3 rounded-lg p-3 text-sm"></div>
+      <div data-manifiesto-search-target="results" class="mt-3 hidden"></div>
     </div>
   </div>
 <% end %>
@@ -174,5 +207,11 @@ end %>
     <% end %>
   </div>
 <% end %>
+
+<%# Los cierres, otra vez — acá es donde uno **termina**. Con la tabla llena, el
+    bloque de arriba queda a una pantalla de distancia. %>
+<div id="manifiesto-acciones-abajo" class="mt-6">
+  <%= render "manifiestos/acciones", manifiesto: @manifiesto, paquetes: @paquetes %>
+</div>
 
 <%= render "shared/bitacora", record: @manifiesto, label: "Manifiesto" %>

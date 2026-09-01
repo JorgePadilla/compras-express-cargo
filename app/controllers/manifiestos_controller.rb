@@ -154,7 +154,11 @@ class ManifiestosController < ApplicationController
           # aparecía: la única forma de finalizar era recargar la pantalla. Y al
           # quitar el último pasa al revés — el botón quedaba ofreciendo
           # finalizar un manifiesto vacío.
-          turbo_stream.update("manifiesto-acciones", partial: "manifiestos/acciones", locals: { manifiesto: @manifiesto, paquetes: @paquetes }),
+          # Van los dos: el bloque está arriba y abajo porque con la tabla
+          # llena el de arriba queda a una pantalla de distancia. Refrescar uno
+          # solo dejaría al otro mintiendo.
+          turbo_stream.update("manifiesto-acciones-arriba", partial: "manifiestos/acciones", locals: { manifiesto: @manifiesto, paquetes: @paquetes }),
+          turbo_stream.update("manifiesto-acciones-abajo", partial: "manifiestos/acciones", locals: { manifiesto: @manifiesto, paquetes: @paquetes }),
           turbo_stream.prepend("flash-messages", partial: "shared/flash", locals: { notice: message })
         ]
       end

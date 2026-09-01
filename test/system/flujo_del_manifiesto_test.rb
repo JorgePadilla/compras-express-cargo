@@ -80,7 +80,9 @@ class FlujoDelManifiestoTest < ApplicationSystemTestCase
     crear_manifiesto
     agregar_el_paquete
 
-    confirmando { click_on "Solo Finalizar" }
+    # Hay dos: el bloque de cierre va arriba y abajo. Con la tabla llena, el de
+    # arriba queda a una pantalla de distancia.
+    confirmando { first(:button, "Solo Finalizar").click }
 
     assert_text "enviado", wait: 5
     assert_equal "enviado_honduras", @paquete.reload.estado,
@@ -115,12 +117,39 @@ class FlujoDelManifiestoTest < ApplicationSystemTestCase
     click_on "Volver al manifiesto"
     assert_selector "h1", text: /M[A-Z]{3}\d{4}/, wait: 5
 
-    confirmando { click_on "Finalizar e Imprimir" }
+    confirmando { first(:button, "Finalizar e Imprimir").click }
     esperar_pestana_de_impresion
     cerrar_pestanas_extra
 
     assert_equal "enviado_honduras", @paquete.reload.estado
     assert_equal 1, Manifiesto.last.cajas.count, "la casa no quedó armada"
+  end
+
+  # ── El escaneo, que es lo que lo hace rápido ────────────────────────────
+
+  test "escanear y Enter agrega el paquete sin tocar el mouse" do
+    abrir_manifiestos
+    crear_manifiesto
+
+    find("#buscar_paquete").set(@paquete.numero_recepcion)
+    find("#buscar_paquete").send_keys(:enter)
+
+    within("#manifiesto-paquetes") { assert_text @paquete.tracking, wait: 5 }
+    assert_equal "", find("#buscar_paquete").value,
+                 "el campo tiene que quedar vacío para el siguiente escaneo"
+  end
+
+  # ── Los cierres, arriba y abajo ─────────────────────────────────────────
+
+  test "los botones de finalizar están arriba y abajo" do
+    abrir_manifiestos
+    crear_manifiesto
+    agregar_el_paquete
+
+    assert_equal 2, all(:button, "Solo Finalizar").size,
+                 "con la tabla llena, el de arriba queda a una pantalla de distancia"
+    assert_selector "#manifiesto-acciones-arriba button", text: "Solo Finalizar"
+    assert_selector "#manifiesto-acciones-abajo button", text: "Solo Finalizar"
   end
 
   # ── Y el que documenta la puerta misma ──────────────────────────────────

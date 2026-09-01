@@ -5,14 +5,29 @@
     porque a veces cortan la caja: *"le decimos «EH cortada»"*. %>
 <div class="bg-white rounded-lg shadow mb-6" data-controller="caja-manifiesto">
   <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-    <div>
-      <h2 class="text-lg font-semibold text-gray-900">Casas del manifiesto</h2>
-      <p class="text-xs text-gray-500 mt-0.5">El volumen sale de alto × largo × ancho ÷ 166 — es el reporte por el que cobra el proveedor.</p>
+    <div class="flex items-baseline gap-3">
+      <span class="shrink-0 w-7 h-7 rounded-full bg-cec-navy/10 text-cec-navy dark:bg-cec-gold/20 dark:text-cec-gold
+                   flex items-center justify-center text-sm font-bold">1</span>
+      <div>
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Casas del manifiesto</h2>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          El camino con pre-etiqueta: se arma la caja, se imprime su 4×6 y se escanea cada paquete al meterlo.
+          El volumen sale de alto × largo × ancho ÷ 166 — es el reporte por el que cobra el proveedor.
+        </p>
+      </div>
     </div>
     <div class="flex items-center gap-3">
       <span class="text-sm text-gray-500"><%= manifiesto.cajas.size %> bulto(s)</span>
       <% if manifiesto.cajas.any? %>
-        <%= render ButtonComponent.new(variant: :secondary, size: :sm, icon: "printer",
+        <%# Jorge: *"el botón de imprimir casi ni se mira"* y *"esos botones con
+            fondo blanco cuesta demasiado verlos"*. Y es literal: `secondary` es
+            `bg-white` con borde `gray-300` **sobre una tarjeta blanca**, así que
+            el borde es lo único que lo separa del fondo.
+
+            Pasan a `outline_navy` —borde y tinta navy, que sí se ven— y a
+            tamaño normal: son las dos acciones del paso, no adornos del
+            encabezado. %>
+        <%= render ButtonComponent.new(variant: :outline_navy, icon: "printer",
               href: etiquetas_manifiesto_cajas_path(manifiesto, print: true),
               target: "_blank") do %>Imprimir las 4×6<% end %>
         <%# C21-01 · La puerta a la pantalla de empacar, que **no tenía ninguna**.
@@ -27,7 +42,7 @@
             Las dos condiciones salen del contexto y son las correctas: `cajas.any?`
             —la pantalla de empaque no sirve sin casas y ella misma lo dice— y
             `creado?`, porque `show.html.erb` envuelve este partial entero en él. %>
-        <%= render ButtonComponent.new(variant: :primary, size: :sm, icon: "qr-code",
+        <%= render ButtonComponent.new(variant: :primary, icon: "qr-code",
               href: manifiesto_empacar_path(manifiesto)) do %>Empacar<% end %>
       <% end %>
     </div>
