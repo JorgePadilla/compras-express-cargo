@@ -8,7 +8,7 @@
                   recepcion-carga:yaRecibida->audio#alert">
 
   <%= render PageHeaderComponent.new(title: "Recibir #{@manifiesto.numero}",
-                                     subtitle: "Escaneá cada caja al bajarla del camión") do |h| %>
+                                     subtitle: @manifiesto.tipo_interno? ? "Interno de #{@manifiesto.sucursal_origen&.codigo} — escaneá cada paquete al bajarlo" : "Escaneá cada caja al bajarla del camión") do |h| %>
     <% h.with_action do %>
       <%= render ButtonComponent.new(href: recepcion_carga_index_path, variant: :secondary, icon: "arrow-left") do %>
         Volver
@@ -17,23 +17,70 @@
   <% end %>
 
   <div class="bg-white rounded-lg shadow mb-6 p-6">
-    <%= label_tag :codigo_caja, "Escaneá la caja", class: "block text-sm font-medium text-gray-700 mb-1" %>
-    <%= text_field_tag :codigo_caja, nil, placeholder: "Escanear la etiqueta 4×6 del bulto…",
+    <%= label_tag :codigo_caja, @manifiesto.tipo_interno? ? "Escaneá el paquete" : "Escaneá la caja",
+          class: "block text-sm font-medium text-gray-700 mb-1" %>
+    <%= text_field_tag :codigo_caja, nil,
+          placeholder: @manifiesto.tipo_interno? ? "Escanear la etiqueta del paquete…" : "Escanear la etiqueta 4×6 del bulto…",
           autocomplete: "off", autofocus: true,
           data: { recepcion_carga_target: "codigo", action: "keydown->recepcion-carga#teclado" },
           class: "block w-full rounded-lg border-gray-300 shadow-sm font-mono focus:ring-cec-teal focus:border-cec-teal" %>
     <p class="text-xs text-gray-500 mt-1">
-      Cada caja recibida manda sus paquetes a <b>aduana</b>. Se escanean cajas, no paquetes.
+      <% if @manifiesto.tipo_interno? %>
+        <%# `A7-08` · *"Empiezan a escanear paquete por paquete para cuadrar el
+            manifiesto."* El interno lleva carga suelta, no casas. %>
+        Cada paquete queda <b>disponible en <%= @manifiesto.sucursal_entrega&.nombre %></b> al escanearlo.
+        Se escanean paquetes, no cajas.
+      <% else %>
+        Cada caja recibida manda sus paquetes a <b>aduana</b>. Se escanean cajas, no paquetes.
+      <% end %>
     </p>
     <div data-recepcion-carga-target="aviso" class="hidden mt-4 rounded-lg p-3 text-sm"></div>
   </div>
+
+  <%# `A7-08` · El interno se cuadra paquete por paquete. «Escaneado» no lleva
+      columna: el paquete se mueve al escanearlo, así que lo que falta se
+      reconoce solo porque sigue en «enviado a sucursal». %>
+  <% if @manifiesto.tipo_interno? %>
+    <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-900">Paquetes del manifiesto</h2>
+        <span class="text-sm text-gray-500" data-recepcion-carga-target="contador">
+          <%= @recibidos.size %> de <%= @recibidos.size + @pendientes.size %> recibidos
+        </span>
+      </div>
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tracking</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% (@recibidos + @pendientes).each do |paquete| %>
+            <tr data-paquete-fila="<%= paquete.id %>">
+              <td class="px-6 py-3 text-sm font-mono text-gray-900"><%= paquete.tracking %></td>
+              <td class="px-6 py-3 text-sm text-gray-700"><%= paquete.cliente&.nombre_completo %></td>
+              <td class="px-6 py-3 text-sm" data-paquete-estado="<%= paquete.id %>">
+                <% if paquete.estado == "enviado_sucursal" %>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Falta</span>
+                <% else %>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal">Recibido</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
 
   <%# C21-01 · El camino sin escaneo. Yusef dejó los dos vivos: el nuevo —crear
       el manifiesto, sacar las pre-etiquetas y escanear cada paquete adentro— y
       el de siempre, que se queda *"porque a veces no da tiempo"*. Un manifiesto
       armado así llega sin una sola caja, y esta pantalla decía «0 de 0
       recibidas» sobre algo que traía carga. %>
-  <% if @sin_caja.any? %>
+  <% if @sin_caja&.any? %>
     <div class="bg-cec-gold/10 ring-1 ring-cec-gold/40 rounded-lg p-4 mb-6">
       <p class="text-sm font-medium text-cec-navy">
         Este manifiesto trae <%= @sin_caja.size %> paquete<%= "s" unless @sin_caja.size == 1 %> sin caja.
@@ -56,7 +103,7 @@
   <%# La tarjeta de cajas solo si hay cajas: una tabla vacía con «0 de 0
       recibidas» encima era justo lo que hacía parecer que no había nada que
       recibir en un manifiesto del camino sin escaneo. %>
-  <% if @cajas.any? %>
+  <% if @cajas&.any? %>
   <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
     <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
       <h2 class="text-lg font-semibold text-gray-900">Cajas del manifiesto</h2>
@@ -103,8 +150,8 @@
     <% end %>
     <%= render ButtonComponent.new(variant: :secondary, icon: "exclamation-triangle",
           href: finalizar_recepcion_carga_path(@manifiesto, con_faltantes: true), method: :patch,
-          confirm: "Se marca #{@manifiesto.numero} como recibido aunque falten cajas. Los paquetes que iban adentro pasan a aduana igual, y sale un correo con lo que faltó. ¿Seguro?") do %>
-      Marcar recibido con las pendientes
+          confirm: @manifiesto.tipo_interno? ? "Se cierra #{@manifiesto.numero} aunque falten paquetes. Los que no se escanearon **quedan señalados como pendientes** para que alguien los busque — no se marcan como disponibles. ¿Seguro?" : "Se marca #{@manifiesto.numero} como recibido aunque falten cajas. Los paquetes que iban adentro pasan a aduana igual, y sale un correo con lo que faltó. ¿Seguro?") do %>
+      <%= @manifiesto.tipo_interno? ? "Cerrar y dejar los faltantes señalados" : "Marcar recibido con las pendientes" %>
     <% end %>
   </div>
 </div>

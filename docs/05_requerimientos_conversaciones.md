@@ -4851,7 +4851,7 @@ queda en San Pedro"*).
 | `PR-I0` | El número lleva el **código completo** de la sucursal: con la letra sola, `SPS` y `SAM` no podían tener manifiesto el mismo año (`RP-46`) | ✅ #398 |
 | `PR-I1` | El manifiesto **interno** como tipo: exige a dónde va, y no pide nada de aduana | 🟡 |
 | `PR-I2` | Cerrarlo manda los paquetes a `enviado_sucursal` — **sin notificar** (`A7-09`) | ✅ |
-| `PR-I3` | Recibirlo en la sucursal destino, escaneando, sin bloquear | ⏳ |
+| `PR-I3` | Recibirlo en la sucursal destino, escaneando **paquetes** | ✅ |
 | `PR-I4` | La notificación con la ventana de espera (`A7-08`) | ⏳ |
 
 **`PR-I0` no estaba en el plan y salió del camino.** Numerar desde una sucursal
@@ -4886,6 +4886,29 @@ Y qué se manda:
 **Lectura.** Job encolado con retraso configurable (30–60 min) desde que se
 escanea el manifiesto, para que el conteo termine antes de avisarle a la gente.
 WhatsApp y SMS son excluyentes entre sí.
+
+**La mitad del escaneo está en `PR-I3`.** En el interno la pistola lee el
+**paquete** y no la caja —*"empiezan a escanear paquete por paquete"*—, y cada
+uno queda `disponible_entrega` **en la sucursal destino** al escanearlo, que es
+lo que `A7-13` pide mostrar. «Escaneado» no necesitó columna nueva: el paquete se
+mueve en el acto, así que lo que falta se reconoce solo porque sigue en
+`enviado_sucursal`.
+
+**Y hay una diferencia de fondo con el oficial, decidida y no heredada.** El
+oficial, al cerrar «con faltantes», mueve **igual** a todos los paquetes: la caja
+que no apareció ya está perdida y no cerrar no la trae. El interno **no puede**
+hacer eso: marcar `disponible_entrega` a un paquete que no llegó es decirle al
+cliente que venga a retirar algo que no está. Así que el que no se escaneó **se
+queda en `enviado_sucursal`**, que es exactamente el señalamiento que pidió
+`A7-09` (*"ey, este sale pendiente, hay que buscarlo"*). El manifiesto se cierra;
+el paquete queda marcado.
+
+El correo de faltantes tampoco sale en el interno: `A7-06` lo pidió para el
+**internacional** (*"si falta una caja, manda un correo al correo tal"*), y acá
+el faltante no se pierde de vista.
+
+**Lo que falta de `A7-08` es la notificación** (`PR-I4`), con el aviso de arriba
+sobre los canales.
 
 ---
 
