@@ -51,14 +51,27 @@ class FinalizarManifiesto
 
     Manifiesto.transaction do
       paquetes_a_enviar.each do |paquete|
-        if paquete.update(estado: "enviado_honduras")
-          # `ESTADO_FECHA_MAP` estampa `fecha_enviado_by_user_id` desde
+        # La guarda de tareas abiertas **hay que preguntarla acá**, no confiar en
+        # el modelo. `no_advance_with_open_tareas` compara índices de
+        # `ESTADOS_ORDEN`, y `enviado_sucursal` no está ahí: es un desvío
+        # (`ESTADOS_EXCEPCIONALES`), no un paso del pipeline. Así que en el
+        # manifiesto **interno** el guard no dispara — `new_idx` sale nil y el
+        # método se va sin mirar nada.
+        #
+        # Y la regla es la misma para los dos: el paquete está en la bodega, en
+        # la mano, y la tarea abierta es justo el aviso de que le falta algo
+        # antes de subirse al camión. Que el destino sea Tegucigalpa en vez de
+        # Honduras no la cambia.
+        if paquete.tareas_bloqueantes_pendientes?
+          trabados << [ paquete, "tiene tareas pendientes" ]
+        elsif paquete.update(**cambios_para(paquete))
+          # `ESTADO_FECHA_MAP` estampa `fecha_<estado>_by_user_id` desde
           # `Current.user`, que en un request es quien apretó el botón. Fuera de
           # un request —consola, un job— queda en nil, y entonces volveríamos a
           # perder exactamente lo que perdía el `update_all`. Se rellena con el
           # usuario que se pasó, sin volver a correr callbacks.
-          if @user && paquete.fecha_enviado_by_user_id.nil?
-            paquete.update_column(:fecha_enviado_by_user_id, @user.id)
+          if @user && paquete.public_send(columna_de_usuario).nil?
+            paquete.update_column(columna_de_usuario, @user.id)
           end
           enviados << paquete
         else
@@ -81,6 +94,38 @@ class FinalizarManifiesto
   end
 
   private
+
+  # `A7-09` · A dónde manda cada manifiesto.
+  #
+  # El **oficial** manda a `enviado_honduras`: la carga sale del extranjero y
+  # cruza aduana. El **interno** manda a `enviado_sucursal`, que es el estado que
+  # Yusef pidió como F7 y que existía en el enum **sin un solo escritor** desde
+  # que se agregó.
+  #
+  # Y para qué lo quiere, con sus palabras: *"¿por qué va a servir ese status
+  # nuevo? **Porque esto sirve de auditoría.** Qué paquete no escanearon o no
+  # enviaron… se pueden ir a revisar el sistema y decir: ey, este sale pendiente,
+  # hay que buscarlo"*, con la meta de *"que los errores se corrijan en 24
+  # horas"*.
+  #
+  # **El destino sale del manifiesto, no del cliente.** `heredar_sucursal_destino`
+  # cae a la sucursal donde el cliente retira, que es el caso normal; pero el
+  # manifiesto sabe a dónde va el camión de verdad —puede ser una escala— y es el
+  # que manda. Sin esto, un paquete de un cliente de SPS metido en el manifiesto
+  # a Tegucigalpa se marcaría como que va a SPS.
+  #
+  # **No notifica nada**, y es a propósito: *"solo en sistema va a cambiar el
+  # estatus"*. Al cliente se le avisa cuando la carga **llega**, no cuando sale
+  # (`A7-08`, que es `PR-I4`).
+  def cambios_para(_paquete)
+    return { estado: "enviado_honduras" } unless @manifiesto.tipo_interno?
+
+    { estado: "enviado_sucursal", sucursal_destino: @manifiesto.sucursal_entrega }
+  end
+
+  def columna_de_usuario
+    @manifiesto.tipo_interno? ? :fecha_enviado_sucursal_by_user_id : :fecha_enviado_by_user_id
+  end
 
   # *"Todos los paquetes con el tipo de envío nuestro seleccionado."* Los de
   # otro tipo que hayan entrado por «omitir» se quedan: el manifiesto no habla

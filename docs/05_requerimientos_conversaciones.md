@@ -4850,7 +4850,7 @@ queda en San Pedro"*).
 |---|---|---|
 | `PR-I0` | El número lleva el **código completo** de la sucursal: con la letra sola, `SPS` y `SAM` no podían tener manifiesto el mismo año (`RP-46`) | ✅ #398 |
 | `PR-I1` | El manifiesto **interno** como tipo: exige a dónde va, y no pide nada de aduana | 🟡 |
-| `PR-I2` | Cerrarlo manda los paquetes a `enviado_sucursal` — **sin notificar** (`A7-09`) | ⏳ |
+| `PR-I2` | Cerrarlo manda los paquetes a `enviado_sucursal` — **sin notificar** (`A7-09`) | ✅ |
 | `PR-I3` | Recibirlo en la sucursal destino, escaneando, sin bloquear | ⏳ |
 | `PR-I4` | La notificación con la ventana de espera (`A7-08`) | ⏳ |
 
@@ -4889,7 +4889,7 @@ WhatsApp y SMS son excluyentes entre sí.
 
 ---
 
-### A7-09 · Falta el estado **enviado a sucursal** (F7) — y existe por auditoría
+### A7-09 · Falta el estado **enviado a sucursal** (F7) — ✅ **YA SE ESCRIBE (PR-I2)**
 
 > "Está el **F8** para consolidar en Honduras y el **F9** para notificar. Entonces
 >  tenemos que crear un **F7**… que va para una sucursal."
@@ -4906,6 +4906,22 @@ Lo importante es para qué sirve:
 gancho que permite detectar el paquete que se quedó sin empacar. Al cerrar el
 manifiesto interno pasa a *enviado a sucursal*, **sin mandar ninguna
 notificación** (*"solo en sistema va a cambiar el estatus"*).
+
+**Implementado en `PR-I2`.** `enviado_sucursal` estaba en el enum, con su fecha y
+su validación, **sin un solo escritor** desde que se agregó; `FinalizarManifiesto`
+es el primero. El **destino sale del manifiesto y no del cliente**:
+`heredar_sucursal_destino` cae a la sucursal donde el cliente retira —el caso
+normal—, pero el manifiesto sabe a dónde va el camión, y un paquete de un cliente
+de SPS metido en el manifiesto a Tegucigalpa se habría marcado como que va a SPS.
+
+**Y apareció un hueco que el modelo no cubría.** La guarda de tareas abiertas
+(`no_advance_with_open_tareas`) compara índices de `ESTADOS_ORDEN`, y
+`enviado_sucursal` **no está ahí**: es un desvío (`ESTADOS_EXCEPCIONALES`), no un
+paso del pipeline. O sea que en el interno el guard no disparaba —`new_idx` sale
+nil y el método se va sin mirar nada— y el manifiesto se habría cerrado con
+paquetes que tenían algo pendiente, que es justo lo que Jorge decidió que trabara
+el cierre. Se pregunta explícitamente en `FinalizarManifiesto`, y hay un test que
+falla si se saca.
 
 ---
 
