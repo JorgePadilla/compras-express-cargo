@@ -12,7 +12,7 @@ module AuditLogHelper
     user = Current.user
     return false unless user
     return true if user.admin?
-    AUDIT_LOG_ROLES.include?(user.rol)
+    user.tiene_rol?(AUDIT_LOG_ROLES)
   end
 
   # Carga eficiente de los users referenciados por una colección de versions

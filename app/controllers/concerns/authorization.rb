@@ -36,10 +36,13 @@ module Authorization
     require_role # no roles passed → only admin? guard passes
   end
 
+  # `RP-58` paso 2a: pregunta por **todos** los roles de la persona, no solo el
+  # principal. Con `rol` a secas, quien es Caja y SAC entraba únicamente a lo de
+  # Caja, y lo que el segundo rol le daba se le negaba sin decírselo.
   def require_role(*roles)
     return if Current.user&.admin?
 
-    unless roles.map(&:to_s).include?(Current.user&.rol)
+    unless Current.user&.tiene_rol?(roles)
       redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion."
     end
   end
@@ -68,13 +71,30 @@ module Authorization
   # que vale nombrar: una celda que nadie tocó **sigue al código para siempre**.
   # Si mañana se cambia la política de una sección, las celdas sin fila se
   # mueven solas; las tocadas a mano no, y la pantalla las marca.
+  # `RP-58` paso 2a · Con varios roles **se resuelve rol por rol y se suma**, y
+  # el orden importa más de lo que parece.
+  #
+  # La forma equivocada —y la que sale sola— es juntar primero las excepciones
+  # de todos los roles en un mapa y resolver una vez. Ahí una excepción que le
+  # niega la sección al rol A **le pisa al rol B el permiso que el código le
+  # daba**, y la persona pierde un acceso que nadie le quitó: el que movió esa
+  # celda estaba pensando en el rol A.
+  #
+  # Resolviendo por separado, cada rol contesta con sus propias reglas —su
+  # excepción si la hay, si no el código— y basta que **uno** diga que sí. Los
+  # roles suman; para quitar algo hay que quitárselo a todos sus roles, o
+  # quitarle un rol.
   def can_access?(feature)
     return true if admin?
 
-    rol = Current.user&.rol
-    return false if rol.blank?
+    roles = Current.user&.roles.to_a
+    return false if roles.empty?
 
-    excepcion = permisos_del_rol[feature.to_s]
+    roles.any? { |rol| rol_puede?(rol, feature) }
+  end
+
+  def rol_puede?(rol, feature)
+    excepcion = permisos_del_rol.dig(rol, feature.to_s)
     return excepcion unless excepcion.nil?
 
     PermisosDelSistema.politica(rol, feature)
@@ -85,6 +105,6 @@ module Authorization
   # una consulta por llamada sería absurdo. `Current` se limpia solo entre
   # requests, así que no hay estado que se filtre de uno a otro.
   def permisos_del_rol
-    Current.permisos ||= PermisoDeRol.mapa_para(Current.user&.rol)
+    Current.permisos ||= PermisoDeRol.mapa_para(Current.user&.roles)
   end
 end

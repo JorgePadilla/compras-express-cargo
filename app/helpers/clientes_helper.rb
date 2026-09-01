@@ -5,6 +5,6 @@ module ClientesHelper
   def can_edit_clientes?
     return false unless Current.user
 
-    Current.user.admin? || ClientesController::EDICION_ROLES.include?(Current.user.rol)
+    Current.user.admin? || Current.user.tiene_rol?(ClientesController::EDICION_ROLES)
   end
 end

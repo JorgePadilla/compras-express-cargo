@@ -8359,12 +8359,74 @@ Las dos garantías van en tests ejecutables: una fila que le niegue algo al admi
 no valida —y metida por SQL tampoco hace nada—, y `:permisos`/`:usuarios` no se
 pueden conceder.
 
-### Paso 2 — lo que queda para después ⏳
+### Paso 2a — varios roles por persona ✅ **HECHO**
 
-Varios roles por persona (el caso de Michelle) y el **título del rol editable**,
-que es la otra mitad de lo que pidió Yusef y que convierte los roles en data en
-vez de un enum. Y el segundo escalón: las reglas de acción, que necesitan otra
-forma de tabla — rol × acción, no rol × sección.
+Yusef, 2026-08-30, nombrando a dos personas que el enum de un solo rol no sabe
+describir: Michelle es *"Sub-Jefa de área de Caja y SAC"* y Bessy *"Supervisora
+de Caja y SAC"*. Cada combinación así obligaba a inventar un rol nuevo — y con
+él, una columna más en la matriz de permisos.
+
+`users.rol` **se queda** como el rol principal: es el que se muestra, el que
+alimenta los predicados del enum y el que decide el cortocircuito de admin. Los
+de más viven en `roles_de_usuario` — tabla y no columna de arreglo por lo mismo
+que `permisos_de_rol`: con `paper_trail` sobre filas, «quién le dio qué a quién»
+tiene respuesta.
+
+**Los roles suman**, y la contracara conviene decirla en voz alta: **quitarle
+algo a una persona con dos roles es quitárselo a los dos, o quitarle un rol**. La
+pantalla de permisos sigue moviendo *roles*, no personas — que es lo que Yusef
+pidió (*"quitale a este título de caja que no puedan hacer esto"*).
+
+**Dónde estaba el bug silencioso, que es lo único difícil de este paso.** Con
+varios roles hay que resolver **rol por rol y después sumar**. La forma que sale
+sola —juntar las excepciones de todos sus roles en un mapa y resolver una vez—
+deja que una excepción puesta pensando en el rol A **le pise al rol B un permiso
+que el código le daba y que nadie le quitó**. Por eso `PermisoDeRol.mapa_para`
+devuelve un mapa **anidado por rol** y no uno plano: aplanarlo obliga a elegir un
+ganador, y esa elección no se puede hacer ahí. Hay un test que corre la versión
+ingenua y falla con ella puesta.
+
+**El otro riesgo era quedar a medio migrar**, que es la firma de este repo: unos
+chequeos suman los roles y otros no, y la diferencia solo aparece cuando alguien
+con dos puestos se queja de una pantalla que a su compañero sí le abre. Los 15
+chequeos de autorización pasaron a `user.tiene_rol?(LISTA)` —que mira todos—, los
+de segmentación (tareas, notas, el destino del dashboard) pasaron a la **unión**,
+y un lint nuevo en `permisos_en_una_sola_fuente_test.rb` traba que vuelva a
+aparecer un `user.rol` decidiendo algo. Lleva su contra-test, como el de al lado.
+
+**`admin` no puede ser un rol adicional**, y no es cosmético: el cortocircuito
+pregunta `Current.user.admin?`, el predicado del enum sobre el principal. Si
+`admin` entrara por la puerta de atrás habría dos verdades a la vez.
+
+Tres cosas que aparecieron construyendo:
+
+1. **`User.autorizantes` mentía a medias.** Es el dropdown de «¿quién autoriza?»
+   de la pre-factura, y filtraba por `rol` en SQL: alguien que autoriza por su
+   *segundo* rol no salía en la lista, pero `puede_autorizar?` sí lo dejaba
+   pasar. Dos respuestas distintas a la misma pregunta.
+2. **`notas_permanentes_visibles` era un `case`**, y un `case` sobre una sola
+   variable no se puede recorrer rol por rol. Pasó a tabla. Espeja a
+   `Tarea::DEPARTAMENTOS_POR_ROL` a propósito: si una sumara y la otra no, sería
+   justo la incoherencia que ese método vino a evitar.
+3. **El formulario necesita el hidden vacío.** Destildar *todas* las casillas no
+   manda nada, y «no vino en el formulario» es indistinguible de «no tiene
+   ninguno»: los roles se quedaban puestos. Es el mismo agujero que el `Paso 1`
+   tuvo que tapar acá al lado, con la misma forma.
+
+### Paso 2b — el título del rol editable ⏳
+
+La otra mitad de lo que pidió Yusef: *"editar el título del rol"*. Convierte el
+nombre del rol en data — hoy sale de `User::ROL_DESCRIPTIONS`, una constante.
+
+**Los códigos se quedan en el código.** `ROLES_QUE_ABREN_EL_CANDADO`, el `case`
+de `PermisosDelSistema.politica` y las constantes `*_ROLES` hablan de códigos
+(`supervisor_caja`), no de títulos. Lo que se vuelve editable es **cómo se lee**,
+no qué significa — y por eso el paso 2a no necesitó una tabla de roles.
+
+### El segundo escalón — las reglas de acción ⏳
+
+Lo que ninguna de las dos formas cubre: rol × **acción**, no rol × sección.
+Necesita otra tabla; son ~10 constantes.
 
 ---
 
@@ -8375,7 +8437,7 @@ forma de tabla — rol × acción, no rol × sección.
 | ~~`RP-53`~~ | **✅ CERRADA por Jorge (2026-08-30): se puebla `Consignatario` y `Agent` se queda como está** para el Warehouse Receipt. Implementado en `PR-M1`. ~~¿Dónde vive el consignatario? El modelo `Consignatario` existe y está **vacío** (sin seeds, sin pantalla, sin asociaciones), y es el nombre semánticamente correcto. Pero «CORPORACION KARSAM» hoy vive en `Agent` —el bloque *Agent* del Warehouse Receipt—, que significa «agente de destino». ¿Se puebla `Consignatario` y se deja `Agent` como está, o son la misma cosa con dos nombres?~~ |
 | ~~`RP-54`~~ | **✅ CERRADA por Yusef (2026-08-30): código QR** — *"habría que instalar la gema necesaria"*, o sea aceptando el costo. **IMPLEMENTADO en `PR-M11`** con `rqrcode`, solo en la 4×6 del bulto: la etiqueta del paquete sigue en Code128, que es lo que leen las pistolas de Miami hoy. ~~El código de la caja: ¿barras o QR? `A7-03` dejó abierto *"un código QR o lo que vos querás"*. El repo solo genera Code128 (`barby`), que es lo que ya leen las pistolas; QR necesitaría gema nueva. Confirmar antes de imprimir 4×6 en producción~~ |
 | ~~`RP-55`~~ | **✅ CERRADA por Jorge (2026-08-30): se borran.** Eran 2 de prueba y no hay producción. Implementado en `PR-M2`. ~~¿Qué se hace con los manifiestos viejos? Jorge lo preguntó derecho. Hoy hay manifiestos numerados `MA-…` (formato legacy) porque la numeración anual nunca corrió. Al despertarla, ¿se renumeran, se dejan conviviendo, o se cierra el formato viejo en una fecha?~~ |
-| `RP-58` | **✅ ELEGIDA por Jorge (2026-08-31): la tabla de permisos, en dos pasos.** **Paso 1 ✅ `PR-388`**: `/permisos` mueve las secciones por rol, guardando **solo las excepciones**. **Paso 2 ⏳ pendiente de arrancar**: varios roles por persona —el caso de Michelle, que es Caja *y* SAC— y el título del rol editable, o sea el rol como dato y no como enum. Y sigue abierto el segundo escalón, que es lo único que ninguna de las dos formas cubre: las reglas de **acción** escritas a mano son otra cosa que la pantalla no toca, y necesitan otra tabla — `rol × acción`. **No son 22**, como decía acá: contadas contra el código son **~10** — `EDIT_ROLES`, `ESTADO_CHANGE_ROLES` y `DELETE_ROLES` en paquetes; `EDICION_ROLES` en clientes; las tres de tareas; y las que viven en modelos (`Manifiesto::ROLES_QUE_ABREN_EL_CANDADO`, `BajarCajasConPin::ROLES`, `QuitarCambioServicio::ROLES`). `require_role` en sí aparece 6 veces. ~~¿Cómo se editan los permisos sin un PR? (`C21-12`) Yusef quiere mover el mapa de roles él —*"editar el título del rol y lo que ellos puedan y no puedan"*—~~ |
+| `RP-58` | **✅ ELEGIDA por Jorge (2026-08-31): la tabla de permisos, en dos pasos.** **Paso 1 ✅ `PR-388`**: `/permisos` mueve las secciones por rol, guardando **solo las excepciones**. **Paso 2a ✅**: varios roles por persona —el caso de Michelle, que es Caja *y* SAC—; los roles **suman** y las excepciones se resuelven rol por rol, que es donde estaba el bug silencioso. **Paso 2b ⏳**: el título del rol editable, o sea el nombre como dato (los **códigos** se quedan en el código, así que no hace falta una tabla de roles). Y sigue abierto el segundo escalón, que es lo único que ninguna de las dos formas cubre: las reglas de **acción** escritas a mano son otra cosa que la pantalla no toca, y necesitan otra tabla — `rol × acción`. **No son 22**, como decía acá: contadas contra el código son **~10** — `EDIT_ROLES`, `ESTADO_CHANGE_ROLES` y `DELETE_ROLES` en paquetes; `EDICION_ROLES` en clientes; las tres de tareas; y las que viven en modelos (`Manifiesto::ROLES_QUE_ABREN_EL_CANDADO`, `BajarCajasConPin::ROLES`, `QuitarCambioServicio::ROLES`). `require_role` en sí aparece 6 veces. ~~¿Cómo se editan los permisos sin un PR? (`C21-12`) Yusef quiere mover el mapa de roles él —*"editar el título del rol y lo que ellos puedan y no puedan"*—~~ |
 | ~~`RP-56`~~ | **✅ CERRADA por Yusef (2026-08-30): «Recibir carga».** ~~Cómo se llama la pantalla de recepción. Yusef dio tres nombres en la misma frase: *"dar entrada al almacén"*, *"entrada al inventario"* y *"recibir carga"*. Elegir uno antes de que Miami y SPS le pongan cada quien el suyo~~ |
 | `RP-57` | **Retención y peso de la data.** *"Lo mínimo son seis años: cinco para atrás más el año en curso"*, pero *"yo lo que ocupo es el año en curso y un año antes"*. Su idea: *"crear reportes automáticos, cierre anual, cierre mensual… lo mandás al bucket y ahí guarda todos los reportes del año"*. Es una discusión propia, no del manifiesto |
 

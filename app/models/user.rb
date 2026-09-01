@@ -14,6 +14,9 @@ class User < ApplicationRecord
   # aporta nada al audit log y reduce la superficie ante una brecha.
   has_paper_trail skip: %i[password_digest pin_digest]
   has_many :sessions, dependent: :destroy
+  # `RP-58` paso 2a · Los roles **además** del principal. Ver `RolDeUsuario`.
+  has_many :roles_adicionales, class_name: "RolDeUsuario", dependent: :destroy
+  accepts_nested_attributes_for :roles_adicionales, allow_destroy: true
   # Seguimiento de C18-02: la sucursal donde trabaja. Yusef: *"ahí vamos a
   # amarrar al usuario de dónde es"*. Opcional; si recibe carga, /etiquetar y
   # /entrega_personal la preseleccionan (`Sucursal.recepcion_por_defecto_para`).
@@ -71,17 +74,51 @@ class User < ApplicationRecord
   # Ojo: autorizar NO es un permiso de pantalla y por eso no pasa por
   # `can_access?`. El supervisor nunca entra al sistema para esto — el cajero
   # está logueado y el supervisor solo pone su PIN.
+  # `RP-58` paso 2a · **Todos** los roles de la persona: el principal más los
+  # adicionales. Es la única lista que la autorización tiene derecho a mirar.
+  #
+  # Yusef pidió poder decir que alguien es *"Sub-Jefa de área de Caja y SAC"* sin
+  # inventar un rol nuevo por cada combinación. Los roles **suman**: quien es
+  # Caja y SAC entra a lo de Caja y a lo de SAC.
+  #
+  # Y ahí está la contracara, que conviene decirla en voz alta: **quitarle algo a
+  # una persona con dos roles es quitárselo a los dos, o quitarle un rol**. La
+  # pantalla de permisos sigue moviendo *roles*, no personas.
+  def roles
+    ([ rol ] + roles_adicionales.map(&:rol)).compact.uniq
+  end
+
+  # ¿Alguno de sus roles está en la lista? Es la forma que reemplaza a
+  # `user.rol.in?(LISTA)` en **todo** chequeo de autorización: con dos roles, la
+  # versión vieja miraba solo el principal y le negaba en silencio lo que el
+  # segundo rol le daba. Hay un lint que traba que vuelva
+  # (`test/lint/permisos_en_una_sola_fuente_test.rb`).
+  def tiene_rol?(*lista)
+    (roles & lista.flatten.map(&:to_s)).any?
+  end
+
   ROLES_AUTORIZANTES = %w[admin supervisor_prefactura supervisor_caja supervisor_sac].freeze
 
-  scope :autorizantes, -> { activos.where(rol: ROLES_AUTORIZANTES).where.not(pin_digest: nil) }
+  # `RP-58` paso 2a · Mira los roles adicionales también, y tiene que hacerlo en
+  # SQL: es la lista que llena el dropdown de «¿quién autoriza?» en la
+  # pre-factura. Con el `where(rol:)` a secas, alguien que autoriza por su
+  # segundo rol no aparecía ahí — y `puede_autorizar?` sí lo dejaba pasar. Dos
+  # respuestas distintas a la misma pregunta.
+  scope :autorizantes, -> {
+    activos.where.not(pin_digest: nil).where(
+      "users.rol IN (:roles) OR users.id IN " \
+      "(SELECT user_id FROM roles_de_usuario WHERE rol IN (:roles))",
+      roles: ROLES_AUTORIZANTES
+    )
+  }
 
   def puede_autorizar?
-    activo? && pin_digest.present? && rol.in?(ROLES_AUTORIZANTES)
+    activo? && pin_digest.present? && tiene_rol?(ROLES_AUTORIZANTES)
   end
 
   # Puede tener PIN, aunque todavía no se lo hayan asignado.
   def rol_autorizante?
-    rol.in?(ROLES_AUTORIZANTES)
+    tiene_rol?(ROLES_AUTORIZANTES)
   end
 
   # Todavía tiene el que le puso el admin. No bloquea nada —trabar el mostrador
@@ -120,6 +157,31 @@ class User < ApplicationRecord
     ROL_DESCRIPTIONS.dig(rol, :label) || rol&.humanize
   end
 
+  # `RP-58` paso 2a · Cómo se lee el puesto completo de alguien con dos roles:
+  # «Supervisor Caja + SAC». Lo usan las pantallas que muestran el puesto.
+  def roles_label
+    roles.map { |r| ROL_DESCRIPTIONS.dig(r, :label) || r.humanize }.join(" + ")
+  end
+
+  # Los adicionales que se pueden elegir en el formulario: todos menos `admin`
+  # —que va en el principal, ver `RolDeUsuario`— y menos el principal mismo.
+  def roles_adicionales_elegibles
+    ROL_DESCRIPTIONS.keys - [ "admin", rol ]
+  end
+
+  def roles_adicionales_lista
+    roles_adicionales.map(&:rol)
+  end
+
+  # Reconcilia contra lo que vino del formulario: agrega los que faltan y borra
+  # los que se destildaron. Se guarda al salvar el usuario, no antes, para que
+  # un formulario rechazado no deje roles a medio aplicar.
+  def roles_adicionales_lista=(valores)
+    @roles_adicionales_lista = Array(valores).compact_blank.map(&:to_s).uniq
+  end
+
+  after_save :aplicar_roles_adicionales, if: -> { @roles_adicionales_lista }
+
   def nombre_completo
     nombre
   end
@@ -142,30 +204,43 @@ class User < ApplicationRecord
   # `notas_honduras`, así que el orden efectivo colapsa a estos cuatro.
   NOTAS_DEPARTAMENTO_ORDEN = %i[notas_miami notas_caja notas_honduras notas_sac].freeze
 
+  # PR-D2.b, ahora como tabla y no como `case`: con varios roles hay que poder
+  # recorrerla rol por rol y unir, que un `case` sobre una sola variable no deja.
+  NOTAS_POR_ROL = {
+    "admin"                 => [ %i[notas_miami Miami], %i[notas_honduras Honduras],
+                                 %i[notas_caja Caja], %i[notas_sac SAC] ],
+    "supervisor_miami"      => [ %i[notas_miami Miami] ],
+    "digitador_miami"       => [ %i[notas_miami Miami] ],
+    "supervisor_caja"       => [ %i[notas_caja Caja], %i[notas_honduras Honduras] ],
+    "cajero"                => [ %i[notas_caja Caja], %i[notas_honduras Honduras] ],
+    "supervisor_prefactura" => [ %i[notas_honduras Honduras] ],
+    "sac"                   => [ %i[notas_sac SAC], %i[notas_honduras Honduras] ],
+    "supervisor_sac"        => [ %i[notas_sac SAC], %i[notas_honduras Honduras] ],
+    "entrega_despacho"      => [ %i[notas_honduras Honduras] ]
+  }.freeze
+
   # PR-D2.b: campos de `Cliente` con notas permanentes que el usuario
   # puede ver según su rol. Admin ve todas; cada rol operativo ve sólo
   # las notas pensadas para su área. Devuelve una lista ordenada para
   # renderizar el modal "Notas del cliente" en el detalle del paquete.
+  def aplicar_roles_adicionales
+    deseados = @roles_adicionales_lista - [ rol ]
+    @roles_adicionales_lista = nil
+
+    roles_adicionales.where.not(rol: deseados).destroy_all
+    (deseados - roles_adicionales.reload.map(&:rol)).each do |r|
+      roles_adicionales.create!(rol: r)
+    end
+  end
+
   def notas_permanentes_visibles
-    pares =
-      case rol
-      when "admin"
-        [ %i[notas_miami Miami], %i[notas_honduras Honduras],
-          %i[notas_caja Caja], %i[notas_sac SAC] ]
-      when "supervisor_miami", "digitador_miami"
-        [ %i[notas_miami Miami] ]
-      when "supervisor_caja", "cajero"
-        [ %i[notas_caja Caja], %i[notas_honduras Honduras] ]
-      when "supervisor_prefactura"
-        [ %i[notas_honduras Honduras] ]
-      when "sac", "supervisor_sac"
-        [ %i[notas_sac SAC], %i[notas_honduras Honduras] ]
-      when "entrega_despacho"
-        [ %i[notas_honduras Honduras] ]
-      else
-        []
-      end
-    pares
+    # `RP-58` paso 2a · La **unión** de lo que ve cada uno de sus roles. Espeja
+    # a `Tarea::DEPARTAMENTOS_POR_ROL`, que se resuelve igual: notas y tareas
+    # se filtran con el mismo criterio a propósito, y si uno sumara roles y el
+    # otro no, la incoherencia sería justo la que este método vino a evitar.
+    roles
+      .flat_map { |r| NOTAS_POR_ROL.fetch(r, []) }
+      .uniq
       .sort_by { |campo, _| NOTAS_DEPARTAMENTO_ORDEN.index(campo) || NOTAS_DEPARTAMENTO_ORDEN.size }
       .map { |campo, etiqueta| { campo: campo, etiqueta: etiqueta } }
   end

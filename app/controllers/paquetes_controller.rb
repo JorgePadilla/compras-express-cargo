@@ -733,7 +733,7 @@ class PaquetesController < ApplicationController
 
   def authorize_edit
     return if Current.user&.admin?
-    return if EDIT_ROLES.include?(Current.user&.rol)
+    return if Current.user&.tiene_rol?(EDIT_ROLES)
     redirect_to paquetes_path,
                 alert: "No tienes permiso para editar paquetes. Solo admin, supervisor Miami o supervisor Pre-factura."
   end
@@ -748,7 +748,7 @@ class PaquetesController < ApplicationController
     actual = @paquete.estado.to_s
     return nil if target == actual
 
-    unless Current.user&.admin? || ESTADO_CHANGE_ROLES.include?(Current.user&.rol.to_s)
+    unless Current.user&.admin? || Current.user&.tiene_rol?(ESTADO_CHANGE_ROLES)
       return {
         motivo:   :rol,
         status:   :forbidden,
@@ -813,7 +813,7 @@ class PaquetesController < ApplicationController
 
   def authorize_delete
     return if Current.user&.admin?
-    return if DELETE_ROLES.include?(Current.user&.rol)
+    return if Current.user&.tiene_rol?(DELETE_ROLES)
     redirect_to paquetes_path,
                 alert: "No tienes permiso para eliminar paquetes. Solo administradores."
   end

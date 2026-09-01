@@ -182,7 +182,7 @@ class ClientesController < ApplicationController
   # mensaje se perdería en la segunda vuelta.
   def authorize_edicion
     return if Current.user&.admin?
-    return if EDICION_ROLES.include?(Current.user&.rol)
+    return if Current.user&.tiene_rol?(EDICION_ROLES)
 
     redirect_to clientes_path,
                 alert: "Tu rol solo consulta clientes. Crear y editar es de Honduras y del supervisor de Miami."

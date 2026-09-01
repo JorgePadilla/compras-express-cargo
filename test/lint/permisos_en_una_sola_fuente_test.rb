@@ -100,6 +100,75 @@ class PermisosEnUnaSolaFuenteTest < ActiveSupport::TestCase
                     "las tres de tareas son el ejemplo canónico"
   end
 
+  # `RP-58` paso 2a · **Ningún chequeo de autorización mira `user.rol`.**
+  #
+  # Con varios roles por persona, `user.rol` es solo el principal. Un chequeo que
+  # lo mire deja afuera lo que el segundo rol concede — y lo deja afuera **en
+  # silencio**, que es la forma en que este repo se lastima: unos lugares suman
+  # los roles y otros no, y la diferencia solo aparece cuando alguien con dos
+  # puestos se queja de una pantalla que a su compañero sí le abre.
+  #
+  # La forma correcta es `user.tiene_rol?(LISTA)`, que mira todos.
+  #
+  # Quedan afuera a propósito los que **muestran** el puesto —una etiqueta, una
+  # bitácora, el área por defecto de una tarea nueva— y los que administran los
+  # roles mismos. Ahí `rol` significa «el principal» y eso es lo que se quiere.
+  MIRAN_EL_ROL_PRINCIPAL_A_PROPOSITO = %w[
+    app/models/user.rb
+    app/models/rol_de_usuario.rb
+    app/models/permiso_de_rol.rb
+    app/models/permisos_del_sistema.rb
+    app/controllers/permisos_controller.rb
+    app/helpers/tareas_helper.rb
+    app/views/dashboard/sin_accesos.html.erb
+    app/views/paquetes/show.html.erb
+  ].freeze
+
+  # `.rol` comparado contra algo: `.rol.in?(…)`, `LISTA.include?(user.rol)`,
+  # `.rol == "cajero"`, `.rol.to_s`.
+  COMPARA_EL_ROL = /
+    \.rol\b\s*(?:\.in\?|==|!=|\.to_s|\]) |
+    include\?\([^)]*\.rol\b |
+    fetch\([^)]*\.rol\b |
+    values_at\([^)]*\.rol\b
+  /x
+
+  def lineas_que_comparan_el_rol
+    raiz = Rails.root
+    Dir.glob(raiz.join("app/**/*.{rb,erb}")).sort.flat_map do |archivo|
+      nombre = Pathname.new(archivo).relative_path_from(raiz).to_s
+      next [] if nombre.in?(MIRAN_EL_ROL_PRINCIPAL_A_PROPOSITO)
+
+      File.readlines(archivo).each_with_index.filter_map do |linea, i|
+        next if linea.match?(/^\s*#/)
+        next unless linea.match?(COMPARA_EL_ROL)
+
+        "#{nombre}:#{i + 1} — #{linea.strip}"
+      end
+    end
+  end
+
+  test "ningún chequeo de autorización mira solo el rol principal" do
+    assert_empty lineas_que_comparan_el_rol, <<~MSG
+      Estas líneas deciden con `user.rol`, que es **solo el rol principal**.
+      Quien tiene dos roles pierde en silencio lo que el segundo le da.
+
+      Usá `user.tiene_rol?(LISTA)`, que mira todos sus roles. Si de verdad
+      querés el principal —para mostrarlo, no para decidir— agregá el archivo a
+      `MIRAN_EL_ROL_PRINCIPAL_A_PROPOSITO` y decí por qué.
+    MSG
+  end
+
+  # El contrapeso, por lo mismo que el de arriba: si el regex deja de enganchar,
+  # el test pasa vacío y contento sin haber mirado nada.
+  test "el lint del rol principal de verdad engancha" do
+    linea = 'return if EDIT_ROLES.include?(Current.user&.rol)'
+    assert_match COMPARA_EL_ROL, linea, "el regex dejó de reconocer la forma que vino a prohibir"
+    assert_match COMPARA_EL_ROL, 'user.rol.in?(ROLES)'
+    assert_match COMPARA_EL_ROL, 'Current.user.rol == "cajero"'
+    refute_match COMPARA_EL_ROL, 'user.tiene_rol?(EDIT_ROLES)', "la forma correcta no puede dar falso positivo"
+  end
+
   # `RP-58` paso 1 · El registro y el código no se pueden separar, en **ninguna**
   # de las dos direcciones:
   #
