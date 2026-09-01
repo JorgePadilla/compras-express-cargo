@@ -96,6 +96,10 @@
       <%# `RP-58` · Qué pantalla ve cada puesto. Va junto a Usuarios: uno dice
           quién es cada quien y el otro qué puede. %>
       <%= sidebar_link "Permisos por rol", permisos_path, icon: "lock-closed" %>
+      <%# `RP-58` paso 2b · Y cómo se llama cada puesto, que es la otra mitad de
+          lo que pidió Yusef. Va pegado a Permisos: son las dos cosas que dijo en
+          la misma frase. %>
+      <%= sidebar_link "Títulos de los roles", roles_path, icon: "identification" %>
       <%= sidebar_link "Sucursales", sucursales_path, icon: "building-storefront" %>
       <%# C21-08 · El portal de catálogos del manifiesto —empresas
           transportadoras, tipos de envío del proveedor, consignatarios y

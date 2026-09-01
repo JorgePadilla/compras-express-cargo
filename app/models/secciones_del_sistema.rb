@@ -68,6 +68,8 @@ module SeccionesDelSistema
     usuarios:             { nombre: "Usuarios",                  grupo: "Configuración" },
 
     # ── La pantalla misma ──
+    roles:                { nombre: "Títulos de los roles",      grupo: "Configuración",
+                            ayuda: "Cómo se lee cada puesto. Renombrar no cambia lo que el puesto puede hacer." },
     permisos:             { nombre: "Permisos por rol",          grupo: "Configuración" }
   }.freeze
 

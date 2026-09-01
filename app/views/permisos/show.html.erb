@@ -38,8 +38,11 @@
           <tr>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sección</th>
             <% @roles.each do |rol| %>
-              <th class="px-3 py-3 text-center text-[11px] font-mono font-medium text-gray-500 dark:text-gray-400">
-                <%= rol.tr("_", " ") %>
+              <%# `RP-58` paso 2b · Se lee el título, no el código: es la pantalla que
+                  Yusef mira, y si acá dijera «supervisor caja» mientras el resto del
+                  sistema dice lo que él le puso, no se reconocerían como lo mismo. %>
+              <th class="px-3 py-3 text-center text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                <%= User.titulo_de_rol(rol) %>
               </th>
             <% end %>
           </tr>

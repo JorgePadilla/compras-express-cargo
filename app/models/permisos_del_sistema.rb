@@ -108,6 +108,11 @@ module PermisosDelSistema
          :servicios, :proveedores, :motivos_retencion, :motivos_envio_politica,
          :plantillas_notas_cliente, :plantillas_descripcion, :categoria_precios,
          :tasa_cambio, :ajustes_etiqueta,
+         # `RP-58` paso 2b · Los títulos de los roles. Admin y nadie más, como el
+         # resto de Configuración. **No** entra en `NO_EDITABLES`: renombrar un
+         # puesto no concede nada —los permisos siguen atados al código del rol—,
+         # así que dársela a alguien no le abre ninguna puerta.
+         :roles,
          # `RP-58` · La pantalla de permisos misma. Admin y nadie más, y además
          # está en `NO_EDITABLES`: concedérsela a un rol le deja darse todo lo
          # demás en el siguiente clic.
