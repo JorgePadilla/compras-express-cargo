@@ -268,8 +268,15 @@ La serie `RP-{nn}` **no son PRs**: son las preguntas al cliente. Viven en
 | 5c.5 | `feat/warehouse-receipt-model` | Modelos nuevos: `WarehouseReceipt` + `Supplier` + `Agent` + `Terms`. Migra `paquetes.numero_recepcion` → `paquetes.warehouse_receipt_id`. **Antecede a D1-D4.** | ⏳ Listo para implementar |
 | 5c.1 | `feat/paquete-estados-fechas-audit` | Nuevo estado `pre_alerta`, ~7 fechas + `*_user_id` por fecha, `users.iniciales` (campo nuevo editable), `paper_trail` + UI bitácora. **Indicador visual "modificada"** en fechas re-editadas (ej. `fecha_recibido_miami`). Job nocturno de "disponible programada" con notif email/SMS/WhatsApp/push a las 7am. Modelo `SubLocalidad` + `sucursal_actual_id`/`sub_localidad_actual_id` en paquetes. Recolecta fija $35 USD editable. **Manifiesto formato anual `MM2026000001`** (counter por sucursal/año, análogo a `numero_recepcion`). **`paquetes.tracking_secundario`** (string, nullable) — vinculación de PA matchea ambos trackings. | ✅ Listo para implementar |
 | 5c.2 | `feat/paquete-notas-categorizadas` | Refactor notas (especiales PA, consolidación PA, retención, internas, al_cliente). Notas permanentes del cliente como modal por área (`notas_miami`, `notas_honduras`, **`notas_caja` NUEVA**, **`notas_sac` NUEVA**). **Plantillas de notas al cliente** (modelo `PlantillaNotaCliente` + picker, compartidas entre Etiquetar/Pre-Factura/Caja/SAC). Notas al cliente viajan en email de notificación. **Notas de retención obligatorias en estado `retenido`** + modelo `MotivoRetencion` con multi-select de motivos. | ✅ Listo para implementar |
-| 5c.3 | `feat/paquete-tercero-proveedor-services` | `tercero_nombre` (string libre, no FK), `Proveedor` modelo con dropdown + opción "Otros" (texto libre), flow ENTREGA PERSONAL con tracking auto generado (`<SUCURSAL>-<YYYYMMDD>-<correlativo>`), `service_code` enum, `repackaging_type` enum, `consolidation` bool. **`paquetes.carrier_id` FK al modelo `Carrier` existente** (UPS/USPS/DHL/FedEx). | ⏳ Bloqueado solo por pregunta 14b (empresa transporte) |
+| 5c.3 | `feat/paquete-tercero-proveedor-services` | `tercero_nombre` (string libre, no FK), `Proveedor` modelo con dropdown + opción "Otros" (texto libre), flow ENTREGA PERSONAL con tracking auto generado (`<SUCURSAL>-<YYYYMMDD>-<correlativo>`), `service_code` enum, `repackaging_type` enum, `consolidation` bool. **`paquetes.carrier_id` FK al modelo `Carrier` existente** (UPS/USPS/DHL/FedEx). | ✅ Construido, por otro camino — ver abajo |
 | 5c.4 | `feat/paquete-show-actions` | ~10 botones del header del show (mover/eliminar PA, copy buttons, ver pre-factura/factura). **Re-imprimir Etiquetas Miami: preview con checkboxes para seleccionar cuáles imprimir** (1 por página). **Imprimir Pre-Factura: preview + imprimir + copiar imagen para enviar al cliente.** **Botón "Refrescar"** visual estilo Gmail (icono ↻). El WR ya está hecho en 5c.WR. | ✅ Listo para implementar |
+
+**5c.3 se construyó, y no como decía su scope.** La fila quedó años marcada «bloqueada por 14b»; contestada la 14b, no quedaba nada bloqueándola — y para entonces ya estaba hecha, por otro camino:
+
+- **ENTREGA PERSONAL no salió de un `service_code` enum**, sino de `Proveedor#tipo` (`comercio` / `entrega_personal`, `app/models/proveedor.rb:17`) — decisión de `PR-D3.b`.
+- **El tracking auto es `EP-AÑO-SUC-PROV-NNNNNN`**, no `<SUCURSAL>-<YYYYMMDD>-<correlativo>` (`app/models/paquete.rb:1615`).
+- **El carrier no terminó en FK.** Sigue en `paquetes.expedido_por` (string), con dropdown híbrido que además deja agregar a la lista sobre la marcha. `paquetes.carrier_id` **no existe**.
+- Sí quedaron como decía: `tercero_nombre`, `tercero_id` y `proveedor_id`.
 
 **Dependencia:** Fase 5b (numero_recepcion anual + split). ✅ Cumplida.
 
@@ -322,8 +329,10 @@ La serie `RP-{nn}` **no son PRs**: son las preguntas al cliente. Viven en
 
 **Segundo tracking** (`paquetes.tracking_secundario`): muchos paquetes llegan con 2 números de seguimiento (el proveedor le da uno al cliente para la pre-alerta y otro al paquete físico). El sistema acepta ambos en el form, los indexa, y `PreAlertaPaquete.link_tracking!` matchea contra cualquiera de los dos. Búsqueda incluye ambos. WR/etiquetas muestran principal + "Alt:" debajo si existe secundario. **Se incluye en PR-D1.**
 
-**Pregunta pendiente para Yusef (única restante):**
-- 14b. Empresa transporte vs manifiesto: cuando un paquete cambia de manifiesto, ¿muestra la empresa actual del manifiesto (heredada) o la empresa original con la que viajó (redundante en paquete)?
+**14b — Empresa transporte vs manifiesto: ✅ CONTESTADA por Yusef (2026-05-01), opción A.**
+La empresa se **hereda del manifiesto** y no se duplica en el paquete: `paquete.manifiesto.empresa_manifiesto` es el único lugar de verdad. En 9 de cada 10 casos el paquete viaja con su manifiesto, así que un solo lugar evita que se contradigan; si la empresa del manifiesto se corrige, todos sus paquetes se corrigen solos. Al reasignar un paquete de manifiesto (confirmado 2026-05-04) se actualiza **toda** la información derivada —empresa, fecha de salida, fecha estimada de entrega— y el audit log registra el cambio; al cliente solo se le notifican las fechas, no el cambio de empresa.
+
+**Construido así, y verificable:** `paquetes` no tiene ninguna columna de empresa en `db/structure.sql`. Si alguna vez aparece una, es esta decisión que se revirtió sin decirlo.
 
 **Referencia:** `docs/05_requerimientos_conversaciones.md` Conversación 3.
 
@@ -879,6 +888,7 @@ Y lo que salió de mirar el resultado (2026-08-30):
 | `PR-U3` | El date picker del proyecto en todas las fechas, con lint | ✅ |
 | `PR-U4` | El manifiesto, para dedos — y el estándar táctil de `docs/07` | ✅ |
 | `PR-U5` | Empacar y las casas, para dedos | ✅ |
+| `PR-U6` | La guía del proveedor decía «guardado.» y no se guardaba — un `child_index` de texto que `permit` filtraba entero | ✅ #390 |
 
 **Lo que se cerró de paso:** `RP-30` (aduana ya tiene pantalla y quién escriba el
 estado — `PR-M7` es el **primer escritor de `en_aduana` en todo el sistema**),
