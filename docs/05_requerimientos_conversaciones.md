@@ -4932,6 +4932,12 @@ escanear paquete por paquete para cuadrar"*— pero al cerrar ese conteo **ya
 terminó**, que es justo lo que la ventana venía a esperar. **`RP-32` (¿media hora
 o una hora?) queda sin efecto** hasta que la cola se conecte.
 
+**Decisión de Jorge (2026-09-01): la cola no se conecta por ahora** — *"no vamos
+a meter colas ahorita eso pone lento las cosas"*. Se le aclaró que una cola no
+pone lento el request —hoy `:async` ya manda en un hilo aparte, y el costo real
+es el worker aparte en Render— y la decisión quedó igual. **No volver a
+proponerlo**; lo que sigue abajo queda como riesgo aceptado.
+
 **Deuda que esto destapó, y que es más grande que este bloque:** *todos* los
 `deliver_later` de hoy corren sobre el mismo adaptador no durable — la factura
 pendiente, la pagada, las cotizaciones, las notas de crédito y débito, y el
@@ -8699,7 +8705,7 @@ mal en silencio:
 
 | Qué sobrevive a F2 en modo alta | Consecuencia |
 |---|---|
-| **`paquete[tercero_id]`** (hidden, `shared/_tercero_field`) | El campo visible del tercero se vacía y **el id se queda**: el paquete siguiente se guarda con el tercero del anterior, sin que nada lo muestre en pantalla. Es el más grave de la lista |
+| ~~**`paquete[tercero_id]`** (hidden)~~ | **✅ ARREGLADO (2026-09-01).** El campo visible se vaciaba y **el id se quedaba**: el paquete siguiente se guardaba con el tercero del anterior, sin que nada lo mostrara. `toggleTercero` (F4) sí lo limpiaba desde siempre — los dos caminos hacían distinto lo mismo. Ahora la limpieza vive en **un solo método** que usan los dos, que es lo que evita que se vuelvan a separar |
 | Los campos `data-print-field` (`print`, `etiquetas`, pesos) | Solo los quita `_removePrintField`, al empezar el siguiente guardado |
 | Los radios de prepago Miami | `_limpiarCampos` los desmarca a todos, y con eso **se pierde el default «Cobrar en Honduras»**; además el panel del método queda visible porque nadie dispara el `change` |
 | `_duplicadoDesde` | Único memo del controller que ninguna de las cuatro rutas de limpieza reinicia |
