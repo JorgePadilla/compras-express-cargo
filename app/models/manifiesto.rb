@@ -193,12 +193,31 @@ class Manifiesto < ApplicationRecord
   # Ejemplos: MM2026000001 (Miami), MS2026000042 (SPS), MT2026000001 (Humuya).
   # Si no hay sucursal_origen (manifiestos legacy o tests), cae al formato
   # antiguo `MA-XXXXXX` para no romper la creación.
+  # `RP-46` · **El código completo de la sucursal, no su primera letra.**
+  #
+  # Nació como `M<letra><año><correlativo>` —`MM2026000001` para Miami— y eso
+  # funcionaba mientras Miami fuera la única que armaba manifiestos. Con dos
+  # sucursales cuyo código empieza igual, **el segundo manifiesto no se puede
+  # crear**: `SPS` y `SAM` generan los dos `MS2026000001` y la validación de
+  # unicidad lo rechaza. Y el reintento de `save` no lo salva — escucha
+  # `RecordNotUnique`, el error de la base, y acá la validación dispara antes.
+  #
+  # No era teórico: `SPS` (Zerón) y `SAM` (San Manuel) existen las dos hoy. Lo
+  # que lo despierta es el **manifiesto interno de sucursal**, que es de lo que
+  # se trata construir ahora — hasta hoy nadie más que Miami numeraba.
+  #
+  # Jorge eligió el código completo (2026-09-01). **Cambia el formato que Yusef
+  # confirmó** (`MM2026000001` → `MMIA2026000001`, dos caracteres más en la hoja
+  # impresa): hay que decírselo.
+  #
+  # Los manifiestos ya numerados **no se renumeran**: su número es como se los
+  # conoce, y el contador por sucursal sigue donde estaba.
   def generate_numero
     if sucursal_origen.present?
-      letra = sucursal_origen.codigo.to_s[0]&.upcase || "X"
+      codigo = sucursal_origen.codigo.to_s.upcase.presence || "XXX"
       anio = (fecha_enviado&.year || created_at&.year || Time.zone.now.year)
       next_number = ManifiestoCounter.next_for!(sucursal: sucursal_origen, anio: anio)
-      self.numero = format("M%<letra>s%<anio>04d%<num>06d", letra: letra, anio: anio, num: next_number)
+      self.numero = format("M%<codigo>s%<anio>04d%<num>06d", codigo: codigo, anio: anio, num: next_number)
     else
       # Fallback legacy
       next_number = (self.class.where("numero LIKE 'MA-%'").maximum(Arel.sql("CAST(SUBSTRING(numero FROM 4) AS INTEGER)")) || 0) + 1
