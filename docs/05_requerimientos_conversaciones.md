@@ -4852,7 +4852,7 @@ queda en San Pedro"*).
 | `PR-I1` | El manifiesto **interno** como tipo: exige a dónde va, y no pide nada de aduana | 🟡 |
 | `PR-I2` | Cerrarlo manda los paquetes a `enviado_sucursal` — **sin notificar** (`A7-09`) | ✅ |
 | `PR-I3` | Recibirlo en la sucursal destino, escaneando **paquetes** | ✅ |
-| `PR-I4` | La notificación con la ventana de espera (`A7-08`) | ⏳ |
+| `PR-I4` | El aviso al cliente al cerrar la recepción — **sin ventana**, ver abajo (`A7-08`) | ✅ |
 
 **`PR-I0` no estaba en el plan y salió del camino.** Numerar desde una sucursal
 que no es Miami es lo que despierta la colisión: hasta ahora nadie más numeraba.
@@ -4866,7 +4866,7 @@ Yusef, no código. `PR-I4` hace la ventana de espera y el correo, y deja el ganc
 
 ---
 
-### A7-08 · Escanear el manifiesto de sucursal notifica a todos, con ventana de espera
+### A7-08 · Escanear el manifiesto de sucursal notifica a todos — ✅ **IMPLEMENTADO en PR-I3/PR-I4, sin la ventana**
 
 > **Jorge:** "¿Solo con que escanee el manifiesto le notifique a todos los clientes
 >  en Tegucigalpa, o que escanee paquete por paquete?"
@@ -4907,8 +4907,48 @@ El correo de faltantes tampoco sale en el interno: `A7-06` lo pidió para el
 **internacional** (*"si falta una caja, manda un correo al correo tal"*), y acá
 el faltante no se pierde de vista.
 
-**Lo que falta de `A7-08` es la notificación** (`PR-I4`), con el aviso de arriba
-sobre los canales.
+**El aviso está en `PR-I4`, y sale al cerrar la recepción — no hay ventana.**
+
+**Y la razón no es de diseño: la cola de trabajos de este repo no está
+conectada.** Verificado el 2026-09-01:
+
+- El adaptador efectivo en producción es **`AsyncAdapter`**
+  (`RAILS_ENV=production bin/rails runner 'puts ActiveJob::Base.queue_adapter.class'`).
+- `solid_queue` está en el `Gemfile` y **`render.yaml` levanta dos workers** que
+  corren `rails solid_queue:start` — pero del lado de Rails nunca se cableó: no
+  hay `db/queue_migrate`, no hay `config/queue.yml`, y **no existe una sola tabla
+  de `solid_queue`** en la base. El worker arranca sin de dónde tomar trabajo y
+  la app encola dentro de su propio proceso.
+- El comentario que quedó sin descomentar en `config/environments/production.rb`
+  lo dice con todas las letras: *"non-durable queuing backend"*.
+
+Un job agendado a 30-60 minutos sobre `:async` **se pierde en el primer
+reinicio**, y en Render hay deploys y spin-down: el cliente no recibiría el
+aviso, sin error y sin rastro.
+
+**Jorge, 2026-09-01, con eso sobre la mesa: notificar al cerrar, sin ventana.**
+Se pierde el motivo que Yusef le daba —*"escanean el manifiesto y empiezan a
+escanear paquete por paquete para cuadrar"*— pero al cerrar ese conteo **ya
+terminó**, que es justo lo que la ventana venía a esperar. **`RP-32` (¿media hora
+o una hora?) queda sin efecto** hasta que la cola se conecte.
+
+**Deuda que esto destapó, y que es más grande que este bloque:** *todos* los
+`deliver_later` de hoy corren sobre el mismo adaptador no durable — la factura
+pendiente, la pagada, las cotizaciones, las notas de crédito y débito, y el
+correo de cajas faltantes del manifiesto. Un deploy en el momento equivocado se
+come uno de esos correos y nadie se entera.
+
+**Cómo quedó el aviso:** un correo **por cliente** y no por paquete —quien tiene
+tres cajas en el mismo camión recibe uno que las nombra—, solo a los que **de
+verdad llegaron** (el que no se escaneó sigue en `enviado_sucursal` y no se
+avisa), con el **nombre de la sucursal en el asunto**, que es el punto de
+`A7-13`. Cerrar dos veces no reenvía.
+
+⚠️ **Solo correo.** Yusef pidió cuatro canales —*"el push del celular, el
+WhatsApp **o** el SMS… y el correo"*— y el repo no tiene gema de push, WhatsApp
+ni SMS; `clientes.telefono_whatsapp` es nada más un campo donde se guarda el
+número. Los otros tres necesitan proveedor, credenciales y costo: decisión de
+Yusef, no código.
 
 ---
 
@@ -5472,7 +5512,7 @@ Sobre prefactura Yusef fue claro en que todavía no toca:
 | Id | Qué |
 |---|---|
 | ~~`RP-31`~~ | ~~¿Pie cúbico o libra volumétrica?~~ (`A7-27`) — **✅ contestada** en la hoja de redondeos del 2026-08-12: **por libra volumétrica**; el pie cúbico *"no afluye en precio"*. Ver `A8-02` |
-| `RP-32` | ¿De cuánto es la ventana de notificación al escanear el manifiesto de sucursal — media hora, una hora? (`A7-08`) |
+| `RP-32` | ⏸️ **SIN EFECTO hasta que la cola de trabajos se conecte** (2026-09-01). ¿De cuánto es la ventana de notificación al escanear el manifiesto de sucursal — media hora, una hora? (`A7-08`). `PR-I4` avisa **al cerrar la recepción**, sin ventana, porque un job diferido se pierde: el adaptador efectivo es `AsyncAdapter` y no hay tablas de `solid_queue`, aunque `render.yaml` levante workers para él. Cuando se conecte, la pregunta vuelve a tener sentido |
 | ~~`RP-33`~~ | ~~Al cambiar el servicio en `/etiquetar`, ¿la pre-alerta se corrige sola o se marca resuelta?~~ **✅ se corrige sola** cuando no hay ambigüedad — `PR-C7.02` |
 | ~~`RP-34`~~ | ~~Los paquetes que hoy están en `prefacturado`, ¿a qué estado se migran?~~ **✅ no se migra ninguno**: el estado se queda, solo deja de poder elegirse a mano — `PR-C7.03` |
 | `RP-35` | El Excel de roles × operaciones (`A7-28`) — lo hace Evelin |

@@ -64,6 +64,11 @@ class RecepcionCargaController < ApplicationController
   # Terminar. Si faltan cajas, la primera vez avisa y ofrece las dos salidas de
   # `A7-05`: seguir escaneando, o marcar recibido con las pendientes.
   def finalizar
+    # `A7-08` · Si ya estaba cerrado, no se vuelve a avisar: la pantalla no lo
+    # ofrece, pero un doble submit o un F5 sobre el PATCH sí llegan acá, y el
+    # cliente recibiría el mismo correo dos veces.
+    ya_estaba_cerrado = @manifiesto.recepcion_finalizada_at.present?
+
     resultado = servicio.finalizar!(con_faltantes: params[:con_faltantes].present?)
 
     if resultado.faltantes.any? && params[:con_faltantes].blank?
@@ -78,8 +83,12 @@ class RecepcionCargaController < ApplicationController
       ManifiestoMailer.cajas_faltantes(@manifiesto, resultado.faltantes).deliver_later
     end
 
-    redirect_to recepcion_carga_index_path,
-                notice: "#{@manifiesto.numero} recibido#{" con #{resultado.faltantes.size} caja(s) pendiente(s)" if resultado.faltantes.any?}."
+    # `A7-08` · *"Con el manifiesto notifique."* Al cerrar y no antes: la ventana
+    # de espera que Yusef pedía existía para que el conteo terminara, y acá ya
+    # terminó. Ver `NotificarLlegadaASucursal` para por qué no hay job diferido.
+    avisados = @manifiesto.tipo_interno? && !ya_estaba_cerrado ? NotificarLlegadaASucursal.new(@manifiesto).call : 0
+
+    redirect_to recepcion_carga_index_path, notice: aviso_de_cierre(resultado, avisados)
   end
 
   private
@@ -104,6 +113,15 @@ class RecepcionCargaController < ApplicationController
     render json: { resultado: "ok", paquete_id: paquete.id, tracking: paquete.tracking,
                    mensaje: "#{paquete.tracking} recibido en #{@manifiesto.sucursal_entrega&.nombre}.",
                    faltan: servicio.paquetes_pendientes.count }
+  end
+
+  def aviso_de_cierre(resultado, avisados)
+    if @manifiesto.tipo_interno?
+      pendientes = " · #{resultado.faltantes.size} paquete(s) quedaron señalados como pendientes" if resultado.faltantes.any?
+      "#{@manifiesto.numero} recibido. Se avisó a #{avisados} cliente(s)#{pendientes}."
+    else
+      "#{@manifiesto.numero} recibido#{" con #{resultado.faltantes.size} caja(s) pendiente(s)" if resultado.faltantes.any?}."
+    end
   end
 
   # El faltante se cuenta en su propia unidad: cajas en el oficial, paquetes en
