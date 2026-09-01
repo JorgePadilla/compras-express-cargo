@@ -32,6 +32,11 @@ class Tarea < ApplicationRecord
     "cajero"                => %w[caja honduras],
     "supervisor_prefactura" => %w[honduras],
     "sac"                   => %w[sac honduras],
+    # `RP-45` · El jefe de SAC **no estaba**, así que `fetch(rol, [])` le
+    # devolvía nada y solo veía las tareas sin área. Ve lo mismo que su equipo:
+    # es la misma regla que ya cumple `User::NOTAS_POR_ROL`, que sí lo tenía —
+    # las dos tablas se espejan a propósito y ésta se había quedado atrás.
+    "supervisor_sac"        => %w[sac honduras],
     "entrega_despacho"      => %w[honduras]
   }.freeze
 

@@ -97,6 +97,15 @@ class User < ApplicationRecord
     (roles & lista.flatten.map(&:to_s)).any?
   end
 
+  # El área de **servicio al cliente**: el agente y su jefe.
+  #
+  # Estaba escrita a mano en `PermisosDelSistema` y **faltaba** en las tres
+  # listas de tareas — por eso el jefe de SAC no veía la cola de SAC (`RP-45`).
+  # Sale acá por lo mismo que `ROLES_DE_HONDURAS` y `ROLES_OPERATIVOS`: dos
+  # copias de una lista de roles se desincronizan sin que nadie lo vea, y ésta
+  # se desincronizó.
+  ROLES_DE_SAC = %w[sac supervisor_sac].freeze
+
   ROLES_AUTORIZANTES = %w[admin supervisor_prefactura supervisor_caja supervisor_sac].freeze
 
   # `RP-58` paso 2a · Mira los roles adicionales también, y tiene que hacerlo en

@@ -14,7 +14,10 @@ class TareasController < ApplicationController
   # puede poner una tarea, solo nosotros"* (C16-01) y nunca quién de nosotros:
   # queda como respuesta provisoria en `RP-45`. Si dice que no, esta constante
   # vuelve a `GESTION_ROLES` y con ella `can_crear_tareas?` y un test.
-  GESTION_ROLES  = %w[supervisor_miami supervisor_caja supervisor_prefactura sac].freeze
+  # `RP-45` · `supervisor_sac` **faltaba en las tres**, así que el jefe de SAC ni
+  # siquiera podía abrir `/tareas`: `EJECUCION_ROLES` traba el `index`. Se deriva
+  # de `User::ROLES_DE_SAC` en vez de sumarlo a mano, que es como se perdió.
+  GESTION_ROLES  = (%w[supervisor_miami supervisor_caja supervisor_prefactura] + User::ROLES_DE_SAC).freeze
   EJECUCION_ROLES = (GESTION_ROLES + %w[digitador_miami cajero entrega_despacho]).freeze
   CREACION_ROLES  = EJECUCION_ROLES
 

@@ -159,11 +159,33 @@ class BandejaDeTareasTest < ActionDispatch::IntegrationTest
     assert_includes hrefs, tareas_path
   end
 
-  test "a quien no ejecuta tareas no se le ofrece" do
+  # Este test decía *"a quien no ejecuta tareas no se le ofrece"* y usaba de
+  # ejemplo a `supervisor_sac`… que era el único que quedaba afuera **por un
+  # olvido**, no por una decisión: faltaba en las tres listas de tareas, que es
+  # el síntoma que `RP-45` traía anotado y se arregló el 2026-09-01.
+  #
+  # O sea que el test fijaba el bug como si fuera la regla. Arreglado el olvido
+  # **ya no queda ningún rol afuera**, así que el ejemplo no existe y el test
+  # tampoco puede.
+  #
+  # Lo que se queda en su lugar es la guarda de verdad: hoy **todo el personal
+  # ejecuta tareas**, que es la respuesta provisoria de Jorge en `RP-45` (*"la
+  # deja cualquiera del personal que las ejecuta"*). Escrito así, el día que
+  # alguien agregue un rol nuevo este test falla hasta que decida si ejecuta o
+  # no — que es justo la decisión que la primera vez nadie tomó.
+  test "todo el personal ejecuta tareas, y agregar un rol obliga a decidirlo" do
+    del_personal = User.rols.keys - [ "admin" ]
+
+    assert_equal del_personal.sort, TareasController::EJECUCION_ROLES.sort,
+                 "hay un rol que no está en EJECUCION_ROLES: ¿ejecuta tareas o no? " \
+                 "Decidilo y actualizá la lista — no lo dejes afuera por omisión."
+  end
+
+  test "el jefe de SAC entra, que era el que faltaba" do
     entrar_como("supervisor_sac")
 
     get tareas_url
 
-    assert_redirected_to root_path
+    assert_response :success
   end
 end
