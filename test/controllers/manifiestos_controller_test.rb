@@ -47,7 +47,9 @@ class ManifiestosControllerTest < ActionDispatch::IntegrationTest
   test "el manifiesto que crea la pantalla nace con el número del año" do
     post manifiestos_url, params: { manifiesto: { tipo_envio_ids: [ tipo_envios(:cer).id ] } }
 
-    assert_match(/\AM[A-Z]#{Time.zone.now.year}\d{6}\z/, Manifiesto.last.numero,
+    # `[A-Z]{3}` desde el 2026-09-01: el número lleva el **código completo** de la
+    # sucursal. Con una sola letra, `SPS` y `SAM` chocaban.
+    assert_match(/\AM[A-Z]{3}#{Time.zone.now.year}\d{6}\z/, Manifiesto.last.numero,
                  "sin sucursal de origen el número vuelve a caer al formato viejo")
     assert Manifiesto.last.sucursal_origen.present?
   end
