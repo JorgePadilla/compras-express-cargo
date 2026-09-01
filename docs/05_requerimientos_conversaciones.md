@@ -4828,7 +4828,7 @@ individual no se escanea acá. El faltante avisa por correo, no en pantalla.
 
 ---
 
-### A7-07 · El manifiesto interno de sucursal es igual al oficial
+### A7-07 · El manifiesto interno de sucursal es igual al oficial — 🟡 **EN CURSO (serie `PR-I`)**
 
 > "Es el de envío nacional, de una sucursal a la otra. Lleva un **manifiesto
 >  interno** y es igualito."
@@ -4843,6 +4843,26 @@ Con su horario y su tamaño:
 **Lectura.** Confirma [[project_dual_manifiesto_sonidos]]: dos manifiestos, mismo
 comportamiento. El interno mueve el ~20% de la carga (*"el 80% de la carga se
 queda en San Pedro"*).
+
+**Cómo se está construyendo (serie `PR-I`, desde el 2026-09-01):**
+
+| PR | Qué | Estado |
+|---|---|---|
+| `PR-I0` | El número lleva el **código completo** de la sucursal: con la letra sola, `SPS` y `SAM` no podían tener manifiesto el mismo año (`RP-46`) | ✅ #398 |
+| `PR-I1` | El manifiesto **interno** como tipo: exige a dónde va, y no pide nada de aduana | 🟡 |
+| `PR-I2` | Cerrarlo manda los paquetes a `enviado_sucursal` — **sin notificar** (`A7-09`) | ⏳ |
+| `PR-I3` | Recibirlo en la sucursal destino, escaneando, sin bloquear | ⏳ |
+| `PR-I4` | La notificación con la ventana de espera (`A7-08`) | ⏳ |
+
+**`PR-I0` no estaba en el plan y salió del camino.** Numerar desde una sucursal
+que no es Miami es lo que despierta la colisión: hasta ahora nadie más numeraba.
+
+⚠️ **Lo que `A7-08` pide y hoy no se puede construir.** Yusef: *"el push del
+celular, el WhatsApp **o** el SMS… y el correo"*. El repo **solo tiene correo**:
+no hay ninguna gema de push, WhatsApp ni SMS en el `Gemfile`, y
+`clientes.telefono_whatsapp` es nada más un campo donde se guarda el número. Los
+otros tres canales necesitan proveedor, credenciales y costo — es una decisión de
+Yusef, no código. `PR-I4` hace la ventana de espera y el correo, y deja el gancho.
 
 ---
 

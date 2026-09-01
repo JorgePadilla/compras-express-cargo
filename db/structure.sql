@@ -1313,7 +1313,8 @@ CREATE TABLE public.manifiestos (
     ultima_letra integer DEFAULT 0 NOT NULL,
     finalizado_por_id bigint,
     finalizado_at timestamp(6) without time zone,
-    recepcion_finalizada_at timestamp(6) without time zone
+    recepcion_finalizada_at timestamp(6) without time zone,
+    tipo character varying DEFAULT 'oficial'::character varying NOT NULL
 );
 
 
@@ -4738,6 +4739,13 @@ CREATE INDEX index_manifiestos_on_sucursal_origen_id ON public.manifiestos USING
 
 
 --
+-- Name: index_manifiestos_on_tipo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_manifiestos_on_tipo ON public.manifiestos USING btree (tipo);
+
+
+--
 -- Name: index_manifiestos_on_tipo_envio_proveedor_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6889,6 +6897,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260901003545'),
 ('20260831234500'),
 ('20260831222808'),
 ('20260831210417'),

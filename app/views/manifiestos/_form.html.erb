@@ -18,8 +18,40 @@
     </div>
   <% end %>
 
-  <%= render FormSectionComponent.new(title: "Lo que se llena en Miami") do %>
+  <%# `A7-07` · Qué manifiesto es esto. Va arriba de todo porque **decide qué se
+      pregunta abajo**: el interno no cruza aduana, así que consignatario,
+      empresa proveedora y tipo de envío del proveedor no le aplican.
+
+      En uno ya guardado no se puede cambiar: el número ya salió con la sucursal
+      de origen y la carga ya se movió con las reglas de su tipo. %>
+  <% if manifiesto.new_record? %>
+    <%= render FormSectionComponent.new(title: "Qué manifiesto es") do %>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <% Manifiesto.tipos.keys.each do |tipo| %>
+          <label class="flex items-start gap-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
+            <%= f.radio_button :tipo, tipo, class: "mt-1 w-5 h-5 text-cec-teal focus:ring-cec-teal" %>
+            <span>
+              <span class="block text-base font-medium text-gray-800 dark:text-gray-100">
+                <%= tipo == "oficial" ? "Oficial — sale del extranjero" : "Interno — de una sucursal a otra" %>
+              </span>
+              <span class="block text-xs text-gray-500 mt-0.5">
+                <%= tipo == "oficial" ? "Cruza aduana: lleva consignatario, empresa proveedora y guía." : "Envío nacional. No cruza aduana ni lleva guía de proveedor." %>
+              </span>
+            </span>
+          </label>
+        <% end %>
+      </div>
+    <% end %>
+  <% else %>
+    <%= f.hidden_field :tipo %>
+  <% end %>
+
+  <%= render FormSectionComponent.new(title: manifiesto.tipo_interno? ? "De dónde sale y a dónde va" : "Lo que se llena en Miami") do %>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <%# `A7-07` · Los tres de abajo son de la carga que cruza aduana. En el
+          interno no existen, y preguntarlos sería pedirle a alguien que invente
+          un dato que no tiene. %>
+      <% unless manifiesto.tipo_interno? %>
       <div>
         <%= f.label :consignatario_id, "Consignatario", class: "block text-base font-medium text-gray-700 dark:text-gray-200 mb-1" %>
         <%= f.collection_select :consignatario_id, @consignatarios, :id, :nombre,
@@ -43,13 +75,16 @@
               class: "block w-full min-h-11 py-3 rounded-lg border-gray-300 shadow-sm text-base focus:ring-cec-teal focus:border-cec-teal" %>
         <p class="text-xs text-gray-500 mt-1">El servicio <b>de ellos</b> — AEREO EXPRESS, CKM MARITIMO. No es el nuestro.</p>
       </div>
+      <% end %>
 
       <div>
         <%= f.label :sucursal_entrega_id, "Sucursal donde se entrega", class: "block text-base font-medium text-gray-700 dark:text-gray-200 mb-1" %>
         <%= f.collection_select :sucursal_entrega_id, @sucursales_entrega, :id, :nombre,
               { include_blank: "— Seleccionar —" },
               class: "block w-full min-h-11 py-3 rounded-lg border-gray-300 shadow-sm text-base focus:ring-cec-teal focus:border-cec-teal" %>
-        <p class="text-xs text-gray-500 mt-1">A dónde llega en Honduras.</p>
+        <p class="text-xs text-gray-500 mt-1">
+          <%= manifiesto.tipo_interno? ? "A qué sucursal va la carga. En el interno es obligatorio: es el envío." : "A dónde llega en Honduras." %>
+        </p>
       </div>
 
       <% if @sucursales_origen.many? %>

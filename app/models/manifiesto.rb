@@ -32,6 +32,18 @@ class Manifiesto < ApplicationRecord
   accepts_nested_attributes_for :guias, allow_destroy: true,
                                 reject_if: ->(a) { a[:numero].blank? }
 
+  # `A7-07` · Dos manifiestos, mismo comportamiento.
+  #
+  # Yusef: *"es el de envío nacional, de una sucursal a la otra. Lleva un
+  # **manifiesto interno** y es igualito."* Igualito en cómo se opera —se arma, se
+  # cierra, se recibe escaneando—, distinto en qué lleva: el interno no cruza
+  # aduana, así que no tiene consignatario, ni empresa proveedora, ni guía, ni
+  # fecha de aduana. Mueve el ~20% de la carga (*"el 80% se queda en San Pedro"*).
+  enum :tipo, {
+    oficial: "oficial",
+    interno: "interno"
+  }, prefix: true
+
   enum :estado, {
     creado: "creado",
     enviado: "enviado",
@@ -45,6 +57,10 @@ class Manifiesto < ApplicationRecord
   # mínimo"*. Es lo que decide qué paquetes salen al finalizar, así que un
   # manifiesto sin ningún tipo no tendría a quién mandar.
   validate :al_menos_un_tipo_de_envio_nuestro
+  # `A7-07` · En el interno la sucursal de entrega **es** el envío: sin ella no
+  # se sabe a dónde va el camión. En el oficial sigue siendo opcional, que es
+  # como estaba.
+  validates :sucursal_entrega, presence: true, if: :tipo_interno?
 
   scope :activos, -> { where(activo: true) }
   # C21-11: las guías se mudaron a su propia tabla. Sin el `left_joins` la
@@ -155,8 +171,12 @@ class Manifiesto < ApplicationRecord
   # `where.not(id: subconsulta)` y no `where.missing(:guias)`: `missing` agrega un
   # LEFT JOIN y `.or` rechaza dos relations que no son estructuralmente iguales.
   # La subconsulta es segura porque `manifiesto_guias.manifiesto_id` es NOT NULL.
+  # `A7-07` · **Solo los oficiales.** La guía del proveedor y la fecha de aduana
+  # son de la carga que cruza aduana; un manifiesto interno no las tiene y no las
+  # va a tener nunca. Sin el filtro, cada envío de SPS a Tegucigalpa aparecería
+  # en `/guias-y-aduana` como «le falta la guía» y no se iría nunca de la lista.
   scope :esperando_datos_de_san_pedro, -> {
-    salidos = where(estado: %w[enviado en_aduana recibido])
+    salidos = tipo_oficial.where(estado: %w[enviado en_aduana recibido])
     salidos.where(fecha_aduana: nil)
            .or(salidos.where.not(id: ManifiestoGuia.select(:manifiesto_id)))
   }
