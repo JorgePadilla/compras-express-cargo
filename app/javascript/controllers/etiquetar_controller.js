@@ -30,7 +30,13 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
     "quitarCobroModal",
     "etiquetasModal", "etiquetasInput", "pesosSeccion", "pesosAviso", "pesosLista",
     "avisoModal", "avisoEncabezado", "avisoTipo", "avisoTitulo", "avisoTexto",
-    "avisoPrincipal", "avisoSecundario"
+    "avisoPrincipal", "avisoSecundario",
+    // C22-02 · El botón de finalizar sesión del encabezado, que F11 dispara.
+    // Lleva target propio porque en la pantalla hay tres botones que van a
+    // `finalizar_sesion` —éste, el de abajo y el del modal de conflicto— y un
+    // `querySelector` agarraría cualquiera. Éste es el único con la
+    // confirmación puesta.
+    "finalizarSesionBtn"
   ]
   static values = {
     // C20-12: el envío ya tiene peso → subir cajas exige pesar cada una.
@@ -110,6 +116,25 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
       e.preventDefault()
       if (this._preguntaAbierta()) return
       this.submitFormWithPrint()
+    } else if (e.key === "F11") {
+      // C22-02 · Yusef: *"¿sabés qué deberíamos crear? Tal vez una función para
+      // finalizar […] una función, un F. Tal vez F11 o algo así, no sé si lo
+      // tenés ya agarrado"*.
+      //
+      // Dispara el botón que ya existe en vez de pegarle al endpoint: así
+      // hereda su «¿Finalizar la sesión de X?», que es lo que decidió Jorge —
+      // un roce de tecla no puede dejar al operario sin sesión.
+      //
+      // Sin sesión abierta el botón no se renderiza, y entonces la tecla no
+      // hace nada: el caso «no hay nada que finalizar» sale gratis.
+      //
+      // Se bloquea con un modal abierto, como F8/F9/F10. F2 queda libre a
+      // propósito porque es la salida que los modales ofrecen; finalizar la
+      // sesión no lo es, y encima pelearía con el botón «Finalizar la sesión»
+      // que el modal de conflicto ya tiene adentro.
+      e.preventDefault()
+      if (this._preguntaAbierta()) return
+      if (this.hasFinalizarSesionBtnTarget) this.finalizarSesionBtnTarget.click()
     }
   }
 
@@ -1040,6 +1065,36 @@ cerrarQuitarCobro() {
 
   // Form actions
   clearForm() {
+    // C22-01 · Yusef, probando en vivo: *"cuando vamos a actualizar un paquete,
+    // el limpiar no está limpiando […] F2 se queda. Ya te queda actualizando. Y
+    // se queda esto, tiene que limpiar todo"*.
+    //
+    // En modo actualización el formulario viene del servidor apuntando a
+    // `PATCH /etiquetar/:id`, y limpiar los campos no toca **la acción**, ni el
+    // `_method` (que `_limpiarCampos` excluye junto al CSRF), ni el banner
+    // amarillo, ni este mismo value. El formulario quedaba en blanco a la vista
+    // y apuntando al paquete anterior por dentro.
+    //
+    // Esto ya estaba resuelto para el otro camino —el guardado exitoso vuelve a
+    // `/etiquetar` con `Turbo.visit` (ver `eventTargetConnected`)— y es lo mismo
+    // que hace el link «Cancelar» del banner. F2 nunca lo recibió.
+    //
+    // Volver a cargar la pantalla, además, deja el estado JS en cero por
+    // construcción: es la clase de bug que acá ya costó cuatro arreglos
+    // parciales (`_ultimoSecundario`, `_colaDeAvisos`, la cantidad de cajas).
+    //
+    // **La sesión sobrevive**, que es la excepción que puso Yusef —Jorge: *"¿a
+    // excepción de la sesión, verdad?"*, Yusef: *"sí, excepción correcto"*—:
+    // vive en `session[:etiquetar_tipo_envio_id]`, del lado del servidor, y solo
+    // `finalizar_sesion` la borra.
+    //
+    // En modo alta no se recarga nada: ahí F2 es el atajo del escaneo rápido y
+    // meterle una vuelta al servidor sería un arreglo peor que el bug.
+    if (this.hasActualizandoIdValue && this.actualizandoIdValue) {
+      Turbo.visit(window.location.pathname)
+      return
+    }
+
     // C20-10: primero el dropdown. F2 limpiaba el cliente pero dejaba la lista
     // abierta y la búsqueda en vuelo viva, así que a los 300ms repintaba
     // encima del formulario ya limpio — y volvía a pitar, sobre un cliente que

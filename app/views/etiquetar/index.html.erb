@@ -162,12 +162,18 @@ end %>
         </div>
       </div>
     </div>
+    <%# C22-02 · El `etiquetar_target` es para que F11 dispare ESTE botón y no
+        alguno de los otros dos que van al mismo endpoint (el de más abajo y el
+        del modal de conflicto). Es el único con la confirmación puesta, y es
+        justamente la confirmación lo que la tecla tiene que heredar. %>
     <%= button_to finalizar_sesion_etiquetar_path,
           method: :delete, form_class: "contents",
-          data: { turbo_confirm: "¿Finalizar la sesión de #{@tipo_envio_sesion.nombre}? Vas a poder elegir otro tipo de envío." },
+          data: { turbo_confirm: "¿Finalizar la sesión de #{@tipo_envio_sesion.nombre}? Vas a poder elegir otro tipo de envío.",
+                  etiquetar_target: "finalizarSesionBtn" },
           class: "inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-full bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 ring-1 ring-gray-300 dark:ring-gray-600 shadow-sm hover:bg-red-600 hover:text-white hover:ring-red-600 transition-colors" do %>
       <%= heroicon "x-circle", variant: :solid, options: { class: "w-4 h-4" } %>
       Finalizar sesión de este tipo de envío
+      <kbd class="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[10px] font-sans">F11</kbd>
     <% end %>
   </div>
 
@@ -531,6 +537,7 @@ end %>
         <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F2</kbd> Limpiar</span>
         <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F10</kbd> Guardar</span>
         <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F9</kbd> Guardar + Imprimir</span>
+        <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F11</kbd> Finalizar sesión</span>
       </div>
       <%= render ButtonComponent.new(variant: :outline_navy, size: :xs,
             data: { action: "click->etiquetar#clearForm" }) do %>
@@ -785,6 +792,7 @@ end %>
         <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F2</kbd> Limpiar</span>
         <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F10</kbd> Guardar</span>
         <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F9</kbd> Guardar + Imprimir</span>
+        <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F11</kbd> Finalizar sesión</span>
       </div>
       <div class="flex items-center gap-3">
         <%= render ButtonComponent.new(variant: :outline_navy,
