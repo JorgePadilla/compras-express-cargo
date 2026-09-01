@@ -87,43 +87,12 @@ end %>
   </div>
 </div>
 
-<%# C21-06 · Los dos cierres de la pantalla vieja: «Solo Finalizar» y
-    «Finalizar e Imprimir». Del diagrama de Yusef: *"finalizar e imprimir todos
-    los paquetes con el tipo de envío nuestro seleccionado"* → todo a ENVIADO.
-    Después el manifiesto queda bloqueado — *"se bloquea para que nadie lo
-    toque"*— y solo se abre con el botón de editar. %>
-<% if @manifiesto.creado? && @paquetes.any? %>
-  <div class="mb-6 flex flex-wrap items-center gap-3">
-    <%= render ButtonComponent.new(variant: :primary, icon: "check",
-          href: finalizar_manifiesto_path(@manifiesto), method: :patch,
-          confirm: "Se finaliza #{@manifiesto.numero}: #{@manifiesto.cantidad_paquetes} paquete(s) pasan a enviado y el manifiesto queda bloqueado. ¿Seguro?") do %>
-      Solo Finalizar
-    <% end %>
-    <% if @manifiesto.cajas.any? %>
-      <%= render ButtonComponent.new(variant: :gold, icon: "printer",
-            href: finalizar_manifiesto_path(@manifiesto, imprimir: true), method: :patch,
-            confirm: "Se finaliza #{@manifiesto.numero} y salen las etiquetas 4×6 de los #{@manifiesto.cajas.size} bulto(s). ¿Seguro?") do %>
-        Finalizar e Imprimir
-      <% end %>
-    <% end %>
-    <p class="text-xs text-gray-500">Pasan los paquetes de <b><%= @manifiesto.tipos_envio_nuestros %></b>.</p>
-  </div>
-<% elsif @manifiesto.bloqueado? %>
-  <div class="mb-6 rounded-lg bg-cec-navy/5 ring-1 ring-cec-navy/20 p-4 flex flex-wrap items-center justify-between gap-3">
-    <div>
-      <p class="text-sm font-medium text-cec-navy">Este manifiesto está finalizado y bloqueado.</p>
-      <p class="text-xs text-gray-600 mt-0.5">
-        <% if @manifiesto.finalizado_por %>Lo finalizó <%= @manifiesto.finalizado_por.nombre %><% end %>
-        <% if @manifiesto.finalizado_at %> el <%= @manifiesto.finalizado_at.strftime("%d/%m/%Y %H:%M") %><% end %>.
-        Las guías del proveedor y la fecha de recibido en Honduras se siguen pudiendo llenar.
-      </p>
-    </div>
-    <% if @manifiesto.editable_por?(Current.user) %>
-      <%= render ButtonComponent.new(variant: :secondary, icon: "pencil-square",
-            href: edit_manifiesto_path(@manifiesto)) do %>Editar igual<% end %>
-    <% end %>
-  </div>
-<% end %>
+<%# C21-06 · Los cierres del manifiesto. El bloque vive en su partial para que
+    `add_paquete` y `remove_paquete` puedan refrescarlo por turbo_stream: los
+    botones dependen de `paquetes.any?` y antes no se enteraban. %>
+<div id="manifiesto-acciones">
+  <%= render "manifiestos/acciones", manifiesto: @manifiesto, paquetes: @paquetes %>
+</div>
 
 <%# Add packages section (only for creado manifests) %>
 <% if @manifiesto.creado? %>
