@@ -148,6 +148,13 @@ class ManifiestosController < ApplicationController
       format.turbo_stream do
         render turbo_stream: [
           turbo_stream.update("manifiesto-paquetes", partial: "manifiestos/paquetes_table", locals: { manifiesto: @manifiesto, paquetes: @paquetes }),
+          # C21-06 · Los botones de cierre **también**. Se actualizaba solo la
+          # tabla, y como «Solo Finalizar» solo se dibuja con `paquetes.any?`,
+          # al agregar el primer paquete la tabla se llenaba y el botón no
+          # aparecía: la única forma de finalizar era recargar la pantalla. Y al
+          # quitar el último pasa al revés — el botón quedaba ofreciendo
+          # finalizar un manifiesto vacío.
+          turbo_stream.update("manifiesto-acciones", partial: "manifiestos/acciones", locals: { manifiesto: @manifiesto, paquetes: @paquetes }),
           turbo_stream.prepend("flash-messages", partial: "shared/flash", locals: { notice: message })
         ]
       end

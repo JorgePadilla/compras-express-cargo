@@ -7838,7 +7838,34 @@ ella cuelga todo lo de abajo. Y la etiqueta 4×6 **no se puede expresar**:
 
 ---
 
-### C21-01 · Crear el manifiesto **primero**, y sacar las pre-etiquetas de los bultos — ✅ **IMPLEMENTADO en PR-M3 / PR-M4**
+### C21-01 · Crear el manifiesto **primero**, y sacar las pre-etiquetas de los bultos — ✅ **IMPLEMENTADO en PR-M3 / PR-M4 · la puerta faltaba (2026-09-01)**
+
+> **La pantalla de empacar vivió meses sin un solo link.** Existía, funcionaba,
+> tenía tests y hasta estaba listada en la tabla de pantallas de `docs/07` — pero
+> a `/manifiestos/:id/empacar` solo se llegaba **escribiendo la URL**. Apareció
+> armando el runbook de los dos caminos.
+>
+> Dos razones, y las dos quedaron trabadas:
+>
+> 1. **El lint no la cubría.** `pantallas_en_el_menu_test` vigila justamente esto
+>    —*"que no quede una pantalla que existe y a la que no se llega"*— pero solo
+>    miraba **índices sin `:id`**, o sea entradas de menú. Ahora tiene un segundo
+>    test para las **anidadas**, y con una sutileza que casi se me escapa: una
+>    pantalla que **se enlaza a sí misma** no cuenta como alcanzable. La primera
+>    versión daba por buena a `empacar` porque su propio selector de «¿en qué caja
+>    estás?» la nombra.
+> 2. **Los tests entraban por URL.** `empaque_controller_test` la visita por
+>    helper de ruta, como nadie real hace, así que pasaba en verde sobre una
+>    pantalla sin puerta. Ahora hay un system test que **camina los dos caminos
+>    haciendo clic** y no escribe una sola URL: si un paso no tiene puerta, no
+>    puede avanzar.
+>
+> Y ese test destapó un segundo bug de la misma familia: **los botones de
+> Finalizar no aparecían al agregar el primer paquete**. `add_paquete` contesta
+> con un turbo_stream que actualizaba solo la tabla, y los botones —que dependen
+> de `paquetes.any?`— viven afuera: la tabla se llenaba, el botón no salía, y la
+> única forma de finalizar era recargar. Por URL no se ve, porque cada `visit`
+> vuelve a renderizar todo.
 
 El cambio de fondo. Hoy:
 

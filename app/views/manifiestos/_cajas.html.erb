@@ -15,6 +15,20 @@
         <%= render ButtonComponent.new(variant: :secondary, size: :sm, icon: "printer",
               href: etiquetas_manifiesto_cajas_path(manifiesto, print: true),
               target: "_blank") do %>Imprimir las 4×6<% end %>
+        <%# C21-01 · La puerta a la pantalla de empacar, que **no tenía ninguna**.
+            Existe desde que se armó el módulo, funciona y tiene tests, y hasta
+            está en la tabla de pantallas de `docs/07` — pero no se llegaba a
+            ella desde ningún lado: había que escribir la URL.
+
+            Va acá y no en el encabezado de la ficha por el orden real del
+            trabajo: se arman las casas, se imprimen sus etiquetas, y con esas
+            etiquetas en la mano se empaca. El botón está donde está la mano.
+
+            Las dos condiciones salen del contexto y son las correctas: `cajas.any?`
+            —la pantalla de empaque no sirve sin casas y ella misma lo dice— y
+            `creado?`, porque `show.html.erb` envuelve este partial entero en él. %>
+        <%= render ButtonComponent.new(variant: :primary, size: :sm, icon: "qr-code",
+              href: manifiesto_empacar_path(manifiesto)) do %>Empacar<% end %>
       <% end %>
     </div>
   </div>
