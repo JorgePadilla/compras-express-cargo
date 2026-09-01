@@ -53,9 +53,14 @@ class EtiquetarErrorNoEs500Test < ActionDispatch::IntegrationTest
     caja2 = Paquete.create!(
       tracking: @paquete.tracking, cliente: @paquete.cliente, tipo_envio: @cer,
       sucursal_recepcion: @miami, numero_recepcion: @paquete.numero_recepcion,
-      estado: "pre_facturado", descripcion: "Perfumes", peso: 5,
+      estado: "disponible_entrega", descripcion: "Perfumes", peso: 5,
       numero_caja: 2, cantidad_paquetes: 2, user: @user
     )
+    # A7-11: el estado `pre_facturado` ya no existe. Lo que hace que la caja
+    # esté cobrada es la pre-factura misma.
+    pf = PreFactura.create!(cliente: caja2.cliente, estado: "creado",
+                            creado_por: users(:cajero), fecha_trabajo: Date.current)
+    caja2.update_columns(pre_factura_id: pf.id)
     @paquete.update_columns(numero_caja: 1, cantidad_paquetes: 2)
 
     patch actualizar_etiquetar_url(@paquete), params: {

@@ -76,7 +76,6 @@ class PreAlerta < ApplicationRecord
     "enviado_honduras"   => "enviado",
     "en_aduana"          => "en_aduana",
     "disponible_entrega" => "disponible",
-    "pre_facturado"      => "disponible",
     "facturado"          => "facturado",
     "en_reparto"         => "facturado",
     "entregado"          => "facturado"
@@ -161,7 +160,7 @@ class PreAlerta < ApplicationRecord
   # Estados where a linked paquete being at this estado or later locks notas_grupo editing.
   # Mirrors the "BLOCKED" row of the move/delete rules matrix.
   ESTADOS_QUE_BLOQUEAN_NOTAS = %w[
-    en_aduana disponible_entrega pre_facturado facturado en_reparto entregado
+    en_aduana disponible_entrega facturado en_reparto entregado
     retenido retornado desechado anulado
   ].freeze
 

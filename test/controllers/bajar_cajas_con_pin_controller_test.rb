@@ -12,7 +12,7 @@ class BajarCajasConPinControllerTest < ActionDispatch::IntegrationTest
     post session_url, params: { email_address: @supervisor.email_address, password: "password123" }
 
     @cajas = crear_split(2)
-    @cajas.last.update_columns(estado: "pre_facturado")
+    marcar_en_pre_factura(@cajas.last)
   end
 
   test "baja la cantidad y avisa cuantas quedaron" do
@@ -85,6 +85,15 @@ class BajarCajasConPinControllerTest < ActionDispatch::IntegrationTest
 
   def params_validos(pin: "1234")
     { cantidad: 1, supervisor_id: @supervisor.id, pin: pin, motivo: "eran menos cajas" }
+  end
+
+
+  # Antes acá decía `estado: "pre_facturado"`. Con ese estado eliminado (A7-11),
+  # lo que dice que una caja ya entró a cobro es la FK.
+  def marcar_en_pre_factura(caja)
+    pf = PreFactura.create!(cliente: caja.cliente, estado: "creado",
+                            creado_por: users(:cajero), fecha_trabajo: Date.current)
+    caja.update_columns(estado: "disponible_entrega", pre_factura_id: pf.id)
   end
 
   def crear_split(n)

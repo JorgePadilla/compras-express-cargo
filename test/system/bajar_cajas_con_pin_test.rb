@@ -15,7 +15,7 @@ class BajarCajasConPinSistemaTest < ApplicationSystemTestCase
 
     @cajas = crear_split(2)
     # La caja 2 ya entró a cobro: sin PIN, el sistema no la deja bajar.
-    @cajas.last.update_columns(estado: "pre_facturado")
+    marcar_en_pre_factura(@cajas.last)
 
     ingresar(@supervisor)
   end
@@ -55,6 +55,15 @@ class BajarCajasConPinSistemaTest < ApplicationSystemTestCase
   end
 
   private
+
+
+  # Antes acá decía `estado: "pre_facturado"`. Con ese estado eliminado (A7-11),
+  # lo que dice que una caja ya entró a cobro es la FK.
+  def marcar_en_pre_factura(caja)
+    pf = PreFactura.create!(cliente: caja.cliente, estado: "creado",
+                            creado_por: users(:cajero), fecha_trabajo: Date.current)
+    caja.update_columns(estado: "disponible_entrega", pre_factura_id: pf.id)
+  end
 
   def crear_split(n)
     Paquete.crear_split!(

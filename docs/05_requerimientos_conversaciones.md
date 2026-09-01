@@ -4716,7 +4716,7 @@ prácticamente cubierto por lo hablado.
 
 ---
 
-### A7-01 · Bodega Honduras va **después** de la prefactura — ✅ **cierra RP-30**
+### A7-01 · Bodega Honduras va **después** de la prefactura — ✅ **cierra RP-30 · el orden quedó en el código con `A7-11`**
 
 El error más importante del diagrama, y Jorge lo tenía al revés:
 
@@ -4912,7 +4912,7 @@ todo el personal en Miami… no tengo el espacio"*. Se documenta, no se activa.
 
 ---
 
-### A7-11 · **Prefacturado no es un estado** — hay que sacarlo
+### A7-11 · **Prefacturado no es un estado** — ✅ **ELIMINADO**
 
 > **Yusef:** "El prefacturado no sé de dónde lo sacó. Yo creo que lo sacó de los
 >  procesos, **no del estatus. Ese tenés que eliminar.**"
@@ -4920,6 +4920,32 @@ todo el personal en Miami… no tengo el espacio"*. Se documenta, no se activa.
 **Lectura.** `prefacturado` está en la lista de estados del paquete y no debería.
 Ojo antes de borrarlo: hay que ver si algún paquete lo tiene puesto y a qué se
 migra.
+
+**Cómo se hizo, en dos tiempos.** Primero salió del dropdown —de
+`ESTADOS_SELECCIONABLES`, con un test que lo trababa—, y ahí se quedó un tiempo
+porque `PreFactura#confirmar!` lo escribía y había que decidir qué escribiría en
+su lugar. Ahora salió del enum entero:
+
+- **`PreFactura#confirmar!` escribe `disponible_entrega`.** Es lo que dicta
+  `A7-01`: bodega va después de prefactura, así que emitir la pre-factura es
+  justamente lo que mete la carga a la bodega de Honduras.
+- **`PreFactura#anular!` ya no toca el estado**, solo suelta la FK. Antes
+  forzaba `disponible_entrega`, o sea fabricaba un movimiento que no ocurrió:
+  anular un documento no mueve carga. Con la FK en nil el paquete vuelve a caer
+  en `Paquete.facturables`, que filtra por `pre_factura_id`.
+- **La plata no se movió**, y es la razón por la que esto se pudo hacer sin
+  tocar cobros: `facturables` nunca filtró por este estado.
+- Los paquetes que lo tenían puesto pasaron a `disponible_entrega` por
+  **migración de datos** (`20260831210417`), porque el deploy de staging solo
+  migra. `estado` es texto sin CHECK, así que un valor que el enum ya no conoce
+  hace reventar al modelo al instanciarlo — no era opcional.
+- **El rótulo «Pre-facturado» se queda** en `EstadoPaqueteHelper::ETIQUETAS`:
+  paper_trail guarda versiones viejas que lo nombran y la bitácora las muestra.
+
+Y quedó a la vista una cosa que el estado tapaba: cuatro tests simulaban «caja ya
+cobrada» poniendo `estado: "pre_facturado"` **sin `pre_factura_id`**, algo que en
+la realidad no puede pasar. Ahora usan la FK, que es lo que `cobrada_o_entregada?`
+miraba de primero desde siempre.
 
 ---
 
@@ -5393,7 +5419,7 @@ Sobre prefactura Yusef fue claro en que todavía no toca:
 | `RP-35` | El Excel de roles × operaciones (`A7-28`) — lo hace Evelin |
 | ~~`RP-36`~~ | ~~Nombre e iniciales de cada sucursal, y la sucursal de retiro estructurada en el cliente~~ **✅ ya existían**: `Sucursal#codigo` son las iniciales y `Cliente#sucursal_retiro_id` está desde antes. El doc que decía lo contrario estaba viejo |
 | `RP-37` | **El impuesto de Miami** (`A7-24`): ¿qué tasa, sobre qué base, en qué servicios? Yusef solo dijo que falta. Y no es agregar una tasa: `impuesto` es una columna escalar en 5 tablas |
-| `RP-38` | **¿Se reordena el pipeline?** Yusef dice *aduana → prefactura → bodega*, y el código tiene *aduana → disponible → prefacturado*, con `Paquete.facturables` exigiendo `disponible_entrega`. Cambiarlo decide **qué paquetes se pueden pre-facturar**, así que no se tocó |
+| ~~`RP-38`~~ | **✅ CERRADA por Jorge (2026-08-31): sí, y de acuerdo al audio** — *"si en los audios están las respuestas, y sí reordenemos de acorde al audio"*. Y la respuesta estaba: no había que reordenar nada alrededor de `pre_facturado`, había que **eliminarlo** (`A7-11`), y el orden que queda es el que Yusef dictó. `PreFactura#confirmar!` escribe `disponible_entrega`; `anular!` solo suelta la FK. La plata no se movió: `facturables` siempre filtró por `pre_factura_id`, no por este estado. Lo que sigue faltando no es el orden sino la **pantalla** de bodega — nadie escanea la carga al entrar, así que `disponible_entrega` es hoy un efecto de la pre-factura y no un lugar por donde alguien la haga pasar. ~~¿Se reordena el pipeline? Yusef dice *aduana → prefactura → bodega*, y el código tiene *aduana → disponible → prefacturado*~~ |
 
 ---
 

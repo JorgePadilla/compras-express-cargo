@@ -76,7 +76,11 @@ class PreFactura < ApplicationRecord
 
     transaction do
       update!(estado: "pendiente", confirmado_at: Time.current)
-      paquetes.reload.each { |p| p.update!(estado: "pre_facturado") }
+      # A7-01 · *"Bodega Honduras va **después** de prefactura"*: emitir la
+      # pre-factura es lo que mete la carga a la bodega de Honduras. Antes esto
+      # escribía `pre_facturado`, el estado que Yusef mandó eliminar (A7-11);
+      # el paso que describe ya tenía nombre, y es éste.
+      paquetes.reload.each { |p| p.update!(estado: "disponible_entrega") }
     end
     true
   end
@@ -162,9 +166,11 @@ class PreFactura < ApplicationRecord
     return false if facturado? || anulado?
 
     transaction do
-      paquetes.reload.each do |p|
-        p.update!(pre_factura_id: nil, estado: "disponible_entrega")
-      end
+      # Solo se suelta la FK. El estado se queda en `disponible_entrega`, que
+      # es donde `confirmar!` lo dejó y donde el paquete físicamente está:
+      # anular la pre-factura no devuelve la carga a la aduana. Con la FK en
+      # nil vuelve a caer en `Paquete.facturables`, que filtra por eso.
+      paquetes.reload.each { |p| p.update!(pre_factura_id: nil) }
       update!(estado: "anulado")
     end
     true
