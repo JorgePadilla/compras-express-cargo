@@ -327,15 +327,30 @@ cerrarQuitarCobro() {
 
     const oculto = this.terceroContainerTarget.classList.toggle("hidden")
     if (oculto) {
-      const hidden = this.terceroContainerTarget.querySelector("input[name*='tercero_id']")
-      const texto = this.terceroContainerTarget.querySelector("input[type='text']")
-      if (hidden) hidden.value = ""
-      if (texto) texto.value = ""
+      this._limpiarTercero()
     } else {
       const texto = this.terceroContainerTarget.querySelector("input[type='text']")
       if (texto) texto.focus()
     }
     this._syncTerceroToggleLabel()
+  }
+
+  // Esconder el bloque del tercero **no alcanza**: `tercero_id` es un `hidden`, y
+  // `_limpiarCampos` excluye los hidden a propósito —ahí viven el CSRF y el
+  // `_method`—. Así que F2 vaciaba el campo que se ve y dejaba el id puesto: el
+  // paquete siguiente se guardaba **con el tercero del anterior**, sin que nada
+  // lo mostrara en pantalla.
+  //
+  // Vive en un solo método porque así fue como se separaron: `toggleTercero`
+  // limpiaba las dos cosas y `clearForm` solo escondía. Dos copias de la misma
+  // limpieza es exactamente cómo este archivo se lastima.
+  _limpiarTercero() {
+    if (!this.hasTerceroContainerTarget) return
+
+    const hidden = this.terceroContainerTarget.querySelector("input[name*='tercero_id']")
+    const texto = this.terceroContainerTarget.querySelector("input[type='text']")
+    if (hidden) hidden.value = ""
+    if (texto) texto.value = ""
   }
 
   _syncTerceroToggleLabel() {
@@ -1113,6 +1128,9 @@ cerrarQuitarCobro() {
     this.loadPanel(null)
     if (this.hasTerceroContainerTarget) {
       this.terceroContainerTarget.classList.add("hidden")
+      // El id del tercero es de ESTE paquete y es un hidden: esconder el bloque
+      // lo dejaba puesto para el siguiente.
+      this._limpiarTercero()
       this._syncTerceroToggleLabel()
     }
     this._resetClienteFromPreAlertaStyling()
