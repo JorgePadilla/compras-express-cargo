@@ -898,6 +898,7 @@ Y lo que salió de mirar el resultado (2026-08-30):
 | `PR-I3` | Recibir el interno escaneando paquetes; el faltante queda señalado (`A7-08`) | ✅ |
 | `PR-I4` | El aviso al cliente al cerrar la recepción — sin ventana: la cola no está conectada (`A7-08`) | ✅ |
 | `PR-C22.2` | El tercero sobrevivía a limpiar y se guardaba en el paquete siguiente | ✅ |
+| `PR-C22.3` | El jefe de SAC no veía la cola de SAC — faltaba en las tres listas (`RP-45`) | ✅ |
 
 **Lo que se cerró de paso:** `RP-30` (aduana ya tiene pantalla y quién escriba el
 estado — `PR-M7` es el **primer escritor de `en_aduana` en todo el sistema**),
