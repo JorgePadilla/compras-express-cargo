@@ -39,9 +39,19 @@ end %>
             <tr class="hover:bg-gray-50">
               <td class="px-6 py-4 whitespace-nowrap">
                 <%= link_to manifiesto.numero, manifiesto, class: "text-sm font-mono font-medium text-cec-navy hover:underline" %>
+                <%# `A7-07` · El interno se marca. Sin esto, en el listado son
+                    indistinguibles y el número tampoco los separa: los dos
+                    empiezan por la sucursal de origen. %>
+                <% if manifiesto.tipo_interno? %>
+                  <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-cec-navy/10 text-cec-navy dark:bg-cec-gold/20 dark:text-cec-gold">
+                    interno<%= " → #{manifiesto.sucursal_entrega.codigo}" if manifiesto.sucursal_entrega %>
+                  </span>
+                <% end %>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <span class="text-sm text-gray-700"><%= manifiesto.empresa_manifiesto&.nombre || "—" %></span>
+                <span class="text-sm text-gray-700">
+                  <%= manifiesto.tipo_interno? ? "—" : (manifiesto.empresa_manifiesto&.nombre || "—") %>
+                </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap hidden md:table-cell">
                 <span class="text-sm text-gray-500"><%= manifiesto.tipo_envio_del_proveedor || "—" %></span>

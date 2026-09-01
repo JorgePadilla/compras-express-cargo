@@ -170,6 +170,10 @@ class ManifiestosController < ApplicationController
       # `sucursal_origen_id` es lo que despierta la numeración anual. Estaba
       # fuera de esta lista, y por eso `MM2026000001` no corría nunca (RP-46).
       :sucursal_origen_id,
+      # `A7-07` · Oficial o interno. El formulario solo lo deja elegir al crear;
+      # en uno guardado va como hidden, porque el número ya salió y la carga ya
+      # se movió con las reglas de su tipo.
+      :tipo,
       tipo_envio_ids: []
     )
   end

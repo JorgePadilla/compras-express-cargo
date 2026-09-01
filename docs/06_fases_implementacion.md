@@ -893,6 +893,7 @@ Y lo que salió de mirar el resultado (2026-08-30):
 | `PR-P2a` | Varios roles por persona — el caso de Michelle, Caja *y* SAC (`RP-58` paso 2a) | ✅ |
 | `PR-P2b` | El título del rol editable — `/roles` (`RP-58` paso 2b) | ✅ |
 | `PR-I0` | El número de manifiesto lleva el código completo de la sucursal — `SPS` y `SAM` chocaban (`RP-46`) | ✅ |
+| `PR-I1` | El manifiesto **interno** de sucursal como tipo (`A7-07`) | ✅ |
 
 **Lo que se cerró de paso:** `RP-30` (aduana ya tiene pantalla y quién escriba el
 estado — `PR-M7` es el **primer escritor de `en_aduana` en todo el sistema**),

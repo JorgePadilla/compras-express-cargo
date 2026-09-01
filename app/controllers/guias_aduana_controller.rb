@@ -25,7 +25,10 @@ class GuiasAduanaController < ApplicationController
   # guía o su fecha; con `?todos=1`, también lo ya completo, para poder corregir.
   def index
     @todos = params[:todos].present?
-    base = Manifiesto.activos.includes(:empresa_manifiesto, :consignatario, :guias)
+    # `A7-07` · `tipo_oficial`: los internos no cruzan aduana, así que no tienen
+    # guía de proveedor ni fecha de aduana que llenar. También en la vista de
+    # «todos», que si no los mostraría como pendientes eternos.
+    base = Manifiesto.activos.tipo_oficial.includes(:empresa_manifiesto, :consignatario, :guias)
     base = base.where(estado: %w[enviado en_aduana recibido]) if @todos
     base = base.esperando_datos_de_san_pedro unless @todos
 
