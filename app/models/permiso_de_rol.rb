@@ -25,11 +25,23 @@ class PermisoDeRol < ApplicationRecord
   # un rol es regalarle todo lo demás en el siguiente clic.
   validate :seccion_editable
 
-  # El mapa del rol, en una consulta. `{ "caja" => true, "ventas" => false }`.
-  def self.mapa_para(rol)
-    return {} if rol.blank?
+  # Las excepciones de **los** roles de una persona, en una consulta, anidadas
+  # por rol: `{ "cajero" => { "caja" => true }, "sac" => { "ventas" => false } }`.
+  #
+  # `RP-58` paso 2a: anidado y no aplanado a propósito. Aplanarlo obliga a
+  # elegir un ganador cuando dos roles dicen cosas distintas de la misma
+  # sección, y esa elección **no se puede hacer acá**: quien sabe resolverla es
+  # `can_access?`, que suma rol por rol. Un mapa plano se veía más cómodo y
+  # perdía en silencio el permiso que el otro rol sí daba.
+  def self.mapa_para(roles)
+    lista = Array(roles).compact_blank.map(&:to_s)
+    return {} if lista.empty?
 
-    where(rol: rol.to_s).pluck(:seccion, :permitido).to_h
+    where(rol: lista)
+      .pluck(:rol, :seccion, :permitido)
+      .each_with_object({}) { |(rol, seccion, permitido), mapa|
+        (mapa[rol] ||= {})[seccion] = permitido
+      }
   end
 
   private

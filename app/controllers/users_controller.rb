@@ -64,7 +64,10 @@ class UsersController < ApplicationController
       :rol, :ubicacion, :activo, :sucursal_id,
       # PR-13.c: el admin asigna el PIN inicial; el supervisor lo cambia desde
       # /mi_pin. Ver el comentario en `User#pin_sin_cambiar?`.
-      :pin, :pin_confirmation
+      :pin, :pin_confirmation,
+      # `RP-58` paso 2a · Los roles de más. Array, y por eso va al final: en
+      # `permit` un array se declara con la llave apuntando a `[]`.
+      roles_adicionales_lista: []
     )
   end
   # `RP-58` · Va por `can_access?` y no por `require_admin`: toda regla de rol

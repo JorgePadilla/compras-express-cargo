@@ -82,7 +82,7 @@ class BajarCajasConPin
 
   def autorizado?
     @supervisor.present? && @supervisor.activo? &&
-      @supervisor.pin_digest.present? && @supervisor.rol.in?(ROLES)
+      @supervisor.pin_digest.present? && @supervisor.tiene_rol?(ROLES)
   end
 
   def hermanas

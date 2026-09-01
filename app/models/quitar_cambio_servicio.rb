@@ -68,7 +68,7 @@ class QuitarCambioServicio
 
   def autorizado?
     @supervisor.present? && @supervisor.activo? &&
-      @supervisor.pin_digest.present? && @supervisor.rol.in?(ROLES)
+      @supervisor.pin_digest.present? && @supervisor.tiene_rol?(ROLES)
   end
 
   # Una vez facturado, el cobro ya salió en un documento fiscal: sacarlo es

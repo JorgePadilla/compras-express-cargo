@@ -142,7 +142,7 @@ class Manifiesto < ApplicationRecord
   def editable_por?(user)
     return true unless bloqueado?
 
-    user&.rol.in?(ROLES_QUE_ABREN_EL_CANDADO)
+    user&.tiene_rol?(ROLES_QUE_ABREN_EL_CANDADO)
   end
 
   # C21-02 · Lo que la pantalla de San Pedro tiene para trabajar: la carga que ya

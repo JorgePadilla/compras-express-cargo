@@ -890,6 +890,7 @@ Y lo que salió de mirar el resultado (2026-08-30):
 | `PR-U5` | Empacar y las casas, para dedos | ✅ |
 | `PR-U6` | La guía del proveedor decía «guardado.» y no se guardaba — un `child_index` de texto que `permit` filtraba entero | ✅ #390 |
 | `PR-C22.1` | En modo actualización F2 no salía del modo — y la tecla para finalizar sesión (`C22-01`, `C22-02`) | ✅ |
+| `PR-P2a` | Varios roles por persona — el caso de Michelle, Caja *y* SAC (`RP-58` paso 2a) | ✅ |
 
 **Lo que se cerró de paso:** `RP-30` (aduana ya tiene pantalla y quién escriba el
 estado — `PR-M7` es el **primer escritor de `en_aduana` en todo el sistema**),

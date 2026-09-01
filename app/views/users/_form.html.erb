@@ -63,6 +63,36 @@
                  focus:ring-cec-teal focus:border-cec-teal" } %>
     </div>
 
+    <%# `RP-58` paso 2a · Los roles de más.
+
+        Yusef, 2026-08-30: Michelle es *"Sub-Jefa de área de Caja y SAC"* y Bessy
+        *"Supervisora de Caja y SAC"*. Antes eso obligaba a inventar un rol nuevo
+        —y una columna más en la matriz de permisos— por cada combinación.
+
+        El hidden vacío es el mismo truco que Rails pone antes de cada checkbox y
+        que `PR-388` ya tuvo que aprender acá al lado: sin él, destildar **todas**
+        las casillas no manda nada, y «no vino en el formulario» es
+        indistinguible de «no tiene ninguno». Los roles se quedarían puestos. %>
+    <div class="sm:col-span-2">
+      <span class="block text-sm font-medium text-gray-700 mb-1">Roles adicionales</span>
+      <p class="text-xs text-gray-500 mb-3">
+        Los accesos <strong>suman</strong>: quien es Caja y SAC entra a lo de Caja y a lo de SAC.
+        Para quitarle algo hay que quitárselo a todos sus roles, o destildarle uno acá.
+      </p>
+      <%= hidden_field_tag "user[roles_adicionales_lista][]", "" %>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <% user.roles_adicionales_elegibles.each do |codigo| %>
+          <label class="flex items-start gap-2 p-2 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer">
+            <%= check_box_tag "user[roles_adicionales_lista][]", codigo,
+                  user.roles_adicionales_lista.include?(codigo),
+                  id: "user_rol_adicional_#{codigo}",
+                  class: "mt-0.5 rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+            <span class="text-sm text-gray-700"><%= User::ROL_DESCRIPTIONS.dig(codigo, :label) || codigo.humanize %></span>
+          </label>
+        <% end %>
+      </div>
+    </div>
+
     <%# PR-13.c: el PIN de 4 dígitos con el que autoriza cambios de precio en la
         pre-factura. Solo para los roles que pueden autorizar; el resto no tiene
         para qué tener uno. El admin asigna el inicial y el supervisor lo cambia

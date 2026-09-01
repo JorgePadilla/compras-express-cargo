@@ -17,13 +17,13 @@ module TareasHelper
   def can_crear_tareas?
     return false unless Current.user
 
-    Current.user.admin? || TareasController::CREACION_ROLES.include?(Current.user.rol)
+    Current.user.admin? || Current.user.tiene_rol?(TareasController::CREACION_ROLES)
   end
 
   def can_gestionar_tareas?
     return false unless Current.user
 
-    Current.user.admin? || TareasController::GESTION_ROLES.include?(Current.user.rol)
+    Current.user.admin? || Current.user.tiene_rol?(TareasController::GESTION_ROLES)
   end
 
   # El área de una tarea nueva: la del que la crea. Para admin, ninguna
@@ -31,6 +31,9 @@ module TareasHelper
   def departamento_por_defecto_de(user)
     return nil if user.nil? || user.admin?
 
+    # El principal a propósito: una tarea nueva cae en **un** área, y con dos
+    # roles hay que elegir una. La del puesto que la persona tiene como
+    # principal es la menos sorprendente — y el campo se puede cambiar a mano.
     Tarea::DEPARTAMENTOS_POR_ROL[user.rol]&.first
   end
 end

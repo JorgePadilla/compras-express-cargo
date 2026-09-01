@@ -2283,6 +2283,38 @@ ALTER SEQUENCE public.reempaques_id_seq OWNED BY public.reempaques.id;
 
 
 --
+-- Name: roles_de_usuario; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.roles_de_usuario (
+    id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    rol character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: roles_de_usuario_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.roles_de_usuario_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: roles_de_usuario_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.roles_de_usuario_id_seq OWNED BY public.roles_de_usuario.id;
+
+
+--
 -- Name: schema_migrations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3255,6 +3287,13 @@ ALTER TABLE ONLY public.reempaques ALTER COLUMN id SET DEFAULT nextval('public.r
 
 
 --
+-- Name: roles_de_usuario id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.roles_de_usuario ALTER COLUMN id SET DEFAULT nextval('public.roles_de_usuario_id_seq'::regclass);
+
+
+--
 -- Name: servicios_extra id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -3819,6 +3858,14 @@ ALTER TABLE ONLY public.recibos
 
 ALTER TABLE ONLY public.reempaques
     ADD CONSTRAINT reempaques_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: roles_de_usuario roles_de_usuario_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.roles_de_usuario
+    ADD CONSTRAINT roles_de_usuario_pkey PRIMARY KEY (id);
 
 
 --
@@ -5294,6 +5341,20 @@ CREATE INDEX index_reempaques_on_tarea_id ON public.reempaques USING btree (tare
 
 
 --
+-- Name: index_roles_de_usuario_on_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_roles_de_usuario_on_user_id ON public.roles_de_usuario USING btree (user_id);
+
+
+--
+-- Name: index_roles_de_usuario_on_user_id_and_rol; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_roles_de_usuario_on_user_id_and_rol ON public.roles_de_usuario USING btree (user_id, rol);
+
+
+--
 -- Name: index_servicios_extra_on_activo; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6351,6 +6412,14 @@ ALTER TABLE ONLY public.caja_manifiestos
 
 
 --
+-- Name: roles_de_usuario fk_rails_a32ec9aab0; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.roles_de_usuario
+    ADD CONSTRAINT fk_rails_a32ec9aab0 FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
 -- Name: cotizaciones fk_rails_a6a86a6366; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6765,6 +6834,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260831222808'),
 ('20260831210417'),
 ('20260831050354'),
 ('20260831004458'),

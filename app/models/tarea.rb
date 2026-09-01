@@ -56,7 +56,10 @@ class Tarea < ApplicationRecord
   # Tareas que un usuario puede ver: las de su(s) departamento(s) más las
   # que no tienen departamento asignado (visibles para todos).
   scope :visibles_para, ->(user) {
-    deptos = DEPARTAMENTOS_POR_ROL.fetch(user&.rol, [])
+    # `RP-58` paso 2a · La **unión** de los departamentos de todos sus roles, no
+    # los del principal: quien es Caja y SAC tiene que ver las dos colas. Con el
+    # rol a secas veía una sola y la otra le desaparecía sin aviso.
+    deptos = DEPARTAMENTOS_POR_ROL.values_at(*user&.roles.to_a).compact.flatten.uniq
     where(departamento: deptos + [ nil ])
   }
 

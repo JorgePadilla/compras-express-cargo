@@ -170,7 +170,7 @@ class DashboardController < ApplicationController
   # admin (admin + supervisores). Otros roles van a su sección apropiada.
   def require_dashboard_access
     return if Current.user&.admin?
-    return if DASHBOARD_ROLES.include?(Current.user&.rol)
+    return if Current.user&.tiene_rol?(DASHBOARD_ROLES)
 
     destino = primera_seccion_alcanzable
     return render("dashboard/sin_accesos", status: :forbidden) if destino.nil?
@@ -181,7 +181,10 @@ class DashboardController < ApplicationController
   # `nil` si no puede abrir ninguna. **No se redirige a ningún lado en ese
   # caso**: se le dice qué pasa. Un redirect sin destino posible es el bucle.
   def primera_seccion_alcanzable
-    llaves = DESTINOS_POR_ROL[Current.user&.rol] || []
+    # La unión, en orden: primero los destinos de su rol principal y después los
+    # de los adicionales. Con dos roles, si el principal no le deja abrir
+    # ninguna, la puerta de entrada puede estar del otro lado.
+    llaves = DESTINOS_POR_ROL.values_at(*Current.user&.roles.to_a).compact.flatten.uniq
     llave = llaves.find { |k| can_access?(k) }
     llave && send(RUTAS.fetch(llave))
   end
