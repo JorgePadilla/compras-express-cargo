@@ -7838,7 +7838,34 @@ ella cuelga todo lo de abajo. Y la etiqueta 4×6 **no se puede expresar**:
 
 ---
 
-### C21-01 · Crear el manifiesto **primero**, y sacar las pre-etiquetas de los bultos — ✅ **IMPLEMENTADO en PR-M3 / PR-M4 · la puerta faltaba (2026-09-01)**
+### C21-01 · Crear el manifiesto **primero**, y sacar las pre-etiquetas de los bultos — ✅ **IMPLEMENTADO en PR-M3 / PR-M4 · la puerta faltaba, y la pantalla iba al revés (2026-09-01)**
+
+> **La pantalla no seguía el orden del trabajo.** Jorge, mirándola: *"no estoy
+> seguro que siga el orden del flujograma"*, *"parece que solo finalizar y
+> finalizar e imprimir también debería estar abajo"*, *"el botón de imprimir casi
+> ni se mira"* y *"esos botones con fondo blanco cuesta demasiado verlos"*.
+>
+> Iba: **detalles → Finalizar → casas → agregar paquetes → tabla**. O sea que
+> **el cierre estaba arriba de todo lo que hay que hacer antes**. Y «Casas del
+> manifiesto» vivía **adentro de la misma tarjeta** que «Agregar paquetes», así
+> que las dos se leían como una sola cosa en vez de como dos caminos distintos.
+>
+> Ahora va en el orden del flujograma —casas → agregar paquetes → tabla →
+> cerrar—, cada paso con su número y su tarjeta, y **los cierres arriba y
+> abajo**: con la tabla llena el de arriba queda a una pantalla de distancia. Es
+> la misma razón por la que la barra de atajos de `/etiquetar` está en los dos
+> lados (*"a veces se ocupan acá arriba. En ambos lados"*).
+>
+> **Agregar paquetes se escanea.** *"Tiene que ser rápida, escanear"*: la pistola
+> dispara Enter al terminar de leer, así que Enter **agrega** en vez de solo
+> buscar — y agrega **solo si hay una coincidencia sola**; si devuelve varias las
+> muestra para elegir, en vez de adivinar. El campo queda vacío y con el foco
+> puesto para el siguiente.
+>
+> **Y los botones se ven.** `secondary` es `bg-white` con borde `gray-300`
+> **sobre una tarjeta blanca**: el borde es lo único que lo separa del fondo. Los
+> del flujo pasaron a `outline_navy` —borde y tinta navy— y a tamaño normal: son
+> las acciones del paso, no adornos del encabezado.
 
 > **La pantalla de empacar vivió meses sin un solo link.** Existía, funcionaba,
 > tenía tests y hasta estaba listada en la tabla de pantallas de `docs/07` — pero
