@@ -24,7 +24,7 @@ class BajarCajasConPinTest < ActiveSupport::TestCase
 
   test "el supervisor con su PIN baja una caja que ya estaba pre-facturada" do
     cajas = crear_split(2)
-    cajas.last.update_columns(estado: "pre_facturado")
+    marcar_en_pre_factura(cajas.last)
 
     # Sin PIN esto es exactamente lo que hoy traba el paquete.
     assert_raises(Paquete::CajaNoEliminable) { Paquete.ajustar_split!(cajas.first, 1) }
@@ -113,7 +113,7 @@ class BajarCajasConPinTest < ActiveSupport::TestCase
 
   test "sin el PIN correcto no borra nada" do
     cajas = crear_split(2)
-    cajas.last.update_columns(estado: "pre_facturado")
+    marcar_en_pre_factura(cajas.last)
 
     error = assert_raises(BajarCajasConPin::PinInvalido) { bajar(cajas.first, 1, pin: "9999").call }
 
@@ -137,7 +137,7 @@ class BajarCajasConPinTest < ActiveSupport::TestCase
     # Yusef lo marco "SI" explicitamente y la primera version de la lista lo
     # dejaba afuera.
     cajas = crear_split(2)
-    cajas.last.update_columns(estado: "pre_facturado")
+    marcar_en_pre_factura(cajas.last)
     sac = User.create!(
       nombre: "Supervisora SAC", email_address: "sac.cajas@test.com",
       password: "password123", rol: "supervisor_sac", activo: true, pin: "1234"
@@ -204,7 +204,7 @@ class BajarCajasConPinTest < ActiveSupport::TestCase
 
   test "el borrado queda auditado" do
     cajas = crear_split(2)
-    cajas.last.update_columns(estado: "pre_facturado")
+    marcar_en_pre_factura(cajas.last)
 
     assert_difference -> { PaperTrail::Version.where(item_type: "Paquete", event: "destroy").count }, 1 do
       bajar(cajas.first, 1).call
@@ -235,6 +235,16 @@ class BajarCajasConPinTest < ActiveSupport::TestCase
     )
   end
 
+  # Antes esto era `estado: "pre_facturado"`. Con ese estado eliminado (A7-11),
+  # lo que dice que una caja ya entró a cobro es la FK — que es lo que
+  # `cobrada_o_entregada?` miraba de primero desde siempre. Y es más fiel: el
+  # estado solo era un espejo de esta columna, y podía mentir.
+  def marcar_en_pre_factura(caja)
+    pf = PreFactura.create!(cliente: @cliente, estado: "creado",
+                            creado_por: users(:cajero), fecha_trabajo: Date.current)
+    caja.update_columns(estado: "disponible_entrega", pre_factura_id: pf.id)
+  end
+
   def pre_factura_con(caja, subtotal:)
     pf = PreFactura.create!(cliente: @cliente, estado: "creado",
                             creado_por: users(:cajero), fecha_trabajo: Date.current)
@@ -242,7 +252,7 @@ class BajarCajasConPinTest < ActiveSupport::TestCase
       paquete: caja, concepto: "Flete caja #{caja.numero_caja}",
       peso_cobrar: 10, precio_libra: 50, subtotal: subtotal
     )
-    caja.update_columns(pre_factura_id: pf.id, estado: "pre_facturado")
+    caja.update_columns(pre_factura_id: pf.id, estado: "disponible_entrega")
     pf.reload.save!
     pf.reload
   end

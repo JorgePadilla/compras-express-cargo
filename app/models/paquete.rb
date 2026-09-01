@@ -90,7 +90,6 @@ class Paquete < ApplicationRecord
     consolidando_honduras: "consolidando_honduras",
     disponible_entrega:    "disponible_entrega",
     enviado_sucursal:      "enviado_sucursal",   # A7-09: va camino a otra sucursal
-    pre_facturado:         "pre_facturado",
     facturado:             "facturado",
     en_reparto:            "en_reparto",
     recoleta_en_proceso:   "recoleta_en_proceso",
@@ -225,8 +224,11 @@ class Paquete < ApplicationRecord
 
   # Orden del pipeline operativo; avances a un indice mayor requieren que
   # las tareas pendientes del paquete esten cerradas.
+  # A7-01 · *"Bodega Honduras va **después** de prefactura."* Con `pre_facturado`
+  # afuera (A7-11), el orden que queda **es** el del audio: la carga espera en
+  # aduana, la pre-factura la trabaja, y de ahí entra a bodega disponible.
   ESTADOS_ORDEN = %w[recibido_miami empacado enviado_honduras en_aduana
-                     disponible_entrega pre_facturado facturado en_reparto entregado].freeze
+                     disponible_entrega facturado en_reparto entregado].freeze
 
   # Estados excepcionales / fuera del pipeline lineal. Las transiciones
   # hacia o desde estos NO se consideran "retroceso" (son rutas
@@ -261,10 +263,10 @@ class Paquete < ApplicationRecord
   # FK que se desliga si el estado nuevo es ANTERIOR al estado mínimo
   # donde la asociación se setea.
   RETROCESO_CLEANUP_FKS_DESDE_ESTADO = {
-    "enviado_honduras" => :manifiesto_id,
-    "pre_facturado"    => :pre_factura_id,
-    "facturado"        => :venta_id,
-    "en_reparto"       => :entrega_id
+    "enviado_honduras"   => :manifiesto_id,
+    "disponible_entrega" => :pre_factura_id,
+    "facturado"          => :venta_id,
+    "en_reparto"         => :entrega_id
   }.freeze
 
   # A7-12. El dropdown de estados salía en orden de declaración del enum, que
@@ -277,12 +279,12 @@ class Paquete < ApplicationRecord
   # Va en orden de proceso: primero el camino que recorre un paquete normal,
   # después los desvíos.
   #
-  # A7-11. `pre_facturado` **no está en esta lista**, a propósito. Yusef:
+  # A7-11. `pre_facturado` **ya no existe**. Salió primero de esta lista —nadie
+  # lo ponía a mano— y ahora del enum entero, que es lo que Yusef pidió:
   # *"el prefacturado no sé de dónde lo sacó… no del estatus. Ese tenés que
-  # eliminar."* Sigue existiendo como estado —lo escribe `PreFactura#confirmar!`
-  # y de él dependen el candado de bajar cajas y la cadena de retroceso—, pero
-  # **nadie lo pone a mano**: es consecuencia de emitir una pre-factura, no una
-  # decisión de bodega.
+  # eliminar."* Que un paquete esté en una pre-factura se sabe por
+  # `pre_factura_id`, que es el dato que ya lo decidía todo: `facturables`
+  # filtra por ahí, no por el estado.
   ESTADOS_SELECCIONABLES = %w[
     pre_alerta_estado recibido_miami consolidando_miami empacado
     enviado_honduras en_aduana consolidando_honduras disponible_entrega
@@ -636,10 +638,13 @@ class Paquete < ApplicationRecord
   # ¿Esta caja ya entró a cobro o salió del almacén? Si sí, borrarla
   # descuadraría una venta o dejaría un entregado sin registro.
   # Se mira el estado **y** los FKs: un paquete puede tener `pre_factura_id`
-  # sin que su estado lo diga todavía.
+  # sin que su estado lo diga todavía. Y desde que `pre_facturado` salió del
+  # enum (A7-11), `pre_factura_id` es **el único** que sabe de la pre-factura:
+  # el estado nunca la delató mejor que la FK, que es justo lo que decía el
+  # comentario de arriba desde antes.
   def cobrada_o_entregada?
     pre_factura_id.present? || venta_id.present? || entrega_id.present? ||
-      pre_facturado? || facturado? || entregado? || en_reparto?
+      facturado? || entregado? || en_reparto?
   end
 
   # ── Sub-etiquetas / split de tracking en N bultos ──
@@ -1431,8 +1436,8 @@ class Paquete < ApplicationRecord
   end
 
   # Registra la primera vez que el paquete llega a disponible_entrega.
-  # Una vez seteada, NO se borra si el estado avanza (pre_facturado,
-  # facturado, entregado...) porque es un timestamp historico util para
+  # Una vez seteada, NO se borra si el estado avanza (facturado,
+  # entregado...) porque es un timestamp historico util para
   # reportes y listados. Tampoco se resetea si retrocede por correccion
   # administrativa: mantener el timestamp original evita perder trazabilidad.
   # Si en el futuro se necesita "fecha programada vs fecha real", se agrega

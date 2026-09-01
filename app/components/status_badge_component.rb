@@ -17,7 +17,7 @@ class StatusBadgeComponent < ViewComponent::Base
 
     # Info — in-progress logistics states
     "recibido_miami" => INFO, "empacado" => INFO, "enviado_honduras" => INFO,
-    "en_reparto" => INFO, "pre_facturado" => INFO, "creado" => INFO, "domicilio" => INFO,
+    "en_reparto" => INFO, "creado" => INFO, "domicilio" => INFO,
     "en_proceso" => INFO, "en_miami" => INFO, "en_transito" => INFO,
     "recibido" => INFO, "enviado" => INFO,
     "consolidando_honduras" => INFO, "recoleta_en_proceso" => INFO,

@@ -72,7 +72,7 @@ class EtiquetarSplitOrdenadoTest < ActionDispatch::IntegrationTest
 
   test "una caja ya cobrada bloquea el ajuste y no se guarda NADA" do
     cajas = crear_split(2)
-    cajas.last.update_columns(estado: "pre_facturado")
+    marcar_en_pre_factura(cajas.last)
 
     patch actualizar_etiquetar_url(cajas.first), params: {
       paquete: { cantidad_paquetes: 1, descripcion: "no tendría que quedar" }
@@ -130,6 +130,15 @@ class EtiquetarSplitOrdenadoTest < ActionDispatch::IntegrationTest
       # el número madre, no el peso.
       peso: nil, user: @user
     )
+  end
+
+
+  # Antes acá decía `estado: "pre_facturado"`. Con ese estado eliminado (A7-11),
+  # lo que dice que una caja ya entró a cobro es la FK.
+  def marcar_en_pre_factura(caja)
+    pf = PreFactura.create!(cliente: caja.cliente, estado: "creado",
+                            creado_por: users(:cajero), fecha_trabajo: Date.current)
+    caja.update_columns(estado: "disponible_entrega", pre_factura_id: pf.id)
   end
 
   def crear_split(n)

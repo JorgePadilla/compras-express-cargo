@@ -19,12 +19,20 @@ class EstadoPaqueteHelperTest < ActionView::TestCase
   end
 
   # A7-11. Yusef: "el prefacturado no es un estado, ese tenés que eliminar".
-  # Sigue existiendo en el enum porque lo escribe PreFactura#confirmar!, pero
-  # nadie lo pone a mano.
-  test "pre_facturado no se puede elegir a mano" do
+  # Este test decía lo contrario —que tenía que seguir en el enum porque lo
+  # escribía PreFactura#confirmar!—, y era cierto hasta que confirmar! pasó a
+  # escribir `disponible_entrega`. Se da vuelta: ahora traba que vuelva.
+  test "pre_facturado no existe, ni para elegir ni en el enum" do
     refute_includes Paquete::ESTADOS_SELECCIONABLES, "pre_facturado"
-    assert_includes Paquete.estados.keys, "pre_facturado",
-                    "se borró del enum y eso rompe la pre-factura"
+    refute_includes Paquete.estados.keys, "pre_facturado",
+                    "volvió al enum: Yusef lo mandó eliminar (A7-11)"
+    refute_includes Paquete::ESTADOS_ORDEN, "pre_facturado"
+  end
+
+  # El rótulo se queda aunque el estado no exista: paper_trail guarda versiones
+  # viejas que lo nombran y la bitácora las muestra.
+  test "el rótulo legacy sobrevive para la bitácora" do
+    assert_equal "Pre-facturado", estado_etiqueta("pre_facturado")
   end
 
   test "todo lo seleccionable existe en el enum" do

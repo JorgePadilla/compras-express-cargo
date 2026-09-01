@@ -29,6 +29,9 @@ module EstadoPaqueteHelper
     "consolidando_honduras" => "Consolidando en Honduras",
     "disponible_entrega"    => "Disponible",
     "enviado_sucursal"      => "Enviado a sucursal",
+    # Legacy. `pre_facturado` salió del enum (A7-11), pero paper_trail guarda
+    # versiones viejas que lo nombran: sin esta línea la bitácora de un paquete
+    # de antes diría "Pre facturado" por el `humanize` de respaldo.
     "pre_facturado"         => "Pre-facturado",
     "facturado"             => "Facturado",
     "en_reparto"            => "En reparto",
@@ -97,7 +100,6 @@ module EstadoPaqueteHelper
     "consolidando_honduras" => "CONS HN",
     "disponible_entrega"    => "DISPONIBLE",
     "enviado_sucursal"      => "ENVIADO",
-    "pre_facturado"         => "PRE-FACT",
     "facturado"             => "FACTURADO",
     "en_reparto"            => "REPARTO",
     "recoleta_en_proceso"   => "RECOLECTA",

@@ -69,9 +69,10 @@ class ProcesosPdf
   # No es preferencia de orden: la pre-factura se hace en San Pedro porque el
   # personal de pre-factura existe solo ahí.
   #
-  # El paso de pre-factura ya **no lleva `estado`**: `pre_facturado` existe en el
-  # sistema pero es consecuencia de emitir el documento, no un estado que alguien
-  # ponga (A7-11).
+  # El paso de pre-factura ya no lleva `estado` propio, y ahora es literal:
+  # `pre_facturado` **se eliminó** del sistema (A7-11, *"ese tenés que
+  # eliminar"*). Lo que la pre-factura escribe es el paso siguiente —bodega—,
+  # que es exactamente el orden que Yusef dictó acá arriba.
   CAMINO_HONDURAS = [
     # C21-07 · Éste era **el hueco más grande del sistema**: no había pantalla y
     # alguien entraba a la ficha del paquete a cambiarle el estado a mano. Es lo
@@ -83,7 +84,11 @@ class ProcesosPdf
       actor: :persona, ruta: "recepcion_carga_index_path", estado: "en_aduana", existe: true },
     { titulo: "Pre-factura", quien: "cajero, en San Pedro",
       actor: :persona, ruta: "pre_facturas_path", existe: true },
-    { titulo: "Bodega en Honduras", quien: "hoy se cambia el estado a mano",
+    # El estado lo escribe hoy `PreFactura#confirmar!`, que es el orden de
+    # A7-01. Sigue `existe: false` porque lo que falta es la **pantalla**: nadie
+    # escanea la carga al entrar a bodega, y hasta que exista el paso es un
+    # efecto de la pre-factura y no un lugar por el que alguien la haga pasar.
+    { titulo: "Bodega en Honduras", quien: "lo escribe la pre-factura; falta la pantalla",
       actor: :persona, estado: "disponible_entrega", existe: false },
     { titulo: "Factura", quien: "cajero",
       actor: :persona, ruta: "ventas_path", existe: true },

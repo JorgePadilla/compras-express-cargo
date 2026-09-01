@@ -895,9 +895,12 @@ estado — `PR-M7` es el **primer escritor de `en_aduana` en todo el sistema**),
 `RP-46(c)` (manifiesto por sucursal con su número anual), `RP-53` y `RP-55`
 (los dos los contestó Jorge).
 
-**Lo que sigue siendo hueco:** la **bodega en Honduras**. Nadie escribe
-`disponible_entrega`, así que la carga que entra por manifiesto se queda en
-`en_aduana` hasta que la pre-factura la mueve. `PR-M8` ensanchó
+**Lo que sigue siendo hueco:** la **bodega en Honduras** — pero ya no el estado,
+sino la pantalla. Desde `RP-38` la pre-factura escribe `disponible_entrega` al
+confirmarse, que es el orden que Yusef dictó en `A7-01` (*"bodega Honduras va
+después de prefactura"*). Lo que falta es que alguien **escanee la carga al
+entrar a bodega**: hoy el estado es un efecto de emitir el documento y no un
+lugar por el que la carga pase. `PR-M8` ensanchó
 `Paquete.facturables` para que eso funcione; el módulo de bodega sigue sin
 construirse y `lib/procesos_pdf.rb` lo dibuja con `existe: false`.
 
