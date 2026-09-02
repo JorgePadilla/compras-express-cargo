@@ -81,13 +81,11 @@
           *"expedido… me estás hablando de que quien lo creó y lo está
           haciendo"*.
 
-          Qué se escribe adentro es `RP-59` y está abierta: el audio dice
-          «sobre el nombre» cuatro veces, que puede ser «sólo el nombre» o
-          «sobrenombre» (o sea, las iniciales), y son dos cosas distintas.
-          Mientras tanto se imprime **lo que escribieron en el campo**, y si
-          está vacío las iniciales de quien lo creó — la misma convención que
-          ya usa «Imprimió» dos renglones abajo. %>
-      <strong>Expedido por:</strong> <%= @manifiesto.expedido_por.presence || wr_user_initials(@manifiesto.user) %><br>
+          `RP-59` cerrada (Jorge, 2026-09-02): son **las iniciales de quien lo
+          creó**, estampadas al crear el manifiesto. El fallback al usuario es
+          para los manifiestos de antes de la regla; los nuevos siempre traen
+          la columna llena. %>
+      <strong>Expedido por:</strong> <%= @manifiesto.expedido_por.presence || @manifiesto.user&.iniciales_display || "—" %><br>
       <strong>Enviado:</strong> <%= @manifiesto.fecha_enviado&.strftime("%d/%m/%Y") || "—" %><br>
       <strong>Impreso:</strong> <%= printed_at.strftime("%d/%m/%Y %H:%M") %><br>
       <strong>Imprimió:</strong> <%= wr_user_initials(Current.user) %>

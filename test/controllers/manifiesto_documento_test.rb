@@ -174,13 +174,29 @@ class ManifiestoDocumentoTest < ActionDispatch::IntegrationTest
     assert_match(/Manal Sahuri/, response.body)
   end
 
-  # Vacío cae en las iniciales de quien lo creó, igual que «Imprimió».
+  # RP-59 · Vacío cae en las iniciales de quien lo creó. Es el caso de los
+  # manifiestos de antes de la regla; los nuevos traen la columna estampada.
   test "C23-09 · sin el campo lleno cae en quien creó el manifiesto" do
+    @user.update!(iniciales: "YS")
     @manifiesto.update!(expedido_por: nil, user: @user)
 
     get documento_manifiesto_url(@manifiesto)
 
-    assert_match(%r{Expedido por:</strong>\s*#{Regexp.escape(wr_iniciales(@user))}}, response.body)
+    assert_match(%r{Expedido por:</strong>\s*YS}, response.body)
+  end
+
+  # **Y las dos casillas de iniciales del papel se escriben igual.** «Expedido
+  # por» y «Imprimió» son la misma cosa dicha dos veces; con dos helpers
+  # distintos salían `DM` y `D.M.` en el mismo documento.
+  test "RP-59 · las iniciales del papel se escriben de una sola forma" do
+    @user.update!(iniciales: nil, nombre: "Digitador Miami")
+    @manifiesto.update!(expedido_por: nil, user: @user)
+
+    get documento_manifiesto_url(@manifiesto)
+
+    assert_match(%r{Expedido por:</strong>\s*DM<}, response.body)
+    assert_match(%r{Imprimió:</strong>\s*DM\s*$}, response.body)
+    assert_no_match(/D\.M\./, response.body, "el formato con puntos era la copia que se fue")
   end
 
   # *"Esta es prioridad, también un poquito más grande."*
@@ -191,13 +207,5 @@ class ManifiestoDocumentoTest < ActionDispatch::IntegrationTest
 
     assert_select "span.mf-pill", text: "ES PRIORIDAD"
     assert_match(/\.mf-pill\s*\{[^}]*font-size:\s*15px/, response.body)
-  end
-
-  private
-
-  # Las mismas iniciales que arma `wr_user_initials`, sin arrastrar el helper
-  # entero al test: si la regla cambia, este test tiene que cambiar con ella.
-  def wr_iniciales(user)
-    ApplicationController.helpers.wr_user_initials(user)
   end
 end

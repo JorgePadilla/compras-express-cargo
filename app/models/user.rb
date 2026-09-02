@@ -235,11 +235,35 @@ class User < ApplicationRecord
   # automáticamente desde el nombre como fallback razonable. La preferencia
   # es la columna explícita (Yusef pidió alias custom porque hay nombres
   # repetidos como "Juan").
+  # RP-59 · **Este es el único lugar donde se calculan las iniciales.** El
+  # Warehouse Receipt tenía su propia copia (`wr_user_initials`) que ignoraba la
+  # columna y devolvía otro formato —`D.M.` contra `DM`—, así que el mismo papel
+  # podía mostrar a la misma persona de dos maneras. Ahora el helper delega acá.
+  #
+  # La escalera de fallbacks, en orden: la columna que llena el admin, el
+  # nombre, y el usuario del correo. El último venía del helper del WR y se
+  # conserva: `nombre` es `NOT NULL DEFAULT ''`, así que puede estar vacío, y
+  # ahí «—» esconde a alguien que sí se puede identificar.
   def iniciales_display
     return iniciales.upcase if iniciales.present?
-    parts = nombre.to_s.split(/\s+/).reject(&:blank?).first(2)
-    return "—" if parts.empty?
-    parts.map { |p| p[0].to_s.upcase }.join
+
+    # El nombre se parte **solo por espacios**, como siempre: `María-José
+    # García` es dos palabras y da `MG`. Partir también por guiones y puntos
+    # —que es lo que hacía el helper del WR— la volvería `MJ`, y eso le
+    # cambiaría las iniciales a gente en la bitácora y en la etiqueta Dymo, que
+    # no tienen nada que ver con esto.
+    #
+    # El correo sí se parte ancho, porque ahí el separador es justamente el
+    # punto o el guion: `jorge.padilla@…` → `JP`.
+    if nombre.to_s.strip.present?
+      partes = nombre.split(/\s+/).reject(&:blank?).first(2)
+    else
+      usuario = email_address.to_s.split("@").first.to_s
+      partes = usuario.split(/[\s._-]+/).reject(&:blank?).first(2)
+    end
+
+    return "—" if partes.empty?
+    partes.map { |p| p[0].to_s.upcase }.join
   end
 
   # PR-9.a: "las notas se ordenan por la jerarquía de la empresa" (Yusef,

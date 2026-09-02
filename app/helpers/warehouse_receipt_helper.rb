@@ -59,16 +59,26 @@ module WarehouseReceiptHelper
   end
 
   # Iniciales del usuario en formato "Y.G." (max 2 letras + punto cada una).
+  # RP-59 · **Ahora delega, y esto cambia el WR.**
+  #
+  # Vivía acá una segunda implementación de las iniciales que (a) **ignoraba
+  # `users.iniciales`** —la columna que llena el admin, que existe justamente
+  # porque *"hay nombres repetidos como Juan"* (`PR-D1.b`)—, así que en el papel
+  # que ve el cliente los dos Juanes salían iguales; y (b) devolvía otro formato,
+  # `D.M.` contra el `DM` de `User#iniciales_display`.
+  #
+  # Lo destapó el manifiesto impreso: «Expedido por» y «Imprimió» son la misma
+  # cosa dicha dos veces, y con dos helpers salían escritas distinto **en el
+  # mismo papel**.
+  #
+  # El punto se va: el `Ej: YG, JP, YS` del formulario de usuarios es lo que el
+  # admin teclea, y es lo que tiene que salir impreso. El helper se queda como
+  # nombre de dominio del WR, pero la regla vive en un solo lugar.
   def wr_user_initials(user)
     return "—" unless user
-    source = if user.respond_to?(:nombre) && user.nombre.to_s.strip.present?
-               user.nombre.to_s
-             else
-               user.email_address.to_s.split("@").first.to_s
-             end
-    parts = source.split(/[\s._-]+/).reject(&:blank?)
-    return "—" if parts.empty?
-    parts.first(2).map { |w| "#{w[0].to_s.upcase}." }.join
+    return "—" unless user.respond_to?(:iniciales_display)
+
+    user.iniciales_display
   end
 
   # Texto T&C para el WR. Consulta el modelo `Term` cuando hay una version

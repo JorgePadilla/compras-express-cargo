@@ -97,11 +97,11 @@
         </div>
       <% end %>
 
-      <div>
-        <%= f.label :expedido_por, "Expedido por", class: "block text-base font-medium text-gray-700 dark:text-gray-200 mb-1" %>
-        <%= f.text_field :expedido_por,
-              class: "block w-full min-h-11 py-3 rounded-lg border-gray-300 shadow-sm text-base focus:ring-cec-teal focus:border-cec-teal" %>
-      </div>
+      <%# RP-59 · «Expedido por» ya no se teclea: lo estampa el sistema con las
+          iniciales de quien crea el manifiesto. Yusef preguntó él mismo qué
+          iba adentro —*"no sé si ponerle las iniciales, la firma, el
+          nombre… solamente quien lo hizo"*— y un campo libre para «quien lo
+          hizo» es un campo donde se puede escribir a otro. %>
     </div>
 
     <%# PR-U4 · La misma tarjeta que los tipos de envío, en chico: es un

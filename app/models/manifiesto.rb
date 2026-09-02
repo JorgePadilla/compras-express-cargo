@@ -62,6 +62,20 @@ class Manifiesto < ApplicationRecord
   # como estaba.
   validates :sucursal_entrega, presence: true, if: :tipo_interno?
 
+  # RP-59 · «Expedido por» lo llena el sistema, no el operario.
+  #
+  # Yusef preguntó él mismo qué iba en ese campo —*"no sé si ponerle las
+  # iniciales, la firma, el nombre… solamente quien lo hizo"*— y Jorge decidió
+  # el 2026-09-02: **las iniciales de quien lo creó**. Son las que define un
+  # admin (`users.iniciales`), que existen porque *"hay nombres repetidos como
+  # Juan"*.
+  #
+  # **Se estampa al crear y no se recalcula.** Es un documento que va firmado y
+  # sellado: si mañana el admin le cambia las iniciales a alguien, el manifiesto
+  # de la semana pasada tiene que seguir diciendo lo que decía cuando se emitió.
+  # Por eso vive en la columna y no en un método que mire al usuario cada vez.
+  before_create :estampar_expedido_por
+
   scope :activos, -> { where(activo: true) }
   # C21-11: las guías se mudaron a su propia tabla. Sin el `left_joins` la
   # búsqueda dejaría de encontrar manifiestos por guía **en silencio**, que es
@@ -226,9 +240,10 @@ class Manifiesto < ApplicationRecord
   # que lo despierta es el **manifiesto interno de sucursal**, que es de lo que
   # se trata construir ahora — hasta hoy nadie más que Miami numeraba.
   #
-  # Jorge eligió el código completo (2026-09-01). **Cambia el formato que Yusef
-  # confirmó** (`MM2026000001` → `MMIA2026000001`, dos caracteres más en la hoja
-  # impresa): hay que decírselo.
+  # Jorge eligió el código completo (2026-09-01). Cambiaba el formato que Yusef
+  # había confirmado (`MM2026000001` → `MMIA2026000001`, dos caracteres más en
+  # la hoja impresa), y **se le contó y lo aceptó** al día siguiente: *"le
+  # agregué tres caracteres más"* · *"No, está bien"* (`C23`, `RP-46`).
   #
   # Los manifiestos ya numerados **no se renumeran**: su número es como se los
   # conoce, y el contador por sucursal sigue donde estaba.
@@ -243,5 +258,17 @@ class Manifiesto < ApplicationRecord
       next_number = (self.class.where("numero LIKE 'MA-%'").maximum(Arel.sql("CAST(SUBSTRING(numero FROM 4) AS INTEGER)")) || 0) + 1
       self.numero = "MA-#{next_number.to_s.rjust(6, '0')}"
     end
+  end
+
+  # RP-59 · Las iniciales de quien lo creó, congeladas al crear.
+  #
+  # `iniciales_display` es el que respeta la columna que llena el admin y cae
+  # al nombre cuando está vacía. Si el manifiesto se crea sin usuario —consola,
+  # una migración de datos— se queda en nil y el papel imprime «—», que es
+  # honesto: nadie lo expidió.
+  def estampar_expedido_por
+    return if expedido_por.present?
+
+    self.expedido_por = user&.iniciales_display
   end
 end

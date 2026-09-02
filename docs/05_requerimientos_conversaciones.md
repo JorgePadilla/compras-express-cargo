@@ -8974,7 +8974,7 @@ El campo existe desde el principio: está en la tabla, en el formulario y en la
 ficha del manifiesto. **No estaba en el papel**, que es donde Yusef lo fue a
 buscar. Ahora se imprime en el encabezado, junto a «Enviado» e «Impreso».
 
-Qué va escrito adentro es otra pregunta, y quedó abierta — ver `C23-11`.
+Qué va escrito adentro era `RP-59` y ya está resuelto — ver abajo.
 
 ---
 
@@ -9023,6 +9023,14 @@ y que cambian lo que se construye:
 2. **¿De qué sucursal?** Dijo «todos los del tipo de servicio». En el manifiesto
    **interno** eso barrería paquetes de otra sucursal, que no van en ese camión.
 
+**Jorge decidió las dos, 2026-09-02:** los paquetes **se quedan en
+`recibido_miami`** —solo se atan al manifiesto, que es lo que ya hace
+`add_paquete` uno por uno— y el tirón **filtra por la sucursal de origen del
+manifiesto**. Lo primero respeta la invariante de que `empacado` implica caja;
+Yusef estaba describiendo el acto, no el estatus. Lo segundo no cambia nada en
+Miami, porque hoy todo sale de ahí, y evita que el interno se lleve carga que
+está físicamente en otra sucursal.
+
 #### C23-11 · Varias cajas abiertas a la vez — 🔜 **PENDIENTE**
 
 > "Pero aquí pues **debería de existir la múltiple** […] o sea, poder
@@ -9044,8 +9052,21 @@ modelo de datos, y el audio admite dos lecturas que llevan a cosas distintas:
 - **(b)** se dejan **N cajas abiertas** y cada escaneo sigue cayendo en una sola,
   sin tener que ir a cambiar de caja entre paquete y paquete.
 
-«En las tres va todo» empuja hacia (a); «meten los paquetes en cualquier caja»
-empuja hacia (b). No se adivina: se pregunta.
+**Es (b), y lo dice el propio audio.** Jorge le preguntó exactamente por (a) y
+Yusef lo corrigió en el acto:
+
+> **Jorge:** "Aquí ya te entendí, porque **un tracking puede tener tres cajas**."
+> **Yusef:** "**No**, porque… esperame. Es que ellos arman tres cajas y empiezan
+>  a meter los paquetes **en cualquier caja**."
+> **Jorge:** "Ah, **puede seleccionar tres**, va."
+
+«En cualquier caja» es una, y «mínimo uno, máximo todas» es la validación de
+**cuántas cajas se dejan abiertas**, no de en cuántas entra un paquete.
+Confirmado por Jorge el 2026-09-02, contra la primera lectura, que era la
+equivocada: (a) además habría dejado sin respuesta qué imprime
+`tipos_envio_adentro` en la 4×6 de cada caja, qué significa recibir en Honduras
+un paquete que está en tres, y qué pasa al escanear una de las tres — tres
+preguntas que Yusef nunca contestó porque no las estaba pidiendo.
 
 ---
 
@@ -9053,15 +9074,15 @@ empuja hacia (b). No se adivina: se pregunta.
 
 | # | Qué | Estado |
 |---|---|---|
-| `C23-10` | Empacar sin escanear: estado final y filtro por sucursal | Pendiente de decisión |
-| `C23-11` | Varias cajas: ¿el paquete en N cajas, o N cajas abiertas? | Pendiente de decisión |
-| `RP-59` | «Expedido por»: ¿el **nombre** de quien lo creó, o sus **iniciales**? | Pendiente de Yusef |
+| `C23-10` | Empacar sin escanear: estado final y filtro por sucursal | ✅ Decidido — ver abajo |
+| `C23-11` | Varias cajas: ¿el paquete en N cajas, o N cajas abiertas? | ✅ Decidido — ver abajo |
+| `RP-59` | «Expedido por»: ¿el **nombre** de quien lo creó, o sus **iniciales**? | ✅ **Las iniciales** |
 
-**`RP-59`, y por qué es una pregunta y no una respuesta.** Yusef preguntó él
-mismo qué va en ese campo —*"no sé si ponerle **las iniciales, la firma, el
-nombre**"*, *"solamente quien lo hizo"*— y la respuesta la dio con una palabra
-que el audio no deja resolver. Suena **«sobre el nombre»**, cuatro veces, que no
-es español. Las dos reconstrucciones posibles dan cosas distintas:
+**`RP-59` · Por qué era una pregunta.** Yusef preguntó él mismo qué va en ese
+campo —*"no sé si ponerle **las iniciales, la firma, el nombre**"*, *"solamente
+quien lo hizo"*— y la respuesta la dio con una palabra que el audio no deja
+resolver. Suena **«sobre el nombre»**, cuatro veces, que no es español. Las dos
+reconstrucciones posibles daban cosas distintas:
 
 - **«sólo el nombre»** → el nombre de quien creó el manifiesto;
 - **«sobrenombre»** → las **iniciales**, que en este sistema las define un admin
@@ -9069,9 +9090,29 @@ es español. Las dos reconstrucciones posibles dan cosas distintas:
   frase siguiente signifique algo: **Jorge:** *"ok, las iniciales"* · **Yusef:**
   *"sí, nomás que **nosotros las creamos**"*.
 
-Mientras tanto el papel imprime **el campo tal como lo escribieron**, y si está
-vacío cae en las iniciales de quien creó el manifiesto — que es la convención
-que ya usa «Imprimió» en el mismo encabezado. Con la respuesta se llena solo.
+**Jorge la cerró el 2026-09-02: las iniciales.** El campo dejó de ser texto
+libre —un campo abierto para «quien lo hizo» es un campo donde se puede escribir
+a otro— y ahora lo **estampa el sistema al crear** el manifiesto, con
+`User#iniciales_display`. Se estampa y no se recalcula: es un papel que va
+firmado, y si mañana el admin le cambia las iniciales a alguien, el manifiesto
+de la semana pasada tiene que seguir diciendo lo que decía cuando se emitió.
+
+**Y al conectarlo apareció que las iniciales se calculaban en dos lugares.**
+`User#iniciales_display` respetaba la columna del admin; `wr_user_initials` —la
+copia que vive en el helper del Warehouse Receipt— **la ignoraba** y derivaba
+siempre del nombre, además de escribirla con puntos (`D.M.` contra `DM`). Las
+dos consecuencias:
+
+1. En el WR, el papel que ve el cliente, **los dos Juanes salían iguales** — que
+   es exactamente lo que la columna venía a resolver: Yusef la pidió *"porque
+   hay nombres repetidos como Juan"* (`PR-D1.b`).
+2. En el manifiesto impreso, «Expedido por» e «Imprimió» son la misma cosa dicha
+   dos veces y **salían escritas distinto en el mismo papel**.
+
+`wr_user_initials` ahora delega en el modelo. **Esto cambia el WR**: donde decía
+`D.M.` ahora dice `DM`. El punto no lo pidió nadie —era un detalle de la copia—
+y el formato que gana es el que el admin teclea en el formulario de usuarios
+(*"Ej: YG, JP, YS"*), que es el que espera ver impreso.
 
 ---
 

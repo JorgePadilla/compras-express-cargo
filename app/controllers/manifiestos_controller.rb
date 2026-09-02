@@ -175,7 +175,7 @@ class ManifiestosController < ApplicationController
   # es lo que pasaba mientras las dos mitades compartían pantalla.
   def manifiesto_params
     params.require(:manifiesto).permit(
-      :numero, :expedido_por, :empresa_manifiesto_id,
+      :numero, :empresa_manifiesto_id,
       # El encabezado que Yusef anotó campo por campo sobre el impreso.
       :consignatario_id, :tipo_envio_proveedor_id, :sucursal_entrega_id, :es_prioridad,
       # `sucursal_origen_id` es lo que despierta la numeración anual. Estaba
