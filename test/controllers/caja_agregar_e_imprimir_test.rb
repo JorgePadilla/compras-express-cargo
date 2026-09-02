@@ -95,7 +95,9 @@ class CajaAgregarEImprimirTest < ActionDispatch::IntegrationTest
 
     get manifiesto_path(@manifiesto)
 
-    assert_select "[data-shortcut='F9']", { minimum: 1 },
+    # C23-12: «Finalizar e Imprimir» se mudó de F9 a F8. Sin él en la página
+    # este test no prueba nada, así que la precondición se afirma.
+    assert_select "[data-shortcut='F8']", { minimum: 1 },
                   "sin «Finalizar e Imprimir» en la página este test no prueba nada"
 
     por_tecla = Hash.new { |h, k| h[k] = [] }
@@ -117,5 +119,42 @@ class CajaAgregarEImprimirTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to manifiesto_path(@manifiesto)
+  end
+
+  # ── C23-12 · Las teclas ──────────────────────────────────────────────────
+
+  # Los dos botones del formulario muestran su tecla pero **no** emiten
+  # `data-shortcut`: las escucha `caja_manifiesto_controller`. Si además las
+  # registraran, el controller global les haría click encima y se guardarían
+  # **dos cajas** — el doble disparo que ya pasó en `/entrega_personal`.
+  test "los botones del formulario muestran la tecla pero no la registran" do
+    get manifiesto_path(@manifiesto)
+
+    assert_match(/Agregar caja\s*\(F5\)/, response.body.gsub(/<[^>]+>/, " "))
+    assert_match(/Agregar e imprimir\s*\(F9\)/, response.body.gsub(/<[^>]+>/, " "))
+    assert_select "[data-shortcut='F5']", 0, "F5 la escucha el formulario, no el controller global"
+    assert_select "[data-shortcut='F9']", 0, "F9 la escucha el formulario, no el controller global"
+  end
+
+  # Y el formulario tiene que poder encontrarlos para disparar el submit.
+  test "el formulario alcanza a sus dos botones por target" do
+    get manifiesto_path(@manifiesto)
+
+    assert_select "[data-caja-manifiesto-target='agregar']", 1
+    assert_select "[data-caja-manifiesto-target='agregarEImprimir']", 1
+  end
+
+  # F9 se la lleva «Agregar e imprimir», que es la del sistema viejo y la que
+  # pasa decenas de veces por manifiesto. Finalizar —una vez, y con confirm—
+  # se corre a F8.
+  test "«Finalizar e Imprimir» se mudó a F8" do
+    @manifiesto.cajas.create!(alto: 23, largo: 23, ancho: 36, peso: 131)
+    paquetes(:disponible_entrega_juan)
+      .update!(manifiesto: @manifiesto, tipo_envio: @manifiesto.tipo_envios.first)
+
+    get manifiesto_path(@manifiesto)
+
+    assert_select "[data-shortcut='F8']", { minimum: 1 }
+    assert_select "[data-shortcut='F9']", 0, "F9 quedó para el formulario de casas"
   end
 end

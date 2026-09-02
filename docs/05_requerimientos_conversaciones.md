@@ -9136,6 +9136,67 @@ en el DOM y se alterna cuál se ve, para no pegar SVG a mano desde JavaScript.
 
 ---
 
+#### C23-12 · La tecla del botón de imprimir — ✅ **ARREGLADO**
+
+No sale del audio: lo vio Jorge al día siguiente mirando la pantalla.
+
+> "Aquí hay un botón de imprimir que no tiene F."
+
+Es «Agregar e imprimir», que `C23-05` había dejado sin tecla a propósito porque
+F9 estaba tomada. Buscando cuál darle apareció que **el problema era más hondo:
+la F5 que «Agregar caja» ya tenía tampoco disparaba.**
+
+**Por qué.** Elegir un tamaño manda el cursor a **Peso** —*"te ponen solo el
+cursor a peso, porque es lo que le vas a meter a ingresar"*, `C21-04`— y ahí el
+operario teclea. Y `keyboard_shortcuts_controller` **ignora toda tecla que no
+sea F2 cuando el foco está en un input**. O sea que el rótulo «(F5)» prometía
+una tecla justo en el único momento en que no funcionaba.
+
+**Y era peor que decorativa.** F5 es «refrescar» del navegador. El handler
+global sale **antes** de llamar a `preventDefault` cuando detecta que estás
+escribiendo, así que el operario tecleaba el peso, apretaba la tecla que el
+botón le prometía, y la pantalla **se recargaba borrándole el peso**.
+Reproducido en Chrome con una tecla de verdad, no simulada: el marcador puesto
+en `window` desapareció y el campo quedó vacío.
+
+**Cómo quedó.** Las teclas de esta pantalla las escucha ahora
+`caja_manifiesto_controller`, que es el patrón que `/etiquetar` ya usaba por
+exactamente la misma razón. Escucha en `document` —para que anden también con
+el foco afuera, que es como andaban antes— y llama a `preventDefault` siempre,
+que es lo que le saca el refresh a F5.
+
+Los botones llevan **`shortcut_label_only`**: muestran «(F5)» y «(F9)» pero
+**no** emiten `data-shortcut`. Si lo emitieran, el controller global les haría
+click además de esto y **se guardarían dos cajas** — el doble disparo que ya
+había pasado en `/entrega_personal` con F2 y F9.
+
+**Y «Finalizar e Imprimir» se mudó de F9 a F8** (Jorge, 2026-09-02). F9 es la
+que el sistema viejo usa para «Agregar/Imprimir» y es la que su equipo tiene en
+el dedo; agregar cajas pasa decenas de veces por manifiesto y finalizar una
+sola, y encima detrás de un confirm. La tecla se la queda la frecuente. F8 es
+«Excel» por convención del sistema, pero en esta pantalla no hay Excel: era la
+única libre sin conflicto real.
+
+El mapa de la ficha queda así:
+
+| Tecla | Qué hace | Quién la escucha |
+|---|---|---|
+| `F2` | Volver | el controller global |
+| `F4` | Imprimir manifiesto | el controller global |
+| `F5` | Agregar caja | **el formulario de casas** |
+| `F6` | Editar | el controller global |
+| `F8` | Finalizar e Imprimir | el controller global |
+| `F9` | **Agregar e imprimir** | **el formulario de casas** |
+| `F10` | Solo Finalizar | el controller global |
+
+**El test que lo cuida es de sistema, y no podía ser otro.** El HTML sale igual
+tenga o no la tecla efecto; lo que decide es qué hace el navegador con el
+`keydown`. `teclas_de_las_casas_test` aprieta F5 y F9 **con el cursor en Peso**
+y afirma que la caja entra. Se verificó rompiéndolo a propósito —sacándole el
+listener al formulario—: tres de sus cuatro tests se ponen rojos.
+
+---
+
 ### Lo que quedó abierto
 
 | # | Qué | Estado |
@@ -9143,6 +9204,7 @@ en el DOM y se alterna cuál se ve, para no pegar SVG a mano desde JavaScript.
 | `C23-10` | Empacar sin escanear | ✅ **Implementado** — falta la regla del interno |
 | `C23-11` | Varias cajas abiertas a la vez | ✅ **Implementado** |
 | `RP-59` | «Expedido por»: ¿el **nombre** de quien lo creó, o sus **iniciales**? | ✅ **Las iniciales** |
+| `C23-12` | La tecla de «Agregar e imprimir» — y la F5 que no disparaba | ✅ **Arreglado** |
 
 **`RP-59` · Por qué era una pregunta.** Yusef preguntó él mismo qué va en ese
 campo —*"no sé si ponerle **las iniciales, la firma, el nombre**"*, *"solamente
