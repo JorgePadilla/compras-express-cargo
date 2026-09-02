@@ -8767,3 +8767,352 @@ mal en silencio:
 
 En modo actualización **todos** quedan resueltos de arrastre, porque recargar
 deja el estado en cero por construcción. En modo alta siguen vivos.
+
+---
+
+## Conversación 23 (2026-09-01) — el manifiesto y la etiqueta del bulto, papel en mano
+
+Audio de **30 minutos**, transcrito con `whisper small`. Yusef y Jorge revisando
+en pantalla, de punta a punta, los dos papeles del módulo de manifiestos —el
+**manifiesto impreso** y la **etiqueta 4×6 del bulto**— y de ahí saltando a la
+pantalla de empacar. La grabación **arranca a mitad de frase**: lo que se dijo
+antes de «…de diferencia, hay una diferencia en los paquetes» no está.
+
+Los últimos cuatro minutos son sobremesa —la miel orgánica de un amigo de
+Valero— y no llevan requerimiento adentro.
+
+> ⚠️ **Sobre el transcript.** La sordina de siempre, y en esta más que en otras:
+> se le van palabras enteras y el audio pisa a los dos hablando encima. Se cita
+> lo que está limpio y **lo dudoso se marca en vez de completarlo**. Muestras de
+> lo que no se usa: *"vamos a marcar a queso, el culo salvaje"*, *"Empresas con
+> aportes, alcalde, donde una persona es cargada"* (que es, evidentemente,
+> «empresa transportadora … persona encargada»), *"Nick, que te llaman la
+> agrega"*. Y una palabra que **cambia el requerimiento según cómo se oiga**
+> queda abierta en `C23-11`.
+
+El termómetro de la llamada, en sus palabras:
+
+> "Bueno, no, **va muy bien vos, muy, muy bien**." · "Ya son detallitos
+>  sencillos, va." · "Lo que quería es más revisar de que todo tenga sentido,
+>  que **el flujo vaya bien**; los detallitos los arreglamos."
+
+---
+
+### La etiqueta 4×6 del bulto
+
+#### C23-01 · La letra **y** el número, los dos — ✅ **ARREGLADO**
+
+> "Nada más que nosotros usamos **la A y el 1**. […] El mismo A, A **1**, B el
+>  **2**, C el **3**."
+> "**Doble** porque la gente, a veces unos leen la A y otros leen el 1."
+
+Es identificación redundante a propósito, no adorno: el bulto se canta en voz
+alta entre dos personas que no leen lo mismo.
+
+La etiqueta imprimía `A` sola y grande, y en el pie repetía `numero_doc || letra`.
+Ahora el número acompaña a la letra —**`A1`**— y es el **mismo** número que la
+letra: sale de invertir `CajaManifiesto.letra_para` (A→1, Z→26, AA→27), que es el
+contador `ultima_letra` del manifiesto. No se guarda en ninguna columna nueva
+porque no es un dato aparte: es la misma cuenta escrita de otra forma, y si se
+guardara podría separarse de la letra, que es justo lo que no puede pasar.
+
+#### C23-02 · Las libras y las medidas, juntas — ✅ **ARREGLADO**
+
+> "Ahora lo que no le vi fue las libras. Ah, aquí está arriba por unos, ya. Las
+>  medidas están acá. Esto, esto **estaría más bonito que estén juntos**."
+
+Las buscó y no las encontró de un vistazo: el peso estaba arriba a la derecha y
+las medidas dos líneas abajo, con la letra gigante en el medio. Van juntas.
+
+#### C23-03 · LBS, VLBS y pies — ✅ **ARREGLADO**
+
+> "Ya que lo querés hacer bonito, hacerle **B L B S** o **pies** o algo."
+> "Ya que vos lo estás haciendo más ordenado, lo más bonito es ponerle **las
+>  libras reales, libras volumétricas, que es V L B S**." · "Y yo pongo la V y
+>  la L en mayúscula." · "Y le podés poner **los pies para el público**."
+> "Con eso se miraría más como **más profesional**."
+
+Decía `Lbs. 46` y nada más. Ahora las tres, rotuladas:
+
+| Rótulo | Qué es | De dónde sale |
+|---|---|---|
+| `LBS` | el peso real de la caja | `caja.peso` |
+| `VLBS` | la libra volumétrica | `caja.volumen`, que ya es alto×largo×ancho ÷ 166 |
+| `PIES³` | el pie cúbico | `VolumetricoCalculator.pies_cubicos`, ÷ 1728 y **ceil** |
+
+Las tres ya existían en el sistema; lo que faltaba era decir cuál es cuál. El
+`÷166` es el que le cobra el proveedor —*"yo agarro el reporte y ellos me cobran
+[según] el reporte"*, `C21-04`— y por eso no se toca ni se reemplaza.
+
+**Lo que costó meterlas.** La 4×6 tiene alto fijo y `overflow: hidden`: cuando
+el contenido se pasa **se recorta en silencio** y la impresora tira una etiqueta
+sin pie, sin que ningún test de Rails se entere. Con los renglones nuevos, la
+etiqueta más cargada quedaba con **0.16 in** de aire —un consignatario de dos
+líneas la desbordaba—, así que el QR bajó de 1.7 a 1.5 in y volvió a **0.36 in**.
+El código de 14 caracteres sigue en 25 módulos de ~1.5 mm, muy por encima de lo
+que necesita una pistola. Medido en Chrome de verdad, y de ahí quedó
+`test/system/etiqueta_bulto_cabe_test.rb`, que es la misma guarda que la Dymo ya
+tenía y esta no.
+
+#### C23-04 · A dónde va — ✅ **ARREGLADO**
+
+> "Y lo último que le falta acá es **a dónde va**." · "Ok, creo que es
+>  importante, va."
+> "Sí, o sea, aquí no lo lleva, porque **todos lo centralizamos acá**. Pero en
+>  el tuyo, pues ya lo tenés, que va."
+
+La etiqueta del legacy no lo lleva porque toda la carga aterriza en San Pedro
+Sula y se reparte desde ahí. El sistema nuevo sí sabe a dónde va —el manifiesto
+tiene `sucursal_entrega`, que en el **interno** es hasta obligatoria (`A7-07`)—,
+así que la etiqueta lo dice.
+
+#### C23-05 · Que la tire al agregar — ✅ **ARREGLADO**
+
+> "Acá un detalle que sería bueno, que **después de que le damos a agregar, de
+>  un solo** te… te las imprimo."
+
+Y lo repitió más tarde, ya viendo la pantalla:
+
+> **Jorge:** "¿Querés que la tire de un solo?" · **Yusef:** "Sí, que **le tire
+>  la que está haciendo** de un solo."
+
+Se agrega un segundo botón, **«Agregar e imprimir»**, al lado del que ya estaba.
+Es la misma pareja que tiene la pantalla vieja que él usa todos los días —*«Solo
+Agregar (F5)»* y *«Agregar/Imprimir (F9)»*—, ya anotada en el encabezado de
+`CajasManifiestoController` desde `C21-04`.
+
+**Y no abre una pestaña.** Chrome bloquea el `window.open` que no nace de un
+gesto, y esta impresión nace de un redirect después de un POST — el mismo
+tropiezo que ya costó en `/entrega_personal`, donde *"un gesto del usuario
+alcanza para un popup, no para dos"*. Así que usa el camino que se construyó
+para eso: la 4×6 se abre **en la misma pestaña**, se imprime sola y
+`@despues_de_imprimir` devuelve al manifiesto. Sin popup no hay bloqueador.
+
+**Pero va sin tecla, y esa es la única parte que no queda como la vieja.** F9
+—la que su equipo tiene en el dedo para esto— en esta ficha ya es **«Finalizar
+e Imprimir»**, que cierra el manifiesto entero.
+`keyboard_shortcuts_controller` resuelve con `document.querySelector`, o sea el
+**primero del DOM**, y el de finalizar está más arriba: el rótulo «(F9)» habría
+prometido agregar una caja y en su lugar habría ofrecido cerrar el manifiesto.
+Se le puso F9, se vio en la ficha de verdad que colisionaba, y se le sacó. Darle
+una tecla obliga antes a decidir si «Finalizar e Imprimir» se mueve, y eso no es
+de este PR.
+
+El test que lo cuida —`caja_agregar_e_imprimir_test`— es más ancho que el botón:
+afirma que **ninguna tecla de la ficha apunta a dos acciones distintas**. Y la
+primera versión de ese test **pasaba en verde con las dos teclas puestas**,
+porque el manifiesto de prueba no tenía paquetes y sin paquetes la ficha no
+pinta los botones de finalizar. Se arregló probándolo al revés: poniendo el bug
+a propósito y exigiendo que fallara.
+
+---
+
+### El manifiesto impreso
+
+#### C23-06 · Firma y hora de quien recibe — ✅ **ARREGLADO**
+
+Es el pedido más insistente de la llamada, y el que trae el porqué pegado:
+
+> "Acá esto tiene que llevar **la firma de quien la recibió** allá. O sea,
+>  normalmente ellos me firman la hoja […] **firma el conductor, firma quien
+>  recepción**. Ese es quien lo recibió, me entendés. Pero **debe decir firma y
+>  hora**."
+> "Sí, eso es bien importante, ahí se ve **mil veces más profesional**."
+
+Y con eso corrigió el rótulo, que decía de más:
+
+> "Esto de **«recibido en Honduras» sí, pero eso es diferente**. O sea, cuando
+>  vos lo emitís, es **entregado por** —entonces quien la llevó— y **recibido
+>  por**, pero **no necesariamente Honduras**, sino quien recibió este packing:
+>  firma y hora de quien recibió."
+
+El pie decía `Entregado por (Miami)` / `Recibido por (Honduras)`, dos rayas
+peladas. Ahora dice **`Entregado por`** / **`Recibido por`**, y cada bloque lleva
+sus tres renglones: **nombre y firma**, **fecha y hora**. «Recibido en Honduras»
+sigue existiendo arriba, en el encabezado, que es donde va: ahí es la fecha de
+aduana (`C21-02`), un dato distinto de quién agarró el papel.
+
+**Y esto es lo mismo que abrió la llamada**, sobre el manifiesto interno:
+
+> "Esto **no lo voy a llenar en el interno** […] y me dice que es Miami."
+> "Y cuando es interno, ¿qué creés que le pongamos ahí? ¿**O le quitamos** […]?"
+> "Porque imaginate, te van a quedar […] y **yo no estoy en Miami**."
+> "Bueno, **le quitamos** […]"
+
+El interno va de una sucursal a otra dentro de Honduras y no pasa por Miami
+nunca (`A7-07`). Con el paréntesis quemado en el HTML, el papel del interno
+mentía. Un solo arreglo cierra los dos pedidos: **el rótulo no nombra ciudades**,
+y entonces sirve igual para los dos manifiestos.
+
+#### C23-07 · El volumen, en pies cúbicos — ✅ **ARREGLADO**
+
+> "De bultos, dos; peso, tal. Volumen… volumen tal. **Y faltaría pies cúbicos
+>  también. Volumen en pies cúbicos.**"
+
+La columna y el total decían «Volumen» a secas, y ese número es la libra
+volumétrica (÷166), no el pie cúbico. Ahora la tabla lleva **las dos columnas
+rotuladas** —`VLBS` y `PIES³`— y el total, las dos líneas.
+
+**El total de pies³ es la suma de los pies³ de cada bulto**, no el pie cúbico del
+volumen total. `pies_cubicos` redondea **hacia arriba a entero** por bulto
+(regla (B) de `VolumetricoCalculator`, de la hoja de Yusef), así que sumar los
+redondeados y redondear la suma dan números distintos: se eligió el primero
+porque es el que cuadra con la columna que está arriba, y un total que no suma
+lo que tiene encima es un papel que nadie firma.
+
+#### C23-08 · «Es prioridad», más grande — ✅ **ARREGLADO**
+
+> "Impreso… prioridad. Esta es prioridad, **también un poquito más grande**."
+
+Es la tercera vez que pide lo mismo sobre este papel —`C21-09` ya venía de
+*"esto está muy pequeño, ni lo vemos"*—. La píldora sube de 11 a 15 px, en
+negrita y con más aire.
+
+#### C23-09 · «Expedido por» no salía impreso — ✅ **ARREGLADO**
+
+El campo existe desde el principio: está en la tabla, en el formulario y en la
+ficha del manifiesto. **No estaba en el papel**, que es donde Yusef lo fue a
+buscar. Ahora se imprime en el encabezado, junto a «Enviado» e «Impreso».
+
+Qué va escrito adentro es otra pregunta, y quedó abierta — ver `C23-11`.
+
+---
+
+### Empacar
+
+#### C23-10 · Despachar sin escanear — 🔜 **PENDIENTE**
+
+El pedido más grande de la llamada. Sale de la temporada alta:
+
+> "Vienen ellos y preparan todas estas cajas, **no les da chance de escanear** y
+>  le empacan al puro […] meten todo."
+> "Yo estoy empacando. **No lo voy a escanear.** Solo voy a empacar y lo voy a
+>  enviar, porque **no hay chance**."
+
+Y la regla, que la dictó él completa:
+
+> "**Todos los paquetes que tienen el estatus** [recibido en Miami], **que bajo
+>  el tipo de servicio** […] que ese fue el que seleccionó para este
+>  [manifiesto], automáticamente […] **se va a enviar sin escanear**."
+> "Y en el manifiesto, **automáticamente los halás**."
+
+Y el nombre del botón, que se negoció en el momento:
+
+> **Jorge:** "Despachar sin escanear. Es que me queda bien largo, va a quedar un
+>  botón bien gigante ahí."
+> **Yusef:** "**Sin escanear**, sí — porque tienen que saber ellos qué son los
+>  que hicieron sin escanear." · "O sea, aquí está empacar **escaneando**. Y
+>  aquí sería **sin escanear**."
+> **Jorge:** "Le voy a poner **empacar como grupo**, y luego **sin escanear** y
+>  **con escanear**."
+
+O sea: el botón «Empacar» de hoy pasa a decir **«Empacar escaneando»** y al lado
+va **«Empacar sin escanear»**, los dos agrupados.
+
+**No está construido todavía, y por qué.** El camino sin escaneo ya existe
+—`add_paquete`, un paquete a la vez— y `FinalizarManifiesto` solo mueve *"los
+paquetes que ya están en el manifiesto"*, así que lo que falta es exactamente el
+tirón masivo que él describe. Pero quedan dos decisiones que no están en el audio
+y que cambian lo que se construye:
+
+1. **¿En qué estado quedan?** Yusef dice *"ya todo fue empacado"*, pero
+   `empacado` hoy **solo lo escribe el camino con escaneo** —y está documentado
+   que nada puede exigirlo, porque el paquete sin escanear no tiene caja
+   (`project_manifiesto_dos_caminos`). Marcarlos `empacado` sin caja rompe esa
+   invariante; dejarlos en `recibido_miami` contradice lo que él dijo.
+2. **¿De qué sucursal?** Dijo «todos los del tipo de servicio». En el manifiesto
+   **interno** eso barrería paquetes de otra sucursal, que no van en ese camión.
+
+#### C23-11 · Varias cajas abiertas a la vez — 🔜 **PENDIENTE**
+
+> "Pero aquí pues **debería de existir la múltiple** […] o sea, poder
+>  **seleccionar las tres cajas** y que **en las tres va todo**."
+> "Es que **ellos arman tres cajas y empiezan a meter los paquetes en cualquier
+>  caja**, no es que quiera[n una]."
+> "Ellos crean tres guías y marcan uno, dos y tres — tres etiquetas de bultos."
+> **Jorge:** "Entonces aquí la validación sería **mínimo uno** y…" ·
+> **Yusef:** "**máximo todas**." · **Jorge:** "Y para desempacarlo, **lo
+>  volvemos a marcar**." · **Yusef:** "Claro." · "Ahí está **excelente
+>  solución**."
+
+Hoy un paquete tiene **una** caja (`paquete.caja_manifiesto_id`), y la pantalla
+de empaque te hace elegir una y escanear adentro de ella. Lo que pide toca el
+modelo de datos, y el audio admite dos lecturas que llevan a cosas distintas:
+
+- **(a)** el paquete queda en **N cajas a la vez** — sería una tabla de unión, y
+  habría que decidir qué contesta «¿en qué caja está?» todo lo que hoy pregunta;
+- **(b)** se dejan **N cajas abiertas** y cada escaneo sigue cayendo en una sola,
+  sin tener que ir a cambiar de caja entre paquete y paquete.
+
+«En las tres va todo» empuja hacia (a); «meten los paquetes en cualquier caja»
+empuja hacia (b). No se adivina: se pregunta.
+
+---
+
+### Lo que quedó abierto
+
+| # | Qué | Estado |
+|---|---|---|
+| `C23-10` | Empacar sin escanear: estado final y filtro por sucursal | Pendiente de decisión |
+| `C23-11` | Varias cajas: ¿el paquete en N cajas, o N cajas abiertas? | Pendiente de decisión |
+| `RP-59` | «Expedido por»: ¿el **nombre** de quien lo creó, o sus **iniciales**? | Pendiente de Yusef |
+
+**`RP-59`, y por qué es una pregunta y no una respuesta.** Yusef preguntó él
+mismo qué va en ese campo —*"no sé si ponerle **las iniciales, la firma, el
+nombre**"*, *"solamente quien lo hizo"*— y la respuesta la dio con una palabra
+que el audio no deja resolver. Suena **«sobre el nombre»**, cuatro veces, que no
+es español. Las dos reconstrucciones posibles dan cosas distintas:
+
+- **«sólo el nombre»** → el nombre de quien creó el manifiesto;
+- **«sobrenombre»** → las **iniciales**, que en este sistema las define un admin
+  (`project_iniciales_usuario_admin`) — y esa lectura es la única que hace que la
+  frase siguiente signifique algo: **Jorge:** *"ok, las iniciales"* · **Yusef:**
+  *"sí, nomás que **nosotros las creamos**"*.
+
+Mientras tanto el papel imprime **el campo tal como lo escribieron**, y si está
+vacío cae en las iniciales de quien creó el manifiesto — que es la convención
+que ya usa «Imprimió» en el mismo encabezado. Con la respuesta se llena solo.
+
+---
+
+### Notas de la llamada que no son tarea
+
+- **El cambio de número de manifiesto ya se le contó.** Jorge: *"algo que sí me
+  tocó hacer es el cambio del formato del manifiesto […] le agregué tres
+  caracteres más"* · Yusef: *"**No, está bien**"*. Es `RP-46`, y el pendiente de
+  contárselo queda cerrado.
+- **La 4×6 está confirmada** como el tamaño de la etiqueta del bulto: *"este
+  tamaño está bien, porque creo que no hablamos de tamaño para esta" · "4×6" ·
+  "sí, está correcto, 4×6"*.
+- **Cuántas líneas trae un manifiesto.** *"Entre 9 líneas […] ahorita es
+  temporada baja […] pega 11, 12, y así va"*, y *"hace un año y media atrás eran
+  25"*. De ahí sale el único comentario sobre el escalado del impreso: *"**12**
+  sería más bonito que quedara"* antes de saltar de página.
+- **Prueba de carga.** Jorge ofreció medir hasta dónde aguanta el impreso —*"era
+  una de las pruebas que, si querés, las podemos hacer"*— y Yusef aceptó: *"sí,
+  lo quiero"*. Sin fecha. Ojo con
+  [[project_pruebas_de_carga_dejan_huerfanos]] cuando se haga.
+- **El botón de imprimir los paquetes existe.** Yusef dijo que no lo tenía
+  —*"no tenemos cómo exportarlo, no le dejó el botón de exportar"*— y a los dos
+  minutos lo encontró solo: *"ahí está arriba, la parte de la impresora está
+  imprimir"* · *"ya vi, ya lo vi"*. Jorge: *"parece que como no está
+  familiarizado"*. **No es un bug, es una pantalla que todavía no conoce.**
+- **La pantalla se le ve chica.** *"Todo lo que se le gusta es más grandecito,
+  porque lo veo pequeño; porque la pantalla de ella es más grandecita que ésta,
+  pero es una laptop."* Sin pedido concreto, y `PR-U4`/`PR-U5` ya subieron los
+  controles del manifiesto y del empaque a 44 px. Queda anotado por si vuelve.
+- **Cómo empacan, para cuando toque el módulo:** *"encaja normal y la caja doble
+  […] la mini-D […] y la mini-D doble es cuando llevan dos de esas"*, y cuando
+  algo no cabe, *"metemos una caja tan por fuera"* — un kayak fue el ejemplo.
+
+---
+
+### Lo que se miró de paso y no se tocó
+
+Buscando dónde vivía cada pedido aparecieron dos cosas que **nadie reportó** y
+que no entran en este PR:
+
+| Qué | Por qué se deja anotado |
+|---|---|
+| `ManifiestosController#documento` carga `@paquetes` y **la vista nunca lo usa** | O es código muerto de `PR-M9`, o quedó afuera una sección del impreso. Yusef buscó justamente *"mostrar paquetes"* en el papel, así que puede ser lo segundo — pero pedirlo no lo pidió |
+| El manifiesto **interno** imprime `Consignatario —`, `No. de guía —` y `Recibido en Honduras —` | Son campos que el interno no tiene por diseño (`A7-07`). `C23-06` le saca el «(Miami)» que era lo que él señaló; los guiones vacíos siguen ahí |

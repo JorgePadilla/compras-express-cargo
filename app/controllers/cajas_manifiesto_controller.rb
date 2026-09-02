@@ -19,6 +19,10 @@ class CajasManifiestoController < ApplicationController
   # de paquetes de ENVIADO → ADUANA»*.
   def etiqueta
     @cajas = [ @caja ]
+    # C23-05 · Cuando la 4×6 se abrió sola después de agregar, no hay pestaña
+    # que cerrar: hay que **devolver** la que se llevó. `volver=1` y no la URL
+    # de vuelta en el parámetro, que sería un redirect abierto de regalo.
+    @despues_de_imprimir = manifiesto_path(@manifiesto) if params[:volver] == "1"
     render "manifiestos/cajas/etiqueta", layout: "etiqueta_4x6"
   end
 
@@ -36,6 +40,21 @@ class CajasManifiestoController < ApplicationController
 
     if @caja.save
       @manifiesto.recalculate_totals!
+
+      # C23-05 · *"Después de que le damos a agregar, de un solo… te las
+      # imprimo"* · *"sí, que le tire la que está haciendo de un solo"*.
+      #
+      # Va por **redirect y no por popup**: esta impresión nace de un POST, no
+      # de un clic, y el `window.open` que no nace de un gesto lo bloquea
+      # Chrome sin decir nada —el mismo tropiezo de `/entrega_personal`, donde
+      # *"un gesto del usuario alcanza para un popup, no para dos"*—. La 4×6 se
+      # lleva ESTA pestaña, se imprime sola y `@despues_de_imprimir` la
+      # devuelve al manifiesto. Sin popup no hay bloqueador que valga.
+      if params[:print] == "true"
+        redirect_to etiqueta_manifiesto_caja_path(@manifiesto, @caja, print: true, volver: 1)
+        return
+      end
+
       redirect_to @manifiesto, notice: "Caja #{@caja.letra} agregada."
     else
       redirect_to @manifiesto, alert: @caja.errors.full_messages.to_sentence

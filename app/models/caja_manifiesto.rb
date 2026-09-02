@@ -50,6 +50,31 @@ class CajaManifiesto < ApplicationRecord
     format("%gx%gx%g", alto, largo, ancho)
   end
 
+  # C23-01 · El número que acompaña a la letra: `A1`, `B2`, `C3`.
+  #
+  #   > "Nosotros usamos la A y el 1… el mismo A, A 1, B el 2, C el 3."
+  #   > "**Doble** porque la gente, a veces unos leen la A y otros leen el 1."
+  #
+  # Se **deriva de la letra**, no se guarda. La letra ya sale del contador
+  # `ultima_letra`, así que el número es esa misma cuenta escrita de otra forma:
+  # una columna aparte podría separarse de ella con un update a mano, y una
+  # etiqueta que dijera `B1` sería exactamente la confusión que la doble
+  # identificación viene a evitar.
+  def numero_bulto
+    self.class.numero_para(letra)
+  end
+
+  # (B) Los pies cúbicos del bulto, para el público — `C23-03`.
+  # El `÷166` de `volumen` es el que le cobra el proveedor y no se toca; este es
+  # el otro número, el que la gente entiende.
+  def pies_cubicos
+    return nil unless alto && largo && ancho
+
+    VolumetricoCalculator.pies_cubicos(
+      VolumetricoCalculator.pulgadas_cubicas(alto, largo, ancho)
+    )
+  end
+
   # Los tipos de envío que lleva adentro, para la fila y la etiqueta: «CER,CKA».
   def tipos_envio_adentro
     paquetes.filter_map { |p| p.tipo_envio&.nombre }.uniq.sort.join(",")
@@ -94,5 +119,13 @@ class CajaManifiesto < ApplicationRecord
       resultado.prepend(("A".ord + resto).chr)
     end
     resultado
+  end
+
+  # La vuelta: A → 1, Z → 26, AA → 27. `C23-01`.
+  def self.numero_para(letra)
+    texto = letra.to_s.strip.upcase
+    return nil if texto.empty? || texto.match?(/[^A-Z]/)
+
+    texto.each_char.reduce(0) { |acc, c| acc * 26 + (c.ord - "A".ord + 1) }
   end
 end

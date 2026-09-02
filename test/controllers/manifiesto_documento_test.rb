@@ -99,4 +99,105 @@ class ManifiestoDocumentoTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "a[href=?]", documento_manifiesto_path(@manifiesto)
   end
+
+  # ── C23 · La revisión del 2026-09-01 ─────────────────────────────────────
+
+  # *"Acá esto tiene que llevar la firma de quien la recibió… firma el
+  #  conductor, firma quien recepción. […] pero **debe decir firma y hora**."*
+  test "C23-06 · el bloque de firmas pide nombre, firma y hora" do
+    get documento_manifiesto_url(@manifiesto)
+
+    assert_select "div.mf-firma div.rotulo", text: "Entregado por"
+    assert_select "div.mf-firma div.rotulo", text: "Recibido por"
+    assert_select "div.mf-firma div.linea", text: "Nombre y firma", count: 2
+    assert_select "div.mf-firma div.linea", text: "Fecha y hora", count: 2
+  end
+
+  # *"«Recibido en Honduras» sí, pero eso es diferente… no necesariamente
+  #  Honduras, sino quien recibió este packing."* Y el interno, que nunca pasa
+  #  por Miami: *"imaginate, yo no estoy en Miami"*.
+  test "C23-06 · el rótulo de las firmas no nombra ciudades" do
+    get documento_manifiesto_url(@manifiesto)
+
+    assert_no_match(/Entregado por \(Miami\)/, response.body)
+    assert_no_match(/Recibido por \(Honduras\)/, response.body)
+  end
+
+  # Pero la fecha de aduana sigue arriba, que es otro dato (`C21-02`).
+  test "C23-06 · «Recibido en Honduras» sigue siendo el campo del encabezado" do
+    get documento_manifiesto_url(@manifiesto)
+
+    assert_select "div.mf-h", text: "Recibido en Honduras"
+  end
+
+  # *"Y faltaría pies cúbicos también. Volumen en pies cúbicos."*
+  test "C23-07 · la tabla distingue la libra volumétrica del pie cúbico" do
+    @manifiesto.cajas.create!(alto: 23, largo: 23, ancho: 36, peso: 131)
+
+    get documento_manifiesto_url(@manifiesto)
+
+    assert_select "table.mf-t thead th", text: "Vol. (VLBS)"
+    assert_select "table.mf-t thead th", text: "Pies³"
+    # 23×23×36 = 19_044 in³ → 114.72 VLBS y 12 pies³ (ceil de 11.02)
+    assert_select "table.mf-t tbody td.num", text: "114.72"
+    assert_select "table.mf-t tbody td.num", text: "12"
+  end
+
+  # El total de pies³ suma los de cada bulto —cada uno ya redondeado hacia
+  # arriba—, para que cuadre con la columna que tiene encima.
+  test "C23-07 · el total de pies cúbicos suma la columna" do
+    @manifiesto.cajas.create!(alto: 23, largo: 23, ancho: 36, peso: 131)   # 12
+    @manifiesto.cajas.create!(alto: 13, largo: 13, ancho: 16, peso: 19)    # 2
+
+    get documento_manifiesto_url(@manifiesto)
+
+    assert_select "table.mf-tot td.label", text: "Pies cúbicos"
+    assert_select "table.mf-tot td.value", text: "14 PIES³"
+  end
+
+  # Las unidades del total, que también eran mudas: decía «LB» y nada.
+  test "C23-07 · los totales dicen en qué unidad están" do
+    get documento_manifiesto_url(@manifiesto)
+
+    assert_select "table.mf-tot td.value", text: /LBS\z/
+    assert_select "table.mf-tot td.value", text: /VLBS\z/
+  end
+
+  # `C23-09` · El campo existía en la tabla, en el formulario y en la ficha,
+  # pero no en el papel — que es donde Yusef lo fue a buscar.
+  test "C23-09 · el documento imprime «Expedido por»" do
+    @manifiesto.update!(expedido_por: "Manal Sahuri")
+
+    get documento_manifiesto_url(@manifiesto)
+
+    assert_match(/Expedido por:/, response.body)
+    assert_match(/Manal Sahuri/, response.body)
+  end
+
+  # Vacío cae en las iniciales de quien lo creó, igual que «Imprimió».
+  test "C23-09 · sin el campo lleno cae en quien creó el manifiesto" do
+    @manifiesto.update!(expedido_por: nil, user: @user)
+
+    get documento_manifiesto_url(@manifiesto)
+
+    assert_match(%r{Expedido por:</strong>\s*#{Regexp.escape(wr_iniciales(@user))}}, response.body)
+  end
+
+  # *"Esta es prioridad, también un poquito más grande."*
+  test "C23-08 · la píldora de prioridad crece" do
+    @manifiesto.update!(es_prioridad: true)
+
+    get documento_manifiesto_url(@manifiesto)
+
+    assert_select "span.mf-pill", text: "ES PRIORIDAD"
+    assert_match(/\.mf-pill\s*\{[^}]*font-size:\s*15px/, response.body)
+  end
+
+  private
+
+  # Las mismas iniciales que arma `wr_user_initials`, sin arrastrar el helper
+  # entero al test: si la regla cambia, este test tiene que cambiar con ella.
+  def wr_iniciales(user)
+    ApplicationController.helpers.wr_user_initials(user)
+  end
 end

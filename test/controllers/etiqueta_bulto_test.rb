@@ -32,7 +32,8 @@ class EtiquetaBultoTest < ActionDispatch::IntegrationTest
   test "lleva lo que ya traía: letra, libras, medidas, consignatario y PRIORITY" do
     get etiqueta_manifiesto_caja_path(@manifiesto, @caja)
 
-    assert_includes response.body, ">#{@caja.letra}<"
+    # C23-01: la letra ya no va sola, lleva su número adentro del mismo span.
+    assert_select "span.letra", text: "#{@caja.letra}#{@caja.numero_bulto}"
     assert_includes response.body, "131"
     assert_includes response.body, "23x23x36"
     assert_includes response.body, "CORPORACION KARSAM"
@@ -108,5 +109,60 @@ class EtiquetaBultoTest < ActionDispatch::IntegrationTest
 
     assert_includes response.body, "size: 4in 6in"
     assert_not_includes response.body, "2.25in"
+  end
+
+  # ── C23 · La revisión del 2026-09-01, papel en mano ──────────────────────
+
+  # *"Nosotros usamos la A y el 1… A 1, B el 2, C el 3."*
+  # *"**Doble** porque la gente, a veces unos leen la A y otros leen el 1."*
+  test "C23-01 · la letra va con su número, y el número es el de la letra" do
+    segunda = @manifiesto.cajas.create!(alto: 13, largo: 13, ancho: 16, peso: 19)
+
+    get etiqueta_manifiesto_caja_path(@manifiesto, @caja)
+    assert_select "span.letra", text: "A1"
+
+    get etiqueta_manifiesto_caja_path(@manifiesto, segunda)
+    assert_select "span.letra", text: "B2"
+  end
+
+  # *"Ponerle las libras reales, libras volumétricas, que es VLBS… y le podés
+  #  poner los pies para el público."*
+  test "C23-03 · las tres cifras salen rotuladas" do
+    get etiqueta_manifiesto_caja_path(@manifiesto, @caja)
+
+    assert_select "div.cifra span.u", text: "LBS"
+    assert_select "div.cifra span.u", text: "VLBS"
+    assert_select "div.cifra span.u", text: "PIES³"
+    # 23×23×36 = 19_044 pulgadas³ → ÷166 = 114.72 VLBS, ÷1728 = 11.02 → 12 pies³
+    assert_select "div.cifra span.v", text: "131"
+    assert_select "div.cifra span.v", text: "114.72"
+    assert_select "div.cifra span.v", text: "12"
+  end
+
+  # *"Esto estaría más bonito que estén juntos."* El peso y las medidas caían
+  # separados por la letra de 58pt; ahora comparten el bloque de la derecha.
+  test "C23-02 · el peso y las medidas van en el mismo bloque" do
+    get etiqueta_manifiesto_caja_path(@manifiesto, @caja)
+
+    assert_select "div.cabeza div.cifras div.medidas", text: "23x23x36"
+  end
+
+  # *"Lo último que le falta acá es a dónde va."*
+  test "C23-04 · dice a dónde va" do
+    @manifiesto.update!(sucursal_entrega: sucursales(:humuya_tgu))
+
+    get etiqueta_manifiesto_caja_path(@manifiesto, @caja)
+
+    assert_select "div.destino", text: "A: #{sucursales(:humuya_tgu).nombre.upcase}"
+  end
+
+  # El oficial puede no tenerla (en el interno es obligatoria, `A7-07`): sin
+  # sucursal no se inventa un renglón vacío.
+  test "C23-04 · sin sucursal de entrega no hay renglón de destino" do
+    @manifiesto.update!(sucursal_entrega: nil)
+
+    get etiqueta_manifiesto_caja_path(@manifiesto, @caja)
+
+    assert_select "div.destino", 0
   end
 end

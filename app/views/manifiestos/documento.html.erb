@@ -45,10 +45,17 @@
   table.mf-tot td { padding: 4px 7px; }
   table.mf-tot td.label { color: #666; text-transform: uppercase; font-size: 10px; letter-spacing: 0.4px; width: 30%; }
   table.mf-tot td.value { font-weight: bold; text-align: right; }
-  .mf-pill { display: inline-block; padding: 3px 10px; border-radius: 9999px; background: #FFB547; color: #1B2559; font-weight: bold; font-size: 11px; letter-spacing: 0.5px; }
+  <%# C23-08 · *"Esta es prioridad, también un poquito más grande."* Es la
+      segunda pasada del mismo pedido: `C21-09` ya venía de *"esto está muy
+      pequeño, ni lo vemos"*. %>
+  .mf-pill { display: inline-block; padding: 5px 14px; border-radius: 9999px; background: #FFB547; color: #1B2559; font-weight: bold; font-size: 15px; letter-spacing: 0.5px; }
   .mf-footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid #d4d4d4; display: flex; justify-content: space-between; font-size: 10px; color: #666; }
-  .mf-firma { margin-top: 22px; display: flex; gap: 40px; }
-  .mf-firma div { flex: 1; border-top: 1px solid #555; padding-top: 5px; font-size: 10px; color: #555; text-align: center; }
+  <%# C23-06 · El bloque de firmas. Tres renglones por lado —quién, su firma, y
+      la fecha con la hora—: *"debe decir firma y hora"*. %>
+  .mf-firma { margin-top: 26px; display: flex; gap: 40px; }
+  .mf-firma > div { flex: 1; }
+  .mf-firma .rotulo { font-weight: bold; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; color: #555; margin-bottom: 20px; }
+  .mf-firma .linea { border-top: 1px solid #555; padding-top: 4px; margin-top: 22px; font-size: 9px; color: #666; text-transform: uppercase; letter-spacing: 0.4px; }
 </style>
 
 <%# ── 1 · Encabezado: la empresa emisora + el número con año ── %>
@@ -69,6 +76,18 @@
       </div>
     </div>
     <div class="mf-v" style="margin-top:7px;color:#444;">
+      <%# C23-09 · «Expedido por» existía en la tabla, en el formulario y en la
+          ficha — pero **no en el papel**, que es donde Yusef lo fue a buscar:
+          *"expedido… me estás hablando de que quien lo creó y lo está
+          haciendo"*.
+
+          Qué se escribe adentro es `RP-59` y está abierta: el audio dice
+          «sobre el nombre» cuatro veces, que puede ser «sólo el nombre» o
+          «sobrenombre» (o sea, las iniciales), y son dos cosas distintas.
+          Mientras tanto se imprime **lo que escribieron en el campo**, y si
+          está vacío las iniciales de quien lo creó — la misma convención que
+          ya usa «Imprimió» dos renglones abajo. %>
+      <strong>Expedido por:</strong> <%= @manifiesto.expedido_por.presence || wr_user_initials(@manifiesto.user) %><br>
       <strong>Enviado:</strong> <%= @manifiesto.fecha_enviado&.strftime("%d/%m/%Y") || "—" %><br>
       <strong>Impreso:</strong> <%= printed_at.strftime("%d/%m/%Y %H:%M") %><br>
       <strong>Imprimió:</strong> <%= wr_user_initials(Current.user) %>
@@ -141,8 +160,14 @@
           <th style="width:20%;">Código</th>
           <th>Tamaño</th>
           <th>Medidas (alto × largo × ancho)</th>
-          <th style="width:12%;">Volumen</th>
-          <th style="width:12%;">Peso (lb)</th>
+          <%# C23-07 · *"Y faltaría pies cúbicos también. Volumen en pies
+              cúbicos."* Decía «Volumen» a secas, y ese número es la libra
+              volumétrica (÷166) — el que le cobra el proveedor (`C21-04`), que
+              por eso no se toca. El pie cúbico es el otro, y ahora se ven los
+              dos con su nombre. %>
+          <th style="width:11%;">Vol. (VLBS)</th>
+          <th style="width:10%;">Pies³</th>
+          <th style="width:11%;">Peso (LBS)</th>
         </tr>
       </thead>
       <tbody>
@@ -155,6 +180,7 @@
               <%= [ caja.alto, caja.largo, caja.ancho ].map { |m| m.presence || "—" }.join(" × ") %>
             </td>
             <td class="num"><%= caja.volumen.present? ? number_with_precision(caja.volumen, precision: 2) : "—" %></td>
+            <td class="num"><%= caja.pies_cubicos || "—" %></td>
             <td class="num"><%= caja.peso.present? ? number_with_precision(caja.peso, precision: 2) : "—" %></td>
           </tr>
         <% end %>
@@ -173,16 +199,50 @@
     </tr>
     <tr>
       <td class="label">Peso total</td>
-      <td class="value"><%= number_with_precision(@manifiesto.peso_total.to_f, precision: 2) %> LB</td>
+      <td class="value"><%= number_with_precision(@manifiesto.peso_total.to_f, precision: 2) %> LBS</td>
       <td class="label">Volumen total</td>
-      <td class="value"><%= number_with_precision(@manifiesto.volumen_total.to_f, precision: 2) %></td>
+      <td class="value"><%= number_with_precision(@manifiesto.volumen_total.to_f, precision: 2) %> VLBS</td>
+    </tr>
+    <tr>
+      <%# C23-07 · El total de pies³ es **la suma de los de cada bulto**, no el
+          pie cúbico del volumen total. `pies_cubicos` redondea hacia arriba a
+          entero por bulto —regla (B) de la hoja de Yusef—, así que las dos
+          cuentas dan distinto; se elige la que **suma la columna de arriba**,
+          porque un total que no cuadra con lo que tiene encima es un papel que
+          nadie firma. %>
+      <td class="label">Pies cúbicos</td>
+      <td class="value"><%= @cajas.sum { |c| c.pies_cubicos.to_i } %> PIES³</td>
+      <td class="label"></td>
+      <td class="value"></td>
     </tr>
   </table>
 </div>
 
+<%# C23-06 · *"Acá esto tiene que llevar la firma de quien la recibió… firma el
+    conductor, firma quien recepción. […] pero **debe decir firma y hora**"* ·
+    *"ahí se ve mil veces más profesional"*.
+
+    Y sin ciudades en el rótulo, que fue la otra mitad del pedido: *"«recibido
+    en Honduras» sí, pero eso es diferente… **no necesariamente Honduras**,
+    sino quien recibió este packing"*. «Recibido en Honduras» sigue arriba, en
+    el encabezado, donde es la fecha de aduana (`C21-02`) — otro dato.
+
+    Con eso queda arreglado también lo que abrió la llamada, sobre el
+    manifiesto **interno**: *"esto no lo voy a llenar en el interno… y me dice
+    que es Miami"* · *"imaginate, yo no estoy en Miami"*. El interno va de una
+    sucursal a otra dentro de Honduras (`A7-07`) y con el paréntesis quemado el
+    papel mentía. Un rótulo sin ciudad sirve para los dos manifiestos. %>
 <div class="mf-firma">
-  <div>Entregado por (Miami)</div>
-  <div>Recibido por (Honduras)</div>
+  <div>
+    <div class="rotulo">Entregado por</div>
+    <div class="linea">Nombre y firma</div>
+    <div class="linea">Fecha y hora</div>
+  </div>
+  <div>
+    <div class="rotulo">Recibido por</div>
+    <div class="linea">Nombre y firma</div>
+    <div class="linea">Fecha y hora</div>
+  </div>
 </div>
 
 <div class="mf-footer">
