@@ -1,6 +1,6 @@
 <%= render PageHeaderComponent.new(title: "Editar Manifiesto", subtitle: @manifiesto.numero) do |header|
   header.with_back do
-    render ButtonComponent.new(variant: :ghost, href: manifiesto_path(@manifiesto), icon: "arrow-left") do
+    render ButtonComponent.new(variant: :ghost, href: manifiesto_path(@manifiesto), icon: "arrow-left", shortcut: "F2") do
       "Volver"
     end
   end

@@ -148,8 +148,8 @@ end %>
        class="mb-4 flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4 rounded-xl <%= sesion_accent[:bg] %> ring-1 <%= sesion_accent[:ring] %>">
     <div class="flex items-center gap-3">
       <div class="shrink-0 w-10 h-10 rounded-xl <%= sesion_accent[:icon_bg] %> flex items-center justify-center">
-        <%= heroicon tipo_envio_icono(@tipo_envio_sesion), variant: :solid,
-            options: { class: "w-5 h-5 #{sesion_accent[:text]}" } %>
+        <%= icono_de_tipo_envio @tipo_envio_sesion, variant: :solid,
+            css: "w-5 h-5 #{sesion_accent[:text]}" %>
       </div>
       <div>
         <p class="text-[10px] uppercase tracking-wider font-bold text-gray-500 dark:text-gray-400">Sesión activa</p>

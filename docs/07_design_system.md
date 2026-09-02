@@ -339,6 +339,35 @@ gem "heroicon"
 | Detalles | Ojo | `eye` |
 | Cerrar sesion | Salir | `arrow-right-start-on-rectangle` |
 
+### Los tipos de envío: el ícono identifica, el color agrupa
+
+Son **cinco servicios y dos modalidades**, y el ícono no puede cargar los dos
+ejes. Así que se reparte: cada servicio tiene el suyo, y la modalidad la dice el
+color. Vive todo en `TipoEnvioPresentationHelper`, que es la fuente única de las
+tres pantallas que los pintan (el selector de `/etiquetar`, el wizard de
+pre-alerta del portal y el form de manifiestos).
+
+| Servicio | Modalidad | Ícono | Color |
+|---|---|---|---|
+| EXPRESS | aéreo | `bolt` — el más rápido, sale los viernes | `cec-gold` |
+| CER | aéreo | `paper-airplane` | `cec-teal` |
+| CKA | aéreo, sin reempaque | `cube` — la caja llega tal cual | `cec-teal` |
+| CEM | marítimo | **barco** — `shared/_icono_barco` | `cec-navy` |
+| CKM | marítimo, sin reempaque | `archive-box` | `cec-navy` |
+
+**El barco es la única excepción a «solo heroicons» de todo el sistema.**
+Heroicons v2 no trae ninguno —se revisaron los 280: ni ship, ni boat, ni
+anchor— y antes marítimo salía con un **camión**, que además de estar mal se
+repetía con el otro marítimo. El SVG propio sigue la misma métrica que el set
+(viewBox 24, `currentColor`, `stroke-width` 1.5 en outline) para que no
+desentone al lado de un heroicon, y trae las dos variantes.
+
+Antes de esto el ícono salía **solo de la modalidad**: tres aviones idénticos y
+dos camiones idénticos. Y `cka`/`ckm` caían las dos al gris de descarte, así que
+además compartían el color — dos tarjetas exactamente iguales. Lo cazó Jorge
+mirando la pantalla, no un test; ahora lo sostiene
+`test/helpers/tipo_envio_presentation_helper_test.rb`.
+
 ### Uso en ERB
 
 ```erb

@@ -14,7 +14,7 @@
       tener 100% del ancho disponible, los botones wrappean mucho menos
       que cuando vivían en la mitad derecha del header. %>
   <% if actions? || back? %>
-    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-2">
+    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-3">
       <%# «Volver» primero, siempre: atrás es izquierda. %>
       <%= back if back? %>
       <% actions.each do |action| %>

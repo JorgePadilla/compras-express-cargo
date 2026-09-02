@@ -10,12 +10,12 @@
   # saca las etiquetas 4×6 de los bultos: son dos papeles distintos.
   header.with_action do
     render ButtonComponent.new(variant: :outline_navy, href: documento_manifiesto_path(@manifiesto),
-                               icon: "printer", target: "_blank") do
+                               icon: "printer", target: "_blank", shortcut: "F4") do
       "Imprimir manifiesto"
     end
   end
   header.with_back do
-    render ButtonComponent.new(variant: :ghost, href: manifiestos_path, icon: "arrow-left") do
+    render ButtonComponent.new(variant: :ghost, href: manifiestos_path, icon: "arrow-left", shortcut: "F2") do
       "Volver"
     end
   end
