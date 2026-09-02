@@ -11,6 +11,7 @@
 <div data-controller="empaque audio"
      data-empaque-escanear-url-value="<%= @caja ? manifiesto_escanear_empaque_path(@manifiesto, @caja) : "" %>"
      data-empaque-omitir-url-value="<%= @caja ? manifiesto_omitir_empaque_path(@manifiesto, @caja) : "" %>"
+     data-empaque-activa-value="<%= @caja&.id %>"
      data-action="empaque:ok->audio#success
                   empaque:tipoDistinto->audio#error
                   empaque:noEncontrado->audio#alert
@@ -30,7 +31,11 @@
           description: "Armá al menos una caja en el manifiesto para poder empacar en ella.", icon: "cube") %>
   <% else %>
     <div class="bg-white rounded-lg shadow mb-6 p-6">
-      <span class="block text-base font-medium text-gray-700 dark:text-gray-200 mb-3">¿En qué caja estás empacando?</span>
+      <span class="block text-base font-medium text-gray-700 dark:text-gray-200 mb-1">¿En qué cajas estás empacando?</span>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+        Las abiertas son las que se están llenando. Tocá una para mandarle el escaneo;
+        tocá el candado para cerrarla. Tiene que quedar al menos una.
+      </p>
       <%# PR-U5 · Eran chips de `px-3 py-2` —unos 34 px— y esto se toca con el
           dedo, en la bodega, con la pistola en la otra mano. Ahora la letra se
           lee de lejos y el bloque entero es el área de toque.
@@ -42,16 +47,58 @@
           contarse como botón crudo —el contador exige `px-` y `py-` juntos— y
           hubo que sacar la entrada del presupuesto. El link no se fue; cambió
           la forma de sus clases. %>
+      <%# C23-11 · Dos gestos distintos sobre la misma tarjeta:
+
+            · **tocar la tarjeta** manda el escaneo a esa caja — sin recargar,
+              sin perder el foco del campo. Antes era un `link_to` que
+              recargaba, y con la pistola en la otra mano cada cambio de caja
+              costaba volver a hacer clic en el campo;
+            · **tocar el candado** abre o cierra la caja del set.
+
+          Sigue siendo `button` y no un `peer sr-only`: son acciones, no campos
+          de un formulario. Y el bloque entero es área de toque, que esto se
+          usa parado frente a la caja (`PR-U5`). %>
       <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
         <% @cajas.each do |caja| %>
-          <% activa = caja == @caja %>
-          <%= link_to manifiesto_empacar_path(@manifiesto, caja_id: caja.id),
-                class: "min-h-11 p-4 rounded-xl border-2 flex flex-col items-center gap-1 text-center transition foco-cec " \
-                       "#{activa ? 'border-cec-gold bg-cec-gold/5 ring-2 ring-cec-gold/30' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-lg hover:border-cec-gold/50'}" do %>
-            <span class="text-3xl font-bold leading-none text-cec-navy dark:text-cec-gold"><%= caja.letra %></span>
-            <span class="font-mono text-xs text-gray-500 dark:text-gray-400"><%= caja.codigo %></span>
-            <span class="text-xs text-gray-600 dark:text-gray-300"><%= caja.paquetes.size %> pqt</span>
-          <% end %>
+          <% abierta = @abiertas.include?(caja) %>
+          <% activa  = caja == @caja %>
+          <div class="relative" data-empaque-target="caja" data-caja-id="<%= caja.id %>"
+               data-abierta="<%= abierta %>"
+               data-escanear-url="<%= manifiesto_escanear_empaque_path(@manifiesto, caja) %>"
+               data-omitir-url="<%= manifiesto_omitir_empaque_path(@manifiesto, caja) %>"
+               data-alternar-url="<%= manifiesto_alternar_empaque_path(@manifiesto, caja) %>">
+            <button type="button" data-action="empaque#elegirCaja"
+                    data-empaque-target="tarjeta"
+                    aria-pressed="<%= activa %>"
+                    class="w-full min-h-11 p-4 rounded-xl border-2 flex flex-col items-center gap-1 text-center transition foco-cec
+                           <%= if activa
+                                 "border-cec-gold bg-cec-gold/5 ring-2 ring-cec-gold/30"
+                               elsif abierta
+                                 "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-lg hover:border-cec-gold/50"
+                               else
+                                 "border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 opacity-60"
+                               end %>">
+              <span class="text-3xl font-bold leading-none text-cec-navy dark:text-cec-gold"><%= caja.letra %><span class="text-lg"><%= caja.numero_bulto %></span></span>
+              <span class="font-mono text-xs text-gray-500 dark:text-gray-400"><%= caja.codigo %></span>
+              <span class="text-xs text-gray-600 dark:text-gray-300" data-empaque-target="conteo"><%= caja.paquetes.size %> pqt</span>
+            </button>
+            <%# Los dos candados viven en el DOM y se alterna cuál se ve: como la
+                pantalla ya no recarga, cambiar el icono desde JS sería pegar
+                SVG a mano en el controller. Acá el markup se queda en el ERB. %>
+            <button type="button" data-action="empaque#alternarCaja"
+                    data-empaque-target="candado"
+                    class="absolute top-1 right-1 w-9 h-9 rounded-lg flex items-center justify-center foco-cec
+                           text-gray-500 hover:text-cec-navy hover:bg-gray-100 dark:hover:bg-gray-700">
+              <span data-icono="abierta" class="<%= "hidden" unless abierta %>">
+                <%= heroicon "lock-open", variant: :outline, options: { class: "w-5 h-5" } %>
+                <span class="sr-only">Cerrar la caja <%= caja.letra %><%= caja.numero_bulto %></span>
+              </span>
+              <span data-icono="cerrada" class="<%= "hidden" if abierta %>">
+                <%= heroicon "lock-closed", variant: :outline, options: { class: "w-5 h-5" } %>
+                <span class="sr-only">Abrir la caja <%= caja.letra %><%= caja.numero_bulto %></span>
+              </span>
+            </button>
+          </div>
         <% end %>
       </div>
     </div>
@@ -64,7 +111,7 @@
             data: { empaque_target: "codigo", action: "keydown->empaque#teclado" },
             class: "block w-full min-h-11 py-4 text-xl rounded-lg border-gray-300 shadow-sm font-mono focus:ring-cec-teal focus:border-cec-teal" %>
       <p class="text-xs text-gray-500 mt-1">
-        Va a la caja <b><%= @caja.letra %></b> — <span class="font-mono"><%= @caja.codigo %></span>.
+        Va a la caja <b data-empaque-target="destino"><%= @caja.letra %><%= @caja.numero_bulto %></b>.
         El manifiesto lleva <b><%= @manifiesto.tipos_envio_nuestros %></b>.
       </p>
 
@@ -72,12 +119,20 @@
     </div>
 
     <div class="bg-white rounded-lg shadow overflow-hidden">
+      <%# C23-11 · La tabla muestra lo que hay en **todas las abiertas**. Son las
+          que se están llenando al mismo tiempo —*"ellos arman tres cajas y
+          empiezan a meter los paquetes en cualquier caja"*— y verlas juntas es
+          el punto; con una sola a la vista el operario no sabe cómo va el
+          conjunto. Por eso la primera columna dice en cuál cayó cada uno. %>
       <div class="px-6 py-4 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-900">En la caja <%= @caja.letra %></h2>
+        <h2 class="text-lg font-semibold text-gray-900">
+          En las cajas abiertas (<span data-empaque-target="listaAbiertas"><%= @abiertas.map { |c| "#{c.letra}#{c.numero_bulto}" }.join(", ") %></span>)
+        </h2>
       </div>
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
           <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Caja</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recepción</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tracking</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
@@ -86,7 +141,8 @@
         </thead>
         <tbody class="bg-white divide-y divide-gray-200" data-empaque-target="filas">
           <% @paquetes.each do |p| %>
-            <tr>
+            <tr data-caja-id="<%= p.caja_manifiesto_id %>">
+              <td class="px-6 py-3 text-sm font-bold text-cec-navy dark:text-cec-gold"><%= p.caja_manifiesto.letra %><%= p.caja_manifiesto.numero_bulto %></td>
               <td class="px-6 py-3 text-sm font-mono text-cec-navy"><%= p.numero_recepcion_visible %></td>
               <td class="px-6 py-3 text-sm font-mono text-gray-500"><%= p.tracking %></td>
               <td class="px-6 py-3 text-sm text-gray-700"><%= p.cliente&.nombre_completo %></td>
@@ -96,7 +152,7 @@
         </tbody>
       </table>
       <% if @paquetes.none? %>
-        <p class="px-6 py-8 text-center text-sm text-gray-500">Todavía no hay paquetes en esta caja.</p>
+        <p class="px-6 py-8 text-center text-sm text-gray-500">Todavía no hay paquetes en las cajas abiertas.</p>
       <% end %>
     </div>
   <% end %>

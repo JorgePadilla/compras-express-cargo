@@ -9069,7 +9069,7 @@ recién después de agregar un paquete y desaparecía al recargar. Es la
 duplicación de siempre, esta vez entre una pantalla y su propio partial. Ahora
 hay una sola tabla.
 
-#### C23-11 · Varias cajas abiertas a la vez — 🔜 **PENDIENTE**
+#### C23-11 · Varias cajas abiertas a la vez — ✅ **IMPLEMENTADO**
 
 > "Pero aquí pues **debería de existir la múltiple** […] o sea, poder
 >  **seleccionar las tres cajas** y que **en las tres va todo**."
@@ -9106,6 +9106,34 @@ equivocada: (a) además habría dejado sin respuesta qué imprime
 un paquete que está en tres, y qué pasa al escanear una de las tres — tres
 preguntas que Yusef nunca contestó porque no las estaba pidiendo.
 
+**Entonces el modelo no se toca: lo que cambia es la pantalla.** Un paquete
+sigue teniendo una caja.
+
+**Qué costaba antes.** Elegir caja era un `link_to` que **recargaba la
+pantalla**, y con eso el campo de escaneo perdía el foco. Con la pistola en una
+mano, cada cambio de caja costaba volver a hacer clic en el campo — que es
+exactamente lo que él describió: *"tenés que ir a buscar, o sea, hay que hacerlo
+bien el proceso"*.
+
+**Cómo quedó.** Cada caja es una tarjeta con dos gestos: **tocarla** manda el
+escaneo ahí, **tocar el candado** la abre o la cierra del set. Nada recarga y el
+foco vuelve al campo siempre. La tabla de abajo muestra lo que hay en **todas
+las abiertas**, con una columna que dice en cuál cayó cada paquete: son las que
+se están llenando al mismo tiempo, y verlas juntas es el punto.
+
+Por defecto están **todas abiertas** —que es «máximo todas»— y el set vive en la
+**sesión del servidor**, como el tipo de envío de `/etiquetar`: es el estado de
+un turno de trabajo, no un dato del manifiesto. Recargar no lo pierde y no le
+pisa el set a quien empaca en la otra mesa.
+
+**Lo que costó no recargar.** Todo lo que el servidor pinta una sola vez se
+queda viejo: el candado seguía dibujado abierto sobre una caja cerrada, el
+título seguía enumerando las cinco, y las filas de una caja cerrada se quedaban
+en la tabla. Ninguna de las tres la agarra un test de Rails —el HTML sale bien,
+lo que envejece es la pantalla ya cargada—; se vieron **mirando la pantalla en
+Chrome** y ahora las tres las repinta el mismo `_pintar`. Los dos candados viven
+en el DOM y se alterna cuál se ve, para no pegar SVG a mano desde JavaScript.
+
 ---
 
 ### Lo que quedó abierto
@@ -9113,7 +9141,7 @@ preguntas que Yusef nunca contestó porque no las estaba pidiendo.
 | # | Qué | Estado |
 |---|---|---|
 | `C23-10` | Empacar sin escanear | ✅ **Implementado** — falta la regla del interno |
-| `C23-11` | Varias cajas: ¿el paquete en N cajas, o N cajas abiertas? | ✅ Decidido — ver abajo |
+| `C23-11` | Varias cajas abiertas a la vez | ✅ **Implementado** |
 | `RP-59` | «Expedido por»: ¿el **nombre** de quien lo creó, o sus **iniciales**? | ✅ **Las iniciales** |
 
 **`RP-59` · Por qué era una pregunta.** Yusef preguntó él mismo qué va en ese

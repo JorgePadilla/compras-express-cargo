@@ -168,6 +168,10 @@ Rails.application.routes.draw do
     get  "empacar", to: "empaque#show", as: :empacar
     post "empacar/:caja_id/escanear", to: "empaque#escanear", as: :escanear_empaque
     post "empacar/:caja_id/omitir",   to: "empaque#omitir",   as: :omitir_empaque
+    # C23-11 · Abrir y cerrar una caja del set con el que se está empacando.
+    # Yusef: *"poder seleccionar las tres cajas"* · *"y para desempacarlo, lo
+    # volvemos a marcar"*.
+    post "empacar/:caja_id/alternar", to: "empaque#alternar", as: :alternar_empaque
     resources :cajas, only: %i[create update destroy], controller: "cajas_manifiesto" do
       member     { get :etiqueta }   # C21-05: la 4×6 de un bulto
       collection { get :etiquetas }  # C21-05: las de todo el manifiesto, de un tiro
