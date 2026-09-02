@@ -10,7 +10,7 @@
   <%= render PageHeaderComponent.new(title: "Recibir #{@manifiesto.numero}",
                                      subtitle: @manifiesto.tipo_interno? ? "Interno de #{@manifiesto.sucursal_origen&.codigo} — escaneá cada paquete al bajarlo" : "Escaneá cada caja al bajarla del camión") do |h| %>
     <% h.with_back do %>
-      <%= render ButtonComponent.new(href: recepcion_carga_index_path, variant: :secondary, icon: "arrow-left") do %>
+      <%= render ButtonComponent.new(href: recepcion_carga_index_path, variant: :secondary, icon: "arrow-left", shortcut: "F2") do %>
         Volver
       <% end %>
     <% end %>

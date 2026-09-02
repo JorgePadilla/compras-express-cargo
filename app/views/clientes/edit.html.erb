@@ -1,6 +1,6 @@
 <%= render PageHeaderComponent.new(title: "Editar Cliente", subtitle: @cliente.codigo) do |header|
   header.with_back do
-    render ButtonComponent.new(variant: :ghost, href: cliente_path(@cliente), icon: "arrow-left") do
+    render ButtonComponent.new(variant: :ghost, href: cliente_path(@cliente), icon: "arrow-left", shortcut: "F2") do
       "Volver"
     end
   end

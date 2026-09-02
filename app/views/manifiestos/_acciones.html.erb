@@ -22,13 +22,19 @@
     wrapper adentro del partial se anidaría una vez por actualización. %>
 <% if manifiesto.creado? && paquetes.any? %>
   <div class="mb-6 flex flex-wrap items-center gap-3">
-    <%= render ButtonComponent.new(variant: :primary, icon: "check",
+    <%# Las teclas: F10 es «guardar/confirmar» por convención y finalizar es el
+        commit de esta pantalla; F9 se la lleva la que además imprime. F2, F4,
+        F5 y F6 ya están tomadas acá (Volver, Imprimir manifiesto, Agregar caja,
+        Editar). Ojo: este partial se pinta **dos veces** —arriba y abajo—, así
+        que la etiqueta sale dos veces y el `querySelector` del controller
+        aprieta la de arriba. Es el mismo botón, así que está bien. %>
+    <%= render ButtonComponent.new(variant: :primary, icon: "check", shortcut: "F10",
           href: finalizar_manifiesto_path(manifiesto), method: :patch,
           confirm: "Se finaliza #{manifiesto.numero}: #{manifiesto.cantidad_paquetes} paquete(s) pasan a enviado y el manifiesto queda bloqueado. ¿Seguro?") do %>
       Solo Finalizar
     <% end %>
     <% if manifiesto.cajas.any? %>
-      <%= render ButtonComponent.new(variant: :gold, icon: "printer",
+      <%= render ButtonComponent.new(variant: :gold, icon: "printer", shortcut: "F9",
             href: finalizar_manifiesto_path(manifiesto, imprimir: true), method: :patch,
             confirm: "Se finaliza #{manifiesto.numero} y salen las etiquetas 4×6 de los #{manifiesto.cajas.size} bulto(s). ¿Seguro?") do %>
         Finalizar e Imprimir

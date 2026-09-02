@@ -6,7 +6,7 @@
     manifiesto se está hablando. %>
 <%= render PageHeaderComponent.new(title: @manifiesto.numero, subtitle: "Guías y aduana") do |header|
   header.with_back do
-    render ButtonComponent.new(variant: :ghost, href: guias_aduana_index_path, icon: "arrow-left") do
+    render ButtonComponent.new(variant: :ghost, href: guias_aduana_index_path, icon: "arrow-left", shortcut: "F2") do
       "Volver"
     end
   end

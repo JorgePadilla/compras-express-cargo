@@ -1,6 +1,6 @@
 <%= render PageHeaderComponent.new(title: "Nuevo Usuario") do |header|
   header.with_back do
-    render ButtonComponent.new(variant: :ghost, href: users_path, icon: "arrow-left") do
+    render ButtonComponent.new(variant: :ghost, href: users_path, icon: "arrow-left", shortcut: "F2") do
       "Volver"
     end
   end
