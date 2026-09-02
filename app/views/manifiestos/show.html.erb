@@ -63,8 +63,11 @@ end %>
       <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.fecha_aduana&.strftime("%d/%m/%Y") || "—" %></dd>
     </div>
     <div>
+      <%# RP-59 · Lo estampa el sistema al crear, con las iniciales de quien lo
+          creó. Los manifiestos viejos que se crearon antes de esto pueden no
+          tenerlo, y ahí cae al usuario. %>
       <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Expedido Por</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.expedido_por.presence || "—" %></dd>
+      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.expedido_por.presence || @manifiesto.user&.iniciales_display || "—" %></dd>
     </div>
     <div>
       <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Paquetes</dt>

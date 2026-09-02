@@ -51,14 +51,26 @@ class WarehouseReceiptHelperTest < ActionView::TestCase
 
   # ── wr_user_initials ──
 
-  test "wr_user_initials con nombre completo devuelve dos iniciales con punto" do
+  # RP-59 · **El punto se fue, y es a propósito.**
+  #
+  # Este helper tenía su propia cuenta de las iniciales, distinta de
+  # `User#iniciales_display` en dos cosas: ignoraba `users.iniciales` —la
+  # columna que llena el admin— y devolvía `Y.G.` donde el resto del sistema
+  # dice `YG`. Lo destapó el manifiesto impreso, que muestra «Expedido por» e
+  # «Imprimió» juntos: la misma persona salía escrita de dos formas en el mismo
+  # papel.
+  #
+  # Ahora delega. El formato que gana es el sin puntos, que es lo que el admin
+  # teclea en el formulario de usuarios (*"Ej: YG, JP, YS"*) y por lo tanto lo
+  # que espera ver impreso.
+  test "wr_user_initials con nombre completo devuelve las dos iniciales" do
     user = User.new(nombre: "Yulien Gonzalez", email_address: "y@test.com")
-    assert_equal "Y.G.", wr_user_initials(user)
+    assert_equal "YG", wr_user_initials(user)
   end
 
   test "wr_user_initials con un solo nombre devuelve una inicial" do
     user = User.new(nombre: "Madonna", email_address: "m@test.com")
-    assert_equal "M.", wr_user_initials(user)
+    assert_equal "M", wr_user_initials(user)
   end
 
   test "wr_user_initials con nil devuelve guion" do
@@ -67,7 +79,16 @@ class WarehouseReceiptHelperTest < ActionView::TestCase
 
   test "wr_user_initials cae a email cuando no hay nombre" do
     user = User.new(nombre: "", email_address: "jorge@test.com")
-    assert_equal "J.", wr_user_initials(user)
+    assert_equal "J", wr_user_initials(user)
+  end
+
+  # Lo que el helper ignoraba y ahora respeta: el alias que define el admin.
+  # Yusef lo pidió *"porque hay nombres repetidos como Juan"* (`PR-D1.b`), y el
+  # WR —el papel donde importa saber quién lo hizo— lo estaba tirando a la
+  # basura.
+  test "wr_user_initials respeta las iniciales que carga el admin" do
+    user = User.new(nombre: "Juan Perez", iniciales: "JP2", email_address: "j2@test.com")
+    assert_equal "JP2", wr_user_initials(user)
   end
 
   # ── wr_terms ──
