@@ -14,12 +14,114 @@ import { Controller } from "@hotwired/stimulus"
 // escanea dos seguidos, la respuesta vieja no puede pintar encima de la nueva
 // ni sonar por un paquete que ya no está en pantalla.
 export default class extends Controller {
-  static targets = ["codigo", "aviso", "filas"]
-  static values = { escanearUrl: String, omitirUrl: String }
+  static targets = ["codigo", "aviso", "filas", "caja", "tarjeta", "candado", "conteo", "destino", "listaAbiertas"]
+  static values = { escanearUrl: String, omitirUrl: String, activa: Number }
 
   connect() {
     this._seq = 0
     if (this.hasCodigoTarget) this.codigoTarget.focus()
+  }
+
+  // ── C23-11 · Varias cajas abiertas ────────────────────────────────────────
+  //
+  // Yusef: *"poder **seleccionar las tres cajas**"* · *"ellos arman tres cajas
+  // y empiezan a meter los paquetes en **cualquier** caja"*.
+  //
+  // Un paquete sigue yendo en UNA caja: lo que cambia es que ya no hay que
+  // **ir a buscarla**. Elegir caja era un `link_to` que recargaba la pantalla,
+  // y con eso el campo de escaneo perdía el foco — con la pistola en la otra
+  // mano, un clic por cada cambio de caja. Acá solo se mueve a dónde apunta el
+  // POST, y el foco vuelve al campo siempre.
+
+  elegirCaja(e) {
+    const bloque = e.currentTarget.closest("[data-caja-id]")
+    // Una caja cerrada no recibe escaneos: tocarla la abre, que es lo que el
+    // operario quiso decir al tocarla.
+    if (bloque.dataset.abierta !== "true") return this.alternarCaja(e)
+
+    this._activar(Number(bloque.dataset.cajaId))
+    this.codigoTarget.focus()
+  }
+
+  alternarCaja(e) {
+    const bloque = e.currentTarget.closest("[data-caja-id]")
+
+    this._post(bloque.dataset.alternarUrl, {})
+      .then((data) => {
+        // «Mínimo uno»: el servidor es el que decide, y si dice que no, lo dice
+        // con todas las letras en vez de dejar la tarjeta a medio apagar.
+        if (!data.ok) return this._mostrar("noEncontrado", data.mensaje)
+
+        this.cajaTargets.forEach((caja) => {
+          caja.dataset.abierta = String(data.abiertas.includes(Number(caja.dataset.cajaId)))
+        })
+        this._pintar()
+        this._activar(data.activa)
+      })
+      .finally(() => this.codigoTarget.focus())
+  }
+
+  _activar(cajaId) {
+    this.activaValue = cajaId
+    const bloque = this.cajaTargets.find((c) => Number(c.dataset.cajaId) === cajaId)
+    if (!bloque) return
+
+    this.escanearUrlValue = bloque.dataset.escanearUrl
+    this.omitirUrlValue = bloque.dataset.omitirUrl
+    this._pintar()
+  }
+
+  // Las clases se arman acá y no en el servidor porque nada recarga: si el
+  // pintado viviera solo en el ERB, la tarjeta activa se quedaría marcando la
+  // caja anterior hasta el próximo refresh.
+  _pintar() {
+    const ACTIVA = ["border-cec-gold", "bg-cec-gold/5", "ring-2", "ring-cec-gold/30"]
+    const ABIERTA = ["border-gray-200", "dark:border-gray-700", "bg-white", "dark:bg-gray-800",
+                     "hover:shadow-lg", "hover:border-cec-gold/50"]
+    const CERRADA = ["border-dashed", "border-gray-300", "dark:border-gray-700",
+                     "bg-gray-50", "dark:bg-gray-900", "opacity-60"]
+
+    this.cajaTargets.forEach((caja) => {
+      const tarjeta = caja.querySelector("[data-empaque-target='tarjeta']")
+      const abierta = caja.dataset.abierta === "true"
+      const activa = Number(caja.dataset.cajaId) === this.activaValue && abierta
+
+      tarjeta.classList.remove(...ACTIVA, ...ABIERTA, ...CERRADA)
+      tarjeta.classList.add(...(activa ? ACTIVA : abierta ? ABIERTA : CERRADA))
+      tarjeta.setAttribute("aria-pressed", String(activa))
+
+      // El candado: los dos iconos están en el DOM y se alterna cuál se ve.
+      const candado = caja.querySelector("[data-empaque-target='candado']")
+      candado.querySelector("[data-icono='abierta']").classList.toggle("hidden", !abierta)
+      candado.querySelector("[data-icono='cerrada']").classList.toggle("hidden", abierta)
+
+      if (activa && this.hasDestinoTarget) {
+        this.destinoTarget.textContent = tarjeta.querySelector("span").textContent.trim()
+      }
+    })
+
+    this._pintarTabla()
+  }
+
+  // Lo que el servidor pintó una vez y acá ya no se recarga nunca: el título
+  // que enumera las abiertas y las filas de las cajas que se cerraron. Sin
+  // esto los dos se quedan diciendo el set del primer render — el título
+  // listando cajas que ya nadie está llenando, y la tabla mostrando lo que hay
+  // adentro de una caja cerrada.
+  _pintarTabla() {
+    const abiertas = this.cajaTargets.filter((c) => c.dataset.abierta === "true")
+
+    if (this.hasListaAbiertasTarget) {
+      this.listaAbiertasTarget.textContent = abiertas
+        .map((c) => c.querySelector("[data-empaque-target='tarjeta'] span").textContent.trim())
+        .join(", ")
+    }
+
+    if (!this.hasFilasTarget) return
+    const ids = abiertas.map((c) => c.dataset.cajaId)
+    this.filasTarget.querySelectorAll("tr[data-caja-id]").forEach((fila) => {
+      fila.classList.toggle("hidden", !ids.includes(fila.dataset.cajaId))
+    })
   }
 
   teclado(e) {
@@ -68,7 +170,10 @@ export default class extends Controller {
       default:              this.dispatch("noEncontrado")
     }
     this._mostrar(this._tono(data.resultado), data.mensaje, data.paquete_id)
-    if (data.fila) this._agregarFila(data.fila)
+    if (data.fila) {
+      this._agregarFila(data.fila)
+      this._sumarAlConteo()
+    }
     this.codigoTarget.focus()
   }
 
@@ -102,10 +207,26 @@ export default class extends Controller {
     this.avisoTarget.appendChild(boton)
   }
 
+  // El «N pqt» de la tarjeta activa. Sin esto la cuenta se queda en lo que
+  // había al cargar la pantalla, y como acá ya no se recarga nunca, se quedaría
+  // vieja todo el turno.
+  _sumarAlConteo() {
+    const bloque = this.cajaTargets.find((c) => Number(c.dataset.cajaId) === this.activaValue)
+    const conteo = bloque?.querySelector("[data-empaque-target='conteo']")
+    if (!conteo) return
+
+    const n = parseInt(conteo.textContent, 10)
+    conteo.textContent = `${(Number.isInteger(n) ? n : 0) + 1} pqt`
+  }
+
   _agregarFila(fila) {
     if (!this.hasFilasTarget) return
     const tr = document.createElement("tr")
+    tr.dataset.cajaId = String(this.activaValue)
     const celdas = [
+      // C23-11 · Con varias cajas abiertas la fila tiene que decir en cuál
+      // entró; si no, la tabla mezcla las tres sin distinguirlas.
+      ["px-6 py-3 text-sm font-bold text-cec-navy dark:text-cec-gold", fila.caja],
       ["px-6 py-3 text-sm font-mono text-cec-navy", fila.recepcion],
       ["px-6 py-3 text-sm font-mono text-gray-500", fila.tracking],
       ["px-6 py-3 text-sm text-gray-700", fila.cliente],
