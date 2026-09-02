@@ -82,7 +82,7 @@ class FlujoDelManifiestoTest < ApplicationSystemTestCase
 
     # Hay dos: el bloque de cierre va arriba y abajo. Con la tabla llena, el de
     # arriba queda a una pantalla de distancia.
-    confirmando { first(:button, "Solo Finalizar").click }
+    confirmando { click_button "Solo Finalizar", match: :first }
 
     assert_text "enviado", wait: 5
     assert_equal "enviado_honduras", @paquete.reload.estado,
@@ -117,7 +117,33 @@ class FlujoDelManifiestoTest < ApplicationSystemTestCase
     click_on "Volver al manifiesto"
     assert_selector "h1", text: /M[A-Z]{3}\d{4}/, wait: 5
 
-    confirmando { first(:button, "Finalizar e Imprimir").click }
+    # ── `click_button` y no `first(...).click`: el nodo se muere en el medio ──
+    #
+    # Acá se venía abajo en CI —`StaleElementReferenceError`, ~2 de cada 3
+    # corridas— y en local nunca, ni con la suite en paralelo.
+    #
+    # La causa es el **preview de caché de Turbo**. «Volver al manifiesto» es un
+    # GET normal, y esta pantalla ya se había visitado, así que Turbo pinta al
+    # instante el snapshot cacheado (`<html data-turbo-preview>`) y recién
+    # cuando llega la respuesta fresca reemplaza el body. El `assert_selector`
+    # del h1 pasa contra el preview, o sea que no protege de nada.
+    #
+    # Y ahí está la trampa: `first(...)` ubica el botón **en el preview**,
+    # `.click` lo aprieta en un segundo viaje, y si el body fresco entra en el
+    # medio el nodo ya no existe. En local la respuesta vuelve tan rápido que la
+    # ventana no existe; en CI sí.
+    #
+    # Se reprodujo a propósito con `demorar("/manifiestos/")` —el helper que ya
+    # estaba para hacer observables las carreras— y forzando el swap entre el
+    # `first` y el `.click`. Con eso, el A/B es limpio:
+    #
+    #     first(:button, …)                → MURIÓ
+    #     find(:button, …, match: :first)  → SOBREVIVIÓ
+    #
+    # Porque **`first` no recarga y `find` sí**: Capybara le guarda la query al
+    # nodo que devuelve `find` y la vuelve a correr cuando lo encuentra viejo.
+    # `click_button` es `find` + `click`, así que hereda el rescate.
+    confirmando { click_button "Finalizar e Imprimir", match: :first }
     esperar_pestana_de_impresion
     cerrar_pestanas_extra
 

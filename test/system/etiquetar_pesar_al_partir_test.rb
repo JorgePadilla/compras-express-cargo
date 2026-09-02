@@ -88,7 +88,7 @@ class EtiquetarPesarAlPartirTest < ApplicationSystemTestCase
   end
 
   def pedir_etiquetas(cantidad)
-    first("button", text: "Guardar + Imprimir").click
+    find("button", text: "Guardar + Imprimir", match: :first).click
     assert_selector "[data-etiquetar-target='etiquetasModal'][open]", wait: 3
     find("[data-etiquetar-target='etiquetasInput']").set(cantidad.to_s)
     click_on "Imprimir"

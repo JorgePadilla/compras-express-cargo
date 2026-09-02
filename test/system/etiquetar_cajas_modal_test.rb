@@ -69,7 +69,7 @@ class EtiquetarCajasModalTest < ApplicationSystemTestCase
     llenar_lo_minimo
 
     # Hay dos: la barra de arriba y la de abajo. Cualquiera sirve.
-    first("button", text: "Guardar + Imprimir").click
+    find("button", text: "Guardar + Imprimir", match: :first).click
 
     assert_selector "[data-etiquetar-target='etiquetasModal'][open]", wait: 3
     assert_text "¿Cuántas etiquetas se imprimen?"
@@ -83,7 +83,7 @@ class EtiquetarCajasModalTest < ApplicationSystemTestCase
     find("[data-etiquetar-target='clienteInput']").set("Juan")
     find("[data-etiquetar-target='clienteDropdown'] *", match: :first, wait: 5).click
 
-    first("button", text: "Guardar + Imprimir").click
+    find("button", text: "Guardar + Imprimir", match: :first).click
     assert_selector "[data-etiquetar-target='etiquetasModal'][open]", wait: 3
     find("[data-etiquetar-target='etiquetasInput']").set("3")
     click_on "Imprimir"
@@ -123,7 +123,7 @@ class EtiquetarCajasModalTest < ApplicationSystemTestCase
     agregar_caja(peso: 12.5)
     assert_selector ".caja-fila", count: 1, wait: 3
 
-    first("button", text: "Guardar + Imprimir").click
+    find("button", text: "Guardar + Imprimir", match: :first).click
 
     assert_no_selector "[data-etiquetar-target='etiquetasModal'][open]", wait: 2
 
@@ -144,7 +144,7 @@ class EtiquetarCajasModalTest < ApplicationSystemTestCase
     find("[data-caja-campo='peso']").set(7.5)
     assert_selector ".caja-fila", count: 0
 
-    first("button", text: "Guardar + Imprimir").click
+    find("button", text: "Guardar + Imprimir", match: :first).click
 
     assert_no_selector "[data-etiquetar-target='etiquetasModal'][open]", wait: 2
     assert_text "guardado exitosamente", wait: 10
@@ -171,7 +171,7 @@ class EtiquetarCajasModalTest < ApplicationSystemTestCase
     visit etiquetar_path(paquete_id: cajas.first.id)
     assert_selector "#paquete_tracking", wait: 5
 
-    first("button", text: "Guardar + Imprimir").click
+    find("button", text: "Guardar + Imprimir", match: :first).click
     assert_selector "[data-etiquetar-target='etiquetasModal'][open]", wait: 3
 
     assert_equal "3", find("[data-etiquetar-target='etiquetasInput']").value
@@ -202,7 +202,7 @@ class EtiquetarCajasModalTest < ApplicationSystemTestCase
     find("[data-etiquetar-target='clienteInput']").set("Juan")
     find("[data-etiquetar-target='clienteDropdown'] *", match: :first, wait: 5).click
 
-    first("button", text: "Guardar + Imprimir").click
+    find("button", text: "Guardar + Imprimir", match: :first).click
     assert_selector "[data-etiquetar-target='etiquetasModal'][open]", wait: 3
     find("[data-etiquetar-target='etiquetasInput']").set(cantidad.to_s)
     click_on "Imprimir"
