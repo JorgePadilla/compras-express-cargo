@@ -18,7 +18,7 @@
 
   <%= render PageHeaderComponent.new(title: "Empacar — #{@manifiesto.numero}",
                                      subtitle: "Escaneá cada paquete al meterlo a la caja") do |h| %>
-    <% h.with_action do %>
+    <% h.with_back do %>
       <%= render ButtonComponent.new(href: manifiesto_path(@manifiesto), variant: :secondary, icon: "arrow-left") do %>
         Volver al manifiesto
       <% end %>

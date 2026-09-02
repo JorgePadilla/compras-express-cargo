@@ -59,6 +59,9 @@ No son convenciones escritas: si te salís, el test falla.
 - `test/lib/procesos_pdf_test.rb` — que los diagramas de proceso nombren rutas y
   estados que **existan**. Si construís un módulo que el diagrama daba por
   pendiente, este test avisa que el dibujo quedó viejo.
+- `test/lint/botones_con_funcion_test.rb` — entre otras cosas, que «Volver» vaya
+  en el slot `with_back` del `PageHeaderComponent` y no entre las acciones:
+  atrás es izquierda.
 
 ## Series de PR
 

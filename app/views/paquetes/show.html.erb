@@ -114,7 +114,7 @@
     render(ButtonComponent.new(variant: :primary, size: :xs, href: paquete_path(@paquete),
                                icon: "arrow-path", data: { turbo_frame: "paquete_dynamic" })) { "Refrescar" }
   end
-  header.with_action do
+  header.with_back do
     render(ButtonComponent.new(variant: :primary, size: :xs, href: paquetes_path,
                                icon: "arrow-left", shortcut: "F2")) { "Volver" }
   end
