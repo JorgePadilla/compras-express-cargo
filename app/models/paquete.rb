@@ -499,6 +499,21 @@ class Paquete < ApplicationRecord
       SQL
   }
   scope :by_sucursal, ->(ids) { where(sucursal_id: Array(ids).compact_blank) }
+  # C23-10 · Los paquetes que se recibieron **en** una sucursal.
+  #
+  # Es `sucursal_del_numero` escrito en SQL: `sucursal_recepcion` es dónde se
+  # recibió, y cae a `sucursal` porque hay flujos que crean paquetes sin pasar
+  # por `/etiquetar` —alta manual, seeds, fixtures— y ahí la única sucursal que
+  # hay es esa. Las dos reglas tienen que decir lo mismo: si se separan, el
+  # tirón de «empacar sin escanear» barrería un conjunto distinto del que la
+  # pantalla numeró.
+  #
+  # **El COALESCE no usa índice**, ni el de `sucursal_recepcion_id` ni el de
+  # `sucursal_id`. Se acepta: esto lo corre una persona un par de veces por
+  # manifiesto, no un listado que se pinta a cada rato.
+  scope :recibidos_en, ->(sucursal_id) {
+    where("COALESCE(paquetes.sucursal_recepcion_id, paquetes.sucursal_id) = ?", sucursal_id)
+  }
   scope :recibidos_hoy, -> { where(fecha_recibido_miami: Time.current.beginning_of_day..Time.current.end_of_day) }
   scope :sin_manifiesto, -> { where(manifiesto_id: nil).where.not(estado: %w[anulado entregado retornado desechado]) }
   # PR-M8. `en_aduana` entra acá desde que PR-M7 le dio quién lo escriba. Es

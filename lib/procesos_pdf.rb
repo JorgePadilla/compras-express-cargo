@@ -144,7 +144,7 @@ class ProcesosPdf
       pasos: [
         { titulo: "Con escaneo", quien: "manifiesto → pre-etiquetas 4×6 → pistola",
           actor: :persona, ruta: "manifiestos_path", estado: "empacado", existe: true },
-        { titulo: "Sin escaneo", quien: "se le meten los paquetes al manifiesto derecho",
+        { titulo: "Sin escaneo", quien: "los paquetes entran al manifiesto derecho, uno por uno o todos de un tirón",
           actor: :persona, ruta: "manifiestos_path", existe: true }
       ],
       notas: [
