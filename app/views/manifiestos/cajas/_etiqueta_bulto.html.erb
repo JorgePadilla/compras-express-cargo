@@ -12,14 +12,33 @@
     vos querás"* y Yusef lo confirmó el 2026-08-30 —*"código QR, habría que
     instalar la gema necesaria"*—. La etiqueta del paquete sigue en Code128;
     acá el QR aguanta el código completo en un cuadrado chico y deja libre el
-    ancho de la 4×6. %>
-<div class="bulto">
-  <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-    <span class="letra"><%= caja.letra %></span>
-    <span class="lbs">Lbs. <%= caja.peso ? etiqueta_num(caja.peso) : "—" %></span>
-  </div>
+    ancho de la 4×6.
 
-  <div class="medidas"><%= caja.medidas || "—" %></div>
+    C23 · La revisión del 2026-09-01, papel en mano, dejó cuatro cambios:
+
+      · `C23-01` la letra va con su número —**A1**— porque el bulto se canta en
+        voz alta y *"unos leen la A y otros leen el 1"*;
+      · `C23-02` el peso y las medidas **juntos**, que las fue a buscar y las
+        tenía separadas por la letra gigante;
+      · `C23-03` las tres cifras rotuladas —**LBS**, **VLBS**, **PIES³**—:
+        *"ponerle las libras reales, libras volumétricas, que es VLBS… y le
+        podés poner los pies para el público"*;
+      · `C23-04` **a dónde va**: *"lo último que le falta acá es a dónde va"*.
+        El legacy no lo lleva porque todo aterriza en San Pedro Sula; acá el
+        manifiesto sí sabe su `sucursal_entrega`. %>
+<div class="bulto">
+  <%# C23-01 + C23-02 + C23-03 · La identificación a la izquierda y, pegado a
+      ella, el bloque de cifras: peso real, volumétrico, pies y las medidas de
+      donde salen los dos últimos. %>
+  <div class="cabeza">
+    <span class="letra"><%= caja.letra %><span class="num"><%= caja.numero_bulto %></span></span>
+    <div class="cifras">
+      <div class="cifra"><span class="u">LBS</span><span class="v"><%= caja.peso ? etiqueta_num(caja.peso) : "—" %></span></div>
+      <div class="cifra"><span class="u">VLBS</span><span class="v"><%= caja.volumen ? etiqueta_num(caja.volumen) : "—" %></span></div>
+      <div class="cifra"><span class="u">PIES³</span><span class="v"><%= caja.pies_cubicos || "—" %></span></div>
+      <div class="medidas"><%= caja.medidas || "—" %></div>
+    </div>
+  </div>
 
   <% if caja.tipos_envio_adentro.present? %>
     <div class="servicio"><%= caja.tipos_envio_adentro %></div>
@@ -37,7 +56,19 @@
     <div class="consig"><%= caja.manifiesto.consignatario.nombre.upcase %></div>
   <% end %>
 
-  <div class="qr"><%= etiqueta_qr_svg(caja.codigo) %></div>
+  <%# C23-04 · A dónde va. %>
+  <% if caja.manifiesto.sucursal_entrega.present? %>
+    <div class="destino">A: <%= caja.manifiesto.sucursal_entrega.nombre.upcase %></div>
+  <% end %>
+
+  <%# C23-04 · El QR baja de 1.7 a 1.5 in para pagar el renglón del destino.
+      Medido en Chrome con la etiqueta más cargada que existe —servicio,
+      proveedor, PRIORITY, consignatario y destino, todos presentes—: con 1.7
+      quedaban 0.16 in de aire y un consignatario de dos renglones la
+      desbordaba en silencio, que es lo que hace `overflow: hidden`. A 1.5 in
+      el código de 14 caracteres sigue en 25 módulos de ~1.5 mm cada uno, muy
+      por encima de lo que necesita una pistola. %>
+  <div class="qr"><%= etiqueta_qr_svg(caja.codigo, tamano: "1.5in") %></div>
   <div class="codigo"><%= caja.codigo %></div>
 
   <div class="pie">
@@ -45,6 +76,6 @@
       <div class="manifiesto"><%= caja.manifiesto.numero %></div>
       <div class="fecha"><%= caja.created_at.strftime("%d/%m/%Y %H:%M") %></div>
     </div>
-    <div class="doc"><%= caja.numero_doc.presence || caja.letra %></div>
+    <div class="doc"><%= caja.numero_doc.presence || "#{caja.letra}#{caja.numero_bulto}" %></div>
   </div>
 </div>

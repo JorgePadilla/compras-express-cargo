@@ -33,13 +33,28 @@
     }
     .bulto + .bulto { page-break-before: always; }
 
+    /* C23-01/02/03 · La identificación y las cifras, en un solo renglón.
+       Antes la letra iba sola con las libras al otro extremo y las medidas dos
+       líneas más abajo; Yusef las fue a buscar y no las encontró de un vistazo
+       —*"estaría más bonito que estén juntos"*—. El bloque de cifras va al
+       costado de la letra, no debajo: son cuatro renglones cortos contra los
+       58pt de la letra, así que ocupan el alto que la letra ya gastaba. */
+    .cabeza  { display: flex; justify-content: space-between; align-items: flex-start; gap: .12in; }
     .letra   { font-size: 58pt; font-weight: 700; line-height: 1; }
-    .lbs     { font-size: 26pt; font-weight: 700; text-align: right; }
-    .medidas { font-size: 22pt; font-weight: 700; margin-top: .04in; }
+    /* El número **no compite** con la letra: es la misma identificación dicha
+       dos veces, no un dato nuevo. */
+    .num     { font-size: 34pt; font-weight: 700; }
+    .cifras  { text-align: right; flex: 1; }
+    .cifra   { display: flex; justify-content: flex-end; align-items: baseline; gap: .06in; line-height: 1.15; }
+    .cifra .u { font-size: 12pt; font-weight: 700; letter-spacing: .02em; }
+    .cifra .v { font-size: 22pt; font-weight: 700; min-width: 1.15in; text-align: right; }
+    .medidas { font-size: 18pt; font-weight: 700; margin-top: .03in; }
     .servicio{ font-size: 20pt; font-style: italic; margin-top: .04in; }
     .proveedor { font-size: 17pt; font-weight: 700; margin-top: .03in; }
     .priority{ font-size: 30pt; font-weight: 900; letter-spacing: .02em; margin-top: .04in; }
     .consig  { font-size: 15pt; font-weight: 700; margin-top: .06in; }
+    /* C23-04 · *"Lo último que le falta acá es a dónde va."* */
+    .destino { font-size: 17pt; font-weight: 700; margin-top: .03in; }
     .barcode { margin-top: .08in; }
     .barcode svg { width: 100%; height: .85in; }
     <%# RP-54 · El QR **no se estira**. El barcode de arriba sí —Code128 se lee
