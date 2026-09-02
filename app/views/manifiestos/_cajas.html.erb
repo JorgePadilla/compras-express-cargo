@@ -161,7 +161,9 @@
           hace un submit con nombre— así que no hay campo escondido que limpiar
           después ni que se pueda quedar pegado del guardado anterior. %>
       <div class="flex justify-end gap-3">
-        <%= render(ButtonComponent.new(variant: :secondary, size: :lg, type: :submit, icon: "plus", shortcut: "F5")) { "Agregar caja" } %>
+        <%= render(ButtonComponent.new(variant: :secondary, size: :lg, type: :submit, icon: "plus",
+              shortcut: "F5", shortcut_label_only: true,
+              data: { caja_manifiesto_target: "agregar" })) { "Agregar caja" } %>
         <%# `data-turbo=false` va en **este** botón y no en el formulario. La
             4×6 se imprime sola con `window.onload`, y en una visita de Turbo
             `onload` no vuelve a dispararse: la etiqueta se abriría y se
@@ -170,17 +172,19 @@
             este camino hace navegación completa y «Agregar caja» sigue
             exactamente como estaba.
 
-            **Y va sin tecla, aunque la pantalla vieja use F9 para esto.** En
-            esta ficha F9 ya es «Finalizar e Imprimir», que cierra el
-            manifiesto entero. `keyboard_shortcuts_controller` resuelve con
-            `document.querySelector`, o sea **el primero del DOM**: el de
-            finalizar está más arriba, así que el F9 de acá nunca dispararía y
-            el rótulo «(F9)» estaría prometiendo algo que hace otra cosa —y esa
-            otra cosa cierra el manifiesto. Tampoco sirve F5, que es del botón
-            de al lado. Antes de darle una tecla hay que decidir si «Finalizar
-            e Imprimir» se mueve, y eso no es de este PR. %>
+            **C23-12 · Y ahora sí lleva F9**, que es la del sistema viejo.
+            Estaba tomada por «Finalizar e Imprimir» y **ésa se movió a F8**
+            (Jorge, 2026-09-02): agregar cajas pasa decenas de veces por
+            manifiesto y finalizar una sola, así que la memoria muscular se
+            queda con la frecuente.
+
+            La tecla la escucha `caja_manifiesto_controller`, no el global — y
+            por eso va `shortcut_label_only`, que muestra el rótulo sin emitir
+            `data-shortcut`. Con los dos escuchando se guardarían dos cajas. %>
         <%= render(ButtonComponent.new(variant: :primary, size: :lg, type: :submit, icon: "printer",
-              name: "print", value: "true", data: { turbo: false })) { "Agregar e imprimir" } %>
+              shortcut: "F9", shortcut_label_only: true,
+              name: "print", value: "true",
+              data: { turbo: false, caja_manifiesto_target: "agregarEImprimir" })) { "Agregar e imprimir" } %>
       </div>
     <% end %>
   </div>

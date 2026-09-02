@@ -18,10 +18,50 @@ import { Controller } from "@hotwired/stimulus"
 const DIVISOR_LB = 166.0
 
 export default class extends Controller {
-  static targets = ["tamano", "alto", "largo", "ancho", "peso", "volumen"]
+  static targets = ["tamano", "alto", "largo", "ancho", "peso", "volumen", "agregar", "agregarEImprimir"]
 
+  // C23-12 · Las teclas de esta pantalla las escucha **este** controller, y no
+  // el global.
+  //
+  // `keyboard_shortcuts_controller` ignora toda tecla que no sea F2 cuando el
+  // foco está en un input — y acá el foco vive en **Peso**, porque elegir un
+  // tamaño manda el cursor ahí (*"te ponen solo el cursor a peso"*). O sea que
+  // la F5 del botón «Agregar caja» **no disparaba nunca en el flujo real**.
+  //
+  // Y era peor que decorativa: **F5 es «refrescar» del navegador**. El handler
+  // global sale antes de llamar a `preventDefault` cuando detecta que estás
+  // escribiendo, así que el operario tecleaba el peso, apretaba la tecla que el
+  // botón le prometía, y la página se recargaba **borrándole el peso**.
+  // Reproducido en Chrome con una tecla de verdad, no simulada.
+  //
+  // Escucha en `document` y no en el formulario para que las teclas anden
+  // también con el foco afuera —que es como andaban antes— y `preventDefault`
+  // corre **siempre**, que es lo que le saca el refresh a F5.
+  //
+  // Los botones llevan `shortcut_label_only`: muestran «(F5)» y «(F9)» pero
+  // **no** emiten `data-shortcut`. Si lo emitieran, el controller global les
+  // haría click además de esto y se guardarían dos cajas — el mismo doble
+  // disparo que ya pasó en `/entrega_personal` con F2 y F9.
   connect() {
     this._recalcular()
+    this._teclas = this._teclas.bind(this)
+    document.addEventListener("keydown", this._teclas)
+  }
+
+  disconnect() {
+    document.removeEventListener("keydown", this._teclas)
+  }
+
+  _teclas(e) {
+    const boton = { F5: this.agregarTarget, F9: this.agregarEImprimirTarget }[e.key]
+    if (!boton) return
+
+    e.preventDefault()
+    // `requestSubmit(boton)` y no `boton.click()`: el submitter viaja con el
+    // envío, y de él salen el `name="print"` de «Agregar e imprimir» y su
+    // `data-turbo="false"`. Con un `click()` sintético también viajarían, pero
+    // pasar el submitter es decir explícitamente cuál de los dos se apretó.
+    boton.form.requestSubmit(boton)
   }
 
   elegirTamano(e) {
