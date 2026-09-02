@@ -3,7 +3,7 @@ class ManifiestosController < ApplicationController
   # necesariamente tienen rol de Miami — se gatea via authorize_edit
   # del paquete antes de llegar acá.
   before_action :authorize_manifiestos, except: [ :buscar ]
-  before_action :set_manifiesto, only: %i[show edit update add_paquete remove_paquete finalizar documento]
+  before_action :set_manifiesto, only: %i[show edit update add_paquete empacar_sin_escanear remove_paquete finalizar documento]
 
   def index
     @manifiestos = Manifiesto.activos.includes(:empresa_manifiesto).order(created_at: :desc)
@@ -15,7 +15,7 @@ class ManifiestosController < ApplicationController
   def show
     # C21-04: los tamaños pre-definidos con los que se arma una casa.
     @tamanos = TamanoCaja.activos.ordered
-    @paquetes = @manifiesto.paquetes.includes(:cliente, :sucursal, :sucursal_destino).order(:created_at)
+    @paquetes = @manifiesto.paquetes.includes(:cliente, :sucursal, :sucursal_destino, :caja_manifiesto).order(:created_at)
   end
 
   def new
@@ -61,6 +61,38 @@ class ManifiestosController < ApplicationController
     paquete.update!(manifiesto: @manifiesto)
     @manifiesto.recalculate_totals!
     respond_to_paquete_change("Paquete #{paquete.guia} agregado al manifiesto.")
+  end
+
+  # C23-10 · El mismo `add_paquete`, pero de un tirón y sin pistola.
+  #
+  #   > "No les da chance de escanear y le empacan al puro… meten todo."
+  #   > "Todos los paquetes que tienen el estatus [recibido en Miami], que bajo
+  #   >  el tipo de servicio que se seleccionó para este [manifiesto]…
+  #   >  automáticamente se va a enviar sin escanear."
+  #
+  # Cuando no hay ninguno **se dice por qué**, nombrando los tres filtros. Un
+  # redirect callado dejaría al operario mirando la misma pantalla sin saber si
+  # el botón hizo algo, si falló, o si de verdad no había carga.
+  def empacar_sin_escanear
+    servicio = EmpacarSinEscanear.new(@manifiesto, user: Current.user)
+
+    unless servicio.aplica?
+      redirect_to @manifiesto, alert: "Este manifiesto no admite empacar sin escanear."
+      return
+    end
+
+    resultado = servicio.call
+
+    if resultado.ninguno?
+      redirect_to @manifiesto,
+                  alert: "No hay paquetes para agregar. Entran los que están en «recibido en " \
+                         "Miami», del tipo #{@manifiesto.tipos_envio_nuestros}, recibidos en " \
+                         "#{@manifiesto.sucursal_origen&.nombre || "—"} y todavía sin manifiesto."
+      return
+    end
+
+    redirect_to @manifiesto,
+                notice: "Entraron #{resultado.agregados} paquete(s) sin escanear."
   end
 
   def remove_paquete
@@ -142,7 +174,7 @@ class ManifiestosController < ApplicationController
   end
 
   def respond_to_paquete_change(message)
-    @paquetes = @manifiesto.paquetes.includes(:cliente, :sucursal, :sucursal_destino).order(:created_at)
+    @paquetes = @manifiesto.paquetes.includes(:cliente, :sucursal, :sucursal_destino, :caja_manifiesto).order(:created_at)
     @manifiesto.reload
     respond_to do |format|
       format.turbo_stream do

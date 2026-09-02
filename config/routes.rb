@@ -174,6 +174,9 @@ Rails.application.routes.draw do
     end
     member do
       post :add_paquete
+      # C23-10 · El mismo camino que `add_paquete`, pero de un tirón. Yusef:
+      # *"no les da chance de escanear y le empacan al puro"*.
+      post :empacar_sin_escanear
       delete "remove_paquete/:paquete_id", action: :remove_paquete, as: :remove_paquete
       # C21-06: «enviar» pasa a llamarse «finalizar», que es la palabra que usa
       # Yusef y la que dice el botón de la pantalla vieja.

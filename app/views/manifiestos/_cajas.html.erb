@@ -16,8 +16,34 @@
         </p>
       </div>
     </div>
+    <%# C23-10 · Los dos empaques, juntos y con su nombre.
+        **Jorge:** "Le voy a poner empacar como grupo, y luego sin escanear y
+        con escanear." · **Yusef:** "O sea, aquí está empacar **escaneando**. Y
+        aquí sería **sin escanear**" · *"porque tienen que saber ellos qué son
+        los que hicieron sin escanear"*.
+
+        `sin_escanear` se calcula acá y no adentro del botón porque el número
+        va en dos lugares —el rótulo y el confirm— y tienen que ser el mismo. %>
+    <% sin_escanear = EmpacarSinEscanear.new(manifiesto) %>
+    <% candidatos = sin_escanear.aplica? ? sin_escanear.candidatos.count : 0 %>
     <div class="flex items-center gap-3">
       <span class="text-sm text-gray-500"><%= manifiesto.cajas.size %> bulto(s)</span>
+
+      <%# **Va afuera del `cajas.any?`, y ése es el punto entero.** El camino
+          sin escaneo es el que Yusef se quedó *"porque a veces no da tiempo"*,
+          y ahí no hay casas ni pistola: si el botón viviera adentro de la
+          condición, solo aparecería cuando ya no hace falta. %>
+      <% if sin_escanear.aplica? %>
+        <%= render ButtonComponent.new(variant: :outline_navy, icon: "bolt",
+              href: empacar_sin_escanear_manifiesto_path(manifiesto), method: :post,
+              disabled: candidatos.zero?,
+              confirm: "Entran #{candidatos} paquete(s) al manifiesto #{manifiesto.numero} " \
+                       "sin escanearlos: los de #{manifiesto.tipos_envio_nuestros} recibidos en " \
+                       "#{manifiesto.sucursal_origen&.nombre}. ¿Seguro?") do %>
+          Empacar sin escanear<%= " (#{candidatos})" if candidatos.positive? %>
+        <% end %>
+      <% end %>
+
       <% if manifiesto.cajas.any? %>
         <%# Jorge: *"el botón de imprimir casi ni se mira"* y *"esos botones con
             fondo blanco cuesta demasiado verlos"*. Y es literal: `secondary` es
@@ -42,8 +68,10 @@
             Las dos condiciones salen del contexto y son las correctas: `cajas.any?`
             —la pantalla de empaque no sirve sin casas y ella misma lo dice— y
             `creado?`, porque `show.html.erb` envuelve este partial entero en él. %>
+        <%# C23-10 · Se llamaba «Empacar» a secas. Ahora que al lado hay otro
+            que también empaca, el nombre tiene que decir cuál es cuál. %>
         <%= render ButtonComponent.new(variant: :primary, icon: "qr-code",
-              href: manifiesto_empacar_path(manifiesto)) do %>Empacar<% end %>
+              href: manifiesto_empacar_path(manifiesto)) do %>Empacar escaneando<% end %>
       <% end %>
     </div>
   </div>

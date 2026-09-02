@@ -8980,7 +8980,7 @@ Qué va escrito adentro era `RP-59` y ya está resuelto — ver abajo.
 
 ### Empacar
 
-#### C23-10 · Despachar sin escanear — 🔜 **PENDIENTE**
+#### C23-10 · Despachar sin escanear — ✅ **IMPLEMENTADO**
 
 El pedido más grande de la llamada. Sale de la temporada alta:
 
@@ -9009,11 +9009,23 @@ Y el nombre del botón, que se negoció en el momento:
 O sea: el botón «Empacar» de hoy pasa a decir **«Empacar escaneando»** y al lado
 va **«Empacar sin escanear»**, los dos agrupados.
 
-**No está construido todavía, y por qué.** El camino sin escaneo ya existe
-—`add_paquete`, un paquete a la vez— y `FinalizarManifiesto` solo mueve *"los
-paquetes que ya están en el manifiesto"*, así que lo que falta es exactamente el
-tirón masivo que él describe. Pero quedan dos decisiones que no están en el audio
-y que cambian lo que se construye:
+**Cómo quedó.** El camino sin escaneo ya existía —`add_paquete`, un paquete a la
+vez— y `FinalizarManifiesto` solo mueve *"los paquetes que ya están en el
+manifiesto"*, así que lo que faltaba era exactamente el tirón masivo. Vive en
+`EmpacarSinEscanear`, y el botón va **al lado** del de la pistola, con el
+conteo puesto: «Empacar sin escanear (23)».
+
+**El botón aparece sin una sola caja, y ése es el punto entero.** El camino sin
+escaneo es el que Yusef se quedó *"porque a veces no da tiempo"*: ahí no hay
+casas ni pistola. Adentro del `cajas.any?` que gobierna al otro botón, solo
+habría aparecido cuando ya no hace falta.
+
+Y **los paquetes entran con `update!` uno por uno**, no con `update_all`: es la
+lección que dejó escrita `FinalizarManifiesto`. Acá el estado no cambia, pero el
+`manifiesto_id` sí, y «¿quién metió esto?» es exactamente la pregunta que se va
+a hacer sobre un tirón masivo.
+
+Dos decisiones no estaban en el audio:
 
 1. **¿En qué estado quedan?** Yusef dice *"ya todo fue empacado"*, pero
    `empacado` hoy **solo lo escribe el camino con escaneo** —y está documentado
@@ -9028,8 +9040,34 @@ y que cambian lo que se construye:
 `add_paquete` uno por uno— y el tirón **filtra por la sucursal de origen del
 manifiesto**. Lo primero respeta la invariante de que `empacado` implica caja;
 Yusef estaba describiendo el acto, no el estatus. Lo segundo no cambia nada en
-Miami, porque hoy todo sale de ahí, y evita que el interno se lleve carga que
-está físicamente en otra sucursal.
+Miami, porque hoy todo sale de ahí, pero sin él un manifiesto se llevaría carga
+que está físicamente en otra sucursal.
+
+**Y por eso el botón es solo del oficial.** El estado que Yusef nombró
+—`recibido_miami`— **no existe en el interno**: su carga ya llegó a Honduras y
+está en `disponible_entrega`, en la sucursal donde la recibieron. Cuál es la
+regla equivalente ahí él no la dijo, y derivarla sería inventarle un criterio a
+un módulo que mueve el 20% de la carga. Queda abierto, y la propuesta cuando se
+pregunte sería la misma forma: `disponible_entrega` + tipo del manifiesto +
+`sucursal_actual` igual al origen.
+
+**Cuando no hay ninguno se dice por qué**, nombrando los tres filtros. Un
+redirect callado dejaría al operario mirando la misma pantalla sin saber si el
+botón hizo algo, si falló, o si de verdad no había carga.
+
+**Y ahora se ve cuál entró sin pistola.** *"Tienen que saber ellos qué son los
+que hicieron sin escanear"* — la tabla de paquetes del manifiesto tenía columnas
+de tracking, cliente, peso y estado, y ninguna decía en qué caja iba cada uno.
+Ahora la primera dice `A1` o **«sin escanear»**, que es lo que separa los dos
+caminos a la vista.
+
+**De paso:** esa tabla estaba escrita **dos veces** —el `show` tenía su copia
+inline y `_paquetes_table` existía solo para el turbo_stream de
+`add_paquete`—, palabra por palabra. La columna nueva entró al partial y la
+primera carga de la pantalla seguía mostrando la vieja: la columna aparecía
+recién después de agregar un paquete y desaparecía al recargar. Es la
+duplicación de siempre, esta vez entre una pantalla y su propio partial. Ahora
+hay una sola tabla.
 
 #### C23-11 · Varias cajas abiertas a la vez — 🔜 **PENDIENTE**
 
@@ -9074,7 +9112,7 @@ preguntas que Yusef nunca contestó porque no las estaba pidiendo.
 
 | # | Qué | Estado |
 |---|---|---|
-| `C23-10` | Empacar sin escanear: estado final y filtro por sucursal | ✅ Decidido — ver abajo |
+| `C23-10` | Empacar sin escanear | ✅ **Implementado** — falta la regla del interno |
 | `C23-11` | Varias cajas: ¿el paquete en N cajas, o N cajas abiertas? | ✅ Decidido — ver abajo |
 | `RP-59` | «Expedido por»: ¿el **nombre** de quien lo creó, o sus **iniciales**? | ✅ **Las iniciales** |
 

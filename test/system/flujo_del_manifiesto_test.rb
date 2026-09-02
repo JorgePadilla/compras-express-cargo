@@ -180,17 +180,20 @@ class FlujoDelManifiestoTest < ApplicationSystemTestCase
 
   # ── Y el que documenta la puerta misma ──────────────────────────────────
 
-  test "la ficha del manifiesto ofrece empacar en cuanto hay una casa" do
+  test "la ficha del manifiesto ofrece empacar escaneando en cuanto hay una casa" do
     abrir_manifiestos
     crear_manifiesto
 
-    # Sin casas no hay nada que empacar, y la pantalla de empaque lo diría sola.
-    assert_no_link "Empacar"
+    # C23-10 · Sin casas no hay nada que **escanear**, y la pantalla de empaque
+    # lo diría sola. Ojo: «Empacar sin escanear» sí está desde el principio y a
+    # propósito —ése es el camino que no usa casas ni pistola—, así que la
+    # afirmación tiene que nombrar cuál de los dos, no decir «Empacar» a secas.
+    assert_no_link "Empacar escaneando"
 
     find("label", text: tamano_cajas(:mediana).nombre).click
     fill_in "caja_manifiesto_peso", with: "12.5"
     click_on "Agregar caja"
 
-    assert_selector "a", text: "Empacar", wait: 5
+    assert_selector "a", text: "Empacar escaneando", wait: 5
   end
 end
