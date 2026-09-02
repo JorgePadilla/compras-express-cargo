@@ -26,6 +26,23 @@ module ActiveSupport
     # tests salen de 127.0.0.1, así que a partir del test 11 se caían solos.
     setup { ActionController::Base.cache_store.clear }
 
+    # ── La apertura de caja «de hoy» tiene que seguir siendo de hoy ──────────
+    #
+    # `aperturas_caja.yml` congela `<%= Date.current %>` **cuando se cargan las
+    # fixtures**, y la app pregunta `Date.current` **cuando corre el request**.
+    # Entre las dos cosas hay una suite entera, y si el reloj cruza la
+    # medianoche en el medio la fila «hoy» pasa a ser de ayer: cuatro tests de
+    # caja fallan, y fallan **solo a esa hora**.
+    #
+    # No es hipotético. Pasó en CI el 2026-09-02 a las 06:00:14 UTC, que con
+    # `config.time_zone = "Central America"` son las **00:00:14** de Honduras —
+    # catorce segundos después de la medianoche—, en un PR que no tocaba caja.
+    #
+    # Se re-estampa solo la **abierta**: `ayer_cerrada` tiene que quedarse
+    # donde está, que su gracia es justamente no ser de hoy. Y solo toca filas
+    # de fixture, porque `setup` corre antes del cuerpo del test.
+    setup { AperturaCaja.where(estado: "abierta").update_all(fecha: Date.current) }
+
     # Add more helper methods to be used by all tests here...
   end
 end
