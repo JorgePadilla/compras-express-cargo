@@ -62,6 +62,9 @@ No son convenciones escritas: si te salís, el test falla.
 - `test/lint/orden_del_menu_test.rb` — que los grupos del sidebar se lean en el
   orden del trabajo. Un link nuevo tiende a quedar al final del grupo, que es
   donde está el cursor; acá se le busca su lugar en el recorrido.
+- `test/lint/nodos_que_no_recargan_test.rb` — que ningún system test haga
+  `first(...).click`. Ese nodo no se recarga, y el preview de caché de Turbo lo
+  mata en el medio: se cae solo en CI.
 - `test/lint/botones_con_funcion_test.rb` — entre otras cosas, que «Volver» vaya
   en el slot `with_back` del `PageHeaderComponent` y no entre las acciones:
   atrás es izquierda.

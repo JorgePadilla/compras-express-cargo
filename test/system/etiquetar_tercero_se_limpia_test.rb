@@ -47,7 +47,7 @@ class EtiquetarTerceroSeLimpiaTest < ApplicationSystemTestCase
 
     # Hay dos: la barra de atajos va arriba y abajo, que lo pidió Yusef —*"estos
     # botones los dejaste abajo y a veces se ocupan acá arriba"*.
-    first("button", text: "Limpiar").click
+    find("button", text: "Limpiar", match: :first).click
 
     assert_equal "", tercero_id
   end
