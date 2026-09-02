@@ -247,10 +247,23 @@ class User < ApplicationRecord
   def iniciales_display
     return iniciales.upcase if iniciales.present?
 
-    fuente = nombre.to_s.strip.presence || email_address.to_s.split("@").first.to_s
-    parts = fuente.split(/[\s._-]+/).reject(&:blank?).first(2)
-    return "—" if parts.empty?
-    parts.map { |p| p[0].to_s.upcase }.join
+    # El nombre se parte **solo por espacios**, como siempre: `María-José
+    # García` es dos palabras y da `MG`. Partir también por guiones y puntos
+    # —que es lo que hacía el helper del WR— la volvería `MJ`, y eso le
+    # cambiaría las iniciales a gente en la bitácora y en la etiqueta Dymo, que
+    # no tienen nada que ver con esto.
+    #
+    # El correo sí se parte ancho, porque ahí el separador es justamente el
+    # punto o el guion: `jorge.padilla@…` → `JP`.
+    if nombre.to_s.strip.present?
+      partes = nombre.split(/\s+/).reject(&:blank?).first(2)
+    else
+      usuario = email_address.to_s.split("@").first.to_s
+      partes = usuario.split(/[\s._-]+/).reject(&:blank?).first(2)
+    end
+
+    return "—" if partes.empty?
+    partes.map { |p| p[0].to_s.upcase }.join
   end
 
   # PR-9.a: "las notas se ordenan por la jerarquía de la empresa" (Yusef,

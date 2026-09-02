@@ -91,6 +91,21 @@ class WarehouseReceiptHelperTest < ActionView::TestCase
     assert_equal "JP2", wr_user_initials(user)
   end
 
+  # **El nombre se parte solo por espacios.** El helper viejo partía también por
+  # guiones y puntos, y al unificar eso se habría colado a `iniciales_display`
+  # —o sea a la bitácora y a la etiqueta Dymo, que no tienen nada que ver con
+  # este PR—: `María-José García` es dos palabras, no tres.
+  test "un nombre con guion no se parte en tres" do
+    user = User.new(nombre: "María-José García", email_address: "mj@test.com")
+    assert_equal "MG", wr_user_initials(user)
+  end
+
+  # El correo sí se parte ancho, porque ahí el punto ES el separador.
+  test "el correo sí se parte por punto cuando no hay nombre" do
+    user = User.new(nombre: "", email_address: "jorge.padilla@test.com")
+    assert_equal "JP", wr_user_initials(user)
+  end
+
   # ── wr_terms ──
 
   test "wr_terms devuelve español por default" do
