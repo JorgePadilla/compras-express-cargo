@@ -1,5 +1,5 @@
 <%= render PageHeaderComponent.new(title: "Editar Usuario", subtitle: @user.nombre) do |header|
-  header.with_action do
+  header.with_back do
     render ButtonComponent.new(variant: :ghost, href: user_path(@user), icon: "arrow-left") do
       "Volver"
     end

@@ -5,7 +5,7 @@
     silencio. Lo de Miami se muestra de solo lectura, para saber de qué
     manifiesto se está hablando. %>
 <%= render PageHeaderComponent.new(title: @manifiesto.numero, subtitle: "Guías y aduana") do |header|
-  header.with_action do
+  header.with_back do
     render ButtonComponent.new(variant: :ghost, href: guias_aduana_index_path, icon: "arrow-left") do
       "Volver"
     end

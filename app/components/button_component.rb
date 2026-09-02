@@ -29,14 +29,39 @@ class ButtonComponent < ViewComponent::Base
     # Navy sólido, no gradiente. Blanco sobre #1B2559 = 14.43:1.
     primary: "bg-cec-navy text-white hover:bg-cec-navy-light shadow-sm",
 
-    # 7.56:1 en claro, 13.34:1 en oscuro.
+    # Texto 10.31:1 en claro, 13.35:1 en oscuro.
     #
-    # El borde `gray-300` da 1.47:1 contra blanco y no llega al 3:1 de 1.4.11.
-    # Se acepta a propósito: el botón lleva texto legible, así que
-    # identificarlo no depende del borde. Subirlo a `gray-500` (3.03:1) lo
-    # haría parecer un input deshabilitado.
+    # (Decía 7.56 en claro, y era un número viejo: 7.56 es `gray-600` sobre
+    # blanco. La tinta se había oscurecido a `gray-700` sin recalcularlo.)
+    #
+    # ── El borde subió, y esto revierte una decisión anterior ────────────────
+    #
+    # Acá decía que `gray-300` (1.47:1 contra blanco) **se aceptaba a propósito**,
+    # con este argumento: *"el botón lleva texto legible, así que identificarlo no
+    # depende del borde"*, y que subirlo a `gray-500` *"lo haría parecer un input
+    # deshabilitado"*.
+    #
+    # Lo desmintió el uso. Jorge, operando el sistema: *"esos botones con fondo
+    # blanco cuesta demasiado verlos"* y *"el botón de imprimir casi ni se mira"*.
+    #
+    # El argumento viejo tiene un agujero: mide si el botón **se lee** una vez que
+    # lo encontraste, y el problema es **encontrarlo**. Un `bg-white` con borde
+    # `gray-300` adentro de una tarjeta blanca no tiene forma — el borde es lo
+    # único que lo separa del fondo, y a 1.47:1 no lo separa.
+    #
+    # Y el modo oscuro estaba peor y nadie lo había mirado: `gray-600` sobre
+    # `gray-800` da **1.94:1**.
+    #
+    # Ahora `gray-500` en claro (4.84:1 contra blanco, 4.54:1 contra el fondo
+    # `#F5F8FB` de la página) y `gray-400` en oscuro (5.64:1 sobre `gray-800`).
+    # Los dos pasan el 3:1 de 1.4.11 para componentes de interfaz.
+    #
+    # Lo de «input deshabilitado» era un riesgo real y se cuida distinto: un input
+    # deshabitado es **relleno gris con tinta gris**. Éste conserva el fondo
+    # blanco, la tinta `gray-700` a 10.31:1 y la sombra, que es lo que lo hace leer
+    # como algo que se puede apretar.
     secondary: "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-100 " \
-               "border border-gray-300 dark:border-gray-600 " \
+               "border border-gray-500 dark:border-gray-400 " \
                "hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm",
 
     # El "Limpiar (F2)" de /etiquetar. 10.31:1 en claro.

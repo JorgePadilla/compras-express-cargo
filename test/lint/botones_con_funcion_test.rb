@@ -105,6 +105,54 @@ class BotonesConFuncionTest < ActiveSupport::TestCase
     refute_match CON_FUNCION_CRUDO, '<button class="x">'
   end
 
+  # ── «Volver» va a la izquierda, y por eso tiene slot propio ─────────────
+  #
+  # Jorge: *"las flechas para ir para atrás están raras y siempre a la derecha de
+  # los botones; me parece que tiene más sentido siempre estar a lo más
+  # izquierda"*.
+  #
+  # Estaban a la derecha por una razón tonta: `PageHeaderComponent` renderiza las
+  # acciones **en orden de declaración**, y «Volver» se declaraba último porque es
+  # lo último que uno escribe. La posición dependía del orden en que alguien
+  # tipeó, no de una decisión.
+  #
+  # `with_back` la vuelve estructural: el slot se renderiza primero, siempre.
+  # Esto traba que alguien vuelva a meterla entre las acciones.
+  #
+  # ── Ojo con las dos formas de cerrar el bloque ──────────────────────────
+  #
+  # Las vistas declaran acciones de dos maneras, y el lint tiene que ver las dos:
+  #
+  #     header.with_action do        …   end       ← Ruby, dentro de un `<%= … do |header| %>`
+  #     <% h.with_action do %>       …   <% end %> ← ERB
+  #
+  # La primera versión de este lint cerraba sólo con `\n\s*end`, que nunca casa
+  # con `<% end %>` porque el `<% ` se mete entre la sangría y el `end`. O sea
+  # que las vistas en ERB —`empaque/show`, `recepcion_carga/show`— pasaban
+  # verdes con el bug puesto. Se comprobó a mano: volviendo `empaque/show` a
+  # `with_action`, el lint no decía nada.
+  test "el botón de volver va en with_back, no entre las acciones" do
+    fuera_de_lugar = []
+
+    cada_archivo do |ruta, cuerpo|
+      cuerpo.scan(/\w+\.with_action do\b.*?(?:\n\s*end\b|<%\s*end\s*%>)/m) do |bloque|
+        next unless bloque.include?("arrow-left")
+
+        linea = cuerpo[0...cuerpo.index(bloque)].count("\n") + 1
+        fuera_de_lugar << "  #{ruta}:#{linea}"
+      end
+    end
+
+    assert_empty fuera_de_lugar, <<~MSG
+      Estos «Volver» están declarados como una acción más, así que caen a la
+      derecha del grupo — y atrás es izquierda.
+
+      Cambiá `with_action` por `with_back`: el slot se renderiza primero.
+
+      #{fuera_de_lugar.join("\n")}
+    MSG
+  end
+
   private
 
   def cada_archivo

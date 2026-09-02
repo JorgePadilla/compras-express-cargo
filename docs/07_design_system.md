@@ -116,7 +116,7 @@ el número se recalcula.
 | variant | uso | ratio |
 |---|---|---:|
 | `primary` | la acción principal — navy **plano** | 14.43 |
-| `secondary` | acción alterna sobre fondo claro | 7.56 |
+| `secondary` | acción alterna sobre fondo claro; borde `gray-500` a 4.84 | 10.31 |
 | `ghost` | Cancelar / Volver / Limpiar | 7.56 |
 | `gold` | CTA de cierre (Guardar, Facturar) | 9.39 |
 | `teal` | acción afirmativa; letra `cec-navy-dark`, no blanca | 6.69 |
@@ -143,6 +143,15 @@ Tamaños: `:xs` `:sm` `:md` (default) `:lg`. El icono sigue al botón (16 / 16 /
   deshabilitado no existe en HTML.
 - **`method:`** distinto de `:get` sale como `button_to`, no como un `<a>` que
   depende de Turbo.
+- **El borde de `secondary` también cumple el 3:1.** Antes era `gray-300`
+  (1.47:1 contra blanco) y estaba aceptado a propósito, con el argumento de que
+  el texto ya se leía. Jorge lo desmintió operando: *"esos botones con fondo
+  blanco cuesta demasiado verlos"*. El argumento medía si el botón **se lee**,
+  y el problema era **encontrarlo**: sobre una tarjeta blanca el borde es lo
+  único que le da forma. Ahora `gray-500` en claro (4.84:1) y `gray-400` en
+  oscuro (5.64:1 sobre `gray-800`; antes `gray-600` daba **1.94:1** y nadie lo
+  había mirado). El fondo blanco, la tinta `gray-700` y la sombra se quedan —
+  son lo que lo distingue de un input deshabilitado, que es gris **relleno**.
 
 **Qué se queda crudo, a propósito:** las tarjetas-botón de tipo de envío en
 `/etiquetar`, los CTA de las pantallas de sesión, los adornos absolutos dentro
@@ -372,7 +381,7 @@ y **se agrega acá** cuando nace. Los props son la firma real de `initialize`.
 | `EmptyStateComponent` | Mensaje cuando no hay datos | `title:, description: nil, icon: "inbox"` |
 | `EnviadoPorPoliticaComponent` | «Enviado según política» (`C18-06`): casilla + listita de motivos + detalle, compuesto en `notas_al_cliente`; gemelo de retener, lint `enviado_por_politica_compartido_test` | `f:, motivos:` |
 | `FormSectionComponent` | Sección de formulario con título y descripción | `title: nil, subtitle: nil, densidad: :comoda, alineacion_del_pie: "sm:justify-between", **attrs` |
-| `PageHeaderComponent` | Título + breadcrumb + acciones | `title:, subtitle: nil` |
+| `PageHeaderComponent` | Título + breadcrumb + acciones; «Volver» va en el slot `back`, no en `actions` | `title:, subtitle: nil` + slots `back` / `actions` / `meta` |
 | `PaginationComponent` | Paginación (Pagy) | `collection:, label: "registros", per_page_options: DEFAULT_PER_PAGE_OPTIONS` |
 | `PreAlertaCardComponent` | Card de pre-alerta en el portal | `pre_alerta:` |
 | `QuickActionCardComponent` | Card de acceso rápido del dashboard | `title:, href:, icon:, subtitle: nil, accent: :teal` |
@@ -523,7 +532,9 @@ mismo.
 ```
 ┌─────────────────────────────────────────────┐
 │ PageHeaderComponent                          │
-│  [Titulo]                    [+ Nuevo] [Btn] │
+│  [Titulo]                                    │
+│  ·········································· │
+│  [← Volver] [+ Nuevo] [Btn]                  │
 ├─────────────────────────────────────────────┤
 │ FilterPanelComponent (colapsable en mobile)  │
 │  [Tipo Envio ▼] [Estado ▼] [Fecha ↔ Fecha]  │
