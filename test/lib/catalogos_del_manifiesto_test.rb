@@ -60,22 +60,83 @@ class CatalogosDelManifiestoTest < ActiveSupport::TestCase
                  TamanoCaja.ordered.pluck(:nombre)
   end
 
-  # `Mini D` es el único con medidas: la pantalla vieja muestra 595.78 de volumen
-  # para 46×43×50, que es exactamente lo que da el divisor 166. Las otras nueve
-  # las mide Miami.
-  test "solo Mini D trae medidas, y son las que dan el volumen del legacy" do
+  # **Ya no es solo Mini D.** Hasta el 2026-09-05 era el único con medidas —la
+  # única derivable, del 595.78 que muestra la pantalla vieja— y las otras nueve
+  # iban en nil. Ese día salieron del propio sistema viejo, del viewmodel
+  # `TamanoCajasPredefinidoVM` que su editor de manifiestos publica en la
+  # página, con Jorge mirando. Mini D coincidió **exacta** con la derivada, que
+  # es la mejor señal de que la derivación era buena.
+  test "los nueve tamaños de verdad traen sus medidas" do
     vaciar
     CatalogosDelManifiesto.sembrar!
 
+    sin_medidas = TamanoCaja.where(alto: nil).pluck(:nombre)
+    assert_equal [ "Especificar" ], sin_medidas,
+                 "solo «Especificar» va sin medidas; las demás salieron del sistema viejo"
+
     mini = TamanoCaja.find_by(nombre: "Mini D")
     assert_equal [ 46, 43, 50 ], [ mini.alto, mini.largo, mini.ancho ].map(&:to_i)
-    # Es la misma cuenta que hace `CajaManifiesto#volumen_calculado`.
-    volumen = (VolumetricoCalculator.pulgadas_cubicas(46, 43, 50) /
-               VolumetricoCalculator::DIVISOR_LB).round(2)
-    assert_in_delta 595.78, volumen, 0.01
+  end
 
-    con_medidas = TamanoCaja.where.not(alto: nil).pluck(:nombre)
-    assert_equal [ "Mini D" ], con_medidas
+  # El número que la pantalla vieja llama «Dimensión» es **nuestro volumen**:
+  # alto × largo × ancho ÷ 166. Verificado contra la pantalla el 2026-09-05, y
+  # es lo que ata este catálogo al `VolumetricoCalculator` — por eso la
+  # Dimensión no se guarda: se deriva.
+  test "la «Dimensión» de la pantalla vieja es nuestro volumen" do
+    vaciar
+    CatalogosDelManifiesto.sembrar!
+
+    { "Mini D" => 595.78, "EH" => 114.72 }.each do |nombre, dimension|
+      t = TamanoCaja.find_by(nombre: nombre)
+      calculado = (VolumetricoCalculator.pulgadas_cubicas(t.alto, t.largo, t.ancho) /
+                   VolumetricoCalculator::DIVISOR_LB).round(2)
+
+      assert_in_delta dimension, calculado, 0.01,
+                      "#{nombre} tendría que dar #{dimension}, como la pantalla vieja"
+    end
+  end
+
+  # ── El relleno de los que ya existían ────────────────────────────────────
+  #
+  # Los diez se sembraron el 2026-08-31 **sin medidas**. `find_or_create_by!`
+  # solo corre su bloque al **crear**, así que sin este relleno los ocho que ya
+  # están en staging se quedarían vacíos para siempre y el dato que se sacó del
+  # sistema viejo no llegaría a nadie.
+
+  test "le pone las medidas al tamaño que ya existía sin ellas" do
+    vaciar
+    TamanoCaja.create!(nombre: "EH", position: 2, activo: true)
+
+    CatalogosDelManifiesto.sembrar!
+
+    eh = TamanoCaja.find_by(nombre: "EH")
+    assert_equal [ 23, 36, 23 ], [ eh.alto, eh.largo, eh.ancho ].map(&:to_i)
+  end
+
+  # **Y no le pisa la medida a quien la midió.** Si Miami corrigió el catálogo
+  # con la cinta en la mano, ese dato vale más que el del sistema que estamos
+  # reemplazando — y esto corre en **cada deploy**, así que sin la guarda se la
+  # revertiría una y otra vez.
+  test "no le pisa una medida que alguien ya corrigió" do
+    vaciar
+    TamanoCaja.create!(nombre: "EH", position: 2, activo: true, alto: 99, largo: 88, ancho: 77)
+
+    CatalogosDelManifiesto.sembrar!
+
+    eh = TamanoCaja.find_by(nombre: "EH")
+    assert_equal [ 99, 88, 77 ], [ eh.alto, eh.largo, eh.ancho ].map(&:to_i)
+  end
+
+  # Y rellena **por medida**, no por tamaño: si alguien puso solo el alto, las
+  # otras dos entran igual.
+  test "rellena solo las medidas que faltan" do
+    vaciar
+    TamanoCaja.create!(nombre: "EH", position: 2, activo: true, alto: 99)
+
+    CatalogosDelManifiesto.sembrar!
+
+    eh = TamanoCaja.find_by(nombre: "EH")
+    assert_equal [ 99, 36, 23 ], [ eh.alto, eh.largo, eh.ancho ].map(&:to_i)
   end
 
   # «Especificar» es la opción para la caja que no entra en ningún tamaño.

@@ -8022,6 +8022,40 @@ Cubo, 18 Cubo, D G, EH G, E, Mini D, Mini D Doble**— y se elige **uno a la vez
 La `Fase 12` solo tenía anotados tres (`E`, `mini D`, `mini D doble`): los otros
 siete son información nueva.
 
+**Y el 2026-09-05 salieron las medidas, del propio sistema viejo.** Los diez se
+habían sembrado sin ellas —solo «Mini D» era derivable, del `595.78` que muestra
+la pantalla—, y Jorge abrió el editor de manifiestos del legacy para sacarlas:
+están en el viewmodel `TamanoCajasPredefinidoVM` que esa página publica.
+
+| Tamaño | Alto × Largo × Ancho | Dimensión (vlbs) |
+|---|---|---|
+| Especificar | — *(se mide a mano)* | — |
+| EH | 23 × 36 × 23 | 114.72 |
+| D | 44 × 56 × 42 | 623.42 |
+| 22 Cubo | 22 × 22 × 22 | 64.14 |
+| 18 Cubo | 18 × 18 × 18 | 35.13 |
+| D G | 45 × 58 × 42 | 660.36 |
+| EH G | 24 × 36 × 23 | 119.71 |
+| E | 25 × 41 × 28 | 172.89 |
+| **Mini D** | **46 × 43 × 50** | **595.78** |
+| Mini D Doble | 86 × 43 × 50 | 1113.86 |
+
+Tres cosas que confirma la tabla:
+
+1. **«Mini D» coincidió exacta** con la que habíamos derivado del 595.78 — la
+   mejor señal de que la derivación era buena.
+2. **La «Dimensión» del sistema viejo es nuestro volumen**: alto×largo×ancho ÷
+   166, o sea `VolumetricoCalculator::DIVISOR_LB`. Verificado contra la pantalla
+   en vivo. **No se guarda**, se deriva: tenerla en columna sería el mismo número
+   en dos lugares con permiso para separarse.
+3. **«Mini D Doble» son dos Mini D encimadas** — 86 de alto contra 46, con el
+   traslape. Cuadra con lo que dijo Yusef: *"la mini-D doble es cuando llevan dos
+   de esas"*.
+
+Ojo con el orden al comparar contra la foto de la etiqueta de `C21-05`, que para
+«EH» muestra `23x23x36`: es la misma caja escrita en otro orden (23 × 36 × 23).
+El producto —y por lo tanto el volumen— da igual; no son dos EH distintas.
+
 **Las medidas siguen siendo editables**, y por una razón concreta:
 
 > *"Ellos vienen y marcan EH y le modifican una medida, **porque la cortan**… le
