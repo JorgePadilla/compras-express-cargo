@@ -94,12 +94,21 @@ class PreAlertasAdminAutoguardadoTest < ActionDispatch::IntegrationTest
   end
 
   test "los atajos no se registran dos veces" do
-    # `pre_alerta_editor_controller` ya escucha F2/F6/F8 en `document`. Si algun
-    # boton llevara `data-shortcut`, el handler global le haria click ademas, y
-    # la accion correria dos veces.
+    # `pre_alerta_editor_controller` ya escucha las teclas en `document`. Si
+    # algun boton llevara `data-shortcut`, el handler global le haria click
+    # ademas, y la accion correria dos veces.
+    #
+    # C23-13 · Las teclas cambiaron —eran F6 agregar y F8 guardar, y en el resto
+    # de la app F6 es editar y F8 es Excel— pero **la propiedad que este test
+    # cuida es la misma**: el rotulo se ve y `data-shortcut` no se emite. Ahora
+    # el rotulo lo pinta `shortcut_label_only` en vez de ir escrito a mano
+    # adentro del texto, que es como se le escondian al lint de teclas.
     get edit_pre_alerta_url(@pa)
 
     assert_select "[data-shortcut]", count: 0
-    assert_match(/Guardar \(F8\)/, response.body, "el atajo se sigue viendo")
+    # El rotulo lo pinta el componente en su propio `<span>`, asi que se afirma
+    # por el texto del boton y no contra el HTML crudo.
+    assert_select "a,button", text: /Guardar\s*\(F10\)/, count: 1
+    assert_select "a,button", text: /Agregar Paquete\s*\(F5\)/, count: 1
   end
 end

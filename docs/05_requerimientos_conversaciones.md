@@ -9248,6 +9248,66 @@ listener al formulario—: tres de sus cuatro tests se ponen rojos.
 
 ---
 
+#### C23-13 · Las teclas dicen lo mismo en todas las pantallas — ✅ **ARREGLADO**
+
+> **Jorge:** *"¿Los F los podemos dejar iguales en las pantallas?"*
+
+Para contestarlo hacía falta el mapa, y el mapa salió **casi limpio**: `F2`
+volver (16 usos), `F6` editar, `F7` nuevo (20), `F10` guardar. Lo que estaba mal
+era poco y concreto.
+
+| Tecla | Qué quiere decir | Estaba |
+|---|---|---|
+| `F2` | Volver / Cancelar / Limpiar | ✅ |
+| `F4` | Imprimir el documento de la pantalla | ✅ |
+| `F5` | Agregar una línea | ✅ (la del sistema viejo) |
+| `F6` | Editar | ✅ |
+| `F7` | Nuevo / Crear | ✅ |
+| `F8` | Excel | ❌ **también «Finalizar e Imprimir»** |
+| `F9` | Imprimir — el PDF y el «hacer algo e imprimir» | ✅ |
+| `F10` | Guardar / Confirmar | ❌ **`/pre_alertas` guardaba con F8** |
+
+**Dos arreglos.**
+
+1. **`/pre_alertas/edit` usaba F6 para agregar y F8 para guardar** — y en las
+   otras veinte pantallas F6 es editar y F8 es Excel. Tres teclas aprendidas ahí
+   que hacen otra cosa en el resto de la app. Pasan a **F5** y **F10**. Esto es
+   viejo, de antes del módulo de manifiestos.
+
+2. **«Finalizar e Imprimir» estaba en F8**, y eso lo puse yo cuatro días antes
+   en `C23-12`. Ahora va **sin tecla**.
+
+**Por qué sin tecla, y no en otra.** El candidato era `F11`, que en esta app ya
+quiere decir finalizar —la «Finalizar sesión» de `/etiquetar`, que eligió Yusef—.
+Al probarla en Chrome **el `keydown` de F11 no llegó a la página**; y para saber
+si era la tecla o el instrumento se probó `F7`, sin atar a nada, y **tampoco
+llegó**. O sea que el experimento no decide. Poner una tecla sin poder
+comprobarla es fabricar el bug que `C23-12` acababa de arreglar: un rótulo que
+promete una tecla muerta. Y sin tecla no se pierde casi nada — finalizar pasa
+**una vez por manifiesto** contra las decenas que se agrega una caja, y la
+pantalla vieja tampoco le da tecla a esos dos botones.
+
+**El lint que lo traba** es `test/lint/teclas_por_familia_test.rb`, y cuenta la
+tecla **venga de donde venga**: de `shortcut:` o escrita a mano adentro del
+texto. Esa segunda forma es cómo se escondían las de `/pre_alertas` — decían
+«Guardar (F8)» con el «(F8)» dentro del bloque, invisibles para cualquier
+búsqueda de `shortcut:`.
+
+> ⚠️ **Y un hallazgo del lint que no se tocó.** `pre_alerta_editor_controller`
+> ata **F9 a «finalizar»** —F9 es imprimir en toda la app— pero **esa acción no
+> tiene botón**: no se ofrece en ningún lado de la pantalla. Nadie puede saber
+> que la tecla existe. Se dejó como estaba porque moverla es tocar a ciegas algo
+> invisible; cuando esa pantalla se vuelva a tocar, o le sale un botón o la
+> tecla se va.
+
+> 📝 **Cómo se armó el mapa, por si hay que rehacerlo.** La primera extracción
+> usó un regex perezoso sobre `ButtonComponent.new(...)` y **cruzaba de un botón
+> al siguiente**: reportó que `guias_aduana/edit` tenía «Agregar guía» en F2 —un
+> hallazgo entero que no existía, la F2 era del «Volver» cien líneas arriba—. El
+> lint cuenta paréntesis balanceados en vez de confiar en `.*?`.
+
+---
+
 ### Lo que quedó abierto
 
 | # | Qué | Estado |
@@ -9258,6 +9318,7 @@ listener al formulario—: tres de sus cuatro tests se ponen rojos.
 | `C23-12` | La tecla de «Agregar e imprimir» — y la F5 que no disparaba | ✅ **Arreglado** |
 | `RP-60` | ¿El **desglose de paquetes** va en el manifiesto impreso, o es un export aparte? | 🔴 **Pendiente de Yusef** |
 | `RP-61` | ¿El **No. Doc** es el mismo para todas las cajas de un manifiesto? | 🔴 **Pendiente de Yusef** |
+| `C23-13` | Las teclas dicen lo mismo en todas las pantallas | ✅ **Arreglado** |
 
 **`RP-59` · Por qué era una pregunta.** Yusef preguntó él mismo qué va en ese
 campo —*"no sé si ponerle **las iniciales, la firma, el nombre**"*, *"solamente

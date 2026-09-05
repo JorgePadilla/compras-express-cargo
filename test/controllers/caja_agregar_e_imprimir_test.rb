@@ -95,10 +95,12 @@ class CajaAgregarEImprimirTest < ActionDispatch::IntegrationTest
 
     get manifiesto_path(@manifiesto)
 
-    # C23-12: «Finalizar e Imprimir» se mudó de F9 a F8. Sin él en la página
-    # este test no prueba nada, así que la precondición se afirma.
-    assert_select "[data-shortcut='F8']", { minimum: 1 },
-                  "sin «Finalizar e Imprimir» en la página este test no prueba nada"
+    # C23-13: «Finalizar e Imprimir» se quedó **sin tecla** —F8 es Excel en toda
+    # la app y era la única que significaba dos cosas—. La precondición ahora es
+    # «Solo Finalizar» (F10), que es el otro botón del bloque: sin él en la
+    # página este test no prueba nada.
+    assert_select "[data-shortcut='F10']", { minimum: 1 },
+                  "sin los botones de finalizar en la página este test no prueba nada"
 
     por_tecla = Hash.new { |h, k| h[k] = [] }
     css_select("[data-shortcut]").each do |el|
@@ -145,17 +147,22 @@ class CajaAgregarEImprimirTest < ActionDispatch::IntegrationTest
   end
 
   # F9 se la lleva «Agregar e imprimir», que es la del sistema viejo y la que
-  # pasa decenas de veces por manifiesto. Finalizar —una vez, y con confirm—
-  # se corre a F8.
-  test "«Finalizar e Imprimir» se mudó a F8" do
+  # pasa decenas de veces por manifiesto.
+  #
+  # «Finalizar e Imprimir» pasó cuatro días en **F8** y estuvo mal: F8 es Excel
+  # en todas las demás pantallas, y era la única tecla del sistema que
+  # significaba dos cosas distintas. Ahora va **sin tecla**: finalizar pasa una
+  # vez por manifiesto, y la pantalla vieja tampoco le da tecla.
+  test "«Finalizar e Imprimir» no le roba la tecla a nadie" do
     @manifiesto.cajas.create!(alto: 23, largo: 23, ancho: 36, peso: 131)
     paquetes(:disponible_entrega_juan)
       .update!(manifiesto: @manifiesto, tipo_envio: @manifiesto.tipo_envios.first)
 
     get manifiesto_path(@manifiesto)
 
-    assert_select "[data-shortcut='F8']", { minimum: 1 }
     assert_select "[data-shortcut='F9']", 0, "F9 quedó para el formulario de casas"
+    assert_select "[data-shortcut='F8']", 0, "F8 es Excel en toda la app"
+    assert_select "[data-shortcut='F11']", 0, "no se pudo comprobar que F11 llegue a la página"
   end
 
   # ── C21-04 · Que el No. Doc se pueda escribir ─────────────────────────────
