@@ -28,19 +28,38 @@
         `querySelector` del controller aprieta la de arriba. Es el mismo botón,
         así que está bien.
 
-        C23-12 · «Finalizar e Imprimir» **se mudó de F9 a F8**. F9 es la que el
-        sistema viejo usa para «Agregar/Imprimir» y es la que su equipo tiene en
-        el dedo; agregar cajas pasa decenas de veces por manifiesto y finalizar
-        una sola, así que la tecla se la queda la frecuente (Jorge, 2026-09-02).
-        F8 es «Excel» por convención del sistema, pero en esta pantalla no hay
-        Excel: era la única libre sin conflicto real. %>
+        C23-12 · «Finalizar e Imprimir» salió de F9, que es la que el sistema
+        viejo usa para «Agregar/Imprimir» y la que su equipo tiene en el dedo:
+        agregar cajas pasa decenas de veces por manifiesto y finalizar una sola,
+        así que la tecla se la queda la frecuente (Jorge, 2026-09-02).
+
+        C23-13 · Y de ahí pasó por **F8**, que estuvo mal cuatro días. F8 es
+        **Excel** en toda la app, y el mapa de teclas mostró que era la única
+        tecla del sistema que significaba dos cosas distintas.
+
+        Ahora **no lleva tecla**, y esto se decidió midiendo en vez de opinando.
+
+        El candidato era `F11`, que en esta app ya quiere decir finalizar —es la
+        de «Finalizar sesión» de `/etiquetar`, que eligió Yusef—. Pero al
+        probarla en Chrome de verdad **el `keydown` de F11 no llegó a la
+        página**; y para saber si era la tecla o el instrumento se probó `F7`,
+        que en esta pantalla no está atada a nada: tampoco llegó. O sea que el
+        experimento **no decide**, y poner una tecla sin poder comprobarla es
+        cómo se fabrica el bug que `C23-12` acaba de arreglar — un rótulo que
+        promete una tecla muerta.
+
+        Sin tecla no se pierde casi nada: finalizar pasa **una vez por
+        manifiesto**, contra las decenas de veces que se agrega una caja. Y la
+        pantalla vieja tampoco les da tecla a estos dos botones —«Solo
+        Finalizar» y «Finalizar e Imprimir» salen pelados en la captura—, así
+        que no hay memoria muscular que romper. %>
     <%= render ButtonComponent.new(variant: :primary, icon: "check", shortcut: "F10",
           href: finalizar_manifiesto_path(manifiesto), method: :patch,
           confirm: "Se finaliza #{manifiesto.numero}: #{manifiesto.cantidad_paquetes} paquete(s) pasan a enviado y el manifiesto queda bloqueado. ¿Seguro?") do %>
       Solo Finalizar
     <% end %>
     <% if manifiesto.cajas.any? %>
-      <%= render ButtonComponent.new(variant: :gold, icon: "printer", shortcut: "F8",
+      <%= render ButtonComponent.new(variant: :gold, icon: "printer",
             href: finalizar_manifiesto_path(manifiesto, imprimir: true), method: :patch,
             confirm: "Se finaliza #{manifiesto.numero} y salen las etiquetas 4×6 de los #{manifiesto.cajas.size} bulto(s). ¿Seguro?") do %>
         Finalizar e Imprimir

@@ -190,23 +190,32 @@
 </template>
 
     <%# Action buttons.
-        Los atajos van con el `<kbd>` adentro del bloque y NUNCA con
-        `shortcut:`: `pre_alerta_editor_controller` ya escucha F2/F6/F8 por su
-        cuenta, y el handler global de `[data-shortcut]` dispararía la acción
-        dos veces. %>
+        Las teclas las escucha `pre_alerta_editor_controller` por su cuenta, así
+        que van con **`shortcut_label_only`**: el rótulo lo pinta el componente
+        —igual que en las demás pantallas— pero **no** emite `data-shortcut`, que
+        haría que el handler global disparara la acción una segunda vez.
+
+        C23-13 · Antes el «(F6)» y el «(F8)» iban **escritos a mano adentro del
+        texto**, y con eso el lint de teclas no los veía: la pantalla usaba F6
+        para agregar y F8 para guardar, cuando en el resto de la app F6 es
+        editar y F8 es Excel. Ahora son F5, F10 y F11, que es lo que esas
+        acciones quieren decir en todos lados. %>
     <div class="flex flex-col sm:flex-row gap-3 justify-end">
-      <%= render ButtonComponent.new(variant: :ghost, href: pre_alertas_path) do %>
-        Cancelar (F2)
+      <%= render ButtonComponent.new(variant: :ghost, href: pre_alertas_path,
+            shortcut: "F2", shortcut_label_only: true) do %>
+        Cancelar
       <% end %>
       <%= render ButtonComponent.new(variant: :outline_teal, icon: "plus-circle",
+            shortcut: "F5", shortcut_label_only: true,
             data: { action: "click->pre-alerta-editor#addPaquete",
                     pre_alerta_editor_target: "addButton" }) do %>
-        Agregar Paquete (F6)
+        Agregar Paquete
       <% end %>
       <%= render ButtonComponent.new(variant: :teal,
+            shortcut: "F10", shortcut_label_only: true,
             data: { action: "click->pre-alerta-editor#save",
                     pre_alerta_editor_target: "saveButton" }) do %>
-        Guardar (F8)
+        Guardar
       <% end %>
     </div>
   <% end %>
