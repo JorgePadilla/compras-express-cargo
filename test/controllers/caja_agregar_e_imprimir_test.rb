@@ -157,4 +157,29 @@ class CajaAgregarEImprimirTest < ActionDispatch::IntegrationTest
     assert_select "[data-shortcut='F8']", { minimum: 1 }
     assert_select "[data-shortcut='F9']", 0, "F9 quedó para el formulario de casas"
   end
+
+  # ── C21-04 · Que el No. Doc se pueda escribir ─────────────────────────────
+
+  test "el formulario tiene dónde teclear el No. Doc" do
+    get manifiesto_path(@manifiesto)
+
+    assert_select "input[name='caja_manifiesto[numero_doc]']", 1,
+                  "la 4×6 lo imprime y caja_params lo permite: sin campo no se puede llenar nunca"
+  end
+
+  test "el No. Doc se guarda al agregar la caja" do
+    post manifiesto_cajas_path(@manifiesto),
+         params: { caja_manifiesto: { alto: 23, largo: 23, ancho: 36, peso: 131, numero_doc: "DM7155" } }
+
+    assert_equal "DM7155", @manifiesto.cajas.order(:id).last.numero_doc
+  end
+
+  test "la tabla de casas muestra el No. Doc" do
+    @manifiesto.cajas.create!(alto: 23, largo: 23, ancho: 36, peso: 131, numero_doc: "DM7155")
+
+    get manifiesto_path(@manifiesto)
+
+    assert_select "th", text: "No. Doc"
+    assert_select "td", text: "DM7155"
+  end
 end

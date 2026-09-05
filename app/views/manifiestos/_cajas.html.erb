@@ -125,7 +125,7 @@
         <% end %>
       </div>
 
-      <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
         <div>
           <%= f.label :alto, "Alto", class: "block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1" %>
           <%= f.number_field :alto, step: "0.01", min: 0, data: { caja_manifiesto_target: "alto", action: "input->caja-manifiesto#medidaCambiada" },
@@ -148,6 +148,20 @@
         <div>
           <%= f.label :peso, "Peso (lbs)", class: "block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1" %>
           <%= f.number_field :peso, step: "0.01", min: 0, data: { caja_manifiesto_target: "peso" },
+                class: "block w-full min-h-11 py-3 text-center text-xl font-mono rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <%# C21-04 · El **No. Doc** de la caja — el `DM7155` de la pantalla vieja.
+            La columna existía en la tabla desde `PR-M3`, `caja_params` la
+            permitía y **la 4×6 ya la imprimía**… pero no había dónde teclearla,
+            así que la etiqueta caía siempre al `A1` de respaldo y el dato que
+            Yusef pidió no se podía meter nunca.
+
+            Va de último y sin `min-h-11` de número: no se elige, se copia de la
+            papeleta del proveedor. Queda opcional — la etiqueta ya sabe qué
+            poner cuando está vacío. %>
+        <div>
+          <%= f.label :numero_doc, "No. Doc", class: "block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1" %>
+          <%= f.text_field :numero_doc, placeholder: "DM7155",
                 class: "block w-full min-h-11 py-3 text-center text-xl font-mono rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
         </div>
       </div>
@@ -195,6 +209,8 @@
         <tr>
           <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
           <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
+          <%# C21-04 · *"Cada casa queda en la tabla con: #, letra, **NO. DOC**…"* %>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">No. Doc</th>
           <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tamaño</th>
           <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">T. envío</th>
           <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Medidas</th>
@@ -208,6 +224,7 @@
           <tr class="hover:bg-gray-50">
             <td class="px-4 py-3 text-sm text-gray-500"><%= i + 1 %></td>
             <td class="px-4 py-3 text-sm font-mono font-medium text-cec-navy"><%= caja.codigo %></td>
+            <td class="px-4 py-3 text-sm font-mono text-gray-700"><%= caja.numero_doc.presence || "—" %></td>
             <td class="px-4 py-3 text-sm text-gray-700"><%= caja.tamano_caja&.nombre || "Especificar" %></td>
             <td class="px-4 py-3 text-sm text-gray-500"><%= caja.tipos_envio_adentro.presence || "—" %></td>
             <td class="px-4 py-3 text-sm text-right font-mono text-gray-500"><%= caja.medidas || "—" %></td>
