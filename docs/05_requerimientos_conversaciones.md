@@ -8046,6 +8046,23 @@ tipos de envío que lleva (`CER,CKA`), alto, largo, ancho, volumen y peso; y por
 fila, borrar e imprimir. Los botones: **Solo Agregar (F5)** y **Agregar/Imprimir
 (F9)**.
 
+> ⚠️ **El «No. Doc» estaba cableado por los dos extremos y sin nada en el medio**
+> — lo destapó la auditoría del 2026-09-05, **arreglado el mismo día**. La
+> columna existía en `caja_manifiestos` desde `PR-M3`, `caja_params` la permitía
+> y **la 4×6 ya la imprimía**… pero **no había ningún campo donde teclearla**, ni
+> columna en la tabla de casas. Ningún seed, fixture ni test la escribía tampoco:
+> el `DM7155` que Yusef pidió **no se podía meter nunca** y la etiqueta caía
+> siempre al `A1` de respaldo.
+>
+> Es la forma que más engaña de todas: `grep numero_doc` da tres resultados y
+> parece implementado. Ahora hay campo en el formulario y columna en la tabla, y
+> dos tests afirman que lo que se teclea llega a la etiqueta.
+>
+> **Queda una pregunta para Yusef:** si el `No. Doc` es el mismo para todas las
+> cajas de un manifiesto, va a haber que teclearlo hasta 30 veces. Si repite, se
+> mueve al manifiesto o se pre-llena con el de la caja anterior — pero eso no se
+> adivina desde el audio, que solo lo muestra como columna por caja.
+
 Sin tope de cantidad: *"a veces son 50… hemos pegado 20 pico, 30 cajas"*.
 
 ---
@@ -9205,6 +9222,8 @@ listener al formulario—: tres de sus cuatro tests se ponen rojos.
 | `C23-11` | Varias cajas abiertas a la vez | ✅ **Implementado** |
 | `RP-59` | «Expedido por»: ¿el **nombre** de quien lo creó, o sus **iniciales**? | ✅ **Las iniciales** |
 | `C23-12` | La tecla de «Agregar e imprimir» — y la F5 que no disparaba | ✅ **Arreglado** |
+| `RP-60` | ¿El **desglose de paquetes** va en el manifiesto impreso, o es un export aparte? | 🔴 **Pendiente de Yusef** |
+| `RP-61` | ¿El **No. Doc** es el mismo para todas las cajas de un manifiesto? | 🔴 **Pendiente de Yusef** |
 
 **`RP-59` · Por qué era una pregunta.** Yusef preguntó él mismo qué va en ese
 campo —*"no sé si ponerle **las iniciales, la firma, el nombre**"*, *"solamente
@@ -9261,11 +9280,20 @@ y el formato que gana es el que el admin teclea en el formulario de usuarios
   una de las pruebas que, si querés, las podemos hacer"*— y Yusef aceptó: *"sí,
   lo quiero"*. Sin fecha. Ojo con
   [[project_pruebas_de_carga_dejan_huerfanos]] cuando se haga.
-- **El botón de imprimir los paquetes existe.** Yusef dijo que no lo tenía
-  —*"no tenemos cómo exportarlo, no le dejó el botón de exportar"*— y a los dos
-  minutos lo encontró solo: *"ahí está arriba, la parte de la impresora está
-  imprimir"* · *"ya vi, ya lo vi"*. Jorge: *"parece que como no está
-  familiarizado"*. **No es un bug, es una pantalla que todavía no conoce.**
+- ~~**El botón de imprimir los paquetes existe.**~~ ⚠️ **Esta nota estaba mal, y
+  la auditoría del 2026-09-05 la corrige.** Yusef estaba hablando del
+  **desglose**: *"acá abajo lleva a mostrar paquetes, esto activa todo el
+  packing… está bien hecho y está mal hecho: bien porque lo tiene, mal porque
+  **no tenemos cómo exportarlo**"*. Jorge lo mandó a «Imprimir manifiesto»
+  —*"ahí está arriba, la parte de la impresora está imprimir"*— y él contestó
+  *"ya vi, ya lo vi"*… pero **ese documento no lleva la lista de paquetes**:
+  lleva los bultos, no lo que va adentro.
+  La prueba está en el código: `ManifiestosController#documento` carga
+  `@paquetes` y **la vista nunca lo usa**, que es la huella de una sección que
+  se cayó. O sea que los dos quedaron conformes con un papel que no contesta lo
+  que él preguntó. **No se agregó acá** porque cambia un documento que va con la
+  carga y se firma: hay que preguntarle si el desglose va en el mismo papel o
+  aparte — ver `RP-60`.
 - **La pantalla se le ve chica.** *"Todo lo que se le gusta es más grandecito,
   porque lo veo pequeño; porque la pantalla de ella es más grandecita que ésta,
   pero es una laptop."* Sin pedido concreto, y `PR-U4`/`PR-U5` ya subieron los

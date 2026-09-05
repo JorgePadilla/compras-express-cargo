@@ -245,5 +245,11 @@
 
 <div class="mf-footer">
   <div><%= issuing[:name] %> · <%= issuing[:phone] %></div>
-  <div><%= @manifiesto.numero %> · pág. 1</div>
+  <%# El número de página **no se puede calcular** desde acá: el navegador
+      pagina al imprimir y el HTML no sabe en cuántas hojas cayó. Decía «pág. 1»
+      fijo, y con 12 bultos —lo normal en temporada, y Yusef habló de 25 hace un
+      año y medio— el papel salía en dos hojas afirmando las dos que eran la
+      primera. Mejor no decirlo que decirlo mal: el número del manifiesto es lo
+      que identifica al documento, y ése sí va. %>
+  <div><%= @manifiesto.numero %></div>
 </div>
