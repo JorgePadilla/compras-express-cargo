@@ -84,15 +84,26 @@ class ManifiestosController < ApplicationController
     resultado = servicio.call
 
     if resultado.ninguno?
+      # El estado sale del servicio y no escrito a mano: en el oficial es
+      # «recibido en Miami» y en el interno «disponible para entrega», y el
+      # aviso tiene que nombrar el que de verdad se buscó (`C23-14`).
       redirect_to @manifiesto,
-                  alert: "No hay paquetes para agregar. Entran los que están en «recibido en " \
-                         "Miami», del tipo #{@manifiesto.tipos_envio_nuestros}, recibidos en " \
+                  alert: "No hay paquetes para agregar. Entran los que están en " \
+                         "«#{estado_legible(servicio.estado_buscado)}», del tipo " \
+                         "#{@manifiesto.tipos_envio_nuestros}, en " \
                          "#{@manifiesto.sucursal_origen&.nombre || "—"} y todavía sin manifiesto."
       return
     end
 
     redirect_to @manifiesto,
                 notice: "Entraron #{resultado.agregados} paquete(s) sin escanear."
+  end
+
+  # El rótulo del estado tal como lo ve el operario, del **mismo mapa** que pinta
+  # las insignias en toda la app: escribir «Recibido en Miami» a mano acá sería
+  # tenerlo en dos lugares y dejar que se separen.
+  def estado_legible(estado)
+    EstadoPaqueteHelper::ETIQUETAS.fetch(estado, estado.humanize)
   end
 
   def remove_paquete

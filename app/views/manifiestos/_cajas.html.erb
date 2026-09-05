@@ -38,7 +38,7 @@
               href: empacar_sin_escanear_manifiesto_path(manifiesto), method: :post,
               disabled: candidatos.zero?,
               confirm: "Entran #{candidatos} paquete(s) al manifiesto #{manifiesto.numero} " \
-                       "sin escanearlos: los de #{manifiesto.tipos_envio_nuestros} recibidos en " \
+                       "sin escanearlos: los de #{manifiesto.tipos_envio_nuestros} que están en " \
                        "#{manifiesto.sucursal_origen&.nombre}. ¿Seguro?") do %>
           Empacar sin escanear<%= " (#{candidatos})" if candidatos.positive? %>
         <% end %>

@@ -33,13 +33,30 @@
 # sin el filtro un manifiesto se llevaría carga que está físicamente en otra
 # sucursal.
 #
-# ── Y por qué solo el oficial ────────────────────────────────────────────────
+# ── C23-14 · El interno, que quedó pendiente y ahora sí se puede ─────────────
 #
 # El estado que Yusef nombró —`recibido_miami`— **no existe en el interno**: su
-# carga ya llegó a Honduras y está en `disponible_entrega`, en la sucursal donde
-# la recibieron. Cuál es la regla equivalente ahí él no la dijo, y derivarla
-# sería inventarle un criterio a un módulo que mueve el 20% de la carga. El
-# botón se muestra solo en el oficial y el interno queda anotado en `docs/05`.
+# carga ya llegó a Honduras. `C23-10` lo dejó afuera diciendo que faltaba una
+# regla de él; buscándola apareció que **lo que faltaba era un dato nuestro**.
+#
+# `paquetes.sucursal_actual` —*"ubicación física actual"*— la escribía **un solo
+# lugar**: la recepción del propio interno. La carga que entra de Miami pasaba a
+# `en_aduana` sin dejar dicho dónde aterrizó, así que preguntar *"qué hay parado
+# en esta sucursal"* era imposible: para saber dónde estaba algo había que
+# haberlo movido antes. `C23-14` lo cierra sellándola al recibir el oficial.
+#
+# Con eso el interno es **la misma regla, con las dos piezas que le tocan**:
+#
+#   | | oficial | interno |
+#   |---|---|---|
+#   | estado | `recibido_miami` | `disponible_entrega` |
+#   | dónde está | recibido en la sucursal de origen | `sucursal_actual` = origen |
+#
+# `disponible_entrega` y no `en_aduana`: es el estado con el que la carga queda
+# **lista en una sucursal**, y es el que ya usan los otros dos lugares que
+# hablan del interno —`RecibirManifiesto#finalizar_interno!` cuenta ésos, y
+# `NotificarLlegadaASucursal` avisa por ésos—. Lo que todavía está en aduana no
+# se ha trabajado; mandarlo a otra sucursal sería moverlo antes de saber qué es.
 class EmpacarSinEscanear
   Resultado = Struct.new(:agregados, keyword_init: true) do
     def ninguno? = agregados.zero?
@@ -56,17 +73,26 @@ class EmpacarSinEscanear
   def candidatos
     return Paquete.none unless aplica?
 
-    Paquete.sin_manifiesto
-           .by_estado(ESTADO)
-           .by_tipos_envio(@manifiesto.tipo_envio_ids)
-           .recibidos_en(@manifiesto.sucursal_origen_id)
+    base = Paquete.sin_manifiesto.by_tipos_envio(@manifiesto.tipo_envio_ids)
+
+    if @manifiesto.tipo_interno?
+      base.by_estado(ESTADO_INTERNO).where(sucursal_actual_id: @manifiesto.sucursal_origen_id)
+    else
+      base.by_estado(ESTADO).recibidos_en(@manifiesto.sucursal_origen_id)
+    end
   end
 
-  # Solo el oficial, y solo mientras el manifiesto se puede tocar. Sin sucursal
-  # de origen no hay con qué filtrar y el tirón se llevaría carga de cualquier
-  # lado: en ese caso no aplica, en vez de aplicar mal.
+  # Los dos tipos, mientras el manifiesto se pueda tocar. Sin sucursal de origen
+  # no hay con qué filtrar y el tirón se llevaría carga de cualquier lado: en
+  # ese caso no aplica, en vez de aplicar mal.
   def aplica?
-    @manifiesto.tipo_oficial? && @manifiesto.creado? && @manifiesto.sucursal_origen_id.present?
+    @manifiesto.creado? && @manifiesto.sucursal_origen_id.present?
+  end
+
+  # Cómo se llama lo que entra, para que la pantalla lo pueda decir sin repetir
+  # la regla.
+  def estado_buscado
+    @manifiesto.tipo_interno? ? ESTADO_INTERNO : ESTADO
   end
 
   # `update!` uno por uno y **no `update_all`**. Es la lección que dejó escrita
@@ -93,4 +119,7 @@ class EmpacarSinEscanear
   # controller para que la consulta de `candidatos` y la del contador del botón
   # no puedan decir cosas distintas.
   ESTADO = "recibido_miami".freeze
+
+  # `C23-14` · El del interno: la carga que ya llegó y está lista en la sucursal.
+  ESTADO_INTERNO = "disponible_entrega".freeze
 end
