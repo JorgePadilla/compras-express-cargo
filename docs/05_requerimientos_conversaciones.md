@@ -9308,17 +9308,66 @@ búsqueda de `shortcut:`.
 
 ---
 
+#### C23-14 · El interno también empaca sin escanear — y por qué no se podía — ✅ **IMPLEMENTADO**
+
+`C23-10` dejó el interno afuera diciendo que faltaba una regla de Yusef.
+Buscándola apareció que **lo que faltaba era un dato nuestro.**
+
+`paquetes.sucursal_actual` dice, por su propia declaración, la *"ubicación
+física actual"*. La escribía **un solo lugar en todo el sistema**:
+`RecibirManifiesto#recibir_paquete!`, o sea la recepción del manifiesto
+**interno**.
+
+O sea que la carga que entra de Miami —por donde entra **toda** la que llega al
+país— pasaba a `en_aduana` **sin dejar dicho en qué sucursal aterrizó**. La
+columna quedaba en `nil` justo para el 100% del inventario, y solo se llenaba si
+esa carga después viajaba en un interno. Circular: **para saber dónde estaba algo
+había que haberlo movido antes.**
+
+Por eso no se podía preguntar *"qué hay parado en esta sucursal"*, que es
+exactamente lo que el tirón del interno necesita.
+
+**El arreglo va en `mover_a_aduana`**, que es por donde pasan los dos caminos
+del oficial —el de escaneo y el de sin escaneo—, y el valor ya estaba en la
+mano: `sucursal_entrega` es a dónde llegó el camión. Sin sucursal de entrega no
+se inventa ninguna: es mejor no saber dónde está algo que decir que está donde
+no está. Una migración de datos rellena lo ya recibido, derivándolo del mismo
+lugar.
+
+**Con eso el interno es la misma regla, con las dos piezas que le tocan:**
+
+| | oficial | interno |
+|---|---|---|
+| estado | `recibido_miami` | `disponible_entrega` |
+| dónde está | recibido en la sucursal de origen | `sucursal_actual` = origen |
+| tipo de envío | el del manifiesto | el del manifiesto |
+| manifiesto | ninguno | ninguno |
+
+**`disponible_entrega` y no `en_aduana`**, y no es arbitrario: es el estado con
+el que la carga queda **lista en una sucursal**, y es el que ya usan los otros
+dos lugares que hablan del interno — `RecibirManifiesto#finalizar_interno!`
+cuenta ésos y `NotificarLlegadaASucursal` avisa por ésos. Lo que sigue en aduana
+no se ha trabajado; mandarlo a otra sucursal sería moverlo antes de saber qué es.
+
+**Y el aviso de «no hay ninguno» dejó de mentir.** Nombraba «recibido en Miami»
+escrito a mano, así que en el interno iba a decir que buscaba un estado que ahí
+no existe. Ahora sale del servicio y del mismo mapa de rótulos que pinta las
+insignias en toda la app.
+
+---
+
 ### Lo que quedó abierto
 
 | # | Qué | Estado |
 |---|---|---|
-| `C23-10` | Empacar sin escanear | ✅ **Implementado** — falta la regla del interno |
+| `C23-10` | Empacar sin escanear | ✅ **Implementado**, interno incluido (`C23-14`) |
 | `C23-11` | Varias cajas abiertas a la vez | ✅ **Implementado** |
 | `RP-59` | «Expedido por»: ¿el **nombre** de quien lo creó, o sus **iniciales**? | ✅ **Las iniciales** |
 | `C23-12` | La tecla de «Agregar e imprimir» — y la F5 que no disparaba | ✅ **Arreglado** |
 | `RP-60` | ¿El **desglose de paquetes** va en el manifiesto impreso, o es un export aparte? | 🔴 **Pendiente de Yusef** |
 | `RP-61` | ¿El **No. Doc** es el mismo para todas las cajas de un manifiesto? | 🔴 **Pendiente de Yusef** |
 | `C23-13` | Las teclas dicen lo mismo en todas las pantallas | ✅ **Arreglado** |
+| `C23-14` | El interno empaca sin escanear — y `sucursal_actual` ya se sella al recibir | ✅ **Implementado** |
 
 **`RP-59` · Por qué era una pregunta.** Yusef preguntó él mismo qué va en ese
 campo —*"no sé si ponerle **las iniciales, la firma, el nombre**"*, *"solamente

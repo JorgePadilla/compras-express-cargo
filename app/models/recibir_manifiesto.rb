@@ -130,9 +130,29 @@ class RecibirManifiesto
 
   # `en_aduana` no tenía **ni un solo escritor** en todo el sistema: el único
   # camino era el dropdown de la ficha del paquete, uno por uno. Ese es el hueco.
+  #
+  # ── C23-14 · Y acá faltaba **dónde quedó** ────────────────────────────────
+  #
+  # `paquetes.sucursal_actual` dice, según su propia declaración, la *"ubicación
+  # física actual"*. La escribía **un solo lugar en todo el sistema**:
+  # `recibir_paquete!`, o sea la recepción del manifiesto **interno**.
+  #
+  # El resultado es que la carga que entra de Miami —que es por donde entra
+  # **toda** la que llega al país— pasaba a `en_aduana` **sin dejar dicho en qué
+  # sucursal aterrizó**. La columna quedaba en `nil` justo para el 100% del
+  # inventario, y solo se llenaba si después esa carga viajaba en un interno.
+  #
+  # Circular: para saber dónde está algo había que haberlo movido antes.
+  #
+  # Se destapó buscando cómo armar «empacar sin escanear» para el interno
+  # (`C23-10`), que necesita justamente *"qué hay parado en esta sucursal"* — y
+  # no se podía preguntar. No era una regla que faltara de Yusef: era este dato.
+  #
+  # El valor ya estaba en la mano: `sucursal_entrega` es a dónde llegó el camión.
   def mover_a_aduana(paquete)
     return false if paquete.en_aduana?
 
-    paquete.update(estado: "en_aduana")
+    paquete.update(estado: "en_aduana",
+                   sucursal_actual: @manifiesto.sucursal_entrega || paquete.sucursal_actual)
   end
 end

@@ -124,18 +124,58 @@ class EmpacarSinEscanearTest < ActionDispatch::IntegrationTest
 
   # ── Dónde no aplica ──────────────────────────────────────────────────────
 
-  # `recibido_miami` **no existe en el interno**: su carga ya llegó a Honduras.
-  # Cuál es la regla equivalente ahí Yusef no la dijo, y derivarla sería
-  # inventarle un criterio a un módulo que mueve el 20% de la carga.
-  test "el interno no admite empacar sin escanear" do
-    interno = Manifiesto.create!(tipo: "interno", sucursal_origen: sucursales(:zeron_sps),
-                                 sucursal_entrega: sucursales(:humuya_tgu),
-                                 tipo_envios: [ tipo_envios(:express) ])
+  # ── C23-14 · El interno, que `C23-10` había dejado afuera ────────────────
+  #
+  # `recibido_miami` no existe en el interno: su carga ya llegó a Honduras y
+  # está **`disponible_entrega` en la sucursal donde la recibieron**. Lo que
+  # faltaba para poder preguntarlo no era una regla de Yusef sino un dato
+  # nuestro: `sucursal_actual` la escribía **solo** la recepción del interno, así
+  # que la carga de Miami nunca decía dónde había aterrizado.
+
+  test "el interno se lleva lo que está disponible en su sucursal de origen" do
+    interno = manifiesto_interno
+    aqui = paquete_en_sucursal(sucursales(:zeron_sps), "1ZINTERNO001")
+
+    assert_difference -> { interno.paquetes.count }, 1 do
+      post empacar_sin_escanear_manifiesto_path(interno)
+    end
+
+    assert_equal interno, aqui.reload.manifiesto
+    assert_equal "disponible_entrega", aqui.estado, "el estado no lo toca, igual que en el oficial"
+  end
+
+  test "el interno no se lleva lo que está en otra sucursal" do
+    interno = manifiesto_interno
+    alla = paquete_en_sucursal(sucursales(:humuya_tgu), "1ZOTRASUC777")
 
     post empacar_sin_escanear_manifiesto_path(interno)
 
-    assert_redirected_to manifiesto_path(interno)
-    assert_match(/no admite/i, flash[:alert])
+    assert_nil alla.reload.manifiesto_id
+  end
+
+  # `en_aduana` es carga que **todavía no se trabajó**. Mandarla a otra sucursal
+  # sería moverla antes de saber qué es; el interno se lleva lo que ya está
+  # listo, que es lo mismo que cuentan `finalizar_interno!` y el aviso de
+  # llegada.
+  test "el interno no se lleva lo que sigue en aduana" do
+    interno = manifiesto_interno
+    en_aduana = paquete_en_sucursal(sucursales(:zeron_sps), "1ZENADUANA01")
+    en_aduana.update!(estado: "en_aduana")
+
+    post empacar_sin_escanear_manifiesto_path(interno)
+
+    assert_nil en_aduana.reload.manifiesto_id
+  end
+
+  # Y el aviso nombra **el estado que de verdad se buscó**, no «recibido en
+  # Miami» escrito a mano.
+  test "sin candidatos el interno dice qué estado buscaba" do
+    interno = manifiesto_interno
+
+    post empacar_sin_escanear_manifiesto_path(interno)
+
+    assert_match(/Disponible/i, flash[:alert])
+    assert_no_match(/Miami/i, flash[:alert])
   end
 
   test "un manifiesto ya finalizado tampoco" do
@@ -196,6 +236,21 @@ class EmpacarSinEscanearTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+  def manifiesto_interno
+    Manifiesto.create!(tipo: "interno", sucursal_origen: sucursales(:zeron_sps),
+                       sucursal_entrega: sucursales(:humuya_tgu),
+                       tipo_envios: [ tipo_envios(:express) ])
+  end
+
+  # Carga que ya llegó y está lista en una sucursal de Honduras: es lo que
+  # `RecibirManifiesto` deja al recibir, y desde `C23-14` también lo que deja el
+  # oficial al pasar a aduana.
+  def paquete_en_sucursal(sucursal, tracking)
+    paquete_candidato(tracking: tracking).tap do |p|
+      p.update!(estado: "disponible_entrega", sucursal_actual: sucursal)
+    end
+  end
 
   def paquete_candidato(tracking:, tipo_envio: tipo_envios(:express), sucursal_recepcion: nil)
     Paquete.create!(

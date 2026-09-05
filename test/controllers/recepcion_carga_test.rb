@@ -206,4 +206,63 @@ class RecepcionCargaTest < ActionDispatch::IntegrationTest
       estado: "enviado_honduras", manifiesto: manifiesto
     )
   end
+
+  # ── C23-14 · Dónde quedó la carga ────────────────────────────────────────
+  #
+  # `paquetes.sucursal_actual` dice, por su propia declaración, la *"ubicación
+  # física actual"*. La escribía **un solo lugar en todo el sistema**: la
+  # recepción del manifiesto **interno**.
+  #
+  # O sea que la carga que entra de Miami —por donde entra **toda** la que llega
+  # al país— pasaba a `en_aduana` sin dejar dicho en qué sucursal aterrizó. La
+  # columna quedaba en nil justo para el 100% del inventario, y solo se llenaba
+  # si esa carga después viajaba en un interno: para saber dónde estaba algo
+  # había que haberlo movido antes.
+  #
+  # Se destapó buscando cómo armar «empacar sin escanear» para el interno
+  # (`C23-10`), que necesita preguntar *"qué hay parado en esta sucursal"*.
+
+  test "C23-14 · recibir una caja deja dicho en qué sucursal quedó la carga" do
+    manifiesto = manifiestos(:enviado)
+    manifiesto.update!(sucursal_entrega: sucursales(:zeron_sps))
+    caja = manifiesto.cajas.create!(alto: 10, largo: 10, ancho: 10, peso: 5)
+    paquete = manifiesto.paquetes.first || paquetes(:disponible_entrega_juan)
+    paquete.update!(manifiesto: manifiesto, caja_manifiesto: caja,
+                    estado: "enviado_honduras", sucursal_actual: nil)
+
+    RecibirManifiesto.new(manifiesto, user: users(:digitador)).recibir_caja!(caja)
+
+    assert_equal "en_aduana", paquete.reload.estado
+    assert_equal sucursales(:zeron_sps), paquete.sucursal_actual,
+                 "sin esto no se puede preguntar qué hay parado en una sucursal"
+  end
+
+  # El camino **sin escaneo** llega por otra puerta y tiene que sellar igual: es
+  # el que Yusef se quedó *"porque a veces no da tiempo"*, y es justamente el que
+  # llega sin cajas.
+  test "C23-14 · el camino sin escaneo también deja dicho dónde quedó" do
+    manifiesto = manifiestos(:enviado)
+    manifiesto.update!(sucursal_entrega: sucursales(:zeron_sps))
+    paquete = paquetes(:disponible_entrega_juan)
+    paquete.update!(manifiesto: manifiesto, caja_manifiesto: nil,
+                    estado: "enviado_honduras", sucursal_actual: nil)
+
+    RecibirManifiesto.new(manifiesto, user: users(:digitador)).finalizar!(con_faltantes: true)
+
+    assert_equal sucursales(:zeron_sps), paquete.reload.sucursal_actual
+  end
+
+  # Sin sucursal de entrega no se inventa ninguna: es mejor no saber dónde está
+  # que decir que está donde no está.
+  test "C23-14 · sin sucursal de entrega no le inventa una" do
+    manifiesto = manifiestos(:enviado)
+    manifiesto.update!(sucursal_entrega: nil)
+    paquete = paquetes(:disponible_entrega_juan)
+    paquete.update!(manifiesto: manifiesto, caja_manifiesto: nil,
+                    estado: "enviado_honduras", sucursal_actual: nil)
+
+    RecibirManifiesto.new(manifiesto, user: users(:digitador)).finalizar!(con_faltantes: true)
+
+    assert_nil paquete.reload.sucursal_actual
+  end
 end
