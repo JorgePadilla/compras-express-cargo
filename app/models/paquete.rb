@@ -115,7 +115,10 @@ class Paquete < ApplicationRecord
   # **No se escribe por `paquete_params`**: solo por `MarcarCobroExcepcion`, con
   # PIN de supervisor. Es la misma regla que `PR-13.d` le puso al precio de una
   # línea — si se puede editar suelto, el registro deja de servir como prueba.
-  enum :cobro_excepcion, { solo_volumetrico: "solo_volumetrico" },
+  # `solo_peso` es el espejo: cobrar el real **aunque gane el volumétrico**.
+  # Jorge, 2026-09-06: *"él quiere poder cobrar por libra o volumen volumétrico
+  # de vez en cuando, **dependiendo el caso**"*. Son las dos mitades de lo mismo.
+  enum :cobro_excepcion, { solo_volumetrico: "solo_volumetrico", solo_peso: "solo_peso" },
        prefix: :cobro, validate: { allow_nil: true }
 
   # PR-D1.b: mapping estado → columna de fecha. El cambio a un estado
@@ -752,6 +755,12 @@ class Paquete < ApplicationRecord
     return true if cobro_solo_volumetrico?
 
     cliente&.cobra_solo_volumetrico?(tipo_envio_id) || false
+  end
+
+  # El espejo: cobrar el peso real aunque el volumétrico sea mayor. **Solo existe
+  # a nivel paquete** — no hay trato de cliente equivalente, y no se inventa uno.
+  def cobra_solo_peso?
+    cobro_solo_peso?
   end
 
   def sucursal_del_numero
@@ -1575,7 +1584,8 @@ class Paquete < ApplicationRecord
     if peso.present? || peso_volumetrico.present?
       self.peso_cobrar = VolumetricoCalculator.entre_peso_y_vlbs(
         peso || 0, peso_volumetrico || 0,
-        solo_volumetrico: cobra_solo_volumetrico?
+        solo_volumetrico: cobra_solo_volumetrico?,
+        solo_peso: cobra_solo_peso?
       )
     end
   end

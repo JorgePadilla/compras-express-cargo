@@ -137,7 +137,12 @@ class MarcarCobroExcepcion
   def detalle
     return "se le quitó la excepción" if @excepcion.nil?
 
-    "cobra solo el volumétrico (#{@paquete.peso_volumetrico&.to_f} lb) " \
-      "en vez del real (#{@paquete.peso&.to_f} lb)"
+    if @excepcion == "solo_peso"
+      "cobra solo el peso real (#{@paquete.peso&.to_f} lb) " \
+        "aunque el volumétrico sea #{@paquete.peso_volumetrico&.to_f} lb"
+    else
+      "cobra solo el volumétrico (#{@paquete.peso_volumetrico&.to_f} lb) " \
+        "en vez del real (#{@paquete.peso&.to_f} lb)"
+    end
   end
 end

@@ -9554,7 +9554,7 @@ hay forma de saber por qué.
 
 ---
 
-### C24-02 · «Tarifa especial», que nombró y no definió — 🔴 `RP-62`
+### C24-02 · «Tarifa especial» y «por libras» — ✅ **CERRADA, y `RP-62` estaba de más**
 
 En la misma respiración apareció una segunda cosa:
 
@@ -9567,18 +9567,40 @@ Y al cerrar enumeró **tres** clases de excepción, no una:
 > "Pero son cobros especiales, ¿a qué me refiero? **Tanto por libras, tanto por
 >  volumen o tanto**…" *(la frase queda a medias)*
 
-De las tres, **solo «por volumen» tiene caso concreto** —los generadores—. Las
-otras dos las nombró y no las definió:
+**Y acá se abrió una `RP-62` que no hacía falta.** Se leyó como si «por libras» y
+«tarifa especial» fueran dos funciones nuevas sin definir. **No lo son**, y basta
+mirar los audios anteriores. Jorge lo cortó el 2026-09-06:
 
-| Clase | Qué se sabe |
+> "Él quiere poder cobrar **por libra o volumen volumétrico de vez en cuando,
+>  dependiendo el caso**. Es que la tarifa son de **reuniones anteriores** que se
+>  supone que ya funciona."
+
+| Lo que se leyó como pregunta nueva | Lo que en realidad es |
 |---|---|
-| **por volumen** | El caso de los generadores. Cobra el volumétrico aunque sea menor |
-| **por libras** | Solo el nombre. ¿Es forzar el peso real cuando manda el volumétrico? |
-| **tarifa especial** | Solo el nombre. ¿Un `precio_libra` distinto? ¿Una tarifa del catálogo? ¿Un monto fijo? |
+| «tanto por libras, tanto por volumen» | **Cuál de los dos pesos se cobra**, caso por caso. Son las **dos mitades de lo mismo**, no dos funciones |
+| «tarifa especial» | **Ya existe**: `PreciosEspecialesDelCliente`, el megacuadro de la ficha del cliente. Lo pidió él en la **Conversación 7** — *"ese precio especial para un cliente debería estar en el cliente"* |
 
-**`RP-62` pregunta las dos que faltan.** Adivinarlas sería inventar una regla de
-plata, que es la línea que este repo no cruza
-([[project_precios_los_carga_yusef]]).
+Y el cobro por volumen tampoco era nuevo: **`RP-04b`** ya lo había cerrado, de su
+propia hoja —*"hay clientes que solo se les cobra volumen en ciertos
+servicios"*—, implementado en `PR-C6.41` por cliente × servicio.
+
+**Entonces lo único nuevo de `C24` es el alcance**: lo que existía por cliente,
+él lo quiere poder poner **en un paquete suelto**. Eso es `C24-01`, y las dos
+mitades quedaron construidas:
+
+| Excepción | Qué hace |
+|---|---|
+| `solo_volumetrico` | Cobra el volumétrico **aunque sea el menor** — el caso de los generadores |
+| `solo_peso` | Cobra el peso real **aunque gane el volumétrico** — el espejo |
+
+**La excepción del paquete le gana al trato del cliente**, que es lo que Yusef
+pidió con *"exclusivamente esa"*: sin esa precedencia, un cliente con el flag de
+`PR-C6.41` no podría tener nunca un paquete cobrado por libra.
+
+**Lección, más ancha que este caso.** Antes de abrir una `RP` hay que buscar el
+término en las conversaciones anteriores. «Tarifa especial» y «cobro por volumen»
+tenían nombre propio en este sistema desde hacía meses, y la `RP-62` mandaba a
+preguntarle al cliente algo que él ya había contestado dos veces.
 
 ---
 

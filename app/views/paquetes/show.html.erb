@@ -231,16 +231,19 @@ end %>
   <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6" data-controller="dialogo">
     <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">Excepción de cobro</h3>
     <p class="text-xs text-gray-600 dark:text-gray-300 mb-3">
-      <% if @paquete.cobro_excepcion.present? %>
+      <% if @paquete.cobro_solo_volumetrico? %>
         Este paquete cobra <strong>solo el volumétrico</strong>
         (<%= @paquete.peso_volumetrico %> lb) en vez del real (<%= @paquete.peso %> lb).
+      <% elsif @paquete.cobro_solo_peso? %>
+        Este paquete cobra <strong>solo el peso real</strong>
+        (<%= @paquete.peso %> lb) aunque el volumétrico sea mayor (<%= @paquete.peso_volumetrico %> lb).
       <% else %>
         Hoy cobra el mayor entre el peso real y el volumétrico, que es la regla normal.
       <% end %>
     </p>
     <%= render ButtonComponent.new(variant: :secondary, size: :sm,
           data: { action: "dialogo#abrir" }) do %>
-      <%= @paquete.cobro_excepcion.present? ? "Quitar la excepción" : "Cobrar solo por volumen" %>
+      <%= @paquete.cobro_excepcion.present? ? "Cambiar cómo se cobra" : "Cobrar distinto este paquete" %>
     <% end %>
 
     <dialog data-dialogo-target="dialogo" style="margin: auto"
@@ -248,10 +251,23 @@ end %>
       <%= form_with url: cobro_excepcion_paquete_path(@paquete), method: :post do %>
         <%# El valor va en un `hidden`: el botón ya dice cuál de los dos actos es,
             así que no hay nada que elegir adentro del modal. %>
-        <%= hidden_field_tag :cobro_excepcion, @paquete.cobro_excepcion.present? ? "" : "solo_volumetrico" %>
+        <%# C24-01 · Las tres opciones, porque son **dos mitades de lo mismo**:
+            Jorge, 2026-09-06, aclarando lo que Yusef pidió — *"él quiere poder
+            cobrar por libra o volumen volumétrico de vez en cuando, dependiendo
+            el caso"*. Un `select` y no un `hidden`, que ahora hay qué elegir. %>
+        <div class="mb-1">
+          <%= label_tag :cobro_excepcion, "Cómo se cobra este paquete", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= select_tag :cobro_excepcion,
+                options_for_select([
+                  [ "Lo normal: el mayor entre peso real y volumétrico", "" ],
+                  [ "Solo el volumétrico, aunque sea menor", "solo_volumetrico" ],
+                  [ "Solo el peso real, aunque gane el volumétrico", "solo_peso" ]
+                ], @paquete.cobro_excepcion.to_s),
+                class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+        </div>
         <div class="bg-gray-50 px-5 py-3 border-b border-gray-200">
           <h3 class="text-base font-semibold text-gray-800">
-            <%= @paquete.cobro_excepcion.present? ? "Volver al cobro normal" : "Cobrar solo por volumen" %>
+            Cómo se cobra este paquete
           </h3>
           <p class="text-xs text-gray-600 mt-0.5">
             Lo autoriza un supervisor con su PIN. Queda registrado quién y por qué.
@@ -754,7 +770,7 @@ end %>
           <% autorizacion = Autorizacion.where(documento: @paquete, accion: "cobro_excepcion").recientes.first %>
           <dd class="mt-1">
             <span class="inline-flex items-center gap-1 rounded-full bg-cec-gold/20 px-2 py-0.5 text-xs font-medium text-cec-navy dark:bg-cec-gold/25 dark:text-cec-gold">
-              cobro por volumen<% if autorizacion %> · autorizó <%= autorizacion.autorizado_por.nombre %><% end %>
+              <%= @paquete.cobro_solo_peso? ? "cobro por peso real" : "cobro por volumen" %><% if autorizacion %> · autorizó <%= autorizacion.autorizado_por.nombre %><% end %>
             </span>
           </dd>
         <% end %>
