@@ -100,8 +100,13 @@ class MedicionController < ApplicationController
   # un solo documento.
   def etiqueta
     @paquete = Paquete.find(params[:id])
-    @paquetes = if params[:hermanas] == "1" && @paquete.dividido?
-      [ @paquete, *@paquete.paquetes_hermanos ].select { |p| p.medido_at.present? }.sort_by { |p| p.numero_caja.to_i }
+    # C26-04 · Las cajas del envío salen por **warehouse receipt** y no por
+    # `dividido?`: ese campo puede venir vacío, y entonces salía **una sola**
+    # etiqueta —el bug que Jorge vio en «Reimprimir el grupo»—. Es el mismo
+    # `dividido?` que ya se había sacado de `GrupoDeUnion` y que quedó vivo acá.
+    @paquetes = if params[:hermanas] == "1"
+      @paquete.cajas_del_mismo_envio.where.not(medido_at: nil).to_a.presence ||
+        [ @paquete ].select { |p| p.medido_at.present? }
     else
       [ @paquete ].select { |p| p.medido_at.present? }
     end

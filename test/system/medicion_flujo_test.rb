@@ -55,6 +55,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_equal "MD", @paquete.medido_por
     assert_match(%r{/medicion/#{@paquete.id}/etiqueta\?print=true}, lo_que_abrio)
     assert_equal "codigo_medicion", foco, "la pistola queda lista para la siguiente"
+    assert_selector "[data-medicion-target='bannerReimprimirTexto']", text: "Reimprimir la etiqueta"
   end
 
   test "un grupo de tres: la grilla se pinta, cambia al medir, y las tres stickers salen juntas" do
@@ -120,8 +121,12 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_selector "dialog[open]", text: "Se va a seguir sin estas cajas"
 
     click_on "Sí, facturar lo que hay"
+
     assert_no_selector "dialog[open]", wait: 5
-    assert_selector "[data-medicion-target='grupoSello']", text: "MD"
+    # Cierra el envío: la pantalla se limpia y el banner dice qué pasó.
+    assert_selector "[data-medicion-target='banner']", text: "Se pasa sin el grupo completo (MD)"
+    assert_no_selector "[data-medicion-target='grilla'] button"
+    assert_equal "MD", PreAlerta.where.not(union_parcial_at: nil).last.union_parcial_por
   end
 
   test "lo que no se encuentra es un modal rojo grande: Enter lo cierra, Escape no" do
@@ -151,6 +156,9 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_selector "[data-medicion-target='grilla'] button", count: 3
     assert_selector "[data-medicion-target='codigoCaja']", text: "#{@paquete.numero_recepcion}-1"
     assert_equal "medicion_peso", foco
+    # C26-04 · El botón dice lo que va a pasar: con cajas por medir, no imprime.
+    assert_selector "[data-medicion-target='guardarTexto']", text: "Guardar y seguir con la 2 de 3"
+    assert_selector "[data-medicion-target='grilla'] button", text: "MIDIENDO", count: 1
 
     # La primera: al guardar, la pantalla salta sola a la segunda.
     send_keys "10", :enter, "10", :enter, "10", :enter, "10"
@@ -165,6 +173,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_selector "[data-medicion-target='codigoCaja']", text: "#{@paquete.numero_recepcion}-3", wait: 5
 
     # La tercera cierra el envío: una sola impresión con las tres stickers.
+    assert_selector "[data-medicion-target='guardarTexto']", text: "Guardar e imprimir las 3"
     send_keys "12", :enter, "12", :enter, "12", :enter, "12"
     espiar_impresion
     send_keys :f10
@@ -172,6 +181,14 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_selector "[data-medicion-target='banner']", text: "3 de 3 medidas", wait: 5
     assert_equal etiqueta_medicion_path(cajas.first, hermanas: "1", print: "true"), lo_que_abrio
     assert_equal 3, Paquete.where(numero_recepcion: @paquete.numero_recepcion).where.not(medido_at: nil).count
+
+    # C26-04 · Y la pantalla queda limpia para el envío siguiente, con el
+    # resultado y lo único que todavía sirve: reimprimir las tres.
+    assert_selector "[data-medicion-target='banner']", text: "Se imprimieron 3 stickers"
+    assert_selector "[data-medicion-target='bannerReimprimirTexto']", text: "Reimprimir las 3 del envío"
+    assert_no_selector "[data-medicion-target='grilla'] button"
+    assert_no_selector "[data-medicion-target='codigoCaja']", visible: true
+    assert_equal "codigo_medicion", foco
   end
 
   private
