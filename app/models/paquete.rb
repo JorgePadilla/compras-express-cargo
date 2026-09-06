@@ -412,7 +412,7 @@ class Paquete < ApplicationRecord
   # **dentro** del alcance del que llama. Con `where` pelado, un exacto fuera
   # del alcance cortaría la escalera y el sufijo nunca se probaría.
   def self.buscar_escaneado(valor)
-    termino = valor.to_s.strip.upcase
+    termino = limpiar_codigo_escaneado(valor).upcase
     return none if termino.blank?
 
     exacto = all.where("UPPER(paquetes.tracking) = ?", termino)
@@ -432,7 +432,9 @@ class Paquete < ApplicationRecord
   end
 
   scope :buscar, ->(term) {
-    term = term.to_s.strip
+    # C26-04 · Antes de `parsear_codigo_de_caja`: el QR de medición trae el
+    # código adentro, y si no se limpia primero el patrón de caja nunca matchea.
+    term = limpiar_codigo_escaneado(term)
     return all if term.empty?
 
     # Escaneo de una caja concreta: cae directo en ella, no en sus hermanas.
@@ -790,8 +792,20 @@ class Paquete < ApplicationRecord
   # recepción exacto, o el tracking exacto por `buscar_escaneado`. No es
   # `buscar`, que hace ILIKE sobre descripción y nombre de cliente: una
   # estación que mide no puede adivinar.
+  # C26-04 · El QR de la etiqueta de medición lleva `MED <código> <peso>
+  # <alto>x<largo>x<ancho>`. Lo que identifica es el código; el resto es
+  # redundancia. Tolerante al separador: todo lo escaneado hasta hoy es
+  # `[A-Z0-9-]`, y un `|` por keyboard-wedge puede no llegar como `|`.
+  QR_DE_MEDICION = /\AMED[^A-Z0-9]+(?<codigo>[A-Z0-9-]+)(?:[^A-Z0-9].*)?\z/im
+
+  def self.limpiar_codigo_escaneado(term)
+    term = term.to_s.strip
+    m = QR_DE_MEDICION.match(term)
+    m ? m[:codigo] : term
+  end
+
   def self.por_codigo_de_etiqueta(codigo)
-    term = codigo.to_s.strip
+    term = limpiar_codigo_escaneado(codigo)
     return none if term.blank?
 
     if (parsed = parsear_codigo_de_caja(term))

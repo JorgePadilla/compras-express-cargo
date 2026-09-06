@@ -10030,7 +10030,7 @@ aviso al escanear el manifiesto interno de vuelta. Esta conversación es el
 
 ---
 
-### Medición: el módulo — ✅ **LA ESTACIÓN ESTÁ** (2026-09-06); la etiqueta, en el PR siguiente
+### Medición: el módulo — ✅ **HECHO** (2026-09-06: la estación y la etiqueta)
 
 #### C26-02 · Se llama «Medición» y va en medio de la línea — ✅ **HECHO**
 
@@ -10120,7 +10120,7 @@ excepción con PIN y la deja en la bitácora de `/autorizaciones`. La pistola
 resuelve con `Paquete.por_codigo_de_etiqueta`, estricto: código de caja,
 número de recepción o tracking exactos, nunca por descripción.
 
-#### C26-04 · La etiqueta de medición — 🔜 **PR siguiente**
+#### C26-04 · La etiqueta de medición — ✅ **HECHA**
 
 > "Sí va una etiqueta. Es chiquitita, va a ser pequeña, porque **solo va a
 >  llevar el QR y la información de medidas y pesos**. No le vamos a meter
@@ -10306,7 +10306,7 @@ pesos tecleados en vivo.
 |---|---|---|
 | `C26-01` | La cola en un servidor aparte | ✅ **Hecho** en `#431` |
 | `C26-02`…`03` | Medición: la estación y «unir» | ✅ **Hecho** — `/medicion`, rol `medicion`, grupo con faltantes, modal rojo, facturar parcial con PIN |
-| `C26-04` | La etiqueta de medición | 🔜 **PR siguiente** |
+| `C26-04` | La etiqueta de medición | ✅ **Hecha** — Dymo 2.25×1.25, QR `MED <código> <peso> <medidas>` que la búsqueda, recibir carga y la pistola entienden; F10 guarda e imprime, F9 reimprime |
 | `C26-08`…`11` | Pre-factura: consolidación visible, split, fecha de trabajo, notificar | 📄 Documentado; es el próximo bloque |
 | `C26-12` | Entrega: la etiqueta que se escanea | 📄 Documentado |
 | `C26-15` | Perfil «medición» | ✅ Existe, y **solo ve su estación**: clientes, pre-alertas y paquetes pasan ahora por `can_access?` — antes esa política era «todos» y ningún controller la consultaba |

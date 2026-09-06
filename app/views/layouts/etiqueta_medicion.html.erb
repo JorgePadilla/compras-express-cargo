@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <title>Medición — <%= etiqueta_codigo_barras(@paquete) || @paquete.tracking %></title>
+  <meta charset="UTF-8">
+  <style>
+    /* C26-04 · La etiqueta de MEDICIÓN: Dymo 2.25 × 1.25 in, la misma
+       impresora que /etiquetar en Miami — Yusef: *"vamos a usar la misma de
+       Miami, comprar otra"*. Solo el QR y los números: *"no le vamos a meter
+       nombre ni nada"*.
+
+       Layout propio y no la plantilla de /ajustes_etiqueta, por la misma
+       razón que la 4×6: `EtiquetaPlantilla` es singleton y describe la
+       etiqueta del paquete de Miami; ésta tiene campos fijos y otro dueño.
+       Que quepa lo mide `test/system/etiqueta_medicion_cabe_test.rb` en
+       Chrome; `overflow: hidden` recorta en silencio. */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    @page { size: 2.25in 1.25in; margin: 0; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #000; -webkit-font-smoothing: none; }
+    .med {
+      width: 2.25in; height: 1.25in;
+      padding: .04in .06in;
+      display: flex; gap: .06in; align-items: center;
+      overflow: hidden;
+      line-height: 1.0;
+    }
+    /* Los hijos no se encogen: si no cabe, desborda y el test lo ve. */
+    .med > * { flex: 0 0 auto; }
+    .med .qr { width: 1.0in; height: 1.0in; }
+    .med .qr svg { width: 1.0in; height: 1.0in; display: block; }
+    .med .datos { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: .02in; }
+    .med .fecha  { font-size: 7pt; }
+    .med .dims   { font-size: 9pt; font-weight: 700; white-space: nowrap; }
+    .med .cifra  { font-size: 10pt; font-weight: 700; white-space: nowrap; }
+    .med .cifra .u { font-size: 6.5pt; font-weight: 700; }
+    .med .pies   { font-size: 8pt; white-space: nowrap; }
+    .med .codigo { font-family: 'Courier New', monospace; font-size: 6.5pt; white-space: nowrap; overflow: hidden; }
+    .med + .med { page-break-before: always; }
+    @media screen {
+      body { background: #e5e7eb; padding: 24px; }
+      .med { background: #fff; outline: 1px dashed #9ca3af; margin: 0 auto 16px; }
+    }
+  </style>
+</head>
+<body>
+  <%= yield %>
+  <%= render "layouts/etiqueta_ajustar_ancho" %>
+  <%= render "layouts/etiqueta_autoprint" %>
+</body>
+</html>

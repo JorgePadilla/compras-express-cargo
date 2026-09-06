@@ -65,6 +65,15 @@ class MedicionController < ApplicationController
     render json: { ok: false, errores: e.record.errors.full_messages }, status: :unprocessable_entity
   end
 
+  # C26-04 · La etiqueta de medición: Dymo 2.25 × 1.25, QR + fecha/hora,
+  # medidas, LBS, VLBS y PIES³. Sin nombre. Solo existe después de medir.
+  def etiqueta
+    @paquete = Paquete.find(params[:id])
+    raise ActiveRecord::RecordNotFound, "sin medir" if @paquete.medido_at.blank?
+
+    render layout: "etiqueta_medicion"
+  end
+
   # C26-03 · Facturar lo que hay: la excepción, con PIN de un jefe.
   def facturar_parcial
     pre_alerta = PreAlerta.find(params[:id])
@@ -100,7 +109,8 @@ class MedicionController < ApplicationController
       caja: (paquete.cantidad_paquetes.to_i > 1 ? "#{paquete.numero_caja} de #{paquete.cantidad_paquetes}" : nil),
       peso: paquete.peso&.to_f, alto: paquete.alto&.to_f, largo: paquete.largo&.to_f, ancho: paquete.ancho&.to_f,
       peso_volumetrico: paquete.peso_volumetrico&.to_f, peso_cobrar: paquete.peso_cobrar&.to_f,
-      medir_url: medir_medicion_path(paquete) }
+      medir_url: medir_medicion_path(paquete),
+      etiqueta_url: (etiqueta_medicion_path(paquete, print: "true") if paquete.medido_at.present?) }
   end
 
   def unir_de(grupo)

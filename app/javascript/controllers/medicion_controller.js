@@ -15,11 +15,11 @@ export default class extends conEnterAvanza(Controller) {
   static targets = [
     "codigo", "aviso", "panel", "codigoCaja", "tracking", "caja", "cliente", "tipoEnvio", "descripcion", "previa",
     "unir", "unirTitulo", "unirFaltantes", "unirSello", "facturarParcial",
-    "form", "peso", "alto", "largo", "ancho", "guardar", "banner", "medidos",
+    "form", "peso", "alto", "largo", "ancho", "guardar", "reimprimir", "banner", "medidos",
     "problemaModal", "problemaTitulo", "problemaTexto", "problemaEntendido", "medirDeNuevo",
     "excepcionModal", "excepcionFaltantes", "excepcionError", "supervisor", "pin", "motivo", "autorizar"
   ]
-  static values = { escanearUrl: String }
+  static values = { escanearUrl: String, etiquetaUrlTemplate: String }
 
   connect() {
     this._seq = 0
@@ -201,9 +201,29 @@ export default class extends conEnterAvanza(Controller) {
         }
         this._agregarFila(data.paquete)
         this.avisoTarget.textContent = data.mensaje
+        this._paqueteGuardado = data.paquete.id
         this._limpiarPanel()
-        this.codigoTarget.focus()
+        this._imprimir(data.paquete.etiqueta_url)
       })
+  }
+
+  // C26-04 · La etiqueta se abre en pestaña nueva, se imprime y se cierra sola
+  // (`_etiqueta_autoprint`); cuando el foco vuelve, la pistola ya está lista.
+  // Mismo patrón que /etiquetar.
+  _imprimir(url) {
+    if (!url && this._paqueteGuardado) url = this.etiquetaUrlTemplateValue.replace("ID", this._paqueteGuardado)
+    if (!url) { this.codigoTarget.focus(); return }
+    this._ultimaEtiquetaUrl = url
+    this.reimprimirTarget.classList.remove("hidden")
+    window.open(url, "_blank")
+    window.addEventListener("focus", () => this.codigoTarget.focus(), { once: true })
+    this.codigoTarget.focus()
+  }
+
+  reimprimir() {
+    if (!this._ultimaEtiquetaUrl || this._modalAbierto()) return
+    window.open(this._ultimaEtiquetaUrl, "_blank")
+    window.addEventListener("focus", () => this.codigoTarget.focus(), { once: true })
   }
 
   _agregarFila(p) {
@@ -277,6 +297,7 @@ export default class extends conEnterAvanza(Controller) {
   teclaGlobal(e) {
     if (this._modalAbierto()) return
     if (e.key === "F10") { e.preventDefault(); this.guardar() }
+    if (e.key === "F9")  { e.preventDefault(); this.reimprimir() }
     if (e.key === "F2")  { e.preventDefault(); this.limpiar() }
   }
 

@@ -12,6 +12,10 @@
 <div data-controller="medicion audio"
      <%= tag.attributes(atributos_de_audio) %>
      data-medicion-escanear-url-value="<%= escanear_medicion_index_path %>"
+     <%# C26-04 · La URL de la etiqueta la manda el servidor con cada medición;
+         este template es el respaldo de «Reimprimir» y, de paso, la puerta
+         que `pantallas_en_el_menu_test` exige para una ruta anidada. %>
+     data-medicion-etiqueta-url-template-value="<%= etiqueta_medicion_path(id: "ID", print: true) %>"
      data-action="medicion:ok->audio#success
                   medicion:unir->audio#alert
                   medicion:grupoCompleto->audio#success
@@ -82,7 +86,9 @@
 
         <div class="mt-5 flex flex-wrap items-center gap-3">
           <%= render(ButtonComponent.new(variant: :gold, size: :lg, shortcut: "F10", shortcut_label_only: true,
-                data: { medicion_target: "guardar", action: "medicion#guardar" })) { "Guardar" } %>
+                data: { medicion_target: "guardar", action: "medicion#guardar" })) { "Guardar e imprimir" } %>
+          <%= render(ButtonComponent.new(variant: :secondary, size: :lg, shortcut: "F9", shortcut_label_only: true,
+                data: { medicion_target: "reimprimir", action: "medicion#reimprimir" }, class: "hidden")) { "Reimprimir etiqueta" } %>
           <%= render(ButtonComponent.new(variant: :secondary, size: :lg, shortcut: "F2", shortcut_label_only: true,
                 data: { action: "medicion#limpiar" })) { "Limpiar" } %>
         </div>

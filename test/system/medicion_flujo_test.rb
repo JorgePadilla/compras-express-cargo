@@ -31,8 +31,14 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     send_keys "10", :enter, "12", :enter, "14"
     assert_nil @paquete.reload.medido_at, "nada se guardó todavía"
 
+    # C26-04 · F10 guarda **e imprime**: abre la etiqueta en pestaña nueva.
+    # `window.open` se reemplaza para no abrir nada de verdad y poder afirmar
+    # a dónde iba (el Chrome de los tests no bloquea popups).
+    page.execute_script("window.open = function(u){ window.__abrio = u }")
     send_keys :f10
     assert_selector "[data-medicion-target='medidos'] tr", text: "Juan", wait: 5
+    assert_match(%r{/medicion/#{@paquete.id}/etiqueta\?print=true}, page.evaluate_script("window.__abrio").to_s,
+                 "la etiqueta se imprime al guardar")
     assert_not_nil @paquete.reload.medido_at
     assert_equal 12.5, @paquete.peso.to_f
     assert_equal "codigo_medicion", foco, "la pistola queda lista para la siguiente"
