@@ -50,7 +50,12 @@ Rails.application.configure do
   # config.cache_store = :mem_cache_store
 
   # Replace the default in-process and non-durable queuing backend for Active Job.
-  # config.active_job.queue_adapter = :resque
+  # 2026-09-06 · La cola de verdad (ver la migración `LaColaDeVerdad`). Jorge:
+  # *"en un servidor solo para colas"* — el worker es el `background_worker` de
+  # `render.yaml`, aparte del web; el web no lleva `SOLID_QUEUE_IN_PUMA`. Sin
+  # `connects_to`: las tablas viven en la base principal, en una migración
+  # normal, porque Render corre `db:migrate` y eso no carga esquemas aparte.
+  config.active_job.queue_adapter = :solid_queue
 
   # Set host to be used by links generated in mailer templates.
   config.action_mailer.default_url_options = {

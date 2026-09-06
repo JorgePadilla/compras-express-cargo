@@ -4866,7 +4866,7 @@ Yusef, no código. `PR-I4` hace la ventana de espera y el correo, y deja el ganc
 
 ---
 
-### A7-08 · Escanear el manifiesto de sucursal notifica a todos — ✅ **IMPLEMENTADO en PR-I3/PR-I4, sin la ventana**
+### A7-08 · Escanear el manifiesto de sucursal notifica a todos — ✅ **IMPLEMENTADO en PR-I3/PR-I4; la ventana, desde el 2026-09-06**
 
 > **Jorge:** "¿Solo con que escanee el manifiesto le notifique a todos los clientes
 >  en Tegucigalpa, o que escanee paquete por paquete?"
@@ -4907,7 +4907,8 @@ El correo de faltantes tampoco sale en el interno: `A7-06` lo pidió para el
 **internacional** (*"si falta una caja, manda un correo al correo tal"*), y acá
 el faltante no se pierde de vista.
 
-**El aviso está en `PR-I4`, y sale al cerrar la recepción — no hay ventana.**
+**El aviso está en `PR-I4`. Del 2026-09-01 al 06 salió al cerrar la recepción, sin
+ventana; desde el 2026-09-06 la ventana existe** (ver abajo).
 
 **Y la razón no es de diseño: la cola de trabajos de este repo no está
 conectada.** Verificado el 2026-09-01:
@@ -4934,9 +4935,40 @@ o una hora?) queda sin efecto** hasta que la cola se conecte.
 
 **Decisión de Jorge (2026-09-01): la cola no se conecta por ahora** — *"no vamos
 a meter colas ahorita eso pone lento las cosas"*. Se le aclaró que una cola no
-pone lento el request —hoy `:async` ya manda en un hilo aparte, y el costo real
-es el worker aparte en Render— y la decisión quedó igual. **No volver a
-proponerlo**; lo que sigue abajo queda como riesgo aceptado.
+pone lento el request y la decisión quedó igual.
+
+**Revertida por Jorge el 2026-09-06, por escrito:** *"vamos a usar solid queues
+y vamos a poner todos esos jobs en un servidor aparte del web service… se
+hablaba de un delay que se va a usar colas; te había dicho que no, que lo
+hiciéramos instantáneo, pero con que más cosas ocupas colas, definitivamente
+hagámoslo, pero en un servidor solo para colas"*. Lo que se hizo, en un PR:
+
+- **Las tablas de `solid_queue` en la base principal, por migración normal.** El
+  instalador las deja en un esquema aparte para una base separada, que se carga
+  con `db:prepare`; Render corre `db:migrate`, que jamás carga un
+  `*_schema.rb`, y sobre una base que existe `db:prepare` **migra en vez de
+  cargar**. Con el layout del instalador staging habría quedado con el adaptador
+  puesto y cero tablas. Como migración, entran a `structure.sql` y a la base de
+  test, donde un lint afirma que existen.
+- `config.active_job.queue_adapter = :solid_queue` en producción (staging corre
+  como producción). Desarrollo y test siguen en `:async` / `:test`.
+- **El worker es un servidor aparte**: los `background_worker` de `render.yaml`,
+  que ya existían corriendo `solid_queue:start` sin tablas de dónde tomar
+  trabajo. El web no lleva `SOLID_QUEUE_IN_PUMA`. **Falta que Jorge confirme en
+  el dashboard de Render que `cec-worker-staging` está desplegado** y que su log
+  muestra al supervisor arrancar: el blueprint lo declara, nadie lo vio correr.
+- **Tres jobs nocturnos despiertan.** `config/recurring.yml` estaba escrito y
+  dormido: `CleanEmptyPreAlertasJob` (3am, borra suavemente pre-alertas vacías
+  de más de 30 días), `MarcarCotizacionesExpiradasJob` (1am) y
+  `MarcarCuotasVencidasJob` (1:30am). Corren desde el primer deploy.
+- **Todos los `deliver_later` pasan a ser durables**: facturas, cotizaciones,
+  notas, pre-alertas, faltantes, contraseñas.
+- **La ventana de `A7-08` vuelve**: el primer paquete escaneado del interno
+  programa `NotificarLlegadaASucursalJob` a 30 minutos (`RP-32` sigue abierta:
+  ¿30 o 60?; se cambia sin deploy con `Configuracion.set("ventana_aviso_llegada_min", "60")`).
+  Hay **dos que avisan** —la ventana y el cierre— y por eso la idempotencia vive
+  en el paquete (`llegada_notificada_at`): la ventana avisa lo escaneado hasta
+  ahí, cerrar después avisa solo a los que faltaban, y nadie recibe dos veces.
 
 **Deuda que esto destapó, y que es más grande que este bloque:** *todos* los
 `deliver_later` de hoy corren sobre el mismo adaptador no durable — la factura
@@ -5518,7 +5550,7 @@ Sobre prefactura Yusef fue claro en que todavía no toca:
 | Id | Qué |
 |---|---|
 | ~~`RP-31`~~ | ~~¿Pie cúbico o libra volumétrica?~~ (`A7-27`) — **✅ contestada** en la hoja de redondeos del 2026-08-12: **por libra volumétrica**; el pie cúbico *"no afluye en precio"*. Ver `A8-02` |
-| `RP-32` | ⏸️ **SIN EFECTO hasta que la cola de trabajos se conecte** (2026-09-01). ¿De cuánto es la ventana de notificación al escanear el manifiesto de sucursal — media hora, una hora? (`A7-08`). `PR-I4` avisa **al cerrar la recepción**, sin ventana, porque un job diferido se pierde: el adaptador efectivo es `AsyncAdapter` y no hay tablas de `solid_queue`, aunque `render.yaml` levante workers para él. Cuando se conecte, la pregunta vuelve a tener sentido |
+| `RP-32` | ▶ **Activa desde el 2026-09-06, puesta en 30 minutos.** ¿De cuánto es la ventana de notificación al escanear el manifiesto de sucursal — media hora, una hora? (`A7-08`). Estuvo sin efecto del 2026-09-01 al 06 porque no había cola. El número sigue siendo de Yusef: se cambia sin deploy con `Configuracion.set("ventana_aviso_llegada_min", "60")` |
 | ~~`RP-33`~~ | ~~Al cambiar el servicio en `/etiquetar`, ¿la pre-alerta se corrige sola o se marca resuelta?~~ **✅ se corrige sola** cuando no hay ambigüedad — `PR-C7.02` |
 | ~~`RP-34`~~ | ~~Los paquetes que hoy están en `prefacturado`, ¿a qué estado se migran?~~ **✅ no se migra ninguno**: el estado se queda, solo deja de poder elegirse a mano — `PR-C7.03` |
 | `RP-35` | El Excel de roles × operaciones (`A7-28`) — lo hace Evelin |
