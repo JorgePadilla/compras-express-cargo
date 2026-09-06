@@ -136,11 +136,15 @@ class CajaManifiestoTest < ActiveSupport::TestCase
   end
 
   # ── C23-03 · Los pies cúbicos, sin tocar el ÷166 ─────────────────────────
-  test "los pies cúbicos van por el mismo calculador, redondeando hacia arriba" do
+  # C25-05 · **Exactos.** Este test afirmaba el ceil (`12`) de la regla B; Yusef
+  # vio ese `12` impreso donde la cuenta daba `11.02` y pidió el exacto para el
+  # proveedor, que redondea por su cuenta. El ceil sigue vivo en
+  # `VolumetricoCalculator.pies_cubicos` para /etiquetar — acá es el papel.
+  test "los pies cúbicos van por el mismo calculador, exactos para el proveedor" do
     caja = manifiestos(:creado).cajas.create!(alto: 23, largo: 23, ancho: 36, peso: 131)
 
-    # 23×23×36 = 19_044 in³ · ÷1728 = 11.02 → 12
-    assert_equal 12, caja.pies_cubicos
+    # 23×23×36 = 19_044 in³ · ÷1728 = 11.02 — y se imprime 11.02, no 12
+    assert_equal 11.02, caja.pies_cubicos
     # Y el volumen del proveedor sigue siendo el ÷166, intacto.
     assert_in_delta 114.72, caja.volumen.to_f, 0.01
   end

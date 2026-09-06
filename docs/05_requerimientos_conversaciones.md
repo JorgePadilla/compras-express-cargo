@@ -9005,11 +9005,14 @@ volumétrica (÷166), no el pie cúbico. Ahora la tabla lleva **las dos columnas
 rotuladas** —`VLBS` y `PIES³`— y el total, las dos líneas.
 
 **El total de pies³ es la suma de los pies³ de cada bulto**, no el pie cúbico del
-volumen total. `pies_cubicos` redondea **hacia arriba a entero** por bulto
-(regla (B) de `VolumetricoCalculator`, de la hoja de Yusef), así que sumar los
-redondeados y redondear la suma dan números distintos: se eligió el primero
-porque es el que cuadra con la columna que está arriba, y un total que no suma
-lo que tiene encima es un papel que nadie firma.
+volumen total — un total que no suma lo que tiene encima es un papel que nadie
+firma.
+
+> ⚠️ **Corregido en `C25-05` (2026-09-06).** Acá decía que cada bulto salía
+> redondeado hacia arriba (regla B) y que por eso se sumaban ceils. Yusef vio
+> ese redondeo impreso —un `12` donde la cuenta daba `11.02`— y lo mandó a
+> exacto para el proveedor. Ahora la columna y el total van con dos decimales
+> y no hay dos cuentas que difieran.
 
 #### C23-08 · «Es prioridad», más grande — ✅ **ARREGLADO**
 
@@ -9626,3 +9629,216 @@ Es la misma diferencia entre corregir y prevenir, y él pidió lo segundo.
 | El circuito de autorización | ✅ `Autorizacion` guarda quién, qué, por qué y con PIN; su `documento` es **polimórfico** |
 | Quiénes son «supervisor o para arriba» | ✅ Se **deriva** de `User::ROLES_AUTORIZANTES`, como hace `BajarCajasConPin` |
 | La pantalla gemela | ⚠️ La pre-alerta se edita en **admin y en el portal del cliente**. La excepción no puede aparecer en el portal |
+
+---
+
+## Conversación 25 (2026-09-05) — la 4×6 impresa de verdad, la Dymo que corta nombres, y el pito que no se oye
+
+Reunión semanal, **34 minutos**, transcrita con `whisper small`. Más **la foto**
+que mandó Yusef por WhatsApp: la 4×6 del bulto de `PR-411` **impresa en Miami**,
+con sus anotaciones a mano encima. Es la primera vez que esa etiqueta sale de
+una impresora real, y la primera prueba de escaneo:
+
+> "Ya me mandó que escaneó. Sí, **el escaneo está bueno**, dice MIA."
+
+Yusef sobre la 4×6 en general: *"esto yo lo veo bastante bien"*. Lo que sigue
+son ajustes de tamaño y dos correcciones de dato, más pedidos en **otras dos
+pantallas** que salieron en la misma llamada.
+
+> ⚠️ **Sobre el transcript.** Los dos hablando encima, y whisper se pierde
+> seguido. Lo dudoso: *"rascar en mi fiesta"* (= manifiesto), *"el
+> telecopier"*, *"pit o de súper"* (= un pito más fuerte), *"hasta a mi leen
+> QR"*, y la frase *"ni mal este, poco más"* de c004, que no se sabe a qué
+> señala. **La foto es la fuente más precisa**: dice campo por campo qué
+> agrandar.
+
+---
+
+### La 4×6 del bulto
+
+#### C25-01 · `A1` un poco más grande — ✅ **ARREGLADO**
+
+En la foto, con flecha: *«← un poco + grande»*. De 58 a **64 pt** (se probó 66:
+dejaba la etiqueta sin aire, ver abajo).
+
+#### C25-02 · El tipo de envío del proveedor: ampliar al tamaño — ✅ **ARREGLADO**
+
+En la foto, sobre `AEREO EXPRESS`: *«← AMPLIAR al tamaño»*. Y en el audio:
+
+> "Lo único que podría ocupar es que **esto sea más grande, aprovechar el
+>  tamaño**. El tipo de envío. Porque **es lo importante**."
+> "Tiene que ser **justificado o ajustado**, no sé cuál es la palabra correcta,
+>  para que tal vez **llene hasta cierto punto y si se pasa que lo achique.
+>  Automáticamente**."
+> "La letra tiene que quedar que **la pueda leer a 3 metros**."
+
+De 17 a **28 pt, ajustado al ancho**: arranca en el máximo y baja de a punto
+hasta caber, con piso en 16. **No existía nada parecido en el repo** —nada medía
+`scrollWidth`— y lo piden las dos etiquetas en la misma llamada, así que va como
+**un solo partial** (`_etiqueta_ajustar_ancho`) que incluyen los dos layouts.
+Corre en `DOMContentLoaded`, antes del `window.print()` del autoprint: si
+corriera después, la impresora se llevaría el tamaño sin ajustar.
+
+#### C25-03 · El número de manifiesto, grande — ✅ **ARREGLADO**
+
+En la foto, con flecha: *«← Grande»*. Audio: *"este también grande"*. De 15 a
+**22 pt**.
+
+#### C25-04 · `LBS` siempre con dos decimales — ✅ **ARREGLADO**
+
+> "Aquí creo que deberías de ponerle **siempre punto cero cero**, ya para que se
+>  vea **parejito**."
+
+`146` pasa a `146.00`. Solo en la 4×6: `etiqueta_num` se queda como está para la
+Dymo, donde manda el espacio.
+
+#### C25-05 · `PIES³` exacto, no redondeado hacia arriba — ✅ **ARREGLADO**, y matiza una regla escrita
+
+Yusef vio un `12` donde la cuenta daba `11.02` y preguntó si era exacto. Jorge
+explicó el redondeo hacia arriba. Su respuesta:
+
+> "**Ponerlo exacto.** […] Eso [el redondeo] es **para cobro nuestro**; ellos
+>  tienen que redondearlo como yo los redondeo."
+> "Si le pones 12 acá, me lo leen 12 y **me clavan**. Porque la política con la
+>  empresa que yo cargo es que **ahí no te cobran 11.02 sino 11; cuando ya pasa
+>  11.5 te cobran 12. Entonces ahí te compensan una con la otra**."
+
+**Esto matiza la regla B.** `VolumetricoCalculator` dice desde junio —de la hoja
+del propio Yusef— *"pies³ = pulgadas³ / 1728, SIEMPRE hacia arriba"*. Hoy la
+acota: es para nuestro calculador; **para el papel que va al proveedor va
+exacto**, porque el proveedor redondea half-up por su cuenta y un ceil impreso
+es plata regalada en cada bulto.
+
+Decisión de Jorge (2026-09-06): **exacto solo en los papeles del proveedor** —la
+4×6 y el manifiesto impreso—; el calculador de `/etiquetar` conserva la regla B.
+Por eso hay un `pies_cubicos_exactos` al lado del `pies_cubicos` de siempre, y
+el test del ceil no cambió. La nota de `C23-07` que justificaba sumar ceils en
+el manifiesto impreso quedó vieja y está corregida arriba.
+
+#### C25-06 · El código de la caja, un poco más grande — ✅ **ARREGLADO** (con un dudoso)
+
+En el audio, después de confundir el código de la caja con el número del
+manifiesto —*"los dos empiezan con M"*—: *"este es el manifiesto y este es la
+caja del manifiesto… **un poquito más grande también**"*. De 12 a **14 pt**.
+
+> ⚠️ En la foto el `-A` del código está **tachado**, y no se entiende por qué.
+> Decisión de Jorge: el `-A` **se queda** — es lo que distingue la caja del
+> manifiesto y es lo que lee el QR; sacarlo haría que los dos textos digan lo
+> mismo, que es justo lo que lo confundió. Si en Miami vuelve a salir, se le
+> pregunta.
+
+#### Lo que se queda como está
+
+- `CORPORACION KARSAM`: *"también está bien, **no necesita tan grande**"*.
+- El QR: *"**el QR no necesita más**, se escanea de lejos"*.
+
+#### Lo que costó: el aire, medido tres veces
+
+`.bulto` mide 6 in y tiene `overflow: hidden`: lo que no cabe **se recorta en
+silencio**. La foto engaña —esa etiqueta no tenía ni servicio ni destino, así
+que se veía con más aire del que hay—. Con **todos** los renglones puestos:
+
+| | Aire que queda |
+|---|---|
+| Antes de C25 (`PR-411`) | 0.36 in |
+| Con los tamaños pedidos, tal cual | **0.04 in** — cuatro píxeles |
+| Como quedó | **0.21 in** |
+
+0.04 no es margen: Miami imprime desde Windows con otra métrica de Arial. El
+aire salió **sin sacar ningún renglón**: el de prioridad baja de 30 a 22 pt (era
+lo más grande después de la letra y Yusef no lo nombró), y el QR de 1.5 a 1.4 in
+(25 módulos de ~1.4 mm; se leyó *"de lejos"* con 1.5). `etiqueta_bulto_cabe_test`
+lo mide en Chrome en cada corrida, con un caso nuevo: un proveedor largo
+(«CKM MARITIMO CONSOLIDADO») **se achica en vez de recortarse**.
+
+---
+
+### La Dymo de `/etiquetar` — *"la chiquitilla"*
+
+#### C25-07 · El nombre del cliente en su fila, con auto-ajuste; el tercero a otro renglón — ✅ **ARREGLADO** (con un cambio de sitio)
+
+> "Ella se llama Sofía García… Jorge Alejandro Federico. Ahí está el detalle."
+> "Primero este lo deberías de **mover del lugar, para abajo: el tercero**, el
+>  nombre del tercero, para acá abajo. Para que aquí **te quepa el nombre
+>  completo** y ese nombre **se ajuste el tamaño**."
+> "El nombre tiene que ir a **una sola fila** y vamos a mover el tercero para
+>  la de abajo." · "El tercero va a llevar **de dos a cuatro** lo más."
+
+La causa: `f-cliente` ponía nombre y tercero en la misma fila, y el nombre lleva
+`text-overflow: ellipsis` — el tercero lo empujaba hasta cortarlo. Ahora el
+nombre va **solo** en su fila con el mismo ajuste al ancho de la 4×6
+(`_etiqueta_ajustar_ancho`, piso 6 pt): un nombre de 40 caracteres se achica y
+sale entero; uno de 50 toca el piso y ahí para, porque por debajo ya no se lee.
+Es [[project_etiqueta_trackings_completos]] llevada al nombre: **ajustar, no
+cortar**.
+
+**Y el tercero no quedó donde Yusef señaló, y hay que decírselo.** Dijo *"para la
+de abajo"*. Se probó **literal** —una fila propia debajo del nombre— y en la
+etiqueta más llena (entrega personal, NO PAGADO, driver, tracking secundario y
+tercero) **desborda 8 px**, medido en Chrome; `C20-08` ya lo había dicho para el
+pago. En el renglón del registro faltan **61 px**: la fecha con hora sola ocupa
+76. Y los dos sitios del bloque inferior están llenos (`ubicación` 75/75,
+`sucursal` 124/124). El único renglón con lugar de sobra es el del **número de
+recepción** —un dato de largo fijo—, que cumple lo otro que dijo: *"ponelo acá,
+que esto no va a crecer tanto"*. Ahí quedó, a la derecha, a 6 pt con ajuste
+propio, y **cabe entero con aire cero** en la etiqueta más llena.
+
+| Sitio probado | Resultado (etiqueta más llena) |
+|---|---|
+| Fila propia debajo del nombre (lo que dijo) | desborda **8 px** |
+| Renglón del registro | faltan **61 px** |
+| Bloque inferior | lleno |
+| **Renglón del número de recepción** | **cabe, aire 0** |
+
+Queda para que Yusef lo vea impreso el martes: si el sitio no le gusta, lo que
+no se puede es la fila propia — habría que sacarle alto a otra cosa.
+
+#### C25-08 · «Dónde retira» dice la sucursal, no la ciudad — ✅ **ARREGLADO**
+
+> "Donde va a retirar ahora dice **San Pedro Sula**; por donde va a retirar
+>  tiene que decir **Zerón SPS**, así se llama la sucursal."
+> "La que voy a abrir se va a llamar **Carmen SPS o Norte SPS**."
+
+Con dos sucursales en la misma ciudad, la ciudad deja de decir dónde. Y había
+**dos** «San Pedro Sula» distintos en el código, arreglados los dos: el preview
+de `/ajustes_etiqueta` lo tenía **escrito a mano** (ahora muestra la sucursal de
+retiro por defecto real), y la etiqueta impresa caía a **la ciudad del cliente**
+cuando el paquete no tenía sucursal (ahora cae a la sucursal de retiro por
+defecto — la columna `retiro_por_defecto` existía y es exactamente esto; la
+ciudad queda de último recurso para que nada salga en blanco).
+
+---
+
+### El escaneo de empaque — 🔜 **PR aparte**
+
+#### C25-09 · El error es un modal
+
+> "Ese debería ser **un modal**. Sí, **siempre**." · "El modal más que todo
+>  **cuando hay error, hay alertas**." · Y del OK: *"¿que diga que sí? **No, no,
+>  no**"* — la notificación de siempre está bien.
+
+#### C25-10 · El sonido de error más fuerte
+
+> "Tiene que ser **más como pit que tú**. Porque el tú está **muy suavecito**, y
+>  está bien cuando están digitando, pero cuando están ahí **la compu está allá
+>  y ellos están acá**."
+> "Si escanea un paquete que va diferente al tipo de envío, el sistema tiene que
+>  tirarle **pipipipi**, pero no pipipipiii."
+
+Al mirar el código apareció **la causa más probable**: `/empacar` es la única
+pantalla de escaneo que **nunca cableó las preferencias de sonido** — el error
+cae siempre al tono de respaldo, y ni la variante elegida ni el volumen del
+usuario aplican. Va en su PR.
+
+---
+
+### Notas que no son tarea
+
+- **Prueba de impresión en Miami**: Jorge la hace **el martes** con Julián
+  (*"va a ser el martes igual, porque no hay nadie"*). Lo que salga de ahí es la
+  Conversación 26.
+- **Jorge usa Mac y no tiene pistola**: *"tu forma de trabajar no es la misma
+  mía"*. Las diferencias se prueban allá.
+- Del cronograma: *"de repente sí está para octubre… falta pre-factura"*.
+- Del servidor: *"lo tenía compartido y funcionaba muy bien, pero este servidor
+  lo tiene un [plan] único… noté la mejora en los reportes"*.

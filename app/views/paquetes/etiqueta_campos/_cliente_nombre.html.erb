@@ -1,6 +1,13 @@
-<%# ── Cliente ── grande y en peso normal, como en el mockup. %>
+<%# ── Cliente ── grande y en peso normal, como en el mockup.
+
+    C25-07 · Va **solo en su fila** y **se ajusta al ancho** en vez de
+    recortarse: *"para que aquí te quepa el nombre completo y ese nombre se
+    ajuste el tamaño"*. El `data-ajustar` lo lee `_etiqueta_ajustar_ancho`
+    antes del print; `data-campo` es lo que permite medirlo en el test —era el
+    único parcial sin él. %>
 <% if etiqueta_plantilla.visible?("cliente_nombre") %>
-  <span class="t" style="font-size:var(--fs-cliente-nombre); text-transform:uppercase;">
+  <span class="t" style="font-size:var(--fs-cliente-nombre); text-transform:uppercase;"
+        data-campo="cliente_nombre" data-ajustar data-ajustar-min="6">
     <%= paquete.cliente&.nombre_completo %>
   </span>
 <% end %>

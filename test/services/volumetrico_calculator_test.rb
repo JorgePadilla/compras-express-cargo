@@ -52,6 +52,14 @@ class VolumetricoCalculatorTest < ActiveSupport::TestCase
   end
 
   # ── (B) Pies cúbicos: ceil a entero ──
+  # C25-05 · El exacto, para los papeles del proveedor. Convive con el ceil de
+  # abajo, que es la regla B de la hoja de Yusef y se queda para /etiquetar.
+  test "pies_cubicos_exactos no redondea hacia arriba" do
+    assert_equal 11.02, VolumetricoCalculator.pies_cubicos_exactos(23 * 36 * 23)
+    assert_equal 1.56, VolumetricoCalculator.pies_cubicos_exactos(13 * 13 * 16)
+    assert_equal 103.83, VolumetricoCalculator.pies_cubicos_exactos(179_424)
+  end
+
   test "pies_cubicos siempre redondea hacia arriba" do
     # 179424 in³ / 1728 = 103.83 → 104
     assert_equal 104, VolumetricoCalculator.pies_cubicos(179_424)

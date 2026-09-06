@@ -40,18 +40,45 @@
        costado de la letra, no debajo: son cuatro renglones cortos contra los
        58pt de la letra, así que ocupan el alto que la letra ya gastaba. */
     .cabeza  { display: flex; justify-content: space-between; align-items: flex-start; gap: .12in; }
-    .letra   { font-size: 58pt; font-weight: 700; line-height: 1; }
+    /* C25-01 · Yusef, en la etiqueta impresa, con flecha: «A1 ← un poco +
+       grande». Un poco: de 58 a 64. (Se probó 66: dejaba 0.04 in de aire con
+       todos los renglones, que no es margen — ver el bloque de abajo.) */
+    .letra   { font-size: 64pt; font-weight: 700; line-height: 1; }
     /* El número **no compite** con la letra: es la misma identificación dicha
        dos veces, no un dato nuevo. */
-    .num     { font-size: 34pt; font-weight: 700; }
+    .num     { font-size: 36pt; font-weight: 700; }
     .cifras  { text-align: right; flex: 1; }
     .cifra   { display: flex; justify-content: flex-end; align-items: baseline; gap: .06in; line-height: 1.15; }
     .cifra .u { font-size: 12pt; font-weight: 700; letter-spacing: .02em; }
     .cifra .v { font-size: 22pt; font-weight: 700; min-width: 1.15in; text-align: right; }
     .medidas { font-size: 18pt; font-weight: 700; margin-top: .03in; }
     .servicio{ font-size: 20pt; font-style: italic; margin-top: .04in; }
-    .proveedor { font-size: 17pt; font-weight: 700; margin-top: .03in; }
-    .priority{ font-size: 30pt; font-weight: 900; letter-spacing: .02em; margin-top: .04in; }
+    /* C25-02 · El tipo de envío del proveedor pasa de 17 a **30 pt**, y se
+       ajusta al ancho solo (`_etiqueta_ajustar_ancho`): «AMPLIAR al tamaño»,
+       escribió Yusef al lado. *"Aprovechar el tamaño… porque es lo
+       importante."* El 28 es el máximo; si «CKM MARITIMO» no cabe, baja hasta
+       el piso de 16 antes de recortar. */
+    .proveedor { font-size: 28pt; font-weight: 700; margin-top: .03in; overflow: hidden; }
+    /* ── El presupuesto de alto, que es la restricción real ──────────────
+       `.bulto` mide 6 in y tiene `overflow: hidden`: lo que no cabe se
+       recorta **en silencio**. Con todos los renglones puestos (servicio,
+       proveedor, prioridad, consignatario, destino) el aire que queda es lo
+       que separa una etiqueta buena de una sin pie. Medido en Chrome:
+
+         · antes de C25 (PR-411):               0.36 in
+         · con los tamaños que pidió Yusef tal cual: **0.04 in** — cuatro
+           píxeles. Miami imprime desde Windows con otra métrica de Arial:
+           eso no es margen, es suerte.
+         · como quedó:                           ver `etiqueta_bulto_cabe_test`
+
+       De dónde salió el aire, sin sacar un solo renglón: el de prioridad baja
+       de 30 a 22 —era lo más grande después de la letra y Yusef no lo
+       nombró—, y el QR de 1.5 a 1.4 in (25 módulos de ~1.4 mm; Yusef: *"el
+       QR no necesita más, se escanea de lejos"*). Sigue en 900.
+       (Ojo: la palabra en mayúsculas no puede ir en este comentario — el
+       `<style>` viaja en el HTML y un test afirma que sin prioridad no
+       aparece.) */
+    .priority{ font-size: 22pt; font-weight: 900; letter-spacing: .02em; margin-top: .04in; }
     .consig  { font-size: 15pt; font-weight: 700; margin-top: .06in; }
     /* C23-04 · *"Lo último que le falta acá es a dónde va."* */
     .destino { font-size: 17pt; font-weight: 700; margin-top: .03in; }
@@ -63,13 +90,17 @@
         helper. %>
     .qr { margin-top: .08in; }
     .qr svg { display: block; }
-    .codigo  { font-size: 12pt; font-family: "Courier New", monospace; }
+    /* C25-06 · *"Un poquito más grande también"*: de 12 a 14. El `-A` se
+       queda — es lo que distingue la caja del número del manifiesto, y es lo
+       que lee el QR. */
+    .codigo  { font-size: 14pt; font-family: "Courier New", monospace; }
     .pie     { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; }
     .fecha   { font-size: 10pt; }
     .doc     { font-size: 24pt; font-weight: 700; }
     /* C21-05 · «Falta el número del manifiesto» — la corrección que Yusef
        escribió a mano sobre la etiqueta impresa. */
-    .manifiesto { font-size: 15pt; font-weight: 700; font-family: "Courier New", monospace; }
+    /* C25-03 · «Grande», con flecha, en la foto. De 15 a 22. */
+    .manifiesto { font-size: 22pt; font-weight: 700; font-family: "Courier New", monospace; }
 
     @media screen {
       body { background: #f3f4f6; padding: 24px; }
@@ -79,6 +110,10 @@
 </head>
 <body>
   <%= yield %>
+  <%# El ajuste va ANTES del autoprint en el markup y corre en DOMContentLoaded;
+      el autoprint imprime en `load`. Ese orden es lo que hace que la impresora
+      reciba el texto ya ajustado. %>
+  <%= render "layouts/etiqueta_ajustar_ancho" %>
   <%= render "layouts/etiqueta_autoprint" %>
 </body>
 </html>
