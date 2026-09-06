@@ -75,6 +75,7 @@ class PantallasEnElMenuTest < ActiveSupport::TestCase
     "new_categoria_precio"                => "PR-C7.12: las categorías se administran dentro de la Tabla de Servicios",
     "entregables_entregas"                => "lo pide el JS de /entregas para llenar la lista, no es una pantalla",
     "facturables_pre_facturas"            => "lo pide el JS de /pre_facturas, no es una pantalla",
+    "etiquetas_grupo_medicion"            => "C26-04: las stickers de un grupo. La URL la arma el controller y la manda en el JSON del escaneo — la pantalla no sabe qué grupo es hasta que alguien escanea una caja",
     "edit_paquete"                        => "el paquete se edita **dentro** de su ficha; el listado enlaza a `paquete_path` con el título «Abrir paquete (Editar dentro)»",
     # Las dos de abajo son deuda encontrada por este lint, no decisiones. Se
     # anotan para que se vean; sacarlas de acá es enlazarlas o borrar la ruta.

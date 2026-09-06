@@ -1,29 +1,45 @@
 require "application_system_test_case"
 
-# C26-02 · La estación de Medición, con pistola y teclado en Chrome de verdad.
+# C26-02/03 · La estación de Medición, con pistola y teclado en Chrome.
 #
-# Lo que importa acá no se ve en el JSON: que el foco vaya del escaneo al peso,
-# que Enter avance y nunca guarde, que F10 guarde y devuelva el foco a la
-# pistola, y que el problema salga en un modal rojo que Escape no cierra.
+# Lo que importa acá no se ve en el JSON: que la grilla del grupo se pinte y
+# cambie sin recargar, que el foco vaya del escaneo al peso, que Enter avance y
+# nunca guarde, y que al completar el grupo se abra **una** impresión con todas
+# las stickers.
 class MedicionFlujoTest < ApplicationSystemTestCase
   setup do
     users(:medidor).update!(iniciales: "MD")
     ingresar(users(:medidor))
-    @paquete = Paquete.create!(tracking: "1ZFLUJO00000001", cliente: clientes(:juan), tipo_envio: tipo_envios(:cer),
-                               sucursal_recepcion: sucursales(:miami), estado: "en_aduana", descripcion: "Zapatos", peso: 2)
+    @paquete = caja("1ZFLUJO00000001")
   end
 
-  def escanear(codigo)
-    find("#codigo_medicion").send_keys(codigo, :enter)
+  def caja(tracking)
+    p = Paquete.create!(tracking: tracking, cliente: clientes(:juan), tipo_envio: tipo_envios(:cer),
+                        sucursal_recepcion: sucursales(:miami), estado: "recibido_miami", descripcion: "Zapatos", peso: 2)
+    p.update!(estado: "en_aduana")
+    p.reload
   end
 
+  def escanear(codigo) = find("#codigo_medicion").send_keys(codigo, :enter)
+
+  # Escanear y **esperar a que la caja esté en pantalla** antes de teclear: sin
+  # esto las teclas se van al campo de escaneo, que todavía tiene el foco, y el
+  # Enter dispara un segundo escaneo de basura.
+  def escanear_y_medir(paquete, peso, alto, largo, ancho)
+    escanear(paquete.numero_recepcion)
+    assert_selector "[data-medicion-target='codigoCaja']", text: paquete.numero_recepcion, wait: 5
+    send_keys peso, :enter, alto, :enter, largo, :enter, ancho
+  end
   def foco = page.evaluate_script("document.activeElement.id")
+  def espiar_impresion = page.execute_script("window.__abrio = null; window.open = function(u){ window.__abrio = u }")
+  def lo_que_abrio = page.evaluate_script("window.__abrio").to_s
 
-  test "escanear, teclear con Enter, guardar con F10, y la pistola queda lista" do
+  test "una caja sola: escanear, teclear con Enter, guardar con F10, y sale su sticker" do
     visit medicion_index_path
     escanear(@paquete.tracking)
 
     assert_selector "[data-medicion-target='panel']", text: "Juan", wait: 5
+    assert_selector "[data-medicion-target='panelMiami']", text: @paquete.numero_recepcion
     assert_equal "medicion_peso", foco, "después de escanear, el cursor va al peso"
 
     send_keys "12.5", :enter
@@ -31,17 +47,81 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     send_keys "10", :enter, "12", :enter, "14"
     assert_nil @paquete.reload.medido_at, "nada se guardó todavía"
 
-    # C26-04 · F10 guarda **e imprime**: abre la etiqueta en pestaña nueva.
-    # `window.open` se reemplaza para no abrir nada de verdad y poder afirmar
-    # a dónde iba (el Chrome de los tests no bloquea popups).
-    page.execute_script("window.open = function(u){ window.__abrio = u }")
+    espiar_impresion
     send_keys :f10
+
     assert_selector "[data-medicion-target='medidos'] tr", text: "Juan", wait: 5
-    assert_match(%r{/medicion/#{@paquete.id}/etiqueta\?print=true}, page.evaluate_script("window.__abrio").to_s,
-                 "la etiqueta se imprime al guardar")
-    assert_not_nil @paquete.reload.medido_at
-    assert_equal 12.5, @paquete.peso.to_f
+    assert_equal 12.5, @paquete.reload.peso.to_f
+    assert_equal "MD", @paquete.medido_por
+    assert_match(%r{/medicion/#{@paquete.id}/etiqueta\?print=true}, lo_que_abrio)
     assert_equal "codigo_medicion", foco, "la pistola queda lista para la siguiente"
+  end
+
+  test "un grupo de tres: la grilla se pinta, cambia al medir, y las tres stickers salen juntas" do
+    pa, otros = grupo_de_tres(@paquete)
+
+    visit medicion_index_path
+    escanear(@paquete.tracking)
+
+    assert_selector "[data-medicion-target='grupoTitulo']", text: "UNIR", wait: 5
+    assert_selector "[data-medicion-target='grupoTitulo']", text: "0 de 3 medidas"
+    assert_selector "[data-medicion-target='grilla'] button", count: 3
+    assert_selector "[data-medicion-target='panelPreAlerta']", text: pa.numero_documento
+    # Los dos que el cliente declaró y Miami todavía no tiene.
+    assert_selector "[data-medicion-target='grilla'] button[data-estado='esperada']", count: 2
+
+    # La primera, medida: su cuadrito cambia sin recargar.
+    send_keys "12.5", :enter, "10", :enter, "12", :enter, "14"
+    send_keys :f10
+    assert_selector "[data-medicion-target='grupoTitulo']", text: "1 de 3 medidas", wait: 5
+    assert_selector "[data-medicion-target='grilla'] button[data-estado='medida']", count: 1
+
+    # La segunda.
+    escanear_y_medir(llego(otros.first), "8", "9", "9", "9")
+    send_keys :f10
+    assert_selector "[data-medicion-target='grupoTitulo']", text: "2 de 3 medidas", wait: 5
+
+    # La tercera cierra el grupo: una sola impresión, con las tres.
+    escanear_y_medir(llego(otros.last), "5", "6", "7", "8")
+    espiar_impresion
+    send_keys :f10
+
+    assert_selector "[data-medicion-target='banner']", text: "3 de 3 medidas", wait: 5
+    assert_equal etiquetas_grupo_medicion_path(pa, print: "true"), lo_que_abrio,
+                 "las tres stickers salen en una sola impresión"
+  end
+
+  test "tocar un cuadrito que ya llegó lo selecciona, sin pistola" do
+    _pa, otros = grupo_de_tres(@paquete)
+    segunda = llego(otros.first)
+
+    visit medicion_index_path
+    escanear(@paquete.tracking)
+    assert_selector "[data-medicion-target='grilla'] button", count: 3, wait: 5
+
+    find("[data-medicion-target='grilla'] button[data-wr='#{segunda.numero_recepcion}']").click
+
+    assert_selector "[data-medicion-target='codigoCaja']", text: segunda.numero_recepcion, wait: 5
+    assert_equal "medicion_peso", foco
+  end
+
+  test "facturar lo que hay abre el modal rojo con lo que falta, y Escape no lo cierra" do
+    grupo_de_tres(@paquete)
+
+    visit medicion_index_path
+    escanear(@paquete.tracking)
+    assert_selector "[data-medicion-target='facturarParcial']", wait: 5
+
+    click_on "Facturar lo que hay"
+
+    assert_selector "dialog[open]", text: "Facturar lo que hay", wait: 5
+    assert_selector "dialog[open]", text: "1ZFALTA000000001 · no ha llegado a Miami"
+    page.driver.browser.action.send_keys(:escape).perform
+    assert_selector "dialog[open]", text: "Se va a seguir sin estas cajas"
+
+    click_on "Sí, facturar lo que hay"
+    assert_no_selector "dialog[open]", wait: 5
+    assert_selector "[data-medicion-target='grupoSello']", text: "MD"
   end
 
   test "lo que no se encuentra es un modal rojo grande: Enter lo cierra, Escape no" do
@@ -57,25 +137,23 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_equal "codigo_medicion", foco
   end
 
-  test "una caja de un grupo consolidado muestra cuántos faltan, y facturar lo que hay abre el modal rojo con la lista" do
+  private
+
+  def grupo_de_tres(paquete)
     pa = PreAlerta.create!(numero_documento: "PA-T#{SecureRandom.hex(3).upcase}", cliente: clientes(:juan),
-                           tipo_envio: tipo_envios(:aereo), consolidado: true, con_reempaque: true,
-                           estado: "pre_alerta", titulo: "Consolidado de prueba",
-                           creado_por_tipo: "usuario", creado_por_id: users(:admin).id)
-    pa.pre_alerta_paquetes.create!(tracking: @paquete.tracking, descripcion: "Zapatos", fecha: Date.current, paquete: @paquete)
-    pa.pre_alerta_paquetes.create!(tracking: "1ZFALTA000000009", descripcion: "Gorra", fecha: Date.current)
+                           tipo_envio: tipo_envios(:aereo), consolidado: true, estado: "pre_alerta",
+                           titulo: "Consolidado de prueba", creado_por_tipo: "usuario", creado_por_id: users(:admin).id)
+    pa.pre_alerta_paquetes.create!(tracking: paquete.tracking, descripcion: "Zapatos", fecha: Date.current,
+                                   paquete: paquete)
+    otros = %w[1ZFALTA000000001 1ZFALTA000000002].map do |t|
+      pa.pre_alerta_paquetes.create!(tracking: t, descripcion: "Gorra", fecha: Date.current).paquete
+    end
+    [ pa, otros ]
+  end
 
-    visit medicion_index_path
-    escanear(@paquete.tracking)
-
-    assert_selector "[data-medicion-target='unir']", text: "llegados 1 de 2", wait: 5
-    assert_selector "[data-medicion-target='unirFaltantes']", text: "1ZFALTA000000009"
-
-    click_on "Facturar lo que hay"
-
-    assert_selector "dialog[open]", text: "Facturar lo que hay", wait: 5
-    assert_selector "dialog[open]", text: "1ZFALTA000000009"
-    page.driver.browser.action.send_keys(:escape).perform
-    assert_selector "dialog[open]", text: "Facturar lo que hay", wait: 2
+  def llego(paquete)
+    paquete.update!(estado: "recibido_miami", sucursal_recepcion: sucursales(:miami))
+    paquete.update!(estado: "en_aduana")
+    paquete.reload
   end
 end

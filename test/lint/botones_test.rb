@@ -52,6 +52,12 @@ class BotonesTest < ActiveSupport::TestCase
     # La × de quitar una caja. Se mudó del componente al partial cuando el
     # <li> pasó a ser uno solo para el <template> y para las filas que pinta
     # el servidor. Es el mismo botón, en otro archivo.
+    # C26-03: el cuadrito de la grilla de Medición. Vive adentro de un
+    # <template> que el JS clona una vez por caja del grupo, así que no puede
+    # ser `ButtonComponent`: el markup se llena después de renderizar. Es una
+    # tarjeta cuadrada con cuatro renglones —la misma forma que las tarjetas de
+    # caja de /empacar, que también están crudas— y lleva su `aria-label`.
+    "app/views/medicion/index.html.erb"                      => 1,
     "app/views/shared/_caja_fila.html.erb"                   => 1,
     # La × de quitar un correo de aviso de la ficha del cliente. Mismo botón y
     # mismo motivo que el de la caja: un icono chico adentro de una fila que se

@@ -1,15 +1,17 @@
-<%# C26-04 · La etiqueta de medición de una caja. QR a la izquierda, los
-    números a la derecha: fecha y hora, medidas, LBS, VLBS, PIES³ (exactos,
-    como en la 4×6: C25-05), y el código con las iniciales de quien midió. %>
-<% p = @paquete %>
-<div class="med">
-  <div class="qr"><%= etiqueta_qr_svg(etiqueta_qr_medicion(p), tamano: "1.0in") %></div>
-  <div class="datos">
-    <div class="fecha"><%= p.medido_at.strftime("%d/%m/%Y %H:%M") %></div>
-    <div class="dims" data-ajustar data-ajustar-min="6"><%= [ p.alto, p.largo, p.ancho ].map { |m| etiqueta_num(m) }.join("x") %> in</div>
-    <div class="cifra"><span class="u">LBS</span> <%= etiqueta_num_2d(p.peso) %></div>
-    <div class="cifra"><span class="u">VLBS</span> <%= etiqueta_num_2d(p.peso_volumetrico) %></div>
-    <div class="pies">PIES³ <%= etiqueta_num_2d(VolumetricoCalculator.pies_cubicos_exactos(VolumetricoCalculator.pulgadas_cubicas(p.alto, p.largo, p.ancho))) %></div>
-    <div class="codigo" data-ajustar data-ajustar-min="5"><%= etiqueta_codigo_barras(p) || p.tracking %> · <%= p.medido_por %></div>
+<%# C26-04 · Las etiquetas de medición. Una por caja: cuando el grupo se
+    completa salen todas en un solo documento —*"que salgan las 3 stickers,
+    una para cada paquete"*— y `layouts/etiqueta_medicion` las separa con
+    `page-break-before`. %>
+<% (@paquetes || [ @paquete ]).each do |p| %>
+  <div class="med">
+    <div class="qr"><%= etiqueta_qr_svg(etiqueta_qr_medicion(p), tamano: "1.0in") %></div>
+    <div class="datos">
+      <div class="fecha"><%= p.medido_at.strftime("%d/%m/%Y %H:%M") %></div>
+      <div class="dims" data-ajustar data-ajustar-min="6"><%= [ p.alto, p.largo, p.ancho ].map { |m| etiqueta_num(m) }.join("x") %> in</div>
+      <div class="cifra"><span class="u">LBS</span> <%= etiqueta_num_2d(p.peso) %></div>
+      <div class="cifra"><span class="u">VLBS</span> <%= etiqueta_num_2d(p.peso_volumetrico) %></div>
+      <div class="pies">PIES³ <%= etiqueta_num_2d(VolumetricoCalculator.pies_cubicos_exactos(VolumetricoCalculator.pulgadas_cubicas(p.alto, p.largo, p.ancho))) %></div>
+      <div class="codigo" data-ajustar data-ajustar-min="5"><%= etiqueta_codigo_barras(p) || p.tracking %> · <%= p.medido_por %></div>
+    </div>
   </div>
-</div>
+<% end %>

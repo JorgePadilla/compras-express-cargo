@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <title>Medición — <%= etiqueta_codigo_barras(@paquete) || @paquete.tracking %></title>
+  <%# El documento puede traer **una** etiqueta o las de todo un grupo
+      (C26-04), así que el título sale de la lista y no de una caja suelta. %>
+  <% cajas = @paquetes || [ @paquete ].compact %>
+  <title>Medición — <%= cajas.size > 1 ? "#{cajas.size} etiquetas" : (etiqueta_codigo_barras(cajas.first) || cajas.first&.tracking) %></title>
   <meta charset="UTF-8">
   <style>
     /* C26-04 · La etiqueta de MEDICIÓN: Dymo 2.25 × 1.25 in, la misma

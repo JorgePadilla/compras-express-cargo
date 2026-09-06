@@ -3,10 +3,10 @@ Rails.application.routes.draw do
   resource :registro, only: %i[new create], controller: "registrations"
   resources :passwords, param: :token
 
-  resource :preferencia_tema, only: [:update], controller: "theme_preferences"
-  resource :preferencia_sidebar, only: [:update], controller: "sidebar_preferences"
+  resource :preferencia_tema, only: [ :update ], controller: "theme_preferences"
+  resource :preferencia_sidebar, only: [ :update ], controller: "sidebar_preferences"
   # PR-9.c: on/off + volumen de los tonos de escaneo, por usuario.
-  resource :preferencia_sonido, only: [:update], controller: "sonido_preferences"
+  resource :preferencia_sonido, only: [ :update ], controller: "sonido_preferences"
   # PR-13.c: el supervisor cambia el PIN con el que autoriza cambios de precio.
   resource :mi_pin, only: %i[edit update], controller: "pins"
 
@@ -38,9 +38,9 @@ Rails.application.routes.draw do
   # se ven en /paquetes (listado general), no hay listado propio.
   resources :entrega_personal, only: [ :new, :create ], path: "entrega_personal"
 
-  resources :users, except: [:destroy]
+  resources :users, except: [ :destroy ]
 
-  resources :clientes, except: [:destroy] do
+  resources :clientes, except: [ :destroy ] do
     collection { get :buscar }
     # PR-C7.37: ponerle o cambiarle la clave del portal desde la ficha. Yusef:
     # *"¿cuál es la cuenta de acceso de él? Y cambiarle la clave por si se le
@@ -49,7 +49,7 @@ Rails.application.routes.draw do
     member { patch :clave }
   end
 
-  resources :paquetes, except: [:new] do
+  resources :paquetes, except: [ :new ] do
     member do
       # PR-10.d.3: se llamaba `label`, que era el único nombre en inglés que
       # quedaba y encima nombraba mal lo que hace — esta ruta imprime el
@@ -81,14 +81,14 @@ Rails.application.routes.draw do
       post :bulk_print
       post :bulk_export
     end
-    resources :tareas, only: [:index, :new, :create, :edit, :update, :destroy] do
+    resources :tareas, only: [ :index, :new, :create, :edit, :update, :destroy ] do
       member do
         post :iniciar
         post :completar
         post :reabrir
       end
     end
-    resources :reempaques, only: [:index, :new, :create, :show]
+    resources :reempaques, only: [ :index, :new, :create, :show ]
   end
 
   # PR-9.a: rutas top-level para tareas que cuelgan del CLIENTE y todavía no
@@ -114,7 +114,7 @@ Rails.application.routes.draw do
   # turbo-frame en /etiquetar y /entrega_personal.
   get "panel_contexto", to: "panel_contexto#show"
 
-  resources :sucursales, except: [:show]
+  resources :sucursales, except: [ :show ]
 
   # C21-08 · El portal de catálogos del manifiesto. Yusef: *"que un CRUD para
   # todo, para todo lo del manifiesto… como un portal, pero que todo esté ahí,
@@ -234,6 +234,8 @@ Rails.application.routes.draw do
       get :etiqueta
     end
   end
+  # C26-04 · Las stickers de un grupo consolidado, juntas.
+  get "medicion/grupos/:id/etiquetas", to: "medicion#etiquetas", as: :etiquetas_grupo_medicion
   post "medicion/pre_alertas/:id/facturar_parcial", to: "medicion#facturar_parcial", as: :facturar_parcial_medicion
 
   resources :pre_alertas, except: %i[destroy] do
@@ -250,7 +252,7 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :pre_facturas, except: [:destroy] do
+  resources :pre_facturas, except: [ :destroy ] do
     collection { get :facturables }
     member do
       post   :confirmar
@@ -337,7 +339,7 @@ Rails.application.routes.draw do
   # borrarse para que los bookmarks viejos lleguen a algún lado y no a un 404.
   resources :categoria_precios, path: "categorias-precio"
 
-  resources :entregas, except: [:destroy] do
+  resources :entregas, except: [ :destroy ] do
     collection { get :entregables }
     member do
       post :despachar
@@ -346,7 +348,7 @@ Rails.application.routes.draw do
     end
   end
 
-  resource :caja, only: [:show], controller: "caja" do
+  resource :caja, only: [ :show ], controller: "caja" do
     post :apertura
     post :cierre
     get  :historial
@@ -357,7 +359,7 @@ Rails.application.routes.draw do
   # Client portal
   namespace :cuenta do
     root "dashboard#index"
-    resource :preferencia_tema, only: [:update], controller: "theme_preferences"
+    resource :preferencia_tema, only: [ :update ], controller: "theme_preferences"
     resources :pre_alertas do
       member do
         delete :anular
