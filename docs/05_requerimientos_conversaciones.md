@@ -9977,3 +9977,329 @@ Tres cosas más, en el mismo PR:
 - Del cronograma: *"de repente sí está para octubre… falta pre-factura"*.
 - Del servidor: *"lo tenía compartido y funcionaba muy bien, pero este servidor
   lo tiene un [plan] único… noté la mejora en los reportes"*.
+
+---
+
+## Conversación 26 (2026-09-05) — la cola aparte, el módulo de **Medición** en San Pedro, y lo que se vio en la línea
+
+Dos audios grabados **en la bodega de San Pedro Sula**, con Yusef, Vanessa y la
+gente de la línea: *«Optimización de procesos y desafíos operativos»* (**41.7
+min**) y *«Diseño de etiqueta de prefactura y perfiles de usuario»* (**2.7
+min**). Transcritos con `whisper small`; hay ruido de bodega y varias voces a
+la vez, así que los dudosos van marcados y no completados.
+
+Jorge, después, por escrito: *"hablamos de arquitectura para los jobs, vamos a
+usar solid queues… en un servidor solo para colas. Adicional, un nuevo módulo,
+el de **medición y pesaje** que se hace en San Pedro Sula; va en el área de
+logística y es la unión entre manifiesto y pre-factura. Documenta todo lo que
+puedas de pre-factura, pero en esta corrida solo trabaja solid queues y
+medición y pesaje. Facturación y entrega también, solo documenta."* Y sobre
+dónde: *"esto pasa en San Pedro Sula actualmente"*.
+
+Lo que se vio con los ojos, y que ningún audio anterior tenía: **la línea**.
+Las cajas llegan, se agrupan por letra y por nombre, se pesan, se teclean en la
+pre-factura, y cuando alguien descubre que ese cliente estaba consolidando, la
+caja **vuelve**: *"la línea no es continua, sino que tiene retorno, y es el
+retorno"* · *"ya es la tercera vez que los pesamos"*. Durante la grabación
+pasó en vivo: *"ya le había mandado el paquete y no lo agregó a la medición de
+nuevo… tiene que volver a empezar todo el proceso"*.
+
+---
+
+### La cola
+
+#### C26-01 · La cola en un servidor aparte — ✅ **HECHO en `#431`**
+
+Yusef, cuando Jorge le explicó que las notificaciones de las 7 am se encolan:
+
+> "¿Por qué Vanessa, que está en el web server, debe sufrir lo que está
+>  pasando de la cola?"
+
+Jorge: *"te lo voy a dividir, te voy a poner en otro servidor exclusivo… el
+trabajador para puras colas, todo lo que manda mensajes"*. Y el volumen que lo
+justifica, de Yusef: por manifiesto *"mil, dos mil paquetes"*, *"quinientas
+pre-facturas hechas hoy"*, y a las 7 de la mañana *"quinientos correos,
+trescientos WhatsApp y doscientos textos"*. Un servidor compartido y barato
+para el worker le pareció bien: *"es un compartido, funciona muy bien"*.
+
+Es lo que se construyó el mismo día en `#431` (ver `A7-08`, la nota del
+2026-09-06): `solid_queue` con las tablas en la base principal, el worker en
+el `background_worker` de Render, `recurring.yml` despierto, y la ventana de
+aviso al escanear el manifiesto interno de vuelta. Esta conversación es el
+**porqué** con las palabras del cliente; el cómo ya está escrito allá.
+
+---
+
+### Medición: el módulo — 🔨 **EN CONSTRUCCIÓN** (plan aprobado el 2026-09-06)
+
+#### C26-02 · Se llama «Medición» y va en medio de la línea
+
+> **Jorge:** "¿Cómo vamos a llamar a este módulo de acá?"
+> **Yusef:** "**Medición** se llama."
+
+Está *"en medio de la línea"*: después de recibir la carga, antes de la
+pre-factura. Lo que necesita, en palabras de Jorge en la bodega: *"el input de
+tracking, la información de medida y peso, y la información de si el cliente
+está consolidando o no"*. Se escanea **la etiqueta que se hizo en Miami**, una
+por una —*"exacto, es la misma; escanea… una por una"*—, y se anotan medida y
+peso: *"¿la volumétrica? sí, las dos también… medidas de tamaño y peso"*.
+
+Del lado del código, lo que ya está y el módulo reusa: al recibir una caja en
+`/recibir-carga` los paquetes quedan `en_aduana`, que es exactamente el estado
+que la pre-factura puede tomar; y el paquete **recalcula solo** el volumétrico
+y el peso a cobrar cuando se le escriben peso y medidas (`before_save`). Lo
+que **no** existe: ninguna columna dice que un paquete se midió en Honduras,
+ni quién ni cuándo; hoy el único camino es el formulario genérico del paquete,
+solo para supervisor de pre-factura.
+
+**Dónde entra en el flujo, y por qué antes de la pre-factura:** la pre-factura
+**copia** `peso_cobrar` al crearse y no lo vuelve a leer. Un paquete que ya
+está en una pre-factura no se puede medir desde acá; se dice con un modal.
+
+Jorge, con la línea parada: *"yo creo que para el lunes puedo, por lo menos,
+tener algo de acá"* (2026-09-08).
+
+#### C26-03 · «Unir»: el grupo de la pre-alerta consolidada
+
+El motivo del módulo no es pesar: es **saber, caja en mano, si ese cliente
+está consolidando**.
+
+> "Al escanearlo, el sistema le va a decir: *ey, este está consolidando, se
+>  llama Nora, tiene que estar aquí en la N*."
+> "Lo que ellos necesitan saber es si está consolidando el cliente, **para no
+>  trabajar doble**."
+> "Me gusta más **unir** porque ahí no me confundo con el otro consolidado
+>  [la solicitud en la pre-alerta]. Es lo mismo, sí, pero es la acción."
+
+Jorge lo cerró el 2026-09-06: *"en peso y medición es donde se unen,
+dependiendo de cómo está en la pre-alerta. Al escanear le tiene que salir
+**cuántos paquetes hacen falta** para que se envíen todos los paquetes con
+todas las medidas al mismo tiempo. Pueden haber excepciones donde toque
+facturar lo que se encuentre, pero se debe mostrar un **modal rojo grande**
+con el problema que se encuentre."*
+
+**Lectura, y lo que se construye:**
+
+- Al escanear, si el cliente tiene una pre-alerta **consolidada abierta** que
+  lista ese tracking, la pantalla muestra el grupo: *«UNIR · PA-000123 ·
+  llegados 3 de 5 · medidos 2 de 5»* y **cuáles faltan**, cada uno con su
+  dónde: *no ha llegado* (sigue antes de Honduras o no se ha vinculado) o
+  *llegó, sin medir*.
+- «Llegado» es un renglón con paquete en un estado de Honduras (`en_aduana`,
+  `consolidando_honduras`, `disponible_entrega`, `facturado`, `en_reparto`,
+  `entregado`). «Medido» es llegado con sello de medición.
+- Cuando se mide el último, el grupo **sale junto**: suena distinto y dice
+  *«5 de 5 medidos: el grupo va junto»*. No se cambia ningún estado: que el
+  grupo esté listo **se calcula**, no se guarda.
+- **Facturar lo que hay** es la excepción: un modal rojo grande lista los
+  faltantes y pide **PIN de un jefe** (`User::ROLES_AUTORIZANTES`) con motivo,
+  como toda excepción que cambia plata en este sistema (precio, peso, cobro por
+  volumen). Queda sellado en la pre-alerta (quién, cuándo) y en la bitácora de
+  autorizaciones. Es decisión de diseño: el operario de medición no es jefe, y
+  el modal rojo existe justamente para meter fricción. Si Yusef quiere que el
+  operario lo haga solo, es quitar el PIN del servicio.
+- Los otros problemas también son modal rojo: caja que no se encuentra; caja
+  que todavía no se recibió (*«pasala por Recibir Carga»*); caja **ya en una
+  pre-factura** (el peso ya está congelado; no se mide); y caja de una
+  pre-alerta consolidada **ya facturada** —el caso del split, `C26-09`—, que
+  avisa *«no la unas, hay que partir la pre-alerta»* y **sí deja medir**,
+  porque esa caja se factura aparte.
+
+**Lo que la pre-factura todavía no hace** (es su bloque, no éste): un paquete
+de grupo incompleto sigue apareciendo como facturable. El gancho queda
+definido y probado —`Paquete#listo_para_prefactura?`— para que
+`/pre_facturas` lo lea cuando se toque esa pantalla.
+
+#### C26-04 · La etiqueta de medición
+
+> "Sí va una etiqueta. Es chiquitita, va a ser pequeña, porque **solo va a
+>  llevar el QR y la información de medidas y pesos**. No le vamos a meter
+>  nombre ni nada."
+> "Vamos a usar la misma [Dymo] de Miami… comprar otra [impresora]."
+> "Lo que pasa es que en el QR vos ocupás que **quede amarrado**: que cuando lo
+>  escanee, ingrese al sistema la información de libras y pesos… un solo
+>  entry… es para que lo lea el sistema."
+
+Y del audio corto, mirando una impresa: *"está muy bien: está la hora, está la
+fecha, dimensiones y el peso. Lo que le hace falta son dos que tres cositas:
+que diga cuánto da en volumen, porque solo tiene las medidas pero no te da el
+volumen de esas dimensiones. Hace falta **el volumen en libras y en pies**."*
+*"Vamos a la misma etiqueta de tamaño de Miami: le pones el QR a un lado y la
+información al lado derecho."*
+
+**Lectura:** Dymo 2.25 × 1.25 in, QR a la izquierda, a la derecha fecha y hora,
+`alto x largo x ancho in`, `LBS`, `VLBS` y `PIES³` (exactos, como en la 4×6:
+`C25-05`), el código de la caja y las iniciales de quien midió. Sin nombre. El
+QR lleva el código de la caja **más** los datos (`MED <código> <peso>
+<alto>x<largo>x<ancho>`, con espacios y no `|`: una pistola por teclado en
+es-419 puede no entregar la barra). El sistema resuelve por el código y lee
+peso y medidas de la base; los datos del QR son redundancia legible, que es lo
+que él pidió. Que la búsqueda de paquetes, recibir carga y la pre-factura
+entiendan ese prefijo es parte del mismo PR.
+
+#### C26-05 · Varias cajas por paquete — decisión de Jorge
+
+> "Entonces el sistema tendría que crear que puedas agregar hasta 5, 6, 7,
+>  10… medida y peso independiente… clicky, clicky, clicky."
+
+Decisión (2026-09-06): **una medición por caja escaneada.** Cada caja de un
+split ya es un paquete con su propia etiqueta de Miami (`C20-12`,
+[[project_split_agrupa_por_tracking]]), así que escanear caja por caja es
+exactamente eso. Lo que no se construye: partir en Honduras. Si la línea
+encuentra más cajas de las que Miami contó, se anota y se pregunta (`RP-66`).
+
+#### C26-06 · La báscula — nota y pregunta
+
+> "Esas balanzas son digitales, no las puedo conectar a la máquina."
+> "Voy a pedir una nueva… tengo que ver cuáles son compatibles."
+> "Ella redondea demasiado, no tiene tan buena afinidad."
+
+Jorge: *"mandame cuál pensás comprar, a ver si tiene los protocolos o si es
+protocolo cerrado"*. Mientras no haya báscula conectada, el peso se teclea.
+`RP-63`.
+
+#### C26-07 · Futuro: medir con sensores — nota, no tarea
+
+> "Ya futuro, lo que yo quiero es que vos me creés con **sensores**, no
+>  cámaras, y medir este paquete." · Jorge: "Ya lo tengo en memoria."
+
+---
+
+### Pre-factura — 📄 **solo documentado en esta corrida**
+
+#### C26-08 · La consolidación que nadie ve
+
+Cinco pre-alertas consolidadas del mismo cliente son cinco facturas:
+
+> "Cuando son cinco consolidados diferentes, que vienen cinco pre-alertas…
+>  ellos tienen que separarlos en cinco."
+> "Ellos no tienen cómo visualizar que este es un agrupado. Yo le pasé todo
+>  junto, y tenía que haber sido separado."
+
+El peso hoy **se teclea en la pre-factura**, paquete por paquete, en vivo
+durante la grabación: *"11, 594… reviso que no tenga agrupado… no tiene
+ninguna pre-alerta, entonces se va todo junto… bajo el servicio, normal…
+entonces ya me sale el cobro"*. Con dos paquetes de la misma pre-alerta que
+llegaron después: *"solo dos lleva… le faltan otros dos de la misma"*, y para
+que el cliente no reciba aviso a medias: *"llevamos la pre-alerta acá solo para
+guardarla y que no le caiga la notificación al cliente"*.
+
+**Lo que esto pide de la pre-factura, cuando se toque:** leer el grupo de
+unión (`C26-03`) y no ofrecer como facturable un paquete de grupo incompleto
+sin la excepción sellada; y mostrar el agrupado, que hoy solo se sabe de
+memoria.
+
+#### C26-09 · El split de la pre-alerta — pregunta abierta
+
+> "El cliente puso cinco paquetes a consolidar. Cuando ya tenía cuatro, lo
+>  retiró. Y quedó uno pendiente. Esta pre-alerta debe tener una nueva
+>  pre-alerta o algo… un **split**: la que ya facturó dice facturado, y este
+>  que todavía no ha venido te lo paso a esta otra nueva."
+> "Ese split **no existe**, es la mejora que ocupo en esto. Es una de las
+>  veinte que tiene."
+
+Hoy la pre-alerta consolidada se cierra entera al facturar; el que llegó
+después queda huérfano. `RP-64`. Medición ya lo reconoce (modal *«no la unas,
+hay que partir la pre-alerta»*), pero partirla es de este bloque.
+
+#### C26-10 · El flujo de trabajo y la notificación de las 7 am
+
+> "Vamos a seleccionar el tipo de envío que vamos a procesar. Vamos a
+>  seleccionar la guía [el manifiesto] que vamos a procesar. Y la fecha de
+>  trabajo… la ponemos mañana, porque el sistema notifica que está disponible
+>  en Honduras **mañana a las 7 de la mañana**: manda textos, WhatsApp,
+>  emails, cambia los estatus."
+
+Es la carga que justifica la cola (`C26-01`): un manifiesto grande son cientos
+de mensajes de golpe. Del sistema viejo; el nuevo tiene la pieza (worker
+aparte) y le falta el disparo programado por fecha de trabajo, que va con
+pre-factura.
+
+#### C26-11 · Notificar: Miami todo, Honduras al estar disponible
+
+> "En Miami todo cae en notificación. Acá no la mandamos, para no confundir."
+
+Coincide con lo ya construido: el aviso al cliente sale al cerrar la
+recepción o con la ventana de `A7-08`, no al escanear cada caja.
+
+---
+
+### Facturación y entrega — 📄 **solo documentado**
+
+#### C26-12 · La etiqueta que se escanea al entregar
+
+> "Esta es la etiqueta de entrada, cliente. Esa es la que van a escanear para
+>  entregar." · "Y esto lo van a empacar en una sola."
+
+Al terminar la pre-factura se imprime la etiqueta del cliente; entrega la
+escanea. Varios paquetes del mismo cliente van *"en una sola"* bolsa. Es del
+módulo de entregas, con `A7-30`.
+
+#### C26-13 · «El forzado» ya se usa
+
+> "El forzado va a ir para esta carga de esta fecha."
+
+Es la excepción de cobro de `C24-01` (`#422`, `#424`), en uso para un
+manifiesto concreto. Nota.
+
+---
+
+### Perfiles de usuario — 📄 **documentado**, con una excepción
+
+#### C26-15 · El perfil «medición», y el de entrega
+
+> "Hay usuarios que no van a tener acceso a nada. Digamos, si tenemos una
+>  persona para medición exclusivamente, usan su código y **no se les habilita
+>  nada más que eso**." · "Este perfil va a ser nuevo."
+> "Igual va a haber uno que solo son de entrega, como lo que viste. Son con
+>  un código, acceden con su código, con su código hacen todo."
+
+**El rol `medicion` se crea con el módulo** (decisión de Jorge, 2026-09-06):
+solo ve `/medicion`; los roles de Honduras también entran a la estación. El de
+entrega queda para el bloque de entregas.
+
+#### C26-16 · Código de acceso con tiempo límite — pregunta abierta
+
+> "En el de pre-factura ellos ingresan su código al iniciar sesión: acceden al
+>  sistema, presionan un botón, ingresan el código y ese queda activado hasta…
+>  hay que ponerle un tiempo límite de unas **4 horas, 5 horas**."
+> Para admin: "¿Un día?" · "No, un día no… **doce a catorce horas** lo más."
+> "La cosa es que no lo dejen abierto y se van."
+
+Hoy la sesión **no expira**: no hay ningún timeout en `Session` ni en
+`Authentication`. `RP-65`: qué es «el código» (¿el PIN de 4 dígitos que ya
+existe, u otro?), y los dos plazos.
+
+---
+
+### Notas que no son tarea
+
+- **Red y servidor en la bodega:** *"está lento"*, F5 repetido, *"cincuenta
+  megas"*, *"dos [enlaces] y un balanceador en medio"*. Yusef quedó de ver el
+  enlace; no es del sistema.
+- **La cola como tecnología:** Jorge le contó que con la nueva se puede
+  *"parar, mover"* un trabajo. *"Está bien."*
+- **Lo que viene:** la carga de Miami de esta semana *"viene un montón"*;
+  Jorge va el lunes a la bodega a empezar con Medición en la línea.
+
+**Dudosos del transcript:** *"Daimón"* (¿Dymo?, la báscula compatible),
+*"lentes de cámara"* (¿un medidor que ya tiene?), *"Malticago"*, *"P8"*,
+*"Lurvin"*, Linares y Leo (la gente de la línea: *"Linares y Leo trabajan
+doble"*), y los números sueltos (*"265"*, *"28, 38"*, *"22, 42"*), que son
+pesos tecleados en vivo.
+
+---
+
+### Lo que quedó abierto
+
+| # | Qué | Estado |
+|---|---|---|
+| `C26-01` | La cola en un servidor aparte | ✅ **Hecho** en `#431` |
+| `C26-02`…`04` | Medición: la estación, «unir», la etiqueta | 🔨 **En construcción** (plan del 2026-09-06: docs, estación, etiqueta) |
+| `C26-08`…`11` | Pre-factura: consolidación visible, split, fecha de trabajo, notificar | 📄 Documentado; es el próximo bloque |
+| `C26-12` | Entrega: la etiqueta que se escanea | 📄 Documentado |
+| `C26-15` | Perfil «medición» | 🔨 Se crea con el módulo; el de entrega, 📄 |
+| `RP-63` | ¿Qué báscula compra Yusef, y tiene protocolo abierto? | 🔴 **Pendiente de Yusef** — mientras, el peso se teclea |
+| `RP-64` | Split de la pre-alerta consolidada cuando se factura parcial | 🔴 **Pendiente** — va con el bloque de pre-factura |
+| `RP-65` | «El código» con tiempo límite: ¿es el PIN? ¿4–5 h operarios, 12–14 h admin? | 🔴 **Pendiente de Yusef** — hoy la sesión no expira |
+| `RP-66` | Más cajas en Honduras que las que Miami contó: ¿se parte acá? | 🔴 **Pendiente de Yusef** — hoy no se parte en Honduras |
