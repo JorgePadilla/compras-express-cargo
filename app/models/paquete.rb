@@ -100,6 +100,24 @@ class Paquete < ApplicationRecord
     anulado:               "anulado"
   }
 
+  # C24-01 · La excepción de cobro **de este paquete**.
+  #
+  # Yusef, sobre unos generadores de 400 lb reales y 150 volumétricas: *"es lo
+  # que yo voy a cobrar"*. Y el alcance, que lo puso él: *"el cliente **no es que
+  # toda la carga** ya se la cobro por peso, **sino que exclusivamente esa**"* —
+  # por eso no sirve el flag de `ClienteCobroVolumetrico`, que es por cliente ×
+  # tipo de envío.
+  #
+  # **Un solo valor hoy.** Él nombró tres clases —*"tanto por libras, tanto por
+  # volumen o tanto…"*— y las otras dos las nombró sin definirlas (`RP-62`).
+  # Entran acá cuando las conteste, sin migración.
+  #
+  # **No se escribe por `paquete_params`**: solo por `MarcarCobroExcepcion`, con
+  # PIN de supervisor. Es la misma regla que `PR-13.d` le puso al precio de una
+  # línea — si se puede editar suelto, el registro deja de servir como prueba.
+  enum :cobro_excepcion, { solo_volumetrico: "solo_volumetrico" },
+       prefix: :cobro, validate: { allow_nil: true }
+
   # PR-D1.b: mapping estado → columna de fecha. El cambio a un estado
   # actualiza `fecha_<estado>` + `fecha_<estado>_by_user_id` (excepto
   # pre_alerta que NUNCA se sobrescribe — Yusef 2026-04-29).
@@ -720,6 +738,20 @@ class Paquete < ApplicationRecord
 
   def cobra_por_metro_cubico?
     forma_de_cobro == :metros_cubicos
+  end
+
+  # C24-01 · ¿Este paquete se cobra solo por el volumétrico, aunque sea el menor?
+  #
+  # **La excepción del paquete gana**, y si no hay, sigue mandando el trato del
+  # cliente que puso `PR-C6.41`. Las dos conviven: una es *"a este cliente, en
+  # este servicio, siempre"* y la otra *"a este paquete, esta vez"*.
+  #
+  # Vive acá y no en `calculate_peso_cobrar` porque el cotizador de pantalla
+  # también tiene que poder preguntarlo sin guardar nada.
+  def cobra_solo_volumetrico?
+    return true if cobro_solo_volumetrico?
+
+    cliente&.cobra_solo_volumetrico?(tipo_envio_id) || false
   end
 
   def sucursal_del_numero
@@ -1543,7 +1575,7 @@ class Paquete < ApplicationRecord
     if peso.present? || peso_volumetrico.present?
       self.peso_cobrar = VolumetricoCalculator.entre_peso_y_vlbs(
         peso || 0, peso_volumetrico || 0,
-        solo_volumetrico: cliente&.cobra_solo_volumetrico?(tipo_envio_id)
+        solo_volumetrico: cobra_solo_volumetrico?
       )
     end
   end

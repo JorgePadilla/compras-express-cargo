@@ -1838,7 +1838,8 @@ CREATE TABLE public.paquetes (
     enviado_por_politica boolean DEFAULT false NOT NULL,
     notas_envio_politica text,
     recolecta_direccion text,
-    caja_manifiesto_id bigint
+    caja_manifiesto_id bigint,
+    cobro_excepcion character varying
 );
 
 
@@ -4970,6 +4971,13 @@ CREATE INDEX index_paquetes_on_cliente_id ON public.paquetes USING btree (client
 
 
 --
+-- Name: index_paquetes_on_cobro_excepcion; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_paquetes_on_cobro_excepcion ON public.paquetes USING btree (cobro_excepcion) WHERE (cobro_excepcion IS NOT NULL);
+
+
+--
 -- Name: index_paquetes_on_entrega_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6897,6 +6905,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260905180000'),
 ('20260905120000'),
 ('20260905060000'),
 ('20260901003545'),
