@@ -64,13 +64,20 @@ class CajaManifiesto < ApplicationRecord
     self.class.numero_para(letra)
   end
 
-  # (B) Los pies cúbicos del bulto, para el público — `C23-03`.
+  # Los pies cúbicos del bulto, para el público — `C23-03`.
   # El `÷166` de `volumen` es el que le cobra el proveedor y no se toca; este es
   # el otro número, el que la gente entiende.
+  #
+  # `C25-05` · **Exactos, no redondeados hacia arriba.** Este método lo leen
+  # exactamente dos lugares —la 4×6 y el manifiesto impreso— y los dos son
+  # papeles que van al proveedor, que redondea por su cuenta. Yusef vio un `12`
+  # donde la cuenta daba `11.02` y dijo *"ponerlo exacto… si le pones 12 acá me
+  # lo leen 12 y me clavan"*. La regla B (ceil) sigue viva en
+  # `VolumetricoCalculator.pies_cubicos` para el calculador de `/etiquetar`.
   def pies_cubicos
     return nil unless alto && largo && ancho
 
-    VolumetricoCalculator.pies_cubicos(
+    VolumetricoCalculator.pies_cubicos_exactos(
       VolumetricoCalculator.pulgadas_cubicas(alto, largo, ancho)
     )
   end
