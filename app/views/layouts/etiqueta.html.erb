@@ -106,6 +106,9 @@
 <body>
   <%= yield %>
 
+  <%# C25-07 · El mismo ajuste al ancho que la 4×6, y en el mismo orden: corre
+      en DOMContentLoaded, el autoprint imprime en load. %>
+  <%= render "layouts/etiqueta_ajustar_ancho" %>
   <%= render "layouts/etiqueta_autoprint" %>
 </body>
 </html>

@@ -9753,9 +9753,9 @@ lo mide en Chrome en cada corrida, con un caso nuevo: un proveedor largo
 
 ---
 
-### La Dymo de `/etiquetar` — *"la chiquitilla"* — 🔜 **PR aparte**
+### La Dymo de `/etiquetar` — *"la chiquitilla"*
 
-#### C25-07 · El nombre del cliente en su fila, con auto-ajuste; el tercero abajo
+#### C25-07 · El nombre del cliente en su fila, con auto-ajuste; el tercero a otro renglón — ✅ **ARREGLADO** (con un cambio de sitio)
 
 > "Ella se llama Sofía García… Jorge Alejandro Federico. Ahí está el detalle."
 > "Primero este lo deberías de **mover del lugar, para abajo: el tercero**, el
@@ -9764,21 +9764,48 @@ lo mide en Chrome en cada corrida, con un caso nuevo: un proveedor largo
 > "El nombre tiene que ir a **una sola fila** y vamos a mover el tercero para
 >  la de abajo." · "El tercero va a llevar **de dos a cuatro** lo más."
 
-La causa está ubicada: `f-cliente` pone nombre y tercero en la misma fila, y el
-nombre lleva `text-overflow: ellipsis`. Es la misma disciplina que
-[[project_etiqueta_trackings_completos]] —*nunca recortar*— llevada al nombre:
-**ajustar, no cortar**.
+La causa: `f-cliente` ponía nombre y tercero en la misma fila, y el nombre lleva
+`text-overflow: ellipsis` — el tercero lo empujaba hasta cortarlo. Ahora el
+nombre va **solo** en su fila con el mismo ajuste al ancho de la 4×6
+(`_etiqueta_ajustar_ancho`, piso 6 pt): un nombre de 40 caracteres se achica y
+sale entero; uno de 50 toca el piso y ahí para, porque por debajo ya no se lee.
+Es [[project_etiqueta_trackings_completos]] llevada al nombre: **ajustar, no
+cortar**.
 
-#### C25-08 · «Dónde retira» dice la sucursal, no la ciudad
+**Y el tercero no quedó donde Yusef señaló, y hay que decírselo.** Dijo *"para la
+de abajo"*. Se probó **literal** —una fila propia debajo del nombre— y en la
+etiqueta más llena (entrega personal, NO PAGADO, driver, tracking secundario y
+tercero) **desborda 8 px**, medido en Chrome; `C20-08` ya lo había dicho para el
+pago. En el renglón del registro faltan **61 px**: la fecha con hora sola ocupa
+76. Y los dos sitios del bloque inferior están llenos (`ubicación` 75/75,
+`sucursal` 124/124). El único renglón con lugar de sobra es el del **número de
+recepción** —un dato de largo fijo—, que cumple lo otro que dijo: *"ponelo acá,
+que esto no va a crecer tanto"*. Ahí quedó, a la derecha, a 6 pt con ajuste
+propio, y **cabe entero con aire cero** en la etiqueta más llena.
+
+| Sitio probado | Resultado (etiqueta más llena) |
+|---|---|
+| Fila propia debajo del nombre (lo que dijo) | desborda **8 px** |
+| Renglón del registro | faltan **61 px** |
+| Bloque inferior | lleno |
+| **Renglón del número de recepción** | **cabe, aire 0** |
+
+Queda para que Yusef lo vea impreso el martes: si el sitio no le gusta, lo que
+no se puede es la fila propia — habría que sacarle alto a otra cosa.
+
+#### C25-08 · «Dónde retira» dice la sucursal, no la ciudad — ✅ **ARREGLADO**
 
 > "Donde va a retirar ahora dice **San Pedro Sula**; por donde va a retirar
 >  tiene que decir **Zerón SPS**, así se llama la sucursal."
 > "La que voy a abrir se va a llamar **Carmen SPS o Norte SPS**."
 
-Con dos sucursales en la misma ciudad, la ciudad deja de decir dónde. Y hay
-**dos** «San Pedro Sula» distintos en el código —el preview de
-`/ajustes_etiqueta` lo tiene escrito a mano, y la etiqueta real cae a la ciudad
-del cliente cuando el paquete no tiene sucursal—; se arreglan los dos.
+Con dos sucursales en la misma ciudad, la ciudad deja de decir dónde. Y había
+**dos** «San Pedro Sula» distintos en el código, arreglados los dos: el preview
+de `/ajustes_etiqueta` lo tenía **escrito a mano** (ahora muestra la sucursal de
+retiro por defecto real), y la etiqueta impresa caía a **la ciudad del cliente**
+cuando el paquete no tenía sucursal (ahora cae a la sucursal de retiro por
+defecto — la columna `retiro_por_defecto` existía y es exactamente esto; la
+ciudad queda de último recurso para que nada salga en blanco).
 
 ---
 

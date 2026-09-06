@@ -51,7 +51,11 @@ class EtiquetaPlantilla < ApplicationRecord
       prepagado_miami: false,
       cliente: Cliente.new(codigo: "C6", nombre: "Kenia Isabel", apellido: "Maya Rodriguez",
                            ciudad: "San Pedro Sula", departamento: "Cortés"),
-      sucursal: Sucursal.new(nombre: "San Pedro Sula"),
+      # C25-08 · Decía «San Pedro Sula» escrito a mano, y ésa es una ciudad, no
+      # una sucursal: Yusef vio ese texto y mandó que dijera «Zerón SPS». El
+      # preview tiene que mostrar lo mismo que sale impreso, así que toma la
+      # sucursal de retiro por defecto de verdad si existe.
+      sucursal: Sucursal.find_by(retiro_por_defecto: true) || Sucursal.new(nombre: "Zeron SPS"),
       tipo_envio: TipoEnvio.new(codigo: "exp", nombre: "EXPRESS"),
       proveedor: Proveedor.new(codigo: "AMZ", tipo: "entrega_personal"),
       user: User.new(iniciales: "DM", nombre: "Digitador Miami")
