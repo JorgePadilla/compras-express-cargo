@@ -10044,7 +10044,10 @@ Está *"en medio de la línea"*: después de recibir la carga, antes de la
 pre-factura. Lo que necesita, en palabras de Jorge en la bodega: *"el input de
 tracking, la información de medida y peso, y la información de si el cliente
 está consolidando o no"*. Se escanea **la etiqueta que se hizo en Miami**, una
-por una —*"exacto, es la misma; escanea… una por una"*—, y se anotan medida y
+por una —*"exacto, es la misma; escanea… una por una"*—. Jorge, después, lo
+precisó: *"se escanea el warehouse receipt que digitamos en Miami, que es el de
+la sticker que le pegamos"*, o sea el número de recepción más el sufijo de
+caja. Y se anotan medida y
 peso: *"¿la volumétrica? sí, las dos también… medidas de tamaño y peso"*.
 
 Del lado del código, lo que ya está y el módulo reusa: al recibir una caja en
