@@ -1,4 +1,5 @@
 class ClientesController < ApplicationController
+  before_action :authorize_seccion
   # C16-06 · Yusef, 2026-08-25: *"Miami no va a poder ver todo… vamos a
   # sectorizar las cosas. Aquí van a tener restricciones de ver y de modificar,
   # sobre todo"*. Miami busca clientes —*"llegó un paquete a nombre de Carmen,
@@ -149,6 +150,15 @@ class ClientesController < ApplicationController
   end
 
   private
+
+
+  # C26-15 · La sección entera pasa por `can_access?`, como pide `RP-58`: sin
+  # esto, un rol de estación (*"no se les habilita nada más que eso"*) entraba
+  # igual, porque la política de esta sección era «todos» y ningún controller
+  # la consultaba.
+  def authorize_seccion
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:clientes)
+  end
 
   # Todo lo que el form necesita para pintarse. Va en un método —y no suelto en
   # `new`/`edit`— porque `create`/`update` re-renderizan ese mismo form cuando

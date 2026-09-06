@@ -1,4 +1,5 @@
 class PreAlertasController < ApplicationController
+  before_action :authorize_seccion
   before_action :set_pre_alerta, only: %i[show edit update anular destinos_disponibles mover_paquete]
 
   def index
@@ -173,6 +174,15 @@ class PreAlertasController < ApplicationController
   end
 
   private
+
+
+  # C26-15 · La sección entera pasa por `can_access?`, como pide `RP-58`: sin
+  # esto, un rol de estación (*"no se les habilita nada más que eso"*) entraba
+  # igual, porque la política de esta sección era «todos» y ningún controller
+  # la consultaba.
+  def authorize_seccion
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:pre_alertas)
+  end
 
   # El guardado del editor. Espejo de `Cuenta::PreAlertasController#update`.
   #

@@ -379,7 +379,8 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
       rol: "supervisor_prefactura", ubicacion: "honduras", pin: "1111" },
     { nombre: "Supervisor SAC", email: "sup_sac@cec.com",
       rol: "supervisor_sac", ubicacion: "honduras", pin: "2222" },
-    { nombre: "Entrega", email: "entrega@cec.com", rol: "entrega_despacho", ubicacion: "honduras" }
+    { nombre: "Entrega", email: "entrega@cec.com", rol: "entrega_despacho", ubicacion: "honduras" },
+    { nombre: "Medición", email: "medicion@cec.com", rol: "medicion", ubicacion: "honduras" }
   ].each do |attrs|
     user = User.find_or_initialize_by(email_address: attrs[:email])
     user.nombre = attrs[:nombre]

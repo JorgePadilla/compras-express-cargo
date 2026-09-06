@@ -30,7 +30,7 @@
     <% end %>
   <% end %>
 
-  <% if can_access?(:pre_alertas) || can_access?(:paquetes) || can_access?(:manifiestos) || can_access?(:recibir_carga) || can_access?(:guias_aduana) %>
+  <% if can_access?(:pre_alertas) || can_access?(:paquetes) || can_access?(:manifiestos) || can_access?(:recibir_carga) || can_access?(:medicion) || can_access?(:guias_aduana) %>
     <%= sidebar_section "Logistica" do %>
       <%# El grupo va **en orden de proceso**, siguiendo a la carga (Jorge,
           2026-09-01: *"en los menú pongamos por orden de proceso los botones,
@@ -50,6 +50,9 @@
       <%= sidebar_link "Guías y aduana", guias_aduana_index_path, icon: "document-text" if can_access?(:guias_aduana) %>
       <%# 4 · Llegó: se escanean las cajas. %>
       <%= sidebar_link "Recibir Carga", recepcion_carga_index_path, icon: "truck" if can_access?(:recibir_carga) %>
+      <%# 5 · C26-02 · Ya recibida: se pesa y se mide cada caja antes de la
+          pre-factura. *"Medición se llama."* %>
+      <%= sidebar_link "Medición", medicion_index_path, icon: "scale" if can_access?(:medicion) %>
       <%# Transversal, no es un paso: al final. %>
       <%= sidebar_link "Todos los Paquetes", paquetes_path, icon: "archive-box" if can_access?(:paquetes) %>
     <% end %>

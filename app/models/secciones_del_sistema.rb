@@ -24,6 +24,7 @@ module SeccionesDelSistema
     manifiestos:          { nombre: "Manifiestos",               grupo: "Logística" },
     guias_aduana:         { nombre: "Guías y aduana",            grupo: "Logística" },
     recibir_carga:        { nombre: "Recibir Carga",             grupo: "Logística" },
+    medicion:             { nombre: "Medición",                  grupo: "Logística" },
     pre_alertas:          { nombre: "Pre-Alertas",               grupo: "Logística" },
     paquetes:             { nombre: "Todos los Paquetes",        grupo: "Logística" },
 

@@ -8,7 +8,7 @@
 # crean ni se borran. Sus códigos viven en el enum de `User`, en el `case` de
 # `PermisosDelSistema.politica` y en cada constante `*_ROLES` — inventar uno
 # desde una pantalla dejaría un rol que ninguna regla conoce. Acá se renombran
-# los nueve que hay.
+# los diez que hay.
 #
 # **El admin sí aparece**, al revés que en `/permisos`. Allá se lo excluye porque
 # no se le pueden quitar accesos; acá se trata de cómo se lee su puesto, y eso sí

@@ -157,6 +157,11 @@ class PreAlerta < ApplicationRecord
     consolidado? && !finalizado?
   end
 
+  # C26-03 · Un renglón «llegó» cuando su paquete está en un estado de
+  # Honduras. Explícito, y no derivado de `PAQUETE_TO_PRE_ALERTA_ESTADO`, que
+  # no conoce `consolidando_honduras` — justo el estado de unir.
+  ESTADOS_EN_HONDURAS = %w[en_aduana consolidando_honduras disponible_entrega facturado en_reparto entregado].freeze
+
   # Estados where a linked paquete being at this estado or later locks notas_grupo editing.
   # Mirrors the "BLOCKED" row of the move/delete rules matrix.
   ESTADOS_QUE_BLOQUEAN_NOTAS = %w[

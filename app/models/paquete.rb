@@ -785,6 +785,43 @@ class Paquete < ApplicationRecord
   # El caso 2 se puede detectar sin miedo a falsos positivos: una recepción
   # real es SIEMPRE `<PREFIX><AÑO 7><CORRELATIVO 6>` (ej. `RM0002026000010`),
   # que no se parece a ningún tracking de courier.
+  # C26-02 · Lo que lee la pistola en Medición, **estricto**: el código de la
+  # caja exacto (`RMI…-2` cae en su caja y no en sus hermanas), el número de
+  # recepción exacto, o el tracking exacto por `buscar_escaneado`. No es
+  # `buscar`, que hace ILIKE sobre descripción y nombre de cliente: una
+  # estación que mide no puede adivinar.
+  def self.por_codigo_de_etiqueta(codigo)
+    term = codigo.to_s.strip
+    return none if term.blank?
+
+    if (parsed = parsear_codigo_de_caja(term))
+      madre, caja = parsed
+      exacta = where("UPPER(paquetes.numero_recepcion) = ?", madre.upcase).where(numero_caja: caja)
+      return exacta if exacta.exists?
+    end
+
+    por_numero = where("UPPER(paquetes.numero_recepcion) = ?", term.upcase)
+    return por_numero if por_numero.exists?
+
+    buscar_escaneado(term)
+  end
+
+  # C26-03 · El grupo consolidado de esta caja, o nil si el cliente no está
+  # consolidando. Ver `GrupoDeUnion`.
+  def grupo_de_union
+    GrupoDeUnion.de(self)
+  end
+
+  # C26-03 · El gancho para la pre-factura, que **todavía no lo lee** (es su
+  # bloque, `C26-08`): medido, y sin grupo, o con el grupo completo, cerrado
+  # (se factura aparte) o con la excepción de facturar parcial sellada.
+  def listo_para_prefactura?
+    return false if medido_at.blank?
+
+    grupo = grupo_de_union
+    grupo.nil? || grupo.cerrada? || grupo.completo? || grupo.parcial_autorizado?
+  end
+
   def numero_recepcion_visible
     return nil if numero_recepcion.blank?
     return nil if numero_recepcion.casecmp?(tracking.to_s)

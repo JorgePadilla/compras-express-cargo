@@ -215,7 +215,7 @@ Rails.application.routes.draw do
   # `RP-58` paso 2b · Cómo se lee cada rol. Singular y sin `new`/`destroy` a
   # propósito: los roles **no se crean ni se borran** —sus códigos viven en el
   # enum, en `PermisosDelSistema.politica` y en las constantes `*_ROLES`—, acá
-  # solo se renombran los nueve que hay.
+  # solo se renombran los diez que hay.
   resource :roles, only: %i[show update], controller: "roles"
 
   resources :recepcion_carga, only: %i[index show], path: "recibir-carga" do
@@ -224,6 +224,14 @@ Rails.application.routes.draw do
       patch :finalizar
     end
   end
+
+  # C26-02 · Medición: la estación de San Pedro. Escanear, medir, y la
+  # excepción de facturar parcial (C26-03).
+  resources :medicion, only: %i[index], path: "medicion" do
+    collection { post :escanear }
+    member { patch :medir }
+  end
+  post "medicion/pre_alertas/:id/facturar_parcial", to: "medicion#facturar_parcial", as: :facturar_parcial_medicion
 
   resources :pre_alertas, except: %i[destroy] do
     member do

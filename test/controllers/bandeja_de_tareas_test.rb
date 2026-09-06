@@ -174,7 +174,8 @@ class BandejaDeTareasTest < ActionDispatch::IntegrationTest
   # alguien agregue un rol nuevo este test falla hasta que decida si ejecuta o
   # no — que es justo la decisión que la primera vez nadie tomó.
   test "todo el personal ejecuta tareas, y agregar un rol obliga a decidirlo" do
-    del_personal = User.rols.keys - [ "admin" ]
+    # C26-15 · Los roles de estación no ejecutan tareas: solo ven su pantalla.
+    del_personal = User.rols.keys - [ "admin" ] - User::ROLES_DE_ESTACION
 
     assert_equal del_personal.sort, TareasController::EJECUCION_ROLES.sort,
                  "hay un rol que no está en EJECUCION_ROLES: ¿ejecuta tareas o no? " \

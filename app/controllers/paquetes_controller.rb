@@ -1,5 +1,6 @@
 class PaquetesController < ApplicationController
   include NotificaRecibido
+  before_action :authorize_seccion
   before_action :set_paquete, only: [ :show, :edit, :update, :warehouse_receipt, :etiqueta, :destroy, :eliminar_de_pre_alerta, :reimprimir_etiquetas, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero, :bajar_cajas, :cobro_excepcion ]
   before_action :authorize_tracking_actions, only: [ :check_tracking, :search ]
   before_action :authorize_edit, only: [ :edit, :update, :eliminar_de_pre_alerta, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero ]
@@ -995,5 +996,15 @@ class PaquetesController < ApplicationController
     return :missing unless params.dig(:paquete)&.key?(:pre_factura)
 
     ActiveModel::Type::Boolean.new.cast(params[:paquete][:pre_factura])
+  end
+
+  private
+
+  # C26-15 · La sección entera pasa por `can_access?`, como pide `RP-58`: sin
+  # esto, un rol de estación (*"no se les habilita nada más que eso"*) entraba
+  # igual, porque la política de esta sección era «todos» y ningún controller
+  # la consultaba.
+  def authorize_seccion
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:paquetes)
   end
 end

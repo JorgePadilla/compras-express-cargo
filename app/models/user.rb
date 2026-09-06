@@ -37,8 +37,16 @@ class User < ApplicationRecord
     # supervisor, que Yusef cuenta también como jefe y por eso autoriza
     # cambios de precio en la pre-factura.
     supervisor_sac: "supervisor_sac",
-    entrega_despacho: "entrega_despacho"
+    entrega_despacho: "entrega_despacho",
+    # C26-15 · Yusef: *"si tenemos una persona para medición exclusivamente,
+    # usan su código y no se les habilita nada más que eso. Este perfil va a
+    # ser nuevo."* Solo ve la estación de Medición.
+    medicion: "medicion"
   }
+
+  # C26-15 · Los roles de **estación**: entran a su pantalla y a nada más —
+  # ni clientes, ni pre-alertas, ni el listado de paquetes, ni tareas.
+  ROLES_DE_ESTACION = %w[medicion].freeze
 
   enum :ubicacion, {
     miami: "miami",
@@ -155,7 +163,8 @@ class User < ApplicationRecord
     "cajero" => { label: "Cajero", descripcion: "Procesa pagos de clientes, ventas y recibos en Honduras." },
     "sac" => { label: "Servicio al Cliente (SAC)", descripcion: "Atencion al cliente, consultas, reclamos y marketing." },
     "supervisor_sac" => { label: "Supervisor de Servicio al Cliente", descripcion: "Supervisa al equipo de SAC y autoriza cambios de precio en pre-factura." },
-    "entrega_despacho" => { label: "Entrega y Despacho", descripcion: "Gestiona entregas finales de paquetes al cliente en Honduras." }
+    "entrega_despacho" => { label: "Entrega y Despacho", descripcion: "Gestiona entregas finales de paquetes al cliente en Honduras." },
+    "medicion" => { label: "Medición", descripcion: "Pesa y mide las cajas en San Pedro Sula. Solo ve la estación de Medición." }
   }.freeze
 
   # `RP-58` paso 2b · **El único lugar donde se resuelve cómo se lee un rol.**
@@ -284,7 +293,8 @@ class User < ApplicationRecord
     "supervisor_prefactura" => [ %i[notas_honduras Honduras] ],
     "sac"                   => [ %i[notas_sac SAC], %i[notas_honduras Honduras] ],
     "supervisor_sac"        => [ %i[notas_sac SAC], %i[notas_honduras Honduras] ],
-    "entrega_despacho"      => [ %i[notas_honduras Honduras] ]
+    "entrega_despacho"      => [ %i[notas_honduras Honduras] ],
+    "medicion"              => [ %i[notas_honduras Honduras] ]
   }.freeze
 
   # PR-D2.b: campos de `Cliente` con notas permanentes que el usuario
