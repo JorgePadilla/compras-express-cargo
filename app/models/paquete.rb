@@ -820,6 +820,24 @@ class Paquete < ApplicationRecord
     buscar_escaneado(term)
   end
 
+  # C26-02 · Las cajas que comparten este warehouse receipt: las de un envío
+  # partido. `crear_split!` les pone a todas el mismo `numero_recepcion` (el
+  # «número madre») y a cada una su `numero_caja`, así que **varias cajas con
+  # el mismo warehouse receipt siempre son un split**.
+  #
+  # Se agrupa por el warehouse receipt y no por `tracking` —que es lo que hace
+  # `paquetes_hermanos`— por dos razones: no depende de que `cantidad_paquetes`
+  # esté puesto, y el tracking **se repite entre envíos** (DHL los reusa; está
+  # documentado en `docs/05`). El warehouse receipt sale de un contador: es
+  # único por envío.
+  def cajas_del_mismo_envio
+    return Paquete.none if numero_recepcion.blank?
+
+    Paquete.where(numero_recepcion: numero_recepcion)
+           .where.not(estado: NO_SON_CAJAS)
+           .order(:numero_caja, :id)
+  end
+
   # C26-03 · El grupo consolidado de esta caja, o nil si el cliente no está
   # consolidando. Ver `GrupoDeUnion`.
   def grupo_de_union

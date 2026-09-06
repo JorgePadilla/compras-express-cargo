@@ -258,9 +258,29 @@ export default class extends conEnterAvanza(Controller) {
         // La grilla se queda en pantalla con el cuadrito ya en verde: el
         // operario sigue con la caja siguiente del mismo grupo.
         this._pintarGrupo(data.grupo)
+
+        // C26-02 · Si el envío venía partido, las otras cajas tienen **el
+        // mismo warehouse receipt impreso**: volver a escanearlo no aportaría
+        // nada. Se salta sola a la siguiente sin medir, con el cursor en el
+        // peso. Cuando no queda ninguna, recién ahí se imprime y vuelve el
+        // foco a la pistola.
+        const siguiente = this._siguienteDelEnvio(data.paquete, data.grupo)
+        if (siguiente) {
+          this._escanear(siguiente)
+          return
+        }
+
         this._limpiarCaja()
         this._imprimir(data.imprimir_url)
       })
+  }
+
+  // La siguiente caja sin medir del mismo envío, si queda alguna.
+  _siguienteDelEnvio(paquete, grupo) {
+    if (!paquete.wr || !grupo) return null
+
+    const caja = grupo.cajas.find((c) => c.envio === paquete.wr && c.estado === "aqui")
+    return caja?.wr || null
   }
 
   _agregarFila(p) {

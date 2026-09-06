@@ -137,6 +137,43 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_equal "codigo_medicion", foco
   end
 
+  # C26-02 · Jorge: *"escaneé el warehouse receipt y me deberían aparecer los
+  # datos de los otros paquetes… que me permita tomar las medidas y el peso, y
+  # luego entonces podamos imprimir la sticker"*. Las tres cajas llevan el
+  # mismo código impreso, así que la pantalla encadena sola.
+  test "un envío partido: se escanea el warehouse receipt una vez y se miden las tres seguidas" do
+    cajas = envio_partido(@paquete, 3)
+
+    visit medicion_index_path
+    escanear(@paquete.reload.numero_recepcion)
+
+    assert_selector "[data-medicion-target='grupoTitulo']", text: "3 cajas", wait: 5
+    assert_selector "[data-medicion-target='grilla'] button", count: 3
+    assert_selector "[data-medicion-target='codigoCaja']", text: "#{@paquete.numero_recepcion}-1"
+    assert_equal "medicion_peso", foco
+
+    # La primera: al guardar, la pantalla salta sola a la segunda.
+    send_keys "10", :enter, "10", :enter, "10", :enter, "10"
+    send_keys :f10
+    assert_selector "[data-medicion-target='codigoCaja']", text: "#{@paquete.numero_recepcion}-2", wait: 5
+    assert_equal "medicion_peso", foco, "el cursor queda listo para la siguiente caja"
+    assert_selector "[data-medicion-target='grilla'] button[data-estado='medida']", count: 1
+
+    # La segunda, igual.
+    send_keys "11", :enter, "11", :enter, "11", :enter, "11"
+    send_keys :f10
+    assert_selector "[data-medicion-target='codigoCaja']", text: "#{@paquete.numero_recepcion}-3", wait: 5
+
+    # La tercera cierra el envío: una sola impresión con las tres stickers.
+    send_keys "12", :enter, "12", :enter, "12", :enter, "12"
+    espiar_impresion
+    send_keys :f10
+
+    assert_selector "[data-medicion-target='banner']", text: "3 de 3 medidas", wait: 5
+    assert_equal etiqueta_medicion_path(cajas.first, hermanas: "1", print: "true"), lo_que_abrio
+    assert_equal 3, Paquete.where(numero_recepcion: @paquete.numero_recepcion).where.not(medido_at: nil).count
+  end
+
   private
 
   def grupo_de_tres(paquete)
@@ -149,6 +186,17 @@ class MedicionFlujoTest < ApplicationSystemTestCase
       pa.pre_alerta_paquetes.create!(tracking: t, descripcion: "Gorra", fecha: Date.current).paquete
     end
     [ pa, otros ]
+  end
+
+  # Un envío partido, como lo deja `crear_split!`: mismo warehouse receipt,
+  # cada caja con su número.
+  def envio_partido(madre, n)
+    madre.update!(cantidad_paquetes: n, numero_caja: 1)
+    [ madre.reload, *(2..n).map { |i|
+      Paquete.create!(tracking: madre.tracking, cliente: madre.cliente, tipo_envio: madre.tipo_envio,
+                      sucursal_recepcion: sucursales(:miami), estado: madre.estado, descripcion: madre.descripcion,
+                      peso: 2, numero_recepcion: madre.numero_recepcion, cantidad_paquetes: n, numero_caja: i)
+    } ]
   end
 
   def llego(paquete)

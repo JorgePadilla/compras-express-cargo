@@ -62,7 +62,13 @@ class GrupoDeUnion
   def self.de(paquete)
     pa = pre_alerta_consolidada_de(paquete)
     return new(pre_alerta: pa) if pa
-    return new(paquetes: [ paquete, *paquete.paquetes_hermanos ]) if paquete.dividido?
+
+    # Un envío partido también es un grupo: varias stickers que salen juntas,
+    # aunque el cliente no haya pedido consolidar. Se arma por **warehouse
+    # receipt** y no por `dividido?`: así no depende de que `cantidad_paquetes`
+    # esté puesto, y no barre cajas de otro envío que reusó el tracking.
+    cajas = paquete.cajas_del_mismo_envio.to_a
+    return new(paquetes: cajas) if cajas.size > 1
 
     nil
   end
@@ -114,15 +120,14 @@ class GrupoDeUnion
   end
 
   def cajas_sueltas(paquetes)
-    Array(paquetes).compact.uniq.sort_by { |c| c.numero_caja.to_i }
+    Array(paquetes).compact.uniq
                    .map { |c| Caja.new(paquete: c, tracking: c.tracking, descripcion: c.descripcion) }
   end
 
-  # `paquetes_hermanos` ya excluye `NO_SON_CAJAS`, así que un esperado nunca
-  # trae hermanas fantasma.
+  # Las cajas del envío de este renglón. Un paquete «esperado» no tiene
+  # warehouse receipt todavía, así que es un solo cuadrito — como debe.
   def hermanas(paquete)
-    return [ paquete ] unless paquete.dividido?
-
-    [ paquete, *paquete.paquetes_hermanos ].sort_by { |c| c.numero_caja.to_i }
+    cajas = paquete.cajas_del_mismo_envio.to_a
+    cajas.size > 1 ? cajas : [ paquete ]
   end
 end

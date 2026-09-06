@@ -10047,7 +10047,25 @@ está consolidando o no"*. Se escanea **la etiqueta que se hizo en Miami**, una
 por una —*"exacto, es la misma; escanea… una por una"*—. Jorge, después, lo
 precisó: *"se escanea el warehouse receipt que digitamos en Miami, que es el de
 la sticker que le pegamos"*, o sea el número de recepción más el sufijo de
-caja. Y se anotan medida y
+caja.
+
+**Y un warehouse receipt puede tener varias cajas.** La primera versión lo
+rechazaba —*«es un envío de 3 cajas: escaneá la etiqueta de la caja»*— y Jorge
+lo corrigió usándolo: *"esto no debería salir… escaneé el warehouse receipt y
+me deberían aparecer los datos de los otros paquetes… que me diga si hay más
+paquetes con ese warehouse receipt, y que me permita tomar las medidas y el
+peso, y luego entonces podamos imprimir la sticker"*. Un envío partido comparte
+el número de recepción a propósito (`crear_split!` le pone a todas las cajas el
+mismo «número madre» y a cada una su número de caja), así que **varias cajas
+con el mismo warehouse receipt no son una ambigüedad: son el grupo**. Al
+escanearlo se cargan todas, se mide la primera sin medir, y **la pantalla salta
+sola a la siguiente** —las tres llevan el mismo código impreso, volver a
+escanear no aportaría nada—; al medir la última salen las tres stickers juntas.
+La ambigüedad de verdad —un código que cae en **envíos distintos**, porque
+alguien reusó un tracking— sigue saliendo en el modal rojo, ahora diciendo
+cuáles son.
+
+Y se anotan medida y
 peso: *"¿la volumétrica? sí, las dos también… medidas de tamaño y peso"*.
 
 Del lado del código, lo que ya está y el módulo reusa: al recibir una caja en

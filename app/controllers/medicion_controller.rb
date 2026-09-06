@@ -34,12 +34,20 @@ class MedicionController < ApplicationController
     if encontrados.empty?
       return render json: { resultado: "no_encontrado", mensaje: "No se encontró ninguna caja con «#{codigo}»." }
     end
-    if encontrados.size > 1
+    # C26-02 · **Varias cajas con el mismo warehouse receipt no son una
+    # ambigüedad: son un envío partido**, y es justo lo que Jorge quiere ver al
+    # escanear —*"me deberían aparecer los datos de los otros paquetes"*—. La
+    # guarda de abajo se escribió pensando en un tracking repetido entre envíos
+    # distintos, que es la ambigüedad de verdad y sigue saliendo en rojo.
+    envio = encontrados.map(&:numero_recepcion).uniq
+    if encontrados.size > 1 && (envio.size > 1 || envio.first.blank?)
       return render json: { resultado: "ambiguo",
-                            mensaje: "«#{codigo}» es un envío de #{encontrados.size} cajas: escaneá la etiqueta de la caja, no el tracking." }
+                            mensaje: "«#{codigo}» aparece en #{envio.compact.size} envíos distintos " \
+                                     "(#{envio.compact.take(2).join(", ")}…): escaneá el warehouse receipt de la caja que tenés en la mano." }
     end
 
-    paquete = encontrados.first
+    # La que toca medir: la primera sin medir del envío, por número de caja.
+    paquete = por_caja(encontrados).find { |p| p.medido_at.blank? } || por_caja(encontrados).first
     if paquete.pre_factura_id.present? || paquete.venta_id.present?
       return render json: { resultado: "en_pre_factura", paquete: datos_de(paquete),
                             mensaje: "#{codigo_de(paquete)} ya está en la pre-factura #{paquete.pre_factura&.numero}: " \
@@ -133,6 +141,8 @@ class MedicionController < ApplicationController
       medicion_previa: previa_de(paquete) }
   end
 
+  def por_caja(paquetes) = paquetes.sort_by { |p| [ p.numero_caja.to_i, p.id ] }
+
   def codigo_de(paquete)
     helpers.etiqueta_codigo_barras(paquete).presence || paquete.tracking
   end
@@ -145,7 +155,7 @@ class MedicionController < ApplicationController
 
   def datos_de(paquete)
     cliente = paquete.cliente
-    { id: paquete.id, codigo: codigo_de(paquete), tracking: paquete.tracking,
+    { id: paquete.id, codigo: codigo_de(paquete), wr: paquete.numero_recepcion, tracking: paquete.tracking,
       cliente: cliente && "#{cliente.nombre_completo} · #{cliente.codigo}",
       tipo_envio: paquete.tipo_envio&.nombre, descripcion: paquete.descripcion,
       caja: caja_de(paquete),
@@ -193,7 +203,8 @@ class MedicionController < ApplicationController
 
   def caja_json(caja, seleccionada_id)
     p = caja.paquete
-    { id: p&.id, wr: (codigo_de(p) if p && p.numero_recepcion.present?), tracking: caja.tracking,
+    { id: p&.id, wr: (codigo_de(p) if p && p.numero_recepcion.present?),
+      envio: p&.numero_recepcion, tracking: caja.tracking,
       descripcion: caja.descripcion, caja: (caja_de(p) if p), estado: caja.estado, donde: caja.donde,
       peso: (p&.peso&.to_f if caja.medida?), medidas: (medidas_de(p) if caja.medida?),
       por: p&.medido_por, seleccionada: p.present? && p.id == seleccionada_id,
@@ -226,6 +237,9 @@ class MedicionController < ApplicationController
         "no la unas, hay que partir la pre-alerta. Se mide y se factura aparte."
     elsif grupo&.consolidada?
       "#{codigo_de(paquete)} · UNIR con #{grupo.pre_alerta.numero_documento}: #{grupo.medidas} de #{grupo.total} medidas."
+    elsif grupo && grupo.pre_alerta.nil?
+      "#{codigo_de(paquete)} · #{grupo.total} cajas con este warehouse receipt: " \
+        "#{grupo.medidas} medidas, vas por la #{paquete.numero_caja || 1} de #{grupo.total}."
     elsif grupo
       "#{codigo_de(paquete)} · viene partido en #{grupo.total} cajas: #{grupo.medidas} medidas."
     else
