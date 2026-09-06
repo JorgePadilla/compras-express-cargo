@@ -64,11 +64,6 @@ class RecepcionCargaController < ApplicationController
   # Terminar. Si faltan cajas, la primera vez avisa y ofrece las dos salidas de
   # `A7-05`: seguir escaneando, o marcar recibido con las pendientes.
   def finalizar
-    # `A7-08` · Si ya estaba cerrado, no se vuelve a avisar: la pantalla no lo
-    # ofrece, pero un doble submit o un F5 sobre el PATCH sí llegan acá, y el
-    # cliente recibiría el mismo correo dos veces.
-    ya_estaba_cerrado = @manifiesto.recepcion_finalizada_at.present?
-
     resultado = servicio.finalizar!(con_faltantes: params[:con_faltantes].present?)
 
     if resultado.faltantes.any? && params[:con_faltantes].blank?
@@ -83,10 +78,11 @@ class RecepcionCargaController < ApplicationController
       ManifiestoMailer.cajas_faltantes(@manifiesto, resultado.faltantes).deliver_later
     end
 
-    # `A7-08` · *"Con el manifiesto notifique."* Al cerrar y no antes: la ventana
-    # de espera que Yusef pedía existía para que el conteo terminara, y acá ya
-    # terminó. Ver `NotificarLlegadaASucursal` para por qué no hay job diferido.
-    avisados = @manifiesto.tipo_interno? && !ya_estaba_cerrado ? NotificarLlegadaASucursal.new(@manifiesto).call : 0
+    # `A7-08` · Cerrar avisa a los que **faltaban**: si la ventana ya disparó,
+    # son los escaneados después; si no, son todos. La idempotencia está en el
+    # paquete (`llegada_notificada_at`), así que un doble submit no repite
+    # correos. Ver `NotificarLlegadaASucursal`.
+    avisados = @manifiesto.tipo_interno? ? NotificarLlegadaASucursal.new(@manifiesto).call : 0
 
     redirect_to recepcion_carga_index_path, notice: aviso_de_cierre(resultado, avisados)
   end
@@ -110,6 +106,9 @@ class RecepcionCargaController < ApplicationController
     end
 
     servicio.recibir_paquete!(paquete)
+    # `A7-08` · *"Con el manifiesto notifique, pero darle una ventana."* El
+    # primer paquete escaneado programa el aviso; los demás no hacen nada.
+    NotificarLlegadaASucursal.programar(@manifiesto)
     render json: { resultado: "ok", paquete_id: paquete.id, tracking: paquete.tracking,
                    mensaje: "#{paquete.tracking} recibido en #{@manifiesto.sucursal_entrega&.nombre}.",
                    faltan: servicio.paquetes_pendientes.count }

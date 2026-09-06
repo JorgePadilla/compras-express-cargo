@@ -135,4 +135,74 @@ class NotificarLlegadaASucursalTest < ActionDispatch::IntegrationTest
       perform_enqueued_jobs { patch finalizar_recepcion_carga_url(oficial) }
     end
   end
+
+  # ── A7-08 · La ventana, ahora que hay cola (2026-09-06) ──────────────────
+  #
+  # Yusef: *"con el manifiesto notifique, pero darle una ventana de media hora,
+  # por ejemplo, o una hora"*. Del 2026-09-01 al 06 no la hubo porque no había
+  # cola. Dos que avisan —la ventana y el cierre— y ningún correo repetido.
+
+  test "el primer paquete escaneado programa el aviso a la ventana" do
+    freeze_time do
+      assert_enqueued_with(job: NotificarLlegadaASucursalJob, args: [ @manifiesto ], at: 30.minutes.from_now) do
+        escanear(paquete_de(clientes(:juan)))
+      end
+    end
+
+    assert_not_nil @manifiesto.reload.aviso_llegada_programado_at
+  end
+
+  test "el segundo paquete no programa otro aviso" do
+    escanear(paquete_de(clientes(:juan)))
+
+    assert_no_enqueued_jobs(only: NotificarLlegadaASucursalJob) do
+      escanear(paquete_de(clientes(:maria)))
+    end
+  end
+
+  # RP-32 (¿media hora o una hora?) sigue abierta: va en 30 y se cambia sin deploy.
+  test "la ventana se cambia por configuración, sin deploy" do
+    Configuracion.set("ventana_aviso_llegada_min", "60", tipo: "integer", categoria: "general")
+
+    freeze_time do
+      assert_enqueued_with(job: NotificarLlegadaASucursalJob, at: 60.minutes.from_now) do
+        escanear(paquete_de(clientes(:juan)))
+      end
+    end
+  end
+
+  test "la ventana avisa lo escaneado hasta ahí, y cerrar después solo a los que faltaban" do
+    escanear(paquete_de(clientes(:juan)))
+
+    assert_difference "ActionMailer::Base.deliveries.size", 1 do
+      disparar_ventana # Juan recibe su correo
+    end
+    assert_equal [ clientes(:juan).email ], ActionMailer::Base.deliveries.last.to
+
+    escanear(paquete_de(clientes(:maria)))
+    assert_difference "ActionMailer::Base.deliveries.size", 1 do
+      perform_enqueued_jobs { cerrar }
+    end
+    assert_equal [ clientes(:maria).email ], ActionMailer::Base.deliveries.last.to, "a Juan no se le repite"
+  end
+
+  test "cerrar antes de la ventana avisa a todos, y la ventana después no repite a nadie" do
+    escanear(paquete_de(clientes(:juan)))
+    escanear(paquete_de(clientes(:maria)))
+
+    assert_difference "ActionMailer::Base.deliveries.size", 2 do
+      perform_enqueued_jobs { cerrar }
+    end
+    assert_no_difference "ActionMailer::Base.deliveries.size" do
+      disparar_ventana # sobre paquetes ya avisados: nadie
+    end
+  end
+
+  # El job de la ventana encola el correo **adentro**, y `perform_enqueued_jobs`
+  # sin bloque solo corre lo que ya estaba encolado al llamarlo: hay que
+  # vaciar dos veces, el job y después el correo.
+  def disparar_ventana
+    perform_enqueued_jobs(only: NotificarLlegadaASucursalJob)
+    perform_enqueued_jobs(only: ActionMailer::MailDeliveryJob)
+  end
 end

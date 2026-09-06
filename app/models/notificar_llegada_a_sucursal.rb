@@ -6,34 +6,53 @@
 #   > **Yusef:** "Con el manifiesto notifique, pero **darle una ventana de media
 #   >  hora, por ejemplo, o una hora**."
 #
-# ── Por qué NO hay ventana de espera ──────────────────────────────────────
+# ── La ventana ────────────────────────────────────────────────────────────
 #
-# La ventana es un trabajo diferido, y **la cola de trabajos de este repo no
-# está conectada**: `solid_queue` está en el `Gemfile` y `render.yaml` levanta
-# dos workers que corren `rails solid_queue:start`, pero del lado de Rails nunca
-# se cableó — el adaptador efectivo en producción es `AsyncAdapter`, no existe
-# `db/queue_migrate` ni `config/queue.yml`, y no hay una sola tabla de
-# `solid_queue` en la base. El propio comentario que quedó sin descomentar en
-# `config/environments/production.rb` lo dice: *"non-durable queuing backend"*.
+# Del 2026-09-01 al 2026-09-06 esto avisaba **al cerrar la recepción, sin
+# ventana**, porque la cola de trabajos no estaba conectada y un job diferido
+# sobre `:async` se pierde en el primer deploy. Jorge, 2026-09-06: *"se hablaba
+# de un delay que se va a usar colas; te había dicho que no, que lo hiciéramos
+# instantáneo, pero con que más cosas ocupas colas, definitivamente hagámoslo"*.
 #
-# Un job agendado a 30-60 minutos sobre `:async` se pierde en el primer reinicio,
-# y en Render hay deploys y spin-down: el cliente **no recibiría el aviso, sin
-# error y sin rastro**.
+# Ahora hay **dos que avisan**, y por eso la idempotencia vive en el paquete
+# (`llegada_notificada_at`) y no en el cierre:
 #
-# Jorge, 2026-09-01, con esa información sobre la mesa: **notificar al cerrar la
-# recepción, sin ventana**. Se pierde el motivo que Yusef le daba —*"escanean el
-# manifiesto y empiezan a escanear paquete por paquete para cuadrar"*—, pero al
-# cerrar ese conteo **ya terminó**, que es justo lo que la ventana venía a
-# esperar. `RP-32` (¿media hora o una hora?) queda sin efecto hasta que la cola
-# se conecte.
+# 1. La **ventana**: con el primer paquete escaneado se programa
+#    `NotificarLlegadaASucursalJob` a `ventana_minutos` — `RP-32` (¿media hora
+#    o una hora?) sigue abierta; va en 30 y se cambia sin deploy con
+#    `Configuracion.set("ventana_aviso_llegada_min", "60")`. Cuando dispara,
+#    avisa lo escaneado hasta ahí.
+# 2. **Cerrar la recepción**: avisa a los que faltaban. Si la ventana ya pasó,
+#    son los escaneados después; si no, son todos, y el job después no
+#    encuentra a nadie.
+#
+# Se programa **una** vez por manifiesto (`aviso_llegada_programado_at`): el
+# segundo paquete escaneado no arma un segundo job.
 #
 # ── Quién recibe ──────────────────────────────────────────────────────────
 #
-# Solo los paquetes que **de verdad llegaron**: los que quedaron
-# `disponible_entrega` al escanearlos. El que no se escaneó sigue en
+# Solo los paquetes que **de verdad llegaron** y no fueron avisados: los que
+# quedaron `disponible_entrega` al escanearlos. El que no se escaneó sigue en
 # `enviado_sucursal` y no se avisa — avisarlo sería mandar al cliente a buscar
 # algo que no está, que es la queja que `A7-13` documenta.
 class NotificarLlegadaASucursal
+  VENTANA_DEFAULT_MIN = 30
+
+  def self.ventana_minutos
+    Configuracion.get("ventana_aviso_llegada_min").to_i.then { |m| m.positive? ? m : VENTANA_DEFAULT_MIN }
+  end
+
+  # A7-08 · Se llama al escanear cada paquete del interno; programa el aviso
+  # la primera vez y no hace nada las demás.
+  def self.programar(manifiesto)
+    return false unless manifiesto.tipo_interno?
+    return false if manifiesto.aviso_llegada_programado_at.present?
+
+    manifiesto.update_column(:aviso_llegada_programado_at, Time.current)
+    NotificarLlegadaASucursalJob.set(wait: ventana_minutos.minutes).perform_later(manifiesto)
+    true
+  end
+
   def initialize(manifiesto)
     @manifiesto = manifiesto
   end
@@ -52,13 +71,18 @@ class NotificarLlegadaASucursal
 
       LlegadaASucursalMailer.disponible(cliente, paquetes, @manifiesto.sucursal_entrega)
                             .deliver_later
+      # El sello va después de encolar, en la misma transacción del request:
+      # si el correo no se encola, el paquete queda sin sellar y el siguiente
+      # que avise lo agarra.
+      Paquete.where(id: paquetes.map(&:id)).update_all(llegada_notificada_at: Time.current)
       avisados += 1
     end
 
     avisados
   end
 
+  # Los que llegaron y todavía no fueron avisados — por ningún camino.
   def paquetes_llegados
-    @manifiesto.paquetes.where(estado: "disponible_entrega").includes(:cliente).to_a
+    @manifiesto.paquetes.where(estado: "disponible_entrega", llegada_notificada_at: nil).includes(:cliente).to_a
   end
 end
