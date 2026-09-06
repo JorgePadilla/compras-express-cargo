@@ -9457,3 +9457,143 @@ que no entran en este PR:
 |---|---|
 | `ManifiestosController#documento` carga `@paquetes` y **la vista nunca lo usa** | O es código muerto de `PR-M9`, o quedó afuera una sección del impreso. Yusef buscó justamente *"mostrar paquetes"* en el papel, así que puede ser lo segundo — pero pedirlo no lo pidió |
 | El manifiesto **interno** imprime `Consignatario —`, `No. de guía —` y `Recibido en Honduras —` | Son campos que el interno no tiene por diseño (`A7-07`). `C23-06` le saca el «(Miami)» que era lo que él señaló; los guiones vacíos siguen ahí |
+
+---
+
+## Conversación 24 (2026-09-05) — cobrar distinto **un paquete**, no un cliente
+
+Audio corto, **2 minutos 28 segundos**, transcrito con `whisper small`. Arranca a
+mitad de otra conversación y Yusef corta para cambiar de tema — y aclara de
+entrada que **no es del manifiesto**:
+
+> **Jorge:** "¿Te manifiestas todo?" · **Yusef:** "**No, no, es en paquetes**,
+>  fíjate, **para cobro**."
+> "Entonces te lo quiero platicar ahorita para que **lo tengamos previsto en
+>  prefactura**."
+
+> ⚠️ **Sobre el transcript.** Dos minutos, pero con la sordina de siempre y los
+> dos hablando encima. Se cita lo limpio y **lo dudoso se marca**. Muestras de lo
+> que no se usa: *"es lo asistuyo"*, *"pesaba más de lo que me diga ponerlo"*,
+> *"quiero dividirlos por señal"*. Y dos que sí se entienden con el contexto:
+> **«kiloguas» son kilowatts**, y los pesos de los generadores salen enredados
+> —*"de pesaditos de 800 libras, perdón 500 libras, es que eran como 800, 900
+> porque eran 2, estos eran 400 libras"*—: son **dos** generadores de ~400 lb
+> cada uno.
+
+---
+
+### C24-01 · Una excepción de cobro **por paquete** — 🔜 **PENDIENTE**
+
+El caso concreto, que es lo más claro de la llamada:
+
+> "Tengo un cliente que me ha movido unos **generadores**, de esos de 12
+>  kilo[watts], 10 kilo[watts]. […] Estos eran **400 libras**. Pero **el volumen
+>  de esos es 150 libras**. Es lo que yo […] voy a cobrar."
+
+O sea: el paquete pesa 400 lb reales y 150 lb volumétricas, y quiere cobrar
+**150** — el **menor** de los dos. Que es exactamente al revés de la regla
+normal, donde manda el mayor.
+
+Y la parte que define el alcance, dicha por él sin que se la preguntaran:
+
+> "El cliente **no es que toda la carga** ya se la cobro por peso, **sino que
+>  exclusivamente esa**. Se la cobro —perdón— **por volumen**."
+> "Entonces ahorita tengo el caso de **otro cliente igual**."
+
+**Esto descarta el camino que ya existe.** `PR-C6.41` puso «cobrar solo por
+volumen» a nivel de **cliente × tipo de envío** (`ClienteCobroVolumetrico`), y
+esa es justo la forma que Yusef está diciendo que no sirve: prender el flag del
+cliente le cambiaría el cobro a **toda** su carga, no a los generadores.
+
+**Dónde quiere marcarlo:**
+
+> "Lo que yo quiero es que podamos **crearle como excepciones… al paquete**. Al
+>  paquete registrado, al paquete que va a venir, al paquete…"
+> **Jorge:** "O sea, ¿en **prealerta** o en el **paquete**?" · **Yusef:**
+>  "Claro."
+
+Los dos: el que ya está en bodega y el que viene anunciado.
+
+**Y con permiso, que lo dijo sin que se lo preguntaran:**
+
+> "Esto va a tener un control donde **no lo puede hacer cualquiera**. No lo van a
+>  [manejar] a cualquier servicio al cliente, **nada que ver** con esto. **Tiene
+>  que ser alguien de supervisor o para arriba.**"
+
+---
+
+### C24-02 · «Tarifa especial», que nombró y no definió — 🔴 `RP-62`
+
+En la misma respiración apareció una segunda cosa:
+
+> "Y este mismo, solo por amarrado o por **tarifa especial** o algo por el
+>  estilo. […] O sea que este se lo vamos a cobrar en **una tarifa especial**
+>  como tal. Pero **él lo puede meter**, el que… **solo en ese paquete**."
+
+Y al cerrar enumeró **tres** clases de excepción, no una:
+
+> "Pero son cobros especiales, ¿a qué me refiero? **Tanto por libras, tanto por
+>  volumen o tanto**…" *(la frase queda a medias)*
+
+De las tres, **solo «por volumen» tiene caso concreto** —los generadores—. Las
+otras dos las nombró y no las definió:
+
+| Clase | Qué se sabe |
+|---|---|
+| **por volumen** | El caso de los generadores. Cobra el volumétrico aunque sea menor |
+| **por libras** | Solo el nombre. ¿Es forzar el peso real cuando manda el volumétrico? |
+| **tarifa especial** | Solo el nombre. ¿Un `precio_libra` distinto? ¿Una tarifa del catálogo? ¿Un monto fijo? |
+
+**`RP-62` pregunta las dos que faltan.** Adivinarlas sería inventar una regla de
+plata, que es la línea que este repo no cruza
+([[project_precios_los_carga_yusef]]).
+
+---
+
+### Lo que Yusef dijo del *cuándo*, y lo que decidió Jorge
+
+Él mismo lo puso después de que el sistema funcione:
+
+> "Ahí van a haber varias excepciones, en varias cositas así que se le ponen.
+>  Pero **yo pensaba eso más después** de haber hecho que el sistema funcione."
+
+Jorge contestó que no era caro:
+
+> "Si como ya lo tenés… ya dije, **esto no es tan complicado**."
+
+Y tiene razón por una razón concreta: **la aritmética ya existe**.
+`VolumetricoCalculator.entre_peso_y_vlbs` tiene el parámetro `solo_volumetrico:`
+desde `PR-C6.41` y **devuelve el volumétrico aunque sea el menor**, que es
+literalmente lo que Yusef describió. Lo que cambia no es la cuenta: es **de
+dónde sale el flag** — hoy del cliente, y él lo quiere del paquete.
+
+**Se construye** (decisión de Jorge, 2026-09-05), y va como `Fase 13.f`: es la
+misma familia que el precio bloqueado con PIN de supervisor, no una fase nueva.
+
+---
+
+### Por qué no alcanza con lo que ya hay en pre-factura
+
+`Fase 13.d` ya deja que un supervisor cambie el **peso** de una línea de
+pre-factura con su PIN (`Autorizacion`, acción `peso`). En teoría el caso de los
+generadores se resuelve ahí.
+
+Lo que no resuelve es lo que Yusef pidió con esas palabras: *"que **lo tengamos
+previsto** en prefactura"*. Con el camino de hoy, el cajero arma la pre-factura,
+le sale 400 libras, y **tiene que ir a buscar a un supervisor al mostrador** —
+cada vez, para cada generador de ese cliente. Marcándolo en el paquete, la
+pre-factura ya nace con las 150.
+
+Es la misma diferencia entre corregir y prevenir, y él pidió lo segundo.
+
+---
+
+### Lo que ya está verificado del lado del código
+
+| Qué | Estado |
+|---|---|
+| La cuenta que Yusef quiere | ✅ `entre_peso_y_vlbs(solo_volumetrico: true)` devuelve el volumétrico aunque sea menor |
+| Que el flag llegue a la pre-factura | ✅ `calculate_peso_cobrar` es `before_save`, y `PreFactura.build_from_paquetes` lee `paquete.peso_cobrar` |
+| El circuito de autorización | ✅ `Autorizacion` guarda quién, qué, por qué y con PIN; su `documento` es **polimórfico** |
+| Quiénes son «supervisor o para arriba» | ✅ Se **deriva** de `User::ROLES_AUTORIZANTES`, como hace `BajarCajasConPin` |
+| La pantalla gemela | ⚠️ La pre-alerta se edita en **admin y en el portal del cliente**. La excepción no puede aparecer en el portal |
