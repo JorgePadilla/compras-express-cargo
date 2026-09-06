@@ -31,10 +31,11 @@ class Autorizacion < ApplicationRecord
   # todo lo que importa —el PIN, el autorizante habilitado, el `motivo`
   # obligatorio y la bitácora—, que es el punto de que viva en esta tabla.
   ACCIONES_PAQUETE = %w[cobro_excepcion].freeze
-  # C26-03 · Facturar lo que hay de un grupo consolidado incompleto. El
-  # documento es la **pre-alerta**; lo aplica `AutorizarUnionParcial`.
-  ACCIONES_PRE_ALERTA = %w[union_parcial].freeze
-  ACCIONES = (ACCIONES_LINEA + ACCIONES_PAQUETE + ACCIONES_PRE_ALERTA + %w[emitir]).freeze
+  # C26-03 · Acá vivió `union_parcial`, para facturar un grupo consolidado
+  # incompleto con PIN de un jefe. Jorge lo corrigió el mismo día: *"se pone
+  # una alerta y se pasa"*. Sin PIN no hay autorización que registrar; el
+  # registro es el historial de la pre-alerta (`PasarGrupoIncompleto`).
+  ACCIONES = (ACCIONES_LINEA + ACCIONES_PAQUETE + %w[emitir]).freeze
 
   # Virtuales: llegan del formulario, no se guardan.
   attr_accessor :pin, :valor, :modo
@@ -170,7 +171,7 @@ class Autorizacion < ApplicationRecord
   def accion_label
     { "precio" => "Precio por libra", "peso" => "Peso a cobrar",
       "descuento" => "Descuento", "eliminar" => "Línea eliminada",
-      "emitir" => "Nota emitida", "union_parcial" => "Facturar parcial" }[accion]
+      "emitir" => "Nota emitida" }[accion]
   end
 
   private

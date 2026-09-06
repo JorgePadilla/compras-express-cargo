@@ -2,8 +2,15 @@
 # se pesa y se mide **antes** de la pre-factura.
 #
 # Yusef, en la línea: *"¿cómo vamos a llamar a este módulo? Medición se
-# llama."* Lo que necesita: *"el input de tracking, la información de medida y
-# peso, y la información de si el cliente está consolidando o no"*.
+# llama."* Jorge, corrigiendo la primera versión: *"se escanea el warehouse
+# receipt y me tiene que avisar **cómo está en la pre-alerta y cómo ingresó en
+# Miami**… los cuadritos: lo que está y lo que falta"*.
+#
+# Por eso el escaneo no responde una caja: responde **el grupo**. Los dos lados
+# del dato —lo que el cliente declaró y lo que Miami ingresó— van separados a
+# propósito: pueden no coincidir, y esa diferencia es información (el tipo de
+# envío cambia en Miami bastante seguido, por eso existe
+# `PreAlerta#sincronizar_tipo_envio_desde_paquetes!`).
 #
 # Por qué antes de la pre-factura: la pre-factura **copia** `peso_cobrar` al
 # crearse y no lo vuelve a leer. Una caja que ya está en una pre-factura no se
@@ -19,10 +26,10 @@ class MedicionController < ApplicationController
                           .includes(:cliente, :tipo_envio).order(medido_at: :desc).limit(30)
   end
 
-  # Lo que lee la pistola. Seis resultados, y cuatro de ellos son un modal rojo.
+  # Lo que lee la pistola: el warehouse receipt de la etiqueta de Miami.
   def escanear
     codigo = params[:codigo].to_s.strip
-    encontrados = Paquete.por_codigo_de_etiqueta(codigo).includes(:cliente, :tipo_envio).to_a
+    encontrados = Paquete.por_codigo_de_etiqueta(codigo).includes(:cliente, :tipo_envio, :user).to_a
 
     if encontrados.empty?
       return render json: { resultado: "no_encontrado", mensaje: "No se encontró ninguna caja con «#{codigo}»." }
@@ -44,10 +51,7 @@ class MedicionController < ApplicationController
                                      "Pasala por Recibir Carga." }
     end
 
-    grupo = paquete.grupo_de_union
-    resultado = grupo&.cerrada? ? "pre_alerta_ya_facturada" : "ok"
-    render json: { resultado: resultado, mensaje: mensaje_de(resultado, paquete, grupo),
-                   paquete: datos_de(paquete), unir: unir_de(grupo), medicion_previa: previa_de(paquete) }
+    render json: respuesta_de(paquete, paquete.grupo_de_union, resultado_de(paquete))
   end
 
   def medir
@@ -56,39 +60,57 @@ class MedicionController < ApplicationController
 
     grupo = paquete.grupo_de_union
     completo = grupo.present? && !grupo.cerrada? && grupo.completo?
-    render json: { ok: true, resultado: completo ? "grupo_completo" : "medido",
-                   paquete: datos_de(paquete), unir: unir_de(grupo),
-                   mensaje: completo ? "#{grupo.medidos} de #{grupo.total} medidos: el grupo va junto." : mensaje_medido(paquete) }
+    render json: respuesta_de(paquete, grupo, completo ? "grupo_completo" : "medido").merge(
+      ok: true,
+      mensaje: completo ? "#{grupo.medidas} de #{grupo.total} medidas: el grupo va junto." : mensaje_medido(paquete),
+      # Las stickers salen **juntas** al completar el grupo; una caja suelta
+      # imprime la suya al guardarla.
+      imprimir_url: completo ? etiquetas_url_de(grupo) : (grupo ? nil : etiqueta_medicion_path(paquete, print: "true"))
+    )
   rescue MedirPaquete::NoSePuede => e
     render json: { ok: false, errores: [ e.message ] }, status: :unprocessable_entity
   rescue ActiveRecord::RecordInvalid => e
     render json: { ok: false, errores: e.record.errors.full_messages }, status: :unprocessable_entity
   end
 
-  # C26-04 · La etiqueta de medición: Dymo 2.25 × 1.25, QR + fecha/hora,
-  # medidas, LBS, VLBS y PIES³. Sin nombre. Solo existe después de medir.
+  # C26-03 · «Facturar lo que hay»: el grupo sigue incompleto y hay que pasar.
+  # Sin PIN — Jorge: *"se pone una alerta y se pasa"*. Queda sellado en la
+  # pre-alerta, con qué faltaba, en su historial.
+  def facturar_parcial
+    pre_alerta = PreAlerta.find(params[:id])
+    grupo = PasarGrupoIncompleto.new(pre_alerta: pre_alerta, user: Current.user).call
+
+    render json: { ok: true, grupo: grupo_json(grupo),
+                   imprimir_url: (etiquetas_url_de(grupo) if grupo.paquetes_medidos.any?),
+                   mensaje: "Se pasa sin el grupo completo (#{pre_alerta.union_parcial_por}): " \
+                            "#{grupo.medidas} de #{grupo.total} medidas." }
+  rescue PasarGrupoIncompleto::YaCompleto => e
+    render json: { ok: false, errores: [ e.message ] }, status: :unprocessable_entity
+  end
+
+  # C26-04 · La etiqueta de una caja. Con `hermanas=1`, las de todo el split en
+  # un solo documento.
   def etiqueta
     @paquete = Paquete.find(params[:id])
-    raise ActiveRecord::RecordNotFound, "sin medir" if @paquete.medido_at.blank?
+    @paquetes = if params[:hermanas] == "1" && @paquete.dividido?
+      [ @paquete, *@paquete.paquetes_hermanos ].select { |p| p.medido_at.present? }.sort_by { |p| p.numero_caja.to_i }
+    else
+      [ @paquete ].select { |p| p.medido_at.present? }
+    end
+    raise ActiveRecord::RecordNotFound, "sin medir" if @paquetes.empty?
 
     render layout: "etiqueta_medicion"
   end
 
-  # C26-03 · Facturar lo que hay: la excepción, con PIN de un jefe.
-  def facturar_parcial
-    pre_alerta = PreAlerta.find(params[:id])
-    AutorizarUnionParcial.new(pre_alerta: pre_alerta,
-                              supervisor: User.find_by(id: params[:supervisor_id]),
-                              pin: params[:pin], motivo: params[:motivo],
-                              solicitado_por: Current.user).call
-    grupo = GrupoDeUnion.new(pre_alerta.reload)
-    render json: { ok: true, unir: unir_de(grupo),
-                   mensaje: "Facturar parcial autorizado por #{pre_alerta.union_parcial_por}: #{grupo.medidos} de #{grupo.total}." }
-  rescue AutorizarUnionParcial::NoPermitido, AutorizarUnionParcial::SinMotivo, AutorizarUnionParcial::YaCompleto => e
-    render json: { ok: false, errores: [ e.message ] }, status: :unprocessable_entity
-  rescue ActiveRecord::RecordInvalid => e
-    # El PIN lo valida `Autorizacion`, así que su rechazo llega por acá.
-    render json: { ok: false, errores: e.record.errors.full_messages }, status: :unprocessable_entity
+  # Las stickers de un grupo consolidado, juntas: *"que salgan las 3 stickers,
+  # una para cada paquete"*. Solo las medidas — una caja sin medir no tiene qué
+  # rotular.
+  def etiquetas
+    grupo = GrupoDeUnion.new(pre_alerta: PreAlerta.find(params[:id]))
+    @paquetes = grupo.paquetes_medidos
+    raise ActiveRecord::RecordNotFound, "ninguna medida" if @paquetes.empty?
+
+    render :etiqueta, layout: "etiqueta_medicion"
   end
 
   private
@@ -97,8 +119,28 @@ class MedicionController < ApplicationController
     redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:medicion)
   end
 
+  def resultado_de(paquete)
+    grupo = paquete.grupo_de_union
+    grupo&.cerrada? ? "pre_alerta_ya_facturada" : "ok"
+  end
+
+  # La respuesta completa del escaneo: la caja para el formulario, los dos
+  # lados del dato, y el grupo para la grilla.
+  def respuesta_de(paquete, grupo, resultado)
+    { resultado: resultado, mensaje: mensaje_de(resultado, paquete, grupo),
+      paquete: datos_de(paquete), miami: miami_de(paquete),
+      pre_alerta: pre_alerta_json(grupo), grupo: grupo_json(grupo, paquete.id),
+      medicion_previa: previa_de(paquete) }
+  end
+
   def codigo_de(paquete)
     helpers.etiqueta_codigo_barras(paquete).presence || paquete.tracking
+  end
+
+  def caja_de(paquete)
+    return nil unless paquete.cantidad_paquetes.to_i > 1
+
+    "#{paquete.numero_caja} de #{paquete.cantidad_paquetes}"
   end
 
   def datos_de(paquete)
@@ -106,38 +148,86 @@ class MedicionController < ApplicationController
     { id: paquete.id, codigo: codigo_de(paquete), tracking: paquete.tracking,
       cliente: cliente && "#{cliente.nombre_completo} · #{cliente.codigo}",
       tipo_envio: paquete.tipo_envio&.nombre, descripcion: paquete.descripcion,
-      caja: (paquete.cantidad_paquetes.to_i > 1 ? "#{paquete.numero_caja} de #{paquete.cantidad_paquetes}" : nil),
+      caja: caja_de(paquete),
       peso: paquete.peso&.to_f, alto: paquete.alto&.to_f, largo: paquete.largo&.to_f, ancho: paquete.ancho&.to_f,
       peso_volumetrico: paquete.peso_volumetrico&.to_f, peso_cobrar: paquete.peso_cobrar&.to_f,
       medir_url: medir_medicion_path(paquete),
       etiqueta_url: (etiqueta_medicion_path(paquete, print: "true") if paquete.medido_at.present?) }
   end
 
-  def unir_de(grupo)
+  # Cómo ingresó Miami esta caja. `numero_recepcion` en blanco significa que
+  # Miami todavía no la tiene: es un paquete «esperado» de la pre-alerta.
+  def miami_de(paquete)
+    return nil if paquete.numero_recepcion.blank?
+
+    { wr: codigo_de(paquete), recibido: paquete.fecha_recibido_miami&.strftime("%d/%m/%Y"),
+      por: paquete.user&.iniciales_display, descripcion: paquete.descripcion,
+      tipo_envio: paquete.tipo_envio&.nombre, caja: caja_de(paquete),
+      retenido: paquete.retener_miami? }
+  end
+
+  # Lo que el cliente declaró. Puede no coincidir con lo de arriba.
+  def pre_alerta_json(grupo)
+    pa = grupo&.pre_alerta
+    return nil if pa.nil?
+
+    { numero: pa.numero_documento, url: pre_alerta_path(pa), titulo: pa.titulo, proveedor: pa.proveedor,
+      consolidado: pa.consolidado?, con_reempaque: pa.con_reempaque?, notas: pa.notas_grupo,
+      tipo_envio: pa.tipo_envio&.nombre, trackings: pa.pre_alerta_paquetes.size }
+  end
+
+  # El grupo, para la grilla de cuadritos.
+  def grupo_json(grupo, seleccionada_id = nil)
     return nil if grupo.nil?
 
     pa = grupo.pre_alerta
-    { numero: pa.numero_documento, url: pre_alerta_path(pa),
-      total: grupo.total, llegados: grupo.llegados, medidos: grupo.medidos,
-      faltantes: grupo.faltantes.map { |f| { tracking: f.tracking, descripcion: f.descripcion, donde: f.donde } },
+    { consolidada: grupo.consolidada?, numero: pa&.numero_documento,
+      total: grupo.total, medidas: grupo.medidas, llegadas: grupo.llegadas,
       completo: grupo.completo?, cerrada: grupo.cerrada?,
-      parcial_autorizado: pa.union_parcial_at && { fecha: pa.union_parcial_at.strftime("%d/%m/%Y %H:%M"), por: pa.union_parcial_por },
-      facturar_parcial_url: facturar_parcial_medicion_path(pa) }
+      parcial_autorizado: (pa&.union_parcial_at && { fecha: pa.union_parcial_at.strftime("%d/%m/%Y %H:%M"),
+                                                     por: pa.union_parcial_por }),
+      facturar_parcial_url: (facturar_parcial_medicion_path(pa) if pa),
+      etiquetas_url: etiquetas_url_de(grupo),
+      cajas: grupo.cajas.map { |c| caja_json(c, seleccionada_id) } }
+  end
+
+  def caja_json(caja, seleccionada_id)
+    p = caja.paquete
+    { id: p&.id, wr: (codigo_de(p) if p && p.numero_recepcion.present?), tracking: caja.tracking,
+      descripcion: caja.descripcion, caja: (caja_de(p) if p), estado: caja.estado, donde: caja.donde,
+      peso: (p&.peso&.to_f if caja.medida?), medidas: (medidas_de(p) if caja.medida?),
+      por: p&.medido_por, seleccionada: p.present? && p.id == seleccionada_id,
+      medible: caja.aqui? || caja.medida? }
+  end
+
+  def medidas_de(paquete)
+    "#{paquete.alto&.to_f}x#{paquete.largo&.to_f}x#{paquete.ancho&.to_f}"
+  end
+
+  # Dónde están las stickers del grupo: la ruta del grupo si hay pre-alerta, y
+  # si es un split suelto, la de la caja con sus hermanas.
+  def etiquetas_url_de(grupo)
+    return nil if grupo.nil? || grupo.paquetes_medidos.empty?
+    return etiquetas_grupo_medicion_path(grupo.pre_alerta, print: "true") if grupo.pre_alerta
+
+    etiqueta_medicion_path(grupo.paquetes_medidos.first, hermanas: "1", print: "true")
   end
 
   def previa_de(paquete)
     return nil if paquete.medido_at.blank?
 
     { fecha: paquete.medido_at.strftime("%d/%m/%Y %H:%M"), por: paquete.medido_por,
-      peso: paquete.peso&.to_f, medidas: "#{paquete.alto&.to_f}x#{paquete.largo&.to_f}x#{paquete.ancho&.to_f}" }
+      peso: paquete.peso&.to_f, medidas: medidas_de(paquete) }
   end
 
   def mensaje_de(resultado, paquete, grupo)
     if resultado == "pre_alerta_ya_facturada"
       "#{codigo_de(paquete)} es de la pre-alerta #{grupo.pre_alerta.numero_documento}, ya facturada: " \
         "no la unas, hay que partir la pre-alerta. Se mide y se factura aparte."
+    elsif grupo&.consolidada?
+      "#{codigo_de(paquete)} · UNIR con #{grupo.pre_alerta.numero_documento}: #{grupo.medidas} de #{grupo.total} medidas."
     elsif grupo
-      "#{codigo_de(paquete)} · UNIR con #{grupo.pre_alerta.numero_documento}: #{grupo.medidos} de #{grupo.total} medidos."
+      "#{codigo_de(paquete)} · viene partido en #{grupo.total} cajas: #{grupo.medidas} medidas."
     else
       "#{codigo_de(paquete)} · #{paquete.cliente&.nombre_completo}"
     end

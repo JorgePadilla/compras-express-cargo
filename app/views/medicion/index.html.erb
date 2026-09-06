@@ -1,21 +1,34 @@
 <%# C26-02 · Medición: la estación de San Pedro.
 
-    Yusef, en la línea: *"Medición se llama"*. Escanea la etiqueta que se hizo
-    en Miami, una caja por vez; teclea peso y medidas; el sistema le dice si ese
-    cliente está **consolidando** y cuántas cajas faltan (C26-03, «unir»); y las
-    excepciones —caja que no aparece, que no se recibió, que ya está en
-    pre-factura, de una pre-alerta ya facturada, o facturar lo que hay— salen en
-    un **modal rojo grande**, porque *"la compu está allá y ellos están acá"*.
+    Se escanea el **warehouse receipt** de la etiqueta que Miami le pegó a la
+    caja. La pantalla contesta con tres cosas, que es lo que Jorge corrigió de
+    la primera versión: *"me tiene que avisar cómo está en la pre-alerta y cómo
+    ingresó en Miami… los cuadritos: lo que está y lo que falta"*.
 
-    Es el patrón de /empacar: `audio` con sus atributos, un `dispatch` por
-    resultado, Enter = siguiente campo y nunca guardar, F10 guarda, F2 limpia. %>
+      · lo que el **cliente declaró** en la pre-alerta;
+      · cómo la **ingresó Miami** (puede no coincidir, y esa diferencia importa);
+      · la **grilla del grupo**: un cuadrito por caja, con su estado.
+
+    Se miden todas, y al completar el grupo salen **todas las stickers juntas**.
+    Si falta alguna y hay que pasar igual, el modal rojo lo dice y se pasa
+    —*"se pone una alerta y se pasa"*—, con el sello de quién y qué faltaba. %>
 <div data-controller="medicion audio"
      <%= tag.attributes(atributos_de_audio) %>
      data-medicion-escanear-url-value="<%= escanear_medicion_index_path %>"
-     <%# C26-04 · La URL de la etiqueta la manda el servidor con cada medición;
-         este template es el respaldo de «Reimprimir» y, de paso, la puerta
-         que `pantallas_en_el_menu_test` exige para una ruta anidada. %>
+     <%# La URL de la etiqueta la manda el servidor con cada medición; este
+         template es el respaldo de «Reimprimir» y, de paso, la puerta que
+         `pantallas_en_el_menu_test` exige para una ruta anidada. %>
      data-medicion-etiqueta-url-template-value="<%= etiqueta_medicion_path(id: "ID", print: true) %>"
+     <%# Las clases de cada estado del cuadrito viven acá y no en el JS: Tailwind
+         escanea los `.erb` para saber qué clases compilar, y una clase que solo
+         existe dentro de un string de JavaScript **no se compila**. %>
+     data-medicion-clases-value='<%= {
+           medida:       "border-cec-teal bg-cec-teal/10 text-cec-teal-dark",
+           aqui:         "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800",
+           en_camino:    "border-amber-300 bg-amber-50 text-amber-900",
+           esperada:     "border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 opacity-60",
+           seleccionada: "ring-2 ring-cec-gold/40 border-cec-gold"
+         }.to_json %>'
      data-action="medicion:ok->audio#success
                   medicion:unir->audio#alert
                   medicion:grupoCompleto->audio#success
@@ -24,7 +37,7 @@
                   medicion:guardado->audio#success
                   medicion:fallo->audio#error">
 
-  <%= render PageHeaderComponent.new(title: "Medición", subtitle: "Escaneá la caja, pesala y medila. Si el cliente está consolidando, acá lo ves.") do |h| %>
+  <%= render PageHeaderComponent.new(title: "Medición", subtitle: "Escaneá el warehouse receipt, pesá y medí. Si el cliente está uniendo, acá ves lo que falta.") do |h| %>
     <% h.with_action { render "shared/sonido_config" } %>
   <% end %>
 
@@ -32,10 +45,6 @@
     <div class="lg:col-span-2 space-y-6">
       <%# ── a · la pistola ─────────────────────────────────────────────── %>
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <%# Jorge, 2026-09-06: *"en medición se escanea el warehouse receipt que
-            digitamos en Miami, que es el de la sticker que le pegamos"*. Es el
-            número de recepción más el sufijo de caja — lo que `por_codigo_de_etiqueta`
-            resuelve primero. %>
         <%= label_tag :codigo_medicion, "Escaneá el warehouse receipt de la etiqueta de Miami", class: "block text-base font-medium text-gray-700 dark:text-gray-200 mb-1" %>
         <%= text_field_tag :codigo_medicion, nil, autofocus: true, autocomplete: "off",
               placeholder: "RMI0002026000042-2 (o el tracking)",
@@ -44,7 +53,59 @@
         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400" data-medicion-target="aviso">Enter escanea. Los errores salen en rojo, grande.</p>
       </div>
 
-      <%# ── b · la caja y sus números ──────────────────────────────────── %>
+      <%# ── b · los dos lados del dato ─────────────────────────────────── %>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden" data-medicion-target="dosLados">
+        <%# Lo que el cliente declaró. %>
+        <div class="rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 p-4 hidden" data-medicion-target="panelPreAlerta">
+          <p class="text-xs uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Lo que declaró el cliente</p>
+          <p class="mt-1 font-mono font-bold text-cec-navy dark:text-cec-gold" data-medicion-target="paNumero"></p>
+          <p class="text-sm text-gray-800 dark:text-gray-100" data-medicion-target="paTitulo"></p>
+          <p class="text-sm text-gray-500 dark:text-gray-400" data-medicion-target="paDetalle"></p>
+          <p class="mt-1 text-sm text-amber-800 dark:text-amber-400 font-medium" data-medicion-target="paBanderas"></p>
+          <p class="mt-1 text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line" data-medicion-target="paNotas"></p>
+        </div>
+
+        <%# Cómo lo ingresó Miami. %>
+        <div class="rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 p-4 hidden" data-medicion-target="panelMiami">
+          <p class="text-xs uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Cómo ingresó Miami</p>
+          <p class="mt-1 font-mono font-bold text-cec-navy dark:text-cec-gold" data-medicion-target="miamiWr"></p>
+          <p class="text-sm text-gray-800 dark:text-gray-100" data-medicion-target="miamiDetalle"></p>
+          <p class="text-sm text-gray-500 dark:text-gray-400" data-medicion-target="miamiDescripcion"></p>
+          <p class="mt-1 text-sm text-red-700 font-medium hidden" data-medicion-target="miamiRetenido">Retenido en Miami</p>
+        </div>
+      </div>
+
+      <%# ── c · la grilla del grupo ────────────────────────────────────── %>
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 hidden" data-medicion-target="grupo">
+        <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3">
+          <p class="text-lg font-bold text-gray-800 dark:text-gray-100" data-medicion-target="grupoTitulo"></p>
+          <p class="text-sm text-gray-500 dark:text-gray-400" data-medicion-target="grupoSello"></p>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3" data-medicion-target="grilla"></div>
+        <div class="mt-4 flex flex-wrap gap-3">
+          <%= render(ButtonComponent.new(variant: :danger, size: :md, label: "Facturar lo que hay, sin el grupo completo",
+                data: { medicion_target: "facturarParcial", action: "medicion#abrirExcepcion" }, class: "hidden")) { "Facturar lo que hay" } %>
+          <%= render(ButtonComponent.new(variant: :secondary, size: :md, label: "Reimprimir las etiquetas del grupo",
+                data: { medicion_target: "reimprimirGrupo", action: "medicion#reimprimirGrupo" }, class: "hidden")) { "Reimprimir el grupo" } %>
+        </div>
+
+        <%# El cuadrito vive en el ERB y no en el JS: el markup se lee acá, y
+            Tailwind ve sus clases. El JS solo lo clona y lo llena. %>
+        <template data-medicion-target="plantillaCuadrito">
+          <%# El nombre accesible arranca genérico y el JS lo reemplaza por el
+              warehouse receipt de la caja: un botón cuyo texto llega por JS nace
+              mudo para el lector de pantalla. %>
+          <button type="button" data-action="medicion#elegirCaja" aria-label="Elegir esta caja para medirla"
+                  class="w-full min-h-11 p-3 rounded-xl border-2 flex flex-col items-center gap-0.5 text-center transition foco-cec">
+            <span class="font-mono text-sm font-bold leading-tight" data-campo="wr"></span>
+            <span class="text-[11px] text-gray-500 dark:text-gray-400" data-campo="caja"></span>
+            <span class="text-[11px] font-medium" data-campo="estado"></span>
+            <span class="text-[11px] font-mono text-gray-600 dark:text-gray-300" data-campo="peso"></span>
+          </button>
+        </template>
+      </div>
+
+      <%# ── d · la caja y sus números ──────────────────────────────────── %>
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 hidden" data-medicion-target="panel">
         <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1">
           <span class="text-2xl font-mono font-bold text-cec-navy dark:text-cec-gold" data-medicion-target="codigoCaja"></span>
@@ -55,18 +116,6 @@
         <p class="text-sm text-gray-500 dark:text-gray-400"><span data-medicion-target="tipoEnvio"></span> · <span data-medicion-target="descripcion"></span></p>
         <p class="mt-2 text-sm text-amber-800 dark:text-amber-400 hidden" data-medicion-target="previa"></p>
 
-        <%# C26-03 · El grupo de la pre-alerta consolidada: cuántos faltan. %>
-        <div class="mt-4 rounded-lg bg-amber-100 text-amber-900 p-4 hidden" data-medicion-target="unir">
-          <p class="text-xl font-bold" data-medicion-target="unirTitulo"></p>
-          <ul class="mt-2 text-sm space-y-0.5 font-mono" data-medicion-target="unirFaltantes"></ul>
-          <p class="mt-2 text-sm font-medium hidden" data-medicion-target="unirSello"></p>
-          <div class="mt-3">
-            <%= render(ButtonComponent.new(variant: :danger, size: :md, label: "Facturar lo que hay, con PIN de un jefe",
-                  data: { medicion_target: "facturarParcial", action: "medicion#abrirExcepcion" }, class: "hidden")) { "Facturar lo que hay" } %>
-          </div>
-        </div>
-
-        <%# Peso y medidas. Enter avanza, nunca guarda; F10 guarda. %>
         <div class="mt-5" data-medicion-target="form" data-action="keydown->medicion#formKeydown"
              data-controller="calc-volumetrico">
           <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -101,7 +150,7 @@
       <div class="rounded-lg bg-cec-teal/10 text-cec-teal-dark p-4 text-lg font-semibold hidden" data-medicion-target="banner"></div>
     </div>
 
-    <%# ── c · el turno ───────────────────────────────────────────────────── %>
+    <%# ── e · el turno ───────────────────────────────────────────────────── %>
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
       <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
         <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100">Medidos hoy</h2>
@@ -140,44 +189,24 @@
     </div>
   </dialog>
 
-  <%# ── Facturar lo que hay: la excepción, con PIN de un jefe ───────────── %>
+  <%# ── Facturar lo que hay: la alerta, y se pasa ───────────────────────── %>
   <dialog data-medicion-target="excepcionModal" data-action="cancel->medicion#avisoCancelar"
           style="margin: auto" class="rounded-xl p-0 w-[44rem] max-w-[95vw] backdrop:bg-black/70">
     <div class="px-8 py-5 bg-red-700 text-white">
-      <p class="text-xs font-bold uppercase tracking-wider">Excepción</p>
+      <p class="text-xs font-bold uppercase tracking-wider">El grupo está incompleto</p>
       <p class="text-3xl font-bold mt-1" data-medicion-target="excepcionTitulo">Facturar lo que hay</p>
     </div>
     <div class="bg-white px-8 py-6 space-y-4">
-      <p class="text-xl text-gray-900">El grupo está incompleto. Se va a facturar sin:</p>
+      <p class="text-xl text-gray-900">Se va a seguir sin estas cajas:</p>
       <ul class="text-lg font-mono text-red-800 space-y-1" data-medicion-target="excepcionFaltantes"></ul>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-        <div>
-          <%= label_tag :medicion_supervisor_id, "Jefe que autoriza", class: "block text-sm font-medium text-gray-700 mb-1" %>
-          <% autorizantes = User.autorizantes.order(:nombre) %>
-          <%= select_tag :medicion_supervisor_id,
-                options_from_collection_for_select(autorizantes, :id, ->(u) { "#{u.nombre} — #{u.rol_label}" }),
-                include_blank: "— Seleccionar —", data: { medicion_target: "supervisor" },
-                class: "block w-full min-h-11 rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
-        </div>
-        <div>
-          <%= label_tag :medicion_pin, "PIN", class: "block text-sm font-medium text-gray-700 mb-1" %>
-          <%= password_field_tag :medicion_pin, nil, inputmode: "numeric", maxlength: 4, autocomplete: "off",
-                data: { medicion_target: "pin" },
-                class: "block w-full min-h-11 text-xl font-mono tracking-widest rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
-        </div>
-      </div>
-      <div>
-        <%= label_tag :medicion_motivo, "Motivo", class: "block text-sm font-medium text-gray-700 mb-1" %>
-        <%= text_field_tag :medicion_motivo, nil, autocomplete: "off", data: { medicion_target: "motivo" },
-              class: "block w-full min-h-11 rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
-      </div>
+      <p class="text-base text-gray-600">Queda anotado en la pre-alerta con tu nombre, la hora y lo que faltaba.</p>
       <p class="text-base font-medium text-red-700 hidden" data-medicion-target="excepcionError"></p>
     </div>
     <div class="flex items-center justify-end gap-3 px-8 py-4 bg-gray-50 border-t border-gray-200">
       <%= render(ButtonComponent.new(variant: :secondary, size: :md, label: "Cancelar la excepción",
             data: { action: "medicion#cerrarExcepcion" })) { "Cancelar" } %>
-      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Autorizar facturar parcial con PIN",
-            data: { medicion_target: "autorizar", action: "medicion#autorizarParcial" })) { "Autorizar con PIN" } %>
+      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Sí, facturar lo que hay",
+            data: { medicion_target: "confirmarParcial", action: "medicion#confirmarParcial" })) { "Sí, facturar lo que hay" } %>
     </div>
   </dialog>
 </div>

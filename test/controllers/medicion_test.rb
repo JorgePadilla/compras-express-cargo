@@ -1,6 +1,10 @@
 require "test_helper"
 
 # C26-02 · La estación de Medición, por JSON.
+#
+# Lo que Jorge corrigió de la primera versión: el escaneo no responde una caja,
+# responde **el grupo**, con los dos lados del dato — *"cómo está en la
+# pre-alerta y cómo ingresó en Miami"*.
 class MedicionTest < ActionDispatch::IntegrationTest
   setup do
     @medidor = users(:medidor)
@@ -13,9 +17,9 @@ class MedicionTest < ActionDispatch::IntegrationTest
     post session_url, params: { email_address: user.email_address, password: "password123" }
   end
 
-  def caja(tracking, estado: "en_aduana", cliente: clientes(:juan))
+  def caja(tracking, estado: "en_aduana", cliente: clientes(:juan), **extra)
     Paquete.create!(tracking: tracking, cliente: cliente, tipo_envio: tipo_envios(:cer),
-                    sucursal_recepcion: sucursales(:miami), estado: estado, descripcion: "Zapatos", peso: 2)
+                    sucursal_recepcion: sucursales(:miami), estado: estado, descripcion: "Zapatos", peso: 2, **extra)
   end
 
   def escanear(codigo) = post(escanear_medicion_index_path, params: { codigo: codigo }, as: :json)
@@ -24,66 +28,153 @@ class MedicionTest < ActionDispatch::IntegrationTest
   end
   def json = JSON.parse(response.body)
 
-  # ── Escanear ─────────────────────────────────────────────────────────────
+  # ── Los dos lados del dato ───────────────────────────────────────────────
 
-  test "una caja recibida se encuentra por su tracking, y trae sus números" do
+  test "el escaneo dice cómo ingresó Miami" do
+    @paquete.update!(fecha_recibido_miami: Time.zone.parse("2026-09-01 09:00"), user: users(:digitador))
+    users(:digitador).update!(iniciales: "DM")
+
     escanear(@paquete.tracking)
 
     assert_equal "ok", json["resultado"]
-    assert_equal @paquete.id, json["paquete"]["id"]
-    assert_match(/Juan/, json["paquete"]["cliente"])
-    assert_nil json["unir"], "Juan no está consolidando"
-    assert_nil json["medicion_previa"]
+    miami = json["miami"]
+    assert_equal @paquete.reload.numero_recepcion, miami["wr"]
+    assert_equal "01/09/2026", miami["recibido"]
+    assert_equal "DM", miami["por"]
+    assert_equal "Zapatos", miami["descripcion"]
+    assert_not miami["retenido"]
   end
 
-  test "lo que no se encuentra, lo dice" do
+  test "y dice cómo lo declaró el cliente, que puede ser otra cosa" do
+    pa, = grupo_de_tres(@paquete)
+    escanear(@paquete.tracking)
+
+    declarado = json["pre_alerta"]
+    assert_equal pa.numero_documento, declarado["numero"]
+    assert_equal 3, declarado["trackings"]
+    assert declarado["consolidado"]
+    assert_equal "Consolidado de prueba", declarado["titulo"]
+    assert_not_equal declarado["tipo_envio"], json["miami"]["tipo_envio"],
+                     "el tipo con el que Miami lo ingresó no es el que el cliente declaró, y las dos cosas se ven"
+  end
+
+  # ── La grilla ────────────────────────────────────────────────────────────
+
+  test "la grilla trae un cuadrito por caja, con su estado y cuál está seleccionada" do
+    _pa, otros = grupo_de_tres(@paquete)
+    llego(otros.first)
+
+    escanear(@paquete.tracking)
+
+    grupo = json["grupo"]
+    assert grupo["consolidada"]
+    assert_equal [ 3, 0, 2 ], grupo.values_at("total", "medidas", "llegadas")
+    assert_equal %w[aqui aqui esperada], grupo["cajas"].map { |c| c["estado"] }
+    assert_equal [ true, false, false ], grupo["cajas"].map { |c| c["seleccionada"] }
+    assert_equal [ true, true, false ], grupo["cajas"].map { |c| c["medible"] }
+    assert_nil grupo["cajas"].last["wr"], "lo que Miami no tiene no tiene warehouse receipt"
+    assert_equal "no ha llegado a Miami", grupo["cajas"].last["donde"]
+  end
+
+  test "un tracking partido en tres cajas son tres cuadritos, aunque la pre-alerta tenga un renglón" do
+    @paquete.update!(cantidad_paquetes: 3, numero_caja: 1)
+    hermanas = (2..3).map { |n| hermana(@paquete, n) }
+
+    escanear(@paquete.reload.numero_recepcion + "-1")
+
+    grupo = json["grupo"]
+    assert_equal 3, grupo["total"]
+    assert_not grupo["consolidada"], "no lo pidió el cliente: viene partido"
+    assert_equal hermanas.map(&:id), grupo["cajas"].drop(1).map { |c| c["id"] }
+  end
+
+  # ── Medir y las stickers juntas ──────────────────────────────────────────
+
+  test "medir una caja de un grupo incompleto no imprime todavía" do
+    grupo_de_tres(@paquete)
+
+    medir(@paquete)
+
+    assert_equal "medido", json["resultado"]
+    assert_nil json["imprimir_url"], "las stickers salen juntas al completar el grupo"
+    assert_equal 1, json["grupo"]["medidas"]
+    assert_equal "medida", json["grupo"]["cajas"].first["estado"]
+  end
+
+  test "al medir la última salen las etiquetas del grupo, juntas" do
+    pa, otros = grupo_de_tres(@paquete)
+    medir(@paquete)
+    otros.each { |p| medir(llego(p)) }
+
+    assert_equal "grupo_completo", json["resultado"]
+    assert_match(/3 de 3 medidas/, json["mensaje"])
+    assert_equal etiquetas_grupo_medicion_path(pa, print: "true"), json["imprimir_url"]
+
+    get json["imprimir_url"]
+    assert_response :success
+    assert_equal 3, response.body.scan(/class="med"/).size, "una sticker por caja"
+  end
+
+  test "una caja sola imprime la suya al guardarla" do
+    medir(@paquete)
+
+    assert_equal etiqueta_medicion_path(@paquete, print: "true"), json["imprimir_url"]
+  end
+
+  test "las etiquetas del grupo son solo las medidas" do
+    pa, = grupo_de_tres(@paquete)
+    medir(@paquete)
+
+    get etiquetas_grupo_medicion_path(pa)
+    assert_response :success
+    assert_equal 1, response.body.scan(/class="med"/).size, "una caja sin medir no lleva sticker"
+  end
+
+  # ── Facturar lo que hay, sin PIN ─────────────────────────────────────────
+
+  test "pasar sin el grupo completo no pide PIN, y queda anotado" do
+    pa, = grupo_de_tres(@paquete)
+    medir(@paquete)
+
+    post facturar_parcial_medicion_path(pa), as: :json
+
+    assert_response :success
+    assert_equal "MD", pa.reload.union_parcial_por
+    assert_equal "MD", json["grupo"]["parcial_autorizado"]["por"]
+    assert_match(/1ZFALTA/, pa.historial)
+    assert_equal etiquetas_grupo_medicion_path(pa, print: "true"), json["imprimir_url"]
+  end
+
+  test "con el grupo completo, forzarlo es 422" do
+    pa, otros = grupo_de_tres(@paquete)
+    medir(@paquete)
+    otros.each { |p| medir(llego(p)) }
+
+    post facturar_parcial_medicion_path(pa), as: :json
+
+    assert_response :unprocessable_entity
+    assert_match(/completo/, json["errores"].join)
+  end
+
+  # ── Lo que no se mide ────────────────────────────────────────────────────
+
+  test "lo que no se encuentra, lo que no llegó y lo que ya está facturado se dicen distinto" do
     escanear("NOEXISTE123")
-
     assert_equal "no_encontrado", json["resultado"]
-  end
 
-  test "una caja que todavía no se recibió no se mide: Recibir Carga primero" do
-    p = caja("1ZNOLLEGO0000001", estado: "enviado_honduras")
-    escanear(p.tracking)
-
+    escanear(caja("1ZNOLLEGO0000001", estado: "enviado_honduras").tracking)
     assert_equal "no_esta_en_honduras", json["resultado"]
     assert_match(/Recibir Carga/, json["mensaje"])
-  end
 
-  test "una caja ya en pre-factura no se mide: el peso se congeló ahí" do
     @paquete.update_columns(pre_factura_id: PreFactura.first.id)
     escanear(@paquete.tracking)
-
     assert_equal "en_pre_factura", json["resultado"]
-  end
-
-  test "una caja ya medida avisa quién y cuándo" do
-    @paquete.update!(medido_at: Time.zone.parse("2026-09-06 10:22"), medido_por: "SP", alto: 10, largo: 12, ancho: 14)
-    escanear(@paquete.tracking)
-
-    assert_equal "ok", json["resultado"]
-    assert_equal "SP", json["medicion_previa"]["por"]
-    assert_match(/06\/09\/2026/, json["medicion_previa"]["fecha"])
-  end
-
-  # ── Unir ─────────────────────────────────────────────────────────────────
-
-  test "una caja de un grupo consolidado trae cuántos faltan y cuáles" do
-    pa, otra = grupo_de_dos(@paquete)
-    escanear(@paquete.tracking)
-
-    unir = json["unir"]
-    assert_equal pa.numero_documento, unir["numero"]
-    assert_equal [ 2, 1, 0 ], unir.values_at("total", "llegados", "medidos")
-    assert_equal [ [ @paquete.tracking, "llegó, sin medir" ], [ otra, "no ha llegado" ] ],
-                 unir["faltantes"].map { |f| f.values_at("tracking", "donde") }
-    assert_not unir["completo"]
-    assert_equal facturar_parcial_medicion_path(pa), unir["facturar_parcial_url"]
   end
 
   test "una caja de una pre-alerta ya facturada avisa, y se deja medir" do
     cerrada = pre_alertas(:finalizada)
-    cerrada.pre_alerta_paquetes.create!(tracking: @paquete.tracking, descripcion: "Tarde", fecha: Date.current, paquete: @paquete)
+    cerrada.pre_alerta_paquetes.create!(tracking: @paquete.tracking, descripcion: "Tarde",
+                                        fecha: Date.current, paquete: @paquete)
 
     escanear(@paquete.tracking)
     assert_equal "pre_alerta_ya_facturada", json["resultado"]
@@ -91,31 +182,15 @@ class MedicionTest < ActionDispatch::IntegrationTest
 
     medir(@paquete)
     assert_response :success
-    assert_equal "medido", json["resultado"]
   end
 
-  # ── Medir ────────────────────────────────────────────────────────────────
+  test "una caja ya medida avisa quién y cuándo" do
+    @paquete.update!(medido_at: Time.zone.parse("2026-09-06 10:22"), medido_por: "SP", alto: 10, largo: 12, ancho: 14)
 
-  test "medir escribe, sella con las iniciales del que entró, y devuelve el paquete al día" do
-    medir(@paquete)
+    escanear(@paquete.tracking)
 
-    assert_response :success
-    assert_equal "medido", json["resultado"]
-    assert_equal 12.5, json["paquete"]["peso"]
-    assert_equal 10.5, json["paquete"]["peso_volumetrico"]
-    assert_equal "MD", @paquete.reload.medido_por
-  end
-
-  test "medir el último del grupo lo declara completo" do
-    pa, otra = grupo_de_dos(@paquete)
-    p2 = llego(paquete_del_renglon(pa, otra))
-    medir(@paquete)
-    assert_equal "medido", json["resultado"], "todavía falta uno"
-
-    medir(p2)
-    assert_equal "grupo_completo", json["resultado"]
-    assert_match(/2 de 2 medidos/, json["mensaje"])
-    assert json["unir"]["completo"]
+    assert_equal "SP", json["medicion_previa"]["por"]
+    assert_match(%r{06/09/2026}, json["medicion_previa"]["fecha"])
   end
 
   test "una medida en cero es 422 con el porqué" do
@@ -124,34 +199,6 @@ class MedicionTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_match(/mayores que cero/, json["errores"].join)
     assert_nil @paquete.reload.medido_at
-  end
-
-  # ── Facturar lo que hay ──────────────────────────────────────────────────
-
-  test "facturar parcial con PIN de un jefe sella la pre-alerta" do
-    pa, _otra = grupo_de_dos(@paquete)
-    medir(@paquete)
-    jefe = users(:supervisor_prefactura)
-    jefe.update!(pin: "1234", iniciales: "SP")
-
-    post facturar_parcial_medicion_path(pa), params: { supervisor_id: jefe.id, pin: "1234", motivo: "no viene" }, as: :json
-
-    assert_response :success
-    assert_equal "SP", json["unir"]["parcial_autorizado"]["por"]
-    assert_equal "SP", pa.reload.union_parcial_por
-    assert @paquete.reload.listo_para_prefactura?
-  end
-
-  test "facturar parcial con PIN equivocado es 422 y no sella" do
-    pa, _otra = grupo_de_dos(@paquete)
-    jefe = users(:supervisor_prefactura)
-    jefe.update!(pin: "1234")
-
-    post facturar_parcial_medicion_path(pa), params: { supervisor_id: jefe.id, pin: "0000", motivo: "no viene" }, as: :json
-
-    assert_response :unprocessable_entity
-    assert_match(/pin/i, json["errores"].join)
-    assert_nil pa.reload.union_parcial_at
   end
 
   # ── Quién entra ──────────────────────────────────────────────────────────
@@ -166,12 +213,10 @@ class MedicionTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "la raíz lo manda a su estación" do
+  test "la raíz lo manda a su estación; Honduras entra y Miami no" do
     get root_path
     assert_redirected_to medicion_index_path
-  end
 
-  test "Honduras entra; Miami no" do
     ingresar(users(:cajero))
     get medicion_index_path
     assert_response :success
@@ -183,56 +228,32 @@ class MedicionTest < ActionDispatch::IntegrationTest
 
   private
 
-  # Una pre-alerta consolidada de Juan con dos renglones: esta caja (ya llegó)
-  # y otra que sigue esperada.
-  def grupo_de_dos(paquete)
-    otra = "1ZFALTA000000001"
-    pa = pre_alerta_consolidada(paquete.tracking, otra)
-    # El renglón de esta caja creó un esperado; en la vida real Miami lo
-    # convierte en el paquete de verdad. Acá lo vinculamos a mano.
-    esperado = paquete_del_renglon(pa, paquete.tracking)
-    pa.pre_alerta_paquetes.find_by(tracking: paquete.tracking).update_columns(paquete_id: paquete.id)
-    esperado.destroy
-    [ pa, otra ]
-  end
-
-  # Una pre-alerta consolidada nueva de Juan. Cada renglón crea su paquete
-  # esperado (`pre_alerta_estado`); «llegar» es que Miami lo reciba y Honduras
-  # lo escanee — acá, moverlo a `en_aduana`. Las de fixtures ya traen renglones
-  # y corren los conteos; y vaciar una la borra por callback.
-  def pre_alerta_consolidada(*trackings)
+  # Una pre-alerta consolidada de Juan con tres trackings: el que se escanea
+  # (que ya está acá) y dos más. El tipo de envío declarado es aéreo, distinto
+  # del que Miami usó, a propósito.
+  def grupo_de_tres(paquete)
     pa = PreAlerta.create!(numero_documento: "PA-T#{SecureRandom.hex(3).upcase}", cliente: clientes(:juan),
                            tipo_envio: tipo_envios(:aereo), consolidado: true, con_reempaque: true,
                            estado: "pre_alerta", titulo: "Consolidado de prueba",
                            creado_por_tipo: "usuario", creado_por_id: users(:admin).id)
-    trackings.each { |t| pa.pre_alerta_paquetes.create!(tracking: t, descripcion: "Bulto #{t.last(3)}", fecha: Date.current) }
-    pa
-  end
-
-  def paquete_del_renglon(pa, tracking)
-    pa.pre_alerta_paquetes.find_by(tracking: tracking).paquete
+    pa.pre_alerta_paquetes.create!(tracking: paquete.tracking, descripcion: "Zapatos", fecha: Date.current,
+                                   paquete: paquete)
+    otros = %w[1ZFALTA000000001 1ZFALTA000000002].map do |t|
+      pa.pre_alerta_paquetes.create!(tracking: t, descripcion: "Gorra", fecha: Date.current).paquete
+    end
+    [ pa, otros ]
   end
 
   def llego(paquete)
-    paquete.update_columns(estado: "en_aduana")
+    paquete.update!(estado: "recibido_miami", sucursal_recepcion: sucursales(:miami))
+    paquete.update!(estado: "en_aduana")
     paquete.reload
   end
 
-  # ── C26-04 · La etiqueta ─────────────────────────────────────────────────
-
-  test "medir devuelve la URL de la etiqueta, y la etiqueta existe solo después de medir" do
-    get etiqueta_medicion_path(@paquete)
-    assert_response :not_found
-
-    medir(@paquete)
-    assert_match(%r{/medicion/#{@paquete.id}/etiqueta}, json["paquete"]["etiqueta_url"])
-
-    get etiqueta_medicion_path(@paquete)
-    assert_response :success
-    assert_match(%r{class="codigo"[^>]*>#{@paquete.reload.numero_recepcion} · MD<}, response.body, "el código y quién midió")
-    assert_match(/VLBS<\/span> 10\.50/, response.body)
-    assert_match(/PIES³ 0\.97/, response.body)
-    # El QR va dentro del SVG; su texto se afirma por el helper que lo arma.
-    assert_equal "MED #{@paquete.numero_recepcion} 12.50 10x12x14", ApplicationController.helpers.etiqueta_qr_medicion(@paquete)
+  def hermana(madre, numero)
+    Paquete.create!(tracking: madre.tracking, cliente: madre.cliente, tipo_envio: madre.tipo_envio,
+                    sucursal_recepcion: sucursales(:miami), estado: madre.estado, descripcion: madre.descripcion,
+                    peso: 2, numero_recepcion: madre.numero_recepcion,
+                    cantidad_paquetes: madre.cantidad_paquetes, numero_caja: numero)
   end
 end

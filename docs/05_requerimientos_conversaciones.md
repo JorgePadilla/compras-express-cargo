@@ -10065,7 +10065,7 @@ está en una pre-factura no se puede medir desde acá; se dice con un modal.
 Jorge, con la línea parada: *"yo creo que para el lunes puedo, por lo menos,
 tener algo de acá"* (2026-09-08).
 
-#### C26-03 · «Unir»: el grupo de la pre-alerta consolidada — ✅ **HECHO**
+#### C26-03 · «Unir»: el grupo, con sus cuadritos — ✅ **HECHO**, en dos vueltas
 
 El motivo del módulo no es pesar: es **saber, caja en mano, si ese cliente
 está consolidando**.
@@ -10086,43 +10086,52 @@ con el problema que se encuentre."*
 
 **Lectura, y lo que se construye:**
 
-- Al escanear, si el cliente tiene una pre-alerta **consolidada abierta** que
-  lista ese tracking, la pantalla muestra el grupo: *«UNIR · PA-000123 ·
-  llegados 3 de 5 · medidos 2 de 5»* y **cuáles faltan**, cada uno con su
-  dónde: *no ha llegado* (sigue antes de Honduras o no se ha vinculado) o
-  *llegó, sin medir*.
-- «Llegado» es un renglón con paquete en un estado de Honduras (`en_aduana`,
-  `consolidando_honduras`, `disponible_entrega`, `facturado`, `en_reparto`,
-  `entregado`). «Medido» es llegado con sello de medición.
-- Cuando se mide el último, el grupo **sale junto**: suena distinto y dice
-  *«5 de 5 medidos: el grupo va junto»*. No se cambia ningún estado: que el
-  grupo esté listo **se calcula**, no se guarda.
-- **Facturar lo que hay** es la excepción: un modal rojo grande lista los
-  faltantes y pide **PIN de un jefe** (`User::ROLES_AUTORIZANTES`) con motivo,
-  como toda excepción que cambia plata en este sistema (precio, peso, cobro por
-  volumen). Queda sellado en la pre-alerta (quién, cuándo) y en la bitácora de
-  autorizaciones. Es decisión de diseño: el operario de medición no es jefe, y
-  el modal rojo existe justamente para meter fricción. Si Yusef quiere que el
-  operario lo haga solo, es quitar el PIN del servicio.
-- Los otros problemas también son modal rojo: caja que no se encuentra; caja
-  que todavía no se recibió (*«pasala por Recibir Carga»*); caja **ya en una
-  pre-factura** (el peso ya está congelado; no se mide); y caja de una
-  pre-alerta consolidada **ya facturada** —el caso del split, `C26-09`—, que
-  avisa *«no la unas, hay que partir la pre-alerta»* y **sí deja medir**,
-  porque esa caja se factura aparte.
+- Al escanear el **warehouse receipt**, la pantalla contesta con **el grupo
+  entero**, no con una caja: lo que declaró el cliente en la pre-alerta, cómo lo
+  ingresó Miami, y una **grilla de cuadritos** —uno por caja— con lo que está y
+  lo que falta.
+- **Un cuadrito por sticker**, no por renglón. Un tracking que Miami partió en
+  tres cajas son **tres warehouse receipts y tres stickers**; la primera versión
+  lo contaba como uno. Jorge lo corrigió el mismo día: *"si vienen 3 warehouse
+  receipts y en la pre-alerta vienen 3, se tienen que unir"*.
+- **Los cuatro estados salen de la base, sin columna nueva.** Un paquete recibe
+  su número de recepción **en el instante en que Miami lo ingresa**
+  (`debe_generar_numero_recepcion?`), y cada tracking declarado ya tiene su
+  paquete «esperado» desde la pre-alerta (`crear_paquete_esperado`). Entonces:
+  sin WR es *esperada*; con WR y fuera de Honduras, *en camino*; en Honduras sin
+  medir, *acá*; con `medido_at`, *medida*.
+- Se puede **tocar un cuadrito** que ya llegó para medirlo, sin volver a
+  escanear: el operario tiene las tres cajas enfrente.
+- Al medir la última, el grupo **sale junto** y **salen las N stickers en una
+  sola impresión** — *"que salgan las 3 stickers, una para cada paquete"*. Una
+  caja suelta imprime la suya al guardarla.
+- **Faltantes: alerta y se pasa.** Jorge: *"hay una posibilidad de que solo
+  estén 2: en ese caso **se pone una alerta y se pasa**"*. El modal rojo lista
+  lo que falta y con qué —*no ha llegado a Miami*, *en Miami todavía no llega
+  acá*, *acá sin medir*—, el operario confirma, y queda sellado en la pre-alerta
+  con su nombre, la hora y lo que faltaba, en el historial. **Sin PIN**: la
+  primera versión lo pedía, y la fricción que él quiere es el modal, no un jefe
+  caminando hasta la estación con mil paquetes en la línea.
+- El grupo también aparece **sin consolidación**: un tracking partido en varias
+  cajas son varias stickers que salen juntas igual.
+- Los otros problemas siguen siendo modal rojo: caja que no aparece, código
+  ambiguo, caja que no se recibió, caja ya en pre-factura (no se mide), y caja
+  de una pre-alerta ya facturada (avisa y **sí** deja medir).
 
 **Lo que la pre-factura todavía no hace** (es su bloque, no éste): un paquete
 de grupo incompleto sigue apareciendo como facturable. El gancho queda
 definido y probado —`Paquete#listo_para_prefactura?`— para que
 `/pre_facturas` lo lea cuando se toque esa pantalla.
 
-**Cómo quedó construido (2026-09-06):** `/medicion` en Logística, entre Recibir
-Carga y Pre-Facturas. `MedirPaquete` escribe los cuatro números y sella
+**Cómo quedó construido (2026-09-06, en dos vueltas):** `/medicion` en
+Logística, entre Recibir Carga y Pre-Facturas. `MedirPaquete` escribe los cuatro números y sella
 `medido_at`/`medido_por` (re-sellado en cada medición). `GrupoDeUnion` es la
 consulta del grupo: cada renglón de pre-alerta **tiene** su paquete desde que se
 crea (`crear_paquete_esperado`), así que «llegó» es que ese paquete esté en un
-estado de Honduras — no se busca por tracking. `AutorizarUnionParcial` sella la
-excepción con PIN y la deja en la bitácora de `/autorizaciones`. La pistola
+estado de Honduras — no se busca por tracking. `PasarGrupoIncompleto` sella la
+excepción —sin PIN— y la escribe en el historial de la pre-alerta, que es lo que
+pre-factura va a leer. `GrupoDeUnion` cuenta **cajas**: cada renglón aporta su
+paquete y, si Miami lo partió, sus hermanas. La pistola
 resuelve con `Paquete.por_codigo_de_etiqueta`, estricto: código de caja,
 número de recepción o tracking exactos, nunca por descripción.
 

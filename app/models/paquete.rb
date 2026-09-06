@@ -828,7 +828,10 @@ class Paquete < ApplicationRecord
 
   # C26-03 · El gancho para la pre-factura, que **todavía no lo lee** (es su
   # bloque, `C26-08`): medido, y sin grupo, o con el grupo completo, cerrado
-  # (se factura aparte) o con la excepción de facturar parcial sellada.
+  # (se factura aparte) o con la excepción de «facturar lo que hay» sellada.
+  #
+  # «Grupo» incluye el split: media caja de un tracking partido no se factura
+  # sin la otra mitad medida.
   def listo_para_prefactura?
     return false if medido_at.blank?
 
