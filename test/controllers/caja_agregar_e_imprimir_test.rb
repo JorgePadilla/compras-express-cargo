@@ -165,28 +165,21 @@ class CajaAgregarEImprimirTest < ActionDispatch::IntegrationTest
     assert_select "[data-shortcut='F11']", 0, "no se pudo comprobar que F11 llegue a la página"
   end
 
-  # ── C21-04 · Que el No. Doc se pueda escribir ─────────────────────────────
-
-  test "el formulario tiene dónde teclear el No. Doc" do
+  # ── RP-61 · El «No. Doc» no se teclea, porque no existe ──────────────────
+  #
+  # Tres tests acá afirmaban que el formulario tenía dónde teclearlo y que se
+  # guardaba. El sistema viejo lo fabrica (`"DM" + id`) y nadie lo escribe;
+  # acá la caja se identifica por `codigo`. Que no vuelva el campo.
+  test "RP-61 · el formulario de casas no pide ningún No. Doc" do
     get manifiesto_path(@manifiesto)
 
-    assert_select "input[name='caja_manifiesto[numero_doc]']", 1,
-                  "la 4×6 lo imprime y caja_params lo permite: sin campo no se puede llenar nunca"
+    assert_select "input[name='caja_manifiesto[numero_doc]']", 0
+    assert_select "th", text: "No. Doc", count: 0
   end
 
-  test "el No. Doc se guarda al agregar la caja" do
-    post manifiesto_cajas_path(@manifiesto),
-         params: { caja_manifiesto: { alto: 23, largo: 23, ancho: 36, peso: 131, numero_doc: "DM7155" } }
-
-    assert_equal "DM7155", @manifiesto.cajas.order(:id).last.numero_doc
-  end
-
-  test "la tabla de casas muestra el No. Doc" do
-    @manifiesto.cajas.create!(alto: 23, largo: 23, ancho: 36, peso: 131, numero_doc: "DM7155")
-
-    get manifiesto_path(@manifiesto)
-
-    assert_select "th", text: "No. Doc"
-    assert_select "td", text: "DM7155"
+  test "RP-61 · la caja no tiene el atributo, ni el controller lo permite" do
+    assert_not CajaManifiesto.column_names.include?("numero_doc")
+    assert_no_match(/numero_doc/, Rails.root.join("app/controllers/cajas_manifiesto_controller.rb").read,
+                    "sin columna, un permit que lo nombre es el cableado por un solo extremo otra vez")
   end
 end

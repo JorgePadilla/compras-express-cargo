@@ -8081,21 +8081,30 @@ fila, borrar e imprimir. Los botones: **Solo Agregar (F5)** y **Agregar/Imprimir
 (F9)**.
 
 > ⚠️ **El «No. Doc» estaba cableado por los dos extremos y sin nada en el medio**
-> — lo destapó la auditoría del 2026-09-05, **arreglado el mismo día**. La
-> columna existía en `caja_manifiestos` desde `PR-M3`, `caja_params` la permitía
-> y **la 4×6 ya la imprimía**… pero **no había ningún campo donde teclearla**, ni
-> columna en la tabla de casas. Ningún seed, fixture ni test la escribía tampoco:
-> el `DM7155` que Yusef pidió **no se podía meter nunca** y la etiqueta caía
-> siempre al `A1` de respaldo.
+> — lo destapó la auditoría del 2026-09-05. La columna existía en
+> `caja_manifiestos` desde `PR-M3`, `caja_params` la permitía y **la 4×6 ya la
+> imprimía**… pero no había ningún campo donde teclearla. Ese día se le puso un
+> campo de texto y quedó abierta `RP-61`: ¿es el mismo para todas las cajas?
 >
-> Es la forma que más engaña de todas: `grep numero_doc` da tres resultados y
-> parece implementado. Ahora hay campo en el formulario y columna en la tabla, y
-> dos tests afirman que lo que se teclea llega a la etiqueta.
+> **El arreglo estaba equivocado, y `RP-61` se respondió con datos el
+> 2026-09-06.** Se leyó el sistema viejo por su propio endpoint
+> (`POST /Logistica/Manifiestos/GetManifiesto`, 196 manifiestos, 186 con cajas):
+> el «No. Doc» es el campo `NoCajaPaquetes`, y vale **siempre**
+> `"DM" + DetallesManifiestoID` — `DM7679`, `DM7680`, `DM7681`… una por caja, en
+> las 186. Se pinta como `<td>`; **no hay input**. Nadie lo tecleó nunca: es el
+> ID de la caja con «DM» adelante. Yusef tampoco lo nombró en ningún audio; salió
+> de leer una columna en la pantalla.
 >
-> **Queda una pregunta para Yusef:** si el `No. Doc` es el mismo para todas las
-> cajas de un manifiesto, va a haber que teclearlo hasta 30 veces. Si repite, se
-> mueve al manifiesto o se pre-llena con el de la caja anterior — pero eso no se
-> adivina desde el audio, que solo lo muestra como columna por caja.
+> Lo que sí se teclea en la cabecera vieja es el **No. Guía** (`302094`,
+> `301931 CANOA DE CLIENTE DIRECTO`), y eso acá ya existe: `manifiesto_guias`.
+>
+> **Decisión:** el `numero_doc` se va — columna, campo, celda y la línea de la
+> etiqueta. Su trabajo lo hace `codigo` (`MMIA2026000001-A`), que va bajo el QR y
+> es lo que escanea `/recepcion_carga`. La etiqueta vieja necesitaba el `DM`
+> porque **no traía el número del manifiesto** (la primera corrección de Yusef en
+> `C21-05`); la nuestra sí. Dos nombres para una caja es la duplicación que
+> este repo persigue. Si el martes Yusef extraña el «DM», un método calculado
+> `"DM#{id}"` son tres líneas — pero es el respaldo, no el plan.
 
 Sin tope de cantidad: *"a veces son 50… hemos pegado 20 pico, 30 cajas"*.
 
@@ -9368,9 +9377,17 @@ insignias en toda la app.
 | `RP-59` | «Expedido por»: ¿el **nombre** de quien lo creó, o sus **iniciales**? | ✅ **Las iniciales** |
 | `C23-12` | La tecla de «Agregar e imprimir» — y la F5 que no disparaba | ✅ **Arreglado** |
 | `RP-60` | ¿El **desglose de paquetes** va en el manifiesto impreso? | ✅ **Sí** — Jorge, 2026-09-06 |
-| `RP-61` | ¿El **No. Doc** es el mismo para todas las cajas de un manifiesto? | 🔴 **Pendiente de Yusef** |
+| `RP-61` | ¿El **No. Doc** es el mismo para todas las cajas de un manifiesto? | ✅ **Respondida con datos del sistema viejo** — es `"DM" + id` de la caja, generado; se quitó el campo |
 | `C23-13` | Las teclas dicen lo mismo en todas las pantallas | ✅ **Arreglado** |
 | `C23-14` | El interno empaca sin escanear — y `sucursal_actual` ya se sella al recibir | ✅ **Implementado** |
+
+**`RP-61` · Cómo se respondió sin esperar a Yusef.** Jorge pidió *"lo que tenga
+más sentido"*, y lo que tenía más sentido era mirar el dato antes de opinar. El
+sistema viejo contesta JSON por `GetManifiesto`, y en 186 manifiestos con cajas
+el «No. Doc» fue siempre `"DM" + DetallesManifiestoID`: un número que el
+servidor fabrica por caja, nunca tecleado. La pregunta *"¿es el mismo para
+todas?"* estaba mal hecha: no es un dato, es un identificador. Detalle y
+decisión en la nota de `C21-04`.
 
 **`RP-59` · Por qué era una pregunta.** Yusef preguntó él mismo qué va en ese
 campo —*"no sé si ponerle **las iniciales, la firma, el nombre**"*, *"solamente
