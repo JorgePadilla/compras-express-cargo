@@ -19,7 +19,19 @@ class Autorizacion < ApplicationRecord
   self.table_name = "autorizaciones"
 
   ACCIONES_LINEA = %w[precio peso descuento eliminar].freeze
-  ACCIONES = (ACCIONES_LINEA + %w[emitir]).freeze
+  # C24-01 · Y un tercer momento: la **excepción de cobro de un paquete**, que
+  # se marca antes de que exista la pre-factura.
+  #
+  # Yusef lo pidió así —*"que lo tengamos **previsto** en prefactura"*—: con
+  # `ACCIONES_LINEA` el cajero tiene que ir a buscar a un supervisor al mostrador
+  # cada vez que arma la factura; marcado en el paquete, la línea ya nace bien.
+  #
+  # La aplica `MarcarCobroExcepcion`, no `aplicar_a_linea!`: acá el `documento`
+  # es un `Paquete` y no hay `pre_factura_item` que tocar. Lo que sí comparte es
+  # todo lo que importa —el PIN, el autorizante habilitado, el `motivo`
+  # obligatorio y la bitácora—, que es el punto de que viva en esta tabla.
+  ACCIONES_PAQUETE = %w[cobro_excepcion].freeze
+  ACCIONES = (ACCIONES_LINEA + ACCIONES_PAQUETE + %w[emitir]).freeze
 
   # Virtuales: llegan del formulario, no se guardan.
   attr_accessor :pin, :valor, :modo

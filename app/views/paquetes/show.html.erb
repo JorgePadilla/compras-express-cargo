@@ -217,6 +217,78 @@ end %>
   </div>
 <% end %>
 
+<%# C24-01 · La excepción de cobro del paquete.
+
+    Yusef, sobre unos generadores de 400 lb reales y 150 volumétricas: *"es lo
+    que yo voy a cobrar"* — el **menor**, al revés de la regla normal. Y el
+    control, que también lo puso él: *"no lo puede hacer cualquiera… tiene que
+    ser alguien de supervisor o para arriba"*.
+
+    Va en su propio `dialogo` y no dentro del de bajar cajas: son dos actos
+    distintos con dos listas de supervisores distintas —el de cobro **no incluye
+    a Miami**— y meterlos juntos haría que uno heredara los permisos del otro. %>
+<% if can_access?(:paquetes) && @supervisores_cobro&.any? %>
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6" data-controller="dialogo">
+    <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">Excepción de cobro</h3>
+    <p class="text-xs text-gray-600 dark:text-gray-300 mb-3">
+      <% if @paquete.cobro_excepcion.present? %>
+        Este paquete cobra <strong>solo el volumétrico</strong>
+        (<%= @paquete.peso_volumetrico %> lb) en vez del real (<%= @paquete.peso %> lb).
+      <% else %>
+        Hoy cobra el mayor entre el peso real y el volumétrico, que es la regla normal.
+      <% end %>
+    </p>
+    <%= render ButtonComponent.new(variant: :secondary, size: :sm,
+          data: { action: "dialogo#abrir" }) do %>
+      <%= @paquete.cobro_excepcion.present? ? "Quitar la excepción" : "Cobrar solo por volumen" %>
+    <% end %>
+
+    <dialog data-dialogo-target="dialogo" style="margin: auto"
+            class="rounded-xl p-0 w-[26rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-gray-300">
+      <%= form_with url: cobro_excepcion_paquete_path(@paquete), method: :post do %>
+        <%# El valor va en un `hidden`: el botón ya dice cuál de los dos actos es,
+            así que no hay nada que elegir adentro del modal. %>
+        <%= hidden_field_tag :cobro_excepcion, @paquete.cobro_excepcion.present? ? "" : "solo_volumetrico" %>
+        <div class="bg-gray-50 px-5 py-3 border-b border-gray-200">
+          <h3 class="text-base font-semibold text-gray-800">
+            <%= @paquete.cobro_excepcion.present? ? "Volver al cobro normal" : "Cobrar solo por volumen" %>
+          </h3>
+          <p class="text-xs text-gray-600 mt-0.5">
+            Lo autoriza un supervisor con su PIN. Queda registrado quién y por qué.
+          </p>
+        </div>
+        <div class="p-5 space-y-3 bg-white">
+          <div>
+            <%= label_tag :supervisor_id, "Supervisor", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= select_tag :supervisor_id,
+                  options_from_collection_for_select(@supervisores_cobro, :id, :nombre),
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+          </div>
+          <div>
+            <%= label_tag :pin, "PIN", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= password_field_tag :pin, nil, inputmode: "numeric", autocomplete: "off", maxlength: 4,
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono tracking-widest" %>
+          </div>
+          <div>
+            <%= label_tag :motivo, "Motivo", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= text_field_tag :motivo, nil, placeholder: "Ej. generadores, se cobran por volumen",
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+          </div>
+          <p class="text-xs text-gray-500">
+            El peso a cobrar se recalcula solo, y la pre-factura ya nace con él.
+            Si el paquete ya se facturó, no se puede desde acá.
+          </p>
+        </div>
+        <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">
+          <%= render ButtonComponent.new(variant: :ghost, size: :sm,
+                data: { action: "dialogo#cerrar" }) do %>Cancelar<% end %>
+          <%= render ButtonComponent.new(variant: :primary, size: :sm, type: "submit") do %>Autorizar<% end %>
+        </div>
+      <% end %>
+    </dialog>
+  </div>
+<% end %>
+
 <% if @edit_mode %>
   <%# Modo edición inline (Yusef 2026-05-08): el form de edit se
       renderiza en el show via `?mode=edit`, eliminando la página
@@ -675,6 +747,17 @@ end %>
       <div>
         <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Peso a Cobrar</dt>
         <dd class="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100"><%= @paquete.peso_cobrar || "—" %> lbs</dd>
+        <%# C24-01 · Si el paquete tiene excepción hay que **decirlo acá**: sin
+            esto el número sale más bajo de lo que cualquiera espera y no hay
+            forma de saber por qué hasta que alguien reclama. %>
+        <% if @paquete.cobro_excepcion.present? %>
+          <% autorizacion = Autorizacion.where(documento: @paquete, accion: "cobro_excepcion").recientes.first %>
+          <dd class="mt-1">
+            <span class="inline-flex items-center gap-1 rounded-full bg-cec-gold/20 px-2 py-0.5 text-xs font-medium text-cec-navy dark:bg-cec-gold/25 dark:text-cec-gold">
+              cobro por volumen<% if autorizacion %> · autorizó <%= autorizacion.autorizado_por.nombre %><% end %>
+            </span>
+          </dd>
+        <% end %>
       </div>
     </div>
 

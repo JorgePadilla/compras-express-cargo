@@ -442,7 +442,7 @@ Fase 9  ░░░░░░░░░░░░░░░░░░░░  Fotos de P
 Fase 10 ████████████████░░░░  Contexto operativo en captura (PR-9)      ← EN CURSO
 Fase 11 ████████████████░░░░  Tarifas y calculo de cobro (PR-10)        ← EN CURSO
 Fase 12 ████████████████████  Manifiesto de punta a punta (PR-M1–M9)      ✅
-Fase 13 ████████████████░░░░  Precio bloqueado + PIN de supervisor        🔜 13.f
+Fase 13 ████████████████████  Precio bloqueado + PIN de supervisor        ✅
 ```
 
 > El trabajo de agosto 2026 **no aparece en este cuadro**: es la serie `PR-C6`
@@ -1007,7 +1007,7 @@ tipo de envío, que ya tiene su fuente en `lib/sonidos_de_error.rb`.
 | 13.c | Rol `supervisor_sac` + PIN de 4 dígitos | ✅ |
 | 13.d | Autorización por línea y el candado | ✅ |
 | 13.e | Emitir notas de débito/crédito pide PIN + cuatro ojos | ✅ |
-| 13.f | Excepción de cobro **por paquete**, con PIN de supervisor (`C24-01`) | 🔜 |
+| 13.f | Excepción de cobro **por paquete**, con PIN de supervisor (`C24-01`) | ✅ |
 
 Sale de la aclaración de Yusef del 2026-08-05 sobre
 la nota `TARIFA EDITABLE CON AUTORIZACION DE SUPERVISOR O JEFE` que repite en

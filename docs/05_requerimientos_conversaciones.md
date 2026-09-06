@@ -9482,7 +9482,7 @@ entrada que **no es del manifiesto**:
 
 ---
 
-### C24-01 · Una excepción de cobro **por paquete** — 🔜 **PENDIENTE**
+### C24-01 · Una excepción de cobro **por paquete** — ✅ **IMPLEMENTADO**
 
 El caso concreto, que es lo más claro de la llamada:
 
@@ -9519,6 +9519,35 @@ Los dos: el que ya está en bodega y el que viene anunciado.
 > "Esto va a tener un control donde **no lo puede hacer cualquiera**. No lo van a
 >  [manejar] a cualquier servicio al cliente, **nada que ver** con esto. **Tiene
 >  que ser alguien de supervisor o para arriba.**"
+
+---
+
+**Cómo quedó.** `MarcarCobroExcepcion` marca la excepción en el paquete con PIN
+de supervisor, y `paquetes.cobro_excepcion` la guarda. El peso a cobrar se
+recalcula solo —`calculate_peso_cobrar` es `before_save`— y **la pre-factura
+hereda las 150 sin que se toque una línea de pre-factura**, que es exactamente
+el *"previsto en prefactura"* que él pidió.
+
+**La forma sale de juntar los dos patrones que el repo ya tenía**, porque hacían
+falta las dos mitades: de `QuitarCambioServicio` —el análogo más cercano, que
+también es un flag en un paquete— salen los errores tipados y el guard de
+`ya_facturado?`; de `Autorizacion` (`Fase 13.d`) sale **el registro**, que es
+todo el punto del control que Yusef pidió. El PIN lo valida `Autorizacion` con
+sus propias reglas: duplicarlo sería tener dos formas de decir si un PIN sirve.
+
+**Quiénes:** los cuatro que ya llevan PIN (`User::ROLES_AUTORIZANTES`),
+derivados y no copiados. **Miami queda afuera a propósito** — y ahí está la
+diferencia con `BajarCajasConPin`, que sí lo suma: allá el error nace en Miami,
+acá la excepción es una decisión de cobro.
+
+**Una sola puerta.** `cobro_excepcion` **no** está en `paquete_params`, con un
+test que lo afirma: si se pudiera escribir por `PATCH /paquetes/:id`, todo el
+control se salta y el registro deja de servir como prueba. Es la misma regla que
+`PR-13.d` le puso al precio de una línea.
+
+**Y se ve**: la ficha del paquete dice «cobro por volumen · autorizó X» al lado
+del peso, porque si no el número sale más bajo de lo que cualquiera espera y no
+hay forma de saber por qué.
 
 ---
 

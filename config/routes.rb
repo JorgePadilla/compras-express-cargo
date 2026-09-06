@@ -70,6 +70,8 @@ Rails.application.routes.draw do
       # Honduras**, al entregar: "el sistema no va a querer entregar porque
       # decía que eran dos".
       post :bajar_cajas
+      # C24-01 · La excepción de cobro del paquete, con PIN de supervisor.
+      post :cobro_excepcion
     end
     collection do
       get :check_tracking

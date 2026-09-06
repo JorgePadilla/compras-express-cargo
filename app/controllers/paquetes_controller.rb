@@ -1,6 +1,6 @@
 class PaquetesController < ApplicationController
   include NotificaRecibido
-  before_action :set_paquete, only: [ :show, :edit, :update, :warehouse_receipt, :etiqueta, :destroy, :eliminar_de_pre_alerta, :reimprimir_etiquetas, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero, :bajar_cajas ]
+  before_action :set_paquete, only: [ :show, :edit, :update, :warehouse_receipt, :etiqueta, :destroy, :eliminar_de_pre_alerta, :reimprimir_etiquetas, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero, :bajar_cajas, :cobro_excepcion ]
   before_action :authorize_tracking_actions, only: [ :check_tracking, :search ]
   before_action :authorize_edit, only: [ :edit, :update, :eliminar_de_pre_alerta, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero ]
   before_action :authorize_delete, only: [ :destroy ]
@@ -314,6 +314,34 @@ class PaquetesController < ApplicationController
   rescue BajarCajasConPin::NoPermitido, BajarCajasConPin::PinInvalido,
          BajarCajasConPin::YaFacturado, BajarCajasConPin::NadaQueBajar => e
     redirect_to @paquete, alert: e.message
+  end
+
+  # C24-01 · Marcarle al paquete que se cobra distinto.
+  #
+  # Yusef: *"esto va a tener un control donde **no lo puede hacer cualquiera**…
+  # tiene que ser alguien de supervisor o para arriba"*. Todo el control vive en
+  # `MarcarCobroExcepcion`; acá solo se traducen sus errores a un aviso.
+  #
+  # **`cobro_excepcion` no está en `paquete_params`** y no puede estarlo: éste es
+  # el único camino, igual que `PR-13.d` dejó el precio de una línea con una sola
+  # puerta.
+  def cobro_excepcion
+    MarcarCobroExcepcion.new(
+      paquete: @paquete,
+      excepcion: params[:cobro_excepcion],
+      supervisor: User.find_by(id: params[:supervisor_id]),
+      pin: params[:pin],
+      motivo: params[:motivo],
+      solicitado_por: Current.user
+    ).call
+
+    redirect_to @paquete, notice: aviso_de_excepcion
+  rescue MarcarCobroExcepcion::NoPermitido, MarcarCobroExcepcion::SinMotivo,
+         MarcarCobroExcepcion::YaFacturado, ArgumentError => e
+    redirect_to @paquete, alert: e.message
+  rescue ActiveRecord::RecordInvalid => e
+    # El PIN lo valida `Autorizacion`, así que su rechazo llega por acá.
+    redirect_to @paquete, alert: e.record.errors.full_messages.to_sentence
   end
 
   def quitar_tercero
@@ -809,6 +837,10 @@ class PaquetesController < ApplicationController
   def cargar_supervisores_cajas
     @supervisores_cajas = User.activos.where(rol: BajarCajasConPin::ROLES)
                               .where.not(pin_digest: nil).order(:nombre)
+    # C24-01 · Los de la excepción de cobro son **otra lista**: sin Miami. Se
+    # cargan acá porque la ficha del paquete ya llama a este método.
+    @supervisores_cobro = User.activos.where(rol: MarcarCobroExcepcion::ROLES)
+                              .where.not(pin_digest: nil).order(:nombre)
   end
 
   def authorize_delete
@@ -919,6 +951,14 @@ class PaquetesController < ApplicationController
     scope = scope.where(estado: "anulado") if params[:solo_anulados] == "1"
     scope = scope.where(pre_factura: true) if params[:solo_prefactura] == "1"
     scope
+  end
+
+  def aviso_de_excepcion
+    if @paquete.reload.cobro_excepcion.present?
+      "#{@paquete.numero_recepcion_visible} cobra solo el volumétrico: #{@paquete.peso_cobrar} lb."
+    else
+      "#{@paquete.numero_recepcion_visible} vuelve al cobro normal: #{@paquete.peso_cobrar} lb."
+    end
   end
 
   def paquete_params
