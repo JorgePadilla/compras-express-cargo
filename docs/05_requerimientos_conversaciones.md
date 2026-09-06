@@ -4952,11 +4952,14 @@ hagámoslo, pero en un servidor solo para colas"*. Lo que se hizo, en un PR:
   test, donde un lint afirma que existen.
 - `config.active_job.queue_adapter = :solid_queue` en producción (staging corre
   como producción). Desarrollo y test siguen en `:async` / `:test`.
-- **El worker es un servidor aparte**: los `background_worker` de `render.yaml`,
-  que ya existían corriendo `solid_queue:start` sin tablas de dónde tomar
-  trabajo. El web no lleva `SOLID_QUEUE_IN_PUMA`. **Falta que Jorge confirme en
-  el dashboard de Render que `cec-worker-staging` está desplegado** y que su log
-  muestra al supervisor arrancar: el blueprint lo declara, nadie lo vio correr.
+- **El worker es un servidor aparte** — y **no existía**. `render.yaml` lo
+  declaraba desde hace meses, pero en la cuenta de Render había cinco servicios
+  y `cec-worker-staging` no era uno de ellos (y `cec-worker-production` está
+  suspendido). Se creó el mismo 2026-09-06 por la API de Render, con las
+  variables de `cec-staging`, y su log lo confirma: *SolidQueue-1.4.0 Started
+  Supervisor / Dispatcher / Worker / Scheduler*, y un segundo después ejecutó
+  un correo que llevaba una hora esperando en la cola. Lección: un `render.yaml`
+  no es un deploy; si el servicio no aparece en la lista, no existe.
 - **Tres jobs nocturnos despiertan.** `config/recurring.yml` estaba escrito y
   dormido: `CleanEmptyPreAlertasJob` (3am, borra suavemente pre-alertas vacías
   de más de 30 días), `MarcarCotizacionesExpiradasJob` (1am) y
