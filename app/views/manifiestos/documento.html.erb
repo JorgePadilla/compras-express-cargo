@@ -178,7 +178,7 @@
               <%= [ caja.alto, caja.largo, caja.ancho ].map { |m| m.presence || "—" }.join(" × ") %>
             </td>
             <td class="num"><%= caja.volumen.present? ? number_with_precision(caja.volumen, precision: 2) : "—" %></td>
-            <td class="num"><%= caja.pies_cubicos || "—" %></td>
+            <td class="num"><%= caja.pies_cubicos.present? ? number_with_precision(caja.pies_cubicos, precision: 2) : "—" %></td>
             <td class="num"><%= caja.peso.present? ? number_with_precision(caja.peso, precision: 2) : "—" %></td>
           </tr>
         <% end %>
@@ -202,18 +202,78 @@
       <td class="value"><%= number_with_precision(@manifiesto.volumen_total.to_f, precision: 2) %> VLBS</td>
     </tr>
     <tr>
-      <%# C23-07 · El total de pies³ es **la suma de los de cada bulto**, no el
-          pie cúbico del volumen total. `pies_cubicos` redondea hacia arriba a
-          entero por bulto —regla (B) de la hoja de Yusef—, así que las dos
-          cuentas dan distinto; se elige la que **suma la columna de arriba**,
-          porque un total que no cuadra con lo que tiene encima es un papel que
-          nadie firma. %>
+      <%# C23-07 · El total de pies³ es **la suma de los de cada bulto** —
+          un total que no cuadra con lo que tiene encima es un papel que nadie
+          firma.
+
+          C25-05 · Y ahora suma **exactos**. `C23-07` sumaba ceils porque cada
+          bulto salía redondeado hacia arriba; Yusef vio un `12` donde la
+          cuenta daba `11.02` y pidió el exacto para el proveedor, que
+          redondea por su cuenta. Con exactos ya no hay dos cuentas que
+          difieran: la suma de la columna y el total son el mismo número. %>
       <td class="label">Pies cúbicos</td>
-      <td class="value"><%= @cajas.sum { |c| c.pies_cubicos.to_i } %> PIES³</td>
+      <td class="value"><%= number_with_precision(@cajas.sum { |c| c.pies_cubicos.to_f }, precision: 2) %> PIES³</td>
       <td class="label"></td>
       <td class="value"></td>
     </tr>
   </table>
+</div>
+
+<%# RP-60 · El desglose de los paquetes que van adentro.
+
+    Yusef lo pidió mirando la pantalla vieja: *"acá abajo lleva a mostrar
+    paquetes, esto activa todo el packing… está bien hecho y está mal hecho:
+    bien porque lo tiene, mal porque **no tenemos cómo exportarlo**"*. En la
+    llamada se le contestó que apretara «Imprimir manifiesto» y él dijo *"ya vi,
+    ya lo vi"* — pero ese papel llevaba **los bultos, no lo que va adentro**, así
+    que los dos quedaron conformes con algo que no contestaba la pregunta. Jorge
+    lo confirmó el 2026-09-06: **sí va en el impreso**.
+
+    Media función ya estaba: `ManifiestosController#documento` carga `@paquetes`
+    desde `PR-M9` y **la vista nunca lo usaba** — la huella de una sección que se
+    cayó, no de código muerto de nacimiento.
+
+    Las columnas son las de la pantalla vieja —NO. RECEPCIÓN, TRACKING,
+    CONTENIDO, T.E.— más el **cliente**, que en un papel que viaja con la carga
+    es lo que se busca primero. Se deja afuera **ESTADO**, que allá sirve porque
+    la pantalla es de trabajo: acá todos acaban de pasar a «enviado» en el mismo
+    acto, así que sería una columna con el mismo valor repetido.
+
+    Va **después de los bultos y antes de las firmas**: primero qué bultos van,
+    después qué hay adentro, al final quién firma. %>
+<div class="mf-section">
+  <div class="mf-h" style="font-size:12px;margin-bottom:6px;">Paquetes (<%= @paquetes.size %>)</div>
+  <% if @paquetes.any? %>
+    <table class="mf-t">
+      <thead>
+        <tr>
+          <th style="width:5%;">#</th>
+          <th style="width:16%;">No. recepción</th>
+          <th style="width:20%;">Tracking</th>
+          <th style="width:24%;">Cliente</th>
+          <th>Contenido</th>
+          <th style="width:10%;">T. envío</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @paquetes.each_with_index do |paquete, i| %>
+          <tr>
+            <td><%= i + 1 %></td>
+            <td class="mf-mono"><%= paquete.numero_recepcion_visible || "—" %></td>
+            <td class="mf-mono"><%= paquete.tracking %></td>
+            <td><%= paquete.cliente&.codigo %> — <%= paquete.cliente&.nombre_completo %></td>
+            <td><%= paquete.descripcion.presence || "—" %></td>
+            <td><%= paquete.tipo_envio&.nombre || "—" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% else %>
+    <%# Puede pasar de verdad: el manifiesto se imprime antes de finalizar, o la
+        carga viajó sin que nadie le metiera los paquetes. Decirlo es mejor que
+        una tabla vacía que parece un error de impresión. %>
+    <div class="mf-v" style="color:#999;">Este manifiesto todavía no tiene paquetes.</div>
+  <% end %>
 </div>
 
 <%# C23-06 · *"Acá esto tiene que llevar la firma de quien la recibió… firma el

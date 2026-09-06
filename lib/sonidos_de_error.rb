@@ -1,4 +1,5 @@
-# Las tres opciones del sonido de error, para que Yusef elija una.
+# Las opciones del sonido de error, para que Yusef elija una. Eran tres
+# (`RP-20`); la cuarta, aguda, la pidió él el 2026-09-05 (`C25-10`).
 #
 # `RP-20` es deuda nuestra: el cuestionario le prometía "te mandamos tres
 # opciones por WhatsApp para que las oigas" y esas tres nunca se hicieron. Dejó
@@ -40,6 +41,17 @@ module SonidosDeError
       tonos: [ { hz: 320, ms: 80 }, { hz: 0, ms: 60 },
                { hz: 320, ms: 80 }, { hz: 0, ms: 60 },
                { hz: 320, ms: 120 } ]
+    },
+    # C25-10 · La cuarta, y la única **aguda**. Las tres de arriba son graves
+    # (200 a 440 Hz) y Yusef, desde la mesa de empaque con la computadora
+    # lejos, pidió lo contrario: *"tiene que ser más como **pit** que tú… está
+    # muy suavecito"*. Un tono alto y plano: no sube (la regla de acá), dura
+    # un cuarto de segundo, y se separa de los graves de oído.
+    {
+      id: "agudo",
+      nombre: "Agudo",
+      descripcion: "Un pito alto y seco. Para cuando la computadora está lejos de la mesa.",
+      tonos: [ { hz: 1500, ms: 250 } ]
     }
   ].freeze
 

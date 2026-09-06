@@ -86,6 +86,27 @@ class SonidosCableadosTest < ActiveSupport::TestCase
     assert_empty mudos, "abren un modal sin hacer sonar nada:\n#{mudos.join("\n")}"
   end
 
+  # C25-10 · `/empacar` montó `audio` durante meses **sin `atributos_de_audio`**:
+  # `error()` caía siempre al tono de respaldo y el volumen del usuario no
+  # aplicaba. Ningún lint lo miraba, y Yusef lo oyó como *"muy suavecito"*. Una
+  # vista que monta el controller sin sus atributos suena, pero suena mal — y
+  # eso no se ve en ningún test que no escuche. Éste lo mira en el código.
+  test "toda vista que monta `audio` le pasa sus atributos" do
+    sin_atributos = Dir[Rails.root.join("app/views/**/*.erb")].filter_map do |ruta|
+      fuente = File.read(ruta)
+      next unless fuente.match?(/data-controller="[^"]*\baudio\b/)
+      # La **llamada** en un tag de salida, no la palabra: la primera versión
+      # hacía `include?` y un comentario ERB que la nombraba lo dejaba verde
+      # con el bug puesto. Se probó sacando la llamada de /empacar.
+      next if fuente.match?(/<%=[^%]*\batributos_de_audio\b/)
+      Pathname(ruta).relative_path_from(Rails.root).to_s
+    end
+
+    assert_empty sin_atributos,
+                 "montan `audio` sin `atributos_de_audio`: la variante y el volumen del usuario no aplican\n" \
+                 "#{sin_atributos.join("\n")}"
+  end
+
   test "el modal deja probar exactamente los sonidos que el sistema toca" do
     # Jorge, de oído: "el modal suena distinto de los reales; los del sistema
     # están bien, hay que arreglar los del modal".

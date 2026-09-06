@@ -205,8 +205,20 @@ module EtiquetaHelper
 
   # La sucursal donde el cliente retira. Es el campo que provocó el
   # "¿qué es San Pedro Soda?": salía truncado y bajo un encabezado en inglés.
+  # C25-08 · «Dónde retira» dice **la sucursal**, nunca una ciudad.
+  #
+  # Yusef, mirando la etiqueta: *"ahora dice San Pedro Sula; por donde va a
+  # retirar tiene que decir **Zerón SPS**, así se llama la sucursal"*. Y el
+  # porqué: *"la que voy a abrir se va a llamar Carmen SPS o Norte SPS"* — con
+  # dos sucursales en la misma ciudad, la ciudad deja de decir dónde.
+  #
+  # Sin sucursal en el paquete cae a la **de retiro por defecto** (columna que
+  # ya existía, el seed la pone en SPS). La ciudad del cliente queda de último
+  # recurso, para que nada salga en blanco.
   def etiqueta_sucursal(paquete)
-    paquete.sucursal&.nombre.presence || paquete.cliente&.ciudad.presence
+    paquete.sucursal&.nombre.presence ||
+      Sucursal.find_by(retiro_por_defecto: true)&.nombre.presence ||
+      paquete.cliente&.ciudad.presence
   end
 
   # El tipo de envío va a tres letras: en el mockup de Yusef dice **EXP**, no
@@ -311,5 +323,14 @@ module EtiquetaHelper
   # 19.0 → "19", 10.5 → "10.5", 2.25 → "2.25" — como estaban escritos a mano.
   def etiqueta_num(n)
     (n % 1).zero? ? n.to_i.to_s : n.to_s
+  end
+
+  # `C25-04` · Siempre con dos decimales: `146.00`, no `146`.
+  #
+  # Yusef, sobre la 4×6 impresa: *"deberías de ponerle siempre punto cero cero,
+  # para que se vea parejito"*. Es **solo para la 4×6**: `etiqueta_num` se queda
+  # como está porque lo usa la Dymo, y ahí manda el espacio, no la prolijidad.
+  def etiqueta_num_2d(n)
+    format("%.2f", n.to_f)
   end
 end

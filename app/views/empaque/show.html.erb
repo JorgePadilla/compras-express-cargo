@@ -8,23 +8,77 @@
     y un tercero si no encontró nada. Con el aviso de tipo distinto sale el botón
     de **omitir**, que la Fase 12 pidió con esas palabras: *"para no trabar la
     operación cuando algo no cuadra"*. %>
+<%# C25-10 · `atributos_de_audio` **faltaba acá**, y sólo acá. Era la única
+    pantalla de escaneo que montaba `audio` sin sus preferencias: `variantes`
+    llegaba vacío, `error()` caía siempre al tono de respaldo de 200 Hz al
+    volumen por defecto, y ni la variante elegida ni el slider del usuario
+    aplicaban. Es *"está muy suavecito"* con una explicación de dos líneas.
+
+    Y `noEncontrado` / `yaEmpacado` iban a `audio#alert`, que **sube** de tono
+    (600→900): la regla del propio repo dice que *"un error que suena como un
+    aviso de «todo bien» no avisa nada"*. Los tres no-OK son `error`. Yusef:
+    *"cuando hay error, hay alertas"*. %>
 <div data-controller="empaque audio"
+     <%= tag.attributes(atributos_de_audio) %>
      data-empaque-escanear-url-value="<%= @caja ? manifiesto_escanear_empaque_path(@manifiesto, @caja) : "" %>"
      data-empaque-omitir-url-value="<%= @caja ? manifiesto_omitir_empaque_path(@manifiesto, @caja) : "" %>"
      data-empaque-activa-value="<%= @caja&.id %>"
      data-action="empaque:ok->audio#success
                   empaque:tipoDistinto->audio#error
-                  empaque:noEncontrado->audio#alert
-                  empaque:yaEmpacado->audio#alert">
+                  empaque:noEncontrado->audio#error
+                  empaque:yaEmpacado->audio#error">
 
   <%= render PageHeaderComponent.new(title: "Empacar — #{@manifiesto.numero}",
                                      subtitle: "Escaneá cada paquete al meterlo a la caja") do |h| %>
+    <%# C25-10 · El botón «Sonidos», que las otras dos pantallas de escaneo ya
+        tenían y ésta no. Julián elige acá la variante que se oye desde la
+        mesa de empaque. %>
+    <% h.with_action { render "shared/sonido_config" } %>
     <% h.with_back do %>
       <%= render ButtonComponent.new(href: manifiesto_path(@manifiesto), variant: :secondary, icon: "arrow-left", shortcut: "F2") do %>
         Volver al manifiesto
       <% end %>
     <% end %>
   <% end %>
+
+  <%# C25-09 · El error es un modal.
+
+      Yusef: *"ese debería ser un modal, sí, siempre"* · *"el modal más que
+      todo cuando hay error, hay alertas"*. Y del OK: *"¿que diga que sí? No,
+      no, no"* — el OK sigue en el aviso de siempre, sin tapar nada.
+
+      Por qué: *"la compu está allá y ellos están acá"*. Un aviso en la
+      pantalla no lo ve nadie desde la mesa; un modal que no se va hasta que
+      alguien lo cierre, sí.
+
+      Es el patrón del `avisoModal` de `/etiquetar`: `<dialog>` nativo, Enter
+      = «Entendido», Escape frenado (*"ellos no las leen"*, `C20-13`), y el
+      foco vuelve al campo solo cuando se cierra. El botón de omitir del
+      tipo distinto vive **adentro**, que es donde está la decisión. %>
+  <dialog data-empaque-target="avisoModal"
+          data-action="cancel->empaque#avisoCancelar"
+          style="margin: auto"
+          class="rounded-xl p-0 w-[30rem] max-w-[95vw] backdrop:bg-black/60">
+    <div class="px-6 py-4 text-center bg-red-50">
+      <p class="text-xs font-bold uppercase tracking-wider text-red-800">No entró a la caja</p>
+      <p class="text-2xl font-bold mt-1 text-red-800" data-empaque-target="avisoTitulo"></p>
+    </div>
+    <div class="bg-white px-6 py-5">
+      <p class="text-base text-gray-800" data-empaque-target="avisoTexto"></p>
+    </div>
+    <div class="flex items-center justify-end gap-3 px-6 py-3 bg-gray-50 border-t border-gray-200">
+      <%# Sale sólo con el tipo distinto: la `Fase 12` lo pidió *"para no
+          trabar la operación cuando algo no cuadra"*. El `label` es el nombre
+          accesible; el texto se lee igual. %>
+      <%= render(ButtonComponent.new(variant: :secondary, size: :sm,
+            label: "Meterlo igual, omitiendo el aviso",
+            data: { empaque_target: "avisoOmitir", action: "empaque#omitir" },
+            class: "hidden")) { "Meterlo igual (omitir)" } %>
+      <%= render(ButtonComponent.new(variant: :primary, size: :md,
+            label: "Entendido",
+            data: { empaque_target: "avisoEntendido", action: "empaque#avisoEntendido" })) { "Entendido" } %>
+    </div>
+  </dialog>
 
   <% if @cajas.none? %>
     <%= render EmptyStateComponent.new(title: "Este manifiesto no tiene casas todavía",

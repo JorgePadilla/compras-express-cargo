@@ -123,8 +123,29 @@ module VolumetricoCalculator
   end
 
   # (B) Pies cúbicos, SIEMPRE redondeado hacia arriba a entero.
+  #
+  # Es la regla de la hoja de Yusef de junio y **se queda para nuestro
+  # calculador** (`/etiquetar`), que es informativo. Para los papeles que van al
+  # proveedor va `pies_cubicos_exactos`, abajo.
   def pies_cubicos(in3)
     (in3.to_f / IN3_PER_FT3).round(6).ceil
+  end
+
+  # `C25-05` · Los pies cúbicos **exactos**, para lo que se le imprime al
+  # proveedor: la 4×6 del bulto y el manifiesto impreso.
+  #
+  # Yusef, 2026-09-05, mirando un `12` donde la cuenta daba `11.02`:
+  #
+  #   > "Ponerlo exacto. […] Eso [el redondeo] es para cobro nuestro; ellos
+  #   >  tienen que redondearlo como yo los redondeo. Si le pones 12 acá, me lo
+  #   >  leen 12 y me clavan — ahí no te cobran 11.02 sino 11; cuando ya pasa
+  #   >  11.5 te cobran 12. Entonces ahí te compensan una con la otra."
+  #
+  # O sea: el proveedor redondea half-up por su cuenta, y un ceil impreso es
+  # plata regalada en cada bulto. **No reemplaza a la regla B**: son dos
+  # lectores distintos del mismo número, y el que va al papel es éste.
+  def pies_cubicos_exactos(in3)
+    (in3.to_f / IN3_PER_FT3).round(2)
   end
 
   # (C) Metros cúbicos, ceil a 2 decimales.

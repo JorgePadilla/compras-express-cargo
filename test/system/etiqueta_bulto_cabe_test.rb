@@ -66,6 +66,40 @@ class EtiquetaBultoCabeTest < ApplicationSystemTestCase
     assert_selector "span.letra", text: "B2"
   end
 
+  # ── C25-02 · El tipo de envío del proveedor se ajusta al ancho ───────────
+  #
+  # Yusef, con flecha en la etiqueta impresa: «AMPLIAR al tamaño». Y en el
+  # audio: *"que llene hasta cierto punto y si se pasa que lo achique,
+  # automáticamente"*. El script arranca en 30 pt y baja hasta 16 antes de
+  # recortar. Esto **no se ve en el HTML** —el tamaño lo decide el navegador
+  # midiendo— así que se mide en Chrome de verdad.
+  test "un tipo de envío largo se achica en vez de recortarse" do
+    @manifiesto.tipo_envio_proveedor.update!(nombre: "CKM MARITIMO CONSOLIDADO")
+
+    visit etiqueta_manifiesto_caja_path(@manifiesto, @caja)
+
+    ancho, visible, pt = page.evaluate_script(<<~JS)
+      (function () {
+        var el = document.querySelector(".proveedor");
+        return [ el.scrollWidth, el.clientWidth, parseFloat(getComputedStyle(el).fontSize) * 72 / 96 ];
+      })()
+    JS
+
+    assert_operator ancho, :<=, visible,
+                    "«CKM MARITIMO CONSOLIDADO» se está recortando: el ajuste no corrió"
+    assert_operator pt, :<, 28, "tendría que haber bajado de los 28 pt para caber"
+    assert_operator pt, :>=, 16, "y nunca por debajo del piso legible"
+  end
+
+  # Y uno corto **no** se achica: el máximo es el máximo.
+  test "un tipo de envío corto se queda en el tamaño máximo" do
+    visit etiqueta_manifiesto_caja_path(@manifiesto, @caja)
+
+    pt = page.evaluate_script("parseFloat(getComputedStyle(document.querySelector('.proveedor')).fontSize) * 72 / 96")
+
+    assert_in_delta 28, pt, 0.5, "«AEREO EXPRESS» cabe en 28 pt y ahí se queda"
+  end
+
   private
 
   def medir(propiedad)

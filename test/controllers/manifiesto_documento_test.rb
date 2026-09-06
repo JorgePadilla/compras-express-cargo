@@ -138,21 +138,25 @@ class ManifiestoDocumentoTest < ActionDispatch::IntegrationTest
 
     assert_select "table.mf-t thead th", text: "Vol. (VLBS)"
     assert_select "table.mf-t thead th", text: "Pies³"
-    # 23×23×36 = 19_044 in³ → 114.72 VLBS y 12 pies³ (ceil de 11.02)
+    # 23×23×36 = 19_044 in³ → 114.72 VLBS y 11.02 pies³.
+    # C25-05: exacto — era `12`, el ceil, y el proveedor lo cobraba como 12.
     assert_select "table.mf-t tbody td.num", text: "114.72"
-    assert_select "table.mf-t tbody td.num", text: "12"
+    assert_select "table.mf-t tbody td.num", text: "11.02"
   end
 
-  # El total de pies³ suma los de cada bulto —cada uno ya redondeado hacia
-  # arriba—, para que cuadre con la columna que tiene encima.
+  # El total de pies³ suma los de cada bulto, para que cuadre con la columna
+  # que tiene encima. C25-05: ahora suma **exactos** — `C23-07` sumaba ceils
+  # (12 + 2 = 14) porque cada bulto salía redondeado; con exactos la suma y el
+  # total son el mismo número.
   test "C23-07 · el total de pies cúbicos suma la columna" do
-    @manifiesto.cajas.create!(alto: 23, largo: 23, ancho: 36, peso: 131)   # 12
-    @manifiesto.cajas.create!(alto: 13, largo: 13, ancho: 16, peso: 19)    # 2
+    @manifiesto.cajas.create!(alto: 23, largo: 23, ancho: 36, peso: 131)   # 11.02
+    @manifiesto.cajas.create!(alto: 13, largo: 13, ancho: 16, peso: 19)    #  1.56
 
     get documento_manifiesto_url(@manifiesto)
 
     assert_select "table.mf-tot td.label", text: "Pies cúbicos"
-    assert_select "table.mf-tot td.value", text: "14 PIES³"
+    assert_select "table.mf-tot td.value", text: "12.58 PIES³"
+    assert_select "table.mf-tot td.value", text: "14 PIES³", count: 0
   end
 
   # Las unidades del total, que también eran mudas: decía «LB» y nada.
@@ -207,5 +211,48 @@ class ManifiestoDocumentoTest < ActionDispatch::IntegrationTest
 
     assert_select "span.mf-pill", text: "ES PRIORIDAD"
     assert_match(/\.mf-pill\s*\{[^}]*font-size:\s*15px/, response.body)
+  end
+
+  # ── RP-60 · El desglose de los paquetes que van adentro ──────────────────
+  #
+  # Yusef lo pidió mirando la pantalla vieja —*"no tenemos cómo exportarlo"*— y
+  # en la llamada se le contestó que apretara «Imprimir manifiesto». Ese papel
+  # llevaba **los bultos, no lo que va adentro**, así que los dos quedaron
+  # conformes con algo que no contestaba la pregunta. Jorge lo confirmó el
+  # 2026-09-06: sí va en el impreso.
+
+  test "RP-60 · el impreso lista los paquetes que van adentro" do
+    paquete = paquetes(:disponible_entrega_juan)
+    paquete.update!(manifiesto: @manifiesto, descripcion: "dos generadores")
+
+    get documento_manifiesto_url(@manifiesto)
+
+    assert_select "div.mf-h", text: /Paquetes \(1\)/
+    assert_select "table.mf-t td", text: paquete.tracking
+    assert_select "table.mf-t td", text: "dos generadores"
+    assert_select "table.mf-t th", text: "No. recepción"
+    assert_select "table.mf-t th", text: "Contenido"
+  end
+
+  # Los bultos y los paquetes son **dos tablas distintas**: una dice qué cajas
+  # viajan, la otra qué hay adentro. Confundirlas es justo el malentendido que
+  # dejó esto sin construir.
+  test "RP-60 · el desglose no reemplaza a la tabla de bultos" do
+    @manifiesto.cajas.create!(alto: 23, largo: 23, ancho: 36, peso: 131)
+    paquetes(:disponible_entrega_juan).update!(manifiesto: @manifiesto)
+
+    get documento_manifiesto_url(@manifiesto)
+
+    assert_select "div.mf-h", text: /Bultos \(1\)/
+    assert_select "div.mf-h", text: /Paquetes \(1\)/
+  end
+
+  # Se imprime antes de finalizar, o la carga viajó sin que nadie le metiera los
+  # paquetes: decirlo es mejor que una tabla vacía que parece un error.
+  test "RP-60 · sin paquetes lo dice en vez de dejar la tabla vacía" do
+    get documento_manifiesto_url(@manifiesto)
+
+    assert_select "div.mf-h", text: /Paquetes \(0\)/
+    assert_match(/todavía no tiene paquetes/i, response.body)
   end
 end

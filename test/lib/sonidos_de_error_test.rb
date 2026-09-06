@@ -7,9 +7,20 @@ require "test_helper"
 # sonido de error que se parece al de "todo bien" no avisa nada, y el operario
 # de bodega lo distingue de oído, sin mirar la pantalla.
 class SonidosDeErrorTest < ActiveSupport::TestCase
-  test "son tres, con ids unicos" do
-    assert_equal 3, SonidosDeError::VARIANTES.size
+  # Eran tres (`RP-20`); la cuarta la pidió Yusef el 2026-09-05 (`C25-10`).
+  test "son cuatro, con ids unicos" do
+    assert_equal 4, SonidosDeError::VARIANTES.size
     assert_equal SonidosDeError::IDS.uniq, SonidosDeError::IDS
+  end
+
+  # *"Tiene que ser más como pit que tú"*: de las cuatro, una tiene que ser
+  # claramente más alta que las demás, y plana — que el «agudo» no sea un
+  # grave con otro nombre.
+  test "hay una aguda, y es la única por encima de los 1000 Hz" do
+    agudas = SonidosDeError::VARIANTES.select { |v| SonidosDeError.frecuencias(v).min >= 1_000 }
+
+    assert_equal [ "agudo" ], agudas.map { |v| v[:id] }
+    assert_equal 1, SonidosDeError.frecuencias(SonidosDeError.find("agudo")).uniq.size, "plana, no sube ni baja"
   end
 
   test "la primera es la de hoy, y es el default" do
