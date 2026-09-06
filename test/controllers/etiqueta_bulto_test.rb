@@ -34,7 +34,7 @@ class EtiquetaBultoTest < ActionDispatch::IntegrationTest
 
     # C23-01: la letra ya no va sola, lleva su número adentro del mismo span.
     assert_select "span.letra", text: "#{@caja.letra}#{@caja.numero_bulto}"
-    assert_includes response.body, "131"
+    assert_includes response.body, "131.00"
     assert_includes response.body, "23x23x36"
     assert_includes response.body, "CORPORACION KARSAM"
     assert_includes response.body, "AEREO EXPRESS"
@@ -133,10 +133,11 @@ class EtiquetaBultoTest < ActionDispatch::IntegrationTest
     assert_select "div.cifra span.u", text: "LBS"
     assert_select "div.cifra span.u", text: "VLBS"
     assert_select "div.cifra span.u", text: "PIES³"
-    # 23×23×36 = 19_044 pulgadas³ → ÷166 = 114.72 VLBS, ÷1728 = 11.02 → 12 pies³
-    assert_select "div.cifra span.v", text: "131"
+    # 23×23×36 = 19_044 pulgadas³ → ÷166 = 114.72 VLBS, ÷1728 = 11.02 pies³.
+    # C25-04/05: LBS con dos decimales, PIES³ exacto (era `12`, el ceil).
+    assert_select "div.cifra span.v", text: "131.00"
     assert_select "div.cifra span.v", text: "114.72"
-    assert_select "div.cifra span.v", text: "12"
+    assert_select "div.cifra span.v", text: "11.02"
   end
 
   # *"Esto estaría más bonito que estén juntos."* El peso y las medidas caían
@@ -189,5 +190,37 @@ class EtiquetaBultoTest < ActionDispatch::IntegrationTest
     get etiqueta_manifiesto_caja_path(@manifiesto, @caja)
 
     assert_select "div.doc", text: "#{@caja.letra}#{@caja.numero_bulto}"
+  end
+
+  # ── C25 · La 4×6 impresa de verdad, con las anotaciones de Yusef ─────────
+
+  # *"Deberías de ponerle siempre punto cero cero, para que se vea parejito."*
+  test "C25-04 · las libras salen siempre con dos decimales" do
+    @caja.update!(peso: 146)
+
+    get etiqueta_manifiesto_caja_path(@manifiesto, @caja)
+
+    assert_select "div.cifra span.v", text: "146.00"
+    assert_select "div.cifra span.v", text: "146", count: 0
+  end
+
+  # *"Ponerlo exacto… si le pones 12 acá, me lo leen 12 y me clavan."* El
+  # proveedor redondea por su cuenta; el ceil de la regla B es para nosotros.
+  test "C25-05 · los pies cúbicos salen exactos, no redondeados hacia arriba" do
+    get etiqueta_manifiesto_caja_path(@manifiesto, @caja)
+
+    assert_select "div.cifra span.v", text: "11.02"
+    assert_select "div.cifra span.v", text: "12", count: 0
+  end
+
+  # *"AMPLIAR al tamaño"*, con flecha. El texto lleva la marca que el script de
+  # ajuste busca; que de verdad se achique en vez de recortarse lo mide
+  # `etiqueta_bulto_cabe_test` en Chrome — acá solo se afirma el cableado.
+  test "C25-02 · el tipo de envío del proveedor se ajusta al ancho" do
+    get etiqueta_manifiesto_caja_path(@manifiesto, @caja)
+
+    assert_select "div.proveedor[data-ajustar][data-ajustar-min='16']", text: "AEREO EXPRESS"
+    assert_match(/querySelectorAll\("\[data-ajustar\]"\)/, response.body,
+                 "sin el script, el data-ajustar es decorativo")
   end
 end

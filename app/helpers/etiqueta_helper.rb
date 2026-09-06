@@ -312,4 +312,13 @@ module EtiquetaHelper
   def etiqueta_num(n)
     (n % 1).zero? ? n.to_i.to_s : n.to_s
   end
+
+  # `C25-04` · Siempre con dos decimales: `146.00`, no `146`.
+  #
+  # Yusef, sobre la 4×6 impresa: *"deberías de ponerle siempre punto cero cero,
+  # para que se vea parejito"*. Es **solo para la 4×6**: `etiqueta_num` se queda
+  # como está porque lo usa la Dymo, y ahí manda el espacio, no la prolijidad.
+  def etiqueta_num_2d(n)
+    format("%.2f", n.to_f)
+  end
 end

@@ -33,19 +33,24 @@
   <div class="cabeza">
     <span class="letra"><%= caja.letra %><span class="num"><%= caja.numero_bulto %></span></span>
     <div class="cifras">
-      <div class="cifra"><span class="u">LBS</span><span class="v"><%= caja.peso ? etiqueta_num(caja.peso) : "—" %></span></div>
-      <div class="cifra"><span class="u">VLBS</span><span class="v"><%= caja.volumen ? etiqueta_num(caja.volumen) : "—" %></span></div>
+      <%# C25-04 · Siempre con dos decimales — *"ponerle siempre punto cero
+          cero, para que se vea parejito"*. PIES³ ya sale con dos por ser
+          exacto (`C25-05`). %>
+      <div class="cifra"><span class="u">LBS</span><span class="v"><%= caja.peso ? etiqueta_num_2d(caja.peso) : "—" %></span></div>
+      <div class="cifra"><span class="u">VLBS</span><span class="v"><%= caja.volumen ? etiqueta_num_2d(caja.volumen) : "—" %></span></div>
       <div class="cifra"><span class="u">PIES³</span><span class="v"><%= caja.pies_cubicos || "—" %></span></div>
       <div class="medidas"><%= caja.medidas || "—" %></div>
     </div>
   </div>
 
   <% if caja.tipos_envio_adentro.present? %>
-    <div class="servicio"><%= caja.tipos_envio_adentro %></div>
+    <div class="servicio" data-ajustar data-ajustar-min="14"><%= caja.tipos_envio_adentro %></div>
   <% end %>
 
   <% if caja.manifiesto.tipo_envio_del_proveedor.present? %>
-    <div class="proveedor"><%= caja.manifiesto.tipo_envio_del_proveedor.upcase %></div>
+    <%# C25-02 · Ajustado al ancho: arranca en 30 pt y baja hasta 16 si no
+        cabe. Ver `_etiqueta_ajustar_ancho`. %>
+    <div class="proveedor" data-ajustar data-ajustar-min="16"><%= caja.manifiesto.tipo_envio_del_proveedor.upcase %></div>
   <% end %>
 
   <% if caja.manifiesto.es_prioridad? %>
@@ -68,7 +73,10 @@
       desbordaba en silencio, que es lo que hace `overflow: hidden`. A 1.5 in
       el código de 14 caracteres sigue en 25 módulos de ~1.5 mm cada uno, muy
       por encima de lo que necesita una pistola. %>
-  <div class="qr"><%= etiqueta_qr_svg(caja.codigo, tamano: "1.5in") %></div>
+  <%# C25 · Y de 1.5 a 1.4 para pagar la letra, el proveedor y el número del
+      manifiesto más grandes. A 1.4 in son 25 módulos de ~1.4 mm; en Miami se
+      leyó *"de lejos"* con 1.5, y las pistolas resuelven bastante menos. %>
+  <div class="qr"><%= etiqueta_qr_svg(caja.codigo, tamano: "1.4in") %></div>
   <div class="codigo"><%= caja.codigo %></div>
 
   <div class="pie">

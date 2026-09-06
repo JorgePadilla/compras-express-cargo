@@ -178,7 +178,7 @@
               <%= [ caja.alto, caja.largo, caja.ancho ].map { |m| m.presence || "—" }.join(" × ") %>
             </td>
             <td class="num"><%= caja.volumen.present? ? number_with_precision(caja.volumen, precision: 2) : "—" %></td>
-            <td class="num"><%= caja.pies_cubicos || "—" %></td>
+            <td class="num"><%= caja.pies_cubicos.present? ? number_with_precision(caja.pies_cubicos, precision: 2) : "—" %></td>
             <td class="num"><%= caja.peso.present? ? number_with_precision(caja.peso, precision: 2) : "—" %></td>
           </tr>
         <% end %>
@@ -202,14 +202,17 @@
       <td class="value"><%= number_with_precision(@manifiesto.volumen_total.to_f, precision: 2) %> VLBS</td>
     </tr>
     <tr>
-      <%# C23-07 · El total de pies³ es **la suma de los de cada bulto**, no el
-          pie cúbico del volumen total. `pies_cubicos` redondea hacia arriba a
-          entero por bulto —regla (B) de la hoja de Yusef—, así que las dos
-          cuentas dan distinto; se elige la que **suma la columna de arriba**,
-          porque un total que no cuadra con lo que tiene encima es un papel que
-          nadie firma. %>
+      <%# C23-07 · El total de pies³ es **la suma de los de cada bulto** —
+          un total que no cuadra con lo que tiene encima es un papel que nadie
+          firma.
+
+          C25-05 · Y ahora suma **exactos**. `C23-07` sumaba ceils porque cada
+          bulto salía redondeado hacia arriba; Yusef vio un `12` donde la
+          cuenta daba `11.02` y pidió el exacto para el proveedor, que
+          redondea por su cuenta. Con exactos ya no hay dos cuentas que
+          difieran: la suma de la columna y el total son el mismo número. %>
       <td class="label">Pies cúbicos</td>
-      <td class="value"><%= @cajas.sum { |c| c.pies_cubicos.to_i } %> PIES³</td>
+      <td class="value"><%= number_with_precision(@cajas.sum { |c| c.pies_cubicos.to_f }, precision: 2) %> PIES³</td>
       <td class="label"></td>
       <td class="value"></td>
     </tr>
