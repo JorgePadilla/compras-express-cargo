@@ -94,6 +94,6 @@ class CajasManifiestoController < ApplicationController
   end
 
   def caja_params
-    params.require(:caja_manifiesto).permit(:tamano_caja_id, :alto, :largo, :ancho, :peso, :numero_doc)
+    params.require(:caja_manifiesto).permit(:tamano_caja_id, :alto, :largo, :ancho, :peso)
   end
 end

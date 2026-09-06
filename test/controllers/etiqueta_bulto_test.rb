@@ -167,29 +167,18 @@ class EtiquetaBultoTest < ActionDispatch::IntegrationTest
     assert_select "div.destino", 0
   end
 
-  # ── C21-04 · El «No. Doc» de la caja, el `DM7155` de la pantalla vieja ─────
+  # ── RP-61 · Un solo identificador por caja ────────────────────────────────
   #
-  # La columna existía desde `PR-M3`, `caja_params` la permitía y **esta
-  # etiqueta ya la imprimía** — pero no había ningún campo donde teclearla, así
-  # que en la práctica siempre salía el respaldo. Estaba cableada por los dos
-  # extremos y sin nada en el medio.
-
-  test "C21-04 · la etiqueta imprime el No. Doc cuando lo tiene" do
-    @caja.update!(numero_doc: "DM7155")
-
+  # Acá había dos tests que afirmaban que el «No. Doc» tecleado llegaba a la
+  # etiqueta. El dato del sistema viejo dijo otra cosa: `NoCajaPaquetes` es
+  # `"DM" + id de la caja`, generado, nunca tecleado. Su trabajo lo hace
+  # `codigo`, que va bajo el QR. Si alguien vuelve a poner un segundo nombre
+  # para la misma caja, esto se pone rojo.
+  test "RP-61 · la etiqueta no lleva un segundo identificador de la caja" do
     get etiqueta_manifiesto_caja_path(@manifiesto, @caja)
 
-    assert_select "div.doc", text: "DM7155"
-  end
-
-  # Y sin él sigue cayendo a la identificación de la caja, que es lo que se
-  # canta en voz alta (`C23-01`). El respaldo no se toca.
-  test "C21-04 · sin No. Doc cae a la letra con su número" do
-    @caja.update!(numero_doc: nil)
-
-    get etiqueta_manifiesto_caja_path(@manifiesto, @caja)
-
-    assert_select "div.doc", text: "#{@caja.letra}#{@caja.numero_bulto}"
+    assert_select "div.doc", 0, "un solo nombre por caja: el código bajo el QR"
+    assert_select "div.codigo", text: @caja.codigo
   end
 
   # ── C25 · La 4×6 impresa de verdad, con las anotaciones de Yusef ─────────

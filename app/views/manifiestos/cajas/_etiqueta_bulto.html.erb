@@ -84,6 +84,8 @@
       <div class="manifiesto"><%= caja.manifiesto.numero %></div>
       <div class="fecha"><%= caja.created_at.strftime("%d/%m/%Y %H:%M") %></div>
     </div>
-    <div class="doc"><%= caja.numero_doc.presence || "#{caja.letra}#{caja.numero_bulto}" %></div>
+    <%# RP-61 · Acá iba un segundo identificador, el «No. Doc» (`DM7155` en la
+        etiqueta vieja). Aquella lo necesitaba porque no traía el número del
+        manifiesto; ésta lleva `codigo` bajo el QR. Un solo nombre por caja. %>
   </div>
 </div>

@@ -283,7 +283,6 @@ CREATE TABLE public.caja_manifiestos (
     user_id bigint,
     letra character varying NOT NULL,
     codigo character varying NOT NULL,
-    numero_doc character varying,
     alto numeric(8,2),
     largo numeric(8,2),
     ancho numeric(8,2),
@@ -6905,6 +6904,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260906120000'),
 ('20260906090000'),
 ('20260905180000'),
 ('20260905120000'),
