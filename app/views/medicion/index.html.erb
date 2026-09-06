@@ -32,9 +32,13 @@
     <div class="lg:col-span-2 space-y-6">
       <%# ── a · la pistola ─────────────────────────────────────────────── %>
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <%= label_tag :codigo_medicion, "Escaneá la etiqueta de la caja", class: "block text-base font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <%# Jorge, 2026-09-06: *"en medición se escanea el warehouse receipt que
+            digitamos en Miami, que es el de la sticker que le pegamos"*. Es el
+            número de recepción más el sufijo de caja — lo que `por_codigo_de_etiqueta`
+            resuelve primero. %>
+        <%= label_tag :codigo_medicion, "Escaneá el warehouse receipt de la etiqueta de Miami", class: "block text-base font-medium text-gray-700 dark:text-gray-200 mb-1" %>
         <%= text_field_tag :codigo_medicion, nil, autofocus: true, autocomplete: "off",
-              placeholder: "RMI0002026000042-2 o el tracking",
+              placeholder: "RMI0002026000042-2 (o el tracking)",
               data: { medicion_target: "codigo", action: "keydown->medicion#teclado" },
               class: "block w-full min-h-14 text-2xl font-mono rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400" data-medicion-target="aviso">Enter escanea. Los errores salen en rojo, grande.</p>
