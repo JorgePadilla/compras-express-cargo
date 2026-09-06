@@ -9364,7 +9364,7 @@ insignias en toda la app.
 | `C23-11` | Varias cajas abiertas a la vez | ✅ **Implementado** |
 | `RP-59` | «Expedido por»: ¿el **nombre** de quien lo creó, o sus **iniciales**? | ✅ **Las iniciales** |
 | `C23-12` | La tecla de «Agregar e imprimir» — y la F5 que no disparaba | ✅ **Arreglado** |
-| `RP-60` | ¿El **desglose de paquetes** va en el manifiesto impreso, o es un export aparte? | 🔴 **Pendiente de Yusef** |
+| `RP-60` | ¿El **desglose de paquetes** va en el manifiesto impreso? | ✅ **Sí** — Jorge, 2026-09-06 |
 | `RP-61` | ¿El **No. Doc** es el mismo para todas las cajas de un manifiesto? | 🔴 **Pendiente de Yusef** |
 | `C23-13` | Las teclas dicen lo mismo en todas las pantallas | ✅ **Arreglado** |
 | `C23-14` | El interno empaca sin escanear — y `sucursal_actual` ya se sella al recibir | ✅ **Implementado** |
