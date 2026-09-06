@@ -212,4 +212,47 @@ class ManifiestoDocumentoTest < ActionDispatch::IntegrationTest
     assert_select "span.mf-pill", text: "ES PRIORIDAD"
     assert_match(/\.mf-pill\s*\{[^}]*font-size:\s*15px/, response.body)
   end
+
+  # ── RP-60 · El desglose de los paquetes que van adentro ──────────────────
+  #
+  # Yusef lo pidió mirando la pantalla vieja —*"no tenemos cómo exportarlo"*— y
+  # en la llamada se le contestó que apretara «Imprimir manifiesto». Ese papel
+  # llevaba **los bultos, no lo que va adentro**, así que los dos quedaron
+  # conformes con algo que no contestaba la pregunta. Jorge lo confirmó el
+  # 2026-09-06: sí va en el impreso.
+
+  test "RP-60 · el impreso lista los paquetes que van adentro" do
+    paquete = paquetes(:disponible_entrega_juan)
+    paquete.update!(manifiesto: @manifiesto, descripcion: "dos generadores")
+
+    get documento_manifiesto_url(@manifiesto)
+
+    assert_select "div.mf-h", text: /Paquetes \(1\)/
+    assert_select "table.mf-t td", text: paquete.tracking
+    assert_select "table.mf-t td", text: "dos generadores"
+    assert_select "table.mf-t th", text: "No. recepción"
+    assert_select "table.mf-t th", text: "Contenido"
+  end
+
+  # Los bultos y los paquetes son **dos tablas distintas**: una dice qué cajas
+  # viajan, la otra qué hay adentro. Confundirlas es justo el malentendido que
+  # dejó esto sin construir.
+  test "RP-60 · el desglose no reemplaza a la tabla de bultos" do
+    @manifiesto.cajas.create!(alto: 23, largo: 23, ancho: 36, peso: 131)
+    paquetes(:disponible_entrega_juan).update!(manifiesto: @manifiesto)
+
+    get documento_manifiesto_url(@manifiesto)
+
+    assert_select "div.mf-h", text: /Bultos \(1\)/
+    assert_select "div.mf-h", text: /Paquetes \(1\)/
+  end
+
+  # Se imprime antes de finalizar, o la carga viajó sin que nadie le metiera los
+  # paquetes: decirlo es mejor que una tabla vacía que parece un error.
+  test "RP-60 · sin paquetes lo dice en vez de dejar la tabla vacía" do
+    get documento_manifiesto_url(@manifiesto)
+
+    assert_select "div.mf-h", text: /Paquetes \(0\)/
+    assert_match(/todavía no tiene paquetes/i, response.body)
+  end
 end
