@@ -63,6 +63,11 @@ module PermisosDelSistema
     # lado entra a lo suyo por su puerta.
     when :guias_aduana
       role.in?(Authorization::ROLES_DE_SAN_PEDRO)
+    # C26-02 · La estación de Medición en San Pedro: pesar y medir cada caja
+    # antes de la pre-factura. La gente de Honduras que recibe carga, más el
+    # rol de estación (`C26-15`), que solo ve esto.
+    when :medicion
+      role.in?(Authorization::ROLES_QUE_MIDEN)
     # Las herramientas compartidas de los dos mostradores: buscar un cliente,
     # cotizar un flete, tocar el tracking de un paquete. No es una pantalla del
     # menú, pero sí una llave: `RP-58` necesita que **todo** chequeo de rol pase
@@ -82,8 +87,10 @@ module PermisosDelSistema
       role.in?(%w[supervisor_caja cajero])
     when :entregas
       role.in?(%w[entrega_despacho supervisor_caja])
+    # C26-15 · Para todos menos los roles de estación: Yusef, *"no se les
+    # habilita nada más que eso"*. Sin esta resta, «solo medición» es mentira.
     when :clientes, :pre_alertas, :paquetes
-      true
+      !role.in?(User::ROLES_DE_ESTACION)
     # PR-C7.40: la bandeja de tareas la ve quien las ejecuta, que es la misma
     # lista que ya usaba `TareasController`. Derivarla y no reescribirla: dos
     # copias de una lista de roles se desincronizan sin que nadie lo vea.

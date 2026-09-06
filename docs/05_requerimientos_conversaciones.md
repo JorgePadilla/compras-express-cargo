@@ -10030,9 +10030,9 @@ aviso al escanear el manifiesto interno de vuelta. Esta conversación es el
 
 ---
 
-### Medición: el módulo — 🔨 **EN CONSTRUCCIÓN** (plan aprobado el 2026-09-06)
+### Medición: el módulo — ✅ **LA ESTACIÓN ESTÁ** (2026-09-06); la etiqueta, en el PR siguiente
 
-#### C26-02 · Se llama «Medición» y va en medio de la línea
+#### C26-02 · Se llama «Medición» y va en medio de la línea — ✅ **HECHO**
 
 > **Jorge:** "¿Cómo vamos a llamar a este módulo de acá?"
 > **Yusef:** "**Medición** se llama."
@@ -10059,7 +10059,7 @@ está en una pre-factura no se puede medir desde acá; se dice con un modal.
 Jorge, con la línea parada: *"yo creo que para el lunes puedo, por lo menos,
 tener algo de acá"* (2026-09-08).
 
-#### C26-03 · «Unir»: el grupo de la pre-alerta consolidada
+#### C26-03 · «Unir»: el grupo de la pre-alerta consolidada — ✅ **HECHO**
 
 El motivo del módulo no es pesar: es **saber, caja en mano, si ese cliente
 está consolidando**.
@@ -10110,7 +10110,17 @@ de grupo incompleto sigue apareciendo como facturable. El gancho queda
 definido y probado —`Paquete#listo_para_prefactura?`— para que
 `/pre_facturas` lo lea cuando se toque esa pantalla.
 
-#### C26-04 · La etiqueta de medición
+**Cómo quedó construido (2026-09-06):** `/medicion` en Logística, entre Recibir
+Carga y Pre-Facturas. `MedirPaquete` escribe los cuatro números y sella
+`medido_at`/`medido_por` (re-sellado en cada medición). `GrupoDeUnion` es la
+consulta del grupo: cada renglón de pre-alerta **tiene** su paquete desde que se
+crea (`crear_paquete_esperado`), así que «llegó» es que ese paquete esté en un
+estado de Honduras — no se busca por tracking. `AutorizarUnionParcial` sella la
+excepción con PIN y la deja en la bitácora de `/autorizaciones`. La pistola
+resuelve con `Paquete.por_codigo_de_etiqueta`, estricto: código de caja,
+número de recepción o tracking exactos, nunca por descripción.
+
+#### C26-04 · La etiqueta de medición — 🔜 **PR siguiente**
 
 > "Sí va una etiqueta. Es chiquitita, va a ser pequeña, porque **solo va a
 >  llevar el QR y la información de medidas y pesos**. No le vamos a meter
@@ -10246,7 +10256,7 @@ manifiesto concreto. Nota.
 
 ### Perfiles de usuario — 📄 **documentado**, con una excepción
 
-#### C26-15 · El perfil «medición», y el de entrega
+#### C26-15 · El perfil «medición», y el de entrega — ✅ el rol `medicion` existe
 
 > "Hay usuarios que no van a tener acceso a nada. Digamos, si tenemos una
 >  persona para medición exclusivamente, usan su código y **no se les habilita
@@ -10295,10 +10305,11 @@ pesos tecleados en vivo.
 | # | Qué | Estado |
 |---|---|---|
 | `C26-01` | La cola en un servidor aparte | ✅ **Hecho** en `#431` |
-| `C26-02`…`04` | Medición: la estación, «unir», la etiqueta | 🔨 **En construcción** (plan del 2026-09-06: docs, estación, etiqueta) |
+| `C26-02`…`03` | Medición: la estación y «unir» | ✅ **Hecho** — `/medicion`, rol `medicion`, grupo con faltantes, modal rojo, facturar parcial con PIN |
+| `C26-04` | La etiqueta de medición | 🔜 **PR siguiente** |
 | `C26-08`…`11` | Pre-factura: consolidación visible, split, fecha de trabajo, notificar | 📄 Documentado; es el próximo bloque |
 | `C26-12` | Entrega: la etiqueta que se escanea | 📄 Documentado |
-| `C26-15` | Perfil «medición» | 🔨 Se crea con el módulo; el de entrega, 📄 |
+| `C26-15` | Perfil «medición» | ✅ Existe, y **solo ve su estación**: clientes, pre-alertas y paquetes pasan ahora por `can_access?` — antes esa política era «todos» y ningún controller la consultaba |
 | `RP-63` | ¿Qué báscula compra Yusef, y tiene protocolo abierto? | 🔴 **Pendiente de Yusef** — mientras, el peso se teclea |
 | `RP-64` | Split de la pre-alerta consolidada cuando se factura parcial | 🔴 **Pendiente** — va con el bloque de pre-factura |
 | `RP-65` | «El código» con tiempo límite: ¿es el PIN? ¿4–5 h operarios, 12–14 h admin? | 🔴 **Pendiente de Yusef** — hoy la sesión no expira |

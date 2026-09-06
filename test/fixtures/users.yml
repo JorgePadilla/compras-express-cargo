@@ -51,3 +51,11 @@ repartidor:
   rol: entrega_despacho
   ubicacion: honduras
   activo: true
+
+medidor:
+  nombre: Medidor San Pedro
+  email_address: medidor@test.com
+  password_digest: <%= BCrypt::Password.create("password123") %>
+  rol: medicion
+  ubicacion: honduras
+  activo: true

@@ -1841,7 +1841,9 @@ CREATE TABLE public.paquetes (
     recolecta_direccion text,
     caja_manifiesto_id bigint,
     cobro_excepcion character varying,
-    llegada_notificada_at timestamp(6) without time zone
+    llegada_notificada_at timestamp(6) without time zone,
+    medido_at timestamp(6) without time zone,
+    medido_por character varying
 );
 
 
@@ -2024,7 +2026,9 @@ CREATE TABLE public.pre_alertas (
     titulo character varying,
     proveedor character varying,
     finalizado boolean DEFAULT false NOT NULL,
-    historial text
+    historial text,
+    union_parcial_at timestamp(6) without time zone,
+    union_parcial_por character varying
 );
 
 
@@ -7678,6 +7682,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260906160000'),
 ('20260906150100'),
 ('20260906150000'),
 ('20260906140000'),

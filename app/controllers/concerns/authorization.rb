@@ -26,6 +26,10 @@ module Authorization
   # carga», Michelle quedaba afuera si su usuario dice `supervisor_sac`.
   ROLES_DE_SAN_PEDRO = (User::ROLES_AUTORIZANTES - %w[admin]).freeze
 
+  # C26-02 · Quiénes pesan y miden en San Pedro: la gente de Honduras que ya
+  # recibe carga, más el rol de estación que Yusef pidió aparte. Derivado.
+  ROLES_QUE_MIDEN = (ROLES_DE_HONDURAS + User::ROLES_DE_ESTACION).freeze
+
   included do
     helper_method :admin?, :can_access?
   end

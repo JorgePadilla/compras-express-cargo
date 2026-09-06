@@ -45,6 +45,7 @@ class OrdenDelMenuTest < ActiveSupport::TestCase
         "manifiestos_path",           # Miami lo arma y lo envía
         "guias_aduana_index_path",    # San Pedro le pone guía y fecha al que salió
         "recepcion_carga_index_path", # llegó: se escanean las cajas
+        "medicion_index_path",        # C26-02: se pesa y se mide antes de la pre-factura
         "paquetes_path"               # transversal: el listado de todo
       ]
     },

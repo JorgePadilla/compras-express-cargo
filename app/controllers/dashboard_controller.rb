@@ -157,13 +157,14 @@ class DashboardController < ApplicationController
     "cajero"           => %i[caja pre_facturas paquetes],
     "digitador_miami"  => %i[etiquetar entrega_personal paquetes],
     "entrega_despacho" => %i[entregas paquetes],
-    "sac"              => %i[paquetes clientes]
+    "sac"              => %i[paquetes clientes],
+    "medicion"         => %i[medicion]
   }.freeze
 
   RUTAS = {
     caja: :caja_path, pre_facturas: :pre_facturas_path, paquetes: :paquetes_path,
     etiquetar: :etiquetar_path, entrega_personal: :new_entrega_personal_path,
-    entregas: :entregas_path, clientes: :clientes_path
+    entregas: :entregas_path, clientes: :clientes_path, medicion: :medicion_index_path
   }.freeze
 
   # Requiere que el usuario autenticado tenga un rol con acceso al dashboard

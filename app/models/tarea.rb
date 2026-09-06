@@ -37,7 +37,8 @@ class Tarea < ApplicationRecord
     # es la misma regla que ya cumple `User::NOTAS_POR_ROL`, que sí lo tenía —
     # las dos tablas se espejan a propósito y ésta se había quedado atrás.
     "supervisor_sac"        => %w[sac honduras],
-    "entrega_despacho"      => %w[honduras]
+    "entrega_despacho"      => %w[honduras],
+    "medicion"              => %w[honduras]
   }.freeze
 
   # `pre_alerta` ya no se escribe: era el origen de las tareas que nacían de
