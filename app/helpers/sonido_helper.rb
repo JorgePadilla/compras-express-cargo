@@ -1,10 +1,16 @@
 # Los atributos que el `audio` de Stimulus necesita para saber qué tocar.
 #
-# Vive en un helper y no escrito en cada vista porque son **dos pantallas**
-# —/etiquetar y /entrega_personal— y en este repo lo que se escribe dos veces
-# se desincroniza: cuando `RP-20` agregó la variante, la copia de una de las
-# dos se hubiera quedado sin ella y el error habría sonado distinto en cada
-# pantalla. Con el helper, el próximo atributo llega a las dos solo.
+# Vive en un helper y no escrito en cada vista porque son **cuatro pantallas**
+# —/etiquetar, /entrega_personal, /empacar y /recepcion_carga— y acá lo que se escribe
+# dos veces se desincroniza: cuando `RP-20` agregó la variante, la copia de una
+# se hubiera quedado sin ella y el error habría sonado distinto en cada
+# pantalla. Con el helper, el próximo atributo llega a todas solo.
+#
+# C25-10 · Y aun con el helper, `/empacar` **no lo llamaba** (ni `/recepcion_carga`,
+# que el lint encontró al escribirse): montaba `audio`
+# sin atributos, así que `error()` caía siempre al tono de respaldo y el
+# volumen del usuario no aplicaba. Es lo que Yusef oyó como *"muy suavecito"*.
+# Un helper compartido no sirve si a una pantalla se le olvida llamarlo.
 module SonidoHelper
   def atributos_de_audio(usuario = Current.user)
     {

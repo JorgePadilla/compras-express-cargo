@@ -2,6 +2,10 @@
     escanean la caja y automáticamente el sistema lo [pone]"*. Se escanean
     **cajas, no paquetes** (`A7-06`), y al completar todo pasa a aduana. %>
 <div data-controller="recepcion-carga audio"
+     <%# C25-10 · Faltaba: el lint «toda vista que monta `audio` le pasa sus
+         atributos» lo encontró al escribirse para /empacar. Sin esto, el error
+         suena al tono de respaldo y el volumen del usuario no aplica. %>
+     <%= tag.attributes(atributos_de_audio) %>
      data-recepcion-carga-escanear-url-value="<%= escanear_recepcion_carga_path(@manifiesto) %>"
      data-action="recepcion-carga:ok->audio#success
                   recepcion-carga:noEsDeAqui->audio#error

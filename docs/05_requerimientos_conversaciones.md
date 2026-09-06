@@ -9782,15 +9782,22 @@ del cliente cuando el paquete no tiene sucursal—; se arreglan los dos.
 
 ---
 
-### El escaneo de empaque — 🔜 **PR aparte**
+### El escaneo de empaque
 
-#### C25-09 · El error es un modal
+#### C25-09 · El error es un modal — ✅ **ARREGLADO**
 
 > "Ese debería ser **un modal**. Sí, **siempre**." · "El modal más que todo
 >  **cuando hay error, hay alertas**." · Y del OK: *"¿que diga que sí? **No, no,
 >  no**"* — la notificación de siempre está bien.
 
-#### C25-10 · El sonido de error más fuerte
+Es el patrón del `avisoModal` de `/etiquetar`: `<dialog>` nativo, **Enter =
+«Entendido»**, Escape frenado (*"ellos no las leen"*, `C20-13`), y **el foco
+vuelve al campo solo** cuando se cierra — sin eso la pistola no puede seguir. El
+botón «Meterlo igual (omitir)» del tipo distinto vive **adentro** del modal, que
+es donde está la decisión. Los tres no-OK (tipo distinto, ya en otra caja, no
+encontrado) son modal; el OK sigue como aviso en pantalla.
+
+#### C25-10 · El sonido de error más fuerte — ✅ **ARREGLADO**, y era un cable suelto
 
 > "Tiene que ser **más como pit que tú**. Porque el tú está **muy suavecito**, y
 >  está bien cuando están digitando, pero cuando están ahí **la compu está allá
@@ -9798,10 +9805,32 @@ del cliente cuando el paquete no tiene sucursal—; se arreglan los dos.
 > "Si escanea un paquete que va diferente al tipo de envío, el sistema tiene que
 >  tirarle **pipipipi**, pero no pipipipiii."
 
-Al mirar el código apareció **la causa más probable**: `/empacar` es la única
-pantalla de escaneo que **nunca cableó las preferencias de sonido** — el error
-cae siempre al tono de respaldo, y ni la variante elegida ni el volumen del
-usuario aplican. Va en su PR.
+**La causa era un cable suelto.** `/empacar` montaba el controller `audio`
+**sin `atributos_de_audio`** — la única de las tres pantallas de escaneo sin
+eso, y `sonido_helper.rb` lo decía sin querer: *"son dos pantallas —/etiquetar y
+/entrega_personal—"*. Consecuencias, verificadas en el JS: `variantes` llegaba
+vacío, `error()` caía **siempre** al tono de respaldo de 200 Hz, el slider de
+volumen del usuario no aplicaba, y el operario no tenía el botón «Sonidos». Eso
+es *"está muy suavecito"* con una explicación de dos líneas. Cableado.
+
+Se le puso **lint** (`sonidos_cableados_test`: *"toda vista que monta `audio` le
+pasa sus atributos"*), y al primer corrido **encontró una cuarta pantalla con el
+mismo agujero: `/recepcion_carga`**. Cableada en el mismo PR. Un helper
+compartido evita que dos copias diverjan; no evita que a una pantalla se le
+olvide llamarlo — para eso está el lint.
+
+Tres cosas más, en el mismo PR:
+
+- **Una variante aguda, porque no había ninguna.** Las tres existentes son
+  graves (200 a 440 Hz) y Yusef pidió *"más como pit que tú"*: `agudo`, un tono
+  plano de 1500 Hz × 250 ms, que cumple las reglas del repo (no sube, ≤ 500 ms,
+  distinto de los tonos ya tomados). El default sigue en `grave`: en
+  `/etiquetar*, digitando, *"está bien"*; cada usuario elige la suya.
+- **Dos resultados sonaban a «todo bien».** `noEncontrado` y `yaEmpacado` iban
+  a `audio#alert`, que **sube** de tono — justo lo que el repo prohíbe para un
+  error. Los tres no-OK pasan a `error`.
+- Los `.wav` de `docs/entregables/sonidos/` se regeneraron con la cuarta, porque
+  el test los compara byte a byte contra lo que suena.
 
 ---
 
