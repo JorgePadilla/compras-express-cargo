@@ -47,8 +47,10 @@
       flex-direction: column;
       justify-content: space-between;
       overflow: hidden;
-      /* El interlineado normal de Arial (~1.15) se come una línea entera. */
-      line-height: 1.03;
+      /* El interlineado normal de Arial (~1.15) se come una línea entera.
+         C25-07: de 1.03 a 1.0 — son 2.6 px, el colchón del tercero en el
+         bloque, y a estos tamaños no se ve. */
+      line-height: 1.0;
     }
 
     /* Los hijos NO se encogen. Con el `flex-shrink: 1` que trae flex por

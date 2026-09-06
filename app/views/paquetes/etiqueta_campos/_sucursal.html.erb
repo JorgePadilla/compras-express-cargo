@@ -1,11 +1,18 @@
-<%# Sucursal donde retira, en itálica como el mockup. El encabezado (texto
-    fijo de la plantilla, «RETIRA EN» de fábrica) va en su propio renglón para
-    que el nombre tenga todo el ancho de la columna y no se corte: en la
-    etiqueta vieja salía truncado y bajo la palabra inglesa "Agent". %>
+<%# Sucursal donde retira, en itálica como el mockup.
+
+    C25-07 · El rótulo («RETIRA EN» de fábrica) va EN LÍNEA con el nombre, no
+    en renglón propio. Ese renglón de 8 px era la única línea que la columna
+    izquierda del bloque tenía de más sobre la derecha, y ahora la ocupa el
+    tercero (ver `definicion.rb`, con las medidas). Antes iba aparte para que
+    el nombre tuviera todo el ancho —en la etiqueta vieja salía truncado bajo
+    la palabra inglesa "Agent"—; hoy eso lo resuelve el ajuste al ancho: un
+    nombre largo se achica, no se corta. %>
 <% if etiqueta_plantilla.visible?("sucursal") %>
-  <div style="font-size:var(--fs-sucursal-rotulo); line-height:1;"><%= etiqueta_plantilla.texto("sucursal") %></div>
-  <div class="t" data-campo="sucursal"
-       style="font-size:var(--fs-sucursal); font-weight:bold; font-style:italic; text-transform:uppercase;">
-    <%= etiqueta_sucursal(paquete) %>
+  <div class="r">
+    <span style="font-size:var(--fs-sucursal-rotulo); white-space:nowrap; flex:0 0 auto;"><%= etiqueta_plantilla.texto("sucursal") %></span>
+    <span class="t" data-campo="sucursal" data-ajustar data-ajustar-min="7"
+          style="font-size:var(--fs-sucursal); font-weight:bold; font-style:italic; text-transform:uppercase;">
+      <%= etiqueta_sucursal(paquete) %>
+    </span>
   </div>
 <% end %>
