@@ -22,11 +22,14 @@ export default class extends conEnterAvanza(Controller) {
     "grupo", "grupoTitulo", "grupoSello", "grilla", "plantillaCuadrito", "facturarParcial",
     "panel", "codigoCaja", "tracking", "caja", "cliente", "tipoEnvio", "descripcion", "previa",
     "form", "peso", "alto", "largo", "ancho", "guardar", "guardarTexto", "reimprimir", "reimprimirTexto",
-    "banner", "bannerTexto", "bannerReimprimir", "bannerReimprimirTexto", "medidos",
+    "banner", "bannerTexto", "bannerReimprimir", "bannerReimprimirTexto",
+    "manifiestoNumero", "manifiestoFechas", "manifiestoConteo", "pendientes", "sinPendientes",
+    "plantillaPendiente", "descarteModal", "descarteCaja", "descarteMotivo", "descarteNota",
+    "descarteError", "confirmarDescarte",
     "problemaModal", "problemaTitulo", "problemaTexto", "problemaEntendido", "medirDeNuevo",
     "excepcionModal", "excepcionFaltantes", "excepcionError", "confirmarParcial"
   ]
-  static values = { escanearUrl: String, etiquetaUrlTemplate: String, clases: Object }
+  static values = { escanearUrl: String, panelUrl: String, etiquetaUrlTemplate: String, clases: Object }
 
   connect() {
     this._seq = 0
@@ -42,6 +45,12 @@ export default class extends conEnterAvanza(Controller) {
     this._alCerrarse = () => requestAnimationFrame(() => this._enfocarDondeToca())
     this.element.addEventListener("close", this._alCerrarse, true)
     if (this.hasCodigoTarget) this.codigoTarget.focus()
+    // C26-17 · El panel de la derecha arranca con el último manifiesto que
+    // todavía tiene algo que medir, para que la pantalla no abra vacía.
+    this._fetch("GET", this.panelUrlValue)
+      .then((r) => r.json())
+      .then((data) => this._pintarManifiesto(data.manifiesto))
+      .catch(() => {})
   }
 
   disconnect() {
@@ -160,6 +169,7 @@ export default class extends conEnterAvanza(Controller) {
 
     this._pintarDosLados(data.pre_alerta, data.miami)
     this._pintarGrupo(data.grupo)
+    this._pintarManifiesto(data.manifiesto)
     this._textoDeLosBotones()
     this.bannerTarget.classList.add("hidden")
     this.panelTarget.classList.remove("hidden")
@@ -278,7 +288,7 @@ export default class extends conEnterAvanza(Controller) {
         } else {
           this.dispatch("guardado")
         }
-        this._agregarFila(data.paquete)
+        this._pintarManifiesto(data.manifiesto)
         this.avisoTarget.textContent = data.mensaje
         // La grilla se queda en pantalla con el cuadrito ya en verde: el
         // operario sigue con la caja siguiente del mismo grupo.
@@ -316,15 +326,86 @@ export default class extends conEnterAvanza(Controller) {
     return caja?.wr || null
   }
 
-  _agregarFila(p) {
-    const tr = document.createElement("tr")
-    tr.innerHTML = `<td class="px-4 py-2 font-mono text-cec-navy dark:text-cec-gold"></td>` +
-                   `<td class="px-4 py-2 text-gray-700 dark:text-gray-200"></td>` +
-                   `<td class="px-4 py-2 text-right font-mono text-gray-500"></td>`
-    tr.children[0].textContent = p.codigo
-    tr.children[1].textContent = (p.cliente || "").split(" · ")[0]
-    tr.children[2].textContent = `${Number(p.peso).toFixed(2)} lb`
-    this.medidosTarget.prepend(tr)
+  // ── El panel de la derecha: lo que falta de este manifiesto ─────────────
+
+  _pintarManifiesto(m) {
+    if (!m) return
+
+    this.manifiestoNumeroTarget.textContent = [m.numero, m.guia && `guía ${m.guia}`].filter(Boolean).join(" · ")
+    this.manifiestoFechasTarget.textContent = [
+      m.enviado && `Salió de Miami el ${m.enviado}`,
+      m.recibido && `recibido el ${m.recibido}`
+    ].filter(Boolean).join(" · ")
+    // El match con lo que Miami dijo que mandó.
+    const partes = [`Miami mandó ${m.enviados}`, `medidos ${m.medidos}`]
+    if (m.descartados > 0) partes.push(`sacados ${m.descartados}`)
+    partes.push(`faltan ${m.faltan}`)
+    this.manifiestoConteoTarget.textContent = partes.join(" · ")
+
+    this.pendientesTarget.replaceChildren(...m.pendientes.map((p) => this._renglon(p, m.puede_descartar)))
+    this.sinPendientesTarget.classList.toggle("hidden", m.pendientes.length > 0)
+  }
+
+  _renglon(pendiente, puedeDescartar) {
+    const nodo = this.plantillaPendienteTarget.content.firstElementChild.cloneNode(true)
+    nodo.dataset.paqueteId = pendiente.id
+    nodo.dataset.descartarUrl = pendiente.descartar_url
+    nodo.dataset.wr = pendiente.wr || ""
+    if (pendiente.midiendo) nodo.classList.add("bg-cec-gold/15")
+    if (!pendiente.aqui) nodo.classList.add("opacity-60")
+
+    nodo.querySelector("[data-campo=wr]").textContent =
+      [pendiente.wr, pendiente.caja && `caja ${pendiente.caja}`].filter(Boolean).join(" · ")
+    nodo.querySelector("[data-campo=cliente]").textContent = pendiente.cliente || ""
+    const donde = nodo.querySelector("[data-campo=donde]")
+    donde.textContent = pendiente.donde
+    donde.classList.add(pendiente.aqui ? "text-gray-500" : "text-amber-800")
+
+    // C26-17 · Los que vienen consolidados se ven sin escanearlos.
+    const unir = nodo.querySelector("[data-campo=unir]")
+    unir.classList.toggle("hidden", !pendiente.unir)
+    if (pendiente.unir) unir.textContent = `UNIR · ${pendiente.unir}`
+
+    // Sacar de la lista es de administración y de nadie más.
+    nodo.querySelector("button").classList.toggle("hidden", !puedeDescartar)
+    return nodo
+  }
+
+  // ── Sacar una caja de la lista ──────────────────────────────────────────
+
+  abrirDescarte(e) {
+    // Suena aunque lo abra un clic y no la pistola: la regla de las pantallas
+    // de escaneo es que ningún modal se abra mudo, y acá el operario puede
+    // estar mirando la caja y no la pantalla.
+    this.dispatch("atencion")
+    const fila = e.currentTarget.closest("li")
+    this._descartando = fila.dataset.descartarUrl
+    this.descarteCajaTarget.textContent = fila.dataset.wr
+    this.descarteNotaTarget.value = ""
+    this.descarteErrorTarget.classList.add("hidden")
+    this.descarteModalTarget.showModal()
+    requestAnimationFrame(() => this.confirmarDescarteTarget.focus())
+  }
+
+  cerrarDescarte() { this.descarteModalTarget.close() }
+
+  confirmarDescarte() {
+    if (!this._descartando) return
+
+    const motivo = this.descarteMotivoTargets.find((r) => r.checked)?.value
+    this._post(this._descartando, { motivo: motivo, nota: this.descarteNotaTarget.value }, { conEstado: true })
+      .then(({ ok, data }) => {
+        if (!ok) {
+          this.dispatch("fallo")
+          this.descarteErrorTarget.textContent = (data.errores || []).join(" ")
+          this.descarteErrorTarget.classList.remove("hidden")
+          return
+        }
+        this.dispatch("guardado")
+        this._pintarManifiesto(data.manifiesto)
+        this.avisoTarget.textContent = data.mensaje
+        this.descarteModalTarget.close()
+      })
   }
 
   // ── Terminar: imprimir, limpiar y dejar dicho qué pasó ──────────────────
@@ -433,7 +514,7 @@ export default class extends conEnterAvanza(Controller) {
   }
 
   _modalAbierto() {
-    return this.problemaModalTarget.open || this.excepcionModalTarget.open
+    return this.problemaModalTarget.open || this.excepcionModalTarget.open || this.descarteModalTarget.open
   }
 
   _enfocarPeso() {

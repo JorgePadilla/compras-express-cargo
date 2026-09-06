@@ -820,6 +820,22 @@ class Paquete < ApplicationRecord
     buscar_escaneado(term)
   end
 
+  # C26-17 · Lo que la estación de medición todavía espera de un manifiesto:
+  # lo que Miami mandó, sin medir, y que un admin no haya sacado de la lista.
+  #
+  # No filtra por estado a propósito: lo que **no llegó a Honduras** también
+  # falta, y el panel lo muestra aparte —es lo que hay que ir a buscar, no lo
+  # que hay que medir.
+  scope :pendientes_de_medicion, -> {
+    where(medido_at: nil, medicion_descartada_at: nil)
+      .where.not(estado: NO_SON_CAJAS)
+  }
+
+  def descartado_de_medicion? = medicion_descartada_at.present?
+
+  # ¿Está en Honduras, lista para que la midan?
+  def esperando_medicion? = estado.in?(ESTADOS_FACTURABLES) && medido_at.blank?
+
   # C26-02 · Las cajas que comparten este warehouse receipt: las de un envío
   # partido. `crear_split!` les pone a todas el mismo `numero_recepcion` (el
   # «número madre») y a cada una su `numero_caja`, así que **varias cajas con

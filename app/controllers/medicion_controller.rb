@@ -22,8 +22,43 @@ class MedicionController < ApplicationController
   before_action :authorize_medicion
 
   def index
-    @medidos_hoy = Paquete.where(medido_at: Time.current.all_day)
-                          .includes(:cliente, :tipo_envio).order(medido_at: :desc).limit(30)
+    @puede_descartar = admin?
+  end
+
+  # C26-17 · El panel de la derecha: lo que **falta** del manifiesto que se está
+  # procesando. Jorge: *"¿cómo ayuda eso de «medidos hoy»? Sería bueno que
+  # aparezcan los que faltan de ese manifiesto, así como match con lo que se
+  # mandó desde Miami"*.
+  #
+  # Se pide al cargar la pantalla —con el último manifiesto que todavía tiene
+  # algo que medir— y después de cada escaneo, con el de la caja en la mano.
+  def panel
+    render json: { manifiesto: manifiesto_json(manifiesto_por_defecto) }
+  end
+
+  # C26-17 · Sacar una caja de la lista: perdida, o ya entregada. Solo admin.
+  def descartar
+    paquete = Paquete.find(params[:id])
+    DescartarDeMedicion.new(paquete: paquete, user: Current.user)
+                       .descartar!(motivo: params[:motivo], nota: params[:nota])
+
+    render json: { ok: true, manifiesto: manifiesto_json(paquete.manifiesto),
+                   mensaje: "#{codigo_de(paquete)} salió de la lista: " \
+                            "#{DescartarDeMedicion::MOTIVOS[paquete.medicion_descartada_motivo].downcase}." }
+  rescue DescartarDeMedicion::NoPermitido => e
+    render json: { ok: false, errores: [ e.message ] }, status: :forbidden
+  rescue DescartarDeMedicion::SinMotivo => e
+    render json: { ok: false, errores: [ e.message ] }, status: :unprocessable_entity
+  end
+
+  def restaurar
+    paquete = Paquete.find(params[:id])
+    DescartarDeMedicion.new(paquete: paquete, user: Current.user).restaurar!
+
+    render json: { ok: true, manifiesto: manifiesto_json(paquete.manifiesto),
+                   mensaje: "#{codigo_de(paquete)} vuelve a la lista." }
+  rescue DescartarDeMedicion::NoPermitido => e
+    render json: { ok: false, errores: [ e.message ] }, status: :forbidden
   end
 
   # Lo que lee la pistola: el warehouse receipt de la etiqueta de Miami.
@@ -143,10 +178,75 @@ class MedicionController < ApplicationController
     { resultado: resultado, mensaje: mensaje_de(resultado, paquete, grupo),
       paquete: datos_de(paquete), miami: miami_de(paquete),
       pre_alerta: pre_alerta_json(grupo), grupo: grupo_json(grupo, paquete.id),
+      manifiesto: manifiesto_json(paquete.manifiesto, paquete.id),
       medicion_previa: previa_de(paquete) }
   end
 
   def por_caja(paquetes) = paquetes.sort_by { |p| [ p.numero_caja.to_i, p.id ] }
+
+  # El manifiesto con el que arranca la pantalla: el más reciente que todavía
+  # tiene algo que medir.
+  def manifiesto_por_defecto
+    Manifiesto.activos
+              .joins(:paquetes)
+              .where(paquetes: { estado: Paquete::ESTADOS_FACTURABLES, medido_at: nil, medicion_descartada_at: nil })
+              .order(fecha_aduana: :desc, id: :desc).first
+  end
+
+  # C26-17 · El manifiesto y lo que le falta. El encabezado es el «match con lo
+  # que se mandó desde Miami»; la lista, lo que el operario todavía tiene que
+  # buscar o medir.
+  def manifiesto_json(manifiesto, midiendo_id = nil)
+    return nil if manifiesto.nil?
+
+    resumen = manifiesto.resumen_de_medicion
+    resumen.merge(
+      numero: manifiesto.numero,
+      guia: manifiesto.numeros_de_guia.join(" · ").presence,
+      enviado: manifiesto.fecha_enviado&.strftime("%d/%m/%Y"),
+      recibido: manifiesto.fecha_aduana&.strftime("%d/%m/%Y"),
+      puede_descartar: admin?,
+      pendientes: pendientes_de(manifiesto, midiendo_id)
+    )
+  end
+
+  # Primero lo que está acá esperando que lo midan; al final, lo que no llegó
+  # —que es lo que hay que ir a buscar, no lo que hay que medir.
+  def pendientes_de(manifiesto, midiendo_id)
+    paquetes = manifiesto.paquetes.pendientes_de_medicion.includes(:cliente).to_a
+    uniones = uniones_de(paquetes)
+
+    paquetes.sort_by { |p| [ p.esperando_medicion? ? 0 : 1, p.numero_recepcion.to_s, p.numero_caja.to_i ] }
+            .map do |p|
+      { id: p.id, wr: codigo_de(p), caja: caja_de(p), cliente: p.cliente&.nombre_completo,
+        donde: p.esperando_medicion? ? "acá, sin medir" : "no llegó a Honduras",
+        aqui: p.esperando_medicion?, midiendo: p.id == midiendo_id,
+        unir: uniones[p.id], descartar_url: descartar_medicion_path(p) }
+    end
+  end
+
+  # C26-17 · Cuáles de los pendientes vienen **consolidados**, y con cuál
+  # pre-alerta. Jorge: *"¿cómo sé si los warehouse receipts vienen consolidados
+  # en una pre-alerta?"* — antes había que escanear uno para enterarse; acá se
+  # ve la lista entera de un vistazo.
+  #
+  # Una sola consulta para todos: preguntarle a `GrupoDeUnion` paquete por
+  # paquete serían 40 consultas en un manifiesto normal.
+  def uniones_de(paquetes)
+    return {} if paquetes.empty?
+
+    PreAlertaPaquete.joins(:pre_alerta)
+                    .merge(PreAlerta.activas.where(consolidado: true, finalizado: false))
+                    .where("pre_alerta_paquetes.paquete_id IN (:ids) OR UPPER(pre_alerta_paquetes.tracking) IN (:trk)",
+                           ids: paquetes.map(&:id), trk: paquetes.map { |p| p.tracking.to_s.upcase })
+                    .includes(:pre_alerta)
+                    .each_with_object({}) do |renglon, acc|
+      numero = renglon.pre_alerta.numero_documento
+      paquetes.each do |p|
+        acc[p.id] ||= numero if renglon.paquete_id == p.id || renglon.tracking.to_s.casecmp?(p.tracking.to_s)
+      end
+    end
+  end
 
   def codigo_de(paquete)
     helpers.etiqueta_codigo_barras(paquete).presence || paquete.tracking
