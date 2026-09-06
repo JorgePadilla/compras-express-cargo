@@ -229,7 +229,10 @@ Rails.application.routes.draw do
   # excepción de facturar parcial (C26-03).
   resources :medicion, only: %i[index], path: "medicion" do
     collection { post :escanear }
-    member { patch :medir }
+    member do
+      patch :medir
+      get :etiqueta
+    end
   end
   post "medicion/pre_alertas/:id/facturar_parcial", to: "medicion#facturar_parcial", as: :facturar_parcial_medicion
 

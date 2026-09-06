@@ -217,4 +217,22 @@ class MedicionTest < ActionDispatch::IntegrationTest
     paquete.update_columns(estado: "en_aduana")
     paquete.reload
   end
+
+  # ── C26-04 · La etiqueta ─────────────────────────────────────────────────
+
+  test "medir devuelve la URL de la etiqueta, y la etiqueta existe solo después de medir" do
+    get etiqueta_medicion_path(@paquete)
+    assert_response :not_found
+
+    medir(@paquete)
+    assert_match(%r{/medicion/#{@paquete.id}/etiqueta}, json["paquete"]["etiqueta_url"])
+
+    get etiqueta_medicion_path(@paquete)
+    assert_response :success
+    assert_match(%r{class="codigo"[^>]*>#{@paquete.reload.numero_recepcion} · MD<}, response.body, "el código y quién midió")
+    assert_match(/VLBS<\/span> 10\.50/, response.body)
+    assert_match(/PIES³ 0\.97/, response.body)
+    # El QR va dentro del SVG; su texto se afirma por el helper que lo arma.
+    assert_equal "MED #{@paquete.numero_recepcion} 12.50 10x12x14", ApplicationController.helpers.etiqueta_qr_medicion(@paquete)
+  end
 end

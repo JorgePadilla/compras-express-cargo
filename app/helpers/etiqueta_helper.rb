@@ -333,4 +333,19 @@ module EtiquetaHelper
   def etiqueta_num_2d(n)
     format("%.2f", n.to_f)
   end
+
+  # C26-04 · Lo que lleva el QR de la etiqueta de medición.
+  #
+  # Yusef: *"que quede amarrado: cuando lo escanee, ingrese al sistema la
+  # información de libras y pesos… es para que lo lea el sistema"*. Va el
+  # código de la caja **más** los datos: `MED RMI0002026000042-2 12.50 10x12x14`.
+  # Con espacios y no `|`: una pistola por teclado en distribución es-419 puede
+  # no entregar la barra. El sistema resuelve por el código
+  # (`Paquete.limpiar_codigo_escaneado`) y lee peso y medidas de la base; los
+  # datos del QR son redundancia legible.
+  def etiqueta_qr_medicion(paquete)
+    codigo = etiqueta_codigo_barras(paquete).presence || paquete.tracking
+    medidas = [ paquete.alto, paquete.largo, paquete.ancho ].map { |m| etiqueta_num(m) }.join("x")
+    "MED #{codigo} #{etiqueta_num_2d(paquete.peso)} #{medidas}"
+  end
 end
