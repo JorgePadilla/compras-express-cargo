@@ -205,8 +205,20 @@ module EtiquetaHelper
 
   # La sucursal donde el cliente retira. Es el campo que provocó el
   # "¿qué es San Pedro Soda?": salía truncado y bajo un encabezado en inglés.
+  # C25-08 · «Dónde retira» dice **la sucursal**, nunca una ciudad.
+  #
+  # Yusef, mirando la etiqueta: *"ahora dice San Pedro Sula; por donde va a
+  # retirar tiene que decir **Zerón SPS**, así se llama la sucursal"*. Y el
+  # porqué: *"la que voy a abrir se va a llamar Carmen SPS o Norte SPS"* — con
+  # dos sucursales en la misma ciudad, la ciudad deja de decir dónde.
+  #
+  # Sin sucursal en el paquete cae a la **de retiro por defecto** (columna que
+  # ya existía, el seed la pone en SPS). La ciudad del cliente queda de último
+  # recurso, para que nada salga en blanco.
   def etiqueta_sucursal(paquete)
-    paquete.sucursal&.nombre.presence || paquete.cliente&.ciudad.presence
+    paquete.sucursal&.nombre.presence ||
+      Sucursal.find_by(retiro_por_defecto: true)&.nombre.presence ||
+      paquete.cliente&.ciudad.presence
   end
 
   # El tipo de envío va a tres letras: en el mockup de Yusef dice **EXP**, no
