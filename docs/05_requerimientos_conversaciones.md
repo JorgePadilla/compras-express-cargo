@@ -10203,6 +10203,42 @@ peso y medidas de la base; los datos del QR son redundancia legible, que es lo
 que él pidió. Que la búsqueda de paquetes, recibir carga y la pre-factura
 entiendan ese prefijo es parte del mismo PR.
 
+#### C26-17 · El panel de la derecha: lo que **falta** de este manifiesto — ✅ **HECHO**
+
+Jorge, usando la estación (2026-09-06):
+
+> "**¿Cómo ayuda eso de «medidos hoy»?** Sería bueno que aparezcan **los que
+>  faltan de ese manifiesto**, así como **match con lo que se mandó desde
+>  Miami**. El **admin** debería poder quitarlos con algunas opciones de
+>  **perdido**, **ya fue entregado**, y una nota si es necesario, pero eso solo
+>  el admin. Y **la fecha de cuándo fue enviado** sería cool."
+
+Un contador de lo ya hecho no le sirve a nadie parado en la línea. El panel
+pasa a decir:
+
+- **De qué manifiesto es**, con su guía, **cuándo salió de Miami** y cuándo se
+  recibió.
+- **El match**: «Miami mandó 40 · medidos 33 · faltan 7».
+- **La lista de lo que falta**, con el warehouse receipt, el cliente y dónde
+  está —*acá, sin medir* o *no llegó a Honduras*, con el mismo vocabulario de
+  los cuadritos—. Lo que no llegó va al final y apagado: eso se busca, no se
+  mide. El que se está midiendo se resalta.
+- **Cuáles vienen consolidados**, que era otra pregunta de Jorge —*"¿cómo sé si
+  los warehouse receipts vienen consolidados en una pre-alerta?"*—: cada
+  renglón que pertenece a una pre-alerta consolidada abierta lleva su número.
+  Antes había que escanear uno para enterarse.
+
+El panel **sigue al manifiesto de la caja que se acaba de escanear**; al abrir
+la pantalla arranca con el último manifiesto que todavía tenga algo que medir.
+
+**Sacar una caja de la lista es de administración y de nadie más.** El modal
+pide motivo —*Perdido* o *Ya fue entregado*— y una nota opcional, y sella
+quién y cuándo. **El estado del paquete no se toca**: un «entregado» sin
+entrega registrada le mentiría al módulo de entregas y a la factura, y
+«perdido» no existe como estado ni se inventa acá. Lo que se sella es algo más
+chico y cierto: esa caja ya no se espera en la estación. El sello sale en la
+ficha del paquete y se puede deshacer.
+
 #### C26-05 · Varias cajas por paquete — decisión de Jorge
 
 > "Entonces el sistema tendría que crear que puedas agregar hasta 5, 6, 7,

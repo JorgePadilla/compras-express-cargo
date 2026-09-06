@@ -15,6 +15,7 @@
 <div data-controller="medicion audio"
      <%= tag.attributes(atributos_de_audio) %>
      data-medicion-escanear-url-value="<%= escanear_medicion_index_path %>"
+     data-medicion-panel-url-value="<%= panel_medicion_index_path %>"
      <%# La URL de la etiqueta la manda el servidor con cada medición; este
          template es el respaldo de «Reimprimir» y, de paso, la puerta que
          `pantallas_en_el_menu_test` exige para una ruta anidada. %>
@@ -33,6 +34,7 @@
                   medicion:unir->audio#alert
                   medicion:grupoCompleto->audio#success
                   medicion:yaMedido->audio#notify
+                  medicion:atencion->audio#notify
                   medicion:problema->audio#error
                   medicion:guardado->audio#success
                   medicion:fallo->audio#error">
@@ -167,22 +169,46 @@
       </div>
     </div>
 
-    <%# ── e · el turno ───────────────────────────────────────────────────── %>
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+    <%# ── e · lo que falta de este manifiesto ─────────────────────────────
+
+        Jorge: *"¿cómo ayuda eso de «medidos hoy»? Sería bueno que aparezcan los
+        que faltan de ese manifiesto, así como match con lo que se mandó desde
+        Miami… y la fecha de cuándo fue enviado"*. Un contador de lo ya hecho no
+        le sirve a nadie parado en la línea; lo que falta, sí.
+
+        El panel sigue al manifiesto de la caja que se acaba de escanear. %>
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden self-start"
+         data-medicion-target="panelManifiesto">
       <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-        <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100">Medidos hoy</h2>
+        <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100">Lo que falta de este manifiesto</h2>
+        <p class="mt-1 font-mono font-bold text-cec-navy dark:text-cec-gold" data-medicion-target="manifiestoNumero"></p>
+        <p class="text-xs text-gray-500 dark:text-gray-400" data-medicion-target="manifiestoFechas"></p>
+        <%# El match con lo que Miami dijo que mandó. %>
+        <p class="mt-1 text-sm font-semibold text-gray-700 dark:text-gray-200" data-medicion-target="manifiestoConteo"></p>
       </div>
-      <table class="min-w-full text-sm">
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700" data-medicion-target="medidos">
-          <% @medidos_hoy.each do |p| %>
-            <tr>
-              <td class="px-4 py-2 font-mono text-cec-navy dark:text-cec-gold"><%= etiqueta_codigo_barras(p) %></td>
-              <td class="px-4 py-2 text-gray-700 dark:text-gray-200"><%= p.cliente&.nombre_completo %></td>
-              <td class="px-4 py-2 text-right font-mono text-gray-500"><%= number_with_precision(p.peso, precision: 2) %> lb</td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
+
+      <ul class="divide-y divide-gray-200 dark:divide-gray-700 max-h-[32rem] overflow-y-auto"
+          data-medicion-target="pendientes"></ul>
+
+      <p class="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400 hidden"
+         data-medicion-target="sinPendientes">No falta nada por medir de este manifiesto.</p>
+
+      <%# El renglón vive en el ERB, como el cuadrito: el markup se lee acá y
+          Tailwind ve sus clases. El JS lo clona y lo llena. %>
+      <template data-medicion-target="plantillaPendiente">
+        <li class="px-4 py-2 flex items-start gap-2">
+          <div class="flex-1 min-w-0">
+            <p class="font-mono text-sm text-cec-navy dark:text-cec-gold truncate" data-campo="wr"></p>
+            <p class="text-xs text-gray-600 dark:text-gray-300 truncate" data-campo="cliente"></p>
+            <p class="text-xs" data-campo="donde"></p>
+            <%# C26-17 · Cuáles vienen consolidados, sin tener que escanearlos. %>
+            <p class="mt-0.5 inline-block text-[11px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 hidden"
+               data-campo="unir"></p>
+          </div>
+          <%= render(ButtonComponent.new(variant: :ghost, size: :xs, icon: "x-mark", label: "Sacar de la lista",
+                data: { action: "medicion#abrirDescarte" }, class: "hidden shrink-0")) %>
+        </li>
+      </template>
     </div>
   </div>
 
@@ -203,6 +229,42 @@
             data: { medicion_target: "medirDeNuevo", action: "medicion#medirDeNuevo" }, class: "hidden")) { "Medir de nuevo" } %>
       <%= render(ButtonComponent.new(variant: :primary, size: :lg, label: "Entendido",
             data: { medicion_target: "problemaEntendido", action: "medicion#avisoEntendido" })) { "Entendido" } %>
+    </div>
+  </dialog>
+
+  <%# ── Sacar una caja de la lista: perdida, o ya entregada. Solo admin ──── %>
+  <dialog data-medicion-target="descarteModal" data-action="cancel->medicion#avisoCancelar"
+          style="margin: auto" class="rounded-xl p-0 w-[32rem] max-w-[95vw] backdrop:bg-black/60">
+    <div class="px-6 py-4 bg-cec-navy text-white">
+      <p class="text-xs font-bold uppercase tracking-wider">Solo administración</p>
+      <p class="text-xl font-bold mt-1">Sacar de la lista</p>
+    </div>
+    <div class="bg-white px-6 py-5 space-y-4">
+      <p class="text-base text-gray-900 font-mono" data-medicion-target="descarteCaja"></p>
+      <div>
+        <span class="block text-sm font-medium text-gray-700 mb-1">Por qué</span>
+        <% DescartarDeMedicion::MOTIVOS.each_with_index do |(valor, etiqueta), i| %>
+          <label class="flex items-center gap-2 text-sm text-gray-700 min-h-11">
+            <%= radio_button_tag "medicion_descarte_motivo", valor, i.zero?,
+                  data: { medicion_target: "descarteMotivo" }, class: "text-cec-teal focus:ring-cec-teal" %>
+            <%= etiqueta %>
+          </label>
+        <% end %>
+      </div>
+      <div>
+        <%= label_tag :medicion_descarte_nota, "Nota (opcional)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= text_field_tag :medicion_descarte_nota, nil, autocomplete: "off",
+              data: { medicion_target: "descarteNota" },
+              class: "block w-full min-h-11 rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+      <p class="text-sm text-gray-500">La caja **no** cambia de estado: solo deja de esperarse acá, con tu nombre y la hora.</p>
+      <p class="text-base font-medium text-red-700 hidden" data-medicion-target="descarteError"></p>
+    </div>
+    <div class="flex items-center justify-end gap-3 px-6 py-3 bg-gray-50 border-t border-gray-200">
+      <%= render(ButtonComponent.new(variant: :secondary, size: :md, label: "Cancelar",
+            data: { action: "medicion#cerrarDescarte" })) { "Cancelar" } %>
+      <%= render(ButtonComponent.new(variant: :danger, size: :md, label: "Sacar esta caja de la lista",
+            data: { medicion_target: "confirmarDescarte", action: "medicion#confirmarDescarte" })) { "Sacar de la lista" } %>
     </div>
   </dialog>
 

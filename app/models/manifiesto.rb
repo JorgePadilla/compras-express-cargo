@@ -212,6 +212,22 @@ class Manifiesto < ApplicationRecord
 
   # Los números de guía del proveedor, para mostrar. Lee las dos formas: la
   # tabla nueva y el varchar viejo de los manifiestos que ya estaban.
+  # C26-17 · El match con lo que Miami dijo que mandó, para el panel de la
+  # estación de medición: *"que aparezcan los que faltan de ese manifiesto, así
+  # como match con lo que se mandó desde Miami"*.
+  #
+  # `enviados` son los paquetes del manifiesto que son cajas de verdad (un
+  # «esperado» de pre-alerta no viaja). Se cuenta en una sola pasada: la lista
+  # de pendientes se arma con los mismos objetos.
+  def resumen_de_medicion
+    cajas = paquetes.where.not(estado: Paquete::NO_SON_CAJAS).to_a
+    medidos = cajas.count { |p| p.medido_at.present? }
+    descartados = cajas.count(&:descartado_de_medicion?)
+
+    { enviados: cajas.size, medidos: medidos, descartados: descartados,
+      faltan: cajas.size - medidos - descartados }
+  end
+
   def numeros_de_guia
     de_la_tabla = guias.map(&:numero)
     return de_la_tabla if de_la_tabla.any?

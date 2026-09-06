@@ -327,6 +327,99 @@ class MedicionTest < ActionDispatch::IntegrationTest
     assert_equal 2, response.body.scan(/class="med"/).size
   end
 
+  # ── C26-17 · El panel de lo que falta del manifiesto ─────────────────────
+  #
+  # Jorge: *"¿cómo ayuda eso de «medidos hoy»? Sería bueno que aparezcan los que
+  # faltan de ese manifiesto, así como match con lo que se mandó desde Miami…
+  # y la fecha de cuándo fue enviado"*.
+
+  test "el escaneo trae el manifiesto, con el match de lo que Miami mandó" do
+    manifiesto = manifiesto_con(@paquete, otras: 2)
+
+    escanear(@paquete.tracking)
+
+    m = json["manifiesto"]
+    assert_equal manifiesto.numero, m["numero"]
+    assert_equal "20/08/2026", m["enviado"]
+    assert_equal [ 3, 0, 3 ], m.values_at("enviados", "medidos", "faltan")
+    assert_equal 3, m["pendientes"].size
+    assert m["pendientes"].first["midiendo"], "el que se está midiendo se marca"
+  end
+
+  test "medir baja el contador y saca la caja de los pendientes" do
+    manifiesto_con(@paquete, otras: 2)
+
+    medir(@paquete)
+
+    m = json["manifiesto"]
+    assert_equal [ 3, 1, 2 ], m.values_at("enviados", "medidos", "faltan")
+    assert_not_includes m["pendientes"].map { |p| p["id"] }, @paquete.id
+  end
+
+  test "los pendientes dicen cuáles vienen consolidados, sin escanearlos" do
+    manifiesto = manifiesto_con(@paquete, otras: 1)
+    otra = manifiesto.paquetes.where.not(id: @paquete.id).first
+    pa = PreAlerta.create!(numero_documento: "PA-TUNIR1", cliente: clientes(:juan), tipo_envio: tipo_envios(:aereo),
+                           consolidado: true, estado: "pre_alerta", titulo: "Consolidado",
+                           creado_por_tipo: "usuario", creado_por_id: users(:admin).id)
+    pa.pre_alerta_paquetes.create!(tracking: otra.tracking, descripcion: "x", fecha: Date.current, paquete: otra)
+
+    get panel_medicion_index_path
+
+    pendientes = json["manifiesto"]["pendientes"].index_by { |p| p["id"] }
+    assert_equal "PA-TUNIR1", pendientes[otra.id]["unir"]
+    assert_nil pendientes[@paquete.id]["unir"]
+  end
+
+  test "lo que no llegó a Honduras va en la lista, aparte" do
+    manifiesto = manifiesto_con(@paquete, otras: 1)
+    manifiesto.paquetes.where.not(id: @paquete.id).first.update!(estado: "enviado_honduras")
+
+    get panel_medicion_index_path
+
+    pendientes = json["manifiesto"]["pendientes"]
+    assert_equal [ true, false ], pendientes.map { |p| p["aqui"] }, "primero lo que se puede medir"
+    assert_equal "no llegó a Honduras", pendientes.last["donde"]
+  end
+
+  # ── Sacar de la lista: solo admin ────────────────────────────────────────
+
+  test "el operario de medición no puede sacar nada de la lista" do
+    manifiesto_con(@paquete, otras: 1)
+
+    post descartar_medicion_path(@paquete), params: { motivo: "perdido" }, as: :json
+
+    assert_response :forbidden
+    assert_not @paquete.reload.descartado_de_medicion?
+  end
+
+  test "el admin la saca con su motivo, y deja de contarse como faltante" do
+    manifiesto_con(@paquete, otras: 1)
+    users(:admin).update!(iniciales: "AD")
+    ingresar(users(:admin))
+
+    post descartar_medicion_path(@paquete), params: { motivo: "perdido", nota: "no apareció" }, as: :json
+
+    assert_response :success
+    assert_equal "AD", @paquete.reload.medicion_descartada_por
+    m = json["manifiesto"]
+    assert_equal [ 2, 0, 1, 1 ], m.values_at("enviados", "medidos", "faltan", "descartados")
+    assert_not_includes m["pendientes"].map { |p| p["id"] }, @paquete.id
+    assert_match(/salió de la lista: perdido/, json["mensaje"])
+  end
+
+  test "el admin también puede devolverla a la lista" do
+    manifiesto_con(@paquete, otras: 1)
+    ingresar(users(:admin))
+    post descartar_medicion_path(@paquete), params: { motivo: "entregado" }, as: :json
+
+    delete restaurar_medicion_path(@paquete), as: :json
+
+    assert_response :success
+    assert_not @paquete.reload.descartado_de_medicion?
+    assert_includes json["manifiesto"]["pendientes"].map { |p| p["id"] }, @paquete.id
+  end
+
   private
 
 
@@ -357,6 +450,17 @@ class MedicionTest < ActionDispatch::IntegrationTest
     paquete.update!(estado: "recibido_miami", sucursal_recepcion: sucursales(:miami))
     paquete.update!(estado: "en_aduana")
     paquete.reload
+  end
+
+  # Un manifiesto oficial que salió de Miami, con esta caja y otras.
+  def manifiesto_con(paquete, otras: 0)
+    manifiesto = Manifiesto.create!(tipo_envios: [ tipo_envios(:cer) ],
+                                    sucursal_origen: sucursales(:miami), estado: "recibido",
+                                    fecha_enviado: Time.zone.parse("2026-08-20"),
+                                    fecha_aduana: Time.zone.parse("2026-08-28"))
+    paquete.update!(manifiesto: manifiesto)
+    otras.times { |i| caja("1ZOTRA#{i}00000001").update!(manifiesto: manifiesto) }
+    manifiesto
   end
 
   def hermana(madre, numero)

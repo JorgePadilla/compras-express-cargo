@@ -50,7 +50,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     espiar_impresion
     send_keys :f10
 
-    assert_selector "[data-medicion-target='medidos'] tr", text: "Juan", wait: 5
+    assert_selector "[data-medicion-target='banner']", text: "medido", wait: 5
     assert_equal 12.5, @paquete.reload.peso.to_f
     assert_equal "MD", @paquete.medido_por
     assert_match(%r{/medicion/#{@paquete.id}/etiqueta\?print=true}, lo_que_abrio)
@@ -189,6 +189,62 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_no_selector "[data-medicion-target='grilla'] button"
     assert_no_selector "[data-medicion-target='codigoCaja']", visible: true
     assert_equal "codigo_medicion", foco
+  end
+
+  # C26-17 · El panel de la derecha: lo que falta del manifiesto.
+  #
+  # Jorge: *"¿cómo ayuda eso de «medidos hoy»? Sería bueno que aparezcan los
+  # que faltan de ese manifiesto, así como match con lo que se mandó desde
+  # Miami… y la fecha de cuándo fue enviado"*.
+  test "el panel dice qué falta de este manifiesto, y solo el admin puede sacar una caja" do
+    manifiesto = Manifiesto.create!(tipo_envios: [ tipo_envios(:cer) ], sucursal_origen: sucursales(:miami),
+                                    estado: "recibido", fecha_enviado: Time.zone.parse("2026-08-20"),
+                                    fecha_aduana: Time.zone.parse("2026-08-28"))
+    @paquete.update!(manifiesto: manifiesto)
+    otra = caja("1ZPANEL00000002")
+    otra.update!(manifiesto: manifiesto)
+
+    visit medicion_index_path
+
+    assert_selector "[data-medicion-target='manifiestoNumero']", text: manifiesto.numero, wait: 5
+    assert_selector "[data-medicion-target='manifiestoFechas']", text: "Salió de Miami el 20/08/2026"
+    assert_selector "[data-medicion-target='manifiestoConteo']", text: "Miami mandó 2 · medidos 0 · faltan 2"
+    assert_selector "[data-medicion-target='pendientes'] li", count: 2
+    # El operario de medición no saca nada de la lista.
+    assert_no_selector "[data-medicion-target='pendientes'] li button:not(.hidden)"
+
+    # Y al medir una, el panel lo refleja sin recargar.
+    escanear(@paquete.numero_recepcion)
+    assert_selector "[data-medicion-target='codigoCaja']", text: @paquete.numero_recepcion, wait: 5
+    send_keys "9", :enter, "9", :enter, "9", :enter, "9"
+    espiar_impresion
+    send_keys :f10
+
+    assert_selector "[data-medicion-target='manifiestoConteo']", text: "medidos 1 · faltan 1", wait: 5
+    assert_selector "[data-medicion-target='pendientes'] li", count: 1
+  end
+
+  test "el admin saca una caja de la lista con su motivo" do
+    manifiesto = Manifiesto.create!(tipo_envios: [ tipo_envios(:cer) ], sucursal_origen: sucursales(:miami),
+                                    estado: "recibido", fecha_enviado: Time.zone.parse("2026-08-20"))
+    @paquete.update!(manifiesto: manifiesto)
+    users(:admin).update!(iniciales: "AD")
+    ingresar(users(:admin))
+
+    visit medicion_index_path
+    assert_selector "[data-medicion-target='pendientes'] li", count: 1, wait: 5
+
+    find("[data-medicion-target='pendientes'] li button").click
+
+    assert_selector "dialog[open]", text: "Sacar de la lista", wait: 5
+    choose "Perdido", allow_label_click: true
+    fill_in "medicion_descarte_nota", with: "no apareció en la bodega"
+    within("dialog[open]") { click_on "Sacar de la lista" }
+
+    assert_no_selector "dialog[open]", wait: 5
+    assert_selector "[data-medicion-target='sinPendientes']", visible: true
+    assert_equal "perdido", @paquete.reload.medicion_descartada_motivo
+    assert_equal "en_aduana", @paquete.estado, "sacarla de la lista no le cambia el estado"
   end
 
   private

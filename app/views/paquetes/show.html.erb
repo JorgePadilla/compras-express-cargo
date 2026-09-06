@@ -777,6 +777,21 @@ end %>
       </div>
     </div>
 
+    <%# C26-17 · Si la estación de medición dejó de esperar esta caja, hay que
+        **decirlo acá**: es una decisión de administración que explica por qué
+        no tiene peso medido y por qué no aparece en la lista de la línea. %>
+    <% if @paquete.descartado_de_medicion? %>
+      <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+        <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
+          Fuera de la lista de medición · <%= DescartarDeMedicion::MOTIVOS[@paquete.medicion_descartada_motivo] %>
+          · <%= @paquete.medicion_descartada_por %> · <%= @paquete.medicion_descartada_at.strftime("%d/%m/%Y") %>
+        </span>
+        <% if @paquete.medicion_descartada_nota.present? %>
+          <p class="mt-1 text-xs text-gray-600 dark:text-gray-300"><%= @paquete.medicion_descartada_nota %></p>
+        <% end %>
+      </div>
+    <% end %>
+
     <%# Sucursal actual + Flags + Recolecta + Retención + Cambio Servicio %>
     <div class="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
       <% if @paquete.sucursal_actual %>

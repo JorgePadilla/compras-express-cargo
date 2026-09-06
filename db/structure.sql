@@ -1843,7 +1843,11 @@ CREATE TABLE public.paquetes (
     cobro_excepcion character varying,
     llegada_notificada_at timestamp(6) without time zone,
     medido_at timestamp(6) without time zone,
-    medido_por character varying
+    medido_por character varying,
+    medicion_descartada_at timestamp(6) without time zone,
+    medicion_descartada_por character varying,
+    medicion_descartada_motivo character varying,
+    medicion_descartada_nota text
 );
 
 
@@ -7682,6 +7686,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260906180000'),
 ('20260906160000'),
 ('20260906150100'),
 ('20260906150000'),

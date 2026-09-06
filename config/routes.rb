@@ -228,10 +228,16 @@ Rails.application.routes.draw do
   # C26-02 · Medición: la estación de San Pedro. Escanear, medir, y la
   # excepción de facturar parcial (C26-03).
   resources :medicion, only: %i[index], path: "medicion" do
-    collection { post :escanear }
+    collection do
+      post :escanear
+      # C26-17 · Lo que falta del manifiesto, para el panel de la derecha.
+      get :panel
+    end
     member do
       patch :medir
       get :etiqueta
+      post :descartar
+      delete :restaurar
     end
   end
   # C26-04 · Las stickers de un grupo consolidado, juntas.
