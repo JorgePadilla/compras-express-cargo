@@ -302,6 +302,31 @@ class MedicionTest < ActionDispatch::IntegrationTest
     assert_equal 2, json["grupo"]["total"], "comparten warehouse receipt: son el mismo envío"
   end
 
+  # C26-04 · El bug que Jorge vio: *"«Reimprimir el grupo» veo que solo imprime
+  # una"*. `etiqueta` decidía si traía las hermanas con `dividido?`, que mira
+  # `cantidad_paquetes` — el mismo campo que ayer se sacó de `GrupoDeUnion`
+  # porque puede venir vacío, y que había quedado vivo acá.
+  test "reimprimir el envío trae todas las medidas, aunque falte la cantidad de cajas" do
+    cajas = envio_partido(@paquete, 3)
+    cajas.each { |c| medir(c) }
+    Paquete.where(id: cajas.map(&:id)).update_all(cantidad_paquetes: nil)
+
+    get etiqueta_medicion_path(cajas.first, hermanas: "1")
+
+    assert_response :success
+    assert_equal 3, response.body.scan(/class="med"/).size,
+                 "son tres cajas del mismo warehouse receipt: van las tres stickers"
+  end
+
+  test "y solo las medidas: una caja sin medir no lleva sticker" do
+    cajas = envio_partido(@paquete, 3)
+    cajas.first(2).each { |c| medir(c) }
+
+    get etiqueta_medicion_path(cajas.first, hermanas: "1")
+
+    assert_equal 2, response.body.scan(/class="med"/).size
+  end
+
   private
 
 

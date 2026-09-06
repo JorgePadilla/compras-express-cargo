@@ -27,7 +27,7 @@
            aqui:         "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800",
            en_camino:    "border-amber-300 bg-amber-50 text-amber-900",
            esperada:     "border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 opacity-60",
-           seleccionada: "ring-2 ring-cec-gold/40 border-cec-gold"
+           seleccionada: "border-cec-gold bg-cec-gold/30 ring-4 ring-cec-gold/60 shadow-lg text-cec-navy dark:text-cec-gold"
          }.to_json %>'
      data-action="medicion:ok->audio#success
                   medicion:unir->audio#alert
@@ -82,11 +82,12 @@
           <p class="text-sm text-gray-500 dark:text-gray-400" data-medicion-target="grupoSello"></p>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3" data-medicion-target="grilla"></div>
+        <%# Reimprimir vive **una sola vez**, en el panel de la caja con su
+            tecla. Acá estaba repetido, y con el otro camino —el que tenía el
+            bug de imprimir una sola. %>
         <div class="mt-4 flex flex-wrap gap-3">
           <%= render(ButtonComponent.new(variant: :danger, size: :md, label: "Facturar lo que hay, sin el grupo completo",
                 data: { medicion_target: "facturarParcial", action: "medicion#abrirExcepcion" }, class: "hidden")) { "Facturar lo que hay" } %>
-          <%= render(ButtonComponent.new(variant: :secondary, size: :md, label: "Reimprimir las etiquetas del grupo",
-                data: { medicion_target: "reimprimirGrupo", action: "medicion#reimprimirGrupo" }, class: "hidden")) { "Reimprimir el grupo" } %>
         </div>
 
         <%# El cuadrito vive en el ERB y no en el JS: el markup se lee acá, y
@@ -97,6 +98,7 @@
               mudo para el lector de pantalla. %>
           <button type="button" data-action="medicion#elegirCaja" aria-label="Elegir esta caja para medirla"
                   class="w-full min-h-11 p-3 rounded-xl border-2 flex flex-col items-center gap-0.5 text-center transition foco-cec">
+            <span class="text-[10px] font-bold tracking-wider text-cec-navy dark:text-cec-gold" data-campo="marca"></span>
             <span class="font-mono text-sm font-bold leading-tight" data-campo="wr"></span>
             <span class="text-[11px] text-gray-500 dark:text-gray-400" data-campo="caja"></span>
             <span class="text-[11px] font-medium" data-campo="estado"></span>
@@ -138,16 +140,31 @@
         </div>
 
         <div class="mt-5 flex flex-wrap items-center gap-3">
+          <%# El texto de los dos primeros lo reescribe el JS según lo que va a
+              pasar: con un grupo a medias, F10 no imprime —guarda y salta a la
+              caja siguiente—, y prometerlo sería mentir. Va en un `<span>` para
+              poder cambiarlo; como el botón tiene contenido, ese texto **es** su
+              nombre accesible y no hay `aria-label` que sincronizar. %>
           <%= render(ButtonComponent.new(variant: :gold, size: :lg, shortcut: "F10", shortcut_label_only: true,
-                data: { medicion_target: "guardar", action: "medicion#guardar" })) { "Guardar e imprimir" } %>
+                data: { medicion_target: "guardar", action: "medicion#guardar" })) do %><span data-medicion-target="guardarTexto">Guardar e imprimir</span><% end %>
           <%= render(ButtonComponent.new(variant: :secondary, size: :lg, shortcut: "F9", shortcut_label_only: true,
-                data: { medicion_target: "reimprimir", action: "medicion#reimprimir" }, class: "hidden")) { "Reimprimir etiqueta" } %>
+                data: { medicion_target: "reimprimir", action: "medicion#reimprimir" }, class: "hidden")) do %><span data-medicion-target="reimprimirTexto">Reimprimir la etiqueta</span><% end %>
           <%= render(ButtonComponent.new(variant: :secondary, size: :lg, shortcut: "F2", shortcut_label_only: true,
                 data: { action: "medicion#limpiar" })) { "Limpiar" } %>
         </div>
       </div>
 
-      <div class="rounded-lg bg-cec-teal/10 text-cec-teal-dark p-4 text-lg font-semibold hidden" data-medicion-target="banner"></div>
+      <%# Lo que queda en pantalla cuando el envío se terminó: la pantalla se
+          limpia para el siguiente —Jorge: *"cuando se facture o se termine de
+          imprimir se debería limpiar"*— y esto guarda el resultado y la única
+          acción que todavía tiene sentido. Se va con el escaneo siguiente. %>
+      <div class="rounded-lg bg-cec-teal/10 text-cec-teal-dark p-4 hidden" data-medicion-target="banner">
+        <p class="text-lg font-semibold" data-medicion-target="bannerTexto"></p>
+        <div class="mt-2">
+          <%= render(ButtonComponent.new(variant: :secondary, size: :sm,
+                data: { medicion_target: "bannerReimprimir", action: "medicion#reimprimir" }, class: "hidden")) do %><span data-medicion-target="bannerReimprimirTexto">Reimprimir</span><% end %>
+        </div>
+      </div>
     </div>
 
     <%# ── e · el turno ───────────────────────────────────────────────────── %>

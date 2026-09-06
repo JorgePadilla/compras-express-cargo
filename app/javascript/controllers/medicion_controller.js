@@ -19,9 +19,10 @@ export default class extends conEnterAvanza(Controller) {
     "codigo", "aviso",
     "dosLados", "panelPreAlerta", "paNumero", "paTitulo", "paDetalle", "paBanderas", "paNotas",
     "panelMiami", "miamiWr", "miamiDetalle", "miamiDescripcion", "miamiRetenido",
-    "grupo", "grupoTitulo", "grupoSello", "grilla", "plantillaCuadrito", "facturarParcial", "reimprimirGrupo",
+    "grupo", "grupoTitulo", "grupoSello", "grilla", "plantillaCuadrito", "facturarParcial",
     "panel", "codigoCaja", "tracking", "caja", "cliente", "tipoEnvio", "descripcion", "previa",
-    "form", "peso", "alto", "largo", "ancho", "guardar", "reimprimir", "banner", "medidos",
+    "form", "peso", "alto", "largo", "ancho", "guardar", "guardarTexto", "reimprimir", "reimprimirTexto",
+    "banner", "bannerTexto", "bannerReimprimir", "bannerReimprimirTexto", "medidos",
     "problemaModal", "problemaTitulo", "problemaTexto", "problemaEntendido", "medirDeNuevo",
     "excepcionModal", "excepcionFaltantes", "excepcionError", "confirmarParcial"
   ]
@@ -159,6 +160,7 @@ export default class extends conEnterAvanza(Controller) {
 
     this._pintarDosLados(data.pre_alerta, data.miami)
     this._pintarGrupo(data.grupo)
+    this._textoDeLosBotones()
     this.bannerTarget.classList.add("hidden")
     this.panelTarget.classList.remove("hidden")
     this.formTarget.querySelectorAll("input").forEach((i) => i.dispatchEvent(new Event("input", { bubbles: true })))
@@ -210,7 +212,25 @@ export default class extends conEnterAvanza(Controller) {
 
     const forzable = !grupo.completo && !grupo.cerrada && !grupo.parcial_autorizado && grupo.facturar_parcial_url
     this.facturarParcialTarget.classList.toggle("hidden", !forzable)
-    this.reimprimirGrupoTarget.classList.toggle("hidden", !grupo.etiquetas_url)
+  }
+
+  // C26-04 · Los botones dicen lo que **va a pasar**, que no es siempre lo
+  // mismo. Jorge: *"veo «Guardar e imprimir»… «Reimprimir etiqueta», no sé si
+  // solo hace una, ¿cuál hace?"*. Con un envío a medias, F10 no imprime:
+  // guarda y salta a la caja siguiente, y el texto lo dice con su número.
+  _textoDeLosBotones() {
+    const g = this._grupo
+    const otraSinMedir = g && this._paquete
+      ? g.cajas.find((c) => c.estado === "aqui" && c.id !== this._paquete.id)
+      : null
+
+    if (!g) {
+      this.guardarTextoTarget.textContent = "Guardar e imprimir"
+    } else if (otraSinMedir) {
+      this.guardarTextoTarget.textContent = `Guardar y seguir con la ${otraSinMedir.caja || "siguiente"}`
+    } else {
+      this.guardarTextoTarget.textContent = `Guardar e imprimir las ${g.total}`
+    }
   }
 
   _cuadrito(caja) {
@@ -219,8 +239,14 @@ export default class extends conEnterAvanza(Controller) {
     nodo.dataset.wr = caja.wr || ""
     nodo.dataset.estado = caja.estado
     nodo.disabled = !caja.medible
-    nodo.className += ` ${clases[caja.estado] || ""}${caja.seleccionada ? ` ${clases.seleccionada}` : ""}`
-    nodo.setAttribute("aria-label", `${caja.wr || caja.tracking}: ${caja.donde}`)
+    // La seleccionada **reemplaza** las clases del estado en vez de sumarse:
+    // dos `bg-` en el mismo elemento las resuelve el orden del CSS, no el del
+    // atributo, así que sumarlas daba un resultado a medias. Jorge: *"la
+    // seleccionada no se ve tan marcada"*.
+    nodo.className += ` ${caja.seleccionada ? clases.seleccionada : (clases[caja.estado] || "")}`
+    nodo.setAttribute("aria-label",
+                      `${caja.wr || caja.tracking}: ${caja.seleccionada ? "midiendo esta" : caja.donde}`)
+    nodo.querySelector("[data-campo=marca]").textContent = caja.seleccionada ? "MIDIENDO" : ""
     nodo.querySelector("[data-campo=wr]").textContent = caja.wr || caja.tracking
     nodo.querySelector("[data-campo=caja]").textContent = caja.caja || ""
     nodo.querySelector("[data-campo=estado]").textContent = caja.donde
@@ -245,14 +271,13 @@ export default class extends conEnterAvanza(Controller) {
           return
         }
 
+        // Literales y no un ternario: `sonidos_cableados_test` los busca en el
+        // archivo, y con el ternario dejó de encontrar `grupoCompleto`.
         if (data.resultado === "grupo_completo") {
           this.dispatch("grupoCompleto")
-          this.bannerTarget.textContent = data.mensaje
-          this.bannerTarget.classList.remove("hidden")
         } else {
           this.dispatch("guardado")
         }
-
         this._agregarFila(data.paquete)
         this.avisoTarget.textContent = data.mensaje
         // La grilla se queda en pantalla con el cuadrito ya en verde: el
@@ -262,16 +287,24 @@ export default class extends conEnterAvanza(Controller) {
         // C26-02 · Si el envío venía partido, las otras cajas tienen **el
         // mismo warehouse receipt impreso**: volver a escanearlo no aportaría
         // nada. Se salta sola a la siguiente sin medir, con el cursor en el
-        // peso. Cuando no queda ninguna, recién ahí se imprime y vuelve el
-        // foco a la pistola.
+        // peso.
         const siguiente = this._siguienteDelEnvio(data.paquete, data.grupo)
         if (siguiente) {
           this._escanear(siguiente)
           return
         }
 
+        // C26-04 · Cuando hay algo que imprimir, el envío terminó: se imprime,
+        // **se limpia la pantalla** y queda el banner. Jorge: *"cuando se
+        // facture o se termine de imprimir se debería limpiar para que se
+        // comience con el siguiente grupo"*.
+        if (data.imprimir_url) {
+          this._terminar(data.mensaje, data.imprimir_url, data.grupo ? data.grupo.total : 1)
+          return
+        }
+
         this._limpiarCaja()
-        this._imprimir(data.imprimir_url)
+        this.codigoTarget.focus()
       })
   }
 
@@ -294,17 +327,37 @@ export default class extends conEnterAvanza(Controller) {
     this.medidosTarget.prepend(tr)
   }
 
-  // ── Imprimir ────────────────────────────────────────────────────────────
+  // ── Terminar: imprimir, limpiar y dejar dicho qué pasó ──────────────────
   //
-  // C26-04 · Una caja suelta imprime su sticker al guardarla; un grupo imprime
+  // C26-04 · Una caja suelta imprime su sticker al guardarla; un envío imprime
   // **todas juntas** cuando se mide la última — *"que salgan las 3 stickers"*.
-  // La pestaña se imprime y se cierra sola (`_etiqueta_autoprint`), y al volver
-  // el foco la pistola queda lista.
-  _imprimir(url) {
+  // En los dos casos la pantalla queda limpia para el envío siguiente, y el
+  // banner guarda el resultado y la única acción que todavía sirve: reimprimir.
+  _terminar(mensaje, url, cantidad) {
+    this._limpiarCaja()
+    this._pintarGrupo(null)
+    this.dosLadosTarget.classList.add("hidden")
+
+    this.bannerTextoTarget.textContent = cantidad > 1
+      ? `${mensaje} Se imprimieron ${cantidad} stickers.`
+      : mensaje
+    this.bannerTarget.classList.remove("hidden")
+
+    this._imprimir(url, cantidad)
+  }
+
+  _imprimir(url, cantidad = 1) {
     if (!url) { this.codigoTarget.focus(); return }
 
+    // «Reimprimir» significa **lo último que se imprimió**, y el texto de los
+    // botones lo dice: era la pregunta de Jorge, *"¿cuál hace?"*.
     this._ultimaEtiquetaUrl = url
+    const texto = cantidad > 1 ? `Reimprimir las ${cantidad} del envío` : "Reimprimir la etiqueta"
+    this.reimprimirTextoTarget.textContent = texto
+    this.bannerReimprimirTextoTarget.textContent = texto
     this.reimprimirTarget.classList.remove("hidden")
+    this.bannerReimprimirTarget.classList.remove("hidden")
+
     window.open(url, "_blank")
     window.addEventListener("focus", () => this.codigoTarget.focus(), { once: true })
     this.codigoTarget.focus()
@@ -312,16 +365,8 @@ export default class extends conEnterAvanza(Controller) {
 
   reimprimir() {
     if (!this._ultimaEtiquetaUrl || this._modalAbierto()) return
-    this._abrirEtiqueta(this._ultimaEtiquetaUrl)
-  }
 
-  reimprimirGrupo() {
-    if (!this._grupo?.etiquetas_url || this._modalAbierto()) return
-    this._abrirEtiqueta(this._grupo.etiquetas_url)
-  }
-
-  _abrirEtiqueta(url) {
-    window.open(url, "_blank")
+    window.open(this._ultimaEtiquetaUrl, "_blank")
     window.addEventListener("focus", () => this.codigoTarget.focus(), { once: true })
   }
 
@@ -371,10 +416,10 @@ export default class extends conEnterAvanza(Controller) {
           return
         }
         this.dispatch("guardado")
-        this._pintarGrupo(data.grupo)
         this.avisoTarget.textContent = data.mensaje
         this.excepcionModalTarget.close()
-        if (data.imprimir_url) this._imprimir(data.imprimir_url)
+        // Facturar lo que hay cierra el envío: imprime lo medido y limpia.
+        this._terminar(data.mensaje, data.imprimir_url, data.grupo.medidas)
       })
   }
 

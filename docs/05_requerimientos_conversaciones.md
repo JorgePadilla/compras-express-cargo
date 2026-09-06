@@ -10065,6 +10065,29 @@ La ambigüedad de verdad —un código que cae en **envíos distintos**, porque
 alguien reusó un tracking— sigue saliendo en el modal rojo, ahora diciendo
 cuáles son.
 
+**Los botones, revisados por Jorge el 2026-09-06:** *"veo «Guardar e
+imprimir», «Reimprimir etiqueta» —no sé si solo hace una, ¿cuál hace?—,
+«Reimprimir el grupo» —veo que solo imprime una—… y luego limpiar: cuando se
+facture o se termine de imprimir se debería limpiar para que se comience con el
+siguiente grupo"*. Salieron tres cosas:
+
+- **Un bug**: «Reimprimir el grupo» imprimía **una sola**. La acción decidía si
+  traer las hermanas con `dividido?`, que mira `cantidad_paquetes` — el mismo
+  campo que ya se había sacado de `GrupoDeUnion` por venir vacío, y que había
+  quedado vivo ahí. Ahora agrupa por warehouse receipt.
+- **Los textos prometían mal.** El de guardar cambia con lo que va a pasar:
+  «Guardar e imprimir» en una caja suelta, «Guardar y seguir con la 2 de 3»
+  mientras queden cajas, «Guardar e imprimir las 3» en la última. Y reimprimir
+  quedó **uno solo** —el del grupo estaba repetido— y su texto dice qué va a
+  salir: «Reimprimir la etiqueta» o «Reimprimir las 3 del envío».
+- **La pantalla se limpia al terminar.** Al completar el envío o al facturar lo
+  que hay: se imprime, se limpian la caja y la grilla, y queda un banner con lo
+  que pasó y el botón de reimprimir. El escaneo siguiente arranca de cero.
+
+Y la caja que se está midiendo se ve: la seleccionada **reemplaza** el color de
+su estado en vez de sumarse —dos fondos en el mismo elemento los resuelve el
+orden del CSS, no el del atributo— y lleva la palabra «MIDIENDO».
+
 Y se anotan medida y
 peso: *"¿la volumétrica? sí, las dos también… medidas de tamaño y peso"*.
 
