@@ -954,8 +954,10 @@ class PaquetesController < ApplicationController
   end
 
   def aviso_de_excepcion
-    if @paquete.reload.cobro_excepcion.present?
+    if @paquete.reload.cobro_solo_volumetrico?
       "#{@paquete.numero_recepcion_visible} cobra solo el volumétrico: #{@paquete.peso_cobrar} lb."
+    elsif @paquete.cobro_solo_peso?
+      "#{@paquete.numero_recepcion_visible} cobra solo el peso real: #{@paquete.peso_cobrar} lb."
     else
       "#{@paquete.numero_recepcion_visible} vuelve al cobro normal: #{@paquete.peso_cobrar} lb."
     end

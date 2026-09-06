@@ -153,6 +153,40 @@ class MarcarCobroExcepcionTest < ActiveSupport::TestCase
                  "no se tocó nada de pre-factura: hereda el peso del paquete"
   end
 
+  # ── El espejo: cobrar el peso real aunque gane el volumétrico ────────────
+  #
+  # Jorge, 2026-09-06, aclarando lo que Yusef pidió: *"él quiere poder cobrar
+  # **por libra o volumen volumétrico de vez en cuando, dependiendo el caso**"*.
+  # Son las dos mitades de lo mismo, no dos funciones distintas.
+
+  test "con solo_peso cobra el real aunque el volumétrico sea mayor" do
+    # Al revés del caso de los generadores: 100 reales contra 500 volumétricas.
+    @paquete.update_columns(peso: 100, peso_volumetrico: 500, peso_cobrar: 500)
+
+    marcar!(excepcion: "solo_peso", motivo: "carga liviana y voluminosa, se cobra por libra")
+
+    assert_equal 100, @paquete.reload.peso_cobrar.to_i
+  end
+
+  # **La excepción del paquete le gana al trato del cliente**, que es lo que
+  # Yusef pidió con *"exclusivamente esa"*. Sin esta precedencia, un cliente con
+  # el flag de `PR-C6.41` no podría tener nunca un paquete cobrado por peso.
+  test "solo_peso le gana al trato de volumen del cliente" do
+    ClienteCobroVolumetrico.create!(cliente: @paquete.cliente, tipo_envio: @paquete.tipo_envio)
+
+    marcar!(excepcion: "solo_peso", motivo: "esta vez por libra")
+
+    assert_equal 400, @paquete.reload.peso_cobrar.to_i,
+                 "el paquete manda sobre el cliente"
+  end
+
+  test "el registro dice cuál de las dos excepciones fue" do
+    autorizacion = marcar!(excepcion: "solo_peso", motivo: "por libra")
+
+    assert_match(/peso real/i, autorizacion.detalle)
+    assert_no_match(/en vez del real/i, autorizacion.detalle)
+  end
+
   private
 
   def marcar!(excepcion: "solo_volumetrico", supervisor: @supervisor,

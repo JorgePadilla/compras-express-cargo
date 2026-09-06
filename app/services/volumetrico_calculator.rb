@@ -102,7 +102,21 @@ module VolumetricoCalculator
   # `solo_volumetrico` es el trato de mayorista de Yusef. El guard de cero no es
   # cosmético: si el operario todavía no tecleó las medidas, el volumétrico es 0
   # y sin el guard el paquete se cobraría **gratis**.
-  def entre_peso_y_vlbs(peso_real, vlbs, solo_volumetrico: false)
+  # `C24-01` · Y el caso espejo: **cobrar el peso real aunque gane el
+  # volumétrico**. Jorge, 2026-09-06, aclarando lo que Yusef pidió: *"él quiere
+  # poder cobrar **por libra o volumen volumétrico de vez en cuando, dependiendo
+  # el caso**"*. Son las dos mitades de lo mismo, no dos funciones.
+  #
+  # **`solo_peso` se pregunta primero**, y no es arbitrario: el único que lo
+  # prende es la excepción **del paquete**, mientras que `solo_volumetrico` puede
+  # venir del paquete **o del trato del cliente** (`PR-C6.41`). Preguntándolo
+  # primero, la excepción del paquete le gana al trato del cliente — que es lo
+  # que Yusef pidió: *"exclusivamente esa"*.
+  #
+  # Los dos siguen teniendo el guard de cero del `solo_volumetrico` original: si
+  # el operario todavía no tecleó el dato, cobrar por él sería cobrar gratis.
+  def entre_peso_y_vlbs(peso_real, vlbs, solo_volumetrico: false, solo_peso: false)
+    return peso_real if solo_peso && peso_real.to_f.positive?
     return vlbs if solo_volumetrico && vlbs.to_f.positive?
 
     [ peso_real, vlbs ].max
