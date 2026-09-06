@@ -27,6 +27,9 @@ end %>
           <tr>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Manifiesto</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Empresa</th>
+            <%# Jorge, 2026-09-06 · La lista venía ordenada por esta fecha y no la
+                mostraba. Con las iniciales de quien lo armó (`expedido_por`). %>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Salió de Miami</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Guías del proveedor</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Recibido en Honduras</th>
             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
@@ -42,6 +45,9 @@ end %>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-200">
                 <%= m.empresa_manifiesto&.nombre || "—" %>
               </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-200" data-columna="salio">
+                <%= fecha_y_quien(m.fecha_enviado, m.expedido_por) || "—" %>
+              </td>
               <td class="px-6 py-4 text-sm">
                 <% if m.numeros_de_guia.any? %>
                   <span class="font-mono text-gray-700 dark:text-gray-200"><%= m.numeros_de_guia.join(" · ") %></span>
@@ -49,16 +55,17 @@ end %>
                   <span class="text-amber-700 dark:text-amber-500 font-medium">Falta</span>
                 <% end %>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm">
+              <%# …y quién la recibió: «30/08/2026 · SP». %>
+              <td class="px-6 py-4 whitespace-nowrap text-sm" data-columna="recibido">
                 <% if m.fecha_aduana %>
-                  <span class="text-gray-700 dark:text-gray-200"><%= m.fecha_aduana.strftime("%d/%m/%Y") %></span>
+                  <span class="text-gray-700 dark:text-gray-200"><%= fecha_y_quien(m.fecha_aduana, m.recibido_hn_por) %></span>
                 <% else %>
                   <span class="text-amber-700 dark:text-amber-500 font-medium">Falta</span>
                 <% end %>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right">
                 <%= render ButtonComponent.new(variant: :secondary, size: :lg, icon: "pencil-square",
-                      href: edit_guias_aduana_path(m)) do %>Completar<% end %>
+                      href: edit_guias_aduana_path(m)) do %><%= m.datos_de_san_pedro_completos? ? "Corregir" : "Completar" %><% end %>
               </td>
             </tr>
           <% end %>

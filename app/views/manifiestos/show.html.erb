@@ -60,7 +60,7 @@ end %>
     </div>
     <div>
       <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Recibido en Honduras</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.fecha_aduana&.strftime("%d/%m/%Y") || "—" %></dd>
+      <dd class="mt-1 text-sm text-gray-900"><%= fecha_y_quien(@manifiesto.fecha_aduana, @manifiesto.recibido_hn_por) || "—" %></dd>
     </div>
     <div>
       <%# RP-59 · Lo estampa el sistema al crear, con las iniciales de quien lo

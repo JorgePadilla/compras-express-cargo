@@ -7984,6 +7984,27 @@ Logística: lista lo que salió de Miami y todavía no tiene guía **o** fecha
 sobre lo ya completo. El manifiesto puede estar finalizado y bloqueado: es
 exactamente para lo que existe `CAMPOS_DE_SAN_PEDRO`.
 
+**2026-09-06, Jorge, revisando la bandeja:** *"siento que a esta vista de guías
+y aduanas como que le faltan las iniciales de quien está haciendo la acción"*. Y
+al mirarla con esa pregunta salieron cuatro cosas, hechas el mismo día:
+
+- **`recibido_hn_por`**, hermana de `expedido_por` (`RP-59`): las iniciales de
+  quien puso la fecha de recibido en Honduras, selladas en el manifiesto. Con
+  dos diferencias a propósito: se **vuelve a sellar** cada vez que la fecha
+  cambia (quien puso la fecha que está), y agregar una guía no la toca. Quién
+  escribió cada guía no se sella: eso lo tiene `paper_trail`.
+- La bandeja venía **ordenada por `fecha_enviado` y no la mostraba**. Ahora hay
+  una columna «Salió de Miami» con la fecha y las iniciales de quien lo armó, y
+  «Recibido en Honduras» lleva la fecha y las de quien la recibió:
+  `30/08/2026 · SP`. Las tres pantallas —bandeja, ficha, impreso— lo dicen
+  igual, por un helper (`fecha_y_quien`).
+- Las filas que Jorge pegó decían **10/09 y 12/09 con el calendario en el 6**.
+  Una fecha de recibido en el futuro no es un dato: se rechaza, pero **solo
+  cuando la fecha cambia**, para que a las filas que ya la tenían mal se les
+  pueda agregar la guía sin corregirla antes.
+- El botón decía «Completar» aunque no faltara nada. Con las dos cosas puestas
+  dice **«Corregir»** — decisión de Jorge pendiente de que la vea.
+
 **Y los nombres actuales lo confunden** — esto lo dijo con molestia:
 
 > *"Los nombres son malos… dice «tipo de envío de manifiesto»; tengo que

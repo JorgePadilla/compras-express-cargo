@@ -141,7 +141,7 @@
         *"Es por la fecha de recibido en aduana en Honduras… que es que nosotros
         lo recibimos."* Por eso el rótulo no dice «Aduana». %>
     <div class="mf-h">Recibido en Honduras</div>
-    <div class="mf-v"><%= @manifiesto.fecha_aduana&.strftime("%d/%m/%Y") || "—" %></div>
+    <div class="mf-v"><%= fecha_y_quien(@manifiesto.fecha_aduana, @manifiesto.recibido_hn_por) || "—" %></div>
   </div>
 </div>
 

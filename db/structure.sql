@@ -1313,7 +1313,8 @@ CREATE TABLE public.manifiestos (
     finalizado_por_id bigint,
     finalizado_at timestamp(6) without time zone,
     recepcion_finalizada_at timestamp(6) without time zone,
-    tipo character varying DEFAULT 'oficial'::character varying NOT NULL
+    tipo character varying DEFAULT 'oficial'::character varying NOT NULL,
+    recibido_hn_por character varying
 );
 
 
@@ -6904,6 +6905,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260906130000'),
 ('20260906120000'),
 ('20260906090000'),
 ('20260905180000'),

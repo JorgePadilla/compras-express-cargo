@@ -75,6 +75,10 @@ class Manifiesto < ApplicationRecord
   # de la semana pasada tiene que seguir diciendo lo que decía cuando se emitió.
   # Por eso vive en la columna y no en un método que mire al usuario cada vez.
   before_create :estampar_expedido_por
+  # Jorge, 2026-09-06 · Y las de quien puso la fecha de recibido en Honduras.
+  # Solo cuando la fecha cambia: agregar una guía no toca a quien la recibió.
+  before_save :estampar_recibido_hn_por, if: :will_save_change_to_fecha_aduana?
+  validate :fecha_aduana_no_es_futura, if: :will_save_change_to_fecha_aduana?
 
   scope :activos, -> { where(activo: true) }
   # C21-11: las guías se mudaron a su propia tabla. Sin el `left_joins` la
@@ -215,6 +219,12 @@ class Manifiesto < ApplicationRecord
     [ numero_guia ].compact_blank
   end
 
+  # Lo que San Pedro tiene que poner, ¿ya está? Decide si el botón de la
+  # bandeja dice «Completar» o «Corregir».
+  def datos_de_san_pedro_completos?
+    fecha_aduana.present? && numeros_de_guia.any?
+  end
+
   private
 
   def al_menos_un_tipo_de_envio_nuestro
@@ -270,5 +280,31 @@ class Manifiesto < ApplicationRecord
     return if expedido_por.present?
 
     self.expedido_por = user&.iniciales_display
+  end
+
+  # Jorge, 2026-09-06 · Las iniciales de quien puso la fecha de recibido en
+  # Honduras — *"a esta vista le faltan las iniciales de quien está haciendo la
+  # acción"*. Hermana de `expedido_por`, con **dos diferencias a propósito**,
+  # para que nadie las «armonice»:
+  #
+  # 1. **Se vuelve a sellar cada vez que la fecha cambia.** La respuesta honesta
+  #    a «¿quién puso esta fecha?» es quien puso la que está. El congelado de
+  #    `RP-59` era contra el admin renombrando iniciales, no contra correcciones.
+  # 2. Lee `Current.user`, porque `GuiasAduanaController` no le pasa usuario al
+  #    manifiesto (la relación `user` es quien lo armó en Miami).
+  #
+  # Quién escribió cada guía no se sella acá: eso lo tiene `paper_trail`.
+  def estampar_recibido_hn_por
+    self.recibido_hn_por = fecha_aduana.present? ? Current.user&.iniciales_display : nil
+  end
+
+  # «Recibido en Honduras» es el día en que **nosotros** la recibimos: una fecha
+  # futura no es un dato, es un dedo que resbaló. Se valida solo cuando la fecha
+  # cambia —había filas con fechas futuras ya guardadas, y sin este guard San
+  # Pedro no podría ni agregarles una guía hasta corregirlas.
+  def fecha_aduana_no_es_futura
+    return if fecha_aduana.blank? || fecha_aduana.to_date <= Date.current
+
+    errors.add(:fecha_aduana, "no puede ser una fecha futura: es el día en que nosotros la recibimos")
   end
 end
