@@ -221,4 +221,111 @@ class GuiasAduanaTest < ActionDispatch::IntegrationTest
   def cuerpo_del_form
     response.body.sub(/<template[^>]*>.*?<\/template>/m, "")
   end
+
+  # ── Jorge, 2026-09-06 · Quién hizo la acción ──────────────────────────────
+  #
+  # *"Siento que a esta vista como que le faltan las iniciales de quien está
+  # haciendo la acción."* Hermana de `expedido_por` (`RP-59`).
+
+  test "la fecha de recibido lleva las iniciales de quien la puso" do
+    users(:supervisor_prefactura).update!(iniciales: "SP")
+    ingresar(users(:supervisor_prefactura))
+
+    patch guias_aduana_url(@manifiesto), params: { manifiesto: { fecha_aduana: "2026-08-30" } }
+
+    assert_equal "SP", @manifiesto.reload.recibido_hn_por
+  end
+
+  test "si otro corrige la fecha, las iniciales son las del que corrigió" do
+    users(:supervisor_prefactura).update!(iniciales: "SP")
+    users(:admin).update!(iniciales: "AD")
+    ingresar(users(:supervisor_prefactura))
+    patch guias_aduana_url(@manifiesto), params: { manifiesto: { fecha_aduana: "2026-08-30" } }
+
+    otro = open_session
+    otro.post session_url, params: { email_address: users(:admin).email_address, password: "password123" }
+    otro.patch guias_aduana_url(@manifiesto), params: { manifiesto: { fecha_aduana: "2026-08-29" } }
+
+    assert_equal "AD", @manifiesto.reload.recibido_hn_por, "quien puso la fecha que está"
+  end
+
+  test "agregar una guía sin tocar la fecha no cambia quién la recibió" do
+    @manifiesto.update_columns(fecha_aduana: Time.zone.parse("2026-08-30"), recibido_hn_por: "SP")
+    users(:admin).update!(iniciales: "AD")
+    ingresar(users(:admin))
+
+    patch guias_aduana_url(@manifiesto),
+          params: { manifiesto: { fecha_aduana: "2026-08-30", guias_attributes: { "0" => { numero: "286441-1" } } } }
+
+    assert_equal "SP", @manifiesto.reload.recibido_hn_por
+    assert_equal [ "286441-1" ], @manifiesto.numeros_de_guia
+  end
+
+  test "sin fecha no hay iniciales: se limpian con ella" do
+    @manifiesto.update_columns(fecha_aduana: Time.zone.parse("2026-08-30"), recibido_hn_por: "SP")
+    ingresar(users(:admin))
+
+    patch guias_aduana_url(@manifiesto), params: { manifiesto: { fecha_aduana: "" } }
+
+    assert_nil @manifiesto.reload.recibido_hn_por
+  end
+
+  # «Recibido en Honduras» es el día en que nosotros la recibimos. Las filas
+  # que Jorge vio decían 10/09 y 12/09 con el calendario en el 6.
+  test "una fecha de recibido en el futuro no se acepta" do
+    ingresar(users(:supervisor_prefactura))
+
+    patch guias_aduana_url(@manifiesto), params: { manifiesto: { fecha_aduana: (Date.current + 3).to_s } }
+
+    assert_response :unprocessable_entity
+    assert_nil @manifiesto.reload.fecha_aduana
+    assert_match(/futura/, response.body)
+  end
+
+  test "una fecha futura que ya estaba guardada no traba agregar la guía" do
+    futura = Date.current + 5
+    @manifiesto.update_columns(fecha_aduana: Time.zone.parse(futura.to_s))
+    ingresar(users(:supervisor_prefactura))
+
+    patch guias_aduana_url(@manifiesto),
+          params: { manifiesto: { fecha_aduana: futura.to_s, guias_attributes: { "0" => { numero: "286441-1" } } } }
+
+    assert_redirected_to guias_aduana_index_path
+    assert_equal [ "286441-1" ], @manifiesto.reload.numeros_de_guia
+  end
+
+  # La bandeja venía ordenada por `fecha_enviado` y no la mostraba.
+  test "la bandeja dice cuándo salió de Miami y quién, y cuándo se recibió y quién" do
+    @manifiesto.update_columns(fecha_enviado: Time.zone.parse("2026-08-20 10:00"), expedido_por: "MI",
+                               fecha_aduana: Time.zone.parse("2026-08-30"), recibido_hn_por: "SP")
+    @manifiesto.guias.create!(numero: "286441-1")
+    ingresar(users(:supervisor_prefactura))
+
+    get guias_aduana_index_url(todos: 1)
+
+    assert_select "td[data-columna='salio']", text: %r{20/08/2026 · MI}
+    assert_select "td[data-columna='recibido']", text: %r{30/08/2026 · SP}
+    assert_select "a", text: /Corregir/, minimum: 1
+  end
+
+  test "a lo que le falta algo, el botón le dice Completar y no Corregir" do
+    ingresar(users(:supervisor_prefactura))
+
+    get guias_aduana_index_url
+
+    assert_select "a", text: /Completar/, minimum: 1
+    assert_select "a", text: /Corregir/, count: 0
+  end
+
+  # Las pantallas gemelas: la ficha y el impreso dicen lo mismo que la bandeja.
+  test "la ficha y el impreso dicen quién recibió" do
+    @manifiesto.update_columns(fecha_aduana: Time.zone.parse("2026-08-30"), recibido_hn_por: "SP")
+    ingresar(users(:admin))
+
+    get manifiesto_url(@manifiesto)
+    assert_match(%r{30/08/2026 · SP}, response.body, "la ficha")
+
+    get "/manifiestos/#{@manifiesto.id}/documento"
+    assert_match(%r{30/08/2026 · SP}, response.body, "el impreso")
+  end
 end
