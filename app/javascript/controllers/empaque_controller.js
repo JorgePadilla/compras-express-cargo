@@ -14,12 +14,23 @@ import { Controller } from "@hotwired/stimulus"
 // escanea dos seguidos, la respuesta vieja no puede pintar encima de la nueva
 // ni sonar por un paquete que ya no está en pantalla.
 export default class extends Controller {
-  static targets = ["codigo", "aviso", "filas", "caja", "tarjeta", "candado", "conteo", "destino", "listaAbiertas"]
+  static targets = ["codigo", "aviso", "filas", "caja", "tarjeta", "candado", "conteo", "destino", "listaAbiertas",
+                    "avisoModal", "avisoTitulo", "avisoTexto", "avisoOmitir", "avisoEntendido"]
   static values = { escanearUrl: String, omitirUrl: String, activa: Number }
 
   connect() {
     this._seq = 0
+    // C25-09 · Cuando se cierra el modal de error, el foco vuelve al campo.
+    // `close` no burbujea: va en captura sobre el elemento del controller. Y
+    // un frame después, como en /etiquetar: en el mismo tick el `open` todavía
+    // no se fue y el `focus()` pega en una página inerte.
+    this._alCerrarseElAviso = () => requestAnimationFrame(() => this.codigoTarget.focus())
+    this.element.addEventListener("close", this._alCerrarseElAviso, true)
     if (this.hasCodigoTarget) this.codigoTarget.focus()
+  }
+
+  disconnect() {
+    this.element.removeEventListener("close", this._alCerrarseElAviso, true)
   }
 
   // ── C23-11 · Varias cajas abiertas ────────────────────────────────────────
@@ -154,7 +165,8 @@ export default class extends Controller {
     const paqueteId = e.currentTarget.dataset.paqueteId
     this._post(this.omitirUrlValue, { paquete_id: paqueteId })
       .then((data) => this._resolver(data))
-      .finally(() => this.codigoTarget.focus())
+      // El modal se cierra al final, y el `close` devuelve el foco al campo.
+      .finally(() => { if (this.avisoModalTarget.open) this.avisoModalTarget.close() })
   }
 
   // Los `dispatch` van con el nombre **literal**, uno por rama. Con un
@@ -169,19 +181,67 @@ export default class extends Controller {
       case "ya_empacado":   this.dispatch("yaEmpacado"); break
       default:              this.dispatch("noEncontrado")
     }
-    this._mostrar(this._tono(data.resultado), data.mensaje, data.paquete_id)
+
+    if (data.resultado === "ok") {
+      // El OK sigue como aviso en la pantalla: *"¿que diga que sí? No, no, no."*
+      this._mostrar("ok", data.mensaje)
+    } else {
+      // C25-09 · Los tres no-OK son un modal: *"ese debería ser un modal, sí,
+      // siempre"*. El `showModal()` va **acá**, en el mismo método que el
+      // `dispatch` de arriba: `sonidos_cableados_test` exige que todo método
+      // que abre un modal haga sonar algo, y ésta es la forma de que no se
+      // separen. «Entendido» recibe el foco explícito para que Enter lo apriete
+      // aunque el de omitir esté visible antes en el DOM.
+      this._avisar(this._tono(data.resultado), data.mensaje, data.paquete_id)
+      this.avisoModalTarget.showModal()
+      requestAnimationFrame(() => this.avisoEntendidoTarget.focus())
+    }
+
     if (data.fila) {
       this._agregarFila(data.fila)
       this._sumarAlConteo()
     }
-    this.codigoTarget.focus()
+    // Con el modal abierto el `focus()` pegaría en una página inerte: lo
+    // devuelve el listener de `close` cuando se cierre.
+    if (!this.avisoModalTarget.open) this.codigoTarget.focus()
+  }
+
+  // Lo que dice el modal, según el resultado. Los títulos son los tres motivos
+  // por los que un paquete no entra a la caja.
+  _avisar(tono, mensaje, paqueteId) {
+    const titulos = {
+      tipoDistinto: "Tipo de envío distinto",
+      yaEmpacado:   "Ya está en otra caja",
+      noEncontrado: "No se encontró"
+    }
+    this.avisoTituloTarget.textContent = titulos[tono] || titulos.noEncontrado
+    this.avisoTextoTarget.textContent = mensaje
+
+    // «Meterlo igual (omitir)» sólo cuando el motivo es el tipo de envío — la
+    // `Fase 12` lo pidió para eso y para nada más.
+    const omitible = tono === "tipoDistinto" && paqueteId
+    this.avisoOmitirTarget.classList.toggle("hidden", !omitible)
+    this.avisoOmitirTarget.dataset.paqueteId = omitible ? paqueteId : ""
+  }
+
+  avisoEntendido() {
+    this.avisoModalTarget.close()
+  }
+
+  // C20-13 · Escape no contesta un aviso: *"ellos no las leen"*. Las salidas
+  // son «Entendido» o «Meterlo igual».
+  avisoCancelar(e) {
+    e.preventDefault()
   }
 
   _tono(resultado) {
     return { ok: "ok", tipo_distinto: "tipoDistinto", ya_empacado: "yaEmpacado" }[resultado] || "noEncontrado"
   }
 
-  _mostrar(evento, mensaje, paqueteId) {
+  // El aviso en la pantalla. Desde C25-09 sólo lo usa el OK; los errores van
+  // al modal. Se deja con los cuatro tonos por si un resultado nuevo entra por
+  // acá antes de decidir si merece modal.
+  _mostrar(evento, mensaje) {
     if (!this.hasAvisoTarget) return
 
     const tonos = {
@@ -193,18 +253,6 @@ export default class extends Controller {
     this.avisoTarget.className = `mt-4 rounded-lg p-3 text-sm ${tonos[evento] || tonos.noEncontrado}`
     this.avisoTarget.textContent = mensaje
     this.avisoTarget.classList.remove("hidden")
-
-    if (evento === "tipoDistinto" && paqueteId) this._botonOmitir(paqueteId)
-  }
-
-  _botonOmitir(paqueteId) {
-    const boton = document.createElement("button")
-    boton.type = "button"
-    boton.textContent = "Meterlo igual (omitir)"
-    boton.className = "ml-3 underline font-medium"
-    boton.dataset.paqueteId = paqueteId
-    boton.dataset.action = "click->empaque#omitir"
-    this.avisoTarget.appendChild(boton)
   }
 
   // El «N pqt» de la tarjeta activa. Sin esto la cuenta se queda en lo que
