@@ -132,6 +132,11 @@ class EtiquetaCabeTest < ApplicationSystemTestCase
 
     t = page.evaluate_script("(function(){var el=document.querySelector('[data-campo=tercero]');return [el.scrollWidth, el.clientWidth, el.textContent.trim()];})()")
     assert_operator t[0], :<=, t[1], "\"#{t[2]}\" se está recortando en su renglón"
+
+    # C25-07 · *"Para acá abajo"*: debajo de dónde retira. Esto es lo que hace
+    # que el sitio sea un test y no un comentario.
+    tops = page.evaluate_script("(function(){var t=document.querySelector('[data-campo=tercero]'), s=document.querySelector('[data-campo=sucursal]');return [t.getBoundingClientRect().top, s.getBoundingClientRect().top];})()")
+    assert_operator tops[0], :>, tops[1], "el tercero va debajo de la sucursal, en el bloque inferior"
   end
 
   # El "¿qué es San Pedro Soda?" fue exactamente esto: la sucursal saliendo

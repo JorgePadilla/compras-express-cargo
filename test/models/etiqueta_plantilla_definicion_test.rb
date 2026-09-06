@@ -134,4 +134,19 @@ class EtiquetaPlantillaDefinicionTest < ActiveSupport::TestCase
     assert_equal 19.0, d.pt("tipo_envio")
     assert_equal 2.25, d.ancho_in
   end
+
+  # C25-07 · El tercero vive dentro del bloque. Una plantilla guardada de antes
+  # no lo tiene ahí: tiene que entrar como subfila del bloque, no como fila
+  # suelta al final — que es la fila propia que desborda 8 px.
+  test "un campo cuya casa de fábrica es el bloque vuelve adentro del bloque" do
+    filas = EtiquetaPlantilla::Definicion::DEFAULT["filas"].map(&:deep_dup)
+    bloque = filas.find { |f| f["tipo"] == "dos_columnas" }
+    bloque["izquierda"] = bloque["izquierda"].reject { |sub| sub == [ "tercero" ] }
+
+    d = EtiquetaPlantilla::Definicion.new("version" => EtiquetaPlantilla::Definicion::VERSION, "filas" => filas)
+
+    assert_equal 1, d.filas.count { |f| f["id"] == "bloque-inferior" }, "no puede aparecer un segundo bloque-inferior suelto"
+    assert_includes d.filas.find { |f| f["tipo"] == "dos_columnas" }["izquierda"], [ "tercero" ]
+    assert_empty d.filas.select { |f| f["campos"].is_a?(Array) && f["campos"].include?("tercero") }, "arriba no"
+  end
 end

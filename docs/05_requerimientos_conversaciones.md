@@ -9832,26 +9832,40 @@ sale entero; uno de 50 toca el piso y ahí para, porque por debajo ya no se lee.
 Es [[project_etiqueta_trackings_completos]] llevada al nombre: **ajustar, no
 cortar**.
 
-**Y el tercero no quedó donde Yusef señaló, y hay que decírselo.** Dijo *"para la
-de abajo"*. Se probó **literal** —una fila propia debajo del nombre— y en la
-etiqueta más llena (entrega personal, NO PAGADO, driver, tracking secundario y
-tercero) **desborda 8 px**, medido en Chrome; `C20-08` ya lo había dicho para el
-pago. En el renglón del registro faltan **61 px**: la fecha con hora sola ocupa
-76. Y los dos sitios del bloque inferior están llenos (`ubicación` 75/75,
-`sucursal` 124/124). El único renglón con lugar de sobra es el del **número de
-recepción** —un dato de largo fijo—, que cumple lo otro que dijo: *"ponelo acá,
-que esto no va a crecer tanto"*. Ahí quedó, a la derecha, a 6 pt con ajuste
-propio, y **cabe entero con aire cero** en la etiqueta más llena.
+**El tercero está donde Yusef señaló —«para acá abajo»— pero llegar costó
+tres sitios en dos días, y vale dejarlos escritos.** El primer intento fue
+**literal**: una fila propia debajo del nombre. En la etiqueta más llena
+(entrega personal, NO PAGADO, driver, tracking secundario y tercero) desborda
+**8.1 px**, medido en Chrome. Se lo puso entonces al lado del número de
+recepción, el único renglón con ancho de sobra, y ahí cabía con aire cero, a
+5–6 pt. Jorge preguntó si se podían achicar las filas para que entrara la de
+abajo, y se midió palanca por palanca:
 
-| Sitio probado | Resultado (etiqueta más llena) |
+| Arreglo (etiqueta más llena, 120 px) | Aire |
 |---|---|
-| Fila propia debajo del nombre (lo que dijo) | desborda **8 px** |
-| Renglón del registro | faltan **61 px** |
-| Bloque inferior | lleno |
-| **Renglón del número de recepción** | **cabe, aire 0** |
+| Fila propia debajo del nombre | desborda **8.1 px** |
+| Idem, achicando **todos** los textos un escalón | desborda 0.9 px |
+| Idem, con «RETIRA EN» en línea + interlineado 1.0 + recepción 10 pt + trackings 6.5 pt | 0.75 px |
+| Al lado del número de recepción (donde estaba) | 0.1 px |
+| **Tercera línea del bloque inferior, con «RETIRA EN» en línea + interlineado 1.0** | **2.5 px** |
 
-Queda para que Yusef lo vea impreso el martes: si el sitio no le gusta, lo que
-no se puede es la fila propia — habría que sacarle alto a otra cosa.
+Achicar filas no alcanza: bajando todo un escalón sigue faltando casi un píxel,
+y la combinación que cierra se paga con el número de recepción y los trackings
+más chicos, para quedar con menos colchón del que varía el render entre dos
+máquinas. Lo que sí había era **8 px escondidos en el bloque inferior**: mide lo
+que mide su columna izquierda, y ahí el rótulo «RETIRA EN» ocupaba una línea
+entera que la columna derecha —con el tipo de envío grande— no necesitaba.
+Con el rótulo en línea con la sucursal, esa línea la ocupa el tercero: **debajo
+de dónde retira, que es de quien retira en nombre del cliente**. Ningún texto
+se achicó; el interlineado pasó de 1.03 a 1.0, que a estos tamaños no se ve.
+
+De paso, el bloque inferior deja de ser «lleno»: la sucursal ahora se ajusta al
+ancho (`data-ajustar`, piso 7 pt) en vez de truncarse. La lección de medición
+queda en la memoria: `scrollHeight` es entero y no ve un desborde de décimas;
+para medir aire de verdad hay que apilar el contenido arriba y leer el borde
+inferior del último hijo.
+
+Queda para que Yusef lo vea impreso el martes.
 
 #### C25-08 · «Dónde retira» dice la sucursal, no la ciudad — ✅ **ARREGLADO**
 

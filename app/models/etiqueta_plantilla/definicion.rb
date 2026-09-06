@@ -65,17 +65,7 @@ class EtiquetaPlantilla < ApplicationRecord
       "escala_pct" => 100,
       "filas"      => [
         { "id" => "f-barcode",   "campos" => [ "barcode" ] },
-        # C25-07 · El tercero vive acá, al lado del número de recepción, y no
-        # es donde Yusef señaló primero. Él dijo *"para la de abajo"*; se probó
-        # **literal** —una fila propia debajo del nombre— y en la etiqueta más
-        # llena (entrega personal, NO PAGADO, driver, tracking secundario y
-        # tercero) **desborda 8 px**, medido en Chrome: `C20-08` ya lo había
-        # dicho para el pago. Y en el renglón del registro faltan **61 px**
-        # —la fecha con hora sola ocupa 76—. Este renglón es el único con
-        # lugar de sobra, y cumple lo otro que dijo: *"ponelo acá, que esto no
-        # va a crecer tanto"* — un número de largo fijo no crece. Queda para
-        # confirmar en Miami el martes.
-        { "id" => "f-recepcion", "campos" => [ "numero_recepcion", "tercero" ] },
+        { "id" => "f-recepcion", "campos" => [ "numero_recepcion" ] },
         { "id" => "f-tracking",  "campos" => [ "tracking" ] },
         { "id" => "f-tracking2", "campos" => [ "tracking_secundario" ] },
         # C25-07 · El nombre **solo** en su fila. Compartía renglón con el
@@ -90,8 +80,24 @@ class EtiquetaPlantilla < ApplicationRecord
         # 13px. Acá cuesta ancho —que sobra— y no alto.
 
         { "id" => "f-registro",  "campos" => [ "pago", "fecha", "driver", "reg" ] },
+        # C25-07 · El tercero vive acá: tercera línea de la columna izquierda
+        # del bloque, debajo de dónde retira — *"para acá abajo"*. Es su
+        # tercer sitio en dos días, y el único que se sostiene con números
+        # (medido en Chrome, la etiqueta más llena, 120 px de alto):
+        #
+        #   fila propia debajo del nombre ............ desborda 8.1 px
+        #   idem, achicando TODO un escalón .......... desborda 0.9 px
+        #   idem, achicando + rótulo en línea ........ 0.75 px, con recepción
+        #                                              y trackings más chicos
+        #   renglón del número de recepción .......... cabe, aire 0.1, a 5–6 pt
+        #   tercera línea del bloque inferior ........ 2.5 px de aire
+        #
+        # El bloque mide lo que mide su columna izquierda, y ahí el rótulo
+        # «RETIRA EN» ocupaba una línea entera (8 px) que la derecha —con el
+        # tipo de envío grande— no necesitaba. Con el rótulo en línea con la
+        # sucursal, esa línea la ocupa el tercero. Ningún texto se achicó.
         { "id" => "bloque-inferior", "tipo" => "dos_columnas",
-          "izquierda" => [ [ "cliente_codigo", "fraccion" ], [ "sucursal" ] ],
+          "izquierda" => [ [ "cliente_codigo", "fraccion" ], [ "sucursal" ], [ "tercero" ] ],
           "derecha"   => [ [ "ubicacion" ], [ "proveedor", "tipo_envio" ] ] }
       ],
       "campos" => {
@@ -253,6 +259,23 @@ class EtiquetaPlantilla < ApplicationRecord
       DEFAULT["filas"].each_with_object(filas.dup) do |fila_default, acc|
         pendientes = campos_de_fila(fila_default) & faltantes
         next if pendientes.empty?
+
+        # C25-07 · Un campo cuya casa de fábrica es el bloque (el tercero)
+        # entra como subfila nueva en la misma columna del bloque guardado.
+        # Sin esto caía como fila suelta al final — la fila propia que
+        # desborda 8 px, la que este cambio existe para evitar.
+        if fila_default["tipo"] == "dos_columnas"
+          bloque = acc.find { |f| f["id"] == fila_default["id"] && f["tipo"] == "dos_columnas" }
+          if bloque
+            %w[izquierda derecha].each do |col|
+              suyos = fila_default[col].flatten & pendientes
+              bloque[col] = bloque[col] + [ suyos ] if suyos.any?
+            end
+          else
+            acc << { "id" => fila_default["id"], "campos" => pendientes }
+          end
+          next
+        end
 
         destino = acc.find { |f| f["id"] == fila_default["id"] && f["tipo"] != "dos_columnas" }
         if destino
