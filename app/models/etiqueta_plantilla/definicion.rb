@@ -65,13 +65,30 @@ class EtiquetaPlantilla < ApplicationRecord
       "escala_pct" => 100,
       "filas"      => [
         { "id" => "f-barcode",   "campos" => [ "barcode" ] },
-        { "id" => "f-recepcion", "campos" => [ "numero_recepcion" ] },
+        # C25-07 · El tercero vive acá, al lado del número de recepción, y no
+        # es donde Yusef señaló primero. Él dijo *"para la de abajo"*; se probó
+        # **literal** —una fila propia debajo del nombre— y en la etiqueta más
+        # llena (entrega personal, NO PAGADO, driver, tracking secundario y
+        # tercero) **desborda 8 px**, medido en Chrome: `C20-08` ya lo había
+        # dicho para el pago. Y en el renglón del registro faltan **61 px**
+        # —la fecha con hora sola ocupa 76—. Este renglón es el único con
+        # lugar de sobra, y cumple lo otro que dijo: *"ponelo acá, que esto no
+        # va a crecer tanto"* — un número de largo fijo no crece. Queda para
+        # confirmar en Miami el martes.
+        { "id" => "f-recepcion", "campos" => [ "numero_recepcion", "tercero" ] },
         { "id" => "f-tracking",  "campos" => [ "tracking" ] },
         { "id" => "f-tracking2", "campos" => [ "tracking_secundario" ] },
-        { "id" => "f-cliente",   "campos" => [ "cliente_nombre", "tercero" ] },
+        # C25-07 · El nombre **solo** en su fila. Compartía renglón con el
+        # tercero, y `.t` lleva `text-overflow: ellipsis`: el tercero lo
+        # empujaba y el nombre salía *"Sofía García… Jorge Alejandro
+        # Federico"*. Yusef: *"el nombre tiene que ir a una sola fila… y ese
+        # nombre se ajuste el tamaño"*. Con un solo campo, `etiqueta_fila`
+        # devuelve el span pelado sin `.r` y el nombre se lleva todo el ancho.
+        { "id" => "f-cliente",   "campos" => [ "cliente_nombre" ] },
         # C20-08: el pago viaja en el renglón del registro y NO en uno propio.
         # La etiqueta está al filo: medido en Chrome, una fila más la desborda
         # 13px. Acá cuesta ancho —que sobra— y no alto.
+
         { "id" => "f-registro",  "campos" => [ "pago", "fecha", "driver", "reg" ] },
         { "id" => "bloque-inferior", "tipo" => "dos_columnas",
           "izquierda" => [ [ "cliente_codigo", "fraccion" ], [ "sucursal" ] ],

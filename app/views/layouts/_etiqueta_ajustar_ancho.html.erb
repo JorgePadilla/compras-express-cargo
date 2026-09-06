@@ -37,8 +37,11 @@
       // texto envuelve y `scrollWidth` nunca supera a `clientWidth`.
       el.style.whiteSpace = "nowrap";
       var guarda = 60;
+      // `Math.max`: la primera versión comparaba antes de restar y se pasaba
+      // del piso hasta 1 pt (un nombre quedó en 5.5 con piso en 6). El piso es
+      // el piso: por debajo ya no se lee a la distancia que Yusef pidió.
       while (el.scrollWidth > el.clientWidth && pt > min && guarda-- > 0) {
-        pt -= 1;
+        pt = Math.max(pt - 1, min);
         el.style.fontSize = pt + "pt";
       }
     }

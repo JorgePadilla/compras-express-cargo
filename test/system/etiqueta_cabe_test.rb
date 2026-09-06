@@ -65,16 +65,73 @@ class EtiquetaCabeTest < ApplicationSystemTestCase
     assert_operator medir("scrollHeight"), :<=, medir("clientHeight")
   end
 
-  test "un nombre largo no empuja el resto fuera de la etiqueta" do
-    # Los campos de ancho variable se recortan con puntos suspensivos; si
-    # alguno pudiera envolver a dos renglones, se comeria una linea.
-    @paquete.cliente.update!(
-      nombre: "MARIA DE LOS ANGELES", apellido: "HERNANDEZ RODRIGUEZ DE SAMARA"
-    )
+  # C25-07 · **Este test decía lo contrario.** Su comentario afirmaba que el
+  # recorte con puntos suspensivos era lo deseado. Yusef vio *"Sofía García…
+  # Jorge Alejandro Federico"* y pidió lo otro: *"para que aquí te quepa el
+  # nombre completo y ese nombre se ajuste el tamaño"*. Ahora el nombre va solo
+  # en su fila, con `data-ajustar`: **se achica, no se corta**. Y el tercero se
+  # fue a otro renglón — el del número de recepción.
+  test "un nombre largo se achica en vez de cortarse, y no empuja el resto" do
+    # 40 caracteres: bastante más que el «Jorge Alejandro Federico» que Yusef
+    # vio cortado, y lo que de verdad se puede leer a 6 pt en 2.1 pulgadas.
+    @paquete.cliente.update!(nombre: "MARIA DE LOS ANGELES", apellido: "HERNANDEZ RODRIGUEZ")
 
     visit etiqueta_paquete_path(@paquete)
 
+    nombre = page.evaluate_script(<<~JS)
+      (function () {
+        var el = document.querySelector("[data-campo=cliente_nombre]");
+        var t = document.querySelector("[data-campo=tercero]");
+        return [ el.scrollWidth, el.clientWidth, parseFloat(getComputedStyle(el).fontSize),
+                 el.offsetTop, t ? t.offsetTop : null, el.textContent.trim() ];
+      })()
+    JS
+
+    assert_operator nombre[0], :<=, nombre[1],
+                    "\"#{nombre[5]}\" se está recortando: necesita #{nombre[0]}px y tiene #{nombre[1]}px"
+    assert_operator nombre[2], :<, 9.5 * 96 / 72, "tendría que haberse achicado de los 9.5 pt"
+    assert_not_nil nombre[4], "la muestra lleva tercero"
+    # En **otro** renglón — no «abajo»: Yusef dijo abajo, se probó literal y
+    # desbordaba 8 px; quedó arriba, al lado del número de recepción (ver
+    # `definicion.rb`). Lo que importa es que ya no comparte fila con el nombre.
+    assert_not_equal nombre[3], nombre[4], "el tercero no puede compartir renglón con el nombre"
     assert_operator medir("scrollHeight"), :<=, medir("clientHeight")
+  end
+
+  # Y el piso es el piso. Un nombre de 50 caracteres no cabe en 2.1 pulgadas
+  # ni a 6 pt: ahí el ajuste **para en 6** y deja que el `overflow: hidden`
+  # recorte, en vez de seguir bajando a algo que no se lee. La primera versión
+  # del script se pasaba del piso (comparaba antes de restar).
+  test "un nombre imposible toca el piso y no baja de ahí" do
+    @paquete.cliente.update!(nombre: "MARIA DE LOS ANGELES", apellido: "HERNANDEZ RODRIGUEZ DE SAMARA Y CASTRO")
+
+    visit etiqueta_paquete_path(@paquete)
+
+    pt = page.evaluate_script("parseFloat(getComputedStyle(document.querySelector('[data-campo=cliente_nombre]')).fontSize) * 72 / 96")
+    assert_in_delta 6, pt, 0.05, "el piso es 6 pt: ni más chico, ni un pelo más"
+  end
+
+  # Un nombre corto **no** se achica: 9.5 pt es el máximo y ahí se queda.
+  test "un nombre corto se queda en su tamaño" do
+    @paquete.cliente.update!(nombre: "Ana", apellido: "Paz")
+
+    visit etiqueta_paquete_path(@paquete)
+
+    pt = page.evaluate_script("parseFloat(getComputedStyle(document.querySelector('[data-campo=cliente_nombre]')).fontSize) * 72 / 96")
+    assert_in_delta 9.5, pt, 0.3
+  end
+
+  # Y el tercero, en su renglón nuevo, tampoco se corta en la etiqueta más
+  # llena — entrega personal con NO PAGADO, driver y tracking secundario. Se
+  # probaron tres sitios antes de éste, con medidas (ver `definicion.rb`).
+  test "el tercero cabe entero en su renglón" do
+    @paquete.update!(proveedor: Proveedor.where(tipo: "entrega_personal").activos.first,
+                     prepagado_miami: false, tercero: clientes(:maria))
+
+    visit etiqueta_paquete_path(@paquete)
+
+    t = page.evaluate_script("(function(){var el=document.querySelector('[data-campo=tercero]');return [el.scrollWidth, el.clientWidth, el.textContent.trim()];})()")
+    assert_operator t[0], :<=, t[1], "\"#{t[2]}\" se está recortando en su renglón"
   end
 
   # El "¿qué es San Pedro Soda?" fue exactamente esto: la sucursal saliendo
@@ -82,11 +139,13 @@ class EtiquetaCabeTest < ApplicationSystemTestCase
   # envío completo y después el código del proveedor—, así que va como test y
   # no como cosa a revisar de vista.
   test "la sucursal donde retira nunca sale truncada" do
-    # El caso largo, que es el que importa: sin sucursal asignada el campo cae a
-    # la ciudad del cliente, y "San Pedro Sula" es justo el nombre que salía
-    # cortado en la etiqueta vieja.
+    # El caso largo, que es el que importa. C25-08: sin sucursal en el paquete
+    # ya **no** cae a la ciudad del cliente sino a la sucursal de retiro por
+    # defecto — Yusef: *"tiene que decir Zerón SPS, así se llama la sucursal"*.
+    # Se le da un nombre largo a propósito, que es lo que este test cuida.
     @paquete.update!(sucursal: nil)
-    @paquete.cliente.update!(ciudad: "San Pedro Sula")
+    Sucursal.update_all(retiro_por_defecto: false)
+    sucursales(:zeron_sps).update!(retiro_por_defecto: true)
 
     visit etiqueta_paquete_path(@paquete)
 
@@ -100,6 +159,13 @@ class EtiquetaCabeTest < ApplicationSystemTestCase
     assert_operator recorte[0], :<=, recorte[1],
                     "\"#{recorte[2]}\" no entra: necesita #{recorte[0]}px y tiene #{recorte[1]}px. " \
                     "Algo a su derecha le esta robando ancho."
+    # C25-08 · Y dice **la sucursal**, no la ciudad. La primera versión de este
+    # test solo medía ancho, y «Tegucigalpa» también cabe: pasaba con el
+    # fallback viejo puesto. Un test que no distingue el bug no es un test.
+    assert_includes recorte[2], sucursales(:zeron_sps).nombre,
+                    "sin sucursal en el paquete tiene que caer a la de retiro por defecto"
+    assert_not_includes recorte[2], @paquete.cliente.ciudad.to_s,
+                        "la ciudad del cliente ya no es el fallback: con dos sucursales en la misma ciudad no dice dónde"
   end
 
   test "el tipo de envio es el texto mas grande de la etiqueta" do
