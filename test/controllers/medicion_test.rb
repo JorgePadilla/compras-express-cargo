@@ -226,7 +226,91 @@ class MedicionTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
   end
 
+
+  # ── C26-02 · El warehouse receipt de un envío partido ────────────────────
+  #
+  # Jorge, escaneando: *"esto no debería salir: «es un envío de 3 cajas,
+  # escaneá la etiqueta de la caja». Escaneé el warehouse receipt y me deberían
+  # aparecer los datos de los otros paquetes."* Varias cajas con el mismo
+  # warehouse receipt **no son una ambigüedad**: son un envío partido.
+
+  test "escanear el warehouse receipt de un envío de tres cajas trae las tres" do
+    cajas = envio_partido(@paquete, 3)
+
+    escanear(@paquete.reload.numero_recepcion)
+
+    assert_equal "ok", json["resultado"]
+    assert_equal cajas.first.id, json["paquete"]["id"], "se mide la primera sin medir"
+    assert_equal 3, json["grupo"]["total"]
+    assert_equal cajas.map(&:id), json["grupo"]["cajas"].map { |c| c["id"] }
+    assert_match(/3 cajas con este warehouse receipt/, json["mensaje"])
+    assert_match(/vas por la 1 de 3/, json["mensaje"])
+  end
+
+  test "con la primera medida, el mismo warehouse receipt trae la segunda" do
+    cajas = envio_partido(@paquete, 3)
+    medir(cajas.first)
+
+    escanear(@paquete.reload.numero_recepcion)
+
+    assert_equal cajas.second.id, json["paquete"]["id"]
+    assert_equal "medida", json["grupo"]["cajas"].first["estado"]
+    assert_match(/vas por la 2 de 3/, json["mensaje"])
+  end
+
+  test "cada cuadrito dice de qué envío es, para poder encadenar las cajas" do
+    envio_partido(@paquete, 2)
+
+    escanear(@paquete.reload.numero_recepcion)
+
+    assert_equal [ @paquete.numero_recepcion ] * 2, json["grupo"]["cajas"].map { |c| c["envio"] }
+    assert_equal @paquete.numero_recepcion, json["paquete"]["wr"]
+  end
+
+  test "al medir la última del envío salen las stickers de las tres" do
+    cajas = envio_partido(@paquete, 3)
+    cajas.first(2).each { |c| medir(c) }
+    assert_nil json["imprimir_url"], "todavía falta una"
+
+    medir(cajas.last)
+
+    assert_equal "grupo_completo", json["resultado"]
+    assert_equal etiqueta_medicion_path(cajas.first, hermanas: "1", print: "true"), json["imprimir_url"]
+    get json["imprimir_url"]
+    assert_equal 3, response.body.scan(/class="med"/).size
+  end
+
+  # La ambigüedad de verdad: un código que cae en **envíos distintos**.
+  test "un código que aparece en dos envíos distintos sí es ambiguo" do
+    otro = caja("1ZMEDIR00000001")   # mismo tracking, otro warehouse receipt
+
+    escanear("1ZMEDIR00000001")
+
+    assert_equal "ambiguo", json["resultado"]
+    assert_match(/envíos distintos/, json["mensaje"])
+    assert_match(/#{@paquete.reload.numero_recepcion}/, json["mensaje"])
+    assert_not_equal @paquete.numero_recepcion, otro.reload.numero_recepcion
+  end
+
+  test "el grupo se arma aunque Miami no haya puesto la cantidad de cajas" do
+    hermana(@paquete, nil).update_columns(cantidad_paquetes: nil, numero_caja: nil)
+    @paquete.update_columns(cantidad_paquetes: nil, numero_caja: nil)
+
+    escanear(@paquete.reload.numero_recepcion)
+
+    assert_equal "ok", json["resultado"]
+    assert_equal 2, json["grupo"]["total"], "comparten warehouse receipt: son el mismo envío"
+  end
+
   private
+
+
+  # Un envío partido de verdad: todas las cajas comparten el warehouse receipt
+  # (el «número madre») y cada una lleva el suyo, como hace `crear_split!`.
+  def envio_partido(madre, n)
+    madre.update!(cantidad_paquetes: n, numero_caja: 1)
+    [ madre.reload, *(2..n).map { |i| hermana(madre, i) } ]
+  end
 
   # Una pre-alerta consolidada de Juan con tres trackings: el que se escanea
   # (que ya está acá) y dos más. El tipo de envío declarado es aéreo, distinto

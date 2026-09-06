@@ -13,8 +13,13 @@ class PaquetePorCodigoDeEtiquetaTest < ActiveSupport::TestCase
     assert_equal [ @c1 ], Paquete.por_codigo_de_etiqueta("rmi0002026000900-1").to_a, "sin importar mayúsculas"
   end
 
-  test "el número de recepción solo, en un split, es ambiguo" do
-    assert_equal 2, Paquete.por_codigo_de_etiqueta(@madre).count
+  # C26-02 · Este test decía «es ambiguo» y **codificaba el requisito
+  # equivocado**: escanear el warehouse receipt de un envío partido tiene que
+  # traer sus cajas, no rechazarlas. Jorge, al usarlo: *"escaneé el warehouse
+  # receipt y me deberían aparecer los datos de los otros paquetes"*. Quien
+  # decide qué hacer con las varias es la estación, no esta consulta.
+  test "el número de recepción de un envío partido trae todas sus cajas" do
+    assert_equal [ @c1, @c2 ], Paquete.por_codigo_de_etiqueta(@madre).order(:numero_caja).to_a
   end
 
   test "el tracking exacto también sirve, y una descripción no" do
