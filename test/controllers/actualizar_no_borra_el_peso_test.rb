@@ -12,10 +12,18 @@ require "test_helper"
 # `assign_attributes`, y como `peso` valida `allow_nil: true` el `save!` pasa sin
 # quejarse. El peso se fue **en silencio**: nadie escribió nada y nadie vio nada.
 #
+# Y no es que quede sin cobrar: queda **mal** cobrado. Medido en este mismo
+# archivo antes de escribirlo: un paquete de 30 lb reales con medidas de 6 VLbs
+# queda con `peso_cobrar` en 6 —`calculate_peso_cobrar` recalcula con el peso en
+# cero contra un `peso_volumetrico` que no se recalculó, y gana el volumétrico
+# viejo—. Son 24 libras de flete que nadie va a facturar. Es el mismo síntoma
+# que `cajas_repetidor_controller#_renumerar` ya tenía anotado: *"el cobro se
+# desplomaba al mínimo de servicio"*.
+#
 # Los cinco campos de `CAMPOS_POR_CAJA` son los únicos que el JS vacía solo, y
 # por eso son los únicos donde un blanco NO es una decisión de quien digita. En
 # el resto —una nota, un tercero— borrar el texto sí es lo que quiso hacer, y
-# tiene que seguir borrando: eso lo pina el último test.
+# tiene que seguir borrando: eso lo fija el último test.
 class ActualizarNoBorraElPesoTest < ActionDispatch::IntegrationTest
   setup do
     post session_url, params: {
@@ -35,11 +43,15 @@ class ActualizarNoBorraElPesoTest < ActionDispatch::IntegrationTest
     } }
 
     paquete.reload
-    assert_equal 5.5.to_d, paquete.peso, "le borraron el peso guardado"
+    assert_equal 30.to_d, paquete.peso, "le borraron el peso guardado"
     assert_equal 10.to_d, paquete.alto, "y también el alto"
     assert_equal 12.to_d, paquete.largo
     assert_equal 8.to_d, paquete.ancho
     assert_equal 3, paquete.cantidad_productos
+    # La parte que cuesta plata. Con el peso en nil, `calculate_peso_cobrar`
+    # recalcula contra el volumétrico viejo y el envío pasa a cobrarse por
+    # 6 VLbs en vez de por sus 30 lb reales.
+    assert_equal 30.to_d, paquete.peso_cobrar, "el flete se cobraría por 6 libras en vez de 30"
   end
 
   test "un cero explícito sí es un dato y se guarda" do
@@ -105,7 +117,7 @@ class ActualizarNoBorraElPesoTest < ActionDispatch::IntegrationTest
     Paquete.create!(cliente: clientes(:juan), tipo_envio: tipo_envios(:cer),
                     tracking: tracking, descripcion: "Ropa", estado: "recibido_miami",
                     user: users(:digitador), sucursal_recepcion: sucursales(:miami),
-                    peso: 5.5, alto: 10, largo: 12, ancho: 8, cantidad_productos: 3)
+                    peso: 30, alto: 10, largo: 12, ancho: 8, cantidad_productos: 3)
   end
 
   def crear_esperado(tracking)
