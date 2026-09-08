@@ -98,6 +98,16 @@ class PaquetesController < ApplicationController
     # se abra automáticamente con motivo + acción alternativa.
     if (blocker = estado_transition_blocker(paquete_params))
       @estado_transition_block = blocker
+      # C27-01 · El re-render tiene que traer lo que la persona había tecleado.
+      # Antes se pintaba el formulario con los valores de la base y todo lo
+      # escrito —descripción, notas, proveedor, medidas— se perdía: el modal
+      # decía «no podés» y de paso te borraba media hora de trabajo.
+      #
+      # `:estado` se queda afuera **a propósito**: el modal de retroceso lista
+      # lo que se limpiaría con `retroceso_cleanup_preview(objetivo)`, y ese
+      # cálculo compara el estado ACTUAL contra el objetivo. Asignado el
+      # objetivo, los dos índices se igualan y la lista sale vacía.
+      conservar_lo_tecleado(except: [ :estado ])
       render_show_with_edit_assigns(status: blocker[:status])
       return
     end
@@ -137,6 +147,16 @@ class PaquetesController < ApplicationController
         @paquete.reload
       rescue Paquete::CajaNoEliminable => e
         flash.now[:alert] = e.message
+        # Mismo caso que arriba: «no se puede bajar a N cajas» no puede costar
+        # también lo tecleado. Acá el estado sí entra — el gate ya lo aprobó.
+        #
+        # Lo que se queda afuera es `:cantidad_paquetes`, que es justo lo que
+        # se rechazó: pintarlo como si hubiera pasado esconde el botón de
+        # «bajar cajas con PIN» —el show lo ofrece solo si el paquete sigue
+        # dividido— y ese botón es lo único que destraba esta pantalla
+        # (`bajar_cajas_con_pin_controller_test`, «el re-render de un update
+        # fallido tambien lo ofrece»).
+        conservar_lo_tecleado(except: [ :cantidad_paquetes ])
         render_show_with_edit_assigns(status: :unprocessable_entity)
         return
       end
@@ -800,6 +820,21 @@ class PaquetesController < ApplicationController
     nil
   end
 
+  # Pega en el objeto en memoria lo que venía en el formulario, para que un
+  # `render :show` con `@edit_mode` devuelva la pantalla como el operario la
+  # dejó. **No guarda nada**: es el camino del bloqueo.
+  #
+  # Las dos colecciones se excluyen siempre porque `motivo_retencion_ids=` y
+  # `motivo_envio_politica_ids=` son `has_many :through`, y sobre un registro
+  # ya guardado el writer **escribe las filas de join de una vez**. En un
+  # guardado que estamos bloqueando eso sería persistir justo lo que dijimos
+  # que no íbamos a persistir. El costo es que los motivos del modal vuelven a
+  # los de la base; el precio de la otra opción es escribirlos de verdad.
+  def conservar_lo_tecleado(except: [])
+    fuera = except + [ :motivo_retencion_ids, :motivo_envio_politica_ids ]
+    @paquete.assign_attributes(paquete_params.except(*fuera))
+  end
+
   # ¿El form está pidiendo cambiar la cantidad de cajas de verdad?
   #
   # Solo aplica a paquetes que YA son un split o que pasan a serlo. Un paquete
@@ -968,7 +1003,14 @@ class PaquetesController < ApplicationController
     params.require(:paquete).permit(
       :tracking, :tracking_secundario, :cliente_id, :tipo_envio_id, :estado, :peso,
       :alto, :largo, :ancho, :cantidad_productos, :cantidad_paquetes,
-      :numero_caja, :descripcion, :remitente, :driver, :expedido_por, :proveedor, :proveedor_id,
+      # C27-01 · `:proveedor` **no** va acá: es a la vez columna string legacy
+      # y el nombre de `belongs_to :proveedor`, así que permitirlo hacía que
+      # `assign_attributes` le mandara un String a la asociación y reventara
+      # con `AssociationTypeMismatch`. Sobrevivió porque el input del form no
+      # tenía `name` y nunca llegaba; el día que se lo pusimos, salía el 500.
+      # El texto entra por `proveedor_texto`, que escribe la columna.
+      :numero_caja, :descripcion, :remitente, :driver, :expedido_por,
+      :proveedor_texto, :proveedor_id,
       :tercero_id, :tercero_nombre,
       :notas_internas, :notas_al_cliente, :notas_consolidacion, :notas_retencion,
       :pre_alerta,

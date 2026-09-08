@@ -131,9 +131,6 @@ class EntregaPersonalController < ApplicationController
   # `paquete_params`. El sellado lo hace `PrepagoMiami`, compartido con
   # /etiquetar: escrito acá otra vez, las dos pantallas se separan.
   def apply_extra_params(paquete, save: false)
-    if (prov_str = proveedor_string_param) != :missing
-      paquete[:proveedor] = prov_str
-    end
     aplicar_prepago_miami(paquete)
     paquete.save! if save
   end
@@ -255,6 +252,11 @@ class EntregaPersonalController < ApplicationController
       :cliente_id, :tipo_envio_id, :proveedor_id, :sucursal_id, :sucursal_recepcion_id, :peso,
       :alto, :largo, :ancho, :cantidad_productos, :cantidad_paquetes,
       :numero_caja, :descripcion, :remitente, :driver,
+      # C27-01 · El escritor de columna de `Paquete`. Esta pantalla elige el
+      # proveedor del catálogo (`proveedor_id`), así que hoy no manda texto
+      # libre; queda permitido para que el día que el form lo ofrezca no haya
+      # que volver a inventar el parche del string legacy.
+      :proveedor_texto,
       :notas_internas, :notas_retencion,
       :retener_miami, :enviado_por_politica, :notas_envio_politica,
       # A7-22/A7-23: la recolecta vive en esta misma pantalla.
@@ -263,14 +265,5 @@ class EntregaPersonalController < ApplicationController
       :recolecta_direccion,
       motivo_retencion_ids: [], motivo_envio_politica_ids: []
     )
-  end
-
-  # `proveedor` string legacy choca con `belongs_to :proveedor` (mismo
-  # patrón del bug PR fix #185 en EtiquetarController). Lo extraemos
-  # aparte para asignar vía column accessor.
-  def proveedor_string_param
-    return :missing unless params.dig(:paquete)&.key?(:proveedor)
-
-    params[:paquete][:proveedor].to_s
   end
 end

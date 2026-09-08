@@ -248,10 +248,20 @@
     <div data-controller="proveedor-autocomplete"
          data-proveedor-autocomplete-url-value="<%= buscar_proveedores_path %>"
          class="relative">
-      <%= f.label :proveedor_id, "Proveedor", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.label :proveedor_texto, "Proveedor", class: "block text-sm font-medium text-gray-700 mb-1" %>
       <% sel = paquete.proveedor %>
+      <%# C27-01 · Este input no tenía `name`: lo que el operario tecleaba no
+          salía nunca del navegador y un proveedor escrito a mano se perdía en
+          silencio. Jorge lo encontró en vivo sobre la ficha del paquete —
+          *"está en F10… no lo está cambiando… el guardar"* y enseguida
+          *"ya, ya, ya, es que este es el proveedor"*.
+
+          Manda `proveedor_texto` y no `proveedor`: ver el comentario del
+          accessor en `Paquete`. El `value` se queda explícito porque cuando
+          hay uno del catálogo se muestra su nombre, no la columna legacy. %>
       <input type="text"
-             value="<%= sel&.nombre || paquete[:proveedor].to_s %>"
+             name="paquete[proveedor_texto]"
+             value="<%= sel&.nombre || paquete.proveedor_texto.to_s %>"
              placeholder="Amazon, Walmart, Driver Juan…"
              autocomplete="off"
              data-proveedor-autocomplete-target="input"

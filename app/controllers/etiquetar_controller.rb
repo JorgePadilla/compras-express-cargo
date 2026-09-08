@@ -194,9 +194,6 @@ class EtiquetarController < ApplicationController
         cambios = cambios.except(*MedidasPorCaja::CAMPOS_POR_CAJA) if @reanclado || pesos_aplicados
         @paquete.assign_attributes(cambios)
 
-        if (prov_str = proveedor_string_param) != :missing
-          @paquete[:proveedor] = prov_str
-        end
         aplicar_prepago_miami(@paquete)
         @paquete.save!
         propagar_envio_a_hermanas(@paquete)
@@ -377,9 +374,6 @@ end
       render_create_error(conflicto)
       return
     end
-    if (prov_str = proveedor_string_param) != :missing
-      @paquete[:proveedor] = prov_str
-    end
     aplicar_prepago_miami(@paquete)
 
     if @paquete.save
@@ -457,9 +451,6 @@ end
 
     paquetes = Paquete.crear_split!(attrs: attrs, total_cajas: total_cajas,
                                     por_caja: medidas_por_caja, reusar: esperado)
-    if (prov_str = proveedor_string_param) != :missing && prov_str.present?
-      paquetes.each { |p| p.update_column(:proveedor, prov_str) }
-    end
     # El pago es uno solo para el envío, así que marca las N cajas: el cliente
     # pagó el tracking, no la caja 2 de 3.
     paquetes.each { |p| aplicar_prepago_miami(p); p.save! }
@@ -612,9 +603,12 @@ end
   # aunque "no cambió" hace que actualizar cualquier caja **converja** un envío
   # que ya estaba partido — el de Diego y Sofía se arregla tocando cualquiera
   # de las dos, sin tener que adivinar cuál quedó bien.
+  # C27-01 · `proveedor_texto` entra a la lista. Antes se copiaba a mano tres
+  # líneas más abajo porque el nombre `proveedor` era el de la asociación; con
+  # el escritor de columna ya es un atributo más del envío.
   ATRIBUTOS_DEL_ENVIO = %i[
     tracking tracking_secundario cliente_id tercero_id tercero_nombre
-    descripcion remitente expedido_por notas_internas
+    descripcion remitente expedido_por proveedor_texto notas_internas
     retener_miami notas_retencion enviado_por_politica notas_envio_politica
     motivo_retencion_ids motivo_envio_politica_ids
   ].freeze
@@ -624,7 +618,6 @@ end
     return if hermanas.empty?
 
     del_envio = paquete_params.to_h.symbolize_keys.slice(*ATRIBUTOS_DEL_ENVIO)
-    prov_str = proveedor_string_param
 
     hermanas.each do |caja|
       caja.assign_attributes(del_envio)
@@ -638,7 +631,6 @@ end
         # ya traía de antes no se toca.
         caja.solicito_cambio_servicio = false
       end
-      caja[:proveedor] = prov_str if prov_str != :missing
       aplicar_prepago_miami(caja)
       caja.save!
     end
@@ -843,6 +835,11 @@ end
       :tracking, :tracking_secundario, :cliente_id, :tercero_id, :tercero_nombre, :peso,
       :alto, :largo, :ancho, :cantidad_productos, :cantidad_paquetes,
       :numero_caja, :descripcion, :remitente, :expedido_por,
+      # C27-01 · Entra por el escritor de columna de `Paquete` y no como
+      # `:proveedor`, que es a la vez el nombre de la asociación. Con eso se
+      # fue `proveedor_string_param`, que era la primera de las cuatro copias
+      # del mismo parche.
+      :proveedor_texto,
       :notas_internas, :notas_retencion,
       :solicito_cambio_servicio, :retener_miami,
       :enviado_por_politica, :notas_envio_politica,
@@ -854,14 +851,4 @@ end
   # Pre-Alerta y Pre-Factura que Yusef mandó sacar de /etiquetar — "esto no
   # tiene nada que ver con ellos". Dejar el lector de un param que nadie manda
   # solo confunde al que venga después.
-  # `proveedor` (string legacy) Y a la vez el name de la asociación
-  # belongs_to :proveedor (PR-D3.a catálogo). Mismo conflicto que pre_factura:
-  # asignar un string desde el form dispara AssociationTypeMismatch. Se escribe
-  # vía column accessor `paquete[:proveedor]`. La asociación se usa solo cuando
-  # hay un Proveedor del catálogo (via proveedor_id en otros flows).
-  def proveedor_string_param
-    return :missing unless params.dig(:paquete)&.key?(:proveedor)
-
-    params[:paquete][:proveedor].to_s
-  end
 end

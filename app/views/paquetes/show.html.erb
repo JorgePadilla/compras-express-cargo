@@ -717,7 +717,7 @@ end %>
               <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-900">EP</span>
             <% end %>
           <% else %>
-            <%= @paquete[:proveedor].presence || "—" %>
+            <%= @paquete.proveedor_texto.presence || "—" %>
           <% end %>
         </dd>
       </div>

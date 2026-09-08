@@ -50,6 +50,29 @@ export default class extends BusquedaAutocomplete {
     }
   }
 
+  // C27-01 · Teclear encima suelta el proveedor del catálogo.
+  //
+  // El oculto se escribía al elegir y **no se limpiaba nunca**: quien tenía
+  // "Amazon" elegido, borraba y escribía "Driver Juan", mandaba las dos cosas
+  // —`proveedor_id` viejo + texto nuevo— y al volver a pintar la ficha ganaba
+  // el del catálogo. Ese es el *"no lo está cambiando"* de Jorge: el texto sí
+  // viajaba (desde este PR), pero el id lo tapaba.
+  //
+  // Va acá y no en `BusquedaAutocomplete` a propósito: la base la comparten
+  // ocho pantallas y no todas quieren que escribir suelte lo elegido.
+  buscar() {
+    this._soltarSeleccion()
+    super.buscar()
+  }
+
+  _soltarSeleccion() {
+    if (this.hasProveedorIdTarget) this.proveedorIdTarget.value = ""
+    if (this.hasNombreTarget) {
+      this.nombreTarget.textContent = ""
+      this.nombreTarget.classList.add("hidden")
+    }
+  }
+
   // ── Alias en el idioma viejo, para no tocar markup que ya funciona ──
   search() { this.buscar() }
   onKeydown(e) { this.teclado(e) }

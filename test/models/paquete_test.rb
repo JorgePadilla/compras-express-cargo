@@ -766,4 +766,39 @@ class PaqueteTest < ActiveSupport::TestCase
     # No persiste hasta el save siguiente.
     assert_not_nil p.reload.fecha_entregado
   end
+
+  # ── C27-01 · La columna que se llama como la asociación ─────────────────
+  #
+  # `proveedor` es a la vez la columna string legacy y el nombre de
+  # `belongs_to :proveedor`. Antes cada pantalla se acordaba (o no) de escribir
+  # por `paquete[:proveedor]`; había cuatro copias del mismo parche. Ahora la
+  # puerta es una sola.
+
+  test "proveedor_texto escribe la columna, no la asociación" do
+    p = paquetes(:recibido)
+    p.proveedor_texto = "Driver Juan"
+
+    assert_equal "Driver Juan", p[:proveedor]
+    assert_equal "Driver Juan", p.proveedor_texto
+    assert p.save, "un String por la puerta correcta no puede reventar"
+  end
+
+  test "asignar el String por el nombre de la asociación sigue siendo un error" do
+    # No se arregla ocultando el problema: `proveedor=` es de la asociación y
+    # tiene que seguir exigiendo un Proveedor. Lo que cambió es que ningún
+    # formulario le manda texto.
+    assert_raises(ActiveRecord::AssociationTypeMismatch) do
+      paquetes(:recibido).proveedor = "Amazon"
+    end
+  end
+
+  test "proveedor_texto y el catálogo son dos datos distintos" do
+    p = paquetes(:recibido)
+    p.proveedor_texto = "Driver Juan"
+    p.save!
+
+    assert_equal "Driver Juan", p.reload.proveedor_texto
+    assert_equal proveedores(:Amazon), p.proveedor,
+                 "escribir el texto no toca el proveedor del catálogo: eso lo suelta el front"
+  end
 end
