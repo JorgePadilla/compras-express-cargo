@@ -20,6 +20,10 @@ class Paquete < ApplicationRecord
   belongs_to :sub_localidad_actual, class_name: "SubLocalidad",  optional: true  # PR-D1.c: bodega interna actual
   belongs_to :warehouse_receipt, optional: true  # PR-5c.5p2 — fuente rica del numero_recepcion (madre)
   belongs_to :proveedor, optional: true  # PR-D3.a: catálogo (Amazon, Walmart, drivers privados…)
+  # C26-19 · La medición a la que esta caja entró en San Pedro. Varias cajas
+  # comparten bulto: *"no es una etiqueta por paquete, es una etiqueta por
+  # medición, y la medición puede tener 100 paquetes"*.
+  belongs_to :bulto, optional: true
   belongs_to :tercero, class_name: "Cliente", optional: true  # PR-D3.c: cliente final cuando CEC le maneja carga a otra empresa
   belongs_to :tarifa_recolecta, optional: true  # PR-D6.a: cuando el cajero elige una tarifa del catálogo, copiamos monto+moneda
   # PR-6 (Entrega Personal): cobro al recibir en Miami. Cuando esto está
