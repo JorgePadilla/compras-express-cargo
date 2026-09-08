@@ -10526,7 +10526,7 @@ Su argumento no es de diseño, es de personal: *"no van a leer"*.
 > caja sola** —que es para lo que se puso— no lo es. La pantalla tiene que
 > distinguir las dos cosas; el documento las deja nombradas, no las resuelve.
 
-#### C27-03 · **Máximo 10** mediciones por sesión — 🔨 **pendiente**
+#### C27-03 · **Máximo 10** mediciones por sesión — ✅ **HECHO** en `#443` y `#445` (2026-09-08)
 
 > "Máximo 10 warehouse, máximo 10 etiquetas… **el normal de nosotros es 2 a 3;
 >  5 ya es demasiado.** Pusimos 10 para no estar ahí «hay que cambiar esto»."
@@ -10543,13 +10543,36 @@ propósito —*"para no estar ahí «hay que cambiar esto»"*—, así que el n�
 conviene que sea configurable pero que **no se muestre como una preferencia**:
 es una regla, no una opción.
 
-> ⚠️ **Falta una precisión, y es de él: qué se cuenta.** Sus dos unidades son
-> *"máximo 10 warehouse"* y *"máximo 10 etiquetas"*, y con el bulto de `C27-01`
-> esas dos dejan de ser lo mismo: diez warehouse receipts sobre la mesa pueden
-> ser tres volúmenes, o sea tres etiquetas. Hay que preguntarle si el tope son
-> **10 cajas escaneadas** o **10 mediciones** antes de imprimir. Su *"el normal
-> de nosotros es 2 a 3; 5 ya es demasiado"* suena a mediciones, pero no se
-> asume.
+**Qué se cuenta: mediciones.** Sus dos unidades —*"máximo 10 warehouse"* y
+*"máximo 10 etiquetas"*— dejan de ser lo mismo con el bulto de `C27-01`, así
+que quedó anotado como duda. Al releer el audio entero, **él la contesta**:
+
+- El pie de la pregunta la fija. Viene de explicar por qué no hace una etiqueta
+  sola —*"si hacemos una sola, se les puede escapar… entonces son 3 etiquetas,
+  o sea **3 volúmenes**, como se le dice"*— y ahí Jorge pregunta *"¿cuántos
+  quiere que **agreguemos** máximo?"*. El tope es sobre el **agregar**.
+- Descarta las otras lecturas una por una: *"¿por un bulto? No"*, *"olvidate
+  los manifiestos a esos"*, y sobre todo ***"estamos hablando de máxima medida
+  de volumen, no máximo de paquetes que vamos a agregar"***.
+- Y la cierra: *"máximo 10 warehouse, máximo 10 etiquetas"* → Jorge, *"eso es
+  lo que había entendido, el máximo 10 etiquetas"* → sin corrección, y remata
+  **"ya lo paré en máximo 10, **es sacar 10 volúmenes**"**.
+
+**Por qué existe: contener el error del operario.** *"Pongamos el limiter **por
+cualquier error que empiecen a cometer**… cuando le ponés boundary, lo bloqueás
+un poco: **por una persona**, por un consolidado, por un paquete de medidas que
+haga."* La tanda es de una sola persona —tiene su `user` y su sello—, así que
+el tope por tanda **es** el tope por operario. Jorge lo leyó así en su momento
+y es la lectura correcta del porqué.
+
+> ❓ **Lo que él no contestó: qué pasa al llegar a diez.** Jorge se lo preguntó
+> **tres veces** —*"¿qué hago cuando se alcanza el limiter?"*— y las tres se
+> fue al caso del cliente que manda 100 paquetes sin pre-alerta. Lo construido
+> es decisión de Jorge, no de él: se avisa y **no se frena el trabajo** —*"de
+> una tanda salen 10 mediciones como mucho; guardá e imprimí lo que llevás y
+> seguí con la siguiente"*—, y el tope **no es acumulativo**: el mismo operario
+> arranca otra tanda de 10 enseguida. Un techo por turno o por día frenaría
+> justo el día de las 100 cajas. Ver `RP-71`.
 
 #### C27-04 · «NO Mezclar»: el modal del consolidado, y sus dos respuestas — 🔨 **pendiente**
 
@@ -11160,7 +11183,7 @@ Es otra vez un elemento con dos responsabilidades en esa pantalla; va con
 |---|---|---|
 | `C27-01` | La unidad de medición es el **bulto** («volumen», como le dicen ellos) | 🔨 **Pendiente** — supera a `C26-05`; el modelo de datos está decidido en `C27-10` |
 | `C27-02` | El bulto se arma escaneando, no eligiendo | 🔨 **Pendiente** — y hay que separar «tocar para medir» de «tocar para elegir» (`C26-03`) |
-| `C27-03` | Máximo **10** — *"10 warehouse, 10 etiquetas"* | 🔨 **Pendiente** — es disciplina, no capacidad: *"van a estar forzados a no agruparlos"*. ❓ Falta que él diga si se cuentan **cajas o mediciones**: con el bulto ya no son lo mismo |
+| `C27-03` | Máximo **10** — *"10 warehouse, 10 etiquetas"* | ✅ **Hecho** — `#443` y `#445`. Se cuentan **mediciones**, que es lo que él cierra (*"es sacar 10 volúmenes"*); es disciplina, no capacidad. ❓ Qué pasa al llegar a diez lo preguntó Jorge tres veces y no se contestó: ver `RP-71` |
 | `C27-04` | «NO Mezclar»: modal con la pre-alerta y la pre-factura, y **dos respuestas** | 🔨 **Pendiente** — «a un lado» = F2 y no se guarda; «sí lo hago» = borra lo escaneado y amarra la sesión a ese consolidado |
 | `C27-05` | Mismo cliente y mismo servicio, o error con dos salidas | 🔨 **Pendiente** — «¿eliminar el último o empezar de nuevo?» |
 | `C27-06` | **Una etiqueta por medición**, no por paquete (4 WR con 2 consolidados = **3**) | 🔨 **Pendiente** — cambia el conteo de `C26-04`; una sola para todo se descartó: *"se les puede escapar"* |
@@ -11198,3 +11221,4 @@ Es otra vez un elemento con dos responsabilidades en esa pantalla; va con
 | `RP-68` | **¿Qué es «finalizar el ciclo»** para el job que cierra las consolidaciones (`C27-19`)? ¿La fecha de corte del tipo de envío, el manifiesto que sale de Miami, o la fecha de trabajo de `C26-10`? |
 | `RP-69` | **La purga de un año (`C27-21`): qué se borra exactamente.** ¿Solo el historial de mediciones, o los paquetes de ese año? Las facturas **no** —eso ya está dicho—. ¿Y las versiones de `paper_trail`, que están en los 50 modelos? Un borrado mal delimitado no se deshace |
 | `RP-70` | ⏸️ **Congelado por decisión de Yusef, no es pregunta.** Sumar varias mediciones declaradas del mismo envío (`C27-23`). *"Me gustaría que quedara así, pero… por el tipo de personal que está ahí"*. Se anota por si el personal cambia |
+| `RP-71` | **¿Qué pasa cuando el operario llega a los 10 volúmenes de una tanda (`C27-03`)?** Jorge se lo preguntó **tres veces** en el audio del 2026-09-07 y las tres la conversación se fue al caso del cliente de 100 paquetes. Hoy se avisa y se lo deja seguir en una tanda nueva —el tope **no es acumulativo**—, que es decisión de Jorge: un techo por turno frenaría justo ese día. Falta que Yusef diga si con eso alcanza o quiere que quede registrado quién lo alcanza |
