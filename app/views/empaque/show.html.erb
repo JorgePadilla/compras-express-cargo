@@ -73,7 +73,7 @@
       <%= render(ButtonComponent.new(variant: :secondary, size: :sm,
             label: "Meterlo igual, omitiendo el aviso",
             data: { empaque_target: "avisoOmitir", action: "empaque#omitir" },
-            class: "hidden")) { "Meterlo igual (omitir)" } %>
+            hidden: true)) { "Meterlo igual (omitir)" } %>
       <%= render(ButtonComponent.new(variant: :primary, size: :md,
             label: "Entendido",
             data: { empaque_target: "avisoEntendido", action: "empaque#avisoEntendido" })) { "Entendido" } %>

@@ -3,12 +3,16 @@ import { conEnterAvanza } from "controllers/enter_avanza"
 
 // C26-02/19 · La estación de Medición (San Pedro).
 //
-// Se escanea el warehouse receipt de la etiqueta de Miami y la pantalla
-// contesta con **el grupo**, no con una caja: lo que declaró el cliente, cómo
-// lo ingresó Miami, y la grilla de cuadritos con lo que está y lo que falta.
+// Se escanea el warehouse receipt de la etiqueta de Miami y cada pip agrega
+// una caja a la mesa. La pantalla es **una tarjeta** en el orden del bloque de
+// /etiquetar —Jorge: *"a Yusef le gusta el agregar que estaba en etiqueta"*—:
+// la pistola, la tanda (cliente una vez, y la línea de consolidación si la
+// hay), la mesa, la captura con el cálculo al lado, los volúmenes con su
+// «+ Agregar», y la barra. Sin grilla de cuadritos: la primera versión mostraba
+// dos modelos a la vez y la última caja aparecía cuatro veces.
 //
-// C27-01 · Y desde el bulto, la unidad de la pantalla ya no es la caja: es
-// **la medición**. Yusef, el 2026-09-07, tres veces en la misma reunión:
+// C27-01 · La unidad de la pantalla no es la caja: es **la medición**. Yusef,
+// el 2026-09-07, tres veces en la misma reunión:
 //
 //   "No es una etiqueta por paquete, es una etiqueta por medición, y la
 //    medición puede tener 100 paquetes."
@@ -34,15 +38,11 @@ import { conEnterAvanza } from "controllers/enter_avanza"
 export default class extends conEnterAvanza(Controller) {
   static targets = [
     "codigo", "aviso",
-    "dosLados", "panelPreAlerta", "paNumero", "paTitulo", "paDetalle", "paBanderas", "paNotas",
-    "panelMiami", "miamiWr", "miamiDetalle", "miamiDescripcion", "miamiRetenido",
-    "grupo", "grupoTitulo", "grupoSello", "grilla", "plantillaCuadrito", "facturarParcial",
-    "panel", "codigoCaja", "tracking", "caja", "cliente", "tipoEnvio", "descripcion", "previa",
-    "mesa", "plantillaMesa", "mesaTitulo", "mesaCliente", "quitarUltima",
-    "acciones", "volumenesContador", "volumenesVacio", "listaVolumenes", "plantillaVolumen",
-    "quitarVolumen", "agregarVolumen",
-    "form", "peso", "alto", "largo", "ancho", "guardar", "guardarTexto", "reimprimir", "reimprimirTexto",
-    "banner", "bannerTexto", "bannerReimprimir", "bannerReimprimirTexto",
+    "trabajo", "barra", "tandaCliente", "tandaConsolidado",
+    "mesa", "plantillaMesa", "mesaTitulo", "quitarUltima",
+    "volumenesContador", "volumenesVacio", "listaVolumenes", "plantillaVolumen", "agregarVolumen",
+    "form", "peso", "alto", "largo", "ancho", "guardar", "guardarTexto",
+    "banner", "bannerTexto", "bannerFaltan", "bannerReimprimir", "bannerReimprimirTexto", "bannerFacturar",
     "manifiestoNumero", "manifiestoFechas", "manifiestoConteo", "pendientes", "sinPendientes",
     "plantillaPendiente", "descarteModal", "descarteCaja", "descarteMotivo", "descarteNota",
     "descarteError", "confirmarDescarte",
@@ -55,7 +55,7 @@ export default class extends conEnterAvanza(Controller) {
   ]
   static values = {
     escanearUrl: String, guardarUrl: String, panelUrl: String,
-    etiquetaUrlTemplate: String, clases: Object, maximo: Number
+    etiquetaUrlTemplate: String, maximo: Number
   }
 
   connect() {
@@ -107,13 +107,6 @@ export default class extends conEnterAvanza(Controller) {
     // levantar la mano del teclado. En la pantalla táctil se toca el campo.
     if (!codigo) { this._enfocarPeso(); return }
     this._escanear(codigo)
-  }
-
-  // Tocar un cuadrito que ya llegó es lo mismo que escanearlo: el operario
-  // tiene las tres cajas enfrente y no siempre quiere levantar la pistola.
-  elegirCaja(e) {
-    const wr = e.currentTarget.dataset.wr
-    if (wr) this._escanear(wr)
   }
 
   _escanear(codigo, { saltarManifiesto = false } = {}) {
@@ -215,7 +208,7 @@ export default class extends conEnterAvanza(Controller) {
       : "Ésta no está consolidando"
     this.consolidadoTextoTarget.textContent = data.mensaje
     this.consolidadoPreAlertaTarget.textContent = [choque.numero, choque.titulo].filter(Boolean).join(" · ")
-    this.consolidadoPreFacturaTarget.classList.toggle("hidden", !choque.pre_factura)
+    this.consolidadoPreFacturaTarget.hidden = !choque.pre_factura
     if (choque.pre_factura) {
       this.consolidadoPreFacturaTarget.textContent = `Ese consolidado ya tiene la pre-factura ${choque.pre_factura}.`
     }
@@ -292,9 +285,9 @@ export default class extends conEnterAvanza(Controller) {
   _llenarProblema(titulo, texto, { medirDeNuevo = false, reimprimir = false, medirIgual = false }) {
     this.problemaTituloTarget.textContent = titulo
     this.problemaTextoTarget.textContent = texto
-    this.medirDeNuevoTarget.classList.toggle("hidden", !medirDeNuevo)
-    this.reimprimirBultoTarget.classList.toggle("hidden", !reimprimir)
-    this.medirIgualTarget.classList.toggle("hidden", !medirIgual)
+    this.medirDeNuevoTarget.hidden = !medirDeNuevo
+    this.reimprimirBultoTarget.hidden = !reimprimir
+    this.medirIgualTarget.hidden = !medirIgual
   }
 
   avisoEntendido() { this.problemaModalTarget.close() }
@@ -313,21 +306,18 @@ export default class extends conEnterAvanza(Controller) {
   avisoCancelar(e) { e.preventDefault() }
 
   // ── Pintar ──────────────────────────────────────────────────────────────
+  //
+  // Mostrar y esconder va por el **atributo** `hidden`, nunca por la clase. En
+  // el CSS compilado `.inline-flex`, `.flex` y `.inline-block` vienen después
+  // de `.hidden`, así que un `ButtonComponent` con la clase `hidden` **se ve
+  // igual**: los tres botones del modal rojo salían juntos, y el «×» de sacar
+  // de la lista lo veía el operario que no es admin. El preflight de Tailwind
+  // trae `[hidden]{display:none!important}`, y ése no pierde con nadie.
 
   _pintar(data) {
     this._paquete = data.paquete
+    this._grupo = data.grupo || null
     const p = data.paquete
-    this.codigoCajaTarget.textContent = p.codigo
-    this.trackingTarget.textContent = p.tracking
-    this.cajaTarget.textContent = p.caja ? `caja ${p.caja}` : ""
-    this.clienteTarget.textContent = p.cliente || ""
-    this.tipoEnvioTarget.textContent = p.tipo_envio || ""
-    this.descripcionTarget.textContent = p.descripcion || ""
-    this.previaTarget.classList.toggle("hidden", !data.medicion_previa)
-    if (data.medicion_previa) {
-      this.previaTarget.textContent = `Ya medida el ${data.medicion_previa.fecha} por ${data.medicion_previa.por}: ` +
-        `${data.medicion_previa.peso} lb · ${data.medicion_previa.medidas}`
-    }
     // Los números de Miami solo se copian con la **primera** caja de la mesa:
     // a partir de la segunda pisarían lo que el operario ya tecleó, y el peso
     // que vale es el del bulto entero.
@@ -338,103 +328,69 @@ export default class extends conEnterAvanza(Controller) {
       this.anchoTarget.value = p.ancho || ""
     }
 
-    this._pintarDosLados(data.pre_alerta, data.miami)
-    this._pintarGrupo(data.grupo)
     this._pintarManifiesto(data.manifiesto)
     this._repintar()
-    this.bannerTarget.classList.add("hidden")
+    this.bannerTarget.hidden = true
     this.formTarget.querySelectorAll("input").forEach((i) => i.dispatchEvent(new Event("input", { bubbles: true })))
   }
 
-  // Los dos lados del dato: lo que el cliente declaró y lo que Miami ingresó.
-  // Pueden no coincidir, y esa diferencia es justamente la información.
-  _pintarDosLados(preAlerta, miami) {
-    this.panelPreAlertaTarget.classList.toggle("hidden", !preAlerta)
-    if (preAlerta) {
-      this.paNumeroTarget.textContent = preAlerta.numero
-      this.paTituloTarget.textContent = preAlerta.titulo || ""
-      const detalle = [preAlerta.proveedor, preAlerta.tipo_envio,
-                       `${preAlerta.trackings} tracking${preAlerta.trackings === 1 ? "" : "s"}`].filter(Boolean)
-      this.paDetalleTarget.textContent = detalle.join(" · ")
-      const banderas = []
-      if (preAlerta.consolidado) banderas.push("Pidió consolidar")
-      if (preAlerta.con_reempaque) banderas.push("con reempaque")
-      this.paBanderasTarget.textContent = banderas.join(" · ")
-      this.paNotasTarget.textContent = preAlerta.notas || ""
-    }
-
-    this.panelMiamiTarget.classList.toggle("hidden", !miami)
-    if (miami) {
-      this.miamiWrTarget.textContent = miami.wr
-      const detalle = [miami.recibido && `recibido ${miami.recibido}`, miami.por && `por ${miami.por}`,
-                       miami.tipo_envio, miami.caja && `caja ${miami.caja}`].filter(Boolean)
-      this.miamiDetalleTarget.textContent = detalle.join(" · ")
-      this.miamiDescripcionTarget.textContent = miami.descripcion || ""
-      this.miamiRetenidoTarget.classList.toggle("hidden", !miami.retenido)
-    }
-    this.dosLadosTarget.classList.toggle("hidden", !preAlerta && !miami)
-  }
-
-  // La grilla de cuadritos: uno por caja, con su estado.
-  _pintarGrupo(grupo) {
-    this._grupo = grupo
-    this.grupoTarget.classList.toggle("hidden", !grupo)
-    if (!grupo) return
-
-    this.grupoTituloTarget.textContent = grupo.consolidada
-      ? `UNIR · ${grupo.numero} · ${grupo.medidas} de ${grupo.total} medidas`
-      : `Viene partido en ${grupo.total} cajas · ${grupo.medidas} medidas`
-    this.grupoSelloTarget.textContent = grupo.parcial_autorizado
-      ? `Se facturó incompleto el ${grupo.parcial_autorizado.fecha} por ${grupo.parcial_autorizado.por}`
+  // ── La tanda, una vez ───────────────────────────────────────────────────
+  //
+  // El cliente y el servicio salen **una sola vez** —en la primera versión
+  // estaban en tres lugares—. Y si la caja viene en grupo, la línea que antes
+  // repartían la grilla de cuadritos y los paneles de «dos lados»: con qué
+  // pre-alerta, cuántas van en la mesa, cuáles ya se midieron (y quién, que es
+  // C27-12) y cuáles faltan y dónde están. Es la «Notificación» de la pizarra
+  // —*medir → notificación → buscar el resto*— sin nada que tocar.
+  _pintarTanda() {
+    const primera = this._mesa[0] || this._volumenes[0]
+    this.tandaClienteTarget.textContent = primera
+      ? [primera.cliente, primera.tipo_envio].filter(Boolean).join(" · ")
       : ""
 
-    this.grillaTarget.replaceChildren(...grupo.cajas.map((c) => this._cuadrito(c)))
+    const g = this._grupo
+    const hay = !!(g && g.total > 1)
+    this.tandaConsolidadoTarget.hidden = !hay
+    if (!hay) return
 
-    const forzable = !grupo.completo && !grupo.cerrada && !grupo.parcial_autorizado && grupo.facturar_parcial_url
-    this.facturarParcialTarget.classList.toggle("hidden", !forzable)
-  }
+    const enTanda = new Set(this._idsDeLaTanda())
+    const enMesa = g.cajas.filter((c) => c.id && enTanda.has(c.id)).length
+    const medidas = g.cajas.filter((c) => c.estado === "medida")
+    const faltan = g.cajas.filter((c) => c.estado !== "medida" && !(c.id && enTanda.has(c.id)))
 
-  _cuadrito(caja) {
-    const nodo = this.plantillaCuadritoTarget.content.firstElementChild.cloneNode(true)
-    const clases = this.clasesValue
-    nodo.dataset.wr = caja.wr || ""
-    nodo.dataset.estado = caja.estado
-    nodo.disabled = !caja.medible
-    // La seleccionada **reemplaza** las clases del estado en vez de sumarse:
-    // dos `bg-` en el mismo elemento las resuelve el orden del CSS, no el del
-    // atributo, así que sumarlas daba un resultado a medias. Jorge: *"la
-    // seleccionada no se ve tan marcada"*.
-    nodo.className += ` ${caja.seleccionada ? clases.seleccionada : (clases[caja.estado] || "")}`
-    nodo.setAttribute("aria-label",
-                      `${caja.wr || caja.tracking}: ${caja.seleccionada ? "midiendo esta" : caja.donde}`)
-    nodo.querySelector("[data-campo=marca]").textContent = caja.seleccionada ? "MIDIENDO" : ""
-    nodo.querySelector("[data-campo=wr]").textContent = caja.wr || caja.tracking
-    nodo.querySelector("[data-campo=caja]").textContent = caja.caja || ""
-    nodo.querySelector("[data-campo=estado]").textContent = caja.donde
-    // C27-12 · Yusef, mirando este panel: *"lo que hace falta aquí es poner
-    // **quién ingresó las medidas**"*. El dato ya venía en el JSON y se caía
-    // acá al piso.
-    nodo.querySelector("[data-campo=peso]").textContent =
-      [caja.peso ? `${Number(caja.peso).toFixed(2)} lb` : "", caja.por].filter(Boolean).join(" · ")
-    return nodo
+    const partes = [g.consolidada ? `Consolidando ${g.numero}` : `Envío de ${g.total} cajas`,
+                    `${enMesa} de ${g.total} en la mesa`]
+    if (medidas.length > 0) {
+      partes.push(`ya medidas: ${medidas.map((c) => [c.wr || c.tracking, c.por && `(${c.por})`].filter(Boolean).join(" ")).join(", ")}`)
+    }
+    if (faltan.length > 0) {
+      partes.push(`faltan ${faltan.length}: ${faltan.map((c) => `${c.wr || c.tracking} (${c.donde})`).join(", ")}`)
+    }
+    if (g.parcial_autorizado) {
+      partes.push(`se facturó incompleto el ${g.parcial_autorizado.fecha} por ${g.parcial_autorizado.por}`)
+    }
+    this.tandaConsolidadoTarget.textContent = partes.join(" · ")
   }
 
   // ── La mesa y los volúmenes ─────────────────────────────────────────────
 
   _repintar() {
+    this._pintarTanda()
     this._pintarMesa()
     this._pintarVolumenes()
     this._textoDeLosBotones()
+    // La tanda y la barra aparecen con la primera caja y se van con la última.
+    const vacia = this._mesa.length === 0 && this._volumenes.length === 0
+    this.trabajoTarget.hidden = vacia
+    this.barraTarget.hidden = vacia
   }
 
   _pintarMesa() {
     const n = this._mesa.length
     this.mesaTituloTarget.textContent =
       `Volumen ${this._volumenes.length + 1} · ${n} ${n === 1 ? "caja" : "cajas"} en la mesa`
-    this.mesaClienteTarget.textContent = (this._mesa[0] && this._mesa[0].cliente) || ""
     this.mesaTarget.replaceChildren(...this._mesa.map((p, i) => this._filaMesa(p, i)))
-    this.quitarUltimaTarget.classList.toggle("hidden", n === 0)
-    this.panelTarget.classList.toggle("hidden", n === 0)
+    this.quitarUltimaTarget.hidden = n === 0
   }
 
   _filaMesa(p, i) {
@@ -451,15 +407,13 @@ export default class extends conEnterAvanza(Controller) {
   _pintarVolumenes() {
     const n = this._volumenes.length
     this.volumenesContadorTarget.textContent = n
-    this.volumenesVacioTarget.classList.toggle("hidden", n > 0)
-    this.quitarVolumenTarget.classList.toggle("hidden", n === 0)
+    this.volumenesVacioTarget.hidden = n > 0
     this.listaVolumenesTarget.replaceChildren(...this._volumenes.map((v, i) => this._filaVolumen(v, i)))
-    this.accionesTarget.classList.toggle(
-      "hidden", n === 0 && this._mesa.length === 0 && !this._ultimaEtiquetaUrl)
   }
 
   _filaVolumen(v, i) {
     const nodo = this.plantillaVolumenTarget.content.firstElementChild.cloneNode(true)
+    nodo.dataset.indice = i
     nodo.querySelector("[data-campo=orden]").textContent = `Volumen ${i + 1}`
     const medidas = [v.alto, v.largo, v.ancho].filter(Boolean).join("x")
     nodo.querySelector("[data-campo=numeros]").textContent =
@@ -485,18 +439,19 @@ export default class extends conEnterAvanza(Controller) {
     if (this._modalAbierto() || this._mesa.length === 0) return
 
     this._mesa.pop()
-    if (this._mesa.length === 0) {
-      this._pintarGrupo(null)
-      this.dosLadosTarget.classList.add("hidden")
-    }
+    if (this._mesa.length === 0) this._grupo = null
     this._repintar()
     this.codigoTarget.focus()
   }
 
-  quitarUltimoVolumen() {
-    if (this._modalAbierto() || this._volumenes.length === 0) return
+  // El «×» de un volumen ya agregado, como el de una caja en /etiquetar. Es
+  // deshacer, no elegir: el volumen lo armó él y lo puede tirar.
+  quitarVolumen(e) {
+    if (this._modalAbierto()) return
+    const i = Number(e.currentTarget.closest("li")?.dataset.indice)
+    if (Number.isNaN(i)) return
 
-    this._volumenes.pop()
+    this._volumenes.splice(i, 1)
     this._repintar()
     this.codigoTarget.focus()
   }
@@ -528,11 +483,13 @@ export default class extends conEnterAvanza(Controller) {
       return
     }
 
-    this._volumenes.push({ ...numeros, paquete_ids: this._mesa.map((p) => p.id) })
+    // El cliente y el servicio viajan con el volumen: cuando la mesa queda
+    // vacía, el encabezado de la tanda sigue diciendo de quién es.
+    this._volumenes.push({ ...numeros, paquete_ids: this._mesa.map((p) => p.id),
+                           cliente: this._mesa[0].cliente, tipo_envio: this._mesa[0].tipo_envio })
     this._mesa = []
+    this._grupo = null
     this._limpiarNumeros()
-    this._pintarGrupo(null)
-    this.dosLadosTarget.classList.add("hidden")
     this.dispatch("guardado")
     this._repintar()
     this.codigoTarget.focus()
@@ -581,7 +538,7 @@ export default class extends conEnterAvanza(Controller) {
         // La tanda terminó: la pantalla se limpia para la siguiente y el banner
         // guarda el resultado. Jorge: *"cuando se facture o se termine de
         // imprimir se debería limpiar para que se comience con el siguiente"*.
-        this._terminar(data.mensaje, data.imprimir_url, data.cantidad)
+        this._terminar(data.mensaje, data.imprimir_url, data.cantidad, data.grupo)
       })
   }
 
@@ -602,7 +559,7 @@ export default class extends conEnterAvanza(Controller) {
     this.manifiestoConteoTarget.textContent = partes.join(" · ")
 
     this.pendientesTarget.replaceChildren(...m.pendientes.map((p) => this._renglon(p, m.puede_descartar)))
-    this.sinPendientesTarget.classList.toggle("hidden", m.pendientes.length > 0)
+    this.sinPendientesTarget.hidden = m.pendientes.length > 0
   }
 
   _renglon(pendiente, puedeDescartar) {
@@ -622,11 +579,11 @@ export default class extends conEnterAvanza(Controller) {
 
     // C26-17 · Los que vienen consolidados se ven sin escanearlos.
     const unir = nodo.querySelector("[data-campo=unir]")
-    unir.classList.toggle("hidden", !pendiente.unir)
+    unir.hidden = !pendiente.unir
     if (pendiente.unir) unir.textContent = `UNIR · ${pendiente.unir}`
 
     // Sacar de la lista es de administración y de nadie más.
-    nodo.querySelector("button").classList.toggle("hidden", !puedeDescartar)
+    nodo.querySelector("button").hidden = !puedeDescartar
     return nodo
   }
 
@@ -641,7 +598,7 @@ export default class extends conEnterAvanza(Controller) {
     this._descartando = fila.dataset.descartarUrl
     this.descarteCajaTarget.textContent = fila.dataset.wr
     this.descarteNotaTarget.value = ""
-    this.descarteErrorTarget.classList.add("hidden")
+    this.descarteErrorTarget.hidden = true
     this.descarteModalTarget.showModal()
     requestAnimationFrame(() => this.confirmarDescarteTarget.focus())
   }
@@ -657,7 +614,7 @@ export default class extends conEnterAvanza(Controller) {
         if (!ok) {
           this.dispatch("fallo")
           this.descarteErrorTarget.textContent = (data.errores || []).join(" ")
-          this.descarteErrorTarget.classList.remove("hidden")
+          this.descarteErrorTarget.hidden = false
           return
         }
         this.dispatch("guardado")
@@ -673,13 +630,30 @@ export default class extends conEnterAvanza(Controller) {
   // mediciones, imprime dos"*. En los dos casos la pantalla queda limpia para
   // la tanda siguiente, y el banner guarda el resultado y la única acción que
   // todavía sirve: reimprimir.
-  _terminar(mensaje, url, cantidad) {
+  _terminar(mensaje, url, cantidad, grupo = null) {
     this._vaciarTanda()
 
     this.bannerTextoTarget.textContent = cantidad > 1
       ? `${mensaje} Se imprimieron ${cantidad} etiquetas.`
       : mensaje
-    this.bannerTarget.classList.remove("hidden")
+    this.bannerTarget.hidden = false
+
+    // «Facturar lo que hay» **cambia de momento, no de sentido**: medir nunca
+    // se frena, y la excepción aparece después de guardar, solo si el
+    // consolidado quedó incompleto. Es el flujo de la pizarra —*medir →
+    // notificación → buscar el resto*—, y el modal y el sello son los de
+    // siempre (`PasarGrupoIncompleto`).
+    this._grupo = grupo
+    const forzable = !!(grupo && grupo.consolidada && !grupo.completo && !grupo.cerrada &&
+                        !grupo.parcial_autorizado && grupo.facturar_parcial_url)
+    this.bannerFaltanTarget.hidden = !forzable
+    this.bannerFacturarTarget.hidden = !forzable
+    if (forzable) {
+      const faltan = grupo.cajas.filter((c) => c.estado !== "medida")
+      this.bannerFaltanTarget.textContent =
+        `Faltan ${faltan.length} ${faltan.length === 1 ? "caja" : "cajas"} de ${grupo.numero} para que salga a pre-factura: ` +
+        faltan.map((c) => `${c.wr || c.tracking} (${c.donde})`).join(", ") + "."
+    }
 
     this._imprimir(url, cantidad)
   }
@@ -687,18 +661,14 @@ export default class extends conEnterAvanza(Controller) {
   _imprimir(url, cantidad = 1) {
     if (!url) { this.codigoTarget.focus(); return }
 
-    // «Reimprimir» significa **lo último que se imprimió**, y el texto de los
-    // botones lo dice: era la pregunta de Jorge, *"¿cuál hace?"*.
+    // «Reimprimir» significa **lo último que se imprimió**, y el texto del
+    // botón lo dice: era la pregunta de Jorge, *"¿cuál hace?"*. Vive en el
+    // banner y en ningún otro lado: mientras se arma la tanda no hay nada que
+    // reimprimir.
     this._ultimaEtiquetaUrl = url
-    const texto = cantidad > 1 ? `Reimprimir las ${cantidad} etiquetas` : "Reimprimir la etiqueta"
-    this.reimprimirTextoTarget.textContent = texto
-    this.bannerReimprimirTextoTarget.textContent = texto
-    this.reimprimirTarget.classList.remove("hidden")
-    this.bannerReimprimirTarget.classList.remove("hidden")
-    // El botón vive adentro del bloque de acciones, que está escondido cuando
-    // no hay nada en la mesa: sin esto, reimprimir después de guardar no tiene
-    // dónde apretarse.
-    this.accionesTarget.classList.remove("hidden")
+    this.bannerReimprimirTextoTarget.textContent =
+      cantidad > 1 ? `Reimprimir las ${cantidad} etiquetas` : "Reimprimir la etiqueta"
+    this.bannerReimprimirTarget.hidden = false
 
     window.open(url, "_blank")
     window.addEventListener("focus", () => this.codigoTarget.focus(), { once: true })
@@ -720,15 +690,14 @@ export default class extends conEnterAvanza(Controller) {
     this.codigoTarget.focus()
   }
 
-  // Toda la tanda al piso: la mesa, los volúmenes, la grilla y los dos lados.
+  // Toda la tanda al piso: la mesa, los volúmenes y el grupo.
   _vaciarTanda() {
     this._paquete = null
+    this._grupo = null
     this._mesa = []
     this._volumenes = []
     this._saltados = []
     this._limpiarNumeros()
-    this._pintarGrupo(null)
-    this.dosLadosTarget.classList.add("hidden")
     this._repintar()
   }
 
@@ -747,7 +716,7 @@ export default class extends conEnterAvanza(Controller) {
       li.textContent = `${c.wr || c.tracking} · ${c.donde}`
       return li
     }))
-    this.excepcionErrorTarget.classList.add("hidden")
+    this.excepcionErrorTarget.hidden = true
     this.excepcionModalTarget.showModal()
     requestAnimationFrame(() => this.confirmarParcialTarget.focus())
   }
@@ -762,14 +731,19 @@ export default class extends conEnterAvanza(Controller) {
         if (!ok) {
           this.dispatch("fallo")
           this.excepcionErrorTarget.textContent = (data.errores || []).join(" ")
-          this.excepcionErrorTarget.classList.remove("hidden")
+          this.excepcionErrorTarget.hidden = false
           return
         }
         this.dispatch("guardado")
         this.avisoTarget.textContent = data.mensaje
         this.excepcionModalTarget.close()
-        // Facturar lo que hay cierra el envío: imprime lo medido y limpia.
-        this._terminar(data.mensaje, data.imprimir_url, data.grupo.medidas)
+        // Las etiquetas ya salieron al guardar —una por medición—; acá solo se
+        // sella la excepción y el banner dice que se pasó. Nada que reimprimir.
+        this._grupo = null
+        this.bannerTextoTarget.textContent = data.mensaje
+        this.bannerFaltanTarget.hidden = true
+        this.bannerFacturarTarget.hidden = true
+        this.codigoTarget.focus()
       })
   }
 

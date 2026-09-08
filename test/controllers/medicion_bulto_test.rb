@@ -330,6 +330,45 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
     assert_equal 0, Bulto.count
   end
 
+  # ── El grupo, después de guardar ────────────────────────────────────────
+  #
+  # 2026-09-08 · «Facturar lo que hay» cambia de momento, no de sentido: sale
+  # en el banner **después** de guardar, y solo si el consolidado quedó
+  # incompleto. Para eso la respuesta de guardar trae el grupo ya sellado.
+
+  test "guardar un consolidado incompleto devuelve el grupo con lo que falta y la puerta a facturar parcial" do
+    pa = pre_alerta_consolidada(@primera)
+    pa.pre_alerta_paquetes.create!(tracking: "1ZFALTA0000GRUPO", descripcion: "Gorra", fecha: Date.current)
+
+    guardar([ { paquete_ids: [ @primera.id ], peso: "10", alto: "10", largo: "10", ancho: "10" } ])
+
+    assert_response :success
+    grupo = json["grupo"]
+    assert grupo, "la respuesta de guardar trae el grupo"
+    assert grupo["consolidada"]
+    assert_not grupo["completo"]
+    assert_equal 1, grupo["medidas"], "la que se acaba de guardar ya cuenta como medida"
+    assert_equal 2, grupo["total"]
+    assert grupo["facturar_parcial_url"].present?
+    faltan = grupo["cajas"].reject { |c| c["estado"] == "medida" }
+    assert_equal [ "1ZFALTA0000GRUPO" ], faltan.map { |c| c["tracking"] }
+    assert_equal [ "no ha llegado a Miami" ], faltan.map { |c| c["donde"] }
+  end
+
+  test "guardar un consolidado completo devuelve el grupo completo, y una suelta no devuelve grupo" do
+    segunda = caja("1ZBULTO0000COMPL")
+    pre_alerta_consolidada(@primera, segunda)
+
+    guardar([ { paquete_ids: [ @primera.id, segunda.id ], peso: "10" } ])
+    assert_response :success
+    assert json["grupo"]["completo"], "las dos están medidas: el grupo va junto"
+
+    suelta = caja("1ZBULTO0000SUELTA")
+    guardar([ { paquete_ids: [ suelta.id ], peso: "10" } ])
+    assert_response :success
+    assert_nil json["grupo"], "una caja sola no es un grupo"
+  end
+
   private
 
   def ingresar(user)

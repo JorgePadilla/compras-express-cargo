@@ -151,11 +151,17 @@ class MedicionController < ApplicationController
                        .guardar!(mediciones_permitidas)
     cajas = bultos.sum { |b| b.paquetes.size }
 
+    primera = bultos.first.paquetes.first
     render json: { ok: true, cantidad: bultos.size,
                    mensaje: mensaje_guardado(bultos, cajas),
                    imprimir_url: etiquetas_sesion_medicion_path(bultos.first.sesion, print: "true"),
                    bultos: bultos.map { |b| bulto_json(b) },
-                   manifiesto: manifiesto_json(bultos.first.paquetes.first&.manifiesto) }
+                   manifiesto: manifiesto_json(primera&.manifiesto),
+                   # El grupo **después** de sellar: la pantalla lo usa para
+                   # ofrecer «Facturar lo que hay» en el banner, solo si el
+                   # consolidado quedó incompleto. Antes ese botón vivía en rojo
+                   # permanente al lado de la grilla, con la mesa completa.
+                   grupo: grupo_json(primera&.grupo_de_union) }
   rescue MedirBulto::NoSePuede => e
     render json: { ok: false, errores: [ e.message ] }, status: :unprocessable_entity
   rescue ActiveRecord::RecordInvalid => e

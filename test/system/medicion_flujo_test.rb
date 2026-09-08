@@ -8,6 +8,11 @@ require "application_system_test_case"
 # el modal rojo salga con las dos salidas que pidió Yusef, y que al guardar se
 # abra **una** impresión con tantas etiquetas como mediciones.
 #
+# Y desde el 2026-09-08, que la pantalla sea **una sola tarjeta** con el bloque
+# de /etiquetar —Jorge: *"a Yusef le gusta el agregar que estaba en etiqueta"*—:
+# la caja se ve una vez, no hay cuadritos que tocar, y «Facturar lo que hay»
+# sale después de guardar, solo si el consolidado quedó incompleto.
+#
 # Yusef, el 2026-09-07: *"no es una etiqueta por paquete, es una etiqueta por
 # medición, y la medición puede tener 100 paquetes"*.
 class MedicionFlujoTest < ApplicationSystemTestCase
@@ -51,9 +56,9 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     visit medicion_index_path
     escanear(@paquete.tracking)
 
-    assert_selector "[data-medicion-target='panel']", text: "Juan", wait: 5
-    assert_selector "[data-medicion-target='mesaTitulo']", text: "Volumen 1 · 1 caja en la mesa"
-    assert_selector "[data-medicion-target='panelMiami']", text: @paquete.numero_recepcion
+    assert_selector "[data-medicion-target='trabajo']", text: "Juan", wait: 5
+    assert_selector "[data-medicion-target='mesaTitulo']", text: /Volumen 1 · 1 caja en la mesa/i
+    assert_selector "[data-medicion-target='mesa'] li", text: @paquete.numero_recepcion
     assert_equal "codigo_medicion", foco, "el foco se queda en la pistola: la mesa se arma escaneando"
 
     teclear "12.5", "10", "12", "14"
@@ -84,7 +89,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     escanear_a_la_mesa(segunda, 2)
     escanear_a_la_mesa(tercera, 3)
 
-    assert_selector "[data-medicion-target='mesaTitulo']", text: "3 cajas en la mesa"
+    assert_selector "[data-medicion-target='mesaTitulo']", text: /3 cajas en la mesa/i
     assert_selector "[data-medicion-target='mesa'] li", text: segunda.numero_recepcion
 
     teclear "40", "20", "30", "40"
@@ -155,7 +160,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_no_selector "[data-medicion-target='mesa'] li"
 
     escanear_a_la_mesa(segunda, 1)
-    assert_selector "[data-medicion-target='mesaTitulo']", text: "Volumen 2 · 1 caja en la mesa"
+    assert_selector "[data-medicion-target='mesaTitulo']", text: /Volumen 2 · 1 caja en la mesa/i
     assert_selector "[data-medicion-target='guardarTexto']", text: "Guardar e imprimir 2 etiquetas"
 
     teclear "8", "5", "6", "7"
@@ -271,51 +276,101 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_equal "codigo_medicion", foco
   end
 
-  test "la grilla del grupo se pinta con lo que falta, y dice quién midió" do
+  # 2026-09-08 · Jorge, en staging: *"esta vista está confusa"*. La última caja
+  # salía **cuatro veces** —en «Cómo ingresó Miami», en el cuadrito MIDIENDO, en
+  # el encabezado del panel y en la mesa—. Ahora sale una, en la mesa.
+  test "una caja en la mesa se ve UNA vez, y no queda ni grilla ni panel de Miami" do
+    segunda = caja("1ZUNAVEZ0000002")
+
+    visit medicion_index_path
+    escanear_a_la_mesa(@paquete, 1)
+    escanear_a_la_mesa(segunda, 2)
+
+    veces = page.all("[data-medicion-target='trabajo'] *", text: segunda.numero_recepcion, exact_text: false)
+                .count { |n| n.text(:all).strip == segunda.numero_recepcion }
+    assert_equal 1, veces, "el warehouse receipt aparece #{veces} veces en la columna de trabajo"
+    assert_no_selector "[data-medicion-target='grilla']"
+    assert_no_selector "[data-medicion-target='panelMiami']"
+    assert_no_selector "[data-medicion-target='codigoCaja']"
+    # El cliente, una sola vez: en el encabezado de la tanda.
+    assert_selector "[data-medicion-target='tandaCliente']", text: "Juan"
+    # Y nada de reimprimir mientras se arma: no hay qué.
+    assert_no_selector "[data-medicion-target='banner']", visible: :visible
+    assert_no_button "Reimprimir la etiqueta"
+  end
+
+  # El «×» de un volumen, como el de una caja en /etiquetar. Deshacer no es
+  # elegir: el volumen lo armó él y lo puede tirar.
+  test "el × de un volumen quita ESE volumen y renumera" do
+    segunda = caja("1ZEQUIS00000002")
+    tercera = caja("1ZEQUIS00000003")
+
+    visit medicion_index_path
+    escanear_a_la_mesa(@paquete, 1)
+    teclear "10", "10", "10", "10"
+    send_keys :f5
+    escanear_a_la_mesa(segunda, 1)
+    teclear "20", "10", "10", "10"
+    send_keys :f5
+    assert_selector "[data-medicion-target='listaVolumenes'] li", count: 2, wait: 5
+
+    find("[data-medicion-target='listaVolumenes'] li:first-child button").click
+
+    assert_selector "[data-medicion-target='listaVolumenes'] li", count: 1, wait: 5
+    assert_selector "[data-medicion-target='listaVolumenes'] li", text: /Volumen 1/i
+    assert_selector "[data-medicion-target='listaVolumenes'] li", text: "20 lb"
+    assert_no_selector "[data-medicion-target='listaVolumenes'] li", text: "10 lb"
+
+    escanear_a_la_mesa(tercera, 1)
+    assert_selector "[data-medicion-target='mesaTitulo']", text: /Volumen 2 · 1 caja en la mesa/i
+  end
+
+  # C27-04 · La «Notificación» de la pizarra —*medir → notificación → buscar el
+  # resto*— es una línea, no una grilla: con qué pre-alerta, cuántas van en la
+  # mesa, cuáles faltan y dónde están. Y C27-12, quién midió las que ya están.
+  test "la línea de consolidación dice qué falta y dónde está, y quién midió" do
     pa, otros = grupo_de_tres(@paquete)
     segunda = llego(otros.first)
 
     visit medicion_index_path
-    escanear(@paquete.tracking)
+    escanear_a_la_mesa(@paquete, 1)
 
-    assert_selector "[data-medicion-target='grupoTitulo']", text: "UNIR", wait: 5
-    assert_selector "[data-medicion-target='grilla'] button", count: 3
-    assert_selector "[data-medicion-target='panelPreAlerta']", text: pa.numero_documento
-    # El que el cliente declaró y Miami todavía no tiene.
-    assert_selector "[data-medicion-target='grilla'] button[data-estado='esperada']", count: 1
+    linea = find("[data-medicion-target='tandaConsolidado']", wait: 5)
+    assert_includes linea.text, "Consolidando #{pa.numero_documento}"
+    assert_includes linea.text, "1 de 3 en la mesa"
+    assert_includes linea.text, "faltan 2"
+    assert_includes linea.text, "#{segunda.numero_recepcion} (acá, sin medir)"
+    assert_includes linea.text, "1ZFALTA000000002 (no ha llegado a Miami)"
+    assert_no_selector "[data-medicion-target='grilla'] button"
 
     teclear "20", "10", "12", "14"
     espiar_impresion
     send_keys :f10
     assert_selector "[data-medicion-target='banner']", wait: 5
 
-    # C27-12 · Yusef, mirando este panel: *"lo que hace falta aquí es poner
-    # **quién ingresó las medidas**"*. La grilla lo trae al escanear la
-    # siguiente caja del mismo grupo.
     escanear_a_la_mesa(segunda, 1)
-    assert_selector "[data-medicion-target='grilla'] button[data-estado='medida']", text: "MD"
+    assert_selector "[data-medicion-target='tandaConsolidado']", text: "ya medidas: #{@paquete.numero_recepcion} (MD)"
   end
 
-  test "tocar un cuadrito que ya llegó lo escanea, sin pistola" do
-    _pa, otros = grupo_de_tres(@paquete)
-    segunda = llego(otros.first)
-
-    visit medicion_index_path
-    escanear(@paquete.tracking)
-    assert_selector "[data-medicion-target='grilla'] button", count: 3, wait: 5
-
-    find("[data-medicion-target='grilla'] button[data-wr='#{segunda.numero_recepcion}']").click
-
-    assert_selector "[data-medicion-target='mesa'] li", count: 2, wait: 5
-    assert_selector "[data-medicion-target='mesa'] li", text: segunda.numero_recepcion
-  end
-
-  test "facturar lo que hay abre el modal rojo con lo que falta, y Escape no lo cierra" do
+  # «Facturar lo que hay» cambia de momento, no de sentido: medir nunca se
+  # frena, y la excepción sale **después de guardar**, en el banner, solo si el
+  # consolidado quedó incompleto. Antes era un botón rojo permanente al lado de
+  # la grilla, con la mesa completa.
+  test "guardar un consolidado incompleto ofrece «facturar lo que hay» en el banner, y el modal lista lo que falta" do
     grupo_de_tres(@paquete)
 
     visit medicion_index_path
-    escanear(@paquete.tracking)
-    assert_selector "[data-medicion-target='facturarParcial']", wait: 5
+    escanear_a_la_mesa(@paquete, 1)
+    assert_no_button "Facturar lo que hay"
+
+    teclear "20", "10", "12", "14"
+    espiar_impresion
+    send_keys :f10
+
+    assert_selector "[data-medicion-target='banner']", wait: 5
+    assert_selector "[data-medicion-target='bannerFaltan']", text: "Faltan 2 cajas"
+    assert_selector "[data-medicion-target='bannerFaltan']", text: "1ZFALTA000000001 (no ha llegado a Miami)"
+    assert_equal 1, Bulto.count, "medir no se frenó por el grupo incompleto"
 
     click_on "Facturar lo que hay"
 
@@ -328,7 +383,28 @@ class MedicionFlujoTest < ApplicationSystemTestCase
 
     assert_no_selector "dialog[open]", wait: 5
     assert_selector "[data-medicion-target='banner']", text: "Se pasa sin el grupo completo (MD)"
+    assert_no_button "Facturar lo que hay"
     assert_equal "MD", PreAlerta.where.not(union_parcial_at: nil).last.union_parcial_por
+  end
+
+  test "un consolidado completo NO ofrece facturar lo que hay" do
+    consolidada = caja("1ZCOMPLETO00002")
+    pa = consolidado_con(@paquete)
+    pa.pre_alerta_paquetes.create!(tracking: consolidada.tracking, descripcion: "Bulto",
+                                   fecha: Date.current, paquete: consolidada)
+
+    visit medicion_index_path
+    escanear_a_la_mesa(@paquete, 1)
+    escanear_a_la_mesa(consolidada, 2)
+    assert_selector "[data-medicion-target='tandaConsolidado']", text: "2 de 2 en la mesa"
+
+    teclear "20", "10", "12", "14"
+    espiar_impresion
+    send_keys :f10
+
+    assert_selector "[data-medicion-target='banner']", wait: 5
+    assert_no_button "Facturar lo que hay"
+    assert_no_selector "[data-medicion-target='bannerFaltan']", visible: :visible
   end
 
   # C26-17 · El panel de la derecha: lo que falta del manifiesto.
@@ -346,7 +422,9 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_selector "[data-medicion-target='manifiestoConteo']", text: "Miami mandó 2 · medidos 0 · faltan 2"
     assert_selector "[data-medicion-target='pendientes'] li", count: 2
     # El operario de medición no saca nada de la lista.
-    assert_no_selector "[data-medicion-target='pendientes'] li button:not(.hidden)"
+    # Se mira si **se ve**, no si tiene la clase: la clase `hidden` no esconde un
+    # `ButtonComponent`, y este test daba verde con el botón a la vista.
+    assert_no_selector "[data-medicion-target='pendientes'] li button", visible: :visible
 
     # Y al medir una, el panel lo refleja sin recargar.
     escanear_a_la_mesa(@paquete, 1)
