@@ -57,7 +57,6 @@ class BotonesTest < ActiveSupport::TestCase
     # ser `ButtonComponent`: el markup se llena después de renderizar. Es una
     # tarjeta cuadrada con cuatro renglones —la misma forma que las tarjetas de
     # caja de /empacar, que también están crudas— y lleva su `aria-label`.
-    "app/views/medicion/index.html.erb"                      => 1,
     "app/views/shared/_caja_fila.html.erb"                   => 1,
     # La × de quitar un correo de aviso de la ficha del cliente. Mismo botón y
     # mismo motivo que el de la caja: un icono chico adentro de una fila que se

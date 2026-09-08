@@ -220,7 +220,9 @@ export default class extends Controller {
     // «Meterlo igual (omitir)» sólo cuando el motivo es el tipo de envío — la
     // `Fase 12` lo pidió para eso y para nada más.
     const omitible = tono === "tipoDistinto" && paqueteId
-    this.avisoOmitirTarget.classList.toggle("hidden", !omitible)
+    // Por el atributo y no por la clase: `.inline-flex` le gana a `.hidden` y
+    // «Meterlo igual» se veía siempre, omisible o no.
+    this.avisoOmitirTarget.hidden = !omitible
     this.avisoOmitirTarget.dataset.paqueteId = omitible ? paqueteId : ""
   }
 

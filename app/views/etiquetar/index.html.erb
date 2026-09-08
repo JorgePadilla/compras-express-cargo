@@ -308,7 +308,7 @@ end %>
       <%= render(ButtonComponent.new(variant: :secondary, size: :sm,
             label: "Responder que no",
             data: { etiquetar_target: "avisoSecundario", action: "etiquetar#avisoNo" },
-            class: "hidden")) { "Todavía no" } %>
+            hidden: true)) { "Todavía no" } %>
       <%= render(ButtonComponent.new(variant: :primary, size: :md,
             label: "Confirmar el aviso",
             data: { etiquetar_target: "avisoPrincipal", action: "etiquetar#avisoSi" })) { "Entendido" } %>

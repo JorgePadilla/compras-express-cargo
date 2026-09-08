@@ -784,7 +784,9 @@ cerrarQuitarCobro() {
     if (this.hasAvisoPrincipalTarget) this.avisoPrincipalTarget.textContent = aviso.principal
     if (this.hasAvisoSecundarioTarget) {
       this.avisoSecundarioTarget.textContent = aviso.secundario || ""
-      this.avisoSecundarioTarget.classList.toggle("hidden", !aviso.secundario)
+      // Por el atributo y no por la clase: `.inline-flex` le gana a `.hidden` y
+      // «Todavía no» se veía en todos los avisos, tuvieran segunda salida o no.
+      this.avisoSecundarioTarget.hidden = !aviso.secundario
     }
     if (this.hasAvisoEncabezadoTarget) {
       this.avisoEncabezadoTarget.className =

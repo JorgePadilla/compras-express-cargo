@@ -11166,6 +11166,51 @@ Es otra vez un elemento con dos responsabilidades en esa pantalla; va con
 
 ---
 
+#### C27-32 · La pantalla de medición se rehízo con el «Agregar» de /etiquetar — ✅ **HECHO** en `#447` (2026-09-08)
+
+Jorge probó `#445` en staging y lo dijo en una línea: *"esta vista está
+confusa, revisá el diseño"*. Y dio la referencia que decide el diseño:
+**"a Yusef le gusta el agregar que estaba en etiqueta"** — lo mismo que Yusef
+había dicho el 7: *"le podría poner otro cuadro igual como el que está en
+Miami… así como dejaste Miami, es una copia de ese pedazo"*.
+
+**Lo que estaba mal, visto con dos cajas en la mesa.** Cuatro tarjetas
+apiladas y **dos modelos a la vez**: la grilla de cuadritos de `C26` —una
+medición por caja, MIDIENDO, «tocar para elegir»— y la mesa de `C27`. La
+última caja aparecía **cuatro veces**; el cliente, tres. Tocar un cuadrito lo
+agregaba a la mesa, que es elegir de una lista (`C27-02` lo prohíbe).
+«Facturar lo que hay» vivía en rojo permanente con la mesa completa. «Agregar
+volumen» estaba en una barra al final, lejos de los números.
+
+**Cómo quedó: una tarjeta, en el orden del bloque de /etiquetar.** La pistola;
+la tanda **una vez** (cliente · servicio, y si está consolidando, la línea con
+qué pre-alerta, cuántas van en la mesa, cuáles ya se midieron y **por quién**
+—que es `C27-12`— y cuáles faltan y dónde están: la «Notificación» de la
+pizarra, sin cuadritos); «VOLUMEN 1 · N cajas en la mesa» con sus filas; la
+captura a la izquierda y el cálculo a la derecha; «Volúmenes guardados N de
+10» con **«+ Agregar volumen»** pegado a la captura y una fila por volumen con
+su «×», como las cajas en Miami; y la barra pegada abajo para la laptop táctil
+(`C27-13`).
+
+**«Facturar lo que hay» cambia de momento, no de sentido.** Medir nunca se
+frena. Al guardar con un consolidado incompleto, el banner dice qué falta y
+dónde está y ofrece la excepción —el mismo modal rojo y el mismo sello de
+`C26-03`—. Un consolidado completo no la ofrece.
+
+> 🐛 **Lo que la captura dejó a la vista, y no era de esta pantalla.** El
+> banner decía «completo» y el botón rojo se veía igual. En el CSS compilado,
+> `.inline-flex`, `.flex` y `.inline-block` vienen **después** de `.hidden`:
+> en cualquier elemento que lleve una de esas —y `ButtonComponent` lleva
+> `inline-flex`— **la clase `hidden` pierde y el botón se ve**. Con eso: los
+> tres botones del modal rojo de medición salían juntos; «Reimprimir» se veía
+> mientras se armaba la tanda; el «×» de sacar de la lista lo veía el operario
+> que no es admin; en `/empacar`, «Meterlo igual (omitir)» siempre; en
+> `/etiquetar`, «Todavía no» siempre. Y el test del panel daba verde con el
+> bug puesto: miraba la clase, no si el botón se veía. Se arregló en las tres
+> pantallas por el **atributo** `hidden` —el preflight de Tailwind trae
+> `[hidden]{display:none!important}`— y `botones_escondidos_test` cierra la
+> puerta del lado del ERB.
+
 ### Notas que no son tarea
 
 - **El rótulo dice PESA, y al bulto le dicen volumen.** Vale la pena que las
@@ -11216,6 +11261,7 @@ Es otra vez un elemento con dos responsabilidades en esa pantalla; va con
 | `C27-29` | El proveedor no se guarda en `/paquetes/<id>` | ✅ **Hecho** — `#444`. Eran **tres** bugs tapándose: sin `name`, `:proveedor` en los params (500 al ponerle el `name`) y el `proveedor_id` viejo que ganaba. Se cerró con `proveedor_texto=` y se fueron las dos copias de `proveedor_string_param` |
 | `C27-30` | El sufijo de caja no se ve en el listado | ✅ **Hecho** en `#440` (2026-09-08) — la columna usa el mismo helper que la etiqueta |
 | `C27-31` | `/etiquetar` borra el peso al agregar una caja | ✅ **Hecho** — `#441`. Y es peor de lo reportado: no queda sin cobrar, **se cobra mal** — 30 lb reales facturadas por 6, porque el volumétrico viejo le gana al peso en `nil` |
+| `C27-32` | La pantalla de medición, con el «Agregar» de /etiquetar | ✅ **Hecho** — `#447`. Una tarjeta, la caja una vez, sin cuadritos, «Facturar lo que hay» después de guardar. Y de paso: la clase `hidden` **no esconde** un `ButtonComponent`; se arregló en tres pantallas y hay lint |
 
 ### Las preguntas que abre
 
