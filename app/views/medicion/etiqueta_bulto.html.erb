@@ -1,0 +1,45 @@
+<%# C27-06 · Las etiquetas del bulto: **una por medición**, no una por caja.
+
+    Yusef, el 2026-09-07, tres veces en la misma reunión:
+
+      "No es una etiqueta por paquete, es una etiqueta por medición, y la
+       medición puede tener 100 paquetes."
+
+    Y por qué no una sola para toda la tanda, que fue su primera idea y la
+    descartó él mismo:
+
+      "Yo había pensado hacer una sola etiqueta para todo, aunque sean tres
+       volúmenes, pero dije no, **porque si hacemos una sola, se les puede
+       escapar** algo."
+
+    Dos datos que la caja no tenía y el bulto sí, los dos para la estación
+    siguiente:
+
+      · **cuántas cajas ampara** — la persona que la recibe tiene que escanear
+        cada warehouse, y necesita saber cuántos busca;
+      · **«1 de 2» de mediciones** — *"si no escanea la segunda medición no se
+        le agrega. Esa es una manera de auditar las mediciones."*
+
+    La Dymo 2.25×1.25 **no tiene una fila más** (`etiqueta_medicion_cabe_test`
+    lo mide en Chrome), así que los dos entran en filas que ya existen y
+    `data-ajustar` los encoge hasta que quepan. %>
+<% @bultos.each do |b| %>
+  <div class="med">
+    <div class="arriba">
+    <div class="qr"><%= etiqueta_qr_svg(etiqueta_qr_medicion(b), tamano: "1.0in") %></div>
+    <div class="datos">
+      <%# Cuántas cajas ampara este bulto va acá, en la fila de la fecha: es la
+          que más aire tiene de las seis. %>
+      <div class="fecha" data-ajustar data-ajustar-min="5"><%= b.medido_at.strftime("%d/%m/%Y %H:%M") %> · <%= b.paquetes.size %> caja<%= "s" if b.paquetes.size != 1 %></div>
+      <div class="dims" data-ajustar data-ajustar-min="6"><%= [ b.alto, b.largo, b.ancho ].map { |m| etiqueta_num(m) }.join("x") %> in</div>
+      <div class="cifra"><span class="u">LBS</span> <%= etiqueta_num_2d(b.peso) %></div>
+      <div class="cifra"><span class="u">VLBS</span> <%= etiqueta_num_2d(b.peso_volumetrico) %></div>
+      <div class="pies">PIES³ <%= etiqueta_num_2d(VolumetricoCalculator.pies_cubicos_exactos(VolumetricoCalculator.pulgadas_cubicas(b.alto, b.largo, b.ancho))) %></div>
+    </div>
+    </div>
+    <%# El código de la primera caja identifica al bulto para el humano; el QR
+        lo identifica para el sistema. El «1 de 2» —de **mediciones**— va con
+        él, a lo ancho de la etiqueta. %>
+    <div class="codigo" data-ajustar data-ajustar-min="5"><%= etiqueta_codigo_barras(b.paquetes.first) || b.paquetes.first&.tracking %><%= " · #{b.de_cuantos_texto}" if b.de_cuantos_texto %> · <%= b.medido_por %></div>
+  </div>
+<% end %>

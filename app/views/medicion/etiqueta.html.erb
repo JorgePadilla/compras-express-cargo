@@ -4,6 +4,7 @@
     `page-break-before`. %>
 <% (@paquetes || [ @paquete ]).each do |p| %>
   <div class="med">
+    <div class="arriba">
     <div class="qr"><%= etiqueta_qr_svg(etiqueta_qr_medicion(p), tamano: "1.0in") %></div>
     <div class="datos">
       <div class="fecha"><%= p.medido_at.strftime("%d/%m/%Y %H:%M") %></div>
@@ -11,11 +12,12 @@
       <div class="cifra"><span class="u">LBS</span> <%= etiqueta_num_2d(p.peso) %></div>
       <div class="cifra"><span class="u">VLBS</span> <%= etiqueta_num_2d(p.peso_volumetrico) %></div>
       <div class="pies">PIES³ <%= etiqueta_num_2d(VolumetricoCalculator.pies_cubicos_exactos(VolumetricoCalculator.pulgadas_cubicas(p.alto, p.largo, p.ancho))) %></div>
-      <%# C26-18 · «n de m» también impreso, no solo en el QR: es lo que mira la
-          persona de pre-factura, que vuelve a escanear todas las cajas. Va en
-          la línea del código y no en una fila propia — en esta etiqueta no cabe
-          una fila más, y `data-ajustar` la encoge hasta que quepa. %>
-      <div class="codigo" data-ajustar data-ajustar-min="5"><%= etiqueta_codigo_barras(p) || p.tracking %><%= " · #{p.numero_caja || 1}/#{p.cantidad_paquetes}" if p.cantidad_paquetes.to_i > 1 %> · <%= p.medido_por %></div>
     </div>
+    </div>
+    <%# C26-18 · «n de m» también impreso, no solo en el QR: es lo que mira la
+        persona de pre-factura, que vuelve a escanear todas las cajas. C27-06:
+        va **a lo ancho**, debajo del QR, porque en la columna de la derecha no
+        cabía y el final se recortaba en silencio. %>
+    <div class="codigo" data-ajustar data-ajustar-min="5"><%= etiqueta_codigo_barras(p) || p.tracking %><%= " · #{p.numero_caja || 1}/#{p.cantidad_paquetes}" if p.cantidad_paquetes.to_i > 1 %> · <%= p.medido_por %></div>
   </div>
 <% end %>

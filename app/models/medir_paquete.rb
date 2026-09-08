@@ -32,19 +32,28 @@ class MedirPaquete
   CAMPOS = %i[peso alto largo ancho].freeze
   DIMENSIONES = %i[alto largo ancho].freeze
 
-  def initialize(paquete, user:)
+  # C27-14 · `saltar_manifiesto` deja medir una caja que no pasó por el
+  # manifiesto, con el sello de quién lo autorizó. Yusef: *"le tiene que
+  # eliminar eso porque nos va a llevar putas, porque a más de alguno se le va a
+  # escapar. **Hay que poner una opción ahí.**"*
+  def initialize(paquete, user:, saltar_manifiesto: false)
     @paquete = paquete
     @user = user
+    @saltar = saltar_manifiesto
   end
 
   def medir!(valores)
     numeros = self.class.numeros_de(valores)
     raise NoSePuede, sin_nada_msg if numeros.empty?
     raise NoSePuede, dimensiones_a_medias_msg if dimensiones_a_medias?(numeros)
+    # El «ya está en una pre-factura» **sigue siendo un no rotundo**: ahí el
+    # peso se congeló y medirlo mentiría. El del manifiesto no.
     raise NoSePuede, en_pre_factura_msg if @paquete.pre_factura_id.present? || @paquete.venta_id.present?
-    raise NoSePuede, no_recibida_msg unless @paquete.estado.in?(Paquete::ESTADOS_FACTURABLES)
+    raise NoSePuede, no_recibida_msg if salto? && !@saltar
 
-    @paquete.update!(**numeros, medido_at: Time.current, medido_por: @user&.iniciales_display)
+    ahora = Time.current
+    @paquete.update!(**numeros, medido_at: ahora, medido_por: @user&.iniciales_display,
+                     **sello_de_salto(ahora))
     @paquete
   end
 
@@ -63,6 +72,17 @@ class MedirPaquete
   def dimensiones_a_medias?(numeros)
     puestas = DIMENSIONES.count { |d| numeros.key?(d) }
     puestas.positive? && puestas < DIMENSIONES.size
+  end
+
+  def salto? = !@paquete.estado.in?(Paquete::ESTADOS_FACTURABLES)
+
+  # El estado del paquete **no se toca**: lo que se sella es la excepción, con
+  # el estado que tenía cuando alguien decidió pasarla igual.
+  def sello_de_salto(ahora)
+    return {} unless salto? && @saltar
+
+    { salto_manifiesto_at: ahora, salto_manifiesto_por: @user&.iniciales_display,
+      salto_manifiesto_estado: @paquete.estado }
   end
 
   def sin_nada_msg
