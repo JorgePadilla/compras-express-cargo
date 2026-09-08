@@ -691,4 +691,172 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     @paquete.reload
     assert_equal fecha_original&.to_i, @paquete.fecha_recibido_miami&.to_i
   end
+
+  # ── C27-29 · La pantalla que no guardaba ────────────────────────────────
+  #
+  # Jorge, 2026-09-07, editando un paquete en vivo: *"está en F10… no lo está
+  # cambiando… el guardar… quiero ver en qué vista era; hay pleca y dice
+  # paquete, guión, un número"* — y enseguida: **"ya, ya, ya, es que este es
+  # el proveedor"**.
+
+  test "el proveedor tecleado a mano se guarda" do
+    patch paquete_url(@paquete), params: { paquete: { proveedor_texto: "Driver Juan" } }
+
+    assert_redirected_to paquete_url(@paquete)
+    @paquete.reload
+    assert_equal "Driver Juan", @paquete.proveedor_texto,
+                 "lo que el operario teclea en Proveedor tiene que llegar a la columna"
+  end
+
+  test "escribir encima de un proveedor del catalogo lo suelta" do
+    # El fixture llega con Amazon **del catálogo** (`proveedor_id`). Teclear
+    # encima manda el oculto vacío —eso lo hace `proveedor_autocomplete`, que
+    # antes escribía el id y no lo limpiaba nunca— y el texto nuevo. Si el id
+    # sobrevive, la ficha vuelve a decir "Amazon": el *"no lo está cambiando"*.
+    assert @paquete.proveedor_id.present?, "el fixture tiene que traer uno del catálogo"
+
+    patch paquete_url(@paquete), params: { paquete: {
+      proveedor_id: "", proveedor_texto: "Driver Juan"
+    } }
+
+    assert_redirected_to paquete_url(@paquete)
+    @paquete.reload
+    assert_nil @paquete.proveedor_id
+    assert_equal "Driver Juan", @paquete.proveedor_texto
+
+    get paquete_url(@paquete)
+    assert_match(/Driver Juan/, response.body)
+  end
+
+  test "el campo visible de Proveedor viaja con name" do
+    # El bug de origen: el input estaba pintado sin `name`, así que el
+    # navegador nunca lo mandaba. Se prueba el HTML porque el `patch` de acá
+    # arriba pasa igual con el formulario roto — es la trampa del «cableado
+    # por los dos extremos y sin nada en medio».
+    get paquete_url(@paquete, mode: "edit")
+
+    assert_response :success
+    assert_select "input[name=?]", "paquete[proveedor_texto]"
+  end
+
+  test "el proveedor legacy en los params no revienta el update" do
+    # `proveedor` es columna string Y el nombre de `belongs_to :proveedor`:
+    # permitirlo hacía que `assign_attributes` le mandara un String a la
+    # asociación → `AssociationTypeMismatch` → 500. Ya no se permite.
+    patch paquete_url(@paquete), params: { paquete: { proveedor: "Amazon",
+                                                      descripcion: "Con proveedor legacy" } }
+
+    assert_response :redirect
+    @paquete.reload
+    assert_equal "Con proveedor legacy", @paquete.descripcion
+  end
+
+  test "un bloqueo de estado no se lleva lo que la persona habia tecleado" do
+    # Jorge: el modal decía «no podés» y de paso borraba el formulario entero.
+    entregado = paquetes(:entregado)
+
+    patch paquete_url(entregado), params: { paquete: {
+      estado: "en_reparto",              # retroceso sin confirmar → bloquea
+      descripcion: "Caja abierta al llegar",
+      notas_internas: "Revisar con el cliente",
+      proveedor_texto: "Walmart"
+    } }
+
+    assert_response :unprocessable_entity
+    assert_select "textarea[name=?]", "paquete[descripcion]", text: /Caja abierta al llegar/
+    assert_select "textarea[name=?]", "paquete[notas_internas]", text: /Revisar con el cliente/
+    assert_select "input[name=?][value=?]", "paquete[proveedor_texto]", "Walmart"
+
+    entregado.reload
+    assert_equal "entregado", entregado.estado, "el bloqueo no puede guardar nada"
+    assert_not_equal "Caja abierta al llegar", entregado.descripcion
+  end
+
+  test "una caja que no se puede eliminar tampoco se lleva lo tecleado" do
+    # El otro `return` temprano del update: `Paquete::CajaNoEliminable`. Se
+    # llega acá bajando las cajas de un split cuya última ya entró a cobro.
+    cajas = Paquete.crear_split!(
+      attrs: { tracking: "CTL#{SecureRandom.hex(4)}", cliente: clientes(:juan),
+               sucursal_recepcion: sucursales(:miami), estado: "empacado",
+               descripcion: "Split de prueba", user: users(:digitador) },
+      total_cajas: 2
+    )
+    pf = PreFactura.create!(cliente: clientes(:juan), estado: "creado",
+                            creado_por: users(:cajero), fecha_trabajo: Date.current)
+    cajas.last.update_columns(estado: "disponible_entrega", pre_factura_id: pf.id)
+
+    patch paquete_url(cajas.first), params: { paquete: {
+      cantidad_paquetes: 1, descripcion: "Perfumes y relojes"
+    } }
+
+    assert_response :unprocessable_entity
+    assert_select "textarea[name=?]", "paquete[descripcion]", text: /Perfumes y relojes/
+    assert_equal "Split de prueba", cajas.first.reload.descripcion,
+                 "el rechazo no puede guardar nada"
+  end
+
+  test "el modal de retroceso sigue listando lo que se limpiaria" do
+    # El re-render con lo tecleado NO puede asignar `estado`: el preview del
+    # modal compara el estado actual contra el objetivo, y con los dos iguales
+    # la lista de fechas a limpiar sale vacía.
+    entregado = paquetes(:entregado)
+    entregado.update_columns(fecha_entregado: 1.day.ago, fecha_en_reparto: 2.days.ago)
+
+    patch paquete_url(entregado), params: { paquete: {
+      estado: "en_reparto", descripcion: "Algo tecleado"
+    } }
+
+    assert_response :unprocessable_entity
+    assert_match(/Se limpiarán los siguientes datos/, response.body)
+    assert_match(/Fecha entregado/i, response.body)
+  end
+
+  # ── C27-14 · «Debe dejar que sí se lo salten» ───────────────────────────
+  #
+  # Del mismo audio, con Jorge diciendo que no se puede saltar el manifiesto:
+  #
+  #   — Pero si ya está en Honduras. ¿Cómo llegó a Honduras si no…?
+  #   — Yusef: **"Debe dejar que sí se lo salten, porque a veces se capean,
+  #     algunos se los van a capear."**
+  #
+  # O sea: un paquete que el escaneo del manifiesto no agarró y que ya está acá
+  # tiene que poder moverse a un estado de Honduras.
+  #
+  # **Acá no había nada que arreglar, y eso es el hallazgo.** `estado_transition_
+  # blocker` solo mira rol y retroceso: no hay gate de manifiesto en /paquetes,
+  # así que el salto ya se permitía. El bloqueo del que se queja Yusef —*"si no
+  # ha pasado el proceso desde Miami para acá, no lo puede hacer… hay que poner
+  # una opción ahí"*— vive en **`MedirPaquete`**, que se niega a medir una caja
+  # cuyo estado no está en `ESTADOS_FACTURABLES`. Eso se atiende aparte, con la
+  # pantalla de medición.
+  #
+  # Este test queda para que nadie cierre acá lo que Yusef mandó abrir, y para
+  # exigir lo otro que él pide: que quede sellado quién lo dejó pasar.
+  test "avanzar a Honduras sin manifiesto se permite, y queda sellado quien fue" do
+    p = paquetes(:empacado)
+    assert_nil p.manifiesto_id, "el fixture tiene que llegar acá sin manifiesto"
+
+    # Se salta `enviado_honduras` y `en_aduana`: los dos pasos del manifiesto.
+    patch paquete_url(p), params: { paquete: { estado: "disponible_entrega" } }
+
+    assert_redirected_to paquete_url(p)
+    p.reload
+    assert_equal "disponible_entrega", p.estado
+    assert_nil p.manifiesto_id
+    assert_not_nil p.fecha_disponible
+    assert_equal @user.id, p.fecha_disponible_by_user_id,
+                 "el salto tiene que decir quién lo hizo"
+    assert_equal @user.id.to_s, p.versions.last.whodunnit,
+                 "paper_trail tiene que registrar al usuario, no 'Sistema'"
+  end
+
+  test "el retroceso sigue pidiendo confirmacion aunque el salto adelante sea libre" do
+    entregado = paquetes(:entregado)
+
+    patch paquete_url(entregado), params: { paquete: { estado: "empacado" } }
+
+    assert_response :unprocessable_entity
+    assert_select "dialog#estado-transition-dialog"
+    assert_equal "entregado", entregado.reload.estado
+  end
 end

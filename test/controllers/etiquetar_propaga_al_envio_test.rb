@@ -103,6 +103,27 @@ class EtiquetarPropagaAlEnvioTest < ActionDispatch::IntegrationTest
     assert_equal [ @cem.id, @cem.id ], @cajas.map { |c| c.reload.tipo_envio_id }
   end
 
+  # C27-29 · El proveedor entró a `ATRIBUTOS_DEL_ENVIO` cuando el formulario
+  # pasó a mandar `proveedor_texto`. Antes se copiaba a mano en una línea
+  # aparte, porque `proveedor` es también el nombre de la asociación.
+  test "el proveedor tecleado se propaga a todas las cajas del envío" do
+    patch actualizar_etiquetar_url(@cajas.first), params: {
+      paquete: { proveedor_texto: "Walmart", descripcion: "Perfumes" }
+    }
+
+    assert_equal [ "Walmart", "Walmart" ], @cajas.map { |c| c.reload.proveedor_texto },
+                 "el origen que sale en la etiqueta es del envío, no de una caja"
+  end
+
+  test "el nombre viejo del campo ya no llega, y no revienta" do
+    patch actualizar_etiquetar_url(@cajas.first), params: {
+      paquete: { proveedor: "Amazon", descripcion: "Perfumes" }
+    }
+
+    assert_response :redirect, "`paquete[proveedor]` va al writer de la asociación: era un 500"
+    assert_equal "Perfumes", @cajas.first.reload.descripcion
+  end
+
   private
 
   def crear_split(n)

@@ -31,6 +31,32 @@ class Paquete < ApplicationRecord
   belongs_to :prepagado_miami_sucursal, class_name: "Sucursal", optional: true
   belongs_to :prepagado_miami_by_user,  class_name: "User",     optional: true
 
+  # ── El proveedor escrito a mano ───────────────────────────────────────
+  #
+  # `proveedor` es DOS cosas: la columna string legacy (lo que el operario
+  # teclea, "Amazon") y el nombre de `belongs_to :proveedor` (el catálogo de
+  # PR-D3.a). Rails le da el setter `proveedor=` a la asociación, así que
+  # asignarle un String desde un formulario revienta con
+  # `AssociationTypeMismatch`.
+  #
+  # Eso ya mordió **cuatro veces**, y cada vez se parchó en el lugar donde
+  # dolía: `EtiquetarController#proveedor_string_param`,
+  # `EntregaPersonalController#proveedor_string_param`,
+  # `Paquete.ajustar_split!` y el input sin `name` de /paquetes. Cuatro
+  # copias del mismo `paquete[:proveedor] = ...`.
+  #
+  # Este par de métodos es la salida: los formularios mandan
+  # `paquete[proveedor_texto]` y nadie más tiene que acordarse de la trampa.
+  # `self[:proveedor]` es el column accessor, que va derecho a la columna sin
+  # pasar por la asociación.
+  def proveedor_texto
+    self[:proveedor]
+  end
+
+  def proveedor_texto=(valor)
+    self[:proveedor] = valor
+  end
+
   # Con qué se pagó en Miami. Yusef: *"faltó algo que conversamos: que
   # escogieran cómo se pagó — efectivo o Zelle o TC"*.
   #
@@ -1142,13 +1168,16 @@ class Paquete < ApplicationRecord
         # con NULL pasaba de casualidad; con "" —que es lo que deja cualquier
         # update— o con "Amazon", `AssociationTypeMismatch`. Jorge lo vio en
         # staging *"al actualizar varias veces"*: la segunda subida de cajas era
-        # la que reventaba. Se copia por column accessor, como en el resto del
-        # repo (`EtiquetarController#proveedor_string_param`). Es dato del
-        # envío, así que las cajas nuevas lo heredan igual que el cliente.
-        proveedor_legacy = attrs.delete("proveedor")
+        # la que reventaba. Es dato del envío, así que las cajas nuevas lo
+        # heredan igual que el cliente.
+        #
+        # C27-29: se renombra la llave al escritor de columna en vez de
+        # asignarla aparte después del `new`. Es la misma puerta que usan hoy
+        # los formularios, y así queda **un solo** lugar en el repo que sabe de
+        # la colisión: `Paquete#proveedor_texto=`.
+        attrs["proveedor_texto"] = attrs.delete("proveedor")
         ((n + 1)..m).each do |i|
           caja = new(attrs.merge("numero_caja" => i, "cantidad_paquetes" => m))
-          caja[:proveedor] = proveedor_legacy
           caja.save!
           hermanas << caja
         end

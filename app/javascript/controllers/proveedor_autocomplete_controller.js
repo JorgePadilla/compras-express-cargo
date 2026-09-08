@@ -50,6 +50,39 @@ export default class extends BusquedaAutocomplete {
     }
   }
 
+  // C27-29 · Teclear encima suelta el proveedor del catálogo.
+  //
+  // El oculto se escribía al elegir y **no se limpiaba nunca**: quien tenía
+  // "Amazon" elegido, borraba y escribía "Driver Juan", mandaba las dos cosas
+  // —`proveedor_id` viejo + texto nuevo— y al volver a pintar la ficha ganaba
+  // el del catálogo. Ese es el *"no lo está cambiando"* de Jorge: el texto sí
+  // viajaba (desde este PR), pero el id lo tapaba.
+  //
+  // Va acá y no en `BusquedaAutocomplete` a propósito: la base la comparten
+  // ocho pantallas y no todas quieren que escribir suelte lo elegido.
+  //
+  // **O sea que el agujero sigue abierto en las otras siete.** Es la tercera
+  // vez que este patrón muerde ([[project_autocomplete_no_limpia_el_oculto]]).
+  // Los que escriben un oculto y NO lo sueltan al teclear son
+  // `tercero-search`, `pre-alerta-search`, `mover-pre-alerta-modal`,
+  // `cliente-autocomplete`, `client-autocomplete`, `cliente-search` y
+  // `asignar-tercero-modal`; cuatro de ellos lo limpian solo con un botón
+  // «×» explícito. Subirlo a la base es un PR aparte, con su repaso de las
+  // ocho pantallas: en un campo obligatorio soltar la selección al teclear
+  // puede dejar el form sin dato en vez de con el dato viejo.
+  buscar() {
+    this._soltarSeleccion()
+    super.buscar()
+  }
+
+  _soltarSeleccion() {
+    if (this.hasProveedorIdTarget) this.proveedorIdTarget.value = ""
+    if (this.hasNombreTarget) {
+      this.nombreTarget.textContent = ""
+      this.nombreTarget.classList.add("hidden")
+    }
+  }
+
   // ── Alias en el idioma viejo, para no tocar markup que ya funciona ──
   search() { this.buscar() }
   onKeydown(e) { this.teclado(e) }
