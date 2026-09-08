@@ -38,6 +38,17 @@
          template es el respaldo de «Reimprimir» y, de paso, la puerta que
          `pantallas_en_el_menu_test` exige para una ruta anidada. %>
      data-medicion-etiqueta-url-template-value="<%= etiqueta_medicion_path(id: "ID", print: true) %>"
+     <%# Las clases de cada estado del dibujito viven acá y no en el JS: Tailwind
+         escanea los `.erb` para saber qué clases compilar, y una clase que solo
+         existe dentro de un string de JavaScript **no se compila**. Son las
+         mismas que tenía la grilla de #445; el color ya estaba decidido. %>
+     data-medicion-clases-value='<%= {
+           medida:       "border-cec-teal bg-cec-teal/10 text-cec-teal-dark",
+           aqui:         "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200",
+           en_camino:    "border-amber-300 bg-amber-50 text-amber-900",
+           esperada:     "border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 opacity-60",
+           seleccionada: "border-cec-gold bg-cec-gold/30 ring-4 ring-cec-gold/60 shadow-lg text-cec-navy dark:text-cec-gold"
+         }.to_json %>'
      <%# C27-04/05 · Los tres resultados no-OK del escaneo van a `error` y no a
          `alert` ni a `notify`: esos dos suben de tono y suenan a «todo bien».
          Una caja que no puede entrar a la mesa tiene que sonar mal. %>
@@ -87,7 +98,30 @@
                 —*medir → notificación → buscar el resto*— sin cuadritos. %>
             <div class="rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 px-4 py-3">
               <p class="text-lg font-semibold text-gray-800 dark:text-gray-100" data-medicion-target="tandaCliente"></p>
-              <p hidden class="mt-1 text-sm font-medium text-amber-800 dark:text-amber-400" data-medicion-target="tandaConsolidado"></p>
+              <%# ── Los dibujitos del envío ──────────────────────────────────
+                  La primera versión de esto era una frase: diez códigos de
+                  dieciocho caracteres con su paréntesis cada uno. Jorge, con un
+                  envío partido en diez: *"¿podemos hacer dibujitos, para que se
+                  mire mejor?"*. Un cuadrito por caja, coloreado por estado, con
+                  las iniciales de quien midió (C27-12) y el anillo dorado en la
+                  que está en la mesa.
+
+                  **No se tocan.** Es un `<li>`, no un botón: la grilla vieja se
+                  fue porque tocar un cuadrito agregaba la caja a la mesa, y eso
+                  es elegir de una lista (C27-02). Esto es un mapa, no un menú. %>
+              <div hidden data-medicion-target="tandaGrupo">
+                <p class="mt-1 text-sm font-medium text-amber-800 dark:text-amber-400" data-medicion-target="tandaConsolidado"></p>
+                <ul class="mt-2 flex flex-wrap gap-1.5" aria-label="Las cajas del envío" data-medicion-target="tandaCajas"></ul>
+                <%# Solo las que no están acá: ésas hay que ir a buscar o
+                    reclamar. Las «acá, sin medir» ya se ven en el dibujo. %>
+                <p hidden class="mt-2 text-sm text-amber-800 dark:text-amber-400" data-medicion-target="tandaAusentes"></p>
+                <template data-medicion-target="plantillaDibujito">
+                  <li class="w-14 min-h-11 px-1 rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 text-center leading-none">
+                    <span class="font-mono text-sm font-bold" data-campo="sufijo"></span>
+                    <span class="text-[10px] font-bold tracking-wider" data-campo="marca"></span>
+                  </li>
+                </template>
+              </div>
             </div>
 
             <%# ── c · la mesa: el volumen que se está armando ───────────────

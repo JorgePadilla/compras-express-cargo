@@ -331,22 +331,33 @@ class MedicionFlujoTest < ApplicationSystemTestCase
   end
 
   # C27-04 · La «Notificación» de la pizarra —*medir → notificación → buscar el
-  # resto*— es una línea, no una grilla: con qué pre-alerta, cuántas van en la
-  # mesa, cuáles faltan y dónde están. Y C27-12, quién midió las que ya están.
-  test "la línea de consolidación dice qué falta y dónde está, y quién midió" do
+  # resto*— son **dibujitos**, no una frase: Jorge, con un envío partido en
+  # diez, *"¿podemos hacer dibujitos, para que se mire mejor?"*. Un cuadrito por
+  # caja, coloreado por estado, con quién midió (C27-12), y **sin nada que
+  # tocar** (C27-02).
+  test "los dibujitos del envío dicen cuáles están, cuáles faltan y quién midió, y no se tocan" do
     pa, otros = grupo_de_tres(@paquete)
     segunda = llego(otros.first)
 
     visit medicion_index_path
     escanear_a_la_mesa(@paquete, 1)
 
-    linea = find("[data-medicion-target='tandaConsolidado']", wait: 5)
+    assert_selector "[data-medicion-target='tandaCajas'] li", count: 3, wait: 5
+    assert_selector "[data-medicion-target='tandaCajas'] li[data-en-mesa]", count: 1, text: "MESA"
+    assert_selector "[data-medicion-target='tandaCajas'] li[data-estado='aqui']", count: 2
+    assert_selector "[data-medicion-target='tandaCajas'] li[data-estado='esperada']", count: 1
+    assert_selector "[data-medicion-target='tandaCajas'] li[title*='#{segunda.numero_recepcion}']", text: segunda.numero_recepcion.last(4)
+    assert_no_selector "[data-medicion-target='tandaCajas'] button", visible: :all
+
+    linea = find("[data-medicion-target='tandaConsolidado']")
     assert_includes linea.text, "Consolidando #{pa.numero_documento}"
-    assert_includes linea.text, "1 de 3 en la mesa"
+    assert_includes linea.text, "en la mesa 1"
     assert_includes linea.text, "faltan 2"
-    assert_includes linea.text, "#{segunda.numero_recepcion} (acá, sin medir)"
-    assert_includes linea.text, "1ZFALTA000000002 (no ha llegado a Miami)"
-    assert_no_selector "[data-medicion-target='grilla'] button"
+    assert_not_includes linea.text, segunda.numero_recepcion, "los códigos van en los dibujitos, no en la frase"
+
+    ausentes = find("[data-medicion-target='tandaAusentes']")
+    assert_includes ausentes.text, "1ZFALTA000000002 (no ha llegado a Miami)"
+    assert_not_includes ausentes.text, segunda.numero_recepcion, "la que está acá se ve en el dibujo, no se lista"
 
     teclear "20", "10", "12", "14"
     espiar_impresion
@@ -354,7 +365,8 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_selector "[data-medicion-target='banner']", wait: 5
 
     escanear_a_la_mesa(segunda, 1)
-    assert_selector "[data-medicion-target='tandaConsolidado']", text: "ya medidas: #{@paquete.numero_recepcion} (MD)"
+    assert_selector "[data-medicion-target='tandaCajas'] li[data-estado='medida']", text: "MD"
+    assert_selector "[data-medicion-target='tandaConsolidado']", text: "medidas 1"
   end
 
   # «Facturar lo que hay» cambia de momento, no de sentido: medir nunca se
@@ -401,7 +413,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     visit medicion_index_path
     escanear_a_la_mesa(@paquete, 1)
     escanear_a_la_mesa(consolidada, 2)
-    assert_selector "[data-medicion-target='tandaConsolidado']", text: "2 de 2 en la mesa"
+    assert_selector "[data-medicion-target='tandaConsolidado']", text: "en la mesa 2"
 
     teclear "20", "10", "12", "14"
     espiar_impresion

@@ -11211,6 +11211,15 @@ dónde está y ofrece la excepción —el mismo modal rojo y el mismo sello de
 > `[hidden]{display:none!important}`— y `botones_escondidos_test` cierra la
 > puerta del lado del ERB.
 
+> ▶ **Más tarde el mismo día: la notificación pasó a dibujitos.** Jorge, con un
+> envío partido en diez, vio la línea de consolidación como lo que era —diez
+> códigos de dieciocho caracteres con su paréntesis— y pidió: *"¿podemos hacer
+> dibujitos, para que se mire mejor?"*. Ahora es una línea corta de conteos y
+> **un cuadrito por caja**, coloreado por estado, con las iniciales de quien
+> midió en las medidas y el anillo dorado en la que está en la mesa; debajo,
+> solo las que **no están acá**. Y **no se tocan** (`C27-02`): es un mapa, no
+> un menú.
+
 ### Notas que no son tarea
 
 - **El rótulo dice PESA, y al bulto le dicen volumen.** Vale la pena que las
