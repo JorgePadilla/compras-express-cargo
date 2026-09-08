@@ -80,6 +80,37 @@ class PaqueteNumeroRecepcionColumnaTest < ActionDispatch::IntegrationTest
     assert_includes columna_recepcion(response.body), "RM0002026000042"
   end
 
+  # C26-18 · El sufijo de caja también acá. Yusef, el 2026-09-07, mirando esta
+  # misma columna después de escanear un envío partido:
+  #
+  #   "Cuando vuelvo a escanear aparece en las cajitas y aparecen todos los
+  #    datos, **pero a la vista no**… lo mejor sería que lo tengas en los dos
+  #    lados."
+  #
+  # Las tres cajas de un split comparten el número madre, así que sin el sufijo
+  # la columna muestra tres filas idénticas y no se sabe cuál es cuál — que es
+  # justo el problema que `etiqueta_codigo_barras` ya resolvió en la etiqueta.
+  test "una caja de un envio partido muestra su sufijo" do
+    @paquete.update_columns(numero_recepcion: "RM0002026000042", cantidad_paquetes: 3, numero_caja: 2)
+
+    get paquetes_url, params: { q: @paquete.tracking }
+    assert_response :success
+
+    assert_includes columna_recepcion(response.body), "RM0002026000042-2",
+                    "la columna muestra el número madre pelado: las 3 cajas se ven iguales"
+  end
+
+  test "un envio de una sola caja no lleva sufijo" do
+    @paquete.update_columns(numero_recepcion: "RM0002026000042", cantidad_paquetes: 1, numero_caja: 1)
+
+    get paquetes_url, params: { q: @paquete.tracking }
+    assert_response :success
+
+    celda = columna_recepcion(response.body)
+    assert_includes celda, "RM0002026000042"
+    assert_not_includes celda, "RM0002026000042-1"
+  end
+
   test "las dos columnas vecinas no muestran el mismo texto" do
     # El síntoma tal como lo vio Yusef: el mismo número dos veces seguidas.
     #
