@@ -148,7 +148,7 @@ class MedicionController < ApplicationController
   # cuántas son antes de imprimir la primera.
   def guardar
     bultos = MedirBulto.new(user: Current.user, saltar_manifiesto: params[:saltar_manifiesto])
-                       .guardar!(params[:mediciones])
+                       .guardar!(mediciones_permitidas)
     cajas = bultos.sum { |b| b.paquetes.size }
 
     render json: { ok: true, cantidad: bultos.size,
@@ -270,6 +270,16 @@ class MedicionController < ApplicationController
   # C27-14 · La pantalla lo manda **por caja**, después de que alguien apretó
   # «Medirlo igual» en el modal rojo. No es un modo que quede prendido.
   def saltar_manifiesto? = params[:saltar_manifiesto].to_s == "true"
+
+  # Lista blanca, aunque `MedirBulto` ya lea campo por campo —`paquete_ids` y
+  # los cuatro de `MedirPaquete::CAMPOS`— y nunca haga un assign masivo. Se
+  # escribe igual para que el filtro se **vea** en la puerta y no dependa de que
+  # el modelo siga leyendo así: es lo que pidió la revisión del PR-445.
+  def mediciones_permitidas
+    Array(params[:mediciones]).map do |medicion|
+      medicion.permit(:peso, :alto, :largo, :ancho, paquete_ids: [])
+    end
+  end
 
   def ya_escaneadas
     return [] if en_tanda.empty?

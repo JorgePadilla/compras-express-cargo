@@ -167,6 +167,19 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
     assert_equal 2, response.body.scan(/class="med"/).size, "dos mediciones, dos etiquetas"
   end
 
+  # Lista blanca en la puerta: lo que venga de más en una medición se cae ahí,
+  # no depende de que el modelo siga leyendo campo por campo.
+  test "lo que no es peso ni medidas ni cajas no entra al bulto" do
+    guardar([ { paquete_ids: [ @primera.id ], peso: "20",
+                medido_por: "XX", sesion: "colada", cliente_id: clientes(:maria).id } ])
+
+    assert_response :success
+    bulto = Bulto.first
+    assert_equal "MD", bulto.medido_por, "el sello es del que está adentro de la sesión"
+    assert_equal clientes(:juan).id, bulto.cliente_id, "el cliente sale de la caja, no del request"
+    assert_not_equal "colada", bulto.sesion
+  end
+
   test "guardar sin números es 422 con el porqué, y no crea nada" do
     guardar([ { paquete_ids: [ @primera.id ], peso: "", alto: "", largo: "", ancho: "" } ])
 
