@@ -424,8 +424,15 @@ end %>
                   llama "N° recepción" y con el tracking pegado a la derecha,
                   miente. Sin recepción va guión — igual que el Excel y el PDF. %>
               <td class="px-3 py-2 whitespace-nowrap" data-campo="numero-recepcion">
+                <%# C26-18 · Con el sufijo de caja, como en la etiqueta y en los
+                    cuadritos de /medicion. Yusef, el 2026-09-07, mirando esta
+                    columna: *"cuando vuelvo a escanear aparece en las cajitas y
+                    aparecen todos los datos, pero a la vista no… lo mejor sería
+                    que lo tengas en los dos lados"*. Es el mismo helper que
+                    imprime el código de barras, así que las dos pantallas no
+                    pueden divergir. %>
                 <% if paquete.numero_recepcion_visible %>
-                  <span class="font-mono text-xs font-semibold text-cec-navy dark:text-cec-gold"><%= paquete.numero_recepcion_visible %></span>
+                  <span class="font-mono text-xs font-semibold text-cec-navy dark:text-cec-gold"><%= etiqueta_codigo_barras(paquete) %></span>
                 <% else %>
                   <span class="font-mono text-xs text-gray-400 dark:text-gray-500" title="Sin número de recepción: el paquete se guardó sin sucursal">—</span>
                 <% end %>

@@ -122,15 +122,34 @@
 
         <div class="mt-5" data-medicion-target="form" data-action="keydown->medicion#formKeydown"
              data-controller="calc-volumetrico">
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <% { peso: "Peso (lb)", alto: "Alto (in)", largo: "Largo (in)", ancho: "Ancho (in)" }.each do |campo, rotulo| %>
-              <div>
-                <%= label_tag "medicion_#{campo}", rotulo, class: "block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1" %>
-                <%= number_field_tag "medicion_#{campo}", nil, step: "0.01", min: 0, inputmode: "decimal",
-                      data: { medicion_target: campo.to_s, calc_volumetrico_target: campo.to_s, action: "input->calc-volumetrico#recalcular" },
-                      class: "block w-full min-h-12 text-xl font-mono text-center rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+          <%# C26-18 · La misma disposición que /etiquetar. Jorge, el 2026-09-08:
+              *"como estaban en etiquetar están bien, lo podés copiar a
+              medición"*. O sea: el peso con su rótulo aparte, y las tres
+              medidas juntas bajo un solo rótulo —que es como se leen y como se
+              teclean—, en el orden de `CajasPesoMedidasComponent::DIMENSIONES`,
+              que es la única lista de dimensiones del repo.
+
+              Los `name` y los targets no cambian: el Stimulus sigue leyendo
+              `peso`, `alto`, `largo` y `ancho` por separado. %>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <%= label_tag "medicion_peso", "Peso real (lbs)", class: "block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1" %>
+              <%= number_field_tag "medicion_peso", nil, step: "0.01", min: 0, inputmode: "decimal",
+                    data: { medicion_target: "peso", calc_volumetrico_target: "peso", action: "input->calc-volumetrico#recalcular" },
+                    class: "block w-full min-h-12 text-xl font-mono text-center rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+            </div>
+            <div>
+              <span class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Medidas (pulgadas)</span>
+              <div class="grid grid-cols-3 gap-2">
+                <% CajasPesoMedidasComponent::DIMENSIONES.each do |dim| %>
+                  <%= number_field_tag "medicion_#{dim}", nil, step: "0.01", min: 0, inputmode: "decimal",
+                        placeholder: dim.to_s, "aria-label": "#{dim.to_s.capitalize} en pulgadas",
+                        data: { medicion_target: dim.to_s, calc_volumetrico_target: dim.to_s, action: "input->calc-volumetrico#recalcular" },
+                        class: "block w-full min-h-12 text-xl font-mono text-center rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+                <% end %>
               </div>
-            <% end %>
+              <p class="mt-1 text-[11px] text-gray-400">alto × largo × ancho</p>
+            </div>
           </div>
           <div class="mt-3 grid grid-cols-3 gap-3 text-center text-sm text-gray-600 dark:text-gray-300">
             <div><span class="block text-xs uppercase tracking-wide">VLBS</span><span class="text-lg font-mono font-bold" data-calc-volumetrico-target="vlbs">—</span></div>

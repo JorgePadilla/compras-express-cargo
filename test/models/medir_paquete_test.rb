@@ -42,13 +42,53 @@ class MedirPaqueteTest < ActiveSupport::TestCase
     assert_equal 13.0, @paquete.peso.to_f
   end
 
-  test "un cero o un vacío no es una medida" do
-    assert_raises(MedirPaquete::NoSePuede) do
-      MedirPaquete.new(@paquete, user: @user).medir!(peso: "0", alto: "10", largo: "12", ancho: "14")
-    end
-    assert_raises(MedirPaquete::NoSePuede) do
+  # C26-18 · Yusef, el 2026-09-07: *"a veces no se mide, cuando es una cajita
+  # bien pequeñita. Pero siempre una de estas cuatro se mete —que sería peso en
+  # ese caso—, o estas tres, o esta, o todo, para que el sistema diga cuál es el
+  # mayor"*. Antes esto reventaba y la caja chiquita no se podía medir.
+  test "una cajita a la que solo se le pone el peso sí se mide" do
+    MedirPaquete.new(@paquete, user: @user).medir!(peso: "2.5", alto: "", largo: "", ancho: "")
+
+    @paquete.reload
+    assert_equal 2.5, @paquete.peso.to_f
+    assert_equal "SP", @paquete.medido_por
+    assert_not_nil @paquete.medido_at
+  end
+
+  # El cero es «no lo puse», no «pesa cero»: la báscula chiquita no llega.
+  test "solo las tres medidas, sin peso, también es una medida" do
+    MedirPaquete.new(@paquete, user: @user).medir!(peso: "0", alto: "10", largo: "12", ancho: "14")
+
+    @paquete.reload
+    assert_equal [ 10.0, 12.0, 14.0 ], [ @paquete.alto, @paquete.largo, @paquete.ancho ].map(&:to_f)
+    assert_not_nil @paquete.medido_at
+  end
+
+  # Lo que Miami digitó no se pisa con nada: un campo en blanco no es un dato.
+  test "lo que se deja en blanco se queda con lo que traía de Miami" do
+    @paquete.update!(peso: 3, alto: 5, largo: 6, ancho: 7)
+
+    MedirPaquete.new(@paquete, user: @user).medir!(peso: "9", alto: "", largo: "", ancho: "")
+
+    @paquete.reload
+    assert_equal 9.0, @paquete.peso.to_f
+    assert_equal [ 5.0, 6.0, 7.0 ], [ @paquete.alto, @paquete.largo, @paquete.ancho ].map(&:to_f),
+                 "las medidas de Miami siguen ahí"
+  end
+
+  test "dos de tres medidas no es una medida: sin volumétrico no hay nada que comparar" do
+    e = assert_raises(MedirPaquete::NoSePuede) do
       MedirPaquete.new(@paquete, user: @user).medir!(peso: "12", alto: "", largo: "12", ancho: "14")
     end
+    assert_match(/las tres/, e.message)
+    assert_nil @paquete.reload.medido_at
+  end
+
+  test "los cuatro en blanco no es una medida" do
+    e = assert_raises(MedirPaquete::NoSePuede) do
+      MedirPaquete.new(@paquete, user: @user).medir!(peso: "", alto: "", largo: "", ancho: "")
+    end
+    assert_match(/al menos el peso/, e.message)
     assert_nil @paquete.reload.medido_at
   end
 

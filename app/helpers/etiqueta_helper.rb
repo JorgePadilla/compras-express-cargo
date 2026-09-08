@@ -346,6 +346,30 @@ module EtiquetaHelper
   def etiqueta_qr_medicion(paquete)
     codigo = etiqueta_codigo_barras(paquete).presence || paquete.tracking
     medidas = [ paquete.alto, paquete.largo, paquete.ancho ].map { |m| etiqueta_num(m) }.join("x")
-    "MED #{codigo} #{etiqueta_num_2d(paquete.peso)} #{medidas}"
+    [ "MED", codigo, etiqueta_num_2d(paquete.peso), medidas, etiqueta_cuantas_cajas(paquete) ].compact.join(" ")
+  end
+
+  # C26-18 · Cuántas cajas son, para que la siguiente estación sepa cuántas
+  # tiene que escanear. Yusef, el 2026-09-07:
+  #
+  #   "Al escanear, este solo es único; **o si son dos, entonces el QR le va a
+  #    decir que es uno de dos, entonces tiene que escanear dos para que le
+  #    cuadre**."
+  #
+  # `2de3` y no `2/3` ni `2|3`: la barra es la razón por la que el resto del QR
+  # va con espacios —una pistola por teclado en distribución es-419 puede no
+  # entregarla—. Una caja sola no lleva nada: el QR se queda como estaba.
+  #
+  # **Y no contradice `etiqueta_numero_de_caja`**, donde Yusef cortó el "1/2" a
+  # propósito. Ahí era la etiqueta de **Miami**, que se imprime mientras todavía
+  # se está empacando: *"no estamos seguros cuántas estamos empacando… cuando
+  # menos acordás me salieron cuatro en vez de cinco"*. Ésta se imprime en San
+  # Pedro, con la carga entera en la mesa: acá el total sí se sabe, y es el dato
+  # que la siguiente estación necesita.
+  def etiqueta_cuantas_cajas(paquete)
+    total = paquete.cantidad_paquetes.to_i
+    return nil unless total > 1
+
+    "#{paquete.numero_caja || 1}de#{total}"
   end
 end

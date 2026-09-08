@@ -188,6 +188,12 @@ class EtiquetarController < ApplicationController
         # fue; no se le pega a la que sobrevivió.
         cambios = paquete_params.except(:cantidad_paquetes)
         #
+        # Y un peso o una medida **en blanco** no borran los que ya estaban.
+        # 2026-09-07: el operario agrega una caja, `cajas-repetidor` le vacía
+        # los campos de captura para la siguiente, guarda, y el envío quedaba
+        # sin peso sin que nadie lo tocara. Ver `MedidasPorCaja`.
+        cambios = sin_medidas_en_blanco(cambios)
+        #
         # C20-12: y si el modal pesó cada caja, el peso pre-llenado del formulario
         # tampoco — pisaría el nuevo de la caja 1. Solo cuando de verdad se
         # aplicaron: una corrección de peso normal, sin tocar la cantidad, entra.
@@ -345,7 +351,11 @@ end
 
     if esperado
       @paquete = esperado
-      @paquete.assign_attributes(paquete_params.merge(medidas))
+      # Mismo cuidado que en `update`: el esperado ya es un registro guardado, y
+      # un campo de captura vacío —el que `cajas-repetidor` limpió al agregar la
+      # caja— no puede llevarse por delante lo que ya tenía. `medidas` ya viene
+      # sin blancos; lo que faltaba era lo de afuera.
+      @paquete.assign_attributes(sin_medidas_en_blanco(paquete_params).merge(medidas))
       @paquete.tracking = tracking
       @paquete.tracking_secundario = secundario if secundario && @paquete.tracking_secundario.blank?
     else

@@ -273,6 +273,49 @@ ALTER SEQUENCE public.autorizaciones_id_seq OWNED BY public.autorizaciones.id;
 
 
 --
+-- Name: bultos; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.bultos (
+    id bigint NOT NULL,
+    cliente_id bigint NOT NULL,
+    user_id bigint,
+    peso numeric(10,2),
+    alto numeric(10,2),
+    largo numeric(10,2),
+    ancho numeric(10,2),
+    peso_volumetrico numeric(10,2),
+    peso_cobrar numeric(10,2),
+    sesion character varying NOT NULL,
+    orden integer DEFAULT 1 NOT NULL,
+    de_cuantos integer DEFAULT 1 NOT NULL,
+    medido_at timestamp(6) without time zone NOT NULL,
+    medido_por character varying,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: bultos_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.bultos_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: bultos_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.bultos_id_seq OWNED BY public.bultos.id;
+
+
+--
 -- Name: caja_manifiestos; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1847,7 +1890,8 @@ CREATE TABLE public.paquetes (
     medicion_descartada_at timestamp(6) without time zone,
     medicion_descartada_por character varying,
     medicion_descartada_motivo character varying,
-    medicion_descartada_nota text
+    medicion_descartada_nota text,
+    bulto_id bigint
 );
 
 
@@ -3372,6 +3416,13 @@ ALTER TABLE ONLY public.autorizaciones ALTER COLUMN id SET DEFAULT nextval('publ
 
 
 --
+-- Name: bultos id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.bultos ALTER COLUMN id SET DEFAULT nextval('public.bultos_id_seq'::regclass);
+
+
+--
 -- Name: caja_manifiestos id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -3964,6 +4015,14 @@ ALTER TABLE ONLY public.ar_internal_metadata
 
 ALTER TABLE ONLY public.autorizaciones
     ADD CONSTRAINT autorizaciones_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: bultos bultos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.bultos
+    ADD CONSTRAINT bultos_pkey PRIMARY KEY (id);
 
 
 --
@@ -4801,6 +4860,34 @@ CREATE INDEX index_autorizaciones_on_solicitado_por_id ON public.autorizaciones 
 
 
 --
+-- Name: index_bultos_on_cliente_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_bultos_on_cliente_id ON public.bultos USING btree (cliente_id);
+
+
+--
+-- Name: index_bultos_on_sesion; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_bultos_on_sesion ON public.bultos USING btree (sesion);
+
+
+--
+-- Name: index_bultos_on_sesion_and_orden; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_bultos_on_sesion_and_orden ON public.bultos USING btree (sesion, orden);
+
+
+--
+-- Name: index_bultos_on_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_bultos_on_user_id ON public.bultos USING btree (user_id);
+
+
+--
 -- Name: index_caja_manifiestos_on_codigo; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5498,6 +5585,13 @@ CREATE INDEX index_paquete_motivos_retencion_on_motivo_retencion_id ON public.pa
 --
 
 CREATE INDEX index_paquete_motivos_retencion_on_paquete_id ON public.paquete_motivos_retencion USING btree (paquete_id);
+
+
+--
+-- Name: index_paquetes_on_bulto_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_paquetes_on_bulto_id ON public.paquetes USING btree (bulto_id);
 
 
 --
@@ -7032,6 +7126,14 @@ ALTER TABLE ONLY public.paquetes
 
 
 --
+-- Name: bultos fk_rails_7d15388a09; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.bultos
+    ADD CONSTRAINT fk_rails_7d15388a09 FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
 -- Name: entregas fk_rails_7ee1ee7e61; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7133,6 +7235,14 @@ ALTER TABLE ONLY public.egresos_caja
 
 ALTER TABLE ONLY public.paquetes
     ADD CONSTRAINT fk_rails_8bb0460b57 FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: paquetes fk_rails_8c0abe04de; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.paquetes
+    ADD CONSTRAINT fk_rails_8c0abe04de FOREIGN KEY (bulto_id) REFERENCES public.bultos(id);
 
 
 --
@@ -7512,6 +7622,14 @@ ALTER TABLE ONLY public.ventas
 
 
 --
+-- Name: bultos fk_rails_d8fab8c7ad; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.bultos
+    ADD CONSTRAINT fk_rails_d8fab8c7ad FOREIGN KEY (cliente_id) REFERENCES public.clientes(id);
+
+
+--
 -- Name: pre_alerta_paquetes fk_rails_d98af13fbd; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7686,6 +7804,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260908120000'),
 ('20260906180000'),
 ('20260906160000'),
 ('20260906150100'),
