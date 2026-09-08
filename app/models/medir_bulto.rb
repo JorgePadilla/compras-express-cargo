@@ -34,15 +34,18 @@ class MedirBulto
 
     cajas_por_medicion = lista.map { |m| cajas_de(m) }
     numeros_por_medicion = lista.map { |m| numeros_de(m) }
-    validar!(cajas_por_medicion)
+    reemplazos = lista.map { |m| reemplazo_de(m) }
+    validar!(cajas_por_medicion, reemplazos)
 
     sesion = SecureRandom.uuid
     ahora = Time.current
 
     Bulto.transaction do
       cajas_por_medicion.each_with_index.map do |cajas, i|
-        crear!(cajas, numeros_por_medicion[i], sesion: sesion, orden: i + 1,
-               de_cuantos: lista.size, ahora: ahora)
+        nuevo = crear!(cajas, numeros_por_medicion[i], sesion: sesion, orden: i + 1,
+                       de_cuantos: lista.size, ahora: ahora)
+        reemplazar!(reemplazos[i], cajas) if reemplazos[i]
+        nuevo
       end
     end
   end
@@ -64,6 +67,26 @@ class MedirBulto
     bulto.paquetes.reset
     bulto.save!
     bulto
+  end
+
+  # C27-33 · Medir de nuevo: el bulto viejo se va y el nuevo ocupa su lugar.
+  # Sus cajas ya apuntan al nuevo (`crear!`); las que el operario **sacó de la
+  # mesa** vuelven a estar sin medir —y a la lista de pendientes—, porque el
+  # único número que tenían era el del bulto que acaba de morir. `has_paper_trail`
+  # en `Bulto` guarda los números viejos con quién los puso.
+  def reemplazar!(viejo, cajas_nuevas)
+    ids = cajas_nuevas.map(&:id)
+    viejo.paquetes.where.not(id: ids).find_each do |caja|
+      caja.update!(bulto: nil, medido_at: nil, medido_por: nil)
+    end
+    viejo.destroy!
+  end
+
+  def reemplazo_de(medicion)
+    id = (medicion[:reemplaza_bulto_id] || medicion["reemplaza_bulto_id"]).to_i
+    return nil if id.zero?
+
+    Bulto.find_by(id: id) or raise NoSePuede, "El bulto que se quería corregir ya no existe. Escaneá la caja otra vez."
   end
 
   def cajas_de(medicion)
@@ -95,12 +118,14 @@ class MedirBulto
   # Las guardas de siempre, caja por caja, **antes** de escribir nada; más
   # «NO Mezclar» sobre toda la sesión, no solo dentro de cada medición: dos
   # bultos de la misma mesa son del mismo cliente y del mismo servicio.
-  def validar!(cajas_por_medicion)
+  def validar!(cajas_por_medicion, reemplazos = [])
     todas = cajas_por_medicion.flatten
     repetida = todas.group_by(&:id).find { |_id, v| v.size > 1 }
     raise NoSePuede, repetida_msg(repetida.last.first) if repetida
 
-    todas.each { |caja| validar_caja!(caja) }
+    cajas_por_medicion.each_with_index do |cajas, i|
+      cajas.each { |caja| validar_caja!(caja, reemplaza: reemplazos[i]) }
+    end
 
     todas.each_with_index do |caja, i|
       next if i.zero?
@@ -110,9 +135,15 @@ class MedirBulto
     end
   end
 
-  def validar_caja!(caja)
+  def validar_caja!(caja, reemplaza: nil)
     if caja.pre_factura_id.present? || caja.venta_id.present?
       raise NoSePuede, "#{codigo(caja)} ya está en una pre-factura: el peso se congeló ahí."
+    end
+    # Una caja que ya tiene bulto solo entra si esta medición viene a
+    # reemplazar **ese** bulto: si no, es un pip sobre una caja ya medida y la
+    # pantalla tiene que haber preguntado antes.
+    if caja.bulto_id.present? && caja.bulto_id != reemplaza&.id
+      raise NoSePuede, "#{codigo(caja)} ya está medida. Para corregirla, escaneala y elegí «Medir de nuevo»."
     end
     return if caja.estado.in?(Paquete::ESTADOS_FACTURABLES)
     # C27-14 · La caja **está en la mesa, en la mano del operario**: el estado
