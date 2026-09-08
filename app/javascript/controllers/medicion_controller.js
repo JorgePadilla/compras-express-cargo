@@ -38,7 +38,7 @@ import { conEnterAvanza } from "controllers/enter_avanza"
 export default class extends conEnterAvanza(Controller) {
   static targets = [
     "codigo", "aviso",
-    "trabajo", "barra", "tandaCliente", "tandaConsolidado",
+    "trabajo", "barra", "tandaCliente", "tandaGrupo", "tandaConsolidado", "tandaCajas", "tandaAusentes", "plantillaDibujito",
     "mesa", "plantillaMesa", "mesaTitulo", "quitarUltima",
     "volumenesContador", "volumenesVacio", "listaVolumenes", "plantillaVolumen", "agregarVolumen",
     "form", "peso", "alto", "largo", "ancho", "guardar", "guardarTexto",
@@ -55,7 +55,7 @@ export default class extends conEnterAvanza(Controller) {
   ]
   static values = {
     escanearUrl: String, guardarUrl: String, panelUrl: String,
-    etiquetaUrlTemplate: String, maximo: Number
+    etiquetaUrlTemplate: String, clases: Object, maximo: Number
   }
 
   connect() {
@@ -350,26 +350,61 @@ export default class extends conEnterAvanza(Controller) {
 
     const g = this._grupo
     const hay = !!(g && g.total > 1)
-    this.tandaConsolidadoTarget.hidden = !hay
+    this.tandaGrupoTarget.hidden = !hay
     if (!hay) return
 
     const enTanda = new Set(this._idsDeLaTanda())
-    const enMesa = g.cajas.filter((c) => c.id && enTanda.has(c.id)).length
-    const medidas = g.cajas.filter((c) => c.estado === "medida")
-    const faltan = g.cajas.filter((c) => c.estado !== "medida" && !(c.id && enTanda.has(c.id)))
+    const enMesa = (c) => !!(c.id && enTanda.has(c.id))
+    const cajasEnMesa = g.cajas.filter(enMesa).length
+    const medidas = g.cajas.filter((c) => c.estado === "medida").length
+    const faltan = g.cajas.filter((c) => c.estado !== "medida" && !enMesa(c))
 
-    const partes = [g.consolidada ? `Consolidando ${g.numero}` : `Envío de ${g.total} cajas`,
-                    `${enMesa} de ${g.total} en la mesa`]
-    if (medidas.length > 0) {
-      partes.push(`ya medidas: ${medidas.map((c) => [c.wr || c.tracking, c.por && `(${c.por})`].filter(Boolean).join(" ")).join(", ")}`)
-    }
-    if (faltan.length > 0) {
-      partes.push(`faltan ${faltan.length}: ${faltan.map((c) => `${c.wr || c.tracking} (${c.donde})`).join(", ")}`)
-    }
+    // La línea corta: los conteos y nada más. Los códigos van en los dibujitos.
+    const partes = [g.consolidada ? `Consolidando ${g.numero} · ${g.total} cajas` : `Envío de ${g.total} cajas`,
+                    `en la mesa ${cajasEnMesa}`, `medidas ${medidas}`, `faltan ${faltan.length}`]
     if (g.parcial_autorizado) {
       partes.push(`se facturó incompleto el ${g.parcial_autorizado.fecha} por ${g.parcial_autorizado.por}`)
     }
     this.tandaConsolidadoTarget.textContent = partes.join(" · ")
+
+    this.tandaCajasTarget.replaceChildren(...g.cajas.map((c) => this._dibujito(c, enMesa(c))))
+
+    // Las que no están acá son las que hay que ir a buscar o reclamar; las
+    // «acá, sin medir» ya se ven en el dibujo y no se listan.
+    const ausentes = faltan.filter((c) => c.estado === "en_camino" || c.estado === "esperada")
+    this.tandaAusentesTarget.hidden = ausentes.length === 0
+    this.tandaAusentesTarget.textContent = ausentes.length === 0 ? "" :
+      `No están acá: ${ausentes.map((c) => `${c.wr || c.tracking} (${c.donde})`).join(", ")}`
+  }
+
+  // Un dibujito por caja. Solo el sufijo: el número madre ya está en la mesa y
+  // en el cliente, y repetirlo diez veces es lo que hacía ilegible la frase.
+  _dibujito(c, enMesa) {
+    const nodo = this.plantillaDibujitoTarget.content.firstElementChild.cloneNode(true)
+    const clases = this.clasesValue
+    nodo.dataset.estado = c.estado
+    if (enMesa) nodo.dataset.enMesa = "1"
+    // La de la mesa **reemplaza** las clases del estado en vez de sumarse: dos
+    // `bg-` en el mismo elemento las resuelve el orden del CSS, no el del
+    // atributo (la lección de #438).
+    nodo.className += ` ${enMesa ? clases.seleccionada : (clases[c.estado] || "")}`
+    const codigo = c.wr || c.tracking || ""
+    const donde = enMesa ? "en la mesa" : c.donde
+    nodo.querySelector("[data-campo=sufijo]").textContent = this._sufijo(c)
+    // C27-12 · En la medida, quién la midió.
+    nodo.querySelector("[data-campo=marca]").textContent =
+      enMesa ? "MESA" : (c.estado === "medida" ? (c.por || "OK") : "")
+    nodo.title = `${codigo} · ${donde}`
+    nodo.setAttribute("aria-label", `${codigo}: ${donde}`)
+    return nodo
+  }
+
+  _sufijo(c) {
+    if (c.wr) {
+      const caja = c.wr.match(/-(\d+)$/)
+      return caja ? `-${caja[1]}` : c.wr.slice(-4)
+    }
+    return (c.tracking || "").slice(-4)
   }
 
   // ── La mesa y los volúmenes ─────────────────────────────────────────────
