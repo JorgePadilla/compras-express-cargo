@@ -76,6 +76,8 @@ class PantallasEnElMenuTest < ActiveSupport::TestCase
     "entregables_entregas"                => "lo pide el JS de /entregas para llenar la lista, no es una pantalla",
     "facturables_pre_facturas"            => "lo pide el JS de /pre_facturas, no es una pantalla",
     "etiquetas_grupo_medicion"            => "C26-04: las stickers de un grupo. La URL la arma el controller y la manda en el JSON del escaneo — la pantalla no sabe qué grupo es hasta que alguien escanea una caja",
+    "etiquetas_sesion_medicion"           => "C27-06: las etiquetas de una tanda de mediciones, por la misma razón que la de arriba — la sesión no existe hasta que se guarda, y la URL viene en el JSON de `medicion#guardar`",
+    "etiqueta_bulto_medicion"             => "C27-09: reimprimir **una** medición. Yusef: *«tendría que volver a escanear el warehouse»* — la puerta es el escaneo, y la URL la manda el controller en el JSON",
     "edit_paquete"                        => "el paquete se edita **dentro** de su ficha; el listado enlaza a `paquete_path` con el título «Abrir paquete (Editar dentro)»",
     # Las dos de abajo son deuda encontrada por este lint, no decisiones. Se
     # anotan para que se vean; sacarlas de acá es enlazarlas o borrar la ruta.

@@ -1891,7 +1891,10 @@ CREATE TABLE public.paquetes (
     medicion_descartada_por character varying,
     medicion_descartada_motivo character varying,
     medicion_descartada_nota text,
-    bulto_id bigint
+    bulto_id bigint,
+    salto_manifiesto_at timestamp(6) without time zone,
+    salto_manifiesto_por character varying,
+    salto_manifiesto_estado character varying
 );
 
 
@@ -7804,6 +7807,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260908140000'),
 ('20260908120000'),
 ('20260906180000'),
 ('20260906160000'),

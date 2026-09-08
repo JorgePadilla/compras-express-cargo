@@ -11,8 +11,18 @@
 class MedirBulto
   class NoSePuede < StandardError; end
 
-  def initialize(user:)
+  # C27-14 · `saltar_manifiesto` son las cajas que el operario autorizó a medir
+  # aunque **no hayan pasado por el manifiesto**. Yusef, mirando el bloqueo en
+  # vivo: *"este tiene un bloqueo ahorita que me tiene loco: si no ha pasado el
+  # proceso desde Miami para acá, no lo puede hacer… **hay que poner una opción
+  # ahí**"*. Y el porqué: *"debe dejar que sí se lo salten, porque a veces se
+  # capean, algunos se los van a capear"*.
+  #
+  # La lista viene de la pantalla, caja por caja: no es un modo, es una
+  # excepción con nombre, y cada una queda sellada en su paquete.
+  def initialize(user:, saltar_manifiesto: [])
     @user = user
+    @saltar = Array(saltar_manifiesto).map(&:to_i).to_set
   end
 
   # `mediciones` es una lista de `{ paquete_ids: [...], peso:, alto:, largo:,
@@ -46,7 +56,8 @@ class MedirBulto
     # A la caja **solo** el vínculo y el sello. Sus `peso, alto, largo, ancho`
     # son el dato de Miami y no se pisan: el que cobra es el bulto.
     cajas.each do |caja|
-      caja.update!(bulto: bulto, medido_at: ahora, medido_por: @user&.iniciales_display)
+      caja.update!(bulto: bulto, medido_at: ahora, medido_por: @user&.iniciales_display,
+                   **sello_de_salto(caja, ahora))
     end
     # El `peso_cobrar` se calcula con las cajas ya atadas: el trato de cobro del
     # cliente se lee de ellas.
@@ -104,9 +115,30 @@ class MedirBulto
       raise NoSePuede, "#{codigo(caja)} ya está en una pre-factura: el peso se congeló ahí."
     end
     return if caja.estado.in?(Paquete::ESTADOS_FACTURABLES)
+    # C27-14 · La caja **está en la mesa, en la mano del operario**: el estado
+    # dice que no pasó por el manifiesto, y eso se avisa, pero no bloquea si
+    # alguien puso su nombre. *"Pero si ya está en Honduras. ¿Cómo llegó a
+    # Honduras si no…? Debe dejar que sí se lo salten."*
+    return if salto?(caja)
 
     raise NoSePuede, "#{codigo(caja)} está «#{caja.estado.to_s.humanize}»: todavía no se recibió. " \
                      "Pasala por Recibir Carga."
+  end
+
+  # Ésta se está midiendo saltándose el manifiesto: la autorizaron y su estado
+  # no da. Si el estado sí da, no hay nada que sellar aunque venga en la lista.
+  def salto?(caja)
+    @saltar.include?(caja.id) && !caja.estado.in?(Paquete::ESTADOS_FACTURABLES)
+  end
+
+  # Lo que se guarda de la excepción: quién, cuándo, y **en qué estado estaba**
+  # —que es el dato que después se audita—. El estado del paquete no se toca:
+  # cambiarlo a «en_aduana» sería inventar un paso de aduana que no ocurrió.
+  def sello_de_salto(caja, ahora)
+    return {} unless salto?(caja)
+
+    { salto_manifiesto_at: ahora, salto_manifiesto_por: @user&.iniciales_display,
+      salto_manifiesto_estado: caja.estado }
   end
 
   def demasiadas_msg

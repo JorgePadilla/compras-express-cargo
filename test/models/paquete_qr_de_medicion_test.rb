@@ -52,4 +52,41 @@ class PaqueteQrDeMedicionTest < ActiveSupport::TestCase
     assert_includes Paquete.buscar(qr).to_a, @paquete
     assert_equal [ @paquete ], Paquete.buscar_escaneado("MED 1ZQRMED000000001 12.50 10x12x14").to_a, "también por tracking"
   end
+
+  # ── C27-06/C27-08 · El QR del bulto ──────────────────────────────────────
+  #
+  # Yusef: *"cuando ella escanea cualquiera de los QR le dice: ¡eh!, son dos —ya
+  # le va a decir que **tiene dos mediciones**—, porque si no escanea la segunda
+  # medición no se le agrega. **Esa es una manera de auditar las mediciones.**"*
+
+  test "con bulto, el QR lleva los números del bulto y no los de la caja" do
+    bulto = medicion(orden: 1, de_cuantos: 1)
+
+    assert_equal "MED RMI0002026000777 20.00 20x30x40", etiqueta_qr_medicion(bulto)
+  end
+
+  test "y el «n de m» cuenta MEDICIONES, no cajas del split" do
+    @paquete.update!(numero_caja: 2, cantidad_paquetes: 3)
+    bulto = medicion(orden: 1, de_cuantos: 2)
+
+    assert_equal "MED RMI0002026000777-2 20.00 20x30x40 1de2", etiqueta_qr_medicion(bulto),
+                 "el «2de3» de las cajas no manda: la etiqueta es de la medición"
+  end
+
+  test "el QR del bulto también resuelve por el código" do
+    qr = etiqueta_qr_medicion(medicion(orden: 2, de_cuantos: 2))
+
+    assert_equal "RMI0002026000777", Paquete.limpiar_codigo_escaneado(qr)
+    assert_equal [ @paquete ], Paquete.por_codigo_de_etiqueta(qr).to_a
+  end
+
+  private
+
+  def medicion(orden:, de_cuantos:)
+    bulto = Bulto.create!(cliente: clientes(:juan), sesion: SecureRandom.uuid, orden: orden,
+                          de_cuantos: de_cuantos, medido_at: Time.current, medido_por: "MD",
+                          peso: 20, alto: 20, largo: 30, ancho: 40)
+    @paquete.update!(bulto: bulto)
+    bulto.reload
+  end
 end

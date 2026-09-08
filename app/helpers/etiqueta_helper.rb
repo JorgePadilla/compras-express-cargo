@@ -343,10 +343,31 @@ module EtiquetaHelper
   # no entregar la barra. El sistema resuelve por el código
   # (`Paquete.limpiar_codigo_escaneado`) y lee peso y medidas de la base; los
   # datos del QR son redundancia legible.
-  def etiqueta_qr_medicion(paquete)
-    codigo = etiqueta_codigo_barras(paquete).presence || paquete.tracking
-    medidas = [ paquete.alto, paquete.largo, paquete.ancho ].map { |m| etiqueta_num(m) }.join("x")
-    [ "MED", codigo, etiqueta_num_2d(paquete.peso), medidas, etiqueta_cuantas_cajas(paquete) ].compact.join(" ")
+  #
+  # C27-08 · Recibe una caja **o un bulto**. Con bulto los números son los del
+  # bulto —el que cobra es el bulto, no la caja, que se quedó con el dato de
+  # Miami— y el «n de m» cuenta **mediciones**, no cajas de un split. Yusef:
+  #
+  #   "Cuando ella escanea cualquiera de los QR le dice: ¡eh!, son dos —ya le va
+  #    a decir que **tiene dos mediciones**—, porque si no escanea la segunda
+  #    medición no se le agrega. **Esa es una manera de auditar las mediciones.**"
+  def etiqueta_qr_medicion(objeto)
+    bulto = objeto if objeto.is_a?(Bulto)
+    paquete = bulto ? bulto.paquetes.first : objeto
+    numeros = bulto || paquete
+    codigo = etiqueta_codigo_barras(paquete).presence || paquete&.tracking
+    medidas = [ numeros.alto, numeros.largo, numeros.ancho ].map { |m| etiqueta_num(m) }.join("x")
+    cuantas = bulto ? etiqueta_cuantas_mediciones(bulto) : etiqueta_cuantas_cajas(paquete)
+    [ "MED", codigo, etiqueta_num_2d(numeros.peso), medidas, cuantas ].compact.join(" ")
+  end
+
+  # C27-08 · Cuántas **mediciones** salieron de esta mesa, para que pre-factura
+  # sepa cuántas etiquetas tiene que escanear. Una medición sola no lleva nada,
+  # igual que una caja sola: el QR se queda como estaba.
+  def etiqueta_cuantas_mediciones(bulto)
+    return nil if bulto.unico?
+
+    "#{bulto.orden}de#{bulto.de_cuantos}"
   end
 
   # C26-18 · Cuántas cajas son, para que la siguiente estación sepa cuántas

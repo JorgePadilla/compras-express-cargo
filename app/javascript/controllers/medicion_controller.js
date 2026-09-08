@@ -1,12 +1,29 @@
 import { Controller } from "@hotwired/stimulus"
 import { conEnterAvanza } from "controllers/enter_avanza"
 
-// C26-02 · La estación de Medición (San Pedro).
+// C26-02/19 · La estación de Medición (San Pedro).
 //
 // Se escanea el warehouse receipt de la etiqueta de Miami y la pantalla
 // contesta con **el grupo**, no con una caja: lo que declaró el cliente, cómo
 // lo ingresó Miami, y la grilla de cuadritos con lo que está y lo que falta.
-// Se mide cada una, y al completar el grupo salen todas las stickers juntas.
+//
+// C27-01 · Y desde el bulto, la unidad de la pantalla ya no es la caja: es
+// **la medición**. Yusef, el 2026-09-07, tres veces en la misma reunión:
+//
+//   "No es una etiqueta por paquete, es una etiqueta por medición, y la
+//    medición puede tener 100 paquetes."
+//
+// El operario junta cajas en la mesa hasta que le cuadran y mide el bulto
+// entero, porque *"si yo mido esto [caja por caja], te estoy cobrando espacio
+// vacío"*. La mesa se arma **escaneando**, nunca eligiendo de una lista:
+//
+//   — "¿Cómo los unís? ¿En pantalla, cómo te imaginás?"
+//   — "No, no, porque se van a equivocar. Eso es un error ya. No van a leer."
+//   — "¿Entonces cómo los unís?"
+//   — "Escaneando. Escaneando cada uno."
+//
+// Por eso el foco se queda en el campo de escaneo después de un pip bueno, y
+// no salta al peso como antes: el gesto normal es pip, pip, pip.
 //
 // Mismo esqueleto que /empacar: la pistola dispara Enter, cada resultado suena
 // distinto, y el guard `_seq` evita que una respuesta vieja pinte por una caja
@@ -21,23 +38,43 @@ export default class extends conEnterAvanza(Controller) {
     "panelMiami", "miamiWr", "miamiDetalle", "miamiDescripcion", "miamiRetenido",
     "grupo", "grupoTitulo", "grupoSello", "grilla", "plantillaCuadrito", "facturarParcial",
     "panel", "codigoCaja", "tracking", "caja", "cliente", "tipoEnvio", "descripcion", "previa",
+    "mesa", "plantillaMesa", "mesaTitulo", "mesaCliente", "quitarUltima",
+    "acciones", "volumenesContador", "volumenesVacio", "listaVolumenes", "plantillaVolumen",
+    "quitarVolumen", "agregarVolumen",
     "form", "peso", "alto", "largo", "ancho", "guardar", "guardarTexto", "reimprimir", "reimprimirTexto",
     "banner", "bannerTexto", "bannerReimprimir", "bannerReimprimirTexto",
     "manifiestoNumero", "manifiestoFechas", "manifiestoConteo", "pendientes", "sinPendientes",
     "plantillaPendiente", "descarteModal", "descarteCaja", "descarteMotivo", "descarteNota",
     "descarteError", "confirmarDescarte",
     "problemaModal", "problemaTitulo", "problemaTexto", "problemaEntendido", "medirDeNuevo",
+    "reimprimirBulto", "medirIgual",
+    "mezclaModal", "mezclaTitulo", "mezclaTexto", "mezclaQuitar",
+    "consolidadoModal", "consolidadoTitulo", "consolidadoTexto", "consolidadoPreAlerta",
+    "consolidadoPreFactura", "hacerConsolidado",
     "excepcionModal", "excepcionFaltantes", "excepcionError", "confirmarParcial"
   ]
-  static values = { escanearUrl: String, panelUrl: String, etiquetaUrlTemplate: String, clases: Object }
+  static values = {
+    escanearUrl: String, guardarUrl: String, panelUrl: String,
+    etiquetaUrlTemplate: String, clases: Object, maximo: Number
+  }
 
   connect() {
     this._seq = 0
     this._paquete = null
     this._grupo = null
-    // F10 guarda, F9 reimprime, F2 limpia — escuchando en `document`, porque el
-    // atajo global ignora las F-keys cuando el foco está en un input, y acá
-    // siempre está.
+    // La mesa: las cajas del volumen que se está armando, en el orden en que
+    // entraron. Los volúmenes: las mediciones ya agregadas de esta tanda.
+    // Nada de esto vive en el servidor hasta F10 — `MedirBulto` recibe la
+    // tanda entera de un saque, porque el «1 de 2» del QR necesita saber
+    // cuántas mediciones son antes de imprimir la primera.
+    this._mesa = []
+    this._volumenes = []
+    // C27-14 · Las cajas que alguien autorizó a medir sin manifiesto. Se
+    // mandan al guardar y el servidor las sella una por una.
+    this._saltados = []
+    // F10 guarda, F9 reimprime, F5 agrega volumen, F2 limpia — escuchando en
+    // `document`, porque el atajo global ignora las F-keys cuando el foco está
+    // en un input, y acá siempre está.
     this._teclaGlobal = this.teclaGlobal.bind(this)
     document.addEventListener("keydown", this._teclaGlobal)
     // Al cerrarse cualquier modal, el foco vuelve a donde toca, un frame
@@ -65,6 +102,10 @@ export default class extends conEnterAvanza(Controller) {
     e.preventDefault()
     const codigo = this.codigoTarget.value.trim()
     this.codigoTarget.value = ""
+    // Enter con el campo vacío es la salida al peso: el foco se queda acá
+    // mientras se arma la mesa, así que hace falta una forma de salir sin
+    // levantar la mano del teclado. En la pantalla táctil se toca el campo.
+    if (!codigo) { this._enfocarPeso(); return }
     this._escanear(codigo)
   }
 
@@ -75,11 +116,16 @@ export default class extends conEnterAvanza(Controller) {
     if (wr) this._escanear(wr)
   }
 
-  _escanear(codigo) {
+  _escanear(codigo, { saltarManifiesto = false } = {}) {
     if (!codigo) return
 
     const consulta = (this._seq += 1)
-    this._post(this.escanearUrlValue, { codigo })
+    // `en_tanda` es **toda** la tanda, mesa y volúmenes: «NO Mezclar» es de la
+    // sesión entera y no de cada medición. Mirando solo la mesa, la caja de
+    // otro cliente entraría en el volumen 2 sin chistar y el error saldría
+    // recién en F10, con el volumen 1 ya medido.
+    this._post(this.escanearUrlValue,
+               { codigo, en_tanda: this._idsDeLaTanda(), saltar_manifiesto: saltarManifiesto })
       .then((data) => {
         if (consulta !== this._seq) return  // llegó tarde: habla de otro escaneo
         this._resolver(data)
@@ -87,29 +133,40 @@ export default class extends conEnterAvanza(Controller) {
       .catch(() => this._problema("No se pudo consultar", "Probá de nuevo."))
   }
 
+  _idsDeLaTanda() {
+    return [...this._volumenes.flatMap((v) => v.paquete_ids), ...this._mesa.map((p) => p.id)]
+  }
+
   _resolver(data) {
+    if (data.resultado === "no_mezclar") { this._noMezclar(data); return }
+    if (data.resultado === "ya_tiene_bulto") { this._yaTieneBulto(data); return }
+    if (data.puede_saltar) { this._sinManifiesto(data); return }
     if (data.resultado !== "ok" && data.resultado !== "pre_alerta_ya_facturada") {
       this._problema(this._titulo(data.resultado), data.mensaje)
       return
     }
 
+    // La caja entra a la mesa. Es lo único que agrega cajas: no hay checkbox
+    // ni lista de dónde elegir.
+    this._mesa.push({ ...data.paquete, salto_manifiesto: data.salto_manifiesto })
+    if (data.salto_manifiesto) this._saltados.push(data.paquete.id)
     this._pintar(data)
 
     if (data.resultado === "pre_alerta_ya_facturada") {
       // Se avisa y se deja medir: esa caja se factura aparte.
       this._problema("Pre-alerta ya facturada", data.mensaje)
     } else if (data.medicion_previa) {
+      // Medida con el camino viejo —`MedirPaquete`, sin bulto—. Se avisa y se
+      // queda en la mesa: el número del bulto es el que va a mandar.
       this.dispatch("yaMedido")
-      this._llenarProblema("Ya medida", `Medida el ${data.medicion_previa.fecha} por ${data.medicion_previa.por}: ` +
-        `${data.medicion_previa.peso} lb · ${data.medicion_previa.medidas}. ¿Medir de nuevo?`, { medirDeNuevo: true })
+      this._llenarProblema("Ya medida antes", `Medida el ${data.medicion_previa.fecha} por ${data.medicion_previa.por}: ` +
+        `${data.medicion_previa.peso} lb · ${data.medicion_previa.medidas}. Entró a la mesa igual.`, { medirDeNuevo: true })
       this.problemaModalTarget.showModal()
       requestAnimationFrame(() => this.problemaEntendidoTarget.focus())
     } else if (data.grupo && !data.grupo.completo) {
       this.dispatch("unir")
-      this._enfocarPeso()
     } else {
       this.dispatch("ok")
-      this._enfocarPeso()
     }
   }
 
@@ -122,18 +179,122 @@ export default class extends conEnterAvanza(Controller) {
     }[resultado] || "Problema"
   }
 
+  // ── «NO Mezclar»: los dos modales que pidió Yusef ───────────────────────
+
+  _noMezclar(data) {
+    if (data.motivo === "otro_cliente" || data.motivo === "otro_servicio") {
+      this._mezcla(data)
+    } else if (data.motivo === "otra_consolidacion" || data.motivo === "no_consolidada") {
+      this._consolidado(data)
+    } else {
+      // "repetida": no hay nada que decidir, es un pip de más.
+      this._problema("Esa caja ya está en la mesa", data.mensaje)
+    }
+  }
+
+  // Yusef: *"escanea uno de Jorge y va y escanea otro y ese no es el mismo
+  // Jorge… le tira error, es diferente cliente… ¿desea eliminar este último o
+  // empezar todo de nuevo?"*. Las dos salidas son las de él.
+  _mezcla(data) {
+    this.dispatch("mezcla")
+    this.mezclaTituloTarget.textContent = data.motivo === "otro_cliente" ? "Es otro cliente" : "Es otro servicio"
+    this.mezclaTextoTarget.textContent = data.mensaje
+    this.mezclaModalTarget.showModal()
+    requestAnimationFrame(() => this.mezclaQuitarTarget.focus())
+  }
+
+  // Yusef: *"ese está consolidando con tal pre-alerta, con tal número. Ese va
+  // amarrado con otra"* — *"¿desea procesar el consolidado o lo va a poner a un
+  // lado para terminar el que está haciendo?"*.
+  _consolidado(data) {
+    this.dispatch("consolidado")
+    const choque = data.choque || {}
+    this._consolidada = data.paquete
+    this.consolidadoTituloTarget.textContent = data.motivo === "otra_consolidacion"
+      ? "Está consolidando con otra pre-alerta"
+      : "Ésta no está consolidando"
+    this.consolidadoTextoTarget.textContent = data.mensaje
+    this.consolidadoPreAlertaTarget.textContent = [choque.numero, choque.titulo].filter(Boolean).join(" · ")
+    this.consolidadoPreFacturaTarget.classList.toggle("hidden", !choque.pre_factura)
+    if (choque.pre_factura) {
+      this.consolidadoPreFacturaTarget.textContent = `Ese consolidado ya tiene la pre-factura ${choque.pre_factura}.`
+    }
+    this.consolidadoModalTarget.showModal()
+    requestAnimationFrame(() => this.hacerConsolidadoTarget.focus())
+  }
+
+  // «Quitar el último escaneado»: la caja rechazada nunca entró a la mesa, así
+  // que esto es cerrar y seguir con lo que hay. Es lo que Yusef describe: él se
+  // la imagina en la lista, y lo que pide es que no quede.
+  mezclaQuitarUltimo() { this.mezclaModalTarget.close() }
+
+  mezclaEmpezarDeNuevo() {
+    this._vaciarTanda()
+    this.mezclaModalTarget.close()
+  }
+
+  // «Lo dejo de lado» → *"no lo va a guardar, lo pone a un lado"*. No hay cola
+  // de apartados ni nada que persistir: la caja no entró, se sigue con la mesa
+  // como estaba y el foco vuelve al escaneo. Yusef: *"este es como un F2"*.
+  dejarDeLado() { this.consolidadoModalTarget.close() }
+
+  // «Hago el consolidado» → *"tiene que eliminar este del listado que escaneó,
+  // porque ese no va a ir en la medición"*. Se vacía **la tanda entera** y no
+  // solo la mesa: «NO Mezclar» corre sobre toda la sesión, así que un volumen
+  // ya agregado de cajas sueltas dejaría la tanda imposible de guardar.
+  // Después se vuelve a escanear la consolidada, que ahora es la primera.
+  hacerConsolidado() {
+    const codigo = this._consolidada && (this._consolidada.codigo || this._consolidada.tracking)
+    this._vaciarTanda()
+    this.consolidadoModalTarget.close()
+    if (codigo) this._escanear(codigo)
+  }
+
   // El modal rojo grande.
   _problema(titulo, texto) {
     this.dispatch("problema")
-    this._llenarProblema(titulo, texto, { medirDeNuevo: false })
+    this._llenarProblema(titulo, texto, {})
     this.problemaModalTarget.showModal()
     requestAnimationFrame(() => this.problemaEntendidoTarget.focus())
   }
 
-  _llenarProblema(titulo, texto, { medirDeNuevo }) {
+  // C27-14 · El estado no bloquea: avisa y deja pasar. Yusef, mirando el
+  // bloqueo en vivo: *"le tiene que eliminar eso porque nos va a llevar putas,
+  // porque a más de alguno se le va a escapar. **Hay que poner una opción
+  // ahí.**"* El modal rojo se queda —la caja de verdad no pasó por aduana— y le
+  // crece una puerta.
+  _sinManifiesto(data) {
+    this.dispatch("problema")
+    this._paraSaltar = data.paquete
+    this._llenarProblema(this._titulo(data.resultado), data.mensaje, { medirIgual: true })
+    this.problemaModalTarget.showModal()
+    requestAnimationFrame(() => this.problemaEntendidoTarget.focus())
+  }
+
+  // Se vuelve a escanear con el permiso puesto: así la caja entra a la mesa por
+  // el mismo camino que las demás, con su grupo y su manifiesto pintados.
+  medirIgual() {
+    const codigo = this._paraSaltar && (this._paraSaltar.codigo || this._paraSaltar.tracking)
+    this.problemaModalTarget.close()
+    if (codigo) this._escanear(codigo, { saltarManifiesto: true })
+  }
+
+  // C27-09 · Una caja que ya tiene bulto no se vuelve a medir: se reimprime.
+  // Yusef: *"si se le cae… tendría que volver a escanear el warehouse"*.
+  _yaTieneBulto(data) {
+    this.dispatch("yaMedido")
+    this._bultoParaReimprimir = data.bulto && data.bulto.etiqueta_url
+    this._llenarProblema("Esta caja ya está medida", data.mensaje, { reimprimir: true })
+    this.problemaModalTarget.showModal()
+    requestAnimationFrame(() => this.problemaEntendidoTarget.focus())
+  }
+
+  _llenarProblema(titulo, texto, { medirDeNuevo = false, reimprimir = false, medirIgual = false }) {
     this.problemaTituloTarget.textContent = titulo
     this.problemaTextoTarget.textContent = texto
     this.medirDeNuevoTarget.classList.toggle("hidden", !medirDeNuevo)
+    this.reimprimirBultoTarget.classList.toggle("hidden", !reimprimir)
+    this.medirIgualTarget.classList.toggle("hidden", !medirIgual)
   }
 
   avisoEntendido() { this.problemaModalTarget.close() }
@@ -141,6 +302,11 @@ export default class extends conEnterAvanza(Controller) {
   medirDeNuevo() {
     this._volverAPeso = true
     this.problemaModalTarget.close()
+  }
+
+  reimprimirBulto() {
+    this.problemaModalTarget.close()
+    if (this._bultoParaReimprimir) this._imprimir(this._bultoParaReimprimir, 1)
   }
 
   // C20-13 · Escape no contesta un aviso: *"ellos no las leen"*.
@@ -162,17 +328,21 @@ export default class extends conEnterAvanza(Controller) {
       this.previaTarget.textContent = `Ya medida el ${data.medicion_previa.fecha} por ${data.medicion_previa.por}: ` +
         `${data.medicion_previa.peso} lb · ${data.medicion_previa.medidas}`
     }
-    this.pesoTarget.value = p.peso || ""
-    this.altoTarget.value = p.alto || ""
-    this.largoTarget.value = p.largo || ""
-    this.anchoTarget.value = p.ancho || ""
+    // Los números de Miami solo se copian con la **primera** caja de la mesa:
+    // a partir de la segunda pisarían lo que el operario ya tecleó, y el peso
+    // que vale es el del bulto entero.
+    if (this._mesa.length <= 1) {
+      this.pesoTarget.value = p.peso || ""
+      this.altoTarget.value = p.alto || ""
+      this.largoTarget.value = p.largo || ""
+      this.anchoTarget.value = p.ancho || ""
+    }
 
     this._pintarDosLados(data.pre_alerta, data.miami)
     this._pintarGrupo(data.grupo)
     this._pintarManifiesto(data.manifiesto)
-    this._textoDeLosBotones()
+    this._repintar()
     this.bannerTarget.classList.add("hidden")
-    this.panelTarget.classList.remove("hidden")
     this.formTarget.querySelectorAll("input").forEach((i) => i.dispatchEvent(new Event("input", { bubbles: true })))
   }
 
@@ -224,25 +394,6 @@ export default class extends conEnterAvanza(Controller) {
     this.facturarParcialTarget.classList.toggle("hidden", !forzable)
   }
 
-  // C26-04 · Los botones dicen lo que **va a pasar**, que no es siempre lo
-  // mismo. Jorge: *"veo «Guardar e imprimir»… «Reimprimir etiqueta», no sé si
-  // solo hace una, ¿cuál hace?"*. Con un envío a medias, F10 no imprime:
-  // guarda y salta a la caja siguiente, y el texto lo dice con su número.
-  _textoDeLosBotones() {
-    const g = this._grupo
-    const otraSinMedir = g && this._paquete
-      ? g.cajas.find((c) => c.estado === "aqui" && c.id !== this._paquete.id)
-      : null
-
-    if (!g) {
-      this.guardarTextoTarget.textContent = "Guardar e imprimir"
-    } else if (otraSinMedir) {
-      this.guardarTextoTarget.textContent = `Guardar y seguir con la ${otraSinMedir.caja || "siguiente"}`
-    } else {
-      this.guardarTextoTarget.textContent = `Guardar e imprimir las ${g.total}`
-    }
-  }
-
   _cuadrito(caja) {
     const nodo = this.plantillaCuadritoTarget.content.firstElementChild.cloneNode(true)
     const clases = this.clasesValue
@@ -260,70 +411,178 @@ export default class extends conEnterAvanza(Controller) {
     nodo.querySelector("[data-campo=wr]").textContent = caja.wr || caja.tracking
     nodo.querySelector("[data-campo=caja]").textContent = caja.caja || ""
     nodo.querySelector("[data-campo=estado]").textContent = caja.donde
-    nodo.querySelector("[data-campo=peso]").textContent = caja.peso ? `${Number(caja.peso).toFixed(2)} lb` : ""
+    // C27-12 · Yusef, mirando este panel: *"lo que hace falta aquí es poner
+    // **quién ingresó las medidas**"*. El dato ya venía en el JSON y se caía
+    // acá al piso.
+    nodo.querySelector("[data-campo=peso]").textContent =
+      [caja.peso ? `${Number(caja.peso).toFixed(2)} lb` : "", caja.por].filter(Boolean).join(" · ")
     return nodo
+  }
+
+  // ── La mesa y los volúmenes ─────────────────────────────────────────────
+
+  _repintar() {
+    this._pintarMesa()
+    this._pintarVolumenes()
+    this._textoDeLosBotones()
+  }
+
+  _pintarMesa() {
+    const n = this._mesa.length
+    this.mesaTituloTarget.textContent =
+      `Volumen ${this._volumenes.length + 1} · ${n} ${n === 1 ? "caja" : "cajas"} en la mesa`
+    this.mesaClienteTarget.textContent = (this._mesa[0] && this._mesa[0].cliente) || ""
+    this.mesaTarget.replaceChildren(...this._mesa.map((p, i) => this._filaMesa(p, i)))
+    this.quitarUltimaTarget.classList.toggle("hidden", n === 0)
+    this.panelTarget.classList.toggle("hidden", n === 0)
+  }
+
+  _filaMesa(p, i) {
+    const nodo = this.plantillaMesaTarget.content.firstElementChild.cloneNode(true)
+    nodo.dataset.paqueteId = p.id
+    nodo.querySelector("[data-campo=orden]").textContent = i + 1
+    nodo.querySelector("[data-campo=wr]").textContent = p.codigo || p.tracking
+    nodo.querySelector("[data-campo=detalle]").textContent =
+      [p.tipo_envio, p.caja && `caja ${p.caja}`,
+       p.salto_manifiesto && "SIN MANIFIESTO", p.descripcion].filter(Boolean).join(" · ")
+    return nodo
+  }
+
+  _pintarVolumenes() {
+    const n = this._volumenes.length
+    this.volumenesContadorTarget.textContent = n
+    this.volumenesVacioTarget.classList.toggle("hidden", n > 0)
+    this.quitarVolumenTarget.classList.toggle("hidden", n === 0)
+    this.listaVolumenesTarget.replaceChildren(...this._volumenes.map((v, i) => this._filaVolumen(v, i)))
+    this.accionesTarget.classList.toggle(
+      "hidden", n === 0 && this._mesa.length === 0 && !this._ultimaEtiquetaUrl)
+  }
+
+  _filaVolumen(v, i) {
+    const nodo = this.plantillaVolumenTarget.content.firstElementChild.cloneNode(true)
+    nodo.querySelector("[data-campo=orden]").textContent = `Volumen ${i + 1}`
+    const medidas = [v.alto, v.largo, v.ancho].filter(Boolean).join("x")
+    nodo.querySelector("[data-campo=numeros]").textContent =
+      [v.peso && `${v.peso} lb`, medidas && `${medidas} in`].filter(Boolean).join(" · ")
+    const c = v.paquete_ids.length
+    nodo.querySelector("[data-campo=cajas]").textContent = `${c} ${c === 1 ? "caja" : "cajas"}`
+    return nodo
+  }
+
+  // C26-04/19 · Los botones dicen lo que **va a pasar**. Jorge: *"veo «Guardar
+  // e imprimir»… «Reimprimir etiqueta», no sé si solo hace una, ¿cuál hace?"*.
+  // Con tres volúmenes salen tres etiquetas, y prometer una sería mentir.
+  _textoDeLosBotones() {
+    const total = this._volumenes.length + (this._mesa.length > 0 ? 1 : 0)
+    this.guardarTextoTarget.textContent = total > 1
+      ? `Guardar e imprimir ${total} etiquetas`
+      : "Guardar e imprimir"
+  }
+
+  // La única forma de sacar algo de la mesa: la última. No hay lista de dónde
+  // elegir — *"no, no, porque se van a equivocar… no van a leer"*.
+  quitarUltimaCaja() {
+    if (this._modalAbierto() || this._mesa.length === 0) return
+
+    this._mesa.pop()
+    if (this._mesa.length === 0) {
+      this._pintarGrupo(null)
+      this.dosLadosTarget.classList.add("hidden")
+    }
+    this._repintar()
+    this.codigoTarget.focus()
+  }
+
+  quitarUltimoVolumen() {
+    if (this._modalAbierto() || this._volumenes.length === 0) return
+
+    this._volumenes.pop()
+    this._repintar()
+    this.codigoTarget.focus()
+  }
+
+  // ── Agregar un volumen ──────────────────────────────────────────────────
+  //
+  // Yusef: *"mide y pesa este, le da **agregar**; mide y pesa este por separado
+  // porque no cuadra… y ahí le dice **imprimir**, y como son dos mediciones,
+  // imprime dos"*. El operario les dice «volúmenes»: *"le voy a sacar tres
+  // volúmenes, así lo dicen ellos, porque son diferentes de tamaño"*.
+  agregarVolumen() {
+    if (this._modalAbierto()) return
+    if (this._mesa.length === 0) {
+      this._problema("La mesa está vacía", "Escaneá las cajas de este volumen antes de agregarlo.")
+      return
+    }
+    if (this._volumenes.length >= this.maximoValue) {
+      // C27-03 · El techo es de Yusef: *"máximo 10 warehouse, máximo 10 etiquetas… el
+      // normal de nosotros es 2 a 3; 5 ya es demasiado"*. Se avisa acá y el
+      // servidor lo vuelve a mirar en `MedirBulto`.
+      this._problema("Son demasiados volúmenes",
+                     `De una tanda salen ${this.maximoValue} mediciones como mucho. ` +
+                     "Guardá e imprimí lo que llevás y seguí con la siguiente.")
+      return
+    }
+    const numeros = this._numeros()
+    if (!this._tieneNumeros(numeros)) {
+      this._problema("Falta pesarlo", "Poné al menos el peso, o las tres medidas, antes de agregar el volumen.")
+      return
+    }
+
+    this._volumenes.push({ ...numeros, paquete_ids: this._mesa.map((p) => p.id) })
+    this._mesa = []
+    this._limpiarNumeros()
+    this._pintarGrupo(null)
+    this.dosLadosTarget.classList.add("hidden")
+    this.dispatch("guardado")
+    this._repintar()
+    this.codigoTarget.focus()
+  }
+
+  _numeros() {
+    return { peso: this.pesoTarget.value.trim(), alto: this.altoTarget.value.trim(),
+             largo: this.largoTarget.value.trim(), ancho: this.anchoTarget.value.trim() }
+  }
+
+  _tieneNumeros(n) {
+    return [n.peso, n.alto, n.largo, n.ancho].some((v) => Number(v) > 0)
   }
 
   // ── Guardar ─────────────────────────────────────────────────────────────
 
   guardar() {
-    if (!this._paquete || this._modalAbierto()) return
+    if (this._modalAbierto()) return
 
-    const cuerpo = { peso: this.pesoTarget.value, alto: this.altoTarget.value,
-                     largo: this.largoTarget.value, ancho: this.anchoTarget.value }
-    this._patch(this._paquete.medir_url, cuerpo)
+    const mediciones = this._volumenes.map((v) => ({ paquete_ids: v.paquete_ids, peso: v.peso,
+                                                     alto: v.alto, largo: v.largo, ancho: v.ancho }))
+    // Lo que quedó en la mesa entra como el último volumen: Yusef no dice
+    // «agregar» para el último — *"mide y pesa este por separado… y ahí le dice
+    // imprimir"*.
+    if (this._mesa.length > 0) {
+      mediciones.push({ paquete_ids: this._mesa.map((p) => p.id), ...this._numeros() })
+    }
+    if (mediciones.length === 0) {
+      this._problema("No hay nada que guardar", "Escaneá las cajas del bulto y poné el peso.")
+      return
+    }
+
+    this._post(this.guardarUrlValue, { mediciones, saltar_manifiesto: this._saltados }, { conEstado: true })
       .then(({ ok, data }) => {
         if (!ok) {
           this.dispatch("fallo")
-          this._llenarProblema("No se guardó", (data.errores || []).join(" "), { medirDeNuevo: false })
+          this._llenarProblema("No se guardó", (data.errores || []).join(" "), {})
           this.problemaModalTarget.showModal()
           requestAnimationFrame(() => this.problemaEntendidoTarget.focus())
           return
         }
 
-        // Literales y no un ternario: `sonidos_cableados_test` los busca en el
-        // archivo, y con el ternario dejó de encontrar `grupoCompleto`.
-        if (data.resultado === "grupo_completo") {
-          this.dispatch("grupoCompleto")
-        } else {
-          this.dispatch("guardado")
-        }
+        this.dispatch("guardado")
         this._pintarManifiesto(data.manifiesto)
         this.avisoTarget.textContent = data.mensaje
-        // La grilla se queda en pantalla con el cuadrito ya en verde: el
-        // operario sigue con la caja siguiente del mismo grupo.
-        this._pintarGrupo(data.grupo)
-
-        // C26-02 · Si el envío venía partido, las otras cajas tienen **el
-        // mismo warehouse receipt impreso**: volver a escanearlo no aportaría
-        // nada. Se salta sola a la siguiente sin medir, con el cursor en el
-        // peso.
-        const siguiente = this._siguienteDelEnvio(data.paquete, data.grupo)
-        if (siguiente) {
-          this._escanear(siguiente)
-          return
-        }
-
-        // C26-04 · Cuando hay algo que imprimir, el envío terminó: se imprime,
-        // **se limpia la pantalla** y queda el banner. Jorge: *"cuando se
-        // facture o se termine de imprimir se debería limpiar para que se
-        // comience con el siguiente grupo"*.
-        if (data.imprimir_url) {
-          this._terminar(data.mensaje, data.imprimir_url, data.grupo ? data.grupo.total : 1)
-          return
-        }
-
-        this._limpiarCaja()
-        this.codigoTarget.focus()
+        // La tanda terminó: la pantalla se limpia para la siguiente y el banner
+        // guarda el resultado. Jorge: *"cuando se facture o se termine de
+        // imprimir se debería limpiar para que se comience con el siguiente"*.
+        this._terminar(data.mensaje, data.imprimir_url, data.cantidad)
       })
-  }
-
-  // La siguiente caja sin medir del mismo envío, si queda alguna.
-  _siguienteDelEnvio(paquete, grupo) {
-    if (!paquete.wr || !grupo) return null
-
-    const caja = grupo.cajas.find((c) => c.envio === paquete.wr && c.estado === "aqui")
-    return caja?.wr || null
   }
 
   // ── El panel de la derecha: lo que falta de este manifiesto ─────────────
@@ -410,17 +669,15 @@ export default class extends conEnterAvanza(Controller) {
 
   // ── Terminar: imprimir, limpiar y dejar dicho qué pasó ──────────────────
   //
-  // C26-04 · Una caja suelta imprime su sticker al guardarla; un envío imprime
-  // **todas juntas** cuando se mide la última — *"que salgan las 3 stickers"*.
-  // En los dos casos la pantalla queda limpia para el envío siguiente, y el
-  // banner guarda el resultado y la única acción que todavía sirve: reimprimir.
+  // C27-06 · Salen **tantas etiquetas como mediciones**: *"como son dos
+  // mediciones, imprime dos"*. En los dos casos la pantalla queda limpia para
+  // la tanda siguiente, y el banner guarda el resultado y la única acción que
+  // todavía sirve: reimprimir.
   _terminar(mensaje, url, cantidad) {
-    this._limpiarCaja()
-    this._pintarGrupo(null)
-    this.dosLadosTarget.classList.add("hidden")
+    this._vaciarTanda()
 
     this.bannerTextoTarget.textContent = cantidad > 1
-      ? `${mensaje} Se imprimieron ${cantidad} stickers.`
+      ? `${mensaje} Se imprimieron ${cantidad} etiquetas.`
       : mensaje
     this.bannerTarget.classList.remove("hidden")
 
@@ -433,11 +690,15 @@ export default class extends conEnterAvanza(Controller) {
     // «Reimprimir» significa **lo último que se imprimió**, y el texto de los
     // botones lo dice: era la pregunta de Jorge, *"¿cuál hace?"*.
     this._ultimaEtiquetaUrl = url
-    const texto = cantidad > 1 ? `Reimprimir las ${cantidad} del envío` : "Reimprimir la etiqueta"
+    const texto = cantidad > 1 ? `Reimprimir las ${cantidad} etiquetas` : "Reimprimir la etiqueta"
     this.reimprimirTextoTarget.textContent = texto
     this.bannerReimprimirTextoTarget.textContent = texto
     this.reimprimirTarget.classList.remove("hidden")
     this.bannerReimprimirTarget.classList.remove("hidden")
+    // El botón vive adentro del bloque de acciones, que está escondido cuando
+    // no hay nada en la mesa: sin esto, reimprimir después de guardar no tiene
+    // dónde apretarse.
+    this.accionesTarget.classList.remove("hidden")
 
     window.open(url, "_blank")
     window.addEventListener("focus", () => this.codigoTarget.focus(), { once: true })
@@ -455,16 +716,24 @@ export default class extends conEnterAvanza(Controller) {
 
   limpiar() {
     if (this._modalAbierto()) return
-    this._limpiarCaja()
-    this._pintarGrupo(null)
-    this.dosLadosTarget.classList.add("hidden")
+    this._vaciarTanda()
     this.codigoTarget.focus()
   }
 
-  _limpiarCaja() {
+  // Toda la tanda al piso: la mesa, los volúmenes, la grilla y los dos lados.
+  _vaciarTanda() {
     this._paquete = null
-    this.panelTarget.classList.add("hidden")
-    ;[this.pesoTarget, this.altoTarget, this.largoTarget, this.anchoTarget].forEach((i) => { i.value = "" })
+    this._mesa = []
+    this._volumenes = []
+    this._saltados = []
+    this._limpiarNumeros()
+    this._pintarGrupo(null)
+    this.dosLadosTarget.classList.add("hidden")
+    this._repintar()
+  }
+
+  _limpiarNumeros() {
+    [this.pesoTarget, this.altoTarget, this.largoTarget, this.anchoTarget].forEach((i) => { i.value = "" })
   }
 
   // ── Facturar lo que hay ─────────────────────────────────────────────────
@@ -507,25 +776,36 @@ export default class extends conEnterAvanza(Controller) {
   // ── Teclado ─────────────────────────────────────────────────────────────
 
   teclaGlobal(e) {
+    // F5 recarga la página en Chrome, así que se frena **siempre**, con modal
+    // abierto o sin él: si se escapa, el operario pierde la mesa entera y no
+    // hay nada guardado que recuperar.
+    if (e.key === "F5") e.preventDefault()
     if (this._modalAbierto()) return
     if (e.key === "F10") { e.preventDefault(); this.guardar() }
     if (e.key === "F9")  { e.preventDefault(); this.reimprimir() }
+    if (e.key === "F5")  { this.agregarVolumen() }
     if (e.key === "F2")  { e.preventDefault(); this.limpiar() }
   }
 
   _modalAbierto() {
-    return this.problemaModalTarget.open || this.excepcionModalTarget.open || this.descarteModalTarget.open
+    return this.problemaModalTarget.open || this.excepcionModalTarget.open ||
+           this.descarteModalTarget.open || this.mezclaModalTarget.open ||
+           this.consolidadoModalTarget.open
   }
 
   _enfocarPeso() {
+    if (this._mesa.length === 0) return
+
     this.pesoTarget.focus()
     this.pesoTarget.select()
   }
 
+  // C27-02 · El foco vuelve **al escaneo**, siempre: la mesa se arma pip a pip
+  // y el peso se toca (o se llega con Enter en el campo vacío). Antes volvía al
+  // peso, y con el bulto eso mandaba el segundo warehouse al campo del peso.
   _enfocarDondeToca() {
     if (this._volverAPeso) { this._volverAPeso = false; this._enfocarPeso(); return }
-    if (this._paquete && !this.panelTarget.classList.contains("hidden")) this._enfocarPeso()
-    else this.codigoTarget.focus()
+    this.codigoTarget.focus()
   }
 
   // ── Red ─────────────────────────────────────────────────────────────────
@@ -533,10 +813,6 @@ export default class extends conEnterAvanza(Controller) {
   _post(url, cuerpo, { conEstado = false } = {}) {
     return this._fetch("POST", url, cuerpo)
       .then((r) => (conEstado ? r.json().then((data) => ({ ok: r.ok, data })) : r.json()))
-  }
-
-  _patch(url, cuerpo) {
-    return this._fetch("PATCH", url, cuerpo).then((r) => r.json().then((data) => ({ ok: r.ok, data })))
   }
 
   _fetch(method, url, cuerpo) {

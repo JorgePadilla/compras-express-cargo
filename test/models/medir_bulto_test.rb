@@ -253,6 +253,35 @@ class MedirBultoTest < ActiveSupport::TestCase
     assert_equal 10, bultos.last.de_cuantos
   end
 
+  # ── C27-14 · Saltarse el manifiesto ──────────────────────────────────────
+
+  test "una caja que no pasó por el manifiesto no entra… salvo que alguien ponga su nombre" do
+    suelta = caja
+    suelta.update_columns(estado: "enviado_honduras")
+    medicion = [ { paquete_ids: [ suelta.id ], peso: "20" } ]
+
+    assert_raises(MedirBulto::NoSePuede) { MedirBulto.new(user: @user).guardar!(medicion) }
+
+    MedirBulto.new(user: @user, saltar_manifiesto: [ suelta.id ]).guardar!(medicion)
+
+    suelta.reload
+    assert_not_nil suelta.bulto_id
+    assert_equal "SP", suelta.salto_manifiesto_por
+    assert_equal "enviado_honduras", suelta.salto_manifiesto_estado
+  end
+
+  test "el permiso es por caja: la que sí pasó por el manifiesto no queda sellada" do
+    buena = caja
+    suelta = caja
+    suelta.update_columns(estado: "enviado_honduras")
+
+    MedirBulto.new(user: @user, saltar_manifiesto: [ buena.id, suelta.id ])
+              .guardar!([ { paquete_ids: [ buena.id, suelta.id ], peso: "20" } ])
+
+    assert_nil buena.reload.salto_manifiesto_at, "no hubo excepción que sellar"
+    assert_not_nil suelta.reload.salto_manifiesto_at
+  end
+
   private
 
   def pre_alerta_consolidada(*trackings)

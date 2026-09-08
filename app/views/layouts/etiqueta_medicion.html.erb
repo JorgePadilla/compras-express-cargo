@@ -2,9 +2,12 @@
 <html lang="es">
 <head>
   <%# El documento puede traer **una** etiqueta o las de todo un grupo
-      (C26-04), así que el título sale de la lista y no de una caja suelta. %>
-  <% cajas = @paquetes || [ @paquete ].compact %>
-  <title>Medición — <%= cajas.size > 1 ? "#{cajas.size} etiquetas" : (etiqueta_codigo_barras(cajas.first) || cajas.first&.tracking) %></title>
+      (C26-04), así que el título sale de la lista y no de una caja suelta.
+      C27-06: y desde el bulto, la lista puede ser de mediciones y no de cajas.
+      El rótulo lo nombra la primera caja en los dos casos. %>
+  <% cajas = Array(@bultos).flat_map { |b| b.paquetes.to_a }.presence || @paquetes || [ @paquete ].compact %>
+  <% cuantas = Array(@bultos).presence&.size || cajas.size %>
+  <title>Medición — <%= cuantas > 1 ? "#{cuantas} etiquetas" : (etiqueta_codigo_barras(cajas.first) || cajas.first&.tracking) %></title>
   <meta charset="UTF-8">
   <style>
     /* C26-04 · La etiqueta de MEDICIÓN: Dymo 2.25 × 1.25 in, la misma
@@ -23,12 +26,27 @@
     .med {
       width: 2.25in; height: 1.25in;
       padding: .04in .06in;
-      display: flex; gap: .06in; align-items: center;
+      display: flex; flex-direction: column; gap: .02in;
       overflow: hidden;
       line-height: 1.0;
     }
+    /* C27-06 · El código va **abajo, a lo ancho de la etiqueta**, y no en la
+       columna de la derecha.
+
+       Estaba en la columna, que mide 1.07in, y ahí no cabía: `data-ajustar` lo
+       bajaba hasta su piso de 5 pt y el `overflow: hidden` se comía el final —
+       las iniciales de quien midió salían cortadas **desde antes del bulto**, y
+       nadie lo veía porque el test medía solo el `.med` de afuera, que no se
+       desbordaba. Ahora el test mide también cada fila que `data-ajustar`
+       encoge; ver [[project_etiqueta_trackings_completos]]: el código nunca se
+       recorta.
+
+       No es «una fila más» de las que no caben: el QR ocupa 1.0in de los
+       1.17in de alto útil, así que este renglón vive en el aire que ya
+       sobraba debajo. Medido en Chrome por `etiqueta_medicion_cabe_test`. */
+    .med .arriba { display: flex; gap: .06in; align-items: center; flex: 0 0 auto; }
     /* Los hijos no se encogen: si no cabe, desborda y el test lo ve. */
-    .med > * { flex: 0 0 auto; }
+    .med .arriba > * { flex: 0 0 auto; }
     .med .qr { width: 1.0in; height: 1.0in; }
     .med .qr svg { width: 1.0in; height: 1.0in; display: block; }
     .med .datos { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: .02in; }
@@ -37,7 +55,7 @@
     .med .cifra  { font-size: 10pt; font-weight: 700; white-space: nowrap; }
     .med .cifra .u { font-size: 6.5pt; font-weight: 700; }
     .med .pies   { font-size: 8pt; white-space: nowrap; }
-    .med .codigo { font-family: 'Courier New', monospace; font-size: 6.5pt; white-space: nowrap; overflow: hidden; }
+    .med .codigo { font-family: 'Courier New', monospace; font-size: 6.5pt; white-space: nowrap; overflow: hidden; flex: 0 0 auto; }
     .med + .med { page-break-before: always; }
     @media screen {
       body { background: #e5e7eb; padding: 24px; }

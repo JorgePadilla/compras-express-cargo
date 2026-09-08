@@ -230,6 +230,9 @@ Rails.application.routes.draw do
   resources :medicion, only: %i[index], path: "medicion" do
     collection do
       post :escanear
+      # C27-01 · El bulto: toda la tanda de mediciones entra junta. Yusef:
+      # *"no es una etiqueta por paquete, es una etiqueta por medición"*.
+      post :guardar
       # C26-17 · Lo que falta del manifiesto, para el panel de la derecha.
       get :panel
     end
@@ -242,6 +245,12 @@ Rails.application.routes.draw do
   end
   # C26-04 · Las stickers de un grupo consolidado, juntas.
   get "medicion/grupos/:id/etiquetas", to: "medicion#etiquetas", as: :etiquetas_grupo_medicion
+  # C27-06 · Las etiquetas de una tanda: una por medición, no una por caja. La
+  # sesión es el uuid que comparten los bultos que salieron de la misma mesa.
+  get "medicion/sesiones/:sesion/etiquetas", to: "medicion#etiquetas_sesion", as: :etiquetas_sesion_medicion
+  # C27-09 · Reimprimir **una** medición. Yusef: *"si se le cae… tendría que
+  # volver a escanear el warehouse"* — se escanea una caja y sale su etiqueta.
+  get "medicion/bultos/:id/etiqueta", to: "medicion#etiqueta_bulto", as: :etiqueta_bulto_medicion
   post "medicion/pre_alertas/:id/facturar_parcial", to: "medicion#facturar_parcial", as: :facturar_parcial_medicion
 
   resources :pre_alertas, except: %i[destroy] do

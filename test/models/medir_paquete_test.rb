@@ -110,4 +110,37 @@ class MedirPaqueteTest < ActiveSupport::TestCase
     end
     assert_match(/Recibir Carga/, e.message)
   end
+
+  # C27-14 · Yusef: *"debe dejar que sí se lo salten, porque a veces se capean,
+  # algunos se los van a capear"* — *"hay que poner una opción ahí"*.
+  test "con el permiso puesto sí se mide, y queda sellado quién se lo saltó" do
+    @paquete.update_columns(estado: "enviado_honduras")
+
+    MedirPaquete.new(@paquete, user: @user, saltar_manifiesto: true)
+                .medir!(peso: "12", alto: "10", largo: "12", ancho: "14")
+
+    @paquete.reload
+    assert_equal 12.0, @paquete.peso.to_f
+    assert_equal "SP", @paquete.salto_manifiesto_por
+    assert_not_nil @paquete.salto_manifiesto_at
+    assert_equal "enviado_honduras", @paquete.salto_manifiesto_estado
+    assert_equal "enviado_honduras", @paquete.estado,
+                 "saltarse el manifiesto no le inventa un paso de aduana al paquete"
+  end
+
+  test "el permiso no sella nada cuando la caja sí pasó por el manifiesto" do
+    MedirPaquete.new(@paquete, user: @user, saltar_manifiesto: true).medir!(peso: "12")
+
+    assert_nil @paquete.reload.salto_manifiesto_at
+  end
+
+  # El otro portón sigue cerrado: ahí el peso se congeló y medirlo mentiría.
+  test "el permiso no abre la puerta de la pre-factura" do
+    @paquete.update_columns(estado: "enviado_honduras", pre_factura_id: pre_facturas(:borrador_juan).id)
+
+    e = assert_raises(MedirPaquete::NoSePuede) do
+      MedirPaquete.new(@paquete, user: @user, saltar_manifiesto: true).medir!(peso: "12")
+    end
+    assert_match(/pre-factura/, e.message)
+  end
 end
