@@ -20,6 +20,12 @@ class EtiquetaMedicionCabeTest < ApplicationSystemTestCase
 
     assert_text "999.50"
     assert_text "RMI0002026000901-12"
+    # C26-18 · El «n de m» impreso, que es lo que mira la persona de
+    # pre-factura antes de volver a escanear. Va en la misma línea del código
+    # porque en esta etiqueta no cabe una fila más, así que la peor etiqueta
+    # —caja 12 de 12, con los números más largos— es justo la que tiene que
+    # seguir cabiendo, y eso lo miden las dos aserciones de arriba.
+    assert_text "12/12"
     assert_selector ".qr svg"
   end
 end

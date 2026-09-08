@@ -193,12 +193,33 @@ class MedicionTest < ActionDispatch::IntegrationTest
     assert_match(%r{06/09/2026}, json["medicion_previa"]["fecha"])
   end
 
-  test "una medida en cero es 422 con el porqué" do
-    medir(@paquete, peso: "0")
+  # C26-18 · La regla dejó de ser «los cuatro» y pasó a ser «al menos uno».
+  # Yusef: *"a veces no se mide, cuando es una cajita bien pequeñita; pero
+  # siempre una de estas cuatro se mete"*.
+  test "todo en blanco es 422 con el porqué" do
+    medir(@paquete, peso: "", alto: "", largo: "", ancho: "")
 
     assert_response :unprocessable_entity
-    assert_match(/mayores que cero/, json["errores"].join)
+    assert_match(/al menos el peso/, json["errores"].join)
     assert_nil @paquete.reload.medido_at
+  end
+
+  test "dos de tres medidas es 422: sin volumétrico no hay qué comparar" do
+    medir(@paquete, peso: "12.5", alto: "", largo: "12", ancho: "14")
+
+    assert_response :unprocessable_entity
+    assert_match(/las tres/, json["errores"].join)
+    assert_nil @paquete.reload.medido_at
+  end
+
+  # La caja chiquita que solo va a la báscula: antes esto era un 422 y la
+  # estación quedaba trabada.
+  test "solo el peso alcanza para medir" do
+    medir(@paquete, peso: "2.5", alto: "", largo: "", ancho: "")
+
+    assert_response :success
+    assert_equal 2.5, @paquete.reload.peso.to_f
+    assert_not_nil @paquete.medido_at
   end
 
   # ── Quién entra ──────────────────────────────────────────────────────────
