@@ -286,9 +286,14 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     escanear_a_la_mesa(@paquete, 1)
     escanear_a_la_mesa(segunda, 2)
 
-    veces = page.all("[data-medicion-target='trabajo'] *", text: segunda.numero_recepcion, exact_text: false)
-                .count { |n| n.text(:all).strip == segunda.numero_recepcion }
-    assert_equal 1, veces, "el warehouse receipt aparece #{veces} veces en la columna de trabajo"
+    # Se cuentan **apariciones del código en el texto**, no nodos con ese texto
+    # exacto: la primera versión de este test daba verde con el código repetido
+    # dentro de una frase más larga (el encabezado decía «RSPS… · Juan · CER»).
+    texto = find("[data-medicion-target='trabajo']").text(:all)
+    [ @paquete, segunda ].each do |p|
+      veces = texto.scan(p.numero_recepcion).size
+      assert_equal 1, veces, "#{p.numero_recepcion} aparece #{veces} veces en la columna de trabajo"
+    end
     assert_no_selector "[data-medicion-target='grilla']"
     assert_no_selector "[data-medicion-target='panelMiami']"
     assert_no_selector "[data-medicion-target='codigoCaja']"
