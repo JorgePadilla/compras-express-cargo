@@ -10416,6 +10416,7 @@ pesos tecleados en vivo.
 | `C26-04` | La etiqueta de medición | ✅ **Hecha** — Dymo 2.25×1.25, QR `MED <código> <peso> <medidas>` que la búsqueda, recibir carga y la pistola entienden; F10 guarda e imprime, F9 reimprime. ▶ El QR lleva además el `NdeM` desde el 2026-09-08 (`C27-08`), y el conteo pasa a ser **una etiqueta por medición**, no por caja (`C27-06`) |
 | `C26-08`…`11` | Pre-factura: consolidación visible, split, fecha de trabajo, notificar | 📄 Documentado; es el próximo bloque. ▶ `C26-08` **contestado el 2026-09-07**: la pre-factura no hereda el grupo, **vuelve a escanear** (`C27-15`, `C27-16`), y se factura por pre-alerta (`C27-17`) |
 | `C26-12` | Entrega: la etiqueta que se escanea | 📄 Documentado |
+| `C26-18` | *(número que usó `#440` en su título, antes de que la reunión del 07 estuviera numerada)* | ➡️ Se documenta en la Conversación 27: `C27-07` (al menos un número), `C27-08` (el QR «n de m») y `C27-30` (el sufijo en el listado) |
 | `C26-15` | Perfil «medición» | ✅ Existe, y **solo ve su estación**: clientes, pre-alertas y paquetes pasan ahora por `can_access?` — antes esa política era «todos» y ningún controller la consultaba |
 | `RP-63` | ¿Qué báscula compra Yusef, y tiene protocolo abierto? | 🔴 **Pendiente de Yusef** — mientras, el peso se teclea. ▶ **2026-09-07: la decisión ya está tomada, se conecta** —*"el peso va a estar conectado a la balanza… ahorita lo podemos poner manualmente"* (`C27-22`)—; falta **cuál** |
 | `RP-64` | Split de la pre-alerta consolidada cuando se factura parcial | 🔴 **Pendiente** — va con el bloque de pre-factura |
@@ -10586,7 +10587,14 @@ Y la versión corta que él dio antes, que sigue valiendo para la primera rama:
 **Lectura.** El modal no es un aviso: es una **bifurcación con consecuencia**.
 La rama del consolidado cambia el modo de la pantalla —pasa a estar «amarrada»
 a una pre-alerta y rechaza todo lo demás— y la rama de «a un lado» limpia y
-sigue. Encaja con la regla que ya existe para el estado que sobrevive a limpiar
+sigue.
+
+> **Y el residuo lo contestó él mismo, en el mismo audio: no hay nada que
+> guardar.** La caja apartada *"la deja a un lado"* —físicamente, en la mesa— y
+> el operario sigue con lo que tiene: *"este es como un F2: limpia de nuevo"*.
+> No se abre pregunta por esto: **no hay estado, no hay cola de apartados, no
+> hay bandeja**. Lo único que el sistema aporta es decirle, en el modal, con qué
+> pre-alerta va amarrada, para que sepa qué buscar. Encaja con la regla que ya existe para el estado que sobrevive a limpiar
 ([[project_estado_js_que_sobrevive_a_limpiar]]): lo que se limpia, se limpia
 entero, incluido el modo.
 
@@ -10652,7 +10660,7 @@ La etiqueta por volumen y no por envío es, además, la que hace posible la
 auditoría de `C27-16`: tres etiquetas obligan a tres escaneos en pre-factura, y
 si falta uno se nota.
 
-#### C27-07 · No hacen falta los cuatro números — ✅ **HECHO** (2026-09-08)
+#### C27-07 · No hacen falta los cuatro números — ✅ **HECHO** en `#440` (2026-09-08)
 
 > "Siempre vas a meter length, height, width y weight. **A veces no se mide,
 >  cuando es una cajita bien pequeñita. Pero siempre una de estas cuatro se
@@ -10671,17 +10679,34 @@ cero»*—, que es exactamente la caja chiquita que él describe. Ahora:
   agrega.
 
 El resto sigue igual: el paquete recalcula solo VLBS y peso a cobrar
-(`before_save`), y de ahí sale *"cuál es el mayor"*, que es lo que él pide.
+(`before_save`), y quien decide *"cuál es el mayor"* —que es lo que él pide—
+sigue siendo `VolumetricoCalculator.entre_peso_y_vlbs`, que ya lo hacía. Un
+campo en blanco, en cero o con basura **se cae de la lista** y el paquete se
+queda con lo que tenía.
 
-#### C27-08 · El QR dice «1 de 2» — ✅ **HECHO** (2026-09-08)
+> `#440` se tituló `C26-18`, porque se abrió antes de que esta conversación
+> estuviera numerada. Es este item, `C27-08` y `C27-30`.
+
+#### C27-08 · El QR dice «1 de 2» — ✅ **HECHO** en `#440` (2026-09-08), con una salvedad
 
 > "Al escanear, este solo es único; o si son dos, entonces **el QR le va a
 >  decir que es uno de dos**, entonces tiene que escanear dos para que le
 >  cuadre."
 
 **Lo que se construyó.** El QR de la etiqueta de medición (`C26-04`) lleva el
-`NdeM` al final —`2de3`— y la etiqueta lo imprime, así que quien la escanea
-sabe cuántas espera. Es la pieza que hace funcionar la auditoría de `C27-16`.
+`NdeM` al final —`2de3`, sin barra, por la misma razón por la que el resto del
+QR va con espacios— y la etiqueta lo imprime, así que quien la escanea sabe
+cuántas espera. Una caja sola no lleva nada: el QR se queda como estaba.
+
+> ⚠️ **La salvedad, y no es menor: hoy cuenta cajas, no mediciones.**
+> `etiqueta_cuantas_cajas` se arma con `numero_caja` y `cantidad_paquetes`, o
+> sea **las cajas de un envío partido**. Hoy los dos números coinciden porque
+> cada caja es una medición y una etiqueta; **en cuanto entre el bulto
+> (`C27-01`, `C27-06`) dejan de coincidir** —tres cajas pueden ser un solo
+> volumen— y ahí el `NdeM` tiene que pasar a contar **mediciones**, que es lo
+> que Yusef describe y lo que la auditoría de `C27-16` necesita. Lo construido
+> es la pieza correcta con la fuente provisional; nadie lea este item como si la
+> regla final ya estuviera puesta.
 
 **Y no contradice a `A7-21`.** Ahí Yusef sacó el *«1 de N»* de la etiqueta de
 Miami, y con razón: esa se imprime **mientras todavía se empaca** y el total no
@@ -10731,6 +10756,11 @@ que parece más barata y es la que rompe la plata:
 Esto toca de frente `RP-41` (*¿el flete se cobra por caja o por envío?*), que
 sigue abierta: el bulto **es** la respuesta operativa de Yusef —se cobra lo que
 se midió junto—, pero la regla de facturación la tiene que confirmar él.
+
+> ▶ **En vuelo: `#443`** (`feat/el-bulto-de-medicion`) lleva esto a código —el
+> modelo `Bulto`, `PuedenIrJuntas` y `MedirBulto`, con el tope de 10 de `C27-03`
+> y el bulto como unidad de cobro—. Mientras no mergee, lo de acá arriba es la
+> especificación, no el estado del sistema.
 
 > 🕳️ **Hueco conocido, y no se esconde.** `Paquete#listo_para_prefactura?` mira
 > `medido_at` **y el grupo de unión**, y nada más: no sabe qué es un bulto. Y
@@ -11072,15 +11102,19 @@ pantalla no se queja. Se suma a lo ya sabido de ese autocomplete
 ([[project_autocomplete_no_limpia_el_oculto]]): escribe el oculto, nunca lo
 limpia, y ahora sabemos que **el texto tampoco llega**.
 
-#### C27-30 · El sufijo de caja no se ve en el listado — ✅ **HECHO** (2026-09-08)
+#### C27-30 · El sufijo de caja no se ve en el listado — ✅ **HECHO** en `#440` (2026-09-08)
 
 > **Yusef:** "Cuando vuelvo a escanear aparece en las cajitas y aparecen todos
 >  los datos, **pero a la vista no**… lo mejor sería que lo tengas en los dos
 >  lados."
 
 El `-1`, `-2` del warehouse receipt (`A1-04`, `A1-05`) estaba en el detalle y en
-la etiqueta, pero no en la fila del listado, que es donde el operario mira
-primero. **Está en los dos lados.**
+la etiqueta, pero no en la columna «N° recepción» de `/paquetes`, que es donde
+el operario mira primero. **Está en los dos lados**, y la columna pasó a usar
+**el mismo helper que imprime el código de barras** (`etiqueta_codigo_barras`)
+en vez de `numero_recepcion_visible`: así las dos pantallas no pueden divergir,
+que es el modo conocido de que esto se rompa
+([[project_duplicacion_entre_pantallas]]).
 
 #### C27-31 · `/etiquetar` borra el peso al agregar una caja — 🔨 **confirmado, en arreglo**
 
@@ -11090,7 +11124,15 @@ primero. **Está en los dos lados.**
 `data-caja-campo="peso"`, el campo de **captura** del repetidor de cajas. Al
 agregar una caja, `cajas_repetidor_controller#agregar` llama a
 `_limpiarCaptura()`, que vacía los campos de captura… **y con ellos el peso del
-paquete**, porque son el mismo elemento del DOM. El paquete se guarda sin peso.
+paquete**, porque son el mismo elemento del DOM.
+
+**Y es peor que lo reportado.** El paquete **no queda sin cobrar: se cobra
+mal.** `calculate_peso_cobrar` corre igual con el peso en `nil`, y entonces gana
+el volumétrico —el viejo, el que tuviera de antes—. Medido en `#441`: **un
+paquete de 30 lb reales se factura por 6**. Un paquete sin peso salta a la
+vista y alguien lo arregla; un paquete cobrado por la quinta parte se va con la
+factura hecha y nadie lo mira. Se arregla en `#441`
+(`fix/etiquetar-no-borra-el-peso`).
 
 Es otra vez un elemento con dos responsabilidades en esa pantalla; va con
 [[project_duplicacion_entre_pantallas]] y con el `1 de N` del mismo componente.
@@ -11122,10 +11164,10 @@ Es otra vez un elemento con dos responsabilidades en esa pantalla; va con
 | `C27-04` | «NO Mezclar»: modal con la pre-alerta y la pre-factura, y **dos respuestas** | 🔨 **Pendiente** — «a un lado» = F2 y no se guarda; «sí lo hago» = borra lo escaneado y amarra la sesión a ese consolidado |
 | `C27-05` | Mismo cliente y mismo servicio, o error con dos salidas | 🔨 **Pendiente** — «¿eliminar el último o empezar de nuevo?» |
 | `C27-06` | **Una etiqueta por medición**, no por paquete (4 WR con 2 consolidados = **3**) | 🔨 **Pendiente** — cambia el conteo de `C26-04`; una sola para todo se descartó: *"se les puede escapar"* |
-| `C27-07` | No hacen falta los cuatro números | ✅ **Hecho** (2026-09-08) — al menos uno; las tres dimensiones juntas o ninguna; el blanco no pisa a Miami |
-| `C27-08` | El QR dice «1 de 2» | ✅ **Hecho** (2026-09-08) — `NdeM` al final del QR; no contradice `A7-21` |
+| `C27-07` | No hacen falta los cuatro números | ✅ **Hecho** en `#440` (2026-09-08) — al menos uno; las tres dimensiones juntas o ninguna; el blanco no pisa a Miami |
+| `C27-08` | El QR dice «1 de 2» | ✅ **Hecho** en `#440` (2026-09-08) — `NdeM` al final del QR; no contradice `A7-21`. ⚠️ Hoy cuenta **cajas** (`cantidad_paquetes`), no mediciones: con el bulto dejan de coincidir |
 | `C27-09` | Reimprimir volviendo a escanear el warehouse | ✅ **Ya está** (`C26-04`), confirmado en vivo |
-| `C27-10` | El modelo de datos del bulto: tabla `bultos`, `bulto_id` en el paquete, **no** repartir el peso | 📄 **Decidido, no construido** — toca `RP-41`; hueco: la pre-factura sigue copiando el peso de Miami |
+| `C27-10` | El modelo de datos del bulto: tabla `bultos`, `bulto_id` en el paquete, **no** repartir el peso | 🔨 **En vuelo en `#443`** (`Bulto`, `PuedenIrJuntas`, `MedirBulto`) — toca `RP-41`; hueco: la pre-factura sigue copiando el peso de Miami |
 | `C27-11` | El panel del manifiesto es una auditoría | ✅ **Aprobado** tal como quedó en `C26-17` |
 | `C27-12` | Falta **quién ingresó las medidas** en el panel | 🔨 **Pendiente, chico** — `medido_por` ya se sella; solo sale en la etiqueta |
 | `C27-13` | Pantalla táctil, teclado en pantalla, botones grandes, y el teclado físico convive | 📄 **Regla de diseño** de la estación |
@@ -11145,8 +11187,8 @@ Es otra vez un elemento con dos responsabilidades en esa pantalla; va con
 | `C27-27` | «Los paquetes se bloquean en aduana» | ❓ **Sentido no cerrado** — la frase admite tres lecturas (la pre-alerta que no deja mover, la aduana física, o el gate de `C27-14`); se le pregunta con el bloque de pre-alerta |
 | `C27-28` | Falta la bandera de Compra China / CKM junto a «sellado» y «enviado según política» | 🔨 **Verificar primero** — la plantilla existe en `seeds.rb`, y **el deploy no siembra** |
 | `C27-29` | El proveedor no se guarda en `/paquetes/<id>` | 🔨 **Confirmado** — el campo visible no tiene `name` |
-| `C27-30` | El sufijo de caja no se ve en el listado | ✅ **Hecho** (2026-09-08) |
-| `C27-31` | `/etiquetar` borra el peso al agregar una caja | 🔨 **Confirmado, en arreglo** — el peso del paquete y el de captura son el mismo elemento |
+| `C27-30` | El sufijo de caja no se ve en el listado | ✅ **Hecho** en `#440` (2026-09-08) — la columna usa el mismo helper que la etiqueta |
+| `C27-31` | `/etiquetar` borra el peso al agregar una caja | 🔨 **En arreglo en `#441`** — y es peor de lo reportado: no queda sin cobrar, **se cobra mal**. 30 lb reales se facturan por 6 |
 
 ### Las preguntas que abre
 
