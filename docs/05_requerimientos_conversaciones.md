@@ -5553,7 +5553,7 @@ Sobre prefactura Yusef fue claro en que todavía no toca:
 | Id | Qué |
 |---|---|
 | ~~`RP-31`~~ | ~~¿Pie cúbico o libra volumétrica?~~ (`A7-27`) — **✅ contestada** en la hoja de redondeos del 2026-08-12: **por libra volumétrica**; el pie cúbico *"no afluye en precio"*. Ver `A8-02` |
-| `RP-32` | ▶ **Activa desde el 2026-09-06, puesta en 30 minutos.** ¿De cuánto es la ventana de notificación al escanear el manifiesto de sucursal — media hora, una hora? (`A7-08`). Estuvo sin efecto del 2026-09-01 al 06 porque no había cola. El número sigue siendo de Yusef: se cambia sin deploy con `Configuracion.set("ventana_aviso_llegada_min", "60")` |
+| ~~`RP-32`~~ | ~~¿De cuánto es la ventana de notificación al escanear el manifiesto de sucursal — media hora, una hora? (`A7-08`)~~ — **✅ CONTESTADA el 2026-09-07: 30 minutos**, con esas palabras: *"que le pusiéramos 30 minutos a los correos para que si tienen más paquetes se le actualicen"* (`C27-20`). Es el valor que ya estaba puesto y activo desde el 2026-09-06 (`VENTANA_DEFAULT_MIN`); estuvo sin efecto del 01 al 06 porque no había cola. Se cambia sin deploy con `Configuracion.set("ventana_aviso_llegada_min", "60")` |
 | ~~`RP-33`~~ | ~~Al cambiar el servicio en `/etiquetar`, ¿la pre-alerta se corrige sola o se marca resuelta?~~ **✅ se corrige sola** cuando no hay ambigüedad — `PR-C7.02` |
 | ~~`RP-34`~~ | ~~Los paquetes que hoy están en `prefacturado`, ¿a qué estado se migran?~~ **✅ no se migra ninguno**: el estado se queda, solo deja de poder elegirse a mano — `PR-C7.03` |
 | `RP-35` | El Excel de roles × operaciones (`A7-28`) — lo hace Evelin |
@@ -5691,7 +5691,7 @@ arreglar; quedó escrito para que no se vuelva a preguntar.
 | Id | Qué |
 |---|---|
 | `RP-39` | La tolerancia de `.10`/`.60` está dictada **solo para media libra**. Si algún día se carga una tarifa con incremento de 1 lb, ¿la tolerancia sigue siendo la misma o es proporcional? Hoy no hay ninguna tarifa así, así que no bloquea nada |
-| `RP-41` | **¿El flete de un envío de varias cajas se cobra por caja o por envío?** Hoy `PreFactura` arma una línea por caja, y cada una resuelve su propio escalón y su propio mínimo. Con las cajas de `A9-03` —5, 9 y 163 lb en CER— eso da **$633.50**; el mismo envío como 177 lb en un solo escalón daría **$619.50**. Nadie lo escribió, y son **$14.00 de diferencia en un envío**. La pantalla espeja lo que la factura cobra hoy (`PR-C7.17`) hasta que él decida |
+| `RP-41` | **¿El flete de un envío de varias cajas se cobra por caja o por envío?** Hoy `PreFactura` arma una línea por caja, y cada una resuelve su propio escalón y su propio mínimo. Con las cajas de `A9-03` —5, 9 y 163 lb en CER— eso da **$633.50**; el mismo envío como 177 lb en un solo escalón daría **$619.50**. Nadie lo escribió, y son **$14.00 de diferencia en un envío**. La pantalla espeja lo que la factura cobra hoy (`PR-C7.17`) hasta que él decida. ▶ **2026-09-07: el bulto la toca de frente** (`C27-01`, `C27-10`). Su respuesta operativa es «se cobra lo que se midió junto», y por eso el peso del bulto **no se reparte** entre las cajas: la cadena corre por caja y 20 lb entre 3 pueden cobrar tres mínimos. La regla de facturación sigue siendo de él |
 | `RP-40` | El metro cúbico y el pie cúbico *"no afluyen en precio"* **hoy**. ¿Van a afluir alguna vez —China por m³, marítimo por ft³— o son informativos para siempre? Cambia si hay que guardarlos o basta calcularlos |
 
 ---
@@ -10250,6 +10250,12 @@ split ya es un paquete con su propia etiqueta de Miami (`C20-12`,
 exactamente eso. Lo que no se construye: partir en Honduras. Si la línea
 encuentra más cajas de las que Miami contó, se anota y se pregunta (`RP-66`).
 
+> ▶ **Superado el 2026-09-07 por `C27-01`.** Con la cámara puesta sobre la mesa
+> se vio que el operario **agrupa cajas y mide el bulto**, no la caja: *"se
+> vuelve como una nueva unidad y solo se le ingresa la medida de esa
+> agrupación"*. La unidad de medición **no es la caja escaneada, es el bulto**;
+> lo de acá arriba se decidió con la información que había el 06.
+
 #### C26-06 · La báscula — nota y pregunta
 
 > "Esas balanzas son digitales, no las puedo conectar a la máquina."
@@ -10290,6 +10296,15 @@ guardarla y que no le caiga la notificación al cliente"*.
 unión (`C26-03`) y no ofrecer como facturable un paquete de grupo incompleto
 sin la excepción sellada; y mostrar el agrupado, que hoy solo se sabe de
 memoria.
+
+> ▶ **Contestado el 2026-09-07.** La duda de si la pre-factura podía **heredar**
+> el grupo que armó Medición la cerró Yusef: **no lo hereda, lo reconstruye
+> escaneando** —*"yo prefiero volver a escanear… ahí es donde yo no puedo
+> confiar"*— y son **dos escaneos**: los QR de las mediciones, que le dicen
+> cuántas espera, y cada warehouse receipt uno por uno (`C27-15`, `C27-16`). Y
+> el «agrupado que nadie ve» tiene su regla confirmada por Vanessa: **se factura
+> de acuerdo a la pre-alerta**, cinco pre-alertas son cinco facturas
+> (`C27-17`).
 
 #### C26-09 · El split de la pre-alerta — pregunta abierta
 
@@ -10397,12 +10412,789 @@ pesos tecleados en vivo.
 | # | Qué | Estado |
 |---|---|---|
 | `C26-01` | La cola en un servidor aparte | ✅ **Hecho** en `#431` |
-| `C26-02`…`03` | Medición: la estación y «unir» | ✅ **Hecho** — `/medicion`, rol `medicion`, grupo con faltantes, modal rojo, facturar parcial con PIN |
-| `C26-04` | La etiqueta de medición | ✅ **Hecha** — Dymo 2.25×1.25, QR `MED <código> <peso> <medidas>` que la búsqueda, recibir carga y la pistola entienden; F10 guarda e imprime, F9 reimprime |
-| `C26-08`…`11` | Pre-factura: consolidación visible, split, fecha de trabajo, notificar | 📄 Documentado; es el próximo bloque |
+| `C26-02`…`03` | Medición: la estación y «unir» | ✅ **Hecho** — `/medicion`, rol `medicion`, grupo con faltantes, modal rojo, facturar parcial con PIN. ▶ **La unidad cambió el 2026-09-07**: se mide el **bulto**, no la caja (`C27-01`), y armarlo es solo escaneando (`C27-02`) |
+| `C26-04` | La etiqueta de medición | ✅ **Hecha** — Dymo 2.25×1.25, QR `MED <código> <peso> <medidas>` que la búsqueda, recibir carga y la pistola entienden; F10 guarda e imprime, F9 reimprime. ▶ El QR lleva además el `NdeM` desde el 2026-09-08 (`C27-08`), y el conteo pasa a ser **una etiqueta por medición**, no por caja (`C27-06`) |
+| `C26-08`…`11` | Pre-factura: consolidación visible, split, fecha de trabajo, notificar | 📄 Documentado; es el próximo bloque. ▶ `C26-08` **contestado el 2026-09-07**: la pre-factura no hereda el grupo, **vuelve a escanear** (`C27-15`, `C27-16`), y se factura por pre-alerta (`C27-17`) |
 | `C26-12` | Entrega: la etiqueta que se escanea | 📄 Documentado |
+| `C26-18` | *(número que usó `#440` en su título, antes de que la reunión del 07 estuviera numerada)* | ➡️ Se documenta en la Conversación 27: `C27-07` (al menos un número), `C27-08` (el QR «n de m») y `C27-30` (el sufijo en el listado) |
 | `C26-15` | Perfil «medición» | ✅ Existe, y **solo ve su estación**: clientes, pre-alertas y paquetes pasan ahora por `can_access?` — antes esa política era «todos» y ningún controller la consultaba |
-| `RP-63` | ¿Qué báscula compra Yusef, y tiene protocolo abierto? | 🔴 **Pendiente de Yusef** — mientras, el peso se teclea |
+| `RP-63` | ¿Qué báscula compra Yusef, y tiene protocolo abierto? | 🔴 **Pendiente de Yusef** — mientras, el peso se teclea. ▶ **2026-09-07: la decisión ya está tomada, se conecta** —*"el peso va a estar conectado a la balanza… ahorita lo podemos poner manualmente"* (`C27-22`)—; falta **cuál** |
 | `RP-64` | Split de la pre-alerta consolidada cuando se factura parcial | 🔴 **Pendiente** — va con el bloque de pre-factura |
 | `RP-65` | «El código» con tiempo límite: ¿es el PIN? ¿4–5 h operarios, 12–14 h admin? | 🔴 **Pendiente de Yusef** — hoy la sesión no expira |
 | `RP-66` | Más cajas en Honduras que las que Miami contó: ¿se parte acá? | 🔴 **Pendiente de Yusef** — hoy no se parte en Honduras |
+
+---
+
+## Conversación 27 (2026-09-07) — la **PESA** por cámara: el bulto, «NO Mezclar», y la etiqueta que no es por caja
+
+Un lunes entero **mirando por cámara** la estación de pesaje de San Pedro Sula
+y viendo trabajar al operario, con Yusef narrando. Los audios del día,
+incluido el largo de 62 minutos —el de la pizarra—, transcritos con
+`whisper small`.
+
+Tres cosas de vocabulario, antes que nada, porque las tres van a la pantalla:
+
+- **El rótulo físico de esa estación dice «PESA»**, no «Medición». El módulo se
+  sigue llamando `Medición` (`C26-02`, es como lo bautizó él), pero la gente de
+  la línea le dice la PESA.
+- **Al bulto le dicen «volumen».** Yusef, explicando cómo el operario cuadra la
+  carga: *"le voy a sacar tres volúmenes, **así lo dicen ellos**, porque son
+  diferentes de tamaño… nosotros hacemos siempre lo más justo con el cúbico"*.
+  Vale la pena que la UI diga «volumen» y no una palabra que ellos no usan.
+- **A media reunión instalaron una pizarra** en la estación, y en ella quedó
+  escrito a mano lo que esta conversación decide: «NO Mezclar» y el conteo de
+  etiquetas de `C27-06`. La pizarra es la fuente más precisa de esas dos.
+
+> ⚠️ **Sobre el transcript.** Es automático, con ruido de bodega y la cámara de
+> por medio; **el sentido está, la letra puede tener errores menores**. Las
+> citas se leyeron contra lo que se vio en pantalla. Dudoso: *"chain"* (=
+> China), *"los queos"* (= las colas / los queues).
+
+Lo que esta conversación cambia de raíz: hasta el 2026-09-06 el módulo de
+Medición asumía que **se mide una caja**. Se mide un **volumen**, y el volumen
+lo arma el operario en la mesa.
+
+---
+
+### La PESA: qué se mide, y cómo se arma
+
+#### C27-01 · La unidad de medición es el **bulto**, no la caja — 🔨 **pendiente de construir**
+
+Yusef, viendo la cámara mientras el operario acomodaba:
+
+> "Él está agarrando dos paquetes, uno sobre el otro, cuadrando lo mejor
+>  posible… **Pero hay que poner varios Warehouse Receipts**… aquí la cosa es
+>  seleccionar todos los que el paquete va agregando. Y entonces en esas
+>  medidas **se vuelve como una nueva unidad y solo se le ingresa la medida de
+>  esa agrupación**."
+
+El porqué no es de comodidad, es **de plata**:
+
+> "Tratan de buscar que quede lo más cuadrado posible… **si yo mido esto, te
+>  estoy cobrando espacio vacío.** Entonces, ¿qué hacemos? Medimos esto,
+>  pesamos esto, y se le agrega esto. Esa es la razón de la medición: acomodar
+>  la carga lo mejor posible… Entonces le decimos: mire, le valió tanto, sale
+>  de esto más esto."
+
+Y diez cajas no se miden diez veces:
+
+> **Jorge:** "¿A ese donde hoy se mide 10 veces?"
+> **Yusef:** "No. **Se mide de acuerdo con cómo lo agrupe, como lo cuadremos
+>  ahí en la mesa, lo que convenga.** O sea que tendrían que poder seleccionar
+>  varios; por eso escaneamos varios, los que vamos a medir."
+
+También aplica **dentro de un mismo tracking**: *"todo puede estar bajo un
+mismo tracking también, esta es la otra situación que no la hemos visto"*. Un
+envío que Miami partió en tres cajas puede volver a ser un solo volumen en la
+mesa de San Pedro, si así cuadra.
+
+**Lectura.** El bulto no es una agrupación visual: es **la cosa que se mide y
+la que se cobra**. Sus cuatro números son suyos, no de ninguna de las cajas que
+lo componen. Las cajas siguen existiendo —cada una con su warehouse receipt, su
+etiqueta de Miami y su renglón— pero para el cobro pasan a ser contenido.
+
+> ▶ **Supera a `C26-05`.** El 2026-09-06 Jorge había decidido *«una medición
+> por caja escaneada»*, con la información que había entonces. Esta
+> conversación la cambia: una medición por **bulto**, y un bulto son N cajas.
+
+#### C27-02 · El bulto se arma **escaneando** — nunca eligiendo de una lista
+
+Preguntado directo, dos veces:
+
+> **Jorge:** ¿Y cómo los unís? ¿En pantalla, cómo te imaginás?
+> **Yusef:** **"No, no, porque se van a equivocar. Eso es un error ya. No van a
+>  leer."**
+> **Jorge:** ¿Entonces cómo los unís?
+> **Yusef:** **"Escaneando."**
+> **Jorge:** Si tengo tres paquetes, ¿cómo sabe cuáles vas a unir?
+> **Yusef:** **"Escaneando cada uno."**
+
+Su propio resumen:
+
+> "Es lo mismo que en Miami: vas a medir y pesar, pero esta vez vas a medir y
+>  pesar **varios warehouse**."
+
+**Lectura.** La pistola es la que dice qué va adentro del bulto, caja por caja.
+El **botón de confirmar sí puede estar** —la pantalla es táctil (`C27-13`)—; lo
+que no puede haber es **una lista donde el operario marque cuáles van juntas**.
+Su argumento no es de diseño, es de personal: *"no van a leer"*.
+
+> ⚠️ **Tensión con `C26-03`, a resolver en el código.** Ahí quedó escrito que
+> *"se puede tocar un cuadrito que ya llegó para medirlo, sin volver a
+> escanear"*. Tocar un cuadrito **para elegir qué caja entra al bulto** es
+> exactamente lo que él acaba de prohibir. Tocar un cuadrito **para medir esa
+> caja sola** —que es para lo que se puso— no lo es. La pantalla tiene que
+> distinguir las dos cosas; el documento las deja nombradas, no las resuelve.
+
+#### C27-03 · **Máximo 10** mediciones por sesión — 🔨 **pendiente**
+
+> "Máximo 10 warehouse, máximo 10 etiquetas… **el normal de nosotros es 2 a 3;
+>  5 ya es demasiado.** Pusimos 10 para no estar ahí «hay que cambiar esto»."
+
+Y el porqué, que no es técnico:
+
+> "Eliminar un poco el hecho de que quedés muy libre… **si hubiéramos metido
+>  los 100 bultos, van a estar forzados a no agruparlos.**"
+
+**Lectura.** El tope es una **herramienta de disciplina**, no un límite de
+recursos: con la mesa llena de cien cajas el operario deja de agrupar, y
+agrupar es todo el negocio de esta estación (`C27-01`). Diez es holgado a
+propósito —*"para no estar ahí «hay que cambiar esto»"*—, así que el número
+conviene que sea configurable pero que **no se muestre como una preferencia**:
+es una regla, no una opción.
+
+> ⚠️ **Falta una precisión, y es de él: qué se cuenta.** Sus dos unidades son
+> *"máximo 10 warehouse"* y *"máximo 10 etiquetas"*, y con el bulto de `C27-01`
+> esas dos dejan de ser lo mismo: diez warehouse receipts sobre la mesa pueden
+> ser tres volúmenes, o sea tres etiquetas. Hay que preguntarle si el tope son
+> **10 cajas escaneadas** o **10 mediciones** antes de imprimir. Su *"el normal
+> de nosotros es 2 a 3; 5 ya es demasiado"* suena a mediciones, pero no se
+> asume.
+
+#### C27-04 · «NO Mezclar»: el modal del consolidado, y sus dos respuestas — 🔨 **pendiente**
+
+Es lo que quedó escrito en la pizarra, y dicho así:
+
+> "Le tienen que decir si lo puede hacer o no lo puede hacer… **no lo podría
+>  hacer porque está consolidando esa carga con otros paquetes.** Le debería
+>  tirar un error, **un modal que le diga: hey, no, ese está consolidando con
+>  tal pre-alerta, con tal número. Ese va amarrado con otra.**"
+
+**Qué dice el modal:** a qué **pre-alerta** y a qué **pre-factura** pertenece la
+caja que se acaba de escanear. Sin eso el operario no sabe qué buscar.
+
+**Y qué pregunta: ¿procesa el consolidado, o lo pone a un lado y termina el que
+está haciendo?** Las dos respuestas tienen efectos distintos y los dos son de
+Yusef:
+
+- **«A un lado»** → *"no lo va a guardar, lo pone a un lado"*. La caja escaneada
+  **no se agrega** al volumen, y se sigue con lo que ya hay en la mesa. Lo de
+  «a un lado» es un movimiento físico —la caja se aparta—, **no un estado del
+  sistema**: no hay cola de apartados, ni bandeja de «pendientes de buscar», ni
+  nada que persistir.
+- **«Sí, voy a hacer el consolidado»** → *"**tiene que eliminar este del
+  listado que escaneó**, porque ese no va a ir en la medición"*. Se **limpian
+  las cajas ya escaneadas** —el volumen que venía armando se descarta— y de ahí
+  en adelante **solo se pueden escanear cajas de ese consolidado**: *"a uno que
+  no está, le tira un error"*.
+
+Y la versión corta que él dio antes, que sigue valiendo para la primera rama:
+
+> "Le tiene que salir un modal donde le van a preguntar **si lo va a hacer o lo
+>  va a poner a un lado**… se lo pone de lado, entonces **este es como un F2:
+>  limpia de nuevo**."
+
+**Lectura.** El modal no es un aviso: es una **bifurcación con consecuencia**.
+La rama del consolidado cambia el modo de la pantalla —pasa a estar «amarrada»
+a una pre-alerta y rechaza todo lo demás— y la rama de «a un lado» limpia y
+sigue.
+
+> **Y el residuo lo contestó él mismo, en el mismo audio: no hay nada que
+> guardar.** La caja apartada *"la deja a un lado"* —físicamente, en la mesa— y
+> el operario sigue con lo que tiene: *"este es como un F2: limpia de nuevo"*.
+> No se abre pregunta por esto: **no hay estado, no hay cola de apartados, no
+> hay bandeja**. Lo único que el sistema aporta es decirle, en el modal, con qué
+> pre-alerta va amarrada, para que sepa qué buscar. Encaja con la regla que ya existe para el estado que sobrevive a limpiar
+([[project_estado_js_que_sobrevive_a_limpiar]]): lo que se limpia, se limpia
+entero, incluido el modo.
+
+#### C27-05 · Mismo cliente, mismo servicio: el error y sus dos salidas — 🔨 **pendiente**
+
+Qué se valida, atado a algo que **ya existe** en el sistema:
+
+> "Es como los trackings cuando los escaneamos en Miami: escaneamos el tracking
+>  uno y el tracking dos, **que valida que sean del mismo código de cliente,
+>  mismo código de servicio**, etcétera. **Esa validación la vamos a hacer
+>  acá.**"
+
+Y el caso concreto, con las dos salidas que él pidió:
+
+> "Cuando él arranca, escanea uno de Jorge y va y escanea otro y ese no es el
+>  mismo Jorge —en vez de Jorge Padilla es Jorge Manzano—, **le tira error, es
+>  diferente cliente**… ¿qué opciones tiene ahí? **¿Desea eliminar este último
+>  o empezar todo de nuevo?**"
+
+**Lectura.** Dos clientes distintos en un mismo volumen es un cobro mal hecho,
+así que el error es **bloqueante** —la caja no entra—, pero no puede dejar al
+operario sin salida con la carga encima: **«eliminar el último»** (lo más común:
+se escaneó una caja de más) o **«empezar todo de nuevo»**. No son las mismas dos
+salidas que el modal del consolidado de `C27-04`, pero son dos modales de la
+misma familia y **conviene que se vean igual**: mismo lugar, mismo tamaño,
+mismos botones.
+
+Yusef ata la validación a **la que ya hace Miami** al escanear los trackings de
+una pre-alerta —*"esa validación la vamos a hacer acá"*—. Antes de escribirla
+hay que **ubicar dónde vive esa validación en `/etiquetar`** y reusarla, no
+escribir una segunda copia: es exactamente el patrón que ya mordió cuatro veces
+([[project_duplicacion_entre_pantallas]]).
+
+#### C27-06 · **Una etiqueta por medición**, no una por paquete — 🔨 **pendiente**
+
+Lo dijo tres veces, y textual:
+
+> "**No es una etiqueta por paquete, es una etiqueta por medición**, y la
+>  medición puede tener 100 paquetes."
+> "Todos los trackings que escaneó pueden ser 20 trackings y los metió todos en
+>  una sola caja: **hay una sola medida, un solo peso, entonces todo cabe en
+>  una sola etiqueta**."
+
+De la pizarra, con el ejemplo dibujado: cuatro warehouse receipts donde dos van
+consolidados **no son 4 etiquetas sino 3** —
+
+> «1 → 2 items consolidables, 1 sin consolidar, 1 sin consolidar»
+
+**Y por qué no una sola etiqueta para todo el envío**, que era la idea que él
+mismo tuvo y descartó:
+
+> "Yo había pensado hacer una sola etiqueta para todo, aunque sean tres
+>  volúmenes, pero dije no, **porque si hacemos una sola, se les puede
+>  escapar** algo."
+
+**Lectura.** Cambia el conteo que hoy hace la estación: hoy `C26-04` imprime
+**una sticker por caja medida** y las saca juntas al terminar el envío. Con el
+bulto, la sticker es **del volumen**; las cajas que van adentro no llevan la
+suya. Un volumen de una sola caja imprime una —el caso más común—, así que la
+diferencia no salta a la vista hasta que hay consolidado.
+
+La etiqueta por volumen y no por envío es, además, la que hace posible la
+auditoría de `C27-16`: tres etiquetas obligan a tres escaneos en pre-factura, y
+si falta uno se nota.
+
+#### C27-07 · No hacen falta los cuatro números — ✅ **HECHO** en `#440` (2026-09-08)
+
+> "Siempre vas a meter length, height, width y weight. **A veces no se mide,
+>  cuando es una cajita bien pequeñita. Pero siempre una de estas cuatro se
+>  mete** —que sería peso en ese caso—, o estas tres, o esta, o todo, **para
+>  que el sistema diga cuál es el mayor.**"
+
+**Lo que se construyó.** `MedirPaquete` pedía los cuatro y **fallaba** si
+faltaba uno —*«Faltan alto, largo, ancho: los cuatro tienen que ser mayores que
+cero»*—, que es exactamente la caja chiquita que él describe. Ahora:
+
+- pide **al menos uno** de los cuatro;
+- **las tres dimensiones van juntas o no van**: dos de tres no calculan volumen,
+  y guardarlas es guardar un dato que miente;
+- **lo que se deja en blanco no pisa lo que digitó Miami.** Éste es el punto
+  fino: un `nil` que sobrescribe es perder el dato bueno. Medir en Honduras solo
+  agrega.
+
+El resto sigue igual: el paquete recalcula solo VLBS y peso a cobrar
+(`before_save`), y quien decide *"cuál es el mayor"* —que es lo que él pide—
+sigue siendo `VolumetricoCalculator.entre_peso_y_vlbs`, que ya lo hacía. Un
+campo en blanco, en cero o con basura **se cae de la lista** y el paquete se
+queda con lo que tenía.
+
+> `#440` se tituló `C26-18`, porque se abrió antes de que esta conversación
+> estuviera numerada. Es este item, `C27-08` y `C27-30`.
+
+#### C27-08 · El QR dice «1 de 2» — ✅ **HECHO** en `#440` (2026-09-08), con una salvedad
+
+> "Al escanear, este solo es único; o si son dos, entonces **el QR le va a
+>  decir que es uno de dos**, entonces tiene que escanear dos para que le
+>  cuadre."
+
+**Lo que se construyó.** El QR de la etiqueta de medición (`C26-04`) lleva el
+`NdeM` al final —`2de3`, sin barra, por la misma razón por la que el resto del
+QR va con espacios— y la etiqueta lo imprime, así que quien la escanea sabe
+cuántas espera. Una caja sola no lleva nada: el QR se queda como estaba.
+
+> ⚠️ **La salvedad, y no es menor: hoy cuenta cajas, no mediciones.**
+> `etiqueta_cuantas_cajas` se arma con `numero_caja` y `cantidad_paquetes`, o
+> sea **las cajas de un envío partido**. Hoy los dos números coinciden porque
+> cada caja es una medición y una etiqueta; **en cuanto entre el bulto
+> (`C27-01`, `C27-06`) dejan de coincidir** —tres cajas pueden ser un solo
+> volumen— y ahí el `NdeM` tiene que pasar a contar **mediciones**, que es lo
+> que Yusef describe y lo que la auditoría de `C27-16` necesita. Lo construido
+> es la pieza correcta con la fuente provisional; nadie lea este item como si la
+> regla final ya estuviera puesta.
+
+**Y no contradice a `A7-21`.** Ahí Yusef sacó el *«1 de N»* de la etiqueta de
+Miami, y con razón: esa se imprime **mientras todavía se empaca** y el total no
+se sabe —*"cuando menos acordás: hey, me salieron cuatro en vez de cinco"*—.
+Ésta se imprime en San Pedro **con la carga entera sobre la mesa**, donde el
+total sí se sabe. Es la misma distinción que él hizo el 2026-08-19 entre
+empacar y etiquetar.
+
+#### C27-09 · Reimprimir: se vuelve a escanear el warehouse — ✅ **ya está, confirmado**
+
+> "Él va a poder reimprimir la etiqueta, porque digamos que si se le cae…
+>  ¿cómo la buscaría? **Tendría que volver a escanear el warehouse.**"
+
+Y el otro caso de reimpresión: **corregir una medida mal digitada**. Se vuelve a
+medir y se reimprime; la etiqueta vieja se descarta.
+
+**Lectura.** Confirma lo que ya se construyó en `C26-04` —el botón de
+reimprimir, y el escaneo del warehouse como única forma de volver a encontrar
+una medición— y agrega la regla del re-sellado que `MedirPaquete` ya cumple:
+medir de nuevo **re-sella** `medido_at`/`medido_por`, porque el sello contesta
+*quién puso el dato que está*.
+
+#### C27-10 · El modelo de datos del bulto — **decidido, no construido**
+
+La decisión técnica que sale de `C27-01`, escrita para que no se re-decida:
+
+- Nace una tabla **`bultos`** con las cuatro medidas, su propio
+  `peso_volumetrico` y su propio `peso_cobrar`. Hoy **no existe** en
+  `structure.sql`.
+- Los paquetes apuntan con **`bulto_id`**.
+- A las cajas se les escribe **solo** `bulto_id` y el sello
+  `medido_at` / `medido_por`. Sus `peso, alto, largo, ancho` **no se tocan**:
+  ése es el dato de Miami y sigue siendo verdad sobre esa caja.
+
+**Por qué no se reparte el peso del bulto entre sus cajas**, que es la solución
+que parece más barata y es la que rompe la plata:
+
+1. `Paquete` tiene `before_save :calculate_peso_cobrar` — le escribas lo que le
+   escribas, **recalcula desde los números de ese paquete**. Un peso repartido
+   no sobrevive al guardado.
+2. **Dividir dimensiones no significa nada.** Un bulto de 20×20×20 no son tres
+   cajas de 20×20×6.67; el volumen que se cobró es el del bulto.
+3. **La cadena de cobro corre por caja** —redondeo → escalón → mínimo
+   ([[project_cadena_de_cobro_flete]])—, así que 20 lb repartidas entre 3 cajas
+   pueden terminar cobrando **tres mínimos de servicio** en vez de uno.
+
+Esto toca de frente `RP-41` (*¿el flete se cobra por caja o por envío?*), que
+sigue abierta: el bulto **es** la respuesta operativa de Yusef —se cobra lo que
+se midió junto—, pero la regla de facturación la tiene que confirmar él.
+
+> ▶ **En vuelo: `#443`** (`feat/el-bulto-de-medicion`) lleva esto a código —el
+> modelo `Bulto`, `PuedenIrJuntas` y `MedirBulto`, con el tope de 10 de `C27-03`
+> y el bulto como unidad de cobro—. Mientras no mergee, lo de acá arriba es la
+> especificación, no el estado del sistema.
+
+> 🕳️ **Hueco conocido, y no se esconde.** `Paquete#listo_para_prefactura?` mira
+> `medido_at` **y el grupo de unión**, y nada más: no sabe qué es un bulto. Y
+> `PreFactura` **copia** `paquete.peso_cobrar` al armar sus items y no lo vuelve
+> a leer. Mientras el bulto no exista y la pre-factura no lo lea (`C26-08`,
+> `C27-15`), **una caja medida entra a la pre-factura con el peso de Miami**, no
+> con el del bulto. Es la razón por la que esto no se puede dejar a medias.
+
+---
+
+### El panel y la pantalla
+
+#### C27-11 · El panel del manifiesto está **aprobado** — es una auditoría
+
+Mirando el panel de la derecha que se construyó en `C26-17`:
+
+> "El manifiesto, olvidate, aquí no tiene nada que ver… pero no está mal.
+>  **Esto es una auditoría.** Aquí si le faltó la caja, aquí te va a quedar uno,
+>  y hay que echarle un ojo."
+
+**Lectura.** Aprobado tal como está, y con el nombre que él le puso: no es una
+herramienta de trabajo de la línea, es **el control de que no se perdió nada**.
+No se toca.
+
+#### C27-12 · Falta **quién ingresó las medidas** — 🔨 **pendiente, es chico**
+
+> "Lo que hace falta aquí es poner **quién ingresó las medidas** hoy."
+
+**Contra el código: el dato ya está, solo no se muestra.** `MedirPaquete` sella
+`medido_por` con las iniciales de quien midió, y hoy eso sale **únicamente en
+la etiqueta impresa** (`app/views/medicion/etiqueta.html.erb`). Ni el panel de
+la derecha ni la grilla lo dicen. Es un renglón, no una feature — y es
+exactamente el tipo de dato que después se busca cuando algo salió mal.
+
+#### C27-13 · La pantalla es **táctil**, y habla como un celular
+
+> "**Tiene que ser touch en la pantalla. Le voy a poner una laptop touch.** La
+>  idea es que ellos solo toquen, porque **ellos no saben usar el computador**,
+>  esos dos chicos que ves ahí no saben. Pero saben usar celular, entonces
+>  tienen una facilidad: hacérselos parecidos al lenguaje de un celular."
+> "**No lo van a leer, no van a ver bien, olvídenlo.**"
+
+Y el detalle de cómo se digita:
+
+> Teclado **en pantalla** para meter los números, botones grandes, y **las dos
+> cosas** —el touchpad y el teclado— *"lo que se sientan mejor para ellos"*.
+
+**Lectura.** Es el mismo argumento de `C27-02` visto por el otro lado: **tocar
+un botón grande sí, leer y elegir de una lista no**. Para la estación: blancos
+de toque grandes, poco texto, un camino por pantalla, teclado numérico en
+pantalla para las medidas, y las decisiones resueltas por el escaneo. **No se
+quita el teclado físico**: conviven. El teclado sigue siendo la herramienta en
+Miami (`A1-*`); acá la herramienta es el dedo y la pistola.
+
+#### C27-14 · El gate de estado tiene que dejar **saltarse el manifiesto** — 🔨 **pendiente**
+
+Salió dos veces, y la segunda con nombre y apellido:
+
+> **Jorge:** Tenés que pasar el proceso de aduana, no podés saltarte el proceso
+>  de manifiesto.
+> **Yusef:** Pero si ya está en Honduras. ¿Cómo llegó a Honduras si no…?
+>  **"Debe dejar que sí se lo salten, porque a veces se capean, algunos se los
+>  van a capear."**
+
+Y, mirándolo pasar en vivo:
+
+> "Este tiene un bloqueo ahorita que me tiene loco: **si no ha pasado el proceso
+>  desde Miami para acá, no lo puede hacer.** Y ya le dije que **le tiene que
+>  eliminar eso** porque nos va a llevar putas, porque a más de alguno se le va
+>  a escapar. **Hay que poner una opción ahí.**"
+
+**Lectura, contra el código.** Hoy `MedirPaquete` **bloquea**: si el estado no
+está en `ESTADOS_FACTURABLES` (`en_aduana`, `disponible_entrega`) tira
+*«todavía no se recibió. Pasala por Recibir Carga»*. Eso asume que la única
+manera de estar en Honduras es haber pasado por el manifiesto, y él dice que no:
+la caja **está ahí**, en la mesa, en la mano del operario.
+
+Lo que pide —*"hay que poner una opción ahí"*— es lo mismo que ya se hizo con el
+grupo incompleto en `C26-03`: **avisar y dejar pasar**, no bloquear, y **sellar
+quién lo dejó pasar y cuándo**, que es lo que después permite auditarlo desde el
+panel de `C26-17`. Va en la misma línea que
+[[project_manifiesto_dos_caminos]]: nada puede asumir que el paquete pasó por el
+manifiesto.
+
+---
+
+### Pre-factura, facturación y entrega
+
+#### C27-15 · La pre-factura **vuelve a escanear** — contesta `C26-08`
+
+La pregunta que quedó abierta el 2026-09-05, hecha y contestada:
+
+> **Jorge:** ¿Debo confiar en que el de medición escaneó todos los paquetes, o
+>  desconfiar y en pre-factura volver a escanear?
+> **Yusef:** **"Yo prefiero volver a escanear. Es que ahí es donde yo no puedo
+>  confiar… y los errores se dan acá."**
+
+**Lectura.** La pre-factura **no hereda** el grupo que armó Medición: lo
+**reconstruye escaneando**. Medición no es una autoridad sobre qué se factura
+junto; es la estación donde se pesa y se mide. Las dos pantallas escanean, y que
+coincidan es la verificación, no un dato que se pasa de una a la otra.
+
+Y del lado del cobro, lo que `C27-01` le deja a este bloque: **la línea de la
+factura es el bulto**, no la caja. *"Le decimos: mire, le valió tanto, sale de
+esto más esto."*
+
+#### C27-16 · Cómo audita Vanessa: el QR dice «son dos», y además cada warehouse
+
+Con qué escanea la pre-factura, en las palabras de él:
+
+> "Cuando ella escanea cualquiera de los QR le dice: ¡eh!, son dos —ya le va a
+>  decir que **tiene dos mediciones**—, porque si no escanea la segunda medición
+>  no se le agrega. **Esa es una manera de auditar las mediciones.** Pero ella
+>  también tiene que escanear **cada warehouse**, de esa manera auditamos que no
+>  se quedó nada o no se cayó a otro lado."
+
+**Lectura, y son dos escaneos distintos, no uno:**
+
+1. **Los QR de las mediciones** (`C27-08`): el primero que se escanea declara
+   *«soy 1 de 2»*, y la pre-factura **no se completa** hasta que llegue el
+   segundo. Audita que no se perdió un volumen entero.
+2. **Cada warehouse receipt**, uno por uno: audita que dentro de esos volúmenes
+   están todas las cajas — *"que no se quedó nada o no se cayó a otro lado"*.
+
+Es el detalle que faltaba de `C27-15`: la pre-factura no solo re-escanea, sabe
+**cuántas mediciones espera** porque el QR se lo dice.
+
+#### C27-17 · **Se factura por pre-alerta**: cinco pre-alertas, cinco facturas — ✅ **contestado**
+
+Ésta era la pregunta que Yusef mismo había dejado abierta —*"aquí es donde tengo
+que llamar a Vanessa para que me explique qué hacen en ese caso"*—. Fue, y
+volvió con la respuesta: un cliente con dos paquetes consolidados y uno sin
+consolidar son **facturas separadas**.
+
+> "Nosotros facturamos **de acuerdo a la pre-alerta**."
+
+Cinco pre-alertas, cinco facturas. Es la misma regla que ya estaba escrita en
+`C26-08` desde el otro lado (*"cuando son cinco consolidados diferentes… ellos
+tienen que separarlos en cinco"*), ahora confirmada con la práctica.
+
+**Lectura, y es la razón de fondo de «NO Mezclar».** Si la factura sale de la
+pre-alerta, entonces **consolidado y no-consolidado no pueden compartir una
+medición**: el volumen es la línea de la factura (`C27-15`), y una línea no
+puede pertenecer a dos facturas. `C27-04` no es una guarda de conveniencia —es
+la consecuencia de cómo se factura.
+
+---
+
+### Reglas de negocio nuevas, que hoy **no** están en el código
+
+#### C27-18 · Máximo **cinco** pre-alertas consolidando abiertas, por tipo de envío — 🔨 **pendiente**
+
+> "Hay clientes que así dividen, dividen hasta en cinco. Nosotros le pusimos un
+>  límite de cinco a los clientes, de pre-alertas consolidando por tipo de
+>  envío… **cinco por servicio. Son tres servicios que consolidan.**"
+
+**Lectura, contra el código.** Los *"tres servicios que consolidan"* cuadran
+solos: `tipos_envio.consolidable` es verdadero en **EXPRESS, CER y CEM**, y
+falso en CKA y CKM. O sea que el tope es **5 por cliente y por servicio
+consolidable**, hasta 15 pre-alertas consolidando abiertas por cliente.
+
+**El límite no existe en ninguna parte**: no hay constante, ni validación, ni
+nada que cuente pre-alertas consolidando abiertas. Hoy un cliente puede abrir
+las que quiera. Lo que falta decidir es qué pasa con la sexta (`RP-67`).
+
+#### C27-19 · Al finalizar el ciclo, la consolidación se cierra sola — 🔨 **pendiente, es un job**
+
+> "Cuando ya se finaliza el ciclo, se cierra automático también. **Y eso es
+>  parte de los queos**, lo que parece que esa parte no la he hecho."
+
+**Lectura.** Él mismo lo ubica donde va: en la cola. Y la cola **ya está
+conectada** desde el 2026-09-06 (`C26-01`, `#431`), así que esto ya se puede
+construir: no queda bloqueado como quedaron los diferidos de antes
+([[project_cola_de_trabajos_no_conectada]]). En `app/jobs` hay seis trabajos hoy
+y ninguno cierra consolidaciones.
+
+Lo que falta antes de escribirlo es **qué es «finalizar el ciclo»** — la fecha de
+corte del tipo de envío, el manifiesto que sale de Miami, o la fecha de trabajo
+de `C26-10`. `RP-68`.
+
+#### C27-20 · La ventana de 30 minutos del correo, **confirmada** — cierra `RP-32`
+
+> "Que le pusiéramos **30 minutos** a los correos para que si tienen más
+>  paquetes se le actualicen."
+
+**Ya está construida** y es exactamente eso: `NotificarLlegadaASucursal` programa
+el aviso a `VENTANA_DEFAULT_MIN = 30` (`A7-08`, activa desde el 2026-09-06), y el
+número se cambia sin deploy con
+`Configuracion.set("ventana_aviso_llegada_min", "…")`. **`RP-32` se cierra**: el
+número es 30.
+
+#### C27-21 · Retención: **un año** de historial de medición; las facturas no se borran — 🔨 **pendiente**
+
+> **Jorge:** "¿El historial de medición hasta cuánto tiempo se va a poder ver?"
+> **Yusef:** "**Como un año atrás.** Se va a limpiar el 2025 cuando entremos al
+>  2027; va a tener un año de almacenamiento, el del año anterior. **No se
+>  eliminan las facturas.**"
+
+**Lectura.** La regla es: **el año corriente más el anterior**, y la limpieza es
+por año calendario, no por ventana móvil —*"se va a limpiar el 2025 cuando
+entremos al 2027"*—. Y el límite duro: **las facturas nunca**.
+
+Es un borrado, así que antes de escribirlo hay que saber exactamente qué cae y
+qué no (`RP-69`). Hoy no existe ninguna purga; y lo que sí existe y hay que
+mirar de frente es `paper_trail`, que está en los 50 modelos
+([[project_paper_trail_global]]): las versiones de auditoría también crecen, y
+borrar el dato dejando la versión no borra nada.
+
+#### C27-22 · La báscula **se conecta** — actualiza `RP-63`
+
+> "No va a meter peso, porque **el peso va a estar conectado a la balanza**, se
+>  lo va a dar automático… **ahorita lo podemos poner manualmente.**"
+
+**Lectura.** Cambia el estado de `RP-63` (abierta el 2026-09-05: *"esas balanzas
+son digitales, no las puedo conectar"*, *"voy a pedir una nueva"*): la decisión
+ya está tomada —**se conecta**— y el manual es explícitamente el **puente**,
+no el destino. Lo que sigue faltando es el mismo dato de siempre: cuál compra y
+si tiene protocolo abierto. La pantalla conviene diseñarla con el peso como un
+campo que **puede llegar solo**, no como un campo que siempre se teclea.
+
+---
+
+### Lo que Yusef **descartó**, con sus palabras
+
+#### C27-23 · Que el operario declare que dividió una carga en tres mediciones — ❌ **descartado**
+
+La idea era que, cuando un bulto no cabe en una sola medición, el operario
+declarara *«esto son 3 mediciones del mismo envío»* y el sistema las sumara.
+Yusef la mató él mismo:
+
+> "Me gustaría que quedara así, pero de entrada va a estar **muy difícil eso
+>  para ellos… por el tipo de personal que está ahí**."
+
+**No se construye.** Lo que la reemplaza es más simple y ya está decidido: la
+pre-factura escanea los QR y **el QR dice cuántas mediciones son** (`C27-08`,
+`C27-16`), así que la suma la hace el que factura, no el que mide. Queda anotado
+en `RP-70` por si el personal cambia; no es una pregunta pendiente, es una
+decisión con fecha.
+
+---
+
+### Pre-alerta: lo que salió al final — 📄 **otro bloque, se deja escrito**
+
+Cerrando la reunión, Yusef fue pasando por el portal del cliente. No es el
+bloque de esta corrida; va acá para que no se pierda.
+
+#### C27-24 · Mover un paquete de una pre-alerta a otra
+
+> "Aquí le hace falta a Jorge que **lo pueda mover**, no sé por qué no está esa
+>  opción."
+
+**Contra el código: la capacidad existe, la puerta no.** `cuenta/pre_alertas`
+tiene `mover_paquete` y `destinos_disponibles` desde hace tiempo, y admin las
+tiene también desde `PR-C6.48` (*"el portal ya lo tenía; admin solo podía
+hacerlo desde la ficha del paquete"*). O sea que lo que falta es **el botón en
+la pantalla que él estaba mirando**, no la función. Es el patrón conocido
+([[project_duplicacion_entre_pantallas]], [[project_pantallas_sin_puerta]]):
+antes de construir nada, hay que ver **en qué pantalla** lo buscó.
+
+#### C27-25 · Editar o agregar instrucciones a una pre-alerta ya creada
+
+> "Acá sería bueno que él pueda **agregar instrucciones, aunque no la haya
+>  agregado**."
+
+La columna existe —`pre_alerta_paquetes.instrucciones`— y se llena al crear. Lo
+que falta es poder **agregarlas o cambiarlas después**. Y aplica la regla que
+Yusef ya fijó: las instrucciones del cliente son **nota, no tarea**
+([[feedback_instrucciones_son_nota_no_tarea]]); agregar una instrucción no crea
+trabajo, lo escribe.
+
+#### C27-26 · Poder **borrar** una pre-alerta
+
+> "Debería **poderla borrar** para ya no tenerla, porque me equivoqué."
+
+**Contra el código: hoy no se puede, y es a propósito.** Las dos rutas de
+pre-alertas están declaradas `except: %i[destroy]`; lo que hay es **anular**
+(`delete :anular`), que la deja marcada y auditable. Lo que él pide es para el
+caso *"me equivoqué"* —una pre-alerta recién creada, sin nada recibido—, que no
+es lo mismo que anular una que ya tiene historia. Cuando se toque, la línea a
+respetar es la de siempre: se borra lo que nunca existió de verdad, se anula lo
+que ya pasó por algún lado.
+
+#### C27-27 · «Los paquetes se bloquean en aduana» — ❓ **sentido no cerrado**
+
+Lo dijo de paso, en la pasada por pre-alertas del final:
+
+> Los paquetes **se bloquean en aduana**.
+
+**No se cierra el sentido, porque la frase admite varias lecturas** y la
+transcripción no da más contexto:
+
+1. **En la pre-alerta**: un paquete que ya está en aduana **no se puede mover ni
+   editar** desde el portal, y por eso lo dice justo cuando pide poder mover
+   (`C27-24`) y borrar (`C27-26`).
+2. **Operativa**: la carga se **detiene físicamente** en aduana, y es una
+   descripción del proceso, no un pedido al sistema.
+3. **El gate**: es la otra cara de `C27-14`, donde él pide que se pueda saltar
+   el manifiesto.
+
+Cuál de las tres es, se le pregunta cuando se abra el bloque de pre-alerta. Lo
+que **no** se hace es tomar la tercera y construirla: `C27-14` ya tiene sus
+palabras propias y no necesita ésta de apoyo.
+
+#### C27-28 · Falta la bandera de **Compra China / CKM**
+
+> "Falta **chain** también" —junto a «sellado» y «enviado según política».
+
+**Contra el código.** «Sellado» y «Compra chino» **existen** como plantillas de
+descripción (`PlantillaDescripcion`, `C19-04`, sembradas en `db/seeds.rb` desde
+`PR-C7.58`), y «enviado según política» tiene su propio catálogo
+(`motivos_envio_politica`). Dos cosas a verificar antes de construir nada:
+
+1. **En qué pantalla las está viendo.** Si en esa pantalla está el picker de
+   políticas y no el de descripciones, es de nuevo el patrón de la puerta
+   faltante.
+2. **Que el catálogo exista donde él mira.** El deploy **no siembra**
+   ([[project_deploy_no_siembra]]): un catálogo que el sistema necesita va por
+   **migración de datos**, no por `seeds.rb`. Es perfectamente posible que
+   «Compra chino» exista en la máquina de Jorge y **no en staging**, y que eso
+   sea todo el bug.
+
+---
+
+### Bugs de digitación que salieron **en vivo**, por cámara
+
+#### C27-29 · El proveedor no se guarda en `/paquetes/<id>` — 🔨 **confirmado en el código**
+
+Jorge lo encontró mirando la pantalla del operario:
+
+> "Está en F10… no lo está cambiando… el guardar…" · **"Ya, ya, ya, es que este
+>  es el proveedor."**
+
+**El diagnóstico, confirmado leyendo `app/views/paquetes/_form.html.erb`:** el
+campo visible del autocomplete es un `<input type="text">` **sin `name`**. No se
+envía nunca. Lo único que viaja es el `hidden_field :proveedor_id`, y ése lo
+escribe el controller de JS **solo cuando se elige una sugerencia del dropdown**.
+Entonces: escribir el proveedor a mano y guardar **no guarda nada**, y la
+pantalla no se queja. Se suma a lo ya sabido de ese autocomplete
+([[project_autocomplete_no_limpia_el_oculto]]): escribe el oculto, nunca lo
+limpia, y ahora sabemos que **el texto tampoco llega**.
+
+#### C27-30 · El sufijo de caja no se ve en el listado — ✅ **HECHO** en `#440` (2026-09-08)
+
+> **Yusef:** "Cuando vuelvo a escanear aparece en las cajitas y aparecen todos
+>  los datos, **pero a la vista no**… lo mejor sería que lo tengas en los dos
+>  lados."
+
+El `-1`, `-2` del warehouse receipt (`A1-04`, `A1-05`) estaba en el detalle y en
+la etiqueta, pero no en la columna «N° recepción» de `/paquetes`, que es donde
+el operario mira primero. **Está en los dos lados**, y la columna pasó a usar
+**el mismo helper que imprime el código de barras** (`etiqueta_codigo_barras`)
+en vez de `numero_recepcion_visible`: así las dos pantallas no pueden divergir,
+que es el modo conocido de que esto se rompa
+([[project_duplicacion_entre_pantallas]]).
+
+#### C27-31 · `/etiquetar` borra el peso al agregar una caja — 🔨 **confirmado, en arreglo**
+
+**El diagnóstico, confirmado leyendo el código:** en
+`cajas_peso_medidas_component`, el campo de peso es a la vez
+`f.number_field :peso` —o sea `name="paquete[peso]"`, el peso **del paquete**— y
+`data-caja-campo="peso"`, el campo de **captura** del repetidor de cajas. Al
+agregar una caja, `cajas_repetidor_controller#agregar` llama a
+`_limpiarCaptura()`, que vacía los campos de captura… **y con ellos el peso del
+paquete**, porque son el mismo elemento del DOM.
+
+**Y es peor que lo reportado.** El paquete **no queda sin cobrar: se cobra
+mal.** `calculate_peso_cobrar` corre igual con el peso en `nil`, y entonces gana
+el volumétrico —el viejo, el que tuviera de antes—. Medido en `#441`: **un
+paquete de 30 lb reales se factura por 6**. Un paquete sin peso salta a la
+vista y alguien lo arregla; un paquete cobrado por la quinta parte se va con la
+factura hecha y nadie lo mira. Se arregla en `#441`
+(`fix/etiquetar-no-borra-el-peso`).
+
+Es otra vez un elemento con dos responsabilidades en esa pantalla; va con
+[[project_duplicacion_entre_pantallas]] y con el `1 de N` del mismo componente.
+
+---
+
+### Notas que no son tarea
+
+- **El rótulo dice PESA, y al bulto le dicen volumen.** Vale la pena que las
+  etiquetas y los mensajes de la estación usen las palabras que ya se usan ahí.
+- **La pizarra.** Yusef la mandó instalar durante la reunión, y lo primero que
+  se escribió en ella fue «NO Mezclar». Cuando la regla está en la pared, el
+  sistema no la puede contradecir.
+- **«Ellos no saben usar el computador»** no es un desprecio, es el requisito:
+  todo lo que en esta estación se resuelva leyendo, se resuelve mal.
+- **La cámara como método.** Es la primera vez que se documenta viendo trabajar
+  al operario en vez de escuchando a Yusef contarlo, y los tres bugs de
+  `C27-29`…`C27-31` salieron de ahí, no de un reporte.
+
+---
+
+### Lo que quedó abierto
+
+| # | Qué | Estado |
+|---|---|---|
+| `C27-01` | La unidad de medición es el **bulto** («volumen», como le dicen ellos) | 🔨 **Pendiente** — supera a `C26-05`; el modelo de datos está decidido en `C27-10` |
+| `C27-02` | El bulto se arma escaneando, no eligiendo | 🔨 **Pendiente** — y hay que separar «tocar para medir» de «tocar para elegir» (`C26-03`) |
+| `C27-03` | Máximo **10** — *"10 warehouse, 10 etiquetas"* | 🔨 **Pendiente** — es disciplina, no capacidad: *"van a estar forzados a no agruparlos"*. ❓ Falta que él diga si se cuentan **cajas o mediciones**: con el bulto ya no son lo mismo |
+| `C27-04` | «NO Mezclar»: modal con la pre-alerta y la pre-factura, y **dos respuestas** | 🔨 **Pendiente** — «a un lado» = F2 y no se guarda; «sí lo hago» = borra lo escaneado y amarra la sesión a ese consolidado |
+| `C27-05` | Mismo cliente y mismo servicio, o error con dos salidas | 🔨 **Pendiente** — «¿eliminar el último o empezar de nuevo?» |
+| `C27-06` | **Una etiqueta por medición**, no por paquete (4 WR con 2 consolidados = **3**) | 🔨 **Pendiente** — cambia el conteo de `C26-04`; una sola para todo se descartó: *"se les puede escapar"* |
+| `C27-07` | No hacen falta los cuatro números | ✅ **Hecho** en `#440` (2026-09-08) — al menos uno; las tres dimensiones juntas o ninguna; el blanco no pisa a Miami |
+| `C27-08` | El QR dice «1 de 2» | ✅ **Hecho** en `#440` (2026-09-08) — `NdeM` al final del QR; no contradice `A7-21`. ⚠️ Hoy cuenta **cajas** (`cantidad_paquetes`), no mediciones: con el bulto dejan de coincidir |
+| `C27-09` | Reimprimir volviendo a escanear el warehouse | ✅ **Ya está** (`C26-04`), confirmado en vivo |
+| `C27-10` | El modelo de datos del bulto: tabla `bultos`, `bulto_id` en el paquete, **no** repartir el peso | 🔨 **En vuelo en `#443`** (`Bulto`, `PuedenIrJuntas`, `MedirBulto`) — toca `RP-41`; hueco: la pre-factura sigue copiando el peso de Miami |
+| `C27-11` | El panel del manifiesto es una auditoría | ✅ **Aprobado** tal como quedó en `C26-17` |
+| `C27-12` | Falta **quién ingresó las medidas** en el panel | 🔨 **Pendiente, chico** — `medido_por` ya se sella; solo sale en la etiqueta |
+| `C27-13` | Pantalla táctil, teclado en pantalla, botones grandes, y el teclado físico convive | 📄 **Regla de diseño** de la estación |
+| `C27-14` | El gate de estado debe dejar saltarse el manifiesto | 🔨 **Pendiente** — *"hay que poner una opción ahí"*; hoy `MedirPaquete` bloquea. Avisar, dejar pasar y sellar |
+| `C27-15` | La pre-factura vuelve a escanear | ✅ **Contestado** — cierra la duda de `C26-08`; se construye con el bloque de pre-factura |
+| `C27-16` | La auditoría de Vanessa: el QR dice cuántas mediciones, y además cada warehouse | 📄 **Documentado** — es el requisito de la pre-factura, y lo que le da sentido a `C27-08` |
+| `C27-17` | **Se factura por pre-alerta**: cinco pre-alertas, cinco facturas | ✅ **Contestado por Vanessa** — es la razón de fondo de `C27-04` |
+| `C27-18` | Máximo 5 pre-alertas consolidando abiertas **por servicio** (EXPRESS, CER, CEM) | 🔨 **Pendiente** — no existe ningún límite en el código; `RP-67` |
+| `C27-19` | Al finalizar el ciclo, la consolidación se cierra sola | 🔨 **Pendiente** — es un job, y la cola ya está; `RP-68` |
+| `C27-20` | La ventana de 30 minutos del correo | ✅ **Confirmada** — ya construida (`A7-08`); **cierra `RP-32`** |
+| `C27-21` | Retención: un año de historial de medición; las facturas **no** se borran | 🔨 **Pendiente** — es un borrado: `RP-69` antes de escribir nada |
+| `C27-22` | La báscula se conecta; el peso manual es el puente | 📄 **Decidido** — actualiza `RP-63`, que sigue esperando **cuál** báscula |
+| `C27-23` | Declarar una carga dividida en 3 mediciones | ❌ **Descartado por Yusef** — *"muy difícil para ellos"*; lo reemplaza el QR de `C27-08`. Anotado en `RP-70` |
+| `C27-24` | Mover un paquete de una pre-alerta a otra | 🔨 **La función existe** (`mover_paquete`, `PR-C6.48`) — falta el botón en la pantalla que él miraba |
+| `C27-25` | Agregar o editar instrucciones en una pre-alerta ya creada | 🔨 **Pendiente** — la columna existe; son nota, no tarea |
+| `C27-26` | Borrar una pre-alerta *("me equivoqué")* | 🔨 **Pendiente** — hoy `except: destroy` a propósito; solo hay `anular` |
+| `C27-27` | «Los paquetes se bloquean en aduana» | ❓ **Sentido no cerrado** — la frase admite tres lecturas (la pre-alerta que no deja mover, la aduana física, o el gate de `C27-14`); se le pregunta con el bloque de pre-alerta |
+| `C27-28` | Falta la bandera de Compra China / CKM junto a «sellado» y «enviado según política» | 🔨 **Verificar primero** — la plantilla existe en `seeds.rb`, y **el deploy no siembra** |
+| `C27-29` | El proveedor no se guarda en `/paquetes/<id>` | 🔨 **Confirmado** — el campo visible no tiene `name` |
+| `C27-30` | El sufijo de caja no se ve en el listado | ✅ **Hecho** en `#440` (2026-09-08) — la columna usa el mismo helper que la etiqueta |
+| `C27-31` | `/etiquetar` borra el peso al agregar una caja | 🔨 **En arreglo en `#441`** — y es peor de lo reportado: no queda sin cobrar, **se cobra mal**. 30 lb reales se facturan por 6 |
+
+### Las preguntas que abre
+
+| Id | Qué |
+|---|---|
+| `RP-67` | **La sexta pre-alerta consolidando.** El tope es 5 por servicio consolidable (`C27-18`). ¿Qué pasa cuando el cliente intenta abrir la sexta: se bloquea con mensaje, o se avisa y se deja? ¿Y aplica igual cuando la abre servicio al cliente por él? |
+| `RP-68` | **¿Qué es «finalizar el ciclo»** para el job que cierra las consolidaciones (`C27-19`)? ¿La fecha de corte del tipo de envío, el manifiesto que sale de Miami, o la fecha de trabajo de `C26-10`? |
+| `RP-69` | **La purga de un año (`C27-21`): qué se borra exactamente.** ¿Solo el historial de mediciones, o los paquetes de ese año? Las facturas **no** —eso ya está dicho—. ¿Y las versiones de `paper_trail`, que están en los 50 modelos? Un borrado mal delimitado no se deshace |
+| `RP-70` | ⏸️ **Congelado por decisión de Yusef, no es pregunta.** Sumar varias mediciones declaradas del mismo envío (`C27-23`). *"Me gustaría que quedara así, pero… por el tipo de personal que está ahí"*. Se anota por si el personal cambia |
