@@ -50,7 +50,7 @@ export default class extends BusquedaAutocomplete {
     }
   }
 
-  // C27-01 · Teclear encima suelta el proveedor del catálogo.
+  // C27-29 · Teclear encima suelta el proveedor del catálogo.
   //
   // El oculto se escribía al elegir y **no se limpiaba nunca**: quien tenía
   // "Amazon" elegido, borraba y escribía "Driver Juan", mandaba las dos cosas
@@ -60,6 +60,16 @@ export default class extends BusquedaAutocomplete {
   //
   // Va acá y no en `BusquedaAutocomplete` a propósito: la base la comparten
   // ocho pantallas y no todas quieren que escribir suelte lo elegido.
+  //
+  // **O sea que el agujero sigue abierto en las otras siete.** Es la tercera
+  // vez que este patrón muerde ([[project_autocomplete_no_limpia_el_oculto]]).
+  // Los que escriben un oculto y NO lo sueltan al teclear son
+  // `tercero-search`, `pre-alerta-search`, `mover-pre-alerta-modal`,
+  // `cliente-autocomplete`, `client-autocomplete`, `cliente-search` y
+  // `asignar-tercero-modal`; cuatro de ellos lo limpian solo con un botón
+  // «×» explícito. Subirlo a la base es un PR aparte, con su repaso de las
+  // ocho pantallas: en un campo obligatorio soltar la selección al teclear
+  // puede dejar el form sin dato en vez de con el dato viejo.
   buscar() {
     this._soltarSeleccion()
     super.buscar()

@@ -176,7 +176,7 @@ class SplitAjustableTest < ActiveSupport::TestCase
     assert_equal %w[pre_factura proveedor], chocan.sort,
                  "apareció otra columna con nombre de asociación: por `create!(attributes)` " \
                  "va al writer de la asociación. La salida de `proveedor` fue un escritor " \
-                 "de columna en el modelo (`Paquete#proveedor_texto=`, C27-01); `ajustar_split!` " \
+                 "de columna en el modelo (`Paquete#proveedor_texto=`, C27-29); `ajustar_split!` " \
                  "solo le renombra la llave."
   end
 

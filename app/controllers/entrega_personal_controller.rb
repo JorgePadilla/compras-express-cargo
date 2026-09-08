@@ -252,7 +252,7 @@ class EntregaPersonalController < ApplicationController
       :cliente_id, :tipo_envio_id, :proveedor_id, :sucursal_id, :sucursal_recepcion_id, :peso,
       :alto, :largo, :ancho, :cantidad_productos, :cantidad_paquetes,
       :numero_caja, :descripcion, :remitente, :driver,
-      # C27-01 · El escritor de columna de `Paquete`. Esta pantalla elige el
+      # C27-29 · El escritor de columna de `Paquete`. Esta pantalla elige el
       # proveedor del catálogo (`proveedor_id`), así que hoy no manda texto
       # libre; queda permitido para que el día que el form lo ofrezca no haya
       # que volver a inventar el parche del string legacy.

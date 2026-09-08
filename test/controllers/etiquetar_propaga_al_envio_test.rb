@@ -103,7 +103,7 @@ class EtiquetarPropagaAlEnvioTest < ActionDispatch::IntegrationTest
     assert_equal [ @cem.id, @cem.id ], @cajas.map { |c| c.reload.tipo_envio_id }
   end
 
-  # C27-01 · El proveedor entró a `ATRIBUTOS_DEL_ENVIO` cuando el formulario
+  # C27-29 · El proveedor entró a `ATRIBUTOS_DEL_ENVIO` cuando el formulario
   # pasó a mandar `proveedor_texto`. Antes se copiaba a mano en una línea
   # aparte, porque `proveedor` es también el nombre de la asociación.
   test "el proveedor tecleado se propaga a todas las cajas del envío" do

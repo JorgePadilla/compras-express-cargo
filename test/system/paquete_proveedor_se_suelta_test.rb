@@ -1,6 +1,6 @@
 require "application_system_test_case"
 
-# C27-01 · Teclear encima del proveedor tiene que soltar el del catálogo.
+# C27-29 · Teclear encima del proveedor tiene que soltar el del catálogo.
 #
 # Jorge, 2026-09-07, editando un paquete en vivo: *"está en F10… no lo está
 # cambiando… el guardar"* — y enseguida **"ya, ya, ya, es que este es el

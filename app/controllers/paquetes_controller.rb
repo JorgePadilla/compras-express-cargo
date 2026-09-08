@@ -98,7 +98,7 @@ class PaquetesController < ApplicationController
     # se abra automáticamente con motivo + acción alternativa.
     if (blocker = estado_transition_blocker(paquete_params))
       @estado_transition_block = blocker
-      # C27-01 · El re-render tiene que traer lo que la persona había tecleado.
+      # C27-29 · El re-render tiene que traer lo que la persona había tecleado.
       # Antes se pintaba el formulario con los valores de la base y todo lo
       # escrito —descripción, notas, proveedor, medidas— se perdía: el modal
       # decía «no podés» y de paso te borraba media hora de trabajo.
@@ -1003,7 +1003,7 @@ class PaquetesController < ApplicationController
     params.require(:paquete).permit(
       :tracking, :tracking_secundario, :cliente_id, :tipo_envio_id, :estado, :peso,
       :alto, :largo, :ancho, :cantidad_productos, :cantidad_paquetes,
-      # C27-01 · `:proveedor` **no** va acá: es a la vez columna string legacy
+      # C27-29 · `:proveedor` **no** va acá: es a la vez columna string legacy
       # y el nombre de `belongs_to :proveedor`, así que permitirlo hacía que
       # `assign_attributes` le mandara un String a la asociación y reventara
       # con `AssociationTypeMismatch`. Sobrevivió porque el input del form no

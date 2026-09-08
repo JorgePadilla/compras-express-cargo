@@ -1171,7 +1171,7 @@ class Paquete < ApplicationRecord
         # la que reventaba. Es dato del envío, así que las cajas nuevas lo
         # heredan igual que el cliente.
         #
-        # C27-01: se renombra la llave al escritor de columna en vez de
+        # C27-29: se renombra la llave al escritor de columna en vez de
         # asignarla aparte después del `new`. Es la misma puerta que usan hoy
         # los formularios, y así queda **un solo** lugar en el repo que sabe de
         # la colisión: `Paquete#proveedor_texto=`.

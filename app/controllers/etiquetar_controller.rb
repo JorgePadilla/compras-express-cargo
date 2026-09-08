@@ -613,7 +613,7 @@ end
   # aunque "no cambió" hace que actualizar cualquier caja **converja** un envío
   # que ya estaba partido — el de Diego y Sofía se arregla tocando cualquiera
   # de las dos, sin tener que adivinar cuál quedó bien.
-  # C27-01 · `proveedor_texto` entra a la lista. Antes se copiaba a mano tres
+  # C27-29 · `proveedor_texto` entra a la lista. Antes se copiaba a mano tres
   # líneas más abajo porque el nombre `proveedor` era el de la asociación; con
   # el escritor de columna ya es un atributo más del envío.
   ATRIBUTOS_DEL_ENVIO = %i[
@@ -845,7 +845,7 @@ end
       :tracking, :tracking_secundario, :cliente_id, :tercero_id, :tercero_nombre, :peso,
       :alto, :largo, :ancho, :cantidad_productos, :cantidad_paquetes,
       :numero_caja, :descripcion, :remitente, :expedido_por,
-      # C27-01 · Entra por el escritor de columna de `Paquete` y no como
+      # C27-29 · Entra por el escritor de columna de `Paquete` y no como
       # `:proveedor`, que es a la vez el nombre de la asociación. Con eso se
       # fue `proveedor_string_param`, que era la primera de las cuatro copias
       # del mismo parche.

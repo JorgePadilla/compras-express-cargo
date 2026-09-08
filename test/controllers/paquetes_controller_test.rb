@@ -692,7 +692,7 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_equal fecha_original&.to_i, @paquete.fecha_recibido_miami&.to_i
   end
 
-  # ── C27-01 · La pantalla que no guardaba ────────────────────────────────
+  # ── C27-29 · La pantalla que no guardaba ────────────────────────────────
   #
   # Jorge, 2026-09-07, editando un paquete en vivo: *"está en F10… no lo está
   # cambiando… el guardar… quiero ver en qué vista era; hay pleca y dice
@@ -811,7 +811,7 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Fecha entregado/i, response.body)
   end
 
-  # ── C27-01 · «Debe dejar que sí se lo salten» ───────────────────────────
+  # ── C27-14 · «Debe dejar que sí se lo salten» ───────────────────────────
   #
   # Del mismo audio, con Jorge diciendo que no se puede saltar el manifiesto:
   #
@@ -819,11 +819,19 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
   #   — Yusef: **"Debe dejar que sí se lo salten, porque a veces se capean,
   #     algunos se los van a capear."**
   #
-  # O sea: un paquete que el escaneo del manifiesto no agarró y que ya está
-  # acá tiene que poder moverse a un estado de Honduras. Hoy `estado_transition_
-  # blocker` solo mira rol y retroceso —no hay gate de manifiesto—, y este test
-  # está para que nadie lo agregue sin hablar con Yusef. Lo que sí se exige es
-  # que quede sellado quién lo hizo.
+  # O sea: un paquete que el escaneo del manifiesto no agarró y que ya está acá
+  # tiene que poder moverse a un estado de Honduras.
+  #
+  # **Acá no había nada que arreglar, y eso es el hallazgo.** `estado_transition_
+  # blocker` solo mira rol y retroceso: no hay gate de manifiesto en /paquetes,
+  # así que el salto ya se permitía. El bloqueo del que se queja Yusef —*"si no
+  # ha pasado el proceso desde Miami para acá, no lo puede hacer… hay que poner
+  # una opción ahí"*— vive en **`MedirPaquete`**, que se niega a medir una caja
+  # cuyo estado no está en `ESTADOS_FACTURABLES`. Eso se atiende aparte, con la
+  # pantalla de medición.
+  #
+  # Este test queda para que nadie cierre acá lo que Yusef mandó abrir, y para
+  # exigir lo otro que él pide: que quede sellado quién lo dejó pasar.
   test "avanzar a Honduras sin manifiesto se permite, y queda sellado quien fue" do
     p = paquetes(:empacado)
     assert_nil p.manifiesto_id, "el fixture tiene que llegar acá sin manifiesto"

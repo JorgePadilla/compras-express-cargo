@@ -45,7 +45,7 @@ class EtiquetarActualizarVariasVecesTest < ActionDispatch::IntegrationTest
     paquete = crear_recibido
     paquete.update_column(:proveedor, "Amazon")  # lo que deja `create` con el campo lleno
 
-    # C27-01: el formulario manda `proveedor_texto`, que es el escritor de
+    # C27-29: el formulario manda `proveedor_texto`, que es el escritor de
     # columna. `paquete[proveedor]` ya ni se permite — ver
     # `etiquetar_propaga_al_envio_test`.
     actualizar(paquete, cajas: 3, proveedor: "Amazon")

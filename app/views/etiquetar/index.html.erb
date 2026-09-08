@@ -755,7 +755,7 @@ end %>
       </div>
 
       <div>
-        <%# C27-01 · `f.text_field :proveedor` leía `paquete.proveedor`, que es la
+        <%# C27-29 · `f.text_field :proveedor` leía `paquete.proveedor`, que es la
             ASOCIACIÓN: en un re-render con proveedor del catálogo el campo salía
             con un `#<Proveedor:0x…>` adentro. `proveedor_texto` lee la columna. %>
         <%= f.label :proveedor_texto, "Proveedor", class: "block text-sm font-medium text-gray-700 mb-1" %>

@@ -767,7 +767,7 @@ class PaqueteTest < ActiveSupport::TestCase
     assert_not_nil p.reload.fecha_entregado
   end
 
-  # ── C27-01 · La columna que se llama como la asociación ─────────────────
+  # ── C27-29 · La columna que se llama como la asociación ─────────────────
   #
   # `proveedor` es a la vez la columna string legacy y el nombre de
   # `belongs_to :proveedor`. Antes cada pantalla se acordaba (o no) de escribir
