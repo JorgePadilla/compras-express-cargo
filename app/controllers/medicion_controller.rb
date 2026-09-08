@@ -107,10 +107,17 @@ class MedicionController < ApplicationController
                             mensaje: "#{codigo_de(paquete)} ya está en la pre-factura #{paquete.pre_factura&.numero}: " \
                                      "el peso se congeló ahí. No se mide desde acá." }
     end
-    # C27-09 · Una caja que ya tiene bulto no se vuelve a medir: se reimprime.
-    # Yusef: *"él va a poder reimprimir la etiqueta, porque digamos que si se le
-    # cae… ¿cómo la buscaría? **Tendría que volver a escanear el warehouse**"*.
-    if paquete.bulto_id.present?
+    # C27-09 · Una caja que ya tiene bulto se reimprime —Yusef: *"si se le cae…
+    # tendría que volver a escanear el warehouse"*— **o se mide de nuevo**
+    # (C27-33): *"se equivocan y lo ingresan en seis libras, y eran cuatro… se
+    # va a poder corregir, las mismas etiquetas… medir de nuevo"*. Jorge, en
+    # staging: *"cuando un warehouse receipt ya tiene medidas y se vuelve a
+    # escanear no me pregunta si quiero editarlo"*.
+    #
+    # Medir de nuevo trae a la mesa **el bulto entero**: sus cajas se midieron
+    # juntas y vuelven juntas, con los números viejos puestos para corregirlos.
+    # Al guardar, el bulto nuevo reemplaza al viejo.
+    if paquete.bulto_id.present? && !remedir?
       return render json: { resultado: "ya_tiene_bulto", paquete: datos_de(paquete),
                             bulto: bulto_json(paquete.bulto),
                             mensaje: mensaje_ya_medido(paquete.bulto) }
@@ -135,8 +142,19 @@ class MedicionController < ApplicationController
                             paquete: datos_de(paquete), choque: choque_json(problema) }
     end
 
-    render json: respuesta_de(paquete, paquete.grupo_de_union, resultado_de(paquete))
-             .merge(mesa: true, salto_manifiesto: !paquete.estado.in?(Paquete::ESTADOS_FACTURABLES))
+    respuesta = respuesta_de(paquete, paquete.grupo_de_union, resultado_de(paquete))
+                  .merge(mesa: true, salto_manifiesto: !paquete.estado.in?(Paquete::ESTADOS_FACTURABLES))
+    if remedir? && paquete.bulto
+      bulto = paquete.bulto
+      respuesta = respuesta.merge(
+        remedir_bulto: bulto_json(bulto),
+        hermanas: bulto.paquetes.includes(:cliente, :tipo_envio).map { |h| datos_de(h) },
+        mensaje: "Midiendo de nuevo: #{bulto.paquetes.size} caja#{"s" if bulto.paquetes.size != 1} " \
+                 "que se midieron juntas el #{bulto.medido_at.strftime('%d/%m/%Y')} por #{bulto.medido_por}. " \
+                 "Corregí los números y guardá: la etiqueta vieja deja de valer."
+      )
+    end
+    render json: respuesta
   end
 
   # C27-01 · Guardar la tanda entera: las mediciones que el operario armó en la
@@ -276,6 +294,7 @@ class MedicionController < ApplicationController
   # C27-14 · La pantalla lo manda **por caja**, después de que alguien apretó
   # «Medirlo igual» en el modal rojo. No es un modo que quede prendido.
   def saltar_manifiesto? = params[:saltar_manifiesto].to_s == "true"
+  def remedir? = params[:remedir].to_s == "true"
 
   # Lista blanca, aunque `MedirBulto` ya lea campo por campo —`paquete_ids` y
   # los cuatro de `MedirPaquete::CAMPOS`— y nunca haga un assign masivo. Se
@@ -283,7 +302,7 @@ class MedicionController < ApplicationController
   # el modelo siga leyendo así: es lo que pidió la revisión del PR-445.
   def mediciones_permitidas
     Array(params[:mediciones]).map do |medicion|
-      medicion.permit(:peso, :alto, :largo, :ancho, paquete_ids: [])
+      medicion.permit(:peso, :alto, :largo, :ancho, :reemplaza_bulto_id, paquete_ids: [])
     end
   end
 
@@ -317,6 +336,7 @@ class MedicionController < ApplicationController
 
     { id: bulto.id, sesion: bulto.sesion, de_cuantos_texto: bulto.de_cuantos_texto,
       cajas: bulto.paquetes.size, peso: bulto.peso&.to_f, medidas: bulto.medidas_texto,
+      alto: bulto.alto&.to_f, largo: bulto.largo&.to_f, ancho: bulto.ancho&.to_f,
       peso_volumetrico: bulto.peso_volumetrico&.to_f, peso_cobrar: bulto.peso_cobrar&.to_f,
       fecha: bulto.medido_at.strftime("%d/%m/%Y %H:%M"), por: bulto.medido_por,
       etiqueta_url: etiqueta_bulto_medicion_path(bulto, print: "true") }
@@ -326,7 +346,7 @@ class MedicionController < ApplicationController
     detalle = [ bulto.de_cuantos_texto, "#{bulto.paquetes.size} caja#{"s" if bulto.paquetes.size != 1}" ].compact
     "Esta caja ya está medida: #{format('%.2f', bulto.peso.to_f)} lb · #{bulto.medidas_texto} " \
       "(#{detalle.join(' · ')}), por #{bulto.medido_por} el #{bulto.medido_at.strftime('%d/%m/%Y %H:%M')}. " \
-      "Podés reimprimir su etiqueta."
+      "Podés reimprimir su etiqueta, o medirla de nuevo si el número estaba mal."
   end
 
   def mensaje_guardado(bultos, cajas)

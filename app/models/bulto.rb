@@ -11,6 +11,9 @@
 # repartirlo entre sus cajas — ver el comentario de la migración
 # `ElBultoDeMedicion`, que explica por qué repartir cobra de más.
 class Bulto < ApplicationRecord
+  # C27-33 · Medir de nuevo destruye el bulto viejo: el historial es lo único
+  # que se queda con los números que estaban mal y con quién los puso.
+  has_paper_trail
   # Cuántas mediciones puede sacar el operario de una sola sesión. Yusef:
   # *"máximo 10 warehouse, máximo 10 etiquetas… el normal de nosotros es 2 a 3;
   # 5 ya es demasiado. Pusimos 10 para no estar ahí «hay que cambiar esto»"*.

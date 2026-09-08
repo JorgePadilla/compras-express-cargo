@@ -350,6 +350,14 @@
       <%# C27-09 · Yusef: *"él va a poder reimprimir la etiqueta, porque digamos
           que si se le cae… ¿cómo la buscaría? **Tendría que volver a escanear el
           warehouse**"*. Eso es exactamente lo que acaba de hacer. %>
+      <%# C27-33 · Y la otra salida, la que Jorge no encontró en staging: *"cuando un
+          warehouse receipt ya tiene medidas y se vuelve a escanear no me pregunta
+          si quiero editarlo"*. Yusef la había pedido: *"se equivocan y lo ingresan
+          en seis libras, y eran cuatro… se va a poder corregir… medir de nuevo"*.
+          Trae el bulto entero a la mesa con sus números viejos; al guardar, el
+          nuevo reemplaza al viejo. %>
+      <%= render(ButtonComponent.new(variant: :danger, size: :md, label: "Medir de nuevo esta medición y reemplazar la etiqueta",
+            data: { medicion_target: "remedirBulto", action: "medicion#remedirBulto" }, hidden: true)) { "Medir de nuevo" } %>
       <%= render(ButtonComponent.new(variant: :secondary, size: :md, label: "Reimprimir la etiqueta de esta medición",
             data: { medicion_target: "reimprimirBulto", action: "medicion#reimprimirBulto" }, hidden: true)) { "Reimprimir la etiqueta" } %>
       <%= render(ButtonComponent.new(variant: :secondary, size: :md, label: "Medir de nuevo",

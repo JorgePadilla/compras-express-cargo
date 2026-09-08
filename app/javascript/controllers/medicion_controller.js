@@ -47,7 +47,7 @@ export default class extends conEnterAvanza(Controller) {
     "plantillaPendiente", "descarteModal", "descarteCaja", "descarteMotivo", "descarteNota",
     "descarteError", "confirmarDescarte",
     "problemaModal", "problemaTitulo", "problemaTexto", "problemaEntendido", "medirDeNuevo",
-    "reimprimirBulto", "medirIgual",
+    "reimprimirBulto", "remedirBulto", "medirIgual",
     "mezclaModal", "mezclaTitulo", "mezclaTexto", "mezclaQuitar",
     "consolidadoModal", "consolidadoTitulo", "consolidadoTexto", "consolidadoPreAlerta",
     "consolidadoPreFactura", "hacerConsolidado",
@@ -109,7 +109,7 @@ export default class extends conEnterAvanza(Controller) {
     this._escanear(codigo)
   }
 
-  _escanear(codigo, { saltarManifiesto = false } = {}) {
+  _escanear(codigo, { saltarManifiesto = false, remedir = false } = {}) {
     if (!codigo) return
 
     const consulta = (this._seq += 1)
@@ -118,7 +118,7 @@ export default class extends conEnterAvanza(Controller) {
     // otro cliente entraría en el volumen 2 sin chistar y el error saldría
     // recién en F10, con el volumen 1 ya medido.
     this._post(this.escanearUrlValue,
-               { codigo, en_tanda: this._idsDeLaTanda(), saltar_manifiesto: saltarManifiesto })
+               { codigo, en_tanda: this._idsDeLaTanda(), saltar_manifiesto: saltarManifiesto, remedir })
       .then((data) => {
         if (consulta !== this._seq) return  // llegó tarde: habla de otro escaneo
         this._resolver(data)
@@ -141,6 +141,24 @@ export default class extends conEnterAvanza(Controller) {
 
     // La caja entra a la mesa. Es lo único que agrega cajas: no hay checkbox
     // ni lista de dónde elegir.
+    if (data.remedir_bulto) {
+      // C27-33 · Medir de nuevo: el bulto entero vuelve a la mesa —sus cajas
+      // se midieron juntas— con los números viejos puestos para corregirlos.
+      // Al guardar, el nuevo reemplaza al viejo.
+      this._mesa.push(...data.hermanas.filter((h) => !this._mesa.some((p) => p.id === h.id)))
+      this._reemplaza = data.remedir_bulto.id
+      this._pintar(data)
+      this.pesoTarget.value = data.remedir_bulto.peso || ""
+      this.altoTarget.value = data.remedir_bulto.alto || ""
+      this.largoTarget.value = data.remedir_bulto.largo || ""
+      this.anchoTarget.value = data.remedir_bulto.ancho || ""
+      this.formTarget.querySelectorAll("input").forEach((i) => i.dispatchEvent(new Event("input", { bubbles: true })))
+      this.avisoTarget.textContent = data.mensaje
+      this.dispatch("atencion")
+      this._volverAPeso = true
+      this._enfocarDondeToca()
+      return
+    }
     this._mesa.push({ ...data.paquete, salto_manifiesto: data.salto_manifiesto })
     if (data.salto_manifiesto) this._saltados.push(data.paquete.id)
     this._pintar(data)
@@ -277,17 +295,29 @@ export default class extends conEnterAvanza(Controller) {
   _yaTieneBulto(data) {
     this.dispatch("yaMedido")
     this._bultoParaReimprimir = data.bulto && data.bulto.etiqueta_url
-    this._llenarProblema("Esta caja ya está medida", data.mensaje, { reimprimir: true })
+    this._paraRemedir = data.paquete
+    this._llenarProblema("Esta caja ya está medida", data.mensaje, { reimprimir: true, remedir: true })
     this.problemaModalTarget.showModal()
     requestAnimationFrame(() => this.problemaEntendidoTarget.focus())
   }
 
-  _llenarProblema(titulo, texto, { medirDeNuevo = false, reimprimir = false, medirIgual = false }) {
+  _llenarProblema(titulo, texto, { medirDeNuevo = false, reimprimir = false, medirIgual = false, remedir = false }) {
     this.problemaTituloTarget.textContent = titulo
     this.problemaTextoTarget.textContent = texto
     this.medirDeNuevoTarget.hidden = !medirDeNuevo
     this.reimprimirBultoTarget.hidden = !reimprimir
+    this.remedirBultoTarget.hidden = !remedir
     this.medirIgualTarget.hidden = !medirIgual
+  }
+
+  // C27-33 · «Medir de nuevo»: se vuelve a escanear con el permiso puesto, y
+  // el servidor devuelve el bulto entero para la mesa. Jorge, en staging:
+  // *"cuando un warehouse receipt ya tiene medidas y se vuelve a escanear no
+  // me pregunta si quiero editarlo"*.
+  remedirBulto() {
+    const codigo = this._paraRemedir && (this._paraRemedir.codigo || this._paraRemedir.tracking)
+    this.problemaModalTarget.close()
+    if (codigo) this._escanear(codigo, { remedir: true })
   }
 
   avisoEntendido() { this.problemaModalTarget.close() }
@@ -474,7 +504,7 @@ export default class extends conEnterAvanza(Controller) {
     if (this._modalAbierto() || this._mesa.length === 0) return
 
     this._mesa.pop()
-    if (this._mesa.length === 0) this._grupo = null
+    if (this._mesa.length === 0) { this._grupo = null; this._reemplaza = null }
     this._repintar()
     this.codigoTarget.focus()
   }
@@ -521,9 +551,11 @@ export default class extends conEnterAvanza(Controller) {
     // El cliente y el servicio viajan con el volumen: cuando la mesa queda
     // vacía, el encabezado de la tanda sigue diciendo de quién es.
     this._volumenes.push({ ...numeros, paquete_ids: this._mesa.map((p) => p.id),
+                           reemplaza_bulto_id: this._reemplaza || null,
                            cliente: this._mesa[0].cliente, tipo_envio: this._mesa[0].tipo_envio })
     this._mesa = []
     this._grupo = null
+    this._reemplaza = null
     this._limpiarNumeros()
     this.dispatch("guardado")
     this._repintar()
@@ -545,12 +577,14 @@ export default class extends conEnterAvanza(Controller) {
     if (this._modalAbierto()) return
 
     const mediciones = this._volumenes.map((v) => ({ paquete_ids: v.paquete_ids, peso: v.peso,
-                                                     alto: v.alto, largo: v.largo, ancho: v.ancho }))
+                                                     alto: v.alto, largo: v.largo, ancho: v.ancho,
+                                                     reemplaza_bulto_id: v.reemplaza_bulto_id || null }))
     // Lo que quedó en la mesa entra como el último volumen: Yusef no dice
     // «agregar» para el último — *"mide y pesa este por separado… y ahí le dice
     // imprimir"*.
     if (this._mesa.length > 0) {
-      mediciones.push({ paquete_ids: this._mesa.map((p) => p.id), ...this._numeros() })
+      mediciones.push({ paquete_ids: this._mesa.map((p) => p.id), ...this._numeros(),
+                        reemplaza_bulto_id: this._reemplaza || null })
     }
     if (mediciones.length === 0) {
       this._problema("No hay nada que guardar", "Escaneá las cajas del bulto y poné el peso.")
@@ -729,6 +763,7 @@ export default class extends conEnterAvanza(Controller) {
   _vaciarTanda() {
     this._paquete = null
     this._grupo = null
+    this._reemplaza = null
     this._mesa = []
     this._volumenes = []
     this._saltados = []

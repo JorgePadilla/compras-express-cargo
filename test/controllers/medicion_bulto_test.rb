@@ -369,6 +369,84 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
     assert_nil json["grupo"], "una caja sola no es un grupo"
   end
 
+  # ── C27-33 · Medir de nuevo ─────────────────────────────────────────────
+  #
+  # Yusef: *"se equivocan y lo ingresan en seis libras, y eran cuatro… se va a
+  # poder corregir, las mismas etiquetas… medir de nuevo"*. Jorge, en staging:
+  # *"cuando un warehouse receipt ya tiene medidas y se vuelve a escanear no me
+  # pregunta si quiero editarlo"*.
+
+  test "escanear con «medir de nuevo» trae el bulto entero a la mesa, con sus números viejos" do
+    otra = caja("1ZREMEDIR0000002")
+    guardar([ { paquete_ids: [ @primera.id, otra.id ], peso: "6", alto: "10", largo: "12", ancho: "14" } ])
+    bulto = Bulto.last
+
+    post escanear_medicion_index_path, params: { codigo: @primera.tracking, en_tanda: [], remedir: true }, as: :json
+
+    assert_response :success
+    assert_equal "ok", json["resultado"]
+    assert json["mesa"]
+    assert_equal bulto.id, json["remedir_bulto"]["id"]
+    assert_equal 6.0, json["remedir_bulto"]["peso"]
+    assert_equal [ 10.0, 12.0, 14.0 ], json["remedir_bulto"].values_at("alto", "largo", "ancho")
+    assert_equal [ @primera.id, otra.id ].sort, json["hermanas"].map { |h| h["id"] }.sort, "vuelven las dos, no solo la escaneada"
+    assert_match(/Midiendo de nuevo: 2 cajas/, json["mensaje"])
+  end
+
+  test "sin «medir de nuevo», la caja con bulto sigue rebotando como ya medida" do
+    guardar([ { paquete_ids: [ @primera.id ], peso: "6" } ])
+
+    escanear(@primera.tracking)
+
+    assert_equal "ya_tiene_bulto", json["resultado"]
+    assert_match(/medirla de nuevo/, json["mensaje"])
+  end
+
+  test "guardar reemplazando el bulto: el viejo se va, el nuevo tiene los números corregidos" do
+    otra = caja("1ZREMEDIR0000003")
+    guardar([ { paquete_ids: [ @primera.id, otra.id ], peso: "6", alto: "10", largo: "12", ancho: "14" } ])
+    viejo = Bulto.last
+
+    guardar([ { paquete_ids: [ @primera.id, otra.id ], peso: "4", alto: "10", largo: "12", ancho: "14",
+                reemplaza_bulto_id: viejo.id } ])
+
+    assert_response :success
+    assert_equal 1, Bulto.count, "un bulto reemplaza al otro: no se acumulan"
+    nuevo = Bulto.last
+    assert_not_equal viejo.id, nuevo.id
+    assert_equal 4.0, nuevo.peso.to_f
+    assert_equal [ @primera.id, otra.id ].sort, nuevo.paquetes.pluck(:id).sort
+    assert_nil Bulto.find_by(id: viejo.id)
+    assert_equal 1, PaperTrail::Version.where(item_type: "Bulto", item_id: viejo.id, event: "destroy").count,
+                 "el historial se queda con los números que estaban mal"
+  end
+
+  test "la caja que se sacó de la mesa al medir de nuevo queda sin medir, y vuelve a pendientes" do
+    otra = caja("1ZREMEDIR0000004")
+    guardar([ { paquete_ids: [ @primera.id, otra.id ], peso: "6" } ])
+    viejo = Bulto.last
+
+    guardar([ { paquete_ids: [ @primera.id ], peso: "4", reemplaza_bulto_id: viejo.id } ])
+
+    assert_response :success
+    otra.reload
+    assert_nil otra.bulto_id
+    assert_nil otra.medido_at, "el único número que tenía era el del bulto que se fue"
+    assert_equal 1, Bulto.last.paquetes.count
+  end
+
+  test "una caja con bulto no se guarda en otra medición sin reemplazar el suyo" do
+    guardar([ { paquete_ids: [ @primera.id ], peso: "6" } ])
+    viejo = Bulto.last
+
+    guardar([ { paquete_ids: [ @primera.id ], peso: "4" } ])
+
+    assert_response :unprocessable_entity
+    assert_match(/Medir de nuevo/, json["errores"].join)
+    assert_equal viejo.id, Bulto.last.id, "el bulto viejo sigue intacto"
+    assert_equal 6.0, @primera.reload.bulto.peso.to_f
+  end
+
   private
 
   def ingresar(user)

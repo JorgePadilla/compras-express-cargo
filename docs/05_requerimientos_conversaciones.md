@@ -11220,6 +11220,32 @@ dónde está y ofrece la excepción —el mismo modal rojo y el mismo sello de
 > solo las que **no están acá**. Y **no se tocan** (`C27-02`): es un mapa, no
 > un menú.
 
+#### C27-33 · Una caja ya medida se puede **medir de nuevo** — ✅ **HECHO** (2026-09-08)
+
+Yusef lo pidió el 7, mirando la pantalla: *"si se equivocan y lo van a
+ingresar en seis libras, y en la mesa eran cuatro libras, **se va a poder
+corregir**, las mismas etiquetas… medir de nuevo"*. La primera versión de la
+pantalla solo ofrecía reimprimir, y Jorge lo encontró en staging: *"cuando un
+warehouse receipt ya tiene medidas y se vuelve a escanear **no me pregunta si
+quiero editarlo**"*.
+
+**Cómo funciona.** Al escanear una caja con bulto, el modal rojo ofrece
+«Reimprimir la etiqueta» **y «Medir de nuevo»**. Medir de nuevo trae a la mesa
+**el bulto entero** —sus cajas se midieron juntas, vuelven juntas— con los
+números viejos puestos y el foco en el peso, para corregir. Al guardar, el
+bulto nuevo **reemplaza** al viejo: el viejo se destruye (con `has_paper_trail`
+en `Bulto`, que se queda con los números que estaban mal y con quién los puso)
+y sale la etiqueta nueva. Una caja que el operario **sacó de la mesa** antes de
+guardar queda **sin medir** y vuelve a la lista de pendientes: el único número
+que tenía era el del bulto que se fue.
+
+**Guarda.** Una caja con bulto no entra a otra medición si esa medición no
+viene a reemplazar **su** bulto: la pantalla tiene que haber preguntado antes.
+
+> ❓ Si el bulto viejo era «1 de 2» de una tanda, el «2 de 2» de la otra
+> etiqueta sigue impreso y el nuevo sale «1 de 1». El caso normal —una tanda de
+> un bulto— no lo tiene; el otro queda anotado.
+
 ### Notas que no son tarea
 
 - **El rótulo dice PESA, y al bulto le dicen volumen.** Vale la pena que las
@@ -11271,6 +11297,7 @@ dónde está y ofrece la excepción —el mismo modal rojo y el mismo sello de
 | `C27-30` | El sufijo de caja no se ve en el listado | ✅ **Hecho** en `#440` (2026-09-08) — la columna usa el mismo helper que la etiqueta |
 | `C27-31` | `/etiquetar` borra el peso al agregar una caja | ✅ **Hecho** — `#441`. Y es peor de lo reportado: no queda sin cobrar, **se cobra mal** — 30 lb reales facturadas por 6, porque el volumétrico viejo le gana al peso en `nil` |
 | `C27-32` | La pantalla de medición, con el «Agregar» de /etiquetar | ✅ **Hecho** — `#447`. Una tarjeta, la caja una vez, sin cuadritos, «Facturar lo que hay» después de guardar. Y de paso: la clase `hidden` **no esconde** un `ButtonComponent`; se arregló en tres pantallas y hay lint |
+| `C27-33` | Una caja ya medida se puede **medir de nuevo** | ✅ **Hecho** — el modal ofrece «Medir de nuevo»; vuelve el bulto entero con sus números, y al guardar el nuevo reemplaza al viejo (historial en `Bulto`). Lo que se saque de la mesa queda sin medir |
 
 ### Las preguntas que abre
 

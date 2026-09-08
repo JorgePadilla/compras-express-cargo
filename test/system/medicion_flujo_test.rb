@@ -236,6 +236,46 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_equal etiqueta_bulto_medicion_path(Bulto.last, print: "true"), lo_que_abrio
   end
 
+  # C27-33 · Yusef: *"se equivocan y lo ingresan en seis libras, y eran
+  # cuatro… se va a poder corregir, las mismas etiquetas… medir de nuevo"*.
+  # Jorge, en staging: *"cuando un warehouse receipt ya tiene medidas y se
+  # vuelve a escanear no me pregunta si quiero editarlo"*.
+  test "escanear una caja ya medida ofrece medir de nuevo, y el bulto nuevo reemplaza al viejo" do
+    segunda = caja("1ZREMEDIR000002")
+
+    visit medicion_index_path
+    escanear_a_la_mesa(@paquete, 1)
+    escanear_a_la_mesa(segunda, 2)
+    teclear "6", "10", "12", "14"
+    espiar_impresion
+    send_keys :f10
+    assert_selector "[data-medicion-target='banner']", wait: 5
+    viejo = Bulto.last
+
+    escanear(@paquete.tracking)
+    assert_selector "dialog[open]", text: "Esta caja ya está medida", wait: 5
+    within("dialog[open]") { click_on "Medir de nuevo" }
+
+    assert_no_selector "dialog[open]", wait: 5
+    # El bulto entero vuelve a la mesa, no solo la caja escaneada.
+    assert_selector "[data-medicion-target='mesa'] li", count: 2, wait: 5
+    assert_selector "[data-medicion-target='mesa'] li", text: segunda.numero_recepcion
+    assert_equal "6", find("#medicion_peso").value, "los números viejos vienen puestos para corregirlos"
+    assert_equal "medicion_peso", foco, "el foco va al peso: lo que sigue es corregir"
+    assert_selector "[data-medicion-target='aviso']", text: "Midiendo de nuevo"
+
+    fill_in "medicion_peso", with: "4"
+    espiar_impresion
+    send_keys :f10
+
+    assert_selector "[data-medicion-target='banner']", wait: 5
+    assert_equal 1, Bulto.count, "el nuevo reemplaza al viejo"
+    assert_nil Bulto.find_by(id: viejo.id)
+    assert_equal 4.0, Bulto.last.peso.to_f
+    assert_equal Bulto.last.id, @paquete.reload.bulto_id
+    assert_equal Bulto.last.id, segunda.reload.bulto_id
+  end
+
   # C27-14 · Yusef: *"este tiene un bloqueo ahorita que me tiene loco… hay que
   # poner una opción ahí"*.
   test "una caja que no pasó por el manifiesto avisa, se puede medir igual, y queda sellada" do
