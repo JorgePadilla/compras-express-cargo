@@ -772,6 +772,29 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_not_equal "Caja abierta al llegar", entregado.descripcion
   end
 
+  test "una caja que no se puede eliminar tampoco se lleva lo tecleado" do
+    # El otro `return` temprano del update: `Paquete::CajaNoEliminable`. Se
+    # llega acá bajando las cajas de un split cuya última ya entró a cobro.
+    cajas = Paquete.crear_split!(
+      attrs: { tracking: "CTL#{SecureRandom.hex(4)}", cliente: clientes(:juan),
+               sucursal_recepcion: sucursales(:miami), estado: "empacado",
+               descripcion: "Split de prueba", user: users(:digitador) },
+      total_cajas: 2
+    )
+    pf = PreFactura.create!(cliente: clientes(:juan), estado: "creado",
+                            creado_por: users(:cajero), fecha_trabajo: Date.current)
+    cajas.last.update_columns(estado: "disponible_entrega", pre_factura_id: pf.id)
+
+    patch paquete_url(cajas.first), params: { paquete: {
+      cantidad_paquetes: 1, descripcion: "Perfumes y relojes"
+    } }
+
+    assert_response :unprocessable_entity
+    assert_select "textarea[name=?]", "paquete[descripcion]", text: /Perfumes y relojes/
+    assert_equal "Split de prueba", cajas.first.reload.descripcion,
+                 "el rechazo no puede guardar nada"
+  end
+
   test "el modal de retroceso sigue listando lo que se limpiaria" do
     # El re-render con lo tecleado NO puede asignar `estado`: el preview del
     # modal compara el estado actual contra el objetivo, y con los dos iguales
