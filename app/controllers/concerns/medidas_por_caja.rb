@@ -41,8 +41,33 @@ module MedidasPorCaja
     crudo.to_unsafe_h.each_with_object({}) do |(indice, valores), acc|
       # Un campo vacío no puede pisar con nil lo que ya trae el formulario:
       # el partial manda los cuatro inputs siempre, llenos o no.
-      limpios = valores.slice(*CAMPOS_POR_CAJA).reject { |_k, v| v.to_s.strip.empty? }
+      limpios = valores.slice(*CAMPOS_POR_CAJA).reject { |_k, v| en_blanco?(v) }
       acc[indice.to_i] = limpios.symbolize_keys if limpios.any?
     end
+  end
+
+  # La misma regla, pero para los campos de captura del formulario —los que van
+  # sueltos como `paquete[peso]`, no adentro de `paquete[cajas][…]`—.
+  #
+  # 2026-09-07, mirando la estación de Miami por cámara: un paquete que ya
+  # pesaba salía guardado **sin peso** sin que nadie tocara el campo. El camino
+  # es `cajas-repetidor#_limpiarCaptura`, que al apretar «Agregar» vacía los
+  # cinco inputs de captura para que se mida la caja siguiente. El formulario
+  # manda entonces `paquete[peso]=""`, y `peso` valida `allow_nil: true`: el
+  # `assign_attributes` lo nulificaba y el `save!` pasaba en silencio.
+  #
+  # **Solo estos cinco campos.** Es a propósito, y no es "todo blanco se
+  # ignora": son los únicos que el JS vacía solo, así que son los únicos donde
+  # un blanco no es una decisión de quien digita. Vaciar una nota o un tercero
+  # sí es lo que quiso hacer, y tiene que seguir borrando.
+  #
+  # Un cero explícito es un dato y entra: la pregunta es si el campo viene
+  # vacío, no si vale cero.
+  def sin_medidas_en_blanco(atributos)
+    atributos.reject { |campo, valor| CAMPOS_POR_CAJA.include?(campo.to_s) && en_blanco?(valor) }
+  end
+
+  def en_blanco?(valor)
+    valor.to_s.strip.empty?
   end
 end
