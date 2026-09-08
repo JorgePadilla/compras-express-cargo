@@ -215,6 +215,9 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     visit medicion_index_path
     escanear_a_la_mesa(@paquete, 1)
     teclear "20", "10", "12", "14"
+    # Se espía **antes** del F10, no después: un `window.open` de verdad deja
+    # una ventana huérfana que después le tira flakes al resto de la suite.
+    espiar_impresion
     send_keys :f10
     assert_selector "[data-medicion-target='banner']", wait: 5
 
@@ -282,6 +285,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_selector "[data-medicion-target='grilla'] button[data-estado='esperada']", count: 1
 
     teclear "20", "10", "12", "14"
+    espiar_impresion
     send_keys :f10
     assert_selector "[data-medicion-target='banner']", wait: 5
 
