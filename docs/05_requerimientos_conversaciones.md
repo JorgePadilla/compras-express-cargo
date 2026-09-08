@@ -10427,8 +10427,9 @@ pesos tecleados en vivo.
 ## Conversación 27 (2026-09-07) — la **PESA** por cámara: el bulto, «NO Mezclar», y la etiqueta que no es por caja
 
 Un lunes entero **mirando por cámara** la estación de pesaje de San Pedro Sula
-y viendo trabajar al operario, con Yusef narrando. Cinco audios —cuatro cortos
-y el largo de 62 minutos, el de la pizarra—, transcritos con `whisper small`.
+y viendo trabajar al operario, con Yusef narrando. Los audios del día,
+incluido el largo de 62 minutos —el de la pizarra—, transcritos con
+`whisper small`.
 
 Tres cosas de vocabulario, antes que nada, porque las tres van a la pantalla:
 
@@ -10541,8 +10542,13 @@ propósito —*"para no estar ahí «hay que cambiar esto»"*—, así que el n�
 conviene que sea configurable pero que **no se muestre como una preferencia**:
 es una regla, no una opción.
 
-Se cuenta por **sesión de la pantalla**: hasta 10 volúmenes medidos antes de
-cerrar y empezar de nuevo.
+> ⚠️ **Falta una precisión, y es de él: qué se cuenta.** Sus dos unidades son
+> *"máximo 10 warehouse"* y *"máximo 10 etiquetas"*, y con el bulto de `C27-01`
+> esas dos dejan de ser lo mismo: diez warehouse receipts sobre la mesa pueden
+> ser tres volúmenes, o sea tres etiquetas. Hay que preguntarle si el tope son
+> **10 cajas escaneadas** o **10 mediciones** antes de imprimir. Su *"el normal
+> de nosotros es 2 a 3; 5 ya es demasiado"* suena a mediciones, pero no se
+> asume.
 
 #### C27-04 · «NO Mezclar»: el modal del consolidado, y sus dos respuestas — 🔨 **pendiente**
 
@@ -10603,11 +10609,16 @@ Y el caso concreto, con las dos salidas que él pidió:
 **Lectura.** Dos clientes distintos en un mismo volumen es un cobro mal hecho,
 así que el error es **bloqueante** —la caja no entra—, pero no puede dejar al
 operario sin salida con la carga encima: **«eliminar el último»** (lo más común:
-se escaneó una caja de más) o **«empezar todo de nuevo»**. Es el mismo par de
-salidas que la rama del consolidado de `C27-04`, y conviene que se vean igual.
+se escaneó una caja de más) o **«empezar todo de nuevo»**. No son las mismas dos
+salidas que el modal del consolidado de `C27-04`, pero son dos modales de la
+misma familia y **conviene que se vean igual**: mismo lugar, mismo tamaño,
+mismos botones.
 
-La validación reusa lo que ya hace `/etiquetar` al escanear trackings de una
-pre-alerta: mismo código de cliente, mismo código de servicio.
+Yusef ata la validación a **la que ya hace Miami** al escanear los trackings de
+una pre-alerta —*"esa validación la vamos a hacer acá"*—. Antes de escribirla
+hay que **ubicar dónde vive esa validación en `/etiquetar`** y reusarla, no
+escribir una segunda copia: es exactamente el patrón que ya mordió cuatro veces
+([[project_duplicacion_entre_pantallas]]).
 
 #### C27-06 · **Una etiqueta por medición**, no una por paquete — 🔨 **pendiente**
 
@@ -11002,13 +11013,26 @@ es lo mismo que anular una que ya tiene historia. Cuando se toque, la línea a
 respetar es la de siempre: se borra lo que nunca existió de verdad, se anula lo
 que ya pasó por algún lado.
 
-#### C27-27 · Los paquetes **se bloquean en aduana** — regla, ya es así
+#### C27-27 · «Los paquetes se bloquean en aduana» — ❓ **sentido no cerrado**
 
-Yusef, de paso: los paquetes **se bloquean en aduana**. Es lo que el código ya
-hace: `ESTADOS_FACTURABLES` son `en_aduana` y `disponible_entrega`, y de ahí no
-se mueven solos. Se anota porque es la regla que `C27-14` viene a **relajar**
-para la PESA, y conviene que quede claro que relajarla es una excepción con
-sello, no cambiar el pipeline.
+Lo dijo de paso, en la pasada por pre-alertas del final:
+
+> Los paquetes **se bloquean en aduana**.
+
+**No se cierra el sentido, porque la frase admite varias lecturas** y la
+transcripción no da más contexto:
+
+1. **En la pre-alerta**: un paquete que ya está en aduana **no se puede mover ni
+   editar** desde el portal, y por eso lo dice justo cuando pide poder mover
+   (`C27-24`) y borrar (`C27-26`).
+2. **Operativa**: la carga se **detiene físicamente** en aduana, y es una
+   descripción del proceso, no un pedido al sistema.
+3. **El gate**: es la otra cara de `C27-14`, donde él pide que se pueda saltar
+   el manifiesto.
+
+Cuál de las tres es, se le pregunta cuando se abra el bloque de pre-alerta. Lo
+que **no** se hace es tomar la tercera y construirla: `C27-14` ya tiene sus
+palabras propias y no necesita ésta de apoyo.
 
 #### C27-28 · Falta la bandera de **Compra China / CKM**
 
@@ -11094,7 +11118,7 @@ Es otra vez un elemento con dos responsabilidades en esa pantalla; va con
 |---|---|---|
 | `C27-01` | La unidad de medición es el **bulto** («volumen», como le dicen ellos) | 🔨 **Pendiente** — supera a `C26-05`; el modelo de datos está decidido en `C27-10` |
 | `C27-02` | El bulto se arma escaneando, no eligiendo | 🔨 **Pendiente** — y hay que separar «tocar para medir» de «tocar para elegir» (`C26-03`) |
-| `C27-03` | Máximo **10** mediciones por sesión | 🔨 **Pendiente** — es disciplina, no capacidad: *"van a estar forzados a no agruparlos"* |
+| `C27-03` | Máximo **10** — *"10 warehouse, 10 etiquetas"* | 🔨 **Pendiente** — es disciplina, no capacidad: *"van a estar forzados a no agruparlos"*. ❓ Falta que él diga si se cuentan **cajas o mediciones**: con el bulto ya no son lo mismo |
 | `C27-04` | «NO Mezclar»: modal con la pre-alerta y la pre-factura, y **dos respuestas** | 🔨 **Pendiente** — «a un lado» = F2 y no se guarda; «sí lo hago» = borra lo escaneado y amarra la sesión a ese consolidado |
 | `C27-05` | Mismo cliente y mismo servicio, o error con dos salidas | 🔨 **Pendiente** — «¿eliminar el último o empezar de nuevo?» |
 | `C27-06` | **Una etiqueta por medición**, no por paquete (4 WR con 2 consolidados = **3**) | 🔨 **Pendiente** — cambia el conteo de `C26-04`; una sola para todo se descartó: *"se les puede escapar"* |
@@ -11118,7 +11142,7 @@ Es otra vez un elemento con dos responsabilidades en esa pantalla; va con
 | `C27-24` | Mover un paquete de una pre-alerta a otra | 🔨 **La función existe** (`mover_paquete`, `PR-C6.48`) — falta el botón en la pantalla que él miraba |
 | `C27-25` | Agregar o editar instrucciones en una pre-alerta ya creada | 🔨 **Pendiente** — la columna existe; son nota, no tarea |
 | `C27-26` | Borrar una pre-alerta *("me equivoqué")* | 🔨 **Pendiente** — hoy `except: destroy` a propósito; solo hay `anular` |
-| `C27-27` | Los paquetes se bloquean en aduana | 📄 **Ya es así** — y `C27-14` es la excepción con sello, no un cambio de pipeline |
+| `C27-27` | «Los paquetes se bloquean en aduana» | ❓ **Sentido no cerrado** — la frase admite tres lecturas (la pre-alerta que no deja mover, la aduana física, o el gate de `C27-14`); se le pregunta con el bloque de pre-alerta |
 | `C27-28` | Falta la bandera de Compra China / CKM junto a «sellado» y «enviado según política» | 🔨 **Verificar primero** — la plantilla existe en `seeds.rb`, y **el deploy no siembra** |
 | `C27-29` | El proveedor no se guarda en `/paquetes/<id>` | 🔨 **Confirmado** — el campo visible no tiene `name` |
 | `C27-30` | El sufijo de caja no se ve en el listado | ✅ **Hecho** (2026-09-08) |
