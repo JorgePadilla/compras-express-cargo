@@ -192,6 +192,8 @@ Rails.application.routes.draw do
       # warehouse; esto es relativamente un warehouse, solo que es un
       # manifiesto"*. Así que va por el mismo `layout: "print"`.
       get :documento
+      # C28-02 · El desglose de paquetes, aparte de la hoja del transportista.
+      get :listado
     end
     collection do
       get :buscar

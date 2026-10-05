@@ -11335,7 +11335,7 @@ volúmenes salen después, sin amarrar ninguna caja a ninguno (`C28-07`).
 
 ### El manifiesto: lo que va al transportista y lo que se queda en casa
 
-#### C28-01 · El manifiesto impreso **no lleva los paquetes** — revierte `RP-60`
+#### C28-01 · El manifiesto impreso **no lleva los paquetes** — revierte `RP-60` — ✅ **HECHO** en `PR-C28.1`
 
 Jorge le mostró la hoja impresa con los bultos y, abajo, los paquetes:
 
@@ -11356,7 +11356,7 @@ roban"*.
 > Yusef delante. Lo que Yusef pidió entonces —*"no tenemos cómo
 > exportarlo"*— era sacarlo, no imprimirlo: eso es `C28-02`.
 
-#### C28-02 · El listado de paquetes del manifiesto, **aparte**: imprimir y Excel
+#### C28-02 · El listado de paquetes del manifiesto, **aparte**: imprimir y Excel — ✅ **HECHO** en `PR-C28.1`
 
 > "Ahora, el listado sí va amarrado, pero no va en la impresión. Eso lo
 >  sacamos aparte."
@@ -11603,8 +11603,8 @@ dato ya no existe. Vuelve a escanear los warehouse de la tanda y las etiquetas
 
 | # | Qué | Estado |
 |---|---|---|
-| `C28-01` | El manifiesto impreso sin la tabla de paquetes ni «Cantidad de paquetes» | 🔨 **PR-C28.1** — revierte `RP-60` |
-| `C28-02` | El listado de paquetes aparte: imprimir y Excel desde el manifiesto, y el filtro por manifiesto en `/paquetes` | 🔨 **PR-C28.1** |
+| `C28-01` | El manifiesto impreso sin la tabla de paquetes ni «Cantidad de paquetes» | ✅ **Hecho** — `PR-C28.1`; revierte `RP-60`. El volumen total se queda, porque sale de los bultos |
+| `C28-02` | El listado de paquetes aparte: imprimir y Excel desde el manifiesto, y el filtro por manifiesto en `/paquetes` | ✅ **Hecho** — `PR-C28.1`. `manifiestos#listado` lleva la marca «uso interno», va por bulto y no lleva firmas. El Excel es el de `/paquetes` con el filtro nuevo, y su N° de recepción ahora lleva el sufijo de caja |
 | `C28-03` | El warehouse con el sufijo de caja, como primera columna de lo escaneado | 🔨 **PR-C28.2** |
 | `C28-04` | El escaneo dice por qué (en este, en otro abierto, en otro enviado, tipo distinto) y siempre limpia | 🔨 **PR-C28.2** |
 | `C28-05` | Editar la caja del manifiesto: tamaño, medidas, peso | 🔨 **PR-C28.3** |
