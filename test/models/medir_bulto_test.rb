@@ -287,6 +287,51 @@ class MedirBultoTest < ActiveSupport::TestCase
     assert_not_nil suelta.reload.salto_manifiesto_at
   end
 
+  # ── C28-13 · Faltan cajas que vinieron: código de supervisor ────────────
+
+  test "C28-13 · si falta una del consolidado que ya llegó, no se guarda sin código" do
+    pa = pre_alerta_consolidada("1ZCONSPIN0000001", "1ZCONSPIN0000002")
+    una, otra = pa.pre_alerta_paquetes.map { |r| llego(r.paquete) }
+
+    e = assert_raises(MedirBulto::NecesitaAutorizacion) { medir([ una ], { peso: "10" }) }
+    assert_equal [ otra.id ], e.faltantes.map { |c| c.paquete.id }
+    assert_match(/que sí vinieron/, e.message)
+    assert_equal 0, Bulto.count
+  end
+
+  test "C28-13 · la que no vino no pide código: sigue el «facturar lo que hay» de siempre" do
+    pa = pre_alerta_consolidada("1ZCONSPIN0000003", "1ZCONSPIN0000004")
+    una = llego(pa.pre_alerta_paquetes.first.paquete)
+
+    assert_equal 1, medir([ una ], { peso: "10" }).size
+  end
+
+  test "C28-13 · con el PIN malo no se guarda nada; con el bueno queda la autorización" do
+    supervisor = users(:supervisor_prefactura)
+    supervisor.update!(pin: "1234")
+    pa = pre_alerta_consolidada("1ZCONSPIN0000005", "1ZCONSPIN0000006")
+    una, otra = pa.pre_alerta_paquetes.map { |r| llego(r.paquete) }
+    guardar = ->(pin) {
+      MedirBulto.new(user: @user).guardar!(paquete_ids: [ una.id ], volumenes: [ { peso: "10" } ],
+                                           autorizacion: { supervisor_id: supervisor.id, pin: pin, motivo: "no aparece" })
+    }
+
+    e = assert_raises(MedirBulto::NecesitaAutorizacion) { guardar.call("9999") }
+    assert_match(/incorrecto/i, e.message)
+    assert_equal 0, Bulto.count
+    assert_equal 0, Autorizacion.where(accion: "medicion_con_faltantes").count
+
+    guardar.call("1234")
+
+    a = Autorizacion.find_by!(accion: "medicion_con_faltantes")
+    assert_equal supervisor, a.autorizado_por
+    assert_equal @user, a.solicitado_por
+    assert_equal una, a.documento, "el documento es una caja: los bultos se borran al medir de nuevo"
+    assert_equal pa.numero_documento, a.concepto
+    assert_includes a.detalle, otra.numero_recepcion
+    assert_equal 1, Bulto.count
+  end
+
   private
 
   def medir(cajas, *volumenes)

@@ -99,6 +99,19 @@ export default class extends Controller {
     this._playTone(hz, ms / 1000, seguir)
   }
 
+  // C28-11 · El consolidado quedó entero: tres tonos que suben. Yusef: *"y
+  // aquí es algo donde debería decir… Completado. Completado… sí, el audio"*.
+  // Distinto de `success` —un pip por caja— para que se oiga que terminó el
+  // grupo, no que entró una caja más.
+  completo() {
+    if (!this.enabledValue) return
+    this._playTone(660, 0.12, () => {
+      setTimeout(() => this._playTone(880, 0.12, () => {
+        setTimeout(() => this._playTone(1320, 0.25), 90)
+      }), 90)
+    })
+  }
+
   alert() {
     if (!this.enabledValue) return
     this._playTone(600, 0.15, () => {

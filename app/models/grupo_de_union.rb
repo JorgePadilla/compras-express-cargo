@@ -29,6 +29,9 @@
 #
 # No hace falta ninguna columna nueva: la grilla es una lectura.
 class GrupoDeUnion
+  # Estados con los que una caja ya no se espera en la mesa de medición.
+  FUERA_DE_JUEGO = %w[facturado en_reparto entregado anulado retornado desechado].freeze
+
   # Una caja del grupo — un cuadrito de la pantalla.
   Caja = Struct.new(:paquete, :tracking, :descripcion, keyword_init: true) do
     def estado
@@ -41,6 +44,30 @@ class GrupoDeUnion
 
     def medida? = estado == "medida"
     def aqui?   = estado == "aqui"
+
+    # C28-13 · ¿Esta caja, si falta en la tanda, **frena** el guardado?
+    #
+    # Yusef, el 2026-10-03: *"el sistema lo va a dejar pesar porque en el
+    # manifiesto este no venían más, pero si viene y venían más paquetes no lo
+    # debería dejar"*. O sea, la diferencia es entre «no vino» y «vino y no
+    # aparece»:
+    #
+    #   · ya se recibió en Honduras y no está medida — está en algún estante;
+    #   · o viajó en el mismo manifiesto que las cajas de la mesa — tendría que
+    #     haber llegado con ellas.
+    #
+    # Lo que no vino —sigue en Miami, o viene en otro manifiesto— no frena: es
+    # el «Facturar lo que hay» de siempre. Y lo que ya no está en juego (sacado
+    # de la lista, en una pre-factura, entregado) tampoco.
+    def bloquea_si_falta?(manifiesto_ids)
+      return false if paquete.nil? || medida?
+      return false if paquete.medicion_descartada_at.present?
+      return false if paquete.pre_factura_id.present? || paquete.venta_id.present?
+      return true if paquete.esperando_medicion?
+      return false if paquete.estado.in?(FUERA_DE_JUEGO)
+
+      paquete.manifiesto_id.present? && manifiesto_ids.include?(paquete.manifiesto_id)
+    end
 
     # Para la lista del modal rojo: dónde está lo que falta.
     def donde

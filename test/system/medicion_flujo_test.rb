@@ -406,7 +406,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     escanear_a_la_mesa(@paquete, 1)
 
     assert_selector "[data-medicion-target='tandaCajas'] li", count: 3, wait: 5
-    assert_selector "[data-medicion-target='tandaCajas'] li[data-en-mesa]", count: 1, text: "MESA"
+    assert_selector "[data-medicion-target='tandaCajas'] li[data-en-mesa]", count: 1, text: "LEÍDA"
     assert_selector "[data-medicion-target='tandaCajas'] li[data-estado='aqui']", count: 2
     assert_selector "[data-medicion-target='tandaCajas'] li[data-estado='esperada']", count: 1
     assert_selector "[data-medicion-target='tandaCajas'] li[title*='#{segunda.numero_recepcion}']", text: segunda.numero_recepcion.last(4)
@@ -414,7 +414,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
 
     linea = find("[data-medicion-target='tandaConsolidado']")
     assert_includes linea.text, "Consolidando #{pa.numero_documento}"
-    assert_includes linea.text, "en la mesa 1"
+    assert_includes linea.text, "escaneadas 1"
     assert_includes linea.text, "faltan 2"
     assert_not_includes linea.text, segunda.numero_recepcion, "los códigos van en los dibujitos, no en la frase"
 
@@ -422,14 +422,84 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_includes ausentes.text, "1ZFALTA000000002 (no ha llegado a Miami)"
     assert_not_includes ausentes.text, segunda.numero_recepcion, "la que está acá se ve en el dibujo, no se lista"
 
+    # C28-11 · El número grande: lo resuelto contra el total.
+    assert_selector "[data-medicion-target='tandaContador']", text: "1 de 3"
+    assert_selector "[data-medicion-target='tandaFaltan']", text: "faltan 2"
+    assert_no_selector "[data-medicion-target='tandaCompleto']", visible: :visible
+
+    # C28-13 · La segunda **ya llegó** y no está en la tanda: guardar frena y
+    # pide el código. «Cancelar» deja todo como estaba para ir a buscarla.
     teclear "20", "10", "12", "14"
     espiar_impresion
     send_keys :f10
-    assert_selector "[data-medicion-target='banner']", wait: 5
+    assert_selector "dialog[open]", text: /faltan cajas que sí vinieron/i, wait: 5
+    assert_selector "dialog[open] li", text: segunda.numero_recepcion
+    assert_no_selector "dialog[open] li", text: "1ZFALTA000000002"  # la que no vino no frena
+    within("dialog[open]") { click_on "Cancelar" }
+    assert_no_selector "dialog[open]", wait: 5
+    assert_equal 0, Bulto.count
 
-    escanear_a_la_mesa(segunda, 1)
-    assert_selector "[data-medicion-target='tandaCajas'] li[data-estado='medida']", text: "MD"
-    assert_selector "[data-medicion-target='tandaConsolidado']", text: "medidas 1"
+    escanear_a_la_mesa(segunda, 2)
+    assert_selector "[data-medicion-target='tandaContador']", text: "2 de 3"
+    send_keys :f10
+
+    # La que falta no vino: pasa sin PIN, y el banner ofrece «Facturar lo que hay».
+    assert_selector "[data-medicion-target='banner']", wait: 5
+    assert_equal 1, Bulto.count
+    assert_equal [ Bulto.first.sesion ], [ @paquete, segunda ].map { |c| c.reload.medicion_sesion }.uniq
+  end
+
+  # C28-13 · Con el código de un supervisor sí se guarda sin la que vino, y
+  # queda en la bitácora con lo que faltaba.
+  test "faltan cajas que vinieron: con el PIN del supervisor se guarda y queda registrado" do
+    supervisor = users(:supervisor_prefactura)
+    supervisor.update!(pin: "1234")
+    _pa, otros = grupo_de_tres(@paquete)
+    segunda = llego(otros.first)
+
+    visit medicion_index_path
+    escanear_a_la_mesa(@paquete, 1)
+    teclear "20", "10", "12", "14"
+    espiar_impresion
+    send_keys :f10
+    assert_selector "dialog[open]", text: /faltan cajas que sí vinieron/i, wait: 5
+
+    within("dialog[open]") do
+      select supervisor.nombre, from: "autorizar_supervisor", match: :first
+      fill_in "autorizar_pin", with: "9999"
+      fill_in "autorizar_motivo", with: "no aparece en el estante"
+      click_on "Autorizar y guardar"
+    end
+    assert_selector "dialog[open]", text: "incorrecto", wait: 5
+    assert_equal 0, Bulto.count, "con el PIN malo no se guarda nada"
+
+    within("dialog[open]") do
+      fill_in "autorizar_pin", with: "1234"
+      click_on "Autorizar y guardar"
+    end
+
+    assert_selector "[data-medicion-target='banner']", wait: 5
+    assert_no_selector "dialog[open]"
+    assert_equal 1, Bulto.count
+    autorizacion = Autorizacion.find_by!(accion: "medicion_con_faltantes")
+    assert_equal supervisor, autorizacion.autorizado_por
+    assert_includes autorizacion.detalle, segunda.numero_recepcion
+  end
+
+  # C28-11 · *"Completado… sí, el audio"*.
+  test "con todas las cajas del consolidado escaneadas sale COMPLETADO" do
+    pa = consolidado_con(@paquete)
+    segunda = caja("1ZCOMPLETO00002")
+    pa.pre_alerta_paquetes.create!(tracking: segunda.tracking, descripcion: "Gorra", fecha: Date.current, paquete: segunda)
+
+    visit medicion_index_path
+    escanear_a_la_mesa(@paquete, 1)
+    assert_selector "[data-medicion-target='tandaFaltan']", text: "faltan 1", wait: 5
+    assert_no_selector "[data-medicion-target='tandaCompleto']", visible: :visible
+
+    escanear_a_la_mesa(segunda, 2)
+    assert_selector "[data-medicion-target='tandaCompleto']", text: "COMPLETADO", visible: :visible, wait: 5
+    assert_selector "[data-medicion-target='tandaContador']", text: "2 de 2"
   end
 
   # «Facturar lo que hay» cambia de momento, no de sentido: medir nunca se
@@ -476,7 +546,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     visit medicion_index_path
     escanear_a_la_mesa(@paquete, 1)
     escanear_a_la_mesa(consolidada, 2)
-    assert_selector "[data-medicion-target='tandaConsolidado']", text: "en la mesa 2"
+    assert_selector "[data-medicion-target='tandaConsolidado']", text: "escaneadas 2"
 
     teclear "20", "10", "12", "14"
     espiar_impresion

@@ -48,7 +48,7 @@ class PuedenIrJuntas
 
   def repetida
     Problema.new(motivo: "repetida",
-                 mensaje: "#{codigo(@nueva)} ya está en la mesa: no lo escanees dos veces.")
+                 mensaje: "#{codigo(@nueva)} ya la escaneaste: no la escanees dos veces.")
   end
 
   # Yusef: *"escanea uno de Jorge y va y escanea otro y ese no es el mismo Jorge
@@ -57,14 +57,14 @@ class PuedenIrJuntas
   # nuevo— las ofrece el modal.
   def otro_cliente
     Problema.new(motivo: "otro_cliente",
-                 mensaje: "#{codigo(@nueva)} es de #{nombre(@nueva)}, y en la mesa " \
-                          "tenés a #{nombre(@ya.first)}. No se miden juntos.")
+                 mensaje: "#{codigo(@nueva)} es de #{nombre(@nueva)}, y lo que ya escaneaste " \
+                          "es de #{nombre(@ya.first)}. No se miden juntos.")
   end
 
   def otro_servicio
     Problema.new(motivo: "otro_servicio",
-                 mensaje: "#{codigo(@nueva)} va por #{@nueva.tipo_envio&.nombre}, y en la mesa " \
-                          "tenés #{@ya.first.tipo_envio&.nombre}. Cada servicio se factura aparte.")
+                 mensaje: "#{codigo(@nueva)} va por #{@nueva.tipo_envio&.nombre}, y lo que ya escaneaste " \
+                          "va por #{@ya.first.tipo_envio&.nombre}. Cada servicio se factura aparte.")
   end
 
   # Las dos direcciones cuentan: entra una consolidada donde hay sueltas, o
@@ -81,7 +81,7 @@ class PuedenIrJuntas
                             "o hacés ese consolidado, o lo dejás de lado y terminás lo que tenés.")
     else
       Problema.new(motivo: "no_consolidada", pre_alerta: de_la_mesa,
-                   mensaje: "#{codigo(@nueva)} no está consolidando, y en la mesa estás armando " \
+                   mensaje: "#{codigo(@nueva)} no está consolidando, y lo que ya escaneaste es de " \
                             "la pre-alerta #{de_la_mesa.numero_documento}. Se facturan aparte.")
     end
   end

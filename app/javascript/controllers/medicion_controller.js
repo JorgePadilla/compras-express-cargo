@@ -47,6 +47,7 @@ export default class extends conEnterAvanza(Controller) {
   static targets = [
     "codigo", "aviso",
     "trabajo", "barra", "tandaCliente", "tandaGrupo", "tandaConsolidado", "tandaCajas", "tandaAusentes", "plantillaDibujito",
+    "tandaContador", "tandaFaltan", "tandaCompleto",
     "mesa", "plantillaMesa", "mesaTitulo", "quitarUltima",
     "volumenesContador", "volumenesVacio", "listaVolumenes", "plantillaVolumen", "agregarVolumen",
     "form", "peso", "alto", "largo", "ancho", "guardar", "guardarTexto",
@@ -59,7 +60,9 @@ export default class extends conEnterAvanza(Controller) {
     "mezclaModal", "mezclaTitulo", "mezclaTexto", "mezclaQuitar",
     "consolidadoModal", "consolidadoTitulo", "consolidadoTexto", "consolidadoPreAlerta",
     "consolidadoPreFactura", "hacerConsolidado",
-    "excepcionModal", "excepcionFaltantes", "excepcionError", "confirmarParcial"
+    "excepcionModal", "excepcionFaltantes", "excepcionError", "confirmarParcial",
+    "autorizarModal", "autorizarFaltantes", "autorizarSupervisor", "autorizarPin", "autorizarMotivo",
+    "autorizarError", "confirmarAutorizacion"
   ]
   static values = {
     escanearUrl: String, guardarUrl: String, panelUrl: String,
@@ -176,7 +179,7 @@ export default class extends conEnterAvanza(Controller) {
       // queda en la mesa: el número del bulto es el que va a mandar.
       this.dispatch("yaMedido")
       this._llenarProblema("Ya medida antes", `Medida el ${data.medicion_previa.fecha} por ${data.medicion_previa.por}: ` +
-        `${data.medicion_previa.peso} lb · ${data.medicion_previa.medidas}. Entró a la mesa igual.`, { medirDeNuevo: true })
+        `${data.medicion_previa.peso} lb · ${data.medicion_previa.medidas}. Entró a la tanda igual.`, { medirDeNuevo: true })
       this.problemaModalTarget.showModal()
       requestAnimationFrame(() => this.problemaEntendidoTarget.focus())
     } else if (data.grupo && !data.grupo.completo) {
@@ -204,7 +207,7 @@ export default class extends conEnterAvanza(Controller) {
       this._consolidado(data)
     } else {
       // "repetida": no hay nada que decidir, es un pip de más.
-      this._problema("Esa caja ya está en la mesa", data.mensaje)
+      this._problema("Esa caja ya la escaneaste", data.mensaje)
     }
   }
 
@@ -382,7 +385,7 @@ export default class extends conEnterAvanza(Controller) {
     const g = this._grupo
     const hay = !!(g && g.total > 1)
     this.tandaGrupoTarget.hidden = !hay
-    if (!hay) return
+    if (!hay) { this._yaCompleto = false; return }
 
     const enTanda = new Set(this._idsDeLaTanda())
     const enMesa = (c) => !!(c.id && enTanda.has(c.id))
@@ -390,9 +393,24 @@ export default class extends conEnterAvanza(Controller) {
     const medidas = g.cajas.filter((c) => c.estado === "medida").length
     const faltan = g.cajas.filter((c) => c.estado !== "medida" && !enMesa(c))
 
+    // C28-11 · El número, **grande**. Yusef, mirando la línea con el conteo:
+    // *"eso sí se necesita hacer más grande. Así como está, pero más grande.
+    // El número, a cuánto falta"*. Cuenta lo que ya está resuelto —escaneado
+    // en esta tanda o medido antes— contra el total del envío.
+    this.tandaContadorTarget.textContent = `${cajasEnMesa + medidas} de ${g.total}`
+    this.tandaFaltanTarget.textContent = faltan.length > 0 ? `faltan ${faltan.length}` : ""
+    // Y cuando no falta nada, que lo diga y que suene: *"Completado.
+    // Completado. Pero literalmente quiero que salga al lado… sí, el
+    // audio"*. Suena **una vez**, al pasar de faltar a completo, y no con
+    // cada repintado.
+    const completo = faltan.length === 0
+    this.tandaCompletoTarget.hidden = !completo
+    if (completo && !this._yaCompleto) this.dispatch("completo")
+    this._yaCompleto = completo
+
     // La línea corta: los conteos y nada más. Los códigos van en los dibujitos.
     const partes = [g.consolidada ? `Consolidando ${g.numero} · ${g.total} cajas` : `Envío de ${g.total} cajas`,
-                    `en la mesa ${cajasEnMesa}`, `medidas ${medidas}`, `faltan ${faltan.length}`]
+                    `escaneadas ${cajasEnMesa}`, `medidas ${medidas}`, `faltan ${faltan.length}`]
     if (g.parcial_autorizado) {
       partes.push(`se facturó incompleto el ${g.parcial_autorizado.fecha} por ${g.parcial_autorizado.por}`)
     }
@@ -420,11 +438,11 @@ export default class extends conEnterAvanza(Controller) {
     // atributo (la lección de #438).
     nodo.className += ` ${enMesa ? clases.seleccionada : (clases[c.estado] || "")}`
     const codigo = c.wr || c.tracking || ""
-    const donde = enMesa ? "en la mesa" : c.donde
+    const donde = enMesa ? "escaneada" : c.donde
     nodo.querySelector("[data-campo=sufijo]").textContent = this._sufijo(c)
     // C27-12 · En la medida, quién la midió.
     nodo.querySelector("[data-campo=marca]").textContent =
-      enMesa ? "MESA" : (c.estado === "medida" ? (c.por || "OK") : "")
+      enMesa ? "LEÍDA" : (c.estado === "medida" ? (c.por || "OK") : "")
     nodo.title = `${codigo} · ${donde}`
     nodo.setAttribute("aria-label", `${codigo}: ${donde}`)
     return nodo
@@ -614,13 +632,21 @@ export default class extends conEnterAvanza(Controller) {
       return
     }
 
-    this._post(this.guardarUrlValue,
-               { paquete_ids: this._idsDeLaTanda(), volumenes, reemplaza_sesion: this._reemplazaSesion || null,
-                 saltar_manifiesto: this._saltados },
-               { conEstado: true })
+    this._enviarTanda({ paquete_ids: this._idsDeLaTanda(), volumenes, reemplaza_sesion: this._reemplazaSesion || null,
+                        saltar_manifiesto: this._saltados })
+  }
+
+  _enviarTanda(cuerpo) {
+    this._ultimaTanda = cuerpo
+    this._post(this.guardarUrlValue, cuerpo, { conEstado: true })
       .then(({ ok, data }) => {
+        if (!ok && data.necesita_autorizacion) {
+          this._pedirAutorizacion(data)
+          return
+        }
         if (!ok) {
           this.dispatch("fallo")
+          if (this.autorizarModalTarget.open) this.autorizarModalTarget.close()
           this._llenarProblema("No se guardó", (data.errores || []).join(" "), {})
           this.problemaModalTarget.showModal()
           requestAnimationFrame(() => this.problemaEntendidoTarget.focus())
@@ -628,6 +654,7 @@ export default class extends conEnterAvanza(Controller) {
         }
 
         this.dispatch("guardado")
+        if (this.autorizarModalTarget.open) this.autorizarModalTarget.close()
         this._pintarManifiesto(data.manifiesto)
         this.avisoTarget.textContent = data.mensaje
         // La tanda terminó: la pantalla se limpia para la siguiente y el banner
@@ -636,6 +663,47 @@ export default class extends conEnterAvanza(Controller) {
         this._terminar(data.mensaje, data.imprimir_url, data.cantidad, data.grupo)
       })
   }
+
+  // ── C28-13 · Faltan cajas que vinieron: el código de un supervisor ──────
+  //
+  // Yusef: *"si viene y venían más paquetes no lo debería dejar… para todos
+  // estos bloqueos va a haber alguien que lo va a desbloquear, a autorizar…
+  // con su código"*. El modal lista lo que falta y dónde está —*"ahí es donde
+  // tienen que mandar a buscarlos"*—, y «Cancelar» deja la tanda como estaba
+  // para ir a buscarlas.
+  _pedirAutorizacion(data) {
+    this.dispatch("problema")
+    if (this.autorizarModalTarget.open) {
+      // Segundo intento con el PIN malo: el modal se queda y dice por qué.
+      this.autorizarErrorTarget.textContent = (data.errores || []).join(" ")
+      this.autorizarErrorTarget.hidden = false
+      this.autorizarPinTarget.value = ""
+      this.autorizarPinTarget.focus()
+      return
+    }
+    this.autorizarFaltantesTarget.replaceChildren(...(data.faltantes || []).map((f) => {
+      const li = document.createElement("li")
+      li.textContent = `${f.codigo} · ${f.donde}`
+      return li
+    }))
+    this.autorizarErrorTarget.hidden = true
+    this.autorizarPinTarget.value = ""
+    this.autorizarMotivoTarget.value = ""
+    this.autorizarModalTarget.showModal()
+    requestAnimationFrame(() => this.autorizarSupervisorTarget.focus())
+  }
+
+  confirmarAutorizacion() {
+    if (!this._ultimaTanda) return
+
+    this._enviarTanda({ ...this._ultimaTanda, autorizacion: {
+      supervisor_id: this.autorizarSupervisorTarget.value,
+      pin: this.autorizarPinTarget.value,
+      motivo: this.autorizarMotivoTarget.value
+    } })
+  }
+
+  cerrarAutorizacion() { this.autorizarModalTarget.close() }
 
   // ── El panel de la derecha: lo que falta de este manifiesto ─────────────
 
@@ -790,6 +858,7 @@ export default class extends conEnterAvanza(Controller) {
     this._paquete = null
     this._grupo = null
     this._reemplazaSesion = null
+    this._yaCompleto = false
     this._mesa = []
     this._volumenes = []
     this._saltados = []
@@ -865,7 +934,7 @@ export default class extends conEnterAvanza(Controller) {
   _modalAbierto() {
     return this.problemaModalTarget.open || this.excepcionModalTarget.open ||
            this.descarteModalTarget.open || this.mezclaModalTarget.open ||
-           this.consolidadoModalTarget.open
+           this.consolidadoModalTarget.open || this.autorizarModalTarget.open
   }
 
   _enfocarPeso() {

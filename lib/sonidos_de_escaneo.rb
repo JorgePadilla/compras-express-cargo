@@ -25,6 +25,10 @@ module SonidosDeEscaneo
     # el 2026-08-25: "siempre hay pitos para decir: ok, podés seguir".
     { accion: "success", etiqueta: "Podés seguir",
       ayuda: "El paquete quedó grabado, el tracking está libre, o el cliente apareció en la lista" },
+    # C28-11 · En Medición, cuando el consolidado queda entero: *"Completado…
+    # sí, el audio"*.
+    { accion: "completo", etiqueta: "Completado",
+      ayuda: "En Medición: ya están todas las cajas del consolidado" },
     { accion: "speakPreAlerta", etiqueta: "Pre-alerta",
       ayuda: "El pito y la voz. Es el sonido completo, no solo el pito" },
     { accion: "notify", etiqueta: "Ya existía",

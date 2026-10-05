@@ -73,9 +73,8 @@
                 <%= l a.created_at, format: :short %>
               </td>
               <td class="px-4 py-3 text-sm">
-                <%= link_to a.documento.numero, a.documento,
-                      class: "font-mono text-cec-teal hover:text-cec-teal-dark" %>
-                <span class="block text-[11px] text-gray-500"><%= a.documento.cliente.codigo %></span>
+                <%= documento_de_autorizacion(a) %>
+                <span class="block text-[11px] text-gray-500"><%= a.documento&.cliente&.codigo %></span>
               </td>
               <td class="px-4 py-3 text-sm text-gray-700"><%= truncate(a.concepto, length: 34) %></td>
               <td class="px-4 py-3 text-sm">
