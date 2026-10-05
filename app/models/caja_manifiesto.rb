@@ -55,8 +55,9 @@ class CajaManifiesto < ApplicationRecord
   #   > "Nosotros usamos la A y el 1… el mismo A, A 1, B el 2, C el 3."
   #   > "**Doble** porque la gente, a veces unos leen la A y otros leen el 1."
   #
-  # Se **deriva de la letra**, no se guarda. La letra ya sale del contador
-  # `ultima_letra`, así que el número es esa misma cuenta escrita de otra forma:
+  # Se **deriva de la letra**, no se guarda. La letra ya es una cuenta
+  # (`asignar_letra_y_codigo`), así que el número es esa misma cuenta escrita
+  # de otra forma:
   # una columna aparte podría separarse de ella con un update a mano, y una
   # etiqueta que dijera `B1` sería exactamente la confusión que la doble
   # identificación viene a evitar.
@@ -97,20 +98,38 @@ class CajaManifiesto < ApplicationRecord
     self.ancho ||= tamano_caja.ancho
   end
 
-  # La letra sale del marcador del manifiesto, que **solo sube**. Si saliera de
-  # las filas vivas, borrar la última después de imprimir su etiqueta y agregar
-  # otra reusaría la letra — y la etiqueta ya pegada al bulto apuntaría a otra
-  # caja. Más allá de la Z sigue como las columnas de una hoja de cálculo: Z,
-  # AA, AB. Yusef: *"a veces son 50… hemos pegado 20 pico, 30 cajas"*.
+  # C28-06 · La letra es **la primera libre** entre las cajas vivas del
+  # manifiesto: borrar la B deja la B para la que sigue.
+  #
+  # Hasta el 2026-10-03 salía de `ultima_letra`, un marcador que **solo
+  # subía**, para que una etiqueta ya pegada nunca apuntara a otra caja. Yusef
+  # lo dio vuelta mirando una A seguida de una D:
+  #
+  #   > "Si yo la borré no quiere decir que la siguiente letra era la C, sino
+  #   >  que **siempre sigue siendo la B**… Es la caja 2."
+  #   > "Sí, siempre tiene que quedar secuencial… después vas a creer que son
+  #   >  7 cajas porque le diste 7."
+  #
+  # O sea: una letra salteada miente sobre cuántas cajas hay, y eso le pesa más
+  # que el riesgo de la etiqueta vieja. La etiqueta de la caja borrada se
+  # despega —el aviso al borrar lo dice—. `ultima_letra` queda en la tabla
+  # como historia y ya no se lee. Más allá de la Z sigue como las columnas de
+  # una hoja de cálculo: Z, AA, AB. Yusef: *"a veces son 50… hemos pegado 20
+  # pico, 30 cajas"*.
   def asignar_letra_y_codigo
     return if letra.present? && codigo.present?
 
     manifiesto.with_lock do
-      siguiente = manifiesto.ultima_letra.to_i + 1
-      manifiesto.update_column(:ultima_letra, siguiente)
-      self.letra ||= self.class.letra_para(siguiente)
+      self.letra ||= self.class.siguiente_letra_de(manifiesto, sin: id)
       self.codigo ||= "#{manifiesto.numero}-#{letra}"
     end
+  end
+
+  # La primera letra que ninguna caja viva del manifiesto tiene. La usa también
+  # el aviso de borrar, para decir cuál va a ser la próxima.
+  def self.siguiente_letra_de(manifiesto, sin: nil)
+    usadas = manifiesto.cajas.where.not(id: sin).pluck(:letra).filter_map { |l| numero_para(l) }.to_set
+    letra_para((1..).find { |n| !usadas.include?(n) })
   end
 
   def calcular_volumen

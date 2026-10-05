@@ -18,7 +18,8 @@ import { Controller } from "@hotwired/stimulus"
 const DIVISOR_LB = 166.0
 
 export default class extends Controller {
-  static targets = ["tamano", "alto", "largo", "ancho", "peso", "volumen", "agregar", "agregarEImprimir"]
+  static targets = ["tamano", "alto", "largo", "ancho", "peso", "volumen", "agregar", "agregarEImprimir",
+                    "form", "editando", "editandoTexto", "agregarTexto", "agregarEImprimirTexto"]
 
   // C23-12 · Las teclas de esta pantalla las escucha **este** controller, y no
   // el global.
@@ -43,6 +44,7 @@ export default class extends Controller {
   // haría click además de esto y se guardarían dos cajas — el mismo doble
   // disparo que ya pasó en `/entrega_personal` con F2 y F9.
   connect() {
+    if (this.hasFormTarget) this._urlDeAgregar = this.formTarget.action
     this._recalcular()
     this._teclas = this._teclas.bind(this)
     document.addEventListener("keydown", this._teclas)
@@ -73,6 +75,60 @@ export default class extends Controller {
     if (ancho) this.anchoTarget.value = ancho
     this._recalcular()
     if (this.hasPesoTarget) this.pesoTarget.focus()
+  }
+
+  // ── C28-05 · Corregir una caja ya armada ─────────────────────────────────
+  //
+  // El lápiz de la fila trae la caja al formulario de arriba y lo pasa a
+  // PATCH. Yusef: *"la vuelvo a seleccionar, me vuelve a aparecer aquí toda la
+  // información… le voy a escoger de nuevo la caja, los pesos, las medidas"*.
+  // F5 y F9 siguen andando: guardan los cambios en vez de agregar.
+  editar(e) {
+    const d = e.currentTarget.dataset
+    this.formTarget.action = d.url
+    this._metodo("patch")
+
+    this.tamanoTargets.forEach((radio) => { radio.checked = radio.value === (d.tamanoId || "") })
+    this.altoTarget.value = d.alto || ""
+    this.largoTarget.value = d.largo || ""
+    this.anchoTarget.value = d.ancho || ""
+    this.pesoTarget.value = d.peso || ""
+    this._recalcular()
+
+    this.editandoTextoTarget.textContent = `Editando la caja ${d.letra}`
+    this.editandoTarget.hidden = false
+    this.agregarTextoTarget.textContent = "Guardar cambios"
+    this.agregarEImprimirTextoTarget.textContent = "Guardar e imprimir"
+
+    this.formTarget.scrollIntoView({ behavior: "smooth", block: "center" })
+    this.pesoTarget.focus()
+  }
+
+  cancelarEdicion() {
+    this.formTarget.reset()
+    this.formTarget.action = this._urlDeAgregar
+    this._metodo(null)
+    this.editandoTarget.hidden = true
+    this.agregarTextoTarget.textContent = "Agregar caja"
+    this.agregarEImprimirTextoTarget.textContent = "Agregar e imprimir"
+    this._recalcular()
+  }
+
+  // El `_method` que Rails lee para tratar el POST como PATCH. Se crea al
+  // editar y se quita al volver a agregar.
+  _metodo(verbo) {
+    let campo = this.formTarget.querySelector("input[name='_method']")
+    if (!verbo) {
+      campo?.remove()
+      return
+    }
+    if (!campo) {
+      campo = document.createElement("input")
+      campo.type = "hidden"
+      campo.name = "_method"
+      this.formTarget.appendChild(campo)
+    }
+    campo.value = verbo
   }
 
   medidaCambiada() {
