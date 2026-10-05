@@ -130,11 +130,14 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
   end
 
   # ── Guardar la tanda ─────────────────────────────────────────────────────
+  #
+  # C28-08 · La tanda llega como **las cajas** y **los volúmenes**, separados:
+  # *"la medición la va a decidir después de haber escaneado"*.
 
   test "tres cajas en una medición son un bulto y una sola etiqueta" do
     cajas = [ @primera, caja("1ZBULTO000000003"), caja("1ZBULTO000000004") ]
 
-    guardar([ { paquete_ids: cajas.map(&:id), peso: "20", alto: "10", largo: "12", ancho: "14" } ])
+    guardar(cajas, [ { peso: "20", alto: "10", largo: "12", ancho: "14" } ])
 
     assert_response :success
     assert_equal 1, json["cantidad"]
@@ -148,30 +151,44 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
   # Yusef: *"mide y pesa este, le da agregar; mide y pesa este por separado
   # porque no cuadra… y ahí le dice imprimir, y como son dos mediciones,
   # imprime dos"*.
-  test "dos mediciones crean dos bultos, y las dos etiquetas dicen «1 de 2» y «2 de 2»" do
+  test "dos volúmenes crean dos bultos, y las dos etiquetas dicen «1 de 2» y «2 de 2»" do
     otra = caja("1ZBULTO000000005")
 
-    guardar([
-      { paquete_ids: [ @primera.id ], peso: "20", alto: "10", largo: "12", ancho: "14" },
-      { paquete_ids: [ otra.id ], peso: "8", alto: "5", largo: "6", ancho: "7" }
-    ])
+    guardar([ @primera, otra ], [ { peso: "20", alto: "10", largo: "12", ancho: "14" },
+                                  { peso: "8", alto: "5", largo: "6", ancho: "7" } ])
 
     assert_response :success
     assert_equal 2, json["cantidad"]
     assert_equal 2, Bulto.count
     assert_equal [ "1 de 2", "2 de 2" ], json["bultos"].map { |b| b["de_cuantos_texto"] }
-    assert_equal 1, Bulto.pluck(:sesion).uniq.size, "las dos salieron de la misma mesa"
+    assert_equal 1, Bulto.pluck(:sesion).uniq.size, "las dos salieron de la misma tanda"
+    assert_match(/2 volúmenes guardados de 2 cajas/, json["mensaje"])
 
     get json["imprimir_url"]
     assert_response :success
     assert_equal 2, response.body.scan(/class="med"/).size, "dos mediciones, dos etiquetas"
   end
 
-  # Lista blanca en la puerta: lo que venga de más en una medición se cae ahí,
+  # C28-08 · La forma vieja —`mediciones: [{ paquete_ids, peso… }]`— la sigue
+  # mandando la pestaña que se cargó antes del deploy: el operario deja
+  # /medicion abierta todo el día. Se traduce, no se rechaza.
+  test "la pestaña de antes del deploy todavía guarda: las cajas se juntan y los números son volúmenes" do
+    otra = caja("1ZBULTO000000008")
+
+    post guardar_medicion_index_path, as: :json, params: { mediciones: [
+      { paquete_ids: [ @primera.id ], peso: "20" },
+      { paquete_ids: [ otra.id ], peso: "8" }
+    ] }
+
+    assert_response :success
+    assert_equal 2, Bulto.count
+    assert_equal [ Bulto.first.sesion ], [ @primera, otra ].map { |c| c.reload.medicion_sesion }.uniq
+  end
+
+  # Lista blanca en la puerta: lo que venga de más en un volumen se cae ahí,
   # no depende de que el modelo siga leyendo campo por campo.
-  test "lo que no es peso ni medidas ni cajas no entra al bulto" do
-    guardar([ { paquete_ids: [ @primera.id ], peso: "20",
-                medido_por: "XX", sesion: "colada", cliente_id: clientes(:maria).id } ])
+  test "lo que no es peso ni medidas no entra al bulto" do
+    guardar([ @primera ], [ { peso: "20", medido_por: "XX", sesion: "colada", cliente_id: clientes(:maria).id } ])
 
     assert_response :success
     bulto = Bulto.first
@@ -181,31 +198,24 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
   end
 
   test "guardar sin números es 422 con el porqué, y no crea nada" do
-    guardar([ { paquete_ids: [ @primera.id ], peso: "", alto: "", largo: "", ancho: "" } ])
+    guardar([ @primera ], [ { peso: "", alto: "", largo: "", ancho: "" } ])
 
     assert_response :unprocessable_entity
     assert_match(/al menos el peso/, json["errores"].first)
     assert_equal 0, Bulto.count
   end
 
-  test "mezclar clientes en dos mediciones de la misma tanda es 422: la tanda es de uno solo" do
+  test "mezclar clientes en la misma tanda es 422: la tanda es de uno solo" do
     otro = caja("1ZBULTO000000006", cliente: clientes(:maria))
 
-    guardar([
-      { paquete_ids: [ @primera.id ], peso: "20" },
-      { paquete_ids: [ otro.id ], peso: "8" }
-    ])
+    guardar([ @primera, otro ], [ { peso: "20" }, { peso: "8" } ])
 
     assert_response :unprocessable_entity
     assert_equal 0, Bulto.count
   end
 
-  test "más de diez mediciones en una tanda es 422" do
-    mediciones = (Bulto::MAXIMO_POR_SESION + 1).times.map do |i|
-      { paquete_ids: [ caja("1ZBULTOMAX#{format('%04d', i)}").id ], peso: "5" }
-    end
-
-    guardar(mediciones)
+  test "más de diez volúmenes en una tanda es 422" do
+    guardar([ @primera ], Array.new(Bulto::MAXIMO_POR_SESION + 1) { { peso: "5" } })
 
     assert_response :unprocessable_entity
     assert_match(/#{Bulto::MAXIMO_POR_SESION}/, json["errores"].first)
@@ -215,27 +225,29 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
 
   # Yusef: *"él va a poder reimprimir la etiqueta, porque digamos que si se le
   # cae… ¿cómo la buscaría? **Tendría que volver a escanear el warehouse**"*.
-  test "escanear una caja que ya tiene bulto ofrece reimprimir su etiqueta" do
+  # C28-08 · Y salen **todas** las de su tanda: la caja no es de un volumen.
+  test "escanear una caja ya medida ofrece reimprimir las etiquetas de su tanda" do
     otra = caja("1ZBULTO000000007")
-    guardar([ { paquete_ids: [ @primera.id, otra.id ], peso: "20", alto: "10", largo: "12", ancho: "14" } ])
-    bulto = Bulto.first
+    guardar([ @primera, otra ], [ { peso: "20", alto: "10", largo: "12", ancho: "14" }, { peso: "5" } ])
+    sesion = Bulto.first.sesion
 
     escanear(@primera.tracking)
 
     assert_equal "ya_tiene_bulto", json["resultado"]
     assert_not json["mesa"], "no vuelve a la mesa: ya está medida"
-    assert_equal etiqueta_bulto_medicion_path(bulto, print: "true"), json["bulto"]["etiqueta_url"]
-    assert_equal 2, json["bulto"]["cajas"]
-    assert_match(/ya está medida/, json["mensaje"])
+    assert_equal etiquetas_sesion_medicion_path(sesion, print: "true"), json["tanda"]["etiquetas_url"]
+    assert_equal 2, json["tanda"]["cajas"]
+    assert_equal 2, json["tanda"]["volumenes"].size
+    assert_match(/tanda de 2 cajas y 2 volúmenes/, json["mensaje"])
 
-    get json["bulto"]["etiqueta_url"]
+    get json["tanda"]["etiquetas_url"]
     assert_response :success
-    assert_equal 1, response.body.scan(/class="med"/).size, "una etiqueta por medición, no una por caja"
+    assert_equal 2, response.body.scan(/class="med"/).size, "una etiqueta por volumen, no una por caja"
   end
 
   test "la etiqueta del bulto lleva sus números y no los de la caja" do
     @primera.update!(peso: 3, alto: 5, largo: 6, ancho: 7)
-    guardar([ { paquete_ids: [ @primera.id ], peso: "20", alto: "10", largo: "12", ancho: "14" } ])
+    guardar([ @primera ], [ { peso: "20", alto: "10", largo: "12", ancho: "14" } ])
 
     get etiqueta_bulto_medicion_path(Bulto.first)
 
@@ -247,13 +259,22 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
     assert_match "MD", response.body
   end
 
+  test "la etiqueta de una caja medida en tanda son las de la tanda" do
+    guardar([ @primera ], [ { peso: "20" }, { peso: "4" } ])
+
+    get etiqueta_medicion_path(@primera)
+
+    assert_response :success
+    assert_equal 2, response.body.scan(/class="med"/).size
+  end
+
   # C27-06 · Un grupo consolidado medido en bultos imprime **una etiqueta por
   # bulto**, no una por caja: es la regla, y la ruta vieja del grupo sigue
   # siendo la que el JSON manda al facturar parcial.
   test "las etiquetas del grupo consolidado salen por bulto, no por caja" do
     segunda = caja("1ZBULTO000000015")
     pa = pre_alerta_consolidada(@primera, segunda)
-    guardar([ { paquete_ids: [ @primera.id, segunda.id ], peso: "20", alto: "10", largo: "12", ancho: "14" } ])
+    guardar([ @primera, segunda ], [ { peso: "20", alto: "10", largo: "12", ancho: "14" } ])
     assert_response :success
 
     get etiquetas_grupo_medicion_path(pa)
@@ -293,13 +314,13 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
 
   test "sin el permiso, guardarla es 422; con el permiso se guarda y queda sellada" do
     suelta = caja("1ZBULTO000000022", estado: "enviado_honduras")
-    medicion = { paquete_ids: [ suelta.id ], peso: "20", alto: "10", largo: "12", ancho: "14" }
+    volumen = { peso: "20", alto: "10", largo: "12", ancho: "14" }
 
-    guardar([ medicion ])
+    guardar([ suelta ], [ volumen ])
     assert_response :unprocessable_entity
     assert_equal 0, Bulto.count
 
-    guardar([ medicion ], saltar: [ suelta.id ])
+    guardar([ suelta ], [ volumen ], saltar: [ suelta.id ])
 
     assert_response :success
     assert_equal 1, Bulto.count
@@ -311,7 +332,7 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
   end
 
   test "una caja que sí pasó por el manifiesto no queda sellada aunque venga en la lista" do
-    guardar([ { paquete_ids: [ @primera.id ], peso: "20" } ], saltar: [ @primera.id ])
+    guardar([ @primera ], [ { peso: "20" } ], saltar: [ @primera.id ])
 
     assert_response :success
     assert_nil @primera.reload.salto_manifiesto_at, "no hubo excepción que sellar"
@@ -325,7 +346,7 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
     assert_equal "en_pre_factura", json["resultado"]
     assert_not json["puede_saltar"]
 
-    guardar([ { paquete_ids: [ @primera.id ], peso: "20" } ], saltar: [ @primera.id ])
+    guardar([ @primera ], [ { peso: "20" } ], saltar: [ @primera.id ])
     assert_response :unprocessable_entity
     assert_equal 0, Bulto.count
   end
@@ -340,7 +361,7 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
     pa = pre_alerta_consolidada(@primera)
     pa.pre_alerta_paquetes.create!(tracking: "1ZFALTA0000GRUPO", descripcion: "Gorra", fecha: Date.current)
 
-    guardar([ { paquete_ids: [ @primera.id ], peso: "10", alto: "10", largo: "10", ancho: "10" } ])
+    guardar([ @primera ], [ { peso: "10", alto: "10", largo: "10", ancho: "10" } ])
 
     assert_response :success
     grupo = json["grupo"]
@@ -359,92 +380,91 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
     segunda = caja("1ZBULTO0000COMPL")
     pre_alerta_consolidada(@primera, segunda)
 
-    guardar([ { paquete_ids: [ @primera.id, segunda.id ], peso: "10" } ])
+    guardar([ @primera, segunda ], [ { peso: "10" } ])
     assert_response :success
     assert json["grupo"]["completo"], "las dos están medidas: el grupo va junto"
 
     suelta = caja("1ZBULTO0000SUELTA")
-    guardar([ { paquete_ids: [ suelta.id ], peso: "10" } ])
+    guardar([ suelta ], [ { peso: "10" } ])
     assert_response :success
     assert_nil json["grupo"], "una caja sola no es un grupo"
   end
 
-  # ── C27-33 · Medir de nuevo ─────────────────────────────────────────────
+  # ── C27-33 · Medir de nuevo, la tanda entera ────────────────────────────
   #
   # Yusef: *"se equivocan y lo ingresan en seis libras, y eran cuatro… se va a
   # poder corregir, las mismas etiquetas… medir de nuevo"*. Jorge, en staging:
   # *"cuando un warehouse receipt ya tiene medidas y se vuelve a escanear no me
   # pregunta si quiero editarlo"*.
 
-  test "escanear con «medir de nuevo» trae el bulto entero a la mesa, con sus números viejos" do
+  test "escanear con «medir de nuevo» trae la tanda entera, con sus volúmenes" do
     otra = caja("1ZREMEDIR0000002")
-    guardar([ { paquete_ids: [ @primera.id, otra.id ], peso: "6", alto: "10", largo: "12", ancho: "14" } ])
-    bulto = Bulto.last
+    guardar([ @primera, otra ], [ { peso: "6", alto: "10", largo: "12", ancho: "14" }, { peso: "3" } ])
+    sesion = Bulto.last.sesion
 
     post escanear_medicion_index_path, params: { codigo: @primera.tracking, en_tanda: [], remedir: true }, as: :json
 
     assert_response :success
     assert_equal "ok", json["resultado"]
     assert json["mesa"]
-    assert_equal bulto.id, json["remedir_bulto"]["id"]
-    assert_equal 6.0, json["remedir_bulto"]["peso"]
-    assert_equal [ 10.0, 12.0, 14.0 ], json["remedir_bulto"].values_at("alto", "largo", "ancho")
+    assert_equal sesion, json["remedir_tanda"]["sesion"]
+    assert_equal [ 6.0, 3.0 ], json["remedir_tanda"]["volumenes"].map { |v| v["peso"] }
+    assert_equal [ 10.0, 12.0, 14.0 ], json["remedir_tanda"]["volumenes"].first.values_at("alto", "largo", "ancho")
     assert_equal [ @primera.id, otra.id ].sort, json["hermanas"].map { |h| h["id"] }.sort, "vuelven las dos, no solo la escaneada"
-    assert_match(/Midiendo de nuevo: 2 cajas/, json["mensaje"])
+    assert_match(/Midiendo de nuevo: 2 cajas y 2 volúmenes/, json["mensaje"])
   end
 
-  test "sin «medir de nuevo», la caja con bulto sigue rebotando como ya medida" do
-    guardar([ { paquete_ids: [ @primera.id ], peso: "6" } ])
+  test "sin «medir de nuevo», la caja ya medida sigue rebotando" do
+    guardar([ @primera ], [ { peso: "6" } ])
 
     escanear(@primera.tracking)
 
     assert_equal "ya_tiene_bulto", json["resultado"]
-    assert_match(/medirla de nuevo/, json["mensaje"])
+    assert_match(/medir la tanda de nuevo/, json["mensaje"])
   end
 
-  test "guardar reemplazando el bulto: el viejo se va, el nuevo tiene los números corregidos" do
+  test "guardar reemplazando la tanda: los volúmenes viejos se van, los nuevos tienen los números corregidos" do
     otra = caja("1ZREMEDIR0000003")
-    guardar([ { paquete_ids: [ @primera.id, otra.id ], peso: "6", alto: "10", largo: "12", ancho: "14" } ])
-    viejo = Bulto.last
+    guardar([ @primera, otra ], [ { peso: "6", alto: "10", largo: "12", ancho: "14" }, { peso: "2" } ])
+    viejos = Bulto.order(:orden).to_a
 
-    guardar([ { paquete_ids: [ @primera.id, otra.id ], peso: "4", alto: "10", largo: "12", ancho: "14",
-                reemplaza_bulto_id: viejo.id } ])
+    guardar([ @primera, otra ], [ { peso: "4", alto: "10", largo: "12", ancho: "14" } ], reemplaza: viejos.first.sesion)
 
     assert_response :success
-    assert_equal 1, Bulto.count, "un bulto reemplaza al otro: no se acumulan"
+    assert_equal 1, Bulto.count, "la tanda nueva reemplaza a la vieja: no se acumulan"
     nuevo = Bulto.last
-    assert_not_equal viejo.id, nuevo.id
     assert_equal 4.0, nuevo.peso.to_f
     assert_equal [ @primera.id, otra.id ].sort, nuevo.paquetes.pluck(:id).sort
-    assert_nil Bulto.find_by(id: viejo.id)
-    assert_equal 1, PaperTrail::Version.where(item_type: "Bulto", item_id: viejo.id, event: "destroy").count,
-                 "el historial se queda con los números que estaban mal"
+    viejos.each do |viejo|
+      assert_equal 1, PaperTrail::Version.where(item_type: "Bulto", item_id: viejo.id, event: "destroy").count,
+                   "el historial se queda con los números que estaban mal"
+    end
   end
 
-  test "la caja que se sacó de la mesa al medir de nuevo queda sin medir, y vuelve a pendientes" do
+  test "la caja que se sacó al medir de nuevo queda sin medir, y vuelve a pendientes" do
     otra = caja("1ZREMEDIR0000004")
-    guardar([ { paquete_ids: [ @primera.id, otra.id ], peso: "6" } ])
+    guardar([ @primera, otra ], [ { peso: "6" } ])
     viejo = Bulto.last
 
-    guardar([ { paquete_ids: [ @primera.id ], peso: "4", reemplaza_bulto_id: viejo.id } ])
+    guardar([ @primera ], [ { peso: "4" } ], reemplaza: viejo.sesion)
 
     assert_response :success
     otra.reload
-    assert_nil otra.bulto_id
-    assert_nil otra.medido_at, "el único número que tenía era el del bulto que se fue"
+    assert_nil otra.medicion_sesion
+    assert_nil otra.medido_at, "el único número que tenía era el de la tanda que se fue"
     assert_equal 1, Bulto.last.paquetes.count
   end
 
-  test "una caja con bulto no se guarda en otra medición sin reemplazar el suyo" do
-    guardar([ { paquete_ids: [ @primera.id ], peso: "6" } ])
+  test "una caja ya medida no se guarda en otra tanda sin medir la suya de nuevo" do
+    guardar([ @primera ], [ { peso: "6" } ])
     viejo = Bulto.last
 
-    guardar([ { paquete_ids: [ @primera.id ], peso: "4" } ])
+    guardar([ @primera ], [ { peso: "4" } ])
 
     assert_response :unprocessable_entity
     assert_match(/Medir de nuevo/, json["errores"].join)
     assert_equal viejo.id, Bulto.last.id, "el bulto viejo sigue intacto"
-    assert_equal 6.0, @primera.reload.bulto.peso.to_f
+    assert_equal [ 6.0 ], @primera.reload.bultos.map { |b| b.peso.to_f }
   end
 
   private
@@ -459,9 +479,10 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
     post escanear_medicion_index_path, params: { codigo: codigo, en_tanda: en_tanda }, as: :json
   end
 
-  def guardar(mediciones, saltar: [])
-    post guardar_medicion_index_path,
-         params: { mediciones: mediciones, saltar_manifiesto: saltar }, as: :json
+  def guardar(cajas, volumenes, saltar: [], reemplaza: nil)
+    post guardar_medicion_index_path, as: :json,
+         params: { paquete_ids: cajas.map(&:id), volumenes: volumenes,
+                   reemplaza_sesion: reemplaza, saltar_manifiesto: saltar }
   end
 
   def caja(tracking, cliente: clientes(:juan), tipo_envio: tipo_envios(:cer), estado: "en_aduana", **extra)

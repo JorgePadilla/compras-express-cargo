@@ -48,6 +48,13 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     send_keys peso, :enter, alto, :enter, largo, :enter, ancho
   end
 
+  # C28-09 · Después de F5 el foco **ya está** en el peso: el próximo volumen
+  # se teclea de una, sin pasar por la pistola.
+  def teclear_otro(peso, alto, largo, ancho)
+    assert_equal "medicion_peso", foco, "después de F5 el foco va al peso real"
+    send_keys peso, :enter, alto, :enter, largo, :enter, ancho
+  end
+
   def foco = page.evaluate_script("document.activeElement.id")
   def espiar_impresion = page.execute_script("window.__abrio = null; window.open = function(u){ window.__abrio = u }")
   def lo_que_abrio = page.evaluate_script("window.__abrio").to_s
@@ -57,7 +64,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     escanear(@paquete.tracking)
 
     assert_selector "[data-medicion-target='trabajo']", text: "Juan", wait: 5
-    assert_selector "[data-medicion-target='mesaTitulo']", text: /Volumen 1 · 1 caja en la mesa/i
+    assert_selector "[data-medicion-target='mesaTitulo']", text: /1 caja escaneada/i
     assert_selector "[data-medicion-target='mesa'] li", text: @paquete.numero_recepcion
     assert_equal "codigo_medicion", foco, "el foco se queda en la pistola: la mesa se arma escaneando"
 
@@ -89,14 +96,14 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     escanear_a_la_mesa(segunda, 2)
     escanear_a_la_mesa(tercera, 3)
 
-    assert_selector "[data-medicion-target='mesaTitulo']", text: /3 cajas en la mesa/i
+    assert_selector "[data-medicion-target='mesaTitulo']", text: /3 cajas escaneadas/i
     assert_selector "[data-medicion-target='mesa'] li", text: segunda.numero_recepcion
 
     teclear "40", "20", "30", "40"
     espiar_impresion
     send_keys :f10
 
-    assert_selector "[data-medicion-target='banner']", text: "3 cajas en un solo bulto", wait: 5
+    assert_selector "[data-medicion-target='banner']", text: "3 cajas en un solo volumen", wait: 5
     assert_equal 1, Bulto.count, "tres cajas, un solo bulto"
     assert_equal 3, Bulto.first.paquetes.count
     assert_equal 40.0, Bulto.first.peso.to_f
@@ -147,34 +154,48 @@ class MedicionFlujoTest < ApplicationSystemTestCase
   # C27-01 · *"Mide y pesa este, le da agregar; mide y pesa este por separado
   # porque no cuadra… y ahí le dice imprimir, y como son dos mediciones, imprime
   # dos."* El operario les dice **volúmenes**.
-  test "un segundo volumen imprime DOS etiquetas, con «1 de 2» y «2 de 2»" do
+  #
+  # C28-08 · Y desde el 2026-10-03 se escanea **todo primero**: *"la medición la
+  # va a decidir después de haber escaneado"*. F5 agrega un volumen con sus
+  # números y **las cajas se quedan**: son de la tanda, no del volumen.
+  test "escanear todo, y dos volúmenes con F5: DOS etiquetas, «1 de 2» y «2 de 2»" do
     segunda = caja("1ZFLUJO00000006")
 
     visit medicion_index_path
     escanear_a_la_mesa(@paquete, 1)
+    escanear_a_la_mesa(segunda, 2)
     teclear "20", "10", "12", "14"
     send_keys :f5
 
     assert_selector "[data-medicion-target='listaVolumenes'] li", count: 1, wait: 5
     assert_selector "[data-medicion-target='volumenesContador']", text: "1"
-    assert_no_selector "[data-medicion-target='mesa'] li"
+    assert_selector "[data-medicion-target='mesa'] li", count: 2, text: /RMI|1ZFLUJO/
+    assert_equal "", find("#medicion_peso").value, "el formulario queda limpio para el próximo volumen"
+    assert_selector "[data-calc-volumetrico-target='pesoCobrar']", text: "—"  # el cálculo se limpia con los campos
 
-    escanear_a_la_mesa(segunda, 1)
-    assert_selector "[data-medicion-target='mesaTitulo']", text: /Volumen 2 · 1 caja en la mesa/i
+    teclear_otro "8", "5", "6", "7"
     assert_selector "[data-medicion-target='guardarTexto']", text: "Guardar e imprimir 2 etiquetas"
-
-    teclear "8", "5", "6", "7"
     espiar_impresion
     send_keys :f10
 
     assert_selector "[data-medicion-target='banner']", text: "2 volúmenes", wait: 5
     assert_equal 2, Bulto.count
     assert_equal [ "1 de 2", "2 de 2" ], Bulto.order(:orden).map(&:de_cuantos_texto)
+    assert_equal [ Bulto.first.sesion ], [ @paquete, segunda ].map { |c| c.reload.medicion_sesion }.uniq
 
     visit lo_que_abrio
     assert_selector ".med", count: 2, visible: :all
     assert_text "1 de 2"
     assert_text "2 de 2"
+  end
+
+  # La regla vieja trababa justo esto: Jorge, en la prueba, *"aquí es donde ya
+  # me dejaste amarrado, porque no puedo meterle otra vez escaneas"*.
+  test "F5 sin cajas escaneadas avisa que primero se escanea" do
+    visit medicion_index_path
+    find("#codigo_medicion").send_keys(:f5)
+
+    assert_selector "dialog[open]", text: "No hay cajas escaneadas", wait: 5
   end
 
   # C27-04 · *"Ese está consolidando con tal pre-alerta, con tal número. Ese va
@@ -230,10 +251,10 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     escanear(@paquete.tracking)
 
     assert_selector "dialog[open]", text: "Esta caja ya está medida", wait: 5
-    within("dialog[open]") { click_on "Reimprimir la etiqueta" }
+    within("dialog[open]") { click_on "Reimprimir sus etiquetas" }
 
     assert_no_selector "dialog[open]", wait: 5
-    assert_equal etiqueta_bulto_medicion_path(Bulto.last, print: "true"), lo_que_abrio
+    assert_equal etiquetas_sesion_medicion_path(Bulto.last.sesion, print: "true"), lo_que_abrio
   end
 
   # C27-33 · Yusef: *"se equivocan y lo ingresan en seis libras, y eran
@@ -257,12 +278,17 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     within("dialog[open]") { click_on "Medir de nuevo" }
 
     assert_no_selector "dialog[open]", wait: 5
-    # El bulto entero vuelve a la mesa, no solo la caja escaneada.
+    # La tanda entera vuelve, no solo la caja escaneada: sus cajas, y sus
+    # volúmenes en la lista para corregirlos (C28-08).
     assert_selector "[data-medicion-target='mesa'] li", count: 2, wait: 5
     assert_selector "[data-medicion-target='mesa'] li", text: segunda.numero_recepcion
-    assert_equal "6", find("#medicion_peso").value, "los números viejos vienen puestos para corregirlos"
+    assert_selector "[data-medicion-target='listaVolumenes'] li", count: 1, text: "6 lb"
     assert_equal "medicion_peso", foco, "el foco va al peso: lo que sigue es corregir"
     assert_selector "[data-medicion-target='aviso']", text: "Midiendo de nuevo"
+
+    find("[data-medicion-target='listaVolumenes'] li button[aria-label='Corregir este volumen']").click
+    assert_no_selector "[data-medicion-target='listaVolumenes'] li"
+    assert_equal "6", find("#medicion_peso").value, "«Corregir» trae los números viejos al formulario"
 
     fill_in "medicion_peso", with: "4"
     espiar_impresion
@@ -272,8 +298,8 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_equal 1, Bulto.count, "el nuevo reemplaza al viejo"
     assert_nil Bulto.find_by(id: viejo.id)
     assert_equal 4.0, Bulto.last.peso.to_f
-    assert_equal Bulto.last.id, @paquete.reload.bulto_id
-    assert_equal Bulto.last.id, segunda.reload.bulto_id
+    assert_equal Bulto.last.sesion, @paquete.reload.medicion_sesion
+    assert_equal Bulto.last.sesion, segunda.reload.medicion_sesion
   end
 
   # C27-14 · Yusef: *"este tiene un bloqueo ahorita que me tiene loco… hay que
@@ -298,7 +324,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
 
     assert_selector "[data-medicion-target='banner']", wait: 5
     suelta.reload
-    assert_not_nil suelta.bulto_id
+    assert_not_nil suelta.medicion_sesion
     assert_equal "MD", suelta.salto_manifiesto_por
     assert_equal "enviado_honduras", suelta.estado, "el estado del paquete no se toca"
   end
@@ -346,28 +372,25 @@ class MedicionFlujoTest < ApplicationSystemTestCase
 
   # El «×» de un volumen, como el de una caja en /etiquetar. Deshacer no es
   # elegir: el volumen lo armó él y lo puede tirar.
-  test "el × de un volumen quita ESE volumen y renumera" do
+  test "el × de un volumen quita ESE volumen y renumera, y las cajas se quedan" do
     segunda = caja("1ZEQUIS00000002")
-    tercera = caja("1ZEQUIS00000003")
 
     visit medicion_index_path
     escanear_a_la_mesa(@paquete, 1)
+    escanear_a_la_mesa(segunda, 2)
     teclear "10", "10", "10", "10"
     send_keys :f5
-    escanear_a_la_mesa(segunda, 1)
-    teclear "20", "10", "10", "10"
+    teclear_otro "20", "10", "10", "10"
     send_keys :f5
     assert_selector "[data-medicion-target='listaVolumenes'] li", count: 2, wait: 5
 
-    find("[data-medicion-target='listaVolumenes'] li:first-child button").click
+    find("[data-medicion-target='listaVolumenes'] li:first-child button[aria-label='Quitar este volumen']").click
 
     assert_selector "[data-medicion-target='listaVolumenes'] li", count: 1, wait: 5
     assert_selector "[data-medicion-target='listaVolumenes'] li", text: /Volumen 1/i
     assert_selector "[data-medicion-target='listaVolumenes'] li", text: "20 lb"
     assert_no_selector "[data-medicion-target='listaVolumenes'] li", text: "10 lb"
-
-    escanear_a_la_mesa(tercera, 1)
-    assert_selector "[data-medicion-target='mesaTitulo']", text: /Volumen 2 · 1 caja en la mesa/i
+    assert_selector "[data-medicion-target='mesaTitulo']", text: /2 cajas escaneadas/i
   end
 
   # C27-04 · La «Notificación» de la pizarra —*medir → notificación → buscar el

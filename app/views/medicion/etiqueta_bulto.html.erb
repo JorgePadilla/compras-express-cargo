@@ -28,10 +28,12 @@
     <div class="arriba">
     <div class="qr"><%= etiqueta_qr_svg(etiqueta_qr_medicion(b), tamano: "1.0in") %></div>
     <div class="datos">
-      <%# Cuántas cajas ampara este bulto va acá, en la fila de la fecha: es la
-          que más aire tiene de las seis. %>
+      <%# Cuántas cajas ampara la tanda va acá, en la fila de la fecha: es la
+          que más aire tiene de las seis. Desde C28-08 es la tanda entera y no
+          este volumen —ninguna caja es de un volumen—, que es lo que necesita
+          quien la recibe: cuántos warehouse tiene que encontrar. %>
       <div class="fecha" data-ajustar data-ajustar-min="5"><%= b.medido_at.strftime("%d/%m/%Y %H:%M") %> · <%= b.paquetes.size %> caja<%= "s" if b.paquetes.size != 1 %></div>
-      <div class="dims" data-ajustar data-ajustar-min="6"><%= [ b.alto, b.largo, b.ancho ].map { |m| etiqueta_num(m) }.join("x") %> in</div>
+      <div class="dims" data-ajustar data-ajustar-min="6"><%= (m = etiqueta_medidas(b)) ? "#{m} in" : "solo peso" %></div>
       <div class="cifra"><span class="u">LBS</span> <%= etiqueta_num_2d(b.peso) %></div>
       <div class="cifra"><span class="u">VLBS</span> <%= etiqueta_num_2d(b.peso_volumetrico) %></div>
       <div class="pies">PIES³ <%= etiqueta_num_2d(VolumetricoCalculator.pies_cubicos_exactos(VolumetricoCalculator.pulgadas_cubicas(b.alto, b.largo, b.ancho))) %></div>

@@ -1,4 +1,9 @@
 class Paquete < ApplicationRecord
+  # C28-08 · La caja ya no apunta a un volumen sino a su tanda
+  # (`medicion_sesion`). La columna se borra en la release siguiente: el
+  # contenedor viejo la sigue insertando mientras corre el deploy.
+  self.ignored_columns += %w[bulto_id]
+
   has_paper_trail  # PR-D1.a: audit log de cada cambio en el paquete
 
   belongs_to :cliente
@@ -20,10 +25,13 @@ class Paquete < ApplicationRecord
   belongs_to :sub_localidad_actual, class_name: "SubLocalidad",  optional: true  # PR-D1.c: bodega interna actual
   belongs_to :warehouse_receipt, optional: true  # PR-5c.5p2 — fuente rica del numero_recepcion (madre)
   belongs_to :proveedor, optional: true  # PR-D3.a: catálogo (Amazon, Walmart, drivers privados…)
-  # C26-19 · La medición a la que esta caja entró en San Pedro. Varias cajas
-  # comparten bulto: *"no es una etiqueta por paquete, es una etiqueta por
-  # medición, y la medición puede tener 100 paquetes"*.
-  belongs_to :bulto, optional: true
+  # C28-08 · La tanda de medición en la que entró esta caja en San Pedro, y
+  # sus volúmenes. Hasta el 2026-10-03 la caja era de **un** volumen
+  # (`bulto_id`, C26-19); ahora es de la tanda: *"la medición la va a decidir
+  # después de haber escaneado"*. `bulto_id` queda en la tabla hasta que la
+  # migración que lo borra salga sola.
+  has_many :bultos, -> { order(:orden) }, primary_key: :medicion_sesion, foreign_key: :sesion,
+                    inverse_of: false
   belongs_to :tercero, class_name: "Cliente", optional: true  # PR-D3.c: cliente final cuando CEC le maneja carga a otra empresa
   belongs_to :tarifa_recolecta, optional: true  # PR-D6.a: cuando el cajero elige una tarifa del catálogo, copiamos monto+moneda
   # PR-6 (Entrega Personal): cobro al recibir en Miami. Cuando esto está

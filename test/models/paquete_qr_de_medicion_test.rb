@@ -80,13 +80,22 @@ class PaqueteQrDeMedicionTest < ActiveSupport::TestCase
     assert_equal [ @paquete ], Paquete.por_codigo_de_etiqueta(qr).to_a
   end
 
+  # C27-07 · Un volumen solo con el peso: la etiqueta no puede reventar, y el
+  # QR marca que no hay medidas en vez de inventarlas.
+  test "un volumen con solo el peso lleva un guion donde irían las medidas" do
+    bulto = medicion(orden: 1, de_cuantos: 1)
+    bulto.update!(alto: nil, largo: nil, ancho: nil)
+
+    assert_equal "MED RMI0002026000777 20.00 -", etiqueta_qr_medicion(bulto)
+  end
+
   private
 
   def medicion(orden:, de_cuantos:)
     bulto = Bulto.create!(cliente: clientes(:juan), sesion: SecureRandom.uuid, orden: orden,
                           de_cuantos: de_cuantos, medido_at: Time.current, medido_por: "MD",
                           peso: 20, alto: 20, largo: 30, ancho: 40)
-    @paquete.update!(bulto: bulto)
+    @paquete.update!(medicion_sesion: bulto.sesion)
     bulto.reload
   end
 end

@@ -39,7 +39,7 @@ class EtiquetaMedicionCabeTest < ApplicationSystemTestCase
     bulto = Bulto.create!(cliente: clientes(:juan), sesion: SecureRandom.uuid, orden: 10, de_cuantos: 10,
                           medido_at: Time.current, medido_por: "MD",
                           peso: 999.5, alto: 99.5, largo: 99.5, ancho: 99.5)
-    @paquete.update!(bulto: bulto)
+    @paquete.update!(medicion_sesion: bulto.sesion)
     99.times { |i| caja_del(bulto, i) }
 
     visit etiqueta_bulto_medicion_path(bulto)
@@ -57,7 +57,7 @@ class EtiquetaMedicionCabeTest < ApplicationSystemTestCase
   test "la etiqueta de una caja con bulto es la del bulto" do
     bulto = Bulto.create!(cliente: clientes(:juan), sesion: SecureRandom.uuid, orden: 1, de_cuantos: 2,
                           medido_at: Time.current, medido_por: "MD", peso: 20, alto: 10, largo: 12, ancho: 14)
-    @paquete.update!(bulto: bulto)
+    @paquete.update!(medicion_sesion: bulto.sesion)
 
     visit etiqueta_medicion_path(@paquete)
 
@@ -97,6 +97,6 @@ class EtiquetaMedicionCabeTest < ApplicationSystemTestCase
   def caja_del(bulto, i)
     Paquete.create!(tracking: "1ZMEDBULTO#{format('%06d', i)}", cliente: clientes(:juan),
                     tipo_envio: tipo_envios(:cer), sucursal_recepcion: sucursales(:miami),
-                    estado: "en_aduana", descripcion: "Zapatos", bulto: bulto)
+                    estado: "en_aduana", descripcion: "Zapatos", medicion_sesion: bulto.sesion)
   end
 end

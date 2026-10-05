@@ -325,6 +325,16 @@ module EtiquetaHelper
     (n % 1).zero? ? n.to_i.to_s : n.to_s
   end
 
+  # `10x12x14`, o nil si no hay las tres. Desde C27-07 se puede medir **solo
+  # con el peso** —y en la línea es lo normal: *"esto solo va a pesar, dos
+  # libras"* (2026-10-03)—, y la etiqueta reventaba con `nil % 1`.
+  def etiqueta_medidas(numeros)
+    dims = [ numeros.alto, numeros.largo, numeros.ancho ]
+    return nil unless dims.all?(&:present?)
+
+    dims.map { |m| etiqueta_num(m) }.join("x")
+  end
+
   # `C25-04` · Siempre con dos decimales: `146.00`, no `146`.
   #
   # Yusef, sobre la 4×6 impresa: *"deberías de ponerle siempre punto cero cero,
@@ -346,7 +356,9 @@ module EtiquetaHelper
   #
   # C27-08 · Recibe una caja **o un bulto**. Con bulto los números son los del
   # bulto —el que cobra es el bulto, no la caja, que se quedó con el dato de
-  # Miami— y el «n de m» cuenta **mediciones**, no cajas de un split. Yusef:
+  # Miami— y el «n de m» cuenta **mediciones**, no cajas de un split. El código
+  # es el de la primera caja **de la tanda** (C28-08): las N etiquetas llevan
+  # el mismo, y resuelve a la misma tanda. Yusef:
   #
   #   "Cuando ella escanea cualquiera de los QR le dice: ¡eh!, son dos —ya le va
   #    a decir que **tiene dos mediciones**—, porque si no escanea la segunda
@@ -356,7 +368,7 @@ module EtiquetaHelper
     paquete = bulto ? bulto.paquetes.first : objeto
     numeros = bulto || paquete
     codigo = etiqueta_codigo_barras(paquete).presence || paquete&.tracking
-    medidas = [ numeros.alto, numeros.largo, numeros.ancho ].map { |m| etiqueta_num(m) }.join("x")
+    medidas = etiqueta_medidas(numeros) || "-"
     cuantas = bulto ? etiqueta_cuantas_mediciones(bulto) : etiqueta_cuantas_cajas(paquete)
     [ "MED", codigo, etiqueta_num_2d(numeros.peso), medidas, cuantas ].compact.join(" ")
   end
