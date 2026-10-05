@@ -73,6 +73,7 @@ end %>
   qf_nombre      = params[:cliente_nombre]
   qf_desde       = params[:fecha_desde]
   qf_hasta       = params[:fecha_hasta]
+  qf_manifiesto  = params[:manifiesto]
 %>
 <%= form_tag paquetes_path(anchor: "resultados"), method: :get,
       class: "mb-4 bg-white dark:bg-gray-800 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 shadow-sm px-4 py-3",
@@ -89,7 +90,7 @@ end %>
     <%= hidden_field_tag k, "1" if params[k] == "1" %>
   <% end %>
 
-  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 items-end">
+  <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 items-end">
     <div>
       <label for="qf_tipo_envio" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Tipo envío</label>
       <%= select_tag "tipo_envio_ids[]",
@@ -145,6 +146,19 @@ end %>
             class: "w-full h-9 px-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-cec-teal",
             data: { action: "input->quick-filters#debouncedSubmit keydown.enter->quick-filters#submit" } %>
     </div>
+
+    <%# C28-02 · Yusef: *"habíamos puesto en el filtro que ahí vamos a buscarlo
+        por manifiesto"*. Es la otra puerta al desglose que ya no va en la
+        hoja impresa del manifiesto. %>
+    <div>
+      <label for="qf_manifiesto" class="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Manifiesto</label>
+      <%= text_field_tag :manifiesto, qf_manifiesto,
+            id: "qf_manifiesto",
+            placeholder: "ej. MMIA2026000011",
+            autocomplete: "off",
+            class: "w-full h-9 px-2 text-sm font-mono border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-cec-teal",
+            data: { action: "input->quick-filters#debouncedSubmit keydown.enter->quick-filters#submit" } %>
+    </div>
   </div>
 <% end %>
 
@@ -184,6 +198,7 @@ end %>
   Array(params[:sucursal_ids]).reject(&:blank?).any?,
   params[:pre_alerta_id].present?, params[:busqueda_avanzada].present?,
   params[:cliente_codigo].present?, params[:cliente_nombre].present?,
+  params[:manifiesto].present?,
   params[:fecha_desde].present?, params[:fecha_hasta].present?,
   params[:solo_facturados] == "1", params[:incluir_facturados] == "1",
   params[:sin_prealerta] == "1",

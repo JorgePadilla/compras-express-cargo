@@ -517,6 +517,14 @@ class Paquete < ApplicationRecord
     q = "%#{sanitize_sql_like(text)}%"
     left_joins(:cliente).where("clientes.codigo ILIKE ?", q)
   }
+  # C28-02 · *"En el filtro… buscarlo por manifiesto."* Por número, que es lo
+  # que el operario tiene en la mano —la hoja, la etiqueta del bulto—, y
+  # parcial, para que alcance con el final (`000011`).
+  scope :by_manifiesto, ->(text) {
+    text = text.to_s.strip
+    next all if text.empty?
+    left_joins(:manifiesto).where("manifiestos.numero ILIKE ?", "%#{sanitize_sql_like(text)}%")
+  }
   scope :by_cliente_nombre, ->(text) {
     text = text.to_s.strip
     next all if text.empty?

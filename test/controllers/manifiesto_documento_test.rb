@@ -213,46 +213,42 @@ class ManifiestoDocumentoTest < ActionDispatch::IntegrationTest
     assert_match(/\.mf-pill\s*\{[^}]*font-size:\s*15px/, response.body)
   end
 
-  # ── RP-60 · El desglose de los paquetes que van adentro ──────────────────
+  # ── C28-01 · Los paquetes no van en la hoja del transportista ────────────
   #
-  # Yusef lo pidió mirando la pantalla vieja —*"no tenemos cómo exportarlo"*— y
-  # en la llamada se le contestó que apretara «Imprimir manifiesto». Ese papel
-  # llevaba **los bultos, no lo que va adentro**, así que los dos quedaron
-  # conformes con algo que no contestaba la pregunta. Jorge lo confirmó el
-  # 2026-09-06: sí va en el impreso.
+  # Hasta el 2026-10-03 iban (`RP-60`). Yusef tachó la tabla en el papel
+  # impreso y escribió «Esto no va» junto a «Cantidad de paquetes»: la hoja se
+  # le entrega al transportista, y *"los proveedores te roban"*. El desglose se
+  # fue a `listado` (`C28-02`).
 
-  test "RP-60 · el impreso lista los paquetes que van adentro" do
+  test "C28-01 · la hoja no lista los paquetes ni dice de quién son" do
     paquete = paquetes(:disponible_entrega_juan)
     paquete.update!(manifiesto: @manifiesto, descripcion: "dos generadores")
 
     get documento_manifiesto_url(@manifiesto)
 
-    assert_select "div.mf-h", text: /Paquetes \(1\)/
-    assert_select "table.mf-t td", text: paquete.tracking
-    assert_select "table.mf-t td", text: "dos generadores"
-    assert_select "table.mf-t th", text: "No. recepción"
-    assert_select "table.mf-t th", text: "Contenido"
+    assert_response :success
+    assert_no_match(/#{Regexp.escape(paquete.tracking)}/, response.body)
+    assert_no_match(/dos generadores/, response.body)
+    assert_no_match(/#{Regexp.escape(paquete.cliente.nombre_completo)}/, response.body)
+    assert_select "div.mf-h", text: /Paquetes \(/, count: 0
   end
 
-  # Los bultos y los paquetes son **dos tablas distintas**: una dice qué cajas
-  # viajan, la otra qué hay adentro. Confundirlas es justo el malentendido que
-  # dejó esto sin construir.
-  test "RP-60 · el desglose no reemplaza a la tabla de bultos" do
-    @manifiesto.cajas.create!(alto: 23, largo: 23, ancho: 36, peso: 131)
+  test "C28-01 · los totales no cuentan paquetes, pero sí bultos, peso, volumen y pies³" do
     paquetes(:disponible_entrega_juan).update!(manifiesto: @manifiesto)
 
     get documento_manifiesto_url(@manifiesto)
 
-    assert_select "div.mf-h", text: /Bultos \(1\)/
-    assert_select "div.mf-h", text: /Paquetes \(1\)/
+    assert_select "table.mf-tot td.label", text: "Cantidad de paquetes", count: 0
+    [ "Cantidad de bultos", "Peso total", "Volumen total", "Pies cúbicos" ].each do |rotulo|
+      assert_select "table.mf-tot td.label", text: rotulo
+    end
   end
 
-  # Se imprime antes de finalizar, o la carga viajó sin que nadie le metiera los
-  # paquetes: decirlo es mejor que una tabla vacía que parece un error.
-  test "RP-60 · sin paquetes lo dice en vez de dejar la tabla vacía" do
+  test "C28-01 · los bultos siguen en la hoja" do
+    @manifiesto.cajas.create!(alto: 23, largo: 23, ancho: 36, peso: 131)
+
     get documento_manifiesto_url(@manifiesto)
 
-    assert_select "div.mf-h", text: /Paquetes \(0\)/
-    assert_match(/todavía no tiene paquetes/i, response.body)
+    assert_select "div.mf-h", text: /Bultos \(1\)/
   end
 end

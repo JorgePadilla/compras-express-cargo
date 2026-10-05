@@ -3,7 +3,7 @@ class ManifiestosController < ApplicationController
   # necesariamente tienen rol de Miami — se gatea via authorize_edit
   # del paquete antes de llegar acá.
   before_action :authorize_manifiestos, except: [ :buscar ]
-  before_action :set_manifiesto, only: %i[show edit update add_paquete empacar_sin_escanear remove_paquete finalizar documento]
+  before_action :set_manifiesto, only: %i[show edit update add_paquete empacar_sin_escanear remove_paquete finalizar documento listado]
 
   def index
     @manifiestos = Manifiesto.activos.includes(:empresa_manifiesto).order(created_at: :desc)
@@ -149,9 +149,24 @@ class ManifiestosController < ApplicationController
   # mano sobre las dos copias del legacy viven en la vista; acá solo se arma la
   # data. El `layout: "print"` es el mismo del Warehouse Receipt, que trae de
   # regalo la cadena de `?print=true` (imprime y, con `cerrar=1`, se cierra).
+  #
+  # C28-01 · Ya no lleva los paquetes: esta hoja se le entrega al transportista.
+  # El desglose se fue a `listado`.
   def documento
     @cajas = @manifiesto.cajas.includes(:tamano_caja)
-    @paquetes = @manifiesto.paquetes.includes(:cliente, :tipo_envio).order(:id)
+    render layout: "print"
+  end
+
+  # C28-02 · El desglose de paquetes, **aparte** de la hoja que viaja con la
+  # carga. Yusef: *"el listado sí va amarrado, pero no va en la impresión. Eso
+  # lo sacamos aparte"*. Es interno: sin transportista y sin firmas.
+  #
+  # Va ordenado **por bulto**, que es como se revisa contra la carga: abrir la
+  # caja A y tachar lo que tiene adentro. Lo que entró sin pistola (`C23-10`)
+  # no tiene bulto y va al final.
+  def listado
+    @paquetes = @manifiesto.paquetes.includes(:cliente, :tipo_envio, :caja_manifiesto).to_a
+                           .sort_by { |p| orden_en_el_listado(p) }
     render layout: "print"
   end
 
@@ -178,6 +193,12 @@ class ManifiestosController < ApplicationController
   # fueron con la sección.
   private def authorize_manifiestos
     redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:manifiestos)
+  end
+
+  private def orden_en_el_listado(paquete)
+    caja = paquete.caja_manifiesto
+    [ caja ? CajaManifiesto.numero_para(caja.letra).to_i : Float::INFINITY,
+      paquete.numero_recepcion.to_s, paquete.numero_caja.to_i, paquete.id ]
   end
 
   def set_manifiesto
