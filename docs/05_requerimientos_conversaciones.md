@@ -11335,7 +11335,7 @@ volúmenes salen después, sin amarrar ninguna caja a ninguno (`C28-07`).
 
 ### El manifiesto: lo que va al transportista y lo que se queda en casa
 
-#### C28-01 · El manifiesto impreso **no lleva los paquetes** — revierte `RP-60`
+#### C28-01 · El manifiesto impreso **no lleva los paquetes** — revierte `RP-60` — ✅ **HECHO** en `PR-C28.1`
 
 Jorge le mostró la hoja impresa con los bultos y, abajo, los paquetes:
 
@@ -11356,7 +11356,7 @@ roban"*.
 > Yusef delante. Lo que Yusef pidió entonces —*"no tenemos cómo
 > exportarlo"*— era sacarlo, no imprimirlo: eso es `C28-02`.
 
-#### C28-02 · El listado de paquetes del manifiesto, **aparte**: imprimir y Excel
+#### C28-02 · El listado de paquetes del manifiesto, **aparte**: imprimir y Excel — ✅ **HECHO** en `PR-C28.1`
 
 > "Ahora, el listado sí va amarrado, pero no va en la impresión. Eso lo
 >  sacamos aparte."
@@ -11372,7 +11372,7 @@ Son dos cosas:
 
 El listado es interno: no lleva transportista ni firmas.
 
-#### C28-03 · La lista de lo escaneado lleva el **warehouse**, primero
+#### C28-03 · La lista de lo escaneado lleva el **warehouse**, primero — ✅ **HECHO** en `PR-C28.2`
 
 > "En el lado del manifiesto, le estás escaneando: **le hace falta el número de
 >  warehouse que escaneó**. O sea, tiene un tracking pero no el warehouse."
@@ -11384,7 +11384,7 @@ Estado. Sin el warehouse con su sufijo de caja, las cajas de un split se ven
 **iguales**. Es el mismo arreglo que `C27-30` le hizo a `/paquetes`, y va con
 el mismo helper que la etiqueta.
 
-#### C28-04 · El escaneo dice **por qué** no entró — y siempre limpia el campo
+#### C28-04 · El escaneo dice **por qué** no entró — y siempre limpia el campo — ✅ **HECHO** en `PR-C28.2`
 
 Escanearon un paquete que ya estaba adentro y salió *«No se encontró ningún
 paquete libre»*.
@@ -11417,7 +11417,7 @@ ahorita con un paquete"*.
 
 En los cuatro casos el campo queda vacío y con el foco puesto.
 
-#### C28-05 · La caja del manifiesto se **edita**
+#### C28-05 · La caja del manifiesto se **edita** — ✅ **HECHO** en `PR-C28.3`
 
 > "Me la dejó agregar sin peso, sin nada, **eso está bueno**… voy a agregar sin
 >  peso porque voy a empacar… después le voy a agregar el peso. **Aquí es donde
@@ -11431,7 +11431,7 @@ En los cuatro casos el campo queda vacío y con el foco puesto.
 `CajasManifiestoController#update` existe desde `C21-04`, pero ninguna
 pantalla lo llama. Lo que falta es el botón y el formulario.
 
-#### C28-06 · La letra de la caja es **secuencial**: borrar la B deja libre la B — revierte la regla de `C21-04`
+#### C28-06 · La letra de la caja es **secuencial**: borrar la B deja libre la B — revierte la regla de `C21-04` — ✅ **HECHO** en `PR-C28.3`
 
 > "Pero no, si yo la borré no quiere decir que la siguiente letra era la C,
 >  sino que **siempre sigue siendo la B**… Es la caja 2."
@@ -11603,12 +11603,12 @@ dato ya no existe. Vuelve a escanear los warehouse de la tanda y las etiquetas
 
 | # | Qué | Estado |
 |---|---|---|
-| `C28-01` | El manifiesto impreso sin la tabla de paquetes ni «Cantidad de paquetes» | 🔨 **PR-C28.1** — revierte `RP-60` |
-| `C28-02` | El listado de paquetes aparte: imprimir y Excel desde el manifiesto, y el filtro por manifiesto en `/paquetes` | 🔨 **PR-C28.1** |
-| `C28-03` | El warehouse con el sufijo de caja, como primera columna de lo escaneado | 🔨 **PR-C28.2** |
-| `C28-04` | El escaneo dice por qué (en este, en otro abierto, en otro enviado, tipo distinto) y siempre limpia | 🔨 **PR-C28.2** |
-| `C28-05` | Editar la caja del manifiesto: tamaño, medidas, peso | 🔨 **PR-C28.3** |
-| `C28-06` | Letra secuencial: borrar la B deja libre la B | 🔨 **PR-C28.3** — revierte la regla de `C21-04` |
+| `C28-01` | El manifiesto impreso sin la tabla de paquetes ni «Cantidad de paquetes» | ✅ **Hecho** — `PR-C28.1`; revierte `RP-60`. El volumen total se queda, porque sale de los bultos |
+| `C28-02` | El listado de paquetes aparte: imprimir y Excel desde el manifiesto, y el filtro por manifiesto en `/paquetes` | ✅ **Hecho** — `PR-C28.1`. `manifiestos#listado` lleva la marca «uso interno», va por bulto y no lleva firmas. El Excel es el de `/paquetes` con el filtro nuevo, y su N° de recepción ahora lleva el sufijo de caja |
+| `C28-03` | El warehouse con el sufijo de caja, como primera columna de lo escaneado | ✅ **Hecho** — `PR-C28.2`, en el manifiesto y en `/empacar`. De paso: en `/empacar`, la etiqueta `…-2` de un split empacaba **cualquiera** de sus cajas; ahora cae en la suya |
+| `C28-04` | El escaneo dice por qué (en este, en otro abierto, en otro enviado, tipo distinto) y siempre limpia | ✅ **Hecho** — `PR-C28.2`: `manifiestos#escanear` clasifica (`EscaneoDeManifiesto`) y `mover_paquete` mueve solo desde un manifiesto `creado`. Lo elegido de la lista pasa por las mismas preguntas, y la pantalla suena |
+| `C28-05` | Editar la caja del manifiesto: tamaño, medidas, peso | ✅ **Hecho** — `PR-C28.3`. El lápiz de la fila la carga en el mismo formulario. F5 guarda, F9 guarda y reimprime la 4×6 |
+| `C28-06` | Letra secuencial: borrar la B deja libre la B | ✅ **Hecho** — `PR-C28.3`; revierte la regla de `C21-04`. La letra es la primera libre, y el aviso de borrar dice que hay que despegar la etiqueta y cuál va a ser la próxima |
 | `C28-07` | Carga escaneada y sin escanear en el mismo viaje | 📄 **Confirma** los dos caminos del manifiesto |
 | `C28-08` | Escanear todo, después los volúmenes | 🔨 **PR-C28.4** — revierte el amarre de `C27-02`; empuja `RP-41` |
 | `C28-09` | F5 vuelve al peso real | 🔨 **PR-C28.4** |

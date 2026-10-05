@@ -1,0 +1,78 @@
+<%# C28-02 · El listado de paquetes del manifiesto, **aparte** de la hoja que
+    viaja con la carga.
+
+    Hasta el 2026-10-03 este desglose iba dentro del manifiesto impreso
+    (`RP-60`). Yusef lo tachó sobre el papel: esa hoja se le entrega al
+    transportista, y *"los proveedores te roban"*. Pero el desglose hace falta
+    adentro —*"el listado sí va amarrado, pero no va en la impresión"*—, así
+    que vive acá, con el mismo `layout: "print"`.
+
+    Es **interno**: sin transportista, sin consignatario y sin firmas, que son
+    de la hoja que viaja. Lleva lo que sirve para revisar la carga contra el
+    papel: el warehouse **con el sufijo de caja** (`C28-03`; sin él las cajas
+    de un split salen iguales), y el bulto en el que entró. %>
+
+<% content_for :titulo_print, "Listado de paquetes #{@manifiesto.numero}" %>
+
+<% printed_at = Time.current.in_time_zone %>
+<% trackings = @paquetes.map(&:tracking).uniq.size %>
+
+<style>
+  .ls-h { font-weight: bold; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; color: #555; }
+  .ls-mono { font-family: "Courier New", Courier, monospace; }
+  .ls-aviso { display: inline-block; margin-top: 6px; padding: 3px 10px; border-radius: 9999px; background: #FFB547; color: #1B2559; font-weight: bold; font-size: 11px; letter-spacing: 0.4px; }
+  table.ls-t { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px; }
+  table.ls-t th, table.ls-t td { border: 1px solid #d4d4d4; padding: 6px 7px; text-align: left; vertical-align: top; }
+  table.ls-t thead th { background: #f3f4f6; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .ls-footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid #d4d4d4; display: flex; justify-content: space-between; font-size: 10px; color: #666; }
+</style>
+
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;">
+  <div>
+    <div class="ls-h">Listado de paquetes</div>
+    <div class="ls-mono" style="font-size:24px;font-weight:bold;color:#1B2559;margin-top:2px;"><%= @manifiesto.numero %></div>
+    <span class="ls-aviso">USO INTERNO · NO SE ENTREGA AL TRANSPORTISTA</span>
+  </div>
+  <div style="text-align:right;font-size:12px;line-height:1.6;color:#444;">
+    <strong>Paquetes:</strong> <%= @paquetes.size %> · <strong>Trackings:</strong> <%= trackings %><br>
+    <strong>Bultos:</strong> <%= @manifiesto.cantidad_bultos %><br>
+    <strong>Impreso:</strong> <%= printed_at.strftime("%d/%m/%Y %H:%M") %> · <strong>Imprimió:</strong> <%= wr_user_initials(Current.user) %>
+  </div>
+</div>
+
+<% if @paquetes.any? %>
+  <table class="ls-t">
+    <thead>
+      <tr>
+        <th style="width:4%;">#</th>
+        <th style="width:8%;">Bulto</th>
+        <th style="width:18%;">No. recepción</th>
+        <th style="width:20%;">Tracking</th>
+        <th style="width:22%;">Cliente</th>
+        <th>Contenido</th>
+        <th style="width:8%;">T. envío</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @paquetes.each_with_index do |paquete, i| %>
+        <% caja = paquete.caja_manifiesto %>
+        <tr>
+          <td><%= i + 1 %></td>
+          <td class="ls-mono"><%= caja ? "#{caja.letra}#{caja.numero_bulto}" : "sin escanear" %></td>
+          <td class="ls-mono"><%= etiqueta_codigo_barras(paquete) || "—" %></td>
+          <td class="ls-mono"><%= paquete.tracking %></td>
+          <td><%= paquete.cliente&.codigo %> — <%= paquete.cliente&.nombre_completo %></td>
+          <td><%= paquete.descripcion.presence || "—" %></td>
+          <td><%= paquete.tipo_envio&.nombre || "—" %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% else %>
+  <p style="margin-top:16px;color:#999;font-size:13px;">Este manifiesto todavía no tiene paquetes.</p>
+<% end %>
+
+<div class="ls-footer">
+  <div>Listado interno del manifiesto</div>
+  <div><%= @manifiesto.numero %></div>
+</div>

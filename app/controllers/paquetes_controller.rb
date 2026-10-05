@@ -743,7 +743,9 @@ class PaquetesController < ApplicationController
         sheet.add_row([
           p.fecha_recibido_miami&.to_date || p.created_at.to_date,
           p.fecha_disponible&.to_date,
-          p.numero_recepcion_visible || "—",
+          # C28-03 · Con el sufijo de caja, como la etiqueta y el listado
+          # (`C27-30`): sin él, las cajas de un split salen iguales.
+          helpers.etiqueta_codigo_barras(p) || "—",
           p.tracking.to_s,
           p.cliente.codigo.to_s,
           p.cliente.nombre_completo.to_s,
@@ -964,6 +966,7 @@ class PaquetesController < ApplicationController
 
     scope = scope.by_cliente_codigo(params[:cliente_codigo]) if params[:cliente_codigo].present?
     scope = scope.by_cliente_nombre(params[:cliente_nombre]) if params[:cliente_nombre].present?
+    scope = scope.by_manifiesto(params[:manifiesto]) if params[:manifiesto].present?
     scope = scope.busqueda_avanzada(params[:busqueda_avanzada]) if params[:busqueda_avanzada].present?
     scope = scope.by_pre_alerta(params[:pre_alerta_id]) if params[:pre_alerta_id].present?
 

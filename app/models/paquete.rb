@@ -525,6 +525,14 @@ class Paquete < ApplicationRecord
     q = "%#{sanitize_sql_like(text)}%"
     left_joins(:cliente).where("clientes.codigo ILIKE ?", q)
   }
+  # C28-02 · *"En el filtro… buscarlo por manifiesto."* Por número, que es lo
+  # que el operario tiene en la mano —la hoja, la etiqueta del bulto—, y
+  # parcial, para que alcance con el final (`000011`).
+  scope :by_manifiesto, ->(text) {
+    text = text.to_s.strip
+    next all if text.empty?
+    left_joins(:manifiesto).where("manifiestos.numero ILIKE ?", "%#{sanitize_sql_like(text)}%")
+  }
   scope :by_cliente_nombre, ->(text) {
     text = text.to_s.strip
     next all if text.empty?
@@ -856,6 +864,19 @@ class Paquete < ApplicationRecord
     return por_numero if por_numero.exists?
 
     buscar_escaneado(term)
+  end
+
+  # C28-04 · Lo mismo, pero si el sufijo no existe se prueba con el número
+  # madre — que es lo que hacía /empacar desde `C21-01`: un paquete que no se
+  # partió no tiene caja 1, y su recepción con `-1` igual tiene que entrar.
+  # La Medición sigue con el estricto; esto es para las pantallas de Miami,
+  # que preguntan (lista para elegir) cuando el madre trae varias cajas.
+  def self.por_etiqueta_o_su_madre(codigo)
+    exacto = por_codigo_de_etiqueta(codigo)
+    return exacto if exacto.exists?
+
+    madre, _caja = parsear_codigo_de_caja(limpiar_codigo_escaneado(codigo))
+    madre ? por_codigo_de_etiqueta(madre) : exacto
   end
 
   # C26-17 · Lo que la estación de medición todavía espera de un manifiesto:

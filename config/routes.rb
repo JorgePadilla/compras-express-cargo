@@ -180,6 +180,10 @@ Rails.application.routes.draw do
     end
     member do
       post :add_paquete
+      # C28-04 · La pistola pregunta antes de agregar: ¿está acá, en otro, es
+      # de otro servicio? Y si está en otro abierto, se mueve.
+      post :escanear
+      post :mover_paquete
       # C23-10 · El mismo camino que `add_paquete`, pero de un tirón. Yusef:
       # *"no les da chance de escanear y le empacan al puro"*.
       post :empacar_sin_escanear
@@ -192,6 +196,8 @@ Rails.application.routes.draw do
       # warehouse; esto es relativamente un warehouse, solo que es un
       # manifiesto"*. Así que va por el mismo `layout: "print"`.
       get :documento
+      # C28-02 · El desglose de paquetes, aparte de la hoja del transportista.
+      get :listado
     end
     collection do
       get :buscar

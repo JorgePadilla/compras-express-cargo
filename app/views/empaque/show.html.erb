@@ -197,7 +197,7 @@
           <% @paquetes.each do |p| %>
             <tr data-caja-id="<%= p.caja_manifiesto_id %>">
               <td class="px-6 py-3 text-sm font-bold text-cec-navy dark:text-cec-gold"><%= p.caja_manifiesto.letra %><%= p.caja_manifiesto.numero_bulto %></td>
-              <td class="px-6 py-3 text-sm font-mono text-cec-navy"><%= p.numero_recepcion_visible %></td>
+              <td class="px-6 py-3 text-sm font-mono text-cec-navy"><%= etiqueta_codigo_barras(p) %></td>
               <td class="px-6 py-3 text-sm font-mono text-gray-500"><%= p.tracking %></td>
               <td class="px-6 py-3 text-sm text-gray-700"><%= p.cliente&.nombre_completo %></td>
               <td class="px-6 py-3 text-sm text-gray-500"><%= p.tipo_envio&.nombre %></td>
