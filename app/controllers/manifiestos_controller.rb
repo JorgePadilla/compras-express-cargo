@@ -3,7 +3,7 @@ class ManifiestosController < ApplicationController
   # necesariamente tienen rol de Miami — se gatea via authorize_edit
   # del paquete antes de llegar acá.
   before_action :authorize_manifiestos, except: [ :buscar ]
-  before_action :set_manifiesto, only: %i[show edit update add_paquete empacar_sin_escanear remove_paquete finalizar documento]
+  before_action :set_manifiesto, only: %i[show edit update add_paquete empacar_sin_escanear remove_paquete finalizar documento listado escanear mover_paquete]
 
   def index
     @manifiestos = Manifiesto.activos.includes(:empresa_manifiesto).order(created_at: :desc)
@@ -61,6 +61,50 @@ class ManifiestosController < ApplicationController
     paquete.update!(manifiesto: @manifiesto)
     @manifiesto.recalculate_totals!
     respond_to_paquete_change("Paquete #{paquete.guia} agregado al manifiesto.")
+  end
+
+  # C28-04 · Lo que leyó la pistola, **y por qué** entra o no. Solo clasifica
+  # (`EscaneoDeManifiesto`); el que escribe sigue siendo `add_paquete`, que la
+  # pantalla llama cuando la respuesta es `ok`, o `mover_paquete` cuando el
+  # operario confirma el modal de «está en otro manifiesto».
+  #
+  # `paquete_id` en vez de `codigo` es la lista de resultados: el operario
+  # eligió uno y pasa por las mismas preguntas que si lo hubiera escaneado.
+  def escanear
+    escaneo = EscaneoDeManifiesto.new(@manifiesto)
+    codigo = params[:codigo].to_s.strip
+    resultado =
+      if params[:paquete_id].present?
+        escaneo.clasificar(Paquete.includes(:cliente, :tipo_envio, :manifiesto).find(params[:paquete_id]))
+      else
+        escaneo.por_codigo(codigo)
+      end
+
+    render json: respuesta_del_escaneo(resultado, codigo)
+  end
+
+  # C28-04 · *"¿Desea agregar este a este manifiesto y retirarlo del otro?"*
+  #
+  # Solo desde un manifiesto que **sigue abierto** (Jorge, 2026-10-04): uno ya
+  # enviado se firmó y viajó, y sacarle un paquete sería cambiar un papel que
+  # ya no está en la mano. Al salir del otro se le suelta la caja —la etiqueta
+  # 4×6 de esa caja ya no lo cuenta— y vuelve al estado de recién etiquetado,
+  # que es lo mismo que hace `remove_paquete`. Los dos manifiestos recalculan.
+  def mover_paquete
+    paquete = Paquete.find(params[:paquete_id])
+    resultado = EscaneoDeManifiesto.new(@manifiesto).clasificar(paquete)
+    unless resultado.tipo == :en_otro
+      return respond_to_paquete_change("#{paquete.guia} no se movió: #{motivo_del_escaneo(resultado)}")
+    end
+
+    otro = paquete.manifiesto
+    Paquete.transaction do
+      paquete.update!(manifiesto: @manifiesto, caja_manifiesto: nil,
+                      estado: EtiquetarController::ESTADO_AL_ETIQUETAR)
+      otro.recalculate_totals!
+      @manifiesto.recalculate_totals!
+    end
+    respond_to_paquete_change("#{paquete.guia} se movió del manifiesto #{otro.numero} a éste.")
   end
 
   # C23-10 · El mismo `add_paquete`, pero de un tirón y sin pistola.
@@ -149,9 +193,24 @@ class ManifiestosController < ApplicationController
   # mano sobre las dos copias del legacy viven en la vista; acá solo se arma la
   # data. El `layout: "print"` es el mismo del Warehouse Receipt, que trae de
   # regalo la cadena de `?print=true` (imprime y, con `cerrar=1`, se cierra).
+  #
+  # C28-01 · Ya no lleva los paquetes: esta hoja se le entrega al transportista.
+  # El desglose se fue a `listado`.
   def documento
     @cajas = @manifiesto.cajas.includes(:tamano_caja)
-    @paquetes = @manifiesto.paquetes.includes(:cliente, :tipo_envio).order(:id)
+    render layout: "print"
+  end
+
+  # C28-02 · El desglose de paquetes, **aparte** de la hoja que viaja con la
+  # carga. Yusef: *"el listado sí va amarrado, pero no va en la impresión. Eso
+  # lo sacamos aparte"*. Es interno: sin transportista y sin firmas.
+  #
+  # Va ordenado **por bulto**, que es como se revisa contra la carga: abrir la
+  # caja A y tachar lo que tiene adentro. Lo que entró sin pistola (`C23-10`)
+  # no tiene bulto y va al final.
+  def listado
+    @paquetes = @manifiesto.paquetes.includes(:cliente, :tipo_envio, :caja_manifiesto).to_a
+                           .sort_by { |p| orden_en_el_listado(p) }
     render layout: "print"
   end
 
@@ -178,6 +237,60 @@ class ManifiestosController < ApplicationController
   # fueron con la sección.
   private def authorize_manifiestos
     redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:manifiestos)
+  end
+
+  private def respuesta_del_escaneo(resultado, codigo)
+    paquete = resultado.paquete
+    base = { resultado: resultado.tipo.to_s, mensaje: motivo_del_escaneo(resultado, codigo) }
+    base[:paquete] = paquete_del_escaneo(paquete) if paquete
+    base[:otro_manifiesto] = resultado.otro_manifiesto&.numero if paquete&.manifiesto_id
+    base[:paquetes] = resultado.candidatos.map { |p| paquete_del_escaneo(p) } if resultado.candidatos
+    base
+  end
+
+  private def paquete_del_escaneo(paquete)
+    { id: paquete.id,
+      codigo: codigo_de(paquete),
+      tracking: paquete.tracking,
+      cliente: paquete.cliente&.nombre_completo,
+      cliente_codigo: paquete.cliente&.codigo,
+      peso_cobrar: paquete.peso_cobrar.to_f,
+      manifiesto: paquete.manifiesto&.numero }
+  end
+
+  # Las frases son las de Yusef cuando las dijo; las demás, en su mismo tono.
+  private def motivo_del_escaneo(resultado, codigo = nil)
+    paquete = resultado.paquete
+    case resultado.tipo
+    when :ok
+      "#{codigo_de(paquete)} · #{paquete.tracking} agregado."
+    when :en_este
+      "Este paquete ya fue escaneado y está en este manifiesto (#{codigo_de(paquete)})."
+    when :en_otro
+      "#{codigo_de(paquete)} ya fue escaneado y está en el manifiesto #{paquete.manifiesto.numero}."
+    when :en_otro_cerrado
+      "#{codigo_de(paquete)} está en el manifiesto #{paquete.manifiesto.numero}, que ya salió " \
+        "(#{paquete.manifiesto.estado.humanize.downcase}). No se puede mover."
+    when :tipo_distinto
+      "#{codigo_de(paquete)} es #{paquete.tipo_envio&.nombre || "sin tipo"}, " \
+        "y este manifiesto lleva #{@manifiesto.tipos_envio_nuestros}."
+    when :fuera_de_circulacion
+      "#{codigo_de(paquete)} está #{estado_legible(paquete.estado).downcase}: ya no viaja."
+    when :varios
+      "«#{codigo}» trae #{resultado.candidatos.size} cajas que no están en este manifiesto: elegí cuál."
+    else
+      "No existe ningún paquete con «#{codigo}»."
+    end
+  end
+
+  private def codigo_de(paquete)
+    helpers.etiqueta_codigo_barras(paquete) || paquete.tracking
+  end
+
+  private def orden_en_el_listado(paquete)
+    caja = paquete.caja_manifiesto
+    [ caja ? CajaManifiesto.numero_para(caja.letra).to_i : Float::INFINITY,
+      paquete.numero_recepcion.to_s, paquete.numero_caja.to_i, paquete.id ]
   end
 
   def set_manifiesto
