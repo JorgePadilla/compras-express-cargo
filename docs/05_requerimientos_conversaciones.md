@@ -11460,7 +11460,7 @@ puede asumir que el paquete pasó por la pistola. No pide nada nuevo.
 
 ### La PESA: escanear todo, y después los volúmenes
 
-#### C28-08 · **Escanear todo primero, medir después** — revierte el amarre de `C27-02`
+#### C28-08 · **Escanear todo primero, medir después** — revierte el amarre de `C27-02` — ✅ **HECHO** en `PR-C28.4`
 
 Jorge probó la pantalla como quedó en `#447`: tres cajas, se mide; dos cajas,
 se mide; una, se mide. Y salió la regla que no cabe:
@@ -11500,7 +11500,7 @@ Jorge, en el audio: *"voy a relajar esta parte"*. Y al planear (2026-10-04):
 > `RP-41`. Hasta que se construya ese bloque, la pre-factura sigue copiando el
 > peso de Miami.
 
-#### C28-09 · **F5 vuelve al peso real**
+#### C28-09 · **F5 vuelve al peso real** — ✅ **HECHO** en `PR-C28.4`
 
 > "Entonces acá va a venir y van a presionar F5. **Aquí tiene que volver a
 >  regresar acá**… porque le diste agregar volúmenes, que vas a agregar otro."
@@ -11610,8 +11610,8 @@ dato ya no existe. Vuelve a escanear los warehouse de la tanda y las etiquetas
 | `C28-05` | Editar la caja del manifiesto: tamaño, medidas, peso | ✅ **Hecho** — `PR-C28.3`. El lápiz de la fila la carga en el mismo formulario. F5 guarda, F9 guarda y reimprime la 4×6 |
 | `C28-06` | Letra secuencial: borrar la B deja libre la B | ✅ **Hecho** — `PR-C28.3`; revierte la regla de `C21-04`. La letra es la primera libre, y el aviso de borrar dice que hay que despegar la etiqueta y cuál va a ser la próxima |
 | `C28-07` | Carga escaneada y sin escanear en el mismo viaje | 📄 **Confirma** los dos caminos del manifiesto |
-| `C28-08` | Escanear todo, después los volúmenes | 🔨 **PR-C28.4** — revierte el amarre de `C27-02`; empuja `RP-41` |
-| `C28-09` | F5 vuelve al peso real | 🔨 **PR-C28.4** |
+| `C28-08` | Escanear todo, después los volúmenes | ✅ **Hecho** — `PR-C28.4`; revierte el amarre de `C27-02` y empuja `RP-41`. La caja guarda la sesión de su tanda (`paquetes.medicion_sesion`, con backfill desde `bulto_id`). Medir de nuevo trae la tanda entera, y reimprimir saca todas sus etiquetas |
+| `C28-09` | F5 vuelve al peso real | ✅ **Hecho** — `PR-C28.4` |
 | `C28-10` | «Mesa» sale de la pantalla | 🔨 **PR-C28.5** |
 | `C28-11` | El conteo del consolidado grande, y «Completado» con su sonido | 🔨 **PR-C28.5** |
 | `C28-12` | La captura arriba, lo escaneado abajo | 🔨 **PR-C28.5** — ❓ lectura dudosa, se confirma probándolo |
