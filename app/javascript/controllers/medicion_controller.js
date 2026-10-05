@@ -29,6 +29,14 @@ import { conEnterAvanza } from "controllers/enter_avanza"
 // Por eso el foco se queda en el campo de escaneo después de un pip bueno, y
 // no salta al peso como antes: el gesto normal es pip, pip, pip.
 //
+// C28-08 · **Primero se escanea todo, después salen los volúmenes.** Hasta el
+// 2026-10-03 cada volumen llevaba sus cajas —escanear tres, medir, escanear
+// dos, medir—, y la línea lo probó y lo dio vuelta: *"la medición la va a
+// decidir después de haber escaneado… para ellos es mejor solo escanear, que
+// sí están ahí, y ellos lo acomodan como gustan para medir y pesar"*. Las cajas
+// escaneadas (`_mesa`) son de la tanda; los volúmenes (`_volumenes`) son solo
+// números, y F5 agrega el siguiente con el foco ya en el peso.
+//
 // Mismo esqueleto que /empacar: la pistola dispara Enter, cada resultado suena
 // distinto, y el guard `_seq` evita que una respuesta vieja pinte por una caja
 // que ya no está en pantalla. Los `dispatch` van con el nombre literal, uno por
@@ -62,8 +70,8 @@ export default class extends conEnterAvanza(Controller) {
     this._seq = 0
     this._paquete = null
     this._grupo = null
-    // La mesa: las cajas del volumen que se está armando, en el orden en que
-    // entraron. Los volúmenes: las mediciones ya agregadas de esta tanda.
+    // La mesa: las cajas de la tanda, en el orden en que entraron. Los
+    // volúmenes: los números ya agregados (C28-08: ninguno lleva cajas).
     // Nada de esto vive en el servidor hasta F10 — `MedirBulto` recibe la
     // tanda entera de un saque, porque el «1 de 2» del QR necesita saber
     // cuántas mediciones son antes de imprimir la primera.
@@ -127,7 +135,7 @@ export default class extends conEnterAvanza(Controller) {
   }
 
   _idsDeLaTanda() {
-    return [...this._volumenes.flatMap((v) => v.paquete_ids), ...this._mesa.map((p) => p.id)]
+    return this._mesa.map((p) => p.id)
   }
 
   _resolver(data) {
@@ -141,18 +149,15 @@ export default class extends conEnterAvanza(Controller) {
 
     // La caja entra a la mesa. Es lo único que agrega cajas: no hay checkbox
     // ni lista de dónde elegir.
-    if (data.remedir_bulto) {
-      // C27-33 · Medir de nuevo: el bulto entero vuelve a la mesa —sus cajas
-      // se midieron juntas— con los números viejos puestos para corregirlos.
-      // Al guardar, el nuevo reemplaza al viejo.
+    if (data.remedir_tanda) {
+      // C27-33 · Medir de nuevo: la tanda entera vuelve —sus cajas y sus
+      // volúmenes (C28-08)— para corregir lo que estaba mal. «Corregir» en un
+      // volumen lo trae al formulario; al guardar, la tanda nueva reemplaza a
+      // la vieja.
       this._mesa.push(...data.hermanas.filter((h) => !this._mesa.some((p) => p.id === h.id)))
-      this._reemplaza = data.remedir_bulto.id
+      this._reemplazaSesion = data.remedir_tanda.sesion
+      this._volumenes = data.remedir_tanda.volumenes.map((v) => this._numerosDe(v))
       this._pintar(data)
-      this.pesoTarget.value = data.remedir_bulto.peso || ""
-      this.altoTarget.value = data.remedir_bulto.alto || ""
-      this.largoTarget.value = data.remedir_bulto.largo || ""
-      this.anchoTarget.value = data.remedir_bulto.ancho || ""
-      this.formTarget.querySelectorAll("input").forEach((i) => i.dispatchEvent(new Event("input", { bubbles: true })))
       this.avisoTarget.textContent = data.mensaje
       this.dispatch("atencion")
       this._volverAPeso = true
@@ -294,7 +299,10 @@ export default class extends conEnterAvanza(Controller) {
   // Yusef: *"si se le cae… tendría que volver a escanear el warehouse"*.
   _yaTieneBulto(data) {
     this.dispatch("yaMedido")
-    this._bultoParaReimprimir = data.bulto && data.bulto.etiqueta_url
+    // C28-08 · Reimprimir saca las etiquetas de **toda la tanda**: la caja no
+    // es de un volumen.
+    this._bultoParaReimprimir = data.tanda && data.tanda.etiquetas_url
+    this._cuantasParaReimprimir = (data.tanda && data.tanda.volumenes.length) || 1
     this._paraRemedir = data.paquete
     this._llenarProblema("Esta caja ya está medida", data.mensaje, { reimprimir: true, remedir: true })
     this.problemaModalTarget.showModal()
@@ -329,7 +337,7 @@ export default class extends conEnterAvanza(Controller) {
 
   reimprimirBulto() {
     this.problemaModalTarget.close()
-    if (this._bultoParaReimprimir) this._imprimir(this._bultoParaReimprimir, 1)
+    if (this._bultoParaReimprimir) this._imprimir(this._bultoParaReimprimir, this._cuantasParaReimprimir)
   }
 
   // C20-13 · Escape no contesta un aviso: *"ellos no las leen"*.
@@ -347,16 +355,9 @@ export default class extends conEnterAvanza(Controller) {
   _pintar(data) {
     this._paquete = data.paquete
     this._grupo = data.grupo || null
-    const p = data.paquete
-    // Los números de Miami solo se copian con la **primera** caja de la mesa:
-    // a partir de la segunda pisarían lo que el operario ya tecleó, y el peso
-    // que vale es el del bulto entero.
-    if (this._mesa.length <= 1) {
-      this.pesoTarget.value = p.peso || ""
-      this.altoTarget.value = p.alto || ""
-      this.largoTarget.value = p.largo || ""
-      this.anchoTarget.value = p.ancho || ""
-    }
+    // C28-08 · Los números de Miami ya **no** se copian al formulario: el
+    // volumen 1 no es la caja 1, y un peso de Miami puesto de antemano es un
+    // número que se guarda sin que nadie lo haya pesado.
 
     this._pintarManifiesto(data.manifiesto)
     this._repintar()
@@ -373,7 +374,7 @@ export default class extends conEnterAvanza(Controller) {
   // C27-12) y cuáles faltan y dónde están. Es la «Notificación» de la pizarra
   // —*medir → notificación → buscar el resto*— sin nada que tocar.
   _pintarTanda() {
-    const primera = this._mesa[0] || this._volumenes[0]
+    const primera = this._mesa[0]
     this.tandaClienteTarget.textContent = primera
       ? [primera.cliente, primera.tipo_envio].filter(Boolean).join(" · ")
       : ""
@@ -452,8 +453,7 @@ export default class extends conEnterAvanza(Controller) {
 
   _pintarMesa() {
     const n = this._mesa.length
-    this.mesaTituloTarget.textContent =
-      `Volumen ${this._volumenes.length + 1} · ${n} ${n === 1 ? "caja" : "cajas"} en la mesa`
+    this.mesaTituloTarget.textContent = `${n} ${n === 1 ? "caja escaneada" : "cajas escaneadas"}`
     this.mesaTarget.replaceChildren(...this._mesa.map((p, i) => this._filaMesa(p, i)))
     this.quitarUltimaTarget.hidden = n === 0
   }
@@ -483,8 +483,6 @@ export default class extends conEnterAvanza(Controller) {
     const medidas = [v.alto, v.largo, v.ancho].filter(Boolean).join("x")
     nodo.querySelector("[data-campo=numeros]").textContent =
       [v.peso && `${v.peso} lb`, medidas && `${medidas} in`].filter(Boolean).join(" · ")
-    const c = v.paquete_ids.length
-    nodo.querySelector("[data-campo=cajas]").textContent = `${c} ${c === 1 ? "caja" : "cajas"}`
     return nodo
   }
 
@@ -492,7 +490,9 @@ export default class extends conEnterAvanza(Controller) {
   // e imprimir»… «Reimprimir etiqueta», no sé si solo hace una, ¿cuál hace?"*.
   // Con tres volúmenes salen tres etiquetas, y prometer una sería mentir.
   _textoDeLosBotones() {
-    const total = this._volumenes.length + (this._mesa.length > 0 ? 1 : 0)
+    // Lo que está en el formulario sale como el último volumen, si tiene
+    // números (C28-08: ya no importa si quedan cajas «en la mesa»).
+    const total = this._volumenes.length + (this._tieneNumeros(this._numeros()) ? 1 : 0)
     this.guardarTextoTarget.textContent = total > 1
       ? `Guardar e imprimir ${total} etiquetas`
       : "Guardar e imprimir"
@@ -504,7 +504,7 @@ export default class extends conEnterAvanza(Controller) {
     if (this._modalAbierto() || this._mesa.length === 0) return
 
     this._mesa.pop()
-    if (this._mesa.length === 0) { this._grupo = null; this._reemplaza = null }
+    if (this._mesa.length === 0) { this._grupo = null; this._reemplazaSesion = null }
     this._repintar()
     this.codigoTarget.focus()
   }
@@ -518,7 +518,32 @@ export default class extends conEnterAvanza(Controller) {
 
     this._volumenes.splice(i, 1)
     this._repintar()
-    this.codigoTarget.focus()
+    this._enfocarPeso()
+  }
+
+  // «Corregir» un volumen ya agregado: sus números vuelven al formulario y la
+  // fila se va; F5 lo agrega de nuevo. Es como se corrige al medir de nuevo.
+  corregirVolumen(e) {
+    if (this._modalAbierto()) return
+    const i = Number(e.currentTarget.closest("li")?.dataset.indice)
+    if (Number.isNaN(i)) return
+
+    const [v] = this._volumenes.splice(i, 1)
+    this.pesoTarget.value = v.peso || ""
+    this.altoTarget.value = v.alto || ""
+    this.largoTarget.value = v.largo || ""
+    this.anchoTarget.value = v.ancho || ""
+    this.formTarget.querySelectorAll("input").forEach((inp) => inp.dispatchEvent(new Event("input", { bubbles: true })))
+    this._repintar()
+    this._enfocarPeso()
+  }
+
+  // El texto de «Guardar e imprimir N etiquetas» depende de lo que se teclea.
+  numerosCambiados() { this._textoDeLosBotones() }
+
+  _numerosDe(b) {
+    const t = (n) => (n === null || n === undefined ? "" : String(n))
+    return { peso: t(b.peso), alto: t(b.alto), largo: t(b.largo), ancho: t(b.ancho) }
   }
 
   // ── Agregar un volumen ──────────────────────────────────────────────────
@@ -529,8 +554,12 @@ export default class extends conEnterAvanza(Controller) {
   // volúmenes, así lo dicen ellos, porque son diferentes de tamaño"*.
   agregarVolumen() {
     if (this._modalAbierto()) return
+    // C28-08 · Lo único que pide es que la tanda tenga cajas: los volúmenes
+    // ya no llevan las suyas. Jorge, en la prueba del 2026-10-03, con el
+    // bloqueo viejo puesto: *"aquí es donde ya me dejaste amarrado, porque no
+    // puedo meterle otra vez escaneas"*.
     if (this._mesa.length === 0) {
-      this._problema("La mesa está vacía", "Escaneá las cajas de este volumen antes de agregarlo.")
+      this._problema("No hay cajas escaneadas", "Escaneá primero las cajas de la tanda, y después sacá los volúmenes.")
       return
     }
     if (this._volumenes.length >= this.maximoValue) {
@@ -548,18 +577,13 @@ export default class extends conEnterAvanza(Controller) {
       return
     }
 
-    // El cliente y el servicio viajan con el volumen: cuando la mesa queda
-    // vacía, el encabezado de la tanda sigue diciendo de quién es.
-    this._volumenes.push({ ...numeros, paquete_ids: this._mesa.map((p) => p.id),
-                           reemplaza_bulto_id: this._reemplaza || null,
-                           cliente: this._mesa[0].cliente, tipo_envio: this._mesa[0].tipo_envio })
-    this._mesa = []
-    this._grupo = null
-    this._reemplaza = null
+    this._volumenes.push(numeros)
     this._limpiarNumeros()
     this.dispatch("guardado")
     this._repintar()
-    this.codigoTarget.focus()
+    // C28-09 · *"F5 siempre tiene que ir al peso real"*: lo que sigue después
+    // de agregar un volumen es **el próximo volumen**, no otra caja.
+    this.pesoTarget.focus()
   }
 
   _numeros() {
@@ -576,22 +600,24 @@ export default class extends conEnterAvanza(Controller) {
   guardar() {
     if (this._modalAbierto()) return
 
-    const mediciones = this._volumenes.map((v) => ({ paquete_ids: v.paquete_ids, peso: v.peso,
-                                                     alto: v.alto, largo: v.largo, ancho: v.ancho,
-                                                     reemplaza_bulto_id: v.reemplaza_bulto_id || null }))
-    // Lo que quedó en la mesa entra como el último volumen: Yusef no dice
-    // «agregar» para el último — *"mide y pesa este por separado… y ahí le dice
-    // imprimir"*.
-    if (this._mesa.length > 0) {
-      mediciones.push({ paquete_ids: this._mesa.map((p) => p.id), ...this._numeros(),
-                        reemplaza_bulto_id: this._reemplaza || null })
+    if (this._mesa.length === 0) {
+      this._problema("No hay nada que guardar", "Escaneá las cajas de la tanda y poné el peso.")
+      return
     }
-    if (mediciones.length === 0) {
-      this._problema("No hay nada que guardar", "Escaneá las cajas del bulto y poné el peso.")
+    // Lo que quedó en el formulario entra como el último volumen: Yusef no
+    // dice «agregar» para el último — *"mide y pesa este por separado… y ahí
+    // le dice imprimir"*.
+    const volumenes = [...this._volumenes]
+    if (this._tieneNumeros(this._numeros())) volumenes.push(this._numeros())
+    if (volumenes.length === 0) {
+      this._problema("Falta pesarlo", "Poné al menos el peso, o las tres medidas, antes de guardar.")
       return
     }
 
-    this._post(this.guardarUrlValue, { mediciones, saltar_manifiesto: this._saltados }, { conEstado: true })
+    this._post(this.guardarUrlValue,
+               { paquete_ids: this._idsDeLaTanda(), volumenes, reemplaza_sesion: this._reemplazaSesion || null,
+                 saltar_manifiesto: this._saltados },
+               { conEstado: true })
       .then(({ ok, data }) => {
         if (!ok) {
           this.dispatch("fallo")
@@ -763,7 +789,7 @@ export default class extends conEnterAvanza(Controller) {
   _vaciarTanda() {
     this._paquete = null
     this._grupo = null
-    this._reemplaza = null
+    this._reemplazaSesion = null
     this._mesa = []
     this._volumenes = []
     this._saltados = []

@@ -62,7 +62,7 @@
                   medicion:guardado->audio#success
                   medicion:fallo->audio#error">
 
-  <%= render PageHeaderComponent.new(title: "Medición", subtitle: "Escaneá las cajas del volumen, pesá y medí. Si el cliente está uniendo, acá ves lo que falta.") do |h| %>
+  <%= render PageHeaderComponent.new(title: "Medición", subtitle: "Escaneá todas las cajas de la tanda; después pesá y medí cada volumen. Si el cliente está uniendo, acá ves lo que falta.") do |h| %>
     <% h.with_action { render "shared/sonido_config" } %>
   <% end %>
 
@@ -83,7 +83,7 @@
                 **se queda acá** después de un escaneo bueno. La ayuda es una
                 línea y no tres: Yusef, *"no lo van a leer, no van a ver bien"*.
                 Después de guardar, acá se escribe el resultado. %>
-            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400" data-medicion-target="aviso">Escaneá una por una las cajas que van en este volumen.</p>
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400" data-medicion-target="aviso">Escaneá una por una todas las cajas de la tanda.</p>
           </div>
 
           <%# ── b…e · la tanda: aparece con la primera caja ─────────────── %>
@@ -131,8 +131,7 @@
                 pip; no hay de dónde elegir. %>
             <div>
               <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-                <span data-medicion-target="mesaTitulo">Volumen 1 · 0 cajas en la mesa</span>
-                <span class="text-gray-400 dark:text-gray-500 normal-case tracking-normal font-normal">· peso, medidas y cálculo</span>
+                <span data-medicion-target="mesaTitulo">0 cajas escaneadas</span>
               </h4>
               <ul class="space-y-2" data-medicion-target="mesa"></ul>
 
@@ -163,8 +162,13 @@
                 el peso con su rótulo, las tres medidas juntas bajo uno solo, y
                 el cálculo al lado y no debajo. Los campos son grandes porque la
                 pantalla es táctil. %>
+            <%# C28-08 · Debajo de lo escaneado, y no pegado a una caja: los
+                volúmenes son de la tanda entera. %>
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 -mb-3">
+              Volumen · peso, medidas y cálculo
+            </h4>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6" data-medicion-target="form"
-                 data-action="keydown->medicion#formKeydown" data-controller="calc-volumetrico">
+                 data-action="keydown->medicion#formKeydown input->medicion#numerosCambiados" data-controller="calc-volumetrico">
               <div class="space-y-3">
                 <div>
                   <%= label_tag "medicion_peso", "Peso real (lbs)", class: "block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1" %>
@@ -229,18 +233,22 @@
               </div>
 
               <p data-medicion-target="volumenesVacio" class="text-[11px] text-gray-400">
-                Todavía ninguno. Lo que está en la mesa sale con «Guardar e imprimir», en una sola etiqueta.
+                Todavía ninguno. Lo que esté pesado arriba sale con «Guardar e imprimir», como el último volumen.
               </p>
 
               <ul data-medicion-target="listaVolumenes" class="space-y-1.5"></ul>
 
               <%# La fila de un volumen ya agregado, con su «×» como en
-                  /etiquetar: deshacer no es elegir. %>
+                  /etiquetar: deshacer no es elegir. C28-08 · Sin «N cajas»:
+                  ningún volumen tiene cajas propias. Y «Corregir» le devuelve
+                  los números al formulario, que es como se arregla al medir
+                  de nuevo. %>
               <template data-medicion-target="plantillaVolumen">
                 <li class="flex items-center gap-3 rounded-md bg-gray-50 dark:bg-gray-900 px-2.5 py-1.5">
                   <span class="shrink-0 text-xs font-bold uppercase tracking-wider text-cec-navy dark:text-cec-gold" data-campo="orden"></span>
                   <span class="flex-1 min-w-0 truncate text-sm font-mono text-gray-700 dark:text-gray-200" data-campo="numeros"></span>
-                  <span class="shrink-0 text-xs text-gray-500 dark:text-gray-400" data-campo="cajas"></span>
+                  <%= render(ButtonComponent.new(variant: :ghost, size: :xs, icon: "pencil-square", label: "Corregir este volumen",
+                        data: { action: "medicion#corregirVolumen" }, class: "shrink-0")) %>
                   <%= render(ButtonComponent.new(variant: :ghost, size: :xs, icon: "x-mark", label: "Quitar este volumen",
                         data: { action: "medicion#quitarVolumen" }, class: "shrink-0")) %>
                 </li>
@@ -354,12 +362,13 @@
           warehouse receipt ya tiene medidas y se vuelve a escanear no me pregunta
           si quiero editarlo"*. Yusef la había pedido: *"se equivocan y lo ingresan
           en seis libras, y eran cuatro… se va a poder corregir… medir de nuevo"*.
-          Trae el bulto entero a la mesa con sus números viejos; al guardar, el
-          nuevo reemplaza al viejo. %>
-      <%= render(ButtonComponent.new(variant: :danger, size: :md, label: "Medir de nuevo esta medición y reemplazar la etiqueta",
+          Trae la tanda entera con sus volúmenes (C28-08); al guardar, la
+          nueva reemplaza a la vieja. Y reimprimir saca **todas** sus
+          etiquetas: la caja no es de un volumen. %>
+      <%= render(ButtonComponent.new(variant: :danger, size: :md, label: "Medir de nuevo la tanda y reemplazar sus etiquetas",
             data: { medicion_target: "remedirBulto", action: "medicion#remedirBulto" }, hidden: true)) { "Medir de nuevo" } %>
-      <%= render(ButtonComponent.new(variant: :secondary, size: :md, label: "Reimprimir la etiqueta de esta medición",
-            data: { medicion_target: "reimprimirBulto", action: "medicion#reimprimirBulto" }, hidden: true)) { "Reimprimir la etiqueta" } %>
+      <%= render(ButtonComponent.new(variant: :secondary, size: :md, label: "Reimprimir las etiquetas de la tanda",
+            data: { medicion_target: "reimprimirBulto", action: "medicion#reimprimirBulto" }, hidden: true)) { "Reimprimir sus etiquetas" } %>
       <%= render(ButtonComponent.new(variant: :secondary, size: :md, label: "Medir de nuevo",
             data: { medicion_target: "medirDeNuevo", action: "medicion#medirDeNuevo" }, hidden: true)) { "Medir de nuevo" } %>
       <%= render(ButtonComponent.new(variant: :primary, size: :lg, label: "Entendido",

@@ -8,7 +8,7 @@
     <div class="qr"><%= etiqueta_qr_svg(etiqueta_qr_medicion(p), tamano: "1.0in") %></div>
     <div class="datos">
       <div class="fecha"><%= p.medido_at.strftime("%d/%m/%Y %H:%M") %></div>
-      <div class="dims" data-ajustar data-ajustar-min="6"><%= [ p.alto, p.largo, p.ancho ].map { |m| etiqueta_num(m) }.join("x") %> in</div>
+      <div class="dims" data-ajustar data-ajustar-min="6"><%= (m = etiqueta_medidas(p)) ? "#{m} in" : "solo peso" %></div>
       <div class="cifra"><span class="u">LBS</span> <%= etiqueta_num_2d(p.peso) %></div>
       <div class="cifra"><span class="u">VLBS</span> <%= etiqueta_num_2d(p.peso_volumetrico) %></div>
       <div class="pies">PIES³ <%= etiqueta_num_2d(VolumetricoCalculator.pies_cubicos_exactos(VolumetricoCalculator.pulgadas_cubicas(p.alto, p.largo, p.ancho))) %></div>

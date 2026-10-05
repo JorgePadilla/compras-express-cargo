@@ -4,8 +4,10 @@
   <%# El documento puede traer **una** etiqueta o las de todo un grupo
       (C26-04), así que el título sale de la lista y no de una caja suelta.
       C27-06: y desde el bulto, la lista puede ser de mediciones y no de cajas.
-      El rótulo lo nombra la primera caja en los dos casos. %>
-  <% cajas = Array(@bultos).flat_map { |b| b.paquetes.to_a }.presence || @paquetes || [ @paquete ].compact %>
+      El rótulo lo nombra la primera caja en los dos casos.
+      C28-08: los volúmenes de una tanda comparten las cajas, así que se leen
+      las del primero y no las de todos (saldrían repetidas N veces). %>
+  <% cajas = Array(@bultos).first&.paquetes.to_a.presence || @paquetes || [ @paquete ].compact %>
   <% cuantas = Array(@bultos).presence&.size || cajas.size %>
   <title>Medición — <%= cuantas > 1 ? "#{cuantas} etiquetas" : (etiqueta_codigo_barras(cajas.first) || cajas.first&.tracking) %></title>
   <meta charset="UTF-8">

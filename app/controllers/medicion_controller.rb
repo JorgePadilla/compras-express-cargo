@@ -114,13 +114,13 @@ class MedicionController < ApplicationController
     # staging: *"cuando un warehouse receipt ya tiene medidas y se vuelve a
     # escanear no me pregunta si quiero editarlo"*.
     #
-    # Medir de nuevo trae a la mesa **el bulto entero**: sus cajas se midieron
-    # juntas y vuelven juntas, con los números viejos puestos para corregirlos.
-    # Al guardar, el bulto nuevo reemplaza al viejo.
-    if paquete.bulto_id.present? && !remedir?
+    # Medir de nuevo trae **la tanda entera** (C28-08): sus cajas se escanearon
+    # juntas y vuelven juntas, con sus volúmenes puestos para corregirlos. Al
+    # guardar, la tanda nueva reemplaza a la vieja.
+    if paquete.medicion_sesion.present? && !remedir?
       return render json: { resultado: "ya_tiene_bulto", paquete: datos_de(paquete),
-                            bulto: bulto_json(paquete.bulto),
-                            mensaje: mensaje_ya_medido(paquete.bulto) }
+                            tanda: tanda_json(paquete.medicion_sesion),
+                            mensaje: mensaje_ya_medido(paquete) }
     end
     # C27-14 · El estado se **avisa**, no bloquea. Yusef, mirando el bloqueo en
     # vivo: *"este tiene un bloqueo ahorita que me tiene loco: si no ha pasado
@@ -144,14 +144,15 @@ class MedicionController < ApplicationController
 
     respuesta = respuesta_de(paquete, paquete.grupo_de_union, resultado_de(paquete))
                   .merge(mesa: true, salto_manifiesto: !paquete.estado.in?(Paquete::ESTADOS_FACTURABLES))
-    if remedir? && paquete.bulto
-      bulto = paquete.bulto
+    if remedir? && paquete.medicion_sesion.present?
+      cajas = Paquete.where(medicion_sesion: paquete.medicion_sesion).includes(:cliente, :tipo_envio).order(:id)
+      bultos = paquete.bultos.to_a
       respuesta = respuesta.merge(
-        remedir_bulto: bulto_json(bulto),
-        hermanas: bulto.paquetes.includes(:cliente, :tipo_envio).map { |h| datos_de(h) },
-        mensaje: "Midiendo de nuevo: #{bulto.paquetes.size} caja#{"s" if bulto.paquetes.size != 1} " \
-                 "que se midieron juntas el #{bulto.medido_at.strftime('%d/%m/%Y')} por #{bulto.medido_por}. " \
-                 "Corregí los números y guardá: la etiqueta vieja deja de valer."
+        remedir_tanda: { sesion: paquete.medicion_sesion, volumenes: bultos.map { |b| bulto_json(b) } },
+        hermanas: cajas.map { |h| datos_de(h) },
+        mensaje: "Midiendo de nuevo: #{cajas.size} caja#{"s" if cajas.size != 1} y " \
+                 "#{volumenes_texto(bultos.size)} del #{paquete.medido_at&.strftime('%d/%m/%Y')} " \
+                 "por #{paquete.medido_por}. Corregí los volúmenes y guardá: las etiquetas viejas dejan de valer."
       )
     end
     render json: respuesta
@@ -164,12 +165,16 @@ class MedicionController < ApplicationController
   # porque no cuadra… y ahí le dice imprimir, y como son dos mediciones,
   # imprime dos"*. Todo entra junto porque el «1 de 2» del QR necesita saber
   # cuántas son antes de imprimir la primera.
+  #
+  # C28-08 · La tanda llega como **las cajas** y **los volúmenes**, separados:
+  # ninguna caja va atada a un volumen.
   def guardar
+    tanda = tanda_permitida
     bultos = MedirBulto.new(user: Current.user, saltar_manifiesto: params[:saltar_manifiesto])
-                       .guardar!(mediciones_permitidas)
-    cajas = bultos.sum { |b| b.paquetes.size }
+                       .guardar!(**tanda)
+    cajas = tanda[:paquete_ids].uniq.size
 
-    primera = bultos.first.paquetes.first
+    primera = Paquete.find(tanda[:paquete_ids].first)
     render json: { ok: true, cantidad: bultos.size,
                    mensaje: mensaje_guardado(bultos, cajas),
                    imprimir_url: etiquetas_sesion_medicion_path(bultos.first.sesion, print: "true"),
@@ -227,8 +232,10 @@ class MedicionController < ApplicationController
     @paquete = Paquete.find(params[:id])
     # C27-06 · Si la caja se midió en un bulto, su etiqueta **es la del bulto**:
     # una por medición, no una por caja.
-    if @paquete.bulto_id.present?
-      @bultos = [ @paquete.bulto ]
+    #
+    # C28-08 · Las de **toda su tanda**: la caja no es de un volumen.
+    if @paquete.medicion_sesion.present?
+      @bultos = @paquete.bultos.to_a
       return render :etiqueta_bulto, layout: "etiqueta_medicion"
     end
     # C26-04 · Las cajas del envío salen por **warehouse receipt** y no por
@@ -259,8 +266,8 @@ class MedicionController < ApplicationController
     medidos = grupo.paquetes_medidos
     raise ActiveRecord::RecordNotFound, "ninguna medida" if medidos.empty?
 
-    @bultos = medidos.filter_map(&:bulto).uniq.sort_by(&:orden)
-    @paquetes = medidos.reject(&:bulto_id)
+    @bultos = Bulto.where(sesion: medidos.filter_map(&:medicion_sesion).uniq).order(:medido_at, :orden).to_a
+    @paquetes = medidos.reject(&:medicion_sesion)
     return render :etiqueta_bulto, layout: "etiqueta_medicion" if @paquetes.empty?
 
     render :etiqueta, layout: "etiqueta_medicion"
@@ -296,14 +303,28 @@ class MedicionController < ApplicationController
   def saltar_manifiesto? = params[:saltar_manifiesto].to_s == "true"
   def remedir? = params[:remedir].to_s == "true"
 
-  # Lista blanca, aunque `MedirBulto` ya lea campo por campo —`paquete_ids` y
-  # los cuatro de `MedirPaquete::CAMPOS`— y nunca haga un assign masivo. Se
-  # escribe igual para que el filtro se **vea** en la puerta y no dependa de que
-  # el modelo siga leyendo así: es lo que pidió la revisión del PR-445.
-  def mediciones_permitidas
-    Array(params[:mediciones]).map do |medicion|
-      medicion.permit(:peso, :alto, :largo, :ancho, :reemplaza_bulto_id, paquete_ids: [])
+  # Lista blanca, aunque `MedirBulto` ya lea campo por campo y nunca haga un
+  # assign masivo. Se escribe igual para que el filtro se **vea** en la puerta
+  # y no dependa de que el modelo siga leyendo así: es lo que pidió la revisión
+  # del PR-445.
+  #
+  # C28-08 · Y traduce la forma vieja —`mediciones: [{ paquete_ids, peso… }]`—
+  # por una release: el operario deja /medicion abierta todo el día, y la
+  # pestaña que cargó antes del deploy sigue mandando eso. Se juntan las cajas
+  # de todos los volúmenes y los números quedan como volúmenes, que es
+  # exactamente lo que significa ahora.
+  def tanda_permitida
+    if params[:mediciones].present? && params[:volumenes].blank?
+      viejas = Array(params[:mediciones]).map { |m| m.permit(:peso, :alto, :largo, :ancho, :reemplaza_bulto_id, paquete_ids: []) }
+      reemplaza = viejas.filter_map { |m| m[:reemplaza_bulto_id].presence }.first
+      return { paquete_ids: viejas.flat_map { |m| Array(m[:paquete_ids]) },
+               volumenes: viejas.map { |m| m.slice(:peso, :alto, :largo, :ancho).to_h },
+               reemplaza_sesion: (Bulto.find_by(id: reemplaza)&.sesion if reemplaza) }
     end
+
+    { paquete_ids: Array(params[:paquete_ids]),
+      volumenes: Array(params[:volumenes]).map { |v| v.permit(:peso, :alto, :largo, :ancho).to_h },
+      reemplaza_sesion: params[:reemplaza_sesion].presence }
   end
 
   def ya_escaneadas
@@ -342,18 +363,32 @@ class MedicionController < ApplicationController
       etiqueta_url: etiqueta_bulto_medicion_path(bulto, print: "true") }
   end
 
-  def mensaje_ya_medido(bulto)
-    detalle = [ bulto.de_cuantos_texto, "#{bulto.paquetes.size} caja#{"s" if bulto.paquetes.size != 1}" ].compact
-    "Esta caja ya está medida: #{format('%.2f', bulto.peso.to_f)} lb · #{bulto.medidas_texto} " \
-      "(#{detalle.join(' · ')}), por #{bulto.medido_por} el #{bulto.medido_at.strftime('%d/%m/%Y %H:%M')}. " \
-      "Podés reimprimir su etiqueta, o medirla de nuevo si el número estaba mal."
+  # C28-08 · Lo que la tanda tiene: sus cajas, sus volúmenes, y la URL de
+  # todas sus etiquetas —reimprimir saca las N, porque la caja no es de una.
+  def tanda_json(sesion)
+    bultos = Bulto.de_la_sesion(sesion).to_a
+    { sesion: sesion, cajas: Paquete.where(medicion_sesion: sesion).count,
+      volumenes: bultos.map { |b| bulto_json(b) },
+      etiquetas_url: etiquetas_sesion_medicion_path(sesion, print: "true") }
   end
+
+  def mensaje_ya_medido(paquete)
+    bultos = paquete.bultos.to_a
+    cajas = Paquete.where(medicion_sesion: paquete.medicion_sesion).count
+    pesos = bultos.map { |b| "#{format('%.2f', b.peso.to_f)} lb" }.join(", ")
+    "Esta caja ya está medida, en una tanda de #{cajas} caja#{"s" if cajas != 1} y " \
+      "#{volumenes_texto(bultos.size)} (#{pesos}), por #{paquete.medido_por} " \
+      "el #{paquete.medido_at&.strftime('%d/%m/%Y %H:%M')}. Podés reimprimir sus etiquetas, " \
+      "o medir la tanda de nuevo si algún número estaba mal."
+  end
+
+  def volumenes_texto(n) = n == 1 ? "1 volumen" : "#{n} volúmenes"
 
   def mensaje_guardado(bultos, cajas)
     if bultos.size == 1
-      "Medición guardada: #{cajas} caja#{"s" if cajas != 1} en un solo bulto, una etiqueta."
+      "Medición guardada: #{cajas} caja#{"s" if cajas != 1} en un solo volumen, una etiqueta."
     else
-      "#{bultos.size} volúmenes guardados con #{cajas} cajas: #{bultos.size} etiquetas."
+      "#{bultos.size} volúmenes guardados de #{cajas} caja#{"s" if cajas != 1}: #{bultos.size} etiquetas."
     end
   end
 
@@ -502,14 +537,15 @@ class MedicionController < ApplicationController
 
   def caja_json(caja, seleccionada_id)
     p = caja.paquete
-    # C27-01 · Con bulto, los números que valen son los del bulto: a la caja
-    # `MedirBulto` **no le pisa** su peso ni sus medidas —ésos son el dato de
-    # Miami— porque el que cobra es el bulto.
-    numeros = p&.bulto || p
+    # C27-01 · A la caja `MedirBulto` **no le pisa** su peso ni sus medidas
+    # —ésos son el dato de Miami—. Y desde C28-08 la caja tampoco tiene un
+    # volumen propio: sus números son los de la tanda, que van en las
+    # etiquetas. Solo una caja medida con el camino viejo tiene números suyos.
+    numeros = p if p && p.medicion_sesion.blank?
     { id: p&.id, wr: (codigo_de(p) if p && p.numero_recepcion.present?),
       envio: p&.numero_recepcion, tracking: caja.tracking,
       descripcion: caja.descripcion, caja: (caja_de(p) if p), estado: caja.estado, donde: caja.donde,
-      peso: (numeros&.peso&.to_f if caja.medida?), medidas: (medidas_de(numeros) if caja.medida?),
+      peso: (numeros&.peso&.to_f if caja.medida?), medidas: (medidas_de(numeros) if caja.medida? && numeros),
       por: p&.medido_por, seleccionada: p.present? && p.id == seleccionada_id,
       medible: caja.aqui? || caja.medida? }
   end

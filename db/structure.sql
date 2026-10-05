@@ -1894,7 +1894,8 @@ CREATE TABLE public.paquetes (
     bulto_id bigint,
     salto_manifiesto_at timestamp(6) without time zone,
     salto_manifiesto_por character varying,
-    salto_manifiesto_estado character varying
+    salto_manifiesto_estado character varying,
+    medicion_sesion character varying
 );
 
 
@@ -5661,6 +5662,13 @@ CREATE INDEX index_paquetes_on_manifiesto_id ON public.paquetes USING btree (man
 
 
 --
+-- Name: index_paquetes_on_medicion_sesion; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_paquetes_on_medicion_sesion ON public.paquetes USING btree (medicion_sesion);
+
+
+--
 -- Name: index_paquetes_on_numero_recepcion; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7241,14 +7249,6 @@ ALTER TABLE ONLY public.paquetes
 
 
 --
--- Name: paquetes fk_rails_8c0abe04de; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.paquetes
-    ADD CONSTRAINT fk_rails_8c0abe04de FOREIGN KEY (bulto_id) REFERENCES public.bultos(id);
-
-
---
 -- Name: notas_credito fk_rails_8c7b98254b; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7807,6 +7807,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261005120000'),
 ('20260908140000'),
 ('20260908120000'),
 ('20260906180000'),

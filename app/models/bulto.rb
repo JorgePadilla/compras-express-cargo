@@ -23,7 +23,13 @@ class Bulto < ApplicationRecord
 
   belongs_to :cliente
   belongs_to :user, optional: true
-  has_many :paquetes, dependent: :nullify
+  # C28-08 · Las cajas **de la tanda**, no de este volumen: desde el
+  # 2026-10-03 se escanea todo primero y los volúmenes salen después, sin que
+  # ninguna caja quede atada a uno. Los N bultos de una tanda devuelven las
+  # mismas cajas. Sin `dependent`: borrar un volumen no le quita la tanda a las
+  # cajas — re-medir la reemplaza entera (`MedirBulto`).
+  has_many :paquetes, -> { order(:id) }, primary_key: :sesion, foreign_key: :medicion_sesion,
+                      inverse_of: false
 
   validates :sesion, :medido_at, presence: true
   validates :orden, :de_cuantos, numericality: { greater_than: 0 }
@@ -48,7 +54,7 @@ class Bulto < ApplicationRecord
 
   def medidas_texto = [ alto, largo, ancho ].map { |m| m&.to_f }.join("x")
 
-  # Las cajas de este bulto llevan todas el mismo cliente y el mismo servicio
+  # Las cajas de la tanda llevan todas el mismo cliente y el mismo servicio
   # —eso lo garantiza `PuedenIrJuntas`—, así que el trato de cobro del cliente
   # se pregunta una sola vez.
   def tipo_envio = paquetes.first&.tipo_envio
@@ -67,6 +73,9 @@ class Bulto < ApplicationRecord
   # caja —`cobro_solo_peso`, `cobro_solo_volumetrico`— aplican **solo si las
   # llevan todas**: media excepción no es una excepción, y con una sola caja se
   # comporta igual que hoy.
+  #
+  # C28-08 · «Todas» son las de la **tanda**: un generador «solo peso» medido
+  # junto con ropa pierde la excepción. Es `RP-72`, abierta con Yusef.
   def calcular_peso_cobrar
     return if peso.blank? && peso_volumetrico.blank?
 
