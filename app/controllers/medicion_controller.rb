@@ -171,7 +171,7 @@ class MedicionController < ApplicationController
   def guardar
     tanda = tanda_permitida
     bultos = MedirBulto.new(user: Current.user, saltar_manifiesto: params[:saltar_manifiesto])
-                       .guardar!(**tanda)
+                       .guardar!(**tanda, autorizacion: autorizacion_permitida)
     cajas = tanda[:paquete_ids].uniq.size
 
     primera = Paquete.find(tanda[:paquete_ids].first)
@@ -185,6 +185,12 @@ class MedicionController < ApplicationController
                    # consolidado quedó incompleto. Antes ese botón vivía en rojo
                    # permanente al lado de la grilla, con la mesa completa.
                    grupo: grupo_json(primera&.grupo_de_union) }
+  # C28-13 · Faltan cajas que vinieron: la pantalla abre el modal del PIN con
+  # la lista. Va **antes** que `NoSePuede`, que es su clase madre.
+  rescue MedirBulto::NecesitaAutorizacion => e
+    render json: { ok: false, necesita_autorizacion: true, errores: [ e.message ],
+                   faltantes: e.faltantes.map { |c| { codigo: codigo_de(c.paquete), donde: c.donde } } },
+           status: :unprocessable_entity
   rescue MedirBulto::NoSePuede => e
     render json: { ok: false, errores: [ e.message ] }, status: :unprocessable_entity
   rescue ActiveRecord::RecordInvalid => e
@@ -313,6 +319,12 @@ class MedicionController < ApplicationController
   # pestaña que cargó antes del deploy sigue mandando eso. Se juntan las cajas
   # de todos los volúmenes y los números quedan como volúmenes, que es
   # exactamente lo que significa ahora.
+  def autorizacion_permitida
+    return nil if params[:autorizacion].blank?
+
+    params.require(:autorizacion).permit(:supervisor_id, :pin, :motivo).to_h
+  end
+
   def tanda_permitida
     if params[:mediciones].present? && params[:volumenes].blank?
       viejas = Array(params[:mediciones]).map { |m| m.permit(:peso, :alto, :largo, :ancho, :reemplaza_bulto_id, paquete_ids: []) }

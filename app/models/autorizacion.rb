@@ -35,7 +35,14 @@ class Autorizacion < ApplicationRecord
   # incompleto con PIN de un jefe. Jorge lo corrigió el mismo día: *"se pone
   # una alerta y se pasa"*. Sin PIN no hay autorización que registrar; el
   # registro es el historial de la pre-alerta (`PasarGrupoIncompleto`).
-  ACCIONES = (ACCIONES_LINEA + ACCIONES_PAQUETE + %w[emitir]).freeze
+  #
+  # C28-13 · Y el PIN vuelve a la medición, pero para otra cosa: guardar una
+  # tanda a la que le faltan cajas **que vinieron** —están en un estante, o
+  # viajaron en el mismo manifiesto—. Yusef: *"si venían más paquetes no lo
+  # debería dejar… para todos estos bloqueos va a haber alguien que lo va a
+  # desbloquear, a autorizar"*. Lo que no vino sigue pasando sin PIN.
+  ACCIONES_MEDICION = %w[medicion_con_faltantes].freeze
+  ACCIONES = (ACCIONES_LINEA + ACCIONES_PAQUETE + ACCIONES_MEDICION + %w[emitir]).freeze
 
   # Virtuales: llegan del formulario, no se guardan.
   attr_accessor :pin, :valor, :modo
@@ -171,7 +178,8 @@ class Autorizacion < ApplicationRecord
   def accion_label
     { "precio" => "Precio por libra", "peso" => "Peso a cobrar",
       "descuento" => "Descuento", "eliminar" => "Línea eliminada",
-      "emitir" => "Nota emitida" }[accion]
+      "emitir" => "Nota emitida", "cobro_excepcion" => "Excepción de cobro",
+      "medicion_con_faltantes" => "Medido con faltantes" }[accion]
   end
 
   private

@@ -41,7 +41,7 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
     assert_equal "no_mezclar", json["resultado"]
     assert_equal "repetida", json["motivo"]
     assert_not json["mesa"], "una caja repetida no vuelve a entrar"
-    assert_match(/ya está en la mesa/, json["mensaje"])
+    assert_match(/ya la escaneaste/, json["mensaje"])
   end
 
   # El mismo warehouse impreso en las tres cajas de un split: se escanea tres

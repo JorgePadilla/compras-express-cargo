@@ -117,6 +117,50 @@ class GrupoDeUnionTest < ActiveSupport::TestCase
     assert caja.reload.listo_para_prefactura?
   end
 
+  # ── C28-13 · Qué faltante frena el guardado ──────────────────────────────
+  #
+  # Yusef: *"el sistema lo va a dejar pesar porque en el manifiesto este no
+  # venían más, pero si viene y venían más paquetes no lo debería dejar"*.
+
+  test "C28-13 · la que ya llegó a Honduras y no está medida frena" do
+    llego(paquete_del_renglon(@pa, @t1))
+    aqui = llego(paquete_del_renglon(@pa, @t2))
+
+    caja = GrupoDeUnion.de(aqui).cajas.find { |c| c.tracking == @t2 }
+
+    assert caja.bloquea_si_falta?([])
+  end
+
+  test "C28-13 · la que no vino no frena: sigue en Miami, o ni la recibieron" do
+    llego(paquete_del_renglon(@pa, @t1))
+    en_miami = llego_a_miami(paquete_del_renglon(@pa, @t2))
+    g = GrupoDeUnion.de(en_miami)
+
+    assert_not g.cajas.find { |c| c.tracking == @t2 }.bloquea_si_falta?([]), "en Miami"
+    assert_not g.cajas.find { |c| c.tracking == @t3 }.bloquea_si_falta?([]), "esperada"
+  end
+
+  test "C28-13 · la que viajó en el mismo manifiesto frena aunque no la hayan recibido" do
+    manifiesto = manifiestos(:enviado)
+    viajo = llego_a_miami(paquete_del_renglon(@pa, @t2))
+    viajo.update!(manifiesto: manifiesto, estado: "enviado_honduras")
+    caja = GrupoDeUnion.de(viajo).cajas.find { |c| c.tracking == @t2 }
+
+    assert caja.bloquea_si_falta?([ manifiesto.id ]), "vino con las de la mesa"
+    assert_not caja.bloquea_si_falta?([]), "viene en otro manifiesto"
+  end
+
+  test "C28-13 · la medida, la sacada de la lista y la que ya está en pre-factura no frenan" do
+    medida = llego(paquete_del_renglon(@pa, @t1))
+    medida.update!(medido_at: Time.current)
+    sacada = llego(paquete_del_renglon(@pa, @t2))
+    sacada.update!(medicion_descartada_at: Time.current)
+    cobrada = llego(paquete_del_renglon(@pa, @t3))
+    cobrada.update_columns(pre_factura_id: PreFactura.first.id)
+
+    assert_empty GrupoDeUnion.de(medida).cajas.select { |c| c.bloquea_si_falta?([]) }
+  end
+
   private
 
   # Una pre-alerta consolidada nueva de Juan. Cada renglón crea su paquete

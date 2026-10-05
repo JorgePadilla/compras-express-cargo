@@ -11509,7 +11509,7 @@ Jorge, en el audio: *"voy a relajar esta parte"*. Y al planear (2026-10-04):
 Con la tanda escaneada, después de F5 lo que sigue es **el próximo volumen**,
 no una caja. El foco va al peso.
 
-#### C28-10 · «La **mesa**» no se entiende
+#### C28-10 · «La **mesa**» no se entiende — ✅ **HECHO** en `PR-C28.5`
 
 > "No sé qué es ese, mesa dos… Mesa creada."
 > "**No sé qué es eso de la mesa.** No, yo sé que creo que era como
@@ -11520,7 +11520,7 @@ no una caja. El foco va al peso.
 La palabra era nuestra, no de ellos. Sale de la pantalla y queda «cajas
 escaneadas».
 
-#### C28-11 · El conteo del consolidado, **más grande** — y **«Completado»**
+#### C28-11 · El conteo del consolidado, **más grande** — y **«Completado»** — ✅ **HECHO** en `PR-C28.5`
 
 Al escanear la primera caja de Ana, la pantalla buscó el consolidado: *"te está
 diciendo: el consolidado con pre-alerta número tal, siete cajas, cinco
@@ -11531,7 +11531,7 @@ diciendo: el consolidado con pre-alerta número tal, siete cajas, cinco
 > "Y aquí es algo donde debería decir… **Completado. Completado.** Pero
 >  literalmente quiero que **salga al lado**… Sí, **el audio**."
 
-#### C28-12 · La captura más arriba, el historial abajo — ❓ **lectura dudosa**
+#### C28-12 · La captura más arriba, el historial abajo — ❓ **lectura dudosa** — ✅ **HECHO** en `PR-C28.5`
 
 > "Esto me parece a mí que debería estar como más por acá… Esto es un historial
 >  que lleva, pero esta parte acá abajo **la veo muy abajo**… Esta información
@@ -11542,7 +11542,7 @@ Señalaba la pantalla, y el audio no dice qué. La lectura más probable: arriba
 lo que se usa en cada pip (la pistola, la suma y el cuadro de medir), y abajo
 lo escaneado. Se confirma con el equipo al probarlo.
 
-#### C28-13 · Los que **faltan del mismo manifiesto** bloquean, con **código de supervisor**
+#### C28-13 · Los que **faltan del mismo manifiesto** bloquean, con **código de supervisor** — ✅ **HECHO** en `PR-C28.5`
 
 > "El sistema lo va a dejar —le voy a pesar— porque en el manifiesto este no
 >  venían más, pero **si viene y venían más paquetes, no lo debería dejar**."
@@ -11612,10 +11612,10 @@ dato ya no existe. Vuelve a escanear los warehouse de la tanda y las etiquetas
 | `C28-07` | Carga escaneada y sin escanear en el mismo viaje | 📄 **Confirma** los dos caminos del manifiesto |
 | `C28-08` | Escanear todo, después los volúmenes | ✅ **Hecho** — `PR-C28.4`; revierte el amarre de `C27-02` y empuja `RP-41`. La caja guarda la sesión de su tanda (`paquetes.medicion_sesion`, con backfill desde `bulto_id`). Medir de nuevo trae la tanda entera, y reimprimir saca todas sus etiquetas |
 | `C28-09` | F5 vuelve al peso real | ✅ **Hecho** — `PR-C28.4` |
-| `C28-10` | «Mesa» sale de la pantalla | 🔨 **PR-C28.5** |
-| `C28-11` | El conteo del consolidado grande, y «Completado» con su sonido | 🔨 **PR-C28.5** |
-| `C28-12` | La captura arriba, lo escaneado abajo | 🔨 **PR-C28.5** — ❓ lectura dudosa, se confirma probándolo |
-| `C28-13` | Faltan cajas que vinieron: bloquea, y pasa con PIN de supervisor | 🔨 **PR-C28.5** |
+| `C28-10` | «Mesa» sale de la pantalla | ✅ **Hecho** — `PR-C28.5`: «cajas escaneadas», «LEÍDA» en el dibujito, y los mensajes de «NO Mezclar» dicen «lo que ya escaneaste» |
+| `C28-11` | El conteo del consolidado grande, y «Completado» con su sonido | ✅ **Hecho** — `PR-C28.5`: «5 de 7» en grande y «faltan 2». Con todas: «COMPLETADO» y tres tonos que suben (`audio#completo`), que suenan una vez y figuran en el modal de sonidos |
+| `C28-12` | La captura arriba, lo escaneado abajo | ✅ **Hecho** — `PR-C28.5`: pistola, conteo, captura y volúmenes arriba; la lista de lo escaneado baja. ❓ Lectura dudosa: se confirma con el equipo probándolo |
+| `C28-13` | Faltan cajas que vinieron: bloquea, y pasa con PIN de supervisor | ✅ **Hecho** — `PR-C28.5`: `FaltantesDeLaTanda` + `Autorizacion` `medicion_con_faltantes`, que queda en la bitácora. Lo que no vino sigue con «Facturar lo que hay», sin PIN. De paso: la bitácora reventaba con un paquete como documento (`C24-01`) |
 | `C28-14` | La pre-factura elige el warehouse disponible en aduana, y el manifiesto incompleto queda pendiente | 📄 **Documentado** — va con `C27-15` |
 | `C28-15` | La pre-factura vuelve a auditar | 📄 **Refuerza** `C27-15`/`C27-16` |
 

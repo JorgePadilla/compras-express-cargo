@@ -53,6 +53,7 @@
          `alert` ni a `notify`: esos dos suben de tono y suenan a «todo bien».
          Una caja que no puede entrar a la mesa tiene que sonar mal. %>
      data-action="medicion:ok->audio#success
+                  medicion:completo->audio#completo
                   medicion:unir->audio#alert
                   medicion:yaMedido->audio#error
                   medicion:mezcla->audio#error
@@ -110,6 +111,19 @@
                   fue porque tocar un cuadrito agregaba la caja a la mesa, y eso
                   es elegir de una lista (C27-02). Esto es un mapa, no un menú. %>
               <div hidden data-medicion-target="tandaGrupo">
+                <%# C28-11 · El número, grande. Yusef: *"eso sí se necesita hacer
+                    más grande. Así como está, pero más grande. El número, a
+                    cuánto falta"*. Y cuando no falta nada, que lo diga y que
+                    suene: *"Completado… quiero que salga al lado… el audio"*.
+                    El teal es el «listo» de `docs/07` (el verde está prohibido
+                    por `banned_colors_test`), con tinta navy encima: blanco
+                    sobre teal da 2.46:1 y el lint de botones no lo deja. %>
+                <div class="mt-2 flex flex-wrap items-baseline gap-x-5 gap-y-1">
+                  <p class="font-mono text-5xl font-bold text-cec-navy dark:text-cec-gold" data-medicion-target="tandaContador"></p>
+                  <p class="text-2xl font-semibold text-amber-800 dark:text-amber-400" data-medicion-target="tandaFaltan"></p>
+                </div>
+                <p hidden class="mt-2 rounded-xl bg-cec-teal px-6 py-3 text-center text-4xl font-bold tracking-wide text-cec-navy-dark"
+                   data-medicion-target="tandaCompleto">COMPLETADO</p>
                 <p class="mt-1 text-sm font-medium text-amber-800 dark:text-amber-400" data-medicion-target="tandaConsolidado"></p>
                 <ul class="mt-2 flex flex-wrap gap-1.5" aria-label="Las cajas del envío" data-medicion-target="tandaCajas"></ul>
                 <%# Solo las que no están acá: ésas hay que ir a buscar o
@@ -124,39 +138,7 @@
               </div>
             </div>
 
-            <%# ── c · la mesa: el volumen que se está armando ───────────────
-                El rótulo es el de /etiquetar («CAJA 1 · peso, medidas y
-                cálculo»), con la palabra del operario: *"le voy a sacar tres
-                **volúmenes**, así lo dicen ellos"*. Cada renglón llegó por un
-                pip; no hay de dónde elegir. %>
-            <div>
-              <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-                <span data-medicion-target="mesaTitulo">0 cajas escaneadas</span>
-              </h4>
-              <ul class="space-y-2" data-medicion-target="mesa"></ul>
-
-              <%# El renglón vive en el ERB y no en el JS: el markup se lee acá
-                  y Tailwind ve sus clases. El JS lo clona y lo llena. %>
-              <template data-medicion-target="plantillaMesa">
-                <li class="flex items-center gap-3 rounded-lg ring-1 ring-cec-teal/40 bg-cec-teal/5 px-3 py-2">
-                  <span class="w-7 shrink-0 text-center text-sm font-bold text-cec-teal-dark" data-campo="orden"></span>
-                  <div class="flex-1 min-w-0">
-                    <p class="font-mono text-base font-bold text-cec-navy dark:text-cec-gold" data-campo="wr"></p>
-                    <p class="text-xs text-gray-600 dark:text-gray-300 truncate" data-campo="detalle"></p>
-                  </div>
-                </li>
-              </template>
-
-              <div class="mt-2">
-                <%# La única forma de sacar algo de la mesa: la última. Es el
-                    mismo gesto del modal de «diferente cliente»: *"¿desea
-                    eliminar este último…?"*. %>
-                <%= render(ButtonComponent.new(variant: :secondary, size: :sm, label: "Quitar la última caja de la mesa",
-                      data: { medicion_target: "quitarUltima", action: "medicion#quitarUltimaCaja" }, hidden: true)) { "Quitar la última" } %>
-              </div>
-            </div>
-
-            <%# ── d · captura a la izquierda, cálculo a la derecha ──────────
+            <%# ── c · captura a la izquierda, cálculo a la derecha ──────────
                 C26-18 · La misma disposición que /etiquetar —Jorge: *"como
                 estaban en etiquetar están bien, lo podés copiar a medición"*—:
                 el peso con su rótulo, las tres medidas juntas bajo uno solo, y
@@ -214,7 +196,7 @@
               </div>
             </div>
 
-            <%# ── e · los volúmenes de esta tanda, con su «+ Agregar» ───────
+            <%# ── d · los volúmenes de esta tanda, con su «+ Agregar» ───────
                 C27-01/03 · «El repetidor de Miami», dicho por Yusef: *"mide y
                 pesa este, le da **agregar**; mide y pesa este por separado
                 porque no cuadra… y ahí le dice **imprimir**, y como son dos
@@ -253,6 +235,44 @@
                         data: { action: "medicion#quitarVolumen" }, class: "shrink-0")) %>
                 </li>
               </template>
+            </div>
+
+            <%# ── e · lo escaneado: el historial de la tanda ────────────────
+                C28-12 · Va **abajo**, después de medir. Yusef, señalando la
+                pantalla: *"esto es un historial que lleva… esta parte acá
+                abajo la veo muy abajo… esta información donde vas a escanear,
+                y aquí la suma, lo que vas a medir… este cuadro"*. Arriba queda
+                lo que se usa en cada pip —la pistola, el conteo, la captura—, y
+                lo escaneado, que se mira de vez en cuando, baja. Cada renglón
+                llegó por un pip; no hay de dónde elegir.
+
+                C28-10 · Y sin la palabra «mesa», que era nuestra: *"no sé qué
+                es eso de la mesa"*. %>
+            <div>
+              <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                <span data-medicion-target="mesaTitulo">0 cajas escaneadas</span>
+              </h4>
+              <ul class="space-y-2" data-medicion-target="mesa"></ul>
+
+              <%# El renglón vive en el ERB y no en el JS: el markup se lee acá
+                  y Tailwind ve sus clases. El JS lo clona y lo llena. %>
+              <template data-medicion-target="plantillaMesa">
+                <li class="flex items-center gap-3 rounded-lg ring-1 ring-cec-teal/40 bg-cec-teal/5 px-3 py-2">
+                  <span class="w-7 shrink-0 text-center text-sm font-bold text-cec-teal-dark" data-campo="orden"></span>
+                  <div class="flex-1 min-w-0">
+                    <p class="font-mono text-base font-bold text-cec-navy dark:text-cec-gold" data-campo="wr"></p>
+                    <p class="text-xs text-gray-600 dark:text-gray-300 truncate" data-campo="detalle"></p>
+                  </div>
+                </li>
+              </template>
+
+              <div class="mt-2">
+                <%# La única forma de sacar algo de lo escaneado: la última. Es el
+                    mismo gesto del modal de «diferente cliente»: *"¿desea
+                    eliminar este último…?"*. %>
+                <%= render(ButtonComponent.new(variant: :secondary, size: :sm, label: "Quitar la última caja escaneada",
+                      data: { medicion_target: "quitarUltima", action: "medicion#quitarUltimaCaja" }, hidden: true)) { "Quitar la última" } %>
+              </div>
             </div>
           </div>
         </div>
@@ -433,6 +453,59 @@
     </div>
   </dialog>
 
+  <%# ── C28-13 · Faltan cajas que vinieron: el código de un supervisor ─────
+
+      Yusef, el 2026-10-03: *"el sistema lo va a dejar pesar porque en el
+      manifiesto este no venían más, pero si viene y venían más paquetes no lo
+      debería dejar"* · *"para todos estos bloqueos va a haber alguien que lo va
+      a desbloquear, a autorizar… con su código"*. Lo que no vino sigue pasando
+      sin PIN («Facturar lo que hay»); esto es solo para lo que está acá y no
+      apareció en la tanda.
+
+      La lista de quién puede es `User.autorizantes`: los que llevan PIN desde
+      `RP-21`, no una lista escrita acá. «Cancelar» deja la tanda como estaba,
+      para ir a buscar las que faltan. %>
+  <dialog data-medicion-target="autorizarModal" data-action="cancel->medicion#avisoCancelar"
+          style="margin: auto" class="rounded-xl p-0 w-[44rem] max-w-[95vw] backdrop:bg-black/70">
+    <div class="px-8 py-5 bg-red-700 text-white">
+      <p class="text-xs font-bold uppercase tracking-wider">Faltan cajas que sí vinieron</p>
+      <p class="text-3xl font-bold mt-1">Mandalas a buscar, o que autorice un supervisor</p>
+    </div>
+    <div class="bg-white px-8 py-6 space-y-4">
+      <ul class="text-lg font-mono text-red-800 space-y-1" data-medicion-target="autorizarFaltantes"></ul>
+      <% autorizantes = User.autorizantes.order(:nombre) %>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <%= label_tag "autorizar_supervisor", "Supervisor", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= select_tag "autorizar_supervisor",
+                options_from_collection_for_select(autorizantes, :id, ->(u) { "#{u.nombre} — #{u.rol_label}" }),
+                data: { medicion_target: "autorizarSupervisor" },
+                class: "block w-full min-h-12 text-lg rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <div>
+          <%= label_tag "autorizar_pin", "Código (PIN)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= password_field_tag "autorizar_pin", nil, inputmode: "numeric", maxlength: 4, autocomplete: "off",
+                data: { medicion_target: "autorizarPin", action: "keydown.enter->medicion#confirmarAutorizacion:prevent" },
+                class: "block w-full min-h-12 text-2xl font-mono text-center rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+      </div>
+      <div>
+        <%= label_tag "autorizar_motivo", "Motivo", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= text_field_tag "autorizar_motivo", nil, autocomplete: "off", placeholder: "ej. se buscó en el estante y no aparece",
+              data: { medicion_target: "autorizarMotivo", action: "keydown.enter->medicion#confirmarAutorizacion:prevent" },
+              class: "block w-full min-h-12 text-lg rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+      <p class="text-base text-gray-600">Queda en la bitácora de autorizaciones con quién autorizó, por qué y qué faltaba.</p>
+      <p hidden class="text-base font-medium text-red-700" data-medicion-target="autorizarError"></p>
+    </div>
+    <div class="flex items-center justify-end gap-3 px-8 py-4 bg-gray-50 border-t border-gray-200">
+      <%= render(ButtonComponent.new(variant: :secondary, size: :md, label: "Cancelar y mandar a buscar las cajas",
+            data: { action: "medicion#cerrarAutorizacion" })) { "Cancelar" } %>
+      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Autorizar y guardar sin esas cajas",
+            data: { medicion_target: "confirmarAutorizacion", action: "medicion#confirmarAutorizacion" })) { "Autorizar y guardar" } %>
+    </div>
+  </dialog>
+
   <%# ── «NO Mezclar»: otro cliente, otro servicio ─────────────────────────
 
       C27-05 · Yusef lo describió con nombre y apellido:
@@ -452,10 +525,10 @@
     </div>
     <div class="bg-white px-8 py-6 space-y-3">
       <p class="text-xl text-gray-900" data-medicion-target="mezclaTexto"></p>
-      <p class="text-base text-gray-600">Esta caja <strong>no</strong> se agregó a la mesa. ¿Qué hacemos?</p>
+      <p class="text-base text-gray-600">Esta caja <strong>no</strong> entró a la tanda. ¿Qué hacemos?</p>
     </div>
     <div class="flex flex-wrap items-center justify-end gap-3 px-8 py-4 bg-gray-50 border-t border-gray-200">
-      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Empezar todo de nuevo, con la mesa vacía",
+      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Empezar todo de nuevo, sin ninguna caja escaneada",
             data: { action: "medicion#mezclaEmpezarDeNuevo" })) { "Empezar todo de nuevo" } %>
       <%= render(ButtonComponent.new(variant: :primary, size: :lg, label: "Quitar el último escaneado y seguir",
             data: { medicion_target: "mezclaQuitar", action: "medicion#mezclaQuitarUltimo" })) { "Quitar el último escaneado" } %>

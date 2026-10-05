@@ -20,6 +20,17 @@
 class MedirBulto
   class NoSePuede < StandardError; end
 
+  # C28-13 · Faltan cajas que vinieron, y nadie puso su código todavía. Lleva
+  # la lista para que la pantalla la muestre en el modal del PIN.
+  class NecesitaAutorizacion < NoSePuede
+    attr_reader :faltantes
+
+    def initialize(mensaje, faltantes)
+      super(mensaje)
+      @faltantes = faltantes
+    end
+  end
+
   # C27-14 · `saltar_manifiesto` son las cajas que el operario autorizó a medir
   # aunque **no hayan pasado por el manifiesto**. Yusef, mirando el bloqueo en
   # vivo: *"este tiene un bloqueo ahorita que me tiene loco: si no ha pasado el
@@ -39,7 +50,10 @@ class MedirBulto
   # una lista de `{ peso:, alto:, largo:, ancho: }` en el orden en que se
   # agregaron. `reemplaza_sesion` es la tanda que se está midiendo de nuevo
   # (`C27-33`): sus bultos se van y sus cajas pueden volver a entrar.
-  def guardar!(paquete_ids:, volumenes:, reemplaza_sesion: nil)
+  #
+  # `autorizacion` es `{ supervisor_id:, pin:, motivo: }`, y solo hace falta
+  # cuando a la tanda le faltan cajas que vinieron (`FaltantesDeLaTanda`).
+  def guardar!(paquete_ids:, volumenes:, reemplaza_sesion: nil, autorizacion: nil)
     lista = Array(volumenes).map { |v| v.respond_to?(:to_unsafe_h) ? v.to_unsafe_h : v.to_h }
     raise NoSePuede, "No hay ningún volumen que guardar: poné al menos el peso." if lista.empty?
     raise NoSePuede, demasiadas_msg if lista.size > Bulto::MAXIMO_POR_SESION
@@ -52,11 +66,13 @@ class MedirBulto
     cajas = cajas_de(paquete_ids)
     numeros = lista.map { |v| numeros_de(v) }
     validar!(cajas, reemplaza_sesion)
+    permiso = permiso_por_faltantes(cajas, autorizacion)
 
     sesion = SecureRandom.uuid
     ahora = Time.current
 
     Bulto.transaction do
+      permiso&.save!
       reemplazar!(reemplaza_sesion, cajas) if reemplaza_sesion
       # Primero las cajas y después los bultos: el `peso_cobrar` del bulto lee
       # el trato de cobro de las cajas, y tienen que estar ya en la tanda.
@@ -73,6 +89,39 @@ class MedirBulto
   end
 
   private
+
+  # C28-13 · Si faltan cajas que vinieron, hace falta el código de un
+  # supervisor; sin él no se guarda nada. El registro queda en la bitácora de
+  # autorizaciones con quién, por qué y **qué faltaba**, que es lo que después
+  # se audita. Se valida acá, antes de escribir: un PIN malo no deja nada.
+  def permiso_por_faltantes(cajas, autorizacion)
+    faltantes = FaltantesDeLaTanda.new(cajas)
+    return nil unless faltantes.any?
+
+    lista = faltantes.bloqueantes
+    datos = (autorizacion || {}).to_h.symbolize_keys
+    raise NecesitaAutorizacion.new(faltantes_msg(lista), lista) if datos[:supervisor_id].blank?
+
+    permiso = Autorizacion.new(
+      documento: cajas.first, solicitado_por: @user,
+      autorizado_por: User.find_by(id: datos[:supervisor_id]),
+      accion: "medicion_con_faltantes", pin: datos[:pin].to_s, motivo: datos[:motivo].to_s,
+      concepto: concepto_de(cajas.first),
+      detalle: "Faltaban #{lista.size}: #{lista.map { |c| "#{codigo(c.paquete)} (#{c.donde})" }.join(', ')}".truncate(250)
+    )
+    raise NecesitaAutorizacion.new(permiso.errors.full_messages.to_sentence, lista) unless permiso.valid?
+
+    permiso
+  end
+
+  def concepto_de(caja)
+    caja.grupo_de_union&.pre_alerta&.numero_documento || codigo(caja)
+  end
+
+  def faltantes_msg(lista)
+    "Faltan #{lista.size} caja#{"s" if lista.size != 1} que sí vinieron: " \
+      "#{lista.map { |c| codigo(c.paquete) }.join(', ')}. Mandalas a buscar, o que un supervisor ponga su código."
+  end
 
   # C27-33 · Medir de nuevo: los volúmenes viejos se van y los nuevos ocupan
   # su lugar. Las cajas que el operario **sacó** de la tanda vuelven a estar
