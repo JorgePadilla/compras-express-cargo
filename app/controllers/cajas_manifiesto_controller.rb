@@ -61,9 +61,23 @@ class CajasManifiestoController < ApplicationController
     end
   end
 
+  # C28-05 · Corregir una caja ya armada. La acción existía desde `C21-04` y
+  # ninguna pantalla la llamaba; ahora el lápiz de cada fila la carga en el
+  # mismo formulario de arriba. Yusef: *"marqué quiero una EH y al final… la
+  # hice en una E… le corté un pedazo"* · *"la voy a agregar sin peso porque
+  # voy a empacar… después le voy a agregar el peso"*. Y por qué no alcanza con
+  # borrar y volver a armar: *"ya los he visto confundirse"*.
+  #
+  # «Guardar e imprimir» reimprime la 4×6 con los números nuevos, por el mismo
+  # redirect que usa `create` (sin popup, que Chrome bloquea sin gesto).
   def update
     if @caja.update(caja_params)
       @manifiesto.recalculate_totals!
+      if params[:print] == "true"
+        redirect_to etiqueta_manifiesto_caja_path(@manifiesto, @caja, print: true, volver: 1)
+        return
+      end
+
       redirect_to @manifiesto, notice: "Caja #{@caja.letra} actualizada."
     else
       redirect_to @manifiesto, alert: @caja.errors.full_messages.to_sentence
@@ -74,9 +88,10 @@ class CajasManifiestoController < ApplicationController
     letra = @caja.letra
     @caja.destroy!
     @manifiesto.recalculate_totals!
-    # La letra NO se devuelve: `ultima_letra` solo sube. Si se reusara, la
-    # etiqueta ya impresa y pegada al bulto apuntaría a otra caja.
-    redirect_to @manifiesto, notice: "Caja #{letra} eliminada."
+    # C28-06 · La letra **sí** vuelve: la próxima caja la toma. Si su
+    # etiqueta ya estaba pegada, hay que despegarla, y el aviso lo dice.
+    redirect_to @manifiesto, notice: "Caja #{letra} eliminada. Si su etiqueta ya estaba pegada, despegala: " \
+                                     "la próxima caja va a ser la #{CajaManifiesto.siguiente_letra_de(@manifiesto)}."
   end
 
   private

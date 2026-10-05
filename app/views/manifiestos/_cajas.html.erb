@@ -78,7 +78,19 @@
 
   <div class="p-6 border-b border-gray-200">
     <%= form_with model: [ manifiesto, CajaManifiesto.new ], url: manifiesto_cajas_path(manifiesto),
-                  local: true, class: "space-y-4" do |f| %>
+                  local: true, class: "space-y-4", data: { caja_manifiesto_target: "form" } do |f| %>
+      <%# C28-05 · El mismo formulario sirve para corregir. El lápiz de una fila
+          lo carga con esa caja y lo pasa a PATCH; este cartel dice cuál se
+          está editando y cómo volver a agregar. Yusef: *"aquí es donde
+          necesito que le des la opción de editarla… también para
+          corregirla"*. %>
+      <div hidden data-caja-manifiesto-target="editando"
+           class="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-cec-gold/15 px-4 py-3">
+        <p class="text-base font-semibold text-cec-navy" data-caja-manifiesto-target="editandoTexto"></p>
+        <%= render(ButtonComponent.new(variant: :secondary, size: :sm, icon: "x-mark",
+              label: "Cancelar la edición y volver a agregar cajas",
+              data: { action: "caja-manifiesto#cancelarEdicion" })) { "Cancelar edición" } %>
+      </div>
       <div>
         <span class="block text-sm font-medium text-gray-700 mb-2">Tamaño</span>
         <% if @tamanos.any? %>
@@ -164,9 +176,11 @@
           hace un submit con nombre— así que no hay campo escondido que limpiar
           después ni que se pueda quedar pegado del guardado anterior. %>
       <div class="flex justify-end gap-3">
+        <%# Los textos van en un `<span>` con target: al editar dicen «Guardar
+            cambios» y «Guardar e imprimir», sin tocar el ícono ni la tecla. %>
         <%= render(ButtonComponent.new(variant: :secondary, size: :lg, type: :submit, icon: "plus",
               shortcut: "F5", shortcut_label_only: true,
-              data: { caja_manifiesto_target: "agregar" })) { "Agregar caja" } %>
+              data: { caja_manifiesto_target: "agregar" })) do %><span data-caja-manifiesto-target="agregarTexto">Agregar caja</span><% end %>
         <%# `data-turbo=false` va en **este** botón y no en el formulario. La
             4×6 se imprime sola con `window.onload`, y en una visita de Turbo
             `onload` no vuelve a dispararse: la etiqueta se abriría y se
@@ -187,7 +201,7 @@
         <%= render(ButtonComponent.new(variant: :primary, size: :lg, type: :submit, icon: "printer",
               shortcut: "F9", shortcut_label_only: true,
               name: "print", value: "true",
-              data: { turbo: false, caja_manifiesto_target: "agregarEImprimir" })) { "Agregar e imprimir" } %>
+              data: { turbo: false, caja_manifiesto_target: "agregarEImprimir" })) do %><span data-caja-manifiesto-target="agregarEImprimirTexto">Agregar e imprimir</span><% end %>
       </div>
     <% end %>
   </div>
@@ -216,13 +230,19 @@
             <td class="px-4 py-3 text-sm text-right font-mono text-gray-500"><%= caja.medidas || "—" %></td>
             <td class="px-4 py-3 text-sm text-right font-mono text-gray-700"><%= caja.volumen || "—" %></td>
             <td class="px-4 py-3 text-sm text-right font-mono text-gray-700"><%= caja.peso || "—" %></td>
-            <td class="px-4 py-3 text-right">
+            <td class="px-4 py-3 text-right whitespace-nowrap">
+              <%= render ButtonComponent.new(variant: :secondary, size: :xs, icon: "pencil-square",
+                    label: "Editar la caja #{caja.letra}",
+                    data: { action: "caja-manifiesto#editar",
+                            url: manifiesto_caja_path(manifiesto, caja), letra: caja.letra,
+                            tamano_id: caja.tamano_caja_id, alto: caja.alto, largo: caja.largo,
+                            ancho: caja.ancho, peso: caja.peso }) %>
               <%= render ButtonComponent.new(variant: :secondary, size: :xs, icon: "printer",
                     href: etiqueta_manifiesto_caja_path(manifiesto, caja, print: true),
                     target: "_blank", label: "Imprimir la etiqueta de la caja #{caja.letra}") %>
               <%= render ButtonComponent.new(variant: :danger, size: :xs, icon: "trash",
                     href: manifiesto_caja_path(manifiesto, caja), method: :delete,
-                    confirm: "Se elimina la caja #{caja.letra}. La letra no se reusa: si ya imprimiste su etiqueta, esa etiqueta queda sin caja. ¿Seguro?",
+                    confirm: "Se elimina la caja #{caja.letra}. Si ya imprimiste su etiqueta, despegala: la próxima caja que agregues va a tomar la primera letra libre. ¿Seguro?",
                     label: "Eliminar caja #{caja.letra}") %>
             </td>
           </tr>

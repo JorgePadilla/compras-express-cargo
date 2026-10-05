@@ -58,17 +58,34 @@ class CajaManifiestoTest < ActiveSupport::TestCase
     assert_equal "#{@manifiesto.numero}-B", b.codigo
   end
 
-  # Si la letra saliera de las filas vivas, borrar la última después de imprimir
-  # su etiqueta y agregar otra reusaría la letra — y esa etiqueta, ya pegada a un
-  # bulto, apuntaría a otra caja.
-  test "borrar la última caja no le devuelve la letra a la siguiente" do
+  # C28-06 · La letra es la primera libre. Hasta el 2026-10-03 solo subía, para
+  # que una etiqueta pegada no apuntara a otra caja; Yusef lo dio vuelta: *"si
+  # yo la borré… siempre sigue siendo la B… siempre tiene que quedar
+  # secuencial"*.
+  test "borrar la B deja la B para la que sigue, aunque la C esté viva" do
     @manifiesto.cajas.create!(peso: 1)
     b = @manifiesto.cajas.create!(peso: 1)
+    @manifiesto.cajas.create!(peso: 1)
     b.destroy!
 
-    tercera = @manifiesto.cajas.create!(peso: 1)
+    nueva = @manifiesto.cajas.create!(peso: 1)
 
-    assert_equal "C", tercera.letra, "la B ya se imprimió y se pegó a un bulto"
+    assert_equal "B", nueva.letra
+    assert_equal "#{@manifiesto.numero}-B", nueva.codigo
+    assert_equal "D", @manifiesto.cajas.create!(peso: 1).letra, "llenado el hueco, sigue después de la última"
+  end
+
+  test "borrar la última la deja libre para la siguiente" do
+    @manifiesto.cajas.create!(peso: 1)
+    @manifiesto.cajas.create!(peso: 1).destroy!
+
+    assert_equal "B", @manifiesto.cajas.create!(peso: 1).letra
+  end
+
+  test "siguiente_letra_de dice cuál va a ser la próxima" do
+    assert_equal "A", CajaManifiesto.siguiente_letra_de(@manifiesto)
+    @manifiesto.cajas.create!(peso: 1)
+    assert_equal "B", CajaManifiesto.siguiente_letra_de(@manifiesto)
   end
 
   test "pasada la Z sigue como las columnas de una hoja de cálculo" do
