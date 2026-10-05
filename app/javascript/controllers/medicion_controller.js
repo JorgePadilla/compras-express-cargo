@@ -797,8 +797,13 @@ export default class extends conEnterAvanza(Controller) {
     this._repintar()
   }
 
+  // El `input` es lo que escucha `calc-volumetrico`: sin él, después de F5 el
+  // cálculo seguía mostrando el volumen anterior con los campos ya vacíos.
   _limpiarNumeros() {
-    [this.pesoTarget, this.altoTarget, this.largoTarget, this.anchoTarget].forEach((i) => { i.value = "" })
+    [this.pesoTarget, this.altoTarget, this.largoTarget, this.anchoTarget].forEach((i) => {
+      i.value = ""
+      i.dispatchEvent(new Event("input", { bubbles: true }))
+    })
   }
 
   // ── Facturar lo que hay ─────────────────────────────────────────────────

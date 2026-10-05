@@ -171,6 +171,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_selector "[data-medicion-target='volumenesContador']", text: "1"
     assert_selector "[data-medicion-target='mesa'] li", count: 2, text: /RMI|1ZFLUJO/
     assert_equal "", find("#medicion_peso").value, "el formulario queda limpio para el próximo volumen"
+    assert_selector "[data-calc-volumetrico-target='pesoCobrar']", text: "—"  # el cálculo se limpia con los campos
 
     teclear_otro "8", "5", "6", "7"
     assert_selector "[data-medicion-target='guardarTexto']", text: "Guardar e imprimir 2 etiquetas"
