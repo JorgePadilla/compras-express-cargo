@@ -9432,7 +9432,7 @@ insignias en toda la app.
 | `C23-11` | Varias cajas abiertas a la vez | ✅ **Implementado** |
 | `RP-59` | «Expedido por»: ¿el **nombre** de quien lo creó, o sus **iniciales**? | ✅ **Las iniciales** |
 | `C23-12` | La tecla de «Agregar e imprimir» — y la F5 que no disparaba | ✅ **Arreglado** |
-| `RP-60` | ¿El **desglose de paquetes** va en el manifiesto impreso? | ✅ **Sí** — Jorge, 2026-09-06 |
+| `RP-60` | ¿El **desglose de paquetes** va en el manifiesto impreso? | ~~✅ **Sí** — Jorge, 2026-09-06~~ ▶ **No — Yusef, 2026-10-03** (`C28-01`): tachó la tabla en la hoja impresa; el listado va aparte, con Excel (`C28-02`) |
 | `RP-61` | ¿El **No. Doc** es el mismo para todas las cajas de un manifiesto? | ✅ **Respondida con datos del sistema viejo** — es `"DM" + id` de la caja, generado; se quitó el campo |
 | `C23-13` | Las teclas dicen lo mismo en todas las pantallas | ✅ **Arreglado** |
 | `C23-14` | El interno empaca sin escanear — y `sucursal_actual` ya se sella al recibir | ✅ **Implementado** |
@@ -11308,3 +11308,319 @@ viene a reemplazar **su** bulto: la pantalla tiene que haber preguntado antes.
 | `RP-69` | **La purga de un año (`C27-21`): qué se borra exactamente.** ¿Solo el historial de mediciones, o los paquetes de ese año? Las facturas **no** —eso ya está dicho—. ¿Y las versiones de `paper_trail`, que están en los 50 modelos? Un borrado mal delimitado no se deshace |
 | `RP-70` | ⏸️ **Congelado por decisión de Yusef, no es pregunta.** Sumar varias mediciones declaradas del mismo envío (`C27-23`). *"Me gustaría que quedara así, pero… por el tipo de personal que está ahí"*. Se anota por si el personal cambia |
 | `RP-71` | **¿Qué pasa cuando el operario llega a los 10 volúmenes de una tanda (`C27-03`)?** Jorge se lo preguntó **tres veces** en el audio del 2026-09-07 y las tres la conversación se fue al caso del cliente de 100 paquetes. Hoy se avisa y se lo deja seguir en una tanda nueva —el tope **no es acumulativo**—, que es decisión de Jorge: un techo por turno frenaría justo ese día. Falta que Yusef diga si con eso alcanza o quiere que quede registrado quién lo alcanza |
+
+---
+
+## Conversación 28 (2026-10-03) — el manifiesto que va al transportista, el escaneo que dice por qué, y la medición desamarrada
+
+Un sábado en San Pedro, Jorge con Yusef y su equipo **probando en vivo** el
+manifiesto, la recepción y la PESA en staging. Dos fuentes:
+
+- **El audio**, 42 minutos, transcrito con `whisper small` en nueve pedazos.
+- **La hoja impresa** del manifiesto `MMIA2026000011`, marcada a mano por
+  Yusef: la tabla de PAQUETES **tachada** con una X, y al lado de «Cantidad de
+  paquetes 8» escrito **«Esto no va»**.
+
+> ⚠️ **Sobre el transcript.** Grabado en la bodega, con clientes llegando y
+> conversaciones cruzadas. **El sentido está; la letra puede fallar** y varios
+> nombres se perdieron. Lo que no se entiende se marca, no se completa.
+> Dudosos: *"cañar"* (= escanear), *"el expo"*, *"el del vierno"* (¿el del
+> viernes?), *"Patiz"*.
+
+Lo que esta conversación cambia de raíz es la PESA. Hasta hoy cada volumen
+llevaba **sus** cajas escaneadas (`C27-02`). Ahora se escanea **todo**, y los
+volúmenes salen después, sin amarrar ninguna caja a ninguno (`C28-07`).
+
+---
+
+### El manifiesto: lo que va al transportista y lo que se queda en casa
+
+#### C28-01 · El manifiesto impreso **no lleva los paquetes** — revierte `RP-60`
+
+Jorge le mostró la hoja impresa con los bultos y, abajo, los paquetes:
+
+> "No, no, no… Los bultos… No, **esto va en un reporte aparte**. En el
+>  manifiesto, pero no en la impresión específicamente."
+> "Ahorita estás en el manifiesto, y **los paquetes no van en el manifiesto**.
+>  No van en la hoja de impresión del manifiesto. **Lo que van son las cajas
+>  del manifiesto.**"
+
+Y sobre la hoja tachó la tabla PAQUETES y escribió **«Esto no va»** junto a
+«Cantidad de paquetes». Jorge lo confirmó al planear (2026-10-04): sale **solo
+esa línea**, y el volumen total se queda, porque sale de los bultos. El porqué:
+el manifiesto **se le entrega al proveedor que mueve la carga**, y no hay por
+qué contarle qué va adentro. En el audio, más corto: *"los proveedores te
+roban"*.
+
+> ▶ **Revierte `RP-60`**, que Jorge había contestado *«Sí»* el 2026-09-06 sin
+> Yusef delante. Lo que Yusef pidió entonces —*"no tenemos cómo
+> exportarlo"*— era sacarlo, no imprimirlo: eso es `C28-02`.
+
+#### C28-02 · El listado de paquetes del manifiesto, **aparte**: imprimir y Excel
+
+> "Ahora, el listado sí va amarrado, pero no va en la impresión. Eso lo
+>  sacamos aparte."
+> "Ahí arriba donde está el paquete… donde yo le puedo imprimir eso,
+>  **exportar Excel** o algo."
+> "Recuerda que también aquí habíamos puesto **en el filtro** que ahí vamos a
+>  buscarlo **por manifiesto**."
+
+Son dos cosas:
+- **En el manifiesto**, junto a la tabla de paquetes, un botón para imprimir el
+  listado y otro para exportarlo a Excel.
+- **En `/paquetes`**, filtrar por manifiesto. Hoy no hay filtro.
+
+El listado es interno: no lleva transportista ni firmas.
+
+#### C28-03 · La lista de lo escaneado lleva el **warehouse**, primero
+
+> "En el lado del manifiesto, le estás escaneando: **le hace falta el número de
+>  warehouse que escaneó**. O sea, tiene un tracking pero no el warehouse."
+> "Recuerda que **un tracking ya está dividido en varios paquetes**… ese 03 es
+>  de una caja, fíjate que solo es de una caja."
+
+La tabla de paquetes del manifiesto muestra Tracking, Cliente, Peso, Caja y
+Estado. Sin el warehouse con su sufijo de caja, las cajas de un split se ven
+**iguales**. Es el mismo arreglo que `C27-30` le hizo a `/paquetes`, y va con
+el mismo helper que la etiqueta.
+
+#### C28-04 · El escaneo dice **por qué** no entró — y siempre limpia el campo
+
+Escanearon un paquete que ya estaba adentro y salió *«No se encontró ningún
+paquete libre»*.
+
+> "Ya entendí, o sea **el mensaje está malo**."
+> "Ese ahí tiene que decir: este paquete **ya fue escaneado y está en este
+>  manifiesto**… pero si éste está… este paquete ya fue escaneado **y está en
+>  otro manifiesto**, ahí ya levanta sospecha."
+> "Ahí es un **modal**: ¿desea agregar este a este manifiesto **y retirarlo del
+>  otro**?"
+
+Qué es grave y qué no lo dijo él mismo:
+
+> "No es un error grave, eso no pasa nada. **El error es que diga que estás
+>  pagando CER y metas un paquete CKA**… ahí sí, porque **genera gasto**."
+> "**Cuando hay un error, siempre hay que limpiarlo.**"
+
+Y el caso real detrás de «está en otro manifiesto»: *"en vez de tirarlo dentro
+de la caja, se les cayó a otro lado, o lo mandaron sin escanear… así nos pasó
+ahorita con un paquete"*.
+
+**Lectura.** Cuatro respuestas distintas, no una:
+
+| Caso | Respuesta |
+|---|---|
+| Ya está en **este** manifiesto | Aviso chico, sin modal. Es error de dedo |
+| Está en **otro** que sigue abierto | Modal: agregarlo acá y sacarlo del otro |
+| Está en otro **ya enviado** | Modal rojo, sin mover. Esa hoja ya se firmó y viajó (Jorge, 2026-10-04) |
+| Tipo de envío distinto | Modal rojo, bloquea. Genera gasto |
+
+En los cuatro casos el campo queda vacío y con el foco puesto.
+
+#### C28-05 · La caja del manifiesto se **edita**
+
+> "Me la dejó agregar sin peso, sin nada, **eso está bueno**… voy a agregar sin
+>  peso porque voy a empacar… después le voy a agregar el peso. **Aquí es donde
+>  necesito que le des la opción de editarla.** También para corregirla."
+> "Porque yo dije voy a armar una EH y al final termino armando una E… Marqué
+>  quiero una EH y al final me sobró mucho espacio… **le corté un pedazo**, las
+>  ajusté a un tamaño menor, entonces yo lo voy a modificar."
+> "Es que así está ahorita: que borran y la vuelven a agregar. **Y ya los he
+>  visto confundirse.**"
+
+`CajasManifiestoController#update` existe desde `C21-04`, pero ninguna
+pantalla lo llama. Lo que falta es el botón y el formulario.
+
+#### C28-06 · La letra de la caja es **secuencial**: borrar la B deja libre la B — revierte la regla de `C21-04`
+
+> "Pero no, si yo la borré no quiere decir que la siguiente letra era la C,
+>  sino que **siempre sigue siendo la B**… Es la caja 2."
+> "Que yo la borré porque tenía un error es otra cosa, pero sigue siendo la B."
+> "Sí, **siempre tiene que quedar secuencial**… después vas a creer que son 7
+>  cajas porque le diste 7."
+
+> ▶ **Revierte una decisión del código.** `ultima_letra` solo subía, a
+> propósito: si se reusaba la letra, una etiqueta ya pegada apuntaría a otra
+> caja. Yusef prefiere el conteo honesto: una letra salteada hace creer que hay
+> más cajas de las que hay. El aviso al borrar cambia de «la letra no se
+> reusa» a «despegá su etiqueta».
+
+#### C28-07 · Carga **escaneada y sin escanear** en el mismo viaje
+
+> "Una parte va a venir escaneada y otra parte no va a venir escaneada… la carga
+>  que viene en los palets dobles… pero la carga que viene en las E, que viene
+>  **los martes y los sábados**, esa sí va a venir escaneada. Entonces toda la
+>  carga que no se escaneó se le va a agregar automáticamente al
+>  [¿del viernes?], al que es del palet doble."
+
+📄 **Confirma** los dos caminos del manifiesto (`C23-10`): ninguna pantalla
+puede asumir que el paquete pasó por la pistola. No pide nada nuevo.
+
+---
+
+### La PESA: escanear todo, y después los volúmenes
+
+#### C28-08 · **Escanear todo primero, medir después** — revierte el amarre de `C27-02`
+
+Jorge probó la pantalla como quedó en `#447`: tres cajas, se mide; dos cajas,
+se mide; una, se mide. Y salió la regla que no cabe:
+
+> "Jorge, fíjate que aquí es donde ya me dejaste amarrado, porque **no puedo
+>  meterle otra vez escaneas**."
+> "No puede ser tan sencillo, porque **la medición la va a decidir después de
+>  haber escaneado**. No puedes escanear y medir… es un poquito complejito."
+> "Ajá, es como en Miami, que escaneaste un tracking y lo dices en tantos
+>  paquetes. **Y aquí es que vas a unir varios tracking y lo vas a hacer en
+>  tantas mediciones.**"
+
+Y la gente de la línea, que lo va a usar, lo cerró:
+
+> "Si se van a poner a estar escaneando los paquetes que van a medir… tenés que
+>  medirlo y pesarlo de acuerdo al escaneo. No sé si eso va a ser factible. No
+>  creo… **para ellos es mejor solo escanear, que sí están ahí, y ellos lo
+>  acomodan como gustan para medir y pesar.**"
+> "Lo nuevo es **el escaneo de todo**, y que no los deje equivocarse metiendo
+>  paquetes de un cliente a otro, y que no los deje meter un consolidado con
+>  uno que no está consolidando, **y que sepan si falta**."
+
+Jorge, en el audio: *"voy a relajar esta parte"*. Y al planear (2026-10-04):
+**desamarrar**.
+
+**Lectura.**
+- Las cajas son **de la tanda**, y los N volúmenes miden la tanda. Ninguna caja
+  queda atada a un volumen en particular.
+- De `C27-02` sigue en pie lo importante: **nada se elige de una lista**, todo
+  entra por la pistola.
+- «NO Mezclar» (`C27-04`, `C27-05`) sigue corriendo caja por caja al escanear.
+
+> ⚠️ **Lo que esto le hace al cobro.** La caja ya no tiene un peso medido
+> propio: el peso medido es de la tanda, repartido en volúmenes. Cobrar **por
+> caja** desde la medición se vuelve imposible. La pre-factura (`C27-15`) va a
+> tener que cobrar por tanda o por volumen, y eso contesta de hecho la mitad de
+> `RP-41`. Hasta que se construya ese bloque, la pre-factura sigue copiando el
+> peso de Miami.
+
+#### C28-09 · **F5 vuelve al peso real**
+
+> "Entonces acá va a venir y van a presionar F5. **Aquí tiene que volver a
+>  regresar acá**… porque le diste agregar volúmenes, que vas a agregar otro."
+> "**F5 siempre tiene que ir al peso real.**"
+
+Con la tanda escaneada, después de F5 lo que sigue es **el próximo volumen**,
+no una caja. El foco va al peso.
+
+#### C28-10 · «La **mesa**» no se entiende
+
+> "No sé qué es ese, mesa dos… Mesa creada."
+> "**No sé qué es eso de la mesa.** No, yo sé que creo que era como
+>  asignándose a alguien."
+> "Eso de mesa, perdón, es que está en la mesa. **Son los paquetes que están en
+>  la mesa.**"
+
+La palabra era nuestra, no de ellos. Sale de la pantalla y queda «cajas
+escaneadas».
+
+#### C28-11 · El conteo del consolidado, **más grande** — y **«Completado»**
+
+Al escanear la primera caja de Ana, la pantalla buscó el consolidado: *"te está
+diciendo: el consolidado con pre-alerta número tal, siete cajas, cinco
+[aquí], faltan dos"*.
+
+> "Ahí ya te dice que faltan cero. Ahora, **eso sí se necesita hacer más
+>  grande**. Así como está, pero más grande. **El número, a cuánto falta.**"
+> "Y aquí es algo donde debería decir… **Completado. Completado.** Pero
+>  literalmente quiero que **salga al lado**… Sí, **el audio**."
+
+#### C28-12 · La captura más arriba, el historial abajo — ❓ **lectura dudosa**
+
+> "Esto me parece a mí que debería estar como más por acá… Esto es un historial
+>  que lleva, pero esta parte acá abajo **la veo muy abajo**… Esta información
+>  donde vas a escanear, esto, y aquí la suma. **Lo que vas a medir**, o sea,
+>  este cuadro."
+
+Señalaba la pantalla, y el audio no dice qué. La lectura más probable: arriba
+lo que se usa en cada pip (la pistola, la suma y el cuadro de medir), y abajo
+lo escaneado. Se confirma con el equipo al probarlo.
+
+#### C28-13 · Los que **faltan del mismo manifiesto** bloquean, con **código de supervisor**
+
+> "El sistema lo va a dejar —le voy a pesar— porque en el manifiesto este no
+>  venían más, pero **si viene y venían más paquetes, no lo debería dejar**."
+> "Para todos estos bloqueos va a haber alguien que lo va a desbloquear, **a
+>  autorizar**."
+> "Exacto, y ahí es donde tienen que mandar a buscarlos, o ponerlo a un lado y
+>  seguir trabajando, y sigamos con el siguiente cliente mientras aparecen esos
+>  paquetes."
+> "…o si se puede, pero **con autorización de un supervisor**, el jefe de área…
+>  le va a batir con su **código**… son cositas que están bloqueadas, pero al
+>  mismo tiempo **tienen excepciones**."
+
+**Lectura.** La diferencia es entre «no vino» y «vino y no aparece»:
+
+| La caja que falta… | Qué pasa |
+|---|---|
+| **Vino** en el mismo manifiesto, o ya se recibió en Honduras, y no está en la tanda | **Bloquea**. Pasa solo con PIN de supervisor, y queda en la bitácora de autorizaciones |
+| **No vino**: sigue en Miami, o viene en otro manifiesto | Se deja pasar como hoy («Facturar lo que hay», sin PIN, sellado) |
+
+El PIN lo lleva quien lo lleva desde `RP-21` (`User::ROLES_AUTORIZANTES`), no
+una lista nueva.
+
+---
+
+### Recepción, aduana y pre-factura — 📄 documentado, va con el bloque de pre-factura
+
+#### C28-14 · La pre-factura elige **qué warehouse está disponible en aduana**
+
+> "Y entonces nosotros [escaneamos] y ya lo tomamos como recibido…
+>  automáticamente, y ya no van a inventarse, **no van a copiar y pegar un
+>  número de warehouse** que se recibió, sino que ahora, para prefacturar,
+>  ustedes van a **seleccionar cuál warehouse sale todavía disponible en
+>  aduana**."
+> "Van a seleccionar en prefactura qué carga van a trabajar… qué manifiesto de
+>  estos están agarrando, porque **si hace falta uno** y lo están empezando a
+>  trabajar, **tiene que quedar que está pendiente**, una caja o dos cajas."
+
+Y el caso de hace diez días: *"nos mandaron solo dos palets de cinco, y
+entonces se quedaron tres"*. Lo que busca: *"que nosotros sepamos que hacen
+falta tres palets, que hace falta una caja"*.
+
+`/recepcion_carga` ya lista las cajas pendientes de un manifiesto. Lo que no
+existe es la pre-factura que arranque de ahí. Va con `C27-15`.
+
+#### C28-15 · La pre-factura **vuelve a auditar** — refuerza `C27-15` y `C27-16`
+
+> "En prefactura, él va a agarrar estas medidas… pero **los tienes que ver y
+>  auditarlo**… Mi idea es que tienes que volver a revisarlos. Aunque sea doble
+>  trabajo, lo revise, porque es **una doble auditoría, una doble revisión**."
+
+Con `C28-08`, la pre-factura no hereda «qué caja va en qué volumen» porque ese
+dato ya no existe. Vuelve a escanear los warehouse de la tanda y las etiquetas
+«1 de N» de sus volúmenes. Es lo que ya decía `C27-16`.
+
+---
+
+### Lo que quedó abierto
+
+| # | Qué | Estado |
+|---|---|---|
+| `C28-01` | El manifiesto impreso sin la tabla de paquetes ni «Cantidad de paquetes» | 🔨 **PR-C28.1** — revierte `RP-60` |
+| `C28-02` | El listado de paquetes aparte: imprimir y Excel desde el manifiesto, y el filtro por manifiesto en `/paquetes` | 🔨 **PR-C28.1** |
+| `C28-03` | El warehouse con el sufijo de caja, como primera columna de lo escaneado | 🔨 **PR-C28.2** |
+| `C28-04` | El escaneo dice por qué (en este, en otro abierto, en otro enviado, tipo distinto) y siempre limpia | 🔨 **PR-C28.2** |
+| `C28-05` | Editar la caja del manifiesto: tamaño, medidas, peso | 🔨 **PR-C28.3** |
+| `C28-06` | Letra secuencial: borrar la B deja libre la B | 🔨 **PR-C28.3** — revierte la regla de `C21-04` |
+| `C28-07` | Carga escaneada y sin escanear en el mismo viaje | 📄 **Confirma** los dos caminos del manifiesto |
+| `C28-08` | Escanear todo, después los volúmenes | 🔨 **PR-C28.4** — revierte el amarre de `C27-02`; empuja `RP-41` |
+| `C28-09` | F5 vuelve al peso real | 🔨 **PR-C28.4** |
+| `C28-10` | «Mesa» sale de la pantalla | 🔨 **PR-C28.5** |
+| `C28-11` | El conteo del consolidado grande, y «Completado» con su sonido | 🔨 **PR-C28.5** |
+| `C28-12` | La captura arriba, lo escaneado abajo | 🔨 **PR-C28.5** — ❓ lectura dudosa, se confirma probándolo |
+| `C28-13` | Faltan cajas que vinieron: bloquea, y pasa con PIN de supervisor | 🔨 **PR-C28.5** |
+| `C28-14` | La pre-factura elige el warehouse disponible en aduana, y el manifiesto incompleto queda pendiente | 📄 **Documentado** — va con `C27-15` |
+| `C28-15` | La pre-factura vuelve a auditar | 📄 **Refuerza** `C27-15`/`C27-16` |
+
+### Las preguntas que abre
+
+| Id | Qué |
+|---|---|
+| `RP-72` | **Una caja con «solo peso» o «solo volumétrico» medida junto a otras.** Con `C28-08` la excepción de cobro de `C24-01` se aplica a la tanda entera, y hoy solo vale si **todas** las cajas la tienen. Un generador marcado «solo peso» y medido con ropa pierde la excepción. ¿Se mide aparte siempre, o la pantalla debe avisar cuando se mezclan? |
