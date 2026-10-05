@@ -101,6 +101,23 @@ class EmpaqueControllerTest < ActionDispatch::IntegrationTest
     assert_equal "ok", json["resultado"]
   end
 
+  # C28-03 · Antes el código se partía en el guion y se buscaba el número
+  # madre: la etiqueta de la caja 2 empacaba **cualquiera** de las cajas.
+  test "la etiqueta de la caja 2 de un split empaca la caja 2, no su hermana" do
+    cajas = Paquete.crear_split!(
+      attrs: { tracking: "1ZEMPAQUESPLIT01", cliente: clientes(:juan), tipo_envio: tipo_envios(:cer),
+               sucursal_recepcion: sucursales(:miami), estado: "recibido_miami", user: users(:digitador) },
+      total_cajas: 2
+    )
+
+    escanear("#{cajas.second.numero_recepcion}-2")
+
+    assert_equal "ok", json["resultado"]
+    assert_equal @caja.id, cajas.second.reload.caja_manifiesto_id
+    assert_nil cajas.first.reload.caja_manifiesto_id
+    assert_match(/-2 entró/, json["mensaje"], "el aviso nombra la caja con su sufijo")
+  end
+
   test "y el tracking también sirve, por si escanean la del courier" do
     escanear(@paquete.tracking)
 

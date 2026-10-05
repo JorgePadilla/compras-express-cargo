@@ -210,6 +210,14 @@ class Manifiesto < ApplicationRecord
     tipo_envios.map(&:nombre).join(", ")
   end
 
+  # *"Si el tipo de servicio no concuerda con el de la caja, pita"* (`C21-01`).
+  # Vivía como `tipo_permitido?` adentro de `EmpaqueController`; desde `C28-04`
+  # la usa también el escaneo del manifiesto, y una regla que se escribe dos
+  # veces termina diciendo dos cosas.
+  def acepta_tipo?(paquete)
+    tipo_envio_ids.include?(paquete.tipo_envio_id)
+  end
+
   # Los números de guía del proveedor, para mostrar. Lee las dos formas: la
   # tabla nueva y el varchar viejo de los manifiestos que ya estaban.
   # C26-17 · El match con lo que Miami dijo que mandó, para el panel de la

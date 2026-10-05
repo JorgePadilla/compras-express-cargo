@@ -858,6 +858,19 @@ class Paquete < ApplicationRecord
     buscar_escaneado(term)
   end
 
+  # C28-04 · Lo mismo, pero si el sufijo no existe se prueba con el número
+  # madre — que es lo que hacía /empacar desde `C21-01`: un paquete que no se
+  # partió no tiene caja 1, y su recepción con `-1` igual tiene que entrar.
+  # La Medición sigue con el estricto; esto es para las pantallas de Miami,
+  # que preguntan (lista para elegir) cuando el madre trae varias cajas.
+  def self.por_etiqueta_o_su_madre(codigo)
+    exacto = por_codigo_de_etiqueta(codigo)
+    return exacto if exacto.exists?
+
+    madre, _caja = parsear_codigo_de_caja(limpiar_codigo_escaneado(codigo))
+    madre ? por_codigo_de_etiqueta(madre) : exacto
+  end
+
   # C26-17 · Lo que la estación de medición todavía espera de un manifiesto:
   # lo que Miami mandó, sin medir, y que un admin no haya sacado de la lista.
   #

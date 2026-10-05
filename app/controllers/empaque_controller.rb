@@ -92,20 +92,20 @@ class EmpaqueController < ApplicationController
 
     if ya_esta_en_otra_caja?(paquete)
       return render json: { resultado: "ya_empacado",
-                            mensaje: "#{paquete.numero_recepcion_visible} ya está en la caja #{paquete.caja_manifiesto.letra}." }
+                            mensaje: "#{codigo_de(paquete)} ya está en la caja #{paquete.caja_manifiesto.letra}." }
     end
 
     unless tipo_permitido?(paquete)
       return render json: {
         resultado: "tipo_distinto",
-        mensaje: "#{paquete.numero_recepcion_visible} es #{paquete.tipo_envio&.nombre || "sin tipo"}, " \
+        mensaje: "#{codigo_de(paquete)} es #{paquete.tipo_envio&.nombre || "sin tipo"}, " \
                  "y este manifiesto lleva #{@manifiesto.tipos_envio_nuestros}.",
         paquete_id: paquete.id
       }
     end
 
     empacar!(paquete)
-    render json: { resultado: "ok", mensaje: "#{paquete.numero_recepcion_visible} entró a la caja #{@caja.letra}.",
+    render json: { resultado: "ok", mensaje: "#{codigo_de(paquete)} entró a la caja #{@caja.letra}.",
                    fila: fila_de(paquete) }
   end
 
@@ -117,7 +117,7 @@ class EmpaqueController < ApplicationController
     @caja = @manifiesto.cajas.find(params[:caja_id])
     paquete = Paquete.find(params[:paquete_id])
     empacar!(paquete)
-    render json: { resultado: "ok", mensaje: "#{paquete.numero_recepcion_visible} entró igual, omitiendo el aviso.",
+    render json: { resultado: "ok", mensaje: "#{codigo_de(paquete)} entró igual, omitiendo el aviso.",
                    fila: fila_de(paquete) }
   end
 
@@ -177,13 +177,24 @@ class EmpaqueController < ApplicationController
   # el número de recepción con su sufijo de caja (`etiqueta_codigo_barras`), no
   # el tracking. Se prueban las dos cosas: el número y, si no, la escalera de
   # tracking que ya usa /etiquetar.
+  #
+  # C28-03 · Antes partía el código en el guion y buscaba el número madre: la
+  # etiqueta `RMIA…-2` de un split caía en **cualquiera** de sus cajas —la
+  # primera que devolviera la base—, y la caja 2 quedaba empacada como si
+  # fuera la 1. Ahora va por el mismo resolvedor estricto que el escaneo del
+  # manifiesto y la Medición: el sufijo cae en su caja. Si el código trae
+  # varias (el tracking de un split), gana una que todavía no esté en caja.
   def buscar_paquete(codigo)
     return nil if codigo.blank?
 
-    base = codigo.split("-").first
-    Paquete.find_by("UPPER(numero_recepcion) = ?", codigo.upcase) ||
-      Paquete.find_by("UPPER(numero_recepcion) = ?", base.to_s.upcase) ||
-      Paquete.buscar_escaneado(codigo).first
+    candidatos = Paquete.por_etiqueta_o_su_madre(codigo).where.not(estado: Paquete::NO_SON_CAJAS)
+    candidatos.where(caja_manifiesto_id: nil).order(:numero_caja, :id).first ||
+      candidatos.order(:numero_caja, :id).first
+  end
+
+  # El código que dice la etiqueta: el warehouse con su sufijo de caja.
+  def codigo_de(paquete)
+    helpers.etiqueta_codigo_barras(paquete) || paquete.tracking
   end
 
   def ya_esta_en_otra_caja?(paquete)
@@ -193,7 +204,7 @@ class EmpaqueController < ApplicationController
   # *"Si el tipo de servicio no concuerda con el de la caja, pita."* La caja
   # hereda los tipos del manifiesto: son los que el operario eligió al crearlo.
   def tipo_permitido?(paquete)
-    @manifiesto.tipo_envio_ids.include?(paquete.tipo_envio_id)
+    @manifiesto.acepta_tipo?(paquete)
   end
 
   def empacar!(paquete)
@@ -208,7 +219,7 @@ class EmpaqueController < ApplicationController
       # C23-11 · Con varias cajas abiertas la fila tiene que decir **en cuál**
       # entró: si no, la tabla mezcla las tres y no se sabe qué se llenó.
       caja: "#{@caja.letra}#{@caja.numero_bulto}",
-      recepcion: paquete.numero_recepcion_visible,
+      recepcion: codigo_de(paquete),
       tracking: paquete.tracking,
       cliente: paquete.cliente&.nombre_completo,
       tipo: paquete.tipo_envio&.nombre
