@@ -132,9 +132,14 @@ class RecepcionCargaController < ApplicationController
 
   # `A7-08` · En el interno la pistola lee el **paquete**, no la caja. Acepta el
   # tracking o el número de recepción, que es lo que la etiqueta lleva impreso.
+  #
+  # C30-09 · **Estricto**, como la pistola de la lista. Era `Paquete.buscar`,
+  # que hace ILIKE sobre el número del manifiesto, la descripción y el cliente:
+  # escanear la hoja del manifiesto —la que el que recibe tiene en la mano—
+  # recibía el primer paquete que saliera, sin que nadie lo bajara del camión.
   def escanear_paquete
     codigo = params[:codigo].to_s.strip
-    paquete = @manifiesto.paquetes.buscar(codigo).first
+    paquete = @manifiesto.paquetes.por_codigo_de_etiqueta(codigo).first
 
     if paquete.nil?
       return render json: { resultado: "no_es_de_aqui",
