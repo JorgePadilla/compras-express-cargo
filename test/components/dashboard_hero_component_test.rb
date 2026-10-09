@@ -45,4 +45,17 @@ class DashboardHeroComponentTest < ActiveSupport::TestCase
 
     assert_text "Crítico: 25 ventas pendientes"
   end
+
+  # PR-C29.16 · El ícono de «Signos del servidor», a la derecha.
+  test "con signos sale el ícono, con el color de su semáforo" do
+    { bien: "bg-cec-teal", mirar: "bg-cec-gold", problema: "bg-red-600" }.each do |nivel, color|
+      render_inline(DashboardHeroComponent.new(user: users(:admin), health_status: nil, signos: nivel))
+      assert_selector "a[aria-label^='Signos del servidor'] span.#{color}"
+    end
+  end
+
+  test "sin signos (quien no puede entrar) el ícono no sale" do
+    render_inline(DashboardHeroComponent.new(user: users(:admin), health_status: nil))
+    assert_no_selector "a[aria-label^='Signos del servidor']"
+  end
 end

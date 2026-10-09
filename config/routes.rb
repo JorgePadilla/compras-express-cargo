@@ -12,6 +12,9 @@ Rails.application.routes.draw do
 
   # Health check for Render
   get "up" => "rails/health#show", as: :rails_health_check
+  # PR-C29.16 · Los signos del servidor (RAM, disco, base, cola). Solo admin;
+  # se entra por el ícono del Home.
+  get "signos_vitales", to: "signos_vitales#show", as: :signos_vitales
 
   # Etiquetar (Miami labeling)
   get "etiquetar", to: "etiquetar#index"
