@@ -97,7 +97,7 @@ class ManifiestoDocumentoTest < ActionDispatch::IntegrationTest
   test "el botón de imprimir está en la pantalla del manifiesto" do
     get manifiesto_url(@manifiesto)
     assert_response :success
-    assert_select "a[href=?]", documento_manifiesto_path(@manifiesto, print: true)
+    assert_select "a[href=?]", documento_manifiesto_path(@manifiesto, print: true, cerrar: 1)
   end
 
   # C29-11 · *"No tiene el botón de imprimir a la mano… no lo tiró como preview

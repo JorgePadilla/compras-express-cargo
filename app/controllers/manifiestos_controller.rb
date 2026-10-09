@@ -190,8 +190,14 @@ class ManifiestosController < ApplicationController
 
     aviso = "Manifiesto #{@manifiesto.numero} finalizado: #{resultado.enviados.size} paquete(s) a enviado."
 
+    # PR-C29.7 · Con `volver=1`, como «Agregar e imprimir»: esto nace de un
+    # PATCH y se lleva **esta** pestaña, así que al terminar no hay nada que
+    # cerrar —`window.close()` sobre una pestaña que no abrió un script no hace
+    # nada— y hay que devolverla a la ficha. Sin esto el operario quedaba
+    # mirando las 4×6. Jorge: *"una vez se imprime se regresa a la vista
+    # previa"*.
     if params[:imprimir].present? && @manifiesto.cajas.any?
-      redirect_to etiquetas_manifiesto_cajas_path(@manifiesto, print: true), notice: aviso
+      redirect_to etiquetas_manifiesto_cajas_path(@manifiesto, print: true, volver: 1), notice: aviso
     else
       redirect_to @manifiesto, notice: aviso
     end

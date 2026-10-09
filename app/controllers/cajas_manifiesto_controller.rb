@@ -29,8 +29,12 @@ class CajasManifiestoController < ApplicationController
   # Todas las del manifiesto de un tiro, con el mismo patrón de
   # `PaquetesController#etiquetas_combinadas`: N etiquetas en una sola pestaña,
   # una por página.
+  #
+  # PR-C29.7 · `volver=1` cuando la abre «Finalizar e Imprimir», que se lleva
+  # la pestaña de la ficha: igual que `etiqueta`, la devuelve al terminar.
   def etiquetas
     @cajas = @manifiesto.cajas.ordenadas
+    @despues_de_imprimir = manifiesto_path(@manifiesto) if params[:volver] == "1"
     render "manifiestos/cajas/etiqueta", layout: "etiqueta_4x6"
   end
 

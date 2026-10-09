@@ -14,8 +14,13 @@
   # más, y Yusef la buscó: *"no tiene el botón de imprimir a la mano… no lo
   # tiró como preview para imprimir"*, mientras que el listado, al lado,
   # *"a éste sí salió bien"*.
+  #
+  # PR-C29.7 · Y con `cerrar: 1`: la hoja se abre en pestaña nueva, imprime, y
+  # al terminar **se cierra**, como las 4×6. Antes quedaba abierta y la ficha
+  # se perdía atrás. Jorge: *"una vez se imprime se regresa a la vista
+  # previa"*.
   header.with_action do
-    render ButtonComponent.new(variant: :outline_navy, href: documento_manifiesto_path(@manifiesto, print: true),
+    render ButtonComponent.new(variant: :outline_navy, href: documento_manifiesto_path(@manifiesto, print: true, cerrar: 1),
                                icon: "printer", target: "_blank", shortcut: "F4") do
       "Imprimir manifiesto"
     end

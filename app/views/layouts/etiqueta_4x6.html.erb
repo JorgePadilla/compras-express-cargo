@@ -3,6 +3,14 @@
 <head>
   <title>Bulto — <%= @caja&.codigo %></title>
   <meta charset="UTF-8">
+  <%# PR-C29.7 · A esta página se llega también por una visita de Turbo: el
+      redirect de «Finalizar e Imprimir», que es un PATCH de Turbo. Si Turbo
+      solo cambiara el body, `window.onload` no volvería a dispararse y el
+      diálogo de impresión no se abriría nunca. Hoy Turbo ya recarga entera
+      porque el `tailwind` con `data-turbo-track` de la app no está acá —se
+      verificó sacando esta línea: sigue imprimiendo—, pero eso es un efecto
+      lateral de qué CSS carga cada layout. Esto lo dice a propósito. %>
+  <meta name="turbo-visit-control" content="reload">
   <style>
     /* C21-05 · La etiqueta del BULTO: 4 × 6 in, FreeX. No es la Dymo de
        /etiquetar (2.25 × 1.25) — son dos documentos distintos, con dos
