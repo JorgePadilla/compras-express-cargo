@@ -8,14 +8,16 @@ class SignosVitalesTest < ActiveSupport::TestCase
 
   # Una máquina armada a mano: rutas → contenido, y la salida de `df`.
   class FuenteFalsa
-    def initialize(archivos: {}, df: nil, nucleos: 2)
+    def initialize(archivos: {}, df: nil, nucleos: 2, du_kb: nil)
       @archivos = archivos
       @df = df
       @nucleos = nucleos
+      @du_kb = du_kb
     end
 
     def leer(ruta) = @archivos.fetch(ruta) { raise Errno::ENOENT, ruta }
     def df(_ruta = "/") = @df || raise(Errno::ENOENT, "df")
+    def du(*_rutas) = @du_kb || raise(Errno::ENOENT, "du")
     attr_reader :nucleos
   end
 
@@ -60,24 +62,40 @@ class SignosVitalesTest < ActiveSupport::TestCase
     assert_equal :problema, ram.nivel
   end
 
-  test "el disco al 50, 85 y 95 %" do
-    { 50 => :bien, 85 => :mirar, 95 => :problema }.each do |porcentaje, nivel|
-      signos = SignosVitales.new(fuente: FuenteFalsa.new(df: df_al(porcentaje)))
-      assert_equal nivel, medida(signos, :servidor, "Disco").nivel, "disco al #{porcentaje} %"
-    end
+  # 2026-10-08 · Jorge, en staging: *"¿por qué el disco está tan lleno?"* —
+  # 82.9 %—. Era el disco de la máquina de Render, compartida. Ese va de
+  # referencia y sin semáforo; el que cuenta es el de la app.
+  test "el disco de la máquina de Render, lleno, no prende el semáforo" do
+    signos = SignosVitales.new(fuente: FuenteFalsa.new(df: df_al(95), du_kb: 10 * 1024))
+    maquina = medida(signos, :servidor, "Disco de la máquina de Render")
+    assert_nil maquina.nivel
+    assert_includes maquina.detalle, "no es nuestro"
+    assert_equal :bien, signos.secciones.find { |s| s.clave == :servidor }.nivel
   end
 
-  test "la carga por encima de los núcleos pide mirar" do
-    alta = SignosVitales.new(fuente: FuenteFalsa.new(archivos: { "/proc/loadavg" => "3.10 2.90 1.00 2/300 1234" }, nucleos: 2))
-    baja = SignosVitales.new(fuente: FuenteFalsa.new(archivos: { "/proc/loadavg" => "0.20 0.30 0.10 1/300 1234" }, nucleos: 2))
-    assert_equal :mirar, medida(alta, :servidor, "Carga de CPU").nivel
-    assert_equal :bien, medida(baja, :servidor, "Carga de CPU").nivel
+  test "el disco de la app: lo que ocupan tmp, log y storage" do
+    chico = SignosVitales.new(fuente: FuenteFalsa.new(du_kb: 50 * 1024))
+    grande = SignosVitales.new(fuente: FuenteFalsa.new(du_kb: 2 * 1024 * 1024))
+    assert_equal "50 MB", medida(chico, :servidor, "Disco de la app").valor
+    assert_equal :bien, medida(chico, :servidor, "Disco de la app").nivel
+    assert_equal :mirar, medida(grande, :servidor, "Disco de la app").nivel
+  end
+
+  test "la carga de la máquina va sin semáforo; la CPU nuestra sale de cgroup" do
+    signos = SignosVitales.new(fuente: FuenteFalsa.new(archivos: {
+      "/proc/loadavg" => "7.25 5.45 5.18 2/300 1234", "/sys/fs/cgroup/cpu.max" => "50000 100000"
+    }, nucleos: 8))
+    assert_nil medida(signos, :servidor, "Carga de la máquina de Render").nivel
+    assert_equal "0.5 CPU", medida(signos, :servidor, "CPU del contenedor").valor
+
+    sin_tope = SignosVitales.new(fuente: FuenteFalsa.new(archivos: { "/sys/fs/cgroup/cpu.max" => "max 100000" }))
+    assert_equal "sin tope", medida(sin_tope, :servidor, "CPU del contenedor").valor
   end
 
   test "lo que no se puede leer dice «no disponible», y la pantalla no se cae" do
     signos = SignosVitales.new(fuente: FuenteFalsa.new)
     servidor = signos.secciones.find { |s| s.clave == :servidor }
-    %w[RAM Disco].each do |nombre|
+    [ "RAM", "Disco de la app", "Disco de la máquina de Render" ].each do |nombre|
       assert_equal SignosVitales::NO_DISPONIBLE, servidor.medidas.find { |m| m.nombre == nombre }.valor
     end
     assert_includes SignosVitales::NIVELES, signos.nivel
@@ -102,6 +120,16 @@ class SignosVitalesTest < ActiveSupport::TestCase
       assert_equal "RuntimeError: se cayó", fila.detalle
       assert_equal :problema, signos.nivel
     end
+  end
+
+  # Así llegó en staging: `error` ya deserializado a Hash, con la clase con
+  # su namespace. Salía el Hash crudo.
+  test "el error de un fallido se lee aunque llegue como Hash" do
+    signos = SignosVitales.new(fuente: FuenteFalsa.new)
+    detalle = signos.send(:error_de, { "exception_class" => "ActiveRecord::RecordInvalid",
+                                       "message" => "La validacion fallo: Titulo no puede estar en blanco",
+                                       "backtrace" => [ "/opt/render/…" ] })
+    assert_equal "RecordInvalid: La validacion fallo: Titulo no puede estar en blanco", detalle
   end
 
   test "un worker que latió hace un minuto está vivo; uno de hace diez, no" do

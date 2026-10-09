@@ -145,8 +145,15 @@ class PreAlerta < ApplicationRecord
     update!(estado: "anulado")
   end
 
+  # 2026-10-08 · Sin validar. Borrar es marcar `deleted_at`, y no tiene por
+  # qué depender de que el resto del registro pase las validaciones de hoy:
+  # hay pre-alertas viejas sin título, y `update!` las rechazaba. Eso tumbaba
+  # `CleanEmptyPreAlertasJob` todas las noches en la primera que encontraba
+  # —32 fallidos en «Signos del servidor»— y no limpiaba ninguna.
+  # `update_attribute` salta las validaciones y conserva los callbacks, así
+  # que paper_trail sigue anotando quién borró.
   def soft_delete!
-    update!(deleted_at: Time.current)
+    update_attribute(:deleted_at, Time.current)
   end
 
   def vacia?
