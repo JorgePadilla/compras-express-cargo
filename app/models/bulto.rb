@@ -31,6 +31,13 @@ class Bulto < ApplicationRecord
   has_many :paquetes, -> { order(:id) }, primary_key: :sesion, foreign_key: :medicion_sesion,
                       inverse_of: false
 
+  # PR-P.1 · Un volumen que ya está en una pre-factura **no se borra**: es la
+  # línea que le cobra al cliente. Volver a medir esa tanda lo frena antes, con
+  # un mensaje (`MedirBulto#reemplazar!`); esto es la red de abajo, y la FK
+  # `restrict` la de más abajo todavía.
+  has_many :pre_factura_items, dependent: :restrict_with_error
+  has_many :venta_items, dependent: :restrict_with_error
+
   validates :sesion, :medido_at, presence: true
   validates :orden, :de_cuantos, numericality: { greater_than: 0 }
 

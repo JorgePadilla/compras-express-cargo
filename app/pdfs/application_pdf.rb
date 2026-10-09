@@ -95,7 +95,11 @@ class ApplicationPdf
     columnas = columnas[0..-2] + [ "Descuento", "Total linea" ] if con_descuento
 
     rows = [ columnas ]
-    items.each do |item|
+    # PR-P.1 · Las cajas de un volumen van en **un** renglón debajo de él
+    # (`LineasPorVolumen`): un consolidado de cien cajas no son cien renglones
+    # en cero. Con las líneas de las notas, que no llevan volumen, no cambia
+    # nada.
+    LineasPorVolumen.new(items).each do |item, cajas|
       fila = [
         sanitize_text(item.concepto),
         item.peso_cobrar.present? ? format("%.2f", item.peso_cobrar) : "-",
@@ -108,6 +112,7 @@ class ApplicationPdf
         fila << format_money(item.subtotal || 0)
       end
       rows << fila
+      rows << fila_de_cajas(cajas, columnas.size) if cajas.any?
     end
 
     ultima = rows.first.length - 1
@@ -120,6 +125,13 @@ class ApplicationPdf
       row(0).borders = [ :bottom ]
     end
     move_down 10
+  end
+
+  # Las cajas incluidas, con su código completo, cruzando la fila entera.
+  def fila_de_cajas(cajas, columnas)
+    titulo = cajas.size == 1 ? "1 caja incluida" : "#{cajas.size} cajas incluidas"
+    texto = "#{titulo}: #{cajas.map { |c| LineasPorVolumen.codigo(c) }.join(' · ')}"
+    [ { content: sanitize_text(texto), colspan: columnas, size: 8, text_color: "555555" } ]
   end
 
   def bloque_totales(subtotal:, impuesto:, total:, saldo: nil, moneda: "LPS",

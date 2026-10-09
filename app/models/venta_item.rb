@@ -3,6 +3,10 @@ class VentaItem < ApplicationRecord
 
   belongs_to :venta, inverse_of: :venta_items
   belongs_to :paquete, optional: true
+  # PR-P.1 · Copiado de la línea de la pre-factura al facturar: la factura, el
+  # PDF y el portal agrupan las cajas bajo su volumen igual que la
+  # pre-factura, y una línea de volumen no tiene paquete del que sacarlo.
+  belongs_to :bulto, optional: true
 
   validates :concepto, presence: true
   validates :subtotal, numericality: { greater_than_or_equal_to: 0 }
