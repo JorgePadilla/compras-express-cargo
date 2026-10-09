@@ -194,6 +194,49 @@ class RecepcionCargaVariosManifiestosTest < ActionDispatch::IntegrationTest
     assert_select "[data-manifiesto-fila='#{@uno.id}'] [data-progreso-faltan]", text: "Falta: #{@b1.letra}"
   end
 
+  # ── Terminar desde la fila ──────────────────────────────────────────────
+  #
+  # Con cinco manifiestos de un solo, entrar a cada uno solo para cerrarlo era
+  # un viaje de más. Es el mismo `finalizar`, sin `con_faltantes`.
+
+  test "cada fila trae su «Terminar», que es el finalizar de adentro" do
+    get recepcion_carga_index_path
+
+    assert_select "[data-manifiesto-fila='#{@uno.id}'] form[action='#{finalizar_recepcion_carga_path(@uno)}']" do
+      assert_select "input[name='_method'][value='patch']"
+      assert_select "button", text: /Terminar/
+    end
+    assert_select "[data-manifiesto-fila] form[action*='con_faltantes']", { count: 0 },
+                  "cerrar con pendientes no se aprieta desde una fila"
+  end
+
+  test "terminar desde la lista con todo recibido cierra y vuelve a la lista" do
+    escanear(@a2.codigo)
+
+    patch finalizar_recepcion_carga_path(@dos)
+
+    assert_redirected_to recepcion_carga_index_path
+    assert_equal "recibido", @dos.reload.estado
+    follow_redirect!
+    assert_select "[data-manifiesto-fila='#{@dos.id}']", { count: 0 }, "ya no es pendiente"
+    assert_select "[data-manifiesto-fila='#{@uno.id}']"
+  end
+
+  # `A7-05` · Si falta algo no cierra: lleva al manifiesto con lo que falta y
+  # las dos salidas. El correo sale solo de «marcar recibido con las
+  # pendientes», que está allá y pide confirmación.
+  test "terminar desde la lista con cajas faltantes no cierra ni manda correo" do
+    escanear(@a1.codigo)
+
+    assert_no_enqueued_emails do
+      patch finalizar_recepcion_carga_path(@uno)
+    end
+
+    assert_redirected_to recepcion_carga_path(@uno)
+    assert_match(/Faltan 1 de 2: caja\(s\) #{@b1.letra}/, flash[:alert])
+    assert_equal "en_aduana", @uno.reload.estado
+  end
+
   # ── Imprimir desde la fila ──────────────────────────────────────────────
 
   test "cada fila imprime la hoja de su manifiesto, y se cierra al imprimir" do

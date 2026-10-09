@@ -28,7 +28,7 @@
           class: "block w-full rounded-lg border-gray-300 shadow-sm font-mono focus:ring-cec-teal focus:border-cec-teal" %>
     <p class="text-xs text-gray-500 mt-1">
       No hace falta elegir el manifiesto: cada caja entra en el suyo y sus paquetes pasan a <b>aduana</b>.
-      Al completar uno, entrá a <b>Recibir</b> para terminarlo.
+      Al completar uno, <b>Terminar</b> en su fila lo cierra.
     </p>
     <div data-recepcion-carga-target="aviso" class="hidden mt-4 rounded-lg p-3 text-sm"></div>
   </div>
@@ -88,6 +88,18 @@
                       href: documento_recepcion_carga_path(m, print: true, cerrar: 1)) do %>Imprimir<% end %>
                 <%= render ButtonComponent.new(variant: :primary, size: :sm, icon: "qr-code",
                       href: recepcion_carga_path(m)) do %>Recibir<% end %>
+                <%# C30-09 · Terminar desde la lista: con cinco manifiestos de un
+                    solo, entrar a cada uno solo para cerrarlo era un viaje de
+                    más. Es **el mismo** `finalizar` que el botón de adentro, sin
+                    `con_faltantes`: si llegó todo, cierra acá y vuelve a la
+                    lista; si falta algo, **no cierra** — lleva a la pantalla del
+                    manifiesto con «Faltan 1 de 7: caja B» y las dos salidas de
+                    `A7-05`. Marcar recibido con pendientes sigue siendo allá,
+                    con su confirmación y su correo: eso no se aprieta de rebote
+                    desde una fila. Toda fila de esta lista es un pendiente
+                    (`RecibirManifiesto.pendientes`), así que va en todas. %>
+                <%= render ButtonComponent.new(variant: :secondary, size: :sm, icon: "check",
+                      href: finalizar_recepcion_carga_path(m), method: :patch, form_class: "inline") do %>Terminar<% end %>
               </div>
             </td>
           </tr>

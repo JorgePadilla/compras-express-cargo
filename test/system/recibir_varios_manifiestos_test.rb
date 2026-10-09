@@ -112,6 +112,33 @@ class RecibirVariosManifiestosTest < ApplicationSystemTestCase
     assert_equal "en_aduana", @uno.reload.estado
   end
 
+  # Con cinco manifiestos de un solo, cerrar cada uno sin entrar a su pantalla.
+  test "escanear todo desde la lista y terminar desde la fila" do
+    escanear(@a1.codigo)
+    assert_selector "#{fila(@uno)} [data-progreso-texto]", text: "1 de 2", wait: 5
+    escanear(@b1.codigo)
+    assert_selector "#{fila(@uno)} [data-progreso-texto]", text: "2 de 2 · completo", wait: 5
+
+    within(fila(@uno)) { click_on "Terminar" }
+
+    assert_text "MRSV000001 recibido", wait: 5
+    assert_no_selector fila(@uno)
+    assert_selector fila(@dos), text: "0 de 1 · falta 1"
+    assert_current_path recepcion_carga_index_path
+  end
+
+  test "terminar con una caja faltante lleva al manifiesto, sin cerrarlo" do
+    escanear(@a1.codigo)
+    assert_selector "#{fila(@uno)} [data-progreso-texto]", text: "1 de 2", wait: 5
+
+    within(fila(@uno)) { click_on "Terminar" }
+
+    assert_current_path recepcion_carga_path(@uno), wait: 5
+    assert_text "Faltan 1 de 2: caja(s) B"
+    assert_text "Marcar recibido con las pendientes"
+    assert_equal "en_aduana", @uno.reload.estado
+  end
+
   # *"Lo voy a querer imprimir para darle al oficio."* Se mira el link y no se
   # aprieta: abrir el diálogo de impresión en el Chrome de test no prueba nada.
   test "cada fila imprime su manifiesto en pestaña nueva" do
