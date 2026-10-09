@@ -103,7 +103,7 @@ class EtiquetarDescripcionObligatoriaTest < ActionDispatch::IntegrationTest
     assert_equal "Zapatos", esperado.descripcion
   end
 
-  test "el esperado que ya traía contenido: el servidor no lo pide si el campo no vino" do
+  test "el esperado que ya traía contenido se recibe aunque el campo viaje vacío, y lo conserva" do
     pap = pre_alertas(:activa).pre_alerta_paquetes.create!(
       tracking: "1ZC3003ESPERAD3", descripcion: "Perfumes", fecha: Date.current
     )
@@ -112,19 +112,34 @@ class EtiquetarDescripcionObligatoriaTest < ActionDispatch::IntegrationTest
     post iniciar_sesion_etiquetar_url,
          params: { tipo_envio_id: pre_alertas(:activa).tipo_envio_id, sucursal_recepcion_id: @miami.id }
 
-    # El formulario sí la manda: el JS la auto-llena desde la pre-alerta. Acá
-    # se prueba que el servidor no la pida dos veces si no vino.
+    # El JS la auto-llena desde la pre-alerta cuando vuelve la consulta del
+    # tracking; si la pistola le gana, el textarea viaja vacío. No se pide otra
+    # vez ni se borra la que ya tenía.
     post etiquetar_url, params: { paquete: {
-      tracking: esperado.tracking, cliente_id: clientes(:juan).id, peso: 3
+      tracking: esperado.tracking, cliente_id: clientes(:juan).id, peso: 3, descripcion: ""
     } }
 
-    assert_equal "recibido_miami", esperado.reload.estado
+    esperado.reload
+    assert_equal "recibido_miami", esperado.estado
+    assert_equal "Perfumes", esperado.descripcion
   end
 
-  test "pero si el operario lo deja vacío encima del de la pre-alerta, no se recibe" do
-    # El formulario siempre manda el campo, y el JS lo auto-llena desde la
-    # pre-alerta. Si la pistola le gana a esa consulta y llega `""`, el
-    # contenido de la pre-alerta no se pisa con un vacío: se pide.
+  test "lo que el operario teclea sobre el esperado manda sobre lo de la pre-alerta" do
+    pap = pre_alertas(:activa).pre_alerta_paquetes.create!(
+      tracking: "1ZC3003ESPERAD5", descripcion: "Perfumes", fecha: Date.current
+    )
+    esperado = pap.reload.paquete
+    post iniciar_sesion_etiquetar_url,
+         params: { tipo_envio_id: pre_alertas(:activa).tipo_envio_id, sucursal_recepcion_id: @miami.id }
+
+    post etiquetar_url, params: { paquete: {
+      tracking: esperado.tracking, cliente_id: clientes(:juan).id, peso: 3, descripcion: "Zapatos"
+    } }
+
+    assert_equal "Zapatos", esperado.reload.descripcion
+  end
+
+  test "el esperado partido en cajas les pasa su contenido a todas" do
     pap = pre_alertas(:activa).pre_alerta_paquetes.create!(
       tracking: "1ZC3003ESPERAD4", descripcion: "Perfumes", fecha: Date.current
     )
@@ -132,13 +147,26 @@ class EtiquetarDescripcionObligatoriaTest < ActionDispatch::IntegrationTest
     post iniciar_sesion_etiquetar_url,
          params: { tipo_envio_id: pre_alertas(:activa).tipo_envio_id, sucursal_recepcion_id: @miami.id }
 
-    post etiquetar_url, params: { paquete: {
-      tracking: esperado.tracking, cliente_id: clientes(:juan).id, peso: 3, descripcion: ""
+    post etiquetar_url, params: { etiquetas: 2, paquete: {
+      tracking: esperado.tracking, cliente_id: clientes(:juan).id, descripcion: ""
     } }
 
+    cajas = Paquete.where(tracking: esperado.tracking).order(:numero_caja)
+    assert_equal 2, cajas.count
+    assert_equal [ "Perfumes", "Perfumes" ], cajas.map(&:descripcion)
+    assert_equal "recibido_miami", esperado.reload.estado
+  end
+
+  test "el esperado sin contenido partido en cajas tampoco se recibe vacío" do
+    esperado = esperado_sin_descripcion("1ZC3003ESPERAD6")
+
+    assert_no_difference "Paquete.count" do
+      post etiquetar_url, params: { etiquetas: 2, paquete: {
+        tracking: esperado.tracking, cliente_id: clientes(:juan).id, descripcion: ""
+      } }
+    end
     assert_response :unprocessable_entity
     assert_equal "pre_alerta_estado", esperado.reload.estado
-    assert_equal "Perfumes", esperado.descripcion
   end
 
   # ── Al actualizar ─────────────────────────────────────────────────────

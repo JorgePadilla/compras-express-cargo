@@ -359,7 +359,7 @@ end
       # un campo de captura vacío —el que `cajas-repetidor` limpió al agregar la
       # caja— no puede llevarse por delante lo que ya tenía. `medidas` ya viene
       # sin blancos; lo que faltaba era lo de afuera.
-      @paquete.assign_attributes(sin_medidas_en_blanco(paquete_params).merge(medidas))
+      @paquete.assign_attributes(con_contenido_del_esperado(sin_medidas_en_blanco(paquete_params), esperado).merge(medidas))
       @paquete.tracking = tracking
       @paquete.tracking_secundario = secundario if secundario && @paquete.tracking_secundario.blank?
     else
@@ -469,6 +469,8 @@ end
     tracking, secundario = trackings_reconciliados(esperado, escaneado)
     attrs = attrs.merge(tracking: tracking)
     attrs = attrs.merge(tracking_secundario: secundario) if secundario && attrs[:tracking_secundario].blank?
+    # C30-03: y su contenido, a las N cajas — no solo a la Caja 1 que lo reusa.
+    attrs = con_contenido_del_esperado(attrs, esperado)
 
     paquetes = Paquete.crear_split!(attrs: attrs, total_cajas: total_cajas,
                                     por_caja: medidas_por_caja, reusar: esperado)
@@ -520,6 +522,24 @@ end
   rescue ActiveRecord::RecordInvalid => e
     @paquete = e.record
     render_create_error
+  end
+
+  # C30-03: un contenido en blanco no le borra al esperado el que ya traía de
+  # la pre-alerta. Al dar de alta el formulario no viene pre-llenado del
+  # servidor: el contenido lo pone el JS cuando la consulta del tracking
+  # vuelve, y si la pistola le gana, el campo viaja vacío sin que nadie lo
+  # haya vaciado. Desde acá no se distingue un vacío de otro, así que gana el
+  # texto que ya está — exigirlo otra vez era frenar a Miami por algo que el
+  # paquete ya tiene. Sin contenido en ninguno de los dos, la validación del
+  # modelo (`:al_recibir`) sigue dando el 422.
+  #
+  # Al actualizar es otra cosa: ahí el formulario sí llega del servidor con el
+  # contenido puesto (y `required`), así que un vacío es alguien que lo borró,
+  # y eso sigue siendo error (`Paquete#contenido_obligatorio?`).
+  def con_contenido_del_esperado(atributos, esperado)
+    return atributos unless esperado&.descripcion.present? && atributos[:descripcion].blank?
+
+    atributos.merge(descripcion: esperado.descripcion)
   end
 
   # Todo lo que la pantalla necesita para dibujarse, venga de un GET limpio o
