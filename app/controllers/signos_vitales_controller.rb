@@ -11,6 +11,20 @@ class SignosVitalesController < ApplicationController
     @signos = SignosVitales.new
   end
 
+  # El desglose del disco, a pedido: `du` sobre todo el contenedor tarda unos
+  # segundos y no tiene por qué correr cada 30.
+  def disco
+    @disco = SignosVitales.disco_del_contenedor
+  rescue StandardError => e
+    @error = e.message
+  end
+
+  def descartar_fallidos
+    n = SignosVitales.descartar_fallidos!
+    Rails.logger.info "[SignosVitales] #{Current.user&.email_address} descartó #{n} trabajos fallidos"
+    redirect_to signos_vitales_path, notice: "Se descartaron #{n} #{n == 1 ? 'trabajo fallido' : 'trabajos fallidos'}."
+  end
+
   private
 
   # Por `can_access?` y no por `require_admin`: toda regla de rol vive en

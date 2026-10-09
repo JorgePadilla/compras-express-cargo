@@ -88,6 +88,17 @@ end %>
               </div>
             <% end %>
 
+            <%# 2026-10-09 · Para cuando el error ya se arregló y los intentos
+                viejos solo tapan el semáforo. Va afuera del frame que se
+                refresca (`_top`): el aviso de cuántos se descartaron es de la
+                página. %>
+            <% if seccion.clave == :cola && (pendientes = @signos.fallidos_pendientes).positive? %>
+              <%= render(ButtonComponent.new(variant: :soft_danger, size: :sm, icon: "trash",
+                    href: descartar_fallidos_signos_vitales_path, method: :delete,
+                    confirm: "Se descartan los #{pendientes} trabajos fallidos: se borran de la cola y no se reintentan. ¿Seguro?",
+                    data: { turbo_frame: "_top" })) { "Descartar los #{pendientes} fallidos" } %>
+            <% end %>
+
             <% if seccion.nota.present? %>
               <p class="text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700 pt-3"><%= seccion.nota %></p>
             <% end %>
@@ -97,3 +108,22 @@ end %>
     </div>
   </div>
 <% end %>
+
+<%# ── ¿Qué ocupa nuestro contenedor? ───────────────────────────────────
+    Afuera del frame que se refresca cada 30 s: el desglose se pide con un
+    botón, tarda unos segundos, y no tiene por qué borrarse solo. %>
+<section class="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+  <header class="px-5 py-3 border-b border-gray-200 dark:border-gray-700">
+    <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100">¿Qué ocupa nuestro contenedor?</h2>
+  </header>
+  <%= turbo_frame_tag "disco_del_contenedor" do %>
+    <div class="p-5 flex flex-wrap items-center justify-between gap-3">
+      <p class="text-sm text-gray-600 dark:text-gray-300 max-w-2xl">
+        El disco de la máquina de Render es compartido: desde adentro solo se ven nuestros archivos.
+        Esto los suma carpeta por carpeta y los compara con el total de la máquina.
+      </p>
+      <%= render(ButtonComponent.new(variant: :secondary, icon: "magnifying-glass", href: disco_signos_vitales_path,
+            data: { turbo_frame: "disco_del_contenedor" })) { "Medir" } %>
+    </div>
+  <% end %>
+</section>

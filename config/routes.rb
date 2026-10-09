@@ -15,6 +15,8 @@ Rails.application.routes.draw do
   # PR-C29.16 · Los signos del servidor (RAM, disco, base, cola). Solo admin;
   # se entra por el ícono del Home.
   get "signos_vitales", to: "signos_vitales#show", as: :signos_vitales
+  get "signos_vitales/disco", to: "signos_vitales#disco", as: :disco_signos_vitales
+  delete "signos_vitales/fallidos", to: "signos_vitales#descartar_fallidos", as: :descartar_fallidos_signos_vitales
 
   # Etiquetar (Miami labeling)
   get "etiquetar", to: "etiquetar#index"

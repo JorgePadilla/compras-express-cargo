@@ -1,0 +1,44 @@
+<%# El desglose del disco de nuestro contenedor, adentro de su frame. Lo pide
+    el botón «Medir» de «Signos del servidor». %>
+<%= turbo_frame_tag "disco_del_contenedor" do %>
+  <div class="p-5 space-y-4">
+    <% if @error %>
+      <p class="text-sm text-red-700 dark:text-red-300">No se pudo medir: <%= @error %></p>
+    <% else %>
+      <dl class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <dt class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Nuestro contenedor</dt>
+          <dd class="mt-1 font-mono text-lg font-semibold text-gray-900 dark:text-gray-100"><%= @disco.total ? number_to_human_size(@disco.total, precision: 3) : "no disponible" %></dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">La máquina de Render, en uso</dt>
+          <dd class="mt-1 font-mono text-lg font-semibold text-gray-900 dark:text-gray-100"><%= @disco.maquina_usados ? "#{number_to_human_size(@disco.maquina_usados, precision: 3)} de #{number_to_human_size(@disco.maquina_total, precision: 3)}" : "no disponible" %></dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">De otros servicios</dt>
+          <dd class="mt-1 font-mono text-lg font-semibold text-gray-900 dark:text-gray-100"><%= @disco.de_otros ? number_to_human_size(@disco.de_otros, precision: 3) : "no disponible" %></dd>
+          <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">no se ven desde adentro: los aísla Render</p>
+        </div>
+      </dl>
+
+      <% if @disco.carpetas.any? %>
+        <div>
+          <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Nuestras carpetas más grandes</h3>
+          <ul class="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+            <% @disco.carpetas.each do |carpeta, bytes| %>
+              <li class="py-2 flex items-center justify-between gap-3">
+                <span class="font-mono text-gray-800 dark:text-gray-100"><%= carpeta %></span>
+                <span class="font-mono text-gray-600 dark:text-gray-300"><%= number_to_human_size(bytes, precision: 3) %></span>
+              </li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+    <% end %>
+
+    <div class="flex justify-end">
+      <%= render(ButtonComponent.new(variant: :secondary, icon: "arrow-path", href: disco_signos_vitales_path,
+            data: { turbo_frame: "disco_del_contenedor" })) { "Medir de nuevo" } %>
+    </div>
+  </div>
+<% end %>
