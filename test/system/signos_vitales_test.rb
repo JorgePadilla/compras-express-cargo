@@ -2,7 +2,7 @@ require "application_system_test_case"
 
 # PR-C29.16 · «Signos del servidor» en Chrome: se llega desde el ícono del
 # Home, y «Actualizar» vuelve a pedir las medidas sin recargar la página.
-class SignosVitalesTest < ApplicationSystemTestCase
+class SignosVitalesPantallaTest < ApplicationSystemTestCase
   setup { ingresar(users(:admin)) }
 
   test "del ícono del Home a la página, y «Actualizar» trae medidas nuevas" do

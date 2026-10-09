@@ -75,6 +75,17 @@ class SignosVitales
     end
 
     def nucleos = Etc.nprocessors
+
+    # Lo que ocupan **nuestras** carpetas, en KB. `df` mide la máquina.
+    def du(*rutas)
+      existentes = rutas.map(&:to_s).select { |r| File.exist?(r) }
+      return 0 if existentes.empty?
+
+      salida, estado = Open3.capture2("du", "-sk", *existentes)
+      raise "du salió con #{estado.exitstatus}" unless estado.success?
+
+      salida.lines.sum { |l| l.split.first.to_i }
+    end
   end
 
   def self.peor(niveles)
@@ -109,10 +120,13 @@ class SignosVitales
   def servidor
     Seccion.new(
       clave: :servidor, titulo: "Servidor web",
-      medidas: [ ram, memoria_del_proceso, disco, carga, arriba_desde, puma ],
+      medidas: [ ram, memoria_del_proceso, disco_de_la_app, cpu_del_contenedor, arriba_desde, puma,
+                 disco_de_la_maquina, carga_de_la_maquina ],
       filas: [],
       nota: "Es el contenedor web. El worker de la cola es otro servicio: se lo ve en «Cola de trabajos». " \
-            "render.yaml pide 2 procesos de Puma (WEB_CONCURRENCY), pero config/puma.rb no tiene `workers`: corre uno solo."
+            "Los dos últimos son de la máquina de Render, que es compartida con otros servicios: van de referencia y " \
+            "no cuentan para el semáforo. render.yaml pide 2 procesos de Puma (WEB_CONCURRENCY), pero " \
+            "config/puma.rb no tiene `workers`: corre uno solo."
     )
   end
 
@@ -153,27 +167,56 @@ class SignosVitales
     no_disponible("Este proceso")
   end
 
-  def disco
-    linea = @fuente.df("/").lines.last.split
-    usados = linea[2].to_i * 1024
-    libres = linea[3].to_i * 1024
-    total = usados + libres
-    porcentaje = (usados * 100.0 / total).round(1)
-    Medida.new(nombre: "Disco", valor: "#{humano(usados)} de #{humano(total)}",
-               detalle: "efímero: se borra en cada deploy; los datos viven en la base",
-               porcentaje: porcentaje, nivel: por_umbral(porcentaje, DISCO_MIRAR, DISCO_PROBLEMA))
+  # 2026-10-08 · Jorge, mirando staging: *"¿por qué el disco está tan lleno?"*
+  # —240 GB de 290 GB, 82.9 %—. No era nuestro: `df /` adentro de un
+  # contenedor de Render mide el disco de **la máquina**, compartida con otros
+  # servicios, y Starter no tiene disco propio. Lo nuestro es lo que escribe la
+  # app: `tmp/`, `log/` y `storage/` (si existiera). Eso es lo que se mide acá.
+  # Es efímero: se borra en cada deploy.
+  DISCO_DE_LA_APP_MIRAR = 1.gigabyte
+
+  def disco_de_la_app
+    kb = @fuente.du(Rails.root.join("tmp"), Rails.root.join("log"), Rails.root.join("storage"))
+    bytes = kb * 1024
+    Medida.new(nombre: "Disco de la app", valor: humano(bytes),
+               detalle: "tmp/, log/ y storage/ · efímero: se borra en cada deploy; los datos viven en la base",
+               nivel: bytes >= DISCO_DE_LA_APP_MIRAR ? :mirar : :bien)
   rescue StandardError
-    no_disponible("Disco")
+    no_disponible("Disco de la app")
   end
 
-  def carga
+  # De referencia, **sin semáforo** (`nivel: nil`): no lo llenamos nosotros y
+  # no hay nada que hacer de este lado si se llena.
+  def disco_de_la_maquina
+    linea = @fuente.df("/").lines.last.split
+    usados = linea[2].to_i * 1024
+    total = usados + linea[3].to_i * 1024
+    Medida.new(nombre: "Disco de la máquina de Render", valor: "#{humano(usados)} de #{humano(total)}",
+               detalle: "compartido con otros servicios: no es nuestro", nivel: nil)
+  rescue StandardError
+    no_disponible("Disco de la máquina de Render", nivel: nil)
+  end
+
+  # Lo que nos toca de CPU: `cpu.max` de cgroup v2 es «cuota período»
+  # (`50000 100000` = media CPU, el plan Starter). Sin tope, «max».
+  def cpu_del_contenedor
+    cuota, periodo = @fuente.leer("/sys/fs/cgroup/cpu.max").split
+    valor = cuota == "max" ? "sin tope" : format("%g CPU", (cuota.to_f / periodo.to_f).round(2))
+    Medida.new(nombre: "CPU del contenedor", valor: valor, detalle: "lo que el plan nos asigna (cgroup)", nivel: :bien)
+  rescue StandardError
+    no_disponible("CPU del contenedor")
+  end
+
+  # `/proc/loadavg` también es de la máquina entera, no del contenedor: con 8
+  # núcleos y otros servicios encima, no dice cuánto usamos nosotros. Sin
+  # semáforo, como el disco de la máquina.
+  def carga_de_la_maquina
     uno, cinco, quince = @fuente.leer("/proc/loadavg").split.first(3).map(&:to_f)
     nucleos = @fuente.nucleos
-    Medida.new(nombre: "Carga de CPU", valor: format("%.2f · %.2f · %.2f", uno, cinco, quince),
-               detalle: "1, 5 y 15 minutos, con #{nucleos} #{nucleos == 1 ? 'núcleo' : 'núcleos'}",
-               nivel: cinco > nucleos ? :mirar : :bien)
+    Medida.new(nombre: "Carga de la máquina de Render", valor: format("%.2f · %.2f · %.2f", uno, cinco, quince),
+               detalle: "1, 5 y 15 min · #{nucleos} #{nucleos == 1 ? 'núcleo' : 'núcleos'} compartidos: no es nuestra", nivel: nil)
   rescue StandardError
-    no_disponible("Carga de CPU")
+    no_disponible("Carga de la máquina de Render", nivel: nil)
   end
 
   def arriba_desde
@@ -190,10 +233,14 @@ class SignosVitales
     stats = defined?(::Puma) && ::Puma.respond_to?(:stats_hash) ? ::Puma.stats_hash : nil
     raise "sin estadísticas de Puma" unless stats
 
+    # 2026-10-08 · En staging salía «? hilos»: las claves pueden venir como
+    # texto o como símbolo según la versión, y sin ellas queda la config.
+    stats = stats.deep_symbolize_keys
     procesos = stats[:workers].to_i.zero? ? 1 : stats[:workers]
-    hilos = stats[:max_threads] || stats.dig(:worker_status, 0, :last_status, :max_threads)
+    hilos = stats[:max_threads] || stats.dig(:worker_status, 0, :last_status, :max_threads) || ENV["RAILS_MAX_THREADS"]
+    ocupados = stats[:busy_threads] || stats[:running] || stats.dig(:worker_status, 0, :last_status, :running)
     Medida.new(nombre: "Puma", valor: "#{procesos} #{procesos == 1 ? 'proceso' : 'procesos'} · #{hilos || '?'} hilos",
-               detalle: "atendiendo #{stats[:running] || stats.dig(:worker_status, 0, :last_status, :running) || '?'} ahora",
+               detalle: ocupados ? "#{ocupados} atendiendo ahora" : nil,
                nivel: :bien)
   rescue StandardError
     no_disponible("Puma")
@@ -312,11 +359,14 @@ class SignosVitales
     []
   end
 
-  def error_de(texto)
-    datos = JSON.parse(texto.to_s)
-    [ datos["exception_class"], datos["message"] ].compact.join(": ").truncate(160)
+  # `error` llega ya como Hash (solid_queue lo deserializa) o como JSON. En
+  # staging salía el Hash crudo: `to_s` lo volvía texto y el JSON no lo leía.
+  def error_de(error)
+    datos = error.is_a?(Hash) ? error : JSON.parse(error.to_s)
+    clase = datos["exception_class"].to_s.split("::").last
+    [ clase.presence, datos["message"] ].compact.join(": ").truncate(160)
   rescue JSON::ParserError
-    texto.to_s.truncate(160)
+    error.to_s.truncate(160)
   end
 
   # La última corrida de cada tarea de la noche. Atrasada si pasaron más de 26
@@ -360,7 +410,7 @@ class SignosVitales
 
   def conexion = ActiveRecord::Base.connection
 
-  def no_disponible(nombre) = Medida.new(nombre: nombre, valor: NO_DISPONIBLE, nivel: nil)
+  def no_disponible(nombre, nivel: nil) = Medida.new(nombre: nombre, valor: NO_DISPONIBLE, nivel: nivel)
 
   def por_umbral(porcentaje, mirar, problema)
     return :problema if porcentaje >= problema

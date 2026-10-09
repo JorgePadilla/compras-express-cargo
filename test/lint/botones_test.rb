@@ -67,6 +67,12 @@ class BotonesTest < ActiveSupport::TestCase
     # mismo motivo que el de la caja: un icono chico adentro de una fila que se
     # repite, con su `aria-label`.
     "app/views/clientes/_correo_fila.html.erb"               => 1,
+    # 2026-10-08 · La píldora «Servidor» del saludo del Home, que lleva a
+    # «Signos del servidor». Es hermana de la píldora de la operación que
+    # tiene al lado —vidrio sobre el navy del saludo, el puntito que late—, y
+    # `ButtonComponent` no tiene variante para un fondo oscuro. Lleva su
+    # `aria-label` con el estado, y foco con `foco-cec`.
+    "app/components/dashboard_hero_component.html.erb"       => 1,
     # PR-C7.17: `app/components` entró al censo con este PR, y este apareció
     # solo. Es legítimo y no puede migrar: `RowActionComponent` **es** la
     # alternativa a los botones crudos, así que envolverlo en `ButtonComponent`
