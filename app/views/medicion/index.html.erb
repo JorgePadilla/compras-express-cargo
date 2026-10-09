@@ -153,103 +153,127 @@
               </div>
             </div>
 
-            <%# ── c · captura a la izquierda, cálculo a la derecha ──────────
+            <%# ── c · captura y volúmenes a la izquierda, cálculo a la derecha ─
                 C26-18 · La misma disposición que /etiquetar —Jorge: *"como
                 estaban en etiquetar están bien, lo podés copiar a medición"*—:
                 el peso con su rótulo, las tres medidas juntas bajo uno solo, y
                 el cálculo al lado y no debajo. Los campos son grandes porque la
-                pantalla es táctil. %>
-            <%# C28-08 · Debajo de lo escaneado, y no pegado a una caja: los
-                volúmenes son de la tanda entera. %>
-            <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 -mb-3">
-              Volumen · peso, medidas y cálculo
-            </h4>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6" data-medicion-target="form"
-                 data-action="keydown->medicion#formKeydown input->medicion#numerosCambiados" data-controller="calc-volumetrico">
-              <div class="space-y-3">
-                <div>
-                  <%= label_tag "medicion_peso", "Peso real (lbs)", class: "block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1" %>
-                  <%= number_field_tag "medicion_peso", nil, step: "0.01", min: 0, inputmode: "decimal",
-                        data: { medicion_target: "peso", calc_volumetrico_target: "peso", action: "input->calc-volumetrico#recalcular" },
-                        class: "block w-full min-h-12 text-xl font-mono text-center rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
-                </div>
-                <div>
-                  <span class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Medidas (pulgadas)</span>
-                  <div class="grid grid-cols-3 gap-2">
-                    <% CajasPesoMedidasComponent::DIMENSIONES.each do |dim| %>
-                      <%= number_field_tag "medicion_#{dim}", nil, step: "0.01", min: 0, inputmode: "decimal",
-                            placeholder: dim.to_s, "aria-label": "#{dim.to_s.capitalize} en pulgadas",
-                            data: { medicion_target: dim.to_s, calc_volumetrico_target: dim.to_s, action: "input->calc-volumetrico#recalcular" },
-                            class: "block w-full min-h-12 text-xl font-mono text-center rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
-                    <% end %>
+                pantalla es táctil.
+
+                PR-C29.8 · Y ahora copiado de verdad. Jorge, 2026-10-08: *"esta
+                parte está montada con otro título… no se mira bien; la
+                calculadora Yusef la había pedido a la derecha"*. Eran tres
+                cosas:
+                  · el título llevaba `-mb-3` adentro de un `space-y-5` y se le
+                    subía encima a «Peso real»: ahora es el separador de
+                    `CajasPesoMedidasComponent`, con borde arriba y aire abajo;
+                  · las dos columnas recién arrancaban en `lg` (1024 px), y en
+                    la laptop táctil de la PESA el cálculo se iba **abajo**:
+                    ahora arrancan en `md`;
+                  · «Volúmenes guardados» cruzaba las dos columnas y dejaba la
+                    calculadora flotando sola arriba a la derecha: baja a la
+                    columna de la captura, donde /etiquetar tiene «Cajas
+                    guardadas».
+                El título dice qué volumen se está midiendo —«Volumen 2»—,
+                como /etiquetar dice «Caja 2». Lo escribe `_pintarVolumenes`. %>
+            <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
+              <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
+                <span data-medicion-target="rotuloVolumen">Volumen 1</span>
+                <span class="text-gray-400 dark:text-gray-500 normal-case tracking-normal font-normal">· peso, medidas y cálculo</span>
+              </h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6" data-medicion-target="form"
+                   data-action="keydown->medicion#formKeydown input->medicion#numerosCambiados" data-controller="calc-volumetrico">
+                <div class="space-y-3">
+                  <div>
+                    <%= label_tag "medicion_peso", "Peso real (lbs)", class: "block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1" %>
+                    <%= number_field_tag "medicion_peso", nil, step: "0.01", min: 0, inputmode: "decimal",
+                          data: { medicion_target: "peso", calc_volumetrico_target: "peso", action: "input->calc-volumetrico#recalcular" },
+                          class: "block w-full min-h-12 text-xl font-mono text-center rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
                   </div>
-                  <p class="mt-1 text-[11px] text-gray-400">alto × largo × ancho</p>
+                  <div>
+                    <span class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Medidas (pulgadas)</span>
+                    <div class="grid grid-cols-3 gap-2">
+                      <% CajasPesoMedidasComponent::DIMENSIONES.each do |dim| %>
+                        <%= number_field_tag "medicion_#{dim}", nil, step: "0.01", min: 0, inputmode: "decimal",
+                              placeholder: dim.to_s, "aria-label": "#{dim.to_s.capitalize} en pulgadas",
+                              data: { medicion_target: dim.to_s, calc_volumetrico_target: dim.to_s, action: "input->calc-volumetrico#recalcular" },
+                              class: "block w-full min-h-12 text-xl font-mono text-center rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+                      <% end %>
+                    </div>
+                    <p class="mt-1 text-[11px] text-gray-400">alto × largo × ancho</p>
+                  </div>
+
+                  <%# ── d · los volúmenes de esta tanda, con su «+ Agregar» ───
+                      C27-01/03 · «El repetidor de Miami», dicho por Yusef:
+                      *"mide y pesa este, le da **agregar**; mide y pesa este
+                      por separado porque no cuadra… y ahí le dice
+                      **imprimir**, y como son dos mediciones, imprime dos"*. El
+                      botón va pegado a la captura, como «Agregar caja» en
+                      /etiquetar. La tecla es F5: `teclas_por_familia_test` la
+                      fija para «agregar». No tiene campos, así que vivir
+                      adentro de `form` no le cambia nada al Enter-avanza, que
+                      solo recorre inputs. %>
+                  <div class="rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 p-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                      <p class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                        Volúmenes guardados
+                        <span data-medicion-target="volumenesContador" class="ml-1 font-mono text-gray-500 dark:text-gray-400">0</span>
+                        <span class="text-gray-400 dark:text-gray-500">de <%= Bulto::MAXIMO_POR_SESION %></span>
+                      </p>
+                      <%= render(ButtonComponent.new(variant: :teal, size: :md, icon: "plus", shortcut: "F5", shortcut_label_only: true,
+                            data: { medicion_target: "agregarVolumen", action: "medicion#agregarVolumen" })) { "Agregar volumen" } %>
+                    </div>
+
+                    <p data-medicion-target="volumenesVacio" class="text-[11px] text-gray-400">
+                      Todavía ninguno. Lo que esté pesado arriba sale con «Guardar e imprimir», como el último volumen.
+                    </p>
+
+                    <ul data-medicion-target="listaVolumenes" class="space-y-1.5"></ul>
+
+                    <%# La fila de un volumen ya agregado, con su «×» como en
+                        /etiquetar: deshacer no es elegir. C28-08 · Sin «N
+                        cajas»: ningún volumen tiene cajas propias. Y
+                        «Corregir» le devuelve los números al formulario, que es
+                        como se arregla al medir de nuevo. %>
+                    <template data-medicion-target="plantillaVolumen">
+                      <li class="flex items-center gap-3 rounded-md bg-gray-50 dark:bg-gray-900 px-2.5 py-1.5">
+                        <span class="shrink-0 text-xs font-bold uppercase tracking-wider text-cec-navy dark:text-cec-gold" data-campo="orden"></span>
+                        <span class="flex-1 min-w-0 truncate text-sm font-mono text-gray-700 dark:text-gray-200" data-campo="numeros"></span>
+                        <%= render(ButtonComponent.new(variant: :ghost, size: :xs, icon: "pencil-square", label: "Corregir este volumen",
+                              data: { action: "medicion#corregirVolumen" }, class: "shrink-0")) %>
+                        <%= render(ButtonComponent.new(variant: :ghost, size: :xs, icon: "x-mark", label: "Quitar este volumen",
+                              data: { action: "medicion#quitarVolumen" }, class: "shrink-0")) %>
+                      </li>
+                    </template>
+                  </div>
+                </div>
+
+                <%# El cálculo, como el de /etiquetar: con su encabezado, el
+                    volumétrico chico, el peso a cobrar grande, y el pie cúbico
+                    de referencia. `self-start` para que no se estire hasta el
+                    alto de la columna de la izquierda. %>
+                <div class="rounded-lg ring-1 ring-gray-200 bg-gray-50 dark:bg-gray-900 dark:ring-gray-700 p-4 space-y-3 self-start">
+                  <div class="rounded-lg bg-white dark:bg-gray-800 ring-1 ring-cec-teal/30 p-3">
+                    <p class="mb-1 text-xs font-semibold text-cec-navy dark:text-cec-gold">USA → HN · libra o volumen</p>
+                    <div class="flex items-baseline justify-between text-sm">
+                      <span class="text-gray-500 dark:text-gray-400">VLbs (volumétrico)</span>
+                      <span class="font-mono text-gray-700 dark:text-gray-200" data-calc-volumetrico-target="vlbs">—</span>
+                    </div>
+                    <div class="flex items-baseline justify-between mt-1">
+                      <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Peso a cobrar</span>
+                      <span class="font-mono font-bold text-2xl text-cec-navy dark:text-cec-gold">
+                        <span data-calc-volumetrico-target="pesoCobrar">—</span> <span class="text-xs font-normal">lbs</span>
+                      </span>
+                    </div>
+                  </div>
+                  <div class="flex items-baseline justify-between text-sm px-1">
+                    <span class="text-gray-500 dark:text-gray-400">pie³ <span class="text-[10px] italic text-gray-400">(no afluye en precio)</span></span>
+                    <span class="font-mono text-gray-700 dark:text-gray-200"><span data-calc-volumetrico-target="pies">—</span> ft³</span>
+                  </div>
+                  <span class="hidden" data-calc-volumetrico-target="in3"></span>
+                  <span class="hidden" data-calc-volumetrico-target="metros"></span>
                 </div>
               </div>
-
-              <%# El cálculo, como el de /etiquetar: el volumétrico chico, el
-                  peso a cobrar grande, y el pie cúbico de referencia. %>
-              <div class="rounded-lg ring-1 ring-gray-200 bg-gray-50 dark:bg-gray-900 dark:ring-gray-700 p-4 space-y-3 self-start">
-                <div class="rounded-lg bg-white dark:bg-gray-800 ring-1 ring-cec-teal/30 p-3">
-                  <div class="flex items-baseline justify-between text-sm">
-                    <span class="text-gray-500 dark:text-gray-400">VLbs (volumétrico)</span>
-                    <span class="font-mono text-gray-700 dark:text-gray-200" data-calc-volumetrico-target="vlbs">—</span>
-                  </div>
-                  <div class="flex items-baseline justify-between mt-1">
-                    <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Peso a cobrar</span>
-                    <span class="font-mono font-bold text-2xl text-cec-navy dark:text-cec-gold">
-                      <span data-calc-volumetrico-target="pesoCobrar">—</span> <span class="text-xs font-normal">lbs</span>
-                    </span>
-                  </div>
-                </div>
-                <div class="flex items-baseline justify-between text-sm px-1">
-                  <span class="text-gray-500 dark:text-gray-400">pie³ <span class="text-[10px] italic text-gray-400">(no afluye en precio)</span></span>
-                  <span class="font-mono text-gray-700 dark:text-gray-200"><span data-calc-volumetrico-target="pies">—</span> ft³</span>
-                </div>
-                <span class="hidden" data-calc-volumetrico-target="in3"></span>
-                <span class="hidden" data-calc-volumetrico-target="metros"></span>
-              </div>
-            </div>
-
-            <%# ── d · los volúmenes de esta tanda, con su «+ Agregar» ───────
-                C27-01/03 · «El repetidor de Miami», dicho por Yusef: *"mide y
-                pesa este, le da **agregar**; mide y pesa este por separado
-                porque no cuadra… y ahí le dice **imprimir**, y como son dos
-                mediciones, imprime dos"*. El botón va pegado a la captura, a la
-                derecha del contador, como «Agregar caja» en /etiquetar. La
-                tecla es F5: `teclas_por_familia_test` la fija para «agregar». %>
-            <div class="rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 p-3">
-              <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-                <p class="text-sm font-medium text-gray-700 dark:text-gray-200">
-                  Volúmenes guardados
-                  <span data-medicion-target="volumenesContador" class="ml-1 font-mono text-gray-500 dark:text-gray-400">0</span>
-                  <span class="text-gray-400 dark:text-gray-500">de <%= Bulto::MAXIMO_POR_SESION %></span>
-                </p>
-                <%= render(ButtonComponent.new(variant: :teal, size: :md, icon: "plus", shortcut: "F5", shortcut_label_only: true,
-                      data: { medicion_target: "agregarVolumen", action: "medicion#agregarVolumen" })) { "Agregar volumen" } %>
-              </div>
-
-              <p data-medicion-target="volumenesVacio" class="text-[11px] text-gray-400">
-                Todavía ninguno. Lo que esté pesado arriba sale con «Guardar e imprimir», como el último volumen.
-              </p>
-
-              <ul data-medicion-target="listaVolumenes" class="space-y-1.5"></ul>
-
-              <%# La fila de un volumen ya agregado, con su «×» como en
-                  /etiquetar: deshacer no es elegir. C28-08 · Sin «N cajas»:
-                  ningún volumen tiene cajas propias. Y «Corregir» le devuelve
-                  los números al formulario, que es como se arregla al medir
-                  de nuevo. %>
-              <template data-medicion-target="plantillaVolumen">
-                <li class="flex items-center gap-3 rounded-md bg-gray-50 dark:bg-gray-900 px-2.5 py-1.5">
-                  <span class="shrink-0 text-xs font-bold uppercase tracking-wider text-cec-navy dark:text-cec-gold" data-campo="orden"></span>
-                  <span class="flex-1 min-w-0 truncate text-sm font-mono text-gray-700 dark:text-gray-200" data-campo="numeros"></span>
-                  <%= render(ButtonComponent.new(variant: :ghost, size: :xs, icon: "pencil-square", label: "Corregir este volumen",
-                        data: { action: "medicion#corregirVolumen" }, class: "shrink-0")) %>
-                  <%= render(ButtonComponent.new(variant: :ghost, size: :xs, icon: "x-mark", label: "Quitar este volumen",
-                        data: { action: "medicion#quitarVolumen" }, class: "shrink-0")) %>
-                </li>
-              </template>
             </div>
 
             <%# ── e · lo escaneado: el historial de la tanda ────────────────

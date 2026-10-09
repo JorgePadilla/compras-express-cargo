@@ -50,7 +50,7 @@ export default class extends conEnterAvanza(Controller) {
     "tandaContador", "tandaFaltan", "tandaCompleto",
     "mesa", "plantillaMesa", "mesaTitulo",
     "notasBoton", "notasBotonTexto", "notasModal", "notasCliente", "notasLista", "notasEntendido", "plantillaNota",
-    "volumenesContador", "volumenesVacio", "listaVolumenes", "plantillaVolumen", "agregarVolumen",
+    "volumenesContador", "volumenesVacio", "listaVolumenes", "plantillaVolumen", "agregarVolumen", "rotuloVolumen",
     "form", "peso", "alto", "largo", "ancho", "guardar", "guardarTexto",
     "banner", "bannerTexto", "bannerFaltan", "bannerReimprimir", "bannerReimprimirTexto", "bannerFacturar",
     "manifiestoNumero", "manifiestoFechas", "manifiestoConteo", "pendientes", "sinPendientes",
@@ -668,6 +668,11 @@ export default class extends conEnterAvanza(Controller) {
   _pintarVolumenes() {
     const n = this._volumenes.length
     this.volumenesContadorTarget.textContent = n
+    // PR-C29.8 · El título de la captura dice qué volumen se está midiendo,
+    // como /etiquetar dice «Caja 2»: con dos guardados, lo de arriba es el
+    // tercero. En el tope no hay un «Volumen 11» que medir, así que se queda
+    // en el último.
+    this.rotuloVolumenTarget.textContent = `Volumen ${Math.min(n + 1, this.maximoValue || n + 1)}`
     this.volumenesVacioTarget.hidden = n > 0
     this.listaVolumenesTarget.replaceChildren(...this._volumenes.map((v, i) => this._filaVolumen(v, i)))
   }
