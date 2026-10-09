@@ -18,9 +18,11 @@ class RecibirVariosManifiestosTest < ApplicationSystemTestCase
     @b1 = @uno.cajas.create!(peso: 10)
     @a2 = @dos.cajas.create!(peso: 10)
     # *"Los de prefactura, ellos son los que se encargan de recibir carga"*
-    # (C21-07). Con el cajero, que también recibe, Chrome dejaba de entregarle
-    # las teclas a la página al segundo de cargar —en cualquier pantalla, no
-    # solo en esta—, y eso es otro asunto.
+    # (C21-07). No el cajero: el par `cajero@test.com` + `password123` está en
+    # la lista de contraseñas filtradas de Chrome, que al loguearse abre su
+    # aviso «cambiá tu contraseña» y se queda con el teclado — las teclas de
+    # WebDriver no llegan a ninguna página. Es del navegador de test, no de la
+    # app (PR-C30.9 lo apaga en los drivers).
     ingresar(users(:supervisor_prefactura))
     visit recepcion_carga_index_path
     esperar_la_pistola
@@ -72,9 +74,11 @@ class RecibirVariosManifiestosTest < ApplicationSystemTestCase
     assert_selector "#{fila(@dos)} [data-progreso-texto]", text: "1 de 1 · completo", wait: 5
     assert_text "Caja A de MRSV000002 recibida"
 
+    assert_selector "#{fila(@uno)} [data-estado-badge]", text: "Enviado"
     escanear(@a1.codigo)
     assert_selector "#{fila(@uno)} [data-progreso-texto]", text: "1 de 2 · falta 1", wait: 5
     assert_selector "#{fila(@uno)} [data-progreso-faltan]", text: "Falta: B"
+    assert_selector "#{fila(@uno)} [data-estado-badge]", text: "En aduana"
     assert_equal "codigo_caja", foco, "el foco vuelve a la pistola"
 
     assert_equal %w[completo ok], sonidos

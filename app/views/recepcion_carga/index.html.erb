@@ -75,7 +75,10 @@
                     class="font-medium <%= progreso.completo? ? "text-cec-teal" : "text-gray-900" %>"><%= progreso.texto %></span>
               <span data-progreso-faltan class="block text-xs font-mono text-gray-500"><%= "Falta: #{progreso.faltantes.join(", ")}" if progreso.faltantes.any? %></span>
             </td>
-            <td class="px-6 py-4 text-sm"><%= render StatusBadgeComponent.new(status: m.estado) %></td>
+            <%# C30-09 · La pistola de la lista lo repinta: la primera caja pasa
+                el manifiesto a «En aduana», y una fila que siguiera diciendo
+                «Enviado» mentiría. %>
+            <td class="px-6 py-4 text-sm" data-estado-badge><%= render StatusBadgeComponent.new(status: m.estado) %></td>
             <td class="px-6 py-4 text-right">
               <div class="inline-flex items-center gap-2">
                 <%# C30-09 · *"Acá afuera sería bueno poder darle también

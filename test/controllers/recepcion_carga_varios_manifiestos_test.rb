@@ -85,6 +85,15 @@ class RecepcionCargaVariosManifiestosTest < ActionDispatch::IntegrationTest
     assert_equal false, json.dig("manifiesto", "completo")
   end
 
+  # La primera caja pasa el manifiesto a «en aduana»: la fila tiene que dejar
+  # de decir «Enviado», y el badge viene hecho por el mismo componente.
+  test "la respuesta trae el estado nuevo con su badge" do
+    escanear(@a1.codigo)
+
+    assert_equal "en_aduana", json.dig("manifiesto", "estado")
+    assert_match(/En aduana/i, json.dig("manifiesto", "estado_html"))
+  end
+
   test "la que completa el manifiesto lo dice, pero no lo cierra" do
     escanear(@a1.codigo)
     escanear(@b1.codigo)

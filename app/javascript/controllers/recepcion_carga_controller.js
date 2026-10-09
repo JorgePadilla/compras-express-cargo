@@ -99,6 +99,10 @@ export default class extends Controller {
     if (faltan) {
       faltan.textContent = progreso.faltantes.length > 0 ? `Falta: ${progreso.faltantes.join(", ")}` : ""
     }
+    // El estado, del mismo componente que la vista (`estado_html`): la
+    // primera caja pasa el manifiesto de «Enviado» a «En aduana».
+    const badge = fila.querySelector("[data-estado-badge]")
+    if (badge && progreso.estado_html) badge.innerHTML = progreso.estado_html
     // La última fila tocada queda marcada: con cinco manifiestos en la lista,
     // el que recibe tiene que ver **cuál** se movió, no buscarlo.
     this.element.querySelectorAll("[data-manifiesto-fila].bg-cec-teal\\/10")

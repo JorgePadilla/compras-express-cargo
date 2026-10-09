@@ -203,8 +203,17 @@ class RecepcionCargaController < ApplicationController
 
   # Recontado con una consulta fresca: `recibir_caja!` acaba de tocar la caja
   # por otro objeto, y lo que tenga cargado `@manifiesto` puede estar viejo.
+  #
+  # C30-09 · Con el badge del estado ya renderizado: la primera caja pasa el
+  # manifiesto de «Enviado» a «En aduana», y la fila lo tiene que decir. Sale
+  # del mismo `StatusBadgeComponent` que la vista, así el color y el texto no
+  # se escriben dos veces —una en Ruby y otra en JS— para separarse después.
   def progreso
-    ProgresoDeRecepcion.new(Manifiesto.includes(:cajas, :paquetes).find(@manifiesto.id)).to_h
+    manifiesto = Manifiesto.includes(:cajas, :paquetes).find(@manifiesto.id)
+    ProgresoDeRecepcion.new(manifiesto).to_h.merge(
+      estado: manifiesto.estado,
+      estado_html: view_context.render(StatusBadgeComponent.new(status: manifiesto.estado))
+    )
   end
 
   def aviso_de_cierre(resultado, avisados)
