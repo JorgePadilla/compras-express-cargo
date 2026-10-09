@@ -11624,3 +11624,419 @@ dato ya no existe. Vuelve a escanear los warehouse de la tanda y las etiquetas
 | Id | Qué |
 |---|---|
 | `RP-72` | **Una caja con «solo peso» o «solo volumétrico» medida junto a otras.** Con `C28-08` la excepción de cobro de `C24-01` se aplica a la tanda entera, y hoy solo vale si **todas** las cajas la tienen. Un generador marcado «solo peso» y medido con ropa pierde la excepción. ¿Se mide aparte siempre, o la pantalla debe avisar cuando se mezclan? |
+
+---
+
+## Conversación 29 (2026-10-08) — la pasada entera en staging: Miami, el manifiesto, la recepción y la PESA
+
+Videollamada de 79 minutos con Yusef, pantalla compartida. Jorge recorrió el
+circuito completo en staging con dos clientes de prueba, Sofía (cliente 6) y
+Diego (cliente 7): etiquetar en Miami, armar y escanear el manifiesto,
+recibir en San Pedro y medir en la PESA. Lo que salió es casi todo **arreglo
+de lo construido en C28**, más dos piezas nuevas en la PESA: los paquetes del
+mismo cliente que vienen en el mismo manifiesto (`C29-16`), y unir un suelto
+a un consolidado desde la mesa (`C29-17`).
+
+> ⚠️ **Sobre el transcript.** `whisper small` en catorce pedazos de 6 minutos;
+> el «min» de cada cita es el pedazo, no el segundo exacto. Hay tramos con
+> conversación personal y otros donde Jorge señalaba la pantalla y el audio no
+> dice qué. Se normalizó solo lo inequívoco (*"Teucidalpa"* → Tegucigalpa,
+> *"Umuya"* → Humuya, *"cañar"* → escanear). Lo que no se entiende se marca
+> con ❓, no se completa.
+
+---
+
+### Miami: `/etiquetar`
+
+#### C29-01 · El tracking pegado con un espacio se limpia solo (min 6)
+
+Jorge pegó un tracking con copy-paste y el sistema no lo dejó guardar:
+
+> "Mirá que hay algo, tracking no es permitido, tienes el espacio este."
+> **Jorge:** "Lo que es espacio fue cuando yo le di copy paste… te lo voy a
+>  arreglar."
+> "No, que no hubiera nada para evitar cosas o algo… **está bien eso, porque
+>  tiene que estar bien hecho.**"
+
+`Paquete::TRACKING_FORMATO` rechaza el espacio, y está bien que lo rechace
+adentro. Lo que falta es que los espacios de los **bordes** (los del pegado) se
+quiten antes de validar. Un espacio en el medio sigue siendo error.
+
+#### C29-02 · «Cancelar» en *«Tracking ya existe»* tiene que **limpiar** el tracking (min 36)
+
+> "Aquí hay un error, te cuento: me pregunta tres opciones, ¿verdad? **Le doy
+>  cancelar y me deja el tracking aquí. Te lo tiene que limpiar.**"
+> "Vengo yo y veo el tracking, me tira qué quiero hacer porque ya está, y es de
+>  Sofía, y entonces le di cancelar y **me deja hacer otra y poner a Diego, y
+>  no es de Diego**. Y esos son errores que nos pasan en Miami con cualquier
+>  sistema."
+> "Eso tiene que limpiarlo cuando le da cancelar."
+
+El modal de duplicado tiene tres salidas (actualización, cambio de servicio,
+duplicado real) y «Cancelar». `closeDuplicate()` solo esconde el modal: el
+tracking repetido queda escrito y se le puede asignar a otro cliente.
+
+#### C29-03 · El cliente **sin sucursal de retiro**: la etiqueta dice otro lugar (min 0–6)
+
+La etiqueta de un paquete de Sofía salió con una sucursal que no era:
+
+> "Aquí hay un error: dice San Pedro Sula y dice Humuya, no sé por qué."
+> "Es que **la ciudad donde es es una cosa y donde retira es otra**."
+> "Si va a retirar en Tegucigalpa, la sucursal de Tegucigalpa tiene que irte.
+>  **Aunque él sea de Choluteca.**"
+> "Cuando ellos crean el casillero, vas a preguntar **a dónde le gustaría
+>  retirar** su producto."
+
+Al abrir la ficha del cliente: *"ah, ahí está, mirá, **está sin definir**"*.
+Sofía la había creado Jorge a mano, sin ese campo. Con la sucursal puesta, la
+etiqueta salió bien.
+
+**Lectura.** El dato faltaba, pero la regla de Yusef no es de datos: la
+sucursal de retiro se pregunta al crear el casillero, y no se deduce de la
+ciudad. Dos cosas:
+- qué imprime la etiqueta cuando el cliente no tiene sucursal de retiro (lo
+  que imprimió no era cierto, y un dato que falta tiene que verse como falta);
+- que la sucursal de retiro sea obligatoria al crear el cliente, en el admin y
+  en el portal (las dos pantallas gemelas).
+
+#### C29-04 · ❓ La descripción vacía y el formulario que no se limpió (min 6–10)
+
+Dos tramos que no se entienden enteros:
+
+> "Mirá que aquí, esto no puede ir vacío. Descripción no puede ir vacío. Eso
+>  sí… **Mirá, me deja irme vacío.**"
+> "Mirá, no borra esto… Ese es que **no se limpió ahí**, no tiene la cuestión
+>  de limpiar."
+> (más tarde) "Descripción, me dice que no puede irse vacío, va. **Descripción
+>  no debería irse vacío.**"
+
+Hoy la descripción solo es obligatoria en Entrega Personal (`Paquete`, línea
+`validates :descripcion`). La segunda vez el formulario sí la pidió, así que el
+primer tramo puede ser el estado que quedó del error del tracking con espacio
+(`C29-01`). Se revisa al probar `C29-01`: después de un error de guardado, qué
+queda escrito y qué valida.
+
+#### C29-05 · El contador del día — 📄 nota (min 9)
+
+Vio el número de paquetes que lleva el operario en el día:
+
+> "Hoy lleva 11, **mirá qué bien esto**. No se me había ocurrido, pero está
+>  bueno."
+> "Es una cosa que yo quiero ir metiendo más adelante… quién generó más, quién
+>  **se equivocó menos**… para que ellos también tengan estadística."
+
+No pide nada ahora. Queda anotado para cuando haya métricas por persona.
+
+---
+
+### El manifiesto
+
+#### C29-06 · Editar una caja y «Guardar e imprimir» **revienta** (min 12–24)
+
+> "Yo le vine y le di editar, le puse peso y **le di guardar e imprimir**."
+> **Jorge:** "Ok, eso no debería tronar." — "Y tronó."
+> "Le digo solo guardar… y después le doy imprimir acá, y funcionó."
+> "Viste, **hay algo malo en este botón nada más**… Se dice guardar e imprimir,
+>  entonces hace éste más éste."
+> "Ok, ese es el error uno."
+
+Y más tarde, otra vez: *"aquí sí no falló, mirá, **es cuando lo edito nada
+más**"*. Jorge: *"voy a investigar por qué es eso"*.
+
+Es el camino nuevo de `C28-05`: el lápiz carga la caja en el formulario, lo
+pasa a PATCH, y F9 / «Guardar e imprimir» va con `data-turbo=false` a
+`CajasManifiestoController#update` con `print=true`. «Guardar» solo y el
+botón de imprimir de la fila, cada uno por su lado, andan.
+
+#### C29-07 · El manifiesto no deja entrar paquetes de **otra sucursal de entrega** (min 18–22)
+
+> "El error dos: es que **yo marqué que van para San Pedro y van paquetes que
+>  van para Humuya**, y debería de notificarte que ese paquete va para
+>  Tegucigalpa."
+> "Recordá que la idea es que **empaquen las cajas de acuerdo a dónde van**."
+> **Jorge:** "Ah, eso es lo que por tipo tenemos la validación, no para hacia
+>  dónde va."
+> "**Y que no debería haberme dejado meter paquetes que van para
+>  Tegucigalpa.** Y vamos a algo similar al tipo de envío, el modal así.
+>  Exactamente así."
+
+▶ **Cambia una decisión.** El 2026-08-08 Yusef difirió el módulo de empacar
+por sucursal (*"el de empacar no sé si lo cargamos ahorita y después lo vamos a
+mejorar"*) y quedó solo el aviso en `/etiquetar`. Ahora, con el manifiesto ya
+andando, pide la validación al escanear.
+
+**Lectura.** Un caso más en `EscaneoDeManifiesto`, con el mismo modal rojo que
+el tipo de envío distinto: si el manifiesto tiene sucursal de entrega y la
+sucursal de retiro del paquete es otra, no entra. Y la gemela: `/empacar`
+(empacar escaneando) mete paquetes en las casas del mismo manifiesto, así que
+lleva la misma regla.
+
+#### C29-08 · **Un sonido distinto para cada error** (min 21–22)
+
+> "Pero el ruido es el que tenemos que mejorar."
+> "Algo como que de verdad te llama, que está equivocada, que no va ahí."
+> "Escuchame esto: **si el tipo de envío es el error, tiene que tirar un sonido
+>  de una forma. Si la sucursal es el error, tiene que tirar un sonido de
+>  error, pero de otro tono.** O sea, diferentes."
+> "**Cada error tiene que tener un tono distinto** para que ellos sepan."
+
+Jorge le ofreció que los pudieran cambiar desde un panel. Yusef: *"ah, si vos
+me hacés un panel…"*. El modal de sonidos ya existe (`C16`); lo que falta es
+que el error de tipo y el de sucursal tengan cada uno el suyo, y más fuerte
+que el pip de hoy.
+
+#### C29-09 · Cambiarle el tipo de envío a un manifiesto **con paquetes adentro** (min 14–15) — ❓ lectura dudosa
+
+Jorge editó un manifiesto ya armado para agregarle otro tipo de envío, y
+funcionó (*"ya lo agregué el servicio, excelente, estamos bien"*). Y Yusef:
+
+> "Pero eso pasa de que ya metiste todo y **le cambiaste a otro servicio, y
+>  todos los que están adentro**… Sí, Jorge, **no puede ser**."
+
+**Lectura.** Agregar un tipo está bien. Quitarle a un manifiesto un tipo que
+ya tienen paquetes adentro deja esos paquetes en un manifiesto que no los
+acepta: el mismo error que `C28-04` bloquea al escanear, entrando por la
+puerta de editar. Se bloquea quitar un tipo que tenga paquetes adentro.
+
+#### C29-10 · El Excel muestra los trackings **en notación científica** (min 24)
+
+> "Algunos son como **con exponente**, el tracking."
+> "Pero es que el tracking, en buena teoría, son números y letras… **hay unos
+>  que solo son números**."
+
+El Excel del listado de paquetes (`C28-02`, el de `/paquetes` con el filtro
+por manifiesto) escribe como número el tracking que es solo dígitos, y Excel lo
+muestra como `9.2E+21`. Va como texto, y lo mismo el warehouse y la guía.
+
+#### C29-11 · ❓ La hoja del manifiesto no abrió la vista de impresión (min 24)
+
+> "Lo voy a imprimir… **no tiene el botón de imprimir a la mano**… es que no lo
+>  tiró como preview para imprimir… pero antes ya lo había dejado como preview."
+> (el listado) "Imprimir listado… **a éste sí salió bien**."
+
+La hoja del transportista (`C28-01`) esta vez abrió sin el diálogo de
+impresión, y el listado sí lo abrió. No queda claro si se abrió desde otro
+botón. Se revisa que la hoja se imprima sola como el listado, y que tenga su
+botón de imprimir a la vista.
+
+---
+
+### San Pedro: recibir la carga
+
+#### C29-12 · `/recepcion_carga` dice el **tipo de envío** y **la empresa** (min 29)
+
+> "El tipo de envío no sale acá, fijate. **Hay que poner tipo de envío, y la
+>  empresa que lo mandó, por dónde viene.**"
+
+La lista de manifiestos por recibir muestra número y cajas. Le faltan el tipo
+de envío del manifiesto y la empresa transportadora (que el paquete hereda del
+manifiesto).
+
+El resto de la recepción anduvo: *"no es una caja del MMIA…012"* al escanear la
+caja de otro manifiesto, y *"ya no tengo pendientes"* al terminar.
+
+---
+
+### La PESA
+
+#### C29-13 · **F9 imprime**, igual que en todas las pantallas (min 71)
+
+> "F10 le pusiste. **Normalmente es F9**, Jorge. F9 para imprimir siempre."
+> "Solo para que lo tengamos uniforme."
+
+En `/medicion` hoy F10 guarda (y con eso imprime) y F9 reimprime. En las casas
+del manifiesto F9 es «guardar e imprimir», y en `/etiquetar` también.
+
+#### C29-14 · **Una X grande en cada caja** escaneada, no solo «quitar la última» (min 48)
+
+> "Voy a quitar uno, ¿cómo quito uno?… **solo puede quitar la última.**"
+> "**Una X acá al lado, una X grande, porque acordate que va a hacer touch.**"
+> "Sí, una X grande, correcto."
+
+#### C29-15 · El **número de pre-alerta** en la etiqueta del volumen (min 50–54)
+
+Jorge preguntó si la etiqueta tenía que decir que estaba consolidando. Yusef
+lo bajó a una sola cosa:
+
+> "Cuando tiene pre-alertas, **que las pongas ahí en la etiqueta**."
+> "Sí, o sea, **solo el número de pre-alerta**. PA, tal."
+> **Jorge:** "¿En una etiqueta pueden haber varias pre-alertas o solo es una?"
+> "**Solo es una pre-alerta.**"
+
+Lo del consolidado no va en la etiqueta: *"en pre-factura es que va a mandar
+eso a guardar a consolidar"*.
+
+#### C29-16 · «Completado» mentía: **los paquetes del cliente que vinieron en el mismo manifiesto** (min 60–72)
+
+Escaneando a Diego, la pantalla dijo «Completado» con dos cajas:
+
+> "Me dice completado, **yo tengo más paquetes de Diego en el mismo
+>  manifiesto**. Debería decirte: hay más paquetes del cliente en el mismo
+>  manifiesto."
+> "No, no, no, por pre-alerta o sin pre-alerta, **aquí no es por pre-alerta**."
+> "Le diga: hey, **Diego tiene cinco paquetes en el vuelo y solo estás
+>  escaneando tres, y faltan dos en el mismo manifiesto**."
+> "Él tiene que cuadrar que vinieron esos cinco. Si no los cuadra, hace falta…
+>  y si hace falta hay que buscarlo… porque se supone que lo escaneó Miami,
+>  entonces debería de venir."
+
+La excepción, el consolidado:
+
+> "**Al menos que el cliente tenga un consolidado.** Si tengo un consolidado,
+>  como Sofía tenía un consolidado y tenía sin consolidar… ahí ya no le va a
+>  exigir que los mida juntos."
+> "Si viene consolidado, entonces solo tira los consolidados."
+
+Y dónde va: el panel de la derecha ya lista lo que falta **del manifiesto
+entero**.
+
+> "Esto es algo ya más general, pero aquí lo que me hace falta es que me dé
+>  **de Diego específicamente**."
+> "Ese listado que vos tenés acá lo podés poner abajo, porque **ese es
+>  independiente** para verlo."
+
+**Lectura.**
+- Al escanear la primera caja, si no viene en un consolidado: *"Diego tiene 5
+  en este manifiesto · llevás 3 · faltan 2"*, con la lista de esos paquetes.
+- «Completado» solo cuando no falta ninguno de ese cliente en ese manifiesto,
+  o cuando el grupo es un consolidado y está completo.
+- Si viene en un consolidado, la cuenta es la del consolidado (como hoy).
+- El listado general del manifiesto baja, debajo de lo de la tanda.
+- Lo que falta y **vino** en el manifiesto sigue el bloqueo con PIN de
+  `C28-13`. En el audio Jorge lo probó y lo frenó bien: *"mandarla a buscar…
+  porque como éste venía en el mismo manifiesto"*.
+
+#### C29-17 · **Unir un suelto al consolidado** desde la mesa — tres opciones (min 42–48, 72)
+
+Con el consolidado de Sofía abierto, escaneó otra caja de Sofía que no está en
+ninguna pre-alerta, y el modal le ofreció «hacer el consolidado», que **le
+borró lo que estaba haciendo**:
+
+> "En esta situación… **debería de preguntarte: lo agrego a este consolidado o
+>  lo hago aparte**. Porque hay clientes que le agregan a lo que tienen."
+> "Éste que tengo acá **debería de darte la opción de agregárselo a este
+>  consolidado**, porque ahora es uno y no tiene pre-alerta ni nada… está
+>  independiente, y tal vez el que pidió la cliente que se lo uniera."
+> "En vez de darle dolor de cabeza a alguien que empiece a agregarlos y a
+>  moverlos, **que el mismo que está pesando y midiendo los agrega**."
+> "¿Desea agregar este paquete a esta consolidación? Sí… o sigo procesando el
+>  que estoy trabajando, o dejarlo a un lado. **Tres opciones.**"
+
+Y la condición, dicha dos veces:
+
+> "Si yo escaneo un paquete que no tiene otra pre-alerta consolidando ni nada,
+>  debería de poderse unir aquí. **Siempre y cuando sea de la misma Sofía, y que
+>  no tenga otro consolidado o una pre-alerta independiente.**"
+
+| La caja que se escanea con un consolidado en la mesa… | Qué ofrece |
+|---|---|
+| Es del mismo cliente y **no tiene pre-alerta** | **Agregarla a este consolidado** · seguir con la mesa sin ella · dejarla de lado |
+| Tiene **otra** pre-alerta (consolidada o independiente) | Lo de hoy (`C27-04`): no se mezcla |
+| Es de otro cliente | Lo de hoy (`C27-05`) |
+
+«Agregar» la suma a la pre-alerta consolidada y entra a la mesa. Ver `RP-73`.
+
+#### C29-18 · La caja que llega **después** de un consolidado ya medido (min 72–74)
+
+> "Esto que vos pusiste aquí hay que explicárselo **en un modal**: este
+>  paquete está consolidando con otro, **traer el resto y medir, y unirlo**.
+>  Este es el caso de unirlo."
+> "Tres paquetes que fueron medidos, se agregaron a volumen… luego vino el
+>  complemento días después, en diferente manifiesto… está en estantes, y hay
+>  que volver a medir. **Una remedición nueva.** Porque van en un solo volumen
+>  los cuatro."
+> "Siempre pasa al muchacho de pre-facturación a remedir."
+
+Jorge propuso que la PESA mandara sola la pre-factura a actualizar, o que el
+mismo que mide lo devolviera al estante. Yusef lo frenó:
+
+> "Podría, pero **no lo hagamos todavía**, hasta que ya estemos bien avanzados
+>  en el sistema, ya en uso. Porque se le va a complicar mucho… **no quiero
+>  sobresaturar eso.**"
+
+**Lectura.** Al escanear una caja cuyo consolidado ya tiene cajas medidas: el
+modal dice cuáles están medidas (y desde cuándo, en el estante), y ofrece
+**medir de nuevo todo junto**: trae la tanda vieja a la mesa (`C27-33`) y le
+suma esta. Nada automático hacia la pre-factura.
+
+#### C29-19 · Las **notas** del cliente en la PESA, en un modal (min 46, 76)
+
+> "La clienta va a tener alguna nota aquí, porque como ya creamos el área de
+>  medición, **aquí van a estar las notas de prefacturación**… como esto es
+>  parte del área de prefacturación."
+> "Va a tocar crearle notas en prefacturación y en medición, y yo creo que **de
+>  momento no las deberíamos de separar**."
+> "El que necesita leer es las notas. **Las notas en modal**, las notas en
+>  todo."
+
+Y el espacio: *"me estoy quedando sin espacio… ese listado que vos tenés acá
+lo podés poner abajo"* (ver `C29-16`).
+
+#### C29-20 · «Facturar lo que hay» no es de la PESA (min 54–57) — 📄 aclara `C26-03`
+
+Jorge apretó «Facturar lo que hay» con una caja que no había venido, y Yusef:
+
+> "Es que **no debería dar eso**."
+> "Va a llegar a pre-factura a ponerle medidas y pesos, para después colocarlo
+>  en el estante de consolidado San Pedro… porque si el cliente lo quiere
+>  retirar, ya está hecho con medidas y pesos."
+> "**Se prefactura nada más, solo queda como prefactura abierta, pendiente de
+>  todo lo que viene.**"
+> "Pero en medición **no debería de darle guerra** de estar que si lo factura,
+>  si no lo factura."
+
+Al final lo dejó pasar (*"entonces sí dice facturar lo que hay, ok, vamos a
+seguir"*). **Lectura:** el paso está bien —lo que no vino no frena la PESA—,
+lo que está mal es la palabra. La PESA mide, no factura: el botón dice **«Medir
+lo que hay»**, y su aviso dice que la pre-factura va a quedar abierta esperando
+lo que falta.
+
+#### C29-21 · Lo que anduvo — 📄
+
+- El tipo de envío distinto en el manifiesto frenó con su modal: *"excelente"*.
+- El listado del manifiesto impreso: *"mirá qué bonito"*.
+- La caja que vino en el manifiesto y no está pidió el código de supervisor
+  (`C28-13`), y la que **no** vino no frenó: *"no tiró error, porque ya le
+  escaneé todo lo que viene en el manifiesto, y así debe ser"*.
+- «No ha llegado a Miami» para la caja que nunca se recibió: *"me gusta"*.
+- Agregar la caja del manifiesto sin peso y completarla después (`C28-05`).
+
+#### C29-22 · Grabar para capacitar — 📄 nota (min 31)
+
+> "Fijate que estas conversaciones… más adelante **habría que grabarlas para
+>  la capacitación** de esta gente."
+
+---
+
+### Lo que quedó abierto
+
+| # | Qué | Estado |
+|---|---|---|
+| `C29-01` | Los espacios de los bordes del tracking se quitan antes de validar | 🔲 Pendiente |
+| `C29-02` | «Cancelar» del modal de duplicado limpia el tracking | 🔲 Pendiente |
+| `C29-03` | La etiqueta del cliente sin sucursal de retiro, y la sucursal obligatoria al crear el cliente | 🔲 Pendiente |
+| `C29-04` | La descripción vacía y el formulario que no se limpió | ❓ Se revisa con `C29-01` |
+| `C29-05` | Contador del día y métricas por persona | 📄 Nota |
+| `C29-06` | Editar una caja y «Guardar e imprimir» revienta | 🔲 Pendiente |
+| `C29-07` | El manifiesto con sucursal de entrega no deja entrar paquetes de otra sucursal (y `/empacar` tampoco) | 🔲 Pendiente |
+| `C29-08` | Un sonido distinto por error: tipo de envío y sucursal | 🔲 Pendiente |
+| `C29-09` | No se le quita a un manifiesto un tipo de envío que tienen paquetes adentro | 🔲 Pendiente — ❓ lectura dudosa |
+| `C29-10` | El Excel escribe el tracking, el warehouse y la guía como texto | 🔲 Pendiente |
+| `C29-11` | La hoja del manifiesto se imprime sola y tiene su botón | ❓ Se revisa |
+| `C29-12` | `/recepcion_carga` con tipo de envío y empresa transportadora | 🔲 Pendiente |
+| `C29-13` | F9 imprime en `/medicion` | 🔲 Pendiente |
+| `C29-14` | Una X grande por caja escaneada | 🔲 Pendiente |
+| `C29-15` | El número de pre-alerta en la etiqueta del volumen | 🔲 Pendiente |
+| `C29-16` | Los paquetes del cliente en el mismo manifiesto: la cuenta, la lista filtrada y el «Completado» honesto | 🔲 Pendiente |
+| `C29-17` | Unir un suelto al consolidado desde la mesa | 🔲 Pendiente — ver `RP-73` |
+| `C29-18` | La caja que llega después de un consolidado medido: medir de nuevo todo junto | 🔲 Pendiente |
+| `C29-19` | Las notas del cliente en la PESA, en modal | 🔲 Pendiente |
+| `C29-20` | «Facturar lo que hay» pasa a «Medir lo que hay» | 🔲 Pendiente |
+| `C29-21` | Lo que anduvo | 📄 Confirma `C28` |
+| `C29-22` | Grabar para capacitar | 📄 Nota |
+
+### Las preguntas que abre
+
+| Id | Qué |
+|---|---|
+| `RP-73` | **Unir un suelto a un consolidado (`C29-17`): ¿queda en la pre-alerta consolidada?** La lectura es que sí: si no quedara, la pre-factura (que factura por pre-alerta, `C27-04`) lo facturaría aparte de la tanda con la que se midió. Se construye así y se confirma con Yusef, junto con quién puede hacerlo (hoy: el operario de la PESA, sin PIN, como lo dijo él: *"que el mismo que está pesando y midiendo los agrega"*) |
