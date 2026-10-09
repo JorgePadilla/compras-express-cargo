@@ -8,12 +8,15 @@ class SignosVitalesTest < ActiveSupport::TestCase
 
   # Una máquina armada a mano: rutas → contenido, y la salida de `df`.
   class FuenteFalsa
-    def initialize(archivos: {}, df: nil, nucleos: 2, du_kb: nil)
+    def initialize(archivos: {}, df: nil, nucleos: 2, du_kb: nil, puma_stats: nil)
       @archivos = archivos
       @df = df
       @nucleos = nucleos
       @du_kb = du_kb
+      @puma_stats = puma_stats
     end
+
+    attr_reader :puma_stats
 
     def leer(ruta) = @archivos.fetch(ruta) { raise Errno::ENOENT, ruta }
     def df(_ruta = "/") = @df || raise(Errno::ENOENT, "df")
@@ -63,14 +66,16 @@ class SignosVitalesTest < ActiveSupport::TestCase
   end
 
   # 2026-10-08 · Jorge, en staging: *"¿por qué el disco está tan lleno?"* —
-  # 82.9 %—. Era el disco de la máquina de Render, compartida. Ese va de
-  # referencia y sin semáforo; el que cuenta es el de la app.
-  test "el disco de la máquina de Render, lleno, no prende el semáforo" do
-    signos = SignosVitales.new(fuente: FuenteFalsa.new(df: df_al(95), du_kb: 10 * 1024))
-    maquina = medida(signos, :servidor, "Disco de la máquina de Render")
-    assert_nil maquina.nivel
-    assert_includes maquina.detalle, "no es nuestro"
-    assert_equal :bien, signos.secciones.find { |s| s.clave == :servidor }.nivel
+  # 82.9 %—. Era el disco de la máquina de Render, compartida. Y el
+  # 2026-10-09: *"aunque no sean nuestros siempre hay que mirarlos, porque si
+  # revientan muere la app"*. Cuenta, con la vara de una máquina compartida.
+  test "el disco de la máquina de Render: 83 % bien, 92 % para mirar, 97 % problema" do
+    { 83 => :bien, 92 => :mirar, 97 => :problema }.each do |porcentaje, nivel|
+      signos = SignosVitales.new(fuente: FuenteFalsa.new(df: df_al(porcentaje), du_kb: 10 * 1024))
+      assert_equal nivel, medida(signos, :servidor, "Disco de la máquina de Render").nivel, "máquina al #{porcentaje} %"
+    end
+    lleno = SignosVitales.new(fuente: FuenteFalsa.new(df: df_al(97), du_kb: 10 * 1024))
+    assert_equal :problema, lleno.secciones.find { |s| s.clave == :servidor }.nivel, "la máquina llena tiene que prender el semáforo"
   end
 
   test "el disco de la app: lo que ocupan tmp, log y storage" do
@@ -81,11 +86,13 @@ class SignosVitalesTest < ActiveSupport::TestCase
     assert_equal :mirar, medida(grande, :servidor, "Disco de la app").nivel
   end
 
-  test "la carga de la máquina va sin semáforo; la CPU nuestra sale de cgroup" do
+  test "la carga de la máquina cuenta por núcleos; la CPU nuestra sale de cgroup" do
     signos = SignosVitales.new(fuente: FuenteFalsa.new(archivos: {
       "/proc/loadavg" => "7.25 5.45 5.18 2/300 1234", "/sys/fs/cgroup/cpu.max" => "50000 100000"
     }, nucleos: 8))
-    assert_nil medida(signos, :servidor, "Carga de la máquina de Render").nivel
+    assert_equal :bien, medida(signos, :servidor, "Carga de la máquina de Render").nivel, "6 de carga con 8 núcleos"
+    ahogada = SignosVitales.new(fuente: FuenteFalsa.new(archivos: { "/proc/loadavg" => "20 18.5 12 9/300 1" }, nucleos: 8))
+    assert_equal :problema, medida(ahogada, :servidor, "Carga de la máquina de Render").nivel
     assert_equal "0.5 CPU", medida(signos, :servidor, "CPU del contenedor").valor
 
     sin_tope = SignosVitales.new(fuente: FuenteFalsa.new(archivos: { "/sys/fs/cgroup/cpu.max" => "max 100000" }))
@@ -130,6 +137,21 @@ class SignosVitalesTest < ActiveSupport::TestCase
                                        "message" => "La validacion fallo: Titulo no puede estar en blanco",
                                        "backtrace" => [ "/opt/render/…" ] })
     assert_equal "RecordInvalid: La validacion fallo: Titulo no puede estar en blanco", detalle
+  end
+
+  # Staging, 2026-10-09: «1 proceso · ? hilos». Puma no daba `max_threads` y
+  # Render no tiene `RAILS_MAX_THREADS`; queda el default de `config/puma.rb`.
+  test "sin estadísticas de hilos, Puma dice los de su configuración" do
+    fuente = FuenteFalsa.new(puma_stats: { "started_at" => "2026-10-09T00:00:00Z" })
+    con_env("RAILS_MAX_THREADS" => nil) do
+      assert_equal "1 proceso · 3 hilos", medida(SignosVitales.new(fuente: fuente), :servidor, "Puma").valor
+    end
+    con_env("RAILS_MAX_THREADS" => "5") do
+      assert_equal "1 proceso · 5 hilos", medida(SignosVitales.new(fuente: fuente), :servidor, "Puma").valor
+    end
+
+    con_hilos = FuenteFalsa.new(puma_stats: { max_threads: 4, busy_threads: 1 })
+    assert_equal "1 proceso · 4 hilos", medida(SignosVitales.new(fuente: con_hilos), :servidor, "Puma").valor
   end
 
   test "un worker que latió hace un minuto está vivo; uno de hace diez, no" do
@@ -184,5 +206,13 @@ class SignosVitalesTest < ActiveSupport::TestCase
     yield
   ensure
     ActiveJob::Base.queue_adapter = anterior
+  end
+
+  def con_env(vars)
+    viejas = vars.keys.to_h { |k| [ k, ENV[k] ] }
+    vars.each { |k, v| v.nil? ? ENV.delete(k) : ENV[k] = v }
+    yield
+  ensure
+    viejas.each { |k, v| v.nil? ? ENV.delete(k) : ENV[k] = v }
   end
 end
