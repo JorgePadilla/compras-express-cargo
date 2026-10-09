@@ -1,17 +1,29 @@
-<%# Toggle sun/moon. Requiere helper `theme_preferencia_url`. %>
+<%# Toggle sun/moon. Requiere helper `theme_preferencia_url`.
+
+    `en_barra: true` · el mismo botón en el pie de la barra lateral, con la
+    tinta de la barra (navy). En escritorio vive ahí desde 2026-10-08: tenía
+    un renglón propio arriba de cada pantalla, y ese renglón era la mitad del
+    aire que Jorge pidió sacar (*"all the pages the empty space on the top is
+    too big, we could reduce around 60%"*). %>
 <% if theme_toggle_available? %>
   <%
     is_dark = current_theme == "dark"
     aria_label = is_dark ? "Cambiar a tema claro" : "Cambiar a tema oscuro"
+    tinta = if local_assigns[:en_barra]
+      "w-8 h-8 rounded-md text-gray-300 hover:text-white hover:bg-white/10"
+    else
+      "w-9 h-9 rounded-lg text-gray-600 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+    end
+    clase_extra = local_assigns[:clase].to_s
   %>
-  <div data-controller="theme" data-theme-url-value="<%= theme_preferencia_url %>" class="inline-flex">
+  <div data-controller="theme" data-theme-url-value="<%= theme_preferencia_url %>" class="inline-flex <%= clase_extra %>">
     <button type="button"
             data-action="click->theme#toggle"
             data-theme-target="button"
             aria-pressed="<%= is_dark %>"
             aria-label="<%= aria_label %>"
-            class="inline-flex items-center justify-center w-9 h-9 rounded-lg
-                   text-gray-600 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700
+            title="<%= aria_label %>"
+            class="inline-flex items-center justify-center <%= tinta %>
                    foco-cec
                    transition-colors motion-reduce:transition-none">
       <span data-theme-target="iconLight" class="<%= 'hidden' if is_dark %>" aria-hidden="true">

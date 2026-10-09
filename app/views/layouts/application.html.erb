@@ -128,6 +128,11 @@
                 <%= heroicon "arrows-right-left", variant: :outline, options: { class: "w-4 h-4" } %>
               </button>
 
+              <%# El tema, que antes tenía un renglón propio arriba de cada
+                  pantalla. Oculto con la barra colapsada, como el pin: al
+                  pasar el mouse la barra se abre y aparece. %>
+              <%= render "shared/theme_toggle", en_barra: true, clase: "sidebar-collapsed-hide" %>
+
               <%# Logout %>
               <%= link_to session_path, data: { turbo_method: :delete },
                   class: "flex-1 flex items-center justify-center gap-2 p-1.5 rounded-md text-red-400 hover:text-red-300 hover:bg-red-500/10 text-sm transition-colors",
@@ -162,10 +167,12 @@
             <span class="font-bold text-cec-navy dark:text-cec-gold">CEC</span>
             <%= render "shared/theme_toggle" %>
           </header>
-          <%# Theme toggle desktop — fixed top-right %>
-          <div class="hidden lg:flex justify-end px-6 pt-4">
-            <%= render "shared/theme_toggle" %>
-          </div>
+          <%# 2026-10-08 · Acá había un renglón solo para el sol del tema: 16 px de
+              aire + 36 del botón, encima de los 32 del contenido. Jorge: *"all
+              the pages the empty space on the top is too big, we could reduce
+              around 60%"*. El sol se fue al pie de la barra lateral, con
+              «Salir», y el título arranca a 32 px en vez de ~88. En el celular
+              sigue en la barra de arriba, que ya existía. %>
 
           <%# Page content %>
           <div class="flex-1 p-4 md:p-6 lg:p-8">
