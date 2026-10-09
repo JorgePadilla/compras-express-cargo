@@ -78,8 +78,14 @@ class ButtonComponent < ViewComponent::Base
     danger: "bg-red-600 text-white hover:bg-red-700 shadow-sm",
 
     # El destructivo "suave" de los 7 `button_to` de anular. 5.91:1.
-    soft_danger: "bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 " \
-                 "dark:bg-red-900/30 dark:text-red-300 dark:border-red-800 " \
+    #
+    # 2026-10-08 · El borde subió de `red-200` a `red-500`. Jorge, en
+    # /medicion: *"some buttons are hard to distinguish"* — la X grande de
+    # cada caja escaneada era un rosa sobre blanco: `red-200` da 1.45:1 y el
+    # fondo `red-50` casi nada. `red-500` da 3.76:1 contra blanco y 3.90:1
+    # sobre `gray-800`: pasa el 3:1 de 1.4.11 en los dos modos.
+    soft_danger: "bg-red-50 text-red-700 border border-red-500 hover:bg-red-100 " \
+                 "dark:bg-red-900/30 dark:text-red-300 dark:border-red-500 " \
                  "dark:hover:bg-red-900/50",
 
     # PR-C29.12 · El ámbar de las **notas**, en claro: `amber-900` sobre
@@ -89,17 +95,32 @@ class ButtonComponent < ViewComponent::Base
     # *"feels different from the other"*—. Amber no va más sólido en ningún
     # lado (`tonos_de_modal_test`); para confirmar va `primary`, `teal` o
     # `gold`, y para avisar, la franja de `ModalHeaderComponent`.
-    warning: "bg-amber-50 text-amber-900 ring-1 ring-amber-300 hover:bg-amber-100 " \
-             "dark:bg-amber-900/20 dark:text-amber-200 dark:ring-amber-800 dark:hover:bg-amber-900/40",
+    #
+    # 2026-10-08 · El anillo, de `amber-300` (1.44:1 contra blanco: el botón
+    # «Notas del cliente» se leía como un cartel y no como algo que se
+    # aprieta) a `amber-600`, 3.19:1; en oscuro `amber-500` sobre `gray-800`,
+    # 6.83:1. Es un borde, no un relleno: amber sigue sin ser sólido.
+    warning: "bg-amber-50 text-amber-900 ring-1 ring-amber-600 hover:bg-amber-100 " \
+             "dark:bg-amber-900/20 dark:text-amber-200 dark:ring-amber-500 dark:hover:bg-amber-900/40",
 
     # Uno de los dos gradientes autorizados del design system. Absorbe los 4
     # `bg-cec-gold` planos de la app: dos oros que nadie sabe nombrar no son
     # dos variantes. `cec-navy-dark` sobre gold = 9.39:1.
-    gold: "btn-gold-gradient text-cec-navy-dark font-semibold shadow-sm shadow-cec-gold/25",
+    #
+    # 2026-10-08 · Y un canto: el oro sobre blanco da 1.76:1, así que el
+    # botón no tenía borde que lo separara de la tarjeta (1.4.11 pide 3:1).
+    # Un anillo interno de `cec-navy-dark` al 40 % sobre el oro da 3.99:1
+    # contra blanco y 3.74:1 contra el fondo de la página. El foco no se
+    # pisa: `foco-cec` es un `outline`, no un `ring`.
+    gold: "btn-gold-gradient text-cec-navy-dark font-semibold shadow-sm shadow-cec-gold/25 " \
+          "ring-1 ring-inset ring-cec-navy-dark/40",
 
     # El fondo de marca queda igual. Cambia la tinta: 2.46 → 6.69:1, y sobre
     # el hover (`cec-teal-dark`) 4.86:1.
-    teal: "bg-cec-teal text-cec-navy-dark hover:bg-cec-teal-dark shadow-sm",
+    #
+    # 2026-10-08 · El mismo canto que `gold`: teal sobre blanco da 2.46:1.
+    # `cec-navy-dark` al 40 % sobre el teal da 5.08:1 contra blanco.
+    teal: "bg-cec-teal text-cec-navy-dark hover:bg-cec-teal-dark shadow-sm ring-1 ring-inset ring-cec-navy-dark/40",
 
     # Borde y texto en `cec-teal-deep`: `border-cec-teal` da 2.46:1 y no llega
     # al 3:1 de 1.4.11 para un borde. 4.81:1 en claro, 7.58:1 en oscuro.

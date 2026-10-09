@@ -8,7 +8,9 @@
 <%# PR-C29.11 · `tactil: true` en las pantallas de pantalla táctil (/medicion):
     el mismo botón, del tamaño de un dedo. Jorge: *"all actionable in
     medicion should be easy to touch in a touch screen"*. %>
-<% tamano = local_assigns[:tactil] ? "text-base px-4 min-h-12" : "text-sm px-3 py-1.5" %>
+<%# Y en táctil con borde que se vea: `gray-300` da 1.47:1 contra blanco;
+    `gray-500`, 4.83:1 (1.4.11 pide 3:1). %>
+<% tamano = local_assigns[:tactil] ? "text-base px-4 min-h-12 ring-gray-500" : "text-sm px-3 py-1.5 ring-gray-300" %>
 
 <div data-controller="sonido-config"
      data-sonido-config-url-value="<%= preferencia_sonido_path %>"
@@ -16,7 +18,7 @@
 
   <button type="button" data-action="click->sonido-config#open"
           title="Configurar sonidos"
-          class="inline-flex items-center gap-1.5 <%= tamano %> rounded-lg foco-cec ring-1 ring-gray-300 dark:ring-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+          class="inline-flex items-center gap-1.5 <%= tamano %> rounded-lg foco-cec ring-1 dark:ring-gray-400 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
     <%= heroicon(habilitado ? "speaker-wave" : "speaker-x-mark", variant: :solid,
           options: { class: "w-4 h-4 #{habilitado ? 'text-cec-teal' : 'text-gray-400'}" }) %>
     Sonidos
