@@ -59,6 +59,38 @@ class Bulto < ApplicationRecord
   # se pregunta una sola vez.
   def tipo_envio = paquetes.first&.tipo_envio
 
+  # C29-15 · La pre-alerta que va en la etiqueta. Yusef, el 2026-10-08:
+  # *"cuando tiene pre-alertas, que las pongas ahí en la etiqueta… solo el
+  # número de pre-alerta. PA, tal"* — y a la pregunta de si puede haber
+  # varias: *"solo es una"*.
+  #
+  # Lo normal es una: «NO Mezclar» no deja juntar un consolidado con otra
+  # cosa. Pero dos cajas sueltas con pre-alertas independientes distintas sí
+  # pueden ir en la misma tanda, y la etiqueta no puede callarse la segunda:
+  # sale la primera y «+1». Sin pre-alerta, `nil`, y la etiqueta no cambia.
+  #
+  # Se busca por vínculo **o** por tracking, como `GrupoDeUnion`: el renglón
+  # de la pre-alerta puede no estar vinculado todavía. Y solo las del mismo
+  # cliente, para que un tracking repetido entre clientes no le ponga a esta
+  # etiqueta la pre-alerta de otro.
+  def pre_alerta_en_etiqueta
+    numeros = numeros_de_pre_alerta
+    return nil if numeros.empty?
+
+    numeros.size == 1 ? numeros.first : "#{numeros.first} +#{numeros.size - 1}"
+  end
+
+  def numeros_de_pre_alerta
+    lista = cajas
+    return [] if lista.empty?
+
+    PreAlerta.activas.where(cliente_id: cliente_id)
+             .joins(:pre_alerta_paquetes)
+             .where("pre_alerta_paquetes.paquete_id IN (:ids) OR UPPER(pre_alerta_paquetes.tracking) IN (:trk)",
+                    ids: lista.map(&:id), trk: lista.map { |c| c.tracking.to_s.upcase })
+             .distinct.order(:numero_documento).pluck(:numero_documento)
+  end
+
   private
 
   def calcular_volumetrico

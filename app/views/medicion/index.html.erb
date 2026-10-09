@@ -67,8 +67,13 @@
     <% h.with_action { render "shared/sonido_config" } %>
   <% end %>
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-2 space-y-4">
+  <%# C29-16/19 · Una columna. Lo que falta del manifiesto entero vivía a la
+      derecha y le comía a la tanda el lugar que ahora necesitan las notas y
+      la cuenta del cliente. Yusef: *"me estoy quedando sin espacio… ese
+      listado que vos tenés acá lo podés poner abajo, porque **ese es
+      independiente** para verlo"*. %>
+  <div class="space-y-6">
+    <div class="space-y-4">
       <%# ── Una sola tarjeta, de arriba abajo, en el orden del trabajo ──── %>
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
         <div class="p-6 space-y-5">
@@ -98,7 +103,16 @@
                 cuáles faltan y dónde están. Es la «Notificación» de la pizarra
                 —*medir → notificación → buscar el resto*— sin cuadritos. %>
             <div class="rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 px-4 py-3">
-              <p class="text-lg font-semibold text-gray-800 dark:text-gray-100" data-medicion-target="tandaCliente"></p>
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <p class="text-lg font-semibold text-gray-800 dark:text-gray-100" data-medicion-target="tandaCliente"></p>
+                <%# C29-19 · Las notas se abren solas la primera vez que
+                    aparecen —*"el que necesita leer es las notas. Las notas
+                    en modal"*— y este botón las vuelve a abrir. Sin notas, no
+                    está: un botón que abre un modal vacío enseña a no
+                    apretarlo. %>
+                <%= render(ButtonComponent.new(variant: :warning, size: :md, icon: "chat-bubble-left-ellipsis",
+                      data: { medicion_target: "notasBoton", action: "medicion#verNotas" }, hidden: true)) do %><span data-medicion-target="notasBotonTexto">Notas del cliente</span><% end %>
+              </div>
               <%# ── Los dibujitos del envío ──────────────────────────────────
                   La primera versión de esto era una frase: diez códigos de
                   dieciocho caracteres con su paréntesis cada uno. Jorge, con un
@@ -255,7 +269,15 @@
               <ul class="space-y-2" data-medicion-target="mesa"></ul>
 
               <%# El renglón vive en el ERB y no en el JS: el markup se lee acá
-                  y Tailwind ve sus clases. El JS lo clona y lo llena. %>
+                  y Tailwind ve sus clases. El JS lo clona y lo llena.
+
+                  C29-14 · **Una X grande en cada caja.** Antes solo se podía
+                  quitar la última, y Jorge lo tropezó en la prueba: *"voy a
+                  quitar uno, ¿cómo quito uno?… solo puede quitar la última"*.
+                  Yusef: *"una X acá al lado, **una X grande, porque acordate
+                  que va a hacer touch**"*. Es `size: :lg` con el mínimo de 44
+                  px: la pantalla de la PESA es táctil. Sacar no es elegir de
+                  una lista (C27-02): la caja entró por un pip y se deshace. %>
               <template data-medicion-target="plantillaMesa">
                 <li class="flex items-center gap-3 rounded-lg ring-1 ring-cec-teal/40 bg-cec-teal/5 px-3 py-2">
                   <span class="w-7 shrink-0 text-center text-sm font-bold text-cec-teal-dark" data-campo="orden"></span>
@@ -263,16 +285,10 @@
                     <p class="font-mono text-base font-bold text-cec-navy dark:text-cec-gold" data-campo="wr"></p>
                     <p class="text-xs text-gray-600 dark:text-gray-300 truncate" data-campo="detalle"></p>
                   </div>
+                  <%= render(ButtonComponent.new(variant: :soft_danger, size: :lg, icon: "x-mark", label: "Quitar esta caja de la tanda",
+                        data: { action: "medicion#quitarCaja" }, class: "shrink-0 min-h-12 min-w-12")) %>
                 </li>
               </template>
-
-              <div class="mt-2">
-                <%# La única forma de sacar algo de lo escaneado: la última. Es el
-                    mismo gesto del modal de «diferente cliente»: *"¿desea
-                    eliminar este último…?"*. %>
-                <%= render(ButtonComponent.new(variant: :secondary, size: :sm, label: "Quitar la última caja escaneada",
-                      data: { medicion_target: "quitarUltima", action: "medicion#quitarUltimaCaja" }, hidden: true)) { "Quitar la última" } %>
-              </div>
             </div>
           </div>
         </div>
@@ -280,7 +296,7 @@
         <%# ── f · la barra, pegada abajo de la tarjeta ─────────────────────
             `sticky bottom-0`: en la laptop táctil los botones no se van del
             pliegue. El texto del primero lo reescribe el JS según lo que va a
-            pasar: con dos volúmenes, F10 imprime dos etiquetas, y prometer una
+            pasar: con dos volúmenes, F9 imprime dos etiquetas, y prometer una
             sería mentir. Va en un `<span>` para poder cambiarlo; como el botón
             tiene contenido, ese texto **es** su nombre accesible. «Reimprimir»
             no está acá: vive en el banner, cuando hay algo que reimprimir. %>
@@ -288,7 +304,14 @@
              data-medicion-target="barra">
           <%= render(ButtonComponent.new(variant: :secondary, size: :lg, shortcut: "F2", shortcut_label_only: true,
                 data: { action: "medicion#limpiar" })) { "Limpiar" } %>
-          <%= render(ButtonComponent.new(variant: :gold, size: :lg, shortcut: "F10", shortcut_label_only: true,
+          <%# C29-13 · **F9**, como en las casas del manifiesto y en
+              /etiquetar. Yusef, en la prueba del 2026-10-08: *"F10 le
+              pusiste. Normalmente es F9, Jorge. F9 para imprimir siempre…
+              solo para que lo tengamos uniforme"*. Acá guardar siempre
+              imprime, así que es la misma tecla. F10 sigue guardando sin
+              rótulo, como en /etiquetar («guardar es F9 o F10»): el que ya
+              se la aprendió no pierde la tanda. %>
+          <%= render(ButtonComponent.new(variant: :gold, size: :lg, shortcut: "F9", shortcut_label_only: true,
                 data: { medicion_target: "guardar", action: "medicion#guardar" })) do %><span data-medicion-target="guardarTexto">Guardar e imprimir</span><% end %>
         </div>
       </div>
@@ -297,17 +320,26 @@
           La pantalla se limpia para la siguiente —Jorge: *"cuando se facture o
           se termine de imprimir se debería limpiar"*— y esto guarda el
           resultado con las únicas acciones que todavía tienen sentido:
-          reimprimir, y —solo si el consolidado quedó incompleto— «Facturar lo
-          que hay», que abre el modal rojo de siempre. Se va con el escaneo
-          siguiente. %>
+          reimprimir, y —solo si el consolidado quedó incompleto— «Medir lo
+          que hay» (C29-20; se llamaba «Facturar»), que abre el modal rojo de
+          siempre. Se va con el escaneo siguiente. %>
       <div hidden class="rounded-lg bg-cec-teal/10 text-cec-teal-dark p-4" data-medicion-target="banner">
         <p class="text-lg font-semibold" data-medicion-target="bannerTexto"></p>
         <p hidden class="mt-1 text-base text-amber-900" data-medicion-target="bannerFaltan"></p>
         <div class="mt-3 flex flex-wrap items-center gap-3">
-          <%= render(ButtonComponent.new(variant: :secondary, size: :md, shortcut: "F9", shortcut_label_only: true,
+          <%# C29-13 · Reimprimir deja F9 —que ahora guarda— y pasa a F4,
+              que en el resto de la app ya es «imprimir un documento»
+              (`teclas_por_familia_test`). %>
+          <%= render(ButtonComponent.new(variant: :secondary, size: :md, shortcut: "F4", shortcut_label_only: true,
                 data: { medicion_target: "bannerReimprimir", action: "medicion#reimprimir" }, hidden: true)) do %><span data-medicion-target="bannerReimprimirTexto">Reimprimir</span><% end %>
-          <%= render(ButtonComponent.new(variant: :danger, size: :md, label: "Facturar lo que hay, sin el grupo completo",
-                data: { medicion_target: "bannerFacturar", action: "medicion#abrirExcepcion" }, hidden: true)) { "Facturar lo que hay" } %>
+          <%# C29-20 · «Medir lo que hay», no «facturar». Yusef, cuando Jorge
+              lo apretó: *"es que no debería dar eso… se prefactura nada más,
+              solo queda como prefactura abierta, pendiente de todo lo que
+              viene… en medición no debería de darle guerra de estar que si lo
+              factura, si no lo factura"*. La PESA mide; el paso es el mismo
+              (`PasarGrupoIncompleto`), lo que mentía era la palabra. %>
+          <%= render(ButtonComponent.new(variant: :danger, size: :md, label: "Medir lo que hay, sin el grupo completo",
+                data: { medicion_target: "bannerFacturar", action: "medicion#abrirExcepcion" }, hidden: true)) { "Medir lo que hay" } %>
         </div>
       </div>
     </div>
@@ -320,7 +352,10 @@
         le sirve a nadie parado en la línea; lo que falta, sí.
 
         El panel sigue al manifiesto de la caja que se acaba de escanear. %>
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden self-start"
+    <%# C29-16 · Abajo y no al costado: es el listado general, *"ese es
+        independiente para verlo"*. Lo del cliente de la tanda va arriba, en
+        la tarjeta. %>
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden"
          data-medicion-target="panelManifiesto">
       <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
         <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100">Lo que falta de este manifiesto</h2>
@@ -354,6 +389,33 @@
       </template>
     </div>
   </div>
+
+  <%# ── C29-19 · Las notas del cliente ──────────────────────────────────────
+      Las mismas que lee pre-factura: *"de momento no las deberíamos de
+      separar"*. Cada bloque con su rótulo y su color, como en la franja de
+      /etiquetar. Enter = Entendido; Escape frenado, como todo aviso de esta
+      pantalla (C20-13). Los bloques los clona el JS de la plantilla. %>
+  <dialog data-medicion-target="notasModal" data-action="cancel->medicion#avisoCancelar"
+          style="margin: auto" class="rounded-xl p-0 w-[44rem] max-w-[95vw] backdrop:bg-black/70">
+    <div class="px-8 py-5 bg-amber-700 text-white">
+      <p class="text-xs font-bold uppercase tracking-wider">Antes de medir</p>
+      <p class="text-3xl font-bold mt-1">Notas del cliente</p>
+      <p class="text-base mt-1" data-medicion-target="notasCliente"></p>
+    </div>
+    <div class="bg-white px-8 py-6">
+      <ul class="space-y-3 max-h-[60vh] overflow-y-auto" data-medicion-target="notasLista"></ul>
+    </div>
+    <div class="flex items-center justify-end gap-3 px-8 py-4 bg-gray-50 border-t border-gray-200">
+      <%= render(ButtonComponent.new(variant: :primary, size: :lg, label: "Entendido",
+            data: { medicion_target: "notasEntendido", action: "medicion#cerrarNotas" })) { "Entendido" } %>
+    </div>
+  </dialog>
+  <template data-medicion-target="plantillaNota">
+    <li class="rounded-lg ring-1 px-4 py-3">
+      <p class="text-xs font-bold uppercase tracking-wider" data-campo="etiqueta"></p>
+      <p class="mt-1 text-lg text-gray-900 whitespace-pre-line" data-campo="texto"></p>
+    </li>
+  </template>
 
   <%# ── El modal rojo grande ──────────────────────────────────────────────
       Jorge: *"se debe mostrar un modal rojo grande con el problema que se
@@ -432,24 +494,29 @@
     </div>
   </dialog>
 
-  <%# ── Facturar lo que hay: la alerta, y se pasa ───────────────────────── %>
+  <%# ── Medir lo que hay: la alerta, y se pasa ──────────────────────────────
+      C29-20 · Se llamaba «Facturar lo que hay», y la PESA no factura. Lo
+      que pasa de verdad lo dijo Yusef: *"se prefactura nada más, solo queda
+      como prefactura abierta, pendiente de todo lo que viene"*. El texto lo
+      dice así, para que nadie crea que con esto se le cobra al cliente. %>
   <dialog data-medicion-target="excepcionModal" data-action="cancel->medicion#avisoCancelar"
           style="margin: auto" class="rounded-xl p-0 w-[44rem] max-w-[95vw] backdrop:bg-black/70">
     <div class="px-8 py-5 bg-red-700 text-white">
       <p class="text-xs font-bold uppercase tracking-wider">El grupo está incompleto</p>
-      <p class="text-3xl font-bold mt-1" data-medicion-target="excepcionTitulo">Facturar lo que hay</p>
+      <p class="text-3xl font-bold mt-1" data-medicion-target="excepcionTitulo">Medir lo que hay</p>
     </div>
     <div class="bg-white px-8 py-6 space-y-4">
       <p class="text-xl text-gray-900">Se va a seguir sin estas cajas:</p>
       <ul class="text-lg font-mono text-red-800 space-y-1" data-medicion-target="excepcionFaltantes"></ul>
+      <p class="text-base text-gray-600">La pre-factura va a quedar <strong>abierta</strong>, esperando lo que falta: nadie le cobra al cliente con esto.</p>
       <p class="text-base text-gray-600">Queda anotado en la pre-alerta con tu nombre, la hora y lo que faltaba.</p>
       <p hidden class="text-base font-medium text-red-700" data-medicion-target="excepcionError"></p>
     </div>
     <div class="flex items-center justify-end gap-3 px-8 py-4 bg-gray-50 border-t border-gray-200">
       <%= render(ButtonComponent.new(variant: :secondary, size: :md, label: "Cancelar la excepción",
             data: { action: "medicion#cerrarExcepcion" })) { "Cancelar" } %>
-      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Sí, facturar lo que hay",
-            data: { medicion_target: "confirmarParcial", action: "medicion#confirmarParcial" })) { "Sí, facturar lo que hay" } %>
+      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Sí, medir lo que hay",
+            data: { medicion_target: "confirmarParcial", action: "medicion#confirmarParcial" })) { "Sí, medir lo que hay" } %>
     </div>
   </dialog>
 
@@ -459,7 +526,7 @@
       manifiesto este no venían más, pero si viene y venían más paquetes no lo
       debería dejar"* · *"para todos estos bloqueos va a haber alguien que lo va
       a desbloquear, a autorizar… con su código"*. Lo que no vino sigue pasando
-      sin PIN («Facturar lo que hay»); esto es solo para lo que está acá y no
+      sin PIN («Medir lo que hay»); esto es solo para lo que está acá y no
       apareció en la tanda.
 
       La lista de quién puede es `User.autorizantes`: los que llevan PIN desde

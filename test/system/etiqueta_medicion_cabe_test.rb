@@ -52,6 +52,38 @@ class EtiquetaMedicionCabeTest < ApplicationSystemTestCase
     assert_selector ".qr svg"
   end
 
+  # C29-15 · El número de la pre-alerta entra en la fila del código: *"solo el
+  # número de pre-alerta. PA, tal"*. La peor: la décima de diez, y con **dos**
+  # pre-alertas independientes, que la etiqueta no puede callarse —sale la
+  # primera y «+1»—. Todo en una fila que ya existía, y sin recortar nada.
+  test "la etiqueta del bulto con su pre-alerta, en la peor tanda, sigue cabiendo" do
+    bulto = Bulto.create!(cliente: clientes(:juan), sesion: SecureRandom.uuid, orden: 10, de_cuantos: 10,
+                          medido_at: Time.current, medido_por: "MD",
+                          peso: 999.5, alto: 99.5, largo: 99.5, ancho: 99.5)
+    @paquete.update!(medicion_sesion: bulto.sesion)
+    otra = caja_del(bulto, 1)
+    pre_alerta_de(@paquete, "PA-999998")
+    pre_alerta_de(otra, "PA-999999")
+
+    visit etiqueta_bulto_medicion_path(bulto)
+
+    assert_cabe
+    assert_selector ".codigo", text: "PA-999998 +1"
+    assert_text "RMI0002026000901-12"
+    assert_text "10 de 10"
+  end
+
+  test "sin pre-alerta, la etiqueta no inventa ninguna" do
+    bulto = Bulto.create!(cliente: clientes(:juan), sesion: SecureRandom.uuid, orden: 1, de_cuantos: 1,
+                          medido_at: Time.current, medido_por: "MD", peso: 20)
+    @paquete.update!(medicion_sesion: bulto.sesion)
+
+    visit etiqueta_bulto_medicion_path(bulto)
+
+    assert_text "RMI0002026000901-12"
+    assert_no_text "PA-"
+  end
+
   # Escanear la caja lleva a la etiqueta del bulto: es una por medición, no una
   # por caja.
   test "la etiqueta de una caja con bulto es la del bulto" do
@@ -92,6 +124,13 @@ class EtiquetaMedicionCabeTest < ApplicationSystemTestCase
       "return [e.scrollHeight, e.clientHeight, e.scrollWidth, e.clientWidth];})()"
     )
     { alto: m[0], altoVisible: m[1], ancho: m[2], anchoVisible: m[3] }
+  end
+
+  def pre_alerta_de(paquete, numero)
+    pa = PreAlerta.create!(numero_documento: numero, cliente: clientes(:juan), tipo_envio: tipo_envios(:aereo),
+                           estado: "pre_alerta", titulo: "Pre-alerta", creado_por_tipo: "usuario",
+                           creado_por_id: users(:admin).id)
+    pa.pre_alerta_paquetes.create!(tracking: paquete.tracking, descripcion: "Zapatos", fecha: Date.current, paquete: paquete)
   end
 
   def caja_del(bulto, i)
