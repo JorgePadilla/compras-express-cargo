@@ -706,6 +706,37 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_no_selector "[data-medicion-target='notasBoton']", visible: :visible
   end
 
+  # C29-16 · «Completado» mentía: *"me dice completado, yo tengo más paquetes
+  # de Diego en el mismo manifiesto"*. La cuenta de lo suelto va por cliente y
+  # por manifiesto, con la lista de lo que falta.
+  test "los sueltos del cliente en el manifiesto: cuántos tiene, cuántos llevás, cuáles faltan, y COMPLETADO solo con todos" do
+    manifiesto = Manifiesto.create!(tipo_envios: [ tipo_envios(:cer) ], sucursal_origen: sucursales(:miami),
+                                    estado: "recibido", fecha_enviado: Time.zone.parse("2026-10-01"),
+                                    fecha_aduana: Time.zone.parse("2026-10-06"))
+    segunda = caja("1ZDIEGO00000002")
+    tercera = caja("1ZDIEGO00000003")
+    [ @paquete, segunda, tercera ].each { |p| p.update!(manifiesto: manifiesto) }
+
+    visit medicion_index_path
+    escanear_a_la_mesa(@paquete, 1)
+
+    assert_selector "[data-medicion-target='tandaConsolidado']",
+                    text: "#{clientes(:juan).nombre_completo} tiene 3 en el manifiesto #{manifiesto.numero}", wait: 5
+    assert_selector "[data-medicion-target='tandaContador']", text: "1 de 3"
+    assert_selector "[data-medicion-target='tandaFaltan']", text: "faltan 2"
+    assert_selector "[data-medicion-target='tandaAusentes']", text: tercera.reload.numero_recepcion
+    assert_selector "[data-medicion-target='tandaAusentes']", text: "acá, sin medir"
+
+    escanear_a_la_mesa(segunda, 2)
+    assert_selector "[data-medicion-target='tandaContador']", text: "2 de 3", wait: 5
+    assert_no_selector "[data-medicion-target='tandaCompleto']", visible: :visible
+
+    escanear_a_la_mesa(tercera, 3)
+    assert_selector "[data-medicion-target='tandaCompleto']", text: "COMPLETADO", wait: 5
+    assert_selector "[data-medicion-target='tandaConsolidado']", text: "llevás 3"
+    assert_no_selector "[data-medicion-target='tandaAusentes']", visible: :visible
+  end
+
   private
 
   def consolidado_con(paquete)
