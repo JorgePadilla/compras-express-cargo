@@ -59,6 +59,7 @@ class EtiquetarControllerTest < ActionDispatch::IntegrationTest
   test "create usa el tipo de envío de la sesión e ignora el del form" do
     post etiquetar_url, params: { paquete: {
       tracking: "1Z999SESSIONTIPO1",
+      descripcion: "Ropa",
       cliente_id: clientes(:juan).id,
       tipo_envio_id: tipo_envios(:cem).id, # debe ser ignorado
       peso: 3.0
@@ -87,6 +88,7 @@ class EtiquetarControllerTest < ActionDispatch::IntegrationTest
   test "create asigna tercero_id" do
     post etiquetar_url, params: { paquete: {
       tracking: "1Z999TERCERO001",
+      descripcion: "Ropa",
       cliente_id: clientes(:juan).id,
       tercero_id: clientes(:maria).id,
       peso: 4.0
@@ -173,6 +175,7 @@ class EtiquetarControllerTest < ActionDispatch::IntegrationTest
     assert_difference("Paquete.count", 1) do
       post etiquetar_url, params: { paquete: {
         tracking: "1Z999SINGLECTRL001",
+        descripcion: "Ropa",
         cliente_id: clientes(:juan).id,
         cantidad_paquetes: 1
       } }

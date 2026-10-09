@@ -82,6 +82,7 @@ class EtiquetarCajasModalTest < ApplicationSystemTestCase
     find("#paquete_tracking").set(tracking)
     find("[data-etiquetar-target='clienteInput']").set("Juan")
     find("[data-etiquetar-target='clienteDropdown'] *", match: :first, wait: 5).click
+    find("#paquete_descripcion").set("Ropa")  # C30-03: obligatoria
 
     find("button", text: "Guardar + Imprimir", match: :first).click
     assert_selector "[data-etiquetar-target='etiquetasModal'][open]", wait: 3
@@ -141,6 +142,7 @@ class EtiquetarCajasModalTest < ApplicationSystemTestCase
     find("#paquete_tracking").set(tracking)
     find("[data-etiquetar-target='clienteInput']").set("Juan")
     find("[data-etiquetar-target='clienteDropdown'] *", match: :first, wait: 5).click
+    find("#paquete_descripcion").set("Ropa")  # C30-03: obligatoria
     find("[data-caja-campo='peso']").set(7.5)
     assert_selector ".caja-fila", count: 0
 
@@ -191,6 +193,7 @@ class EtiquetarCajasModalTest < ApplicationSystemTestCase
     find("#paquete_tracking").set("1Z999MODALTEST#{rand(1000)}")
     find("[data-etiquetar-target='clienteInput']").set("Juan")
     find("[data-etiquetar-target='clienteDropdown'] *", match: :first, wait: 5).click
+    find("#paquete_descripcion").set("Ropa")  # C30-03: obligatoria
   end
 
   def guardar_con_etiquetas(tracking, cantidad)
@@ -201,6 +204,7 @@ class EtiquetarCajasModalTest < ApplicationSystemTestCase
     find("#paquete_tracking").set(tracking)
     find("[data-etiquetar-target='clienteInput']").set("Juan")
     find("[data-etiquetar-target='clienteDropdown'] *", match: :first, wait: 5).click
+    find("#paquete_descripcion").set("Ropa")  # C30-03: obligatoria
 
     find("button", text: "Guardar + Imprimir", match: :first).click
     assert_selector "[data-etiquetar-target='etiquetasModal'][open]", wait: 3

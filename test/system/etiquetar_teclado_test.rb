@@ -103,6 +103,8 @@ class EtiquetarTecladoTest < ApplicationSystemTestCase
   test "F10 envia el formulario" do
     espiar_submit
     campo("paquete_tracking").send_keys("1Z999TECLADO005")
+    # C30-03: sin descripción el navegador no deja enviar (`required`).
+    campo("paquete_descripcion").set("Ropa")
 
     page.send_keys(:f10)
 
@@ -112,6 +114,8 @@ class EtiquetarTecladoTest < ApplicationSystemTestCase
   test "F8 sigue funcionando mientras Miami se acostumbra" do
     espiar_submit
     campo("paquete_tracking").send_keys("1Z999TECLADO006")
+    # C30-03: sin descripción el navegador no deja enviar (`required`).
+    campo("paquete_descripcion").set("Ropa")
 
     page.send_keys(:f8)
 
@@ -200,6 +204,8 @@ class EtiquetarTecladoTest < ApplicationSystemTestCase
     # reintroducir sin que nadie lo note.
     espiar_submit
     campo("paquete_tracking").send_keys("1Z999TECLADO008")
+    # C30-03: sin descripción el navegador no deja enviar (`required`).
+    campo("paquete_descripcion").set("Ropa")
     page.execute_script("document.activeElement.blur()")
 
     page.send_keys(:f10)
