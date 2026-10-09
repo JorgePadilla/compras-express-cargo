@@ -122,7 +122,7 @@ class AccesoDelClienteTest < ActionDispatch::IntegrationTest
     post session_url, params: { email_address: users(:admin).email_address, password: "password123" }
 
     assert_difference "Cliente.count", 1 do
-      post clientes_url, params: { cliente: { nombre: "Jorge Alejandro", apellido: "Padilla Ferico" } }
+      post clientes_url, params: { cliente: { sucursal_retiro_id: sucursales(:humuya_tgu).id, nombre: "Jorge Alejandro", apellido: "Padilla Ferico" } }
     end
   end
 

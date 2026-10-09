@@ -8,6 +8,7 @@ class RegistrationsController < ApplicationController
 
   def new
     @cliente = Cliente.new
+    @sucursales_retiro = Sucursal.de_retiro
   end
 
   def create
@@ -24,12 +25,16 @@ class RegistrationsController < ApplicationController
     # Los 9.000 importados siguen sin enterarse: la regla la enciende esta
     # bandera, y solo la encienden las dos pantallas donde alguien teclea.
     @cliente.exigir_nombre_completo = true
+    # C29-03 · La gemela de `/clientes#create`: dónde retira se pregunta al
+    # abrir el casillero, y acá es el cliente mismo el que lo abre.
+    @cliente.exigir_sucursal_retiro = true
     @cliente.activo = true
 
     if @cliente.save
       start_new_cliente_session_for(@cliente)
       redirect_to cuenta_root_path, notice: "Bienvenido a Compras Express Cargo! Tu cuenta ha sido creada exitosamente."
     else
+      @sucursales_retiro = Sucursal.de_retiro
       render :new, status: :unprocessable_entity
     end
   end
@@ -37,6 +42,7 @@ class RegistrationsController < ApplicationController
   private
 
   def registration_params
-    params.require(:cliente).permit(:nombre, :apellido, :email, :telefono, :password, :password_confirmation)
+    params.require(:cliente).permit(:nombre, :apellido, :email, :telefono, :sucursal_retiro_id,
+                                    :password, :password_confirmation)
   end
 end

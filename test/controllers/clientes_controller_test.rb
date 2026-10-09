@@ -37,7 +37,7 @@ class ClientesControllerTest < ActionDispatch::IntegrationTest
 
   test "should create cliente" do
     assert_difference("Cliente.count") do
-      post clientes_url, params: { cliente: {
+      post clientes_url, params: { cliente: { sucursal_retiro_id: sucursales(:humuya_tgu).id,
         nombre: "Nuevo", apellido: "Cliente De Prueba", email: "nuevo@test.com",
         telefono: "99998888", ciudad: "Tegucigalpa"
       } }

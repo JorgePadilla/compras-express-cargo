@@ -144,13 +144,14 @@ class EtiquetaCabeTest < ApplicationSystemTestCase
   # envío completo y después el código del proveedor—, así que va como test y
   # no como cosa a revisar de vista.
   test "la sucursal donde retira nunca sale truncada" do
-    # El caso largo, que es el que importa. C25-08: sin sucursal en el paquete
-    # ya **no** cae a la ciudad del cliente sino a la sucursal de retiro por
-    # defecto — Yusef: *"tiene que decir Zerón SPS, así se llama la sucursal"*.
-    # Se le da un nombre largo a propósito, que es lo que este test cuida.
-    @paquete.update!(sucursal: nil)
-    Sucursal.update_all(retiro_por_defecto: false)
-    sucursales(:zeron_sps).update!(retiro_por_defecto: true)
+    # El caso largo, que es el que importa. C25-08: dice **la sucursal** —
+    # Yusef: *"tiene que decir Zerón SPS, así se llama la sucursal"*—. Se le
+    # da un nombre largo a propósito, que es lo que este test cuida.
+    #
+    # C29-03 · Ya no se llega a ella por el fallback de la de por defecto: un
+    # paquete sin sucursal imprime «SIN SUCURSAL» (lo cuida
+    # `sucursal_de_retiro_obligatoria_test`). Acá se la pone explícita.
+    @paquete.update!(sucursal: sucursales(:zeron_sps))
 
     visit etiqueta_paquete_path(@paquete)
 
@@ -168,7 +169,7 @@ class EtiquetaCabeTest < ApplicationSystemTestCase
     # test solo medía ancho, y «Tegucigalpa» también cabe: pasaba con el
     # fallback viejo puesto. Un test que no distingue el bug no es un test.
     assert_includes recorte[2], sucursales(:zeron_sps).nombre,
-                    "sin sucursal en el paquete tiene que caer a la de retiro por defecto"
+                    "la etiqueta tiene que decir la sucursal del paquete"
     assert_not_includes recorte[2], @paquete.cliente.ciudad.to_s,
                         "la ciudad del cliente ya no es el fallback: con dos sucursales en la misma ciudad no dice dónde"
   end

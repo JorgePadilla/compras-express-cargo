@@ -22,7 +22,9 @@ require "application_system_test_case"
 # ("no sé si lo cargamos ahorita y después lo vamos a mejorar").
 class EtiquetarAvisoSucursalTest < ApplicationSystemTestCase
   setup do
-    clientes(:maria).update!(ciudad: "Tegucigalpa")
+    # C29-03 · El aviso sale de la sucursal de retiro, nunca de la ciudad: la
+    # ciudad es otra a propósito, para que un regreso al fallback se vea.
+    clientes(:maria).update!(ciudad: "Choluteca", sucursal_retiro: sucursales(:humuya_tgu))
 
     ingresar(users(:digitador))
 
@@ -33,7 +35,7 @@ class EtiquetarAvisoSucursalTest < ApplicationSystemTestCase
     elegir_cliente
 
     assert_selector "[data-etiquetar-target=sucursalBanner]:not(.hidden)", wait: 5
-    assert_text "Se entregará en Tegucigalpa"
+    assert_text "Se entregará en #{sucursales(:humuya_tgu).nombre}"
   end
 
   test "sin cliente elegido no avisa nada" do
@@ -51,12 +53,18 @@ class EtiquetarAvisoSucursalTest < ApplicationSystemTestCase
     assert_no_selector "[data-etiquetar-target=sucursalBanner]:not(.hidden)", wait: 5
   end
 
-  test "un cliente sin ciudad no muestra un aviso vacio" do
-    clientes(:maria).update!(ciudad: nil)
+  test "un cliente sin sucursal de retiro avisa que falta, no su ciudad" do
+    # C29-03 · Yusef, 2026-10-08: *"la ciudad donde es es una cosa y donde
+    # retira es otra"*. Antes esto decía «Se entregará en Choluteca», y la
+    # etiqueta, la sucursal por defecto.
+    clientes(:maria).update!(sucursal_retiro: nil)
 
     elegir_cliente
 
-    assert_no_selector "[data-etiquetar-target=sucursalBanner]:not(.hidden)", wait: 3
+    assert_selector "[data-etiquetar-target=sucursalBanner]:not(.hidden)", wait: 5
+    assert_text "Este cliente no tiene sucursal de retiro"
+    assert_no_text "Se entregará en"
+    assert_no_text "Choluteca"
   end
 
   private

@@ -8,7 +8,7 @@ import { conEnterAvanza } from "controllers/enter_avanza"
 export default class extends conEnterAvanza(ClienteAutocomplete) {
   static targets = [
     "form", "clienteInput", "clienteId", "clienteDropdown", "clienteNombre",
-    "sucursalBanner", "sucursalTexto",
+    "sucursalBanner", "sucursalTexto", "sucursalDestino", "sucursalFalta",
     "etiquetasModal", "etiquetasInput",
     "event", "panel"
   ]
@@ -50,24 +50,28 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
     this._focusSiguiente(e.target)
   }
 
-  _alSeleccionarCliente({ id, sucursalRetiro }) {
+  _alSeleccionarCliente({ id, sucursalRetiro, sinSucursalRetiro }) {
     // El mixin siempre mandó la sucursal de retiro; esta pantalla la tiraba, y
     // por eso nunca avisaba a dónde iba la caja. Yusef: "también misma
     // situación no avisa que va a tegus".
-    this._mostrarSucursal(sucursalRetiro)
+    this._mostrarSucursal(sucursalRetiro, sinSucursalRetiro === "true")
     this.loadPanel(id)
   }
 
   // Mismo aviso que /etiquetar, mismo motivo: decide en qué bolsa física cae la
   // caja, y enterarse tarde significa volver a abrirla (PR-C6.24).
-  _mostrarSucursal(sucursal) {
+  // C29-03 · Y la misma gemela del cliente sin sucursal: el aviso dice que
+  // falta, en vez de esconderse (antes caía a la ciudad).
+  _mostrarSucursal(sucursal, sinSucursal = false) {
     if (!this.hasSucursalBannerTarget) return
 
     const texto = (sucursal || "").trim()
-    this.sucursalBannerTarget.classList.toggle("hidden", texto === "")
+    this.sucursalBannerTarget.classList.toggle("hidden", texto === "" && !sinSucursal)
     if (texto !== "" && this.hasSucursalTextoTarget) {
       this.sucursalTextoTarget.textContent = texto
     }
+    if (this.hasSucursalDestinoTarget) this.sucursalDestinoTarget.hidden = sinSucursal
+    if (this.hasSucursalFaltaTarget) this.sucursalFaltaTarget.hidden = !sinSucursal
   }
 
   // PR-C6.41: acá el tipo de envío es un select y puede cambiar después de
