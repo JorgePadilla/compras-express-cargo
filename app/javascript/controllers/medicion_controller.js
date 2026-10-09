@@ -48,7 +48,8 @@ export default class extends conEnterAvanza(Controller) {
     "codigo", "aviso",
     "trabajo", "barra", "tandaCliente", "tandaGrupo", "tandaConsolidado", "tandaCajas", "tandaAusentes", "plantillaDibujito",
     "tandaContador", "tandaFaltan", "tandaCompleto",
-    "mesa", "plantillaMesa", "mesaTitulo", "quitarUltima",
+    "mesa", "plantillaMesa", "mesaTitulo",
+    "notasBoton", "notasBotonTexto", "notasModal", "notasCliente", "notasLista", "notasEntendido", "plantillaNota",
     "volumenesContador", "volumenesVacio", "listaVolumenes", "plantillaVolumen", "agregarVolumen",
     "form", "peso", "alto", "largo", "ancho", "guardar", "guardarTexto",
     "banner", "bannerTexto", "bannerFaltan", "bannerReimprimir", "bannerReimprimirTexto", "bannerFacturar",
@@ -75,7 +76,7 @@ export default class extends conEnterAvanza(Controller) {
     this._grupo = null
     // La mesa: las cajas de la tanda, en el orden en que entraron. Los
     // volúmenes: los números ya agregados (C28-08: ninguno lleva cajas).
-    // Nada de esto vive en el servidor hasta F10 — `MedirBulto` recibe la
+    // Nada de esto vive en el servidor hasta F9 — `MedirBulto` recibe la
     // tanda entera de un saque, porque el «1 de 2» del QR necesita saber
     // cuántas mediciones son antes de imprimir la primera.
     this._mesa = []
@@ -83,9 +84,13 @@ export default class extends conEnterAvanza(Controller) {
     // C27-14 · Las cajas que alguien autorizó a medir sin manifiesto. Se
     // mandan al guardar y el servidor las sella una por una.
     this._saltados = []
-    // F10 guarda, F9 reimprime, F5 agrega volumen, F2 limpia — escuchando en
-    // `document`, porque el atajo global ignora las F-keys cuando el foco está
-    // en un input, y acá siempre está.
+    // C29-19 · Las notas del cliente que ya se mostraron en esta tanda, por
+    // texto: el modal se abre solo con lo que **no** se vio todavía.
+    this._notas = []
+    // F9 guarda e imprime (C29-13; F10 también, sin rótulo), F4 reimprime,
+    // F5 agrega volumen, F2 limpia — escuchando en `document`, porque el
+    // atajo global ignora las F-keys cuando el foco está en un input, y acá
+    // siempre está.
     this._teclaGlobal = this.teclaGlobal.bind(this)
     document.addEventListener("keydown", this._teclaGlobal)
     // Al cerrarse cualquier modal, el foco vuelve a donde toca, un frame
@@ -127,7 +132,7 @@ export default class extends conEnterAvanza(Controller) {
     // `en_tanda` es **toda** la tanda, mesa y volúmenes: «NO Mezclar» es de la
     // sesión entera y no de cada medición. Mirando solo la mesa, la caja de
     // otro cliente entraría en el volumen 2 sin chistar y el error saldría
-    // recién en F10, con el volumen 1 ya medido.
+    // recién en F9, con el volumen 1 ya medido.
     this._post(this.escanearUrlValue,
                { codigo, en_tanda: this._idsDeLaTanda(), saltar_manifiesto: saltarManifiesto, remedir })
       .then((data) => {
@@ -165,6 +170,7 @@ export default class extends conEnterAvanza(Controller) {
       this.dispatch("atencion")
       this._volverAPeso = true
       this._enfocarDondeToca()
+      this._recibirNotas(data)
       return
     }
     this._mesa.push({ ...data.paquete, salto_manifiesto: data.salto_manifiesto })
@@ -187,7 +193,61 @@ export default class extends conEnterAvanza(Controller) {
     } else {
       this.dispatch("ok")
     }
+    this._recibirNotas(data)
   }
+
+  // ── C29-19 · Las notas del cliente ──────────────────────────────────────
+  //
+  // Yusef: *"el que necesita leer es las notas. Las notas en modal, las notas
+  // en todo"*. Se abren **solas** la primera vez que aparecen en la tanda
+  // —la primera caja trae las del cliente; una caja con su propia
+  // instrucción trae la suya— y el botón de la tanda las vuelve a abrir. Si
+  // ya hay otro modal arriba (una caja medida antes, una pre-alerta
+  // facturada), no se apilan: queda el botón con el número, que avisa.
+  _recibirNotas(data) {
+    const nuevas = (data.notas || []).filter((n) => !this._notas.some((v) => this._mismaNota(v, n)))
+    if (nuevas.length === 0) return
+
+    this._notas.push(...nuevas)
+    this._pintarBotonNotas()
+    if (this._modalAbierto()) return
+    this._abrirNotas()
+  }
+
+  _mismaNota(a, b) { return a.etiqueta === b.etiqueta && a.detalle === b.detalle && a.texto === b.texto }
+
+  _pintarBotonNotas() {
+    const n = this._notas.length
+    this.notasBotonTarget.hidden = n === 0
+    this.notasBotonTextoTarget.textContent = n === 1 ? "1 nota del cliente" : `${n} notas del cliente`
+  }
+
+  verNotas() {
+    if (this._modalAbierto() || this._notas.length === 0) return
+    this._abrirNotas()
+  }
+
+  _abrirNotas() {
+    this.dispatch("atencion")
+    const primera = this._mesa[0]
+    this.notasClienteTarget.textContent = primera ? primera.cliente || "" : ""
+    this.notasListaTarget.replaceChildren(...this._notas.map((n) => this._bloqueNota(n)))
+    this.notasModalTarget.showModal()
+    requestAnimationFrame(() => this.notasEntendidoTarget.focus())
+  }
+
+  _bloqueNota(n) {
+    const nodo = this.plantillaNotaTarget.content.firstElementChild.cloneNode(true)
+    const clases = n.clases || {}
+    nodo.className += ` ${clases.wrap || ""}`
+    const etiqueta = nodo.querySelector("[data-campo=etiqueta]")
+    etiqueta.className += ` ${clases.label || ""}`
+    etiqueta.textContent = [n.etiqueta, n.detalle].filter(Boolean).join(" · ")
+    nodo.querySelector("[data-campo=texto]").textContent = n.texto
+    return nodo
+  }
+
+  cerrarNotas() { this.notasModalTarget.close() }
 
   _titulo(resultado) {
     return {
@@ -473,7 +533,6 @@ export default class extends conEnterAvanza(Controller) {
     const n = this._mesa.length
     this.mesaTituloTarget.textContent = `${n} ${n === 1 ? "caja escaneada" : "cajas escaneadas"}`
     this.mesaTarget.replaceChildren(...this._mesa.map((p, i) => this._filaMesa(p, i)))
-    this.quitarUltimaTarget.hidden = n === 0
   }
 
   _filaMesa(p, i) {
@@ -516,12 +575,23 @@ export default class extends conEnterAvanza(Controller) {
       : "Guardar e imprimir"
   }
 
-  // La única forma de sacar algo de la mesa: la última. No hay lista de dónde
-  // elegir — *"no, no, porque se van a equivocar… no van a leer"*.
-  quitarUltimaCaja() {
-    if (this._modalAbierto() || this._mesa.length === 0) return
+  // C29-14 · La X de **cada** caja. Antes solo se podía quitar la última, y
+  // en la prueba del 2026-10-08 Jorge preguntó *"¿cómo quito uno?"*. Yusef:
+  // *"una X acá al lado, una X grande, porque acordate que va a hacer touch"*.
+  //
+  // Sacar una del medio no rompe «NO Mezclar»: todas las de la tanda son del
+  // mismo cliente, del mismo servicio y de la misma consolidación, así que la
+  // que queda primera vale igual que la que se fue. Y si era una que alguien
+  // autorizó a medir sin manifiesto, el permiso se va con ella. En una tanda
+  // que se está midiendo de nuevo, la que se saca queda **sin medir** al
+  // guardar (`MedirBulto#reemplazar!`), que es lo que significa sacarla.
+  quitarCaja(e) {
+    if (this._modalAbierto()) return
+    const id = Number(e.currentTarget.closest("li")?.dataset.paqueteId)
+    if (!id) return
 
-    this._mesa.pop()
+    this._mesa = this._mesa.filter((p) => p.id !== id)
+    this._saltados = this._saltados.filter((s) => s !== id)
     if (this._mesa.length === 0) { this._grupo = null; this._reemplazaSesion = null }
     this._repintar()
     this.codigoTarget.focus()
@@ -862,6 +932,8 @@ export default class extends conEnterAvanza(Controller) {
     this._mesa = []
     this._volumenes = []
     this._saltados = []
+    this._notas = []
+    this._pintarBotonNotas()
     this._limpiarNumeros()
     this._repintar()
   }
@@ -925,8 +997,12 @@ export default class extends conEnterAvanza(Controller) {
     // hay nada guardado que recuperar.
     if (e.key === "F5") e.preventDefault()
     if (this._modalAbierto()) return
-    if (e.key === "F10") { e.preventDefault(); this.guardar() }
-    if (e.key === "F9")  { e.preventDefault(); this.reimprimir() }
+    // C29-13 · F9 guarda e imprime, como en el resto de la app: *"F9 para
+    // imprimir siempre… solo para que lo tengamos uniforme"*. F10 también
+    // guarda —es «guardar» en todos lados, y en /etiquetar son las dos— y
+    // reimprimir pasa a F4, la de «imprimir un documento».
+    if (e.key === "F9" || e.key === "F10") { e.preventDefault(); this.guardar() }
+    if (e.key === "F4")  { e.preventDefault(); this.reimprimir() }
     if (e.key === "F5")  { this.agregarVolumen() }
     if (e.key === "F2")  { e.preventDefault(); this.limpiar() }
   }
@@ -934,7 +1010,8 @@ export default class extends conEnterAvanza(Controller) {
   _modalAbierto() {
     return this.problemaModalTarget.open || this.excepcionModalTarget.open ||
            this.descarteModalTarget.open || this.mezclaModalTarget.open ||
-           this.consolidadoModalTarget.open || this.autorizarModalTarget.open
+           this.consolidadoModalTarget.open || this.autorizarModalTarget.open ||
+           this.notasModalTarget.open
   }
 
   _enfocarPeso() {

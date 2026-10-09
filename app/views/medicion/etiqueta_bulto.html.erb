@@ -41,7 +41,15 @@
     </div>
     <%# El código de la primera caja identifica al bulto para el humano; el QR
         lo identifica para el sistema. El «1 de 2» —de **mediciones**— va con
-        él, a lo ancho de la etiqueta. %>
-    <div class="codigo" data-ajustar data-ajustar-min="5"><%= etiqueta_codigo_barras(b.paquetes.first) || b.paquetes.first&.tracking %><%= " · #{b.de_cuantos_texto}" if b.de_cuantos_texto %> · <%= b.medido_por %></div>
+        él, a lo ancho de la etiqueta.
+
+        C29-15 · Y adelante, el número de la pre-alerta, que es con lo que
+        pre-factura agrupa: *"solo el número de pre-alerta. PA, tal"*. Va en
+        **esta** fila y no en una nueva, porque la Dymo no tiene una fila más
+        ([[project_la_dymo_no_tiene_una_fila_mas]]): es la única a lo ancho
+        de la etiqueta, y `etiqueta_medicion_cabe_test` mide que la peor
+        —décima de diez, con pre-alerta— siga cabiendo. %>
+    <% pa = b.pre_alerta_en_etiqueta %>
+    <div class="codigo" data-ajustar data-ajustar-min="5"><%= "#{pa} · " if pa %><%= etiqueta_codigo_barras(b.paquetes.first) || b.paquetes.first&.tracking %><%= " · #{b.de_cuantos_texto}" if b.de_cuantos_texto %> · <%= b.medido_por %></div>
   </div>
 <% end %>

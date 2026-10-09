@@ -45,6 +45,33 @@ class MedicionTest < ActionDispatch::IntegrationTest
     assert_not miami["retenido"]
   end
 
+  # C29-19 · Las notas de la PESA son las de pre-factura: *"de momento no las
+  # deberíamos de separar"*. El medidor lee `notas_honduras` —la columna de
+  # pre-factura— y no las de Miami ni las de caja.
+  test "el escaneo trae las notas que lee pre-factura, y no las de otras áreas" do
+    clientes(:juan).update!(notas_honduras: "Avisar antes de entregar", notas_miami: "Revisar el contenido",
+                            notas_caja: "Paga con tarjeta")
+    pa, = grupo_de_tres(@paquete)
+    pa.update!(notas_grupo: "Todo en una caja")
+    @paquete.update!(notas_internas: "Vino mojada")
+
+    escanear(@paquete.tracking)
+
+    textos = json["notas"].map { |n| n["texto"] }
+    assert_includes textos, "Avisar antes de entregar"
+    assert_includes textos, "Todo en una caja"
+    assert_includes textos, "Vino mojada"
+    assert_not_includes textos, "Revisar el contenido"
+    assert_not_includes textos, "Paga con tarjeta"
+    assert json["notas"].all? { |n| n["clases"]["wrap"].present? }, "cada nota lleva su color, como en la franja"
+  end
+
+  test "un cliente sin notas no trae ninguna" do
+    escanear(@paquete.tracking)
+
+    assert_equal [], json["notas"]
+  end
+
   test "y dice cómo lo declaró el cliente, que puede ser otra cosa" do
     pa, = grupo_de_tres(@paquete)
     escanear(@paquete.tracking)
