@@ -8,8 +8,14 @@
   end
   # C21-09 · El manifiesto impreso. Va aparte de «Finalizar e Imprimir», que
   # saca las etiquetas 4×6 de los bultos: son dos papeles distintos.
+  #
+  # C29-11 · Con `print: true`, como «Imprimir listado» (`C28-02`): abre el
+  # diálogo de impresión solo. Sin él la hoja se abría como página y nada
+  # más, y Yusef la buscó: *"no tiene el botón de imprimir a la mano… no lo
+  # tiró como preview para imprimir"*, mientras que el listado, al lado,
+  # *"a éste sí salió bien"*.
   header.with_action do
-    render ButtonComponent.new(variant: :outline_navy, href: documento_manifiesto_path(@manifiesto),
+    render ButtonComponent.new(variant: :outline_navy, href: documento_manifiesto_path(@manifiesto, print: true),
                                icon: "printer", target: "_blank", shortcut: "F4") do
       "Imprimir manifiesto"
     end
