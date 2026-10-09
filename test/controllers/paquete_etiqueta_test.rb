@@ -141,7 +141,8 @@ class PaqueteEtiquetaTest < ActionDispatch::IntegrationTest
 
     get reimprimir_etiquetas_paquete_url(@paquete)
 
-    assert_redirected_to etiqueta_paquete_path(@paquete)
+    # 2026-10-08 · Con el diálogo: re-imprimir es imprimir.
+    assert_redirected_to etiqueta_paquete_path(@paquete, print: true)
   end
 
   test "las etiquetas combinadas son etiquetas, no warehouse receipts" do
