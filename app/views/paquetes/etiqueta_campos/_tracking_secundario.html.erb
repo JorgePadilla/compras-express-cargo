@@ -1,0 +1,6 @@
+<%# El secundario, con la misma regla `.trk` del tracking: completo o nada. %>
+<% if etiqueta_plantilla.visible?("tracking_secundario") && paquete.tracking_secundario.present? %>
+  <div class="trk mono" style="font-size:var(--fs-tracking-secundario); font-weight:bold;" data-campo="tracking-secundario">
+    <%= paquete.tracking_secundario %>
+  </div>
+<% end %>

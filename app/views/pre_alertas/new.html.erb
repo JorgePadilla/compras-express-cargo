@@ -1,198 +1,132 @@
-<%= render PageHeaderComponent.new(title: "Nueva Pre-Alerta") %>
+<%# PR-C6.46: el envoltorio se acerca al del portal. Las tarjetas de paquete ya
+    hablaban el mismo idioma desde PR-C6.44; lo que estaba viejo era esto — la
+    tarjeta, el título de sección, el pie suelto.
 
-<div class="max-w-5xl">
-  <%= form_with model: @pre_alerta, url: pre_alertas_path, class: "space-y-6" do |f| %>
+    Los controles NO cambian (decisión de Jorge, 2026-08-12): el select de tipo
+    de envío y los checkboxes se quedan. Quien carga treinta al día va más
+    rápido así, y el wizard de 3 pasos del portal ya se había descartado para
+    admin. Lo que se acerca es cómo se ve, no cómo se opera. %>
+<%= render PageHeaderComponent.new(title: "Nueva Pre-Alerta",
+      subtitle: "Cargá el cliente, el servicio y los paquetes que vienen en camino") %>
+
+<%# El `pre-alerta-editor` vive en el div de afuera y no en la tarjeta de
+    paquetes: el select del servicio tiene que poder cambiarle el límite de
+    tarjetas cuando el operario elige CKA, y para eso los dos tienen que estar
+    en el mismo alcance. En `/pre_alertas/:id/edit` ya estaba así. %>
+<% max_paquetes = (@pre_alerta.tipo_envio || @tipo_envio_sugerido)&.max_paquetes_por_accion || -1 %>
+<div class="max-w-5xl mx-auto"
+     data-controller="pre-alerta-editor"
+     data-pre-alerta-editor-max-paquetes-value="<%= max_paquetes %>">
+  <%= form_with model: @pre_alerta, url: pre_alertas_path, class: "space-y-6 animate-fade-in-up" do |f| %>
     <% if @pre_alerta.errors.any? %>
-      <div class="p-4 bg-red-50 border border-red-200 rounded-xl">
-        <p class="text-sm font-medium text-red-700"><%= @pre_alerta.errors.full_messages.join(", ") %></p>
+      <div class="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl">
+        <p class="text-sm font-medium text-red-700 dark:text-red-300"><%= @pre_alerta.errors.full_messages.join(", ") %></p>
       </div>
     <% end %>
 
-    <%# Client selector %>
-    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 space-y-4">
-      <h3 class="text-sm font-bold text-gray-800">Cliente</h3>
+    <%= render FormSectionComponent.new(title: "Cliente",
+          subtitle: "A nombre de quién entra esta pre-alerta") do %>
       <div data-controller="client-autocomplete" data-client-autocomplete-url-value="<%= buscar_clientes_path %>">
         <div class="relative">
-          <input type="text" data-client-autocomplete-target="input" data-action="input->client-autocomplete#search"
+          <%# PR-C6.33: faltaba el `keydown`. El controller siempre supo manejar
+              flechas y Enter, pero acá nadie se los mandaba — así que en esta
+              pantalla el dropdown solo se podía usar con el mouse. Eso es lo
+              que Yusef pidió como "preseleccionar de los dropdown" (A3-10). %>
+          <input type="text" data-client-autocomplete-target="input"
+                 data-action="input->client-autocomplete#search
+                              keydown->client-autocomplete#onKeydown"
                  placeholder="Buscar por codigo o nombre..."
                  autocomplete="off"
-                 class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
-                        focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
+                 class="<%= clases_de_input %>">
           <%= f.hidden_field :cliente_id, data: { client_autocomplete_target: "clienteId" } %>
-          <div data-client-autocomplete-target="dropdown" class="hidden absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"></div>
+          <div data-client-autocomplete-target="dropdown" class="hidden absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto"></div>
         </div>
-        <p data-client-autocomplete-target="nombre" class="mt-1 text-sm text-gray-500 hidden"></p>
+        <p data-client-autocomplete-target="nombre" class="mt-1 text-sm text-gray-500 dark:text-gray-400 hidden"></p>
       </div>
-    </div>
+    <% end %>
 
-    <%# Options %>
-    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 space-y-4">
-      <h3 class="text-sm font-bold text-gray-800">Opciones</h3>
+    <%= render FormSectionComponent.new(title: "Servicio",
+          subtitle: "Cómo viaja, y si se agrupa con otros paquetes") do %>
+      <%= render "pre_alertas/reglas_del_servicio", f: f, tipo_envios: @tipo_envios,
+            seleccionado: @pre_alerta.tipo_envio || @tipo_envio_sugerido %>
+    <% end %>
+
+    <%= render FormSectionComponent.new(title: "Referencia",
+          subtitle: "Con qué se va a reconocer este envío") do %>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Envio</label>
-          <%= f.select :tipo_envio_id, options_from_collection_for_select(@tipo_envios, :id, :nombre, @pre_alerta.tipo_envio_id),
-              { include_blank: "— Seleccionar —" },
-              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
-        </div>
-        <div class="flex flex-col justify-end gap-3">
-          <label class="flex items-center gap-2 text-sm">
-            <%= f.check_box :con_reempaque, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-            Con Reempaque
-          </label>
-          <label class="flex items-center gap-2 text-sm">
-            <%= f.check_box :consolidado, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-            Consolidado
-          </label>
-        </div>
-      </div>
-    </div>
-
-    <%# Titulo + Proveedor %>
-    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 space-y-4">
-      <h3 class="text-sm font-bold text-gray-800">Referencia</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Título de Referencia</label>
-          <%= f.text_field :titulo, placeholder: "Ej. Televisor, Zapatos...",
-              class: "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
-                     focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+          <label class="<%= clases_de_etiqueta %>"><%= etiqueta_de_campo("Título de Referencia") %></label>
+          <%= f.text_field :titulo, placeholder: "Ej. Televisor, Zapatos...", class: clases_de_input %>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Proveedor / Tienda</label>
-          <%= f.text_field :proveedor, placeholder: "Ej. Amazon, Best Buy...",
-              class: "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
-                     focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
+          <label class="<%= clases_de_etiqueta %>">
+            <%= etiqueta_de_campo("Proveedor / Tienda", ayuda: "(opcional)") %>
+          </label>
+          <%# PR-C6.36: sugerencias del catalogo de Proveedores, con texto libre.
+              Mismo patron que el carrier de /etiquetar, que Yusef ya aprobo:
+              "dropdown con texto libre para agregar a la lista". No se migra
+              a FK porque `PreAlerta.proveedor` es un string y cambiarlo
+              tocaria datos viejos por una pantalla que nadie reporto rota. %>
+          <%= f.text_field :proveedor, list: "proveedores-list", placeholder: "Ej. Amazon, Best Buy...",
+              class: clases_de_input %>
+          <datalist id="proveedores-list">
+            <% @proveedores_sugeridos.each do |p| %>
+              <option value="<%= p.nombre %>">
+            <% end %>
+          </datalist>
         </div>
       </div>
-    </div>
+    <% end %>
 
-    <%# Notas %>
-    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-      <label class="block text-sm font-medium text-gray-700 mb-1.5">Notas del grupo</label>
+    <%= render FormSectionComponent.new(title: "Notas del grupo",
+          subtitle: "Van a toda la pre-alerta, no a un paquete suelto") do %>
       <%= f.text_area :notas_grupo, rows: 2,
-          placeholder: "Notas opcionales...",
-          class: "block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
-                 focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
-    </div>
+          placeholder: "Notas opcionales...", class: clases_de_input %>
+    <% end %>
 
-    <%# Paquetes %>
-    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100" data-controller="pre-alerta-editor">
+    <%= render FormSectionComponent.new do |s| %>
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-2">
-          <h3 class="text-sm font-bold text-gray-800">Paquetes</h3>
-          <span data-pre-alerta-editor-target="counter" class="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-cec-navy/10 text-cec-navy">0</span>
+          <h2 class="text-xl sm:text-2xl font-bold text-cec-navy dark:text-cec-gold">Paquetes</h2>
+          <span data-pre-alerta-editor-target="counter" class="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-cec-navy/10 dark:bg-cec-gold/20 text-cec-navy dark:text-cec-gold">0</span>
         </div>
       </div>
 
       <div data-pre-alerta-editor-target="paquetesBody" class="space-y-4">
-        <% @pre_alerta.pre_alerta_paquetes.each.with_index do |pap, index| %>
-          <div class="paquete-row relative bg-gray-50 rounded-xl p-4 border border-gray-200">
-            <button type="button" data-action="click->pre-alerta-editor#removePaquete"
-                    class="absolute top-3 right-3 text-red-400 hover:text-red-600 transition-colors">
-              <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
-            </button>
-            <%= f.fields_for :pre_alerta_paquetes, pap, child_index: index do |pf| %>
-              <div class="grid grid-cols-1 gap-4">
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div class="sm:col-span-2">
-                    <label class="block text-sm font-semibold text-cec-navy mb-1.5">
-                      Tracking o Número de Rastreo
-                      <span class="text-xs font-normal text-red-500 ml-1">Obligatorio (Aquí NO va el Número de Orden)</span>
-                    </label>
-                    <%= pf.text_field :tracking, placeholder: "Ej. 1Z999AA1...",
-                        class: "block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
-                  </div>
-                  <div>
-                    <label class="block text-sm font-semibold text-cec-navy mb-1.5">Fecha</label>
-                    <%= pf.date_field :fecha, class: "block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal", data: { controller: "flatpickr" } %>
-                  </div>
-                </div>
-                <div>
-                  <label class="block text-sm font-semibold text-cec-navy mb-1.5">
-                    Descripción del Producto
-                    <span class="text-xs font-normal text-red-500 ml-1">Obligatorio</span>
-                  </label>
-                  <%= pf.text_field :descripcion, placeholder: "¿Qué contiene el paquete?",
-                      class: "block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
-                </div>
-                <div>
-                  <label class="block text-sm font-semibold text-cec-navy mb-1.5">
-                    Instrucciones Especiales del Paquete <span class="text-xs font-normal text-gray-500">(opcional)</span>
-                  </label>
-                  <%= pf.text_area :instrucciones, placeholder: "Instrucciones para el procesamiento del paquete...", rows: 2,
-                      class: "block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal" %>
-                </div>
-              </div>
-            <% end %>
-          </div>
-        <% end %>
+<% @pre_alerta.pre_alerta_paquetes.each.with_index do |pap, index| %>
+  <%= render "pre_alertas/paquete_card", f: f, pap: pap, index: index %>
+<% end %>
       </div>
 
-      <%# Botón Agregar Paquete %>
+      <%# El aviso del límite. `/edit` ya lo tenía y esta pantalla no: el servidor
+          rechazaba con `respect_max_paquetes_por_accion` y el operario se
+          enteraba después de llenar todo. %>
+      <p data-pre-alerta-editor-target="limitMessage"
+         class="hidden mt-3 text-sm text-amber-800 dark:text-amber-300">
+        Este servicio lleva un solo tracking por pre-alerta.
+      </p>
+
       <div class="mt-4">
-        <button type="button" data-action="click->pre-alerta-editor#addPaquete"
-                data-pre-alerta-editor-target="addButton"
-                class="inline-flex items-center gap-2 border border-cec-teal text-cec-teal font-semibold px-5 py-2.5 rounded-lg hover:bg-cec-teal/10 transition-colors text-sm">
-          <%= heroicon "plus-circle", variant: :outline, options: { class: "w-5 h-5" } %>
-          Agregar Paquete
-        </button>
+        <%= render ButtonComponent.new(variant: :outline_teal, size: :md, icon: "plus-circle",
+              data: { action: "click->pre-alerta-editor#addPaquete",
+                      pre_alerta_editor_target: "addButton" }) do %>Agregar Paquete<% end %>
       </div>
 
-      <template data-pre-alerta-editor-target="template">
-        <div class="paquete-row relative bg-gray-50 rounded-xl p-4 border border-gray-200" data-new-record="true">
-          <button type="button" data-action="click->pre-alerta-editor#removePaquete"
-                  class="absolute top-3 right-3 text-red-400 hover:text-red-600 transition-colors">
-            <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
-          </button>
-          <div class="grid grid-cols-1 gap-4">
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div class="sm:col-span-2">
-                <label class="block text-sm font-semibold text-cec-navy mb-1.5">
-                  Tracking o Número de Rastreo
-                  <span class="text-xs font-normal text-red-500 ml-1">Obligatorio (Aquí NO va el Número de Orden)</span>
-                </label>
-                <input type="text" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][tracking]"
-                       placeholder="Ej. 1Z999AA1..."
-                       class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
-              </div>
-              <div>
-                <label class="block text-sm font-semibold text-cec-navy mb-1.5">Fecha</label>
-                <input type="date" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][fecha]"
-                       data-controller="flatpickr"
-                       class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
-              </div>
-            </div>
-            <div>
-              <label class="block text-sm font-semibold text-cec-navy mb-1.5">
-                Descripción del Producto
-                <span class="text-xs font-normal text-red-500 ml-1">Obligatorio</span>
-              </label>
-              <input type="text" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][descripcion]"
-                     placeholder="¿Qué contiene el paquete?"
-                     class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
-            </div>
-            <div>
-              <label class="block text-sm font-semibold text-cec-navy mb-1.5">
-                Instrucciones Especiales del Paquete <span class="text-xs font-normal text-gray-500">(opcional)</span>
-              </label>
-              <textarea name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][instrucciones]"
-                        rows="2" placeholder="Instrucciones para el procesamiento del paquete..."
-                        class="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"></textarea>
-            </div>
-          </div>
-        </div>
-      </template>
-    </div>
+<template data-pre-alerta-editor-target="template">
+  <%= render "pre_alertas/paquete_card",
+        f: f, pap: PreAlertaPaquete.new, index: "NEW_INDEX" %>
+</template>
 
-    <%# Actions %>
-    <div class="flex flex-col-reverse sm:flex-row sm:justify-between gap-3">
-      <%= render ButtonComponent.new(variant: :ghost, size: :lg, icon: "arrow-left", href: pre_alertas_path) do %>
-        Cancelar
+      <%# El pie va DENTRO de la última tarjeta, como en el portal: suelto abajo
+          se leía como si no perteneciera al formulario. %>
+      <% s.with_footer do %>
+        <%= render ButtonComponent.new(variant: :ghost, size: :lg, icon: "arrow-left", href: pre_alertas_path) do %>
+          Cancelar
+        <% end %>
+        <%= render ButtonComponent.new(variant: :gold, size: :lg, icon: "check-circle", type: "submit") do %>
+          Crear Pre-Alerta
+        <% end %>
       <% end %>
-      <%= render ButtonComponent.new(variant: :gold, size: :lg, icon: "check-circle", type: "submit") do %>
-        Crear Pre-Alerta
-      <% end %>
-    </div>
+    <% end %>
   <% end %>
 </div>

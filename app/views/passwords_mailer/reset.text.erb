@@ -1,2 +1,6 @@
 Puedes restablecer tu contrasena en los proximos 15 minutos en la siguiente pagina:
-<%= edit_password_url(@user.password_reset_token) %>
+<%= edit_password_url(@cuenta.password_reset_token) %>
+<% if @codigo %>
+
+Recorda que a tu cuenta tambien entras con tu codigo de casillero: <%= @codigo %>
+<% end %>

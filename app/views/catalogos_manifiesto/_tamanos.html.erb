@@ -1,0 +1,38 @@
+<%= render "catalogos_manifiesto/encabezado",
+      ayuda: "Los tamaños con los que empacan. Las medidas son un punto de partida: al armar la caja se pueden corregir, porque a veces las cortan.",
+      href_nuevo: new_tamanos_caja_path, titulo_nuevo: "Nuevo tamaño" %>
+
+<% if @tamanos.any? %>
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Posición</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Alto</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Largo</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ancho</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        <% @tamanos.each do |t| %>
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 text-sm text-gray-500"><%= t.position %></td>
+            <td class="px-6 py-4 text-sm font-medium text-gray-900"><%= t.nombre %></td>
+            <td class="px-6 py-4 text-sm text-right text-gray-500 font-mono"><%= t.alto || "—" %></td>
+            <td class="px-6 py-4 text-sm text-right text-gray-500 font-mono"><%= t.largo || "—" %></td>
+            <td class="px-6 py-4 text-sm text-right text-gray-500 font-mono"><%= t.ancho || "—" %></td>
+            <td class="px-6 py-4 text-sm"><%= render "catalogos_manifiesto/estado", activo: t.activo %></td>
+            <td class="px-6 py-4 text-right text-sm">
+              <%= render RowActionComponent.new(action: :edit, href: edit_tamanos_caja_path(t), label: "Editar tamaño de caja") %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <%= render EmptyStateComponent.new(title: "Todavía no hay tamaños de caja", description: "Agregá los que usan al empacar: EH, D, 22 Cubo, 18 Cubo, D G, EH G, E, Mini D, Mini D Doble — y «Especificar» para las que se miden a mano.", icon: "cube") %>
+<% end %>

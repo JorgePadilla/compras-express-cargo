@@ -7,24 +7,24 @@ class NumeroRecepcionCounterTest < ActiveSupport::TestCase
   end
 
   test "next_for! crea fila en 0 y devuelve 1 al primer call" do
-    n = NumeroRecepcionCounter.next_for!(sucursal: @sucursal, anio: 2026)
+    n = NumeroRecepcionCounter.next_for!(sucursal: @sucursal, anio: 2026, mes: 1)
     assert_equal 1, n
 
     counter = NumeroRecepcionCounter.find_by!(sucursal_id: @sucursal.id, anio: 2026)
     assert_equal 1, counter.ultimo_numero
   end
 
-  test "next_for! incrementa secuencialmente para el mismo (sucursal, anio)" do
-    a = NumeroRecepcionCounter.next_for!(sucursal: @sucursal, anio: 2026)
-    b = NumeroRecepcionCounter.next_for!(sucursal: @sucursal, anio: 2026)
-    c = NumeroRecepcionCounter.next_for!(sucursal: @sucursal, anio: 2026)
+  test "next_for! incrementa secuencialmente para el mismo (sucursal, anio, mes)" do
+    a = NumeroRecepcionCounter.next_for!(sucursal: @sucursal, anio: 2026, mes: 1)
+    b = NumeroRecepcionCounter.next_for!(sucursal: @sucursal, anio: 2026, mes: 1)
+    c = NumeroRecepcionCounter.next_for!(sucursal: @sucursal, anio: 2026, mes: 1)
     assert_equal [ 1, 2, 3 ], [ a, b, c ]
   end
 
   test "next_for! reinicia el contador al cambiar de año" do
-    a = NumeroRecepcionCounter.next_for!(sucursal: @sucursal, anio: 2026)
-    b = NumeroRecepcionCounter.next_for!(sucursal: @sucursal, anio: 2026)
-    c = NumeroRecepcionCounter.next_for!(sucursal: @sucursal, anio: 2027)
+    a = NumeroRecepcionCounter.next_for!(sucursal: @sucursal, anio: 2026, mes: 1)
+    b = NumeroRecepcionCounter.next_for!(sucursal: @sucursal, anio: 2026, mes: 1)
+    c = NumeroRecepcionCounter.next_for!(sucursal: @sucursal, anio: 2027, mes: 1)
 
     assert_equal 1, a
     assert_equal 2, b
@@ -35,9 +35,9 @@ class NumeroRecepcionCounterTest < ActiveSupport::TestCase
     otra = sucursales(:zeron_sps)
     NumeroRecepcionCounter.where(sucursal_id: otra.id).delete_all
 
-    a = NumeroRecepcionCounter.next_for!(sucursal: @sucursal, anio: 2026)
-    b = NumeroRecepcionCounter.next_for!(sucursal: otra,     anio: 2026)
-    c = NumeroRecepcionCounter.next_for!(sucursal: @sucursal, anio: 2026)
+    a = NumeroRecepcionCounter.next_for!(sucursal: @sucursal, anio: 2026, mes: 1)
+    b = NumeroRecepcionCounter.next_for!(sucursal: otra,     anio: 2026, mes: 1)
+    c = NumeroRecepcionCounter.next_for!(sucursal: @sucursal, anio: 2026, mes: 1)
 
     assert_equal 1, a
     assert_equal 1, b

@@ -1,6 +1,31 @@
 <div class="bg-white rounded-lg shadow overflow-hidden">
-  <div class="px-6 py-4 border-b border-gray-200">
+  <div class="px-6 py-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
     <h2 class="text-lg font-semibold text-gray-800">Paquetes (<%= paquetes.size %>)</h2>
+    <%# C28-02 · El desglose sale de acá y no de la hoja del manifiesto, que se
+        le entrega al transportista. Yusef: *"ahí arriba donde está el
+        paquete… donde yo le puedo imprimir eso, exportar Excel"*.
+
+        Los dos llevan `data-turbo-frame="_top"`: esta tabla vive adentro del
+        frame `manifiesto-paquetes`, y un link sin eso Turbo lo trae **dentro**
+        del frame — la descarga del Excel se perdería en un frame vacío. El
+        Excel es el export de `/paquetes` con el filtro por manifiesto, para
+        que haya **un** Excel de paquetes y no dos que se separen.
+
+        PR-C29.7 · El listado lleva `cerrar: 1`: imprime y la pestaña se cierra
+        sola, de vuelta a la ficha. %>
+    <% if paquetes.any? %>
+      <div class="flex flex-wrap gap-2">
+        <%= render(ButtonComponent.new(variant: :secondary, size: :sm, icon: "printer",
+              href: listado_manifiesto_path(manifiesto, print: true, cerrar: 1), target: "_blank",
+              label: "Imprimir el listado de paquetes del manifiesto",
+              data: { turbo_frame: "_top" })) { "Imprimir listado" } %>
+        <%= render(ButtonComponent.new(variant: :secondary, size: :sm, icon: "arrow-down-tray",
+              href: export_paquetes_path(format: :xlsx, manifiesto: manifiesto.numero,
+                                         incluir_facturados: 1, incluir_mas_1_ano: 1),
+              label: "Exportar a Excel los paquetes del manifiesto",
+              data: { turbo_frame: "_top", turbo: false })) { "Exportar Excel" } %>
+      </div>
+    <% end %>
   </div>
 
   <% if paquetes.any? %>
@@ -8,9 +33,19 @@
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
           <tr>
+            <%# C28-03 · Primero el warehouse, con el sufijo de caja. Yusef: *"le
+                hace falta el número de warehouse que escaneó… recuerda que un
+                tracking ya está dividido en varios paquetes"*. Sin el sufijo,
+                las cajas de un split salen como dos renglones iguales. %>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No. recepción</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tracking</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Peso</th>
+            <%# C23-10 · Cuál caja, o si entró sin pistola. Yusef, sobre el
+                tirón masivo: *"tienen que saber ellos qué son los que hicieron
+                sin escanear"*. Sin esta columna el manifiesto mezcla los dos
+                caminos sin decir cuál fue cuál. %>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Caja</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
             <% if manifiesto.creado? %>
               <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
@@ -21,6 +56,9 @@
           <% paquetes.each do |paquete| %>
             <tr class="hover:bg-gray-50">
               <td class="px-6 py-4 whitespace-nowrap">
+                <span class="text-sm font-mono font-medium text-cec-navy dark:text-cec-gold"><%= etiqueta_codigo_barras(paquete) || "—" %></span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
                 <span class="text-sm font-mono text-gray-700"><%= truncate(paquete.tracking, length: 25) %></span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
@@ -30,7 +68,14 @@
                 <span class="text-sm text-gray-700"><%= paquete.peso_cobrar || "—" %> lbs</span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <%= render StatusBadgeComponent.new(status: paquete.estado) %>
+                <% if paquete.caja_manifiesto.present? %>
+                  <span class="text-sm font-bold text-cec-navy dark:text-cec-gold"><%= paquete.caja_manifiesto.letra %><%= paquete.caja_manifiesto.numero_bulto %></span>
+                <% else %>
+                  <span class="text-xs text-gray-500 dark:text-gray-400">sin escanear</span>
+                <% end %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <%= render StatusBadgeComponent.new(status: paquete.estado, label: estado_de(paquete)) %>
               </td>
               <% if manifiesto.creado? %>
                 <td class="px-6 py-4 whitespace-nowrap text-right">

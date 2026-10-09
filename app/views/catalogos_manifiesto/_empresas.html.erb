@@ -1,0 +1,36 @@
+<%= render "catalogos_manifiesto/encabezado",
+      ayuda: "Quién mueve la carga de Miami a Honduras. La dirección, el teléfono y la persona encargada salen impresos en el manifiesto.",
+      href_nuevo: new_empresas_manifiesto_path, titulo_nuevo: "Nueva empresa" %>
+
+<% if @empresas.any? %>
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dirección</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teléfono</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Persona encargada</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        <% @empresas.each do |e| %>
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 text-sm font-medium text-gray-900"><%= e.nombre %></td>
+            <td class="px-6 py-4 text-sm text-gray-500"><%= e.direccion.presence || "—" %></td>
+            <td class="px-6 py-4 text-sm text-gray-500"><%= e.telefono.presence || "—" %></td>
+            <td class="px-6 py-4 text-sm text-gray-500"><%= e.encargado.presence || "—" %></td>
+            <td class="px-6 py-4 text-sm"><%= render "catalogos_manifiesto/estado", activo: e.activo %></td>
+            <td class="px-6 py-4 text-right text-sm">
+              <%= render RowActionComponent.new(action: :edit, href: edit_empresas_manifiesto_path(e), label: "Editar empresa") %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <%= render EmptyStateComponent.new(title: "Todavía no hay empresas", description: "Agregá la que mueve tu carga para poder elegirla al crear un manifiesto.", icon: "truck") %>
+<% end %>

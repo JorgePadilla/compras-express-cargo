@@ -1,0 +1,4 @@
+<%# "Departamento abreviado y ciudad o pueblo" (Yusef). %>
+<% if etiqueta_plantilla.visible?("ubicacion") && (ubic = etiqueta_ubicacion_cliente(paquete.cliente)) %>
+  <div class="t" style="font-size:var(--fs-ubicacion); font-style:italic;" data-campo="ubicacion"><%= ubic %></div>
+<% end %>

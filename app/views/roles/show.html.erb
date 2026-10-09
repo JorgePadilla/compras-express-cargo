@@ -1,0 +1,78 @@
+<%# `RP-58` paso 2b · Cómo se lee cada puesto.
+
+    Como `/permisos`, no lleva el estándar táctil de 44 px: Configuración no está
+    en la lista de pantallas de bodega de `docs/07`. Esto se usa sentado. %>
+<%= render PageHeaderComponent.new(
+      title: "Títulos de los roles",
+      subtitle: "Cómo se lee cada puesto en todo el sistema") %>
+
+<div class="bg-cec-navy/5 dark:bg-gray-800 ring-1 ring-cec-navy/20 dark:ring-gray-700 rounded-lg p-4 mb-6 text-sm">
+  <p class="text-gray-800 dark:text-gray-100">
+    Renombrar un puesto cambia <b>cómo se lee</b> en todo el sistema — el listado de
+    usuarios, la bitácora, los permisos, quién autoriza.
+    <b>No cambia lo que ese puesto puede hacer</b>: eso se mueve en
+    <%= link_to "Permisos por rol", permisos_path, class: "text-cec-teal-deep dark:text-cec-gold underline" %>.
+  </p>
+  <p class="text-gray-600 dark:text-gray-300 mt-1">
+    Dejá el campo <b>vacío</b> para volver al nombre que trae el sistema.
+    Los puestos no se crean ni se borran acá: son los que el sistema conoce.
+  </p>
+</div>
+
+<%= form_with url: roles_path, method: :patch, local: true do %>
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-900">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Código</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Título</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Descripción</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          <% @roles.each do |rol| %>
+            <% renombrado = User.titulo_de_rol(rol) != User.titulo_del_sistema(rol) %>
+            <tr class="<%= "bg-cec-gold/5" if renombrado %>">
+              <%# El código, que es lo que el sistema usa de verdad. Se muestra
+                  para que quien renombra sepa qué está tocando — y para que el
+                  día que alguien lea un log o un test lo reconozca. %>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="font-mono text-xs text-gray-500 dark:text-gray-400"><%= rol %></span>
+                <% if renombrado %>
+                  <span class="ml-2 text-[10px] text-cec-teal-deep dark:text-cec-gold">· renombrado</span>
+                <% end %>
+              </td>
+              <td class="px-6 py-4">
+                <%= text_field_tag "roles[#{rol}][titulo]", User.titulo_de_rol(rol),
+                      placeholder: User.titulo_del_sistema(rol),
+                      class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 shadow-sm text-sm
+                              focus:ring-cec-teal focus:border-cec-teal" %>
+                <% if renombrado %>
+                  <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                    El sistema lo llama «<%= User.titulo_del_sistema(rol) %>»
+                  </p>
+                <% end %>
+              </td>
+              <td class="px-6 py-4">
+                <%= text_field_tag "roles[#{rol}][descripcion]", User.descripcion_de_rol(rol),
+                      placeholder: User.descripcion_del_sistema(rol),
+                      class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 shadow-sm text-sm
+                              focus:ring-cec-teal focus:border-cec-teal" %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="mt-6 flex justify-end gap-3">
+    <%= render ButtonComponent.new(variant: :secondary, href: permisos_path) do %>
+      Ir a Permisos
+    <% end %>
+    <%= render ButtonComponent.new(variant: :primary, type: "submit", shortcut: "F10") do %>
+      Guardar
+    <% end %>
+  </div>
+<% end %>

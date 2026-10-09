@@ -1,0 +1,616 @@
+require "test_helper"
+
+# C27-01 · La pantalla del bulto, por JSON.
+#
+# Yusef, el 2026-09-07, tres veces en la misma reunión: *"no es una etiqueta por
+# paquete, es una etiqueta por medición, y la medición puede tener 100
+# paquetes"*. Y cómo se arma la medición, cuando Jorge le preguntó si se elegían
+# de una lista: *"No, no, porque se van a equivocar. Eso es un error ya. No van
+# a leer."* — *"¿Entonces cómo los unís?"* — **"Escaneando. Escaneando cada
+# uno."**
+#
+# Así que lo que se prueba acá es el escaneo como puerta: qué entra a la mesa,
+# qué rebota y con qué motivo, y qué sale al guardar la tanda.
+class MedicionBultoTest < ActionDispatch::IntegrationTest
+  setup do
+    @medidor = users(:medidor)
+    @medidor.update!(iniciales: "MD")
+    ingresar(@medidor)
+    @primera = caja("1ZBULTO000000001")
+  end
+
+  # ── El escaneo acumula ───────────────────────────────────────────────────
+
+  test "cada escaneo agrega una caja a la mesa, y la mesa se manda de vuelta" do
+    segunda = caja("1ZBULTO000000002")
+
+    escanear(@primera.tracking)
+    assert_equal "ok", json["resultado"]
+    assert json["mesa"], "la caja entra a la mesa"
+    assert_equal @primera.id, json["paquete"]["id"]
+
+    escanear(segunda.tracking, en_tanda: [ @primera.id ])
+    assert_equal "ok", json["resultado"]
+    assert json["mesa"]
+    assert_equal segunda.id, json["paquete"]["id"]
+  end
+
+  test "escanear dos veces la misma caja no la duplica: rebota por repetida" do
+    escanear(@primera.tracking, en_tanda: [ @primera.id ])
+
+    assert_equal "no_mezclar", json["resultado"]
+    assert_equal "repetida", json["motivo"]
+    assert_not json["mesa"], "una caja repetida no vuelve a entrar"
+    assert_match(/ya la escaneaste/, json["mensaje"])
+  end
+
+  # El mismo warehouse impreso en las tres cajas de un split: se escanea tres
+  # veces y entran las tres, una por pip.
+  test "el mismo warehouse de un envío partido trae la caja siguiente, no la misma" do
+    cajas = envio_partido(@primera, 3)
+    wr = @primera.reload.numero_recepcion
+
+    escanear(wr)
+    assert_equal cajas[0].id, json["paquete"]["id"]
+
+    escanear(wr, en_tanda: [ cajas[0].id ])
+    assert_equal cajas[1].id, json["paquete"]["id"], "el segundo pip trae la caja 2, no otra vez la 1"
+
+    escanear(wr, en_tanda: [ cajas[0].id, cajas[1].id ])
+    assert_equal cajas[2].id, json["paquete"]["id"]
+  end
+
+  # ── «NO Mezclar» ─────────────────────────────────────────────────────────
+
+  # Yusef: *"escanea uno de Jorge y va y escanea otro y ese no es el mismo Jorge
+  # —en vez de Jorge Padilla es Jorge Manzano—: le tira error, es diferente
+  # cliente"*.
+  test "una caja de otro cliente rebota con su motivo, y no entra a la mesa" do
+    otro = caja("1ZBULTO000000009", cliente: clientes(:maria))
+
+    escanear(otro.tracking, en_tanda: [ @primera.id ])
+
+    assert_equal "no_mezclar", json["resultado"]
+    assert_equal "otro_cliente", json["motivo"]
+    assert_not json["mesa"], "la caja rechazada nunca entra a la mesa"
+    assert_match clientes(:maria).nombre_completo, json["mensaje"]
+    assert_match clientes(:juan).nombre_completo, json["mensaje"]
+  end
+
+  test "otro servicio también rebota: cada servicio se factura aparte" do
+    otro = caja("1ZBULTO000000010", tipo_envio: tipo_envios(:cem))
+
+    escanear(otro.tracking, en_tanda: [ @primera.id ])
+
+    assert_equal "otro_servicio", json["motivo"]
+    assert_not json["mesa"]
+    assert_match(/se factura aparte/i, json["mensaje"])
+  end
+
+  # Yusef: *"no lo podría hacer porque está consolidando esa carga con otros
+  # paquetes… un modal que le diga: hey, no, ese está consolidando con tal
+  # pre-alerta, con tal número. Ese va amarrado con otra."*
+  test "una caja de otra consolidación dice con qué pre-alerta choca" do
+    consolidada = caja("1ZBULTO000000011")
+    pa = pre_alerta_consolidada(consolidada)
+
+    escanear(consolidada.tracking, en_tanda: [ @primera.id ])
+
+    assert_equal "otra_consolidacion", json["motivo"]
+    assert_not json["mesa"]
+    assert_equal pa.numero_documento, json["choque"]["numero"]
+    assert_equal "Consolidado de prueba", json["choque"]["titulo"]
+    assert_match pa.numero_documento, json["mensaje"]
+  end
+
+  # La otra dirección: la mesa ya trae un consolidado y entra una suelta.
+  # Se facturan aparte —*"nosotros facturamos de acuerdo a la pre-alerta"*.
+  #
+  # C29-17 · La que rebota es la suelta **con su propia pre-alerta**: la que no
+  # tiene ninguna se puede unir (abajo).
+  test "una suelta con su pre-alerta contra un consolidado armado también rebota, y nombra la pre-alerta de la mesa" do
+    consolidada = caja("1ZBULTO000000012")
+    pa = pre_alerta_consolidada(consolidada)
+    independiente(@primera)
+
+    escanear(@primera.tracking, en_tanda: [ consolidada.id ])
+
+    assert_equal "no_consolidada", json["motivo"]
+    assert_equal pa.numero_documento, json["choque"]["numero"]
+  end
+
+  # C29-17 · *"Éste que tengo acá debería de darte la opción de agregárselo a
+  # este consolidado, porque ahora es uno y no tiene pre-alerta ni nada"*.
+  test "C29-17 · una suelta sin ninguna pre-alerta, del mismo cliente, se puede unir al consolidado de la mesa" do
+    consolidada = caja("1ZBULTO000000015")
+    pa = pre_alerta_consolidada(consolidada)
+
+    escanear(@primera.tracking, en_tanda: [ consolidada.id ])
+
+    assert_equal "unible", json["motivo"]
+    assert_not json["mesa"], "no entra hasta que la agreguen"
+    assert_equal pa.id, json["choque"]["id"]
+
+    post unir_medicion_path(pa), params: { paquete_id: @primera.id }, as: :json
+    assert json["ok"]
+    assert_equal pa, GrupoDeUnion.pre_alerta_consolidada_de(@primera.reload)
+
+    escanear(@primera.tracking, en_tanda: [ consolidada.id ])
+    assert_equal "ok", json["resultado"]
+    assert json["mesa"], "ahora es del mismo consolidado"
+    assert_equal 2, json["grupo"]["total"]
+  end
+
+  test "C29-17 · unir no deja meter una caja que ya tiene pre-alerta, ni de otro cliente, ni a un consolidado facturado" do
+    pa = pre_alerta_consolidada(caja("1ZBULTO000000016"))
+
+    con_pre_alerta = caja("1ZBULTO000000017")
+    independiente(con_pre_alerta)
+    post unir_medicion_path(pa), params: { paquete_id: con_pre_alerta.id }, as: :json
+    assert_response :unprocessable_entity
+    assert_match(/ya está en la pre-alerta/, json["errores"].first)
+
+    ajena = caja("1ZBULTO000000018", cliente: clientes(:maria))
+    post unir_medicion_path(pa), params: { paquete_id: ajena.id }, as: :json
+    assert_match(/otro cliente/, json["errores"].first)
+
+    pa.update!(finalizado: true)
+    post unir_medicion_path(pa), params: { paquete_id: @primera.id }, as: :json
+    assert_match(/ya se facturó/, json["errores"].first)
+    assert_empty UnirAlConsolidado.pre_alertas_de(@primera)
+  end
+
+  # C29-18 · *"Este paquete está consolidando con otro, traer el resto y medir,
+  # y unirlo… hay que volver a medir."*
+  test "C29-18 · la caja que llega después de que su consolidado se midió pregunta antes de entrar" do
+    medida = caja("1ZBULTO000000019")
+    pa = pre_alerta_consolidada(medida)
+    guardar([ medida ], [ { peso: "10" } ])
+    assert medida.reload.medicion_sesion
+    # El complemento llega días después, en otro manifiesto.
+    pa.pre_alerta_paquetes.create!(tracking: @primera.tracking, descripcion: "Bulto", fecha: Date.current, paquete: @primera)
+
+    escanear(@primera.tracking)
+
+    assert_equal "consolidado_ya_medido", json["resultado"]
+    assert_equal pa.numero_documento, json["pre_alerta"]
+    assert json["puede_remedir"]
+    assert_equal medida.reload.numero_recepcion, json["remedir_codigo"]
+    assert_match(/Traelas del estante/, json["mensaje"])
+
+    # «Medirla sola» la deja entrar.
+    escanear_aparte(@primera.tracking)
+    assert_equal "ok", json["resultado"]
+    assert json["mesa"]
+
+    # Y con la tanda vieja ya en la mesa, no vuelve a preguntar.
+    escanear(@primera.tracking, en_tanda: [ medida.id ])
+    assert_equal "ok", json["resultado"]
+  end
+
+  test "C29-18 · si lo medido ya está en una pre-factura, no ofrece medir todo junto" do
+    medida = caja("1ZBULTO000000020")
+    pa = pre_alerta_consolidada(medida)
+    guardar([ medida ], [ { peso: "10" } ])
+    pa.pre_alerta_paquetes.create!(tracking: @primera.tracking, descripcion: "Bulto", fecha: Date.current, paquete: @primera)
+    medida.reload.update_columns(pre_factura_id: pre_facturas(:borrador_juan).id)
+
+    escanear(@primera.tracking)
+
+    assert_equal "consolidado_ya_medido", json["resultado"]
+    assert_not json["puede_remedir"]
+    assert_match(/pre-factura/, json["mensaje"])
+  end
+
+  test "el modal del consolidado dice también a qué pre-factura pertenece, si ya tiene una" do
+    consolidada = caja("1ZBULTO000000013")
+    pa = pre_alerta_consolidada(consolidada)
+    hermana = caja("1ZBULTO000000014")
+    pa.pre_alerta_paquetes.create!(tracking: hermana.tracking, descripcion: "Gorra",
+                                   fecha: Date.current, paquete: hermana)
+    hermana.update!(pre_factura: pre_facturas(:borrador_juan))
+
+    escanear(consolidada.tracking, en_tanda: [ @primera.id ])
+
+    assert_equal "otra_consolidacion", json["motivo"]
+    assert_equal pre_facturas(:borrador_juan).numero, json["choque"]["pre_factura"]
+  end
+
+  # ── Guardar la tanda ─────────────────────────────────────────────────────
+  #
+  # C28-08 · La tanda llega como **las cajas** y **los volúmenes**, separados:
+  # *"la medición la va a decidir después de haber escaneado"*.
+
+  test "tres cajas en una medición son un bulto y una sola etiqueta" do
+    cajas = [ @primera, caja("1ZBULTO000000003"), caja("1ZBULTO000000004") ]
+
+    guardar(cajas, [ { peso: "20", alto: "10", largo: "12", ancho: "14" } ])
+
+    assert_response :success
+    assert_equal 1, json["cantidad"]
+    assert_equal 1, Bulto.count
+    assert_equal 3, Bulto.first.paquetes.count
+    assert_match %r{/medicion/sesiones/.+/etiquetas\?print=true}, json["imprimir_url"]
+    assert_nil json["bultos"].first["de_cuantos_texto"], "una medición sola no lleva «1 de 1»"
+    assert_equal 3, json["bultos"].first["cajas"]
+  end
+
+  # Yusef: *"mide y pesa este, le da agregar; mide y pesa este por separado
+  # porque no cuadra… y ahí le dice imprimir, y como son dos mediciones,
+  # imprime dos"*.
+  test "dos volúmenes crean dos bultos, y las dos etiquetas dicen «1 de 2» y «2 de 2»" do
+    otra = caja("1ZBULTO000000005")
+
+    guardar([ @primera, otra ], [ { peso: "20", alto: "10", largo: "12", ancho: "14" },
+                                  { peso: "8", alto: "5", largo: "6", ancho: "7" } ])
+
+    assert_response :success
+    assert_equal 2, json["cantidad"]
+    assert_equal 2, Bulto.count
+    assert_equal [ "1 de 2", "2 de 2" ], json["bultos"].map { |b| b["de_cuantos_texto"] }
+    assert_equal 1, Bulto.pluck(:sesion).uniq.size, "las dos salieron de la misma tanda"
+    assert_match(/2 volúmenes guardados de 2 cajas/, json["mensaje"])
+
+    get json["imprimir_url"]
+    assert_response :success
+    assert_equal 2, response.body.scan(/class="med"/).size, "dos mediciones, dos etiquetas"
+  end
+
+  # C28-08 · La forma vieja —`mediciones: [{ paquete_ids, peso… }]`— la sigue
+  # mandando la pestaña que se cargó antes del deploy: el operario deja
+  # /medicion abierta todo el día. Se traduce, no se rechaza.
+  test "la pestaña de antes del deploy todavía guarda: las cajas se juntan y los números son volúmenes" do
+    otra = caja("1ZBULTO000000008")
+
+    post guardar_medicion_index_path, as: :json, params: { mediciones: [
+      { paquete_ids: [ @primera.id ], peso: "20" },
+      { paquete_ids: [ otra.id ], peso: "8" }
+    ] }
+
+    assert_response :success
+    assert_equal 2, Bulto.count
+    assert_equal [ Bulto.first.sesion ], [ @primera, otra ].map { |c| c.reload.medicion_sesion }.uniq
+  end
+
+  # Lista blanca en la puerta: lo que venga de más en un volumen se cae ahí,
+  # no depende de que el modelo siga leyendo campo por campo.
+  test "lo que no es peso ni medidas no entra al bulto" do
+    guardar([ @primera ], [ { peso: "20", medido_por: "XX", sesion: "colada", cliente_id: clientes(:maria).id } ])
+
+    assert_response :success
+    bulto = Bulto.first
+    assert_equal "MD", bulto.medido_por, "el sello es del que está adentro de la sesión"
+    assert_equal clientes(:juan).id, bulto.cliente_id, "el cliente sale de la caja, no del request"
+    assert_not_equal "colada", bulto.sesion
+  end
+
+  test "guardar sin números es 422 con el porqué, y no crea nada" do
+    guardar([ @primera ], [ { peso: "", alto: "", largo: "", ancho: "" } ])
+
+    assert_response :unprocessable_entity
+    assert_match(/al menos el peso/, json["errores"].first)
+    assert_equal 0, Bulto.count
+  end
+
+  test "mezclar clientes en la misma tanda es 422: la tanda es de uno solo" do
+    otro = caja("1ZBULTO000000006", cliente: clientes(:maria))
+
+    guardar([ @primera, otro ], [ { peso: "20" }, { peso: "8" } ])
+
+    assert_response :unprocessable_entity
+    assert_equal 0, Bulto.count
+  end
+
+  test "más de diez volúmenes en una tanda es 422" do
+    guardar([ @primera ], Array.new(Bulto::MAXIMO_POR_SESION + 1) { { peso: "5" } })
+
+    assert_response :unprocessable_entity
+    assert_match(/#{Bulto::MAXIMO_POR_SESION}/, json["errores"].first)
+  end
+
+  # ── Reimprimir ───────────────────────────────────────────────────────────
+
+  # Yusef: *"él va a poder reimprimir la etiqueta, porque digamos que si se le
+  # cae… ¿cómo la buscaría? **Tendría que volver a escanear el warehouse**"*.
+  # C28-08 · Y salen **todas** las de su tanda: la caja no es de un volumen.
+  test "escanear una caja ya medida ofrece reimprimir las etiquetas de su tanda" do
+    otra = caja("1ZBULTO000000007")
+    guardar([ @primera, otra ], [ { peso: "20", alto: "10", largo: "12", ancho: "14" }, { peso: "5" } ])
+    sesion = Bulto.first.sesion
+
+    escanear(@primera.tracking)
+
+    assert_equal "ya_tiene_bulto", json["resultado"]
+    assert_not json["mesa"], "no vuelve a la mesa: ya está medida"
+    assert_equal etiquetas_sesion_medicion_path(sesion, print: "true"), json["tanda"]["etiquetas_url"]
+    assert_equal 2, json["tanda"]["cajas"]
+    assert_equal 2, json["tanda"]["volumenes"].size
+    assert_match(/tanda de 2 cajas y 2 volúmenes/, json["mensaje"])
+
+    get json["tanda"]["etiquetas_url"]
+    assert_response :success
+    assert_equal 2, response.body.scan(/class="med"/).size, "una etiqueta por volumen, no una por caja"
+  end
+
+  test "la etiqueta del bulto lleva sus números y no los de la caja" do
+    @primera.update!(peso: 3, alto: 5, largo: 6, ancho: 7)
+    guardar([ @primera ], [ { peso: "20", alto: "10", largo: "12", ancho: "14" } ])
+
+    get etiqueta_bulto_medicion_path(Bulto.first)
+
+    assert_response :success
+    assert_match "20.00", response.body
+    assert_match "10x12x14", response.body
+    assert_no_match(/3\.00/, response.body)
+    assert_match "1 caja", response.body
+    assert_match "MD", response.body
+  end
+
+  test "la etiqueta de una caja medida en tanda son las de la tanda" do
+    guardar([ @primera ], [ { peso: "20" }, { peso: "4" } ])
+
+    get etiqueta_medicion_path(@primera)
+
+    assert_response :success
+    assert_equal 2, response.body.scan(/class="med"/).size
+  end
+
+  # C27-06 · Un grupo consolidado medido en bultos imprime **una etiqueta por
+  # bulto**, no una por caja: es la regla, y la ruta vieja del grupo sigue
+  # siendo la que el JSON manda al facturar parcial.
+  test "las etiquetas del grupo consolidado salen por bulto, no por caja" do
+    segunda = caja("1ZBULTO000000015")
+    pa = pre_alerta_consolidada(@primera, segunda)
+    guardar([ @primera, segunda ], [ { peso: "20", alto: "10", largo: "12", ancho: "14" } ])
+    assert_response :success
+
+    get etiquetas_grupo_medicion_path(pa)
+
+    assert_response :success
+    assert_equal 1, response.body.scan(/class="med"/).size,
+                 "dos cajas medidas juntas son UNA etiqueta"
+  end
+
+  # ── C27-14 · Saltarse el manifiesto ──────────────────────────────────────
+  #
+  # Yusef: *"este tiene un bloqueo ahorita que me tiene loco: si no ha pasado el
+  # proceso desde Miami para acá, no lo puede hacer. Y ya le dije que le tiene
+  # que eliminar eso… **hay que poner una opción ahí**"*.
+
+  test "una caja que no pasó por el manifiesto avisa, y dice que se puede medir igual" do
+    suelta = caja("1ZBULTO000000020", estado: "enviado_honduras")
+
+    escanear(suelta.tracking)
+
+    assert_equal "no_esta_en_honduras", json["resultado"]
+    assert json["puede_saltar"], "el aviso tiene que traer la puerta"
+    assert_not json["mesa"]
+    assert_match(/Se puede medir igual/, json["mensaje"])
+  end
+
+  test "con el permiso puesto, la misma caja entra a la mesa marcada" do
+    suelta = caja("1ZBULTO000000021", estado: "enviado_honduras")
+
+    post escanear_medicion_index_path,
+         params: { codigo: suelta.tracking, en_tanda: [], saltar_manifiesto: true }, as: :json
+
+    assert_equal "ok", json["resultado"]
+    assert json["mesa"]
+    assert json["salto_manifiesto"], "la mesa tiene que saber que esta caja va por excepción"
+  end
+
+  test "sin el permiso, guardarla es 422; con el permiso se guarda y queda sellada" do
+    suelta = caja("1ZBULTO000000022", estado: "enviado_honduras")
+    volumen = { peso: "20", alto: "10", largo: "12", ancho: "14" }
+
+    guardar([ suelta ], [ volumen ])
+    assert_response :unprocessable_entity
+    assert_equal 0, Bulto.count
+
+    guardar([ suelta ], [ volumen ], saltar: [ suelta.id ])
+
+    assert_response :success
+    assert_equal 1, Bulto.count
+    suelta.reload
+    assert_not_nil suelta.salto_manifiesto_at
+    assert_equal "MD", suelta.salto_manifiesto_por
+    assert_equal "enviado_honduras", suelta.salto_manifiesto_estado, "queda el estado que tenía"
+    assert_equal "enviado_honduras", suelta.estado, "el estado del paquete **no** se toca"
+  end
+
+  test "una caja que sí pasó por el manifiesto no queda sellada aunque venga en la lista" do
+    guardar([ @primera ], [ { peso: "20" } ], saltar: [ @primera.id ])
+
+    assert_response :success
+    assert_nil @primera.reload.salto_manifiesto_at, "no hubo excepción que sellar"
+  end
+
+  # El otro portón sigue cerrado: ahí el peso se congeló y medirlo mentiría.
+  test "«ya está en una pre-factura» sigue siendo un no rotundo, sin puerta" do
+    @primera.update!(pre_factura: pre_facturas(:borrador_juan))
+
+    escanear(@primera.tracking)
+    assert_equal "en_pre_factura", json["resultado"]
+    assert_not json["puede_saltar"]
+
+    guardar([ @primera ], [ { peso: "20" } ], saltar: [ @primera.id ])
+    assert_response :unprocessable_entity
+    assert_equal 0, Bulto.count
+  end
+
+  # ── El grupo, después de guardar ────────────────────────────────────────
+  #
+  # 2026-09-08 · «Facturar lo que hay» cambia de momento, no de sentido: sale
+  # en el banner **después** de guardar, y solo si el consolidado quedó
+  # incompleto. Para eso la respuesta de guardar trae el grupo ya sellado.
+
+  test "guardar un consolidado incompleto devuelve el grupo con lo que falta y la puerta a facturar parcial" do
+    pa = pre_alerta_consolidada(@primera)
+    pa.pre_alerta_paquetes.create!(tracking: "1ZFALTA0000GRUPO", descripcion: "Gorra", fecha: Date.current)
+
+    guardar([ @primera ], [ { peso: "10", alto: "10", largo: "10", ancho: "10" } ])
+
+    assert_response :success
+    grupo = json["grupo"]
+    assert grupo, "la respuesta de guardar trae el grupo"
+    assert grupo["consolidada"]
+    assert_not grupo["completo"]
+    assert_equal 1, grupo["medidas"], "la que se acaba de guardar ya cuenta como medida"
+    assert_equal 2, grupo["total"]
+    assert grupo["facturar_parcial_url"].present?
+    faltan = grupo["cajas"].reject { |c| c["estado"] == "medida" }
+    assert_equal [ "1ZFALTA0000GRUPO" ], faltan.map { |c| c["tracking"] }
+    assert_equal [ "no ha llegado a Miami" ], faltan.map { |c| c["donde"] }
+  end
+
+  test "guardar un consolidado completo devuelve el grupo completo, y una suelta no devuelve grupo" do
+    segunda = caja("1ZBULTO0000COMPL")
+    pre_alerta_consolidada(@primera, segunda)
+
+    guardar([ @primera, segunda ], [ { peso: "10" } ])
+    assert_response :success
+    assert json["grupo"]["completo"], "las dos están medidas: el grupo va junto"
+
+    suelta = caja("1ZBULTO0000SUELTA")
+    guardar([ suelta ], [ { peso: "10" } ])
+    assert_response :success
+    assert_nil json["grupo"], "una caja sola no es un grupo"
+  end
+
+  # ── C27-33 · Medir de nuevo, la tanda entera ────────────────────────────
+  #
+  # Yusef: *"se equivocan y lo ingresan en seis libras, y eran cuatro… se va a
+  # poder corregir, las mismas etiquetas… medir de nuevo"*. Jorge, en staging:
+  # *"cuando un warehouse receipt ya tiene medidas y se vuelve a escanear no me
+  # pregunta si quiero editarlo"*.
+
+  test "escanear con «medir de nuevo» trae la tanda entera, con sus volúmenes" do
+    otra = caja("1ZREMEDIR0000002")
+    guardar([ @primera, otra ], [ { peso: "6", alto: "10", largo: "12", ancho: "14" }, { peso: "3" } ])
+    sesion = Bulto.last.sesion
+
+    post escanear_medicion_index_path, params: { codigo: @primera.tracking, en_tanda: [], remedir: true }, as: :json
+
+    assert_response :success
+    assert_equal "ok", json["resultado"]
+    assert json["mesa"]
+    assert_equal sesion, json["remedir_tanda"]["sesion"]
+    assert_equal [ 6.0, 3.0 ], json["remedir_tanda"]["volumenes"].map { |v| v["peso"] }
+    assert_equal [ 10.0, 12.0, 14.0 ], json["remedir_tanda"]["volumenes"].first.values_at("alto", "largo", "ancho")
+    assert_equal [ @primera.id, otra.id ].sort, json["hermanas"].map { |h| h["id"] }.sort, "vuelven las dos, no solo la escaneada"
+    assert_match(/Midiendo de nuevo: 2 cajas y 2 volúmenes/, json["mensaje"])
+  end
+
+  test "sin «medir de nuevo», la caja ya medida sigue rebotando" do
+    guardar([ @primera ], [ { peso: "6" } ])
+
+    escanear(@primera.tracking)
+
+    assert_equal "ya_tiene_bulto", json["resultado"]
+    assert_match(/medir la tanda de nuevo/, json["mensaje"])
+  end
+
+  test "guardar reemplazando la tanda: los volúmenes viejos se van, los nuevos tienen los números corregidos" do
+    otra = caja("1ZREMEDIR0000003")
+    guardar([ @primera, otra ], [ { peso: "6", alto: "10", largo: "12", ancho: "14" }, { peso: "2" } ])
+    viejos = Bulto.order(:orden).to_a
+
+    guardar([ @primera, otra ], [ { peso: "4", alto: "10", largo: "12", ancho: "14" } ], reemplaza: viejos.first.sesion)
+
+    assert_response :success
+    assert_equal 1, Bulto.count, "la tanda nueva reemplaza a la vieja: no se acumulan"
+    nuevo = Bulto.last
+    assert_equal 4.0, nuevo.peso.to_f
+    assert_equal [ @primera.id, otra.id ].sort, nuevo.paquetes.pluck(:id).sort
+    viejos.each do |viejo|
+      assert_equal 1, PaperTrail::Version.where(item_type: "Bulto", item_id: viejo.id, event: "destroy").count,
+                   "el historial se queda con los números que estaban mal"
+    end
+  end
+
+  test "la caja que se sacó al medir de nuevo queda sin medir, y vuelve a pendientes" do
+    otra = caja("1ZREMEDIR0000004")
+    guardar([ @primera, otra ], [ { peso: "6" } ])
+    viejo = Bulto.last
+
+    guardar([ @primera ], [ { peso: "4" } ], reemplaza: viejo.sesion)
+
+    assert_response :success
+    otra.reload
+    assert_nil otra.medicion_sesion
+    assert_nil otra.medido_at, "el único número que tenía era el de la tanda que se fue"
+    assert_equal 1, Bulto.last.paquetes.count
+  end
+
+  test "una caja ya medida no se guarda en otra tanda sin medir la suya de nuevo" do
+    guardar([ @primera ], [ { peso: "6" } ])
+    viejo = Bulto.last
+
+    guardar([ @primera ], [ { peso: "4" } ])
+
+    assert_response :unprocessable_entity
+    assert_match(/Medir de nuevo/, json["errores"].join)
+    assert_equal viejo.id, Bulto.last.id, "el bulto viejo sigue intacto"
+    assert_equal [ 6.0 ], @primera.reload.bultos.map { |b| b.peso.to_f }
+  end
+
+  private
+
+  def ingresar(user)
+    post session_url, params: { email_address: user.email_address, password: "password123" }
+  end
+
+  def json = JSON.parse(response.body)
+
+  def escanear(codigo, en_tanda: [])
+    post escanear_medicion_index_path, params: { codigo: codigo, en_tanda: en_tanda }, as: :json
+  end
+
+  def escanear_aparte(codigo)
+    post escanear_medicion_index_path, params: { codigo: codigo, aparte: true }, as: :json
+  end
+
+  # Una pre-alerta **independiente** (no consolidada) que nombra la caja.
+  def independiente(paquete)
+    pa = PreAlerta.create!(numero_documento: "PA-I#{SecureRandom.hex(3).upcase}", cliente: paquete.cliente,
+                           tipo_envio: tipo_envios(:aereo), estado: "pre_alerta", titulo: "Independiente",
+                           creado_por_tipo: "usuario", creado_por_id: users(:admin).id)
+    pa.pre_alerta_paquetes.create!(tracking: paquete.tracking, descripcion: "Suelto", fecha: Date.current, paquete: paquete)
+    pa
+  end
+
+  def guardar(cajas, volumenes, saltar: [], reemplaza: nil)
+    post guardar_medicion_index_path, as: :json,
+         params: { paquete_ids: cajas.map(&:id), volumenes: volumenes,
+                   reemplaza_sesion: reemplaza, saltar_manifiesto: saltar }
+  end
+
+  def caja(tracking, cliente: clientes(:juan), tipo_envio: tipo_envios(:cer), estado: "en_aduana", **extra)
+    Paquete.create!(tracking: tracking, cliente: cliente, tipo_envio: tipo_envio,
+                    sucursal_recepcion: sucursales(:miami), estado: estado,
+                    descripcion: "Zapatos", peso: 2, **extra)
+  end
+
+  def envio_partido(madre, n)
+    madre.update!(cantidad_paquetes: n, numero_caja: 1)
+    [ madre.reload, *(2..n).map { |i|
+      Paquete.create!(tracking: madre.tracking, cliente: madre.cliente, tipo_envio: madre.tipo_envio,
+                      sucursal_recepcion: sucursales(:miami), estado: madre.estado, descripcion: madre.descripcion,
+                      peso: 2, numero_recepcion: madre.numero_recepcion, cantidad_paquetes: n, numero_caja: i)
+    } ]
+  end
+
+  # La pre-alerta se arma con los paquetes **vinculados**: crear el renglón
+  # solo con el tracking le fabrica un paquete «esperado» aparte, y entonces el
+  # escaneo encuentra dos cajas con el mismo tracking y contesta «ambiguo».
+  def pre_alerta_consolidada(*paquetes)
+    pa = PreAlerta.create!(numero_documento: "PA-C#{SecureRandom.hex(3).upcase}", cliente: clientes(:juan),
+                           tipo_envio: tipo_envios(:aereo), consolidado: true, estado: "pre_alerta",
+                           titulo: "Consolidado de prueba", creado_por_tipo: "usuario",
+                           creado_por_id: users(:admin).id)
+    paquetes.each do |p|
+      pa.pre_alerta_paquetes.create!(tracking: p.tracking, descripcion: "Bulto", fecha: Date.current, paquete: p)
+    end
+    pa
+  end
+end

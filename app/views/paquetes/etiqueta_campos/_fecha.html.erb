@@ -1,0 +1,8 @@
+<%# La fecha no se encoge: en la jerarquía de Yusef está por encima del
+    driver, que ni siquiera aparece en su mockup. Si falta espacio, el que
+    se recorta es el driver. %>
+<% if etiqueta_plantilla.visible?("fecha") %>
+  <span style="font-size:var(--fs-fecha); font-weight:bold; flex:0 0 auto; white-space:nowrap;" data-campo="fecha">
+    <%= (paquete.fecha_recibido_miami || paquete.created_at)&.strftime("%d-%b-%Y %H:%M") %>
+  </span>
+<% end %>

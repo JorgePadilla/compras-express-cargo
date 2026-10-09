@@ -1,0 +1,8 @@
+<p>El manifiesto <strong><%= @manifiesto.numero %></strong> se marcó como recibido, pero
+   <strong><%= @faltantes.size %></strong> caja(s) no se escanearon:</p>
+<ul>
+  <% @faltantes.each do |caja| %>
+    <li><strong><%= caja.letra %></strong> — <%= caja.codigo %><%= " · #{caja.peso} lbs" if caja.peso %></li>
+  <% end %>
+</ul>
+<p>Los paquetes que iban adentro quedaron en aduana igual, para no trabar la operación.</p>

@@ -1,0 +1,84 @@
+<%# PR-C6.29: la tasa multiplica todo lo que se factura, así que la pantalla
+    tiene que decirlo antes de que alguien la toque, y mostrar el efecto en un
+    cobro real en vez de en abstracto. %>
+<%= render PageHeaderComponent.new(
+      title: "Tasa de Cambio",
+      subtitle: "Convierte a Lempiras todo precio cargado en dolares") %>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+    <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Tasa vigente</p>
+    <p class="text-4xl font-bold text-cec-navy dark:text-cec-gold font-mono mb-6">
+      L. <%= number_with_precision(@tasa, precision: 2) %>
+      <span class="text-base font-normal text-gray-500">por dolar</span>
+    </p>
+
+    <div class="p-3 rounded-lg bg-amber-50 border border-amber-200 mb-6">
+      <p class="text-sm text-amber-900">
+        <b>Ojo:</b> cambiarla mueve <b>todos</b> los precios que estan cargados en dolares —
+        el flete y los cargos extra. Aplica de inmediato a lo que se cotice y facture
+        despues del cambio; lo ya facturado no se toca, cada documento guarda la tasa
+        con la que se emitio.
+      </p>
+    </div>
+
+    <%= form_with url: tasa_cambio_path, method: :patch, class: "flex flex-wrap items-end gap-3" do %>
+      <div>
+        <%= label_tag :tasa_cambio, "Nueva tasa",
+              class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+        <%= text_field_tag :tasa_cambio, number_with_precision(@tasa, precision: 2),
+              inputmode: "decimal", autocomplete: "off",
+              class: "block w-40 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900
+                     dark:text-gray-100 shadow-sm text-sm font-mono
+                     focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+      <%= submit_tag "Guardar tasa",
+            class: "px-4 py-2 bg-cec-navy text-white rounded-lg text-sm font-medium hover:bg-cec-navy-light cursor-pointer",
+            data: { turbo_confirm: "Esto cambia el precio en Lempiras de todo lo que se cobra en dolares. Confirmas?" } %>
+    <% end %>
+  </div>
+
+  <%# Un cobro real con el motor de verdad. Es la misma cuenta que Yusef hizo a
+      mano sobre el PDF de preguntas, para que el numero no sea abstracto. %>
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+    <p class="text-xs text-gray-500 uppercase tracking-wider mb-3">Como queda un cobro</p>
+    <% if @ejemplo %>
+      <p class="text-sm text-gray-600 dark:text-gray-300 mb-2">Un <b>CER de 1.5 lb</b> hoy paga:</p>
+      <p class="text-2xl font-bold text-cec-navy dark:text-cec-gold font-mono">
+        L. <%= number_with_precision(@ejemplo[:total], precision: 2) %>
+      </p>
+      <p class="text-xs text-gray-500 mt-1">
+        L. <%= number_with_precision(@ejemplo[:neto], precision: 2) %> + ISV
+        <% if @ejemplo[:aplico_minimo] %>
+          <span class="block mt-1 text-amber-700">Cayo en el minimo del servicio.</span>
+        <% end %>
+      </p>
+    <% else %>
+      <p class="text-sm text-gray-500 italic">No hay tarifa de CER cargada para calcular el ejemplo.</p>
+    <% end %>
+  </div>
+</div>
+
+<% if @historial.any? %>
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mt-6">
+    <h2 class="text-sm font-semibold text-cec-navy dark:text-cec-gold mb-3">Cambios anteriores</h2>
+    <table class="min-w-full text-sm" data-tabla="historial-tasa">
+      <thead>
+        <tr class="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
+          <th class="py-2 pr-4">Cuando</th>
+          <th class="py-2 pr-4">Quien</th>
+          <th class="py-2">Quedo en</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @historial.each do |v| %>
+          <tr class="border-b border-gray-100 dark:border-gray-700">
+            <td class="py-2 pr-4 whitespace-nowrap"><%= l(v.created_at, format: :short) %></td>
+            <td class="py-2 pr-4"><%= User.find_by(id: v.whodunnit)&.nombre || "Sistema" %></td>
+            <td class="py-2 font-mono"><%= v.changeset&.dig("valor")&.last || "—" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>

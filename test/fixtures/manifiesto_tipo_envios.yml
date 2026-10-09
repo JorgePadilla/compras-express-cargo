@@ -1,0 +1,10 @@
+# C21-03: un manifiesto sin ningún tipo de envío nuestro no es válido —
+# *"no puede ser sin ninguno, tiene que llevar uno mínimo"*. Los manifiestos
+# de fixture llevan el suyo para no nacer inválidos.
+creado_cer:
+  manifiesto: creado
+  tipo_envio: cer
+
+enviado_cer:
+  manifiesto: enviado
+  tipo_envio: cer

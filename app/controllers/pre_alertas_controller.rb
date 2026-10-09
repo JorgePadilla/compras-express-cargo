@@ -1,5 +1,6 @@
 class PreAlertasController < ApplicationController
-  before_action :set_pre_alerta, only: %i[show edit update anular]
+  before_action :authorize_seccion
+  before_action :set_pre_alerta, only: %i[show edit update anular destinos_disponibles mover_paquete]
 
   def index
     @pre_alertas = base_scope.includes(:cliente, :tipo_envio, :pre_alerta_paquetes).recientes
@@ -36,6 +37,12 @@ class PreAlertasController < ApplicationController
     @pre_alerta = PreAlerta.new
     @pre_alerta.pre_alerta_paquetes.build
     @tipo_envios = TipoEnvio.activos.order(:nombre)
+    cargar_sugerencias
+    # PR-C6.26: el dropdown arrancaba vacío aunque el modelo backfillea CER en
+    # `before_validation on: :create` — el default existía pero no se veía, y
+    # el operario tenía que elegirlo igual. Yusef: "preseleccionar de los
+    # dropdown". Se muestra el mismo que se iba a aplicar.
+    @tipo_envio_sugerido = @tipo_envios.find { |t| t.codigo == "cer" }
   end
 
   def create
@@ -47,15 +54,44 @@ class PreAlertasController < ApplicationController
       redirect_to pre_alerta_path(@pre_alerta), notice: "Pre-Alerta #{@pre_alerta.numero_documento} creada exitosamente."
     else
       @tipo_envios = TipoEnvio.activos.order(:nombre)
+      cargar_sugerencias
       render :new, status: :unprocessable_entity
     end
   end
 
   def edit
     @tipo_envios = TipoEnvio.activos.order(:nombre)
+    # PR-C29.20 · Cada renglón mira su paquete (¿ya se recibió?) y los motivos
+    # de retención del paquete (`PreAlertaPaquete#motivo_retencion_ids`). Sin
+    # precargar eran dos consultas por renglón: con 15 paquetes, de 17 a 41.
+    ActiveRecord::Associations::Preloader.new(
+      records: [ @pre_alerta ], associations: { pre_alerta_paquetes: { paquete: :motivos_retencion } }
+    ).call
+    cargar_sugerencias
   end
 
+  # ── Autosave (JSON) ──
+  #
+  # PR-C6.43: esta rama faltaba, y el que faltara **duplicaba paquetes**.
+  #
+  # El editor guarda por fetch mandando `autosave=true`, y espera que la
+  # respuesta le devuelva el `id` que la base le asignó a cada fila nueva
+  # (`_injectNewPaqueteIds`). Con la respuesta vieja —`{ ok: true }`, sin
+  # `new_paquetes`— el bucle del JS no corría nunca: la fila recién creada se
+  # quedaba sin su `id` oculto, y al segundo F8 se reenviaba como si fuera
+  # nueva. `accepts_nested_attributes_for` creaba un SEGUNDO registro, que por
+  # `crear_paquete_esperado` metía un segundo Paquete en bodega.
+  #
+  # F8 es la única forma de guardar en esta pantalla, así que el segundo apretón
+  # era la ruta normal, no un caso raro. El portal del cliente nunca lo tuvo
+  # porque su `update` sí devuelve `new_paquetes` desde el principio.
+  #
+  # La rama `format.json` vieja (`ok`/`errores`) se conserva: el JS siempre manda
+  # `autosave=true`, así que cae acá, y lo otro sigue sirviendo para un PATCH
+  # JSON hecho a mano.
   def update
+    return autosave if params[:autosave] == "true"
+
     if @pre_alerta.update(pre_alerta_params)
       respond_to do |format|
         format.turbo_stream do
@@ -65,10 +101,70 @@ class PreAlertasController < ApplicationController
           ]
         end
         format.html { redirect_to pre_alerta_path(@pre_alerta), notice: "Pre-Alerta actualizada." }
+        # PR-C6.25: el editor guarda por fetch (el botón "Guardar (F8)" es
+        # `type=button`, no un submit), así que necesita una respuesta JSON.
+        # Sin esta rama el guardado devolvía HTML y el Stimulus no sabía qué
+        # hacer con él.
+        format.json { render json: { ok: true } }
       end
     else
       @tipo_envios = TipoEnvio.activos.order(:nombre)
-      render :edit, status: :unprocessable_entity
+      cargar_sugerencias
+      respond_to do |format|
+        format.json { render json: { ok: false, errores: @pre_alerta.errors.full_messages }, status: :unprocessable_entity }
+        format.any  { render :edit, status: :unprocessable_entity }
+      end
+    end
+  end
+
+  # PR-C6.48: los destinos posibles para mover un paquete.
+  #
+  # La lista de admin es deliberadamente más ancha que la del portal: **de
+  # cualquier cliente**, y sin exigir que el tipo de envío coincida. Yusef:
+  # *"se permite mover a pre-alerta de cualquier cliente (caso típico: corregir
+  # asignación equivocada)"* — si el paquete cayó en la pre-alerta del cliente
+  # equivocado, el destino correcto es justamente de otro cliente.
+  #
+  # Lo único que se sigue bloqueando es meterlo en una consolidación ya cerrada:
+  # ahí el cliente ya no puede reaccionar.
+  def destinos_disponibles
+    # El `find` es la validación: si la fila no es de esta pre-alerta, levanta
+    # RecordNotFound y no se filtra la lista de nadie.
+    @pre_alerta.pre_alerta_paquetes.find(params[:pre_alerta_paquete_id])
+
+    destinos = PreAlerta.activas
+                        .includes(:cliente, :tipo_envio)
+                        .where.not(id: @pre_alerta.id)
+                        .where(finalizado: false)
+                        .order(created_at: :desc)
+                        .limit(20)
+
+    render json: destinos.map { |pa| destino_json(pa) }
+  end
+
+  def mover_paquete
+    pap = @pre_alerta.pre_alerta_paquetes.find(params[:pre_alerta_paquete_id])
+    destino = PreAlerta.activas.find_by(id: params[:destino_id])
+
+    if destino.nil? || destino.id == @pre_alerta.id
+      redirect_to edit_pre_alerta_path(@pre_alerta), alert: "Destino no válido."
+      return
+    end
+
+    if destino.finalizado?
+      redirect_to edit_pre_alerta_path(@pre_alerta),
+                  alert: "#{destino.numero_documento} ya se finalizó: no se le pueden agregar paquetes."
+      return
+    end
+
+    origen_quedo_vacia = mover!(pap, destino)
+
+    if origen_quedo_vacia
+      redirect_to pre_alertas_path,
+                  notice: "Paquete movido a #{destino.numero_documento}. La pre-alerta origen quedó vacía y fue eliminada."
+    else
+      redirect_to edit_pre_alerta_path(@pre_alerta),
+                  notice: "Paquete movido a #{destino.numero_documento} (#{destino.cliente.codigo})."
     end
   end
 
@@ -83,9 +179,120 @@ class PreAlertasController < ApplicationController
     redirect_to pre_alertas_path, notice: "#{count} pre-alertas vacias eliminadas."
   end
 
-  private  def set_pre_alerta
+  private
+
+
+  # C26-15 · La sección entera pasa por `can_access?`, como pide `RP-58`: sin
+  # esto, un rol de estación (*"no se les habilita nada más que eso"*) entraba
+  # igual, porque la política de esta sección era «todos» y ningún controller
+  # la consultaba.
+  def authorize_seccion
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:pre_alertas)
+  end
+
+  # El guardado del editor. Espejo de `Cuenta::PreAlertasController#update`.
+  #
+  # `errors` y no `errores`: es la llave que el JS lee
+  # (`Array.isArray(data.errors)`). Con la otra, el operario veía "Error al
+  # guardar" genérico en vez de "el tracking ya existe en esta pre-alerta" —
+  # justo el mensaje que hace falta para arreglarlo.
+  def autosave
+    unless @pre_alerta.update(pre_alerta_params)
+      render json: { status: "error", errors: @pre_alerta.errors.full_messages },
+             status: :unprocessable_entity
+      return
+    end
+
+    render json: { status: "saved", new_paquetes: ids_de_las_filas_nuevas }
+  end
+
+  # `{ indice_del_form => id_en_la_base }` para las filas que acaban de nacer.
+  # Se busca por tracking porque es lo único que el form y la base comparten
+  # antes de que exista el id — el mismo criterio que usa el portal.
+  def ids_de_las_filas_nuevas
+    attrs_por_indice = params.dig(:pre_alerta, :pre_alerta_paquetes_attributes)
+    return {} if attrs_por_indice.blank?
+
+    # `each` y no `each_with_object`: `ActionController::Parameters` dejó de ser
+    # Enumerable en Rails 5.
+    nuevas = {}
+    attrs_por_indice.each do |indice, attrs|
+      next if attrs[:id].present? || attrs[:_destroy] == "1"
+
+      pap = @pre_alerta.pre_alerta_paquetes.find_by(tracking: attrs[:tracking]&.strip&.upcase)
+      nuevas[indice] = pap.id if pap
+    end
+    nuevas
+  end
+
+  # El movimiento en sí. Devuelve si la pre-alerta origen quedó vacía.
+  #
+  # Deja rastro en el `historial` de las DOS, igual que el portal: un paquete
+  # que aparece en otra pre-alerta sin explicación es indistinguible de un
+  # error de carga.
+  #
+  # **No manda mail.** Los movimientos del portal los hace el cliente sobre sus
+  # propias pre-alertas; este lo hace el equipo, y avisarle al cliente de una
+  # corrección interna es una decisión de negocio que nadie pidió.
+  def mover!(pap, destino)
+    vacia = false
+
+    PreAlertaPaquete.transaction do
+      sello = Time.current.strftime("%d/%m/%Y %H:%M")
+      quien = Current.user&.nombre || "el equipo"
+      desc = pap.descripcion.presence || pap.tracking.presence || "sin descripcion"
+
+      pap.update!(pre_alerta: destino)
+
+      @pre_alerta.append_historial!(
+        "[#{sello}] #{quien} movió el paquete '#{desc}' (#{pap.tracking}) a #{destino.numero_documento} — #{destino.cliente.codigo}."
+      )
+      destino.append_historial!(
+        "[#{sello}] #{quien} trajo el paquete '#{desc}' (#{pap.tracking}) desde #{@pre_alerta.numero_documento} — #{@pre_alerta.cliente.codigo}."
+      )
+
+      if @pre_alerta.pre_alerta_paquetes.reload.empty?
+        @pre_alerta.soft_delete!
+        vacia = true
+      end
+    end
+
+    vacia
+  end
+
+  def destino_json(pa)
+    te = pa.tipo_envio
+    modalidad = te&.modalidad&.capitalize || "—"
+
+    {
+      id: pa.id,
+      numero_documento: pa.numero_documento,
+      # El código del cliente va en el título porque acá el destino puede ser
+      # de OTRO cliente — es el dato que decide si es el correcto.
+      titulo: "#{pa.cliente.codigo} · #{pa.titulo}",
+      tipo_envio: te&.nombre || "—",
+      tipo_envio_descripcion: te&.con_reempaque ? "#{modalidad} con Reempaque" : "#{modalidad} sin Reempaque",
+      consolidado: pa.consolidado,
+      paquetes_count: pa.pre_alerta_paquetes.size,
+      created_at: pa.created_at.strftime("%d/%m/%Y")
+    }
+  end
+
+  def set_pre_alerta
     @pre_alerta = PreAlerta.find(params[:id])
   end
+
+# PR-C6.36: el catalogo que alimenta el `datalist` del proveedor. Vive en un
+# metodo y no repetido en cada accion porque los re-render de error tambien
+# lo necesitan — y ahi fue justo donde se olvido la primera vez.
+def cargar_sugerencias
+  @proveedores_sugeridos = Proveedor.activos.ordered
+  # Los motivos de retención van con las sugerencias porque los pide el mismo
+  # bloque en las tres pantallas donde se arma un renglón: crear, editar y el
+  # re-render de un error. Cargarlo en una sola de ellas es cómo el modal sale
+  # vacío en las otras dos.
+  @motivos_retencion = MotivoRetencion.activos.ordered
+end
 
   def base_scope
     if params[:incluir_anulados] == "1" || params[:solo_anulados] == "1"
@@ -108,9 +315,21 @@ class PreAlertasController < ApplicationController
 
   def pre_alerta_params
     params.require(:pre_alerta).permit(
-      :cliente_id, :tipo_envio_id, :consolidado, :con_reempaque,
+      # `con_reempaque` **no** se permite: lo deriva el modelo del servicio. Un
+      # campo derivado que se sigue aceptando por parámetro es la puerta por la
+      # que vuelve la contradicción.
+      :cliente_id, :tipo_envio_id, :consolidado,
       :notas_grupo, :estado, :titulo, :proveedor,
-      pre_alerta_paquetes_attributes: %i[id tracking descripcion fecha instrucciones _destroy]
+      # `fecha` NO se permite: la pone el servidor (`PreAlertaPaquete` la trae
+      # por default) y la pantalla la muestra como sello, sin input. Dejarla
+      # permitida haría que "read only" fuera solo de la vista — un request
+      # armado a mano podría poner cualquier fecha.
+      pre_alerta_paquetes_attributes: [
+        :id, :tracking, :descripcion, :instrucciones, :retener_miami,
+        # Los motivos y la nota de la retención. No son columnas de
+        # `pre_alerta_paquetes`: viajan al paquete esperado, que ya las tiene.
+        :notas_retencion, :_destroy, { motivo_retencion_ids: [] }
+      ]
     )
   end
 end

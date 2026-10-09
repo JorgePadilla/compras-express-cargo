@@ -35,6 +35,44 @@ class PaqueteEtiquetaTest < ActionDispatch::IntegrationTest
     assert_match "RETIRA EN", body, "la sucursal necesita encabezado (el 'San Pedro Soda')"
   end
 
+  # C16-07 · Yusef, con las etiquetas de un retenido en la mano: "y sigue
+  # saliendo el CER aquí. Mirá, sería así: retenido" · "el de retener me
+  # dijiste RT, me va". Jorge: en lugar del servicio, las primeras tres letras
+  # de RETENIDO. Salió RTE y Yusef lo corrigió al día siguiente (C18-01).
+  test "un retenido en Miami imprime RET donde iba el servicio" do
+    @paquete.update!(retener_miami: true, notas_retencion: "Caja abierta")
+
+    get etiqueta_paquete_url(@paquete)
+
+    servicio = response.body[/data-campo="tipo-envio"[^>]*>\s*([A-Z]{3})\s*</, 1]
+    assert_equal "RET", servicio
+    assert_no_match(/>\s*CER\s*</, response.body, "el servicio no puede salir al lado: RET lo reemplaza")
+  end
+
+  test "sin retencion sigue saliendo el servicio" do
+    @paquete.update!(tipo_envio: tipo_envios(:cer))
+    assert_not @paquete.retener_miami?
+
+    get etiqueta_paquete_url(@paquete)
+
+    servicio = response.body[/data-campo="tipo-envio"[^>]*>\s*([A-Z]{3})\s*</, 1]
+    assert_equal "CER", servicio
+  end
+
+  test "con hermanas=1 todas las cajas del retenido dicen RET" do
+    cajas = Paquete.crear_split!(
+      attrs: { tracking: "1ZRTEHERMANAS001", cliente: @paquete.cliente, tipo_envio: tipo_envios(:cer),
+               descripcion: "Dos cajas retenidas", estado: "recibido_miami", user: users(:digitador),
+               sucursal_recepcion: sucursales(:miami), retener_miami: true, notas_retencion: "Mojado" },
+      total_cajas: 2
+    )
+
+    get etiqueta_paquete_url(cajas.first, hermanas: 1)
+
+    servicios = response.body.scan(/data-campo="tipo-envio"[^>]*>\s*([A-Z]{3})\s*</).flatten
+    assert_equal %w[RET RET], servicios
+  end
+
   test "no lleva terminos y condiciones ni precios" do
     get etiqueta_paquete_url(@paquete)
 
@@ -56,8 +94,18 @@ class PaqueteEtiquetaTest < ActionDispatch::IntegrationTest
     assert_response :success
     # "si el tracking se divide en 5 paquetes es una para cada una"
     assert_equal 3, response.body.scan(/class="etq"/).size
-    assert_match "1/3", response.body
-    assert_match "3/3", response.body
+    # `A7-21` decía que la etiqueta llevara el número solo, y su razón era del
+    # **empaque**: *"no estamos seguros cuántas estamos empacando"*.
+    #
+    # Al recibir es al revés: la cantidad se fija antes de imprimir —el operario
+    # cargó las cajas o contestó cuántas—, y por eso el código de barras ya salía
+    # con su sufijo. Jorge, con una etiqueta de dos cajas en la mano: *"el 1 está
+    # bien, pero aquí yo mandé 2; cuando manda más de una debe llevar el 1/2"*.
+    #
+    # La fracción sale **solo cuando el total está grabado**; ver
+    # `test/helpers/etiqueta_fraccion_test.rb`.
+    assert_match ">1/3</span>", response.body
+    assert_match ">3/3</span>", response.body
   end
 
   test "sin hermanas imprime solo la del paquete" do
@@ -93,7 +141,8 @@ class PaqueteEtiquetaTest < ActionDispatch::IntegrationTest
 
     get reimprimir_etiquetas_paquete_url(@paquete)
 
-    assert_redirected_to etiqueta_paquete_path(@paquete)
+    # 2026-10-08 · Con el diálogo: re-imprimir es imprimir.
+    assert_redirected_to etiqueta_paquete_path(@paquete, print: true)
   end
 
   test "las etiquetas combinadas son etiquetas, no warehouse receipts" do

@@ -77,6 +77,179 @@ Sólo dos gradientes decorativos están autorizados a nivel global:
 Gradientes ad-hoc como `from-emerald-*`, `from-gray-500 to-gray-600` o
 `from-white to-gray-50` decorativos fueron removidos y no deben reintroducirse.
 
+### Contraste — `cec-teal` rellena, `cec-teal-deep` entinta
+
+WCAG AA pide **4.5:1** para texto y **3:1** para elementos de interfaz (bordes,
+iconos, anillos de foco). Dos combinaciones de la paleta **no llegan**, y son
+las que más se usaban:
+
+| combinación | ratio | veredicto |
+|---|---:|---|
+| blanco sobre `cec-teal` `#00B4D8` | **2.46** | falla |
+| `text-cec-teal` sobre blanco | **2.46** | falla |
+| blanco sobre `cec-teal-dark` `#0096C7` | 3.39 | falla para texto |
+| **`cec-navy-dark` sobre `cec-teal`** | **6.69** | ✅ así se usa |
+| **`cec-teal-deep` `#007BA3` sobre blanco** | **4.81** | ✅ así se usa |
+
+Por eso existe `--color-cec-teal-deep`. La regla, en una línea:
+
+> **`cec-teal` es un fondo. `cec-teal-deep` es una tinta.**
+>
+> Si el teal va *detrás* de algo, es `cec-teal` y la letra encima va
+> `cec-navy-dark`. Si el teal *es* lo que se lee —texto, borde, anillo de
+> foco— es `cec-teal-deep`, y en modo oscuro `cec-teal-light` (7.58:1).
+
+Otras que la auditoría de PR-BTN.1 encontró abajo del mínimo y ya no se usan
+en botones: `cec-danger` `#EF4444` con blanco (3.76 → usar `red-600`, 4.83),
+`amber-600` con blanco (3.19 → `amber-700`, 5.02), `text-gray-400` (2.54 →
+`gray-500`, 4.83), `text-red-400` (2.77 → `red-500`, 3.76) y
+`dark:text-cec-navy-light` sobre `gray-900` (**1.69** → `cec-gold`, 10.10).
+
+---
+
+## Modales — un tono por intención
+
+> Jorge, 2026-10-08, mirando el modal «Su consolidado ya se midió» en
+> medición: *"the orange in here feels different from the other; I would like
+> to somehow have a standard on the colors use"*. Era `amber-700` sólido —que
+> la paleta no prevé— y no había regla: 38 modales, seis colores de franja
+> distintos, y la mitad sin franja.
+
+**El color de la franja dice qué le pide el modal al operario**, no de qué
+pantalla es. Se pinta siempre con `ModalHeaderComponent`; las clases viven en
+`ModalHeaderComponent::TONOS` y en ningún otro lado.
+
+| tono | franja | contraste | cuándo | ejemplos |
+|---|---|---:|---|---|
+| `:bloqueo` | `bg-red-700 text-white` | 6.47 | algo está mal y no deja seguir | «Faltan cajas que sí vinieron», «No entró al manifiesto», «Este paquete es de otro tipo de envío», «Guardar en la bolsa de…» |
+| `:atencion` | `bg-cec-gold text-cec-navy-dark` | 9.39 | hay que decidir o mirar; no es un error | «Su consolidado ya se midió», «¿La agregás a este consolidado?», «Tracking ya existe», «Estás retrocediendo el pipeline», «Medir lo que hay», el «Confirmar» genérico |
+| `:info` | `bg-cec-navy text-white` | 14.43 | informa, administra, pide un PIN, es un formulario | «Sacar de la lista», «Cambio de servicio», «Retener en Miami», «Emitir NC-…», «Sonidos de escaneo» |
+| `:listo` | `bg-cec-teal text-cec-navy-dark` | 6.69 | salió bien | «¡Tus cambios fueron guardados!», «Pre-alerta registrada» |
+| `:notas` | `bg-amber-50 text-amber-900` · oscuro `dark:bg-amber-900/20 dark:text-amber-200` | 8.75 · 11.11 | notas del cliente o del paquete | «Notas del cliente» de la PESA, la nota del cliente en el aviso de /etiquetar |
+
+```erb
+<%= render ModalHeaderComponent.new(tono: :atencion, tamano: :grande,
+      kicker: "Su consolidado ya se midió", titulo: "Traé el resto del estante") %>
+```
+
+- `tamano:` `:grande` en las pantallas de pistola (se leen parado, a un metro),
+  `:normal` por defecto, `:chico` en formularios. `centrado: true` pone el
+  ícono arriba. `titulo_data:` / `kicker_data:` para los targets de Stimulus
+  que escriben el texto; `cerrar: "click->modal#close"` agrega la «×».
+- Lo que va adentro de la franja (subtítulos) hereda la tinta: usar
+  `opacity-90`, no un color.
+- **Amber nunca va sólido.** Ni en franjas ni en botones: amber es el de las
+  notas, y en claro. El `warning` de `ButtonComponent` pasó a ser ese ámbar
+  claro; para confirmar va `primary`, `teal` o `gold`.
+- El aviso de `/etiquetar` cambia de tono en vivo (retención → bloqueo, tarea
+  → atención, nota → notas) y lee las clases del servidor
+  (`data-etiquetar-tonos-value`), no de una tabla propia en el JS.
+
+`test/lint/tonos_de_modal_test.rb` hace cumplir las cuatro cosas: no hay ámbar
+sólido en `app/views` ni `app/components`, todo `<dialog>` y todo
+`fixed inset-0` que sea modal renderiza `ModalHeaderComponent`, los tonos son
+exactamente cinco, y el JS de `/etiquetar` no tiene su copia.
+
+> ⏳ **Pendiente.** El modal de confirmación genérico (`shared/_confirm_modal`,
+> el que reemplaza a `turbo_confirm`) pinta el botón de confirmar en **rojo
+> siempre**: `danger` es `true` por defecto y casi ninguna de las ~44 llamadas
+> lo pasa, así que «¿Generar venta?» sale igual que «¿Eliminar?». Hay que
+> clasificar cada llamada; no entró en PR-C29.12.
+
+---
+
+## Botones — `ButtonComponent`
+
+**Un botón nuevo se escribe con `ButtonComponent`, no a mano.** Los variants
+llevan el ratio de contraste en el comentario del código; si alguno se toca,
+el número se recalcula.
+
+| variant | uso | ratio |
+|---|---|---:|
+| `primary` | la acción principal — navy **plano** | 14.43 |
+| `secondary` | acción alterna sobre fondo claro; borde `gray-500` a 4.84 | 10.31 |
+| `ghost` | Cancelar / Volver / Limpiar | 7.56 |
+| `gold` | CTA de cierre (Guardar, Facturar) | 9.39 |
+| `teal` | acción afirmativa; letra `cec-navy-dark`, no blanca | 6.69 |
+| `outline_navy` | secundaria con borde; en oscuro va a **gold** | 10.31 |
+| `outline_teal` | secundaria con borde teal (`-deep`) | 4.81 |
+| `danger` | destructiva — `red-600` | 4.83 |
+| `soft_danger` | destructiva "suave" (Anular) | 5.91 |
+| `warning` | el ámbar **claro** de las notas — `amber-900` sobre `amber-50` (PR-C29.12; era `amber-700` sólido) | 8.75 |
+
+Tamaños: `:xs` `:sm` `:md` (default) `:lg`. El icono sigue al botón (16 / 16 /
+20 / 20 px).
+
+**Lo que el componente garantiza y no hay que volver a escribir:**
+
+- **Anillo de foco visible** en los diez variants. Un variant nuevo sin anillo
+  rompe la suite (`button_component_test.rb`).
+- **`type="button"` por defecto.** Un `<button>` sin type dentro de un `<form>`
+  es `submit` — así, "Limpiar" en `/entrega_personal` reseteaba el formulario
+  **y lo enviaba**.
+- **Nombre accesible obligatorio**: un botón de solo icono sin `label:` levanta
+  `ArgumentError` en vez de quedar mudo para un lector de pantalla.
+- **`disabled:`** con un solo tratamiento (`opacity-50` + `cursor-not-allowed`),
+  y un `<span role="button" aria-disabled>` cuando hay `href` — un `<a>`
+  deshabilitado no existe en HTML.
+- **`method:`** distinto de `:get` sale como `button_to`, no como un `<a>` que
+  depende de Turbo.
+- **El borde de `secondary` también cumple el 3:1.** Antes era `gray-300`
+  (1.47:1 contra blanco) y estaba aceptado a propósito, con el argumento de que
+  el texto ya se leía. Jorge lo desmintió operando: *"esos botones con fondo
+  blanco cuesta demasiado verlos"*. El argumento medía si el botón **se lee**,
+  y el problema era **encontrarlo**: sobre una tarjeta blanca el borde es lo
+  único que le da forma. Ahora `gray-500` en claro (4.84:1) y `gray-400` en
+  oscuro (5.64:1 sobre `gray-800`; antes `gray-600` daba **1.94:1** y nadie lo
+  había mirado). El fondo blanco, la tinta `gray-700` y la sombra se quedan —
+  son lo que lo distingue de un input deshabilitado, que es gris **relleno**.
+
+**Qué se queda crudo, a propósito:** las tarjetas-botón de tipo de envío en
+`/etiquetar`, los CTA de las pantallas de sesión, los adornos absolutos dentro
+de un input (ojo de contraseña, limpiar fecha) y las pills de filtro con clases
+interpoladas. Su forma es incompatible con `inline-flex items-center` — pero
+igual llevan anillo de foco y nombre accesible.
+
+### El trinquete — `test/lint/botones_test.rb`
+
+El componente existía desde antes de `PR-BTN.1` y aun así **el 82% de los
+botones se seguía escribiendo a mano**. Por eso hay un lint.
+
+Lleva un **presupuesto por archivo** que falla en las **dos** direcciones:
+
+- **sube** → entró un botón crudo nuevo. Usá `ButtonComponent`.
+- **baja** → migraste y no actualizaste el número. Dejarlo inflado le abre
+  lugar a botones crudos nuevos que el lint no vería entrar.
+
+```
+bin/rails botones:presupuesto     # imprime los hashes listos para pegar
+```
+
+Un segundo presupuesto, `BLANCO_SOBRE_TEAL`, cuenta los `bg-cec-teal` con
+`text-white` en el mismo elemento. Tiene que llegar a `{}` cuando termine la
+migración.
+
+**Si de verdad tiene que ser un botón crudo** —una tarjeta, un CTA de sesión,
+un adorno dentro de un input— corré la tarea, pegá el hash y dejá un comentario
+diciendo por qué. Crudo a propósito sigue contando: su número tampoco puede
+subir solo.
+
+### Accesibilidad — `test/lint/botones_accesibles_test.rb`
+
+Crudo a propósito **no** es exento. Un segundo lint, sin lista de excepciones,
+exige de **todos** los `<button>` de la app:
+
+- **Nombre accesible.** Un botón de solo icono necesita `aria-label`. `title`
+  **no alcanza**: es el tooltip del mouse, no aparece con teclado y los
+  lectores de pantalla no lo usan como nombre. Cuando hay texto visible no hace
+  falta — el nombre sale del contenido.
+- **No apagar el foco sin reemplazarlo.** `focus:outline-none` suelto le saca
+  al navegador el único indicador que trae de fábrica. Si hay que cambiarlo, va
+  `foco-cec`.
+
+`ButtonComponent` ya cumple las dos por construcción: `label:` es obligatorio
+cuando no hay contenido, y el anillo viene en la base.
+
 ---
 
 ## Paleta de Colores — Referencia histórica (sistema legacy)
@@ -122,26 +295,33 @@ Gradientes ad-hoc como `from-emerald-*`, `from-gray-500 to-gray-600` o
 
 ### Colores de Estado de Paquete
 
-Estos son los colores usados en la leyenda del listado de paquetes:
+Los estados **no tienen color propio**: pasan por `StatusBadgeComponent`, que
+los mapea a las cinco familias de arriba (`COLORS` en
+`app/components/status_badge_component.rb`). En los listados de operación el
+rótulo va corto (`EstadoPaqueteHelper::CORTAS`, `PR-C7.25`) y el largo queda en
+el `title`; el cliente sigue viendo el largo.
 
-| Estado | Color fondo | Color texto | Tailwind classes |
-|--------|-------------|-------------|------------------|
-| PRE-ALERTA | Amarillo claro | Texto oscuro | `bg-yellow-100 text-yellow-800` |
-| FACTURADO | Verde claro | Texto oscuro | `bg-green-100 text-green-800` |
-| ADUANA | Azul claro | Texto oscuro | `bg-blue-100 text-blue-800` |
-| DISPONIBLE | Verde solido | Blanco | `bg-emerald-600 text-white` |
-| ENTREGADO | Gris | Texto oscuro | `bg-gray-100 text-gray-600` |
-| ANULADO | Rojo claro | Texto rojo | `bg-red-100 text-red-700` |
-| EN MANIFIESTO | Indigo claro | Texto oscuro | `bg-indigo-100 text-indigo-800` |
+> La tabla que vivía acá (`bg-yellow-100`, `bg-emerald-600`, `bg-indigo-100`…)
+> era del sistema viejo y usaba tonos que `test/lint/banned_colors_test.rb`
+> prohíbe. Se quitó el 2026-08-25 (`C16-07`).
 
-### Flags Especiales (leyenda paquetes)
+### Flags de la fila (leyenda de `/paquetes`)
 
-| Flag | Color | Significado |
-|------|-------|-------------|
-| P.A. | Badge azul | Pre-Alerta vinculada |
-| P.F. | Badge verde | Pre-Factura generada |
-| Amarillo | Fila amarilla | Solicito Cambio de Servicio |
-| Azul | Fila azul | Retener en Miami |
+Lo que dice `app/views/paquetes/index.html.erb` hoy, en el orden en que gana
+(es un `elsif`: una fila lleva un solo fondo):
+
+| Flag | Fila | Significado |
+|------|------|-------------|
+| Retener en Miami | ámbar claro `bg-amber-50` | la bandera `retener_miami` (no el estado `retenido`, que es de Honduras) |
+| Cambio de servicio | ámbar `bg-amber-100/60` | `solicito_cambio_servicio` |
+| Enviado según política | navy `bg-cec-navy/5` | `enviado_por_politica` (`C18-06`): llegó sin identificación y se mandó por la política por defecto; la explicación le llega al cliente |
+| Pre-Factura | azul claro `bg-blue-50` | ya entró a una pre-factura |
+| Pre-Alerta | teal `bg-cec-teal/5` | vino anunciado |
+
+Y en la **etiqueta impresa**, el retenido en Miami dice **`RET`** donde va el
+servicio (`etiqueta_tipo_envio`, `C16-07`): es el texto más grande de la
+etiqueta porque es con lo que separan la carga antes de empacar, y una caja
+retenida no se empaca.
 
 ---
 
@@ -210,6 +390,35 @@ gem "heroicon"
 | Detalles | Ojo | `eye` |
 | Cerrar sesion | Salir | `arrow-right-start-on-rectangle` |
 
+### Los tipos de envío: el ícono identifica, el color agrupa
+
+Son **cinco servicios y dos modalidades**, y el ícono no puede cargar los dos
+ejes. Así que se reparte: cada servicio tiene el suyo, y la modalidad la dice el
+color. Vive todo en `TipoEnvioPresentationHelper`, que es la fuente única de las
+tres pantallas que los pintan (el selector de `/etiquetar`, el wizard de
+pre-alerta del portal y el form de manifiestos).
+
+| Servicio | Modalidad | Ícono | Color |
+|---|---|---|---|
+| EXPRESS | aéreo | `bolt` — el más rápido, sale los viernes | `cec-gold` |
+| CER | aéreo | `paper-airplane` | `cec-teal` |
+| CKA | aéreo, sin reempaque | `cube` — la caja llega tal cual | `cec-teal` |
+| CEM | marítimo | **barco** — `shared/_icono_barco` | `cec-navy` |
+| CKM | marítimo, sin reempaque | `archive-box` | `cec-navy` |
+
+**El barco es la única excepción a «solo heroicons» de todo el sistema.**
+Heroicons v2 no trae ninguno —se revisaron los 280: ni ship, ni boat, ni
+anchor— y antes marítimo salía con un **camión**, que además de estar mal se
+repetía con el otro marítimo. El SVG propio sigue la misma métrica que el set
+(viewBox 24, `currentColor`, `stroke-width` 1.5 en outline) para que no
+desentone al lado de un heroicon, y trae las dos variantes.
+
+Antes de esto el ícono salía **solo de la modalidad**: tres aviones idénticos y
+dos camiones idénticos. Y `cka`/`ckm` caían las dos al gris de descarte, así que
+además compartían el color — dos tarjetas exactamente iguales. Lo cazó Jorge
+mirando la pantalla, no un test; ahora lo sostiene
+`test/helpers/tipo_envio_presentation_helper_test.rb`.
+
 ### Uso en ERB
 
 ```erb
@@ -231,77 +440,168 @@ gem "heroicon"
 gem "view_component"
 ```
 
-### Catalogo de Componentes
+### Catálogo de componentes
 
-#### 1. Layout Components
+Son los que existen en `app/components/` (**20**, 2026-08-26). El
+catálogo anterior era el del diseño original y listaba componentes que nunca
+se construyeron (`DataTableComponent`, `Sidebar::LinkComponent`,
+`ConfirmDialogComponent`…): lo que hace falta se construye cuando hace falta,
+y **se agrega acá** cuando nace. Los props son la firma real de `initialize`.
 
-| Componente | Proposito | Props |
-|------------|-----------|-------|
-| `Sidebar::LinkComponent` | Link individual del sidebar | `label:, path:, icon:, active:, badge_count:` |
-| `Sidebar::SectionComponent` | Grupo colapsable del sidebar | `title:, icon:, expanded:` |
-| `PageHeaderComponent` | Titulo + breadcrumb + botones accion | `title:, breadcrumbs:, actions:` |
-| `EmptyStateComponent` | Mensaje cuando no hay datos | `title:, description:, icon:, action_path:` |
+| Componente | Para qué | Props |
+|---|---|---|
+| `BitacoraComponent` | Bitácora (paper_trail) de un registro, en su ficha | `record:, label: nil, limit: 50` |
+| `ButtonComponent` | **El** botón (ver «Botones»); el lint `botones_test` lo hace cumplir | `variant: :primary, size: :md, href: nil, icon: nil, type: nil, disabled: false, method: nil, label: nil, confirm: nil, form: nil, form_class: nil, params: nil, shortcut: nil, shortcut_label_only: false, **attrs` |
+| `CajasPesoMedidasComponent` | Peso y medidas por caja con el repetidor; lo comparten `/etiquetar` y `/entrega_personal` | `f:, tipo_envio_id: nil, wrapper_class: "", valor_a_pagar: false, cotizador_url: nil, cajas_cargadas: {}` |
+| `DashboardActivityItemComponent` | Renglón de la actividad reciente del dashboard | `href:, avatar_name:, eyebrow:, title:, time: nil` |
+| `DashboardChartComponent` | Gráfica del dashboard | `series:` |
+| `DashboardHeroComponent` | Encabezado con los números grandes del dashboard | `user:, health_status:, time: Time.zone.now` |
+| `DashboardKpiCardComponent` | KPI card del dashboard | `title:, value:, icon:, accent:, delta:, series: [], decimals: 0, prefix: "", suffix: "", caption: nil, inverse_delta: false` |
+| `DashboardPipelineComponent` | Embudo de estados del dashboard | `en_bodega:, en_transito:, disponibles:, pendientes:` |
+| `EmptyStateComponent` | Mensaje cuando no hay datos | `title:, description: nil, icon: "inbox"` |
+| `EnviadoPorPoliticaComponent` | «Enviado según política» (`C18-06`): casilla + listita de motivos + detalle, compuesto en `notas_al_cliente`; gemelo de retener, lint `enviado_por_politica_compartido_test` | `f:, motivos:` |
+| `FormSectionComponent` | Sección de formulario con título y descripción | `title: nil, subtitle: nil, densidad: :comoda, alineacion_del_pie: "sm:justify-between", **attrs` |
+| `PageHeaderComponent` | Título + breadcrumb + acciones; «Volver» va en el slot `back`, no en `actions` | `title:, subtitle: nil` + slots `back` / `actions` / `meta` |
+| `PaginationComponent` | Paginación (Pagy) | `collection:, label: "registros", per_page_options: DEFAULT_PER_PAGE_OPTIONS` |
+| `PreAlertaCardComponent` | Card de pre-alerta en el portal | `pre_alerta:` |
+| `QuickActionCardComponent` | Card de acceso rápido del dashboard | `title:, href:, icon:, subtitle: nil, accent: :teal` |
+| `RetenerMiamiComponent` | «Retener en Miami» (`C11`): casilla + motivos del catálogo + nota; lint `retener_compartido_test` | `f:, motivos:` |
+| `RowActionComponent` | Acción por fila de tabla | `action:, href:, label: nil, disabled: false, confirm: nil, method: nil, target: nil` |
+| `SearchBarComponent` | Barra de búsqueda | `url:, placeholder: "Buscar...", value: nil, param: :q` |
+| `StatusBadgeComponent` | Badge de estado; colapsa los estados a 5 cubetas (ver arriba) | `status:, label: nil, title: nil` |
+| `StepperComponent` | Pasos de un flujo (wizard) | `steps:` |
 
-#### 2. Data Display Components
-
-| Componente | Proposito | Props |
-|------------|-----------|-------|
-| `DataTableComponent` | Tabla con headers + sorting | `columns:, records:, sortable:` |
-| `StatusBadgeComponent` | Badge de estado con color | `status:, size:` |
-| `PackageFlagComponent` | Flag P.A./P.F./Amarillo/Azul | `flag_type:` |
-| `CardComponent` | Card generico (mobile paquetes) | `title:, subtitle:, body:, footer:` |
-| `StatCardComponent` | KPI card para dashboard | `label:, value:, icon:, trend:` |
-
-#### 3. Form Components
-
-| Componente | Proposito | Props |
-|------------|-----------|-------|
-| `FilterPanelComponent` | Panel de filtros colapsable | `filters:, collapsible:` |
-| `SearchBarComponent` | Barra busqueda con placeholder | `placeholder:, url:, method:` |
-| `DateRangeComponent` | Par fecha inicio/fin | `start_name:, end_name:` |
-| `ClientAutocompleteComponent` | Autocomplete cliente por codigo | `name:, url:` |
-| `ToggleFilterComponent` | Toggle switch para filtros | `label:, name:, checked:` |
-
-#### 4. Action Components
-
-| Componente | Proposito | Props |
-|------------|-----------|-------|
-| `ButtonComponent` | Boton reutilizable (primary/secondary/danger) | `label:, variant:, icon:, size:, href:, method:` |
-| `ActionMenuComponent` | Menu acciones por fila de tabla | `actions:` |
-| `ConfirmDialogComponent` | Modal de confirmacion | `title:, message:, confirm_text:, cancel_text:` |
-| `FlashMessageComponent` | Notificacion flash | `type:, message:, dismissible:` |
-
-#### 5. Domain-Specific Components
-
-| Componente | Proposito | Props |
-|------------|-----------|-------|
-| `PackageCardComponent` | Card paquete (mobile view) | `package:` |
-| `PreAlertaCardComponent` | Card pre-alerta (client grid) | `pre_alerta:` |
-| `ManifiestoRowComponent` | Fila de tabla manifiesto | `manifiesto:` |
-| `TrackingInputComponent` | Input tracking con validacion duplicado | `name:, client_code:` |
-| `LeyendaComponent` | Leyenda de colores paquetes | — |
+Los dos de «marcar el paquete con una explicación» —retener y enviado según
+política— son copias deliberadas uno del otro: misma casilla que despliega,
+mismo catálogo administrable por un admin, mismo lint que exige que las tres
+pantallas (`/etiquetar`, `/entrega_personal`, `paquetes/_form`) rendericen el
+componente y ninguna escriba los motivos a mano.
 
 ### Estructura de archivos
 
 ```
 app/components/
-  sidebar/
-    link_component.rb
-    link_component.html.erb
-    section_component.rb
-    section_component.html.erb
-  page_header_component.rb
-  page_header_component.html.erb
-  status_badge_component.rb
-  status_badge_component.html.erb
+  bitacora_component.html.erb
+  bitacora_component.rb
   button_component.rb
-  button_component.html.erb
-  data_table_component.rb
-  data_table_component.html.erb
-  filter_panel_component.rb
-  filter_panel_component.html.erb
-  ...
+  cajas_peso_medidas_component.html.erb
+  cajas_peso_medidas_component.rb
+  dashboard_activity_item_component.html.erb
+  dashboard_activity_item_component.rb
+  dashboard_chart_component.html.erb
+  dashboard_chart_component.rb
+  dashboard_hero_component.html.erb
+  dashboard_hero_component.rb
+  dashboard_kpi_card_component.html.erb
+  dashboard_kpi_card_component.rb
+  dashboard_pipeline_component.html.erb
+  dashboard_pipeline_component.rb
+  empty_state_component.html.erb
+  empty_state_component.rb
+  enviado_por_politica_component.html.erb
+  enviado_por_politica_component.rb
+  form_section_component.html.erb
+  form_section_component.rb
+  page_header_component.html.erb
+  page_header_component.rb
+  pagination_component.html.erb
+  pagination_component.rb
+  pre_alerta_card_component.html.erb
+  pre_alerta_card_component.rb
+  quick_action_card_component.html.erb
+  quick_action_card_component.rb
+  retener_miami_component.html.erb
+  retener_miami_component.rb
+  row_action_component.html.erb
+  row_action_component.rb
+  search_bar_component.html.erb
+  search_bar_component.rb
+  status_badge_component.rb
+  stepper_component.html.erb
+  stepper_component.rb
 ```
+
+---
+
+## Tamaño táctil — 44 px de lado en las pantallas de bodega
+
+**Regla:** en las pantallas que se usan con el dedo, todo lo que se toca mide
+**44 px de alto como mínimo**. En Tailwind: `min-h-11` (2.75rem), o
+`ButtonComponent size: :lg` (`px-6 py-3 text-base`).
+
+Jorge, 2026-08-30: *"esta pantalla es táctil, así que debería ser fácil poder
+seleccionar con los dedos… siento que ocupa mucho amor esta pantalla"*. Hasta
+ese día **no había ninguna regla escrita**, y se notaba: los tipos de envío del
+manifiesto eran checkboxes de 13 px y la casilla de «Quitar» de una guía era más
+chica que la yema de un dedo.
+
+**Cuáles son táctiles:**
+
+| Pantalla | Qué se hace ahí |
+|---|---|
+| `/etiquetar` · `/entrega_personal` | Mostrador de Miami, con pistola |
+| `/manifiestos` (new/edit y las casas) | Armar el manifiesto parado en la bodega |
+| `/manifiestos/:id/empacar` | Escanear paquetes a la caja |
+| `/recibir-carga` | Bajar el camión en Honduras |
+| `/guias-y-aduana` | San Pedro, cargando guías |
+
+**El patrón de selección**, para no reinventarlo cada vez: `<label>` con un
+`<input class="peer sr-only">` adentro y un `<div>` estilado al lado. La firma
+visual del sistema es
+
+```
+peer-checked:border-cec-gold peer-checked:bg-cec-gold/5
+peer-checked:ring-2 peer-checked:ring-cec-gold/30
+```
+
+sobre una tarjeta `p-4 rounded-xl border-2 border-gray-200`. El ejemplo completo
+está en `app/views/cuenta/pre_alertas/new.html.erb`.
+
+Dos ventajas sobre un `<button>`: el navegador maneja el estado y el teclado
+solo, y **no cuenta como botón crudo** en `test/lint/botones_test.rb`, así que
+una pantalla se puede volver táctil sin pelear con el presupuesto.
+
+**Lo que no cambia de tamaño:** los `<select>` de catálogos que crecen —
+consignatario, empresa, tipos del proveedor— se quedan como selects. Convertir
+en tarjetas una lista que el equipo va a llenar por el CRUD es fabricar una
+pantalla que no escala. Suben a `py-3 text-base` y listo.
+
+---
+
+## Fechas — siempre `flatpickr`, nunca el picker del navegador
+
+**Regla:** ningún `date_field` / `date_field_tag` sin
+`data: { controller: "flatpickr" }`. Lo hace cumplir
+`test/lint/fechas_flatpickr_test.rb`.
+
+Jorge, 2026-08-30, mirando el manifiesto: *"el date picker no es el que estamos
+usando en el proyecto"*. Eran nueve campos y **ocho estaban con el nativo**: se
+fueron quedando así, nadie decidió que fueran distintos.
+
+No es solo estética. `app/javascript/controllers/flatpickr_controller.js` va con:
+
+- **`disableMobile: true`** — fuerza su propio calendario en vez del nativo. En
+  una tablet, el picker de Chrome en Android es la ruleta chiquita del sistema, y
+  estas pantallas se usan con el dedo.
+- **`locale: Spanish`** y `altFormat: d/m/Y` — se ve `30/08/2026` y se manda
+  `2026-08-30`. El nativo muestra `yyyy-mm-dd` y cada navegador lo dibuja distinto.
+- Un parche anti-autofill: el input visible que crea `altInput` no tiene `name`,
+  y Chrome lo clasificaba como fecha de vencimiento de tarjeta.
+
+**Las dos formas de montarlo:**
+
+| | Cuándo | Ejemplo |
+|---|---|---|
+| Directo sobre el input | Filtros y campos simples | `app/views/paquetes/index.html.erb` |
+| Wrapper + `flatpickr_target` + botón de limpiar | Cuando hace falta una × para vaciar | `app/views/paquetes/_form.html.erb` |
+
+**Ojo con F2.** `f2-clear` hace `form.reset()`, que devuelve el input real a su
+valor por defecto — pero flatpickr no se entera y el visible queda con lo de
+antes. Hoy no se ve, porque los nueve formularios que usan ese controller
+recargan la página al limpiar; `f2_clear_controller` igual avisa a las
+instancias (`input._flatpickr?.clear()`) para el primero que use el modo sin
+submit. Si aparece otro controller que limpie un formulario, tiene que hacer lo
+mismo.
 
 ---
 
@@ -312,7 +612,9 @@ app/components/
 ```
 ┌─────────────────────────────────────────────┐
 │ PageHeaderComponent                          │
-│  [Titulo]                    [+ Nuevo] [Btn] │
+│  [Titulo]                                    │
+│  ·········································· │
+│  [← Volver] [+ Nuevo] [Btn]                  │
 ├─────────────────────────────────────────────┤
 │ FilterPanelComponent (colapsable en mobile)  │
 │  [Tipo Envio ▼] [Estado ▼] [Fecha ↔ Fecha]  │
@@ -380,5 +682,5 @@ El sistema actual tiene toggle "Oscuro" en el header. Implementar con Tailwind `
 | Tipografia | Inter (sans) + JetBrains Mono | Moderna, legible, buena en tablas |
 | Paleta | Basada en sistema actual (#262B40 navy + #F5B759 gold) | Continuidad de marca |
 | Dark mode | Tailwind `dark:` variant + Stimulus toggle | Ya existe en sistema actual |
-| Responsive | Mobile-first (ya documentado en 04_diseno_responsive.md) | Clientes usan celular |
+| Responsive | Mobile-first (el planteo original está en `historico/04_diseno_responsive.md`) | Clientes usan celular |
 | Imagenes | Logo PNG existente + Heroicons SVG | Minimo peso, maximo rendimiento |

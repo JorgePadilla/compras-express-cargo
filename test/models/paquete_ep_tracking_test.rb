@@ -12,13 +12,15 @@ class PaqueteEpTrackingTest < ActiveSupport::TestCase
   end
 
   test "auto-genera tracking EP cuando proveedor.entrega_personal? y tracking blank" do
-    p = Paquete.create!(cliente: @cliente, sucursal: @sucursal, proveedor: @driver, tracking: nil)
+    p = Paquete.create!(cliente: @cliente, sucursal: @sucursal, proveedor: @driver, tracking: nil,
+                        descripcion: "Carga de prueba")
     expected_year = Time.zone.now.year
     assert_match(/\AEP-#{expected_year}-SMI-#{@driver.codigo}-\d{6}\z/, p.tracking)
   end
 
   test "respeta tracking del operador aunque proveedor sea entrega_personal" do
     p = Paquete.create!(cliente: @cliente, sucursal: @sucursal, proveedor: @driver,
+                        descripcion: "Carga de prueba",
                         tracking: "UBER-DRIVER-XYZ-123")
     assert_equal "UBER-DRIVER-XYZ-123", p.tracking
   end
@@ -37,8 +39,10 @@ class PaqueteEpTrackingTest < ActiveSupport::TestCase
   end
 
   test "correlativo incrementa entre creaciones secuenciales" do
-    p1 = Paquete.create!(cliente: @cliente, sucursal: @sucursal, proveedor: @driver, tracking: nil)
-    p2 = Paquete.create!(cliente: @cliente, sucursal: @sucursal, proveedor: @driver, tracking: nil)
+    p1 = Paquete.create!(cliente: @cliente, sucursal: @sucursal, proveedor: @driver, tracking: nil,
+                        descripcion: "Carga de prueba")
+    p2 = Paquete.create!(cliente: @cliente, sucursal: @sucursal, proveedor: @driver, tracking: nil,
+                        descripcion: "Carga de prueba")
     n1 = p1.tracking[/(\d{6})\z/, 1].to_i
     n2 = p2.tracking[/(\d{6})\z/, 1].to_i
     assert_equal n1 + 1, n2
@@ -46,15 +50,18 @@ class PaqueteEpTrackingTest < ActiveSupport::TestCase
 
   test "falla limpio si la sucursal no tiene codigo_ep" do
     @sucursal.update_column(:codigo_ep, nil)
-    p = Paquete.new(cliente: @cliente, sucursal: @sucursal, proveedor: @driver, tracking: nil)
+    p = Paquete.new(cliente: @cliente, sucursal: @sucursal, proveedor: @driver, tracking: nil,
+                        descripcion: "Carga de prueba")
     assert_not p.valid?
     assert p.errors[:tracking].any?
   end
 
   test "el correlativo es independiente entre proveedores EP distintos" do
     otro_driver = Proveedor.create!(nombre: "EpTest Driver Cuatro", tipo: "entrega_personal")
-    p1 = Paquete.create!(cliente: @cliente, sucursal: @sucursal, proveedor: @driver, tracking: nil)
-    p2 = Paquete.create!(cliente: @cliente, sucursal: @sucursal, proveedor: otro_driver, tracking: nil)
+    p1 = Paquete.create!(cliente: @cliente, sucursal: @sucursal, proveedor: @driver, tracking: nil,
+                        descripcion: "Carga de prueba")
+    p2 = Paquete.create!(cliente: @cliente, sucursal: @sucursal, proveedor: otro_driver, tracking: nil,
+                        descripcion: "Carga de prueba")
     n1 = p1.tracking[/(\d{6})\z/, 1].to_i
     n2 = p2.tracking[/(\d{6})\z/, 1].to_i
     assert_equal 1, n1

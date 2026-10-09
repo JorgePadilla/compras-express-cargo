@@ -32,9 +32,18 @@ class Tarea < ApplicationRecord
     "cajero"                => %w[caja honduras],
     "supervisor_prefactura" => %w[honduras],
     "sac"                   => %w[sac honduras],
-    "entrega_despacho"      => %w[honduras]
+    # `RP-45` · El jefe de SAC **no estaba**, así que `fetch(rol, [])` le
+    # devolvía nada y solo veía las tareas sin área. Ve lo mismo que su equipo:
+    # es la misma regla que ya cumple `User::NOTAS_POR_ROL`, que sí lo tenía —
+    # las dos tablas se espejan a propósito y ésta se había quedado atrás.
+    "supervisor_sac"        => %w[sac honduras],
+    "entrega_despacho"      => %w[honduras],
+    "medicion"              => %w[honduras]
   }.freeze
 
+  # `pre_alerta` ya no se escribe: era el origen de las tareas que nacían de
+  # las `instrucciones` del cliente, quitado en `PR-C7.41` (`C16-01`). Sigue en
+  # la lista por las filas históricas ya realizadas.
   ORIGENES = %w[manual pre_alerta].freeze
 
   validates :titulo, presence: true
@@ -44,6 +53,7 @@ class Tarea < ApplicationRecord
   validate  :requiere_cliente_o_paquete
 
   before_validation :derivar_cliente_desde_paquete
+  before_validation :normalizar_tracking
 
   scope :abiertas, -> { where.not(estado: "realizada") }
   scope :por_paquete, ->(paquete_id) { where(paquete_id: paquete_id) }
@@ -52,9 +62,42 @@ class Tarea < ApplicationRecord
   # Tareas que un usuario puede ver: las de su(s) departamento(s) más las
   # que no tienen departamento asignado (visibles para todos).
   scope :visibles_para, ->(user) {
-    deptos = DEPARTAMENTOS_POR_ROL.fetch(user&.rol, [])
+    # `RP-58` paso 2a · La **unión** de los departamentos de todos sus roles, no
+    # los del principal: quien es Caja y SAC tiene que ver las dos colas. Con el
+    # rol a secas veía una sola y la otra le desaparecía sin aviso.
+    deptos = DEPARTAMENTOS_POR_ROL.values_at(*user&.roles.to_a).compact.flatten.uniq
     where(departamento: deptos + [ nil ])
   }
+
+  # Las tareas que nacieron de las `instrucciones` del cliente (`PR-9`) y nadie
+  # marcó como hechas. Yusef, 2026-08-25: *"el cliente no puede poner una
+  # tarea, solo nosotros"*. Las ya realizadas se quedan: llevan quién y cuándo
+  # las marcó, y esa evidencia no se toca. `destroy!` y no `delete_all` para
+  # que paper_trail guarde la versión de cada una.
+  #
+  # Devuelve los títulos borrados, para que la migración informe cuáles tocó.
+  def self.borrar_las_nacidas_de_instrucciones!
+    nacidas = where(origen: "pre_alerta").abiertas.order(:id).to_a
+    nacidas.each(&:destroy!)
+    nacidas.map(&:titulo)
+  end
+
+  # C17-02: las tareas que se dejaron desde la franja de /etiquetar mientras
+  # se recibía este paquete —con su tracking y todavía sin paquete— pasan a
+  # colgar de él. También por el secundario: `trackings_reconciliados` mueve
+  # el escaneado al secundario cuando el esperado tenía otro tracking (el caso
+  # USPS), y lo que la franja guardó fue el escaneado. Espejo de
+  # `PreAlertaPaquete.link_tracking!`. Devuelve cuántas ató.
+  def self.atar_al_paquete!(paquete)
+    return 0 if paquete.nil? || paquete.cliente_id.nil?
+
+    trackings = [ paquete.tracking, paquete.tracking_secundario ]
+                  .compact_blank.map { |t| t.to_s.strip.upcase }.uniq
+    return 0 if trackings.empty?
+
+    where(cliente_id: paquete.cliente_id, paquete_id: nil, tracking: trackings)
+      .update_all(paquete_id: paquete.id)
+  end
 
   def completar!(user)
     update!(estado: "realizada", completado_por: user, completada_en: Time.current)
@@ -80,6 +123,10 @@ class Tarea < ApplicationRecord
   # encuentre por `cliente_id` sin tener que hacer join.
   def derivar_cliente_desde_paquete
     self.cliente_id ||= paquete&.cliente_id
+  end
+
+  def normalizar_tracking
+    self.tracking = tracking.to_s.strip.upcase.presence
   end
 
   def requiere_cliente_o_paquete

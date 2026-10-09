@@ -8,79 +8,17 @@
 #   bin/rails docs:resumen_pdf
 #   bin/rails docs:preguntas_xlsx
 # ── Estilo compartido por los documentos ───────────────────────────────
-# Constantes y helpers a nivel de archivo: si viven dentro de un task, solo
-# existen cuando ESE task corre, y el resto revienta con NameError.
-
-NAVY = "1B2559"
-GOLD = "E69E2E"
-TEAL = "0096C7"
-GRIS = "6B7280"
-ROJO = "B91C1C"
-
-pdf = Prawn::Document.new(page_size: "LETTER", margin: [ 50, 45, 45, 45 ])
-fonts = Rails.root.join("vendor/fonts")
-if File.exist?(fonts.join("DejaVuSans.ttf"))
-  pdf.font_families.update("DejaVu" => {
-    normal: fonts.join("DejaVuSans.ttf").to_s,
-    bold: fonts.join("DejaVuSans-Bold.ttf").to_s
-  })
-  pdf.font "DejaVu"
-end
-
-def h1(pdf, texto)
-  pdf.move_down 6
-  pdf.fill_color NAVY
-  pdf.text texto, size: 15, style: :bold
-  pdf.fill_color "000000"
-  pdf.stroke_color GOLD
-  pdf.stroke_horizontal_rule
-  pdf.stroke_color "000000"
-  pdf.move_down 8
-end
-
-def h2(pdf, texto)
-  pdf.move_down 8
-  pdf.fill_color TEAL
-  pdf.text texto, size: 11.5, style: :bold
-  pdf.fill_color "000000"
-  pdf.move_down 4
-end
-
-def p_(pdf, texto, size: 9.5)
-  pdf.text texto, size: size, leading: 2.5, inline_format: true
-  pdf.move_down 4
-end
-
-def cita(pdf, texto)
-  pdf.indent(14) do
-    pdf.fill_color GRIS
-    pdf.text "“#{texto}”", size: 9, leading: 2
-    pdf.fill_color "000000"
-  end
-  pdf.move_down 5
-end
-
-def tabla(pdf, encabezados, filas, anchos: nil)
-  data = [ encabezados ] + filas
-  # `width` y `column_widths` juntos chocan si no suman igual; se escala la
-  # última columna para que el total dé exactamente el ancho disponible.
-  if anchos
-    anchos = anchos.dup
-    anchos[-1] += pdf.bounds.width - anchos.sum
-  end
-  opciones = { header: true, cell_style: { size: 8.5, padding: [ 5, 6 ],
-                                           border_color: "D4D4D4", inline_format: true } }
-  opciones[anchos ? :column_widths : :width] = anchos || pdf.bounds.width
-
-  pdf.table(data, **opciones) do
-    row(0).background_color = NAVY
-    row(0).text_color = "FFFFFF"
-    row(0).font_style = :bold
-    rows(1..-1).borders = [ :bottom ]
-  end
-  pdf.move_down 8
-end
-
+# Las constantes y los helpers viven en `lib/pdf_entregable.rb`.
+#
+# Estaban acá como `def` de nivel de archivo, y eso los hacía invisibles para
+# un test: Minitest no carga los `.rake`. O sea que los tres PDF que se le
+# mandan a Yusef nunca tuvieron ninguna prueba, y un `CannotFit` por anchos de
+# tabla solo se descubría corriendo la tarea.
+#
+# `include` trae métodos Y constantes, así que las llamadas de abajo no
+# cambian: siguen siendo `h1(pdf, "…")`.
+require Rails.root.join("lib/pdf_entregable")
+include PdfEntregable
 
 namespace :docs do
   DESTINO = Rails.root.join("docs/entregables")
@@ -92,6 +30,10 @@ namespace :docs do
 
     destino = DESTINO.join("resumen_para_yusef.pdf")
     FileUtils.mkdir_p(DESTINO)
+
+    # PR: este task usaba el documento de nivel de archivo. Correrlo dos veces
+    # en el mismo proceso escribia sobre el mismo objeto.
+    pdf = documento
 
       # ── Portada ──
       pdf.fill_color NAVY
@@ -429,61 +371,112 @@ namespace :docs do
         s.add_row [ "Preguntas para Yusef — #{I18n.l(Date.current, format: '%d de %B de %Y')}" ], style: titulo
         s.add_row [ "Llená solo la columna amarilla. Lo demás es contexto para que no tengas que acordarte de nada." ], style: nota
         s.add_row [ "Están en orden de urgencia: las primeras son las que hoy hacen que el sistema cobre distinto de lo que vos querés." ], style: nota
+        s.add_row [ "En la reunión del 8 de agosto ya contestaste tres: el cambio de servicio (L.100), la moneda de los cargos y el redondeo de libras. Esas ya no están acá." ], style: nota
         s.add_row []
         s.add_row [ "#", "Urgencia", "Tema", "Pregunta", "Lo que sabemos hoy", "TU RESPUESTA" ],
                   style: [ navy, navy, navy, navy, navy, gold ]
 
         [
-          # ── Lo que hoy cobra distinto de lo que él quiere ──
-          [ "1", "ALTA", "Cambio de servicio",
-            "En tu hoja el cambio de servicio dice 5 y el titulo dice L100, con la nota \"pasarlo a dolares\". En el sistema esta cargado en $15. ¿Cual queda?",
-            "Este cargo se genera SOLO, en una nota de debito, cada vez que se factura un paquete al que le cambiaron el servicio. Mientras no nos digas, sigue cobrando los $15 — que es el triple de los 5 de tu hoja.",
+          # ── Lo que hoy cobra distinto, o bloquea trabajo ──
+          [ "1", "ALTA", "Formato del N° de recepcion",
+            "Dijiste que al numero de recepcion le falta el MES, y que ya nos lo habias mandado. ¿Nos pasas el formato exacto? Ejemplo de como quedaria un paquete recibido en Miami en agosto 2026.",
+            "Hoy el numero es RM + anio + correlativo de 6 digitos: RM0002026000010. El correlativo reinicia cada enero. Cambiar el formato toca todos los numeros ya generados, por eso no lo inventamos nosotros.",
             "" ],
-          [ "2", "ALTA", "Moneda de 10 cargos",
-            "Necesitamos la moneda de 10 cargos de tu hoja. Estan en la HOJA 4 con la duda de cada uno y una columna para que escribas $ o LPS.",
-            "En tu hoja pusiste la leyenda \"precios en $\" y \"precios en lempiras\" pero las celdas de precio quedaron sin colorear, asi que un 5 no dice si son 5 dolares o 5 lempiras. Ya cargamos los 5 que si dejaste claros con una nota escrita.",
+          [ "2", "ALTA", "Redondeo de libras",
+            "La regla que diste (1.09 se cobra 1.0, 1.10 se cobra 1.5, 1.60 se cobra 2.0) es para escalones de MEDIA libra. Si armas una tarifa con escalon de 1 libra entera, ¿la tolerancia sigue siendo 0.09?",
+            "Hoy el sistema no redondea: cobra el peso exacto. Cuando actives el escalonado va a redondear, y necesitamos la regla completa para no cobrarte de mas a vos ni de menos al cliente.",
             "" ],
           [ "3", "ALTA", "Recolecta: ¿zona o plano?",
-            "Vos pediste que la recolecta se cobrara POR ZONA en vez de $35 fijos, y asi esta hecho. Pero tu hoja nueva dice 35 plano. ¿Cual mandamos?",
-            "Hoy el sistema tiene una tabla de tarifas de recolecta por zona/distancia, que es lo que pediste en su momento. Si mandamos el 35 plano, esa tabla deja de usarse.",
+            "Vos pediste que la recolecta se cobrara POR ZONA en vez de $35 fijos, y asi esta hecho. En el audio dijiste \"$35 normal, pero hay clientes con descuento\". ¿La recolecta de MIAMI y la de HONDURAS son dos cosas distintas?",
+            "Hoy el sistema tiene una tabla de tarifas de recolecta por zona/distancia, que es lo que pediste en su momento. Si el $35 de Miami es otro cargo aparte, conviven los dos sin problema.",
+            "" ],
+          [ "4", "ALTA", "Manejo y gastos de destino",
+            "Tu hoja dice textual \"ponerlo lps1 mas isv\", pero en el audio dijiste que es \"parecido al de ajuste\", y ajuste es en dolares. ¿Lempiras o dolares?",
+            "Lo dejamos en Lempiras, que es lo que dice la nota escrita de tu hoja. Es el unico cargo donde el audio y la hoja no coinciden.",
+            "" ],
+
+          # ── Los cargos que faltan definir ──
+          [ "5", "MEDIA", "Retornado de Miami",
+            "Dijiste \"$5 es como un precio minimo\" y que si va por USPS sube a $15 porque hay que pagar motorista. ¿Son dos cargos distintos, o uno con minimo de $5?",
+            "Cargado a $5. Si son dos, los damos de alta por separado y en Miami eligen cual aplica.",
+            "" ],
+          [ "6", "MEDIA", "Entrada y salida (IN & OUT)",
+            "Dijiste que es \"de 10 a 5 depende\". ¿De que depende — del tamano del paquete, del cliente, de la cantidad?",
+            "Es cuando el cliente recibe en Miami y lo recoge el mismo. Nos diste el ejemplo de 3 paquetes a $5 cada uno.",
+            "" ],
+          [ "7", "MEDIA", "Flete Mexico y etiqueta internacional",
+            "Dos cosas: (a) el flete de Mexico a Honduras, ¿en que moneda? (b) la creacion de etiqueta internacional que mencionaste, ¿que precio y en que moneda?",
+            "El flete Mexico esta en tu hoja con precio pero sin moneda. La etiqueta internacional no esta ni en la hoja ni en el sistema — la mencionaste como parte de los retornados de Miami.",
+            "" ],
+
+          # ── Operación de etiquetar ──
+          [ "8", "MEDIA", "Buscar cliente por los ultimos digitos",
+            "Pediste que se pueda escribir solo el final del codigo (2867, o hasta un solo 6) y que caiga. Con codigos de 5 digitos, escribir un 6 va a traer cientos. ¿Mostramos todos los que terminan en 6, o priorizamos el que coincide exacto?",
+            "Asi trabajan hoy en el sistema viejo, y los codigos viejos de 4 digitos no se van a migrar.",
+            "" ],
+          [ "9", "MEDIA", "Guardar: ¿F8 o F10?",
+            "En etiquetar guardar es F8, pero en pre-facturas, ventas, caja y financiamientos es F10 — y vos apretaste F10 sin pensarlo. ¿Lo pasamos todo a F10?",
+            "F8 en el resto del sistema es \"exportar a Excel\". Si cambiamos, hay que avisarle a Miami que ya tiene el F8 en el dedo.",
+            "" ],
+          [ "10", "MEDIA", "Peso por caja",
+            "Si son 2 cajas, ¿preferis que salgan las 2 lineas de peso y medidas de una vez, o un boton \"agregar\" que las va sumando de a una?",
+            "Hoy pide una sola linea aunque sean varias cajas. Vos mencionaste las dos formas y dejaste elegir.",
+            "" ],
+          [ "11", "MEDIA", "Bajar la cantidad de cajas",
+            "Si un paquete tiene 5 cajas y alguien lo baja a 2, las otras 3 se borran. ¿Que hacemos si alguna de esas ya esta facturada o entregada?",
+            "Hoy no se borra ninguna y quedan registros de mas, que es el error que viste. Lo mas seguro es no dejar borrar una caja ya facturada y avisar por que.",
+            "" ],
+          [ "12", "MEDIA", "Origen del paquete",
+            "El campo de origen (Estados Unidos / China) esta en pantalla sin definir. ¿Que origenes van, y cambia algo del cobro segun el origen?",
+            "Dijiste \"como ahorita estamos en Estados Unidos, pero ya va a abrir China\".",
+            "" ],
+
+          # ── Lo que quedaste de mandarnos ──
+          [ "13", "MEDIA", "Listas que quedaste de mandar",
+            "Nos faltan tres listas tuyas: (a) motivos de retencion completos — sabemos que falta \"solicitado por el cliente para retorno\"; (b) las notas predeterminadas de pre-factura, caja y servicio al cliente; (c) las grabaciones de voz para la alerta de pre-alerta.",
+            "Los motivos y las notas van a quedar editables por vos, asi que podes agregarlos vos mismo despues. Las grabaciones son las que hizo tu senora en 2022 — dijiste que las volvias a grabar.",
+            "" ],
+          [ "14", "MEDIA", "Sonidos de etiquetar",
+            "Te vamos a pasar una lista de sonidos para que elijas el de ERROR (el \"feo\", para cuando el paquete no es del tipo de envio de la sesion). ¿Preferis elegir vos o te proponemos uno?",
+            "El pin agradable que ya suena lo aprobaste. Faltan: el pito de \"este tracking ya existia\", el de error, y el pin antes de que salga cada modal.",
             "" ],
 
           # ── Revisar lo que ya quedó cargado ──
-          [ "4", "MEDIA", "Revisar los precios cargados",
+          [ "15", "MEDIA", "Revisar los precios cargados",
             "En la HOJA 2 esta TODO lo que quedo cargado de tu tabla, leido directo del sistema. Es literalmente lo que va a cobrar. ¿Esta bien?",
             "Tomamos la hoja PROPUESTA de \"precios por categoria 2026.xlsx\". Si algo esta mal, escribilo en la ultima columna de esa hoja.",
             "" ],
-          [ "5", "MEDIA", "Las categorías no bajan de escalón",
+          [ "16", "MEDIA", "Las categorías no bajan de escalón",
             "Un cliente \"Clientes Amigos\" con 200 libras de CER paga $4.20 la libra ($840) mientras el publico paga $3.50 ($700). ¿Es asi, o las categorias tambien deberian bajar de escalon?",
             "Tu tabla da un solo precio por categoria (columna NORMAL) y los tarifarios escalonados los declaraste solo para el Precio Normal. Lo cargamos literal a como lo mandaste, pero el resultado es que un amigo paga mas que un cliente de mostrador en paquetes grandes.",
             "" ],
-          [ "6", "MEDIA", "CKM cae en dos reglas",
+          [ "17", "MEDIA", "CKM cae en dos reglas",
             "Para CKM, ¿cual minimo manda: los L.200, el de libras, o el que resulte MAYOR de los dos?",
             "En el audio dijiste \"los servicios serie CK son 200 lempiras ya con ISV\" (aplica a CKA y CKM) y tambien \"el maritimo lo tenemos estipulado en cantidad de libras\" (aplica a CEM y CKM). CKM es las dos cosas. En tu tabla le pusiste L.173.91, asi que cargamos ese.",
             "" ],
-          [ "7", "MEDIA", "Mínimo en libras de CEM y CKM",
+          [ "18", "MEDIA", "Mínimo en libras de CEM y CKM",
             "¿Hace falta todavia un minimo en LIBRAS para CEM y CKM, o con el minimo en dinero de tu tabla ya esta?",
             "Tu tabla trae el minimo en dinero (L.200 con ISV) pero no el de libras. En la practica el escalonado ya cubre el paquete chico: un CEM de 2 libras paga $4.50 la libra. Documentado en abril: CEM = 8 libras, CKM = 20 libras. En el audio dijiste 3 o 4 libras.",
             "" ],
-          [ "8", "MEDIA", "Regular y VIP",
+          [ "19", "MEDIA", "Regular y VIP",
             "Hay 8 clientes en las categorias \"Regular\" y \"VIP\", que no aparecen en tu tabla. ¿A cual de las nuevas los pasamos, o los dejamos como estan?",
             "Por ahora se quedaron con los precios viejos, que son mas bajos que los de lista. Las categorias de tu tabla son: Clientes Amigos, doTERRA/Farmasi, Familia, Mayoristas, Personal de CEC, Shein, Revendedores y Sin Cobro Minimo.",
             "" ],
-          [ "9", "MEDIA", "Mayoristas incompleto",
+          [ "20", "MEDIA", "Mayoristas incompleto",
             "De MAYORISTAS solo vino el precio de CKM ($1.50). Los otros cuatro servicios vinieron en cero. ¿Que cobran los mayoristas en CER, CKA, EXPRESS y CEM?",
             "Mientras tanto esos cuatro siguen con los valores viejos del sistema, que no salieron de tu tabla. FAMILIA y REVENDEDORES vinieron todos en cero, asi que sus clientes pagan precio de lista.",
             "" ],
 
           # ── Operación ──
-          [ "10", "MEDIA", "PINs de los supervisores",
+          [ "21", "MEDIA", "PINs de los supervisores",
             "El codigo del supervisor ya esta funcionando. ¿A quienes les asignamos PIN? Pueden tenerlo: Administrador, Supervisor Caja, Supervisor Pre-Factura y Supervisor de Servicio al Cliente.",
             "Un administrador se los asigna desde la pantalla de usuarios y despues cada supervisor lo cambia por uno que solo el sepa. Mientras no lo cambie, el administrador conoce el PIN con el que ese supervisor autoriza — la pantalla de usuarios marca a quienes les falta cambiarlo.",
             "" ],
-          [ "11", "MEDIA", "Probar la etiqueta impresa",
+          [ "22", "MEDIA", "Probar la etiqueta impresa",
             "Imprimi una etiqueta y decinos dos cosas: (1) si no se corta nada, sobre todo en un paquete que traiga tercero Y driver, que es el que mas campos lleva; (2) si el lector escanea bien el codigo de barras.",
             "Los 11 campos van con la jerarquia de tamanos que marcaste. El codigo de barras quedo en 0.20 pulgadas de alto, que es el minimo practico para lectores de mano — es lo unico que no podemos probar nosotros. Los campos estan en la hoja 3.",
             "" ],
-          [ "12", "BAJA", "Proveedores de entrega personal",
+          [ "23", "BAJA", "Proveedores de entrega personal",
             "¿Confirmas esta lista para dejarla precargada? Entrega local / personal, Uber o delivery, Driver particular, Courier local.",
             "Hoy no hay ninguno cargado, asi que la pantalla de Entrega Personal avisa que faltan configurar. En cualquier caso los podes crear, editar o desactivar vos mismo desde Catalogos → Proveedores.",
             "" ]
@@ -654,15 +647,7 @@ namespace :docs do
     destino = DESTINO.join("historia_y_reglas.pdf")
     FileUtils.mkdir_p(DESTINO)
 
-    pdf = Prawn::Document.new(page_size: "LETTER", margin: [ 50, 45, 45, 45 ])
-    fuentes = Rails.root.join("vendor/fonts")
-    if File.exist?(fuentes.join("DejaVuSans.ttf"))
-      pdf.font_families.update("DejaVu" => {
-        normal: fuentes.join("DejaVuSans.ttf").to_s,
-        bold: fuentes.join("DejaVuSans-Bold.ttf").to_s
-      })
-      pdf.font "DejaVu"
-    end
+    pdf = documento
 
       # ── Portada ──
       pdf.fill_color NAVY
@@ -806,6 +791,22 @@ namespace :docs do
       p_(pdf, "Los cálculos de <b>pie cúbico</b> y <b>metro cúbico</b> que se ven en pantalla son solo " \
               "informativos: no afectan el precio.")
 
+      h2(pdf, "El orden en que se calcula un flete")
+      p_(pdf, "Es uno solo, y cada paso depende del anterior. Si un cobro no cuadra, casi siempre es la " \
+              "tasa o el escalón, no la fórmula.")
+      tabla(pdf,
+        [ "Paso", "Qué pasa" ],
+        [
+          [ "<b>1. Peso</b>",    "El de la báscula se redondea a media libra con la tolerancia de arriba." ],
+          [ "<b>2. Escalón</b>", "Se elige con el peso <b>ya redondeado</b>, no con el crudo. Un paquete de 50.2 lb se cobra como 50.5, y 50.5 cae en el tramo de $4.00." ],
+          [ "<b>3. Mínimo</b>",  "Si el resultado queda por debajo del mínimo del servicio, se cobra el mínimo." ],
+          [ "<b>4. ISV</b>",     "Se suma al final, una sola vez." ]
+        ], anchos: [ 80, 407 ])
+      p_(pdf, "Los mínimos se <b>guardan sin ISV</b> y la pantalla los muestra con ISV incluido. El mínimo " \
+              "de CER son L.173.91 netos, que es lo que usted conoce como los <b>L.200</b>. Por eso un CER " \
+              "de 1 lb paga L.200 (cae en el mínimo) y uno de 1.5 lb paga L.210.37 (ya lo pasó).")
+      p_(pdf, "<b>No hay mínimo en libras.</b> Manda el escalonado, como usted lo dejó dicho.")
+
       h2(pdf, "Dinero e impuesto")
       tabla(pdf,
         [ "Regla", "Detalle" ],
@@ -813,8 +814,22 @@ namespace :docs do
           [ "<b>Todos los precios llevan ISV</b>", "El impuesto se aplica <b>una sola vez</b>, al totalizar la factura." ],
           [ "<b>Redondeo de montos</b>", "Half-up al segundo decimal, sobre el resultado final de cada línea. Regla del contador." ],
           [ "<b>Tarifas en dólares</b>", "El precio por libra es en dólares; la factura sale en Lempiras convertida a la tasa." ],
-          [ "<b>Tasa de cambio fija</b>", "La define un administrador. Ya no se actualiza sola desde internet." ],
+          [ "<b>Tasa de cambio fija</b>", "Está en <b>L.27.10</b> por dólar. La cambia un administrador desde su propia pantalla; no se actualiza sola desde internet. Mover ese número mueve todos los precios en dólares." ],
           [ "<b>El mínimo es por concepto</b>", "El flete lleva su mínimo y la recolecta el suyo. No hay un mínimo global de factura." ]
+        ], anchos: [ 152, 335 ])
+
+      h2(pdf, "Los cargos que no son flete")
+      p_(pdf, "Lo que usted nos definió el 9 de agosto. Lo que falta está marcado.")
+      tabla(pdf,
+        [ "Cargo", "Cómo se cobra" ],
+        [
+          [ "<b>Manejo y gastos de destino</b>", "L.1 + ISV." ],
+          [ "<b>Retornado de Miami</b>", "Dos cargos separados: Retornado <b>$5</b> y Retornado USPS <b>$10</b>." ],
+          [ "<b>Entrada y salida</b>", "Base <b>$5</b> para paquete pequeño; sube a criterio según tamaño y complejidad. Se ajusta a mano." ],
+          [ "<b>Flete México</b>", "<b>$5</b> por libra o libra volumétrica, más ISV. Sin mínimo." ],
+          [ "<b>Cambio de servicio</b>", "L.100 con ISV incluido. Se genera solo cuando el paquete viene marcado." ],
+          [ "<b>Recolecta</b>", "Editable. El mínimo es $35 o $25 según la categoría del cliente. <b>Falta definir</b> si la de Miami y la de Honduras son dos cobros o uno." ],
+          [ "<b>Etiqueta internacional</b>", "<b>Falta el precio y la moneda.</b> Sin eso no se puede dar de alta." ]
         ], anchos: [ 152, 335 ])
 
       pdf.start_new_page
@@ -852,8 +867,9 @@ namespace :docs do
           [ "<b>De consolidación</b>", "Vienen de la pre-alerta consolidada." ],
           [ "<b>Especiales</b>", "Las instrucciones que el cliente escribió en su pre-alerta." ]
         ], anchos: [ 148, 339 ])
-      p_(pdf, "Las instrucciones del cliente además <b>se vuelven tareas</b> con casilla de verificación, " \
-              "para que no se pierdan en un cuadro de texto. Al marcarlas queda registrado quién y cuándo.")
+      p_(pdf, "Las instrucciones del cliente son una <b>nota</b>: el que recibe las ve en un aviso al escanear, " \
+              "en la franja de contexto y en la ficha del paquete. <b>No son tareas</b> — las tareas las crea " \
+              "solo el personal, y al marcarlas queda registrado quién y cuándo.")
 
       h2(pdf, "Facturación")
       tabla(pdf,
@@ -863,7 +879,7 @@ namespace :docs do
           [ "<b>Cargos automáticos</b>", "La recolecta y el cambio de servicio se agregan solos a la pre-factura." ],
           [ "<b>Cambio de servicio</b>", "Genera nota de débito al facturar. El monto es ajustable en la pre-factura." ],
           [ "<b>Prepagado en Miami</b>", "Si pagó allá, en Honduras solo se hace una factura simbólica de $1 más impuesto." ],
-          [ "<b>Tareas abiertas</b>", "Un paquete con tareas pendientes no avanza de etapa." ],
+          [ "<b>Tareas abiertas</b>", "Un paquete con tareas pendientes marcadas como bloqueantes no avanza de etapa. Las tareas las deja el personal —desde la bandeja, desde el paquete o desde el cliente—, nunca el cliente." ],
           [ "<b>El precio sale bloqueado</b>", "En la pre-factura nadie edita el monto suelto. Precio, peso, descuento y quitar una línea piden el PIN de un supervisor, y queda registrado quién autorizó y por qué." ],
           [ "<b>Descuento a la vista</b>", "El descuento es un campo propio y sale impreso en la factura, en monto o en porcentaje. El ISV se calcula sobre el neto, después del descuento." ],
           [ "<b>Emitir una nota lleva dos firmas</b>", "Las notas de débito y crédito se arman libres, pero al emitirlas —que es cuando cambia el saldo del cliente— piden el PIN de un supervisor distinto de quien la creó." ]
@@ -989,6 +1005,228 @@ namespace :docs do
     puts "  ✓ #{destino.relative_path_from(Rails.root)}"
   end
 
+
+  desc "Genera el PDF de preguntas para Yusef (contestable a mano)"
+  task preguntas_pdf: :environment do
+    require "prawn"
+    require "prawn/table"
+
+    destino = DESTINO.join("preguntas_para_yusef.pdf")
+    FileUtils.mkdir_p(DESTINO)
+
+    pdf = documento
+
+    # ── Portada ──
+    pdf.fill_color NAVY
+    pdf.text "Preguntas pendientes", size: 24, style: :bold
+    pdf.fill_color GOLD
+    pdf.text "Sistema Compras Express Cargo", size: 13, style: :bold
+    pdf.fill_color "000000"
+    pdf.move_down 4
+    pdf.fill_color GRIS
+    pdf.text "Para Yusef Samara · #{I18n.l(Date.current, format: '%d de %B de %Y')}", size: 9.5
+    pdf.fill_color "000000"
+    pdf.move_down 14
+
+    p_(pdf, "Yusef, este documento junta todo lo que necesitamos que nos definás para cerrar el tema de precios y dejar el sistema cobrando exactamente lo que vos querés.")
+    p_(pdf, "Varias preguntas del Excel anterior <b>ya quedaron resueltas</b> y las sacamos — por eso este es más corto. Estas son las que siguen vivas, más unas nuevas que salieron al revisar tu tarifario.")
+    pdf.move_down 2
+    p_(pdf, "<b>Cómo contestarlo:</b> casi todo se marca con una X o se llena en una línea. No necesitás abrir el sistema ni buscar papeles — el contexto de cada pregunta va escrito aquí mismo. Si preferís, contestá por audio de WhatsApp diciendo el número.")
+
+    pdf.move_down 6
+    pdf.fill_color ROJO
+    pdf.text "Las de la primera sección son las urgentes: mientras no se definan, el sistema puede estar cobrando distinto de lo que vos querés.", size: 9.5, style: :bold
+    pdf.fill_color "000000"
+
+    # ── Sección 1 ──
+    h1(pdf, "1 · Precios que hoy salen distintos de lo que querés cobrar")
+
+    pregunta(pdf, 1, "Un Cliente Amigo puede pagar MÁS que el público")
+    p_(pdf, "Tu tabla da <b>un solo precio por categoría</b> (Clientes Amigos paga $4.20 la libra de aéreo), y el precio escalonado —el que baja entre más libras— solo lo definiste para el Precio Normal.")
+    p_(pdf, "Resultado: un Cliente Amigo con 200 libras de CER paga <b>$840</b>, y un cliente de la calle con las mismas 200 libras paga <b>$700</b>. El amigo termina pagando más.")
+    opcion(pdf, "Está bien así: cada categoría tiene su precio fijo, sin escalones.")
+    opcion(pdf, "Que las categorías también bajen por escalón — les mando esas tablas.")
+    opcion(pdf, "Que a nadie se le cobre más que el Precio Normal (se cobra el menor de los dos).")
+
+    pregunta(pdf, 2, "Mayoristas: solo vino un precio")
+    p_(pdf, "De Mayoristas solo llegó el precio de CKM ($1.50 la libra). CER, CEM, CKA y EXPRESS vinieron <b>en cero</b>, y así no podemos facturarles esos servicios.")
+    opcion(pdf, "Mientras armo la tabla, cóbrenles Precio Normal.")
+    opcion(pdf, "Aquí van:  CER $______   ·   CEM $______   ·   CKA $______   ·   EXPRESS $______")
+
+    pregunta(pdf, 3, "¿Prendemos el redondeo a media libra?")
+    p_(pdf, "Tu tarifario escalonado asume que el peso se redondea a medias libras con tu regla: <b>1.09 lb se cobra como 1 lb, y 1.10 lb se cobra como 1.5 lb</b>.")
+    p_(pdf, "Hoy el sistema cobra el peso exacto de la báscula — el redondeo <b>no está activo</b>. Si lo prendemos, el peso facturado sube en promedio 0.16 lb por paquete (unos L.20 más en un CER), aunque en algunos paquetes baja.")
+    opcion(pdf, "Préndanlo ya.")
+    opcion(pdf, "Primero quiero ver el número calculado con mis paquetes reales.")
+    opcion(pdf, "No — que siga cobrando el peso exacto.")
+
+    pregunta(pdf, 4, "Si dijiste que sí: ¿dónde aplica el redondeo?")
+    p_(pdf, "<b>Contestá esta solo si arriba marcaste una de las dos primeras.</b>")
+    opcion(pdf, "Solo en el Precio Normal (el de lista).")
+    opcion(pdf, "También en las tarifas por categoría: Clientes Amigos, Shein, Personal CEC y las demás.")
+
+    pdf.start_new_page
+
+    pregunta(pdf, 5, "Manejo y gastos de destino: ¿lempiras o dólares?")
+    p_(pdf, "Es el único cargo donde tu hoja y tu audio se contradicen. La hoja dice textual <b>“ponerlo lps1 mas isv”</b>. Pero en el audio dijiste que es <b>“parecido al de ajuste”</b>, y el ajuste es en dólares.")
+    opcion(pdf, "Va como dice la hoja: L.1 + ISV.")
+    opcion(pdf, "Va en dólares como el ajuste. El monto es: $______")
+    opcion(pdf, "Otra cosa:")
+    linea(pdf)
+
+    pregunta(pdf, 6, "CKM: ¿precio fijo o por libra?")
+    p_(pdf, "Dijiste dos cosas que chocan para este servicio: <b>“los CK son 200 lempiras ya con ISV”</b> (fijo) y <b>“el marítimo lo tenemos en cantidad de libras”</b> (por libra). CKM es CK y es marítimo — cae en las dos.")
+    opcion(pdf, "CKM es fijo: L.200 con ISV incluido, pese lo que pese.")
+    opcion(pdf, "CKM va por libra. La tarifa y el mínimo son:")
+    linea(pdf)
+
+    pregunta(pdf, 7, "Mínimo en libras del marítimo (CEM y CKM)")
+    p_(pdf, "Tenemos tres versiones y hay que quedarse con una. En abril quedó <b>CEM 8 lb / CKM 20 lb</b>. En el audio reciente dijiste <b>“3 o 4 libras”</b>. Y tu hoja trae el mínimo <b>en dinero</b>, no en libras.")
+    opcion(pdf, "Vale lo de abril: CEM 8 lb / CKM 20 lb.")
+    opcion(pdf, "Es menos:  CEM ______ lb  ·  CKM ______ lb")
+    opcion(pdf, "Ya no hay mínimo en libras — solo el mínimo en dinero de la hoja.")
+
+    pregunta(pdf, 8, "Confirmación rápida: el mínimo de CER es L.200 parejo")
+    p_(pdf, "En el audio dijiste <b>“es mínimo doscientos, doscientos, doscientos”</b>. O sea: un CER de 1.5 lb paga <b>L.200 exactos</b>, no L.192.86. Así lo dejamos — solo confirmá.")
+    opcion(pdf, "Correcto, L.200.")
+    opcion(pdf, "No, es así:")
+    linea(pdf)
+
+    # ── Sección 2 ──
+    pdf.start_new_page
+    h1(pdf, "2 · Cargos y categorías que faltan o no cuadran")
+
+    pregunta(pdf, 9, "¿Qué hacemos con Regular y VIP?")
+    p_(pdf, "Hay <b>8 clientes</b> en esas categorías, pero no aparecen en tu tabla nueva.")
+    opcion(pdf, "Esas categorías ya no van — pasá esos 8 clientes a:")
+    linea(pdf)
+    opcion(pdf, "Sí van — les mando sus precios.")
+
+    pregunta(pdf, 10, "Recolecta: ¿precio parejo o por zona? ¿Y Miami?")
+    p_(pdf, "En su momento pediste tabla por zona. En el audio dijiste “$35 normal, pero hay clientes con descuento”, y tu hoja trae <b>$35 normal y $25</b> para Clientes Amigos, doTERRA, Mayoristas y Revendedores.")
+    p_(pdf, "<b>a) El precio:</b>")
+    opcion(pdf, "Parejo con descuento por categoría (35 / 25), sin zonas.")
+    opcion(pdf, "Tabla por zona — les mando las zonas con sus precios.")
+    p_(pdf, "<b>b) ¿La recolecta de Miami y la de Honduras son dos cobros distintos?</b>")
+    opcion(pdf, "Sí, son dos cargos aparte.")
+    opcion(pdf, "No, es un solo cargo.")
+
+    pregunta(pdf, 11, "Retornado de Miami: ¿uno o dos cargos?")
+    p_(pdf, "Dijiste que “$5 es como un precio mínimo”, y que si el retorno va por USPS sube a <b>$15</b> porque hay que pagar motorista.")
+    opcion(pdf, "Es un solo cargo: mínimo $5, y $15 cuando es por USPS.")
+    opcion(pdf, "Son dos cargos separados: Retornado ($5) y Retornado USPS ($15).")
+
+    pregunta(pdf, 12, "Entrada y salida (IN & OUT): ¿de qué depende?")
+    p_(pdf, "Dijiste “de 10 a 5, depende”. La hoja dice precio $10 y mínimo $5, igual para todas las categorías. No sabemos qué hace que baje.")
+    opcion(pdf, "Cobren $10 fijo, y cuando aplique menos lo bajamos a mano.")
+    opcion(pdf, "Depende de esto, y lo dejamos automático:")
+    linea(pdf)
+
+    pdf.start_new_page
+
+    pregunta(pdf, 13, "Flete México y etiqueta internacional")
+    p_(pdf, "<b>a) Flete México:</b> en tu hoja quedó precio $5 y mínimo $6 — el mínimo salió mayor que el precio, algo está volteado.")
+    opcion(pdf, "Es al revés: precio $6, mínimo $5.")
+    opcion(pdf, "Los buenos son:  precio $______  ·  mínimo $______")
+    p_(pdf, "<b>b) Etiqueta internacional:</b> la mencionaste pero no aparece en ninguna hoja.")
+    opcion(pdf, "Se cobra ______________   ·   ¿lempiras o dólares? ______________")
+
+    pregunta(pdf, 14, "¿CKA y EXPRESS también llevan escalonado?")
+    p_(pdf, "Vos mismo dijiste que esos tarifarios te faltaban. Hoy no tienen tabla escalonada.")
+    opcion(pdf, "No llevan — precio único por libra y ya.")
+    opcion(pdf, "Sí llevan — les mando las tablas.")
+
+    pregunta(pdf, 15, "Tu hoja de precios: qué recibimos y qué falta")
+    p_(pdf, "La versión del 7 de agosto era <b>idéntica</b> a la del 5. La del 8 sí trajo dos cambios y <b>ya los aplicamos</b>: consolidando en Miami quedó en cero, y el primer escalón arranca en 1.1 lb.")
+    p_(pdf, "Lo que sigue pendiente: la <b>leyenda de colores</b> —la que dice en qué moneda va cada precio— no está aplicada a las celdas. Por eso hay varios cargos donde no sabemos si son lempiras o dólares.")
+    opcion(pdf, "Confirmado, esos dos cambios van.")
+    opcion(pdf, "Para la moneda: pinto las celdas y reenvío la hoja.")
+    opcion(pdf, "Para la moneda: se las digo por teléfono, sale más rápido.")
+
+    pregunta(pdf, 16, "Visto bueno final a los precios cargados")
+    p_(pdf, "Ya metimos al sistema todos los precios de tu hoja. El detalle completo va en la <b>hoja 2 del Excel</b> que te mandamos junto con este documento — es literalmente lo que va a cobrar.")
+    opcion(pdf, "Revisado, todo correcto — eso es lo que voy a cobrar.")
+    opcion(pdf, "Hay cambios — los marqué encima del Excel.")
+
+    # ── Sección 3 ──
+    pdf.start_new_page
+    h1(pdf, "3 · Decisiones rápidas del sistema")
+
+    pregunta(pdf, 17, "El número de recepción: ¿le metemos el mes?")
+    p_(pdf, "Dijiste que le falta el mes y que ya habías mandado el formato, pero no apareció. Hoy el número es <b>RM0002026000010</b> (RM + año + correlativo). Cambiarlo toca todos los números ya generados, por eso no quisimos inventar.")
+    opcion(pdf, "Déjenlo como está.")
+    opcion(pdf, "Métanle el mes después del año, el resto igual.")
+    opcion(pdf, "El formato que quiero es este (escribilo con un ejemplo):")
+    linea(pdf)
+
+    pregunta(pdf, 18, "Bajar la cantidad de cajas de un paquete")
+    p_(pdf, "Si un paquete tiene 5 cajas y alguien lo baja a 2, se borran 3. Hoy el sistema <b>bloquea</b> el cambio si alguna de esas ya está facturada o entregada, y avisa por qué.")
+    opcion(pdf, "Está bien que bloquee.")
+    opcion(pdf, "Que deje hacerlo, pero solo con PIN de supervisor.")
+    opcion(pdf, "Otra cosa:")
+    linea(pdf)
+
+    pregunta(pdf, 19, "El campo de origen del paquete (China / Estados Unidos)")
+    p_(pdf, "Al registrar el paquete hay un campo de origen que quedó sin definir para qué sirve.")
+    opcion(pdf, "Es solo informativo, para saber de dónde vino.")
+    opcion(pdf, "Cambia el precio o el proceso. Así:")
+    linea(pdf)
+    opcion(pdf, "Quítenlo, no lo ocupamos.")
+
+    pregunta(pdf, 20, "El sonido de error del escaneo")
+    p_(pdf, "Cuando se escanee un paquete que <b>no</b> es del tipo de envío que se está trabajando, va a sonar un aviso de error. El pin agradable de cuando todo está bien ya lo aprobaste; falta escoger el feo.")
+    p_(pdf, "<b>Te mandamos tres opciones por WhatsApp para que las oigas. Marcá cuál:</b>")
+    opcion(pdf, "Opción 1")
+    opcion(pdf, "Opción 2")
+    opcion(pdf, "Opción 3")
+
+    pregunta(pdf, 21, "¿Quién lleva PIN de supervisor?")
+    p_(pdf, "El sistema maneja cuatro permisos con PIN. Una misma persona puede tener varios. Escribí quién lleva cada uno:")
+    linea(pdf, "Administrador:")
+    linea(pdf, "Supervisor de Caja:")
+    linea(pdf, "Supervisor de Pre-Factura:")
+    linea(pdf, "Supervisor de Servicio al Cliente:")
+
+    pdf.start_new_page
+
+    pregunta(pdf, 22, "Proveedores de entrega personal")
+    p_(pdf, "Esta es la lista que dejaríamos precargada. Tachá los que no van y agregá al lado los que falten:")
+    tabla(pdf, [ "Proveedor", "¿Va?" ],
+          [ [ "Entrega local / personal", "" ], [ "Uber o delivery", "" ],
+            [ "Driver particular", "" ], [ "Courier local", "" ],
+            [ "." * 40, "" ], [ "." * 40, "" ] ],
+          anchos: [ 320, 180 ])
+
+    # ── Sección 4 ──
+    h1(pdf, "4 · Para probar en bodega")
+
+    pregunta(pdf, 23, "La etiqueta impresa")
+    p_(pdf, "Esto es lo único que no podemos probar nosotros desde acá. Pedile a alguien que imprima la etiqueta de un paquete que tenga <b>tercero autorizado Y motorista asignado</b> —esa es la más llena— y revisá dos cosas:")
+    p_(pdf, "<b>a) ¿Se lee todo completo, nada cortado?</b>")
+    opcion(pdf, "Sí, se lee todo")
+    opcion(pdf, "No — mandanos foto de cómo salió")
+    p_(pdf, "<b>b) ¿El lector agarra el código de barras a la primera?</b>")
+    opcion(pdf, "Sí, lo agarra")
+    opcion(pdf, "No")
+
+    # ── Pendientes ──
+    h1(pdf, "Pendientes tuyos — no son preguntas")
+
+    p_(pdf, "Estas tres cosas quedaste de mandarlas. Pueden ir por WhatsApp como salgan —audio, foto de una hoja escrita a mano, lo que sea— y nosotros las acomodamos:")
+    tabla(pdf, [ "#", "Qué", "Para qué sirve" ],
+          [ [ "1", "Motivos de retención", "La lista completa de razones por las que se retiene un paquete." ],
+            [ "2", "Notas predeterminadas", "Las frases hechas para Pre-Factura, Caja y Servicio al Cliente." ],
+            [ "3", "Grabaciones de voz", "Los audios para la alerta de pre-alerta al escanear." ] ],
+          anchos: [ 28, 150, 322 ])
+
+    pdf.move_down 10
+    p_(pdf, "Gracias, Yusef. Con esto cerramos el tema de precios y el sistema queda cobrando parejo con lo que vos definás.")
+
+    pdf.number_pages "<page> / <total>", at: [ pdf.bounds.right - 60, -22 ], size: 8, color: GRIS
+    pdf.render_file destino
+    puts "  ✓ #{destino.relative_path_from(Rails.root)}"
+  end
+
   desc "Regenera todos los entregables"
-  task entregables: %i[resumen_pdf historia_pdf preguntas_xlsx]
+  task entregables: %i[resumen_pdf historia_pdf preguntas_xlsx preguntas_pdf]
 end

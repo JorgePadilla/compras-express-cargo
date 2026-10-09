@@ -151,48 +151,18 @@
 
     <% unless @pre_alerta.finalizado? %>
       <%# Template for new rows (hidden) %>
-      <template data-pre-alerta-editor-target="template">
-        <tr class="paquete-row" data-new-record="true">
-          <td class="px-4 py-2">
-            <div data-controller="tracking-input">
-              <input type="text" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][tracking]"
-                     placeholder="Tracking"
-                     pattern="[A-Za-z0-9\-]+"
-                     title="Solo letras, números y guiones. Sin espacios ni símbolos."
-                     data-tracking-input-target="input"
-                     data-action="input->tracking-input#sanitize"
-                     class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
-                            focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
-              <p data-tracking-input-target="error" class="hidden text-xs text-red-600 mt-1"></p>
-            </div>
-          </td>
-          <td class="px-4 py-2">
-            <input type="text" name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][descripcion]"
-                   placeholder="Descripcion"
-                   class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
-                          focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">
-          </td>
-          <td class="px-4 py-2">
-            <textarea name="pre_alerta[pre_alerta_paquetes_attributes][NEW_INDEX][instrucciones]"
-                      rows="2" placeholder="Instrucciones"
-                      class="block w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm
-                             focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal"></textarea>
-          </td>
-          <td class="px-4 py-2">
-            <span class="text-sm text-gray-500"><%= Date.current.strftime("%d/%m/%Y") %></span>
-          </td>
-          <td class="px-4 py-2 text-center">
-            <%= render StatusBadgeComponent.new(status: "pre_alerta", label: "Pre Alerta") %>
-          </td>
-          <td class="px-4 py-2"></td>
-          <td class="px-4 py-2 text-center">
-            <button type="button" data-action="click->pre-alerta-editor#removePaquete"
-                    class="text-red-400 hover:text-red-600">
-              <%= heroicon "trash", variant: :outline, options: { class: "w-4 h-4" } %>
-            </button>
-          </td>
-        </tr>
-      </template>
+<%# PR-C6.44: el template sale del MISMO partial que las filas del
+    servidor. Antes era HTML a mano y por eso divergia — cada arreglo
+    llegaba a una de las dos copias.
+
+    `PreAlertaPaquete.new` y no `pre_alerta_paquetes.build`: `build`
+    agrega a la asociacion y pintaria una fila fantasma de mas. La
+    fecha va puesta porque el partial la muestra como texto y una fila
+    nueva se guarda con la de hoy. %>
+<template data-pre-alerta-editor-target="template">
+  <%= render "cuenta/pre_alertas/paquete_fields",
+        f: f, pap: PreAlertaPaquete.new(fecha: Date.current), index: "NEW_INDEX" %>
+</template>
     <% end %>
 
     <%# Action buttons %>
@@ -224,21 +194,22 @@
   <%# Saved overlay (toggled by pre-alerta-editor controller) %>
   <div data-pre-alerta-editor-target="savedModal"
        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm">
-    <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md mx-4 text-center animate-fade-in-up">
-      <div class="mx-auto w-16 h-16 rounded-full bg-cec-teal/10 flex items-center justify-center mb-4">
-        <%= heroicon "check-circle", variant: :solid, options: { class: "w-10 h-10 text-cec-teal" } %>
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md mx-4 overflow-hidden text-center animate-fade-in-up">
+      <%= render ModalHeaderComponent.new(tono: :listo, centrado: true, icono: "check-circle",
+            titulo: "¡Tus cambios fueron guardados!") %>
+      <div class="px-8 py-6">
+        <p class="text-sm text-gray-600 leading-relaxed">
+          Tu pre-alerta está al día. Podés seguir editándola cuando quieras;
+          nosotros nos encargamos de que nada se pierda.
+        </p>
+        <p class="text-xs text-gray-500 mt-4">Gracias por confiar en Compras Express Cargo.</p>
       </div>
-      <p class="text-lg font-bold text-cec-navy mb-2">¡Tus cambios fueron guardados!</p>
-      <p class="text-sm text-gray-600 leading-relaxed">
-        Tu pre-alerta está al día. Podés seguir editándola cuando quieras;
-        nosotros nos encargamos de que nada se pierda.
-      </p>
-      <p class="text-xs text-gray-400 mt-4">Gracias por confiar en Compras Express Cargo.</p>
     </div>
   </div>
 
   <% unless @pre_alerta.finalizado? %>
-    <%= render "cuenta/pre_alertas/move_modal", pre_alerta: @pre_alerta %>
+    <%= render "shared/mover_paquete_modal",
+            pre_alerta: @pre_alerta, url: mover_paquete_cuenta_pre_alerta_path(@pre_alerta) %>
   <% end %>
 
   <% if puede_buscar? %>

@@ -95,6 +95,7 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     groups = @controller.instance_variable_get(:@shortcut_groups)
     areas = groups.map { |g| g[:area] }
+    assert_includes areas, "Miami"
     assert_includes areas, "Logística"
     assert_includes areas, "Facturación y Cobro"
     assert_includes areas, "Entregas"
@@ -133,13 +134,19 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
 
     hrefs = @controller.instance_variable_get(:@shortcut_groups).flat_map { |g| g[:cards] }.map { |c| c[:href] }
 
+    # `categoria_precios_path` salió de la lista en PR-C7.12: los grupos de
+    # clientes dejaron de ser una pantalla y se administran dentro de la Tabla de
+    # Servicios, así que la tarjeta que llega a ellos es la de servicios.
     [
-      servicios_path, categoria_precios_path, tarifas_recolecta_path,
+      servicios_path, tarifas_recolecta_path,
       servicios_extra_path, proveedores_path, motivos_retencion_path,
-      plantillas_notas_cliente_path
+      plantillas_notas_cliente_path, motivos_envio_politica_path
     ].each do |ruta|
       assert_includes hrefs, ruta, "#{ruta} solo se alcanzaba desde el sidebar"
     end
+
+    assert_not_includes hrefs, categoria_precios_path,
+                        "los grupos de clientes no son una pantalla aparte; se administran en /servicios"
   end
 
   # Guard contra la desincronización que ya pasó una vez: se quitaron las
@@ -169,7 +176,7 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "supervisor_miami ve Logística + Clientes pero no Facturación/Caja Diaria/Configuración" do
+  test "supervisor_miami ve Miami + Logística + Clientes pero no Facturación/Caja Diaria/Configuración" do
     sup = User.create!(nombre: "Sup M", email_address: "sup_m_dash@test.com", password: "password123",
                        rol: "supervisor_miami", ubicacion: "miami", activo: true)
     login_as sup
@@ -177,12 +184,43 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     groups = @controller.instance_variable_get(:@shortcut_groups)
     areas = groups.map { |g| g[:area] }
+    assert_includes areas, "Miami"
+    # Logística le sigue apareciendo, pero ya no por Etiquetar: le quedan
+    # Pre-Alertas y Todos los Paquetes, que `can_access?` deja ver a cualquiera.
     assert_includes areas, "Logística"
     assert_includes areas, "Clientes"
     assert_not_includes areas, "Facturación y Cobro"
     assert_not_includes areas, "Caja Diaria"
     assert_not_includes areas, "Entregas"
     assert_not_includes areas, "Configuración"
+  end
+
+  # PR-C7.36. Los tests de arriba solo miran los nombres de las áreas, y con
+  # `assert_includes` "Logística" seguía pasando tuviera adentro lo que tuviera.
+  # Este fija la intención: qué card cae en qué bloque. Sin él, alguien devuelve
+  # Etiquetar a Logística y la suite no se entera.
+  test "el mostrador de Miami vive en su propio bloque, no adentro de Logística" do
+    login_as users(:admin)
+    get root_url
+
+    grupos = @controller.instance_variable_get(:@shortcut_groups).index_by { |g| g[:area] }
+    titulos = ->(area) { grupos.fetch(area)[:cards].map { |c| c[:title] } }
+
+    # PR-M10 · Miami es **el mostrador** —recibir el paquete y entregarlo en
+    # mano—; **mover la carga es Logística**. El manifiesto se fue de acá
+    # (Jorge: *"hay que mover los links de mover carga al grupo de logística"*)
+    # y «Recibir Carga», que nunca había tenido card, entró con él.
+    #
+    # 2026-10-08 · Y en el orden de la barra, que es el del trabajo, con
+    # «Medición», que faltaba (Jorge: *"all the options in the left have an
+    # icon in the root /"*).
+    assert_equal [ "Etiquetar", "Entrega Personal" ], titulos.call("Miami")
+    assert_equal [ "Pre-Alertas", "Manifiestos", "Guías y aduana", "Recibir Carga", "Medición", "Todos los Paquetes" ],
+                 titulos.call("Logística")
+
+    areas = grupos.keys
+    assert_operator areas.index("Miami"), :<, areas.index("Logística"),
+                    "Miami es la operación diaria: va primero en el home"
   end
 
   test "supervisor_caja ve Facturación + Caja Diaria + Entregas pero no Configuración" do
@@ -198,6 +236,21 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     assert_includes areas, "Entregas"
     assert_includes areas, "Clientes"
     assert_not_includes areas, "Configuración"
+    assert_not_includes areas, "Miami", "el mostrador de Miami no es de este rol"
+  end
+
+  # C21-02 · San Pedro le pone al manifiesto la guía del proveedor y la fecha de
+  # recibido en Honduras. Desde `PR-U1` eso tiene pantalla propia: ve «Guías y
+  # aduana» en Logística, **no** «Manifiestos», y tampoco el mostrador de Miami.
+  test "el jefe de Honduras ve Guías y aduana, no Manifiestos ni Miami" do
+    login_as users(:supervisor_prefactura)
+    get root_url
+
+    grupos = @controller.instance_variable_get(:@shortcut_groups).index_by { |g| g[:area] }
+    titulos = grupos.fetch("Logística")[:cards].map { |c| c[:title] }
+    assert_includes titulos, "Guías y aduana"
+    assert_not_includes titulos, "Manifiestos"
+    assert_not_includes grupos.keys, "Miami"
   end
 
   test "supervisor_prefactura ve Facturación pero no Caja Diaria ni Configuración" do
@@ -213,6 +266,7 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes areas, "Caja Diaria"
     assert_not_includes areas, "Entregas"
     assert_not_includes areas, "Configuración"
+    assert_not_includes areas, "Miami", "el mostrador de Miami no es de este rol"
   end
 
   test "shortcut_groups omite áreas vacías" do
@@ -221,6 +275,33 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     groups = @controller.instance_variable_get(:@shortcut_groups)
     groups.each do |g|
       assert g[:cards].any?, "El área #{g[:area]} está vacía y no debería renderizarse"
+    end
+  end
+
+  # Jorge, 2026-10-08: *"let's make sure all the options in the left have an
+  # icon in the root /"*. Para cada rol que ve el Home, todo link de la barra
+  # (menos «Home») tiene su tarjeta en el contenido. El lint
+  # `home_con_todas_las_opciones_test` compara los íconos; esto, que cada rol
+  # vea las suyas y no las de otro.
+  {
+    "admin" => -> { users(:admin) },
+    "supervisor_miami" => -> {
+      User.create!(nombre: "Sup Miami", email_address: "sup_miami_home@test.com", password: "password123",
+                   rol: "supervisor_miami", ubicacion: "miami", activo: true)
+    }
+  }.each do |rol, usuario|
+    test "#{rol}: toda opción de la barra tiene su tarjeta en el Home" do
+      login_as instance_exec(&usuario)
+      get root_url
+      assert_response :success
+
+      html = Nokogiri::HTML(response.body)
+      barra = html.css("aside#sidebar nav a[href]").map { |a| a["href"] }.uniq - [ root_path ]
+      home = html.css("main a[href]").map { |a| a["href"] }
+      assert_operator barra.size, :>, 3, "la barra de #{rol} salió casi vacía: el test no mira nada"
+
+      faltan = barra - home
+      assert_empty faltan, "#{rol} ve en la barra y no en el Home: #{faltan.join(', ')}"
     end
   end
 end

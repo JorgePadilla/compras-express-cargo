@@ -1,10 +1,13 @@
 class PreAlertaPaquete < ApplicationRecord
   belongs_to :pre_alerta
   belongs_to :paquete, optional: true
-  # PR-9.a: las `instrucciones` que el cliente escribe se materializan como
-  # Tarea para que el digitador las vea (y las pueda marcar) en la franja de
-  # /etiquetar. `nullify` para no borrar la evidencia de una tarea ya hecha
-  # si después se elimina la línea de la pre-alerta.
+  # Las tareas que cuelgan de este renglón. Hasta `PR-C7.41` las `instrucciones`
+  # del cliente se materializaban acá como Tarea (`PR-9`); Yusef lo paró el
+  # 2026-08-25 —*"el cliente no puede poner una tarea, solo nosotros"*
+  # (`C16-01`)—: la instrucción es una **nota** para el que recibe. La
+  # asociación se queda por las tareas históricas ya realizadas, que son
+  # evidencia de quién hizo qué; `nullify` para no borrarlas si se elimina el
+  # renglón.
   has_many :tareas, dependent: :nullify
 
   validates :tracking, presence: true, uniqueness: { scope: :pre_alerta_id, case_sensitive: false }
@@ -17,20 +20,86 @@ class PreAlertaPaquete < ApplicationRecord
   scope :sin_vincular, -> { where(paquete_id: nil) }
   scope :vinculados, -> { where.not(paquete_id: nil) }
 
+  # PR-C6.21: la misma escalera que `Paquete.buscar_escaneado`, del lado de la
+  # pre-alerta. Va acá también porque el paquete de Miami y su pre-alerta se
+  # buscan con el MISMO escaneo: si un lado tolera el código largo del carrier
+  # y el otro no, la pistola encuentra la pre-alerta y pierde el paquete (o al
+  # revés) sobre el mismo bulto.
+  def self.buscar_escaneado(valor)
+    termino = valor.to_s.strip.upcase
+    return none if termino.blank?
+
+    exacto = all.where("UPPER(pre_alerta_paquetes.tracking) = ?", termino)
+    return exacto if exacto.exists?
+
+    return none if termino.length < Paquete::ESCANEO_LARGO_MINIMO
+
+    all.where("UPPER(pre_alerta_paquetes.tracking) = RIGHT(?, LENGTH(pre_alerta_paquetes.tracking))", termino)
+       .where("LENGTH(pre_alerta_paquetes.tracking) >= ?", Paquete::ESCANEO_LARGO_MINIMO)
+  end
+
+  # La fecha nace puesta, no se llena recién al validar.
+  #
+  # Jorge: *"pongamos la fecha que se está haciendo, por defecto en el campo"*.
+  # `set_default_fecha` ya la ponía —o sea que se guardaba bien— pero el campo
+  # salía **vacío** en la pantalla: el operario no sabía qué fecha iba a quedar,
+  # y el dato parecía faltante.
+  #
+  # Va como default del atributo y no como `after_initialize` a propósito: la
+  # API de `attribute` aplica el default **solo a instancias nuevas**. Un
+  # registro viejo con `fecha` nula se sigue leyendo nulo, en vez de que
+  # cualquier lectura le invente una fecha de hoy que nunca tuvo.
+  #
+  # Con esto alcanza para los dos lugares donde nace una fila: el
+  # `pre_alerta_paquetes.build` del controller y el `PreAlertaPaquete.new` del
+  # `<template>` de filas nuevas.
+  attribute :fecha, :date, default: -> { Date.current }
+
+  # Se queda como red: si alguien manda la fecha en blanco explícitamente —un
+  # request a mano, un import— igual entra con la de hoy.
   before_validation :set_default_fecha
   before_validation :normalize_tracking
 
   after_create :crear_paquete_esperado
   after_update :sync_paquete_esperado
-  after_save   :sync_tarea_desde_instrucciones
   before_destroy :anular_paquete_esperado
-  # `prepend: true` es obligatorio: el `dependent: :nullify` de `has_many
-  # :tareas` registra su propio before_destroy al declararse la asociación
-  # (arriba), así que sin prepend correría primero y nos dejaría sin
-  # `pre_alerta_paquete_id` con el cual encontrar la tarea abierta.
-  before_destroy :descartar_tarea_abierta, prepend: true
 
   after_destroy_commit :soft_delete_pre_alerta_if_empty
+
+  # ── Los motivos de la retención ─────────────────────────────────────────
+  #
+  # No son columnas de esta tabla **a propósito**. `crear_paquete_esperado` ya
+  # materializa un `Paquete` por renglón, y `Paquete` ya tiene `motivos_retencion`
+  # y `notas_retencion`. Duplicarlas acá sería una segunda fuente para el mismo
+  # dato, y este repo ya sabe cómo termina eso.
+  #
+  # Así que el renglón las acepta, se las pasa al esperado al crearlo o al
+  # editarlo, y las lee de vuelta desde él para pintar el formulario. La única
+  # fuente sigue siendo el paquete.
+  #
+  # `#305` había decidido que la pre-alerta llevara la bandera y nada más — *"el
+  # motivo se sabe cuando el paquete llega"*. Jorge lo revirtió: *"debería ser el
+  # mismo componente"*. Y tenía razón en lo que a mí me había frenado: no hacía
+  # falta ninguna tabla nueva.
+  def motivo_retencion_ids=(ids)
+    @retencion_tocada = true
+    @motivo_retencion_ids = Array(ids).reject(&:blank?).map(&:to_i)
+  end
+
+  def motivo_retencion_ids
+    @motivo_retencion_ids || paquete&.motivo_retencion_ids || []
+  end
+
+  def notas_retencion=(texto)
+    @retencion_tocada = true
+    @notas_retencion = texto
+  end
+
+  def notas_retencion
+    return @notas_retencion if defined?(@notas_retencion)
+
+    paquete&.notas_retencion
+  end
 
   # Links unlinked pre_alerta_paquetes by tracking to a given paquete.
   # Advances parent pre_alerta estado to "recibido" if still in pre_alerta state.
@@ -59,9 +128,10 @@ class PreAlertaPaquete < ApplicationRecord
     count = rows.update_all(paquete_id: paquete.id)
 
     if count > 0
-      # Las tareas nacidas de `instrucciones` colgaban solo del cliente (o
-      # del paquete esperado). Al llegar el paquete físico las reapuntamos
-      # para que aparezcan también en su historial.
+      # Las tareas históricas nacidas de `instrucciones` (hasta `PR-C7.41`)
+      # colgaban del cliente o del paquete esperado. Si alguna sigue viva, al
+      # llegar el paquete físico la reapuntamos para que aparezca en su
+      # historial. Con las nuevas no pasa nada: ya no nacen de acá.
       Tarea.where(pre_alerta_paquete_id: pap_ids).update_all(paquete_id: paquete.id)
 
       pre_alertas = PreAlerta.where(id: pre_alerta_ids)
@@ -119,7 +189,12 @@ class PreAlertaPaquete < ApplicationRecord
       descripcion: descripcion,
       estado: "pre_alerta_estado",
       user: Current.user,
-      pre_alerta: true
+      pre_alerta: true,
+      # La retención marcada desde la pre-alerta viaja al paquete esperado, así
+      # el que lo recibe en Miami ya lo ve marcado sin tener que acordarse.
+      retener_miami: retener_miami,
+      motivo_retencion_ids: motivo_retencion_ids,
+      notas_retencion: notas_retencion
     )
     update_columns(paquete_id: paquete.id)
   end
@@ -130,53 +205,23 @@ class PreAlertaPaquete < ApplicationRecord
   # tocamos.
   def sync_paquete_esperado
     return unless paquete_id.present?
-    return unless saved_change_to_tracking? || saved_change_to_descripcion?
+    # `retener_miami` entra acá también: si se marca DESPUÉS de crear la
+    # pre-alerta, el paquete esperado tiene que enterarse igual. Sin esto, la
+    # bandera solo funcionaba al crear.
+    #
+    # `@retencion_tocada` no es un capricho: los motivos y la nota **no son
+    # columnas** de esta tabla —viven en el paquete esperado, que ya las tiene—
+    # así que el dirty tracking de Rails no los ve. Sin esta bandera, editar una
+    # pre-alerta cambiando solo los motivos no sincronizaba nada, en silencio.
+    return unless saved_change_to_tracking? || saved_change_to_descripcion? ||
+                  saved_change_to_retener_miami? || @retencion_tocada
 
     p = paquete
     return unless p && p.estado == "pre_alerta_estado"
 
-    p.update!(tracking: tracking, descripcion: descripcion)
-  end
-
-  # PR-9.a: las instrucciones del cliente ("el celular por Express, la ropa
-  # por marítimo") se vuelven una Tarea real para que el digitador las vea
-  # con checkbox en la franja de /etiquetar en vez de que se pierdan en un
-  # textarea que nadie abre.
-  #
-  # Idempotente por `pre_alerta_paquete_id`: re-guardar la pre-alerta no
-  # duplica la tarea. `bloquea_avance: false` es deliberado — ver el
-  # comentario en la migración 20260801150000.
-  def sync_tarea_desde_instrucciones
-    return unless saved_change_to_instrucciones?
-
-    tarea = Tarea.find_or_initialize_by(pre_alerta_paquete_id: id, origen: "pre_alerta")
-
-    if instrucciones.blank?
-      # El cliente borró las instrucciones: retiramos la tarea si nadie la
-      # completó todavía. Si ya está hecha, se conserva como evidencia.
-      tarea.destroy if tarea.persisted? && !tarea.realizada?
-      return
-    end
-
-    # No reabrimos algo que el operario ya marcó como hecho.
-    return if tarea.persisted? && tarea.realizada?
-
-    tarea.assign_attributes(
-      cliente_id:     pre_alerta.cliente_id,
-      paquete_id:     paquete_id,
-      titulo:         "Instrucciones del cliente — #{tracking}",
-      descripcion:    instrucciones,
-      departamento:   "miami",
-      bloquea_avance: false
-    )
-    tarea.save!
-  end
-
-  # Si se elimina la línea de la pre-alerta, la instrucción dejó de aplicar.
-  # Borramos la tarea solo si sigue abierta; las completadas quedan (con
-  # `pre_alerta_paquete_id` nulificado por el `dependent: :nullify`).
-  def descartar_tarea_abierta
-    tareas.abiertas.where(origen: "pre_alerta").destroy_all
+    p.update!(tracking: tracking, descripcion: descripcion, retener_miami: retener_miami,
+              motivo_retencion_ids: motivo_retencion_ids, notas_retencion: notas_retencion)
+    @retencion_tocada = false
   end
 
   # Si el PAP se elimina (vía nested-attributes _destroy o cascade de

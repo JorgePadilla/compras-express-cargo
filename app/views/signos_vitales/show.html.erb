@@ -1,0 +1,129 @@
+<%# PR-C29.16 · Los signos del servidor. Jorge: *"ram, disco duro y cualquier
+    otra cosa que sea importante, colas, queues tal vez"*. Qué se mide y con
+    qué umbrales vive en `SignosVitales`; acá solo se dibuja.
+
+    Todo adentro de un `turbo-frame` que `refresco` vuelve a pedir cada 30
+    segundos y con «Actualizar»: la página entera no se recarga y el scroll se
+    queda donde estaba. %>
+<% content_for :title, "Signos del servidor" %>
+
+<%= render PageHeaderComponent.new(title: "Signos del servidor",
+      subtitle: "RAM, disco, base de datos y cola de trabajos. Se actualiza solo cada 30 segundos.") do |header|
+  header.with_back do
+    render ButtonComponent.new(variant: :ghost, href: root_path, icon: "arrow-left") do
+      "Volver"
+    end
+  end
+end %>
+
+<%= turbo_frame_tag "signos_vitales", data: { controller: "refresco", refresco_url_value: signos_vitales_path, refresco_segundos_value: 30 } do %>
+  <% nivel = @signos.nivel %>
+  <div class="space-y-6">
+    <%# El semáforo de todo junto: el peor de las secciones, en los tonos de
+        `ModalHeaderComponent`, que son la regla de color de la app. %>
+    <div class="rounded-xl px-6 py-4 flex flex-wrap items-center justify-between gap-3 <%= ModalHeaderComponent.clases(SignosVitales::TONO.fetch(nivel)) %>"
+         data-nivel="<%= nivel %>">
+      <div>
+        <p class="text-xs font-bold uppercase tracking-wider opacity-80">Estado general</p>
+        <p class="text-2xl font-bold"><%= SignosVitales::TITULO.fetch(nivel) %></p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-sm opacity-80">Medido a las <%= l(Time.current, format: "%H:%M:%S") %></span>
+        <%= render(ButtonComponent.new(variant: :secondary, icon: "arrow-path", data: { action: "refresco#ahora" })) { "Actualizar" } %>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <% @signos.secciones.each do |seccion| %>
+        <section class="bg-white dark:bg-gray-800 rounded-lg shadow" data-seccion="<%= seccion.clave %>">
+          <header class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3">
+            <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100"><%= seccion.titulo %></h2>
+            <span class="text-xs font-bold uppercase tracking-wider rounded-full px-2.5 py-1 <%= ModalHeaderComponent.clases(SignosVitales::TONO.fetch(seccion.nivel)) %>">
+              <%= SignosVitales::TITULO.fetch(seccion.nivel) %>
+            </span>
+          </header>
+
+          <div class="p-5 space-y-4">
+            <% if seccion.medidas.any? %>
+              <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <% seccion.medidas.each do |m| %>
+                  <div data-medida="<%= m.nombre %>">
+                    <dt class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400"><%= m.nombre %></dt>
+                    <dd class="mt-1 font-mono text-lg font-semibold <%= m.valor == SignosVitales::NO_DISPONIBLE ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100' %>">
+                      <%= m.valor %>
+                    </dd>
+                    <% if m.porcentaje %>
+                      <%# La barra: llena en el color de su nivel, sobre gris. %>
+                      <div class="mt-1.5 h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden"
+                           role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= m.porcentaje %>" aria-label="<%= m.nombre %>">
+                        <div class="h-full rounded-full <%= { bien: 'bg-cec-teal', mirar: 'bg-cec-gold', problema: 'bg-red-700' }.fetch(m.nivel || :bien) %>"
+                             style="width: <%= [ m.porcentaje, 100 ].min %>%"></div>
+                      </div>
+                      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400"><%= m.porcentaje %> %</p>
+                    <% end %>
+                    <% if m.detalle.present? %>
+                      <p class="mt-0.5 text-xs <%= m.nivel == :problema ? 'text-red-700 dark:text-red-300 font-semibold' : 'text-gray-500 dark:text-gray-400' %>"><%= m.detalle %></p>
+                    <% end %>
+                  </div>
+                <% end %>
+              </dl>
+            <% end %>
+
+            <% if seccion.filas.any? %>
+              <div>
+                <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2"><%= seccion.titulo_filas %></h3>
+                <ul class="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+                  <% seccion.filas.each do |f| %>
+                    <li class="py-2 flex items-start justify-between gap-3">
+                      <div class="min-w-0">
+                        <p class="font-mono font-medium <%= f.nivel == :mirar ? 'text-amber-900 dark:text-amber-200' : 'text-gray-800 dark:text-gray-100' %>"><%= f.titulo %></p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 break-words"><%= f.detalle %></p>
+                      </div>
+                      <% if f.cuando %>
+                        <span class="shrink-0 text-xs text-gray-500 dark:text-gray-400">hace <%= time_ago_in_words(f.cuando) %></span>
+                      <% end %>
+                    </li>
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
+
+            <%# 2026-10-09 · Para cuando el error ya se arregló y los intentos
+                viejos solo tapan el semáforo. Va afuera del frame que se
+                refresca (`_top`): el aviso de cuántos se descartaron es de la
+                página. %>
+            <% if seccion.clave == :cola && (pendientes = @signos.fallidos_pendientes).positive? %>
+              <%= render(ButtonComponent.new(variant: :soft_danger, size: :sm, icon: "trash",
+                    href: descartar_fallidos_signos_vitales_path, method: :delete,
+                    confirm: "Se descartan los #{pendientes} trabajos fallidos: se borran de la cola y no se reintentan. ¿Seguro?",
+                    data: { turbo_frame: "_top" })) { "Descartar los #{pendientes} fallidos" } %>
+            <% end %>
+
+            <% if seccion.nota.present? %>
+              <p class="text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700 pt-3"><%= seccion.nota %></p>
+            <% end %>
+          </div>
+        </section>
+      <% end %>
+    </div>
+  </div>
+<% end %>
+
+<%# ── ¿Qué ocupa nuestro contenedor? ───────────────────────────────────
+    Afuera del frame que se refresca cada 30 s: el desglose se pide con un
+    botón, tarda unos segundos, y no tiene por qué borrarse solo. %>
+<section class="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+  <header class="px-5 py-3 border-b border-gray-200 dark:border-gray-700">
+    <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100">¿Qué ocupa nuestro contenedor?</h2>
+  </header>
+  <%= turbo_frame_tag "disco_del_contenedor" do %>
+    <div class="p-5 flex flex-wrap items-center justify-between gap-3">
+      <p class="text-sm text-gray-600 dark:text-gray-300 max-w-2xl">
+        El disco de la máquina de Render es compartido: desde adentro solo se ven nuestros archivos.
+        Esto los suma carpeta por carpeta y los compara con el total de la máquina.
+      </p>
+      <%= render(ButtonComponent.new(variant: :secondary, icon: "magnifying-glass", href: disco_signos_vitales_path,
+            data: { turbo_frame: "disco_del_contenedor" })) { "Medir" } %>
+    </div>
+  <% end %>
+</section>

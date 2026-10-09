@@ -17,13 +17,19 @@ class StatusBadgeComponent < ViewComponent::Base
 
     # Info — in-progress logistics states
     "recibido_miami" => INFO, "empacado" => INFO, "enviado_honduras" => INFO,
-    "en_reparto" => INFO, "pre_facturado" => INFO, "creado" => INFO, "domicilio" => INFO,
+    "en_reparto" => INFO, "creado" => INFO, "domicilio" => INFO,
     "en_proceso" => INFO, "en_miami" => INFO, "en_transito" => INFO,
     "recibido" => INFO, "enviado" => INFO,
     "consolidando_honduras" => INFO, "recoleta_en_proceso" => INFO,
+    # A7-09/A7-10
+    "consolidando_miami" => INFO, "enviado_sucursal" => INFO,
 
     # Warning — pending / held / awaiting action
     "pendiente" => WARNING, "pre_alerta" => WARNING,
+    # `pre_alerta` es el estado de `PreAlerta`; `pre_alerta_estado` es el del
+    # `Paquete` esperado, y faltaba: se pintaba gris por fallback pese a ser
+    # exactamente lo mismo para quien lo mira.
+    "pre_alerta_estado" => WARNING,
     "retenido" => WARNING, "en_aduana" => WARNING,
 
     # Danger
@@ -34,13 +40,18 @@ class StatusBadgeComponent < ViewComponent::Base
     "inactivo" => NEUTRAL, "retiro_oficina" => NEUTRAL
   }.freeze
 
-  def initialize(status:, label: nil)
+  # `title:` es para cuando el rótulo visible va abreviado — la tabla de
+  # `/paquetes` usa el corto para no comerse el ancho del tracking, y deja el
+  # largo debajo del mouse. Sin él, un `REC MIAMI` sería una sigla y nada más.
+  def initialize(status:, label: nil, title: nil)
     @status = status.to_s
     @label = label || @status.humanize
+    @title = title
   end
 
   def call
     content_tag :span, @label,
+      title: @title,
       class: "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium #{color_classes}"
   end
 

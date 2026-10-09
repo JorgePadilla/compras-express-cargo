@@ -10,6 +10,9 @@ class DashboardController < ApplicationController
     metrics = DashboardMetrics.new.to_h
     metrics.each { |key, value| instance_variable_set("@#{key}", value) }
     @shortcut_groups = build_shortcut_groups
+    # PR-C29.16 · El puntito del ícono de «Signos del servidor», solo para quien
+    # puede entrar. Barato: la cola y las conexiones, sin leer la máquina.
+    @signos_nivel = SignosVitales.nivel_rapido if can_access?(:signos_vitales)
   end
 
   private
@@ -20,25 +23,54 @@ class DashboardController < ApplicationController
   def build_shortcut_groups
     groups = []
 
-    log = []
-    log << card("Etiquetar",          "Recibir paquetes",           "tag",                    etiquetar_path,    :navy) if can_access?(:etiquetar)
-    # PR-10.c: faltaba la card de Entrega Personal, aunque la pantalla existe
+    # PR-C7.36: lo que se hace en el mostrador de Miami sale de "Logística" y
+    # tiene bloque propio. "Miami" tampoco es nombre nuevo: así lo dibuja el
+    # mock de `docs/07`.
+    #
+    # PR-10.c: la card de Entrega Personal faltaba, aunque la pantalla existe
     # desde PR-6a y esta en el sidebar.
-    log << card("Entrega Personal",   "Paquetes traídos al mostrador", "user-plus",          new_entrega_personal_path, :navy) if can_access?(:entrega_personal)
-    log << card("Manifiestos",        "Empaque y envío",            "cube",                   manifiestos_path,  :navy) if can_access?(:manifiestos)
+    #
+    # PR-M10: **Miami es el mostrador** —recibir el paquete y entregarlo en
+    # mano— y **mover la carga es Logística**. Jorge: *"hay que mover los links
+    # de mover carga al grupo de logística"*. El manifiesto estaba acá y ya no
+    # encajaba: desde `C21-02` lo termina San Pedro, así que "Miami" mentía
+    # sobre quién lo usa, y a esos roles se les prendía el bloque entero.
+    mia = []
+    mia << card("Etiquetar",          "Recibir paquetes",           "tag",                    etiquetar_path,            :navy) if can_access?(:etiquetar)
+    mia << card("Entrega Personal",   "Paquetes traídos al mostrador", "user-plus",          new_entrega_personal_path, :navy) if can_access?(:entrega_personal)
+    groups << { area: "Miami", cards: mia } if mia.any?
+
+    # Mover la carga: se arma en Miami, se recibe en Honduras, y es un solo
+    # recorrido. "Recibir Carga" además **no tenía card**: la pantalla existe
+    # desde `PR-M7` y al dashboard nunca llegó.
+    log = []
+    # Home con todas las opciones: el mismo orden que la barra lateral, que es
+    # el del trabajo (`orden_del_menu_test`). «Medición» faltaba.
     log << card("Pre-Alertas",        "Recepciones esperadas",      "bell-alert",             pre_alertas_path,  :navy) if can_access?(:pre_alertas)
+    log << card("Manifiestos",        "Empaque y envío",            "cube",                   manifiestos_path,  :navy) if can_access?(:manifiestos)
+    log << card("Guías y aduana",     "La guía del proveedor y la fecha", "document-text",   guias_aduana_index_path, :navy) if can_access?(:guias_aduana)
+    log << card("Recibir Carga",      "Escanear las cajas que llegan", "truck",               recepcion_carga_index_path, :navy) if can_access?(:recibir_carga)
+    log << card("Medición",           "Pesar y medir en San Pedro", "scale",                  medicion_index_path, :navy) if can_access?(:medicion)
     log << card("Todos los Paquetes", "Búsqueda y reportes",        "archive-box",            paquetes_path,     :navy) if can_access?(:paquetes)
     groups << { area: "Logística", cards: log } if log.any?
 
     fac = []
-    fac << card("Pre-Facturas",      nil, "document-text",            pre_facturas_path,    :teal) if can_access?(:pre_facturas)
     fac << card("Cotizaciones",      nil, "clipboard-document-list",  cotizaciones_path,    :teal) if can_access?(:cotizaciones)
+    fac << card("Pre-Facturas",      nil, "document-text",            pre_facturas_path,    :teal) if can_access?(:pre_facturas)
     fac << card("Facturas",          nil, "currency-dollar",          ventas_path,          :teal) if can_access?(:ventas)
     fac << card("Recibos",           nil, "receipt-percent",          recibos_path,         :teal) if can_access?(:recibos)
     fac << card("Notas de Débito",   nil, "document-plus",            notas_debito_path,    :teal) if can_access?(:notas_debito)
     fac << card("Notas de Crédito",  nil, "document-minus",           notas_credito_path,   :teal) if can_access?(:notas_credito)
     fac << card("Financiamientos",   nil, "banknotes",                financiamientos_path, :teal) if can_access?(:financiamientos)
     groups << { area: "Facturación y Cobro", cards: fac } if fac.any?
+
+    # PR-C7.40: las tareas no tenían tarjeta ni link — la pantalla se alcanzaba
+    # solo desde adentro de un paquete o de un cliente, o sea que había que saber
+    # de antemano dónde estaba la tarea para poder verla.
+    tar = []
+    tar << card("Tareas", "Lo que tu área tiene abierto", "clipboard-document-check",
+                tareas_path, :teal) if can_access?(:tareas)
+    groups << { area: "Tareas", cards: tar } if tar.any?
 
     ent = []
     ent << card("Entregas", "Despachos y rutas", "truck", entregas_path, :gold) if can_access?(:entregas)
@@ -52,6 +84,12 @@ class DashboardController < ApplicationController
         card("Historial", nil, "clock",                 historial_caja_path, :gold)
       ]
       groups << { area: "Caja Diaria", cards: caja }
+    end
+
+    # La bitácora de autorizaciones: en la barra es la sección «Control», y
+    # sale para quien lleva PIN (`RP-21`), no por permiso de pantalla.
+    if Current.user&.rol_autorizante?
+      groups << { area: "Control", cards: [ card("Autorizaciones", "Quién autorizó qué, y por qué", "key", autorizaciones_path, :navy) ] }
     end
 
     if can_access?(:clientes)
@@ -76,22 +114,30 @@ class DashboardController < ApplicationController
       groups << {
         area: "Catálogos",
         cards: [
-          card("Tabla de Servicios",     "Precios, escalones y mínimos", "currency-dollar",         servicios_path,                 :gold),
-          card("Categorías de Precio",   nil, "tag",                     categoria_precios_path,    :gold),
-          card("Tarifas de Recolecta",   nil, "truck",                   tarifas_recolecta_path,    :gold),
-          card("Servicios Extra",        nil, "sparkles",                servicios_extra_path,      :gold),
-          card("Proveedores",            nil, "building-storefront",     proveedores_path,          :gold),
+          # PR-C7.12: los grupos de clientes ya no tienen tarjeta propia — se
+          # administran dentro de la Tabla de Servicios, que es donde vive su precio.
+          card("Tabla de Servicios",     "Precios, escalones, mínimos y grupos", "currency-dollar", servicios_path,                 :gold),
+          card("Tarifas de Recolecta",   nil, "map-pin",                 tarifas_recolecta_path,    :gold),
+          card("Servicios Extra",        nil, "puzzle-piece",            servicios_extra_path,      :gold),
+          card("Proveedores",            nil, "shopping-bag",            proveedores_path,          :gold),
           card("Motivos de Retención",   nil, "hand-raised",             motivos_retencion_path,    :gold),
-          card("Plantillas de Notas",    nil, "document-duplicate",      plantillas_notas_cliente_path, :gold)
+          card("Envío por Política",     "Por qué se mandó sin identificación", "paper-airplane", motivos_envio_politica_path, :gold),
+          card("Plantillas de Notas",    nil, "clipboard",               plantillas_notas_cliente_path, :gold),
+          card("Plantillas Descripción", nil, "tag",                     plantillas_descripcion_path, :gold),
+          card("Catálogos del Manifiesto", "Tamaños de caja y empresas", "rectangle-stack", catalogos_manifiesto_path, :gold)
         ]
       }
 
       groups << {
         area: "Configuración",
         cards: [
-          card("Usuarios",   nil, "user-group",          users_path,      :red),
-          card("Sucursales", nil, "building-storefront", sucursales_path, :red),
-          card("Empresa",    nil, "building-office-2",   empresa_path,    :red)
+          card("Usuarios",             nil, "user-group",          users_path,           :red),
+          card("Permisos por rol",     nil, "lock-closed",         permisos_path,        :red),
+          card("Títulos de los roles", nil, "identification",      roles_path,           :red),
+          card("Sucursales",           nil, "building-storefront", sucursales_path,      :red),
+          card("Empresa",              nil, "building-office-2",   empresa_path,         :red),
+          card("Tasa de Cambio",       nil, "currency-dollar",     tasa_cambio_path,     :red),
+          card("Ajustes de Etiqueta",  nil, "printer",             ajustes_etiqueta_path, :red)
           # "Reportes" apuntaba a "#" — se agrega cuando exista (Fase 6).
         ]
       }
@@ -114,21 +160,51 @@ class DashboardController < ApplicationController
     redirect_to cuenta_root_path
   end
 
+  # A dónde mandar a cada rol que no ve el dashboard. En orden: se toma **la
+  # primera que el usuario pueda abrir de verdad**.
+  #
+  # `RP-58` · Antes era un `case` que mandaba al cajero a `/caja` y listo. Con la
+  # pantalla de permisos eso se volvió un **bucle de redirecciones**: si un admin
+  # le quita Caja Diaria al cajero, `/` lo manda a `/caja`, `/caja` lo devuelve a
+  # `/`, y el navegador corta con ERR_TOO_MANY_REDIRECTS. El usuario queda sin
+  # puerta de entrada y sin explicación.
+  #
+  # Apareció en el QA del paso 1, quitándole Caja al cajero — que es exactamente
+  # lo primero que alguien va a probar en esa pantalla.
+  DESTINOS_POR_ROL = {
+    "cajero"           => %i[caja pre_facturas paquetes],
+    "digitador_miami"  => %i[etiquetar entrega_personal paquetes],
+    "entrega_despacho" => %i[entregas paquetes],
+    "sac"              => %i[paquetes clientes],
+    "medicion"         => %i[medicion]
+  }.freeze
+
+  RUTAS = {
+    caja: :caja_path, pre_facturas: :pre_facturas_path, paquetes: :paquetes_path,
+    etiquetar: :etiquetar_path, entrega_personal: :new_entrega_personal_path,
+    entregas: :entregas_path, clientes: :clientes_path, medicion: :medicion_index_path
+  }.freeze
+
   # Requiere que el usuario autenticado tenga un rol con acceso al dashboard
-  # admin (admin + supervisores). Otros roles son redirigidos a su sección
-  # apropiada.
+  # admin (admin + supervisores). Otros roles van a su sección apropiada.
   def require_dashboard_access
     return if Current.user&.admin?
-    return if DASHBOARD_ROLES.include?(Current.user&.rol)
+    return if Current.user&.tiene_rol?(DASHBOARD_ROLES)
 
-    fallback = case Current.user&.rol
-               when "cajero"           then caja_path
-               when "digitador_miami"  then etiquetar_path
-               when "entrega_despacho" then entregas_path
-               when "sac"              then paquetes_path
-               else new_session_path
-               end
+    destino = primera_seccion_alcanzable
+    return render("dashboard/sin_accesos", status: :forbidden) if destino.nil?
 
-    redirect_to fallback, alert: "No tienes permiso para acceder al dashboard."
+    redirect_to destino, alert: "No tienes permiso para acceder al dashboard."
+  end
+
+  # `nil` si no puede abrir ninguna. **No se redirige a ningún lado en ese
+  # caso**: se le dice qué pasa. Un redirect sin destino posible es el bucle.
+  def primera_seccion_alcanzable
+    # La unión, en orden: primero los destinos de su rol principal y después los
+    # de los adicionales. Con dos roles, si el principal no le deja abrir
+    # ninguna, la puerta de entrada puede estar del otro lado.
+    llaves = DESTINOS_POR_ROL.values_at(*Current.user&.roles.to_a).compact.flatten.uniq
+    llave = llaves.find { |k| can_access?(k) }
+    llave && send(RUTAS.fetch(llave))
   end
 end

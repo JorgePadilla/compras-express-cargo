@@ -1,0 +1,305 @@
+import { Controller } from "@hotwired/stimulus"
+
+// C21-01 · El escaneo al empacar.
+//
+// Yusef, mostrando la bodega en vivo mientras empacaban: *"ahí están empacando,
+// mirá… y aquí es donde hace falta, **es el pip pip pip**"*.
+//
+// El operario mira la pistola, no la pantalla, así que **lo que decide es el
+// sonido**. Por eso cada resultado dispara su evento y la vista los cablea a
+// `audio#success` / `audio#error` / `audio#alert`.
+//
+// La pistola dispara Enter al terminar de leer — la misma mecánica de
+// /etiquetar. Y va con el guard de carrera de siempre (`_seq`): si el operario
+// escanea dos seguidos, la respuesta vieja no puede pintar encima de la nueva
+// ni sonar por un paquete que ya no está en pantalla.
+export default class extends Controller {
+  static targets = ["codigo", "aviso", "filas", "caja", "tarjeta", "candado", "conteo", "destino", "listaAbiertas",
+                    "avisoModal", "avisoTitulo", "avisoTexto", "avisoOmitir", "avisoEntendido"]
+  static values = { escanearUrl: String, omitirUrl: String, activa: Number }
+
+  connect() {
+    this._seq = 0
+    // C25-09 · Cuando se cierra el modal de error, el foco vuelve al campo.
+    // `close` no burbujea: va en captura sobre el elemento del controller. Y
+    // un frame después, como en /etiquetar: en el mismo tick el `open` todavía
+    // no se fue y el `focus()` pega en una página inerte.
+    this._alCerrarseElAviso = () => requestAnimationFrame(() => this.codigoTarget.focus())
+    this.element.addEventListener("close", this._alCerrarseElAviso, true)
+    if (this.hasCodigoTarget) this.codigoTarget.focus()
+  }
+
+  disconnect() {
+    this.element.removeEventListener("close", this._alCerrarseElAviso, true)
+  }
+
+  // ── C23-11 · Varias cajas abiertas ────────────────────────────────────────
+  //
+  // Yusef: *"poder **seleccionar las tres cajas**"* · *"ellos arman tres cajas
+  // y empiezan a meter los paquetes en **cualquier** caja"*.
+  //
+  // Un paquete sigue yendo en UNA caja: lo que cambia es que ya no hay que
+  // **ir a buscarla**. Elegir caja era un `link_to` que recargaba la pantalla,
+  // y con eso el campo de escaneo perdía el foco — con la pistola en la otra
+  // mano, un clic por cada cambio de caja. Acá solo se mueve a dónde apunta el
+  // POST, y el foco vuelve al campo siempre.
+
+  elegirCaja(e) {
+    const bloque = e.currentTarget.closest("[data-caja-id]")
+    // Una caja cerrada no recibe escaneos: tocarla la abre, que es lo que el
+    // operario quiso decir al tocarla.
+    if (bloque.dataset.abierta !== "true") return this.alternarCaja(e)
+
+    this._activar(Number(bloque.dataset.cajaId))
+    this.codigoTarget.focus()
+  }
+
+  alternarCaja(e) {
+    const bloque = e.currentTarget.closest("[data-caja-id]")
+
+    this._post(bloque.dataset.alternarUrl, {})
+      .then((data) => {
+        // «Mínimo uno»: el servidor es el que decide, y si dice que no, lo dice
+        // con todas las letras en vez de dejar la tarjeta a medio apagar.
+        if (!data.ok) return this._mostrar("noEncontrado", data.mensaje)
+
+        this.cajaTargets.forEach((caja) => {
+          caja.dataset.abierta = String(data.abiertas.includes(Number(caja.dataset.cajaId)))
+        })
+        this._pintar()
+        this._activar(data.activa)
+      })
+      .finally(() => this.codigoTarget.focus())
+  }
+
+  _activar(cajaId) {
+    this.activaValue = cajaId
+    const bloque = this.cajaTargets.find((c) => Number(c.dataset.cajaId) === cajaId)
+    if (!bloque) return
+
+    this.escanearUrlValue = bloque.dataset.escanearUrl
+    this.omitirUrlValue = bloque.dataset.omitirUrl
+    this._pintar()
+  }
+
+  // Las clases se arman acá y no en el servidor porque nada recarga: si el
+  // pintado viviera solo en el ERB, la tarjeta activa se quedaría marcando la
+  // caja anterior hasta el próximo refresh.
+  _pintar() {
+    const ACTIVA = ["border-cec-gold", "bg-cec-gold/5", "ring-2", "ring-cec-gold/30"]
+    const ABIERTA = ["border-gray-200", "dark:border-gray-700", "bg-white", "dark:bg-gray-800",
+                     "hover:shadow-lg", "hover:border-cec-gold/50"]
+    const CERRADA = ["border-dashed", "border-gray-300", "dark:border-gray-700",
+                     "bg-gray-50", "dark:bg-gray-900", "opacity-60"]
+
+    this.cajaTargets.forEach((caja) => {
+      const tarjeta = caja.querySelector("[data-empaque-target='tarjeta']")
+      const abierta = caja.dataset.abierta === "true"
+      const activa = Number(caja.dataset.cajaId) === this.activaValue && abierta
+
+      tarjeta.classList.remove(...ACTIVA, ...ABIERTA, ...CERRADA)
+      tarjeta.classList.add(...(activa ? ACTIVA : abierta ? ABIERTA : CERRADA))
+      tarjeta.setAttribute("aria-pressed", String(activa))
+
+      // El candado: los dos iconos están en el DOM y se alterna cuál se ve.
+      const candado = caja.querySelector("[data-empaque-target='candado']")
+      candado.querySelector("[data-icono='abierta']").classList.toggle("hidden", !abierta)
+      candado.querySelector("[data-icono='cerrada']").classList.toggle("hidden", abierta)
+
+      if (activa && this.hasDestinoTarget) {
+        this.destinoTarget.textContent = tarjeta.querySelector("span").textContent.trim()
+      }
+    })
+
+    this._pintarTabla()
+  }
+
+  // Lo que el servidor pintó una vez y acá ya no se recarga nunca: el título
+  // que enumera las abiertas y las filas de las cajas que se cerraron. Sin
+  // esto los dos se quedan diciendo el set del primer render — el título
+  // listando cajas que ya nadie está llenando, y la tabla mostrando lo que hay
+  // adentro de una caja cerrada.
+  _pintarTabla() {
+    const abiertas = this.cajaTargets.filter((c) => c.dataset.abierta === "true")
+
+    if (this.hasListaAbiertasTarget) {
+      this.listaAbiertasTarget.textContent = abiertas
+        .map((c) => c.querySelector("[data-empaque-target='tarjeta'] span").textContent.trim())
+        .join(", ")
+    }
+
+    if (!this.hasFilasTarget) return
+    const ids = abiertas.map((c) => c.dataset.cajaId)
+    this.filasTarget.querySelectorAll("tr[data-caja-id]").forEach((fila) => {
+      fila.classList.toggle("hidden", !ids.includes(fila.dataset.cajaId))
+    })
+  }
+
+  teclado(e) {
+    if (e.key !== "Enter") return
+    e.preventDefault()
+    this.escanear()
+  }
+
+  escanear() {
+    const codigo = this.codigoTarget.value.trim()
+    if (codigo === "") return
+
+    const consulta = (this._seq += 1)
+    this.codigoTarget.value = ""
+
+    this._post(this.escanearUrlValue, { codigo })
+      .then((data) => {
+        if (consulta !== this._seq) return  // llegó tarde: habla de otro escaneo
+        this._resolver(data)
+      })
+      .catch(() => {
+        this.dispatch("noEncontrado")
+        this._mostrar("noEncontrado", "No se pudo consultar. Probá de nuevo.")
+      })
+  }
+
+  // C21-01 · «Omitir»: lo mete igual aunque el tipo no concuerde. La Fase 12 lo
+  // pidió *"para no trabar la operación cuando algo no cuadra"*.
+  omitir(e) {
+    const paqueteId = e.currentTarget.dataset.paqueteId
+    this._post(this.omitirUrlValue, { paquete_id: paqueteId })
+      .then((data) => this._resolver(data))
+      // El modal se cierra al final, y el `close` devuelve el foco al campo.
+      .finally(() => { if (this.avisoModalTarget.open) this.avisoModalTarget.close() })
+  }
+
+  // Los `dispatch` van con el nombre **literal**, uno por rama. Con un
+  // `dispatch(variable)` el sonido igual sonaría, pero `sonidos_cableados_test`
+  // no podría probarlo leyendo el archivo — y ése es justo el bug que ese lint
+  // existe para atrapar: un cable suelto en Stimulus no tira error, no ensucia
+  // la consola; simplemente no suena.
+  _resolver(data) {
+    switch (data.resultado) {
+      case "ok":            this.dispatch("ok"); break
+      case "tipo_distinto": this.dispatch("tipoDistinto"); break
+      case "sucursal_distinta": this.dispatch("sucursalDistinta"); break
+      case "ya_empacado":   this.dispatch("yaEmpacado"); break
+      default:              this.dispatch("noEncontrado")
+    }
+
+    if (data.resultado === "ok") {
+      // El OK sigue como aviso en la pantalla: *"¿que diga que sí? No, no, no."*
+      this._mostrar("ok", data.mensaje)
+    } else {
+      // C25-09 · Los tres no-OK son un modal: *"ese debería ser un modal, sí,
+      // siempre"*. El `showModal()` va **acá**, en el mismo método que el
+      // `dispatch` de arriba: `sonidos_cableados_test` exige que todo método
+      // que abre un modal haga sonar algo, y ésta es la forma de que no se
+      // separen. «Entendido» recibe el foco explícito para que Enter lo apriete
+      // aunque el de omitir esté visible antes en el DOM.
+      this._avisar(this._tono(data.resultado), data.mensaje, data.paquete_id)
+      this.avisoModalTarget.showModal()
+      requestAnimationFrame(() => this.avisoEntendidoTarget.focus())
+    }
+
+    if (data.fila) {
+      this._agregarFila(data.fila)
+      this._sumarAlConteo()
+    }
+    // Con el modal abierto el `focus()` pegaría en una página inerte: lo
+    // devuelve el listener de `close` cuando se cierre.
+    if (!this.avisoModalTarget.open) this.codigoTarget.focus()
+  }
+
+  // Lo que dice el modal, según el resultado. Los títulos son los tres motivos
+  // por los que un paquete no entra a la caja.
+  _avisar(tono, mensaje, paqueteId) {
+    const titulos = {
+      tipoDistinto: "Tipo de envío distinto",
+      sucursalDistinta: "Va a otra sucursal",
+      yaEmpacado:   "Ya está en otra caja",
+      noEncontrado: "No se encontró"
+    }
+    this.avisoTituloTarget.textContent = titulos[tono] || titulos.noEncontrado
+    this.avisoTextoTarget.textContent = mensaje
+
+    // «Meterlo igual (omitir)» sólo cuando el motivo es el tipo de envío — la
+    // `Fase 12` lo pidió para eso y para nada más.
+    const omitible = tono === "tipoDistinto" && paqueteId
+    // Por el atributo y no por la clase: `.inline-flex` le gana a `.hidden` y
+    // «Meterlo igual» se veía siempre, omisible o no.
+    this.avisoOmitirTarget.hidden = !omitible
+    this.avisoOmitirTarget.dataset.paqueteId = omitible ? paqueteId : ""
+  }
+
+  avisoEntendido() {
+    this.avisoModalTarget.close()
+  }
+
+  // C20-13 · Escape no contesta un aviso: *"ellos no las leen"*. Las salidas
+  // son «Entendido» o «Meterlo igual».
+  avisoCancelar(e) {
+    e.preventDefault()
+  }
+
+  _tono(resultado) {
+    return { ok: "ok", tipo_distinto: "tipoDistinto", sucursal_distinta: "sucursalDistinta",
+             ya_empacado: "yaEmpacado" }[resultado] || "noEncontrado"
+  }
+
+  // El aviso en la pantalla. Desde C25-09 sólo lo usa el OK; los errores van
+  // al modal. Se deja con los cuatro tonos por si un resultado nuevo entra por
+  // acá antes de decidir si merece modal.
+  _mostrar(evento, mensaje) {
+    if (!this.hasAvisoTarget) return
+
+    const tonos = {
+      ok: "bg-cec-teal/10 text-cec-teal-dark",
+      tipoDistinto: "bg-red-50 text-red-800",
+      yaEmpacado: "bg-cec-gold/15 text-cec-navy",
+      noEncontrado: "bg-cec-gold/15 text-cec-navy"
+    }
+    this.avisoTarget.className = `mt-4 rounded-lg p-3 text-sm ${tonos[evento] || tonos.noEncontrado}`
+    this.avisoTarget.textContent = mensaje
+    this.avisoTarget.classList.remove("hidden")
+  }
+
+  // El «N pqt» de la tarjeta activa. Sin esto la cuenta se queda en lo que
+  // había al cargar la pantalla, y como acá ya no se recarga nunca, se quedaría
+  // vieja todo el turno.
+  _sumarAlConteo() {
+    const bloque = this.cajaTargets.find((c) => Number(c.dataset.cajaId) === this.activaValue)
+    const conteo = bloque?.querySelector("[data-empaque-target='conteo']")
+    if (!conteo) return
+
+    const n = parseInt(conteo.textContent, 10)
+    conteo.textContent = `${(Number.isInteger(n) ? n : 0) + 1} pqt`
+  }
+
+  _agregarFila(fila) {
+    if (!this.hasFilasTarget) return
+    const tr = document.createElement("tr")
+    tr.dataset.cajaId = String(this.activaValue)
+    const celdas = [
+      // C23-11 · Con varias cajas abiertas la fila tiene que decir en cuál
+      // entró; si no, la tabla mezcla las tres sin distinguirlas.
+      ["px-6 py-3 text-sm font-bold text-cec-navy dark:text-cec-gold", fila.caja],
+      ["px-6 py-3 text-sm font-mono text-cec-navy", fila.recepcion],
+      ["px-6 py-3 text-sm font-mono text-gray-500", fila.tracking],
+      ["px-6 py-3 text-sm text-gray-700", fila.cliente],
+      ["px-6 py-3 text-sm text-gray-500", fila.tipo]
+    ]
+    celdas.forEach(([cls, texto]) => {
+      const td = document.createElement("td")
+      td.className = cls
+      td.textContent = texto || "—"
+      tr.appendChild(td)
+    })
+    this.filasTarget.prepend(tr)
+  }
+
+  _post(url, cuerpo) {
+    const token = document.querySelector("meta[name='csrf-token']")?.content
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json", "X-CSRF-Token": token },
+      body: JSON.stringify(cuerpo)
+    }).then((r) => r.json())
+  }
+}

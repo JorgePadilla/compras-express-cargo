@@ -107,7 +107,7 @@ class NotasPrecioRealTest < ActiveSupport::TestCase
 
   test "el cobro simbolico de prepagado en Miami sobrevive a facturar" do
     paquete = paquete_facturable(peso: 10)
-    paquete.update!(prepagado_miami: true)
+    paquete.update!(prepagado_miami: true, prepagado_miami_metodo: "zelle")
 
     pf = PreFactura.build_from_paquetes(@cliente, [ paquete.id ], user: @user)
     pf.save!

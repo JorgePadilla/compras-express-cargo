@@ -1,0 +1,44 @@
+<%= render PageHeaderComponent.new(title: "Plantillas de Descripción") do |h| %>
+  <% h.with_action do %>
+    <%= render ButtonComponent.new(href: new_plantilla_descripcion_path, variant: :primary, icon: "plus", data: { shortcut: "F7" }) do %>
+      Nueva Plantilla <span class="ml-1 text-[10px] opacity-70">(F7)</span>
+    <% end %>
+  <% end %>
+<% end %>
+
+<% if @plantillas.any? %>
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Posición</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Título</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Texto (preview)</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        <% @plantillas.each do |p| %>
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 text-sm text-gray-500"><%= p.position %></td>
+            <td class="px-6 py-4 text-sm font-medium text-gray-900"><%= p.titulo %></td>
+            <td class="px-6 py-4 text-sm text-gray-500 max-w-md truncate"><%= p.texto.to_s.truncate(80) %></td>
+            <td class="px-6 py-4 text-sm">
+              <% if p.activo %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal">Activa</span>
+              <% else %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Inactiva</span>
+              <% end %>
+            </td>
+            <td class="px-6 py-4 text-right text-sm">
+              <%= render RowActionComponent.new(action: :edit, href: edit_plantilla_descripcion_path(p), label: "Editar plantilla") %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <%= render EmptyStateComponent.new(title: "No hay plantillas", description: "Crea una para insertarla rápido en la descripción del contenido del paquete.", icon: "tag") %>
+<% end %>

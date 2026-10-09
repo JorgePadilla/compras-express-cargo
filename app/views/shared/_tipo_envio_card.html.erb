@@ -8,8 +8,7 @@
 <% show_badge = local_assigns.fetch(:show_badge, true) %>
 <div class="flex items-start gap-3">
   <div class="shrink-0 w-11 h-11 rounded-xl <%= accent[:icon_bg] %> flex items-center justify-center">
-    <%= heroicon tipo_envio_icono(tipo), variant: :outline,
-        options: { class: "w-6 h-6 #{accent[:text]}" } %>
+    <%= icono_de_tipo_envio tipo, variant: :outline, css: "w-6 h-6 #{accent[:text]}" %>
   </div>
   <div class="flex-1 min-w-0">
     <div class="flex items-center gap-2 flex-wrap">

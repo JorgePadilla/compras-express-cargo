@@ -3,21 +3,37 @@ Rails.application.routes.draw do
   resource :registro, only: %i[new create], controller: "registrations"
   resources :passwords, param: :token
 
-  resource :preferencia_tema, only: [:update], controller: "theme_preferences"
-  resource :preferencia_sidebar, only: [:update], controller: "sidebar_preferences"
+  resource :preferencia_tema, only: [ :update ], controller: "theme_preferences"
+  resource :preferencia_sidebar, only: [ :update ], controller: "sidebar_preferences"
   # PR-9.c: on/off + volumen de los tonos de escaneo, por usuario.
-  resource :preferencia_sonido, only: [:update], controller: "sonido_preferences"
+  resource :preferencia_sonido, only: [ :update ], controller: "sonido_preferences"
   # PR-13.c: el supervisor cambia el PIN con el que autoriza cambios de precio.
   resource :mi_pin, only: %i[edit update], controller: "pins"
 
   # Health check for Render
   get "up" => "rails/health#show", as: :rails_health_check
+  # PR-C29.16 · Los signos del servidor (RAM, disco, base, cola). Solo admin;
+  # se entra por el ícono del Home.
+  get "signos_vitales", to: "signos_vitales#show", as: :signos_vitales
+  get "signos_vitales/disco", to: "signos_vitales#disco", as: :disco_signos_vitales
+  delete "signos_vitales/fallidos", to: "signos_vitales#descartar_fallidos", as: :descartar_fallidos_signos_vitales
 
   # Etiquetar (Miami labeling)
   get "etiquetar", to: "etiquetar#index"
   post "etiquetar", to: "etiquetar#create"
+  # PR-C6.10: Miami actualiza sus datos en la MISMA hoja donde los llenó, no
+  # en /paquetes. Yusef: "me mandaste a editar y yo no quiero editar mi
+  # paquete... que te cargue aquí la lista, esto te lo vuelve a llenar tal
+  # cual como quedó".
+  patch "etiquetar/:id", to: "etiquetar#update", as: :actualizar_etiquetar
   # Sesión de etiquetado por tipo de envío: el operario elige el tipo una vez
   # al inicio (queda en session) y lo cierra al terminar el lote.
+  # PR-C6.28: el supervisor de Miami quita el cobro por cambio de servicio con
+  # su PIN. Va bajo /etiquetar porque es donde el digitador se da cuenta del
+  # error — "es que ellos no manejan la página de paquetes".
+  post "etiquetar/:id/quitar_cambio_servicio", to: "etiquetar#quitar_cambio_servicio",
+       as: :quitar_cambio_servicio_etiquetar
+
   post   "etiquetar/sesion", to: "etiquetar#iniciar_sesion",  as: :iniciar_sesion_etiquetar
   delete "etiquetar/sesion", to: "etiquetar#finalizar_sesion", as: :finalizar_sesion_etiquetar
 
@@ -27,13 +43,18 @@ Rails.application.routes.draw do
   # se ven en /paquetes (listado general), no hay listado propio.
   resources :entrega_personal, only: [ :new, :create ], path: "entrega_personal"
 
-  resources :users, except: [:destroy]
+  resources :users, except: [ :destroy ]
 
-  resources :clientes, except: [:destroy] do
+  resources :clientes, except: [ :destroy ] do
     collection { get :buscar }
+    # PR-C7.37: ponerle o cambiarle la clave del portal desde la ficha. Yusef:
+    # *"¿cuál es la cuenta de acceso de él? Y cambiarle la clave por si se le
+    # olvidó"*. Va como acción propia y NO como un campo más de `cliente_params`
+    # porque esa misma lista la guardan media docena de pantallas.
+    member { patch :clave }
   end
 
-  resources :paquetes, except: [:new] do
+  resources :paquetes, except: [ :new ] do
     member do
       # PR-10.d.3: se llamaba `label`, que era el único nombre en inglés que
       # quedaba y encima nombraba mal lo que hace — esta ruta imprime el
@@ -49,6 +70,13 @@ Rails.application.routes.draw do
       post :mover_a_pre_alerta
       post :asignar_tercero
       delete :quitar_tercero
+      # PR-C6.42: bajar la cantidad de cajas cuando alguna ya entró a cobro.
+      # Va en /paquetes y no en /etiquetar porque el problema aparece **en
+      # Honduras**, al entregar: "el sistema no va a querer entregar porque
+      # decía que eran dos".
+      post :bajar_cajas
+      # C24-01 · La excepción de cobro del paquete, con PIN de supervisor.
+      post :cobro_excepcion
     end
     collection do
       get :check_tracking
@@ -58,20 +86,29 @@ Rails.application.routes.draw do
       post :bulk_print
       post :bulk_export
     end
-    resources :tareas, only: [:index, :new, :create, :edit, :update, :destroy] do
+    resources :tareas, only: [ :index, :new, :create, :edit, :update, :destroy ] do
       member do
         post :iniciar
         post :completar
         post :reabrir
       end
     end
-    resources :reempaques, only: [:index, :new, :create, :show]
+    resources :reempaques, only: [ :index, :new, :create, :show ]
   end
 
   # PR-9.a: rutas top-level para tareas que cuelgan del CLIENTE y todavía no
   # tienen paquete (en /etiquetar el paquete no existe cuando el operario
   # escanea). Las anidadas bajo :paquetes se mantienen para /paquetes/:id/tareas.
-  resources :tareas, only: [ :new, :create ] do
+  #
+  # PR-C7.40: y `:index`, que es la bandeja — todas las tareas abiertas del área
+  # de uno. Hasta acá solo existían las de UN paquete (`/paquetes/:id/tareas`) o
+  # las de UN cliente, o sea que había que saber de antemano dónde estaba la
+  # tarea para poder verla. Por eso tampoco estaba en el menú: no había a dónde
+  # apuntar.
+  #
+  # C17-01: y `edit/update/destroy`, porque una tarea de cliente —sin paquete—
+  # no se podía editar ni borrar desde ninguna pantalla.
+  resources :tareas, only: [ :index, :new, :create, :edit, :update, :destroy ] do
     member do
       post :completar
       post :reabrir
@@ -82,9 +119,25 @@ Rails.application.routes.draw do
   # turbo-frame en /etiquetar y /entrega_personal.
   get "panel_contexto", to: "panel_contexto#show"
 
-  resources :sucursales, except: [:show]
+  resources :sucursales, except: [ :show ]
+
+  # C21-08 · El portal de catálogos del manifiesto. Yusef: *"que un CRUD para
+  # todo, para todo lo del manifiesto… como un portal, pero que todo esté ahí,
+  # porque así uno no tiene que andar buscando"*. El hub es una sola pantalla
+  # con solapas; los cuatro CRUD no tienen `index` propio porque volver al
+  # portal ES el requisito.
+  resource  :catalogos_manifiesto,  only: :show, controller: "catalogos_manifiesto"
+  resources :empresas_manifiesto,   only: %i[new create edit update]
+  resources :tipos_envio_proveedor, only: %i[new create edit update],
+            path: "tipos-envio-proveedor"
+  resources :consignatarios,        only: %i[new create edit update]
+  resources :tamanos_caja,          only: %i[new create edit update],
+            path: "tamanos-caja"
 
   # PR-10.a: "la tabla de servicios" — precios por libra, escalones y mínimos.
+  # El redondeo a media libra ya no se prende ni se apaga: es la regla, y las
+  # tarifas nacen con ella (`RedondeoMediaLibraSiempre`). Por eso se fue el
+  # `member { patch :redondeo }` que existía desde PR-C6.20.
   resources :servicios, only: %i[index new create edit update destroy]
 
   # PR-10.b: cotización de flete en vivo (JSON) para el "valor a pagar".
@@ -101,6 +154,12 @@ Rails.application.routes.draw do
             controller: "motivos_retencion"
   resources :plantillas_notas_cliente, only: %i[index new create edit update],
             controller: "plantillas_notas_cliente"
+  # C19-04: descripciones frecuentes del contenido (Sellado, Compra chino…).
+  resources :plantillas_descripcion, only: %i[index new create edit update],
+            controller: "plantillas_descripcion"
+  # C18-06: el catálogo de «enviado según política», gemelo del de retención.
+  resources :motivos_envio_politica, only: %i[index new create edit update],
+            controller: "motivos_envio_politica"
 
   # PR-D3.a: catálogo de proveedores con autocomplete público para el
   # form del paquete; CRUD restringido a admin (controller-level guard).
@@ -108,26 +167,121 @@ Rails.application.routes.draw do
     collection { get :buscar }
   end
 
-  resources :manifiestos, except: [:destroy] do
+  resources :manifiestos, except: [ :destroy ] do
+    # C21-04 · Las casas del manifiesto. Cuelgan del manifiesto porque el
+    # manifiesto ya existe cuando se empaca: ése es el cambio de C21-01.
+    # C21-01 · El escaneo al empacar: el «pip pip pip». Cuelga del manifiesto
+    # porque el manifiesto ya existe cuando se empaca — ése es el cambio.
+    get  "empacar", to: "empaque#show", as: :empacar
+    post "empacar/:caja_id/escanear", to: "empaque#escanear", as: :escanear_empaque
+    post "empacar/:caja_id/omitir",   to: "empaque#omitir",   as: :omitir_empaque
+    # C23-11 · Abrir y cerrar una caja del set con el que se está empacando.
+    # Yusef: *"poder seleccionar las tres cajas"* · *"y para desempacarlo, lo
+    # volvemos a marcar"*.
+    post "empacar/:caja_id/alternar", to: "empaque#alternar", as: :alternar_empaque
+    resources :cajas, only: %i[create update destroy], controller: "cajas_manifiesto" do
+      member     { get :etiqueta }   # C21-05: la 4×6 de un bulto
+      collection { get :etiquetas }  # C21-05: las de todo el manifiesto, de un tiro
+    end
     member do
       post :add_paquete
+      # C28-04 · La pistola pregunta antes de agregar: ¿está acá, en otro, es
+      # de otro servicio? Y si está en otro abierto, se mueve.
+      post :escanear
+      post :mover_paquete
+      # C23-10 · El mismo camino que `add_paquete`, pero de un tirón. Yusef:
+      # *"no les da chance de escanear y le empacan al puro"*.
+      post :empacar_sin_escanear
       delete "remove_paquete/:paquete_id", action: :remove_paquete, as: :remove_paquete
-      patch :enviar
+      # C21-06: «enviar» pasa a llamarse «finalizar», que es la palabra que usa
+      # Yusef y la que dice el botón de la pantalla vieja.
+      patch :finalizar
+      # C21-09 · El manifiesto impreso. Yusef lo comparó él mismo con el
+      # documento que ya existe: *"ese número va a ir igual que el recibo de
+      # warehouse; esto es relativamente un warehouse, solo que es un
+      # manifiesto"*. Así que va por el mismo `layout: "print"`.
+      get :documento
+      # C28-02 · El desglose de paquetes, aparte de la hoja del transportista.
+      get :listado
     end
     collection do
       get :buscar
     end
   end
 
+  # C21-07 · Recibir la carga en Honduras — «la pantallita» y «el aparatito».
+  # Cierra el hueco que `procesos_pdf` marcaba con "hoy se cambia el estado a
+  # mano" y que preguntaba `RP-30`.
+  # C21-02 · Lo que llena San Pedro después: la guía del proveedor y la fecha de
+  # recibido en Honduras. Tiene pantalla propia y no una sección del formulario
+  # del manifiesto —Jorge, 2026-08-30: *"hay que hacer dos accesos, links,
+  # iconos"*— y sobre todo porque compartir el formulario hacía que San Pedro
+  # editara campos de Miami que el controller después descartaba en silencio.
+  resources :guias_aduana, only: %i[index edit update], path: "guias-y-aduana"
+
+  # `RP-58` · La pantalla donde se mueve el mapa de permisos. Singular porque es
+  # una sola grilla que se guarda de un tiro, no un CRUD de filas.
+  resource :permisos, only: %i[show update], controller: "permisos"
+
+  # `RP-58` paso 2b · Cómo se lee cada rol. Singular y sin `new`/`destroy` a
+  # propósito: los roles **no se crean ni se borran** —sus códigos viven en el
+  # enum, en `PermisosDelSistema.politica` y en las constantes `*_ROLES`—, acá
+  # solo se renombran los diez que hay.
+  resource :roles, only: %i[show update], controller: "roles"
+
+  resources :recepcion_carga, only: %i[index show], path: "recibir-carga" do
+    member do
+      post :escanear
+      patch :finalizar
+    end
+  end
+
+  # C26-02 · Medición: la estación de San Pedro. Escanear, medir, y la
+  # excepción de facturar parcial (C26-03).
+  resources :medicion, only: %i[index], path: "medicion" do
+    collection do
+      post :escanear
+      # C27-01 · El bulto: toda la tanda de mediciones entra junta. Yusef:
+      # *"no es una etiqueta por paquete, es una etiqueta por medición"*.
+      post :guardar
+      # C26-17 · Lo que falta del manifiesto, para el panel de la derecha.
+      get :panel
+    end
+    member do
+      patch :medir
+      get :etiqueta
+      post :descartar
+      delete :restaurar
+    end
+  end
+  # C26-04 · Las stickers de un grupo consolidado, juntas.
+  get "medicion/grupos/:id/etiquetas", to: "medicion#etiquetas", as: :etiquetas_grupo_medicion
+  # C27-06 · Las etiquetas de una tanda: una por medición, no una por caja. La
+  # sesión es el uuid que comparten los bultos que salieron de la misma mesa.
+  get "medicion/sesiones/:sesion/etiquetas", to: "medicion#etiquetas_sesion", as: :etiquetas_sesion_medicion
+  # C27-09 · Reimprimir **una** medición. Yusef: *"si se le cae… tendría que
+  # volver a escanear el warehouse"* — se escanea una caja y sale su etiqueta.
+  get "medicion/bultos/:id/etiqueta", to: "medicion#etiqueta_bulto", as: :etiqueta_bulto_medicion
+  post "medicion/pre_alertas/:id/facturar_parcial", to: "medicion#facturar_parcial", as: :facturar_parcial_medicion
+  # C29-17 · Unir una caja suelta al consolidado que está en la mesa. Yusef:
+  # *"que el mismo que está pesando y midiendo los agrega"*.
+  post "medicion/pre_alertas/:id/unir", to: "medicion#unir", as: :unir_medicion
+
   resources :pre_alertas, except: %i[destroy] do
-    member { delete :anular }
+    member do
+      delete :anular
+      # PR-C6.48: mover un paquete a otra pre-alerta desde el editor. El portal
+      # ya lo tenía; admin solo podía hacerlo desde la ficha del paquete.
+      get  :destinos_disponibles
+      post :mover_paquete
+    end
     collection do
       post :clean_empty
       get :buscar
     end
   end
 
-  resources :pre_facturas, except: [:destroy] do
+  resources :pre_facturas, except: [ :destroy ] do
     collection { get :facturables }
     member do
       post   :confirmar
@@ -194,9 +348,27 @@ Rails.application.routes.draw do
 
   resource :empresa, only: %i[show edit update]
 
-  resources :categoria_precios, except: :destroy, path: "categorias-precio"
+  # PR-C6.29: la tasa multiplica todo lo que se cobra en dólares y hasta ahora
+  # solo se podía cambiar con un deploy. Yusef: "la tasa es FIJA, la fija un
+  # admin" — por eso es un CRUD y no un job.
+  resource :tasa_cambio, only: %i[show update], controller: "tasa_cambio"
+  # C19-06: los márgenes y la plantilla de la etiqueta, ajustables por admin
+  # sin deploy. La plantilla se guarda/restaura entera; el preview renderiza
+  # una candidata sin persistirla.
+  resource :ajustes_etiqueta, only: %i[show update], controller: "ajustes_etiqueta" do
+    patch  :plantilla, action: :guardar_plantilla
+    delete :plantilla, action: :restaurar_plantilla
+    delete :margenes, action: :restablecer_margenes
+    post   :preview
+  end
 
-  resources :entregas, except: [:destroy] do
+  # `index` y `show` sobreviven solo para redirigir: los grupos de clientes se
+  # administran en /servicios desde `PR-C7.12`, y lo que mostraba el detalle
+  # —qué cobra el grupo— está ahí, fila por fila. Se quedan como rutas en vez de
+  # borrarse para que los bookmarks viejos lleguen a algún lado y no a un 404.
+  resources :categoria_precios, path: "categorias-precio"
+
+  resources :entregas, except: [ :destroy ] do
     collection { get :entregables }
     member do
       post :despachar
@@ -205,7 +377,7 @@ Rails.application.routes.draw do
     end
   end
 
-  resource :caja, only: [:show], controller: "caja" do
+  resource :caja, only: [ :show ], controller: "caja" do
     post :apertura
     post :cierre
     get  :historial
@@ -216,7 +388,7 @@ Rails.application.routes.draw do
   # Client portal
   namespace :cuenta do
     root "dashboard#index"
-    resource :preferencia_tema, only: [:update], controller: "theme_preferences"
+    resource :preferencia_tema, only: [ :update ], controller: "theme_preferences"
     resources :pre_alertas do
       member do
         delete :anular

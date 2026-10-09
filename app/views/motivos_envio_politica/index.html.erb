@@ -1,0 +1,44 @@
+<%# C18-06: la listita de «enviado según política», administrable como la de
+    retención. Lo que se ve en la columna «Texto al cliente» es lo que le llega. %>
+<%= render PageHeaderComponent.new(title: "Motivos de Envío por Política",
+      subtitle: "Por qué un paquete sin identificación se mandó como se mandó — el texto le llega al cliente") do |h| %>
+  <% h.with_action do %>
+    <%= render ButtonComponent.new(href: new_motivo_envio_politica_path, variant: :primary, icon: "plus", shortcut: "F7") do %>
+      Nuevo Motivo
+    <% end %>
+  <% end %>
+<% end %>
+
+<% if @motivos.any? %>
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+      <thead class="bg-gray-50 dark:bg-gray-900">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Posición</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Texto al cliente</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+        <% @motivos.each do |m| %>
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+            <td class="px-6 py-4 text-sm text-gray-500"><%= m.position %></td>
+            <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100"><%= m.nombre %></td>
+            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300"><%= m.texto_al_cliente %></td>
+            <td class="px-6 py-4 text-sm">
+              <%= render StatusBadgeComponent.new(status: m.activo ? "activo" : "inactivo") %>
+            </td>
+            <td class="px-6 py-4 text-right text-sm">
+              <%= render RowActionComponent.new(action: :edit, href: edit_motivo_envio_politica_path(m), label: "Editar motivo") %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <%= render EmptyStateComponent.new(title: "No hay motivos de envío por política",
+        description: "Creá uno para que Miami pueda marcarlo al recibir un paquete sin identificación.", icon: "paper-airplane") %>
+<% end %>

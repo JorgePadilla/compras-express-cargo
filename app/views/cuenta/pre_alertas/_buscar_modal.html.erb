@@ -2,27 +2,16 @@
 <div data-pre-alerta-buscar-target="modal"
      class="hidden fixed inset-0 z-50 flex items-center justify-center">
   <%# Backdrop %>
-  <div data-action="click->pre-alerta-buscar#close"
+  <div data-action="click->pre-alerta-buscar#close" aria-hidden="true"
        class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"></div>
 
   <%# Card %>
   <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden">
     <%# Header %>
-    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-full bg-cec-teal/10 flex items-center justify-center">
-          <%= heroicon "magnifying-glass", variant: :outline, options: { class: "w-5 h-5 text-cec-teal" } %>
-        </div>
-        <div>
-          <h3 class="text-sm font-bold text-gray-800">Buscar Paquetes</h3>
-          <p class="text-xs text-gray-500">Agrega paquetes existentes a esta pre-alerta</p>
-        </div>
-      </div>
-      <button type="button" data-action="click->pre-alerta-buscar#close"
-              class="text-gray-400 hover:text-gray-600">
-        <%= heroicon "x-mark", variant: :outline, options: { class: "w-5 h-5" } %>
-      </button>
-    </div>
+    <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, icono: "magnifying-glass",
+          titulo: "Buscar Paquetes", titulo_tag: :h3, cerrar: "click->pre-alerta-buscar#close") do %>
+      <p class="text-xs opacity-90">Agrega paquetes existentes a esta pre-alerta</p>
+    <% end %>
 
     <%# Search input %>
     <div class="px-6 py-3 border-b border-gray-100 bg-gray-50">
@@ -78,7 +67,7 @@
         <button type="submit" data-pre-alerta-buscar-target="confirmBtn"
                 disabled
                 class="inline-flex items-center gap-2 bg-cec-teal text-white font-semibold px-5 py-2 rounded-lg text-sm
-                       hover:bg-cec-teal-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                       hover:bg-cec-teal-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           <%= heroicon "plus-circle", variant: :outline, options: { class: "w-4 h-4" } %>
           Agregar
         </button>

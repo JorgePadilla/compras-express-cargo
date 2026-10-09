@@ -1,0 +1,38 @@
+<% clases_de_campo = "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+<%= form_with model: motivo, class: "space-y-4 bg-white dark:bg-gray-800 rounded-lg shadow p-6" do |f| %>
+  <% if motivo.errors.any? %>
+    <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+      <%= motivo.errors.full_messages.to_sentence %>
+    </div>
+  <% end %>
+
+  <div>
+    <%= f.label :nombre, "Nombre (lo que ve el operario)", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+    <%= f.text_field :nombre, required: true, class: clases_de_campo %>
+  </div>
+
+  <div>
+    <%= f.label :texto_al_cliente, "Texto al cliente (lo que le llega)", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+    <%= f.text_area :texto_al_cliente, rows: 3, required: true, class: clases_de_campo,
+          placeholder: "Enviado según política de envío por falta de identificación o pre-alerta." %>
+  </div>
+
+  <div class="grid grid-cols-2 gap-4">
+    <div>
+      <%= f.label :position, "Posición", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+      <%= f.number_field :position, min: 0, class: clases_de_campo %>
+    </div>
+    <div class="flex items-end">
+      <label class="flex items-center gap-2">
+        <%= f.check_box :activo, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Activo</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+    <%= link_to "Cancelar (F2)", motivos_envio_politica_path,
+        class: "text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300", data: { shortcut: "F2" } %>
+    <%= render(ButtonComponent.new(variant: :gold, type: :submit, shortcut: "F10")) { motivo.persisted? ? "Guardar" : "Crear" } %>
+  </div>
+<% end %>

@@ -1,3 +1,7 @@
+<%# «Sonidos», debajo del sol, en la esquina de arriba a la derecha (ver
+    `layouts/application`). Jorge, 2026-10-09: *"el botón de sonido va mejor
+    debajo del sol"*. %>
+<% content_for :esquina, render("shared/sonido_config") %>
 <%= render PageHeaderComponent.new(title: "Entrega Personal", subtitle: "Paquetes traídos físicamente al mostrador") do |header|
   header.with_action do
     tag.span(class: "inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400") do
@@ -7,13 +11,25 @@
       ])
     end
   end
-  header.with_action { render "shared/sonido_config" }
 end %>
 
 <div data-controller="entrega-personal audio"
-     data-audio-enabled-value="<%= Current.user&.sonido_habilitado != false %>"
-     data-audio-volumen-value="<%= Current.user&.sonido_volumen || 60 %>"
-     data-action="entrega-personal:success->audio#success">
+     <%= tag.attributes(atributos_de_audio) %>
+     <%# RP-20: acá solo estaba `success`. Un guardado que falla dejaba la
+         pantalla muda, y en entrega personal el operario está con el paquete
+         en la mano, no leyendo. `submitEnd` suena el feo cuando Turbo avisa
+         que el submit no pasó. %>
+     <%# C16-02: el cliente que aparece en el autocomplete pita igual que en
+         /etiquetar — mismo pin de «podés seguir». Acá no hay chequeo de
+         tracking, así que `trackingLibre` no aplica. %>
+     data-action="entrega-personal:success->audio#success
+                  entrega-personal:clienteEncontrado->audio#success
+                  turbo:submit-end->audio#submitEnd
+                  click@document->entrega-personal#clickOutsideDropdown">
+
+  <%# El aviso de sucursal de retiro, el mismo de /etiquetar. Antes no existía
+      acá: Yusef, "también misma situación no avisa que va a tegus". %>
+  <%= render "shared/aviso_sucursal_retiro", controlador: "entrega-personal" %>
 
   <%# Flash messages %>
   <div id="flash-messages" class="mb-4">
@@ -42,8 +58,10 @@ end %>
   <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
   <div class="xl:col-span-8">
 
+  <%# C16-04: Enter avanza de campo y nunca envía — la misma regla de
+      /etiquetar («Enter no guarda»), que esta gemela no tenía. %>
   <%= form_with model: @paquete, url: entrega_personal_index_path,
-                data: { entrega_personal_target: "form" },
+                data: { entrega_personal_target: "form", action: "keydown->entrega-personal#formKeydown" },
                 class: "bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden" do |f| %>
     <% if @paquete.errors.any? %>
       <div class="m-6 p-4 bg-red-50 dark:bg-red-900/30 rounded-lg">
@@ -60,6 +78,11 @@ end %>
     <% end %>
 
     <div class="px-6 py-4 space-y-6">
+
+      <%# Sección 0: ¿es una recolecta? Va antes de proveedor porque Yusef lo
+          pidió así: "antes de proveedores". Cambia el tracking (RC en vez de
+          EP) y agrega los datos de la visita. %>
+      <%= render "entrega_personal/recolecta", f: f %>
 
       <%# Sección 1: Proveedor EP + Sucursal — define el prefijo del tracking %>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -84,15 +107,23 @@ end %>
           <% end %>
         </div>
         <div>
-          <%= f.label :sucursal_id, "Sucursal de Miami", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
-          <% if @sucursales_miami.any? %>
-            <%= f.collection_select :sucursal_id, @sucursales_miami, :id, :nombre,
+          <%# PR-C7.16: esto mandaba `sucursal_id`, que en `Paquete` significa
+              **dónde retira el cliente** — por eso la etiqueta salía diciendo
+              "RETIRA EN MIAMI". Yusef: "retira en la sucursal asignada al
+              cliente, al igual que etiquetar".
+
+              /etiquetar siempre lo hizo bien: la sucursal donde se está
+              recibiendo va a `sucursal_recepcion`, y `sucursal` queda libre
+              para heredarse del cliente. Ahora esta pantalla hace lo mismo. %>
+          <%= f.label :sucursal_recepcion_id, "Sucursal donde se recibe", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <% if @sucursales_recepcion.any? %>
+            <%= f.collection_select :sucursal_recepcion_id, @sucursales_recepcion, :id, :nombre,
                 { include_blank: "— Seleccionar sucursal —" },
                 { class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Determina el código de sucursal (SMI, etc.) en el tracking generado.</p>
           <% else %>
             <p class="text-sm text-amber-700 dark:text-amber-300 italic">
-              No hay sucursales de Miami con código EP configurado.
+              Ninguna sucursal que reciba carga tiene código EP configurado (se marcan en Sucursales).
             </p>
           <% end %>
         </div>
@@ -102,9 +133,13 @@ end %>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="relative">
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Cliente</label>
+          <%# PR-C6.32: mismo cableado que /etiquetar — `keydown` es lo que
+              habilita flechas y Enter sobre el preseleccionado. Sin él, el
+              dropdown solo se podía usar con el mouse. %>
           <input type="text" placeholder="Buscar por código o nombre..."
                  data-entrega-personal-target="clienteInput"
-                 data-action="input->entrega-personal#searchCliente"
+                 data-action="input->entrega-personal#searchCliente
+                              keydown->entrega-personal#clienteKeydown"
                  autocomplete="off"
                  class="block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal">
           <%= f.hidden_field :cliente_id, data: { entrega_personal_target: "clienteId" } %>
@@ -114,24 +149,43 @@ end %>
         </div>
         <div>
           <%= f.label :tipo_envio_id, "Tipo de Envío", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%# PR-C6.41: el cobro solo-volumétrico es por servicio, así que
+              cambiar este select puede cambiar el peso a cobrar. El select vive
+              fuera del panel de cálculo, por eso el controller de la pantalla
+              le reescribe el valor. %>
           <%= f.collection_select :tipo_envio_id, @tipo_envios, :id, :nombre,
               { include_blank: "— Seleccionar —" },
-              { class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
+              { data: { action: "change->entrega-personal#cambioTipoEnvio" },
+                class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
+        </div>
+        <%# Yusef: "es obligatorio poner contenido, y debería ir más arriba,
+            después de tipo de envío". Estaba hasta abajo del peso y las cajas,
+            así que el que recibía llenaba todo el cálculo antes de toparse con
+            el único campo que dice qué es lo que está midiendo. %>
+        <div class="md:col-span-2">
+          <%= f.label :descripcion, "Contenido", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%= f.text_area :descripcion, rows: 2, placeholder: "Descripción del contenido…", required: true,
+              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+          <%# C19-04: la gemela de /etiquetar — mismos chips, mismo campo. %>
+          <%= render "shared/plantillas_descripcion", selector: "#paquete_descripcion" %>
         </div>
       </div>
 
       <%# Sección 3: Peso, medidas y cálculo — partial compartido con /etiquetar.
           En EP además muestra el valor a pagar (PR-10.b). %>
-      <%= render "shared/peso_medidas_calc", f: f,
-            valor_a_pagar: true, cotizador_url: cotizador_path %>
+      <%# `tipo_envio_id` arranca del objeto y no en blanco: en un form nuevo el
+          select viene vacío y el `change` lo va a llenar, pero en el re-render
+          de un error el select vuelve lleno y ese `change` ya no ocurre — un
+          cliente con cobro solo-volumétrico mostraría el peso viejo. %>
+      <%# A7-20: acá las cajas se agregan una por una. Ver el partial
+          `entrega_personal/_cajas_repetidor` para el porqué. %>
+      <%= render CajasPesoMedidasComponent.new(f: f,
+            valor_a_pagar: true, cotizador_url: cotizador_path,
+            tipo_envio_id: f.object.tipo_envio_id,
+            cajas_cargadas: @cajas_cargadas || {}) %>
 
-      <%# Sección 4: Contenido + Remitente + Driver %>
+      <%# Sección 4: Remitente + Driver %>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="md:col-span-2">
-          <%= f.label :descripcion, "Contenido", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
-          <%= f.text_area :descripcion, rows: 2, placeholder: "Descripción del contenido…",
-              class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
-        </div>
         <div>
           <%= f.label :remitente, "Remitente / Quien lo envía", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
           <%= f.text_field :remitente, placeholder: "Nombre del remitente",
@@ -148,33 +202,15 @@ end %>
         </div>
       </div>
 
-      <%# Sección 5: Pago — pre-pagado en Miami o se cobra en Honduras %>
-      <div class="rounded-lg ring-1 ring-cec-teal/30 bg-cec-teal/5 dark:bg-cec-teal/10 dark:ring-cec-teal/40 px-4 py-3">
-        <p class="text-sm font-semibold text-cec-teal-dark dark:text-cec-teal-light mb-2">
-          <%= heroicon "currency-dollar", variant: :solid, options: { class: "w-4 h-4 inline mr-1" } %>
-          Pago
-        </p>
-        <div class="space-y-2">
-          <label class="flex items-start gap-2 cursor-pointer">
-            <%= radio_button_tag "paquete[prepagado_miami]", "0", true,
-                class: "mt-1 border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-            <div>
-              <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Cobrar en Honduras al entregar (default)</span>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Sigue el flujo normal: PreFactura → Factura cuando llegue.</p>
-            </div>
-          </label>
-          <label class="flex items-start gap-2 cursor-pointer">
-            <%= radio_button_tag "paquete[prepagado_miami]", "1", false,
-                class: "mt-1 border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-            <div>
-              <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Pagado aquí en Miami</span>
-              <p class="text-xs text-gray-500 dark:text-gray-400">
-                Sin factura formal. La etiqueta muestra "PREPAGADO EN MIAMI" y Honduras hace factura simbólica editable al recibir.
-              </p>
-            </div>
-          </label>
-        </div>
-      </div>
+      <%# Retener en Miami. Esta pantalla **nunca lo tuvo**, aunque su controller
+          carga los motivos y permite `retener_miami` y `motivo_retencion_ids`
+          desde siempre: la intención estaba y el marcado nunca se escribió.
+          Salió al buscar el componente para la pre-alerta. %>
+      <%= render RetenerMiamiComponent.new(f: f, motivos: @motivos_retencion) %>
+        <%= render EnviadoPorPoliticaComponent.new(f: f, motivos: @motivos_envio_politica) %>
+
+      <%# Sección 5: Pago. El partial lo comparte con /etiquetar. %>
+      <%= render "shared/prepago_miami" %>
 
       <%# Sección 6: Notas internas %>
       <div>
@@ -183,9 +219,15 @@ end %>
             class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
       </div>
 
-      <%# Cantidad de cajas: modal post-F9 (mismo patrón que PR-4 etiquetar) %>
-      <%= f.hidden_field :cantidad_paquetes, value: 1,
-          data: { entrega_personal_target: "cantidadPaquetesHidden" } %>
+      <%# PR-C6.31: acá vivía un `hidden_field :cantidad_paquetes, value: 1`,
+          resto del modal de F9. Como quedaba DESPUÉS del partial compartido,
+          había dos campos con el mismo `name` y Rails se quedaba con el
+          último: el operario ponía 3 cajas, veía las 3 filas, las llenaba, y
+          se grababa **un solo paquete**. Sin error y sin aviso.
+
+          La cantidad ahora se pregunta una sola vez, en el campo visible
+          "Cant. Cajas" del partial — igual que en /etiquetar desde que Jorge
+          reportó que "el F9 era como confuso". %>
     </div>
 
     <%# Action bar (PR-7) — ButtonComponent muestra el atajo inline.
@@ -217,42 +259,45 @@ end %>
     </aside>
   </div><%# /grid %>
 
-  <%# Modal "¿Cuántas cajas?" — mismo patrón que PR-4 %>
-  <dialog data-entrega-personal-target="cajasModal"
-          aria-labelledby="modal-cajas-title"
+<%# PR-C6.31: acá vivía el modal "¿Cuántas cajas?" que abría F9. Preguntaba
+    lo mismo que el campo visible "Cant. Cajas" del formulario, arrancando
+    siempre en 1 y pisando lo que el operario ya había escrito. Es el mismo
+    modal que se sacó de /etiquetar cuando Jorge dijo que "el F9 era como
+    confuso". Ahora F9 es solo guardar e imprimir. %>
+
+  <%# Turbo stream events container %>
+  <%# ── ¿Cuántas etiquetas? ──
+      C20-07: la gemela de /etiquetar (`PR-C7.23`). Acá la cantidad de cajas
+      salía SOLO de las filas que el operario agregara, así que un envío de
+      tres bultos sin medir no tenía cómo pedir tres etiquetas — y en Entrega
+      Personal casi nunca se mide. Jorge: *"esta lógica de las cajas que
+      hicimos para etiquetar también hay que aplicarla en entrega personal"*.
+
+      Igual que allá, solo sale cuando **no hay ninguna caja cargada**: si
+      midió aunque sea una, mandan las filas y no hay dos fuentes para el
+      mismo número. %>
+  <dialog data-entrega-personal-target="etiquetasModal"
           style="margin: auto"
-          class="rounded-xl p-0 w-[28rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-cec-teal/40">
-    <div class="bg-cec-teal/10 px-5 py-3 border-b border-cec-teal/30">
-      <h3 id="modal-cajas-title" class="text-base font-semibold text-cec-teal-dark dark:text-cec-teal-light">
-        ¿Cuántas cajas trae esta entrega personal?
-      </h3>
+          class="rounded-xl p-0 w-[22rem] max-w-[95vw] backdrop:bg-black/50 ring-2 ring-cec-gold">
+    <%# PR-C29.12 · El mismo que /etiquetar: info, con `ModalHeaderComponent`. %>
+    <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, centrado: true,
+          kicker: "No se midió ninguna caja", titulo: "¿Cuántas etiquetas se imprimen?") %>
+    <div class="bg-white px-6 py-5 text-center">
+      <input type="number" min="1" max="99" value="1" step="1"
+             data-entrega-personal-target="etiquetasInput"
+             data-action="keydown->entrega-personal#etiquetasKeydown"
+             autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other"
+             aria-label="Cantidad de etiquetas"
+             class="w-28 text-center text-3xl font-bold rounded-lg border-gray-300 text-cec-navy shadow-sm focus:ring-cec-teal focus:border-cec-teal">
+      <p class="text-[11px] text-gray-500 mt-2">Una por caja. Todas comparten el tracking y el número de recepción.</p>
     </div>
-    <div class="p-5 space-y-4 bg-white dark:bg-gray-800">
-      <div>
-        <label for="ep-cajas-input" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-          Cantidad de cajas a imprimir
-        </label>
-        <input id="ep-cajas-input" type="number" min="1" max="26" value="1"
-               data-entrega-personal-target="cajasInput"
-               data-action="keydown->entrega-personal#cajasKeydown"
-               class="block w-full text-2xl text-center font-mono rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:ring-cec-teal focus:border-cec-teal">
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          Cada caja recibe su propia etiqueta (1/N, 2/N…). Máximo 26.
-        </p>
-      </div>
-    </div>
-    <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
-      <button type="button" data-action="click->entrega-personal#cancelCajas"
-              class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100">
-        Cancelar
-      </button>
-      <button type="button" data-action="click->entrega-personal#confirmCajas"
-              class="px-4 py-1.5 text-sm font-medium bg-cec-gold text-cec-navy-dark rounded-lg hover:bg-cec-gold-dark">
-        Confirmar e imprimir
-      </button>
+    <div class="flex items-center justify-end gap-3 px-6 py-3 bg-gray-50 border-t border-gray-200">
+      <%= render ButtonComponent.new(variant: :secondary,
+            data: { action: "entrega-personal#cerrarEtiquetas" }) do %>Cancelar<% end %>
+      <%= render ButtonComponent.new(variant: :gold, icon: "printer",
+            data: { action: "entrega-personal#confirmarEtiquetas" }) do %>Imprimir<% end %>
     </div>
   </dialog>
 
-  <%# Turbo stream events container %>
   <div id="entrega-personal-events"></div>
 </div>

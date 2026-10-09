@@ -19,7 +19,7 @@ services:
     plan: starter
     region: oregon
     branch: main
-    autoDeploy: false  # producción es deploy manual desde el dashboard
+    autoDeploy: true   # auto-deploy en cada merge a `main` (Jorge lo pidió el 2026-09-12)
     buildCommand: bundle install && bundle exec rails assets:precompile
     preDeployCommand: bundle exec rails db:migrate
     startCommand: bundle exec puma -C config/puma.rb
@@ -49,7 +49,7 @@ services:
     plan: starter
     region: oregon
     branch: main
-    autoDeploy: false  # producción es manual
+    autoDeploy: true   # auto-deploy en cada merge a `main`
     buildCommand: bundle install
     startCommand: bundle exec rails solid_queue:start
     envVars:

@@ -15,7 +15,7 @@ wb.add_worksheet(name: "Paquetes") do |sheet|
     sheet.add_row([
       p.fecha_recibido_miami || p.created_at,
       p.fecha_disponible,
-      p.numero_recepcion.presence || "—",
+      p.numero_recepcion_visible || "—",
       p.tracking,
       p.cliente.codigo,
       p.cliente.nombre_completo,

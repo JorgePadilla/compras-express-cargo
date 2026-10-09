@@ -1,0 +1,10 @@
+<%# De dónde viene (el comercio). Va más chico que el tipo de envío a
+    propósito: a la par de EXP le robaba el ancho a la sucursal y la dejaba
+    en "SAN PEDRO S…". Lo cuida el test "la sucursal donde retira nunca sale
+    truncada". %>
+<% if etiqueta_plantilla.visible?("proveedor") && (origen = etiqueta_proveedor(paquete)) %>
+  <span data-campo="proveedor"
+        style="font-size:var(--fs-proveedor); font-weight:bold; white-space:nowrap;">
+    <%= origen %>
+  </span>
+<% end %>

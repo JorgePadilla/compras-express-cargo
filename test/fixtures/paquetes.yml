@@ -1,6 +1,7 @@
 recibido:
   tracking: "1Z999AA10123456784"
   guia: "PQ-000001"
+  numero_recepcion: "RMI0002026000902"
   cliente: juan
   estado: recibido_miami
   peso: 5.50
@@ -52,6 +53,10 @@ entregado:
 disponible_entrega_juan:
   tracking: "1Z999BODEGA000001"
   guia: "PQ-000004"
+  # PR-C6.6: el barcode es el numero de recepcion y ya no cae al tracking.
+  # Un paquete etiquetado siempre tiene numero (PR-C6.5), asi que el fixture
+  # tambien — si no, su etiqueta sale sin codigo escaneable.
+  numero_recepcion: "RMI0002026000901"
   cliente: juan
   tipo_envio: aereo
   estado: disponible_entrega

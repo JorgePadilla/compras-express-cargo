@@ -38,7 +38,7 @@
       <%# Heading %>
       <div class="text-center mb-8">
         <h2 class="text-2xl font-bold text-cec-navy">Recuperar contrasena</h2>
-        <p class="text-sm text-gray-500 mt-1">Ingresa tu correo para recibir instrucciones</p>
+        <p class="text-sm text-gray-500 mt-1">Ingresa tu correo o tu codigo de casillero</p>
       </div>
 
       <%# Flash messages %>
@@ -51,19 +51,22 @@
 
       <%# Form %>
       <%= form_with url: passwords_path, class: "space-y-5" do |form| %>
+        <%# Mismo campo que el del login, y por la misma razon: `email_field` haria
+            que el navegador rechace un codigo de casillero antes de enviar. %>
         <div>
           <label for="email_address" class="block text-sm font-medium text-gray-700 mb-1.5">
-            Correo electronico
+            Correo o codigo de casillero
           </label>
           <div class="relative">
             <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-              <%= heroicon "envelope", variant: :outline, options: { class: "w-5 h-5 text-gray-400" } %>
+              <%= heroicon "user", variant: :outline, options: { class: "w-5 h-5 text-gray-400" } %>
             </div>
-            <%= form.email_field :email_address,
+            <%= form.text_field :email_address,
                 required: true,
                 autofocus: true,
                 autocomplete: "username",
-                placeholder: "admin@comprasexpresscargo.com",
+                inputmode: "email",
+                placeholder: "correo@ejemplo.com o C2867",
                 value: params[:email_address],
                 class: "block w-full rounded-xl border border-gray-300 pl-11 pr-4 py-3 text-sm
                        transition-all duration-200

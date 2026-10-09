@@ -32,7 +32,11 @@ class EtiquetarControllerTest < ActionDispatch::IntegrationTest
   test "index con sesión activa muestra el banner una sola vez" do
     get etiquetar_url
     assert_response :success
-    assert_select "form[action=?]", finalizar_sesion_etiquetar_path, count: 1
+    # Se cuenta el banner por su marca y no los formularios que apuntan a
+    # `finalizar_sesion`: desde PR-C6.9 el aviso de "este paquete es de otro
+    # tipo de envío" tiene su propio botón para cerrar la sesión, y contar
+    # formularios agarraba ese también.
+    assert_select "[data-banner=?]", "sesion-activa", count: 1
     assert_select "p", text: "Sesión activa", count: 1
   end
 
@@ -102,7 +106,9 @@ class EtiquetarControllerTest < ActionDispatch::IntegrationTest
       } }
     end
     paquete = Paquete.last
-    assert_equal "empacado", paquete.estado
+    # PR-C6.22: etiquetar recibe, no empaca. "Empacado dice, y empacado no es
+    # lo que sigue... queda aquí en recibido, porque apenas se recibió."
+    assert_equal "recibido_miami", paquete.estado
     assert_equal @digitador, paquete.user
     assert_redirected_to etiquetar_url
   end
@@ -150,7 +156,7 @@ class EtiquetarControllerTest < ActionDispatch::IntegrationTest
         cliente_id: clientes(:juan).id,
         tipo_envio_id: tipo_envios(:aereo).id,
         peso: 5.0,
-        cantidad_paquetes: 3,
+        cajas: { "1" => { peso: 5 }, "2" => { peso: 5 }, "3" => { peso: 5 } },
         sucursal_id: sucursal.id,
         descripcion: "Split test"
       } }
@@ -159,7 +165,7 @@ class EtiquetarControllerTest < ActionDispatch::IntegrationTest
     paquetes = Paquete.where(tracking: "1Z999SPLITCTRL001").order(:numero_caja)
     assert_equal [ 1, 2, 3 ], paquetes.map(&:numero_caja)
     assert paquetes.all? { |p| p.cantidad_paquetes == 3 }
-    assert paquetes.all? { |p| p.estado == "empacado" }
+    assert paquetes.all? { |p| p.estado == "recibido_miami" }
     assert_redirected_to etiquetar_url
   end
 
@@ -201,7 +207,7 @@ class EtiquetarControllerTest < ActionDispatch::IntegrationTest
     end
 
     esperado.reload
-    assert_equal "empacado", esperado.estado
+    assert_equal "recibido_miami", esperado.estado
     assert_equal 7.5, esperado.peso.to_f
     assert_equal "Updated by digitador", esperado.descripcion
   end

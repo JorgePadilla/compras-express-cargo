@@ -1,0 +1,34 @@
+<%= render "catalogos_manifiesto/encabezado",
+      ayuda: "La empresa o persona a la que va consignada la carga. Sale impresa en el manifiesto y en la etiqueta del bulto.",
+      href_nuevo: new_consignatario_path, titulo_nuevo: "Nuevo consignatario" %>
+
+<% if @consignatarios.any? %>
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Identidad / RTN</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dirección</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        <% @consignatarios.each do |c| %>
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 text-sm font-medium text-gray-900"><%= c.nombre %></td>
+            <td class="px-6 py-4 text-sm text-gray-500"><%= c.identidad.presence || "—" %></td>
+            <td class="px-6 py-4 text-sm text-gray-500"><%= c.direccion.presence || "—" %></td>
+            <td class="px-6 py-4 text-sm"><%= render "catalogos_manifiesto/estado", activo: c.activo %></td>
+            <td class="px-6 py-4 text-right text-sm">
+              <%= render RowActionComponent.new(action: :edit, href: edit_consignatario_path(c), label: "Editar consignatario") %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <%= render EmptyStateComponent.new(title: "Todavía no hay consignatarios", description: "Agregá a quién va consignada la carga, como CORPORACION KARSAM.", icon: "building-office") %>
+<% end %>

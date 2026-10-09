@@ -1,0 +1,253 @@
+<%# C21-04 · Las casas del manifiesto.
+    El tamaño pre-definido pre-llena las medidas y el foco salta al peso —
+    *"te ponen solo el cursor a peso, porque es lo que le vas a meter a
+    ingresar, que es lo que hace falta"*—, pero las medidas quedan editables,
+    porque a veces cortan la caja: *"le decimos «EH cortada»"*. %>
+<div class="bg-white rounded-lg shadow mb-6" data-controller="caja-manifiesto">
+  <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+    <div class="flex items-baseline gap-3">
+      <span class="shrink-0 w-7 h-7 rounded-full bg-cec-navy/10 text-cec-navy dark:bg-cec-gold/20 dark:text-cec-gold
+                   flex items-center justify-center text-sm font-bold">1</span>
+      <div>
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Casas del manifiesto</h2>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          El camino con pre-etiqueta: se arma la caja, se imprime su 4×6 y se escanea cada paquete al meterlo.
+          El volumen sale de alto × largo × ancho ÷ 166 — es el reporte por el que cobra el proveedor.
+        </p>
+      </div>
+    </div>
+    <%# C23-10 · Los dos empaques, juntos y con su nombre.
+        **Jorge:** "Le voy a poner empacar como grupo, y luego sin escanear y
+        con escanear." · **Yusef:** "O sea, aquí está empacar **escaneando**. Y
+        aquí sería **sin escanear**" · *"porque tienen que saber ellos qué son
+        los que hicieron sin escanear"*.
+
+        `sin_escanear` se calcula acá y no adentro del botón porque el número
+        va en dos lugares —el rótulo y el confirm— y tienen que ser el mismo. %>
+    <% sin_escanear = EmpacarSinEscanear.new(manifiesto) %>
+    <% candidatos = sin_escanear.aplica? ? sin_escanear.candidatos.count : 0 %>
+    <div class="flex items-center gap-3">
+      <span class="text-sm text-gray-500"><%= manifiesto.cajas.size %> bulto(s)</span>
+
+      <%# **Va afuera del `cajas.any?`, y ése es el punto entero.** El camino
+          sin escaneo es el que Yusef se quedó *"porque a veces no da tiempo"*,
+          y ahí no hay casas ni pistola: si el botón viviera adentro de la
+          condición, solo aparecería cuando ya no hace falta. %>
+      <% if sin_escanear.aplica? %>
+        <%= render ButtonComponent.new(variant: :outline_navy, icon: "bolt",
+              href: empacar_sin_escanear_manifiesto_path(manifiesto), method: :post,
+              disabled: candidatos.zero?,
+              confirm: "Entran #{candidatos} paquete(s) al manifiesto #{manifiesto.numero} " \
+                       "sin escanearlos: los de #{manifiesto.tipos_envio_nuestros} que están en " \
+                       "#{manifiesto.sucursal_origen&.nombre}. ¿Seguro?") do %>
+          Empacar sin escanear<%= " (#{candidatos})" if candidatos.positive? %>
+        <% end %>
+      <% end %>
+
+      <% if manifiesto.cajas.any? %>
+        <%# Jorge: *"el botón de imprimir casi ni se mira"* y *"esos botones con
+            fondo blanco cuesta demasiado verlos"*. Y es literal: `secondary` es
+            `bg-white` con borde `gray-300` **sobre una tarjeta blanca**, así que
+            el borde es lo único que lo separa del fondo.
+
+            Pasan a `outline_navy` —borde y tinta navy, que sí se ven— y a
+            tamaño normal: son las dos acciones del paso, no adornos del
+            encabezado. %>
+        <%= render ButtonComponent.new(variant: :outline_navy, icon: "printer",
+              href: etiquetas_manifiesto_cajas_path(manifiesto, print: true),
+              target: "_blank") do %>Imprimir las 4×6<% end %>
+        <%# C21-01 · La puerta a la pantalla de empacar, que **no tenía ninguna**.
+            Existe desde que se armó el módulo, funciona y tiene tests, y hasta
+            está en la tabla de pantallas de `docs/07` — pero no se llegaba a
+            ella desde ningún lado: había que escribir la URL.
+
+            Va acá y no en el encabezado de la ficha por el orden real del
+            trabajo: se arman las casas, se imprimen sus etiquetas, y con esas
+            etiquetas en la mano se empaca. El botón está donde está la mano.
+
+            Las dos condiciones salen del contexto y son las correctas: `cajas.any?`
+            —la pantalla de empaque no sirve sin casas y ella misma lo dice— y
+            `creado?`, porque `show.html.erb` envuelve este partial entero en él. %>
+        <%# C23-10 · Se llamaba «Empacar» a secas. Ahora que al lado hay otro
+            que también empaca, el nombre tiene que decir cuál es cuál. %>
+        <%= render ButtonComponent.new(variant: :primary, icon: "qr-code",
+              href: manifiesto_empacar_path(manifiesto)) do %>Empacar escaneando<% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="p-6 border-b border-gray-200">
+    <%= form_with model: [ manifiesto, CajaManifiesto.new ], url: manifiesto_cajas_path(manifiesto),
+                  local: true, class: "space-y-4", data: { caja_manifiesto_target: "form" } do |f| %>
+      <%# C28-05 · El mismo formulario sirve para corregir. El lápiz de una fila
+          lo carga con esa caja y lo pasa a PATCH; este cartel dice cuál se
+          está editando y cómo volver a agregar. Yusef: *"aquí es donde
+          necesito que le des la opción de editarla… también para
+          corregirla"*. %>
+      <div hidden data-caja-manifiesto-target="editando"
+           class="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-cec-gold/15 px-4 py-3">
+        <p class="text-base font-semibold text-cec-navy" data-caja-manifiesto-target="editandoTexto"></p>
+        <%= render(ButtonComponent.new(variant: :secondary, size: :sm, icon: "x-mark",
+              label: "Cancelar la edición y volver a agregar cajas",
+              data: { action: "caja-manifiesto#cancelarEdicion" })) { "Cancelar edición" } %>
+      </div>
+      <div>
+        <span class="block text-sm font-medium text-gray-700 mb-2">Tamaño</span>
+        <% if @tamanos.any? %>
+          <%# PR-U5 · Eran chips de `px-3 py-1.5` —unos 30 px— y esto se elige
+              parado frente a la caja. Ahora son tarjetas de 44, con el patrón
+              y la firma de selección de `docs/07`.
+
+              Debajo del nombre van las medidas del tamaño, que es lo que hace
+              falta saber para elegir; «Especificar» no las tiene a propósito y
+              lo dice. Al elegir, el cursor sigue yendo al peso — eso ya estaba
+              y es lo que pidió Yusef: *"te ponen solo el cursor a peso, porque
+              es lo que le vas a meter a ingresar"*. %>
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <% @tamanos.each do |tamano| %>
+              <label class="cursor-pointer group">
+                <%= f.radio_button :tamano_caja_id, tamano.id, class: "peer sr-only",
+                      data: { caja_manifiesto_target: "tamano",
+                              alto: tamano.alto, largo: tamano.largo, ancho: tamano.ancho,
+                              action: "change->caja-manifiesto#elegirTamano" } %>
+                <span class="block h-full min-h-11 px-3 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800
+                             peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 peer-checked:ring-2 peer-checked:ring-cec-gold/30
+                             peer-focus-visible:ring-2 peer-focus-visible:ring-cec-teal-deep
+                             hover:shadow-lg hover:border-cec-gold/50 transition-all duration-200 text-center">
+                  <span class="block font-bold text-base text-cec-navy dark:text-cec-gold"><%= tamano.nombre %></span>
+                  <span class="block text-xs font-mono text-gray-500 dark:text-gray-400 mt-0.5">
+                    <%= tamano.medidas_completas? ? "#{etiqueta_num(tamano.alto)}×#{etiqueta_num(tamano.largo)}×#{etiqueta_num(tamano.ancho)}" : "a medida" %>
+                  </span>
+                </span>
+              </label>
+            <% end %>
+          </div>
+        <% else %>
+          <%# El link solo para quien puede: el portal se fue a Configuración
+              (admin-only) el 2026-08-30, y Miami arma manifiestos sin cargar
+              catálogos. Mostrárselo sería mandarlo a un redirect. %>
+          <p class="text-sm text-gray-500">
+            No hay tamaños cargados todavía.
+            <% if can_access?(:catalogos_manifiesto) %>
+              <%= link_to "Agregalos en Catálogos del Manifiesto", catalogos_manifiesto_path(tab: "tamanos"), class: "text-cec-teal-deep hover:underline" %>.
+            <% else %>
+              Pedile a un administrador que los cargue en Configuración.
+            <% end %>
+          </p>
+        <% end %>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
+        <div>
+          <%= f.label :alto, "Alto", class: "block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1" %>
+          <%= f.number_field :alto, step: "0.01", min: 0, data: { caja_manifiesto_target: "alto", action: "input->caja-manifiesto#medidaCambiada" },
+                class: "block w-full min-h-11 py-3 text-center text-xl font-mono rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <div>
+          <%= f.label :largo, "Largo", class: "block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1" %>
+          <%= f.number_field :largo, step: "0.01", min: 0, data: { caja_manifiesto_target: "largo", action: "input->caja-manifiesto#medidaCambiada" },
+                class: "block w-full min-h-11 py-3 text-center text-xl font-mono rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <div>
+          <%= f.label :ancho, "Ancho", class: "block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1" %>
+          <%= f.number_field :ancho, step: "0.01", min: 0, data: { caja_manifiesto_target: "ancho", action: "input->caja-manifiesto#medidaCambiada" },
+                class: "block w-full min-h-11 py-3 text-center text-xl font-mono rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <div>
+          <span class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Volumen</span>
+          <p class="min-h-11 flex items-center justify-center text-xl font-mono text-gray-500 dark:text-gray-400" data-caja-manifiesto-target="volumen">—</p>
+        </div>
+        <div>
+          <%= f.label :peso, "Peso (lbs)", class: "block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1" %>
+          <%= f.number_field :peso, step: "0.01", min: 0, data: { caja_manifiesto_target: "peso" },
+                class: "block w-full min-h-11 py-3 text-center text-xl font-mono rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <%# RP-61 · Acá había un campo «No. Doc» (`C21-04`). Se sacó: en el
+            sistema viejo ese valor es `"DM" + id de la caja`, lo fabrica el
+            servidor y nadie lo teclea. Nuestra caja ya tiene `codigo`. %>
+      </div>
+
+      <%# C23-05 · Las dos que tiene la pantalla vieja, con las mismas teclas:
+          *«Solo Agregar (F5)»* y *«Agregar/Imprimir (F9)»*. Yusef: *"después de
+          que le damos a agregar, de un solo te las imprimo"* · *"sí, que le
+          tire la que está haciendo de un solo"*.
+
+          El `name="print"` viaja solo con el botón que se apretó — es lo que
+          hace un submit con nombre— así que no hay campo escondido que limpiar
+          después ni que se pueda quedar pegado del guardado anterior. %>
+      <div class="flex justify-end gap-3">
+        <%# Los textos van en un `<span>` con target: al editar dicen «Guardar
+            cambios» y «Guardar e imprimir», sin tocar el ícono ni la tecla. %>
+        <%= render(ButtonComponent.new(variant: :secondary, size: :lg, type: :submit, icon: "plus",
+              shortcut: "F5", shortcut_label_only: true,
+              data: { caja_manifiesto_target: "agregar" })) do %><span data-caja-manifiesto-target="agregarTexto">Agregar caja</span><% end %>
+        <%# `data-turbo=false` va en **este** botón y no en el formulario. La
+            4×6 se imprime sola con `window.onload`, y en una visita de Turbo
+            `onload` no vuelve a dispararse: la etiqueta se abriría y se
+            quedaría ahí mirando. Turbo lee el atributo del submitter —
+            verificado en Chrome de verdad, no solo en los tests—, así que solo
+            este camino hace navegación completa y «Agregar caja» sigue
+            exactamente como estaba.
+
+            **C23-12 · Y ahora sí lleva F9**, que es la del sistema viejo.
+            Estaba tomada por «Finalizar e Imprimir» y **ésa se movió a F8**
+            (Jorge, 2026-09-02): agregar cajas pasa decenas de veces por
+            manifiesto y finalizar una sola, así que la memoria muscular se
+            queda con la frecuente.
+
+            La tecla la escucha `caja_manifiesto_controller`, no el global — y
+            por eso va `shortcut_label_only`, que muestra el rótulo sin emitir
+            `data-shortcut`. Con los dos escuchando se guardarían dos cajas. %>
+        <%= render(ButtonComponent.new(variant: :primary, size: :lg, type: :submit, icon: "printer",
+              shortcut: "F9", shortcut_label_only: true,
+              name: "print", value: "true",
+              data: { turbo: false, caja_manifiesto_target: "agregarEImprimir" })) do %><span data-caja-manifiesto-target="agregarEImprimirTexto">Agregar e imprimir</span><% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <% if manifiesto.cajas.any? %>
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tamaño</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">T. envío</th>
+          <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Medidas</th>
+          <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Volumen</th>
+          <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Peso</th>
+          <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        <% manifiesto.cajas.each_with_index do |caja, i| %>
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 text-sm text-gray-500"><%= i + 1 %></td>
+            <td class="px-4 py-3 text-sm font-mono font-medium text-cec-navy"><%= caja.codigo %></td>
+            <td class="px-4 py-3 text-sm text-gray-700"><%= caja.tamano_caja&.nombre || "Especificar" %></td>
+            <td class="px-4 py-3 text-sm text-gray-500"><%= caja.tipos_envio_adentro.presence || "—" %></td>
+            <td class="px-4 py-3 text-sm text-right font-mono text-gray-500"><%= caja.medidas || "—" %></td>
+            <td class="px-4 py-3 text-sm text-right font-mono text-gray-700"><%= caja.volumen || "—" %></td>
+            <td class="px-4 py-3 text-sm text-right font-mono text-gray-700"><%= caja.peso || "—" %></td>
+            <td class="px-4 py-3 text-right whitespace-nowrap">
+              <%= render ButtonComponent.new(variant: :secondary, size: :xs, icon: "pencil-square",
+                    label: "Editar la caja #{caja.letra}",
+                    data: { action: "caja-manifiesto#editar",
+                            url: manifiesto_caja_path(manifiesto, caja), letra: caja.letra,
+                            tamano_id: caja.tamano_caja_id, alto: caja.alto, largo: caja.largo,
+                            ancho: caja.ancho, peso: caja.peso }) %>
+              <%= render ButtonComponent.new(variant: :secondary, size: :xs, icon: "printer",
+                    href: etiqueta_manifiesto_caja_path(manifiesto, caja, print: true),
+                    target: "_blank", label: "Imprimir la etiqueta de la caja #{caja.letra}") %>
+              <%= render ButtonComponent.new(variant: :danger, size: :xs, icon: "trash",
+                    href: manifiesto_caja_path(manifiesto, caja), method: :delete,
+                    confirm: "Se elimina la caja #{caja.letra}. Si ya imprimiste su etiqueta, despegala: la próxima caja que agregues va a tomar la primera letra libre. ¿Seguro?",
+                    label: "Eliminar caja #{caja.letra}") %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</div>

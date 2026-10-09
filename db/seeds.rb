@@ -11,10 +11,16 @@ puts "  ✓ Admin user"
 
 # ── Sucursales iniciales ──
 [
-  { codigo: "MIA", codigo_ep: "SMI", nombre: "Miami",      pais: "USA",      ubicacion: "miami",    codigo_recepcion_prefix: "RMI" },
+  { codigo: "MIA", codigo_ep: "SMI", nombre: "Miami",      pais: "USA",      ubicacion: "miami",    codigo_recepcion_prefix: "RMI", recibe_carga: true, recepcion_por_defecto: true },
   { codigo: "SPS", codigo_ep: "SZR", nombre: "Zeron SPS",  pais: "Honduras", ubicacion: "honduras", codigo_recepcion_prefix: "RZE" },
   { codigo: "TGU", codigo_ep: "SHU", nombre: "Humuya TGU", pais: "Honduras", ubicacion: "honduras", codigo_recepcion_prefix: "RHU" },
-  { codigo: "SAM", codigo_ep: "SSM", nombre: "San Manuel", pais: "Honduras", ubicacion: "honduras", codigo_recepcion_prefix: "RSM" }
+  { codigo: "SAM", codigo_ep: "SSM", nombre: "San Manuel", pais: "Honduras", ubicacion: "honduras", codigo_recepcion_prefix: "RSM" },
+  # C18-02, seguimiento del 2026-08-27. Yusef: *"Sería bueno tener otro como de
+  # prueba, tipo México"*. Recibe carga y no es la de por defecto: el chooser
+  # de /etiquetar pregunta, con Miami preseleccionada. Sin prefijo: el número
+  # sale del código (RDFM2608000001). Se desactiva desde /sucursales cuando
+  # estorbe.
+  { codigo: "DFM", codigo_ep: "SDF", nombre: "DF México",  pais: "México",   ubicacion: "otros",    recibe_carga: true }
 ].each do |attrs|
   Sucursal.find_or_create_by!(codigo: attrs[:codigo]) do |s|
     s.assign_attributes(attrs)
@@ -23,7 +29,27 @@ puts "  ✓ Admin user"
   s = Sucursal.find_by(codigo: attrs[:codigo])
   s.update_column(:codigo_ep, attrs[:codigo_ep]) if s && s.codigo_ep.blank?
 end
-puts "  ✓ #{Sucursal.count} sucursales"
+# La sucursal de retiro «de siempre» (PR-C7.32). La migración la backfilleó con
+# los datos, pero una base que se reseedea después nacía sin ninguna, y ahí el
+# aviso de bolsa vuelve a salir para San Pedro — Jorge lo vio en staging el
+# 2026-08-25: *"el modal guardar en San Pedro Sula no debería salir al final…
+# y acaba de aparecer"*. Solo si no hay ninguna: la que elijan desde
+# `/sucursales` manda.
+unless Sucursal.exists?(retiro_por_defecto: true)
+  Sucursal.find_by(codigo: "SPS")&.update_column(:retiro_por_defecto, true)
+end
+# Y lo mismo para recibir (C18-02): una base re-sembrada nacía sin ninguna
+# sucursal que recibiera carga —el backfill vivía solo en la migración— y
+# /etiquetar no ofrecía nada. Sin «recepción por defecto», el orden por nombre
+# decidía. Miami si recibe; si no, la primera que reciba.
+unless Sucursal.de_recepcion.exists?
+  Sucursal.find_by(codigo: "MIA")&.update_column(:recibe_carga, true)
+end
+unless Sucursal.exists?(recepcion_por_defecto: true)
+  (Sucursal.de_recepcion.find_by(ubicacion: "miami") || Sucursal.de_recepcion.first)&.update_column(:recepcion_por_defecto, true)
+end
+puts "  ✓ #{Sucursal.count} sucursales (retiro por defecto: #{Sucursal.find_by(retiro_por_defecto: true)&.nombre || 'ninguna'}; " \
+     "recepción por defecto: #{Sucursal.find_by(recepcion_por_defecto: true)&.nombre || 'ninguna'})"
 
 # ── Tipos de envio (v4.0 — ver docs/approved/pre_alerta_v4.docx) ──
 [
@@ -67,23 +93,29 @@ puts "  ✓ #{TipoEnvio.activos.count} tipos de envio v4"
 end
 puts "  ✓ #{Carrier.count} carriers"
 
-# ── Empresas de manifiesto ──
-%w[PRONTO\ CARGO SERCARGO GENESIS].each do |nombre|
-  EmpresaManifiesto.find_or_create_by!(nombre: nombre) { |e| e.activo = true }
-end
+# ── Los catálogos del manifiesto (C21-08) ──
+#
+# La lista vive en `lib/catalogos_del_manifiesto.rb` y no acá: el deploy de
+# staging solo migra, así que hay una **migración de datos** que siembra lo
+# mismo, y dos copias de la misma lista se separan solas. Es idempotente y no
+# pisa lo que haya cargado el equipo por el CRUD.
+require Rails.root.join("lib/catalogos_del_manifiesto")
+CatalogosDelManifiesto.sembrar!
 puts "  ✓ #{EmpresaManifiesto.count} empresas de manifiesto"
+puts "  ✓ #{TipoEnvioProveedor.count} tipos de envío del proveedor"
+puts "  ✓ #{Consignatario.count} consignatarios"
+puts "  ✓ #{TamanoCaja.count} tamaños de caja"
 
 # ── Categorias de precio ──
-[
-  { nombre: "Regular", precio_libra_aereo: 3.50, precio_libra_maritimo: 1.50, precio_volumen: 0.008 },
-  { nombre: "VIP", precio_libra_aereo: 3.00, precio_libra_maritimo: 1.25, precio_volumen: 0.007 },
-  { nombre: "Mayorista", precio_libra_aereo: 2.50, precio_libra_maritimo: 1.00, precio_volumen: 0.006 }
-].each do |attrs|
-  CategoriaPrecio.find_or_create_by!(nombre: attrs[:nombre]) do |cp|
-    cp.precio_libra_aereo = attrs[:precio_libra_aereo]
-    cp.precio_libra_maritimo = attrs[:precio_libra_maritimo]
-    cp.precio_volumen = attrs[:precio_volumen]
-  end
+# Solo el nombre: una categoria agrupa clientes, no guarda precios. Los precios
+# de cada categoria los siembra `TarifasPropuesta2026` sobre `tarifas`, con su
+# moneda explicita.
+#
+# "Regular" y "VIP" son las de la epoca vieja y la hoja de Yusef no las declara;
+# se dejan de sembrar. Los clientes que las tengan asignadas se mueven con
+# `rake tarifas:migrar_categorias_viejas`.
+[ "Mayorista" ].each do |nombre|
+  CategoriaPrecio.find_or_create_by!(nombre: nombre)
 end
 puts "  ✓ #{CategoriaPrecio.count} categorias de precio"
 
@@ -96,7 +128,11 @@ TarifasPropuesta2026.sembrar!(verbose: true)
 
 # ── Configuraciones ──
 {
-  "tasa_cambio" => { valor: "24.85", tipo: "decimal", categoria: "general" },
+  # PR-C6.29: 27.10 es la tasa con la que Yusef hace sus cuentas — la escribió
+  # sobre el PDF de preguntas al confirmar el mínimo de CER (4.50 × 1.5 =
+  # 182.93 + ISV = 210.36). Con la 24.85 que había, ese mismo paquete caía en
+  # el mínimo y daba L.200: sus números no reproducían.
+  "tasa_cambio" => { valor: "27.10", tipo: "decimal", categoria: "moneda" },
   "empresa_nombre" => { valor: "Compras Express Cargo", tipo: "string", categoria: "general" },
   "empresa_email" => { valor: "info@comprasexpresscargo.com", tipo: "string", categoria: "general" },
   "iva_porcentaje" => { valor: "15", tipo: "decimal", categoria: "facturacion" }
@@ -196,6 +232,20 @@ puts "Seeding plantillas_notas_cliente..."
 end
 puts "  ✓ #{PlantillaNotaCliente.count} plantillas notas al cliente"
 
+# ── Plantillas de Descripción (C19-04, PR-C7.58) ──
+# Yusef, 2026-08-28: "hay dos cosas: sellado y compra chino, son más comunes".
+puts "Seeding plantillas_descripcion..."
+[
+  { titulo: "Sellado",     texto: "Sellado",     position: 0 },
+  { titulo: "Compra chino", texto: "Compra chino", position: 1 }
+].each do |attrs|
+  PlantillaDescripcion.find_or_create_by!(titulo: attrs[:titulo]) do |p|
+    p.texto    = attrs[:texto]
+    p.position = attrs[:position]
+  end
+end
+puts "  ✓ #{PlantillaDescripcion.count} plantillas de descripción"
+
 # ── Motivos de Retención (PR-D2) ──
 puts "Seeding motivos_retencion..."
 [
@@ -212,6 +262,28 @@ puts "Seeding motivos_retencion..."
   end
 end
 puts "  ✓ #{MotivoRetencion.count} motivos de retención"
+
+# ── Motivos de envío por política (C18-06) ──
+# Solo los dos que Yusef leyó textuales del sistema viejo, donde los tienen
+# guardados y los copian y pegan (Conversación 18, 2026-08-26): *"Enviado según
+# política de envío por falta de identificación o pre-alerta"* y *"sellados y
+# enviados según políticas de envío por falta de identificación"*. Lo demás que
+# mencionó —«etiqueta incompleta», «solo se lee Juan», «desconocido»— es el
+# contenido de cada caso, no una frase estándar: eso lo escriben en el detalle,
+# o lo agregan al catálogo desde /motivos_envio_politica. Jorge, 2026-08-27:
+# *"pongamos unas seeds ahí con dos ejemplos"*; y Yusef, desde abril: *"entre
+# más cosas nos dejes crear, menos te molestaremos"*.
+puts "Seeding motivos_envio_politica..."
+[
+  { nombre: "Sin pre-alerta ni identificación", texto_al_cliente: "Enviado según política de envío por falta de identificación o pre-alerta.", position: 0 },
+  { nombre: "Sellado y enviado",                texto_al_cliente: "Sellado y enviado según políticas de envío por falta de identificación.", position: 1 }
+].each do |attrs|
+  MotivoEnvioPolitica.find_or_create_by!(nombre: attrs[:nombre]) do |m|
+    m.texto_al_cliente = attrs[:texto_al_cliente]
+    m.position         = attrs[:position]
+  end
+end
+puts "  ✓ #{MotivoEnvioPolitica.count} motivos de envío por política"
 
 # ── Proveedores (PR-D3.a) ──
 # Yusef 2026-04-30: lista inicial de comercios recurrentes (Walmart,
@@ -260,8 +332,19 @@ puts "  ✓ #{TarifaRecolecta.count} tarifas de recolecta"
 # correspondiente (cambio de servicio, etc.). Precio incluye ISV.
 puts "Seeding servicios extra..."
 [
+  # Yusef 2026-08-08, en el audio de precios: "es un ajuste que se le hace por
+  # hacer cambio de servicio que son los **100 lempiras**. Yo te lo puse que
+  # eran 5". Estaba cargado en $15 USD, que son ~L.373 — 3.7× de más, y este
+  # cargo **se auto-genera** en nota de débito al facturar.
+  #
+  # Va con el ISV adentro a propósito, distinto de los cinco de la hoja
+  # (`ServiciosExtraPropuesta2026`, que van netos porque la hoja dice "PRECIOS
+  # NO INCLUYEN IMPUESTOS"). Este número no vino de la hoja sino del audio, y
+  # ahí Yusef habla del precio final: los 100 son lo que paga el cliente. Con
+  # el flag en true el CRUD le muestra **100**, que es su número, y
+  # `precio_venta_sin_isv` guarda los 86.96 que van a la línea.
   { codigo: "CAMBIO_SERVICIO", descripcion: "Cambio de servicio (aéreo↔marítimo, con/sin reempaque)",
-    costo: 0, precio_venta: 15.00, moneda: "USD", precio_incluye_isv: true, position: 0 },
+    costo: 0, precio_venta: 100.00, moneda: "LPS", precio_incluye_isv: true, position: 0 },
   { codigo: "PESO_ADICIONAL",  descripcion: "Peso adicional declarado vs medido",
     costo: 0, precio_venta: 0,     moneda: "USD", precio_incluye_isv: true, position: 1 },
   { codigo: "MANEJO_ESPECIAL", descripcion: "Manejo especial (frágil, voluminoso, perecedero)",
@@ -296,7 +379,8 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
       rol: "supervisor_prefactura", ubicacion: "honduras", pin: "1111" },
     { nombre: "Supervisor SAC", email: "sup_sac@cec.com",
       rol: "supervisor_sac", ubicacion: "honduras", pin: "2222" },
-    { nombre: "Entrega", email: "entrega@cec.com", rol: "entrega_despacho", ubicacion: "honduras" }
+    { nombre: "Entrega", email: "entrega@cec.com", rol: "entrega_despacho", ubicacion: "honduras" },
+    { nombre: "Medición", email: "medicion@cec.com", rol: "medicion", ubicacion: "honduras" }
   ].each do |attrs|
     user = User.find_or_initialize_by(email_address: attrs[:email])
     user.nombre = attrs[:nombre]
@@ -311,8 +395,20 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   puts "  ✓ #{User.count} users total (including demo)"
 
   # Demo clients
-  regular = CategoriaPrecio.find_by!(nombre: "Regular")
-  vip = CategoriaPrecio.find_by!(nombre: "VIP")
+  #
+  # "Regular" y "VIP" eran las categorias de la epoca vieja y ya no existen: la
+  # hoja de precios de Yusef no las declara y `BorrarCategoriasViejasSinUso` las
+  # saco. Los clientes demo usan el mismo criterio que se le aplico a los reales
+  # en PR-C7.08, para que dev se comporte como produccion:
+  #
+  #   los que eran regular -> sin categoria (pagan precio de lista)
+  #   los que eran vip     -> Clientes Amigos
+  #
+  # `find_by` sin bang a proposito: si por lo que sea la categoria no esta
+  # sembrada todavia, los clientes demo se crean igual y sin categoria, en vez de
+  # tumbar el seed entero.
+  regular = nil
+  vip = CategoriaPrecio.find_by(nombre: "Clientes Amigos")
   [
     { nombre: "Juan", apellido: "Perez", identidad: "0801199012345", email: "juan.perez@gmail.com",
       telefono: "99887766", telefono_whatsapp: "99887766", direccion: "Col. Kennedy, Tegucigalpa",

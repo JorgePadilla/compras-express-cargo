@@ -72,7 +72,11 @@
           <input type="text"
                  placeholder="Código (ej. CEC-010) o nombre…"
                  data-cliente-search-target="input"
-                 data-action="input->cliente-search#search"
+                 <%# PR-C6.33: el `keydown` faltaba acá también. Tercera vista
+                     con el mismo hueco — el controller sabía navegar, la vista
+                     nunca le mandó las teclas. %>
+                 data-action="input->cliente-search#search
+                              keydown->cliente-search#onKeydown"
                  autocomplete="off"
                  class="block w-full pl-9 pr-3 py-2 rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 dark:text-gray-100 shadow-sm text-sm focus:ring-2 focus:ring-cec-teal/40 focus:border-cec-teal">
           <div data-cliente-search-target="dropdown"
@@ -202,7 +206,7 @@
     <div>
       <%= f.label :estado, class: "block text-sm font-medium text-gray-700 mb-1" %>
       <% if can_change_estado_paquete? %>
-        <%= f.select :estado, Paquete.estados.keys.map { |e| [e.humanize, e] },
+        <%= f.select :estado, Paquete::ESTADOS_SELECCIONABLES.map { |e| [estado_etiqueta(e), e] },
             {},
             { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
                      focus:ring-cec-teal focus:border-cec-teal" } %>
@@ -244,14 +248,28 @@
     <div data-controller="proveedor-autocomplete"
          data-proveedor-autocomplete-url-value="<%= buscar_proveedores_path %>"
          class="relative">
-      <%= f.label :proveedor_id, "Proveedor", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.label :proveedor_texto, "Proveedor", class: "block text-sm font-medium text-gray-700 mb-1" %>
       <% sel = paquete.proveedor %>
+      <%# C27-29 · Este input no tenía `name`: lo que el operario tecleaba no
+          salía nunca del navegador y un proveedor escrito a mano se perdía en
+          silencio. Jorge lo encontró en vivo sobre la ficha del paquete —
+          *"está en F10… no lo está cambiando… el guardar"* y enseguida
+          *"ya, ya, ya, es que este es el proveedor"*.
+
+          Manda `proveedor_texto` y no `proveedor`: ver el comentario del
+          accessor en `Paquete`. El `value` se queda explícito porque cuando
+          hay uno del catálogo se muestra su nombre, no la columna legacy. %>
       <input type="text"
-             value="<%= sel&.nombre || paquete[:proveedor].to_s %>"
+             name="paquete[proveedor_texto]"
+             id="paquete_proveedor_texto"
+             value="<%= sel&.nombre || paquete.proveedor_texto.to_s %>"
              placeholder="Amazon, Walmart, Driver Juan…"
              autocomplete="off"
              data-proveedor-autocomplete-target="input"
-             data-action="input->proveedor-autocomplete#search"
+             <%# PR-C6.33: faltaba el `keydown`, igual que en /pre_alertas/new.
+                 Sin él este dropdown solo se podía usar con el mouse. %>
+             data-action="input->proveedor-autocomplete#search
+                          keydown->proveedor-autocomplete#onKeydown"
              class="block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal">
       <%= f.hidden_field :proveedor_id,
           data: { proveedor_autocomplete_target: "proveedorId" } %>
@@ -316,6 +334,8 @@
       <%= f.text_area :descripcion, rows: 2,
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
                  focus:ring-cec-teal focus:border-cec-teal" %>
+      <%# C19-04: la tercera gemela, para corregir después. %>
+      <%= render "shared/plantillas_descripcion", selector: "#paquete_descripcion" %>
     </div>
 
     <div>
@@ -388,9 +408,10 @@
         <dialog data-checkbox-modal-target="dialog"
                 aria-labelledby="modal-cambio-servicio-title"
                 style="margin: auto" class="rounded-xl p-0 w-[32rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-amber-300">
-          <div class="bg-amber-50 px-5 py-3 border-b border-amber-200">
-            <h3 id="modal-cambio-servicio-title" class="text-base font-semibold text-amber-900">Cambio de Servicio</h3>
-          </div>
+          <%# PR-C29.12 · Info, igual que su gemelo de /etiquetar: eran ámbar acá
+              y teal allá. %>
+          <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, titulo: "Cambio de Servicio",
+                titulo_tag: :h3, titulo_id: "modal-cambio-servicio-title") %>
           <div class="p-5 space-y-4 bg-white">
             <p class="text-sm text-gray-700">
               El cliente solicitó cambio de servicio. Confirmá el nuevo tipo de envío.
@@ -410,68 +431,18 @@
           <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">
             <button type="button" data-action="checkbox-modal#cancel"
                     class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900">Cancelar</button>
-            <button type="button" data-action="checkbox-modal#confirm"
-                    class="px-3 py-1.5 text-sm font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700">Confirmar</button>
+            <%# Era `bg-amber-600` crudo (3.19:1). Teal, como el de /etiquetar. %>
+            <%= render(ButtonComponent.new(variant: :teal, size: :sm,
+                  data: { action: "checkbox-modal#confirm" })) { "Confirmar" } %>
           </div>
         </dialog>
       </div>
 
-      <%# Retener en Miami — modal: motivos[] + nota. %>
-      <div data-controller="checkbox-modal"
-           class="px-3 py-2 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors">
-        <label class="flex items-center gap-2 cursor-pointer">
-          <%= f.check_box :retener_miami,
-              data: { checkbox_modal_target: "checkbox", action: "change->checkbox-modal#onChange" },
-              class: "rounded border-gray-300 text-amber-600 focus:ring-amber-500" %>
-          <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Retener en Miami</span>
-          <% if paquete.retener_miami? %>
-            <span class="ml-auto text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">activo</span>
-          <% end %>
-        </label>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Especificá motivo(s) de la retención.</p>
-
-        <dialog data-checkbox-modal-target="dialog"
-                aria-labelledby="modal-retener-miami-title"
-                style="margin: auto" class="rounded-xl p-0 w-[32rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-amber-300">
-          <div class="bg-amber-50 px-5 py-3 border-b border-amber-200">
-            <h3 id="modal-retener-miami-title" class="text-base font-semibold text-amber-900">Retener en Miami</h3>
-          </div>
-          <div class="p-5 space-y-4 bg-white">
-            <div>
-              <span class="block text-sm font-medium text-gray-700 mb-1">Motivos</span>
-              <% motivos = MotivoRetencion.activos.ordered %>
-              <% if motivos.any? %>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <% motivos.each do |m| %>
-                    <label class="flex items-start gap-2 text-sm text-gray-800">
-                      <%= check_box_tag "paquete[motivo_retencion_ids][]", m.id,
-                          paquete.motivo_retencion_ids.include?(m.id),
-                          class: "mt-0.5 rounded border-amber-300 text-amber-600 focus:ring-amber-500" %>
-                      <span><%= m.nombre %></span>
-                    </label>
-                  <% end %>
-                </div>
-                <%= hidden_field_tag "paquete[motivo_retencion_ids][]", "" %>
-              <% else %>
-                <p class="text-xs text-amber-700 italic">No hay motivos configurados todavía.</p>
-              <% end %>
-            </div>
-            <div>
-              <%= f.label :notas_retencion, "Notas de retención (detalle del caso)",
-                  class: "block text-sm font-medium text-gray-700 mb-1" %>
-              <%= f.text_area :notas_retencion, rows: 3,
-                  placeholder: "Detalle adicional. Obligatorio si no seleccionaste motivo.",
-                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-amber-500 focus:border-amber-500" %>
-            </div>
-          </div>
-          <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">
-            <button type="button" data-action="checkbox-modal#cancel"
-                    class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900">Cancelar</button>
-            <button type="button" data-action="checkbox-modal#confirm"
-                    class="px-3 py-1.5 text-sm font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700">Confirmar</button>
-          </div>
-        </dialog>
-      </div>
+      <%# Retener en Miami. El bloque vive en `shared/_retener_miami`: acá estaba
+          **copiado** de /etiquetar y ya había divergido — consultaba el catálogo
+          de motivos adentro de la vista y cambiaban los rótulos y los botones. %>
+      <%= render RetenerMiamiComponent.new(f: f, motivos: @motivos_retencion) %>
+        <%= render EnviadoPorPoliticaComponent.new(f: f, motivos: @motivos_envio_politica) %>
 
       <%# Solicitó Recolecta — modal: zona + monto + moneda. %>
       <div data-controller="checkbox-modal"
@@ -492,9 +463,8 @@
         <dialog data-checkbox-modal-target="dialog"
                 aria-labelledby="modal-recolecta-title"
                 style="margin: auto" class="rounded-xl p-0 w-[32rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-cec-teal/40">
-          <div class="bg-cec-teal/10 px-5 py-3 border-b border-cec-teal/20">
-            <h3 id="modal-recolecta-title" class="text-base font-semibold text-cec-navy dark:text-cec-gold">Solicitó Recolecta</h3>
-          </div>
+          <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, titulo: "Solicitó Recolecta",
+                titulo_tag: :h3, titulo_id: "modal-recolecta-title") %>
           <div class="p-5 space-y-4 bg-white">
             <div>
               <%= f.label :tarifa_recolecta_id, "Zona / Tarifa", class: "block text-sm font-medium text-gray-700 mb-1" %>
@@ -516,6 +486,14 @@
                       { include_blank: "—" },
                       { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" } %>
               </div>
+            </div>
+            <%# C19-03: la dirección también acá, para corregir una recolecta
+                ya creada. Los demás datos de la visita se editan en EP. %>
+            <div>
+              <%= f.label :recolecta_direccion, "Dirección de la recolecta", class: "block text-sm font-medium text-gray-700 mb-1" %>
+              <%= f.text_area :recolecta_direccion, rows: 2,
+                    placeholder: "Dónde queda: calle, local, referencia…",
+                    class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
             </div>
             <p class="text-xs text-gray-600 italic">Se cobra automáticamente en la pre-factura.</p>
           </div>
@@ -583,7 +561,7 @@
          data-controller="plantilla-picker"
          data-plantilla-picker-target-selector-value="#paquete_notas_al_cliente">
       <div class="flex items-baseline justify-between mb-1">
-        <%= f.label :notas_al_cliente, "Notas al Cliente (visibles al cliente)", class: "block text-sm font-medium text-gray-700" %>
+        <%= f.label :notas_al_cliente, "Notas al Cliente (le llegan en el correo de recibido)", class: "block text-sm font-medium text-gray-700" %>
         <% plantillas_activas = PlantillaNotaCliente.activas.ordered %>
         <% if plantillas_activas.any? %>
           <span class="text-[11px] text-gray-500">Plantillas:</span>
@@ -666,7 +644,8 @@
               <button type="button"
                       data-action="click->flatpickr#clear"
                       title="Limpiar fecha"
-                      class="absolute inset-y-0 right-0 flex items-center px-2.5 text-gray-400 hover:text-red-500 focus:outline-none">
+                      aria-label="Limpiar fecha"
+                      class="absolute inset-y-0 right-0 flex items-center px-2.5 rounded foco-cec text-gray-500 hover:text-red-600">
                 <%= heroicon "x-mark", variant: :solid, options: { class: "w-4 h-4" } %>
               </button>
             </div>

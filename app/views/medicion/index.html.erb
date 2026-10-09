@@ -1,0 +1,775 @@
+<%# C26-02 · Medición: la estación de San Pedro.
+
+    Se escanea el **warehouse receipt** de la etiqueta que Miami le pegó a la
+    caja, y cada pip agrega una caja a la mesa. La mesa se mide **una vez** —
+    C27-01, Yusef: *"no es una etiqueta por paquete, es una etiqueta por
+    medición, y la medición puede tener 100 paquetes"*— y se puede sacar más de
+    un volumen antes de imprimir.
+
+    ── Por qué se ve como /etiquetar ──────────────────────────────────────
+
+    Jorge, el 2026-09-08, probando la primera versión en staging: *"esta vista
+    está confusa"*, y la referencia: **"a Yusef le gusta el agregar que estaba en
+    etiqueta"**. Coincide con el audio del 7: *"le podría poner otro cuadro igual
+    como el que está en Miami… así como dejaste Miami, es una copia de ese
+    pedazo"*.
+
+    La primera versión apilaba cuatro tarjetas y mostraba **dos modelos a la
+    vez**: la grilla de cuadritos de C26 —una medición por caja, con MIDIENDO y
+    «tocar para elegir»— y la mesa de C27. La última caja aparecía cuatro veces,
+    y «Facturar lo que hay» vivía en rojo permanente con la mesa completa.
+
+    Ahora es **una tarjeta**, en el orden del bloque de /etiquetar: la pistola,
+    la tanda (cliente una vez, y la línea de consolidación si la hay), la mesa,
+    la captura con el cálculo al lado, los volúmenes con su «+ Agregar» pegado a
+    la captura, y la barra abajo. Sin cuadritos: elegir de una lista es lo que
+    Yusef rechazó —*"no quiero que él venga y seleccione, porque ahí se
+    equivoca"*—. Y «Facturar lo que hay» sale **después de guardar**, en el
+    banner, solo cuando el consolidado quedó incompleto. %>
+<div data-controller="medicion audio"
+     <%= tag.attributes(atributos_de_audio) %>
+     data-medicion-escanear-url-value="<%= escanear_medicion_index_path %>"
+     data-medicion-unir-url-template-value="<%= unir_medicion_path(id: "ID") %>"
+     data-medicion-guardar-url-value="<%= guardar_medicion_index_path %>"
+     data-medicion-panel-url-value="<%= panel_medicion_index_path %>"
+     <%# El techo lo pone el modelo y la pantalla lo repite: *"máximo 10
+         warehouse, máximo 10 etiquetas"*. `MedirBulto` lo vuelve a mirar. %>
+     data-medicion-maximo-value="<%= Bulto::MAXIMO_POR_SESION %>"
+     <%# La URL de la etiqueta la manda el servidor con cada medición; este
+         template es el respaldo de «Reimprimir» y, de paso, la puerta que
+         `pantallas_en_el_menu_test` exige para una ruta anidada. %>
+     data-medicion-etiqueta-url-template-value="<%= etiqueta_medicion_path(id: "ID", print: true) %>"
+     <%# Las clases de cada estado del dibujito viven acá y no en el JS: Tailwind
+         escanea los `.erb` para saber qué clases compilar, y una clase que solo
+         existe dentro de un string de JavaScript **no se compila**. Son las
+         mismas que tenía la grilla de #445; el color ya estaba decidido. %>
+     data-medicion-clases-value='<%= {
+           medida:       "border-cec-teal bg-cec-teal/10 text-cec-teal-dark",
+           aqui:         "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200",
+           en_camino:    "border-amber-300 bg-amber-50 text-amber-900",
+           esperada:     "border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 opacity-60",
+           seleccionada: "border-cec-gold bg-cec-gold/30 ring-4 ring-cec-gold/60 shadow-lg text-cec-navy dark:text-cec-gold"
+         }.to_json %>'
+     <%# C27-04/05 · Los tres resultados no-OK del escaneo van a `error` y no a
+         `alert` ni a `notify`: esos dos suben de tono y suenan a «todo bien».
+         Una caja que no puede entrar a la mesa tiene que sonar mal. %>
+     data-action="medicion:ok->audio#success
+                  medicion:completo->audio#completo
+                  medicion:unir->audio#alert
+                  medicion:yaMedido->audio#error
+                  medicion:mezcla->audio#error
+                  medicion:consolidado->audio#error
+                  medicion:atencion->audio#notify
+                  medicion:problema->audio#error
+                  medicion:guardado->audio#success
+                  medicion:fallo->audio#error">
+
+  <%# «Sonidos», debajo del sol, en la esquina de arriba a la derecha, y en
+      tamaño de dedo (PR-C29.11). Jorge, 2026-10-09: *"el botón de sonido va
+      mejor debajo del sol en mediciones"*. %>
+  <% content_for :esquina, render("shared/sonido_config", tactil: true) %>
+  <%= render PageHeaderComponent.new(title: "Medición", subtitle: "Escaneá todas las cajas de la tanda; después pesá y medí cada volumen. Si el cliente está uniendo, acá ves lo que falta.") %>
+
+  <%# PR-C29.10 · Dos columnas: a la izquierda se escanea, a la derecha se
+      mide. Es el orden del trabajo desde C28-08 —primero la pistola, después
+      la balanza— y el «otro cuadro al lado derecho» que Yusef había pedido y
+      no se hizo. Debajo, de punta a punta, lo que falta del manifiesto
+      entero: *"ese listado… lo podés poner abajo, porque ese es
+      independiente para verlo"* (C29-16; C27-11: *"esto es una
+      auditoría"*). Desde `md` van lado a lado y parejas.
+
+      PR-C29.11 · Desde `lg`, escanear se lleva más ancho (4 a 3). Jorge:
+      *"it seems like the scanning, the left part, is the one that should be
+      a little bigger"*. Y tiene razón por cómo es cada columna: a la
+      izquierda está lo que crece —las cajas escaneadas, el «5 de 7», la
+      cuenta del cliente, los dibujitos—; a la derecha, campos de ancho fijo
+      que en 1440 px quedaban estirados de balde. En `md` siguen parejas:
+      a ~820 px cada una mide ~370, y medir necesita eso para las tres
+      medidas lado a lado. Y con `minmax(0, …)`: un `fr` a secas no baja
+      del ancho propio de su contenido, y los tres campos de medir le comían
+      el reparto a escanear (a 1024 px salía al revés: 362 contra 496).
+
+      PR-C29.14 · Y medir, un 20 % más angosta: de 3/7 (43 %) a 34 %. Jorge:
+      *"en mediciones esta parte, Volumen 2 · peso, medidas y cálculo, el lado
+      derecho se puede reducir 20 % para que la parte del scanner sea más
+      ancha"*. A 1024 px medir queda en ~290: las tres medidas siguen
+      entrando, y el test lo mide campo por campo. %>
+  <div class="space-y-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[minmax(0,66fr)_minmax(0,34fr)] gap-6 items-start">
+    <%# ── ESCANEAR · la columna de la izquierda ──────────────────────────
+        La pistola, la tanda una vez, y lo escaneado con su X. Arriba lo que
+        se usa en cada pip y abajo el historial (C28-12). Después de guardar,
+        el resultado queda debajo, en el banner. %>
+    <div class="space-y-4 min-w-0">
+      <%# ── La tarjeta de escanear, de arriba abajo en el orden del trabajo ── %>
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+        <div class="p-6 space-y-5">
+
+          <%# ── a · la pistola ──────────────────────────────────────────── %>
+          <div>
+            <%= label_tag :codigo_medicion, "Escaneá el warehouse receipt de la etiqueta de Miami", class: "block text-base font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+            <%= text_field_tag :codigo_medicion, nil, autofocus: true, autocomplete: "off",
+                  placeholder: "RMI0002026000042-2 (o el tracking)",
+                  data: { medicion_target: "codigo", action: "keydown->medicion#teclado" },
+                  class: "block w-full min-h-14 text-2xl font-mono rounded-lg border border-gray-500 dark:border-gray-400 shadow-sm focus:ring-cec-teal-deep focus:border-cec-teal-deep" %>
+            <%# C27-02 · El bulto se arma escaneando, una caja por pip: el foco
+                **se queda acá** después de un escaneo bueno. La ayuda es una
+                línea y no tres: Yusef, *"no lo van a leer, no van a ver bien"*.
+                Después de guardar, acá se escribe el resultado. %>
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400" data-medicion-target="aviso">Escaneá una por una todas las cajas de la tanda.</p>
+          </div>
+
+          <%# ── b…e · la tanda: aparece con la primera caja ─────────────── %>
+          <div hidden class="space-y-5" data-medicion-target="trabajo">
+
+            <%# ── b · la tanda, una vez ─────────────────────────────────────
+                El cliente y el servicio salen **una sola vez**: en la primera
+                versión estaban en tres lugares. Y si está consolidando, la
+                línea que antes repartían la grilla y los «dos lados»: con qué
+                pre-alerta, cuántas van en la mesa, cuáles ya se midieron y
+                cuáles faltan y dónde están. Es la «Notificación» de la pizarra
+                —*medir → notificación → buscar el resto*— sin cuadritos. %>
+            <div class="rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 px-4 py-3">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <p class="text-lg font-semibold text-gray-800 dark:text-gray-100" data-medicion-target="tandaCliente"></p>
+                <%# C29-19 · Las notas se abren solas la primera vez que
+                    aparecen —*"el que necesita leer es las notas. Las notas
+                    en modal"*— y este botón las vuelve a abrir. Sin notas, no
+                    está: un botón que abre un modal vacío enseña a no
+                    apretarlo. %>
+                <%= render(ButtonComponent.new(variant: :warning, size: :lg, icon: "chat-bubble-left-ellipsis",
+                      data: { medicion_target: "notasBoton", action: "medicion#verNotas" }, hidden: true)) do %><span data-medicion-target="notasBotonTexto">Notas del cliente</span><% end %>
+              </div>
+              <%# ── Los dibujitos del envío ──────────────────────────────────
+                  La primera versión de esto era una frase: diez códigos de
+                  dieciocho caracteres con su paréntesis cada uno. Jorge, con un
+                  envío partido en diez: *"¿podemos hacer dibujitos, para que se
+                  mire mejor?"*. Un cuadrito por caja, coloreado por estado, con
+                  las iniciales de quien midió (C27-12) y el anillo dorado en la
+                  que está en la mesa.
+
+                  **No se tocan.** Es un `<li>`, no un botón: la grilla vieja se
+                  fue porque tocar un cuadrito agregaba la caja a la mesa, y eso
+                  es elegir de una lista (C27-02). Esto es un mapa, no un menú. %>
+              <div hidden data-medicion-target="tandaGrupo">
+                <%# C28-11 · El número, grande. Yusef: *"eso sí se necesita hacer
+                    más grande. Así como está, pero más grande. El número, a
+                    cuánto falta"*. Y cuando no falta nada, que lo diga y que
+                    suene: *"Completado… quiero que salga al lado… el audio"*.
+                    El teal es el «listo» de `docs/07` (el verde está prohibido
+                    por `banned_colors_test`), con tinta navy encima: blanco
+                    sobre teal da 2.46:1 y el lint de botones no lo deja. %>
+                <div class="mt-2 flex flex-wrap items-baseline gap-x-5 gap-y-1">
+                  <p class="font-mono text-5xl font-bold text-cec-navy dark:text-cec-gold" data-medicion-target="tandaContador"></p>
+                  <p class="text-2xl font-semibold text-amber-800 dark:text-amber-400" data-medicion-target="tandaFaltan"></p>
+                </div>
+                <p hidden class="mt-2 rounded-xl bg-cec-teal px-6 py-3 text-center text-4xl font-bold tracking-wide text-cec-navy-dark"
+                   data-medicion-target="tandaCompleto">COMPLETADO</p>
+                <p class="mt-1 text-sm font-medium text-amber-800 dark:text-amber-400" data-medicion-target="tandaConsolidado"></p>
+                <ul class="mt-2 flex flex-wrap gap-1.5" aria-label="Las cajas del envío" data-medicion-target="tandaCajas"></ul>
+                <%# Solo las que no están acá: ésas hay que ir a buscar o
+                    reclamar. Las «acá, sin medir» ya se ven en el dibujo. %>
+                <p hidden class="mt-2 text-sm text-amber-800 dark:text-amber-400" data-medicion-target="tandaAusentes"></p>
+                <template data-medicion-target="plantillaDibujito">
+                  <li class="min-w-14 min-h-11 px-1.5 rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 text-center leading-none">
+                    <span class="font-mono text-sm font-bold" data-campo="sufijo"></span>
+                    <span class="text-[10px] font-bold tracking-wider" data-campo="marca"></span>
+                  </li>
+                </template>
+              </div>
+            </div>
+
+            <%# ── e · lo escaneado: el historial de la tanda ────────────────
+                C28-12 · Va **abajo**, después de medir. Yusef, señalando la
+                pantalla: *"esto es un historial que lleva… esta parte acá
+                abajo la veo muy abajo… esta información donde vas a escanear,
+                y aquí la suma, lo que vas a medir… este cuadro"*. Arriba queda
+                lo que se usa en cada pip —la pistola, el conteo, la captura—, y
+                lo escaneado, que se mira de vez en cuando, baja. Cada renglón
+                llegó por un pip; no hay de dónde elegir.
+
+                C28-10 · Y sin la palabra «mesa», que era nuestra: *"no sé qué
+                es eso de la mesa"*. %>
+            <div>
+              <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                <span data-medicion-target="mesaTitulo">0 cajas escaneadas</span>
+              </h4>
+              <ul class="space-y-2" data-medicion-target="mesa"></ul>
+
+              <%# El renglón vive en el ERB y no en el JS: el markup se lee acá
+                  y Tailwind ve sus clases. El JS lo clona y lo llena.
+
+                  C29-14 · **Una X grande en cada caja.** Antes solo se podía
+                  quitar la última, y Jorge lo tropezó en la prueba: *"voy a
+                  quitar uno, ¿cómo quito uno?… solo puede quitar la última"*.
+                  Yusef: *"una X acá al lado, **una X grande, porque acordate
+                  que va a hacer touch**"*. Es `size: :lg` con el mínimo de 44
+                  px: la pantalla de la PESA es táctil. Sacar no es elegir de
+                  una lista (C27-02): la caja entró por un pip y se deshace. %>
+              <template data-medicion-target="plantillaMesa">
+                <li class="flex items-center gap-3 rounded-lg ring-1 ring-cec-teal/40 bg-cec-teal/5 px-3 py-2">
+                  <span class="w-7 shrink-0 text-center text-sm font-bold text-cec-teal-dark" data-campo="orden"></span>
+                  <div class="flex-1 min-w-0">
+                    <p class="font-mono text-base font-bold text-cec-navy dark:text-cec-gold" data-campo="wr"></p>
+                    <p class="text-xs text-gray-600 dark:text-gray-300 truncate" data-campo="detalle"></p>
+                  </div>
+                  <%= render(ButtonComponent.new(variant: :soft_danger, size: :lg, icon: "x-mark", label: "Quitar esta caja de la tanda",
+                        data: { action: "medicion#quitarCaja" }, class: "shrink-0 min-h-12 min-w-12")) %>
+                </li>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <%# ── Lo que queda cuando la tanda se guardó ────────────────────────
+          La pantalla se limpia para la siguiente —Jorge: *"cuando se facture o
+          se termine de imprimir se debería limpiar"*— y esto guarda el
+          resultado con las únicas acciones que todavía tienen sentido:
+          reimprimir, y —solo si el consolidado quedó incompleto— «Medir lo
+          que hay» (C29-20; se llamaba «Facturar»), que abre el modal rojo de
+          siempre. Se va con el escaneo siguiente. %>
+      <div hidden class="rounded-lg bg-cec-teal/10 text-cec-teal-dark p-4" data-medicion-target="banner">
+        <p class="text-lg font-semibold" data-medicion-target="bannerTexto"></p>
+        <p hidden class="mt-1 text-base text-amber-900" data-medicion-target="bannerFaltan"></p>
+        <div class="mt-3 flex flex-wrap items-center gap-3">
+          <%# C29-13 · Reimprimir deja F9 —que ahora guarda— y pasa a F4,
+              que en el resto de la app ya es «imprimir un documento»
+              (`teclas_por_familia_test`). %>
+          <%= render(ButtonComponent.new(variant: :secondary, size: :lg, shortcut: "F4", shortcut_label_only: true,
+                data: { medicion_target: "bannerReimprimir", action: "medicion#reimprimir" }, hidden: true)) do %><span data-medicion-target="bannerReimprimirTexto">Reimprimir</span><% end %>
+          <%# C29-20 · «Medir lo que hay», no «facturar». Yusef, cuando Jorge
+              lo apretó: *"es que no debería dar eso… se prefactura nada más,
+              solo queda como prefactura abierta, pendiente de todo lo que
+              viene… en medición no debería de darle guerra de estar que si lo
+              factura, si no lo factura"*. La PESA mide; el paso es el mismo
+              (`PasarGrupoIncompleto`), lo que mentía era la palabra. %>
+          <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Medir lo que hay, sin el grupo completo",
+                data: { medicion_target: "bannerFacturar", action: "medicion#abrirExcepcion" }, hidden: true)) { "Medir lo que hay" } %>
+        </div>
+      </div>
+    </div>
+
+    <%# ── MEDIR · la columna de la derecha ─────────────────────────────────
+        PR-C29.10 · Jorge, 2026-10-08: *"the part for medir should be on the
+        right"*. Es el «otro cuadro al lado derecho» que se había quedado sin
+        hacer —en la reunión: *"solo está el lado izquierdo… se me olvidó que
+        vos querías el otro cuadro al lado derecho también"*—, y es el orden
+        del trabajo desde C28-08: *"la medición la va a decidir después de
+        haber escaneado"*. Primero se escanea todo a la izquierda; después se
+        mide acá.
+
+        `sticky`: la lista de lo escaneado crece a la izquierda y el peso no se
+        va de la pantalla. Y con tope de alto: en una laptop de 650 px la
+        columna con dos volúmenes no entra, y pegada arriba dejaría «Guardar e
+        imprimir» abajo del pliegue para siempre. Así la columna se desplaza
+        sola y la barra queda pegada a su pie. Antes de la primera caja la
+        columna no desaparece: dice qué va a pasar acá, y la pantalla no salta
+        con el primer pip. %>
+    <div class="md:sticky md:top-4 self-start">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow md:max-h-[calc(100vh-2rem)] md:overflow-y-auto">
+        <div class="px-6 py-10 text-center" data-medicion-target="medirVacio">
+          <p class="text-lg font-semibold text-gray-700 dark:text-gray-200">Acá se pesa y se mide</p>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Escaneá primero todas las cajas de la tanda.</p>
+        </div>
+
+        <div hidden data-medicion-target="medir">
+          <%# ── c · peso, medidas, cálculo y volúmenes ─────────────────────
+              C26-18 · El bloque de /etiquetar —Jorge: *"como estaban en
+              etiquetar están bien, lo podés copiar a medición"*—: el peso con
+              su rótulo, las tres medidas juntas bajo uno solo, la calculadora
+              con su encabezado, y «Agregar» pegado a la captura. Apilado: la
+              columna mide ~370 px en la laptop chica y no entra al costado.
+              El título dice qué volumen se mide —«Volumen 2»—, como /etiquetar
+              dice «Caja 2» (PR-C29.8). Los campos son grandes porque la
+              pantalla es táctil. %>
+          <div class="p-6">
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
+              <span data-medicion-target="rotuloVolumen">Volumen 1</span>
+              <span class="text-gray-400 dark:text-gray-500 normal-case tracking-normal font-normal">· peso, medidas y cálculo</span>
+            </h4>
+            <div class="space-y-4" data-medicion-target="form"
+                 data-action="keydown->medicion#formKeydown input->medicion#numerosCambiados" data-controller="calc-volumetrico">
+              <div>
+                <%# 2026-10-08 · Sin las flechitas del campo numérico. Jorge: *"increasing
+                    peso real the arrows are weird and hard to reach"* — dos
+                    triangulitos de 8 px en una pantalla táctil, que además
+                    suben de a 0.01. El peso sale de la balanza y se teclea; el
+                    teclado numérico lo abre `inputmode: decimal`.
+
+                    Y todos los campos de esta pantalla con borde: decían
+                    `border-gray-300` pero sin la clase `border`, así que el
+                    ancho era 0 y lo único que los separaba de la tarjeta era
+                    una sombra. Ahora `border border-gray-500` (4.83:1; en
+                    oscuro `gray-400`, 5.64:1): un campo que no se distingue de
+                    la tarjeta no se encuentra (1.4.11). Con el foco, el borde
+                    va a `cec-teal-deep` (4.81:1) y no a `cec-teal` (2.46:1):
+                    «el teal es un fondo, `-deep` es una tinta» (`docs/07`). %>
+                <%= label_tag "medicion_peso", "Peso real (lbs)", class: "block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1" %>
+                <%= number_field_tag "medicion_peso", nil, step: "0.01", min: 0, inputmode: "decimal",
+                      data: { medicion_target: "peso", calc_volumetrico_target: "peso", action: "input->calc-volumetrico#recalcular" },
+                      class: "block w-full min-h-12 text-xl font-mono text-center rounded-lg border border-gray-500 dark:border-gray-400 shadow-sm focus:ring-cec-teal-deep focus:border-cec-teal-deep [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" %>
+              </div>
+              <div>
+                <span class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Medidas (pulgadas)</span>
+                <div class="grid grid-cols-3 gap-2">
+                  <% CajasPesoMedidasComponent::DIMENSIONES.each do |dim| %>
+                    <%= number_field_tag "medicion_#{dim}", nil, step: "0.01", min: 0, inputmode: "decimal",
+                          placeholder: dim.to_s, "aria-label": "#{dim.to_s.capitalize} en pulgadas",
+                          data: { medicion_target: dim.to_s, calc_volumetrico_target: dim.to_s, action: "input->calc-volumetrico#recalcular" },
+                          class: "block w-full min-h-12 px-1 text-xl font-mono text-center rounded-lg border border-gray-500 dark:border-gray-400 shadow-sm focus:ring-cec-teal-deep focus:border-cec-teal-deep placeholder:text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" %>
+                  <% end %>
+                </div>
+                <%# PR-C29.14 · Con medir en un tercio, a 1024 px cada medida mide ~72
+                    px: el rótulo de adentro va chico y sin las flechitas del
+                    campo numérico, que comen ancho y en una pantalla táctil no
+                    se usan. Lo que se teclea sigue grande. %>
+                <p class="mt-1 text-[11px] text-gray-400">alto × largo × ancho</p>
+              </div>
+
+              <%# El cálculo, como el de /etiquetar: con su encabezado, el
+                  volumétrico chico, el peso a cobrar grande, y el pie cúbico
+                  de referencia. Debajo de lo que se teclea, a la vista del
+                  dedo que va a apretar «Agregar». %>
+              <div class="rounded-lg ring-1 ring-gray-200 bg-gray-50 dark:bg-gray-900 dark:ring-gray-700 p-4 space-y-3">
+                <div class="rounded-lg bg-white dark:bg-gray-800 ring-1 ring-cec-teal/30 p-3">
+                  <p class="mb-1 text-xs font-semibold text-cec-navy dark:text-cec-gold">USA → HN · libra o volumen</p>
+                  <div class="flex items-baseline justify-between text-sm">
+                    <span class="text-gray-500 dark:text-gray-400">VLbs (volumétrico)</span>
+                    <span class="font-mono text-gray-700 dark:text-gray-200" data-calc-volumetrico-target="vlbs">—</span>
+                  </div>
+                  <div class="flex items-baseline justify-between gap-2 mt-1">
+                    <span class="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap">Peso a cobrar</span>
+                    <span class="font-mono font-bold text-2xl text-cec-navy dark:text-cec-gold whitespace-nowrap">
+                      <span data-calc-volumetrico-target="pesoCobrar">—</span> <span class="text-xs font-normal">lbs</span>
+                    </span>
+                  </div>
+                </div>
+                <div class="flex items-baseline justify-between text-sm px-1">
+                  <span class="text-gray-500 dark:text-gray-400">pie³ <span class="text-[10px] italic text-gray-400">(no afluye en precio)</span></span>
+                  <span class="font-mono text-gray-700 dark:text-gray-200"><span data-calc-volumetrico-target="pies">—</span> ft³</span>
+                </div>
+                <span class="hidden" data-calc-volumetrico-target="in3"></span>
+                <span class="hidden" data-calc-volumetrico-target="metros"></span>
+              </div>
+
+              <%# PR-C29.10 · Jorge: *"the button Agregar volumen (F5) is too
+                  flat, it needs to be easy to press on a touch screen"*. Era
+                  `size: :md` —unos 36 px— metido en el renglón de «Volúmenes
+                  guardados». Ahora es un blanco de dedo: todo el ancho y 56 px
+                  de alto, entre la calculadora y la lista, que es donde va la
+                  mano después de leer el peso a cobrar. %>
+              <%= render(ButtonComponent.new(variant: :teal, size: :lg, icon: "plus", shortcut: "F5", shortcut_label_only: true,
+                    data: { medicion_target: "agregarVolumen", action: "medicion#agregarVolumen" },
+                    class: "w-full min-h-14 justify-center text-lg")) { "Agregar volumen" } %>
+
+              <%# ── d · los volúmenes de esta tanda, con su «+ Agregar» ───
+                  C27-01/03 · «El repetidor de Miami», dicho por Yusef:
+                  *"mide y pesa este, le da **agregar**; mide y pesa este
+                  por separado porque no cuadra… y ahí le dice
+                  **imprimir**, y como son dos mediciones, imprime dos"*. La
+                  tecla de «Agregar» es F5: `teclas_por_familia_test` la fija
+                  para «agregar». Ni el botón ni la lista tienen campos, así
+                  que vivir adentro de `form` no le cambia nada al
+                  Enter-avanza, que solo recorre inputs. %>
+              <div class="rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 p-3">
+                <p class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+                  Volúmenes guardados
+                  <span data-medicion-target="volumenesContador" class="ml-1 font-mono text-gray-500 dark:text-gray-400">0</span>
+                  <span class="text-gray-400 dark:text-gray-500">de <%= Bulto::MAXIMO_POR_SESION %></span>
+                </p>
+
+                <p data-medicion-target="volumenesVacio" class="text-[11px] text-gray-400">
+                  Todavía ninguno. Lo que esté pesado arriba sale con «Guardar e imprimir», como el último volumen.
+                </p>
+
+                <ul data-medicion-target="listaVolumenes" class="space-y-1.5"></ul>
+
+                <%# La fila de un volumen ya agregado, con su «×» como en
+                    /etiquetar: deshacer no es elegir. C28-08 · Sin «N
+                    cajas»: ningún volumen tiene cajas propias. Y
+                    «Corregir» le devuelve los números al formulario, que es
+                    como se arregla al medir de nuevo. %>
+                <template data-medicion-target="plantillaVolumen">
+                  <%# Los números van debajo del «Volumen N» y pueden partirse en dos
+                      renglones: con medir en un tercio del ancho y los dos
+                      botones de 48, en una sola línea quedaban en «12.…». %>
+                  <li class="flex items-center gap-3 rounded-md bg-gray-50 dark:bg-gray-900 px-2.5 py-1.5">
+                    <div class="flex-1 min-w-0">
+                      <span class="block text-xs font-bold uppercase tracking-wider text-cec-navy dark:text-cec-gold" data-campo="orden"></span>
+                      <span class="block text-sm font-mono text-gray-700 dark:text-gray-200 break-words" data-campo="numeros"></span>
+                    </div>
+                    <%= render(ButtonComponent.new(variant: :secondary, size: :lg, icon: "pencil-square", label: "Corregir este volumen",
+                          data: { action: "medicion#corregirVolumen" }, class: "shrink-0 min-h-12 min-w-12")) %>
+                    <%= render(ButtonComponent.new(variant: :secondary, size: :lg, icon: "x-mark", label: "Quitar este volumen",
+                          data: { action: "medicion#quitarVolumen" }, class: "shrink-0 min-h-12 min-w-12")) %>
+                  </li>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <%# ── f · la barra, al pie de MEDIR ──────────────────────────────
+              Es lo que cierra la medición, así que va donde se mide, pegada al
+              pie de la columna: si la columna se desplaza, la barra no se va.
+              El texto del primero lo reescribe el JS según lo que va
+              a pasar: con dos volúmenes, F9 imprime dos etiquetas, y prometer
+              una sería mentir. «Reimprimir» no está acá: vive en el banner,
+              cuando hay algo que reimprimir. %>
+          <div class="sticky bottom-0 rounded-b-lg border-t border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-800/95 backdrop-blur px-6 py-4 flex flex-wrap items-center justify-end gap-3"
+               data-medicion-target="barra">
+            <%= render(ButtonComponent.new(variant: :secondary, size: :lg, shortcut: "F2", shortcut_label_only: true,
+                  data: { action: "medicion#limpiar" })) { "Limpiar" } %>
+            <%# C29-13 · **F9**, como en las casas del manifiesto y en
+                /etiquetar. Yusef, en la prueba del 2026-10-08: *"F10 le
+                pusiste. Normalmente es F9, Jorge. F9 para imprimir siempre…
+                solo para que lo tengamos uniforme"*. Acá guardar siempre
+                imprime, así que es la misma tecla. F10 sigue guardando sin
+                rótulo, como en /etiquetar («guardar es F9 o F10»). %>
+            <%= render(ButtonComponent.new(variant: :gold, size: :lg, shortcut: "F9", shortcut_label_only: true,
+                  data: { medicion_target: "guardar", action: "medicion#guardar" })) do %><span data-medicion-target="guardarTexto">Guardar e imprimir</span><% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <%# ── e · lo que falta de este manifiesto ─────────────────────────────
+
+        Jorge: *"¿cómo ayuda eso de «medidos hoy»? Sería bueno que aparezcan los
+        que faltan de ese manifiesto, así como match con lo que se mandó desde
+        Miami… y la fecha de cuándo fue enviado"*. Un contador de lo ya hecho no
+        le sirve a nadie parado en la línea; lo que falta, sí.
+
+        El panel sigue al manifiesto de la caja que se acaba de escanear. %>
+    <%# C29-16 · Abajo y no al costado: es el listado general, *"ese es
+        independiente para verlo"*. Lo del cliente de la tanda va arriba, en
+        la tarjeta. %>
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden"
+         data-medicion-target="panelManifiesto">
+      <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100">Lo que falta de este manifiesto</h2>
+        <p class="mt-1 font-mono font-bold text-cec-navy dark:text-cec-gold" data-medicion-target="manifiestoNumero"></p>
+        <p class="text-xs text-gray-500 dark:text-gray-400" data-medicion-target="manifiestoFechas"></p>
+        <%# El match con lo que Miami dijo que mandó. %>
+        <p class="mt-1 text-sm font-semibold text-gray-700 dark:text-gray-200" data-medicion-target="manifiestoConteo"></p>
+      </div>
+
+      <ul class="divide-y divide-gray-200 dark:divide-gray-700 max-h-[32rem] overflow-y-auto"
+          data-medicion-target="pendientes"></ul>
+
+      <p hidden class="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400"
+         data-medicion-target="sinPendientes">No falta nada por medir de este manifiesto.</p>
+
+      <%# El renglón vive en el ERB, como el cuadrito: el markup se lee acá y
+          Tailwind ve sus clases. El JS lo clona y lo llena. %>
+      <template data-medicion-target="plantillaPendiente">
+        <li class="px-4 py-2 flex items-start gap-2">
+          <div class="flex-1 min-w-0">
+            <p class="font-mono text-sm text-cec-navy dark:text-cec-gold truncate" data-campo="wr"></p>
+            <p class="text-xs text-gray-600 dark:text-gray-300 truncate" data-campo="cliente"></p>
+            <p class="text-xs" data-campo="donde"></p>
+            <%# C26-17 · Cuáles vienen consolidados, sin tener que escanearlos. %>
+            <p hidden class="mt-0.5 inline-block text-[11px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900"
+               data-campo="unir"></p>
+          </div>
+          <%= render(ButtonComponent.new(variant: :secondary, size: :lg, icon: "x-mark", label: "Sacar de la lista",
+                data: { action: "medicion#abrirDescarte" }, hidden: true, class: "shrink-0 min-h-12 min-w-12")) %>
+        </li>
+      </template>
+    </div>
+  </div>
+
+  <%# ── C29-19 · Las notas del cliente ──────────────────────────────────────
+      Las mismas que lee pre-factura: *"de momento no las deberíamos de
+      separar"*. Cada bloque con su rótulo y su color, como en la franja de
+      /etiquetar. Enter = Entendido; Escape frenado, como todo aviso de esta
+      pantalla (C20-13). Los bloques los clona el JS de la plantilla. %>
+  <dialog data-medicion-target="notasModal" data-action="cancel->medicion#avisoCancelar"
+          style="margin: auto" class="rounded-xl p-0 w-[44rem] max-w-[95vw] backdrop:bg-black/70">
+    <%# PR-C29.12 · Notas: ámbar **claro**, como la franja de notas de
+        /etiquetar. Era `amber-700` sólido, el naranja que Jorge vio distinto. %>
+    <%= render ModalHeaderComponent.new(tono: :notas, tamano: :grande, kicker: "Antes de medir", titulo: "Notas del cliente") do %>
+      <p class="text-base mt-1" data-medicion-target="notasCliente"></p>
+    <% end %>
+    <div class="bg-white px-8 py-6">
+      <ul class="space-y-3 max-h-[60vh] overflow-y-auto" data-medicion-target="notasLista"></ul>
+    </div>
+    <div class="flex items-center justify-end gap-3 px-8 py-4 bg-gray-50 border-t border-gray-200">
+      <%= render(ButtonComponent.new(variant: :primary, size: :lg, label: "Entendido",
+            data: { medicion_target: "notasEntendido", action: "medicion#cerrarNotas" })) { "Entendido" } %>
+    </div>
+  </dialog>
+  <template data-medicion-target="plantillaNota">
+    <li class="rounded-lg ring-1 px-4 py-3">
+      <p class="text-xs font-bold uppercase tracking-wider" data-campo="etiqueta"></p>
+      <p class="mt-1 text-lg text-gray-900 whitespace-pre-line" data-campo="texto"></p>
+    </li>
+  </template>
+
+  <%# ── El modal rojo grande ──────────────────────────────────────────────
+      Jorge: *"se debe mostrar un modal rojo grande con el problema que se
+      encuentre"*. Enter = Entendido, Escape frenado (C20-13). %>
+  <dialog data-medicion-target="problemaModal" data-action="cancel->medicion#avisoCancelar"
+          style="margin: auto" class="rounded-xl p-0 w-[44rem] max-w-[95vw] backdrop:bg-black/70">
+    <%= render ModalHeaderComponent.new(tono: :bloqueo, tamano: :grande, kicker: "Problema",
+          titulo_data: { medicion_target: "problemaTitulo" }) %>
+    <div class="bg-white px-8 py-6">
+      <p class="text-xl text-gray-900" data-medicion-target="problemaTexto"></p>
+    </div>
+    <div class="flex items-center justify-end gap-3 px-8 py-4 bg-gray-50 border-t border-gray-200">
+      <%# C27-14 · La salida del bloqueo del manifiesto. Yusef: *"si no ha pasado
+          el proceso desde Miami para acá, no lo puede hacer… **hay que poner una
+          opción ahí**"*. El aviso se queda —la caja de verdad no pasó por
+          aduana—; lo que cambia es que ahora tiene puerta, y quien la usa deja
+          su nombre en el paquete. %>
+      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Medirlo igual, sin haber pasado por el manifiesto",
+            data: { medicion_target: "medirIgual", action: "medicion#medirIgual" }, hidden: true)) { "Medirlo igual" } %>
+      <%# C27-09 · Yusef: *"él va a poder reimprimir la etiqueta, porque digamos
+          que si se le cae… ¿cómo la buscaría? **Tendría que volver a escanear el
+          warehouse**"*. Eso es exactamente lo que acaba de hacer. %>
+      <%# C27-33 · Y la otra salida, la que Jorge no encontró en staging: *"cuando un
+          warehouse receipt ya tiene medidas y se vuelve a escanear no me pregunta
+          si quiero editarlo"*. Yusef la había pedido: *"se equivocan y lo ingresan
+          en seis libras, y eran cuatro… se va a poder corregir… medir de nuevo"*.
+          Trae la tanda entera con sus volúmenes (C28-08); al guardar, la
+          nueva reemplaza a la vieja. Y reimprimir saca **todas** sus
+          etiquetas: la caja no es de un volumen. %>
+      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Medir de nuevo la tanda y reemplazar sus etiquetas",
+            data: { medicion_target: "remedirBulto", action: "medicion#remedirBulto" }, hidden: true)) { "Medir de nuevo" } %>
+      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Reimprimir las etiquetas de la tanda",
+            data: { medicion_target: "reimprimirBulto", action: "medicion#reimprimirBulto" }, hidden: true)) { "Reimprimir sus etiquetas" } %>
+      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Medir de nuevo",
+            data: { medicion_target: "medirDeNuevo", action: "medicion#medirDeNuevo" }, hidden: true)) { "Medir de nuevo" } %>
+      <%= render(ButtonComponent.new(variant: :primary, size: :lg, label: "Entendido",
+            data: { medicion_target: "problemaEntendido", action: "medicion#avisoEntendido" })) { "Entendido" } %>
+    </div>
+  </dialog>
+
+  <%# ── Sacar una caja de la lista: perdida, o ya entregada. Solo admin ──── %>
+  <dialog data-medicion-target="descarteModal" data-action="cancel->medicion#avisoCancelar"
+          style="margin: auto" class="rounded-xl p-0 w-[32rem] max-w-[95vw] backdrop:bg-black/60">
+    <%= render ModalHeaderComponent.new(tono: :info, kicker: "Solo administración", titulo: "Sacar de la lista") %>
+    <div class="bg-white px-6 py-5 space-y-4">
+      <p class="text-base text-gray-900 font-mono" data-medicion-target="descarteCaja"></p>
+      <div>
+        <span class="block text-sm font-medium text-gray-700 mb-1">Por qué</span>
+        <% DescartarDeMedicion::MOTIVOS.each_with_index do |(valor, etiqueta), i| %>
+          <label class="flex items-center gap-3 text-base text-gray-700 min-h-12 cursor-pointer">
+            <%= radio_button_tag "medicion_descarte_motivo", valor, i.zero?,
+                  data: { medicion_target: "descarteMotivo" }, class: "w-6 h-6 text-cec-teal focus:ring-cec-teal" %>
+            <%= etiqueta %>
+          </label>
+        <% end %>
+      </div>
+      <div>
+        <%= label_tag :medicion_descarte_nota, "Nota (opcional)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= text_field_tag :medicion_descarte_nota, nil, autocomplete: "off",
+              data: { medicion_target: "descarteNota" },
+              class: "block w-full min-h-12 text-lg rounded-lg border border-gray-500 dark:border-gray-400 shadow-sm focus:ring-cec-teal-deep focus:border-cec-teal-deep" %>
+      </div>
+      <p class="text-sm text-gray-500">La caja **no** cambia de estado: solo deja de esperarse acá, con tu nombre y la hora.</p>
+      <p hidden class="text-base font-medium text-red-700" data-medicion-target="descarteError"></p>
+    </div>
+    <div class="flex items-center justify-end gap-3 px-6 py-3 bg-gray-50 border-t border-gray-200">
+      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Cancelar",
+            data: { action: "medicion#cerrarDescarte" })) { "Cancelar" } %>
+      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Sacar esta caja de la lista",
+            data: { medicion_target: "confirmarDescarte", action: "medicion#confirmarDescarte" })) { "Sacar de la lista" } %>
+    </div>
+  </dialog>
+
+  <%# ── Medir lo que hay: la alerta, y se pasa ──────────────────────────────
+      C29-20 · Se llamaba «Facturar lo que hay», y la PESA no factura. Lo
+      que pasa de verdad lo dijo Yusef: *"se prefactura nada más, solo queda
+      como prefactura abierta, pendiente de todo lo que viene"*. El texto lo
+      dice así, para que nadie crea que con esto se le cobra al cliente. %>
+  <dialog data-medicion-target="excepcionModal" data-action="cancel->medicion#avisoCancelar"
+          style="margin: auto" class="rounded-xl p-0 w-[44rem] max-w-[95vw] backdrop:bg-black/70">
+    <%# PR-C29.12 · Atención y no bloqueo: medir lo que hay es una decisión del
+        operario, no un error. Yusef (C29-20): *"en medición no debería de
+        darle guerra"*. %>
+    <%= render ModalHeaderComponent.new(tono: :atencion, tamano: :grande, kicker: "El grupo está incompleto",
+          titulo: "Medir lo que hay", titulo_data: { medicion_target: "excepcionTitulo" }) %>
+    <div class="bg-white px-8 py-6 space-y-4">
+      <p class="text-xl text-gray-900">Se va a seguir sin estas cajas:</p>
+      <ul class="text-lg font-mono text-red-800 space-y-1" data-medicion-target="excepcionFaltantes"></ul>
+      <p class="text-base text-gray-600">La pre-factura va a quedar <strong>abierta</strong>, esperando lo que falta: nadie le cobra al cliente con esto.</p>
+      <p class="text-base text-gray-600">Queda anotado en la pre-alerta con tu nombre, la hora y lo que faltaba.</p>
+      <p hidden class="text-base font-medium text-red-700" data-medicion-target="excepcionError"></p>
+    </div>
+    <div class="flex items-center justify-end gap-3 px-8 py-4 bg-gray-50 border-t border-gray-200">
+      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Cancelar la excepción",
+            data: { action: "medicion#cerrarExcepcion" })) { "Cancelar" } %>
+      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Sí, medir lo que hay",
+            data: { medicion_target: "confirmarParcial", action: "medicion#confirmarParcial" })) { "Sí, medir lo que hay" } %>
+    </div>
+  </dialog>
+
+  <%# ── C28-13 · Faltan cajas que vinieron: el código de un supervisor ─────
+
+      Yusef, el 2026-10-03: *"el sistema lo va a dejar pesar porque en el
+      manifiesto este no venían más, pero si viene y venían más paquetes no lo
+      debería dejar"* · *"para todos estos bloqueos va a haber alguien que lo va
+      a desbloquear, a autorizar… con su código"*. Lo que no vino sigue pasando
+      sin PIN («Medir lo que hay»); esto es solo para lo que está acá y no
+      apareció en la tanda.
+
+      La lista de quién puede es `User.autorizantes`: los que llevan PIN desde
+      `RP-21`, no una lista escrita acá. «Cancelar» deja la tanda como estaba,
+      para ir a buscar las que faltan. %>
+  <dialog data-medicion-target="autorizarModal" data-action="cancel->medicion#avisoCancelar"
+          style="margin: auto" class="rounded-xl p-0 w-[44rem] max-w-[95vw] backdrop:bg-black/70">
+    <%= render ModalHeaderComponent.new(tono: :bloqueo, tamano: :grande, kicker: "Faltan cajas que sí vinieron",
+          titulo: "Mandalas a buscar, o que autorice un supervisor") %>
+    <div class="bg-white px-8 py-6 space-y-4">
+      <ul class="text-lg font-mono text-red-800 space-y-1" data-medicion-target="autorizarFaltantes"></ul>
+      <% autorizantes = User.autorizantes.order(:nombre) %>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <%= label_tag "autorizar_supervisor", "Supervisor", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= select_tag "autorizar_supervisor",
+                options_from_collection_for_select(autorizantes, :id, ->(u) { "#{u.nombre} — #{u.rol_label}" }),
+                data: { medicion_target: "autorizarSupervisor" },
+                class: "block w-full min-h-12 text-lg rounded-lg border border-gray-500 dark:border-gray-400 shadow-sm focus:ring-cec-teal-deep focus:border-cec-teal-deep" %>
+        </div>
+        <div>
+          <%= label_tag "autorizar_pin", "Código (PIN)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= password_field_tag "autorizar_pin", nil, inputmode: "numeric", maxlength: 4, autocomplete: "off",
+                data: { medicion_target: "autorizarPin", action: "keydown.enter->medicion#confirmarAutorizacion:prevent" },
+                class: "block w-full min-h-12 text-2xl font-mono text-center rounded-lg border border-gray-500 dark:border-gray-400 shadow-sm focus:ring-cec-teal-deep focus:border-cec-teal-deep" %>
+        </div>
+      </div>
+      <div>
+        <%= label_tag "autorizar_motivo", "Motivo", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= text_field_tag "autorizar_motivo", nil, autocomplete: "off", placeholder: "ej. se buscó en el estante y no aparece",
+              data: { medicion_target: "autorizarMotivo", action: "keydown.enter->medicion#confirmarAutorizacion:prevent" },
+              class: "block w-full min-h-12 text-lg rounded-lg border border-gray-500 dark:border-gray-400 shadow-sm focus:ring-cec-teal-deep focus:border-cec-teal-deep" %>
+      </div>
+      <p class="text-base text-gray-600">Queda en la bitácora de autorizaciones con quién autorizó, por qué y qué faltaba.</p>
+      <p hidden class="text-base font-medium text-red-700" data-medicion-target="autorizarError"></p>
+    </div>
+    <div class="flex items-center justify-end gap-3 px-8 py-4 bg-gray-50 border-t border-gray-200">
+      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Cancelar y mandar a buscar las cajas",
+            data: { action: "medicion#cerrarAutorizacion" })) { "Cancelar" } %>
+      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Autorizar y guardar sin esas cajas",
+            data: { medicion_target: "confirmarAutorizacion", action: "medicion#confirmarAutorizacion" })) { "Autorizar y guardar" } %>
+    </div>
+  </dialog>
+
+  <%# ── «NO Mezclar»: otro cliente, otro servicio ─────────────────────────
+
+      C27-05 · Yusef lo describió con nombre y apellido:
+
+        "Escanea uno de Jorge y va y escanea otro y ese no es el mismo Jorge
+         —en vez de Jorge Padilla es Jorge Manzano—: **le tira error, es
+         diferente cliente**… ¿qué opciones tiene ahí? **¿Desea eliminar este
+         último o empezar todo de nuevo?**"
+
+      Las dos salidas son las de él, textuales. La caja rechazada **nunca entró
+      a la mesa**, así que «quitar el último escaneado» es cerrar y seguir. %>
+  <dialog data-medicion-target="mezclaModal" data-action="cancel->medicion#avisoCancelar"
+          style="margin: auto" class="rounded-xl p-0 w-[46rem] max-w-[95vw] backdrop:bg-black/70">
+    <%= render ModalHeaderComponent.new(tono: :bloqueo, tamano: :grande, kicker: "No se pueden medir juntos",
+          titulo_data: { medicion_target: "mezclaTitulo" }) %>
+    <div class="bg-white px-8 py-6 space-y-3">
+      <p class="text-xl text-gray-900" data-medicion-target="mezclaTexto"></p>
+      <p class="text-base text-gray-600">Esta caja <strong>no</strong> entró a la tanda. ¿Qué hacemos?</p>
+    </div>
+    <div class="flex flex-wrap items-center justify-end gap-3 px-8 py-4 bg-gray-50 border-t border-gray-200">
+      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Empezar todo de nuevo, sin ninguna caja escaneada",
+            data: { action: "medicion#mezclaEmpezarDeNuevo" })) { "Empezar todo de nuevo" } %>
+      <%= render(ButtonComponent.new(variant: :primary, size: :lg, label: "Quitar el último escaneado y seguir",
+            data: { medicion_target: "mezclaQuitar", action: "medicion#mezclaQuitarUltimo" })) { "Quitar el último escaneado" } %>
+    </div>
+  </dialog>
+
+  <%# ── C29-17 · Una suelta del mismo cliente, con un consolidado en la mesa ──
+
+      Yusef, el 2026-10-08: *"¿desea agregar este paquete a esta
+      consolidación? Sí… o sigo procesando el que estoy trabajando, o dejarlo
+      a un lado"*. Lo segundo y lo tercero son el mismo gesto para el sistema
+      —la caja no entra y se sigue con la mesa—, así que van en un solo
+      botón con las dos palabras. Agregarla la suma a la pre-alerta
+      consolidada (`RP-73`) y la mete a la tanda. %>
+  <dialog data-medicion-target="unirModal" data-action="cancel->medicion#avisoCancelar"
+          style="margin: auto" class="rounded-xl p-0 w-[46rem] max-w-[95vw] backdrop:bg-black/70">
+    <%= render ModalHeaderComponent.new(tono: :atencion, tamano: :grande, kicker: "No está en ninguna pre-alerta",
+          titulo: "¿La agregás a este consolidado?") %>
+    <div class="bg-white px-8 py-6 space-y-3">
+      <p class="text-xl text-gray-900" data-medicion-target="unirTexto"></p>
+      <p class="text-lg font-mono font-bold text-cec-navy" data-medicion-target="unirPreAlerta"></p>
+      <p hidden class="text-base font-medium text-red-700" data-medicion-target="unirError"></p>
+    </div>
+    <div class="flex flex-wrap items-center justify-end gap-3 px-8 py-4 bg-gray-50 border-t border-gray-200">
+      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Sigo sin ella y la dejo de lado",
+            data: { action: "medicion#unirNo" })) { "Sigo sin ella, la dejo de lado" } %>
+      <%= render(ButtonComponent.new(variant: :primary, size: :lg, label: "Agregarla a este consolidado",
+            data: { medicion_target: "unirSi", action: "medicion#unirSi" })) { "Agregarla a este consolidado" } %>
+    </div>
+  </dialog>
+
+  <%# ── C29-18 · El consolidado ya tiene cajas medidas ─────────────────────
+
+      Yusef: *"este paquete está consolidando con otro, traer el resto y medir,
+      y unirlo… está en estantes, y hay que volver a medir… porque van en un
+      solo volumen los cuatro"*. «Medir de nuevo todo junto» trae la tanda
+      vieja (el camino de C27-33) y le suma esta caja. Cuando no se puede —ya
+      hay pre-factura, o se midió en tandas distintas— queda medirla sola. %>
+  <dialog data-medicion-target="yaMedidoModal" data-action="cancel->medicion#avisoCancelar"
+          style="margin: auto" class="rounded-xl p-0 w-[46rem] max-w-[95vw] backdrop:bg-black/70">
+    <%# PR-C29.12 · Era el naranja que lo empezó: *"the orange in here, Su
+        consolidado ya se midió… feels different from the other"*. No es un
+        error, es algo que hacer: atención, en oro. %>
+    <%= render ModalHeaderComponent.new(tono: :atencion, tamano: :grande, kicker: "Su consolidado ya se midió",
+          titulo: "Traé el resto del estante") %>
+    <div class="bg-white px-8 py-6 space-y-3">
+      <p class="text-xl text-gray-900" data-medicion-target="yaMedidoTexto"></p>
+      <ul class="text-lg font-mono text-cec-navy space-y-1" data-medicion-target="yaMedidoLista"></ul>
+    </div>
+    <div class="flex flex-wrap items-center justify-end gap-3 px-8 py-4 bg-gray-50 border-t border-gray-200">
+      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Dejarla de lado",
+            data: { action: "medicion#yaMedidoDejar" })) { "Dejarla de lado" } %>
+      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Medirla sola",
+            data: { action: "medicion#yaMedidoSola" })) { "Medirla sola" } %>
+      <%= render(ButtonComponent.new(variant: :primary, size: :lg, label: "Medir de nuevo todo junto",
+            data: { medicion_target: "yaMedidoJunto", action: "medicion#yaMedidoJunto" }, hidden: true)) { "Medir de nuevo todo junto" } %>
+    </div>
+  </dialog>
+
+  <%# ── «NO Mezclar»: otra consolidación ──────────────────────────────────
+
+      C27-04 · Yusef: *"no lo podría hacer porque está consolidando esa carga
+      con otros paquetes. Le debería tirar un error, un modal que le diga: hey,
+      no, ese está consolidando con tal pre-alerta, con tal número. Ese va
+      amarrado con otra."* Y la pregunta: *"¿desea procesar el consolidado o lo
+      va a poner a un lado para terminar el que está haciendo?"*
+
+      El porqué es de facturación, y lo confirmó con Vanessa en la misma
+      reunión: consolidado y suelto llevan **facturas separadas** —*"nosotros
+      facturamos de acuerdo a la pre-alerta"*. %>
+  <dialog data-medicion-target="consolidadoModal" data-action="cancel->medicion#avisoCancelar"
+          style="margin: auto" class="rounded-xl p-0 w-[46rem] max-w-[95vw] backdrop:bg-black/70">
+    <%= render ModalHeaderComponent.new(tono: :bloqueo, tamano: :grande, kicker: "Ese va amarrado con otra",
+          titulo_data: { medicion_target: "consolidadoTitulo" }) %>
+    <div class="bg-white px-8 py-6 space-y-3">
+      <p class="text-xl text-gray-900" data-medicion-target="consolidadoTexto"></p>
+      <p class="text-lg font-mono font-bold text-cec-navy" data-medicion-target="consolidadoPreAlerta"></p>
+      <p hidden class="text-base font-medium text-red-700" data-medicion-target="consolidadoPreFactura"></p>
+    </div>
+    <div class="flex flex-wrap items-center justify-end gap-3 px-8 py-4 bg-gray-50 border-t border-gray-200">
+      <%# «Hago el consolidado» limpia la tanda entera y no solo la mesa: «NO
+          Mezclar» es de la sesión —dos volúmenes de la misma mesa son del mismo
+          cliente y del mismo consolidado—, así que dejar volúmenes sueltos
+          armados haría que `MedirBulto` rechazara la tanda al guardar. %>
+      <%# C29-17 · Solo cuando la caja que entra **es** de un consolidado. Si
+          la de la mesa es el consolidado y la que entra es suelta, «hago el
+          consolidado» vaciaba la mesa y arrancaba con la suelta: le borraba
+          al operario lo que estaba haciendo. Ahí queda «lo dejo de lado». %>
+      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Hago el consolidado: empiezo de nuevo con esta caja",
+            data: { medicion_target: "hacerConsolidado", action: "medicion#hacerConsolidado" })) { "Hago el consolidado" } %>
+      <%= render(ButtonComponent.new(variant: :primary, size: :lg, label: "Lo dejo de lado y sigo con lo que tengo",
+            data: { action: "medicion#dejarDeLado" })) { "Lo dejo de lado" } %>
+    </div>
+  </dialog>
+</div>

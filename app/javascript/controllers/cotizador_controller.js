@@ -50,6 +50,27 @@ export default class extends Controller {
       if (v) params.set(param, v)
     }
 
+    // PR-C7.17: las cajas ya agregadas.
+    //
+    // Antes se cotizaba solo con los campos de captura, que `cajas-repetidor`
+    // vacía al agregar — así que con dos cajas cargadas el cobro se desplomaba
+    // al mínimo de servicio. Jorge lo vio: L.200 por un envío de 80 lb.
+    //
+    // Se mandan tal como viajan en el form (`paquete[cajas][N][campo]`) y el
+    // servidor las totaliza. La suma NO se hace acá a propósito: la regla de
+    // A9-03 —el mayor de cada caja, y después se suman— ya vive en Ruby, y una
+    // tercera copia es la duplicación que PR-C7.11 vino a matar.
+    let cajas = 0
+    for (const [nombre, valor] of datos.entries()) {
+      const m = nombre.match(/^paquete\[cajas\]\[(\d+)\]\[(\w+)\]$/)
+      if (!m || !valor) continue
+      params.append(`cajas[${m[1]}][${m[2]}]`, valor)
+      cajas = Math.max(cajas, Number(m[1]))
+    }
+    // Con cajas cargadas manda el envío entero: la caja en curso todavía no es
+    // una caja, y sumarla contaría lo que el operario aún está tecleando.
+    if (cajas > 0) ["peso", "alto", "largo", "ancho"].forEach(c => params.delete(c))
+
     if (!params.get("tipo_envio_id")) return this._limpiar("Elegí el tipo de envío para ver el cobro.")
 
     try {
@@ -67,7 +88,14 @@ export default class extends Controller {
   }
 
   _pintar(d) {
-    this._set(this.precioTarget, d.precio_libra)
+    // Sin `precio_libra` el envío tiene cajas en escalones distintos: no hay un
+    // precio por libra que mostrar. Se dice, en vez de dejar el de la consulta
+    // anterior, que sería un número de otra cosa.
+    if (d.precio_libra) {
+      this._set(this.precioTarget, d.precio_libra)
+    } else if (this.hasPrecioTarget) {
+      this.precioTarget.textContent = "varía por caja"
+    }
     this._set(this.subtotalTarget, d.subtotal)
     this._set(this.isvTarget, d.impuesto)
     this._set(this.totalTarget, d.total)

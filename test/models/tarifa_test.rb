@@ -25,8 +25,13 @@ class TarifaTest < ActiveSupport::TestCase
     assert_not r[:aplico_minimo]
   end
 
-  test "sin incremento no redondea el peso — preserva el comportamiento historico" do
-    t = crear(precio_libra: 2.00, incremento_libras: nil)
+  # `redondear_al_incremento` sigue tolerando `nil` — es código de cobro que
+  # funciona y no se toca. Lo que cambió con `RedondeoMediaLibraSiempre` es que
+  # ya **no hay forma de guardar** una tarifa así: la columna es NOT NULL con
+  # default 0.5. Por eso el objeto va sin persistir.
+  test "sin incremento no redondea el peso — el metodo sigue tolerando nil" do
+    t = Tarifa.new(tipo_envio: @cer, desde_libras: 0, precio_libra: 2.00,
+                   moneda: "USD", incremento_libras: nil, aplica_minimo: false)
 
     r = t.cobro_para(3.2)
 

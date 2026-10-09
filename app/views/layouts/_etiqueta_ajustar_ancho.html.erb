@@ -1,0 +1,52 @@
+<%# C25-02 · Ajustar un texto al ancho: llenar hasta donde cabe y, si se pasa,
+    achicarse solo. Yusef, sobre el `AEREO EXPRESS` de la 4×6:
+
+      > "Que llene hasta cierto punto y si se pasa que lo achique,
+      >  automáticamente." · "La letra tiene que quedar que la pueda leer a
+      >  3 metros."
+
+    Y lo pidió **para las dos etiquetas** en la misma llamada: acá el tipo de
+    envío del proveedor, y en la Dymo el nombre del cliente que se cortaba con
+    puntos suspensivos (`C25-07`). Por eso es un partial que incluyen los dos
+    layouts —como ya hacen con `_etiqueta_autoprint`, y por la misma razón:
+    dos copias divergen.
+
+    **No existía nada parecido en el repo**: nada medía `scrollWidth`. Lo único
+    que escalaba era `Definicion#fs`, proporcional y ciego al contenido.
+
+    Cómo:
+      · arranca en el tamaño que el CSS le dio (ése es el «máximo»);
+      · mientras no quepa, baja de a 1 pt;
+      · para en `data-ajustar-min` — de ahí no baja, y lo que sobre lo recorta
+        el `overflow: hidden` de siempre. Un piso demasiado bajo sería ilegible
+        a 3 metros, que es peor que corto.
+
+    Corre en `DOMContentLoaded`, **antes** del `window.onload` donde el autoprint
+    llama a `window.print()`: si corriera después, la impresora se llevaría el
+    tamaño sin ajustar. Arial es fuente del sistema, así que no hay webfont
+    que esperar para medir.
+
+    Sin Stimulus y sin `data-shortcut`: esto es un documento de impresión, no
+    una pantalla. %>
+<script>
+  (function () {
+    function ajustar(el) {
+      var min = parseFloat(el.getAttribute("data-ajustar-min")) || 6;
+      var pt = parseFloat(window.getComputedStyle(el).fontSize) * 72 / 96;
+      // `white-space: nowrap` es lo que hace medible el ancho: sin él, el
+      // texto envuelve y `scrollWidth` nunca supera a `clientWidth`.
+      el.style.whiteSpace = "nowrap";
+      var guarda = 60;
+      // `Math.max`: la primera versión comparaba antes de restar y se pasaba
+      // del piso hasta 1 pt (un nombre quedó en 5.5 con piso en 6). El piso es
+      // el piso: por debajo ya no se lee a la distancia que Yusef pidió.
+      while (el.scrollWidth > el.clientWidth && pt > min && guarda-- > 0) {
+        pt = Math.max(pt - 1, min);
+        el.style.fontSize = pt + "pt";
+      }
+    }
+    document.addEventListener("DOMContentLoaded", function () {
+      document.querySelectorAll("[data-ajustar]").forEach(ajustar);
+    });
+  })();
+</script>

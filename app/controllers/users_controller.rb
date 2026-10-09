@@ -1,6 +1,7 @@
 class UsersController < ApplicationController
-  before_action :require_admin
+  before_action :solo_admin
   before_action :set_user, only: [ :show, :edit, :update ]
+  before_action :cargar_sucursales, only: [ :new, :create, :edit, :update ]
 
   def index
     @users = User.order(created_at: :desc)
@@ -52,13 +53,27 @@ class UsersController < ApplicationController
     @user = User.find(params[:id])
   end
 
+  # Todas las activas, no solo las que reciben: un cajero trabaja en SPS.
+  def cargar_sucursales
+    @sucursales = Sucursal.activas.ordered
+  end
+
   def user_params
     params.require(:user).permit(
       :nombre, :iniciales, :email_address, :password, :password_confirmation,
-      :rol, :ubicacion, :activo,
+      :rol, :ubicacion, :activo, :sucursal_id,
       # PR-13.c: el admin asigna el PIN inicial; el supervisor lo cambia desde
       # /mi_pin. Ver el comentario en `User#pin_sin_cambiar?`.
-      :pin, :pin_confirmation
+      :pin, :pin_confirmation,
+      # `RP-58` paso 2a · Los roles de más. Array, y por eso va al final: en
+      # `permit` un array se declara con la llave apuntando a `[]`.
+      roles_adicionales_lista: []
     )
+  end
+  # `RP-58` · Va por `can_access?` y no por `require_admin`: toda regla de rol
+  # tiene que pasar por el mismo lugar, o una pantalla de permisos diría que se
+  # puede algo que este controller después niega.
+  def solo_admin
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:usuarios)
   end
 end

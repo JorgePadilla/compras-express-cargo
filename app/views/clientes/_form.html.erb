@@ -52,11 +52,26 @@
                  focus:ring-cec-teal focus:border-cec-teal" %>
     </div>
 
+    <%# RTN al lado de la identidad, los dos opcionales. Yusef: *"yo estoy
+        pensando si debería existir la opción de que diga identidad y RTN, para
+        las empresas"*, y sobre no exigirlo: *"eso se va actualizando cuando
+        ellos van pidiendo factura"*. Los 9.000 viejos vienen sin él. %>
     <div>
-      <%= f.label :email, class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.label :rtn, "RTN", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.text_field :rtn, placeholder: "Para facturar a empresas",
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                 focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+
+    <div>
+      <%= f.label :email, "Correo de acceso", class: "block text-sm font-medium text-gray-700 mb-1" %>
       <%= f.email_field :email,
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
                  focus:ring-cec-teal focus:border-cec-teal" %>
+      <p class="text-xs text-gray-500 mt-1">
+        Con este o con su código de casillero entra al portal. Los correos para
+        avisarle van más abajo.
+      </p>
     </div>
 
     <div>
@@ -87,6 +102,28 @@
                  focus:ring-cec-teal focus:border-cec-teal" %>
     </div>
 
+    <%# PR-C6.37: donde retira, que NO es lo mismo que la ciudad donde vive.
+        Yusef: "la ciudad donde es la persona no es el mismo lugar donde se le
+        entrega — la idea es ponerle donde el hombre va a querer su retiro".
+        De aca lo hereda el paquete al etiquetarlo, y es lo que Miami lee para
+        saber en que bolsa va la caja. %>
+    <div>
+      <%= f.label :sucursal_retiro_id, "Sucursal donde retira",
+            class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%# C29-03 · Obligatoria al crear: *"cuando ellos crean el casillero, vas
+          a preguntar a dónde le gustaría retirar su producto"*. Al editar un
+          cliente viejo que no la tiene no se exige —se puede corregir el
+          teléfono sin elegirla—, pero ya no se puede vaciar. %>
+      <%= f.collection_select :sucursal_retiro_id, @sucursales_retiro, :id, :nombre,
+            { include_blank: "— sin definir —" },
+            { required: @cliente.new_record?,
+              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                     focus:ring-cec-teal focus:border-cec-teal" } %>
+      <p class="mt-1 text-xs text-gray-500">
+        Miami separa las cajas por esta sucursal. Sin definir, la etiqueta sale diciendo «SIN SUCURSAL».
+      </p>
+    </div>
+
     <div>
       <%= f.label :departamento, class: "block text-sm font-medium text-gray-700 mb-1" %>
       <%= f.text_field :departamento,
@@ -95,7 +132,10 @@
     </div>
 
     <div>
-      <%= f.label :categoria_precio_id, "Categoria de Precio", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%# PR-C7.12: se llama "Grupo de clientes" en las tres pantallas que lo
+          muestran. Antes acá decía "Categoria de Precio" y en /servicios decía
+          otra cosa; dos nombres para lo mismo es lo que Jorge reportó. %>
+      <%= f.label :categoria_precio_id, "Grupo de clientes", class: "block text-sm font-medium text-gray-700 mb-1" %>
       <%= f.collection_select :categoria_precio_id, CategoriaPrecio.order(:nombre), :id, :nombre,
           { include_blank: "— Seleccionar —" },
           { class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
@@ -108,6 +148,15 @@
         <%= f.label :activo, "Cliente activo", class: "text-sm font-medium text-gray-700" %>
       </div>
     <% end %>
+
+    <%# ── El megacuadro (A7-26 · PR-C7.15) ──
+        Acá estaban sueltos los checkboxes de "solo volumétrico" de PR-C6.41,
+        que ya eran media matriz cliente × servicio. Ahora es la matriz entera:
+        precio especial, mínimo y cobro por volumen, servicio por servicio.
+
+        Va pegado a Grupo de clientes, que es el otro campo que decide cómo se
+        le cobra a este cliente. %>
+    <%= render "megacuadro_precios", cliente: cliente, filas: @filas_de_precios %>
 
     <div class="md:col-span-2">
       <%= f.label :notas_miami, "Notas Miami", class: "block text-sm font-medium text-gray-700 mb-1" %>
@@ -140,6 +189,58 @@
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
                  focus:ring-cec-teal focus:border-cec-teal" %>
       <p class="mt-1 text-xs text-gray-500">Visibles al equipo de SAC al atender al cliente</p>
+    </div>
+  </div>
+
+  <%# ── El acceso al portal ──
+      Yusef, 2026-08-19: *"falta el sistema de usuario… lo del acceso de ellos"*.
+      El cliente ya podía entrar; lo que no existía era dónde administrarlo:
+      *"¿cuál es la cuenta de acceso de él? Y cambiarle la clave por si se le
+      olvidó"*.
+
+      El caso que mostró: una clienta con **dos correos**, a la que no le podían
+      crear cuenta porque el correo es la llave. Por eso el de arriba es el de
+      acceso y estos son a quién más avisarle. %>
+  <div class="mt-6 pt-4 border-t border-gray-200">
+    <h3 class="text-sm font-bold text-cec-navy dark:text-cec-gold">Acceso al portal</h3>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+      Entra con su código <span class="font-mono"><%= cliente.codigo %></span> o con el correo de acceso.
+    </p>
+
+    <div class="mt-3 flex items-start gap-3 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 px-3 py-2">
+      <%= f.check_box :acceso_habilitado, class: "mt-0.5 rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+      <span>
+        <%= f.label :acceso_habilitado, "Puede entrar al portal",
+              class: "block text-sm font-medium text-gray-700 dark:text-gray-200" %>
+        <span class="block text-xs text-gray-500 dark:text-gray-400">
+          Quitarlo le corta el acceso sin darlo de baja como cliente — son dos cosas distintas.
+        </span>
+      </span>
+    </div>
+
+    <%# Los correos de aviso. Uno por renglón, y se agregan los que hagan falta:
+        *"correos a notificar y correos al usuario"* · *"números a segundo,
+        números a tercero… ya no es problema"*. %>
+    <div class="mt-4" data-controller="correos-repetidor">
+      <p class="text-sm font-medium text-gray-700 dark:text-gray-200">Correos para avisarle</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+        Además del de acceso. No sirven para entrar.
+      </p>
+
+      <div data-correos-repetidor-target="lista" class="space-y-2">
+        <%= f.fields_for :cliente_correos do |cf| %>
+          <%= render "clientes/correo_fila", cf: cf %>
+        <% end %>
+      </div>
+
+      <template data-correos-repetidor-target="template">
+        <%= f.fields_for :cliente_correos, ClienteCorreo.new, child_index: "NEW_INDEX" do |cf| %>
+          <%= render "clientes/correo_fila", cf: cf %>
+        <% end %>
+      </template>
+
+      <%= render(ButtonComponent.new(variant: :outline_teal, size: :sm, icon: "plus-circle",
+            data: { action: "click->correos-repetidor#agregar" })) { "Agregar correo" } %>
     </div>
   </div>
 

@@ -1,8 +1,13 @@
-<%# Toggle sun/moon. Requiere helper `theme_preferencia_url`. %>
+<%# Toggle sun/moon. Requiere helper `theme_preferencia_url`.
+
+    `chico: true` · 32 px en vez de 36: es el que flota arriba a la derecha
+    en escritorio, y tiene que caber en el margen de arriba del contenido sin
+    tocar el título (ver `layouts/application`). %>
 <% if theme_toggle_available? %>
   <%
     is_dark = current_theme == "dark"
     aria_label = is_dark ? "Cambiar a tema claro" : "Cambiar a tema oscuro"
+    tamano = local_assigns[:chico] ? "w-8 h-8" : "w-9 h-9"
   %>
   <div data-controller="theme" data-theme-url-value="<%= theme_preferencia_url %>" class="inline-flex">
     <button type="button"
@@ -10,9 +15,10 @@
             data-theme-target="button"
             aria-pressed="<%= is_dark %>"
             aria-label="<%= aria_label %>"
-            class="inline-flex items-center justify-center w-9 h-9 rounded-lg
+            title="<%= aria_label %>"
+            class="inline-flex items-center justify-center <%= tamano %> rounded-lg
                    text-gray-600 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700
-                   focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cec-teal
+                   foco-cec
                    transition-colors motion-reduce:transition-none">
       <span data-theme-target="iconLight" class="<%= 'hidden' if is_dark %>" aria-hidden="true">
         <%= heroicon "sun", variant: :outline, options: { class: "w-5 h-5" } %>

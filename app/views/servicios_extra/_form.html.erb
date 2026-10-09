@@ -38,6 +38,28 @@
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
     </div>
 
+    <%# PR-C6.12: el mínimo que pedía Yusef — "precio mínimo a cobrar, lo tiene
+        obligado". El retornado de Miami es exactamente eso: "$5 es como un
+        precio mínimo, porque son 5 dólares MÁS el trámite".
+        La moneda va aparte de la del precio, igual que en Tarifa: el cargo
+        puede cotizarse en dólares y el piso vivir en Lempiras. %>
+    <div>
+      <%= f.label :minimo_monto, "Mínimo a cobrar", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.number_field :minimo_monto, step: 0.01, min: 0,
+          placeholder: "vacío = sin mínimo",
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+      <p class="mt-1 text-xs text-gray-500">
+        Si el cobro sale por debajo, se cobra este monto.
+      </p>
+    </div>
+
+    <div>
+      <%= f.label :minimo_moneda, "Moneda del mínimo", class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <%= f.select :minimo_moneda, ServicioExtra::MONEDAS,
+          { include_blank: "— la misma del precio —" },
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+
     <div>
       <%= f.label :moneda, class: "block text-sm font-medium text-gray-700 mb-1" %>
       <%= f.select :moneda, ServicioExtra::MONEDAS,

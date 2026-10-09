@@ -2,7 +2,7 @@
 # el autocomplete que se usa en el form del paquete (igual al patrón
 # de `clientes#buscar`).
 class ProveedoresController < ApplicationController
-  before_action :require_admin, except: [ :buscar ]
+  before_action :solo_admin, except: [ :buscar ]
   before_action :set_proveedor, only: %i[edit update]
 
   def index
@@ -45,9 +45,6 @@ class ProveedoresController < ApplicationController
 
   private
 
-  def require_admin
-    redirect_to(root_path, alert: "Solo admin.") unless admin?
-  end
 
   def set_proveedor
     @proveedor = Proveedor.find(params[:id])
@@ -55,5 +52,11 @@ class ProveedoresController < ApplicationController
 
   def proveedor_params
     params.require(:proveedor).permit(:nombre, :codigo, :tipo, :position, :activo, :notas)
+  end
+  # `RP-58` · Va por `can_access?` y no por `require_admin`: toda regla de rol
+  # tiene que pasar por el mismo lugar, o una pantalla de permisos diría que se
+  # puede algo que este controller después niega.
+  def solo_admin
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:proveedores)
   end
 end

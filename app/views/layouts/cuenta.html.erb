@@ -68,30 +68,29 @@
         </div>
 
         <%# ========== MAIN CONTENT ========== %>
-        <main class="flex-1 flex flex-col min-h-screen overflow-x-hidden">
+        <main class="relative flex-1 flex flex-col min-h-screen overflow-x-hidden">
           <%# Top bar (mobile) %>
           <header class="bg-white dark:bg-gray-800 shadow-sm px-4 py-3 flex items-center justify-between lg:hidden">
-            <button data-action="click->sidebar#toggle" class="text-gray-600 dark:text-gray-200 p-1" aria-label="Menu">
+            <button type="button" data-action="click->sidebar#toggle" class="rounded foco-cec text-gray-600 dark:text-gray-200 p-1" aria-label="Menu">
               <%= heroicon "bars-3", variant: :outline, options: { class: "w-6 h-6" } %>
             </button>
             <span class="font-bold text-cec-navy dark:text-cec-gold">Mi Cuenta</span>
             <%= render "shared/theme_toggle" %>
           </header>
-          <%# Theme toggle desktop %>
-          <div class="hidden lg:flex justify-end px-6 pt-4">
-            <%= render "shared/theme_toggle" %>
+          <%# El sol arriba a la derecha, flotando y sin renglón propio: igual
+              que en el layout del personal (ver ahí el porqué). %>
+          <div class="hidden lg:block absolute top-1 right-6 z-10">
+            <%= render "shared/theme_toggle", chico: true %>
           </div>
 
           <%# Page content %>
-          <div class="flex-1 p-4 md:p-6 lg:p-8">
+          <div class="flex-1 p-4 md:p-6 lg:px-8 lg:pb-8 lg:pt-9">
             <% if success_modal = flash[:success_modal] %>
               <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm"
                    data-controller="auto-dismiss" data-auto-dismiss-delay-value="1500">
-                <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm mx-4 text-center animate-fade-in-up">
-                  <div class="mx-auto w-16 h-16 rounded-full bg-cec-teal/10 flex items-center justify-center mb-4">
-                    <%= heroicon "check-circle", variant: :solid, options: { class: "w-10 h-10 text-cec-teal" } %>
-                  </div>
-                  <p class="text-lg font-bold text-cec-navy mb-1"><%= success_modal %></p>
+                <div class="rounded-2xl shadow-2xl max-w-sm mx-4 overflow-hidden animate-fade-in-up">
+                  <%= render ModalHeaderComponent.new(tono: :listo, centrado: true,
+                        icono: "check-circle", titulo: success_modal) %>
                 </div>
               </div>
             <% end %>

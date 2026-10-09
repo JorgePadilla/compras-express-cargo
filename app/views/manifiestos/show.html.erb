@@ -1,13 +1,38 @@
 <div id="flash-messages"></div>
 
+<%# «Sonidos», debajo del sol, en la esquina de arriba a la derecha (ver
+    `layouts/application`). Jorge, 2026-10-09: *"el botón de sonido va mejor
+    debajo del sol"*. %>
+<% content_for :esquina, render("shared/sonido_config") %>
 <%= render PageHeaderComponent.new(title: @manifiesto.numero, subtitle: "Manifiesto") do |header|
   header.with_action do
-    render ButtonComponent.new(variant: :secondary, href: edit_manifiesto_path(@manifiesto), icon: "pencil-square", shortcut: "F6") do
+    render ButtonComponent.new(variant: :outline_navy, href: edit_manifiesto_path(@manifiesto), icon: "pencil-square", shortcut: "F6") do
       "Editar"
     end
   end
+  # C21-09 · El manifiesto impreso. Va aparte de «Finalizar e Imprimir», que
+  # saca las etiquetas 4×6 de los bultos: son dos papeles distintos.
+  #
+  # C29-11 · Con `print: true`, como «Imprimir listado» (`C28-02`): abre el
+  # diálogo de impresión solo. Sin él la hoja se abría como página y nada
+  # más, y Yusef la buscó: *"no tiene el botón de imprimir a la mano… no lo
+  # tiró como preview para imprimir"*, mientras que el listado, al lado,
+  # *"a éste sí salió bien"*.
+  #
+  # PR-C29.7 · Y con `cerrar: 1`: la hoja se abre en pestaña nueva, imprime, y
+  # al terminar **se cierra**, como las 4×6. Antes quedaba abierta y la ficha
+  # se perdía atrás. Jorge: *"una vez se imprime se regresa a la vista
+  # previa"*.
   header.with_action do
-    render ButtonComponent.new(variant: :ghost, href: manifiestos_path, icon: "arrow-left") do
+    render ButtonComponent.new(variant: :outline_navy, href: documento_manifiesto_path(@manifiesto, print: true, cerrar: 1),
+                               icon: "printer", target: "_blank", shortcut: "F4") do
+      "Imprimir manifiesto"
+    end
+  end
+  # C29-08 · El modal de sonidos, que esta pantalla de escaneo no tenía:
+  # acá se elige con qué suena el tipo distinto y la sucursal distinta.
+  header.with_back do
+    render ButtonComponent.new(variant: :ghost, href: manifiestos_path, icon: "arrow-left", shortcut: "F2") do
       "Volver"
     end
   end
@@ -29,20 +54,37 @@ end %>
       <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.empresa_manifiesto&.nombre || "—" %></dd>
     </div>
     <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo de Envio</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.tipo_envio.presence || "—" %></dd>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">T. envío del proveedor</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.tipo_envio_del_proveedor || "—" %></dd>
+    </div>
+    <%# C21-03: los NUESTROS, que son los que deciden qué paquetes salen. %>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">T. envío nuestros</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.tipos_envio_nuestros.presence || "—" %></dd>
     </div>
     <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Numero Guia</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.numero_guia.presence || "—" %></dd>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Consignatario</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.consignatario&.nombre || "—" %></dd>
     </div>
     <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Numero Caja</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.numero_caja.presence || "—" %></dd>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Se entrega en</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.sucursal_entrega&.nombre || "—" %></dd>
+    </div>
+    <%# C21-11: son varias, y las llena San Pedro Sula después. %>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Guías del proveedor</dt>
+      <dd class="mt-1 text-sm font-mono text-gray-900"><%= @manifiesto.numeros_de_guia.join(" · ").presence || "—" %></dd>
     </div>
     <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Recibido en Honduras</dt>
+      <dd class="mt-1 text-sm text-gray-900"><%= fecha_y_quien(@manifiesto.fecha_aduana, @manifiesto.recibido_hn_por) || "—" %></dd>
+    </div>
+    <div>
+      <%# RP-59 · Lo estampa el sistema al crear, con las iniciales de quien lo
+          creó. Los manifiestos viejos que se crearon antes de esto pueden no
+          tenerlo, y ahí cae al usuario. %>
       <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Expedido Por</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.expedido_por.presence || "—" %></dd>
+      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.expedido_por.presence || @manifiesto.user&.iniciales_display || "—" %></dd>
     </div>
     <div>
       <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Paquetes</dt>
@@ -56,97 +98,139 @@ end %>
       <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Enviado</dt>
       <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.fecha_enviado&.strftime("%d/%m/%Y %H:%M") || "—" %></dd>
     </div>
+    <% if @manifiesto.es_prioridad? %>
+      <div>
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Prioridad</dt>
+        <dd class="mt-1"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-cec-gold/20 text-cec-navy">ES PRIORIDAD</span></dd>
+      </div>
+    <% end %>
   </div>
 </div>
 
-<%# Enviar action %>
-<% if @manifiesto.creado? && @paquetes.any? %>
-  <div class="mb-6">
-    <%= link_to enviar_manifiesto_path(@manifiesto), method: :patch, data: { turbo_method: :patch, turbo_confirm: "Enviar manifiesto #{@manifiesto.numero} con #{@manifiesto.cantidad_paquetes} paquetes?" },
-        class: "inline-flex items-center gap-2 px-6 py-3 bg-cec-teal text-white rounded-lg font-medium hover:bg-cec-teal-dark transition-colors" do %>
-      <%= heroicon "paper-airplane", variant: :outline, options: { class: "w-5 h-5" } %>
-      Enviar Manifiesto
-    <% end %>
-  </div>
-<% end %>
+<%# ── La pantalla sigue el orden del trabajo ────────────────────────────────
 
-<%# Add packages section (only for creado manifests) %>
+    Jorge, mirándola: *"no estoy seguro que siga el orden del flujograma"*, y
+    tenía razón — **«Finalizar» estaba arriba de todo lo que hay que hacer
+    antes**, y los pasos reales quedaban debajo. La página iba al revés.
+
+    Ahora va: detalles → casas → agregar paquetes → los paquetes → finalizar.
+
+    Los cierres van **arriba y abajo**, que es lo que pidió: *"solo finalizar y
+    finalizar e imprimir también debería estar abajo"*. Es la misma razón por la
+    que la barra de atajos de `/etiquetar` está en los dos lados —Yusef:
+    *"estos botones los dejaste abajo y a veces se ocupan acá arriba"*—: con la
+    tabla llena, el de arriba queda a una pantalla de distancia. %>
+<div id="manifiesto-acciones-arriba">
+  <%= render "manifiestos/acciones", manifiesto: @manifiesto, paquetes: @paquetes %>
+</div>
+
 <% if @manifiesto.creado? %>
-  <div class="bg-white rounded-lg shadow overflow-hidden mb-6" data-controller="manifiesto-search"
+  <%# Paso 1 · Las casas. Va antes de agregar paquetes porque en el camino con
+      pre-etiqueta **es** cómo entran: se arma la caja, se imprime su 4×6 y se
+      escanea cada paquete al meterlo. Estaba metida adentro de la misma tarjeta
+      que «Agregar paquetes», y por eso las dos se leían como una sola cosa. %>
+  <%= render "manifiestos/cajas", manifiesto: @manifiesto %>
+
+  <%# Paso 2 · Agregar paquetes sueltos — el camino sin pre-etiqueta. %>
+  <%# C28-04 · La pistola ahora pregunta antes (`manifiestos#escanear`) y cada
+      respuesta suena distinta. Es pantalla de escaneo: el operario mira la
+      pistola, no la pantalla, así que nada sale mudo. %>
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden mb-6"
+       data-controller="manifiesto-search audio"
+       <%= tag.attributes(atributos_de_audio) %>
        data-manifiesto-search-url-value="<%= search_paquetes_path %>"
-       data-manifiesto-search-manifiesto-id-value="<%= @manifiesto.id %>">
-    <div class="px-6 py-4 border-b border-gray-200">
-      <h2 class="text-lg font-semibold text-gray-800">Agregar Paquetes</h2>
+       data-manifiesto-search-escanear-url-value="<%= escanear_manifiesto_path(@manifiesto) %>"
+       data-manifiesto-search-agregar-url-value="<%= add_paquete_manifiesto_path(@manifiesto) %>"
+       data-manifiesto-search-mover-url-value="<%= mover_paquete_manifiesto_path(@manifiesto) %>"
+       data-action="manifiesto-search:ok->audio#success
+                    manifiesto-search:enEste->audio#notify
+                    manifiesto-search:varios->audio#notify
+                    manifiesto-search:enOtro->audio#alert
+                    manifiesto-search:cerrado->audio#error
+                    manifiesto-search:tipoDistinto->audio#errorTipo
+                    manifiesto-search:sucursalDistinta->audio#errorSucursal
+                    manifiesto-search:fuera->audio#error
+                    manifiesto-search:noEncontrado->audio#error">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+      <div class="flex items-baseline gap-3">
+        <span class="shrink-0 w-7 h-7 rounded-full bg-cec-navy/10 text-cec-navy dark:bg-cec-gold/20 dark:text-cec-gold
+                     flex items-center justify-center text-sm font-bold">2</span>
+        <div>
+          <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Agregar paquetes</h2>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            Escaneá y entra solo. Es el camino sin pre-etiqueta: los paquetes van sueltos, sin casa.
+          </p>
+        </div>
+      </div>
     </div>
     <div class="p-6">
-      <div class="flex gap-3">
-        <input type="text" placeholder="Buscar por tracking o número de recepción..."
-               data-manifiesto-search-target="input"
-               data-action="input->manifiesto-search#search"
-               class="flex-1 rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal">
-      </div>
-      <div data-manifiesto-search-target="results" class="mt-3 hidden">
-      </div>
+      <%# La pistola dispara Enter al terminar de leer, así que Enter **agrega**
+          en vez de solo buscar: el operario escanea uno atrás de otro sin soltar
+          la pistola ni tocar el mouse. Jorge: *"la parte de agregar paquetes
+          tiene que ser rápida, escanear"*. %>
+      <%= label_tag :buscar_paquete, "Escaneá el paquete", class: "block text-base font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+      <input type="text" id="buscar_paquete"
+             placeholder="Escanear la etiqueta, o buscar por tracking o número de recepción…"
+             autocomplete="off"
+             data-manifiesto-search-target="input"
+             data-action="input->manifiesto-search#search keydown->manifiesto-search#teclado"
+             class="block w-full min-h-11 py-4 text-xl rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 shadow-sm font-mono focus:ring-cec-teal focus:border-cec-teal">
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        Enter lo agrega directo. Si lo que escribiste devuelve varios, salen abajo para elegir.
+      </p>
+      <div data-manifiesto-search-target="aviso" class="hidden mt-3 rounded-lg p-3 text-sm"></div>
+      <div data-manifiesto-search-target="results" class="mt-3 hidden"></div>
     </div>
+
+    <%# C28-04 · Lo que no entró es un modal, como en /empacar (`C25-09`):
+        *"la compu está allá y ellos están acá"*. Enter aprieta el botón que
+        importa, Escape no contesta (`C20-13`), y el foco vuelve a la pistola
+        al cerrar. «Moverlo a este manifiesto» sale **solo** cuando el otro
+        sigue abierto: *"¿desea agregar este a este manifiesto y retirarlo
+        del otro?"*. El «ya está en este» no llega acá: es un aviso chico,
+        *"es error de dedo"*. %>
+    <dialog data-manifiesto-search-target="avisoModal"
+            data-action="cancel->manifiesto-search#avisoCancelar"
+            style="margin: auto"
+            class="rounded-xl p-0 w-[32rem] max-w-[95vw] backdrop:bg-black/60">
+      <%# PR-C29.12 · Bloqueo: el paquete no entró. Era rojo claro. %>
+      <%= render ModalHeaderComponent.new(tono: :bloqueo, centrado: true, kicker: "No entró al manifiesto",
+            titulo_data: { manifiesto_search_target: "avisoTitulo" }) %>
+      <div class="bg-white px-6 py-5">
+        <p class="text-base text-gray-800" data-manifiesto-search-target="avisoTexto"></p>
+      </div>
+      <div class="flex items-center justify-end gap-3 px-6 py-3 bg-gray-50 border-t border-gray-200">
+        <%= render(ButtonComponent.new(variant: :secondary, size: :md, label: "Entendido",
+              data: { manifiesto_search_target: "avisoEntendido", action: "manifiesto-search#avisoEntendido" })) { "Entendido" } %>
+        <%= render(ButtonComponent.new(variant: :primary, size: :md,
+              label: "Agregarlo a este manifiesto y retirarlo del otro",
+              data: { manifiesto_search_target: "avisoMover", action: "manifiesto-search#mover" },
+              hidden: true)) { "Moverlo a este manifiesto" } %>
+      </div>
+    </dialog>
   </div>
 <% end %>
 
-<%# Packages table %>
+<%# Packages table.
+
+    C23-10 · **Esto era una copia del partial, palabra por palabra.** El
+    `show` tenía su tabla inline y `_paquetes_table` existía solo para el
+    turbo_stream de `add_paquete` / `remove_paquete`, así que las dos tenían
+    que mantenerse a mano — y no se mantuvieron: la columna «Caja» de `C23-10`
+    entró al partial y la primera carga de la pantalla seguía mostrando la
+    tabla vieja. Se veía aparecer la columna recién después de agregar un
+    paquete, y desaparecer al recargar.
+
+    Es la duplicación de siempre de este repo, esta vez entre una pantalla y su
+    propio partial. Ahora hay una sola tabla. %>
 <%= turbo_frame_tag "manifiesto-paquetes" do %>
-  <div class="bg-white rounded-lg shadow overflow-hidden">
-    <div class="px-6 py-4 border-b border-gray-200">
-      <h2 class="text-lg font-semibold text-gray-800">Paquetes (<%= @paquetes.size %>)</h2>
-    </div>
-
-    <% if @paquetes.any? %>
-      <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tracking</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Peso</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-              <% if @manifiesto.creado? %>
-                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-              <% end %>
-            </tr>
-          </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-            <% @paquetes.each do |paquete| %>
-              <tr class="hover:bg-gray-50">
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="text-sm font-mono text-gray-700"><%= truncate(paquete.tracking, length: 25) %></span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="text-sm text-gray-700"><%= paquete.cliente.codigo %> — <%= paquete.cliente.nombre_completo %></span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap hidden md:table-cell">
-                  <span class="text-sm text-gray-700"><%= paquete.peso_cobrar || "—" %> lbs</span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <%= render StatusBadgeComponent.new(status: paquete.estado) %>
-                </td>
-                <% if @manifiesto.creado? %>
-                  <td class="px-6 py-4 whitespace-nowrap text-right">
-                    <%= link_to remove_paquete_manifiesto_path(@manifiesto, paquete_id: paquete.id),
-                        data: { turbo_method: :delete, turbo_confirm: "Remover #{paquete.tracking} del manifiesto?" },
-                        class: "text-red-400 hover:text-red-600" do %>
-                      <%= heroicon "x-mark", variant: :outline, options: { class: "w-5 h-5 inline" } %>
-                    <% end %>
-                  </td>
-                <% end %>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    <% else %>
-      <div class="p-6 text-center text-sm text-gray-500">
-        No hay paquetes en este manifiesto
-      </div>
-    <% end %>
-  </div>
+  <%= render "manifiestos/paquetes_table", manifiesto: @manifiesto, paquetes: @paquetes %>
 <% end %>
+
+<%# Los cierres, otra vez — acá es donde uno **termina**. Con la tabla llena, el
+    bloque de arriba queda a una pantalla de distancia. %>
+<div id="manifiesto-acciones-abajo" class="mt-6">
+  <%= render "manifiestos/acciones", manifiesto: @manifiesto, paquetes: @paquetes %>
+</div>
 
 <%= render "shared/bitacora", record: @manifiesto, label: "Manifiesto" %>

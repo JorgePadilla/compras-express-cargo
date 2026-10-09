@@ -12,7 +12,7 @@ module AuditLogHelper
     user = Current.user
     return false unless user
     return true if user.admin?
-    AUDIT_LOG_ROLES.include?(user.rol)
+    user.tiene_rol?(AUDIT_LOG_ROLES)
   end
 
   # Carga eficiente de los users referenciados por una colección de versions
@@ -161,6 +161,8 @@ module AuditLogHelper
     "recolecta_moneda"         => "Moneda recolecta",
     "solicito_cambio_servicio" => "Solicitó cambio de servicio",
     "retener_miami"            => "Retener en Miami",
+    "enviado_por_politica"     => "Enviado según política",
+    "notas_envio_politica"     => "Detalle del envío por política",
 
     # Pre-alerta / Pre-factura flags
     "pre_alerta"  => "Flag pre-alerta",

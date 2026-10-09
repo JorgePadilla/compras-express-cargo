@@ -4,8 +4,8 @@
       "Editar"
     end
   end
-  header.with_action do
-    render ButtonComponent.new(variant: :ghost, href: users_path, icon: "arrow-left") do
+  header.with_back do
+    render ButtonComponent.new(variant: :ghost, href: users_path, icon: "arrow-left", shortcut: "F2") do
       "Volver"
     end
   end
@@ -35,7 +35,7 @@ end %>
 
     <div>
       <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Ubicacion</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @user.ubicacion&.humanize || "—" %></dd>
+      <dd class="mt-1 text-sm text-gray-900"><%= @user.ubicacion&.humanize || "—" %><% if @user.sucursal %> · <%= @user.sucursal.nombre %><% end %></dd>
     </div>
 
     <div>

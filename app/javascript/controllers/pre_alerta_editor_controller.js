@@ -41,16 +41,31 @@ export default class extends Controller {
   }
 
   handleKeydown(e) {
+    // C23-13 · Las teclas dicen lo mismo que en el resto de la app.
+    //
+    // Esta pantalla usaba **F6 para agregar**, **F8 para guardar** y **F9 para
+    // finalizar** — y en las otras veinte F6 es editar, F8 es Excel, F9 es
+    // imprimir. Tres teclas aprendidas acá que hacen otra cosa allá, que es
+    // justo lo que Jorge preguntó: *"¿los F los podemos dejar iguales en las
+    // pantallas?"*.
+    //
+    // Ahora: F5 agregar, F10 guardar. F2 ya estaba bien.
     if (e.key === "F2" || e.key === "Escape") {
       e.preventDefault()
       this.cancel()
-    } else if (e.key === "F6") {
+    } else if (e.key === "F5") {
       e.preventDefault()
       this.addPaquete()
-    } else if (e.key === "F8") {
+    } else if (e.key === "F10") {
       e.preventDefault()
       this.save()
     } else if (e.key === "F9") {
+      // ⚠️ Ésta se queda como estaba, y no porque esté bien: F9 es «imprimir»
+      // en toda la app. Es que **no tiene botón** —`finalizar()` no se ofrece
+      // en ningún lado de la pantalla—, así que nadie puede saber que existe, y
+      // moverla sería tocar a ciegas algo que no se ve. Cuando esta pantalla se
+      // vuelva a tocar: o le sale un botón, o la tecla se va. Anotado en
+      // `docs/05`, `C23-13`.
       e.preventDefault()
       this.finalizar()
     }

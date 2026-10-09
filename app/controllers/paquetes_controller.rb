@@ -1,5 +1,7 @@
 class PaquetesController < ApplicationController
-  before_action :set_paquete, only: [ :show, :edit, :update, :warehouse_receipt, :etiqueta, :destroy, :eliminar_de_pre_alerta, :reimprimir_etiquetas, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero ]
+  include NotificaRecibido
+  before_action :authorize_seccion
+  before_action :set_paquete, only: [ :show, :edit, :update, :warehouse_receipt, :etiqueta, :destroy, :eliminar_de_pre_alerta, :reimprimir_etiquetas, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero, :bajar_cajas, :cobro_excepcion ]
   before_action :authorize_tracking_actions, only: [ :check_tracking, :search ]
   before_action :authorize_edit, only: [ :edit, :update, :eliminar_de_pre_alerta, :mover_a_pre_alerta, :asignar_tercero, :quitar_tercero ]
   before_action :authorize_delete, only: [ :destroy ]
@@ -14,8 +16,24 @@ class PaquetesController < ApplicationController
     "cliente"          => "clientes.nombre",
     "estado"           => "paquetes.estado",
     "tipo_envio"       => "tipo_envios.codigo",
-    "created_at"       => "paquetes.created_at"
+    "created_at"       => "paquetes.created_at",
+    "actualizado"      => "paquetes.updated_at"
   }.freeze
+
+  # Por dónde arranca el listado cuando nadie eligió columna.
+  #
+  # Era `created_at`, y Yusef lo cazó el 2026-08-18: las dos cajas de un split
+  # le salían **separadas**. La causa es de `PR-C7.20`: la Caja 1 **es** el
+  # paquete que la pre-alerta dejó esperando, así que conserva la hora en que el
+  # cliente lo anunció (11:11) mientras la Caja 2 nace al etiquetar (11:34).
+  #
+  #   > "Todas las actualizaciones tienen que ir con la última hora… si un
+  #   >  paquete está disponible en Honduras, se tiene que actualizar con la
+  #   >  hora que se marcó que estaba disponible."
+  #
+  # Con `updated_at` las cajas de un envío quedan juntas y lo que se acaba de
+  # tocar sube al tope, que es cómo él lee la pantalla.
+  ORDEN_POR_DEFECTO = "paquetes.updated_at".freeze
 
   EDIT_ROLES   = %w[admin supervisor_miami supervisor_prefactura].freeze
   DELETE_ROLES = %w[admin].freeze
@@ -28,7 +46,7 @@ class PaquetesController < ApplicationController
 
   def index
     @paquetes = base_scope
-                  .includes(:cliente, :tercero, :tipo_envio, :sucursal, :manifiesto,
+                  .includes(:cliente, :tercero, :tipo_envio, :sucursal, :sucursal_destino, :manifiesto,
                             :pre_factura, :venta,
                             pre_alerta_paquetes: :pre_alerta)
     @paquetes = apply_filters(@paquetes)
@@ -36,7 +54,7 @@ class PaquetesController < ApplicationController
     @paquetes = @paquetes.page(params[:page]).per(per_page_sanitized)
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     @sucursales = Sucursal.activas.ordered
-    @estados_paquete = Paquete.estados.keys
+    @estados_paquete = Paquete::ESTADOS_SELECCIONABLES
     # Pre-fill para el input de autocomplete de Pre-Alerta cuando el filtro
     # viene en la URL. (El de Cliente fue removido — Yusef 2026-05-08:
     # reemplazado por "Búsqueda avanzada" + quick filters de codigo/nombre.)
@@ -45,10 +63,16 @@ class PaquetesController < ApplicationController
 
   def show
     @edit_mode = params[:mode] == "edit"
+    cargar_supervisores_cajas
     if @edit_mode
       @tipo_envios = TipoEnvio.activos.order(:nombre)
       @carriers = Carrier.where(activo: true).order(:nombre)
       @tarifas_recolecta = TarifaRecolecta.activas.ordered
+      # Los motivos salen del controller, no de la vista. El bloque de retención
+      # los consultaba adentro del ERB —la única de las cuatro pantallas que lo
+      # hacía— y por eso el partial compartido no los podía recibir.
+      @motivos_retencion = MotivoRetencion.activos.ordered
+    @motivos_envio_politica = MotivoEnvioPolitica.activos.ordered
       # PR-5: cuando el digitador re-escanea un tracking existente desde
       # /etiquetar y elige "Cambio de Servicio", llegamos acá con
       # ?cambio_servicio=1. Pre-marcamos el flag en memoria (no se guarda
@@ -74,6 +98,16 @@ class PaquetesController < ApplicationController
     # se abra automáticamente con motivo + acción alternativa.
     if (blocker = estado_transition_blocker(paquete_params))
       @estado_transition_block = blocker
+      # C27-29 · El re-render tiene que traer lo que la persona había tecleado.
+      # Antes se pintaba el formulario con los valores de la base y todo lo
+      # escrito —descripción, notas, proveedor, medidas— se perdía: el modal
+      # decía «no podés» y de paso te borraba media hora de trabajo.
+      #
+      # `:estado` se queda afuera **a propósito**: el modal de retroceso lista
+      # lo que se limpiaría con `retroceso_cleanup_preview(objetivo)`, y ese
+      # cálculo compara el estado ACTUAL contra el objetivo. Asignado el
+      # objetivo, los dos índices se igualan y la lista sale vacía.
+      conservar_lo_tecleado(except: [ :estado ])
       render_show_with_edit_assigns(status: blocker[:status])
       return
     end
@@ -99,6 +133,35 @@ class PaquetesController < ApplicationController
       @paquete.pre_alerta_paquetes.destroy_all
     end
 
+    # PR-C6.7: cambiar la cantidad de cajas de un split crea o elimina las que
+    # correspondan. Antes solo se actualizaba el número en cada fila y los
+    # registros viejos quedaban dando vueltas — Yusef lo reprodujo bajando de
+    # 3 a 2 y viendo que quedaban las 3.
+    #
+    # Va **antes** del save: si alguna caja a eliminar ya está cobrada, la
+    # operación falla entera y no se guarda nada.
+    nueva_cantidad = paquete_params[:cantidad_paquetes].to_i
+    if ajusta_cajas?(nueva_cantidad)
+      begin
+        Paquete.ajustar_split!(@paquete, nueva_cantidad)
+        @paquete.reload
+      rescue Paquete::CajaNoEliminable => e
+        flash.now[:alert] = e.message
+        # Mismo caso que arriba: «no se puede bajar a N cajas» no puede costar
+        # también lo tecleado. Acá el estado sí entra — el gate ya lo aprobó.
+        #
+        # Lo que se queda afuera es `:cantidad_paquetes`, que es justo lo que
+        # se rechazó: pintarlo como si hubiera pasado esconde el botón de
+        # «bajar cajas con PIN» —el show lo ofrece solo si el paquete sigue
+        # dividido— y ese botón es lo único que destraba esta pantalla
+        # (`bajar_cajas_con_pin_controller_test`, «el re-render de un update
+        # fallido tambien lo ofrece»).
+        conservar_lo_tecleado(except: [ :cantidad_paquetes ])
+        render_show_with_edit_assigns(status: :unprocessable_entity)
+        return
+      end
+    end
+
     @paquete.assign_attributes(paquete_params)
     # `paquete[:pre_factura]` es columna boolean; el accessor normal lo
     # interpreta como la asociación belongs_to :pre_factura. Lo escribimos
@@ -108,6 +171,13 @@ class PaquetesController < ApplicationController
     end
 
     if @paquete.save
+      # C18-06: marcar «enviado según política» después —"para corregir
+      # después"— es la misma transición que al recibir: el cliente se entera
+      # igual. Un modelo que compone la nota y nadie la manda sería la listita
+      # que nadie lee.
+      if @paquete.saved_change_to_enviado_por_politica? && @paquete.enviado_por_politica?
+        notificar_recibido(@paquete, pre_alerta_vinculada: false)
+      end
       # Persistir instrucciones de la pre-alerta si el operador las editó
       # desde el form del paquete. Va a la primera PAP vinculada (caso
       # normal: 1 paquete vive en 1 pre-alerta).
@@ -145,12 +215,34 @@ class PaquetesController < ApplicationController
   # Con ?hermanas=1 imprime las N cajas del mismo tracking de una vez
   # ("si el tracking se divide en 5 paquetes es una para cada una").
   def etiqueta
+    # Quiénes son las hermanas lo decide **el modelo**, no esta acción. Acá había
+    # una segunda consulta escrita a mano y por eso las etiquetas y el Warehouse
+    # Receipt podían discrepar: el WR sí pasaba por `paquetes_hermanos`.
     @paquetes = if params[:hermanas] == "1" && @paquete.dividido?
-      Paquete.where(tracking: @paquete.tracking)
+      Paquete.where(id: [ @paquete.id, *@paquete.paquetes_hermanos.ids ])
              .includes(:cliente, :tercero, :tipo_envio, :sucursal, :user)
              .order(:numero_caja, :id)
     else
       [ @paquete ]
+    end
+
+    # Yusef: *"si después de imprimir la etiqueta, te tire automáticamente el
+    # Recibo de Bodega"*. /entrega_personal abría dos ventanas y **Chrome
+    # bloquea la segunda**: un gesto del usuario alcanza para un solo popup.
+    # Ahora se abre una sola y, al terminar de imprimir, esa misma se va al
+    # Warehouse Receipt en vez de cerrarse.
+    #
+    # La URL la arma el servidor a propósito: un parámetro con la dirección de
+    # destino sería un redirect abierto servido desde nuestro propio dominio.
+    #
+    # C19-01: el WR iba como preview —"el operario decide si lo imprime o se lo
+    # manda al cliente"— y Yusef lo cambió probándolo: "ocupás que esté como
+    # versión para imprimir… le doy a imprimir y, como hice con la etiqueta, me
+    # regresa acá". Ahora hace el mismo ciclo que la etiqueta: `print` lo
+    # auto-imprime y `cerrar` cierra la pestaña al salir del diálogo. El botón
+    # «Ver WR» de la ficha y el link del flash siguen abriendo el preview.
+    if params[:wr] == "1"
+      @despues_de_imprimir = warehouse_receipt_paquete_path(@paquete, print: "true", cerrar: "1")
     end
 
     render layout: "etiqueta"
@@ -219,6 +311,60 @@ class PaquetesController < ApplicationController
     redirect_to @paquete, notice: "Tercero asignado: #{cliente.codigo} — #{cliente.nombre_completo}."
   end
 
+  # PR-C6.42 · RP-18: un supervisor destraba con su PIN un split que quedó con
+  # cajas de más. Yusef: "le pusieron 2 y al final es un paquete, y cuando van
+  # a entregar, el sistema no va a querer entregar porque decía que eran dos".
+  #
+  # No lleva `authorize_edit`: igual que el "quitar cobro" de /etiquetar, el que
+  # está en la pantalla es el operario y el supervisor es quien teclea el PIN al
+  # lado. La autorización de verdad la hace `BajarCajasConPin`.
+  def bajar_cajas
+    quedan = BajarCajasConPin.new(
+      paquete: @paquete,
+      cantidad: params[:cantidad],
+      supervisor: User.find_by(id: params[:supervisor_id]),
+      pin: params[:pin],
+      motivo: params[:motivo]
+    ).call
+
+    # Si el supervisor estaba parado justo en una de las cajas que se fueron,
+    # `@paquete` ya no existe — mandarlo ahí sería un 404 después de una
+    # operación exitosa.
+    destino = quedan.find { |c| c.id == @paquete.id } || quedan.first
+    redirect_to destino, notice: "Quedaron #{quedan.size} caja(s) en #{@paquete.tracking}."
+  rescue BajarCajasConPin::NoPermitido, BajarCajasConPin::PinInvalido,
+         BajarCajasConPin::YaFacturado, BajarCajasConPin::NadaQueBajar => e
+    redirect_to @paquete, alert: e.message
+  end
+
+  # C24-01 · Marcarle al paquete que se cobra distinto.
+  #
+  # Yusef: *"esto va a tener un control donde **no lo puede hacer cualquiera**…
+  # tiene que ser alguien de supervisor o para arriba"*. Todo el control vive en
+  # `MarcarCobroExcepcion`; acá solo se traducen sus errores a un aviso.
+  #
+  # **`cobro_excepcion` no está en `paquete_params`** y no puede estarlo: éste es
+  # el único camino, igual que `PR-13.d` dejó el precio de una línea con una sola
+  # puerta.
+  def cobro_excepcion
+    MarcarCobroExcepcion.new(
+      paquete: @paquete,
+      excepcion: params[:cobro_excepcion],
+      supervisor: User.find_by(id: params[:supervisor_id]),
+      pin: params[:pin],
+      motivo: params[:motivo],
+      solicitado_por: Current.user
+    ).call
+
+    redirect_to @paquete, notice: aviso_de_excepcion
+  rescue MarcarCobroExcepcion::NoPermitido, MarcarCobroExcepcion::SinMotivo,
+         MarcarCobroExcepcion::YaFacturado, ArgumentError => e
+    redirect_to @paquete, alert: e.message
+  rescue ActiveRecord::RecordInvalid => e
+    # El PIN lo valida `Autorizacion`, así que su rechazo llega por acá.
+    redirect_to @paquete, alert: e.record.errors.full_messages.to_sentence
+  end
+
   def quitar_tercero
     if @paquete.tercero_id.nil?
       redirect_to @paquete, alert: "Este paquete no tiene tercero asignado."
@@ -240,7 +386,10 @@ class PaquetesController < ApplicationController
     else
       # PR-10.d.3: iba al Warehouse Receipt. Esta acción se llama
       # "reimprimir_etiquetas" y sacaba la hoja carta.
-      redirect_to etiqueta_paquete_path(@paquete)
+      #
+      # 2026-10-08 · Y re-imprimir es imprimir: con el diálogo, y la pestaña
+      # se cierra al terminar.
+      redirect_to etiqueta_paquete_path(@paquete, print: true)
     end
   end
 
@@ -338,7 +487,20 @@ class PaquetesController < ApplicationController
 
   def check_tracking
     tracking = params[:tracking].to_s
-    paquete = Paquete.where(tracking: tracking).order(created_at: :desc).first
+    # PR-C6.21: antes era `where(tracking: tracking)` — exacto y case-sensitive
+    # sobre una sola columna. Ahora entra por la escalera del modelo, que
+    # además cubre el secundario y el código largo que escupe la pistola.
+    # PR-C6.44: `excluir_paquete_id` deja que una fila pregunte sin avisarse a
+    # sí misma. Cada `PreAlertaPaquete` materializa un Paquete en estado
+    # `pre_alerta`, así que en el editor de pre-alertas tocar el propio tracking
+    # encontraba el propio paquete y avisaba "ya está en el sistema".
+    #
+    # `PR-C7.29` lo empezó a mandar también desde /etiquetar al actualizar, por lo
+    # mismo: el tracking viene puesto y el primer blur se encontraba a sí mismo.
+    candidatos = Paquete.buscar_escaneado(tracking)
+    excluidos = ids_del_mismo_envio(params[:excluir_paquete_id])
+    candidatos = candidatos.where.not(id: excluidos) if excluidos.any?
+    paquete = candidatos.order(created_at: :desc).first
 
     # PR-2: detectar match con pre-alerta. Caso (a): el paquete ya existe en
     # estado `pre_alerta_estado` (lo creó PreAlertaPaquete#crear_paquete_esperado).
@@ -346,7 +508,12 @@ class PaquetesController < ApplicationController
     pre_alerta_match_info = detect_pre_alerta_match(tracking, paquete)
 
     if paquete
-      next_suffix = Paquete.next_duplicate_suffix(tracking)
+      # PR-C6.21: el duplicado se calcula sobre el tracking **guardado**, no
+      # sobre lo que entró por la pistola. Si el match vino por sufijo (USPS)
+      # o por el secundario, lo escaneado no es el tracking del paquete, y
+      # sufijar eso generaría un duplicado con un tracking que no existe.
+      tracking_base = paquete.tracking
+      next_suffix = Paquete.next_duplicate_suffix(tracking_base)
 
       render json: {
         exists: true,
@@ -354,8 +521,12 @@ class PaquetesController < ApplicationController
         guia: ERB::Util.html_escape(paquete.guia),
         estado: ERB::Util.html_escape(paquete.estado),
         cliente: ERB::Util.html_escape(paquete.cliente.nombre_completo),
-        fecha: paquete.fecha_recibido_miami&.strftime("%d/%m/%Y"),
-        count: Paquete.where(tracking: tracking).count,
+        # C19-05: con hora y segundos — el modal no distinguía el paquete
+        # recibido hace 10 minutos del de las 8am.
+        fecha: paquete.fecha_recibido_miami&.strftime("%d/%m/%Y %H:%M:%S"),
+        # Sin las hermanas propias. Con un envío dividido, contarlas le decía al
+        # operario «ya hay 3» cuando eran sus dos cajas más un ajeno.
+        count: Paquete.where(tracking: tracking_base).where.not(id: excluidos).count,
         # PR-10.c: Yusef sobre el modal de tracking repetido — "aquí solo
         # agregarle el contenido... el contenido y el tipo de servicio, esas
         # son las dos cosas que más te faltan ahí". El numero_recepcion ya se
@@ -369,9 +540,9 @@ class PaquetesController < ApplicationController
         # - next_suffix nil cuando se agotó A-Z (intervención manual).
         existing_paquete_id: paquete.id,
         edit_url: edit_paquete_path(paquete),
-        tracking_base: tracking,
+        tracking_base: tracking_base,
         next_suffix: next_suffix,
-        next_tracking: next_suffix ? "#{tracking}#{next_suffix}" : nil,
+        next_tracking: next_suffix ? "#{tracking_base}#{next_suffix}" : nil,
         **pre_alerta_match_info
       }
     else
@@ -385,12 +556,27 @@ class PaquetesController < ApplicationController
   def detect_pre_alerta_match(tracking, paquete)
     return { pre_alerta_match: false } if tracking.blank?
 
-    pap_query = PreAlertaPaquete.sin_vincular
-                                .where("UPPER(tracking) = ?", tracking.strip.upcase)
+    # PR-C6.21: por la misma escalera que el paquete. Antes era solo el match
+    # exacto en mayúsculas, así que el código largo de USPS encontraba el
+    # paquete y perdía su pre-alerta.
+    pap_query = PreAlertaPaquete.sin_vincular.buscar_escaneado(tracking)
 
     pap = pap_query.includes(:pre_alerta).first
-    pa = pap&.pre_alerta || (paquete && paquete.estado == "pre_alerta_estado" ?
-                              PreAlertaPaquete.where(paquete_id: paquete.id).first&.pre_alerta : nil)
+    # El renglón casi nunca está `sin_vincular`: `crear_paquete_esperado` le puso
+    # `paquete_id` al materializar el esperado. Así que sin este segundo intento
+    # `pap` queda en nil y con él se van **las instrucciones que escribió el
+    # cliente** — que es justo lo que hay que mostrarle al que recibe.
+    #
+    # C16-05: un paquete puede tener **más de un** renglón vinculado —el suyo y
+    # el del secundario que absorbió al guardar—, y `find_by` sin orden devolvía
+    # el que saliera. El JSON llevaba entonces el `cliente_id` de cualquiera de
+    # los dos, y la pantalla comparaba contra el equivocado. Primero el renglón
+    # cuyo tracking es el escaneado; si no hay, el más viejo, siempre el mismo.
+    if paquete && pap.nil?
+      vinculados = PreAlertaPaquete.includes(:pre_alerta).where(paquete_id: paquete.id)
+      pap = vinculados.buscar_escaneado(tracking).first || vinculados.order(:id).first
+    end
+    pa = pap&.pre_alerta
 
     if pa.present?
       cli = pa.cliente
@@ -405,12 +591,105 @@ class PaquetesController < ApplicationController
         cliente_id: cli&.id,
         cliente_codigo: ERB::Util.html_escape(cli&.codigo.to_s),
         cliente_nombre: ERB::Util.html_escape(cli&.nombre_completo.to_s),
-        cliente_notas_miami: ERB::Util.html_escape(cli&.notas_miami.to_s)
+        cliente_notas_miami: ERB::Util.html_escape(cli&.notas_miami.to_s),
+        # PR: a qué sucursal retira este cliente. Faltaba, y por eso al escanear
+        # un tracking con pre-alerta **no salía el aviso de sucursal** — Yusef,
+        # dos veces: "no me da la información de que es de Sucursal de
+        # Tegucigalpa". Las notas del cliente sí venían: se agregó una y se
+        # olvidó la otra. Misma llave que usa `/clientes/buscar`.
+        cliente_sucursal_retiro: ERB::Util.html_escape(cli&.sucursal_retiro_nombre.to_s),
+        cliente_sin_sucursal_retiro: cli&.sin_sucursal_retiro? || false,
+        cliente_retiro_por_defecto: cli&.retira_en_la_de_por_defecto? || false,
+        # PR-C6.9: el tipo de envío que el cliente pidió en su pre-alerta. Si
+        # no coincide con el de la sesión de etiquetado, el front avisa antes
+        # de que el operario siga escribiendo — y el servidor lo rechaza igual.
+        pre_alerta_tipo_envio_id: pa.tipo_envio_id,
+        pre_alerta_tipo_envio: ERB::Util.html_escape(pa.tipo_envio&.nombre.to_s),
+        # La retención que viene anunciada. Sin esto el formulario arrancaba con
+        # el checkbox desmarcado, y un checkbox desmarcado manda `"0"`: el
+        # escaneo **apagaba** la bandera que la pre-alerta acababa de traer, y
+        # con ella los motivos. O sea que lo que Yusef pidió el 17-ago llegaba al
+        # paquete esperado y se borraba en el momento de recibirlo.
+        retener_miami: pap&.retener_miami? || paquete&.retener_miami? || false,
+        motivo_retencion_ids: paquete&.motivo_retencion_ids || [],
+        motivo_retencion_nombres: paquete&.motivos_retencion&.map { |m| ERB::Util.html_escape(m.nombre) } || [],
+        notas_retencion: ERB::Util.html_escape(paquete&.notas_retencion.to_s),
+        # Lo que el que recibe **tiene que ver antes de guardar**, no al costado.
+        #
+        # Yusef, 2026-08-19, señalando la franja: *"estas informaciones ellos no
+        # las leen. Esto no lo van a leer, olvídate"* · *"no te voy a mentir,
+        # Jorge: a puro huevos leen esto"*. Digitan de 500 a 1.000 paquetes al
+        # día mirando la pistola, no la pantalla.
+        tareas: tareas_del_cliente(cli),
+        notas: notas_para_el_modal(pa, pap)
       }
     else
       { pre_alerta_match: false }
     end
   end
+  # Las cajas que **son el mismo envío** que el que está preguntando.
+  #
+  # Jorge, 2026-08-21: *"cuando estoy actualizando un tracking y le voy a dar
+  # click a un campo, el modal lo sigue tirando"*.
+  #
+  # `PR-C7.29` excluyó *la fila* y quedó corto: las hermanas de un split
+  # **comparten el tracking**, así que al actualizar la Caja 1 el sistema
+  # encontraba la Caja 2 y avisaba «ya existe» sobre el mismo envío que se estaba
+  # editando. Con un paquete de una sola caja no pasaba, y por eso la prueba de
+  # entonces lo dio por arreglado.
+  #
+  # `cajas_del_mismo_split` agrupa por **número de recepción** y no por tracking
+  # —el courier recicla números, y dos envíos distintos pueden compartirlo—, así
+  # que esto **no** ciega el aviso frente a un duplicado ajeno, que es para lo
+  # único que el modal existe.
+  #
+  # Un id que no existe —un formulario viejo, un paquete borrado— no excluye nada
+  # y no revienta.
+  def ids_del_mismo_envio(id)
+    return [] if id.blank?
+
+    paquete = Paquete.find_by(id: id)
+    return [ id ] if paquete.nil?
+
+    Paquete.cajas_del_mismo_split(paquete).ids
+  end
+  private :ids_del_mismo_envio
+
+  # Las tareas abiertas del cliente, para el modal. Mismo criterio que la franja
+  # de contexto: abiertas y visibles para quien está recibiendo.
+  def tareas_del_cliente(cliente)
+    return [] if cliente.nil?
+
+    Tarea.abiertas
+         .para_cliente(cliente.id)
+         .visibles_para(Current.user)
+         .order(created_at: :asc)
+         .limit(5)
+         .map do |t|
+      { id: t.id, titulo: ERB::Util.html_escape(t.titulo.to_s),
+        url: completar_tarea_path(t) }
+    end
+  end
+
+  # Las notas que escribió el cliente sobre este envío.
+  #
+  # Van las dos: las `instrucciones` de **este** renglón y las `notas_grupo` de
+  # la pre-alerta, que aplican a todo el envío. Yusef: *"aquí están las notas del
+  # grupo y no sale… y el grupo sí tiene notas"*.
+  def notas_para_el_modal(pre_alerta, pap)
+    notas = []
+    if pap&.instrucciones.present?
+      notas << { titulo: "Instrucción del paquete",
+                 texto: ERB::Util.html_escape(pap.instrucciones) }
+    end
+    if pre_alerta&.notas_grupo.present?
+      notas << { titulo: "Nota del grupo",
+                 texto: ERB::Util.html_escape(pre_alerta.notas_grupo) }
+    end
+    notas
+  end
+  private :tareas_del_cliente, :notas_para_el_modal
+
   private :detect_pre_alerta_match
 
   public
@@ -465,10 +744,20 @@ class PaquetesController < ApplicationController
       paquetes.each do |p|
         pa = p.pre_alerta_paquetes.first&.pre_alerta
         row_styles = [ date_style, date_style, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil ]
+        # C29-10 · Todo lo que no es fecha va **como texto**. Sin `types`,
+        # Axlsx mira el string y, si son solo dígitos, lo escribe como número:
+        # un tracking de USPS de 22 dígitos salía `9.2E+21`. Yusef, con el
+        # Excel abierto: *"algunos son como con exponente, el tracking"* ·
+        # *"hay unos que solo son números"*. Pasa igual con el N° de recepción
+        # y la guía, y un número de 22 dígitos ni siquiera cabe entero en el
+        # double de Excel: se pierden los últimos.
+        row_types = [ :date, :date ] + [ :string ] * 13
         sheet.add_row([
           p.fecha_recibido_miami&.to_date || p.created_at.to_date,
           p.fecha_disponible&.to_date,
-          p.numero_recepcion.presence || "—",
+          # C28-03 · Con el sufijo de caja, como la etiqueta y el listado
+          # (`C27-30`): sin él, las cajas de un split salen iguales.
+          helpers.etiqueta_codigo_barras(p) || "—",
           p.tracking.to_s,
           p.cliente.codigo.to_s,
           p.cliente.nombre_completo.to_s,
@@ -481,7 +770,7 @@ class PaquetesController < ApplicationController
           pa&.numero_documento || "—",
           p.pre_factura&.numero || "—",
           p.venta&.numero || "—"
-        ], style: row_styles)
+        ], style: row_styles, types: row_types)
       end
 
       sheet.column_widths 12, 12, 14, 20, 12, 28, 18, 10, 18, 12, 40, 14, 14, 14, 14
@@ -502,12 +791,12 @@ class PaquetesController < ApplicationController
   end
 
   def authorize_tracking_actions
-    require_role(:supervisor_miami, :digitador_miami, :supervisor_prefactura, :supervisor_caja, :cajero)
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:operacion)
   end
 
   def authorize_edit
     return if Current.user&.admin?
-    return if EDIT_ROLES.include?(Current.user&.rol)
+    return if Current.user&.tiene_rol?(EDIT_ROLES)
     redirect_to paquetes_path,
                 alert: "No tienes permiso para editar paquetes. Solo admin, supervisor Miami o supervisor Pre-factura."
   end
@@ -522,7 +811,7 @@ class PaquetesController < ApplicationController
     actual = @paquete.estado.to_s
     return nil if target == actual
 
-    unless Current.user&.admin? || ESTADO_CHANGE_ROLES.include?(Current.user&.rol.to_s)
+    unless Current.user&.admin? || Current.user&.tiene_rol?(ESTADO_CHANGE_ROLES)
       return {
         motivo:   :rol,
         status:   :forbidden,
@@ -545,17 +834,68 @@ class PaquetesController < ApplicationController
     nil
   end
 
+  # Pega en el objeto en memoria lo que venía en el formulario, para que un
+  # `render :show` con `@edit_mode` devuelva la pantalla como el operario la
+  # dejó. **No guarda nada**: es el camino del bloqueo.
+  #
+  # Las dos colecciones se excluyen siempre porque `motivo_retencion_ids=` y
+  # `motivo_envio_politica_ids=` son `has_many :through`, y sobre un registro
+  # ya guardado el writer **escribe las filas de join de una vez**. En un
+  # guardado que estamos bloqueando eso sería persistir justo lo que dijimos
+  # que no íbamos a persistir. El costo es que los motivos del modal vuelven a
+  # los de la base; el precio de la otra opción es escribirlos de verdad.
+  def conservar_lo_tecleado(except: [])
+    fuera = except + [ :motivo_retencion_ids, :motivo_envio_politica_ids ]
+    @paquete.assign_attributes(paquete_params.except(*fuera))
+  end
+
+  # ¿El form está pidiendo cambiar la cantidad de cajas de verdad?
+  #
+  # Solo aplica a paquetes que YA son un split o que pasan a serlo. Un paquete
+  # suelto que se edita sin tocar el campo no debe entrar acá — y menos uno
+  # que llega con `cantidad_paquetes` en blanco, que es el default de muchos
+  # formularios.
+  def ajusta_cajas?(nueva_cantidad)
+    return false unless paquete_params.key?(:cantidad_paquetes)
+    return false if nueva_cantidad < 1
+
+    actual = @paquete.cantidad_paquetes.to_i
+    return false if nueva_cantidad == actual
+
+    # Pasar de 1 a N sobre un paquete que nunca fue split lo convierte en uno;
+    # `ajustar_split!` lo maneja creando las cajas que faltan.
+    actual > 1 || nueva_cantidad > 1
+  end
+
   def render_show_with_edit_assigns(status:)
     @edit_mode = true
     @tipo_envios = TipoEnvio.activos.order(:nombre)
     @carriers = Carrier.where(activo: true).order(:nombre)
     @tarifas_recolecta = TarifaRecolecta.activas.ordered
+    @motivos_retencion = MotivoRetencion.activos.ordered
+    @motivos_envio_politica = MotivoEnvioPolitica.activos.ordered
+    cargar_supervisores_cajas
     render :show, status: status
+  end
+
+  # PR-C6.42: quién puede destrabar un split con cajas de más.
+  #
+  # Va en un método porque el `show` se renderiza por DOS caminos: la acción
+  # `#show` y el re-render de `#update` cuando algo falla. Justamente por ese
+  # segundo camino se llega acá con "no se puede bajar a N cajas" — o sea, el
+  # momento exacto en que el operario necesita el botón.
+  def cargar_supervisores_cajas
+    @supervisores_cajas = User.activos.where(rol: BajarCajasConPin::ROLES)
+                              .where.not(pin_digest: nil).order(:nombre)
+    # C24-01 · Los de la excepción de cobro son **otra lista**: sin Miami. Se
+    # cargan acá porque la ficha del paquete ya llama a este método.
+    @supervisores_cobro = User.activos.where(rol: MarcarCobroExcepcion::ROLES)
+                              .where.not(pin_digest: nil).order(:nombre)
   end
 
   def authorize_delete
     return if Current.user&.admin?
-    return if DELETE_ROLES.include?(Current.user&.rol)
+    return if Current.user&.tiene_rol?(DELETE_ROLES)
     redirect_to paquetes_path,
                 alert: "No tienes permiso para eliminar paquetes. Solo administradores."
   end
@@ -579,7 +919,7 @@ class PaquetesController < ApplicationController
   def apply_sort(scope)
     sort_param = params[:sort].to_s
     user_picked_sort = SORTABLE_COLUMNS.key?(sort_param)
-    column = user_picked_sort ? SORTABLE_COLUMNS[sort_param] : "paquetes.created_at"
+    column = user_picked_sort ? SORTABLE_COLUMNS[sort_param] : ORDEN_POR_DEFECTO
 
     dir = params[:dir].to_s.downcase
     direction = SORT_DIRECTIONS.include?(dir) ? dir : "desc"
@@ -638,6 +978,7 @@ class PaquetesController < ApplicationController
 
     scope = scope.by_cliente_codigo(params[:cliente_codigo]) if params[:cliente_codigo].present?
     scope = scope.by_cliente_nombre(params[:cliente_nombre]) if params[:cliente_nombre].present?
+    scope = scope.by_manifiesto(params[:manifiesto]) if params[:manifiesto].present?
     scope = scope.busqueda_avanzada(params[:busqueda_avanzada]) if params[:busqueda_avanzada].present?
     scope = scope.by_pre_alerta(params[:pre_alerta_id]) if params[:pre_alerta_id].present?
 
@@ -663,16 +1004,35 @@ class PaquetesController < ApplicationController
     scope
   end
 
+  def aviso_de_excepcion
+    if @paquete.reload.cobro_solo_volumetrico?
+      "#{@paquete.numero_recepcion_visible} cobra solo el volumétrico: #{@paquete.peso_cobrar} lb."
+    elsif @paquete.cobro_solo_peso?
+      "#{@paquete.numero_recepcion_visible} cobra solo el peso real: #{@paquete.peso_cobrar} lb."
+    else
+      "#{@paquete.numero_recepcion_visible} vuelve al cobro normal: #{@paquete.peso_cobrar} lb."
+    end
+  end
+
   def paquete_params
     params.require(:paquete).permit(
       :tracking, :tracking_secundario, :cliente_id, :tipo_envio_id, :estado, :peso,
       :alto, :largo, :ancho, :cantidad_productos, :cantidad_paquetes,
-      :numero_caja, :descripcion, :remitente, :driver, :expedido_por, :proveedor, :proveedor_id,
-      :tercero_id,
+      # C27-29 · `:proveedor` **no** va acá: es a la vez columna string legacy
+      # y el nombre de `belongs_to :proveedor`, así que permitirlo hacía que
+      # `assign_attributes` le mandara un String a la asociación y reventara
+      # con `AssociationTypeMismatch`. Sobrevivió porque el input del form no
+      # tenía `name` y nunca llegaba; el día que se lo pusimos, salía el 500.
+      # El texto entra por `proveedor_texto`, que escribe la columna.
+      :numero_caja, :descripcion, :remitente, :driver, :expedido_por,
+      :proveedor_texto, :proveedor_id,
+      :tercero_id, :tercero_nombre,
       :notas_internas, :notas_al_cliente, :notas_consolidacion, :notas_retencion,
       :pre_alerta,
       :solicito_cambio_servicio, :retener_miami,
+      :enviado_por_politica, :notas_envio_politica,
       :recolecta_solicitada, :recolecta_monto, :recolecta_moneda, :tarifa_recolecta_id,
+      :recolecta_direccion,
       # PR-D7.m: fechas editables manualmente (admin/supervisor). El gate
       # de permisos lo hace `authorize_edit` antes; el callback del modelo
       # `track_fecha_by_user_on_manual_edit` se encarga de _by_user_id.
@@ -682,7 +1042,7 @@ class PaquetesController < ApplicationController
       # Reasignación de manifiesto desde el form. El callback
       # `sync_dates_from_manifiesto` se encarga de actualizar las fechas.
       :manifiesto_id,
-      motivo_retencion_ids: []
+      motivo_retencion_ids: [], motivo_envio_politica_ids: []
     )
   end
 
@@ -693,5 +1053,15 @@ class PaquetesController < ApplicationController
     return :missing unless params.dig(:paquete)&.key?(:pre_factura)
 
     ActiveModel::Type::Boolean.new.cast(params[:paquete][:pre_factura])
+  end
+
+  private
+
+  # C26-15 · La sección entera pasa por `can_access?`, como pide `RP-58`: sin
+  # esto, un rol de estación (*"no se les habilita nada más que eso"*) entraba
+  # igual, porque la política de esta sección era «todos» y ningún controller
+  # la consultaba.
+  def authorize_seccion
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:paquetes)
   end
 end

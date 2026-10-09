@@ -58,12 +58,15 @@ Sistema actual: `https://cec.rsahn.com/App/Home`
 
 ### Conversaciones con el Cliente
 
-| # | Tema | Estado |
-|---|------|--------|
-| 1 | Pre-alertas, tareas, audio, notas, fotos, volumen | Documentado completo |
-| 2 | Login, Logout, Usuarios y Roles | Parcial — roles definidos, permisos por definir |
-| 3 | Por definir (visita al cliente) | Pendiente |
-| 4 | Por definir (visita al cliente) | Pendiente |
+| # | Fecha | Tema | Estado |
+|---|-------|------|--------|
+| 1 | Mar 2026 | Pre-alertas, tareas, audio, notas, fotos, volumen | ✅ Documentada |
+| 2 | — | Login, Logout, Usuarios y Roles | ⏳ Parcial — los 9 roles están definidos; los permisos por operación llegan en el Excel que Yusef ofreció en `A7-28` (`RP-35`) |
+| 3 | 2026-04-29 | Detalle de Paquete Interno + Warehouse Receipt | ✅ Documentada (bloque `PR-D`) |
+| 4 | 2026-08-01 | Franja de contexto operativo | ✅ Documentada (`PR-9`) |
+| 5 | 2026-08-02 | Tarifas, mínimos y etiqueta | ✅ Documentada (`PR-10`) |
+| 6 | 2026-08-08/10 | Prueba en vivo de `/etiquetar` — 4 audios + 4 anexos | ✅ Documentada (`A1-*`…`A4-*`, `RP-01`…`RP-23`) |
+| 7 | 2026-08-12 | Revisión del PDF de procesos, de punta a punta | ✅ Documentada (`A7-01`…`A7-34`, abre `RP-31`…`RP-36`) |
 
 ---
 
@@ -1456,7 +1459,7 @@ Formato análogo a `numero_recepcion` pero para manifiesto:
 - 14b. **Empresa de transporte (ej. EPN = Pronto Cargo)** cuando un paquete cambia de manifiesto. ✅ **Resuelta (Yusef):** se **hereda del manifiesto actual**. No se duplica el dato en `paquetes` — si el paquete cambia de manifiesto, muestra la empresa nueva.
 - 15. Re-imprimir etiquetas: ¿todas las cajas o solo la actual? ✅ **Resuelta:** modal de preview con **checkboxes de todas las cajas hermanas**, preseleccionadas por defecto; el digitador desmarca las que no necesita. Una etiqueta por hoja.
 - 16. Botón "Refrescar": ¿F5 o algo específico? ✅ **Resuelta (Yusef, opción B):** refresco **granular vía Turbo Frame**, no F5 — recarga solo la zona dinámica sin perder el scroll. Implementado con `turbo_frame_tag "paquete_dynamic", target: "_top"` + `data: { turbo_frame: "paquete_dynamic" }` en el botón.
-- 17. Manifiesto formato `MM2026000001`. ✅ **Resuelta e implementada** en PR-D1.d con el modelo `ManifiestoCounter` (contador por sucursal/año, análogo a `numero_recepcion_counters`).
+- 17. Manifiesto formato `MM2026000001`. ✅ **Resuelta e implementada** en PR-D1.d con el modelo `ManifiestoCounter` (contador por sucursal/año, análogo a `numero_recepcion_counters`). ⚠️ **El formato cambió el 2026-09-01** a `MMIA2026000001` —el código completo de la sucursal— porque con una sola letra `SPS` y `SAM` chocaban. Ver `RP-46`: **falta contárselo a Yusef**, que confirmó el formato corto.
 
 ---
 
@@ -1509,6 +1512,12 @@ Contiene, en este orden:
 ### Decisiones confirmadas (Jorge, 2026-08-01)
 
 1. **Origen de las tareas: cliente + pre-alerta.** Una tarea puede colgar de un cliente (`tareas.cliente_id`, nuevo) o de un paquete (`paquete_id`, ahora opcional). Las `instrucciones` que el cliente escribe en cada línea de su pre-alerta **se convierten en tareas reales** al guardarse, para que el digitador las vea al escanear.
+   > ⚠️ **Revertido el 2026-08-25 (`C16-01`, `PR-C7.41`).** Yusef, viendo la
+   > tarea salir en el modal: *"el cliente no puede poner una tarea, solo
+   > nosotros"*. Las instrucciones son **nota**, no tarea — que es como él
+   > mismo las había clasificado en su tabla («notas especiales»). Una tarea
+   > puede seguir colgando de un cliente; lo que ya no pasa es que el cliente la
+   > cree desde el portal.
 2. **Al marcar el checkbox:** `realizada` + registro de quién y cuándo. Desaparece para todos. Reabrible por supervisor.
 3. **"Jerarquía de la empresa" = orden por departamento:** Miami → Caja → Pre-Factura → SAC → Entrega.
 4. **Alcance:** franja + notas + sonidos + documentación.
@@ -1956,9 +1965,10109 @@ diez pendientes con su motivo** para que no se pierdan de vista.
 
 ---
 
+## Conversación 6 (2026-08-08): Prueba en vivo de /etiquetar
+
+Yusef sentado frente al sistema nuevo, probándolo campo por campo con Jorge al
+lado. Es la primera vez que **opera** `/etiquetar` en vez de opinar sobre
+capturas, y por eso salieron cosas que ninguna revisión de diseño iba a agarrar.
+
+Se entrega en tres partes:
+
+| Parte | Estado |
+|---|---|
+| **Audio 1** — prueba de `/etiquetar` y `/paquetes` | ✅ documentada abajo (`A1-nn`) |
+| **Audio 2** — monedas, cargos extra y escalonado | ✅ documentada abajo (`A2-nn`) |
+| **Imágenes** — 3 páginas de notas a mano de Jorge | ✅ cruzadas abajo (`N-nn`) |
+
+Los items van con ID `A1-nn` para poder cruzarlos cuando lleguen las otras dos
+partes. Cada uno lleva su estado:
+
+- **BUG** — reportado por Yusef y confirmado leyendo el código
+- **YA ESTÁ** — Yusef lo pidió y ya existe (o existe a medias)
+- **NUEVO** — no está y hay que hacerlo
+- **PREGUNTA** — no se puede implementar sin que Yusef defina algo
+- **FUTURO** — lo quiere, pero no ahora
+
+---
+
+### El tema de fondo: el teclado es la herramienta
+
+Yusef lo dijo dos veces y explica la mitad de la lista:
+
+> "Nosotros solo teclado porque usamos las manos para trabajar."
+
+Y sobre el Enter:
+
+> "El enter es como el siguiente campo."
+
+La pistola de código de barras **dispara Enter** al terminar de leer. Eso no es
+configurable en la práctica: hay varias pistolas, unas con cable y otras sin, y
+todas vienen así. O sea que en `/etiquetar` el Enter no es "aceptar el
+formulario" — es "terminé este campo, seguí".
+
+---
+
+### A1-01 · Enter guardaba el paquete en vez de pasar al siguiente campo — ✅ **ARREGLADO** (PR-C6.3)
+
+El más grave de todos, y del que cuelgan otros cuatro.
+
+> "El error está en el enter, el enter es el que hace todo el carnal."
+
+`etiquetar/index.html.erb:213` es un `form_with` normal y
+`etiquetar_controller.js:41-63` solo intercepta F2/F3/F4/F8/F9. **No hay ningún
+handler de Enter**, así que gana el comportamiento por defecto del navegador:
+Enter en un input de texto envía el formulario.
+
+Consecuencias que Yusef vio en vivo:
+
+1. El paquete **se graba incompleto** apenas escanea el tracking.
+2. Al grabarse sin sucursal, `generate_numero_recepcion`
+   (`paquete.rb:555-556`) sale temprano por el `return if sucursal.nil?` y el
+   `numero_recepcion` queda vacío → ver A1-02.
+3. Se le asignó a un usuario que él no eligió ("se lo asignó a María López
+   cuando yo no se lo había puesto a nadie").
+4. Después de ese Enter, **F2 ya no limpia** → A1-03.
+
+**Arreglo (PR-C6.3).** `formKeydown` en el form: Enter avanza al siguiente
+campo visible y habilitado, y en los dropdowns deja seleccionar el ítem activo.
+Nunca envía.
+
+Tres cosas del handler que no son obvias:
+
+- **Respeta `e.defaultPrevented`**, para no pisar el Enter del dropdown de
+  cliente ni el del modal de cajas, que ya lo resuelven ellos.
+- **Salta los `textarea`** — en descripción y notas Enter tiene que ser salto de
+  línea.
+- **Recalcula los campos en cada Enter**, porque F3 y F4 muestran y esconden el
+  tracking secundario y el tercero; una lista cacheada quedaría vieja.
+
+Cubierto por `test/system/etiquetar_teclado_test.rb`, que es lo único que puede
+verlo: en un test de integración no hay navegador que decida qué hace un Enter.
+
+El test fiel usa un tracking **con pre-alerta**, y ahí está la gracia: al salir
+del campo, `checkTracking` auto-rellena el cliente, y con tracking + cliente el
+paquete ya pasa las validaciones. Sin pre-alerta el test no probaría nada,
+porque el guardado fallaría igual.
+
+> "Grabar con tab o enter — o sea, grabar no, **seleccionar**."
+
+Y explícitamente: en `/etiquetar` **no hay autoguardado**. Jorge preguntó porque
+en pre-alerta sí lo hay, y Yusef marcó la diferencia:
+
+> "Sí, pero no en editar. Hay campos obligatorios, no lo puede grabar sin los campos."
+
+---
+
+### A1-02 · En /paquetes el tracking salía dos veces seguidas — ✅ **ARREGLADO**
+
+Minuto **41:02**, viendo el listado:
+
+> "Esto está malo... porque te está poniendo el tracking y el número de recepción."
+> "Es que el número de recepción es como el número de registro."
+
+Y en **38:53**: *"el primer error es el número de recepción"*.
+
+**No era un problema de datos.** En la base hay **cero** paquetes con
+`numero_recepcion = tracking`. Se verificó:
+
+| | |
+|---|---|
+| Paquetes totales | 54 |
+| Con `numero_recepcion = tracking` grabado | **0** |
+| Sin `numero_recepcion` | 45 |
+| Sin sucursal | 45 |
+
+Era la **vista**. Las columnas "N° recepción" y "Tracking" son vecinas, y la
+primera usaba `paquete_display_id`, que cae al tracking cuando no hay
+recepción:
+
+```ruby
+# paquetes_helper.rb:43
+paquete.numero_recepcion.presence || paquete.tracking
+```
+
+Y no hay recepción en 45 de 54 paquetes porque `generate_numero_recepcion`
+(`paquete.rb:556`) sale temprano con `return if sucursal.nil?`. Resultado: el
+mismo texto en dos celdas pegadas.
+
+**El PDF del listado tenía exactamente el mismo bug** (`listado_pdf.rb:46`):
+mismas dos columnas vecinas, mismo fallback. Los dos Excel
+(`paquetes_controller.rb:471`, `export.xlsx.axlsx:18`) sí ponían "—".
+
+**Y hay un segundo camino al mismo síntoma** que la base local no puede
+reproducir: filas viejas con la recepción **guardada** igual al tracking. Jorge
+lo dijo en el audio:
+
+> "Estos están hechos porque yo los metí en la base de datos en este formato."
+
+En local eso da 0 filas, pero **la reunión fue sobre staging**, así que el
+arreglo cubre los dos casos.
+
+**Arreglo:** `Paquete#numero_recepcion_visible` devuelve `nil` cuando no hay una
+recepción de verdad — en blanco **o** igual al tracking — y las cuatro
+superficies del listado (pantalla, PDF y los dos Excel) ponen guión.
+
+Se puede comparar contra el tracking sin miedo a falsos positivos porque una
+recepción real es siempre `<PREFIX><AÑO 7><CORRELATIVO 6>` (`RM0002026000010`),
+que no se parece a ningún tracking de courier.
+
+`paquete_display_id` **no se tocó** — como identificador de un título el
+fallback sirve; el problema era usarlo en una columna que se llama
+"N° recepción" con el tracking pegado al lado.
+
+Cubierto por `test/controllers/paquete_numero_recepcion_columna_test.rb`
+(5 tests, incluido el del PDF; verificados reintroduciendo cada guard a
+propósito).
+
+El formato anual del número **está bien** y no se tocó
+(`numero_recepcion_counter.rb`): `<PREFIX><AÑO><CONTADOR-6>`, contador atómico
+con `SELECT FOR UPDATE`, reinicia cada enero. Ej. `RM0002026000010`. Es el
+número del Warehouse Receipt. Lo único pendiente ahí es el **mes** que pidió
+Yusef → ver preguntas.
+
+✅ **La causa raíz se cerró en PR-C6.5.** Y no era el Enter como decía este
+doc: **`/etiquetar` nunca asignaba sucursal** — cero menciones en el controller
+y cero en la vista. Como `generate_numero_recepcion` sale temprano sin
+sucursal, la correlación en la base era perfecta: 45 sin sucursal, los mismos
+45 sin número.
+
+Debajo había un choque de significados. `paquetes.sucursal_id` era a la vez
+"dónde retira el cliente" (etiqueta, listado, y la **búsqueda de tarifa** en
+`pre_factura.rb:201`) y "de dónde sale el prefijo del número" (`RMI` = Recibido
+Miami). Un paquete se recibe en Miami y se retira en Zeron SPS; una columna no
+puede ser las dos, y por eso `/etiquetar` no podía asignar ninguna.
+
+Se separó en `paquetes.sucursal_recepcion_id`. `sucursal_id` no se tocó.
+
+⚠️ **Y queda un caso peor con el mismo fallback:** `_etiqueta.html.erb:29`
+codifica `numero_recepcion.presence || tracking` **en el código de barras**. Si
+el paquete no tiene recepción, la etiqueta sale con un barcode del tracking —
+justo lo que Yusef prohibió (*"el código de barra que está aquí es el warehouse,
+no es el tracking"*, minuto 42:19). Se atiende junto con A1-04, porque la
+decisión no es obvia: sin recepción, o no se imprime barcode, o no se debería
+poder etiquetar el paquete.
+
+---
+
+### A1-03 · Después de un Enter, F2 no limpiaba — ✅ **ARREGLADO** (PR-C6.3)
+
+> "Le doy F2 y no limpia. Le doy enter y presiono F2, no lo borra."
+
+F2 tiene que limpiar **todo**, siempre:
+
+> "Todo, todo. Porque se equivocó y lo mejor es F2 y volvemos a empezar."
+
+**El diagnóstico de este doc estaba mal.** Decía "problema de foco", pero el
+listener de F2 es a nivel `document` (`etiquetar_controller.js:26`), así que el
+foco no puede ser la causa.
+
+Lo real: `clearForm` usaba `formTarget.reset()`, y **`reset()` no vacía un
+formulario** — lo devuelve a los valores *renderizados*. Cuando el submit del
+Enter fallaba y el servidor re-renderizaba con 422, esos valores eran los que
+Yusef acababa de escribir. F2 "limpiaba" de vuelta a lo mismo.
+
+**Arreglo (PR-C6.3):** `_limpiarCampos` vacía campo por campo. Los `hidden`
+quedan afuera a propósito — ahí viven el token CSRF y el `_method` de Rails; los
+dos que sí hay que limpiar (`cliente_id` y `cantidad_paquetes`) ya los maneja
+`clearForm` explícitamente.
+
+---
+
+### A1-04 · El código de barras no distinguía caja 1 de caja 2 — ✅ **ARREGLADO** (PR-C6.6)
+
+Este es el centro de la reunión y el que más plata mueve, porque de acá cuelga
+el inventario.
+
+`_etiqueta.html.erb:29` codifica el `numero_recepcion` pelado. Pero
+`crear_split!` (`paquete.rb:367-395`) le asigna a las N cajas **el mismo**
+`numero_recepcion` — el número madre — y las diferencia solo por `numero_caja`
+(el unique index es compuesto: `(numero_recepcion, numero_caja)`).
+
+O sea que las dos cajas de un tracking dividido **llevan el mismo código de
+barras impreso**. Escanear no dice cuál es cuál:
+
+> "Si yo escaneo esto no sé si es el paquete uno o el paquete dos."
+
+El `n/N` sí sale impreso como texto (`etiqueta_fraccion`), pero no va adentro
+del código escaneable, que es lo único que se lee en San Pedro.
+
+Por qué importa: al recibir en San Pedro se escanea para **rebajar del
+inventario**, y ahí hay que saber cuál de las N cajas llegó y cuál falta.
+
+> "Esa etiqueta selecciona del inventario... el paquete que sí vino, y que falta
+> el otro. De esa manera él rebaja."
+
+Lo que pidió: que el código lleve el sufijo de caja — `7-1`, `7-2`.
+
+> "Donde vos se lo vas a tener que poner es aquí: acordate que aquí va el 6 —
+> bueno, aquí sería 7-1, 7-2."
+
+**Arreglo (PR-C6.6).** `etiqueta_codigo_barras` arma el payload con dos reglas:
+
+1. **Es el warehouse, nunca el tracking.** Sin número de recepción devuelve
+   `nil` y **no se imprime barcode**, en vez de caer al tracking como antes.
+   Una etiqueta sin código es un problema visible; una con el código
+   equivocado se escanea mal en San Pedro y nadie se entera.
+2. **Lleva el sufijo de caja** cuando el tracking se dividió. El mismo texto va
+   impreso debajo, para poder teclearlo si la etiqueta viene rayada.
+
+⚠️ **Y lo que hubiera cambiado un bug por otro:** el scope de búsqueda usa
+`numero_recepcion ILIKE`, así que escanear `RMI0002026000042-2` daba **cero
+resultados** contra la recepción `RMI0002026000042`. `Paquete.buscar` ahora
+parsea el sufijo y cae **en la caja exacta**. Si esa caja no existe, busca por
+el número madre en vez de devolver vacío — puede ser una etiqueta de una caja
+que se eliminó, o un tracking que casualmente termina en `-2`.
+
+Y la contraparte, igual de importante:
+
+### A1-05 · El sufijo `-1`, `-2` va en la recepción, **nunca** en el tracking — **regla**
+
+Es el error que arrastraba el sistema viejo y que confundió a todo el mundo:
+
+> "El tracking él le agregaba un 2, y al warehouse él le agregaba un 2 y el 1."
+
+> "Este -1 y -2 al tracking no es necesario ponérselo."
+
+El tracking es del courier y no se toca. La única excepción es el sufijo
+`A`/`B`/`C` para trackings **duplicados de verdad**, que es otra cosa
+(`next_duplicate_suffix`).
+
+---
+
+### A1-06 · Cambiar la cantidad de cajas no eliminaba las sobrantes — ✅ **ARREGLADO** (PR-C6.7)
+
+Yusef lo reprodujo dos veces en vivo:
+
+- Un paquete con 3 cajas → lo editó a 2 → **quedaron las 3**.
+- Después lo subió a 5 → quedaron los registros viejos mezclados con los
+  nuevos: "aquí dice dos y aquí dice que son cinco".
+
+`crear_split!` solo sabe **crear** N cajas. No hay una operación de *ajustar* de
+N a M sobre un split que ya existe.
+
+La regla que acordaron es simple: la cantidad nueva manda.
+
+> **Jorge:** "Si tienes cinco y lo quieres cambiar a dos, solo deberían quedar los dos."
+> **Yusef:** "Eliminar lo otro. Ajá."
+
+**Arreglo (PR-C6.7):** `Paquete.ajustar_split!`. Bajar elimina las cajas de
+`numero_caja` mayor; subir crea las nuevas con el mismo número madre.
+
+**Guarda dura, confirmada por Jorge:** si alguna caja a eliminar ya está
+facturada, pre-facturada o entregada, la operación falla **entera** y no toca
+nada — borrarla descuadraría la venta en silencio. Mira el estado **y** los FKs
+de cobro, porque un paquete puede tener `pre_factura_id` sin que su estado lo
+diga todavía.
+
+Qué hacer en ese caso sigue siendo pregunta abierta de Yusef; hasta que
+conteste, bloquear con un error explícito es lo conservador.
+
+---
+
+### A1-07 · Miami actualiza desde /etiquetar, no desde /paquetes — ✅ **HECHO** (PR-C6.10)
+
+Hoy, cuando escanean un tracking que ya existe y eligen "actualización", el
+sistema los manda a `/paquetes/:id/edit`. Yusef no quiere eso:
+
+> "Me mandaste a editar y yo no quiero editar mi paquete."
+
+Lo que quiere: que el formulario de `/etiquetar` **se recargue con los datos que
+ya tiene** el paquete, y ahí mismo lo corrijan y le den F9.
+
+> "Que te cargue aquí la lista. Esto te lo vuelve a llenar tal cual como quedó,
+> y actualizan todo lo que quieran actualizar, porque eso es lo que ellos ocupan."
+
+La línea divisoria la definió él mismo, y es limpia:
+
+| Qué cambia | Dónde |
+|---|---|
+| Datos que Miami **captura** — tracking secundario, tercero, courier, proveedor, medidas, peso, cantidad de cajas, tipo de servicio | `/etiquetar` |
+| **Estado** del paquete — "lo escanearon que se iba y al final ya no se va" | `/paquetes` |
+
+> "Si ellos entran a actualizar acá es porque van a actualizar datos del paquete,
+> de lo que ellos ingresan."
+
+Lo confirmó con Julián (Miami) por videollamada durante la reunión: sí, siempre
+mejor en la misma hoja donde llenan.
+
+Motivo de fondo: hoy actualizar 2 cajas cuesta ir a editar → guardar → volver →
+re-imprimir → seleccionar. Yusef contó los pasos en voz alta y ahí se le acabó
+la paciencia.
+
+**Arreglo (PR-C6.10):** `/etiquetar?paquete_id=X` recarga el mismo formulario
+con lo que el paquete ya tiene, y F9/F10 guardan encima. "Es actualización"
+deja de navegar a `/paquetes/:id/edit`.
+
+**La línea divisoria se respeta en el servidor**, no solo en la UI:
+`paquete_params` no permite `estado`, y hay un test que lo fija. Cambiar la
+cantidad de cajas delega en `ajustar_split!` (A1-06), con su bloqueo si alguna
+ya se cobró.
+
+**Decisión tomada, confirmada por Jorge:** al actualizar **la sesión no le pisa
+el tipo de envío** al paquete. Si es CEM y el operario está en sesión CER,
+corregirle el peso no puede convertirlo en CER — la sesión manda al *crear*.
+El cambio de servicio sigue siendo la excepción explícita.
+
+---
+
+### A1-08 · Marcar "cambio de servicio" no preguntaba a cuál — ✅ **ARREGLADO** (PR-C6.8)
+
+> "En etiquetar, al marcar cambio de servicio no está, no pregunta qué tipo de
+> servicio."
+
+Y cuando lo forzó por otro camino y guardó, **el tipo de envío no cambió**: se
+quedó en CER. O sea que además de no preguntar, no aplica.
+
+Jorge propuso un modal. Yusef no se casa con la forma, sí con la velocidad:
+
+> "No sé, lo que funcione bien: solo darle click, yo doy click y click y ya va.
+> Lo que vos creas que te funcione bien, que no cargue y que sea rápido."
+
+**Arreglo (PR-C6.8):** el checkbox adopta el patrón `checkbox-modal` que ya usa
+Retener — el propio `checkbox_modal_controller.js` lo tenía documentado como
+patrón para "Cambio de Servicio". Al marcarlo abre un `<dialog>` que pregunta
+el destino, y al guardar **el tipo de envío cambia de verdad**.
+
+Se agregó `paquetes.tipo_envio_anterior_id` para dejar rastro. No es adorno: el
+cambio **genera un cargo automático** en la pre-factura, y cuando el cliente
+reclame hay que poder decirle de qué a qué se movió (`cambio_servicio_label`
+devuelve `"CER → CKM"`).
+
+Dos detalles que se resolvieron implementándolo:
+
+- **No se usa `errors.add`** para el caso "marcó el flag y no eligió destino":
+  el `valid?` que corre adentro de `save` limpia los errores, así que el
+  paquete se guardaba igual — a medias, con el flag prendido sobre el tipo
+  viejo. Se corta antes de guardar. Es el mismo tropiezo que ya había pasado
+  con el cuatro-ojos de las notas.
+- **Elegir el mismo servicio de la sesión no marca cambio**: no es un cambio,
+  así que no cobra cargo ni ensucia el rastro.
+
+---
+
+### A1-09 · Alerta cuando el paquete no es del tipo de envío de la sesión — ✅ **HECHO** (PR-C6.9)
+
+La sesión por tipo de envío **ya existe** (`etiquetar_controller.rb:3-4,
+16, 28, 144-151`: `iniciar_sesion`, `finalizar_sesion`,
+`require_tipo_envio_sesion`). Lo que falta es qué pasa cuando el paquete
+escaneado no corresponde.
+
+Yusef llamó a Julián (Miami) por video en plena reunión para decidirlo, y
+quedó así:
+
+Al escanear un paquete cuya pre-alerta tiene un tipo de envío distinto al de la
+sesión → **sonido feo + modal** con dos opciones:
+
+| Opción | Qué hace |
+|---|---|
+| **Cambiar de sesión** | Manda a finalizar sesión y volver a escoger tipo de envío |
+| **Seguir en la misma sesión** | Limpia el formulario. El paquete **no se ingresa** |
+
+La clave: en ningún caso se puede grabar bajo el tipo equivocado.
+
+> "No te va a permitir grabarlo. No vas a poder hacerlo... el chavo no hizo nada,
+> no pudo hacer nada."
+
+Julián lo confirmó: mejor que lo obligue a cerrar la sesión.
+
+⚠️ **Lo que este doc no había visto: hoy se grababa bajo el tipo equivocado, en
+silencio.** `create_single` hace `@paquete.tipo_envio_id = @tipo_envio_sesion.id`
+**incondicional**, así que un paquete con pre-alerta CEM escaneado en sesión CER
+se guardaba como CER sin que nadie se enterara. El modal es la mitad visible;
+**el rechazo del servidor es la mitad que cobra bien**.
+
+**Arreglo (PR-C6.9):** `conflicto_con_la_sesion` rechaza en el servidor, y el
+front avisa antes con sonido feo y un banner con las dos salidas acordadas. El
+**cambio de servicio (A1-08) es la excepción explícita** — ahí el operario
+declaró que el paquete sale de la sesión.
+
+Los sonidos que entraron con esto (A1-10): el pito de **"ya existía"** (el modal
+de duplicado abría mudo) y el **feo** para el conflicto de tipo. `audio#error`
+ya existía sin cablear.
+
+> **Yusef:** "Si es CKM ya sabemos que se lo va a llevar tu papá. Como tienen el
+> relajo en la mesa, los va a obligar a hacer los que son correctos."
+
+---
+
+### A1-10 · Sonidos — **YA ESTÁ a medias**
+
+Existe el `audio_controller` cableado a tres eventos
+(`etiquetar/index.html.erb:91`): `success`, `clienteNotas`, `speakPreAlerta`.
+Yusef aprobó el que ya suena:
+
+> "Ese pin está bien. Se oye amigable, no se oye así como que lo querés apagar."
+
+El mapa completo que pidió:
+
+| Cuándo | Sonido | Estado |
+|---|---|---|
+| Terminó de escanear y ya revisó pre-alertas — "podés seguir" | pin agradable | ~~✅ existe~~ **nunca existió** — ✅ `PR-C7.42` (`C16-02`) |
+| Seleccionó el código de cliente | pin | ~~✅ existe~~ **nunca existió** — ✅ `PR-C7.42` (`C16-02`) |
+| El paquete **tiene pre-alerta** | voz grabada | ⏳ falta la grabación |
+| El tracking **ya existía / ya fue usado** | pito distinto | ✅ PR-C6.9 |
+| **Error** — tipo de envío distinto al de la sesión | sonido feo | ✅ PR-C6.9 · tres opciones en `PR-275` |
+| **Antes** de que salga cualquier modal | pin | ✅ **de verdad** desde `PR-275` — ver abajo |
+
+> ⚠️ **Las dos primeras decían ✅ desde que se escribió esta tabla y nunca lo
+> fueron.** El único «podés seguir» que existe es el pin de guardado
+> (`dispatch("success")`, desde abril), y suena **solo al grabar**: el chequeo
+> del tracking que vuelve limpio y el cliente que aparece en el autocomplete
+> abren mudos. Yusef lo agarró con la pistola en la mano el 2026-08-25
+> (`C16-02`). Es el mismo drift doc-vs-código que denuncia el párrafo de abajo.
+>
+> ⚠️ **La última decía ✅ desde `PR-C6.16` y no era cierta.** El evento
+> `etiquetar:modalAbierto` estaba cableado en la vista y **nadie lo disparaba**:
+> el modal de sucursal de retiro y el del PIN del supervisor abrieron mudos
+> durante meses. Un cable suelto en Stimulus no tira error ni ensucia la
+> consola — simplemente no suena, y el operario está mirando la pistola.
+>
+> Es el mismo bug que Yusef ya había reportado una vez (*"el modal de duplicado
+> abría mudo"*), reaparecido en otros dos modales.
+>
+> `PR-275` lo arregla y deja dos lints para que no vuelva:
+> `test/lint/sonidos_cableados_test.rb` verifica que **ningún modal de las
+> pantallas de escaneo abra sin sonar** —método por método, porque con dos
+> modales en el mismo archivo un chequeo global no agarra que le borren el
+> sonido a uno— y que cada `audio#accion` nombre un método que existe.
+>
+> Salió también que el modal de configuración **probaba sonidos que no eran los
+> que suenan**: el botón rotulado "Pre-alerta" tocaba el de «ya existía», y el
+> de pre-alerta de verdad —el que suma la voz— no tenía botón. La lista ahora
+> sale de `SonidosDeEscaneo::BOTONES` y hay lint que la confronta contra el
+> cableado real.
+
+Son **dos** pitos distintos, no uno. Yusef lo dijo así:
+
+> "Pita para dos razones... pita, te decía, pre-alerta, para que te fijaras que
+> tiene pre-alerta." · "El otro pito es porque te tira que **ya existía**."
+
+Y las notas de Jorge de esa misma reunión lo listan igual: *"pita — 1) pre-alerta
+2) que ya existía"*.
+
+Sobre el pin de confirmación, la razón no es cosmética:
+
+> "Ahorita el sistema es bolazón, pero más adelante pueda que tenga un pequeño
+> lag de milisegundos... Ocupamos la confirmación para que ellos puedan estar
+> seguros de que pueden seguir."
+
+La voz de pre-alerta es la de su señora, grabada en 2022-2023 para el sistema
+viejo. Va a mandar grabaciones nuevas. Del sonido de error, Jorge le va a pasar
+una lista para que elija.
+
+---
+
+### A1-11 · La ventana de impresión queda abierta — ✅ **ARREGLADO** (PR-C6.4)
+
+F9 abre la etiqueta en pestaña nueva y ahí se quedaba. En un lote de 100
+paquetes se juntaban 100 pestañas.
+
+> **Yusef:** "Esto que ves acá debería de cerrarse."
+> **Jorge:** "Cerrar y te tiro una limpia."
+
+**Arreglo:** el layout de la etiqueta escucha `afterprint` y cierra. Cierra
+tanto si imprimió como si canceló — lo que Yusef quiere es volver a escanear,
+no decidir. Lleva un fallback por `matchMedia("print")` para el Safari viejo,
+que no dispara `afterprint`.
+
+El `clearForm` post-guardado ya existía, así que con esto queda el ciclo
+completo que pidió: **F9 → imprime → se cierra → `/etiquetar` limpio**.
+
+⚠️ **Lo que el test cubre y lo que no.** Chrome headless dispara `beforeprint`
+pero **nunca `afterprint`** — no hay diálogo que cerrar; se verificó con una
+prueba directa. Así que el ciclo real no se puede observar en CI. Lo que sí se
+prueba es todo lo que es código nuestro: que el listener quede registrado y que
+al llegar el evento la ventana se cierre. **Queda para verificación manual en
+`:3090`**: imprimir de verdad y ver la pestaña desaparecer.
+
+---
+
+### A1-12 · Los atajos también arriba, no solo abajo — ✅ **HECHO** (PR-C6.11)
+
+> "Estos botones los dejaste abajo y a veces se ocupan acá arriba. En ambos lados."
+
+---
+
+### A1-13 · Guardar es F10, como en el resto del sistema — ✅ **ARREGLADO** (PR-C6.3)
+
+Yusef presionó **F10** para guardar sin pensarlo. Y tiene razón por costumbre:
+F10 es guardar en pre-facturas, ventas, egresos, ingresos, financiamientos y
+re-empaques. `/etiquetar` es el único que usa F8
+(`etiquetar_controller.js:56`, `index.html.erb:435,445`), donde F8 en el resto
+del sistema es *exportar a Excel*.
+
+**Arreglo (PR-C6.3):** F10 guarda, y **F8 queda de alias** mientras Miami se
+acostumbra — allá ya lo tienen en el dedo. Los `<kbd>` de la pantalla muestran
+F10.
+
+Queda la parte que no es código: **avisarle al equipo de Miami**.
+
+---
+
+### A1-14 · Buscar cliente por los últimos dígitos del código — ✅ **HECHO** (PR-C6.14b)
+
+> "El rollo de los códigos de cliente actuales es que tienen el `C00002867`.
+> Actualmente el sistema lee de derecha a izquierda."
+
+En el sistema viejo escriben solo `2867`, o hasta un solo dígito, y cae. Es
+búsqueda por **sufijo**, no por prefijo.
+
+> "Eso es algo que ya trabajan así, y si se los cambio... solo le ponían el dos."
+
+Contexto: los códigos viejos son de 4 dígitos y los nuevos de 5. **Los viejos no
+se migran** — se quedan como están.
+
+**Encontrar ya funcionaba** desde PR-10.f: `codigo ILIKE '%2867%'` matchea el
+sufijo, y los ceros a la izquierda ya se ignoraban (`C002 == C2 == 2`). Lo que
+faltaba era el **orden** — que era justamente la pregunta abierta: con códigos
+de 5 dígitos, teclear `6` trae decenas y el que uno quiere queda enterrado.
+
+**Arreglo (PR-C6.14b):** `Cliente.priorizar_codigo` ordena por
+
+1. el código que **es** ese número, ignorando ceros (`6` → `C00006`),
+2. el que **termina** en ese número (`2867` → `C00002867`),
+3. el resto.
+
+No inventa política: hace confiable exactamente lo que él describió. Y solo
+aplica cuando el término trae dígitos — buscar por nombre queda como estaba.
+
+⚠️ **Faltaba la mitad del front (PR-C6.16).** El autocomplete tenía un mínimo
+de **2 caracteres**, así que teclear un solo `2` nunca abría la lista — que es
+exactamente lo que Yusef describió. Lo encontró Jorge probándolo: *"veo que si
+pongo 2 no me sale María"*.
+
+Ahora un **dígito** suelto busca; una **letra** suelta no, porque buscar "a"
+devolvería la cartera entera y el dropdown sería ruido.
+
+La preselección que Yusef pidió **ya estaba**: `renderDropdown` deja el primer
+ítem activo, así que Enter lo toma sin tocar el mouse.
+
+---
+
+### A1-15 · Orden de campos y navegación — ✅ **HECHO** (PR-C6.11)
+
+Lo revisaron campo por campo:
+
+| Cambio | Detalle |
+|---|---|
+| **Notas internas** sube | Arriba del cuadro de carrier/proveedor/remitente |
+| **Carrier, proveedor y remitente** bajan | Al cuadro de abajo — "es parte de lo que van a llenar" |
+| **Pre-alerta y pre-factura** se van de `/etiquetar` | "Eso no tiene nada que ver con ellos" — Jorge confirmó que quedaron del inicio |
+| Tab desde **tercero** → descripción | Y si no activó tercero, de cliente → descripción directo |
+| **F4** activa el tercero | ✅ ya está (`etiquetar_controller.js:50-55`) |
+
+---
+
+### A1-16 · El cliente tercero no se guarda en ninguna base de datos — ✅ **HECHO** (PR-C6.14)
+
+Yusef fue enfático porque es un tema de integridad de datos:
+
+> "Solo se guarda en esa guía... Queda guardado en ese warehouse receipt, pero
+> no queda grabado en ninguna base de datos de clientes."
+
+Dos razones:
+
+1. **Autoridad**: quien digita en Miami no decide quién es cliente.
+   > "El que está digitando ahí no tiene ni voz ni voto para guardar."
+2. **Errores**: "ellos se pueden equivocar y pueden hacer este relajo."
+
+La excepción son los **revendedores**. Un cliente como Carlos Reyes tiene su
+propia cartera de terceros, y ahí sí sale el dropdown con los suyos:
+
+> "Él en su lista tiene su cartera de terceros... ahí sí me van a salir los de él."
+
+O sea: texto libre por defecto; dropdown solo si el cliente titular es
+revendedor y tiene terceros registrados.
+
+**El diagnóstico de este doc estaba a medias.** Decía "verificar que el texto
+libre no esté creando clientes". La verificación pasa —`tercero_id` solo se
+asigna eligiendo un `Cliente` que ya existe— pero **el texto libre no existía**,
+así que a un tercero fuera de la cartera no se le podía poner el nombre en la
+etiqueta. Y ese es el caso normal.
+
+**Arreglo (PR-C6.14):** columna `paquetes.tercero_nombre`. Lo que se escribe
+vive en **ese paquete** y no crea ningún cliente — hay un test que mide
+`Cliente.count` para fijarlo.
+
+`tercero_display` resuelve las dos fuentes con el catálogo mandando: si alguien
+eligió un cliente de verdad, ese nombre es el bueno. En el detalle se muestra
+**sin link ni código y con la aclaración "solo en este paquete"**: no es un
+`Cliente` y no debe parecerlo.
+
+Queda pendiente la cartera del revendedor (el caso Carlos Reyes): hoy no existe
+ni el flag `revendedor` ni la cartera, y el buscador actual mira **todos** los
+clientes.
+
+---
+
+### A1-17 · Peso y medidas por caja — ✅ **HECHO** (PR-C6.17)
+
+> "Sinceramente sí se ocuparía hacerle esa mejora: ponerle cantidad dos y aquí
+> te pregunta dos veces."
+
+Si son 2 cajas, el formulario tiene que pedir peso y medidas **de cada una**. Hoy
+solo pide una línea.
+
+Dos formas, y dejó elegir:
+
+- N líneas de una vez, según la cantidad
+- Un botón "agregar" que va sumando de a uno y limpia entre cada uno
+
+> "Como le importa que son dos, te da esa opción para dos. Al menos vos lo
+> cambias a tres."
+
+**Parecía chocar con el modal de F9**, y por eso quedó documentado antes de
+implementarse: la cantidad recién se sabe al apretar F9, así que no se pueden
+pedir N pesos antes.
+
+**La contradicción se disuelve pidiéndolos en ese mismo modal.** Ahí ya se
+pregunta la cantidad, y Yusef revalidó ese flujo en esta misma reunión — *"le
+voy a poner dos, ahí está una y dos, excelente"*. Así no se deshace nada de lo
+aprobado en PR-4.
+
+**Primer arreglo (PR-C6.17):** las filas se pusieron dentro del modal de F9,
+que es donde se preguntaba la cantidad.
+
+**Corrección (PR-C6.18b).** Jorge lo probó y fue directo: **"el F9 era como
+confuso"**. Tenía razón, y el motivo se ve al mirar la pantalla: el formulario
+mostraba **"Cant. Productos"** —que es cuántos artículos vienen adentro— y
+parecía el campo que mandaba, mientras el que de verdad divide el tracking en
+bultos estaba escondido detrás de una tecla.
+
+Son dos campos distintos y nadie lo podía adivinar:
+
+| Campo | Qué es |
+|---|---|
+| **Cant. Productos** | cuántos artículos vienen adentro — dato de contenido |
+| **Cant. Cajas** | en cuántos bultos **físicos** se divide el tracking |
+
+Ahora la cantidad de cajas vive **en el formulario**, junto al peso y las
+medidas, con las filas por caja debajo — que es exactamente donde Yusef la
+señaló: *"acá sería cantidad de paquetes o productos, y aquí el peso de cada
+quien"*. **F9 vuelve a ser solo guardar e imprimir.**
+
+Las filas nacen precargadas con lo que ya escribió arriba: si las cajas son
+parecidas basta con Enter, y solo se tocan las que difieren.
+
+Vive en `cajas_controller.js` y no dentro de `etiquetar` porque el partial
+`shared/_peso_medidas_calc` se usa en **dos** pantallas —`/etiquetar` y
+`/entrega_personal`— y las dos crean splits. Jorge preguntó si se podía unificar
+el componente: **ya lo estaba** desde PR-10.b; lo que faltaba era que el campo
+de cajas viviera ahí.
+
+Del lado del servidor, `crear_split!` acepta `por_caja:` con overrides. Solo se
+aceptan esos cuatro campos: el resto del paquete es el mismo para todas —mismo
+tracking, mismo cliente, mismo contenido— y lo único que cambia físicamente es
+cuánto pesa y mide cada bulto. Va con test.
+
+Lo que arreglaba de fondo: antes las N cajas nacían con el **mismo peso**, así
+que un tracking con una caja de 5 lb y otra de 30 se facturaba como dos de 5 —
+o como dos de 30, según cuál hubieran escrito. Las dos están mal, y el peso
+volumétrico salía igual de mal porque es derivado de las medidas.
+
+---
+
+### A1-18 · Motivos de retención editables — ✅ **APROBADO EN VIVO** (A3-11), falta la lista
+
+Hoy los motivos están fijos (paquete dañado, mercancía prohibida…). Yusef quiere
+un CRUD:
+
+> "¿Hay algún lugar donde nosotros podamos agregarlos, o te los tendremos que
+> estar dando a vos?"
+
+Ya sabe que falta al menos uno: *"solicitado por el cliente para retorno"*. Va a
+mandar la lista completa.
+
+Es el mismo patrón de siempre — [[feedback_yusef_crud_first]].
+
+---
+
+### A1-19 · Notas predeterminadas en pre-factura, facturación y caja — ✅ **HECHO** (PR-C6.13)
+
+El modal de motivos que ya existe en `/etiquetar` (retener) lo quiere replicado
+en las áreas de cobro:
+
+> "Ese mismo lo vas a crear para que existan predeterminados en prefactura, en caja."
+
+Para qué:
+
+> "Siempre tenemos, digamos, no cumple el mínimo y se le cobró tarifa tal."
+
+Otros ejemplos que dio: *"ese paquete fue enviado al cliente vía KAEX Logistics"*,
+*"retirado al crédito por Nilmo Peña"*.
+
+Un clic en vez de escribirlo a mano cada vez. Con opción de detallar manual
+también, como el de Miami.
+
+Y esas notas tienen que **verse en el detalle del paquete**, no quedarse en el
+documento donde se pusieron:
+
+> "Esa información me tiene que aparecer si yo entro aquí."
+
+**Arreglo (PR-C6.13):** el picker `shared/_plantillas_notas` se renderiza en
+pre-factura (alta y edición) y en la apertura de caja, y el detalle del paquete
+muestra una sección **"Notas de facturación"** con lo que se escribió en su
+pre-factura y en su factura.
+
+Lo segundo es lo que importa para servicio al cliente: es lo que necesitan
+cuando el cliente llama a preguntar por qué le cobraron algo.
+
+El CRUD de plantillas (`PlantillaNotaCliente`) y el `plantilla_picker`
+**ya existían** — faltaba usarlos en cobros.
+
+---
+
+### A1-20 · En el detalle del paquete, las notas más arriba — ✅ **HECHO** (PR-C6.11)
+
+> "Acá proveedor, carrier, remitente... es más importante que diga notas."
+
+---
+
+### A1-21 · /paquetes muestra la madre y las hijas — **cerrado, no se toca**
+
+Se discutió largo y **quedó como está**. Jorge lo dejó separado (madre + N
+hijas) y Yusef lo aceptó:
+
+> "Que quede así como está. Solo tenés que corregir el número de recepción."
+
+La razón para mantenerlo separado la dio él mismo: puede llegar una caja y la
+otra no.
+
+Opcional, si sobra tiempo: colapsar en una fila con un expander.
+
+> "Que alguien pueda presionar en algún lado y se baje y saque la segunda línea."
+
+---
+
+### A1-22 · Aviso al retroceder en el pipeline — **YA ESTÁ, aprobado**
+
+Yusef pasó un paquete de "empacado" a "recibido en Miami" y le salió el aviso:
+
+> "Excelente que lo estás previniendo."
+
+---
+
+### A1-23 · Auditoría incompleta — ✅ **HECHO** (PR-C6.15)
+
+> "Auditar quién... en este no, fíjate, pero en otros campos sí. No sé si es
+> que se lo quitó o no había."
+
+**Tenía razón a medias, y este doc lo diagnosticó al revés.** Decía que faltaba
+extender `paper_trail` más allá de `Paquete`. **La captura no era el problema**:
+`has_paper_trail` está en **41 modelos**. Lo que faltaba era *verlo*.
+
+Lo único con "quién" visible eran los cambios de **estado**, que llevan su
+propia columna `fecha_<estado>_by_user_id`. Por eso unos campos sí y otros no —
+exactamente lo que él notó.
+
+**Arreglo (PR-C6.15):** sección "Historial de cambios" en el detalle del
+paquete, con cuándo, quién y qué cambió. Los ids se resuelven a nombres (un
+`tipo_envio_id: 4 → 7` no le dice nada a nadie), los campos derivados y
+`updated_at` se filtran, y un cambio sin usuario dice "Sistema" en vez de un id
+suelto.
+
+---
+
+### A1-24 · El PIN **no** va en /etiquetar — **límite de alcance**
+
+Importante dejarlo escrito ahora que Fase 13 está fresca. Jorge preguntó y Yusef
+cortó:
+
+> **Jorge:** "¿Este no ocupa PIN?"
+> **Yusef:** "No. El PIN es para prefactura. De momento no recuerdo algo que
+> ocupe PIN ahí."
+
+Nadie extienda `Autorizacion` a `/etiquetar`.
+
+---
+
+### A1-25 · Origen del paquete (China / Estados Unidos) — ✅ **CERRADA** (RP-19)
+
+> ⚠️ **Ojo con la corrección.** `PR-C6.38` lo resolvió derivándolo de la
+> sucursal de recepción y lo documentó como **informativo**. Yusef contestó que
+> **entra en el cobro** — *"se utiliza para el cobro en Entrega Personal o en
+> PreFactura"*. La derivación estaba bien; la conclusión no. Ver `RP-19`.
+
+Campo ya marcado en pantalla, sin definir.
+
+> "Lo que marca acá, si es de China no sé qué. Eso es algo que tenemos que ver...
+> Como ahorita estamos en Estados Unidos, pero ya va a abrir China."
+
+---
+
+### A1-26 · Tracking secundario — **A MEDIAS** (matizado por A3-09)
+
+Se guarda, se muestra en el detalle y **se puede buscar en los filtros**. Yusef
+lo probó durante la llamada y funcionó.
+
+> ⚠️ **Matizado el 2026-08-08 (A3-09).** Lo que estaba era el *display* y el
+> filtro de `/paquetes`. La **búsqueda del escaneo** no lo miraba:
+> `check_tracking` —el endpoint que usa la pistola en /etiquetar— hacía
+> `where(tracking: valor)` sobre una sola columna. Yusef: *"el sistema debe
+> buscar en esto también, debe buscar en la base, y **eso no estaba**"*. Tenía
+> razón. Arreglado en `PR-C6.21`.
+
+---
+
+### A1-27 · Cámara con IA que llene el formulario — **FUTURO**
+
+Es lo que más quiere del proyecto, en sus palabras:
+
+> "Cuando me vayas a trabajar en la inteligencia artificial, lo primero que yo
+> quiero es que estos chavos, encima de la mesa de trabajo, tengan la cámara...
+> La cosa es que lea la etiqueta y llene este formulario. Es lo que más quiero."
+
+Una cámara colgada de un cable sobre la mesa, que se acerca a la caja, lee la
+etiqueta del courier (FedEx, Amazon, etc.) y llena `/etiquetar` solo.
+
+No es para ahora. Sí conviene que el formulario quede alimentable por algo que
+no sea un humano tecleando.
+
+---
+
+### A1-28 · Fechas del proyecto — **contexto**
+
+| Cuándo | Qué |
+|---|---|
+| **Noviembre 2026** | Sistema terminado, "solo con los últimos detalles" |
+| **Diciembre 2026** | **No** se arranca — es temporada alta |
+| **Enero 2027** | Arranque real, jalando la base de datos que quede de diciembre |
+
+> "Yo sé que para noviembre vas a tener eso, pero mentira que en diciembre vamos
+> a iniciarlo. En enero, que baja un poquito."
+
+También pidió cambiar el formato de trabajo:
+
+> "Prefiero que vos vengas. Por eso te dije: hagamos videollamadas, porque en las
+> videollamadas estoy obligado a atenderte."
+
+Y Jorge propuso diagramas de proceso, que Yusef aceptó a medias — prefiere
+revisar sobre el sistema andando que sobre un diagrama.
+
+---
+
+### Lo que Yusef quedó de mandar
+
+| Qué | Para qué |
+|---|---|
+| Lista completa de **motivos de retención** | A1-18 |
+| Lista de **notas predeterminadas** por área (pre-factura, caja, SAC) | A1-19 |
+| **Formato exacto del número de recepción** con el mes | Ver preguntas |
+| **Grabaciones de voz** para pre-alerta | A1-10 |
+| Elección del **sonido de error** de la lista que le pase Jorge | A1-10 |
+
+---
+
+### Preguntas nuevas para Yusef (se suman al Excel después del envío 3)
+
+1. **Formato del número de recepción.** Dijo que le falta el mes y que ya lo
+   había mandado, pero no lo encontró en la llamada:
+   > "Lo que le faltaba era el mes en que se recibió... o sea, era la fecha:
+   > recibido en Miami tal fecha 2026."
+
+   Hoy es `<PREFIX><AÑO><CONTADOR-6>`. **No se inventa el formato**: hay que
+   pedirle el que mandó. Y ojo — cambiarlo toca `NumeroRecepcionCounter`, el
+   índice único y todos los números ya generados en staging.
+
+2. **Búsqueda de cliente por sufijo** (A1-14) — con 5 dígitos, ¿cómo desempata?
+
+3. **Origen del paquete** (A1-25) — ¿qué orígenes y qué cambia según el origen?
+
+4. **F8 → F10** (A1-13) — ¿avisamos a Miami del cambio de atajo?
+
+5. **Peso por caja** (A1-17) — ¿N líneas de una vez o botón "agregar"?
+
+6. **Eliminar cajas al bajar la cantidad** (A1-06) — ¿qué pasa si alguna de las
+   que se van ya está facturada o entregada?
+
+---
+
+### Cambios que se ocupan — resumen
+
+**BUGs (confirmados en código)**
+
+| ID | Qué | Dónde |
+|---|---|---|
+| ~~A1-01~~ | ~~Enter envía el formulario en vez de avanzar de campo~~ ✅ **arreglado** | `etiquetar_controller.js` `formKeydown` |
+| ~~A1-02~~ | ~~En `/paquetes` el tracking salía dos veces seguidas~~ ✅ **arreglado** | `index.html.erb` col. "N° recepción" — era la vista, no los datos |
+| ~~A1-03~~ | ~~F2 no limpia después de un Enter~~ ✅ **arreglado** | era `formTarget.reset()`, no el foco |
+| ~~A1-04~~ | ~~El código de barras no distingue caja 1 de caja 2~~ ✅ **arreglado** | `etiqueta_codigo_barras` + parseo en `Paquete.buscar` |
+| ~~A1-06~~ | ~~Cambiar la cantidad de cajas no elimina ni crea las sobrantes~~ ✅ **arreglado** | `Paquete.ajustar_split!` |
+| ~~A1-08~~ | ~~"Cambio de servicio" no pregunta a cuál, y no aplica~~ ✅ **arreglado** | modal + `aplicar_cambio_servicio` |
+| ~~A1-11~~ | ~~La ventana de impresión no se cierra~~ ✅ **arreglado** | `layouts/etiqueta.html.erb` |
+
+**Nuevo**
+
+| ID | Qué |
+|---|---|
+| ~~A1-07~~ | ~~Actualizar desde `/etiquetar` con el formulario pre-cargado~~ ✅ **hecho** |
+| ~~A1-09~~ | ~~Modal + sonido cuando el tipo de envío no es el de la sesión~~ ✅ **hecho** |
+| A1-10 | Pito de "ya existía", sonido de error, pin antes de los modales, voz de pre-alerta |
+| ~~A1-12~~ | ~~Atajos arriba y abajo~~ ✅ **hecho** |
+| ~~A1-15~~ | ~~Reordenar campos y flujo de Tab~~ ✅ **hecho** |
+| A1-17 | Peso y medidas por caja |
+| A1-18 | CRUD de motivos de retención |
+| ~~A1-19~~ | ~~Notas predeterminadas en pre-factura, facturación y caja~~ ✅ **hecho** |
+| ~~A1-20~~ | ~~Notas arriba en el detalle del paquete~~ ✅ **hecho** |
+
+**Verificar / decidir**
+
+| ID | Qué |
+|---|---|
+| ~~A1-05~~ | ~~Que el sufijo `-1`/`-2` **nunca** toque el tracking~~ ✅ **con test de regresión** |
+| ~~A1-13~~ | ~~Unificar guardar en F10~~ ✅ **arreglado** (F8 queda de alias) |
+| ~~A1-16~~ | ~~Que el tercero de texto libre no esté creando clientes~~ ✅ **hecho** — no existía, se construyó |
+| ~~A1-23~~ | ~~`paper_trail` más allá de `Paquete`~~ ✅ **hecho** — faltaba mostrarlo, no capturarlo |
+| A1-24 | **No** meter PIN en `/etiquetar` |
+
+**Ya está** — A1-22 (aviso de retroceso), A1-26 (tracking secundario), sesión
+por tipo de envío (A1-09 parcial), F4 tercero (A1-15).
+
+**Futuro** — A1-27 (cámara con IA).
+
+---
+
+## Conversación 6 · Audio 2 — monedas, cargos extra y escalonado
+
+Yusef recorriendo su hoja de precios cargo por cargo. **Este audio contesta la
+pregunta más grande que teníamos abierta**: la moneda de los diez cargos que
+PR-10.i dejó sin cargar porque la leyenda de colores de la hoja nunca se aplicó
+a las celdas.
+
+---
+
+### A2-01 · Los precios los ingresa Yusef, no Jorge — **cambia la estrategia**
+
+Lo más importante del audio para el plan de trabajo:
+
+> "No es necesario que vos me crees aquí con los precios. **Los precios los
+> ingresamos nosotros.**"
+
+Jorge solo carga **los cuatro** que hacen falta para poder probar:
+
+> "Vos ingresás estos cuatro que están acá. ¿Por qué? Para que podamos usar el
+> sistema y probarlo. Después vos me decís que ingresemos los demás nosotros,
+> entonces yo pongo a Vanessa o a alguien y lo ingresamos nosotros. Porque eso
+> es demasiado trabajo para meterlo vos."
+
+O sea que la respuesta a "faltan 10 cargos por cargar" **no es cargarlos** — es
+que el CRUD esté completo y ellos los metan. Mismo patrón de siempre:
+[[feedback_yusef_crud_first]].
+
+Esto **cierra** la pregunta ALTA *"la moneda de 10 cargos"* del Excel: ya no
+bloquea nada de código.
+
+---
+
+### A2-02 · Regla de fondo: el flete internacional va en dólares, los mínimos en Lempiras
+
+> "Casi todo lo que tiene que ver con servicios de flete, los fletes
+> internacionales nuestros... casi todo está en dólares. **A excepción de cuatro
+> mínimos**, que están en lempiras."
+
+Y el porqué es competitivo, no contable:
+
+> "Así es la competencia... el que le sigue, que cobra más barato, cobra
+> doscientos más impuestos. Yo cobro ciento setenta y tres 91 centavos, o sea
+> haciendo 200."
+
+| | Competencia | Compras Express |
+|---|---|---|
+| Precio de lista | L.200 | L.173.91 |
+| + ISV 15% | L.30 | L.26.09 |
+| **Total al cliente** | **L.230** | **L.200** |
+
+Por eso el mínimo es **L.173.91** y no un número redondo: es L.200 exactos ya con
+impuesto. Confirma que el mínimo está bien cargado y que la regla del ISV
+(precio neto, ISV encima) es la correcta.
+
+---
+
+### A2-03 · Monedas de los cargos — **RESUELTAS**
+
+Lo que dijo de cada uno, cruzado contra lo que hay cargado hoy:
+
+| Cargo | Yusef (audio 2) | En el sistema | |
+|---|---|---|---|
+| **Ajuste** | **USD** — "aquí dice un lempira pero yo lo puse a dólares" | no cargado | ✅ resuelto |
+| **Cambio de servicio** | **L.100** — "son los 100 lempiras, yo te lo puse que eran 5" | L.100 | ✅ arreglado (A2-04) |
+| **Compras online** | **USD** — "ponerlo 1 USD más impuesto" | USD 1.00 | ✅ coincide |
+| **Consolidado en Miami** | **sin costo** — "eso no tiene ningún costo, en cero. Le pusimos algo pero es porque me equivoqué" | no cargado | ✅ resuelto |
+| **Entrega local** | **variable** — "a veces hay entregas especiales que no sabemos el costo" | no cargado | ✅ manual |
+| **Entrega nacional** | **LPS** — "servicios convencionales, es decir lempiras" | LPS 86.96 | ✅ coincide |
+| **Flete** (genérico) | **variable** — "un flete X que hagamos, que no sepamos cómo ingresar" | no cargado | ✅ manual |
+| **Flete internacional UPS** | **USD** — "esa es las exportaciones" | USD 1.00 | ✅ coincide |
+| **Flete México** | de México a Honduras, "ya le puse los precios" | no cargado | ⚠️ moneda no dicha |
+| **Manejo y gastos de destino** | "igual parecido al de ajuste" (y ajuste es USD) | **LPS** 1.00 | ⚠️ ver abajo |
+| **Producto ejemplo** ×2 | **borrar** — "no existe" | no cargado | ✅ correcto |
+| **Recolecta Miami** | **$35 USD**, con descuentos por cliente | choca con `TarifaRecolecta` | ⚠️ ver A2-06 |
+| **Retenido en Miami** | **NO cuesta** — ver A2-05 | no cargado | ✅ resuelto |
+| **Retornado de Miami** | **USD**, $5 mínimo / $15 típico | USD 5.00 | ✅ coincide |
+| **Servicio de entrada y salida** | **$5 a $10 USD** por paquete | no cargado | ✅ resuelto |
+
+⚠️ **Manejo y gastos de destino** es el único donde el audio y la hoja se
+contradicen. La hoja dice textual *"ponerlo lps1 mas isv"* (por eso está en LPS)
+y en el audio dice que es *"parecido al de ajuste"*, que es USD. Puede que
+"parecido" se refiera a la **naturaleza** del cargo (un trámite variable) y no a
+la moneda. **No lo cambié.** Va a la lista de confirmar.
+
+---
+
+### A2-04 · Cambio de servicio: cobraba 3.7× de más — ✅ **ARREGLADO** (PR-C6.1)
+
+| | |
+|---|---|
+| Yusef en el audio | **L.100** |
+| En la hoja | 5 |
+| **En el sistema hoy** | **$15 USD ≈ L.373** |
+
+Y no es un cargo que alguien elige a mano: **se auto-genera en nota de débito**
+al facturar un paquete con `solicito_cambio_servicio`. O sea que hoy sale solo,
+a casi cuatro veces lo que Yusef dice que vale.
+
+Él mismo dijo que lo va a ajustar:
+
+> "Como esto es editable, nosotros lo vamos a cambiar de acuerdo a lo que
+> cuadremos al final."
+
+Esto **cierra** la pregunta ALTA *"cambio de servicio: su hoja dice 5, el sistema
+cobra $15"* del Excel.
+
+**Arreglo (PR-C6.1).** Queda en `L.100 LPS` con el ISV **adentro**:
+
+| | neto | + ISV |
+|---|---|---|
+| Antes ($15 USD) | L.324.04 | **L.372.65** |
+| Ahora (L.100) | L.86.96 | **L.100.00** exactos |
+
+Va con el ISV adentro al revés que los cinco cargos de la hoja, y es a
+propósito: los de la hoja van netos porque ahí dice *"PRECIOS NO INCLUYEN
+IMPUESTOS"*, y este número vino del **audio**, donde Yusef habla del precio
+final que paga el cliente. Con el flag en `true` el CRUD le muestra **100** —
+su número — y `precio_venta_sin_isv` mete los 86.96 a la línea. Es el mismo
+criterio que `Tarifa#minimo_monto_con_isv`, que lo deja escribir 200 y guarda
+173.91.
+
+Él lo sigue ajustando desde el CRUD: *"como esto es editable, nosotros lo vamos
+a cambiar de acuerdo a lo que cuadremos al final"*.
+
+⚠️ **El seed no alcanzaba.** `db/seeds.rb` usa `find_or_create_by!`, así que
+corregirlo no toca la fila donde el cargo ya existe — que es justamente donde
+importa. Va con `ServiciosExtraPropuesta2026.corregir_cambio_servicio!`, que
+`tarifas:sembrar_cargos_2026` ya invoca (y hay tarea suelta
+`tarifas:corregir_cambio_servicio` por si hace falta).
+
+**Corrección a lo que decía este doc:** la `NotaDebito` que se auto-crea al
+facturar con motivo `cambio_servicio` **no contiene el cargo** — sus líneas son
+un *ajuste de flete*. Los L.100 viven en la pre-factura y en la venta, que es
+donde se cobra. Quedó un test para que nadie lo asuma al revés y termine
+cobrándolo dos veces.
+
+Cubierto por `test/models/cambio_servicio_precio_test.rb` (4 tests) y 5 más en
+`servicios_extra_propuesta_2026_test.rb`. Verificado reintroduciendo el $15 —
+caen 5.
+
+---
+
+### A2-05 · Retener en Miami **no** tiene costo — **corrección**
+
+> "El retener **no tiene un cobro**. Lo que en realidad tiene un cobro es el
+> proceso que le hagamos."
+
+Y el $5 que aparecía era deliberado, pero ya no lo quiere:
+
+> "Fue un error que se dejó. Que cobrábamos $5 por retener en Miami **para que la
+> gente se asustara** cuando leyera."
+
+Para qué usan retener de verdad: el cliente quiere saber cuánto mide y pesa
+antes de decidir si lo manda aéreo o marítimo. **Medir y pesar no se cobra.**
+
+Lo que sí se cobra es lo que venga después (retornar, entrada y salida, etc.).
+
+Y mencionó que el servicio de consolidación (**CONT**) sí va a existir: el
+cliente acumula en Miami y pide que se lo manden todo junto.
+
+---
+
+### A2-06 · Los cargos que faltan definir bien
+
+| Cargo | Lo que dijo | Falta |
+|---|---|---|
+| **Retornado de Miami** | $5 es el **mínimo**. Con trámite y llevada al correo sube. Si es **USPS** hay que pagar motorista aparte → **$15** | ¿$5 mínimo con escalones, o dos cargos? |
+| **Entrada y salida (IN & OUT)** | El cliente recibe en Miami y lo recoge él mismo. "$5 cada uno" por paquete, "de 10 a 5 depende" | El rango — ¿de qué depende? |
+| **Recolecta Miami** | "$35 normal, pero hay clientes que tienen descuentos" | Choca con [[project_recolecta_tabla_tarifas]], donde pidió tabla **por zona**. ¿Son dos cosas distintas — recolecta en Miami vs. en Honduras? |
+| **Etiqueta internacional** | Servicio que existe dentro de los retornados de Miami | **No está en la hoja ni en el sistema.** "¿La vas a poder agregar después?" → "Sí, necesitamos poder agregar" |
+
+---
+
+### A2-12 · La hoja "actualizada" del 7 de agosto no trae nada nuevo
+
+Yusef mandó `precios por categoria 2026 (1).xlsx` diciendo que era la versión
+actualizada. **No lo es.** Se comparó celda por celda contra la del 5 de agosto:
+
+| | Vieja (5 ago) | Nueva (7 ago) |
+|---|---|---|
+| Valores de las 3 hojas (`Hoja1`, `ACTUAL`, `PROPUESTA`) | idénticos | idénticos |
+| Rellenos de las celdas de precio | `theme0` (blanco) | `theme0` (blanco) |
+| Celdas de la leyenda D31/D32 | `theme9` / `theme7` | `theme9` / `theme7` |
+| `dcterms:modified` | 2026-08-05 21:31 | 2026-08-07 02:20 |
+
+Lo abrió y lo volvió a guardar; los bytes cambian porque Excel reescribe todo,
+pero **ninguna celda cambió**.
+
+⚠️ **La leyenda de colores sigue sin aplicarse.** Era la esperanza de que esta
+versión resolviera la moneda de los cargos: las celdas de precio siguen en
+blanco (`theme0`), y los colores solo están en las dos celdas de la leyenda.
+Menos mal que el audio 2 la resolvió hablando (A2-03).
+
+También se confirmó que **la matriz de categorías y los tres tarifarios
+escalonados (CER, CEM, CKM) coinciden exactamente** con lo que ya está sembrado
+en `lib/tarifas_propuesta_2026.rb`, incluido el split de CKM 13.5–100 lb entre
+SPS ($1.90) y TGU ($2.00).
+
+Y siguen faltando **EXPRESS y CKA** en los tarifarios escalonados, tal como
+Yusef dijo en el audio (A2-10).
+
+---
+
+### A2-14 · La hoja del 8 de agosto — esta sí trae cambios
+
+Tercera versión (`precios por categoria 2026 (2).xlsx`, modificada 16:56). A
+diferencia de la del 7, **esta sí cambió celdas**. Solo la hoja PROPUESTA;
+`ACTUAL` y `Hoja1` siguen idénticas.
+
+**1. Consolidando en Miami pasa de 1 a 0** (Precio Normal y Precio Tegus).
+
+Es Yusef corrigiendo en la hoja lo que ya había dicho en el audio: *"eso no
+tiene ningún costo, en cero. Eso le pusimos aquí algo, pero es porque me
+equivoqué"*. No hay nada que cargar — el cargo no estaba sembrado.
+
+**2. El primer escalón pasa de "DE 0 A 1 LBS" a "DE 0 A 1.1 LBS"**, en los tres
+tarifarios (CER, CEM, CKM).
+
+**No requiere cambio de código: confirma la tolerancia que ya está
+implementada.** El `.10` de `TOLERANCIA_LIBRAS` es exactamente ese límite —
+todo lo que redondea a 1.0 lb (o sea, por debajo de 1.10) cae en ese escalón y
+paga el mínimo de L.200.
+
+El label queda un poco holgado —estrictamente sería "hasta 1.09"— pero su regla
+hablada manda y coincide: *"uno punto uno ya es uno y medio"*. La diferencia
+práctica entre tolerancia 0.09 y 0.10 es un solo peso: **exactamente 1.10 lb**.
+Vale confirmárselo en una línea, pero el audio ya lo resuelve.
+
+⚠️ **La leyenda de colores sigue sin aplicarse.** Tercera versión seguida con
+los precios en `theme0` (blanco) y los colores solo en las dos celdas de la
+leyenda. Las monedas de los cargos que faltan siguen dependiendo de que él las
+cargue por el CRUD (A2-01), que para eso ya está completo.
+
+---
+
+### A2-13 · Lo que la hoja sí tenía y nunca habíamos extraído
+
+Revisándola a fondo aparecieron tres cargos con datos **por categoría** que solo
+se habían leído de la columna "Precio Normal".
+
+**Recolecta Miami — los descuentos están en la hoja** (fila 24). Esto le pone
+números al *"$35 normal, pero hay clientes que tienen descuentos"* del audio:
+
+| Categoría | Precio |
+|---|---|
+| Precio Normal · Precio Tegus · Shein · Shein TGUS | **35** |
+| Clientes Amigos · doTERRA/Farmasi · Mayoristas · Revendedores | **25** |
+| Familia · Personal CEC · Sin Cobro Mínimo | 0 |
+
+⚠️ Ojo con los ceros: en esta hoja un 0 viene significando *"sin definir"*, no
+*"gratis"* — así está documentado para los mínimos. Pero **Personal CEC sí tiene
+precios en todo lo demás**, así que su 0 en recolecta podría ser un descuento
+del 100% para el personal. Va a preguntas.
+
+**Servicio de entrada y salida** (fila 27): precio **10**, mínimo **5**, igual
+para todas las categorías que pagan. O sea que el *"de 10 a 5 depende"* del
+audio **no depende de la categoría** — el 10 es el precio y el 5 el piso. De qué
+depende que baje sigue abierto.
+
+**Flete México** (fila 20): solo Precio Normal y Precio Tegus, con precio **5**
+y mínimo **6**. ⚠️ El mínimo es **mayor que el precio**, lo cual no tiene
+sentido — o el 5 es por libra y el 6 el piso del envío, o hay un error de
+tipeo. Va a preguntas.
+
+Nada de esto se carga todavía: la moneda de los tres sigue sin confirmarse, y
+además **los precios los mete Yusef** (A2-01).
+
+---
+
+### A2-07 · El CRUD de tarifas ya hace lo que pidió — ✅ **YA ESTÁ**
+
+Yusef describió lo que necesita mostrando el sistema viejo:
+
+> "Cuando lo crees, que yo pueda seleccionar cómo es el cobro: si lempiras o
+> dólares."
+
+Y su queja concreta del sistema viejo:
+
+> "Cada vez que queremos modificar un precio mínimo tenemos que modificarlo en
+> dólares, y los dólares no cuadran. Yo tengo que venir y cuadrar 173.91."
+
+**Eso ya está resuelto** en `/servicios` (`app/views/servicios/_form.html.erb`):
+
+| Lo que pidió | Dónde está |
+|---|---|
+| Moneda del precio | `f.select :moneda` — LPS/USD |
+| **Moneda del mínimo, independiente** | `f.select :minimo_moneda` |
+| Monto mínimo **en el idioma de Yusef** | `minimo_monto_con_isv` — él escribe **200**, la columna guarda **173.91** |
+| Si incluye impuestos | `precio_incluye_isv` |
+| Mínimo de libras | `minimo_libras` |
+
+El accessor de `tarifa.rb:96-107` es justo el que le quita el dolor de cabeza:
+convierte de/hacia el ISV para que nunca tenga que calcular el neto a mano.
+
+Vale enseñárselo en la próxima llamada — él no sabía que ya estaba, y opinó:
+
+> "Yo veo el tuyo mejor en eso, mucho mejor en un montón de cosas."
+
+---
+
+### A2-08 · A los servicios extra les faltaba el mínimo — ✅ **HECHO** (PR-C6.12)
+
+En el sistema viejo el mínimo era **obligatorio** en cada servicio:
+
+> "Precio mínimo a cobrar, lo tiene obligado."
+
+`Tarifa` sí tiene `minimo_monto` / `minimo_moneda`. **`ServicioExtra` no tiene
+ningún campo de mínimo** — sus columnas son `codigo, descripcion, costo,
+precio_venta, moneda, precio_incluye_isv, position, activo, notas`.
+
+Y hace falta de verdad: el **retornado de Miami** es exactamente eso — *"$5 es
+como un precio mínimo que cobramos"*.
+
+El CRUD de `/servicios_extra` ya tenía moneda y el check de ISV; faltaba el
+mínimo.
+
+**Arreglo (PR-C6.12):** `minimo_monto` + `minimo_moneda`, con la moneda del
+piso **independiente de la del precio** — mismo criterio que `Tarifa`, donde el
+flete se cotiza en dólares y el piso vive en Lempiras porque así lo pone la
+competencia.
+
+`ServicioExtra#cobro_para` aplica el piso y lo usa la línea automática de la
+pre-factura. Un detalle que importa: el mínimo **se compara sin ISV** cuando el
+precio lo trae adentro. Yusef habla del mínimo como precio final (los L.200 son
+con impuesto); comparar el bruto contra un subtotal neto habría dejado el piso
+un 15% más alto de lo que él dijo.
+
+Esto desbloquea que Yusef cargue bien los cargos (A2-01): el **retornado de
+Miami** es exactamente un mínimo.
+
+---
+
+### A2-09 · Escalonado — la regla de redondeo — ✅ **ARREGLADO** (PR-C6.2)
+
+La tabla de escalones va en hoja aparte:
+
+> "No supe cómo ponértelo ahí, entonces mejor lo metí acá abajo."
+
+Columnas: **desde – hasta libras · monto en Lempiras con impuesto**. Mínimo
+L.200 con impuesto en todas: *"es mínimo doscientos, doscientos, doscientos"*.
+
+Y confirmó la regla de redondeo de libras, que ya teníamos anotada:
+
+> "El uno punto cero nueve **sigue siendo uno**. Uno punto uno ya es **uno y
+> medio**. Uno y medio pues uno y medio. Y de **uno punto seis ya sube**."
+
+| Peso real | Se cobra |
+|---|---|
+| 1.00 – 1.09 | **1.0** |
+| 1.10 – 1.59 | **1.5** |
+| 1.60 – 2.09 | **2.0** |
+
+Coincide con la regla `.10/.60` de [[project_etiquetar_sesion_y_calc]].
+
+**Se cruzó contra el código y hay dos cosas.**
+
+**1. Hoy el redondeo no se aplica.** `incremento_libras` está en `nil` en las
+58 tarifas cargadas, y `redondear_al_incremento` (`tarifa.rb:131-136`) devuelve
+el peso tal cual cuando está vacío. O sea que se cobra el peso exacto: 1.09 lb
+se cobran como 1.09.
+
+**2. Cuando se active, no va a redondear como Yusef dijo.** La implementación es
+un `ceil` puro al múltiplo:
+
+```ruby
+((peso / inc).ceil * inc).round(2)
+```
+
+Un `ceil` no tiene tolerancia, y la regla de Yusef sí: el `.10` y el `.60` son
+justamente los umbrales donde recién sube. Con `incremento_libras = 0.5`:
+
+| Peso | El código | Yusef | |
+|---|---|---|---|
+| 1.05 | 1.5 | **1.0** | 🔴 cobra de más |
+| 1.09 | 1.5 | **1.0** | 🔴 cobra de más |
+| 1.10 | 1.5 | 1.5 | ok |
+| 1.50 | 1.5 | 1.5 | ok |
+| 1.55 | 2.0 | **1.5** | 🔴 cobra de más |
+| 1.59 | 2.0 | **1.5** | 🔴 cobra de más |
+| 1.60 | 2.0 | 2.0 | ok |
+
+Falla en dos bandas — `.01–.09` y `.51–.59` — y **siempre hacia arriba**. Sobre
+un CER de 1.05 lb con mínimo de por medio no se nota, pero sobre un paquete de
+40.05 lb son media libra de más cobrada.
+
+Es una **mina**, no un incendio: mientras `incremento_libras` siga en `nil` no
+cobra de más. Muerde el día que Yusef active el escalonado — el mismo patrón de
+los cuatro errores de plata de PR-10, que estuvieron latentes hasta que se
+cargaron las tarifas reales.
+
+**Arreglo (PR-C6.2):** `Tarifa::TOLERANCIA_LIBRAS = 9/100`, y el redondeo le
+resta la tolerancia antes del ceil. Los `.10` y `.60` son justamente esos
+umbrales: la báscula tiembla y no se le cobra media libra a alguien por 30
+gramos.
+
+Va con un guard para que un peso menor que la tolerancia no se vuelva
+negativo — un peso negativo en una factura es peor que uno mal redondeado.
+
+⚠️ **La tolerancia queda fija en 0.09**, que es la lectura literal del audio.
+Yusef describió la regla **solo para incrementos de media libra**; si algún día
+crea una tarifa con incremento de 1 lb hay que preguntarle si sigue igual o es
+proporcional. Hay un test que **documenta el comportamiento actual** para ese
+caso, de modo que cambiarlo sea deliberado y no un efecto colateral. Sigue
+como pregunta ALTA en el Excel.
+
+---
+
+### A2-10 · Faltan EXPRESS y CKA en la tabla de escalones — ✅ **CONFIRMADO** (RP-14): los manda antes de lanzar
+
+> "Aquí me faltó el exprés, porque el exprés no lo hemos creado, pero vos debés
+> crearlo para yo podérselo agregar."
+> "Y aquí faltó el CKA también, que no lo tengo analizado."
+
+No hay que esperarlos: con el CRUD de `/servicios` andando, él los mete. Lo que
+sí hay que confirmar es que el catálogo de **tipos de envío** tenga EXPRESS y
+CKA dados de alta para poder colgarles tarifas.
+
+---
+
+### A2-11 · Tarifa editable: supervisor **y** área administrativa — **matiz de Fase 13**
+
+> "Tarifa editable con autorización de supervisor o jefe **cuando están en
+> prefactura**, pero también eso es **editable por el área administrativa**."
+
+Son dos caminos distintos y conviene no confundirlos:
+
+| Quién | Dónde | Cómo |
+|---|---|---|
+| Supervisor / jefe | En la **pre-factura**, sobre una línea concreta | **PIN** + queda la autorización registrada (Fase 13) |
+| Área administrativa | En el **catálogo** `/servicios` | Edición normal del precio de lista, sin PIN |
+
+Lo que Fase 13 protege es el precio **de una venta**, no el catálogo.
+
+---
+
+### Preguntas que este audio CERRÓ
+
+| Pregunta del Excel | Cómo quedó |
+|---|---|
+| Moneda de los 10 cargos | ✅ Resueltas casi todas (A2-03). Y ya no bloquea: los carga Yusef (A2-01) |
+| Cambio de servicio: ¿5 o $15? | ✅ **L.100**, editable por ellos (A2-04) |
+| Redondeo de libras | ✅ Confirmada la regla `.10/.60` — y el código **no** la cumple (A2-09) |
+
+### Preguntas que quedan (se suman a las de audio 1)
+
+> **Actualizado 2026-08-09** con las respuestas del PDF. Las tachadas quedaron
+> cerradas; ver `RP-nn` más abajo para la respuesta literal.
+
+7. ~~**Manejo y gastos de destino** — la hoja dice LPS, el audio sugiere USD~~
+   ✅ **L.1 + ISV** (RP-05)
+8. **Recolecta** — ¿el $35 de Miami y la tabla por zona son dos cosas distintas?
+   ⚠️ **a medias**: el precio quedó (editable, 35/25 según categoría, como
+   **mínimo**), pero si Miami y Honduras son uno o dos cargos sigue abierto
+   (RP-10)
+9. ~~**Retornado de Miami** — ¿$5 mínimo con escalones, o $5 y $15 son dos cargos?~~
+   ✅ **dos cargos: $5 y $10** — tachó el 15 (RP-11)
+10. ~~**Entrada y salida** — ¿de qué depende que sea $5 o $10?~~
+    ✅ **base $5, sube a criterio por tamaño y complejidad** (RP-12)
+11. ~~**Flete México** — ¿en qué moneda?~~
+    ✅ **$5 por lb o VLb + ISV** (RP-13a)
+12. **Etiqueta internacional** — ¿precio y en qué moneda? — **sigue abierta**,
+    la dejó en blanco (RP-13b)
+13. **Tolerancia del redondeo** — el `.10/.60` es para incrementos de media
+    libra. Si crea una tarifa con incremento de 1 lb, ¿la tolerancia sigue
+    siendo 0.09 o es proporcional? (A2-09) — **sigue abierta**
+14. **Recolecta: el 0 de Personal CEC** — ¿es descuento del 100% o "sin
+    definir"? Tiene precios en todo lo demás (A2-13) — **sigue abierta**
+15. ~~**Flete México** — el mínimo (6) es mayor que el precio (5)~~
+    ✅ **el mínimo era el error: no hay** (RP-13a)
+16. ~~**La hoja de precios** — la versión del 7 de agosto es idéntica a la del 5~~
+    ✅ superada: la del 8 sí trajo cambios (A2-14)
+
+---
+
+### Audio 2 — cambios que se ocupan
+
+**Urgente**
+
+| ID | Qué |
+|---|---|
+| ~~A2-04~~ | ~~Cambio de servicio cobraba $15 (≈L.373)~~ ✅ **arreglado** — L.100 exactos |
+| ~~A2-09~~ | ~~El redondeo de libras cobra de más en `.01–.09` y `.51–.59`~~ ✅ **arreglado** |
+
+**Nuevo**
+
+| ID | Qué |
+|---|---|
+| ~~A2-08~~ | ~~Campo de **mínimo** en `ServicioExtra`~~ ✅ **hecho** |
+| A2-06 | Dar de alta **etiqueta internacional** como servicio |
+| A2-10 | Confirmar que EXPRESS y CKA existen como tipo de envío |
+
+**Corregir el catálogo** (lo hace Yusef, pero hay que dejarle el camino)
+
+| ID | Qué |
+|---|---|
+| A2-05 | Retener en Miami **no** cuesta — quitar el cobro |
+| A2-03 | Consolidado en Miami en **cero** |
+| A2-03 | Borrar los "producto ejemplo" |
+
+**Verificar**
+
+| ID | Qué |
+|---|---|
+| A2-11 | Que el PIN cubra la línea de pre-factura y **no** el catálogo |
+
+**Ya está** — A2-07 (el CRUD de tarifas con moneda + mínimo con ISV ya hace todo
+lo que pidió; solo hay que enseñárselo).
+
+**Ya no aplica** — cargar los 10 cargos pendientes de PR-10.i: los mete Yusef
+(A2-01).
+
+---
+
+## Conversación 6 · Imágenes — las notas a mano de Jorge
+
+Tres páginas escritas **durante la misma reunión**, mientras Yusef probaba el
+sistema. No son requerimientos nuevos: son el apunte de Jorge en el momento, lo
+que las vuelve un contraste independiente contra lo que se sacó de los audios.
+
+**El cruce da 1:1.** Todo lo que está en las notas aparece en `A1-nn`, y aparece
+**un solo item nuevo** (el segundo pito), que ya quedó incorporado a A1-10.
+
+---
+
+### Página 1 — el teclado
+
+Transcripción:
+
+```
+pág 1
+1) /etiquetar
+2) código cliente
+   leer de derecha a izq
+Y
+el ~~Tab~~ presiona enter → moverse al siguiente
+
+3) quitar Pre-Alerta, Pre-Factura
+
+   pita
+   1) pre-alerta
+   2) que ya existía
+
+poner ambos lados  Botones
+pistola enter
+F2 → limpiar todo el formulario
+→ No autograbar etiqueta
+```
+
+| Nota | Item |
+|---|---|
+| `código cliente leer de derecha a izq` | **A1-14** |
+| `el ~~Tab~~ presiona enter → moverse al siguiente` | **A1-01** |
+| `pistola enter` | **A1-01** |
+| `No autograbar etiqueta` | **A1-01** |
+| `F2 → limpiar todo el formulario` | **A1-03** |
+| `quitar Pre-Alerta, Pre-Factura` | **A1-15** |
+| `poner ambos lados — Botones` | **A1-12** |
+| `pita: 1) pre-alerta 2) que ya existía` | **A1-10** ← el único item nuevo |
+
+Detalle que vale: Jorge **tachó "Tab" y escribió "enter"** en el momento. Eso
+fija que la regla no es "que Tab funcione" sino que **Enter haga lo que hace
+Tab** — que es exactamente donde está el bug (A1-01).
+
+Y el punto 1 dice `/etiquetar`, no `/label`: es el apunte del que salió el
+renombre que ya se hizo.
+
+---
+
+### Página 2 — dropdowns, tercero y la columna de warehouse
+
+Transcripción:
+
+```
+pág 2   seleccionar
+→ ~~Grabar~~ con tab o enter
+  de los dropdowns
+
+Tercero
+  2 formas de crear
+  etiquetas → warehouse receipts
+→ Texto
+→ o selección
+
+Tab Tercero → que pase Descripción
+Notas → arriba de carrier
+
+columna de warehouse
+No de recepción
+```
+
+| Nota | Item |
+|---|---|
+| `~~Grabar~~ seleccionar con tab o enter de los dropdowns` | **A1-01** |
+| `Tercero: texto o selección` | **A1-16** |
+| `Tab Tercero → que pase Descripción` | **A1-15** |
+| `Notas → arriba de carrier` | **A1-15** |
+| `columna de warehouse / No de recepción` | **A1-02** ✅ ya arreglado |
+
+Acá también hay una tachadura que dice todo: Jorge escribió **"Grabar"**, lo
+tachó y puso **"seleccionar"**. Es la corrección que Yusef le hizo en voz alta:
+
+> "O sea, grabar, no grabar — **seleccionar**."
+
+Y `columna de warehouse / No de recepción` es exactamente el bug que se arregló
+en este bloque: la columna tenía que mostrar el número de warehouse y estaba
+mostrando el tracking.
+
+`etiquetas → warehouse receipts` bajo "Tercero" es la regla A1-16: el tercero
+escrito a mano vive **en el warehouse receipt** y no se guarda en ninguna base
+de datos de clientes.
+
+---
+
+### Página 3 — impresión, cambio de servicio y sonidos
+
+Transcripción:
+
+```
+página 3
+etiquetar
+→ cerrar ventana y regresar etiquetar
+────────────
+cambio de servicio → CER a CKM  no funciona
+
+→ Cambio de servicio → ¿?
+  pregunte qué servicio → modal
+
+→ Rebajar
+Nota
+────────────
+Audios / sonidos → cuando se escanea
+                   escanea
+                   código de cliente
+→ Diff session tiene que tener una alerta sonido
+```
+
+| Nota | Item |
+|---|---|
+| `cerrar ventana y regresar etiquetar` | **A1-11** |
+| `cambio de servicio → CER a CKM no funciona` | **A1-08** |
+| `pregunte qué servicio → modal` | **A1-08** |
+| `Rebajar` | **A1-04** — el rebaje de inventario al escanear en San Pedro |
+| `Nota` | **A1-19 / A1-20** |
+| `sonidos: cuando se escanea · código de cliente` | **A1-10** |
+| `Diff session tiene que tener una alerta sonido` | **A1-09 + A1-10** |
+
+`CER a CKM no funciona` es el caso exacto que Yusef reprodujo: marcó el cambio,
+guardó, y el tipo de envío se quedó en CER. Sirve como caso de prueba concreto
+cuando se arregle A1-08.
+
+---
+
+### Lo que el cruce confirma
+
+1. **No se perdió nada de los audios.** Los 15 apuntes de las tres páginas caen
+   todos dentro de `A1-01` … `A1-20`.
+2. **Un solo item nuevo:** el segundo pito (`que ya existía`), incorporado a
+   A1-10.
+3. **Las notas no contradicen nada** de lo documentado.
+4. Las tachaduras (`Tab`→`enter`, `Grabar`→`seleccionar`) son las dos
+   correcciones que Yusef hizo en vivo, y las dos apuntan al mismo bug: **A1-01**.
+
+Y una lectura de prioridad que sale sola: de los 15 apuntes, **cinco** son A1-01
+o su consecuencia directa. Es el que hay que arreglar primero.
+
+---
+
+## Conversación 6 · Respuestas al PDF de preguntas (recibidas 2026-08-09)
+
+Yusef devolvió el PDF de 23 preguntas (`docs/entregables/preguntas_para_yusef.pdf`)
+contestado a mano. Llegaron fotos de **las páginas 1 a 4**, o sea `P1`–`P16`.
+Jorge confirmó que **sí contestó P17–P23**, pero esas fotos todavía no llegan.
+
+Los ids son `RP-nn`, donde el número **es el de la pregunta en el PDF** —
+trazabilidad 1:1 contra `lib/tasks/docs.rake:1132-1298`. Prefijo distinto de
+`A1-`/`A2-` a propósito: son respuestas a un artefacto nuestro, no items
+extraídos de un audio.
+
+Cada item lleva la **transcripción literal** de lo que marcó o escribió, después
+la lectura, y al final el veredicto.
+
+---
+
+### RP-01 · Un Cliente Amigo puede pagar MÁS que el público — **SIGUE ABIERTA**
+
+Ninguna casilla marcada. Al margen, con una flecha al párrafo:
+
+> "ACTIVA Los Precios del Escalonado"
+
+**Lectura.** La intención es clara: las categorías también van escalonadas. Lo
+que **no** dice es qué se le cobra a un Cliente Amigo **mientras** esas tablas
+no lleguen — y en RP-14 él mismo dice que las de CKA y EXPRESS las manda
+"antes de lanzar sistema". Hoy un Cliente Amigo con 200 lb de CER paga $840 y
+uno de la calle paga $700.
+
+Va a la ronda 2 con la pregunta acotada: ¿precio fijo de la categoría, o el
+menor de los dos, hasta que lleguen las tablas?
+
+---
+
+### RP-02 · Mayoristas: solo vino un precio — **SIGUE ABIERTA**
+
+Ninguna casilla marcada. Escribió:
+
+> "Por que Usamos tarifas Diferentes Para Clientes / tarifario Único."
+
+**Lectura.** No se lee como decisión. Puede querer decir "usamos tarifas
+distintas por cliente, no un tarifario único" o exactamente lo contrario. De
+Mayoristas solo llegó CKM a $1.50; CER, CEM, CKA y EXPRESS vinieron en cero, y
+así no se les puede facturar esos servicios. Se pregunta de nuevo, concreto.
+
+---
+
+### RP-03 · ¿Prendemos el redondeo a media libra? — ✅ **CERRADA**
+
+Marcó:
+
+> ☒ **Préndanlo ya.**
+
+Y **no** marcó "primero quiero ver el número calculado con mis paquetes reales".
+
+**Consecuencia.** Es la autorización que el informe de impacto iba a pedir. Eso
+re-ordena el plan del escalonado: el informe deja de ser compuerta y pasa a ser
+verificación posterior. Lo que **no** cambia es que el bug de frontera
+(`PR-C6.18`) tiene que aterrizar **antes** de que alguien pulse el botón —
+activar es exactamente lo que lo despierta.
+
+---
+
+### RP-04 · ¿Dónde aplica el redondeo? — ✅ **CERRADA**
+
+Marcó:
+
+> ☒ También en las tarifas por categoría: Clientes Amigos, Shein, Personal CEC
+> y las demás.
+
+Y escribió al lado: **"Todo"**.
+
+**Consecuencia.** El botón de activación no necesita selector de alcance: pone
+`incremento_libras` en todas las filas del servicio, lista y categorías.
+
+---
+
+### RP-04b · Cobro por volumen editable por cliente y por servicio — ✅ **CERRADA** (A4-01) e implementada
+
+En la misma página, suelto abajo, no como respuesta a nada:
+
+> "Formas de cobro
+>  Hay Clientes Que solo se les cobra Volumen en ciertos servicio
+>  (necesita quedar Editable por Kliente y Por servicio)"
+
+**Lectura.** Hoy el peso a cobrar es `max(peso real, peso volumétrico)`
+(`VolumetricoCalculator#peso_a_cobrar`). Esto pide poder forzar **siempre
+volumen** para ciertos clientes en ciertos servicios, aunque el peso real sea
+mayor.
+
+**IMPLEMENTADO en PR-C6.41** (ver `A4-01`, que es donde el audio 4 lo cerró).
+
+- Tabla `cliente_cobro_volumetricos` — **la fila es el flag**: si existe
+  `(cliente, tipo_envio)`, ese cliente paga solo volumétrico en ese servicio.
+- Se configura en la ficha del cliente, tarjeta **"Cómo se le cobra"**, donde
+  Yusef dijo: *"cuando creamos el cliente"*.
+- `VolumetricoCalculator.entre_peso_y_vlbs` pasa a ser el único lugar donde se
+  decide qué peso manda; `Paquete` y `CotizadorFlete` lo llaman a él (antes eran
+  dos copias sueltas del `max`).
+- **El mínimo del servicio se sigue aplicando** — decisión de Jorge: es una regla
+  del servicio, no del peso. Vive aguas abajo en `Tarifa#cobro_para` y este PR
+  no lo toca.
+- **Guard de cero**: sin medidas el volumétrico es 0, y ahí se cobra el peso
+  real. Es el único camino por el que la feature podría regalar flete.
+- **Nadie arranca con el flag puesto.** Prenderlo baja lo que se le cobra a ese
+  cliente, así que queda auditado con `paper_trail` en el join.
+
+---
+
+### RP-05 · Manejo y gastos de destino: ¿lempiras o dólares? — ✅ **CERRADA**
+
+Marcó:
+
+> ☒ Va como dice la hoja: **L.1 + ISV**.
+
+Cierra la pregunta 7 del registro del audio 2, donde la hoja y el audio se
+contradecían.
+
+---
+
+### RP-06 · CKM: ¿precio fijo o por libra? — ✅ **CERRADA**
+
+Sobre la opción "L.200 con ISV incluido, pese lo que pese" escribió una flecha
+y:
+
+> "Es EL **Mínimo**"
+
+Y debajo, abarcando las dos opciones con una llave:
+
+> "Después es el **Escalonado**"
+
+**Lectura.** L.200 es el piso; pasado ese piso manda la tabla escalonada. Es el
+mismo mecanismo que ya tiene CER — **no hace falta código nuevo**.
+
+---
+
+### RP-07 · Mínimo en libras del marítimo (CEM y CKM) — ✅ **CERRADA**
+
+Ninguna casilla. Escribió:
+
+> "**MANDA el Escalonado**"
+
+**Lectura.** No hay mínimo en libras: el escalonado decide. Cierra la duda
+vieja de "8/20 lb vs 3 o 4 lb".
+
+**Ya se cumple**: `minimo_libras` viene nil en todas las tarifas sembradas y
+`tarifa.rb` solo lo aplicaría si existiera. Solo hace falta verificarlo en
+staging — no se toca código.
+
+---
+
+### RP-08 · Confirmación: ¿el mínimo de CER es L.200 parejo? — ✅ **CERRADA** (y confirma el motor)
+
+Marcó **"No, es así:"** y escribió la aritmética:
+
+```
+tasa 27.10
+4.50 × 1   = 121.95  + ISV = 200      "ya con ISV"
+4.50 × 1.5 = 182.93  + ISV = 210.36   "ya con ISV"
+             ↓ libras
+```
+
+**Lectura, y es la más importante de todo el PDF.** Esa cuenta **confirma que
+el motor de mínimos está bien**: el sistema guarda el mínimo **neto de ISV**
+(CER: `minimo_monto = 173.91 LPS`) y le suma el ISV al final, que es
+exactamente lo que él hizo a mano.
+
+- 1 lb → $4.50 < $6.42 (=173.91/27.10) → aplica el mínimo → 173.91 × 1.15 = **L.200** ✓
+- 1.5 lb → $6.75 > $6.42 → 6.75 × 27.10 = 182.93 → × 1.15 = **L.210.37**
+
+Él escribió **210.36**. El centavo de diferencia es de orden de redondeo: aplicó
+el ISV sobre `182.925` sin redondear, y el motor redondea el subtotal a dos
+decimales antes de convertir. No se cambia sin que él lo pida.
+
+**Y destapó la tasa.** El sistema tenía **24.85** sembrada. Con esa, la segunda
+línea **no reproduce**: 6.75 × 24.85 = L.167.76, debajo del mínimo neto, así que
+el paquete caía en L.200 y no en L.210.37. Jorge decidió fijarla en **27.10**
+(`PR-C6.29`), que además creó la pantalla para que un admin la maneje — hasta
+ese PR la tasa solo se podía cambiar con un deploy.
+
+---
+
+### RP-09 · ¿Qué hacemos con Regular y VIP? — **ABIERTA A MEDIAS** (ver A4-05)
+
+Ninguna casilla. Con una flecha al título:
+
+> "→ categorías Actuales del Excel"
+
+**Lectura.** Se entiende que Regular y VIP son lo viejo, pero no dice a qué
+categoría pasan los 8 clientes que hoy están ahí. Sin eso no se pueden migrar.
+
+> **Actualización (audio 4).** En el audio dice *"esas categorías ya no van,
+> ahora es el escalonado"* — o sea que **se eliminan**. Lo que falta es solo el
+> destino de los 8 clientes. Ver `A4-05`; sale del audio, así que va *a
+> confirmar* y no se migra nada sobre esa base.
+
+---
+
+### RP-10 · Recolecta — **(a) CERRADA con matiz · (b) SIGUE ABIERTA**
+
+Una llave abarcando las opciones de precio, y al lado:
+
+> "Editable.
+>  $35 o $25 Dependiendo de la categoría de Precio de cliente
+>  **es el mínimo a cobrar**."
+
+**(a) El precio — cerrada con matiz.** No es tabla por zona ni precio parejo:
+es **editable**, y el 35/25 según la categoría del cliente es el **piso**, no
+el precio final. Eso **contradice** lo documentado en su momento como "tabla de
+tarifas por zona".
+
+**Ojo, es modelado nuevo**: `ServicioExtra` tiene un `minimo_monto` **plano**,
+no uno por categoría de precio. No es carga de datos.
+
+**(b) ¿La recolecta de Miami y la de Honduras son dos cobros distintos?** —
+**quedó sin marcar**. Y bloquea (a): sin saber si son uno o dos cargos no se
+sabe cuántos mínimos hay que modelar.
+
+---
+
+### RP-11 · Retornado de Miami: ¿uno o dos cargos? — ✅ **CERRADA**
+
+Marcó la segunda opción y **tachó el 15**:
+
+> ☒ Son dos cargos separados: Retornado ($5) y Retornado USPS ($~~15~~ **10**).
+
+Al margen:
+
+> "5 + 10 Retorno. **Hay que llevarlo a sucursal**"
+
+**Lectura.** Dos cargos, $5 y $10 USD. La nota del margen es contexto operativo:
+el retorno implica llevar el paquete a una sucursal.
+
+---
+
+### RP-12 · Entrada y salida (IN & OUT): ¿de qué depende? — ✅ **CERRADA**
+
+Sin marcar casilla, escribió sobre las dos:
+
+> "**$5 Paquete pequeño** → sube a consideración de tamaño complejidad"
+
+**Lectura.** Base $5 para paquete pequeño, y de ahí sube **a criterio**, según
+tamaño y complejidad. O sea: no es automático — se cobra $5 y se ajusta a mano
+cuando corresponde.
+
+---
+
+### RP-13 · Flete México y etiqueta internacional — **(a) CERRADA · (b) SIGUE ABIERTA**
+
+Al título, con flecha:
+
+> "→ Precio x Lbs o VLbs"
+
+**(a) Flete México — cerrada.** En "Los buenos son: precio $___ · mínimo $___"
+escribió **5** en el precio, **tachó el mínimo**, y agregó **"+ ISV."**
+
+O sea: **$5 por libra o libra volumétrica, más ISV, sin mínimo**. El "mínimo 6
+mayor que el precio 5" de la hoja era el error, y así se cierran de una las dos
+preguntas viejas sobre este cargo.
+
+**(b) Etiqueta internacional — abierta.** Quedó **en blanco**. Sigue sin precio
+y sin moneda, así que no se puede dar de alta como servicio.
+
+---
+
+### RP-14 · ¿CKA y EXPRESS también llevan escalonado? — ✅ **CERRADA**
+
+Marcó:
+
+> ☒ Sí llevan — les mando las tablas.
+
+Al margen:
+
+> "Si en el Futuro **Antes de Lanzar Sistema**"
+
+**Lectura.** Sí llevan, y las tablas llegan antes del lanzamiento. Cuando
+lleguen es **carga por CRUD** — la hace su equipo, no es un PR.
+
+---
+
+### RP-15 · La leyenda de colores / la moneda de cada cargo — **PENDIENTE DE OFICINA**
+
+Ninguna casilla. Escribió:
+
+> "Expres y CKA
+>  Lo llenaremos Después **los de Oficina**"
+
+**Lectura.** Delegado a su equipo administrativo, sin fecha. La leyenda de
+colores de la hoja de precios —la que dice en qué moneda va cada precio— sigue
+sin aplicarse a las celdas.
+
+---
+
+### RP-16 · Visto bueno final a los precios cargados — **SIGUE ABIERTA**
+
+Escribió:
+
+> "**No Ha Revisado**"
+
+**Lectura.** La hoja 2 del Excel —el detalle completo de lo que el sistema va a
+cobrar— sigue sin revisar. Se le vuelve a mandar junto con el informe de
+impacto del redondeo, para que revise las dos de un solo.
+
+---
+
+### RP-17 … RP-22 — ✅ **CONTESTADAS** (fotos recibidas el 2026-08-10)
+
+Llegaron las páginas 6/7 y 7/7. Las respuestas literales y su lectura están
+abajo, en la sección del **audio 4**. Resumen:
+
+| Id | Cómo quedó |
+|---|---|
+| RP-17 | ✅ escribió el formato con mes: `R` + sucursal + año + mes + correlativo |
+| RP-18 | ✅ se puede bajar la cantidad de cajas, **con PIN de supervisor** |
+| RP-19 | ✅ el origen **entra en el cobro** — corrige `PR-C6.38` |
+| RP-20 | ⏳ sin marcar — pero **la deuda ya se pagó**: las tres existen (`PR-275`) |
+| RP-21 | ✅ los cuatro roles llevan PIN — son los mismos `ROLES_AUTORIZANTES` |
+| RP-22 | ⏳ "llenaremos en oficina" |
+
+**RP-21 no bloquea código.** Los cuatro que marcó ya eran los del sistema; lo
+que falta son los **nombres**, y eso lo carga el admin desde el CRUD de usuarios.
+Lo mismo con el PIN de Julien para `PR-C6.28`: el flujo está listo y el banner
+avisa solo mientras nadie tenga PIN asignado.
+
+---
+
+### RP-23 · La etiqueta impresa — ⏳ **PENDIENTE** (escribió "Pendiente")
+
+> ⚠️ **Corrección.** Acá decía "cerrada de facto" porque mandó la etiqueta
+> anotada en rojo. Esa foto resolvió la **maquetación** (`PR-C6.27`), pero la
+> pregunta 23 pide otra cosa: **imprimir una y probar que el lector agarre el
+> código de barras**. En la página 7 escribió "Pendiente". Y ahora conviene
+> que la imprima **después** de aplicar `RP-17`, porque el número cambia y va
+> justo en el código de barras.
+>
+> ✅ **Ya se puede (2026-08-11).** `RP-17` salió en `PR-C6.40` (merge #259): el
+> número de recepción ya lleva sucursal, año y mes. La prueba deja de estar
+> bloqueada. Y en el audio 4 él dijo *"eso lo puedo hacer yo… queda pendiente,
+> pendiente tuyo"*, así que la corre él.
+
+No la contestó por escrito: **mandó la etiqueta impresa anotada en rojo**, que
+resolvió la maquetación. Se documenta abajo, en su propia sección.
+
+---
+
+### Lo que el PDF cerró
+
+| Pregunta vieja | Cómo quedó |
+|---|---|
+| Manejo y gastos de destino: ¿LPS o USD? | ✅ L.1 + ISV (RP-05) |
+| Retornado: ¿uno o dos cargos? | ✅ dos: $5 y $10 (RP-11) |
+| Entrada y salida: ¿de qué depende? | ✅ base $5, ajuste manual (RP-12) |
+| Flete México: ¿moneda? ¿mínimo mayor que el precio? | ✅ $5/lb o VLb + ISV, sin mínimo (RP-13a) |
+| Mínimo en libras del marítimo (8/20 vs 3-4) | ✅ no hay: manda el escalonado (RP-07) |
+| CKM: ¿fijo o por libra? | ✅ L.200 es el mínimo, después escalonado (RP-06) |
+| ¿Prendemos el redondeo? | ✅ "préndanlo ya" (RP-03) |
+| ¿Dónde aplica el redondeo? | ✅ "todo" (RP-04) |
+| ¿CKA y EXPRESS llevan escalonado? | ✅ sí, tablas antes de lanzar (RP-14) |
+| ¿El mínimo de CER es L.200 parejo? | ✅ confirmado el motor, y destapó la tasa (RP-08) |
+
+### Las que siguen vivas
+
+> Esta tabla se leyó como el estado real y **estaba vieja**: el audio 4 y las
+> páginas 6-7 cerraron varias y nadie bajó el resultado hasta acá. Reconciliada
+> el 2026-08-11 contra las secciones `A4-*` y `RP-17`…`RP-23`.
+
+| Id | Qué falta | Novedad |
+|---|---|---|
+| RP-01 | Qué se cobra a las categorías mientras no lleguen sus tablas escalonadas | — |
+| RP-02 | Mayoristas: qué se les cobra en CER/CEM/CKA/EXPRESS | — |
+| RP-09 | **Solo** a qué categoría pasan los 8 clientes | El audio dice que Regular y VIP **se eliminan** (`A4-05`, *a confirmar*) |
+| RP-10b | ¿La recolecta de Miami y la de Honduras son uno o dos cargos? | El audio no la contesta; sí agrega que la tarifa la crea un supervisor (`A4-06`) |
+| RP-13b | Etiqueta internacional: precio y moneda | Salió en el audio pero el transcript no se entiende (`A4-07`) |
+| RP-15 | La leyenda de colores/moneda de la hoja (lo hace su oficina) | — |
+| RP-16 | El visto bueno a la hoja 2 del Excel | Falta la tabla de EXPRESS: *"llenaremos después"* |
+| RP-20 | Que **elija** una de las tres | Ya no es deuda nuestra: las tres existen y se pueden oír (`PR-275`) |
+| RP-22 | Los proveedores de Entrega Personal | Escribió *"llenaremos en oficina"* |
+| RP-23 | Imprimir una etiqueta y probar el lector — **él dijo que lo hace él** | **Desbloqueada**: esperaba a `RP-17`, que salió en `PR-C6.40` |
+| — | Tolerancia del redondeo con incremento de 1 lb (viene del audio 2) | — |
+| — | El 0 de Personal CEC en recolecta: ¿descuento del 100% o sin definir? | — |
+| — | Motivos de retención, notas predeterminadas y grabaciones de voz | Los tres pendientes que el papel le listaba; siguen sin llegar |
+
+### Las que ya cerraron y esta tabla no reflejaba
+
+| Id | Cómo cerró |
+|---|---|
+| RP-04b | ✅ **Contestada** en `A4-01` (por cliente y por servicio) e **implementada** en `PR-C6.41` |
+| RP-17 | ✅ El número de recepción lleva sucursal, año y mes — `PR-C6.40` |
+| RP-18 | ✅ Se puede bajar la cantidad de cajas, con PIN de supervisor |
+| RP-19 | ✅ El origen entra en el cobro — corrige `PR-C6.38` |
+| RP-21 | ✅ Los cuatro roles llevan PIN; falta asignar los PIN desde el CRUD, no es decisión |
+
+### Las que nacen
+
+| Id | Qué |
+|---|---|
+| — | La tasa: quién la mantiene y cada cuánto (aviso, no pregunta — ya se fijó en 27.10) |
+
+### Las que están escritas pero viven **solo en código**
+
+Estas nunca entraron a este documento porque nacieron dentro de un entregable, y
+por eso preguntar *"¿qué está pendiente?"* leyendo solo este archivo daba una
+lista incompleta. Se anotan acá; las respuestas, cuando lleguen, se documentan
+como todas las demás.
+
+| Id | Qué pregunta | Dónde vive |
+|---|---|---|
+| RP-24 | EXPRESS: ¿la libra vale $8.00 (hoja de abril) o $7.50 (sistema)? | `lib/servicios_pdf.rb` |
+| RP-25 | EXPRESS: ¿el mínimo es $14.95 con ISV o $10.00 más ISV? | idem |
+| RP-26 | CEM: el mínimo de 8 libras no se aplica — ¿manda el dinero o las libras? | idem |
+| RP-27 | CKM: ¿la libra vale $1.50 (hoja) o $1.90 (sistema)? | idem |
+| RP-28 | CKM: dos reglas del mismo audio se contradicen — ¿dinero o libras? | idem |
+| ~~RP-29~~ | ~~El redondeo escalonado sobre el peso de báscula está apagado — ¿se prende?~~ **✅ CERRADA POR DUPLICADA**: ya la había contestado en `RP-03` ("préndanlo ya") y `RP-04` ("todo") el 2026-08-09. El PDF se armó leyendo el estado del código sin cruzarlo contra sus respuestas. El redondeo quedó puesto en `PR-C7.10` | idem |
+| ~~RP-30~~ | ~~Aduana y bodega: hoy el estado se cambia a mano — ¿hace falta pantalla?~~ **✅ CERRADA en la Conversación 7**: sí hace falta, y es el escaneo del manifiesto (`A7-03`…`A7-05`). De paso corrigió el orden del diagrama (`A7-01`) | `lib/procesos_pdf.rb` |
+
+**`RP-24`…`RP-29` son plata.** Cada una es una diferencia entre la hoja de abril
+y lo que el sistema cobra hoy: mientras no se contesten, alguna de las dos está
+cobrando mal. Salen en `docs:servicios_pdf`.
+
+**`RP-30`** salía en `docs:procesos_pdf` y **la contestó la Conversación 7**: el
+estado no se cambia a mano, se cambia escaneando el manifiesto. El documento
+deliberadamente **no** pregunta por empaque, entregas, manifiestos ni caja: hasta
+terminar etiquetas y entrega personal no se le ponen enfrente (Jorge,
+2026-08-11) — y Yusef lo ratificó por su cuenta en `A7-34`. Las preguntas nuevas
+arrancan en `RP-31`.
+
+---
+
+## Conversación 6 · Audio 3 (2026-08-08) — pre-alertas, escaneo y sucursal de retiro
+
+Tercer audio de la **misma reunión** del 2026-08-08: Yusef siguió probando el
+sistema en vivo, esta vez con la pistola de códigos de barras y paquetes
+reales de los cuatro carriers. Ids `A3-nn`, continuando la serie de audios.
+
+---
+
+### A3-01 · Falta el estatus por tracking en `/pre_alertas/edit` — ✅ **PLANIFICADO** (PR-C6.25)
+
+> "Acá no me sale todavía el estatus, mira. ¿Te acordás que **aquí debería ir
+>  el estatus**? Si ya fue recibido, si está en estado prealerta, etcétera."
+
+En `show.html.erb` sí sale (badge con `pap.paquete.estado`); en `edit.html.erb`
+no existe la columna.
+
+---
+
+### A3-02 · La columna "Vinculado" repite el tracking — ✅ **DIAGNOSTICADO** (PR-C6.25)
+
+> "Ahora este **vinculado** es el que no… no entiendo. Yo creo que este ha de
+>  ser la recepción, ¿o no? Si es para poder unirlos. No, porque **este es el
+>  mismo que este**."
+> "Revisá bien ahí y me dejás saber."
+
+**Tenía razón.** La columna usa `paquete_display_id`, que es
+`numero_recepcion.presence || tracking`. Como `crear_paquete_esperado` crea el
+paquete esperado **sin** número de recepción, el link muestra el tracking otra
+vez — la misma columna dos veces.
+
+---
+
+### A3-03 · Tras etiquetar el estado debe ser **recibido**, no empacado — ✅ **ARREGLADO** (PR-C6.22)
+
+> "**Empacado dice, y empacado no es lo que sigue**… queda aquí en recibido,
+>  porque apenas se recibió y se tiene ahí. Cuando hagamos lo que hablamos del
+>  empaque, ahí sí va a decir empacado, porque ya lo escaneamos, lo agregamos y
+>  lo metimos."
+
+Jorge lo había notado esa mañana sin saber qué era: *"yo lo noté ahorita en la
+mañana, pero no sabía que estaba con él"*.
+
+`ESTADOS_ORDEN` es `recibido_miami → empacado → …`, así que el paquete nacía un
+escalón adelantado: el dashboard contaba como empacado lo que sigue en la mesa,
+y `fecha_empacado` guardaba la hora de un paso que nadie dio.
+
+---
+
+### A3-04 · Cambio de servicio "envía donde no es" — ✅ **ARREGLADO** (PR-C6.23)
+
+> "Cambio de servicio **envía donde no es**."
+> "Para mí que si hacemos cambio de servicio nada más al producto, nos tire de
+>  un solo a esta ventana. Si yo presiono cambio de servicio, **me tire aquí de
+>  un solo a esto**."
+> "Es que **ellos no manejan la página de paquetes**."
+
+**La mitad ya estaba resuelta**: marcar el check a mano abre el modal al
+instante, sin ida al servidor. El bug era el botón "Cambio de servicio" del
+modal de **duplicado**, que navegaba a `/paquetes/:id?mode=edit`.
+
+Es la misma queja que ya había hecho por la **otra** opción de ese mismo modal
+(*"me mandaste a editar y yo no quiero editar mi paquete"*, A1-07 / PR-C6.10).
+Quedó a medias: se arregló una de las dos.
+
+---
+
+### A3-05 · "Enter no lo encontró… tiene que ser rápido" — ✅ **ARREGLADO** (PR-C6.21)
+
+> "Le di enter y **no lo reconoce**."
+> "Ahora sí, cuando le di **tap** ya reconoció."
+> "**Le di enter rápido y mete rápido**, aquí es donde tenés que ver cómo
+>  integrar eso."
+> "Tiene que ser **rápido**."
+
+Dos causas distintas, las dos reales:
+
+1. **La búsqueda** era `where(tracking: valor)` — exacto y case-sensitive sobre
+   una sola columna (ver A3-08 y A3-09).
+2. **Una carrera en el navegador**: el `fetch` salía sin cancelar el anterior y
+   su `.then` nunca verificaba que el campo siguiera diciendo lo mismo. La
+   pistola manda Enter sola, así que escanear A y enseguida B dejaba **el
+   cliente de A auto-rellenado sobre el paquete de B**. Eso se factura mal.
+
+El arreglo **no** es un debounce: sería justo lo contrario de lo que pidió.
+
+---
+
+### A3-06 · Quitar el cobro de cambio de servicio, con permiso — **PLANIFICADO** (PR-C6.28)
+
+> "Aquí es donde hay un dilema: si el muchacho mío se equivocó y lo está
+>  cambiando, tenemos que buscar una manera de **poderle quitar ese cambio de
+>  servicio**. Eso sería como que le digan al **supervisor** de ellos allá en
+>  Miami: 'hey, mire, yo me equivoqué, lo ingresé mal y era otro tipo de
+>  envío', y entonces él lo pueda eliminar el cobro."
+> "No estamos hablando de Jordan o Julio, sino que él se llama **Julien**, el
+>  supervisor… que él sí pueda eliminarlo **con el usuario de él**."
+> "Que tenga algo aquí en algún lado, **acá cerca**, que diga que **se le está
+>  cobrando** cambio de servicio, y lo vamos a eliminar."
+
+**Trampa encontrada.** El cobro nace en **dos lugares**: la línea automática de
+la pre-factura y una **NotaDebito aparte** dentro de `facturar!`. La vía que ya
+existe (autorización con PIN → borrar la línea) **no suprime la NotaDebito**.
+Por eso el diseño es apagar el flag `solicito_cambio_servicio`, que suprime las
+dos.
+
+**No depende de código.** `RP-21` cerró los roles; lo único que falta es que el
+admin le asigne PIN a Julien desde el CRUD de usuarios. Mientras nadie lo tenga,
+el banner lo dice en vez de ofrecer un botón muerto.
+
+---
+
+### A3-07 · Empacar por sucursal — **el módulo de empaque queda DIFERIDO**
+
+> "Se me olvidó decirte algo… lo que queremos es **empacar todas las sucursales
+>  en Miami por separado, en caja por separado**. Si dice Tegucigalpa, es
+>  sucursal — o sea, sucursales ajenas a San Pedro."
+> "Hay dos áreas donde yo creo que se ocupa: una en **etiquetar** y dos en
+>  **empacar**."
+> "El de empacar **no sé si lo cargamos ahorita** y después lo vamos a mejorar,
+>  porque pueda que sea complicado hacer tanto de un solo."
+
+Lo que sí quiere ya, en etiquetar:
+
+> "Al mismo instante que les aparezca… que el sistema les diga **sucursal tal**."
+> "Yo opino dos cosas: una es que le salga **en rojo** 'sucursal Tegucigalpa' o
+>  'se entregará en Tegucigalpa' — solo que les diga que eso es de Tegucigalpa."
+> "Solo quiero **un modal al principio y uno al final**."
+
+Y la distinción que remarcó dos veces:
+
+> "Recordá que **la ciudad donde es la persona no es el mismo lugar donde se le
+>  entrega**. La idea es ponerle dónde el hombre va a querer su retiro."
+
+O sea: es la **sucursal de retiro**, que ya existe y ya se imprime en la
+etiqueta (`RETIRA EN …`). **No se agranda el alcance** — el módulo de empaque
+lo difirió él.
+
+Contexto físico que dio: en Miami hay tres estaciones de etiquetado más una en
+la oficina, y bolsas de Amazon para lo no digitado y lo ya etiquetado. Lo que
+pide es una **tercera bolsa por sucursal**.
+
+---
+
+### A3-08 · El escaneo de USPS trae más de lo que el cliente pre-alertó — ✅ **ARREGLADO** (PR-C6.21)
+
+Probó los cuatro carriers con la pistola. Sobre USPS:
+
+> "El tracking de USPS **solo es desde donde dice 92**."
+> "**Esto es lo que el cliente recibe de tracking y esto es lo que le escanea
+>  el sistema.**"
+
+La etiqueta lleva el código completo (`420` + ZIP + servicio + tracking) y el
+cliente pre-alerta solo la cola. Con match exacto, ese escaneo no encontraba
+nada: ni el paquete esperado ni su pre-alerta, y Miami grababa un paquete nuevo
+al lado.
+
+El arreglo acepta que lo guardado sea **sufijo** de lo escaneado, con piso de
+longitud a los dos lados, **sin hardcodear el 92** — así cubre igual UPS y
+FedEx.
+
+---
+
+### A3-09 · Buscar también por el tracking secundario — ✅ **ARREGLADO** (PR-C6.21)
+
+> "Ahora el sistema debe buscar en esto también, debe buscar en la base, y
+>  **eso no estaba**."
+
+Tenía razón: `Paquete.buscar` sí cubría el secundario, pero `check_tracking`
+—el endpoint que usa la pistola— no lo usaba. Matiza **A1-26**, que daba el
+secundario por resuelto: el *display* estaba, la **búsqueda** no.
+
+---
+
+### A3-10 · Pre-alerta admin: autofill, dropdowns y duplicados — **PLANIFICADO** (PR-C6.25 / PR-C6.26)
+
+De la página de notas y del audio:
+
+> "/pre-alertas/new pero rol Admin → **abre tarjetas de crédito en tracking**"
+> "**Preseleccionar** de los dropdown."
+> "Mira, ve, cómo le di enter: ya tiene un error y **no lo detecta que ya
+>  existe**."
+> "Aquí esto **no tiene sentido** porque es consolidado… los servicios son como
+>  si repaque aquí."
+
+Verificado en el código:
+
+- Los inputs de tracking del admin **no tienen** `autocomplete`, `inputmode` ni
+  nada anti-autofill; el portal cliente sí tiene un Stimulus que sanea. De ahí
+  el autofill de tarjetas.
+- El único dropdown que arranca vacío es **Tipo de Envío** (`include_blank`),
+  aunque el modelo backfillea CER al guardar: el default existe pero **no se
+  ve**. Cliente y Proveedor son texto libre, no dropdowns.
+- **No hay detección de duplicado**: la unicidad de tracking está scopeada a
+  `pre_alerta_id`, y `Paquete` no tiene unicidad de tracking. Además
+  `edit.html.erb` **no tiene bloque de errores**, así que un 422 se re-renderiza
+  mudo.
+- Los campos que "no tienen sentido" — **no dijo cuáles**. Se le pregunta antes
+  de tocar nada.
+
+---
+
+### A3-11 · Aprobados en vivo — **no se tocan**
+
+- **Motivos de retención editables** (A1-18): *"aquí le hiciste un cuadro ahí
+  atrás, y todas ahí en motivos de retención. Ah, sí, está perfecto eso. Esa es
+  la idea de lo que queremos: un montón de cosas que nosotros podamos cambiar,
+  porque este es bien cambiante el negocio."* Falta que mande la lista.
+- **El cuadrito de descripción de Miami**: aprobado.
+- **Las iniciales de usuario**: confirmó que las define el admin —
+  *"nosotros creamos nuestras propias iniciales"*, *"el sobrenombre es lo que
+  realmente va"*.
+
+---
+
+### A3-12 · Fuera de alcance
+
+El servidor de Render, la caché y el precio del hosting ocuparon un buen rato
+del audio. No es trabajo de sistema; queda anotado para que no se busque
+después como si fuera un requerimiento.
+
+---
+
+## Conversación 6 · La etiqueta anotada y la página de notas (2026-08-09)
+
+### La etiqueta impresa, anotada en rojo
+
+Yusef imprimió una etiqueta real y le dibujó recuadros encima. La etiqueta
+salió así:
+
+```
+[código de barras]
+RS0002026000001
+9621091390000806743500382574 95791...      ← cortado
+ROBERTO HERNANDEZ
+CEC-005   08-Aug-2026 16:49   1/1  FRA · Tegucigalpa  Reg: A
+RETIRA EN TEGUCIGALPA                             CER
+```
+
+Anotaciones:
+
+| Anotación | Apunta a |
+|---|---|
+| **LOS TRACKING DEBEN CABER COMPLETOS** | regla general, arriba de todo |
+| **TRACKING PRIMARIO** | recuadro sobre `RS0002026000001` |
+| **TRACKING SECUNDARIO** | recuadro **debajo**, o sea en línea propia |
+| **CLIENTE TERCERO** | recuadro con dos líneas a la zona del nombre |
+| **FECHA Y HORA** | recuadro sobre `08-Aug-2026 16:49` |
+
+**Ojo con el vocabulario.** Él llama "tracking primario" al **número de
+recepción** de CEC y "tracking secundario" a los del carrier. No es la
+nomenclatura del sistema, pero lo que pide es claro: cada uno en su lugar y
+completo.
+
+**El hallazgo.** No faltaban campos — la etiqueta ya imprimía los cuatro. El
+`...` era **CSS**: `.t` lleva `text-overflow: ellipsis` y tracking y secundario
+iban **concatenados con `" · "` dentro de un solo elemento**, así que lo que se
+recortaba era siempre el final del segundo.
+
+Arreglado en `PR-C6.27`: líneas propias, sin recorte, y los escalones de letra
+bajaron para hacerle lugar a la línea de más. El tamaño 2.25 × 1.25 in **no se
+toca**, como pidió en su momento.
+
+### La página de notas a mano
+
+Escrita durante la misma reunión:
+
+```
+Pre-alerta
+→ Revisar Vinculado
+→ Etiquetar → Recibido miami
+→ Cambio de servicio envía donde no es.
+→ Cambio de servicio que mande al modal.
+→ Enter no lo encontró
+   ↳ Tracking → Enter.   ↳ tiene que ser Rápido
+/pre-alertas/new pero rol Admin
+→ abre tarjetas de crédito en tracking
+→ preseleccionar de los dropdown.
+```
+
+**El cruce.** Los 8 apuntes caen todos dentro de `A3-01` … `A3-10`. **No hay
+items nuevos** y no contradicen nada del audio — igual que pasó con las tres
+páginas de la conversación anterior.
+
+---
+
+### Lo que salió del código y no estaba en ninguna lista
+
+Dos cosas que aparecieron al implementar y que nadie había reportado:
+
+1. **El botón "Guardar (F8)" de `/pre_alertas/edit` no hace nada.** La vista no
+   setea `autosave-url-value` y el Stimulus corta en seco. Borrar una fila
+   tampoco persiste. Va en `PR-C6.25`.
+2. **El audit log nunca registró quién.** La guarda
+   `respond_to?(:set_paper_trail_whodunnit)` de `ApplicationController` daba
+   `false` siempre —el método viene `protected` y `respond_to?` sin el flag los
+   oculta—, así que el hook nunca corrió y las versiones de los 41 modelos
+   quedaron con `whodunnit` nil. En pantalla se leía "Sistema", que es lo mismo
+   que muestra un cambio hecho por un job, y por eso nadie lo notó. Arreglado en
+   `PR-C6.30`.
+
+---
+
+### Conversación 6 — cambios que se ocupan
+
+**Arreglado**
+
+| ID | Qué | PR |
+|---|---|---|
+| A3-05 / A3-08 / A3-09 | El escaneo no encontraba el paquete, y las respuestas se pisaban entre bultos | C6.21 |
+| A3-03 | Etiquetar dejaba el paquete en `empacado` | C6.22 |
+| A3-04 | Cambio de servicio mandaba a `/paquetes` | C6.23 |
+| RP-23 | Los trackings salían cortados en la etiqueta | C6.27 |
+| — | El escalón se elegía con el peso crudo y el precio se aplicaba al redondeado | C6.18 |
+| RP-08 | La tasa estaba en 24.85; sus cuentas usan 27.10 | C6.29 |
+| — | El audit log no registraba quién | C6.30 |
+
+**Planificado**
+
+| ID | Qué | PR |
+|---|---|---|
+| A3-07 | Aviso de sucursal de retiro en /etiquetar (el empaque queda diferido) | C6.24 |
+| A3-01 / A3-02 | Estatus y columna "Vinculado" en pre-alerta admin, más el F8 muerto | C6.25 |
+| A3-10 | Autofill de tarjetas, dropdowns y aviso de duplicado | C6.26 |
+| A3-06 | Quitar el cobro de cambio de servicio con PIN de Miami | C6.28 |
+| RP-03 / RP-04 | Botón para activar el redondeo a media libra | C6.20 |
+| RP-16 | Informe de impacto del redondeo, para que revise la hoja 2 | C6.19 |
+
+**Bloqueado por una respuesta**
+
+| Qué | Espera |
+|---|---|
+| Mínimo 35/25 por categoría en recolecta | RP-10b |
+| Etiqueta internacional como servicio | RP-13b |
+| Tarifas escalonadas por categoría y de CKA/EXPRESS | RP-01 / RP-14 (las manda él; es carga por CRUD) |
+
+---
+
+## Conversación 6 · Audio 4 y páginas 6-7 — el cuestionario cerrado (2026-08-10)
+
+Llegaron las dos piezas que faltaban: el **transcript del audio del 2026-08-08**
+(29 min, Yusef contestando el cuestionario en voz alta mientras Jorge lo iba
+leyendo) y las **fotos de las páginas 6/7 y 7/7** con sus respuestas a mano.
+
+Con eso el cuestionario queda **completo**: las 23 preguntas.
+
+> ⚠️ **Sobre el transcript.** Está hecho con `faster-whisper tiny` y se nota:
+> frases partidas, palabras inventadas, números mal oídos. **Las fotos mandan.**
+> Donde el papel es claro se toma el papel; lo que sale **solo** del audio va
+> marcado *a confirmar* y **no se codifica** sobre esa base sola.
+
+---
+
+### A4-01 · El cobro por volumen se configura al crear el cliente — ✅ **cierra RP-04b**
+
+Es lo primero que dice el audio, y contesta la nota suelta que él había escrito
+al margen del PDF:
+
+> "Clientes que son **mayoristas o clientes grandes**, que en cierto… y en
+>  cierto tipo de envío **solo se les cobra volumen, no peso**. Entonces ahí es
+>  donde nosotros necesitamos esa opción."
+> "Es lo que le creamos al cliente, **cuando creamos el cliente**… que en este
+>  cliente, en estos tipos de envío, va a tener una opción para **seleccionar
+>  varios tipos de envío y en cuál sí y en cuál no**."
+
+Y el papel lo respalda: *"necesita quedar editable **por Kliente y por
+servicio**"*.
+
+**Lectura.** No es un flag global: es una configuración **por cliente y por tipo
+de envío**, que se pone en la ficha del cliente. Hoy el peso a cobrar es siempre
+`max(peso real, volumétrico)`; esto pide poder forzar **solo volumétrico** para
+ciertos clientes en ciertos servicios.
+
+`RP-04b` deja de estar SIN DEFINIR.
+
+**IMPLEMENTADO en PR-C6.41.** Jorge cerró las tres cosas que quedaban abiertas:
+es el **peso volumétrico** (no otra medida), va en la **ficha del cliente** con
+tarjeta propia, y **el mínimo del servicio se sigue aplicando** aunque el
+volumétrico deje el cobro por debajo. El detalle técnico está en `RP-04b`.
+
+---
+
+### A4-02 · Caja puede subir un precio, no bajarlo — *a confirmar*
+
+> "Lo de caja no debería de editar. Entonces solo lo hacen los que están en
+>  pre-factura, los que autorizan, supervisor."
+> "Ellos pueden agregar un producto y le pueden poner el precio… entonces, si
+>  estamos que sean ciertos productos que ellos puedan agregar y modificar
+>  precio, **pero para arriba**. Si lo bajan, entonces ya no."
+
+**Lectura.** Caja puede **agregar** ciertos productos y ponerles precio, y puede
+**subirlo**; bajarlo necesita autorización. Es un matiz de la regla de precio
+bloqueado que ya estaba documentada (Fase 13).
+
+Va marcado *a confirmar* porque el pasaje viene entrecortado en el transcript y
+la regla mueve plata. **No se implementa hasta confirmarlo.**
+
+---
+
+### A4-03 · Por qué existe el mínimo de peso — *contexto*
+
+> "El mínimo de ellos es lo que pesa la libra, o sea media libra o algo por el
+>  estilo… la mayoría es una libra, pero para que, si le llega una pluma… le
+>  cobramos media libra nada más, o punto 25, para que al cliente no le cobren
+>  de más."
+
+**Lectura.** El mínimo no es para exprimir al cliente sino lo contrario: evitar
+cobrarle una libra entera a quien manda algo casi sin peso. Confirma el espíritu
+de la tolerancia `.10/.60` que ya está implementada (A2-09).
+
+---
+
+### A4-04 · El formato del número de recepción — respalda RP-17
+
+> "Sería **sucursal donde se recibió**, año y el mes… pero va a poner acá 12, el
+>  mes, y el número."
+
+Coincide con lo que escribió en la página 6. Ver `RP-17`.
+
+---
+
+### A4-05 · Regular y VIP **se eliminan** — mueve `RP-09`, *a confirmar*
+
+Jorge le lee la pregunta 9 y Yusef contesta de una:
+
+> Jorge: *"¿Qué hacemos con Regular y VIP? Hay 8 clientes en esta categoría."*
+> Yusef: *"**Esas categorías ya no van**… ahora es el escalonado."*
+
+Esto va **más allá** de lo que escribió en el papel, que solo decía
+*"→ categorías actuales del Excel"*. El papel dejaba dudando si Regular y VIP
+seguían existiendo; el audio dice que no: **desaparecen, y manda el escalonado**.
+
+**Lo que sigue faltando** es lo mismo que faltaba: **a qué categoría pasan los 8
+clientes** que hoy están ahí. Sin eso no se pueden migrar, así que `RP-09` no
+cierra — pero deja de ser una pregunta abierta entera y pasa a ser una sola.
+
+> ⚠️ *A confirmar.* Sale **solo del audio**, y el transcript es `tiny`. No se
+> borra ninguna categoría hasta tenerlo por escrito.
+
+---
+
+### A4-06 · La tarifa de recolecta la crea un supervisor — detalle nuevo de `RP-10`
+
+El papel ya había dado el precio (*"$35 o $25 dependiendo de la categoría de
+precio de cliente, **es el mínimo a cobrar**"*). El audio agrega **quién la
+carga**:
+
+> *"…igual es editable… **crea la tarifa, pero por alguien que es supervisor**,
+>  tipo Michelle."*
+
+**Lectura.** Encaja con el patrón que ya usa el sistema en otros lados: el monto
+lo puede mover alguien con autorización, no cualquiera. No cambia el modelado
+que `RP-10` pide, lo acota: la edición del mínimo va detrás de un rol.
+
+**`RP-10b` sigue abierta.** El audio habla de precios y de zonas de Miami, pero
+**nunca contesta** si la recolecta de Miami y la de Honduras son uno o dos
+cargos, que es lo que la pregunta pide.
+
+> ⚠️ *A confirmar.* Solo audio.
+
+---
+
+### A4-07 · El flete de México se habla, pero no se entiende — `RP-13b`
+
+Hay un tramo de casi un minuto sobre el flete de México y el mínimo, y el
+transcript se cae ahí: números sueltos —cinco, seis, siete— sin frase que los
+sostenga, y él mismo diciendo *"ahí fue que me equivoqué"* en el medio.
+
+**No se documenta ningún número.** `RP-13b` (etiqueta internacional: precio y
+moneda) **sigue abierta** y hay que volver a preguntarla. Se anota que el tema
+salió en el audio para que nadie lo busque de nuevo pensando que se perdió.
+
+---
+
+## Las respuestas de las páginas 6 y 7
+
+### RP-17 · El número de recepción: ¿le metemos el mes? — ✅ **CERRADA**
+
+No marcó ninguna casilla: **escribió el formato**, rotulando cada parte.
+
+```
+R        MIA        26     12     ______________________
+prefijo  sucursal   año    mes    número correlativo recepción
+```
+
+**Lectura.** Hoy es `RM` + `0002026` + `000010` → `RM0002026000010`.
+Queda `R` + código de sucursal de 3 letras + año de 2 dígitos + mes →
+`RMIA2612` + correlativo.
+
+Dos consecuencias:
+
+- El código de 3 letras **ya existe** (`Sucursal#codigo`: `MIA`, `SPS`, `TGU`,
+  `SAM`), así que no hace falta catálogo nuevo. El
+  `codigo_recepcion_prefix` actual (`RM`, `RS`, `RH`, `RSM`) queda obsoleto.
+- El contador pasa a ser por **sucursal + año + mes**; hoy es solo por año.
+
+Él ya sabía el costo — el papel lo decía: *"cambiarlo toca todos los números ya
+generados, por eso no quisimos inventar"* — y aun así escribió el formato nuevo.
+Como **no hay producción todavía**, se puede.
+
+---
+
+### RP-18 · Bajar la cantidad de cajas de un paquete — ✅ **CERRADA**
+
+Marcó:
+
+> ☒ Que deje hacerlo, pero **solo con PIN de supervisor**.
+
+Y en el audio dio la razón:
+
+> "Le pusieron 2 y al final es un paquete, y cuando van a entregar, el sistema
+>  no va a querer entregar porque decía que eran dos. Va a ser un error así."
+
+**Lectura.** Hoy `Paquete.ajustar_split!` **bloquea** el cambio si alguna caja
+sobrante ya se cobró o entregó (`CajaNoEliminable`). Esa guarda deja paquetes
+trabados en entrega. Pasa a ser: se puede, con PIN.
+
+**IMPLEMENTADO en PR-C6.42.**
+
+- `BajarCajasConPin` (mismo patrón que `QuitarCambioServicio`): lista de roles
+  propia, PIN, y auditado por `paper_trail`. **No se toca `ROLES_AUTORIZANTES`**
+  — esa lista da autorización sobre cualquier línea de pre-factura.
+- Vive en **/paquetes** y no en /etiquetar: el problema aparece en Honduras,
+  *"cuando van a entregar"*.
+- **Desengancha antes de borrar.** Borrar la caja a secas no alcanza:
+  `pre_factura_items` y `venta_items` la referencian con FK, así que el
+  `destroy!` reventaría contra la base. Se le saca la línea a la pre-factura
+  abierta y se recalculan los totales — si no, el cliente seguiría pagando una
+  caja que ya no existe.
+- **Dónde se planta el límite:** una caja ya **facturada**, con **venta**, o ya
+  **entregada** no se baja ni con PIN. Eso es un documento fiscal o un hecho
+  físico, y se corrige con una nota de crédito.
+- **Sin PIN se sigue bloqueando**, con el mismo mensaje de hoy.
+
+**Quién lleva el PIN (`RP-21`, contestado):** la lista se **deriva** de
+`User::ROLES_AUTORIZANTES` —los cuatro renglones que Yusef marcó "SI"— más
+`supervisor_miami`, que es Julien y es donde nace el error de digitación.
+Derivada y no copiada a propósito: la primera versión, armada a criterio, se
+había comido al **Supervisor de SAC**. Hay un test que fija que la lista sale de
+la respuesta y no de un criterio nuestro.
+
+---
+
+### RP-19 · El campo de origen (China / Estados Unidos) — ✅ **CERRADA**, y **corrige lo que habíamos hecho**
+
+No marcó "es solo informativo" ni "quítenlo". Escribió al lado de *"Cambia el
+precio o el proceso"*:
+
+> "Se utiliza para **el cobro** en Entrega Personal o en PreFactura."
+
+**Lectura, y la corrección.** En `PR-C6.38` se concluyó que el origen era
+**informativo** y se dejó derivado de la sucursal de recepción. La derivación
+estaba bien —él nunca pidió un campo para teclear, y en el audio lo confirma:
+*"si es en Miami, donde están recibiendo… si es fuera de ahí, ahí es donde está
+eso"*—. **La conclusión no**: entra en el cobro.
+
+Encaja con algo que ya está en pantalla: el panel de cálculo muestra **tres
+formas** —`USA → HN` por libra o volumen, `USA → HN` por pie³, y **`China → HN`
+por m³**— y hoy las tres se pintan siempre, con dos rotuladas *"no afluye en
+precio"*. El origen es lo que decide **cuál aplica**.
+
+Lo que el papel **no** dice es *cómo* multiplica. Eso queda como pregunta.
+
+---
+
+### RP-20 · El sonido de error del escaneo — ⏳ **abierta, pero ya se puede contestar**
+
+**Sin marcar.** El papel dice *"te mandamos tres opciones por WhatsApp para que
+las oigas"* — y **esas tres grabaciones nunca se hicieron**. No puede contestar
+algo que no recibió.
+
+> ✅ **Pagada (2026-08-11, `PR-275`).** Las tres existen:
+>
+> | Opción | Cómo suena |
+> |---|---|
+> | `grave` | **El que suena hoy.** Un tono bajo y seco de 0.3 s |
+> | `descendente` | 440 → 220. El «respuesta incorrecta» de toda la vida |
+> | `triple` | Tres pulsos cortos. Suena a alarma |
+>
+> Le llegan de dos formas: en `/etiquetar` y `/entrega_personal` —botón
+> **Sonidos**, cada una con su «Escuchar»—, y como archivo en
+> `docs/entregables/sonidos/` (`bin/rails docs:sonidos_wav`), para WhatsApp.
+>
+> Conviene que las oiga **en la pantalla**: un sonido de bodega se elige con el
+> ruido de la bodega de fondo, no en el parlante de un celular.
+>
+> `grave` va primero y es el default a propósito: *"dejalo como está"* tiene que
+> ser una respuesta posible. Cuando elija, se cambia el **default** de
+> `sonido_error_variante` y ahí cambia para todos.
+>
+> **Lo que sigue abierto es solo su respuesta**, no nuestro trabajo.
+
+Y de paso salieron dos cosas que el documento daba por hechas y no eran ciertas
+— ver `A1-10` abajo.
+
+---
+
+### RP-21 · ¿Quién lleva PIN de supervisor? — ✅ **los roles, CERRADOS**
+
+Escribió **"SI"** en los cuatro renglones: Administrador, Supervisor de Caja,
+Supervisor de Pre-Factura, Supervisor de Servicio al Cliente.
+
+**Lectura.** Esos cuatro son **exactamente** `User::ROLES_AUTORIZANTES`, que el
+sistema ya tenía cargados desde `PR-13.c`. O sea que la parte de código de
+`RP-21` **no estaba abierta**: la respuesta confirma lo que ya estaba.
+
+Lo único que falta son los **nombres** de esas personas, y eso es **carga de
+datos** —el admin les asigna PIN desde el CRUD de usuarios—, no una decisión que
+bloquee ningún PR.
+
+**Consecuencia para `PR-C6.42`:** la lista de `BajarCajasConPin` se **deriva** de
+`ROLES_AUTORIZANTES` en vez de armarse a mano. La primera versión, escrita a
+criterio, se había comido al **Supervisor de SAC** —que Yusef marcó "SI"
+explícitamente—. Hay un test que fija que la lista sale de la respuesta y no de
+un criterio nuestro.
+
+Va aparte un renglón que el papel no tenía: el **supervisor de Miami** (Julien).
+Lleva PIN por `PR-C6.28` —Yusef lo pidió en el audio, no en la hoja— y entra en
+`BajarCajasConPin` porque es donde nace el error de digitación. **No** se le
+agrega a `ROLES_AUTORIZANTES`: eso le daría autorización sobre cualquier línea de
+pre-factura, que es mucho más de lo que pidió.
+
+---
+
+### RP-22 · Proveedores de entrega personal — ⏳ **pendiente de su oficina**
+
+Escribió sobre la lista: **"Llenaremos en oficina"**. En el audio: *"eso lo puedo
+grabar… por ahora aquí lo voy a dar yo"*.
+
+---
+
+### RP-23 · La etiqueta impresa — ⏳ **pendiente**
+
+Escribió: **"Pendiente"**.
+
+> "Esto es lo único que no podemos probar nosotros desde acá… vamos a poner con
+>  una campaña y lo hago."
+
+**Ojo con el orden**: ahora conviene que la imprima **después** de aplicar
+`RP-17`, porque el número de recepción cambia y **va en el código de barras**.
+Si la imprime antes, hay que repetirlo.
+
+---
+
+### Los tres pendientes que el papel le listaba
+
+Siguen sin llegar, y el papel los nombra: **motivos de retención**, **notas
+predeterminadas** y las **grabaciones de voz** para la alerta de pre-alerta.
+
+---
+
+### Lo que este cierre cambia de lo ya documentado
+
+- **`RP-04b`** deja de estar SIN DEFINIR (A4-01).
+- **`A1-25`** (origen del paquete) queda cerrada, **corrigiendo** la conclusión
+  de `PR-C6.38`: no es informativo, entra en el cobro.
+- **`A1-10`** (sonidos): el sonido feo espera que **nosotros** mandemos las tres
+  opciones. Es deuda nuestra.
+- **`A1-05`** (el sufijo de caja va en la recepción, nunca en el tracking) se
+  mantiene, pero el número que lo lleva cambia de formato — ver `RP-17`.
+
+### Preguntas nuevas que salen de estas respuestas
+
+1. **¿`RP-19` y `RP-04b` son la misma cosa?** El origen China y el "solo volumen
+   por cliente" apuntan los dos al cobro por volumen. ¿El origen lo decide solo,
+   o siempre manda la configuración del cliente?
+2. ~~**"Solo volumen": ¿es siempre el volumétrico**, o el mayor entre el
+   volumétrico y algún mínimo?~~ — **cerrada por Jorge**: es siempre el
+   volumétrico, y el **mínimo del servicio** se sigue aplicando aparte
+   (`PR-C6.41`). Sin medidas se cobra el peso real, nunca cero.
+3. **Los números de recepción viejos**: ¿se re-siembra staging para que todo
+   quede con el formato nuevo, o conviven los dos?
+4. **A4-02** (caja sube pero no baja): confirmar, que el transcript viene
+   entrecortado y la regla mueve plata.
+
+---
+
+## Conversación 7 (2026-08-12) — la revisión del PDF de procesos, de punta a punta
+
+1 h 50 min con Yusef y Manalo, repasando `procesos_para_yusef.pdf` página por
+página. **Este audio es la respuesta a ese entregable**: cierra `RP-30`, corrige el
+dibujo donde estaba mal, y de paso abre el frente de roles que llevaba meses
+pendiente.
+
+Alcanzaron a llegar hasta la página 3 de 12 antes de que se acabara el tiempo
+(*"vamos por la página 3 de 12"*), pero Yusef dijo que el resto ya quedaba
+prácticamente cubierto por lo hablado.
+
+> ⚠️ **Sobre el transcript.** `whisper small` sobre audio de reunión con altavoz.
+> Se le entiende bastante mejor que al del audio 4, pero se le van palabras y
+> nombres. Se normalizaron las que no tienen ambigüedad —"onduras" → Honduras,
+> "su cursal" → sucursal, "prefectura" → prefactura, "janear" → escanear— y **lo
+> que no se entiende va marcado, no completado**.
+
+---
+
+### A7-01 · Bodega Honduras va **después** de la prefactura — ✅ **cierra RP-30 · el orden quedó en el código con `A7-11`**
+
+El error más importante del diagrama, y Jorge lo tenía al revés:
+
+> **Yusef:** "Bodega Honduras va después de prefactura."
+> **Jorge:** "Ah, ok, prefactura antes de bodega, ok."
+
+Más adelante lo repite con el porqué, que es lo que hay que documentar:
+
+> **Jorge:** "Yo pensé que se iba a enviar primero y luego en el punto se hacía la
+>  prefactura. ¿Por qué no se va a hacer la prefactura en San Pedro?"
+> **Yusef:** "Porque **aquí tengo el personal para eso**. En Tegucigalpa no tengo,
+>  no voy a tener otra persona haciéndolo."
+
+**Lectura.** La prefactura se hace **siempre en San Pedro**, antes de mandar el
+paquete a cualquier sucursal. No es una preferencia de orden: es que el personal
+de prefactura existe solo en San Pedro. Esto tiene que quedar en el diagrama
+(`lib/procesos_pdf.rb`) **y** hay que verificar que el flujo de estados no asuma
+el orden viejo.
+
+---
+
+### A7-02 · El diagrama arranca en el portal del cliente, y ese es el canal minoritario
+
+> **Yusef:** "El cliente solo hace ni... que **30, 40% de las prealertas**."
+
+Yusef ordena las entradas al sistema:
+
+> "Uno lo ve entrada, proceso, salida. Donde nace el paquete, esa es la entrada de
+>  nuestro sistema. Veo que hay prealerta, escaneándolo en Miami, y hay otra
+>  entrada que es una **digitación manual**, que no necesariamente en Miami, puede
+>  ser desde aquí. Esas son las tres entradas."
+
+**Lectura.** Tres puntos de nacimiento: pre-alerta (cliente o admin), escaneo en
+Miami, y digitación manual — esta última es la etiqueta local que se hace en San
+Pedro cuando en Miami se les escapó escanear. El diagrama solo dibuja el primero.
+
+---
+
+### A7-03 · El hueco entre manifiesto y aduana se llena escaneando la caja — ✅ **PLANIFICADO**
+
+Es el hueco que el propio PDF marcaba con borde punteado:
+
+> **Jorge:** "Acá está el hueco más grande, entre el manifiesto y la aduana. No hay
+>  ninguna pantalla. Alguien entra a la ficha de paquetes y cambia el estado."
+> **Yusef:** "Esto lo va a cambiar al **escanear la etiqueta de manifiesto en
+>  caja**."
+
+Y define el identificador:
+
+> "Le vas a crear **un código QR o lo que vos querás**, el único código único de la
+>  caja."
+
+**Lectura.** Cada caja del manifiesto lleva su propio código. Ojo con
+[[project_barcode_etiqueta_es_el_warehouse]]: el código de la **etiqueta del
+paquete** es el warehouse receipt. Este es otro código, el **de la caja de
+empaque**, y es nuevo.
+
+---
+
+### A7-04 · Se escanea primero la hoja del manifiesto, y eso lo "activa"
+
+> "Vamos a escanear primero el [encabezado] que te va a imprimir el manifiesto en
+>  la hoja principal, donde sale el desglose. Eso **te activa los otros paquetes**
+>  para empezar a escanearlos."
+> "En el instante que se están recibiendo, todos los paquetes que vienen amarrados
+>  en ese manifiesto van marcándose como **aduana**."
+
+**Lectura.** Escanear la hoja del manifiesto cambia el estado a *en aduana* y
+habilita el escaneo de las cajas. Es el mismo gesto que ya existe en la
+pre-factura y la factura (*"es como la prefactura, como la factura"*).
+
+---
+
+### A7-05 · La regla **no bloquea**: avisa y da dos salidas — ✅ **DECIDIDO en el audio**
+
+Jorge preguntó explícitamente qué tan dura era la regla, porque de eso depende si
+entorpece la bodega:
+
+> **Jorge:** "Yo pregunto esto porque dependiendo qué tan dura querés esa regla.
+>  Duro me refiero a que si definitivamente no la escanea y no está activada, **te
+>  bloquea** el otro. Puede llegar a convertirse en un problema en el proceso."
+> **Yusef:** "Fijate que hasta cierto punto tenés razón… **que no lo bloquee**."
+
+Lo que sí hace, al finalizar:
+
+> "Le va a decir: **falta la 2 de 3, falta la 8 de 10**… y te tira un listado."
+> "Te va a dar la opción: **seguir escaneando** o **marcar como recibido con las
+>  pendientes**."
+
+Y queda visible fuera del momento del escaneo:
+
+> "Igual si vos entrás como administrador, ahí deberías poder buscar… ya hay una
+>  pendiente."
+
+**Lectura.** Mismo patrón que el aviso de Miami: alerta con el faltante
+enumerado, dos botones, y el pendiente queda consultable. **No bloquea el paso a
+aduana del resto.**
+
+---
+
+### A7-06 · Miami → San Pedro: se escanean **cajas**, no paquetes
+
+> "Escanearon cada caja, cada etiqueta de manifiesto. **No escanean los paquetes,
+>  solo escanean las cajas.** Ya lo pone todo en aduana y listo, se cierra. Si
+>  falta una caja, manda un correo al correo tal."
+
+**Lectura.** El manifiesto internacional se cuadra a nivel de caja. El paquete
+individual no se escanea acá. El faltante avisa por correo, no en pantalla.
+
+---
+
+### A7-07 · El manifiesto interno de sucursal es igual al oficial — 🟡 **EN CURSO (serie `PR-I`)**
+
+> "Es el de envío nacional, de una sucursal a la otra. Lleva un **manifiesto
+>  interno** y es igualito."
+
+Con su horario y su tamaño:
+
+> "El manifiesto de sucursal, el de Tegucigalpa, **lo recibe entre las nueve y
+>  media y las tres de la tarde**."
+> "Adentro del manifiesto, de uno a… cien paquetes. No creo que llegue a cien, por
+>  cincuenta."
+
+**Lectura.** Confirma [[project_dual_manifiesto_sonidos]]: dos manifiestos, mismo
+comportamiento. El interno mueve el ~20% de la carga (*"el 80% de la carga se
+queda en San Pedro"*).
+
+**Cómo se está construyendo (serie `PR-I`, desde el 2026-09-01):**
+
+| PR | Qué | Estado |
+|---|---|---|
+| `PR-I0` | El número lleva el **código completo** de la sucursal: con la letra sola, `SPS` y `SAM` no podían tener manifiesto el mismo año (`RP-46`) | ✅ #398 |
+| `PR-I1` | El manifiesto **interno** como tipo: exige a dónde va, y no pide nada de aduana | 🟡 |
+| `PR-I2` | Cerrarlo manda los paquetes a `enviado_sucursal` — **sin notificar** (`A7-09`) | ✅ |
+| `PR-I3` | Recibirlo en la sucursal destino, escaneando **paquetes** | ✅ |
+| `PR-I4` | El aviso al cliente al cerrar la recepción — **sin ventana**, ver abajo (`A7-08`) | ✅ |
+
+**`PR-I0` no estaba en el plan y salió del camino.** Numerar desde una sucursal
+que no es Miami es lo que despierta la colisión: hasta ahora nadie más numeraba.
+
+⚠️ **Lo que `A7-08` pide y hoy no se puede construir.** Yusef: *"el push del
+celular, el WhatsApp **o** el SMS… y el correo"*. El repo **solo tiene correo**:
+no hay ninguna gema de push, WhatsApp ni SMS en el `Gemfile`, y
+`clientes.telefono_whatsapp` es nada más un campo donde se guarda el número. Los
+otros tres canales necesitan proveedor, credenciales y costo — es una decisión de
+Yusef, no código. `PR-I4` hace la ventana de espera y el correo, y deja el gancho.
+
+---
+
+### A7-08 · Escanear el manifiesto de sucursal notifica a todos — ✅ **IMPLEMENTADO en PR-I3/PR-I4; la ventana, desde el 2026-09-06**
+
+> **Jorge:** "¿Solo con que escanee el manifiesto le notifique a todos los clientes
+>  en Tegucigalpa, o que escanee paquete por paquete?"
+> **Yusef:** "Con el manifiesto notifique, pero **darle una ventana de media hora,
+>  por ejemplo, o una hora**."
+
+El motivo es operativo:
+
+> "Yo veo que escanean el manifiesto y empiezan a escanear paquete por paquete
+>  para cuadrar el manifiesto."
+
+Y qué se manda:
+
+> "El push del celular, el WhatsApp **o** el SMS —no lo vamos a atacar dos veces— y
+>  el correo. El push y el correo es como permanente."
+
+**Lectura.** Job encolado con retraso configurable (30–60 min) desde que se
+escanea el manifiesto, para que el conteo termine antes de avisarle a la gente.
+WhatsApp y SMS son excluyentes entre sí.
+
+**La mitad del escaneo está en `PR-I3`.** En el interno la pistola lee el
+**paquete** y no la caja —*"empiezan a escanear paquete por paquete"*—, y cada
+uno queda `disponible_entrega` **en la sucursal destino** al escanearlo, que es
+lo que `A7-13` pide mostrar. «Escaneado» no necesitó columna nueva: el paquete se
+mueve en el acto, así que lo que falta se reconoce solo porque sigue en
+`enviado_sucursal`.
+
+**Y hay una diferencia de fondo con el oficial, decidida y no heredada.** El
+oficial, al cerrar «con faltantes», mueve **igual** a todos los paquetes: la caja
+que no apareció ya está perdida y no cerrar no la trae. El interno **no puede**
+hacer eso: marcar `disponible_entrega` a un paquete que no llegó es decirle al
+cliente que venga a retirar algo que no está. Así que el que no se escaneó **se
+queda en `enviado_sucursal`**, que es exactamente el señalamiento que pidió
+`A7-09` (*"ey, este sale pendiente, hay que buscarlo"*). El manifiesto se cierra;
+el paquete queda marcado.
+
+El correo de faltantes tampoco sale en el interno: `A7-06` lo pidió para el
+**internacional** (*"si falta una caja, manda un correo al correo tal"*), y acá
+el faltante no se pierde de vista.
+
+**El aviso está en `PR-I4`. Del 2026-09-01 al 06 salió al cerrar la recepción, sin
+ventana; desde el 2026-09-06 la ventana existe** (ver abajo).
+
+**Y la razón no es de diseño: la cola de trabajos de este repo no está
+conectada.** Verificado el 2026-09-01:
+
+- El adaptador efectivo en producción es **`AsyncAdapter`**
+  (`RAILS_ENV=production bin/rails runner 'puts ActiveJob::Base.queue_adapter.class'`).
+- `solid_queue` está en el `Gemfile` y **`render.yaml` levanta dos workers** que
+  corren `rails solid_queue:start` — pero del lado de Rails nunca se cableó: no
+  hay `db/queue_migrate`, no hay `config/queue.yml`, y **no existe una sola tabla
+  de `solid_queue`** en la base. El worker arranca sin de dónde tomar trabajo y
+  la app encola dentro de su propio proceso.
+- El comentario que quedó sin descomentar en `config/environments/production.rb`
+  lo dice con todas las letras: *"non-durable queuing backend"*.
+
+Un job agendado a 30-60 minutos sobre `:async` **se pierde en el primer
+reinicio**, y en Render hay deploys y spin-down: el cliente no recibiría el
+aviso, sin error y sin rastro.
+
+**Jorge, 2026-09-01, con eso sobre la mesa: notificar al cerrar, sin ventana.**
+Se pierde el motivo que Yusef le daba —*"escanean el manifiesto y empiezan a
+escanear paquete por paquete para cuadrar"*— pero al cerrar ese conteo **ya
+terminó**, que es justo lo que la ventana venía a esperar. **`RP-32` (¿media hora
+o una hora?) queda sin efecto** hasta que la cola se conecte.
+
+**Decisión de Jorge (2026-09-01): la cola no se conecta por ahora** — *"no vamos
+a meter colas ahorita eso pone lento las cosas"*. Se le aclaró que una cola no
+pone lento el request y la decisión quedó igual.
+
+**Revertida por Jorge el 2026-09-06, por escrito:** *"vamos a usar solid queues
+y vamos a poner todos esos jobs en un servidor aparte del web service… se
+hablaba de un delay que se va a usar colas; te había dicho que no, que lo
+hiciéramos instantáneo, pero con que más cosas ocupas colas, definitivamente
+hagámoslo, pero en un servidor solo para colas"*. Lo que se hizo, en un PR:
+
+- **Las tablas de `solid_queue` en la base principal, por migración normal.** El
+  instalador las deja en un esquema aparte para una base separada, que se carga
+  con `db:prepare`; Render corre `db:migrate`, que jamás carga un
+  `*_schema.rb`, y sobre una base que existe `db:prepare` **migra en vez de
+  cargar**. Con el layout del instalador staging habría quedado con el adaptador
+  puesto y cero tablas. Como migración, entran a `structure.sql` y a la base de
+  test, donde un lint afirma que existen.
+- `config.active_job.queue_adapter = :solid_queue` en producción (staging corre
+  como producción). Desarrollo y test siguen en `:async` / `:test`.
+- **El worker es un servidor aparte** — y **no existía**. `render.yaml` lo
+  declaraba desde hace meses, pero en la cuenta de Render había cinco servicios
+  y `cec-worker-staging` no era uno de ellos (y `cec-worker-production` está
+  suspendido). Se creó el mismo 2026-09-06 por la API de Render, con las
+  variables de `cec-staging`, y su log lo confirma: *SolidQueue-1.4.0 Started
+  Supervisor / Dispatcher / Worker / Scheduler*, y un segundo después ejecutó
+  un correo que llevaba una hora esperando en la cola. Lección: un `render.yaml`
+  no es un deploy; si el servicio no aparece en la lista, no existe.
+- **Tres jobs nocturnos despiertan.** `config/recurring.yml` estaba escrito y
+  dormido: `CleanEmptyPreAlertasJob` (3am, borra suavemente pre-alertas vacías
+  de más de 30 días), `MarcarCotizacionesExpiradasJob` (1am) y
+  `MarcarCuotasVencidasJob` (1:30am). Corren desde el primer deploy.
+- **Todos los `deliver_later` pasan a ser durables**: facturas, cotizaciones,
+  notas, pre-alertas, faltantes, contraseñas.
+- **La ventana de `A7-08` vuelve**: el primer paquete escaneado del interno
+  programa `NotificarLlegadaASucursalJob` a 30 minutos (`RP-32` sigue abierta:
+  ¿30 o 60?; se cambia sin deploy con `Configuracion.set("ventana_aviso_llegada_min", "60")`).
+  Hay **dos que avisan** —la ventana y el cierre— y por eso la idempotencia vive
+  en el paquete (`llegada_notificada_at`): la ventana avisa lo escaneado hasta
+  ahí, cerrar después avisa solo a los que faltaban, y nadie recibe dos veces.
+
+**Deuda que esto destapó, y que es más grande que este bloque:** *todos* los
+`deliver_later` de hoy corren sobre el mismo adaptador no durable — la factura
+pendiente, la pagada, las cotizaciones, las notas de crédito y débito, y el
+correo de cajas faltantes del manifiesto. Un deploy en el momento equivocado se
+come uno de esos correos y nadie se entera.
+
+**Cómo quedó el aviso:** un correo **por cliente** y no por paquete —quien tiene
+tres cajas en el mismo camión recibe uno que las nombra—, solo a los que **de
+verdad llegaron** (el que no se escaneó sigue en `enviado_sucursal` y no se
+avisa), con el **nombre de la sucursal en el asunto**, que es el punto de
+`A7-13`. Cerrar dos veces no reenvía.
+
+⚠️ **Solo correo.** Yusef pidió cuatro canales —*"el push del celular, el
+WhatsApp **o** el SMS… y el correo"*— y el repo no tiene gema de push, WhatsApp
+ni SMS; `clientes.telefono_whatsapp` es nada más un campo donde se guarda el
+número. Los otros tres necesitan proveedor, credenciales y costo: decisión de
+Yusef, no código.
+
+---
+
+### A7-09 · Falta el estado **enviado a sucursal** (F7) — ✅ **YA SE ESCRIBE (PR-I2)**
+
+> "Está el **F8** para consolidar en Honduras y el **F9** para notificar. Entonces
+>  tenemos que crear un **F7**… que va para una sucursal."
+
+Lo importante es para qué sirve:
+
+> "¿Por qué va a servir ese status nuevo? **Porque esto sirve de auditoría.** Qué
+>  paquete no escanearon o no enviaron… Se pueden ir a revisar el sistema y decir:
+>  ey, este sale pendiente, hay que buscarlo. Y lo vamos a captar el mismo día o
+>  el día siguiente."
+> "A qué me refiero: que **los errores se corrijan en 24 horas**."
+
+**Lectura.** F7 marca *pendiente de envío a sucursal*. No es cosmético: es el
+gancho que permite detectar el paquete que se quedó sin empacar. Al cerrar el
+manifiesto interno pasa a *enviado a sucursal*, **sin mandar ninguna
+notificación** (*"solo en sistema va a cambiar el estatus"*).
+
+**Implementado en `PR-I2`.** `enviado_sucursal` estaba en el enum, con su fecha y
+su validación, **sin un solo escritor** desde que se agregó; `FinalizarManifiesto`
+es el primero. El **destino sale del manifiesto y no del cliente**:
+`heredar_sucursal_destino` cae a la sucursal donde el cliente retira —el caso
+normal—, pero el manifiesto sabe a dónde va el camión, y un paquete de un cliente
+de SPS metido en el manifiesto a Tegucigalpa se habría marcado como que va a SPS.
+
+**Y apareció un hueco que el modelo no cubría.** La guarda de tareas abiertas
+(`no_advance_with_open_tareas`) compara índices de `ESTADOS_ORDEN`, y
+`enviado_sucursal` **no está ahí**: es un desvío (`ESTADOS_EXCEPCIONALES`), no un
+paso del pipeline. O sea que en el interno el guard no disparaba —`new_idx` sale
+nil y el método se va sin mirar nada— y el manifiesto se habría cerrado con
+paquetes que tenían algo pendiente, que es justo lo que Jorge decidió que trabara
+el cierre. Se pregunta explícitamente en `FinalizarManifiesto`, y hay un test que
+falla si se saca.
+
+---
+
+### A7-10 · Falta el estado **consolidando Miami**, y detrás hay un servicio nuevo
+
+> "Falta **consolidando Miami**… y eso no lo hemos creado tampoco en el etiquetar."
+
+El porqué:
+
+> "Creamos un servicio que se llama **COM, de consolidación**. Cuando el cliente lo
+>  solicite por ese medio, entonces se queda consolidando en Miami."
+> "La gente quiere consolidar 20 paquetes **allá**, no acá… y aparte quieren
+>  devolver cosas. Dejan en Miami y de ahí devuelven algunas."
+
+Hoy se resuelve a mano:
+
+> "Me mandó 26 tracking… me puse a copiarle uno por uno y crearle la prealerta uno
+>  por uno. Y después cambiar el estado a consolidado, **porque no existe ese
+>  servicio todavía**."
+
+**Lectura.** Un sexto servicio (`COM`) que hoy no existe, más su estado. Nota que
+Yusef aclara que **no lo prende todavía**: *"si lo creo, tengo que tener listo
+todo el personal en Miami… no tengo el espacio"*. Se documenta, no se activa.
+
+---
+
+### A7-11 · **Prefacturado no es un estado** — ✅ **ELIMINADO**
+
+> **Yusef:** "El prefacturado no sé de dónde lo sacó. Yo creo que lo sacó de los
+>  procesos, **no del estatus. Ese tenés que eliminar.**"
+
+**Lectura.** `prefacturado` está en la lista de estados del paquete y no debería.
+Ojo antes de borrarlo: hay que ver si algún paquete lo tiene puesto y a qué se
+migra.
+
+**Cómo se hizo, en dos tiempos.** Primero salió del dropdown —de
+`ESTADOS_SELECCIONABLES`, con un test que lo trababa—, y ahí se quedó un tiempo
+porque `PreFactura#confirmar!` lo escribía y había que decidir qué escribiría en
+su lugar. Ahora salió del enum entero:
+
+- **`PreFactura#confirmar!` escribe `disponible_entrega`.** Es lo que dicta
+  `A7-01`: bodega va después de prefactura, así que emitir la pre-factura es
+  justamente lo que mete la carga a la bodega de Honduras.
+- **`PreFactura#anular!` ya no toca el estado**, solo suelta la FK. Antes
+  forzaba `disponible_entrega`, o sea fabricaba un movimiento que no ocurrió:
+  anular un documento no mueve carga. Con la FK en nil el paquete vuelve a caer
+  en `Paquete.facturables`, que filtra por `pre_factura_id`.
+- **La plata no se movió**, y es la razón por la que esto se pudo hacer sin
+  tocar cobros: `facturables` nunca filtró por este estado.
+- Los paquetes que lo tenían puesto pasaron a `disponible_entrega` por
+  **migración de datos** (`20260831210417`), porque el deploy de staging solo
+  migra. `estado` es texto sin CHECK, así que un valor que el enum ya no conoce
+  hace reventar al modelo al instanciarlo — no era opcional.
+- **El rótulo «Pre-facturado» se queda** en `EstadoPaqueteHelper::ETIQUETAS`:
+  paper_trail guarda versiones viejas que lo nombran y la bitácora las muestra.
+
+Y quedó a la vista una cosa que el estado tapaba: cuatro tests simulaban «caja ya
+cobrada» poniendo `estado: "pre_facturado"` **sin `pre_factura_id`**, algo que en
+la realidad no puede pasar. Ahora usan la FK, que es lo que `cobrada_o_entregada?`
+miraba de primero desde siempre.
+
+---
+
+### A7-12 · El dropdown de estados va ordenado por el proceso
+
+> **Yusef:** "Prefacturado y disponible para entrega estaban antes. ¿No debería ser
+>  primero…? A mí me gusta el orden."
+> **Jorge:** "Como el proceso. Pero como ahora los metimos, solo están metidos."
+> **Yusef:** "Hacéme la lista y yo la ordeno."
+
+**Lectura.** Los estados salen en orden de inserción. Van en orden de flujo.
+Yusef se ofrece a ordenar la lista si se la mandan.
+
+---
+
+### A7-13 · **Disponible en sucursal `<nombre>`** — y el porqué es una queja real
+
+Yusef insistió mucho en esto, contra la resistencia de Jorge a alargar la lista:
+
+> "Aquí llaman los clientes que cuándo van a recibir el paquete, y ya dice
+>  *disponible en Honduras*."
+> "Un cliente me dijo: recibí un WhatsApp que ya tengo disponible el producto, pero
+>  entro a la página web y me dice que todavía no, que sale *aduanas* todavía.
+>  **¿Cuál es el estatus real?**"
+> "Han ido a recogerlo a Tegucigalpa y no está ahí."
+
+Y cómo lo quiere:
+
+> "*Disponible en sucursal Tegucigalpa*. *Disponible en sucursal SPS Cerón.*"
+> "Es que recordá que **mi meta es abrir sucursales o puntos de entrega**."
+
+**Lectura.** Dos cosas distintas: (a) el estado que ve el cliente tiene que nombrar
+la sucursal, y (b) **la notificación y el portal se están contradiciendo hoy** —
+eso es un bug, no una mejora. Yusef lo llama *"precontestarle la pregunta al
+cliente"*.
+
+Ojo: esto se cruza con la pregunta abierta de que **no hay sucursal de retiro
+estructurada** (`Cliente` solo tiene `ciudad` en texto libre). Sin eso, el nombre
+de la sucursal en el estado es tan confiable como lo que el cliente escribió.
+
+---
+
+### A7-14 · **Enviado**, no *en camino* — la semántica importa
+
+> **Jorge:** "¿En camino sería mejor?"
+> **Yusef:** "**No, enviado.** Porque *en camino* van a creer que ya va para ahí
+>  ahorita, y van a creer que es ahorita."
+> "Tenés que tener mucho cuidado con eso."
+
+---
+
+### A7-15 · **Entregado** lleva las iniciales de la sucursal; **en reparto** lleva KX o local
+
+> "El entregado sería bueno poner ahí **las iniciales de la sucursal** donde se
+>  entregó. Para no solo manejar nombre, sino unas iniciales para que uno pueda
+>  entender en dónde se entregó."
+> "En reparto había que poner que dijera **KX o local**."
+
+**Lectura.** Las sucursales necesitan **nombre e iniciales** como datos propios.
+KX es el repartidor externo; amarrarlo por API queda explícitamente para después
+(*"eso queda para el futuro"*).
+
+---
+
+### A7-16 · F9 activa fecha **y hora** programada
+
+> "**O** se activa la fecha programada… **fecha y hora** programada. Porque ahora lo
+>  vamos a manejar hasta como hora, por si lo queremos programar para la tarde."
+
+---
+
+### A7-17 · El aviso de tracking existente tiene que ser un **modal que bloquee** — 🐛 **el error que encontró**
+
+Este es el que Yusef anunció al principio (*"te encontramos un errorcito ahí que
+se te quedó"*) y demostró en vivo al final:
+
+> "Ya me tira esto, pero esto yo me refería que **me lo tirara como modal**. La
+>  idea es que esto no te tira: **te tiene que bloquear la pantalla**, porque tenés
+>  que usar una de las opciones obligadas de ahí."
+
+Las opciones son tres:
+
+> "Le da escanear y le preguntan qué vas a hacer: **actualización, cambio de
+>  servicio, o es un duplicado**."
+
+**Lectura.** Hoy el aviso sale inline y deja seguir trabajando. Tiene que ser
+modal bloqueante con las tres acciones. Es chico y es el arreglo más fácil de
+cerrar primero.
+
+---
+
+### A7-18 · El duplicado agrega una letra
+
+> "Cuando es un duplicado le agrega **una letra**. Y si ya tiene otro duplicado,
+>  agrega la [siguiente]."
+
+---
+
+### A7-19 · La pre-alerta se queda desincronizada del paquete — ✅ **ARREGLADO (PR-C7.02)**
+
+Lo reprodujeron juntos y les costó entenderlo:
+
+> **Yusef:** "Este tracking está en Express… **la prealerta era CER**, pero tenés
+>  que actualizarla a Express."
+> **Jorge:** "Por eso está haciendo este diagrama, porque **una inconsistencia
+>  entre prealerta y paquete**."
+> **Yusef:** "Ahí es donde tenés que irte a la prealerta y sacarlo de ahí."
+
+**Lectura.** Al cambiar el servicio del paquete en `/etiquetar`, la pre-alerta
+conserva el servicio viejo, y el siguiente escaneo vuelve a proponer el servicio
+equivocado.
+
+**La causa.** `Paquete#aplicar_cambio_servicio` toca solo el paquete, y **nada en
+todo el repo escribía `pre_alertas.tipo_envio_id` después de crearla**. El único
+callback que baja del paquete a la pre-alerta es `sync_pre_alerta_estados`, que
+está condicionado al cambio de *estado* y solo toca el estado.
+
+**Cómo se resolvió (`PR-C7.02`).** La pre-alerta sigue al paquete: un
+`after_save` sobre `tipo_envio_id` que la sincroniza **cuando no hay duda** —si
+todos los paquetes vinculados coinciden. Si divergen (dos cambios de servicio
+distintos en la misma pre-alerta) **no se adivina**: se deja como está y queda
+anotado en el historial, porque elegir uno sería inventarle un servicio al
+cliente. Eso cierra `RP-33`: se corrige sola.
+
+Yusef también pidió limpiar los datos de prueba: *"tenés que limpiar la base"*,
+*"cuando hagamos pruebas mejor siempre trackings nuevos, para que todo quede
+consistente"*. Ver [[project_base_dev_con_fixtures]].
+
+---
+
+### A7-20 · Entrega Personal: **caja por caja con Agregar**, no plantilla
+
+Jorge propuso poner la cantidad de cajas y que el sistema replicara una plantilla
+editable. Yusef lo rechazó tres veces:
+
+> "**Nunca son iguales.** Las entregas personales nunca, nunca, nunca."
+> "Yo he recibido 30 cajas: 10 son de uno, 5 son de otro, 10 son de otro, 2 son de
+>  otro."
+
+Y explicó por qué, que es lo que decide el diseño:
+
+> "Ellos agarran la caja, miden, y de ahí se van a la computadora. **¿Cuáles cajas
+>  eran? ¿Cuáles fueron las que ya metí?**"
+> "Es **paso por paso**. Es igual el manifiesto de Miami."
+
+**Lectura.** El operador mide una caja física y la mete; no tiene forma de saber
+qué fila de una plantilla le toca. Va: llenar medidas y peso → **Agregar** →
+siguiente. Si el tipo de caja existe en catálogo trae medida predeterminada y
+solo se pide el peso.
+
+Esto **contradice el diseño actual** y hay que rehacerlo.
+
+---
+
+### A7-21 · Las etiquetas salen al final, todas juntas, y sin "1 de N" — ✏️ **él mismo lo acotó (2026-08-19)**
+
+> ⚠️ **Esto vale para el empaque, no para etiquetar.** Yusef lo corrigió solo en
+> la llamada del 19-ago, sin que nadie se lo preguntara:
+>
+> > *"La etiqueta solo lleva el 1, 2 ni 3 porque no estamos seguros de cuántas
+> > estamos empacando… **y no es en etiquetar. Etiquetar siempre lleva la
+> > cantidad, porque ahí ya sabés cuántas mandás imprimir**."*
+>
+> Al recibir, la cantidad se fija antes de imprimir. Implementado en `PR-C7.28`
+> con esa distinción; ver `C14-01`.
+
+> "No creo que debamos crearle una etiqueta a cada uno a medida las vayamos
+>  sacando, sino que **hasta el final tira las cinco etiquetas** y las pegás. Por
+>  si hay algún cambio."
+> "La etiqueta **solo lleva el número, no lleva el uno de dos ni de tres**, porque
+>  no estamos seguros cuántas estamos empacando."
+> "Cuando menos acordás: hey, me salieron cuatro en vez de cinco."
+
+**Lectura.** La cantidad de cajas no se conoce hasta terminar de empacar, así que
+ni la etiqueta lleva "1 de N" ni se imprime sobre la marcha.
+
+---
+
+### A7-22 · **Recolecta es una pre-alerta de Entrega Personal**
+
+La definición más limpia que ha dado del módulo:
+
+> "**La recolecta es como una prealerta de una entrega personal.**"
+> "Acá en la entrega personal le podés dar una opción que diga que va a ser una
+>  recolecta. Antes de proveedores."
+
+Campos, todos aproximados:
+
+> "Le vas a poner la cantidad de cajas que vas a ir a traer y un peso o medida
+>  aproximada. **No necesitás exacto**, no todo es exacto."
+> "El costo de recolecta automáticamente es **35**, y si el cliente tiene precio
+>  especial es **25**."
+
+**Lectura.** Misma pantalla que Entrega Personal con un switch al inicio. Genera
+un *pre* warehouse receipt, no uno normal. El costo confirma
+[[project_recolecta_tabla_tarifas]] con dos niveles.
+
+---
+
+### A7-23 · Recolecta necesita horarios, contacto e instrucciones
+
+> "Hay unos campos que hay que agregar, que es **horarios**… horarios y la persona
+>  encargada con número, información."
+> "El paquete de Jorge Padilla me dijeron que preguntara por Manuel Quiñones, el
+>  número de teléfono es tal, el horario de la empresa trabajan de 9 a 6."
+
+**Lectura.** Tres campos nuevos: ventana horaria, persona de contacto con
+teléfono, e instrucciones libres.
+
+---
+
+### A7-24 · Falta el impuesto de Miami — 💰
+
+> "Nada más le está poniendo el **impuesto de Honduras**. Y ahí creo que hay que
+>  poner el **impuesto de Miami**. Esto van a pagar en Honduras y aquí sería en
+>  Miami."
+
+**Lectura.** Es plata. Va con `RP-24`…`RP-29`.
+
+---
+
+### A7-25 · Hay **dos tablas de precios** que se pisan — ✅ **CERRADA (PR-C7.08 + PR-C7.12)**
+
+Yusef encontró la duplicación navegando:
+
+> "**Ya me acordé.** Yo hice categoría de precios al inicio, y después esta es la
+>  que hice reciente. **Hay unas incongruencias.** No me había fijado que tenías
+>  otra tabla del otro lado."
+> **Jorge:** "Voy a tener que migrar, a ver cómo hago para unificar, porque en
+>  teoría este servicio y la otra categoría **debería ser la misma tabla**."
+
+Y falta lo escalonado en una de las dos:
+
+> "Te falta categoría de precios más el **escalonado**. Porque en la categoría de
+>  precios llevamos también precios escalonados."
+
+**Lectura.** Dos modelos representando lo mismo. Mientras convivan, cuál manda es
+ambiguo — y esto decide cuánto se cobra. Va con el bloque de plata.
+
+**Cómo se cerró.** Nunca fueron dos tablas de precios: eran una tabla de precios
+y una de grupos, con la segunda disfrazada de la primera.
+
+`PR-C7.08` le quitó a `categoria_precios` las tres columnas de precio. No eran
+"incongruencias" de contenido: **ningún cálculo las leía** desde `PR-C7.06`, y
+encima las vistas las rotulaban en lempiras sobre números que estaban en dólares
+—la tabla nunca tuvo columna `moneda`—. Se podían editar y no cambiaba nada de
+lo que se cobra.
+
+`PR-C7.12` cerró la otra mitad. Jorge, por segunda vez: *"el área de categoría de
+precio, pensaría que se puede eliminar porque no le veo mucho valor"*. La tabla
+**no** se puede eliminar —los 8 grupos son las 8 columnas de la hoja de Yusef y
+28 de las 44 tarifas cuelgan de ellos; sin ellos el precio de Shein habría que
+copiarlo cliente por cliente—, pero la **pantalla** sí sobraba: un CRUD de un
+campo en el sidebar, justo debajo de "Tabla de Servicios". Se fue, y los grupos
+se administran dentro de la Tabla de Servicios, que es donde vive su precio.
+
+Queda una sola pantalla que cobra, que era el pedido de Yusef. Y un solo rótulo:
+lo que la base llama `categoria_precios` se llama **"grupo de clientes"** en las
+cuatro pantallas que lo muestran.
+
+Lo escalonado que él extrañaba (*"en la categoría de precios llevamos también
+precios escalonados"*) ya funciona igual para todos los niveles: cada fila de
+`tarifas` es un escalón, con o sin grupo.
+
+---
+
+### A7-26 · El precio especial vive **en el cliente**, y aplica por servicio — ✅ **HECHO (PR-C7.15)**
+
+> "Ese precio especial para un cliente **debería estar en el cliente**, digo yo.
+>  Entro al [cliente] y le pongo el precio especial."
+> "Le doy descuento en CER y en CEM, **pero no le doy descuento en EXPRESS**."
+> "Si es mayorista, se va a aplicar **solo a los marítimos**."
+
+La forma que acordaron:
+
+> "Para mí tiene que ser un **megacuadro** para el cliente… un cuadro donde vaya
+>  con todas esas, como seleccionamos."
+
+Y la tensión de fondo, que conviene dejar escrita:
+
+> **Manalo:** "Eso de tener un montón de precios siempre es mala idea."
+> **Yusef:** "Lo que pasa es que en este negocio **vos negociás tarifas**."
+> "Tenemos que unificar lo mejor que se pueda… estandarizar la mayoría y crearle
+>  botones para las excepciones."
+
+**Lectura.** Extiende el cobro por volumen de `PR-C6.41`: la misma matriz
+cliente × servicio que ya existía para eso tiene que servir para el precio.
+
+**Cómo se hizo.** El cuadro está en la ficha del cliente, donde él dijo que
+entra, y **es una vista sobre `tarifas`**: escribe las filas de nivel cliente,
+que ya eran el primer nivel de `Tarifa.resolver`. Guardar los precios del cliente
+en otro lado habría vuelto a dejar dos fuentes de verdad para el mismo número —
+o sea `A7-25` otra vez, tres días después de cerrarla.
+
+Una fila por servicio, con cuatro cosas: **qué paga hoy y de dónde sale** (solo
+lectura), **precio especial**, **mínimo** y **solo volumen**. Los checkboxes de
+cobro por volumen se **mudaron** ahí; no quedaron duplicados.
+
+Las dos columnas de la izquierda son la mitad que pedía Manalo. Yusef lo dijo
+como *"estandarizar la mayoría y crearle botones para las excepciones"*: se ve el
+estándar antes de pisarlo, y la excepción muestra cuánto se está bajando
+(`−22% vs lista`). Por eso **no hay columna de descuento**: el descuento *es* el
+precio especial, y una segunda forma de escribir el mismo número es justo lo que
+se acaba de sacar del sistema.
+
+Vaciar una celda **quita** la excepción, igual que en `PR-C7.14`. Y si un
+servicio ya tiene tramos cargados, la fila sale en solo lectura con un link a la
+Tabla de Servicios: una escalera no cabe en una celda, y ofrecer un número plano
+la aplastaría en silencio.
+
+**Lo que sigue abierto de este bloque**: *"si es mayorista, se va a aplicar solo
+a los marítimos"* es una regla de la **categoría**, no del cliente.
+`TarifasHuerfanas::SOLO_MARITIMOS` ya la detecta y la reporta con
+`rake tarifas:huerfanas`; falta decidir si se corrige la data o la regla.
+
+---
+
+### A7-27 · Sin definir: ¿pie cúbico o libra volumétrica? — ✅ **CONTESTADA (`A8-02`)**
+
+> **Jorge:** "¿Y si va a ser [pie] cúbico?"
+> **Yusef:** "Eso es lo que hace falta todavía… si el cobro es **por pie cúbico o
+>  por libra volumétrica**."
+
+**Contestó el 2026-08-12**, en la hoja de redondeos: el cobro es **por libra
+volumétrica**. El pie cúbico y el metro cúbico llevan escrito al margen *"pero
+**no afluye en precio**"* — se calculan y se muestran, no multiplican. Ver
+`A8-02`.
+
+---
+
+### A7-28 · Arranca la Conversación 2: el **Excel de roles × operaciones**
+
+Lo primero que se habló, y es el frente que llevaba meses sin abrir:
+
+> "Yo voy a crear un Excel donde tenemos arriba **qué roles**, y al costado
+>  izquierdo **todas las operaciones que existen**, y vamos a tener que marcar
+>  cuáles sí pueden hacer y cuáles no, para que vos lo creés."
+> "Los de prefacturas **no pueden facturar**, solo pueden prefacturar. Y los de
+>  facturas no pueden crear prefacturas, solo facturar."
+> "Ahorita vos tenés un usuario de admin que puede hacer todo."
+
+Quién lo hace y con qué expectativa:
+
+> "Que **Evelin** me haga el Excel."
+> "Como no nos vamos a acordar de todo, al final siempre va a irte aumentando. No
+>  es como que te lo vamos a dar y no va a cambiar, **es mentira**."
+
+**Lectura.** Yusef entrega la matriz. Del lado de código el enganche existe: los 9
+roles y el concern `Authorization` (`require_role`, `can_access?`). Esto es lo que
+por fin permite documentar la **Conversación 2**.
+
+---
+
+### A7-29 · Quién es quién
+
+> "Vanessa tiene… los roles altos de administrativos. Ellos pueden hacer y
+>  deshacer **lo mismo que yo**. El rol de ella, el de Vanessa y el mío es el
+>  mismo: caja, prefactura, administrativo, todo."
+> "Supervisor de caja sería **Michel**."
+
+**Lectura.** Cuadra con [[project_quien_lleva_pin_rp21]]. El supervisor de caja es
+un rol distinto del de prefactura y del de entrega: *"como es caja va a ser el
+supervisor de caja, no va a ir el supervisor de prefactura"*.
+
+---
+
+### A7-30 · Pago parcial y crédito piden PIN
+
+> "Siempre pago completo. Rara vez autorizamos pagos parciales, pero **para hacer
+>  pagos parciales o crédito vamos a pedir PIN**, que lo va a poner el supervisor
+>  de caja."
+
+**Lectura.** Un caso nuevo para el candado de la Fase 13, que hoy cubre precio y
+descuento pero no la forma de pago.
+
+---
+
+### A7-31 · "Necesitamos registro de todo" — el caso que lo disparó
+
+Contando un problema real del sistema viejo:
+
+> "Me salió **entregado pero no tenía ni factura ni nada**, no había pagado. Y yo
+>  quise ver quién había dado la orden de entregar algo que no se ha pagado… **no
+>  pude**. No pude ligar la entrega con la proforma que se escaneó."
+> "Lo que necesitamos es poderle dar **seguimiento a cada cambio y cada cosa en
+>  cada proceso, quién lo hizo. Necesitamos registro de todo.**"
+
+**Lectura.** Es del sistema viejo, pero el requerimiento aplica igual. Enlaza con
+[[project_paper_trail_global]] y con [[project_auditoria_whodunnit]]: `paper_trail`
+ya registra quién desde `PR-C6.30`, pero **falta extenderlo** y falta que Entregas
+guarde con qué documento se entregó.
+
+---
+
+### A7-32 · Varias pre-facturas en una sola factura
+
+> **Yusef:** "¿No podés hacer que si al cliente le facturamos tres prefacturas le
+>  haga una sola factura?"
+> **Jorge:** "Podemos. Habría que hacerla bien ordenada la prefactura."
+> **Yusef:** "Es mejor, porque **imprimimos menos papel** y tardamos menos."
+> "Facturás una por una, o **marcás todas y facturás todas**. Y esta la quiero
+>  aparte: entonces son tres marcadas, facturás esas dos y la otra aparte."
+
+---
+
+### A7-33 · Entrega: escanear factura, luego sus paquetes, y **una sola firma**
+
+> "Escanear la primera, pipipe, escanear los paquetes; escanear la segunda, pipipe,
+>  escanear los paquetes… y **una sola firma para todos** esos amarrados."
+
+Y explícitamente **no** mezclarlos:
+
+> **Jorge:** "¿O los cruzan?"
+> **Yusef:** "No creo que sea buena idea, porque **me viene ahí en contra de
+>  errores**."
+
+**Lectura.** Va con el POD pendiente ([[project_pod_firma_entregado]]): la firma
+es una por entrega, no una por factura.
+
+---
+
+### A7-34 · El acuerdo de foco: **terminar Miami antes de seguir**
+
+Cerrando la reunión:
+
+> **Yusef:** "Centrémonos en un área, Jorge. **Es etiquetar. Centrémonos en
+>  Miami.** Terminemos Miami."
+> "Entrada normal, entrega personal, recolecta."
+
+**Lectura.** Confirma la regla que ya está escrita en `docs/entregables/README.md`
+—solo se pregunta por el módulo en el que estamos— y fija el orden de trabajo:
+las tres entradas de Miami antes de abrir prefactura.
+
+Sobre prefactura Yusef fue claro en que todavía no toca:
+
+> "Esta es la pantalla de prefactura, **no hemos llegado ahí**… cuando lleguemos
+>  acá nos vamos a hablar dos meses."
+
+---
+
+### Punch-list de la Conversación 7
+
+| Qué | Estado |
+|---|---|
+| Bodega Honduras después de prefactura (`A7-01`, `A7-02`) | ✅ `PR-C7.07` — dibujo corregido y regenerado; el pipeline de estados queda en `RP-38` |
+| Modal bloqueante en `/etiquetar` (`A7-17`) | ⏳ **el más fácil, va primero** |
+| Pre-alerta desincronizada del paquete (`A7-19`) | ✅ `PR-C7.02` — la pre-alerta sigue al paquete |
+| Entrega Personal caja por caja (`A7-20`, `A7-21`) | ✅ `PR-C7.04` — repetidor con Agregar, y la etiqueta sin el `1 de N` |
+| Estado `enviado a sucursal` / F7 (`A7-09`) | ✅ `PR-C7.03` — con `sucursal_destino_id` y fecha, que es lo que lo hace auditable |
+| Sacar `prefacturado` de los estados (`A7-11`) | ✅ `PR-C7.03` — fuera del dropdown, sigue en el código |
+| Ordenar el dropdown de estados (`A7-12`) | ✅ `PR-C7.03` — orden de proceso, desvíos al final |
+| `Disponible en sucursal <nombre>` (`A7-13`, `A7-14`, `A7-15`) | ✅ `PR-C7.03` — **no estaba bloqueado**: `Cliente#sucursal_retiro` ya existía |
+| Escaneo de manifiesto con aviso no bloqueante (`A7-03`…`A7-08`) | ⏳ Fase 12 |
+| Recolecta como pre-alerta de EP (`A7-22`, `A7-23`) | ✅ `PR-C7.05` — switch en `/entrega_personal`; el `$25` sigue en `RP-10b` |
+| Estado `consolidando_miami` (`A7-10`) | ✅ `PR-C7.03` — el estado sí; el **servicio `COM` no se activa** |
+| Impuesto de Miami (`A7-24`) | 💰 va con `RP-24`…`RP-29` |
+| Dos tablas de precios que se pisan (`A7-25`) | ✅ `PR-C7.06` — el fallback a la tabla vieja murió; el detector de huérfanas queda en `rake tarifas:huerfanas` |
+| Precio especial por cliente y servicio (`A7-26`) | 🔨 el motor ya lo soporta (`tarifas.cliente_id`); falta moverlo a la ficha del cliente |
+| Excel de roles × operaciones (`A7-28`) | ⏸️ lo manda Evelin |
+| Varias prefacturas → una factura (`A7-32`) | 📋 Fase de facturación |
+| Una firma por entrega (`A7-33`) | 📋 va con el POD |
+
+### Las preguntas que abre
+
+| Id | Qué |
+|---|---|
+| ~~`RP-31`~~ | ~~¿Pie cúbico o libra volumétrica?~~ (`A7-27`) — **✅ contestada** en la hoja de redondeos del 2026-08-12: **por libra volumétrica**; el pie cúbico *"no afluye en precio"*. Ver `A8-02` |
+| ~~`RP-32`~~ | ~~¿De cuánto es la ventana de notificación al escanear el manifiesto de sucursal — media hora, una hora? (`A7-08`)~~ — **✅ CONTESTADA el 2026-09-07: 30 minutos**, con esas palabras: *"que le pusiéramos 30 minutos a los correos para que si tienen más paquetes se le actualicen"* (`C27-20`). Es el valor que ya estaba puesto y activo desde el 2026-09-06 (`VENTANA_DEFAULT_MIN`); estuvo sin efecto del 01 al 06 porque no había cola. Se cambia sin deploy con `Configuracion.set("ventana_aviso_llegada_min", "60")` |
+| ~~`RP-33`~~ | ~~Al cambiar el servicio en `/etiquetar`, ¿la pre-alerta se corrige sola o se marca resuelta?~~ **✅ se corrige sola** cuando no hay ambigüedad — `PR-C7.02` |
+| ~~`RP-34`~~ | ~~Los paquetes que hoy están en `prefacturado`, ¿a qué estado se migran?~~ **✅ no se migra ninguno**: el estado se queda, solo deja de poder elegirse a mano — `PR-C7.03` |
+| `RP-35` | El Excel de roles × operaciones (`A7-28`) — lo hace Evelin |
+| ~~`RP-36`~~ | ~~Nombre e iniciales de cada sucursal, y la sucursal de retiro estructurada en el cliente~~ **✅ ya existían**: `Sucursal#codigo` son las iniciales y `Cliente#sucursal_retiro_id` está desde antes. El doc que decía lo contrario estaba viejo |
+| `RP-37` | **El impuesto de Miami** (`A7-24`): ¿qué tasa, sobre qué base, en qué servicios? Yusef solo dijo que falta. Y no es agregar una tasa: `impuesto` es una columna escalar en 5 tablas |
+| ~~`RP-38`~~ | **✅ CERRADA por Jorge (2026-08-31): sí, y de acuerdo al audio** — *"si en los audios están las respuestas, y sí reordenemos de acorde al audio"*. Y la respuesta estaba: no había que reordenar nada alrededor de `pre_facturado`, había que **eliminarlo** (`A7-11`), y el orden que queda es el que Yusef dictó. `PreFactura#confirmar!` escribe `disponible_entrega`; `anular!` solo suelta la FK. La plata no se movió: `facturables` siempre filtró por `pre_factura_id`, no por este estado. Lo que sigue faltando no es el orden sino la **pantalla** de bodega — nadie escanea la carga al entrar, así que `disponible_entrega` es hoy un efecto de la pre-factura y no un lugar por donde alguien la haga pasar. ~~¿Se reordena el pipeline? Yusef dice *aduana → prefactura → bodega*, y el código tiene *aduana → disponible → prefacturado*~~ |
+
+---
+
+## Conversación 8 (2026-08-12) — las reglas de redondeo, por escrito
+
+No es un audio: son **dos mensajes de Yusef** con las reglas que faltaban, una
+de ellas traída del contador. Van juntas acá porque hasta hoy vivían repartidas
+entre comentarios de Ruby y nadie las podía consultar sin abrir el código.
+
+Son **cuatro reglas distintas**, y confundirlas es fácil porque las cuatro se
+llaman "redondeo".
+
+| # | Qué se redondea | Regla | Código |
+|---|---|---|---|
+| 1 | **Libras y libras volumétricas** | umbrales `.10` y `.60` sobre la fracción | `VolumetricoCalculator.redondear_media_libra` |
+| 2 | **Pies cúbicos** | **siempre hacia arriba** al entero | `VolumetricoCalculator.pies_cubicos` |
+| 3 | **Metros cúbicos** | hacia arriba al **segundo decimal** | `VolumetricoCalculator.metros_cubicos` |
+| 4 | **Dinero (L. y $)** | media redonda al **tercer decimal** | `ROUND_HALF_UP` en todo el cobro |
+
+---
+
+### A8-01 · Libra volumétrica: la regla al tercer decimal — 🐛 **el código no cumplía**
+
+La tabla que mandó, con el ejemplo completo:
+
+> **TARIFA USA A HN — POR LIBRA O VOLUMEN — LA MÁS COMÚN**
+> PESO REAL 5 LBS · MEDIDAS 648 (ancho × largo × profundo, en pulgadas³)
+> **ENTRE 166** → 3.90 VLbs → *"ES IGUAL A **4**"*
+>
+> | VLbs | redondeado |
+> |---|---|
+> | 3.099 | *"es igual"* **3** |
+> | 3.10 | *"es igual a"* **3.50** |
+> | 3.599 | *"es igual"* **3.50** |
+
+Confirma dos cosas que ya estaban: el divisor es **166** y los umbrales son
+`.10` / `.60`. Pero los dos valores de **tres** decimales destaparon un bug.
+
+La regla estaba escrita **dos veces**. `VolumetricoCalculator` la resolvía en
+milésimas con los umbrales literales; `Tarifa#redondear_al_incremento` le
+restaba una tolerancia de `0.09` y hacía `ceil`. **No son equivalentes**: restar
+0.09 y "por debajo de .10" coinciden en todo peso de dos decimales y se separan
+en el tercero.
+
+| peso | `Tarifa` (antes) | `VolumetricoCalculator` | **hoja de Yusef** |
+|---|---|---|---|
+| 3.099 | 3.5 ❌ | 3.0 | **3** |
+| 3.599 | 4.0 ❌ | 3.5 | **3.50** |
+
+Había un test que barría 4001 pesos obligándolas a coincidir — pero **en pasos
+de 0.01**, o sea justo por encima de donde vivía la diferencia.
+
+Estaba latente mientras `incremento_libras` venía en `nil`. `PR-C7.10` lo puso
+en `0.5` en las 44 tarifas y lo volvió alcanzable: los pesos guardados son
+`numeric(10,2)`, pero **`/cotizador` pasa `params[:peso]` crudo**, así que
+cotizar 3.099 lb cobraba por 3.5 — media libra de más, en la pantalla que el
+cliente ve antes de decidir.
+
+**✅ Arreglado en `PR-C7.11`**: una sola implementación —la que valida la hoja—
+y el barrido del test pasa a milésimas.
+
+---
+
+### A8-02 · Pie cúbico y metro cúbico **no afluyen en precio** — ✅ **cierra `A7-27` / `RP-31`**
+
+Las otras dos tablas que mandó, las dos con la misma anotación al margen:
+
+> **TARIFA USA A HN — POR PIE CÚBICO** · *"pero **no afluye en precio**"*
+> 179424 pulgadas³ **entre 1728** → 103.8333 → **104** — *"**este siempre hacia
+> arriba**"* (peso real 1000 lbs)
+>
+> **TARIFA CHINA A HN — POR METRO CÚBICO** · *"pero **no afluye en precio**"*
+> 2.95 m³ · 450 kg
+>
+> | m³ | redondeado |
+> |---|---|
+> | 2.9301 | 2.94 |
+> | 2.9400 | 2.94 |
+> | 2.9401 | 2.95 |
+> | 2.9402 | 2.95 |
+
+Esto contesta la pregunta que quedó abierta en `A7-27` —*"eso es lo que hace
+falta todavía: si el cobro es por pie cúbico o por libra volumétrica"*—:
+**se cobra por libra volumétrica**. El pie cúbico y el metro cúbico se calculan
+y se muestran, pero no multiplican nada.
+
+Dos frases suyas hay que leerlas con cuidado porque están en taquigrafía:
+
+- **"NO AFLUYE EN PRECIO"** = informativo. Se muestra, no se cobra.
+- **"NO SE REDONDEA"** (sobre el metro cúbico) **no** quiere decir que se deje
+  crudo — sus propios cuatro ejemplos suben `2.9301` a `2.94` y `2.9401` a
+  `2.95`. Quiere decir *no se redondea al estilo media libra*: es hacia arriba
+  al segundo decimal. Así estaba implementado desde antes.
+
+El pie cúbico sí es un ceil puro al entero, tal cual dice.
+
+---
+
+### A8-03 · El redondeo del dinero: la respuesta del contador — ✅ **el código ya cumplía**
+
+Venía de una pregunta nuestra sobre una diferencia de 3 centavos:
+
+> **Pregunta:** 4 × 93.98 = 375.92, y con ISV 15% da 432.31. Pero el PDF dice
+> 375.90 y 432.28. La diferencia de 0.03 — ¿cuál es la regla de redondeo?
+>
+> **Yusef:** *"¡Hay papito! Es que el programador anterior no entiende. Pero
+> dejame, hablo con el contador y que me dé las reglas de redondeo."*
+
+Y volvió con ellas:
+
+> **Método de Redondeo — regla estándar**
+> · Si el **tercer decimal** es ≥ 5, se redondea hacia arriba.
+> · Si el tercer decimal es < 5, se redondea hacia abajo.
+> · `L. 100.004 → L. 100.00` · `L. 100.005 → L. 100.01`
+
+Es media redonda al segundo decimal, que es **exactamente lo que hace el sistema
+nuevo**: `ROUND_HALF_UP` en los ~30 puntos donde se calcula plata —subtotales,
+ISV, totales, descuentos, mínimos, notas de crédito y débito.
+
+O sea que **`375.92` y `432.31` eran nuestros números, y estaban bien**. El
+`375.90 / 432.28` del PDF era el sistema viejo **truncando** en vez de
+redondear, y truncar siempre le cobra de menos a la empresa. No hay nada que
+arreglar; quedó escrito para que no se vuelva a preguntar.
+
+---
+
+### Las preguntas que abre la Conversación 8
+
+| Id | Qué |
+|---|---|
+| `RP-39` | La tolerancia de `.10`/`.60` está dictada **solo para media libra**. Si algún día se carga una tarifa con incremento de 1 lb, ¿la tolerancia sigue siendo la misma o es proporcional? Hoy no hay ninguna tarifa así, así que no bloquea nada |
+| `RP-41` | **¿El flete de un envío de varias cajas se cobra por caja o por envío?** Hoy `PreFactura` arma una línea por caja, y cada una resuelve su propio escalón y su propio mínimo. Con las cajas de `A9-03` —5, 9 y 163 lb en CER— eso da **$633.50**; el mismo envío como 177 lb en un solo escalón daría **$619.50**. Nadie lo escribió, y son **$14.00 de diferencia en un envío**. La pantalla espeja lo que la factura cobra hoy (`PR-C7.17`) hasta que él decida. ▶ **2026-09-07: el bulto la toca de frente** (`C27-01`, `C27-10`). Su respuesta operativa es «se cobra lo que se midió junto», y por eso el peso del bulto **no se reparte** entre las cajas: la cadena corre por caja y 20 lb entre 3 pueden cobrar tres mínimos. La regla de facturación sigue siendo de él |
+| `RP-40` | El metro cúbico y el pie cúbico *"no afluyen en precio"* **hoy**. ¿Van a afluir alguna vez —China por m³, marítimo por ft³— o son informativos para siempre? Cambia si hay que guardarlos o basta calcularlos |
+
+---
+
+## Conversación 9 (2026-08-13) — la etiqueta y el WR de un envío real, marcados a mano
+
+Yusef mandó por WhatsApp la etiqueta y el Warehouse Receipt de un envío de
+3 cajas (`RMIA2608000001` / `EP-2026-SMI-WAL-000003`), con anotaciones en rojo
+sobre las imágenes y una nota de voz de minuto y medio explicándolas.
+
+> ⚠️ **Sobre el transcript.** `whisper small` sobre nota de voz de WhatsApp. Oye
+> *"World Health Receipt"* donde él dice **Warehouse Receipt**; queda
+> normalizado. Lo demás va como salió.
+
+---
+
+### A9-01 · La etiqueta dice "RETIRA EN MIAMI" — 🐛 ✅ **ARREGLADO (PR-C7.16)**
+
+Anotado sobre el recuadro de la etiqueta:
+
+> *"Retira en la sucursal asignada al cliente, **al igual que etiquetar**."*
+
+Y en el audio: *"la etiqueta solo tiene esos dos defectitos, verdad, que no es
+nada del otro mundo"*.
+
+**Qué pasaba.** `Paquete#sucursal` es, textualmente en el modelo, *"dónde RETIRA
+el cliente"*. `/etiquetar` lo respeta: manda la sucursal donde se está
+recibiendo a `sucursal_recepcion` y deja `sucursal` para heredarla del cliente.
+`/entrega_personal` mandaba la sucursal de Miami como `sucursal_id`, o sea que
+ocupaba el campo del retiro — y la etiqueta imprimía lo que encontraba ahí.
+
+Su comparación con `/etiquetar` era exacta: esa pantalla ya lo hacía bien.
+
+---
+
+### A9-02 · El Warehouse Receipt "solo sale por una caja" — 🐛 ✅ **ARREGLADO (PR-C7.16)**
+
+> *"Dos: el Warehouse Receipt sí está malo, porque **solo sale por una caja**.
+>  Y el Warehouse Receipt es cuando vos le entregás al cliente que recibiste las
+>  tres cajas."*
+
+Y la distinción que hay que tener clara, porque es la que ordena todo el flujo:
+
+> *"Esa etiqueta… es **la etiqueta que nosotros le pegamos a cada caja**, pero
+>  pido tres. Pero al contrario, el Warehouse Receipt es al revés: el Warehouse
+>  Receipt **solo imprimís uno**, donde detalla todo lo que recibiste y toda la
+>  información que ya le pusiste."*
+
+Sobre la imagen, al lado del `-1` del código de barras:
+
+> *"Agregue detalle de 3 cajas, aquí debería crear las etiquetas para 3 cajas y
+>  luego tirar preview del WR."*
+
+**La causa era una sola, y no estaba en el WR.** Los trackings autogenerados
+—`EP-` y `RC-`— salen de un callback cuyo único guard es `tracking.blank?`, y
+`crear_split!` crea las cajas en un loop: cada caja sacaba **su propio número**
+(`…000003`, `…000004`, `…000005`) y el contador avanzaba tres veces.
+
+Y todo lo que agrupa un split lo hace por `tracking` —`paquetes_hermanos`,
+`wr_packages_for`, `etiqueta?hermanas=1`—, así que los hermanos eran **cero**. De
+ahí salía lo que él vio: el WR listaba una fila y `TOTAL PIECES 1` mientras el
+badge de al lado decía `SPLIT 3 CAJAS`.
+
+Contradecía además lo ya decidido: **un tracking, N cajas**.
+
+---
+
+### A9-03 · Al WR le falta el total de libras que se va a cobrar — ✅ **HECHO (PR-C7.16)**
+
+> *"Entonces aquí es donde le tenés que poner la medida de las tres cajas, el
+>  total de las tres cajas, etcétera. El valor total de libras que se le va a
+>  cobrar, etcétera. **No es valor de precios, sino es valor de libras que se le
+>  va a cobrar, el que sea mayor en cada transacción.** O sea, si una caja pesa
+>  más y la otra tiene más volumen, entonces le vas poniendo el de mayor **de
+>  cada una individual**."*
+
+Es **suma de los máximos por caja**, no el máximo de las sumas — y no dan lo
+mismo. Con las tres cajas del ejemplo (5 lb / 8 lb / 2 lb pero 30×30×30):
+
+| | |
+|---|---|
+| Peso real total | 15.0 lb |
+| Volumétrico total | 176.5 lb |
+| **Libras a cobrar** | **177.0 lb** |
+
+El número que factura no aparecía en el documento y no se deducía mirando las
+otras filas. Sale de sumar `peso_cobrar`, que cada caja ya calcula con la regla
+completa.
+
+---
+
+### A9-04 · El resto del WR no se toca: es de pre-factura
+
+> *"La otra: en el servicio… todo esto es parte que va en **prefactura**. Por eso
+>  yo no te he explicado estas partes."*
+> *"De ahí parece que el Warehouse Receipt está bastante bien, que lo vimos una
+>  vez pasada."*
+
+Acota el alcance: el WR lleva **pesos y medidas, no plata**. El precio, el ISV y
+el valor declarado son del documento que viene después.
+
+---
+
 ## Próximos Pasos
 
-1. **Conversación 2:** Login, Logout, Creación de usuarios y roles — por documentar
+1. **Conversación 2:** Login, Logout, Creación de usuarios y roles — **arrancó en
+   `A7-28`**: Yusef manda el Excel de roles × operaciones (`RP-35`)
 2. **Conversación 3:** Detalle de Paquete Interno + Warehouse Receipt — ✅ documentada arriba, preguntas del bloque PR-D todas resueltas
 3. **Conversación 4:** ✅ documentada arriba — franja de contexto operativo (PR-9)
 4. **Conversación 5:** ✅ documentada arriba — tarifas, mínimos y etiqueta (PR-10)
+5. **Conversación 6:** ✅ documentada completa — los tres audios, las 3 páginas
+   de notas de Jorge, las respuestas de Yusef al PDF, su página de notas y la
+   etiqueta anotada (`A1-01`…`A1-28`, `A2-01`…`A2-14`, `A3-01`…`A3-12`,
+   `RP-01`…`RP-23`, cruce `N`).
+6. **Conversación 7:** ✅ documentada arriba — la revisión del PDF de procesos
+   (`A7-01`…`A7-34`). Cierra `RP-30` y abre `RP-31`…`RP-36`.
+
+### Lo que salió implementando (2026-08-09 / 10)
+
+Cosas que **nadie reportó** y aparecieron al tocar el código. Van acá para que
+no se pierdan y para que las que son preguntas lleguen a Yusef.
+
+| Qué | Dónde quedó |
+|---|---|
+| El **audit log nunca registró quién**: `respond_to?` sin el flag de privados devolvía false, así que el hook nunca corría. Los 41 modelos guardaban qué cambió, nunca quién | ✅ `PR-C6.30` |
+| El botón **"Guardar (F8)" de `/pre_alertas/edit` no hacía nada**, y borrar una fila tampoco persistía | ✅ `PR-C6.25` |
+| En **Entrega Personal la cantidad de cajas se perdía**: dos campos con el mismo `name`, ganaba el hidden con valor 1. Y EP nunca aplicó el peso por caja | ✅ `PR-C6.31` |
+| **Ocho copias** de la misma búsqueda con dropdown. Las ocho pedían 2 caracteres, dos preseleccionaban, cuatro tenían flechas | ✅ `PR-C6.32` a `PR-C6.34` |
+| **Tres vistas** cableaban un autocomplete sin mandarle el `keydown`: el JS sabía navegar, la vista nunca le pasaba las teclas | ✅ `PR-C6.34` + lint |
+
+### Preguntas nuevas para Yusef (salieron del código, no de él)
+
+1. **No existe una sucursal de retiro estructurada.** `Cliente` solo tiene
+   `ciudad`, texto libre, y `/etiquetar` nunca setea `paquete.sucursal`. El
+   aviso de "separar por sucursal" (`A3-07`, `PR-C6.24`) muestra ese texto,
+   así que es **tan confiable como él**: si un cliente dice "Tegus" y otro
+   "Tegucigalpa", Miami arma dos bolsas. Para que separar por sucursal
+   funcione de verdad hace falta una sucursal real en el cliente.
+2. **La tasa de cambio: quién la mantiene y cada cuánto.** Ya está en 27.10 y
+   tiene su pantalla (`PR-C6.29`), pero nadie dijo quién la revisa.
+3. **PIN para Julien.** `PR-C6.28` deja listo que el supervisor de Miami
+   quite el cobro por cambio de servicio, pero hoy el banner avisa que nadie
+   puede autorizar. `RP-21` ya llegó y cerró los roles: falta **asignarle el
+   PIN** desde el CRUD de usuarios, no una decisión.
+
+### Lo que sigue (2026-08-09)
+
+1. ~~**Faltan las fotos de `RP-17`…`RP-22`**~~ — **llegaron** (páginas 6/7 y
+   7/7, con el audio 4). `RP-21` quedó cerrada del lado de código: los cuatro
+   roles que marcó ya eran `ROLES_AUTORIZANTES`.
+2. **Ronda 2 de preguntas**: `RP-01`, `RP-02`, `RP-09` (solo el destino de los 8
+   clientes), `RP-10b` y `RP-13b`, más los recordatorios de `RP-15` y `RP-16`.
+   `RP-04b` **sale de esta lista**: cerró en `A4-01` y ya está implementada en
+   `PR-C6.41`. **No se pisa** `preguntas_para_yusef.pdf`: es el que él contestó.
+3. **La pista de plata**, en este orden y verificando en staging entre paso y
+   paso: `C6.18` (bug de frontera) → `C6.29` (tasa 27.10) → `C6.20` (activar el
+   redondeo) → `C6.19` (informe de impacto). El informe se le lleva junto con
+   la hoja 2 del Excel, que sigue sin revisar (`RP-16`).
+4. **La pista de Miami**: `C6.24`, `C6.25`, `C6.26`, `C6.28`.
+5. ~~**Conversación 2** sigue siendo la única sin documentar.~~ — **arrancó** en
+   `A7-28`: Yusef ofreció el Excel de roles × operaciones (`RP-35`).
+
+### Lo que sigue (2026-08-12, después de la Conversación 7)
+
+Yusef fijó el foco y conviene respetarlo: **terminar Miami antes de abrir
+prefactura** (`A7-34`). El orden que sale de eso:
+
+1. **El modal de `/etiquetar`** (`A7-17`). Es el error que él encontró probando,
+   es chico, y es lo primero que va a volver a mirar.
+2. **La pre-alerta desincronizada** (`A7-19`) — mismo módulo, mismo escaneo.
+3. **Entrega Personal caja por caja** (`A7-20`, `A7-21`). Contradice el diseño
+   actual, así que es rehacer, no ajustar.
+4. **Recolecta** (`A7-22`, `A7-23`) — es la tercera entrada de Miami y la
+   definición ya está completa: es una pre-alerta de Entrega Personal.
+5. **El PDF de procesos corregido** (`A7-01`, `A7-02`) y regenerado, para
+   devolvérselo con el orden bueno.
+
+Los estados (`A7-09`…`A7-16`) son un bloque aparte: tocan migración, badges y el
+dropdown, y varios están bloqueados por la sucursal estructurada (`RP-36`).
+
+**La pista de plata**: de lo que había abierto el 2026-08-12 quedan el impuesto
+de Miami (`A7-24`, sigue esperando definición) y el bloque `RP-24`…`RP-29`. Las
+dos tablas de precios que se pisaban (`A7-25`) se cerraron el mismo día con
+`PR-C7.08` y `PR-C7.12`, y las reglas de redondeo quedaron escritas y
+verificadas en la Conversación 8.
+
+---
+
+## Conversación 10 (2026-08-14) — cómo se recibió el pago en Miami
+
+Jorge, después de probar el prepago en staging:
+
+> *"Ya vi el pagado en Miami, está bien. Solo faltó algo que conversamos: que
+> escogieran **cómo se pagó**. Efectivo o Zelle o TC."*
+
+Y al preguntarle en qué pantallas:
+
+> *"Esto es en la parte de Miami — **etiquetar y entrega personal** — hay que
+> mostrar cómo se pagó."*
+
+### C10-01 · El método de pago del prepago — ✅ **CERRADA e implementada**
+
+`prepagado_miami` guardaba quién, cuándo y en qué sucursal, pero **no con qué**.
+El cajero de Honduras armaba el cobro simbólico sin saber si había entrado
+efectivo, Zelle o tarjeta.
+
+**Lo que se hizo:** columna `prepagado_miami_metodo` con
+`%w[efectivo zelle tarjeta]`, obligatoria al marcar el prepago y prohibida si no.
+Se muestra en la ficha del paquete, en el badge del Warehouse Receipt
+(`✓ PREPAGADO EN MIAMI · ZELLE`) y en el concepto de la línea simbólica de la
+pre-factura.
+
+> **La lista NO es la de la caja.** `Pago`, `IngresoCaja` y `EgresoCaja` comparten
+> `%w[efectivo tarjeta transferencia]` —la misma lista escrita tres veces— y
+> **Zelle no se recibe en Honduras**. Son dos listas distintas a propósito, con
+> un test que lo fija. La triplicación de la otra queda como deuda: consolidarla
+> toca la caja, que es plata en vivo.
+
+### C10-02 · `/etiquetar` no tenía el prepago — ✅ **CERRADA**
+
+Al ir a implementar apareció que **el marcado existía solo en
+`/entrega_personal`**. Las dos pantallas de Miami hacen lo mismo y una se había
+quedado atrás sin que nadie lo decidiera — el bug recurrente de este repo.
+
+Ahora las dos comparten `shared/_prepago_miami` y el concern `PrepagoMiami`, con
+un lint que impide volver a escribirlo a mano en cualquiera de las dos.
+
+**De paso se cerró un hueco viejo:** el sellado solo actuaba en la rama `true`,
+así que **desmarcar el prepago dejaba puestos** la fecha, el usuario y la
+sucursal de un cobro que ya no existía.
+
+### C10-03 · La suma de libras del panel — ⏳ **ABIERTA**
+
+> *"Solo que tiene malo la suma de libras para cobrar."* · Y al ubicarlo:
+> *"en el panel de cálculo mientras cargo"*.
+
+La suma de las cajas **ya agregadas** está bien: es el mayor de cada caja y
+después se suman, que es la regla `A9-03`. Lo que falta es que **la caja que se
+está escribiendo todavía no cuenta** — `calc_volumetrico_controller` lee solo
+las filas `.caja-fila` ya confirmadas. Jorge lo confirmó. Va en su propio PR.
+
+---
+
+## Conversación 11 (2026-08-17) — la tanda de WhatsApp después de probar staging
+
+Yusef probó de punta a punta y mandó una lista. Cerró con *"va agarrando muy muy
+buena forma"*, y confirmó que **funcionan** el escaneo de USPS, el tracking de
+FedEx y el prepago de Entrega Personal.
+
+**Dos cosas de su lista no entraron, porque él mismo se corrigió**: lo de *"F9 no
+me pregunta cuántas etiquetas"* lo cerró con *"ya vi dónde está el clavo… es una
+inconsistencia mía, en cuanto a editar y recibir carga variada sin medir y sin
+pesar"*.
+
+### C11-01 · Los avisos que no avisan — 🐛 ✅ **ARREGLADO (#304)**
+
+Lo reportó **dos veces**: *"no me da la información de que es de Sucursal de
+Tegucigalpa"* y *"también misma situación no avisa que va a tegus"*.
+
+Eran dos causas del mismo tipo de falla. En `/etiquetar`,
+`_fillClienteFromPreAlerta` era una **copia** de `_alSeleccionarCliente`: se
+copiaron las notas del cliente y se olvidó el aviso de sucursal — el comentario
+del propio código decía *"misma lógica para mantener consistencia"* y no lo era.
+En `/entrega_personal` el aviso **no existía**.
+
+Los dos fallaban en silencio: nadie se entera de un aviso que no salió. Ahora
+los tres caminos que fijan cliente pasan por un solo gancho, el aviso sale de un
+partial compartido, y hay lint de las dos cosas.
+
+De la misma tanda: *"aquí no me dio alerta del Secundario"* — el input del
+tracking secundario no tenía **ninguna** acción, así que un repetido no avisaba y
+lo que escupía la pistola entraba crudo.
+
+### C11-02 · La pre-alerta de admin — 🐛 ✅ **ARREGLADO (#305)**
+
+> *"No marqué consolidado y me deja agregar más de 1, siempre en admin."*
+> *"Nos hace falta la opción de Retener en Miami en Pre Alerta de Admin."*
+
+La regla de consolidación existía en el portal pero **solo en la vista**. Pasó a
+ser validación de modelo, y corre solo al crear o cuando cambia la cantidad de
+paquetes: una pre-alerta vieja que ya está así se sigue pudiendo guardar. Es la
+misma trampa del método de prepago.
+
+`retener_miami` es columna nueva en `pre_alerta_paquetes` y viaja al paquete
+esperado. **Va la bandera, sin motivos**: el motivo se sabe cuando el paquete
+llega y se etiqueta, que es donde ya se pide.
+
+> ✅ **El hueco que quedaba acá se cerró en `PR-C7.27`.** El checkbox de
+> retención de `/etiquetar` arrancaba desmarcado, y un checkbox desmarcado manda
+> `"0"` — así que **el escaneo apagaba la bandera** que la pre-alerta acababa de
+> traer. Ahora `detect_pre_alerta_match` la devuelve y el autofill la marca en la
+> pantalla; el operario la puede desmarcar, que era la condición.
+>
+> Y la decisión de que la pre-alerta llevara *"la bandera, sin motivos"* también
+> se revirtió ahí: los motivos y la nota se guardan en el **paquete esperado**,
+> que ya tiene esas columnas — la tabla de join que me la había hecho descartar
+> nunca hizo falta. Ver `C13-01`.
+
+### C11-03 · Entrega Personal: el Contenido — ✅ **ARREGLADO (#306)**
+
+> *"Entrega personal, es obligatorio poner contenido, y debería ir más arriba,
+> después de tipo de envío."*
+
+Un paquete de courier llega con la descripción del carrier; el que entra al
+mostrador de Miami no trae nada escrito, y sin eso la etiqueta y el Warehouse
+Receipt dicen cuánto pesa pero no qué es. Obligatorio al crear o al tocar el
+campo —los EP viejos sin contenido se siguen pudiendo guardar— y el campo subió
+a la altura del tipo de envío.
+
+### C11-04 · El Warehouse Receipt que no le salía — 🐛 ✅ **ARREGLADO (#307)**
+
+> *"Falta la observación que te hice: si después de imprimir la etiqueta, te
+> tire automáticamente el Recibo de Bodega."*
+
+El código **sí** lo hacía desde `PR-C7.16`. A Jorge se le abrían las dos
+ventanas; a Yusef no. Jorge pidió no dar por sentado el bloqueador de popups.
+
+**Reproducido**: Chrome le da permiso a un gesto del usuario para **un** popup,
+no para dos — el segundo `window.open` se cae en silencio. A Jorge le funcionaba
+porque su Chrome ya tenía el permiso dado para el sitio.
+
+Ahora se abre una sola ventana y ésa, al terminar de imprimir, **se va** al
+Warehouse Receipt en vez de cerrarse.
+
+> ⚠️ **De paso salió una trampa del harness.** El Chrome de los system tests
+> **no bloquea popups** (chromedriver lo arranca con `--disable-popup-blocking`),
+> así que un test escrito de la forma normal daba verde con el bug puesto. Hay un
+> driver aparte, `:chrome_con_bloqueador_de_popups`, para cuando haga falta.
+
+---
+
+## Revisión integral (2026-08-17) — el paquete fantasma
+
+Salió del repaso de punta a punta que pidió Jorge —pre-alerta → paquetes →
+etiquetas → WR—, no de un reporte de Yusef.
+
+### RI-01 · Un tracking pre-alertado que llega dividido — 🐛 ✅ **ARREGLADO (PR-C7.20 · C7.21 · C7.22)**
+
+`create_single` reconciliaba contra el paquete que la pre-alerta dejó esperando;
+**`create_split` no**. Un tracking pre-alertado que llegaba en varias cajas
+dejaba tres registros con el mismo tracking:
+
+```
+id=…102  estado=pre_alerta_estado  caja=nil  peso=nil     ← el fantasma
+id=…103  estado=recibido_miami     caja=1    peso=12.5
+id=…104  estado=recibido_miami     caja=2    peso=30.0
+```
+
+Y de ahí: **3 etiquetas para 2 cajas** —la de más con `—` donde va el número de
+recepción—, el Warehouse Receipt declarando **3 piezas**, y la pre-alerta
+congelada en `pre_alerta`: el cliente la veía "en camino" con el paquete ya en
+Miami. El cobro no se veía afectado — el fantasma se queda en
+`pre_alerta_estado` y la pre-factura solo agarra paquetes disponibles.
+
+No se reparaba solo: `link_tracking!` filtra por `sin_vincular`
+(`paquete_id: nil`) y esa fila **ya apuntaba** al fantasma — invisible para su
+propio reparador.
+
+**Jorge eligió que el esperado se vuelva la Caja 1** (y no borrarlo y
+re-apuntar): conserva id, guía y bitácora. Reusar la caja 1 y no otra tampoco es
+casualidad — `ajustar_split!` solo borra `numero_caja > m`, así que es la única
+que sobrevive a subir y bajar la cantidad de cajas.
+
+La reconciliación salió a un concern compartido por las dos rutas; quiénes son
+"las hermanas" de una caja se decide en un solo lugar y excluye lo que no llegó;
+y una migración de datos reconcilia los fantasmas que ya estaban grabados,
+saltando y reportando los que ya entraran a una pre-factura, venta, nota o
+reempaque.
+
+---
+
+## Conversación 12 (2026-08-18) — la videollamada probando staging
+
+42 minutos con la pantalla compartida, probando lo que se había subido el día
+anterior. Transcrita con `whisper small`.
+
+**Lo que dio por bueno, probándolo en vivo:**
+
+| Qué | Lo que dijo |
+|---|---|
+| El paquete fantasma (`RI-01`) | *"Ahora, si te entran dos paquetes, pues dos paquetes te quedan."* |
+| El aviso de sucursal (`C11-01`) | *"Sí me dice el TEGUS, excelente. Esto está bien aquí."* |
+| La retención con motivos | *"Ahí se ha retenido… de esa manera nosotros tenemos menor error al verlo."* |
+| El cambio de servicio | *"Está saliendo bien."* |
+
+Y cerró: *"ahí va agarrando forma… ya hay mejor entendimiento de los dos lados"*.
+
+> El Warehouse Receipt encadenado (`C11-04`) no alcanzó a probarlo: la
+> computadora se le trabó dos veces durante la llamada.
+
+### C12-01 · Si no se midió nada, preguntar cuántas etiquetas — ✅ **ARREGLADO (PR-C7.23)**
+
+Lo repitió **tres veces**, la última al despedirse: *"acordate, no se te olvide
+corregir que si sale cero aquí, pregunte cuántas etiquetas"*.
+
+> *"En etiquetar casi nunca medimos y pesamos."*
+> *"Cuando la cantidad de cajas guardadas sea cero, que pregunte cuántas son."*
+
+El caso normal de Miami es recibir sin medir, y eso grababa **un** bulto y sacaba
+**una** etiqueta aunque el envío trajera tres cajas.
+
+**Tres etiquetas son tres cajas**, no tres copias del mismo papel: el flete se
+cobra por caja, el WR cuenta piezas y cada etiqueta lleva su `1/3`.
+
+Esto ya había cambiado tres veces —`PR-C6.17` lo preguntaba en F9, `PR-C6.18b` lo
+quitó porque *"el F9 era como confuso"*, `A7-20` sacó también el campo del
+formulario— y siempre por lo mismo: que haya **una sola fuente** para el número.
+Vuelve a preguntar con la condición que lo hace distinto: **solo cuando no hay
+ninguna caja cargada**. Jorge lo planteó en la llamada —*"no pueden ser los dos,
+voy a tener dos variables"*— y Yusef aceptó.
+
+### C12-02 · Las cajas de un split salían separadas en el listado — 🐛 ✅ **ARREGLADO (PR-C7.24)**
+
+> *"Lo único que no entiendo es por qué está separado, deberían de estar
+> juntitos. Porque eso puede ocasionar errores."*
+
+Causado por `RI-01`: con la reconciliación, la Caja 1 **es** el paquete esperado
+y conserva la hora en que el cliente lo anunció (11:11), mientras la Caja 2 nace
+al etiquetar (11:34). El listado ordenaba por fecha de creación.
+
+Él lo cerró con una regla más ancha que el síntoma:
+
+> *"Todas las actualizaciones tienen que ir con la última hora… si un paquete
+> está disponible en Honduras, se tiene que actualizar con la hora que se marcó
+> que estaba disponible."*
+
+El orden por defecto pasa a la última actualización, y la primera columna lleva
+la hora — *"aquí ocupamos la hora en esto"*.
+
+### C12-03 · El tracking no se ve completo — ✅ **ARREGLADO (PR-C7.25)**
+
+> *"El tracking necesitamos verlo completo… si no, vamos a tener que estar
+> entrando a cada tracking para poder encontrar uno."* · *"Para querer leérselo
+> al cliente."*
+
+Salía recortado a 18 caracteres y los de USPS pasan de 30. Es la misma regla que
+ya valía para la etiqueta impresa y que nunca había llegado al listado.
+
+El ancho salió de donde él lo señaló: *"le puedes poner «rep Miami»… «hn», no
+pones Honduras sino que «hn», cosas así"*. Los estados de la tabla pasan a un
+rótulo corto.
+
+> ⚠️ **Los rótulos largos no se tocaron.** Son los que ve el cliente y los peleó
+> él mismo en `A7-13`. Son dos audiencias distintas: el cliente necesita la frase
+> entera, el operario necesita el ancho. El largo quedó en el `title`.
+
+### C12-04 · El segundo tracking también anunciado — 🐛 ✅ **ARREGLADO (PR-C7.26)**
+
+Un bulto llega con dos códigos —el del carrier y el del comercio— y el cliente
+pre-alerta uno, o el otro, o los dos. Escaneó el segundo y le salió el modal de
+duplicado:
+
+> *"Esto, según tus reglas del inicio, no debería pasar… aquí está agarrando la
+> regla de que existe el tracking y no la regla de que es una pre-alerta."*
+
+La regla que dictó, con sus dos mitades:
+
+| Lo que compara | Qué pasa |
+|---|---|
+| Mismo cliente **y** mismo tipo de envío | *"No es necesario hacer nada"* |
+| Cliente distinto **o** tipo de envío distinto | *"Hay una diferencia en el tipo de envío"* · *"está a nombre de dos personas diferentes"* |
+
+**El aviso no marca nada solo.** Jorge preguntó derecho —*"¿el sistema va y marca
+la casillita?"*— y contestó que no: *"ahí mismo le dice: este paquete tiene dos
+tipos de envío. Lo va a retener, o lo va a enviar así"*.
+
+Y la otra mitad, la del guardado: *"tiene que jalar esta información,
+compararlo, venir y unificarlos acá y eliminarlo de la pre-alerta. **No es
+vincularlo, eliminarlo**"*. El esperado del secundario quedaba huérfano igual que
+el fantasma de `RI-01`, por la otra puerta.
+
+Frecuencia, según él: *"normalmente va a ser uno o el otro… te voy a dar un 80%
+de los casos"*; el 20% los dos, y *"el 5% le voy a dar que va a haber un error en
+algo"*.
+
+### C12-05 · Mover el aviso de sucursal en la pantalla de Miami — ⏳ **ABIERTA, la cierra él**
+
+> *"Tal vez moverlo… me voy a hablar con el muchacho de Miami, porque ellos
+> cuando escanean voltean a ver esto."*
+
+Primero pregunta él dónde miran los que escanean.
+
+### C12-06 · Una base de terceros — ⏳ **DIFERIDA**
+
+> *"Ese pues a futuro lo vamos a arreglar… ponerle una base de terceros.
+> Todavía solo tenemos la base normal de nosotros, no de un tercero."*
+
+### C12-07 · «Ya recibido en Miami, no debemos poder cambiarla» — ⏳ **HAY QUE PREGUNTARLE**
+
+> *"Ahora, esta información al ya estar recibido en Miami, nosotros no debemos de
+> poderla cambiar."*
+
+Lo dijo de pasada y justo antes de otra cosa. Del transcript no se saca **qué**
+información ni **quién** no debería poder cambiarla — se le pregunta antes de
+tocar nada.
+
+### C12-08 · Data vieja en staging — 🧹 **es de operación, no de código**
+
+> *"Tenés todos los paquetes viejos ahí… la mitad de la información no sirve, es
+> data dañada, hay que borrarlo."*
+
+Jorge ya limpió su base local y dijo en la llamada que se le olvidó correrlo en
+staging.
+
+---
+
+## Conversación 13 (2026-08-18) — «Retener en Miami», un solo control
+
+Jorge, mirando `/pre_alertas/new` en staging:
+
+> *"Retener en Miami debería comportarse igual que el de etiquetar y entrega
+> personal, debería ser el mismo componente, reemplazá el de pre-alerta."*
+
+### C13-01 · El control, escrito una sola vez — ✅ **ARREGLADO (PR-C7.27)**
+
+Al ir a buscar ese componente para reusarlo **no existía**. Había cuatro
+pantallas y cuatro respuestas distintas:
+
+| Pantalla | Qué tenía |
+|---|---|
+| `/etiquetar` | El bloque completo — casilla, modal, motivos y nota |
+| `/paquetes` (form) | **Una copia**, ya divergida: consultaba `MotivoRetencion` **adentro de la vista**, y los rótulos y los botones no eran los mismos |
+| `/entrega_personal` | **Nada**, aunque su controller carga los motivos y permite `retener_miami` y `motivo_retencion_ids` desde siempre. Cableado muerto |
+| `/pre_alertas` | Solo la casilla, y **solo al crear** — la pantalla de editar no la mostraba, así que marcarla por error era irreversible |
+
+Ahora es un `RetenerMiamiComponent` que rendericen las cinco (la pre-alerta lo
+pinta dos veces: la tarjeta de crear y la fila de editar), con lint.
+
+**Dónde se guardan los motivos de una pre-alerta: en el paquete esperado**, que
+ya tiene esas columnas. `C11-02` había decidido lo contrario —*"va la bandera,
+sin motivos: el motivo se sabe cuando el paquete llega"*— y la razón real era
+evitar una tabla de join. No hacía falta ninguna.
+
+> ⚠️ **Los motivos no son columnas de `pre_alerta_paquetes` a propósito**, así que
+> el dirty tracking de Rails no los ve: `sync_paquete_esperado` necesita una
+> bandera propia. Sin ella, editar una pre-alerta cambiando **solo** los motivos
+> no sincronizaba nada, en silencio.
+
+### C13-02 · El escaneo ya no borra la retención — ✅ **ARREGLADO (PR-C7.27)**
+
+Venía anotado desde `C11-02` y dejó de ser opcional al entrar los motivos: si el
+escaneo apaga la bandera, se los lleva por delante.
+
+Se marca **en la pantalla** y no se fuerza desde el servidor: el que recibe tiene
+que poder desmarcarlo si al ver el bulto decide que no. Es la misma forma que
+Yusef eligió para el aviso del secundario en `C12-04` — *"lo va a retener, o lo
+va a enviar así"*.
+
+De la misma familia: **desmarcar la retención se lleva sus motivos**. Quedaba un
+paquete sin retención y con «contenido perecedero» colgado, que es el mismo dato
+falso que dejaba el prepago antes de que su concern limpiara la rama `false`.
+Nunca sobre un paquete en estado `retenido`, que es **otra cosa** —un paso del
+pipeline— y ahí el motivo es obligatorio.
+
+### C13-03 · El portal del cliente **no** lleva el control — decisión, no olvido
+
+Retener es una acción operativa de Miami y los motivos son de ellos («paquete
+dañado», «contenido perecedero»). Yusef lo pidió para la pre-alerta de **admin**
+(`C11-02`). Queda fijado en el lint para que nadie lo empareje después creyendo
+que falta.
+
+---
+
+## Conversación 14 (2026-08-19) — dos llamadas: /etiquetar y los accesos
+
+31 minutos probando `/etiquetar` con la pantalla compartida, y 13 más sobre los
+clientes. Transcritas con `whisper small`.
+
+**Lo que confirmó de lo del día**, reproduciéndolo en vivo: la franjita de
+«Actualizando» que no se iba y el modal que reaparecía — *"ahí es donde está todo
+el mejengue"*. Los dos ya estaban arreglados (`PR-C7.28`, `PR-C7.29`).
+
+> ⚠️ **`PR-C7.29` quedó corto.** Excluía *la fila* y no *el envío*, así que al
+> actualizar **una caja de un split** las hermanas —que comparten el tracking—
+> seguían disparando el modal. Jorge lo volvió a ver el 21-ago: *"actualizar no
+> está aún al 100"*. Completado en `PR-C7.35`. La prueba de entonces usaba un
+> paquete de una sola caja, y por eso lo dio por bueno.
+
+### C14-01 · El `1 de N` — ✏️ se corrigió solo
+
+Ver la nota agregada a `A7-21`. Su regla original valía para el **empaque**;
+etiquetar es otra cosa porque ahí la cantidad se sabe antes de imprimir.
+
+### C14-02 · Los avisos que nadie lee — ✅ **ARREGLADO (PR-C7.31)**
+
+Lo repitió tres veces, señalando la franja de contexto:
+
+> *"No me da la información, **aquí necesitamos un modal**."*
+> *"Estas informaciones **ellos no las leen**. Esto no lo leen, esto no lo van a
+> leer, olvídate."*
+> *"No te voy a mentir, Jorge: **a puro huevos leen esto**."*
+
+Digitan de 500 a 1.000 paquetes al día mirando la pistola. Retención, tarea y
+nota pasan a **un modal cada uno**, con su propia respuesta —retenido / se hizo /
+leída— y solo los que el paquete tiene.
+
+> **Uno por cosa y no uno con todo** lo discutieron ahí mismo: él pidió uno solo,
+> Jorge argumentó que cada uno necesita su respuesta, y él aceptó — *"tenés
+> razón, hacerlo así si querés"*.
+
+De paso salieron dos: las **notas del grupo** nunca se mostraban —*"aquí están
+las notas del grupo y no sale"*— y el renglón de la pre-alerta casi nunca se
+encontraba, así que **las instrucciones que escribe el cliente se perdían
+siempre**.
+
+### C14-03 · El aviso de bolsa del default — ✅ **ARREGLADO (PR-C7.32)**
+
+> *"Esa de San Pedro Sula hay que eliminarlo, porque es el default."*
+> *"El cerebro trabaja en default. Cuando querés que haga una cosa diferente al
+> default, tenés que ponerle la nota que es diferente."*
+
+El 80% de la carga se queda en San Pedro: un aviso que sale siempre deja de
+leerse, y con él el del día que dice Tegucigalpa. Cuál es la de por defecto es
+una columna editable desde `/sucursales`, no una constante.
+
+Pidió además **color por sucursal** cuando abran más — *"el cerebro hasta el
+color asocia"*. Entra cuando exista la tercera.
+
+### C14-04 · Los tres bugs de actualizar — ✅ **ARREGLADO (PR-C7.30)**
+
+Los reprodujo en vivo: la cantidad de etiquetas que se perdía (*"le di cinco y se
+quedó con las primeras tres"*), el cambio de servicio que solo tocaba una caja
+(*"debería de cambiar todas"*) y que actualizar un paquete de otro tipo de envío
+no avisara nada.
+
+### C14-05 · El acceso del cliente — ✅ **ARREGLADO (PR-C7.33 + PR-C7.37)**
+
+> ⚠️ **`PR-C7.33` quedó corto: dejó el modelo y no la pantalla.** Auditando el
+> audio contra el código el 25-ago salieron dos cosas que se habían dado por
+> hechas y no lo estaban:
+>
+> 1. **Un cliente creado por el admin no podía entrar nunca.** `cliente_params`
+>    no permitía `:password`, el formulario no tenía campo de clave y
+>    `PasswordsController` era solo de `User`. Nacía con `password_digest` nulo,
+>    le salía "contraseña incorrecta" para siempre, y "olvidé mi contraseña" le
+>    contestaba en silencio. Si además intentaba registrarse solo en `/registro`,
+>    la unicidad del correo lo rebotaba. Era exactamente lo que él estaba
+>    describiendo —*"yo no le puedo crear una cuenta aquí"*— y se leyó como el
+>    caso de los dos correos.
+> 2. **Entrar con el código estaba en el modelo pero la pantalla no lo dejaba.**
+>    `Cliente.autenticar` acepta las dos llaves, pero el campo del login era un
+>    `email_field` con `required`: el navegador rechaza `C2867` antes de enviar.
+>    Los 15 tests pasaban porque postean directo al controller, y no había ningún
+>    system test del login.
+>
+> Completado en `PR-C7.37`: la clave se pone y se cambia desde la ficha, el link
+> de recuperación funciona para cliente —por correo **y** por código— y el campo
+> del login dejó de ser `type="email"`. Lo de `/registro` se cerró en `PR-C7.38`.
+> **Queda abierto** que la ficha todavía no muestra `rtn` ni la sucursal de retiro.
+
+> *"Falta el sistema de usuario… lo del acceso de ellos."*
+> *"¿Cuál es la cuenta de acceso de él? Y cambiarle la clave por si se le olvidó."*
+
+El cliente ya podía entrar; lo que no existía era **dónde administrarlo**. El caso
+que mostró: una clienta con **dos correos** a la que no le pueden crear cuenta,
+porque el correo es la llave.
+
+**Entran con el código de casillero o con el correo.** Él lo pidió dos veces —*"es
+que mi correo está lleno"*, *"es que yo no tengo correo"*— y Jorge argumentó que
+hoy es por correo y es lo que funciona. Quedaron en las dos.
+
+> `clientes.codigo` tiene índice único; `email` **no** —la unicidad la pone solo
+> el modelo, o sea que no alcanza a los importados—. Por eso el código es el
+> camino que no miente cuando hay correos repetidos.
+
+Y **cortar el acceso no es dar de baja al cliente**: son dos banderas distintas.
+
+### C14-06 · El nombre y el RTN — ✅ **ARREGLADO (PR-C7.33 + PR-C7.38)**
+
+> ⚠️ **La regla llegó a una pantalla y no a la gemela.** `PR-C7.33` la puso en
+> `/clientes` y se olvidó de `/registro` —pública, sin autenticar y linkeada
+> desde el login—, así que ahí un "Jorge Padilla" pasaba tranquilo. Y los tests
+> de esa pantalla usaban nombres de dos palabras **afirmando que se guardaban**:
+> congelaban el agujero en vez de avisarlo.
+>
+> Tampoco había test de la mitad que enforza al editar —solo del caso de *no*
+> tocar el nombre—, así que borrar la línea del `#update` dejaba la suite en
+> verde.
+>
+> Cerrado en `PR-C7.38`, con un lint (`test/lint/regla_del_nombre_test.rb`) que
+> falla cuando aparece **una tercera pantalla** que construye clientes sin
+> encender la bandera. Es el bug recurrente del repo y ahora tiene trinquete.
+
+> *"Tiene que poner mínimo **tres ítems**… por lo menos Jorge y dos apellidos."*
+> *"Imaginate cuántos Jorge Padilla hay."*
+
+Es una regla **de la pantalla donde alguien teclea**, no del modelo entero: hay
+9.000 clientes importados con dos palabras y una validación a secas trabaría la
+migración que sigue pendiente. Al editar, solo si el nombre de verdad cambia.
+
+`rtn` al lado de `identidad`, los dos opcionales — *"eso se va actualizando
+cuando ellos van pidiendo factura"*.
+
+### C14-07 · La ficha del paquete y su historial — ⏳ **DIFERIDO por Jorge**
+
+> *"Esta parte del historial de cambios me le quita lo bonito."*
+
+Y la respuesta de Jorge, que es la que manda acá: *"que no te estrese eso hasta
+que lleguemos a servicio al cliente, porque ellos son los que van a leer eso"*.
+
+### C14-08 · Migrar los 9.000 clientes del sistema viejo — ⏳ **ABIERTA**
+
+> **Jorge:** *"Lo que más me preocupa es mover los clientes."*
+> **Yusef:** *"Yo no tengo cómo este chavo Roger; él hizo tablas y relaciones,
+> eso es lo que yo tengo."*
+
+Sin las tablas del sistema viejo no hay nada que planear.
+
+---
+
+## Conversación 15 (2026-08-20) — las reglas del servicio, iguales en las dos pantallas
+
+Jorge, comparando `/pre_alertas/new` con el portal del cliente:
+
+> *"El área de pre-alerta para los admin y clientes es muy diferente; faltan las
+> reglas de servicio, que son importantísimas, con respecto a si se puede con
+> reempaque y consolidación. Revisá la parte de cliente y aplicale las reglas al
+> admin."*
+
+### C15-01 · Admin podía grabar lo que el portal hace imposible — 🐛 ✅ **ARREGLADO (PR-C7.34)**
+
+Las reglas son tres columnas de `tipo_envios`, y el portal las respeta las tres:
+
+| Regla | Portal | Admin (antes) |
+|---|---|---|
+| `con_reempaque` | sale del servicio | casilla libre |
+| `consolidable` | el paso 2 **no existe** si no lo es | casilla libre |
+| `max_paquetes_por_accion` | lo dice la tarjeta del servicio | no lo decía |
+
+O sea que admin podía crear una **CKA marcada «con reempaque» y «consolidada»**,
+y CKA ni reempaca ni consolida. El modelo tampoco lo impedía: solo cubría el
+tercero.
+
+> ⚠️ **Ya había dos fuentes para el mismo hecho, y no coincidían.**
+> `PreAlerta#tipo_envio_descripcion` decía «con Reempaque» leyendo el flag **del
+> servicio**, mientras el badge «R» del listado leía el **de la fila**. Podían
+> decir cosas distintas del mismo envío. Hasta las fixtures traían la
+> contradicción: `con_reempaque: false` sobre servicios que sí reempacan.
+
+**Decisión de Jorge**: `con_reempaque` pasa a ser **derivado y no editable** —sale
+del servicio, como en el portal— y las pre-alertas viejas que se contradigan se
+corrigen con una migración que informa cuáles tocó.
+
+Las reglas viven en el **modelo**, no en la vista: una regla que vive en una
+pantalla es una regla que la otra no tiene, que es exactamente cómo se llegó acá.
+Y el campo derivado sale del `permit` de los dos controllers — aceptarlo por
+parámetro es la puerta por la que vuelve la contradicción.
+
+> **El admin no lleva el wizard**, y eso no cambió: sigue vigente lo decidido el
+> 2026-08-12 —*"los controles NO cambian… el wizard de 3 pasos del portal ya se
+> había descartado para admin"*—. Lo que se emparejó son **las reglas**, no los
+> pasos.
+
+De paso: la pantalla de alta nunca le pasaba el límite de paquetes al
+`pre-alerta-editor` —que sabe deshabilitar «Agregar Paquete» desde siempre—,
+así que el operario llenaba todo y el servidor lo rechazaba después. `/edit` sí
+lo pasaba: la gemela otra vez.
+
+---
+
+## Conversación 16 (2026-08-25) — la pistola en la mano: lo que suena, lo que avisa y lo que no era una tarea
+
+30 minutos con la pantalla compartida, escaneando en staging después de
+`PR-C7.36`. Transcrita con `whisper small`. Arrancó él fijando el foco: *"los
+detallitos yo casi que no les paro mucha bola… me interesa más ahorita terminar
+el proceso"* — y cerró pidiendo reuniones cortas: *"15 minutos, 20 minutos y
+avanzamos en algo… cuando me hacés mucho, me confundo"*.
+
+**Lo que dio por bueno, probándolo en vivo:**
+
+| Qué | Lo que dijo |
+|---|---|
+| El secundario pre-alertado a otro cliente (`C12-04`) | *"Detectó la diferencia de cliente… ahí lograste dos cosas"* |
+| Cambio de servicio + cantidad de etiquetas en el mismo paquete | *"Todo está bien, no tenía cambio de servicio ni pre-alerta ni nada, pero yo lo hice solo por molestar"* |
+| Finalizar sesión / dejarlo de lado | *"De momento está bien. No te puedo decir otra cosa porque es algo nuevo"* |
+| Un tracking sin pre-alerta | *"No tiene pre-alerta, por eso no la tiró, y estamos bien"* |
+| El bloque Miami del menú (`PR-C7.36`) | *"Ya, ya, ya: etiquetar, entrega personal, manifiestos"* — y de ahí salió `C16-06` |
+
+### C16-01 · Las instrucciones del cliente salían como **tarea** — 🐛 ✅ **ARREGLADO (PR-C7.41)**
+
+Escaneó un CER con pre-alerta. Salió el modal de la instrucción (*"ya salió el
+modal, ya va bien"*) y detrás **otro**, rotulado tarea, con el mismo texto:
+
+> *"No, pero el cliente no puede poner una tarea, solo nosotros."*
+> *"Punto importante: el cliente no puede poner una tarea."*
+> *"En el menú no está en ningún lado, pero yo lo hice, yo sé."*
+
+Se fue a buscar de dónde había salido —la ficha del cliente, el home, «Todos los
+paquetes»— y quedaron en que *"hay que revisar la parte de tareas y la nota"*.
+
+**Qué pasaba.** `PR-9` (2026-08-01) convertía las `instrucciones` de cada
+renglón de pre-alerta en una `Tarea` real (`sync_tarea_desde_instrucciones`),
+para que el digitador las viera con checkbox en la franja. Era una **decisión de
+Jorge** —está anotada así arriba, en *"Decisiones confirmadas (Jorge,
+2026-08-01)"*—; Yusef siempre las había llamado **notas especiales**. Después
+`PR-C7.31` (`C14-02`) puso la instrucción en un modal de **nota**, que es lo que
+él pidió. Nadie quitó la conversión: dos modales por la misma instrucción, y el
+operario "completaba" —con su nombre y hora— una tarea que había creado el
+cliente desde el portal.
+
+La instrucción ya le llega al que recibe por tres caminos que no pasan por
+`Tarea`: el modal de nota, la franja de contexto y la ficha del paquete. Se quita
+la conversión y una migración borra las tareas **abiertas** de ese origen
+(informando cuántas); las ya realizadas se quedan como evidencia, con quién las
+marcó. Las tareas **internas** —las que crea el personal— siguen saliendo en el
+modal: él dijo que el cliente no las pone, no que no existan.
+
+> El índice global de tareas que él buscó en el menú **no existía**: solo se
+> veían las de un paquete o las de un cliente, y por eso tampoco había a dónde
+> apuntar desde el menú. Lo construyó `PR-C7.40` (#324) ese mismo día —la
+> bandeja `/tareas`, con su link—. Con la conversión quitada, lo que va a
+> encontrar ahí son solo tareas del personal.
+
+### C16-02 · El pito de «podés seguir» — ✅ **ARREGLADO (PR-C7.42)**
+
+> *"Cuando yo hago esto y no tiene pre-alerta, debe pitar, acordate."*
+> *"¿Cuándo escuchás el pip? Cuando el sistema buscó en los paquetes y vio que
+> no existía."*
+> *"Ahí, cuando yo presiono tres, acá, él debe pitar para que yo presione
+> Enter."* · *"Sí la selecciona, pero nosotros tenemos que esperar el pito para
+> presionar Enter."*
+> *"Siempre hay pitos para decir: ok, podés seguir."*
+
+Jorge, mirándolo: *"Ay, no está pitando."*
+
+Son dos pitos de **listo**: cuando el chequeo del tracking vuelve limpio —ni
+duplicado ni pre-alerta— y cuando el autocomplete de cliente encuentra a
+alguien. El pin de guardado (`success`) era el único «podés seguir» que existía,
+y sonaba **solo al grabar**. ⚠️ La tabla de `A1-10` daba estos dos por «✅
+existe» y **nunca fue cierto** — ver la corrección ahí.
+
+Los dos usan **el mismo pin** que el guardado, el que él aprobó en la
+Conversación 6 (*"se oye amigable"*): son tres momentos de una sola cosa. El
+del cliente vive en la base que comparten `/etiquetar` y `/entrega_personal`,
+así que suena en las dos; el del tracking no aplica a Entrega Personal, que no
+chequea trackings. No suena al entrar a actualizar un paquete: ahí el tracking
+viene puesto y el primer blur no es un escaneo. Y el lint de sonidos aprendió a
+seguir los `import`: el `dispatch` de una base cuenta para la pantalla que la
+hereda.
+
+### C16-03 · «Le da Enter y se queda ahí» — ✅ **ARREGLADO (PR-C7.42 + PR-C7.43)**
+
+> *"El día que uno viene y le hace así, le da Enter, y mirá: se queda ahí… no
+> sé cómo podemos hacer algún bloqueíto ahí."*
+> *"Cuando le damos Enter, normalmente de un solo se pasa acá abajo. No le tengo
+> que dar dos veces."*
+> *"Nosotros presionamos entre Tab y Enter: es la misma cosa para nosotros."*
+
+Enter **sí** avanza al siguiente campo (es de `A1-01`, y hay test). Lo que no
+hay es la señal de que el chequeo terminó —eso es `C16-02`— y el modal de
+duplicado abre **sin llevarse el foco**, así que el Enter siguiente cae en el
+formulario de atrás. No se hace ningún «bloqueíto»: él mismo dijo en la
+Conversación 6 que el escaneo *"tiene que ser rápido"*.
+
+### C16-04 · Elegir el cliente y pasar, con la misma tecla — ✅ **ARREGLADO (PR-C7.43)**
+
+> *"Mirá a ver si lo podés lograr que quede al mismo Tab: que vos lo
+> seleccionás, se pase."*
+
+Enter sobre el cliente elegía y **se quedaba** en el campo; Tab pasaba pero
+**sin elegir**. Ahora las dos eligen y pasan. Tab-elige vive en la base de los
+autocompletes, así que aplica también a tercero, proveedor, pre-alerta y al
+cliente de la ficha del paquete (Shift+Tab no elige).
+
+> **De paso se emparejó la gemela.** `/entrega_personal` no tenía la
+> navegación por Enter de `/etiquetar` —Enter todavía **enviaba** el
+> formulario— y con Tab-elige habría quedado con Tab avanzando y Enter no. La
+> navegación se sacó a un mixin (`conEnterAvanza`) que mezclan las dos. Eso
+> cierra `RP-44` sin preguntarle: es la regla «Enter no guarda» que él mismo
+> dictó en la Conversación 6, llegando a la pantalla que le faltaba.
+
+### C16-05 · El secundario ya avisado no volvió a avisar — 🐛 ✅ **ARREGLADO (PR-C7.44)**
+
+Metió un paquete cuyo secundario estaba pre-alertado a nombre de otra clienta:
+avisó. Le dio «Dejarlo de lado y seguir», metió otro paquete con **el mismo
+secundario**, y:
+
+> *"No, pero aquí lo puse a nombre de alguien más. No lo detectó, mirá. Ahora
+> no lo detectó."*
+> *"Es el mismo tracking, lo agarré, lo volví a usar… ya lo había detectado, y
+> se quedó esto así, mirá: **no lo limpió**."*
+> *"Cuando queda aquí algo, ahí está la razón."*
+
+Jorge: *"El problema es que queda como la sesión abierta, no se limpia… lo
+mismo que estaba pasando."* Al finalizar la sesión de verdad —que recarga la
+pantalla— volvió a avisar.
+
+**Qué pasaba.** «Dejarlo de lado» limpia el formulario **sin recargar**, y la
+limpieza reiniciaba la memoria del tracking principal (`PR-C6.21`) pero no la
+del secundario: el segundo paquete ni siquiera volvía a consultar. Y había una
+segunda capa: el secundario está **arriba** del cliente en la pantalla, así que
+en el orden natural se revisa con el cliente todavía vacío y la comparación no
+tenía contra qué comparar — la primera vez avisó porque la pre-alerta del
+principal ya había puesto al cliente.
+
+**Qué cambió.** La memoria se reinicia donde se vacía el campo, que cubre F3,
+F2 y «Dejarlo de lado» de una vez. Lo que dijo el servidor del secundario se
+guarda y **se vuelve a comparar cuando el cliente aparece** (elegido a mano o
+traído por la pre-alerta del principal). La consulta del secundario gana el
+mismo guard de respuesta tardía que la del principal. Y del lado del servidor,
+un paquete con dos renglones vinculados —el suyo y el del secundario que
+absorbió— devolvía el `cliente_id` del que saliera; ahora prefiere el renglón
+cuyo tracking es el escaneado. Lo que **no** cambió es que guardar consuma la
+pre-alerta del otro cliente: eso es `RP-42`.
+
+### C16-06 · Clientes para Miami, en modo consulta — ✅ **ARREGLADO (PR-C7.45)**
+
+Mirando el bloque Miami del menú:
+
+> *"Falta Clientes para Miami, para que ellos lo puedan ver."*
+> *"Recordá que Miami no va a poder ver todo lo que mira [el admin]… vamos a
+> sectorizar las cosas. Aquí van a tener restricciones de ver y de modificar,
+> sobre todo."*
+
+El porqué:
+
+> *"A veces buscan un cliente para tratar de encontrar cuál es el número
+> correcto; si sale repetido; hay clientes que ponen el código de cliente
+> equivocado."*
+> *"Llegó un paquete a nombre de Carmen, con el código cortado… y entonces ellos
+> vienen y empiezan a escribir, a buscar quién aparece con eso."*
+> *"Este código con el nombre no me sale igual, entonces se van y buscan el
+> nombre… se equivocó por un número o por dos."*
+
+Y probando la lista con «1» y «10»: Jorge — *"ese filtro no lo tengo así como lo
+querés"*. La lista busca con la variante estricta y ordena por fecha de alta,
+así que C10 aparece enterrado; el autocomplete de `/etiquetar` usa la flexible,
+que pone el código primero. Es la misma búsqueda dos veces, distinta.
+
+> **Decisión de Jorge (2026-08-25):** solo `digitador_miami` queda en consulta;
+> `supervisor_miami` sigue editando. Hasta acá **todos** los roles podían crear
+> y editar clientes — la restricción no existía. Qué de la ficha no debe **ver**
+> Miami queda en `RP-43`.
+
+**Qué cambió.** «Clientes» entra al bloque Miami del menú (el link suelto se
+queda para los roles sin mostrador). `ClientesController` gana `EDICION_ROLES`
+—todos menos el digitador— y un guard sobre crear, editar y poner la clave del
+portal; la lista y la ficha esconden «Nuevo cliente», «Editar» y el formulario
+de la clave para quien no puede (se van enteros, no en gris: llevan atajo F7/F6
+y el atajo global clickea lo que encuentre). Y la lista busca **como el
+autocomplete** —`buscar_flexible` con el código primero, la fecha de alta solo
+desempata—, así que «10» pone a C10 arriba.
+
+### C16-07 · La etiqueta del retenido dice **RET** — ✅ **ARREGLADO (PR-C7.46, corregido en PR-C7.49)**
+
+Guardó un paquete retenido con tres etiquetas y, mirándolas:
+
+> *"Y sigue saliendo el CER aquí. Mirá, sería así: retenido."*
+
+Jorge: *"Ay, ese se me olvidó."* Y la abreviatura, más tarde: *"El de retener me
+dijiste RT, me va. RT, RT, RT."*
+
+> **Jorge (2026-08-25):** es en la etiqueta impresa — donde va el servicio, en
+> lugar de `CER`, tiene que decir **`RET`** (salió `RTE` y él lo corrigió al día
+> siguiente: *"las primeras tres letras"*, `C18-01`). La caja retenida no se despacha, y
+> el servicio se vuelve a imprimir cuando se libera.
+
+Es un solo lugar (`etiqueta_tipo_envio`), y el mismo partial sirve a la
+etiqueta, a las combinadas y a la reimpresión, así que las N cajas de un split
+retenido dicen RET todas. Es la bandera `retener_miami`, no el estado
+`retenido` de Honduras. Sigue siendo el texto más grande de la etiqueta —la
+jerarquía que fijó `A9`— porque es con lo que separan la carga antes de
+empacar, y una caja retenida no se empaca.
+
+### C16-08 · El aviso de bolsa de San Pedro volvió a salir — 🐛 ✅ **ARREGLADO (PR-C7.44)**
+
+Jorge, esa misma noche, probando staging: *"el modal guardar en San Pedro Sula
+no debería salir al final luego de imprimir las etiquetas, y acaba de
+aparecer"*.
+
+`C14-03` (`PR-C7.32`) lo había sacado para la sucursal de siempre, y la
+migración marcó cuál era **con los datos de ese momento**. Pero `db/seeds.rb`
+crea las sucursales sin la bandera, así que una base que se reseedea después
+—staging lo fue— queda sin ninguna «de siempre», y el aviso vuelve a salir
+para todos. El código no cambió: cambió la base.
+
+Dos arreglos: en staging se marca «Zeron SPS» desde `/sucursales` (es la
+columna editable que `C14-03` dejó a propósito), y el seed pone la bandera en
+SPS **solo si ninguna la tiene** — la que elijan desde la pantalla manda.
+
+### Lo que no es código
+
+**El arranque va por Express.**
+
+> *"Vamos a empezar por el Express, que es el que tiene menos paquetes, es el
+> que más rápido viene… le vamos a saber más rápido cualquier falla."*
+> *"Dejamos de usar el otro para Express y solo usamos el tuyo para el Express,
+> pero ya tiene que estar listo hasta poder facturarle al cliente."*
+
+**Lo único que ve complicado: las pre-alertas del sistema viejo.**
+
+> *"Cómo pasar ese montón de pre-alertas que van a haber en el sistema, que no
+> las teníamos en el anterior… cómo bajo esa lista y vos la vas a subir. Es la
+> única lista que veo complicada."*
+
+Jorge: *"La estoy viendo complicada yo también."* Va con `C14-08`: sin las
+tablas del sistema viejo no hay nada que planear.
+
+**Las instrucciones se repiten en todo el sistema.** *"Todo esto vos lo vas a
+ver, más unas cuantas más… el que más tiene es prefactura, el que le sigue es
+Miami y el último es Caja. Y de ahí van las entregas nacionales."*
+
+**Cuándo no está:** 2–4 sep (Tegucigalpa), 12–16 sep (El Salvador), 3–11 nov.
+
+### Dudosos del transcript
+
+Se marcan, no se completan (la disciplina de siempre):
+
+- *"Una y dos… eso era lo otro que me había dicho"* y *"esto de [¿la etiqueta?]
+  ahorita está bien, pero acuérdate que solo es al que queramos que aparezca"* —
+  suena a confirmar `C14-03` (el aviso de bolsa solo para la que no es default),
+  pero el audio no lo deja claro.
+- *"El [número] quedaría también en… 60, antes tenía 054"* — ininteligible.
+
+### Las preguntas que abre
+
+| Id | Qué |
+|---|---|
+| `RP-42` | Al guardar un paquete del cliente A cuyo **secundario** está pre-alertado por el cliente B, hoy el sistema vincula la pre-alerta de B al paquete de A y borra el esperado de B, **sin avisar**. `C12-04` decidió eso para el **mismo** cliente (*"no es vincularlo, eliminarlo"*); para clientes distintos él solo dijo *"lo va a retener, o lo va a enviar así"*. ¿Qué pasa con la pre-alerta de B? |
+| `RP-43` | *"Restricciones de ver"* (`C16-06`): ¿qué de la ficha del cliente **no** debe ver Miami? Las notas ya se filtran por rol; los precios especiales, los correos y el acceso al portal viven en el formulario de edición, que el digitador deja de abrir |
+| ~~`RP-44`~~ | ~~En `/entrega_personal` Enter todavía envía el formulario~~ — **✅ emparejada en `PR-C7.43`**: la regla «Enter no guarda» ya era suya (Conversación 6) y él mismo había dicho *"esto es en Etiquetar y en Entrega Personal"* |
+
+---
+
+## Conversación 17 (2026-08-26) — «nos falta formas de agregar tareas»
+
+Jorge, después de cerrar la Conversación 16:
+
+> *"Creo que nos falta formas de agregar tareas."*
+
+Tenía razón, y el repo lo decía solo: `PR-C7.40` (#324) construyó la bandeja
+para **ver** y **cerrar** tareas, y su estado vacío rezaba *"las tareas se
+crean desde la ficha de un paquete o de un cliente"*. `PR-C7.41` quitó la
+única creación automática (`C16-01`). Lo que quedaba:
+
+| Dónde | Qué pasaba |
+|---|---|
+| `/tareas/new` a secas | callejón sin salida: el cliente solo llegaba por `?cliente_id=`, y sin él la tarea no se guardaba — por eso la bandeja no tenía «Nueva» |
+| `/paquetes/:id/tareas` | «Nueva tarea», «Editar» y «Borrar» salían **para todos**; el digitador clickeaba y rebotaba al home |
+| Ficha del paquete | «+ Nueva tarea» con la lista de quién edita **paquetes**: `supervisor_caja` y SAC podían crear y no veían el botón |
+| Tareas de cliente | no se podían editar ni borrar desde ninguna pantalla |
+| La franja de `/etiquetar` y `/entrega_personal` | solo lectura (decisión de PR-9), aunque `#324` dice que las tareas de Miami *"nacen en /etiquetar"* |
+| Quién crea | solo supervisores y SAC: **el que está en la pistola podía marcar una tarea hecha pero no dejar una** |
+
+Y detrás de todo, la pregunta de marzo que nunca se cerró (`docs/05`, *"Tareas
+y Re-empaque (pendiente de reunión)"*): *¿quién asigna las tareas? ¿el
+digitador al etiquetar? ¿el supervisor?* — Yusef: *"prefiere explicarlo en
+reunión directa"*. Lo único que dijo después es `C16-01`: *"el cliente no puede
+poner una tarea, solo nosotros"*. Quién de nosotros, nunca.
+
+**Decisiones de Jorge (2026-08-26):**
+
+1. **Crea quien ejecuta** (`EJECUCION_ROLES`: se suman digitador, cajero y
+   entrega). Editar y borrar siguen siendo de supervisores y SAC.
+2. **La franja crea**, en las dos pantallas.
+3. **La tarea que se deja mientras se recibe un paquete se ata a ese paquete
+   al guardarlo.**
+
+Y una de implementación: el área por defecto de una tarea nueva es **la del que
+la crea**, no «todas» — si fuera «Honduras», el digitador no vería en su propia
+franja la tarea que acaba de dejar (`visibles_para` filtra por área).
+
+### C17-01 · Crear desde la bandeja, y desde donde se la ve — ✅ **HECHO (PR-C7.47)**
+
+`/tareas/new` gana el autocomplete de cliente de `pre_alertas/new` y un campo
+**tracking opcional** que el servidor resuelve con la escalera de siempre
+(`buscar_escaneado`), **dentro del cliente elegido** —los couriers reciclan
+trackings—; con tracking la tarea cuelga del paquete (la Caja 1 si es un
+split), sin él queda del cliente. La bandeja gana «Nueva tarea» (F7) y el lápiz
+(que va a donde la tarea está pegada). Las tareas de cliente se editan y se
+borran. Los tres botones viejos pasan a `can_crear_tareas?` /
+`can_gestionar_tareas?`, una sola fuente.
+
+> ⚠️ El bloqueo de avance por tareas es **por caja** —la pre-factura avanza
+> caja por caja— y **el manifiesto no lo mira** (`update_all`). Una tarea en la
+> Caja 1 frena esa caja en la pre-factura y nada más.
+
+### C17-02 · Dejar una tarea desde la franja, sin salir de la pantalla — ✅ **HECHO (PR-C7.48)**
+
+«+ Dejar una tarea» en la franja de `/etiquetar` y `/entrega_personal` (es un
+solo partial: la gemela por construcción): título + área, en un diálogo que
+abre por click —no lleva sonido, el operario ya está mirando—. Crea sin
+recargar: el bloque de tareas se reemplaza entero por `turbo_stream` con el
+tracking **fresco** que mandó el JS, y en el 422 solo se re-pinta el form con
+sus errores, con el diálogo abierto. Si la franja ya conoce el paquete (el
+esperado de una pre-alerta, o el paquete en modo actualización) postea al
+paquete; si no, al cliente con el tracking que había en pantalla, y
+`Tarea.atar_al_paquete!` la re-apunta al guardar la caja —también por el
+secundario, por el caso USPS—. En un split va a la Caja 1. En Entrega Personal
+queda del cliente: el tracking se genera al guardar y no hay por dónde
+atarla.
+
+### Las preguntas que abre
+
+| Id | Qué |
+|---|---|
+| `RP-45` | **¿Quién puede dejar una tarea?** Es la pregunta de marzo (*"¿quién asigna las tareas?"*) que quedó para *"reunión directa"* y nunca se cerró. Respuesta provisoria de Jorge: **la deja cualquiera del personal que las ejecuta** (Miami, caja, entrega); editar y borrar solo supervisores y SAC; el cliente nunca. Si Yusef dice otra cosa —o cuando llegue el Excel de roles (`RP-35`)—, el cambio es una constante (`CREACION_ROLES`), un helper y un test. ~~Y un síntoma para que lo reconozca: **el jefe de SAC (`supervisor_sac`) hoy no ve la cola de SAC**~~ **✅ El síntoma se arregló el 2026-09-01**, sin esperar la respuesta: la pregunta abierta es **quién puede crear** una tarea, y que el jefe de un área vea la cola de su área no es una pregunta. Faltaba en **tres** lugares —`DEPARTAMENTOS_POR_ROL`, `GESTION_ROLES` y por herencia `EJECUCION_ROLES`, así que ni siquiera podía abrir `/tareas`—. El par `sac`/`supervisor_sac` estaba escrito a mano en `PermisosDelSistema` y faltaba en las de tareas: ahora es `User::ROLES_DE_SAC` y se deriva, que es como no se vuelve a perder. **La pregunta de quién crea sigue abierta.** |
+| `RP-46` | **Cuando se reciba fuera de Miami.** DF México ya se puede recibir (`C18-02`, seguimiento). Tres cosas siguen atadas a Miami y se decidió no tocarlas sin preguntar: (a) el estado se llama **«Recibido en Miami»** (`recibido_miami`, en la ficha, el listado y el timeline) aunque el paquete se haya recibido en México — ¿pasa a «Recibido en bodega» con el nombre de la sucursal, o Miami es la palabra que usan para "ya lo tenemos"?; (b) el **flete México** (`RP-13a`: $5 por libra o volumétrica + ISV) hoy es un cargo que se agrega a mano en la pre-factura — ¿debería salir solo cuando el origen es México, como el escalonado sale solo para USA?; ~~(c) los **manifiestos** hoy no llevan sucursal de origen (todos numeran `MA-…`) — ¿un manifiesto por sucursal que recibe, con su propio número?~~ **(c) ✅ RESUELTA en `PR-M2`, y corregida el 2026-09-01**: el manifiesto lleva `sucursal_origen` y numera por sucursal + año + correlativo. El formato pasó de `M<letra><año><nnnnnn>` a **`M<código-completo><año><nnnnnn>`** (`MMIA2026000001`): con la letra sola, **`SPS` y `SAM` generaban el mismo número y el segundo manifiesto del año no se podía crear** — `RecordInvalid`, no un número salteado, y el reintento de `save` no lo cubre porque escucha `RecordNotUnique`. No era teórico: las dos sucursales existen hoy; lo que lo despertaba era el **manifiesto interno de sucursal**, porque hasta ahora solo Miami numeraba. Elegido por Jorge; ⚠️ **cambia el formato que Yusef confirmó y hay que decírselo**. **(a) y (b) siguen abiertas.**
+
+---
+
+## Conversación 18 (2026-08-26) — la segunda pasada con la pistola: RET, la sucursal al revés, la etiqueta sin número, y «enviado según política»
+
+47 minutos, Yusef desde su oficina (con escalera, ingeniero de cámaras y
+perfumes de por medio) probando `/etiquetar` en staging con lo de la
+Conversación 16 ya adentro. Transcrita con `whisper small`.
+
+**Lo que dio por bueno, probándolo en vivo:**
+
+| Qué | Lo que dijo |
+|---|---|
+| El secundario de otro cliente **y** otro tipo (`C12-04`, `C16-05`) | *"Como tiene dos personas diferentes y dos tipos de envío diferentes, lo correcto es dejarlo a un lado porque hay un error, y volver a empezar."* |
+| El mismo cliente con otro tipo | *"No tiró error porque detectó que estaba el mismo cliente… sí te lo dice, y te dice que es diferente tipo de servicio, pero te está diciendo que es el mismo cliente. Está bien."* |
+| El orden del listado (`C12-02`) | *"Sí, lo está haciendo: este es el más reciente."* |
+| Las tres notas: renglón, grupo, cliente (`C14-02`) | *"Este botón va a las dos notas… y la tercera del agrupado. Excelente, todo salió bien."* |
+| Cambio de servicio + cantidad de etiquetas | *"Todo está bien, no tenía cambio de servicio ni pre-alerta, pero yo lo hice solo por molestar."* |
+
+Y de paso, el diagnóstico de negocio: *"todos los que he comprado, ustedes son
+unos botes bien sólidos… los mandan sin nada de protección"* — el perfume es lo
+que más se retiene, *"paquete dañado, lo más común"*.
+
+### C18-01 · RET, no RTE — ✅ **ARREGLADO (PR-C7.49)**
+
+> *"Me dijiste RTEBA… RET. Sí, **las primeras tres letras**."*
+
+`C16-07` salió como `RTE` y él lo corrigió al día siguiente. Es un solo lugar
+(`etiqueta_tipo_envio`); ver la nota en `C16-07`.
+
+### C18-02 · La sucursal de recepción está al revés — ✅ **ARREGLADO (PR-C7.50)**
+
+Al cerrar sesión para abrir otro tipo de envío, el chooser le ofreció San
+Pedro, Tegucigalpa y San Manuel:
+
+> *"Aquí te falta Miami."*
+> *"¿Dónde se está recibiendo el paquete? No es a dónde va."*
+> *"Debería de ser las sucursales donde **recibimos** carga, no donde
+> entregamos carga. En este momento en la historia solo es Miami… futuramente
+> posiblemente Los Ángeles, Panamá, México."*
+> *"Básicamente debería invertir lo que está: el que está oculto es el que va a
+> recibir."*
+> *"Sería bueno tener otro como de prueba, tipo México."*
+
+**Qué pasa.** El chooser filtra por la **ubicación del usuario** — y el admin
+de Yusef está en `honduras`, así que ve las tres de Honduras y no Miami. Por lo
+mismo el número de recepción de la etiqueta salió `RSPS…`: la sesión se abrió
+con San Pedro porque era la primera de esa lista. No existe ningún concepto
+«sucursal que recibe carga»: `ubicacion` es miami/honduras/otros y ningún
+usuario puede ser `otros`, así que México no le saldría a nadie. Y
+`/entrega_personal` usa otro filtro distinto (Miami a mano) — la gemela.
+
+Al costado: *"la administración está amarrada a SPS… ahí vamos a amarrar al
+usuario de dónde es"*. Hoy el usuario tiene `ubicacion` (Miami/Honduras) y nada
+más fino.
+
+> **Decisión de Jorge (2026-08-26):** un checkbox **«recibe carga»** en
+> `/sucursales`, Miami marcada; México la crea y la marca Yusef.
+
+**La regla, que nunca estuvo escrita:** *de recepción* son las sucursales
+marcadas «acá se recibe carga» (activas). Hoy Miami; mañana Los Ángeles,
+Panamá, México — se crean y se marcan desde `/sucursales`, sin tocar código.
+El chooser de `/etiquetar` y el select de `/entrega_personal` salen del mismo
+scope (`Sucursal.de_recepcion`), y EP además pide código EP. Si hay una sola,
+no se pregunta; si hay varias, queda preseleccionada la de la ubicación del
+usuario. Un id que no esté en la lista cae al default. ~~Lo que quedó como deuda:
+`codigo_recepcion_prefix` sigue siendo obligatorio en el form aunque el número
+lo arme `Sucursal#codigo` desde `RP-17`.~~ (saldado abajo)
+
+**Seguimiento 2026-08-27 (PR-C7.52).** Jorge, mirando el chooser: *"aquí
+podemos seleccionar 'Recibiendo en Miami'; Miami es el default pero podría ser
+DF México, ¿tenemos cómo ingresarlo?"*. Ingresarla ya se podía; lo que no había
+era una regla para el default: con dos que reciben, un usuario de Honduras —el
+admin de Yusef— no coincidía con ninguna y caía a la primera **por nombre**, y
+«DF México» ordena antes que «Miami». Es lo de *"ahí vamos a amarrar al usuario
+de dónde es"*.
+
+> **Decisión de Jorge (2026-08-27):** sucursal por usuario **y** «recepción por
+> defecto» en `/sucursales`; DF México queda sembrada como prueba; el orden por
+> nombre nunca decide.
+
+**La regla del default, en cuatro escalones** (`Sucursal.recepcion_por_defecto_para`,
+la comparten `/etiquetar` y `/entrega_personal`, que antes ni preseleccionaba):
+la **sucursal donde trabaja** el usuario (campo nuevo en `/users`, opcional) si
+recibe carga → la marcada **«recepción por defecto»** (checkbox en `/sucursales`,
+solo una: marcar una desmarca la otra; Miami quedó marcada con los datos) → la
+de la ubicación del usuario → la primera. De paso: el prefijo de recepción dejó
+de pedirse (el número es `R<código>AAMM000001`, y el índice de `/sucursales` lo
+muestra así, con badges de «Recibe carga» / «Recepción por defecto» / «Retiro
+por defecto»); una sucursal que recibe carga ya no se ofrece como lugar de
+**retiro** del cliente; el correo de recibido dice *"bodega de DF México"*
+cuando corresponde (y Miami para los viejos); «DF México» (`DFM`, EP `SDF`,
+país México) está en los seeds — se desactiva desde `/sucursales` cuando
+estorbe.
+
+**Lo que sigue diciendo Miami a propósito** —es pregunta, no bug— va en `RP-46`.
+
+### C18-03 · «Sale algo escrito alrededor» de la etiqueta — 🧹 **no es código**
+
+> *"De ahorita te puedo decir solo la etiqueta: el error de que sale algo
+> escrito alrededor. Tendría que probar el sistema en Miami para enseñarte cómo
+> sale en la impresora [Dymo]."*
+
+La etiqueta ya declara `2.25in × 1.25in` con margen cero. Lo que sale alrededor
+en una impresora de hojas es lo que el **navegador** agrega en el diálogo de
+impresión (título, URL, fecha, «1/1»): se apaga ahí («Encabezados y pies de
+página»). Con la Dymo no aparece. *"Son bien escasas… 10.000 etiquetas al mes."*
+
+### C18-04 · La etiqueta sin código de barras ni número — 🐛 ✅ **ARREGLADO (PR-C7.49)**
+
+> *"Al etiquetar todo con RT, pero mirá: algo falló ahí. No tiene el código de
+> barras ni el número de recepción ni nada."*
+> *"Yo estaba probando con dos, tres, cuatro, cinco, hasta seis… pero **la única
+> que probé con una fue la que falló**."*
+
+**Qué pasaba.** Con una sola etiqueta y un tracking que tenía pre-alerta,
+`/etiquetar` reusa el paquete esperado —que nació **sin ninguna sucursal**— y lo
+guarda como actualización. El número de recepción solo se generaba **al crear**,
+así que el esperado se recibía sin número, sin Warehouse Receipt, y la etiqueta
+salía sin código de barras y con `—` donde va el número. Con dos o más etiquetas
+el split asigna el número a mano: por eso esas sí salían. El mismo agujero tenía
+**actualizar** un paquete desde `/etiquetar`. El síntoma ya estaba escrito en el
+código desde `PR-C7.20` (*"una con — donde va el número"*), como otra cosa.
+
+Ahora el número (y el WR) se generan también al **recibirse** un paquete ya
+grabado — solo entonces: un esperado que alguien edite desde `/paquetes` sigue
+sin número, porque no llegó. Y una migración numera los que ya quedaron así en
+staging, informando cuáles.
+
+### C18-05 · El modal de «¿cuántas etiquetas?» con las cajas ya puestas — ✅ **ARREGLADO (PR-C7.49)**
+
+> *"Yo puse que eran dos cajas… que agregué dos cajas en pesos y medidas. Y me
+> las tiró aquí con su código de barras y todo bien bonito. Y me tiró siempre la
+> [pregunta]."*
+
+Jorge, en la llamada: *"es una maña ahí para que escoja quién domina"*. Yusef:
+*"son cositas… que te las busco para que ya lo dejes arreglando"*.
+
+Dos formas de llegar ahí. Al **actualizar** un paquete el modal sale siempre, a
+propósito: es donde se cambia la cantidad de cajas (`C14-04`), y arranca en las
+que ya tiene. Y al dar de alta, si se **teclea el peso arriba sin darle
+«Agregar»** —que es lo que la pantalla misma dice que se puede hacer— el modal
+contaba solo las filas y preguntaba igual.
+
+> **Decisión de Jorge (2026-08-26):** la caja tecleada sin «Agregar» cuenta; el
+> modo actualización sigue preguntando.
+
+### C18-06 · «Enviado según política de envío» — ✅ **HECHO (PR-C7.51)**
+
+> *"Hay una cuestión que le queríamos agregar, pero a mí se me olvidó de un
+> principio… es lo mismo que vos tenés como cuando retenés. Como una nota de por
+> qué se le envió [así]."*
+> *"El paquete no llegó identificado con tipo de envío. Antes nos poníamos a
+> preguntarle a la gente qué tipo de envío quiere. Ahora los enviamos nosotros…
+> de acuerdo a las políticas."*
+> *"Necesitamos una listita igual como la otra: se le marca el checkbox y te
+> despliega."*
+> *"No es para retener. Se dan como 100 paquetes al mes."*
+
+Las frases que hoy copian y pegan del sistema viejo: *"Enviado según política
+de envío por falta de identificación o pre-alerta"* · *"Sellado y enviado según
+políticas de envío por falta de identificación"* · *"Desconocido"* (sin etiqueta,
+sin nada) · *"Etiqueta incompleta"* · *"Nombre incompleto: solo se lee Juan"*.
+Y el porqué de fondo: *"hay dos Kenias Maya… la gente no pone el código"*.
+
+No supo cómo llamarlo: *"¿acción? notas me confunde… no se retuvo por
+política"*. Es una explicación al cliente de por qué su paquete se mandó como se
+mandó.
+
+⚠️ La «nota al cliente» que él asume que existe **no le llega al cliente**: no
+viaja en el correo de recibido, no hay detalle de paquete en el portal, no sale
+en el WR (deuda escrita en `docs/06` desde abril). Y el correo de recibido solo
+se manda cuando el tracking tenía pre-alerta — justo lo que estos paquetes no
+tienen.
+
+> **Decisiones de Jorge (2026-08-26):** la listita se compone en
+> `notas_al_cliente` y **va en el correo de recibido**; el correo se manda
+> cuando hay pre-alerta **o** nota de política; el checkbox va en Etiquetar,
+> Entrega Personal y el form de `/paquetes` (para corregir después).
+
+**Qué se hizo.** Una copia deliberada de «Retener en Miami»: catálogo
+`Motivos de Envío por Política` (nombre para el operario, **texto al cliente**
+que es lo que le llega; admin, con card y link), el componente con la casilla,
+la listita y el detalle libre, en las tres pantallas, con su lint gemelo. Al
+marcarla, los textos de los motivos elegidos y el detalle se componen en
+`notas_al_cliente` —una vez, sin pisar lo que había—; al desmarcarla se van
+los motivos y el detalle, no lo que ya se le dijo al cliente. Badge «Enviado
+según política» en la ficha y fondo navy en `/paquetes`. Y el correo de
+recibido **lleva la nota** y sale de un solo lugar (`NotificaRecibido`) cuando
+hay pre-alerta o política — un pre-alertado con política manda uno, no dos;
+corregirlo después desde `/paquetes` también avisa. Sin correo del cliente
+la nota queda igual en la ficha. El portal no tiene detalle de paquete: es lo
+que sigue.
+
+**Seguimiento 2026-08-27 (PR-C7.53).** Jorge: *"pongamos unas seeds ahí con dos
+ejemplos"*. Los seeds quedan con los **dos** motivos que Yusef leyó textuales
+del sistema viejo («Sin pre-alerta ni identificación» → *Enviado según política
+de envío por falta de identificación o pre-alerta*; «Sellado y enviado» →
+*Sellado y enviado según políticas de envío por falta de identificación*). Lo
+demás que mencionó —etiqueta incompleta, «solo se lee Juan», desconocido— es el
+contenido de cada caso, no una frase estándar: va en el detalle libre, o lo
+agregan al catálogo desde `/motivos_envio_politica`. En staging el catálogo
+nació vacío porque el deploy solo migra (`render.yaml`), nunca siembra: hay que
+correr los seeds una vez.
+
+### Dudosos del transcript
+
+- *"Estamos en pre-alerta y hay que cambiar en cliente la parte donde está, si
+  el cliente en [portal] tiene que ver lo mismo…"* (minuto 0, se corta).
+- *"Ahí vamos a amarrar al usuario de dónde es"* — ver `C18-02`.
+
+---
+
+## Conversación 19 (2026-08-28) — el papel de su equipo: el WR para imprimir, el foco al tracking, sellado, y los segundos
+
+~20 minutos. Yusef leyó **un papel que le preparó su equipo** — *"la izquierda
+era para ellos, y el lado derecho era para vos"* — con lo que juntaron usando
+staging con la pistola. Transcrita con `whisper small`.
+
+Antes de los ítems, dos cosas que dio por buenas: los listados de razones
+(retenido, política, casillero) se los va a pasar su equipo — los CRUDs ya
+existen, *"ese está para agregar y quitar vos"* —, y la lentitud que sienten
+por ratos la atribuyen a la red interna de Miami (*"estamos analizando lo de
+las cámaras en Miami… saturan la red interna. Voy a hacer unos cambios yo en
+Miami a ver si me funcionan"*), no al sistema.
+
+### C19-01 · EP: el Warehouse Receipt no sale en versión para imprimir — 🐛 ✅ **ARREGLADO (PR-C7.55)**
+
+> *"Después de hacer todo esto, yo le doy [F]9… me imprimen la etiqueta, me
+> tira el warehouse, pero mirá cómo me lo tira."*
+> *"Ocupás que esté como versión para imprimir… que es de un solo… le doy a
+> imprimir, y al darle a imprimir, como hice con la etiqueta, me regresa acá."*
+
+**Qué pasa.** El mecanismo ya existe a medias: `/entrega_personal` abre la
+etiqueta con `?wr=1` y, tras imprimirse, la misma pestaña navega al WR
+(`PR-C7.28`: Chrome permite un popup por gesto, no dos). Pero navega **sin**
+`print=true`, así que el WR cae como vista previa —la hoja gris con el botón—
+y la pestaña queda abierta. La etiqueta sí hace el ciclo completo: imprime,
+cierra, devuelve el foco. Él quiere el WR igual.
+
+### C19-02 · Tras imprimir, el foco vuelve al tracking — ✅ **ARREGLADO (PR-C7.55 · PR-C7.56)**
+
+> *"Después de darle F9, sale la etiqueta, imprime… lo que le hace falta es que
+> el cursor… regrese a donde está el [campo de] tracking."*
+> *"No sé dónde va, se queda como en el aire… la ventaja de eso es que ellos ya
+> solo vienen y escanean el siguiente."*
+
+Y el scroll, aparte:
+
+> *"Era que se fue para arriba… debería siempre dejar esto así como más a la
+> vista de ellos… que se mantenga en el área donde ellos en realidad se
+> mueven."*
+
+**Qué pasa.** `clearForm()` en `/etiquetar` sí enfoca el tracking — pero la
+pestaña de impresión **roba el foco de la ventana**, y al cerrarse nadie
+re-enfoca el campo. En `/entrega_personal` es peor: su `clearForm()` no enfoca
+nada. Y ninguna de las dos pantallas maneja el scroll.
+
+**La mitad de EP salió en `PR-C7.55`**: `clearForm()` vuelve al `[autofocus]`
+(el proveedor) al guardar, y con el WR cerrándose solo el foco regresa a la
+pantalla lista para el siguiente. **La de `/etiquetar` en `PR-C7.56`**, que
+encontró la tercera vía de fuga: el modal rojo de la bolsa (`showModal` hace
+inerte la página, así que el `focus()` de `clearForm` moría en silencio, y el
+modal al cerrarse no devolvía el foco). Ahora las tres vías vuelven al
+tracking —tras limpiar, al cerrar el modal, y cuando la pestaña de impresión
+devuelve la ventana— con `scrollIntoView` para que la vista se quede "en el
+área donde ellos en realidad se mueven". El listener de window "focus" quedó
+también en EP, apuntando a su `[autofocus]`.
+
+### C19-03 · Recolecta: campo de dirección — ✅ **HECHO (PR-C7.57)**
+
+> *"En entrega [personal]… lo único que vimos que hace falta ahorita es que
+> pongamos un campo que diga dirección. Dirección de la recolecta."*
+> *"Ya hay instrucciones, y en caso de que sea para llevarlo a otro lado se lo
+> agregamos en instrucciones al motorista… son raras, es una de cada 100."*
+
+**Qué pasa.** La recolecta guarda contacto, teléfono, horario e instrucciones
+— pero no tiene dónde poner la dirección, así que hoy se cuela en el textarea
+de instrucciones (el placeholder mismo dice *"Dónde queda, por dónde
+entrar…"*). Y un hallazgo al costado: esos cuatro campos se guardan y **no se
+muestran en ninguna pantalla** — el que maneja no tiene dónde leerlos.
+
+**Qué se hizo (`PR-C7.57`).** `recolecta_direccion` en el paquete, con su
+campo en EP (arriba de las instrucciones, que dejaron de pedir "dónde queda")
+y en el modal de recolecta del form de `/paquetes` para corregir después. Sin
+prefill del cliente a propósito: la recolecta puede ser en la bodega de un
+proveedor. Y la ficha ganó el bloque «Datos de la Recolecta» con dirección,
+contacto, teléfono, horario e instrucciones — que hasta hoy eran write-only.
+
+### C19-04 · Checkbox «Sellado» (y «Compra chino») para la descripción — ✅ **HECHO (PR-C7.58)**
+
+> *"Si aquí en la descripción del contenido les podemos poner un check nada más
+> que diga sellado… para que llegue en la descripción y diga paquete sellado."*
+> *"Mira, hay dos cosas: sellado y compra chino. Son más comunes. ¿Pudieras
+> poner algo para ellos? Aquí, a la parte de descripción: sellado, compra
+> chino."*
+
+El porqué: muchos paquetes no se abren (*"nosotros hay muchos paquetes que no
+los abrimos"*), y en el viejo escriben "sellado" a mano mil veces al día.
+
+> **Decisión de Jorge (2026-08-28):** catálogo CRUD como las plantillas de
+> notas —no dos botones fijos—, sembrado con los dos que dictó. Es su
+> filosofía de siempre: *"entre más cosas nos dejés crear, menos te
+> molestaremos"*.
+
+Regla de las gemelas: el campo descripción vive en `/etiquetar`, en
+`/entrega_personal` (donde se llama «Contenido» y es obligatorio) y en el form
+de `/paquetes`. Las tres.
+
+**Qué se hizo (`PR-C7.58`).** Catálogo `Plantillas de Descripción` calcado de
+las plantillas de notas: CRUD admin (`/plantillas_descripcion`, link en el
+sidebar), chips con el mismo `plantilla-picker` (reemplaza si vacío, agrega si
+no) junto al campo en las tres gemelas, y seeds con los dos que dictó —
+«Sellado» y «Compra chino». En staging hay que correr `db:seed` una vez: el
+deploy solo migra, nunca siembra.
+
+**Seguimiento 2026-08-28 (PR-C7.61).** Jorge: *"pon la seed en la migración
+para que se corra"*. Las dos plantillas viajan ahora en una migración de
+datos —idempotente por título, en SQL, como la de la tasa— así el deploy de
+staging las siembra solo y el paso a mano desaparece. `db/seeds.rb` las
+conserva igual para levantar un dev desde cero.
+
+### C19-05 · Los segundos del F9, donde se buscan las cámaras — ✅ **HECHO (PR-C7.59)**
+
+> *"Lo que ocupo son los segundos… cuando revisamos cámaras, en un segundo
+> pueden pasar tres o cuatro paquetes… entonces no sabemos cuál segundo es
+> donde ellos salvaron, le dieron ingresado, o sea, el F9. Ese segundo es como
+> el paquete exacto."*
+> *"Roger le quitó los segundos por una mala interpretación de él… es que los
+> segundos los ocupamos nosotros para ver cámaras."*
+> *"Nosotros como administradores, o como sistema, sí necesitamos esa
+> información. El cliente no la necesita."*
+
+**Qué pasa.** El momento existe con precisión de microsegundos
+(`fecha_recibido_miami`, seteado en el save del F9) — pero ninguna pantalla
+del admin muestra los segundos: el listado y el timeline cortan en `%H:%M`, y
+el modal de duplicado de `/etiquetar` da solo la fecha. El único lugar de todo
+el sistema que imprime segundos es el pie del WR. Peor: el `datetime-local`
+del form de `/paquetes` envía sin segundos, así que **cualquier** edición
+posterior del paquete borra el segundo exacto en silencio.
+
+Lo del cliente quedó abierto a propósito — ver `RP-48`.
+
+**Qué se hizo (`PR-C7.59`).** Solo admin: la columna del listado (la que él ya
+usa: *"aquí ocupamos la hora en esto"*), la línea de tiempo de la ficha (todas
+las fechas — *"igual el enviado"*) y la fecha del modal de duplicado pasan a
+llevar segundos. Y la protección que faltaba: el flatpickr del form edita al
+minuto, así que guardar cualquier corrección re-parseaba la fecha con :00 —
+ahora, si el minuto no cambió, se conserva el momento original con su segundo
+(y paper_trail no registra un cambio que no fue). La etiqueta impresa queda
+`%H:%M`: el ancho está al filo y el WR ya imprime segundos.
+
+### C19-06 · La etiqueta corrida, y los márgenes los ajusta él — ✅ **HECHO (PR-C7.60)**
+
+> *"Solo centrarla un poquito más hacia adentro… lo único que hay que hacer es
+> correr este lado, del lado izquierdo hacia la derecha; el lado derecho
+> déjalo tal cual."*
+
+Las impresoras se van de lado con el uso — *"como arrancamos etiquetas a
+morir, créeme que más de alguna tira que se va de lado; en San Pedro tengo esa
+situación y le tuve que poner una tuerca"*. Y la parte que más le importa:
+
+> *"¿Vos no tenés en el sistema donde yo pueda cambiarlas yo? El tamaño… a mí
+> me habían dado esto [en el sistema viejo] para hacer eso, para no molestar…
+> con eso yo te quito a vos, [que] te estás molestando para hacer estas
+> cosas."*
+
+> **Decisión de Jorge (2026-08-28):** las dos cosas. El corrimiento ya —margen
+> izquierdo arriba, el derecho tal cual— y una pantalla de ajustes de etiqueta
+> (patrón `/tasa_cambio`: claves en `Configuracion`, historial, solo admin)
+> para que él mismo la corra cuando la impresora se desvíe.
+
+**Qué se hizo (`PR-C7.60`).** Los márgenes horizontales de la etiqueta salen
+de `Configuracion` (`EtiquetaAjustes`, en milímetros): izquierdo 2.5mm —1mm
+corrido a la derecha respecto del 0.06in de antes—, derecho 1.5mm, tal cual.
+`/ajustes_etiqueta` (solo admin, con historial) los edita entre 0 y 10mm; un
+valor fuera de rango cae al default en vez de irse a la impresora, porque
+subir el margen le quita ancho a los trackings, que deben caber completos —
+los tests que miden en Chrome real pasan con el default nuevo. Aplica a la
+siguiente etiqueta que se imprima, en los dos render paths (etiqueta y
+combinadas), sin deploy.
+
+**Seguimiento 2026-08-28 (PR-C7.63 → serie de la plantilla).** Jorge: *"¿y con
+respecto a hacer editable la plantilla de las etiquetas? ¿se hizo algo?"* — el
+pedido completo de Yusef era más que los márgenes, y Jorge cerró el alcance:
+escala de letra, letra por campo, dimensiones, campos on/off, **mover campos
+por filas** (no canvas libre: el desborde sigue siendo medible) y textos
+fijos, con vista previa en vivo y «restaurar la original» (que en el legacy
+Yusef resolvía "grabando las originales"). `PR-C7.63` puso los cimientos sin
+cambiar un pixel: la etiqueta ahora se renderiza desde una **plantilla**
+(`EtiquetaPlantilla`, singleton jsonb; sin registro rige la de fábrica, que
+vive en el código y es la etiqueta de hoy **1:1** — los seis tests de etiqueta
+pasan sin tocarse, incluido el que mide en Chrome). Cada campo vive en su
+partial con su lógica y su `data-campo`; identidad no apagable (barcode, nº
+recepción, tracking, tipo de envío/RET); todo clamp cae al default — basura
+nunca llega a la impresora. El editor en sí viene en `PR-C7.64…66`.
+
+**Seguimiento (PR-C7.64).** `/ajustes_etiqueta` ya es el editor: dimensiones
+(con el aviso «solo si cambiaste el rollo»), escala 70–130% y tamaño por campo
+—con el **efectivo** (pt × escala) al lado, que es el que imprime—, todo con
+**vista previa en vivo**: un iframe renderiza la etiqueta de muestra (un
+paquete en memoria con todos los opcionales — la etiqueta más llena es la que
+puede no caber) con la candidata sin guardar, por el layout real de
+impresión. El estado «Cabe ✓ / Se recortan Xpx» mide lo mismo que
+`etiqueta_cabe_test`; guardar en rojo pide confirmación, no bloquea — la
+etiqueta es de Yusef. Warning si el tipo de envío deja de ser lo más grande.
+Y «Restaurar la original» desde el primer PR que puede guardar: la válvula de
+escape existe antes que el riesgo.
+
+**Seguimiento (PR-C7.65).** Campos on/off y textos fijos en el editor. Los de
+identidad —barcode, nº recepción, tracking, tipo de envío/RET— **salen
+siempre** (la pantalla lo dice y el server lo fuerza aunque el payload pida
+otra cosa); los demás se apagan con su checkbox, con aviso junto al
+secundario (el ~40% de los envíos trae segundo tracking). Los rótulos
+(«RETIRA EN», «Reg:», «Drv:», «3ro:») se editan; vacío o pasado de largo
+vuelve al de fábrica al guardar. Todo se ve en el preview al instante.
+
+**Seguimiento (PR-C7.66) — la serie queda completa.** Reordenar por filas con
+flechas (⇑⇓ la fila, ◀▶ el campo adentro de su fila, ↑↓ a la fila de
+arriba/abajo), la card de Orden como fuente: el serializer lee el DOM tal
+como quedó. El bloque de dos columnas sigue **sellado** —sus renglones se
+mueven adentro de su columna y ningún campo entra ni sale de él, porque es lo
+que hace que la etiqueta quepa—. Un orden que no cubra todos los campos
+vuelve al de fábrica entero; una fila vacía no imprime nada (sirve para dejar
+aire). Con esto C19-06 queda entregado completo: márgenes, dimensiones,
+escala, letra por campo, on/off, textos fijos, orden, preview en vivo y
+restaurar — todo desde `/ajustes_etiqueta`, sin deploy.
+
+### C19-07 · «Todas estas ciudades» en /etiquetar — ✅ ya existe, es dato
+
+> *"De hecho, lo que hay que [hacer es] quitar todas estas ciudades por solo
+> dejar una sucursal… que solo salgan las que tenemos activadas."*
+> *"Si podés ponerle una opción en algún lado donde uno pueda escoger qué
+> sucursal está activa."*
+
+Era el chooser «¿Dónde estás recibiendo?», que desde `PR-C7.52` ofrece Miami y
+DF México (la de prueba). Lo pedido ya está: el chooser sale de
+`Sucursal.de_recepcion` —solo activas que reciben carga— y `/sucursales` tiene
+el toggle de activa. Desactivando DF México el chooser desaparece entero (solo
+se pregunta cuando hay más de una). No es código; queda documentado para
+cuando le estorbe.
+
+### C19-08 · Los modales salen montados — 🐛 ✅ **ARREGLADO (PR-C7.62)**
+
+Jorge, el mismo día, probando con lo del audio ya adentro:
+
+> *"¿Podemos hacer que los modales salgan en orden? Actualmente salen
+> montados… pensaría que no tiene sentido que aparezca el modal [de aviso
+> junto a] 'Este paquete es de otro tipo de envío'."*
+> *"Si hay varias notas y alertas como la del paquete de otro tipo de envío
+> hay que mostrarlas en orden y no montadas, el orden que haga más sentido."*
+
+**Qué pasaba.** El conflicto de sesión es un overlay (`div` con z-index) y los
+avisos de retención/tareas/notas son `<dialog>` nativos — top-layer, que pinta
+**encima de cualquier z-index**. Al escanear un tracking con pre-alerta de
+otro tipo salían las dos cosas a la vez: el beep alegre de match, la fila de
+avisos tapando al conflicto, y el foco peleado (el `showModal` hace inerte el
+resto de la página, así que el foco que el conflicto pedía moría en
+silencio). La incongruencia del secundario tenía el mismo montaje por otra
+vía: se teclea con los avisos del primario ya saliendo.
+
+**El orden con sentido (decisión de Jorge, 2026-08-28).** El conflicto decide
+**primero y sale solo**: sus dos salidas —finalizar la sesión o dejarlo de
+lado— abandonan el paquete en esta sesión, así que los avisos no tienen
+"después" acá. No se pierden: vuelven a salir **enteros** al escanear el
+paquete en la sesión que corresponde, que es donde se contestan de verdad.
+Con el conflicto suena solo el error — el beep de match sobre un paquete que
+no se puede guardar le mentía al oído del operario (cambia lo de `PR-C6.9`,
+que mandaba los dos sonidos juntos).
+
+**Y la regla general que evita todo montaje:** mientras haya una pregunta en
+pantalla sin contestar —un aviso en fila, el conflicto, el duplicado, la
+listita de retener o política, el PIN, el «¿cuántas etiquetas?»— las teclas
+de guardar (F8/F9/F10) no actúan. Contestar cuesta un Enter; guardar por
+encima costaba un paquete con la pregunta sin responder. F2 queda libre: es
+la salida que los propios modales ofrecen. La gemela de EP lleva la misma regla con sus listitas. `C20-13` extiende la
+regla al duplicado y a cualquier `<dialog>` abierto: no se abre una pregunta
+encima de otra, se pospone.
+
+De paso, cazado en el mismo arreglo: el comentario ERB del partial de chips
+(`PR-C7.58`) filtraba un `%>` a la pantalla — y su molde,
+`shared/_plantillas_notas`, filtraba **la frase entera del comentario** en
+`/pre_facturas`, `/caja` y el form de `/paquetes` desde `PR-C6.13`: el primer
+cierre de tag adentro de un `<%#` lo termina, y lo que sigue se imprime.
+
+### Las preguntas que abre
+
+| Id | Qué |
+|---|---|
+| `RP-47` | **La «incongruencia del paquete ingresado»** que traía en el papel. En vivo no la reprodujo: grabó un tracking que ya existía (*"grabé un tracking que ya existía… y no me lo reconoció"*), pero al revisar, el paquete **sí** estaba recibido hacía 3 minutos, y el código sí avisa (el modal de duplicado sale cuando el tracking existe y no está terminal). *"Voy a hablar con los mensajeros en Miami que me recuerden qué era esa incongruencia… creo que eran unas notas o algo que salían."* Esperar su detalle antes de tocar nada |
+| `RP-48` | **Qué detalle de fecha/hora ve el cliente.** *"El cliente no la necesita. Ellos con el día que se les diga… lo más que les podemos dar es el disponible en Honduras… con hora."* Y ahí mismo: *"ya son cositas que tengo que decidir con el personal… acaba de regresar hoy [de vacaciones]"*. El portal hoy casi no muestra horas de paquetes. **No tocar el portal** hasta que decida con su gente |
+
+### Dudosos del transcript
+
+- *"Hablando de México, no he recibido notificaciones, eso ya me levantó
+  alerta"* (min ~2, se corta) — ¿correos de la bodega DF México? Preguntar
+  antes de asumir.
+- *"Me lo tenés predeterminado, Miami… no hay problema, solo que después
+  podamos activarlo cuando activemos más cosas"* — parece el default de
+  recepción de `PR-C7.52`, conforme.
+
+---
+
+## Conversación 20 (2026-08-29) — el update de punta a punta, y el barcode que la pistola no leía
+
+Cinco audios: la videollamada de la mañana (23 min, Jorge y Yusef probando
+staging con la pantalla compartida) y cuatro notas del mediodía. Transcritas
+con `whisper small`. Más los **logs de Render** que Jorge pegó en el chat, que
+resultaron ser la pieza que faltaba.
+
+Yusef lo resumió al final: *"si es que eso es lo que estoy [viendo], porque no
+ha hecho nada… hemos avanzado ya poquitos, vamos bien"*.
+
+### C20-01 · «Ahí tira el rojo»: el error que se volvía 500 — 🐛 ✅ **ARREGLADO (PR-C7.67)**
+
+Probando actualizaciones con cambio de servicio, Yusef chocó dos veces con una
+pantalla de error donde tenía que haber un aviso:
+
+> *"Mira acá… estoy agregando un tracking que ya existe, le di cambio de
+> servicio, le di a express, le dije que sí, le di grabar… ahí tira el rojo."*
+> *"¿Será que hay una validación?"*
+
+**Qué pasaba.** Los logs lo dijeron con nombre y apellido:
+
+```
+ActionView::Template::Error (undefined method `any?' for nil)
+app/controllers/etiquetar_controller.rb:467:in `render_create_error'
+```
+
+`index` y `render_create_error` tenían **dos copias del mismo bloque de
+assigns**, y una se quedó atrás: `@supervisores_cobro` (`PR-C6.28`) se agregó
+solo en `index`. La vista lo usa en el banner del cobro por cambio de
+servicio, que sale justo cuando `@modo_actualizacion &&
+solicito_cambio_servicio?`. O sea que **cualquier** error legítimo al
+actualizar un paquete con cambio de servicio moría en la vista: el 422 con el
+mensaje que explicaba qué corregir nunca llegaba a la pantalla. Los dos
+estaban viendo el humo, no el fuego.
+
+Los assigns viven ahora en un solo método (`assigns_del_formulario`): la
+próxima ivar no puede volver a faltarle a la mitad de los caminos. Y los tres
+caminos de error del update —destino de cambio de servicio faltante, caja ya
+cobrada, paquete que no valida— tienen su test, que sin el arreglo revienta
+con el mismo `undefined method 'any?' for nil` de los logs.
+
+### C20-02 · El código de barras que la pistola no lee — 🐛 ✅ **ARREGLADO (PR-C7.68)**
+
+El problema grande de la etiqueta, encontrado en vivo:
+
+> *"Sí, sí, sí, le cortó la última, la derecha."* · *"Le faltan rayitas."*
+> *"Yo creo que es el margen que movimos… si regresás ese dos punto [cinco] al
+> por defecto, que creo que sería a uno punto cinco, el de la izquierda."*
+
+Y el diagnóstico, que es de él:
+
+> *"La idea de ese margen es que lo corre para la derecha; el problema es que
+> como ya no hay espacio, donde lo corre para la derecha **se corta**."*
+
+**Qué pasa.** El margen izquierdo de 2.5mm (`C19-06`) le quita ancho al SVG
+del código de barras, que tiene ancho fijo en píxeles: lo que sobra lo recorta
+`overflow:hidden`, en silencio. Una etiqueta que se ve bien y **no se
+escanea** — el peor de los dos mundos, porque el error aparece en San Pedro.
+
+> **Decisión de Yusef, en la llamada:** *"Es que si lo justificás, lo que va a
+> pasar es que se hace un poquito más pequeño el código de barra, **pero la
+> pistola lo va a leer**. Eso es lo que hay que hacer."* (Y lo respalda con su
+> equipo: *"yo uso equipo usado, pero uso marca Motorola o Symbol, o sea de
+> buena calidad"*.)
+
+Justificado —el barcode estirado al ancho disponible— pasa a ser el
+**default**: nunca más un recorte silencioso, cualquiera sea el margen.
+Izquierda, centro y derecha quedan como opciones en la plantilla, que es lo
+que Jorge pidió por chat: *"ponle que se pueda justificar, mover al lado
+izquierdo, derecho y centrar el código de barra"*.
+
+**Qué se hizo.** El SVG de Barby ya venía con `viewBox` y
+`preserveAspectRatio="none"`, así que alcanzó con cambiarle el ancho fijo del
+tag de apertura por `100%`: el dibujo se acomoda al ancho que haya y ningún
+margen se lo puede comer. Las otras tres alineaciones conservan el ancho
+natural —el operario elige, y la pantalla le dice el riesgo con todas las
+letras—. La alineación vive en la plantilla (`campos.barcode.alineacion`), con
+la regla madre de siempre: un valor desconocido cae a justificado, que es el
+único que no se corta. En el editor va como control segmentado con su
+explicación, y el preview lo muestra al instante. De paso salió un bug del
+editor que no se había visto: los cuatro radios comparten `data-def-path` y el
+serializador se quedaba con el último del grupo en vez del elegido.
+
+### C20-03 · Restablecer los ajustes — ✅ **HECHO (PR-C7.69)**
+
+Jorge: *"ponle un restablecer a los ajustes de etiqueta"*. La plantilla ya
+tiene «Restaurar la original» (`C19-06`); los márgenes no. Y de paso el
+margen izquierdo vuelve a 1.5mm: el corrimiento de `C19-06` compensaba la
+deriva de **una** impresora, hoy eso se ajusta desde la pantalla sin deploy, y
+con el barcode justificado ya no hace falta pagar ancho por él.
+
+**Qué se hizo.** «Restablecer márgenes» borra las dos claves y
+`EtiquetaAjustes` vuelve a sus defaults solo — mismo criterio que la
+plantilla: la original es el código, y paper_trail conserva lo que había. El
+default queda en **1.5mm de cada lado**, que es el valor histórico. Y el piso
+no es cero, aunque el rango lo permita: el margen **es la zona muda** del
+Code 128, así que un código pegado al borde tampoco se lee aunque salga
+completo — lo dice la pantalla, al lado del botón.
+
+### C20-04 · Actualizar la cantidad de cajas: las reglas — 🐛 ✅ **ARREGLADO (PR-C7.70 · PR-C7.71)**
+
+La regla, dicha por Yusef y que hoy el sistema no cumple:
+
+> *"Imprimir la etiqueta tiene que actualizarte la… **en impresión de
+> etiquetas es el que te marca la cantidad de cajas**."*
+
+Los dos casos reales, con sus palabras:
+
+> **De 3 a 2** — *"ese caso tiene 3 etiquetas porque se lo retuvimos por
+> alguna razón; ella viene y nos confirma: fíjese que el paquete lleva un
+> celular… ese celular hay que devolverlo, entonces ya pasa de ser 3 a 2."*
+> **De 1 a 3** — *"era un paquete, porque solo estaba en un solo bulto, pero
+> cuando lo queremos empacar **no cabe**. Entonces nos vamos a mesa,
+> actualizamos, lo reempacamos diferente en 2 bultos o 3."*
+
+Con detalle y sin detalle son dos cosas distintas:
+
+> *"Si tiene cajas así, con medidas y todo, entonces hay que detenerse,
+> analizar… **tiene que actualizarlo completo**. En el otro solo va a
+> actualizar las cajas que tiene."* · *"Como normalmente no hay detalle, vos
+> **reducís la última**."*
+
+Y por qué se reimprimen todas:
+
+> *"Tenés que imprimirlas todas, porque si no, en San Pedro también ocasiona
+> malentendido: ellos creen, ah, si son tres… **pero este dice cuatro y usted
+> dice tres**."*
+
+**Qué pasa hoy.** Tres cosas, encontradas siguiendo el flujo:
+
+- **Pedir 1 no hace nada.** El modal manda la cantidad al servidor solo
+  cuando es mayor que 1, así que confirmar «1» se descarta en silencio: el
+  split sigue en 3, el sistema dice "actualizado" y salen 3 etiquetas. Bajar
+  a una sola caja es hoy **inexpresable**.
+- **El split se ajusta antes de que el paquete tenga número.** Sobre un
+  esperado de pre-alerta, las cajas nuevas nacen con el estado de esperado y
+  la impresión no las ve (una etiqueta para M cajas), o cada una se acuña su
+  propio número y Warehouse Receipt — y entonces el envío queda partido para
+  siempre, porque las cajas se agrupan justamente por ese número.
+- **Reducir editando la última caja revienta.** Al re-escanear, el sistema
+  abre la caja más nueva; si desde ahí se baja la cantidad, esa caja se borra
+  y el servidor sigue trabajando con un registro que ya no existe → 500. Hoy
+  se alcanza; con lo de arriba arreglado sería el caso común.
+
+**Qué se hizo en `PR-C7.70`** (el orden; el modal es `PR-C7.71`). Primero el
+número, después las hermanas: `ajustar_split!` acuña el número madre si falta
+—igual que `crear_split!` desde siempre— y recién ahí busca el grupo, así que
+las cajas nuevas nacen con el número del envío y un solo Warehouse Receipt. El
+acuñado escribe **solo** esas columnas y no un `save` entero, porque el
+paquete llega con cambios en memoria que todavía no toca guardar. Sobre un
+esperado no se ajusta nada y se lo dice con todas las letras: *se recibe
+escaneándolo*, que es el camino que sí sabe convertirlo. Al reducir, el
+formulario se re-ancla a una caja que quedó viva —la que se editaba puede ser
+justo la que se va— y el peso y las medidas que venían de la caja borrada no
+se le pegan a la sobreviviente. Y todo adentro de una transacción: el contrato
+viejo *"si una caja ya se cobró, no se guarda nada"* se cumplía por orden pero
+no al revés — un `save` fallido después de ajustar dejaba las cajas creadas o
+borradas igual.
+
+**Qué se hizo en `PR-C7.71`** (la pantalla). El modal mandaba la cantidad
+**solo si era mayor que 1**, así que confirmar «1» no mandaba nada: el
+servidor —que sabe hacerlo desde `PR-C7.23`— no recibía cantidad, no ajustaba
+el split, y el paquete seguía en tres cajas mientras la pantalla decía
+"actualizado" y salían tres etiquetas. Bajar un envío a una sola caja era
+**inexpresable**. Ahora se manda siempre que el operario conteste; al dar de
+alta `1` es lo mismo que no mandarlo, y el modal sigue arrancando en la
+cantidad actual para que un Enter distraído no baje un split de tres a uno.
+Con eso las etiquetas se reimprimen todas con el `n/N` nuevo, que es lo que
+él pidió.
+
+### C20-05 · Lo que cambia es del envío, no de una caja — 🐛 ✅ **ARREGLADO (PR-C7.72)**
+
+Reproducido en vivo, sobre un envío de dos cajas a nombre de Diego:
+
+> *"Yo recibí dos paquetes a nombre de Diego. Después vine yo y lo actualicé y
+> lo cambié al nombre de Sofía."*
+> *"Mira, aquí hay una cuestión: **quedó a nombre de Diego uno y el otro quedó
+> a nombre de Sofía**."*
+
+Lo mismo con la retención: *"mira que decía RET… **solo uno te metió RET**"*.
+
+Al actualizar una caja, lo que es del **envío** —el cliente, el tercero, la
+retención y sus motivos, la política, el cambio de servicio, el contenido, el
+prepago— se queda en la caja que se tocó. `crear_split!` sí reparte esos
+datos entre las N cajas al dar de alta; el update nunca aprendió a hacerlo.
+Es la misma familia del *"el tercero lo reconoce como exprés y los otros dos
+como CER… debería de cambiar todas"* de la Conversación 14.
+
+**Qué se hizo.** Al actualizar una caja, lo que vino en el formulario y es del
+envío se escribe en todas sus hermanas: cliente, tercero, trackings,
+retención con sus motivos y notas, política, contenido, remitente, prepago,
+proveedor. El peso y las medidas no — ésos sí son de cada caja. Se escribe lo
+que vino, **sin mirar qué cambió**: los motivos son asociaciones y no
+aparecerían en el diff, y reescribir aunque "no cambió" hace que actualizar
+cualquier caja **converja** un envío que ya quedó partido — el de Diego y
+Sofía se arregla tocando cualquiera de las dos, sin adivinar cuál quedó bien.
+
+Y de paso salió un cobro mal. El cambio de servicio se propagaba prendiendo
+la bandera en cada hermana, y la pre-factura arma un ítem **por paquete
+marcado**: un envío de tres cajas que pasaba de CER a CEM se cobraba **L.300
+en vez de L.100**. Ahora las hermanas heredan el tipo de envío nuevo pero el
+cargo lo lleva una sola caja, que es lo que dice el propio código desde
+siempre: *el cambio de servicio es del envío, no de una caja*.
+
+### C20-06 · Una etiqueta por caja, no N por N — 🐛 ✅ **ARREGLADO (PR-C7.73)**
+
+Al dar de alta un tracking dividido, el sistema pide **una ventana de
+impresión por caja**, y cada ventana imprime **todas** las etiquetas del
+envío: dos cajas son cuatro etiquetas, tres son nueve. Hoy no se nota porque
+el bloqueador de ventanas emergentes de Chrome deja pasar una sola —el mismo
+límite que ya conocíamos de `PR-C7.28`—, así que el día que alguien le dé
+permiso al sitio en la estación de Miami, empieza a salir papel de más.
+
+**Qué se hizo.** Los N eventos se quedan —cada uno dispara su sonido y su
+limpieza de formulario—, pero la impresión se marca una sola vez, en la
+primera caja, que es la que trae a todas sus hermanas. El navegador deja de
+ser lo único que nos separaba del papel de más.
+
+### C20-07 · Las cajas de Entrega Personal — ✅ **HECHO (PR-C7.74)**
+
+Jorge, viendo lo que se arregló en `/etiquetar`:
+
+> *"Esta lógica de las cajas que hicimos para etiquetar también hay que
+> aplicarla en entrega personal."*
+
+**Qué pasaba.** En Entrega Personal la cantidad de cajas salía **solo** de las
+filas que el operario agregara — y ahí casi nunca se pesa ni se mide. Un envío
+de tres bultos no tenía forma de pedir tres etiquetas: se grababa uno. El
+modal de «¿cuántas etiquetas?» existía en `/etiquetar` desde `PR-C7.23` y acá
+hacía más falta que allá.
+
+Ahora es la misma regla en las dos pantallas: si midió cajas, mandan las filas
+—el modal ni aparece, así que nunca hay dos fuentes para el mismo número—; si
+no midió ninguna, el modal pregunta. De paso, `render_create_error` de esta
+pantalla aprendió a llevar mensaje: un rechazo que no viene de las validaciones
+del modelo no tenía cómo explicarse.
+
+### C20-08 · La etiqueta de Entrega Personal dice si viene pagada — ✅ **HECHO (PR-C7.74)**
+
+> *"Sí, es la misma la etiqueta, idénticas, no cambia, pero en la entrega
+> personal y recolectas va **si va bien pagada o no viene pagada**, si le
+> marcamos la opción de que se pagó o no se pagó."*
+
+Se imprimen los **dos** estados, no solo el pagado: el que entrega en Honduras
+tiene que poder leer «NO PAGADO» y cobrar — un renglón en blanco diría lo
+mismo que una etiqueta vieja, y ahí es donde se pierde la plata. El NO PAGADO
+va en negativo, que es lo que se ve de más lejos. Solo sale en entrega personal
+y recolectas (que comparten proveedor); el resto de la carga se cobra por la
+pre-factura y decirlo en cada etiqueta sería ruido — *"es la misma etiqueta,
+no cambia"*.
+
+Dónde ponerlo lo decidió la medición: en su propio renglón la etiqueta se
+desbordaba **13px**, y con recuadro todavía **2px**. Viaja en el renglón del
+registro —ahí cuesta ancho, que sobra— y el énfasis es fondo, no borde, porque
+el borde suma alto. Hay un test que mide en Chrome la etiqueta de EP con
+todos los campos, para que el próximo campo que alguien agregue no lo descubra
+en la impresora.
+
+Y de paso, la plantilla dejó de resetearse: antes exigía que el orden guardado
+cubriera **exactamente** los campos conocidos, así que agregar uno nuevo
+—como éste— le borraba en silencio el orden que el operario hubiera armado.
+Ahora se reconcilia: lo que ya no existe se descarta y lo que falta entra
+donde lo pone la de fábrica.
+
+### C20-09 · El paquete pre-alertado que no se puede actualizar — 🐛 pendiente (`PR-C7.75`)
+
+Un paquete que llegó por pre-alerta y **ya se recibió** no tiene forma de
+volver a modo actualización escaneándolo: el aviso verde de pre-alerta se
+adelanta y el modal de duplicado —donde vive el botón «Es actualización»—
+nunca abre. Peor: si el operario llena y guarda igual, el sistema **crea un
+paquete nuevo** con el mismo tracking, sin avisar. Es candidato a explicar la
+`RP-47` de la conversación pasada (la «incongruencia» que Yusef no pudo
+reproducir).
+
+### C20-10 · El dropdown le gana al teclado — 🐛 ✅ **ARREGLADO (PR-C7.76 · PR-C7.77 · PR-C7.78)**
+
+> *"Cuando ingresamos número, por ejemplo 6, en cliente tiene que buscarlo y
+> seleccionarlo rápido. Actualmente si se hace rápido, el dropdown tarda mucho
+> y se queda pegado."*
+> *"Cuando el cliente escribe 6 y luego Enter rápido, es más rápido que el
+> dropdown — y encima el dropdown se queda guindado porque el teclado es más
+> rápido."*
+
+**Qué pasaba.** El autocomplete nunca recibió el guard que el escaneo de
+tracking tiene desde `PR-C6.21` —el mismo que en el repo está escrito tres
+veces—, así que arrastraba tres carreras a la vez:
+
+- **El Enter que le gana al dropdown.** La lista todavía no estaba pintada, así
+  que el autocomplete dejaba pasar el Enter sin tocarlo, se lo quedaba el
+  mixin que avanza de campo, y **el paquete se iba con el cliente vacío**. Dos
+  décimas después la respuesta llegaba igual: el dropdown se abría solo bajo un
+  campo que ya nadie miraba, movía la página, y **sonaba el pito de «cliente
+  encontrado»**. El operario lo oía, creía que había quedado puesto, y F9
+  grababa sin cliente. El pito mentía.
+- **La lista vieja eligiendo sola.** El campo decía `63` y la lista seguía
+  siendo la de `6`: Enter tomaba CEC-006 en silencio.
+- **Las respuestas fuera de orden**: dos consultas en vuelo y la vieja pintaba
+  encima de la nueva.
+
+Y el «tarda mucho» era real, con dos sumandos medidos: 300ms de debounce fijos
+**más** 35-55ms de CPU en Postgres por tecla.
+
+> **Decisión de Jorge (2026-08-29):** el Enter que llega antes **queda anotado
+> y toma el primero**. No es regla nueva — es la que ya rige con la lista
+> abierta, donde el primero viene preseleccionado justamente para confirmarlo
+> con Enter; lo único que cambia es que deja de depender de quién fue más
+> rápido. Y atacar los dos sumandos de la lentitud, no uno.
+
+**Qué se hizo.** `PR-C7.76` puso la plomería sin cambiar una sola tecla de lo
+que Miami ya tiene en el dedo: cada búsqueda lleva número y se descarta si ya
+salió otra o si el campo cambió; la lista recuerda de qué valor es; y el cancel
+se centralizó en `cerrar()`, que ya era el punto por donde pasan todas las
+salidas — de paso los dos modales de `<dialog>`, que lo sobreescribían entero,
+lo ganaron gratis. Ahí mismo se fueron tres fugas: el `super.disconnect()` que
+faltaba (una búsqueda pendiente disparaba después de cambiar de página), el
+estado muerto desde `PR-C6.32`, y F2, que limpiaba el cliente pero dejaba la
+búsqueda viva y repintaba encima del formulario ya limpio.
+
+`PR-C7.77` trajo el Enter anotado, con sus bordes: sin resultados no elige nada
+y el foco avanza igual; si el operario sigue tecleando se olvida; y hay una
+válvula de 1200ms para que el foco nunca quede trabado si la respuesta no
+llega. El debounce bajó a 120ms. El pito **se quedó donde estaba** y ahora dice
+la verdad: como el pintado huérfano dejó de existir, pitar al pintar es pitar
+al resolverse — sigue siendo el *"esperá el pito para dar Enter"* de `C16-02`
+cuando el operario espera, y es la confirmación de que quedó puesto cuando no.
+
+`PR-C7.78` fue la otra mitad, y ahí el diagnóstico obvio estaba **mal**: los
+índices ya existían desde `PR-10.c`, y ninguno servía. El de código vive
+adentro de un `OR` de cuatro ramas —son las cuatro o ninguna—, y el de nombre
+estaba **muerto desde `PR-10.f`**, que le puso un `translate()` encima para
+ignorar acentos y con eso la expresión dejó de coincidir con la del índice:
+meses manteniéndolo en cada escritura sin que lo usara nadie, y sin forma de
+notarlo porque los resultados seguían siendo correctos. Agregar índices tampoco
+era la respuesta: para el caso real de Miami —*"solo poníamos el seis o el dos
+y ya con eso cae"*— `pg_trgm` no puede ayudar, porque con uno o dos caracteres
+no hay trigramas. La palanca era el **costo por fila**: tres columnas
+calculadas al guardar y los cuatro índices realineados a ellas.
+
+De regalo salieron dos cosas viejas: la tabla de acentos tenía 14 caracteres de
+origen y **13 de destino**, así que la `Ü` se volvía `N` y la `Ñ` desaparecía
+(*Ñandú* → *andu*) — no rompía la búsqueda porque los dos lados usaban la misma
+tabla, y se destapó recién al guardar el resultado en una columna; y
+`db/schema.rb`, que está versionado, Rails no usa y llevaba meses mintiendo,
+quedó con una advertencia en vez de contenido: es lo que hizo que el primer
+diagnóstico de performance concluyera que faltaban índices que existían hace
+meses.
+
+### C20-11 · «Al actualizar varias veces»: el split heredaba el proveedor por la puerta equivocada — 🐛 ✅ **ARREGLADO (PR-C7.80)**
+
+> Jorge, 2026-08-29, con los logs de staging en la mano: *"En etiquetar —y
+> probablemente entrega personal— al actualizar varias veces da error, cuando
+> actualizamos el número de etiquetas a más y más."*
+
+**Qué pasaba.** `PATCH /etiquetar/:id` con más etiquetas que cajas era un 500:
+`AssociationTypeMismatch (Proveedor expected, got "")` en
+`Paquete.ajustar_split!`. La tabla `paquetes` tiene dos «proveedor»: la columna
+string legacy (el campo *"Amazon, eBay…"* de /etiquetar) y `belongs_to
+:proveedor` (el catálogo de `PR-D3.a`, por `proveedor_id`). Rails le da
+`proveedor=` a la **asociación**, y todo el repo lo sabe: escribe el string por
+column accessor. `ajustar_split!` no: copiaba `hermanas.first.attributes` a
+`create!` (desde `PR-C6.7`), y por ahí el string iba al writer equivocado. Con
+`NULL` pasaba de casualidad; con `""` o con *Amazon*, reventaba.
+
+Por qué «al actualizar varias veces»: al **crear**, el string se graba solo si
+viene con algo, así que las cajas nacen con `NULL`. Al **actualizar** se
+escribe siempre, aunque sea `""` — en la caja editada, o en la caja 1 si el
+formulario se reancló al bajar cajas. La secuencia de los logs cuadra paso a
+paso: 3→5 pasó (la caja 1 aún en `NULL`), 5→4 borró la caja editada y le
+escribió `""` a la 1, y 4→7 copió ese `""`. Con un proveedor tipeado al
+recibir, reventaba a la **primera** subida. No era regresión de hoy: tres
+semanas latente, y se destapó porque hoy la actualización de cajas se usó de
+verdad.
+
+Y había una segunda colisión dormida: `pre_factura`, boolean legacy (el
+checkbox viejo de /paquetes) que también se llama como `belongs_to
+:pre_factura`. `false` pasaba; `true` era el mismo 500.
+
+**Qué se hizo.** En `ajustar_split!` el `proveedor` legacy sale del hash antes
+del `create!` y se escribe en la caja nueva por column accessor — las cajas
+nuevas lo **heredan**, porque es dato del envío igual que el cliente. El flag
+`pre_factura` **no se hereda**, igual que `pre_factura_id`: una caja nueva no
+está pre-facturada. Un test fija que las columnas que chocan con una
+asociación son exactamente esas dos, para que una tercera no llegue callada.
+Sin migración: el `""` que ya quedó grabado en staging ahora se tolera.
+
+Cubre las tres pantallas que pasan por `ajustar_split!`: /etiquetar, /paquetes
+y el re-escaneo de un paquete EP. **Entrega Personal no tiene update de cajas**
+—solo crea, por `crear_split!`, que va por otro camino— así que ahí no pegaba.
+Lo que sí salió de mirar esto es `RP-51`: las cajas nuevas heredan también el
+peso y las medidas de la caja 1. Yusef contestó al día siguiente: `C20-12`.
+
+### C20-12 · «Si ya tiene peso, obligarlo a llenar»: pesar al partir — ✅ **HECHO (PR-C7.81)**
+
+> Yusef, 2026-08-30, cuando Jorge le llevó `RP-51`: *"Si no tiene pesos, pues
+> los ponemos sin pesos. Pero si ya tiene pesos, tenemos que obligarlo a
+> llenar, para evitar esta incoherencia."*
+
+**De dónde sale.** Al arreglar `C20-11` apareció que, al subir cajas, las
+nuevas heredaban **también el peso y las medidas** de la caja 1 (desde
+`PR-C6.7`): una caja de 5 lb reempacada en tres nacía como tres cajas de 5 lb
+— y el flete se cobra por caja. Se le llevó como pregunta con dos opciones
+(dejar que hereden, o que nazcan sin peso y avisar al cobrar) y Yusef contestó
+con una tercera, mejor que las dos: **nunca copiar, y exigir el peso en el
+momento**.
+
+**La regla.**
+- Las cajas nuevas **no heredan nada de lo que es de cada caja**: ni peso, ni
+  medidas, ni cantidad de productos. Si el envío no tenía peso, nacen sin peso
+  y no se pregunta nada.
+- Si el envío **ya tiene peso** y se piden más cajas de las que hay, hay que
+  pesar **cada una, la original incluida**: el peso de una caja sola era el del
+  envío entero, y después de reempacar ya no vale. Al partir 1→N los N campos
+  van vacíos; en un split que ya venía pesado caja por caja (3→5), las que
+  existen traen el suyo y las nuevas van vacías. Todos obligatorios.
+- Bajar cajas no pide nada: no cambia el peso de nadie.
+
+**Qué se hizo.** El modal de «¿cuántas etiquetas?» —que en modo actualización
+es, por diseño, el único lugar donde se cambia la cantidad— gana un segundo
+paso solo en ese caso: tecleás 3 y aparecen tres pesos. Enter pasa al
+siguiente que falte y confirma cuando están todos; sobre uno vacío no avanza.
+Los pesos viajan como `paquete[cajas][i][peso]`, que `MedidasPorCaja` ya sabía
+leer, y `ajustar_split!` los aplica con `por_caja:` —igual que `crear_split!`—
+a todas las cajas. El servidor exige lo mismo por su cuenta (422 con mensaje)
+por si alguien salta el JS, y cuida que el peso pre-llenado del formulario no
+pise el nuevo de la caja 1. `CAMPOS_POR_CAJA` pasó a vivir en `Paquete`: es
+un hecho del dominio, no del formulario.
+
+**Alcance, para que no vuelva como bug.** En `/paquetes` (que Miami no usa:
+*"ellos no manejan la página de paquetes"*) aplica solo la mitad del modelo
+—subir cajas ya no copia el peso— pero **no** el obligar: ahí cada caja se
+edita después por separado. Al dar de alta no cambia nada: las cajas se pesan
+una por una con F6 y la incoherencia no puede darse. Entrega Personal no tiene
+actualización de cajas.
+
+### C20-13 · Retención y «Tracking ya existe» salían montados — 🐛 ✅ **ARREGLADO (PR-C7.82)**
+
+> Jorge, 2026-08-30: *"Hay veces que retener en Miami y el cuadro de tracking
+> ya existe en el sistema salen los dos. Hagamos que el que tenga más sentido
+> salga primero: solo permitamos un modal a la vez."*
+
+**Qué pasaba.** Una sola respuesta de `check_tracking` nunca abre los dos: la
+rama de pre-alerta —la que trae retención, tareas y notas— retorna antes de
+mirar si el tracking existe. El montaje venía de **dos consultas en vuelo**,
+cada una con su guarda de secuencia y ninguna guarda cruzada: el tracking
+primario pre-alertado (→ aviso rojo NO DESPACHAR, un `<dialog>` top-layer) y
+el secundario que ya existía (→ «Tracking ya existe», un overlay). El caso
+típico es un pre-alertado **ya recibido** (`C20-09`) que se vuelve a escanear:
+el primario cae en la rama de pre-alerta y el secundario, ya guardado en ese
+paquete, cae en «existe». `C19-08` ordenó solo al conflicto de sesión frente a
+los avisos; **el duplicado no participaba en ninguna dirección** — ni miraba
+qué había abierto, ni nadie lo miraba antes de abrir. Según cuál respuesta
+llegara primero, el aviso salía encima del duplicado (con dos pitos) o el
+duplicado se abría debajo del aviso.
+
+> **Decisión de Jorge (2026-08-30): conflicto > avisos (retención → tareas →
+> notas) > duplicado. Uno a la vez.** Los avisos van antes que el duplicado
+> porque, a diferencia del conflicto —cuyos avisos *vuelven a salir enteros*
+> en la sesión correcta—, después de «Es actualización» la página recarga en
+> modo actualización y ahí **no sale ningún aviso**: poner el duplicado
+> primero perdería el NO DESPACHAR, justo el que Yusef pidió como modal
+> porque *"ellos no las leen"* (`C14-02`). Y los avisos son del paquete y del
+> cliente: valen igual se resuelva el duplicado como se resuelva.
+
+**La regla, extendida.** `C19-08` decía: mientras haya una pregunta abierta,
+F8/F9/F10 no actúan. `C20-13` agrega: **mientras haya una pregunta abierta,
+no se abre otra — se pospone.** El conflicto mata todo lo demás (ahora
+también al duplicado, en pantalla o pospuesto); un aviso que llega con el
+duplicado en pantalla lo hace a un lado y el duplicado vuelve solo cuando la
+fila se vacía; un duplicado que llega con un aviso abierto espera; y la fila
+espera también a cualquier otro `<dialog>` (la listita de retener abierta a
+mano, el cambio de servicio que abre solo con `?cambio_servicio=1`, «¿cuántas
+etiquetas?») y sigue al cerrarse. Cada modal pita al salir, no al llegar: se
+acabó el doble pito. Y **Escape no contesta un aviso**: las salidas son sus
+botones y F2 (`C14-02`); si el navegador fuerza el cierre, la fila sigue
+igual — cuenta como «todavía no».
+
+**De paso, dos cosas viejas.** El aviso de «otro tipo de envío» del tracking
+**secundario** estaba muerto desde `PR-C7.62`: ese PR partió la comparación en
+pregunta + modal y la renombró solo en el primario; el secundario seguía
+llamando al nombre viejo y el `TypeError` caía en el `catch` del fetch —que
+además borraba la marca de «ya consultado», así que el mismo secundario se
+volvía a consultar y a decir «pre alerta» en cada blur. Vuelve, como aviso y
+no como bloqueo: el servidor solo rechaza por el tipo del primario, y Yusef
+dejó esa decisión en el operario (*"lo va a retener, o lo va a enviar
+así"*). Y «Es duplicado real» sobre un secundario que ya existía escribía el
+sufijo **en el primario**; ahora va al campo que lo escaneó.
+
+**Lo que este arreglo destapó.** Dos archivos de system tests llevaban tiempo
+rojos sin que nadie lo viera —el CI no los corría—: `avisos_al_escanear_test`
+(cinco de seis) y `etiquetar_cambio_servicio_test`, los dos por lo mismo: abrían la
+sesión con el primer tipo del prompt en vez del de sus pre-alertas, y desde
+`C19-08` el conflicto sale antes que cualquier aviso. Arreglados en el camino.
+
+> **Cerrado el 2026-08-30.** Jorge: *"sí, agreguemos al CI"*. El workflow estrena
+> el job **`System Tests`**, aparte del de `Tests`. Antes de poder prenderlo hubo
+> que matar los flakes, que eran **tres mecanismos y ninguno era timing**: la
+> sesión de `/etiquetar` que sobraba del test anterior (trece copias del mismo
+> `abrir_etiquetar` con un `if` que no corría), la **ventana de impresión que
+> `Capybara.reset_sessions!` nunca cierra** —con dos ventanas Chrome congela el
+> reloj de animaciones de la de atrás y `animate-fade-in-up` deja el campo en
+> `opacity: 0`—, y que el `confirm` de la app **no es el del navegador** sino el
+> modal de HTML de `Turbo.setConfirmMethod`. Los helpers viven ahora en
+> `test/application_system_test_case.rb`, uno solo de cada uno.
+
+**Alcance.** Solo /etiquetar: Entrega Personal no tiene estos modales. Lo que
+queda abierto es `RP-52`.
+
+### Las preguntas que abre
+
+| Id | Qué |
+|---|---|
+| `RP-49` | **Registro y reporte de errores del sistema.** Yusef, viendo la pantalla de error: *"cuando te pasa algo así… ¿cómo lo reportás? ¿Venís y lo grabás, un videíto?"* · *"Normalmente en una empresa grande hay como un equipo que está grabando todos los errores… lo más bonito sería llegar a eso y que mande un reporte."* Y para qué lo quiere: *"más que el reporte, es para poder ir a devolverme yo… que te diga qué estaba haciendo"* — o sea contexto, no solo el stack. Es una serie propia (esbozo: `solid_errors` + contexto de usuario/URL, o tabla propia con pantalla de admin). Decidir alcance antes de arrancar |
+| `RP-50` | **Estandarizar F8 / F9 / F10.** Yusef: *"F8 es guardar y F9 es guardar y notificar… ahorita en etiquetar es guardar e imprimir. ¿Por qué no lo estandarizamos todos?"*. Jorge: *"hay opciones donde no queremos imprimir"*. La propuesta que quedó sonando: F8/F10 guardar (+notificar) y F9 guardar + imprimir, **notificando al final** para *"que no te atrase el de Miami y quede en cola la notificación"*. Tocar los atajos es tocar el dedo de Miami: se decide antes, no en el camino |
+| ~~`RP-51`~~ | ~~Al subir cajas, ¿las nuevas heredan el peso y las medidas de la caja 1?~~ **✅ contestada el 2026-08-30**: *"si no tiene pesos, los ponemos sin pesos; si ya tiene pesos, obligarlo a llenar"* — nunca se copia, y al partir un envío pesado se pesa cada caja en el momento. Ver `C20-12` — `PR-C7.81` |
+| `RP-52` | **Al entrar en modo actualización no sale ningún aviso del paquete** — ni el NO DESPACHAR de uno ya retenido, ni sus tareas o notas: solo quedan el checkbox marcado y el RET en la etiqueta. Salió al decidir el orden de `C20-13`, y es el mismo nudo que `C20-09` (el paquete que ya existe). Decidir si el servidor arma los avisos del paquete que se actualiza y el JS los encola al cargar, igual que al escanear |
+
+### Dudosos del transcript
+
+- ~~*"Cuando se hace rápido el ingreso… **queda seleccionado** porque se hizo
+  muy rápido"*~~ — **dejó de ser dudoso**: es `C20-10`. Era la lista vieja
+  eligiendo sola (el campo decía `63` y la lista era la de `6`), o el pito
+  huérfano haciendo creer que el cliente había quedado puesto. Los dos con
+  repro y con test.
+- *"Se quedó ahí cuando le dije F2, no limpió"* (probando cambio de servicio).
+  **La mitad estaba en `C20-10`**: F2 limpiaba el cliente pero dejaba el
+  dropdown abierto y la búsqueda en vuelo, que después repintaba encima del
+  formulario ya limpio. La otra mitad puede seguir siendo el 500 de `C20-01`;
+  verificar con los dos arreglos puestos antes de abrir un ítem propio.
+- El recorrido del manifiesto y el empaque en Miami (nota de las 12:24) es
+  material del módulo que viene, no un pedido de hoy: la etiqueta 4×6 del
+  bulto, el consignatario, la palabra «PRIORITY», y el código del documento
+  de manifiesto para *"rebajarlo… el sistema te va a decir: ya se recibieron
+  las cinco, falta una"*.
+
+---
+
+## Conversación 21 (2026-08-29, tarde) — el manifiesto de punta a punta
+
+Videollamada de 95 minutos con la pantalla compartida desde Miami, más un audio
+corto de la mañana (6 min) que resultó ser el preámbulo de la llamada ya
+documentada en la `Conversación 20`. Transcritas con `faster-whisper small`.
+
+Y algo que no había pasado antes: **Yusef mandó seis fotos** — una hoja de notas
+de Jorge, un diagrama de flujo de su puño, **dos copias del manifiesto impreso
+del sistema viejo anotadas a mano**, la etiqueta 4×6 del bulto también anotada, y
+una nota sobre el cambio de estatus. Más la captura de la pantalla de Manifiesto
+del legacy que Jorge mandó como referencia de diseño. Las anotaciones a mano son
+la fuente más precisa de esta conversación: dicen **campo por campo quién lo
+llena y qué significa**.
+
+Arrancó sin rodeos: *"vamos a empezar hoy con manifiesto"*, y para explicarlo se
+fue a la cámara de la bodega — *"quiero mostrarte cuándo empacamos… ahí están
+empacando, mirá"*.
+
+La motivación, en una línea:
+
+> *"Hay que ordenarlo, porque lo podés tener así como están haciendo, pero vas a
+> tener siempre el problema: **no ves dónde está la carga**."*
+
+### El estado del módulo hoy (verificado en el código)
+
+`Manifiesto`, `ManifiestoCounter` y `EmpresaManifiesto` existen desde la Fase 1,
+con CRUD, rutas, permisos y bitácora. El enum ya tiene `en_aduana` y `recibido`,
+y `fecha_aduana` ya es columna — **la mitad de recepción entra sin migración**.
+
+Lo que está muerto adentro: `sucursal_origen` no lo asigna ningún controller, así
+que la numeración anual `MM2026000001` de `PR-D1.d` **nunca corre** y todo cae al
+legacy `MA-000001` (es `RP-46`); `en_aduana`, `recibido` y `activo` no tienen
+quién los escriba; `TamanoCaja` y `Consignatario` son **modelos huérfanos** —sin
+seeds, sin pantallas, sin asociaciones—; y el estado `empacado` del paquete no lo
+asigna nadie (`ESTADO_AL_ETIQUETAR = "recibido_miami"`, con el comentario de
+`PR-C6.22`: *"`empacado` queda reservado para el módulo de empaque, que todavía
+no existe"*).
+
+Falta entera la entidad **«caja empacada»** entre `Paquete` y `Manifiesto` — de
+ella cuelga todo lo de abajo. Y la etiqueta 4×6 **no se puede expresar**:
+`EtiquetaPlantilla` es singleton y su `ALTO_RANGO` topa en 3 pulgadas.
+
+---
+
+### C21-01 · Crear el manifiesto **primero**, y sacar las pre-etiquetas de los bultos — ✅ **IMPLEMENTADO en PR-M3 / PR-M4 · la puerta faltaba, y la pantalla iba al revés (2026-09-01)**
+
+> **La pantalla no seguía el orden del trabajo.** Jorge, mirándola: *"no estoy
+> seguro que siga el orden del flujograma"*, *"parece que solo finalizar y
+> finalizar e imprimir también debería estar abajo"*, *"el botón de imprimir casi
+> ni se mira"* y *"esos botones con fondo blanco cuesta demasiado verlos"*.
+>
+> Iba: **detalles → Finalizar → casas → agregar paquetes → tabla**. O sea que
+> **el cierre estaba arriba de todo lo que hay que hacer antes**. Y «Casas del
+> manifiesto» vivía **adentro de la misma tarjeta** que «Agregar paquetes», así
+> que las dos se leían como una sola cosa en vez de como dos caminos distintos.
+>
+> Ahora va en el orden del flujograma —casas → agregar paquetes → tabla →
+> cerrar—, cada paso con su número y su tarjeta, y **los cierres arriba y
+> abajo**: con la tabla llena el de arriba queda a una pantalla de distancia. Es
+> la misma razón por la que la barra de atajos de `/etiquetar` está en los dos
+> lados (*"a veces se ocupan acá arriba. En ambos lados"*).
+>
+> **Agregar paquetes se escanea.** *"Tiene que ser rápida, escanear"*: la pistola
+> dispara Enter al terminar de leer, así que Enter **agrega** en vez de solo
+> buscar — y agrega **solo si hay una coincidencia sola**; si devuelve varias las
+> muestra para elegir, en vez de adivinar. El campo queda vacío y con el foco
+> puesto para el siguiente.
+>
+> **Y los botones se ven.** `secondary` es `bg-white` con borde `gray-300`
+> **sobre una tarjeta blanca**: el borde es lo único que lo separa del fondo. Los
+> del flujo pasaron a `outline_navy` —borde y tinta navy— y a tamaño normal: son
+> las acciones del paso, no adornos del encabezado.
+
+> **La pantalla de empacar vivió meses sin un solo link.** Existía, funcionaba,
+> tenía tests y hasta estaba listada en la tabla de pantallas de `docs/07` — pero
+> a `/manifiestos/:id/empacar` solo se llegaba **escribiendo la URL**. Apareció
+> armando el runbook de los dos caminos.
+>
+> Dos razones, y las dos quedaron trabadas:
+>
+> 1. **El lint no la cubría.** `pantallas_en_el_menu_test` vigila justamente esto
+>    —*"que no quede una pantalla que existe y a la que no se llega"*— pero solo
+>    miraba **índices sin `:id`**, o sea entradas de menú. Ahora tiene un segundo
+>    test para las **anidadas**, y con una sutileza que casi se me escapa: una
+>    pantalla que **se enlaza a sí misma** no cuenta como alcanzable. La primera
+>    versión daba por buena a `empacar` porque su propio selector de «¿en qué caja
+>    estás?» la nombra.
+> 2. **Los tests entraban por URL.** `empaque_controller_test` la visita por
+>    helper de ruta, como nadie real hace, así que pasaba en verde sobre una
+>    pantalla sin puerta. Ahora hay un system test que **camina los dos caminos
+>    haciendo clic** y no escribe una sola URL: si un paso no tiene puerta, no
+>    puede avanzar.
+>
+> Y ese test destapó un segundo bug de la misma familia: **los botones de
+> Finalizar no aparecían al agregar el primer paquete**. `add_paquete` contesta
+> con un turbo_stream que actualizaba solo la tabla, y los botones —que dependen
+> de `paquetes.any?`— viven afuera: la tabla se llenaba, el botón no salía, y la
+> única forma de finalizar era recargar. Por URL no se ve, porque cada `visit`
+> vuelve a renderizar todo.
+
+El cambio de fondo. Hoy:
+
+> *"El de ahorita, manifiesto ahorita, es **empacar todo, o casi todo**… y luego
+> ingresar en manifiesto."*
+
+Lo que quiere:
+
+> *"El cambio que yo quiero hacer es: **crear manifiesto** → la pre-etiqueta."*
+> *"Es la **misma etiqueta**, antes de empezar a amarrarle paquetes."*
+> *"Imprimir una pre-etiqueta **para los bultos**."*
+
+Y la pregunta que abre todo el módulo:
+
+> *"¿Qué otra forma puedo hacer para empezar a decir que **estos paquetes van en
+> esa caja**?"*
+
+Mostrando la bodega en vivo, señaló lo que falta: *"aquí es donde hace falta, es
+el **pip pip pip**"* — el escaneo del paquete al meterlo a la caja, que es lo que
+la `Fase 12` ya tenía dibujado.
+
+**Se mantienen los dos caminos.** La etiqueta **con escaneo** es lo que quiere, y
+la **sin escaneo** —*"que es lo que está actualmente, como actual"*— se queda,
+*"porque a veces no da tiempo"*.
+
+> **El segundo camino estaba roto, y se descubrió leyendo el dibujo.** Jorge,
+> 2026-08-31: *"en el flujograma manifiesto tiene dos flujos, con pre-manifiesto
+> y sin pre-manifiesto, no veo esa lógica"*.
+>
+> Los dos estaban vivos en el código —se le pueden meter paquetes al manifiesto
+> derecho, sin cajas— pero **la recepción en Honduras solo movía
+> `caja.paquetes`**. Un manifiesto armado sin escaneo llegaba sin una sola caja:
+> la pantalla decía *«0 de 0 recibidas»*, «Terminar la recepción» salía bien, el
+> manifiesto quedaba `recibido`… y sus paquetes se quedaban en
+> `enviado_honduras` **para siempre**. No llegaban a aduana y por lo tanto
+> tampoco a la pre-factura, porque `Paquete.facturables` arranca en `en_aduana`.
+>
+> Peor que un hueco: quedaba **inconsistente y callado**, con el manifiesto
+> diciendo una cosa y sus paquetes otra.
+>
+> Arreglado: al cerrar la recepción se barre el manifiesto entero, no solo las
+> cajas. La pantalla avisa cuántos paquetes vienen sin caja y por qué no hay
+> etiqueta que escanear, y la tabla de cajas no se dibuja vacía. El flujograma
+> estrena el desvío «Con escaneo y sin escaneo» — y de paso `CAMINO_MIAMI` deja
+> de mostrar el orden viejo (empacar y **después** el manifiesto), que es
+> justamente el problema que `C21-01` vino a resolver.
+
+Contexto de por qué empacan como empacan: *"nosotros dividimos cargas, las que
+tienen descuento y las que no, porque con este proveedor nos sale más caro"*.
+
+---
+
+### C21-02 · Los campos del encabezado: quién llena qué — ✅ **IMPLEMENTADO en PR-M2**
+
+Esto sale de las **anotaciones a mano sobre el manifiesto impreso**, que es donde
+quedó más claro que en el audio:
+
+| Campo | Quién lo llena | Qué significa |
+|---|---|---|
+| `Consignatario` | **Miami** | La empresa o persona que recibe. Ej: Corporación Karsam |
+| `No. Guía` | **SPS, después** | **Del proveedor.** Editable, **no obligatorio**, pueden ser **varias** |
+| `Aduana` (fecha) | **SPS** | **Recibido en HN** — ver abajo |
+| `T. Envío` | **Miami** | El **del proveedor** |
+| `Fecha Enviado` | **automático** | Cuando **salió de Miami** |
+| `ES PRIORIDAD` | **Miami** | Checkbox |
+| `Empresa` | **Miami** | El proveedor: SERCARGO, PRONTO CARGO, GENESIS |
+
+Sobre la guía:
+
+> *"El número de guía de proveedor es editable… pero **no obligatorio**… lo
+> ingresan después… le ingresa **la encargada de operaciones en San Pedro Sula**."*
+
+**El campo «Aduana»: lo mandó a quitar y se retractó en la misma llamada.**
+Primero: *"aduana sinceramente… al final eso nunca se [usa], eso está ahí hasta de
+más"* · Jorge: *"si está de más, quitémoslo"* · Yusef: *"sí… nunca lo has usado"*.
+Más adelante, mirando el impreso: *"esto de aduana, **aquí sí va**… si lo puso, lo
+agregamos. Pero es por la fecha de **recibido en aduana en Honduras**, o sea en
+aduana que es que **nosotros lo recibimos**; lo otro ya lo tenemos, ya pasó aduana
+más bien"*. Coincide con lo que anotó a mano: **«Recibido en HN»**.
+
+→ **Se queda, rotulado como la fecha en que nosotros lo recibimos en Honduras.**
+
+**IMPLEMENTADO en `PR-U1`: los dos campos de San Pedro tienen pantalla propia.**
+Jorge, 2026-08-30: *"veo que en manifiesto tenemos dos secciones, lo que se
+llena en Miami y lo que se llena en San Pedro Sula: me parece que hay que hacer
+dos accesos, links, iconos"*. Es `/guias-y-aduana`, con su link e icono en
+Logística: lista lo que salió de Miami y todavía no tiene guía **o** fecha
+—*"solo le aparece lo que tiene que meter"*—, con un `?todos=1` para volver
+sobre lo ya completo. El manifiesto puede estar finalizado y bloqueado: es
+exactamente para lo que existe `CAMPOS_DE_SAN_PEDRO`.
+
+**2026-09-06, Jorge, revisando la bandeja:** *"siento que a esta vista de guías
+y aduanas como que le faltan las iniciales de quien está haciendo la acción"*. Y
+al mirarla con esa pregunta salieron cuatro cosas, hechas el mismo día:
+
+- **`recibido_hn_por`**, hermana de `expedido_por` (`RP-59`): las iniciales de
+  quien puso la fecha de recibido en Honduras, selladas en el manifiesto. Con
+  dos diferencias a propósito: se **vuelve a sellar** cada vez que la fecha
+  cambia (quien puso la fecha que está), y agregar una guía no la toca. Quién
+  escribió cada guía no se sella: eso lo tiene `paper_trail`.
+- La bandeja venía **ordenada por `fecha_enviado` y no la mostraba**. Ahora hay
+  una columna «Salió de Miami» con la fecha y las iniciales de quien lo armó, y
+  «Recibido en Honduras» lleva la fecha y las de quien la recibió:
+  `30/08/2026 · SP`. Las tres pantallas —bandeja, ficha, impreso— lo dicen
+  igual, por un helper (`fecha_y_quien`).
+- Las filas que Jorge pegó decían **10/09 y 12/09 con el calendario en el 6**.
+  Una fecha de recibido en el futuro no es un dato: se rechaza, pero **solo
+  cuando la fecha cambia**, para que a las filas que ya la tenían mal se les
+  pueda agregar la guía sin corregirla antes.
+- El botón decía «Completar» aunque no faltara nada. Con las dos cosas puestas
+  dice **«Corregir»** — decisión de Jorge pendiente de que la vea.
+
+**Y los nombres actuales lo confunden** — esto lo dijo con molestia:
+
+> *"Los nombres son malos… dice «tipo de envío de manifiesto»; tengo que
+> aprenderme que el tipo de envío del manifiesto es **el del proveedor**. Aquí me
+> pierdo."*
+> *"[Me costó] hasta un año, porque nunca me explicó dónde era que yo tenía que
+> poner el tipo de envío."*
+
+→ Rotular explícito: **«Tipo de envío del proveedor»** vs **«Tipo de envío
+nuestro»**.
+
+---
+
+### C21-03 · Tipo de envío nuestro: selección múltiple, mínimo 1 — ✅ **IMPLEMENTADO en PR-M2**
+
+> *"Aquí es **tipo de envío nuestro**, el interno nuestro… aquí es **selección
+> múltiple**… podés seleccionar todos los cinco tipos de servicio que tengo
+> actuales. ¿Por qué seleccionás todo? **Porque a veces combinás todo y lo
+> mandás**."*
+> *"**No puede ser sin ninguno**, tiene que llevar uno mínimo."*
+
+→ **Mínimo 1, máximo todos, y obligatorio.** Los cinco: CER, CKA, CEM, CKM, EXP.
+
+Va junto con la **sucursal de entrega**, que hoy no existe en el manifiesto:
+
+> *"Vas a empacar sucursal también, acuérdate que va a la sucursal por separado…
+> le va a preguntar sucursal, ¿**sucursal a entregar**?… ahorita tenemos
+> Tegu[cigalpa], SPS."*
+
+---
+
+### C21-04 · Las casas: tamaño pre-definido, medidas editables, volumen ÷166 — ✅ **IMPLEMENTADO en PR-M3**
+
+La pantalla vieja tiene diez tamaños pre-definidos —**Especificar, EH, D, 22
+Cubo, 18 Cubo, D G, EH G, E, Mini D, Mini D Doble**— y se elige **uno a la vez**.
+La `Fase 12` solo tenía anotados tres (`E`, `mini D`, `mini D doble`): los otros
+siete son información nueva.
+
+**Y el 2026-09-05 salieron las medidas, del propio sistema viejo.** Los diez se
+habían sembrado sin ellas —solo «Mini D» era derivable, del `595.78` que muestra
+la pantalla—, y Jorge abrió el editor de manifiestos del legacy para sacarlas:
+están en el viewmodel `TamanoCajasPredefinidoVM` que esa página publica.
+
+| Tamaño | Alto × Largo × Ancho | Dimensión (vlbs) |
+|---|---|---|
+| Especificar | — *(se mide a mano)* | — |
+| EH | 23 × 36 × 23 | 114.72 |
+| D | 44 × 56 × 42 | 623.42 |
+| 22 Cubo | 22 × 22 × 22 | 64.14 |
+| 18 Cubo | 18 × 18 × 18 | 35.13 |
+| D G | 45 × 58 × 42 | 660.36 |
+| EH G | 24 × 36 × 23 | 119.71 |
+| E | 25 × 41 × 28 | 172.89 |
+| **Mini D** | **46 × 43 × 50** | **595.78** |
+| Mini D Doble | 86 × 43 × 50 | 1113.86 |
+
+Tres cosas que confirma la tabla:
+
+1. **«Mini D» coincidió exacta** con la que habíamos derivado del 595.78 — la
+   mejor señal de que la derivación era buena.
+2. **La «Dimensión» del sistema viejo es nuestro volumen**: alto×largo×ancho ÷
+   166, o sea `VolumetricoCalculator::DIVISOR_LB`. Verificado contra la pantalla
+   en vivo. **No se guarda**, se deriva: tenerla en columna sería el mismo número
+   en dos lugares con permiso para separarse.
+3. **«Mini D Doble» son dos Mini D encimadas** — 86 de alto contra 46, con el
+   traslape. Cuadra con lo que dijo Yusef: *"la mini-D doble es cuando llevan dos
+   de esas"*.
+
+Ojo con el orden al comparar contra la foto de la etiqueta de `C21-05`, que para
+«EH» muestra `23x23x36`: es la misma caja escrita en otro orden (23 × 36 × 23).
+El producto —y por lo tanto el volumen— da igual; no son dos EH distintas.
+
+**Las medidas siguen siendo editables**, y por una razón concreta:
+
+> *"Ellos vienen y marcan EH y le modifican una medida, **porque la cortan**… le
+> decimos **«EH cortada»**."*
+
+Al elegir el tamaño, el cursor va directo al peso: *"te ponen solo el cursor a
+peso, porque es lo que le vas a meter a ingresar, que es lo que hace falta"*.
+
+**Por qué la medida real importa: el proveedor cobra por ese reporte.**
+
+> *"Es porque tenés que reportarlo a tu proveedor… yo agarro el reporte y **ellos
+> me cobran [según] el reporte**. Y eso le facilita a ellos: cuando llega la
+> carga, la ingresan así como ingresamos nosotros —como la entrega personal— y
+> ponemos una por una."*
+
+El volumen sale de alto × largo × ancho ÷ **166**, que es exactamente el
+`595.78` que muestra la pantalla vieja para `46×43×50`. **Ya está en el repo**:
+`VolumetricoCalculator::DIVISOR_LB = 166.0`.
+
+Cada casa queda en la tabla con: `#`, letra (A/B/C), **NO. DOC** (`DM7155`), los
+tipos de envío que lleva (`CER,CKA`), alto, largo, ancho, volumen y peso; y por
+fila, borrar e imprimir. Los botones: **Solo Agregar (F5)** y **Agregar/Imprimir
+(F9)**.
+
+> ⚠️ **El «No. Doc» estaba cableado por los dos extremos y sin nada en el medio**
+> — lo destapó la auditoría del 2026-09-05. La columna existía en
+> `caja_manifiestos` desde `PR-M3`, `caja_params` la permitía y **la 4×6 ya la
+> imprimía**… pero no había ningún campo donde teclearla. Ese día se le puso un
+> campo de texto y quedó abierta `RP-61`: ¿es el mismo para todas las cajas?
+>
+> **El arreglo estaba equivocado, y `RP-61` se respondió con datos el
+> 2026-09-06.** Se leyó el sistema viejo por su propio endpoint
+> (`POST /Logistica/Manifiestos/GetManifiesto`, 196 manifiestos, 186 con cajas):
+> el «No. Doc» es el campo `NoCajaPaquetes`, y vale **siempre**
+> `"DM" + DetallesManifiestoID` — `DM7679`, `DM7680`, `DM7681`… una por caja, en
+> las 186. Se pinta como `<td>`; **no hay input**. Nadie lo tecleó nunca: es el
+> ID de la caja con «DM» adelante. Yusef tampoco lo nombró en ningún audio; salió
+> de leer una columna en la pantalla.
+>
+> Lo que sí se teclea en la cabecera vieja es el **No. Guía** (`302094`,
+> `301931 CANOA DE CLIENTE DIRECTO`), y eso acá ya existe: `manifiesto_guias`.
+>
+> **Decisión:** el `numero_doc` se va — columna, campo, celda y la línea de la
+> etiqueta. Su trabajo lo hace `codigo` (`MMIA2026000001-A`), que va bajo el QR y
+> es lo que escanea `/recepcion_carga`. La etiqueta vieja necesitaba el `DM`
+> porque **no traía el número del manifiesto** (la primera corrección de Yusef en
+> `C21-05`); la nuestra sí. Dos nombres para una caja es la duplicación que
+> este repo persigue. Si el martes Yusef extraña el «DM», un método calculado
+> `"DM#{id}"` son tres líneas — pero es el respaldo, no el plan.
+
+Sin tope de cantidad: *"a veces son 50… hemos pegado 20 pico, 30 cajas"*.
+
+---
+
+### C21-05 · La etiqueta 4×6 del bulto — ✅ **IMPLEMENTADO en PR-M4**
+
+Lo que ya trae, según la foto: la letra, `Lbs. 131.0`, `23x23x36`, `EXP`, `AEREO
+EXPRESS`, **PRIORITY**, el consignatario, el barcode, la fecha y `DM7155`.
+
+**La corrección que escribió a mano:**
+
+> **«Falta el número del manifiesto.»**
+
+Y al lado del barcode:
+
+> **«Se escanea al recibir en HN»** → **«Actualiza estatus de paquetes de ENVIADO
+> → ADUANA.»**
+
+Ojo con el formato: la etiqueta de `/etiquetar` es Dymo **2.25 × 1.25 in** y la
+plantilla es **singleton** con el alto topado en 3 pulgadas — **la 4×6 es un
+formato nuevo, no un ajuste**. Se reusan el barcode (`etiqueta_barcode_svg`,
+Code128) y la mecánica de impresión (`layouts/etiqueta`, el patrón de
+`etiquetas_combinadas`). `A7-03` decía *"un código QR o lo que vos querás"*; el
+repo **no tiene generador de QR** (necesitaría gema), y las pistolas de hoy leen
+Code128.
+
+---
+
+### C21-06 · Finalizar: todo a ENVIADO, y el manifiesto se bloquea — ✅ **IMPLEMENTADO en PR-M6 · corregido en PR-M10**
+
+De su diagrama: **«Finalizar e imprimir todos los paquetes con el tipo de envío
+nuestro seleccionado» → cambia estatus a ENVIADO.** La pantalla vieja tiene los
+dos botones: **Solo Finalizar** y **Finalizar e Imprimir**.
+
+Y una regla que no estaba escrita:
+
+> *"Cuando termino el manifiesto **se bloquea**… se bloquea para que nadie lo
+> [toque]. Sí es editable, **pero tiene el botón de editar**."*
+
+**Quién puede editarlo después:** *"solo los que están en Miami; lo hace
+normalmente Julien, el supervisor. **Tendrían que ser dos de ellos mínimo**: el
+supervisor de Miami y… es que es un etiquetador el otro"* — la frase quedó sin
+terminar y se le preguntó cuál era el segundo.
+
+> **Yusef, 2026-08-30: *"por hoy solo será supervisor Miami."*** → se queda como
+> está. El segundo rol queda para cuando lo pida.
+
+#### El organigrama, que es lo que decide los permisos
+
+Preguntando por Michelle salió el escalafón, en palabras de Yusef (audio del
+2026-08-30, con partes que no se entienden):
+
+| Nivel | Quién | Qué puede |
+|---|---|---|
+| Yusef | — | todo |
+| dos abajo | **Manal** (su hermana) y **Vanesa** | *"tienen todos los poderes en el sistema relativamente… no estoy ni seguro qué poderes no tienen ellas que sí tengo yo"* → en el sistema son **admin** |
+| abajo de Manal | **Michelle** | *"Sub-Jefa de área de Caja y SAC"* |
+| abajo de Michelle | **Bessy** | *"Supervisora de Caja y SAC"* |
+
+Esto contesta dos cosas que parecían contradecirse:
+
+- **C21-08** dice que el portal de catálogos existe para poder delegar —*"andate
+  al área donde dice empresa, agregame esta empresa"*— y ahí Yusef nombró a
+  Michelle. Pero preguntado derecho el 2026-08-30 dijo que **Michelle no carga
+  catálogos**. Con el escalafón puesto no hay contradicción: quien delega y
+  carga son **Manal y Vanesa**, que en el sistema son admin y ya tienen todo.
+- **Michelle sí edita el manifiesto**, porque es de las de San Pedro que le
+  ponen la guía del proveedor y la fecha de recibido en Honduras (`C21-02`).
+
+**Cómo quedó, después de `PR-U1`:**
+
+| Sección | Quién |
+|---|---|
+| Catálogos del manifiesto | **solo admin** — vive en la sección Configuración desde 2026-08-30 |
+| `/manifiestos` — entrar, crear, empacar, meter paquetes, finalizar | solo `ROLES_DE_MIAMI` |
+| Reabrir un manifiesto cerrado | `ROLES_QUE_ABREN_EL_CANDADO` (admin + supervisor de Miami) |
+| `/guias-y-aduana` — la guía del proveedor y la fecha | `ROLES_DE_SAN_PEDRO` (llave propia, `:guias_aduana`) |
+
+`PR-M10` había metido a los jefes de Honduras dentro de `:manifiestos` para que
+pudieran llenar sus dos campos. **Eso destapó el problema de fondo**, que se
+arregla en `PR-U1`: el recorte por rol era 100 % del controller y
+`_form.html.erb` no tenía ni un `if`. San Pedro veía los campos de Miami
+**habilitados**, los editaba, guardaba, y `manifiesto_params` los recortaba en
+silencio contestando *«Manifiesto actualizado exitosamente»*.
+
+Con pantalla propia no hay nada que recortar —la de San Pedro tiene dos campos y
+son los suyos—, `:manifiestos` vuelve a ser de Miami, y el que no puede reabrir
+un manifiesto cerrado **se entera**: se le contesta con un aviso en vez de
+aceptarle el formulario para descartárselo callado.
+
+La lista de jefes de Honduras **se deriva de `User::ROLES_AUTORIZANTES`**, que
+el repo ya tenía —es la misma que decide quién lleva PIN—, y por eso cubre a
+Michelle sin depender de si su usuario dice `supervisor_caja` o
+`supervisor_sac`.
+
+**Y qué pasa si un paquete tiene una tarea abierta al finalizar.** `PR-M6` lo
+dejó del lado permisivo —los trabados se listaban y el manifiesto cerraba sin
+ellos, copiando la forma de `A7-05`— y se le preguntó a Jorge.
+
+> **Jorge, 2026-08-30: *"bloquear cierre."*** → **IMPLEMENTADO en PR-M10.** Un
+> solo paquete trabado revierte el cierre entero: no se mueve nada, el
+> manifiesto sigue abierto y la pantalla enumera cuáles y por qué.
+
+No es el mismo caso que `A7-05`: en la recepción una caja que no aparece **ya
+está perdida** y no cerrar no la trae; acá el paquete está en la bodega, en la
+mano, y la tarea abierta es justo el aviso de que le falta algo **antes de
+subirse al camión**. Cerrar sin él lo deja fuera con el camión saliendo.
+
+Las horas de corte, que explican por qué a veces sobra o falta carga: *"el corte
+del marítimo es el jueves al mediodía… y el siguiente sale el lunes temprano"* ·
+*"a veces metemos más, a veces metemos menos, pero rara vez metemos menos;
+también metemos un par de paquetes más porque hay que [llenar] un espacio"*. En
+aéreo tratan de meter todo *"porque tiene mayor prioridad de tiempo"*; en
+marítimo *"un día más un día menos no afecta"*.
+
+---
+
+### C21-07 · Recibir la carga en Honduras: la pantallita y el aparatito — ✅ **IMPLEMENTADO en PR-M7**
+
+Esto **completa** el circuito que la `Conversación 7` dejó decidido
+(`A7-03`…`A7-08`) y le pone quién y con qué.
+
+**Quién lo hace:**
+
+> **Jorge:** *"¿En el sistema qué perfil es el que hace eso?"*
+> **Yusef:** *"**Los de prefactura**, ellos son los que se encargan de recibir
+> carga."*
+
+Cómo es hoy: *"viene el camión, agarran el montacargas, empiezan a descargar, y
+adentro de la bodega está otro chavo con **esta hoja marcando cuál llegó**, y
+después se van a sistema"*. Lo hace el supervisor *"pero rota"*.
+
+**Lo que pide:**
+
+> *"Es mejor **una pantallita** que ahí buscara y que **solo le aparezca lo que
+> tiene que meter**."*
+> *"Solo lo que está como **enviado**… **las cajas** que están como enviados."*
+> *"Aquí es donde yo te digo que quiero **el aparatito**: que vengan ellos, llegan
+> a recibir carga, y **escanean la caja** y automáticamente el sistema lo [pone]."*
+
+Con pistola también (*"¿esto es pistola?" — "también"*), y el volumen es chico:
+*"como solo son **5 o 10 cajas** lo más que se recibe"*.
+
+**El efecto**, que es lo que también escribió a mano:
+
+> *"Al recibir el manifiesto, **los paquetes amarrados cambian estatus** … lo
+> tenemos como **aduana**."*
+> *"**Al completar el manifiesto pone todo en aduana.**"*
+
+Y de ahí sigue la cadena: *"ya de aquí el paquete va a cambiar cuando ingresemos
+a la **prefactura**"*.
+
+**Recepción parcial** (confirma `A7-05`): *"a veces no viene todo… hay que marcar
+todo como que está acá. Pero todavía le pone una opción de marcar todo el
+manifiesto"*.
+
+**Cómo llamarlo, sin cerrar:** Jorge preguntó el término y Yusef dio tres —
+*"para que me le den **entrada**. Así se le dice: dar la **entrada al almacén**"* ·
+*"vos le das entrada al **inventario**"* · *"nosotros le decimos… que hoy
+**recibimos carga**"*. Queda en `RP-56`.
+
+---
+
+### C21-08 · Un CRUD para **todo** lo del manifiesto — ✅ **IMPLEMENTADO en PR-M1**
+
+Pedido explícito, y repetido dos veces en la llamada:
+
+> *"Lo que yo te digo: **que un CRUD para todo, para todo lo del manifiesto**."*
+> *"Si vos creás una [pantalla] donde yo pueda crear **las empresas, los tipos de
+> envío que manejamos, la empresa que lo envía, qué consignatario somos
+> nosotros**… que pueda yo crear estos, **las cajas, los tamaños de las cajas**, en
+> un solo [lugar]."*
+> *"Como **un portal**, por decirte algo, que te diga: bueno, estas son las
+> empresas, estos son los tipos de envío. Pero que **todo esté ahí**, porque así
+> uno no tiene que andar buscando."*
+> *"Todo eso tengo que ingresar a donde te dije, que creemos **una plantilla**…
+> donde voy a ingresar **las medidas de las cajas, los tipos de envío nuestros y
+> todo**."*
+
+Para qué, con nombre propio: poder decirle a Michelle *"andate al área donde dice
+empresa, agregame esta empresa que voy a usar"* — nombró una encomendera y
+«Carolina Cargo» de ejemplo. Es exactamente la filosofía de
+[[feedback_yusef_crud_first]]: *"entre más cosas nos dejes crear, menos te
+molestaremos"*.
+
+**Dónde vive, y por qué cambió.** `PR-M1` lo colgó del bloque **Miami**,
+razonando que un portal admin-only *"cumpliría la letra y fallaría el
+propósito"*, porque el pedido era poder delegar. Jorge lo movió a
+**Configuración** el 2026-08-30, y ese bloque es admin-only.
+
+No hay contradicción: el organigrama que dictó Yusef ese mismo día muestra que
+**a quien delega es a Manal y Vanesa**, que *"tienen todos los poderes en el
+sistema"* y en el sistema son admin. Michelle —el nombre que aparece en la cita
+de arriba— está dos niveles abajo, y preguntado derecho dijo que **no carga
+catálogos**. O sea que el portal admin-only es exactamente para la gente a la
+que se lo quería delegar.
+
+**Cubre los cuatro catálogos que hoy están huérfanos o incompletos:**
+`EmpresaManifiesto` (hoy solo `nombre` + `activo`), el tipo de envío del
+proveedor, `Consignatario` (tabla vacía, sin pantalla) y `TamanoCaja` (tabla
+vacía, sin pantalla).
+
+**Y a la empresa proveedora le faltan campos:**
+
+> *"La **dirección** es tal, porque sale la dirección en la información de la
+> empresa. Va la dirección **y número**, y si es posible hasta **un encargado**."*
+> *"**Número de teléfono. La persona encargada**… del proveedor."*
+
+Que es lo mismo que anotó a mano sobre el bloque de Pronto Cargo del impreso:
+**«# tel»** y **«persona encargada»**.
+
+---
+
+### C21-09 · El documento impreso: cuatro correcciones — ✅ **IMPLEMENTADO en PR-M9**
+
+De las anotaciones a mano sobre las dos copias:
+
+1. **El encabezado dice «Compras Express Miami»** y tiene que decir **Compras
+   Express *Logistics LLC*** y llevar el **teléfono 305-848-0990** (el número se
+   entiende a medias en el audio; el escrito a mano es claro).
+2. **El número de manifiesto tiene que llevar el año** — hoy es `MA00001469`.
+   Por qué: *"para poder limpiar el año, poder ordenar cosas, saber de qué año
+   es"*. Y lo comparó con lo que ya tenemos: *"ese número va a ir **igual que el
+   recibo de warehouse**; esto es relativamente un warehouse, solo que es un
+   manifiesto"*. → **Esto valida la numeración anual `MM2026000001` que hoy está
+   muerta (`RP-46`).**
+3. **Faltan `# tel` y `persona encargada`** en el bloque del transportista.
+4. **La letra es muy chica**: *"esto está muy pequeño, ni lo vemos cuando lo
+   queremos ver en la pantalla"*.
+
+**IMPLEMENTADO en PR-M9.** El documento **no existía**: es papel nuevo, no un
+arreglo. Vive en `GET /manifiestos/:id/documento` y usa el mismo
+`layout: "print"` del Warehouse Receipt — que es lo que él mismo propuso:
+*"ese número va a ir igual que el recibo de warehouse; esto es relativamente un
+warehouse, solo que es un manifiesto"*. De ahí sale gratis la cadena de
+`?print=true`.
+
+Las cuatro, una por una:
+
+1. El encabezado sale de `wr_issuing_company`, la constante que ya usa el WR:
+   **COMPRAS EXPRESS LOGISTICS LLC**, 8109 NW 60th Street, y el teléfono.
+2. El número lleva el año desde `PR-M2` (`MM2026000001`).
+3. **`# tel` y `persona encargada`** salen del catálogo de `EmpresaManifiesto`
+   (`PR-M1`). Si están vacíos se imprime «—» y los llena el equipo por el CRUD;
+   no hizo falta ninguna migración.
+4. La base pasa a **12px** y el número del manifiesto a **26px**, contra los
+   9-11px del WR.
+
+Lleva además el bloque del consignatario, los rótulos de `C21-02` («del
+proveedor» vs «nuestro», y «Recibido en Honduras» en lugar de «Aduana»), la
+tabla de bultos con código, tamaño, medidas, volumen y peso, los cuatro totales
+y las dos firmas. El botón «Imprimir manifiesto» va en la pantalla del
+manifiesto, **aparte** de «Finalizar e Imprimir», que saca las etiquetas 4×6 de
+los bultos: son dos papeles distintos.
+
+De paso, el `<title>` del layout `print` estaba fijo en «Warehouse Receipt»; la
+pestaña del manifiesto decía «Warehouse Receipt - 1 cajas». Ahora cada vista
+pone el suyo con `content_for :titulo_print`.
+
+---
+
+### C21-10 · La pre-factura se amarra al **manifiesto**, no a la guía — ✅ **IMPLEMENTADO en PR-M8**
+
+Arrancó diciendo guía y **se corrigió solo**:
+
+> *"Ese número de guía, cuando creemos las prefacturas, nosotros vamos a
+> seleccionar de alguna manera que esa es la guía que vamos a trabajar."*
+
+y unos minutos después:
+
+> *"Ahí **no va la guía**; en la prefactura va **el manifiesto**, la caja del
+> manifiesto."*
+> *"**Está malo**… porque no es la guía del proveedor, **es el manifiesto**."*
+> *"Lo que vamos a seleccionar, de que estamos procesando, **es el manifiesto**…
+> ahí es donde deberíamos amarrar el manifiesto, no la guía, sino que es el
+> número."*
+
+Hoy lo hacen **a mano**: *"le ponen esa guía, se la ponen manual"*.
+
+**Verificado: hoy no existe ningún vínculo** entre `PreFactura` y `Manifiesto` —
+ni columna, ni scope, ni filtro.
+
+**IMPLEMENTADO en PR-M8.** `pre_facturas.manifiesto_id` (nullable — una
+recolecta no viene de ningún manifiesto). El selector va en el paso 1 de
+`/pre_facturas/new`, al lado del cliente, y la lista sale de
+`Manifiesto.con_carga_por_facturar`: se deriva de los paquetes, no del estado
+del manifiesto, así que **se vacía sola** a medida que se factura. Elegido el
+manifiesto, la pantalla, el JSON del preview y el re-render de error filtran
+por el mismo helper, y el número queda guardado, visible en el índice y en la
+ficha, y filtrable.
+
+Dos cosas salieron de acá porque no se sostenían sin ellas:
+
+1. **`Paquete.facturables` se ensanchó a `en_aduana`.** Desde `PR-M7` la carga
+   que llega por manifiesto aterriza en `en_aduana`, y **nadie escribe
+   `disponible_entrega`** — la bodega en Honduras sigue siendo un hueco. Sin
+   ensancharlo, la pantalla de pre-factura salía vacía para toda la carga real.
+   Coincide con lo que dijo Yusef mirando la pantalla —*"ya de aquí el paquete
+   va a cambiar cuando ingresemos a la prefactura"*— y con `docs/05:1201`.
+   `consolidando_honduras` **no** entró: es un desvío, no un paso del pipeline.
+2. **`PreFactura.build_from_paquetes` ahora filtra por `facturables`.** El
+   comentario decía «must be in bodega Honduras» y el código tomaba cualquier
+   id del cliente: la lista de la pantalla filtraba, el `create` no.
+3. **`paquetes.pre_factura_id` no lo escribía nadie.** Lo leen tres lugares
+   —`Paquete.facturables`, `Paquete#cobrada_o_entregada?` y el bloqueo de
+   borrar del controller— y lo limpian dos (`anular!`, `BajarCajasConPin`),
+   pero el único que lo ponía eran los seeds: el mismo paquete podía entrar en
+   dos pre-facturas borrador a la vez. Ahora se estampa al guardar y **se
+   suelta al morir su última línea** — sin ese contrapeso, quitar una línea con
+   PIN dejaba el paquete estampado para siempre.
+
+**Consecuencia conocida, no es regresión:** el contador «paquetes disponibles»
+del dashboard (`DashboardMetrics#paquetes_disponibles`, que cuenta
+`disponible_entrega`) va a quedar cerca de cero hasta que exista el módulo de
+bodega en Honduras. Y `PreFactura#anular!` devuelve los paquetes a
+`disponible_entrega` aunque hayan entrado desde `en_aduana` — siguen siendo
+facturables, así que el flujo no se rompe, pero el salto queda anotado.
+
+---
+
+### C21-11 · Varias guías por manifiesto, y son como nuestros splits — ✅ **IMPLEMENTADO en PR-M2**
+
+> *"El número de guía **termina siendo varios**."*
+
+Y explicó la forma con el ejemplo del impreso (`286441-1`, `-2`, `-3`):
+
+> *"Es el **mismo número**, solo tiene el 1, el 2 y el 3. Es **el mismo que
+> nosotros, la misma teoría**."*
+
+O sea: la misma lógica de sufijos que ya usan nuestras cajas de un split.
+
+**Cómo se cargan, desde `PR-U2`.** Arrancaron como **tres renglones vacíos
+fijos**, con el argumento de que *"alcanzan para el caso normal y no obligan a
+nadie a pelear con un botón de «agregar»"*. El problema estaba del otro lado:
+con cuatro guías había que guardar, volver a entrar y llenar la cuarta, y las
+tres casillas vacías ocupaban la pantalla siempre. Jorge, 2026-08-30: *"veo que
+hay 3 guías por defecto, esto debería ser un poco más dinámico"*.
+
+Ahora las filas se agregan y se quitan sin recargar, con el patrón que el repo
+ya tenía en los correos del cliente: el `<template>` se genera **del mismo
+partial** que las filas del servidor, con `child_index: "NEW_INDEX"`. Sin guías
+todavía, arranca con una fila lista para escribir — entrar y tener que apretar
+«Agregar» antes de poder teclear sería un paso de más en la pantalla que existe
+justamente para teclear guías.
+
+El orden sale del `id`, no de `position`: las guías se cargan en orden y
+`order(:position, :id)` con todo en cero da orden de inserción, que es lo que se
+quiere para `286441-1, -2, -3`. Escribir `position` pediría renumerar en JS en
+cada alta y baja, para un caso —reordenar a mano— que no tiene pantalla.
+
+---
+
+### C21-12 · Los permisos de los roles, editables por ellos — 🆕 **PLANIFICADO**
+
+Salió el 2026-08-30, leyendo la tabla de quién puede qué que dejó `PR-M10`. Le
+gustó, **y por eso mismo pidió poder moverla él**:
+
+> *"Siempre necesitamos que nosotros podamos editar el rol y los roles que tiene
+> [cada puesto]… editar el título del rol y lo que ellos puedan y no puedan."*
+
+El costo de no tenerlo, dicho por él:
+
+> *"Si no, te vamos a estar molestando con que necesitamos quitar y poner:
+> «fíjate, quitale a este título de caja que no puedan hacer [esto], ponele que
+> puedan hacer esto otro», y te vamos a tener en ese relajo."*
+> *"No es lo mismo tu sistema con el otro, y hay cositas que se nos van a
+> escapar y vamos a estar ahí en fría y fría."*
+> *"Hay cosas que hacemos cambios, o les queremos dar o quitar cosas que tal vez
+> podían y no podían hacer."*
+
+O sea: no es un pedido de una pantalla más, es que **el mapa de permisos se va a
+mover seguido** —porque el sistema viejo repartía distinto y porque la
+estructura de la empresa cambia— y hoy cada movimiento es un PR.
+
+**La posición de Jorge, en la misma conversación:** hacerlo **muy granular es
+muy complicado**. Le recomendó dos formas más baratas:
+
+1. **Una persona puede tener varios roles.** Hoy `users.rol` es un enum de uno
+   solo. Con varios, «Sub-Jefa de Caja y SAC» deja de necesitar un rol nuevo:
+   se le dan los dos que ya existen. Cubre buena parte de los casos que él
+   describe sin tocar el mapa.
+2. **Encender y apagar secciones por rol.** El mapa ya está cortado en
+   secciones (`can_access?` tiene 15 llaves: `:etiquetar`, `:manifiestos`,
+   `:pre_facturas`, `:caja`…). Volverlo data en vez de un `case` deja que se
+   prenda y apague desde una pantalla, **sin** bajar al nivel de «puede editar
+   el precio pero no el peso».
+
+**Lo que hay hoy, para dimensionar:** `users.rol` es un enum de 9 valores;
+`Authorization#can_access?` es un `case` con 15 llaves; hay **22** `require_role`
+repartidos en los controllers y **59** usos de `can_access?` entre controllers y
+vistas. Los `require_role` son el problema real: son la regla escrita a mano en
+cada controller, y una pantalla de permisos que no los cubra miente. El camino
+sería que todos pasen por una llave de `can_access?` primero — que es la
+dirección en la que `PR-M10` ya empujó al darle llave propia a
+`:catalogos_manifiesto` y derivar las listas en vez de escribirlas.
+
+**La decisión, 2026-08-31.** Jorge eligió **la tabla de permisos, en dos pasos**,
+y descartó «varios roles por persona» como sustituto: eso resuelve el caso de
+Michelle —Sub-Jefa de Caja **y** SAC— pero **no** es lo que pidió Yusef, que fue
+poder *quitarle* cosas a un puesto.
+
+### Paso 0 — una sola fuente de verdad ✅ **HECHO**
+
+Antes de cualquier pantalla había que juntar las reglas: **27 chequeos de rol
+vivían escritos a mano en los controllers**, fuera de `can_access?`. Una pantalla
+que solo leyera la tabla habría dicho que un rol puede algo que el controller le
+niega.
+
+Se separaron en dos clases, que no son lo mismo:
+
+| Clase | Qué pregunta | Dónde vive |
+|---|---|---|
+| **De sección** | *¿entrás a esta pantalla?* | `can_access?`, que es lo que la pantalla de permisos va a leer |
+| **De acción** | *adentro, ¿podés hacer esto?* — editar un cliente, cambiarle el estado a un paquete, borrarlo, crear una tarea | En código, pero **siempre contra una constante con nombre** |
+
+Lo que cambió:
+
+- Las **14 pantallas de Configuración** estrenan una llave cada una, y no una
+  sola para todas: así se ven en el menú y así las va a querer prender y apagar.
+- **`ROLES_OPERATIVOS`** (Miami + Honduras) sale a la luz: los mismos cinco roles
+  estaban copiados a mano en tres controllers — el autocomplete de clientes, el
+  cotizador de flete y las acciones sobre el tracking. Son las herramientas
+  compartidas de los dos mostradores, y ahora tienen llave: `:operacion`.
+- **Doce métodos `require_admin` muertos** se borraron: quedaron sin llamador al
+  pasar todo por `can_access?`.
+- `test/lint/permisos_en_una_sola_fuente_test.rb` traba las dos reglas, y lleva
+  su propio contra-test para no morirse en silencio si el regex deja de
+  enganchar.
+
+**Ojo con el cortocircuito de admin**: `can_access?` hace `return true if
+admin?` **antes** de mirar la sección. Eso se queda en código y no baja a la
+tabla — si no, alguien puede dejarse afuera a sí mismo. La pantalla tampoco
+puede dibujarlo como una fila de casillas marcadas, porque no lo es.
+
+### Paso 1 — la tabla y la pantalla ✅ **HECHO**
+
+`/permisos`, en Configuración: la grilla de 8 roles × 39 secciones, agrupada
+como el menú, y un solo Guardar.
+
+**Guarda solo las excepciones, no la matriz entera.** El plan decía «sembrada
+del `case`»; al construirlo quedó claro que es peor. Con **cero filas la
+conducta es idéntica por construcción** —verificado: matriz igual, cero filas—,
+no hace falta migración de datos que la mantenga, y evita que cambiar la
+política en el código no cambie nada **en silencio** porque cada celda tendría
+su fila pisándola. La celda que nadie tocó sigue al código para siempre; borrar
+una fila es el «deshacer».
+
+**Tres capas, en orden:** admin (cortocircuito, nunca baja a la base) → la
+excepción → el código (`PermisosDelSistema.politica`, que salió del controller a
+una función pura para que la pantalla pueda mostrar el default de cada celda).
+
+**Lo que no se puede mover:** `:permisos` y `:usuarios`. Concederle la primera a
+un rol le deja darse todo lo demás en el siguiente clic; la segunda es el mismo
+agujero por la puerta de al lado — quien administra usuarios se pone `admin`.
+
+**Dos cosas que aparecieron construyendo, y que la pantalla hace posibles:**
+
+1. **Un rol sin ninguna casilla tildada era indistinguible de «no vino en el
+   formulario»**, y el servicio le borraba todos los accesos en vez de
+   negárselos. Va con un marcador oculto por columna — el mismo truco del hidden
+   que Rails pone antes de cada checkbox.
+2. **El bucle de redirecciones.** Quitarle Caja Diaria al cajero —lo primero que
+   alguien va a probar— dejaba `/` mandando a `/caja` y `/caja` devolviendo a
+   `/`: ERR_TOO_MANY_REDIRECTS, sin puerta de entrada y sin explicación. Ahora el
+   dashboard busca **la primera sección que el usuario pueda abrir de verdad**, y
+   si no hay ninguna le dice qué pasa y a quién pedírselo, en vez de redirigirlo
+   a la nada.
+
+Las dos garantías van en tests ejecutables: una fila que le niegue algo al admin
+no valida —y metida por SQL tampoco hace nada—, y `:permisos`/`:usuarios` no se
+pueden conceder.
+
+### Paso 2a — varios roles por persona ✅ **HECHO**
+
+Yusef, 2026-08-30, nombrando a dos personas que el enum de un solo rol no sabe
+describir: Michelle es *"Sub-Jefa de área de Caja y SAC"* y Bessy *"Supervisora
+de Caja y SAC"*. Cada combinación así obligaba a inventar un rol nuevo — y con
+él, una columna más en la matriz de permisos.
+
+`users.rol` **se queda** como el rol principal: es el que se muestra, el que
+alimenta los predicados del enum y el que decide el cortocircuito de admin. Los
+de más viven en `roles_de_usuario` — tabla y no columna de arreglo por lo mismo
+que `permisos_de_rol`: con `paper_trail` sobre filas, «quién le dio qué a quién»
+tiene respuesta.
+
+**Los roles suman**, y la contracara conviene decirla en voz alta: **quitarle
+algo a una persona con dos roles es quitárselo a los dos, o quitarle un rol**. La
+pantalla de permisos sigue moviendo *roles*, no personas — que es lo que Yusef
+pidió (*"quitale a este título de caja que no puedan hacer esto"*).
+
+**Dónde estaba el bug silencioso, que es lo único difícil de este paso.** Con
+varios roles hay que resolver **rol por rol y después sumar**. La forma que sale
+sola —juntar las excepciones de todos sus roles en un mapa y resolver una vez—
+deja que una excepción puesta pensando en el rol A **le pise al rol B un permiso
+que el código le daba y que nadie le quitó**. Por eso `PermisoDeRol.mapa_para`
+devuelve un mapa **anidado por rol** y no uno plano: aplanarlo obliga a elegir un
+ganador, y esa elección no se puede hacer ahí. Hay un test que corre la versión
+ingenua y falla con ella puesta.
+
+**El otro riesgo era quedar a medio migrar**, que es la firma de este repo: unos
+chequeos suman los roles y otros no, y la diferencia solo aparece cuando alguien
+con dos puestos se queja de una pantalla que a su compañero sí le abre. Los 15
+chequeos de autorización pasaron a `user.tiene_rol?(LISTA)` —que mira todos—, los
+de segmentación (tareas, notas, el destino del dashboard) pasaron a la **unión**,
+y un lint nuevo en `permisos_en_una_sola_fuente_test.rb` traba que vuelva a
+aparecer un `user.rol` decidiendo algo. Lleva su contra-test, como el de al lado.
+
+**`admin` no puede ser un rol adicional**, y no es cosmético: el cortocircuito
+pregunta `Current.user.admin?`, el predicado del enum sobre el principal. Si
+`admin` entrara por la puerta de atrás habría dos verdades a la vez.
+
+Tres cosas que aparecieron construyendo:
+
+1. **`User.autorizantes` mentía a medias.** Es el dropdown de «¿quién autoriza?»
+   de la pre-factura, y filtraba por `rol` en SQL: alguien que autoriza por su
+   *segundo* rol no salía en la lista, pero `puede_autorizar?` sí lo dejaba
+   pasar. Dos respuestas distintas a la misma pregunta.
+2. **`notas_permanentes_visibles` era un `case`**, y un `case` sobre una sola
+   variable no se puede recorrer rol por rol. Pasó a tabla. Espeja a
+   `Tarea::DEPARTAMENTOS_POR_ROL` a propósito: si una sumara y la otra no, sería
+   justo la incoherencia que ese método vino a evitar.
+3. **El formulario necesita el hidden vacío.** Destildar *todas* las casillas no
+   manda nada, y «no vino en el formulario» es indistinguible de «no tiene
+   ninguno»: los roles se quedaban puestos. Es el mismo agujero que el `Paso 1`
+   tuvo que tapar acá al lado, con la misma forma.
+
+### Paso 2b — el título del rol editable ✅ **HECHO**
+
+La otra mitad de lo que pidió Yusef: *"editar el título del rol"*. `/roles`, en
+Configuración, al lado de `/permisos` — son las dos cosas que dijo en la misma
+frase.
+
+**Los códigos se quedan en el código**, y es lo que hace que esto sea chico:
+`ROLES_QUE_ABREN_EL_CANDADO`, el `case` de `PermisosDelSistema.politica` y las
+constantes `*_ROLES` hablan de códigos (`supervisor_caja`), no de títulos. Lo
+editable es **cómo se lee**, no qué significa — por eso no hizo falta una tabla
+de roles, ni acá ni en el paso 2a.
+
+**No es un CRUD, y la diferencia importa.** Los roles **no se crean ni se
+borran**: un rol nuevo hecho desde una pantalla quedaría fuera del enum, del
+`case` de `politica` y de cada constante `*_ROLES` — un rol que ninguna regla del
+sistema conoce. La pantalla renombra los nueve que hay, y hay un test que fija
+que el controller no tenga `new`, `create` ni `destroy`: la puerta no existe.
+
+**Guarda solo lo renombrado**, como `permisos_de_rol` y por lo mismo: con cero
+filas la conducta es idéntica a hoy por construcción, vaciar el campo es «volver
+al nombre del sistema», y un título **igual** al del código no deja fila — si la
+dejara, cambiar el nombre por defecto en el código no se vería nunca, tapado en
+silencio por una fila que dice lo que el código decía el día que se guardó.
+
+**El admin sí aparece acá**, al revés que en `/permisos`. Allá se lo excluye
+porque no se le pueden quitar accesos; cómo se lee su puesto sí es suyo.
+
+**El riesgo era el de siempre: que el nombre nuevo llegara a la mitad de las
+pantallas.** Todo lo que muestra un rol pasa por `User.titulo_de_rol`, un solo
+punto con la cadena *renombrado → código → humanizado*. Al rutear los sitios que
+lo esquivaban aparecieron **dos que mostraban el código crudo**: el encabezado de
+columna de `/permisos` —justo la pantalla que Yusef mira— decía «supervisor
+caja», y la de «no tenés accesos» también. El test recorre las cuatro pantallas
+que lo muestran.
+
+Dos cosas que se dejaron dichas porque se leen mal solas:
+
+- **Renombrar no cambia lo que el puesto puede hacer.** Hay dos tests que lo
+  fijan: la política y quién autoriza siguen resolviéndose por código.
+- **El dropdown sigue mandando el código.** Se lee «Sub-Jefa de Caja» y se
+  guarda `cajero`.
+- **La bitácora sale gratis**: `paper_trail` guarda códigos, así que una versión
+  vieja se lee con el nombre de hoy y no con uno que ya nadie reconoce.
+
+### El segundo escalón — las reglas de acción ⏳
+
+Lo que ninguna de las dos formas cubre: rol × **acción**, no rol × sección.
+Necesita otra tabla; son ~10 constantes.
+
+---
+
+### Las preguntas que abre
+
+| Id | Qué |
+|---|---|
+| ~~`RP-53`~~ | **✅ CERRADA por Jorge (2026-08-30): se puebla `Consignatario` y `Agent` se queda como está** para el Warehouse Receipt. Implementado en `PR-M1`. ~~¿Dónde vive el consignatario? El modelo `Consignatario` existe y está **vacío** (sin seeds, sin pantalla, sin asociaciones), y es el nombre semánticamente correcto. Pero «CORPORACION KARSAM» hoy vive en `Agent` —el bloque *Agent* del Warehouse Receipt—, que significa «agente de destino». ¿Se puebla `Consignatario` y se deja `Agent` como está, o son la misma cosa con dos nombres?~~ |
+| ~~`RP-54`~~ | **✅ CERRADA por Yusef (2026-08-30): código QR** — *"habría que instalar la gema necesaria"*, o sea aceptando el costo. **IMPLEMENTADO en `PR-M11`** con `rqrcode`, solo en la 4×6 del bulto: la etiqueta del paquete sigue en Code128, que es lo que leen las pistolas de Miami hoy. ~~El código de la caja: ¿barras o QR? `A7-03` dejó abierto *"un código QR o lo que vos querás"*. El repo solo genera Code128 (`barby`), que es lo que ya leen las pistolas; QR necesitaría gema nueva. Confirmar antes de imprimir 4×6 en producción~~ |
+| ~~`RP-55`~~ | **✅ CERRADA por Jorge (2026-08-30): se borran.** Eran 2 de prueba y no hay producción. Implementado en `PR-M2`. ~~¿Qué se hace con los manifiestos viejos? Jorge lo preguntó derecho. Hoy hay manifiestos numerados `MA-…` (formato legacy) porque la numeración anual nunca corrió. Al despertarla, ¿se renumeran, se dejan conviviendo, o se cierra el formato viejo en una fecha?~~ |
+| `RP-58` | **✅ ELEGIDA por Jorge (2026-08-31): la tabla de permisos, en dos pasos.** **Paso 1 ✅ `PR-388`**: `/permisos` mueve las secciones por rol, guardando **solo las excepciones**. **Paso 2a ✅**: varios roles por persona —el caso de Michelle, que es Caja *y* SAC—; los roles **suman** y las excepciones se resuelven rol por rol, que es donde estaba el bug silencioso. **Paso 2b ✅**: `/roles` renombra los nueve puestos —los **códigos** se quedan en el código, así que renombrar no cambia lo que un puesto puede hacer—. Con eso `RP-58` queda **cerrada** salvo el segundo escalón. Y sigue abierto el segundo escalón, que es lo único que ninguna de las dos formas cubre: las reglas de **acción** escritas a mano son otra cosa que la pantalla no toca, y necesitan otra tabla — `rol × acción`. **No son 22**, como decía acá: contadas contra el código son **~10** — `EDIT_ROLES`, `ESTADO_CHANGE_ROLES` y `DELETE_ROLES` en paquetes; `EDICION_ROLES` en clientes; las tres de tareas; y las que viven en modelos (`Manifiesto::ROLES_QUE_ABREN_EL_CANDADO`, `BajarCajasConPin::ROLES`, `QuitarCambioServicio::ROLES`). `require_role` en sí aparece 6 veces. ~~¿Cómo se editan los permisos sin un PR? (`C21-12`) Yusef quiere mover el mapa de roles él —*"editar el título del rol y lo que ellos puedan y no puedan"*—~~ |
+| ~~`RP-56`~~ | **✅ CERRADA por Yusef (2026-08-30): «Recibir carga».** ~~Cómo se llama la pantalla de recepción. Yusef dio tres nombres en la misma frase: *"dar entrada al almacén"*, *"entrada al inventario"* y *"recibir carga"*. Elegir uno antes de que Miami y SPS le pongan cada quien el suyo~~ |
+| `RP-57` | **Retención y peso de la data.** *"Lo mínimo son seis años: cinco para atrás más el año en curso"*, pero *"yo lo que ocupo es el año en curso y un año antes"*. Su idea: *"crear reportes automáticos, cierre anual, cierre mensual… lo mandás al bucket y ahí guarda todos los reportes del año"*. Es una discusión propia, no del manifiesto |
+
+### Dudosos del transcript
+
+- ~~El teléfono del encabezado se oye **305-848-79-90** en el audio y está
+  escrito **305-848-0990** a mano.~~ **RESUELTO al construir `PR-M9`:** el
+  repo ya tenía `305-848-0990` en `WR_ISSUING_COMPANY_DEFAULT`, que sale de
+  `warehouse_receipt_fields.md` — la spec que **Yusef entregó él mismo el
+  2026-04-29**. Dos fuentes suyas, de meses distintos, dicen lo mismo; el audio
+  es el que se oye mal. Se imprime `+1 305-848-0990`.
+- Habló de que los del perfil de pre-factura *"me los tengo que quitar"* de
+  recibir carga — no quedó claro si es un cambio de proceso que quiere o un
+  desahogo. **Preguntado el 2026-08-30: era desahogo.** `PR-M7` deja
+  `/recibir-carga` autorizada a los roles de pre-factura, como está.
+
+---
+
+## Conversación 22 (2026-08-31) — el limpiar que no limpiaba al actualizar
+
+Audio corto, **2 minutos 7 segundos**, transcrito con `whisper small`. Yusef
+operando `/etiquetar` con Jorge escuchando, y arranca literalmente diciendo que
+lo está grabando para que quede.
+
+Dos cosas salieron, y la segunda salió de la primera.
+
+> ⚠️ **Sobre el transcript.** Audio corto pero con la misma sordina de siempre:
+> se le van palabras. Se cita lo que está limpio y **lo dudoso se marca en vez
+> de completarlo**. Un ejemplo de lo que no se usa: *"ya le te quedo
+> actualizando"*, que es ruido de whisper sobre lo que evidentemente es «ya te
+> queda actualizando».
+
+---
+
+### C22-01 · Al actualizar un paquete, F2 no limpia — ✅ **ARREGLADO**
+
+> "Ya estoy grabando entonces. La sección de etiquetar, en la parte **cuando
+>  vamos a actualizar un paquete, el limpiar no está limpiando**."
+> "Sí, entonces ahorita lo voy a hacer, ¿verdad? Y ya está, le doy a actualizar y
+>  digo no, no me equivoqué, era eso. **F2 se queda.** […] Y se queda esto,
+>  **tiene que limpiar todo**."
+
+Y la excepción, que la puso Jorge y Yusef ratificó en el acto:
+
+> **Jorge:** "¿A excepción de la sesión, verdad?" · **Yusef:** "Sí, excepción
+>  correcto."
+
+**La causa.** En modo actualización el formulario lo renderiza el servidor
+apuntando a `PATCH /etiquetar/:id`. `clearForm` vaciaba los **campos** y no
+tocaba la **acción** del formulario, ni el `_method` (que `_limpiarCampos`
+excluye junto al CSRF), ni el banner amarillo, ni el value `actualizandoId`. El
+formulario quedaba en blanco a la vista y apuntando al paquete anterior por
+dentro: **el siguiente escaneo se guardaba encima de él**.
+
+Lo notable es que el repo ya sabía esto **para el otro camino**. Cuando Jorge
+reportó en agosto que el banner «Actualizando …» no se iba al guardar
+(`C20-04`), el arreglo fue volver a `/etiquetar` con `Turbo.visit`, y el
+comentario que quedó en el código lo explica con todas las letras — *"`clearForm`
+limpia los campos pero no la acción del formulario, así que el paquete siguiente
+que se escaneara se iba a guardar encima del anterior"*. **F2 nunca recibió ese
+tratamiento.** El mismo bug tenía dos salidas y solo una se arregló: es la
+duplicación entre caminos, la misma forma que el bug recurrente entre pantallas
+gemelas.
+
+**Cómo quedó.** F2 —y el botón Limpiar, y «Dejarlo de lado», que comparten
+`clearForm`— vuelve a `/etiquetar` cuando hay un paquete en actualización. La
+sesión sobrevive porque vive en `session[:etiquetar_tipo_envio_id]`, del lado del
+servidor: recargar no la toca, solo la borra «Finalizar sesión». **En modo alta
+no se recarga nada**, que ahí F2 es el atajo del escaneo rápido y una vuelta al
+servidor por limpieza sería un arreglo peor que el bug.
+
+Yusef, sobre por qué esto importa ahora y no después:
+
+> "Yo creería que está bien, hasta que no lo pongamos a trote ahí, no vamos a
+>  saberlo." · "Tiene que quedar **lo más pulidito ahorita**."
+
+---
+
+### C22-02 · Una tecla para finalizar sesión — ✅ **IMPLEMENTADO (F11)**
+
+Salió de lo anterior, sin transición:
+
+> "¿Sabés qué deberíamos de crear? Tal vez **una función para finalizar**."
+> **Jorge:** "Pero ahí está, o finalizar sesión ahorita." · **Yusef:** "No, no,
+>  una función, **un F**."
+> "Tal vez **F11** o algo así, no sé si lo tenés ya agarrado, no creo." · "Ya que
+>  le vas a hacer un cambio, si podés ponerle un F11."
+
+**Con confirmación** — decisión de Jorge, 2026-08-31. La tecla dispara el botón
+que ya existe en vez de pegarle al endpoint, así que hereda su «¿Finalizar la
+sesión de X? Vas a poder elegir otro tipo de envío». El razonamiento: finalizar
+deja al operario eligiendo tipo de envío en medio de un lote, y un roce de tecla
+no puede provocar eso.
+
+**Por qué F11 y no otra.** Jorge pidió *"otro que esté libre pues"* por si el
+navegador se quedaba con la tecla — y al buscarla apareció que casi no quedan:
+`keyboard_shortcuts_controller.js` documenta una convención de todo el sistema
+(F2 limpiar, F4 imprimir, F6 editar, **F7 nuevo**, F8 Excel, F9 PDF, F10
+guardar) y `/etiquetar` además ocupa F3. Contra eso, libres quedaban F1, F5, F11
+y F12: **F12** no se puede interceptar, **F5** es el reflejo de refrescar (sería
+un reflejo que destruye la sesión) y **F1** abre la ayuda del navegador si el
+`preventDefault` no gana. F11 —la que él nombró— era la única sin conflicto
+dentro del sistema.
+
+**Verificado en Chrome de verdad, no solo en los tests:** el `keydown` de F11
+llega a la página y el `preventDefault` frena la pantalla completa (la ventana no
+cambió de alto). El system test **no puede probar esto** —en headless no hay
+pantalla completa que robar—, así que se probó a mano. La salvedad honesta: se
+probó en Chrome sobre macOS; si en las máquinas de Miami se comporta distinto, la
+tecla se cambia sin tocar nada más.
+
+**No** se usó el `data-shortcut` genérico del sistema por dos razones concretas:
+ese controller **ignora toda tecla que no sea F2 cuando el foco está en un
+input**, y en `/etiquetar` el foco vive en el campo de tracking; y cuando
+`ButtonComponent` emite `data-shortcut` y un controller propio escucha la misma
+tecla, se dispara dos veces — ya pasó en `/entrega_personal` con F2 y F9.
+
+---
+
+### Lo que salió de mirar el resto, y no se arregló acá
+
+Buscando el bug apareció que **en modo alta hay más cosas que `clearForm` no
+limpia**. No las reportó Yusef y no entran en este PR, pero quedan anotadas
+porque son la misma familia —«limpiar no limpia»— y una de ellas guarda datos
+mal en silencio:
+
+| Qué sobrevive a F2 en modo alta | Consecuencia |
+|---|---|
+| ~~**`paquete[tercero_id]`** (hidden)~~ | **✅ ARREGLADO (2026-09-01).** El campo visible se vaciaba y **el id se quedaba**: el paquete siguiente se guardaba con el tercero del anterior, sin que nada lo mostrara. `toggleTercero` (F4) sí lo limpiaba desde siempre — los dos caminos hacían distinto lo mismo. Ahora la limpieza vive en **un solo método** que usan los dos, que es lo que evita que se vuelvan a separar |
+| Los campos `data-print-field` (`print`, `etiquetas`, pesos) | Solo los quita `_removePrintField`, al empezar el siguiente guardado |
+| Los radios de prepago Miami | `_limpiarCampos` los desmarca a todos, y con eso **se pierde el default «Cobrar en Honduras»**; además el panel del método queda visible porque nadie dispara el `change` |
+| `_duplicadoDesde` | Único memo del controller que ninguna de las cuatro rutas de limpieza reinicia |
+| Los textos de los banners escondidos (notas, pre-alerta, sucursal, duplicado) | Se esconde el contenedor, no se borra el contenido |
+
+En modo actualización **todos** quedan resueltos de arrastre, porque recargar
+deja el estado en cero por construcción. En modo alta siguen vivos.
+
+---
+
+## Conversación 23 (2026-09-01) — el manifiesto y la etiqueta del bulto, papel en mano
+
+Audio de **30 minutos**, transcrito con `whisper small`. Yusef y Jorge revisando
+en pantalla, de punta a punta, los dos papeles del módulo de manifiestos —el
+**manifiesto impreso** y la **etiqueta 4×6 del bulto**— y de ahí saltando a la
+pantalla de empacar. La grabación **arranca a mitad de frase**: lo que se dijo
+antes de «…de diferencia, hay una diferencia en los paquetes» no está.
+
+Los últimos cuatro minutos son sobremesa —la miel orgánica de un amigo de
+Valero— y no llevan requerimiento adentro.
+
+> ⚠️ **Sobre el transcript.** La sordina de siempre, y en esta más que en otras:
+> se le van palabras enteras y el audio pisa a los dos hablando encima. Se cita
+> lo que está limpio y **lo dudoso se marca en vez de completarlo**. Muestras de
+> lo que no se usa: *"vamos a marcar a queso, el culo salvaje"*, *"Empresas con
+> aportes, alcalde, donde una persona es cargada"* (que es, evidentemente,
+> «empresa transportadora … persona encargada»), *"Nick, que te llaman la
+> agrega"*. Y una palabra que **cambia el requerimiento según cómo se oiga**
+> queda abierta en `C23-11`.
+
+El termómetro de la llamada, en sus palabras:
+
+> "Bueno, no, **va muy bien vos, muy, muy bien**." · "Ya son detallitos
+>  sencillos, va." · "Lo que quería es más revisar de que todo tenga sentido,
+>  que **el flujo vaya bien**; los detallitos los arreglamos."
+
+---
+
+### La etiqueta 4×6 del bulto
+
+#### C23-01 · La letra **y** el número, los dos — ✅ **ARREGLADO**
+
+> "Nada más que nosotros usamos **la A y el 1**. […] El mismo A, A **1**, B el
+>  **2**, C el **3**."
+> "**Doble** porque la gente, a veces unos leen la A y otros leen el 1."
+
+Es identificación redundante a propósito, no adorno: el bulto se canta en voz
+alta entre dos personas que no leen lo mismo.
+
+La etiqueta imprimía `A` sola y grande, y en el pie repetía `numero_doc || letra`.
+Ahora el número acompaña a la letra —**`A1`**— y es el **mismo** número que la
+letra: sale de invertir `CajaManifiesto.letra_para` (A→1, Z→26, AA→27), que es el
+contador `ultima_letra` del manifiesto. No se guarda en ninguna columna nueva
+porque no es un dato aparte: es la misma cuenta escrita de otra forma, y si se
+guardara podría separarse de la letra, que es justo lo que no puede pasar.
+
+#### C23-02 · Las libras y las medidas, juntas — ✅ **ARREGLADO**
+
+> "Ahora lo que no le vi fue las libras. Ah, aquí está arriba por unos, ya. Las
+>  medidas están acá. Esto, esto **estaría más bonito que estén juntos**."
+
+Las buscó y no las encontró de un vistazo: el peso estaba arriba a la derecha y
+las medidas dos líneas abajo, con la letra gigante en el medio. Van juntas.
+
+#### C23-03 · LBS, VLBS y pies — ✅ **ARREGLADO**
+
+> "Ya que lo querés hacer bonito, hacerle **B L B S** o **pies** o algo."
+> "Ya que vos lo estás haciendo más ordenado, lo más bonito es ponerle **las
+>  libras reales, libras volumétricas, que es V L B S**." · "Y yo pongo la V y
+>  la L en mayúscula." · "Y le podés poner **los pies para el público**."
+> "Con eso se miraría más como **más profesional**."
+
+Decía `Lbs. 46` y nada más. Ahora las tres, rotuladas:
+
+| Rótulo | Qué es | De dónde sale |
+|---|---|---|
+| `LBS` | el peso real de la caja | `caja.peso` |
+| `VLBS` | la libra volumétrica | `caja.volumen`, que ya es alto×largo×ancho ÷ 166 |
+| `PIES³` | el pie cúbico | `VolumetricoCalculator.pies_cubicos`, ÷ 1728 y **ceil** |
+
+Las tres ya existían en el sistema; lo que faltaba era decir cuál es cuál. El
+`÷166` es el que le cobra el proveedor —*"yo agarro el reporte y ellos me cobran
+[según] el reporte"*, `C21-04`— y por eso no se toca ni se reemplaza.
+
+**Lo que costó meterlas.** La 4×6 tiene alto fijo y `overflow: hidden`: cuando
+el contenido se pasa **se recorta en silencio** y la impresora tira una etiqueta
+sin pie, sin que ningún test de Rails se entere. Con los renglones nuevos, la
+etiqueta más cargada quedaba con **0.16 in** de aire —un consignatario de dos
+líneas la desbordaba—, así que el QR bajó de 1.7 a 1.5 in y volvió a **0.36 in**.
+El código de 14 caracteres sigue en 25 módulos de ~1.5 mm, muy por encima de lo
+que necesita una pistola. Medido en Chrome de verdad, y de ahí quedó
+`test/system/etiqueta_bulto_cabe_test.rb`, que es la misma guarda que la Dymo ya
+tenía y esta no.
+
+#### C23-04 · A dónde va — ✅ **ARREGLADO**
+
+> "Y lo último que le falta acá es **a dónde va**." · "Ok, creo que es
+>  importante, va."
+> "Sí, o sea, aquí no lo lleva, porque **todos lo centralizamos acá**. Pero en
+>  el tuyo, pues ya lo tenés, que va."
+
+La etiqueta del legacy no lo lleva porque toda la carga aterriza en San Pedro
+Sula y se reparte desde ahí. El sistema nuevo sí sabe a dónde va —el manifiesto
+tiene `sucursal_entrega`, que en el **interno** es hasta obligatoria (`A7-07`)—,
+así que la etiqueta lo dice.
+
+#### C23-05 · Que la tire al agregar — ✅ **ARREGLADO**
+
+> "Acá un detalle que sería bueno, que **después de que le damos a agregar, de
+>  un solo** te… te las imprimo."
+
+Y lo repitió más tarde, ya viendo la pantalla:
+
+> **Jorge:** "¿Querés que la tire de un solo?" · **Yusef:** "Sí, que **le tire
+>  la que está haciendo** de un solo."
+
+Se agrega un segundo botón, **«Agregar e imprimir»**, al lado del que ya estaba.
+Es la misma pareja que tiene la pantalla vieja que él usa todos los días —*«Solo
+Agregar (F5)»* y *«Agregar/Imprimir (F9)»*—, ya anotada en el encabezado de
+`CajasManifiestoController` desde `C21-04`.
+
+**Y no abre una pestaña.** Chrome bloquea el `window.open` que no nace de un
+gesto, y esta impresión nace de un redirect después de un POST — el mismo
+tropiezo que ya costó en `/entrega_personal`, donde *"un gesto del usuario
+alcanza para un popup, no para dos"*. Así que usa el camino que se construyó
+para eso: la 4×6 se abre **en la misma pestaña**, se imprime sola y
+`@despues_de_imprimir` devuelve al manifiesto. Sin popup no hay bloqueador.
+
+**Pero va sin tecla, y esa es la única parte que no queda como la vieja.** F9
+—la que su equipo tiene en el dedo para esto— en esta ficha ya es **«Finalizar
+e Imprimir»**, que cierra el manifiesto entero.
+`keyboard_shortcuts_controller` resuelve con `document.querySelector`, o sea el
+**primero del DOM**, y el de finalizar está más arriba: el rótulo «(F9)» habría
+prometido agregar una caja y en su lugar habría ofrecido cerrar el manifiesto.
+Se le puso F9, se vio en la ficha de verdad que colisionaba, y se le sacó. Darle
+una tecla obliga antes a decidir si «Finalizar e Imprimir» se mueve, y eso no es
+de este PR.
+
+El test que lo cuida —`caja_agregar_e_imprimir_test`— es más ancho que el botón:
+afirma que **ninguna tecla de la ficha apunta a dos acciones distintas**. Y la
+primera versión de ese test **pasaba en verde con las dos teclas puestas**,
+porque el manifiesto de prueba no tenía paquetes y sin paquetes la ficha no
+pinta los botones de finalizar. Se arregló probándolo al revés: poniendo el bug
+a propósito y exigiendo que fallara.
+
+---
+
+### El manifiesto impreso
+
+#### C23-06 · Firma y hora de quien recibe — ✅ **ARREGLADO**
+
+Es el pedido más insistente de la llamada, y el que trae el porqué pegado:
+
+> "Acá esto tiene que llevar **la firma de quien la recibió** allá. O sea,
+>  normalmente ellos me firman la hoja […] **firma el conductor, firma quien
+>  recepción**. Ese es quien lo recibió, me entendés. Pero **debe decir firma y
+>  hora**."
+> "Sí, eso es bien importante, ahí se ve **mil veces más profesional**."
+
+Y con eso corrigió el rótulo, que decía de más:
+
+> "Esto de **«recibido en Honduras» sí, pero eso es diferente**. O sea, cuando
+>  vos lo emitís, es **entregado por** —entonces quien la llevó— y **recibido
+>  por**, pero **no necesariamente Honduras**, sino quien recibió este packing:
+>  firma y hora de quien recibió."
+
+El pie decía `Entregado por (Miami)` / `Recibido por (Honduras)`, dos rayas
+peladas. Ahora dice **`Entregado por`** / **`Recibido por`**, y cada bloque lleva
+sus tres renglones: **nombre y firma**, **fecha y hora**. «Recibido en Honduras»
+sigue existiendo arriba, en el encabezado, que es donde va: ahí es la fecha de
+aduana (`C21-02`), un dato distinto de quién agarró el papel.
+
+**Y esto es lo mismo que abrió la llamada**, sobre el manifiesto interno:
+
+> "Esto **no lo voy a llenar en el interno** […] y me dice que es Miami."
+> "Y cuando es interno, ¿qué creés que le pongamos ahí? ¿**O le quitamos** […]?"
+> "Porque imaginate, te van a quedar […] y **yo no estoy en Miami**."
+> "Bueno, **le quitamos** […]"
+
+El interno va de una sucursal a otra dentro de Honduras y no pasa por Miami
+nunca (`A7-07`). Con el paréntesis quemado en el HTML, el papel del interno
+mentía. Un solo arreglo cierra los dos pedidos: **el rótulo no nombra ciudades**,
+y entonces sirve igual para los dos manifiestos.
+
+#### C23-07 · El volumen, en pies cúbicos — ✅ **ARREGLADO**
+
+> "De bultos, dos; peso, tal. Volumen… volumen tal. **Y faltaría pies cúbicos
+>  también. Volumen en pies cúbicos.**"
+
+La columna y el total decían «Volumen» a secas, y ese número es la libra
+volumétrica (÷166), no el pie cúbico. Ahora la tabla lleva **las dos columnas
+rotuladas** —`VLBS` y `PIES³`— y el total, las dos líneas.
+
+**El total de pies³ es la suma de los pies³ de cada bulto**, no el pie cúbico del
+volumen total — un total que no suma lo que tiene encima es un papel que nadie
+firma.
+
+> ⚠️ **Corregido en `C25-05` (2026-09-06).** Acá decía que cada bulto salía
+> redondeado hacia arriba (regla B) y que por eso se sumaban ceils. Yusef vio
+> ese redondeo impreso —un `12` donde la cuenta daba `11.02`— y lo mandó a
+> exacto para el proveedor. Ahora la columna y el total van con dos decimales
+> y no hay dos cuentas que difieran.
+
+#### C23-08 · «Es prioridad», más grande — ✅ **ARREGLADO**
+
+> "Impreso… prioridad. Esta es prioridad, **también un poquito más grande**."
+
+Es la tercera vez que pide lo mismo sobre este papel —`C21-09` ya venía de
+*"esto está muy pequeño, ni lo vemos"*—. La píldora sube de 11 a 15 px, en
+negrita y con más aire.
+
+#### C23-09 · «Expedido por» no salía impreso — ✅ **ARREGLADO**
+
+El campo existe desde el principio: está en la tabla, en el formulario y en la
+ficha del manifiesto. **No estaba en el papel**, que es donde Yusef lo fue a
+buscar. Ahora se imprime en el encabezado, junto a «Enviado» e «Impreso».
+
+Qué va escrito adentro era `RP-59` y ya está resuelto — ver abajo.
+
+---
+
+### Empacar
+
+#### C23-10 · Despachar sin escanear — ✅ **IMPLEMENTADO**
+
+El pedido más grande de la llamada. Sale de la temporada alta:
+
+> "Vienen ellos y preparan todas estas cajas, **no les da chance de escanear** y
+>  le empacan al puro […] meten todo."
+> "Yo estoy empacando. **No lo voy a escanear.** Solo voy a empacar y lo voy a
+>  enviar, porque **no hay chance**."
+
+Y la regla, que la dictó él completa:
+
+> "**Todos los paquetes que tienen el estatus** [recibido en Miami], **que bajo
+>  el tipo de servicio** […] que ese fue el que seleccionó para este
+>  [manifiesto], automáticamente […] **se va a enviar sin escanear**."
+> "Y en el manifiesto, **automáticamente los halás**."
+
+Y el nombre del botón, que se negoció en el momento:
+
+> **Jorge:** "Despachar sin escanear. Es que me queda bien largo, va a quedar un
+>  botón bien gigante ahí."
+> **Yusef:** "**Sin escanear**, sí — porque tienen que saber ellos qué son los
+>  que hicieron sin escanear." · "O sea, aquí está empacar **escaneando**. Y
+>  aquí sería **sin escanear**."
+> **Jorge:** "Le voy a poner **empacar como grupo**, y luego **sin escanear** y
+>  **con escanear**."
+
+O sea: el botón «Empacar» de hoy pasa a decir **«Empacar escaneando»** y al lado
+va **«Empacar sin escanear»**, los dos agrupados.
+
+**Cómo quedó.** El camino sin escaneo ya existía —`add_paquete`, un paquete a la
+vez— y `FinalizarManifiesto` solo mueve *"los paquetes que ya están en el
+manifiesto"*, así que lo que faltaba era exactamente el tirón masivo. Vive en
+`EmpacarSinEscanear`, y el botón va **al lado** del de la pistola, con el
+conteo puesto: «Empacar sin escanear (23)».
+
+**El botón aparece sin una sola caja, y ése es el punto entero.** El camino sin
+escaneo es el que Yusef se quedó *"porque a veces no da tiempo"*: ahí no hay
+casas ni pistola. Adentro del `cajas.any?` que gobierna al otro botón, solo
+habría aparecido cuando ya no hace falta.
+
+Y **los paquetes entran con `update!` uno por uno**, no con `update_all`: es la
+lección que dejó escrita `FinalizarManifiesto`. Acá el estado no cambia, pero el
+`manifiesto_id` sí, y «¿quién metió esto?» es exactamente la pregunta que se va
+a hacer sobre un tirón masivo.
+
+Dos decisiones no estaban en el audio:
+
+1. **¿En qué estado quedan?** Yusef dice *"ya todo fue empacado"*, pero
+   `empacado` hoy **solo lo escribe el camino con escaneo** —y está documentado
+   que nada puede exigirlo, porque el paquete sin escanear no tiene caja
+   (`project_manifiesto_dos_caminos`). Marcarlos `empacado` sin caja rompe esa
+   invariante; dejarlos en `recibido_miami` contradice lo que él dijo.
+2. **¿De qué sucursal?** Dijo «todos los del tipo de servicio». En el manifiesto
+   **interno** eso barrería paquetes de otra sucursal, que no van en ese camión.
+
+**Jorge decidió las dos, 2026-09-02:** los paquetes **se quedan en
+`recibido_miami`** —solo se atan al manifiesto, que es lo que ya hace
+`add_paquete` uno por uno— y el tirón **filtra por la sucursal de origen del
+manifiesto**. Lo primero respeta la invariante de que `empacado` implica caja;
+Yusef estaba describiendo el acto, no el estatus. Lo segundo no cambia nada en
+Miami, porque hoy todo sale de ahí, pero sin él un manifiesto se llevaría carga
+que está físicamente en otra sucursal.
+
+**Y por eso el botón es solo del oficial.** El estado que Yusef nombró
+—`recibido_miami`— **no existe en el interno**: su carga ya llegó a Honduras y
+está en `disponible_entrega`, en la sucursal donde la recibieron. Cuál es la
+regla equivalente ahí él no la dijo, y derivarla sería inventarle un criterio a
+un módulo que mueve el 20% de la carga. Queda abierto, y la propuesta cuando se
+pregunte sería la misma forma: `disponible_entrega` + tipo del manifiesto +
+`sucursal_actual` igual al origen.
+
+**Cuando no hay ninguno se dice por qué**, nombrando los tres filtros. Un
+redirect callado dejaría al operario mirando la misma pantalla sin saber si el
+botón hizo algo, si falló, o si de verdad no había carga.
+
+**Y ahora se ve cuál entró sin pistola.** *"Tienen que saber ellos qué son los
+que hicieron sin escanear"* — la tabla de paquetes del manifiesto tenía columnas
+de tracking, cliente, peso y estado, y ninguna decía en qué caja iba cada uno.
+Ahora la primera dice `A1` o **«sin escanear»**, que es lo que separa los dos
+caminos a la vista.
+
+**De paso:** esa tabla estaba escrita **dos veces** —el `show` tenía su copia
+inline y `_paquetes_table` existía solo para el turbo_stream de
+`add_paquete`—, palabra por palabra. La columna nueva entró al partial y la
+primera carga de la pantalla seguía mostrando la vieja: la columna aparecía
+recién después de agregar un paquete y desaparecía al recargar. Es la
+duplicación de siempre, esta vez entre una pantalla y su propio partial. Ahora
+hay una sola tabla.
+
+#### C23-11 · Varias cajas abiertas a la vez — ✅ **IMPLEMENTADO**
+
+> "Pero aquí pues **debería de existir la múltiple** […] o sea, poder
+>  **seleccionar las tres cajas** y que **en las tres va todo**."
+> "Es que **ellos arman tres cajas y empiezan a meter los paquetes en cualquier
+>  caja**, no es que quiera[n una]."
+> "Ellos crean tres guías y marcan uno, dos y tres — tres etiquetas de bultos."
+> **Jorge:** "Entonces aquí la validación sería **mínimo uno** y…" ·
+> **Yusef:** "**máximo todas**." · **Jorge:** "Y para desempacarlo, **lo
+>  volvemos a marcar**." · **Yusef:** "Claro." · "Ahí está **excelente
+>  solución**."
+
+Hoy un paquete tiene **una** caja (`paquete.caja_manifiesto_id`), y la pantalla
+de empaque te hace elegir una y escanear adentro de ella. Lo que pide toca el
+modelo de datos, y el audio admite dos lecturas que llevan a cosas distintas:
+
+- **(a)** el paquete queda en **N cajas a la vez** — sería una tabla de unión, y
+  habría que decidir qué contesta «¿en qué caja está?» todo lo que hoy pregunta;
+- **(b)** se dejan **N cajas abiertas** y cada escaneo sigue cayendo en una sola,
+  sin tener que ir a cambiar de caja entre paquete y paquete.
+
+**Es (b), y lo dice el propio audio.** Jorge le preguntó exactamente por (a) y
+Yusef lo corrigió en el acto:
+
+> **Jorge:** "Aquí ya te entendí, porque **un tracking puede tener tres cajas**."
+> **Yusef:** "**No**, porque… esperame. Es que ellos arman tres cajas y empiezan
+>  a meter los paquetes **en cualquier caja**."
+> **Jorge:** "Ah, **puede seleccionar tres**, va."
+
+«En cualquier caja» es una, y «mínimo uno, máximo todas» es la validación de
+**cuántas cajas se dejan abiertas**, no de en cuántas entra un paquete.
+Confirmado por Jorge el 2026-09-02, contra la primera lectura, que era la
+equivocada: (a) además habría dejado sin respuesta qué imprime
+`tipos_envio_adentro` en la 4×6 de cada caja, qué significa recibir en Honduras
+un paquete que está en tres, y qué pasa al escanear una de las tres — tres
+preguntas que Yusef nunca contestó porque no las estaba pidiendo.
+
+**Entonces el modelo no se toca: lo que cambia es la pantalla.** Un paquete
+sigue teniendo una caja.
+
+**Qué costaba antes.** Elegir caja era un `link_to` que **recargaba la
+pantalla**, y con eso el campo de escaneo perdía el foco. Con la pistola en una
+mano, cada cambio de caja costaba volver a hacer clic en el campo — que es
+exactamente lo que él describió: *"tenés que ir a buscar, o sea, hay que hacerlo
+bien el proceso"*.
+
+**Cómo quedó.** Cada caja es una tarjeta con dos gestos: **tocarla** manda el
+escaneo ahí, **tocar el candado** la abre o la cierra del set. Nada recarga y el
+foco vuelve al campo siempre. La tabla de abajo muestra lo que hay en **todas
+las abiertas**, con una columna que dice en cuál cayó cada paquete: son las que
+se están llenando al mismo tiempo, y verlas juntas es el punto.
+
+Por defecto están **todas abiertas** —que es «máximo todas»— y el set vive en la
+**sesión del servidor**, como el tipo de envío de `/etiquetar`: es el estado de
+un turno de trabajo, no un dato del manifiesto. Recargar no lo pierde y no le
+pisa el set a quien empaca en la otra mesa.
+
+**Lo que costó no recargar.** Todo lo que el servidor pinta una sola vez se
+queda viejo: el candado seguía dibujado abierto sobre una caja cerrada, el
+título seguía enumerando las cinco, y las filas de una caja cerrada se quedaban
+en la tabla. Ninguna de las tres la agarra un test de Rails —el HTML sale bien,
+lo que envejece es la pantalla ya cargada—; se vieron **mirando la pantalla en
+Chrome** y ahora las tres las repinta el mismo `_pintar`. Los dos candados viven
+en el DOM y se alterna cuál se ve, para no pegar SVG a mano desde JavaScript.
+
+---
+
+#### C23-12 · La tecla del botón de imprimir — ✅ **ARREGLADO**
+
+No sale del audio: lo vio Jorge al día siguiente mirando la pantalla.
+
+> "Aquí hay un botón de imprimir que no tiene F."
+
+Es «Agregar e imprimir», que `C23-05` había dejado sin tecla a propósito porque
+F9 estaba tomada. Buscando cuál darle apareció que **el problema era más hondo:
+la F5 que «Agregar caja» ya tenía tampoco disparaba.**
+
+**Por qué.** Elegir un tamaño manda el cursor a **Peso** —*"te ponen solo el
+cursor a peso, porque es lo que le vas a meter a ingresar"*, `C21-04`— y ahí el
+operario teclea. Y `keyboard_shortcuts_controller` **ignora toda tecla que no
+sea F2 cuando el foco está en un input**. O sea que el rótulo «(F5)» prometía
+una tecla justo en el único momento en que no funcionaba.
+
+**Y era peor que decorativa.** F5 es «refrescar» del navegador. El handler
+global sale **antes** de llamar a `preventDefault` cuando detecta que estás
+escribiendo, así que el operario tecleaba el peso, apretaba la tecla que el
+botón le prometía, y la pantalla **se recargaba borrándole el peso**.
+Reproducido en Chrome con una tecla de verdad, no simulada: el marcador puesto
+en `window` desapareció y el campo quedó vacío.
+
+**Cómo quedó.** Las teclas de esta pantalla las escucha ahora
+`caja_manifiesto_controller`, que es el patrón que `/etiquetar` ya usaba por
+exactamente la misma razón. Escucha en `document` —para que anden también con
+el foco afuera, que es como andaban antes— y llama a `preventDefault` siempre,
+que es lo que le saca el refresh a F5.
+
+Los botones llevan **`shortcut_label_only`**: muestran «(F5)» y «(F9)» pero
+**no** emiten `data-shortcut`. Si lo emitieran, el controller global les haría
+click además de esto y **se guardarían dos cajas** — el doble disparo que ya
+había pasado en `/entrega_personal` con F2 y F9.
+
+**Y «Finalizar e Imprimir» se mudó de F9 a F8** (Jorge, 2026-09-02). F9 es la
+que el sistema viejo usa para «Agregar/Imprimir» y es la que su equipo tiene en
+el dedo; agregar cajas pasa decenas de veces por manifiesto y finalizar una
+sola, y encima detrás de un confirm. La tecla se la queda la frecuente. F8 es
+«Excel» por convención del sistema, pero en esta pantalla no hay Excel: era la
+única libre sin conflicto real.
+
+El mapa de la ficha queda así:
+
+| Tecla | Qué hace | Quién la escucha |
+|---|---|---|
+| `F2` | Volver | el controller global |
+| `F4` | Imprimir manifiesto | el controller global |
+| `F5` | Agregar caja | **el formulario de casas** |
+| `F6` | Editar | el controller global |
+| `F8` | Finalizar e Imprimir | el controller global |
+| `F9` | **Agregar e imprimir** | **el formulario de casas** |
+| `F10` | Solo Finalizar | el controller global |
+
+**El test que lo cuida es de sistema, y no podía ser otro.** El HTML sale igual
+tenga o no la tecla efecto; lo que decide es qué hace el navegador con el
+`keydown`. `teclas_de_las_casas_test` aprieta F5 y F9 **con el cursor en Peso**
+y afirma que la caja entra. Se verificó rompiéndolo a propósito —sacándole el
+listener al formulario—: tres de sus cuatro tests se ponen rojos.
+
+---
+
+#### C23-13 · Las teclas dicen lo mismo en todas las pantallas — ✅ **ARREGLADO**
+
+> **Jorge:** *"¿Los F los podemos dejar iguales en las pantallas?"*
+
+Para contestarlo hacía falta el mapa, y el mapa salió **casi limpio**: `F2`
+volver (16 usos), `F6` editar, `F7` nuevo (20), `F10` guardar. Lo que estaba mal
+era poco y concreto.
+
+| Tecla | Qué quiere decir | Estaba |
+|---|---|---|
+| `F2` | Volver / Cancelar / Limpiar | ✅ |
+| `F4` | Imprimir el documento de la pantalla | ✅ |
+| `F5` | Agregar una línea | ✅ (la del sistema viejo) |
+| `F6` | Editar | ✅ |
+| `F7` | Nuevo / Crear | ✅ |
+| `F8` | Excel | ❌ **también «Finalizar e Imprimir»** |
+| `F9` | Imprimir — el PDF y el «hacer algo e imprimir» | ✅ |
+| `F10` | Guardar / Confirmar | ❌ **`/pre_alertas` guardaba con F8** |
+
+**Dos arreglos.**
+
+1. **`/pre_alertas/edit` usaba F6 para agregar y F8 para guardar** — y en las
+   otras veinte pantallas F6 es editar y F8 es Excel. Tres teclas aprendidas ahí
+   que hacen otra cosa en el resto de la app. Pasan a **F5** y **F10**. Esto es
+   viejo, de antes del módulo de manifiestos.
+
+2. **«Finalizar e Imprimir» estaba en F8**, y eso lo puse yo cuatro días antes
+   en `C23-12`. Ahora va **sin tecla**.
+
+**Por qué sin tecla, y no en otra.** El candidato era `F11`, que en esta app ya
+quiere decir finalizar —la «Finalizar sesión» de `/etiquetar`, que eligió Yusef—.
+Al probarla en Chrome **el `keydown` de F11 no llegó a la página**; y para saber
+si era la tecla o el instrumento se probó `F7`, sin atar a nada, y **tampoco
+llegó**. O sea que el experimento no decide. Poner una tecla sin poder
+comprobarla es fabricar el bug que `C23-12` acababa de arreglar: un rótulo que
+promete una tecla muerta. Y sin tecla no se pierde casi nada — finalizar pasa
+**una vez por manifiesto** contra las decenas que se agrega una caja, y la
+pantalla vieja tampoco le da tecla a esos dos botones.
+
+**El lint que lo traba** es `test/lint/teclas_por_familia_test.rb`, y cuenta la
+tecla **venga de donde venga**: de `shortcut:` o escrita a mano adentro del
+texto. Esa segunda forma es cómo se escondían las de `/pre_alertas` — decían
+«Guardar (F8)» con el «(F8)» dentro del bloque, invisibles para cualquier
+búsqueda de `shortcut:`.
+
+> ⚠️ **Y un hallazgo del lint que no se tocó.** `pre_alerta_editor_controller`
+> ata **F9 a «finalizar»** —F9 es imprimir en toda la app— pero **esa acción no
+> tiene botón**: no se ofrece en ningún lado de la pantalla. Nadie puede saber
+> que la tecla existe. Se dejó como estaba porque moverla es tocar a ciegas algo
+> invisible; cuando esa pantalla se vuelva a tocar, o le sale un botón o la
+> tecla se va.
+
+> 📝 **Cómo se armó el mapa, por si hay que rehacerlo.** La primera extracción
+> usó un regex perezoso sobre `ButtonComponent.new(...)` y **cruzaba de un botón
+> al siguiente**: reportó que `guias_aduana/edit` tenía «Agregar guía» en F2 —un
+> hallazgo entero que no existía, la F2 era del «Volver» cien líneas arriba—. El
+> lint cuenta paréntesis balanceados en vez de confiar en `.*?`.
+
+---
+
+#### C23-14 · El interno también empaca sin escanear — y por qué no se podía — ✅ **IMPLEMENTADO**
+
+`C23-10` dejó el interno afuera diciendo que faltaba una regla de Yusef.
+Buscándola apareció que **lo que faltaba era un dato nuestro.**
+
+`paquetes.sucursal_actual` dice, por su propia declaración, la *"ubicación
+física actual"*. La escribía **un solo lugar en todo el sistema**:
+`RecibirManifiesto#recibir_paquete!`, o sea la recepción del manifiesto
+**interno**.
+
+O sea que la carga que entra de Miami —por donde entra **toda** la que llega al
+país— pasaba a `en_aduana` **sin dejar dicho en qué sucursal aterrizó**. La
+columna quedaba en `nil` justo para el 100% del inventario, y solo se llenaba si
+esa carga después viajaba en un interno. Circular: **para saber dónde estaba algo
+había que haberlo movido antes.**
+
+Por eso no se podía preguntar *"qué hay parado en esta sucursal"*, que es
+exactamente lo que el tirón del interno necesita.
+
+**El arreglo va en `mover_a_aduana`**, que es por donde pasan los dos caminos
+del oficial —el de escaneo y el de sin escaneo—, y el valor ya estaba en la
+mano: `sucursal_entrega` es a dónde llegó el camión. Sin sucursal de entrega no
+se inventa ninguna: es mejor no saber dónde está algo que decir que está donde
+no está. Una migración de datos rellena lo ya recibido, derivándolo del mismo
+lugar.
+
+**Con eso el interno es la misma regla, con las dos piezas que le tocan:**
+
+| | oficial | interno |
+|---|---|---|
+| estado | `recibido_miami` | `disponible_entrega` |
+| dónde está | recibido en la sucursal de origen | `sucursal_actual` = origen |
+| tipo de envío | el del manifiesto | el del manifiesto |
+| manifiesto | ninguno | ninguno |
+
+**`disponible_entrega` y no `en_aduana`**, y no es arbitrario: es el estado con
+el que la carga queda **lista en una sucursal**, y es el que ya usan los otros
+dos lugares que hablan del interno — `RecibirManifiesto#finalizar_interno!`
+cuenta ésos y `NotificarLlegadaASucursal` avisa por ésos. Lo que sigue en aduana
+no se ha trabajado; mandarlo a otra sucursal sería moverlo antes de saber qué es.
+
+**Y el aviso de «no hay ninguno» dejó de mentir.** Nombraba «recibido en Miami»
+escrito a mano, así que en el interno iba a decir que buscaba un estado que ahí
+no existe. Ahora sale del servicio y del mismo mapa de rótulos que pinta las
+insignias en toda la app.
+
+---
+
+### Lo que quedó abierto
+
+| # | Qué | Estado |
+|---|---|---|
+| `C23-10` | Empacar sin escanear | ✅ **Implementado**, interno incluido (`C23-14`) |
+| `C23-11` | Varias cajas abiertas a la vez | ✅ **Implementado** |
+| `RP-59` | «Expedido por»: ¿el **nombre** de quien lo creó, o sus **iniciales**? | ✅ **Las iniciales** |
+| `C23-12` | La tecla de «Agregar e imprimir» — y la F5 que no disparaba | ✅ **Arreglado** |
+| `RP-60` | ¿El **desglose de paquetes** va en el manifiesto impreso? | ~~✅ **Sí** — Jorge, 2026-09-06~~ ▶ **No — Yusef, 2026-10-03** (`C28-01`): tachó la tabla en la hoja impresa; el listado va aparte, con Excel (`C28-02`) |
+| `RP-61` | ¿El **No. Doc** es el mismo para todas las cajas de un manifiesto? | ✅ **Respondida con datos del sistema viejo** — es `"DM" + id` de la caja, generado; se quitó el campo |
+| `C23-13` | Las teclas dicen lo mismo en todas las pantallas | ✅ **Arreglado** |
+| `C23-14` | El interno empaca sin escanear — y `sucursal_actual` ya se sella al recibir | ✅ **Implementado** |
+
+**`RP-61` · Cómo se respondió sin esperar a Yusef.** Jorge pidió *"lo que tenga
+más sentido"*, y lo que tenía más sentido era mirar el dato antes de opinar. El
+sistema viejo contesta JSON por `GetManifiesto`, y en 186 manifiestos con cajas
+el «No. Doc» fue siempre `"DM" + DetallesManifiestoID`: un número que el
+servidor fabrica por caja, nunca tecleado. La pregunta *"¿es el mismo para
+todas?"* estaba mal hecha: no es un dato, es un identificador. Detalle y
+decisión en la nota de `C21-04`.
+
+**`RP-59` · Por qué era una pregunta.** Yusef preguntó él mismo qué va en ese
+campo —*"no sé si ponerle **las iniciales, la firma, el nombre**"*, *"solamente
+quien lo hizo"*— y la respuesta la dio con una palabra que el audio no deja
+resolver. Suena **«sobre el nombre»**, cuatro veces, que no es español. Las dos
+reconstrucciones posibles daban cosas distintas:
+
+- **«sólo el nombre»** → el nombre de quien creó el manifiesto;
+- **«sobrenombre»** → las **iniciales**, que en este sistema las define un admin
+  (`project_iniciales_usuario_admin`) — y esa lectura es la única que hace que la
+  frase siguiente signifique algo: **Jorge:** *"ok, las iniciales"* · **Yusef:**
+  *"sí, nomás que **nosotros las creamos**"*.
+
+**Jorge la cerró el 2026-09-02: las iniciales.** El campo dejó de ser texto
+libre —un campo abierto para «quien lo hizo» es un campo donde se puede escribir
+a otro— y ahora lo **estampa el sistema al crear** el manifiesto, con
+`User#iniciales_display`. Se estampa y no se recalcula: es un papel que va
+firmado, y si mañana el admin le cambia las iniciales a alguien, el manifiesto
+de la semana pasada tiene que seguir diciendo lo que decía cuando se emitió.
+
+**Y al conectarlo apareció que las iniciales se calculaban en dos lugares.**
+`User#iniciales_display` respetaba la columna del admin; `wr_user_initials` —la
+copia que vive en el helper del Warehouse Receipt— **la ignoraba** y derivaba
+siempre del nombre, además de escribirla con puntos (`D.M.` contra `DM`). Las
+dos consecuencias:
+
+1. En el WR, el papel que ve el cliente, **los dos Juanes salían iguales** — que
+   es exactamente lo que la columna venía a resolver: Yusef la pidió *"porque
+   hay nombres repetidos como Juan"* (`PR-D1.b`).
+2. En el manifiesto impreso, «Expedido por» e «Imprimió» son la misma cosa dicha
+   dos veces y **salían escritas distinto en el mismo papel**.
+
+`wr_user_initials` ahora delega en el modelo. **Esto cambia el WR**: donde decía
+`D.M.` ahora dice `DM`. El punto no lo pidió nadie —era un detalle de la copia—
+y el formato que gana es el que el admin teclea en el formulario de usuarios
+(*"Ej: YG, JP, YS"*), que es el que espera ver impreso.
+
+---
+
+### Notas de la llamada que no son tarea
+
+- **El cambio de número de manifiesto ya se le contó.** Jorge: *"algo que sí me
+  tocó hacer es el cambio del formato del manifiesto […] le agregué tres
+  caracteres más"* · Yusef: *"**No, está bien**"*. Es `RP-46`, y el pendiente de
+  contárselo queda cerrado.
+- **La 4×6 está confirmada** como el tamaño de la etiqueta del bulto: *"este
+  tamaño está bien, porque creo que no hablamos de tamaño para esta" · "4×6" ·
+  "sí, está correcto, 4×6"*.
+- **Cuántas líneas trae un manifiesto.** *"Entre 9 líneas […] ahorita es
+  temporada baja […] pega 11, 12, y así va"*, y *"hace un año y media atrás eran
+  25"*. De ahí sale el único comentario sobre el escalado del impreso: *"**12**
+  sería más bonito que quedara"* antes de saltar de página.
+- **Prueba de carga.** Jorge ofreció medir hasta dónde aguanta el impreso —*"era
+  una de las pruebas que, si querés, las podemos hacer"*— y Yusef aceptó: *"sí,
+  lo quiero"*. Sin fecha. Ojo con
+  [[project_pruebas_de_carga_dejan_huerfanos]] cuando se haga.
+- ~~**El botón de imprimir los paquetes existe.**~~ ⚠️ **Esta nota estaba mal, y
+  la auditoría del 2026-09-05 la corrige.** Yusef estaba hablando del
+  **desglose**: *"acá abajo lleva a mostrar paquetes, esto activa todo el
+  packing… está bien hecho y está mal hecho: bien porque lo tiene, mal porque
+  **no tenemos cómo exportarlo**"*. Jorge lo mandó a «Imprimir manifiesto»
+  —*"ahí está arriba, la parte de la impresora está imprimir"*— y él contestó
+  *"ya vi, ya lo vi"*… pero **ese documento no lleva la lista de paquetes**:
+  lleva los bultos, no lo que va adentro.
+  La prueba está en el código: `ManifiestosController#documento` carga
+  `@paquetes` y **la vista nunca lo usa**, que es la huella de una sección que
+  se cayó. O sea que los dos quedaron conformes con un papel que no contesta lo
+  que él preguntó. **No se agregó acá** porque cambia un documento que va con la
+  carga y se firma: hay que preguntarle si el desglose va en el mismo papel o
+  aparte — ver `RP-60`.
+- **La pantalla se le ve chica.** *"Todo lo que se le gusta es más grandecito,
+  porque lo veo pequeño; porque la pantalla de ella es más grandecita que ésta,
+  pero es una laptop."* Sin pedido concreto, y `PR-U4`/`PR-U5` ya subieron los
+  controles del manifiesto y del empaque a 44 px. Queda anotado por si vuelve.
+- **Cómo empacan, para cuando toque el módulo:** *"encaja normal y la caja doble
+  […] la mini-D […] y la mini-D doble es cuando llevan dos de esas"*, y cuando
+  algo no cabe, *"metemos una caja tan por fuera"* — un kayak fue el ejemplo.
+
+---
+
+### Lo que se miró de paso y no se tocó
+
+Buscando dónde vivía cada pedido aparecieron dos cosas que **nadie reportó** y
+que no entran en este PR:
+
+| Qué | Por qué se deja anotado |
+|---|---|
+| `ManifiestosController#documento` carga `@paquetes` y **la vista nunca lo usa** | O es código muerto de `PR-M9`, o quedó afuera una sección del impreso. Yusef buscó justamente *"mostrar paquetes"* en el papel, así que puede ser lo segundo — pero pedirlo no lo pidió |
+| El manifiesto **interno** imprime `Consignatario —`, `No. de guía —` y `Recibido en Honduras —` | Son campos que el interno no tiene por diseño (`A7-07`). `C23-06` le saca el «(Miami)» que era lo que él señaló; los guiones vacíos siguen ahí |
+
+---
+
+## Conversación 24 (2026-09-05) — cobrar distinto **un paquete**, no un cliente
+
+Audio corto, **2 minutos 28 segundos**, transcrito con `whisper small`. Arranca a
+mitad de otra conversación y Yusef corta para cambiar de tema — y aclara de
+entrada que **no es del manifiesto**:
+
+> **Jorge:** "¿Te manifiestas todo?" · **Yusef:** "**No, no, es en paquetes**,
+>  fíjate, **para cobro**."
+> "Entonces te lo quiero platicar ahorita para que **lo tengamos previsto en
+>  prefactura**."
+
+> ⚠️ **Sobre el transcript.** Dos minutos, pero con la sordina de siempre y los
+> dos hablando encima. Se cita lo limpio y **lo dudoso se marca**. Muestras de lo
+> que no se usa: *"es lo asistuyo"*, *"pesaba más de lo que me diga ponerlo"*,
+> *"quiero dividirlos por señal"*. Y dos que sí se entienden con el contexto:
+> **«kiloguas» son kilowatts**, y los pesos de los generadores salen enredados
+> —*"de pesaditos de 800 libras, perdón 500 libras, es que eran como 800, 900
+> porque eran 2, estos eran 400 libras"*—: son **dos** generadores de ~400 lb
+> cada uno.
+
+---
+
+### C24-01 · Una excepción de cobro **por paquete** — ✅ **IMPLEMENTADO**
+
+El caso concreto, que es lo más claro de la llamada:
+
+> "Tengo un cliente que me ha movido unos **generadores**, de esos de 12
+>  kilo[watts], 10 kilo[watts]. […] Estos eran **400 libras**. Pero **el volumen
+>  de esos es 150 libras**. Es lo que yo […] voy a cobrar."
+
+O sea: el paquete pesa 400 lb reales y 150 lb volumétricas, y quiere cobrar
+**150** — el **menor** de los dos. Que es exactamente al revés de la regla
+normal, donde manda el mayor.
+
+Y la parte que define el alcance, dicha por él sin que se la preguntaran:
+
+> "El cliente **no es que toda la carga** ya se la cobro por peso, **sino que
+>  exclusivamente esa**. Se la cobro —perdón— **por volumen**."
+> "Entonces ahorita tengo el caso de **otro cliente igual**."
+
+**Esto descarta el camino que ya existe.** `PR-C6.41` puso «cobrar solo por
+volumen» a nivel de **cliente × tipo de envío** (`ClienteCobroVolumetrico`), y
+esa es justo la forma que Yusef está diciendo que no sirve: prender el flag del
+cliente le cambiaría el cobro a **toda** su carga, no a los generadores.
+
+**Dónde quiere marcarlo:**
+
+> "Lo que yo quiero es que podamos **crearle como excepciones… al paquete**. Al
+>  paquete registrado, al paquete que va a venir, al paquete…"
+> **Jorge:** "O sea, ¿en **prealerta** o en el **paquete**?" · **Yusef:**
+>  "Claro."
+
+Los dos: el que ya está en bodega y el que viene anunciado.
+
+**Y con permiso, que lo dijo sin que se lo preguntaran:**
+
+> "Esto va a tener un control donde **no lo puede hacer cualquiera**. No lo van a
+>  [manejar] a cualquier servicio al cliente, **nada que ver** con esto. **Tiene
+>  que ser alguien de supervisor o para arriba.**"
+
+---
+
+**Cómo quedó.** `MarcarCobroExcepcion` marca la excepción en el paquete con PIN
+de supervisor, y `paquetes.cobro_excepcion` la guarda. El peso a cobrar se
+recalcula solo —`calculate_peso_cobrar` es `before_save`— y **la pre-factura
+hereda las 150 sin que se toque una línea de pre-factura**, que es exactamente
+el *"previsto en prefactura"* que él pidió.
+
+**La forma sale de juntar los dos patrones que el repo ya tenía**, porque hacían
+falta las dos mitades: de `QuitarCambioServicio` —el análogo más cercano, que
+también es un flag en un paquete— salen los errores tipados y el guard de
+`ya_facturado?`; de `Autorizacion` (`Fase 13.d`) sale **el registro**, que es
+todo el punto del control que Yusef pidió. El PIN lo valida `Autorizacion` con
+sus propias reglas: duplicarlo sería tener dos formas de decir si un PIN sirve.
+
+**Quiénes:** los cuatro que ya llevan PIN (`User::ROLES_AUTORIZANTES`),
+derivados y no copiados. **Miami queda afuera a propósito** — y ahí está la
+diferencia con `BajarCajasConPin`, que sí lo suma: allá el error nace en Miami,
+acá la excepción es una decisión de cobro.
+
+**Una sola puerta.** `cobro_excepcion` **no** está en `paquete_params`, con un
+test que lo afirma: si se pudiera escribir por `PATCH /paquetes/:id`, todo el
+control se salta y el registro deja de servir como prueba. Es la misma regla que
+`PR-13.d` le puso al precio de una línea.
+
+**Y se ve**: la ficha del paquete dice «cobro por volumen · autorizó X» al lado
+del peso, porque si no el número sale más bajo de lo que cualquiera espera y no
+hay forma de saber por qué.
+
+---
+
+### C24-02 · «Tarifa especial» y «por libras» — ✅ **CERRADA, y `RP-62` estaba de más**
+
+En la misma respiración apareció una segunda cosa:
+
+> "Y este mismo, solo por amarrado o por **tarifa especial** o algo por el
+>  estilo. […] O sea que este se lo vamos a cobrar en **una tarifa especial**
+>  como tal. Pero **él lo puede meter**, el que… **solo en ese paquete**."
+
+Y al cerrar enumeró **tres** clases de excepción, no una:
+
+> "Pero son cobros especiales, ¿a qué me refiero? **Tanto por libras, tanto por
+>  volumen o tanto**…" *(la frase queda a medias)*
+
+**Y acá se abrió una `RP-62` que no hacía falta.** Se leyó como si «por libras» y
+«tarifa especial» fueran dos funciones nuevas sin definir. **No lo son**, y basta
+mirar los audios anteriores. Jorge lo cortó el 2026-09-06:
+
+> "Él quiere poder cobrar **por libra o volumen volumétrico de vez en cuando,
+>  dependiendo el caso**. Es que la tarifa son de **reuniones anteriores** que se
+>  supone que ya funciona."
+
+| Lo que se leyó como pregunta nueva | Lo que en realidad es |
+|---|---|
+| «tanto por libras, tanto por volumen» | **Cuál de los dos pesos se cobra**, caso por caso. Son las **dos mitades de lo mismo**, no dos funciones |
+| «tarifa especial» | **Ya existe**: `PreciosEspecialesDelCliente`, el megacuadro de la ficha del cliente. Lo pidió él en la **Conversación 7** — *"ese precio especial para un cliente debería estar en el cliente"* |
+
+Y el cobro por volumen tampoco era nuevo: **`RP-04b`** ya lo había cerrado, de su
+propia hoja —*"hay clientes que solo se les cobra volumen en ciertos
+servicios"*—, implementado en `PR-C6.41` por cliente × servicio.
+
+**Entonces lo único nuevo de `C24` es el alcance**: lo que existía por cliente,
+él lo quiere poder poner **en un paquete suelto**. Eso es `C24-01`, y las dos
+mitades quedaron construidas:
+
+| Excepción | Qué hace |
+|---|---|
+| `solo_volumetrico` | Cobra el volumétrico **aunque sea el menor** — el caso de los generadores |
+| `solo_peso` | Cobra el peso real **aunque gane el volumétrico** — el espejo |
+
+**La excepción del paquete le gana al trato del cliente**, que es lo que Yusef
+pidió con *"exclusivamente esa"*: sin esa precedencia, un cliente con el flag de
+`PR-C6.41` no podría tener nunca un paquete cobrado por libra.
+
+**Lección, más ancha que este caso.** Antes de abrir una `RP` hay que buscar el
+término en las conversaciones anteriores. «Tarifa especial» y «cobro por volumen»
+tenían nombre propio en este sistema desde hacía meses, y la `RP-62` mandaba a
+preguntarle al cliente algo que él ya había contestado dos veces.
+
+---
+
+### Lo que Yusef dijo del *cuándo*, y lo que decidió Jorge
+
+Él mismo lo puso después de que el sistema funcione:
+
+> "Ahí van a haber varias excepciones, en varias cositas así que se le ponen.
+>  Pero **yo pensaba eso más después** de haber hecho que el sistema funcione."
+
+Jorge contestó que no era caro:
+
+> "Si como ya lo tenés… ya dije, **esto no es tan complicado**."
+
+Y tiene razón por una razón concreta: **la aritmética ya existe**.
+`VolumetricoCalculator.entre_peso_y_vlbs` tiene el parámetro `solo_volumetrico:`
+desde `PR-C6.41` y **devuelve el volumétrico aunque sea el menor**, que es
+literalmente lo que Yusef describió. Lo que cambia no es la cuenta: es **de
+dónde sale el flag** — hoy del cliente, y él lo quiere del paquete.
+
+**Se construye** (decisión de Jorge, 2026-09-05), y va como `Fase 13.f`: es la
+misma familia que el precio bloqueado con PIN de supervisor, no una fase nueva.
+
+---
+
+### Por qué no alcanza con lo que ya hay en pre-factura
+
+`Fase 13.d` ya deja que un supervisor cambie el **peso** de una línea de
+pre-factura con su PIN (`Autorizacion`, acción `peso`). En teoría el caso de los
+generadores se resuelve ahí.
+
+Lo que no resuelve es lo que Yusef pidió con esas palabras: *"que **lo tengamos
+previsto** en prefactura"*. Con el camino de hoy, el cajero arma la pre-factura,
+le sale 400 libras, y **tiene que ir a buscar a un supervisor al mostrador** —
+cada vez, para cada generador de ese cliente. Marcándolo en el paquete, la
+pre-factura ya nace con las 150.
+
+Es la misma diferencia entre corregir y prevenir, y él pidió lo segundo.
+
+---
+
+### Lo que ya está verificado del lado del código
+
+| Qué | Estado |
+|---|---|
+| La cuenta que Yusef quiere | ✅ `entre_peso_y_vlbs(solo_volumetrico: true)` devuelve el volumétrico aunque sea menor |
+| Que el flag llegue a la pre-factura | ✅ `calculate_peso_cobrar` es `before_save`, y `PreFactura.build_from_paquetes` lee `paquete.peso_cobrar` |
+| El circuito de autorización | ✅ `Autorizacion` guarda quién, qué, por qué y con PIN; su `documento` es **polimórfico** |
+| Quiénes son «supervisor o para arriba» | ✅ Se **deriva** de `User::ROLES_AUTORIZANTES`, como hace `BajarCajasConPin` |
+| La pantalla gemela | ⚠️ La pre-alerta se edita en **admin y en el portal del cliente**. La excepción no puede aparecer en el portal |
+
+---
+
+## Conversación 25 (2026-09-05) — la 4×6 impresa de verdad, la Dymo que corta nombres, y el pito que no se oye
+
+Reunión semanal, **34 minutos**, transcrita con `whisper small`. Más **la foto**
+que mandó Yusef por WhatsApp: la 4×6 del bulto de `PR-411` **impresa en Miami**,
+con sus anotaciones a mano encima. Es la primera vez que esa etiqueta sale de
+una impresora real, y la primera prueba de escaneo:
+
+> "Ya me mandó que escaneó. Sí, **el escaneo está bueno**, dice MIA."
+
+Yusef sobre la 4×6 en general: *"esto yo lo veo bastante bien"*. Lo que sigue
+son ajustes de tamaño y dos correcciones de dato, más pedidos en **otras dos
+pantallas** que salieron en la misma llamada.
+
+> ⚠️ **Sobre el transcript.** Los dos hablando encima, y whisper se pierde
+> seguido. Lo dudoso: *"rascar en mi fiesta"* (= manifiesto), *"el
+> telecopier"*, *"pit o de súper"* (= un pito más fuerte), *"hasta a mi leen
+> QR"*, y la frase *"ni mal este, poco más"* de c004, que no se sabe a qué
+> señala. **La foto es la fuente más precisa**: dice campo por campo qué
+> agrandar.
+
+---
+
+### La 4×6 del bulto
+
+#### C25-01 · `A1` un poco más grande — ✅ **ARREGLADO**
+
+En la foto, con flecha: *«← un poco + grande»*. De 58 a **64 pt** (se probó 66:
+dejaba la etiqueta sin aire, ver abajo).
+
+#### C25-02 · El tipo de envío del proveedor: ampliar al tamaño — ✅ **ARREGLADO**
+
+En la foto, sobre `AEREO EXPRESS`: *«← AMPLIAR al tamaño»*. Y en el audio:
+
+> "Lo único que podría ocupar es que **esto sea más grande, aprovechar el
+>  tamaño**. El tipo de envío. Porque **es lo importante**."
+> "Tiene que ser **justificado o ajustado**, no sé cuál es la palabra correcta,
+>  para que tal vez **llene hasta cierto punto y si se pasa que lo achique.
+>  Automáticamente**."
+> "La letra tiene que quedar que **la pueda leer a 3 metros**."
+
+De 17 a **28 pt, ajustado al ancho**: arranca en el máximo y baja de a punto
+hasta caber, con piso en 16. **No existía nada parecido en el repo** —nada medía
+`scrollWidth`— y lo piden las dos etiquetas en la misma llamada, así que va como
+**un solo partial** (`_etiqueta_ajustar_ancho`) que incluyen los dos layouts.
+Corre en `DOMContentLoaded`, antes del `window.print()` del autoprint: si
+corriera después, la impresora se llevaría el tamaño sin ajustar.
+
+#### C25-03 · El número de manifiesto, grande — ✅ **ARREGLADO**
+
+En la foto, con flecha: *«← Grande»*. Audio: *"este también grande"*. De 15 a
+**22 pt**.
+
+#### C25-04 · `LBS` siempre con dos decimales — ✅ **ARREGLADO**
+
+> "Aquí creo que deberías de ponerle **siempre punto cero cero**, ya para que se
+>  vea **parejito**."
+
+`146` pasa a `146.00`. Solo en la 4×6: `etiqueta_num` se queda como está para la
+Dymo, donde manda el espacio.
+
+#### C25-05 · `PIES³` exacto, no redondeado hacia arriba — ✅ **ARREGLADO**, y matiza una regla escrita
+
+Yusef vio un `12` donde la cuenta daba `11.02` y preguntó si era exacto. Jorge
+explicó el redondeo hacia arriba. Su respuesta:
+
+> "**Ponerlo exacto.** […] Eso [el redondeo] es **para cobro nuestro**; ellos
+>  tienen que redondearlo como yo los redondeo."
+> "Si le pones 12 acá, me lo leen 12 y **me clavan**. Porque la política con la
+>  empresa que yo cargo es que **ahí no te cobran 11.02 sino 11; cuando ya pasa
+>  11.5 te cobran 12. Entonces ahí te compensan una con la otra**."
+
+**Esto matiza la regla B.** `VolumetricoCalculator` dice desde junio —de la hoja
+del propio Yusef— *"pies³ = pulgadas³ / 1728, SIEMPRE hacia arriba"*. Hoy la
+acota: es para nuestro calculador; **para el papel que va al proveedor va
+exacto**, porque el proveedor redondea half-up por su cuenta y un ceil impreso
+es plata regalada en cada bulto.
+
+Decisión de Jorge (2026-09-06): **exacto solo en los papeles del proveedor** —la
+4×6 y el manifiesto impreso—; el calculador de `/etiquetar` conserva la regla B.
+Por eso hay un `pies_cubicos_exactos` al lado del `pies_cubicos` de siempre, y
+el test del ceil no cambió. La nota de `C23-07` que justificaba sumar ceils en
+el manifiesto impreso quedó vieja y está corregida arriba.
+
+#### C25-06 · El código de la caja, un poco más grande — ✅ **ARREGLADO** (con un dudoso)
+
+En el audio, después de confundir el código de la caja con el número del
+manifiesto —*"los dos empiezan con M"*—: *"este es el manifiesto y este es la
+caja del manifiesto… **un poquito más grande también**"*. De 12 a **14 pt**.
+
+> ⚠️ En la foto el `-A` del código está **tachado**, y no se entiende por qué.
+> Decisión de Jorge: el `-A` **se queda** — es lo que distingue la caja del
+> manifiesto y es lo que lee el QR; sacarlo haría que los dos textos digan lo
+> mismo, que es justo lo que lo confundió. Si en Miami vuelve a salir, se le
+> pregunta.
+
+#### Lo que se queda como está
+
+- `CORPORACION KARSAM`: *"también está bien, **no necesita tan grande**"*.
+- El QR: *"**el QR no necesita más**, se escanea de lejos"*.
+
+#### Lo que costó: el aire, medido tres veces
+
+`.bulto` mide 6 in y tiene `overflow: hidden`: lo que no cabe **se recorta en
+silencio**. La foto engaña —esa etiqueta no tenía ni servicio ni destino, así
+que se veía con más aire del que hay—. Con **todos** los renglones puestos:
+
+| | Aire que queda |
+|---|---|
+| Antes de C25 (`PR-411`) | 0.36 in |
+| Con los tamaños pedidos, tal cual | **0.04 in** — cuatro píxeles |
+| Como quedó | **0.21 in** |
+
+0.04 no es margen: Miami imprime desde Windows con otra métrica de Arial. El
+aire salió **sin sacar ningún renglón**: el de prioridad baja de 30 a 22 pt (era
+lo más grande después de la letra y Yusef no lo nombró), y el QR de 1.5 a 1.4 in
+(25 módulos de ~1.4 mm; se leyó *"de lejos"* con 1.5). `etiqueta_bulto_cabe_test`
+lo mide en Chrome en cada corrida, con un caso nuevo: un proveedor largo
+(«CKM MARITIMO CONSOLIDADO») **se achica en vez de recortarse**.
+
+---
+
+### La Dymo de `/etiquetar` — *"la chiquitilla"*
+
+#### C25-07 · El nombre del cliente en su fila, con auto-ajuste; el tercero a otro renglón — ✅ **ARREGLADO** (con un cambio de sitio)
+
+> "Ella se llama Sofía García… Jorge Alejandro Federico. Ahí está el detalle."
+> "Primero este lo deberías de **mover del lugar, para abajo: el tercero**, el
+>  nombre del tercero, para acá abajo. Para que aquí **te quepa el nombre
+>  completo** y ese nombre **se ajuste el tamaño**."
+> "El nombre tiene que ir a **una sola fila** y vamos a mover el tercero para
+>  la de abajo." · "El tercero va a llevar **de dos a cuatro** lo más."
+
+La causa: `f-cliente` ponía nombre y tercero en la misma fila, y el nombre lleva
+`text-overflow: ellipsis` — el tercero lo empujaba hasta cortarlo. Ahora el
+nombre va **solo** en su fila con el mismo ajuste al ancho de la 4×6
+(`_etiqueta_ajustar_ancho`, piso 6 pt): un nombre de 40 caracteres se achica y
+sale entero; uno de 50 toca el piso y ahí para, porque por debajo ya no se lee.
+Es [[project_etiqueta_trackings_completos]] llevada al nombre: **ajustar, no
+cortar**.
+
+**El tercero está donde Yusef señaló —«para acá abajo»— pero llegar costó
+tres sitios en dos días, y vale dejarlos escritos.** El primer intento fue
+**literal**: una fila propia debajo del nombre. En la etiqueta más llena
+(entrega personal, NO PAGADO, driver, tracking secundario y tercero) desborda
+**8.1 px**, medido en Chrome. Se lo puso entonces al lado del número de
+recepción, el único renglón con ancho de sobra, y ahí cabía con aire cero, a
+5–6 pt. Jorge preguntó si se podían achicar las filas para que entrara la de
+abajo, y se midió palanca por palanca:
+
+| Arreglo (etiqueta más llena, 120 px) | Aire |
+|---|---|
+| Fila propia debajo del nombre | desborda **8.1 px** |
+| Idem, achicando **todos** los textos un escalón | desborda 0.9 px |
+| Idem, con «RETIRA EN» en línea + interlineado 1.0 + recepción 10 pt + trackings 6.5 pt | 0.75 px |
+| Al lado del número de recepción (donde estaba) | 0.1 px |
+| **Tercera línea del bloque inferior, con «RETIRA EN» en línea + interlineado 1.0** | **2.5 px** |
+
+Achicar filas no alcanza: bajando todo un escalón sigue faltando casi un píxel,
+y la combinación que cierra se paga con el número de recepción y los trackings
+más chicos, para quedar con menos colchón del que varía el render entre dos
+máquinas. Lo que sí había era **8 px escondidos en el bloque inferior**: mide lo
+que mide su columna izquierda, y ahí el rótulo «RETIRA EN» ocupaba una línea
+entera que la columna derecha —con el tipo de envío grande— no necesitaba.
+Con el rótulo en línea con la sucursal, esa línea la ocupa el tercero: **debajo
+de dónde retira, que es de quien retira en nombre del cliente**. Ningún texto
+se achicó; el interlineado pasó de 1.03 a 1.0, que a estos tamaños no se ve.
+
+De paso, el bloque inferior deja de ser «lleno»: la sucursal ahora se ajusta al
+ancho (`data-ajustar`, piso 7 pt) en vez de truncarse. La lección de medición
+queda en la memoria: `scrollHeight` es entero y no ve un desborde de décimas;
+para medir aire de verdad hay que apilar el contenido arriba y leer el borde
+inferior del último hijo.
+
+Queda para que Yusef lo vea impreso el martes.
+
+#### C25-08 · «Dónde retira» dice la sucursal, no la ciudad — ✅ **ARREGLADO**
+
+> "Donde va a retirar ahora dice **San Pedro Sula**; por donde va a retirar
+>  tiene que decir **Zerón SPS**, así se llama la sucursal."
+> "La que voy a abrir se va a llamar **Carmen SPS o Norte SPS**."
+
+Con dos sucursales en la misma ciudad, la ciudad deja de decir dónde. Y había
+**dos** «San Pedro Sula» distintos en el código, arreglados los dos: el preview
+de `/ajustes_etiqueta` lo tenía **escrito a mano** (ahora muestra la sucursal de
+retiro por defecto real), y la etiqueta impresa caía a **la ciudad del cliente**
+cuando el paquete no tenía sucursal (ahora cae a la sucursal de retiro por
+defecto — la columna `retiro_por_defecto` existía y es exactamente esto; la
+ciudad queda de último recurso para que nada salga en blanco).
+
+---
+
+### El escaneo de empaque
+
+#### C25-09 · El error es un modal — ✅ **ARREGLADO**
+
+> "Ese debería ser **un modal**. Sí, **siempre**." · "El modal más que todo
+>  **cuando hay error, hay alertas**." · Y del OK: *"¿que diga que sí? **No, no,
+>  no**"* — la notificación de siempre está bien.
+
+Es el patrón del `avisoModal` de `/etiquetar`: `<dialog>` nativo, **Enter =
+«Entendido»**, Escape frenado (*"ellos no las leen"*, `C20-13`), y **el foco
+vuelve al campo solo** cuando se cierra — sin eso la pistola no puede seguir. El
+botón «Meterlo igual (omitir)» del tipo distinto vive **adentro** del modal, que
+es donde está la decisión. Los tres no-OK (tipo distinto, ya en otra caja, no
+encontrado) son modal; el OK sigue como aviso en pantalla.
+
+#### C25-10 · El sonido de error más fuerte — ✅ **ARREGLADO**, y era un cable suelto
+
+> "Tiene que ser **más como pit que tú**. Porque el tú está **muy suavecito**, y
+>  está bien cuando están digitando, pero cuando están ahí **la compu está allá
+>  y ellos están acá**."
+> "Si escanea un paquete que va diferente al tipo de envío, el sistema tiene que
+>  tirarle **pipipipi**, pero no pipipipiii."
+
+**La causa era un cable suelto.** `/empacar` montaba el controller `audio`
+**sin `atributos_de_audio`** — la única de las tres pantallas de escaneo sin
+eso, y `sonido_helper.rb` lo decía sin querer: *"son dos pantallas —/etiquetar y
+/entrega_personal—"*. Consecuencias, verificadas en el JS: `variantes` llegaba
+vacío, `error()` caía **siempre** al tono de respaldo de 200 Hz, el slider de
+volumen del usuario no aplicaba, y el operario no tenía el botón «Sonidos». Eso
+es *"está muy suavecito"* con una explicación de dos líneas. Cableado.
+
+Se le puso **lint** (`sonidos_cableados_test`: *"toda vista que monta `audio` le
+pasa sus atributos"*), y al primer corrido **encontró una cuarta pantalla con el
+mismo agujero: `/recepcion_carga`**. Cableada en el mismo PR. Un helper
+compartido evita que dos copias diverjan; no evita que a una pantalla se le
+olvide llamarlo — para eso está el lint.
+
+Tres cosas más, en el mismo PR:
+
+- **Una variante aguda, porque no había ninguna.** Las tres existentes son
+  graves (200 a 440 Hz) y Yusef pidió *"más como pit que tú"*: `agudo`, un tono
+  plano de 1500 Hz × 250 ms, que cumple las reglas del repo (no sube, ≤ 500 ms,
+  distinto de los tonos ya tomados). El default sigue en `grave`: en
+  `/etiquetar*, digitando, *"está bien"*; cada usuario elige la suya.
+- **Dos resultados sonaban a «todo bien».** `noEncontrado` y `yaEmpacado` iban
+  a `audio#alert`, que **sube** de tono — justo lo que el repo prohíbe para un
+  error. Los tres no-OK pasan a `error`.
+- Los `.wav` de `docs/entregables/sonidos/` se regeneraron con la cuarta, porque
+  el test los compara byte a byte contra lo que suena.
+
+---
+
+### Notas que no son tarea
+
+- **Prueba de impresión en Miami**: Jorge la hace **el martes** con Julián
+  (*"va a ser el martes igual, porque no hay nadie"*). Lo que salga de ahí es la
+  Conversación 26.
+- **Jorge usa Mac y no tiene pistola**: *"tu forma de trabajar no es la misma
+  mía"*. Las diferencias se prueban allá.
+- Del cronograma: *"de repente sí está para octubre… falta pre-factura"*.
+- Del servidor: *"lo tenía compartido y funcionaba muy bien, pero este servidor
+  lo tiene un [plan] único… noté la mejora en los reportes"*.
+
+---
+
+## Conversación 26 (2026-09-05) — la cola aparte, el módulo de **Medición** en San Pedro, y lo que se vio en la línea
+
+Dos audios grabados **en la bodega de San Pedro Sula**, con Yusef, Vanessa y la
+gente de la línea: *«Optimización de procesos y desafíos operativos»* (**41.7
+min**) y *«Diseño de etiqueta de prefactura y perfiles de usuario»* (**2.7
+min**). Transcritos con `whisper small`; hay ruido de bodega y varias voces a
+la vez, así que los dudosos van marcados y no completados.
+
+Jorge, después, por escrito: *"hablamos de arquitectura para los jobs, vamos a
+usar solid queues… en un servidor solo para colas. Adicional, un nuevo módulo,
+el de **medición y pesaje** que se hace en San Pedro Sula; va en el área de
+logística y es la unión entre manifiesto y pre-factura. Documenta todo lo que
+puedas de pre-factura, pero en esta corrida solo trabaja solid queues y
+medición y pesaje. Facturación y entrega también, solo documenta."* Y sobre
+dónde: *"esto pasa en San Pedro Sula actualmente"*.
+
+Lo que se vio con los ojos, y que ningún audio anterior tenía: **la línea**.
+Las cajas llegan, se agrupan por letra y por nombre, se pesan, se teclean en la
+pre-factura, y cuando alguien descubre que ese cliente estaba consolidando, la
+caja **vuelve**: *"la línea no es continua, sino que tiene retorno, y es el
+retorno"* · *"ya es la tercera vez que los pesamos"*. Durante la grabación
+pasó en vivo: *"ya le había mandado el paquete y no lo agregó a la medición de
+nuevo… tiene que volver a empezar todo el proceso"*.
+
+---
+
+### La cola
+
+#### C26-01 · La cola en un servidor aparte — ✅ **HECHO en `#431`**
+
+Yusef, cuando Jorge le explicó que las notificaciones de las 7 am se encolan:
+
+> "¿Por qué Vanessa, que está en el web server, debe sufrir lo que está
+>  pasando de la cola?"
+
+Jorge: *"te lo voy a dividir, te voy a poner en otro servidor exclusivo… el
+trabajador para puras colas, todo lo que manda mensajes"*. Y el volumen que lo
+justifica, de Yusef: por manifiesto *"mil, dos mil paquetes"*, *"quinientas
+pre-facturas hechas hoy"*, y a las 7 de la mañana *"quinientos correos,
+trescientos WhatsApp y doscientos textos"*. Un servidor compartido y barato
+para el worker le pareció bien: *"es un compartido, funciona muy bien"*.
+
+Es lo que se construyó el mismo día en `#431` (ver `A7-08`, la nota del
+2026-09-06): `solid_queue` con las tablas en la base principal, el worker en
+el `background_worker` de Render, `recurring.yml` despierto, y la ventana de
+aviso al escanear el manifiesto interno de vuelta. Esta conversación es el
+**porqué** con las palabras del cliente; el cómo ya está escrito allá.
+
+---
+
+### Medición: el módulo — ✅ **HECHO** (2026-09-06: la estación y la etiqueta)
+
+#### C26-02 · Se llama «Medición» y va en medio de la línea — ✅ **HECHO**
+
+> **Jorge:** "¿Cómo vamos a llamar a este módulo de acá?"
+> **Yusef:** "**Medición** se llama."
+
+Está *"en medio de la línea"*: después de recibir la carga, antes de la
+pre-factura. Lo que necesita, en palabras de Jorge en la bodega: *"el input de
+tracking, la información de medida y peso, y la información de si el cliente
+está consolidando o no"*. Se escanea **la etiqueta que se hizo en Miami**, una
+por una —*"exacto, es la misma; escanea… una por una"*—. Jorge, después, lo
+precisó: *"se escanea el warehouse receipt que digitamos en Miami, que es el de
+la sticker que le pegamos"*, o sea el número de recepción más el sufijo de
+caja.
+
+**Y un warehouse receipt puede tener varias cajas.** La primera versión lo
+rechazaba —*«es un envío de 3 cajas: escaneá la etiqueta de la caja»*— y Jorge
+lo corrigió usándolo: *"esto no debería salir… escaneé el warehouse receipt y
+me deberían aparecer los datos de los otros paquetes… que me diga si hay más
+paquetes con ese warehouse receipt, y que me permita tomar las medidas y el
+peso, y luego entonces podamos imprimir la sticker"*. Un envío partido comparte
+el número de recepción a propósito (`crear_split!` le pone a todas las cajas el
+mismo «número madre» y a cada una su número de caja), así que **varias cajas
+con el mismo warehouse receipt no son una ambigüedad: son el grupo**. Al
+escanearlo se cargan todas, se mide la primera sin medir, y **la pantalla salta
+sola a la siguiente** —las tres llevan el mismo código impreso, volver a
+escanear no aportaría nada—; al medir la última salen las tres stickers juntas.
+La ambigüedad de verdad —un código que cae en **envíos distintos**, porque
+alguien reusó un tracking— sigue saliendo en el modal rojo, ahora diciendo
+cuáles son.
+
+**Los botones, revisados por Jorge el 2026-09-06:** *"veo «Guardar e
+imprimir», «Reimprimir etiqueta» —no sé si solo hace una, ¿cuál hace?—,
+«Reimprimir el grupo» —veo que solo imprime una—… y luego limpiar: cuando se
+facture o se termine de imprimir se debería limpiar para que se comience con el
+siguiente grupo"*. Salieron tres cosas:
+
+- **Un bug**: «Reimprimir el grupo» imprimía **una sola**. La acción decidía si
+  traer las hermanas con `dividido?`, que mira `cantidad_paquetes` — el mismo
+  campo que ya se había sacado de `GrupoDeUnion` por venir vacío, y que había
+  quedado vivo ahí. Ahora agrupa por warehouse receipt.
+- **Los textos prometían mal.** El de guardar cambia con lo que va a pasar:
+  «Guardar e imprimir» en una caja suelta, «Guardar y seguir con la 2 de 3»
+  mientras queden cajas, «Guardar e imprimir las 3» en la última. Y reimprimir
+  quedó **uno solo** —el del grupo estaba repetido— y su texto dice qué va a
+  salir: «Reimprimir la etiqueta» o «Reimprimir las 3 del envío».
+- **La pantalla se limpia al terminar.** Al completar el envío o al facturar lo
+  que hay: se imprime, se limpian la caja y la grilla, y queda un banner con lo
+  que pasó y el botón de reimprimir. El escaneo siguiente arranca de cero.
+
+Y la caja que se está midiendo se ve: la seleccionada **reemplaza** el color de
+su estado en vez de sumarse —dos fondos en el mismo elemento los resuelve el
+orden del CSS, no el del atributo— y lleva la palabra «MIDIENDO».
+
+Y se anotan medida y
+peso: *"¿la volumétrica? sí, las dos también… medidas de tamaño y peso"*.
+
+Del lado del código, lo que ya está y el módulo reusa: al recibir una caja en
+`/recibir-carga` los paquetes quedan `en_aduana`, que es exactamente el estado
+que la pre-factura puede tomar; y el paquete **recalcula solo** el volumétrico
+y el peso a cobrar cuando se le escriben peso y medidas (`before_save`). Lo
+que **no** existe: ninguna columna dice que un paquete se midió en Honduras,
+ni quién ni cuándo; hoy el único camino es el formulario genérico del paquete,
+solo para supervisor de pre-factura.
+
+**Dónde entra en el flujo, y por qué antes de la pre-factura:** la pre-factura
+**copia** `peso_cobrar` al crearse y no lo vuelve a leer. Un paquete que ya
+está en una pre-factura no se puede medir desde acá; se dice con un modal.
+
+Jorge, con la línea parada: *"yo creo que para el lunes puedo, por lo menos,
+tener algo de acá"* (2026-09-08).
+
+#### C26-03 · «Unir»: el grupo, con sus cuadritos — ✅ **HECHO**, en dos vueltas
+
+El motivo del módulo no es pesar: es **saber, caja en mano, si ese cliente
+está consolidando**.
+
+> "Al escanearlo, el sistema le va a decir: *ey, este está consolidando, se
+>  llama Nora, tiene que estar aquí en la N*."
+> "Lo que ellos necesitan saber es si está consolidando el cliente, **para no
+>  trabajar doble**."
+> "Me gusta más **unir** porque ahí no me confundo con el otro consolidado
+>  [la solicitud en la pre-alerta]. Es lo mismo, sí, pero es la acción."
+
+Jorge lo cerró el 2026-09-06: *"en peso y medición es donde se unen,
+dependiendo de cómo está en la pre-alerta. Al escanear le tiene que salir
+**cuántos paquetes hacen falta** para que se envíen todos los paquetes con
+todas las medidas al mismo tiempo. Pueden haber excepciones donde toque
+facturar lo que se encuentre, pero se debe mostrar un **modal rojo grande**
+con el problema que se encuentre."*
+
+**Lectura, y lo que se construye:**
+
+- Al escanear el **warehouse receipt**, la pantalla contesta con **el grupo
+  entero**, no con una caja: lo que declaró el cliente en la pre-alerta, cómo lo
+  ingresó Miami, y una **grilla de cuadritos** —uno por caja— con lo que está y
+  lo que falta.
+- **Un cuadrito por sticker**, no por renglón. Un tracking que Miami partió en
+  tres cajas son **tres warehouse receipts y tres stickers**; la primera versión
+  lo contaba como uno. Jorge lo corrigió el mismo día: *"si vienen 3 warehouse
+  receipts y en la pre-alerta vienen 3, se tienen que unir"*.
+- **Los cuatro estados salen de la base, sin columna nueva.** Un paquete recibe
+  su número de recepción **en el instante en que Miami lo ingresa**
+  (`debe_generar_numero_recepcion?`), y cada tracking declarado ya tiene su
+  paquete «esperado» desde la pre-alerta (`crear_paquete_esperado`). Entonces:
+  sin WR es *esperada*; con WR y fuera de Honduras, *en camino*; en Honduras sin
+  medir, *acá*; con `medido_at`, *medida*.
+- Se puede **tocar un cuadrito** que ya llegó para medirlo, sin volver a
+  escanear: el operario tiene las tres cajas enfrente.
+- Al medir la última, el grupo **sale junto** y **salen las N stickers en una
+  sola impresión** — *"que salgan las 3 stickers, una para cada paquete"*. Una
+  caja suelta imprime la suya al guardarla.
+- **Faltantes: alerta y se pasa.** Jorge: *"hay una posibilidad de que solo
+  estén 2: en ese caso **se pone una alerta y se pasa**"*. El modal rojo lista
+  lo que falta y con qué —*no ha llegado a Miami*, *en Miami todavía no llega
+  acá*, *acá sin medir*—, el operario confirma, y queda sellado en la pre-alerta
+  con su nombre, la hora y lo que faltaba, en el historial. **Sin PIN**: la
+  primera versión lo pedía, y la fricción que él quiere es el modal, no un jefe
+  caminando hasta la estación con mil paquetes en la línea.
+- El grupo también aparece **sin consolidación**: un tracking partido en varias
+  cajas son varias stickers que salen juntas igual.
+- Los otros problemas siguen siendo modal rojo: caja que no aparece, código
+  ambiguo, caja que no se recibió, caja ya en pre-factura (no se mide), y caja
+  de una pre-alerta ya facturada (avisa y **sí** deja medir).
+
+**Lo que la pre-factura todavía no hace** (es su bloque, no éste): un paquete
+de grupo incompleto sigue apareciendo como facturable. El gancho queda
+definido y probado —`Paquete#listo_para_prefactura?`— para que
+`/pre_facturas` lo lea cuando se toque esa pantalla.
+
+**Cómo quedó construido (2026-09-06, en dos vueltas):** `/medicion` en
+Logística, entre Recibir Carga y Pre-Facturas. `MedirPaquete` escribe los cuatro números y sella
+`medido_at`/`medido_por` (re-sellado en cada medición). `GrupoDeUnion` es la
+consulta del grupo: cada renglón de pre-alerta **tiene** su paquete desde que se
+crea (`crear_paquete_esperado`), así que «llegó» es que ese paquete esté en un
+estado de Honduras — no se busca por tracking. `PasarGrupoIncompleto` sella la
+excepción —sin PIN— y la escribe en el historial de la pre-alerta, que es lo que
+pre-factura va a leer. `GrupoDeUnion` cuenta **cajas**: cada renglón aporta su
+paquete y, si Miami lo partió, sus hermanas. La pistola
+resuelve con `Paquete.por_codigo_de_etiqueta`, estricto: código de caja,
+número de recepción o tracking exactos, nunca por descripción.
+
+#### C26-04 · La etiqueta de medición — ✅ **HECHA**
+
+> "Sí va una etiqueta. Es chiquitita, va a ser pequeña, porque **solo va a
+>  llevar el QR y la información de medidas y pesos**. No le vamos a meter
+>  nombre ni nada."
+> "Vamos a usar la misma [Dymo] de Miami… comprar otra [impresora]."
+> "Lo que pasa es que en el QR vos ocupás que **quede amarrado**: que cuando lo
+>  escanee, ingrese al sistema la información de libras y pesos… un solo
+>  entry… es para que lo lea el sistema."
+
+Y del audio corto, mirando una impresa: *"está muy bien: está la hora, está la
+fecha, dimensiones y el peso. Lo que le hace falta son dos que tres cositas:
+que diga cuánto da en volumen, porque solo tiene las medidas pero no te da el
+volumen de esas dimensiones. Hace falta **el volumen en libras y en pies**."*
+*"Vamos a la misma etiqueta de tamaño de Miami: le pones el QR a un lado y la
+información al lado derecho."*
+
+**Lectura:** Dymo 2.25 × 1.25 in, QR a la izquierda, a la derecha fecha y hora,
+`alto x largo x ancho in`, `LBS`, `VLBS` y `PIES³` (exactos, como en la 4×6:
+`C25-05`), el código de la caja y las iniciales de quien midió. Sin nombre. El
+QR lleva el código de la caja **más** los datos (`MED <código> <peso>
+<alto>x<largo>x<ancho>`, con espacios y no `|`: una pistola por teclado en
+es-419 puede no entregar la barra). El sistema resuelve por el código y lee
+peso y medidas de la base; los datos del QR son redundancia legible, que es lo
+que él pidió. Que la búsqueda de paquetes, recibir carga y la pre-factura
+entiendan ese prefijo es parte del mismo PR.
+
+#### C26-17 · El panel de la derecha: lo que **falta** de este manifiesto — ✅ **HECHO**
+
+Jorge, usando la estación (2026-09-06):
+
+> "**¿Cómo ayuda eso de «medidos hoy»?** Sería bueno que aparezcan **los que
+>  faltan de ese manifiesto**, así como **match con lo que se mandó desde
+>  Miami**. El **admin** debería poder quitarlos con algunas opciones de
+>  **perdido**, **ya fue entregado**, y una nota si es necesario, pero eso solo
+>  el admin. Y **la fecha de cuándo fue enviado** sería cool."
+
+Un contador de lo ya hecho no le sirve a nadie parado en la línea. El panel
+pasa a decir:
+
+- **De qué manifiesto es**, con su guía, **cuándo salió de Miami** y cuándo se
+  recibió.
+- **El match**: «Miami mandó 40 · medidos 33 · faltan 7».
+- **La lista de lo que falta**, con el warehouse receipt, el cliente y dónde
+  está —*acá, sin medir* o *no llegó a Honduras*, con el mismo vocabulario de
+  los cuadritos—. Lo que no llegó va al final y apagado: eso se busca, no se
+  mide. El que se está midiendo se resalta.
+- **Cuáles vienen consolidados**, que era otra pregunta de Jorge —*"¿cómo sé si
+  los warehouse receipts vienen consolidados en una pre-alerta?"*—: cada
+  renglón que pertenece a una pre-alerta consolidada abierta lleva su número.
+  Antes había que escanear uno para enterarse.
+
+El panel **sigue al manifiesto de la caja que se acaba de escanear**; al abrir
+la pantalla arranca con el último manifiesto que todavía tenga algo que medir.
+
+**Sacar una caja de la lista es de administración y de nadie más.** El modal
+pide motivo —*Perdido* o *Ya fue entregado*— y una nota opcional, y sella
+quién y cuándo. **El estado del paquete no se toca**: un «entregado» sin
+entrega registrada le mentiría al módulo de entregas y a la factura, y
+«perdido» no existe como estado ni se inventa acá. Lo que se sella es algo más
+chico y cierto: esa caja ya no se espera en la estación. El sello sale en la
+ficha del paquete y se puede deshacer.
+
+#### C26-05 · Varias cajas por paquete — decisión de Jorge
+
+> "Entonces el sistema tendría que crear que puedas agregar hasta 5, 6, 7,
+>  10… medida y peso independiente… clicky, clicky, clicky."
+
+Decisión (2026-09-06): **una medición por caja escaneada.** Cada caja de un
+split ya es un paquete con su propia etiqueta de Miami (`C20-12`,
+[[project_split_agrupa_por_tracking]]), así que escanear caja por caja es
+exactamente eso. Lo que no se construye: partir en Honduras. Si la línea
+encuentra más cajas de las que Miami contó, se anota y se pregunta (`RP-66`).
+
+> ▶ **Superado el 2026-09-07 por `C27-01`.** Con la cámara puesta sobre la mesa
+> se vio que el operario **agrupa cajas y mide el bulto**, no la caja: *"se
+> vuelve como una nueva unidad y solo se le ingresa la medida de esa
+> agrupación"*. La unidad de medición **no es la caja escaneada, es el bulto**;
+> lo de acá arriba se decidió con la información que había el 06.
+
+#### C26-06 · La báscula — nota y pregunta
+
+> "Esas balanzas son digitales, no las puedo conectar a la máquina."
+> "Voy a pedir una nueva… tengo que ver cuáles son compatibles."
+> "Ella redondea demasiado, no tiene tan buena afinidad."
+
+Jorge: *"mandame cuál pensás comprar, a ver si tiene los protocolos o si es
+protocolo cerrado"*. Mientras no haya báscula conectada, el peso se teclea.
+`RP-63`.
+
+#### C26-07 · Futuro: medir con sensores — nota, no tarea
+
+> "Ya futuro, lo que yo quiero es que vos me creés con **sensores**, no
+>  cámaras, y medir este paquete." · Jorge: "Ya lo tengo en memoria."
+
+---
+
+### Pre-factura — 📄 **solo documentado en esta corrida**
+
+#### C26-08 · La consolidación que nadie ve
+
+Cinco pre-alertas consolidadas del mismo cliente son cinco facturas:
+
+> "Cuando son cinco consolidados diferentes, que vienen cinco pre-alertas…
+>  ellos tienen que separarlos en cinco."
+> "Ellos no tienen cómo visualizar que este es un agrupado. Yo le pasé todo
+>  junto, y tenía que haber sido separado."
+
+El peso hoy **se teclea en la pre-factura**, paquete por paquete, en vivo
+durante la grabación: *"11, 594… reviso que no tenga agrupado… no tiene
+ninguna pre-alerta, entonces se va todo junto… bajo el servicio, normal…
+entonces ya me sale el cobro"*. Con dos paquetes de la misma pre-alerta que
+llegaron después: *"solo dos lleva… le faltan otros dos de la misma"*, y para
+que el cliente no reciba aviso a medias: *"llevamos la pre-alerta acá solo para
+guardarla y que no le caiga la notificación al cliente"*.
+
+**Lo que esto pide de la pre-factura, cuando se toque:** leer el grupo de
+unión (`C26-03`) y no ofrecer como facturable un paquete de grupo incompleto
+sin la excepción sellada; y mostrar el agrupado, que hoy solo se sabe de
+memoria.
+
+> ▶ **Contestado el 2026-09-07.** La duda de si la pre-factura podía **heredar**
+> el grupo que armó Medición la cerró Yusef: **no lo hereda, lo reconstruye
+> escaneando** —*"yo prefiero volver a escanear… ahí es donde yo no puedo
+> confiar"*— y son **dos escaneos**: los QR de las mediciones, que le dicen
+> cuántas espera, y cada warehouse receipt uno por uno (`C27-15`, `C27-16`). Y
+> el «agrupado que nadie ve» tiene su regla confirmada por Vanessa: **se factura
+> de acuerdo a la pre-alerta**, cinco pre-alertas son cinco facturas
+> (`C27-17`).
+
+#### C26-09 · El split de la pre-alerta — pregunta abierta
+
+> "El cliente puso cinco paquetes a consolidar. Cuando ya tenía cuatro, lo
+>  retiró. Y quedó uno pendiente. Esta pre-alerta debe tener una nueva
+>  pre-alerta o algo… un **split**: la que ya facturó dice facturado, y este
+>  que todavía no ha venido te lo paso a esta otra nueva."
+> "Ese split **no existe**, es la mejora que ocupo en esto. Es una de las
+>  veinte que tiene."
+
+Hoy la pre-alerta consolidada se cierra entera al facturar; el que llegó
+después queda huérfano. `RP-64`. Medición ya lo reconoce (modal *«no la unas,
+hay que partir la pre-alerta»*), pero partirla es de este bloque.
+
+#### C26-10 · El flujo de trabajo y la notificación de las 7 am
+
+> "Vamos a seleccionar el tipo de envío que vamos a procesar. Vamos a
+>  seleccionar la guía [el manifiesto] que vamos a procesar. Y la fecha de
+>  trabajo… la ponemos mañana, porque el sistema notifica que está disponible
+>  en Honduras **mañana a las 7 de la mañana**: manda textos, WhatsApp,
+>  emails, cambia los estatus."
+
+Es la carga que justifica la cola (`C26-01`): un manifiesto grande son cientos
+de mensajes de golpe. Del sistema viejo; el nuevo tiene la pieza (worker
+aparte) y le falta el disparo programado por fecha de trabajo, que va con
+pre-factura.
+
+#### C26-11 · Notificar: Miami todo, Honduras al estar disponible
+
+> "En Miami todo cae en notificación. Acá no la mandamos, para no confundir."
+
+Coincide con lo ya construido: el aviso al cliente sale al cerrar la
+recepción o con la ventana de `A7-08`, no al escanear cada caja.
+
+---
+
+### Facturación y entrega — 📄 **solo documentado**
+
+#### C26-12 · La etiqueta que se escanea al entregar
+
+> "Esta es la etiqueta de entrada, cliente. Esa es la que van a escanear para
+>  entregar." · "Y esto lo van a empacar en una sola."
+
+Al terminar la pre-factura se imprime la etiqueta del cliente; entrega la
+escanea. Varios paquetes del mismo cliente van *"en una sola"* bolsa. Es del
+módulo de entregas, con `A7-30`.
+
+#### C26-13 · «El forzado» ya se usa
+
+> "El forzado va a ir para esta carga de esta fecha."
+
+Es la excepción de cobro de `C24-01` (`#422`, `#424`), en uso para un
+manifiesto concreto. Nota.
+
+---
+
+### Perfiles de usuario — 📄 **documentado**, con una excepción
+
+#### C26-15 · El perfil «medición», y el de entrega — ✅ el rol `medicion` existe
+
+> "Hay usuarios que no van a tener acceso a nada. Digamos, si tenemos una
+>  persona para medición exclusivamente, usan su código y **no se les habilita
+>  nada más que eso**." · "Este perfil va a ser nuevo."
+> "Igual va a haber uno que solo son de entrega, como lo que viste. Son con
+>  un código, acceden con su código, con su código hacen todo."
+
+**El rol `medicion` se crea con el módulo** (decisión de Jorge, 2026-09-06):
+solo ve `/medicion`; los roles de Honduras también entran a la estación. El de
+entrega queda para el bloque de entregas.
+
+#### C26-16 · Código de acceso con tiempo límite — pregunta abierta
+
+> "En el de pre-factura ellos ingresan su código al iniciar sesión: acceden al
+>  sistema, presionan un botón, ingresan el código y ese queda activado hasta…
+>  hay que ponerle un tiempo límite de unas **4 horas, 5 horas**."
+> Para admin: "¿Un día?" · "No, un día no… **doce a catorce horas** lo más."
+> "La cosa es que no lo dejen abierto y se van."
+
+Hoy la sesión **no expira**: no hay ningún timeout en `Session` ni en
+`Authentication`. `RP-65`: qué es «el código» (¿el PIN de 4 dígitos que ya
+existe, u otro?), y los dos plazos.
+
+---
+
+### Notas que no son tarea
+
+- **Red y servidor en la bodega:** *"está lento"*, F5 repetido, *"cincuenta
+  megas"*, *"dos [enlaces] y un balanceador en medio"*. Yusef quedó de ver el
+  enlace; no es del sistema.
+- **La cola como tecnología:** Jorge le contó que con la nueva se puede
+  *"parar, mover"* un trabajo. *"Está bien."*
+- **Lo que viene:** la carga de Miami de esta semana *"viene un montón"*;
+  Jorge va el lunes a la bodega a empezar con Medición en la línea.
+
+**Dudosos del transcript:** *"Daimón"* (¿Dymo?, la báscula compatible),
+*"lentes de cámara"* (¿un medidor que ya tiene?), *"Malticago"*, *"P8"*,
+*"Lurvin"*, Linares y Leo (la gente de la línea: *"Linares y Leo trabajan
+doble"*), y los números sueltos (*"265"*, *"28, 38"*, *"22, 42"*), que son
+pesos tecleados en vivo.
+
+---
+
+### Lo que quedó abierto
+
+| # | Qué | Estado |
+|---|---|---|
+| `C26-01` | La cola en un servidor aparte | ✅ **Hecho** en `#431` |
+| `C26-02`…`03` | Medición: la estación y «unir» | ✅ **Hecho** — `/medicion`, rol `medicion`, grupo con faltantes, modal rojo, facturar parcial con PIN. ▶ **La unidad cambió el 2026-09-07**: se mide el **bulto**, no la caja (`C27-01`), y armarlo es solo escaneando (`C27-02`) |
+| `C26-04` | La etiqueta de medición | ✅ **Hecha** — Dymo 2.25×1.25, QR `MED <código> <peso> <medidas>` que la búsqueda, recibir carga y la pistola entienden; F10 guarda e imprime, F9 reimprime. ▶ El QR lleva además el `NdeM` desde el 2026-09-08 (`C27-08`), y el conteo pasa a ser **una etiqueta por medición**, no por caja (`C27-06`) |
+| `C26-08`…`11` | Pre-factura: consolidación visible, split, fecha de trabajo, notificar | 📄 Documentado; es el próximo bloque. ▶ `C26-08` **contestado el 2026-09-07**: la pre-factura no hereda el grupo, **vuelve a escanear** (`C27-15`, `C27-16`), y se factura por pre-alerta (`C27-17`) |
+| `C26-12` | Entrega: la etiqueta que se escanea | 📄 Documentado |
+| `C26-18` | *(número que usó `#440` en su título, antes de que la reunión del 07 estuviera numerada)* | ➡️ Se documenta en la Conversación 27: `C27-07` (al menos un número), `C27-08` (el QR «n de m») y `C27-30` (el sufijo en el listado) |
+| `C26-15` | Perfil «medición» | ✅ Existe, y **solo ve su estación**: clientes, pre-alertas y paquetes pasan ahora por `can_access?` — antes esa política era «todos» y ningún controller la consultaba |
+| `RP-63` | ¿Qué báscula compra Yusef, y tiene protocolo abierto? | 🔴 **Pendiente de Yusef** — mientras, el peso se teclea. ▶ **2026-09-07: la decisión ya está tomada, se conecta** —*"el peso va a estar conectado a la balanza… ahorita lo podemos poner manualmente"* (`C27-22`)—; falta **cuál** |
+| `RP-64` | Split de la pre-alerta consolidada cuando se factura parcial | 🔴 **Pendiente** — va con el bloque de pre-factura |
+| `RP-65` | «El código» con tiempo límite: ¿es el PIN? ¿4–5 h operarios, 12–14 h admin? | 🔴 **Pendiente de Yusef** — hoy la sesión no expira |
+| `RP-66` | Más cajas en Honduras que las que Miami contó: ¿se parte acá? | 🔴 **Pendiente de Yusef** — hoy no se parte en Honduras |
+
+---
+
+## Conversación 27 (2026-09-07) — la **PESA** por cámara: el bulto, «NO Mezclar», y la etiqueta que no es por caja
+
+Un lunes entero **mirando por cámara** la estación de pesaje de San Pedro Sula
+y viendo trabajar al operario, con Yusef narrando. Los audios del día,
+incluido el largo de 62 minutos —el de la pizarra—, transcritos con
+`whisper small`.
+
+Tres cosas de vocabulario, antes que nada, porque las tres van a la pantalla:
+
+- **El rótulo físico de esa estación dice «PESA»**, no «Medición». El módulo se
+  sigue llamando `Medición` (`C26-02`, es como lo bautizó él), pero la gente de
+  la línea le dice la PESA.
+- **Al bulto le dicen «volumen».** Yusef, explicando cómo el operario cuadra la
+  carga: *"le voy a sacar tres volúmenes, **así lo dicen ellos**, porque son
+  diferentes de tamaño… nosotros hacemos siempre lo más justo con el cúbico"*.
+  Vale la pena que la UI diga «volumen» y no una palabra que ellos no usan.
+- **A media reunión instalaron una pizarra** en la estación, y en ella quedó
+  escrito a mano lo que esta conversación decide: «NO Mezclar» y el conteo de
+  etiquetas de `C27-06`. La pizarra es la fuente más precisa de esas dos.
+
+> ⚠️ **Sobre el transcript.** Es automático, con ruido de bodega y la cámara de
+> por medio; **el sentido está, la letra puede tener errores menores**. Las
+> citas se leyeron contra lo que se vio en pantalla. Dudoso: *"chain"* (=
+> China), *"los queos"* (= las colas / los queues).
+
+Lo que esta conversación cambia de raíz: hasta el 2026-09-06 el módulo de
+Medición asumía que **se mide una caja**. Se mide un **volumen**, y el volumen
+lo arma el operario en la mesa.
+
+---
+
+### La PESA: qué se mide, y cómo se arma
+
+#### C27-01 · La unidad de medición es el **bulto**, no la caja — ✅ **HECHO** en `#443` (modelo) y `#445` (pantalla), 2026-09-08
+
+Yusef, viendo la cámara mientras el operario acomodaba:
+
+> "Él está agarrando dos paquetes, uno sobre el otro, cuadrando lo mejor
+>  posible… **Pero hay que poner varios Warehouse Receipts**… aquí la cosa es
+>  seleccionar todos los que el paquete va agregando. Y entonces en esas
+>  medidas **se vuelve como una nueva unidad y solo se le ingresa la medida de
+>  esa agrupación**."
+
+El porqué no es de comodidad, es **de plata**:
+
+> "Tratan de buscar que quede lo más cuadrado posible… **si yo mido esto, te
+>  estoy cobrando espacio vacío.** Entonces, ¿qué hacemos? Medimos esto,
+>  pesamos esto, y se le agrega esto. Esa es la razón de la medición: acomodar
+>  la carga lo mejor posible… Entonces le decimos: mire, le valió tanto, sale
+>  de esto más esto."
+
+Y diez cajas no se miden diez veces:
+
+> **Jorge:** "¿A ese donde hoy se mide 10 veces?"
+> **Yusef:** "No. **Se mide de acuerdo con cómo lo agrupe, como lo cuadremos
+>  ahí en la mesa, lo que convenga.** O sea que tendrían que poder seleccionar
+>  varios; por eso escaneamos varios, los que vamos a medir."
+
+También aplica **dentro de un mismo tracking**: *"todo puede estar bajo un
+mismo tracking también, esta es la otra situación que no la hemos visto"*. Un
+envío que Miami partió en tres cajas puede volver a ser un solo volumen en la
+mesa de San Pedro, si así cuadra.
+
+**Lectura.** El bulto no es una agrupación visual: es **la cosa que se mide y
+la que se cobra**. Sus cuatro números son suyos, no de ninguna de las cajas que
+lo componen. Las cajas siguen existiendo —cada una con su warehouse receipt, su
+etiqueta de Miami y su renglón— pero para el cobro pasan a ser contenido.
+
+> ▶ **Supera a `C26-05`.** El 2026-09-06 Jorge había decidido *«una medición
+> por caja escaneada»*, con la información que había entonces. Esta
+> conversación la cambia: una medición por **bulto**, y un bulto son N cajas.
+
+#### C27-02 · El bulto se arma **escaneando** — nunca eligiendo de una lista — ✅ **HECHO** en `#445` (2026-09-08)
+
+Preguntado directo, dos veces:
+
+> **Jorge:** ¿Y cómo los unís? ¿En pantalla, cómo te imaginás?
+> **Yusef:** **"No, no, porque se van a equivocar. Eso es un error ya. No van a
+>  leer."**
+> **Jorge:** ¿Entonces cómo los unís?
+> **Yusef:** **"Escaneando."**
+> **Jorge:** Si tengo tres paquetes, ¿cómo sabe cuáles vas a unir?
+> **Yusef:** **"Escaneando cada uno."**
+
+Su propio resumen:
+
+> "Es lo mismo que en Miami: vas a medir y pesar, pero esta vez vas a medir y
+>  pesar **varios warehouse**."
+
+**Lectura.** La pistola es la que dice qué va adentro del bulto, caja por caja.
+El **botón de confirmar sí puede estar** —la pantalla es táctil (`C27-13`)—; lo
+que no puede haber es **una lista donde el operario marque cuáles van juntas**.
+Su argumento no es de diseño, es de personal: *"no van a leer"*.
+
+> ⚠️ **Tensión con `C26-03`, a resolver en el código.** Ahí quedó escrito que
+> *"se puede tocar un cuadrito que ya llegó para medirlo, sin volver a
+> escanear"*. Tocar un cuadrito **para elegir qué caja entra al bulto** es
+> exactamente lo que él acaba de prohibir. Tocar un cuadrito **para medir esa
+> caja sola** —que es para lo que se puso— no lo es. La pantalla tiene que
+> distinguir las dos cosas; el documento las deja nombradas, no las resuelve.
+
+#### C27-03 · **Máximo 10** mediciones por sesión — ✅ **HECHO** en `#443` y `#445` (2026-09-08)
+
+> "Máximo 10 warehouse, máximo 10 etiquetas… **el normal de nosotros es 2 a 3;
+>  5 ya es demasiado.** Pusimos 10 para no estar ahí «hay que cambiar esto»."
+
+Y el porqué, que no es técnico:
+
+> "Eliminar un poco el hecho de que quedés muy libre… **si hubiéramos metido
+>  los 100 bultos, van a estar forzados a no agruparlos.**"
+
+**Lectura.** El tope es una **herramienta de disciplina**, no un límite de
+recursos: con la mesa llena de cien cajas el operario deja de agrupar, y
+agrupar es todo el negocio de esta estación (`C27-01`). Diez es holgado a
+propósito —*"para no estar ahí «hay que cambiar esto»"*—, así que el número
+conviene que sea configurable pero que **no se muestre como una preferencia**:
+es una regla, no una opción.
+
+**Qué se cuenta: mediciones.** Sus dos unidades —*"máximo 10 warehouse"* y
+*"máximo 10 etiquetas"*— dejan de ser lo mismo con el bulto de `C27-01`, así
+que quedó anotado como duda. Al releer el audio entero, **él la contesta**:
+
+- El pie de la pregunta la fija. Viene de explicar por qué no hace una etiqueta
+  sola —*"si hacemos una sola, se les puede escapar… entonces son 3 etiquetas,
+  o sea **3 volúmenes**, como se le dice"*— y ahí Jorge pregunta *"¿cuántos
+  quiere que **agreguemos** máximo?"*. El tope es sobre el **agregar**.
+- Descarta las otras lecturas una por una: *"¿por un bulto? No"*, *"olvidate
+  los manifiestos a esos"*, y sobre todo ***"estamos hablando de máxima medida
+  de volumen, no máximo de paquetes que vamos a agregar"***.
+- Y la cierra: *"máximo 10 warehouse, máximo 10 etiquetas"* → Jorge, *"eso es
+  lo que había entendido, el máximo 10 etiquetas"* → sin corrección, y remata
+  **"ya lo paré en máximo 10, **es sacar 10 volúmenes**"**.
+
+**Por qué existe: contener el error del operario.** *"Pongamos el limiter **por
+cualquier error que empiecen a cometer**… cuando le ponés boundary, lo bloqueás
+un poco: **por una persona**, por un consolidado, por un paquete de medidas que
+haga."* La tanda es de una sola persona —tiene su `user` y su sello—, así que
+el tope por tanda **es** el tope por operario. Jorge lo leyó así en su momento
+y es la lectura correcta del porqué.
+
+> ❓ **Lo que él no contestó: qué pasa al llegar a diez.** Jorge se lo preguntó
+> **tres veces** —*"¿qué hago cuando se alcanza el limiter?"*— y las tres se
+> fue al caso del cliente que manda 100 paquetes sin pre-alerta. Lo construido
+> es decisión de Jorge, no de él: se avisa y **no se frena el trabajo** —*"de
+> una tanda salen 10 mediciones como mucho; guardá e imprimí lo que llevás y
+> seguí con la siguiente"*—, y el tope **no es acumulativo**: el mismo operario
+> arranca otra tanda de 10 enseguida. Un techo por turno o por día frenaría
+> justo el día de las 100 cajas. Ver `RP-71`.
+
+#### C27-04 · «NO Mezclar»: el modal del consolidado, y sus dos respuestas — ✅ **HECHO** en `#443` (`PuedenIrJuntas`) y `#445` (el modal), 2026-09-08
+
+Es lo que quedó escrito en la pizarra, y dicho así:
+
+> "Le tienen que decir si lo puede hacer o no lo puede hacer… **no lo podría
+>  hacer porque está consolidando esa carga con otros paquetes.** Le debería
+>  tirar un error, **un modal que le diga: hey, no, ese está consolidando con
+>  tal pre-alerta, con tal número. Ese va amarrado con otra.**"
+
+**Qué dice el modal:** a qué **pre-alerta** y a qué **pre-factura** pertenece la
+caja que se acaba de escanear. Sin eso el operario no sabe qué buscar.
+
+**Y qué pregunta: ¿procesa el consolidado, o lo pone a un lado y termina el que
+está haciendo?** Las dos respuestas tienen efectos distintos y los dos son de
+Yusef:
+
+- **«A un lado»** → *"no lo va a guardar, lo pone a un lado"*. La caja escaneada
+  **no se agrega** al volumen, y se sigue con lo que ya hay en la mesa. Lo de
+  «a un lado» es un movimiento físico —la caja se aparta—, **no un estado del
+  sistema**: no hay cola de apartados, ni bandeja de «pendientes de buscar», ni
+  nada que persistir.
+- **«Sí, voy a hacer el consolidado»** → *"**tiene que eliminar este del
+  listado que escaneó**, porque ese no va a ir en la medición"*. Se **limpian
+  las cajas ya escaneadas** —el volumen que venía armando se descarta— y de ahí
+  en adelante **solo se pueden escanear cajas de ese consolidado**: *"a uno que
+  no está, le tira un error"*.
+
+Y la versión corta que él dio antes, que sigue valiendo para la primera rama:
+
+> "Le tiene que salir un modal donde le van a preguntar **si lo va a hacer o lo
+>  va a poner a un lado**… se lo pone de lado, entonces **este es como un F2:
+>  limpia de nuevo**."
+
+**Lectura.** El modal no es un aviso: es una **bifurcación con consecuencia**.
+La rama del consolidado cambia el modo de la pantalla —pasa a estar «amarrada»
+a una pre-alerta y rechaza todo lo demás— y la rama de «a un lado» limpia y
+sigue.
+
+> **Y el residuo lo contestó él mismo, en el mismo audio: no hay nada que
+> guardar.** La caja apartada *"la deja a un lado"* —físicamente, en la mesa— y
+> el operario sigue con lo que tiene: *"este es como un F2: limpia de nuevo"*.
+> No se abre pregunta por esto: **no hay estado, no hay cola de apartados, no
+> hay bandeja**. Lo único que el sistema aporta es decirle, en el modal, con qué
+> pre-alerta va amarrada, para que sepa qué buscar. Encaja con la regla que ya existe para el estado que sobrevive a limpiar
+([[project_estado_js_que_sobrevive_a_limpiar]]): lo que se limpia, se limpia
+entero, incluido el modo.
+
+#### C27-05 · Mismo cliente, mismo servicio: el error y sus dos salidas — ✅ **HECHO** en `#443` y `#445` (2026-09-08)
+
+Qué se valida, atado a algo que **ya existe** en el sistema:
+
+> "Es como los trackings cuando los escaneamos en Miami: escaneamos el tracking
+>  uno y el tracking dos, **que valida que sean del mismo código de cliente,
+>  mismo código de servicio**, etcétera. **Esa validación la vamos a hacer
+>  acá.**"
+
+Y el caso concreto, con las dos salidas que él pidió:
+
+> "Cuando él arranca, escanea uno de Jorge y va y escanea otro y ese no es el
+>  mismo Jorge —en vez de Jorge Padilla es Jorge Manzano—, **le tira error, es
+>  diferente cliente**… ¿qué opciones tiene ahí? **¿Desea eliminar este último
+>  o empezar todo de nuevo?**"
+
+**Lectura.** Dos clientes distintos en un mismo volumen es un cobro mal hecho,
+así que el error es **bloqueante** —la caja no entra—, pero no puede dejar al
+operario sin salida con la carga encima: **«eliminar el último»** (lo más común:
+se escaneó una caja de más) o **«empezar todo de nuevo»**. No son las mismas dos
+salidas que el modal del consolidado de `C27-04`, pero son dos modales de la
+misma familia y **conviene que se vean igual**: mismo lugar, mismo tamaño,
+mismos botones.
+
+Yusef ata la validación a **la que ya hace Miami** al escanear los trackings de
+una pre-alerta —*"esa validación la vamos a hacer acá"*—. Antes de escribirla
+hay que **ubicar dónde vive esa validación en `/etiquetar`** y reusarla, no
+escribir una segunda copia: es exactamente el patrón que ya mordió cuatro veces
+([[project_duplicacion_entre_pantallas]]).
+
+#### C27-06 · **Una etiqueta por medición**, no una por paquete — ✅ **HECHO** en `#445` (2026-09-08)
+
+Lo dijo tres veces, y textual:
+
+> "**No es una etiqueta por paquete, es una etiqueta por medición**, y la
+>  medición puede tener 100 paquetes."
+> "Todos los trackings que escaneó pueden ser 20 trackings y los metió todos en
+>  una sola caja: **hay una sola medida, un solo peso, entonces todo cabe en
+>  una sola etiqueta**."
+
+De la pizarra, con el ejemplo dibujado: cuatro warehouse receipts donde dos van
+consolidados **no son 4 etiquetas sino 3** —
+
+> «1 → 2 items consolidables, 1 sin consolidar, 1 sin consolidar»
+
+**Y por qué no una sola etiqueta para todo el envío**, que era la idea que él
+mismo tuvo y descartó:
+
+> "Yo había pensado hacer una sola etiqueta para todo, aunque sean tres
+>  volúmenes, pero dije no, **porque si hacemos una sola, se les puede
+>  escapar** algo."
+
+**Lectura.** Cambia el conteo que hoy hace la estación: hoy `C26-04` imprime
+**una sticker por caja medida** y las saca juntas al terminar el envío. Con el
+bulto, la sticker es **del volumen**; las cajas que van adentro no llevan la
+suya. Un volumen de una sola caja imprime una —el caso más común—, así que la
+diferencia no salta a la vista hasta que hay consolidado.
+
+La etiqueta por volumen y no por envío es, además, la que hace posible la
+auditoría de `C27-16`: tres etiquetas obligan a tres escaneos en pre-factura, y
+si falta uno se nota.
+
+#### C27-07 · No hacen falta los cuatro números — ✅ **HECHO** en `#440` (2026-09-08)
+
+> "Siempre vas a meter length, height, width y weight. **A veces no se mide,
+>  cuando es una cajita bien pequeñita. Pero siempre una de estas cuatro se
+>  mete** —que sería peso en ese caso—, o estas tres, o esta, o todo, **para
+>  que el sistema diga cuál es el mayor.**"
+
+**Lo que se construyó.** `MedirPaquete` pedía los cuatro y **fallaba** si
+faltaba uno —*«Faltan alto, largo, ancho: los cuatro tienen que ser mayores que
+cero»*—, que es exactamente la caja chiquita que él describe. Ahora:
+
+- pide **al menos uno** de los cuatro;
+- **las tres dimensiones van juntas o no van**: dos de tres no calculan volumen,
+  y guardarlas es guardar un dato que miente;
+- **lo que se deja en blanco no pisa lo que digitó Miami.** Éste es el punto
+  fino: un `nil` que sobrescribe es perder el dato bueno. Medir en Honduras solo
+  agrega.
+
+El resto sigue igual: el paquete recalcula solo VLBS y peso a cobrar
+(`before_save`), y quien decide *"cuál es el mayor"* —que es lo que él pide—
+sigue siendo `VolumetricoCalculator.entre_peso_y_vlbs`, que ya lo hacía. Un
+campo en blanco, en cero o con basura **se cae de la lista** y el paquete se
+queda con lo que tenía.
+
+> `#440` se tituló `C26-18`, porque se abrió antes de que esta conversación
+> estuviera numerada. Es este item, `C27-08` y `C27-30`.
+
+#### C27-08 · El QR dice «1 de 2» — ✅ **HECHO** en `#440` (2026-09-08), con una salvedad
+
+> "Al escanear, este solo es único; o si son dos, entonces **el QR le va a
+>  decir que es uno de dos**, entonces tiene que escanear dos para que le
+>  cuadre."
+
+**Lo que se construyó.** El QR de la etiqueta de medición (`C26-04`) lleva el
+`NdeM` al final —`2de3`, sin barra, por la misma razón por la que el resto del
+QR va con espacios— y la etiqueta lo imprime, así que quien la escanea sabe
+cuántas espera. Una caja sola no lleva nada: el QR se queda como estaba.
+
+> ⚠️ **La salvedad, y no es menor: hoy cuenta cajas, no mediciones.**
+> `etiqueta_cuantas_cajas` se arma con `numero_caja` y `cantidad_paquetes`, o
+> sea **las cajas de un envío partido**. Hoy los dos números coinciden porque
+> cada caja es una medición y una etiqueta; **en cuanto entre el bulto
+> (`C27-01`, `C27-06`) dejan de coincidir** —tres cajas pueden ser un solo
+> volumen— y ahí el `NdeM` tiene que pasar a contar **mediciones**, que es lo
+> que Yusef describe y lo que la auditoría de `C27-16` necesita.
+>
+> ▶ **Resuelto el 2026-09-08 en `#445`.** Cuando la caja tiene bulto, el QR
+> cuenta mediciones (`orden` / `de_cuantos`) y lleva los números **del bulto**;
+> sin bulto sigue contando cajas del split, que es el caso donde los dos
+> conteos coinciden. La salvedad de arriba queda como registro de por qué el
+> `#440` no era todavía la regla final.
+
+**Y no contradice a `A7-21`.** Ahí Yusef sacó el *«1 de N»* de la etiqueta de
+Miami, y con razón: esa se imprime **mientras todavía se empaca** y el total no
+se sabe —*"cuando menos acordás: hey, me salieron cuatro en vez de cinco"*—.
+Ésta se imprime en San Pedro **con la carga entera sobre la mesa**, donde el
+total sí se sabe. Es la misma distinción que él hizo el 2026-08-19 entre
+empacar y etiquetar.
+
+#### C27-09 · Reimprimir: se vuelve a escanear el warehouse — ✅ **ya está, confirmado**
+
+> "Él va a poder reimprimir la etiqueta, porque digamos que si se le cae…
+>  ¿cómo la buscaría? **Tendría que volver a escanear el warehouse.**"
+
+Y el otro caso de reimpresión: **corregir una medida mal digitada**. Se vuelve a
+medir y se reimprime; la etiqueta vieja se descarta.
+
+**Lectura.** Confirma lo que ya se construyó en `C26-04` —el botón de
+reimprimir, y el escaneo del warehouse como única forma de volver a encontrar
+una medición— y agrega la regla del re-sellado que `MedirPaquete` ya cumple:
+medir de nuevo **re-sella** `medido_at`/`medido_por`, porque el sello contesta
+*quién puso el dato que está*.
+
+#### C27-10 · El modelo de datos del bulto — ✅ **CONSTRUIDO** en `#443` (2026-09-08)
+
+La decisión técnica que sale de `C27-01`, escrita para que no se re-decida:
+
+- Nace una tabla **`bultos`** con las cuatro medidas, su propio
+  `peso_volumetrico` y su propio `peso_cobrar`. Hoy **no existe** en
+  `structure.sql`.
+- Los paquetes apuntan con **`bulto_id`**.
+- A las cajas se les escribe **solo** `bulto_id` y el sello
+  `medido_at` / `medido_por`. Sus `peso, alto, largo, ancho` **no se tocan**:
+  ése es el dato de Miami y sigue siendo verdad sobre esa caja.
+
+**Por qué no se reparte el peso del bulto entre sus cajas**, que es la solución
+que parece más barata y es la que rompe la plata:
+
+1. `Paquete` tiene `before_save :calculate_peso_cobrar` — le escribas lo que le
+   escribas, **recalcula desde los números de ese paquete**. Un peso repartido
+   no sobrevive al guardado.
+2. **Dividir dimensiones no significa nada.** Un bulto de 20×20×20 no son tres
+   cajas de 20×20×6.67; el volumen que se cobró es el del bulto.
+3. **La cadena de cobro corre por caja** —redondeo → escalón → mínimo
+   ([[project_cadena_de_cobro_flete]])—, así que 20 lb repartidas entre 3 cajas
+   pueden terminar cobrando **tres mínimos de servicio** en vez de uno.
+
+Esto toca de frente `RP-41` (*¿el flete se cobra por caja o por envío?*), que
+sigue abierta: el bulto **es** la respuesta operativa de Yusef —se cobra lo que
+se midió junto—, pero la regla de facturación la tiene que confirmar él.
+
+> ▶ **Construido el 2026-09-08 en `#443`** — el modelo `Bulto`, `PuedenIrJuntas`
+> y `MedirBulto`, con el tope de 10 de `C27-03` y el bulto como unidad de cobro.
+> La pantalla que lo usa entró en `#445`.
+
+> 🕳️ **Hueco conocido, abierto, y no se esconde.** `Paquete#listo_para_prefactura?`
+> mira `medido_at` **y el grupo de unión**, y nada más: no sabe qué es un bulto.
+> Y `PreFactura` **copia** `paquete.peso_cobrar` al armar sus items y no lo
+> vuelve a leer. El bulto ya existe (`#443`), pero **la pre-factura todavía no
+> lo lee**, así que hoy **una caja medida entra a la pre-factura con el peso de
+> Miami**, no con el del bulto. Es la primera tarea de `C26-08` / `C27-15` y la
+> razón por la que ese bloque no puede quedar para después.
+
+---
+
+### El panel y la pantalla
+
+#### C27-11 · El panel del manifiesto está **aprobado** — es una auditoría
+
+Mirando el panel de la derecha que se construyó en `C26-17`:
+
+> "El manifiesto, olvidate, aquí no tiene nada que ver… pero no está mal.
+>  **Esto es una auditoría.** Aquí si le faltó la caja, aquí te va a quedar uno,
+>  y hay que echarle un ojo."
+
+**Lectura.** Aprobado tal como está, y con el nombre que él le puso: no es una
+herramienta de trabajo de la línea, es **el control de que no se perdió nada**.
+No se toca.
+
+#### C27-12 · Falta **quién ingresó las medidas** — ✅ **HECHO** en `#445` (2026-09-08), con una pregunta abierta
+
+> "Lo que hace falta aquí es poner **quién ingresó las medidas** hoy."
+
+**Contra el código: el dato ya está, solo no se muestra.** `MedirPaquete` sella
+`medido_por` con las iniciales de quien midió, y hoy eso sale **únicamente en
+la etiqueta impresa** (`app/views/medicion/etiqueta.html.erb`). Ni el panel de
+la derecha ni la grilla lo dicen. Es un renglón, no una feature — y es
+exactamente el tipo de dato que después se busca cuando algo salió mal.
+
+#### C27-13 · La pantalla es **táctil**, y habla como un celular
+
+> "**Tiene que ser touch en la pantalla. Le voy a poner una laptop touch.** La
+>  idea es que ellos solo toquen, porque **ellos no saben usar el computador**,
+>  esos dos chicos que ves ahí no saben. Pero saben usar celular, entonces
+>  tienen una facilidad: hacérselos parecidos al lenguaje de un celular."
+> "**No lo van a leer, no van a ver bien, olvídenlo.**"
+
+Y el detalle de cómo se digita:
+
+> Teclado **en pantalla** para meter los números, botones grandes, y **las dos
+> cosas** —el touchpad y el teclado— *"lo que se sientan mejor para ellos"*.
+
+**Lectura.** Es el mismo argumento de `C27-02` visto por el otro lado: **tocar
+un botón grande sí, leer y elegir de una lista no**. Para la estación: blancos
+de toque grandes, poco texto, un camino por pantalla, teclado numérico en
+pantalla para las medidas, y las decisiones resueltas por el escaneo. **No se
+quita el teclado físico**: conviven. El teclado sigue siendo la herramienta en
+Miami (`A1-*`); acá la herramienta es el dedo y la pistola.
+
+#### C27-14 · El gate de estado tiene que dejar **saltarse el manifiesto** — ✅ **HECHO** en `#445` (2026-09-08)
+
+Salió dos veces, y la segunda con nombre y apellido:
+
+> **Jorge:** Tenés que pasar el proceso de aduana, no podés saltarte el proceso
+>  de manifiesto.
+> **Yusef:** Pero si ya está en Honduras. ¿Cómo llegó a Honduras si no…?
+>  **"Debe dejar que sí se lo salten, porque a veces se capean, algunos se los
+>  van a capear."**
+
+Y, mirándolo pasar en vivo:
+
+> "Este tiene un bloqueo ahorita que me tiene loco: **si no ha pasado el proceso
+>  desde Miami para acá, no lo puede hacer.** Y ya le dije que **le tiene que
+>  eliminar eso** porque nos va a llevar putas, porque a más de alguno se le va
+>  a escapar. **Hay que poner una opción ahí.**"
+
+**Lectura, contra el código.** Hoy `MedirPaquete` **bloquea**: si el estado no
+está en `ESTADOS_FACTURABLES` (`en_aduana`, `disponible_entrega`) tira
+*«todavía no se recibió. Pasala por Recibir Carga»*. Eso asume que la única
+manera de estar en Honduras es haber pasado por el manifiesto, y él dice que no:
+la caja **está ahí**, en la mesa, en la mano del operario.
+
+Lo que pide —*"hay que poner una opción ahí"*— es lo mismo que ya se hizo con el
+grupo incompleto en `C26-03`: **avisar y dejar pasar**, no bloquear, y **sellar
+quién lo dejó pasar y cuándo**, que es lo que después permite auditarlo desde el
+panel de `C26-17`. Va en la misma línea que
+[[project_manifiesto_dos_caminos]]: nada puede asumir que el paquete pasó por el
+manifiesto.
+
+---
+
+### Pre-factura, facturación y entrega
+
+#### C27-15 · La pre-factura **vuelve a escanear** — contesta `C26-08`
+
+La pregunta que quedó abierta el 2026-09-05, hecha y contestada:
+
+> **Jorge:** ¿Debo confiar en que el de medición escaneó todos los paquetes, o
+>  desconfiar y en pre-factura volver a escanear?
+> **Yusef:** **"Yo prefiero volver a escanear. Es que ahí es donde yo no puedo
+>  confiar… y los errores se dan acá."**
+
+**Lectura.** La pre-factura **no hereda** el grupo que armó Medición: lo
+**reconstruye escaneando**. Medición no es una autoridad sobre qué se factura
+junto; es la estación donde se pesa y se mide. Las dos pantallas escanean, y que
+coincidan es la verificación, no un dato que se pasa de una a la otra.
+
+Y del lado del cobro, lo que `C27-01` le deja a este bloque: **la línea de la
+factura es el bulto**, no la caja. *"Le decimos: mire, le valió tanto, sale de
+esto más esto."*
+
+#### C27-16 · Cómo audita Vanessa: el QR dice «son dos», y además cada warehouse
+
+Con qué escanea la pre-factura, en las palabras de él:
+
+> "Cuando ella escanea cualquiera de los QR le dice: ¡eh!, son dos —ya le va a
+>  decir que **tiene dos mediciones**—, porque si no escanea la segunda medición
+>  no se le agrega. **Esa es una manera de auditar las mediciones.** Pero ella
+>  también tiene que escanear **cada warehouse**, de esa manera auditamos que no
+>  se quedó nada o no se cayó a otro lado."
+
+**Lectura, y son dos escaneos distintos, no uno:**
+
+1. **Los QR de las mediciones** (`C27-08`): el primero que se escanea declara
+   *«soy 1 de 2»*, y la pre-factura **no se completa** hasta que llegue el
+   segundo. Audita que no se perdió un volumen entero.
+2. **Cada warehouse receipt**, uno por uno: audita que dentro de esos volúmenes
+   están todas las cajas — *"que no se quedó nada o no se cayó a otro lado"*.
+
+Es el detalle que faltaba de `C27-15`: la pre-factura no solo re-escanea, sabe
+**cuántas mediciones espera** porque el QR se lo dice.
+
+#### C27-17 · **Se factura por pre-alerta**: cinco pre-alertas, cinco facturas — ✅ **contestado**
+
+Ésta era la pregunta que Yusef mismo había dejado abierta —*"aquí es donde tengo
+que llamar a Vanessa para que me explique qué hacen en ese caso"*—. Fue, y
+volvió con la respuesta: un cliente con dos paquetes consolidados y uno sin
+consolidar son **facturas separadas**.
+
+> "Nosotros facturamos **de acuerdo a la pre-alerta**."
+
+Cinco pre-alertas, cinco facturas. Es la misma regla que ya estaba escrita en
+`C26-08` desde el otro lado (*"cuando son cinco consolidados diferentes… ellos
+tienen que separarlos en cinco"*), ahora confirmada con la práctica.
+
+**Lectura, y es la razón de fondo de «NO Mezclar».** Si la factura sale de la
+pre-alerta, entonces **consolidado y no-consolidado no pueden compartir una
+medición**: el volumen es la línea de la factura (`C27-15`), y una línea no
+puede pertenecer a dos facturas. `C27-04` no es una guarda de conveniencia —es
+la consecuencia de cómo se factura.
+
+---
+
+### Reglas de negocio nuevas, que hoy **no** están en el código
+
+#### C27-18 · Máximo **cinco** pre-alertas consolidando abiertas, por tipo de envío — 🔨 **pendiente**
+
+> "Hay clientes que así dividen, dividen hasta en cinco. Nosotros le pusimos un
+>  límite de cinco a los clientes, de pre-alertas consolidando por tipo de
+>  envío… **cinco por servicio. Son tres servicios que consolidan.**"
+
+**Lectura, contra el código.** Los *"tres servicios que consolidan"* cuadran
+solos: `tipos_envio.consolidable` es verdadero en **EXPRESS, CER y CEM**, y
+falso en CKA y CKM. O sea que el tope es **5 por cliente y por servicio
+consolidable**, hasta 15 pre-alertas consolidando abiertas por cliente.
+
+**El límite no existe en ninguna parte**: no hay constante, ni validación, ni
+nada que cuente pre-alertas consolidando abiertas. Hoy un cliente puede abrir
+las que quiera. Lo que falta decidir es qué pasa con la sexta (`RP-67`).
+
+#### C27-19 · Al finalizar el ciclo, la consolidación se cierra sola — 🔨 **pendiente, es un job**
+
+> "Cuando ya se finaliza el ciclo, se cierra automático también. **Y eso es
+>  parte de los queos**, lo que parece que esa parte no la he hecho."
+
+**Lectura.** Él mismo lo ubica donde va: en la cola. Y la cola **ya está
+conectada** desde el 2026-09-06 (`C26-01`, `#431`), así que esto ya se puede
+construir: no queda bloqueado como quedaron los diferidos de antes
+([[project_cola_de_trabajos_no_conectada]]). En `app/jobs` hay seis trabajos hoy
+y ninguno cierra consolidaciones.
+
+Lo que falta antes de escribirlo es **qué es «finalizar el ciclo»** — la fecha de
+corte del tipo de envío, el manifiesto que sale de Miami, o la fecha de trabajo
+de `C26-10`. `RP-68`.
+
+#### C27-20 · La ventana de 30 minutos del correo, **confirmada** — cierra `RP-32`
+
+> "Que le pusiéramos **30 minutos** a los correos para que si tienen más
+>  paquetes se le actualicen."
+
+**Ya está construida** y es exactamente eso: `NotificarLlegadaASucursal` programa
+el aviso a `VENTANA_DEFAULT_MIN = 30` (`A7-08`, activa desde el 2026-09-06), y el
+número se cambia sin deploy con
+`Configuracion.set("ventana_aviso_llegada_min", "…")`. **`RP-32` se cierra**: el
+número es 30.
+
+#### C27-21 · Retención: **un año** de historial de medición; las facturas no se borran — 🔨 **pendiente**
+
+> **Jorge:** "¿El historial de medición hasta cuánto tiempo se va a poder ver?"
+> **Yusef:** "**Como un año atrás.** Se va a limpiar el 2025 cuando entremos al
+>  2027; va a tener un año de almacenamiento, el del año anterior. **No se
+>  eliminan las facturas.**"
+
+**Lectura.** La regla es: **el año corriente más el anterior**, y la limpieza es
+por año calendario, no por ventana móvil —*"se va a limpiar el 2025 cuando
+entremos al 2027"*—. Y el límite duro: **las facturas nunca**.
+
+Es un borrado, así que antes de escribirlo hay que saber exactamente qué cae y
+qué no (`RP-69`). Hoy no existe ninguna purga; y lo que sí existe y hay que
+mirar de frente es `paper_trail`, que está en los 50 modelos
+([[project_paper_trail_global]]): las versiones de auditoría también crecen, y
+borrar el dato dejando la versión no borra nada.
+
+#### C27-22 · La báscula **se conecta** — actualiza `RP-63`
+
+> "No va a meter peso, porque **el peso va a estar conectado a la balanza**, se
+>  lo va a dar automático… **ahorita lo podemos poner manualmente.**"
+
+**Lectura.** Cambia el estado de `RP-63` (abierta el 2026-09-05: *"esas balanzas
+son digitales, no las puedo conectar"*, *"voy a pedir una nueva"*): la decisión
+ya está tomada —**se conecta**— y el manual es explícitamente el **puente**,
+no el destino. Lo que sigue faltando es el mismo dato de siempre: cuál compra y
+si tiene protocolo abierto. La pantalla conviene diseñarla con el peso como un
+campo que **puede llegar solo**, no como un campo que siempre se teclea.
+
+---
+
+### Lo que Yusef **descartó**, con sus palabras
+
+#### C27-23 · Que el operario declare que dividió una carga en tres mediciones — ❌ **descartado**
+
+La idea era que, cuando un bulto no cabe en una sola medición, el operario
+declarara *«esto son 3 mediciones del mismo envío»* y el sistema las sumara.
+Yusef la mató él mismo:
+
+> "Me gustaría que quedara así, pero de entrada va a estar **muy difícil eso
+>  para ellos… por el tipo de personal que está ahí**."
+
+**No se construye.** Lo que la reemplaza es más simple y ya está decidido: la
+pre-factura escanea los QR y **el QR dice cuántas mediciones son** (`C27-08`,
+`C27-16`), así que la suma la hace el que factura, no el que mide. Queda anotado
+en `RP-70` por si el personal cambia; no es una pregunta pendiente, es una
+decisión con fecha.
+
+---
+
+### Pre-alerta: lo que salió al final — 📄 **otro bloque, se deja escrito**
+
+Cerrando la reunión, Yusef fue pasando por el portal del cliente. No es el
+bloque de esta corrida; va acá para que no se pierda.
+
+#### C27-24 · Mover un paquete de una pre-alerta a otra
+
+> "Aquí le hace falta a Jorge que **lo pueda mover**, no sé por qué no está esa
+>  opción."
+
+**Contra el código: la capacidad existe, la puerta no.** `cuenta/pre_alertas`
+tiene `mover_paquete` y `destinos_disponibles` desde hace tiempo, y admin las
+tiene también desde `PR-C6.48` (*"el portal ya lo tenía; admin solo podía
+hacerlo desde la ficha del paquete"*). O sea que lo que falta es **el botón en
+la pantalla que él estaba mirando**, no la función. Es el patrón conocido
+([[project_duplicacion_entre_pantallas]], [[project_pantallas_sin_puerta]]):
+antes de construir nada, hay que ver **en qué pantalla** lo buscó.
+
+#### C27-25 · Editar o agregar instrucciones a una pre-alerta ya creada
+
+> "Acá sería bueno que él pueda **agregar instrucciones, aunque no la haya
+>  agregado**."
+
+La columna existe —`pre_alerta_paquetes.instrucciones`— y se llena al crear. Lo
+que falta es poder **agregarlas o cambiarlas después**. Y aplica la regla que
+Yusef ya fijó: las instrucciones del cliente son **nota, no tarea**
+([[feedback_instrucciones_son_nota_no_tarea]]); agregar una instrucción no crea
+trabajo, lo escribe.
+
+#### C27-26 · Poder **borrar** una pre-alerta
+
+> "Debería **poderla borrar** para ya no tenerla, porque me equivoqué."
+
+**Contra el código: hoy no se puede, y es a propósito.** Las dos rutas de
+pre-alertas están declaradas `except: %i[destroy]`; lo que hay es **anular**
+(`delete :anular`), que la deja marcada y auditable. Lo que él pide es para el
+caso *"me equivoqué"* —una pre-alerta recién creada, sin nada recibido—, que no
+es lo mismo que anular una que ya tiene historia. Cuando se toque, la línea a
+respetar es la de siempre: se borra lo que nunca existió de verdad, se anula lo
+que ya pasó por algún lado.
+
+#### C27-27 · «Los paquetes se bloquean en aduana» — ❓ **sentido no cerrado**
+
+Lo dijo de paso, en la pasada por pre-alertas del final:
+
+> Los paquetes **se bloquean en aduana**.
+
+**No se cierra el sentido, porque la frase admite varias lecturas** y la
+transcripción no da más contexto:
+
+1. **En la pre-alerta**: un paquete que ya está en aduana **no se puede mover ni
+   editar** desde el portal, y por eso lo dice justo cuando pide poder mover
+   (`C27-24`) y borrar (`C27-26`).
+2. **Operativa**: la carga se **detiene físicamente** en aduana, y es una
+   descripción del proceso, no un pedido al sistema.
+3. **El gate**: es la otra cara de `C27-14`, donde él pide que se pueda saltar
+   el manifiesto.
+
+Cuál de las tres es, se le pregunta cuando se abra el bloque de pre-alerta. Lo
+que **no** se hace es tomar la tercera y construirla: `C27-14` ya tiene sus
+palabras propias y no necesita ésta de apoyo.
+
+#### C27-28 · Falta la bandera de **Compra China / CKM**
+
+> "Falta **chain** también" —junto a «sellado» y «enviado según política».
+
+**Contra el código.** «Sellado» y «Compra chino» **existen** como plantillas de
+descripción (`PlantillaDescripcion`, `C19-04`, sembradas en `db/seeds.rb` desde
+`PR-C7.58`), y «enviado según política» tiene su propio catálogo
+(`motivos_envio_politica`). Dos cosas a verificar antes de construir nada:
+
+1. **En qué pantalla las está viendo.** Si en esa pantalla está el picker de
+   políticas y no el de descripciones, es de nuevo el patrón de la puerta
+   faltante.
+2. **Que el catálogo exista donde él mira.** El deploy **no siembra**
+   ([[project_deploy_no_siembra]]): un catálogo que el sistema necesita va por
+   **migración de datos**, no por `seeds.rb`. Es perfectamente posible que
+   «Compra chino» exista en la máquina de Jorge y **no en staging**, y que eso
+   sea todo el bug.
+
+---
+
+### Bugs de digitación que salieron **en vivo**, por cámara
+
+#### C27-29 · El proveedor no se guarda en `/paquetes/<id>` — ✅ **HECHO** en `#444` (2026-09-08)
+
+Jorge lo encontró mirando la pantalla del operario:
+
+> "Está en F10… no lo está cambiando… el guardar…" · **"Ya, ya, ya, es que este
+>  es el proveedor."**
+
+**El diagnóstico, confirmado leyendo `app/views/paquetes/_form.html.erb`:** el
+campo visible del autocomplete es un `<input type="text">` **sin `name`**. No se
+envía nunca. Lo único que viaja es el `hidden_field :proveedor_id`, y ése lo
+escribe el controller de JS **solo cuando se elige una sugerencia del dropdown**.
+Entonces: escribir el proveedor a mano y guardar **no guarda nada**, y la
+pantalla no se queja. Se suma a lo ya sabido de ese autocomplete
+([[project_autocomplete_no_limpia_el_oculto]]): escribe el oculto, nunca lo
+limpia, y ahora sabemos que **el texto tampoco llega**.
+
+#### C27-30 · El sufijo de caja no se ve en el listado — ✅ **HECHO** en `#440` (2026-09-08)
+
+> **Yusef:** "Cuando vuelvo a escanear aparece en las cajitas y aparecen todos
+>  los datos, **pero a la vista no**… lo mejor sería que lo tengas en los dos
+>  lados."
+
+El `-1`, `-2` del warehouse receipt (`A1-04`, `A1-05`) estaba en el detalle y en
+la etiqueta, pero no en la columna «N° recepción» de `/paquetes`, que es donde
+el operario mira primero. **Está en los dos lados**, y la columna pasó a usar
+**el mismo helper que imprime el código de barras** (`etiqueta_codigo_barras`)
+en vez de `numero_recepcion_visible`: así las dos pantallas no pueden divergir,
+que es el modo conocido de que esto se rompa
+([[project_duplicacion_entre_pantallas]]).
+
+#### C27-31 · `/etiquetar` borra el peso al agregar una caja — ✅ **HECHO** en `#441` (2026-09-08)
+
+**El diagnóstico, confirmado leyendo el código:** en
+`cajas_peso_medidas_component`, el campo de peso es a la vez
+`f.number_field :peso` —o sea `name="paquete[peso]"`, el peso **del paquete**— y
+`data-caja-campo="peso"`, el campo de **captura** del repetidor de cajas. Al
+agregar una caja, `cajas_repetidor_controller#agregar` llama a
+`_limpiarCaptura()`, que vacía los campos de captura… **y con ellos el peso del
+paquete**, porque son el mismo elemento del DOM.
+
+**Y es peor que lo reportado.** El paquete **no queda sin cobrar: se cobra
+mal.** `calculate_peso_cobrar` corre igual con el peso en `nil`, y entonces gana
+el volumétrico —el viejo, el que tuviera de antes—. Medido en `#441`: **un
+paquete de 30 lb reales se factura por 6**. Un paquete sin peso salta a la
+vista y alguien lo arregla; un paquete cobrado por la quinta parte se va con la
+factura hecha y nadie lo mira. Se arregla en `#441`
+(`fix/etiquetar-no-borra-el-peso`).
+
+Es otra vez un elemento con dos responsabilidades en esa pantalla; va con
+[[project_duplicacion_entre_pantallas]] y con el `1 de N` del mismo componente.
+
+---
+
+#### C27-32 · La pantalla de medición se rehízo con el «Agregar» de /etiquetar — ✅ **HECHO** en `#447` (2026-09-08)
+
+Jorge probó `#445` en staging y lo dijo en una línea: *"esta vista está
+confusa, revisá el diseño"*. Y dio la referencia que decide el diseño:
+**"a Yusef le gusta el agregar que estaba en etiqueta"** — lo mismo que Yusef
+había dicho el 7: *"le podría poner otro cuadro igual como el que está en
+Miami… así como dejaste Miami, es una copia de ese pedazo"*.
+
+**Lo que estaba mal, visto con dos cajas en la mesa.** Cuatro tarjetas
+apiladas y **dos modelos a la vez**: la grilla de cuadritos de `C26` —una
+medición por caja, MIDIENDO, «tocar para elegir»— y la mesa de `C27`. La
+última caja aparecía **cuatro veces**; el cliente, tres. Tocar un cuadrito lo
+agregaba a la mesa, que es elegir de una lista (`C27-02` lo prohíbe).
+«Facturar lo que hay» vivía en rojo permanente con la mesa completa. «Agregar
+volumen» estaba en una barra al final, lejos de los números.
+
+**Cómo quedó: una tarjeta, en el orden del bloque de /etiquetar.** La pistola;
+la tanda **una vez** (cliente · servicio, y si está consolidando, la línea con
+qué pre-alerta, cuántas van en la mesa, cuáles ya se midieron y **por quién**
+—que es `C27-12`— y cuáles faltan y dónde están: la «Notificación» de la
+pizarra, sin cuadritos); «VOLUMEN 1 · N cajas en la mesa» con sus filas; la
+captura a la izquierda y el cálculo a la derecha; «Volúmenes guardados N de
+10» con **«+ Agregar volumen»** pegado a la captura y una fila por volumen con
+su «×», como las cajas en Miami; y la barra pegada abajo para la laptop táctil
+(`C27-13`).
+
+**«Facturar lo que hay» cambia de momento, no de sentido.** Medir nunca se
+frena. Al guardar con un consolidado incompleto, el banner dice qué falta y
+dónde está y ofrece la excepción —el mismo modal rojo y el mismo sello de
+`C26-03`—. Un consolidado completo no la ofrece.
+
+> 🐛 **Lo que la captura dejó a la vista, y no era de esta pantalla.** El
+> banner decía «completo» y el botón rojo se veía igual. En el CSS compilado,
+> `.inline-flex`, `.flex` y `.inline-block` vienen **después** de `.hidden`:
+> en cualquier elemento que lleve una de esas —y `ButtonComponent` lleva
+> `inline-flex`— **la clase `hidden` pierde y el botón se ve**. Con eso: los
+> tres botones del modal rojo de medición salían juntos; «Reimprimir» se veía
+> mientras se armaba la tanda; el «×» de sacar de la lista lo veía el operario
+> que no es admin; en `/empacar`, «Meterlo igual (omitir)» siempre; en
+> `/etiquetar`, «Todavía no» siempre. Y el test del panel daba verde con el
+> bug puesto: miraba la clase, no si el botón se veía. Se arregló en las tres
+> pantallas por el **atributo** `hidden` —el preflight de Tailwind trae
+> `[hidden]{display:none!important}`— y `botones_escondidos_test` cierra la
+> puerta del lado del ERB.
+
+> ▶ **Más tarde el mismo día: la notificación pasó a dibujitos.** Jorge, con un
+> envío partido en diez, vio la línea de consolidación como lo que era —diez
+> códigos de dieciocho caracteres con su paréntesis— y pidió: *"¿podemos hacer
+> dibujitos, para que se mire mejor?"*. Ahora es una línea corta de conteos y
+> **un cuadrito por caja**, coloreado por estado, con las iniciales de quien
+> midió en las medidas y el anillo dorado en la que está en la mesa; debajo,
+> solo las que **no están acá**. Y **no se tocan** (`C27-02`): es un mapa, no
+> un menú.
+
+#### C27-33 · Una caja ya medida se puede **medir de nuevo** — ✅ **HECHO** (2026-09-08)
+
+Yusef lo pidió el 7, mirando la pantalla: *"si se equivocan y lo van a
+ingresar en seis libras, y en la mesa eran cuatro libras, **se va a poder
+corregir**, las mismas etiquetas… medir de nuevo"*. La primera versión de la
+pantalla solo ofrecía reimprimir, y Jorge lo encontró en staging: *"cuando un
+warehouse receipt ya tiene medidas y se vuelve a escanear **no me pregunta si
+quiero editarlo**"*.
+
+**Cómo funciona.** Al escanear una caja con bulto, el modal rojo ofrece
+«Reimprimir la etiqueta» **y «Medir de nuevo»**. Medir de nuevo trae a la mesa
+**el bulto entero** —sus cajas se midieron juntas, vuelven juntas— con los
+números viejos puestos y el foco en el peso, para corregir. Al guardar, el
+bulto nuevo **reemplaza** al viejo: el viejo se destruye (con `has_paper_trail`
+en `Bulto`, que se queda con los números que estaban mal y con quién los puso)
+y sale la etiqueta nueva. Una caja que el operario **sacó de la mesa** antes de
+guardar queda **sin medir** y vuelve a la lista de pendientes: el único número
+que tenía era el del bulto que se fue.
+
+**Guarda.** Una caja con bulto no entra a otra medición si esa medición no
+viene a reemplazar **su** bulto: la pantalla tiene que haber preguntado antes.
+
+> ❓ Si el bulto viejo era «1 de 2» de una tanda, el «2 de 2» de la otra
+> etiqueta sigue impreso y el nuevo sale «1 de 1». El caso normal —una tanda de
+> un bulto— no lo tiene; el otro queda anotado.
+
+### Notas que no son tarea
+
+- **El rótulo dice PESA, y al bulto le dicen volumen.** Vale la pena que las
+  etiquetas y los mensajes de la estación usen las palabras que ya se usan ahí.
+- **La pizarra.** Yusef la mandó instalar durante la reunión, y lo primero que
+  se escribió en ella fue «NO Mezclar». Cuando la regla está en la pared, el
+  sistema no la puede contradecir.
+- **«Ellos no saben usar el computador»** no es un desprecio, es el requisito:
+  todo lo que en esta estación se resuelva leyendo, se resuelve mal.
+- **La cámara como método.** Es la primera vez que se documenta viendo trabajar
+  al operario en vez de escuchando a Yusef contarlo, y los tres bugs de
+  `C27-29`…`C27-31` salieron de ahí, no de un reporte.
+
+---
+
+### Lo que quedó abierto
+
+| # | Qué | Estado |
+|---|---|---|
+| `C27-01` | La unidad de medición es el **bulto** («volumen», como le dicen ellos) | ✅ **Hecho** — `#443` (modelo) y `#445` (pantalla). Supera a `C26-05` |
+| `C27-02` | El bulto se arma escaneando, no eligiendo | ✅ **Hecho** — `#445`. Cada pip agrega una caja; los botones son para confirmar y deshacer, nunca para elegir |
+| `C27-03` | Máximo **10** — *"10 warehouse, 10 etiquetas"* | ✅ **Hecho** — `#443` y `#445`. Se cuentan **mediciones**, que es lo que él cierra (*"es sacar 10 volúmenes"*); es disciplina, no capacidad. ❓ Qué pasa al llegar a diez lo preguntó Jorge tres veces y no se contestó: ver `RP-71` |
+| `C27-04` | «NO Mezclar»: modal con la pre-alerta y la pre-factura, y **dos respuestas** | ✅ **Hecho** — `#443` (`PuedenIrJuntas`) y `#445` (el modal). «A un lado» no guarda y sigue; «sí lo hago» limpia la tanda y solo deja entrar cajas de ese consolidado |
+| `C27-05` | Mismo cliente y mismo servicio, o error con dos salidas | ✅ **Hecho** — `#443` y `#445`, con las dos salidas textuales: «quitar el último escaneado» y «empezar todo de nuevo» |
+| `C27-06` | **Una etiqueta por medición**, no por paquete (4 WR con 2 consolidados = **3**) | ✅ **Hecho** — `#445`. Cambia el conteo de `C26-04`; una sola para todo la descartó él: *"si hacemos una sola, se les puede escapar"* |
+| `C27-07` | No hacen falta los cuatro números | ✅ **Hecho** en `#440` (2026-09-08) — al menos uno; las tres dimensiones juntas o ninguna; el blanco no pisa a Miami |
+| `C27-08` | El QR dice «1 de 2» | ✅ **Hecho** — `#440` (`NdeM` al final del QR; no contradice `A7-21`) y `#445`, que lo pasó a contar **mediciones** cuando hay bulto, que es lo que audita `C27-16`. Sin bulto sigue contando cajas del split, y ahí los dos conteos coinciden |
+| `C27-09` | Reimprimir volviendo a escanear el warehouse | ✅ **Ya está** (`C26-04`), confirmado en vivo |
+| `C27-10` | El modelo de datos del bulto: tabla `bultos`, `bulto_id` en el paquete, **no** repartir el peso | ✅ **Construido** — `#443`. Hay un test que afirma que a las cajas no se les toca el peso: repartirlo cobraría tres mínimos donde va uno |
+| `C27-11` | El panel del manifiesto es una auditoría | ✅ **Aprobado** tal como quedó en `C26-17` |
+| `C27-12` | Falta **quién ingresó las medidas** en el panel | ✅ **Hecho** — `#445`, en el cuadrito de la grilla. ❓ El panel que él miraba lista solo lo que **falta** por medir, así que ahí no hay iniciales que poner: falta confirmar dónde lo quería |
+| `C27-13` | Pantalla táctil, teclado en pantalla, botones grandes, y el teclado físico convive | 📄 **Regla de diseño** de la estación |
+| `C27-14` | El gate de estado debe dejar saltarse el manifiesto | ✅ **Hecho** — `#445`: avisa, deja pasar y sella (`salto_manifiesto_at/_por/_estado`). *"Hay que poner una opción ahí."* La guarda de «ya está en una pre-factura» **no** se tocó: ahí el peso se congeló |
+| `C27-15` | La pre-factura vuelve a escanear | ✅ **Contestado** — cierra la duda de `C26-08`; se construye con el bloque de pre-factura |
+| `C27-16` | La auditoría de Vanessa: el QR dice cuántas mediciones, y además cada warehouse | 📄 **Documentado** — es el requisito de la pre-factura, y lo que le da sentido a `C27-08` |
+| `C27-17` | **Se factura por pre-alerta**: cinco pre-alertas, cinco facturas | ✅ **Contestado por Vanessa** — es la razón de fondo de `C27-04` |
+| `C27-18` | Máximo 5 pre-alertas consolidando abiertas **por servicio** (EXPRESS, CER, CEM) | 🔨 **Pendiente** — no existe ningún límite en el código; `RP-67` |
+| `C27-19` | Al finalizar el ciclo, la consolidación se cierra sola | 🔨 **Pendiente** — es un job, y la cola ya está; `RP-68` |
+| `C27-20` | La ventana de 30 minutos del correo | ✅ **Confirmada** — ya construida (`A7-08`); **cierra `RP-32`** |
+| `C27-21` | Retención: un año de historial de medición; las facturas **no** se borran | 🔨 **Pendiente** — es un borrado: `RP-69` antes de escribir nada |
+| `C27-22` | La báscula se conecta; el peso manual es el puente | 📄 **Decidido** — actualiza `RP-63`, que sigue esperando **cuál** báscula |
+| `C27-23` | Declarar una carga dividida en 3 mediciones | ❌ **Descartado por Yusef** — *"muy difícil para ellos"*; lo reemplaza el QR de `C27-08`. Anotado en `RP-70` |
+| `C27-24` | Mover un paquete de una pre-alerta a otra | 🔨 **La función existe** (`mover_paquete`, `PR-C6.48`) — falta el botón en la pantalla que él miraba |
+| `C27-25` | Agregar o editar instrucciones en una pre-alerta ya creada | 🔨 **Pendiente** — la columna existe; son nota, no tarea |
+| `C27-26` | Borrar una pre-alerta *("me equivoqué")* | 🔨 **Pendiente** — hoy `except: destroy` a propósito; solo hay `anular` |
+| `C27-27` | «Los paquetes se bloquean en aduana» | ❓ **Sentido no cerrado** — la frase admite tres lecturas (la pre-alerta que no deja mover, la aduana física, o el gate de `C27-14`); se le pregunta con el bloque de pre-alerta |
+| `C27-28` | Falta la bandera de Compra China / CKM junto a «sellado» y «enviado según política» | 🔨 **Verificar primero** — la plantilla existe en `seeds.rb`, y **el deploy no siembra** |
+| `C27-29` | El proveedor no se guarda en `/paquetes/<id>` | ✅ **Hecho** — `#444`. Eran **tres** bugs tapándose: sin `name`, `:proveedor` en los params (500 al ponerle el `name`) y el `proveedor_id` viejo que ganaba. Se cerró con `proveedor_texto=` y se fueron las dos copias de `proveedor_string_param` |
+| `C27-30` | El sufijo de caja no se ve en el listado | ✅ **Hecho** en `#440` (2026-09-08) — la columna usa el mismo helper que la etiqueta |
+| `C27-31` | `/etiquetar` borra el peso al agregar una caja | ✅ **Hecho** — `#441`. Y es peor de lo reportado: no queda sin cobrar, **se cobra mal** — 30 lb reales facturadas por 6, porque el volumétrico viejo le gana al peso en `nil` |
+| `C27-32` | La pantalla de medición, con el «Agregar» de /etiquetar | ✅ **Hecho** — `#447`. Una tarjeta, la caja una vez, sin cuadritos, «Facturar lo que hay» después de guardar. Y de paso: la clase `hidden` **no esconde** un `ButtonComponent`; se arregló en tres pantallas y hay lint |
+| `C27-33` | Una caja ya medida se puede **medir de nuevo** | ✅ **Hecho** — el modal ofrece «Medir de nuevo»; vuelve el bulto entero con sus números, y al guardar el nuevo reemplaza al viejo (historial en `Bulto`). Lo que se saque de la mesa queda sin medir |
+
+### Las preguntas que abre
+
+| Id | Qué |
+|---|---|
+| `RP-67` | **La sexta pre-alerta consolidando.** El tope es 5 por servicio consolidable (`C27-18`). ¿Qué pasa cuando el cliente intenta abrir la sexta: se bloquea con mensaje, o se avisa y se deja? ¿Y aplica igual cuando la abre servicio al cliente por él? |
+| `RP-68` | **¿Qué es «finalizar el ciclo»** para el job que cierra las consolidaciones (`C27-19`)? ¿La fecha de corte del tipo de envío, el manifiesto que sale de Miami, o la fecha de trabajo de `C26-10`? |
+| `RP-69` | **La purga de un año (`C27-21`): qué se borra exactamente.** ¿Solo el historial de mediciones, o los paquetes de ese año? Las facturas **no** —eso ya está dicho—. ¿Y las versiones de `paper_trail`, que están en los 50 modelos? Un borrado mal delimitado no se deshace |
+| `RP-70` | ⏸️ **Congelado por decisión de Yusef, no es pregunta.** Sumar varias mediciones declaradas del mismo envío (`C27-23`). *"Me gustaría que quedara así, pero… por el tipo de personal que está ahí"*. Se anota por si el personal cambia |
+| `RP-71` | **¿Qué pasa cuando el operario llega a los 10 volúmenes de una tanda (`C27-03`)?** Jorge se lo preguntó **tres veces** en el audio del 2026-09-07 y las tres la conversación se fue al caso del cliente de 100 paquetes. Hoy se avisa y se lo deja seguir en una tanda nueva —el tope **no es acumulativo**—, que es decisión de Jorge: un techo por turno frenaría justo ese día. Falta que Yusef diga si con eso alcanza o quiere que quede registrado quién lo alcanza |
+
+---
+
+## Conversación 28 (2026-10-03) — el manifiesto que va al transportista, el escaneo que dice por qué, y la medición desamarrada
+
+Un sábado en San Pedro, Jorge con Yusef y su equipo **probando en vivo** el
+manifiesto, la recepción y la PESA en staging. Dos fuentes:
+
+- **El audio**, 42 minutos, transcrito con `whisper small` en nueve pedazos.
+- **La hoja impresa** del manifiesto `MMIA2026000011`, marcada a mano por
+  Yusef: la tabla de PAQUETES **tachada** con una X, y al lado de «Cantidad de
+  paquetes 8» escrito **«Esto no va»**.
+
+> ⚠️ **Sobre el transcript.** Grabado en la bodega, con clientes llegando y
+> conversaciones cruzadas. **El sentido está; la letra puede fallar** y varios
+> nombres se perdieron. Lo que no se entiende se marca, no se completa.
+> Dudosos: *"cañar"* (= escanear), *"el expo"*, *"el del vierno"* (¿el del
+> viernes?), *"Patiz"*.
+
+Lo que esta conversación cambia de raíz es la PESA. Hasta hoy cada volumen
+llevaba **sus** cajas escaneadas (`C27-02`). Ahora se escanea **todo**, y los
+volúmenes salen después, sin amarrar ninguna caja a ninguno (`C28-07`).
+
+---
+
+### El manifiesto: lo que va al transportista y lo que se queda en casa
+
+#### C28-01 · El manifiesto impreso **no lleva los paquetes** — revierte `RP-60` — ✅ **HECHO** en `PR-C28.1`
+
+Jorge le mostró la hoja impresa con los bultos y, abajo, los paquetes:
+
+> "No, no, no… Los bultos… No, **esto va en un reporte aparte**. En el
+>  manifiesto, pero no en la impresión específicamente."
+> "Ahorita estás en el manifiesto, y **los paquetes no van en el manifiesto**.
+>  No van en la hoja de impresión del manifiesto. **Lo que van son las cajas
+>  del manifiesto.**"
+
+Y sobre la hoja tachó la tabla PAQUETES y escribió **«Esto no va»** junto a
+«Cantidad de paquetes». Jorge lo confirmó al planear (2026-10-04): sale **solo
+esa línea**, y el volumen total se queda, porque sale de los bultos. El porqué:
+el manifiesto **se le entrega al proveedor que mueve la carga**, y no hay por
+qué contarle qué va adentro. En el audio, más corto: *"los proveedores te
+roban"*.
+
+> ▶ **Revierte `RP-60`**, que Jorge había contestado *«Sí»* el 2026-09-06 sin
+> Yusef delante. Lo que Yusef pidió entonces —*"no tenemos cómo
+> exportarlo"*— era sacarlo, no imprimirlo: eso es `C28-02`.
+
+#### C28-02 · El listado de paquetes del manifiesto, **aparte**: imprimir y Excel — ✅ **HECHO** en `PR-C28.1`
+
+> "Ahora, el listado sí va amarrado, pero no va en la impresión. Eso lo
+>  sacamos aparte."
+> "Ahí arriba donde está el paquete… donde yo le puedo imprimir eso,
+>  **exportar Excel** o algo."
+> "Recuerda que también aquí habíamos puesto **en el filtro** que ahí vamos a
+>  buscarlo **por manifiesto**."
+
+Son dos cosas:
+- **En el manifiesto**, junto a la tabla de paquetes, un botón para imprimir el
+  listado y otro para exportarlo a Excel.
+- **En `/paquetes`**, filtrar por manifiesto. Hoy no hay filtro.
+
+El listado es interno: no lleva transportista ni firmas.
+
+#### C28-03 · La lista de lo escaneado lleva el **warehouse**, primero — ✅ **HECHO** en `PR-C28.2`
+
+> "En el lado del manifiesto, le estás escaneando: **le hace falta el número de
+>  warehouse que escaneó**. O sea, tiene un tracking pero no el warehouse."
+> "Recuerda que **un tracking ya está dividido en varios paquetes**… ese 03 es
+>  de una caja, fíjate que solo es de una caja."
+
+La tabla de paquetes del manifiesto muestra Tracking, Cliente, Peso, Caja y
+Estado. Sin el warehouse con su sufijo de caja, las cajas de un split se ven
+**iguales**. Es el mismo arreglo que `C27-30` le hizo a `/paquetes`, y va con
+el mismo helper que la etiqueta.
+
+#### C28-04 · El escaneo dice **por qué** no entró — y siempre limpia el campo — ✅ **HECHO** en `PR-C28.2`
+
+Escanearon un paquete que ya estaba adentro y salió *«No se encontró ningún
+paquete libre»*.
+
+> "Ya entendí, o sea **el mensaje está malo**."
+> "Ese ahí tiene que decir: este paquete **ya fue escaneado y está en este
+>  manifiesto**… pero si éste está… este paquete ya fue escaneado **y está en
+>  otro manifiesto**, ahí ya levanta sospecha."
+> "Ahí es un **modal**: ¿desea agregar este a este manifiesto **y retirarlo del
+>  otro**?"
+
+Qué es grave y qué no lo dijo él mismo:
+
+> "No es un error grave, eso no pasa nada. **El error es que diga que estás
+>  pagando CER y metas un paquete CKA**… ahí sí, porque **genera gasto**."
+> "**Cuando hay un error, siempre hay que limpiarlo.**"
+
+Y el caso real detrás de «está en otro manifiesto»: *"en vez de tirarlo dentro
+de la caja, se les cayó a otro lado, o lo mandaron sin escanear… así nos pasó
+ahorita con un paquete"*.
+
+**Lectura.** Cuatro respuestas distintas, no una:
+
+| Caso | Respuesta |
+|---|---|
+| Ya está en **este** manifiesto | Aviso chico, sin modal. Es error de dedo |
+| Está en **otro** que sigue abierto | Modal: agregarlo acá y sacarlo del otro |
+| Está en otro **ya enviado** | Modal rojo, sin mover. Esa hoja ya se firmó y viajó (Jorge, 2026-10-04) |
+| Tipo de envío distinto | Modal rojo, bloquea. Genera gasto |
+
+En los cuatro casos el campo queda vacío y con el foco puesto.
+
+#### C28-05 · La caja del manifiesto se **edita** — ✅ **HECHO** en `PR-C28.3`
+
+> "Me la dejó agregar sin peso, sin nada, **eso está bueno**… voy a agregar sin
+>  peso porque voy a empacar… después le voy a agregar el peso. **Aquí es donde
+>  necesito que le des la opción de editarla.** También para corregirla."
+> "Porque yo dije voy a armar una EH y al final termino armando una E… Marqué
+>  quiero una EH y al final me sobró mucho espacio… **le corté un pedazo**, las
+>  ajusté a un tamaño menor, entonces yo lo voy a modificar."
+> "Es que así está ahorita: que borran y la vuelven a agregar. **Y ya los he
+>  visto confundirse.**"
+
+`CajasManifiestoController#update` existe desde `C21-04`, pero ninguna
+pantalla lo llama. Lo que falta es el botón y el formulario.
+
+#### C28-06 · La letra de la caja es **secuencial**: borrar la B deja libre la B — revierte la regla de `C21-04` — ✅ **HECHO** en `PR-C28.3`
+
+> "Pero no, si yo la borré no quiere decir que la siguiente letra era la C,
+>  sino que **siempre sigue siendo la B**… Es la caja 2."
+> "Que yo la borré porque tenía un error es otra cosa, pero sigue siendo la B."
+> "Sí, **siempre tiene que quedar secuencial**… después vas a creer que son 7
+>  cajas porque le diste 7."
+
+> ▶ **Revierte una decisión del código.** `ultima_letra` solo subía, a
+> propósito: si se reusaba la letra, una etiqueta ya pegada apuntaría a otra
+> caja. Yusef prefiere el conteo honesto: una letra salteada hace creer que hay
+> más cajas de las que hay. El aviso al borrar cambia de «la letra no se
+> reusa» a «despegá su etiqueta».
+
+#### C28-07 · Carga **escaneada y sin escanear** en el mismo viaje
+
+> "Una parte va a venir escaneada y otra parte no va a venir escaneada… la carga
+>  que viene en los palets dobles… pero la carga que viene en las E, que viene
+>  **los martes y los sábados**, esa sí va a venir escaneada. Entonces toda la
+>  carga que no se escaneó se le va a agregar automáticamente al
+>  [¿del viernes?], al que es del palet doble."
+
+📄 **Confirma** los dos caminos del manifiesto (`C23-10`): ninguna pantalla
+puede asumir que el paquete pasó por la pistola. No pide nada nuevo.
+
+---
+
+### La PESA: escanear todo, y después los volúmenes
+
+#### C28-08 · **Escanear todo primero, medir después** — revierte el amarre de `C27-02` — ✅ **HECHO** en `PR-C28.4`
+
+Jorge probó la pantalla como quedó en `#447`: tres cajas, se mide; dos cajas,
+se mide; una, se mide. Y salió la regla que no cabe:
+
+> "Jorge, fíjate que aquí es donde ya me dejaste amarrado, porque **no puedo
+>  meterle otra vez escaneas**."
+> "No puede ser tan sencillo, porque **la medición la va a decidir después de
+>  haber escaneado**. No puedes escanear y medir… es un poquito complejito."
+> "Ajá, es como en Miami, que escaneaste un tracking y lo dices en tantos
+>  paquetes. **Y aquí es que vas a unir varios tracking y lo vas a hacer en
+>  tantas mediciones.**"
+
+Y la gente de la línea, que lo va a usar, lo cerró:
+
+> "Si se van a poner a estar escaneando los paquetes que van a medir… tenés que
+>  medirlo y pesarlo de acuerdo al escaneo. No sé si eso va a ser factible. No
+>  creo… **para ellos es mejor solo escanear, que sí están ahí, y ellos lo
+>  acomodan como gustan para medir y pesar.**"
+> "Lo nuevo es **el escaneo de todo**, y que no los deje equivocarse metiendo
+>  paquetes de un cliente a otro, y que no los deje meter un consolidado con
+>  uno que no está consolidando, **y que sepan si falta**."
+
+Jorge, en el audio: *"voy a relajar esta parte"*. Y al planear (2026-10-04):
+**desamarrar**.
+
+**Lectura.**
+- Las cajas son **de la tanda**, y los N volúmenes miden la tanda. Ninguna caja
+  queda atada a un volumen en particular.
+- De `C27-02` sigue en pie lo importante: **nada se elige de una lista**, todo
+  entra por la pistola.
+- «NO Mezclar» (`C27-04`, `C27-05`) sigue corriendo caja por caja al escanear.
+
+> ⚠️ **Lo que esto le hace al cobro.** La caja ya no tiene un peso medido
+> propio: el peso medido es de la tanda, repartido en volúmenes. Cobrar **por
+> caja** desde la medición se vuelve imposible. La pre-factura (`C27-15`) va a
+> tener que cobrar por tanda o por volumen, y eso contesta de hecho la mitad de
+> `RP-41`. Hasta que se construya ese bloque, la pre-factura sigue copiando el
+> peso de Miami.
+
+#### C28-09 · **F5 vuelve al peso real** — ✅ **HECHO** en `PR-C28.4`
+
+> "Entonces acá va a venir y van a presionar F5. **Aquí tiene que volver a
+>  regresar acá**… porque le diste agregar volúmenes, que vas a agregar otro."
+> "**F5 siempre tiene que ir al peso real.**"
+
+Con la tanda escaneada, después de F5 lo que sigue es **el próximo volumen**,
+no una caja. El foco va al peso.
+
+#### C28-10 · «La **mesa**» no se entiende — ✅ **HECHO** en `PR-C28.5`
+
+> "No sé qué es ese, mesa dos… Mesa creada."
+> "**No sé qué es eso de la mesa.** No, yo sé que creo que era como
+>  asignándose a alguien."
+> "Eso de mesa, perdón, es que está en la mesa. **Son los paquetes que están en
+>  la mesa.**"
+
+La palabra era nuestra, no de ellos. Sale de la pantalla y queda «cajas
+escaneadas».
+
+#### C28-11 · El conteo del consolidado, **más grande** — y **«Completado»** — ✅ **HECHO** en `PR-C28.5`
+
+Al escanear la primera caja de Ana, la pantalla buscó el consolidado: *"te está
+diciendo: el consolidado con pre-alerta número tal, siete cajas, cinco
+[aquí], faltan dos"*.
+
+> "Ahí ya te dice que faltan cero. Ahora, **eso sí se necesita hacer más
+>  grande**. Así como está, pero más grande. **El número, a cuánto falta.**"
+> "Y aquí es algo donde debería decir… **Completado. Completado.** Pero
+>  literalmente quiero que **salga al lado**… Sí, **el audio**."
+
+#### C28-12 · La captura más arriba, el historial abajo — ❓ **lectura dudosa** — ✅ **HECHO** en `PR-C28.5`
+
+> "Esto me parece a mí que debería estar como más por acá… Esto es un historial
+>  que lleva, pero esta parte acá abajo **la veo muy abajo**… Esta información
+>  donde vas a escanear, esto, y aquí la suma. **Lo que vas a medir**, o sea,
+>  este cuadro."
+
+Señalaba la pantalla, y el audio no dice qué. La lectura más probable: arriba
+lo que se usa en cada pip (la pistola, la suma y el cuadro de medir), y abajo
+lo escaneado. Se confirma con el equipo al probarlo.
+
+#### C28-13 · Los que **faltan del mismo manifiesto** bloquean, con **código de supervisor** — ✅ **HECHO** en `PR-C28.5`
+
+> "El sistema lo va a dejar —le voy a pesar— porque en el manifiesto este no
+>  venían más, pero **si viene y venían más paquetes, no lo debería dejar**."
+> "Para todos estos bloqueos va a haber alguien que lo va a desbloquear, **a
+>  autorizar**."
+> "Exacto, y ahí es donde tienen que mandar a buscarlos, o ponerlo a un lado y
+>  seguir trabajando, y sigamos con el siguiente cliente mientras aparecen esos
+>  paquetes."
+> "…o si se puede, pero **con autorización de un supervisor**, el jefe de área…
+>  le va a batir con su **código**… son cositas que están bloqueadas, pero al
+>  mismo tiempo **tienen excepciones**."
+
+**Lectura.** La diferencia es entre «no vino» y «vino y no aparece»:
+
+| La caja que falta… | Qué pasa |
+|---|---|
+| **Vino** en el mismo manifiesto, o ya se recibió en Honduras, y no está en la tanda | **Bloquea**. Pasa solo con PIN de supervisor, y queda en la bitácora de autorizaciones |
+| **No vino**: sigue en Miami, o viene en otro manifiesto | Se deja pasar como hoy («Facturar lo que hay», sin PIN, sellado) |
+
+El PIN lo lleva quien lo lleva desde `RP-21` (`User::ROLES_AUTORIZANTES`), no
+una lista nueva.
+
+---
+
+### Recepción, aduana y pre-factura — 📄 documentado, va con el bloque de pre-factura
+
+#### C28-14 · La pre-factura elige **qué warehouse está disponible en aduana**
+
+> "Y entonces nosotros [escaneamos] y ya lo tomamos como recibido…
+>  automáticamente, y ya no van a inventarse, **no van a copiar y pegar un
+>  número de warehouse** que se recibió, sino que ahora, para prefacturar,
+>  ustedes van a **seleccionar cuál warehouse sale todavía disponible en
+>  aduana**."
+> "Van a seleccionar en prefactura qué carga van a trabajar… qué manifiesto de
+>  estos están agarrando, porque **si hace falta uno** y lo están empezando a
+>  trabajar, **tiene que quedar que está pendiente**, una caja o dos cajas."
+
+Y el caso de hace diez días: *"nos mandaron solo dos palets de cinco, y
+entonces se quedaron tres"*. Lo que busca: *"que nosotros sepamos que hacen
+falta tres palets, que hace falta una caja"*.
+
+`/recepcion_carga` ya lista las cajas pendientes de un manifiesto. Lo que no
+existe es la pre-factura que arranque de ahí. Va con `C27-15`.
+
+#### C28-15 · La pre-factura **vuelve a auditar** — refuerza `C27-15` y `C27-16`
+
+> "En prefactura, él va a agarrar estas medidas… pero **los tienes que ver y
+>  auditarlo**… Mi idea es que tienes que volver a revisarlos. Aunque sea doble
+>  trabajo, lo revise, porque es **una doble auditoría, una doble revisión**."
+
+Con `C28-08`, la pre-factura no hereda «qué caja va en qué volumen» porque ese
+dato ya no existe. Vuelve a escanear los warehouse de la tanda y las etiquetas
+«1 de N» de sus volúmenes. Es lo que ya decía `C27-16`.
+
+---
+
+### Lo que quedó abierto
+
+| # | Qué | Estado |
+|---|---|---|
+| `C28-01` | El manifiesto impreso sin la tabla de paquetes ni «Cantidad de paquetes» | ✅ **Hecho** — `PR-C28.1`; revierte `RP-60`. El volumen total se queda, porque sale de los bultos |
+| `C28-02` | El listado de paquetes aparte: imprimir y Excel desde el manifiesto, y el filtro por manifiesto en `/paquetes` | ✅ **Hecho** — `PR-C28.1`. `manifiestos#listado` lleva la marca «uso interno», va por bulto y no lleva firmas. El Excel es el de `/paquetes` con el filtro nuevo, y su N° de recepción ahora lleva el sufijo de caja |
+| `C28-03` | El warehouse con el sufijo de caja, como primera columna de lo escaneado | ✅ **Hecho** — `PR-C28.2`, en el manifiesto y en `/empacar`. De paso: en `/empacar`, la etiqueta `…-2` de un split empacaba **cualquiera** de sus cajas; ahora cae en la suya |
+| `C28-04` | El escaneo dice por qué (en este, en otro abierto, en otro enviado, tipo distinto) y siempre limpia | ✅ **Hecho** — `PR-C28.2`: `manifiestos#escanear` clasifica (`EscaneoDeManifiesto`) y `mover_paquete` mueve solo desde un manifiesto `creado`. Lo elegido de la lista pasa por las mismas preguntas, y la pantalla suena |
+| `C28-05` | Editar la caja del manifiesto: tamaño, medidas, peso | ✅ **Hecho** — `PR-C28.3`. El lápiz de la fila la carga en el mismo formulario. F5 guarda, F9 guarda y reimprime la 4×6 |
+| `C28-06` | Letra secuencial: borrar la B deja libre la B | ✅ **Hecho** — `PR-C28.3`; revierte la regla de `C21-04`. La letra es la primera libre, y el aviso de borrar dice que hay que despegar la etiqueta y cuál va a ser la próxima |
+| `C28-07` | Carga escaneada y sin escanear en el mismo viaje | 📄 **Confirma** los dos caminos del manifiesto |
+| `C28-08` | Escanear todo, después los volúmenes | ✅ **Hecho** — `PR-C28.4`; revierte el amarre de `C27-02` y empuja `RP-41`. La caja guarda la sesión de su tanda (`paquetes.medicion_sesion`, con backfill desde `bulto_id`). Medir de nuevo trae la tanda entera, y reimprimir saca todas sus etiquetas |
+| `C28-09` | F5 vuelve al peso real | ✅ **Hecho** — `PR-C28.4` |
+| `C28-10` | «Mesa» sale de la pantalla | ✅ **Hecho** — `PR-C28.5`: «cajas escaneadas», «LEÍDA» en el dibujito, y los mensajes de «NO Mezclar» dicen «lo que ya escaneaste» |
+| `C28-11` | El conteo del consolidado grande, y «Completado» con su sonido | ✅ **Hecho** — `PR-C28.5`: «5 de 7» en grande y «faltan 2». Con todas: «COMPLETADO» y tres tonos que suben (`audio#completo`), que suenan una vez y figuran en el modal de sonidos |
+| `C28-12` | La captura arriba, lo escaneado abajo | ✅ **Hecho** — `PR-C28.5`: pistola, conteo, captura y volúmenes arriba; la lista de lo escaneado baja. ❓ Lectura dudosa: se confirma con el equipo probándolo |
+| `C28-13` | Faltan cajas que vinieron: bloquea, y pasa con PIN de supervisor | ✅ **Hecho** — `PR-C28.5`: `FaltantesDeLaTanda` + `Autorizacion` `medicion_con_faltantes`, que queda en la bitácora. Lo que no vino sigue con «Facturar lo que hay», sin PIN. De paso: la bitácora reventaba con un paquete como documento (`C24-01`) |
+| `C28-14` | La pre-factura elige el warehouse disponible en aduana, y el manifiesto incompleto queda pendiente | 📄 **Documentado** — va con `C27-15` |
+| `C28-15` | La pre-factura vuelve a auditar | 📄 **Refuerza** `C27-15`/`C27-16` |
+
+### Las preguntas que abre
+
+| Id | Qué |
+|---|---|
+| `RP-72` | **Una caja con «solo peso» o «solo volumétrico» medida junto a otras.** Con `C28-08` la excepción de cobro de `C24-01` se aplica a la tanda entera, y hoy solo vale si **todas** las cajas la tienen. Un generador marcado «solo peso» y medido con ropa pierde la excepción. ¿Se mide aparte siempre, o la pantalla debe avisar cuando se mezclan? |
+
+---
+
+## Conversación 29 (2026-10-08) — la pasada entera en staging: Miami, el manifiesto, la recepción y la PESA
+
+Videollamada de 79 minutos con Yusef, pantalla compartida. Jorge recorrió el
+circuito completo en staging con dos clientes de prueba, Sofía (cliente 6) y
+Diego (cliente 7): etiquetar en Miami, armar y escanear el manifiesto,
+recibir en San Pedro y medir en la PESA. Lo que salió es casi todo **arreglo
+de lo construido en C28**, más dos piezas nuevas en la PESA: los paquetes del
+mismo cliente que vienen en el mismo manifiesto (`C29-16`), y unir un suelto
+a un consolidado desde la mesa (`C29-17`).
+
+> ⚠️ **Sobre el transcript.** `whisper small` en catorce pedazos de 6 minutos;
+> el «min» de cada cita es el pedazo, no el segundo exacto. Hay tramos con
+> conversación personal y otros donde Jorge señalaba la pantalla y el audio no
+> dice qué. Se normalizó solo lo inequívoco (*"Teucidalpa"* → Tegucigalpa,
+> *"Umuya"* → Humuya, *"cañar"* → escanear). Lo que no se entiende se marca
+> con ❓, no se completa.
+
+---
+
+### Miami: `/etiquetar`
+
+#### C29-01 · El tracking pegado con un espacio se limpia solo (min 6) — ✅ **HECHO** en `PR-C29.3`
+
+Jorge pegó un tracking con copy-paste y el sistema no lo dejó guardar:
+
+> "Mirá que hay algo, tracking no es permitido, tienes el espacio este."
+> **Jorge:** "Lo que es espacio fue cuando yo le di copy paste… te lo voy a
+>  arreglar."
+> "No, que no hubiera nada para evitar cosas o algo… **está bien eso, porque
+>  tiene que estar bien hecho.**"
+
+`Paquete::TRACKING_FORMATO` rechaza el espacio, y está bien que lo rechace
+adentro. Lo que falta es que los espacios de los **bordes** (los del pegado) se
+quiten antes de validar. Un espacio en el medio sigue siendo error.
+
+#### C29-02 · «Cancelar» en *«Tracking ya existe»* tiene que **limpiar** el tracking (min 36) — ✅ **HECHO** en `PR-C29.3`
+
+> "Aquí hay un error, te cuento: me pregunta tres opciones, ¿verdad? **Le doy
+>  cancelar y me deja el tracking aquí. Te lo tiene que limpiar.**"
+> "Vengo yo y veo el tracking, me tira qué quiero hacer porque ya está, y es de
+>  Sofía, y entonces le di cancelar y **me deja hacer otra y poner a Diego, y
+>  no es de Diego**. Y esos son errores que nos pasan en Miami con cualquier
+>  sistema."
+> "Eso tiene que limpiarlo cuando le da cancelar."
+
+El modal de duplicado tiene tres salidas (actualización, cambio de servicio,
+duplicado real) y «Cancelar». `closeDuplicate()` solo esconde el modal: el
+tracking repetido queda escrito y se le puede asignar a otro cliente.
+
+#### C29-03 · El cliente **sin sucursal de retiro**: la etiqueta dice otro lugar (min 0–6) — ✅ **HECHO** en `PR-C29.3`
+
+La etiqueta de un paquete de Sofía salió con una sucursal que no era:
+
+> "Aquí hay un error: dice San Pedro Sula y dice Humuya, no sé por qué."
+> "Es que **la ciudad donde es es una cosa y donde retira es otra**."
+> "Si va a retirar en Tegucigalpa, la sucursal de Tegucigalpa tiene que irte.
+>  **Aunque él sea de Choluteca.**"
+> "Cuando ellos crean el casillero, vas a preguntar **a dónde le gustaría
+>  retirar** su producto."
+
+Al abrir la ficha del cliente: *"ah, ahí está, mirá, **está sin definir**"*.
+Sofía la había creado Jorge a mano, sin ese campo. Con la sucursal puesta, la
+etiqueta salió bien.
+
+**Lectura.** El dato faltaba, pero la regla de Yusef no es de datos: la
+sucursal de retiro se pregunta al crear el casillero, y no se deduce de la
+ciudad. Dos cosas:
+- qué imprime la etiqueta cuando el cliente no tiene sucursal de retiro (lo
+  que imprimió no era cierto, y un dato que falta tiene que verse como falta);
+- que la sucursal de retiro sea obligatoria al crear el cliente, en el admin y
+  en el portal (las dos pantallas gemelas).
+
+#### C29-04 · ❓ La descripción vacía y el formulario que no se limpió (min 6–10)
+
+Dos tramos que no se entienden enteros:
+
+> "Mirá que aquí, esto no puede ir vacío. Descripción no puede ir vacío. Eso
+>  sí… **Mirá, me deja irme vacío.**"
+> "Mirá, no borra esto… Ese es que **no se limpió ahí**, no tiene la cuestión
+>  de limpiar."
+> (más tarde) "Descripción, me dice que no puede irse vacío, va. **Descripción
+>  no debería irse vacío.**"
+
+Hoy la descripción solo es obligatoria en Entrega Personal (`Paquete`, línea
+`validates :descripcion`). La segunda vez el formulario sí la pidió, así que el
+primer tramo puede ser el estado que quedó del error del tracking con espacio
+(`C29-01`). Se revisa al probar `C29-01`: después de un error de guardado, qué
+queda escrito y qué valida.
+
+#### C29-05 · El contador del día — 📄 nota (min 9)
+
+Vio el número de paquetes que lleva el operario en el día:
+
+> "Hoy lleva 11, **mirá qué bien esto**. No se me había ocurrido, pero está
+>  bueno."
+> "Es una cosa que yo quiero ir metiendo más adelante… quién generó más, quién
+>  **se equivocó menos**… para que ellos también tengan estadística."
+
+No pide nada ahora. Queda anotado para cuando haya métricas por persona.
+
+---
+
+### El manifiesto
+
+#### C29-06 · Editar una caja y «Guardar e imprimir» **revienta** (min 12–24) — ✅ **HECHO** en `PR-C29.1`
+
+> "Yo le vine y le di editar, le puse peso y **le di guardar e imprimir**."
+> **Jorge:** "Ok, eso no debería tronar." — "Y tronó."
+> "Le digo solo guardar… y después le doy imprimir acá, y funcionó."
+> "Viste, **hay algo malo en este botón nada más**… Se dice guardar e imprimir,
+>  entonces hace éste más éste."
+> "Ok, ese es el error uno."
+
+Y más tarde, otra vez: *"aquí sí no falló, mirá, **es cuando lo edito nada
+más**"*. Jorge: *"voy a investigar por qué es eso"*.
+
+Es el camino nuevo de `C28-05`: el lápiz carga la caja en el formulario, lo
+pasa a PATCH, y F9 / «Guardar e imprimir» va con `data-turbo=false` a
+`CajasManifiestoController#update` con `print=true`. «Guardar» solo y el
+botón de imprimir de la fila, cada uno por su lado, andan.
+
+#### C29-07 · El manifiesto no deja entrar paquetes de **otra sucursal de entrega** (min 18–22) — ✅ **HECHO** en `PR-C29.2`
+
+> "El error dos: es que **yo marqué que van para San Pedro y van paquetes que
+>  van para Humuya**, y debería de notificarte que ese paquete va para
+>  Tegucigalpa."
+> "Recordá que la idea es que **empaquen las cajas de acuerdo a dónde van**."
+> **Jorge:** "Ah, eso es lo que por tipo tenemos la validación, no para hacia
+>  dónde va."
+> "**Y que no debería haberme dejado meter paquetes que van para
+>  Tegucigalpa.** Y vamos a algo similar al tipo de envío, el modal así.
+>  Exactamente así."
+
+▶ **Cambia una decisión.** El 2026-08-08 Yusef difirió el módulo de empacar
+por sucursal (*"el de empacar no sé si lo cargamos ahorita y después lo vamos a
+mejorar"*) y quedó solo el aviso en `/etiquetar`. Ahora, con el manifiesto ya
+andando, pide la validación al escanear.
+
+**Lectura.** Un caso más en `EscaneoDeManifiesto`, con el mismo modal rojo que
+el tipo de envío distinto: si el manifiesto tiene sucursal de entrega y la
+sucursal de retiro del paquete es otra, no entra. Y la gemela: `/empacar`
+(empacar escaneando) mete paquetes en las casas del mismo manifiesto, así que
+lleva la misma regla.
+
+#### C29-08 · **Un sonido distinto para cada error** (min 21–22) — ✅ **HECHO** en `PR-C29.2`
+
+> "Pero el ruido es el que tenemos que mejorar."
+> "Algo como que de verdad te llama, que está equivocada, que no va ahí."
+> "Escuchame esto: **si el tipo de envío es el error, tiene que tirar un sonido
+>  de una forma. Si la sucursal es el error, tiene que tirar un sonido de
+>  error, pero de otro tono.** O sea, diferentes."
+> "**Cada error tiene que tener un tono distinto** para que ellos sepan."
+
+Jorge le ofreció que los pudieran cambiar desde un panel. Yusef: *"ah, si vos
+me hacés un panel…"*. El modal de sonidos ya existe (`C16`); lo que falta es
+que el error de tipo y el de sucursal tengan cada uno el suyo, y más fuerte
+que el pip de hoy.
+
+#### C29-09 · Cambiarle el tipo de envío a un manifiesto **con paquetes adentro** (min 14–15) — ❓ lectura dudosa — ✅ **HECHO** en `PR-C29.2`
+
+Jorge editó un manifiesto ya armado para agregarle otro tipo de envío, y
+funcionó (*"ya lo agregué el servicio, excelente, estamos bien"*). Y Yusef:
+
+> "Pero eso pasa de que ya metiste todo y **le cambiaste a otro servicio, y
+>  todos los que están adentro**… Sí, Jorge, **no puede ser**."
+
+**Lectura.** Agregar un tipo está bien. Quitarle a un manifiesto un tipo que
+ya tienen paquetes adentro deja esos paquetes en un manifiesto que no los
+acepta: el mismo error que `C28-04` bloquea al escanear, entrando por la
+puerta de editar. Se bloquea quitar un tipo que tenga paquetes adentro.
+
+#### C29-10 · El Excel muestra los trackings **en notación científica** (min 24) — ✅ **HECHO** en `PR-C29.1`
+
+> "Algunos son como **con exponente**, el tracking."
+> "Pero es que el tracking, en buena teoría, son números y letras… **hay unos
+>  que solo son números**."
+
+El Excel del listado de paquetes (`C28-02`, el de `/paquetes` con el filtro
+por manifiesto) escribe como número el tracking que es solo dígitos, y Excel lo
+muestra como `9.2E+21`. Va como texto, y lo mismo el warehouse y la guía.
+
+#### C29-11 · ❓ La hoja del manifiesto no abrió la vista de impresión (min 24) — ✅ **HECHO** en `PR-C29.1`
+
+> "Lo voy a imprimir… **no tiene el botón de imprimir a la mano**… es que no lo
+>  tiró como preview para imprimir… pero antes ya lo había dejado como preview."
+> (el listado) "Imprimir listado… **a éste sí salió bien**."
+
+La hoja del transportista (`C28-01`) esta vez abrió sin el diálogo de
+impresión, y el listado sí lo abrió. No queda claro si se abrió desde otro
+botón. Se revisa que la hoja se imprima sola como el listado, y que tenga su
+botón de imprimir a la vista.
+
+---
+
+### San Pedro: recibir la carga
+
+#### C29-12 · `/recepcion_carga` dice el **tipo de envío** y **la empresa** (min 29) — ✅ **HECHO** en `PR-C29.1`
+
+> "El tipo de envío no sale acá, fijate. **Hay que poner tipo de envío, y la
+>  empresa que lo mandó, por dónde viene.**"
+
+La lista de manifiestos por recibir muestra número y cajas. Le faltan el tipo
+de envío del manifiesto y la empresa transportadora (que el paquete hereda del
+manifiesto).
+
+El resto de la recepción anduvo: *"no es una caja del MMIA…012"* al escanear la
+caja de otro manifiesto, y *"ya no tengo pendientes"* al terminar.
+
+---
+
+### La PESA
+
+#### C29-13 · **F9 imprime**, igual que en todas las pantallas (min 71) — ✅ **HECHO** en `PR-C29.4`
+
+> "F10 le pusiste. **Normalmente es F9**, Jorge. F9 para imprimir siempre."
+> "Solo para que lo tengamos uniforme."
+
+En `/medicion` hoy F10 guarda (y con eso imprime) y F9 reimprime. En las casas
+del manifiesto F9 es «guardar e imprimir», y en `/etiquetar` también.
+
+#### C29-14 · **Una X grande en cada caja** escaneada, no solo «quitar la última» (min 48) — ✅ **HECHO** en `PR-C29.4`
+
+> "Voy a quitar uno, ¿cómo quito uno?… **solo puede quitar la última.**"
+> "**Una X acá al lado, una X grande, porque acordate que va a hacer touch.**"
+> "Sí, una X grande, correcto."
+
+#### C29-15 · El **número de pre-alerta** en la etiqueta del volumen (min 50–54) — ✅ **HECHO** en `PR-C29.4`
+
+Jorge preguntó si la etiqueta tenía que decir que estaba consolidando. Yusef
+lo bajó a una sola cosa:
+
+> "Cuando tiene pre-alertas, **que las pongas ahí en la etiqueta**."
+> "Sí, o sea, **solo el número de pre-alerta**. PA, tal."
+> **Jorge:** "¿En una etiqueta pueden haber varias pre-alertas o solo es una?"
+> "**Solo es una pre-alerta.**"
+
+Lo del consolidado no va en la etiqueta: *"en pre-factura es que va a mandar
+eso a guardar a consolidar"*.
+
+#### C29-16 · «Completado» mentía: **los paquetes del cliente que vinieron en el mismo manifiesto** (min 60–72) — ✅ **HECHO** en `PR-C29.5`
+
+Escaneando a Diego, la pantalla dijo «Completado» con dos cajas:
+
+> "Me dice completado, **yo tengo más paquetes de Diego en el mismo
+>  manifiesto**. Debería decirte: hay más paquetes del cliente en el mismo
+>  manifiesto."
+> "No, no, no, por pre-alerta o sin pre-alerta, **aquí no es por pre-alerta**."
+> "Le diga: hey, **Diego tiene cinco paquetes en el vuelo y solo estás
+>  escaneando tres, y faltan dos en el mismo manifiesto**."
+> "Él tiene que cuadrar que vinieron esos cinco. Si no los cuadra, hace falta…
+>  y si hace falta hay que buscarlo… porque se supone que lo escaneó Miami,
+>  entonces debería de venir."
+
+La excepción, el consolidado:
+
+> "**Al menos que el cliente tenga un consolidado.** Si tengo un consolidado,
+>  como Sofía tenía un consolidado y tenía sin consolidar… ahí ya no le va a
+>  exigir que los mida juntos."
+> "Si viene consolidado, entonces solo tira los consolidados."
+
+Y dónde va: el panel de la derecha ya lista lo que falta **del manifiesto
+entero**.
+
+> "Esto es algo ya más general, pero aquí lo que me hace falta es que me dé
+>  **de Diego específicamente**."
+> "Ese listado que vos tenés acá lo podés poner abajo, porque **ese es
+>  independiente** para verlo."
+
+**Lectura.**
+- Al escanear la primera caja, si no viene en un consolidado: *"Diego tiene 5
+  en este manifiesto · llevás 3 · faltan 2"*, con la lista de esos paquetes.
+- «Completado» solo cuando no falta ninguno de ese cliente en ese manifiesto,
+  o cuando el grupo es un consolidado y está completo.
+- Si viene en un consolidado, la cuenta es la del consolidado (como hoy).
+- El listado general del manifiesto baja, debajo de lo de la tanda.
+- Lo que falta y **vino** en el manifiesto sigue el bloqueo con PIN de
+  `C28-13`. En el audio Jorge lo probó y lo frenó bien: *"mandarla a buscar…
+  porque como éste venía en el mismo manifiesto"*.
+
+#### C29-17 · **Unir un suelto al consolidado** desde la mesa — tres opciones (min 42–48, 72) — ✅ **HECHO** en `PR-C29.6`
+
+Con el consolidado de Sofía abierto, escaneó otra caja de Sofía que no está en
+ninguna pre-alerta, y el modal le ofreció «hacer el consolidado», que **le
+borró lo que estaba haciendo**:
+
+> "En esta situación… **debería de preguntarte: lo agrego a este consolidado o
+>  lo hago aparte**. Porque hay clientes que le agregan a lo que tienen."
+> "Éste que tengo acá **debería de darte la opción de agregárselo a este
+>  consolidado**, porque ahora es uno y no tiene pre-alerta ni nada… está
+>  independiente, y tal vez el que pidió la cliente que se lo uniera."
+> "En vez de darle dolor de cabeza a alguien que empiece a agregarlos y a
+>  moverlos, **que el mismo que está pesando y midiendo los agrega**."
+> "¿Desea agregar este paquete a esta consolidación? Sí… o sigo procesando el
+>  que estoy trabajando, o dejarlo a un lado. **Tres opciones.**"
+
+Y la condición, dicha dos veces:
+
+> "Si yo escaneo un paquete que no tiene otra pre-alerta consolidando ni nada,
+>  debería de poderse unir aquí. **Siempre y cuando sea de la misma Sofía, y que
+>  no tenga otro consolidado o una pre-alerta independiente.**"
+
+| La caja que se escanea con un consolidado en la mesa… | Qué ofrece |
+|---|---|
+| Es del mismo cliente y **no tiene pre-alerta** | **Agregarla a este consolidado** · seguir con la mesa sin ella · dejarla de lado |
+| Tiene **otra** pre-alerta (consolidada o independiente) | Lo de hoy (`C27-04`): no se mezcla |
+| Es de otro cliente | Lo de hoy (`C27-05`) |
+
+«Agregar» la suma a la pre-alerta consolidada y entra a la mesa. Ver `RP-73`.
+
+#### C29-18 · La caja que llega **después** de un consolidado ya medido (min 72–74) — ✅ **HECHO** en `PR-C29.6`
+
+> "Esto que vos pusiste aquí hay que explicárselo **en un modal**: este
+>  paquete está consolidando con otro, **traer el resto y medir, y unirlo**.
+>  Este es el caso de unirlo."
+> "Tres paquetes que fueron medidos, se agregaron a volumen… luego vino el
+>  complemento días después, en diferente manifiesto… está en estantes, y hay
+>  que volver a medir. **Una remedición nueva.** Porque van en un solo volumen
+>  los cuatro."
+> "Siempre pasa al muchacho de pre-facturación a remedir."
+
+Jorge propuso que la PESA mandara sola la pre-factura a actualizar, o que el
+mismo que mide lo devolviera al estante. Yusef lo frenó:
+
+> "Podría, pero **no lo hagamos todavía**, hasta que ya estemos bien avanzados
+>  en el sistema, ya en uso. Porque se le va a complicar mucho… **no quiero
+>  sobresaturar eso.**"
+
+**Lectura.** Al escanear una caja cuyo consolidado ya tiene cajas medidas: el
+modal dice cuáles están medidas (y desde cuándo, en el estante), y ofrece
+**medir de nuevo todo junto**: trae la tanda vieja a la mesa (`C27-33`) y le
+suma esta. Nada automático hacia la pre-factura.
+
+#### C29-19 · Las **notas** del cliente en la PESA, en un modal (min 46, 76) — ✅ **HECHO** en `PR-C29.4`
+
+> "La clienta va a tener alguna nota aquí, porque como ya creamos el área de
+>  medición, **aquí van a estar las notas de prefacturación**… como esto es
+>  parte del área de prefacturación."
+> "Va a tocar crearle notas en prefacturación y en medición, y yo creo que **de
+>  momento no las deberíamos de separar**."
+> "El que necesita leer es las notas. **Las notas en modal**, las notas en
+>  todo."
+
+Y el espacio: *"me estoy quedando sin espacio… ese listado que vos tenés acá
+lo podés poner abajo"* (ver `C29-16`).
+
+#### C29-20 · «Facturar lo que hay» no es de la PESA (min 54–57) — 📄 aclara `C26-03` — ✅ **HECHO** en `PR-C29.4`
+
+Jorge apretó «Facturar lo que hay» con una caja que no había venido, y Yusef:
+
+> "Es que **no debería dar eso**."
+> "Va a llegar a pre-factura a ponerle medidas y pesos, para después colocarlo
+>  en el estante de consolidado San Pedro… porque si el cliente lo quiere
+>  retirar, ya está hecho con medidas y pesos."
+> "**Se prefactura nada más, solo queda como prefactura abierta, pendiente de
+>  todo lo que viene.**"
+> "Pero en medición **no debería de darle guerra** de estar que si lo factura,
+>  si no lo factura."
+
+Al final lo dejó pasar (*"entonces sí dice facturar lo que hay, ok, vamos a
+seguir"*). **Lectura:** el paso está bien —lo que no vino no frena la PESA—,
+lo que está mal es la palabra. La PESA mide, no factura: el botón dice **«Medir
+lo que hay»**, y su aviso dice que la pre-factura va a quedar abierta esperando
+lo que falta.
+
+#### C29-21 · Lo que anduvo — 📄
+
+- El tipo de envío distinto en el manifiesto frenó con su modal: *"excelente"*.
+- El listado del manifiesto impreso: *"mirá qué bonito"*.
+- La caja que vino en el manifiesto y no está pidió el código de supervisor
+  (`C28-13`), y la que **no** vino no frenó: *"no tiró error, porque ya le
+  escaneé todo lo que viene en el manifiesto, y así debe ser"*.
+- «No ha llegado a Miami» para la caja que nunca se recibió: *"me gusta"*.
+- Agregar la caja del manifiesto sin peso y completarla después (`C28-05`).
+
+#### C29-22 · Grabar para capacitar — 📄 nota (min 31)
+
+> "Fijate que estas conversaciones… más adelante **habría que grabarlas para
+>  la capacitación** de esta gente."
+
+---
+
+### Lo que quedó abierto
+
+| # | Qué | Estado |
+|---|---|---|
+| `C29-01` | Los espacios de los bordes del tracking se quitan antes de validar | ✅ **Hecho** — `PR-C29.3`. También `tracking_secundario`; un espacio en el medio sigue siendo error. `PreAlertaPaquete` y la búsqueda de `/etiquetar` ya recortaban |
+| `C29-02` | «Cancelar» del modal de duplicado limpia el tracking | ✅ **Hecho** — `PR-C29.3`: vacía el campo que abrió el modal (principal o secundario), vuelve el foco y olvida la búsqueda. El modal solo existe en `/etiquetar` |
+| `C29-03` | La etiqueta del cliente sin sucursal de retiro, y la sucursal obligatoria al crear el cliente | ✅ **Hecho** — `PR-C29.3`. La etiqueta caía en la sucursal por defecto (Zeron SPS) o en la ciudad del cliente: ahora dice **«SIN SUCURSAL»** y el aviso rojo pide apartar la caja. Revierte el fallback de `C25-08`. Obligatoria al crear en `/clientes` y en el registro del portal; los clientes viejos sin ella se editan igual y **no** se rellenaron a ciegas |
+| `C29-04` | La descripción vacía y el formulario que no se limpió | 📄 **No era bug** — después de un guardado fallido el formulario devuelve lo tecleado a propósito, y el error era el espacio de `C29-01`. La descripción obligatoria para todos es regla nueva: `RP-74` |
+| `C29-05` | Contador del día y métricas por persona | 📄 Nota |
+| `C29-06` | Editar una caja y «Guardar e imprimir» revienta | ✅ **Hecho** — `PR-C29.1`. Era el **token CSRF**: es por acción de formulario, el lápiz cambia la acción a la de la caja, y «Guardar e imprimir» (sin Turbo) mandaba el token viejo → 422. Los tests no lo veían porque en test la protección está apagada; los nuevos la prenden |
+| `C29-07` | El manifiesto con sucursal de entrega no deja entrar paquetes de otra sucursal (y `/empacar` tampoco) | ✅ **Hecho** — `PR-C29.2`: `:sucursal_distinta` en todas las puertas (escaneo, lista, mover, `add_paquete`, `/empacar` y «Empacar sin escanear»). No aplica al manifiesto interno (su destino es el del camión), ni sin sucursal de entrega, ni al paquete sin sucursal de retiro (`C29-03`) |
+| `C29-08` | Un sonido distinto por error: tipo de envío y sucursal | ✅ **Hecho** — `PR-C29.2`: tipo distinto suena «Triple» y sucursal distinta «Agudo», dos veces; cada uno se elige en el modal de sonidos, que ahora también está en el manifiesto |
+| `C29-09` | No se le quita a un manifiesto un tipo de envío que tienen paquetes adentro | ✅ **Hecho** — `PR-C29.2`: no se quita un tipo ni se cambia la sucursal de entrega si algún paquete adentro deja de caber. Solo se revisa cuando esos campos cambian, así que finalizar no se traba |
+| `C29-10` | El Excel escribe el tracking, el warehouse y la guía como texto | ✅ **Hecho** — `PR-C29.1`: toda columna que no es fecha va como texto |
+| `C29-11` | La hoja del manifiesto se imprime sola y tiene su botón | ✅ **Hecho** — `PR-C29.1`: se reprodujo. «Imprimir manifiesto» abría la hoja sin `print=true`; ahora abre el diálogo sola, y la hoja tiene un botón «Imprimir» a la vista |
+| `C29-12` | `/recepcion_carga` con tipo de envío y empresa transportadora | ✅ **Hecho** — `PR-C29.1` |
+| `C29-13` | F9 imprime en `/medicion` | ✅ **Hecho** — `PR-C29.4`: F9 guarda e imprime; F10 sigue guardando sin etiqueta, como en `/etiquetar`. Reimprimir pasa a F4, la de imprimir documentos |
+| `C29-14` | Una X grande por caja escaneada | ✅ **Hecho** — `PR-C29.4` |
+| `C29-15` | El número de pre-alerta en la etiqueta del volumen | ✅ **Hecho** — `PR-C29.4`: «PA-…» al frente de la fila del código, «+N» si hubiera más de una; el test de que cabe mide el peor caso en Chrome |
+| `C29-16` | Los paquetes del cliente en el mismo manifiesto: la cuenta, la lista filtrada y el «Completado» honesto | ✅ **Hecho** — `PR-C29.5`: la cuenta y la lista del cliente en el manifiesto, mismo servicio, sin los que van en un consolidado. **Avisa, no bloquea**: el PIN sigue siendo solo para `C28-13` |
+| `C29-17` | Unir un suelto al consolidado desde la mesa | ✅ **Hecho** — `PR-C29.6` (`UnirAlConsolidado`, sin PIN, con paper_trail). «Sigo sin ella» y «dejarla de lado» hacen lo mismo en el sistema y quedan en un botón. «Hago el consolidado» ya no sale en este caso, que era el que borraba la mesa. Ver `RP-73` |
+| `C29-18` | La caja que llega después de un consolidado medido: medir de nuevo todo junto | ✅ **Hecho** — `PR-C29.6`: «Medir de nuevo todo junto» solo si lo medido es una sola tanda y nada está en pre-factura; si no, «Medirla sola» o «Dejarla de lado». Nada automático hacia la pre-factura |
+| `C29-19` | Las notas del cliente en la PESA, en modal | ✅ **Hecho** — `PR-C29.4`: las mismas notas que `/etiquetar` (instrucciones, nota del grupo, notas permanentes del área, notas del paquete; el rol `medicion` ya leía `notas_honduras`). El modal se abre solo con la primera nota de la tanda, y un botón lo reabre. El listado del manifiesto bajó |
+| `C29-20` | «Facturar lo que hay» pasa a «Medir lo que hay» | ✅ **Hecho** — `PR-C29.4` |
+| `C29-21` | Lo que anduvo | 📄 Confirma `C28` |
+| `C29-22` | Grabar para capacitar | 📄 Nota |
+
+### Las preguntas que abre
+
+| Id | Qué |
+|---|---|
+| `RP-73` | **Unir un suelto a un consolidado (`C29-17`): ¿queda en la pre-alerta consolidada?** La lectura es que sí: si no quedara, la pre-factura (que factura por pre-alerta, `C27-04`) lo facturaría aparte de la tanda con la que se midió. Se construye así y se confirma con Yusef, junto con quién puede hacerlo (hoy: el operario de la PESA, sin PIN, como lo dijo él: *"que el mismo que está pesando y midiendo los agrega"*) |
+| `RP-74` | **¿La descripción es obligatoria en todo paquete, o solo en Entrega Personal (`C29-04`)?** Hoy solo en EP, a propósito (#306): en `/etiquetar` pasan 500–1.000 paquetes por día y casi ninguno trae el contenido escrito. Yusef dijo *"descripción no debería irse vacío"*, pero mirando un caso que podía ser el error del tracking con espacio. Si es para todos, cambia el ritmo de Miami |
+
+### Después de la reunión — lo que Jorge vio en staging (2026-10-08)
+
+Cuatro arreglos más, pedidos por Jorge mirando staging con la serie ya
+mergeada. No salen del audio, salen de usarlo.
+
+| PR | Qué | Por qué |
+|---|---|---|
+| `PR-C29.7` (#466) | **Toda impresión del manifiesto abre el diálogo y, al terminar, vuelve a la ficha.** «Imprimir manifiesto» e «Imprimir listado» dejaban la pestaña abierta; «Finalizar e Imprimir» dejaba al operario mirando las 4×6. Las otras cuatro ya andaban y quedaron con test | Jorge: *"cuando guarda imprime o solo imprime siempre se tiene que abrir el preview para imprimir; una vez se imprime se regresa a la vista previa"*. Cierra la duda de `C29-11` |
+| `PR-C29.8` (#465) | **El título de la captura ya no se monta sobre «Peso real»**, y dice qué volumen se mide («Volumen 2») | Jorge: *"esta parte está montada con otro título… no se mira bien"* |
+| `PR-C29.9` (#467) | **El error suena áspero, sostenido y fuerte**: dos tonos a un semitono, sin apagarse desde el primer instante; ×3.8 de energía al mismo volumen. «Alarma» es el nuevo error por defecto (no pisa lo que cada usuario ya eligió), y tipo y sucursal distintos suenan tres veces | Jorge: *"el audio de error creo que tiene que ser más cruel, fuerte, molesto, intenso"*. Refuerza `C29-08` |
+| `PR-C29.10` | **/medicion en dos columnas: a la izquierda se escanea, a la derecha se mide.** MEDIR va pegada (`sticky`) con tope de alto, así el peso y «Guardar e imprimir» no se van de la pantalla con la lista larga; antes de la primera caja dice «Acá se pesa y se mide». «Agregar volumen (F5)» pasa a ocupar todo el ancho con 56 px de alto. Lo que falta del manifiesto sigue abajo, de punta a punta | Jorge: *"the part for medir should be on the right"* y *"Agregar volumen is too flat, it needs to be easy to press on a touch screen"*. En las grabaciones: *"solo está el lado izquierdo… se me olvidó que vos querías el otro cuadro al lado derecho también"* (C29, min 0); escanear todo primero y medir después (`C28-08`); arriba lo de cada pip y lo escaneado abajo (`C28-12`); *"una X grande, porque acordate que va a hacer touch"* (`C29-14`) |
+| `PR-C29.11` | **Escanear se lleva más ancho que medir** (4 a 3 desde `lg`; parejas en `md`), y **todo lo que se aprieta en /medicion mide 48 px o más**: los 14 botones que eran `xs`/`sm`/`md` pasan a `lg`, los de solo ícono a cuadrados de 48, los campos a `min-h-12`, el renglón entero de cada radio, y «Sonidos» en tamaño táctil. Lo cuida `test/lint/medicion_tactil_test.rb`, que lee también los modales | Jorge: *"it seems like the scanning, the left part, is the one that should be a little bigger"* y *"all actionable in medicion should be easy to touch in a touch screen"*. A la izquierda está lo que crece; a la derecha, campos de ancho fijo. Y C27-13: *"tiene que ser touch en la pantalla"* |
+| `PR-C29.12` (#470) | **Un tono por intención en todos los modales**: rojo bloquea, oro pide atención o una decisión, navy informa, teal es listo, y las notas van en ámbar claro. `ModalHeaderComponent` con cinco tonos, 41 encabezados migrados, y el ámbar nunca más sólido. Lo cuida `tonos_de_modal_test`; la tabla vive en `docs/07` | Jorge: *"the orange in here, Su consolidado ya se midió, feels different from the other; I would like to somehow have a standard on the colors used"*. Eligió «por intención, solo la paleta» y «toda la app + lint» |
+| `PR-C29.13` | **El Home tiene una tarjeta, con el mismo ícono, por cada opción de la barra.** Faltaban ocho —Medición, Autorizaciones, Permisos por rol, Títulos de los roles, Catálogos del Manifiesto, Plantillas Descripción, Tasa de Cambio, Ajustes de Etiqueta— y cuatro tenían otro ícono. Logística y Facturación van en el orden de la barra. Lo cuidan `home_con_todas_las_opciones_test` (ícono por ruta) y `dashboard_controller_test` (cada rol ve en el Home lo que ve en la barra) | Jorge: *"let's make sure all the options in the left have an icon in the root /"*. Dos listas a mano que se separan: el bug de siempre |
+| `PR-C29.14` | **Medir, un 20 % más angosta**: de 3/7 (43 %) a un tercio del ancho desde `lg`, y escanear se queda con el resto. Las medidas llevan el rótulo de adentro chico y sin flechitas, para que «10.25» entre a 1024 px. **Y la accesibilidad de la pantalla**: todo botón y campo tiene canto de 3:1 contra su fondo (1.4.11) — la X de cada caja, «Notas», corregir y quitar volumen (eran `ghost`, sin borde), «Agregar volumen», «Guardar e imprimir», «Sonidos», y los campos, que no tenían borde ninguno; el foco va en `cec-teal-deep`; «Peso real» sin flechitas. Los cantos de `soft_danger`, `warning`, `teal` y `gold` subieron en `ButtonComponent`, así que mejoran en toda la app. Lo mide `medicion_se_distingue_test` | Jorge: *"en mediciones esta parte, Volumen 2 · peso, medidas y cálculo, el lado derecho se puede reducir 20 % para que la parte del scanner sea más ancha"*, y *"review the accessibility in this page, some buttons are hard to distinguish, but also increasing peso real the arrows are weird and hard to reach"* |
+| `PR-C29.15` | **Menos aire arriba en todas las pantallas**: el título arranca a 32 px y no a ~88. Había un renglón solo para el sol del tema; el sol se fue al pie de la barra lateral, con «Salir», en el layout del personal y en el portal de clientes. En el celular sigue en la barra de arriba | Jorge: *"I feel that all the pages the empty space on the top is too big, we could reduce around probably 60%"*. Es 64 % menos |
+| `PR-C29.16` | **«Signos del servidor»**: una página solo para admin (`/signos_vitales`) con la RAM del contenedor, el disco, la carga y el uptime de la web; tamaño, tablas más grandes y conexiones de la base; la cola (listos, programados, corriendo, fallidos con su error, workers vivos por su latido, la última corrida de cada tarea de la noche); y versión, sesiones y cambios de la app. Semáforo por sección y general en los tonos de los modales, se actualiza solo cada 30 s. Se entra por un ícono a la derecha del Home, con un puntito del color del semáforo | Jorge: *"pon un icono en / root y al lado derecho para ver los signos del servidor: ram, disco duro y cualquier otra cosa que sea importante, colas, queues tal vez"* · *"en una página, signos del servidor o algo así"*. De paso: `WEB_CONCURRENCY=2` no tiene efecto, `puma.rb` no declara `workers` |
+| `PR-C29.17` | **El sol del tema vuelve arriba a la derecha, flotando**: sin renglón propio, así el aire que sacó `PR-C29.15` no vuelve (el contenido arranca a 36 px; eran 84). Sale del pie de la barra | Jorge: *"me parece que el sol estaba bien arriba"* |
+| `PR-C29.18` | **Imprimir desde «Todos los Paquetes» abre el diálogo**, y la pestaña se cierra al terminar: la impresora de cada fila, «Re-imprimir Etiquetas Miami» (una caja, «Solo esta» e «Imprimir seleccionadas», que prometía el diálogo y no lo pedía) y «Warehouse Receipt» (F4) de la ficha | Jorge: *"en todos los paquetes, cuando se imprime la etiqueta no sale en imprimir previo sino que solo la etiqueta, corrige que salga el imprimir preview"*. La misma regla que el manifiesto (`PR-C29.7`) |
+| `PR-C29.19` | **«Signos del servidor» mide lo nuestro.** El disco (82.9 %) y la carga de CPU eran de la máquina de Render, compartida: pasan a referencia y sin semáforo, y se agregan el disco de la app (`tmp/`, `log/`, `storage/`) y la CPU que nos da el plan (cgroup). El error de los fallidos se lee, Puma muestra sus hilos. **Y el bug que la página encontró**: `CleanEmptyPreAlertasJob` fallaba todas las noches en la primera pre-alerta vieja sin título y no limpiaba ninguna (32 fallidos); borrar ya no valida y una que falle no frena a las demás. La píldora «Servidor» del Home, de vidrio y hermana de la de la operación | Jorge: *"¿por qué el disco está tan lleno?"* y *"creo que podemos mejorar el icono de signos vitales, hacerlo más agradable, y el color"* |
+| `PR-C29.20` | **Sin N+1 en las pantallas de listas.** Cada pantalla se midió con 3 y con 15 renglones; siete crecían con los renglones y dejaron de hacerlo (con 15: ficha del manifiesto 39 → 23 consultas, sus 4×6 35 → 6, empacar 27 → 12, recibir carga 40 → 9, sucursales 24 → 6, editar pre-alerta 41 → 13 y su gemela del portal 21 → 6). `sin_n_mas_1_test` mide 22 pantallas para que no vuelvan, y queda un cazador a pedido: `CAZAR_N_MAS_1=1 bin/rails test` | Jorge: *"let's make sure we don't have n+1 in the code, if we have let's improve it"* |
+| `PR-C29.21` | **El disco y la carga de la máquina de Render vuelven a contar**, con la vara de una máquina compartida: disco 90 / 95 %, carga por encima de los núcleos / el doble. Y Puma dice sus hilos (3, el default de `config/puma.rb`: Render no tiene `RAILS_MAX_THREADS`) | Jorge: *"me parece que aunque no sean nuestros siempre hay que mirarlos, porque si revientan muere la app"*. Corrige lo que `PR-C29.19` había dejado sin semáforo |
+| `PR-C29.22` | **«Sonidos» va debajo del sol**, en la esquina de arriba a la derecha, en las cinco pantallas de escaneo (/etiquetar, /entrega_personal, el manifiesto, /empacar y /medicion, ésta en tamaño de dedo). El layout tiene una esquina (`content_for :esquina`) y el encabezado le deja lugar | Jorge: *"me parece que el botón de sonido va mejor debajo del sol en mediciones, y si hay en otras partes también"* |
+| `PR-C29.23` | **«Signos del servidor» descarta los fallidos y mide nuestro disco.** Un botón «Descartar los N fallidos» (con confirmación, solo admin), para cuando el error ya se arregló; y «¿Qué ocupa nuestro contenedor?»: `du` por carpeta a pedido, al lado del total de la máquina de Render, y la diferencia es de otros servicios | Jorge: *"I want to know what is taking the disk space"*, y *"yes for both"* a borrar los 32 fallidos viejos y a mostrar el desglose |
+
+> 🔎 **Una atribución que se corrige.** El comentario de la vista le daba a
+> Yusef *"me estoy quedando sin espacio"* (C29-16). Por el contexto del audio
+> lo dijo Jorge; lo de Yusef es lo que sigue: *"ese listado… lo podés poner
+> abajo, porque ese es independiente para verlo"*.

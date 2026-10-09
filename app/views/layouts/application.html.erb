@@ -110,8 +110,9 @@
               <button type="button"
                       data-action="click->sidebar#togglePin"
                       data-sidebar-target="pinIcon"
-                      class="sidebar-collapsed-hide p-1.5 rounded-md text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
+                      class="sidebar-collapsed-hide p-1.5 rounded-md foco-cec text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
                       title="<%= sidebar_pinned_init ? 'Desfijar sidebar' : 'Fijar sidebar' %>"
+                      aria-label="<%= sidebar_pinned_init ? 'Desfijar sidebar' : 'Fijar sidebar' %>"
                       aria-pressed="<%= sidebar_pinned_init %>">
                 <%= heroicon "bookmark", variant: :solid, options: { class: "w-4 h-4 sidebar-pin-on hidden" } %>
                 <%= heroicon "bookmark", variant: :outline, options: { class: "w-4 h-4 sidebar-pin-off" } %>
@@ -121,8 +122,9 @@
               <button type="button"
                       data-action="click->sidebar#togglePosition"
                       data-sidebar-target="positionIcon"
-                      class="sidebar-collapsed-hide p-1.5 rounded-md text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
-                      title="<%= sidebar_position_init == 'right' ? 'Mover a la izquierda' : 'Mover a la derecha' %>">
+                      class="sidebar-collapsed-hide p-1.5 rounded-md foco-cec text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
+                      title="<%= sidebar_position_init == 'right' ? 'Mover a la izquierda' : 'Mover a la derecha' %>"
+                      aria-label="<%= sidebar_position_init == 'right' ? 'Mover a la izquierda' : 'Mover a la derecha' %>">
                 <%= heroicon "arrows-right-left", variant: :outline, options: { class: "w-4 h-4" } %>
               </button>
 
@@ -147,26 +149,44 @@
             Compensa el ancho del sidebar pinned con margin (ml-64 izq o
             mr-64 der). Cuando NO está pinned, el sidebar es overlay y el
             margin es solo el ancho de los íconos colapsados (16). %>
-        <main class="flex-1 flex flex-col min-h-screen overflow-x-hidden transition-all duration-200
+        <main class="relative flex-1 flex flex-col min-h-screen overflow-x-hidden transition-all duration-200
                      <%= 'lg:ml-16'  if sidebar_position_init == 'left'  && !sidebar_pinned_init %>
                      <%= 'lg:ml-64'  if sidebar_position_init == 'left'  && sidebar_pinned_init %>
                      <%= 'lg:mr-16'  if sidebar_position_init == 'right' && !sidebar_pinned_init %>
                      <%= 'lg:mr-64'  if sidebar_position_init == 'right' && sidebar_pinned_init %>">
           <%# Top bar (mobile) %>
           <header class="bg-white dark:bg-gray-800 shadow-sm px-4 py-3 flex items-center justify-between lg:hidden">
-            <button data-action="click->sidebar#toggle" class="text-gray-600 dark:text-gray-200 p-1" aria-label="Menu">
+            <button type="button" data-action="click->sidebar#toggle" class="rounded foco-cec text-gray-600 dark:text-gray-200 p-1" aria-label="Menu">
               <%= heroicon "bars-3", variant: :outline, options: { class: "w-6 h-6" } %>
             </button>
             <span class="font-bold text-cec-navy dark:text-cec-gold">CEC</span>
             <%= render "shared/theme_toggle" %>
           </header>
-          <%# Theme toggle desktop — fixed top-right %>
-          <div class="hidden lg:flex justify-end px-6 pt-4">
-            <%= render "shared/theme_toggle" %>
+          <%# El sol del tema, arriba a la derecha, **flotando**: no ocupa
+              renglón.
+
+              Tenía un renglón propio —16 px de aire + 36 del botón, encima de
+              los 32 del contenido— y Jorge pidió sacar ese aire: *"all the
+              pages the empty space on the top is too big, we could reduce
+              around 60%"*. En PR-C29.15 el sol se fue al pie de la barra
+              lateral, y Jorge lo quiso de vuelta: *"me parece que el sol
+              estaba bien arriba"*. Las dos cosas a la vez: vuelve a su
+              esquina, pero `absolute`, y el contenido arranca a 36 px (eran
+              84). El botón es el chico (32 px) para caber en ese margen sin
+              tocar el título ni la tarjeta del Home. En el celular sigue en
+              la barra de arriba, que ya existía. %>
+          <%# La esquina de arriba a la derecha: el sol y, debajo, lo que la
+              pantalla ponga en `content_for :esquina` —hoy «Sonidos», en las
+              cinco pantallas de escaneo—. Jorge, 2026-10-09: *"el botón de
+              sonido va mejor debajo del sol"*. En el celular el sol vive en la
+              barra de arriba, y la esquina baja por debajo de esa barra. %>
+          <div class="absolute top-16 right-4 lg:top-1 lg:right-6 z-10 flex flex-col items-end gap-2">
+            <div class="hidden lg:block"><%= render "shared/theme_toggle", chico: true %></div>
+            <%= yield :esquina %>
           </div>
 
           <%# Page content %>
-          <div class="flex-1 p-4 md:p-6 lg:p-8">
+          <div class="flex-1 p-4 md:p-6 lg:px-8 lg:pb-8 lg:pt-9">
             <% if notice = flash[:notice] %>
               <div class="mb-4 p-3 bg-cec-teal/10 text-cec-teal-dark border border-cec-teal/30 dark:bg-cec-teal/20 dark:text-cec-teal-light dark:border-cec-teal/50 rounded-xl text-sm flex items-center gap-2"
                    role="status" aria-live="polite" data-controller="auto-dismiss">

@@ -1,0 +1,9 @@
+Hola <%= @cliente.nombre_completo %>,
+
+<%= @paquetes.size == 1 ? "Tu paquete ya está disponible" : "Tus #{@paquetes.size} paquetes ya están disponibles" %> para retirar en <%= @sucursal.nombre %>.
+
+<% @paquetes.each do |paquete| -%>
+- <%= paquete.tracking %> — <%= paquete.descripcion %>
+<% end -%>
+
+Compras Express Cargo

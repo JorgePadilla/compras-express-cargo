@@ -10,13 +10,16 @@
       <h1 class="text-2xl font-bold text-cec-navy mt-1">Tareas</h1>
       <p class="text-sm text-gray-600">Paquete <span class="font-mono"><%= @paquete.tracking %></span> · <%= @paquete.cliente.nombre %></p>
     </div>
-    <%= link_to "Nueva tarea", new_paquete_tarea_path(@paquete),
-        class: "bg-cec-teal text-white font-semibold px-4 py-2 rounded-lg text-sm hover:bg-cec-teal-dark transition-colors" %>
+    <%# C17-01: gateado. Salía para todos, y el digitador rebotaba al clickear. %>
+    <% if can_crear_tareas? %>
+      <%= link_to "Nueva tarea", new_paquete_tarea_path(@paquete),
+          class: "bg-cec-teal text-white font-semibold px-4 py-2 rounded-lg text-sm hover:bg-cec-teal-dark transition-colors" %>
+    <% end %>
   </div>
 
-  <% if @paquete.tareas_pendientes? %>
+  <% if @paquete.tareas_bloqueantes_pendientes? %>
     <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
-      Este paquete tiene tareas abiertas. No se puede avanzar su estado hasta completarlas todas.
+      Este paquete tiene tareas abiertas que bloquean su avance. No puede pasar al siguiente estado hasta completarlas.
     </div>
   <% end %>
 
@@ -78,12 +81,14 @@
                       method: :post,
                       class: "text-xs text-gray-500 hover:text-cec-navy font-semibold" %>
                 <% end %>
-                <%= link_to "Editar", edit_paquete_tarea_path(@paquete, tarea),
-                    class: "text-xs text-gray-500 hover:text-cec-navy font-semibold" %>
-                <%= button_to "Borrar", paquete_tarea_path(@paquete, tarea),
-                    method: :delete,
-                    data: { turbo_confirm: "¿Eliminar esta tarea?" },
-                    class: "text-xs text-red-500 hover:text-red-700 font-semibold" %>
+                <% if can_gestionar_tareas? %>
+                  <%= link_to "Editar", edit_paquete_tarea_path(@paquete, tarea),
+                      class: "text-xs text-gray-500 hover:text-cec-navy font-semibold" %>
+                  <%= button_to "Borrar", paquete_tarea_path(@paquete, tarea),
+                      method: :delete,
+                      data: { turbo_confirm: "¿Eliminar esta tarea?" },
+                      class: "text-xs text-red-500 hover:text-red-700 font-semibold" %>
+                <% end %>
               </div>
             </td>
           </tr>
@@ -91,7 +96,7 @@
         <% if @tareas.empty? %>
           <tr>
             <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500">
-              Sin tareas asignadas. <%= link_to "Crear la primera (F7)", new_paquete_tarea_path(@paquete), class: "text-cec-teal hover:text-cec-teal-dark font-medium", data: { shortcut: "F7" } %>.
+              Sin tareas asignadas.<% if can_crear_tareas? %> <%= link_to "Crear la primera (F7)", new_paquete_tarea_path(@paquete), class: "text-cec-teal hover:text-cec-teal-dark font-medium", data: { shortcut: "F7" } %>.<% end %>
             </td>
           </tr>
         <% end %>

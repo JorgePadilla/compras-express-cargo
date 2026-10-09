@@ -20,7 +20,8 @@ module Cuenta
         if tipo
           session[:pre_alerta_wizard] = {
             "tipo_envio_id" => tipo.id,
-            "con_reempaque" => tipo.con_reempaque,
+            # `con_reempaque` ya no viaja en el wizard: lo deriva el modelo del
+            # servicio. Una clave muerta en la sesión confunde al que la lea después.
             "consolidado"   => params[:consolidado] == "1"
           }
         end
@@ -28,7 +29,7 @@ module Cuenta
 
       @pre_alerta = current_cliente.pre_alertas.build
       @wizard = session[:pre_alerta_wizard] || {}
-      @pre_alerta.con_reempaque = @wizard["con_reempaque"]
+      # `con_reempaque` sale del servicio; lo pone el modelo.
       @pre_alerta.consolidado = @wizard["consolidado"]
       @pre_alerta.tipo_envio_id = @wizard["tipo_envio_id"]
 
@@ -54,13 +55,18 @@ module Cuenta
     end
 
     def edit
+      # PR-C29.20 · Cada renglón muestra el estado de su paquete: sin precargar,
+      # una consulta por renglón (con 15, de 9 a 21). Es la gemela del admin
+      # (`PreAlertasController#edit`). Se precarga antes del `build`, que deja
+      # la asociación cargada y el preloader ya no la tocaría.
+      ActiveRecord::Associations::Preloader.new(records: [ @pre_alerta ], associations: { pre_alerta_paquetes: :paquete }).call
       @pre_alerta.pre_alerta_paquetes.build if @pre_alerta.pre_alerta_paquetes.empty?
     end
 
     def update
       if @pre_alerta.finalizado?
         if params[:autosave] == "true"
-          render json: { status: "error", errors: ["Esta pre-alerta ya fue finalizada."] }, status: :unprocessable_entity
+          render json: { status: "error", errors: [ "Esta pre-alerta ya fue finalizada." ] }, status: :unprocessable_entity
           return
         end
         redirect_to edit_cuenta_pre_alerta_path(@pre_alerta), alert: "Esta pre-alerta ya fue finalizada y no se puede modificar."
@@ -431,8 +437,9 @@ module Cuenta
 
     def pre_alerta_params
       params.require(:pre_alerta).permit(
-        :tipo_envio_id, :consolidado, :con_reempaque, :notas_grupo, :titulo, :proveedor,
-        pre_alerta_paquetes_attributes: [:id, :tracking, :descripcion, :instrucciones, :_destroy]
+        # `con_reempaque` lo deriva el modelo del servicio; ver `PreAlerta`.
+        :tipo_envio_id, :consolidado, :notas_grupo, :titulo, :proveedor,
+        pre_alerta_paquetes_attributes: [ :id, :tracking, :descripcion, :instrucciones, :_destroy ]
       )
     end
 
@@ -446,7 +453,6 @@ module Cuenta
         return redirect_to(new_cuenta_pre_alerta_path(step: 1), alert: "Selecciona un servicio") unless tipo
 
         session[:pre_alerta_wizard]["tipo_envio_id"] = tipo.id
-        session[:pre_alerta_wizard]["con_reempaque"] = tipo.con_reempaque
 
         if tipo.consolidable
           redirect_to new_cuenta_pre_alerta_path(step: 2)
@@ -464,13 +470,12 @@ module Cuenta
         wizard = session[:pre_alerta_wizard]
         @pre_alerta = current_cliente.pre_alertas.build(
           tipo_envio_id:   wizard["tipo_envio_id"],
-          con_reempaque:   wizard["con_reempaque"],
           consolidado:     wizard["consolidado"],
           titulo:          params[:titulo],
           proveedor:       params[:proveedor],
           creado_por_tipo: "cliente",
           creado_por_id:   current_cliente.id,
-          pre_alerta_paquetes_attributes: [paquete_attrs_from_params]
+          pre_alerta_paquetes_attributes: [ paquete_attrs_from_params ]
         )
 
         if @pre_alerta.save

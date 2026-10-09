@@ -1,123 +1,93 @@
-import { Controller } from "@hotwired/stimulus"
+import BusquedaAutocomplete from "controllers/busqueda_autocomplete"
 
-// PR-D3.a — Autocomplete de proveedores (Amazon, Walmart, drivers
-// privados…). Misma UX que client_autocomplete: el operador escribe
-// código o nombre, ve un dropdown filtrado server-side, y al elegir
-// se popula un hidden field con el id y se muestra el nombre.
+// Autocomplete de PROVEEDOR (Amazon, Walmart, el driver de entrega personal…).
 //
 // Markup esperado:
 //   <div data-controller="proveedor-autocomplete"
 //        data-proveedor-autocomplete-url-value="<%= buscar_proveedores_path %>">
 //     <input data-proveedor-autocomplete-target="input"
-//            data-action="input->proveedor-autocomplete#search">
-//     <input type="hidden" name="paquete[proveedor_id]"
-//            data-proveedor-autocomplete-target="proveedorId">
+//            data-action="input->proveedor-autocomplete#search
+//                         keydown->proveedor-autocomplete#onKeydown">
+//     <input type="hidden" data-proveedor-autocomplete-target="proveedorId">
 //     <div data-proveedor-autocomplete-target="dropdown" class="hidden …"></div>
 //     <span data-proveedor-autocomplete-target="nombre" class="hidden …"></span>
 //   </div>
-export default class extends Controller {
-  static targets = ["input", "proveedorId", "dropdown", "nombre"]
+//
+// PR-C6.33. Era de las más pobres de las ocho copias: pedía 2 caracteres, no
+// preseleccionaba nada y no respondía a las flechas — o sea que solo se podía
+// usar con el mouse. Ahora hereda de `BusquedaAutocomplete`.
+//
+// Lo propio de esta pantalla: el campo queda con el **nombre** (no el código,
+// como en cliente) porque el operario piensa en "Amazon", no en "AMZN"; el
+// código va al lado entre paréntesis. Y las filas marcan con una etiqueta los
+// proveedores de entrega personal, que es lo que distingue a un driver de una
+// tienda.
+export default class extends BusquedaAutocomplete {
+  static targets = [ "input", "proveedorId", "dropdown", "nombre" ]
   static values = { url: String }
 
-  connect() {
-    this._timeout = null
+  get _oculto() { return this.proveedorIdTarget }
+
+  _textoVacio() { return "Sin resultados — pedile a admin que cree el proveedor" }
+
+  _filaHtml(p) {
+    return `data-id="${p.id}"
+            data-codigo="${p.codigo}"
+            data-nombre="${p.nombre}"
+            data-tipo="${p.tipo || ""}">
+        <div>
+          <span class="font-mono text-sm font-medium text-cec-navy dark:text-cec-gold">${p.codigo}</span>
+          <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">${p.nombre}</span>
+        </div>
+        ${p.tipo === "entrega_personal" ? `<span class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-cec-gold/20 text-cec-gold-dark">EP</span>` : ""}`
   }
 
-  disconnect() {
-    if (this._timeout) clearTimeout(this._timeout)
-  }
-
-  search() {
-    if (this._timeout) clearTimeout(this._timeout)
-
-    const query = this.inputTarget.value.trim()
-    // Si el operador limpia el campo, se desvincula del catálogo.
-    if (query.length === 0) {
-      this.proveedorIdTarget.value = ""
-      if (this.hasNombreTarget) {
-        this.nombreTarget.textContent = ""
-        this.nombreTarget.classList.add("hidden")
-      }
-      this.hideDropdown()
-      return
-    }
-
-    if (query.length < 2) {
-      this.hideDropdown()
-      return
-    }
-
-    this._timeout = setTimeout(() => {
-      fetch(`${this.urlValue}?q=${encodeURIComponent(query)}`, {
-        headers: { "Accept": "application/json" }
-      })
-        .then(r => r.json())
-        .then(items => this.renderDropdown(items))
-        .catch(() => this.hideDropdown())
-    }, 300)
-  }
-
-  renderDropdown(items) {
-    this.dropdownTarget.replaceChildren()
-
-    if (items.length === 0) {
-      const empty = document.createElement("div")
-      empty.className = "px-4 py-3 text-sm text-gray-500"
-      empty.textContent = "Sin resultados — pedile a admin que cree el proveedor"
-      this.dropdownTarget.appendChild(empty)
-      this.showDropdown()
-      return
-    }
-
-    items.forEach(p => {
-      const btn = document.createElement("button")
-      btn.type = "button"
-      btn.className = "w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2"
-      btn.dataset.action = "click->proveedor-autocomplete#select"
-      btn.dataset.id = p.id
-      btn.dataset.codigo = p.codigo
-      btn.dataset.nombre = p.nombre
-      btn.dataset.tipo = p.tipo
-
-      const codigoSpan = document.createElement("span")
-      codigoSpan.className = "font-mono text-sm font-medium text-cec-navy"
-      codigoSpan.textContent = p.codigo
-
-      const nombreSpan = document.createElement("span")
-      nombreSpan.className = "text-sm text-gray-700"
-      nombreSpan.textContent = p.nombre
-
-      btn.appendChild(codigoSpan)
-      btn.appendChild(nombreSpan)
-
-      if (p.tipo === "entrega_personal") {
-        const tag = document.createElement("span")
-        tag.className = "ml-auto px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-900"
-        tag.textContent = "EP"
-        btn.appendChild(tag)
-      }
-
-      this.dropdownTarget.appendChild(btn)
-    })
-    this.showDropdown()
-  }
-
-  select(e) {
-    const btn = e.currentTarget
-    this.proveedorIdTarget.value = btn.dataset.id
-    this.inputTarget.value = btn.dataset.nombre
+  _alSeleccionar(datos) {
+    this._campo.value = datos.nombre
     if (this.hasNombreTarget) {
-      this.nombreTarget.textContent = `(${btn.dataset.codigo})`
+      this.nombreTarget.textContent = `(${datos.codigo})`
       this.nombreTarget.classList.remove("hidden")
     }
-    this.hideDropdown()
   }
 
-  hideDropdown() {
-    this.dropdownTarget.classList.add("hidden")
+  // C27-29 · Teclear encima suelta el proveedor del catálogo.
+  //
+  // El oculto se escribía al elegir y **no se limpiaba nunca**: quien tenía
+  // "Amazon" elegido, borraba y escribía "Driver Juan", mandaba las dos cosas
+  // —`proveedor_id` viejo + texto nuevo— y al volver a pintar la ficha ganaba
+  // el del catálogo. Ese es el *"no lo está cambiando"* de Jorge: el texto sí
+  // viajaba (desde este PR), pero el id lo tapaba.
+  //
+  // Va acá y no en `BusquedaAutocomplete` a propósito: la base la comparten
+  // ocho pantallas y no todas quieren que escribir suelte lo elegido.
+  //
+  // **O sea que el agujero sigue abierto en las otras siete.** Es la tercera
+  // vez que este patrón muerde ([[project_autocomplete_no_limpia_el_oculto]]).
+  // Los que escriben un oculto y NO lo sueltan al teclear son
+  // `tercero-search`, `pre-alerta-search`, `mover-pre-alerta-modal`,
+  // `cliente-autocomplete`, `client-autocomplete`, `cliente-search` y
+  // `asignar-tercero-modal`; cuatro de ellos lo limpian solo con un botón
+  // «×» explícito. Subirlo a la base es un PR aparte, con su repaso de las
+  // ocho pantallas: en un campo obligatorio soltar la selección al teclear
+  // puede dejar el form sin dato en vez de con el dato viejo.
+  buscar() {
+    this._soltarSeleccion()
+    super.buscar()
   }
 
-  showDropdown() {
-    this.dropdownTarget.classList.remove("hidden")
+  _soltarSeleccion() {
+    if (this.hasProveedorIdTarget) this.proveedorIdTarget.value = ""
+    if (this.hasNombreTarget) {
+      this.nombreTarget.textContent = ""
+      this.nombreTarget.classList.add("hidden")
+    }
   }
+
+  // ── Alias en el idioma viejo, para no tocar markup que ya funciona ──
+  search() { this.buscar() }
+  onKeydown(e) { this.teclado(e) }
+  select(e) { this.elegir(e) }
+  renderDropdown(items) { this.pintar(items) }
+  hideDropdown() { this.cerrar() }
+  showDropdown() { this.abrir() }
 }

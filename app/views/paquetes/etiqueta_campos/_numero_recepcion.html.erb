@@ -1,0 +1,10 @@
+<%# ── Número de recepción ── el más grande después del tipo de envío.
+    Lleva el sufijo de caja cuando el tracking se dividió (`…-1`, `…-2`),
+    igual que el barcode: es lo que se teclea cuando la etiqueta viene
+    rayada y el lector no la lee. El n/N va otra vez suelto abajo — Jorge lo
+    confirmó, es como está en el mockup. %>
+<% if etiqueta_plantilla.visible?("numero_recepcion") %>
+  <div class="t mono" style="font-size:var(--fs-numero-recepcion); font-weight:bold;" data-campo="numero-recepcion">
+    <%= etiqueta_codigo_barras(paquete) || "—" %>
+  </div>
+<% end %>

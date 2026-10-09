@@ -1,0 +1,74 @@
+<%# Las reglas del servicio, en la pantalla de admin.
+    Locals: `f`, `tipo_envios` (nil = el servicio ya no se cambia), `seleccionado`.
+
+    Jorge, 2026-08-20: *"faltan las reglas de servicio, que son importantísimas,
+    con respecto a si se puede con reempaque y consolidación. Revisá la parte de
+    cliente y aplicale las reglas al admin"*.
+
+    El portal las comunica con su forma —agrupa los servicios en «con reempaque»
+    y «sin reempaque», y el paso de consolidación **no existe** para los que no
+    la permiten—. Admin tenía dos casillas sueltas que dejaban grabar una CKA
+    «con reempaque y consolidada», que es una combinación que no existe.
+
+    Acá no va el wizard: los controles de admin no cambian (decisión de Jorge,
+    2026-08-12). Lo que se empareja son las reglas. %>
+<div data-controller="reglas-de-servicio"
+     data-reglas-de-servicio-consolidable-value="<%= seleccionado&.consolidable ? "true" : "false" %>">
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div>
+      <label class="<%= clases_de_etiqueta %>"><%= etiqueta_de_campo("Tipo de Envío") %></label>
+      <% if tipo_envios %>
+        <%# Cada opción lleva sus reglas: el JS las lee del `<option>` elegido y
+            no vuelve a preguntarle al servidor. %>
+        <%= f.select :tipo_envio_id,
+              options_from_collection_for_select(tipo_envios, :id, :nombre, seleccionado&.id),
+              { include_blank: "— Seleccionar —" },
+              class: clases_de_input,
+              data: { action: "change->reglas-de-servicio#alCambiarServicio",
+                      reglas_de_servicio_target: "select" } %>
+        <% tipo_envios.each do |t| %>
+          <%# Las reglas de cada servicio, para el `<option>` de arriba. Van en un
+              `data-` aparte porque `options_from_collection_for_select` no deja
+              ponerle atributos a cada opción. %>
+          <span class="hidden" data-reglas-de-servicio-target="reglas"
+                data-tipo-envio-id="<%= t.id %>"
+                data-consolidable="<%= t.consolidable %>"
+                data-con-reempaque="<%= t.con_reempaque %>"
+                data-max-paquetes="<%= t.max_paquetes_por_accion || -1 %>"></span>
+        <% end %>
+      <% else %>
+        <p class="text-sm font-medium text-gray-800 dark:text-gray-100"><%= seleccionado&.nombre || "—" %></p>
+      <% end %>
+    </div>
+
+    <div class="flex flex-col justify-end gap-3">
+      <%# Reempaque ya no se elige: sale del servicio. La casilla dejaba marcar
+          «con reempaque» en CKA, que no reempaca — y el listado mostraba la «R»
+          leyendo esta columna mientras `tipo_envio_descripcion` leía la del
+          servicio, así que podían decir cosas distintas del mismo envío. %>
+      <p class="text-sm text-gray-700 dark:text-gray-200">
+        <span class="font-medium">Reempaque:</span>
+        <span data-reglas-de-servicio-target="reempaque">
+          <%= seleccionado.nil? ? "—" : (seleccionado.con_reempaque ? "sí, lo reempaca el servicio" : "no, viaja tal como llega") %>
+        </span>
+      </p>
+
+      <div data-reglas-de-servicio-target="consolidadoCampo"
+           class="<%= "hidden" unless seleccionado&.consolidable %>">
+        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+          <%= f.check_box :consolidado,
+                data: { reglas_de_servicio_target: "consolidado" },
+                class: "rounded border-gray-300 dark:border-gray-600 text-cec-teal focus:ring-cec-teal" %>
+          Consolidado
+        </label>
+      </div>
+
+      <%# Y si no se puede, se dice por qué — esconderlo sin explicación deja al
+          operario buscando una casilla que ayer estaba. %>
+      <p data-reglas-de-servicio-target="consolidadoNo"
+         class="<%= "hidden" if seleccionado.nil? || seleccionado.consolidable %> text-sm text-gray-500 dark:text-gray-400">
+        Este servicio no se consolida.
+      </p>
+    </div>
+  </div>
+</div>

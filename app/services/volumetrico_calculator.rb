@@ -37,30 +37,115 @@ module VolumetricoCalculator
   #   frac < .10        → baja al entero
   #   .10 ≤ frac < .60  → .50
   #   frac ≥ .60        → sube al siguiente entero
+  #
+  # **Esta es la única implementación de la regla.** `Tarifa#redondear_al_incremento`
+  # delega acá cuando el incremento es media libra.
+  #
+  # Vivió duplicada hasta `PR-C7.11`: `Tarifa` la resolvía restando una tolerancia
+  # de 0.09 y haciendo `ceil`. Las dos coinciden en todo peso de **dos** decimales
+  # —por eso el barrido de `redondeo_media_libra_coincide_test` nunca las separó—
+  # pero restar 0.09 no es lo mismo que "por debajo de .10", y en el tercer decimal
+  # se iban:
+  #
+  #   | peso  | restando 0.09 | esta | hoja de Yusef |
+  #   |-------|---------------|------|---------------|
+  #   | 3.099 | 3.5           | 3.0  | **3**         |
+  #   | 3.599 | 4.0           | 3.5  | **3.50**      |
+  #
+  # La hoja que Yusef mandó el 2026-08-12 escribe esos dos valores, así que la
+  # buena es esta y la otra se fue.
+  #
   # Se trabaja en milésimas (enteros) para evitar el ruido de punto flotante
   # (p.ej. 4.1 - 4 = 0.0999… en float rompería el umbral .10).
-  def half_pound_round(x)
-    milesimas = (x.to_f * 1000).round
-    entero    = milesimas / 1000
-    frac      = milesimas % 1000
+  #
+  # Devuelve `BigDecimal` porque el resultado va a multiplicar un precio: en el
+  # camino de `Tarifa` esto es plata, y meterle un Float a la factura le mete
+  # ruido. `half_pound_round` es el adaptador para el camino de pantalla.
+  def redondear_media_libra(peso)
+    exacto       = peso.is_a?(BigDecimal) ? peso : BigDecimal(peso.to_s)
+    milesimas    = (exacto * 1000).round
+    entero, frac = milesimas.divmod(1000)
 
     if frac < 100
-      entero.to_f
+      BigDecimal(entero)
     elsif frac < 600
-      entero + 0.5
+      entero + BigDecimal("0.5")
     else
-      entero + 1.0
+      BigDecimal(entero + 1)
     end
   end
 
+  # La misma regla, en Float. Es lo que consumen la calculadora de `/etiquetar` y
+  # el resto del módulo, que trabajan en Float de punta a punta.
+  def half_pound_round(x)
+    redondear_media_libra(x.to_f).to_f
+  end
+
   # Peso a cobrar (lo más común): el mayor entre peso real y VLbs.
-  def peso_a_cobrar(peso_real, in3)
-    [ peso_real.to_f, vlbs(in3) ].max
+  def peso_a_cobrar(peso_real, in3, solo_volumetrico: false)
+    entre_peso_y_vlbs(peso_real.to_f, vlbs(in3), solo_volumetrico: solo_volumetrico)
+  end
+
+  # PR-C6.41 · RP-04b: la regla de qué peso manda, en un solo lugar.
+  #
+  # Antes vivía copiada en tres: `Paquete#calculate_peso_cobrar`,
+  # `CotizadorFlete#peso_cobrar` y `peso_a_cobrar` acá (que solo llamaban los
+  # tests). Es la misma duplicación entre pantallas gemelas que ya mordió cuatro
+  # veces en este proyecto, y acá el precio de que se separen es que la
+  # calculadora de /etiquetar le muestre al operario un peso distinto del que
+  # factura la pre-factura.
+  #
+  # **Selecciona, no calcula**: devuelve uno de sus dos argumentos tal cual. El
+  # peso a cobrar es plata y llega como BigDecimal; convertirlo a float acá le
+  # metería ruido de punto flotante a la factura.
+  #
+  # `solo_volumetrico` es el trato de mayorista de Yusef. El guard de cero no es
+  # cosmético: si el operario todavía no tecleó las medidas, el volumétrico es 0
+  # y sin el guard el paquete se cobraría **gratis**.
+  # `C24-01` · Y el caso espejo: **cobrar el peso real aunque gane el
+  # volumétrico**. Jorge, 2026-09-06, aclarando lo que Yusef pidió: *"él quiere
+  # poder cobrar **por libra o volumen volumétrico de vez en cuando, dependiendo
+  # el caso**"*. Son las dos mitades de lo mismo, no dos funciones.
+  #
+  # **`solo_peso` se pregunta primero**, y no es arbitrario: el único que lo
+  # prende es la excepción **del paquete**, mientras que `solo_volumetrico` puede
+  # venir del paquete **o del trato del cliente** (`PR-C6.41`). Preguntándolo
+  # primero, la excepción del paquete le gana al trato del cliente — que es lo
+  # que Yusef pidió: *"exclusivamente esa"*.
+  #
+  # Los dos siguen teniendo el guard de cero del `solo_volumetrico` original: si
+  # el operario todavía no tecleó el dato, cobrar por él sería cobrar gratis.
+  def entre_peso_y_vlbs(peso_real, vlbs, solo_volumetrico: false, solo_peso: false)
+    return peso_real if solo_peso && peso_real.to_f.positive?
+    return vlbs if solo_volumetrico && vlbs.to_f.positive?
+
+    [ peso_real, vlbs ].max
   end
 
   # (B) Pies cúbicos, SIEMPRE redondeado hacia arriba a entero.
+  #
+  # Es la regla de la hoja de Yusef de junio y **se queda para nuestro
+  # calculador** (`/etiquetar`), que es informativo. Para los papeles que van al
+  # proveedor va `pies_cubicos_exactos`, abajo.
   def pies_cubicos(in3)
     (in3.to_f / IN3_PER_FT3).round(6).ceil
+  end
+
+  # `C25-05` · Los pies cúbicos **exactos**, para lo que se le imprime al
+  # proveedor: la 4×6 del bulto y el manifiesto impreso.
+  #
+  # Yusef, 2026-09-05, mirando un `12` donde la cuenta daba `11.02`:
+  #
+  #   > "Ponerlo exacto. […] Eso [el redondeo] es para cobro nuestro; ellos
+  #   >  tienen que redondearlo como yo los redondeo. Si le pones 12 acá, me lo
+  #   >  leen 12 y me clavan — ahí no te cobran 11.02 sino 11; cuando ya pasa
+  #   >  11.5 te cobran 12. Entonces ahí te compensan una con la otra."
+  #
+  # O sea: el proveedor redondea half-up por su cuenta, y un ceil impreso es
+  # plata regalada en cada bulto. **No reemplaza a la regla B**: son dos
+  # lectores distintos del mismo número, y el que va al papel es éste.
+  def pies_cubicos_exactos(in3)
+    (in3.to_f / IN3_PER_FT3).round(2)
   end
 
   # (C) Metros cúbicos, ceil a 2 decimales.

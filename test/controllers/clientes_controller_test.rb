@@ -7,6 +7,19 @@ class ClientesControllerTest < ActionDispatch::IntegrationTest
     @cliente = clientes(:juan)
   end
 
+  test "una sucursal que recibe carga no se ofrece como sucursal de retiro" do
+    # Seguimiento de C18-02: la lista filtraba `ubicacion != miami`, y una
+    # México de prueba (`otros`, recibe carga) salía como lugar de retiro.
+    mexico = Sucursal.create!(codigo: "DFM", nombre: "DF México", pais: "México", ubicacion: "otros",
+                              activo: true, recibe_carga: true)
+
+    get new_cliente_url
+
+    assert_select "select[name='cliente[sucursal_retiro_id]'] option[value=?]", mexico.id.to_s, count: 0
+    assert_select "select[name='cliente[sucursal_retiro_id]'] option[value=?]", sucursales(:zeron_sps).id.to_s
+    assert_select "select[name='cliente[sucursal_retiro_id]'] option[value=?]", sucursales(:miami).id.to_s, count: 0
+  end
+
   test "should get index" do
     get clientes_url
     assert_response :success
@@ -24,8 +37,8 @@ class ClientesControllerTest < ActionDispatch::IntegrationTest
 
   test "should create cliente" do
     assert_difference("Cliente.count") do
-      post clientes_url, params: { cliente: {
-        nombre: "Nuevo", apellido: "Cliente", email: "nuevo@test.com",
+      post clientes_url, params: { cliente: { sucursal_retiro_id: sucursales(:humuya_tgu).id,
+        nombre: "Nuevo", apellido: "Cliente De Prueba", email: "nuevo@test.com",
         telefono: "99998888", ciudad: "Tegucigalpa"
       } }
     end
@@ -50,10 +63,10 @@ class ClientesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should update cliente" do
-    patch cliente_url(@cliente), params: { cliente: { nombre: "Updated" } }
+    patch cliente_url(@cliente), params: { cliente: { nombre: "Updated De Prueba" } }
     assert_redirected_to cliente_url(@cliente)
     @cliente.reload
-    assert_equal "Updated", @cliente.nombre
+    assert_equal "Updated De Prueba", @cliente.nombre
   end
 
   test "should not update with invalid data" do

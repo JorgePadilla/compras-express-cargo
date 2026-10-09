@@ -20,9 +20,10 @@
 #   3. (Opcional) Repetir para `RENDER_STAGING_WORKER_DEPLOY_HOOK` si
 #      querés que el worker también dispare desde acá.
 #
-# Producción NO está aquí intencionalmente — main → producción es
-# deploy manual desde el dashboard de Render para evitar despliegues
-# accidentales a clientes reales.
+# Producción no está aquí: `main` → producción también es automático,
+# pero por el `autoDeploy: true` del `render.yaml` (Jorge lo pidió el
+# 2026-09-12). Si algún día hace falta el respaldo por deploy hook,
+# copiar este job con `RENDER_PRODUCTION_DEPLOY_HOOK`.
 name: Auto-deploy staging
 
 on:

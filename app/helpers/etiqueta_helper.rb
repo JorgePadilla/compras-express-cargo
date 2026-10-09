@@ -17,7 +17,33 @@ module EtiquetaHelper
   # SVG en vez de PNG a propósito: es vectorial, así que imprime nítido tanto
   # en la Dymo de 203 dpi como en cualquier otra, y no necesita una gema de
   # imágenes.
-  def etiqueta_barcode_svg(texto, height: 34, xdim: 1)
+  # C20-02: `estirar` es lo que hace que la pistola pueda leerlo siempre.
+  #
+  # Barby emite el SVG con **ancho fijo en píxeles** (el que le toque al
+  # código: 211px para un número de recepción con sufijo). La etiqueta mide
+  # 2.25in y los márgenes le comen ancho, así que cuando el código no entra,
+  # `overflow:hidden` le corta la última barra **en silencio** — la etiqueta se
+  # ve bien y no se escanea. Yusef, probándolo en vivo: *"sí, le cortó la
+  # última, la derecha… le faltan rayitas"*, y el diagnóstico es suyo: *"la
+  # idea de ese margen es que lo corre para la derecha; el problema es que como
+  # ya no hay espacio, donde lo corre para la derecha se corta"*.
+  #
+  # Estirado, el ancho lo pone el contenedor y el dibujo se acomoda:
+  #
+  #   > "Si lo justificás, lo que va a pasar es que se hace un poquito más
+  #   >  pequeño el código de barra, **pero la pistola lo va a leer**. Eso es
+  #   >  lo que hay que hacer."
+  #
+  # Y es cierto: Code 128 se lee por la **proporción** entre barras y espacios,
+  # no por su ancho absoluto, así que escalar parejo no lo rompe.
+  #
+  # El SVG de Barby ya trae `viewBox` y `preserveAspectRatio="none"`, o sea que
+  # alcanza con cambiarle el ancho y el alto del tag de apertura — nada de
+  # reescribir el dibujo. `sub` y no `gsub`: adentro van decenas de `<rect>`
+  # con su propio width/height, y ésos no se tocan. Si algún día Barby cambia
+  # de forma y el patrón no engancha, sale el SVG tal cual: se degrada al
+  # comportamiento de antes, nunca a una etiqueta sin código.
+  def etiqueta_barcode_svg(texto, height: 34, xdim: 1, estirar: true)
     valor = texto.to_s.strip
     return nil if valor.blank?
 
@@ -25,6 +51,11 @@ module EtiquetaHelper
     svg = Barby::SvgOutputter.new(barcode)
       .to_svg(height: height, margin: 0, xdim: xdim)
       .sub(/<\?xml[^>]*\?>\s*/, "") # inline: sin prolog XML
+    if estirar
+      svg = svg.sub(/\A\s*<svg\b[^>]*>/) do |tag|
+        tag.sub(/\bwidth="[^"]*"/, 'width="100%"').sub(/\bheight="[^"]*"/, 'height="100%"')
+      end
+    end
     svg.html_safe
   rescue StandardError => e
     # Un carácter fuera de Code128B no puede tumbar la impresión de la
@@ -33,17 +64,133 @@ module EtiquetaHelper
     nil
   end
 
-  # "1/2" — número de caja sobre el total. Solo cuando el tracking se dividió.
-  # "Número y cantidad de paquetes" — el campo 9 de la lista de Yusef.
+  # C21-05 / RP-54 · El QR del bulto.
   #
-  # Devuelve "1/1" cuando el tracking trae una sola caja, y no en blanco como
-  # antes: el espacio ya está reservado en la etiqueta, así que no cuesta nada,
-  # y en blanco es ambiguo — el operario no sabe si hay una sola caja o si el
-  # dato no se imprimió. Con "1/1" sabe que no tiene que buscar más.
-  def etiqueta_fraccion(paquete)
-    total = [ paquete.cantidad_paquetes.to_i, 1 ].max
+  # `A7-03` dejó la puerta abierta —*"un código QR o lo que vos querás"*— y
+  # `RP-54` la preguntó, avisando que el repo solo generaba Code128 y que QR
+  # pedía gema nueva. Yusef eligió el 2026-08-30: *"código QR, habría que
+  # instalar la gema necesaria"*, o sea aceptando el costo.
+  #
+  # Va **solo en la etiqueta del bulto**. El warehouse del paquete sigue en
+  # Code128 (`etiqueta_barcode_svg`), que es lo que leen las pistolas de hoy;
+  # cambiar los dos de un saque dejaría a Miami sin poder escanear nada.
+  #
+  # `use_path: true` + `viewbox: true` para que el SVG escale con su caja en vez
+  # de traer un ancho fijo en píxeles, que es lo que rompe al imprimir a 4×6.
+  #
+  # 1.7in de lado: la 4×6 tenía espacio de sobra donde antes iba el Code128 a
+  # todo el ancho, y un QR grande es un QR que la pistola agarra de lejos y
+  # torcido. Va alineado a la izquierda como todo lo demás de la etiqueta.
+  # Y el mismo degradado que el barcode: si algo revienta sale sin código, nunca
+  # una excepción en medio de una impresión.
+  def etiqueta_qr_svg(texto, tamano: "1.7in")
+    valor = texto.to_s.strip
+    return nil if valor.blank?
 
-    "#{paquete.numero_caja.presence || 1}/#{total}"
+    svg = RQRCode::QRCode.new(valor)
+      .as_svg(module_size: 4, use_path: true, viewbox: true, standalone: true)
+      .sub(/<\?xml[^>]*\?>\s*/, "")
+
+    # Con `viewbox: true` el SVG sale **sin** `width` ni `height` — se insertan,
+    # no se sustituyen. Sustituirlos era un no-op silencioso: el QR salía con el
+    # tamaño que le diera la caja contenedora, que en 4×6 es todo el ancho.
+    svg = svg.sub(/\A\s*<svg\b/, %(<svg width="#{tamano}" height="#{tamano}"))
+    svg.html_safe
+  rescue StandardError => e
+    Rails.logger.warn "[etiqueta] no se pudo generar el QR para #{valor.inspect}: #{e.message}"
+    nil
+  end
+
+  # El renglón donde vive el código de barras.
+  #
+  # C20-02: justificado no necesita alinear nada —el dibujo ya ocupa todo el
+  # ancho— y por eso va como bloque pelado, que es el camino que tenía la
+  # etiqueta desde siempre. Las otras tres van con flex, empujando un SVG que
+  # conserva su ancho natural.
+  POSICION_DEL_BARCODE = { "centro" => "center", "derecha" => "flex-end" }.freeze
+
+  def etiqueta_barcode_estilo(alineacion)
+    base = "width:100%; height:.20in;"
+    return base if alineacion == "justificado"
+
+    "#{base} display:flex; justify-content:#{POSICION_DEL_BARCODE.fetch(alineacion, 'flex-start')};"
+  end
+
+  # Lo que va adentro del código de barras — y también impreso debajo, para
+  # poder teclearlo cuando la etiqueta viene rayada.
+  #
+  # Dos reglas de Yusef, las dos del 2026-08-08:
+  #
+  # **1. Es el warehouse, nunca el tracking.**
+  #
+  #   > "El código de barra que está aquí es el warehouse, no es el tracking."
+  #
+  # Por eso devuelve `nil` cuando no hay número de recepción, en vez de caer al
+  # tracking como hacía antes: una etiqueta sin barcode es un problema visible;
+  # una con el barcode equivocado se escanea mal en San Pedro y nadie se entera.
+  #
+  # **2. Lleva el sufijo de caja cuando el tracking se dividió.**
+  #
+  #   > "Si yo escaneo esto no sé si es el paquete uno o el paquete dos."
+  #   > "Aquí sería 7-1, 7-2."
+  #
+  # Las N cajas de un split comparten el `numero_recepcion` (el número madre),
+  # y se diferencian por `numero_caja` — el índice único es compuesto. Sin el
+  # sufijo las dos cajas llevan el MISMO código impreso, y al recibir en San
+  # Pedro no se puede saber cuál llegó ni cuál falta. Eso es lo que rompe el
+  # rebaje de inventario:
+  #
+  #   > "Esa etiqueta selecciona del inventario... el paquete que sí vino, y
+  #   >  que falta el otro. De esa manera él rebaja."
+  #
+  # El sufijo va en la **recepción**, jamás en el tracking. Ese fue el error
+  # del sistema viejo: "el tracking él le agregaba un 2, y al warehouse él le
+  # agregaba un 2 y el 1".
+  def etiqueta_codigo_barras(paquete)
+    recepcion = paquete.numero_recepcion_visible
+    return nil if recepcion.blank?
+    return recepcion unless paquete.dividido? && paquete.numero_caja.to_i.positive?
+
+    "#{recepcion}-#{paquete.numero_caja}"
+  end
+
+  # El número de caja, solo. **Sin el total.**
+  #
+  # A7-21. Esto era "1/2" y Yusef lo cortó, explicando por qué el total no se
+  # puede saber cuando se imprime:
+  #
+  #   > "La etiqueta **solo lleva el número, no lleva el uno de dos ni de
+  #   >  tres**, porque no estamos seguros cuántas estamos empacando."
+  #   > "Cuando menos acordás: hey, me salieron cuatro en vez de cinco."
+  #
+  # Una etiqueta que dice "1/5" sobre una carga que terminó en 4 cajas es peor
+  # que una que no dice nada: manda a buscar un bulto que no existe.
+  #
+  # 2026-08-19, Jorge sobre una etiqueta de dos cajas: *"el 1 está bien, pero
+  # aquí yo mandé 2 — cuando manda más de una debe llevar el 1/2"*.
+  #
+  # Los dos tienen razón, sobre casos distintos, y por eso la fracción sale
+  # **solo cuando el total está grabado**:
+  #
+  #   · Al **recibir**, la cantidad se fija antes de imprimir — el operario cargó
+  #     las cajas una por una, o contestó cuántas en el modal de `PR-C7.23`. El
+  #     paquete queda con `cantidad_paquetes`, y por eso el código de barras ya
+  #     salía con su `-1`. Ahí el total se sabe y decirlo ayuda.
+  #   · Al **empacar** —el módulo que Yusef difirió— la cantidad va apareciendo
+  #     mientras se empaca. Ahí no hay `cantidad_paquetes` que valga y sale el
+  #     número solo, que es exactamente el caso del que él se quejaba.
+  #
+  # O sea que esto respeta su razón, no su letra. Si algún día el empaque graba
+  # un total provisorio, hay que volver a mirar esta línea.
+  #
+  # Ojo: esto NO es el sufijo del código de barras. `etiqueta_codigo_barras`
+  # sigue emitiendo `RM…-2`, que es lo que permite rebajar inventario caja por
+  # caja en San Pedro. Son dos cosas distintas en dos lugares distintos.
+  def etiqueta_fraccion(paquete)
+    numero = (paquete.numero_caja.presence || 1).to_s
+    return numero unless paquete.dividido?
+
+    "#{numero}/#{paquete.cantidad_paquetes}"
   end
 
   # "Departamento abreviado y ciudad o pueblo" (Yusef). El departamento
@@ -58,8 +205,24 @@ module EtiquetaHelper
 
   # La sucursal donde el cliente retira. Es el campo que provocó el
   # "¿qué es San Pedro Soda?": salía truncado y bajo un encabezado en inglés.
+  # C25-08 · «Dónde retira» dice **la sucursal**, nunca una ciudad.
+  #
+  # Yusef, mirando la etiqueta: *"ahora dice San Pedro Sula; por donde va a
+  # retirar tiene que decir **Zerón SPS**, así se llama la sucursal"*. Y el
+  # porqué: *"la que voy a abrir se va a llamar Carmen SPS o Norte SPS"* — con
+  # dos sucursales en la misma ciudad, la ciudad deja de decir dónde.
+  #
+  # C29-03 · Sin sucursal en el paquete **dice que falta**. Caía a la de
+  # retiro por defecto (SPS) y de último a la ciudad del cliente, y las dos
+  # mienten: el 2026-10-08 la etiqueta de Sofía —de Choluteca, retira en
+  # Humuya, sin sucursal cargada— salió diciendo San Pedro. Yusef: *"si va a
+  # retirar en Tegucigalpa, la sucursal de Tegucigalpa tiene que irte. Aunque
+  # él sea de Choluteca"*. Una caja que dice SPS se empaca con las de SPS; una
+  # que dice SIN SUCURSAL se aparta y se pregunta.
+  SIN_SUCURSAL = "SIN SUCURSAL".freeze
+
   def etiqueta_sucursal(paquete)
-    paquete.sucursal&.nombre.presence || paquete.cliente&.ciudad.presence
+    paquete.sucursal&.nombre.presence || SIN_SUCURSAL
   end
 
   # El tipo de envío va a tres letras: en el mockup de Yusef dice **EXP**, no
@@ -71,7 +234,22 @@ module EtiquetaHelper
   # CER, CEM, CKA y CKM ya son de tres letras; el único que se acorta es
   # EXPRESS. Si algún día entran dos servicios que arranquen igual, hay que
   # mapearlos a mano acá.
+  #
+  # C16-07 · El retenido en Miami imprime **RET** en ese mismo lugar. Yusef,
+  # 2026-08-25, con las tres etiquetas de un paquete retenido en la mano: *"y
+  # sigue saliendo el CER aquí. Mirá, sería así: retenido"*; y la abreviatura,
+  # después: *"el de retener me dijiste RT, me va. RT, RT, RT"*. Jorge lo fijó:
+  # en lugar del servicio, las **primeras tres letras de RETENIDO** — salió
+  # como RTE en el primer intento y Yusef lo corrigió al día siguiente (C18-01:
+  # *"me dijiste RTE… RET. Sí, las primeras tres letras"*). Es el texto más
+  # grande de la etiqueta porque es
+  # con lo que separan la carga antes de empacar — y una caja retenida no se
+  # empaca. El servicio vuelve a imprimirse cuando se libera la retención
+  # (`reimprimir_etiquetas`). Es la bandera `retener_miami`, no el estado
+  # `retenido` (que es otra cosa: un paso del pipeline en Honduras).
   def etiqueta_tipo_envio(paquete)
+    return "RET" if paquete.retener_miami?
+
     paquete.tipo_envio&.codigo.to_s.first(3).upcase.presence
   end
 
@@ -96,5 +274,139 @@ module EtiquetaHelper
     return nil if partes.empty?
 
     partes.map { |p| p[0].to_s.upcase }.join
+  end
+
+  # ── C19-06: la plantilla que rige la etiqueta ──
+
+  # Memoizada por request: layout y partial comparten el view context, y
+  # `etiquetas_combinadas` renderiza N etiquetas — una consulta, no N.
+  # El preview del editor la pisa (`@etiqueta_plantilla = candidata`) para
+  # renderizar una definición sin guardar.
+  def etiqueta_plantilla
+    @etiqueta_plantilla ||= EtiquetaPlantilla.vigente
+  end
+
+  # Una fila de campos: si es un solo campo, el partial trae su propio bloque;
+  # si son varios, van juntos en un renglón `.r` — que solo se emite si algún
+  # campo rindió algo (igual que hoy: sin secundario no hay div vacío).
+  def etiqueta_fila(campos, paquete)
+    piezas = campos.filter_map do |campo|
+      html = etiqueta_campo(campo, paquete)
+      html if html.present? && html.strip.present?
+    end
+    return "".html_safe if piezas.empty?
+    return piezas.first if campos.size == 1
+
+    content_tag(:div, safe_join(piezas), class: "r")
+  end
+
+  def etiqueta_campo(campo, paquete)
+    return "".html_safe unless EtiquetaPlantilla::Definicion::CAMPOS.key?(campo)
+
+    render("paquetes/etiqueta_campos/#{campo}", paquete: paquete)
+  end
+
+  # Las variables CSS de tamaño, una por campo (`--fs-tipo-envio: 19pt`),
+  # ya multiplicadas por la escala. El barcode no tiene: su alto es fijo
+  # (abajo de ~0.15in los escáneres fallan y no se ve en la impresión).
+  def etiqueta_font_vars
+    plantilla = etiqueta_plantilla
+    lineas = EtiquetaPlantilla::Definicion::CAMPOS.keys.filter_map do |campo|
+      fs = plantilla.fs(campo)
+      next if fs.zero?
+
+      linea = "--fs-#{campo.tr('_', '-')}: #{etiqueta_num(fs)}pt;"
+      if (fsr = plantilla.fs_rotulo(campo)).positive?
+        linea += "\n      --fs-#{campo.tr('_', '-')}-rotulo: #{etiqueta_num(fsr)}pt;"
+      end
+      linea
+    end
+    lineas.join("\n      ").html_safe
+  end
+
+  # 19.0 → "19", 10.5 → "10.5", 2.25 → "2.25" — como estaban escritos a mano.
+  def etiqueta_num(n)
+    (n % 1).zero? ? n.to_i.to_s : n.to_s
+  end
+
+  # `10x12x14`, o nil si no hay las tres. Desde C27-07 se puede medir **solo
+  # con el peso** —y en la línea es lo normal: *"esto solo va a pesar, dos
+  # libras"* (2026-10-03)—, y la etiqueta reventaba con `nil % 1`.
+  def etiqueta_medidas(numeros)
+    dims = [ numeros.alto, numeros.largo, numeros.ancho ]
+    return nil unless dims.all?(&:present?)
+
+    dims.map { |m| etiqueta_num(m) }.join("x")
+  end
+
+  # `C25-04` · Siempre con dos decimales: `146.00`, no `146`.
+  #
+  # Yusef, sobre la 4×6 impresa: *"deberías de ponerle siempre punto cero cero,
+  # para que se vea parejito"*. Es **solo para la 4×6**: `etiqueta_num` se queda
+  # como está porque lo usa la Dymo, y ahí manda el espacio, no la prolijidad.
+  def etiqueta_num_2d(n)
+    format("%.2f", n.to_f)
+  end
+
+  # C26-04 · Lo que lleva el QR de la etiqueta de medición.
+  #
+  # Yusef: *"que quede amarrado: cuando lo escanee, ingrese al sistema la
+  # información de libras y pesos… es para que lo lea el sistema"*. Va el
+  # código de la caja **más** los datos: `MED RMI0002026000042-2 12.50 10x12x14`.
+  # Con espacios y no `|`: una pistola por teclado en distribución es-419 puede
+  # no entregar la barra. El sistema resuelve por el código
+  # (`Paquete.limpiar_codigo_escaneado`) y lee peso y medidas de la base; los
+  # datos del QR son redundancia legible.
+  #
+  # C27-08 · Recibe una caja **o un bulto**. Con bulto los números son los del
+  # bulto —el que cobra es el bulto, no la caja, que se quedó con el dato de
+  # Miami— y el «n de m» cuenta **mediciones**, no cajas de un split. El código
+  # es el de la primera caja **de la tanda** (C28-08): las N etiquetas llevan
+  # el mismo, y resuelve a la misma tanda. Yusef:
+  #
+  #   "Cuando ella escanea cualquiera de los QR le dice: ¡eh!, son dos —ya le va
+  #    a decir que **tiene dos mediciones**—, porque si no escanea la segunda
+  #    medición no se le agrega. **Esa es una manera de auditar las mediciones.**"
+  def etiqueta_qr_medicion(objeto)
+    bulto = objeto if objeto.is_a?(Bulto)
+    paquete = bulto ? bulto.paquetes.first : objeto
+    numeros = bulto || paquete
+    codigo = etiqueta_codigo_barras(paquete).presence || paquete&.tracking
+    medidas = etiqueta_medidas(numeros) || "-"
+    cuantas = bulto ? etiqueta_cuantas_mediciones(bulto) : etiqueta_cuantas_cajas(paquete)
+    [ "MED", codigo, etiqueta_num_2d(numeros.peso), medidas, cuantas ].compact.join(" ")
+  end
+
+  # C27-08 · Cuántas **mediciones** salieron de esta mesa, para que pre-factura
+  # sepa cuántas etiquetas tiene que escanear. Una medición sola no lleva nada,
+  # igual que una caja sola: el QR se queda como estaba.
+  def etiqueta_cuantas_mediciones(bulto)
+    return nil if bulto.unico?
+
+    "#{bulto.orden}de#{bulto.de_cuantos}"
+  end
+
+  # C26-18 · Cuántas cajas son, para que la siguiente estación sepa cuántas
+  # tiene que escanear. Yusef, el 2026-09-07:
+  #
+  #   "Al escanear, este solo es único; **o si son dos, entonces el QR le va a
+  #    decir que es uno de dos, entonces tiene que escanear dos para que le
+  #    cuadre**."
+  #
+  # `2de3` y no `2/3` ni `2|3`: la barra es la razón por la que el resto del QR
+  # va con espacios —una pistola por teclado en distribución es-419 puede no
+  # entregarla—. Una caja sola no lleva nada: el QR se queda como estaba.
+  #
+  # **Y no contradice `etiqueta_numero_de_caja`**, donde Yusef cortó el "1/2" a
+  # propósito. Ahí era la etiqueta de **Miami**, que se imprime mientras todavía
+  # se está empacando: *"no estamos seguros cuántas estamos empacando… cuando
+  # menos acordás me salieron cuatro en vez de cinco"*. Ésta se imprime en San
+  # Pedro, con la carga entera en la mesa: acá el total sí se sabe, y es el dato
+  # que la siguiente estación necesita.
+  def etiqueta_cuantas_cajas(paquete)
+    total = paquete.cantidad_paquetes.to_i
+    return nil unless total > 1
+
+    "#{paquete.numero_caja || 1}de#{total}"
   end
 end

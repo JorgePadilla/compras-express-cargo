@@ -15,7 +15,11 @@ class PreFacturaCobrosAutoTest < ActiveSupport::TestCase
   end
 
   def crear_paquete(**overrides)
-    defaults = { cliente: @cliente, sucursal: @sucursal, tracking: "PR-D6B-#{SecureRandom.hex(4)}" }
+    # PR-M8: `build_from_paquetes` ahora filtra por `facturables`. Un paquete
+    # recién creado nace en el arranque del pipeline y no lo es; estos tests
+    # miran las líneas automáticas, no la puerta de entrada.
+    defaults = { cliente: @cliente, sucursal: @sucursal, estado: "disponible_entrega",
+                 tracking: "PR-D6B-#{SecureRandom.hex(4)}" }
     Paquete.create!(defaults.merge(overrides))
   end
 

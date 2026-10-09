@@ -1,10 +1,31 @@
 # CEC — Fases de Implementacion
 
-56 modelos · 101 migraciones · 1270 tests · Rails 8 + Hotwire + Tailwind CSS 4 + PostgreSQL 17
+60 modelos · 116 migraciones · 1879 tests · Rails 8 + Hotwire + Tailwind CSS 4 + PostgreSQL 17
 
 ```
 Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pago → Entrega
 ```
+
+> **Ojo con el orden.** La **pre-factura se hace en San Pedro, antes** de mandar
+> el paquete a cualquier sucursal, porque el personal de prefactura existe solo
+> ahí (`A7-01`, Conversación 7). El diagrama de procesos lo tenía al revés.
+
+---
+
+## Series de PR
+
+Conviven cuatro numeraciones, y no todas se siguen en este archivo. Antes de
+buscar un PR, mirá acá dónde vive:
+
+| Serie | Qué es | Dónde se sigue |
+|---|---|---|
+| `PR-{fase}.{letra}` | El trabajo de una fase numerada: `PR-9.a`, `PR-10.h`, `PR-13.e` | **Este archivo**, en la sección de su fase |
+| `PR-D{n}.{letra}` | Fase 5c — Detalle de Paquete + Warehouse Receipt. La letra es la iteración: `PR-D1.d` es la cuarta pasada de D1 | **Este archivo**, Fase 5c |
+| `PR-C6.{nn}` | Todo lo que salió de la **Conversación 6** — va del `C6.18` al `C6.48`, y es la mayor parte del trabajo de agosto 2026 | **`docs/05`**, no acá. Un solo dueño por dato |
+| `PR-BTN.{n}` | Refactor transversal a `ButtonComponent`. No cuelga de ninguna fase | Historial de git y `docs/07` |
+
+La serie `RP-{nn}` **no son PRs**: son las preguntas al cliente. Viven en
+`docs/05` y salen impresas en `docs/entregables/preguntas_para_yusef.pdf`.
 
 ---
 
@@ -247,8 +268,15 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 | 5c.5 | `feat/warehouse-receipt-model` | Modelos nuevos: `WarehouseReceipt` + `Supplier` + `Agent` + `Terms`. Migra `paquetes.numero_recepcion` → `paquetes.warehouse_receipt_id`. **Antecede a D1-D4.** | ⏳ Listo para implementar |
 | 5c.1 | `feat/paquete-estados-fechas-audit` | Nuevo estado `pre_alerta`, ~7 fechas + `*_user_id` por fecha, `users.iniciales` (campo nuevo editable), `paper_trail` + UI bitácora. **Indicador visual "modificada"** en fechas re-editadas (ej. `fecha_recibido_miami`). Job nocturno de "disponible programada" con notif email/SMS/WhatsApp/push a las 7am. Modelo `SubLocalidad` + `sucursal_actual_id`/`sub_localidad_actual_id` en paquetes. Recolecta fija $35 USD editable. **Manifiesto formato anual `MM2026000001`** (counter por sucursal/año, análogo a `numero_recepcion`). **`paquetes.tracking_secundario`** (string, nullable) — vinculación de PA matchea ambos trackings. | ✅ Listo para implementar |
 | 5c.2 | `feat/paquete-notas-categorizadas` | Refactor notas (especiales PA, consolidación PA, retención, internas, al_cliente). Notas permanentes del cliente como modal por área (`notas_miami`, `notas_honduras`, **`notas_caja` NUEVA**, **`notas_sac` NUEVA**). **Plantillas de notas al cliente** (modelo `PlantillaNotaCliente` + picker, compartidas entre Etiquetar/Pre-Factura/Caja/SAC). Notas al cliente viajan en email de notificación. **Notas de retención obligatorias en estado `retenido`** + modelo `MotivoRetencion` con multi-select de motivos. | ✅ Listo para implementar |
-| 5c.3 | `feat/paquete-tercero-proveedor-services` | `tercero_nombre` (string libre, no FK), `Proveedor` modelo con dropdown + opción "Otros" (texto libre), flow ENTREGA PERSONAL con tracking auto generado (`<SUCURSAL>-<YYYYMMDD>-<correlativo>`), `service_code` enum, `repackaging_type` enum, `consolidation` bool. **`paquetes.carrier_id` FK al modelo `Carrier` existente** (UPS/USPS/DHL/FedEx). | ⏳ Bloqueado solo por pregunta 14b (empresa transporte) |
+| 5c.3 | `feat/paquete-tercero-proveedor-services` | `tercero_nombre` (string libre, no FK), `Proveedor` modelo con dropdown + opción "Otros" (texto libre), flow ENTREGA PERSONAL con tracking auto generado (`<SUCURSAL>-<YYYYMMDD>-<correlativo>`), `service_code` enum, `repackaging_type` enum, `consolidation` bool. **`paquetes.carrier_id` FK al modelo `Carrier` existente** (UPS/USPS/DHL/FedEx). | ✅ Construido, por otro camino — ver abajo |
 | 5c.4 | `feat/paquete-show-actions` | ~10 botones del header del show (mover/eliminar PA, copy buttons, ver pre-factura/factura). **Re-imprimir Etiquetas Miami: preview con checkboxes para seleccionar cuáles imprimir** (1 por página). **Imprimir Pre-Factura: preview + imprimir + copiar imagen para enviar al cliente.** **Botón "Refrescar"** visual estilo Gmail (icono ↻). El WR ya está hecho en 5c.WR. | ✅ Listo para implementar |
+
+**5c.3 se construyó, y no como decía su scope.** La fila quedó años marcada «bloqueada por 14b»; contestada la 14b, no quedaba nada bloqueándola — y para entonces ya estaba hecha, por otro camino:
+
+- **ENTREGA PERSONAL no salió de un `service_code` enum**, sino de `Proveedor#tipo` (`comercio` / `entrega_personal`, `app/models/proveedor.rb:17`) — decisión de `PR-D3.b`.
+- **El tracking auto es `EP-AÑO-SUC-PROV-NNNNNN`**, no `<SUCURSAL>-<YYYYMMDD>-<correlativo>` (`app/models/paquete.rb:1615`).
+- **El carrier no terminó en FK.** Sigue en `paquetes.expedido_por` (string), con dropdown híbrido que además deja agregar a la lista sobre la marcha. `paquetes.carrier_id` **no existe**.
+- Sí quedaron como decía: `tercero_nombre`, `tercero_id` y `proveedor_id`.
 
 **Dependencia:** Fase 5b (numero_recepcion anual + split). ✅ Cumplida.
 
@@ -301,8 +329,10 @@ Pre-alerta → Recepcion Miami → Manifiesto → Pre-factura → Factura → Pa
 
 **Segundo tracking** (`paquetes.tracking_secundario`): muchos paquetes llegan con 2 números de seguimiento (el proveedor le da uno al cliente para la pre-alerta y otro al paquete físico). El sistema acepta ambos en el form, los indexa, y `PreAlertaPaquete.link_tracking!` matchea contra cualquiera de los dos. Búsqueda incluye ambos. WR/etiquetas muestran principal + "Alt:" debajo si existe secundario. **Se incluye en PR-D1.**
 
-**Pregunta pendiente para Yusef (única restante):**
-- 14b. Empresa transporte vs manifiesto: cuando un paquete cambia de manifiesto, ¿muestra la empresa actual del manifiesto (heredada) o la empresa original con la que viajó (redundante en paquete)?
+**14b — Empresa transporte vs manifiesto: ✅ CONTESTADA por Yusef (2026-05-01), opción A.**
+La empresa se **hereda del manifiesto** y no se duplica en el paquete: `paquete.manifiesto.empresa_manifiesto` es el único lugar de verdad. En 9 de cada 10 casos el paquete viaja con su manifiesto, así que un solo lugar evita que se contradigan; si la empresa del manifiesto se corrige, todos sus paquetes se corrigen solos. Al reasignar un paquete de manifiesto (confirmado 2026-05-04) se actualiza **toda** la información derivada —empresa, fecha de salida, fecha estimada de entrega— y el audit log registra el cambio; al cliente solo se le notifican las fechas, no el cambio de empresa.
+
+**Construido así, y verificable:** `paquetes` no tiene ninguna columna de empresa en `db/structure.sql`. Si alguna vez aparece una, es esta decisión que se revirtió sin decirlo.
 
 **Referencia:** `docs/05_requerimientos_conversaciones.md` Conversación 3.
 
@@ -403,14 +433,20 @@ Fase 3c ████████████████████  Cotizacion
 Fase 4  ████████████████████  Entregas + Caja Diaria                      ✅
 Extras  ████████████████████  Users CRUD + Registro + UI polish           ✅
 Fase 5  ████████████████████  Tareas + Re-empaque (5.1–5.5)              ✅
+Fase 5b ████████████████████  Recepcion — Numeracion y Tracking           ✅
+Fase 5c ████████████░░░░░░░░  Detalle de Paquete + WR (PR-D series)     ← EN CURSO
 Fase 6  ███░░░░░░░░░░░░░░░░░  Reportes + Config + Dashboard (6.1 ✅)    ← EN CURSO
 Fase 7  ░░░░░░░░░░░░░░░░░░░░  Marketing CRM
 Fase 8  ░░░░░░░░░░░░░░░░░░░░  Inventario
 Fase 9  ░░░░░░░░░░░░░░░░░░░░  Fotos de Paquetes (storage + envio a cliente)
-Fase 10 ████████████████████  Contexto operativo en captura (PR-9)        ✅
+Fase 10 ████████████████░░░░  Contexto operativo en captura (PR-9)      ← EN CURSO
 Fase 11 ████████████████░░░░  Tarifas y calculo de cobro (PR-10)        ← EN CURSO
-Fase 12 ░░░░░░░░░░░░░░░░░░░░  Escaneo al empacar + pre-etiqueta de caja
+Fase 12 ████████████████████  Manifiesto de punta a punta (PR-M1–M9)      ✅
+Fase 13 ████████████████████  Precio bloqueado + PIN de supervisor        ✅
 ```
+
+> El trabajo de agosto 2026 **no aparece en este cuadro**: es la serie `PR-C6`
+> (del `C6.18` al `C6.48`) y se sigue en `docs/05`. Ver "Series de PR" arriba.
 
 **Fases paralelas posibles:**
 - Fase 5 puede correr en paralelo con Fase 3
@@ -570,8 +606,8 @@ Fuente de verdad testeada: `VolumetricoCalculator` (PORO) con espejo en el Stimu
 
 ### Reglas clave
 
-- **Las `instrucciones` de la pre-alerta se vuelven tareas.** `PreAlertaPaquete` sincroniza una `Tarea` (`origen: "pre_alerta"`, `departamento: "miami"`) cuando el campo tiene contenido. Al vincular el tracking, `link_tracking!` backfillea `paquete_id` en esas tareas.
-- **`bloquea_avance` protege el pipeline.** `Paquete#no_advance_with_open_tareas` congela el avance de estado si hay tareas abiertas. Auto-crear tareas desde `instrucciones` habría trabado cualquier paquete cuya pre-alerta trajera instrucciones. Por eso las de origen `pre_alerta` nacen con `bloquea_avance: false`, las manuales con `true`, y el backfill deja `true` todo lo preexistente — el comportamiento actual no cambia.
+- ~~**Las `instrucciones` de la pre-alerta se vuelven tareas.**~~ **Revertido en `PR-C7.41` (`C16-01`, 2026-08-25).** `PreAlertaPaquete` sincronizaba una `Tarea` (`origen: "pre_alerta"`, `departamento: "miami"`) cuando el campo tenía contenido; Yusef lo paró —*"el cliente no puede poner una tarea, solo nosotros"*—. Las instrucciones son **nota** (modal de `/etiquetar`, franja, ficha del paquete) y las tareas las crea solo el personal. Las abiertas de ese origen se borraron por migración; las realizadas quedan como evidencia, y `link_tracking!` todavía las reapunta al paquete físico.
+- **`bloquea_avance` protege el pipeline.** `Paquete#no_advance_with_open_tareas` congela el avance de estado si hay tareas abiertas. La bandera nació para que las tareas auto-creadas desde `instrucciones` no trabaran `pre_alerta_estado → empacado`; esa auto-creación ya no existe y la bandera queda como control manual por tarea (las manuales nacen con `true`).
 - **Al completar** se guarda `completado_por` + `completada_en` (ya existía en `Tarea#completar!`) y la tarea desaparece de la franja **para todos**. Reabrir solo desde `/paquetes/:id/tareas`.
 - **Orden de las notas por departamento:** Miami → Caja → Honduras → SAC. Pre-Factura y Entrega comparten `notas_honduras` a propósito; no se les creó columna propia.
 - **La franja es solo lectura.** Los campos de escritura siguen en el formulario.
@@ -587,14 +623,15 @@ Preferencias por usuario: `users.sonido_habilitado` + `users.sonido_volumen` (0-
 
 ### Deuda técnica saldada de paso
 
-- `TareasController` **no tenía ninguna autorización** (`before_action` de rol ausente desde PR #66): cualquier usuario autenticado podía crear, editar o borrar tareas de cualquier paquete. Corregido en PR-9.a con `GESTION_ROLES` (crear/editar/borrar) y `EJECUCION_ROLES` (completar/iniciar).
+- `TareasController` **no tenía ninguna autorización** (`before_action` de rol ausente desde PR #66): cualquier usuario autenticado podía crear, editar o borrar tareas de cualquier paquete. Corregido en PR-9.a con `GESTION_ROLES` (crear/editar/borrar) y `EJECUCION_ROLES` (completar/iniciar). **Desde `PR-C7.47` (`C17-01`) crear es de `CREACION_ROLES` = los que ejecutan**; editar/borrar sigue en `GESTION_ROLES`. Queda en `RP-45` para que Yusef lo confirme.
 - **`EntregaPersonalController#render_create_error` reventaba con un 500.** No recargaba `@sucursales_miami` y la vista hace `.any?` sobre él, así que cualquier error de validación producía `undefined method 'any?' for nil` en vez de mostrarle los errores al digitador. Salió a la luz al escribir el primer test de request de la pantalla.
 - `clientes/show` mostraba solo `notas_miami` y `notas_honduras`; `notas_caja` y `notas_sac` eran editables pero invisibles. Ahora lista las 4, filtradas por área y en orden por departamento.
 - Se agregó `test/controllers/entrega_personal_controller_test.rb` — PR-6a y PR-6b habían salido sin ninguna cobertura de request.
 
 ### Deuda técnica detectada, NO saldada aquí
 
-- `paquetes.notas_al_cliente` **nunca llega al cliente** — no viaja en el mailer, ni en PDF, ni en el portal, pese a que el punto 12 de PR-D2 dice que debe ir en el correo de notificación. Requiere PR aparte.
+- `paquetes.notas_al_cliente` ~~**nunca llega al cliente**~~ — desde `PR-C7.51` (`C18-06`) viaja en el correo de recibido (`PreAlertaMailer#paquete_recibido`, html y texto), que se manda cuando hay pre-alerta o «enviado según política». Sigue sin ir en PDF ni en el portal (no hay detalle de paquete): es lo que falta.
+- **`Manifiesto#sucursal_origen` nunca se asigna** (ningún controller lo setea): la numeración anual `M<letra><año><000001>` de PR-D1.d está muerta y todos los manifiestos caen al formato legacy `MA-…`. Y el día que se use, dos sucursales con la misma inicial (MIA y una MEX) chocarían en `index_manifiestos_on_numero`. Detectado en el seguimiento de `C18-02` (2026-08-27); queda en `RP-46`.
 - `db/schema.rb` es un archivo muerto: `config/application.rb:24` fija `schema_format = :sql`, así que el schema autoritativo es **`db/structure.sql`**. El `schema.rb` quedó congelado en abril y confunde a quien lo lea; conviene borrarlo.
 - `test/system/` está vacío, así que nada del comportamiento Stimulus (F-keys, sonidos, modales, el checkbox de la franja) tiene cobertura automatizada.
 - `rubocop` reporta ~136 ofensas preexistentes en el repo y no corre en CI (el workflow solo ejecuta `rails test`).
@@ -823,7 +860,95 @@ abierto están en `docs/05` — "La tabla de precios recibida (2026-08-05)".
 
 ---
 
-## Fase 12: Escaneo al empacar + pre-etiqueta de caja — PLANIFICADA
+## Fase 12: Manifiesto de punta a punta — ✅ COMPLETA (serie PR-M)
+
+> **2026-08-30 · la serie `PR-M`, completa.** El diseño de la Conversación 21
+> se construyó en nueve PRs que mergearon solos, todos el mismo día.
+
+| PR | Qué | Ítem de `docs/05` | Estado |
+|---|---|---|---|
+| `PR-M1` | El portal de catálogos del manifiesto — empresas, tipos del proveedor, consignatarios y tamaños | `C21-08` | ✅ #367 |
+| `PR-M2` | El encabezado que Yusef anotó a mano, y el número que por fin lleva el año (`MM2026000001`) | `C21-02`, `C21-03`, `C21-11` | ✅ #368 |
+| `PR-M3` | Las casas del manifiesto — tamaño, medidas editables y volumen ÷166 | `C21-04` | ✅ #369 |
+| `PR-M4` | La etiqueta 4×6 del bulto, con el número de manifiesto que faltaba | `C21-05` | ✅ #370 |
+| `PR-M5` | El pip pip pip — escanear el paquete al meterlo a la caja | `C21-01` | ✅ #371 |
+| `PR-M6` | Finalizar manda todo a ENVIADO, y el manifiesto queda bloqueado | `C21-06` | ✅ #372 |
+| `PR-M7` | Recibir la carga en Honduras escaneando cajas | `C21-07` | ✅ #373 |
+| `PR-M8` | La pre-factura se amarra al manifiesto | `C21-10` | ✅ |
+| `PR-M9` | El documento impreso — encabezado, teléfono, encargado y letra más grande | `C21-09` | ✅ |
+
+Y lo que salió de mirar el resultado (2026-08-30):
+
+| PR | Qué | Estado |
+|---|---|---|
+| `PR-M10` | Una tarea abierta **traba el cierre**; el candado se aplica de verdad; los catálogos nacen sembrados; mover carga sale de Miami a Logística | ✅ #376 |
+| `PR-M11` | La etiqueta del bulto lleva **QR** en vez de código de barras (`RP-54`) | ✅ #377 |
+| `PR-U1` | La guía del proveedor y la fecha de aduana se van a **`/guias-y-aduana`**, con su link e icono | ✅ |
+| `PR-U2` | Las guías, con filas dinámicas en vez de tres renglones fijos | ✅ |
+| `PR-U3` | El date picker del proyecto en todas las fechas, con lint | ✅ |
+| `PR-U4` | El manifiesto, para dedos — y el estándar táctil de `docs/07` | ✅ |
+| `PR-U5` | Empacar y las casas, para dedos | ✅ |
+| `PR-U6` | La guía del proveedor decía «guardado.» y no se guardaba — un `child_index` de texto que `permit` filtraba entero | ✅ #390 |
+| `PR-C22.1` | En modo actualización F2 no salía del modo — y la tecla para finalizar sesión (`C22-01`, `C22-02`) | ✅ |
+| `PR-P2a` | Varios roles por persona — el caso de Michelle, Caja *y* SAC (`RP-58` paso 2a) | ✅ |
+| `PR-P2b` | El título del rol editable — `/roles` (`RP-58` paso 2b) | ✅ |
+| `PR-I0` | El número de manifiesto lleva el código completo de la sucursal — `SPS` y `SAM` chocaban (`RP-46`) | ✅ |
+| `PR-I1` | El manifiesto **interno** de sucursal como tipo (`A7-07`) | ✅ |
+| `PR-I2` | Cerrar el interno manda su carga a `enviado_sucursal`, sin notificar (`A7-09`) | ✅ |
+| `PR-I3` | Recibir el interno escaneando paquetes; el faltante queda señalado (`A7-08`) | ✅ |
+| `PR-I4` | El aviso al cliente al cerrar la recepción — sin ventana: la cola no está conectada (`A7-08`) | ✅ |
+| `PR-C22.2` | El tercero sobrevivía a limpiar y se guardaba en el paquete siguiente | ✅ |
+| `PR-C22.3` | El jefe de SAC no veía la cola de SAC — faltaba en las tres listas (`RP-45`) | ✅ |
+| `PR-C22.4` | La pantalla de empacar no tenía puerta, y Finalizar no aparecía sin recargar | ✅ |
+| `PR-C22.5` | El manifiesto en el orden del flujograma: escaneo al agregar, cierres arriba y abajo, y los botones que se ven | ✅ |
+
+**Lo que se cerró de paso:** `RP-30` (aduana ya tiene pantalla y quién escriba el
+estado — `PR-M7` es el **primer escritor de `en_aduana` en todo el sistema**),
+`RP-46(c)` (manifiesto por sucursal con su número anual), `RP-53` y `RP-55`
+(los dos los contestó Jorge).
+
+**Lo que sigue siendo hueco:** la **bodega en Honduras** — pero ya no el estado,
+sino la pantalla. Desde `RP-38` la pre-factura escribe `disponible_entrega` al
+confirmarse, que es el orden que Yusef dictó en `A7-01` (*"bodega Honduras va
+después de prefactura"*). Lo que falta es que alguien **escanee la carga al
+entrar a bodega**: hoy el estado es un efecto de emitir el documento y no un
+lugar por el que la carga pase. `PR-M8` ensanchó
+`Paquete.facturables` para que eso funcione; el módulo de bodega sigue sin
+construirse y `lib/procesos_pdf.rb` lo dibuja con `existe: false`.
+
+---
+
+### El diseño original (Conversación 21)
+
+> **2026-08-29 · la Conversación 21 la cerró.** Yusef dedicó una videollamada de
+> 95 minutos con la pantalla compartida desde Miami, mandó **seis fotos** —dos de
+> ellas el manifiesto impreso del legacy **anotado campo por campo**— y Jorge sumó
+> la captura de la pantalla vieja. El detalle está en `docs/05`, `C21-01` a
+> `C21-11`. Lo de abajo es el diseño previo, que sigue siendo correcto: la
+> Conversación 21 lo **completa**, no lo contradice.
+
+**Lo que agrega la Conversación 21**, en corto: crear el manifiesto **primero** y
+sacar de ahí las pre-etiquetas de los bultos; el encabezado con quién llena cada
+campo (Miami vs SPS) y los rótulos explícitos «tipo de envío del proveedor» vs
+«nuestro»; el tipo de envío nuestro en selección múltiple obligatoria; los diez
+tamaños de caja con medidas editables (*«EH cortada»*) y volumen ÷166; la etiqueta
+**4×6** del bulto —que necesita el número de manifiesto y es un **formato nuevo**,
+porque la plantilla actual es singleton y topa en 3 pulgadas de alto—; el bloqueo
+del manifiesto al finalizar; la **pantalla de recibir carga** en Honduras (la hacen
+los de pre-factura, escanean cajas, 5-10 por vez); un **CRUD único** para los
+catálogos; y el amarre de la **pre-factura al manifiesto**, no a la guía.
+
+**El enganche, verificado en el código (2026-08-30):** `Manifiesto`,
+`ManifiestoCounter` y `EmpresaManifiesto` funcionan desde la Fase 1. El enum ya
+tiene `en_aduana` y `recibido` y `fecha_aduana` ya es columna — **la mitad de
+recepción entra sin migración**. Está muerto: `sucursal_origen` (nadie lo asigna →
+la numeración anual `MM2026000001` nunca corre, `RP-46`), `TamanoCaja` y
+`Consignatario` (tablas vacías, sin pantallas), y el estado `empacado`. **Sigue
+faltando la entidad «caja empacada»**, que es de la que cuelga todo.
+
+---
+
+### El diseño previo (Conversación 5) — sigue vigente
 
 **No se construye en PR-10.** Yusef pidió explícitamente dejarla diseñada:
 
@@ -840,6 +965,37 @@ abierto están en `docs/05` — "La tabla de precios recibida (2026-08-05)".
 
 **Enganche existente:** `Manifiesto`, `TamanoCaja` y `EmpresaManifiesto` ya están en el modelo. Falta la entidad de "caja empacada" entre `Paquete` y `Manifiesto`.
 
+### La otra mitad: recibir el manifiesto en Honduras (Conversación 7)
+
+La Fase 12 tenía dibujada la salida —empacar en Miami— pero no la entrada. La
+Conversación 7 la completó, y de paso cerró `RP-30`: el hueco entre *manifiesto*
+y *aduana*, donde hoy alguien entra a la ficha del paquete y cambia el estado a
+mano, se llena escaneando.
+
+**El circuito** (`A7-03`…`A7-08`):
+
+1. Cada caja del manifiesto lleva **su propio código único** — QR o barras. Ojo:
+   no es el código de la etiqueta del paquete, que es el warehouse receipt.
+2. Se escanea **primero la hoja del manifiesto**, y eso lo "activa": habilita el
+   escaneo de las cajas y pasa los paquetes a *en aduana*.
+3. Se escanean **las cajas, no los paquetes** — el manifiesto internacional se
+   cuadra a nivel de caja.
+4. **No bloquea.** Jorge preguntó explícitamente qué tan dura era la regla y
+   Yusef eligió que avise: al finalizar enumera lo que falta (*"falta la 2 de 3,
+   falta la 8 de 10"*) y ofrece **seguir escaneando** o **marcar como recibido
+   con las pendientes**. El pendiente queda consultable para el admin.
+5. Si falta una caja del manifiesto internacional, además **manda correo**.
+
+**El manifiesto interno de sucursal** funciona igual (`A7-07`). Llega a
+Tegucigalpa entre las 9:30 y las 15:00, trae de 1 a ~50 paquetes, y al escanearlo
+**notifica a todos los clientes de golpe** — pero con una **ventana de espera de
+30 a 60 min** (`RP-32`), porque en la práctica escanean el manifiesto y después
+siguen cuadrando paquete por paquete. Push y correo siempre; WhatsApp **o** SMS,
+nunca los dos.
+
+**Depende de** los estados nuevos (`A7-09`, `A7-10`) y del sonido OK/ERROR por
+tipo de envío, que ya tiene su fuente en `lib/sonidos_de_error.rb`.
+
 ---
 
 ## Fase 13: Precio bloqueado en pre-factura + autorización de supervisor — EN CURSO (Agosto 2026)
@@ -851,6 +1007,7 @@ abierto están en `docs/05` — "La tabla de precios recibida (2026-08-05)".
 | 13.c | Rol `supervisor_sac` + PIN de 4 dígitos | ✅ |
 | 13.d | Autorización por línea y el candado | ✅ |
 | 13.e | Emitir notas de débito/crédito pide PIN + cuatro ojos | ✅ |
+| 13.f | Excepción de cobro **por paquete**, con PIN de supervisor (`C24-01`) | ✅ |
 
 Sale de la aclaración de Yusef del 2026-08-05 sobre
 la nota `TARIFA EDITABLE CON AUTORIZACION DE SUPERVISOR O JEFE` que repite en
@@ -1158,11 +1315,16 @@ puede haber movido después, y sin ese dato la auditoría no reconstruye nada.
 
 #### Un PIN de 4 dígitos hay que tratarlo como credencial
 
-Solo 10 000 combinaciones: se adivina en minutos a fuerza bruta. Ya va con
-`bcrypt` y fuera del log (PR-13.c); **falta el límite de intentos**, que va con
-el endpoint de autorización en PR-13.d — `rate_limit` por supervisor, no por IP,
+Solo 10 000 combinaciones: se adivina en minutos a fuerza bruta. Va con `bcrypt`
+y fuera del log (PR-13.c), y **el límite de intentos ya está puesto** en el
+endpoint de autorización (PR-13.d): `rate_limit to: 5, within: 5.minutes` en
+`app/controllers/autorizaciones_controller.rb`. Es por supervisor y no por IP,
 porque en un mostrador todos comparten la IP y por IP el límite se lo comería el
 cajero legítimo.
+
+**Falta un caso**: pagos parciales y crédito también van a pedir PIN, y ese lo
+pone el **supervisor de caja** — un rol distinto del de prefactura y del de
+entrega (`A7-30`, Conversación 7).
 
 Es el único punto de todo el sistema donde 4 dígitos habilitan cambiar plata.
 

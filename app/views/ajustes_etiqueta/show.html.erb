@@ -1,0 +1,392 @@
+<%# C19-06: Yusef ajusta la etiqueta él mismo — márgenes (PR-C7.60) y ahora la
+    plantilla: dimensiones, escala y tamaño por campo, con preview en vivo
+    (PR-C7.64). "¿Vos no tenés en el sistema donde yo pueda cambiarlas yo?…
+    con eso yo te quito a vos." %>
+<%= render PageHeaderComponent.new(
+      title: "Ajustes de Etiqueta",
+      subtitle: "La etiqueta Dymo, ajustable sin deploy — con vista previa en vivo") %>
+
+<div class="grid grid-cols-1 xl:grid-cols-5 gap-6"
+     data-controller="etiqueta-editor"
+     data-etiqueta-editor-preview-url-value="<%= preview_ajustes_etiqueta_path %>">
+
+  <div class="xl:col-span-3 space-y-6">
+
+    <%# ── Márgenes (PR-C7.60) — su form aparte: son claves de Configuracion,
+        no de la plantilla. %>
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+      <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Márgenes de impresión</p>
+      <p class="text-2xl font-bold text-cec-navy dark:text-cec-gold font-mono mb-4">
+        <%= number_with_precision(@margen_izq, precision: 1) %> mm
+        <span class="text-sm font-normal text-gray-500">izquierdo</span>
+        <span class="mx-2 text-gray-300">·</span>
+        <%= number_with_precision(@margen_der, precision: 1) %> mm
+        <span class="text-sm font-normal text-gray-500">derecho</span>
+      </p>
+      <p class="text-xs text-gray-600 dark:text-gray-300 mb-4">
+        Si la impresora se va hacia la izquierda, subí el margen <b>izquierdo</b>
+        de a poco (0.5 mm por vez) y dejá el derecho tal cual.
+      </p>
+      <%= form_with url: ajustes_etiqueta_path, method: :patch, class: "flex flex-wrap items-end gap-3" do %>
+        <div>
+          <%= label_tag :margen_izq_mm, "Margen izquierdo (mm)",
+                class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%= text_field_tag :margen_izq_mm, number_with_precision(@margen_izq, precision: 1),
+                inputmode: "decimal", autocomplete: "off",
+                class: "block w-32 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900
+                       dark:text-gray-100 shadow-sm text-sm font-mono
+                       focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <div>
+          <%= label_tag :margen_der_mm, "Margen derecho (mm)",
+                class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%= text_field_tag :margen_der_mm, number_with_precision(@margen_der, precision: 1),
+                inputmode: "decimal", autocomplete: "off",
+                class: "block w-32 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900
+                       dark:text-gray-100 shadow-sm text-sm font-mono
+                       focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <%= submit_tag "Guardar márgenes",
+              class: "px-4 py-2 bg-cec-navy text-white rounded-lg text-sm font-medium hover:bg-cec-navy-light cursor-pointer" %>
+      <% end %>
+      <div class="mt-3 flex flex-wrap items-center gap-3">
+        <%# C20-03: la vuelta a fábrica que faltaba. La plantilla ya tenía la
+            suya; los márgenes se ajustaban de ida nomás. %>
+        <%= render ButtonComponent.new(href: margenes_ajustes_etiqueta_path, method: :delete,
+              variant: :secondary, size: :sm,
+              confirm: "Vuelven a #{EtiquetaAjustes::IZQ_DEFAULT_MM} mm de cada lado. ¿Seguro?") do %>
+          Restablecer márgenes
+        <% end %>
+        <p class="text-xs text-gray-500 dark:text-gray-400">
+          Entre 0 y <%= EtiquetaAjustes::MAX_MM %> mm. De fábrica van
+          <b><%= EtiquetaAjustes::IZQ_DEFAULT_MM %> mm</b> de cada lado: el
+          margen es la <b>zona muda</b> del código de barras, así que bajarlo a
+          cero tampoco se lee, aunque el código salga completo.
+        </p>
+      </div>
+    </div>
+
+    <%# ── La plantilla (PR-C7.64): un solo form, un solo JSON. Los inputs
+        llevan `data-def-path` y el Stimulus arma el hidden. %>
+    <%= form_with url: plantilla_ajustes_etiqueta_path, method: :patch,
+          data: { action: "submit->etiqueta-editor#confirmarSiNoCabe" },
+          class: "space-y-6" do %>
+      <input type="hidden" name="definicion_json" data-etiqueta-editor-target="json">
+
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <p class="text-xs text-gray-500 uppercase tracking-wider mb-3">Dimensiones de la etiqueta</p>
+        <div class="flex flex-wrap items-end gap-3">
+          <div>
+            <%= label_tag :dim_ancho, "Ancho (pulgadas)", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+            <input type="text" id="dim_ancho" value="<%= etiqueta_num(@plantilla.ancho_in) %>"
+                   inputmode="decimal" autocomplete="off"
+                   data-def-path="dim.ancho_in" data-def-tipo="num"
+                   data-action="input->etiqueta-editor#cambio"
+                   class="block w-28 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 shadow-sm text-sm font-mono focus:ring-cec-teal focus:border-cec-teal">
+          </div>
+          <div>
+            <%= label_tag :dim_alto, "Alto (pulgadas)", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+            <input type="text" id="dim_alto" value="<%= etiqueta_num(@plantilla.alto_in) %>"
+                   inputmode="decimal" autocomplete="off"
+                   data-def-path="dim.alto_in" data-def-tipo="num"
+                   data-action="input->etiqueta-editor#cambio"
+                   class="block w-28 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 shadow-sm text-sm font-mono focus:ring-cec-teal focus:border-cec-teal">
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 max-w-[16rem]">
+            La de fábrica es 2.25 × 1.25. Cambiá esto <b>solo si cambiaste el
+            rollo</b> — el driver de la Dymo manda.
+          </p>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <p class="text-xs text-gray-500 uppercase tracking-wider mb-3">Escala de toda la letra</p>
+        <div class="flex items-center gap-4">
+          <input type="range" min="<%= EtiquetaPlantilla::Definicion::ESCALA_RANGO.min %>"
+                 max="<%= EtiquetaPlantilla::Definicion::ESCALA_RANGO.max %>" step="5"
+                 value="<%= @plantilla.escala_pct %>"
+                 data-def-path="escala_pct" data-def-tipo="num"
+                 data-action="input->etiqueta-editor#cambio"
+                 class="w-56 accent-cec-teal">
+          <span class="text-2xl font-bold font-mono text-cec-navy dark:text-cec-gold"
+                data-etiqueta-editor-target="escalaLabel"><%= @plantilla.escala_pct %>%</span>
+          <span class="text-xs text-gray-500 dark:text-gray-400">agranda o achica TODOS los campos parejo — la jerarquía se conserva sola</span>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Tamaño de letra por campo</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          En puntos. Al lado, el tamaño <b>efectivo</b> (con la escala aplicada) —
+          que es el que imprime.
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+          <% EtiquetaPlantilla::Definicion::CAMPOS.each do |campo, meta| %>
+            <% next if meta[:pt] == false %>
+            <div class="flex items-center gap-2">
+              <span class="flex-1 text-sm text-gray-700 dark:text-gray-200"><%= meta[:nombre] %></span>
+              <input type="text" value="<%= etiqueta_num(@plantilla.pt(campo)) %>"
+                     inputmode="decimal" autocomplete="off" aria-label="Tamaño de <%= meta[:nombre] %>"
+                     data-def-path="campos.<%= campo %>.pt" data-def-tipo="num"
+                     data-action="input->etiqueta-editor#cambio"
+                     class="w-16 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 shadow-sm text-sm font-mono text-right focus:ring-cec-teal focus:border-cec-teal">
+              <span class="w-16 text-[11px] text-gray-500 dark:text-gray-400 font-mono"
+                    data-etiqueta-editor-target="efectivo" data-para-path="campos.<%= campo %>.pt"></span>
+            </div>
+            <% if meta[:pt_rotulo] %>
+              <div class="flex items-center gap-2">
+                <span class="flex-1 text-sm text-gray-500 dark:text-gray-400 pl-4">└ su rótulo («<%= @plantilla.texto(campo) %>»)</span>
+                <input type="text" value="<%= etiqueta_num(@plantilla.pt_rotulo(campo)) %>"
+                       inputmode="decimal" autocomplete="off" aria-label="Tamaño del rótulo de <%= meta[:nombre] %>"
+                       data-def-path="campos.<%= campo %>.pt_rotulo" data-def-tipo="num"
+                       data-action="input->etiqueta-editor#cambio"
+                       class="w-16 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 shadow-sm text-sm font-mono text-right focus:ring-cec-teal focus:border-cec-teal">
+                <span class="w-16 text-[11px] text-gray-500 dark:text-gray-400 font-mono"
+                      data-etiqueta-editor-target="efectivo" data-para-path="campos.<%= campo %>.pt_rotulo"></span>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+        <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+          Entre <%= EtiquetaPlantilla::Definicion::PT_RANGO.min %> y
+          <%= EtiquetaPlantilla::Definicion::PT_RANGO.max %> pt — un valor fuera
+          de rango vuelve al de fábrica al guardar. El código de barras no se
+          toca: abajo de cierto alto los escáneres fallan.
+        </p>
+      </div>
+
+      <%# C20-02: cómo se acomoda el código de barras. Es lo único de la
+          etiqueta que decide si la caja se escanea o no, así que va en su
+          propia card y con el porqué a la vista. %>
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Código de barras</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          <b>Justificado</b> lo estira a todo el ancho: se ve un poco más
+          chico, pero <b>nunca se corta</b>, por más que se muevan los
+          márgenes. Con las otras tres conserva su tamaño natural y, si el
+          margen aprieta, se le puede cortar la última barra — y una etiqueta
+          cortada se ve bien pero no se escanea.
+        </p>
+        <div class="inline-flex rounded-lg ring-1 ring-gray-300 dark:ring-gray-600 overflow-hidden">
+          <% EtiquetaPlantilla::Definicion::ALINEACIONES.each do |opcion| %>
+            <label class="cursor-pointer">
+              <%# El estado lo pinta `peer-checked`, no el servidor: así el
+                  botón se marca al instante, igual que el preview. %>
+              <input type="radio" name="barcode_alineacion" value="<%= opcion %>"
+                     <%= "checked" if @plantilla.alineacion("barcode") == opcion %>
+                     data-def-path="campos.barcode.alineacion"
+                     data-action="change->etiqueta-editor#cambio"
+                     class="sr-only peer">
+              <span class="block px-3 py-1.5 text-sm capitalize border-r last:border-r-0 border-gray-300 dark:border-gray-600
+                           text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700
+                           peer-checked:bg-cec-navy peer-checked:text-white peer-checked:font-medium">
+                <%= opcion %>
+              </span>
+            </label>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Campos y textos fijos</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          Los campos de identidad —el código de barras, el número de recepción,
+          el tracking y el tipo de envío (que es también la bandera RET)—
+          <b>salen siempre</b>: sin ellos la caja no se escanea ni se compara.
+          Los textos fijos son los rótulos; los datos los pone el sistema.
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+          <% EtiquetaPlantilla::Definicion::CAMPOS.each do |campo, meta| %>
+            <div class="flex items-center gap-2">
+              <% if meta[:apagable] %>
+                <label class="flex items-center gap-2 flex-1 cursor-pointer">
+                  <input type="checkbox" <%= "checked" if @plantilla.visible?(campo) %>
+                         data-def-path="campos.<%= campo %>.visible" data-def-tipo="bool"
+                         data-action="change->etiqueta-editor#cambio"
+                         class="rounded border-gray-300 text-cec-teal focus:ring-cec-teal">
+                  <span class="text-sm text-gray-700 dark:text-gray-200"><%= meta[:nombre] %></span>
+                </label>
+              <% else %>
+                <span class="flex-1 text-sm text-gray-400 dark:text-gray-500 pl-6"><%= meta[:nombre] %> · <span class="text-[10px] uppercase tracking-wider">siempre</span></span>
+              <% end %>
+              <% if meta[:texto] %>
+                <input type="text" value="<%= @plantilla.texto(campo) %>"
+                       maxlength="<%= EtiquetaPlantilla::Definicion::TEXTO_MAX %>"
+                       autocomplete="off" aria-label="Texto fijo de <%= meta[:nombre] %>"
+                       data-def-path="campos.<%= campo %>.texto"
+                       data-action="input->etiqueta-editor#cambio"
+                       class="w-28 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal">
+              <% end %>
+            </div>
+            <% if campo == "tracking_secundario" %>
+              <p class="text-[11px] text-amber-700 dark:text-amber-300 md:col-span-1">
+                Ojo al apagarlo: como el 40% de los envíos trae segundo tracking,
+                y en la etiqueta es donde el operario lo compara.
+              </p>
+            <% end %>
+          <% end %>
+        </div>
+        <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+          Un texto vacío o de más de <%= EtiquetaPlantilla::Definicion::TEXTO_MAX %>
+          caracteres vuelve al de fábrica al guardar.
+        </p>
+      </div>
+
+      <%# ── Orden (PR-C7.66): esta card ES la fuente — el serializer lee el
+          DOM y arma `filas`. Flechas, no drag: testeable y suficiente. %>
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Orden de los campos</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          Las flechas <b>⇑⇓</b> mueven la fila entera; <b>◀▶</b> mueven un
+          campo adentro de su fila y <b>↑↓</b> lo pasan a la fila de arriba o
+          de abajo. El bloque de dos columnas es lo que hace que todo quepa:
+          sus renglones se mueven adentro de su columna, y ningún campo entra
+          ni sale de él.
+        </p>
+        <div class="space-y-2">
+          <% campos_meta = EtiquetaPlantilla::Definicion::CAMPOS %>
+          <% @plantilla.filas.each do |fila| %>
+            <% if fila["tipo"] == "dos_columnas" %>
+              <div data-orden-fila data-tipo="dos_columnas" data-fila-id="<%= fila["id"] %>"
+                   class="rounded-lg ring-1 ring-cec-gold/40 bg-cec-gold/5 dark:bg-cec-gold/10 p-2">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="flex-1 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Bloque de dos columnas (sellado)</span>
+                  <button type="button" data-action="etiqueta-editor#filaArriba" title="Subir la fila" aria-label="Subir el bloque"
+                          class="px-1.5 text-xs rounded hover:bg-black/10 cursor-pointer">⇑</button>
+                  <button type="button" data-action="etiqueta-editor#filaAbajo" title="Bajar la fila" aria-label="Bajar el bloque"
+                          class="px-1.5 text-xs rounded hover:bg-black/10 cursor-pointer">⇓</button>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <% { "izquierda" => fila["izquierda"], "derecha" => fila["derecha"] }.each do |col, subfilas| %>
+                    <div data-col="<%= col %>" class="space-y-1">
+                      <% subfilas.each do |sub| %>
+                        <div data-orden-subfila class="flex items-center gap-1 rounded bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700 p-1">
+                          <button type="button" data-action="etiqueta-editor#subfilaArriba" title="Subir el renglón" aria-label="Subir el renglón"
+                                  class="px-1 text-[10px] rounded hover:bg-black/10 cursor-pointer">⇑</button>
+                          <button type="button" data-action="etiqueta-editor#subfilaAbajo" title="Bajar el renglón" aria-label="Bajar el renglón"
+                                  class="px-1 text-[10px] rounded hover:bg-black/10 cursor-pointer">⇓</button>
+                          <span class="flex flex-wrap gap-1" data-chips>
+                            <% sub.each do |c| %>
+                              <span data-orden-campo="<%= c %>" class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-cec-teal/10 text-cec-teal-dark dark:text-cec-teal text-[11px]">
+                                <%= campos_meta[c][:nombre] %>
+                                <button type="button" data-action="etiqueta-editor#campoIzq" title="Mover a la izquierda" aria-label="Mover <%= campos_meta[c][:nombre] %> a la izquierda"
+                                        class="px-0.5 rounded hover:bg-black/10 cursor-pointer">◀</button>
+                                <button type="button" data-action="etiqueta-editor#campoDer" title="Mover a la derecha" aria-label="Mover <%= campos_meta[c][:nombre] %> a la derecha"
+                                        class="px-0.5 rounded hover:bg-black/10 cursor-pointer">▶</button>
+                              </span>
+                            <% end %>
+                          </span>
+                        </div>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            <% else %>
+              <div data-orden-fila data-fila-id="<%= fila["id"] %>"
+                   class="flex items-center gap-2 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 p-2">
+                <button type="button" data-action="etiqueta-editor#filaArriba" title="Subir la fila" aria-label="Subir la fila"
+                        class="px-1.5 text-xs rounded hover:bg-black/10 cursor-pointer">⇑</button>
+                <button type="button" data-action="etiqueta-editor#filaAbajo" title="Bajar la fila" aria-label="Bajar la fila"
+                        class="px-1.5 text-xs rounded hover:bg-black/10 cursor-pointer">⇓</button>
+                <span class="flex flex-wrap gap-1 flex-1" data-chips>
+                  <% fila["campos"].each do |c| %>
+                    <span data-orden-campo="<%= c %>" class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-cec-teal/10 text-cec-teal-dark dark:text-cec-teal text-[11px]">
+                      <%= campos_meta[c][:nombre] %>
+                      <button type="button" data-action="etiqueta-editor#campoIzq" title="Antes en la fila" aria-label="Mover <%= campos_meta[c][:nombre] %> antes"
+                              class="px-0.5 rounded hover:bg-black/10 cursor-pointer">◀</button>
+                      <button type="button" data-action="etiqueta-editor#campoDer" title="Después en la fila" aria-label="Mover <%= campos_meta[c][:nombre] %> después"
+                              class="px-0.5 rounded hover:bg-black/10 cursor-pointer">▶</button>
+                      <button type="button" data-action="etiqueta-editor#campoArriba" title="A la fila de arriba" aria-label="Mover <%= campos_meta[c][:nombre] %> a la fila de arriba"
+                              class="px-0.5 rounded hover:bg-black/10 cursor-pointer">↑</button>
+                      <button type="button" data-action="etiqueta-editor#campoAbajo" title="A la fila de abajo" aria-label="Mover <%= campos_meta[c][:nombre] %> a la fila de abajo"
+                              class="px-0.5 rounded hover:bg-black/10 cursor-pointer">↓</button>
+                    </span>
+                  <% end %>
+                </span>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+        <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+          Una fila que quede vacía no imprime nada — sirve para dejar aire.
+          Si el orden guardado no cubre todos los campos, vuelve el de fábrica.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <%= submit_tag "Guardar plantilla",
+              class: "px-4 py-2 bg-cec-gold text-cec-navy-dark rounded-lg text-sm font-medium hover:bg-cec-gold-dark cursor-pointer" %>
+        <% if @plantilla_personalizada %>
+          <%= render ButtonComponent.new(href: plantilla_ajustes_etiqueta_path, method: :delete,
+                variant: :secondary,
+                confirm: "Vuelve la etiqueta original de fábrica y se pierde lo personalizado. ¿Seguro?") do %>
+            Restaurar la original
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <%# ── Preview en vivo + historial ── %>
+  <div class="xl:col-span-2 space-y-6 self-start xl:sticky xl:top-6">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-xs text-gray-500 uppercase tracking-wider">Vista previa</p>
+        <span data-etiqueta-editor-target="estado" class="text-sm font-bold text-gray-400">midiendo…</span>
+      </div>
+      <p data-etiqueta-editor-target="aviso"
+         class="hidden mb-2 text-xs font-medium text-amber-700 dark:text-amber-300">
+        ⚠️ El tipo de envío dejó de ser lo más grande — es la clave con la que
+        separan la carga por servicio.
+      </p>
+      <%# El iframe corre el layout REAL de impresión: lo que se ve es lo que
+          sale de la Dymo, con un paquete de muestra con todos los campos. %>
+      <div class="overflow-auto rounded border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 p-3">
+        <iframe title="Vista previa de la etiqueta"
+                data-etiqueta-editor-target="iframe"
+                data-action="load->etiqueta-editor#medir"
+                style="width: 100%; height: 300px; border: 0;"
+                class="block"></iframe>
+      </div>
+      <p class="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
+        La muestra trae <b>todos</b> los campos (secundario, tercero, driver…):
+        la etiqueta más llena es la que puede no caber.
+      </p>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+      <p class="text-xs text-gray-500 uppercase tracking-wider mb-3">Últimos cambios</p>
+      <% resumenes = (@historial_plantilla.to_a.map { |v|
+           texto = v.event == "destroy" ? "Restaurada la original" : "Plantilla guardada"
+           [ v.created_at, User.find_by(id: v.whodunnit)&.nombre || "Sistema", texto ]
+         } + @historial.to_a.map { |v|
+           lado = v.item&.clave == EtiquetaAjustes::CLAVE_DER ? "der" : "izq"
+           [ v.created_at, User.find_by(id: v.whodunnit)&.nombre || "Sistema",
+             "Margen #{lado}: #{v.changeset&.dig('valor')&.last || '—'} mm" ]
+         }).sort_by(&:first).reverse.first(10) %>
+      <% if resumenes.any? %>
+        <table class="min-w-full text-sm" data-tabla="historial-etiqueta">
+          <thead>
+            <tr class="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
+              <th class="py-2 pr-4">Cuando</th>
+              <th class="py-2 pr-4">Quien</th>
+              <th class="py-2">Que</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% resumenes.each do |fecha, quien, texto| %>
+              <tr class="border-b border-gray-100 dark:border-gray-700">
+                <td class="py-2 pr-4 whitespace-nowrap text-xs"><%= l(fecha, format: :short) %></td>
+                <td class="py-2 pr-4 text-xs"><%= quien %></td>
+                <td class="py-2 text-xs"><%= texto %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% else %>
+        <p class="text-sm text-gray-500 italic">Todavía con los valores de fábrica.</p>
+      <% end %>
+    </div>
+  </div>
+</div>

@@ -1,5 +1,5 @@
 class EmpresasController < ApplicationController
-  before_action :require_admin
+  before_action :solo_admin
   before_action :set_empresa
 
   def show
@@ -18,9 +18,6 @@ class EmpresasController < ApplicationController
 
   private
 
-  def require_admin
-    redirect_to(root_path, alert: "Solo admin puede editar la empresa.") unless Current.user&.admin?
-  end
 
   def set_empresa
     @empresa = Empresa.instance
@@ -32,5 +29,11 @@ class EmpresasController < ApplicationController
       :ciudad, :pais, :moneda_default, :isv_rate, :sitio_web,
       :terminos_factura, :logo
     )
+  end
+  # `RP-58` · Va por `can_access?` y no por `require_admin`: toda regla de rol
+  # tiene que pasar por el mismo lugar, o una pantalla de permisos diría que se
+  # puede algo que este controller después niega.
+  def solo_admin
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:empresa_settings)
   end
 end

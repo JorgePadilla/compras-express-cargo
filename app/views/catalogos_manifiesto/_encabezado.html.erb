@@ -1,0 +1,6 @@
+<div class="flex items-center justify-between mb-3">
+  <p class="text-sm text-gray-600"><%= ayuda %></p>
+  <%= render ButtonComponent.new(href: href_nuevo, variant: :primary, icon: "plus", size: :sm) do %>
+    <%= titulo_nuevo %>
+  <% end %>
+</div>

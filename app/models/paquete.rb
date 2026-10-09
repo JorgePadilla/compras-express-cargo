@@ -1,24 +1,101 @@
 class Paquete < ApplicationRecord
+  # C28-08 · La caja ya no apunta a un volumen sino a su tanda
+  # (`medicion_sesion`). La columna se borra en la release siguiente: el
+  # contenedor viejo la sigue insertando mientras corre el deploy.
+  self.ignored_columns += %w[bulto_id]
+
   has_paper_trail  # PR-D1.a: audit log de cada cambio en el paquete
 
   belongs_to :cliente
   belongs_to :manifiesto, optional: true
+  # C21-04: en qué casa del manifiesto va empacado. Opcional a propósito —
+  # el camino sin escaneo mete paquetes al manifiesto sin pasar por una caja,
+  # y Yusef lo quiso mantener: *"a veces no da tiempo"*.
+  belongs_to :caja_manifiesto, optional: true
   belongs_to :tipo_envio, optional: true
   belongs_to :user, optional: true
   belongs_to :pre_factura, optional: true
   belongs_to :venta, optional: true
   belongs_to :entrega, optional: true
-  belongs_to :sucursal, optional: true
+  belongs_to :tipo_envio_anterior,  class_name: "TipoEnvio",   optional: true  # PR-C6.8: de qué servicio venía al cambiarlo
+  belongs_to :sucursal, optional: true                                           # dónde RETIRA el cliente
+  belongs_to :sucursal_recepcion,   class_name: "Sucursal",      optional: true  # PR-C6.5: dónde se RECIBIÓ — manda el número de recepción
   belongs_to :sucursal_actual,      class_name: "Sucursal",      optional: true  # PR-D1.c: ubicación física actual
+  belongs_to :sucursal_destino,     class_name: "Sucursal",      optional: true  # A7-09: a qué sucursal va en camino
   belongs_to :sub_localidad_actual, class_name: "SubLocalidad",  optional: true  # PR-D1.c: bodega interna actual
   belongs_to :warehouse_receipt, optional: true  # PR-5c.5p2 — fuente rica del numero_recepcion (madre)
   belongs_to :proveedor, optional: true  # PR-D3.a: catálogo (Amazon, Walmart, drivers privados…)
+  # C28-08 · La tanda de medición en la que entró esta caja en San Pedro, y
+  # sus volúmenes. Hasta el 2026-10-03 la caja era de **un** volumen
+  # (`bulto_id`, C26-19); ahora es de la tanda: *"la medición la va a decidir
+  # después de haber escaneado"*. `bulto_id` queda en la tabla hasta que la
+  # migración que lo borra salga sola.
+  has_many :bultos, -> { order(:orden) }, primary_key: :medicion_sesion, foreign_key: :sesion,
+                    inverse_of: false
   belongs_to :tercero, class_name: "Cliente", optional: true  # PR-D3.c: cliente final cuando CEC le maneja carga a otra empresa
   belongs_to :tarifa_recolecta, optional: true  # PR-D6.a: cuando el cajero elige una tarifa del catálogo, copiamos monto+moneda
   # PR-6 (Entrega Personal): cobro al recibir en Miami. Cuando esto está
   # marcado, NO se emite factura formal — solo se anota que ya pagó.
   belongs_to :prepagado_miami_sucursal, class_name: "Sucursal", optional: true
   belongs_to :prepagado_miami_by_user,  class_name: "User",     optional: true
+
+  # ── El proveedor escrito a mano ───────────────────────────────────────
+  #
+  # `proveedor` es DOS cosas: la columna string legacy (lo que el operario
+  # teclea, "Amazon") y el nombre de `belongs_to :proveedor` (el catálogo de
+  # PR-D3.a). Rails le da el setter `proveedor=` a la asociación, así que
+  # asignarle un String desde un formulario revienta con
+  # `AssociationTypeMismatch`.
+  #
+  # Eso ya mordió **cuatro veces**, y cada vez se parchó en el lugar donde
+  # dolía: `EtiquetarController#proveedor_string_param`,
+  # `EntregaPersonalController#proveedor_string_param`,
+  # `Paquete.ajustar_split!` y el input sin `name` de /paquetes. Cuatro
+  # copias del mismo `paquete[:proveedor] = ...`.
+  #
+  # Este par de métodos es la salida: los formularios mandan
+  # `paquete[proveedor_texto]` y nadie más tiene que acordarse de la trampa.
+  # `self[:proveedor]` es el column accessor, que va derecho a la columna sin
+  # pasar por la asociación.
+  def proveedor_texto
+    self[:proveedor]
+  end
+
+  def proveedor_texto=(valor)
+    self[:proveedor] = valor
+  end
+
+  # Con qué se pagó en Miami. Yusef: *"faltó algo que conversamos: que
+  # escogieran cómo se pagó — efectivo o Zelle o TC"*.
+  #
+  # ── Por qué NO es la lista de la caja ─────────────────────────────────
+  #
+  # `Pago`, `IngresoCaja` y `EgresoCaja` tienen `%w[efectivo tarjeta
+  # transferencia]` — la misma lista, escrita tres veces. Miami necesita
+  # **Zelle**, que en la caja de Honduras no se recibe; meterlo en la lista
+  # compartida lo haría aparecer en tres pantallas donde no aplica. Son dos
+  # listas distintas a propósito, y hay un test que lo fija.
+  METODOS_PREPAGO_MIAMI = %w[efectivo zelle tarjeta].freeze
+
+  ETIQUETAS_METODO_PREPAGO = {
+    "efectivo" => "Efectivo",
+    "zelle"    => "Zelle",
+    "tarjeta"  => "Tarjeta"
+  }.freeze
+
+  # "Zelle", o nil si no se pagó en Miami o es un paquete viejo sin método.
+  def metodo_prepago_label
+    return nil if prepagado_miami_metodo.blank?
+    ETIQUETAS_METODO_PREPAGO.fetch(prepagado_miami_metodo, prepagado_miami_metodo.humanize)
+  end
+
+  # " · ZELLE" para pegarlo detrás de "PREPAGADO EN MIAMI". Formatear esto en
+  # cada lugar que lo muestra es como se terminan viendo distinto el Warehouse
+  # Receipt y la pre-factura.
+  def prepago_sufijo
+    label = metodo_prepago_label
+    label ? " · #{label.upcase}" : ""
+  end
   has_many :pre_alerta_paquetes, dependent: :nullify
   has_many :nota_debito_items,  dependent: :nullify
   has_many :nota_credito_items, dependent: :nullify
@@ -32,16 +109,25 @@ class Paquete < ApplicationRecord
   has_many :motivos_retencion,
            through: :paquete_motivos_retencion,
            source:  :motivo_retencion
+  # C18-06: por qué se mandó por la política de envío por defecto. Mismo
+  # esqueleto que la retención.
+  has_many :paquete_motivos_envio_politica,
+           class_name: "PaqueteMotivoEnvioPolitica",
+           dependent: :destroy
+  has_many :motivos_envio_politica,
+           through: :paquete_motivos_envio_politica,
+           source:  :motivo_envio_politica
 
   enum :estado, {
     pre_alerta_estado:     "pre_alerta_estado",  # PR-D1.b: paquete creado desde pre-alerta antes de llegar a Miami
     recibido_miami:        "recibido_miami",
+    consolidando_miami:    "consolidando_miami", # A7-10: el cliente pidió consolidar allá, no acá
     empacado:              "empacado",
     enviado_honduras:      "enviado_honduras",
     en_aduana:             "en_aduana",
     consolidando_honduras: "consolidando_honduras",
     disponible_entrega:    "disponible_entrega",
-    pre_facturado:         "pre_facturado",
+    enviado_sucursal:      "enviado_sucursal",   # A7-09: va camino a otra sucursal
     facturado:             "facturado",
     en_reparto:            "en_reparto",
     recoleta_en_proceso:   "recoleta_en_proceso",
@@ -51,6 +137,27 @@ class Paquete < ApplicationRecord
     desechado:             "desechado",
     anulado:               "anulado"
   }
+
+  # C24-01 · La excepción de cobro **de este paquete**.
+  #
+  # Yusef, sobre unos generadores de 400 lb reales y 150 volumétricas: *"es lo
+  # que yo voy a cobrar"*. Y el alcance, que lo puso él: *"el cliente **no es que
+  # toda la carga** ya se la cobro por peso, **sino que exclusivamente esa**"* —
+  # por eso no sirve el flag de `ClienteCobroVolumetrico`, que es por cliente ×
+  # tipo de envío.
+  #
+  # **Un solo valor hoy.** Él nombró tres clases —*"tanto por libras, tanto por
+  # volumen o tanto…"*— y las otras dos las nombró sin definirlas (`RP-62`).
+  # Entran acá cuando las conteste, sin migración.
+  #
+  # **No se escribe por `paquete_params`**: solo por `MarcarCobroExcepcion`, con
+  # PIN de supervisor. Es la misma regla que `PR-13.d` le puso al precio de una
+  # línea — si se puede editar suelto, el registro deja de servir como prueba.
+  # `solo_peso` es el espejo: cobrar el real **aunque gane el volumétrico**.
+  # Jorge, 2026-09-06: *"él quiere poder cobrar por libra o volumen volumétrico
+  # de vez en cuando, **dependiendo el caso**"*. Son las dos mitades de lo mismo.
+  enum :cobro_excepcion, { solo_volumetrico: "solo_volumetrico", solo_peso: "solo_peso" },
+       prefix: :cobro, validate: { allow_nil: true }
 
   # PR-D1.b: mapping estado → columna de fecha. El cambio a un estado
   # actualiza `fecha_<estado>` + `fecha_<estado>_by_user_id` (excepto
@@ -63,6 +170,7 @@ class Paquete < ApplicationRecord
     "en_aduana"          => :fecha_aduana,
     "consolidando_honduras" => :fecha_consolidando,
     "disponible_entrega" => :fecha_disponible,
+    "enviado_sucursal"   => :fecha_enviado_sucursal,
     "en_reparto"         => :fecha_en_reparto,
     "entregado"          => :fecha_entregado
   }.freeze
@@ -82,6 +190,15 @@ class Paquete < ApplicationRecord
   # lo dejaría sin poder guardar el paquete. Lo que sí se corta es el
   # whitespace y los caracteres de markup — que es lo único que importaba.
   TRACKING_FORMATO = /\A[A-Za-z0-9._\-\/]+\z/
+  # C29-01 · Los espacios de los **bordes** se van antes de validar. Jorge pegó
+  # un tracking con copy-paste y no lo dejó guardar —Yusef: *"tracking no es
+  # permitido, tienes el espacio este"*—, y ese espacio no lo tecleó nadie: lo
+  # trajo el portapapeles. El de **adentro** sigue siendo error, que es lo que
+  # Yusef defendió en la misma frase: *"está bien eso, porque tiene que estar
+  # bien hecho"*. `PreAlertaPaquete` ya lo hacía (`normalize_tracking`); el
+  # paquete no, y la consulta del JS sí recortaba, así que la pantalla decía
+  # «libre» de un tracking que después el guardado rechazaba.
+  normalizes :tracking, :tracking_secundario, with: ->(t) { t.strip }
   validates :tracking, format: {
     with: TRACKING_FORMATO,
     message: "no permite espacios ni símbolos (solo letras, números, . _ - /)"
@@ -93,6 +210,79 @@ class Paquete < ApplicationRecord
   validate :no_advance_with_open_tareas
   validate :sub_localidad_pertenece_a_sucursal_actual
   validate :retencion_requiere_motivo_o_notas, if: -> { estado == "retenido" }
+  # A7-09. El estado existe para auditar —"qué paquete no escanearon o no
+  # enviaron"— y sin destino no audita nada.
+  #
+  # El `before_validation` va primero a propósito: en el 100% de los casos el
+  # destino es la sucursal donde el cliente retira, que el paquete ya trae. Sin
+  # ese default, cambiar el estado desde el dropdown de `/paquetes` fallaría con
+  # un error que el operario no sabría cómo arreglar desde esa pantalla.
+  before_validation :heredar_sucursal_destino, if: -> { estado == "enviado_sucursal" }
+  validates :sucursal_destino, presence: true, if: -> { estado == "enviado_sucursal" }
+
+  # ── El método de pago, en tres reglas ─────────────────────────────────
+  #
+  # Obligatorio **al marcar** el prepago, no siempre. Los paquetes que ya
+  # estaban prepagados antes de que la columna existiera se quedan en `nil`:
+  # inventarles una forma de pago sería meter un dato falso en el sistema, y
+  # exigírselo los volvería imposibles de guardar desde cualquier pantalla que
+  # no tenga dónde elegirlo. `nil` ahí significa "es de antes, no se sabe".
+  validates :prepagado_miami_metodo, presence: { message: "hay que decir cómo se pagó" },
+            if: -> { prepagado_miami? && (new_record? || prepagado_miami_changed?) }
+
+  validates :prepagado_miami_metodo,
+            inclusion: { in: METODOS_PREPAGO_MIAMI, message: "no es una forma de pago de Miami" },
+            allow_nil: true
+
+  # La dirección que se olvida, y la que ensucia los datos: si alguien marca el
+  # prepago, elige Zelle y después vuelve a "cobrar en Honduras", un método
+  # colgado haría que la pre-factura y el Warehouse Receipt dijeran que se pagó
+  # algo que no se pagó.
+  validates :prepagado_miami_metodo,
+            absence: { message: "solo aplica si el paquete se pagó en Miami" },
+            unless: :prepagado_miami?
+
+  # ── Contenido, obligatorio en Entrega Personal ────────────────────────
+  #
+  # Yusef: *"entrega personal, es obligatorio poner contenido"*. Un paquete de
+  # courier llega con su descripción del carrier; el que entra al mostrador de
+  # Miami no trae nada escrito, y si nadie lo teclea la etiqueta y el Warehouse
+  # Receipt salen diciendo qué pesa pero no qué es.
+  #
+  # Misma trampa que el método de prepago: los EP que ya están grabados sin
+  # contenido tienen que seguirse pudiendo guardar, si no editar cualquier otro
+  # campo de uno viejo lo traba con un error de algo que nadie tocó. Solo se
+  # exige al crear, o cuando alguien toca el campo — vaciarlo sí es un error.
+  validates :descripcion, presence: { message: "hay que decir qué es (Contenido)" },
+            if: -> { entrega_personal? && (new_record? || descripcion_changed?) }
+
+  # ── Apagar la retención se lleva sus motivos ──────────────────────────
+  #
+  # `checkbox-modal` dice explícito que desmarcar la casilla **no** limpia los
+  # campos del modal. Así que quien escanea un paquete que venía anunciado como
+  # retenido, ve los motivos marcados y decide que no hace falta retenerlo,
+  # guardaba `retener_miami: false` **con los motivos colgados**. Un paquete sin
+  # retención y con "contenido perecedero" adentro es un dato falso, igual que
+  # el método de pago que quedaba puesto al desmarcar el prepago.
+  #
+  # Solo en la transición: un paquete que ya estaba sin retener no se toca.
+  #
+  # Y nunca sobre uno en estado `retenido`, que es **otra cosa** —un paso del
+  # pipeline, no la bandera de Miami— y ahí `retencion_requiere_motivo_o_notas`
+  # exige justamente lo que esto borraría.
+  before_save :limpiar_retencion_al_apagarla,
+              if: -> { will_save_change_to_retener_miami? && !retener_miami? && estado != "retenido" }
+
+  # C18-06 · «Enviado según política». Al marcarla, la explicación al cliente
+  # —los textos de los motivos elegidos más el detalle libre— se compone en
+  # `notas_al_cliente`, que es el canal documentado (*"Etiquetar la INGRESA al
+  # recibir… viaja en el correo de notificación"*) y lo que ve /paquetes. Solo
+  # en la transición, y sin pisar lo que ya hubiera; al desmarcarla se van los
+  # motivos y el detalle, como con la retención.
+  before_save :componer_nota_de_politica,
+              if: -> { enviado_por_politica? && will_save_change_to_enviado_por_politica? }
+  before_save :limpiar_politica_al_apagarla,
+              if: -> { will_save_change_to_enviado_por_politica? && !enviado_por_politica? }
 
   # PR-D1.c: tarifa fija pre-establecida $35 USD + ISV (Yusef 2026-04-29).
   # Editable por el cajero al crear/asignar la recolecta. No hay tabla de
@@ -102,13 +292,25 @@ class Paquete < ApplicationRecord
 
   # Orden del pipeline operativo; avances a un indice mayor requieren que
   # las tareas pendientes del paquete esten cerradas.
+  # A7-01 · *"Bodega Honduras va **después** de prefactura."* Con `pre_facturado`
+  # afuera (A7-11), el orden que queda **es** el del audio: la carga espera en
+  # aduana, la pre-factura la trabaja, y de ahí entra a bodega disponible.
   ESTADOS_ORDEN = %w[recibido_miami empacado enviado_honduras en_aduana
-                     disponible_entrega pre_facturado facturado en_reparto entregado].freeze
+                     disponible_entrega facturado en_reparto entregado].freeze
 
   # Estados excepcionales / fuera del pipeline lineal. Las transiciones
   # hacia o desde estos NO se consideran "retroceso" (son rutas
   # alternativas válidas como retención, anulación, consolidación).
-  ESTADOS_EXCEPCIONALES = %w[pre_alerta_estado consolidando_honduras
+  #
+  # A7-09/A7-10: `consolidando_miami` y `enviado_sucursal` entran acá y no en
+  # `ESTADOS_ORDEN` a propósito. Los dos son **desvíos**, no pasos que todo
+  # paquete recorre: consolidar en Miami solo pasa si el cliente lo pidió, y
+  # solo el ~20% de la carga se manda a otra sucursal ("el 80% de la carga se
+  # queda en San Pedro"). Meterlos en el pipeline correría los índices de
+  # `ESTADOS_ORDEN` y con eso la lógica de retroceso, que es de lo poco que
+  # cuida que nadie mueva un paquete hacia atrás sin darse cuenta.
+  ESTADOS_EXCEPCIONALES = %w[pre_alerta_estado consolidando_miami
+                              consolidando_honduras enviado_sucursal
                               recoleta_en_proceso retenido retornado
                               desechado anulado].freeze
 
@@ -129,11 +331,34 @@ class Paquete < ApplicationRecord
   # FK que se desliga si el estado nuevo es ANTERIOR al estado mínimo
   # donde la asociación se setea.
   RETROCESO_CLEANUP_FKS_DESDE_ESTADO = {
-    "enviado_honduras" => :manifiesto_id,
-    "pre_facturado"    => :pre_factura_id,
-    "facturado"        => :venta_id,
-    "en_reparto"       => :entrega_id
+    "enviado_honduras"   => :manifiesto_id,
+    "disponible_entrega" => :pre_factura_id,
+    "facturado"          => :venta_id,
+    "en_reparto"         => :entrega_id
   }.freeze
+
+  # A7-12. El dropdown de estados salía en orden de declaración del enum, que
+  # es el orden en que se fueron agregando. Yusef, mirándolo:
+  #
+  #   > "Prefacturado y disponible para entrega estaban antes. ¿No debería ser
+  #   >  primero…? **A mí me gusta el orden.**"
+  #   > "Hacéme la lista y yo la ordeno."
+  #
+  # Va en orden de proceso: primero el camino que recorre un paquete normal,
+  # después los desvíos.
+  #
+  # A7-11. `pre_facturado` **ya no existe**. Salió primero de esta lista —nadie
+  # lo ponía a mano— y ahora del enum entero, que es lo que Yusef pidió:
+  # *"el prefacturado no sé de dónde lo sacó… no del estatus. Ese tenés que
+  # eliminar."* Que un paquete esté en una pre-factura se sabe por
+  # `pre_factura_id`, que es el dato que ya lo decidía todo: `facturables`
+  # filtra por ahí, no por el estado.
+  ESTADOS_SELECCIONABLES = %w[
+    pre_alerta_estado recibido_miami consolidando_miami empacado
+    enviado_honduras en_aduana consolidando_honduras disponible_entrega
+    enviado_sucursal facturado en_reparto entregado
+    recoleta_en_proceso retenido retornado desechado anulado
+  ].freeze
 
   # PR-D7.b: helpers para que controller/JS detecten retrocesos en el
   # pipeline. Yusef pidió advertir con modal cuando un supervisor mueve
@@ -188,9 +413,89 @@ class Paquete < ApplicationRecord
   end
 
   scope :activos, -> { where.not(estado: %w[anulado entregado retornado desechado]) }
+  # Un código escaneado de una caja de split viene como `RMI0002026000042-2`:
+  # el número madre más el número de caja. Sin esto, `numero_recepcion ILIKE`
+  # no matchea nada — la recepción guardada es `RMI0002026000042` a secas —
+  # y escanear en San Pedro devolvería cero resultados.
+  #
+  # Devuelve `[numero_madre, numero_caja]`, o nil si el término no tiene esa
+  # forma. Se exige que el prefijo termine en dígitos para no partir un
+  # tracking que traiga guiones (`TBA123-456` no es una caja).
+  ESCANEO_DE_CAJA = /\A(?<madre>.*\d)-(?<caja>\d{1,3})\z/
+  def self.parsear_codigo_de_caja(term)
+    m = ESCANEO_DE_CAJA.match(term.to_s.strip)
+    return nil if m.nil?
+
+    [ m[:madre], m[:caja].to_i ]
+  end
+
+  # PR-C6.21: cómo se resuelve un tracking que entró por la pistola.
+  #
+  # Yusef, 2026-08-08, escaneando paquetes reales de los cuatro carriers:
+  #
+  #   > "El tracking de USPS **solo es desde donde dice 92**... esto es lo que
+  #   >  el cliente recibe de tracking y **esto es lo que le escanea el
+  #   >  sistema**."
+  #   > "Ahora el sistema debe buscar en esto también [el secundario], debe
+  #   >  buscar en la base, y **eso no estaba**."
+  #
+  # Antes era `where(tracking: valor)`: exacto, case-sensitive y sobre una
+  # sola columna. Tres formas de no encontrar un paquete que sí existe, y las
+  # tres las vio en vivo.
+  #
+  # La escalera va de lo más específico a lo más laxo y corta en la primera
+  # que pega, para que un match exacto nunca quede tapado por uno difuso.
+  #
+  # El escalón 3 es el del USPS: la pistola lee el código completo del carrier
+  # y el cliente pre-alertó solo la cola. Se acepta que lo guardado sea
+  # **sufijo** de lo escaneado, nunca al revés — si el operario teclea cuatro
+  # dígitos sueltos no puede caer en un paquete cualquiera. De ahí el piso de
+  # `ESCANEO_LARGO_MINIMO` en los dos lados. Sale sin hardcodear el "92", así
+  # que cubre igual los de UPS y FedEx.
+  ESCANEO_LARGO_MINIMO = 10
+
+  # `all.where` y no `where` a secas: así se puede encadenar
+  # (`Paquete.sin_manifiesto.buscar_escaneado(x)`) y cada escalón se prueba
+  # **dentro** del alcance del que llama. Con `where` pelado, un exacto fuera
+  # del alcance cortaría la escalera y el sufijo nunca se probaría.
+  def self.buscar_escaneado(valor)
+    termino = limpiar_codigo_escaneado(valor).upcase
+    return none if termino.blank?
+
+    exacto = all.where("UPPER(paquetes.tracking) = ?", termino)
+    return exacto if exacto.exists?
+
+    secundario = all.where("UPPER(paquetes.tracking_secundario) = ?", termino)
+    return secundario if secundario.exists?
+
+    return none if termino.length < ESCANEO_LARGO_MINIMO
+
+    # `RIGHT(?, LENGTH(...))` y no un `LIKE '%' || tracking`: es comparación
+    # exacta de sufijo, así un tracking con `%` o `_` adentro no se convierte
+    # en comodín. Cuesta un seq scan, pero solo se llega acá cuando los dos
+    # escalones exactos ya fallaron.
+    all.where("UPPER(paquetes.tracking) = RIGHT(?, LENGTH(paquetes.tracking))", termino)
+       .where("LENGTH(paquetes.tracking) >= ?", ESCANEO_LARGO_MINIMO)
+  end
+
   scope :buscar, ->(term) {
-    term = term.to_s.strip
+    # C26-04 · Antes de `parsear_codigo_de_caja`: el QR de medición trae el
+    # código adentro, y si no se limpia primero el patrón de caja nunca matchea.
+    term = limpiar_codigo_escaneado(term)
     return all if term.empty?
+
+    # Escaneo de una caja concreta: cae directo en ella, no en sus hermanas.
+    if (parsed = parsear_codigo_de_caja(term))
+      madre, caja = parsed
+      exacta = where(numero_recepcion: madre, numero_caja: caja)
+      return exacta if exacta.exists?
+
+      # No existe esa caja. Puede ser una etiqueta de una caja que se eliminó,
+      # o un tracking que casualmente termina en `-2`. En vez de devolver
+      # vacío, se busca por la parte de adelante: si es un número madre trae
+      # sus hermanas, y si era un tracking lo encuentra igual.
+      term = madre
+    end
 
     q = "%#{sanitize_sql_like(term)}%"
     left_joins(:cliente, :tipo_envio, :manifiesto)
@@ -229,6 +534,14 @@ class Paquete < ApplicationRecord
     q = "%#{sanitize_sql_like(text)}%"
     left_joins(:cliente).where("clientes.codigo ILIKE ?", q)
   }
+  # C28-02 · *"En el filtro… buscarlo por manifiesto."* Por número, que es lo
+  # que el operario tiene en la mano —la hoja, la etiqueta del bulto—, y
+  # parcial, para que alcance con el final (`000011`).
+  scope :by_manifiesto, ->(text) {
+    text = text.to_s.strip
+    next all if text.empty?
+    left_joins(:manifiesto).where("manifiestos.numero ILIKE ?", "%#{sanitize_sql_like(text)}%")
+  }
   scope :by_cliente_nombre, ->(text) {
     text = text.to_s.strip
     next all if text.empty?
@@ -264,9 +577,36 @@ class Paquete < ApplicationRecord
       SQL
   }
   scope :by_sucursal, ->(ids) { where(sucursal_id: Array(ids).compact_blank) }
+  # C23-10 · Los paquetes que se recibieron **en** una sucursal.
+  #
+  # Es `sucursal_del_numero` escrito en SQL: `sucursal_recepcion` es dónde se
+  # recibió, y cae a `sucursal` porque hay flujos que crean paquetes sin pasar
+  # por `/etiquetar` —alta manual, seeds, fixtures— y ahí la única sucursal que
+  # hay es esa. Las dos reglas tienen que decir lo mismo: si se separan, el
+  # tirón de «empacar sin escanear» barrería un conjunto distinto del que la
+  # pantalla numeró.
+  #
+  # **El COALESCE no usa índice**, ni el de `sucursal_recepcion_id` ni el de
+  # `sucursal_id`. Se acepta: esto lo corre una persona un par de veces por
+  # manifiesto, no un listado que se pinta a cada rato.
+  scope :recibidos_en, ->(sucursal_id) {
+    where("COALESCE(paquetes.sucursal_recepcion_id, paquetes.sucursal_id) = ?", sucursal_id)
+  }
   scope :recibidos_hoy, -> { where(fecha_recibido_miami: Time.current.beginning_of_day..Time.current.end_of_day) }
   scope :sin_manifiesto, -> { where(manifiesto_id: nil).where.not(estado: %w[anulado entregado retornado desechado]) }
-  scope :facturables, -> { where(estado: "disponible_entrega", pre_factura_id: nil, venta_id: nil) }
+  # PR-M8. `en_aduana` entra acá desde que PR-M7 le dio quién lo escriba. Es
+  # el estado en el que la carga espera a que la trabajen, y de ahí sale por
+  # la pre-factura — Yusef, mirando la pantalla: *"ya de aquí el paquete va a
+  # cambiar cuando ingresemos a la prefactura"*. `docs/05:1201` dice lo mismo:
+  # *"mientras espera la fecha programada, el paquete queda en estado aduana"*.
+  #
+  # `disponible_entrega` se queda: es a donde `PreFactura#anular!` y
+  # `Venta#anular!` devuelven los paquetes, y donde vive la data vieja.
+  # `consolidando_honduras` **no** entra: es un desvío
+  # (`ESTADOS_EXCEPCIONALES`), no un paso que la carga recorra.
+  ESTADOS_FACTURABLES = %w[en_aduana disponible_entrega].freeze
+
+  scope :facturables, -> { where(estado: ESTADOS_FACTURABLES, pre_factura_id: nil, venta_id: nil) }
   scope :entregables, -> { where(estado: "facturado", entrega_id: nil) }
   # Paquetes sin vincular a ninguna pre_alerta_paquete (sueltos en bodega)
   scope :sin_pre_alerta, -> {
@@ -281,7 +621,11 @@ class Paquete < ApplicationRecord
   }
 
   before_validation :generate_guia, on: :create, if: -> { guia.blank? }
-  before_validation :generate_numero_recepcion, on: :create, if: -> { numero_recepcion.blank? && sucursal_id.present? }
+  # Al crear, y también al **recibirse** un paquete ya grabado — ver
+  # `debe_generar_numero_recepcion?`. Una sola registración a propósito: Rails
+  # deduplica los callbacks por método, y registrar `generate_numero_recepcion`
+  # dos veces (`on: :create` y `on: :update`) deja viva solo la segunda.
+  before_validation :generate_numero_recepcion, if: :debe_generar_numero_recepcion?
   # Trigger si: (a) marcó recolecta y aún no hay monto, o (b) cambió la
   # tarifa elegida (el cajero corrige zona) → re-sincronizamos monto+moneda.
   before_validation :default_recolecta_monto,
@@ -295,7 +639,20 @@ class Paquete < ApplicationRecord
   # recolecta_solicitada + tracking blank + proveedor (comercio) presente.
   before_validation :generate_rc_tracking, on: :create, if: :rc_tracking_required?
   after_create :ensure_warehouse_receipt, if: -> { warehouse_receipt_id.nil? && numero_recepcion.present? && cliente_id.present? }
+  # C18-04: y el Warehouse Receipt cuando el número recién se acuñó en un
+  # update (el caso de arriba). Acotado al cambio del número a propósito: un
+  # `after_save` ancho dispararía sobre filas viejas cuyo número es el tracking
+  # (`numero_recepcion_visible`) y acuñaría un WR con un tracking de courier.
+  after_update :ensure_warehouse_receipt,
+               if: -> { saved_change_to_numero_recepcion? && warehouse_receipt_id.nil? && numero_recepcion.present? && cliente_id.present? }
   before_save :set_fecha_recibido, if: -> { fecha_recibido_miami.blank? && new_record? }
+  # C19-05: el flatpickr del form de /paquetes edita las fechas **al minuto**
+  # (`%Y-%m-%d %H:%M`), así que cualquier guardado desde ahí re-parseaba la
+  # fecha con :00 — y el segundo exacto del F9, el que se busca en cámaras, se
+  # borraba en silencio la primera vez que alguien editaba el paquete por otra
+  # cosa. Si el minuto no cambió, el "cambio" es solo la pérdida del segundo:
+  # se conserva el momento original.
+  before_save :preservar_segundos_de_fechas
   before_save :calculate_peso_volumetrico
   before_save :calculate_peso_cobrar
   before_save :track_fecha_disponible, if: :will_save_change_to_estado?
@@ -315,6 +672,9 @@ class Paquete < ApplicationRecord
   # "entre más cosas nos dejes crear, menos te molestaremos".
   after_save :sync_carrier_catalog, if: :saved_change_to_expedido_por?
   after_save :sync_pre_alerta_estados, if: :saved_change_to_estado?
+  # A7-19: el tipo de envío también baja a la pre-alerta. Ver
+  # `sync_pre_alerta_tipo_envio` abajo.
+  after_save :sync_pre_alerta_tipo_envio, if: :saved_change_to_tipo_envio_id?
   # Yusef: "al cambiar el manifiesto, las fechas de salida/aduana deben
   # actualizarse al nuevo manifiesto". Mejor como callback (no solo
   # controller) para que el flow desde manifiestos#add_paquete también
@@ -323,6 +683,61 @@ class Paquete < ApplicationRecord
 
   def estado_terminal?
     entregado? || anulado? || retornado? || desechado?
+  end
+
+  # Aplica un cambio de servicio: deja el tipo nuevo y guarda de cuál venía.
+  #
+  # Yusef, 2026-08-08, reproduciendo el caso: marcó "cambio de servicio",
+  # eligió CKM, guardó — y el paquete **se quedó en CER**. En las notas de
+  # Jorge quedó escrito así: *"cambio de servicio → CER a CKM no funciona"*.
+  #
+  # El flag solo decía "alguien pidió el cambio"; nada aplicaba el destino, y
+  # nada dejaba rastro de cuál era el servicio anterior. Eso último importa
+  # porque el cambio **genera un cargo automático** en la pre-factura: cuando
+  # el cliente reclama, hay que poder decirle de qué a qué se movió.
+  #
+  # No hace `save`: el caller decide cuándo persistir, para poder aplicarlo
+  # junto con el resto del formulario en un solo `save`.
+  def aplicar_cambio_servicio(nuevo_tipo)
+    return if nuevo_tipo.nil?
+    return if nuevo_tipo.id == tipo_envio_id
+
+    self.tipo_envio_anterior_id = tipo_envio_id
+    self.tipo_envio = nuevo_tipo
+    self.solicito_cambio_servicio = true
+  end
+
+  # El nombre del tercero para mostrar — venga del catálogo o escrito a mano.
+  #
+  # PR-C6.14. Yusef fue tajante sobre quién digita en Miami: "solo se guarda en
+  # esa guía... **no queda grabado en ninguna base de datos de clientes**",
+  # porque "el que está digitando ahí no tiene ni voz ni voto para guardar" y
+  # "ellos se pueden equivocar y pueden hacer este relajo".
+  #
+  # Por eso hay dos fuentes y **el catálogo manda**: si alguien eligió un
+  # cliente de verdad, ese nombre es el bueno. El texto libre es para el
+  # tercero que no está en ninguna cartera, que es el caso normal — "nosotros
+  # no tenemos la base de datos completa de los clientes terceros".
+  def tercero_display
+    tercero&.nombre_completo.presence || tercero_nombre.presence
+  end
+
+  # "CER → CKM", para mostrarlo en el detalle y en la pre-factura.
+  def cambio_servicio_label
+    return nil unless solicito_cambio_servicio? && tipo_envio_anterior
+    "#{tipo_envio_anterior.codigo.to_s.upcase} → #{tipo_envio&.codigo.to_s.upcase}"
+  end
+
+  # ¿Esta caja ya entró a cobro o salió del almacén? Si sí, borrarla
+  # descuadraría una venta o dejaría un entregado sin registro.
+  # Se mira el estado **y** los FKs: un paquete puede tener `pre_factura_id`
+  # sin que su estado lo diga todavía. Y desde que `pre_facturado` salió del
+  # enum (A7-11), `pre_factura_id` es **el único** que sabe de la pre-factura:
+  # el estado nunca la delató mejor que la FK, que es justo lo que decía el
+  # comentario de arriba desde antes.
+  def cobrada_o_entregada?
+    pre_factura_id.present? || venta_id.present? || entrega_id.present? ||
+      facturado? || entregado? || en_reparto?
   end
 
   # ── Sub-etiquetas / split de tracking en N bultos ──
@@ -334,6 +749,235 @@ class Paquete < ApplicationRecord
     cantidad_paquetes.to_i > 1
   end
 
+  # De qué sucursal sale el prefijo del número de recepción.
+  #
+  # `sucursal_recepcion` es **dónde se recibió** el paquete — Miami, Panamá,
+  # China. `sucursal` es **dónde lo retira el cliente**, y es lo que sale en la
+  # etiqueta y lo que usa la búsqueda de tarifa. Son distintas: se recibe en
+  # Miami y se retira en Zeron SPS.
+  #
+  # El fallback a `sucursal` no es pereza: hay flujos que crean paquetes sin
+  # pasar por `/etiquetar` (alta manual desde `/paquetes`, seeds, fixtures) y
+  # ahí la única sucursal que hay es esa. Sin el fallback esos paquetes se
+  # quedarían sin número, que es exactamente el bug que este PR viene a cerrar.
+  # PR-C6.38: de donde vino el paquete — Estados Unidos, China, Panama.
+  #
+  # Yusef, sobre el campo que el sistema viejo tenia marcado en pantalla:
+  #
+  #   > "Lo que marca aca, si es de China no se que. Eso es algo que tenemos
+  #   >  que ver... como ahorita estamos en Estados Unidos, pero ya va a abrir
+  #   >  China."
+  #
+  # NO se agrega una columna: el dato ya existe. El origen es el pais de la
+  # sucursal donde se RECIBIO, y esa ya se elige al abrir la sesion de
+  # etiquetado — "esta alguien en Miami recibiendo, o en Panama, o en China".
+  # El dia que abran China crean su sucursal y esto funciona solo, sin que
+  # nadie tenga que acordarse de marcar un campo mas.
+  def origen
+    sucursal_del_numero&.pais
+  end
+
+  # PR-C6.39: como se cobra este paquete segun de donde vino.
+  #
+  # Yusef, contestando la pregunta 19: el origen "SE UTILIZA PARA EL COBRO en
+  # Entrega Personal o en PreFactura". PR-C6.38 lo habia dejado como dato
+  # informativo — la derivacion estaba bien, la conclusion no.
+  #
+  # El panel de calculo ya mostraba las tres formas; lo que faltaba era decir
+  # cual aplica en vez de pintarlas todas por igual.
+  #
+  # OJO: esto dice CUAL forma aplica, no cuanto se cobra. El papel dice donde
+  # se usa el origen, no como multiplica — convertirlo en un multiplicador sin
+  # que Yusef lo confirme seria inventar una regla de plata.
+  FORMA_COBRO_POR_ORIGEN = { "China" => :metros_cubicos }.freeze
+  FORMA_COBRO_DEFAULT = :libra_o_volumen
+
+  def forma_de_cobro
+    FORMA_COBRO_POR_ORIGEN.fetch(origen.to_s, FORMA_COBRO_DEFAULT)
+  end
+
+  def cobra_por_metro_cubico?
+    forma_de_cobro == :metros_cubicos
+  end
+
+  # C24-01 · ¿Este paquete se cobra solo por el volumétrico, aunque sea el menor?
+  #
+  # **La excepción del paquete gana**, y si no hay, sigue mandando el trato del
+  # cliente que puso `PR-C6.41`. Las dos conviven: una es *"a este cliente, en
+  # este servicio, siempre"* y la otra *"a este paquete, esta vez"*.
+  #
+  # Vive acá y no en `calculate_peso_cobrar` porque el cotizador de pantalla
+  # también tiene que poder preguntarlo sin guardar nada.
+  def cobra_solo_volumetrico?
+    return true if cobro_solo_volumetrico?
+
+    cliente&.cobra_solo_volumetrico?(tipo_envio_id) || false
+  end
+
+  # El espejo: cobrar el peso real aunque el volumétrico sea mayor. **Solo existe
+  # a nivel paquete** — no hay trato de cliente equivalente, y no se inventa uno.
+  def cobra_solo_peso?
+    cobro_solo_peso?
+  end
+
+  def sucursal_del_numero
+    sucursal_recepcion || sucursal
+  end
+
+  # El número de recepción para MOSTRAR. Devuelve nil cuando no hay uno de
+  # verdad, para que la vista ponga guión en vez de caer al tracking.
+  #
+  # Yusef, 2026-08-08, viendo el listado: "esto está malo, porque te está
+  # poniendo el tracking y el número de recepción... el número de recepción es
+  # como el número de registro". Las columnas son vecinas y salía lo mismo
+  # en las dos.
+  #
+  # Dos formas de no tener recepción de verdad:
+  #
+  #   1. En blanco — `generate_numero_recepcion` sale temprano cuando el
+  #      paquete se guarda sin sucursal.
+  #   2. Guardada igual al tracking — data vieja. Jorge: "estos están hechos
+  #      porque yo los metí en la base de datos en este formato".
+  #
+  # El caso 2 se puede detectar sin miedo a falsos positivos: una recepción
+  # real es SIEMPRE `<PREFIX><AÑO 7><CORRELATIVO 6>` (ej. `RM0002026000010`),
+  # que no se parece a ningún tracking de courier.
+  # C26-02 · Lo que lee la pistola en Medición, **estricto**: el código de la
+  # caja exacto (`RMI…-2` cae en su caja y no en sus hermanas), el número de
+  # recepción exacto, o el tracking exacto por `buscar_escaneado`. No es
+  # `buscar`, que hace ILIKE sobre descripción y nombre de cliente: una
+  # estación que mide no puede adivinar.
+  # C26-04 · El QR de la etiqueta de medición lleva `MED <código> <peso>
+  # <alto>x<largo>x<ancho>`. Lo que identifica es el código; el resto es
+  # redundancia. Tolerante al separador: todo lo escaneado hasta hoy es
+  # `[A-Z0-9-]`, y un `|` por keyboard-wedge puede no llegar como `|`.
+  QR_DE_MEDICION = /\AMED[^A-Z0-9]+(?<codigo>[A-Z0-9-]+)(?:[^A-Z0-9].*)?\z/im
+
+  def self.limpiar_codigo_escaneado(term)
+    term = term.to_s.strip
+    m = QR_DE_MEDICION.match(term)
+    m ? m[:codigo] : term
+  end
+
+  def self.por_codigo_de_etiqueta(codigo)
+    term = limpiar_codigo_escaneado(codigo)
+    return none if term.blank?
+
+    if (parsed = parsear_codigo_de_caja(term))
+      madre, caja = parsed
+      exacta = where("UPPER(paquetes.numero_recepcion) = ?", madre.upcase).where(numero_caja: caja)
+      return exacta if exacta.exists?
+    end
+
+    por_numero = where("UPPER(paquetes.numero_recepcion) = ?", term.upcase)
+    return por_numero if por_numero.exists?
+
+    buscar_escaneado(term)
+  end
+
+  # C28-04 · Lo mismo, pero si el sufijo no existe se prueba con el número
+  # madre — que es lo que hacía /empacar desde `C21-01`: un paquete que no se
+  # partió no tiene caja 1, y su recepción con `-1` igual tiene que entrar.
+  # La Medición sigue con el estricto; esto es para las pantallas de Miami,
+  # que preguntan (lista para elegir) cuando el madre trae varias cajas.
+  def self.por_etiqueta_o_su_madre(codigo)
+    exacto = por_codigo_de_etiqueta(codigo)
+    return exacto if exacto.exists?
+
+    madre, _caja = parsear_codigo_de_caja(limpiar_codigo_escaneado(codigo))
+    madre ? por_codigo_de_etiqueta(madre) : exacto
+  end
+
+  # C26-17 · Lo que la estación de medición todavía espera de un manifiesto:
+  # lo que Miami mandó, sin medir, y que un admin no haya sacado de la lista.
+  #
+  # No filtra por estado a propósito: lo que **no llegó a Honduras** también
+  # falta, y el panel lo muestra aparte —es lo que hay que ir a buscar, no lo
+  # que hay que medir.
+  scope :pendientes_de_medicion, -> {
+    where(medido_at: nil, medicion_descartada_at: nil)
+      .where.not(estado: NO_SON_CAJAS)
+  }
+
+  def descartado_de_medicion? = medicion_descartada_at.present?
+
+  # ¿Está en Honduras, lista para que la midan?
+  def esperando_medicion? = estado.in?(ESTADOS_FACTURABLES) && medido_at.blank?
+
+  # C26-02 · Las cajas que comparten este warehouse receipt: las de un envío
+  # partido. `crear_split!` les pone a todas el mismo `numero_recepcion` (el
+  # «número madre») y a cada una su `numero_caja`, así que **varias cajas con
+  # el mismo warehouse receipt siempre son un split**.
+  #
+  # Se agrupa por el warehouse receipt y no por `tracking` —que es lo que hace
+  # `paquetes_hermanos`— por dos razones: no depende de que `cantidad_paquetes`
+  # esté puesto, y el tracking **se repite entre envíos** (DHL los reusa; está
+  # documentado en `docs/05`). El warehouse receipt sale de un contador: es
+  # único por envío.
+  def cajas_del_mismo_envio
+    return Paquete.none if numero_recepcion.blank?
+
+    Paquete.where(numero_recepcion: numero_recepcion)
+           .where.not(estado: NO_SON_CAJAS)
+           .order(:numero_caja, :id)
+  end
+
+  # C26-03 · El grupo consolidado de esta caja, o nil si el cliente no está
+  # consolidando. Ver `GrupoDeUnion`.
+  def grupo_de_union
+    GrupoDeUnion.de(self)
+  end
+
+  # C26-03 · El gancho para la pre-factura, que **todavía no lo lee** (es su
+  # bloque, `C26-08`): medido, y sin grupo, o con el grupo completo, cerrado
+  # (se factura aparte) o con la excepción de «facturar lo que hay» sellada.
+  #
+  # «Grupo» incluye el split: media caja de un tracking partido no se factura
+  # sin la otra mitad medida.
+  def listo_para_prefactura?
+    return false if medido_at.blank?
+
+    grupo = grupo_de_union
+    grupo.nil? || grupo.cerrada? || grupo.completo? || grupo.parcial_autorizado?
+  end
+
+  def numero_recepcion_visible
+    return nil if numero_recepcion.blank?
+    return nil if numero_recepcion.casecmp?(tracking.to_s)
+
+    numero_recepcion
+  end
+
+  # C20-04: acuña el número de recepción —y con él el Warehouse Receipt— si al
+  # paquete le falta y ya le corresponde tenerlo.
+  #
+  # Es lo que `crear_split!` hace de entrada con el número madre (`:791`) y
+  # `ajustar_split!` no tenía. Sin esto, ajustar la cantidad sobre un paquete
+  # todavía sin número deja el envío roto de dos maneras: las hermanas se
+  # agrupan **por número madre**, así que un envío sin número no tiene
+  # hermanas que encontrar, y las cajas nuevas nacen copiando ese vacío hasta
+  # que cada una se acuña el suyo — y ahí ya no hay forma de volver a
+  # juntarlas.
+  #
+  # Escribe **solo** las dos columnas del número, no un `save` entero: el
+  # paquete llega acá con cambios en memoria que todavía no toca guardar (el
+  # tipo de envío del cambio de servicio, entre otros), y persistirlos de
+  # rebote se los comería del `saved_changes` que el controller mira después.
+  #
+  # El `rescue` es el de `numerar_recibidos_sin_numero!`: una fila vieja puede
+  # no pasar las validaciones de hoy, y dejarla sin número sería peor.
+  def asegurar_numero_recepcion!
+    return if numero_recepcion.present?
+    return if NO_SON_CAJAS.include?(estado) || sucursal_del_numero.blank?
+
+    generate_numero_recepcion
+    return if numero_recepcion.blank?
+
+    update_columns(numero_recepcion: numero_recepcion,
+                   sucursal_recepcion_id: sucursal_recepcion_id)
+    ensure_warehouse_receipt if warehouse_receipt_id.nil? && cliente_id.present?
+  end
+
   # Devuelve "1/3" cuando el paquete está dividido; nil cuando no.
   # Se muestra en etiqueta impresa, detalle y badges del listado.
   def etiqueta_secuencia
@@ -342,11 +986,35 @@ class Paquete < ApplicationRecord
     "#{numero_caja}/#{cantidad_paquetes}"
   end
 
-  # Otros bultos del mismo tracking dividido (sin incluir self). Útiles
-  # para mostrar "ver hermanos" en el detalle.
+  # Estados en los que el paquete **no es una caja física** que alguien pueda
+  # tener en la mano. `pre_alerta_estado` es lo que el cliente anunció y todavía
+  # no llegó: se le materializa un registro para que aparezca en /paquetes, pero
+  # no se etiqueta ni cuenta como pieza en un Warehouse Receipt.
+  NO_SON_CAJAS = %w[pre_alerta_estado].freeze
+
+  # Lo que cambia de una caja a otra dentro de un mismo envío. El resto del
+  # paquete es el mismo para todas: mismo tracking, mismo cliente, mismo
+  # servicio. `crear_split!` y `ajustar_split!` lo reparten caja por caja
+  # (`por_caja:`), y al subir cajas **no se hereda** de la caja 1 (C20-12).
+  # Yusef: *"el peso de cada quien"*. `cantidad_productos` entró en `PR-C7.19`
+  # — ver `MedidasPorCaja`, que lee estos campos del formulario.
+  CAMPOS_POR_CAJA = %w[peso alto largo ancho cantidad_productos].freeze
+
+  # Las otras cajas del mismo tracking dividido, sin incluirse a sí misma.
+  #
+  # **Este es el único lugar donde se resuelve quiénes son las hermanas.** Antes
+  # estaba escrito también a mano en `PaquetesController#etiqueta`, y por eso un
+  # paquete esperado que compartía tracking se colaba en las etiquetas —salían 3
+  # para 2 cajas— mientras el Warehouse Receipt, que sí pasaba por acá, se
+  # colaba por el mismo lado sin que nadie lo relacionara.
+  #
+  # El filtro por estado es la red de abajo: `PR-C7.20` hace que /etiquetar ya no
+  # deje esperados huérfanos, pero un esperado puede aparecer igual —el cliente
+  # pre-alerta un tracking **después** de que la carga llegó, por ejemplo— y una
+  # etiqueta de más se pega en una caja que no existe.
   def paquetes_hermanos
     return Paquete.none unless dividido? && tracking.present?
-    Paquete.where(tracking: tracking).where.not(id: id)
+    Paquete.where(tracking: tracking).where.not(id: id).where.not(estado: NO_SON_CAJAS)
   end
 
   # Crea N paquetes "hijos" en una sola transacción cuando el digitador
@@ -364,13 +1032,34 @@ class Paquete < ApplicationRecord
   #   - Si el save de cualquiera falla, la transacción hace rollback.
   #
   # Devuelve un array con los paquetes creados (en orden 1..N).
-  def self.crear_split!(attrs:, total_cajas:)
+  # `por_caja` lleva los datos que difieren entre cajas: `{1 => {peso: 5},
+  # 2 => {peso: 8}}`. Lo que no venga ahí se hereda de `attrs`.
+  #
+  # PR-C6.17. Yusef: "acá sería cantidad de paquetes o productos, y aquí el
+  # peso de cada quien". Antes las N cajas nacían con el MISMO peso, así que un
+  # tracking con una caja de 5 lb y otra de 30 se facturaba como dos de 5 —
+  # o como dos de 30, según cuál hubieran escrito.
+  # `reusar:` es el paquete que la pre-alerta dejó esperando. Cuando viene, la
+  # **Caja 1 no se crea: se transiciona ese registro**. Es lo mismo que
+  # `create_single` hace desde siempre; acá faltaba, y por eso el esperado
+  # quedaba huérfano al lado de las cajas nuevas, con el mismo tracking.
+  #
+  # Reusar la caja **1** y no otra no es casualidad: `ajustar_split!` solo borra
+  # `numero_caja > m`, así que la 1 sobrevive a que Yusef suba y baje la
+  # cantidad de cajas. Cualquier otra se podría borrar y dejar la pre-alerta
+  # apuntando a un registro muerto.
+  def self.crear_split!(attrs:, total_cajas:, por_caja: {}, reusar: nil)
     n = total_cajas.to_i
     raise ArgumentError, "total_cajas debe ser >= 2" if n < 2
 
     sucursal     = attrs[:sucursal]     || Sucursal.find_by(id: attrs[:sucursal_id])
     cliente      = attrs[:cliente]      || Cliente.find_by(id: attrs[:cliente_id])
-    numero_madre = generate_numero_recepcion_madre(sucursal: sucursal, attrs: attrs)
+    # El número sale de dónde se RECIBIÓ, no de dónde retira el cliente.
+    # Mismo fallback que `Paquete#sucursal_del_numero`.
+    recepcion    = attrs[:sucursal_recepcion] ||
+                   Sucursal.find_by(id: attrs[:sucursal_recepcion_id]) ||
+                   sucursal
+    numero_madre = generate_numero_recepcion_madre(sucursal: recepcion, attrs: attrs)
 
     transaction do
       # PR-5c.5p2: crea el WR madre antes de los paquetes y los enlaza.
@@ -382,15 +1071,313 @@ class Paquete < ApplicationRecord
       )
       wr&.save!
 
+      # ── Un tracking, N cajas ──────────────────────────────────────────────
+      #
+      # PR-C7.16. Los trackings autogenerados (EP y RC) salen de un callback
+      # `before_validation on: :create` cuyo único guard es `tracking.blank?`.
+      # En un split eso corría **una vez por caja**: las tres cajas de un mismo
+      # envío salían con `EP-…-000003`, `…000004` y `…000005`, y el contador
+      # avanzaba tres veces.
+      #
+      # Y todo lo que agrupa un split lo hace por `tracking` —
+      # `paquetes_hermanos`, `wr_packages_for`, `etiqueta?hermanas=1`— así que
+      # con tres trackings distintos los hermanos eran **cero**. Yusef lo vio en
+      # el Warehouse Receipt: *"solo sale por una caja"*, con el badge diciendo
+      # "SPLIT 3 CAJAS" al lado.
+      #
+      # Se resuelve acá y no en el callback a propósito: el callback no sabe de
+      # sus hermanas, y meterle conciencia del split a los callbacks del modelo
+      # es lo que `PR-C6.31` dejó escrito que no se hiciera. Quien sabe que hay
+      # un split es este método, así que es este el que fija el tracking común.
+      tracking_comun = attrs[:tracking].presence
+
       (1..n).map do |i|
-        Paquete.create!(attrs.merge(
+        propios = (por_caja[i] || por_caja[i.to_s] || {}).symbolize_keys
+        comunes = {
           numero_caja: i,
           cantidad_paquetes: n,
           numero_recepcion: numero_madre,
           warehouse_receipt_id: wr&.id
-        ))
+        }
+        comunes[:tracking] = tracking_comun if tracking_comun
+
+        todos = attrs.merge(propios).merge(comunes)
+        caja =
+          if i == 1 && reusar
+            # `assign_attributes` + `save!` y no `update!`: `todos` puede venir
+            # como `ActionController::Parameters` permitidos, igual que en el
+            # `create!` de abajo.
+            reusar.assign_attributes(todos)
+            reusar.save!
+            reusar
+          else
+            Paquete.create!(todos)
+          end
+        # La primera caja es la que dispara el contador; las demás heredan.
+        tracking_comun ||= caja.tracking
+        caja
       end
     end
+  end
+
+  # Error de negocio: se quiso borrar una caja que ya entró a cobro o salió.
+  class CajaNoEliminable < StandardError; end
+
+  # Cambia un split de N cajas a M. `crear_split!` solo sabía **crear**, así
+  # que subir o bajar la cantidad dejaba los registros viejos mezclados con
+  # los nuevos. Yusef lo reprodujo dos veces:
+  #
+  #   · 3 cajas → lo bajó a 2 → quedaron las 3.
+  #   · Después lo subió a 5 → "aquí dice dos y aquí dice que son cinco".
+  #
+  # La regla que acordaron es simple, la cantidad nueva manda:
+  #
+  #   > **Jorge:** "Si tienes cinco y lo querés cambiar a dos, solo deberían
+  #   >  quedar los dos."
+  #   > **Yusef:** "Eliminar lo otro. Ajá."
+  #
+  # **Guarda dura**: si alguna de las cajas a eliminar ya está facturada,
+  # pre-facturada o entregada, la operación falla **entera** y no toca nada.
+  # Borrar una caja que ya se cobró descuadraría la venta en silencio.
+  #
+  # PR-C6.42: Yusef contestó qué hacer en ese caso —*"que deje hacerlo, pero
+  # solo con PIN de supervisor"*—, y por eso existe `forzar:`. **No lo llames
+  # directo**: la puerta es `BajarCajasConPin`, que pide el PIN y desengancha
+  # la caja de sus documentos antes de borrarla. Acá `forzar: true` solo salta
+  # la guarda.
+  #
+  # C20-12: `por_caja:` trae lo que es de cada caja —`{ 1 => { peso: "2" } }`,
+  # igual que en `crear_split!`— y se aplica a **todas**, la original incluida:
+  # el peso de una caja sola era el del envío entero, y después de reempacar
+  # ya no vale. Exigirlo es cosa de quien llama (`EtiquetarController#update`).
+  #
+  # Devuelve las cajas que quedan, ordenadas por `numero_caja`.
+  def self.ajustar_split!(paquete, nueva_cantidad, forzar: false, por_caja: {})
+    m = nueva_cantidad.to_i
+    raise ArgumentError, "la cantidad debe ser >= 1" if m < 1
+
+    transaction do
+      # C20-04: primero el número, después las hermanas. Al revés —que es como
+      # estaba— un paquete sin número no se encuentra a sí mismo en el grupo
+      # (se agrupa por número madre), así que un split real quedaba invisible
+      # y las cajas nuevas nacían sin número, cada una acuñándose el suyo
+      # después. Es el mismo orden que `crear_split!`.
+      paquete.asegurar_numero_recepcion!
+
+      hermanas = cajas_del_mismo_split(paquete).to_a
+      n = hermanas.size
+
+      if m < n
+        sobrantes = hermanas.select { |c| c.numero_caja.to_i > m }
+        bloqueadas = forzar ? [] : sobrantes.select { |c| c.cobrada_o_entregada? }
+        if bloqueadas.any?
+          raise CajaNoEliminable,
+                "No se puede bajar a #{m} cajas: " \
+                "#{bloqueadas.map { |c| "la caja #{c.numero_caja} está #{c.estado.humanize.downcase}" }.join(', ')}."
+        end
+        sobrantes.each(&:destroy!)
+        hermanas -= sobrantes
+      elsif m > n
+        # Un bulto suelto que se vuelve split **es la caja 1**.
+        #
+        # Yusef, 2026-08-19: ingresó un paquete normal y después lo actualizó a
+        # tres. Salían las cajas 2 y 3 y la original se quedaba con
+        # `numero_caja` en nulo — o sea con una etiqueta sin número y fuera del
+        # orden de todo lo que agrupa por caja.
+        hermanas.first.update_column(:numero_caja, 1) if hermanas.first.numero_caja.blank?
+
+        # Una caja nueva no está cobrada ni entregada: los enlaces a pre-factura,
+        # venta y entrega no se heredan — ni el flag legacy `pre_factura`, que
+        # además es una de las dos columnas del párrafo de abajo.
+        #
+        # C20-12: y tampoco hereda lo que es **de cada caja** —peso, medidas,
+        # productos—. Una caja de 5 lb partida en tres nacía como tres cajas de
+        # 5 lb. Yusef: *"si no tiene pesos, pues los ponemos sin pesos; pero si
+        # ya tiene pesos tenemos que obligarlo a llenar"*. Las nuevas nacen sin
+        # nada; lo suyo entra por `por_caja:`, más abajo.
+        attrs = hermanas.first.attributes.except(
+          "id", "created_at", "updated_at", "guia", "numero_caja",
+          "cantidad_paquetes", "pre_factura", "pre_factura_id", "venta_id", "entrega_id",
+          *CAMPOS_POR_CAJA
+        )
+        # C20-11. `proveedor` es columna string legacy Y el nombre de
+        # `belongs_to :proveedor` (PR-D3.a). Rails le da `proveedor=` a la
+        # asociación, así que por `create!` el string iba al writer equivocado:
+        # con NULL pasaba de casualidad; con "" —que es lo que deja cualquier
+        # update— o con "Amazon", `AssociationTypeMismatch`. Jorge lo vio en
+        # staging *"al actualizar varias veces"*: la segunda subida de cajas era
+        # la que reventaba. Es dato del envío, así que las cajas nuevas lo
+        # heredan igual que el cliente.
+        #
+        # C27-29: se renombra la llave al escritor de columna en vez de
+        # asignarla aparte después del `new`. Es la misma puerta que usan hoy
+        # los formularios, y así queda **un solo** lugar en el repo que sabe de
+        # la colisión: `Paquete#proveedor_texto=`.
+        attrs["proveedor_texto"] = attrs.delete("proveedor")
+        ((n + 1)..m).each do |i|
+          caja = new(attrs.merge("numero_caja" => i, "cantidad_paquetes" => m))
+          caja.save!
+          hermanas << caja
+        end
+      end
+
+      # C20-12: lo que es de cada caja, caja por caja. Se recorta acá y no se
+      # confía en quien llama: viene de params. `update!` y no `update_column`:
+      # el peso es un cambio de negocio, con validación y con historial.
+      por_caja.each do |numero, valores|
+        caja = hermanas.find { |c| (c.numero_caja || 1).to_i == numero.to_i }
+        next if caja.nil?
+
+        propios = valores.to_h.transform_keys(&:to_s).slice(*CAMPOS_POR_CAJA)
+        caja.update!(propios) if propios.any?
+      end
+
+      # `update_column` a propósito: `cantidad_paquetes` es un contador, no un
+      # cambio de negocio, y pasarlo por validaciones acá dispararía callbacks
+      # de estado sobre cajas que no cambiaron de estado.
+      hermanas.each { |c| c.update_column(:cantidad_paquetes, m) }
+      hermanas.sort_by { |c| c.numero_caja.to_i }
+    end
+  end
+
+  # Las cajas que comparten número madre. Ojo: NO se agrupa por tracking —
+  # dos splits distintos pueden compartir tracking (el courier recicla
+  # números), y el índice único es `(numero_recepcion, numero_caja)`.
+  def self.cajas_del_mismo_split(paquete)
+    return where(id: paquete.id) if paquete.numero_recepcion.blank?
+
+    where(numero_recepcion: paquete.numero_recepcion).order(:numero_caja)
+  end
+
+  # ── Los fantasmas que quedaron de antes ─────────────────────────────────
+  #
+  # `PR-C7.20` arregla el origen: /etiquetar ya no deja huérfano el paquete que
+  # la pre-alerta dejó esperando. Pero los que ya están grabados siguen ahí,
+  # sacando una etiqueta de más y contando como pieza en su Warehouse Receipt.
+  #
+  # Un fantasma es un paquete en `pre_alerta_estado` que comparte **tracking y
+  # cliente** con cajas que ya llegaron. Lo del cliente no es adorno: el courier
+  # recicla números de tracking, y sin ese filtro se borraría lo que otro
+  # cliente está esperando de verdad.
+  #
+  # Se reapunta la pre-alerta y las tareas a la caja de menor número, y el
+  # fantasma se borra. Se llama desde una migración, pero vive acá porque un
+  # método se puede testear y un archivo de migración no.
+  #
+  # **No toca nada de usuarios**: ni `user_id` ni los `*_by_user_id`. Quién
+  # registró qué se queda como está.
+  #
+  # Devuelve `{ reconciliados:, saltados: }`, donde `saltados` dice por qué.
+  # Es idempotente: en la segunda pasada no encuentra nada.
+  # C18-04, la limpieza: los paquetes que ya se recibieron sin número —los
+  # esperados recibidos con una etiqueta, y los que pasaron por actualizar—.
+  # Se guardan uno por uno para que corran los callbacks de arriba (número y
+  # WR). Una fila vieja puede no pasar las validaciones de hoy (tracking con
+  # espacios, sin descripción…): ahí se acuña el número a mano y se guarda sin
+  # validar —`save!(validate: false)` **no** corre `before_validation`, por eso
+  # el `send`— y el `after_update` sigue disparando el WR. Los recibidos sin
+  # sucursal de recepción no se tocan: no hay de dónde numerar, se informan.
+  #
+  # Devuelve `{ numerados:, saltados:, sin_sucursal: }`. Idempotente.
+  def self.numerar_recibidos_sin_numero!
+    resultado = { numerados: [], saltados: [], sin_sucursal: [] }
+
+    sin_numero = where(numero_recepcion: nil).where.not(estado: NO_SON_CAJAS)
+    sin_numero.where(sucursal_recepcion_id: nil).find_each do |p|
+      resultado[:sin_sucursal] << [ p.id, p.tracking ]
+    end
+
+    sin_numero.where.not(sucursal_recepcion_id: nil).find_each do |paquete|
+      begin
+        paquete.save!
+      rescue ActiveRecord::RecordInvalid
+        paquete.send(:generate_numero_recepcion)
+        paquete.save!(validate: false)
+      end
+      resultado[:numerados] << [ paquete.id, paquete.tracking, paquete.numero_recepcion ]
+    rescue StandardError => e
+      resultado[:saltados] << [ paquete.id, "#{e.class}: #{e.message}" ]
+    end
+
+    resultado
+  end
+
+  def self.reconciliar_fantasmas!
+    resultado = { reconciliados: [], saltados: [] }
+
+    where(estado: "pre_alerta_estado").where.not(tracking: [ nil, "" ]).find_each do |fantasma|
+      cajas = where(tracking: fantasma.tracking, cliente_id: fantasma.cliente_id)
+                .where.not(id: fantasma.id)
+                .where.not(estado: NO_SON_CAJAS)
+                # `NULLS LAST` a propósito: en Ruby `nil.to_i` es 0 y una caja
+                # sin número se colaría de primera.
+                .order(Arel.sql("numero_caja ASC NULLS LAST, id ASC"))
+      caja = cajas.first
+      next if caja.nil?
+
+      if (documento = fantasma.documento_que_lo_ata)
+        resultado[:saltados] << [ fantasma.id, documento ]
+        next
+      end
+
+      caja.absorber!(fantasma)
+      resultado[:reconciliados] << [ fantasma.id, caja.id ]
+    rescue StandardError => e
+      # Cada fantasma en su propio rescue: esto camina datos viejos, y una fila
+      # sucia no puede tumbar el deploy entero.
+      resultado[:saltados] << [ fantasma.id, "#{e.class}: #{e.message}" ]
+    end
+
+    resultado
+  end
+
+  # Este paquete se queda con lo que el fantasma tenía colgado, y el fantasma se
+  # borra.
+  #
+  # Vive acá y no adentro de `reconciliar_fantasmas!` porque hay **dos** que lo
+  # necesitan: la limpieza masiva de `PR-C7.22`, que camina toda la tabla, y
+  # `/etiquetar` al guardar —cuando el tracking secundario traía su propia
+  # pre-alerta y su propio esperado—. Desde el request no se puede llamar al
+  # batch: recorrería la tabla entera para un caso que ya se sabe cuál es.
+  #
+  # **El orden importa.** `actualizar_estado_from_paquetes!` va al final, después
+  # de reapuntar: `sync_pre_alerta_estados` dispara al guardar el paquete, o sea
+  # antes de que esta pre-alerta le pertenezca, así que sola no avanzaría.
+  #
+  # Y las tareas se mudan **antes** del `destroy!`: `has_many :tareas` es
+  # `dependent: :destroy` y si no, la instrucción que dejó escrita el cliente se
+  # va con el fantasma.
+  #
+  # Devuelve false si no hay nada que absorber o si el fantasma ya está atado a
+  # un documento — un registro que entró a un cobro no desaparece en silencio.
+  def absorber!(fantasma)
+    return false if fantasma.nil? || fantasma.id == id
+    return false if fantasma.documento_que_lo_ata
+
+    self.class.transaction do
+      PreAlertaPaquete.where(paquete_id: fantasma.id).update_all(paquete_id: id)
+      Tarea.where(paquete_id: fantasma.id).update_all(paquete_id: id)
+      fantasma.destroy!
+    end
+    pre_alerta_paquetes.reload.each { |pap| pap.pre_alerta&.actualizar_estado_from_paquetes! }
+    true
+  end
+
+  # Si algo de plata o de papel ya lo nombra, no se borra. Mismo espíritu que
+  # `CajaNoEliminable`: un registro que entró a un documento no desaparece en
+  # silencio.
+  def documento_que_lo_ata
+    {
+      "pre_factura_items"  => PreFacturaItem,
+      "venta_items"        => VentaItem,
+      "nota_debito_items"  => NotaDebitoItem,
+      "nota_credito_items" => NotaCreditoItem,
+      "cotizacion_items"   => CotizacionItem,
+      "reempaques"         => Reempaque
+    }.each do |nombre, modelo|
+      return nombre if modelo.where(paquete_id: id).exists?
+    end
+    nil
   end
 
   # Construye un WarehouseReceipt para el split. Solo se crea cuando hay
@@ -417,14 +1404,38 @@ class Paquete < ApplicationRecord
   # el contador 1 vez, no N).
   def self.generate_numero_recepcion_madre(sucursal:, attrs:)
     return nil if sucursal.nil?
-    prefix = sucursal.codigo_recepcion_prefix
-    return nil if prefix.blank?
 
     fecha = attrs[:fecha_recibido_miami] || Time.zone.now
-    anio = fecha.respond_to?(:year) ? fecha.year : Time.zone.now.year
-    next_number = NumeroRecepcionCounter.next_for!(sucursal: sucursal, anio: anio)
+    fecha = Time.zone.now unless fecha.respond_to?(:year)
+    numero_recepcion_para(sucursal: sucursal, fecha: fecha)
+  end
 
-    format("%<prefix>s%<anio>07d%<num>06d", prefix: prefix, anio: anio, num: next_number)
+  # PR-C6.40: el formato del número de recepción, en un solo lugar.
+  #
+  # Yusef lo escribió a mano en la pregunta 17, rotulando cada parte:
+  #
+  #     R        MIA        26     12     ______________
+  #     prefijo  sucursal   año    mes    correlativo
+  #
+  # Antes era `RM` + año de 7 dígitos + correlativo (`RM0002026000010`) y el
+  # correlativo reiniciaba cada 1° de enero. Ahora reinicia **cada mes**.
+  #
+  # El código de 3 letras ya existía (`Sucursal#codigo`), así que
+  # `codigo_recepcion_prefix` (RM, RS, RH…) queda obsoleto.
+  #
+  # Vive acá porque lo usan los dos caminos —el paquete suelto y el número
+  # madre de un split— y tenerlo duplicado es exactamente cómo se separan las
+  # cosas en este proyecto.
+  def self.numero_recepcion_para(sucursal:, fecha:)
+    codigo = sucursal.codigo
+    return nil if codigo.blank?
+
+    anio = fecha.year
+    mes  = fecha.month
+    numero = NumeroRecepcionCounter.next_for!(sucursal: sucursal, anio: anio, mes: mes)
+
+    format("R%<codigo>s%<anio>02d%<mes>02d%<num>06d",
+           codigo: codigo, anio: anio % 100, mes: mes, num: numero)
   end
 
   # Calcula la próxima letra A-Z disponible para distinguir un tracking
@@ -480,12 +1491,20 @@ class Paquete < ApplicationRecord
   end
 
   # PR-9.a: solo las tareas marcadas `bloquea_avance` congelan el pipeline.
-  # Las auto-creadas desde `pre_alerta_paquetes.instrucciones` nacen con
-  # false, porque `crear_paquete_esperado` ya materializó un Paquete y de
-  # otro modo trabarían la transición pre_alerta_estado → empacado que hace
-  # /etiquetar al recibir el paquete físico.
+  # La bandera nació para que las tareas que se auto-creaban desde
+  # `pre_alerta_paquetes.instrucciones` no trabaran la transición
+  # pre_alerta_estado → empacado. Esa auto-creación se quitó en `PR-C7.41`
+  # (`C16-01`); la bandera se queda como control manual de cada tarea.
   def tareas_bloqueantes_pendientes?
     tareas.abiertas.where(bloquea_avance: true).exists?
+  end
+
+  # ¿Este paquete entró por el mostrador de Miami? La distinción vive en el
+  # catálogo (`Proveedor#tipo`), no en una columna del paquete — decisión de
+  # PR-D3.b. La recolecta también cae acá: vive dentro de la misma pantalla y
+  # su proveedor es de tipo entrega_personal (ver A7-22 en `rc_tracking_required?`).
+  def entrega_personal?
+    proveedor&.entrega_personal? || false
   end
 
   # Retry on guia collisions (old max+1 generator). numero_recepcion usa una
@@ -517,9 +1536,62 @@ class Paquete < ApplicationRecord
     errors.add(:estado, "no se puede avanzar: el paquete tiene tareas pendientes")
   end
 
+  # A7-09: si nadie dijo a qué sucursal va, va a la que el cliente eligió para
+  # retirar. Es el caso normal; el destino explícito existe para cuando el
+  # paquete hace una escala en otra sucursal antes de llegar a la suya.
+  def heredar_sucursal_destino
+    self.sucursal_destino ||= sucursal
+  end
+
+  def limpiar_retencion_al_apagarla
+    self.motivo_retencion_ids = []
+    self.notas_retencion = nil
+  end
+
+  # La explicación al cliente de por qué se mandó por la política: los textos
+  # de los motivos elegidos, y el detalle libre si lo hay. Por ids y no por la
+  # asociación: en un registro nuevo la colección `through` todavía no existe.
+  def nota_de_politica
+    textos = MotivoEnvioPolitica.where(id: motivo_envio_politica_ids).ordered.pluck(:texto_al_cliente)
+    textos << notas_envio_politica.to_s.strip if notas_envio_politica.present?
+    textos.map(&:strip).reject(&:blank?).join("\n")
+  end
+
+  def componer_nota_de_politica
+    nota = nota_de_politica
+    return if nota.blank?
+
+    actual = notas_al_cliente.to_s.strip
+    return if actual.include?(nota)
+
+    self.notas_al_cliente = [ actual.presence, nota ].compact.join("\n\n")
+  end
+
+  def limpiar_politica_al_apagarla
+    self.motivo_envio_politica_ids = []
+    self.notas_envio_politica = nil
+  end
+
   def sync_pre_alerta_estados
     pre_alerta_paquetes.includes(:pre_alerta).each do |pap|
       pap.pre_alerta&.actualizar_estado_from_paquetes!
+    end
+  end
+
+  # A7-19. Yusef lo reprodujo en vivo el 2026-08-12: escaneó un paquete cuya
+  # pre-alerta decía CER, lo ingresó como EXPRESS, y la pre-alerta se quedó
+  # en CER.
+  #
+  #   > "La prealerta era CER, pero tenés que actualizarla a Express."
+  #   > "Ahí es donde tenés que irte a la prealerta y sacarlo de ahí."
+  #
+  # Lo estaba corrigiendo a mano. `aplicar_cambio_servicio` toca solo el
+  # paquete, y **nada en todo el repo escribía `pre_alertas.tipo_envio_id`
+  # después de crearla** — así que el cliente veía el servicio viejo en su
+  # portal para siempre, y el siguiente escaneo volvía a proponerlo.
+  def sync_pre_alerta_tipo_envio
+    pre_alerta_paquetes.includes(:pre_alerta).filter_map(&:pre_alerta).uniq.each do |pa|
+      pa.sincronizar_tipo_envio_desde_paquetes!
     end
   end
 
@@ -552,25 +1624,35 @@ class Paquete < ApplicationRecord
   # El unique index en paquetes.numero_recepcion es la salvaguarda final;
   # el retry en `save` cubre colisiones con data legacy que no pasó por
   # el counter.
+  # Al crear: si hay de dónde numerar (recepción, o retiro como fallback
+  # legacy). Al actualizar, solo al **recibirse**: C18-04 — el esperado de una
+  # pre-alerta nace sin ninguna sucursal, y cuando /etiquetar lo recibe con UNA
+  # etiqueta (`create_single`) lo reusa ya persistido, así que el `save` es un
+  # update y el número nunca se generaba: salía sin número y la etiqueta sin
+  # código de barras. Con dos o más etiquetas `crear_split!` lo asigna a mano,
+  # por eso esas sí salían. Lo mismo le pasaba a lo que pasara por
+  # `EtiquetarController#update`. Un esperado que alguien edite desde /paquetes
+  # con la sucursal de retiro **no** se numera: no llegó.
+  def debe_generar_numero_recepcion?
+    return false if numero_recepcion.present?
+    return sucursal_del_numero.present? if new_record?
+
+    sucursal_recepcion.present? && NO_SON_CAJAS.exclude?(estado)
+  end
+
   def generate_numero_recepcion
-    return if sucursal.nil?
-    prefix = sucursal.codigo_recepcion_prefix
-    return if prefix.blank?
+    origen = sucursal_del_numero
+    return if origen.nil?
 
-    anio = (fecha_recibido_miami&.year || Time.zone.now.year)
-    next_number = NumeroRecepcionCounter.next_for!(sucursal: sucursal, anio: anio)
-
-    self.numero_recepcion = format(
-      "%<prefix>s%<anio>07d%<num>06d",
-      prefix: prefix,
-      anio:   anio,
-      num:    next_number
+    self.numero_recepcion = self.class.numero_recepcion_para(
+      sucursal: origen,
+      fecha: fecha_recibido_miami || Time.zone.now
     )
   end
 
   # Registra la primera vez que el paquete llega a disponible_entrega.
-  # Una vez seteada, NO se borra si el estado avanza (pre_facturado,
-  # facturado, entregado...) porque es un timestamp historico util para
+  # Una vez seteada, NO se borra si el estado avanza (facturado,
+  # entregado...) porque es un timestamp historico util para
   # reportes y listados. Tampoco se resetea si retrocede por correccion
   # administrativa: mantener el timestamp original evita perder trazabilidad.
   # Si en el futuro se necesita "fecha programada vs fecha real", se agrega
@@ -624,6 +1706,23 @@ class Paquete < ApplicationRecord
     self.fecha_recibido_miami = Time.current
   end
 
+  # C19-05: ver el comentario del callback. Compara al minuto: si el valor
+  # nuevo cae en el mismo minuto que el guardado, se restaura el guardado (con
+  # sus segundos). Un cambio deliberado a otro minuto sí entra, con :00.
+  # Restaurar el valor idéntico además saca el atributo del diff de
+  # paper_trail, así el historial no se llena de "cambios" que no lo eran.
+  def preservar_segundos_de_fechas
+    FECHAS_EDITABLES.each do |attr|
+      next unless will_save_change_to_attribute?(attr.to_s)
+
+      viejo = attribute_in_database(attr.to_s)
+      nuevo = self[attr]
+      next unless viejo && nuevo
+
+      self[attr] = viejo if nuevo.to_i / 60 == viejo.to_i / 60
+    end
+  end
+
   # PR-10.a: pasa a usar `VolumetricoCalculator`, que ya implementaba la regla
   # real de Yusef (redondeo a ½ libra con umbrales .10/.60, del spreadsheet de
   # tarifas) y estaba testeada — pero nadie la llamaba. Este método usaba
@@ -637,9 +1736,16 @@ class Paquete < ApplicationRecord
     self.peso_volumetrico = VolumetricoCalculator.vlbs(in3)
   end
 
+  # PR-C6.41: la regla de qué peso manda sale de `VolumetricoCalculator`, que
+  # es la misma que usa el cotizador de /entrega_personal. Antes esta línea era
+  # una copia suelta del `max`.
   def calculate_peso_cobrar
     if peso.present? || peso_volumetrico.present?
-      self.peso_cobrar = [peso || 0, peso_volumetrico || 0].max
+      self.peso_cobrar = VolumetricoCalculator.entre_peso_y_vlbs(
+        peso || 0, peso_volumetrico || 0,
+        solo_volumetrico: cobra_solo_volumetrico?,
+        solo_peso: cobra_solo_peso?
+      )
     end
   end
 
@@ -703,11 +1809,28 @@ class Paquete < ApplicationRecord
   # tracking propio (caso típico: driver privado sin GUID del courier).
   # Si el operador SÍ escribió un tracking (Uber GUID, etc.), se respeta
   # tal cual — no se sobreescribe.
+  # A7-22: `!recolecta_solicitada?` es nuevo y es lo que hace que la recolecta
+  # viva dentro de Entrega Personal sin robarle el prefijo.
+  #
+  # Yusef la definió así: *"la recolecta es como una prealerta de una entrega
+  # personal"* — misma pantalla, un switch al inicio. Pero eso ponía a las dos
+  # reglas a competir: el proveedor sigue siendo de tipo entrega_personal, así
+  # que `ep_tracking_required?` ganaba por orden de callback y la recolecta
+  # salía con tracking **EP**. Ahora si el switch está marcado, manda RC.
+  # `sucursal_del_numero` y no `sucursal`: el prefijo del tracking sale de dónde
+  # se **recibió** el paquete, igual que el número de recepción.
+  #
+  # PR-C7.16: antes leía `sucursal`, que es *dónde retira el cliente*. Funcionaba
+  # solo porque `/entrega_personal` metía la sucursal de Miami en ese campo — el
+  # mismo bug que hacía que la etiqueta dijera "RETIRA EN MIAMI". Con la sucursal
+  # de Miami mudada a `sucursal_recepcion`, esto tenía que mudarse con ella o los
+  # EP se quedaban sin tracking.
   def ep_tracking_required?
     tracking.blank? &&
+      !recolecta_solicitada? &&
       proveedor.present? &&
       proveedor.entrega_personal? &&
-      sucursal.present?
+      sucursal_del_numero.present?
   end
 
   # Genera tracking con formato EP-AÑO-SUC-PROV-NNNNNN. Se llama desde
@@ -715,14 +1838,15 @@ class Paquete < ApplicationRecord
   # sucursal no tiene `codigo_ep` configurado, falla limpio con
   # error de validación en lugar de tracking malformado.
   def generate_ep_tracking
-    suc_codigo = sucursal&.codigo_ep
+    recepcion  = sucursal_del_numero
+    suc_codigo = recepcion&.codigo_ep
     if suc_codigo.blank?
-      errors.add(:tracking, "no se puede generar (sucursal #{sucursal&.nombre || sucursal_id} no tiene codigo_ep configurado)")
+      errors.add(:tracking, "no se puede generar (sucursal #{recepcion&.nombre || sucursal_recepcion_id || sucursal_id} no tiene codigo_ep configurado)")
       return
     end
 
     anio = (fecha_recibido_miami&.year || Time.zone.now.year)
-    next_number = EpCounter.next_for!(anio: anio, sucursal: sucursal, proveedor: proveedor)
+    next_number = EpCounter.next_for!(anio: anio, sucursal: recepcion, proveedor: proveedor)
 
     self.tracking = format(
       "EP-%<anio>04d-%<suc>s-%<prov>s-%<num>06d",
@@ -730,31 +1854,36 @@ class Paquete < ApplicationRecord
     )
   end
 
-  # PR-D4.d: condición para auto-generar tracking RC. Aplica cuando
-  # CEC mandó un motorista propio a recoletar (no es entrega personal
-  # vía driver externo). Mismo formato que EP pero prefijo RC y trigger
-  # distinto: recolecta_solicitada + tracking blank + proveedor presente.
-  # Si el proveedor es entrega_personal, gana EP (chequeado primero
-  # por el orden de los before_validation).
+  # PR-D4.d: condición para auto-generar tracking RC. Aplica cuando CEC mandó un
+  # motorista propio a recolectar. Mismo formato que EP pero prefijo RC.
+  #
+  # A7-22: se le quitó la exclusión `!proveedor.entrega_personal?`. Existía
+  # porque RC y EP se pensaron como mutuamente excluyentes, y la recolecta ahora
+  # vive **dentro** de la pantalla de Entrega Personal — su proveedor es de tipo
+  # entrega_personal casi siempre. Con la exclusión puesta, marcar el switch de
+  # recolecta no hacía nada: el paquete salía con tracking EP.
+  #
+  # Quién gana lo decide ahora `ep_tracking_required?`, que se aparta cuando el
+  # switch está marcado.
   def rc_tracking_required?
     tracking.blank? &&
       recolecta_solicitada? &&
       proveedor.present? &&
-      !proveedor.entrega_personal? &&
-      sucursal.present?
+      sucursal_del_numero.present?
   end
 
   # Genera tracking RC-AÑO-SUC-PROV-NNNNNN. Counter independiente de
   # EpCounter — RC y EP no comparten secuencia.
   def generate_rc_tracking
-    suc_codigo = sucursal&.codigo_ep
+    recepcion  = sucursal_del_numero
+    suc_codigo = recepcion&.codigo_ep
     if suc_codigo.blank?
-      errors.add(:tracking, "no se puede generar (sucursal #{sucursal&.nombre || sucursal_id} no tiene codigo_ep configurado)")
+      errors.add(:tracking, "no se puede generar (sucursal #{recepcion&.nombre || sucursal_recepcion_id || sucursal_id} no tiene codigo_ep configurado)")
       return
     end
 
     anio = (fecha_recibido_miami&.year || Time.zone.now.year)
-    next_number = RcCounter.next_for!(anio: anio, sucursal: sucursal, proveedor: proveedor)
+    next_number = RcCounter.next_for!(anio: anio, sucursal: recepcion, proveedor: proveedor)
 
     self.tracking = format(
       "RC-%<anio>04d-%<suc>s-%<prov>s-%<num>06d",

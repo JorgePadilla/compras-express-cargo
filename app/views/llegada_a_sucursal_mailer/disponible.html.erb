@@ -1,0 +1,29 @@
+<p>Hola <%= @cliente.nombre_completo %>,</p>
+
+<p>
+  <%= @paquetes.size == 1 ? "Tu paquete ya está disponible" : "Tus #{@paquetes.size} paquetes ya están disponibles" %>
+  para retirar en <strong><%= @sucursal.nombre %></strong>.
+</p>
+
+<table cellpadding="6" cellspacing="0" border="0" style="border-collapse: collapse; margin: 16px 0;">
+  <thead>
+    <tr style="background:#f3f4f6;">
+      <th align="left" style="font-size:12px; text-transform:uppercase; color:#6b7280;">Tracking</th>
+      <th align="left" style="font-size:12px; text-transform:uppercase; color:#6b7280;">Descripción</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @paquetes.each do |paquete| %>
+      <tr>
+        <td style="font-family:monospace;"><%= paquete.tracking %></td>
+        <td><%= paquete.descripcion %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<p style="color:#6b7280; font-size:13px;">
+  Podés retirarlos en <%= @sucursal.nombre %><%= ", #{@sucursal.direccion}" if @sucursal.respond_to?(:direccion) && @sucursal.direccion.present? %>.
+</p>
+
+<p>Compras Express Cargo</p>

@@ -1,0 +1,115 @@
+<%# C21-02 · Los dos campos de San Pedro y nada más.
+
+    Deliberadamente **no** están los campos de Miami: mientras compartían
+    formulario, San Pedro los editaba y el controller se los descartaba en
+    silencio. Lo de Miami se muestra de solo lectura, para saber de qué
+    manifiesto se está hablando. %>
+<%= render PageHeaderComponent.new(title: @manifiesto.numero, subtitle: "Guías y aduana") do |header|
+  header.with_back do
+    render ButtonComponent.new(variant: :ghost, href: guias_aduana_index_path, icon: "arrow-left", shortcut: "F2") do
+      "Volver"
+    end
+  end
+end %>
+
+<%# Lo que puso Miami, para ubicarse. No se edita desde acá. %>
+<div class="bg-gray-50 dark:bg-gray-900 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 p-4 mb-6">
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+    <div>
+      <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Empresa</p>
+      <p class="font-medium text-gray-800 dark:text-gray-100"><%= @manifiesto.empresa_manifiesto&.nombre || "—" %></p>
+    </div>
+    <div>
+      <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Consignatario</p>
+      <p class="font-medium text-gray-800 dark:text-gray-100"><%= @manifiesto.consignatario&.nombre || "—" %></p>
+    </div>
+    <div>
+      <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">T. envío del proveedor</p>
+      <p class="font-medium text-gray-800 dark:text-gray-100"><%= @manifiesto.tipo_envio_del_proveedor.presence || "—" %></p>
+    </div>
+    <div>
+      <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Salió de Miami</p>
+      <p class="font-medium text-gray-800 dark:text-gray-100"><%= fecha_y_quien(@manifiesto.fecha_enviado, @manifiesto.expedido_por) || "—" %></p>
+    </div>
+  </div>
+</div>
+
+<%= form_with model: @manifiesto, url: guias_aduana_path(@manifiesto), method: :patch, local: true do |f| %>
+  <% if @manifiesto.errors.any? %>
+    <div class="mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800 p-4">
+      <ul class="list-disc list-inside text-sm text-red-800 dark:text-red-200">
+        <% @manifiesto.errors.full_messages.each do |msg| %><li><%= msg %></li><% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <%= render FormSectionComponent.new(title: "Lo que llena San Pedro Sula") do |section| %>
+    <div class="max-w-md">
+      <%= f.label :fecha_aduana, "Recibido en Honduras", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+      <%= f.date_field :fecha_aduana,
+            class: "block w-full min-h-11 rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal",
+            data: { controller: "flatpickr" } %>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">La fecha en que <b>nosotros</b> la recibimos.</p>
+    </div>
+
+    <%# C21-11 · *"El número de guía termina siendo varios"*, con la forma de
+        nuestros splits: 286441-1, -2, -3.
+
+        `PR-U2`: eran tres renglones vacíos fijos. Con cuatro guías había que
+        guardar, volver a entrar y llenar la cuarta; y las tres casillas vacías
+        ocupaban la pantalla siempre. Jorge: *"veo que hay 3 guías por defecto,
+        esto debería ser un poco más dinámico"*.
+
+        El `<template>` se genera **del mismo partial** que las filas de arriba,
+        con `child_index: "NEW_INDEX"`. Y va `ManifiestoGuia.new` y no
+        `guias.build`: `build` agrega a la asociación y pintaría una fila
+        fantasma de más. %>
+    <div class="mt-6 max-w-md" data-controller="guias-repetidor">
+      <span class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Números de guía del proveedor</span>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+        Pueden ser varios — como <span class="font-mono">286441-1</span>, <span class="font-mono">-2</span>, <span class="font-mono">-3</span>.
+      </p>
+
+      <div data-guias-repetidor-target="lista" class="space-y-2">
+        <%= f.fields_for :guias do |g| %>
+          <%= render "guias_aduana/guia_fila", gf: g %>
+        <% end %>
+        <%# Sin ninguna guía todavía, una fila lista para escribir: entrar y
+            tener que apretar «Agregar» antes de poder teclear es un paso de más
+            en la pantalla que existe justamente para teclear guías.
+
+            **El `child_index` tiene que ser un número.** Acá decía `"nueva"`, y
+            Rails **tiraba la fila entera en silencio**: `permit` solo reconoce
+            una colección anidada cuando la llave matchea `/\A-?\d+\z/`
+            (`Parameters.nested_attribute?`). Con una llave de texto,
+            `guias_attributes` llegaba al modelo como `{}` — se escribía la
+            guía, salía «guardado.» y no quedaba nada. Jorge: *"siempre sale que
+            faltan guías de proveedor aunque se ponga algo"*.
+
+            El `<template>` de abajo sí puede llevar texto porque el JS lo
+            reemplaza por `Date.now()` antes de que exista en el DOM. %>
+        <% if @manifiesto.guias.empty? %>
+          <%= f.fields_for :guias, ManifiestoGuia.new, child_index: 0 do |g| %>
+            <%= render "guias_aduana/guia_fila", gf: g %>
+          <% end %>
+        <% end %>
+      </div>
+
+      <template data-guias-repetidor-target="template">
+        <%= f.fields_for :guias, ManifiestoGuia.new, child_index: "NEW_INDEX" do |g| %>
+          <%= render "guias_aduana/guia_fila", gf: g %>
+        <% end %>
+      </template>
+
+      <div class="mt-3">
+        <%= render(ButtonComponent.new(variant: :outline_teal, size: :lg, icon: "plus-circle",
+              data: { action: "click->guias-repetidor#agregar" })) { "Agregar guía" } %>
+      </div>
+    </div>
+
+    <% section.with_footer do %>
+      <%= link_to "Cancelar", guias_aduana_index_path, class: "text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white self-center" %>
+      <%= render(ButtonComponent.new(variant: :gold, size: :lg, type: :submit, shortcut: "F10")) { "Guardar" } %>
+    <% end %>
+  <% end %>
+<% end %>

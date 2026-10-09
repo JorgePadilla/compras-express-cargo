@@ -1,20 +1,72 @@
 <ul class="space-y-1 px-3">
   <%= sidebar_link "Home", root_path, icon: "home" %>
 
-  <% if can_access?(:etiquetar) || can_access?(:manifiestos) || can_access?(:pre_alertas) || can_access?(:paquetes) %>
-    <%= sidebar_section "Logistica" do %>
+  <%# PR-C7.36: el mostrador de Miami tiene bloque propio. Las tres las autoriza
+      `can_access?` al mismo par de roles (supervisor_miami, digitador_miami);
+      Pre-Alertas y Paquetes los ve cualquiera, y por eso se quedan en Logistica.
+      El guard viejo preguntaba por :etiquetar, :manifiestos, :pre_alertas y
+      :paquetes — se habia olvidado de :entrega_personal, aunque su link vivia
+      adentro. No se notaba porque los tres permisos de Miami van juntos. %>
+  <%# Miami es **el mostrador**: recibir el paquete y entregarlo en mano. Mover
+      la carga —armar el manifiesto, recibirla en Honduras— salió de acá y se
+      fue a Logística (Jorge, 2026-08-30: *"hay que mover los links de mover
+      carga al grupo de logística"*). Con San Pedro entrando al manifiesto,
+      dejarlo en «Miami» además mentía sobre quién lo usa. %>
+  <% bloque_miami = can_access?(:etiquetar) || can_access?(:entrega_personal) %>
+  <% if bloque_miami %>
+    <%= sidebar_section "Miami" do %>
+      <%# Este grupo ya estaba en orden de proceso y se queda igual: se etiqueta
+          lo que llega, la entrega personal es el otro mostrador, y Clientes es
+          consulta —transversal— así que va al final. Lo fija el mismo lint que
+          a los otros dos (`test/lint/orden_del_menu_test.rb`). %>
       <%= sidebar_link "Etiquetar", etiquetar_path, icon: "tag" if can_access?(:etiquetar) %>
       <%= sidebar_link "Entrega Personal", new_entrega_personal_path, icon: "user-plus" if can_access?(:entrega_personal) %>
-      <%= sidebar_link "Manifiestos", manifiestos_path, icon: "cube" if can_access?(:manifiestos) %>
+      <%# C16-06 · Yusef, leyendo este bloque: *"falta Clientes para Miami, para
+          que ellos lo puedan ver… a veces buscan un cliente para tratar de
+          encontrar cuál es el número correcto"*. El link suelto de abajo ya lo
+          tenían, pero leyeron el bloque y pararon. Acá va, y el suelto se queda
+          para los roles que no tienen mostrador. %>
+      <%= sidebar_link "Clientes", clientes_path, icon: "users" if can_access?(:clientes) %>
+    <% end %>
+  <% end %>
+
+  <% if can_access?(:pre_alertas) || can_access?(:paquetes) || can_access?(:manifiestos) || can_access?(:recibir_carga) || can_access?(:medicion) || can_access?(:guias_aduana) %>
+    <%= sidebar_section "Logistica" do %>
+      <%# El grupo va **en orden de proceso**, siguiendo a la carga (Jorge,
+          2026-09-01: *"en los menú pongamos por orden de proceso los botones,
+          links de logística"*). El menú se lee de arriba abajo igual que el
+          día de trabajo, y lo transversal cae al final. %>
+      <%# 1 · Antes de que exista el paquete: el cliente avisa que viene. %>
       <%= sidebar_link "Pre-Alertas", pre_alertas_path, icon: "bell-alert" if can_access?(:pre_alertas) %>
+      <%# 2 · Mover la carga: se arma en Miami y se recibe en Honduras, pero es
+          un solo recorrido y vive junto. %>
+      <%= sidebar_link "Manifiestos", manifiestos_path, icon: "cube" if can_access?(:manifiestos) %>
+      <%# 3 · C21-02 · Lo que San Pedro le pone al manifiesto ya salido: la guía
+          del proveedor y la fecha de recibido en Honduras. Va acá y no adentro
+          de Manifiestos porque son dos áreas distintas con dos roles distintos.
+          Y va **antes** de Recibir Carga —estaba después— porque trabaja sobre
+          manifiestos en `enviado`, que es justamente lo que Recibir Carga pasa
+          a `en_aduana`. Confirmado por Jorge el 2026-09-01. %>
+      <%= sidebar_link "Guías y aduana", guias_aduana_index_path, icon: "document-text" if can_access?(:guias_aduana) %>
+      <%# 4 · Llegó: se escanean las cajas. %>
+      <%= sidebar_link "Recibir Carga", recepcion_carga_index_path, icon: "truck" if can_access?(:recibir_carga) %>
+      <%# 5 · C26-02 · Ya recibida: se pesa y se mide cada caja antes de la
+          pre-factura. *"Medición se llama."* %>
+      <%= sidebar_link "Medición", medicion_index_path, icon: "scale" if can_access?(:medicion) %>
+      <%# Transversal, no es un paso: al final. %>
       <%= sidebar_link "Todos los Paquetes", paquetes_path, icon: "archive-box" if can_access?(:paquetes) %>
     <% end %>
   <% end %>
 
   <% if can_access?(:pre_facturas) || can_access?(:ventas) || can_access?(:notas_debito) || can_access?(:notas_credito) || can_access?(:cotizaciones) || can_access?(:financiamientos) %>
     <%= sidebar_section "Facturacion y Cobro" do %>
-      <%= sidebar_link "Pre-Facturas", pre_facturas_path, icon: "document-text" if can_access?(:pre_facturas) %>
+      <%# También en orden de proceso, y es el mismo que dicta `CAMINO_HONDURAS`
+          en `lib/procesos_pdf.rb`: pre-factura → factura → pago.
+          Cotizaciones sube al primer lugar —estaba segunda—: se cotiza antes de
+          pre-facturar, no después. Lo que sigue a la factura (las notas y el
+          financiamiento) son ajustes posteriores y quedan al final. %>
       <%= sidebar_link "Cotizaciones", cotizaciones_path, icon: "clipboard-document-list" if can_access?(:cotizaciones) %>
+      <%= sidebar_link "Pre-Facturas", pre_facturas_path, icon: "document-text" if can_access?(:pre_facturas) %>
       <%= sidebar_link "Facturas", ventas_path, icon: "currency-dollar" if can_access?(:ventas) %>
       <%= sidebar_link "Recibos", recibos_path, icon: "receipt-percent" if can_access?(:recibos) %>
       <%= sidebar_link "Notas de Debito", notas_debito_path, icon: "document-plus" if can_access?(:notas_debito) %>
@@ -23,7 +75,16 @@
     <% end %>
   <% end %>
 
-  <%= sidebar_link "Clientes", clientes_path, icon: "users" if can_access?(:clientes) %>
+  <%= sidebar_link "Clientes", clientes_path, icon: "users" if can_access?(:clientes) && !bloque_miami %>
+
+  <%# PR-C7.40: la bandeja de tareas. Jorge: *"veo que falta la parte de tareas…
+      faltan los links del menú"*. La pantalla no estaba porque no existía ruta
+      global: solo se veían las de UN paquete o las de UN cliente. Va suelta y no
+      en una sección de área porque las tareas cruzan las áreas — cada una trae
+      su departamento y `visibles_para` ya filtra lo que a uno le toca. %>
+  <% if can_access?(:tareas) %>
+    <%= sidebar_link "Tareas", tareas_path, icon: "clipboard-document-check" %>
+  <% end %>
 
   <% if can_access?(:entregas) %>
     <%= sidebar_link "Entregas", entregas_path, icon: "truck" %>
@@ -54,15 +115,35 @@
   <% if admin? %>
     <%= sidebar_section "Configuracion" do %>
       <%= sidebar_link "Usuarios", users_path, icon: "user-group" %>
+      <%# `RP-58` · Qué pantalla ve cada puesto. Va junto a Usuarios: uno dice
+          quién es cada quien y el otro qué puede. %>
+      <%= sidebar_link "Permisos por rol", permisos_path, icon: "lock-closed" %>
+      <%# `RP-58` paso 2b · Y cómo se llama cada puesto, que es la otra mitad de
+          lo que pidió Yusef. Va pegado a Permisos: son las dos cosas que dijo en
+          la misma frase. %>
+      <%= sidebar_link "Títulos de los roles", roles_path, icon: "identification" %>
       <%= sidebar_link "Sucursales", sucursales_path, icon: "building-storefront" %>
+      <%# C21-08 · El portal de catálogos del manifiesto —empresas
+          transportadoras, tipos de envío del proveedor, consignatarios y
+          tamaños de caja—. Jorge lo mandó acá el 2026-08-30; antes colgaba de
+          Miami. Es un CRUD de catálogos como Sucursales, y quien los carga
+          —Manal y Vanesa— es admin. %>
+      <%= sidebar_link "Catálogos del Manifiesto", catalogos_manifiesto_path, icon: "rectangle-stack" %>
+      <%# PR-C7.12: "Categorias de Precio" se fue de acá. Jorge: "no le veo mucho
+          valor". Sonaba a lo mismo que la línea de arriba y era un CRUD de un
+          campo; los grupos de clientes se administran dentro de la Tabla de
+          Servicios, que es donde vive su precio. %>
       <%= sidebar_link "Tabla de Servicios", servicios_path, icon: "currency-dollar" %>
-      <%= sidebar_link "Categorias de Precio", categoria_precios_path, icon: "swatch" %>
       <%= sidebar_link "Tarifas de Recolecta", tarifas_recolecta_path, icon: "map-pin" %>
       <%= sidebar_link "Servicios Extra", servicios_extra_path, icon: "puzzle-piece" %>
       <%= sidebar_link "Proveedores", proveedores_path, icon: "shopping-bag" %>
       <%= sidebar_link "Motivos de Retención", motivos_retencion_path, icon: "hand-raised" %>
+      <%= sidebar_link "Motivos de Envío por Política", motivos_envio_politica_path, icon: "paper-airplane" %>
       <%= sidebar_link "Plantillas Notas Cliente", plantillas_notas_cliente_path, icon: "clipboard" %>
+      <%= sidebar_link "Plantillas Descripción", plantillas_descripcion_path, icon: "tag" %>
       <%= sidebar_link "Empresa", empresa_path, icon: "building-office-2" %>
+      <%= sidebar_link "Tasa de Cambio", tasa_cambio_path, icon: "currency-dollar" %>
+      <%= sidebar_link "Ajustes de Etiqueta", ajustes_etiqueta_path, icon: "printer" %>
       <%# "Reportes" apuntaba a "#" — se agrega cuando exista (Fase 6). %>
     <% end %>
   <% end %>

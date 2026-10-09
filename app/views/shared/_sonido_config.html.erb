@@ -5,6 +5,12 @@
     para desbloquear el AudioContext de Chrome. %>
 <% habilitado = Current.user&.sonido_habilitado != false %>
 <% volumen = Current.user&.sonido_volumen || 60 %>
+<%# PR-C29.11 · `tactil: true` en las pantallas de pantalla táctil (/medicion):
+    el mismo botón, del tamaño de un dedo. Jorge: *"all actionable in
+    medicion should be easy to touch in a touch screen"*. %>
+<%# Y en táctil con borde que se vea: `gray-300` da 1.47:1 contra blanco;
+    `gray-500`, 4.83:1 (1.4.11 pide 3:1). %>
+<% tamano = local_assigns[:tactil] ? "text-base px-4 min-h-12 ring-gray-500" : "text-sm px-3 py-1.5 ring-gray-300" %>
 
 <div data-controller="sonido-config"
      data-sonido-config-url-value="<%= preferencia_sonido_path %>"
@@ -12,7 +18,7 @@
 
   <button type="button" data-action="click->sonido-config#open"
           title="Configurar sonidos"
-          class="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg ring-1 ring-gray-300 dark:ring-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+          class="inline-flex items-center gap-1.5 <%= tamano %> rounded-lg foco-cec ring-1 dark:ring-gray-400 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
     <%= heroicon(habilitado ? "speaker-wave" : "speaker-x-mark", variant: :solid,
           options: { class: "w-4 h-4 #{habilitado ? 'text-cec-teal' : 'text-gray-400'}" }) %>
     Sonidos
@@ -22,13 +28,13 @@
           aria-labelledby="sonido-config-title"
           style="margin: auto"
           class="rounded-xl p-0 w-[26rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-cec-teal/40">
-    <div class="bg-cec-teal/10 px-5 py-3 border-b border-cec-teal/30">
-      <h3 id="sonido-config-title" class="text-base font-semibold text-cec-teal-dark dark:text-cec-teal-light">
-        Sonidos de escaneo
-      </h3>
-    </div>
+    <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, titulo: "Sonidos de escaneo",
+          titulo_tag: :h3, titulo_id: "sonido-config-title") %>
 
-    <div class="p-5 space-y-5 bg-white dark:bg-gray-800">
+    <%# Con las opciones de error y los cinco sonidos de prueba el
+        diálogo pasa de alto en pantallas de laptop, y un <dialog> que se pasa
+        no scrollea solo: deja los botones de abajo fuera de alcance. %>
+    <div class="p-5 space-y-5 bg-white dark:bg-gray-800 max-h-[70vh] overflow-y-auto">
       <label class="flex items-center gap-3">
         <input type="checkbox" data-sonido-config-target="toggle"
                data-action="change->sonido-config#cambiar"
@@ -51,19 +57,83 @@
         </p>
       </div>
 
+      <%# RP-20: las tres opciones del sonido de error. Le prometimos a Yusef
+          "tres opciones para que las oigas" y nunca se las mandamos; acá las
+          oye en la pantalla donde se usan, con el ruido de la bodega de fondo,
+          que es donde se juzga un sonido de bodega. La primera es la de por
+          defecto: la «alarma» desde PR-C29.9 (*"más cruel, fuerte, molesto,
+          intenso"*), y la de siempre sigue en la lista. %>
+      <div>
+        <p class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Sonido de error</p>
+        <div class="space-y-1.5">
+          <% SonidosDeError::VARIANTES.each do |variante| %>
+            <div class="flex items-center gap-2">
+              <label class="flex items-start gap-2 flex-1 cursor-pointer">
+                <input type="radio" name="sonido_error_variante" value="<%= variante[:id] %>"
+                       data-sonido-config-target="variante"
+                       data-action="change->sonido-config#cambiar"
+                       <%= "checked" if variante[:id] == variante_de_error_actual %>
+                       class="mt-0.5 border-gray-300 text-cec-teal focus:ring-cec-teal">
+                <span>
+                  <span class="block text-sm text-gray-700 dark:text-gray-200"><%= variante[:nombre] %></span>
+                  <span class="block text-xs text-gray-500 dark:text-gray-400"><%= variante[:descripcion] %></span>
+                </span>
+              </label>
+              <%# El texto va como bloque: `label:` solo pone el nombre
+                  accesible y el botón sale visualmente vacío. %>
+              <%= render ButtonComponent.new(
+                    variant: :secondary, size: :xs,
+                    class: "shrink-0",
+                    aria: { label: "Escuchar #{variante[:nombre]}" },
+                    data: { action: "click->sonido-config#probarVariante",
+                            variante: variante[:id] }) do %>Escuchar<% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <%# C29-08 · *"Cada error tiene que tener un tono distinto para que ellos
+          sepan."* Los dos que frenan al escanear el manifiesto eligen su
+          propia opción de la lista de arriba, y se prueban en «Probar», más
+          abajo. %>
+      <div>
+        <p class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Un sonido por error</p>
+        <div class="space-y-2">
+          <% SonidosDeError::MOTIVOS.each do |motivo| %>
+            <div>
+              <%= label_tag "sonido_motivo_#{motivo[:id]}", motivo[:nombre],
+                    class: "block text-sm text-gray-700 dark:text-gray-200" %>
+              <%= select_tag "sonido_motivo_#{motivo[:id]}",
+                    options_for_select(SonidosDeError::VARIANTES.map { |v| [ v[:nombre], v[:id] ] },
+                                       variante_de_motivo(motivo[:id])),
+                    data: { sonido_config_target: "motivo", motivo: motivo[:id],
+                            action: "change->sonido-config#cambiar" },
+                    class: "mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <%# La lista sale de `SonidosDeEscaneo` y no de acá adentro: escrita a
+          mano se separó de la realidad. El botón que decía "Pre-alerta" tocaba
+          el sonido de «ya existía», y el de pre-alerta de verdad —el que suma
+          la voz— no tenía botón. Hay test que lo confronta contra lo que las
+          pantallas cablean. %>
       <div>
         <p class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Probar</p>
-        <div class="grid grid-cols-2 gap-2">
-          <% [
-               [ "success", "Guardado" ],
-               [ "notify",  "Pre-alerta" ],
-               [ "alert",   "Notas del cliente" ],
-               [ "error",   "Error" ]
-             ].each do |tono, etiqueta| %>
-            <button type="button" data-action="click->sonido-config#probar" data-tono="<%= tono %>"
-                    class="px-3 py-2 text-xs font-medium rounded-lg ring-1 ring-gray-300 dark:ring-gray-600 text-gray-700 dark:text-gray-200 hover:bg-cec-teal/10 transition-colors">
-              <%= etiqueta %>
-            </button>
+        <div class="space-y-1.5">
+          <% SonidosDeEscaneo::BOTONES.each do |boton| %>
+            <div class="flex items-center gap-2">
+              <span class="flex-1">
+                <span class="block text-sm text-gray-700 dark:text-gray-200"><%= boton[:etiqueta] %></span>
+                <span class="block text-xs text-gray-500 dark:text-gray-400"><%= boton[:ayuda] %></span>
+              </span>
+              <%= render ButtonComponent.new(
+                    variant: :secondary, size: :xs,
+                    class: "shrink-0",
+                    aria: { label: "Escuchar #{boton[:etiqueta]}" },
+                    data: { action: "click->sonido-config#probar", tono: boton[:accion] }) do %>Escuchar<% end %>
+            </div>
           <% end %>
         </div>
         <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">

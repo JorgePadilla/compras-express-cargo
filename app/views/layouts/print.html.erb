@@ -1,8 +1,19 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <title>Warehouse Receipt - <%= @paquete&.numero_recepcion.presence || @paquete&.tracking || "#{@paquetes&.size || 0} cajas" %></title>
+  <%# C21-09: el layout dejó de ser solo del Warehouse Receipt cuando entró el
+      manifiesto impreso. Cada vista pone su título con `content_for
+      :titulo_print`; sin eso queda el del WR, que es como venía. %>
+  <title><%= content_for?(:titulo_print) ? yield(:titulo_print) : "Warehouse Receipt - #{@paquete&.numero_recepcion.presence || @paquete&.tracking || "#{@paquetes&.size || 0} cajas"}" %></title>
   <meta charset="UTF-8">
+  <%# PR-C29.7 · A esta página se llega también por una visita de Turbo: el
+      redirect de «Finalizar e Imprimir», que es un PATCH de Turbo. Si Turbo
+      solo cambiara el body, `window.onload` no volvería a dispararse y el
+      diálogo de impresión no se abriría nunca. Hoy Turbo ya recarga entera
+      porque el `tailwind` con `data-turbo-track` de la app no está acá —se
+      verificó sacando esta línea: sigue imprimiendo—, pero eso es un efecto
+      lateral de qué CSS carga cada layout. Esto lo dice a propósito. %>
+  <meta name="turbo-visit-control" content="reload">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Arial, Helvetica, sans-serif; color: #111; }
@@ -13,18 +24,56 @@
     }
     @media screen {
       body { padding: 24px; max-width: 8.5in; margin: 0 auto; background: #f3f4f6; }
+      .barra-imprimir { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+      .barra-imprimir button {
+        min-height: 44px; padding: 0 20px; border: 0; border-radius: 8px; cursor: pointer;
+        background: #1B2559; color: #fff; font: 600 15px Arial, Helvetica, sans-serif;
+      }
       .wr-sheet { background: #fff; padding: 28px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); border-radius: 6px; }
     }
   </style>
 </head>
 <body>
+  <%# C29-11 · *"No tiene el botón de imprimir a la mano."* Si el diálogo se
+      cancela, o la hoja se abrió sin `?print=true`, queda la página y nada
+      con qué imprimirla más que Ctrl+P. Va crudo y no `ButtonComponent`
+      porque este layout no carga Tailwind: el componente saldría sin forma.
+      `.no-print` lo saca del papel. %>
+  <div class="barra-imprimir no-print">
+    <button type="button" onclick="window.print()">Imprimir</button>
+  </div>
   <div class="wr-sheet">
     <%= yield %>
   </div>
   <script>
-    if (new URL(window.location.href).searchParams.get("print") === "true") {
-      window.onload = function() { window.print(); }
-    }
+    // C19-01: el WR que llega encadenado desde la etiqueta (`?print=true&cerrar=1`)
+    // hace el mismo ciclo que ella: imprime y se cierra solo. Yusef: "le doy a
+    // imprimir y, como hice con la etiqueta, me regresa acá". Sin `cerrar` —el
+    // botón «Ver WR» de la ficha, el link del flash— queda el preview de siempre.
+    // El cierre es el mismo portado de layouts/etiqueta.html.erb: `afterprint`
+    // dispara tanto si imprimió como si canceló (los dos casos vuelven a
+    // escanear), y el media query es el fallback para Safari viejo, que no
+    // dispara `afterprint`. `window.close()` sobre una pestaña que no abrió un
+    // script no hace nada, así que pegar la URL a mano sigue siendo inofensivo.
+    (function () {
+      var params = new URL(window.location.href).searchParams;
+      if (params.get("print") !== "true") return;
+
+      var cerrar = params.get("cerrar") === "1";
+
+      window.onload = function () {
+        if (cerrar) {
+          window.addEventListener("afterprint", function () { window.close(); }, { once: true });
+
+          var mq = window.matchMedia("print");
+          if (mq && mq.addEventListener) {
+            mq.addEventListener("change", function (e) { if (!e.matches) window.close(); });
+          }
+        }
+
+        window.print();
+      };
+    })();
   </script>
 </body>
 </html>

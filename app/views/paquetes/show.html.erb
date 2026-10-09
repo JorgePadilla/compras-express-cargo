@@ -42,65 +42,69 @@
   # ── Acciones (todas :primary :sm; excepción: Eliminar PA = :danger) ──
   if @edit_mode
     header.with_action do
-      render(ButtonComponent.new(variant: :primary, size: :sm, type: "submit",
+      render(ButtonComponent.new(variant: :primary, size: :xs, type: "submit",
                                  form: "paquete-edit-form",
                                  icon: "check", shortcut: "F10")) { "Guardar" }
     end
     header.with_action do
-      render(ButtonComponent.new(variant: :ghost, size: :sm, href: paquete_path(@paquete),
+      render(ButtonComponent.new(variant: :ghost, size: :xs, href: paquete_path(@paquete),
                                  icon: "x-mark", shortcut: "F2")) { "Cancelar" }
     end
   else
     header.with_action do
-      render(ButtonComponent.new(variant: :primary, size: :sm, href: paquete_path(@paquete, mode: "edit"),
+      render(ButtonComponent.new(variant: :primary, size: :xs, href: paquete_path(@paquete, mode: "edit"),
                                  icon: "pencil-square", shortcut: "F6")) { "Editar" }
     end
   end
   header.with_action do
     count = @paquete.tareas.abiertas.count
     label = count.positive? ? "Tareas (#{count})" : "Tareas"
-    render(ButtonComponent.new(variant: :primary, size: :sm, href: paquete_tareas_path(@paquete),
+    render(ButtonComponent.new(variant: :primary, size: :xs, href: paquete_tareas_path(@paquete),
                                icon: "clipboard-document-check")) { label }
   end
   header.with_action do
-    render(ButtonComponent.new(variant: :primary, size: :sm, href: paquete_reempaques_path(@paquete),
+    render(ButtonComponent.new(variant: :primary, size: :xs, href: paquete_reempaques_path(@paquete),
                                icon: "cube-transparent")) { "Re-empaque" }
   end
   header.with_action do
-    render(ButtonComponent.new(variant: :primary, size: :sm, href: warehouse_receipt_paquete_path(@paquete),
+    # 2026-10-08 · F4 es «imprimir un documento» en toda la app: abre el
+    # diálogo y la pestaña se cierra al terminar, como las hojas del
+    # manifiesto (PR-C29.7). Para mirarlo sin imprimir, el WR tiene su
+    # botón «Imprimir» y el link «Ver Warehouse Receipt» de los avisos.
+    render(ButtonComponent.new(variant: :primary, size: :xs, href: warehouse_receipt_paquete_path(@paquete, print: true, cerrar: 1),
                                icon: "document-text", target: "_blank", shortcut: "F4")) { "Warehouse Receipt" }
   end
   if (pf = @paquete.pre_factura)
     header.with_action do
-      render(ButtonComponent.new(variant: :primary, size: :sm, href: pre_factura_path(pf),
+      render(ButtonComponent.new(variant: :primary, size: :xs, href: pre_factura_path(pf),
                                  icon: "document-arrow-down", target: "_blank")) { "Imprimir Pre-Factura" }
     end
     header.with_action do
-      render(ButtonComponent.new(variant: :primary, size: :sm, href: pre_factura_path(pf),
+      render(ButtonComponent.new(variant: :primary, size: :xs, href: pre_factura_path(pf),
                                  icon: "eye")) { "Ver Pre-Factura" }
     end
   end
   if (vt = @paquete.venta)
     header.with_action do
-      render(ButtonComponent.new(variant: :primary, size: :sm, href: venta_path(vt),
+      render(ButtonComponent.new(variant: :primary, size: :xs, href: venta_path(vt),
                                  icon: "currency-dollar")) { "Ver Factura #{vt.numero}" }
     end
   end
   header.with_action do
-    render(ButtonComponent.new(variant: :primary, size: :sm, href: reimprimir_etiquetas_paquete_path(@paquete),
+    render(ButtonComponent.new(variant: :primary, size: :xs, href: reimprimir_etiquetas_paquete_path(@paquete),
                                icon: "printer", target: "_blank")) { "Re-imprimir Etiquetas Miami" }
   end
 
   # ── Pre-Alerta management (Mover siempre disponible; Eliminar solo si está vinculado) ──
   mover_label = @paquete.pre_alerta_paquetes.any? ? "Mover a otra Pre-Alerta" : "Asignar a Pre-Alerta"
   header.with_action do
-    render(ButtonComponent.new(variant: :primary, size: :sm, icon: "arrows-right-left",
+    render(ButtonComponent.new(variant: :primary, size: :xs, icon: "arrows-right-left",
                                type: "button",
                                data: { action: "click->mover-pre-alerta-modal#open" })) { mover_label }
   end
   if @paquete.pre_alerta_paquetes.any?
     header.with_action do
-      render(ButtonComponent.new(variant: :danger, size: :sm, href: eliminar_de_pre_alerta_paquete_path(@paquete),
+      render(ButtonComponent.new(variant: :danger, size: :xs, href: eliminar_de_pre_alerta_paquete_path(@paquete),
                                  icon: "x-mark",
                                  data: {
                                    turbo_method: :delete,
@@ -111,11 +115,11 @@
 
   # ── Navegación ──
   header.with_action do
-    render(ButtonComponent.new(variant: :primary, size: :sm, href: paquete_path(@paquete),
+    render(ButtonComponent.new(variant: :primary, size: :xs, href: paquete_path(@paquete),
                                icon: "arrow-path", data: { turbo_frame: "paquete_dynamic" })) { "Refrescar" }
   end
-  header.with_action do
-    render(ButtonComponent.new(variant: :primary, size: :sm, href: paquetes_path,
+  header.with_back do
+    render(ButtonComponent.new(variant: :primary, size: :xs, href: paquetes_path,
                                icon: "arrow-left", shortcut: "F2")) { "Volver" }
   end
 end %>
@@ -142,6 +146,160 @@ end %>
         <% end %>
       </div>
     </div>
+  </div>
+
+  <%# ── Bajar la cantidad de cajas con PIN (PR-C6.42 · RP-18) ──
+      Yusef marcó ☒ "que deje hacerlo, pero solo con PIN de supervisor", y dio
+      el caso: "le pusieron 2 y al final es un paquete, y cuando van a entregar,
+      el sistema no va a querer entregar porque decía que eran dos".
+
+      Va acá y no en /etiquetar porque el problema aparece **en Honduras**, al
+      entregar — la caja fantasma no existe, nadie la va a entregar nunca, y sin
+      esto el tracking entero se queda sin poder cerrarse. %>
+  <div data-controller="dialogo"
+       class="mb-4 flex flex-wrap items-center justify-between gap-3 px-4 py-3
+              bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+    <p class="text-xs text-gray-600 dark:text-gray-300">
+      ¿Son menos cajas de las que dice? Un supervisor lo puede corregir con su PIN.
+    </p>
+    <% if @supervisores_cajas.any? %>
+      <%= render ButtonComponent.new(variant: :secondary, size: :sm,
+            data: { action: "dialogo#abrir" }) do %>Bajar la cantidad de cajas<% end %>
+    <% else %>
+      <span class="text-xs italic text-gray-500">Ningún supervisor tiene PIN asignado todavía.</span>
+    <% end %>
+
+    <% if @supervisores_cajas.any? %>
+    <dialog data-dialogo-target="dialogo" style="margin: auto"
+            class="rounded-xl p-0 w-[26rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-gray-300">
+      <%= form_with url: bajar_cajas_paquete_path(@paquete), method: :post do %>
+        <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, titulo: "Bajar la cantidad de cajas", titulo_tag: :h3) do %>
+          <p class="text-xs mt-0.5 opacity-90">Lo autoriza un supervisor con su PIN. Queda registrado quién.</p>
+        <% end %>
+        <div class="p-5 space-y-3 bg-white">
+          <div>
+            <%= label_tag :cantidad, "Cuántas cajas son en realidad", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= number_field_tag :cantidad, @paquete.cantidad_paquetes.to_i - 1,
+                  min: 1, max: @paquete.cantidad_paquetes.to_i - 1,
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+            <p class="mt-1 text-xs text-gray-500">
+              Hoy dice <%= @paquete.cantidad_paquetes %>. Se eliminan las cajas de más, empezando por la última.
+            </p>
+          </div>
+          <div>
+            <%= label_tag :supervisor_id, "Supervisor", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= select_tag :supervisor_id,
+                  options_from_collection_for_select(@supervisores_cajas, :id, :nombre),
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+          </div>
+          <div>
+            <%= label_tag :pin, "PIN", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= password_field_tag :pin, nil, inputmode: "numeric", autocomplete: "off", maxlength: 4,
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono tracking-widest" %>
+          </div>
+          <div>
+            <%= label_tag :motivo, "Motivo", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= text_field_tag :motivo, nil, placeholder: "Ej. se ingresaron 2 cajas y al final era una",
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+          </div>
+          <p class="text-xs text-gray-500">
+            Si alguna de esas cajas ya está en una pre-factura abierta, se le saca la línea
+            y se recalcula el total. Si ya se facturó o se entregó, no se puede desde acá.
+          </p>
+        </div>
+        <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">
+          <%= render ButtonComponent.new(variant: :ghost, size: :sm,
+                data: { action: "dialogo#cerrar" }) do %>Cancelar<% end %>
+          <%= render ButtonComponent.new(variant: :primary, size: :sm, type: "submit") do %>Bajar la cantidad<% end %>
+        </div>
+      <% end %>
+    </dialog>
+    <% end %>
+  </div>
+<% end %>
+
+<%# C24-01 · La excepción de cobro del paquete.
+
+    Yusef, sobre unos generadores de 400 lb reales y 150 volumétricas: *"es lo
+    que yo voy a cobrar"* — el **menor**, al revés de la regla normal. Y el
+    control, que también lo puso él: *"no lo puede hacer cualquiera… tiene que
+    ser alguien de supervisor o para arriba"*.
+
+    Va en su propio `dialogo` y no dentro del de bajar cajas: son dos actos
+    distintos con dos listas de supervisores distintas —el de cobro **no incluye
+    a Miami**— y meterlos juntos haría que uno heredara los permisos del otro. %>
+<% if can_access?(:paquetes) && @supervisores_cobro&.any? %>
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6" data-controller="dialogo">
+    <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">Excepción de cobro</h3>
+    <p class="text-xs text-gray-600 dark:text-gray-300 mb-3">
+      <% if @paquete.cobro_solo_volumetrico? %>
+        Este paquete cobra <strong>solo el volumétrico</strong>
+        (<%= @paquete.peso_volumetrico %> lb) en vez del real (<%= @paquete.peso %> lb).
+      <% elsif @paquete.cobro_solo_peso? %>
+        Este paquete cobra <strong>solo el peso real</strong>
+        (<%= @paquete.peso %> lb) aunque el volumétrico sea mayor (<%= @paquete.peso_volumetrico %> lb).
+      <% else %>
+        Hoy cobra el mayor entre el peso real y el volumétrico, que es la regla normal.
+      <% end %>
+    </p>
+    <%= render ButtonComponent.new(variant: :secondary, size: :sm,
+          data: { action: "dialogo#abrir" }) do %>
+      <%= @paquete.cobro_excepcion.present? ? "Cambiar cómo se cobra" : "Cobrar distinto este paquete" %>
+    <% end %>
+
+    <dialog data-dialogo-target="dialogo" style="margin: auto"
+            class="rounded-xl p-0 w-[26rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-gray-300">
+      <%= form_with url: cobro_excepcion_paquete_path(@paquete), method: :post do %>
+        <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, titulo: "Cómo se cobra este paquete", titulo_tag: :h3) do %>
+          <p class="text-xs mt-0.5 opacity-90">Lo autoriza un supervisor con su PIN. Queda registrado quién y por qué.</p>
+        <% end %>
+        <div class="p-5 space-y-3 bg-white">
+          <%# El valor va en un `hidden`: el botón ya dice cuál de los dos actos es,
+              así que no hay nada que elegir adentro del modal. %>
+          <%# C24-01 · Las tres opciones, porque son **dos mitades de lo mismo**:
+              Jorge, 2026-09-06, aclarando lo que Yusef pidió — *"él quiere poder
+              cobrar por libra o volumen volumétrico de vez en cuando, dependiendo
+              el caso"*. Un `select` y no un `hidden`, que ahora hay qué elegir. %>
+          <%# PR-C29.12 · Estaba **arriba** de la franja del modal, antes del
+              título. Baja al cuerpo, primero. %>
+          <div class="mb-1">
+            <%= label_tag :cobro_excepcion, "Cómo se cobra este paquete", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= select_tag :cobro_excepcion,
+                  options_for_select([
+                    [ "Lo normal: el mayor entre peso real y volumétrico", "" ],
+                    [ "Solo el volumétrico, aunque sea menor", "solo_volumetrico" ],
+                    [ "Solo el peso real, aunque gane el volumétrico", "solo_peso" ]
+                  ], @paquete.cobro_excepcion.to_s),
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+          </div>
+          <div>
+            <%= label_tag :supervisor_id, "Supervisor", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= select_tag :supervisor_id,
+                  options_from_collection_for_select(@supervisores_cobro, :id, :nombre),
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+          </div>
+          <div>
+            <%= label_tag :pin, "PIN", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= password_field_tag :pin, nil, inputmode: "numeric", autocomplete: "off", maxlength: 4,
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono tracking-widest" %>
+          </div>
+          <div>
+            <%= label_tag :motivo, "Motivo", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= text_field_tag :motivo, nil, placeholder: "Ej. generadores, se cobran por volumen",
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+          </div>
+          <p class="text-xs text-gray-500">
+            El peso a cobrar se recalcula solo, y la pre-factura ya nace con él.
+            Si el paquete ya se facturó, no se puede desde acá.
+          </p>
+        </div>
+        <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">
+          <%= render ButtonComponent.new(variant: :ghost, size: :sm,
+                data: { action: "dialogo#cerrar" }) do %>Cancelar<% end %>
+          <%= render ButtonComponent.new(variant: :primary, size: :sm, type: "submit") do %>Autorizar<% end %>
+        </div>
+      <% end %>
+    </dialog>
   </div>
 <% end %>
 
@@ -199,6 +357,9 @@ end %>
       <div class="flex-1">
         <p class="text-base font-bold text-cec-teal-dark dark:text-cec-teal-light">
           ✓ Este paquete ya fue pagado en Miami
+          <% if @paquete.metodo_prepago_label %>
+            <span class="text-sm font-semibold">· <%= @paquete.metodo_prepago_label %></span>
+          <% end %>
         </p>
         <p class="text-sm text-gray-700 dark:text-gray-200 mt-1">
           <% if @paquete.prepagado_miami_sucursal %>
@@ -243,19 +404,19 @@ end %>
            data-inline-select-url-value="<%= paquete_path(@paquete) %>"
            data-inline-select-field-value="estado"
            data-inline-select-resource-value="paquete">
-        <%= render StatusBadgeComponent.new(status: @paquete.estado) %>
+        <%= render StatusBadgeComponent.new(status: @paquete.estado, label: estado_de(@paquete)) %>
         <select data-action="change->inline-select#submit"
                 data-inline-select-target="select"
                 aria-label="Cambiar estado del paquete"
                 class="text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 focus:ring-cec-teal focus:border-cec-teal py-1 pr-7">
-          <% Paquete.estados.keys.each do |est| %>
-            <option value="<%= est %>" <%= "selected" if est == @paquete.estado %>><%= est.humanize %></option>
+          <% Paquete::ESTADOS_SELECCIONABLES.each do |est| %>
+            <option value="<%= est %>" <%= "selected" if est == @paquete.estado %>><%= estado_etiqueta(est) %></option>
           <% end %>
         </select>
         <span data-inline-select-target="status" class="hidden text-[10px] font-semibold"></span>
       </div>
     <% else %>
-      <%= render StatusBadgeComponent.new(status: @paquete.estado) %>
+      <%= render StatusBadgeComponent.new(status: @paquete.estado, label: estado_de(@paquete)) %>
     <% end %>
   </div>
 
@@ -314,6 +475,19 @@ end %>
                     class: "text-red-600 hover:text-red-800 hover:underline cursor-pointer bg-transparent border-0 p-0 inline" do %>
                 Quitar
               <% end %>
+            <% end %>
+          <% elsif @paquete.tercero_nombre.present? %>
+            <%# PR-C6.14: tercero escrito a mano en Miami. No es un Cliente y no
+                debe parecerlo — sin link ni código, con la aclaración de que
+                vive solo en este paquete. %>
+            <span class="text-gray-700 dark:text-gray-200"><%= @paquete.tercero_nombre %></span>
+            <span class="ml-1 text-[10px] uppercase tracking-wider text-gray-400">solo en este paquete</span>
+            <% if can_edit_paquetes? %>
+              <button type="button"
+                      data-action="click->asignar-tercero-modal#open"
+                      class="ml-1 text-cec-teal hover:text-cec-teal-dark hover:underline cursor-pointer">
+                Vincular a un cliente
+              </button>
             <% end %>
           <% else %>
             <span class="text-gray-400 dark:text-gray-500 italic">Sin 3ro asignado</span>
@@ -404,6 +578,131 @@ end %>
       </div>
     </div>
 
+    <%# ── Historial de cambios ──
+        PR-C6.15. Yusef, revisando un paquete: "auditar quién... en este no,
+        fíjate, pero en otros campos sí".
+
+        Tenía razón a medias. `paper_trail` venía guardando todo desde PR-D1.a
+        —está en 41 modelos— pero nadie lo mostraba. Lo único con "quién"
+        visible eran los cambios de estado, que llevan su propia columna
+        `fecha_<estado>_by_user_id`. Por eso unos campos sí y otros no.
+
+        Se muestran los últimos 15: más que eso es ruido, y el que necesita
+        más ya está haciendo una investigación, no mirando un paquete. %>
+    <% versiones = @paquete.versions.reorder(created_at: :desc).limit(15).to_a %>
+    <% versiones = versiones.reject { |v| auditoria_cambios(v).empty? } %>
+    <% if versiones.any? %>
+      <div class="lg:col-span-3">
+        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+          Historial de cambios
+          <span class="text-[10px] normal-case text-gray-400">(últimos <%= versiones.size %>)</span>
+        </dt>
+        <dd class="overflow-x-auto">
+          <table class="min-w-full text-xs" data-tabla="auditoria">
+            <thead>
+              <tr class="text-left text-gray-500 dark:text-gray-400">
+                <th class="py-1 pr-3 font-medium">Cuándo</th>
+                <th class="py-1 pr-3 font-medium">Quién</th>
+                <th class="py-1 pr-3 font-medium">Qué cambió</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+              <% versiones.each do |version| %>
+                <tr class="align-top">
+                  <td class="py-1.5 pr-3 whitespace-nowrap text-gray-500 dark:text-gray-400">
+                    <%= l version.created_at, format: :short %>
+                  </td>
+                  <td class="py-1.5 pr-3 whitespace-nowrap font-medium text-gray-700 dark:text-gray-200">
+                    <%= auditoria_quien(version) %>
+                  </td>
+                  <td class="py-1.5 pr-3 text-gray-700 dark:text-gray-200">
+                    <% auditoria_cambios(version).each do |etiqueta, antes, despues| %>
+                      <div>
+                        <span class="font-medium"><%= etiqueta %>:</span>
+                        <span class="text-gray-400 line-through"><%= antes %></span>
+                        <span class="text-gray-400">→</span>
+                        <span><%= despues %></span>
+                      </div>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </dd>
+      </div>
+    <% end %>
+
+    <%# ── Notas de los documentos de cobro ──
+        PR-C6.13, la segunda mitad de lo que pidió Yusef: las notas que se
+        ponen en pre-factura o en la factura tienen que verse desde el paquete.
+
+          > "Esa información me tiene que aparecer si yo entro aquí."
+
+        Es lo que servicio al cliente necesita cuando el cliente llama y
+        pregunta por qué le cobraron algo. %>
+    <% notas_cobro = [
+         [ "Pre-Factura #{@paquete.pre_factura&.numero}", @paquete.pre_factura&.notas ],
+         [ "Factura #{@paquete.venta&.numero}",           @paquete.venta&.notas ]
+       ].select { |_titulo, texto| texto.present? } %>
+    <% if notas_cobro.any? %>
+      <div class="lg:col-span-3">
+        <dt class="text-xs font-medium text-cec-gold-dark uppercase tracking-wider">
+          Notas de facturación
+          <span class="text-[10px] normal-case text-gray-400">(puestas en pre-factura o caja)</span>
+        </dt>
+        <% notas_cobro.each do |titulo, texto| %>
+          <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 border border-amber-200 dark:border-amber-800">
+            <span class="block text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-1"><%= titulo %></span>
+            <%= simple_format(texto) %>
+          </dd>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%# ── Notas ── PR-C6.11: suben por encima de proveedor/carrier/remitente.
+        Yusef, mirando el detalle: "acá proveedor, carrier, remitente... es más
+        importante que diga **notas**". Es lo que servicio al cliente lee
+        primero cuando el cliente llama. %>
+    <%# Notas categorizadas — 4 secciones (Yusef Mayo 4):
+        Internas | al Cliente | Consolidación | Retención (ya arriba).
+        PR-D7.e: siempre visibles para que el usuario sepa qué hay (o
+        que está vacío) sin tener que entrar al modo edit. %>
+    <div>
+      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">
+        Notas Internas
+        <span class="text-[10px] normal-case text-gray-400">(solo equipo CEC)</span>
+      </dt>
+      <% if @paquete.notas_internas.present? %>
+        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 rounded-lg p-3"><%= simple_format(@paquete.notas_internas) %></dd>
+      <% else %>
+        <dd class="mt-1 text-xs italic text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">— sin nota —</dd>
+      <% end %>
+    </div>
+    <div>
+      <dt class="text-xs font-medium text-blue-700 uppercase tracking-wider">
+        Notas al Cliente
+        <span class="text-[10px] normal-case text-blue-500">(le llegan en el correo de recibido)</span>
+      </dt>
+      <% if @paquete.notas_al_cliente.present? %>
+        <dd class="mt-1 text-sm text-gray-900 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800"><%= simple_format(@paquete.notas_al_cliente) %></dd>
+      <% else %>
+        <dd class="mt-1 text-xs italic text-blue-400 dark:text-blue-500 bg-blue-50/40 dark:bg-blue-900/10 rounded-lg p-3 border border-blue-100 dark:border-blue-900/40">— sin nota —</dd>
+      <% end %>
+    </div>
+    <div>
+      <dt class="text-xs font-medium text-cec-teal uppercase tracking-wider">
+        Notas de Consolidación
+        <span class="text-[10px] normal-case text-cec-teal/70">(auto-llenadas desde la pre-alerta consolidada al vincular)</span>
+      </dt>
+      <% if @paquete.notas_consolidacion.present? %>
+        <dd class="mt-1 text-sm text-gray-900 bg-teal-50 dark:bg-teal-900/20 rounded-lg p-3 border border-teal-200 dark:border-teal-800"><%= simple_format(@paquete.notas_consolidacion) %></dd>
+      <% else %>
+        <dd class="mt-1 text-xs italic text-cec-teal/60 bg-teal-50/40 dark:bg-teal-900/10 rounded-lg p-3 border border-teal-100 dark:border-teal-900/40">— sin nota —</dd>
+      <% end %>
+    </div>
+
+
     <%# ── SECCIÓN 3: Proveedor + Carrier + Remitente ── %>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 border-t border-gray-200 dark:border-gray-700 pt-4">
       <div class="col-span-2">
@@ -416,7 +715,7 @@ end %>
               <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-900">EP</span>
             <% end %>
           <% else %>
-            <%= @paquete[:proveedor].presence || "—" %>
+            <%= @paquete.proveedor_texto.presence || "—" %>
           <% end %>
         </dd>
       </div>
@@ -462,8 +761,34 @@ end %>
       <div>
         <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Peso a Cobrar</dt>
         <dd class="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100"><%= @paquete.peso_cobrar || "—" %> lbs</dd>
+        <%# C24-01 · Si el paquete tiene excepción hay que **decirlo acá**: sin
+            esto el número sale más bajo de lo que cualquiera espera y no hay
+            forma de saber por qué hasta que alguien reclama. %>
+        <% if @paquete.cobro_excepcion.present? %>
+          <% autorizacion = Autorizacion.where(documento: @paquete, accion: "cobro_excepcion").recientes.first %>
+          <dd class="mt-1">
+            <span class="inline-flex items-center gap-1 rounded-full bg-cec-gold/20 px-2 py-0.5 text-xs font-medium text-cec-navy dark:bg-cec-gold/25 dark:text-cec-gold">
+              <%= @paquete.cobro_solo_peso? ? "cobro por peso real" : "cobro por volumen" %><% if autorizacion %> · autorizó <%= autorizacion.autorizado_por.nombre %><% end %>
+            </span>
+          </dd>
+        <% end %>
       </div>
     </div>
+
+    <%# C26-17 · Si la estación de medición dejó de esperar esta caja, hay que
+        **decirlo acá**: es una decisión de administración que explica por qué
+        no tiene peso medido y por qué no aparece en la lista de la línea. %>
+    <% if @paquete.descartado_de_medicion? %>
+      <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+        <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
+          Fuera de la lista de medición · <%= DescartarDeMedicion::MOTIVOS[@paquete.medicion_descartada_motivo] %>
+          · <%= @paquete.medicion_descartada_por %> · <%= @paquete.medicion_descartada_at.strftime("%d/%m/%Y") %>
+        </span>
+        <% if @paquete.medicion_descartada_nota.present? %>
+          <p class="mt-1 text-xs text-gray-600 dark:text-gray-300"><%= @paquete.medicion_descartada_nota %></p>
+        <% end %>
+      </div>
+    <% end %>
 
     <%# Sucursal actual + Flags + Recolecta + Retención + Cambio Servicio %>
     <div class="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
@@ -495,6 +820,13 @@ end %>
             Retener Miami
           </span>
         <% end %>
+        <% if @paquete.enviado_por_politica? %>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-cec-navy/5 text-cec-navy ring-1 ring-cec-navy/20 dark:bg-cec-navy/40 dark:text-gray-100"
+                title="<%= @paquete.motivos_envio_politica.map(&:nombre).join(" · ") %>">
+            <%= heroicon "paper-airplane", variant: :solid, options: { class: "w-3 h-3" } %>
+            Enviado según política
+          </span>
+        <% end %>
         <% if @paquete.recolecta_solicitada? %>
           <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30">
             <%= heroicon "truck", variant: :solid, options: { class: "w-3 h-3" } %>
@@ -504,7 +836,7 @@ end %>
             <% end %>
           </span>
         <% end %>
-        <% unless @paquete.solicito_cambio_servicio? || @paquete.retener_miami? || @paquete.recolecta_solicitada? || @paquete.consolidado? %>
+        <% unless @paquete.solicito_cambio_servicio? || @paquete.retener_miami? || @paquete.recolecta_solicitada? || @paquete.consolidado? || @paquete.enviado_por_politica? %>
           <span class="text-xs text-gray-400 italic">Sin marcas especiales</span>
         <% end %>
       </div>
@@ -527,6 +859,25 @@ end %>
           <div class="italic">— sin retención —</div>
         <% end %>
       </div>
+
+      <%# C19-03: los datos de la visita de recolecta se guardaban desde EP y no
+          se mostraban en NINGUNA pantalla — el que va a traer la carga no tenía
+          dónde leerlos. Salen acá, con la dirección nueva incluida. %>
+      <% datos_recolecta = {
+           "Dirección"     => @paquete.recolecta_direccion,
+           "Contacto"      => @paquete.recolecta_contacto,
+           "Teléfono"      => @paquete.recolecta_telefono,
+           "Horario"       => @paquete.recolecta_horario,
+           "Instrucciones" => @paquete.recolecta_instrucciones
+         }.select { |_, v| v.to_s.strip.present? } %>
+      <% if @paquete.recolecta_solicitada? && datos_recolecta.any? %>
+        <div class="bg-cec-teal/5 dark:bg-cec-teal/10 rounded-lg p-3 border border-cec-teal/30 text-xs space-y-1.5 text-gray-800 dark:text-gray-100">
+          <div class="font-semibold uppercase tracking-wider text-[10px] text-cec-teal-dark dark:text-cec-teal">Datos de la Recolecta</div>
+          <% datos_recolecta.each do |etiqueta, valor| %>
+            <div><span class="font-medium"><%= etiqueta %>:</span> <%= valor %></div>
+          <% end %>
+        </div>
+      <% end %>
     </div>
 
     <%# Notas Permanentes del Cliente (PR-D2.b / PR-D7.k).
@@ -558,44 +909,6 @@ end %>
         <% end %>
       </div>
     <% end %>
-
-    <%# Notas categorizadas — 4 secciones (Yusef Mayo 4):
-        Internas | al Cliente | Consolidación | Retención (ya arriba).
-        PR-D7.e: siempre visibles para que el usuario sepa qué hay (o
-        que está vacío) sin tener que entrar al modo edit. %>
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">
-        Notas Internas
-        <span class="text-[10px] normal-case text-gray-400">(solo equipo CEC)</span>
-      </dt>
-      <% if @paquete.notas_internas.present? %>
-        <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700 rounded-lg p-3"><%= simple_format(@paquete.notas_internas) %></dd>
-      <% else %>
-        <dd class="mt-1 text-xs italic text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">— sin nota —</dd>
-      <% end %>
-    </div>
-    <div>
-      <dt class="text-xs font-medium text-blue-700 uppercase tracking-wider">
-        Notas al Cliente
-        <span class="text-[10px] normal-case text-blue-500">(visibles al cliente / en pre-factura)</span>
-      </dt>
-      <% if @paquete.notas_al_cliente.present? %>
-        <dd class="mt-1 text-sm text-gray-900 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800"><%= simple_format(@paquete.notas_al_cliente) %></dd>
-      <% else %>
-        <dd class="mt-1 text-xs italic text-blue-400 dark:text-blue-500 bg-blue-50/40 dark:bg-blue-900/10 rounded-lg p-3 border border-blue-100 dark:border-blue-900/40">— sin nota —</dd>
-      <% end %>
-    </div>
-    <div>
-      <dt class="text-xs font-medium text-cec-teal uppercase tracking-wider">
-        Notas de Consolidación
-        <span class="text-[10px] normal-case text-cec-teal/70">(auto-llenadas desde la pre-alerta consolidada al vincular)</span>
-      </dt>
-      <% if @paquete.notas_consolidacion.present? %>
-        <dd class="mt-1 text-sm text-gray-900 bg-teal-50 dark:bg-teal-900/20 rounded-lg p-3 border border-teal-200 dark:border-teal-800"><%= simple_format(@paquete.notas_consolidacion) %></dd>
-      <% else %>
-        <dd class="mt-1 text-xs italic text-cec-teal/60 bg-teal-50/40 dark:bg-teal-900/10 rounded-lg p-3 border border-teal-100 dark:border-teal-900/40">— sin nota —</dd>
-      <% end %>
-    </div>
 
     <%# Notas Especiales (instrucciones de la pre-alerta del cliente).
         PR-D7.k: siempre visibles con placeholder cuando no hay
@@ -643,7 +956,9 @@ end %>
         <span class="text-xs text-gray-400 italic">sin tareas</span>
       <% end %>
     </div>
-    <% if can_edit_paquetes? %>
+    <%# C17-01: la lista de quién crea tareas es la de tareas, no la de quién
+        edita paquetes — con la otra, supervisor_caja y SAC no veían el botón. %>
+    <% if can_crear_tareas? %>
       <%= link_to new_paquete_tarea_path(@paquete),
             class: "shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-cec-teal text-white hover:bg-cec-teal-dark" do %>
         <%= heroicon "plus", variant: :solid, options: { class: "w-3 h-3" } %>
@@ -726,7 +1041,9 @@ end %>
             <% if step[:fecha] %>
               <%# Línea 2: fecha absoluta + tiempo relativo. %>
               <p class="text-xs text-gray-600 dark:text-gray-300">
-                <span class="font-mono"><%= step[:fecha].strftime("%d/%m/%Y %H:%M") %></span>
+                <%# C19-05: los segundos son la búsqueda en cámaras — "igual el
+                    enviado… como administradores sí necesitamos esa información". %>
+                <span class="font-mono"><%= step[:fecha].strftime("%d/%m/%Y %H:%M:%S") %></span>
                 <span class="text-gray-400 dark:text-gray-500 italic">· hace <%= time_ago_in_words(step[:fecha]) %></span>
               </p>
 
@@ -749,7 +1066,7 @@ end %>
                   <%= heroicon "clock", variant: :outline, options: { class: "w-3 h-3 mt-0.5 shrink-0" } %>
                   <span>
                     Capturada originalmente
-                    <span class="font-mono font-semibold not-italic"><%= step[:first_set][:at].strftime("%d/%m/%Y %H:%M") %></span>
+                    <span class="font-mono font-semibold not-italic"><%= step[:first_set][:at].strftime("%d/%m/%Y %H:%M:%S") %></span>
                     <% if step[:first_set_user] %>
                       por <span class="font-mono font-semibold not-italic"><%= step[:first_set_user].iniciales_display %></span>
                       <span class="text-gray-400 dark:text-gray-500">(<%= step[:first_set_user].nombre %>)</span>
@@ -798,18 +1115,9 @@ end %>
 <dialog data-mover-pre-alerta-modal-target="dialog"
         style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0;"
         class="rounded-xl shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm w-full max-w-lg p-0 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 ring-1 ring-gray-200 dark:ring-gray-700">
-  <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-    <h3 class="text-base font-semibold text-cec-navy dark:text-cec-gold flex items-center gap-2">
-      <%= heroicon "arrows-right-left", variant: :solid, options: { class: "w-5 h-5 text-cec-teal" } %>
-      Mover a Pre-Alerta Existente
-    </h3>
-    <button type="button"
-            data-action="click->mover-pre-alerta-modal#close"
-            class="p-1 rounded text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
-            aria-label="Cerrar">
-      <%= heroicon "x-mark", variant: :solid, options: { class: "w-5 h-5" } %>
-    </button>
-  </div>
+  <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, icono: "arrows-right-left",
+        titulo: "Mover a Pre-Alerta Existente", titulo_tag: :h3,
+        cerrar: "click->mover-pre-alerta-modal#close") %>
 
   <div class="px-5 py-4 space-y-3">
     <div>
@@ -822,7 +1130,8 @@ end %>
         </span>
         <input type="text"
                data-mover-pre-alerta-modal-target="input"
-               data-action="input->mover-pre-alerta-modal#search"
+               data-action="input->mover-pre-alerta-modal#search
+                            keydown->mover-pre-alerta-modal#onKeydown"
                placeholder="Número, título o cliente…"
                class="w-full pl-10 pr-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-cec-teal/40 focus:border-cec-teal">
       </div>
@@ -844,16 +1153,12 @@ end %>
                 data: { mover_pre_alerta_modal_target: "form" },
                 class: "px-5 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2 bg-gray-50 dark:bg-gray-800/50" do |f| %>
     <%= f.hidden_field :pre_alerta_id, value: "", data: { mover_pre_alerta_modal_target: "hiddenId" } %>
-    <button type="button"
-            data-action="click->mover-pre-alerta-modal#close"
-            class="px-3 py-1.5 rounded-md text-sm font-medium bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 ring-1 ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600">
-      Cancelar
-    </button>
-    <button type="submit" disabled
-            class="px-3 py-1.5 rounded-md text-sm font-semibold bg-cec-navy text-white hover:bg-cec-navy-dark disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5">
-      <%= heroicon "check", variant: :solid, options: { class: "w-4 h-4" } %>
-      Mover paquete
-    </button>
+    <%= render ButtonComponent.new(variant: :secondary, size: :sm,
+          data: { action: "click->mover-pre-alerta-modal#close" }) do %>Cancelar<% end %>
+    <%# Arranca deshabilitado; `mover_pre_alerta_modal_controller` lo habilita
+        buscando `button[type=submit]`, asi que el type va explicito. %>
+    <%= render ButtonComponent.new(variant: :primary, size: :sm, type: "submit",
+          icon: "check", disabled: true) do %>Mover paquete<% end %>
   <% end %>
 </dialog>
 
@@ -865,18 +1170,9 @@ end %>
 <dialog data-asignar-tercero-modal-target="dialog"
         style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0;"
         class="rounded-xl shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm w-full max-w-lg p-0 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 ring-1 ring-gray-200 dark:ring-gray-700">
-  <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-    <h3 class="text-base font-semibold text-cec-navy dark:text-cec-gold flex items-center gap-2">
-      <%= heroicon "user-group", variant: :solid, options: { class: "w-5 h-5 text-cec-purple-dark" } %>
-      Asignar Tercero (Cliente Final)
-    </h3>
-    <button type="button"
-            data-action="click->asignar-tercero-modal#close"
-            class="p-1 rounded text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
-            aria-label="Cerrar">
-      <%= heroicon "x-mark", variant: :solid, options: { class: "w-5 h-5" } %>
-    </button>
-  </div>
+  <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, icono: "user-group",
+        titulo: "Asignar Tercero (Cliente Final)", titulo_tag: :h3,
+        cerrar: "click->asignar-tercero-modal#close") %>
 
   <div class="px-5 py-4 space-y-3">
     <p class="text-xs text-gray-600 dark:text-gray-300">
@@ -892,7 +1188,8 @@ end %>
         </span>
         <input type="text"
                data-asignar-tercero-modal-target="input"
-               data-action="input->asignar-tercero-modal#search"
+               data-action="input->asignar-tercero-modal#search
+                            keydown->asignar-tercero-modal#onKeydown"
                placeholder="Código o nombre…"
                class="w-full pl-10 pr-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-cec-teal/40 focus:border-cec-teal">
       </div>
@@ -912,11 +1209,8 @@ end %>
                 data: { asignar_tercero_modal_target: "form" },
                 class: "px-5 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2 bg-gray-50 dark:bg-gray-800/50" do |f| %>
     <%= f.hidden_field :tercero_id, value: "", data: { asignar_tercero_modal_target: "hiddenId" } %>
-    <button type="button"
-            data-action="click->asignar-tercero-modal#close"
-            class="px-3 py-1.5 rounded-md text-sm font-medium bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 ring-1 ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600">
-      Cancelar
-    </button>
+    <%= render ButtonComponent.new(variant: :secondary, size: :sm,
+          data: { action: "click->asignar-tercero-modal#close" }) do %>Cancelar<% end %>
   <% end %>
 </dialog>
 

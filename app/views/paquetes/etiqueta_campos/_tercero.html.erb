@@ -1,0 +1,15 @@
+<%# C25-07 · El tercero: *"para acá abajo"*. Tercera línea de la columna
+    izquierda del bloque inferior, debajo de dónde retira — es quien retira en
+    nombre del cliente. Su tercer sitio en dos días; las medidas están en
+    `definicion.rb`.
+
+    Va como `div.r` y no como span suelto: la columna del bloque es un div
+    normal, no flex, y un span crearía ahí una línea a la altura de la letra
+    heredada — 16 px en vez de 8, y la etiqueta desborda. El ajuste propio es
+    para un tercero de cuatro palabras, que a 6 pt ocupa justo el ancho. %>
+<% if etiqueta_plantilla.visible?("tercero") && paquete.tercero_display %>
+  <div class="r">
+    <b style="font-size:var(--fs-tercero); white-space:nowrap; flex:0 0 auto;"><%= etiqueta_plantilla.texto("tercero") %></b>
+    <span class="t" style="font-size:var(--fs-tercero);" data-campo="tercero" data-ajustar data-ajustar-min="5"><%= paquete.tercero_display.to_s.upcase %></span>
+  </div>
+<% end %>

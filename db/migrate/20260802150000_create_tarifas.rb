@@ -21,6 +21,14 @@
 # "mejor lo hacemos en esa tabla, que todo quede ahí registrado, porque
 # cuando empezás a hacer muchas excepciones el sistema se complica".
 class CreateTarifas < ActiveRecord::Migration[8.0]
+  # NOTA (2026-08-13): el bloque `reversible` de abajo lee
+  # `categoria_precios.precio_libra_aereo/maritimo`, y esas columnas **ya no
+  # existen** — las borró `QuitarPreciosDeCategoriaPrecios`.
+  #
+  # No rompe: con `schema_format = :sql` una base nueva se crea desde
+  # `structure.sql` y no corre migraciones, y las bases que existían ya
+  # ejecutaron ésta. Queda anotado para que nadie se asuste al leerla.
+
   def change
     create_table :tarifas do |t|
       t.references :tipo_envio,       null: false, foreign_key: true

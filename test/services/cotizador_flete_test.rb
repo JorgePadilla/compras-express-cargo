@@ -51,11 +51,15 @@ class CotizadorFleteTest < ActiveSupport::TestCase
     assert_equal BigDecimal("173.91"), r.subtotal
   end
 
-  test "sin tarifa cargada lo reporta pero igual cotiza" do
+  # A7-25: antes cotizaba con la tabla vieja, o sea mostraba un precio distinto
+  # del que la pre-factura iba a cobrar. Ahora devuelve cero y lo reporta: el
+  # vacío se lee como "falta cargar la tarifa", no como "es gratis".
+  test "sin tarifa cargada cotiza en cero y lo reporta" do
     r = CotizadorFlete.call(tipo_envio: @cer, cliente: @cliente, peso: 10)
 
     assert_not r.tarifa_encontrada?
-    assert r.subtotal.positive?
+    assert r.sin_tarifa
+    assert_equal 0, r.subtotal
   end
 
   # ── La garantía que importa ──
@@ -80,5 +84,29 @@ class CotizadorFleteTest < ActiveSupport::TestCase
                  "lo que se le muestra al operario tiene que ser lo que se cobra"
     assert_equal facturado.peso_cobrar.to_d, cotizado.peso_facturado
     assert_equal facturado.precio_libra.to_d, cotizado.precio_libra
+  end
+
+  # PR-C7.11 · el cotizador es el único camino por donde entra un peso con más de
+  # dos decimales: `paquetes.peso` es `numeric(10,2)`, pero `CotizadorController`
+  # pasa `params[:peso]` crudo. Con la aritmética vieja de `Tarifa` —restar 0.09
+  # y hacer `ceil`— cotizar 3.099 lb cobraba por 3.5.
+  #
+  # La hoja de Yusef del 2026-08-12 lo escribe: *"3.099 es igual 3"*.
+  test "un peso de tres decimales se cobra como dice la hoja, no medio libra mas" do
+    Tarifa.create!(tipo_envio: @cer, precio_libra: 10.00, moneda: "USD", aplica_minimo: false)
+
+    r = CotizadorFlete.call(tipo_envio: @cer, cliente: @cliente, peso: BigDecimal("3.099"))
+
+    assert_equal BigDecimal("3.0"), r.peso_facturado,
+                 "3.099 baja a 3: por debajo de .10 no sube a media libra"
+    assert_equal (BigDecimal("3") * a_lps(10.00)).round(2), r.subtotal
+  end
+
+  test "3.599 se queda en media libra, no sube a la entera" do
+    Tarifa.create!(tipo_envio: @cer, precio_libra: 10.00, moneda: "USD", aplica_minimo: false)
+
+    r = CotizadorFlete.call(tipo_envio: @cer, cliente: @cliente, peso: BigDecimal("3.599"))
+
+    assert_equal BigDecimal("3.5"), r.peso_facturado
   end
 end

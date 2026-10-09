@@ -23,7 +23,14 @@
   table.wr-pkg thead th { background: #f3f4f6; font-size: 9px; text-transform: uppercase; letter-spacing: 0.4px; }
   table.wr-totals { width: 100%; font-size: 11px; margin-top: 6px; }
   table.wr-totals td { padding: 3px 6px; }
-  table.wr-totals td.label { color: #666; text-transform: uppercase; font-size: 9px; letter-spacing: 0.4px; width: 40%; }
+  <%# PR-C7.18: 30% y no 40%. La fila lleva cuatro celdas —etiqueta, valor,
+      etiqueta, valor— así que dos etiquetas al 40% dejaban a los valores con 10%
+      cada uno y "0.0 LB · 0.0 KG" partía en dos líneas.
+
+      Se arregla con el ancho y no con `white-space: nowrap`: la fila de
+      "Chargeable weight" lleva una nota larga al lado del número, y prohibirle
+      partir la haría desbordar la hoja. %>
+  table.wr-totals td.label { color: #666; text-transform: uppercase; font-size: 9px; letter-spacing: 0.4px; width: 30%; }
   table.wr-totals td.value { font-weight: bold; text-align: right; }
   .wr-terms-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 8.5px; line-height: 1.4; color: #444; }
   .wr-terms-cols .wr-h { font-size: 8.5px; }
@@ -111,9 +118,15 @@
       <div class="wr-v" style="color:#666;">
         <%= [ agent.destination_city, agent.destination_country ].compact_blank.join(", ").presence || "—" %>
       </div>
-    <% elsif paquete.sucursal.present? %>
-      <div class="wr-v" style="font-weight:bold;"><%= paquete.sucursal.nombre %></div>
-      <div class="wr-v" style="color:#666;font-family:'Courier New',monospace;font-size:11px;"><%= paquete.sucursal.codigo %></div>
+    <%# PR-C7.16: `sucursal_del_numero` y no `sucursal`. El Agent es **dónde se
+        recibió** la mercancía, y `paquete.sucursal` es dónde la retira el
+        cliente. Acá decía "Miami" solo porque /entrega_personal metía la
+        sucursal de Miami en el campo equivocado — el mismo bug que hacía que la
+        etiqueta dijera "RETIRA EN MIAMI". Al arreglar la etiqueta, esto habría
+        empezado a decir "Tegucigalpa" si no se movía con ella. %>
+    <% elsif (recepcion = paquete.sucursal_del_numero).present? %>
+      <div class="wr-v" style="font-weight:bold;"><%= recepcion.nombre %></div>
+      <div class="wr-v" style="color:#666;font-family:'Courier New',monospace;font-size:11px;"><%= recepcion.codigo %></div>
     <% else %>
       <div class="wr-v" style="color:#999;">—</div>
     <% end %>
@@ -160,6 +173,9 @@
   <div class="wr-section" style="margin: 8px 0; padding: 10px 14px; border: 2px solid #047857; background: #ecfdf5; border-radius: 6px; text-align: center;">
     <div style="font-weight: 800; font-size: 14px; color: #064e3b; letter-spacing: 0.04em;">
       ✓ PREPAGADO EN MIAMI
+      <%# Yusef pidió que se marcara CÓMO se pagó: sin esto el documento dice
+          que ya está pagado y el cajero de Honduras no sabe con qué entró. %>
+      <%= paquete.prepago_sufijo %>
       <% if paquete.prepagado_miami_sucursal %>
         · SUCURSAL <%= paquete.prepagado_miami_sucursal.codigo_ep || paquete.prepagado_miami_sucursal.codigo %>
       <% end %>
@@ -178,13 +194,32 @@
   <table class="wr-pkg">
     <thead>
       <tr>
-        <th style="width:5%;">#</th>
-        <th style="width:18%;">Dimensiones (in)</th>
-        <th style="width:8%;">Units</th>
-        <th style="width:11%;">Type</th>
+        <%# ── El reparto del ancho ──
+            PR-C7.18. Jorge, mirando un WR real: "podemos hacer la columna de
+            type y units más pequeña para que quede el tracking bien".
+
+            Units y Type están hardcodeados abajo —siempre `1` y `Box`— y entre
+            los dos se llevaban 19% del ancho. La columna del tracking tenía
+            104 px útiles, o sea ~19 caracteres a 10 px monoespaciado, y los
+            trackings reales no entran:
+
+              123213213sadasd21323 ....... 20   (el que él mandó)
+              EP-2026-SMI-DRV-000001 ..... 22   (Entrega Personal)
+              RC-2026-SMI-DRV-000001 ..... 22   (recolecta)
+
+            Partía en dos líneas. En dev no se veía porque los trackings
+            sembrados miden 12–15.
+
+            Units y Type no bajan de 7% porque ahí el límite deja de ser el dato
+            y pasa a ser el encabezado: "UNITS" en versalitas de 9 px necesita
+            unos 42 px con su padding. %>
+        <th style="width:4%;">#</th>
+        <th style="width:17%;">Dimensiones (in)</th>
+        <th style="width:7%;">Units</th>
+        <th style="width:7%;">Type</th>
         <th style="width:11%;">Weight (lb)</th>
         <th>Description</th>
-        <th style="width:18%;">Trackings</th>
+        <th style="width:24%;">Trackings</th>
       </tr>
     </thead>
     <tbody>
@@ -192,10 +227,20 @@
         <tr>
           <td><%= pkg.numero_caja.presence || (idx + 1) %></td>
           <td><%= [ pkg.largo, pkg.ancho, pkg.alto ].map { |v| v ? sprintf("%.2f", v) : "—" }.join(" × ") %></td>
-          <td>1</td>
+          <%# PR-C7.19: los productos de ESTA caja. Estaba escrito a mano como
+              `1` desde siempre, así que la columna nunca mostró nada — y es
+              justo la que un Warehouse Receipt usa para decir cuántas piezas
+              lleva cada bulto. El `1` queda de fallback para los paquetes
+              viejos, que se guardaron sin el dato. %>
+          <td><%= pkg.cantidad_productos.presence || 1 %></td>
           <td>Box</td>
           <td><%= pkg.peso ? sprintf("%.2f", pkg.peso) : "—" %></td>
-          <td><%= truncate(pkg.descripcion.to_s, length: 45).presence || "PAQUETERIA" %></td>
+          <%# 10 px, que es lo que él pidió — "even description can be a little
+              smaller". Gana más de lo que cede: a 10 px entran unos 36
+              caracteres contra los ~30 de antes, así que se lee **más**
+              descripción aunque la columna sea la misma. El truncate de 45 no
+              se toca. %>
+          <td style="font-size:10px;"><%= truncate(pkg.descripcion.to_s, length: 45).presence || "PAQUETERIA" %></td>
           <td class="wr-mono" style="font-size:10px;word-break:break-all;"><%= pkg.tracking %></td>
         </tr>
       <% end %>
@@ -216,6 +261,20 @@
       <td class="value"><%= totals[:vol_weight_lb] %> LB · <%= totals[:vol_weight_kg] %> KG</td>
       <td class="label">Total volume</td>
       <td class="value"><%= totals[:volume_cuft] %> ft³ · <%= totals[:volume_m3] %> m³</td>
+    </tr>
+    <%# La fila que Yusef pidió: "el valor total de libras que se le va a cobrar
+        — no es valor de precios, sino es valor de libras". Va destacada porque
+        es el número por el que se factura, y es el único de la tabla que no se
+        deduce mirando las filas de arriba: es la suma del mayor de cada caja,
+        no el mayor de los totales. %>
+    <tr>
+      <td class="label" style="font-weight:bold;">Chargeable · Libras a cobrar</td>
+      <td class="value" colspan="3" style="font-weight:bold;">
+        <%= totals[:chargeable_lb] %> LB · <%= totals[:chargeable_kg] %> KG
+        <span style="font-weight:normal;color:#666;font-size:10px;">
+          — el mayor entre real y volumétrico, caja por caja
+        </span>
+      </td>
     </tr>
   </table>
 </div>

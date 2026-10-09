@@ -1,6 +1,7 @@
-import { Controller } from "@hotwired/stimulus"
+import BusquedaAutocomplete from "controllers/busqueda_autocomplete"
 
-// Autocomplete de Pre-Alerta con keyboard nav. Endpoint: /pre_alertas/buscar.
+// Autocomplete de PRE-ALERTA — para enganchar un paquete a la pre-alerta que
+// lo estaba esperando.
 //
 // Markup esperado:
 //   <div data-controller="pre-alerta-search"
@@ -8,171 +9,53 @@ import { Controller } from "@hotwired/stimulus"
 //     <input data-pre-alerta-search-target="input"
 //            data-action="input->pre-alerta-search#search
 //                         keydown->pre-alerta-search#onKeydown">
-//     <input type="hidden" name="pre_alerta_id"
-//            data-pre-alerta-search-target="preAlertaId">
+//     <input type="hidden" data-pre-alerta-search-target="preAlertaId">
 //     <div data-pre-alerta-search-target="dropdown" class="hidden …"></div>
-//     <p   data-pre-alerta-search-target="nombre"   class="hidden …"></p>
+//     <span data-pre-alerta-search-target="nombre" class="hidden …"></span>
 //   </div>
 //
-// Keyboard: ArrowDown/Up navegan, Enter selecciona, Escape cierra,
-// Tab cierra. Si Enter sin highlight → submit normal del form.
-export default class extends Controller {
-  static targets = ["input", "preAlertaId", "dropdown", "nombre"]
-  static values  = { url: String }
+// PR-C6.33: octava y última copia de la misma interacción. Tenía flechas pero
+// no preseleccionaba, y pedía 2 caracteres. Ahora hereda de
+// `BusquedaAutocomplete`.
+//
+// Lo propio de esta pantalla: la fila muestra el número de documento, marca
+// las consolidadas (que son las que aceptan más de un paquete) y debajo pone
+// título y cliente, porque un `PA-000123` suelto no le dice nada a nadie.
+export default class extends BusquedaAutocomplete {
+  static targets = [ "input", "preAlertaId", "dropdown", "nombre" ]
+  static values = { url: String }
 
-  connect() {
-    this._timeout = null
-    this._activeIndex = -1
+  get _oculto() { return this.preAlertaIdTarget }
+
+  _textoVacio() { return "No se encontraron pre-alertas" }
+
+  _filaHtml(pa) {
+    return `data-id="${pa.id}"
+            data-numero="${pa.numero}"
+            data-titulo="${pa.titulo || ""}"
+            data-cliente="${pa.cliente || ""}">
+        <div>
+          <span class="font-mono text-sm font-medium text-cec-navy dark:text-cec-gold">${pa.numero}</span>
+          ${pa.consolidado ? `<span class="ml-2 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-cec-teal/15 text-cec-teal-dark">Consolidado</span>` : ""}
+          ${pa.titulo ? `<span class="block text-sm text-gray-700 dark:text-gray-300">${pa.titulo}</span>` : ""}
+          ${pa.cliente ? `<span class="block text-xs text-gray-500">${pa.cliente}</span>` : ""}
+        </div>`
   }
 
-  disconnect() {
-    if (this._timeout) clearTimeout(this._timeout)
-  }
-
-  search() {
-    if (this._timeout) clearTimeout(this._timeout)
-
-    const query = this.inputTarget.value.trim()
-    if (query.length === 0) {
-      this.preAlertaIdTarget.value = ""
-      if (this.hasNombreTarget) this.nombreTarget.classList.add("hidden")
-      this.hideDropdown()
-      return
-    }
-    if (query.length < 2) {
-      this.hideDropdown()
-      return
-    }
-
-    this._timeout = setTimeout(() => {
-      fetch(`${this.urlValue}?q=${encodeURIComponent(query)}`, {
-        headers: { "Accept": "application/json" }
-      })
-        .then(r => r.json())
-        .then(items => this.renderDropdown(items))
-        .catch(() => this.hideDropdown())
-    }, 300)
-  }
-
-  onKeydown(e) {
-    if (this.dropdownTarget.classList.contains("hidden")) return
-
-    const items = this.itemButtons()
-    if (items.length === 0) return
-
-    switch (e.key) {
-      case "ArrowDown":
-        e.preventDefault()
-        this._activeIndex = (this._activeIndex + 1) % items.length
-        this.applyHighlight(items)
-        break
-      case "ArrowUp":
-        e.preventDefault()
-        this._activeIndex = this._activeIndex <= 0 ? items.length - 1 : this._activeIndex - 1
-        this.applyHighlight(items)
-        break
-      case "Enter":
-        if (this._activeIndex >= 0 && this._activeIndex < items.length) {
-          e.preventDefault()
-          items[this._activeIndex].click()
-        }
-        break
-      case "Escape":
-        e.preventDefault()
-        this.hideDropdown()
-        break
-      case "Tab":
-        this.hideDropdown()
-        break
-    }
-  }
-
-  itemButtons() {
-    return Array.from(this.dropdownTarget.querySelectorAll("button[data-action*='pre-alerta-search#select']"))
-  }
-
-  applyHighlight(items) {
-    items.forEach((btn, i) => {
-      btn.classList.toggle("bg-cec-teal/10", i === this._activeIndex)
-      btn.classList.toggle("dark:bg-cec-teal/20", i === this._activeIndex)
-      if (i === this._activeIndex) btn.scrollIntoView({ block: "nearest" })
-    })
-  }
-
-  renderDropdown(items) {
-    this.dropdownTarget.replaceChildren()
-    this._activeIndex = -1
-
-    if (items.length === 0) {
-      const empty = document.createElement("div")
-      empty.className = "px-4 py-3 text-sm text-gray-500"
-      empty.textContent = "No se encontraron pre-alertas"
-      this.dropdownTarget.appendChild(empty)
-      this.showDropdown()
-      return
-    }
-
-    items.forEach(pa => {
-      const btn = document.createElement("button")
-      btn.type = "button"
-      btn.className = "w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex flex-col gap-0.5"
-      btn.dataset.action = "click->pre-alerta-search#select"
-      btn.dataset.id        = pa.id
-      btn.dataset.numero    = pa.numero
-      btn.dataset.titulo    = pa.titulo || ""
-      btn.dataset.cliente   = pa.cliente || ""
-
-      const top = document.createElement("div")
-      top.className = "flex items-center gap-2"
-
-      const numeroSpan = document.createElement("span")
-      numeroSpan.className = "font-mono text-sm font-medium text-cec-navy dark:text-cec-gold"
-      numeroSpan.textContent = pa.numero
-      top.appendChild(numeroSpan)
-
-      if (pa.consolidado) {
-        const badge = document.createElement("span")
-        badge.className = "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-cec-gold/10 text-cec-gold-dark"
-        badge.textContent = "Consolidado"
-        top.appendChild(badge)
-      }
-      btn.appendChild(top)
-
-      if (pa.titulo) {
-        const tit = document.createElement("span")
-        tit.className = "text-xs text-gray-700 dark:text-gray-300"
-        tit.textContent = pa.titulo
-        btn.appendChild(tit)
-      }
-      if (pa.cliente) {
-        const cli = document.createElement("span")
-        cli.className = "text-xs text-gray-500 dark:text-gray-400"
-        cli.textContent = pa.cliente
-        btn.appendChild(cli)
-      }
-      this.dropdownTarget.appendChild(btn)
-    })
-    this.showDropdown()
-  }
-
-  select(e) {
-    const btn = e.currentTarget
-    this.preAlertaIdTarget.value = btn.dataset.id
-    this.inputTarget.value = btn.dataset.numero
+  _alSeleccionar(datos) {
+    this._campo.value = datos.numero
     if (this.hasNombreTarget) {
-      const partes = [btn.dataset.titulo, btn.dataset.cliente].filter(Boolean)
+      const partes = [ datos.titulo, datos.cliente ].filter(Boolean)
       this.nombreTarget.textContent = partes.join(" · ")
-      this.nombreTarget.classList.toggle("hidden", partes.length === 0)
+      this.nombreTarget.classList.remove("hidden")
     }
-    this.hideDropdown()
   }
 
-  hideDropdown() {
-    this.dropdownTarget.classList.add("hidden")
-    this._activeIndex = -1
-  }
-
-  showDropdown() {
-    this.dropdownTarget.classList.remove("hidden")
-  }
+  // ── Alias en el idioma viejo, para no tocar markup que ya funciona ──
+  search() { this.buscar() }
+  onKeydown(e) { this.teclado(e) }
+  select(e) { this.elegir(e) }
+  renderDropdown(items) { this.pintar(items) }
+  hideDropdown() { this.cerrar() }
+  showDropdown() { this.abrir() }
 }

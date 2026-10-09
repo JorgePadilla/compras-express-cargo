@@ -1,6 +1,16 @@
-import { Controller } from "@hotwired/stimulus"
+import ClienteAutocomplete from "controllers/cliente_autocomplete"
+import { conEnterAvanza } from "controllers/enter_avanza"
 
-export default class extends Controller {
+// El color del encabezado según de qué avisa. Yusef: *"el cerebro hasta el color
+// asocia"*. Las clases ya no viven acá: llegan en `tonosValue` desde
+// `ModalHeaderComponent::TONOS` (PR-C29.12), que es la única fuente de los
+// tonos de modal de la app. La retención es bloqueo, la tarea es atención y
+// la nota es notas.
+
+// PR-C6.32: la búsqueda de cliente vive en `ClienteAutocomplete`, compartida
+// con /entrega_personal. Acá solo queda lo propio de etiquetar: el banner de
+// notas de Miami, vía el gancho `_alSeleccionarCliente`.
+export default class extends conEnterAvanza(ClienteAutocomplete) {
   static targets = [
     "form", "tipoEnvio", "tracking",
     "trackingSecundario", "trackingSecundarioContainer",
@@ -9,21 +19,58 @@ export default class extends Controller {
     "clienteNombre", "descripcion",
     "notasBanner", "notasTexto",
     "preAlertaBanner", "preAlertaNumero", "preAlertaCliente", "preAlertaDescripcion",
-    "duplicateModal", "duplicateInfo", "duplicateNewBtn", "duplicateNewHint",
-    "cajasModal", "cajasInput", "cantidadPaquetesHidden",
+    "duplicateModal", "duplicateInfo", "duplicateUpdateBtn", "duplicateNewBtn", "duplicateNewHint",
     "submitBtn", "event", "panel",
-    "terceroContainer", "terceroToggle"
+    "terceroContainer", "terceroToggle",
+    "conflictoSesionModal", "conflictoSesionTexto", "conflictoSesionDejarBtn",
+    "sucursalBanner", "sucursalTexto", "sucursalDestino", "sucursalFalta", "sucursalModal", "sucursalModalTexto",
+    "quitarCobroModal",
+    "etiquetasModal", "etiquetasInput", "pesosSeccion", "pesosAviso", "pesosLista",
+    "avisoModal", "avisoEncabezado", "avisoTipo", "avisoTitulo", "avisoTexto",
+    "avisoPrincipal", "avisoSecundario",
+    // C22-02 · El botón de finalizar sesión del encabezado, que F11 dispara.
+    // Lleva target propio porque en la pantalla hay tres botones que van a
+    // `finalizar_sesion` —éste, el de abajo y el del modal de conflicto— y un
+    // `querySelector` agarraría cualquiera. Éste es el único con la
+    // confirmación puesta.
+    "finalizarSesionBtn"
   ]
   static values = {
+    // C20-12: el envío ya tiene peso → subir cajas exige pesar cada una.
+    envioPesado: Boolean,
+    pesosActuales: Object,
     checkUrl: String,
-    buscarUrl: String
+    buscarUrl: String,
+    // PR-C6.9: el tipo de envío del lote, para poder comparar contra el de la
+    // pre-alerta sin otra vuelta al servidor.
+    tipoEnvioSesion: String,
+    tipoEnvioSesionNombre: String,
+    // El paquete que se está actualizando. Vacío al dar de alta.
+    actualizandoId: String,
+    // PR-C29.12 · `{ retencion:, tarea:, nota: }` → clases de la franja.
+    tonos: Object,
+    // Cuántas cajas tiene ya, para que el modal no arranque en 1 y borrarlas
+    // quede a un Enter de distancia.
+    cajasActuales: Number
   }
 
   connect() {
-    this._searchTimeout = null
-    this._clienteActiveIndex = -1
+    // C20-10: acá vivían `_searchTimeout` y `_clienteActiveIndex`, muertos
+    // desde PR-C6.32 — el timeout y el índice reales viven en la base
+    // (`_timeout`, `_activo`). Peor que inútiles: el `disconnect` de abajo
+    // limpiaba el muerto y dejaba vivo el de verdad.
     this._handleGlobalKeydown = this.handleKeydown.bind(this)
     document.addEventListener("keydown", this._handleGlobalKeydown)
+    // C20-13: una pregunta a la vez. Cualquier <dialog> que se cierre —el
+    // aviso, el de etiquetas, el PIN, las listitas de retener/política, el de
+    // cambio de servicio que abre solo al llegar con ?cambio_servicio=1,
+    // «Dejar una tarea» en la franja— deja pasar a lo que estaba esperando:
+    // el siguiente aviso en fila, y después el duplicado pospuesto. `close`
+    // no burbujea: va en captura sobre el elemento del controller, que los
+    // envuelve a todos, franja incluida. Un frame después: el `open` ya se
+    // fue, pero dos `showModal()` en el mismo tick dejan el segundo sin foco.
+    this._alCerrarseUnaPregunta = () => requestAnimationFrame(() => this._siguienteAviso())
+    this.element.addEventListener("close", this._alCerrarseUnaPregunta, true)
     // Al cargar /etiquetar (incluida la navegación Turbo tras iniciar sesión),
     // el cursor arranca en el primer campo: tracking. `autofocus` no es
     // confiable en visitas Turbo, así que lo forzamos en connect.
@@ -34,7 +81,11 @@ export default class extends Controller {
 
   disconnect() {
     document.removeEventListener("keydown", this._handleGlobalKeydown)
-    if (this._searchTimeout) clearTimeout(this._searchTimeout)
+    this.element.removeEventListener("close", this._alCerrarseUnaPregunta, true)
+    // La base cancela el debounce y lo que esté en vuelo. Sin este `super`
+    // —que faltaba— una búsqueda pendiente disparaba después de que Turbo ya
+    // había cambiado de página.
+    super.disconnect()
   }
 
   handleKeydown(e) {
@@ -53,13 +104,66 @@ export default class extends Controller {
       // recibimos 20% por mucho". Funciona en cualquier momento del form.
       e.preventDefault()
       this.toggleTercero()
-    } else if (e.key === "F8") {
+    } else if (e.key === "F8" || e.key === "F10") {
+      // F10 es guardar en todo el resto del sistema (pre-facturas, ventas,
+      // caja, financiamientos) y Yusef lo apretó sin pensarlo. F8 se queda de
+      // alias mientras Miami se acostumbra — allá ya lo tienen en el dedo.
       e.preventDefault()
+      if (this._preguntaAbierta()) return
       this.submitForm()
     } else if (e.key === "F9") {
       e.preventDefault()
+      if (this._preguntaAbierta()) return
       this.submitFormWithPrint()
+    } else if (e.key === "F11") {
+      // C22-02 · Yusef: *"¿sabés qué deberíamos crear? Tal vez una función para
+      // finalizar […] una función, un F. Tal vez F11 o algo así, no sé si lo
+      // tenés ya agarrado"*.
+      //
+      // Dispara el botón que ya existe en vez de pegarle al endpoint: así
+      // hereda su «¿Finalizar la sesión de X?», que es lo que decidió Jorge —
+      // un roce de tecla no puede dejar al operario sin sesión.
+      //
+      // Sin sesión abierta el botón no se renderiza, y entonces la tecla no
+      // hace nada: el caso «no hay nada que finalizar» sale gratis.
+      //
+      // Se bloquea con un modal abierto, como F8/F9/F10. F2 queda libre a
+      // propósito porque es la salida que los modales ofrecen; finalizar la
+      // sesión no lo es, y encima pelearía con el botón «Finalizar la sesión»
+      // que el modal de conflicto ya tiene adentro.
+      e.preventDefault()
+      if (this._preguntaAbierta()) return
+      if (this.hasFinalizarSesionBtnTarget) this.finalizarSesionBtnTarget.click()
     }
+  }
+
+  // C19-08 · Jorge: "podemos hacer que los modales salgan en orden,
+  // actualmente salen montados". La regla que lo garantiza: mientras haya una
+  // pregunta en pantalla sin contestar, las teclas de guardar no actúan — así
+  // ningún modal nuevo (¿cuántas etiquetas?, la bolsa) se abre encima del que
+  // espera respuesta. CUALQUIER <dialog> abierto cuenta a propósito: el aviso
+  // en fila, el de etiquetas, el PIN, las listitas de retener/política — todos
+  // son preguntas. F2 queda libre: es la salida que los propios modales
+  // ofrecen. Contestar cuesta un Enter; guardar por encima costaba un error.
+  _preguntaAbierta() {
+    if (document.querySelector("dialog[open]")) return true
+    if (this._conflictoVisible()) return true
+    if (this._duplicadoVisible()) return true
+    // C20-13: lo que está esperando turno también es una pregunta sin
+    // contestar — entre el `close()` de un aviso y el frame siguiente no hay
+    // nada en pantalla, y F9 se colaba.
+    return (this._colaDeAvisos || []).length > 0 || this._avisoActual != null ||
+           this._duplicadoPospuesto != null
+  }
+
+  _conflictoVisible() {
+    return this.hasConflictoSesionModalTarget &&
+           !this.conflictoSesionModalTarget.classList.contains("hidden")
+  }
+
+  _duplicadoVisible() {
+    return this.hasDuplicateModalTarget &&
+           !this.duplicateModalTarget.classList.contains("hidden")
   }
 
   toggleTrackingSecundario() {
@@ -83,146 +187,123 @@ export default class extends Controller {
   _hideTrackingSecundario() {
     this.trackingSecundarioContainerTarget.classList.add("hidden")
     if (this.hasTrackingSecundarioTarget) this.trackingSecundarioTarget.value = ""
+    // C16-05: el campo se vacía por F3, por F2 y por «Dejarlo de lado», y los
+    // tres son un secundario nuevo. La memoria que evita consultar dos veces
+    // el mismo valor (`_ultimoSecundario`) se quedaba puesta, así que volver a
+    // usar el mismo tracking secundario en el paquete siguiente **ni siquiera
+    // consultaba** — Yusef: *"ya lo había detectado, y se quedó esto así,
+    // mirá: no lo limpió"*. El primario ya lo hacía desde PR-C6.21; el
+    // secundario no.
+    this._ultimoSecundario = null
+    this._secundarioPreAlerta = null
     if (this.hasTrackingSecundarioToggleLabelTarget) {
       this.trackingSecundarioToggleLabelTarget.textContent = "+ Agregar tracking secundario"
     }
   }
 
-  // Client autocomplete
-  searchCliente() {
-    if (this._searchTimeout) clearTimeout(this._searchTimeout)
+  // Lo que etiquetar hace de más al elegir un cliente: avisar de sus notas de
+  // Miami. La franja de contexto la carga `loadPanel`, que acá además manda el
+  // tracking del paquete.
+  // PR-C6.24: a qué sucursal va la caja. Se muestra apenas se elige el
+  // cliente, no al guardar: es una decisión física —en qué bolsa cae— y si se
+  // entera tarde hay que volver a abrir la bolsa.
+  _mostrarSucursal(sucursal, esLaDeSiempre = false, sinSucursal = false) {
+    // C29-03 · El cliente sin sucursal de retiro no tiene nombre que mostrar
+    // —ya no se cae a su ciudad—, y es justo el que más hay que avisar: la
+    // etiqueta sale «SIN SUCURSAL» y la caja se aparta. El modal del final lo
+    // repite con esas mismas palabras.
+    this._sucursalActual = sinSucursal ? "SIN SUCURSAL" : (sucursal || "").trim()
+    // Yusef: *"esa de San Pedro Sula hay que eliminarlo, porque es el default…
+    // el cerebro trabaja en default; cuando querés que haga una cosa diferente,
+    // tenés que ponerle la nota que es diferente"*. El 80% de la carga se queda
+    // ahí: un aviso que sale siempre deja de leerse, y con él el del día que
+    // dice Tegucigalpa — que era el único que importaba.
+    //
+    // El banner sí se queda: es pasivo y no interrumpe a nadie. Lo que deja de
+    // salir para la de siempre es el **modal** del final, que tapa la pantalla.
+    this._avisarLaBolsa = this._sucursalActual !== "" && !esLaDeSiempre
 
-    const query = this.clienteInputTarget.value.trim()
-    if (query.length < 2) {
-      this.hideDropdown()
+    if (!this.hasSucursalBannerTarget) return
+    if (this._sucursalActual === "") {
+      this.sucursalBannerTarget.classList.add("hidden")
       return
     }
 
-    this._searchTimeout = setTimeout(() => {
-      fetch(`${this.buscarUrlValue}?q=${encodeURIComponent(query)}`, {
-        headers: { "Accept": "application/json" }
-      })
-        .then(r => r.json())
-        .then(clientes => this.renderDropdown(clientes))
-        .catch(() => this.hideDropdown())
-    }, 300)
+    if (this.hasSucursalTextoTarget) this.sucursalTextoTarget.textContent = this._sucursalActual
+    if (this.hasSucursalDestinoTarget) this.sucursalDestinoTarget.hidden = sinSucursal
+    if (this.hasSucursalFaltaTarget) this.sucursalFaltaTarget.hidden = !sinSucursal
+    this.sucursalBannerTarget.classList.remove("hidden")
   }
 
-  renderDropdown(clientes) {
-    if (clientes.length === 0) {
-      this.clienteDropdownTarget.innerHTML = `
-        <div class="px-4 py-3 text-sm text-gray-500">No se encontraron clientes</div>
-      `
-      this.showDropdown()
-      return
+  // El segundo aviso: "solo quiero un modal al principio y uno al final".
+  // Sale después de imprimir, que es cuando el operario tiene la etiqueta en
+  // la mano y va a guardar la caja.
+  _avisarSucursalAlFinal() {
+    if (!this._sucursalActual || !this.hasSucursalModalTarget) return
+    if (!this._avisarLaBolsa) return
+
+    if (this.hasSucursalModalTextoTarget) {
+      this.sucursalModalTextoTarget.textContent = this._sucursalActual
     }
-
-    this.clienteDropdownTarget.innerHTML = clientes.map((c, i) => `
-      <button type="button"
-        class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center justify-between"
-        data-action="click->etiquetar#selectCliente mousemove->etiquetar#hoverCliente"
-        data-index="${i}"
-        data-id="${c.id}"
-        data-codigo="${c.codigo}"
-        data-nombre="${c.nombre}"
-        data-notas="${c.notas_miami || ''}"
-        data-categoria="${c.categoria_precio || ''}">
-        <div>
-          <span class="font-mono text-sm font-medium text-cec-navy">${c.codigo}</span>
-          <span class="ml-2 text-sm text-gray-700">${c.nombre}</span>
-        </div>
-        ${c.categoria_precio ? `<span class="text-xs text-gray-500">${c.categoria_precio}</span>` : ''}
-      </button>
-    `).join("")
-    this.showDropdown()
-    // Cargar el primer ítem como activo para confirmarlo con Enter sin mouse.
-    this._clienteActiveIndex = 0
-    this._highlightActiveCliente()
+    // RP-20: Yusef pidió "un pin antes de que salga cualquier modal" (A1-10).
+    // La vista escuchaba `modalAbierto` desde `PR-C6.16` y nadie lo disparaba
+    // nunca: este modal y el del PIN abrían mudos, con el operario mirando la
+    // pistola. El cable estaba puesto; le faltaba este extremo.
+    this.dispatch("modalAbierto")
+    if (this.sucursalModalTarget.showModal) this.sucursalModalTarget.showModal()
+    else this.sucursalModalTarget.classList.remove("hidden")
   }
 
-  // ── Navegación por teclado del dropdown de cliente ──
-  _clienteItems() {
-    return Array.from(this.clienteDropdownTarget.querySelectorAll("[data-index]"))
+// PR-C6.28: el modal donde el supervisor pone su PIN para quitarle al
+// paquete el cobro por cambio de servicio.
+abrirQuitarCobro() {
+  if (!this.hasQuitarCobroModalTarget) return
+
+  this.dispatch("modalAbierto")
+  if (this.quitarCobroModalTarget.showModal) this.quitarCobroModalTarget.showModal()
+  else this.quitarCobroModalTarget.classList.remove("hidden")
+  this.quitarCobroModalTarget.querySelector("select, input")?.focus()
+}
+
+cerrarQuitarCobro() {
+  if (!this.hasQuitarCobroModalTarget) return
+
+  if (this.quitarCobroModalTarget.close) this.quitarCobroModalTarget.close()
+  else this.quitarCobroModalTarget.classList.add("hidden")
+}
+
+  cerrarSucursalModal() {
+    if (!this.hasSucursalModalTarget) return
+
+    if (this.sucursalModalTarget.close) this.sucursalModalTarget.close()
+    else this.sucursalModalTarget.classList.add("hidden")
+    // C19-02: `showModal()` se llevó el foco; al cerrar, de vuelta al
+    // tracking para el siguiente escaneo.
+    this._volverAlTracking()
   }
 
-  _highlightActiveCliente() {
-    const items = this._clienteItems()
-    items.forEach((el, i) => {
-      const active = i === this._clienteActiveIndex
-      el.classList.toggle("bg-cec-teal/10", active)
-      if (active) el.scrollIntoView({ block: "nearest" })
-    })
+  // C16-04 · Yusef, 2026-08-25: "mirá a ver si lo podés lograr que quede al
+  // mismo Tab: que vos lo seleccionás, se pase". Enter sobre el cliente elegía
+  // y se quedaba en el campo; el segundo Enter recién avanzaba. Ahora elegir
+  // con el teclado ya es avanzar, como en cualquier otro campo.
+  _despuesDeElegirConTeclado(e) {
+    this._focusSiguiente(e.target)
   }
 
-  _moveCliente(delta) {
-    const items = this._clienteItems()
-    if (items.length === 0) return
-    const next = this._clienteActiveIndex + delta
-    this._clienteActiveIndex = Math.max(0, Math.min(items.length - 1, next))
-    this._highlightActiveCliente()
-  }
-
-  hoverCliente(e) {
-    const idx = parseInt(e.currentTarget.dataset.index, 10)
-    if (Number.isFinite(idx) && idx !== this._clienteActiveIndex) {
-      this._clienteActiveIndex = idx
-      this._highlightActiveCliente()
-    }
-  }
-
-  clienteKeydown(e) {
-    if (this.clienteDropdownTarget.classList.contains("hidden")) return
-    const items = this._clienteItems()
-
-    if (e.key === "ArrowDown") {
-      e.preventDefault()
-      this._moveCliente(1)
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault()
-      this._moveCliente(-1)
-    } else if (e.key === "Enter") {
-      const active = items[this._clienteActiveIndex]
-      if (active) {
-        e.preventDefault() // no enviar el form: solo seleccionar el cliente
-        this._selectClienteEl(active)
-      }
-    } else if (e.key === "Escape") {
-      e.preventDefault()
-      this.hideDropdown()
-    } else if (e.key === "Tab") {
-      this.hideDropdown()
-    }
-  }
-
-  selectCliente(e) {
-    this._selectClienteEl(e.currentTarget)
-  }
-
-  _selectClienteEl(btn) {
-    const id = btn.dataset.id
-    const codigo = btn.dataset.codigo
-    const nombre = btn.dataset.nombre
-    const notas = btn.dataset.notas
-    const categoria = btn.dataset.categoria
-
-    this.clienteIdTarget.value = id
-    this.clienteInputTarget.value = codigo
-    this.clienteNombreTarget.textContent = `${nombre}${categoria ? ` — ${categoria}` : ''}`
-    this.clienteNombreTarget.classList.remove("hidden")
+  _alSeleccionarCliente({ id, notas, sucursalRetiro, retiroPorDefecto, sinSucursalRetiro }) {
+    this._mostrarSucursal(sucursalRetiro, retiroPorDefecto === "true" || retiroPorDefecto === true,
+                          sinSucursalRetiro === "true" || sinSucursalRetiro === true)
 
     if (notas && notas.trim() !== "") {
       if (this.hasNotasTextoTarget) this.notasTextoTarget.textContent = notas
       if (this.hasNotasBannerTarget) this.notasBannerTarget.classList.remove("hidden")
-      // Trigger audio alert for client notes
       this.dispatch("clienteNotas")
     } else if (this.hasNotasBannerTarget) {
       this.notasBannerTarget.classList.add("hidden")
     }
 
-    // PR-9.b: jalar tareas + notas del cliente a la franja de la derecha.
     this.loadPanel(id)
-
-    this.hideDropdown()
+    this._revisarSecundarioPendiente()
   }
 
   // Recarga el turbo-frame de la franja de contexto. Turbo se encarga del
@@ -252,15 +333,30 @@ export default class extends Controller {
 
     const oculto = this.terceroContainerTarget.classList.toggle("hidden")
     if (oculto) {
-      const hidden = this.terceroContainerTarget.querySelector("input[name*='tercero_id']")
-      const texto = this.terceroContainerTarget.querySelector("input[type='text']")
-      if (hidden) hidden.value = ""
-      if (texto) texto.value = ""
+      this._limpiarTercero()
     } else {
       const texto = this.terceroContainerTarget.querySelector("input[type='text']")
       if (texto) texto.focus()
     }
     this._syncTerceroToggleLabel()
+  }
+
+  // Esconder el bloque del tercero **no alcanza**: `tercero_id` es un `hidden`, y
+  // `_limpiarCampos` excluye los hidden a propósito —ahí viven el CSRF y el
+  // `_method`—. Así que F2 vaciaba el campo que se ve y dejaba el id puesto: el
+  // paquete siguiente se guardaba **con el tercero del anterior**, sin que nada
+  // lo mostrara en pantalla.
+  //
+  // Vive en un solo método porque así fue como se separaron: `toggleTercero`
+  // limpiaba las dos cosas y `clearForm` solo escondía. Dos copias de la misma
+  // limpieza es exactamente cómo este archivo se lastima.
+  _limpiarTercero() {
+    if (!this.hasTerceroContainerTarget) return
+
+    const hidden = this.terceroContainerTarget.querySelector("input[name*='tercero_id']")
+    const texto = this.terceroContainerTarget.querySelector("input[type='text']")
+    if (hidden) hidden.value = ""
+    if (texto) texto.value = ""
   }
 
   _syncTerceroToggleLabel() {
@@ -271,44 +367,313 @@ export default class extends Controller {
       : '- Quitar tercero <kbd class="px-1 py-0.5 bg-gray-100 border rounded text-[10px]">F4</kbd>'
   }
 
-  hideDropdown() {
-    this.clienteDropdownTarget.classList.add("hidden")
-    this._clienteActiveIndex = -1
-  }
-
-  showDropdown() {
-    this.clienteDropdownTarget.classList.remove("hidden")
-  }
-
-  clickOutsideDropdown(e) {
-    if (!this.clienteDropdownTarget.contains(e.target) && e.target !== this.clienteInputTarget) {
-      this.hideDropdown()
-    }
-  }
-
   // Duplicate tracking detection
-  checkTracking() {
-    const tracking = this.trackingTarget.value.trim()
-    if (tracking.length < 5) return
+  //
+  // PR-C6.21: el `fetch` iba suelto — sin cancelar el anterior, sin verificar
+  // al volver que el campo siguiera diciendo lo mismo, y con un `catch` vacío
+  // que se tragaba todo. La pistola manda Enter sola, así que escanear A y
+  // enseguida B dejaba la respuesta de A pisando el formulario de B: banner de
+  // pre-alerta equivocado, cliente auto-llenado equivocado, pito equivocado.
+  //
+  // Yusef, viéndolo: "le di enter y no lo reconoce... le di enter rápido y
+  // mete rápido, aquí es donde tenés que ver cómo integrar eso. **Tiene que
+  // ser rápido.**" — de ahí que la salida sea descartar respuestas viejas y no
+  // meter un debounce, que sería justo lo contrario de lo que pidió.
+  // El secundario se revisa igual que el primario.
+  //
+  // Yusef: *"aquí no me dio alerta del Secundario"*. El campo no tenía ninguna
+  // acción cableada: un secundario ya usado no avisaba nada. `buscar_escaneado`
+  // ya lo cubre del lado del server (`paquete.rb:344`) — faltaba preguntarle.
+  //
+  // No auto-rellena cliente: el segundo número es del mismo bulto que se está
+  // cargando, y el cliente ya lo puso el primero.
+  //
+  // 2026-08-18: pero **una pre-alerta no es un duplicado**. Yusef escaneó un
+  // secundario que también tenía la suya y le salió el modal de "¿es una
+  // actualización?":
+  //
+  //   > "Esto, según tus reglas del inicio, no debería pasar… aquí está
+  //   >  agarrando la regla de que existe el tracking y no la regla de que es
+  //   >  una pre-alerta."
+  //
+  // Es la misma divergencia de siempre: `checkTracking` tiene esa rama desde
+  // `PR-2` y acá se copió **solo** el chequeo de duplicado.
+  checkTrackingSecundario() {
+    if (!this.hasTrackingSecundarioTarget) return
+    const valor = this.trackingSecundarioTarget.value.trim()
+    if (valor.length < 5) return
+    if (valor === this._ultimoSecundario) return
+    this._ultimoSecundario = valor
 
-    fetch(`${this.checkUrlValue}?tracking=${encodeURIComponent(tracking)}`, {
+    // El mismo guard que `checkTracking` (PR-C6.21): la respuesta que llega
+    // tarde habla de un valor que ya no está en pantalla.
+    const consulta = (this._secundarioSeq = (this._secundarioSeq || 0) + 1)
+
+    fetch(this._urlDeConsulta(valor), {
       headers: { "Accept": "application/json" }
     })
       .then(r => r.json())
       .then(data => {
+        if (consulta !== this._secundarioSeq) return
+        if (this.trackingSecundarioTarget.value.trim() !== valor) return
+        if (data.pre_alerta_match) return this._revisarSecundarioConPreAlerta(data)
+        if (data.exists && !data.terminal) this._openDuplicateModal(data, "secundario")
+      })
+      .catch(() => { if (consulta === this._secundarioSeq) this._ultimoSecundario = null })
+  }
+
+  // El secundario también venía anunciado. Lo que hay que hacer con eso lo
+  // dictó Yusef, y son dos mitades:
+  //
+  //   > "Si los dos tienen pre-alerta pero el tipo de envío está correcto, no
+  //   >  es necesario hacer nada. Ahora, si hay una incongruencia… hay que
+  //   >  avisarle al usuario: hay una diferencia en el tipo de envío."
+  //   > "Cuando tiene nombres diferentes, igual: hay incongruencia en el
+  //   >  nombre, está a nombre de dos personas diferentes."
+  //
+  // Contra qué se compara: el **cliente que ya está en el formulario** (lo puso
+  // el primer escaneo, o el operario a mano) y el **tipo de envío de la
+  // sesión**. Él calcula que en el 80% de los casos solo uno de los dos
+  // trackings trae pre-alerta, así que comparar contra la pre-alerta del
+  // primero no serviría — muchas veces no hay.
+  //
+  // **No marca nada solo.** Jorge se lo preguntó derecho —"¿el sistema va y
+  // marca la casillita?"— y contestó que no: *"ahí mismo le dice: este paquete
+  // tiene dos tipos de envío. Lo va a retener, o lo va a enviar así"*. Decide
+  // el operario.
+  _revisarSecundarioConPreAlerta(data) {
+    this.dispatch("preAlertaMatch")
+
+    // C16-05: el secundario está **arriba** del cliente en el formulario, así
+    // que en el orden natural esto corre con el cliente todavía vacío y la
+    // comparación no tiene contra qué comparar — la primera vez que Yusef lo
+    // probó avisó solo porque la pre-alerta del primario ya había puesto al
+    // cliente. Se guarda lo que dijo el servidor y se vuelve a comparar cuando
+    // el cliente aparezca (`_alSeleccionarCliente`).
+    this._secundarioPreAlerta = data
+    const hayCliente = this.hasClienteIdTarget && this.clienteIdTarget.value !== ""
+    if (hayCliente && this._avisarSiEsDeOtroCliente(data)) return
+
+    // La otra mitad ya está escrita para el primario: el tipo de envío de la
+    // pre-alerta contra el de la sesión (`_hayConflictoDeSesion`).
+    //
+    // C20-13: esto llamaba a `_avisarConflictoDeSesion`, que PR-C7.62 partió
+    // en pregunta + modal y renombró — solo en el primario. El TypeError caía
+    // en el `catch` del fetch, que además borraba `_ultimoSecundario`: el
+    // aviso no salía nunca y el mismo secundario se volvía a consultar —y a
+    // decir «pre alerta»— en cada blur. Va como aviso y no como «no se puede
+    // guardar»: el servidor solo rechaza por el tipo del primario
+    // (`conflicto_con_la_sesion`), y Yusef dejó la decisión en el operario —
+    // *"lo va a retener, o lo va a enviar así"*.
+    if (this._hayConflictoDeSesion(data)) {
+      this._avisarIncongruenciaDelSecundario(
+        `El tracking secundario tiene pre-alerta de ${data.pre_alerta_tipo_envio}, ` +
+        `y estás trabajando ${this.tipoEnvioSesionNombreValue}. Revisá antes de guardar: ` +
+        `puede que haya que retenerlo en Miami.`)
+    }
+  }
+
+  // ¿El secundario está pre-alertado a nombre de otro cliente que el del
+  // formulario? Avisa y devuelve `true`. No suena la voz de pre-alerta acá:
+  // eso ya sonó cuando el servidor contestó, y volver a llamarlo cada vez que
+  // se cambia el cliente la repetiría.
+  _avisarSiEsDeOtroCliente(data) {
+    const clienteActual = this.hasClienteIdTarget ? this.clienteIdTarget.value : ""
+    const otroCliente = clienteActual && data.cliente_id &&
+                        String(data.cliente_id) !== String(clienteActual)
+    if (!otroCliente) return false
+
+    this._avisarIncongruenciaDelSecundario(
+      `El tracking secundario está pre-alertado a nombre de ${data.pre_alerta_cliente}, ` +
+      `y este paquete va a nombre de otro cliente. Revisá antes de guardar: ` +
+      `puede que haya que retenerlo en Miami.`)
+    return true
+  }
+
+  // El secundario que se revisó con el cliente vacío, ahora que hay cliente.
+  _revisarSecundarioPendiente() {
+    const data = this._secundarioPreAlerta
+    if (!data) return
+    if (!this.hasTrackingSecundarioTarget || this.trackingSecundarioTarget.value.trim() === "") return
+
+    this._avisarSiEsDeOtroCliente(data)
+  }
+
+  _avisarIncongruenciaDelSecundario(texto) {
+    // C19-08: por el camino único del conflicto — que además cierra el aviso
+    // que estuviera en pantalla, porque el secundario se teclea con los
+    // avisos del primario ya saliendo y acá se montaban.
+    this._mostrarConflicto(texto)
+  }
+
+  // El paquete que se está actualizando NO es un duplicado de sí mismo.
+  //
+  // Jorge, 2026-08-19: *"cuando estamos actualizando hay un comportamiento
+  // raro: cierro el modal y doy click en la forma y se vuelve a abrir el
+  // modal"*. Al entrar por `?paquete_id=` el tracking viene puesto, y el primer
+  // blur salía a preguntar si existía — claro que existía: **era él**. Así que
+  // el operario que entró justamente a actualizarlo recibía "ya está en el
+  // sistema, ¿es una actualización?" sobre el paquete que ya estaba
+  // actualizando, y volvía a salir cada vez que el campo perdía el foco.
+  //
+  // `excluir_paquete_id` ya existe para esto — `PR-C6.44` lo agregó cuando el
+  // editor de pre-alertas se avisaba a sí mismo. El comentario del server decía
+  // *"/etiquetar nunca manda el parámetro"*, y era cierto mientras solo diera
+  // de alta.
+  _urlDeConsulta(valor) {
+    const url = new URL(this.checkUrlValue, window.location.origin)
+    url.searchParams.set("tracking", valor)
+    if (this.hasActualizandoIdValue && this.actualizandoIdValue) {
+      url.searchParams.set("excluir_paquete_id", this.actualizandoIdValue)
+    }
+    return url.pathname + url.search
+  }
+
+  checkTracking() {
+    const tracking = this.trackingTarget.value.trim()
+    if (tracking.length < 5) return
+
+    // Enter mueve el foco y el blur vuelve a disparar esto con el mismo valor.
+    // Una consulta por escaneo, no dos.
+    if (tracking === this._ultimoConsultado) return
+    this._ultimoConsultado = tracking
+
+    const consulta = (this._consultaSeq = (this._consultaSeq || 0) + 1)
+
+    fetch(this._urlDeConsulta(tracking), {
+      headers: { "Accept": "application/json" }
+    })
+      .then(r => r.json())
+      .then(data => {
+        // Llegó tarde: ya salió otra consulta, o el operario ya está en otro
+        // paquete. En los dos casos esta respuesta habla de algo que ya no
+        // está en pantalla.
+        if (consulta !== this._consultaSeq) return
+        if (this.trackingTarget.value.trim() !== tracking) return
+
         // PR-2: si el tracking tiene pre-alerta, sonido distintivo + banner verde.
         // No abrimos el modal de duplicado en ese caso — la pre-alerta NO es un
         // duplicado, es un "paquete esperado" que el sistema reconciliará al guardar.
         if (data.pre_alerta_match) {
           this._showPreAlertaBanner(data)
+          // C19-08 · Jorge: "si hay varias notas y alertas como la del paquete
+          // de otro tipo de envío hay que mostrarlas en orden y no montadas,
+          // el orden que haga más sentido". El orden con sentido es que el
+          // conflicto de sesión decide PRIMERO — y como sus dos salidas
+          // (finalizar la sesión / dejarlo de lado) abandonan el paquete en
+          // esta sesión, no hay "después": los avisos de retención, tareas y
+          // notas pertenecen a la sesión donde el paquete sí se va a recibir,
+          // y vuelven a salir enteros al escanearlo ahí. Antes acá salían el
+          // beep de match, la fila de avisos Y el conflicto, montados: el
+          // aviso (un <dialog>, top-layer) tapaba al conflicto (un overlay).
+          //
+          // El banner y el auto-fill sí quedan: dicen QUÉ pre-alerta es, que
+          // es contexto para decidir. Y suena solo el error — el beep alegre
+          // de match sobre un paquete que no se puede guardar era mentirle al
+          // oído del operario (cambia lo de PR-C6.9, que mandaba los dos).
+          if (this._hayConflictoDeSesion(data)) {
+            this._mostrarConflicto(
+              `Este paquete tiene pre-alerta de ${data.pre_alerta_tipo_envio}, ` +
+              `y estás trabajando ${this.tipoEnvioSesionNombreValue}. No se puede guardar así.`)
+            return
+          }
           this.dispatch("preAlertaMatch")
+          this._encolarAvisos(data)
           return
         }
         if (data.exists && !data.terminal) {
           this._openDuplicateModal(data)
+          return
         }
+        this._avisarTrackingLibre()
       })
-      .catch(() => {})
+      .catch((e) => {
+        // No se puede seguir en silencio: si la consulta falla, el operario
+        // cree que el tracking está limpio y graba un duplicado. Se permite
+        // reintentar (el mismo valor vuelve a consultar) y queda registrado.
+        if (consulta === this._consultaSeq) this._ultimoConsultado = null
+        console.error("[etiquetar] falló la consulta del tracking", e)
+      })
+  }
+
+  // El pin de «podés seguir» cuando el chequeo vuelve limpio: ni duplicado ni
+  // pre-alerta. Yusef, 2026-08-25 (C16-02): *"¿cuándo escuchás el pip? Cuando
+  // el sistema buscó en los paquetes y vio que no existía"* · *"siempre hay
+  // pitos para decir: ok, podés seguir"*. El operario mira la pistola, no la
+  // pantalla, y sin este pito no sabe si el chequeo terminó.
+  //
+  // Un tracking terminal (entregado, anulado) también está libre: se puede
+  // volver a usar, y PR-C6.9 ya lo deja pasar sin modal.
+  //
+  // No suena al actualizar: ahí el tracking viene puesto desde el servidor y
+  // el primer blur no es un escaneo — pitaría sin que nadie hubiera hecho
+  // nada.
+  _avisarTrackingLibre() {
+    if (this.hasActualizandoIdValue && this.actualizandoIdValue) return
+    this.dispatch("trackingLibre")
+  }
+
+  // El paquete escaneado pertenece a otro tipo de envío.
+  //
+  // Yusef lo consultó con Julián por videollamada y quedaron en las dos
+  // salidas: finalizar la sesión para abrir la del tipo correcto, o seguir en
+  // la misma y dejar el paquete de lado. En ninguna se graba.
+  //
+  // A7-17: esto avisaba con un banner inline y el operario podía seguir
+  // llenando el formulario igual — Yusef lo hizo delante de Jorge: "mira lo
+  // que pasa ahora: **yo lo puedo recibir**". Ahora es un modal que tapa la
+  // pantalla y obliga a elegir una de las dos.
+  //
+  // El rechazo de verdad lo sigue haciendo el servidor
+  // (`conflicto_con_la_sesion`): el modal es para que el operario se entere
+  // antes de llenar diez campos, no para reemplazar la validación.
+  _hayConflictoDeSesion(data) {
+    const sesion = this.hasTipoEnvioSesionValue ? this.tipoEnvioSesionValue : null
+    if (!sesion || !data.pre_alerta_tipo_envio_id) return false
+    return String(data.pre_alerta_tipo_envio_id) !== String(sesion)
+  }
+
+  // C19-08: el único lugar que abre el modal de conflicto — lo comparten el
+  // tipo de envío distinto y la incongruencia del secundario. El conflicto
+  // MANDA: si había un aviso en pantalla o en fila (el secundario se teclea
+  // con el paquete ya escaneado y sus avisos ya saliendo), se cierran y la
+  // cola muere ANTES de abrir — el `close()` directo no pasa por
+  // `_cerrarAviso`, así que nada la vuelve a avanzar. Los avisos no se
+  // pierden: vuelven a salir enteros al escanear el paquete en la sesión
+  // que corresponde. C20-13: se lleva también al duplicado, en pantalla o
+  // pospuesto — sus dos salidas abandonan el paquete igual.
+  _mostrarConflicto(texto) {
+    this.dispatch("tipoEnvioDistinto")
+    if (!this.hasConflictoSesionModalTarget) return
+
+    this._colaDeAvisos = []
+    this._avisoActual = null
+    if (this.hasAvisoModalTarget && this.avisoModalTarget.open) this.avisoModalTarget.close()
+    this._ocultarDuplicado()
+    this._duplicadoPospuesto = null
+
+    if (this.hasConflictoSesionTextoTarget) this.conflictoSesionTextoTarget.textContent = texto
+    this.conflictoSesionModalTarget.classList.remove("hidden")
+
+    // Se intenta llevar el foco al modal. Va en el frame siguiente porque esto
+    // corre al resolverse el `fetch`, y en ese mismo tick todavía se están
+    // acomodando el auto-llenado del cliente y la navegación con Enter.
+    //
+    // Es un extra, no el bloqueo: lo que impide guardar mal es el overlay —que
+    // tapa el formulario, y desde C19-08 también apaga F8/F9/F10— y, si
+    // alguien igual llega a mandar el POST, el rechazo del servidor
+    // (`conflicto_con_la_sesion`), que tiene sus tests.
+    if (this.hasConflictoSesionDejarBtnTarget) {
+      requestAnimationFrame(() => this.conflictoSesionDejarBtnTarget.focus())
+    }
+  }
+
+  // "Dejarlo de lado y seguir" — cierra el modal y limpia el formulario. Es la
+  // misma acción que F2, y por eso pasa por `clearForm`: si algún día F2 hace
+  // algo más, esto no se queda atrás.
+  descartarPorConflicto() {
+    this.clearForm()
+    if (this.hasTrackingTarget) this.trackingTarget.focus()
   }
 
   _showPreAlertaBanner(data) {
@@ -330,6 +695,206 @@ export default class extends Controller {
         this.descripcionTarget.value.trim() === "") {
       this.descripcionTarget.value = data.pre_alerta_descripcion
     }
+
+    this._marcarRetencionDeLaPreAlerta(data)
+  }
+
+  // ── Lo que el que recibe TIENE que ver ────────────────────────────────
+  //
+  // Yusef, 2026-08-19, señalando la franja donde esto salía como texto al
+  // costado: *"estas informaciones ellos no las leen… a puro huevos leen esto"*.
+  // Digitan de 500 a 1.000 paquetes al día mirando la pistola.
+  //
+  // **Uno por cosa, no uno con todo**: él arrancó pidiendo uno solo y Jorge
+  // argumentó que cada uno necesita su propia respuesta —retenido / se hizo /
+  // leída—. Salen en fila y solo los que el paquete tiene: si no hay retención
+  // ni tareas ni notas, no sale nada.
+  _encolarAvisos(data) {
+    const cola = []
+
+    if (data.retener_miami) {
+      const motivos = (data.motivo_retencion_nombres || []).join(" · ")
+      cola.push({
+        tipo: "Retener en Miami",
+        titulo: "NO DESPACHAR",
+        texto: [motivos, data.notas_retencion].filter(Boolean).join("\n") ||
+               "Sin motivo anotado.",
+        principal: "Retenido, confirmado",
+        tono: "retencion"
+      })
+    }
+
+    ;(data.tareas || []).forEach(t => cola.push({
+      tipo: "Tarea pendiente",
+      titulo: t.titulo,
+      texto: "",
+      principal: "Se hizo",
+      secundario: "Todavía no",
+      completarUrl: t.url,
+      tono: "tarea"
+    }))
+
+    ;(data.notas || []).forEach(n => cola.push({
+      tipo: n.titulo,
+      titulo: "Nota del cliente",
+      texto: n.texto,
+      principal: "Leída",
+      tono: "nota"
+    }))
+
+    this._colaDeAvisos = cola
+    this._siguienteAviso()
+  }
+
+  _siguienteAviso() {
+    if (!this.hasAvisoModalTarget) return
+    // C19-08: con el conflicto en pantalla la fila muere — un aviso abriéndose
+    // encima (es un <dialog>: top-layer, tapa cualquier overlay) era
+    // exactamente el "salen montados" de Jorge. C20-13: y el duplicado
+    // pospuesto muere con ella.
+    if (this._conflictoVisible()) {
+      this._colaDeAvisos = []
+      this._avisoActual = null
+      this._duplicadoPospuesto = null
+      return
+    }
+    // C20-13: con cualquier otra pregunta abierta —la listita de retener que
+    // el operario abrió a mano, el cambio de servicio que abre solo con
+    // ?cambio_servicio=1, «¿cuántas etiquetas?»— la fila espera; el `close`
+    // que escucha `connect` la vuelve a llamar. (El propio aviso cerrándose
+    // llega acá con el `open` ya quitado.)
+    if (document.querySelector("dialog[open]")) return
+
+    // Un aviso cerrado por fuera de sus botones (Escape: `avisoCancelar` lo
+    // frena una vez, el navegador deja pasar el segundo seguido) no marca
+    // nada — cuenta como «todavía no» y la fila sigue.
+    this._avisoActual = null
+    const aviso = (this._colaDeAvisos || []).shift()
+    if (!aviso) {
+      this._mostrarDuplicadoPospuesto()
+      return
+    }
+
+    // C20-13 · Jorge: "hay veces que retener en Miami y el cuadro de tracking
+    // ya existe en el sistema salen los dos". Los avisos van antes: si el
+    // operario después elige «Es actualización», la página recarga y los
+    // avisos ya no vuelven a salir — y el NO DESPACHAR es justo el que Yusef
+    // pidió como modal (C14-02). El duplicado que ya estaba en pantalla se
+    // hace a un lado y vuelve cuando la fila se vacía.
+    this._posponerDuplicadoVisible()
+
+    this._avisoActual = aviso
+    if (this.hasAvisoTipoTarget) this.avisoTipoTarget.textContent = aviso.tipo
+    if (this.hasAvisoTituloTarget) this.avisoTituloTarget.textContent = aviso.titulo
+    if (this.hasAvisoTextoTarget) this.avisoTextoTarget.textContent = aviso.texto
+    if (this.hasAvisoPrincipalTarget) this.avisoPrincipalTarget.textContent = aviso.principal
+    if (this.hasAvisoSecundarioTarget) {
+      this.avisoSecundarioTarget.textContent = aviso.secundario || ""
+      // Por el atributo y no por la clase: `.inline-flex` le gana a `.hidden` y
+      // «Todavía no» se veía en todos los avisos, tuvieran segunda salida o no.
+      this.avisoSecundarioTarget.hidden = !aviso.secundario
+    }
+    if (this.hasAvisoEncabezadoTarget) {
+      // Se sacan las clases de todos los tonos y se ponen las de éste: el
+      // resto de la franja (padding, centrado) lo puso el componente.
+      const tonos = this.tonosValue
+      const clases = (c) => c.split(" ").filter(Boolean)
+      Object.values(tonos).forEach((c) => this.avisoEncabezadoTarget.classList.remove(...clases(c)))
+      this.avisoEncabezadoTarget.classList.add(...clases(tonos[aviso.tono] || tonos.nota))
+    }
+
+    // A1-10: "un pin antes de que salga cualquier modal".
+    this.dispatch("modalAbierto")
+    this.avisoModalTarget.showModal()
+  }
+
+  // "Se hizo" en una tarea la marca de verdad, por donde ya se marcaba: el
+  // endpoint del checkbox de la franja, que registra **quién** la completó. Un
+  // endpoint nuevo sería la gemela separada otra vez.
+  avisoSi() {
+    const aviso = this._avisoActual
+    if (aviso?.completarUrl) {
+      const token = document.querySelector("meta[name='csrf-token']")?.content
+      fetch(aviso.completarUrl, {
+        method: "POST",
+        headers: { "X-CSRF-Token": token, "Accept": "text/vnd.turbo-stream.html" }
+      }).catch(e => console.error("[etiquetar] no se pudo completar la tarea", e))
+    }
+    this._cerrarAviso()
+  }
+
+  avisoNo() {
+    this._cerrarAviso()
+  }
+
+  _cerrarAviso() {
+    this._avisoActual = null
+    // El siguiente lo saca el `close` del dialog (ver `connect`), en el frame
+    // que viene: un solo camino para avanzar la fila — Enter, clic, Escape o
+    // el conflicto que la cierra pasan todos por ahí.
+    this.avisoModalTarget.close()
+  }
+
+  // C20-13 · Escape no contesta un aviso. C14-02: *"ellos no las leen"* — las
+  // salidas son sus botones y F2. Frena el primer Escape; el navegador deja
+  // pasar un segundo seguido (sin activación de usuario entre medio), y para
+  // eso está la red de `_siguienteAviso`: la fila no se traba.
+  avisoCancelar(e) {
+    e.preventDefault()
+  }
+
+  // El duplicado que estaba en pantalla cuando llegó un aviso: se guarda y se
+  // oculta. Vuelve solo, cuando la fila se vacíe.
+  _posponerDuplicadoVisible() {
+    if (!this._duplicadoVisible()) return
+    this._duplicadoPospuesto = { data: this._duplicateData, desde: this._duplicadoDesde }
+    this._ocultarDuplicado()
+  }
+
+  _mostrarDuplicadoPospuesto() {
+    const pospuesto = this._duplicadoPospuesto
+    if (!pospuesto) return
+    this._duplicadoPospuesto = null
+    this._openDuplicateModal(pospuesto.data, pospuesto.desde)
+  }
+
+  _ocultarDuplicado() {
+    if (this.hasDuplicateModalTarget) this.duplicateModalTarget.classList.add("hidden")
+    this._duplicateData = null
+  }
+
+  // ¿Hay algo que tenga que salir antes que el duplicado? Un aviso en
+  // pantalla, avisos esperando, o cualquier otro <dialog> abierto.
+  _hayPreguntaAntesDelDuplicado() {
+    if (document.querySelector("dialog[open]")) return true
+    return (this._colaDeAvisos || []).length > 0 || this._avisoActual != null
+  }
+
+  // La retención que viene anunciada.
+  //
+  // El checkbox arranca desmarcado y un checkbox desmarcado manda `"0"`, así que
+  // el escaneo **apagaba** la bandera que la pre-alerta acababa de traer — y con
+  // ella los motivos. Lo que Yusef pidió el 17-ago llegaba al paquete esperado y
+  // se borraba en el momento de recibirlo.
+  //
+  // Se marca en la pantalla y **no** se fuerza desde el servidor a propósito: el
+  // que recibe tiene que poder desmarcarlo si al ver el bulto decide que no. Es
+  // la misma decisión que tomó para el aviso del secundario — *"lo va a retener,
+  // o lo va a enviar así"*.
+  _marcarRetencionDeLaPreAlerta(data) {
+    if (!data.retener_miami) return
+
+    const check = this.formTarget.querySelector("input[name='paquete[retener_miami]'][type='checkbox']")
+    if (!check || check.checked) return
+    check.checked = true
+
+    const ids = (data.motivo_retencion_ids || []).map(String)
+    this.formTarget
+      .querySelectorAll("input[name='paquete[motivo_retencion_ids][]'][type='checkbox']")
+      .forEach(input => { if (ids.includes(String(input.value))) input.checked = true })
+
+    const notas = this.formTarget.querySelector("[name='paquete[notas_retencion]']")
+    if (notas && notas.value.trim() === "" && data.notas_retencion) notas.value = data.notas_retencion
   }
 
   _hidePreAlertaBanner() {
@@ -359,19 +924,23 @@ export default class extends Controller {
     }
     this.hideDropdown()
 
-    // Si el cliente tiene notas Miami, mostrar banner + sonido alerta —
-    // misma lógica que selectCliente() para mantener consistencia.
-    const notas = (data.cliente_notas_miami || "").trim()
-    if (notas !== "") {
-      if (this.hasNotasTextoTarget) this.notasTextoTarget.textContent = notas
-      if (this.hasNotasBannerTarget) this.notasBannerTarget.classList.remove("hidden")
-      this.dispatch("clienteNotas")
-    }
-
-    // PR-9.b: con match de pre-alerta la franja además trae las "notas
-    // especiales" (las instrucciones que el cliente escribió para ESTE
-    // tracking) y las tareas que salieron de ellas.
-    this.loadPanel(data.cliente_id)
+    // PR: acá vivía una COPIA de lo que hace `_alSeleccionarCliente` — las
+    // notas y la franja— y el comentario decía "misma lógica que
+    // selectCliente() para mantener consistencia". No lo era: se copiaron las
+    // notas y **se olvidó el aviso de sucursal**, así que al escanear un
+    // tracking con pre-alerta el operario nunca se enteraba de a qué sucursal
+    // iba la caja. Yusef lo reportó dos veces.
+    //
+    // Ahora los dos caminos —elegir el cliente a mano y que lo traiga la
+    // pre-alerta— pasan por el mismo gancho. Lo que se agregue ahí vale para
+    // los dos por construcción, no por acordarse.
+    this._alSeleccionarCliente({
+      id: data.cliente_id,
+      notas: data.cliente_notas_miami,
+      sucursalRetiro: data.cliente_sucursal_retiro,
+      retiroPorDefecto: data.cliente_retiro_por_defecto,
+      sinSucursalRetiro: data.cliente_sin_sucursal_retiro
+    })
   }
 
   // Limpia los estilos visuales del input cliente que ponemos cuando viene
@@ -385,7 +954,19 @@ export default class extends Controller {
     }
   }
 
-  _openDuplicateModal(data) {
+  _openDuplicateModal(data, desde = "primario") {
+    // C19-08 / C20-13: el conflicto manda, también sobre el duplicado — sus
+    // salidas abandonan el paquete en esta sesión, no hay a quién contestarle
+    // «¿es actualización?». Y suena solo el error.
+    if (this._conflictoVisible()) return
+    // C20-13: con una pregunta en pantalla o en fila, el duplicado se pospone:
+    // sale —con su pito— cuando la fila se vacíe (`_mostrarDuplicadoPospuesto`).
+    if (this._hayPreguntaAntesDelDuplicado()) {
+      this._duplicadoPospuesto = { data, desde }
+      return
+    }
+    this._duplicadoDesde = desde
+
     // Render info section.
     const info = this.duplicateInfoTarget
     info.textContent = ""
@@ -427,32 +1008,86 @@ export default class extends Controller {
       }
     }
 
+    // PR-C6.9: el modal de duplicado abría mudo. Yusef: "pita para dos
+    // razones... pita, te decía, pre-alerta" y "el otro pito es porque te
+    // tira que **ya existía**". Son dos avisos distintos, no uno.
+    this.dispatch("trackingYaExiste")
     this.duplicateModalTarget.classList.remove("hidden")
+
+    // C16-03 · Yusef: "le da Enter y se queda ahí". El overlay tapaba la
+    // pantalla pero el cursor seguía en el campo de atrás, así que el Enter
+    // siguiente —el de la pistola, o el del operario— caía en el formulario y
+    // el modal ni se enteraba. Mismo patrón que el modal de conflicto: el foco
+    // va a la opción de siempre, «Es actualización», en el frame siguiente
+    // porque esto corre al resolverse el `fetch`.
+    if (this.hasDuplicateUpdateBtnTarget) {
+      requestAnimationFrame(() => this.duplicateUpdateBtnTarget.focus())
+    }
   }
 
+  // C29-02 · «Cancelar» **limpia el tracking** que abrió el modal. Yusef,
+  // 2026-10-08: *"le doy cancelar y me deja el tracking aquí. Te lo tiene que
+  // limpiar"* — y mostró por qué: el tracking era de Sofía, canceló, y el
+  // formulario lo dejó seguir y ponerle a Diego. *"Esos son errores que nos
+  // pasan en Miami con cualquier sistema."*
+  //
+  // Va al campo que lo disparó —el primario o el secundario, igual que
+  // `duplicateAsNew`— y le borra su memo de consulta: sin eso, volver a
+  // escanear el mismo tracking no consultaría (`_ultimoConsultado` lo da por
+  // visto) y el modal no saldría la segunda vez.
   closeDuplicate() {
-    this.duplicateModalTarget.classList.add("hidden")
-    this._duplicateData = null
+    const secundario = this._duplicadoDesde === "secundario" && this.hasTrackingSecundarioTarget
+    const campo = secundario ? this.trackingSecundarioTarget : this.trackingTarget
+    this._ocultarDuplicado()
+    this._duplicadoPospuesto = null
+
+    campo.value = ""
+    if (secundario) this._ultimoSecundario = null
+    else this._ultimoConsultado = null
+    campo.focus()
   }
 
-  // Opción 1: "Es actualización" — navega al edit del paquete original.
-  // El digitador ajusta lo que ocupe en el form de edit estándar.
+  // Opción 1: "Es actualización" — recarga ESTE formulario con los datos del
+  // paquete, sin salir de /etiquetar.
+  //
+  // PR-C6.10. Antes mandaba a `/paquetes/:id/edit`, y Yusef lo cortó en seco:
+  //
+  //   > "Me mandaste a editar y yo no quiero editar mi paquete."
+  //   > "Que te cargue aquí la lista. Esto te lo vuelve a llenar tal cual como
+  //   >  quedó, y actualizan todo lo que quieran actualizar, porque eso es lo
+  //   >  que ellos ocupan."
+  //
+  // Contó los pasos en voz alta —editar, guardar, volver, re-imprimir,
+  // seleccionar— y ahí se le acabó la paciencia.
   duplicateAsUpdate() {
     const data = this._duplicateData
-    if (!data || !data.edit_url) return
-    window.location.href = data.edit_url
+    if (!data || !data.existing_paquete_id) return
+    window.location.href = `/etiquetar?paquete_id=${data.existing_paquete_id}`
   }
 
-  // PR-5: Opción 2 — "Cambio de Servicio". Navega al show del paquete
-  // original con ?mode=edit&cambio_servicio=1 (no usamos edit_url porque
-  // edit_paquete_path redirige sin preservar query params). El banner amber
-  // se muestra y el flag solicito_cambio_servicio queda pre-marcado.
-  // Al guardar, la Nota de Débito auto se genera en facturar! (pre_factura.rb).
+  // Opción 2: "Cambio de Servicio" — igual que la de arriba, sin salir de
+  // /etiquetar.
+  //
+  // PR-C6.23. Antes navegaba a `/paquetes/:id?mode=edit&cambio_servicio=1`, y
+  // eso es literalmente lo que Yusef reportó:
+  //
+  //   > "Cambio de servicio **envía donde no es**."
+  //   > "Para mí que si hacemos cambio de servicio nada más al producto, nos
+  //   >  tire de un solo a esta ventana. Si yo presiono cambio de servicio,
+  //   >  **me tire aquí de un solo a esto**."
+  //   > "Es que ellos no manejan la página de paquetes."
+  //
+  // Es la misma queja que ya había hecho por "Es actualización" (PR-C6.10):
+  // Miami trabaja en /etiquetar y /paquetes es una pantalla ajena. Quedó a
+  // medias porque solo se arregló una de las dos opciones del modal.
+  //
+  // El `cambio_servicio=1` hace que el index marque el checkbox y abra el
+  // modal del tipo de envío destino de una vez — sin un clic de más.
   duplicateAsCambioServicio() {
     const data = this._duplicateData
     if (!data || !data.existing_paquete_id) return
     window.location.href =
-      `/paquetes/${data.existing_paquete_id}?mode=edit&cambio_servicio=1`
+      `/etiquetar?paquete_id=${data.existing_paquete_id}&cambio_servicio=1`
   }
 
   // Opción 2: "Es duplicado real" — pre-rellena el tracking del form con
@@ -461,41 +1096,150 @@ export default class extends Controller {
   duplicateAsNew() {
     const data = this._duplicateData
     if (!data || !data.next_tracking) return
-    this.trackingTarget.value = data.next_tracking
-    this.duplicateModalTarget.classList.add("hidden")
-    this._duplicateData = null
+    // C20-13: el sufijo va al campo que lo escaneó. Sobre un secundario que ya
+    // existía, esto escribía `SECUNDARIO+A` en el PRIMARIO — y el primario de
+    // verdad se perdía.
+    const campo = this._duplicadoDesde === "secundario" && this.hasTrackingSecundarioTarget
+      ? this.trackingSecundarioTarget
+      : this.trackingTarget
+    campo.value = data.next_tracking
+    this._ocultarDuplicado()
+    this._duplicadoPospuesto = null
     this.clienteInputTarget.focus()
   }
 
   // Form actions
   clearForm() {
-    this.formTarget.reset()
+    // C22-01 · Yusef, probando en vivo: *"cuando vamos a actualizar un paquete,
+    // el limpiar no está limpiando […] F2 se queda. Ya te queda actualizando. Y
+    // se queda esto, tiene que limpiar todo"*.
+    //
+    // En modo actualización el formulario viene del servidor apuntando a
+    // `PATCH /etiquetar/:id`, y limpiar los campos no toca **la acción**, ni el
+    // `_method` (que `_limpiarCampos` excluye junto al CSRF), ni el banner
+    // amarillo, ni este mismo value. El formulario quedaba en blanco a la vista
+    // y apuntando al paquete anterior por dentro.
+    //
+    // Esto ya estaba resuelto para el otro camino —el guardado exitoso vuelve a
+    // `/etiquetar` con `Turbo.visit` (ver `eventTargetConnected`)— y es lo mismo
+    // que hace el link «Cancelar» del banner. F2 nunca lo recibió.
+    //
+    // Volver a cargar la pantalla, además, deja el estado JS en cero por
+    // construcción: es la clase de bug que acá ya costó cuatro arreglos
+    // parciales (`_ultimoSecundario`, `_colaDeAvisos`, la cantidad de cajas).
+    //
+    // **La sesión sobrevive**, que es la excepción que puso Yusef —Jorge: *"¿a
+    // excepción de la sesión, verdad?"*, Yusef: *"sí, excepción correcto"*—:
+    // vive en `session[:etiquetar_tipo_envio_id]`, del lado del servidor, y solo
+    // `finalizar_sesion` la borra.
+    //
+    // En modo alta no se recarga nada: ahí F2 es el atajo del escaneo rápido y
+    // meterle una vuelta al servidor sería un arreglo peor que el bug.
+    if (this.hasActualizandoIdValue && this.actualizandoIdValue) {
+      Turbo.visit(window.location.pathname)
+      return
+    }
+
+    // C20-10: primero el dropdown. F2 limpiaba el cliente pero dejaba la lista
+    // abierta y la búsqueda en vuelo viva, así que a los 300ms repintaba
+    // encima del formulario ya limpio — y volvía a pitar, sobre un cliente que
+    // ya no estaba puesto.
+    this.cerrar()
+    this._limpiarCampos()
+    // Las cajas cargadas son de ESTE paquete: se van con él.
+    this.formTarget.dispatchEvent(new CustomEvent("cajas:limpiar", { bubbles: true }))
     this.clienteIdTarget.value = ""
     this.clienteNombreTarget.textContent = ""
     this.clienteNombreTarget.classList.add("hidden")
     if (this.hasNotasBannerTarget) this.notasBannerTarget.classList.add("hidden")
-    this.duplicateModalTarget.classList.add("hidden")
+    this._ocultarDuplicado()
+    this._duplicadoPospuesto = null
     // PR-9.b: la franja vuelve a su estado vacío junto con el formulario.
     this.loadPanel(null)
     if (this.hasTerceroContainerTarget) {
       this.terceroContainerTarget.classList.add("hidden")
+      // El id del tercero es de ESTE paquete y es un hidden: esconder el bloque
+      // lo dejaba puesto para el siguiente.
+      this._limpiarTercero()
       this._syncTerceroToggleLabel()
     }
     this._resetClienteFromPreAlertaStyling()
     this._hidePreAlertaBanner()
-    this._closeCajasModal()
-    this._resetCantidadPaquetes()
+    if (this.hasConflictoSesionModalTarget) this.conflictoSesionModalTarget.classList.add("hidden")
     if (this.hasTrackingSecundarioContainerTarget) this._hideTrackingSecundario()
-    if (this.hasTipoEnvioTarget) {
-      this.tipoEnvioTarget.focus()
-    } else {
-      this.trackingTarget.focus()
-    }
+    // C16-05: lo demás que era de ESTE paquete y sobrevivía a la limpieza — la
+    // cola de avisos pendientes, el aviso abierto y lo que el modal de
+    // duplicado tenía cargado. Un aviso en cola es un modal que le sale al
+    // paquete siguiente hablando del anterior.
+    this._colaDeAvisos = []
+    this._avisoActual = null
+    if (this.hasAvisoModalTarget && this.avisoModalTarget.open) this.avisoModalTarget.close()
+    // C19-02: al tracking, que es donde escanea el siguiente. (El branch que
+    // prefería `tipoEnvio` era de cuando el form tenía ese select; con la
+    // sesión por tipo de envío el target ya no existe en la vista.)
+    this._volverAlTracking()
+  }
+
+  // C19-02. Yusef: "el cursor… regrese a donde está el [campo de] tracking…
+  // se queda como en el aire… ellos ya solo vienen y escanean el siguiente".
+  // Y el scroll aparte: "era que se fue para arriba… que se mantenga en el
+  // área donde ellos en realidad se mueven".
+  //
+  // Si el modal rojo de la bolsa está abierto, el resto de la página es
+  // inerte y un focus() acá no hace nada — el foco lo devuelve
+  // `cerrarSucursalModal()`. El guard de `isConnected` es por el listener de
+  // window "focus" del flujo de actualización: `Turbo.visit` reemplaza la
+  // página y ese listener puede disparar sobre un controller ya muerto.
+  _volverAlTracking() {
+    if (!this.element.isConnected) return
+    if (this.hasSucursalModalTarget && this.sucursalModalTarget.open) return
+    if (this.hasAvisoModalTarget && this.avisoModalTarget.open) return
+    if (!this.hasTrackingTarget) return
+
+    this.trackingTarget.focus()
+    this.trackingTarget.scrollIntoView({ block: "center" })
+  }
+
+  // F2 tiene que dejar el formulario en blanco, siempre. Yusef: "todo, todo.
+  // Porque se equivocó y lo mejor es F2 y volvemos a empezar".
+  //
+  // Antes esto era `formTarget.reset()`, y ahí estaba el bug que reportó como
+  // "le doy F2 y no limpia": `reset()` no vacía el formulario — lo devuelve a
+  // los valores **renderizados**. Cuando el submit fallaba y el servidor
+  // re-renderizaba con 422, esos valores eran los que él acababa de escribir,
+  // así que F2 "limpiaba" de vuelta a lo mismo.
+  //
+  // No es problema de foco: el listener de F2 es a nivel `document`.
+  _limpiarCampos() {
+    // Los `hidden` quedan afuera a propósito: ahí viven el token CSRF y el
+    // `_method` de Rails. Los dos que sí hay que limpiar (`cliente_id` y
+    // `cantidad_paquetes`) los maneja `clearForm` explícitamente.
+    const campos = this.formTarget.querySelectorAll(
+      "input:not([type=hidden]), select, textarea"
+    )
+
+    campos.forEach((el) => {
+      if (el.type === "checkbox" || el.type === "radio") {
+        el.checked = false
+      } else if (el.tagName === "SELECT") {
+        el.selectedIndex = 0
+      } else {
+        el.value = ""
+      }
+    })
+
+    // PR-C6.21: el formulario en blanco empieza un paquete nuevo, así que el
+    // dedupe de consultas arranca de cero. Sin esto, re-escanear el mismo
+    // tracking después de un F2 no volvería a consultarlo.
+    this._ultimoConsultado = null
+
+    // PR-C6.24: y el aviso de sucursal se va con el paquete que lo trajo. Si
+    // quedara puesto, el siguiente bulto se guardaría en la bolsa anterior.
+    this._mostrarSucursal(null)
   }
 
   submitForm() {
     this._removePrintField()
-    this._resetCantidadPaquetes()
     this.formTarget.requestSubmit()
   }
 
@@ -503,63 +1247,239 @@ export default class extends Controller {
   // de submit. Yusef: "cantidad de paquetes se lo vamos a poner después
   // de presionar F9". El modal sobrescribe el hidden cantidad_paquetes
   // y dispara el submit con print=true.
+  // F9 = guardar e imprimir, sin preguntar nada.
+  //
+  // PR-C6.18b. Acá vivía un modal que preguntaba "¿cuántas cajas?" antes de
+  // enviar (PR-4). Jorge lo probó y fue directo: **"el F9 era como confuso"**
+  // — la cantidad de cajas es un dato del paquete, no un paso de impresión, y
+  // esconderla detrás de una tecla hacía que el campo visible del formulario
+  // ("Cant. Productos") pareciera el que mandaba.
+  //
+  // Ahora vive en el formulario, junto al peso y las medidas, con las filas
+  // por caja debajo (`cajas_controller.js`).
+  //
+  // 2026-08-18: y vuelve a preguntar, pero **solo cuando no se midió nada**.
+  // Yusef: *"en etiquetar casi nunca medimos y pesamos… cuando la cantidad de
+  // cajas guardadas sea cero, que pregunte cuántas son"*. Esa condición es la
+  // diferencia con el modal viejo: si hay aunque sea una caja cargada, ella
+  // manda y acá no se pregunta nada — nunca hay dos fuentes para el número.
   submitFormWithPrint() {
-    if (!this.hasCajasModalTarget) {
-      // Fallback si por alguna razón el modal no está montado: submit directo.
-      this._submitWithPrint()
-      return
-    }
-    this._resetCantidadPaquetes()
-    if (this.hasCajasInputTarget) {
-      this.cajasInputTarget.value = "1"
-    }
-    if (typeof this.cajasModalTarget.showModal === "function") {
-      this.cajasModalTarget.showModal()
-    } else {
-      this.cajasModalTarget.setAttribute("open", "")
-    }
-    setTimeout(() => {
-      if (this.hasCajasInputTarget) {
-        this.cajasInputTarget.focus()
-        this.cajasInputTarget.select()
-      }
-    }, 50)
+    if (this._cajasCargadas() > 0) return this._submitWithPrint()
+    if (!this.hasEtiquetasModalTarget) return this._submitWithPrint()
+
+    if (this.hasEtiquetasInputTarget) this.etiquetasInputTarget.value = String(this._etiquetasPorDefecto())
+    // A1-10: "un pin antes de que salga cualquier modal". El operario está
+    // mirando la pistola, no la pantalla — un modal mudo se lo pierde.
+    this._ocultarPesos()
+    this.dispatch("modalAbierto")
+    this.etiquetasModalTarget.showModal()
+    // `select()` y no solo `focus()`: el operario teclea el número encima sin
+    // tener que borrar el 1.
+    if (this.hasEtiquetasInputTarget) this.etiquetasInputTarget.select()
   }
 
-  cancelCajas() {
-    this._closeCajasModal()
+  // Con qué número arranca el modal.
+  //
+  // Al dar de alta, 1. **Al actualizar, las que el paquete ya tiene**: con el 1
+  // de siempre, abrir un envío de tres cajas y darle Enter lo bajaría a una, y
+  // `ajustar_split!` borra las sobrantes sin preguntar —el PIN de supervisor
+  // solo cuida las que ya se cobraron—. Yusef estaba subiendo de 3 a 5; bajar
+  // estaba a un Enter de distancia.
+  _etiquetasPorDefecto() {
+    const actuales = this.hasCajasActualesValue ? this.cajasActualesValue : 0
+    return actuales > 1 ? actuales : 1
   }
 
-  cajasKeydown(e) {
+  // Cuántas filas de caja hay cargadas. Se cuentan las filas y no un contador
+  // aparte: es la misma fuente que usa `cajas-repetidor#_renumerar`, y la
+  // lección de `PR-C6.31` es que dos fuentes para el mismo número terminan
+  // discrepando.
+  _cajasCargadas() {
+    const filas = this.formTarget.querySelectorAll(".caja-fila").length
+    return filas + this._cajaTecleadaSinAgregar()
+  }
+
+  // C18-05 · Yusef, 2026-08-26: *"yo puse que eran dos cajas… y me tiró siempre
+  // la pregunta"*. Tecleó peso y medidas arriba sin darle «Agregar» —la
+  // pantalla misma le dice que no hace falta— y el repetidor agrega esa caja
+  // recién al enviar (`_agregarPendiente`), después de que acá ya se decidió
+  // preguntar. Si hay peso tecleado, esa caja cuenta. Solo al dar de alta: al
+  // actualizar el campo viene pre-llenado con el peso del paquete, y ahí el
+  // modal se queda a propósito (es donde se cambia la cantidad).
+  _cajaTecleadaSinAgregar() {
+    if (this.hasActualizandoIdValue && this.actualizandoIdValue) return 0
+
+    const captura = this.formTarget.querySelector("[data-caja-campo='peso']")
+    return captura && captura.value.trim() !== "" ? 1 : 0
+  }
+
+  // Enter confirma; Escape cancela. Ojo: acá Enter **sí** actúa, al revés que
+  // en el formulario —donde la pistola dispara Enter y por eso Enter pasa al
+  // campo siguiente—. El modal no es el formulario: no hay campo siguiente y
+  // el operario ya decidió imprimir.
+  etiquetasKeydown(e) {
     if (e.key === "Enter") {
       e.preventDefault()
-      this.confirmCajas()
+      this.confirmarEtiquetas()
     } else if (e.key === "Escape") {
       e.preventDefault()
-      this.cancelCajas()
+      this.cerrarEtiquetas()
     }
   }
 
-  confirmCajas() {
-    const raw = this.hasCajasInputTarget ? parseInt(this.cajasInputTarget.value, 10) : 1
-    const n = Number.isFinite(raw) ? Math.max(1, Math.min(26, raw)) : 1
-    if (this.hasCantidadPaquetesHiddenTarget) {
-      this.cantidadPaquetesHiddenTarget.value = String(n)
+  confirmarEtiquetas() {
+    const cantidad = this._etiquetasPedidas()
+    if (cantidad === null) return
+
+    // C20-12: el segundo paso. Si hay que pesar y todavía no se mostró, se
+    // muestra; si ya está a la vista, no sale sin los N pesos.
+    let pesos = null
+    if (this._hayQuePesar(cantidad)) {
+      if (!this._pesosVisibles()) return this._mostrarPesos(cantidad)
+      pesos = this._pesosCompletos(cantidad)
+      if (!pesos) return
     }
-    this._closeCajasModal()
-    this._submitWithPrint()
+
+    this.etiquetasModalTarget.close()
+    this._submitWithPrint(cantidad, pesos)
   }
 
-  _closeCajasModal() {
-    if (!this.hasCajasModalTarget) return
-    if (typeof this.cajasModalTarget.close === "function") {
-      this.cajasModalTarget.close()
-    } else {
-      this.cajasModalTarget.removeAttribute("open")
-    }
+  cerrarEtiquetas() {
+    this._ocultarPesos()
+    this.etiquetasModalTarget.close()
   }
 
-  _submitWithPrint() {
+  // ── C20-12 · pesar al partir ──────────────────────────────────────────────
+  //
+  // Yusef, 2026-08-30: *"si no tiene pesos, pues los ponemos sin pesos; pero si
+  // ya tiene pesos tenemos que obligarlo a llenar, para evitar esta
+  // incoherencia"*. La incoherencia: una caja de 5 lb partida en tres eran tres
+  // cajas de 5 lb. Solo al subir sobre un envío que ya tiene peso: el peso de
+  // una caja sola era el del envío entero, así que al partir 1→N los N campos
+  // van vacíos; en un split que ya venía pesado caja por caja, las que existen
+  // traen el suyo y las nuevas van vacías. Todos obligatorios — y el servidor
+  // lo exige igual (`EtiquetarController#update`).
+  _hayQuePesar(cantidad) {
+    return this.envioPesadoValue && cantidad > this._etiquetasPorDefecto()
+  }
+
+  _pesosVisibles() {
+    return this.hasPesosSeccionTarget && !this.pesosSeccionTarget.classList.contains("hidden")
+  }
+
+  // Si el operario corrige la cantidad con los pesos a la vista, las filas se
+  // rehacen sin perder lo que ya tecleó — y sin robarle el foco.
+  etiquetasCambiadas() {
+    if (!this._pesosVisibles()) return
+    const n = parseInt(this.etiquetasInputTarget.value, 10)
+    if (Number.isInteger(n) && this._hayQuePesar(n)) this._mostrarPesos(n, { enfocar: false })
+    else this._ocultarPesos()
+  }
+
+  _mostrarPesos(cantidad, { enfocar = true } = {}) {
+    if (!this.hasPesosSeccionTarget) return
+    const tecleados = this._leerPesos()
+    const actuales = this._etiquetasPorDefecto()
+    const prellenar = actuales > 1 ? (this.pesosActualesValue || {}) : {}
+
+    this.pesosListaTarget.replaceChildren()
+    for (let i = 1; i <= cantidad; i++) {
+      const fila = document.createElement("label")
+      fila.className = "flex items-center gap-2 text-sm"
+      const nombre = document.createElement("span")
+      nombre.className = "w-14 text-gray-600"
+      nombre.textContent = `Caja ${i}`
+      const input = document.createElement("input")
+      input.type = "number"
+      input.step = "0.01"
+      input.min = "0.01"
+      input.value = tecleados[i] ?? prellenar[i] ?? ""
+      input.dataset.cajaPeso = String(i)
+      input.dataset.action = "keydown->etiquetar#pesosKeydown"
+      input.setAttribute("autocomplete", "off")
+      input.setAttribute("aria-label", `Peso de la caja ${i}`)
+      input.className = "w-24 text-right rounded-lg border-gray-300 text-sm text-cec-navy shadow-sm focus:ring-cec-teal focus:border-cec-teal"
+      const unidad = document.createElement("span")
+      unidad.className = "text-xs text-gray-500"
+      unidad.textContent = "lb"
+      fila.append(nombre, input, unidad)
+      this.pesosListaTarget.appendChild(fila)
+    }
+
+    this.pesosAvisoTarget.textContent = actuales > 1
+      ? "El envío ya tiene peso: pesá las cajas nuevas."
+      : `La caja tenía ${this._pesoActualTexto()} lb. Pesá cada una de las ${cantidad}.`
+    this.pesosSeccionTarget.classList.remove("hidden")
+    if (enfocar) this._primerPesoVacio()?.focus()
+  }
+
+  _ocultarPesos() {
+    if (!this.hasPesosSeccionTarget) return
+    this.pesosSeccionTarget.classList.add("hidden")
+    this.pesosListaTarget.replaceChildren()
+  }
+
+  _leerPesos() {
+    const pesos = {}
+    if (!this.hasPesosListaTarget) return pesos
+    this.pesosListaTarget.querySelectorAll("[data-caja-peso]").forEach((el) => {
+      if (el.value.trim() !== "") pesos[el.dataset.cajaPeso] = el.value.trim()
+    })
+    return pesos
+  }
+
+  // Los N pesos, o null — y el foco en el primero que falta.
+  _pesosCompletos(cantidad) {
+    const pesos = this._leerPesos()
+    for (let i = 1; i <= cantidad; i++) {
+      if (!(parseFloat(pesos[i]) > 0)) {
+        this._primerPesoVacio()?.focus()
+        return null
+      }
+    }
+    return pesos
+  }
+
+  _primerPesoVacio() {
+    if (!this.hasPesosListaTarget) return null
+    return Array.from(this.pesosListaTarget.querySelectorAll("[data-caja-peso]"))
+      .find((el) => !(parseFloat(el.value) > 0)) || null
+  }
+
+  _pesoActualTexto() {
+    const pesos = this.pesosActualesValue || {}
+    const primero = pesos[1] ?? Object.values(pesos)[0]
+    return primero == null ? "" : String(primero)
+  }
+
+  // Enter en un peso: al siguiente que falte; si no falta ninguno, confirma.
+  // Sobre uno vacío no avanza — es justamente el que hay que llenar.
+  pesosKeydown(e) {
+    if (e.key === "Escape") {
+      e.preventDefault()
+      return this.cerrarEtiquetas()
+    }
+    if (e.key !== "Enter") return
+    e.preventDefault()
+    const falta = this._primerPesoVacio()
+    if (falta === e.target) return
+    if (falta) return falta.focus()
+    this.confirmarEtiquetas()
+  }
+
+  // Un número mal tecleado no puede grabar 500 paquetes ni tirar 500 etiquetas.
+  // El servidor lo acota igual; esto es para que el operario se entere acá.
+  _etiquetasPedidas() {
+    if (!this.hasEtiquetasInputTarget) return 1
+    const n = parseInt(this.etiquetasInputTarget.value, 10)
+    if (!Number.isInteger(n) || n < 1 || n > 99) {
+      this.etiquetasInputTarget.select()
+      return null
+    }
+    return n
+  }
+
+  _submitWithPrint(etiquetas = null, pesos = null) {
     this._removePrintField()
     const input = document.createElement("input")
     input.type = "hidden"
@@ -567,18 +1487,55 @@ export default class extends Controller {
     input.value = "true"
     input.dataset.printField = "true"
     this.formTarget.appendChild(input)
+
+    // Va suelto y NO como `paquete[cantidad_paquetes]`: el bug de `PR-C6.31`
+    // fue tener dos campos con el mismo `name` —ganaba el último y el split se
+    // caía en silencio—. Con un nombre propio no hay con quién chocar.
+    //
+    // C20-04: y va SIEMPRE que el operario haya contestado, incluido el 1.
+    // Con el `> 1` de antes, confirmar «1» no mandaba nada: el servidor no
+    // recibía cantidad, no ajustaba el split, y el paquete seguía en tres
+    // cajas mientras la pantalla decía "actualizado" y salían tres etiquetas.
+    // Bajar un envío a una sola caja era **inexpresable** — justo el caso que
+    // Yusef describió: *"ese celular hay que devolverlo, entonces ya pasa de
+    // ser 3 a 2"*, y de 2 a 1 igual.
+    //
+    // Al dar de alta `etiquetas=1` es lo mismo que no mandarlo
+    // (`etiquetas_pedidas` contesta 1 cuando falta), así que ese camino no
+    // cambia. Y el modal arranca en la cantidad actual, así que un Enter sin
+    // tocar nada manda N==actual y el servidor no ajusta nada.
+    if (etiquetas) {
+      const cuantas = document.createElement("input")
+      cuantas.type = "hidden"
+      cuantas.name = "etiquetas"
+      cuantas.value = String(etiquetas)
+      cuantas.dataset.printField = "true"
+      this.formTarget.appendChild(cuantas)
+    }
+
+    // C20-12: el peso de cada caja, con el nombre que `MedidasPorCaja` ya lee.
+    // Con `data-print-field` para que `_removePrintField` los limpie después.
+    if (pesos) {
+      Object.entries(pesos).forEach(([i, peso]) => {
+        const campo = document.createElement("input")
+        campo.type = "hidden"
+        campo.name = `paquete[cajas][${i}][peso]`
+        campo.value = peso
+        campo.dataset.printField = "true"
+        this.formTarget.appendChild(campo)
+      })
+    }
+
     this.formTarget.requestSubmit()
   }
 
-  _resetCantidadPaquetes() {
-    if (this.hasCantidadPaquetesHiddenTarget) {
-      this.cantidadPaquetesHiddenTarget.value = "1"
-    }
-  }
 
+  // `querySelectorAll` y no `querySelector`: desde que el modal agrega también
+  // el campo de la cantidad, son dos los que hay que limpiar. Con el singular,
+  // el segundo sobrevivía al guardado y el paquete siguiente heredaba la
+  // cantidad del anterior — exactamente el bug de `PR-C6.31`, otra vez.
   _removePrintField() {
-    const existing = this.formTarget.querySelector("[data-print-field]")
-    if (existing) existing.remove()
+    this.formTarget.querySelectorAll("[data-print-field]").forEach(el => el.remove())
   }
 
   // Handle turbo stream events
@@ -593,6 +1550,29 @@ export default class extends Controller {
         // Yusef: "aqui esta tirando el warehouse, no la etiqueta".
         // `hermanas=1` saca una por caja cuando el tracking se dividio.
         window.open(`/paquetes/${el.dataset.paqueteId}/etiqueta?hermanas=1&print=true`, "_blank")
+        // C19-02: la pestaña de impresión se lleva el foco de la ventana; al
+        // cerrarse (afterprint → window.close) la ventana vuelve, y acá se
+        // vuelve al tracking. {once}: es un viaje por impresión.
+        window.addEventListener("focus", () => this._volverAlTracking(), { once: true })
+        // PR-C6.24: el segundo aviso, con la etiqueta ya en la mano.
+        this._avisarSucursalAlFinal()
+      }
+
+      // Al actualizar un paquete existente no alcanza con limpiar los campos:
+      // el `form` viene del servidor apuntando a `PATCH /etiquetar/:id`, y
+      // `clearForm` no toca la acción. El paquete siguiente se guardaría
+      // **encima del anterior**, y el banner de "Actualizando …" quedaba en
+      // pantalla diciéndolo — Jorge lo vio por el banner.
+      //
+      // Volver a `/etiquetar` deja la pantalla en modo alta, que es donde tiene
+      // que estar para el siguiente escaneo. La sesión de etiquetado vive en el
+      // server, así que no se pierde.
+      if (el.dataset.volver === "true") {
+        el.remove()
+        // Después de la ventana de impresión: si se navega antes, el navegador
+        // puede cancelarla.
+        setTimeout(() => Turbo.visit(window.location.pathname), 150)
+        return
       }
 
       // Clear form after successful save

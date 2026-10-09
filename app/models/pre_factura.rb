@@ -13,10 +13,27 @@ class PreFactura < ApplicationRecord
 
   belongs_to :cliente
   belongs_to :creado_por, class_name: "User", optional: true
+
+  # C21-10. *"Lo que vamos a seleccionar, de que estamos procesando, es el
+  # manifiesto… ahí es donde deberíamos amarrar el manifiesto, no la guía."*
+  # Opcional: una pre-factura de recolecta no viene de ningún manifiesto.
+  belongs_to :manifiesto, optional: true
   has_many :pre_factura_items, dependent: :destroy, inverse_of: :pre_factura
   # PR-13.d: los cambios que un supervisor autorizó sobre sus líneas.
   has_many :autorizaciones, as: :documento, dependent: :destroy
   has_many :paquetes, -> { distinct }, through: :pre_factura_items
+
+  # PR-M8. `paquetes.pre_factura_id` lo leen tres lugares —`Paquete.facturables`,
+  # `Paquete#cobrada_o_entregada?` y el bloqueo de borrar del controller— y lo
+  # limpian dos (`anular!` y `BajarCajasConPin`). **Nadie lo escribía**: solo
+  # los seeds. O sea que el mismo paquete podía entrar en dos pre-facturas
+  # borrador a la vez, y que `Manifiesto.con_carga_por_facturar` siguiera
+  # listando un manifiesto ya facturado entero.
+  #
+  # Se estampa al guardar, no al confirmar: un borrador ya reserva el paquete.
+  # Se salta cuando el documento está anulado, porque `anular!` acaba de
+  # ponerlo en nil y este callback corre después de su `update!`.
+  after_save :vincular_paquetes
 
   accepts_nested_attributes_for :pre_factura_items, allow_destroy: true
 
@@ -59,7 +76,11 @@ class PreFactura < ApplicationRecord
 
     transaction do
       update!(estado: "pendiente", confirmado_at: Time.current)
-      paquetes.reload.each { |p| p.update!(estado: "pre_facturado") }
+      # A7-01 · *"Bodega Honduras va **después** de prefactura"*: emitir la
+      # pre-factura es lo que mete la carga a la bodega de Honduras. Antes esto
+      # escribía `pre_facturado`, el estado que Yusef mandó eliminar (A7-11);
+      # el paso que describe ya tenía nombre, y es éste.
+      paquetes.reload.each { |p| p.update!(estado: "disponible_entrega") }
     end
     true
   end
@@ -145,9 +166,11 @@ class PreFactura < ApplicationRecord
     return false if facturado? || anulado?
 
     transaction do
-      paquetes.reload.each do |p|
-        p.update!(pre_factura_id: nil, estado: "disponible_entrega")
-      end
+      # Solo se suelta la FK. El estado se queda en `disponible_entrega`, que
+      # es donde `confirmar!` lo dejó y donde el paquete físicamente está:
+      # anular la pre-factura no devuelve la carga a la aduana. Con la FK en
+      # nil vuelve a caer en `Paquete.facturables`, que filtra por eso.
+      paquetes.reload.each { |p| p.update!(pre_factura_id: nil) }
       update!(estado: "anulado")
     end
     true
@@ -164,7 +187,7 @@ class PreFactura < ApplicationRecord
       fecha_trabajo: Date.current
     )
 
-    paquetes = cliente.paquetes.where(id: paquete_ids)
+    paquetes = cliente.paquetes.facturables.where(id: paquete_ids)
                       .includes(:tipo_envio, :sucursal, :proveedor)
     prepagados_miami = []
 
@@ -180,7 +203,8 @@ class PreFactura < ApplicationRecord
         # — el cobro de $1.00 se perdía en silencio desde PR-6b.
         pre_factura.pre_factura_items.build(
           paquete: paquete,
-          concepto: "Flete #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia} (PREPAGADO EN MIAMI)",
+          concepto: "Flete #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia} " \
+                    "(PREPAGADO EN MIAMI#{paquete.prepago_sufijo})",
           peso_cobrar: paquete.peso_cobrar,
           precio_libra: BigDecimal("0"),
           # "la factura la va a hacer por un dólar más impuesto" — el
@@ -218,17 +242,29 @@ class PreFactura < ApplicationRecord
         concepto = "Flete #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia}"
         concepto += " (mínimo de servicio)" if aplico_minimo
       else
-        # Sin tarifa cargada caemos al comportamiento previo, para que un
-        # servicio recién creado no facture en cero sin aviso. Esos precios
-        # también son USD.
-        precio_origen = cliente.categoria_precio&.precio_para(paquete.tipo_envio) ||
-                        paquete.tipo_envio&.precio_libra ||
-                        BigDecimal("0")
-        precio        = pre_factura.convertir_a_moneda(precio_origen, "USD")
+        # A7-25. Acá había un fallback: si `Tarifa.resolver` no encontraba nada,
+        # se cobraba con `categoria_precio.precio_para` y, si tampoco, con
+        # `tipo_envio.precio_libra`. O sea, con la tabla vieja — sin mínimo, sin
+        # escalonado, y colapsando los cinco servicios a "aéreo o marítimo".
+        #
+        # Es justo la duplicación que Yusef encontró: *"no me había fijado que
+        # tenías otra tabla del otro lado"*. Un fallback que cobra distinto que
+        # la tarifa es peor que no tener fallback — el propio
+        # `TarifasPropuesta2026` ya lo dice cuando sincroniza
+        # `tipo_envios.precio_libra`.
+        #
+        # Ahora la tabla vieja **no se consulta**. La línea se arma en cero y lo
+        # dice en el concepto, para que el cajero no la pueda pasar por alto y
+        # alguien cargue la tarifa en /servicios.
+        #
+        # Se eligió esto y no cortar con un error porque el cajero tiene al
+        # cliente enfrente: un precio en cero que grita es peor negocio que
+        # facturar, pero mejor que cobrar en silencio con la tabla equivocada.
+        precio        = BigDecimal("0")
         peso_fac      = peso
-        subtotal      = (BigDecimal(peso.to_s) * precio).round(2, BigDecimal::ROUND_HALF_UP)
+        subtotal      = BigDecimal("0")
         aplico_minimo = false
-        concepto      = "Flete #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia}"
+        concepto      = "⚠ SIN TARIFA CARGADA — #{paquete.tipo_envio&.nombre || 'servicio'} - #{paquete.guia}"
       end
 
       pre_factura.pre_factura_items.build(
@@ -312,7 +348,12 @@ class PreFactura < ApplicationRecord
             # así que a un servicio con el ISV ya adentro se le volvía a
             # aplicar el 15% al totalizar. Se guarda el neto, convertido a la
             # moneda del documento (el catálogo se carga en USD).
-            subtotal: convertir_a_moneda(servicio.precio_venta_sin_isv, servicio.moneda),
+            #
+            # PR-C6.12: y con el piso aplicado. `cobro_para` devuelve el neto
+            # ya en la moneda del documento, así que no hay round-trip: el
+            # mínimo de un cargo en USD con piso en Lempiras se compara en
+            # Lempiras una sola vez.
+            subtotal: servicio.cobro_para(1, en: moneda),
             minimo_aplicado: true, # monto fijo del catálogo
             origen: "auto_servicio_extra"
           )
@@ -327,6 +368,35 @@ class PreFactura < ApplicationRecord
     next_number = (self.class.where("numero LIKE 'PF-%'")
                     .maximum(Arel.sql("CAST(SUBSTRING(numero FROM 4) AS INTEGER)")) || 0) + 1
     self.numero = "PF-#{next_number.to_s.rjust(6, '0')}"
+  end
+
+  def vincular_paquetes
+    return if anulado?
+
+    ids = paquetes.reload.ids
+
+    # Soltar lo que ya no está en el documento. Cubre el caso en que la línea
+    # se quita por `accepts_nested_attributes_for … allow_destroy` y la
+    # pre-factura se vuelve a guardar en el mismo request.
+    sobrantes = Paquete.where(pre_factura_id: id)
+    sobrantes = sobrantes.where.not(id: ids) if ids.any?
+    sobrantes.update_all(pre_factura_id: nil)
+
+    return if ids.empty?
+
+    # `IS DISTINCT FROM` y no `where.not`: con la columna en NULL —que es el
+    # caso de todo paquete que entra por primera vez— `pre_factura_id != :id`
+    # evalúa a NULL, no a TRUE, y el UPDATE no tocaba ni una fila. Con el
+    # guardia puesto bien, la segunda y siguientes guardadas de la misma
+    # pre-factura no escriben nada.
+    #
+    # Va por `update_all` a propósito: `update!` correría las validaciones del
+    # paquete, y en esta bodega hay paquetes guardados incompletos — una
+    # validación que falle acá reventaría el guardado de la pre-factura entera.
+    # Es el mismo criterio que ya usan `BajarCajasConPin` y los seeds.
+    Paquete.where(id: ids)
+           .where("pre_factura_id IS DISTINCT FROM ?", id)
+           .update_all(pre_factura_id: id)
   end
 
   # PR-13.b: el descuento reduce la base del ISV, que es el orden contable

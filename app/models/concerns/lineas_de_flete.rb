@@ -37,7 +37,10 @@ module LineasDeFlete
           cliente: cliente,
           proveedor: paquete.proveedor,
           sucursal: paquete.sucursal,
-          # `peso_cobrar` ya es el mayor entre el real y el volumétrico.
+          # `peso_cobrar` ya viene resuelto del paquete: el mayor entre el real
+          # y el volumétrico, o solo el volumétrico si el cliente tiene ese
+          # trato en este servicio (PR-C6.41). Acá no van medidas, así que el
+          # cotizador no lo vuelve a decidir — lo toma tal cual.
           peso: paquete.peso_cobrar
         )
 

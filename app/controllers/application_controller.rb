@@ -10,7 +10,17 @@ class ApplicationController < ActionController::Base
   # `set_paper_trail_whodunnit` está disponible en runtime aunque no
   # aparezca en `included_modules` al boot. Usamos lambda defensiva para
   # evitar el caso edge donde el hook aún no disparó.
-  before_action -> { set_paper_trail_whodunnit if respond_to?(:set_paper_trail_whodunnit) }
+  #
+  # PR-C6.30: el `true` no es cosmético — es el bug. `set_paper_trail_whodunnit`
+  # viene **protected** de paper_trail, y `respond_to?` sin el flag de
+  # `include_all` devuelve false para protegidos y privados. O sea que la
+  # guarda defensiva daba false SIEMPRE y el hook nunca corría: el audit log
+  # de los 41 modelos venía registrando qué cambió, pero nunca quién.
+  #
+  # Salió escribiendo el test de auditoría de la pantalla de tasa de cambio
+  # (PR-C6.29), no de un reporte — en pantalla se leía "Sistema" y nadie
+  # sospechó, porque un cambio hecho por un job también dice "Sistema".
+  before_action -> { set_paper_trail_whodunnit if respond_to?(:set_paper_trail_whodunnit, true) }
 
   private
 

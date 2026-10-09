@@ -1,6 +1,6 @@
 module Cuenta
   class EntregasController < BaseController
-    before_action :set_entrega, only: [:show]
+    before_action :set_entrega, only: [ :show ]
 
     def index
       @entregas = current_cliente.entregas.includes(:repartidor, :paquetes).recientes
@@ -14,7 +14,7 @@ module Cuenta
     private
 
     def set_entrega
-      @entrega = current_cliente.entregas.includes(paquetes: :tipo_envio).find(params[:id])
+      @entrega = current_cliente.entregas.includes(paquetes: [ :tipo_envio, :sucursal, :sucursal_destino ]).find(params[:id])
     end
   end
 end

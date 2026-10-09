@@ -5,7 +5,11 @@
   <meta name="turbo-cache-control" content="no-cache">
 <% end %>
 
-<%= render PageHeaderComponent.new(title: "Etiquetar Paquetes", subtitle: "Registro de paquetes en Miami") do |header|
+<%# «Sonidos», debajo del sol, en la esquina de arriba a la derecha (ver
+    `layouts/application`). Jorge, 2026-10-09: *"el botón de sonido va mejor
+    debajo del sol"*. %>
+<% content_for :esquina, render("shared/sonido_config") %>
+<%= render PageHeaderComponent.new(title: "Etiquetar Paquetes", subtitle: "Registro de paquetes al recibir la carga") do |header|
   header.with_action do
     tag.span(class: "inline-flex items-center gap-2 text-sm text-gray-600") do
       safe_join([
@@ -14,7 +18,6 @@
       ])
     end
   end
-  header.with_action { render "shared/sonido_config" }
 end %>
 
 <% if @tipo_envio_sesion.nil? %>
@@ -35,46 +38,71 @@ end %>
     </div>
 
     <% if @tipo_envios.any? %>
-      <%# Mismo layout que el wizard de pre-alerta del cliente: dos columnas
-          (con / sin reempaque) con tarjetas ricas. Click en la tarjeta inicia
-          la sesión (button_to). %>
+      <%# PR-C6.5: antes cada tarjeta era su propio `button_to`. Ahora es UN
+          form con un submit por tarjeta (`name="tipo_envio_id"`), para que el
+          select de "recibiendo en" viaje junto con la elección sin necesidad
+          de JS. El layout no cambia. %>
       <% con_reempaque = @tipo_envios.select(&:con_reempaque) %>
       <% sin_reempaque = @tipo_envios.reject(&:con_reempaque) %>
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <%# Grupo: con reempaque + opción a consolidar %>
-        <div class="rounded-2xl border border-cec-navy/10 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800 shadow-sm">
-          <div class="bg-gradient-to-r from-cec-navy to-cec-navy-light px-5 py-3">
-            <p class="text-sm font-bold text-white">Con reempaque unitario</p>
-            <p class="text-xs text-white/70 mt-0.5">+ opción a consolidar</p>
-          </div>
-          <div class="p-4 space-y-3">
-            <% con_reempaque.each do |t| %>
-              <%= button_to iniciar_sesion_etiquetar_path,
-                    method: :post, params: { tipo_envio_id: t.id }, form_class: "block",
-                    class: "w-full text-left p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-lg hover:border-cec-gold/50 transition-all duration-200" do %>
-                <%= render "shared/tipo_envio_card", tipo: t, show_precio: false, show_badge: false %>
-              <% end %>
-            <% end %>
-          </div>
-        </div>
+      <%= form_with url: iniciar_sesion_etiquetar_path, method: :post, class: "block" do %>
 
-        <%# Grupo: sin reempaque — sin consolidar %>
-        <div class="rounded-2xl border border-slate-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800 shadow-sm">
-          <div class="bg-slate-50 dark:bg-gray-900 border-b border-slate-200 dark:border-gray-700 px-5 py-3">
-            <p class="text-sm font-bold text-slate-700 dark:text-gray-200">Sin reempaque</p>
-            <p class="text-xs text-slate-500 dark:text-gray-400 mt-0.5">sin consolidar</p>
+        <%# ── Dónde estás recibiendo ──
+            De acá sale el número de recepción del paquete (`RMIA2608000001`).
+            Solo se pregunta cuando hay más de una opción: el que recibe está
+            parado en un lugar, no lo elige paquete a paquete. Yusef: "está
+            alguien en Miami recibiendo, o en Panamá, o en China". %>
+        <% if @sucursales_recepcion.size > 1 %>
+          <div class="mb-6 max-w-sm mx-auto">
+            <%= label_tag :sucursal_recepcion_id, "¿Dónde estás recibiendo?",
+                  class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1 text-center" %>
+            <%= select_tag :sucursal_recepcion_id,
+                  options_from_collection_for_select(@sucursales_recepcion, :id, :nombre, @sucursal_recepcion_sugerida&.id),
+                  class: "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 text-center">
+              De acá sale el número de recepción de cada paquete.
+            </p>
           </div>
-          <div class="p-4 space-y-3">
-            <% sin_reempaque.each do |t| %>
-              <%= button_to iniciar_sesion_etiquetar_path,
-                    method: :post, params: { tipo_envio_id: t.id }, form_class: "block",
-                    class: "w-full text-left p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-lg hover:border-cec-gold/50 transition-all duration-200" do %>
-                <%= render "shared/tipo_envio_card", tipo: t, show_precio: false, show_badge: false %>
+        <% elsif @sucursal_recepcion_sugerida %>
+          <%= hidden_field_tag :sucursal_recepcion_id, @sucursal_recepcion_sugerida.id %>
+          <p class="text-center text-xs text-gray-500 dark:text-gray-400 mb-6">
+            Recibiendo en <span class="font-semibold text-gray-700 dark:text-gray-200"><%= @sucursal_recepcion_sugerida.nombre %></span>
+          </p>
+        <% end %>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <%# Grupo: con reempaque + opción a consolidar %>
+          <div class="rounded-2xl border border-cec-navy/10 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800 shadow-sm">
+            <div class="bg-gradient-to-r from-cec-navy to-cec-navy-light px-5 py-3">
+              <p class="text-sm font-bold text-white">Con reempaque unitario</p>
+              <p class="text-xs text-white/70 mt-0.5">+ opción a consolidar</p>
+            </div>
+            <div class="p-4 space-y-3">
+              <% con_reempaque.each do |t| %>
+                <button type="submit" name="tipo_envio_id" value="<%= t.id %>"
+                        class="w-full text-left p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-lg hover:border-cec-gold/50 transition-all duration-200">
+                  <%= render "shared/tipo_envio_card", tipo: t, show_precio: false, show_badge: false %>
+                </button>
               <% end %>
-            <% end %>
+            </div>
+          </div>
+
+          <%# Grupo: sin reempaque — sin consolidar %>
+          <div class="rounded-2xl border border-slate-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800 shadow-sm">
+            <div class="bg-slate-50 dark:bg-gray-900 border-b border-slate-200 dark:border-gray-700 px-5 py-3">
+              <p class="text-sm font-bold text-slate-700 dark:text-gray-200">Sin reempaque</p>
+              <p class="text-xs text-slate-500 dark:text-gray-400 mt-0.5">sin consolidar</p>
+            </div>
+            <div class="p-4 space-y-3">
+              <% sin_reempaque.each do |t| %>
+                <button type="submit" name="tipo_envio_id" value="<%= t.id %>"
+                        class="w-full text-left p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-lg hover:border-cec-gold/50 transition-all duration-200">
+                  <%= render "shared/tipo_envio_card", tipo: t, show_precio: false, show_badge: false %>
+                </button>
+              <% end %>
+            </div>
           </div>
         </div>
-      </div>
+      <% end %>
     <% else %>
       <p class="text-center text-sm text-amber-700 italic">
         No hay tipos de envío activos. Pedile a un admin que los cargue.
@@ -84,20 +112,48 @@ end %>
 
 <% else %>
 <div data-controller="etiquetar audio"
-     data-audio-enabled-value="<%= Current.user&.sonido_habilitado != false %>"
-     data-audio-volumen-value="<%= Current.user&.sonido_volumen || 60 %>"
+     <%= tag.attributes(atributos_de_audio) %>
      data-etiquetar-check-url-value="<%= check_tracking_paquetes_path %>"
+     data-etiquetar-tonos-value="<%= { retencion: ModalHeaderComponent.clases(:bloqueo), tarea: ModalHeaderComponent.clases(:atencion), nota: ModalHeaderComponent.clases(:notas) }.to_json %>"
      data-etiquetar-buscar-url-value="<%= buscar_clientes_path %>"
-     data-action="etiquetar:success->audio#success etiquetar:clienteNotas->audio#alert etiquetar:preAlertaMatch->audio#speakPreAlerta click@document->etiquetar#clickOutsideDropdown">
+     data-etiquetar-tipo-envio-sesion-value="<%= @tipo_envio_sesion.id %>"
+     data-etiquetar-tipo-envio-sesion-nombre-value="<%= @tipo_envio_sesion.nombre %>"
+     <%# El paquete que se está actualizando, para que la consulta de duplicado
+         no se encuentre a sí mismo. Vacío al dar de alta. %>
+     data-etiquetar-actualizando-id-value="<%= @modo_actualizacion ? @paquete.id : "" %>"
+     <%# Cuántas cajas tiene ya. El modal de «¿cuántas etiquetas?» arranca acá y
+         no en 1: con el 1, actualizar un envío de tres cajas y darle Enter
+         —que es lo que hace el que va rápido— las bajaría a una, y el PIN de
+         supervisor solo cuida las que ya se cobraron. %>
+     data-etiquetar-cajas-actuales-value="<%= @modo_actualizacion ? @paquete.cantidad_paquetes.to_i : 0 %>"
+     <%# C20-12: si el envío ya tiene peso, subir cajas exige pesar cada una.
+         El modal necesita saberlo, y qué pesa hoy cada caja para pre-llenar
+         las que ya venían pesadas. Vacío al dar de alta. %>
+     data-etiquetar-envio-pesado-value="<%= @pesos_actuales.to_h.any? %>"
+     data-etiquetar-pesos-actuales-value="<%= @pesos_actuales.to_h.to_json %>"
+     <%# PR-C6.9: tres sonidos, no uno. Yusef: "pita para dos razones... pita,
+         te decía, pre-alerta" y "el otro pito es porque te tira que ya
+         existía". Más el feo, para cuando el paquete no es de esta sesión. %>
+     data-action="etiquetar:success->audio#success
+                  etiquetar:trackingLibre->audio#success
+                  etiquetar:clienteEncontrado->audio#success
+                  etiquetar:clienteNotas->audio#alert
+                  etiquetar:preAlertaMatch->audio#speakPreAlerta
+                  etiquetar:trackingYaExiste->audio#notify
+                  etiquetar:modalAbierto->audio#notify
+                  etiquetar:tipoEnvioDistinto->audio#error
+                  turbo:submit-end->audio#submitEnd
+                  click@document->etiquetar#clickOutsideDropdown">
 
   <%# ── Banner de sesión activa ── coloreado según el servicio (mismo acento
       que las tarjetas), con ícono avión/camión. Reemplaza al flash. %>
   <% sesion_accent = tipo_envio_accent(@tipo_envio_sesion) %>
-  <div class="mb-4 flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4 rounded-xl <%= sesion_accent[:bg] %> ring-1 <%= sesion_accent[:ring] %>">
+  <div data-banner="sesion-activa"
+       class="mb-4 flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4 rounded-xl <%= sesion_accent[:bg] %> ring-1 <%= sesion_accent[:ring] %>">
     <div class="flex items-center gap-3">
       <div class="shrink-0 w-10 h-10 rounded-xl <%= sesion_accent[:icon_bg] %> flex items-center justify-center">
-        <%= heroicon tipo_envio_icono(@tipo_envio_sesion), variant: :solid,
-            options: { class: "w-5 h-5 #{sesion_accent[:text]}" } %>
+        <%= icono_de_tipo_envio @tipo_envio_sesion, variant: :solid,
+            css: "w-5 h-5 #{sesion_accent[:text]}" %>
       </div>
       <div>
         <p class="text-[10px] uppercase tracking-wider font-bold text-gray-500 dark:text-gray-400">Sesión activa</p>
@@ -110,12 +166,18 @@ end %>
         </div>
       </div>
     </div>
+    <%# C22-02 · El `etiquetar_target` es para que F11 dispare ESTE botón y no
+        alguno de los otros dos que van al mismo endpoint (el de más abajo y el
+        del modal de conflicto). Es el único con la confirmación puesta, y es
+        justamente la confirmación lo que la tecla tiene que heredar. %>
     <%= button_to finalizar_sesion_etiquetar_path,
           method: :delete, form_class: "contents",
-          data: { turbo_confirm: "¿Finalizar la sesión de #{@tipo_envio_sesion.nombre}? Vas a poder elegir otro tipo de envío." },
+          data: { turbo_confirm: "¿Finalizar la sesión de #{@tipo_envio_sesion.nombre}? Vas a poder elegir otro tipo de envío.",
+                  etiquetar_target: "finalizarSesionBtn" },
           class: "inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-full bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 ring-1 ring-gray-300 dark:ring-gray-600 shadow-sm hover:bg-red-600 hover:text-white hover:ring-red-600 transition-colors" do %>
       <%= heroicon "x-circle", variant: :solid, options: { class: "w-4 h-4" } %>
       Finalizar sesión de este tipo de envío
+      <kbd class="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[10px] font-sans">F11</kbd>
     <% end %>
   </div>
 
@@ -128,6 +190,242 @@ end %>
       <div class="p-3 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm" data-controller="auto-dismiss"><%= flash[:alert] %></div>
     <% end %>
   </div>
+
+  <%# ── Conflicto de tipo de envío ──
+      El paquete escaneado tiene pre-alerta de otro servicio. El servidor lo
+      rechaza igual; esto es para que el operario no siga llenando campos.
+      Yusef con Julián: "no te va a permitir grabarlo... el chavo no hizo
+      nada, no pudo hacer nada". %>
+  <%# ── El paquete es de otro tipo de envío ──
+      A7-17. Esto era un banner inline, y Yusef lo cazó probando en vivo: escaneó
+      un paquete con pre-alerta CER estando en una sesión EXPRESS, le salió el
+      aviso rojo… y siguió.
+
+        "Ya me tira esto, pero esto yo me refería que me lo tirara **como
+         modal**. Mira lo que pasa ahora: **yo lo puedo recibir**."
+        "La idea es que esto no te tira. **Te tiene que bloquear la pantalla**,
+         porque tenés que usar una de las opciones obligadas de ahí."
+
+      Por eso no lleva Cancelar ni cierra con Escape ni con clic afuera: las dos
+      opciones SON la salida. El servidor igual rechaza el guardado
+      (`conflicto_con_la_sesion`), pero que el rechazo llegue hasta allá es
+      justamente lo que hace perder el tiempo del operario. %>
+  <div data-etiquetar-target="conflictoSesionModal"
+       role="alertdialog" aria-modal="true" aria-labelledby="conflicto-sesion-titulo"
+       class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70 p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full p-6 ring-2 ring-red-400">
+      <%# PR-C29.12 · Bloqueo: no deja seguir hasta elegir una de las dos.
+          La franja va pegada a los bordes de la tarjeta (`-mx-6 -mt-6`). %>
+      <%= render ModalHeaderComponent.new(tono: :bloqueo, icono: "exclamation-triangle",
+            titulo: "Este paquete es de otro tipo de envío", titulo_tag: :h3, titulo_id: "conflicto-sesion-titulo",
+            class: "-mx-6 -mt-6 mb-5 rounded-t-xl") %>
+
+      <p data-etiquetar-target="conflictoSesionTexto"
+         class="text-sm text-gray-700 dark:text-gray-300 mb-5"></p>
+
+      <p class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-3">¿Qué corresponde hacer?</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <%= button_to finalizar_sesion_etiquetar_path, method: :delete, form_class: "contents",
+              class: "flex flex-col items-start text-left p-4 rounded-lg ring-1 ring-red-400/60 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 transition w-full" do %>
+          <span class="font-semibold text-red-800 dark:text-red-200">Finalizar la sesión</span>
+          <span class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+            Cierra esta sesión para abrir la del tipo correcto y recibirlo ahí.
+          </span>
+        <% end %>
+        <button type="button" data-action="click->etiquetar#descartarPorConflicto"
+                data-etiquetar-target="conflictoSesionDejarBtn"
+                class="flex flex-col items-start text-left p-4 rounded-lg ring-1 ring-cec-navy/30 bg-cec-navy/5 hover:bg-cec-navy/10 dark:bg-cec-navy/20 dark:hover:bg-cec-navy/30 transition">
+          <span class="font-semibold text-cec-navy dark:text-cec-gold">
+            Dejarlo de lado y seguir
+            <kbd class="ml-1 px-1 py-0.5 bg-gray-100 dark:bg-gray-700 border dark:border-gray-600 rounded text-[10px] align-middle">F2</kbd>
+          </span>
+          <span class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+            Limpia el formulario y seguís con la sesión que ya tenías abierta.
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <%# ── A qué sucursal va ──
+      PR-C6.24. Yusef, 2026-08-08: "queremos empacar todas las sucursales en
+      Miami por separado, en caja por separado". Y sobre cómo avisarlo:
+
+        "Que le salga **en rojo** 'sucursal Tegucigalpa' o 'se entregará en
+         Tegucigalpa' — solo que les diga que eso es de Tegucigalpa."
+
+      Va arriba de todo y en rojo porque es una decisión FÍSICA: en qué bolsa
+      cae la caja. Si se entera tarde, hay que volver a abrir la bolsa. %>
+  <%= render "shared/aviso_sucursal_retiro", controlador: "etiquetar" %>
+
+  <%# El segundo aviso que pidió: "solo quiero un modal al principio y uno al
+      final". El del final sale después de imprimir, que es cuando el operario
+      tiene la etiqueta en la mano y va a guardar la caja. %>
+  <dialog data-etiquetar-target="sucursalModal"
+          style="margin: auto"
+          class="rounded-xl p-0 w-[24rem] max-w-[95vw] backdrop:bg-black/50 ring-2 ring-red-400">
+    <%# PR-C29.12 · Bloqueo, en rojo como lo pidió Yusef: *"le salga en rojo
+        'sucursal Tegucigalpa'"*. Era rojo claro; ahora es la franja de bloqueo. %>
+    <%= render ModalHeaderComponent.new(tono: :bloqueo, tamano: :grande, centrado: true, kicker: "Guardar en la bolsa de",
+          titulo_data: { etiquetar_target: "sucursalModalTexto" }) %>
+    <div class="flex items-center justify-center px-6 py-3 bg-white border-t border-gray-200">
+      <%= render ButtonComponent.new(variant: :primary,
+            data: { action: "etiquetar#cerrarSucursalModal" }) do %>
+        Listo
+      <% end %>
+    </div>
+  </dialog>
+
+  <%# ── Lo que el que recibe TIENE que ver ──
+      Yusef, 2026-08-19, señalando la franja de contexto donde esto salía como
+      texto al costado:
+
+        "No me da la información, **aquí necesitamos un modal**."
+        "Estas informaciones **ellos no las leen**. Esto no lo leen, esto no lo
+         van a leer, olvídate."
+        "No te voy a mentir, Jorge: **a puro huevos leen esto**."
+
+      Digitan de 500 a 1.000 paquetes al día mirando la pistola, no la pantalla.
+
+      **Uno por cosa, no uno con todo.** Él arrancó pidiendo uno solo; Jorge
+      argumentó que cada uno necesita su propia respuesta —retenido / se hizo /
+      leída— y él aceptó: *"tenés razón, hacerlo así si querés"*. Salen en fila,
+      y solo los que el paquete tiene. %>
+  <dialog data-etiquetar-target="avisoModal"
+          data-action="cancel->etiquetar#avisoCancelar"
+          style="margin: auto"
+          class="rounded-xl p-0 w-[30rem] max-w-[95vw] backdrop:bg-black/60">
+    <%# PR-C29.12 · El tono lo cambia el JS según de qué avisa, leyendo las
+        clases de `ModalHeaderComponent::TONOS` (`data-etiquetar-tonos-value`):
+        la retención es bloqueo, la tarea es atención y la nota es notas. %>
+    <%= render ModalHeaderComponent.new(tono: :notas, centrado: true,
+          data: { etiquetar_target: "avisoEncabezado" },
+          kicker_data: { etiquetar_target: "avisoTipo" }, titulo_data: { etiquetar_target: "avisoTitulo" }) %>
+    <div class="bg-white px-6 py-5">
+      <p class="text-base text-gray-800 whitespace-pre-line" data-etiquetar-target="avisoTexto"></p>
+    </div>
+    <div class="flex items-center justify-end gap-3 px-6 py-3 bg-gray-50 border-t border-gray-200">
+      <%# El de la izquierda solo sale cuando hay dos respuestas posibles (la
+          tarea: se hizo o no se hizo). El texto lo escribe el JS según el
+          aviso; el que va acá es el que se lee si algo falla, y el `label` es
+          el nombre accesible — un botón cuyo texto llega por JS nace vacío para
+          el lector de pantalla. %>
+      <%= render(ButtonComponent.new(variant: :secondary, size: :sm,
+            label: "Responder que no",
+            data: { etiquetar_target: "avisoSecundario", action: "etiquetar#avisoNo" },
+            hidden: true)) { "Todavía no" } %>
+      <%= render(ButtonComponent.new(variant: :primary, size: :md,
+            label: "Confirmar el aviso",
+            data: { etiquetar_target: "avisoPrincipal", action: "etiquetar#avisoSi" })) { "Entendido" } %>
+    </div>
+  </dialog>
+
+  <%# ── ¿Cuántas etiquetas? ──
+      Yusef, 2026-08-18: *"en etiquetar casi nunca medimos y pesamos"*, y por eso
+      *"cuando la cantidad de cajas guardadas sea cero, que pregunte cuántas
+      son"*. Lo repitió tres veces en la llamada, la última al despedirse.
+
+      Solo sale cuando **no hay ninguna caja cargada**. Esa condición es lo que
+      lo distingue del modal que se quitó en `PR-C6.18b` —*"el F9 era como
+      confuso"*—: aquel competía con el campo visible del formulario y había dos
+      fuentes para el mismo número. Acá, si el operario midió aunque sea una
+      caja, este modal ni aparece. %>
+  <dialog data-etiquetar-target="etiquetasModal"
+          style="margin: auto"
+          class="rounded-xl p-0 w-[22rem] max-w-[95vw] backdrop:bg-black/50 ring-2 ring-cec-gold">
+    <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, centrado: true,
+          kicker: "No se midió ninguna caja", titulo: "¿Cuántas etiquetas se imprimen?") %>
+    <div class="bg-white px-6 py-5 text-center">
+      <%# `autocomplete=off` y los `data-*-ignore`: es un campo numérico chico y
+          los gestores de contraseñas le ofrecen tarjetas, igual que pasó con las
+          fechas. %>
+      <input type="number" min="1" max="99" value="1" step="1"
+             data-etiquetar-target="etiquetasInput"
+             data-action="keydown->etiquetar#etiquetasKeydown input->etiquetar#etiquetasCambiadas"
+             autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other"
+             aria-label="Cantidad de etiquetas"
+             class="w-28 text-center text-3xl font-bold rounded-lg border-gray-300 text-cec-navy shadow-sm focus:ring-cec-teal focus:border-cec-teal">
+      <p class="text-[11px] text-gray-500 mt-2">Una por caja. Todas comparten el tracking y el número de recepción.</p>
+      <%# C20-12 · el segundo paso: solo cuando el envío ya tiene peso y se piden
+          más cajas de las que hay. Yusef: "si ya tiene pesos tenemos que
+          obligarlo a llenar, para evitar esta incoherencia". Las filas las pinta
+          el JS; los pesos viajan como `paquete[cajas][i][peso]`, que
+          `MedidasPorCaja` ya sabe leer. %>
+      <div data-etiquetar-target="pesosSeccion" class="hidden mt-4 pt-3 text-left border-t border-gray-200">
+        <p class="text-xs font-semibold text-cec-navy" data-etiquetar-target="pesosAviso"></p>
+        <p class="text-[11px] text-gray-500 mt-0.5">Después de reempacar, el peso de cada caja es el que manda. Enter pasa a la siguiente.</p>
+        <div data-etiquetar-target="pesosLista" class="mt-2 space-y-1.5 max-h-56 overflow-y-auto pr-1"></div>
+      </div>
+    </div>
+    <div class="flex items-center justify-end gap-3 px-6 py-3 bg-gray-50 border-t border-gray-200">
+      <%= render ButtonComponent.new(variant: :secondary,
+            data: { action: "etiquetar#cerrarEtiquetas" }) do %>Cancelar<% end %>
+      <%= render ButtonComponent.new(variant: :gold, icon: "printer",
+            data: { action: "etiquetar#confirmarEtiquetas" }) do %>Imprimir<% end %>
+    </div>
+  </dialog>
+
+<%# ── El cobro por cambio de servicio, y cómo sacarlo ──
+    PR-C6.28. Yusef: "que tenga algo aquí en algún lado, **acá cerca**, que
+    diga que **se le está cobrando** cambio de servicio, y lo vamos a
+    eliminar". Va acá y no en /paquetes: "es que ellos no manejan la página
+    de paquetes". %>
+<% if @modo_actualizacion && @paquete.solicito_cambio_servicio? %>
+  <div class="mb-4 p-4 bg-amber-50 border border-amber-300 rounded-lg" data-banner="cobro-cambio-servicio">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <p class="text-sm font-semibold text-amber-900">Este paquete tiene un cobro por cambio de servicio</p>
+        <p class="text-xs text-amber-700 mt-0.5">
+          Se le va a cobrar <b>L.100</b> en la pre-factura. Si fue un error de ingreso, un supervisor lo puede quitar con su PIN.
+        </p>
+      </div>
+      <% if @supervisores_cobro.any? %>
+        <%= render ButtonComponent.new(variant: :secondary, size: :sm,
+              data: { action: "etiquetar#abrirQuitarCobro" }) do %>
+          Quitar el cobro
+        <% end %>
+      <% else %>
+        <span class="text-xs italic text-amber-700">Ningún supervisor tiene PIN asignado todavía.</span>
+      <% end %>
+    </div>
+  </div>
+
+  <dialog data-etiquetar-target="quitarCobroModal" style="margin: auto"
+          class="rounded-xl p-0 w-[26rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-amber-400">
+    <%= form_with url: quitar_cambio_servicio_etiquetar_path(@paquete), method: :post do %>
+      <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, titulo: "Quitar el cobro por cambio de servicio", titulo_tag: :h3) do %>
+        <p class="text-xs mt-0.5 opacity-90">Lo autoriza un supervisor con su PIN. Queda registrado quién.</p>
+      <% end %>
+      <div class="p-5 space-y-3 bg-white">
+        <div>
+          <%= label_tag :supervisor_id, "Supervisor", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= select_tag :supervisor_id,
+                options_from_collection_for_select(@supervisores_cobro, :id, :nombre),
+                class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+        </div>
+        <div>
+          <%= label_tag :pin, "PIN", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= password_field_tag :pin, nil, inputmode: "numeric", autocomplete: "off", maxlength: 4,
+                class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono tracking-widest" %>
+        </div>
+        <div>
+          <%= label_tag :motivo, "Motivo", class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%= text_field_tag :motivo, nil, placeholder: "Ej. se ingresó con el tipo de envío equivocado",
+                class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+        </div>
+      </div>
+      <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">
+        <%= render ButtonComponent.new(variant: :ghost, size: :sm,
+              data: { action: "etiquetar#cerrarQuitarCobro" }) do %>Cancelar<% end %>
+        <%# PR-C29.12 · `primary`: es la confirmación de un formulario con PIN.
+            `warning` pasó a ser el ámbar claro de las notas. %>
+        <%= render ButtonComponent.new(variant: :primary, size: :sm, type: "submit") do %>
+          Quitar el cobro
+        <% end %>
+      </div>
+    <% end %>
+  </dialog>
+<% end %>
 
   <%# Client notes banner (hidden by default) %>
   <div data-etiquetar-target="notasBanner" class="hidden mb-4 p-4 bg-amber-50 border border-amber-300 rounded-lg">
@@ -169,16 +467,17 @@ end %>
                                      para crear paquete distinto. %>
   <div data-etiquetar-target="duplicateModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70 p-4">
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full p-6">
-      <div class="flex items-center gap-3 mb-4">
-        <%= heroicon "exclamation-circle", variant: :outline, options: { class: "w-6 h-6 text-amber-500" } %>
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Tracking ya existe en el sistema</h3>
-      </div>
+      <%# PR-C29.12 · Atención: no es un error, hay que decidir qué es. %>
+      <%= render ModalHeaderComponent.new(tono: :atencion, icono: "exclamation-circle",
+            titulo: "Tracking ya existe en el sistema", titulo_tag: :h3,
+            class: "-mx-6 -mt-6 mb-5 rounded-t-xl") %>
 
       <div data-etiquetar-target="duplicateInfo" class="text-sm text-gray-700 dark:text-gray-300 mb-5"></div>
 
       <p class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-3">¿Qué corresponde hacer?</p>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
         <button type="button" data-action="click->etiquetar#duplicateAsUpdate"
+                data-etiquetar-target="duplicateUpdateBtn"
                 class="flex flex-col items-start text-left p-4 rounded-lg ring-1 ring-cec-teal/40 bg-cec-teal/5 hover:bg-cec-teal/10 dark:bg-cec-teal/10 dark:hover:bg-cec-teal/20 transition">
           <span class="font-semibold text-cec-teal-dark dark:text-cec-teal-light">Es actualización</span>
           <span class="text-xs text-gray-600 dark:text-gray-400 mt-1">Cargar la recepción original para corregir tipo de envío, cliente u otros datos.</span>
@@ -197,8 +496,8 @@ end %>
       </div>
 
       <div class="flex justify-end">
-        <button type="button" data-action="click->etiquetar#closeDuplicate"
-                class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100">Cancelar</button>
+        <%= render ButtonComponent.new(variant: :ghost,
+              data: { action: "click->etiquetar#closeDuplicate" }) do %>Cancelar<% end %>
       </div>
     </div>
   </div>
@@ -210,8 +509,53 @@ end %>
   <div class="xl:col-span-8">
 
   <%# Etiquetar form (PR-7) — card pattern consistente con /paquetes %>
-  <%= form_with model: @paquete, url: etiquetar_path, data: { etiquetar_target: "form" },
+  <%# El `keydown` acá es lo que impide que Enter envíe el formulario: la
+      pistola dispara Enter al terminar de leer, y en Miami trabajan solo con
+      teclado. Enter avanza de campo (`formKeydown`); guardar es F9 o F10. %>
+  <%# PR-C6.10: el mismo formulario sirve para crear y para actualizar. En modo
+      actualización va PATCH al paquete y F9/F10 guardan encima, sin salir de
+      /etiquetar. Yusef: "que te cargue aquí la lista, esto te lo vuelve a
+      llenar tal cual como quedó, y actualizan todo lo que quieran". %>
+  <%= form_with model: @paquete,
+                url: @modo_actualizacion ? actualizar_etiquetar_path(@paquete) : etiquetar_path,
+                method: @modo_actualizacion ? :patch : :post,
+                data: { etiquetar_target: "form", action: "keydown->etiquetar#formKeydown" },
                 class: "bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-200 dark:ring-gray-700 p-6" do |f| %>
+    <% if @modo_actualizacion %>
+      <div class="mb-6 p-3 rounded-lg bg-cec-gold/15 ring-1 ring-cec-gold/40 flex flex-wrap items-center justify-between gap-2">
+        <p class="text-sm text-cec-navy dark:text-cec-gold">
+          Actualizando <span class="font-mono font-bold"><%= @paquete.tracking %></span>
+          <span class="text-xs text-gray-600 dark:text-gray-400">· solo se guardan los datos que Miami captura; el estado se cambia en Paquetes</span>
+        </p>
+        <%= link_to "Cancelar", etiquetar_path,
+              class: "text-xs font-semibold px-3 py-1.5 rounded-lg bg-white text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50" %>
+      </div>
+    <% end %>
+
+    <%# ── Atajos, arriba ──
+        PR-C6.11. Yusef: "estos botones los dejaste abajo y a veces se ocupan
+        acá arriba. En ambos lados. A veces le arregla mejor a ambos lados". %>
+    <div data-barra="atajos"
+         class="mb-5 pb-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-end gap-3">
+      <div class="mr-auto text-xs text-gray-400 dark:text-gray-500 hidden sm:flex gap-4">
+        <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F2</kbd> Limpiar</span>
+        <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F10</kbd> Guardar</span>
+        <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F9</kbd> Guardar + Imprimir</span>
+        <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F11</kbd> Finalizar sesión</span>
+      </div>
+      <%= render ButtonComponent.new(variant: :outline_navy, size: :xs,
+            data: { action: "click->etiquetar#clearForm" }) do %>
+        Limpiar <kbd class="px-1 py-0.5 bg-cec-navy/10 text-cec-navy dark:bg-cec-gold/20 dark:text-cec-gold rounded text-[10px] font-sans">F2</kbd>
+      <% end %>
+      <%= render ButtonComponent.new(variant: :primary, size: :xs, type: "submit") do %>
+        Guardar <kbd class="px-1 py-0.5 bg-white/20 rounded text-[10px] font-sans">F10</kbd>
+      <% end %>
+      <%= render ButtonComponent.new(variant: :gold, size: :xs,
+            data: { action: "click->etiquetar#submitFormWithPrint" }) do %>
+        Guardar + Imprimir <kbd class="px-1 py-0.5 bg-black/10 rounded text-[10px] font-sans">F9</kbd>
+      <% end %>
+    </div>
+
     <% if @paquete.errors.any? %>
       <div class="mb-6 p-4 bg-red-50 rounded-lg">
         <div class="flex items-center gap-2 mb-2">
@@ -234,7 +578,7 @@ end %>
           <button type="button"
                   data-etiquetar-target="trackingSecundarioToggle"
                   data-action="click->etiquetar#toggleTrackingSecundario"
-                  class="text-xs text-cec-teal hover:text-cec-teal-dark font-medium inline-flex items-center gap-1">
+                  class="text-xs text-cec-teal-deep dark:text-cec-teal-light hover:underline font-medium inline-flex items-center gap-1">
             <span data-etiquetar-target="trackingSecundarioToggleLabel">+ Agregar tracking secundario</span>
             <kbd class="px-1 py-0.5 bg-gray-100 border rounded text-[10px]">F3</kbd>
           </button>
@@ -250,9 +594,16 @@ end %>
         <div data-etiquetar-target="trackingSecundarioContainer" class="hidden mt-3">
           <%= f.label :tracking_secundario, "Tracking secundario",
               class: "block text-sm font-medium text-gray-700 mb-1" %>
+          <%# El secundario se revisa y se limpia igual que el primario. Antes no
+              llevaba ninguna acción: un número ya usado no avisaba, y lo que
+              escupía la pistola entraba crudo, con espacios y símbolos. %>
           <%= f.text_field :tracking_secundario,
               placeholder: "2do tracking (si el proveedor da 2 números para el mismo paquete)",
-              data: { etiquetar_target: "trackingSecundario" },
+              autocomplete: "off", inputmode: "latin", spellcheck: "false",
+              data: { etiquetar_target: "trackingSecundario",
+                      controller: "tracking-input",
+                      tracking_input_target: "input",
+                      action: "input->tracking-input#sanitize blur->etiquetar#checkTrackingSecundario" },
               class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono
                      focus:ring-cec-teal focus:border-cec-teal" %>
         </div>
@@ -262,6 +613,7 @@ end %>
       <div class="relative">
         <label class="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
         <input type="text" placeholder="Buscar por código o nombre..."
+               value="<%= @paquete.cliente&.codigo %>"
                data-etiquetar-target="clienteInput"
                data-action="input->etiquetar#searchCliente keydown->etiquetar#clienteKeydown"
                autocomplete="off"
@@ -293,7 +645,7 @@ end %>
           <%= f.label :descripcion, class: "block text-sm font-medium text-gray-700" %>
           <button type="button" data-action="click->etiquetar#toggleTercero"
                   data-etiquetar-target="terceroToggle"
-                  class="text-xs text-cec-teal hover:text-cec-teal-dark font-medium">
+                  class="text-xs text-cec-teal-deep dark:text-cec-teal-light hover:underline font-medium">
             + Agregar tercero <kbd class="px-1 py-0.5 bg-gray-100 border rounded text-[10px]">F4</kbd>
           </button>
         </div>
@@ -301,83 +653,96 @@ end %>
             data: { etiquetar_target: "descripcion" },
             class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
                    focus:ring-cec-teal focus:border-cec-teal" %>
+        <%# C19-04: "sellado y compra chino, son más comunes". %>
+        <%= render "shared/plantillas_descripcion", selector: "#paquete_descripcion" %>
       </div>
 
-      <%# Retener Miami + toggles (después de descripción). Retener abre modal de
-          motivos (PR-3). Al marcar el checkbox se abre <dialog> con multi-select
-          + textarea "otro motivo". Cancel desmarca, Confirm guarda los valores. %>
+      <%# Retener Miami + toggles (después de descripción). El bloque de
+          retención vive en `shared/_retener_miami`: lo comparten esta pantalla,
+          /entrega_personal, el form de /paquetes y las dos de la pre-alerta. %>
       <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div data-controller="checkbox-modal"
-             class="px-3 py-2 rounded-lg ring-1 ring-gray-200 dark:ring-gray-700 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors">
-          <label class="flex items-center gap-2 cursor-pointer">
-            <%= f.check_box :retener_miami,
-                data: { checkbox_modal_target: "checkbox", action: "change->checkbox-modal#onChange" },
-                class: "rounded border-gray-300 text-amber-600 focus:ring-amber-500" %>
-            <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Retener en Miami</span>
-            <% if @paquete.retener_miami? %>
-              <span class="ml-auto text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900">activo</span>
-            <% end %>
-          </label>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Especificá motivo(s) de la retención.</p>
-
-          <dialog data-checkbox-modal-target="dialog"
-                  aria-labelledby="modal-retener-miami-title"
-                  style="margin: auto" class="rounded-xl p-0 w-[32rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-amber-300">
-            <div class="bg-amber-50 px-5 py-3 border-b border-amber-200">
-              <h3 id="modal-retener-miami-title" class="text-base font-semibold text-amber-900">Retener en Miami</h3>
-            </div>
-            <div class="p-5 space-y-4 bg-white">
-              <div>
-                <span class="block text-sm font-medium text-gray-700 mb-1">Motivos</span>
-                <% if @motivos_retencion.any? %>
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <% @motivos_retencion.each do |m| %>
-                      <label class="flex items-start gap-2 text-sm text-gray-800">
-                        <%= check_box_tag "paquete[motivo_retencion_ids][]", m.id,
-                            @paquete.motivo_retencion_ids.include?(m.id),
-                            class: "mt-0.5 rounded border-amber-300 text-amber-600 focus:ring-amber-500" %>
-                        <span><%= m.nombre %></span>
-                      </label>
-                    <% end %>
-                  </div>
-                  <%= hidden_field_tag "paquete[motivo_retencion_ids][]", "" %>
-                <% else %>
-                  <p class="text-xs text-amber-700 italic">No hay motivos configurados todavía. Pedile a un admin que los cargue en /motivos_retencion.</p>
-                <% end %>
-              </div>
-              <div>
-                <%= f.label :notas_retencion, "Otro motivo / detalle del caso",
-                    class: "block text-sm font-medium text-gray-700 mb-1" %>
-                <%= f.text_area :notas_retencion, rows: 3,
-                    placeholder: "Detalle adicional. Obligatorio si no seleccionaste motivo.",
-                    class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-amber-500 focus:border-amber-500" %>
-              </div>
-            </div>
-            <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">
-              <button type="button" data-action="checkbox-modal#cancel"
-                      class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900">Cancelar</button>
-              <button type="button" data-action="checkbox-modal#confirm"
-                      class="px-3 py-1.5 text-sm font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700">Confirmar</button>
-            </div>
-          </dialog>
-        </div>
+        <%= render RetenerMiamiComponent.new(f: f, motivos: @motivos_retencion) %>
+        <%= render EnviadoPorPoliticaComponent.new(f: f, motivos: @motivos_envio_politica) %>
 
         <div class="flex flex-wrap items-center gap-6 px-1">
-          <div class="flex items-center gap-2">
-            <%= f.check_box :pre_alerta, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-            <%= f.label :pre_alerta, "Pre-Alerta", class: "text-sm font-medium text-gray-700" %>
-          </div>
-          <div class="flex items-center gap-2">
-            <%= f.check_box :pre_factura, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-            <%= f.label :pre_factura, "Pre-Factura", class: "text-sm font-medium text-gray-700" %>
-          </div>
-          <div class="flex items-center gap-2">
-            <%= f.check_box :solicito_cambio_servicio, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+          <%# PR-C6.11: se fueron los checkboxes Pre-Alerta y Pre-Factura.
+              Yusef: "esto de prealerta, prefactura... esto no, esto no tiene
+              nada que ver con ellos". Jorge confirmó que habían quedado del
+              inicio del proyecto. La pre-alerta la vincula el sistema solo al
+              reconciliar el tracking; la pre-factura se arma en Honduras. %>
+          <%# PR-C6.8: marcar el flag no alcanzaba — Yusef eligió CKM, guardó, y
+              el paquete se quedó en CER. Ahora abre un modal que pregunta a
+              cuál, con el mismo patrón `checkbox-modal` que ya usa Retener.
+              Yusef sobre la forma: "no sé, lo que funcione bien: solo darle
+              click, yo doy click y click y ya va... que no cargue y que sea
+              rápido". %>
+          <%# PR-C6.23: si se llegó acá desde el botón "Cambio de servicio" del
+              modal de duplicado, el check ya viene marcado y el modal abierto.
+              Yusef: "si yo presiono cambio de servicio, me tire aquí de un
+              solo a esto". %>
+          <div class="flex items-center gap-2" data-controller="checkbox-modal"
+               data-checkbox-modal-abrir-al-cargar-value="<%= @abrir_cambio_servicio ? "true" : "false" %>">
+            <%= f.check_box :solicito_cambio_servicio,
+                data: { checkbox_modal_target: "checkbox", action: "change->checkbox-modal#onChange" },
+                class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
             <%= f.label :solicito_cambio_servicio, "Cambio de Servicio", class: "text-sm font-medium text-gray-700" %>
+
+            <dialog data-checkbox-modal-target="dialog"
+                    aria-labelledby="modal-cambio-servicio-title"
+                    style="margin: auto" class="rounded-xl p-0 w-[26rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-cec-teal/40">
+              <%# PR-C29.12 · El mismo tono que el cambio de servicio de
+                  /paquetes (`_form`): eran teal acá y ámbar allá. %>
+              <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, titulo: "Cambio de servicio",
+                    titulo_tag: :h3, titulo_id: "modal-cambio-servicio-title") do %>
+                <p class="text-xs mt-0.5 opacity-90">
+                  Este paquete se está trabajando como <b><%= @tipo_envio_sesion.codigo.to_s.upcase %></b>. ¿A cuál cambia?
+                </p>
+              <% end %>
+              <div class="p-5 bg-white">
+                <%= label_tag "paquete[tipo_envio_destino_id]", "Nuevo tipo de envío",
+                      class: "block text-sm font-medium text-gray-700 mb-1" %>
+                <%= select_tag "paquete[tipo_envio_destino_id]",
+                      options_from_collection_for_select(
+                        @tipo_envios.reject { |t| t.id == @tipo_envio_sesion.id }, :id, :nombre),
+                      include_blank: "— elegí el servicio —",
+                      class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+                <p class="mt-2 text-xs text-gray-500">
+                  Genera un cargo automático en la pre-factura.
+                </p>
+              </div>
+              <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">
+                <%= render ButtonComponent.new(variant: :ghost, size: :sm,
+                      data: { action: "checkbox-modal#cancel" }) do %>Cancelar<% end %>
+                <%= render ButtonComponent.new(variant: :teal, size: :sm,
+                      data: { action: "checkbox-modal#confirm" }) do %>Confirmar<% end %>
+              </div>
+            </dialog>
           </div>
         </div>
       </div>
 
+      <%# ── Pago ── el mismo partial que /entrega_personal.
+          Jorge: "esto es en la parte de Miami — etiquetar y entrega personal —
+          hay que mostrar cómo se pagó". Antes el prepago existía solo en la
+          otra pantalla. %>
+      <div class="lg:col-span-3">
+        <%= render "shared/prepago_miami" %>
+      </div>
+
+      <%# ── Notas internas ──
+          PR-C6.11: sube acá, arriba del cuadro de carrier/proveedor/remitente.
+          Yusef: "notas internas, aquí es donde creo yo que esto lo deberíamos
+          de poner acá arriba, arriba de esto". %>
+      <div class="lg:col-span-3">
+        <%= f.label :notas_internas, "Notas Internas", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.text_area :notas_internas, rows: 2, placeholder: "Notas internas sobre el paquete...",
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
+                   focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+
+      <%# ── De dónde viene el paquete ── carrier, proveedor y remitente.
+          Yusef: "move carrier, proveedor y remitente en este cuadro que está
+          acá abajo, porque es parte de lo que van a llenar". %>
       <%# Carrier + Proveedor %>
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Carrier</label>
@@ -396,8 +761,11 @@ end %>
       </div>
 
       <div>
-        <%= f.label :proveedor, class: "block text-sm font-medium text-gray-700 mb-1" %>
-        <%= f.text_field :proveedor, placeholder: "Amazon, eBay, etc.",
+        <%# C27-29 · `f.text_field :proveedor` leía `paquete.proveedor`, que es la
+            ASOCIACIÓN: en un re-render con proveedor del catálogo el campo salía
+            con un `#<Proveedor:0x…>` adentro. `proveedor_texto` lee la columna. %>
+        <%= f.label :proveedor_texto, "Proveedor", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.text_field :proveedor_texto, placeholder: "Amazon, eBay, etc.",
             class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
                    focus:ring-cec-teal focus:border-cec-teal" %>
       </div>
@@ -412,42 +780,42 @@ end %>
                    shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
       </div>
 
-      <%# Notas internas %>
-      <div class="lg:col-span-3">
-        <%= f.label :notas_internas, "Notas Internas", class: "block text-sm font-medium text-gray-700 mb-1" %>
-        <%= f.text_area :notas_internas, rows: 2, placeholder: "Notas internas sobre el paquete...",
-            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                   focus:ring-cec-teal focus:border-cec-teal" %>
-      </div>
+      <%# PR-C7.17: el mismo componente que /entrega_personal. Acá vivía el
+          partial `shared/_peso_medidas_calc`, cuyo default de `modo_cajas`
+          nunca se aplicaba —`x = v unless defined?(x)` no asigna nunca en
+          Ruby— y por eso esta pantalla se quedó sin campo de cajas y sin poder
+          dividir un paquete. %>
+      <%# `@cajas_cargadas` solo viene con algo cuando el guardado falló: sin
+          eso, el re-render de la pantalla se llevaba todas las cajas medidas. %>
+      <%= render CajasPesoMedidasComponent.new(f: f, wrapper_class: "lg:col-span-3",
+            tipo_envio_id: @tipo_envio_sesion.id,
+            cajas_cargadas: @cajas_cargadas || {}) %>
 
-      <%= render "shared/peso_medidas_calc", f: f, wrapper_class: "lg:col-span-3" %>
-
-      <%# Cant. de Cajas se pregunta en un modal post-F9 (PR-4). Hidden con
-          default 1; el modal lo sobreescribe si N > 1. %>
-      <%= f.hidden_field :cantidad_paquetes, value: 1, data: { etiquetar_target: "cantidadPaquetesHidden" } %>
     </div>
 
     <%# Action bar — leyenda de atajos a la izquierda + botones con palabra y su
         tecla F (preferencia de Jorge sobre el bar sin leyenda de PR-7). %>
-    <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div data-barra="atajos"
+         class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4">
       <div class="text-xs text-gray-400 dark:text-gray-500 hidden sm:flex gap-4">
         <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F2</kbd> Limpiar</span>
-        <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F8</kbd> Guardar</span>
+        <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F10</kbd> Guardar</span>
         <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F9</kbd> Guardar + Imprimir</span>
+        <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F11</kbd> Finalizar sesión</span>
       </div>
       <div class="flex items-center gap-3">
-        <button type="button" data-action="click->etiquetar#clearForm"
-                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-cec-navy text-cec-navy hover:bg-cec-navy/5 dark:border-cec-navy-light dark:text-cec-navy-light dark:hover:bg-cec-navy-light/10 rounded-lg">
-          Limpiar <kbd class="px-1 py-0.5 bg-cec-navy/10 text-cec-navy dark:bg-cec-navy-light/20 dark:text-cec-navy-light rounded text-[10px] font-sans">F2</kbd>
-        </button>
-        <button type="submit" data-etiquetar-target="submitBtn"
-                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-cec-navy text-white rounded-lg hover:bg-cec-navy-light">
-          Guardar <kbd class="px-1 py-0.5 bg-white/20 rounded text-[10px] font-sans">F8</kbd>
-        </button>
-        <button type="button" data-action="click->etiquetar#submitFormWithPrint"
-                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-cec-gold text-cec-navy-dark rounded-lg hover:bg-cec-gold-dark">
+        <%= render ButtonComponent.new(variant: :outline_navy,
+              data: { action: "click->etiquetar#clearForm" }) do %>
+          Limpiar <kbd class="px-1 py-0.5 bg-cec-navy/10 text-cec-navy dark:bg-cec-gold/20 dark:text-cec-gold rounded text-[10px] font-sans">F2</kbd>
+        <% end %>
+        <%= render ButtonComponent.new(variant: :primary, type: "submit",
+              data: { etiquetar_target: "submitBtn" }) do %>
+          Guardar <kbd class="px-1 py-0.5 bg-white/20 rounded text-[10px] font-sans">F10</kbd>
+        <% end %>
+        <%= render ButtonComponent.new(variant: :gold,
+              data: { action: "click->etiquetar#submitFormWithPrint" }) do %>
           Guardar + Imprimir <kbd class="px-1 py-0.5 bg-black/10 rounded text-[10px] font-sans">F9</kbd>
-        </button>
+        <% end %>
       </div>
     </div>
   <% end %>
@@ -467,43 +835,6 @@ end %>
     </aside>
   </div><%# /grid %>
 
-  <%# PR-4: Modal "¿Cuántas cajas?" — se abre al presionar F9 / Guardar+Imprimir.
-      Default 1, max 26 (límite del sufijo A-Z para duplicados). %>
-  <dialog data-etiquetar-target="cajasModal"
-          aria-labelledby="modal-cajas-title"
-          style="margin: auto"
-          class="rounded-xl p-0 w-[28rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-cec-teal/40">
-    <div class="bg-cec-teal/10 px-5 py-3 border-b border-cec-teal/30">
-      <h3 id="modal-cajas-title" class="text-base font-semibold text-cec-teal-dark dark:text-cec-teal-light">
-        ¿Cuántas cajas trae este tracking?
-      </h3>
-    </div>
-    <div class="p-5 space-y-4 bg-white dark:bg-gray-800">
-      <div>
-        <label for="cajas-input" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-          Cantidad de cajas a imprimir
-        </label>
-        <input id="cajas-input" type="number" min="1" max="26" value="1"
-               data-etiquetar-target="cajasInput"
-               data-action="keydown->etiquetar#cajasKeydown"
-               class="block w-full text-2xl text-center font-mono rounded-lg border-gray-300 shadow-sm
-                      focus:ring-cec-teal focus:border-cec-teal dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100">
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          Cada caja recibe su propia etiqueta (1/N, 2/N…). Máximo 26.
-        </p>
-      </div>
-    </div>
-    <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
-      <button type="button" data-action="click->etiquetar#cancelCajas"
-              class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100">
-        Cancelar
-      </button>
-      <button type="button" data-action="click->etiquetar#confirmCajas"
-              class="px-4 py-1.5 text-sm font-medium bg-cec-gold text-cec-navy-dark rounded-lg hover:bg-cec-gold-dark">
-        Confirmar e imprimir
-      </button>
-    </div>
-  </dialog>
 
   <%# Turbo stream events container %>
   <div id="etiquetar-events"></div>

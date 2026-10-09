@@ -10,8 +10,19 @@ class Cliente < ApplicationRecord
   validates :password, length: { minimum: 8 }, confirmation: true, if: -> { password.present? }
 
   belongs_to :categoria_precio, optional: true
+  # PR-C6.37: donde el cliente retira. Yusef: "la ciudad donde es la persona no
+  # es el mismo lugar donde se le entrega — la idea es ponerle donde el hombre
+  # va a querer su retiro". De aca lo hereda el paquete al etiquetarlo.
+  belongs_to :sucursal_retiro, class_name: "Sucursal", optional: true
   has_many :paquetes, dependent: :restrict_with_error
   has_many :cliente_sessions, dependent: :destroy
+
+  # PR-C6.41 · RP-04b: en qué servicios se le cobra SOLO el volumétrico.
+  # La fila es el flag — ver `ClienteCobroVolumetrico`. `tipo_envio_solo_volumetrico_ids`
+  # (que Rails deriva de este `has_many :through`) es lo que cablea el form.
+  has_many :cliente_cobro_volumetricos, dependent: :destroy
+  has_many :tipo_envio_solo_volumetricos,
+           through: :cliente_cobro_volumetricos, source: :tipo_envio
   has_many :pre_alertas, dependent: :restrict_with_error
   has_many :pre_facturas, dependent: :restrict_with_error
   has_many :ventas, dependent: :restrict_with_error
@@ -26,6 +37,10 @@ class Cliente < ApplicationRecord
   # el cliente porque no tienen valor fuera de su contexto (a diferencia de
   # paquetes o ventas, que son historia contable).
   has_many :tareas, dependent: :destroy
+  # Los correos a los que además hay que avisarle. El de **acceso** es `email`.
+  has_many :cliente_correos, dependent: :destroy
+  accepts_nested_attributes_for :cliente_correos, allow_destroy: true,
+                                reject_if: ->(a) { a[:correo].blank? }
 
   validates :codigo, presence: true, uniqueness: { case_sensitive: false }
   validates :nombre, presence: true
@@ -33,7 +48,53 @@ class Cliente < ApplicationRecord
                    uniqueness: { case_sensitive: false, message: "ya esta registrado" }, if: -> { email.present? }
   validates :tema, inclusion: { in: %w[light dark], allow_nil: true }
 
+  # ── El nombre completo lleva por lo menos tres palabras ─────────────────
+  #
+  # Yusef, 2026-08-19: *"tiene que poner mínimo **tres ítems**… por ejemplo yo me
+  # llamo Alejandro Federico, tres nombres y mis dos apellidos. Entonces por lo
+  # menos tenés que tener Jorge y dos apellidos"*. Y el porqué: *"imaginate
+  # cuántos Jorge Padilla hay"*.
+  #
+  # En Honduras el nombre es el desempate cuando el casillero se lee mal — y las
+  # etiquetas llegan rotas: *"a veces solo dicen 234 y después dice Pérez
+  # Hernández"*.
+  #
+  # **Es una regla de la pantalla, no del modelo entero.** Hay 9.000 clientes
+  # importados del sistema viejo y muchos vienen con dos palabras; una validación
+  # a secas los volvería imposibles de guardar y trabaría la migración que Jorge
+  # tiene pendiente —*"lo que más me preocupa es mover los clientes"*—.
+  #
+  # Corre solo cuando alguien está **tecleando** el nombre en `/clientes`, que es
+  # donde Yusef la pidió. El importador, los seeds y las pruebas que solo
+  # necesitan un cliente cualquiera no se enteran.
+  attr_accessor :exigir_nombre_completo
+
+  # Y además: **solo si el nombre de verdad cambió**. Guardar la ficha de un
+  # cliente viejo reenviando su mismo nombre —que es lo que hace el formulario de
+  # precios especiales— no puede trabarse por dos palabras que nadie tocó.
+  validate :nombre_completo_lleva_tres_palabras,
+           if: -> { exigir_nombre_completo && (new_record? || nombre_changed? || apellido_changed?) }
+
+  # C29-03 · La sucursal donde retira se pregunta **al crear el casillero**.
+  # Yusef, 2026-10-08, con la etiqueta de Sofía diciendo otro lugar: *"cuando
+  # ellos crean el casillero, vas a preguntar a dónde le gustaría retirar su
+  # producto"* · *"la ciudad donde es es una cosa y donde retira es otra"*.
+  # Sofía estaba **sin definir**, y la etiqueta salió con la de por defecto.
+  #
+  # Misma forma que el nombre: regla de las pantallas donde alguien da de alta
+  # (`/clientes` y el registro del portal), no del modelo. Los importados que no
+  # la tienen se siguen pudiendo editar mientras nadie toque el campo; lo que no
+  # se puede es **vaciarla**.
+  attr_accessor :exigir_sucursal_retiro
+
+  validates :sucursal_retiro, presence: { message: "hay que elegir dónde va a retirar" },
+            if: -> { exigir_sucursal_retiro && (new_record? || sucursal_retiro_id_changed?) }
+
   scope :activos, -> { where(activo: true) }
+  # Los que pueden entrar al portal. `activo` es "es cliente nuestro";
+  # `acceso_habilitado` es "puede entrar". Son dos cosas distintas: se le corta
+  # el acceso a alguien que sigue siendo cliente.
+  scope :con_acceso, -> { activos.where(acceso_habilitado: true) }
   # PR-10.c: búsqueda combinada de código y nombre. Antes hacía un `OR` sobre
   # columnas sueltas con el término completo, así que fallaba en los dos casos
   # que más usa el operario:
@@ -68,11 +129,43 @@ class Cliente < ApplicationRecord
   scope :buscar_flexible, ->(term) {
     estricta = buscar(term)
     # Con una sola palabra la estricta y la de fragmentos son equivalentes.
-    next estricta if Cliente.fragmentos_de(term).size <= 1
-    next estricta if estricta.exists?
+    next estricta.then { |r| Cliente.priorizar_codigo(r, term) } if Cliente.fragmentos_de(term).size <= 1
+    next Cliente.priorizar_codigo(estricta, term) if estricta.exists?
 
-    buscar_por_fragmentos(term)
+    Cliente.priorizar_codigo(buscar_por_fragmentos(term), term)
   }
+
+  # PR-C6.14b: pone primero al que el operario está buscando de verdad.
+  #
+  # Yusef, 2026-08-08, sobre cómo trabajan hoy: los códigos son `C00002867` y
+  # "el sistema lee de derecha a izquierda... solo le ponían el dos, ponele que
+  # el mío es el seis, solo poníamos el seis o el dos y ya con eso cae".
+  #
+  # **Encontrar ya funcionaba** — `codigo ILIKE '%2867%'` matchea el sufijo, y
+  # los ceros a la izquierda ya se ignoran. Lo que faltaba era el **orden**:
+  # con códigos de 5 dígitos, teclear `6` trae decenas y el que uno quiere
+  # queda enterrado. Esa era la pregunta abierta del Excel.
+  #
+  # El desempate no inventa política, solo hace confiable lo que él describió:
+  #
+  #   1. el código que **es** ese número (ignorando ceros): `6` → `C00006`
+  #   2. el que **termina** en ese número: `2867` → `C00002867`
+  #   3. el resto
+  def self.priorizar_codigo(relacion, term)
+    digitos = term.to_s.gsub(/\D/, "").sub(/\A0+/, "").presence
+    return relacion if digitos.nil?
+
+    # C20-10: sobre la columna calculada. Antes era un `regexp_replace` por
+    # fila, o sea que ordenar costaba tanto como filtrar.
+    solo_digitos = "clientes.codigo_digitos"
+    relacion.order(Arel.sql(sanitize_sql_array([ <<~SQL, digitos, digitos ])), :codigo)
+      CASE
+        WHEN #{solo_digitos} = ?              THEN 0
+        WHEN #{solo_digitos} LIKE '%%' || ?   THEN 1
+        ELSE 2
+      END
+    SQL
+  end
 
   # Trae los que matcheen AL MENOS UN fragmento, ordenados por cuántos
   # matchean. Con "234 Pérez Hernández", el cliente C234 Juan Pérez matchea 2
@@ -97,18 +190,28 @@ class Cliente < ApplicationRecord
   def self.condicion_fragmento(token)
     like = "%#{sanitize_sql_like(token)}%"
 
+    # C20-10: las columnas ya vienen sin acentos desde la base (calculadas al
+    # guardar), así que acá no se envuelve nada — que es justamente lo que
+    # mataba al índice: un índice de expresión solo se usa cuando la expresión
+    # aparece IDÉNTICA en el WHERE, y `PR-10.f` le agregó un `translate()`
+    # encima sin que nadie se enterara.
+    #
+    # El `sin_acentos` del lado del PATRÓN se queda: la columna está
+    # normalizada, así que 'Pérez' tiene que llegar como 'Perez'. Postgres lo
+    # pliega a constante al planear, así que no le estorba al índice. Ojo con
+    # "simplificarlo" normalizando en Ruby: la única garantía de que los dos
+    # lados normalicen igual es que los dos usen el mismo `translate` de
+    # Postgres.
     condiciones = [
-      sanitize_sql_array([ "#{sin_acentos('clientes.codigo')} ILIKE #{sin_acentos('?')}", like ]),
-      sanitize_sql_array([ "#{sin_acentos(NOMBRE_COMPLETO_SQL)} ILIKE #{sin_acentos('?')}", like ]),
+      sanitize_sql_array([ "clientes.busqueda_codigo ILIKE #{sin_acentos('?')}", like ]),
+      sanitize_sql_array([ "clientes.busqueda_nombre ILIKE #{sin_acentos('?')}", like ]),
       sanitize_sql_array([ "clientes.email ILIKE ?", like ])
     ]
 
     # Los ceros a la izquierda se ignoran a ambos lados: C002 == C2 == 2.
     normalizado = token.gsub(/\D/, "").sub(/\A0+/, "").presence
     if normalizado
-      condiciones << sanitize_sql_array(
-        [ "ltrim(regexp_replace(clientes.codigo, '\\D', '', 'g'), '0') = ?", normalizado ]
-      )
+      condiciones << sanitize_sql_array([ "clientes.codigo_digitos = ?", normalizado ])
     end
 
     "(#{condiciones.join(' OR ')})"
@@ -124,14 +227,134 @@ class Cliente < ApplicationRecord
   # depende de que el entorno permita instalar extensiones, y se comporta igual
   # en local que en Render. Una búsqueda que difiere entre entornos es peor que
   # una limitada.
+  # C20-10: la tabla tenía 14 caracteres de origen y **13 de destino**, así que
+  # `translate` corría el mapeo del final: la `Ü` se volvía `N` y la `Ñ`
+  # desaparecía. `Ñandú ÜBER` salía como `andu NBER`.
+  #
+  # No rompía la búsqueda —los dos lados de la comparación usaban la misma
+  # tabla, así que se seguían encontrando entre ellos— y por eso nadie lo vio.
+  # Se destapó al guardar el resultado en una columna, donde el dato queda a la
+  # vista.
+  ACENTOS_ORIGEN  = "áéíóúüñÁÉÍÓÚÜÑ".freeze
+  ACENTOS_DESTINO = "aeiouunAEIOUUN".freeze
+
   def self.sin_acentos(expresion)
-    "translate(#{expresion}, 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUN')"
+    "translate(#{expresion}, '#{ACENTOS_ORIGEN}', '#{ACENTOS_DESTINO}')"
   end
 
   before_validation :generate_codigo, on: :create, if: -> { codigo.blank? }
 
+  # Lo que Miami tiene que leer para saber en que bolsa va la caja.
+  #
+  # C29-03 · Caía a `ciudad` mientras hubiera clientes sin sucursal asignada, y
+  # eso es justo lo que Yusef dijo que no se puede: *"de donde es la persona no
+  # es donde retira"*. Sofía es de Choluteca y retira en Humuya; el aviso
+  # rojo de «se entregará en» decía la ciudad, y la caja iba a la bolsa
+  # equivocada. Sin sucursal, **no hay nombre**: el aviso dice que falta
+  # (`sin_sucursal_retiro?`) en vez de inventarla.
+  def sucursal_retiro_nombre
+    sucursal_retiro&.nombre.presence
+  end
+
+  def sin_sucursal_retiro? = sucursal_retiro_id.nil?
+
+  # ¿La carga de este cliente va a donde va casi toda?
+  #
+  # Yusef, 2026-08-19: *"esa de San Pedro Sula hay que eliminarlo, porque es el
+  # default… el cerebro trabaja en default; cuando querés que haga una cosa
+  # diferente, tenés que ponerle la nota que es diferente"*. El 80% de la carga
+  # se queda en San Pedro, y un aviso que sale siempre deja de leerse — y con él
+  # el del día que dice Tegucigalpa, que era el único que importaba.
+  #
+  # Un cliente **sin** sucursal asignada no cuenta como default: de ese no se
+  # sabe a dónde va, y ahí el aviso sirve.
+  def retira_en_la_de_por_defecto?
+    sucursal_retiro.present? && sucursal_retiro.retiro_por_defecto?
+  end
+
+  # El cliente entra con su **código de casillero o con su correo**.
+  #
+  # Yusef, 2026-08-19, dos veces: *"es que mi correo está lleno"*, *"es que yo no
+  # tengo correo"*. En Honduras el correo no es el identificador que la gente
+  # recuerda; el número de casillero sí, porque lo usan todos los días.
+  #
+  # Jorge argumentó que hoy la autenticación es por correo y es lo que funciona,
+  # y quedaron en las dos: el correo sigue sirviendo para entrar, para notificar
+  # y para recuperar la clave.
+  #
+  # `codigo` tiene índice único en la base, así que entrar por ahí es sólido.
+  # `email` **no** —la unicidad la pone solo el modelo, o sea que no alcanza a
+  # los 9.000 importados—, y por eso el de correo va segundo: si hay repetidos,
+  # el código es el camino que no miente.
+  #
+  # `con_acceso` y no `activos`: se le puede cortar el acceso a alguien que sigue
+  # siendo cliente.
+  def self.autenticar(identificador, password)
+    valor = identificador.to_s.strip
+    return nil if valor.blank?
+
+    con_acceso.authenticate_by(codigo: valor, password: password) ||
+      con_acceso.authenticate_by(email: valor.downcase, password: password)
+  end
+
+  # ¿Ya le pusieron clave? Sin esto, `acceso_habilitado` miente: la casilla puede
+  # estar marcada y el cliente igual no entra, porque el admin lo creó desde
+  # `/clientes` y ahí nunca hubo dónde ponerle una.
+  #
+  # Yusef, 2026-08-19, mostrando el caso: *"ella tiene dos correos, **yo no le
+  # puedo crear una cuenta aquí**"*.
+  def tiene_clave?
+    password_digest.present?
+  end
+
+  # A quién le corresponde el link de "olvidé mi contraseña".
+  #
+  # Busca por las **mismas dos llaves** con las que se entra (`autenticar`): si
+  # solo mirara el correo, el cliente que Yusef describe —*"es que yo no tengo
+  # correo"*— quedaría afuera justo del camino que existe para él.
+  #
+  # Devuelve al cliente aunque no tenga clave puesta: recuperarla es también
+  # **estrenarla**, y es la salida para el que el admin creó sin cuenta.
+  def self.para_recuperar(identificador)
+    valor = identificador.to_s.strip
+    return nil if valor.blank?
+
+    con_acceso.find_by(codigo: valor) || con_acceso.find_by(email: valor.downcase)
+  end
+
+  # Le pone (o le cambia) la clave. `clave_actualizada_at` es lo que deja la
+  # huella: `has_paper_trail` saltea `password_digest`, así que sin esta columna
+  # el cambio no aparecería en ninguna bitácora.
+  def cambiar_clave(nueva, confirmacion)
+    self.password = nueva
+    self.password_confirmation = confirmacion
+    self.clave_actualizada_at = Time.current
+    save
+  end
+
+  PALABRAS_MINIMAS_DEL_NOMBRE = 3
+
+  def nombre_completo_lleva_tres_palabras
+    return if nombre_completo.to_s.split.size >= PALABRAS_MINIMAS_DEL_NOMBRE
+
+    errors.add(:nombre, "va con nombre y dos apellidos (al menos #{PALABRAS_MINIMAS_DEL_NOMBRE} palabras)")
+  end
+
   def nombre_completo
     [nombre, apellido].compact_blank.join(" ")
+  end
+
+  # PR-C6.41 · RP-04b: ¿a este cliente se le cobra SOLO el volumétrico en este
+  # servicio? Es lo único que el motor de cobro necesita saber.
+  #
+  # Es **por servicio**, no por cliente: el mismo mayorista puede tener el trato
+  # en CEM y pagar normal en CER. `tipo_envio` puede venir nil (`Paquete` lo
+  # tiene `optional: true`) y ahí no aplica nada.
+  def cobra_solo_volumetrico?(tipo_envio)
+    id = tipo_envio.respond_to?(:id) ? tipo_envio&.id : tipo_envio
+    return false if id.blank?
+
+    tipo_envio_solo_volumetrico_ids.include?(id)
   end
 
   private

@@ -42,7 +42,18 @@ ActiveSupport::Inflector.inflections(:en) do |inflect|
   inflect.irregular "servicio_extra",   "servicios_extra"
   inflect.irregular "motivo_retencion", "motivos_retencion"
   inflect.irregular "paquete_motivo_retencion", "paquete_motivos_retencion"
+  # C18-06: sin esto `has_many :motivos_envio_politica` no da
+  # `motivo_envio_politica_ids` y las rutas del catálogo chocan.
+  inflect.irregular "motivo_envio_politica", "motivos_envio_politica"
+  inflect.irregular "paquete_motivo_envio_politica", "paquete_motivos_envio_politica"
   inflect.irregular "plantilla_nota_cliente", "plantillas_notas_cliente"
+  # C19-04: sin esto singular y plural empatan y las rutas del catálogo de
+  # descripciones salen como `plantillas_descripcion_index_path`.
+  inflect.irregular "plantilla_descripcion", "plantillas_descripcion"
+  # C21-11: «guia» cae en la regla Latin -a → -um igual que `pre_alerta`, así
+  # que `ManifiestoGuia`.tableize daba `manifiesto_guia` (singular) y el
+  # `has_many :guias` consultaba una tabla que no existe.
+  inflect.irregular "manifiesto_guia", "manifiesto_guias"
   # PR-13.d: sin esto `has_many :autorizaciones` busca la clase `Autorizacione`.
   inflect.irregular "autorizacion", "autorizaciones"
 end

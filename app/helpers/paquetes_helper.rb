@@ -22,17 +22,17 @@ module PaquetesHelper
 
   def can_edit_paquetes?
     return false unless Current.user
-    Current.user.admin? || PaquetesController::EDIT_ROLES.include?(Current.user.rol)
+    Current.user.admin? || Current.user.tiene_rol?(PaquetesController::EDIT_ROLES)
   end
 
   def can_delete_paquetes?
     return false unless Current.user
-    Current.user.admin? || PaquetesController::DELETE_ROLES.include?(Current.user.rol)
+    Current.user.admin? || Current.user.tiene_rol?(PaquetesController::DELETE_ROLES)
   end
 
   def can_change_estado_paquete?
     return false unless Current.user
-    Current.user.admin? || PaquetesController::ESTADO_CHANGE_ROLES.include?(Current.user.rol)
+    Current.user.admin? || Current.user.tiene_rol?(PaquetesController::ESTADO_CHANGE_ROLES)
   end
 
   # Identificador visible del paquete en UI (títulos, tablas, mensajes,

@@ -50,7 +50,7 @@ class FinanciamientosController < ApplicationController
     venta = @financiamiento.venta
     metodo = params[:metodo_pago] || "efectivo"
     # Cap at venta's remaining saldo to avoid overpayment if someone paid directly on the venta
-    monto = [cuota.monto.to_d, venta.saldo_pendiente.to_d].min
+    monto = [ cuota.monto.to_d, venta.saldo_pendiente.to_d ].min
 
     if monto <= 0
       redirect_to(@financiamiento, alert: "La venta ya no tiene saldo pendiente.") and return
@@ -76,7 +76,7 @@ class FinanciamientosController < ApplicationController
     end
   end
 
-  private  def require_feature_access
+  private def require_feature_access
     redirect_to(root_path, alert: "No tienes permiso para acceder a esta seccion.") unless can_access?(:financiamientos)
   end
 

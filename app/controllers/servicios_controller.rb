@@ -7,7 +7,7 @@
 # Se llama /servicios y no /tarifas porque para el negocio la unidad mental es
 # el servicio (EXPRESS, CER, CEM…) y las tarifas son sus filas.
 class ServiciosController < ApplicationController
-  before_action :require_admin
+  before_action :solo_admin
   before_action :set_tarifa, only: %i[edit update destroy]
 
   def index
@@ -16,6 +16,14 @@ class ServiciosController < ApplicationController
                      .to_a
                      .sort_by { |t| orden_de_lectura(t) }
                      .group_by(&:tipo_envio_id)
+
+    # PR-C7.12: los grupos de clientes se administran acá desde que la pantalla
+    # aparte se fue. `count` en vez de `includes` porque lo único que muestra la
+    # sección son los dos números, y traerse las filas para contarlas sería
+    # cargar las 44 tarifas dos veces.
+    @grupos          = CategoriaPrecio.order(:nombre).to_a
+    @clientes_por_grupo = Cliente.where.not(categoria_precio_id: nil).group(:categoria_precio_id).count
+    @tarifas_por_grupo  = Tarifa.where.not(categoria_precio_id: nil).group(:categoria_precio_id).count
   end
 
   def new
@@ -28,7 +36,7 @@ class ServiciosController < ApplicationController
     @tarifa = Tarifa.new(tarifa_params)
     aplicar_minimo_con_isv
 
-    if @tarifa.save
+    if guardar_con_categoria
       redirect_to servicios_path, notice: "Tarifa creada."
     else
       cargar_catalogos
@@ -44,7 +52,7 @@ class ServiciosController < ApplicationController
     @tarifa.assign_attributes(tarifa_params)
     aplicar_minimo_con_isv
 
-    if @tarifa.save
+    if guardar_con_categoria
       redirect_to servicios_path, notice: "Tarifa actualizada."
     else
       cargar_catalogos
@@ -59,9 +67,6 @@ class ServiciosController < ApplicationController
 
   private
 
-  def require_admin
-    redirect_to(root_path, alert: "Solo admin.") unless admin?
-  end
 
   # PR-10.g: con los precios reales cargados esto pasó de 20 filas a ~60, y el
   # orden por id dejaba el precio de lista hasta abajo (en Postgres los NULL
@@ -84,6 +89,33 @@ class ServiciosController < ApplicationController
     @tarifa = Tarifa.find(params[:id])
   end
 
+  # PR-C7.12: el formulario manda el **nombre** de la categoría, y si no existe se
+  # crea. Desde que la pantalla aparte se fue, esta es la única forma de crear un
+  # grupo — y es donde se necesita, porque uno crea el grupo justo cuando le va a
+  # poner precio.
+  #
+  # Va en una transacción a propósito: si la tarifa no pasa validación, la
+  # categoría recién tecleada **no se queda huérfana**. `transaction` devuelve nil
+  # cuando se hace rollback, así que sirve tal cual como "¿se guardó?".
+  def guardar_con_categoria
+    ActiveRecord::Base.transaction do
+      asignar_categoria_por_nombre
+      @tarifa.save || raise(ActiveRecord::Rollback)
+    end
+  end
+
+  # Sin el `key?` no se puede distinguir "no mandó el campo" de "lo dejó vacío", y
+  # la segunda tiene que poder **quitarle** la categoría a una tarifa.
+  def asignar_categoria_por_nombre
+    return unless params[:tarifa]&.key?(:categoria_nombre)
+
+    nombre = params[:tarifa][:categoria_nombre].to_s.strip
+    @tarifa.categoria_nombre = nombre
+    @tarifa.categoria_precio =
+      nombre.presence && (CategoriaPrecio.find_by("LOWER(nombre) = ?", nombre.downcase) ||
+                          CategoriaPrecio.create!(nombre: nombre))
+  end
+
   def cargar_catalogos
     @tipo_envios       = TipoEnvio.activos.order(:nombre)
     @categorias        = CategoriaPrecio.order(:nombre)
@@ -102,10 +134,27 @@ class ServiciosController < ApplicationController
 
   def tarifa_params
     params.require(:tarifa).permit(
-      :tipo_envio_id, :categoria_precio_id, :cliente_id, :sucursal_id, :proveedor_id,
+      # `categoria_nombre` no es una columna: es el nombre tecleado en el campo
+      # de grupo, que `asignar_categoria_por_nombre` resuelve a `categoria_precio_id`.
+      # Va permitido para que no ensucie el log con "Unpermitted parameter" en
+      # cada guardado; el `attr_writer` de `Tarifa` lo absorbe sin tocar la base.
+      # `cliente_busqueda` tampoco es columna: es lo que se ve en el campo
+      # ("CÓDIGO — Nombre"), y `Tarifa#resolver_cliente_buscado` lo reconcilia
+      # con `cliente_id`. Manda lo que se ve, para que vaciarlo **quite** el
+      # precio especial en vez de dejar el id oculto viejo.
+      :tipo_envio_id, :categoria_precio_id, :categoria_nombre,
+      :cliente_id, :cliente_busqueda, :sucursal_id, :proveedor_id,
       :desde_libras, :hasta_libras, :precio_libra, :moneda,
-      :minimo_moneda, :minimo_libras, :aplica_minimo, :incremento_libras,
+      :minimo_moneda, :minimo_libras, :aplica_minimo,
+      # `incremento_libras` NO se permite: el redondeo a media libra es la regla,
+      # no una opcion del formulario. La columna tiene default 0.5 y NOT NULL.
       :activo, :notas
     )
+  end
+  # `RP-58` · Va por `can_access?` y no por `require_admin`: toda regla de rol
+  # tiene que pasar por el mismo lugar, o una pantalla de permisos diría que se
+  # puede algo que este controller después niega.
+  def solo_admin
+    redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:servicios)
   end
 end

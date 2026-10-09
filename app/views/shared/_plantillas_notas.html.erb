@@ -1,0 +1,44 @@
+<%# Botones de notas predeterminadas para un campo de texto.
+
+    PR-C6.13. El patrón ya existía en el form del paquete; Yusef pidió el mismo
+    en las áreas de cobro:
+
+      > "Esto que vos tenés, este modal, lo vas a usar también en facturación,
+      >  en prefactura. Siempre se usan estos predeterminados."
+
+    Para qué, en sus palabras:
+
+      > "Siempre tenemos, digamos, no se le dio tarifa... **no cumple el
+      >  mínimo** y se le cobró tarifa tal."
+
+    Un clic en vez de escribir lo mismo cada vez. Ejemplos que dio: "ese
+    paquete fue enviado al cliente vía KAEX Logistics", "retirado al crédito
+    por Nilmo Peña".
+
+    Uso — el `selector` apunta al textarea que recibe el texto, y
+    `plantilla-picker` inserta al final de lo que ya haya, así se encadenan:
+      render "shared/plantillas_notas", selector: "#pre_factura_notas"
+
+    ⚠️ Sin ERB adentro del comentario: el primer «cierre de tag» que aparezca
+    lo termina, y lo que siga se imprime en la página — así estuvo saliendo
+    esta misma frase en /pre_facturas, /caja y el form de /paquetes. %>
+<% plantillas = PlantillaNotaCliente.activas.ordered %>
+<% if plantillas.any? %>
+  <div data-controller="plantilla-picker"
+       data-plantilla-picker-target-selector-value="<%= selector %>"
+       class="mb-2">
+    <span class="text-[11px] text-gray-500 dark:text-gray-400 mr-1">Notas frecuentes:</span>
+    <div class="inline-flex flex-wrap gap-1.5 align-middle">
+      <% plantillas.each do |plantilla| %>
+        <button type="button"
+                data-action="plantilla-picker#insert"
+                data-text="<%= plantilla.texto %>"
+                title="<%= plantilla.texto %>"
+                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                       bg-cec-teal/10 text-cec-teal hover:bg-cec-teal/20 transition-colors cursor-pointer">
+          <%= plantilla.titulo %>
+        </button>
+      <% end %>
+    </div>
+  </div>
+<% end %>

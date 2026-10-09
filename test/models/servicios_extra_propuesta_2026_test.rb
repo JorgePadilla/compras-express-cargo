@@ -57,20 +57,78 @@ class ServiciosExtraPropuesta2026Test < ActiveSupport::TestCase
              "#{c[:codigo]} entra sin decir de donde sale la certeza de su moneda"
     end
 
-    assert_operator ServiciosExtraPropuesta2026::PENDIENTES.size, :>=, 10,
+    assert_operator ServiciosExtraPropuesta2026::PENDIENTES.size, :>=, 9,
                     "los que quedan afuera tienen que seguir listados con su motivo"
+
+    assert_not_includes ServiciosExtraPropuesta2026::PENDIENTES.keys, "CAMBIO DE SERVICIO",
+                        "dejo de estar pendiente: Yusef dio el numero en el audio del 2026-08-08"
   end
 
-  test "no pisa el cambio de servicio que ya existe" do
-    # Es el que se auto-genera en nota de débito al facturar. La hoja de Yusef
-    # dice 5 y el sistema tiene $15 — tocarlo sin confirmar cambiaría lo que se
-    # le cobra al cliente en un documento que se emite solo.
-    original = ServicioExtra.find_by(codigo: "CAMBIO_SERVICIO")
-    next if original.nil?
+  # ── Cambio de servicio ──────────────────────────────────────────────────
+  #
+  # Yusef, 2026-08-08: "son los **100 lempiras**. Yo te lo puse que eran 5."
+  # Estaba en $15 USD (~L.373 con ISV): 3.7× de más, en un cargo que se
+  # auto-genera en nota de débito al facturar.
+  #
+  # El test viejo acá no probaba nada: hacía `next if original.nil?` y en el
+  # entorno de test no hay fixture de CAMBIO_SERVICIO, así que salía sin una
+  # sola aserción. La suite lo venía marcando como "Test is missing assertions".
+
+  test "corrige el cambio de servicio que ya estaba cargado mal" do
+    ServicioExtra.create!(
+      codigo: "CAMBIO_SERVICIO", descripcion: "Cambio de servicio",
+      costo: 0, precio_venta: 15.00, moneda: "USD", precio_incluye_isv: true, activo: true
+    )
+
+    resultado = ServiciosExtraPropuesta2026.corregir_cambio_servicio!
+
+    s = ServicioExtra.find_by!(codigo: "CAMBIO_SERVICIO")
+    assert resultado[:corregido]
+    assert_equal BigDecimal("100"), s.precio_venta
+    assert_equal "LPS", s.moneda
+    assert s.precio_incluye_isv, "los 100 son el precio final, no el neto"
+  end
+
+  test "los L.100 le llegan al cliente como L.100 exactos" do
+    # La razón de que vaya con el ISV adentro. El neto es lo que entra a la
+    # línea; el ISV se suma una sola vez al totalizar.
+    ServicioExtra.create!(
+      codigo: "CAMBIO_SERVICIO", descripcion: "Cambio de servicio",
+      costo: 0, precio_venta: 15.00, moneda: "USD", precio_incluye_isv: true, activo: true
+    )
+    ServiciosExtraPropuesta2026.corregir_cambio_servicio!
+
+    s = ServicioExtra.find_by!(codigo: "CAMBIO_SERVICIO")
+    neto = s.precio_venta_sin_isv
+
+    assert_equal BigDecimal("86.96"), neto
+    assert_equal BigDecimal("100.00"),
+                 (neto * (1 + IsvAware.rate)).round(2, BigDecimal::ROUND_HALF_UP)
+  end
+
+  test "sembrar tambien lo corrige, para no depender de dos comandos" do
+    ServicioExtra.create!(
+      codigo: "CAMBIO_SERVICIO", descripcion: "Cambio de servicio",
+      costo: 0, precio_venta: 15.00, moneda: "USD", precio_incluye_isv: true, activo: true
+    )
 
     ServiciosExtraPropuesta2026.sembrar!
 
-    assert_equal original.precio_venta, original.reload.precio_venta
+    assert_equal BigDecimal("100"), ServicioExtra.find_by!(codigo: "CAMBIO_SERVICIO").precio_venta
+  end
+
+  test "correr la correccion dos veces no cambia nada la segunda" do
+    ServicioExtra.create!(
+      codigo: "CAMBIO_SERVICIO", descripcion: "Cambio de servicio",
+      costo: 0, precio_venta: 15.00, moneda: "USD", precio_incluye_isv: true, activo: true
+    )
+
+    assert ServiciosExtraPropuesta2026.corregir_cambio_servicio![:corregido]
+    assert_not ServiciosExtraPropuesta2026.corregir_cambio_servicio![:corregido]
+  end
+
+  test "si el cargo no existe la correccion no revienta" do
+    assert_not ServiciosExtraPropuesta2026.corregir_cambio_servicio![:corregido]
   end
 
   test "resembrar no duplica" do
