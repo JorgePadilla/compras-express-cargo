@@ -61,6 +61,26 @@ class Manifiesto < ApplicationRecord
   # se sabe a dónde va el camión. En el oficial sigue siendo opcional, que es
   # como estaba.
   validates :sucursal_entrega, presence: true, if: :tipo_interno?
+  # C29-09 · Editar no puede dejar adentro lo que escanear no deja entrar.
+  # Jorge le agregó un tipo a un manifiesto ya armado y anduvo; y Yusef:
+  #
+  #   > "Pero eso pasa de que ya metiste todo y le cambiaste a otro servicio,
+  #   >  y todos los que están adentro… Sí, Jorge, no puede ser."
+  #
+  # Agregar un tipo está bien. Sacarle uno que tienen paquetes adentro los
+  # deja en un manifiesto que no los acepta —el mismo error que el escaneo
+  # frena desde `C28-04`, entrando por la puerta de editar—. Y lo mismo con la
+  # sucursal de entrega (`C29-07`). `update` asigna y guarda en una sola
+  # transacción, así que si esto falla las filas de tipos que la asignación ya
+  # tocó vuelven atrás.
+  #
+  # Solo cuando **eso** cambia: finalizar, recibir y fechar el manifiesto
+  # también son `update`, y un paquete que entró con «Omitir» desde `/empacar`
+  # (`C21-01`) es de otro tipo a propósito. Lo que se frena es el cambio, no
+  # lo que ya estaba.
+  validate :no_deja_afuera_lo_que_tiene_adentro, on: :update,
+           if: -> { @tipos_cambiados || will_save_change_to_sucursal_entrega_id? }
+  after_save { @tipos_cambiados = false }
 
   # RP-59 · «Expedido por» lo llena el sistema, no el operario.
   #
@@ -218,6 +238,41 @@ class Manifiesto < ApplicationRecord
     tipo_envio_ids.include?(paquete.tipo_envio_id)
   end
 
+  # C29-09 · `tipo_envio_ids=` de un `has_many :through` no deja rastro en
+  # `changes`, así que se anota acá para que la validación sepa que los tipos
+  # se tocaron.
+  def tipo_envio_ids=(ids)
+    @tipos_cambiados = true
+    super
+  end
+
+  # C29-07 · Y lo mismo con **a dónde va**. Yusef, escaneando en staging el
+  # 2026-10-08:
+  #
+  #   > "Yo marqué que van para San Pedro y van paquetes que van para Humuya, y
+  #   >  debería de notificarte."
+  #   > "Recordá que la idea es que empaquen las cajas de acuerdo a dónde van."
+  #   > "Y que no debería haberme dejado meter paquetes que van para
+  #   >  Tegucigalpa… algo similar al tipo de envío, el modal así. Exactamente
+  #   >  así."
+  #
+  # Lo que se compara es la **sucursal de retiro** del paquete (`sucursal`, la
+  # que la etiqueta imprime como «RETIRA EN») contra la sucursal de entrega del
+  # manifiesto. Un manifiesto sin sucursal de entrega no tiene contra qué
+  # comparar y acepta todo, como hasta hoy. Un paquete sin sucursal de retiro
+  # tampoco se frena acá: no se sabe a dónde va, y ese dato que falta es su
+  # propio problema (`C29-03`), no uno que la pistola pueda resolver.
+  #
+  # **Solo el oficial.** En el interno la sucursal de entrega es a dónde va el
+  # camión, y puede llevar carga que no retira ahí: `CerrarManifiestoInterno`
+  # tiene un test que lo dice con todas las letras —*"el destino sale del
+  # manifiesto, no de dónde retira el cliente"*—. Yusef hablaba de empacar en
+  # Miami.
+  def acepta_sucursal?(paquete)
+    tipo_interno? || sucursal_entrega_id.nil? || paquete.sucursal_id.nil? ||
+      paquete.sucursal_id == sucursal_entrega_id
+  end
+
   # Los números de guía del proveedor, para mostrar. Lee las dos formas: la
   # tabla nueva y el varchar viejo de los manifiestos que ya estaban.
   # C26-17 · El match con lo que Miami dijo que mandó, para el panel de la
@@ -250,6 +305,24 @@ class Manifiesto < ApplicationRecord
   end
 
   private
+
+  def no_deja_afuera_lo_que_tiene_adentro
+    adentro = paquetes.includes(:tipo_envio, :sucursal).to_a
+    return if adentro.empty?
+
+    sin_su_tipo = @tipos_cambiados ? adentro.reject { |p| p.tipo_envio_id.nil? || acepta_tipo?(p) } : []
+    if sin_su_tipo.any?
+      nombres = sin_su_tipo.map { |p| p.tipo_envio.nombre }.uniq.sort.to_sentence
+      errors.add(:base, "No se le puede sacar #{nombres}: hay #{sin_su_tipo.size} paquete(s) de ese tipo " \
+                       "adentro. Sacalos del manifiesto primero")
+    end
+
+    de_otra = will_save_change_to_sucursal_entrega_id? ? adentro.reject { |p| acepta_sucursal?(p) } : []
+    if de_otra.any?
+      errors.add(:base, "La sucursal de entrega no puede ser #{sucursal_entrega.nombre}: hay #{de_otra.size} paquete(s) adentro " \
+                       "que retiran en otra sucursal. Sacalos del manifiesto primero")
+    end
+  end
 
   def al_menos_un_tipo_de_envio_nuestro
     return if manifiesto_tipo_envios.reject(&:marked_for_destruction?).any?

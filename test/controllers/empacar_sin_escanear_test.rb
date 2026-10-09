@@ -235,6 +235,21 @@ class EmpacarSinEscanearTest < ActionDispatch::IntegrationTest
     assert_match(/#{caja.letra}#{caja.numero_bulto}/, response.body)
   end
 
+  # C29-07 · El tirón sin pistola no puede meter lo que escaneando no entra:
+  # con sucursal de entrega, solo lo que retira ahí (o lo que no dice dónde).
+  test "con sucursal de entrega, se lleva solo lo que va ahí" do
+    @manifiesto.update!(sucursal_entrega: sucursales(:zeron_sps))
+    a_sps = paquete_candidato(tracking: "1ZSINESC_SPS01")
+    a_sps.update_columns(sucursal_id: sucursales(:zeron_sps).id)
+    a_tgu = paquete_candidato(tracking: "1ZSINESC_TGU01")
+    a_tgu.update_columns(sucursal_id: sucursales(:humuya_tgu).id)
+
+    post empacar_sin_escanear_manifiesto_path(@manifiesto)
+
+    assert_equal @manifiesto, a_sps.reload.manifiesto
+    assert_nil a_tgu.reload.manifiesto_id, "va a Humuya: no es de este manifiesto"
+  end
+
   private
 
   def manifiesto_interno

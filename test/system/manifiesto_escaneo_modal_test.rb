@@ -65,6 +65,26 @@ class ManifiestoEscaneoModalTest < ApplicationSystemTestCase
     assert_equal "", find("#buscar_paquete").value
   end
 
+  # C29-07 · *"Algo similar al tipo de envío, el modal así. Exactamente así."*
+  test "de otra sucursal: modal rojo como el del tipo, y no entra" do
+    @manifiesto.update!(sucursal_entrega: sucursales(:zeron_sps))
+    humuya = paquete("1ZHUMUYASYS001")
+    humuya.update!(sucursal: sucursales(:humuya_tgu))
+
+    visit manifiesto_path(@manifiesto)
+    find("#buscar_paquete").send_keys(humuya.numero_recepcion, :enter)
+
+    assert_selector "dialog[open]", text: "Va a otra sucursal", wait: 5
+    assert_selector "dialog[open]", text: sucursales(:humuya_tgu).nombre
+    assert_no_selector "dialog[open] button", text: "Moverlo a este manifiesto"
+    assert_equal "", find("#buscar_paquete", visible: :all).value, "el campo se limpia aunque haya error"
+
+    page.driver.browser.action.send_keys(:enter).perform
+
+    assert_no_selector "dialog[open]", wait: 5
+    assert_nil humuya.reload.manifiesto_id
+  end
+
   private
 
   def paquete(tracking, tipo: tipo_envios(:cer))

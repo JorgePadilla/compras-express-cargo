@@ -47,12 +47,14 @@ class SonidoHelperTest < ActionView::TestCase
     assert_equal "grave", attrs["data-audio-variante-value"]
   end
 
-  test "estan los cuatro atributos que el controller de Stimulus lee" do
-    # Si mañana se agrega un quinto, entra por acá y llega a las dos pantallas
-    # solo. Escritos en cada vista, llegaba a una.
+  test "estan los atributos que el controller de Stimulus lee" do
+    # Si mañana se agrega uno, entra por acá y llega a las dos pantallas
+    # solo. Escritos en cada vista, llegaba a una. C29-08 sumó tres: con qué
+    # suena cada error con sonido propio, y cuántas veces.
     esperados = %w[
       data-audio-enabled-value data-audio-volumen-value
       data-audio-variante-value data-audio-variantes-value
+      data-audio-por-motivo-value data-audio-repeticiones-value data-audio-pausa-value
     ]
 
     assert_equal esperados.sort, atributos_de_audio.keys.sort

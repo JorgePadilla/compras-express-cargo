@@ -14,6 +14,13 @@ class SonidoPreferencesController < ApplicationController
     # rechaza la validación del modelo y el `update` devuelve false sin guardar
     # nada. Un default silencioso escondería que el JS mandó basura.
     attrs[:sonido_error_variante] = params[:variante].to_s if params.key?(:variante)
+    # C29-08 · Un sonido por error: `motivos` trae `{ tipo_distinto: "triple" }`.
+    # Igual que la variante, lo que no existe lo rechaza el modelo.
+    if params[:motivos].respond_to?(:each_pair)
+      SonidosDeError::MOTIVOS.each do |m|
+        attrs[m[:columna]] = params[:motivos][m[:id]].to_s if params[:motivos].key?(m[:id])
+      end
+    end
 
     return head :unprocessable_entity if attrs.any? && !Current.user.update(attrs)
 

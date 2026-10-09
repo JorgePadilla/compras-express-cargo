@@ -20,6 +20,9 @@
       "Imprimir manifiesto"
     end
   end
+  # C29-08 · El modal de sonidos, que esta pantalla de escaneo no tenía:
+  # acá se elige con qué suena el tipo distinto y la sucursal distinta.
+  header.with_action { render "shared/sonido_config" }
   header.with_back do
     render ButtonComponent.new(variant: :ghost, href: manifiestos_path, icon: "arrow-left", shortcut: "F2") do
       "Volver"
@@ -136,7 +139,8 @@ end %>
                     manifiesto-search:varios->audio#notify
                     manifiesto-search:enOtro->audio#alert
                     manifiesto-search:cerrado->audio#error
-                    manifiesto-search:tipoDistinto->audio#error
+                    manifiesto-search:tipoDistinto->audio#errorTipo
+                    manifiesto-search:sucursalDistinta->audio#errorSucursal
                     manifiesto-search:fuera->audio#error
                     manifiesto-search:noEncontrado->audio#error">
     <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">

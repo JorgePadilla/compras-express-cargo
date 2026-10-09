@@ -15,7 +15,12 @@ export default class extends Controller {
     // Importmap no tiene build step: si el JS las declarara, serían dos listas
     // distintas y divergirían.
     variante: { type: String, default: "grave" },
-    variantes: { type: Array, default: [] }
+    variantes: { type: Array, default: [] },
+    // C29-08 · Los errores con sonido propio: `{ tipo_distinto: "triple" }`.
+    // Salen de `SonidosDeError::MOTIVOS`, igual que las variantes.
+    porMotivo: { type: Object, default: {} },
+    repeticiones: { type: Number, default: 2 },
+    pausa: { type: Number, default: 150 }
   }
 
   connect() {
@@ -65,6 +70,30 @@ export default class extends Controller {
     if (!variante) return this._playTone(200, 0.3)
 
     this._tocarSecuencia(variante.tonos)
+  }
+
+  // C29-08 · *"Si el tipo de envío es el error, tiene que tirar un sonido de
+  // una forma. Si la sucursal es el error… de otro tono."* Cada uno toca la
+  // variante que el operario eligió para él, **dos veces**: *"algo como que de
+  // verdad te llama"*. Sin variante elegida cae en el error de siempre, que
+  // es mejor que el silencio.
+  errorTipo() { this._errorDeMotivo("tipo_distinto") }
+
+  errorSucursal() { this._errorDeMotivo("sucursal_distinta") }
+
+  _errorDeMotivo(motivo) {
+    if (!this.enabledValue) return
+
+    const id = (this.porMotivoValue || {})[motivo]
+    const variante = (this.variantesValue || []).find(v => v.id === id)
+    if (!variante) return this.error()
+
+    let tonos = []
+    for (let i = 0; i < this.repeticionesValue; i++) {
+      if (i > 0) tonos.push({ hz: 0, ms: this.pausaValue })
+      tonos = tonos.concat(variante.tonos)
+    }
+    this._tocarSecuencia(tonos)
   }
 
   // Turbo avisa cómo terminó el submit. Sin esto un guardado fallido es

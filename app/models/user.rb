@@ -72,6 +72,8 @@ class User < ApplicationRecord
   # cargar `SonidosDeError` al arrancar y crearía un orden de carga que hoy no
   # hace falta.
   validates :sonido_error_variante, inclusion: { in: ->(_user) { SonidosDeError::IDS } }
+  # C29-08 · Lo mismo para los errores que tienen sonido propio.
+  validates :sonido_error_tipo, :sonido_error_sucursal, inclusion: { in: ->(_user) { SonidosDeError::IDS } }
 
   validates :pin, format: { with: /\A\d{4}\z/, message: "deben ser exactamente 4 digitos" },
                   confirmation: true, if: -> { pin.present? }

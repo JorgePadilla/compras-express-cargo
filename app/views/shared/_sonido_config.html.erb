@@ -88,6 +88,28 @@
         </div>
       </div>
 
+      <%# C29-08 · *"Cada error tiene que tener un tono distinto para que ellos
+          sepan."* Los dos que frenan al escanear el manifiesto eligen su
+          propia opción de la lista de arriba, y se prueban en «Probar», más
+          abajo. %>
+      <div>
+        <p class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Un sonido por error</p>
+        <div class="space-y-2">
+          <% SonidosDeError::MOTIVOS.each do |motivo| %>
+            <div>
+              <%= label_tag "sonido_motivo_#{motivo[:id]}", motivo[:nombre],
+                    class: "block text-sm text-gray-700 dark:text-gray-200" %>
+              <%= select_tag "sonido_motivo_#{motivo[:id]}",
+                    options_for_select(SonidosDeError::VARIANTES.map { |v| [ v[:nombre], v[:id] ] },
+                                       variante_de_motivo(motivo[:id])),
+                    data: { sonido_config_target: "motivo", motivo: motivo[:id],
+                            action: "change->sonido-config#cambiar" },
+                    class: "mt-1 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
       <%# La lista sale de `SonidosDeEscaneo` y no de acá adentro: escrita a
           mano se separó de la realidad. El botón que decía "Pre-alerta" tocaba
           el sonido de «ya existía», y el de pre-alerta de verdad —el que suma

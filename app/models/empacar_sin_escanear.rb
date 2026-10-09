@@ -74,6 +74,14 @@ class EmpacarSinEscanear
     return Paquete.none unless aplica?
 
     base = Paquete.sin_manifiesto.by_tipos_envio(@manifiesto.tipo_envio_ids)
+    # C29-07 · Y solo los que van a donde va el manifiesto, con la misma regla
+    # que la pistola (`Manifiesto#acepta_sucursal?`): el tirón sin escanear no
+    # puede meter lo que escaneando no entra. El que no tiene sucursal de
+    # retiro pasa, igual que al escanear. Y el interno no filtra: su camión
+    # lleva carga que no retira donde llega.
+    if @manifiesto.tipo_oficial? && @manifiesto.sucursal_entrega_id
+      base = base.where(sucursal_id: [ @manifiesto.sucursal_entrega_id, nil ])
+    end
 
     if @manifiesto.tipo_interno?
       base.by_estado(ESTADO_INTERNO).where(sucursal_actual_id: @manifiesto.sucursal_origen_id)

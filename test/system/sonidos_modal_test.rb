@@ -62,6 +62,20 @@ class SonidosModalTest < ApplicationSystemTestCase
     assert_equal "triple", users(:digitador).reload.sonido_error_variante
   end
 
+  # C29-08 · *"Cada error tiene que tener un tono distinto para que ellos
+  # sepan."* El tipo distinto y la sucursal distinta eligen su opción acá.
+  test "cada error con sonido propio elige su opción, y queda guardada" do
+    SonidosDeError::MOTIVOS.each do |m|
+      assert_selector "select[data-motivo='#{m[:id]}']"
+      assert_selector "[data-tono='#{m[:accion]}']", text: "Escuchar"
+    end
+
+    find("select[data-motivo='sucursal_distinta']").find("option[value='descendente']").select_option
+
+    esperar { users(:digitador).reload.sonido_error_sucursal == "descendente" }
+    assert_equal "descendente", users(:digitador).reload.sonido_error_sucursal
+  end
+
   private
 
   def esperar(segundos: 5)

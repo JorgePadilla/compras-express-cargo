@@ -13,6 +13,10 @@
 #   > "No es un error grave… El error es que diga que estás pagando CER y metas
 #   >  un paquete CKA… ahí sí, porque genera gasto."
 #
+# C29-07 · Y un caso más: el paquete que va a **otra sucursal** que la del
+# manifiesto. Va después del tipo porque el tipo es el que «genera gasto»: si
+# fallan los dos, se dice primero ése.
+#
 # Esto **solo clasifica**. Agregar sigue siendo `add_paquete` y mover es
 # `mover_paquete`: los dos escriben, y que haya una sola puerta de escritura
 # por acción es lo que evita que el escaneo y el clic hagan cosas distintas.
@@ -56,6 +60,7 @@ class EscaneoDeManifiesto
       if paquete.manifiesto_id == @manifiesto.id then :en_este
       elsif paquete.manifiesto_id && !paquete.manifiesto.creado? then :en_otro_cerrado
       elsif !@manifiesto.acepta_tipo?(paquete) then :tipo_distinto
+      elsif !@manifiesto.acepta_sucursal?(paquete) then :sucursal_distinta
       elsif paquete.estado.in?(FUERA_DE_CIRCULACION) then :fuera_de_circulacion
       elsif paquete.manifiesto_id then :en_otro
       else :ok

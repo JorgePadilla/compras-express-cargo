@@ -145,6 +145,78 @@ class ManifiestoEscaneoTest < ActionDispatch::IntegrationTest
     assert_equal otro, cem.reload.manifiesto
   end
 
+  # ── C29-07 · A dónde va ──────────────────────────────────────────────────
+  #
+  # Yusef, 2026-10-08: *"yo marqué que van para San Pedro y van paquetes que van
+  # para Humuya, y debería de notificarte"* · *"algo similar al tipo de envío,
+  # el modal así. Exactamente así."*
+
+  test "de otra sucursal: sucursal_distinta, nombrando las dos" do
+    @manifiesto.update!(sucursal_entrega: sucursales(:zeron_sps))
+    humuya = paquete("1ZHUMUYA000001")
+    humuya.update_columns(sucursal_id: sucursales(:humuya_tgu).id)
+
+    escanear(humuya.numero_recepcion)
+
+    assert_equal "sucursal_distinta", json["resultado"]
+    assert_match(/retira en #{sucursales(:humuya_tgu).nombre}/, json["mensaje"])
+    assert_match(/va a #{sucursales(:zeron_sps).nombre}/, json["mensaje"])
+  end
+
+  test "si también es de otro tipo, se dice primero el tipo, que es el que genera gasto" do
+    @manifiesto.update!(sucursal_entrega: sucursales(:zeron_sps))
+    cem = paquete("1ZHUMUYACEM001", tipo: tipo_envios(:cem))
+    cem.update_columns(sucursal_id: sucursales(:humuya_tgu).id)
+
+    escanear(cem.numero_recepcion)
+
+    assert_equal "tipo_distinto", json["resultado"]
+  end
+
+  test "un manifiesto sin sucursal de entrega acepta cualquiera, como hasta hoy" do
+    @manifiesto.update!(sucursal_entrega: nil)
+    humuya = paquete("1ZHUMUYA000002")
+    humuya.update_columns(sucursal_id: sucursales(:humuya_tgu).id)
+
+    escanear(humuya.numero_recepcion)
+
+    assert_equal "ok", json["resultado"]
+  end
+
+  test "el paquete sin sucursal de retiro no se frena: el dato que falta es otro problema" do
+    @manifiesto.update!(sucursal_entrega: sucursales(:zeron_sps))
+    sin = paquete("1ZSINSUCURSAL1")
+    sin.update_columns(sucursal_id: nil)
+
+    escanear(sin.numero_recepcion)
+
+    assert_equal "ok", json["resultado"]
+  end
+
+  # El interno lleva carga que no retira donde llega el camión:
+  # `CerrarManifiestoInternoTest` — *"el destino sale del manifiesto"*.
+  test "el interno no compara sucursales" do
+    interno = Manifiesto.create!(numero: "MA-INT-#{SecureRandom.hex(3)}", estado: "creado", tipo: "interno",
+                                 user: users(:digitador), tipo_envios: [ tipo_envios(:cer) ],
+                                 sucursal_origen: sucursales(:zeron_sps), sucursal_entrega: sucursales(:humuya_tgu))
+    de_sps = paquete("1ZINTERNO00001")
+    de_sps.update_columns(sucursal_id: sucursales(:zeron_sps).id)
+
+    assert EscaneoDeManifiesto.new(interno).clasificar(de_sps).ok?
+  end
+
+  test "mover no mete un paquete que va a otra sucursal" do
+    @manifiesto.update!(sucursal_entrega: sucursales(:zeron_sps))
+    otro = otro_manifiesto(estado: "creado")
+    humuya = paquete("1ZHUMUYAMOVER1")
+    humuya.update_columns(sucursal_id: sucursales(:humuya_tgu).id, manifiesto_id: otro.id)
+
+    post mover_paquete_manifiesto_url(@manifiesto), params: { paquete_id: humuya.id }
+
+    assert_equal otro, humuya.reload.manifiesto
+    assert_match(/no se movió/, flash[:alert])
+  end
+
   private
 
   def escanear(codigo)

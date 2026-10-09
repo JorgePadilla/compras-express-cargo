@@ -58,6 +58,37 @@ module SonidosDeError
   IDS = VARIANTES.map { |v| v[:id] }.freeze
   DEFAULT = IDS.first
 
+  # C29-08 · **Un sonido por error**, para los dos que frenan al escanear el
+  # manifiesto. Yusef, 2026-10-08:
+  #
+  #   > "Si el tipo de envío es el error, tiene que tirar un sonido de una
+  #   >  forma. Si la sucursal es el error, tiene que tirar un sonido de error,
+  #   >  pero de otro tono… Cada error tiene que tener un tono distinto para
+  #   >  que ellos sepan."
+  #   > "Algo como que de verdad te llama, que está equivocada, que no va ahí."
+  #
+  # Cada uno toca una de las `VARIANTES` de arriba —no se inventan tonos
+  # nuevos: las cuatro ya pasaron por las reglas de este archivo (no suben, no
+  # se parecen a los avisos)—, elegida por el operario en el modal de sonidos.
+  # Los defaults son distintos entre sí y del error de siempre (`grave`).
+  #
+  # Y **suenan dos veces**: el pip de un error cualquiera es un pip, y éstos
+  # tienen que llamar. `REPETICIONES` y `PAUSA_MS` los lee el JS por el mismo
+  # data attribute que las variantes.
+  MOTIVOS = [
+    { id: "tipo_distinto", accion: "errorTipo", columna: :sonido_error_tipo, default: "triple",
+      nombre: "Tipo de envío distinto", ayuda: "Al escanear un paquete de otro servicio que el del manifiesto" },
+    { id: "sucursal_distinta", accion: "errorSucursal", columna: :sonido_error_sucursal, default: "agudo",
+      nombre: "Va a otra sucursal", ayuda: "Al escanear un paquete que retira en otra sucursal que la del manifiesto" }
+  ].freeze
+
+  REPETICIONES = 2
+  PAUSA_MS = 150
+
+  def self.motivo(id)
+    MOTIVOS.find { |m| m[:id] == id }
+  end
+
   # Lo que ya suena en las pantallas, para que ninguna variante de error se le
   # parezca. Vive acá y no en el JS porque es lo que el test compara.
   #

@@ -20,8 +20,18 @@ module SonidoHelper
       # Las tres opciones enteras, no solo la elegida: el modal de sonidos deja
       # probarlas sin recargar. Sale de la misma constante con la que se
       # rendearon los .wav que se le mandaron a Yusef.
-      "data-audio-variantes-value" => SonidosDeError::VARIANTES.to_json
+      "data-audio-variantes-value" => SonidosDeError::VARIANTES.to_json,
+      # C29-08 · Con qué variante suena cada error con sonido propio, y cuántas
+      # veces.
+      "data-audio-por-motivo-value" => SonidosDeError::MOTIVOS.to_h { |m| [ m[:id], variante_de_motivo(m[:id], usuario) ] }.to_json,
+      "data-audio-repeticiones-value" => SonidosDeError::REPETICIONES,
+      "data-audio-pausa-value" => SonidosDeError::PAUSA_MS
     }
+  end
+
+  def variante_de_motivo(id, usuario = Current.user)
+    motivo = SonidosDeError.motivo(id)
+    usuario&.public_send(motivo[:columna]).presence || motivo[:default]
   end
 
   def variante_de_error_actual(usuario = Current.user)

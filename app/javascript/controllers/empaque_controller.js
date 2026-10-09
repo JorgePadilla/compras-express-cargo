@@ -178,6 +178,7 @@ export default class extends Controller {
     switch (data.resultado) {
       case "ok":            this.dispatch("ok"); break
       case "tipo_distinto": this.dispatch("tipoDistinto"); break
+      case "sucursal_distinta": this.dispatch("sucursalDistinta"); break
       case "ya_empacado":   this.dispatch("yaEmpacado"); break
       default:              this.dispatch("noEncontrado")
     }
@@ -211,6 +212,7 @@ export default class extends Controller {
   _avisar(tono, mensaje, paqueteId) {
     const titulos = {
       tipoDistinto: "Tipo de envío distinto",
+      sucursalDistinta: "Va a otra sucursal",
       yaEmpacado:   "Ya está en otra caja",
       noEncontrado: "No se encontró"
     }
@@ -237,7 +239,8 @@ export default class extends Controller {
   }
 
   _tono(resultado) {
-    return { ok: "ok", tipo_distinto: "tipoDistinto", ya_empacado: "yaEmpacado" }[resultado] || "noEncontrado"
+    return { ok: "ok", tipo_distinto: "tipoDistinto", sucursal_distinta: "sucursalDistinta",
+             ya_empacado: "yaEmpacado" }[resultado] || "noEncontrado"
   }
 
   // El aviso en la pantalla. Desde C25-09 sólo lo usa el OK; los errores van

@@ -129,12 +129,35 @@ class ManifiestosControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should add paquete to manifiesto" do
-    paquete = paquetes(:empacado)
+    paquete = paquete_del_servicio_del_manifiesto
     post add_paquete_manifiesto_url(@manifiesto), params: { paquete_id: paquete.id }
     assert_redirected_to manifiesto_url(@manifiesto)
     paquete.reload
     assert_equal @manifiesto, paquete.manifiesto
     assert_equal "empacado", paquete.estado
+  end
+
+  # C29-07 · Agregar pasa por las mismas preguntas que el escaneo. Hasta acá el
+  # fixture `empacado` (AEREO) entraba a un manifiesto que lleva CER, porque
+  # `add_paquete` confiaba en que la pantalla ya hubiera preguntado.
+  test "add_paquete no mete un paquete de otro servicio" do
+    paquete = paquetes(:empacado)   # AEREO; el manifiesto lleva CER
+    post add_paquete_manifiesto_url(@manifiesto), params: { paquete_id: paquete.id }
+
+    assert_redirected_to manifiesto_url(@manifiesto)
+    assert_nil paquete.reload.manifiesto_id
+    assert_match(/no se agregó/, flash[:alert])
+  end
+
+  test "add_paquete no mete un paquete que va a otra sucursal" do
+    @manifiesto.update!(sucursal_entrega: sucursales(:zeron_sps))
+    paquete = paquete_del_servicio_del_manifiesto
+    paquete.update_columns(sucursal_id: sucursales(:humuya_tgu).id)
+
+    post add_paquete_manifiesto_url(@manifiesto), params: { paquete_id: paquete.id }
+
+    assert_nil paquete.reload.manifiesto_id
+    assert_match(/retira en #{sucursales(:humuya_tgu).nombre}/, flash[:alert])
   end
 
   test "should remove paquete from manifiesto" do
@@ -163,7 +186,7 @@ class ManifiestosControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "add_paquete responds with turbo_stream" do
-    paquete = paquetes(:empacado)
+    paquete = paquete_del_servicio_del_manifiesto
     post add_paquete_manifiesto_url(@manifiesto), params: { paquete_id: paquete.id }, as: :turbo_stream
     assert_response :success
     paquete.reload
@@ -185,5 +208,62 @@ class ManifiestosControllerTest < ActionDispatch::IntegrationTest
     post session_url, params: { email_address: users(:cajero).email_address, password: "password123" }
     get manifiestos_url
     assert_redirected_to root_path
+  end
+
+  # ── C29-09 · Editar no deja afuera lo que ya está adentro ────────────────
+  #
+  # Yusef: *"eso pasa de que ya metiste todo y le cambiaste a otro servicio, y
+  # todos los que están adentro… Sí, Jorge, no puede ser."*
+
+  test "no se le saca un tipo que tienen paquetes adentro" do
+    paquete = paquete_del_servicio_del_manifiesto
+    paquete.update!(manifiesto: @manifiesto)
+
+    patch manifiesto_url(@manifiesto),
+          params: { manifiesto: { tipo_envio_ids: [ tipo_envios(:cem).id ] } }
+
+    assert_response :unprocessable_entity
+    assert_match(/No se le puede sacar #{tipo_envios(:cer).nombre}/, response.body)
+    assert_equal [ tipo_envios(:cer).id ], @manifiesto.reload.tipo_envio_ids, "los tipos quedan como estaban"
+  end
+
+  test "agregarle un tipo sí se puede" do
+    paquete_del_servicio_del_manifiesto.update!(manifiesto: @manifiesto)
+
+    patch manifiesto_url(@manifiesto),
+          params: { manifiesto: { tipo_envio_ids: [ tipo_envios(:cer).id, tipo_envios(:cem).id ] } }
+
+    assert_redirected_to manifiesto_url(@manifiesto)
+    assert_equal 2, @manifiesto.reload.tipo_envio_ids.size
+  end
+
+  test "no se le cambia la sucursal de entrega si hay paquetes adentro que retiran en otra" do
+    paquete = paquete_del_servicio_del_manifiesto
+    paquete.update_columns(sucursal_id: sucursales(:zeron_sps).id, manifiesto_id: @manifiesto.id)
+
+    patch manifiesto_url(@manifiesto),
+          params: { manifiesto: { sucursal_entrega_id: sucursales(:humuya_tgu).id } }
+
+    assert_response :unprocessable_entity
+    assert_nil @manifiesto.reload.sucursal_entrega_id
+  end
+
+  # Finalizar también es un `update`, y lo que entró con «Omitir» desde
+  # /empacar es de otro tipo a propósito: se frena el cambio, no lo que ya
+  # estaba.
+  test "un paquete de otro tipo que ya estaba adentro no traba finalizar" do
+    paquete = paquetes(:empacado)   # AEREO
+    paquete.update!(manifiesto: @manifiesto)
+
+    patch finalizar_manifiesto_url(@manifiesto)
+
+    assert_equal "enviado", @manifiesto.reload.estado
+  end
+
+  private
+
+  # El fixture `empacado` es AEREO y el manifiesto `creado` lleva CER.
+  def paquete_del_servicio_del_manifiesto
+    paquetes(:empacado).tap { |p| p.update_columns(tipo_envio_id: tipo_envios(:cer).id) }
   end
 end
