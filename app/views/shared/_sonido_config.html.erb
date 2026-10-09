@@ -26,11 +26,8 @@
           aria-labelledby="sonido-config-title"
           style="margin: auto"
           class="rounded-xl p-0 w-[26rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-cec-teal/40">
-    <div class="bg-cec-teal/10 px-5 py-3 border-b border-cec-teal/30">
-      <h3 id="sonido-config-title" class="text-base font-semibold text-cec-teal-dark dark:text-cec-teal-light">
-        Sonidos de escaneo
-      </h3>
-    </div>
+    <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, titulo: "Sonidos de escaneo",
+          titulo_tag: :h3, titulo_id: "sonido-config-title") %>
 
     <%# Con las opciones de error y los cinco sonidos de prueba el
         diálogo pasa de alto en pantallas de laptop, y un <dialog> que se pasa

@@ -8,15 +8,13 @@
        class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"></div>
 
   <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
-    <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
-      <div data-confirm-modal-target="icon"
-           class="w-10 h-10 rounded-full flex items-center justify-center bg-red-50 text-red-600">
-        <%= heroicon "exclamation-triangle", variant: :outline, options: { class: "w-5 h-5" } %>
-      </div>
-      <h3 data-confirm-modal-target="title" class="text-sm font-bold text-gray-800">
-        Confirmar
-      </h3>
-    </div>
+    <%# PR-C29.12 · Confirmar es decidir: franja de atención. El círculo del
+        ícono que cambiaba de rojo a teal se fue con la franja: el tono es el
+        de la franja. Que el botón de confirmar salga rojo **siempre**
+        (`danger` por defecto, ~44 llamadas que no lo pasan) es otra deuda,
+        anotada en docs/07. %>
+    <%= render ModalHeaderComponent.new(tono: :atencion, tamano: :chico, icono: "exclamation-triangle",
+          titulo: "Confirmar", titulo_tag: :h3, titulo_data: { confirm_modal_target: "title" }) %>
 
     <div class="px-6 py-4">
       <p data-confirm-modal-target="message" class="text-sm text-gray-700 leading-relaxed"></p>

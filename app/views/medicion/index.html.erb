@@ -456,11 +456,11 @@
       pantalla (C20-13). Los bloques los clona el JS de la plantilla. %>
   <dialog data-medicion-target="notasModal" data-action="cancel->medicion#avisoCancelar"
           style="margin: auto" class="rounded-xl p-0 w-[44rem] max-w-[95vw] backdrop:bg-black/70">
-    <div class="px-8 py-5 bg-amber-700 text-white">
-      <p class="text-xs font-bold uppercase tracking-wider">Antes de medir</p>
-      <p class="text-3xl font-bold mt-1">Notas del cliente</p>
+    <%# PR-C29.12 · Notas: ámbar **claro**, como la franja de notas de
+        /etiquetar. Era `amber-700` sólido, el naranja que Jorge vio distinto. %>
+    <%= render ModalHeaderComponent.new(tono: :notas, tamano: :grande, kicker: "Antes de medir", titulo: "Notas del cliente") do %>
       <p class="text-base mt-1" data-medicion-target="notasCliente"></p>
-    </div>
+    <% end %>
     <div class="bg-white px-8 py-6">
       <ul class="space-y-3 max-h-[60vh] overflow-y-auto" data-medicion-target="notasLista"></ul>
     </div>
@@ -481,10 +481,8 @@
       encuentre"*. Enter = Entendido, Escape frenado (C20-13). %>
   <dialog data-medicion-target="problemaModal" data-action="cancel->medicion#avisoCancelar"
           style="margin: auto" class="rounded-xl p-0 w-[44rem] max-w-[95vw] backdrop:bg-black/70">
-    <div class="px-8 py-5 bg-red-700 text-white">
-      <p class="text-xs font-bold uppercase tracking-wider">Problema</p>
-      <p class="text-3xl font-bold mt-1" data-medicion-target="problemaTitulo"></p>
-    </div>
+    <%= render ModalHeaderComponent.new(tono: :bloqueo, tamano: :grande, kicker: "Problema",
+          titulo_data: { medicion_target: "problemaTitulo" }) %>
     <div class="bg-white px-8 py-6">
       <p class="text-xl text-gray-900" data-medicion-target="problemaTexto"></p>
     </div>
@@ -520,10 +518,7 @@
   <%# ── Sacar una caja de la lista: perdida, o ya entregada. Solo admin ──── %>
   <dialog data-medicion-target="descarteModal" data-action="cancel->medicion#avisoCancelar"
           style="margin: auto" class="rounded-xl p-0 w-[32rem] max-w-[95vw] backdrop:bg-black/60">
-    <div class="px-6 py-4 bg-cec-navy text-white">
-      <p class="text-xs font-bold uppercase tracking-wider">Solo administración</p>
-      <p class="text-xl font-bold mt-1">Sacar de la lista</p>
-    </div>
+    <%= render ModalHeaderComponent.new(tono: :info, kicker: "Solo administración", titulo: "Sacar de la lista") %>
     <div class="bg-white px-6 py-5 space-y-4">
       <p class="text-base text-gray-900 font-mono" data-medicion-target="descarteCaja"></p>
       <div>
@@ -560,10 +555,11 @@
       dice así, para que nadie crea que con esto se le cobra al cliente. %>
   <dialog data-medicion-target="excepcionModal" data-action="cancel->medicion#avisoCancelar"
           style="margin: auto" class="rounded-xl p-0 w-[44rem] max-w-[95vw] backdrop:bg-black/70">
-    <div class="px-8 py-5 bg-red-700 text-white">
-      <p class="text-xs font-bold uppercase tracking-wider">El grupo está incompleto</p>
-      <p class="text-3xl font-bold mt-1" data-medicion-target="excepcionTitulo">Medir lo que hay</p>
-    </div>
+    <%# PR-C29.12 · Atención y no bloqueo: medir lo que hay es una decisión del
+        operario, no un error. Yusef (C29-20): *"en medición no debería de
+        darle guerra"*. %>
+    <%= render ModalHeaderComponent.new(tono: :atencion, tamano: :grande, kicker: "El grupo está incompleto",
+          titulo: "Medir lo que hay", titulo_data: { medicion_target: "excepcionTitulo" }) %>
     <div class="bg-white px-8 py-6 space-y-4">
       <p class="text-xl text-gray-900">Se va a seguir sin estas cajas:</p>
       <ul class="text-lg font-mono text-red-800 space-y-1" data-medicion-target="excepcionFaltantes"></ul>
@@ -593,10 +589,8 @@
       para ir a buscar las que faltan. %>
   <dialog data-medicion-target="autorizarModal" data-action="cancel->medicion#avisoCancelar"
           style="margin: auto" class="rounded-xl p-0 w-[44rem] max-w-[95vw] backdrop:bg-black/70">
-    <div class="px-8 py-5 bg-red-700 text-white">
-      <p class="text-xs font-bold uppercase tracking-wider">Faltan cajas que sí vinieron</p>
-      <p class="text-3xl font-bold mt-1">Mandalas a buscar, o que autorice un supervisor</p>
-    </div>
+    <%= render ModalHeaderComponent.new(tono: :bloqueo, tamano: :grande, kicker: "Faltan cajas que sí vinieron",
+          titulo: "Mandalas a buscar, o que autorice un supervisor") %>
     <div class="bg-white px-8 py-6 space-y-4">
       <ul class="text-lg font-mono text-red-800 space-y-1" data-medicion-target="autorizarFaltantes"></ul>
       <% autorizantes = User.autorizantes.order(:nombre) %>
@@ -645,10 +639,8 @@
       a la mesa**, así que «quitar el último escaneado» es cerrar y seguir. %>
   <dialog data-medicion-target="mezclaModal" data-action="cancel->medicion#avisoCancelar"
           style="margin: auto" class="rounded-xl p-0 w-[46rem] max-w-[95vw] backdrop:bg-black/70">
-    <div class="px-8 py-5 bg-red-700 text-white">
-      <p class="text-xs font-bold uppercase tracking-wider">No se pueden medir juntos</p>
-      <p class="text-3xl font-bold mt-1" data-medicion-target="mezclaTitulo"></p>
-    </div>
+    <%= render ModalHeaderComponent.new(tono: :bloqueo, tamano: :grande, kicker: "No se pueden medir juntos",
+          titulo_data: { medicion_target: "mezclaTitulo" }) %>
     <div class="bg-white px-8 py-6 space-y-3">
       <p class="text-xl text-gray-900" data-medicion-target="mezclaTexto"></p>
       <p class="text-base text-gray-600">Esta caja <strong>no</strong> entró a la tanda. ¿Qué hacemos?</p>
@@ -671,10 +663,8 @@
       consolidada (`RP-73`) y la mete a la tanda. %>
   <dialog data-medicion-target="unirModal" data-action="cancel->medicion#avisoCancelar"
           style="margin: auto" class="rounded-xl p-0 w-[46rem] max-w-[95vw] backdrop:bg-black/70">
-    <div class="px-8 py-5 bg-amber-700 text-white">
-      <p class="text-xs font-bold uppercase tracking-wider">No está en ninguna pre-alerta</p>
-      <p class="text-3xl font-bold mt-1">¿La agregás a este consolidado?</p>
-    </div>
+    <%= render ModalHeaderComponent.new(tono: :atencion, tamano: :grande, kicker: "No está en ninguna pre-alerta",
+          titulo: "¿La agregás a este consolidado?") %>
     <div class="bg-white px-8 py-6 space-y-3">
       <p class="text-xl text-gray-900" data-medicion-target="unirTexto"></p>
       <p class="text-lg font-mono font-bold text-cec-navy" data-medicion-target="unirPreAlerta"></p>
@@ -697,10 +687,11 @@
       hay pre-factura, o se midió en tandas distintas— queda medirla sola. %>
   <dialog data-medicion-target="yaMedidoModal" data-action="cancel->medicion#avisoCancelar"
           style="margin: auto" class="rounded-xl p-0 w-[46rem] max-w-[95vw] backdrop:bg-black/70">
-    <div class="px-8 py-5 bg-amber-700 text-white">
-      <p class="text-xs font-bold uppercase tracking-wider">Su consolidado ya se midió</p>
-      <p class="text-3xl font-bold mt-1">Traé el resto del estante</p>
-    </div>
+    <%# PR-C29.12 · Era el naranja que lo empezó: *"the orange in here, Su
+        consolidado ya se midió… feels different from the other"*. No es un
+        error, es algo que hacer: atención, en oro. %>
+    <%= render ModalHeaderComponent.new(tono: :atencion, tamano: :grande, kicker: "Su consolidado ya se midió",
+          titulo: "Traé el resto del estante") %>
     <div class="bg-white px-8 py-6 space-y-3">
       <p class="text-xl text-gray-900" data-medicion-target="yaMedidoTexto"></p>
       <ul class="text-lg font-mono text-cec-navy space-y-1" data-medicion-target="yaMedidoLista"></ul>
@@ -728,10 +719,8 @@
       facturamos de acuerdo a la pre-alerta"*. %>
   <dialog data-medicion-target="consolidadoModal" data-action="cancel->medicion#avisoCancelar"
           style="margin: auto" class="rounded-xl p-0 w-[46rem] max-w-[95vw] backdrop:bg-black/70">
-    <div class="px-8 py-5 bg-red-700 text-white">
-      <p class="text-xs font-bold uppercase tracking-wider">Ese va amarrado con otra</p>
-      <p class="text-3xl font-bold mt-1" data-medicion-target="consolidadoTitulo"></p>
-    </div>
+    <%= render ModalHeaderComponent.new(tono: :bloqueo, tamano: :grande, kicker: "Ese va amarrado con otra",
+          titulo_data: { medicion_target: "consolidadoTitulo" }) %>
     <div class="bg-white px-8 py-6 space-y-3">
       <p class="text-xl text-gray-900" data-medicion-target="consolidadoTexto"></p>
       <p class="text-lg font-mono font-bold text-cec-navy" data-medicion-target="consolidadoPreAlerta"></p>

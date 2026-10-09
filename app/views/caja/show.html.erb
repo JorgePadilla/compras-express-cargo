@@ -179,10 +179,11 @@
         <%= f.text_field :notas_cierre, value: "", id: "notas_cierre", class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
       </div>
       <div class="md:col-span-2">
-        <button type="submit" class="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700"
-                data-turbo-confirm="¿Cerrar caja del dia? Esta accion no se puede deshacer.">
-          Cerrar Caja
-        </button>
+        <%# PR-C29.12 · `gold`, el CTA de cierre de docs/07. Era `bg-amber-600`
+            crudo: blanco sobre él da 3.19:1, abajo del 4.5 de AA, y amber ya
+            no va sólido en ningún lado (`tonos_de_modal_test`). %>
+        <%= render(ButtonComponent.new(variant: :gold, type: :submit,
+              data: { turbo_confirm: "¿Cerrar caja del dia? Esta accion no se puede deshacer." })) { "Cerrar Caja" } %>
       </div>
     <% end %>
   </div>

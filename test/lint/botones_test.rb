@@ -72,29 +72,35 @@ class BotonesTest < ActiveSupport::TestCase
     # alternativa a los botones crudos, así que envolverlo en `ButtonComponent`
     # sería circular. Queda declarado para que se vea que se lo miró.
     "app/components/row_action_component.html.erb"           => 1,
+    # PR-C29.12: la «×» de cerrar de `ModalHeaderComponent`, una sola para toda
+    # la app. Va cruda por lo mismo que la de arriba: `ButtonComponent` no tiene
+    # un variant que herede la tinta de la franja (navy, oro, rojo, teal), y
+    # agregarle uno solo para esto sería peor. Se llevó tres «×» crudas de las
+    # vistas (paquetes/show ×2, _buscar_modal).
+    "app/components/modal_header_component.html.erb"          => 1,
     # PR-BTN.5: bajó de 15 a 9. Los que quedan crudos lo están a propósito:
     # "Cambiar" / "Asignar" / "Vincular a un cliente" son acciones de texto
     # dentro de una frase —un botón con borde ahí partiría la oración— y los dos
     # "Cerrar" son la × del encabezado de un modal.
-    "app/views/paquetes/show.html.erb"                       => 9,
-    "app/views/paquetes/_form.html.erb"                      => 12,
+    "app/views/paquetes/show.html.erb"                       => 7,
+    "app/views/paquetes/_form.html.erb"                      => 11,
     "app/views/ventas/show.html.erb"                         => 8,
     "app/views/cotizaciones/show.html.erb"                   => 7,
     "app/views/cuenta/pre_alertas/edit.html.erb"             => 4,
     "app/views/pre_facturas/edit.html.erb"                   => 5,
     "app/views/tareas/index.html.erb"                        => 5,
-    "app/views/caja/show.html.erb"                           => 4,
+    "app/views/caja/show.html.erb"                           => 3,
     "app/views/entregas/show.html.erb"                       => 4,
     "app/views/notas_credito/show.html.erb"                  => 4,
     "app/views/notas_debito/show.html.erb"                   => 4,
     "app/views/paquetes/index.html.erb"                      => 4,
     "app/views/cuenta/cotizaciones/show.html.erb"            => 3,
     "app/views/cuenta/facturas/index.html.erb"               => 3,
-    "app/views/cuenta/pre_alertas/_buscar_modal.html.erb"    => 3,
+    "app/views/cuenta/pre_alertas/_buscar_modal.html.erb"    => 2,
     "app/views/cuenta/pre_alertas/_paquete_fields.html.erb"  => 3,
     "app/views/cuenta/pre_alertas/index.html.erb"            => 3,
     "app/views/layouts/application.html.erb"                 => 3,
-    "app/views/paquetes/_estado_transition_modal.html.erb"   => 3,
+    "app/views/paquetes/_estado_transition_modal.html.erb"   => 2,
     "app/views/paquetes/reimprimir_etiquetas.html.erb"       => 3,
     "app/views/pre_alertas/index.html.erb"                   => 3,
     "app/views/shared/_emitir_nota_modal.html.erb"           => 3,
