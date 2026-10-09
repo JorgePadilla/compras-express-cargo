@@ -2,13 +2,10 @@ import ClienteAutocomplete from "controllers/cliente_autocomplete"
 import { conEnterAvanza } from "controllers/enter_avanza"
 
 // El color del encabezado según de qué avisa. Yusef: *"el cerebro hasta el color
-// asocia"*. Rojo para lo que frena el paquete, ámbar para lo que hay que hacer,
-// navy para lo que hay que leer.
-const TONOS_DE_AVISO = {
-  retencion: "bg-red-600 text-white",
-  tarea: "bg-cec-gold text-cec-navy",
-  nota: "bg-cec-navy text-white"
-}
+// asocia"*. Las clases ya no viven acá: llegan en `tonosValue` desde
+// `ModalHeaderComponent::TONOS` (PR-C29.12), que es la única fuente de los
+// tonos de modal de la app. La retención es bloqueo, la tarea es atención y
+// la nota es notas.
 
 // PR-C6.32: la búsqueda de cliente vive en `ClienteAutocomplete`, compartida
 // con /entrega_personal. Acá solo queda lo propio de etiquetar: el banner de
@@ -50,6 +47,8 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
     tipoEnvioSesionNombre: String,
     // El paquete que se está actualizando. Vacío al dar de alta.
     actualizandoId: String,
+    // PR-C29.12 · `{ retencion:, tarea:, nota: }` → clases de la franja.
+    tonos: Object,
     // Cuántas cajas tiene ya, para que el modal no arranque en 1 y borrarlas
     // quede a un Enter de distancia.
     cajasActuales: Number
@@ -796,8 +795,12 @@ cerrarQuitarCobro() {
       this.avisoSecundarioTarget.hidden = !aviso.secundario
     }
     if (this.hasAvisoEncabezadoTarget) {
-      this.avisoEncabezadoTarget.className =
-        `px-6 py-4 text-center ${TONOS_DE_AVISO[aviso.tono] || TONOS_DE_AVISO.nota}`
+      // Se sacan las clases de todos los tonos y se ponen las de éste: el
+      // resto de la franja (padding, centrado) lo puso el componente.
+      const tonos = this.tonosValue
+      const clases = (c) => c.split(" ").filter(Boolean)
+      Object.values(tonos).forEach((c) => this.avisoEncabezadoTarget.classList.remove(...clases(c)))
+      this.avisoEncabezadoTarget.classList.add(...clases(tonos[aviso.tono] || tonos.nota))
     }
 
     // A1-10: "un pin antes de que salga cualquier modal".

@@ -1,0 +1,24 @@
+<%= tag.div(class: clases_franja, data: @data) do %>
+  <div class="<%= clases_interior %>">
+    <% if @icono %>
+      <%= helpers.heroicon @icono, variant: :outline, options: { class: "#{@tamano[:icono]} shrink-0 mt-0.5", "aria-hidden": true } %>
+    <% end %>
+    <div class="<%= @centrado ? 'min-w-0' : 'min-w-0 flex-1' %>">
+      <% if kicker? %>
+        <%= tag.p(@kicker, class: "text-xs font-bold uppercase tracking-wider", data: @kicker_data) %>
+      <% end %>
+      <% if titulo? %>
+        <%= content_tag(@titulo_tag, @titulo, id: @titulo_id, class: "#{@tamano[:titulo]} font-bold #{'mt-1' if kicker?}", data: @titulo_data) %>
+      <% end %>
+      <%= content %>
+    </div>
+    <% if accion? %>
+      <div class="shrink-0"><%= accion %></div>
+    <% end %>
+    <% if @cerrar %>
+      <button type="button" aria-label="Cerrar" data-action="<%= @cerrar %>" class="<%= ModalHeaderComponent::CERRAR %> shrink-0">
+        <%= helpers.heroicon "x-mark", variant: :solid, options: { class: "w-5 h-5" } %>
+      </button>
+    <% end %>
+  </div>
+<% end %>

@@ -111,6 +111,7 @@ end %>
 <div data-controller="etiquetar audio"
      <%= tag.attributes(atributos_de_audio) %>
      data-etiquetar-check-url-value="<%= check_tracking_paquetes_path %>"
+     data-etiquetar-tonos-value="<%= { retencion: ModalHeaderComponent.clases(:bloqueo), tarea: ModalHeaderComponent.clases(:atencion), nota: ModalHeaderComponent.clases(:notas) }.to_json %>"
      data-etiquetar-buscar-url-value="<%= buscar_clientes_path %>"
      data-etiquetar-tipo-envio-sesion-value="<%= @tipo_envio_sesion.id %>"
      data-etiquetar-tipo-envio-sesion-nombre-value="<%= @tipo_envio_sesion.nombre %>"
@@ -210,12 +211,11 @@ end %>
        role="alertdialog" aria-modal="true" aria-labelledby="conflicto-sesion-titulo"
        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70 p-4">
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full p-6 ring-2 ring-red-400">
-      <div class="flex items-center gap-3 mb-4">
-        <%= heroicon "exclamation-triangle", variant: :solid, options: { class: "w-6 h-6 text-red-600 shrink-0" } %>
-        <h3 id="conflicto-sesion-titulo" class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Este paquete es de otro tipo de envío
-        </h3>
-      </div>
+      <%# PR-C29.12 · Bloqueo: no deja seguir hasta elegir una de las dos.
+          La franja va pegada a los bordes de la tarjeta (`-mx-6 -mt-6`). %>
+      <%= render ModalHeaderComponent.new(tono: :bloqueo, icono: "exclamation-triangle",
+            titulo: "Este paquete es de otro tipo de envío", titulo_tag: :h3, titulo_id: "conflicto-sesion-titulo",
+            class: "-mx-6 -mt-6 mb-5 rounded-t-xl") %>
 
       <p data-etiquetar-target="conflictoSesionTexto"
          class="text-sm text-gray-700 dark:text-gray-300 mb-5"></p>
@@ -261,10 +261,10 @@ end %>
   <dialog data-etiquetar-target="sucursalModal"
           style="margin: auto"
           class="rounded-xl p-0 w-[24rem] max-w-[95vw] backdrop:bg-black/50 ring-2 ring-red-400">
-    <div class="bg-red-50 px-6 py-5 text-center">
-      <p class="text-xs font-bold uppercase tracking-wider text-red-700 mb-1">Guardar en la bolsa de</p>
-      <p class="text-3xl font-bold text-red-800" data-etiquetar-target="sucursalModalTexto"></p>
-    </div>
+    <%# PR-C29.12 · Bloqueo, en rojo como lo pidió Yusef: *"le salga en rojo
+        'sucursal Tegucigalpa'"*. Era rojo claro; ahora es la franja de bloqueo. %>
+    <%= render ModalHeaderComponent.new(tono: :bloqueo, tamano: :grande, centrado: true, kicker: "Guardar en la bolsa de",
+          titulo_data: { etiquetar_target: "sucursalModalTexto" }) %>
     <div class="flex items-center justify-center px-6 py-3 bg-white border-t border-gray-200">
       <%= render ButtonComponent.new(variant: :primary,
             data: { action: "etiquetar#cerrarSucursalModal" }) do %>
@@ -292,10 +292,12 @@ end %>
           data-action="cancel->etiquetar#avisoCancelar"
           style="margin: auto"
           class="rounded-xl p-0 w-[30rem] max-w-[95vw] backdrop:bg-black/60">
-    <div class="px-6 py-4 text-center" data-etiquetar-target="avisoEncabezado">
-      <p class="text-xs font-bold uppercase tracking-wider" data-etiquetar-target="avisoTipo"></p>
-      <p class="text-2xl font-bold mt-1" data-etiquetar-target="avisoTitulo"></p>
-    </div>
+    <%# PR-C29.12 · El tono lo cambia el JS según de qué avisa, leyendo las
+        clases de `ModalHeaderComponent::TONOS` (`data-etiquetar-tonos-value`):
+        la retención es bloqueo, la tarea es atención y la nota es notas. %>
+    <%= render ModalHeaderComponent.new(tono: :notas, centrado: true,
+          data: { etiquetar_target: "avisoEncabezado" },
+          kicker_data: { etiquetar_target: "avisoTipo" }, titulo_data: { etiquetar_target: "avisoTitulo" }) %>
     <div class="bg-white px-6 py-5">
       <p class="text-base text-gray-800 whitespace-pre-line" data-etiquetar-target="avisoTexto"></p>
     </div>
@@ -328,10 +330,8 @@ end %>
   <dialog data-etiquetar-target="etiquetasModal"
           style="margin: auto"
           class="rounded-xl p-0 w-[22rem] max-w-[95vw] backdrop:bg-black/50 ring-2 ring-cec-gold">
-    <div class="bg-cec-navy px-6 py-4 text-center">
-      <p class="text-xs font-bold uppercase tracking-wider text-cec-gold">No se midió ninguna caja</p>
-      <p class="text-sm text-white mt-1">¿Cuántas etiquetas se imprimen?</p>
-    </div>
+    <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, centrado: true,
+          kicker: "No se midió ninguna caja", titulo: "¿Cuántas etiquetas se imprimen?") %>
     <div class="bg-white px-6 py-5 text-center">
       <%# `autocomplete=off` y los `data-*-ignore`: es un campo numérico chico y
           los gestores de contraseñas le ofrecen tarjetas, igual que pasó con las
@@ -390,10 +390,9 @@ end %>
   <dialog data-etiquetar-target="quitarCobroModal" style="margin: auto"
           class="rounded-xl p-0 w-[26rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-amber-400">
     <%= form_with url: quitar_cambio_servicio_etiquetar_path(@paquete), method: :post do %>
-      <div class="bg-amber-50 px-5 py-3 border-b border-amber-200">
-        <h3 class="text-base font-semibold text-amber-900">Quitar el cobro por cambio de servicio</h3>
-        <p class="text-xs text-amber-800 mt-0.5">Lo autoriza un supervisor con su PIN. Queda registrado quién.</p>
-      </div>
+      <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, titulo: "Quitar el cobro por cambio de servicio", titulo_tag: :h3) do %>
+        <p class="text-xs mt-0.5 opacity-90">Lo autoriza un supervisor con su PIN. Queda registrado quién.</p>
+      <% end %>
       <div class="p-5 space-y-3 bg-white">
         <div>
           <%= label_tag :supervisor_id, "Supervisor", class: "block text-sm font-medium text-gray-700 mb-1" %>
@@ -415,7 +414,9 @@ end %>
       <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">
         <%= render ButtonComponent.new(variant: :ghost, size: :sm,
               data: { action: "etiquetar#cerrarQuitarCobro" }) do %>Cancelar<% end %>
-        <%= render ButtonComponent.new(variant: :warning, size: :sm, type: "submit") do %>
+        <%# PR-C29.12 · `primary`: es la confirmación de un formulario con PIN.
+            `warning` pasó a ser el ámbar claro de las notas. %>
+        <%= render ButtonComponent.new(variant: :primary, size: :sm, type: "submit") do %>
           Quitar el cobro
         <% end %>
       </div>
@@ -463,10 +464,10 @@ end %>
                                      para crear paquete distinto. %>
   <div data-etiquetar-target="duplicateModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70 p-4">
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full p-6">
-      <div class="flex items-center gap-3 mb-4">
-        <%= heroicon "exclamation-circle", variant: :outline, options: { class: "w-6 h-6 text-amber-500" } %>
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Tracking ya existe en el sistema</h3>
-      </div>
+      <%# PR-C29.12 · Atención: no es un error, hay que decidir qué es. %>
+      <%= render ModalHeaderComponent.new(tono: :atencion, icono: "exclamation-circle",
+            titulo: "Tracking ya existe en el sistema", titulo_tag: :h3,
+            class: "-mx-6 -mt-6 mb-5 rounded-t-xl") %>
 
       <div data-etiquetar-target="duplicateInfo" class="text-sm text-gray-700 dark:text-gray-300 mb-5"></div>
 
@@ -686,12 +687,14 @@ end %>
             <dialog data-checkbox-modal-target="dialog"
                     aria-labelledby="modal-cambio-servicio-title"
                     style="margin: auto" class="rounded-xl p-0 w-[26rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-cec-teal/40">
-              <div class="bg-cec-teal/10 px-5 py-3 border-b border-cec-teal/30">
-                <h3 id="modal-cambio-servicio-title" class="text-base font-semibold text-cec-teal-dark">Cambio de servicio</h3>
-                <p class="text-xs text-gray-600 mt-0.5">
+              <%# PR-C29.12 · El mismo tono que el cambio de servicio de
+                  /paquetes (`_form`): eran teal acá y ámbar allá. %>
+              <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, titulo: "Cambio de servicio",
+                    titulo_tag: :h3, titulo_id: "modal-cambio-servicio-title") do %>
+                <p class="text-xs mt-0.5 opacity-90">
                   Este paquete se está trabajando como <b><%= @tipo_envio_sesion.codigo.to_s.upcase %></b>. ¿A cuál cambia?
                 </p>
-              </div>
+              <% end %>
               <div class="p-5 bg-white">
                 <%= label_tag "paquete[tipo_envio_destino_id]", "Nuevo tipo de envío",
                       class: "block text-sm font-medium text-gray-700 mb-1" %>

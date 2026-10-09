@@ -223,11 +223,8 @@
   <%# PR-C6.45: el aviso de guardado del portal. Aparece 3 segundos y se va. %>
   <div data-pre-alerta-editor-target="savedModal"
        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40">
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl px-8 py-6 text-center">
-      <div class="w-12 h-12 mx-auto rounded-full bg-cec-teal/10 text-cec-teal flex items-center justify-center mb-3">
-        <%= heroicon "check", variant: :outline, options: { class: "w-6 h-6" } %>
-      </div>
-      <p class="text-sm font-semibold text-cec-navy dark:text-cec-gold">Cambios guardados</p>
+    <div class="rounded-2xl shadow-xl overflow-hidden">
+      <%= render ModalHeaderComponent.new(tono: :listo, centrado: true, icono: "check", titulo: "Cambios guardados") %>
     </div>
   </div>
 

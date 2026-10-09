@@ -87,11 +87,9 @@
             <% if success_modal = flash[:success_modal] %>
               <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm"
                    data-controller="auto-dismiss" data-auto-dismiss-delay-value="1500">
-                <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm mx-4 text-center animate-fade-in-up">
-                  <div class="mx-auto w-16 h-16 rounded-full bg-cec-teal/10 flex items-center justify-center mb-4">
-                    <%= heroicon "check-circle", variant: :solid, options: { class: "w-10 h-10 text-cec-teal" } %>
-                  </div>
-                  <p class="text-lg font-bold text-cec-navy mb-1"><%= success_modal %></p>
+                <div class="rounded-2xl shadow-2xl max-w-sm mx-4 overflow-hidden animate-fade-in-up">
+                  <%= render ModalHeaderComponent.new(tono: :listo, centrado: true,
+                        icono: "check-circle", titulo: success_modal) %>
                 </div>
               </div>
             <% end %>

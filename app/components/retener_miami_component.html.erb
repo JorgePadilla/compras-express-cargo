@@ -18,9 +18,8 @@
   <dialog data-checkbox-modal-target="dialog"
           aria-label="Retener en Miami"
           style="margin: auto" class="rounded-xl p-0 w-[32rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-amber-300">
-    <div class="bg-amber-50 px-5 py-3 border-b border-amber-200">
-      <h3 class="text-base font-semibold text-amber-900">Retener en Miami</h3>
-    </div>
+    <%# PR-C29.12 · Es un formulario (qué motivos), no un aviso: info. %>
+    <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, titulo: "Retener en Miami", titulo_tag: :h3) %>
     <div class="p-5 space-y-4 bg-white">
       <div>
         <span class="block text-sm font-medium text-gray-700 mb-1">Motivos</span>
@@ -53,7 +52,10 @@
     <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">
       <%= render ButtonComponent.new(variant: :ghost, size: :sm,
             data: { action: "checkbox-modal#cancel" }) do %>Cancelar<% end %>
-      <%= render ButtonComponent.new(variant: :warning, size: :sm,
+      <%# PR-C29.12 · Teal, como el Confirmar de los otros `checkbox-modal`
+          (cambio de servicio, recolecta). `warning` pasó a ser el ámbar claro
+          de las notas, y esto no es una nota. %>
+      <%= render ButtonComponent.new(variant: :teal, size: :sm,
             data: { action: "checkbox-modal#confirm" }) do %>Confirmar<% end %>
     </div>
   </dialog>

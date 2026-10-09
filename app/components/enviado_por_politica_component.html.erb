@@ -17,10 +17,9 @@
   <dialog data-checkbox-modal-target="dialog"
           aria-label="Enviado según política"
           style="margin: auto" class="rounded-xl p-0 w-[32rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-cec-navy/30">
-    <div class="bg-cec-navy px-5 py-3">
-      <h3 class="text-base font-semibold text-white">Enviado según política</h3>
-      <p class="text-xs text-white/70 mt-0.5">Lo que marques le llega al cliente en el correo de recibido y queda en sus notas.</p>
-    </div>
+    <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, titulo: "Enviado según política", titulo_tag: :h3) do %>
+      <p class="text-xs mt-0.5 opacity-80">Lo que marques le llega al cliente en el correo de recibido y queda en sus notas.</p>
+    <% end %>
     <div class="p-5 space-y-4 bg-white dark:bg-gray-800">
       <div>
         <span class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Por qué</span>

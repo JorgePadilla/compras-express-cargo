@@ -15,13 +15,11 @@
        class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"></div>
 
   <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
-    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-      <h3 class="text-sm font-bold text-gray-800">
-        Mover paquete <span data-pre-alerta-mover-target="trackingLabel" class="font-mono text-cec-navy"></span>
+    <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, cerrar: "click->pre-alerta-mover#close") do %>
+      <h3 class="text-lg font-bold">
+        Mover paquete <span data-pre-alerta-mover-target="trackingLabel" class="font-mono"></span>
       </h3>
-      <%= render ButtonComponent.new(variant: :ghost, size: :xs, icon: "x-mark",
-            label: "Cerrar", data: { action: "click->pre-alerta-mover#close" }) %>
-    </div>
+    <% end %>
 
     <div data-pre-alerta-mover-target="body" class="px-6 py-4 max-h-80 overflow-y-auto">
       <div data-pre-alerta-mover-target="loading" class="text-center py-8">

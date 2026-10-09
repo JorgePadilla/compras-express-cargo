@@ -12,13 +12,12 @@
   <dialog data-emitir-nota-modal-target="dialog"
           class="rounded-lg shadow-xl p-0 w-full max-w-md backdrop:bg-black/40">
     <%= form_with url: url, method: :post, class: "divide-y divide-gray-200" do %>
-      <div class="px-6 py-4">
-        <h3 class="text-base font-semibold text-cec-navy">Emitir <%= nota.numero %></h3>
-        <p class="mt-1 text-sm text-gray-600"><%= advertencia %></p>
-        <p class="mt-2 text-lg font-bold text-cec-navy">
+      <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, titulo: "Emitir #{nota.numero}", titulo_tag: :h3) do %>
+        <p class="mt-1 text-sm opacity-90"><%= advertencia %></p>
+        <p class="mt-2 text-lg font-bold">
           L. <%= number_with_precision(nota.total, precision: 2, delimiter: ",") %>
         </p>
-      </div>
+      <% end %>
 
       <div class="px-6 py-4 space-y-4">
         <% autorizantes = User.autorizantes.where.not(id: nota.creado_por_id).order(:nombre) %>

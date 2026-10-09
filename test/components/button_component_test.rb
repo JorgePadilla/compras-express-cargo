@@ -79,12 +79,15 @@ class ButtonComponentTest < ViewComponent::TestCase
     assert_no_selector "button[class*='dark:text-cec-navy-light']"
   end
 
-  test "warning usa amber-700, no amber-600" do
-    # Blanco sobre #D97706 da 3.19:1; sobre #B45309 da 5.02:1.
-    render_inline(ButtonComponent.new(variant: :warning)) { "Reintentar" }
+  # PR-C29.12 · `warning` es el ámbar de las notas, en claro: amber nunca va
+  # sólido (`tonos_de_modal_test`). `amber-900` sobre `amber-50` da 8.75:1.
+  test "warning es el ámbar claro de las notas, nunca sólido" do
+    render_inline(ButtonComponent.new(variant: :warning)) { "Notas del cliente" }
 
-    assert_selector "button.bg-amber-700"
+    assert_selector "button.bg-amber-50.text-amber-900"
+    assert_no_selector "button.bg-amber-700"
     assert_no_selector "button.bg-amber-600"
+    assert_no_selector "button.text-white"
   end
 
   test "purple ya no es un variant" do
