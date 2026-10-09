@@ -29,6 +29,15 @@ class SonidoHelperTest < ActionView::TestCase
     assert_equal SonidosDeError::VARIANTES, ida_y_vuelta
   end
 
+  # PR-C29.9 · La voz del error viaja igual que las variantes: si el navegador
+  # tuviera sus propios números, los .wav que se le mandan a Yusef y lo que
+  # suena en la bodega serían dos sonidos distintos.
+  test "la vista manda la misma voz de error que definimos en Ruby" do
+    ida_y_vuelta = JSON.parse(atributos_de_audio["data-audio-voz-value"], symbolize_names: true)
+
+    assert_equal SonidosDeError::VOZ, ida_y_vuelta
+  end
+
   test "manda la variante del usuario, no la default" do
     @user.update!(sonido_error_variante: "triple")
 
@@ -44,7 +53,7 @@ class SonidoHelperTest < ActionView::TestCase
 
     assert_equal true, attrs["data-audio-enabled-value"]
     assert_equal 60, attrs["data-audio-volumen-value"]
-    assert_equal "grave", attrs["data-audio-variante-value"]
+    assert_equal SonidosDeError::DEFAULT, attrs["data-audio-variante-value"]
   end
 
   test "estan los atributos que el controller de Stimulus lee" do
@@ -55,6 +64,7 @@ class SonidoHelperTest < ActionView::TestCase
       data-audio-enabled-value data-audio-volumen-value
       data-audio-variante-value data-audio-variantes-value
       data-audio-por-motivo-value data-audio-repeticiones-value data-audio-pausa-value
+      data-audio-voz-value
     ]
 
     assert_equal esperados.sort, atributos_de_audio.keys.sort
