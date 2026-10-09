@@ -69,7 +69,7 @@ class ManifiestoListadoTest < ActionDispatch::IntegrationTest
 
     get manifiesto_url(@manifiesto)
 
-    assert_select "a[href=?]", listado_manifiesto_path(@manifiesto, print: true)
+    assert_select "a[href=?]", listado_manifiesto_path(@manifiesto, print: true, cerrar: 1)
     assert_select "a[href*='manifiesto=#{@manifiesto.numero}'][href*='.xlsx']"
   end
 

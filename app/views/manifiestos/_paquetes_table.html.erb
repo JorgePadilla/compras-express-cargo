@@ -9,11 +9,14 @@
         frame `manifiesto-paquetes`, y un link sin eso Turbo lo trae **dentro**
         del frame — la descarga del Excel se perdería en un frame vacío. El
         Excel es el export de `/paquetes` con el filtro por manifiesto, para
-        que haya **un** Excel de paquetes y no dos que se separen. %>
+        que haya **un** Excel de paquetes y no dos que se separen.
+
+        PR-C29.7 · El listado lleva `cerrar: 1`: imprime y la pestaña se cierra
+        sola, de vuelta a la ficha. %>
     <% if paquetes.any? %>
       <div class="flex flex-wrap gap-2">
         <%= render(ButtonComponent.new(variant: :secondary, size: :sm, icon: "printer",
-              href: listado_manifiesto_path(manifiesto, print: true), target: "_blank",
+              href: listado_manifiesto_path(manifiesto, print: true, cerrar: 1), target: "_blank",
               label: "Imprimir el listado de paquetes del manifiesto",
               data: { turbo_frame: "_top" })) { "Imprimir listado" } %>
         <%= render(ButtonComponent.new(variant: :secondary, size: :sm, icon: "arrow-down-tray",
