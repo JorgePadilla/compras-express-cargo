@@ -128,11 +128,6 @@
                 <%= heroicon "arrows-right-left", variant: :outline, options: { class: "w-4 h-4" } %>
               </button>
 
-              <%# El tema, que antes tenía un renglón propio arriba de cada
-                  pantalla. Oculto con la barra colapsada, como el pin: al
-                  pasar el mouse la barra se abre y aparece. %>
-              <%= render "shared/theme_toggle", en_barra: true, clase: "sidebar-collapsed-hide" %>
-
               <%# Logout %>
               <%= link_to session_path, data: { turbo_method: :delete },
                   class: "flex-1 flex items-center justify-center gap-2 p-1.5 rounded-md text-red-400 hover:text-red-300 hover:bg-red-500/10 text-sm transition-colors",
@@ -154,7 +149,7 @@
             Compensa el ancho del sidebar pinned con margin (ml-64 izq o
             mr-64 der). Cuando NO está pinned, el sidebar es overlay y el
             margin es solo el ancho de los íconos colapsados (16). %>
-        <main class="flex-1 flex flex-col min-h-screen overflow-x-hidden transition-all duration-200
+        <main class="relative flex-1 flex flex-col min-h-screen overflow-x-hidden transition-all duration-200
                      <%= 'lg:ml-16'  if sidebar_position_init == 'left'  && !sidebar_pinned_init %>
                      <%= 'lg:ml-64'  if sidebar_position_init == 'left'  && sidebar_pinned_init %>
                      <%= 'lg:mr-16'  if sidebar_position_init == 'right' && !sidebar_pinned_init %>
@@ -167,15 +162,25 @@
             <span class="font-bold text-cec-navy dark:text-cec-gold">CEC</span>
             <%= render "shared/theme_toggle" %>
           </header>
-          <%# 2026-10-08 · Acá había un renglón solo para el sol del tema: 16 px de
-              aire + 36 del botón, encima de los 32 del contenido. Jorge: *"all
-              the pages the empty space on the top is too big, we could reduce
-              around 60%"*. El sol se fue al pie de la barra lateral, con
-              «Salir», y el título arranca a 32 px en vez de ~88. En el celular
-              sigue en la barra de arriba, que ya existía. %>
+          <%# El sol del tema, arriba a la derecha, **flotando**: no ocupa
+              renglón.
+
+              Tenía un renglón propio —16 px de aire + 36 del botón, encima de
+              los 32 del contenido— y Jorge pidió sacar ese aire: *"all the
+              pages the empty space on the top is too big, we could reduce
+              around 60%"*. En PR-C29.15 el sol se fue al pie de la barra
+              lateral, y Jorge lo quiso de vuelta: *"me parece que el sol
+              estaba bien arriba"*. Las dos cosas a la vez: vuelve a su
+              esquina, pero `absolute`, y el contenido arranca a 36 px (eran
+              84). El botón es el chico (32 px) para caber en ese margen sin
+              tocar el título ni la tarjeta del Home. En el celular sigue en
+              la barra de arriba, que ya existía. %>
+          <div class="hidden lg:block absolute top-1 right-6 z-10">
+            <%= render "shared/theme_toggle", chico: true %>
+          </div>
 
           <%# Page content %>
-          <div class="flex-1 p-4 md:p-6 lg:p-8">
+          <div class="flex-1 p-4 md:p-6 lg:px-8 lg:pb-8 lg:pt-9">
             <% if notice = flash[:notice] %>
               <div class="mb-4 p-3 bg-cec-teal/10 text-cec-teal-dark border border-cec-teal/30 dark:bg-cec-teal/20 dark:text-cec-teal-light dark:border-cec-teal/50 rounded-xl text-sm flex items-center gap-2"
                    role="status" aria-live="polite" data-controller="auto-dismiss">

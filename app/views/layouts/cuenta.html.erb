@@ -53,14 +53,11 @@
               <%= current_cliente.nombre_completo %>
               <span class="block text-gray-500"><%= current_cliente.codigo %></span>
             </div>
-            <div class="flex items-center justify-between gap-2">
-              <%= link_to session_path, data: { turbo_method: :delete },
-                  class: "flex items-center gap-2 text-red-400 hover:text-red-300 text-sm" do %>
-                <%= heroicon "arrow-right-start-on-rectangle", variant: :outline, options: { class: "w-4 h-4" } %>
-                Cerrar Sesion
-              <% end %>
-              <%= render "shared/theme_toggle", en_barra: true %>
-            </div>
+            <%= link_to session_path, data: { turbo_method: :delete },
+                class: "flex items-center gap-2 text-red-400 hover:text-red-300 text-sm" do %>
+              <%= heroicon "arrow-right-start-on-rectangle", variant: :outline, options: { class: "w-4 h-4" } %>
+              Cerrar Sesion
+            <% end %>
           </div>
         </aside>
 
@@ -71,7 +68,7 @@
         </div>
 
         <%# ========== MAIN CONTENT ========== %>
-        <main class="flex-1 flex flex-col min-h-screen overflow-x-hidden">
+        <main class="relative flex-1 flex flex-col min-h-screen overflow-x-hidden">
           <%# Top bar (mobile) %>
           <header class="bg-white dark:bg-gray-800 shadow-sm px-4 py-3 flex items-center justify-between lg:hidden">
             <button type="button" data-action="click->sidebar#toggle" class="rounded foco-cec text-gray-600 dark:text-gray-200 p-1" aria-label="Menu">
@@ -80,11 +77,14 @@
             <span class="font-bold text-cec-navy dark:text-cec-gold">Mi Cuenta</span>
             <%= render "shared/theme_toggle" %>
           </header>
-          <%# 2026-10-08 · Sin el renglón del sol arriba, igual que en el layout
-              del personal: el sol va en el pie de la barra. %>
+          <%# El sol arriba a la derecha, flotando y sin renglón propio: igual
+              que en el layout del personal (ver ahí el porqué). %>
+          <div class="hidden lg:block absolute top-1 right-6 z-10">
+            <%= render "shared/theme_toggle", chico: true %>
+          </div>
 
           <%# Page content %>
-          <div class="flex-1 p-4 md:p-6 lg:p-8">
+          <div class="flex-1 p-4 md:p-6 lg:px-8 lg:pb-8 lg:pt-9">
             <% if success_modal = flash[:success_modal] %>
               <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm"
                    data-controller="auto-dismiss" data-auto-dismiss-delay-value="1500">
