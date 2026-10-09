@@ -126,7 +126,19 @@ class EtiquetarDescripcionObligatoriaTest < ActionDispatch::IntegrationTest
   test "un paquete viejo sin descripción se sigue pudiendo corregir de peso" do
     viejo = paquete_sin_descripcion
 
-    patch actualizar_etiquetar_url(viejo), params: { paquete: { peso: 7 } }, headers: TURBO
+    # El textarea vacío viaja siempre: el navegador manda `descripcion: ""`, y
+    # para Rails nil → "" es un cambio.
+    patch actualizar_etiquetar_url(viejo), params: { paquete: { peso: 7, descripcion: "" } }, headers: TURBO
+
+    assert_response :success
+    assert_equal 7, viejo.reload.peso.to_i
+  end
+
+  test "un viejo con la descripción en cadena vacía también se corrige" do
+    viejo = paquete_sin_descripcion
+    viejo.update_column(:descripcion, "")
+
+    patch actualizar_etiquetar_url(viejo), params: { paquete: { peso: 7, descripcion: "" } }, headers: TURBO
 
     assert_response :success
     assert_equal 7, viejo.reload.peso.to_i

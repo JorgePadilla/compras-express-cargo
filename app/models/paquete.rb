@@ -296,7 +296,11 @@ class Paquete < ApplicationRecord
     return true if contenido_en_etiquetar == :al_recibir
     return false unless entrega_personal? || contenido_en_etiquetar == :al_actualizar
 
-    new_record? || descripcion_changed?
+    # «Vaciarlo» es que **tenía** y ya no. Un viejo con NULL que vuelve del
+    # formulario con `""` cuenta como cambio para Rails (nil → ""), y sin esta
+    # condición el textarea vacío —el navegador siempre lo manda— trababa la
+    # corrección de peso. Es la misma regla que el `required` de la vista.
+    new_record? || (descripcion_changed? && descripcion_in_database.present?)
   end
 
   # ── Apagar la retención se lleva sus motivos ──────────────────────────
