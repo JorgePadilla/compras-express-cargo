@@ -17,6 +17,7 @@ class EtiquetarAutoLinkTest < ActionDispatch::IntegrationTest
     post etiquetar_url, params: { paquete: {
       tracking: tracking,
       cliente_id: clientes(:juan).id,
+      descripcion: "Ropa",
       tipo_envio_id: tipo_envios(:aereo).id,
       peso: 3.0
     } }
@@ -33,6 +34,7 @@ class EtiquetarAutoLinkTest < ActionDispatch::IntegrationTest
       post etiquetar_url, params: { paquete: {
         tracking: pap.tracking,
         cliente_id: clientes(:juan).id,
+        descripcion: "Ropa",
         tipo_envio_id: tipo_envios(:aereo).id,
         peso: 2.0
       } }

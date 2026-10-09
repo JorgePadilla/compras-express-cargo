@@ -199,6 +199,10 @@ class EtiquetarController < ApplicationController
         # aplicaron: una corrección de peso normal, sin tocar la cantidad, entra.
         cambios = cambios.except(*MedidasPorCaja::CAMPOS_POR_CAJA) if @reanclado || pesos_aplicados
         @paquete.assign_attributes(cambios)
+        # C30-03: al actualizar, el contenido se exige solo si alguien lo toca
+        # —vaciarlo es error—. Un paquete viejo sin contenido se sigue pudiendo
+        # corregir de peso. Ver `Paquete#contenido_obligatorio?`.
+        @paquete.contenido_en_etiquetar = :al_actualizar
 
         aplicar_prepago_miami(@paquete)
         @paquete.save!
@@ -363,6 +367,9 @@ end
     end
     @paquete.estado = ESTADO_AL_ETIQUETAR
     @paquete.user = Current.user
+    # C30-03: lo que se recibe acá lleva contenido, también el esperado que la
+    # pre-alerta dejó sin él. El porqué de la bandera, en `Paquete`.
+    @paquete.contenido_en_etiquetar = :al_recibir
     # El tipo de envío lo manda la sesión de etiquetado, no el form.
     @paquete.tipo_envio_id = @tipo_envio_sesion.id
     # PR-C6.5: y la sucursal donde se está recibiendo, que es de donde sale el
@@ -426,7 +433,11 @@ end
       # solo en `create_single` porque las cajas de un split se guardan por
       # otro camino — y sin esto heredaban todo menos esto.
       sucursal_id: paquete_params[:sucursal_id].presence ||
-                   Cliente.find_by(id: paquete_params[:cliente_id])&.sucursal_retiro_id
+                   Cliente.find_by(id: paquete_params[:cliente_id])&.sucursal_retiro_id,
+      # C30-03: las N cajas, igual que la de `create_single`. Va en los `attrs`
+      # porque `crear_split!` arma y guarda las cajas por su cuenta; si no
+      # viaja acá, un envío de dos cajas se grababa sin contenido.
+      contenido_en_etiquetar: :al_recibir
     )
     # Mismo guard que el single: no se graban cajas bajo el tipo equivocado.
     if (conflicto = conflicto_con_la_sesion(Paquete.new(paquete_params)))

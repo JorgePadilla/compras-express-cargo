@@ -1264,6 +1264,13 @@ cerrarQuitarCobro() {
   // diferencia con el modal viejo: si hay aunque sea una caja cargada, ella
   // manda y acá no se pregunta nada — nunca hay dos fuentes para el número.
   submitFormWithPrint() {
+    // C30-03: lo que falta se dice ANTES de preguntar cuántas etiquetas. Sin
+    // esto el operario contestaba el modal, le daba Enter, y recién ahí el
+    // navegador marcaba la descripción vacía — debajo del modal que acababa de
+    // cerrar, y con el `print` ya colgado en el formulario. `reportValidity`
+    // es el mismo aviso que da `requestSubmit` (tracking, descripción), solo
+    // que antes.
+    if (!this.formTarget.reportValidity()) return
     if (this._cajasCargadas() > 0) return this._submitWithPrint()
     if (!this.hasEtiquetasModalTarget) return this._submitWithPrint()
 

@@ -253,8 +253,51 @@ class Paquete < ApplicationRecord
   # contenido tienen que seguirse pudiendo guardar, si no editar cualquier otro
   # campo de uno viejo lo traba con un error de algo que nadie tocó. Solo se
   # exige al crear, o cuando alguien toca el campo — vaciarlo sí es un error.
+  #
+  # ── …y en todo lo que se recibe por /etiquetar (C30-03, responde RP-74) ──
+  #
+  # Yusef, 2026-10-09, recorriendo staging: *"en etiqueta puse el tracking, el
+  # cliente, y la descripción me la está dejando dejar vacía … ok, descripción
+  # tiene que estar llena"*. Hasta acá era solo de EP a propósito (#306: Miami
+  # recibe 500–1.000 paquetes por día y no se quería un campo más que frene);
+  # él mismo decidió que el campo va, para todos los servicios.
+  #
+  # Va en el modelo con una **bandera que pone la pantalla**, y no como regla
+  # general ni como contexto de validación:
+  #
+  # - General no puede ser: los esperados de una pre-alerta, los importados del
+  #   sistema viejo, las cajas que `ajustar_split!` crea al partir y el alta de
+  #   /paquetes nacen legítimamente sin contenido. Ninguno pone la bandera, así
+  #   que ninguno cambia.
+  # - Un contexto (`save(context: :etiquetar)`) reemplaza al `:create`, y con
+  #   él se saltaban los `before_validation on: :create` que generan la guía y
+  #   los trackings EP/RC. Además habría que pasarlo por adentro de
+  #   `crear_split!`, que guarda sus cajas por su cuenta.
+  # - Solo en el controller tampoco: el error tiene que salir en
+  #   `@paquete.errors`, que es lo que la pantalla ya sabe pintar.
+  #
+  # Dos modos, porque al recibir y al actualizar la pregunta es distinta:
+  #
+  # - `:al_recibir` — alta en /etiquetar. Se exige **siempre**, sin mirar
+  #   `new_record?`: el esperado que la pre-alerta dejó esperando ya está
+  #   grabado, y si venía sin contenido y el operario no teclea nada,
+  #   `descripcion_changed?` da falso y se colaba justo el caso más común de
+  #   Miami (el paquete pre-alertado que se escanea).
+  # - `:al_actualizar` — modo actualización de /etiquetar. La misma trampa de
+  #   arriba: un paquete viejo sin contenido se tiene que poder corregir de
+  #   peso sin que lo trabe algo que nadie tocó. Vaciarlo sí es un error.
+  CONTENIDO_EN_ETIQUETAR = %i[al_recibir al_actualizar].freeze
+  attr_accessor :contenido_en_etiquetar
+
   validates :descripcion, presence: { message: "hay que decir qué es (Contenido)" },
-            if: -> { entrega_personal? && (new_record? || descripcion_changed?) }
+            if: :contenido_obligatorio?
+
+  def contenido_obligatorio?
+    return true if contenido_en_etiquetar == :al_recibir
+    return false unless entrega_personal? || contenido_en_etiquetar == :al_actualizar
+
+    new_record? || descripcion_changed?
+  end
 
   # ── Apagar la retención se lleva sus motivos ──────────────────────────
   #
