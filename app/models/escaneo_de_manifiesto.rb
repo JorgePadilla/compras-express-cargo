@@ -53,6 +53,29 @@ class EscaneoDeManifiesto
     Resultado.new(tipo: :varios, candidatos: libres)
   end
 
+  # C30-06 · La otra dirección: lo que leyó la pistola en «Eliminar paquetes».
+  # Solo cuenta lo que está **en este** manifiesto; el mismo resolvedor
+  # (`por_etiqueta_o_su_madre`) hace que la etiqueta `RMIA…-2` saque esa caja
+  # y no a sus hermanas.
+  #
+  #   ok          → hay uno solo acá: se saca (`remove_paquete`)
+  #   varios      → el tracking de un split, o el número madre sin sufijo, con
+  #                 varias cajas acá: no se adivina cuál no se fue
+  #   no_esta_aca → existe, pero no está en este manifiesto
+  #   no_encontrado
+  def para_quitar(codigo)
+    candidatos = Paquete.por_etiqueta_o_su_madre(codigo)
+                        .where.not(estado: Paquete::NO_SON_CAJAS)
+                        .includes(:manifiesto).to_a
+    return Resultado.new(tipo: :no_encontrado) if candidatos.empty?
+
+    aca = candidatos.select { |p| p.manifiesto_id == @manifiesto.id }
+    return Resultado.new(tipo: :no_esta_aca, paquete: candidatos.first) if aca.empty?
+    return Resultado.new(tipo: :ok, paquete: aca.first) if aca.one?
+
+    Resultado.new(tipo: :varios, candidatos: aca)
+  end
+
   # Un paquete ya elegido: el de la lista de resultados, o el que el modal de
   # «está en otro» va a mover.
   def clasificar(paquete)

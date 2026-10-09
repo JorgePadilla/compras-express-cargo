@@ -193,6 +193,11 @@ Rails.application.routes.draw do
       # *"no les da chance de escanear y le empacan al puro"*.
       post :empacar_sin_escanear
       delete "remove_paquete/:paquete_id", action: :remove_paquete, as: :remove_paquete
+      # C30-06 · El finalizado se abre con «Editar» y se vuelve a cerrar; y la
+      # pistola de «Eliminar paquetes» pregunta antes de sacar.
+      patch :abrir_edicion
+      patch :cerrar_edicion
+      post :escanear_para_quitar
       # C21-06: «enviar» pasa a llamarse «finalizar», que es la palabra que usa
       # Yusef y la que dice el botón de la pantalla vieja.
       patch :finalizar

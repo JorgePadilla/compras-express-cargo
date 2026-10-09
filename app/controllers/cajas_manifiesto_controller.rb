@@ -9,9 +9,16 @@
 # que es lo que hace falta"*. Las medidas quedan editables — *"le modifican una
 # medida, porque la cortan… le decimos «EH cortada»"*.
 class CajasManifiestoController < ApplicationController
+  include CandadoDelManifiesto
+
   before_action :authorize_manifiestos
   before_action :set_manifiesto
   before_action :set_caja, only: %i[update destroy etiqueta]
+  # C30-06 · Armar, corregir y borrar cajas, solo con el manifiesto abierto (o
+  # reabierto con «Editar»). Re-imprimir las 4×6 queda siempre: *"podés
+  # reimprimir etiquetas, porque esas se te pueden dañar… lo que no vas a poder
+  # hacer es modificar nada, hasta que le dejes editar"*.
+  before_action :exigir_modificable, only: %i[create update destroy]
 
   # C21-05 · La 4×6 del bulto. Yusef escribió a mano sobre la etiqueta impresa
   # lo que le faltaba —**«Falta el número del manifiesto»**— y, junto al código

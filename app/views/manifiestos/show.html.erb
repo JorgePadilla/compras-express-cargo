@@ -4,10 +4,22 @@
     `layouts/application`). Jorge, 2026-10-09: *"el botón de sonido va mejor
     debajo del sol"*. %>
 <% content_for :esquina, render("shared/sonido_config") %>
+<%# C30-06 · Lo de adentro se toca solo si el manifiesto está abierto, o si un
+    supervisor lo reabrió con «Editar». Se pregunta una vez y lo usan las
+    secciones de abajo. %>
+<% puede_cambiar = @manifiesto.modificable_por?(Current.user) %>
 <%= render PageHeaderComponent.new(title: @manifiesto.numero, subtitle: "Manifiesto") do |header|
-  header.with_action do
-    render ButtonComponent.new(variant: :outline_navy, href: edit_manifiesto_path(@manifiesto), icon: "pencil-square", shortcut: "F6") do
-      "Editar"
+  # C30-06 · Con el manifiesto finalizado y todavía reabrible, este botón se
+  # esconde: la puerta es el «Editar» del cartel de bloqueado, que abre todo
+  # y no solo el encabezado. Dos «Editar» en la misma pantalla haciendo cosas
+  # distintas es lo que no tiene que pasar. Ya en Honduras (`en_aduana`,
+  # `recibido`) no se puede reabrir, y queda este, el de C21-06, para
+  # corregir el encabezado.
+  unless @manifiesto.bloqueado? && @manifiesto.reabrible? && !@manifiesto.edicion_abierta?
+    header.with_action do
+      render ButtonComponent.new(variant: :outline_navy, href: edit_manifiesto_path(@manifiesto), icon: "pencil-square", shortcut: "F6") do
+        "Editar"
+      end
     end
   end
   # C21-09 · El manifiesto impreso. Desde C30-05 es también lo que saca
@@ -125,7 +137,7 @@ end %>
   <%= render "manifiestos/acciones", manifiesto: @manifiesto, paquetes: @paquetes %>
 </div>
 
-<% if @manifiesto.creado? %>
+<% if puede_cambiar %>
   <%# Paso 1 · Las casas. Va antes de agregar paquetes porque en el camino con
       pre-etiqueta **es** cómo entran: se arma la caja, se imprime su 4×6 y se
       escanea cada paquete al meterlo. Estaba metida adentro de la misma tarjeta
@@ -210,6 +222,11 @@ end %>
       </div>
     </dialog>
   </div>
+
+  <%= render "manifiestos/quitar_escaneando", manifiesto: @manifiesto %>
+<% elsif @manifiesto.cajas.any? %>
+  <%# C30-06 / C30-07 · Bloqueado: las casas se ven y se re-imprimen. %>
+  <%= render "manifiestos/cajas_vista", manifiesto: @manifiesto %>
 <% end %>
 
 <%# Packages table.
