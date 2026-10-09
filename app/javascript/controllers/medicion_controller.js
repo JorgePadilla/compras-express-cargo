@@ -61,12 +61,14 @@ export default class extends conEnterAvanza(Controller) {
     "mezclaModal", "mezclaTitulo", "mezclaTexto", "mezclaQuitar",
     "consolidadoModal", "consolidadoTitulo", "consolidadoTexto", "consolidadoPreAlerta",
     "consolidadoPreFactura", "hacerConsolidado",
+    "unirModal", "unirTexto", "unirPreAlerta", "unirError", "unirSi",
+    "yaMedidoModal", "yaMedidoTexto", "yaMedidoLista", "yaMedidoJunto",
     "excepcionModal", "excepcionFaltantes", "excepcionError", "confirmarParcial",
     "autorizarModal", "autorizarFaltantes", "autorizarSupervisor", "autorizarPin", "autorizarMotivo",
     "autorizarError", "confirmarAutorizacion"
   ]
   static values = {
-    escanearUrl: String, guardarUrl: String, panelUrl: String,
+    escanearUrl: String, guardarUrl: String, panelUrl: String, unirUrlTemplate: String,
     etiquetaUrlTemplate: String, clases: Object, maximo: Number
   }
 
@@ -125,7 +127,7 @@ export default class extends conEnterAvanza(Controller) {
     this._escanear(codigo)
   }
 
-  _escanear(codigo, { saltarManifiesto = false, remedir = false } = {}) {
+  _escanear(codigo, { saltarManifiesto = false, remedir = false, aparte = false } = {}) {
     if (!codigo) return
 
     const consulta = (this._seq += 1)
@@ -134,7 +136,7 @@ export default class extends conEnterAvanza(Controller) {
     // otro cliente entraría en el volumen 2 sin chistar y el error saldría
     // recién en F9, con el volumen 1 ya medido.
     this._post(this.escanearUrlValue,
-               { codigo, en_tanda: this._idsDeLaTanda(), saltar_manifiesto: saltarManifiesto, remedir })
+               { codigo, en_tanda: this._idsDeLaTanda(), saltar_manifiesto: saltarManifiesto, remedir, aparte })
       .then((data) => {
         if (consulta !== this._seq) return  // llegó tarde: habla de otro escaneo
         this._resolver(data)
@@ -147,6 +149,12 @@ export default class extends conEnterAvanza(Controller) {
   }
 
   _resolver(data) {
+    // C29-18 · La caja que hay que escanear después de traer la tanda vieja.
+    // Se toma y se suelta acá: si la remedición no vuelve, no queda colgada
+    // para la próxima.
+    const despues = this._despuesDeRemedir
+    this._despuesDeRemedir = null
+    if (data.resultado === "consolidado_ya_medido") { this._consolidadoYaMedido(data); return }
     if (data.resultado === "no_mezclar") { this._noMezclar(data); return }
     if (data.resultado === "ya_tiene_bulto") { this._yaTieneBulto(data); return }
     if (data.puede_saltar) { this._sinManifiesto(data); return }
@@ -171,6 +179,7 @@ export default class extends conEnterAvanza(Controller) {
       this._volverAPeso = true
       this._enfocarDondeToca()
       this._recibirNotas(data)
+      if (despues) this._escanear(despues)
       return
     }
     this._mesa.push({ ...data.paquete, salto_manifiesto: data.salto_manifiesto })
@@ -263,6 +272,8 @@ export default class extends conEnterAvanza(Controller) {
   _noMezclar(data) {
     if (data.motivo === "otro_cliente" || data.motivo === "otro_servicio") {
       this._mezcla(data)
+    } else if (data.motivo === "unible") {
+      this._unible(data)
     } else if (data.motivo === "otra_consolidacion" || data.motivo === "no_consolidada") {
       this._consolidado(data)
     } else {
@@ -298,9 +309,92 @@ export default class extends conEnterAvanza(Controller) {
     if (choque.pre_factura) {
       this.consolidadoPreFacturaTarget.textContent = `Ese consolidado ya tiene la pre-factura ${choque.pre_factura}.`
     }
+    // C29-17 · «Hago el consolidado» solo si la que entra **es** de un
+    // consolidado. Al revés —el consolidado en la mesa, la que entra suelta
+    // con su propia pre-alerta— vaciaba la mesa y arrancaba con la suelta:
+    // le borraba al operario lo que estaba haciendo.
+    const puedeHacerlo = data.motivo === "otra_consolidacion"
+    this.hacerConsolidadoTarget.hidden = !puedeHacerlo
     this.consolidadoModalTarget.showModal()
-    requestAnimationFrame(() => this.hacerConsolidadoTarget.focus())
+    requestAnimationFrame(() => (puedeHacerlo ? this.hacerConsolidadoTarget
+                                              : this.consolidadoModalTarget.querySelector("button:not([hidden])"))?.focus())
   }
+
+  // ── C29-17 · Unir una suelta al consolidado de la mesa ──────────────────
+  //
+  // Yusef: *"¿desea agregar este paquete a esta consolidación?… o sigo
+  // procesando el que estoy trabajando, o dejarlo a un lado"* — y *"que el
+  // mismo que está pesando y midiendo los agrega"*. La caja no entró: si la
+  // agrega, se suma a la pre-alerta y se vuelve a escanear sola, por la puerta
+  // de siempre.
+  _unible(data) {
+    this.dispatch("unir")
+    this._paraUnir = { paquete: data.paquete, preAlertaId: data.choque && data.choque.id }
+    this.unirTextoTarget.textContent = data.mensaje
+    this.unirPreAlertaTarget.textContent = data.choque ? [data.choque.numero, data.choque.titulo].filter(Boolean).join(" · ") : ""
+    this.unirErrorTarget.hidden = true
+    this.unirModalTarget.showModal()
+    requestAnimationFrame(() => this.unirSiTarget.focus())
+  }
+
+  unirSi() {
+    const u = this._paraUnir
+    if (!u || !u.preAlertaId) return
+
+    this._post(this.unirUrlTemplateValue.replace("ID", u.preAlertaId), { paquete_id: u.paquete.id }, { conEstado: true })
+      .then(({ ok, data }) => {
+        if (!ok) {
+          this.unirErrorTarget.textContent = (data.errores || []).join(" ")
+          this.unirErrorTarget.hidden = false
+          return
+        }
+        this._paraUnir = null
+        this.unirModalTarget.close()
+        this.avisoTarget.textContent = data.mensaje
+        this._escanear(data.codigo)
+      })
+  }
+
+  unirNo() {
+    this._paraUnir = null
+    this.unirModalTarget.close()
+  }
+
+  // ── C29-18 · Su consolidado ya se midió ─────────────────────────────────
+  //
+  // *"Este paquete está consolidando con otro, traer el resto y medir, y
+  // unirlo… hay que volver a medir. Una remedición nueva."* «Medir de nuevo
+  // todo junto» trae la tanda vieja (C27-33) y después escanea ésta.
+  _consolidadoYaMedido(data) {
+    this.dispatch("unir")
+    this._yaMedido = data
+    this.yaMedidoTextoTarget.textContent = data.mensaje
+    this.yaMedidoListaTarget.replaceChildren(...(data.medidas || []).map((m) => {
+      const li = document.createElement("li")
+      li.textContent = [m.codigo, m.fecha && `medida el ${m.fecha}`, m.por].filter(Boolean).join(" · ")
+      return li
+    }))
+    this.yaMedidoJuntoTarget.hidden = !data.puede_remedir
+    this.yaMedidoModalTarget.showModal()
+    requestAnimationFrame(() => (data.puede_remedir ? this.yaMedidoJuntoTarget
+                                                    : this.yaMedidoModalTarget.querySelector("button"))?.focus())
+  }
+
+  yaMedidoJunto() {
+    const d = this._yaMedido
+    this.yaMedidoModalTarget.close()
+    if (!d || !d.remedir_codigo) return
+    this._despuesDeRemedir = d.paquete.codigo || d.paquete.tracking
+    this._escanear(d.remedir_codigo, { remedir: true })
+  }
+
+  yaMedidoSola() {
+    const d = this._yaMedido
+    this.yaMedidoModalTarget.close()
+    if (d) this._escanear(d.paquete.codigo || d.paquete.tracking, { aparte: true })
+  }
+
+  yaMedidoDejar() { this.yaMedidoModalTarget.close() }
 
   // «Quitar el último escaneado»: la caja rechazada nunca entró a la mesa, así
   // que esto es cerrar y seguir con lo que hay. Es lo que Yusef describe: él se
@@ -1036,7 +1130,7 @@ export default class extends conEnterAvanza(Controller) {
     return this.problemaModalTarget.open || this.excepcionModalTarget.open ||
            this.descarteModalTarget.open || this.mezclaModalTarget.open ||
            this.consolidadoModalTarget.open || this.autorizarModalTarget.open ||
-           this.notasModalTarget.open
+           this.notasModalTarget.open || this.unirModalTarget.open || this.yaMedidoModalTarget.open
   }
 
   _enfocarPeso() {

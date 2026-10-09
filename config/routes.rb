@@ -258,6 +258,9 @@ Rails.application.routes.draw do
   # volver a escanear el warehouse"* — se escanea una caja y sale su etiqueta.
   get "medicion/bultos/:id/etiqueta", to: "medicion#etiqueta_bulto", as: :etiqueta_bulto_medicion
   post "medicion/pre_alertas/:id/facturar_parcial", to: "medicion#facturar_parcial", as: :facturar_parcial_medicion
+  # C29-17 · Unir una caja suelta al consolidado que está en la mesa. Yusef:
+  # *"que el mismo que está pesando y midiendo los agrega"*.
+  post "medicion/pre_alertas/:id/unir", to: "medicion#unir", as: :unir_medicion
 
   resources :pre_alertas, except: %i[destroy] do
     member do
