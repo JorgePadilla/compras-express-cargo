@@ -299,7 +299,9 @@ class MedicionController < ApplicationController
     medidos = grupo.paquetes_medidos
     raise ActiveRecord::RecordNotFound, "ninguna medida" if medidos.empty?
 
-    @bultos = Bulto.where(sesion: medidos.filter_map(&:medicion_sesion).uniq).order(:medido_at, :orden).to_a
+    # C30-01 · `:cliente`, porque cada etiqueta lleva ahora su nombre con código.
+    @bultos = Bulto.where(sesion: medidos.filter_map(&:medicion_sesion).uniq).order(:medido_at, :orden)
+                   .includes(:cliente).to_a
     @paquetes = medidos.reject(&:medicion_sesion)
     return render :etiqueta_bulto, layout: "etiqueta_medicion" if @paquetes.empty?
 
@@ -309,7 +311,7 @@ class MedicionController < ApplicationController
   # C27-06 · Las etiquetas de una tanda: una por medición, en el orden en que el
   # operario las fue agregando.
   def etiquetas_sesion
-    @bultos = Bulto.de_la_sesion(params[:sesion]).includes(:paquetes).to_a
+    @bultos = Bulto.de_la_sesion(params[:sesion]).includes(:paquetes, :cliente).to_a
     raise ActiveRecord::RecordNotFound, "sesión vacía" if @bultos.empty?
 
     render :etiqueta_bulto, layout: "etiqueta_medicion"

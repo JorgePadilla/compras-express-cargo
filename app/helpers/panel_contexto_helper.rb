@@ -67,14 +67,20 @@ module PanelContextoHelper
   # (`link_tracking!` las une así), así que se mira también párrafo por
   # párrafo: si todos ya salieron, el bloque sobra. Si alguien la editó en la
   # caja y dice otra cosa, sale, que para eso se editó.
+  #
+  # Lo que **no** se junta: el mismo texto con dos `detalle` distintos. «Frágil»
+  # en el renglón del tracking A y «Frágil» en el del B son dos instrucciones,
+  # una por caja; esconder la segunda decía que el B no traía ninguna. La copia
+  # de la caja no lleva detalle, así que esa sí se reconoce contra cualquiera.
   def sin_repetir(blocks)
-    vistos = Set.new
+    vistos = []
     blocks.reject do |b|
+      detalle = b[:detalle].to_s.squish.presence
       todo = normalizar_nota(b[:texto])
       parrafos = b[:texto].to_s.split(/\n\s*\n/).map { |p| normalizar_nota(p) }.compact_blank
-      repetido = vistos.include?(todo) || (parrafos.any? && parrafos.all? { |p| vistos.include?(p) })
-      vistos << todo
-      vistos.merge(parrafos)
+      ya_salio = ->(t) { vistos.any? { |d, v| v == t && (d.nil? || detalle.nil? || d == detalle) } }
+      repetido = ya_salio.(todo) || (parrafos.any? && parrafos.all?(&ya_salio))
+      ([ todo ] + parrafos).each { |t| vistos << [ detalle, t ] }
       repetido
     end
   end

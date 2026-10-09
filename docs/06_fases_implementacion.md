@@ -23,6 +23,8 @@ buscar un PR, mirá acá dónde vive:
 | `PR-D{n}.{letra}` | Fase 5c — Detalle de Paquete + Warehouse Receipt. La letra es la iteración: `PR-D1.d` es la cuarta pasada de D1 | **Este archivo**, Fase 5c |
 | `PR-C6.{nn}` | Todo lo que salió de la **Conversación 6** — va del `C6.18` al `C6.48`, y es la mayor parte del trabajo de agosto 2026 | **`docs/05`**, no acá. Un solo dueño por dato |
 | `PR-BTN.{n}` | Refactor transversal a `ButtonComponent`. No cuelga de ninguna fase | Historial de git y `docs/07` |
+| `PR-P.{n}` | Fase 14 — la pre-factura por escaneo (Conversación 30). **No** es `PR-P2a`/`PR-P2b`, que son de permisos (`RP-58`) | **Este archivo**, Fase 14 |
+| `PR-C{nn}.{n}` | Lo que sale de cada conversación desde la 21 (`PR-C29.7`, `PR-C30.4`) | **`docs/05`**, en la tabla de su conversación |
 
 La serie `RP-{nn}` **no son PRs**: son las preguntas al cliente. Viven en
 `docs/05` y salen impresas en `docs/entregables/preguntas_para_yusef.pdf`.
@@ -1335,3 +1337,123 @@ Es el único punto de todo el sistema donde 4 dígitos habilitan cambiar plata.
 - `PreFacturaItem#origen` ya distingue `automatico` de `manual`; una línea con
   precio autorizado sería un tercer origen.
 - `SessionsController:5` ya usa `rate_limit` — mismo patrón para el PIN.
+
+---
+
+## Fase 14: Pre-factura por escaneo — hoja de preparación, auditoría y disponible programado (serie PR-P) — 📐 DISEÑADA (2026-10-09)
+
+> Sale de la Conversación 30 (`C30-15`…`C30-19`, foto 3 del diagrama). Las
+> `PR-P.n` se siguen **acá**; no confundir con `PR-P2a`/`PR-P2b` (permisos,
+> `RP-58`) ni con `PR-C30.n`, que se siguen en `docs/05`.
+
+> "La siguiente etapa que nos hace falta es hacer las prefacturas. Ya ahí iba a
+>  tener el **70 por ciento del sistema**." — "Lo primero es el **happy path**."
+
+### Objetivo
+
+Que la carga que Medición ya pesó y midió salga de la bodega como **producto
+terminado** sin teclear un peso: el auditor de pre-factura escanea **un** QR de
+volumen, el sistema trae la tanda entera («3 de 3 · 7 cajas»), el auditor
+escanea cada etiqueta de Miami, y con **F9** la pre-factura queda lista, se
+imprime la etiqueta de entrega 4×6 y el aviso al cliente sale **a la hora de la
+fecha de trabajo** (7:30 por defecto). Con **F8** se guarda, se imprime la misma
+etiqueta con **CONSOLIDANDO** atravesado, y no se avisa a nadie.
+
+### El recorrido
+
+1. **Hoja de preparación** (`C30-15`, *"como etiquetando"*): tipo de servicio en
+   selección múltiple **o** «editar pre-facturas»; después los manifiestos —solo
+   los oficiales en aduana/recibidos que todavía tienen carga sin pre-facturar,
+   de esos servicios—; después la **fecha de trabajo** (fecha y hora, sin
+   segundos, `C30-08`; 7:30 por defecto, `C30-16`). Vive en la sesión del
+   usuario, como `/etiquetar`: lo que tiene que durar se copia a cada
+   pre-factura al guardarla.
+2. **Auditar** (`C30-17`): escanear cualquier QR de volumen → trae todos los
+   volúmenes de la tanda y dice cuántas cajas; escanear cada etiqueta de Miami →
+   «pertenece» o error con sonido. Un QR basta (*"solo con uno escanea los
+   otros dos"*): **ajusta** el punto 1 de `C27-16`. El QR del volumen no lleva
+   id propio (`MED <código de la primera caja> …`), así que la pantalla separa
+   volumen de caja por el prefijo `MED`, no buscando el código.
+3. **F9** — guardar, imprimir y **programar** el aviso. Los paquetes siguen en
+   aduana hasta la hora (PR-D1 §A, `A7-16`): a esa hora el sistema los pasa a
+   `disponible_entrega` y le escribe al cliente. Si la hora ya pasó, sale al
+   apretar F9. Ver `RP-78`.
+4. **F8** — guardar e imprimir con CONSOLIDANDO; paquetes a
+   `consolidando_honduras`; **no notifica** (`C30-18`). Es la única pantalla
+   donde F8 imprime.
+
+### La línea de la factura es el volumen (`C27-10`, `C27-15`)
+
+Hoy `PreFactura` copia `paquete.peso_cobrar` —el peso de Miami— y nunca lee el
+de Medición (`C27-10` lo dice). Una línea de flete **por volumen**
+(`pre_factura_items.bulto_id`), cotizada con el mismo `CotizadorFlete` →
+`Tarifa.resolver` → `cobro_para` sobre el `peso_cobrar` **del volumen**. La
+cadena (redondeo → escalón → mínimo → ISV) **no se toca**: cambia lo que entra,
+no cómo se calcula. Cada caja lleva su renglón en L. 0.00 («incluida en el
+volumen 1 de 3»), y así `confirmar!`, `facturar!`, `anular!` y
+`vincular_paquetes` siguen sabiendo sus paquetes por el mismo camino. Un
+volumen de tres cajas cobra **un** mínimo, no tres (`RP-41`, `RP-79`).
+
+### Qué entra (happy path)
+
+- Hoja de preparación por sesión; manifiestos derivados de los datos.
+- Auditoría por escaneo con un QR de volumen + cada warehouse.
+- F8 consolidando / F9 programado; la etiqueta de entrega 4×6.
+- El aviso por **correo** (obligatorio), con número, valor, tipo de envío,
+  sucursal de retiro y la hora sin segundos; un job que barre cada minuto, con
+  la misma idempotencia que `NotificarLlegadaASucursal`.
+- Una pre-factura consolidando recibe una **tanda nueva** («nuevo volumen»).
+- Editar: reabrir una consolidando o una programada que todavía no avisó;
+  cambiar la hora en lote antes de que salga.
+
+### Qué queda afuera (*"no te quiero meter ahí todavía"*)
+
+- Tarifas especiales por cliente, prepagado en Miami, recolecta y cambio de
+  servicio **dentro** del flujo por escaneo: esas pre-facturas siguen por
+  `/pre_facturas/new`, que no se toca.
+- «Agregar a **este** volumen» (re-pesar uno ya facturado) y editar los números
+  de un volumen desde la pre-factura (`RP-83`, `RP-88`).
+- Las notas/tareas de pre-factura por paquete (*"eso va a quedar para arreglar
+  después bien"*).
+- WhatsApp, SMS y push (`RP-80`); el split de pre-alerta (`C26-09`, `RP-64`).
+
+### El modelo
+
+| Qué | Cómo | Por qué |
+|---|---|---|
+| `pre_factura_items.bulto_id` | FK con `restrict`; `Bulto has_many :pre_factura_items, dependent: :restrict_with_error` | La línea es el volumen, y volver a medir no puede borrar uno facturado |
+| `PreFacturaItem::ORIGENES` | + `volumen`, `caja_del_volumen` | Las cajas en L. 0.00 no se recalculan solas |
+| `pre_facturas.notificar_at` | fecha y hora, segundos en 0 | La fecha de trabajo; `fecha_trabajo` se mantiene igual a su día, porque los filtros la leen |
+| `pre_facturas.notificado_at` | sello de idempotencia | Editar después del aviso no lo vuelve a mandar (*"su factura fue editada"* ×5) |
+| `pre_facturas.consolidando_at` | timestamp, no un estado nuevo | `facturar!` y los filtros por estado no se tocan |
+| `pre_facturas.auditado_por_id`, `notificacion_error` | | Quién auditó; un aviso que falla no frena a los demás (la lección de `PR-C29.19`) |
+| `Configuracion` `prefactura_hora_disponible` | `"07:30"` | Como `ventana_aviso_llegada_min` |
+| Paquete | `en_aduana` → (F8) `consolidando_honduras` → (a la hora) `disponible_entrega` | Sin estados nuevos. F9 devuelve lo consolidando a `en_aduana` para que el paso a disponible pase por `no_advance_with_open_tareas` |
+| Manifiesto | sin estado nuevo: sale de la lista cuando todos sus paquetes tienen pre-factura | `C28-14`: si falta una caja, sigue en la lista. `RP-87` |
+
+### Serie
+
+| PR | Qué | Ítems |
+|---|---|---|
+| `PR-P.1` | **La línea es el volumen**: `ArmarPreFacturaPorVolumen`, cajas en L. 0.00 agrupadas bajo su volumen en pre-factura, venta, PDF y la gemela del portal. Dormido: ninguna pantalla lo llama todavía | `C27-10`, `C27-15`, `RP-41` |
+| `PR-P.2` | **Disponible programado**: `HacerDisponibles`, el job cada minuto en `config/recurring.yml`, `PreFacturaMailer#disponible`, y que `anular!` devuelva lo consolidando a aduana | `C30-16`, PR-D1 §A, `A7-16` |
+| `PR-P.3` | **La etiqueta de entrega 4×6**, con la franja CONSOLIDANDO que no tapa el QR (`ENT <número>`) | `C30-19`, `C26-12` |
+| `PR-P.4` | **La hoja de preparación** (`/pre-factura/hoja`) y su link en Logística después de Medición | `C30-15`, `C28-14` |
+| `PR-P.5` | **Auditar escaneando, y F9** (`/pre-factura/auditar`), con el nodo en `lib/procesos_pdf.rb` | `C30-17`, `C30-18`, `C27-16`, `C28-15` |
+| `PR-P.6` | **F8 consolidando**, y una tanda nueva a la que consolida | `C30-18` |
+| `PR-P.7` | **Editar pre-facturas y cambiar la hora en lote**; volver a consolidar solo antes del aviso | `C30-15`, `RP-77` |
+
+### Riesgos
+
+1. **El monto cobrado cambia**: el peso del volumen reemplaza al de Miami. Es
+   lo que se busca (`C27-10`), pero va a dar distinto de lo que el mostrador
+   conoce. `PR-P.1` queda dormido hasta `PR-P.5`; `RP-79` se contesta antes.
+2. **Las notas de crédito y débito** (`LineasDeFlete`) siguen cotizando por
+   paquete con el peso de Miami. Queda anotado, no se arregla acá.
+3. **Si el worker está caído a las 7:30 no sale nadie**: el barrido se pone al
+   día al volver, y `/signos_vitales` muestra la tarea. `recurring.yml` solo
+   tiene `production:`: confirmar que staging corre como production.
+4. **Volver a medir** (`C30-11`): si los volúmenes viejos siguen vivos, se
+   cobrarían dos veces. Se resuelve caja → su `medicion_sesion` actual.
+5. **Las gemelas**: pre-factura y venta en admin, el PDF, y el portal del
+   cliente, que además muestra el estado (`RP-90`).

@@ -100,6 +100,25 @@ class PanelContextoControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, response.body.scan("Meter todo en una sola caja").size
   end
 
+  # …pero el mismo texto en dos renglones distintos son dos instrucciones: una
+  # por tracking. Esconder la segunda decía que esa caja no traía ninguna.
+  test "la misma instrucción en dos trackings sale en los dos" do
+    pa = PreAlerta.create!(numero_documento: "PA-N#{SecureRandom.hex(3).upcase}", cliente: @cliente,
+                           tipo_envio: tipo_envios(:aereo), estado: "pre_alerta", titulo: "Dos cajas",
+                           creado_por_tipo: "usuario", creado_por_id: users(:admin).id)
+    pa.pre_alerta_paquetes.create!(tracking: "1Z999FRAGIL0001", descripcion: "Vasos", fecha: Date.current, instrucciones: "Frágil")
+    pa.pre_alerta_paquetes.create!(tracking: "1Z999FRAGIL0002", descripcion: "Platos", fecha: Date.current, instrucciones: "Frágil")
+    # Sin vincular, como las que llegaron antes de que la pre-alerta creara sus
+    # esperados: es el camino de la franja sin tracking.
+    PreAlertaPaquete.where(pre_alerta: pa).update_all(paquete_id: nil)
+
+    get panel_contexto_url, params: { cliente_id: @cliente.id }
+
+    assert_response :success
+    assert_match "1Z999FRAGIL0001", response.body
+    assert_match "1Z999FRAGIL0002", response.body
+  end
+
   test "un cajero no puede abrir la franja" do
     delete session_url
     login_as users(:cajero)

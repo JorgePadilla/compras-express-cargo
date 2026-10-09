@@ -1,0 +1,29 @@
+<%# C30-01 · El cliente, **nombre con código**, en una fila propia arriba de
+    todo. Yusef, con la etiqueta del bulto impresa en la mano (2026-10-09):
+
+      "¿Quién es el cliente? … No tiene nombre, esto debería de tener
+       nombre … Hay que agregarle nombre acá … Nombre con código."
+
+    Y dónde: *"voy a meter el nombre aquí. Arribita. Lo bajas todo y pones eso
+    arriba"*. Es para pre-factura, que escanea un volumen suelto y tiene que
+    saber de quién es: *"para que sepamos que es cuál"*.
+
+    **Revierte C26-04**, cuando la etiqueta nació con *"no le vamos a meter
+    nombre ni nada"*: solo QR y números. La fila la paga el QR, que baja de
+    1.0in a 0.90in (ver `layouts/etiqueta_medicion`).
+
+    Un partial y no dos copias, porque la usan las dos etiquetas —la del bulto
+    y la de la caja suelta— y dos copias divergen
+    ([[project_duplicacion_entre_pantallas]]).
+
+    El formato es el de la etiqueta de Miami: el código como lo imprime
+    `paquetes/etiqueta_campos/_cliente_codigo` (mono y en negrita) y el nombre
+    como `_cliente_nombre` (`nombre_completo`), aunque acá **sin** pasarlo a
+    mayúsculas: no cabía (lo mide el layout). El código va
+    **primero**: si un nombre larguísimo llegara a no caber ni en el piso de
+    `data-ajustar`, lo que se pierde es la cola del apellido y no la llave con
+    que se busca al cliente. El `<b>` no lleva tamaño propio: hereda el de la
+    fila, para que `data-ajustar` lo encoja junto con el nombre. %>
+<% if cliente %>
+  <div class="cliente" data-ajustar data-ajustar-min="5"><b class="cod"><%= cliente.codigo %></b> · <%= cliente.nombre_completo %></div>
+<% end %>
