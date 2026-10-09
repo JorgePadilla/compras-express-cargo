@@ -212,13 +212,17 @@ module EtiquetaHelper
   # porqué: *"la que voy a abrir se va a llamar Carmen SPS o Norte SPS"* — con
   # dos sucursales en la misma ciudad, la ciudad deja de decir dónde.
   #
-  # Sin sucursal en el paquete cae a la **de retiro por defecto** (columna que
-  # ya existía, el seed la pone en SPS). La ciudad del cliente queda de último
-  # recurso, para que nada salga en blanco.
+  # C29-03 · Sin sucursal en el paquete **dice que falta**. Caía a la de
+  # retiro por defecto (SPS) y de último a la ciudad del cliente, y las dos
+  # mienten: el 2026-10-08 la etiqueta de Sofía —de Choluteca, retira en
+  # Humuya, sin sucursal cargada— salió diciendo San Pedro. Yusef: *"si va a
+  # retirar en Tegucigalpa, la sucursal de Tegucigalpa tiene que irte. Aunque
+  # él sea de Choluteca"*. Una caja que dice SPS se empaca con las de SPS; una
+  # que dice SIN SUCURSAL se aparta y se pregunta.
+  SIN_SUCURSAL = "SIN SUCURSAL".freeze
+
   def etiqueta_sucursal(paquete)
-    paquete.sucursal&.nombre.presence ||
-      Sucursal.find_by(retiro_por_defecto: true)&.nombre.presence ||
-      paquete.cliente&.ciudad.presence
+    paquete.sucursal&.nombre.presence || SIN_SUCURSAL
   end
 
   # El tipo de envío va a tres letras: en el mockup de Yusef dice **EXP**, no

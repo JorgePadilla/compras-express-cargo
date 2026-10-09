@@ -8,7 +8,7 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
 
   test "should create client account" do
     assert_difference("Cliente.count") do
-      post registro_url, params: { cliente: {
+      post registro_url, params: { cliente: { sucursal_retiro_id: sucursales(:humuya_tgu).id,
         nombre: "Test", apellido: "User Prueba",
         email: "newclient@test.com", telefono: "99990000",
         password: "Secure123!", password_confirmation: "Secure123!"
@@ -25,7 +25,7 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
 
   test "should not create client with missing fields" do
     assert_no_difference("Cliente.count") do
-      post registro_url, params: { cliente: {
+      post registro_url, params: { cliente: { sucursal_retiro_id: sucursales(:humuya_tgu).id,
         nombre: "", apellido: "",
         email: "", telefono: "",
         password: "", password_confirmation: ""
@@ -36,7 +36,7 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
 
   test "should not create client with short password" do
     assert_no_difference("Cliente.count") do
-      post registro_url, params: { cliente: {
+      post registro_url, params: { cliente: { sucursal_retiro_id: sucursales(:humuya_tgu).id,
         nombre: "Test", apellido: "User Prueba",
         email: "short@test.com", telefono: "99990000",
         password: "short", password_confirmation: "short"
@@ -47,7 +47,7 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
 
   test "should not create client with mismatched password" do
     assert_no_difference("Cliente.count") do
-      post registro_url, params: { cliente: {
+      post registro_url, params: { cliente: { sucursal_retiro_id: sucursales(:humuya_tgu).id,
         nombre: "Test", apellido: "User Prueba",
         email: "mismatch@test.com", telefono: "99990000",
         password: "Secure123!", password_confirmation: "Different456!"
@@ -59,7 +59,7 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
   test "should not create client with duplicate email" do
     existing = clientes(:juan)
     assert_no_difference("Cliente.count") do
-      post registro_url, params: { cliente: {
+      post registro_url, params: { cliente: { sucursal_retiro_id: sucursales(:humuya_tgu).id,
         nombre: "Duplicate", apellido: "Email Prueba",
         email: existing.email, telefono: "99990000",
         password: "Secure123!", password_confirmation: "Secure123!"
@@ -69,7 +69,7 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should auto-generate codigo" do
-    post registro_url, params: { cliente: {
+    post registro_url, params: { cliente: { sucursal_retiro_id: sucursales(:humuya_tgu).id,
       nombre: "Auto", apellido: "Code Prueba",
       email: "autocode@test.com", telefono: "99990000",
       password: "Secure123!", password_confirmation: "Secure123!"
@@ -90,7 +90,7 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
 
   test "registrarse con nombre de dos palabras no se puede" do
     assert_no_difference("Cliente.count") do
-      post registro_url, params: { cliente: {
+      post registro_url, params: { cliente: { sucursal_retiro_id: sucursales(:humuya_tgu).id,
         nombre: "Jorge", apellido: "Padilla",
         email: "jorge.padilla@test.com", telefono: "99990000",
         password: "Secure123!", password_confirmation: "Secure123!"
@@ -101,7 +101,7 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
 
   test "con nombre y dos apellidos si" do
     assert_difference("Cliente.count") do
-      post registro_url, params: { cliente: {
+      post registro_url, params: { cliente: { sucursal_retiro_id: sucursales(:humuya_tgu).id,
         nombre: "Jorge Alejandro", apellido: "Padilla Ferico",
         email: "jorge.completo@test.com", telefono: "99990000",
         password: "Secure123!", password_confirmation: "Secure123!"
@@ -114,7 +114,7 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
   # juntos, no exige dos en cada campo.
   test "tres palabras en el nombre solo tambien alcanzan" do
     assert_difference("Cliente.count") do
-      post registro_url, params: { cliente: {
+      post registro_url, params: { cliente: { sucursal_retiro_id: sucursales(:humuya_tgu).id,
         nombre: "Ana Maria Reyes", apellido: "",
         email: "ana.reyes.tres@test.com", telefono: "99990000",
         password: "Secure123!", password_confirmation: "Secure123!"

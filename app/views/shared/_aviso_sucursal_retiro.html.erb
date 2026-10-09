@@ -13,8 +13,16 @@
     <%= heroicon "building-storefront", variant: :solid, options: { class: "w-6 h-6 text-red-600 dark:text-red-400 shrink-0" } %>
     <div>
       <p class="text-xs font-bold uppercase tracking-wider text-red-700 dark:text-red-300">Separar esta caja</p>
-      <p class="text-lg font-bold text-red-800 dark:text-red-200">
+      <p class="text-lg font-bold text-red-800 dark:text-red-200" data-<%= controlador %>-target="sucursalDestino">
         Se entregará en <span data-<%= controlador %>-target="sucursalTexto"></span>
+      </p>
+      <%# C29-03 · El cliente sin sucursal de retiro. Antes este aviso decía su
+          **ciudad** —«Se entregará en Choluteca»— y la etiqueta, la sucursal
+          por defecto: dos lugares inventados. Yusef: *"de donde es la persona
+          no es donde retira"*. Ahora dice que falta, que es lo cierto. %>
+      <p hidden class="text-lg font-bold text-red-800 dark:text-red-200" data-<%= controlador %>-target="sucursalFalta">
+        Este cliente no tiene sucursal de retiro: la etiqueta sale «SIN SUCURSAL».
+        Apartá la caja y que se la definan en su ficha.
       </p>
     </div>
   </div>

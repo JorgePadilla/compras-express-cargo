@@ -26,7 +26,7 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
     "submitBtn", "event", "panel",
     "terceroContainer", "terceroToggle",
     "conflictoSesionModal", "conflictoSesionTexto", "conflictoSesionDejarBtn",
-    "sucursalBanner", "sucursalTexto", "sucursalModal", "sucursalModalTexto",
+    "sucursalBanner", "sucursalTexto", "sucursalDestino", "sucursalFalta", "sucursalModal", "sucursalModalTexto",
     "quitarCobroModal",
     "etiquetasModal", "etiquetasInput", "pesosSeccion", "pesosAviso", "pesosLista",
     "avisoModal", "avisoEncabezado", "avisoTipo", "avisoTitulo", "avisoTexto",
@@ -208,8 +208,12 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
   // PR-C6.24: a qué sucursal va la caja. Se muestra apenas se elige el
   // cliente, no al guardar: es una decisión física —en qué bolsa cae— y si se
   // entera tarde hay que volver a abrir la bolsa.
-  _mostrarSucursal(sucursal, esLaDeSiempre = false) {
-    this._sucursalActual = (sucursal || "").trim()
+  _mostrarSucursal(sucursal, esLaDeSiempre = false, sinSucursal = false) {
+    // C29-03 · El cliente sin sucursal de retiro no tiene nombre que mostrar
+    // —ya no se cae a su ciudad—, y es justo el que más hay que avisar: la
+    // etiqueta sale «SIN SUCURSAL» y la caja se aparta. El modal del final lo
+    // repite con esas mismas palabras.
+    this._sucursalActual = sinSucursal ? "SIN SUCURSAL" : (sucursal || "").trim()
     // Yusef: *"esa de San Pedro Sula hay que eliminarlo, porque es el default…
     // el cerebro trabaja en default; cuando querés que haga una cosa diferente,
     // tenés que ponerle la nota que es diferente"*. El 80% de la carga se queda
@@ -227,6 +231,8 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
     }
 
     if (this.hasSucursalTextoTarget) this.sucursalTextoTarget.textContent = this._sucursalActual
+    if (this.hasSucursalDestinoTarget) this.sucursalDestinoTarget.hidden = sinSucursal
+    if (this.hasSucursalFaltaTarget) this.sucursalFaltaTarget.hidden = !sinSucursal
     this.sucursalBannerTarget.classList.remove("hidden")
   }
 
@@ -285,8 +291,9 @@ cerrarQuitarCobro() {
     this._focusSiguiente(e.target)
   }
 
-  _alSeleccionarCliente({ id, notas, sucursalRetiro, retiroPorDefecto }) {
-    this._mostrarSucursal(sucursalRetiro, retiroPorDefecto === "true" || retiroPorDefecto === true)
+  _alSeleccionarCliente({ id, notas, sucursalRetiro, retiroPorDefecto, sinSucursalRetiro }) {
+    this._mostrarSucursal(sucursalRetiro, retiroPorDefecto === "true" || retiroPorDefecto === true,
+                          sinSucursalRetiro === "true" || sinSucursalRetiro === true)
 
     if (notas && notas.trim() !== "") {
       if (this.hasNotasTextoTarget) this.notasTextoTarget.textContent = notas
@@ -928,7 +935,8 @@ cerrarQuitarCobro() {
       id: data.cliente_id,
       notas: data.cliente_notas_miami,
       sucursalRetiro: data.cliente_sucursal_retiro,
-      retiroPorDefecto: data.cliente_retiro_por_defecto
+      retiroPorDefecto: data.cliente_retiro_por_defecto,
+      sinSucursalRetiro: data.cliente_sin_sucursal_retiro
     })
   }
 
@@ -1014,9 +1022,26 @@ cerrarQuitarCobro() {
     }
   }
 
+  // C29-02 · «Cancelar» **limpia el tracking** que abrió el modal. Yusef,
+  // 2026-10-08: *"le doy cancelar y me deja el tracking aquí. Te lo tiene que
+  // limpiar"* — y mostró por qué: el tracking era de Sofía, canceló, y el
+  // formulario lo dejó seguir y ponerle a Diego. *"Esos son errores que nos
+  // pasan en Miami con cualquier sistema."*
+  //
+  // Va al campo que lo disparó —el primario o el secundario, igual que
+  // `duplicateAsNew`— y le borra su memo de consulta: sin eso, volver a
+  // escanear el mismo tracking no consultaría (`_ultimoConsultado` lo da por
+  // visto) y el modal no saldría la segunda vez.
   closeDuplicate() {
+    const secundario = this._duplicadoDesde === "secundario" && this.hasTrackingSecundarioTarget
+    const campo = secundario ? this.trackingSecundarioTarget : this.trackingTarget
     this._ocultarDuplicado()
     this._duplicadoPospuesto = null
+
+    campo.value = ""
+    if (secundario) this._ultimoSecundario = null
+    else this._ultimoConsultado = null
+    campo.focus()
   }
 
   // Opción 1: "Es actualización" — recarga ESTE formulario con los datos del

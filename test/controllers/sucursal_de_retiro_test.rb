@@ -71,12 +71,24 @@ class SucursalDeRetiroTest < ActionDispatch::IntegrationTest
     assert_equal @tgu.nombre, @cliente.reload.sucursal_retiro_nombre
   end
 
-  test "mientras no tenga sucursal, cae a la ciudad" do
-    # No empeora nada: es lo que la etiqueta ya venía imprimiendo. Solo deja de
-    # ser lo único que hay.
-    @cliente.update!(sucursal_retiro: nil, ciudad: "Tegucigalpa")
+  test "sin sucursal NO cae a la ciudad: dice que falta" do
+    # C29-03 · Caía a la ciudad «porque no empeoraba nada», y sí empeoraba: el
+    # 2026-10-08 el aviso de Sofía dijo su ciudad y no dónde retira. Yusef:
+    # *"la ciudad donde es es una cosa y donde retira es otra"*.
+    @cliente.update!(sucursal_retiro: nil, ciudad: "Choluteca")
 
-    assert_equal "Tegucigalpa", @cliente.reload.sucursal_retiro_nombre
+    assert_nil @cliente.reload.sucursal_retiro_nombre
+    assert @cliente.sin_sucursal_retiro?
+  end
+
+  test "el aviso de /etiquetar sabe que el cliente no tiene sucursal" do
+    @cliente.update!(sucursal_retiro: nil, ciudad: "Choluteca")
+
+    get buscar_clientes_url(q: @cliente.codigo)
+
+    encontrado = JSON.parse(response.body).find { |c| c["id"] == @cliente.id }
+    assert_equal "", encontrado["sucursal_retiro"]
+    assert_equal true, encontrado["sin_sucursal_retiro"]
   end
 
   test "el aviso de /etiquetar usa la sucursal de verdad" do
