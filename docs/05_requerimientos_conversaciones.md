@@ -12040,7 +12040,7 @@ lo que falta.
 | Id | Qué |
 |---|---|
 | `RP-73` | **Unir un suelto a un consolidado (`C29-17`): ¿queda en la pre-alerta consolidada?** La lectura es que sí: si no quedara, la pre-factura (que factura por pre-alerta, `C27-04`) lo facturaría aparte de la tanda con la que se midió. Se construye así y se confirma con Yusef, junto con quién puede hacerlo (hoy: el operario de la PESA, sin PIN, como lo dijo él: *"que el mismo que está pesando y midiendo los agrega"*) |
-| `RP-74` | **¿La descripción es obligatoria en todo paquete, o solo en Entrega Personal (`C29-04`)?** Hoy solo en EP, a propósito (#306): en `/etiquetar` pasan 500–1.000 paquetes por día y casi ninguno trae el contenido escrito. Yusef dijo *"descripción no debería irse vacío"*, pero mirando un caso que podía ser el error del tracking con espacio. Si es para todos, cambia el ritmo de Miami |
+| `RP-74` | **¿La descripción es obligatoria en todo paquete, o solo en Entrega Personal (`C29-04`)?** Hoy solo en EP, a propósito (#306): en `/etiquetar` pasan 500–1.000 paquetes por día y casi ninguno trae el contenido escrito. Yusef dijo *"descripción no debería irse vacío"*, pero mirando un caso que podía ser el error del tracking con espacio. Si es para todos, cambia el ritmo de Miami. ✅ **Contestada el 2026-10-09** (`C30-03`): obligatoria |
 
 ### Después de la reunión — lo que Jorge vio en staging (2026-10-08)
 
@@ -12071,3 +12071,376 @@ mergeada. No salen del audio, salen de usarlo.
 > Yusef *"me estoy quedando sin espacio"* (C29-16). Por el contexto del audio
 > lo dijo Jorge; lo de Yusef es lo que sigue: *"ese listado… lo podés poner
 > abajo, porque ese es independiente para verlo"*.
+
+---
+
+## Conversación 30 (2026-10-09) — en la oficina con Yusef: el recorrido otra vez, las teclas en papel, y el arranque de la **pre-factura**
+
+Tres grabaciones del mismo día, en persona, más tres fotos de hojas anotadas a
+mano:
+
+| Audio | Duración | De qué |
+|---|---|---|
+| 11:19 | 92 min | Yusef recorre staging: `/etiquetar`, el manifiesto, `/recepcion_carga`, `/medicion` |
+| 13:39 | 39 min | La introducción de la pre-factura: la **hoja de preparación** y la fecha de trabajo |
+| 14:27 | 30 min | El flujo de la pre-factura, F8 «consolidando» contra F9 «notificar», y la etiqueta de entrega |
+
+| Foto | Qué tiene |
+|---|---|
+| 1 | La etiqueta de un volumen de medición (`RMIA2610000006 · 1 de 3 · A`, «5 cajas») con *«nombre con código»* anotado arriba |
+| 2 | Las teclas, escritas por Yusef: **F8 Guardar · F9 Guardar e Imprimir · F2 Limpiar · F5 Agregar · F4 Imprimir · F1 Crear** (F4 corrige un F1 tachado) |
+| 3 | El diagrama de la pre-factura (ver `C30-15`) |
+
+> ⚠️ **Sobre el transcript.** `whisper small` en pedazos de 6 minutos; el
+> «min» es el del pedazo. Hay tramos largos de conversación personal, y
+> **muchos tramos sobre el sistema viejo** (el de Roger): la proforma, sus
+> permisos, el video del tracking repetido, *"en el actual lo podemos hacer"*.
+> Eso se anota como contexto y **no** como requerimiento; cuando una cita es
+> del sistema viejo se dice. Lo que no se entiende se marca con ❓.
+
+---
+
+### Medición y su etiqueta
+
+#### C30-01 · La etiqueta del volumen lleva **nombre con código** del cliente (13:39 min 30; 14:27 min 0) — foto 1
+
+> "¿Quién es el cliente? … **No tiene nombre, esto debería de tener nombre.**"
+> "Hay que agregarle nombre acá." — "Nombre." — "Sí. **Nombre con código.**"
+
+Y dónde, con la etiqueta en la mano:
+
+> "Voy a meter el nombre aquí. **Arribita.** Yo lo bajás todo y ponés eso
+>  arriba… Ahí tenés dos líneas, una abajo y una arriba. Entonces bajás todo."
+
+Para qué: la pre-factura escanea **un** volumen y tiene que saber de quién es
+(*"para que sepamos que es cuál fue el que me dieron"*).
+
+▶ **Cambia una decisión.** En `C26-04` Yusef había dicho de esta misma
+etiqueta *"no le vamos a meter nombre ni nada"*. La Dymo no tiene una fila más
+([[project_la_dymo_no_tiene_una_fila_mas]]): la fila de arriba sale de achicar
+el QR, y lo mide `etiqueta_medicion_cabe_test`.
+
+#### C30-10 · `/medicion`: el foco no vuelve a la pistola después de las notas, y las notas salen **repetidas** (11:19 min 72–78)
+
+> "Ok, otro error, **no se regresó aquí**." — "Puedes escanear, aunque salió
+>  la nota." — "Y la nota del cliente, **al darle entendido acá, no regresás**."
+> "Esas notas que salieron, salieron a dos **pero repetidas**, pero no sé por
+>  qué, porque yo lo escribí a uno."
+
+#### C30-11 · ❓ «Medir de nuevo todo junto» descarta los volúmenes de antes (11:19 min 0)
+
+Probando el caso de `C29-18`, lectura dudosa:
+
+> "Desde el instante que le dio que lo va a medir de nuevo… **se le borre
+>  todo**." — "Y que solo le diga **volumen anterior**, o algo por el estilo."
+
+Se revisa qué pasa hoy con los volúmenes viejos cuando se guarda la medición
+nueva: si quedan vivos al lado de los nuevos, la pre-factura los vería dos
+veces.
+
+#### C30-12 · Ver los volúmenes medidos, con buscador — 📄 después (11:19 min 90)
+
+> "¿Ahora puedo de alguna manera ver los volúmenes de los paquetes que hemos
+>  medido?" — **Jorge:** "Podemos poner una vista, **pero ahorita no**."
+> "…que tenga el filtro **por cliente o por warehouse**, como un buscador."
+
+#### C30-13 · Los textos de las pantallas en el idioma del personal — 📄 nota (11:19 min 84)
+
+> "Esos textos es lo que te vamos a cambiar, pero para cambiártelo te voy a
+>  tratar de hacer un informe, **como un Word, y que vayan las imágenes** con lo
+>  que va a llevar."
+
+Yusef manda el documento. No se toca nada hasta tenerlo.
+
+---
+
+### Miami: `/etiquetar`
+
+#### C30-02 · **Las teclas, iguales en todo el sistema** — foto 2 (11:19 min 6–14; 14:27 min 6)
+
+Lo dijo apretando F10 en `/medicion`:
+
+> "F10 a guardar, te lo cambio también: **es la F8**." — "Llevá el anotado."
+> "En casi todo es **F8 guardar, F9 guardar e imprimir, F2 es limpiar**."
+> "**F5 es agregar**… en casi todo F5 es agregar."
+> "Acá F2 le puso crear, pero no, no debería ser crear."
+> "Crear puede ser **F1 en todo**. F4 imprimir en casi que todo."
+
+Y la hoja que dejó escrita: F8 Guardar · F9 Guardar e Imprimir · F2 Limpiar ·
+F5 Agregar · F4 Imprimir · F1 Crear.
+
+▶ **Cambia la convención de `C23-13`**, que se había leído de lo que la app
+hacía: guardar era F10, nuevo era F7 y **F8 era Excel**. Excel pierde su tecla
+hasta que Yusef diga cuál (`RP-75`).
+
+#### C30-03 · La descripción **tiene que estar llena** (11:19 min 6) — contesta `RP-74`
+
+> "En etiqueta puse el tracking, el cliente, y **la descripción me la está
+>  dejando dejar vacía**… Ok, descripción tiene que estar llena."
+
+Es la segunda vez (`C29-04`), y esta vez sin el error del espacio de por medio.
+
+#### C30-04 · ❓ Tab en el cliente no lo deja elegido (11:19 min 30)
+
+> "Le di **tap** y no quedó el cliente." — "Algunos usamos tap, otros enter…
+>  el tap normalmente puede ser el siguiente." — "Es que te mueve al siguiente
+>  dejándote a ése sin ejecutarlo… por favor corregir."
+
+No queda claro en qué campo fue. Lo que se puede leer: en el autocomplete del
+cliente, Tab tiene que **elegir** la opción marcada antes de pasar al
+siguiente campo, igual que Enter. Enter sigue sin guardar (`CLAUDE.md`).
+
+---
+
+### El manifiesto
+
+#### C30-05 · «Finalizar e Imprimir» imprime **la hoja del manifiesto**, no las 4×6 (11:19 min 54–60)
+
+> "Lo que tiene que imprimirme **no es esta etiqueta**… el que necesito que me
+>  imprima después de finalizado **es este**. Este es el que ellos imprimen
+>  después de finalizado, porque **todas esas etiquetas ya las imprimieron
+>  cuando los estaban ingresando**."
+> (al probarlo otra vez) "Ahora que yo le doy finalizar… me está imprimiendo
+>  ésta otra vez."
+
+▶ **Cambia `C21-06`**, que había leído del diagrama *"finalizar e imprimir
+todos los bultos"*.
+
+#### C30-06 · El manifiesto finalizado: bloqueado, pero el supervisor lo **abre todo** con «Editar» (11:19 min 48–66)
+
+> "Hay dos cosas que ocupo [en] el manifiesto: uno, **cambiar etiquetas**, y
+>  dos, **eliminar paquetes que no se fueron**." — "Que se escanearon como que
+>  iban y no…"
+> "Después de finalizado lo necesitamos corregir, porque a veces después de
+>  finalizado agregamos algo que se quedaba."
+> "Deseo eliminar paquetes, y le vas a decir que sí, y empezás a escanear
+>  clac, clac, clac." — "O que diga **agregar paquetes** o que diga **eliminar
+>  paquetes que no se fueron**, y entonces empezás a escanear en un modal."
+> "No, no… que le demos un botón que diga **editar**… y ya podemos editarlo
+>  todo otra vez, pero que **presionen el botón**, para que nadie toque algo que
+>  no era." — "Ya nos pasó que venían y sin querer tocaban el manifiesto que ya
+>  se había ido."
+> "¿Quién puede editar? Los permisos." — "Cuando ya está bloqueado, **los
+>  supervisores**, Pedro y Miami."
+
+Y lo que el bloqueado **sí** deja hacer:
+
+> "Podés **reimprimir etiquetas**, porque esas se te pueden dañar… lo que no
+>  vas a poder hacer es modificar nada, hasta que le des editar."
+> "Imprimir etiquetas individuales, imprimir manifiesto, imprimir el listado,
+>  exportar: está bien, porque eso son parte de lo que se ocupa hacer."
+
+(*"En el actual lo podemos hacer, le damos a editar y ya nos deja editar todo
+el manifiesto"* es del sistema viejo.) Hoy «Editar igual» del supervisor abre
+solo el encabezado; los paquetes y las cajas quedan cerrados.
+
+#### C30-07 · Lo de cada caja, **a la vista** en la ficha (11:19 min 60)
+
+> "Toda esa información la necesitamos poderla ver acá también… las cajas,
+>  todo… **verla siempre, como en vista previa, en vez de estarle dando
+>  imprimir para ver**."
+
+#### C30-08 · Las horas **sin segundos** de cara al cliente (11:19 min 60)
+
+> "¿Cómo podemos evitar que agregue los segundos? … Al cliente no le vas a
+>  mandar que a las 11:05 con 20 segundos va a tener un paquete disponible."
+
+Va con la fecha de trabajo de la pre-factura (`C30-16`).
+
+---
+
+### San Pedro: recibir la carga
+
+#### C30-09 · `/recepcion_carga`: escanear **sin elegir el manifiesto**, varios a la vez (11:19 min 66–76)
+
+> "A veces vamos a recibir tres manifiestos de un solo, y hay que estar
+>  seleccionando cada manifiesto."
+> **Jorge:** "Entonces vamos a implementar un search para que escanee ahí…
+>  todos los pendientes."
+> "Si la vuelve a repetir una, solo que avise que **ya fue recibida**."
+> "**Hemos recibido manifiestos hasta cinco de un solo.**" — "Se me quedó una
+>  caja y le hacen un manifiesto nuevo y se lo mandan."
+> "Algo como lo que hiciste de medición, algo que te vaya diciendo **cuál quedó
+>  pendiente**… si 7 cajas iban, 6 nada más, falta una."
+> "Acá afuera sería bueno poder darle también **imprimir al manifiesto**… lo
+>  voy a querer imprimir para darle al oficio."
+
+Y la columna que había pedido en `C29-12` (tipo de envío, empresa) ya estaba:
+*"como vos lo tenés, me parece que está bien"*.
+
+---
+
+### La pre-factura — la fase que sigue
+
+> "La siguiente etapa que nos hace falta es hacer las prefacturas. Ya ahí iba
+>  a tener el **70 por ciento del sistema**."
+> "Lo primero es el **happy path**… este cliente es con tarifa tal, este
+>  cliente con no sé qué: eso son cosas que vas a ir agregando, que no te
+>  quiero meter ahí todavía."
+
+#### C30-15 · La **hoja de preparación** (13:39 min 0–24) — foto 3
+
+El diagrama, de arriba abajo:
+
+1. **Tipo de servicio** a trabajar, **selección múltiple** (*"porque en las
+   cajas vienen dos tipos de servicios"* — el manifiesto permite dos), **o**
+   **editar pre-facturas** ya hechas (*"voy a corregir unas prefacturas"*).
+   Jorge preguntó si editar iba ahí mismo: *"Sí, yo lo editaría ahí mismo."*
+2. **Manifiestos**: *"solo le van a aparecer los que ya fueron recibidos"*,
+   **en aduana**.
+3. **Fecha de trabajo** (`C30-16`).
+4. → **Hoja de preparación** → **Pre-factura**.
+
+> "Es como etiquetando… esa misma vista, no misma, pero así." — *"¿Es esto lo
+>  que se llama la preparación de trabajo? **¿La hoja de preparación?**"*
+
+El estado del manifiesto, en sus palabras:
+
+> "Cuando yo vengo y recibo esto, pasa a ser **en aduana**." — "Cuando vengo y
+>  empiezo a escanearlos en medición… todavía no." — "**En aduana es todo el
+>  proceso.**"
+> "Cuando ya entra prefactura y lo seleccionamos y lo terminamos, **desaparece
+>  de los pendientes**."
+> ¿Cuándo pasan los paquetes a disponibles? — "**Cuando los agregás a la
+>  prefactura y le das F9.**"
+
+#### C30-16 · La **fecha de trabajo**: fecha **y hora** en que se le avisa al cliente (13:39 min 6–18; 11:19 min 60–66)
+
+No es la fecha aproximada que se le da al cliente cuando el paquete llega a
+Miami; es cuándo el sistema le avisa que **ya está disponible**.
+
+> "El default es 7 y media… el sistema viene a las 7:30 y empieza a mandar los
+>  mensajes de texto, los WhatsApp, los correos y los push, todo a esa hora."
+> "Ahora, digamos, yo quiero poner que es hoy mismo y quiero cambiar la hora…
+>  a la 1 de la tarde." — "Le pongo que notifiquemos a las 12… que ya pasó el
+>  pico." — "El marítimo lo notificamos a las 2 de la tarde mientras
+>  terminamos el aéreo."
+
+Por qué la hora: si todo sale a las 7:30, la gente llega toda a la misma hora
+y el personal de pre-factura todavía no terminó.
+
+Los canales:
+
+> "**El correo, que es obligatorio.**" — "Tal vez después le podemos poner al
+>  cliente que escoja cómo quiere la notificación."
+> ❓ "El correo obligatorio, SMS, y si el cliente no se activa con WhatsApp,
+>  entonces el SMS se elimina y solo le manda correo y WhatsApp." — "Y push con
+>  el app, más adelante."
+
+El mensaje: *"le informamos que su pedido número tal ya está disponible, con
+valor tal, con el tipo de envío tal; por favor acercarse a nuestras oficinas"*,
+**con la sucursal de retiro** (*"ponerle la sucursal, SPS Zeron… donde el
+cliente especifica dónde lo va a recoger"*). Sin segundos (`C30-08`).
+
+#### C30-17 · Escanear **un** volumen trae la tanda entera, y después cada etiqueta de Miami (13:39 min 24–30; 14:27 min 0–12)
+
+> "Escanear cualquiera de estas: automáticamente escanean una, **jala los tres
+>  volúmenes**… tres de tres, y ahora te dice **escanear los paquetes que van
+>  con esto**." — "Y te va diciendo: son siete paquetes."
+> "Solo con uno escanea los otros dos. No ocupamos escanear los tres
+>  volúmenes." — "No escanear, pero sí que los procesa los tres."
+> "**La relación es por cliente**: yo saco un volumen de un cliente y jalo los
+>  otros." (no por manifiesto entero)
+> "Esta es la de Miami. … También escanea la de Miami, porque es la
+>  confirmación que son los paquetes… **del mismo cliente y que son todos**."
+> "Si ésta no le corresponde, le va a tirar un error: ése no es."
+
+El que pre-factura **audita**: *"él ya no es como un prefacturador, es como un
+auditor de prefactura… el que mide y pesa ya le hizo el trabajo"*. Puede
+**editar** los paquetes y los volúmenes: *"si desea editarlo por alguna razón…
+que lo pueda hacer"*.
+
+Al terminar, un modal: *"¿Desea agregar algo más, modificar, actualizar, poner
+alguna nota?"* — y ahí se decide F8 o F9 (`C30-18`).
+
+Las notas de pre-factura por paquete (*"ese paquete necesito que se quede en
+San Pedro"*) van con las tareas, **después**: *"eso va a quedar para arreglar
+después bien"*.
+
+#### C30-18 · **F8 consolidando, F9 notificar** — la única pantalla donde F8 imprime (14:27 min 6–14)
+
+> "Si presionan F8, normalmente nosotros solo le guardamos: es que lo vamos a
+>  guardar al **estante consolidado**. Si presionamos F9 es que **hemos
+>  terminado**."
+> "F8 imprime y **no notifica**. En éste es el único caso que es diferente."
+> "El F9 va a salvar, imprimir **y notificar**."
+> "F8 sí o sí es consolidando… y F9 es que ya está disponible y se va para
+>  **producto terminado**."
+> ¿Y si se equivocan con F9? — "Pueden reversarlo y poner F8." (cómo se retira
+> un aviso ya en cola: `RP-77`)
+
+Agregar paquetes a uno que está consolidando: *"tenemos que escanear primero el
+volumen… ¿desea agregar más paquetes a este volumen, o nuevo volumen?"*.
+
+#### C30-19 · La **etiqueta de entrega** 4×6 (14:27 min 6–12)
+
+> "Viene siendo como una de éstas en grande. Solo que trae un **QR para
+>  entregarle al cliente**, trae el **tipo de envío**, a qué **prefactura** está
+>  amarrada, el **código del cliente, el nombre**, las **libras a cobrar**… y el
+>  **volumen**, para que el cliente sepa cuánto fue el volumen y cuánto fue el
+>  peso, la **sucursal donde se retira**, la fecha."
+> "Lo que ocupo más grande son **la sucursal y el nombre del cliente**… y el
+>  tipo de envío."
+> Con F8: "**CONSOLIDANDO**, así en medio, que estorbe… si alguien va pasando
+>  por el estante del producto terminado, vea que el paquete tiene la etiqueta
+>  consolidando."
+
+Es la etiqueta de `C26-12` (*"ésa es la que van a escanear para entregar"*).
+
+---
+
+### Del sistema viejo — contexto, no tareas
+
+- **La proforma y la pre-factura del sistema viejo** (11:19 min 12–24 y 42): Roger
+  las separó por permisos y terminaron iguales. Lo que sí deja como regla para
+  **caja**: un cobro agregado (una entrega local, un cambio de servicio) se
+  puede **editar pero no eliminar, ni bajarle el valor** — *"si le pusieron 100
+  lempiras, no le puedan poner 80"*. Hubo un robo así. Va con la Fase 13 y con
+  el módulo de caja (`C30-14`).
+- **El video del tracking repetido** (min 18–24): un error del sistema viejo
+  (dos clientes con el mismo tracking, la pistola sin sonar). No es nuestro.
+- **«Su factura fue editada» cinco veces** (13:39 min 12) y **cambiar un aviso
+  que todavía está en cola** (14:27 min 12–18): así lo hace el sistema viejo;
+  Yusef lo quiere (*"si yo cambio lo que dice… el sistema lo actualiza y lo
+  manda como vos lo actualizaste, si no se ha enviado"*). Va con `RP-77`.
+
+### Notas — 📄
+
+- **C30-14** · Caja: cobros que no se borran ni bajan (arriba).
+- **C30-20** · La inteligencia artificial que lea la etiqueta del proveedor en
+  Miami y llene el cliente (11:19 min 42): *"lo primero que necesito en la
+  inteligencia artificial es Miami"*. Segunda etapa.
+- **C30-21** · La app móvil (13:39 min 18–24): push más adelante; Jorge le
+  explicó el costo de las tiendas y el mantenimiento anual del SDK.
+- **C30-22** · *"Ya decidí que ya podemos empezar a darle el sistema a cada
+  quien… lo voy a dividir de acuerdo al área"* (11:19 min 36). Las pruebas con
+  el personal arrancan por áreas.
+
+---
+
+### Lo que quedó abierto
+
+| # | Qué | Estado |
+|---|---|---|
+| `C30-01` | Nombre con código en la etiqueta del volumen | ⏳ `PR-C30.1` |
+| `C30-02` | Las teclas de la hoja de Yusef, en todo el sistema | ⏳ `PR-C30.6` — después de los demás, porque toca ~35 pantallas |
+| `C30-03` | Descripción obligatoria en `/etiquetar` | ⏳ `PR-C30.2`; contesta `RP-74` |
+| `C30-04` | Tab en el autocomplete del cliente | ❓ `RP-76` |
+| `C30-05` | «Finalizar e Imprimir» saca la hoja del manifiesto | ⏳ `PR-C30.3`; cambia `C21-06` |
+| `C30-06` | El manifiesto finalizado: «Editar» del supervisor abre paquetes y cajas, y lo bloqueado deja imprimir | ⏳ `PR-C30.7` |
+| `C30-07` | Lo de cada caja a la vista en la ficha | ⏳ con `PR-C30.7` |
+| `C30-08` | Horas sin segundos al cliente | ⏳ con la pre-factura |
+| `C30-09` | `/recepcion_carga` con un escáner para todos los pendientes | ⏳ `PR-C30.4` |
+| `C30-10` | `/medicion`: el foco vuelve a la pistola, y las notas no se repiten | ⏳ `PR-C30.5` |
+| `C30-11` | Medir de nuevo todo junto descarta los volúmenes viejos | ⏳ `PR-C30.5` (se verifica) |
+| `C30-12` | Buscador de volúmenes medidos | 📄 Después |
+| `C30-13` | Los textos en el idioma del personal | 📄 Espera el Word de Yusef |
+| `C30-15`–`C30-19` | La pre-factura: hoja de preparación, fecha de trabajo, escaneo, F8/F9, etiqueta de entrega | ⏳ Fase nueva en `docs/06` |
+
+### Las preguntas que abre
+
+| Id | Qué |
+|---|---|
+| `RP-75` | **Excel se queda sin tecla** (`C30-02`): F8 pasa a guardar. ¿Excel lleva otra tecla, o ninguna? |
+| `RP-76` | **Tab en el autocomplete del cliente** (`C30-04`): ¿en qué pantalla fue? La lectura es que Tab elige la opción marcada y pasa al siguiente campo |
+| `RP-77` | **Corregir después de F9** (`C30-18`): ¿se puede pasar a F8 una pre-factura ya notificada? Si el aviso todavía está en cola, ¿se cancela o se manda corregido, como hace el sistema viejo? |
