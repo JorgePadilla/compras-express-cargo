@@ -142,7 +142,18 @@ class MedicionController < ApplicationController
                             paquete: datos_de(paquete), choque: choque_json(problema) }
     end
 
-    respuesta = respuesta_de(paquete, paquete.grupo_de_union, resultado_de(paquete))
+    # C29-18 · La caja que llega **después** de que su consolidado ya se
+    # midió. Yusef: *"este paquete está consolidando con otro, traer el resto
+    # y medir, y unirlo… está en estantes, y hay que volver a medir. Una
+    # remedición nueva, porque van en un solo volumen los cuatro"*. Se
+    # pregunta con la primera caja de la tanda: después de elegir, la mesa ya
+    # tiene lo que el operario decidió.
+    grupo = paquete.grupo_de_union
+    if en_tanda.empty? && !remedir? && !aparte? && (medido = consolidado_ya_medido(grupo))
+      return render json: medido.merge(paquete: datos_de(paquete))
+    end
+
+    respuesta = respuesta_de(paquete, grupo, resultado_de(paquete))
                   .merge(mesa: true, salto_manifiesto: !paquete.estado.in?(Paquete::ESTADOS_FACTURABLES))
     if remedir? && paquete.medicion_sesion.present?
       cajas = Paquete.where(medicion_sesion: paquete.medicion_sesion).includes(:cliente, :tipo_envio).order(:id)
@@ -232,6 +243,20 @@ class MedicionController < ApplicationController
     render json: { ok: false, errores: [ e.message ] }, status: :unprocessable_entity
   end
 
+  # C29-17 · «Agregarla a este consolidado»: la caja suelta pasa a la
+  # pre-alerta consolidada que está en la mesa (`RP-73`), y la pantalla la
+  # vuelve a escanear para que entre por la puerta de siempre.
+  def unir
+    pre_alerta = PreAlerta.find(params[:id])
+    paquete = Paquete.find(params[:paquete_id])
+    UnirAlConsolidado.new(paquete: paquete, pre_alerta: pre_alerta).call
+
+    render json: { ok: true, codigo: codigo_de(paquete),
+                   mensaje: "#{codigo_de(paquete)} quedó en el consolidado #{pre_alerta.numero_documento}." }
+  rescue UnirAlConsolidado::NoSePuede => e
+    render json: { ok: false, errores: [ e.message ] }, status: :unprocessable_entity
+  end
+
   # C26-04 · La etiqueta de una caja. Con `hermanas=1`, las de todo el split en
   # un solo documento.
   def etiqueta
@@ -308,6 +333,36 @@ class MedicionController < ApplicationController
   # «Medirlo igual» en el modal rojo. No es un modo que quede prendido.
   def saltar_manifiesto? = params[:saltar_manifiesto].to_s == "true"
   def remedir? = params[:remedir].to_s == "true"
+  # C29-18 · «Medirla sola»: el operario ya vio que el consolidado está medido
+  # y eligió no traer el resto.
+  def aparte? = params[:aparte].to_s == "true"
+
+  # C29-18 · Si el consolidado de esta caja ya tiene cajas medidas, qué decir
+  # y qué se puede hacer. «Medir de nuevo todo junto» trae la tanda vieja con
+  # el camino de `C27-33` y le suma esta caja; se ofrece solo si lo medido es
+  # **una** tanda y ninguna caja está ya en una pre-factura —ahí el peso se
+  # congeló, y medir de nuevo no tiene adónde ir—. Nada va solo a la
+  # pre-factura: Yusef, *"no lo hagamos todavía… no quiero sobresaturar eso"*.
+  def consolidado_ya_medido(grupo)
+    return nil unless grupo&.consolidada? && !grupo.cerrada?
+
+    medidas = grupo.cajas.select(&:medida?).map(&:paquete)
+    return nil if medidas.empty?
+
+    sesiones = medidas.filter_map(&:medicion_sesion).uniq
+    congeladas = medidas.select { |p| p.pre_factura_id.present? || p.venta_id.present? }
+    puede = sesiones.size == 1 && congeladas.empty? && medidas.all? { |p| p.medicion_sesion.present? }
+    primera = medidas.min_by(&:medido_at)
+    { resultado: "consolidado_ya_medido", pre_alerta: grupo.pre_alerta.numero_documento,
+      medidas: medidas.map { |p| { codigo: codigo_de(p), fecha: p.medido_at&.strftime("%d/%m/%Y"), por: p.medido_por } },
+      puede_remedir: puede, remedir_codigo: (codigo_de(medidas.first) if puede),
+      mensaje: "El consolidado #{grupo.pre_alerta.numero_documento} ya tiene #{medidas.size} " \
+               "caja#{"s" if medidas.size != 1} medida#{"s" if medidas.size != 1}" \
+               "#{" desde el #{primera.medido_at.strftime('%d/%m/%Y')}" if primera&.medido_at}. " +
+               (puede ? "Traelas del estante y medí todo junto: van en el mismo volumen." :
+                        "#{congeladas.any? ? 'Ya están en una pre-factura' : 'Se midieron en tandas distintas'}: " \
+                        "medí ésta sola, o dejala de lado.") }
+  end
 
   # Lista blanca, aunque `MedirBulto` ya lea campo por campo y nunca haga un
   # assign masivo. Se escribe igual para que el filtro se **vea** en la puerta
@@ -354,7 +409,7 @@ class MedicionController < ApplicationController
     pa = problema.pre_alerta
     return nil if pa.nil?
 
-    { numero: pa.numero_documento, titulo: pa.titulo, url: pre_alerta_path(pa),
+    { id: pa.id, numero: pa.numero_documento, titulo: pa.titulo, url: pre_alerta_path(pa),
       pre_factura: pre_factura_de(pa)&.numero }
   end
 

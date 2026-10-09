@@ -29,6 +29,7 @@
 <div data-controller="medicion audio"
      <%= tag.attributes(atributos_de_audio) %>
      data-medicion-escanear-url-value="<%= escanear_medicion_index_path %>"
+     data-medicion-unir-url-template-value="<%= unir_medicion_path(id: "ID") %>"
      data-medicion-guardar-url-value="<%= guardar_medicion_index_path %>"
      data-medicion-panel-url-value="<%= panel_medicion_index_path %>"
      <%# El techo lo pone el modelo y la pantalla lo repite: *"máximo 10
@@ -602,6 +603,60 @@
     </div>
   </dialog>
 
+  <%# ── C29-17 · Una suelta del mismo cliente, con un consolidado en la mesa ──
+
+      Yusef, el 2026-10-08: *"¿desea agregar este paquete a esta
+      consolidación? Sí… o sigo procesando el que estoy trabajando, o dejarlo
+      a un lado"*. Lo segundo y lo tercero son el mismo gesto para el sistema
+      —la caja no entra y se sigue con la mesa—, así que van en un solo
+      botón con las dos palabras. Agregarla la suma a la pre-alerta
+      consolidada (`RP-73`) y la mete a la tanda. %>
+  <dialog data-medicion-target="unirModal" data-action="cancel->medicion#avisoCancelar"
+          style="margin: auto" class="rounded-xl p-0 w-[46rem] max-w-[95vw] backdrop:bg-black/70">
+    <div class="px-8 py-5 bg-amber-700 text-white">
+      <p class="text-xs font-bold uppercase tracking-wider">No está en ninguna pre-alerta</p>
+      <p class="text-3xl font-bold mt-1">¿La agregás a este consolidado?</p>
+    </div>
+    <div class="bg-white px-8 py-6 space-y-3">
+      <p class="text-xl text-gray-900" data-medicion-target="unirTexto"></p>
+      <p class="text-lg font-mono font-bold text-cec-navy" data-medicion-target="unirPreAlerta"></p>
+      <p hidden class="text-base font-medium text-red-700" data-medicion-target="unirError"></p>
+    </div>
+    <div class="flex flex-wrap items-center justify-end gap-3 px-8 py-4 bg-gray-50 border-t border-gray-200">
+      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Sigo sin ella y la dejo de lado",
+            data: { action: "medicion#unirNo" })) { "Sigo sin ella, la dejo de lado" } %>
+      <%= render(ButtonComponent.new(variant: :primary, size: :lg, label: "Agregarla a este consolidado",
+            data: { medicion_target: "unirSi", action: "medicion#unirSi" })) { "Agregarla a este consolidado" } %>
+    </div>
+  </dialog>
+
+  <%# ── C29-18 · El consolidado ya tiene cajas medidas ─────────────────────
+
+      Yusef: *"este paquete está consolidando con otro, traer el resto y medir,
+      y unirlo… está en estantes, y hay que volver a medir… porque van en un
+      solo volumen los cuatro"*. «Medir de nuevo todo junto» trae la tanda
+      vieja (el camino de C27-33) y le suma esta caja. Cuando no se puede —ya
+      hay pre-factura, o se midió en tandas distintas— queda medirla sola. %>
+  <dialog data-medicion-target="yaMedidoModal" data-action="cancel->medicion#avisoCancelar"
+          style="margin: auto" class="rounded-xl p-0 w-[46rem] max-w-[95vw] backdrop:bg-black/70">
+    <div class="px-8 py-5 bg-amber-700 text-white">
+      <p class="text-xs font-bold uppercase tracking-wider">Su consolidado ya se midió</p>
+      <p class="text-3xl font-bold mt-1">Traé el resto del estante</p>
+    </div>
+    <div class="bg-white px-8 py-6 space-y-3">
+      <p class="text-xl text-gray-900" data-medicion-target="yaMedidoTexto"></p>
+      <ul class="text-lg font-mono text-cec-navy space-y-1" data-medicion-target="yaMedidoLista"></ul>
+    </div>
+    <div class="flex flex-wrap items-center justify-end gap-3 px-8 py-4 bg-gray-50 border-t border-gray-200">
+      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Dejarla de lado",
+            data: { action: "medicion#yaMedidoDejar" })) { "Dejarla de lado" } %>
+      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Medirla sola",
+            data: { action: "medicion#yaMedidoSola" })) { "Medirla sola" } %>
+      <%= render(ButtonComponent.new(variant: :primary, size: :lg, label: "Medir de nuevo todo junto",
+            data: { medicion_target: "yaMedidoJunto", action: "medicion#yaMedidoJunto" }, hidden: true)) { "Medir de nuevo todo junto" } %>
+    </div>
+  </dialog>
+
   <%# ── «NO Mezclar»: otra consolidación ──────────────────────────────────
 
       C27-04 · Yusef: *"no lo podría hacer porque está consolidando esa carga
@@ -629,6 +684,10 @@
           Mezclar» es de la sesión —dos volúmenes de la misma mesa son del mismo
           cliente y del mismo consolidado—, así que dejar volúmenes sueltos
           armados haría que `MedirBulto` rechazara la tanda al guardar. %>
+      <%# C29-17 · Solo cuando la caja que entra **es** de un consolidado. Si
+          la de la mesa es el consolidado y la que entra es suelta, «hago el
+          consolidado» vaciaba la mesa y arrancaba con la suelta: le borraba
+          al operario lo que estaba haciendo. Ahí queda «lo dejo de lado». %>
       <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Hago el consolidado: empiezo de nuevo con esta caja",
             data: { medicion_target: "hacerConsolidado", action: "medicion#hacerConsolidado" })) { "Hago el consolidado" } %>
       <%= render(ButtonComponent.new(variant: :primary, size: :lg, label: "Lo dejo de lado y sigo con lo que tengo",

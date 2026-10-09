@@ -737,6 +737,84 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_no_selector "[data-medicion-target='tandaAusentes']", visible: :visible
   end
 
+  # C29-17 · Con el consolidado de Sofía en la mesa, una caja de Sofía sin
+  # ninguna pre-alerta: *"¿desea agregar este paquete a esta consolidación?"*.
+  # Antes salía «hago el consolidado», que le borraba la mesa.
+  test "una suelta sin pre-alerta se agrega al consolidado de la mesa, y entra a la tanda" do
+    consolidada = caja("1ZUNIRSUELTA001")
+    pa = consolidado_con(consolidada)
+    suelta = caja("1ZUNIRSUELTA002")
+
+    visit medicion_index_path
+    escanear_a_la_mesa(consolidada, 1)
+    escanear(suelta.tracking)
+
+    assert_selector "dialog[open]", text: "¿La agregás a este consolidado?", wait: 5
+    assert_selector "dialog[open]", text: pa.numero_documento
+    assert_no_selector "dialog[open] button", text: "Hago el consolidado"
+    within("dialog[open]") { click_on "Agregarla a este consolidado" }
+
+    assert_no_selector "dialog[open]", wait: 5
+    assert_selector "[data-medicion-target='mesa'] li", count: 2, wait: 5
+    assert_selector "[data-medicion-target='mesa'] li", text: consolidada.numero_recepcion
+    assert_selector "[data-medicion-target='tandaContador']", text: "2 de 2"
+    assert_equal pa, GrupoDeUnion.pre_alerta_consolidada_de(suelta.reload)
+  end
+
+  test "«sigo sin ella» deja la mesa como estaba y no toca la pre-alerta" do
+    consolidada = caja("1ZUNIRSUELTA003")
+    consolidado_con(consolidada)
+    suelta = caja("1ZUNIRSUELTA004")
+
+    visit medicion_index_path
+    escanear_a_la_mesa(consolidada, 1)
+    escanear(suelta.tracking)
+    assert_selector "dialog[open]", text: "¿La agregás a este consolidado?", wait: 5
+    within("dialog[open]") { click_on "Sigo sin ella, la dejo de lado" }
+
+    assert_no_selector "dialog[open]", wait: 5
+    assert_selector "[data-medicion-target='mesa'] li", count: 1, text: consolidada.numero_recepcion
+    assert_nil GrupoDeUnion.pre_alerta_consolidada_de(suelta.reload)
+    assert_equal "codigo_medicion", foco
+  end
+
+  # C29-18 · *"Este paquete está consolidando con otro, traer el resto y medir,
+  # y unirlo… hay que volver a medir."*
+  test "la caja que llega después de su consolidado medido trae la tanda vieja y se mide todo junto" do
+    medida = caja("1ZDESPUES000001")
+    pa = consolidado_con(medida)
+
+    visit medicion_index_path
+    escanear_a_la_mesa(medida, 1)
+    teclear "6", "10", "12", "14"
+    espiar_impresion
+    send_keys :f9
+    assert_selector "[data-medicion-target='banner']", wait: 5
+
+    # El complemento llega días después.
+    tarde = caja("1ZDESPUES000002")
+    pa.pre_alerta_paquetes.create!(tracking: tarde.tracking, descripcion: "Bulto", fecha: Date.current, paquete: tarde)
+
+    escanear(tarde.tracking)
+    assert_selector "dialog[open]", text: "Traé el resto del estante", wait: 5
+    assert_selector "dialog[open]", text: medida.numero_recepcion
+    within("dialog[open]") { click_on "Medir de nuevo todo junto" }
+
+    assert_no_selector "dialog[open]", wait: 5
+    assert_selector "[data-medicion-target='mesa'] li", count: 2, wait: 5
+    assert_selector "[data-medicion-target='mesa'] li", text: tarde.numero_recepcion
+    assert_selector "[data-medicion-target='listaVolumenes'] li", count: 1, text: "6 lb"
+
+    find("[data-medicion-target='listaVolumenes'] li button[aria-label='Quitar este volumen']").click
+    fill_in "medicion_peso", with: "9"
+    espiar_impresion
+    send_keys :f9
+
+    assert_selector "[data-medicion-target='banner']", text: "2 cajas en un solo volumen", wait: 5
+    assert_equal 1, Bulto.count, "la tanda nueva reemplaza a la vieja"
+    assert_equal [ medida.id, tarde.id ].sort, Bulto.last.paquetes.map(&:id).sort
+  end
+
   private
 
   def consolidado_con(paquete)

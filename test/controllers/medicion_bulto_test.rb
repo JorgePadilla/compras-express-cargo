@@ -105,14 +105,101 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
 
   # La otra dirección: la mesa ya trae un consolidado y entra una suelta.
   # Se facturan aparte —*"nosotros facturamos de acuerdo a la pre-alerta"*.
-  test "una suelta contra un consolidado armado también rebota, y nombra la pre-alerta de la mesa" do
+  #
+  # C29-17 · La que rebota es la suelta **con su propia pre-alerta**: la que no
+  # tiene ninguna se puede unir (abajo).
+  test "una suelta con su pre-alerta contra un consolidado armado también rebota, y nombra la pre-alerta de la mesa" do
     consolidada = caja("1ZBULTO000000012")
     pa = pre_alerta_consolidada(consolidada)
+    independiente(@primera)
 
     escanear(@primera.tracking, en_tanda: [ consolidada.id ])
 
     assert_equal "no_consolidada", json["motivo"]
     assert_equal pa.numero_documento, json["choque"]["numero"]
+  end
+
+  # C29-17 · *"Éste que tengo acá debería de darte la opción de agregárselo a
+  # este consolidado, porque ahora es uno y no tiene pre-alerta ni nada"*.
+  test "C29-17 · una suelta sin ninguna pre-alerta, del mismo cliente, se puede unir al consolidado de la mesa" do
+    consolidada = caja("1ZBULTO000000015")
+    pa = pre_alerta_consolidada(consolidada)
+
+    escanear(@primera.tracking, en_tanda: [ consolidada.id ])
+
+    assert_equal "unible", json["motivo"]
+    assert_not json["mesa"], "no entra hasta que la agreguen"
+    assert_equal pa.id, json["choque"]["id"]
+
+    post unir_medicion_path(pa), params: { paquete_id: @primera.id }, as: :json
+    assert json["ok"]
+    assert_equal pa, GrupoDeUnion.pre_alerta_consolidada_de(@primera.reload)
+
+    escanear(@primera.tracking, en_tanda: [ consolidada.id ])
+    assert_equal "ok", json["resultado"]
+    assert json["mesa"], "ahora es del mismo consolidado"
+    assert_equal 2, json["grupo"]["total"]
+  end
+
+  test "C29-17 · unir no deja meter una caja que ya tiene pre-alerta, ni de otro cliente, ni a un consolidado facturado" do
+    pa = pre_alerta_consolidada(caja("1ZBULTO000000016"))
+
+    con_pre_alerta = caja("1ZBULTO000000017")
+    independiente(con_pre_alerta)
+    post unir_medicion_path(pa), params: { paquete_id: con_pre_alerta.id }, as: :json
+    assert_response :unprocessable_entity
+    assert_match(/ya está en la pre-alerta/, json["errores"].first)
+
+    ajena = caja("1ZBULTO000000018", cliente: clientes(:maria))
+    post unir_medicion_path(pa), params: { paquete_id: ajena.id }, as: :json
+    assert_match(/otro cliente/, json["errores"].first)
+
+    pa.update!(finalizado: true)
+    post unir_medicion_path(pa), params: { paquete_id: @primera.id }, as: :json
+    assert_match(/ya se facturó/, json["errores"].first)
+    assert_empty UnirAlConsolidado.pre_alertas_de(@primera)
+  end
+
+  # C29-18 · *"Este paquete está consolidando con otro, traer el resto y medir,
+  # y unirlo… hay que volver a medir."*
+  test "C29-18 · la caja que llega después de que su consolidado se midió pregunta antes de entrar" do
+    medida = caja("1ZBULTO000000019")
+    pa = pre_alerta_consolidada(medida)
+    guardar([ medida ], [ { peso: "10" } ])
+    assert medida.reload.medicion_sesion
+    # El complemento llega días después, en otro manifiesto.
+    pa.pre_alerta_paquetes.create!(tracking: @primera.tracking, descripcion: "Bulto", fecha: Date.current, paquete: @primera)
+
+    escanear(@primera.tracking)
+
+    assert_equal "consolidado_ya_medido", json["resultado"]
+    assert_equal pa.numero_documento, json["pre_alerta"]
+    assert json["puede_remedir"]
+    assert_equal medida.reload.numero_recepcion, json["remedir_codigo"]
+    assert_match(/Traelas del estante/, json["mensaje"])
+
+    # «Medirla sola» la deja entrar.
+    escanear_aparte(@primera.tracking)
+    assert_equal "ok", json["resultado"]
+    assert json["mesa"]
+
+    # Y con la tanda vieja ya en la mesa, no vuelve a preguntar.
+    escanear(@primera.tracking, en_tanda: [ medida.id ])
+    assert_equal "ok", json["resultado"]
+  end
+
+  test "C29-18 · si lo medido ya está en una pre-factura, no ofrece medir todo junto" do
+    medida = caja("1ZBULTO000000020")
+    pa = pre_alerta_consolidada(medida)
+    guardar([ medida ], [ { peso: "10" } ])
+    pa.pre_alerta_paquetes.create!(tracking: @primera.tracking, descripcion: "Bulto", fecha: Date.current, paquete: @primera)
+    medida.reload.update_columns(pre_factura_id: pre_facturas(:borrador_juan).id)
+
+    escanear(@primera.tracking)
+
+    assert_equal "consolidado_ya_medido", json["resultado"]
+    assert_not json["puede_remedir"]
+    assert_match(/pre-factura/, json["mensaje"])
   end
 
   test "el modal del consolidado dice también a qué pre-factura pertenece, si ya tiene una" do
@@ -477,6 +564,19 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
 
   def escanear(codigo, en_tanda: [])
     post escanear_medicion_index_path, params: { codigo: codigo, en_tanda: en_tanda }, as: :json
+  end
+
+  def escanear_aparte(codigo)
+    post escanear_medicion_index_path, params: { codigo: codigo, aparte: true }, as: :json
+  end
+
+  # Una pre-alerta **independiente** (no consolidada) que nombra la caja.
+  def independiente(paquete)
+    pa = PreAlerta.create!(numero_documento: "PA-I#{SecureRandom.hex(3).upcase}", cliente: paquete.cliente,
+                           tipo_envio: tipo_envios(:aereo), estado: "pre_alerta", titulo: "Independiente",
+                           creado_por_tipo: "usuario", creado_por_id: users(:admin).id)
+    pa.pre_alerta_paquetes.create!(tracking: paquete.tracking, descripcion: "Suelto", fecha: Date.current, paquete: paquete)
+    pa
   end
 
   def guardar(cajas, volumenes, saltar: [], reemplaza: nil)

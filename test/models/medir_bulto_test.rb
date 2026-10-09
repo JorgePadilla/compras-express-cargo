@@ -197,13 +197,17 @@ class MedirBultoTest < ActiveSupport::TestCase
   end
 
   # La otra dirección: ya armó el consolidado y le meten una suelta.
+  #
+  # C29-17 · Si la suelta no tiene ninguna pre-alerta, la pantalla ofrece
+  # unirla al consolidado; mientras no la unan, sigue sin poder guardarse con
+  # él, y el mensaje dice por qué.
   test "una caja suelta no entra donde se está armando un consolidado" do
     pa = pre_alerta_consolidada("1ZCONS000000002")
     consolidada = llego(pa.pre_alerta_paquetes.first.paquete)
     suelta = caja(tipo_envio: tipo_envios(:aereo))
 
     e = assert_raises(MedirBulto::NoSePuede) { medir([ consolidada, suelta ], { peso: "10" }) }
-    assert_match(/no está consolidando/, e.message)
+    assert_match(/no está en ninguna pre-alerta/, e.message)
     assert_match(/#{pa.numero_documento}/, e.message)
   end
 

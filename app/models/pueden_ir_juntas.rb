@@ -79,6 +79,15 @@ class PuedenIrJuntas
                    mensaje: "#{codigo(@nueva)} está consolidando con la pre-alerta " \
                             "#{de_la_nueva.numero_documento}. Ese va amarrado con otra: " \
                             "o hacés ese consolidado, o lo dejás de lado y terminás lo que tenés.")
+    elsif UnirAlConsolidado.se_puede?(@nueva, de_la_mesa)
+      # C29-17 · La suelta **sin ninguna pre-alerta**, del mismo cliente, con
+      # un consolidado en la mesa: no es un error, es una pregunta. Yusef:
+      # *"¿desea agregar este paquete a esta consolidación?"* — *"que el mismo
+      # que está pesando y midiendo los agrega"*. Hasta que la agreguen sigue
+      # sin poder entrar: se facturaría aparte de lo que se midió con ella.
+      Problema.new(motivo: "unible", pre_alerta: de_la_mesa,
+                   mensaje: "#{codigo(@nueva)} es de #{nombre(@nueva)} y no está en ninguna pre-alerta. " \
+                            "Lo que ya escaneaste es del consolidado #{de_la_mesa.numero_documento}.")
     else
       Problema.new(motivo: "no_consolidada", pre_alerta: de_la_mesa,
                    mensaje: "#{codigo(@nueva)} no está consolidando, y lo que ya escaneaste es de " \
