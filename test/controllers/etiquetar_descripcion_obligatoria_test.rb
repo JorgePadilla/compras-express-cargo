@@ -103,7 +103,7 @@ class EtiquetarDescripcionObligatoriaTest < ActionDispatch::IntegrationTest
     assert_equal "Zapatos", esperado.descripcion
   end
 
-  test "el esperado de una pre-alerta que ya traía contenido pasa sin teclearlo otra vez" do
+  test "el esperado que ya traía contenido: el servidor no lo pide si el campo no vino" do
     pap = pre_alertas(:activa).pre_alerta_paquetes.create!(
       tracking: "1ZC3003ESPERAD3", descripcion: "Perfumes", fecha: Date.current
     )
@@ -119,6 +119,26 @@ class EtiquetarDescripcionObligatoriaTest < ActionDispatch::IntegrationTest
     } }
 
     assert_equal "recibido_miami", esperado.reload.estado
+  end
+
+  test "pero si el operario lo deja vacío encima del de la pre-alerta, no se recibe" do
+    # El formulario siempre manda el campo, y el JS lo auto-llena desde la
+    # pre-alerta. Si la pistola le gana a esa consulta y llega `""`, el
+    # contenido de la pre-alerta no se pisa con un vacío: se pide.
+    pap = pre_alertas(:activa).pre_alerta_paquetes.create!(
+      tracking: "1ZC3003ESPERAD4", descripcion: "Perfumes", fecha: Date.current
+    )
+    esperado = pap.reload.paquete
+    post iniciar_sesion_etiquetar_url,
+         params: { tipo_envio_id: pre_alertas(:activa).tipo_envio_id, sucursal_recepcion_id: @miami.id }
+
+    post etiquetar_url, params: { paquete: {
+      tracking: esperado.tracking, cliente_id: clientes(:juan).id, peso: 3, descripcion: ""
+    } }
+
+    assert_response :unprocessable_entity
+    assert_equal "pre_alerta_estado", esperado.reload.estado
+    assert_equal "Perfumes", esperado.descripcion
   end
 
   # ── Al actualizar ─────────────────────────────────────────────────────

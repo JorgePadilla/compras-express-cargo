@@ -19,7 +19,7 @@ class EtiquetarDescripcionObligatoriaSystemTest < ApplicationSystemTestCase
     find("#paquete_tracking").set(tracking)
     elegir_juan("etiquetar")
 
-    page.send_keys(:f9)
+    tecla(:f9)
 
     assert_no_selector "[data-etiquetar-target='etiquetasModal'][open]", wait: 1
     assert_equal "paquete_descripcion", foco_actual
@@ -32,13 +32,13 @@ class EtiquetarDescripcionObligatoriaSystemTest < ApplicationSystemTestCase
     find("#paquete_tracking").set(tracking)
     elegir_juan("etiquetar")
 
-    page.send_keys(:f10)
+    tecla(:f10)
     assert_equal "paquete_descripcion", foco_actual
     sleep 0.5
     assert_equal 0, Paquete.where(tracking: tracking).count
 
     find("#paquete_descripcion").set("Ropa")
-    page.send_keys(:f10)
+    tecla(:f10)
     assert_text "guardado exitosamente", wait: 10
     assert_equal "Ropa", Paquete.find_by(tracking: tracking)&.descripcion
   end
@@ -66,6 +66,13 @@ class EtiquetarDescripcionObligatoriaSystemTest < ApplicationSystemTestCase
   end
 
   private
+
+  # A lo que tenga el foco, como la pistola o el operario. `page.send_keys`
+  # exige que el elemento activo sea «interactuable», y después de elegir el
+  # cliente del dropdown a veces no lo es para Selenium aunque sí para Chrome.
+  def tecla(k)
+    page.driver.browser.action.send_keys(k).perform
+  end
 
   def elegir_juan(controlador)
     find("[data-#{controlador}-target='clienteInput']").set("Juan")

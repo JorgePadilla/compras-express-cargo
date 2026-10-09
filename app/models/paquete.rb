@@ -286,7 +286,6 @@ class Paquete < ApplicationRecord
   # - `:al_actualizar` — modo actualización de /etiquetar. La misma trampa de
   #   arriba: un paquete viejo sin contenido se tiene que poder corregir de
   #   peso sin que lo trabe algo que nadie tocó. Vaciarlo sí es un error.
-  CONTENIDO_EN_ETIQUETAR = %i[al_recibir al_actualizar].freeze
   attr_accessor :contenido_en_etiquetar
 
   validates :descripcion, presence: { message: "hay que decir qué es (Contenido)" },
