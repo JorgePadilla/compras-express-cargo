@@ -65,7 +65,7 @@
                   medicion:fallo->audio#error">
 
   <%= render PageHeaderComponent.new(title: "Medición", subtitle: "Escaneá todas las cajas de la tanda; después pesá y medí cada volumen. Si el cliente está uniendo, acá ves lo que falta.") do |h| %>
-    <% h.with_action { render "shared/sonido_config" } %>
+    <% h.with_action { render "shared/sonido_config", tactil: true } %>
   <% end %>
 
   <%# PR-C29.10 · Dos columnas: a la izquierda se escanea, a la derecha se
@@ -74,10 +74,20 @@
       no se hizo. Debajo, de punta a punta, lo que falta del manifiesto
       entero: *"ese listado… lo podés poner abajo, porque ese es
       independiente para verlo"* (C29-16; C27-11: *"esto es una
-      auditoría"*). Desde `md` van lado a lado; en `xl` medir se lleva más
-      ancho, que es donde están los números. %>
+      auditoría"*). Desde `md` van lado a lado y parejas.
+
+      PR-C29.11 · Desde `lg`, escanear se lleva más ancho (4 a 3). Jorge:
+      *"it seems like the scanning, the left part, is the one that should be
+      a little bigger"*. Y tiene razón por cómo es cada columna: a la
+      izquierda está lo que crece —las cajas escaneadas, el «5 de 7», la
+      cuenta del cliente, los dibujitos—; a la derecha, campos de ancho fijo
+      que en 1440 px quedaban estirados de balde. En `md` siguen parejas:
+      a ~820 px cada una mide ~370, y medir necesita eso para las tres
+      medidas lado a lado. Y con `minmax(0, …)`: un `fr` a secas no baja
+      del ancho propio de su contenido, y los tres campos de medir le comían
+      el reparto a escanear (a 1024 px salía al revés: 362 contra 496). %>
   <div class="space-y-6">
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[5fr_7fr] gap-6 items-start">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[minmax(0,4fr)_minmax(0,3fr)] gap-6 items-start">
     <%# ── ESCANEAR · la columna de la izquierda ──────────────────────────
         La pistola, la tanda una vez, y lo escaneado con su X. Arriba lo que
         se usa en cada pip y abajo el historial (C28-12). Después de guardar,
@@ -119,7 +129,7 @@
                     en modal"*— y este botón las vuelve a abrir. Sin notas, no
                     está: un botón que abre un modal vacío enseña a no
                     apretarlo. %>
-                <%= render(ButtonComponent.new(variant: :warning, size: :md, icon: "chat-bubble-left-ellipsis",
+                <%= render(ButtonComponent.new(variant: :warning, size: :lg, icon: "chat-bubble-left-ellipsis",
                       data: { medicion_target: "notasBoton", action: "medicion#verNotas" }, hidden: true)) do %><span data-medicion-target="notasBotonTexto">Notas del cliente</span><% end %>
               </div>
               <%# ── Los dibujitos del envío ──────────────────────────────────
@@ -218,7 +228,7 @@
           <%# C29-13 · Reimprimir deja F9 —que ahora guarda— y pasa a F4,
               que en el resto de la app ya es «imprimir un documento»
               (`teclas_por_familia_test`). %>
-          <%= render(ButtonComponent.new(variant: :secondary, size: :md, shortcut: "F4", shortcut_label_only: true,
+          <%= render(ButtonComponent.new(variant: :secondary, size: :lg, shortcut: "F4", shortcut_label_only: true,
                 data: { medicion_target: "bannerReimprimir", action: "medicion#reimprimir" }, hidden: true)) do %><span data-medicion-target="bannerReimprimirTexto">Reimprimir</span><% end %>
           <%# C29-20 · «Medir lo que hay», no «facturar». Yusef, cuando Jorge
               lo apretó: *"es que no debería dar eso… se prefactura nada más,
@@ -226,7 +236,7 @@
               viene… en medición no debería de darle guerra de estar que si lo
               factura, si no lo factura"*. La PESA mide; el paso es el mismo
               (`PasarGrupoIncompleto`), lo que mentía era la palabra. %>
-          <%= render(ButtonComponent.new(variant: :danger, size: :md, label: "Medir lo que hay, sin el grupo completo",
+          <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Medir lo que hay, sin el grupo completo",
                 data: { medicion_target: "bannerFacturar", action: "medicion#abrirExcepcion" }, hidden: true)) { "Medir lo que hay" } %>
         </div>
       </div>
@@ -358,10 +368,10 @@
                   <li class="flex items-center gap-3 rounded-md bg-gray-50 dark:bg-gray-900 px-2.5 py-1.5">
                     <span class="shrink-0 text-xs font-bold uppercase tracking-wider text-cec-navy dark:text-cec-gold" data-campo="orden"></span>
                     <span class="flex-1 min-w-0 truncate text-sm font-mono text-gray-700 dark:text-gray-200" data-campo="numeros"></span>
-                    <%= render(ButtonComponent.new(variant: :ghost, size: :xs, icon: "pencil-square", label: "Corregir este volumen",
-                          data: { action: "medicion#corregirVolumen" }, class: "shrink-0")) %>
-                    <%= render(ButtonComponent.new(variant: :ghost, size: :xs, icon: "x-mark", label: "Quitar este volumen",
-                          data: { action: "medicion#quitarVolumen" }, class: "shrink-0")) %>
+                    <%= render(ButtonComponent.new(variant: :ghost, size: :lg, icon: "pencil-square", label: "Corregir este volumen",
+                          data: { action: "medicion#corregirVolumen" }, class: "shrink-0 min-h-12 min-w-12")) %>
+                    <%= render(ButtonComponent.new(variant: :ghost, size: :lg, icon: "x-mark", label: "Quitar este volumen",
+                          data: { action: "medicion#quitarVolumen" }, class: "shrink-0 min-h-12 min-w-12")) %>
                   </li>
                 </template>
               </div>
@@ -432,8 +442,8 @@
             <p hidden class="mt-0.5 inline-block text-[11px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900"
                data-campo="unir"></p>
           </div>
-          <%= render(ButtonComponent.new(variant: :ghost, size: :xs, icon: "x-mark", label: "Sacar de la lista",
-                data: { action: "medicion#abrirDescarte" }, hidden: true, class: "shrink-0")) %>
+          <%= render(ButtonComponent.new(variant: :ghost, size: :lg, icon: "x-mark", label: "Sacar de la lista",
+                data: { action: "medicion#abrirDescarte" }, hidden: true, class: "shrink-0 min-h-12 min-w-12")) %>
         </li>
       </template>
     </div>
@@ -484,7 +494,7 @@
           opción ahí**"*. El aviso se queda —la caja de verdad no pasó por
           aduana—; lo que cambia es que ahora tiene puerta, y quien la usa deja
           su nombre en el paquete. %>
-      <%= render(ButtonComponent.new(variant: :danger, size: :md, label: "Medirlo igual, sin haber pasado por el manifiesto",
+      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Medirlo igual, sin haber pasado por el manifiesto",
             data: { medicion_target: "medirIgual", action: "medicion#medirIgual" }, hidden: true)) { "Medirlo igual" } %>
       <%# C27-09 · Yusef: *"él va a poder reimprimir la etiqueta, porque digamos
           que si se le cae… ¿cómo la buscaría? **Tendría que volver a escanear el
@@ -496,11 +506,11 @@
           Trae la tanda entera con sus volúmenes (C28-08); al guardar, la
           nueva reemplaza a la vieja. Y reimprimir saca **todas** sus
           etiquetas: la caja no es de un volumen. %>
-      <%= render(ButtonComponent.new(variant: :danger, size: :md, label: "Medir de nuevo la tanda y reemplazar sus etiquetas",
+      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Medir de nuevo la tanda y reemplazar sus etiquetas",
             data: { medicion_target: "remedirBulto", action: "medicion#remedirBulto" }, hidden: true)) { "Medir de nuevo" } %>
-      <%= render(ButtonComponent.new(variant: :secondary, size: :md, label: "Reimprimir las etiquetas de la tanda",
+      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Reimprimir las etiquetas de la tanda",
             data: { medicion_target: "reimprimirBulto", action: "medicion#reimprimirBulto" }, hidden: true)) { "Reimprimir sus etiquetas" } %>
-      <%= render(ButtonComponent.new(variant: :secondary, size: :md, label: "Medir de nuevo",
+      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Medir de nuevo",
             data: { medicion_target: "medirDeNuevo", action: "medicion#medirDeNuevo" }, hidden: true)) { "Medir de nuevo" } %>
       <%= render(ButtonComponent.new(variant: :primary, size: :lg, label: "Entendido",
             data: { medicion_target: "problemaEntendido", action: "medicion#avisoEntendido" })) { "Entendido" } %>
@@ -519,9 +529,9 @@
       <div>
         <span class="block text-sm font-medium text-gray-700 mb-1">Por qué</span>
         <% DescartarDeMedicion::MOTIVOS.each_with_index do |(valor, etiqueta), i| %>
-          <label class="flex items-center gap-2 text-sm text-gray-700 min-h-11">
+          <label class="flex items-center gap-3 text-base text-gray-700 min-h-12 cursor-pointer">
             <%= radio_button_tag "medicion_descarte_motivo", valor, i.zero?,
-                  data: { medicion_target: "descarteMotivo" }, class: "text-cec-teal focus:ring-cec-teal" %>
+                  data: { medicion_target: "descarteMotivo" }, class: "w-6 h-6 text-cec-teal focus:ring-cec-teal" %>
             <%= etiqueta %>
           </label>
         <% end %>
@@ -530,15 +540,15 @@
         <%= label_tag :medicion_descarte_nota, "Nota (opcional)", class: "block text-sm font-medium text-gray-700 mb-1" %>
         <%= text_field_tag :medicion_descarte_nota, nil, autocomplete: "off",
               data: { medicion_target: "descarteNota" },
-              class: "block w-full min-h-11 rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+              class: "block w-full min-h-12 text-lg rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
       </div>
       <p class="text-sm text-gray-500">La caja **no** cambia de estado: solo deja de esperarse acá, con tu nombre y la hora.</p>
       <p hidden class="text-base font-medium text-red-700" data-medicion-target="descarteError"></p>
     </div>
     <div class="flex items-center justify-end gap-3 px-6 py-3 bg-gray-50 border-t border-gray-200">
-      <%= render(ButtonComponent.new(variant: :secondary, size: :md, label: "Cancelar",
+      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Cancelar",
             data: { action: "medicion#cerrarDescarte" })) { "Cancelar" } %>
-      <%= render(ButtonComponent.new(variant: :danger, size: :md, label: "Sacar esta caja de la lista",
+      <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Sacar esta caja de la lista",
             data: { medicion_target: "confirmarDescarte", action: "medicion#confirmarDescarte" })) { "Sacar de la lista" } %>
     </div>
   </dialog>
@@ -562,7 +572,7 @@
       <p hidden class="text-base font-medium text-red-700" data-medicion-target="excepcionError"></p>
     </div>
     <div class="flex items-center justify-end gap-3 px-8 py-4 bg-gray-50 border-t border-gray-200">
-      <%= render(ButtonComponent.new(variant: :secondary, size: :md, label: "Cancelar la excepción",
+      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Cancelar la excepción",
             data: { action: "medicion#cerrarExcepcion" })) { "Cancelar" } %>
       <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Sí, medir lo que hay",
             data: { medicion_target: "confirmarParcial", action: "medicion#confirmarParcial" })) { "Sí, medir lo que hay" } %>
@@ -615,7 +625,7 @@
       <p hidden class="text-base font-medium text-red-700" data-medicion-target="autorizarError"></p>
     </div>
     <div class="flex items-center justify-end gap-3 px-8 py-4 bg-gray-50 border-t border-gray-200">
-      <%= render(ButtonComponent.new(variant: :secondary, size: :md, label: "Cancelar y mandar a buscar las cajas",
+      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Cancelar y mandar a buscar las cajas",
             data: { action: "medicion#cerrarAutorizacion" })) { "Cancelar" } %>
       <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Autorizar y guardar sin esas cajas",
             data: { medicion_target: "confirmarAutorizacion", action: "medicion#confirmarAutorizacion" })) { "Autorizar y guardar" } %>
