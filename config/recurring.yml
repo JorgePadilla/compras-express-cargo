@@ -16,3 +16,14 @@ production:
   marcar_cuotas_vencidas:
     class: MarcarCuotasVencidasJob
     schedule: every day at 1:30am
+  # PR-P.2 · El disponible programado (`C30-16`): cada minuto, las
+  # pre-facturas que llegaron a su hora pasan a disponible y se le avisa al
+  # cliente. Idempotente: el sello es `pre_facturas.notificado_at`.
+  #
+  # Solo hay sección `production:` y alcanza para staging: el worker de
+  # staging en Render (`cec-worker-staging`, `render.yaml`) corre
+  # `solid_queue:start` con `RAILS_ENV=production`, igual que el de
+  # producción. Cada uno contra su propia base.
+  hacer_disponibles_programadas:
+    class: HacerDisponiblesProgramadasJob
+    schedule: every minute

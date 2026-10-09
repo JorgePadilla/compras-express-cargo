@@ -2170,7 +2170,12 @@ CREATE TABLE public.pre_facturas (
     updated_at timestamp(6) without time zone NOT NULL,
     tasa_cambio_aplicada numeric(10,4),
     descuento numeric(10,2) DEFAULT 0.0 NOT NULL,
-    manifiesto_id bigint
+    manifiesto_id bigint,
+    notificar_at timestamp(6) without time zone,
+    notificado_at timestamp(6) without time zone,
+    consolidando_at timestamp(6) without time zone,
+    auditado_por_id bigint,
+    notificacion_error text
 );
 
 
@@ -5939,6 +5944,13 @@ CREATE INDEX index_pre_factura_items_on_tarifa_recolecta_id ON public.pre_factur
 
 
 --
+-- Name: index_pre_facturas_on_auditado_por_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pre_facturas_on_auditado_por_id ON public.pre_facturas USING btree (auditado_por_id);
+
+
+--
 -- Name: index_pre_facturas_on_cliente_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5971,6 +5983,13 @@ CREATE INDEX index_pre_facturas_on_manifiesto_id ON public.pre_facturas USING bt
 --
 
 CREATE UNIQUE INDEX index_pre_facturas_on_numero ON public.pre_facturas USING btree (numero);
+
+
+--
+-- Name: index_pre_facturas_por_avisar; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pre_facturas_por_avisar ON public.pre_facturas USING btree (notificar_at) WHERE (notificado_at IS NULL);
 
 
 --
@@ -7475,6 +7494,14 @@ ALTER TABLE ONLY public.paquetes
 
 
 --
+-- Name: pre_facturas fk_rails_b672616bb2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pre_facturas
+    ADD CONSTRAINT fk_rails_b672616bb2 FOREIGN KEY (auditado_por_id) REFERENCES public.users(id);
+
+
+--
 -- Name: paquetes fk_rails_ba1c45b053; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7841,6 +7868,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261009190000'),
 ('20261009180000'),
 ('20261009030000'),
 ('20261008163000'),
