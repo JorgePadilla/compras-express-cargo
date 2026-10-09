@@ -1,6 +1,8 @@
 <div class="mb-6">
-  <%# Fila 1: título + subtitle + meta — ocupan el ancho completo. %>
-  <div class="min-w-0">
+  <%# Fila 1: título + subtitle + meta — ocupan el ancho completo. Si la
+      pantalla puso algo en la esquina de arriba a la derecha («Sonidos»), se
+      le deja lugar para que el subtítulo no le pase por debajo. %>
+  <div class="min-w-0 <%= 'pr-40' if helpers.content_for?(:esquina) %>">
     <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100"><%= @title %></h1>
     <% if @subtitle %>
       <p class="text-sm text-gray-500 dark:text-gray-400 mt-1"><%= @subtitle %></p>

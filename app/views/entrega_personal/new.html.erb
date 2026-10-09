@@ -1,3 +1,7 @@
+<%# «Sonidos», debajo del sol, en la esquina de arriba a la derecha (ver
+    `layouts/application`). Jorge, 2026-10-09: *"el botón de sonido va mejor
+    debajo del sol"*. %>
+<% content_for :esquina, render("shared/sonido_config") %>
 <%= render PageHeaderComponent.new(title: "Entrega Personal", subtitle: "Paquetes traídos físicamente al mostrador") do |header|
   header.with_action do
     tag.span(class: "inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400") do
@@ -7,7 +11,6 @@
       ])
     end
   end
-  header.with_action { render "shared/sonido_config" }
 end %>
 
 <div data-controller="entrega-personal audio"

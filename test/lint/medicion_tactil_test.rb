@@ -78,6 +78,6 @@ class MedicionTactilTest < ActiveSupport::TestCase
   end
 
   test "el botón de Sonidos sale en tamaño táctil" do
-    assert_includes fuente, %(render "shared/sonido_config", tactil: true)
+    assert_includes fuente, %(render("shared/sonido_config", tactil: true))
   end
 end
