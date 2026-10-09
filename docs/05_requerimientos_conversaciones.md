@@ -12041,3 +12041,20 @@ lo que falta.
 |---|---|
 | `RP-73` | **Unir un suelto a un consolidado (`C29-17`): ¿queda en la pre-alerta consolidada?** La lectura es que sí: si no quedara, la pre-factura (que factura por pre-alerta, `C27-04`) lo facturaría aparte de la tanda con la que se midió. Se construye así y se confirma con Yusef, junto con quién puede hacerlo (hoy: el operario de la PESA, sin PIN, como lo dijo él: *"que el mismo que está pesando y midiendo los agrega"*) |
 | `RP-74` | **¿La descripción es obligatoria en todo paquete, o solo en Entrega Personal (`C29-04`)?** Hoy solo en EP, a propósito (#306): en `/etiquetar` pasan 500–1.000 paquetes por día y casi ninguno trae el contenido escrito. Yusef dijo *"descripción no debería irse vacío"*, pero mirando un caso que podía ser el error del tracking con espacio. Si es para todos, cambia el ritmo de Miami |
+
+### Después de la reunión — lo que Jorge vio en staging (2026-10-08)
+
+Cuatro arreglos más, pedidos por Jorge mirando staging con la serie ya
+mergeada. No salen del audio, salen de usarlo.
+
+| PR | Qué | Por qué |
+|---|---|---|
+| `PR-C29.7` (#466) | **Toda impresión del manifiesto abre el diálogo y, al terminar, vuelve a la ficha.** «Imprimir manifiesto» e «Imprimir listado» dejaban la pestaña abierta; «Finalizar e Imprimir» dejaba al operario mirando las 4×6. Las otras cuatro ya andaban y quedaron con test | Jorge: *"cuando guarda imprime o solo imprime siempre se tiene que abrir el preview para imprimir; una vez se imprime se regresa a la vista previa"*. Cierra la duda de `C29-11` |
+| `PR-C29.8` (#465) | **El título de la captura ya no se monta sobre «Peso real»**, y dice qué volumen se mide («Volumen 2») | Jorge: *"esta parte está montada con otro título… no se mira bien"* |
+| `PR-C29.9` (#467) | **El error suena áspero, sostenido y fuerte**: dos tonos a un semitono, sin apagarse desde el primer instante; ×3.8 de energía al mismo volumen. «Alarma» es el nuevo error por defecto (no pisa lo que cada usuario ya eligió), y tipo y sucursal distintos suenan tres veces | Jorge: *"el audio de error creo que tiene que ser más cruel, fuerte, molesto, intenso"*. Refuerza `C29-08` |
+| `PR-C29.10` | **/medicion en dos columnas: a la izquierda se escanea, a la derecha se mide.** MEDIR va pegada (`sticky`) con tope de alto, así el peso y «Guardar e imprimir» no se van de la pantalla con la lista larga; antes de la primera caja dice «Acá se pesa y se mide». «Agregar volumen (F5)» pasa a ocupar todo el ancho con 56 px de alto. Lo que falta del manifiesto sigue abajo, de punta a punta | Jorge: *"the part for medir should be on the right"* y *"Agregar volumen is too flat, it needs to be easy to press on a touch screen"*. En las grabaciones: *"solo está el lado izquierdo… se me olvidó que vos querías el otro cuadro al lado derecho también"* (C29, min 0); escanear todo primero y medir después (`C28-08`); arriba lo de cada pip y lo escaneado abajo (`C28-12`); *"una X grande, porque acordate que va a hacer touch"* (`C29-14`) |
+
+> 🔎 **Una atribución que se corrige.** El comentario de la vista le daba a
+> Yusef *"me estoy quedando sin espacio"* (C29-16). Por el contexto del audio
+> lo dijo Jorge; lo de Yusef es lo que sigue: *"ese listado… lo podés poner
+> abajo, porque ese es independiente para verlo"*.
