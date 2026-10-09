@@ -42,7 +42,7 @@ end %>
               <% end %>
             </div>
           </td>
-          <td class="px-4 py-3 text-right text-sm text-gray-600 dark:text-gray-300"><%= s.paquetes.count %></td>
+          <td class="px-4 py-3 text-right text-sm text-gray-600 dark:text-gray-300"><%= @paquetes_por_sucursal.fetch(s.id, 0) %></td>
           <td class="px-4 py-3 text-center">
             <% if s.activo %>
               <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-cec-teal/10 text-cec-teal-dark ring-1 ring-cec-teal/30 dark:bg-cec-teal/20 dark:text-cec-teal-light">Activa</span>

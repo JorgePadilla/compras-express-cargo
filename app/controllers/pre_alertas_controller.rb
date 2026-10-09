@@ -61,6 +61,12 @@ class PreAlertasController < ApplicationController
 
   def edit
     @tipo_envios = TipoEnvio.activos.order(:nombre)
+    # PR-C29.20 · Cada renglón mira su paquete (¿ya se recibió?) y los motivos
+    # de retención del paquete (`PreAlertaPaquete#motivo_retencion_ids`). Sin
+    # precargar eran dos consultas por renglón: con 15 paquetes, de 17 a 41.
+    ActiveRecord::Associations::Preloader.new(
+      records: [ @pre_alerta ], associations: { pre_alerta_paquetes: { paquete: :motivos_retencion } }
+    ).call
     cargar_sugerencias
   end
 

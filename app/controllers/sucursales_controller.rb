@@ -6,6 +6,9 @@ class SucursalesController < ApplicationController
 
   def index
     @sucursales = Sucursal.ordered
+    # PR-C29.20 · La columna de paquetes, en un solo GROUP BY: era un COUNT por
+    # sucursal.
+    @paquetes_por_sucursal = Paquete.where(sucursal_id: @sucursales.map(&:id)).group(:sucursal_id).count
   end
 
   def new

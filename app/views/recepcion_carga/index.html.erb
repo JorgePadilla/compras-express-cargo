@@ -35,7 +35,9 @@
             <td class="px-6 py-4 text-sm text-gray-700"><%= m.consignatario&.nombre || "—" %></td>
             <td class="px-6 py-4 text-sm text-gray-500"><%= m.fecha_enviado&.strftime("%d/%m/%Y") || "—" %></td>
             <td class="px-6 py-4 text-sm text-right text-gray-700">
-              <%= m.cajas.where.not(recibida_at: nil).count %> / <%= m.cajas.size %>
+              <%# PR-C29.20 · Contado sobre las cajas ya cargadas (`includes(:cajas)`):
+                  eran dos COUNT por manifiesto. %>
+              <%= m.cajas.count(&:recibida_at) %> / <%= m.cajas.size %>
             </td>
             <td class="px-6 py-4 text-sm"><%= render StatusBadgeComponent.new(status: m.estado) %></td>
             <td class="px-6 py-4 text-right">

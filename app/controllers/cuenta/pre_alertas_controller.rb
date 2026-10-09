@@ -55,6 +55,11 @@ module Cuenta
     end
 
     def edit
+      # PR-C29.20 · Cada renglón muestra el estado de su paquete: sin precargar,
+      # una consulta por renglón (con 15, de 9 a 21). Es la gemela del admin
+      # (`PreAlertasController#edit`). Se precarga antes del `build`, que deja
+      # la asociación cargada y el preloader ya no la tocaría.
+      ActiveRecord::Associations::Preloader.new(records: [ @pre_alerta ], associations: { pre_alerta_paquetes: :paquete }).call
       @pre_alerta.pre_alerta_paquetes.build if @pre_alerta.pre_alerta_paquetes.empty?
     end
 

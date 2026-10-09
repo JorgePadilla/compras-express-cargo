@@ -139,7 +139,7 @@
                                end %>">
               <span class="text-3xl font-bold leading-none text-cec-navy dark:text-cec-gold"><%= caja.letra %><span class="text-lg"><%= caja.numero_bulto %></span></span>
               <span class="font-mono text-xs text-gray-500 dark:text-gray-400"><%= caja.codigo %></span>
-              <span class="text-xs text-gray-600 dark:text-gray-300" data-empaque-target="conteo"><%= caja.paquetes.size %> pqt</span>
+              <span class="text-xs text-gray-600 dark:text-gray-300" data-empaque-target="conteo"><%= @paquetes_por_caja.fetch(caja.id, 0) %> pqt</span>
             </button>
             <%# Los dos candados viven en el DOM y se alterna cuál se ve: como la
                 pantalla ya no recarga, cambiar el icono desde JS sería pegar

@@ -16,6 +16,13 @@ class ManifiestosController < ApplicationController
     # C21-04: los tamaños pre-definidos con los que se arma una casa.
     @tamanos = TamanoCaja.activos.ordered
     @paquetes = @manifiesto.paquetes.includes(:cliente, :sucursal, :sucursal_destino, :caja_manifiesto).order(:created_at)
+    # PR-C29.20 · La tabla de casas pinta, por cada caja, su tamaño y los tipos
+    # de envío que lleva adentro (`CajaManifiesto#tipos_envio_adentro`, que
+    # recorre sus paquetes). Sin precargar eran dos consultas por caja: con 15
+    # cajas la ficha pasaba de 27 consultas a 39.
+    ActiveRecord::Associations::Preloader.new(
+      records: [ @manifiesto ], associations: { cajas: [ :tamano_caja, { paquetes: :tipo_envio } ] }
+    ).call
   end
 
   def new
