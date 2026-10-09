@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { enfocar } from "controllers/enfocar"
 
 // Agregar paquetes al manifiesto — buscando o **escaneando**.
 //
@@ -35,7 +36,10 @@ export default class extends Controller {
     this._timeout = null
     this._seq = 0
     // El foco vuelve al campo cuando se cierra el modal, por donde sea.
-    this._alCerrar = () => this.inputTarget.focus()
+    //
+    // PR-C30.8 · Con `enfocar` y no con `focus()`: cerrado con el mouse, el
+    // campo quedaba con cara de enfocado y la pistola escribía en el aire.
+    this._alCerrar = () => enfocar(this.inputTarget)
     if (this.hasAvisoModalTarget) this.avisoModalTarget.addEventListener("close", this._alCerrar)
   }
 

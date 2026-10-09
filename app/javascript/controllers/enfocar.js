@@ -6,14 +6,19 @@
 // teclea la pistola **no entra**. Con Enter no pasa, y por eso los tests que
 // cierran los modales con Enter daban verde con el bug puesto.
 //
-// Un `focus()` sobre el elemento que ya figura enfocado no hace nada, así que
-// el arreglo de siempre —`requestAnimationFrame(() => campo.focus())` al
-// cerrarse el modal— no arreglaba: hay que soltarlo y volver a tomarlo.
-//
 // Yusef, en la PESA: *"la nota del cliente, al darle entendido acá, no
-// regresas"*. La PESA es táctil (C27-13): el dedo es el camino normal.
+// regresas"*. La PESA es táctil (C27-13): el dedo es el camino normal. Y el
+// mismo bug estaba en el escaneo del manifiesto, en /empacar y en /etiquetar
+// (PR-C30.8).
+//
+// PR-C30.8 · El porqué, medido: el clic deja la **selección** del documento
+// afuera, en un texto de la página, y el teclado escribe donde está la
+// selección, no donde está el foco. Un `focus()` sobre el campo que ya figura
+// enfocado no la mueve. La primera versión (PR-C30.5) soltaba el foco y lo
+// volvía a tomar; eso dispara `blur`, y en /etiquetar el `blur` del tracking
+// sale a buscarlo (`checkTracking`). Vaciar la selección no dispara nada.
 export function enfocar(campo) {
   if (!campo) return
-  if (document.activeElement === campo) campo.blur()
+  window.getSelection()?.removeAllRanges()
   campo.focus()
 }
