@@ -1,4 +1,5 @@
 require "open3"
+require "timeout"
 
 # PR-C29.16 · Los signos del servidor, para la pantalla de admin.
 #
@@ -83,6 +84,28 @@ class SignosVitales
 
     def puma_stats = defined?(::Puma) && ::Puma.respond_to?(:stats_hash) ? ::Puma.stats_hash : nil
 
+    # `du -xk -d 1 <ruta>`: KB por carpeta de primer nivel, sin salirse del
+    # sistema de archivos (`-x` deja afuera /proc y /sys). Con tope de tiempo:
+    # recorrer las gemas puede tardar, y la página no se puede quedar colgada.
+    # Lo que no se puede leer se ignora (stderr al tacho).
+    def du_por_carpeta(ruta = "/", segundos: 20)
+      salida = +""
+      Open3.popen3("du", "-xk", "-d", "1", ruta.to_s) do |entrada, out, err, espera|
+        entrada.close
+        Thread.new { err.read }
+        begin
+          Timeout.timeout(segundos) { salida = out.read }
+        rescue Timeout::Error
+          Process.kill("KILL", espera.pid) rescue nil
+          raise
+        end
+      end
+      salida.lines.filter_map do |linea|
+        kb, carpeta = linea.chomp.split("\t", 2)
+        [ kb.to_i, carpeta ] if carpeta
+      end
+    end
+
     # Lo que ocupan **nuestras** carpetas, en KB. `df` mide la máquina.
     def du(*rutas)
       existentes = rutas.map(&:to_s).select { |r| File.exist?(r) }
@@ -93,6 +116,49 @@ class SignosVitales
 
       salida.lines.sum { |l| l.split.first.to_i }
     end
+  end
+
+  # La fuente de verdad de la máquina. Los tests la cambian por una falsa: en
+  # una Mac, `du /` tarda minutos.
+  class_attribute :fuente_por_defecto, default: nil
+
+  def self.fuente = fuente_por_defecto || Fuente.new
+
+  # ── ¿Qué ocupa nuestro contenedor? ───────────────────────────────────
+  #
+  # Jorge, 2026-10-09: *"I want to know what is taking the disk space"*. De
+  # los 243 GB de la máquina de Render solo se puede ver lo nuestro: cada
+  # contenedor ve sus archivos y no los de los demás. Esto suma lo nuestro por
+  # carpeta, y lo pone al lado del total de la máquina: la diferencia es de
+  # otros servicios.
+  Disco = Struct.new(:carpetas, :total, :maquina_usados, :maquina_total, keyword_init: true) do
+    def de_otros = maquina_usados && total ? [ maquina_usados - total, 0 ].max : nil
+  end
+
+  CARPETAS_A_MOSTRAR = 12
+
+  def self.disco_del_contenedor(fuente: self.fuente)
+    filas = fuente.du_por_carpeta("/")
+    raiz = filas.find { |_, carpeta| carpeta == "/" }
+    carpetas = filas.reject { |_, carpeta| carpeta == "/" }.sort_by { |kb, _| -kb }.first(CARPETAS_A_MOSTRAR)
+    usados, total = begin
+      linea = fuente.df("/").lines.last.split
+      [ linea[2].to_i * 1024, (linea[2].to_i + linea[3].to_i) * 1024 ]
+    rescue StandardError
+      [ nil, nil ]
+    end
+    Disco.new(carpetas: carpetas.map { |kb, carpeta| [ carpeta, kb * 1024 ] },
+              total: raiz && raiz.first * 1024, maquina_usados: usados, maquina_total: total)
+  end
+
+  # Los fallidos se descartan con el método de solid_queue, que borra la
+  # ejecución fallida y su job. Para cuando el error ya se arregló y los
+  # intentos viejos solo tapan el semáforo (2026-10-09: 32 de la limpieza de
+  # la noche, arreglada en PR-C29.19). Devuelve cuántos había.
+  def self.descartar_fallidos!
+    n = SolidQueue::FailedExecution.count
+    SolidQueue::FailedExecution.discard_all_in_batches
+    n
   end
 
   def self.peor(niveles)
@@ -109,7 +175,7 @@ class SignosVitales
     :mirar
   end
 
-  def initialize(fuente: Fuente.new, ahora: Time.current)
+  def initialize(fuente: self.class.fuente, ahora: Time.current)
     @fuente = fuente
     @ahora = ahora
   end
@@ -119,6 +185,13 @@ class SignosVitales
   end
 
   def nivel = self.class.peor(secciones.map(&:nivel))
+
+  # Para el botón de descartar: solo aparece si hay algo que descartar.
+  def fallidos_pendientes
+    cola_de_verdad? ? SolidQueue::FailedExecution.count : 0
+  rescue StandardError
+    0
+  end
 
   private
 
