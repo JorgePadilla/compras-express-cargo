@@ -26,6 +26,17 @@ class RecepcionCargaTest < ActionDispatch::IntegrationTest
 
   teardown { Current.session = nil }
 
+  # C29-12 · *"El tipo de envío no sale acá, fijate. Hay que poner tipo de
+  # envío, y la empresa que lo mandó, por dónde viene."*
+  test "la lista dice el tipo de envío y la empresa de cada manifiesto" do
+    @manifiesto.update_columns(empresa_manifiesto_id: empresa_manifiestos(:pronto).id)
+
+    get recepcion_carga_index_path
+
+    assert_select "td", text: /#{Regexp.escape(@manifiesto.tipos_envio_nuestros)}/
+    assert_select "td", text: "PRONTO CARGO"
+  end
+
   # *"Es mejor una pantallita que ahí buscara y que solo le aparezca lo que
   # tiene que meter… solo lo que está como enviado."*
   test "solo aparecen los manifiestos que vienen en camino" do

@@ -22,7 +22,7 @@ class RecepcionCargaController < ApplicationController
   def index
     @manifiestos = Manifiesto.activos
                              .where(estado: %w[enviado en_aduana])
-                             .includes(:empresa_manifiesto, :consignatario)
+                             .includes(:empresa_manifiesto, :consignatario, :tipo_envios, :tipo_envio_proveedor)
                              .order(fecha_enviado: :desc)
   end
 

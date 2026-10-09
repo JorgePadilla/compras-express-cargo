@@ -16,11 +16,24 @@
     }
     @media screen {
       body { padding: 24px; max-width: 8.5in; margin: 0 auto; background: #f3f4f6; }
+      .barra-imprimir { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+      .barra-imprimir button {
+        min-height: 44px; padding: 0 20px; border: 0; border-radius: 8px; cursor: pointer;
+        background: #1B2559; color: #fff; font: 600 15px Arial, Helvetica, sans-serif;
+      }
       .wr-sheet { background: #fff; padding: 28px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); border-radius: 6px; }
     }
   </style>
 </head>
 <body>
+  <%# C29-11 · *"No tiene el botón de imprimir a la mano."* Si el diálogo se
+      cancela, o la hoja se abrió sin `?print=true`, queda la página y nada
+      con qué imprimirla más que Ctrl+P. Va crudo y no `ButtonComponent`
+      porque este layout no carga Tailwind: el componente saldría sin forma.
+      `.no-print` lo saca del papel. %>
+  <div class="barra-imprimir no-print">
+    <button type="button" onclick="window.print()">Imprimir</button>
+  </div>
   <div class="wr-sheet">
     <%= yield %>
   </div>

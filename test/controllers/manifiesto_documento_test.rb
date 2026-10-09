@@ -97,7 +97,17 @@ class ManifiestoDocumentoTest < ActionDispatch::IntegrationTest
   test "el botón de imprimir está en la pantalla del manifiesto" do
     get manifiesto_url(@manifiesto)
     assert_response :success
-    assert_select "a[href=?]", documento_manifiesto_path(@manifiesto)
+    assert_select "a[href=?]", documento_manifiesto_path(@manifiesto, print: true)
+  end
+
+  # C29-11 · *"No tiene el botón de imprimir a la mano… no lo tiró como preview
+  # para imprimir"*. El botón de la ficha la abre imprimiendo, como el listado,
+  # y la hoja trae su propio «Imprimir» por si el diálogo se cancela.
+  test "la hoja se imprime sola y trae su botón de imprimir" do
+    get documento_manifiesto_url(@manifiesto, print: true)
+    assert_response :success
+    assert_match(/window\.print\(\)/, response.body)
+    assert_select ".no-print button", text: "Imprimir"
   end
 
   # ── C23 · La revisión del 2026-09-01 ─────────────────────────────────────

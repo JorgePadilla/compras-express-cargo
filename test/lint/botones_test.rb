@@ -58,6 +58,11 @@ class BotonesTest < ActiveSupport::TestCase
     # tarjeta cuadrada con cuatro renglones —la misma forma que las tarjetas de
     # caja de /empacar, que también están crudas— y lleva su `aria-label`.
     "app/views/shared/_caja_fila.html.erb"                   => 1,
+    # C29-11: el «Imprimir» de las hojas que van al papel (el manifiesto, su
+    # listado, el Warehouse Receipt). El layout `print` no carga Tailwind, así
+    # que un `ButtonComponent` saldría sin forma; lleva su estilo en el
+    # `<style>` del layout y `.no-print` lo saca de la hoja.
+    "app/views/layouts/print.html.erb"                       => 1,
     # La × de quitar un correo de aviso de la ficha del cliente. Mismo botón y
     # mismo motivo que el de la caja: un icono chico adentro de una fila que se
     # repite, con su `aria-label`.
