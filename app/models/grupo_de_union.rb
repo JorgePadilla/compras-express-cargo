@@ -78,7 +78,7 @@ class GrupoDeUnion
     end
   end
 
-  attr_reader :pre_alerta, :cajas
+  attr_reader :pre_alerta, :cajas, :manifiesto
 
   # El grupo de esta caja, o nil si va sola.
   #
@@ -100,6 +100,50 @@ class GrupoDeUnion
     nil
   end
 
+  # C29-16 · **Los paquetes del cliente que vinieron en el mismo manifiesto.**
+  #
+  # Escaneando a Diego, la pantalla dijo «Completado» con dos cajas, y Yusef:
+  #
+  #   > "Me dice completado, yo tengo más paquetes de Diego en el mismo
+  #   >  manifiesto… no, no, no, por pre-alerta o sin pre-alerta, aquí no es
+  #   >  por pre-alerta."
+  #   > "Le diga: hey, Diego tiene cinco paquetes en el vuelo y solo estás
+  #   >  escaneando tres, y faltan dos en el mismo manifiesto."
+  #
+  # Con una excepción, la del consolidado: *"al menos que el cliente tenga un
+  # consolidado… ahí ya no le va a exigir que los mida juntos"*. Por eso salen
+  # solo los **sueltos**: lo que está en una pre-alerta consolidada va con su
+  # consolidado, que tiene su propia cuenta (`.de`).
+  #
+  # Y solo los del mismo servicio: los de otro no pueden entrar a esta tanda
+  # («NO Mezclar», `PuedenIrJuntas`), así que contarlos dejaría el
+  # «Completado» imposible. Lo que ya no está en juego —sacado de la lista,
+  # anulado, entregado— no se espera; lo medido cuenta como resuelto.
+  #
+  # Se suman las cajas del envío de esta caja aunque viajen en otro
+  # manifiesto: un split partido entre dos vuelos se seguía viendo entero, y
+  # se sigue viendo.
+  #
+  # Es una **cuenta**, no un bloqueo: Yusef lo pidió como algo que *"le tiene
+  # que decir"*, y las cajas de un envío que vinieron y no están ya frenan el
+  # guardado con PIN (`C28-13`, `FaltantesDeLaTanda`). `nil` si el cliente no
+  # tiene otro paquete suelto en ese manifiesto.
+  def self.del_cliente_en_manifiesto(paquete)
+    return nil if paquete.manifiesto_id.nil? || paquete.cliente_id.nil?
+
+    candidatos = Paquete.where(manifiesto_id: paquete.manifiesto_id, cliente_id: paquete.cliente_id,
+                               tipo_envio_id: paquete.tipo_envio_id, medicion_descartada_at: nil)
+                        .where.not(estado: Paquete::NO_SON_CAJAS + %w[anulado retornado desechado])
+                        .to_a
+    candidatos |= paquete.cajas_del_mismo_envio.to_a
+    sueltos = candidatos.reject { |p| p.id != paquete.id && pre_alerta_consolidada_de(p) }
+                        .reject { |p| p.medido_at.blank? && (p.pre_factura_id || p.venta_id || p.estado.in?(FUERA_DE_JUEGO)) }
+                        .sort_by { |p| [ p.numero_recepcion.to_s, p.numero_caja.to_i, p.id ] }
+    return nil if sueltos.size <= 1
+
+    new(paquetes: sueltos, manifiesto: paquete.manifiesto)
+  end
+
   def self.pre_alerta_consolidada_de(paquete)
     return nil if paquete.cliente_id.nil?
 
@@ -111,8 +155,9 @@ class GrupoDeUnion
                     .first&.pre_alerta
   end
 
-  def initialize(pre_alerta: nil, paquetes: nil)
+  def initialize(pre_alerta: nil, paquetes: nil, manifiesto: nil)
     @pre_alerta = pre_alerta
+    @manifiesto = manifiesto
     @cajas = pre_alerta ? cajas_de(pre_alerta) : cajas_sueltas(paquetes)
   end
 

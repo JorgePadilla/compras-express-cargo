@@ -469,8 +469,15 @@ export default class extends conEnterAvanza(Controller) {
     this._yaCompleto = completo
 
     // La línea corta: los conteos y nada más. Los códigos van en los dibujitos.
-    const partes = [g.consolidada ? `Consolidando ${g.numero} · ${g.total} cajas` : `Envío de ${g.total} cajas`,
-                    `escaneadas ${cajasEnMesa}`, `medidas ${medidas}`, `faltan ${faltan.length}`]
+    //
+    // C29-16 · Lo suelto se cuenta por cliente y por manifiesto, y la línea lo
+    // dice con las palabras de Yusef: *"Diego tiene cinco paquetes en el vuelo
+    // y solo estás escaneando tres, y faltan dos en el mismo manifiesto"*.
+    const encabezado = g.consolidada ? `Consolidando ${g.numero} · ${g.total} cajas`
+      : g.del_manifiesto ? `${g.cliente} tiene ${g.total} en el manifiesto ${g.del_manifiesto}`
+      : `Envío de ${g.total} cajas`
+    const partes = [encabezado, g.del_manifiesto ? `llevás ${cajasEnMesa}` : `escaneadas ${cajasEnMesa}`,
+                    `medidas ${medidas}`, `faltan ${faltan.length}`]
     if (g.parcial_autorizado) {
       partes.push(`se facturó incompleto el ${g.parcial_autorizado.fecha} por ${g.parcial_autorizado.por}`)
     }
@@ -480,6 +487,17 @@ export default class extends conEnterAvanza(Controller) {
 
     // Las que no están acá son las que hay que ir a buscar o reclamar; las
     // «acá, sin medir» ya se ven en el dibujo y no se listan.
+    //
+    // C29-16 · Salvo en la cuenta del cliente: ahí las «acá, sin medir" son
+    // justamente las que hay que ir a buscar a la bodega, y Yusef pidió la
+    // lista —*"que te dé el listado de lo de Diego que venía en ese
+    // manifiesto"*—. Van todas las que faltan, con su warehouse y su caja.
+    if (g.del_manifiesto) {
+      this.tandaAusentesTarget.hidden = faltan.length === 0
+      this.tandaAusentesTarget.textContent = faltan.length === 0 ? "" :
+        `Faltan de ${g.cliente} en este manifiesto: ${faltan.map((c) => `${c.wr || c.tracking} (${c.donde})`).join(", ")}`
+      return
+    }
     const ausentes = faltan.filter((c) => c.estado === "en_camino" || c.estado === "esperada")
     this.tandaAusentesTarget.hidden = ausentes.length === 0
     this.tandaAusentesTarget.textContent = ausentes.length === 0 ? "" :
@@ -510,6 +528,13 @@ export default class extends conEnterAvanza(Controller) {
 
   _sufijo(c) {
     if (c.wr) {
+      // C29-16 · En la cuenta del cliente los dibujitos son de **envíos
+      // distintos**, y «-2» solo no dice de cuál: va la cola del número con
+      // su caja. En un envío partido todos comparten el número y basta la caja.
+      if (this._grupo?.del_manifiesto) {
+        const m = c.wr.match(/(\d{4})(-\d+)?$/)
+        if (m) return `${m[1]}${m[2] || ""}`
+      }
       const caja = c.wr.match(/-(\d+)$/)
       return caja ? `-${caja[1]}` : c.wr.slice(-4)
     }

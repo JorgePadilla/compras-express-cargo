@@ -418,7 +418,7 @@ class MedicionController < ApplicationController
   def respuesta_de(paquete, grupo, resultado)
     { resultado: resultado, mensaje: mensaje_de(resultado, paquete, grupo),
       paquete: datos_de(paquete), miami: miami_de(paquete),
-      pre_alerta: pre_alerta_json(grupo), grupo: grupo_json(grupo, paquete.id),
+      pre_alerta: pre_alerta_json(grupo), grupo: grupo_json(grupo_a_la_vista(paquete, grupo), paquete.id),
       manifiesto: manifiesto_json(paquete.manifiesto, paquete.id),
       medicion_previa: previa_de(paquete), notas: notas_de(paquete) }
   end
@@ -458,6 +458,17 @@ class MedicionController < ApplicationController
   end
 
   def por_caja(paquetes) = paquetes.sort_by { |p| [ p.numero_caja.to_i, p.id ] }
+
+  # C29-16 · Qué cuenta ve el operario. Un consolidado se cuenta como
+  # consolidado, igual que siempre. Lo suelto se cuenta **por cliente y por
+  # manifiesto**: *"Diego tiene cinco paquetes en el vuelo y solo estás
+  # escaneando tres"*. Sin otro suelto del cliente en ese manifiesto, queda el
+  # grupo de antes (el split, o nada).
+  def grupo_a_la_vista(paquete, grupo)
+    return grupo if grupo&.consolidada?
+
+    GrupoDeUnion.del_cliente_en_manifiesto(paquete) || grupo
+  end
 
   # El manifiesto con el que arranca la pantalla: el más reciente que todavía
   # tiene algo que medir.
@@ -572,6 +583,9 @@ class MedicionController < ApplicationController
 
     pa = grupo.pre_alerta
     { consolidada: grupo.consolidada?, numero: pa&.numero_documento,
+      # C29-16 · La cuenta del cliente en el manifiesto dice de quién y de cuál.
+      del_manifiesto: grupo.manifiesto&.numero,
+      cliente: (grupo.cajas.first&.paquete&.cliente&.nombre_completo if grupo.manifiesto),
       total: grupo.total, medidas: grupo.medidas, llegadas: grupo.llegadas,
       completo: grupo.completo?, cerrada: grupo.cerrada?,
       parcial_autorizado: (pa&.union_parcial_at && { fecha: pa.union_parcial_at.strftime("%d/%m/%Y %H:%M"),

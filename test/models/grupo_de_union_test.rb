@@ -161,7 +161,56 @@ class GrupoDeUnionTest < ActiveSupport::TestCase
     assert_empty GrupoDeUnion.de(medida).cajas.select { |c| c.bloquea_si_falta?([]) }
   end
 
+  # ── C29-16 · Los del cliente en el mismo manifiesto ────────────────────────
+
+  # Yusef: *"Diego tiene cinco paquetes en el vuelo y solo estás escaneando
+  # tres, y faltan dos en el mismo manifiesto"* — y *"al menos que el cliente
+  # tenga un consolidado"*: lo consolidado va con su consolidado.
+  test "C29-16 · cuenta los sueltos del cliente en el manifiesto, sin los consolidados ni los de otro servicio" do
+    manifiesto = manifiestos(:enviado)
+    sueltos = %w[1ZSUELTO0000001 1ZSUELTO0000002 1ZSUELTO0000003].map { |t| suelto(t, manifiesto) }
+    consolidado = llego(paquete_del_renglon(@pa, @t1))
+    consolidado.update!(manifiesto: manifiesto)
+    suelto("1ZSUELTO0000004", manifiesto, tipo_envio: tipo_envios(:aereo))
+    suelto("1ZSUELTO0000005", manifiesto, cliente: clientes(:maria))
+    suelto("1ZSUELTO0000006", nil)
+
+    g = GrupoDeUnion.del_cliente_en_manifiesto(sueltos.first)
+
+    assert_equal sueltos.map(&:id).sort, g.cajas.map { |c| c.paquete.id }.sort
+    assert_equal manifiesto, g.manifiesto
+    assert_not g.consolidada?
+    assert_equal [ "aqui" ] * 3, g.cajas.map(&:estado)
+  end
+
+  test "C29-16 · el medido cuenta, el sacado de la lista y el anulado no se esperan" do
+    manifiesto = manifiestos(:enviado)
+    a, b, c, d = %w[1ZSUELTO0000011 1ZSUELTO0000012 1ZSUELTO0000013 1ZSUELTO0000014].map { |t| suelto(t, manifiesto) }
+    b.update!(medido_at: Time.current, medido_por: "SP")
+    c.update!(medicion_descartada_at: Time.current)
+    d.update_columns(estado: "anulado")
+
+    g = GrupoDeUnion.del_cliente_en_manifiesto(a)
+
+    assert_equal [ a.id, b.id ].sort, g.cajas.map { |x| x.paquete.id }.sort
+    assert_equal 1, g.medidas
+  end
+
+  test "C29-16 · sin otro suelto del cliente en ese manifiesto, no hay cuenta" do
+    solo = suelto("1ZSUELTO0000021", manifiestos(:enviado))
+
+    assert_nil GrupoDeUnion.del_cliente_en_manifiesto(solo)
+    assert_nil GrupoDeUnion.del_cliente_en_manifiesto(suelto("1ZSUELTO0000022", nil))
+  end
+
   private
+
+  def suelto(tracking, manifiesto, cliente: clientes(:juan), tipo_envio: tipo_envios(:cer))
+    p = Paquete.create!(tracking: tracking, cliente: cliente, tipo_envio: tipo_envio,
+                        sucursal_recepcion: sucursales(:miami), estado: "recibido_miami", descripcion: "Zapatos", peso: 2)
+    p.update!(estado: "en_aduana", manifiesto: manifiesto)
+    p.reload
+  end
 
   # Una pre-alerta consolidada nueva de Juan. Cada renglón crea su paquete
   # «esperado» (`crear_paquete_esperado`), sin warehouse receipt: el número lo
