@@ -61,6 +61,30 @@ class SonidosWavTest < ActiveSupport::TestCase
     assert_operator muestras.map(&:abs).max, :>, 10_000, "el archivo salió mudo o casi"
   end
 
+  # PR-C29.9 · *"Más cruel, fuerte, molesto, intenso"*. El «tic» de antes —una
+  # cuadrada que empezaba a apagarse en la primera muestra— tenía un RMS de
+  # 0.24 sobre un pico de 0.9. Sostenido y saturado, el tono vive casi todo
+  # su tiempo contra el techo. Si alguien vuelve a la caída exponencial, esto
+  # se pone rojo.
+  test "suena fuerte: casi todo el tono va contra el techo" do
+    datos = SonidosWav.render(SonidosDeError.find("grave"))
+    muestras = datos[CABECERA..].unpack("s<*").map { |m| m / 32_767.0 }
+    rms = Math.sqrt(muestras.sum { |m| m * m } / muestras.size)
+
+    assert_operator rms, :>, 0.7, "RMS #{rms.round(3)}: volvió a sonar como un «tic»"
+    assert_operator muestras.map(&:abs).max, :<=, 1.0
+  end
+
+  test "es áspero: no es una sola onda cuadrada" do
+    # Una cuadrada sola solo tiene dos valores (±pico). La sierra a un
+    # semitono llena todo lo del medio: si la muestra tiene pocas amplitudes
+    # distintas, se perdió la segunda nota.
+    datos = SonidosWav.render(SonidosDeError.find("grave"))
+    medio = datos[CABECERA..].unpack("s<*")[1_000, 5_000]
+
+    assert_operator medio.uniq.size, :>, 100
+  end
+
   test "el silencio del triple es silencio de verdad" do
     triple = SonidosDeError.find("triple")
     datos = SonidosWav.render(triple)
@@ -81,7 +105,7 @@ class SonidosWavTest < ActiveSupport::TestCase
     assert(nombres.all? { |n| n.end_with?(".wav") })
   end
 
-  test "los tres archivos versionados estan al dia" do
+  test "los archivos versionados estan al dia" do
     # Se commitean como los PDF de entregables. Si alguien cambia una variante y
     # no corre `docs:sonidos_wav`, el archivo que se manda por WhatsApp deja de
     # ser el que suena en la pantalla.

@@ -1,5 +1,6 @@
 # Las opciones del sonido de error, para que Yusef elija una. Eran tres
-# (`RP-20`); la cuarta, aguda, la pidió él el 2026-09-05 (`C25-10`).
+# (`RP-20`); la cuarta, aguda, la pidió él el 2026-09-05 (`C25-10`); la
+# quinta, la «alarma», salió de Jorge el 2026-10-08 (`PR-C29.9`).
 #
 # `RP-20` es deuda nuestra: el cuestionario le prometía "te mandamos tres
 # opciones por WhatsApp para que las oigas" y esas tres nunca se hicieron. Dejó
@@ -18,14 +19,38 @@
 module SonidosDeError
   # `hz` cero es silencio: sirve para separar pulsos sin inventar otra clave.
   #
-  # El orden importa: `grave` va primero porque es **el sonido de hoy**. Que la
-  # respuesta "no le muevan nada" sea una opción no es cortesía, es honestidad;
-  # y así cambiar el default es una decisión deliberada y no un descuido.
+  # El orden importa: la primera es **el default**. Fue `grave` —el sonido de
+  # siempre— hasta el 2026-10-08, y que «no le muevan nada» fuera una opción
+  # era honestidad: cambiar el default tenía que ser una decisión, no un
+  # descuido.
+  #
+  # PR-C29.9 · Y la decisión llegó. Jorge, probando el manifiesto con Yusef:
+  # *"el audio de error creo que tiene que ser **más cruel, fuerte, molesto,
+  # intenso**"*. Ya lo había dicho Yusef el mismo día: *"algo como que de
+  # verdad te llama, que está equivocada, que no va ahí"*, y en C25-10 desde
+  # la mesa de empaque: *"está muy suavecito"*. Va primera la «alarma»: cinco
+  # zumbidos iguales y rápidos, que es como suena un error que no se puede
+  # ignorar. `grave` sigue estando para quien la elija.
+  #
+  # Los usuarios que ya existen tienen `grave` **guardado** en la columna (es
+  # NOT NULL con default), y no se les pisa: no hay forma de distinguir a quien
+  # la eligió de quien nunca abrió el modal. Lo que sí les llega a todos es la
+  # voz nueva (`VOZ`, abajo), que vuelve áspera cualquier variante.
   VARIANTES = [
+    {
+      id: "alarma",
+      nombre: "Alarma",
+      descripcion: "Cinco zumbidos ásperos y rápidos. El más molesto: imposible de ignorar.",
+      tonos: [ { hz: 400, ms: 60 }, { hz: 0, ms: 30 },
+               { hz: 400, ms: 60 }, { hz: 0, ms: 30 },
+               { hz: 400, ms: 60 }, { hz: 0, ms: 30 },
+               { hz: 400, ms: 60 }, { hz: 0, ms: 30 },
+               { hz: 400, ms: 60 } ]
+    },
     {
       id: "grave",
       nombre: "Grave",
-      descripcion: "El que suena hoy. Un tono bajo y seco.",
+      descripcion: "El de siempre. Un tono bajo, largo y áspero.",
       tonos: [ { hz: 200, ms: 300 } ]
     },
     {
@@ -42,7 +67,7 @@ module SonidosDeError
                { hz: 320, ms: 80 }, { hz: 0, ms: 60 },
                { hz: 320, ms: 120 } ]
     },
-    # C25-10 · La cuarta, y la única **aguda**. Las tres de arriba son graves
+    # C25-10 · La única **aguda**. Las de arriba son graves
     # (200 a 440 Hz) y Yusef, desde la mesa de empaque con la computadora
     # lejos, pidió lo contrario: *"tiene que ser más como **pit** que tú… está
     # muy suavecito"*. Un tono alto y plano: no sube (la regla de acá), dura
@@ -68,9 +93,9 @@ module SonidosDeError
   #   > "Algo como que de verdad te llama, que está equivocada, que no va ahí."
   #
   # Cada uno toca una de las `VARIANTES` de arriba —no se inventan tonos
-  # nuevos: las cuatro ya pasaron por las reglas de este archivo (no suben, no
-  # se parecen a los avisos)—, elegida por el operario en el modal de sonidos.
-  # Los defaults son distintos entre sí y del error de siempre (`grave`).
+  # nuevos: todas pasaron por las reglas de este archivo (no suben, no se
+  # parecen a los avisos)—, elegida por el operario en el modal de sonidos.
+  # Los defaults son distintos entre sí y del error de siempre (`DEFAULT`).
   #
   # Y **suenan dos veces**: el pip de un error cualquiera es un pip, y éstos
   # tienen que llamar. `REPETICIONES` y `PAUSA_MS` los lee el JS por el mismo
@@ -82,8 +107,47 @@ module SonidosDeError
       nombre: "Va a otra sucursal", ayuda: "Al escanear un paquete que retira en otra sucursal que la del manifiesto" }
   ].freeze
 
-  REPETICIONES = 2
+  # PR-C29.9 · **Tres** veces, no dos. Estos dos errores frenan el escaneo y
+  # *"generan gasto"* (C28-04): un paquete de otro servicio o de otra sucursal
+  # que se cuela viaja mal. Jorge pidió el error *"más intenso"*; un tercer
+  # golpe es lo que separa «algo pasó» de «pará». Son los únicos que
+  # repiten, y son raros: el pip de cada escaneo bueno no cambia.
+  REPETICIONES = 3
   PAUSA_MS = 150
+
+  # PR-C29.9 · **La voz del error**: con qué timbre suena cualquier variante.
+  #
+  # Antes era una onda cuadrada sola cuya ganancia empezaba a caer desde la
+  # primera muestra (`exponentialRampToValueAtTime` a 0.001): cada tono era un
+  # «tic» que se apagaba antes de llegar a sonar, y el tope de ganancia (0.9 ×
+  # volumen) lo dejaba en 0.54 con el volumen por defecto. Jorge: *"más cruel,
+  # fuerte, molesto, intenso"*.
+  #
+  # Ahora:
+  #   · **dos ondas a un semitono** —cuadrada en la nota, sierra un semitono
+  #     arriba (`segunda`)—: el choque de dos notas pegadas es el zumbido de
+  #     un buzzer, el intervalo más molesto que hay;
+  #   · **sostenida**: sube en `ataque_ms`, se queda arriba todo el tono y cae
+  #     en los últimos `caida_ms`. Suena el tono entero, no su primer instante;
+  #   · **saturada** con una curva `tanh` de ganancia `saturacion`: aplasta la
+  #     onda contra el techo, que es lo que la hace sonar fuerte al mismo
+  #     volumen, y le agrega la aspereza de un parlante al límite.
+  #
+  # Es una constante y no tres números en el JS por la misma razón que las
+  # variantes: `SonidosWav` renderea los archivos de WhatsApp **con la misma
+  # cuenta**, y la vista se la pasa al navegador en un data attribute. Por eso
+  # la saturación es una curva (`WaveShaperNode`) y no un compresor: una curva
+  # se escribe igual en Ruby y en el navegador, un compresor no.
+  #
+  # Es solo de los errores: `success`, `notify`, `alert` y `completo` siguen
+  # con su tono limpio. Un «todo bien» áspero dejaría de sonar a «todo bien».
+  VOZ = {
+    segunda: 1.0595,   # un semitono: 2^(1/12)
+    mezcla: 0.6,       # cuánto aporta cada onda antes de saturar
+    saturacion: 3.0,   # la `k` de tanh(k·x)/tanh(k)
+    ataque_ms: 5,
+    caida_ms: 15
+  }.freeze
 
   def self.motivo(id)
     MOTIVOS.find { |m| m[:id] == id }
@@ -102,6 +166,15 @@ module SonidosDeError
 
   def self.find(id)
     VARIANTES.find { |v| v[:id] == id } || VARIANTES.first
+  end
+
+  # La curva de saturación, una muestra por vez. La usan `SonidosWav` y —con
+  # los mismos números, vía `VOZ`— el `WaveShaperNode` del navegador. La
+  # entrada se recorta a [-1, 1] como hace el `WaveShaperNode` con lo que cae
+  # fuera de su curva.
+  def self.saturar(x)
+    k = VOZ[:saturacion]
+    Math.tanh(k * x.clamp(-1.0, 1.0)) / Math.tanh(k)
   end
 
   # Solo los tonos que suenan, sin los silencios.

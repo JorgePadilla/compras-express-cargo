@@ -25,7 +25,9 @@ module SonidoHelper
       # veces.
       "data-audio-por-motivo-value" => SonidosDeError::MOTIVOS.to_h { |m| [ m[:id], variante_de_motivo(m[:id], usuario) ] }.to_json,
       "data-audio-repeticiones-value" => SonidosDeError::REPETICIONES,
-      "data-audio-pausa-value" => SonidosDeError::PAUSA_MS
+      "data-audio-pausa-value" => SonidosDeError::PAUSA_MS,
+      # PR-C29.9 · Con qué timbre suena el error: la misma cuenta que los .wav.
+      "data-audio-voz-value" => SonidosDeError::VOZ.to_json
     }
   end
 

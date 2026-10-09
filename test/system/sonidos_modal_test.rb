@@ -20,13 +20,15 @@ class SonidosModalTest < ApplicationSystemTestCase
     assert_selector "#sonido-config-title", wait: 5
   end
 
-  test "estan las tres opciones de error, y la de hoy viene marcada" do
+  test "estan todas las opciones de error, y la de por defecto viene marcada" do
     SonidosDeError::VARIANTES.each do |variante|
       assert_text variante[:nombre]
       assert_selector "input[name='sonido_error_variante'][value='#{variante[:id]}']"
     end
 
-    assert_selector "input[name='sonido_error_variante'][value='grave']:checked"
+    # El digitador de los fixtures no eligió ninguna: tiene la de la columna,
+    # que desde PR-C29.9 es la alarma.
+    assert_selector "input[name='sonido_error_variante'][value='#{SonidosDeError::DEFAULT}']:checked"
   end
 
   test "estan los sonidos que el sistema toca de verdad" do

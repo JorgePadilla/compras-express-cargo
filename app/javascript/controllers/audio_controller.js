@@ -20,7 +20,11 @@ export default class extends Controller {
     // Salen de `SonidosDeError::MOTIVOS`, igual que las variantes.
     porMotivo: { type: Object, default: {} },
     repeticiones: { type: Number, default: 2 },
-    pausa: { type: Number, default: 150 }
+    pausa: { type: Number, default: 150 },
+    // PR-C29.9 · La voz del error: `SonidosDeError::VOZ`, por el mismo data
+    // attribute que las variantes, para que el navegador y los .wav hagan la
+    // misma cuenta.
+    voz: { type: Object, default: {} }
   }
 
   connect() {
@@ -67,7 +71,7 @@ export default class extends Controller {
     if (!this.enabledValue) return
 
     const variante = this._varianteActiva()
-    if (!variante) return this._playTone(200, 0.3)
+    if (!variante) return this._playErrorTone(200, 0.3)
 
     this._tocarSecuencia(variante.tonos)
   }
@@ -118,6 +122,9 @@ export default class extends Controller {
 
   // Los tonos van uno detrás del otro. `hz: 0` es un silencio: sirve para
   // separar pulsos sin inventar otra clave en la constante de Ruby.
+  //
+  // Solo la tocan los errores (`error`, `errorTipo`, `errorSucursal` y el
+  // «Escuchar» del modal), así que va siempre con la voz del error.
   _tocarSecuencia(tonos, i = 0) {
     if (!tonos || i >= tonos.length) return
 
@@ -125,7 +132,7 @@ export default class extends Controller {
     const seguir = () => this._tocarSecuencia(tonos, i + 1)
 
     if (!hz) return setTimeout(seguir, ms)
-    this._playTone(hz, ms / 1000, seguir)
+    this._playErrorTone(hz, ms / 1000, seguir)
   }
 
   // C28-11 · El consolidado quedó entero: tres tonos que suben. Yusef: *"y
@@ -248,9 +255,97 @@ export default class extends Controller {
   }
 
   // 0-100 → ganancia. Tope 0.9: por encima el oscilador satura y suena sucio.
+  // Es la de los sonidos limpios; el error tiene la suya (`_gainError`).
   get _gain() {
     const pct = Math.min(100, Math.max(0, this.volumenValue)) / 100
     return Math.max(0.001, pct * 0.9)
+  }
+
+  // PR-C29.9 · El error, con tope 1.0: lo que pase del techo lo aplasta la
+  // curva de saturación, que es justamente lo que se busca.
+  get _gainError() {
+    const pct = Math.min(100, Math.max(0, this.volumenValue)) / 100
+    return Math.max(0.001, pct)
+  }
+
+  // Respaldo por si una pantalla montara `audio` sin `atributos_de_audio`.
+  // No debería pasar: `sonidos_cableados_test` caza a la que se olvide.
+  get _voz() {
+    return Object.assign({ segunda: 1.0595, mezcla: 0.6, saturacion: 3.0, ataque_ms: 5, caida_ms: 15 },
+                         this.vozValue || {})
+  }
+
+  // PR-C29.9 · El tono de error. Jorge, 2026-10-08: *"el audio de error creo
+  // que tiene que ser más cruel, fuerte, molesto, intenso"*.
+  //
+  // El de antes era `_playTone`: una cuadrada sola cuya ganancia empezaba a
+  // caer en la primera muestra, así que cada tono era un «tic» que se apagaba
+  // antes de sonar. Éste es la `VOZ` de `SonidosDeError`, la misma cuenta que
+  // hace `SonidosWav` para los archivos:
+  //   · una cuadrada en la nota y una sierra un semitono arriba: el choque es
+  //     el zumbido de un buzzer;
+  //   · sostenido: sube en `ataque_ms`, se queda arriba, cae en `caida_ms`;
+  //   · saturado con la curva `tanh` (`_salidaDeError`), que lo aplasta contra
+  //     el techo y lo hace sonar fuerte al mismo volumen.
+  _playErrorTone(frequency, duration, callback) {
+    try {
+      const ctx = this._getContext()
+      if (!ctx) {
+        console.warn("[audio] este navegador no soporta Web Audio")
+        return
+      }
+      const voz = this._voz
+      const inicio = ctx.currentTime
+      const fin = inicio + duration
+      const arriba = inicio + voz.ataque_ms / 1000
+
+      const envolvente = ctx.createGain()
+      envolvente.gain.setValueAtTime(0, inicio)
+      envolvente.gain.linearRampToValueAtTime(1, arriba)
+      envolvente.gain.setValueAtTime(1, Math.max(arriba, fin - voz.caida_ms / 1000))
+      envolvente.gain.linearRampToValueAtTime(0, fin)
+      envolvente.connect(this._salidaDeError(ctx))
+
+      const ondas = [ [ "square", frequency ], [ "sawtooth", frequency * voz.segunda ] ].map(([ forma, hz ]) => {
+        const oscilador = ctx.createOscillator()
+        oscilador.type = forma
+        oscilador.frequency.value = hz
+        const mezcla = ctx.createGain()
+        mezcla.gain.value = voz.mezcla
+        oscilador.connect(mezcla)
+        mezcla.connect(envolvente)
+        return oscilador
+      })
+
+      ondas.forEach((o) => { o.start(inicio); o.stop(fin) })
+      if (callback) ondas[0].onended = callback
+    } catch (e) {
+      console.warn("[audio] no se pudo reproducir el tono de error:", e)
+    }
+  }
+
+  // La saturación y el volumen, armados una vez por contexto. La curva es
+  // tanh(k·x)/tanh(k): la misma que `SonidosDeError.saturar` en Ruby. El
+  // volumen se relee en cada tono porque el modal de sonidos lo cambia sin
+  // recargar.
+  _salidaDeError(ctx) {
+    if (!this._cadenaError || this._cadenaError.ctx !== ctx) {
+      const k = this._voz.saturacion
+      const curva = new Float32Array(2048)
+      for (let i = 0; i < curva.length; i++) {
+        const x = (i * 2) / (curva.length - 1) - 1
+        curva[i] = Math.tanh(k * x) / Math.tanh(k)
+      }
+      const saturacion = ctx.createWaveShaper()
+      saturacion.curve = curva
+      saturacion.oversample = "none"
+      const volumen = ctx.createGain()
+      saturacion.connect(volumen)
+      volumen.connect(ctx.destination)
+      this._cadenaError = { ctx, entrada: saturacion, volumen }
+    }
+    this._cadenaError.volumen.gain.value = this._gainError
+    return this._cadenaError.entrada
   }
 
   _playTone(frequency, duration, callback) {

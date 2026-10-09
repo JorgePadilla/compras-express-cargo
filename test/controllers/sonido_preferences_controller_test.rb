@@ -27,7 +27,9 @@ class SonidoPreferencesControllerTest < ActionDispatch::IntegrationTest
   test "los defaults dejan el sonido encendido" do
     assert @user.sonido_habilitado
     assert_equal 60, @user.sonido_volumen
-    assert_equal "grave", @user.sonido_error_variante, "el default tiene que ser el sonido de hoy"
+    # PR-C29.9 · Desde el 2026-10-08 es la alarma: *"más cruel, fuerte,
+    # molesto, intenso"*.
+    assert_equal SonidosDeError::DEFAULT, @user.sonido_error_variante, "el default es el de la constante"
   end
 
   # ── RP-20: la variante del sonido de error ──────────────────────────────
@@ -44,10 +46,11 @@ class SonidoPreferencesControllerTest < ActionDispatch::IntegrationTest
     # que no existe, no. Guardar un default silencioso escondería que el JS
     # está mandando basura, y el operario escucharía otro sonido sin saber por
     # qué. Se rechaza entera.
+    antes = @user.sonido_error_variante
     patch preferencia_sonido_url, params: { variante: "reggaeton" }
 
     assert_response :unprocessable_entity
-    assert_equal "grave", @user.reload.sonido_error_variante
+    assert_equal antes, @user.reload.sonido_error_variante
   end
 
   test "una variante mala no se lleva puesto el volumen del mismo request" do
