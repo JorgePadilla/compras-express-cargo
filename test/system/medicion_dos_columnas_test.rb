@@ -43,6 +43,46 @@ class MedicionDosColumnasTest < ApplicationSystemTestCase
     end
   end
 
+  # PR-C29.11 · Jorge: *"it seems like the scanning, the left part, is the one
+  # that should be a little bigger"*. Desde `lg` escanear se lleva más ancho,
+  # y medir no puede quedar tan angosta que no entren las tres medidas. 1024
+  # con un volumen es el caso que salía al revés con `fr` a secas.
+  [ 1024, 1400 ].each do |ancho|
+    test "con #{ancho} px escanear es más ancha que medir, y medir sigue entrando" do
+      page.driver.browser.manage.window.resize_to(ancho, 1000)
+      abrir_con(1)
+      # Con un volumen guardado: su renglón, con los dos botones de 48, es lo
+      # que más empuja el ancho propio de medir.
+      agregar_un_volumen
+
+      escanear = caja_de("#codigo_medicion", cerca: ".rounded-lg.shadow")
+      medir = caja_de("#medicion_peso", cerca: ".rounded-lg.shadow")
+      ancho_escanear = escanear["right"] - escanear["left"]
+      ancho_medir = medir["right"] - medir["left"]
+      assert_operator ancho_escanear, :>, ancho_medir, "escanear mide #{ancho_escanear} y medir #{ancho_medir}"
+      assert_operator ancho_medir, :>=, 360, "medir quedó en #{ancho_medir} px: no entran las tres medidas"
+    end
+  end
+
+  # PR-C29.11 · Jorge: *"all actionable in medicion should be easy to touch in
+  # a touch screen"*. Con la tanda armada y un volumen guardado —que es cuando
+  # están a la vista casi todos—, todo lo que se aprieta mide 48 px o más. Lo
+  # de los modales lo cuida `test/lint/medicion_tactil_test.rb`. Se mira la
+  # pantalla y no el marco del layout (el sol del tema oscuro, la barra
+  # lateral), que es el mismo en todas.
+  test "todo lo que se aprieta a la vista mide 48 px o más" do
+    abrir_con(2)
+    agregar_un_volumen
+
+    chicos = page.evaluate_script(<<~JS)
+      Array.from(document.querySelector("[data-controller~=medicion]").querySelectorAll("button, input:not([type=hidden]), select, a[href]"))
+        .filter(function (el) { return el.offsetParent !== null })
+        .map(function (el) { var r = el.getBoundingClientRect(); return { que: (el.getAttribute("aria-label") || el.textContent || el.id || el.name).trim().slice(0, 40), alto: r.height, ancho: r.width } })
+        .filter(function (x) { return x.alto < 47.5 || x.ancho < 47.5 })
+    JS
+    assert_empty chicos, "estos se aprietan y miden menos de 48 px: #{chicos.inspect}"
+  end
+
   test "antes de escanear, la columna de medir dice qué va a pasar ahí" do
     visit medicion_index_path
 
@@ -123,10 +163,21 @@ class MedicionDosColumnasTest < ApplicationSystemTestCase
     end
   end
 
-  def caja_de(selector)
+  def agregar_un_volumen
+    find("#codigo_medicion").send_keys(:enter)
+    send_keys "10", :enter, "10", :enter, "10", :enter, "10"
+    page.driver.browser.action.send_keys(:f5).perform
+    assert_selector "[data-medicion-target=listaVolumenes] li", count: 1, wait: 5
+  end
+
+  # `cerca:` sube con `closest` hasta la caja que importa: la tarjeta de la
+  # columna, no el campo.
+  def caja_de(selector, cerca: nil)
     page.evaluate_script(<<~JS)
       (function () {
-        var r = document.querySelector(#{selector.to_json}).getBoundingClientRect();
+        var el = document.querySelector(#{selector.to_json});
+        #{cerca ? "el = el.closest(#{cerca.to_json});" : ""}
+        var r = el.getBoundingClientRect();
         return { top: r.top, bottom: r.bottom, left: r.left, right: r.right };
       })()
     JS
