@@ -4,6 +4,9 @@ require "application_system_test_case"
 # largos. La 2.25×1.25 **no tiene una fila más**, así que cada dato nuevo entra
 # en una fila que ya existe y `data-ajustar` la encoge hasta que quepa.
 #
+# C30-01 · La excepción es el cliente, que tiene fila propia arriba y la paga el
+# QR, achicado a 0.90in. Por eso el alto ahora se mide con decimales.
+#
 # Se mide en Chrome y no a ojo: [[project_la_dymo_no_tiene_una_fila_mas]].
 class EtiquetaMedicionCabeTest < ApplicationSystemTestCase
   setup do
@@ -73,6 +76,46 @@ class EtiquetaMedicionCabeTest < ApplicationSystemTestCase
     assert_text "10 de 10"
   end
 
+  # C30-01 · El cliente, **nombre con código**, en una fila propia arriba: *"¿Quién
+  # es el cliente? … No tiene nombre … Nombre con código"*. Revierte el *"no le
+  # vamos a meter nombre ni nada"* de C26-04, y es la única fila más que la Dymo
+  # aceptó: la pagó el QR, que bajó a 0.90in.
+  #
+  # La peor: un nombre de cuatro palabras con preposiciones —52 caracteres con el
+  # código, más que el 99 % de los 21 mil clientes del sistema viejo— en la
+  # décima de diez mediciones y con dos pre-alertas. El nombre se encoge, no se
+  # corta; y el QR no baja de lo que el comentario del layout promete.
+  test "el cliente va arriba con su código, y el nombre más largo cabe sin cortarse" do
+    clientes(:juan).update!(nombre: "María de los Ángeles", apellido: "Castellanos Hernández")
+    bulto = Bulto.create!(cliente: clientes(:juan), sesion: SecureRandom.uuid, orden: 10, de_cuantos: 10,
+                          medido_at: Time.current, medido_por: "MD",
+                          peso: 999.5, alto: 99.5, largo: 99.5, ancho: 99.5)
+    @paquete.update!(medicion_sesion: bulto.sesion)
+    otra = caja_del(bulto, 1)
+    pre_alerta_de(@paquete, "PA-999998")
+    pre_alerta_de(otra, "PA-999999")
+
+    visit etiqueta_bulto_medicion_path(bulto)
+
+    assert_cabe
+    assert_selector ".med > .cliente:first-child", text: "CEC-001 · María de los Ángeles Castellanos Hernández"
+    assert_selector ".cliente .cod", text: "CEC-001"
+    assert_selector ".codigo", text: "PA-999998 +1"
+    assert_text "10 de 10"
+
+    # Lo que pagó la fila: el QR en 0.90in (86.4 px), y no menos.
+    qr = page.evaluate_script("document.querySelector('.qr svg').getBoundingClientRect().height")
+    assert_in_delta 86.4, qr, 0.5, "el QR tenía que quedar en 0.90in"
+  end
+
+  # La gemela: la etiqueta de la caja suelta (sin bulto) lleva la misma fila.
+  test "la etiqueta de la caja suelta también lleva al cliente arriba" do
+    visit etiqueta_medicion_path(@paquete)
+
+    assert_cabe
+    assert_selector ".med > .cliente:first-child", text: "CEC-001 · Juan Perez"
+  end
+
   test "sin pre-alerta, la etiqueta no inventa ninguna" do
     bulto = Bulto.create!(cliente: clientes(:juan), sesion: SecureRandom.uuid, orden: 1, de_cuantos: 1,
                           medido_at: Time.current, medido_por: "MD", peso: 20)
@@ -106,12 +149,25 @@ class EtiquetaMedicionCabeTest < ApplicationSystemTestCase
   # de afuera deja pasar una línea recortada sin que nadie se entere, y
   # [[project_etiqueta_trackings_completos]] dice que el código nunca se corta.
   # Por eso se miden las dos, y cada fila que `data-ajustar` encoge.
+  #
+  # C30-01 · Con la fila del cliente arriba, la etiqueta queda a ~2 px del borde,
+  # y `scrollHeight` es entero: no ve décimas
+  # ([[project_la_dymo_no_tiene_una_fila_mas]]). Por eso además se mide, en
+  # px con decimales, que el borde de abajo del código no pase el borde
+  # interior de la etiqueta.
   def assert_cabe
     caja = medir(".med")
     assert_operator caja[:alto], :<=, caja[:altoVisible], "se recortan #{caja[:alto] - caja[:altoVisible]}px por abajo"
     assert_operator caja[:ancho], :<=, caja[:anchoVisible], "se recortan #{caja[:ancho] - caja[:anchoVisible]}px de ancho"
 
-    %w[.codigo .fecha .dims].each do |selector|
+    aire = page.evaluate_script(
+      "(function(){var m=document.querySelector('.med');var r=m.getBoundingClientRect();" \
+      "var pb=parseFloat(getComputedStyle(m).paddingBottom);" \
+      "return (r.bottom-pb)-m.lastElementChild.getBoundingClientRect().bottom;})()"
+    )
+    assert_operator aire, :>=, 0, "la última fila se pasa #{-aire.round(2)}px del borde de abajo"
+
+    %w[.cliente .codigo .fecha .dims].each do |selector|
       fila = medir(selector)
       assert_operator fila[:ancho], :<=, fila[:anchoVisible],
                       "«#{selector}» se corta: sobran #{fila[:ancho] - fila[:anchoVisible]}px"

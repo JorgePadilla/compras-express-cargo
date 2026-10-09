@@ -1,11 +1,15 @@
 <%# C26-04 · Las etiquetas de medición. Una por caja: cuando el grupo se
     completa salen todas en un solo documento —*"que salgan las 3 stickers,
     una para cada paquete"*— y `layouts/etiqueta_medicion` las separa con
-    `page-break-before`. %>
+    `page-break-before`.
+
+    C30-01 · Y con el cliente arriba, igual que la del bulto: es la misma
+    etiqueta para quien la escanea en pre-factura. %>
 <% (@paquetes || [ @paquete ]).each do |p| %>
   <div class="med">
+    <%= render "medicion/fila_cliente", cliente: p.cliente %>
     <div class="arriba">
-    <div class="qr"><%= etiqueta_qr_svg(etiqueta_qr_medicion(p), tamano: "1.0in") %></div>
+    <div class="qr"><%= etiqueta_qr_svg(etiqueta_qr_medicion(p), tamano: "0.90in") %></div>
     <div class="datos">
       <div class="fecha"><%= p.medido_at.strftime("%d/%m/%Y %H:%M") %></div>
       <div class="dims" data-ajustar data-ajustar-min="6"><%= (m = etiqueta_medidas(p)) ? "#{m} in" : "solo peso" %></div>
