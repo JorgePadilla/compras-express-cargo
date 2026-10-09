@@ -46,13 +46,18 @@ class SignosVitales
   # Los umbrales, en un solo lugar.
   RAM_MIRAR = 75
   RAM_PROBLEMA = 90
-  DISCO_MIRAR = 80
-  DISCO_PROBLEMA = 90
+  # El disco de la máquina de Render: compartida, y vive alrededor del 83 %
+  # (staging, 2026-10-09). Se mira igual —si se llena, la app se cae con
+  # ella— pero con la vara de una máquina compartida.
+  DISCO_MAQUINA_MIRAR = 90
+  DISCO_MAQUINA_PROBLEMA = 95
   CONEXIONES_MIRAR = 80
   CONEXIONES_PROBLEMA = 95
   LATIDO_VIVO = 5.minutes
   NOCTURNA_ATRASADA = 26.hours
   FALLIDOS_A_MOSTRAR = 5
+  # El mismo default que `config/puma.rb` (`ENV.fetch("RAILS_MAX_THREADS", 3)`).
+  HILOS_DE_PUMA_POR_DEFECTO = 3
 
   NO_DISPONIBLE = "no disponible".freeze
 
@@ -75,6 +80,8 @@ class SignosVitales
     end
 
     def nucleos = Etc.nprocessors
+
+    def puma_stats = defined?(::Puma) && ::Puma.respond_to?(:stats_hash) ? ::Puma.stats_hash : nil
 
     # Lo que ocupan **nuestras** carpetas, en KB. `df` mide la máquina.
     def du(*rutas)
@@ -124,8 +131,9 @@ class SignosVitales
                  disco_de_la_maquina, carga_de_la_maquina ],
       filas: [],
       nota: "Es el contenedor web. El worker de la cola es otro servicio: se lo ve en «Cola de trabajos». " \
-            "Los dos últimos son de la máquina de Render, que es compartida con otros servicios: van de referencia y " \
-            "no cuentan para el semáforo. render.yaml pide 2 procesos de Puma (WEB_CONCURRENCY), pero " \
+            "Los dos últimos son de la máquina de Render, compartida con otros servicios: no los llenamos " \
+            "nosotros, pero si revientan la app se cae con ellos, así que cuentan para el semáforo. " \
+            "render.yaml pide 2 procesos de Puma (WEB_CONCURRENCY), pero " \
             "config/puma.rb no tiene `workers`: corre uno solo."
     )
   end
@@ -185,16 +193,21 @@ class SignosVitales
     no_disponible("Disco de la app")
   end
 
-  # De referencia, **sin semáforo** (`nivel: nil`): no lo llenamos nosotros y
-  # no hay nada que hacer de este lado si se llena.
+  # No lo llenamos nosotros, pero **se mira igual**. Jorge, 2026-10-09:
+  # *"me parece que aunque no sean nuestros siempre hay que mirarlos, porque
+  # si revientan muere la app"*. Con su propia vara (90 / 95 %): una máquina
+  # compartida vive más llena que un disco propio.
   def disco_de_la_maquina
     linea = @fuente.df("/").lines.last.split
     usados = linea[2].to_i * 1024
     total = usados + linea[3].to_i * 1024
+    porcentaje = (usados * 100.0 / total).round(1)
     Medida.new(nombre: "Disco de la máquina de Render", valor: "#{humano(usados)} de #{humano(total)}",
-               detalle: "compartido con otros servicios: no es nuestro", nivel: nil)
+               detalle: "compartido con otros servicios: no lo llenamos nosotros, pero si se llena la app se cae",
+               porcentaje: porcentaje,
+               nivel: por_umbral(porcentaje, DISCO_MAQUINA_MIRAR, DISCO_MAQUINA_PROBLEMA))
   rescue StandardError
-    no_disponible("Disco de la máquina de Render", nivel: nil)
+    no_disponible("Disco de la máquina de Render")
   end
 
   # Lo que nos toca de CPU: `cpu.max` de cgroup v2 es «cuota período»
@@ -207,16 +220,22 @@ class SignosVitales
     no_disponible("CPU del contenedor")
   end
 
-  # `/proc/loadavg` también es de la máquina entera, no del contenedor: con 8
-  # núcleos y otros servicios encima, no dice cuánto usamos nosotros. Sin
-  # semáforo, como el disco de la máquina.
+  # `/proc/loadavg` también es de la máquina entera, no del contenedor. Se
+  # mira igual que el disco de la máquina: si la máquina se ahoga, nuestra
+  # media CPU se ahoga con ella. Gold con la carga de 5 minutos por encima de
+  # los núcleos; rojo al doble.
   def carga_de_la_maquina
     uno, cinco, quince = @fuente.leer("/proc/loadavg").split.first(3).map(&:to_f)
     nucleos = @fuente.nucleos
+    nivel = if cinco > nucleos * 2 then :problema
+            elsif cinco > nucleos then :mirar
+            else :bien
+            end
     Medida.new(nombre: "Carga de la máquina de Render", valor: format("%.2f · %.2f · %.2f", uno, cinco, quince),
-               detalle: "1, 5 y 15 min · #{nucleos} #{nucleos == 1 ? 'núcleo' : 'núcleos'} compartidos: no es nuestra", nivel: nil)
+               detalle: "1, 5 y 15 min · #{nucleos} #{nucleos == 1 ? 'núcleo' : 'núcleos'} compartidos con otros servicios",
+               nivel: nivel)
   rescue StandardError
-    no_disponible("Carga de la máquina de Render", nivel: nil)
+    no_disponible("Carga de la máquina de Render")
   end
 
   def arriba_desde
@@ -230,14 +249,18 @@ class SignosVitales
   end
 
   def puma
-    stats = defined?(::Puma) && ::Puma.respond_to?(:stats_hash) ? ::Puma.stats_hash : nil
+    stats = @fuente.puma_stats
     raise "sin estadísticas de Puma" unless stats
 
     # 2026-10-08 · En staging salía «? hilos»: las claves pueden venir como
     # texto o como símbolo según la versión, y sin ellas queda la config.
     stats = stats.deep_symbolize_keys
     procesos = stats[:workers].to_i.zero? ? 1 : stats[:workers]
-    hilos = stats[:max_threads] || stats.dig(:worker_status, 0, :last_status, :max_threads) || ENV["RAILS_MAX_THREADS"]
+    # Y si Puma no los da, los de `config/puma.rb`, con su mismo default: en
+    # Render no hay `RAILS_MAX_THREADS` (solo `DATABASE_URL` y la master key),
+    # así que corre con 3. Visto en staging el 2026-10-09: seguía «? hilos».
+    hilos = stats[:max_threads] || stats.dig(:worker_status, 0, :last_status, :max_threads) ||
+            ENV.fetch("RAILS_MAX_THREADS", HILOS_DE_PUMA_POR_DEFECTO)
     ocupados = stats[:busy_threads] || stats[:running] || stats.dig(:worker_status, 0, :last_status, :running)
     Medida.new(nombre: "Puma", valor: "#{procesos} #{procesos == 1 ? 'proceso' : 'procesos'} · #{hilos || '?'} hilos",
                detalle: ocupados ? "#{ocupados} atendiendo ahora" : nil,
