@@ -29,6 +29,7 @@ export default class ClienteAutocomplete extends BusquedaAutocomplete {
             data-categoria="${c.categoria_precio || ""}"
             data-sucursal-retiro="${c.sucursal_retiro || ""}"
             data-retiro-por-defecto="${c.retiro_por_defecto ? "true" : ""}"
+            data-sin-sucursal-retiro="${c.sin_sucursal_retiro ? "true" : ""}"
             data-solo-volumetrico-en="${(c.solo_volumetrico_en || []).join(",")}">
         <div>
           <span class="font-mono text-sm font-medium text-cec-navy dark:text-cec-gold">${c.codigo}</span>

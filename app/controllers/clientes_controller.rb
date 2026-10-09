@@ -50,6 +50,9 @@ class ClientesController < ApplicationController
     # cuántos Jorge Padilla hay"*. El importador de los 9.000 viejos no pasa por
     # esta pantalla y no se entera.
     @cliente.exigir_nombre_completo = true
+    # C29-03 · Y dónde retira: *"cuando ellos crean el casillero, vas a
+    # preguntar a dónde le gustaría retirar"*.
+    @cliente.exigir_sucursal_retiro = true
     if @cliente.save
       redirect_to @cliente, notice: "Cliente creado exitosamente."
     else
@@ -81,6 +84,9 @@ class ClientesController < ApplicationController
         # de retiro estructurada, así que el aviso es tan confiable como ese
         # texto. Queda como pregunta para Yusef.
         sucursal_retiro: ERB::Util.html_escape(c.sucursal_retiro_nombre.to_s),
+        # C29-03 · Sin sucursal el nombre va vacío —ya no cae a la ciudad— y
+        # esto le dice a Miami que la caja se aparta.
+        sin_sucursal_retiro: c.sin_sucursal_retiro?,
         # Si retira donde retira casi todo el mundo, el aviso de bolsa no sale.
         # Va acá **y** en `detect_pre_alerta_match`: los dos caminos fijan el
         # cliente en la pantalla, y ya se separaron una vez por olvidar uno.
@@ -110,6 +116,9 @@ class ClientesController < ApplicationController
     # algo que nadie tocó. Es la misma trampa del método de prepago y la del
     # consolidado.
     @cliente.exigir_nombre_completo = cliente_params.key?(:nombre) || cliente_params.key?(:apellido)
+    # C29-03 · Vaciarla es error; un viejo que nunca la tuvo se edita igual
+    # mientras nadie toque el campo (la regla mira `sucursal_retiro_id_changed?`).
+    @cliente.exigir_sucursal_retiro = true
 
     guardado = ActiveRecord::Base.transaction do
       @cliente.update(cliente_params) &&

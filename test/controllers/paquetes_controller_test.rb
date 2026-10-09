@@ -289,6 +289,21 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert response.body.bytes.first(2) == [ 0x50, 0x4B ], "expected ZIP magic PK"
   end
 
+  # C29-10 · Un tracking de solo dígitos tiene que llegar al Excel como texto.
+  # Como número, Excel lo muestra `9.2E+21` y además le come los últimos
+  # dígitos: un double no guarda 22 cifras.
+  test "export.xlsx escribe el tracking de solo dígitos como texto" do
+    paquete = paquetes(:recibido)
+    paquete.update_columns(tracking: "9205590164917312345678")
+
+    post bulk_export_paquetes_url, params: { paquete_ids: [ paquete.id ], formato: "xlsx" }
+    assert_response :success
+
+    hoja = Zip::File.open_buffer(StringIO.new(response.body)).read("xl/worksheets/sheet1.xml")
+    celda = Nokogiri::XML(hoja).remove_namespaces!.at_xpath("//c[@r='D2']")
+    assert_includes %w[s str inlineStr], celda["t"], "el tracking salió como número: #{celda}"
+  end
+
   test "bulk_print requiere al menos un id seleccionado" do
     post bulk_print_paquetes_url, params: { paquete_ids: [] }
     assert_redirected_to paquetes_path

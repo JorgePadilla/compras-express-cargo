@@ -87,6 +87,7 @@ export default class extends Controller {
     const d = e.currentTarget.dataset
     this.formTarget.action = d.url
     this._metodo("patch")
+    this._tokenDeLaSesion()
 
     this.tamanoTargets.forEach((radio) => { radio.checked = radio.value === (d.tamanoId || "") })
     this.altoTarget.value = d.alto || ""
@@ -112,6 +113,28 @@ export default class extends Controller {
     this.agregarTextoTarget.textContent = "Agregar caja"
     this.agregarEImprimirTextoTarget.textContent = "Agregar e imprimir"
     this._recalcular()
+  }
+
+  // C29-06 · **Por qué «Guardar e imprimir» reventaba y «Guardar» no.** El
+  // `authenticity_token` que `form_with` pone en el formulario es **por
+  // formulario**: Rails lo ata a la acción y al verbo con que se dibujó (POST
+  // a `/cajas`, `per_form_csrf_tokens`). Al editar, el formulario pasa a
+  // PATCH `/cajas/:id` y ese token deja de valer.
+  //
+  //   · «Guardar» va por Turbo, que manda además el token **de la sesión** en
+  //     el header `X-CSRF-Token`, y ése vale para cualquier acción.
+  //   · «Guardar e imprimir» lleva `data-turbo=false` —la 4×6 necesita una
+  //     navegación completa para que su `onload` imprima— y el navegador manda
+  //     solo el campo del formulario: 422, `InvalidAuthenticityToken`.
+  //
+  // Yusef: *"hay algo malo en este botón nada más"*. Los tests no lo veían
+  // porque el ambiente de test apaga la protección CSRF; `caja_editar_test`
+  // la prende para este camino. El arreglo es poner en el campo el token de
+  // la sesión (el del `<meta>`), que vale para agregar y para editar.
+  _tokenDeLaSesion() {
+    const meta = document.querySelector("meta[name='csrf-token']")
+    const campo = this.formTarget.querySelector("input[name='authenticity_token']")
+    if (meta && campo) campo.value = meta.content
   }
 
   // El `_method` que Rails lee para tratar el POST como PATCH. Se crea al

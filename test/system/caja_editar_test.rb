@@ -40,4 +40,44 @@ class CajaEditarSystemTest < ApplicationSystemTestCase
     assert_text "Caja B agregada", wait: 5
     assert_equal 2, @manifiesto.cajas.count
   end
+
+  # C29-06 · «Guardar e imprimir» reventaba en staging y acá daba verde: el
+  # ambiente de test apaga la protección CSRF, que es justo lo que fallaba.
+  # Estos dos la prenden desde que se dibuja la página: sin protección,
+  # `csrf_meta_tags` ni siquiera escribe el `<meta>`.
+  def con_csrf
+    antes = ActionController::Base.allow_forgery_protection
+    ActionController::Base.allow_forgery_protection = true
+    yield
+  ensure
+    ActionController::Base.allow_forgery_protection = antes
+  end
+
+  test "editar la caja y guardar e imprimir con F9" do
+    con_csrf do
+      visit manifiesto_path(@manifiesto)
+
+      find("button[aria-label='Editar la caja A']").click
+      find("#caja_manifiesto_peso").set("41")
+      page.driver.browser.action.send_keys(:f9).perform
+
+      assert_current_path(/etiqueta/, wait: 5)
+    end
+    assert_equal 41, @caja.reload.peso.to_i
+    assert_equal 1, @manifiesto.cajas.count, "no agregó otra"
+  end
+
+  test "editar la caja y guardar e imprimir con el botón" do
+    con_csrf do
+      visit manifiesto_path(@manifiesto)
+
+      find("button[aria-label='Editar la caja A']").click
+      find("#caja_manifiesto_peso").set("41")
+      click_button "Guardar e imprimir"
+
+      assert_current_path(/etiqueta/, wait: 5)
+    end
+    assert_equal 41, @caja.reload.peso.to_i
+    assert_equal 1, @manifiesto.cajas.count, "no agregó otra"
+  end
 end

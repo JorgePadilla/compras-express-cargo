@@ -71,7 +71,7 @@ class AvisoDeBolsaSoloSiNoEsDefaultTest < ActionDispatch::IntegrationTest
     # Es el que él dio por bueno —*"sí me dice el TEGUS, excelente"*— y no
     # interrumpe a nadie. Lo que deja de salir es el modal que tapa la pantalla.
     src = Rails.root.join("app/javascript/controllers/etiquetar_controller.js").read
-    metodo = src[/_mostrarSucursal\(sucursal, esLaDeSiempre = false\)\s*\{.*?\n  \}/m]
+    metodo = src[/_mostrarSucursal\(sucursal, esLaDeSiempre = false[^)]*\)\s*\{.*?\n  \}/m]
     assert metodo, "no se encontró _mostrarSucursal"
 
     assert_includes metodo, "sucursalBannerTarget.classList.remove"

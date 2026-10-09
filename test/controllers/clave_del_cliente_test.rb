@@ -23,7 +23,7 @@ class ClaveDelClienteTest < ActionDispatch::IntegrationTest
   # ── El agujero que esto tapa ────────────────────────────────────────────
 
   test "un cliente recien creado por el admin no tiene clave y no entra" do
-    post clientes_path, params: { cliente: {
+    post clientes_path, params: { cliente: { sucursal_retiro_id: sucursales(:humuya_tgu).id,
       nombre: "Ana Maria", apellido: "Reyes Pineda", email: "ana.reyes@example.com"
     } }
 

@@ -595,6 +595,7 @@ class PaquetesController < ApplicationController
         # Tegucigalpa". Las notas del cliente sí venían: se agregó una y se
         # olvidó la otra. Misma llave que usa `/clientes/buscar`.
         cliente_sucursal_retiro: ERB::Util.html_escape(cli&.sucursal_retiro_nombre.to_s),
+        cliente_sin_sucursal_retiro: cli&.sin_sucursal_retiro? || false,
         cliente_retiro_por_defecto: cli&.retira_en_la_de_por_defecto? || false,
         # PR-C6.9: el tipo de envío que el cliente pidió en su pre-alerta. Si
         # no coincide con el de la sesión de etiquetado, el front avisa antes
@@ -740,6 +741,14 @@ class PaquetesController < ApplicationController
       paquetes.each do |p|
         pa = p.pre_alerta_paquetes.first&.pre_alerta
         row_styles = [ date_style, date_style, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil ]
+        # C29-10 · Todo lo que no es fecha va **como texto**. Sin `types`,
+        # Axlsx mira el string y, si son solo dígitos, lo escribe como número:
+        # un tracking de USPS de 22 dígitos salía `9.2E+21`. Yusef, con el
+        # Excel abierto: *"algunos son como con exponente, el tracking"* ·
+        # *"hay unos que solo son números"*. Pasa igual con el N° de recepción
+        # y la guía, y un número de 22 dígitos ni siquiera cabe entero en el
+        # double de Excel: se pierden los últimos.
+        row_types = [ :date, :date ] + [ :string ] * 13
         sheet.add_row([
           p.fecha_recibido_miami&.to_date || p.created_at.to_date,
           p.fecha_disponible&.to_date,
@@ -758,7 +767,7 @@ class PaquetesController < ApplicationController
           pa&.numero_documento || "—",
           p.pre_factura&.numero || "—",
           p.venta&.numero || "—"
-        ], style: row_styles)
+        ], style: row_styles, types: row_types)
       end
 
       sheet.column_widths 12, 12, 14, 20, 12, 28, 18, 10, 18, 12, 40, 14, 14, 14, 14

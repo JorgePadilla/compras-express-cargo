@@ -190,6 +190,15 @@ class Paquete < ApplicationRecord
   # lo dejaría sin poder guardar el paquete. Lo que sí se corta es el
   # whitespace y los caracteres de markup — que es lo único que importaba.
   TRACKING_FORMATO = /\A[A-Za-z0-9._\-\/]+\z/
+  # C29-01 · Los espacios de los **bordes** se van antes de validar. Jorge pegó
+  # un tracking con copy-paste y no lo dejó guardar —Yusef: *"tracking no es
+  # permitido, tienes el espacio este"*—, y ese espacio no lo tecleó nadie: lo
+  # trajo el portapapeles. El de **adentro** sigue siendo error, que es lo que
+  # Yusef defendió en la misma frase: *"está bien eso, porque tiene que estar
+  # bien hecho"*. `PreAlertaPaquete` ya lo hacía (`normalize_tracking`); el
+  # paquete no, y la consulta del JS sí recortaba, así que la pantalla decía
+  # «libre» de un tracking que después el guardado rechazaba.
+  normalizes :tracking, :tracking_secundario, with: ->(t) { t.strip }
   validates :tracking, format: {
     with: TRACKING_FORMATO,
     message: "no permite espacios ni símbolos (solo letras, números, . _ - /)"

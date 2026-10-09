@@ -75,6 +75,21 @@ class Cliente < ApplicationRecord
   validate :nombre_completo_lleva_tres_palabras,
            if: -> { exigir_nombre_completo && (new_record? || nombre_changed? || apellido_changed?) }
 
+  # C29-03 · La sucursal donde retira se pregunta **al crear el casillero**.
+  # Yusef, 2026-10-08, con la etiqueta de Sofía diciendo otro lugar: *"cuando
+  # ellos crean el casillero, vas a preguntar a dónde le gustaría retirar su
+  # producto"* · *"la ciudad donde es es una cosa y donde retira es otra"*.
+  # Sofía estaba **sin definir**, y la etiqueta salió con la de por defecto.
+  #
+  # Misma forma que el nombre: regla de las pantallas donde alguien da de alta
+  # (`/clientes` y el registro del portal), no del modelo. Los importados que no
+  # la tienen se siguen pudiendo editar mientras nadie toque el campo; lo que no
+  # se puede es **vaciarla**.
+  attr_accessor :exigir_sucursal_retiro
+
+  validates :sucursal_retiro, presence: { message: "hay que elegir dónde va a retirar" },
+            if: -> { exigir_sucursal_retiro && (new_record? || sucursal_retiro_id_changed?) }
+
   scope :activos, -> { where(activo: true) }
   # Los que pueden entrar al portal. `activo` es "es cliente nuestro";
   # `acceso_habilitado` es "puede entrar". Son dos cosas distintas: se le corta
@@ -229,13 +244,19 @@ class Cliente < ApplicationRecord
 
   before_validation :generate_codigo, on: :create, if: -> { codigo.blank? }
 
-  # Lo que Miami tiene que leer para saber en que bolsa va la caja. Cae a
-  # `ciudad` mientras queden clientes sin sucursal asignada — es lo que la
-  # etiqueta ya venia imprimiendo, asi que no empeora nada; solo deja de ser lo
-  # unico que hay.
+  # Lo que Miami tiene que leer para saber en que bolsa va la caja.
+  #
+  # C29-03 · Caía a `ciudad` mientras hubiera clientes sin sucursal asignada, y
+  # eso es justo lo que Yusef dijo que no se puede: *"de donde es la persona no
+  # es donde retira"*. Sofía es de Choluteca y retira en Humuya; el aviso
+  # rojo de «se entregará en» decía la ciudad, y la caja iba a la bolsa
+  # equivocada. Sin sucursal, **no hay nombre**: el aviso dice que falta
+  # (`sin_sucursal_retiro?`) en vez de inventarla.
   def sucursal_retiro_nombre
-    sucursal_retiro&.nombre.presence || ciudad.presence
+    sucursal_retiro&.nombre.presence
   end
+
+  def sin_sucursal_retiro? = sucursal_retiro_id.nil?
 
   # ¿La carga de este cliente va a donde va casi toda?
   #
