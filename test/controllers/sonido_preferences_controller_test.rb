@@ -64,4 +64,30 @@ class SonidoPreferencesControllerTest < ActionDispatch::IntegrationTest
 
     assert_includes [ 302, 401 ], response.status
   end
+
+  # ── C29-08 · Un sonido por error ────────────────────────────────────────
+  #
+  # *"Cada error tiene que tener un tono distinto para que ellos sepan."*
+
+  test "los errores con sonido propio arrancan distintos entre sí y del de siempre" do
+    assert_equal "triple", @user.sonido_error_tipo
+    assert_equal "agudo", @user.sonido_error_sucursal
+  end
+
+  test "guarda con qué suena cada error" do
+    patch preferencia_sonido_url, params: { motivos: { tipo_distinto: "descendente", sucursal_distinta: "grave" } },
+                                  as: :json
+
+    assert_response :success
+    @user.reload
+    assert_equal "descendente", @user.sonido_error_tipo
+    assert_equal "grave", @user.sonido_error_sucursal
+  end
+
+  test "una variante inventada para un error no guarda nada" do
+    patch preferencia_sonido_url, params: { motivos: { tipo_distinto: "sirena" } }, as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal "triple", @user.reload.sonido_error_tipo
+  end
 end

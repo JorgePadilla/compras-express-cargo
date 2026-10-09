@@ -19,7 +19,7 @@
 module SonidosDeEscaneo
   # En el orden en que aparecen escaneando, no en el orden en que se
   # programaron: primero lo que suena siempre, al final lo que suena mal.
-  BOTONES = [
+  BOTONES = ([
     # C16-02: el mismo pin dice «podés seguir» en tres momentos. Yusef lo
     # aprobó en la Conversación 6 —"se oye amigable"— y pidió los otros dos
     # el 2026-08-25: "siempre hay pitos para decir: ok, podés seguir".
@@ -37,7 +37,11 @@ module SonidosDeEscaneo
       ayuda: "El cliente tiene notas que hay que leer" },
     { accion: "error", etiqueta: "Error",
       ayuda: "Toca la opción elegida arriba" }
-  ].freeze
+  ] + SonidosDeError::MOTIVOS.map { |m|
+    # C29-08 · Los errores con sonido propio. Se eligen en su sección del
+    # modal y se prueban acá, junto con los demás.
+    { accion: m[:accion], etiqueta: m[:nombre], ayuda: "#{m[:ayuda]}. Suena dos veces" }
+  }).freeze
 
   ACCIONES = BOTONES.map { |b| b[:accion] }.freeze
 

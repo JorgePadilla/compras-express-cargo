@@ -20,6 +20,8 @@ import { Controller } from "@hotwired/stimulus"
 //   en_otro         → modal: *"¿desea agregarlo a este y retirarlo del otro?"*
 //   en_otro_cerrado → modal rojo, sin mover: esa hoja ya viajó
 //   tipo_distinto   → modal rojo: *"ahí sí, porque genera gasto"*
+//   sucursal_distinta → modal rojo (C29-07): *"algo similar al tipo de
+//                     envío, el modal así. Exactamente así"*
 //   no_encontrado   → modal rojo
 //
 // Y siempre, con o sin error, el campo queda vacío y con el foco: *"cuando hay
@@ -121,6 +123,11 @@ export default class extends Controller {
       case "tipo_distinto":
         this.dispatch("tipoDistinto")
         this._abrirAviso("Tipo de envío distinto", data.mensaje, null)
+        this.avisoModalTarget.showModal()
+        break
+      case "sucursal_distinta":
+        this.dispatch("sucursalDistinta")
+        this._abrirAviso("Va a otra sucursal", data.mensaje, null)
         this.avisoModalTarget.showModal()
         break
       case "fuera_de_circulacion":

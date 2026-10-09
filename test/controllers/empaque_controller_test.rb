@@ -132,6 +132,24 @@ class EmpaqueControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
   end
 
+  # C29-07 · La gemela del manifiesto: *"la idea es que empaquen las cajas de
+  # acuerdo a dónde van"*. Y a diferencia del tipo, no se omite.
+  test "un paquete que va a otra sucursal no entra, y omitir tampoco lo mete" do
+    @manifiesto.update!(sucursal_entrega: sucursales(:zeron_sps))
+    @paquete.update_columns(sucursal_id: sucursales(:humuya_tgu).id)
+
+    escanear(@paquete.numero_recepcion)
+
+    assert_equal "sucursal_distinta", json["resultado"]
+    assert_match(/retira en #{sucursales(:humuya_tgu).nombre}/, json["mensaje"])
+    assert_nil @paquete.reload.caja_manifiesto
+
+    post manifiesto_omitir_empaque_path(@manifiesto, @caja), params: { paquete_id: @paquete.id }, as: :json
+
+    assert_equal "sucursal_distinta", json["resultado"]
+    assert_nil @paquete.reload.caja_manifiesto, "omitir es para el tipo, no para la sucursal"
+  end
+
   private
 
   def escanear(codigo)

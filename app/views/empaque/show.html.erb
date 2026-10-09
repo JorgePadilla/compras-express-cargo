@@ -23,8 +23,12 @@
      data-empaque-escanear-url-value="<%= @caja ? manifiesto_escanear_empaque_path(@manifiesto, @caja) : "" %>"
      data-empaque-omitir-url-value="<%= @caja ? manifiesto_omitir_empaque_path(@manifiesto, @caja) : "" %>"
      data-empaque-activa-value="<%= @caja&.id %>"
+     <%# C29-08 · El tipo y la sucursal suenan cada uno con su tono, dos
+         veces: *"cada error tiene que tener un tono distinto para que ellos
+         sepan"*. Los otros dos siguen en el error de siempre. %>
      data-action="empaque:ok->audio#success
-                  empaque:tipoDistinto->audio#error
+                  empaque:tipoDistinto->audio#errorTipo
+                  empaque:sucursalDistinta->audio#errorSucursal
                   empaque:noEncontrado->audio#error
                   empaque:yaEmpacado->audio#error">
 

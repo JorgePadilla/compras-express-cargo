@@ -92,4 +92,22 @@ class SonidosDeErrorTest < ActiveSupport::TestCase
     assert_equal [ 320, 320, 320 ], SonidosDeError.frecuencias(triple)
     assert_equal 400, SonidosDeError.duracion_ms(triple)
   end
+
+  # C29-08 · *"Si el tipo de envío es el error, tiene que tirar un sonido de una
+  # forma. Si la sucursal es el error… de otro tono."*
+  test "los errores con sonido propio arrancan en variantes que existen, distintas entre sí y del error de siempre" do
+    defaults = SonidosDeError::MOTIVOS.map { |m| m[:default] }
+
+    assert(defaults.all? { |d| SonidosDeError::IDS.include?(d) })
+    assert_equal defaults.uniq, defaults, "dos errores con el mismo sonido no se distinguen"
+    assert_not_includes defaults, SonidosDeError::DEFAULT, "tienen que sonar distinto del error de siempre"
+  end
+
+  test "cada error con sonido propio tiene su columna en users, con el mismo default" do
+    SonidosDeError::MOTIVOS.each do |m|
+      columna = User.columns_hash[m[:columna].to_s]
+      assert columna, "falta users.#{m[:columna]}"
+      assert_equal m[:default], columna.default
+    end
+  end
 end

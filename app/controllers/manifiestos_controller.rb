@@ -56,8 +56,18 @@ class ManifiestosController < ApplicationController
     end
   end
 
+  # C29-07 · Agregar pasa por las mismas preguntas que el escaneo. Hasta acá
+  # confiaba en que la pantalla solo lo llamara con un `ok`, así que la regla
+  # vivía en el JS: un pedido armado a mano —o una pantalla vieja abierta en
+  # otra pestaña— metía un CKA en un manifiesto CER, o un paquete de Humuya en
+  # uno que va a San Pedro. Una regla, todas las puertas.
   def add_paquete
     paquete = Paquete.find(params[:paquete_id])
+    resultado = EscaneoDeManifiesto.new(@manifiesto).clasificar(paquete)
+    unless resultado.ok?
+      return respond_to_paquete_change("#{paquete.guia} no se agregó: #{motivo_del_escaneo(resultado)}", tipo: :alert)
+    end
+
     paquete.update!(manifiesto: @manifiesto)
     @manifiesto.recalculate_totals!
     respond_to_paquete_change("Paquete #{paquete.guia} agregado al manifiesto.")
@@ -94,7 +104,7 @@ class ManifiestosController < ApplicationController
     paquete = Paquete.find(params[:paquete_id])
     resultado = EscaneoDeManifiesto.new(@manifiesto).clasificar(paquete)
     unless resultado.tipo == :en_otro
-      return respond_to_paquete_change("#{paquete.guia} no se movió: #{motivo_del_escaneo(resultado)}")
+      return respond_to_paquete_change("#{paquete.guia} no se movió: #{motivo_del_escaneo(resultado)}", tipo: :alert)
     end
 
     otro = paquete.manifiesto
@@ -274,6 +284,9 @@ class ManifiestosController < ApplicationController
     when :tipo_distinto
       "#{codigo_de(paquete)} es #{paquete.tipo_envio&.nombre || "sin tipo"}, " \
         "y este manifiesto lleva #{@manifiesto.tipos_envio_nuestros}."
+    when :sucursal_distinta
+      "#{codigo_de(paquete)} retira en #{paquete.sucursal.nombre}, " \
+        "y este manifiesto va a #{@manifiesto.sucursal_entrega.nombre}."
     when :fuera_de_circulacion
       "#{codigo_de(paquete)} está #{estado_legible(paquete.estado).downcase}: ya no viaja."
     when :varios
@@ -297,7 +310,7 @@ class ManifiestosController < ApplicationController
     @manifiesto = Manifiesto.find(params[:id])
   end
 
-  def respond_to_paquete_change(message)
+  def respond_to_paquete_change(message, tipo: :notice)
     @paquetes = @manifiesto.paquetes.includes(:cliente, :sucursal, :sucursal_destino, :caja_manifiesto).order(:created_at)
     @manifiesto.reload
     respond_to do |format|
@@ -315,10 +328,10 @@ class ManifiestosController < ApplicationController
           # solo dejaría al otro mintiendo.
           turbo_stream.update("manifiesto-acciones-arriba", partial: "manifiestos/acciones", locals: { manifiesto: @manifiesto, paquetes: @paquetes }),
           turbo_stream.update("manifiesto-acciones-abajo", partial: "manifiestos/acciones", locals: { manifiesto: @manifiesto, paquetes: @paquetes }),
-          turbo_stream.prepend("flash-messages", partial: "shared/flash", locals: { notice: message })
+          turbo_stream.prepend("flash-messages", partial: "shared/flash", locals: { tipo => message })
         ]
       end
-      format.html { redirect_to @manifiesto, notice: message }
+      format.html { redirect_to @manifiesto, tipo => message }
     end
   end
 

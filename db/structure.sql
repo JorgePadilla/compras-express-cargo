@@ -3267,7 +3267,9 @@ CREATE TABLE public.users (
     pin_digest character varying,
     pin_cambiado_at timestamp(6) without time zone,
     sonido_error_variante character varying DEFAULT 'grave'::character varying NOT NULL,
-    sucursal_id bigint
+    sucursal_id bigint,
+    sonido_error_tipo character varying DEFAULT 'triple'::character varying NOT NULL,
+    sonido_error_sucursal character varying DEFAULT 'agudo'::character varying NOT NULL
 );
 
 
@@ -7807,6 +7809,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261008163000'),
 ('20261005120000'),
 ('20260908140000'),
 ('20260908120000'),

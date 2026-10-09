@@ -104,6 +104,14 @@ class EmpaqueController < ApplicationController
       }
     end
 
+    # C29-07 · La gemela del manifiesto: la casa es del manifiesto, y el
+    # manifiesto va a una sucursal. Yusef: *"la idea es que empaquen las cajas
+    # de acuerdo a dónde van"*. A diferencia del tipo, **no** se omite: el
+    # «Omitir» de la Fase 12 es para el tipo y para nada más.
+    unless @manifiesto.acepta_sucursal?(paquete)
+      return render json: { resultado: "sucursal_distinta", mensaje: sucursal_distinta(paquete) }
+    end
+
     empacar!(paquete)
     render json: { resultado: "ok", mensaje: "#{codigo_de(paquete)} entró a la caja #{@caja.letra}.",
                    fila: fila_de(paquete) }
@@ -116,6 +124,12 @@ class EmpaqueController < ApplicationController
   def omitir
     @caja = @manifiesto.cajas.find(params[:caja_id])
     paquete = Paquete.find(params[:paquete_id])
+    # C29-07 · Omitir salta el tipo, no la sucursal: la pantalla no ofrece el
+    # botón para ese caso, y un pedido a mano tampoco lo consigue.
+    unless @manifiesto.acepta_sucursal?(paquete)
+      return render json: { resultado: "sucursal_distinta", mensaje: sucursal_distinta(paquete) }
+    end
+
     empacar!(paquete)
     render json: { resultado: "ok", mensaje: "#{codigo_de(paquete)} entró igual, omitiendo el aviso.",
                    fila: fila_de(paquete) }
@@ -195,6 +209,11 @@ class EmpaqueController < ApplicationController
   # El código que dice la etiqueta: el warehouse con su sufijo de caja.
   def codigo_de(paquete)
     helpers.etiqueta_codigo_barras(paquete) || paquete.tracking
+  end
+
+  def sucursal_distinta(paquete)
+    "#{codigo_de(paquete)} retira en #{paquete.sucursal.nombre}, " \
+      "y este manifiesto va a #{@manifiesto.sucursal_entrega.nombre}."
   end
 
   def ya_esta_en_otra_caja?(paquete)

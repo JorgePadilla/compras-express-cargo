@@ -5,7 +5,7 @@ import { Controller } from "@hotwired/stimulus"
 // Yusef, 2026-08-01). Ajusta el `audio` controller que vive en la misma
 // pantalla y persiste la preferencia por usuario.
 export default class extends Controller {
-  static targets = ["dialog", "toggle", "slider", "valor", "variante"]
+  static targets = ["dialog", "toggle", "slider", "valor", "variante", "motivo"]
   static values = { url: String }
 
   open() {
@@ -22,6 +22,7 @@ export default class extends Controller {
     const habilitado = this.hasToggleTarget ? this.toggleTarget.checked : true
     const volumen = this.hasSliderTarget ? parseInt(this.sliderTarget.value, 10) : 60
     const variante = this._varianteElegida()
+    const motivos = this._motivosElegidos()
 
     if (this.hasValorTarget) this.valorTarget.textContent = `${volumen}%`
 
@@ -30,9 +31,17 @@ export default class extends Controller {
       audio.enabledValue = habilitado
       audio.volumenValue = volumen
       if (variante) audio.varianteValue = variante
+      if (motivos) audio.porMotivoValue = { ...audio.porMotivoValue, ...motivos }
     }
 
-    this._persistir(habilitado, volumen, variante)
+    this._persistir(habilitado, volumen, variante, motivos)
+  }
+
+  // C29-08 · Con qué variante suena cada error con sonido propio. Un select
+  // por error; sin selects en el modal, no se manda nada.
+  _motivosElegidos() {
+    if (!this.hasMotivoTarget) return null
+    return Object.fromEntries(this.motivoTargets.map(s => [s.dataset.motivo, s.value]))
   }
 
   // RP-20: escuchar una opción sin adoptarla, para poder compararlas.
@@ -61,7 +70,7 @@ export default class extends Controller {
     return this.application.getControllerForElementAndIdentifier(el, "audio")
   }
 
-  _persistir(habilitado, volumen, variante) {
+  _persistir(habilitado, volumen, variante, motivos) {
     if (!this.hasUrlValue) return
 
     clearTimeout(this._saveTimeout)
@@ -69,6 +78,7 @@ export default class extends Controller {
       const token = document.querySelector('meta[name="csrf-token"]')?.content
       const cuerpo = { habilitado: habilitado, volumen: volumen }
       if (variante) cuerpo.variante = variante
+      if (motivos) cuerpo.motivos = motivos
 
       fetch(this.urlValue, {
         method: "PATCH",
