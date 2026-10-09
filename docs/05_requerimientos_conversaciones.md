@@ -11648,7 +11648,7 @@ a un consolidado desde la mesa (`C29-17`).
 
 ### Miami: `/etiquetar`
 
-#### C29-01 · El tracking pegado con un espacio se limpia solo (min 6)
+#### C29-01 · El tracking pegado con un espacio se limpia solo (min 6) — ✅ **HECHO** en `PR-C29.3`
 
 Jorge pegó un tracking con copy-paste y el sistema no lo dejó guardar:
 
@@ -11662,7 +11662,7 @@ Jorge pegó un tracking con copy-paste y el sistema no lo dejó guardar:
 adentro. Lo que falta es que los espacios de los **bordes** (los del pegado) se
 quiten antes de validar. Un espacio en el medio sigue siendo error.
 
-#### C29-02 · «Cancelar» en *«Tracking ya existe»* tiene que **limpiar** el tracking (min 36)
+#### C29-02 · «Cancelar» en *«Tracking ya existe»* tiene que **limpiar** el tracking (min 36) — ✅ **HECHO** en `PR-C29.3`
 
 > "Aquí hay un error, te cuento: me pregunta tres opciones, ¿verdad? **Le doy
 >  cancelar y me deja el tracking aquí. Te lo tiene que limpiar.**"
@@ -11676,7 +11676,7 @@ El modal de duplicado tiene tres salidas (actualización, cambio de servicio,
 duplicado real) y «Cancelar». `closeDuplicate()` solo esconde el modal: el
 tracking repetido queda escrito y se le puede asignar a otro cliente.
 
-#### C29-03 · El cliente **sin sucursal de retiro**: la etiqueta dice otro lugar (min 0–6)
+#### C29-03 · El cliente **sin sucursal de retiro**: la etiqueta dice otro lugar (min 0–6) — ✅ **HECHO** en `PR-C29.3`
 
 La etiqueta de un paquete de Sofía salió con una sucursal que no era:
 
@@ -11731,7 +11731,7 @@ No pide nada ahora. Queda anotado para cuando haya métricas por persona.
 
 ### El manifiesto
 
-#### C29-06 · Editar una caja y «Guardar e imprimir» **revienta** (min 12–24)
+#### C29-06 · Editar una caja y «Guardar e imprimir» **revienta** (min 12–24) — ✅ **HECHO** en `PR-C29.1`
 
 > "Yo le vine y le di editar, le puse peso y **le di guardar e imprimir**."
 > **Jorge:** "Ok, eso no debería tronar." — "Y tronó."
@@ -11748,7 +11748,7 @@ pasa a PATCH, y F9 / «Guardar e imprimir» va con `data-turbo=false` a
 `CajasManifiestoController#update` con `print=true`. «Guardar» solo y el
 botón de imprimir de la fila, cada uno por su lado, andan.
 
-#### C29-07 · El manifiesto no deja entrar paquetes de **otra sucursal de entrega** (min 18–22)
+#### C29-07 · El manifiesto no deja entrar paquetes de **otra sucursal de entrega** (min 18–22) — ✅ **HECHO** en `PR-C29.2`
 
 > "El error dos: es que **yo marqué que van para San Pedro y van paquetes que
 >  van para Humuya**, y debería de notificarte que ese paquete va para
@@ -11771,7 +11771,7 @@ sucursal de retiro del paquete es otra, no entra. Y la gemela: `/empacar`
 (empacar escaneando) mete paquetes en las casas del mismo manifiesto, así que
 lleva la misma regla.
 
-#### C29-08 · **Un sonido distinto para cada error** (min 21–22)
+#### C29-08 · **Un sonido distinto para cada error** (min 21–22) — ✅ **HECHO** en `PR-C29.2`
 
 > "Pero el ruido es el que tenemos que mejorar."
 > "Algo como que de verdad te llama, que está equivocada, que no va ahí."
@@ -11785,7 +11785,7 @@ me hacés un panel…"*. El modal de sonidos ya existe (`C16`); lo que falta es
 que el error de tipo y el de sucursal tengan cada uno el suyo, y más fuerte
 que el pip de hoy.
 
-#### C29-09 · Cambiarle el tipo de envío a un manifiesto **con paquetes adentro** (min 14–15) — ❓ lectura dudosa
+#### C29-09 · Cambiarle el tipo de envío a un manifiesto **con paquetes adentro** (min 14–15) — ❓ lectura dudosa — ✅ **HECHO** en `PR-C29.2`
 
 Jorge editó un manifiesto ya armado para agregarle otro tipo de envío, y
 funcionó (*"ya lo agregué el servicio, excelente, estamos bien"*). Y Yusef:
@@ -11798,7 +11798,7 @@ ya tienen paquetes adentro deja esos paquetes en un manifiesto que no los
 acepta: el mismo error que `C28-04` bloquea al escanear, entrando por la
 puerta de editar. Se bloquea quitar un tipo que tenga paquetes adentro.
 
-#### C29-10 · El Excel muestra los trackings **en notación científica** (min 24)
+#### C29-10 · El Excel muestra los trackings **en notación científica** (min 24) — ✅ **HECHO** en `PR-C29.1`
 
 > "Algunos son como **con exponente**, el tracking."
 > "Pero es que el tracking, en buena teoría, son números y letras… **hay unos
@@ -11808,7 +11808,7 @@ El Excel del listado de paquetes (`C28-02`, el de `/paquetes` con el filtro
 por manifiesto) escribe como número el tracking que es solo dígitos, y Excel lo
 muestra como `9.2E+21`. Va como texto, y lo mismo el warehouse y la guía.
 
-#### C29-11 · ❓ La hoja del manifiesto no abrió la vista de impresión (min 24)
+#### C29-11 · ❓ La hoja del manifiesto no abrió la vista de impresión (min 24) — ✅ **HECHO** en `PR-C29.1`
 
 > "Lo voy a imprimir… **no tiene el botón de imprimir a la mano**… es que no lo
 >  tiró como preview para imprimir… pero antes ya lo había dejado como preview."
@@ -11823,7 +11823,7 @@ botón de imprimir a la vista.
 
 ### San Pedro: recibir la carga
 
-#### C29-12 · `/recepcion_carga` dice el **tipo de envío** y **la empresa** (min 29)
+#### C29-12 · `/recepcion_carga` dice el **tipo de envío** y **la empresa** (min 29) — ✅ **HECHO** en `PR-C29.1`
 
 > "El tipo de envío no sale acá, fijate. **Hay que poner tipo de envío, y la
 >  empresa que lo mandó, por dónde viene.**"
@@ -11839,7 +11839,7 @@ caja de otro manifiesto, y *"ya no tengo pendientes"* al terminar.
 
 ### La PESA
 
-#### C29-13 · **F9 imprime**, igual que en todas las pantallas (min 71)
+#### C29-13 · **F9 imprime**, igual que en todas las pantallas (min 71) — ✅ **HECHO** en `PR-C29.4`
 
 > "F10 le pusiste. **Normalmente es F9**, Jorge. F9 para imprimir siempre."
 > "Solo para que lo tengamos uniforme."
@@ -11847,13 +11847,13 @@ caja de otro manifiesto, y *"ya no tengo pendientes"* al terminar.
 En `/medicion` hoy F10 guarda (y con eso imprime) y F9 reimprime. En las casas
 del manifiesto F9 es «guardar e imprimir», y en `/etiquetar` también.
 
-#### C29-14 · **Una X grande en cada caja** escaneada, no solo «quitar la última» (min 48)
+#### C29-14 · **Una X grande en cada caja** escaneada, no solo «quitar la última» (min 48) — ✅ **HECHO** en `PR-C29.4`
 
 > "Voy a quitar uno, ¿cómo quito uno?… **solo puede quitar la última.**"
 > "**Una X acá al lado, una X grande, porque acordate que va a hacer touch.**"
 > "Sí, una X grande, correcto."
 
-#### C29-15 · El **número de pre-alerta** en la etiqueta del volumen (min 50–54)
+#### C29-15 · El **número de pre-alerta** en la etiqueta del volumen (min 50–54) — ✅ **HECHO** en `PR-C29.4`
 
 Jorge preguntó si la etiqueta tenía que decir que estaba consolidando. Yusef
 lo bajó a una sola cosa:
@@ -11866,7 +11866,7 @@ lo bajó a una sola cosa:
 Lo del consolidado no va en la etiqueta: *"en pre-factura es que va a mandar
 eso a guardar a consolidar"*.
 
-#### C29-16 · «Completado» mentía: **los paquetes del cliente que vinieron en el mismo manifiesto** (min 60–72)
+#### C29-16 · «Completado» mentía: **los paquetes del cliente que vinieron en el mismo manifiesto** (min 60–72) — ✅ **HECHO** en `PR-C29.5`
 
 Escaneando a Diego, la pantalla dijo «Completado» con dos cajas:
 
@@ -11906,7 +11906,7 @@ entero**.
   `C28-13`. En el audio Jorge lo probó y lo frenó bien: *"mandarla a buscar…
   porque como éste venía en el mismo manifiesto"*.
 
-#### C29-17 · **Unir un suelto al consolidado** desde la mesa — tres opciones (min 42–48, 72)
+#### C29-17 · **Unir un suelto al consolidado** desde la mesa — tres opciones (min 42–48, 72) — ✅ **HECHO** en `PR-C29.6`
 
 Con el consolidado de Sofía abierto, escaneó otra caja de Sofía que no está en
 ninguna pre-alerta, y el modal le ofreció «hacer el consolidado», que **le
@@ -11936,7 +11936,7 @@ Y la condición, dicha dos veces:
 
 «Agregar» la suma a la pre-alerta consolidada y entra a la mesa. Ver `RP-73`.
 
-#### C29-18 · La caja que llega **después** de un consolidado ya medido (min 72–74)
+#### C29-18 · La caja que llega **después** de un consolidado ya medido (min 72–74) — ✅ **HECHO** en `PR-C29.6`
 
 > "Esto que vos pusiste aquí hay que explicárselo **en un modal**: este
 >  paquete está consolidando con otro, **traer el resto y medir, y unirlo**.
@@ -11959,7 +11959,7 @@ modal dice cuáles están medidas (y desde cuándo, en el estante), y ofrece
 **medir de nuevo todo junto**: trae la tanda vieja a la mesa (`C27-33`) y le
 suma esta. Nada automático hacia la pre-factura.
 
-#### C29-19 · Las **notas** del cliente en la PESA, en un modal (min 46, 76)
+#### C29-19 · Las **notas** del cliente en la PESA, en un modal (min 46, 76) — ✅ **HECHO** en `PR-C29.4`
 
 > "La clienta va a tener alguna nota aquí, porque como ya creamos el área de
 >  medición, **aquí van a estar las notas de prefacturación**… como esto es
@@ -11972,7 +11972,7 @@ suma esta. Nada automático hacia la pre-factura.
 Y el espacio: *"me estoy quedando sin espacio… ese listado que vos tenés acá
 lo podés poner abajo"* (ver `C29-16`).
 
-#### C29-20 · «Facturar lo que hay» no es de la PESA (min 54–57) — 📄 aclara `C26-03`
+#### C29-20 · «Facturar lo que hay» no es de la PESA (min 54–57) — 📄 aclara `C26-03` — ✅ **HECHO** en `PR-C29.4`
 
 Jorge apretó «Facturar lo que hay» con una caja que no había venido, y Yusef:
 
@@ -12012,26 +12012,26 @@ lo que falta.
 
 | # | Qué | Estado |
 |---|---|---|
-| `C29-01` | Los espacios de los bordes del tracking se quitan antes de validar | 🔲 Pendiente |
-| `C29-02` | «Cancelar» del modal de duplicado limpia el tracking | 🔲 Pendiente |
-| `C29-03` | La etiqueta del cliente sin sucursal de retiro, y la sucursal obligatoria al crear el cliente | 🔲 Pendiente |
-| `C29-04` | La descripción vacía y el formulario que no se limpió | ❓ Se revisa con `C29-01` |
+| `C29-01` | Los espacios de los bordes del tracking se quitan antes de validar | ✅ **Hecho** — `PR-C29.3`. También `tracking_secundario`; un espacio en el medio sigue siendo error. `PreAlertaPaquete` y la búsqueda de `/etiquetar` ya recortaban |
+| `C29-02` | «Cancelar» del modal de duplicado limpia el tracking | ✅ **Hecho** — `PR-C29.3`: vacía el campo que abrió el modal (principal o secundario), vuelve el foco y olvida la búsqueda. El modal solo existe en `/etiquetar` |
+| `C29-03` | La etiqueta del cliente sin sucursal de retiro, y la sucursal obligatoria al crear el cliente | ✅ **Hecho** — `PR-C29.3`. La etiqueta caía en la sucursal por defecto (Zeron SPS) o en la ciudad del cliente: ahora dice **«SIN SUCURSAL»** y el aviso rojo pide apartar la caja. Revierte el fallback de `C25-08`. Obligatoria al crear en `/clientes` y en el registro del portal; los clientes viejos sin ella se editan igual y **no** se rellenaron a ciegas |
+| `C29-04` | La descripción vacía y el formulario que no se limpió | 📄 **No era bug** — después de un guardado fallido el formulario devuelve lo tecleado a propósito, y el error era el espacio de `C29-01`. La descripción obligatoria para todos es regla nueva: `RP-74` |
 | `C29-05` | Contador del día y métricas por persona | 📄 Nota |
-| `C29-06` | Editar una caja y «Guardar e imprimir» revienta | 🔲 Pendiente |
-| `C29-07` | El manifiesto con sucursal de entrega no deja entrar paquetes de otra sucursal (y `/empacar` tampoco) | 🔲 Pendiente |
-| `C29-08` | Un sonido distinto por error: tipo de envío y sucursal | 🔲 Pendiente |
-| `C29-09` | No se le quita a un manifiesto un tipo de envío que tienen paquetes adentro | 🔲 Pendiente — ❓ lectura dudosa |
-| `C29-10` | El Excel escribe el tracking, el warehouse y la guía como texto | 🔲 Pendiente |
-| `C29-11` | La hoja del manifiesto se imprime sola y tiene su botón | ❓ Se revisa |
-| `C29-12` | `/recepcion_carga` con tipo de envío y empresa transportadora | 🔲 Pendiente |
-| `C29-13` | F9 imprime en `/medicion` | 🔲 Pendiente |
-| `C29-14` | Una X grande por caja escaneada | 🔲 Pendiente |
-| `C29-15` | El número de pre-alerta en la etiqueta del volumen | 🔲 Pendiente |
-| `C29-16` | Los paquetes del cliente en el mismo manifiesto: la cuenta, la lista filtrada y el «Completado» honesto | 🔲 Pendiente |
-| `C29-17` | Unir un suelto al consolidado desde la mesa | 🔲 Pendiente — ver `RP-73` |
-| `C29-18` | La caja que llega después de un consolidado medido: medir de nuevo todo junto | 🔲 Pendiente |
-| `C29-19` | Las notas del cliente en la PESA, en modal | 🔲 Pendiente |
-| `C29-20` | «Facturar lo que hay» pasa a «Medir lo que hay» | 🔲 Pendiente |
+| `C29-06` | Editar una caja y «Guardar e imprimir» revienta | ✅ **Hecho** — `PR-C29.1`. Era el **token CSRF**: es por acción de formulario, el lápiz cambia la acción a la de la caja, y «Guardar e imprimir» (sin Turbo) mandaba el token viejo → 422. Los tests no lo veían porque en test la protección está apagada; los nuevos la prenden |
+| `C29-07` | El manifiesto con sucursal de entrega no deja entrar paquetes de otra sucursal (y `/empacar` tampoco) | ✅ **Hecho** — `PR-C29.2`: `:sucursal_distinta` en todas las puertas (escaneo, lista, mover, `add_paquete`, `/empacar` y «Empacar sin escanear»). No aplica al manifiesto interno (su destino es el del camión), ni sin sucursal de entrega, ni al paquete sin sucursal de retiro (`C29-03`) |
+| `C29-08` | Un sonido distinto por error: tipo de envío y sucursal | ✅ **Hecho** — `PR-C29.2`: tipo distinto suena «Triple» y sucursal distinta «Agudo», dos veces; cada uno se elige en el modal de sonidos, que ahora también está en el manifiesto |
+| `C29-09` | No se le quita a un manifiesto un tipo de envío que tienen paquetes adentro | ✅ **Hecho** — `PR-C29.2`: no se quita un tipo ni se cambia la sucursal de entrega si algún paquete adentro deja de caber. Solo se revisa cuando esos campos cambian, así que finalizar no se traba |
+| `C29-10` | El Excel escribe el tracking, el warehouse y la guía como texto | ✅ **Hecho** — `PR-C29.1`: toda columna que no es fecha va como texto |
+| `C29-11` | La hoja del manifiesto se imprime sola y tiene su botón | ✅ **Hecho** — `PR-C29.1`: se reprodujo. «Imprimir manifiesto» abría la hoja sin `print=true`; ahora abre el diálogo sola, y la hoja tiene un botón «Imprimir» a la vista |
+| `C29-12` | `/recepcion_carga` con tipo de envío y empresa transportadora | ✅ **Hecho** — `PR-C29.1` |
+| `C29-13` | F9 imprime en `/medicion` | ✅ **Hecho** — `PR-C29.4`: F9 guarda e imprime; F10 sigue guardando sin etiqueta, como en `/etiquetar`. Reimprimir pasa a F4, la de imprimir documentos |
+| `C29-14` | Una X grande por caja escaneada | ✅ **Hecho** — `PR-C29.4` |
+| `C29-15` | El número de pre-alerta en la etiqueta del volumen | ✅ **Hecho** — `PR-C29.4`: «PA-…» al frente de la fila del código, «+N» si hubiera más de una; el test de que cabe mide el peor caso en Chrome |
+| `C29-16` | Los paquetes del cliente en el mismo manifiesto: la cuenta, la lista filtrada y el «Completado» honesto | ✅ **Hecho** — `PR-C29.5`: la cuenta y la lista del cliente en el manifiesto, mismo servicio, sin los que van en un consolidado. **Avisa, no bloquea**: el PIN sigue siendo solo para `C28-13` |
+| `C29-17` | Unir un suelto al consolidado desde la mesa | ✅ **Hecho** — `PR-C29.6` (`UnirAlConsolidado`, sin PIN, con paper_trail). «Sigo sin ella» y «dejarla de lado» hacen lo mismo en el sistema y quedan en un botón. «Hago el consolidado» ya no sale en este caso, que era el que borraba la mesa. Ver `RP-73` |
+| `C29-18` | La caja que llega después de un consolidado medido: medir de nuevo todo junto | ✅ **Hecho** — `PR-C29.6`: «Medir de nuevo todo junto» solo si lo medido es una sola tanda y nada está en pre-factura; si no, «Medirla sola» o «Dejarla de lado». Nada automático hacia la pre-factura |
+| `C29-19` | Las notas del cliente en la PESA, en modal | ✅ **Hecho** — `PR-C29.4`: las mismas notas que `/etiquetar` (instrucciones, nota del grupo, notas permanentes del área, notas del paquete; el rol `medicion` ya leía `notas_honduras`). El modal se abre solo con la primera nota de la tanda, y un botón lo reabre. El listado del manifiesto bajó |
+| `C29-20` | «Facturar lo que hay» pasa a «Medir lo que hay» | ✅ **Hecho** — `PR-C29.4` |
 | `C29-21` | Lo que anduvo | 📄 Confirma `C28` |
 | `C29-22` | Grabar para capacitar | 📄 Nota |
 
@@ -12040,3 +12040,4 @@ lo que falta.
 | Id | Qué |
 |---|---|
 | `RP-73` | **Unir un suelto a un consolidado (`C29-17`): ¿queda en la pre-alerta consolidada?** La lectura es que sí: si no quedara, la pre-factura (que factura por pre-alerta, `C27-04`) lo facturaría aparte de la tanda con la que se midió. Se construye así y se confirma con Yusef, junto con quién puede hacerlo (hoy: el operario de la PESA, sin PIN, como lo dijo él: *"que el mismo que está pesando y midiendo los agrega"*) |
+| `RP-74` | **¿La descripción es obligatoria en todo paquete, o solo en Entrega Personal (`C29-04`)?** Hoy solo en EP, a propósito (#306): en `/etiquetar` pasan 500–1.000 paquetes por día y casi ninguno trae el contenido escrito. Yusef dijo *"descripción no debería irse vacío"*, pero mirando un caso que podía ser el error del tracking con espacio. Si es para todos, cambia el ritmo de Miami |
