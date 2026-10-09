@@ -1,5 +1,9 @@
 <div id="flash-messages"></div>
 
+<%# «Sonidos», debajo del sol, en la esquina de arriba a la derecha (ver
+    `layouts/application`). Jorge, 2026-10-09: *"el botón de sonido va mejor
+    debajo del sol"*. %>
+<% content_for :esquina, render("shared/sonido_config") %>
 <%= render PageHeaderComponent.new(title: @manifiesto.numero, subtitle: "Manifiesto") do |header|
   header.with_action do
     render ButtonComponent.new(variant: :outline_navy, href: edit_manifiesto_path(@manifiesto), icon: "pencil-square", shortcut: "F6") do
@@ -27,7 +31,6 @@
   end
   # C29-08 · El modal de sonidos, que esta pantalla de escaneo no tenía:
   # acá se elige con qué suena el tipo distinto y la sucursal distinta.
-  header.with_action { render "shared/sonido_config" }
   header.with_back do
     render ButtonComponent.new(variant: :ghost, href: manifiestos_path, icon: "arrow-left", shortcut: "F2") do
       "Volver"

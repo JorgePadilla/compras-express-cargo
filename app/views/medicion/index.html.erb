@@ -64,9 +64,11 @@
                   medicion:guardado->audio#success
                   medicion:fallo->audio#error">
 
-  <%= render PageHeaderComponent.new(title: "Medición", subtitle: "Escaneá todas las cajas de la tanda; después pesá y medí cada volumen. Si el cliente está uniendo, acá ves lo que falta.") do |h| %>
-    <% h.with_action { render "shared/sonido_config", tactil: true } %>
-  <% end %>
+  <%# «Sonidos», debajo del sol, en la esquina de arriba a la derecha, y en
+      tamaño de dedo (PR-C29.11). Jorge, 2026-10-09: *"el botón de sonido va
+      mejor debajo del sol en mediciones"*. %>
+  <% content_for :esquina, render("shared/sonido_config", tactil: true) %>
+  <%= render PageHeaderComponent.new(title: "Medición", subtitle: "Escaneá todas las cajas de la tanda; después pesá y medí cada volumen. Si el cliente está uniendo, acá ves lo que falta.") %>
 
   <%# PR-C29.10 · Dos columnas: a la izquierda se escanea, a la derecha se
       mide. Es el orden del trabajo desde C28-08 —primero la pistola, después

@@ -32,12 +32,13 @@
                   empaque:noEncontrado->audio#error
                   empaque:yaEmpacado->audio#error">
 
+  <%# C25-10 · El botón «Sonidos», que las otras dos pantallas de escaneo ya
+      tenían y ésta no. Julián elige acá la variante que se oye desde la mesa
+      de empaque. Desde 2026-10-09 va debajo del sol, en la esquina de arriba
+      a la derecha (Jorge: *"el botón de sonido va mejor debajo del sol"*). %>
+  <% content_for :esquina, render("shared/sonido_config") %>
   <%= render PageHeaderComponent.new(title: "Empacar — #{@manifiesto.numero}",
                                      subtitle: "Escaneá cada paquete al meterlo a la caja") do |h| %>
-    <%# C25-10 · El botón «Sonidos», que las otras dos pantallas de escaneo ya
-        tenían y ésta no. Julián elige acá la variante que se oye desde la
-        mesa de empaque. %>
-    <% h.with_action { render "shared/sonido_config" } %>
     <% h.with_back do %>
       <%= render ButtonComponent.new(href: manifiesto_path(@manifiesto), variant: :secondary, icon: "arrow-left", shortcut: "F2") do %>
         Volver al manifiesto

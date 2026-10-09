@@ -175,8 +175,14 @@
               84). El botón es el chico (32 px) para caber en ese margen sin
               tocar el título ni la tarjeta del Home. En el celular sigue en
               la barra de arriba, que ya existía. %>
-          <div class="hidden lg:block absolute top-1 right-6 z-10">
-            <%= render "shared/theme_toggle", chico: true %>
+          <%# La esquina de arriba a la derecha: el sol y, debajo, lo que la
+              pantalla ponga en `content_for :esquina` —hoy «Sonidos», en las
+              cinco pantallas de escaneo—. Jorge, 2026-10-09: *"el botón de
+              sonido va mejor debajo del sol"*. En el celular el sol vive en la
+              barra de arriba, y la esquina baja por debajo de esa barra. %>
+          <div class="absolute top-16 right-4 lg:top-1 lg:right-6 z-10 flex flex-col items-end gap-2">
+            <div class="hidden lg:block"><%= render "shared/theme_toggle", chico: true %></div>
+            <%= yield :esquina %>
           </div>
 
           <%# Page content %>
