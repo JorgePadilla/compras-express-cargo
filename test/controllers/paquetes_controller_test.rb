@@ -535,13 +535,19 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_select "input.caja-checkbox[checked]", count: 2
     assert_select "button#print-selected", text: /Imprimir seleccionadas/
     assert_select "input#toggle-all[checked]"
+
+    # 2026-10-08 · Jorge: *"cuando se imprime la etiqueta no sale en imprimir
+    # previo sino que solo la etiqueta"*. El formulario y los «Solo esta»
+    # piden el diálogo.
+    assert_select "form#reimprimir-form input[type=hidden][name=print][value=true]"
+    assert_select "a[title='Imprimir solo esta caja'][href*='print=true']", count: 2
   end
 
   # PR-10.d.3: redirigia al Warehouse Receipt — la hoja carta del expediente —
   # desde una accion que se llama "reimprimir_etiquetas".
-  test "reimprimir_etiquetas para paquete individual redirige a la etiqueta" do
+  test "reimprimir_etiquetas para paquete individual redirige a la etiqueta, con el diálogo" do
     get reimprimir_etiquetas_paquete_url(@paquete)
-    assert_redirected_to etiqueta_paquete_path(@paquete)
+    assert_redirected_to etiqueta_paquete_path(@paquete, print: true)
   end
 
   # PR-D4.review v2 — etiquetas_combinadas renderiza N etiquetas en una sola

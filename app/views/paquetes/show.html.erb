@@ -67,7 +67,11 @@
                                icon: "cube-transparent")) { "Re-empaque" }
   end
   header.with_action do
-    render(ButtonComponent.new(variant: :primary, size: :xs, href: warehouse_receipt_paquete_path(@paquete),
+    # 2026-10-08 · F4 es «imprimir un documento» en toda la app: abre el
+    # diálogo y la pestaña se cierra al terminar, como las hojas del
+    # manifiesto (PR-C29.7). Para mirarlo sin imprimir, el WR tiene su
+    # botón «Imprimir» y el link «Ver Warehouse Receipt» de los avisos.
+    render(ButtonComponent.new(variant: :primary, size: :xs, href: warehouse_receipt_paquete_path(@paquete, print: true, cerrar: 1),
                                icon: "document-text", target: "_blank", shortcut: "F4")) { "Warehouse Receipt" }
   end
   if (pf = @paquete.pre_factura)
