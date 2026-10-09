@@ -123,7 +123,10 @@ module PermisosDelSistema
          # `RP-58` · La pantalla de permisos misma. Admin y nadie más, y además
          # está en `NO_EDITABLES`: concedérsela a un rol le deja darse todo lo
          # demás en el siguiente clic.
-         :permisos
+         :permisos,
+         # PR-C29.16 · Los signos del servidor: RAM, disco, base y cola. Admin y
+         # nadie más, como el resto de Configuración.
+         :signos_vitales
       false
     when :marketing
       # PR-13.c: el supervisor de SAC ve lo mismo que su equipo. Autorizar

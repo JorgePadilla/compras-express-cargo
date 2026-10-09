@@ -67,6 +67,8 @@ module SeccionesDelSistema
     reportes:             { nombre: "Reportes",                  grupo: "Configuración" },
     empleados:            { nombre: "Empleados",                 grupo: "Configuración" },
     usuarios:             { nombre: "Usuarios",                  grupo: "Configuración" },
+    signos_vitales:       { nombre: "Signos del servidor",       grupo: "Configuración",
+                            ayuda: "RAM, disco, base de datos y cola de trabajos." },
 
     # ── La pantalla misma ──
     roles:                { nombre: "Títulos de los roles",      grupo: "Configuración",
