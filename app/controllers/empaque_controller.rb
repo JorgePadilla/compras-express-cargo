@@ -45,6 +45,9 @@ class EmpaqueController < ApplicationController
   # cambio de caja.
   def show
     @cajas = @manifiesto.cajas.ordenadas
+    # PR-C29.20 · «N pqt» de cada caja, en un solo GROUP BY: era un COUNT por
+    # caja.
+    @paquetes_por_caja = Paquete.where(caja_manifiesto_id: @cajas.map(&:id)).group(:caja_manifiesto_id).count
     @abiertas = cajas_abiertas
     @caja = caja_activa
     # La tabla muestra lo que hay en **todas las abiertas**, no en una: son las

@@ -1,6 +1,9 @@
 ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
 require "rails/test_help"
+# PR-C29.20 · El cazador de N+1, solo si se lo pide:
+# `CAZAR_N_MAS_1=1 bin/rails test` → tmp/n_mas_1.txt. Ver el archivo.
+require_relative "support/cazar_n_mas_1" if ENV["CAZAR_N_MAS_1"]
 
 module ActiveSupport
   class TestCase

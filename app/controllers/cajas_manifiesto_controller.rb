@@ -33,7 +33,9 @@ class CajasManifiestoController < ApplicationController
   # PR-C29.7 · `volver=1` cuando la abre «Finalizar e Imprimir», que se lleva
   # la pestaña de la ficha: igual que `etiqueta`, la devuelve al terminar.
   def etiquetas
-    @cajas = @manifiesto.cajas.ordenadas
+    # PR-C29.20 · Cada 4×6 dice los tipos de envío de adentro: sin precargar,
+    # una consulta por etiqueta.
+    @cajas = @manifiesto.cajas.ordenadas.includes(paquetes: :tipo_envio)
     @despues_de_imprimir = manifiesto_path(@manifiesto) if params[:volver] == "1"
     render "manifiestos/cajas/etiqueta", layout: "etiqueta_4x6"
   end
