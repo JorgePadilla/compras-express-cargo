@@ -12,8 +12,11 @@ import { Spanish } from "flatpickr/dist/l10n/es"
 // - Por defecto: solo fecha. Display d/m/Y, submit Y-m-d.
 // - data-flatpickr-time-value="true": fecha + hora. Display
 //   d/m/Y H:i, submit Y-m-d H:i.
+// - data-flatpickr-solo-hora-value="true": solo la hora, 24 h, H:i y **sin
+//   segundos** (PR-P.4, la hora del aviso de la hoja de preparación; `C30-08`:
+//   *"no hace falta que diga los segundos"*).
 export default class extends Controller {
-  static values = { time: { type: Boolean, default: false } }
+  static values = { time: { type: Boolean, default: false }, soloHora: { type: Boolean, default: false } }
   static targets = ["input"]
 
   connect() {
@@ -28,7 +31,13 @@ export default class extends Controller {
       disableMobile: true,
       altInput: true
     }
-    if (this.timeValue) {
+    if (this.soloHoraValue) {
+      opts.enableTime = true
+      opts.noCalendar = true
+      opts.time_24hr = true
+      opts.dateFormat = "H:i"
+      opts.altFormat = "H:i"
+    } else if (this.timeValue) {
       opts.enableTime = true
       opts.time_24hr = true
       opts.dateFormat = "Y-m-d H:i"

@@ -281,6 +281,11 @@ Rails.application.routes.draw do
     end
   end
 
+  # PR-P.4 · C30-15 · La hoja de preparación: servicios o editar, manifiestos y
+  # fecha de trabajo, antes de auditar. Singular porque es **la** hoja del que
+  # está trabajando, y vive en su sesión como la de `/etiquetar`.
+  resource :hoja_de_preparacion, only: %i[show update destroy], path: "pre-factura/hoja",
+                                 controller: "hoja_de_preparacion"
   resources :pre_facturas, except: [ :destroy ] do
     collection { get :facturables }
     member do

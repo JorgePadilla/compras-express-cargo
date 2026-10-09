@@ -607,6 +607,16 @@ class Paquete < ApplicationRecord
   ESTADOS_FACTURABLES = %w[en_aduana disponible_entrega].freeze
 
   scope :facturables, -> { where(estado: ESTADOS_FACTURABLES, pre_factura_id: nil, venta_id: nil) }
+  # PR-P.4 · Lo que retiene a un manifiesto en la hoja de preparación: está en
+  # un manifiesto, todavía no tiene pre-factura ni venta, y sigue viajando. A
+  # diferencia de `facturables`, **no** mira el estado: el paquete cuya caja no
+  # llegó sigue en `enviado_honduras`, y tiene que seguir reteniendo a su
+  # manifiesto (`C28-14`).
+  scope :sin_pre_factura_en_manifiesto, -> {
+    where.not(manifiesto_id: nil)
+         .where(pre_factura_id: nil, venta_id: nil)
+         .where.not(estado: EscaneoDeManifiesto::FUERA_DE_CIRCULACION)
+  }
   scope :entregables, -> { where(estado: "facturado", entrega_id: nil) }
   # Paquetes sin vincular a ninguna pre_alerta_paquete (sueltos en bodega)
   scope :sin_pre_alerta, -> {

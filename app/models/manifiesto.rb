@@ -219,6 +219,29 @@ class Manifiesto < ApplicationRecord
            .or(salidos.where.not(id: ManifiestoGuia.select(:manifiesto_id)))
   }
 
+  # PR-P.4 · C30-15 · Los manifiestos que la hoja de preparación ofrece para
+  # pre-facturar. Yusef: *"solo le van a aparecer los que ya fueron
+  # recibidos"* — en aduana —, y *"cuando ya entra prefactura y lo
+  # seleccionamos y lo terminamos, desaparece de los pendientes"*.
+  #
+  # **Derivado de los datos, sin estado nuevo** (Fase 14): sale de la lista
+  # cuando ya no le queda paquete sin pre-factura de esos servicios. Un paquete
+  # cuya caja no llegó (`C28-14`) sigue sin pre-factura, así que el manifiesto
+  # con faltantes **se queda**, que es lo que tiene que pasar. Los que ya no
+  # viajan (anulado, entregado…) no lo retienen.
+  #
+  # Solo **oficiales**: el interno no se pre-factura, ya viene facturado.
+  ESTADOS_PARA_PRE_FACTURA = %w[en_aduana recibido].freeze
+
+  scope :para_hoja, ->(tipo_envio_ids) {
+    pendientes = Paquete.sin_pre_factura_en_manifiesto
+                        .where(tipo_envio_id: Array(tipo_envio_ids).compact_blank)
+                        .select(:manifiesto_id)
+    tipo_oficial.where(estado: ESTADOS_PARA_PRE_FACTURA, activo: true)
+                .where(id: pendientes)
+                .order(:numero)
+  }
+
   # El tipo de envío del proveedor, para mostrar. Lee las dos formas: la
   # asociación nueva y el varchar viejo de los manifiestos que ya estaban.
   def tipo_envio_del_proveedor
