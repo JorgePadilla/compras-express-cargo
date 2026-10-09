@@ -244,7 +244,13 @@ export default class extends conEnterAvanza(Controller) {
   // que hace Miami al vincularla): para el operario es una nota, no dos. El
   // servidor ya las junta dentro de una caja (`PanelContextoHelper#sin_repetir`);
   // esto las junta entre cajas de la tanda.
-  _mismaNota(a, b) { return this._textoDeNota(a) === this._textoDeNota(b) }
+  //
+  // Salvo que las dos traigan `detalle` y sea distinto: la instrucción del
+  // tracking A y la del B son dos notas aunque digan lo mismo (`sin_repetir`).
+  _mismaNota(a, b) {
+    if (a.detalle && b.detalle && a.detalle !== b.detalle) return false
+    return this._textoDeNota(a) === this._textoDeNota(b)
+  }
 
   _textoDeNota(n) { return String(n.texto || "").replace(/\s+/g, " ").trim().toLowerCase() }
 
