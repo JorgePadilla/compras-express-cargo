@@ -115,8 +115,10 @@ class MedicionController < ApplicationController
     # escanear no me pregunta si quiero editarlo"*.
     #
     # Medir de nuevo trae **la tanda entera** (C28-08): sus cajas se escanearon
-    # juntas y vuelven juntas, con sus volúmenes puestos para corregirlos. Al
-    # guardar, la tanda nueva reemplaza a la vieja.
+    # juntas y vuelven juntas. Sus volúmenes viajan para que la pantalla los
+    # muestre como «volumen anterior» y nada más (C30-11): la lista de la
+    # pantalla arranca vacía. Al guardar, la tanda nueva reemplaza a la vieja
+    # (`MedirBulto#reemplazar!`).
     if paquete.medicion_sesion.present? && !remedir?
       return render json: { resultado: "ya_tiene_bulto", paquete: datos_de(paquete),
                             tanda: tanda_json(paquete.medicion_sesion),
@@ -163,7 +165,7 @@ class MedicionController < ApplicationController
         hermanas: cajas.map { |h| datos_de(h) },
         mensaje: "Midiendo de nuevo: #{cajas.size} caja#{"s" if cajas.size != 1} y " \
                  "#{volumenes_texto(bultos.size)} del #{paquete.medido_at&.strftime('%d/%m/%Y')} " \
-                 "por #{paquete.medido_por}. Corregí los volúmenes y guardá: las etiquetas viejas dejan de valer."
+                 "por #{paquete.medido_por}. Pesá y medí de nuevo y guardá: lo anterior se reemplaza y sus etiquetas dejan de valer."
       )
     end
     render json: respuesta

@@ -278,23 +278,23 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     within("dialog[open]") { click_on "Medir de nuevo" }
 
     assert_no_selector "dialog[open]", wait: 5
-    # La tanda entera vuelve, no solo la caja escaneada: sus cajas, y sus
-    # volúmenes en la lista para corregirlos (C28-08).
+    # La tanda entera vuelve, no solo la caja escaneada: sus cajas (C28-08).
+    # Sus volúmenes **no** vuelven a la lista: quedan escritos como «volumen
+    # anterior» (C30-11), y la lista arranca vacía.
     assert_selector "[data-medicion-target='mesa'] li", count: 2, wait: 5
     assert_selector "[data-medicion-target='mesa'] li", text: segunda.numero_recepcion
-    assert_selector "[data-medicion-target='listaVolumenes'] li", count: 1, text: "6 lb"
-    assert_equal "medicion_peso", foco, "el foco va al peso: lo que sigue es corregir"
+    assert_selector "[data-medicion-target='volumenesAnteriores']", text: "Volumen anterior: 6 lb · 10x12x14 in"
+    assert_no_selector "[data-medicion-target='listaVolumenes'] li"
+    assert_equal "", find("#medicion_peso").value, "nada viejo queda puesto para guardarse sin querer"
+    assert_equal "medicion_peso", foco, "el foco va al peso: lo que sigue es pesar"
     assert_selector "[data-medicion-target='aviso']", text: "Midiendo de nuevo"
 
-    find("[data-medicion-target='listaVolumenes'] li button[aria-label='Corregir este volumen']").click
-    assert_no_selector "[data-medicion-target='listaVolumenes'] li"
-    assert_equal "6", find("#medicion_peso").value, "«Corregir» trae los números viejos al formulario"
-
-    fill_in "medicion_peso", with: "4"
+    # Pesar y F9, sin tocar nada más: sale **un** volumen, no el viejo y el nuevo.
+    send_keys "4"
     espiar_impresion
     send_keys :f9
 
-    assert_selector "[data-medicion-target='banner']", wait: 5
+    assert_selector "[data-medicion-target='banner']", text: "un solo volumen", wait: 5
     assert_equal 1, Bulto.count, "el nuevo reemplaza al viejo"
     assert_nil Bulto.find_by(id: viejo.id)
     assert_equal 4.0, Bulto.last.peso.to_f
@@ -803,16 +803,27 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_no_selector "dialog[open]", wait: 5
     assert_selector "[data-medicion-target='mesa'] li", count: 2, wait: 5
     assert_selector "[data-medicion-target='mesa'] li", text: tarde.numero_recepcion
-    assert_selector "[data-medicion-target='listaVolumenes'] li", count: 1, text: "6 lb"
+    # C30-11 · *"Desde el instante que le dio que lo va a medir de nuevo… se
+    # le borre todo… que solo le diga volumen anterior"*. Antes el volumen
+    # viejo volvía a la lista y había que quitarlo con la X —*"lo que hiciste
+    # fue borrar volumen físicamente"*—; si no, F9 guardaba los dos.
+    assert_selector "[data-medicion-target='volumenesAnteriores']", text: "Volumen anterior: 6 lb"
+    assert_no_selector "[data-medicion-target='listaVolumenes'] li"
+    viejo = Bulto.last
 
-    find("[data-medicion-target='listaVolumenes'] li button[aria-label='Quitar este volumen']").click
     fill_in "medicion_peso", with: "9"
+    assert_selector "[data-medicion-target='guardarTexto']", exact_text: "Guardar e imprimir"
     espiar_impresion
     send_keys :f9
 
     assert_selector "[data-medicion-target='banner']", text: "2 cajas en un solo volumen", wait: 5
     assert_equal 1, Bulto.count, "la tanda nueva reemplaza a la vieja"
+    assert_nil Bulto.find_by(id: viejo.id), "el volumen viejo no sobrevive al lado del nuevo"
+    assert_equal 9.0, Bulto.last.peso.to_f
     assert_equal [ medida.id, tarde.id ].sort, Bulto.last.paquetes.map(&:id).sort
+    assert PaperTrail::Version.where(item_type: "Bulto", item_id: viejo.id, event: "destroy").exists?,
+           "sus números quedan en el historial"
+    assert_no_selector "[data-medicion-target='volumenesAnteriores']", visible: :visible
   end
 
   private

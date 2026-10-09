@@ -39,7 +39,7 @@ module PanelContextoHelper
       blocks << nota_block("Notas al cliente", paquete.notas_al_cliente, :gold)
     end
 
-    blocks.compact
+    sin_repetir(blocks.compact)
   end
 
   def tono_nota_classes(tono)
@@ -53,4 +53,37 @@ module PanelContextoHelper
 
     { etiqueta: etiqueta, detalle: detalle, texto: texto, tono: tono }
   end
+
+  # C30-10 · Un texto sale **una vez**, aunque llegue por dos caminos. Jorge,
+  # en la PESA el 2026-10-09: *"esas notas que salieron, salieron a dos pero
+  # repetidas… porque yo lo escribí a uno"*. Escribió una nota de grupo y la
+  # vio dos veces: como «Nota especial» —la `notas_grupo` de la pre-alerta— y
+  # como «Notas de consolidación», que es **la misma nota copiada** a la caja
+  # cuando Miami la vincula (`PreAlertaPaquete.link_tracking!`, PR-D2) o
+  # cuando la PESA la une al consolidado (`UnirAlConsolidado`).
+  #
+  # Gana la primera, que es la de la pre-alerta con su número. La copia de la
+  # caja puede juntar varias notas de grupo separadas por un renglón en blanco
+  # (`link_tracking!` las une así), así que se mira también párrafo por
+  # párrafo: si todos ya salieron, el bloque sobra. Si alguien la editó en la
+  # caja y dice otra cosa, sale, que para eso se editó.
+  #
+  # Lo que **no** se junta: el mismo texto con dos `detalle` distintos. «Frágil»
+  # en el renglón del tracking A y «Frágil» en el del B son dos instrucciones,
+  # una por caja; esconder la segunda decía que el B no traía ninguna. La copia
+  # de la caja no lleva detalle, así que esa sí se reconoce contra cualquiera.
+  def sin_repetir(blocks)
+    vistos = []
+    blocks.reject do |b|
+      detalle = b[:detalle].to_s.squish.presence
+      todo = normalizar_nota(b[:texto])
+      parrafos = b[:texto].to_s.split(/\n\s*\n/).map { |p| normalizar_nota(p) }.compact_blank
+      ya_salio = ->(t) { vistos.any? { |d, v| v == t && (d.nil? || detalle.nil? || d == detalle) } }
+      repetido = ya_salio.(todo) || (parrafos.any? && parrafos.all?(&ya_salio))
+      ([ todo ] + parrafos).each { |t| vistos << [ detalle, t ] }
+      repetido
+    end
+  end
+
+  def normalizar_nota(texto) = texto.to_s.squish.downcase
 end
