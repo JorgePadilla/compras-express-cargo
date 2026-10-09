@@ -46,7 +46,7 @@ import { conEnterAvanza } from "controllers/enter_avanza"
 export default class extends conEnterAvanza(Controller) {
   static targets = [
     "codigo", "aviso",
-    "trabajo", "barra", "tandaCliente", "tandaGrupo", "tandaConsolidado", "tandaCajas", "tandaAusentes", "plantillaDibujito",
+    "trabajo", "barra", "medir", "medirVacio", "tandaCliente", "tandaGrupo", "tandaConsolidado", "tandaCajas", "tandaAusentes", "plantillaDibujito",
     "tandaContador", "tandaFaltan", "tandaCompleto",
     "mesa", "plantillaMesa", "mesaTitulo",
     "notasBoton", "notasBotonTexto", "notasModal", "notasCliente", "notasLista", "notasEntendido", "plantillaNota",
@@ -100,8 +100,9 @@ export default class extends conEnterAvanza(Controller) {
     this._alCerrarse = () => requestAnimationFrame(() => this._enfocarDondeToca())
     this.element.addEventListener("close", this._alCerrarse, true)
     if (this.hasCodigoTarget) this.codigoTarget.focus()
-    // C26-17 · El panel de la derecha arranca con el último manifiesto que
-    // todavía tiene algo que medir, para que la pantalla no abra vacía.
+    // C26-17 · El panel de lo que falta (abajo desde C29-16) arranca con el
+    // último manifiesto que todavía tiene algo que medir, para que la
+    // pantalla no abra vacía.
     this._fetch("GET", this.panelUrlValue)
       .then((r) => r.json())
       .then((data) => this._pintarManifiesto(data.manifiesto))
@@ -646,6 +647,10 @@ export default class extends conEnterAvanza(Controller) {
     const vacia = this._mesa.length === 0 && this._volumenes.length === 0
     this.trabajoTarget.hidden = vacia
     this.barraTarget.hidden = vacia
+    // PR-C29.10 · La columna de MEDIR no desaparece con la tanda vacía: dice
+    // qué va a pasar ahí, y la pantalla no salta con el primer pip.
+    this.medirTarget.hidden = vacia
+    this.medirVacioTarget.hidden = !vacia
   }
 
   _pintarMesa() {
@@ -899,7 +904,7 @@ export default class extends conEnterAvanza(Controller) {
 
   cerrarAutorizacion() { this.autorizarModalTarget.close() }
 
-  // ── El panel de la derecha: lo que falta de este manifiesto ─────────────
+  // ── El panel de abajo: lo que falta de este manifiesto ──────────────────
 
   _pintarManifiesto(m) {
     if (!m) return
