@@ -85,9 +85,15 @@
       a ~820 px cada una mide ~370, y medir necesita eso para las tres
       medidas lado a lado. Y con `minmax(0, …)`: un `fr` a secas no baja
       del ancho propio de su contenido, y los tres campos de medir le comían
-      el reparto a escanear (a 1024 px salía al revés: 362 contra 496). %>
+      el reparto a escanear (a 1024 px salía al revés: 362 contra 496).
+
+      PR-C29.14 · Y medir, un 20 % más angosta: de 3/7 (43 %) a 34 %. Jorge:
+      *"en mediciones esta parte, Volumen 2 · peso, medidas y cálculo, el lado
+      derecho se puede reducir 20 % para que la parte del scanner sea más
+      ancha"*. A 1024 px medir queda en ~290: las tres medidas siguen
+      entrando, y el test lo mide campo por campo. %>
   <div class="space-y-6">
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[minmax(0,4fr)_minmax(0,3fr)] gap-6 items-start">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[minmax(0,66fr)_minmax(0,34fr)] gap-6 items-start">
     <%# ── ESCANEAR · la columna de la izquierda ──────────────────────────
         La pistola, la tanda una vez, y lo escaneado con su X. Arriba lo que
         se usa en cada pip y abajo el historial (C28-12). Después de guardar,
@@ -103,7 +109,7 @@
             <%= text_field_tag :codigo_medicion, nil, autofocus: true, autocomplete: "off",
                   placeholder: "RMI0002026000042-2 (o el tracking)",
                   data: { medicion_target: "codigo", action: "keydown->medicion#teclado" },
-                  class: "block w-full min-h-14 text-2xl font-mono rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+                  class: "block w-full min-h-14 text-2xl font-mono rounded-lg border border-gray-500 dark:border-gray-400 shadow-sm focus:ring-cec-teal-deep focus:border-cec-teal-deep" %>
             <%# C27-02 · El bulto se arma escaneando, una caja por pip: el foco
                 **se queda acá** después de un escaneo bueno. La ayuda es una
                 línea y no tres: Yusef, *"no lo van a leer, no van a ver bien"*.
@@ -283,10 +289,24 @@
             <div class="space-y-4" data-medicion-target="form"
                  data-action="keydown->medicion#formKeydown input->medicion#numerosCambiados" data-controller="calc-volumetrico">
               <div>
+                <%# 2026-10-08 · Sin las flechitas del campo numérico. Jorge: *"increasing
+                    peso real the arrows are weird and hard to reach"* — dos
+                    triangulitos de 8 px en una pantalla táctil, que además
+                    suben de a 0.01. El peso sale de la balanza y se teclea; el
+                    teclado numérico lo abre `inputmode: decimal`.
+
+                    Y todos los campos de esta pantalla con borde: decían
+                    `border-gray-300` pero sin la clase `border`, así que el
+                    ancho era 0 y lo único que los separaba de la tarjeta era
+                    una sombra. Ahora `border border-gray-500` (4.83:1; en
+                    oscuro `gray-400`, 5.64:1): un campo que no se distingue de
+                    la tarjeta no se encuentra (1.4.11). Con el foco, el borde
+                    va a `cec-teal-deep` (4.81:1) y no a `cec-teal` (2.46:1):
+                    «el teal es un fondo, `-deep` es una tinta» (`docs/07`). %>
                 <%= label_tag "medicion_peso", "Peso real (lbs)", class: "block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1" %>
                 <%= number_field_tag "medicion_peso", nil, step: "0.01", min: 0, inputmode: "decimal",
                       data: { medicion_target: "peso", calc_volumetrico_target: "peso", action: "input->calc-volumetrico#recalcular" },
-                      class: "block w-full min-h-12 text-xl font-mono text-center rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+                      class: "block w-full min-h-12 text-xl font-mono text-center rounded-lg border border-gray-500 dark:border-gray-400 shadow-sm focus:ring-cec-teal-deep focus:border-cec-teal-deep [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" %>
               </div>
               <div>
                 <span class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Medidas (pulgadas)</span>
@@ -295,9 +315,13 @@
                     <%= number_field_tag "medicion_#{dim}", nil, step: "0.01", min: 0, inputmode: "decimal",
                           placeholder: dim.to_s, "aria-label": "#{dim.to_s.capitalize} en pulgadas",
                           data: { medicion_target: dim.to_s, calc_volumetrico_target: dim.to_s, action: "input->calc-volumetrico#recalcular" },
-                          class: "block w-full min-h-12 text-xl font-mono text-center rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+                          class: "block w-full min-h-12 px-1 text-xl font-mono text-center rounded-lg border border-gray-500 dark:border-gray-400 shadow-sm focus:ring-cec-teal-deep focus:border-cec-teal-deep placeholder:text-sm [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" %>
                   <% end %>
                 </div>
+                <%# PR-C29.14 · Con medir en un tercio, a 1024 px cada medida mide ~72
+                    px: el rótulo de adentro va chico y sin las flechitas del
+                    campo numérico, que comen ancho y en una pantalla táctil no
+                    se usan. Lo que se teclea sigue grande. %>
                 <p class="mt-1 text-[11px] text-gray-400">alto × largo × ancho</p>
               </div>
 
@@ -312,9 +336,9 @@
                     <span class="text-gray-500 dark:text-gray-400">VLbs (volumétrico)</span>
                     <span class="font-mono text-gray-700 dark:text-gray-200" data-calc-volumetrico-target="vlbs">—</span>
                   </div>
-                  <div class="flex items-baseline justify-between mt-1">
-                    <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Peso a cobrar</span>
-                    <span class="font-mono font-bold text-2xl text-cec-navy dark:text-cec-gold">
+                  <div class="flex items-baseline justify-between gap-2 mt-1">
+                    <span class="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap">Peso a cobrar</span>
+                    <span class="font-mono font-bold text-2xl text-cec-navy dark:text-cec-gold whitespace-nowrap">
                       <span data-calc-volumetrico-target="pesoCobrar">—</span> <span class="text-xs font-normal">lbs</span>
                     </span>
                   </div>
@@ -365,12 +389,17 @@
                     «Corregir» le devuelve los números al formulario, que es
                     como se arregla al medir de nuevo. %>
                 <template data-medicion-target="plantillaVolumen">
+                  <%# Los números van debajo del «Volumen N» y pueden partirse en dos
+                      renglones: con medir en un tercio del ancho y los dos
+                      botones de 48, en una sola línea quedaban en «12.…». %>
                   <li class="flex items-center gap-3 rounded-md bg-gray-50 dark:bg-gray-900 px-2.5 py-1.5">
-                    <span class="shrink-0 text-xs font-bold uppercase tracking-wider text-cec-navy dark:text-cec-gold" data-campo="orden"></span>
-                    <span class="flex-1 min-w-0 truncate text-sm font-mono text-gray-700 dark:text-gray-200" data-campo="numeros"></span>
-                    <%= render(ButtonComponent.new(variant: :ghost, size: :lg, icon: "pencil-square", label: "Corregir este volumen",
+                    <div class="flex-1 min-w-0">
+                      <span class="block text-xs font-bold uppercase tracking-wider text-cec-navy dark:text-cec-gold" data-campo="orden"></span>
+                      <span class="block text-sm font-mono text-gray-700 dark:text-gray-200 break-words" data-campo="numeros"></span>
+                    </div>
+                    <%= render(ButtonComponent.new(variant: :secondary, size: :lg, icon: "pencil-square", label: "Corregir este volumen",
                           data: { action: "medicion#corregirVolumen" }, class: "shrink-0 min-h-12 min-w-12")) %>
-                    <%= render(ButtonComponent.new(variant: :ghost, size: :lg, icon: "x-mark", label: "Quitar este volumen",
+                    <%= render(ButtonComponent.new(variant: :secondary, size: :lg, icon: "x-mark", label: "Quitar este volumen",
                           data: { action: "medicion#quitarVolumen" }, class: "shrink-0 min-h-12 min-w-12")) %>
                   </li>
                 </template>
@@ -442,7 +471,7 @@
             <p hidden class="mt-0.5 inline-block text-[11px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900"
                data-campo="unir"></p>
           </div>
-          <%= render(ButtonComponent.new(variant: :ghost, size: :lg, icon: "x-mark", label: "Sacar de la lista",
+          <%= render(ButtonComponent.new(variant: :secondary, size: :lg, icon: "x-mark", label: "Sacar de la lista",
                 data: { action: "medicion#abrirDescarte" }, hidden: true, class: "shrink-0 min-h-12 min-w-12")) %>
         </li>
       </template>
@@ -535,7 +564,7 @@
         <%= label_tag :medicion_descarte_nota, "Nota (opcional)", class: "block text-sm font-medium text-gray-700 mb-1" %>
         <%= text_field_tag :medicion_descarte_nota, nil, autocomplete: "off",
               data: { medicion_target: "descarteNota" },
-              class: "block w-full min-h-12 text-lg rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+              class: "block w-full min-h-12 text-lg rounded-lg border border-gray-500 dark:border-gray-400 shadow-sm focus:ring-cec-teal-deep focus:border-cec-teal-deep" %>
       </div>
       <p class="text-sm text-gray-500">La caja **no** cambia de estado: solo deja de esperarse acá, con tu nombre y la hora.</p>
       <p hidden class="text-base font-medium text-red-700" data-medicion-target="descarteError"></p>
@@ -600,20 +629,20 @@
           <%= select_tag "autorizar_supervisor",
                 options_from_collection_for_select(autorizantes, :id, ->(u) { "#{u.nombre} — #{u.rol_label}" }),
                 data: { medicion_target: "autorizarSupervisor" },
-                class: "block w-full min-h-12 text-lg rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+                class: "block w-full min-h-12 text-lg rounded-lg border border-gray-500 dark:border-gray-400 shadow-sm focus:ring-cec-teal-deep focus:border-cec-teal-deep" %>
         </div>
         <div>
           <%= label_tag "autorizar_pin", "Código (PIN)", class: "block text-sm font-medium text-gray-700 mb-1" %>
           <%= password_field_tag "autorizar_pin", nil, inputmode: "numeric", maxlength: 4, autocomplete: "off",
                 data: { medicion_target: "autorizarPin", action: "keydown.enter->medicion#confirmarAutorizacion:prevent" },
-                class: "block w-full min-h-12 text-2xl font-mono text-center rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+                class: "block w-full min-h-12 text-2xl font-mono text-center rounded-lg border border-gray-500 dark:border-gray-400 shadow-sm focus:ring-cec-teal-deep focus:border-cec-teal-deep" %>
         </div>
       </div>
       <div>
         <%= label_tag "autorizar_motivo", "Motivo", class: "block text-sm font-medium text-gray-700 mb-1" %>
         <%= text_field_tag "autorizar_motivo", nil, autocomplete: "off", placeholder: "ej. se buscó en el estante y no aparece",
               data: { medicion_target: "autorizarMotivo", action: "keydown.enter->medicion#confirmarAutorizacion:prevent" },
-              class: "block w-full min-h-12 text-lg rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+              class: "block w-full min-h-12 text-lg rounded-lg border border-gray-500 dark:border-gray-400 shadow-sm focus:ring-cec-teal-deep focus:border-cec-teal-deep" %>
       </div>
       <p class="text-base text-gray-600">Queda en la bitácora de autorizaciones con quién autorizó, por qué y qué faltaba.</p>
       <p hidden class="text-base font-medium text-red-700" data-medicion-target="autorizarError"></p>
