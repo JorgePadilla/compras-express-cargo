@@ -386,7 +386,10 @@ class PaquetesController < ApplicationController
     else
       # PR-10.d.3: iba al Warehouse Receipt. Esta acción se llama
       # "reimprimir_etiquetas" y sacaba la hoja carta.
-      redirect_to etiqueta_paquete_path(@paquete)
+      #
+      # 2026-10-08 · Y re-imprimir es imprimir: con el diálogo, y la pestaña
+      # se cierra al terminar.
+      redirect_to etiqueta_paquete_path(@paquete, print: true)
     end
   end
 
