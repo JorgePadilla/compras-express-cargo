@@ -10,6 +10,9 @@ class DashboardController < ApplicationController
     metrics = DashboardMetrics.new.to_h
     metrics.each { |key, value| instance_variable_set("@#{key}", value) }
     @shortcut_groups = build_shortcut_groups
+    # PR-C29.16 · El puntito del ícono de «Signos del servidor», solo para quien
+    # puede entrar. Barato: la cola y las conexiones, sin leer la máquina.
+    @signos_nivel = SignosVitales.nivel_rapido if can_access?(:signos_vitales)
   end
 
   private
