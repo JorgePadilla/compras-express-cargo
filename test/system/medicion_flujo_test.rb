@@ -59,7 +59,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
   def espiar_impresion = page.execute_script("window.__abrio = null; window.open = function(u){ window.__abrio = u }")
   def lo_que_abrio = page.evaluate_script("window.__abrio").to_s
 
-  test "una caja sola: escanear, teclear con Enter, guardar con F10, y sale su etiqueta" do
+  test "una caja sola: escanear, teclear con Enter, guardar con F9, y sale su etiqueta" do
     visit medicion_index_path
     escanear(@paquete.tracking)
 
@@ -72,7 +72,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_nil @paquete.reload.medido_at, "nada se guardó todavía"
 
     espiar_impresion
-    send_keys :f10
+    send_keys :f9
 
     assert_selector "[data-medicion-target='banner']", text: "una etiqueta", wait: 5
     bulto = Bulto.last
@@ -101,7 +101,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
 
     teclear "40", "20", "30", "40"
     espiar_impresion
-    send_keys :f10
+    send_keys :f9
 
     assert_selector "[data-medicion-target='banner']", text: "3 cajas en un solo volumen", wait: 5
     assert_equal 1, Bulto.count, "tres cajas, un solo bulto"
@@ -176,7 +176,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     teclear_otro "8", "5", "6", "7"
     assert_selector "[data-medicion-target='guardarTexto']", text: "Guardar e imprimir 2 etiquetas"
     espiar_impresion
-    send_keys :f10
+    send_keys :f9
 
     assert_selector "[data-medicion-target='banner']", text: "2 volúmenes", wait: 5
     assert_equal 2, Bulto.count
@@ -244,7 +244,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     # Se espía **antes** del F10, no después: un `window.open` de verdad deja
     # una ventana huérfana que después le tira flakes al resto de la suite.
     espiar_impresion
-    send_keys :f10
+    send_keys :f9
     assert_selector "[data-medicion-target='banner']", wait: 5
 
     espiar_impresion
@@ -269,7 +269,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     escanear_a_la_mesa(segunda, 2)
     teclear "6", "10", "12", "14"
     espiar_impresion
-    send_keys :f10
+    send_keys :f9
     assert_selector "[data-medicion-target='banner']", wait: 5
     viejo = Bulto.last
 
@@ -292,7 +292,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
 
     fill_in "medicion_peso", with: "4"
     espiar_impresion
-    send_keys :f10
+    send_keys :f9
 
     assert_selector "[data-medicion-target='banner']", wait: 5
     assert_equal 1, Bulto.count, "el nuevo reemplaza al viejo"
@@ -320,7 +320,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
 
     teclear "20", "10", "12", "14"
     espiar_impresion
-    send_keys :f10
+    send_keys :f9
 
     assert_selector "[data-medicion-target='banner']", wait: 5
     suelta.reload
@@ -431,7 +431,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     # pide el código. «Cancelar» deja todo como estaba para ir a buscarla.
     teclear "20", "10", "12", "14"
     espiar_impresion
-    send_keys :f10
+    send_keys :f9
     assert_selector "dialog[open]", text: /faltan cajas que sí vinieron/i, wait: 5
     assert_selector "dialog[open] li", text: segunda.numero_recepcion
     assert_no_selector "dialog[open] li", text: "1ZFALTA000000002"  # la que no vino no frena
@@ -441,7 +441,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
 
     escanear_a_la_mesa(segunda, 2)
     assert_selector "[data-medicion-target='tandaContador']", text: "2 de 3"
-    send_keys :f10
+    send_keys :f9
 
     # La que falta no vino: pasa sin PIN, y el banner ofrece «Facturar lo que hay».
     assert_selector "[data-medicion-target='banner']", wait: 5
@@ -461,7 +461,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     escanear_a_la_mesa(@paquete, 1)
     teclear "20", "10", "12", "14"
     espiar_impresion
-    send_keys :f10
+    send_keys :f9
     assert_selector "dialog[open]", text: /faltan cajas que sí vinieron/i, wait: 5
 
     within("dialog[open]") do
@@ -506,38 +506,44 @@ class MedicionFlujoTest < ApplicationSystemTestCase
   # frena, y la excepción sale **después de guardar**, en el banner, solo si el
   # consolidado quedó incompleto. Antes era un botón rojo permanente al lado de
   # la grilla, con la mesa completa.
-  test "guardar un consolidado incompleto ofrece «facturar lo que hay» en el banner, y el modal lista lo que falta" do
+  #
+  # C29-20 · Y se llama «Medir lo que hay»: la PESA no factura. Yusef: *"se
+  # prefactura nada más, solo queda como prefactura abierta, pendiente de todo
+  # lo que viene"*.
+  test "guardar un consolidado incompleto ofrece «medir lo que hay» en el banner, y el modal lista lo que falta" do
     grupo_de_tres(@paquete)
 
     visit medicion_index_path
     escanear_a_la_mesa(@paquete, 1)
-    assert_no_button "Facturar lo que hay"
+    assert_no_button "Medir lo que hay"
 
     teclear "20", "10", "12", "14"
     espiar_impresion
-    send_keys :f10
+    send_keys :f9
 
     assert_selector "[data-medicion-target='banner']", wait: 5
     assert_selector "[data-medicion-target='bannerFaltan']", text: "Faltan 2 cajas"
     assert_selector "[data-medicion-target='bannerFaltan']", text: "1ZFALTA000000001 (no ha llegado a Miami)"
     assert_equal 1, Bulto.count, "medir no se frenó por el grupo incompleto"
 
-    click_on "Facturar lo que hay"
+    click_on "Medir lo que hay"
 
-    assert_selector "dialog[open]", text: "Facturar lo que hay", wait: 5
+    assert_selector "dialog[open]", text: "Medir lo que hay", wait: 5
+    assert_selector "dialog[open]", text: "La pre-factura va a quedar abierta"
+    assert_no_text "acturar lo que hay"
     assert_selector "dialog[open]", text: "1ZFALTA000000001 · no ha llegado a Miami"
     page.driver.browser.action.send_keys(:escape).perform
     assert_selector "dialog[open]", text: "Se va a seguir sin estas cajas"
 
-    click_on "Sí, facturar lo que hay"
+    click_on "Sí, medir lo que hay"
 
     assert_no_selector "dialog[open]", wait: 5
     assert_selector "[data-medicion-target='banner']", text: "Se pasa sin el grupo completo (MD)"
-    assert_no_button "Facturar lo que hay"
+    assert_no_button "Medir lo que hay"
     assert_equal "MD", PreAlerta.where.not(union_parcial_at: nil).last.union_parcial_por
   end
 
-  test "un consolidado completo NO ofrece facturar lo que hay" do
+  test "un consolidado completo NO ofrece medir lo que hay" do
     consolidada = caja("1ZCOMPLETO00002")
     pa = consolidado_con(@paquete)
     pa.pre_alerta_paquetes.create!(tracking: consolidada.tracking, descripcion: "Bulto",
@@ -550,10 +556,10 @@ class MedicionFlujoTest < ApplicationSystemTestCase
 
     teclear "20", "10", "12", "14"
     espiar_impresion
-    send_keys :f10
+    send_keys :f9
 
     assert_selector "[data-medicion-target='banner']", wait: 5
-    assert_no_button "Facturar lo que hay"
+    assert_no_button "Medir lo que hay"
     assert_no_selector "[data-medicion-target='bannerFaltan']", visible: :visible
   end
 
@@ -580,7 +586,7 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     escanear_a_la_mesa(@paquete, 1)
     teclear "9", "9", "9", "9"
     espiar_impresion
-    send_keys :f10
+    send_keys :f9
 
     assert_selector "[data-medicion-target='manifiestoConteo']", text: "medidos 1 · faltan 1", wait: 5
     assert_selector "[data-medicion-target='pendientes'] li", count: 1
@@ -607,6 +613,97 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_selector "[data-medicion-target='sinPendientes']", visible: true
     assert_equal "perdido", @paquete.reload.medicion_descartada_motivo
     assert_equal "en_aduana", @paquete.estado, "sacarla de la lista no le cambia el estado"
+  end
+
+  # ── C29 · La pasada del 2026-10-08 ─────────────────────────────────────────
+
+  # C29-13 · *"F10 le pusiste. Normalmente es F9… F9 para imprimir siempre"*.
+  # F10 sigue guardando —es «guardar» en todos lados—, y reimprimir pasa a F4.
+  test "F10 también guarda, y F4 reimprime lo último" do
+    visit medicion_index_path
+    escanear_a_la_mesa(@paquete, 1)
+    teclear "12.5", "10", "12", "14"
+    espiar_impresion
+    send_keys :f10
+
+    assert_selector "[data-medicion-target='banner']", text: "una etiqueta", wait: 5
+    assert_selector "[data-medicion-target='bannerReimprimir']", text: "(F4)"
+    primera = lo_que_abrio
+    espiar_impresion
+    page.driver.browser.action.send_keys(:f4).perform
+    assert_equal primera, lo_que_abrio, "F4 reimprime la misma etiqueta"
+  end
+
+  # C29-14 · *"Voy a quitar uno, ¿cómo quito uno?… solo puede quitar la
+  # última"* — Yusef: *"una X acá al lado, una X grande, porque acordate que va
+  # a hacer touch"*.
+  test "la X de una caja del medio la saca, y las otras dos se quedan y se miden" do
+    segunda = caja("1ZFLUJO00000012")
+    tercera = caja("1ZFLUJO00000013")
+
+    visit medicion_index_path
+    escanear_a_la_mesa(@paquete, 1)
+    escanear_a_la_mesa(segunda, 2)
+    escanear_a_la_mesa(tercera, 3)
+
+    assert_selector "[data-medicion-target='mesa'] li button[aria-label='Quitar esta caja de la tanda']", count: 3
+    find("[data-medicion-target='mesa'] li", text: segunda.numero_recepcion)
+      .find("button[aria-label='Quitar esta caja de la tanda']").click
+
+    assert_selector "[data-medicion-target='mesa'] li", count: 2, wait: 5
+    assert_no_selector "[data-medicion-target='mesa'] li", text: segunda.numero_recepcion
+    assert_equal "codigo_medicion", foco
+
+    # Y la sacada vuelve a entrar con un pip, al final.
+    escanear_a_la_mesa(segunda, 3)
+    find("[data-medicion-target='mesa'] li", text: @paquete.numero_recepcion)
+      .find("button[aria-label='Quitar esta caja de la tanda']").click
+    assert_selector "[data-medicion-target='mesa'] li", count: 2, wait: 5
+
+    teclear "30", "10", "12", "14"
+    espiar_impresion
+    send_keys :f9
+
+    assert_selector "[data-medicion-target='banner']", text: "2 cajas en un solo volumen", wait: 5
+    assert_equal [ segunda.id, tercera.id ].sort, Bulto.last.paquetes.map(&:id).sort
+    assert_nil @paquete.reload.medido_at, "la que se sacó no se midió"
+  end
+
+  # C29-19 · *"El que necesita leer es las notas. Las notas en modal"* — y las
+  # mismas que pre-factura: *"de momento no las deberíamos de separar"*.
+  test "las notas del cliente se abren solas con la primera caja, y el botón las vuelve a abrir" do
+    clientes(:juan).update!(notas_honduras: "Llamar antes de entregar: trabaja de noche")
+    pa = consolidado_con(@paquete)
+    pa.update!(notas_grupo: "Meter todo en una sola caja")
+    segunda = caja("1ZFLUJO00000022")
+    pa.pre_alerta_paquetes.create!(tracking: segunda.tracking, descripcion: "Bulto", fecha: Date.current, paquete: segunda)
+
+    visit medicion_index_path
+    escanear(@paquete.numero_recepcion)
+
+    assert_selector "dialog[open]", text: "Notas del cliente", wait: 5
+    assert_selector "dialog[open]", text: "Llamar antes de entregar: trabaja de noche"
+    assert_selector "dialog[open]", text: "Meter todo en una sola caja"
+    page.driver.browser.action.send_keys(:escape).perform
+    assert_selector "dialog[open]", text: "Notas del cliente"
+    page.driver.browser.action.send_keys(:enter).perform
+    assert_no_selector "dialog[open]", wait: 5
+    assert_selector "[data-medicion-target='mesa'] li", count: 1
+
+    # La segunda caja trae las mismas notas: no se vuelven a abrir.
+    escanear_a_la_mesa(segunda, 2)
+    assert_no_selector "dialog[open]"
+
+    click_on "2 notas del cliente"
+    assert_selector "dialog[open]", text: "Meter todo en una sola caja", wait: 5
+  end
+
+  test "sin notas no hay modal ni botón" do
+    visit medicion_index_path
+    escanear_a_la_mesa(@paquete, 1)
+
+    assert_no_selector "dialog[open]"
+    assert_no_selector "[data-medicion-target='notasBoton']", visible: :visible
   end
 
   private

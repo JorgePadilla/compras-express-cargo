@@ -420,7 +420,41 @@ class MedicionController < ApplicationController
       paquete: datos_de(paquete), miami: miami_de(paquete),
       pre_alerta: pre_alerta_json(grupo), grupo: grupo_json(grupo, paquete.id),
       manifiesto: manifiesto_json(paquete.manifiesto, paquete.id),
-      medicion_previa: previa_de(paquete) }
+      medicion_previa: previa_de(paquete), notas: notas_de(paquete) }
+  end
+
+  # C29-19 · Las notas del cliente, **las mismas que ve pre-factura**. Yusef,
+  # el 2026-10-08: *"como ya creamos el área de medición, aquí van a estar las
+  # notas de prefacturación… y yo creo que de momento no las deberíamos de
+  # separar"*. Y cómo: *"el que necesita leer es las notas. Las notas en
+  # modal"*.
+  #
+  # No hay notas nuevas: son los bloques de la franja de /etiquetar
+  # (`notas_contexto_blocks`), con su mismo orden y sus colores —lo que el
+  # cliente escribió en la pre-alerta, las permanentes del área del usuario y
+  # las del paquete—. El rol `medicion` ya leía `notas_honduras`, la columna de
+  # pre-factura (`User::NOTAS_POR_ROL`), así que «no separarlas» es justamente
+  # no inventar una columna.
+  def notas_de(paquete)
+    return [] if paquete.cliente.nil?
+
+    helpers.notas_contexto_blocks(cliente: paquete.cliente, paquete: paquete,
+                                  notas_especiales: notas_especiales_de(paquete), user: Current.user)
+           .map { |n| n.merge(clases: helpers.tono_nota_classes(n[:tono])) }
+  end
+
+  # Lo que el cliente escribió sobre **esta** caja: la instrucción de su
+  # renglón y la nota de grupo de su pre-alerta. Por vínculo o por tracking,
+  # como `GrupoDeUnion`.
+  def notas_especiales_de(paquete)
+    renglones = PreAlertaPaquete.joins(:pre_alerta)
+                                .merge(PreAlerta.activas.where(cliente_id: paquete.cliente_id))
+                                .where("pre_alerta_paquetes.paquete_id = :id OR UPPER(pre_alerta_paquetes.tracking) = :t",
+                                       id: paquete.id, t: paquete.tracking.to_s.upcase)
+                                .includes(:pre_alerta).to_a
+    instrucciones = renglones.filter_map { |r| [ r.tracking, r.instrucciones ] if r.instrucciones.present? }
+    grupos = renglones.map(&:pre_alerta).uniq.filter_map { |pa| [ pa.numero_documento, pa.notas_grupo ] if pa.notas_grupo.present? }
+    instrucciones + grupos
   end
 
   def por_caja(paquetes) = paquetes.sort_by { |p| [ p.numero_caja.to_i, p.id ] }
