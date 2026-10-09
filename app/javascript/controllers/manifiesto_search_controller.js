@@ -130,6 +130,14 @@ export default class extends Controller {
         this._abrirAviso("Va a otra sucursal", data.mensaje, null)
         this.avisoModalTarget.showModal()
         break
+      // C30-06 · El candado: una pestaña vieja escaneando en un manifiesto que
+      // ya se finalizó, o que un supervisor volvió a cerrar. Suena como el
+      // que ya salió, y dice por qué.
+      case "bloqueado":
+        this.dispatch("cerrado")
+        this._abrirAviso("El manifiesto está bloqueado", data.mensaje, null)
+        this.avisoModalTarget.showModal()
+        break
       case "fuera_de_circulacion":
         this.dispatch("fuera")
         this._abrirAviso("Ese paquete ya no viaja", data.mensaje, null)
