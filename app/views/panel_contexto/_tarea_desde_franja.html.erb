@@ -9,11 +9,12 @@
 
   <dialog data-dialogo-target="dialogo"
           class="rounded-xl p-0 w-full max-w-md shadow-xl backdrop:bg-black/50 dark:bg-gray-800 dark:text-gray-100">
-    <div class="p-5">
-      <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Dejar una tarea</h3>
-      <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+    <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, titulo: "Dejar una tarea", titulo_tag: :h3) do %>
+      <p class="mt-0.5 text-xs opacity-90">
         Para <%= cliente.nombre_completo %><% if paquete %>, en el paquete <span class="font-mono"><%= paquete.tracking %></span><% elsif tracking.present? %>; se ata al paquete <span class="font-mono"><%= tracking %></span> al guardarlo<% end %>.
       </p>
+    <% end %>
+    <div class="p-5">
       <%= render "panel_contexto/tarea_desde_franja_form",
             tarea: Tarea.new(cliente_id: cliente.id, tracking: tracking,
                              departamento: departamento_por_defecto_de(Current.user)),

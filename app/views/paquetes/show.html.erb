@@ -169,12 +169,9 @@ end %>
     <dialog data-dialogo-target="dialogo" style="margin: auto"
             class="rounded-xl p-0 w-[26rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-gray-300">
       <%= form_with url: bajar_cajas_paquete_path(@paquete), method: :post do %>
-        <div class="bg-gray-50 px-5 py-3 border-b border-gray-200">
-          <h3 class="text-base font-semibold text-gray-800">Bajar la cantidad de cajas</h3>
-          <p class="text-xs text-gray-600 mt-0.5">
-            Lo autoriza un supervisor con su PIN. Queda registrado quién.
-          </p>
-        </div>
+        <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, titulo: "Bajar la cantidad de cajas", titulo_tag: :h3) do %>
+          <p class="text-xs mt-0.5 opacity-90">Lo autoriza un supervisor con su PIN. Queda registrado quién.</p>
+        <% end %>
         <div class="p-5 space-y-3 bg-white">
           <div>
             <%= label_tag :cantidad, "Cuántas cajas son en realidad", class: "block text-sm font-medium text-gray-700 mb-1" %>
@@ -249,31 +246,28 @@ end %>
     <dialog data-dialogo-target="dialogo" style="margin: auto"
             class="rounded-xl p-0 w-[26rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-gray-300">
       <%= form_with url: cobro_excepcion_paquete_path(@paquete), method: :post do %>
-        <%# El valor va en un `hidden`: el botón ya dice cuál de los dos actos es,
-            así que no hay nada que elegir adentro del modal. %>
-        <%# C24-01 · Las tres opciones, porque son **dos mitades de lo mismo**:
-            Jorge, 2026-09-06, aclarando lo que Yusef pidió — *"él quiere poder
-            cobrar por libra o volumen volumétrico de vez en cuando, dependiendo
-            el caso"*. Un `select` y no un `hidden`, que ahora hay qué elegir. %>
-        <div class="mb-1">
-          <%= label_tag :cobro_excepcion, "Cómo se cobra este paquete", class: "block text-sm font-medium text-gray-700 mb-1" %>
-          <%= select_tag :cobro_excepcion,
-                options_for_select([
-                  [ "Lo normal: el mayor entre peso real y volumétrico", "" ],
-                  [ "Solo el volumétrico, aunque sea menor", "solo_volumetrico" ],
-                  [ "Solo el peso real, aunque gane el volumétrico", "solo_peso" ]
-                ], @paquete.cobro_excepcion.to_s),
-                class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
-        </div>
-        <div class="bg-gray-50 px-5 py-3 border-b border-gray-200">
-          <h3 class="text-base font-semibold text-gray-800">
-            Cómo se cobra este paquete
-          </h3>
-          <p class="text-xs text-gray-600 mt-0.5">
-            Lo autoriza un supervisor con su PIN. Queda registrado quién y por qué.
-          </p>
-        </div>
+        <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, titulo: "Cómo se cobra este paquete", titulo_tag: :h3) do %>
+          <p class="text-xs mt-0.5 opacity-90">Lo autoriza un supervisor con su PIN. Queda registrado quién y por qué.</p>
+        <% end %>
         <div class="p-5 space-y-3 bg-white">
+          <%# El valor va en un `hidden`: el botón ya dice cuál de los dos actos es,
+              así que no hay nada que elegir adentro del modal. %>
+          <%# C24-01 · Las tres opciones, porque son **dos mitades de lo mismo**:
+              Jorge, 2026-09-06, aclarando lo que Yusef pidió — *"él quiere poder
+              cobrar por libra o volumen volumétrico de vez en cuando, dependiendo
+              el caso"*. Un `select` y no un `hidden`, que ahora hay qué elegir. %>
+          <%# PR-C29.12 · Estaba **arriba** de la franja del modal, antes del
+              título. Baja al cuerpo, primero. %>
+          <div class="mb-1">
+            <%= label_tag :cobro_excepcion, "Cómo se cobra este paquete", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= select_tag :cobro_excepcion,
+                  options_for_select([
+                    [ "Lo normal: el mayor entre peso real y volumétrico", "" ],
+                    [ "Solo el volumétrico, aunque sea menor", "solo_volumetrico" ],
+                    [ "Solo el peso real, aunque gane el volumétrico", "solo_peso" ]
+                  ], @paquete.cobro_excepcion.to_s),
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+          </div>
           <div>
             <%= label_tag :supervisor_id, "Supervisor", class: "block text-sm font-medium text-gray-700 mb-1" %>
             <%= select_tag :supervisor_id,
@@ -1117,18 +1111,9 @@ end %>
 <dialog data-mover-pre-alerta-modal-target="dialog"
         style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0;"
         class="rounded-xl shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm w-full max-w-lg p-0 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 ring-1 ring-gray-200 dark:ring-gray-700">
-  <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-    <h3 class="text-base font-semibold text-cec-navy dark:text-cec-gold flex items-center gap-2">
-      <%= heroicon "arrows-right-left", variant: :solid, options: { class: "w-5 h-5 text-cec-teal" } %>
-      Mover a Pre-Alerta Existente
-    </h3>
-    <button type="button"
-            data-action="click->mover-pre-alerta-modal#close"
-            class="p-1 rounded text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
-            aria-label="Cerrar">
-      <%= heroicon "x-mark", variant: :solid, options: { class: "w-5 h-5" } %>
-    </button>
-  </div>
+  <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, icono: "arrows-right-left",
+        titulo: "Mover a Pre-Alerta Existente", titulo_tag: :h3,
+        cerrar: "click->mover-pre-alerta-modal#close") %>
 
   <div class="px-5 py-4 space-y-3">
     <div>
@@ -1181,18 +1166,9 @@ end %>
 <dialog data-asignar-tercero-modal-target="dialog"
         style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0;"
         class="rounded-xl shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm w-full max-w-lg p-0 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 ring-1 ring-gray-200 dark:ring-gray-700">
-  <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-    <h3 class="text-base font-semibold text-cec-navy dark:text-cec-gold flex items-center gap-2">
-      <%= heroicon "user-group", variant: :solid, options: { class: "w-5 h-5 text-cec-purple-dark" } %>
-      Asignar Tercero (Cliente Final)
-    </h3>
-    <button type="button"
-            data-action="click->asignar-tercero-modal#close"
-            class="p-1 rounded text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
-            aria-label="Cerrar">
-      <%= heroicon "x-mark", variant: :solid, options: { class: "w-5 h-5" } %>
-    </button>
-  </div>
+  <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, icono: "user-group",
+        titulo: "Asignar Tercero (Cliente Final)", titulo_tag: :h3,
+        cerrar: "click->asignar-tercero-modal#close") %>
 
   <div class="px-5 py-4 space-y-3">
     <p class="text-xs text-gray-600 dark:text-gray-300">

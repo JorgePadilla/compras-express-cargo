@@ -107,6 +107,57 @@ en botones: `cec-danger` `#EF4444` con blanco (3.76 → usar `red-600`, 4.83),
 
 ---
 
+## Modales — un tono por intención
+
+> Jorge, 2026-10-08, mirando el modal «Su consolidado ya se midió» en
+> medición: *"the orange in here feels different from the other; I would like
+> to somehow have a standard on the colors use"*. Era `amber-700` sólido —que
+> la paleta no prevé— y no había regla: 38 modales, seis colores de franja
+> distintos, y la mitad sin franja.
+
+**El color de la franja dice qué le pide el modal al operario**, no de qué
+pantalla es. Se pinta siempre con `ModalHeaderComponent`; las clases viven en
+`ModalHeaderComponent::TONOS` y en ningún otro lado.
+
+| tono | franja | contraste | cuándo | ejemplos |
+|---|---|---:|---|---|
+| `:bloqueo` | `bg-red-700 text-white` | 6.47 | algo está mal y no deja seguir | «Faltan cajas que sí vinieron», «No entró al manifiesto», «Este paquete es de otro tipo de envío», «Guardar en la bolsa de…» |
+| `:atencion` | `bg-cec-gold text-cec-navy-dark` | 9.39 | hay que decidir o mirar; no es un error | «Su consolidado ya se midió», «¿La agregás a este consolidado?», «Tracking ya existe», «Estás retrocediendo el pipeline», «Medir lo que hay», el «Confirmar» genérico |
+| `:info` | `bg-cec-navy text-white` | 14.43 | informa, administra, pide un PIN, es un formulario | «Sacar de la lista», «Cambio de servicio», «Retener en Miami», «Emitir NC-…», «Sonidos de escaneo» |
+| `:listo` | `bg-cec-teal text-cec-navy-dark` | 6.69 | salió bien | «¡Tus cambios fueron guardados!», «Pre-alerta registrada» |
+| `:notas` | `bg-amber-50 text-amber-900` · oscuro `dark:bg-amber-900/20 dark:text-amber-200` | 8.75 · 11.11 | notas del cliente o del paquete | «Notas del cliente» de la PESA, la nota del cliente en el aviso de /etiquetar |
+
+```erb
+<%= render ModalHeaderComponent.new(tono: :atencion, tamano: :grande,
+      kicker: "Su consolidado ya se midió", titulo: "Traé el resto del estante") %>
+```
+
+- `tamano:` `:grande` en las pantallas de pistola (se leen parado, a un metro),
+  `:normal` por defecto, `:chico` en formularios. `centrado: true` pone el
+  ícono arriba. `titulo_data:` / `kicker_data:` para los targets de Stimulus
+  que escriben el texto; `cerrar: "click->modal#close"` agrega la «×».
+- Lo que va adentro de la franja (subtítulos) hereda la tinta: usar
+  `opacity-90`, no un color.
+- **Amber nunca va sólido.** Ni en franjas ni en botones: amber es el de las
+  notas, y en claro. El `warning` de `ButtonComponent` pasó a ser ese ámbar
+  claro; para confirmar va `primary`, `teal` o `gold`.
+- El aviso de `/etiquetar` cambia de tono en vivo (retención → bloqueo, tarea
+  → atención, nota → notas) y lee las clases del servidor
+  (`data-etiquetar-tonos-value`), no de una tabla propia en el JS.
+
+`test/lint/tonos_de_modal_test.rb` hace cumplir las cuatro cosas: no hay ámbar
+sólido en `app/views` ni `app/components`, todo `<dialog>` y todo
+`fixed inset-0` que sea modal renderiza `ModalHeaderComponent`, los tonos son
+exactamente cinco, y el JS de `/etiquetar` no tiene su copia.
+
+> ⏳ **Pendiente.** El modal de confirmación genérico (`shared/_confirm_modal`,
+> el que reemplaza a `turbo_confirm`) pinta el botón de confirmar en **rojo
+> siempre**: `danger` es `true` por defecto y casi ninguna de las ~44 llamadas
+> lo pasa, así que «¿Generar venta?» sale igual que «¿Eliminar?». Hay que
+> clasificar cada llamada; no entró en PR-C29.12.
+
+---
+
 ## Botones — `ButtonComponent`
 
 **Un botón nuevo se escribe con `ButtonComponent`, no a mano.** Los variants
@@ -124,7 +175,7 @@ el número se recalcula.
 | `outline_teal` | secundaria con borde teal (`-deep`) | 4.81 |
 | `danger` | destructiva — `red-600` | 4.83 |
 | `soft_danger` | destructiva "suave" (Anular) | 5.91 |
-| `warning` | aviso — `amber-700` | 5.02 |
+| `warning` | el ámbar **claro** de las notas — `amber-900` sobre `amber-50` (PR-C29.12; era `amber-700` sólido) | 8.75 |
 
 Tamaños: `:xs` `:sm` `:md` (default) `:lg`. El icono sigue al botón (16 / 16 /
 20 / 20 px).

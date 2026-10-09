@@ -276,10 +276,9 @@ end %>
   <dialog data-entrega-personal-target="etiquetasModal"
           style="margin: auto"
           class="rounded-xl p-0 w-[22rem] max-w-[95vw] backdrop:bg-black/50 ring-2 ring-cec-gold">
-    <div class="bg-cec-navy px-6 py-4 text-center">
-      <p class="text-xs font-bold uppercase tracking-wider text-cec-gold">No se midió ninguna caja</p>
-      <p class="text-sm text-white mt-1">¿Cuántas etiquetas se imprimen?</p>
-    </div>
+    <%# PR-C29.12 · El mismo que /etiquetar: info, con `ModalHeaderComponent`. %>
+    <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, centrado: true,
+          kicker: "No se midió ninguna caja", titulo: "¿Cuántas etiquetas se imprimen?") %>
     <div class="bg-white px-6 py-5 text-center">
       <input type="number" min="1" max="99" value="1" step="1"
              data-entrega-personal-target="etiquetasInput"

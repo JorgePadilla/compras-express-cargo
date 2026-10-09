@@ -82,10 +82,15 @@ class ButtonComponent < ViewComponent::Base
                  "dark:bg-red-900/30 dark:text-red-300 dark:border-red-800 " \
                  "dark:hover:bg-red-900/50",
 
-    # `amber-700`, no `amber-600`: blanco sobre #D97706 da 3.19:1; sobre
-    # #B45309 da 5.02:1. Amber está autorizado (no está en la lista prohibida
-    # de `banned_colors_test`, que sí veta orange y yellow).
-    warning: "bg-amber-700 text-white hover:bg-amber-800 shadow-sm",
+    # PR-C29.12 · El ámbar de las **notas**, en claro: `amber-900` sobre
+    # `amber-50` da 8.75:1 (hover `amber-100`, 8.15:1); en oscuro `amber-200`
+    # sobre `amber-900/20` da 11.11:1. Era `amber-700` sólido con blanco, y
+    # ese naranja es el que Jorge vio distinto en los modales de medición —
+    # *"feels different from the other"*—. Amber no va más sólido en ningún
+    # lado (`tonos_de_modal_test`); para confirmar va `primary`, `teal` o
+    # `gold`, y para avisar, la franja de `ModalHeaderComponent`.
+    warning: "bg-amber-50 text-amber-900 ring-1 ring-amber-300 hover:bg-amber-100 " \
+             "dark:bg-amber-900/20 dark:text-amber-200 dark:ring-amber-800 dark:hover:bg-amber-900/40",
 
     # Uno de los dos gradientes autorizados del design system. Absorbe los 4
     # `bg-cec-gold` planos de la app: dos oros que nadie sabe nombrar no son

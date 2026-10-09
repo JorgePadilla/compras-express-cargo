@@ -33,12 +33,16 @@ export default class extends Controller {
     confirmClasses.remove("bg-red-600", "hover:bg-red-700", "bg-cec-teal", "hover:bg-cec-teal-dark")
     if (danger) {
       confirmClasses.add("bg-red-600", "hover:bg-red-700")
-      this.iconTarget.classList.remove("bg-cec-teal/10", "text-cec-teal")
-      this.iconTarget.classList.add("bg-red-50", "text-red-600")
+      if (this.hasIconTarget) {
+        this.iconTarget.classList.remove("bg-cec-teal/10", "text-cec-teal")
+        this.iconTarget.classList.add("bg-red-50", "text-red-600")
+      }
     } else {
       confirmClasses.add("bg-cec-teal", "hover:bg-cec-teal-dark")
-      this.iconTarget.classList.remove("bg-red-50", "text-red-600")
-      this.iconTarget.classList.add("bg-cec-teal/10", "text-cec-teal")
+      if (this.hasIconTarget) {
+        this.iconTarget.classList.remove("bg-red-50", "text-red-600")
+        this.iconTarget.classList.add("bg-cec-teal/10", "text-cec-teal")
+      }
     }
 
     this.rootTarget.classList.remove("hidden")

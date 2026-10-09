@@ -63,10 +63,10 @@
           data-action="cancel->empaque#avisoCancelar"
           style="margin: auto"
           class="rounded-xl p-0 w-[30rem] max-w-[95vw] backdrop:bg-black/60">
-    <div class="px-6 py-4 text-center bg-red-50">
-      <p class="text-xs font-bold uppercase tracking-wider text-red-800">No entró a la caja</p>
-      <p class="text-2xl font-bold mt-1 text-red-800" data-empaque-target="avisoTitulo"></p>
-    </div>
+    <%# PR-C29.12 · Bloqueo: la caja no entró. Era rojo claro, que en la tabla
+        de tonos no existe. %>
+    <%= render ModalHeaderComponent.new(tono: :bloqueo, centrado: true, kicker: "No entró a la caja",
+          titulo_data: { empaque_target: "avisoTitulo" }) %>
     <div class="bg-white px-6 py-5">
       <p class="text-base text-gray-800" data-empaque-target="avisoTexto"></p>
     </div>

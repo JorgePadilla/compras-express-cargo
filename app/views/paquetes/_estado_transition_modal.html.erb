@@ -6,19 +6,15 @@
 <dialog id="estado-transition-dialog"
         class="rounded-xl shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm w-full max-w-md p-0 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 ring-1 ring-gray-200 dark:ring-gray-700"
         style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0;">
-  <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
-    <% if block_info[:motivo] == :rol %>
-      <%= heroicon "lock-closed", variant: :solid, options: { class: "w-5 h-5 text-red-600" } %>
-      <h3 class="text-base font-semibold text-red-700 dark:text-red-400">
-        No tienes permiso para cambiar el estado
-      </h3>
-    <% else %>
-      <%= heroicon "exclamation-triangle", variant: :solid, options: { class: "w-5 h-5 text-amber-600" } %>
-      <h3 class="text-base font-semibold text-amber-700 dark:text-amber-400">
-        Estás retrocediendo el pipeline
-      </h3>
-    <% end %>
-  </div>
+  <%# PR-C29.12 · Sin permiso es bloqueo; retroceder es atención: se puede,
+      pero hay que decidirlo. %>
+  <% if block_info[:motivo] == :rol %>
+    <%= render ModalHeaderComponent.new(tono: :bloqueo, tamano: :chico, icono: "lock-closed",
+          titulo: "No tienes permiso para cambiar el estado", titulo_tag: :h3) %>
+  <% else %>
+    <%= render ModalHeaderComponent.new(tono: :atencion, tamano: :chico, icono: "exclamation-triangle",
+          titulo: "Estás retrocediendo el pipeline", titulo_tag: :h3) %>
+  <% end %>
 
   <div class="px-5 py-4 space-y-3 text-sm">
     <p class="flex items-center gap-2 text-gray-700 dark:text-gray-200">
@@ -80,14 +76,10 @@
     <% else %>
       <%= link_to "Cancelar", paquete_path(paquete),
             class: "px-3 py-1.5 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700" %>
-      <%= button_to paquete_path(paquete),
-            method: :patch,
-            params: {
-              paquete: { estado: block_info[:objetivo] },
-              confirm_retroceso: "1"
-            },
-            class: "px-4 py-1.5 rounded-md text-sm font-semibold bg-amber-600 text-white hover:bg-amber-700 inline-flex items-center gap-1.5" do %>
-        <%= heroicon "check", variant: :solid, options: { class: "w-4 h-4" } %>
+      <%# PR-C29.12 · Era `bg-amber-600` crudo: blanco sobre él da 3.19:1, abajo
+          del 4.5 de AA. %>
+      <%= render ButtonComponent.new(variant: :primary, icon: "check", href: paquete_path(paquete), method: :patch,
+            params: { paquete: { estado: block_info[:objetivo] }, confirm_retroceso: "1" }) do %>
         Confirmar retroceso
       <% end %>
     <% end %>
