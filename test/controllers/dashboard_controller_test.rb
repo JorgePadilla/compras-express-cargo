@@ -210,8 +210,12 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     # mano—; **mover la carga es Logística**. El manifiesto se fue de acá
     # (Jorge: *"hay que mover los links de mover carga al grupo de logística"*)
     # y «Recibir Carga», que nunca había tenido card, entró con él.
+    #
+    # 2026-10-08 · Y en el orden de la barra, que es el del trabajo, con
+    # «Medición», que faltaba (Jorge: *"all the options in the left have an
+    # icon in the root /"*).
     assert_equal [ "Etiquetar", "Entrega Personal" ], titulos.call("Miami")
-    assert_equal [ "Pre-Alertas", "Manifiestos", "Recibir Carga", "Guías y aduana", "Todos los Paquetes" ],
+    assert_equal [ "Pre-Alertas", "Manifiestos", "Guías y aduana", "Recibir Carga", "Medición", "Todos los Paquetes" ],
                  titulos.call("Logística")
 
     areas = grupos.keys
@@ -271,6 +275,33 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     groups = @controller.instance_variable_get(:@shortcut_groups)
     groups.each do |g|
       assert g[:cards].any?, "El área #{g[:area]} está vacía y no debería renderizarse"
+    end
+  end
+
+  # Jorge, 2026-10-08: *"let's make sure all the options in the left have an
+  # icon in the root /"*. Para cada rol que ve el Home, todo link de la barra
+  # (menos «Home») tiene su tarjeta en el contenido. El lint
+  # `home_con_todas_las_opciones_test` compara los íconos; esto, que cada rol
+  # vea las suyas y no las de otro.
+  {
+    "admin" => -> { users(:admin) },
+    "supervisor_miami" => -> {
+      User.create!(nombre: "Sup Miami", email_address: "sup_miami_home@test.com", password: "password123",
+                   rol: "supervisor_miami", ubicacion: "miami", activo: true)
+    }
+  }.each do |rol, usuario|
+    test "#{rol}: toda opción de la barra tiene su tarjeta en el Home" do
+      login_as instance_exec(&usuario)
+      get root_url
+      assert_response :success
+
+      html = Nokogiri::HTML(response.body)
+      barra = html.css("aside#sidebar nav a[href]").map { |a| a["href"] }.uniq - [ root_path ]
+      home = html.css("main a[href]").map { |a| a["href"] }
+      assert_operator barra.size, :>, 3, "la barra de #{rol} salió casi vacía: el test no mira nada"
+
+      faltan = barra - home
+      assert_empty faltan, "#{rol} ve en la barra y no en el Home: #{faltan.join(', ')}"
     end
   end
 end

@@ -41,16 +41,19 @@ class DashboardController < ApplicationController
     # recorrido. "Recibir Carga" además **no tenía card**: la pantalla existe
     # desde `PR-M7` y al dashboard nunca llegó.
     log = []
+    # Home con todas las opciones: el mismo orden que la barra lateral, que es
+    # el del trabajo (`orden_del_menu_test`). «Medición» faltaba.
     log << card("Pre-Alertas",        "Recepciones esperadas",      "bell-alert",             pre_alertas_path,  :navy) if can_access?(:pre_alertas)
     log << card("Manifiestos",        "Empaque y envío",            "cube",                   manifiestos_path,  :navy) if can_access?(:manifiestos)
-    log << card("Recibir Carga",      "Escanear las cajas que llegan", "truck",               recepcion_carga_index_path, :navy) if can_access?(:recibir_carga)
     log << card("Guías y aduana",     "La guía del proveedor y la fecha", "document-text",   guias_aduana_index_path, :navy) if can_access?(:guias_aduana)
+    log << card("Recibir Carga",      "Escanear las cajas que llegan", "truck",               recepcion_carga_index_path, :navy) if can_access?(:recibir_carga)
+    log << card("Medición",           "Pesar y medir en San Pedro", "scale",                  medicion_index_path, :navy) if can_access?(:medicion)
     log << card("Todos los Paquetes", "Búsqueda y reportes",        "archive-box",            paquetes_path,     :navy) if can_access?(:paquetes)
     groups << { area: "Logística", cards: log } if log.any?
 
     fac = []
-    fac << card("Pre-Facturas",      nil, "document-text",            pre_facturas_path,    :teal) if can_access?(:pre_facturas)
     fac << card("Cotizaciones",      nil, "clipboard-document-list",  cotizaciones_path,    :teal) if can_access?(:cotizaciones)
+    fac << card("Pre-Facturas",      nil, "document-text",            pre_facturas_path,    :teal) if can_access?(:pre_facturas)
     fac << card("Facturas",          nil, "currency-dollar",          ventas_path,          :teal) if can_access?(:ventas)
     fac << card("Recibos",           nil, "receipt-percent",          recibos_path,         :teal) if can_access?(:recibos)
     fac << card("Notas de Débito",   nil, "document-plus",            notas_debito_path,    :teal) if can_access?(:notas_debito)
@@ -80,6 +83,12 @@ class DashboardController < ApplicationController
       groups << { area: "Caja Diaria", cards: caja }
     end
 
+    # La bitácora de autorizaciones: en la barra es la sección «Control», y
+    # sale para quien lleva PIN (`RP-21`), no por permiso de pantalla.
+    if Current.user&.rol_autorizante?
+      groups << { area: "Control", cards: [ card("Autorizaciones", "Quién autorizó qué, y por qué", "key", autorizaciones_path, :navy) ] }
+    end
+
     if can_access?(:clientes)
       groups << {
         area: "Clientes",
@@ -105,21 +114,27 @@ class DashboardController < ApplicationController
           # PR-C7.12: los grupos de clientes ya no tienen tarjeta propia — se
           # administran dentro de la Tabla de Servicios, que es donde vive su precio.
           card("Tabla de Servicios",     "Precios, escalones, mínimos y grupos", "currency-dollar", servicios_path,                 :gold),
-          card("Tarifas de Recolecta",   nil, "truck",                   tarifas_recolecta_path,    :gold),
-          card("Servicios Extra",        nil, "sparkles",                servicios_extra_path,      :gold),
-          card("Proveedores",            nil, "building-storefront",     proveedores_path,          :gold),
+          card("Tarifas de Recolecta",   nil, "map-pin",                 tarifas_recolecta_path,    :gold),
+          card("Servicios Extra",        nil, "puzzle-piece",            servicios_extra_path,      :gold),
+          card("Proveedores",            nil, "shopping-bag",            proveedores_path,          :gold),
           card("Motivos de Retención",   nil, "hand-raised",             motivos_retencion_path,    :gold),
           card("Envío por Política",     "Por qué se mandó sin identificación", "paper-airplane", motivos_envio_politica_path, :gold),
-          card("Plantillas de Notas",    nil, "document-duplicate",      plantillas_notas_cliente_path, :gold)
+          card("Plantillas de Notas",    nil, "clipboard",               plantillas_notas_cliente_path, :gold),
+          card("Plantillas Descripción", nil, "tag",                     plantillas_descripcion_path, :gold),
+          card("Catálogos del Manifiesto", "Tamaños de caja y empresas", "rectangle-stack", catalogos_manifiesto_path, :gold)
         ]
       }
 
       groups << {
         area: "Configuración",
         cards: [
-          card("Usuarios",   nil, "user-group",          users_path,      :red),
-          card("Sucursales", nil, "building-storefront", sucursales_path, :red),
-          card("Empresa",    nil, "building-office-2",   empresa_path,    :red)
+          card("Usuarios",             nil, "user-group",          users_path,           :red),
+          card("Permisos por rol",     nil, "lock-closed",         permisos_path,        :red),
+          card("Títulos de los roles", nil, "identification",      roles_path,           :red),
+          card("Sucursales",           nil, "building-storefront", sucursales_path,      :red),
+          card("Empresa",              nil, "building-office-2",   empresa_path,         :red),
+          card("Tasa de Cambio",       nil, "currency-dollar",     tasa_cambio_path,     :red),
+          card("Ajustes de Etiqueta",  nil, "printer",             ajustes_etiqueta_path, :red)
           # "Reportes" apuntaba a "#" — se agrega cuando exista (Fase 6).
         ]
       }
