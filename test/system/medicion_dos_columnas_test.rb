@@ -47,6 +47,7 @@ class MedicionDosColumnasTest < ApplicationSystemTestCase
   # that should be a little bigger"*. Desde `lg` escanear se lleva más ancho,
   # y medir no puede quedar tan angosta que no entren las tres medidas. 1024
   # con un volumen es el caso que salía al revés con `fr` a secas.
+  # PR-C29.14 · Jorge pidió medir un 20 % más angosta: un tercio del ancho.
   [ 1024, 1400 ].each do |ancho|
     test "con #{ancho} px escanear es más ancha que medir, y medir sigue entrando" do
       page.driver.browser.manage.window.resize_to(ancho, 1000)
@@ -60,7 +61,17 @@ class MedicionDosColumnasTest < ApplicationSystemTestCase
       ancho_escanear = escanear["right"] - escanear["left"]
       ancho_medir = medir["right"] - medir["left"]
       assert_operator ancho_escanear, :>, ancho_medir, "escanear mide #{ancho_escanear} y medir #{ancho_medir}"
-      assert_operator ancho_medir, :>=, 360, "medir quedó en #{ancho_medir} px: no entran las tres medidas"
+
+      # PR-C29.14 · Medir es un tercio del ancho, no más (era 3/7, ~43 %).
+      parte = ancho_medir / (ancho_escanear + ancho_medir)
+      assert_in_delta 0.34, parte, 0.03, "medir ocupa el #{(parte * 100).round} % del ancho"
+
+      # …y las tres medidas siguen entrando lado a lado, con lugar para
+      # «12.50» en letra grande.
+      %w[alto largo ancho].each do |medida|
+        campo = caja_de("#medicion_#{medida}")
+        assert_operator campo["right"] - campo["left"], :>=, 64, "el campo #{medida} quedó de #{campo['right'] - campo['left']} px"
+      end
     end
   end
 
