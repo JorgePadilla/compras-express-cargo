@@ -14,8 +14,14 @@
   <style>
     /* C26-04 · La etiqueta de MEDICIÓN: Dymo 2.25 × 1.25 in, la misma
        impresora que /etiquetar en Miami — Yusef: *"vamos a usar la misma de
-       Miami, comprar otra"*. Solo el QR y los números: *"no le vamos a meter
-       nombre ni nada"*.
+       Miami, comprar otra"*. Nació con solo el QR y los números: *"no le
+       vamos a meter nombre ni nada"*.
+
+       C30-01 · **Eso se revirtió.** Con la etiqueta impresa en la mano,
+       Yusef: *"¿Quién es el cliente? … No tiene nombre, esto debería de tener
+       nombre … Nombre con código"*. Pre-factura escanea un volumen suelto y
+       tiene que saber de quién es. Ahora la primera fila es el cliente
+       (`medicion/_fila_cliente`).
 
        Layout propio y no la plantilla de /ajustes_etiqueta, por la misma
        razón que la 4×6: `EtiquetaPlantilla` es singleton y describe la
@@ -43,14 +49,37 @@
        encoge; ver [[project_etiqueta_trackings_completos]]: el código nunca se
        recorta.
 
-       No es «una fila más» de las que no caben: el QR ocupa 1.0in de los
-       1.17in de alto útil, así que este renglón vive en el aire que ya
-       sobraba debajo. Medido en Chrome por `etiqueta_medicion_cabe_test`. */
+       No es «una fila más» de las que no caben: el QR ocupaba 1.0in de los
+       1.17in de alto útil, y este renglón vivía en el aire que sobraba
+       debajo. Medido en Chrome por `etiqueta_medicion_cabe_test`. */
+    /* C30-01 · El cliente, a lo ancho y arriba de todo: *"lo bajas todo y
+       pones eso arriba"*. Esa fila **sí** es una fila más, y la paga el QR:
+
+         1.17in útiles = cliente 8pt (.11in) + .02 + QR + .02 + código 6.5pt (.09in)
+         → el QR baja de 1.0in a **0.90in**, y quedan 1.8 px de aire abajo
+           con todo en su tamaño (medido en Chrome; no da para 0.92in).
+
+       ¿Escanea igual? El QR de medición es versión 6 (41 módulos, corrección
+       H) con el texto más largo —`MED <código> 999.50 99.5x99.5x99.5 10de10`—.
+       A 0.90in en la Dymo (300 dpi) son 270 puntos: **6.6 puntos por módulo**,
+       contra 7.3 a 1.0in. La zona muda la da el `padding` de `.med`, no
+       RQRCode (que dibuja sin margen): no achicar el padding izquierdo.
+
+       El nombre largo se encoge con `data-ajustar` hasta 5 pt —el mismo piso
+       que el código de abajo—, en vez de cortarse: se lee de cerca, en la
+       mesa de pre-factura, no a 3 metros como el servicio de la 4×6. El
+       código, mono y en negrita, como en la etiqueta de Miami; el nombre, en
+       peso normal pero **como está escrito, sin mayúsculas**: con un nombre
+       de 52 caracteres —más largo que el 99 % de los clientes del sistema
+       viejo— en mayúsculas se pasaba 3 px aun en el piso de 5 pt; como está
+       escrito entra en 6 pt. Medido en Chrome. */
+    .med .cliente { font-size: 8pt; line-height: 1.0; white-space: nowrap; overflow: hidden; flex: 0 0 auto; }
+    .med .cliente .cod { font-family: 'Courier New', monospace; font-weight: 700; }
     .med .arriba { display: flex; gap: .06in; align-items: center; flex: 0 0 auto; }
     /* Los hijos no se encogen: si no cabe, desborda y el test lo ve. */
     .med .arriba > * { flex: 0 0 auto; }
-    .med .qr { width: 1.0in; height: 1.0in; }
-    .med .qr svg { width: 1.0in; height: 1.0in; display: block; }
+    .med .qr { width: 0.90in; height: 0.90in; }
+    .med .qr svg { width: 0.90in; height: 0.90in; display: block; }
     .med .datos { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: .02in; }
     .med .fecha  { font-size: 7pt; }
     .med .dims   { font-size: 9pt; font-weight: 700; white-space: nowrap; }
