@@ -22,10 +22,20 @@ module PermisosDelSistema
   #     deja darse todo lo demás en el siguiente clic.
   #   · `:usuarios` — quien administra usuarios puede ponerse `admin` a sí
   #     mismo, que es el mismo agujero por la puerta de al lado.
+  #   · `:autorizaciones_sar` — PR-F1.3, los CAI de la SAR. No regala permisos,
+  #     pero es configuración legal: un CAI mal cargado sale impreso en
+  #     facturas que no se corrigen. Admin y nadie más, sin excepción posible
+  #     desde /permisos (decisión del coordinador, 2026-10-10).
   #
   # Aflojar esto es una decisión, no un descuido: si algún día se abre, que sea
   # borrando una línea de acá y no por accidente.
-  NO_EDITABLES = %i[permisos usuarios].freeze
+  NO_EDITABLES = %i[permisos usuarios autorizaciones_sar].freeze
+
+  # Lo que dice /permisos al lado de cada una. Las dos primeras son el mismo
+  # agujero; la de los CAI es otra razón, y la pantalla no puede mentirla.
+  POR_QUE_NO_SE_MUEVE = Hash.new("No se puede mover: darla es regalar todo lo demás.").merge(
+    autorizaciones_sar: "No se puede mover: es configuración legal, solo admin."
+  ).freeze
 
   module_function
 

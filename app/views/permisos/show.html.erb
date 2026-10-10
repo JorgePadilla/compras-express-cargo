@@ -65,7 +65,7 @@
                   <% end %>
                   <% unless editable %>
                     <span class="block text-xs text-amber-700 dark:text-amber-500">
-                      No se puede mover: darla es regalar todo lo demás.
+                      <%= PermisosDelSistema::POR_QUE_NO_SE_MUEVE[llave.to_sym] %>
                     </span>
                   <% end %>
                 </td>

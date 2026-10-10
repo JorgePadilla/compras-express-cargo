@@ -94,6 +94,25 @@ class AutorizacionesSarControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name='autorizacion_sar[ficticia]']", count: 0
   end
 
+  # Configuración legal: ni desde /permisos se le concede a otro rol.
+  test "la sección no se puede conceder desde /permisos" do
+    assert_not PermisosDelSistema.editable?(:autorizaciones_sar)
+    fila = PermisoDeRol.new(rol: "supervisor_caja", seccion: "autorizaciones_sar", permitido: true)
+    assert_not fila.valid?
+
+    get permisos_url
+    assert_select "span", text: /es configuración legal, solo admin/
+
+    # Y si alguien la mete por SQL, la pantalla de permisos no la ofrece y el
+    # rol sigue afuera: lo que no es editable no se lee de la tabla.
+    PermisoDeRol.insert_all([ { rol: "cajero", seccion: "autorizaciones_sar", permitido: true,
+                                created_at: Time.current, updated_at: Time.current } ])
+    delete session_url
+    entrar(users(:cajero))
+    get autorizaciones_sar_url
+    assert_redirected_to root_path
+  end
+
   test "quien no es admin no entra" do
     delete session_url
     entrar(users(:cajero))
