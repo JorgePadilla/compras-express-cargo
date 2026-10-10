@@ -42,7 +42,10 @@ class Autorizacion < ApplicationRecord
   # debería dejar… para todos estos bloqueos va a haber alguien que lo va a
   # desbloquear, a autorizar"*. Lo que no vino sigue pasando sin PIN.
   ACCIONES_MEDICION = %w[medicion_con_faltantes].freeze
-  ACCIONES = (ACCIONES_LINEA + ACCIONES_PAQUETE + ACCIONES_MEDICION + %w[emitir]).freeze
+  # PR-F2.2a · Y anular una factura SAR. Jorge (Q6): *PIN de supervisor y
+  # motivo, cuatro ojos como las notas*; la aplica `Fiscal::AnularFactura`.
+  ACCIONES_FACTURA = %w[anular_factura].freeze
+  ACCIONES = (ACCIONES_LINEA + ACCIONES_PAQUETE + ACCIONES_MEDICION + %w[emitir] + ACCIONES_FACTURA).freeze
 
   # Virtuales: llegan del formulario, no se guardan.
   attr_accessor :pin, :valor, :modo
@@ -62,7 +65,7 @@ class Autorizacion < ApplicationRecord
   #
   # Va como `validate` y no como chequeo suelto antes de `valid?`: `valid?`
   # limpia los errores, así que un `errors.add` previo se perdía en silencio.
-  validate  :cuatro_ojos, if: -> { accion == "emitir" }
+  validate  :cuatro_ojos, if: -> { accion.in?(%w[emitir anular_factura]) }
 
   scope :recientes, -> { order(created_at: :desc) }
   scope :by_accion, ->(a) { where(accion: a) }
@@ -179,7 +182,8 @@ class Autorizacion < ApplicationRecord
     { "precio" => "Precio por libra", "peso" => "Peso a cobrar",
       "descuento" => "Descuento", "eliminar" => "Línea eliminada",
       "emitir" => "Nota emitida", "cobro_excepcion" => "Excepción de cobro",
-      "medicion_con_faltantes" => "Medido con faltantes" }[accion]
+      "medicion_con_faltantes" => "Medido con faltantes",
+      "anular_factura" => "Factura anulada" }[accion]
   end
 
   private
@@ -212,6 +216,7 @@ class Autorizacion < ApplicationRecord
     return if documento&.creado_por_id.nil?
     return if autorizado_por_id.to_i != documento.creado_por_id
 
-    errors.add(:autorizado_por, "no puede ser quien creo la nota — tiene que autorizarla otra persona")
+    errors.add(:autorizado_por, "no puede ser quien creo #{documento.is_a?(Factura) ? 'la factura' : 'la nota'} — " \
+                                "tiene que autorizarla otra persona")
   end
 end

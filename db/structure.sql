@@ -52,6 +52,41 @@ END
 $$;
 
 
+--
+-- Name: factura_items_inmutables(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.factura_items_inmutables() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  RAISE EXCEPTION 'las líneas de una factura emitida no se cambian (% rechazado)', TG_OP
+    USING ERRCODE = 'restrict_violation';
+END
+$$;
+
+
+--
+-- Name: facturas_fiscal_inmutable(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.facturas_fiscal_inmutable() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'una factura emitida no se borra: se anula (Art. 41)'
+      USING ERRCODE = 'restrict_violation';
+  END IF;
+  IF NEW.numero IS DISTINCT FROM OLD.numero OR NEW.punto_de_emision_id IS DISTINCT FROM OLD.punto_de_emision_id OR NEW.cliente_id IS DISTINCT FROM OLD.cliente_id OR NEW.fecha_emision IS DISTINCT FROM OLD.fecha_emision OR NEW.cai IS DISTINCT FROM OLD.cai OR NEW.rango_inicio IS DISTINCT FROM OLD.rango_inicio OR NEW.rango_fin IS DISTINCT FROM OLD.rango_fin OR NEW.fecha_limite_emision IS DISTINCT FROM OLD.fecha_limite_emision OR NEW.cliente_nombre IS DISTINCT FROM OLD.cliente_nombre OR NEW.cliente_rtn IS DISTINCT FROM OLD.cliente_rtn OR NEW.cliente_identificacion IS DISTINCT FROM OLD.cliente_identificacion OR NEW.moneda IS DISTINCT FROM OLD.moneda OR NEW.tasa_cambio IS DISTINCT FROM OLD.tasa_cambio OR NEW.subtotal IS DISTINCT FROM OLD.subtotal OR NEW.descuento IS DISTINCT FROM OLD.descuento OR NEW.impuesto IS DISTINCT FROM OLD.impuesto OR NEW.total IS DISTINCT FROM OLD.total OR NEW.desglose IS DISTINCT FROM OLD.desglose THEN
+    RAISE EXCEPTION 'los datos fiscales de la factura % no se cambian: se anula (Art. 41)', OLD.numero
+      USING ERRCODE = 'restrict_violation';
+  END IF;
+  RETURN NEW;
+END
+$$;
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -1173,6 +1208,105 @@ ALTER SEQUENCE public.etiqueta_plantillas_id_seq OWNED BY public.etiqueta_planti
 
 
 --
+-- Name: factura_items; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.factura_items (
+    id bigint NOT NULL,
+    factura_id bigint NOT NULL,
+    pre_factura_item_id bigint,
+    paquete_id bigint,
+    bulto_id bigint,
+    concepto character varying NOT NULL,
+    peso_cobrar numeric(10,2),
+    precio_libra numeric(10,2),
+    subtotal numeric(12,2) NOT NULL,
+    descuento_monto numeric(12,2) DEFAULT 0.0 NOT NULL,
+    tratamiento character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT factura_items_concepto CHECK ((length(btrim((concepto)::text)) > 0)),
+    CONSTRAINT factura_items_montos CHECK (((subtotal >= (0)::numeric) AND (descuento_monto >= (0)::numeric)))
+);
+
+
+--
+-- Name: factura_items_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.factura_items_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: factura_items_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.factura_items_id_seq OWNED BY public.factura_items.id;
+
+
+--
+-- Name: facturas; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.facturas (
+    id bigint NOT NULL,
+    numero character varying NOT NULL,
+    punto_de_emision_id bigint NOT NULL,
+    cliente_id bigint NOT NULL,
+    creado_por_id bigint,
+    estado character varying DEFAULT 'emitida'::character varying NOT NULL,
+    fecha_emision date NOT NULL,
+    cai character varying NOT NULL,
+    rango_inicio character varying NOT NULL,
+    rango_fin character varying NOT NULL,
+    fecha_limite_emision date NOT NULL,
+    cliente_nombre character varying NOT NULL,
+    cliente_rtn character varying,
+    cliente_identificacion character varying,
+    moneda character varying NOT NULL,
+    tasa_cambio numeric(10,4),
+    subtotal numeric(12,2) NOT NULL,
+    descuento numeric(12,2) DEFAULT 0.0 NOT NULL,
+    impuesto numeric(12,2) NOT NULL,
+    total numeric(12,2) NOT NULL,
+    desglose jsonb DEFAULT '{}'::jsonb NOT NULL,
+    anulada_at timestamp(6) without time zone,
+    motivo_anulacion text,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT facturas_anulada_con_fecha CHECK ((((estado)::text = 'anulada'::text) = (anulada_at IS NOT NULL))),
+    CONSTRAINT facturas_estado CHECK (((estado)::text = ANY (ARRAY['emitida'::text, 'anulada'::text]))),
+    CONSTRAINT facturas_moneda CHECK (((moneda)::text = ANY (ARRAY['LPS'::text, 'USD'::text]))),
+    CONSTRAINT facturas_montos CHECK (((total >= (0)::numeric) AND (subtotal >= (0)::numeric) AND (descuento >= (0)::numeric) AND (impuesto >= (0)::numeric))),
+    CONSTRAINT facturas_numero CHECK (((numero)::text ~ '^[0-9]{3}-[0-9]{3}-01-[0-9]{8}$'::text))
+);
+
+
+--
+-- Name: facturas_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.facturas_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: facturas_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.facturas_id_seq OWNED BY public.facturas.id;
+
+
+--
 -- Name: financiamiento_cuotas; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2285,7 +2419,8 @@ CREATE TABLE public.pre_facturas (
     notificado_at timestamp(6) without time zone,
     consolidando_at timestamp(6) without time zone,
     auditado_por_id bigint,
-    notificacion_error text
+    notificacion_error text,
+    factura_id bigint
 );
 
 
@@ -3818,6 +3953,20 @@ ALTER TABLE ONLY public.etiqueta_plantillas ALTER COLUMN id SET DEFAULT nextval(
 
 
 --
+-- Name: factura_items id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.factura_items ALTER COLUMN id SET DEFAULT nextval('public.factura_items_id_seq'::regclass);
+
+
+--
+-- Name: facturas id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.facturas ALTER COLUMN id SET DEFAULT nextval('public.facturas_id_seq'::regclass);
+
+
+--
 -- Name: financiamiento_cuotas id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -4482,6 +4631,22 @@ ALTER TABLE ONLY public.ep_counters
 
 ALTER TABLE ONLY public.etiqueta_plantillas
     ADD CONSTRAINT etiqueta_plantillas_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: factura_items factura_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.factura_items
+    ADD CONSTRAINT factura_items_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: facturas facturas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.facturas
+    ADD CONSTRAINT facturas_pkey PRIMARY KEY (id);
 
 
 --
@@ -5576,6 +5741,69 @@ CREATE INDEX index_ep_counters_on_sucursal_id ON public.ep_counters USING btree 
 
 
 --
+-- Name: index_factura_items_on_bulto_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_factura_items_on_bulto_id ON public.factura_items USING btree (bulto_id);
+
+
+--
+-- Name: index_factura_items_on_factura_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_factura_items_on_factura_id ON public.factura_items USING btree (factura_id);
+
+
+--
+-- Name: index_factura_items_on_paquete_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_factura_items_on_paquete_id ON public.factura_items USING btree (paquete_id);
+
+
+--
+-- Name: index_factura_items_on_pre_factura_item_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_factura_items_on_pre_factura_item_id ON public.factura_items USING btree (pre_factura_item_id);
+
+
+--
+-- Name: index_facturas_on_cliente_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_facturas_on_cliente_id ON public.facturas USING btree (cliente_id);
+
+
+--
+-- Name: index_facturas_on_creado_por_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_facturas_on_creado_por_id ON public.facturas USING btree (creado_por_id);
+
+
+--
+-- Name: index_facturas_on_fecha_emision; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_facturas_on_fecha_emision ON public.facturas USING btree (fecha_emision);
+
+
+--
+-- Name: index_facturas_on_numero; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_facturas_on_numero ON public.facturas USING btree (numero);
+
+
+--
+-- Name: index_facturas_on_punto_de_emision_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_facturas_on_punto_de_emision_id ON public.facturas USING btree (punto_de_emision_id);
+
+
+--
 -- Name: index_financiamiento_cuotas_on_financiamiento_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6325,6 +6553,13 @@ CREATE INDEX index_pre_facturas_on_estado ON public.pre_facturas USING btree (es
 
 
 --
+-- Name: index_pre_facturas_on_factura_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pre_facturas_on_factura_id ON public.pre_facturas USING btree (factura_id);
+
+
+--
 -- Name: index_pre_facturas_on_manifiesto_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7060,6 +7295,20 @@ CREATE TRIGGER asientos_fiscales_solo_agregar BEFORE DELETE OR UPDATE ON public.
 
 
 --
+-- Name: factura_items factura_items_inmutables; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER factura_items_inmutables BEFORE DELETE OR UPDATE ON public.factura_items FOR EACH ROW EXECUTE FUNCTION public.factura_items_inmutables();
+
+
+--
+-- Name: facturas facturas_fiscal_inmutable; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER facturas_fiscal_inmutable BEFORE DELETE OR UPDATE ON public.facturas FOR EACH ROW EXECUTE FUNCTION public.facturas_fiscal_inmutable();
+
+
+--
 -- Name: manifiesto_tipo_envios fk_rails_00f8a61e20; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7097,6 +7346,14 @@ ALTER TABLE ONLY public.pre_alerta_paquetes
 
 ALTER TABLE ONLY public.paquete_motivos_envio_politica
     ADD CONSTRAINT fk_rails_0678c767a8 FOREIGN KEY (paquete_id) REFERENCES public.paquetes(id) ON DELETE CASCADE;
+
+
+--
+-- Name: factura_items fk_rails_077f1ce14d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.factura_items
+    ADD CONSTRAINT fk_rails_077f1ce14d FOREIGN KEY (paquete_id) REFERENCES public.paquetes(id);
 
 
 --
@@ -7596,6 +7853,14 @@ ALTER TABLE ONLY public.paquetes
 
 
 --
+-- Name: pre_facturas fk_rails_72188b15e2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pre_facturas
+    ADD CONSTRAINT fk_rails_72188b15e2 FOREIGN KEY (factura_id) REFERENCES public.facturas(id);
+
+
+--
 -- Name: paquetes fk_rails_72e789d8fd; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7753,6 +8018,14 @@ ALTER TABLE ONLY public.paquetes
 
 ALTER TABLE ONLY public.notas_credito
     ADD CONSTRAINT fk_rails_8c7b98254b FOREIGN KEY (creado_por_id) REFERENCES public.users(id);
+
+
+--
+-- Name: facturas fk_rails_8d069a24a1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.facturas
+    ADD CONSTRAINT fk_rails_8d069a24a1 FOREIGN KEY (creado_por_id) REFERENCES public.users(id);
 
 
 --
@@ -7956,6 +8229,14 @@ ALTER TABLE ONLY public.pre_facturas
 
 
 --
+-- Name: factura_items fk_rails_b7fa2d7ef9; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.factura_items
+    ADD CONSTRAINT fk_rails_b7fa2d7ef9 FOREIGN KEY (bulto_id) REFERENCES public.bultos(id);
+
+
+--
 -- Name: paquetes fk_rails_ba1c45b053; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8025,6 +8306,14 @@ ALTER TABLE ONLY public.users
 
 ALTER TABLE ONLY public.paquetes
     ADD CONSTRAINT fk_rails_c06a4ad9ac FOREIGN KEY (sucursal_actual_id) REFERENCES public.sucursales(id);
+
+
+--
+-- Name: facturas fk_rails_c1da424846; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.facturas
+    ADD CONSTRAINT fk_rails_c1da424846 FOREIGN KEY (cliente_id) REFERENCES public.clientes(id);
 
 
 --
@@ -8228,11 +8517,27 @@ ALTER TABLE ONLY public.clientes
 
 
 --
+-- Name: factura_items fk_rails_e5022d9810; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.factura_items
+    ADD CONSTRAINT fk_rails_e5022d9810 FOREIGN KEY (factura_id) REFERENCES public.facturas(id);
+
+
+--
 -- Name: manifiestos fk_rails_e55f679c59; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.manifiestos
     ADD CONSTRAINT fk_rails_e55f679c59 FOREIGN KEY (empresa_manifiesto_id) REFERENCES public.empresa_manifiestos(id);
+
+
+--
+-- Name: facturas fk_rails_e6f807cd93; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.facturas
+    ADD CONSTRAINT fk_rails_e6f807cd93 FOREIGN KEY (punto_de_emision_id) REFERENCES public.puntos_de_emision(id);
 
 
 --
@@ -8340,6 +8645,14 @@ ALTER TABLE ONLY public.paquetes
 
 
 --
+-- Name: factura_items fk_rails_fe9007e5b4; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.factura_items
+    ADD CONSTRAINT fk_rails_fe9007e5b4 FOREIGN KEY (pre_factura_item_id) REFERENCES public.pre_factura_items(id);
+
+
+--
 -- Name: ep_counters fk_rails_fed4cab9d1; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8362,6 +8675,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261011160000'),
 ('20261011140000'),
 ('20261011120000'),
 ('20261010150000'),
