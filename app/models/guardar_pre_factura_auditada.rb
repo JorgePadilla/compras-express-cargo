@@ -22,8 +22,24 @@
 #   nadie mirando, y el cliente se quedaría sin aviso.
 #
 # La línea es el volumen (`ArmarPreFacturaPorVolumen`, PR-P.1).
+#
+# PR-P.8 · **Con candado.** QA apretó F9 dos veces a la vez sobre la misma
+# tanda (dos pestañas; en la línea es la red que reintenta): las dos pasaban la
+# validación —ninguna veía todavía la pre-factura de la otra— y la segunda
+# moría en `RecordNotUnique` sobre `pre_facturas.numero`, un 500 sin JSON. Que
+# quedara una sola pre-factura era suerte: con un instante más de diferencia
+# salían dos, cobrando las mismas cajas. Ahora las cajas se bloquean
+# (`FOR UPDATE`, en orden de id para que dos guardados no se esperen en
+# cruz) **adentro** de la transacción y **antes** de validar: el segundo F9
+# espera al primero y después ve las cajas tomadas, que es el 422 de siempre.
 class GuardarPreFacturaAuditada
   class NoSePuede < StandardError; end
+
+  # Cuántas veces se reintenta si el número de pre-factura chocó con el de
+  # otro guardado simultáneo (de **otra** tanda: la misma ya la frena el
+  # candado). `generate_numero` es máximo + 1, y dos que lo calculan a la vez
+  # sacan el mismo.
+  REINTENTOS_POR_NUMERO = 2
 
   def initialize(hoja:, sesiones:, escaneadas:, user:)
     @hoja = hoja
@@ -35,11 +51,35 @@ class GuardarPreFacturaAuditada
   def call
     raise NoSePuede, "Escaneá primero el QR de un volumen." if @sesiones.empty?
 
-    cajas = Paquete.where(medicion_sesion: @sesiones).includes(:cliente, :tipo_envio, :manifiesto).order(:id).to_a
-    validar!(cajas)
+    intentos = 0
+    begin
+      pre_factura = guardar_con_candado
+    rescue ActiveRecord::RecordNotUnique => e
+      # La transacción entera se deshizo: volver a empezar es seguro, y el
+      # candado decide de nuevo si las cajas siguen libres.
+      intentos += 1
+      retry if intentos <= REINTENTOS_POR_NUMERO && e.message.include?("numero")
+      raise NoSePuede, "Otra pre-factura se guardó al mismo tiempo y no se pudo numerar esta. Apretá F9 de nuevo."
+    end
 
+    HacerDisponibles.new(ahora: Time.current).avisar_una(pre_factura.id) if pre_factura.notificar_at <= Time.current
+    pre_factura.reload
+  rescue ArmarPreFacturaPorVolumen::NoSePuede => e
+    raise NoSePuede, e.message
+  end
+
+  private
+
+  def guardar_con_candado
     pre_factura = nil
     PreFactura.transaction do
+      # El candado primero, y recién después leer y validar: lo que se valida
+      # es lo que ya está bloqueado. `pluck` con `lock` hace un solo
+      # `SELECT id … ORDER BY id FOR UPDATE`.
+      ids = Paquete.where(medicion_sesion: @sesiones).order(:id).lock.pluck(:id)
+      cajas = Paquete.where(id: ids).includes(:cliente, :tipo_envio, :manifiesto).order(:id).to_a
+      validar!(cajas)
+
       pre_factura = ArmarPreFacturaPorVolumen.call(cliente: cajas.first.cliente, sesiones: @sesiones, user: @user)
       pre_factura.assign_attributes(
         manifiesto_id: cajas.first.manifiesto_id,
@@ -53,14 +93,8 @@ class GuardarPreFacturaAuditada
       # por `no_advance_with_open_tareas` desde ahí (Fase 14, el modelo).
       Paquete.where(id: cajas.map(&:id), estado: "consolidando_honduras").find_each { |c| c.update!(estado: "en_aduana") }
     end
-
-    HacerDisponibles.new(ahora: Time.current).avisar_una(pre_factura.id) if pre_factura.notificar_at <= Time.current
-    pre_factura.reload
-  rescue ArmarPreFacturaPorVolumen::NoSePuede => e
-    raise NoSePuede, e.message
+    pre_factura
   end
-
-  private
 
   def validar!(cajas)
     raise NoSePuede, "Esas tandas ya no tienen cajas: se midieron de nuevo. Escaneá otra vez." if cajas.empty?

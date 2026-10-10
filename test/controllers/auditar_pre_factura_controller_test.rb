@@ -135,6 +135,24 @@ class AuditarPreFacturaControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Faltan 1 caja/, response.parsed_body["mensaje"])
   end
 
+  # PR-P.8 · La red de abajo: si un índice único salta igual, la pantalla
+  # recibe JSON con qué hacer, no un 500 que el JS no sabe leer.
+  test "un RecordNotUnique en F9 es un 422 con JSON, no un 500" do
+    con_hoja
+    original = GuardarPreFacturaAuditada.instance_method(:call)
+    GuardarPreFacturaAuditada.define_method(:call) { raise ActiveRecord::RecordNotUnique, "duplicate key" }
+    begin
+      post guardar_auditar_pre_factura_index_url,
+           params: { sesiones: [ @bulto.sesion ], escaneadas: @cajas.map(&:id) }, as: :json
+    ensure
+      GuardarPreFacturaAuditada.define_method(:call, original)
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal false, response.parsed_body["ok"]
+    assert_match(/al mismo tiempo/, response.parsed_body["mensaje"])
+  end
+
   private
 
   def ingresar(user)

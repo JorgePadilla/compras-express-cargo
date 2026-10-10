@@ -40,6 +40,13 @@ class AuditarPreFacturaController < ApplicationController
     }
   rescue GuardarPreFacturaAuditada::NoSePuede => e
     render json: { ok: false, mensaje: e.message }, status: :unprocessable_entity
+  # PR-P.8 · La red de abajo. Dos F9 a la vez ya no llegan acá —el candado de
+  # `GuardarPreFacturaAuditada` hace esperar al segundo, y el número que choca
+  # se reintenta—, pero si un índice único salta por otro lado la pantalla
+  # tiene que recibir JSON con qué hacer, no un 500 que el JS no sabe leer.
+  rescue ActiveRecord::RecordNotUnique
+    render json: { ok: false, mensaje: "Otra pre-factura se guardó al mismo tiempo. Escaneá la tanda de nuevo y apretá F9." },
+           status: :unprocessable_entity
   end
 
   private
