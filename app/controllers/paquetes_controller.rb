@@ -112,6 +112,27 @@ class PaquetesController < ApplicationController
       return
     end
 
+    # C30-06 · El candado del manifiesto también se respeta desde acá. Este
+    # formulario reasigna manifiesto (`manifiesto_id`) y un retroceso de estado
+    # lo suelta (`apply_retroceso_cleanup!`); ninguno preguntaba si el
+    # manifiesto ya había viajado. QA lo reprodujo en PR-C30.7: un PATCH metía
+    # un paquete en uno finalizado, o sacaba uno dejándolo `enviado_honduras`
+    # sin manifiesto.
+    if (motivo = motivo_del_candado_para(paquete_params))
+      flash.now[:alert] = motivo
+      conservar_lo_tecleado(except: %i[manifiesto_id estado cantidad_paquetes])
+      render_show_with_edit_assigns(status: :forbidden)
+      return
+    end
+
+    reasignacion = reasignacion_de_manifiesto(paquete_params)
+    if reasignacion == :no_existe
+      flash.now[:alert] = "Ese manifiesto no existe: el paquete se queda donde estaba."
+      conservar_lo_tecleado(except: %i[manifiesto_id])
+      render_show_with_edit_assigns(status: :unprocessable_entity)
+      return
+    end
+
     # PR-D7.d: cuando un retroceso ya fue confirmado por el supervisor,
     # limpiar fechas + FKs de los estados posteriores antes de tocar
     # attributes para que el paquete quede coherente con el nuevo estado.
@@ -162,7 +183,9 @@ class PaquetesController < ApplicationController
       end
     end
 
-    @paquete.assign_attributes(paquete_params)
+    # `manifiesto_id` no se asigna acá: si cambia, entra por
+    # `guardar_con_reasignacion`, con las puertas del manifiesto.
+    @paquete.assign_attributes(paquete_params.except(:manifiesto_id))
     # `paquete[:pre_factura]` es columna boolean; el accessor normal lo
     # interpreta como la asociación belongs_to :pre_factura. Lo escribimos
     # vía el column accessor `[]=` para evitar AssociationTypeMismatch.
@@ -170,7 +193,7 @@ class PaquetesController < ApplicationController
       @paquete[:pre_factura] = flag
     end
 
-    if @paquete.save
+    if guardar_con_reasignacion(reasignacion)
       # C18-06: marcar «enviado según política» después —"para corregir
       # después"— es la misma transición que al recibir: el cliente se entera
       # igual. Un modelo que compone la nota y nadie la manda sería la listita
@@ -191,6 +214,7 @@ class PaquetesController < ApplicationController
       end
       redirect_to @paquete, notice: msg
     else
+      flash.now[:alert] = @error_de_reasignacion if @error_de_reasignacion
       render_show_with_edit_assigns(status: :unprocessable_entity)
     end
   end
@@ -332,8 +356,12 @@ class PaquetesController < ApplicationController
     # operación exitosa.
     destino = quedan.find { |c| c.id == @paquete.id } || quedan.first
     redirect_to destino, notice: "Quedaron #{quedan.size} caja(s) en #{@paquete.tracking}."
+  # C30-06 · `Paquete::CajaNoEliminable` cubre `ManifiestoBloqueado`: bajar
+  # cajas borra las sobrantes, y en un manifiesto que ya viajó eso es sacarle
+  # carga. Sin el rescue era un 500.
   rescue BajarCajasConPin::NoPermitido, BajarCajasConPin::PinInvalido,
-         BajarCajasConPin::YaFacturado, BajarCajasConPin::NadaQueBajar => e
+         BajarCajasConPin::YaFacturado, BajarCajasConPin::NadaQueBajar,
+         Paquete::CajaNoEliminable => e
     redirect_to @paquete, alert: e.message
   end
 
@@ -834,6 +862,67 @@ class PaquetesController < ApplicationController
     nil
   end
 
+  # C30-06 · ¿Este formulario toca un manifiesto que no se puede tocar?
+  # Devuelve el motivo del candado, o nil.
+  #
+  # Dos maneras de tocarlo: cambiar `manifiesto_id` (cuentan el viejo **y** el
+  # nuevo: sacar de uno cerrado y meter en uno cerrado son lo mismo), o un
+  # retroceso de estado que suelta el manifiesto. La cantidad de cajas la
+  # cuida `Paquete.ajustar_split!`, que es por donde pasan las tres puertas.
+  def motivo_del_candado_para(attrs)
+    tocados = []
+    if (r = reasignacion_de_manifiesto(attrs)).is_a?(Hash)
+      tocados.push(r[:viejo], r[:nuevo])
+    end
+
+    objetivo = attrs[:estado].to_s
+    if objetivo.present? && objetivo != @paquete.estado &&
+       @paquete.retroceso_cleanup_preview(objetivo)[:fks].include?(:manifiesto_id)
+      tocados << @paquete.manifiesto
+    end
+
+    tocados.compact.uniq.find { |m| !m.modificable_por?(Current.user) }&.motivo_del_candado
+  end
+
+  # nil si el formulario no cambia el manifiesto; `:no_existe` si apunta a uno
+  # que no está; si no, `{ viejo:, nuevo: }` (cualquiera de los dos puede ser
+  # nil: entrar desde ninguno, o salir a ninguno).
+  def reasignacion_de_manifiesto(attrs)
+    return nil unless attrs.key?(:manifiesto_id)
+
+    nuevo_id = attrs[:manifiesto_id].presence&.to_i
+    return nil if nuevo_id == @paquete.manifiesto_id
+
+    nuevo = nuevo_id && Manifiesto.find_by(id: nuevo_id)
+    return :no_existe if nuevo_id && nuevo.nil?
+
+    { viejo: @paquete.manifiesto, nuevo: nuevo }
+  end
+
+  # Guarda el formulario y, si cambió el manifiesto, lo mueve **por las mismas
+  # puertas que la ficha del manifiesto**: `sacar!` del viejo (suelta la caja,
+  # vuelve al estado de antes de salir, recalcula) y `meter!` al nuevo (en uno
+  # reabierto sale como los demás, con su guarda de tareas). Las fechas quedan
+  # las del manifiesto nuevo por `sync_dates_from_manifiesto`, que es el pedido
+  # viejo de este formulario.
+  #
+  # Todo o nada: si el nuevo no lo deja entrar, tampoco sale del viejo ni se
+  # guarda lo demás.
+  def guardar_con_reasignacion(reasignacion)
+    Paquete.transaction do
+      raise ActiveRecord::Rollback unless @paquete.save
+
+      if reasignacion.is_a?(Hash)
+        reasignacion[:viejo]&.sacar!(@paquete)
+        reasignacion[:nuevo]&.meter!(@paquete, user: Current.user)
+      end
+      true
+    end || false
+  rescue Manifiesto::NoEntra, ActiveRecord::RecordInvalid => e
+    @error_de_reasignacion = e.message
+    false
+  end
+
   # Pega en el objeto en memoria lo que venía en el formulario, para que un
   # `render :show` con `@edit_mode` devuelva la pantalla como el operario la
   # dejó. **No guarda nada**: es el camino del bloqueo.
@@ -1039,8 +1128,9 @@ class PaquetesController < ApplicationController
       :fecha_solicito_recolecta, :fecha_pre_alerta, :fecha_recibido_miami,
       :fecha_empacado, :fecha_enviado, :fecha_aduana, :fecha_consolidando,
       :fecha_disponible, :fecha_posible_entrega, :fecha_en_reparto, :fecha_entregado,
-      # Reasignación de manifiesto desde el form. El callback
-      # `sync_dates_from_manifiesto` se encarga de actualizar las fechas.
+      # Reasignación de manifiesto desde el form. C30-06: no se asigna directo;
+      # pasa por `guardar_con_reasignacion` (las puertas del manifiesto y su
+      # candado), y `sync_dates_from_manifiesto` pone las fechas del nuevo.
       :manifiesto_id,
       motivo_retencion_ids: [], motivo_envio_politica_ids: []
     )

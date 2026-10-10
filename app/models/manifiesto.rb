@@ -243,6 +243,20 @@ class Manifiesto < ApplicationRecord
     creado? || (edicion_abierta? && editable_por?(user))
   end
 
+  # Por qué no se puede tocar, dicho para quien lo intentó. Vivía en el concern
+  # `CandadoDelManifiesto`; bajó acá porque /paquetes también lo tiene que
+  # decir (el formulario del paquete reasigna manifiesto) y dos copias del
+  # mismo texto se separan.
+  def motivo_del_candado
+    if !reabrible?
+      "#{numero} ya no se puede cambiar: está #{estado.humanize.downcase}."
+    elsif edicion_abierta?
+      "#{numero} está abierto para corregir, pero solo un supervisor de Miami puede cambiarlo."
+    else
+      "#{numero} está finalizado y bloqueado: para corregirlo, un supervisor de Miami aprieta «Editar»."
+    end
+  end
+
   class NoSePuedeReabrir < StandardError; end
 
   def abrir_edicion!(user)

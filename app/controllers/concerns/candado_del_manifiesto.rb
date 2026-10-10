@@ -23,22 +23,26 @@ module CandadoDelManifiesto
     mensaje = motivo_del_candado
     respond_to do |format|
       format.json { render json: { resultado: "bloqueado", ok: false, mensaje: mensaje }, status: :forbidden }
+      # Una pestaña vieja que actúa sobre un manifiesto que se acaba de cerrar.
+      # Antes se le anteponía el aviso arriba de todo —invisible si estaba
+      # bajando por la tabla— y los controles viejos (la «×», la pistola) se
+      # quedaban como si nada. Ahora la página se **refresca**: la ficha
+      # vuelve dibujada como está de verdad (bloqueada, sin «×»), y el aviso
+      # va en el flash de esa visita, arriba, con el scroll arriba.
+      #
+      # `request_id: nil` a propósito: por defecto turbo-rails le pone el id
+      # de este pedido, y Turbo **ignora** un refresh que viene del pedido que
+      # hizo la misma página (es para no refrescar dos veces con los
+      # broadcasts). Acá es justamente esa página la que tiene que refrescar.
       format.turbo_stream do
-        render turbo_stream: turbo_stream.prepend("flash-messages", partial: "shared/flash",
-                                                                    locals: { alert: mensaje }),
-               status: :forbidden
+        flash[:alert] = mensaje
+        render turbo_stream: turbo_stream.refresh(request_id: nil), status: :forbidden
       end
       format.html { redirect_to manifiesto_path(@manifiesto), alert: mensaje }
     end
   end
 
-  def motivo_del_candado
-    if !@manifiesto.reabrible?
-      "#{@manifiesto.numero} ya no se puede cambiar: está #{@manifiesto.estado.humanize.downcase}."
-    elsif @manifiesto.edicion_abierta?
-      "#{@manifiesto.numero} está abierto para corregir, pero solo un supervisor de Miami puede cambiarlo."
-    else
-      "#{@manifiesto.numero} está finalizado y bloqueado: para corregirlo, un supervisor de Miami aprieta «Editar»."
-    end
-  end
+  # El texto vive en el modelo (`Manifiesto#motivo_del_candado`): /paquetes
+  # también lo dice cuando alguien intenta mover un paquete de uno cerrado.
+  def motivo_del_candado = @manifiesto.motivo_del_candado
 end

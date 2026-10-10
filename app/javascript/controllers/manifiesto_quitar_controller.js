@@ -89,10 +89,18 @@ export default class extends Controller {
       headers: { "Accept": "text/vnd.turbo-stream.html", "X-CSRF-Token": this._token() }
     })
       .then((r) => {
+        // C30-06 · 403: el manifiesto se cerró mientras esta pestaña estaba
+        // abierta. El servidor contesta con un refresh de Turbo —la ficha
+        // vuelve bloqueada, con el motivo arriba—, y hay que dejarlo correr:
+        // tirar el error acá lo tapaba con «No se pudo sacar».
+        if (r.status === 403) {
+          return r.text().then((html) => { window.Turbo.renderStreamMessage(html); return null })
+        }
         if (!r.ok) throw new Error(r.status)
         return r.text()
       })
       .then((html) => {
+        if (html === null) return
         window.Turbo.renderStreamMessage(html)
         this._sacados += 1
         this.contadorTarget.textContent = String(this._sacados)

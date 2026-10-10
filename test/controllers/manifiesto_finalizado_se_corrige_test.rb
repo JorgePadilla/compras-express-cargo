@@ -249,6 +249,24 @@ class ManifiestoFinalizadoSeCorrigeTest < ActionDispatch::IntegrationTest
     assert_select "tr[data-caja=?] td", caja.letra, text: /RMI0002026000902/
   end
 
+  # Una pestaña vieja actuando sobre uno que se acaba de cerrar: la respuesta
+  # refresca la página —sin `request-id`, o Turbo la ignora por venir del
+  # mismo pedido— y el aviso viaja en el flash de esa visita.
+  test "el 403 por turbo_stream refresca la página y el aviso llega en el flash" do
+    ingresar(@supervisor)
+
+    delete remove_paquete_manifiesto_url(@manifiesto, paquete_id: @adentro.id),
+           headers: TURBO.merge("X-Turbo-Request-Id" => "pestana-vieja")
+
+    assert_response :forbidden
+    assert_match %r{<turbo-stream action="refresh"}, response.body
+    assert_no_match(/request-id/, response.body, "con el id del pedido Turbo no refresca")
+    assert_no_match(/action="prepend"/, response.body)
+
+    get manifiesto_url(@manifiesto)
+    assert_match "aprieta «Editar»", response.body
+  end
+
   private
 
   def ingresar(user)

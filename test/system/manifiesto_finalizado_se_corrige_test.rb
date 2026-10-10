@@ -67,6 +67,32 @@ class ManifiestoFinalizadoSeCorrigeSystemTest < ApplicationSystemTestCase
     assert_no_selector "#buscar_paquete"
   end
 
+  # Una pestaña vieja: el manifiesto se finaliza en otra mientras ésta sigue
+  # mostrando la «×». Apretarla no puede sacar nada (lo cuida el servidor), y
+  # la pantalla tiene que dejar de mentir: el aviso donde se vea —arriba, con
+  # el scroll arriba— y la ficha dibujada como está, sin «×».
+  test "pestaña vieja: se finaliza en otra, y la × muestra el candado en vez de los controles viejos" do
+    otro = Manifiesto.create!(tipo_envios: [ @cer ], sucursal_origen: sucursales(:miami), user: @supervisor)
+    otro.meter!(@tarde, user: @supervisor)
+
+    visit manifiesto_path(otro)
+    quitar = "#manifiesto-paquetes a[href*='remove_paquete']"
+    assert_selector quitar
+
+    FinalizarManifiesto.new(otro, user: @supervisor).call   # en otra pestaña
+    page.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+
+    confirmando { find(quitar).click }
+
+    assert_selector "[role='alert']", text: "aprieta «Editar»", wait: 5
+    assert_no_selector quitar
+    assert_no_selector "#buscar_paquete"
+    arriba = page.evaluate_script("document.querySelector(\"[role='alert']\").getBoundingClientRect().top")
+    assert_operator arriba, :>=, 0
+    assert_operator arriba, :<, page.evaluate_script("window.innerHeight"), "el aviso quedó fuera de la vista"
+    assert_equal otro.id, @tarde.reload.manifiesto_id, "no sacó nada"
+  end
+
   test "bloqueado, las 4×6 se re-imprimen desde la ficha" do
     visit manifiesto_path(@manifiesto)
 
