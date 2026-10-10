@@ -100,9 +100,12 @@ class HojaDePreparacion
   end
 
   # Las que «editar» ofrece: las que todavía no le avisaron al cliente
-  # (`notificado_at`, el sello de PR-P.2), sin facturar ni anular.
+  # (`notificado_at`, el sello de PR-P.2), sin facturar ni anular, y que
+  # salieron de la auditoría —**consolidando** (F8) o **programadas** (F9)—.
+  # Una hecha a mano por `/pre_facturas/new` no tiene aviso que corregir.
   def self.pre_facturas_editables
-    PreFactura.where(estado: "creado", notificado_at: nil).where.not(manifiesto_id: nil)
+    base = PreFactura.where(estado: "creado", notificado_at: nil).where.not(manifiesto_id: nil)
+    base.where.not(consolidando_at: nil).or(base.where.not(notificar_at: nil))
   end
 
   def to_sesion

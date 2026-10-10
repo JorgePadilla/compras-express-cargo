@@ -35,7 +35,7 @@ export default class extends Controller {
     "cajas", "volumenes", "lineas",
     "finModal", "finTexto", "finGuardar", "finSeguir", "abierta"
   ]
-  static values = { volumenUrl: String, paqueteUrl: String, guardarUrl: String }
+  static values = { volumenUrl: String, paqueteUrl: String, guardarUrl: String, abrir: Object }
 
   connect() {
     this._cola = Promise.resolve()
@@ -44,6 +44,11 @@ export default class extends Controller {
     document.addEventListener("keydown", this._teclaGlobal)
     this._alCerrar = () => requestAnimationFrame(() => enfocar(this.codigoTarget))
     this.finModalTarget.addEventListener("close", this._alCerrar)
+    // PR-P.7 · Abierta desde «editar pre-facturas»: la consolidando, ya cargada.
+    if (this.abrirValue?.pre_factura) {
+      this._reabrir(this.abrirValue)
+      this._avisar("alerta", this.abrirValue.mensaje)
+    }
   }
 
   disconnect() {

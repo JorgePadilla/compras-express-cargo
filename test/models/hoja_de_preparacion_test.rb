@@ -144,7 +144,8 @@ class HojaDePreparacionTest < ActiveSupport::TestCase
 
   test "«editar» ofrece los manifiestos con pre-facturas sin avisar" do
     pf = pre_facturas(:borrador_juan)
-    pf.update_columns(manifiesto_id: @manifiesto.id, estado: "creado")
+    # PR-P.7: las que salieron de la auditoría — programadas o consolidando.
+    pf.update_columns(manifiesto_id: @manifiesto.id, estado: "creado", notificar_at: 1.day.from_now)
 
     hoja = HojaDePreparacion.new(modo: "editar")
     assert_includes hoja.manifiestos_ofrecidos, @manifiesto

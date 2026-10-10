@@ -132,7 +132,7 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
       // Sin sesión abierta el botón no se renderiza, y entonces la tecla no
       // hace nada: el caso «no hay nada que finalizar» sale gratis.
       //
-      // Se bloquea con un modal abierto, como F8/F9/F10. F2 queda libre a
+      // Se bloquea con un modal abierto, como F8/F9. F2 queda libre a
       // propósito porque es la salida que los modales ofrecen; finalizar la
       // sesión no lo es, y encima pelearía con el botón «Finalizar la sesión»
       // que el modal de conflicto ya tiene adentro.
@@ -665,7 +665,7 @@ cerrarQuitarCobro() {
     // acomodando el auto-llenado del cliente y la navegación con Enter.
     //
     // Es un extra, no el bloqueo: lo que impide guardar mal es el overlay —que
-    // tapa el formulario, y desde C19-08 también apaga F8/F9/F10— y, si
+    // tapa el formulario, y desde C19-08 también apaga F8/F9— y, si
     // alguien igual llega a mandar el POST, el rechazo del servidor
     // (`conflicto_con_la_sesion`), que tiene sus tests.
     if (this.hasConflictoSesionDejarBtnTarget) {

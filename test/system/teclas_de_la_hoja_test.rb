@@ -89,7 +89,77 @@ class TeclasDeLaHojaTest < ApplicationSystemTestCase
     assert_current_path new_cuenta_pre_alerta_path, wait: 5
   end
 
+  # PR-C30.11 · F2 en la edición de una pre-alerta del portal: la pantalla la
+  # escucha ella misma (`pre-alerta-editor`) y el «Volver (F2)» llevaba además
+  # `data-shortcut`, así que el atajo global le hacía click también — dos
+  # visitas por tecla. Turbo no recarga la ventana entre visitas, así que el
+  # contador sobrevive y las cuenta.
+  test "en el portal, F2 al editar una pre-alerta vuelve una sola vez" do
+    pa = PreAlerta.create!(cliente: clientes(:juan), tipo_envio: tipo_envios(:aereo), titulo: "PA F2",
+                           estado: "pre_alerta", creado_por_tipo: "cliente", creado_por_id: clientes(:juan).id)
+    pa.pre_alerta_paquetes.create!(tracking: "TRKF2#{SecureRandom.hex(3)}", descripcion: "Ropa", fecha: Date.current)
+    entrar_al_portal
+
+    visit edit_cuenta_pre_alerta_path(pa)
+    assert_text "Volver (F2)"
+    page.execute_script("window.__visitas = 0; document.addEventListener('turbo:visit', () => window.__visitas++)")
+    find("body").click
+    page.driver.browser.action.send_keys(:f2).perform
+
+    assert_current_path cuenta_pre_alertas_path, wait: 5
+    assert_equal 1, page.evaluate_script("window.__visitas"), "F2 visitó dos veces"
+  end
+
+  # PR-C30.11 · Con un modal hecho con `div` abierto —el «Confirmar»
+  # compartido—, F8 no aprieta el «Guardar» de atrás. Antes la guarda miraba
+  # solo `<dialog open>`.
+  test "con el modal de confirmar abierto, F8 no guarda lo de atrás" do
+    visit new_proveedor_path
+    find("#proveedor_nombre").set("Tienda detrás del modal")
+    page.execute_script("window.cecConfirm('¿Seguro?')")
+    assert_selector "[data-confirm-modal-target='root'][aria-modal='true']", visible: true
+
+    page.driver.browser.action.send_keys(:f8).perform
+
+    page.evaluate_script("new Promise(r => setTimeout(r, 300))")
+    assert_current_path new_proveedor_path
+    assert_not Proveedor.exists?(nombre: "Tienda detrás del modal"), "F8 guardó con el modal abierto"
+    assert_selector "[data-confirm-modal-target='root']", visible: true
+  end
+
+  test "con el modal de confirmar abierto, F1 no abre «Nuevo» detrás" do
+    visit proveedores_path
+    page.execute_script("window.cecConfirm('¿Seguro?')")
+    assert_selector "[data-confirm-modal-target='root']", visible: true
+
+    page.driver.browser.action.send_keys(:f1).perform
+
+    page.evaluate_script("new Promise(r => setTimeout(r, 300))")
+    assert_current_path proveedores_path
+  end
+
+  # Y cerrado el modal, las teclas vuelven: la guarda mira si se **ve**, no si
+  # el modal existe (está en todas las páginas, escondido).
+  test "con el modal de confirmar cerrado, F8 guarda como siempre" do
+    visit new_proveedor_path
+    find("#proveedor_nombre").set("Tienda modal cerrado")
+    assert_selector "[data-confirm-modal-target='root']", visible: :hidden
+    find("body").click
+    page.driver.browser.action.send_keys(:f8).perform
+
+    hasta_que("F8 no guardó con el modal cerrado") { Proveedor.exists?(nombre: "Tienda modal cerrado") }
+  end
+
   private
+
+  def entrar_al_portal
+    Capybara.reset_sessions!
+    visit new_session_path
+    fill_in "email_address", with: clientes(:juan).codigo
+    fill_in "password", with: "Cliente123!"
+    click_on "Iniciar Sesion"
+    assert_current_path cuenta_root_path, wait: 5
+  end
 
   # Lo que no es un nodo, con la paciencia de Capybara (el bucle `synchronize`
   # de sus matchers), sin `sleep`.
