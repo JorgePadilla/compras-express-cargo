@@ -1,0 +1,83 @@
+<%# PR-F1.3 · El CAI tal cual lo da la SAR. Sin `ficticia`: lo que se carga a
+    mano es siempre real; el inventado de staging lo siembra F1.5. %>
+<% campo = "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+<% etiqueta = "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+<%= form_with model: autorizacion, url: autorizacion.persisted? ? autorizacion_sar_path(autorizacion) : autorizaciones_sar_path,
+              local: true, data: { controller: "rango-sar" } do |f| %>
+  <% if autorizacion.errors.any? %>
+    <div class="mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800 p-4">
+      <ul class="list-disc list-inside text-sm text-red-800 dark:text-red-200">
+        <% autorizacion.errors.full_messages.each do |msg| %><li><%= msg %></li><% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <%= render FormSectionComponent.new(title: "Autorización de la SAR",
+                                      subtitle: "Copiá los datos de la resolución: el CAI, el rango y la fecha límite de emisión.") do |section| %>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <%= f.label :punto_de_emision_id, "Punto de emisión", class: etiqueta %>
+        <%= f.select :punto_de_emision_id,
+              options_for_select(puntos.map { |p| [ "#{p.prefijo} · #{p.sucursal.nombre}", p.id, { data: { prefijo: p.prefijo } } ] },
+                                 autorizacion.punto_de_emision_id),
+              { include_blank: "Elegí el punto" },
+              required: true, class: campo,
+              data: { rango_sar_target: "punto", action: "change->rango-sar#actualizar" } %>
+      </div>
+
+      <div>
+        <%= f.label :tipo_documento, "Tipo de documento", class: etiqueta %>
+        <%= f.select :tipo_documento, Fiscal::TIPOS_DE_DOCUMENTO.map { |codigo, nombre| [ "#{codigo} · #{nombre}", codigo ] },
+              {}, class: campo,
+              data: { rango_sar_target: "tipo", action: "change->rango-sar#actualizar" } %>
+      </div>
+
+      <div class="md:col-span-2">
+        <%= f.label :cai, "CAI", class: etiqueta %>
+        <%= f.text_field :cai, required: true, autocomplete: "off", spellcheck: false,
+              placeholder: "Tal cual aparece en la resolución",
+              class: "#{campo} font-mono" %>
+      </div>
+
+      <div>
+        <%= f.label :rango_inicio, "Rango: desde el número", class: etiqueta %>
+        <%= f.number_field :rango_inicio, required: true, min: 1, max: Fiscal::CORRELATIVO_MAXIMO, step: 1,
+              class: "#{campo} font-mono",
+              data: { rango_sar_target: "inicio", action: "input->rango-sar#actualizar" } %>
+      </div>
+
+      <div>
+        <%= f.label :rango_fin, "Rango: hasta el número", class: etiqueta %>
+        <%= f.number_field :rango_fin, required: true, min: 1, max: Fiscal::CORRELATIVO_MAXIMO, step: 1,
+              class: "#{campo} font-mono",
+              data: { rango_sar_target: "fin", action: "input->rango-sar#actualizar" } %>
+      </div>
+
+      <div class="md:col-span-2 rounded-lg bg-gray-50 dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-gray-700 p-4">
+        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Así se van a numerar</p>
+        <p class="font-mono text-sm text-gray-900 dark:text-gray-100">
+          <span data-rango-sar-target="desde">—</span>
+          <span class="text-gray-500 dark:text-gray-400 font-sans">al</span>
+          <span data-rango-sar-target="hasta">—</span>
+        </p>
+        <p class="text-xs text-gray-600 dark:text-gray-300 mt-1" data-rango-sar-target="cantidad">—</p>
+      </div>
+
+      <div>
+        <%= f.label :fecha_autorizacion, "Fecha de autorización", class: etiqueta %>
+        <%= f.date_field :fecha_autorizacion, class: campo, data: { controller: "flatpickr" } %>
+      </div>
+
+      <div>
+        <%= f.label :fecha_limite_emision, "Fecha límite de emisión", class: etiqueta %>
+        <%= f.date_field :fecha_limite_emision, required: true, class: campo, data: { controller: "flatpickr" } %>
+      </div>
+    </div>
+
+    <% section.with_footer do %>
+      <%= link_to "Cancelar", autorizacion.persisted? ? autorizacion_sar_path(autorizacion) : autorizaciones_sar_path,
+                  class: "text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white self-center" %>
+      <%= render(ButtonComponent.new(variant: :gold, size: :lg, type: :submit, shortcut: "F8")) { "Guardar" } %>
+    <% end %>
+  <% end %>
+<% end %>

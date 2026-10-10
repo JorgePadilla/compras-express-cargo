@@ -1,0 +1,8 @@
+<%= render PageHeaderComponent.new(title: "Editar punto de emisión", subtitle: @punto.prefijo) do |h| %>
+  <% h.with_back do %>
+    <%= render ButtonComponent.new(variant: :ghost, href: autorizaciones_sar_path, icon: "arrow-left", shortcut: "F2") do %>
+      Volver
+    <% end %>
+  <% end %>
+<% end %>
+<%= render "form", punto: @punto, sucursales: @sucursales %>

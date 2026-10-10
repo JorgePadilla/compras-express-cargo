@@ -119,6 +119,9 @@ module PermisosDelSistema
          :servicios, :proveedores, :motivos_retencion, :motivos_envio_politica,
          :plantillas_notas_cliente, :plantillas_descripcion, :categoria_precios,
          :tasa_cambio, :ajustes_etiqueta,
+         # PR-F1.3 · Facturación SAR: los CAI y los puntos de emisión. Un CAI mal
+         # cargado sale impreso en facturas que no se pueden corregir.
+         :autorizaciones_sar,
          # `RP-58` paso 2b · Los títulos de los roles. Admin y nadie más, como el
          # resto de Configuración. **No** entra en `NO_EDITABLES`: renombrar un
          # puesto no concede nada —los permisos siguen atados al código del rol—,

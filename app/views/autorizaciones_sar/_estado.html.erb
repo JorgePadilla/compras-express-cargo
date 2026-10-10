@@ -1,0 +1,12 @@
+<%# PR-F1.3 · La pastilla de vigencia de un CAI. La usan el listado y la ficha. %>
+<% if autorizacion.vencida? %>
+  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300">Vencida</span>
+<% elsif autorizacion.por_vencer? %>
+  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">Vence pronto</span>
+<% else %>
+  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal-deep dark:text-cec-teal">Vigente</span>
+<% end %>
+<% if autorizacion.ficticia? %>
+  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+        title="CAI inventado para staging: no sirve en producción">Ficticia</span>
+<% end %>

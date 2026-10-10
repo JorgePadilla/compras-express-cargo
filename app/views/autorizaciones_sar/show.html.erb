@@ -1,0 +1,61 @@
+<%# PR-F1.3 · Una autorización: lo que la SAR dio y cuánto se usó. %>
+<%= render PageHeaderComponent.new(title: "CAI de #{@autorizacion.tipo_nombre.downcase}",
+                                   subtitle: "#{@autorizacion.punto_de_emision.sucursal.nombre} · #{@autorizacion.identificador}") do |h| %>
+  <% h.with_back do %>
+    <%= render ButtonComponent.new(variant: :ghost, href: autorizaciones_sar_path, icon: "arrow-left", shortcut: "F2") do %>
+      Volver
+    <% end %>
+  <% end %>
+  <% unless @autorizacion.documentos_emitidos? %>
+    <% h.with_action do %>
+      <%= render ButtonComponent.new(href: edit_autorizacion_sar_path(@autorizacion), variant: :secondary, icon: "pencil-square", shortcut: "F6") do %>
+        Editar
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>
+
+<%= render FormSectionComponent.new(title: "CAI", subtitle: "Así sale impreso en cada documento.") do %>
+  <dl class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+    <div class="md:col-span-2">
+      <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">CAI</dt>
+      <dd class="font-mono text-gray-900 dark:text-gray-100 break-all"><%= @autorizacion.cai %></dd>
+    </div>
+    <div>
+      <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Rango autorizado</dt>
+      <dd class="font-mono text-gray-900 dark:text-gray-100">
+        <%= @autorizacion.numero(@autorizacion.rango_inicio) %> al <%= @autorizacion.numero(@autorizacion.rango_fin) %>
+      </dd>
+    </div>
+    <div>
+      <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Usados</dt>
+      <dd class="text-gray-900 dark:text-gray-100 tabular-nums">
+        <%= number_with_delimiter(@autorizacion.documentos_usados) %> de <%= number_with_delimiter(@autorizacion.capacidad) %>
+      </dd>
+    </div>
+    <div>
+      <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Fecha límite de emisión</dt>
+      <dd class="text-gray-900 dark:text-gray-100 flex items-center gap-2">
+        <%= l(@autorizacion.fecha_limite_emision, format: "%d/%m/%Y") %>
+        <%= render "autorizaciones_sar/estado", autorizacion: @autorizacion %>
+      </dd>
+    </div>
+    <div>
+      <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Fecha de autorización</dt>
+      <dd class="text-gray-900 dark:text-gray-100">
+        <%= @autorizacion.fecha_autorizacion ? l(@autorizacion.fecha_autorizacion, format: "%d/%m/%Y") : "—" %>
+      </dd>
+    </div>
+    <div>
+      <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Cargada por</dt>
+      <dd class="text-gray-900 dark:text-gray-100">
+        <%= [ @autorizacion.cargada_por&.nombre, l(@autorizacion.created_at, format: "%d/%m/%Y %H:%M") ].compact.join(" · ") %>
+      </dd>
+    </div>
+  </dl>
+  <% if @autorizacion.documentos_emitidos? %>
+    <p class="mt-4 text-sm text-gray-600 dark:text-gray-300">
+      Ya se emitieron documentos con esta autorización: no se puede cambiar ni borrar.
+    </p>
+  <% end %>
+<% end %>

@@ -1,0 +1,8 @@
+<%= render PageHeaderComponent.new(title: "Editar autorización", subtitle: @autorizacion.cai) do |h| %>
+  <% h.with_back do %>
+    <%= render ButtonComponent.new(variant: :ghost, href: autorizacion_sar_path(@autorizacion), icon: "arrow-left", shortcut: "F2") do %>
+      Volver
+    <% end %>
+  <% end %>
+<% end %>
+<%= render "form", autorizacion: @autorizacion, puntos: @puntos %>

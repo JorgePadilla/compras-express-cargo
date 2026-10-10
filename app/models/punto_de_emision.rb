@@ -20,6 +20,7 @@ class PuntoDeEmision < ApplicationRecord
   validates :sucursal_id, uniqueness: { message: "ya tiene un punto de emisión" }
   validates :punto, uniqueness: { scope: :establecimiento, message: "ya está asignado con ese establecimiento" }
   validate :sucursal_de_honduras
+  validate :numeros_fijos_con_autorizaciones, on: :update
 
   scope :activos, -> { where(activo: true) }
 
@@ -38,7 +39,23 @@ class PuntoDeEmision < ApplicationRecord
     "#{establecimiento}-#{punto} · #{sucursal&.nombre}"
   end
 
+  # Para el formulario: el `EEE-PPP` sin el tipo.
+  def prefijo
+    "#{establecimiento}-#{punto}"
+  end
+
   private
+
+  # PR-F1.3 · La SAR autoriza cada CAI para un `EEE-PPP` y una sucursal. Con la
+  # pantalla, cambiar los números o la sucursal de un punto que ya tiene CAIs
+  # cargados dejaría esos CAIs apuntando a otro establecimiento. Se carga un
+  # punto nuevo; `activo` sí se puede tocar.
+  def numeros_fijos_con_autorizaciones
+    return unless (changed & %w[establecimiento punto sucursal_id]).any?
+    return unless autorizaciones_sar.exists?
+
+    errors.add(:base, "Ya tiene autorizaciones cargadas: la sucursal y los números no se cambian")
+  end
 
   def sucursal_de_honduras
     return if sucursal.nil? || sucursal.ubicacion == "honduras"

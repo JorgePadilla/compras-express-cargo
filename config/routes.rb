@@ -389,6 +389,13 @@ Rails.application.routes.draw do
 
   resource :empresa, only: %i[show edit update]
 
+  # PR-F1.3 · Fase 15: «Facturación SAR». Los CAI y los puntos de emisión se
+  # cargan por pantalla porque todavía no hay CAI real (Jorge, 2026-10-10). Sin
+  # `destroy`: una autorización con documentos no se borra, y una sin
+  # documentos se corrige editándola.
+  resources :autorizaciones_sar, except: :destroy, controller: "autorizaciones_sar"
+  resources :puntos_de_emision, only: %i[new create edit update], controller: "puntos_de_emision"
+
   # PR-C6.29: la tasa multiplica todo lo que se cobra en dólares y hasta ahora
   # solo se podía cambiar con un deploy. Yusef: "la tasa es FIJA, la fija un
   # admin" — por eso es un CRUD y no un job.

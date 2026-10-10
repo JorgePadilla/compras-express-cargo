@@ -63,6 +63,8 @@ module SeccionesDelSistema
     tasa_cambio:          { nombre: "Tasa de Cambio",            grupo: "Configuración" },
     ajustes_etiqueta:     { nombre: "Ajustes de Etiqueta",       grupo: "Configuración" },
     empresa_settings:     { nombre: "Datos de la Empresa",       grupo: "Configuración" },
+    autorizaciones_sar:   { nombre: "Facturación SAR",           grupo: "Configuración",
+                            ayuda: "Puntos de emisión y autorizaciones (CAI) de la SAR." },
     configuraciones:      { nombre: "Configuración general",     grupo: "Configuración" },
     reportes:             { nombre: "Reportes",                  grupo: "Configuración" },
     empleados:            { nombre: "Empleados",                 grupo: "Configuración" },

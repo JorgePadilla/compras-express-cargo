@@ -50,6 +50,26 @@ class AutorizacionSar < ApplicationRecord
     rango_fin - rango_inicio + 1
   end
 
+  # El número completo de 16 dígitos, `EEE-PPP-TT-NNNNNNNN` (Art. 10 num. 7).
+  def numero(secuencia)
+    "#{identificador}-#{format('%08d', secuencia)}"
+  end
+
+  def tipo_nombre
+    Fiscal::TIPOS_DE_DOCUMENTO.fetch(tipo_documento, tipo_documento)
+  end
+
+  # Cuántos números de este rango ya salieron. `ultimo` se puede pasar ya
+  # leído, para que un listado no consulte el correlativo fila por fila.
+  def documentos_usados(ultimo = correlativo&.ultimo)
+    (ultimo.to_i - rango_inicio + 1).clamp(0, capacidad)
+  end
+
+  # Para avisar en la pantalla antes de que se corte la facturación.
+  def por_vencer?(al = Fiscal.hoy, dias: 30)
+    !vencida?(al) && fecha_limite_emision <= al + dias
+  end
+
   # Art. 62: la fecha límite es el último día en que se puede emitir.
   def vencida?(al = Fiscal.hoy)
     al > fecha_limite_emision
