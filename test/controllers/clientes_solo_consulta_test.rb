@@ -28,7 +28,7 @@ class ClientesSoloConsultaTest < ActionDispatch::IntegrationTest
 
     get clientes_url
     assert_no_match(/Nuevo Cliente/, response.body)
-    assert_no_match(/data-shortcut="F7"/, response.body)
+    assert_no_match(/data-shortcut="F1"/, response.body)
 
     get cliente_url(@cliente)
     assert_no_match(/>\s*Editar\s*</, response.body)

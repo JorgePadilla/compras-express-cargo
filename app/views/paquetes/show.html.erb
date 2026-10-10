@@ -44,7 +44,7 @@
     header.with_action do
       render(ButtonComponent.new(variant: :primary, size: :xs, type: "submit",
                                  form: "paquete-edit-form",
-                                 icon: "check", shortcut: "F10")) { "Guardar" }
+                                 icon: "check", shortcut: "F8")) { "Guardar" }
     end
     header.with_action do
       render(ButtonComponent.new(variant: :ghost, size: :xs, href: paquete_path(@paquete),
@@ -337,7 +337,7 @@ end %>
         Editar Paquete
       </h2>
       <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-        Cambios se guardan al presionar <strong>Guardar</strong> arriba (F10) o <strong>Cancelar</strong> (F2) para descartar.
+        Cambios se guardan al presionar <strong>Guardar</strong> arriba (F8) o <strong>Cancelar</strong> (F2) para descartar.
       </p>
     </div>
     <div class="px-6 py-4">

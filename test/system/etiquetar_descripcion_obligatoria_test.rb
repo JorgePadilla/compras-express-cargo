@@ -26,19 +26,19 @@ class EtiquetarDescripcionObligatoriaSystemTest < ApplicationSystemTestCase
     assert_equal 0, Paquete.where(tracking: tracking).count
   end
 
-  test "F10 sin descripción no graba; con descripción sí" do
+  test "F8 sin descripción no graba; con descripción sí" do
     abrir_sesion_etiquetar(TipoEnvio.activos.order(:nombre).first)
     tracking = "1ZC3003SISTEMA2"
     find("#paquete_tracking").set(tracking)
     elegir_juan("etiquetar")
 
-    tecla(:f10)
+    tecla(:f8)
     assert_equal "paquete_descripcion", foco_actual
     sleep 0.5
     assert_equal 0, Paquete.where(tracking: tracking).count
 
     find("#paquete_descripcion").set("Ropa")
-    tecla(:f10)
+    tecla(:f8)
     assert_text "guardado exitosamente", wait: 10
     assert_equal "Ropa", Paquete.find_by(tracking: tracking)&.descripcion
   end

@@ -183,7 +183,7 @@ class ButtonComponent < ViewComponent::Base
     @form = form
     @form_class = form_class
     @params = params
-    @shortcut = shortcut # ej. "F10" — label visual "(F10)"
+    @shortcut = shortcut # ej. "F8" — label visual "(F8)"
     @shortcut_label_only = shortcut_label_only
     @attrs = attrs
   end

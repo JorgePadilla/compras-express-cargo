@@ -2,8 +2,11 @@ import { Controller } from "@hotwired/stimulus"
 
 // Atajos de teclado para el listado /paquetes:
 //   F4  → Imprimir vista actual (window.print)
-//   F8  → Descargar Excel del scope filtrado
 //   F9  → Descargar PDF del scope filtrado
+//
+// C30-02 · El Excel **ya no tiene tecla**. Era F8, y F8 pasó a ser guardar en
+// todo el sistema (la hoja de Yusef: *"en casi todo es F8 guardar"*). Qué
+// tecla le toca, si alguna, es `RP-75`: no se inventa una.
 //
 // F2 (limpiar filtros + reload) lo maneja el controller universal
 // `f2-clear` adjunto al form de filtros (ver f2_clear_controller.js).
@@ -29,9 +32,6 @@ export default class extends Controller {
     if (e.key === "F4") {
       e.preventDefault()
       this._clickAction("bulk-selection#print")
-    } else if (e.key === "F8") {
-      e.preventDefault()
-      this._clickAction("bulk-selection#exportXlsx")
     } else if (e.key === "F9") {
       e.preventDefault()
       this._clickAction("bulk-selection#exportPdf")

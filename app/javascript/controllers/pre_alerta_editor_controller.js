@@ -49,14 +49,15 @@ export default class extends Controller {
     // justo lo que Jorge preguntó: *"¿los F los podemos dejar iguales en las
     // pantallas?"*.
     //
-    // Ahora: F5 agregar, F10 guardar. F2 ya estaba bien.
+    // Ahora: F5 agregar, F8 guardar (C30-02: la hoja de Yusef; hasta ahí era
+    // F10). F2 ya estaba bien.
     if (e.key === "F2" || e.key === "Escape") {
       e.preventDefault()
       this.cancel()
     } else if (e.key === "F5") {
       e.preventDefault()
       this.addPaquete()
-    } else if (e.key === "F10") {
+    } else if (e.key === "F8") {
       e.preventDefault()
       this.save()
     } else if (e.key === "F9") {
