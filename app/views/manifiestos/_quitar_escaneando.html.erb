@@ -1,0 +1,55 @@
+<%# C30-06 · «Eliminar paquetes», con la pistola y en un modal.
+
+    Yusef: *"deseo eliminar paquetes, y le vas a decir que sí, y empezás a
+    escanear clac, clac, clac"* · *"que diga agregar paquetes o que diga
+    eliminar paquetes que no se fueron, y entonces empezás a escanear en un
+    modal"*. Agregar ya se escanea en la tarjeta de arriba; lo que no había era
+    sacar sin buscar la fila en una tabla de cien.
+
+    Sale con el manifiesto abierto y con el reabierto: sacar el que no se fue
+    sirve igual antes de finalizar. Cada respuesta suena distinta, como en el
+    escaneo de agregar — el operario mira la pistola, no la pantalla. Los
+    errores se dicen **adentro** del modal: ya hay uno abierto. %>
+<div class="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white dark:bg-gray-800 shadow px-6 py-4"
+     data-controller="manifiesto-quitar audio"
+     <%= tag.attributes(atributos_de_audio) %>
+     data-manifiesto-quitar-escanear-url-value="<%= escanear_para_quitar_manifiesto_path(manifiesto) %>"
+     data-manifiesto-quitar-quitar-url-value="<%= remove_paquete_manifiesto_path(manifiesto, paquete_id: "PAQUETE_ID") %>"
+     data-action="manifiesto-quitar:ok->audio#success
+                  manifiesto-quitar:varios->audio#notify
+                  manifiesto-quitar:noEstaAca->audio#error
+                  manifiesto-quitar:noEncontrado->audio#error">
+  <div>
+    <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100">¿Un paquete que no se fue?</h2>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+      Escanealo y sale del manifiesto: vuelve a «<%= EstadoPaqueteHelper::ETIQUETAS.fetch(manifiesto.estado_antes_de_salir, manifiesto.estado_antes_de_salir.humanize) %>» y suelta su caja.
+    </p>
+  </div>
+  <%= render(ButtonComponent.new(variant: :danger, icon: "minus-circle",
+        data: { action: "manifiesto-quitar#abrir" })) { "Eliminar paquetes" } %>
+
+  <dialog data-manifiesto-quitar-target="modal"
+          style="margin: auto"
+          class="rounded-xl p-0 w-[34rem] max-w-[95vw] backdrop:bg-black/60">
+    <%= render ModalHeaderComponent.new(tono: :bloqueo, kicker: manifiesto.numero,
+          titulo: "Eliminar paquetes que no se fueron") %>
+    <div class="bg-white dark:bg-gray-800 px-6 py-5">
+      <%= label_tag :quitar_paquete, "Escaneá el paquete que sale", class: "block text-base font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+      <%# Enter **saca**, como Enter agrega en la tarjeta de arriba: la pistola
+          termina con Enter y el operario escanea uno atrás de otro. %>
+      <input type="text" id="quitar_paquete" autocomplete="off"
+             placeholder="Etiqueta del paquete…"
+             data-manifiesto-quitar-target="input"
+             data-action="keydown->manifiesto-quitar#teclado"
+             class="block w-full min-h-11 py-4 text-xl rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 shadow-sm font-mono focus:ring-cec-teal focus:border-cec-teal">
+      <div data-manifiesto-quitar-target="aviso" class="hidden mt-3 rounded-lg p-3 text-sm" role="status"></div>
+      <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+        Salieron <span class="font-semibold" data-manifiesto-quitar-target="contador">0</span> en esta tanda.
+      </p>
+    </div>
+    <div class="flex items-center justify-end gap-3 px-6 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+      <%= render(ButtonComponent.new(variant: :secondary, size: :md,
+            data: { action: "manifiesto-quitar#cerrar" })) { "Listo" } %>
+    </div>
+  </dialog>
+</div>

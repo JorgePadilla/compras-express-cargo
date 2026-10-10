@@ -1169,6 +1169,12 @@ class Paquete < ApplicationRecord
   # Error de negocio: se quiso borrar una caja que ya entró a cobro o salió.
   class CajaNoEliminable < StandardError; end
 
+  # C30-06 · Partir o bajar cajas de un paquete que va en un manifiesto que ya
+  # no se puede tocar. Hereda de `CajaNoEliminable` a propósito: las tres
+  # puertas que llaman a `ajustar_split!` (/paquetes, /etiquetar y bajar con
+  # PIN) ya muestran ese error como aviso, y esto es lo mismo — no se puede.
+  class ManifiestoBloqueado < CajaNoEliminable; end
+
   # Cambia un split de N cajas a M. `crear_split!` solo sabía **crear**, así
   # que subir o bajar la cantidad dejaba los registros viejos mezclados con
   # los nuevos. Yusef lo reprodujo dos veces:
@@ -1212,6 +1218,13 @@ class Paquete < ApplicationRecord
 
       hermanas = cajas_del_mismo_split(paquete).to_a
       n = hermanas.size
+
+      # C30-06 · Las cajas nuevas heredan el manifiesto (`attributes.except`
+      # de abajo) y las sobrantes se borran: las dos cosas cambian la carga de
+      # un manifiesto. Si alguno ya viajó y no está abierto para corregir, no.
+      if m != n && (cerrado = hermanas.filter_map(&:manifiesto).uniq.find { |mf| !mf.modificable_por?(Current.user) })
+        raise ManifiestoBloqueado, "No se puede cambiar la cantidad de cajas: #{cerrado.motivo_del_candado}"
+      end
 
       if m < n
         sobrantes = hermanas.select { |c| c.numero_caja.to_i > m }
