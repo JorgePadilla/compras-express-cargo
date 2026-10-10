@@ -1586,12 +1586,11 @@ class Paquete < ApplicationRecord
     proveedor&.entrega_personal? || false
   end
 
-  # Retry on guia collisions (old max+1 generator). numero_recepcion usa una
-  # PostgreSQL sequence atomica por sucursal (`nextval`), por lo que nunca
-  # debe colisionar para records nuevos — la migracion inicial hizo setval
-  # al max existente, y nextval garantiza unicidad para inserts concurrentes.
-  # Si hay una colision de numero_recepcion, es un problema de integridad
-  # (data legacy insertada fuera de la sequence) y bubbleamos el error.
+  # Retry on guia collisions (old max+1 generator). numero_recepcion sale de
+  # `numero_recepcion_counters` (por sucursal y mes, PR-C6.40), no de este
+  # reintento: las secuencias por sucursal del principio ya no existen
+  # (PR-F1.8). Si hay una colision de numero_recepcion, es un problema de
+  # integridad y bubbleamos el error.
   def save(**args, &block)
     super
   rescue ActiveRecord::RecordNotUnique => e
