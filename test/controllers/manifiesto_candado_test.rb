@@ -88,17 +88,19 @@ class ManifiestoCandadoTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
   end
 
-  test "el botón «Editar igual» no le sale al digitador" do
+  # C30-06 · «Editar igual» pasó a ser «Editar», y ya no lleva al formulario
+  # del encabezado: abre el manifiesto entero (`abrir_edicion`).
+  test "el botón «Editar» del candado no le sale al digitador" do
     ingresar(users(:digitador))
     get manifiesto_url(@manifiesto)
     assert_response :success
-    assert_select "a", text: /Editar igual/, count: 0
+    assert_select "form[action=?]", abrir_edicion_manifiesto_path(@manifiesto), count: 0
   end
 
   test "y sí le sale al supervisor de Miami" do
     ingresar(users(:supervisor_miami))
     get manifiesto_url(@manifiesto)
     assert_response :success
-    assert_select "a", text: /Editar igual/
+    assert_select "form[action=?] button", abrir_edicion_manifiesto_path(@manifiesto), text: /Editar/
   end
 end

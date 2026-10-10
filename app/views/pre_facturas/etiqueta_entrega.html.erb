@@ -1,0 +1,30 @@
+<%# C30-19 · La etiqueta de entrega 4×6 (PR-P.3). Los datos los junta
+    `EtiquetaDeEntrega`; acá solo se acomodan, de más grande a más chico en el
+    orden que pidió Yusef: sucursal, nombre, tipo de envío. Una por
+    pre-factura, provisorio hasta `RP-82` (ver el modelo). %>
+<% e = @etiqueta %>
+<div class="entrega">
+  <div class="rotulo">RETIRA EN</div>
+  <div class="sucursal" data-ajustar data-ajustar-lineas data-ajustar-min="14"><%= e.sucursal_nombre.presence || "SIN SUCURSAL" %></div>
+
+  <div class="nombre" data-ajustar data-ajustar-lineas data-ajustar-min="12"><%= e.cliente_nombre %></div>
+  <div class="cliente-codigo" data-ajustar data-ajustar-min="10"><%= e.cliente_codigo %></div>
+  <div class="tipo" data-ajustar data-ajustar-min="16"><%= e.tipo_envio || "—" %></div>
+
+  <% if e.consolidando? %>
+    <div class="franja" data-ajustar data-ajustar-min="18">CONSOLIDANDO</div>
+  <% end %>
+
+  <div class="abajo">
+    <div class="qr"><%= etiqueta_qr_svg(e.qr, tamano: "1.5in") %></div>
+    <div class="datos">
+      <div class="pf" data-ajustar data-ajustar-min="10"><%= e.numero %></div>
+      <div class="cifra"><span class="u">LBS A COBRAR</span><span class="v"><%= etiqueta_num_2d(e.libras) %></span></div>
+      <%# RP-82 · «El volumen», provisorio: los VLBS de todo lo que se
+          entrega y en cuántos volúmenes viene. %>
+      <div class="cifra"><span class="u">VLBS</span><span class="v"><%= etiqueta_num_2d(e.vlbs) %></span></div>
+      <div class="cifra"><span class="u">VOLÚMENES</span><span class="v"><%= e.volumenes %></span></div>
+      <div class="fecha" data-ajustar data-ajustar-min="8"><%= e.fecha %></div>
+    </div>
+  </div>
+</div>

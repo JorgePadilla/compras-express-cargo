@@ -1,6 +1,6 @@
 class PreFacturasController < ApplicationController
   before_action :require_feature_access
-  before_action :set_pre_factura, only: %i[show edit update confirmar facturar anular]
+  before_action :set_pre_factura, only: %i[show edit update confirmar facturar anular etiqueta_entrega]
 
   def index
     @pre_facturas = PreFactura.includes(:cliente, :creado_por, :manifiesto).recientes
@@ -9,6 +9,18 @@ class PreFacturasController < ApplicationController
   end
 
   def show
+  end
+
+  # C30-19 · PR-P.3 · La etiqueta de entrega 4×6. Con `?print=true` imprime y
+  # se cierra sola (`_etiqueta_autoprint`), como las otras etiquetas.
+  #
+  # Hoy sale del botón de la ficha, para que ya sirva con las pre-facturas
+  # hechas a mano; cuando llegue la auditoría por escaneo (PR-P.5) la van a
+  # imprimir F8 y F9 — *"es la única etapa de todo el sistema que ellos
+  # ocupan de imprimir ese"*.
+  def etiqueta_entrega
+    @etiqueta = EtiquetaDeEntrega.new(@pre_factura)
+    render layout: "etiqueta_entrega"
   end
 
   def new

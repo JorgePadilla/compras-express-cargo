@@ -1,0 +1,30 @@
+<%# C30-06 / C30-07 · Las casas de un manifiesto bloqueado: para ver y para
+    re-imprimir, nada para cambiar.
+
+    Antes la ficha de uno finalizado no las mostraba — `show` envolvía la
+    sección entera en `creado?`—, así que «Imprimir las 4×6» y la impresora de
+    cada fila quedaban **inalcanzables** justo cuando Yusef las pedía: *"esto
+    está bloqueado, no puede hacer nada más imprimir… re-imprimir una etiqueta
+    y [las] etiquetas individuales, imprimir manifiesto, imprimir el listado,
+    exportar; está bien, porque eso son parte de la cosa que se ocupa hacer"*. %>
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-6" id="manifiesto-cajas-vista">
+  <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Casas del manifiesto</h2>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+        Lo que lleva cada caja, como en la etiqueta. Para cambiar algo, un supervisor aprieta «Editar».
+      </p>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="text-sm text-gray-500 dark:text-gray-400"><%= manifiesto.cajas.size %> bulto(s)</span>
+      <%= render ButtonComponent.new(variant: :outline_navy, icon: "printer",
+            href: etiquetas_manifiesto_cajas_path(manifiesto, print: true),
+            target: "_blank") do %>Imprimir las 4×6<% end %>
+    </div>
+  </div>
+  <div class="overflow-x-auto">
+    <div id="manifiesto-cajas-tabla">
+      <%= render "manifiestos/cajas_tabla", manifiesto: manifiesto, editable: false %>
+    </div>
+  </div>
+</div>
