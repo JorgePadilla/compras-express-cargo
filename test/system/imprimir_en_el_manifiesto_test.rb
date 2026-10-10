@@ -79,40 +79,57 @@ class ImprimirEnElManifiestoTest < ApplicationSystemTestCase
     assert_equal 41, @caja.reload.peso.to_i
   end
 
-  # Era el que no volvía: redirigía a las 4×6 sin `volver=1`, y al terminar la
-  # pestaña intentaba `window.close()` sobre una pestaña que no abrió ningún
-  # script —el navegador se niega— y el operario quedaba mirando etiquetas.
-  test "«Finalizar e Imprimir» imprime las 4×6 y vuelve al manifiesto finalizado" do
+  # PR-C29.7: era el que no volvía —redirigía a las 4×6 sin `volver=1` y el
+  # operario quedaba mirando etiquetas—.
+  #
+  # C30-05: y además imprimía lo que no era. Yusef: *"lo que tiene que
+  # imprimirme no es esta etiqueta… el que necesito que me imprima después de
+  # finalizado es este"* — la hoja del manifiesto. La vuelta es la misma.
+  test "«Finalizar e Imprimir» imprime la hoja del manifiesto y vuelve al manifiesto finalizado" do
     visit manifiesto_path(@manifiesto)
 
-    # «Node with given id does not belong to the document», con la máquina
-    # cargada (QA, 2026-10-09). El botón es un `button_to` con
-    # `turbo_confirm`: si el clic llega **antes** de que Turbo y el modal de
-    # confirmar monten, el form se manda derecho, sin preguntar, y la página
-    # se va. `confirmando` esperaba el `confirm` nativo, no lo encontraba, y
-    # buscaba el modal de HTML en la ficha que se estaba yendo: el nodo que
-    # encontraba era del documento viejo. Así que primero la ficha armada —el
-    # camino del confirm queda siempre el mismo— y después el clic.
-    assert_eventualmente("la ficha no terminó de montar Turbo y el modal de confirmar") do
-      documento_cargado?("!!window.Turbo && typeof window.cecConfirm === 'function'")
-    end
-
     # Las acciones salen dos veces (arriba y abajo de la ficha): la de arriba.
-    # Con una consulta y no con `within`, para no sostener un nodo de la ficha
-    # mientras el clic se la lleva.
-    imprime_y_vuelve do
-      confirmando { find("#manifiesto-acciones-arriba :is(a, button)", text: "Finalizar e Imprimir").click }
-    end
+    imprime_y_vuelve(en: HOJA_DEL_MANIFIESTO) { finalizar_e_imprimir }
+    assert_text "finalizado y bloqueado", wait: 5
+  end
+
+  test "«Finalizar e Imprimir» sin bultos también imprime la hoja y vuelve" do
+    # El manifiesto armado sin escanear (`C23-10`) no tiene cajas. Antes el
+    # botón ni aparecía: lo único que había para imprimir eran 4×6.
+    @paquete.update_columns(caja_manifiesto_id: nil)
+    @caja.destroy!
+    visit manifiesto_path(@manifiesto)
+
+    imprime_y_vuelve(en: HOJA_DEL_MANIFIESTO) { finalizar_e_imprimir }
     assert_text "finalizado y bloqueado", wait: 5
   end
 
   private
 
+  # «Node with given id does not belong to the document», con la máquina
+  # cargada (QA, 2026-10-09). El botón es un `button_to` con
+  # `turbo_confirm`: si el clic llega **antes** de que Turbo y el modal de
+  # confirmar monten, el form se manda derecho, sin preguntar, y la ficha se
+  # va. `confirmando` esperaba el `confirm` nativo, no lo encontraba, y
+  # buscaba el modal de HTML en la ficha que se estaba yendo: el nodo que
+  # encontraba era del documento viejo. Así que primero la ficha armada —el
+  # camino del confirm queda siempre el mismo, el modal de HTML del
+  # operario— y después el clic.
+  #
+  # Las acciones salen dos veces (arriba y abajo de la ficha): la de arriba.
+  # Con una consulta y no con `within`, para no sostener un nodo de la ficha
+  # mientras el clic se la lleva.
+  def finalizar_e_imprimir
+    assert_eventualmente("la ficha no terminó de montar Turbo y el modal de confirmar") do
+      documento_cargado?("!!window.Turbo && typeof window.cecConfirm === 'function'")
+    end
+    confirmando { find("#manifiesto-acciones-arriba :is(a, button)", text: "Finalizar e Imprimir").click }
+  end
+
   def confirmando(&clic)
     accept_confirm(&clic)
   rescue Capybara::ModalNotFound
-    # Una consulta, por lo mismo que arriba: «Confirmar» también se lleva la
-    # página.
+    # Una consulta, por lo mismo: «Confirmar» también se lleva la página.
     if page.has_css?(MODAL_CONFIRMAR, wait: 3)
       find("#{MODAL_CONFIRMAR} :is(a, button)", text: "Confirmar").click
     end
@@ -139,20 +156,37 @@ class ImprimirEnElManifiestoTest < ApplicationSystemTestCase
     Timeout.timeout(10) { sleep 0.2 while page.driver.browser.window_handles.size > 1 }
   end
 
-  # A la 4×6 se llega en dos pasos: Turbo pide el redirect del PATCH, ve
-  # `turbo-visit-control: reload` (`layouts/etiqueta_4x6`) y el navegador la
-  # carga entera. Mientras tanto la página de antes sigue ahí, y preguntarle
-  # algo puede tocar un nodo que está por morir. Y el `afterprint` lo escucha
-  # un listener que se arma en `onload`: disparado antes, no vuelve nadie.
+  # La hoja del manifiesto (layout `print`), por lo que dice arriba y no por
+  # una clase: lo que importa es que sea ESE papel y no una 4×6.
+  HOJA_DEL_MANIFIESTO = :hoja
+
+  # Al papel se llega en dos pasos: Turbo pide el redirect, ve
+  # `turbo-visit-control: reload` —lo llevan `layouts/print` (la hoja) y
+  # `layouts/etiqueta_4x6` (las 4×6)— y el navegador lo carga entero.
+  # Mientras tanto la ficha de antes sigue ahí, y preguntarle algo puede tocar
+  # un nodo que está por morir. Y el `afterprint` lo escucha un listener que
+  # se arma en `onload`: disparado antes, no vuelve nadie.
   #
-  # La 4×6 de verdad es la que no tiene Turbo (ese layout no carga la app) y
-  # terminó de cargar. Recién ahí se mira la URL y se imprime. (Trazado en
-  # Chrome: entre el clic y eso no hay ningún estado intermedio con `.bulto`
-  # y Turbo a la vez, así que esto no deja pasar nada que antes pasara.)
-  def imprime_y_vuelve
+  # El papel de verdad es el que **no tiene Turbo** —ninguno de los dos
+  # layouts carga la app— y terminó de cargar. Recién ahí se mira qué papel es
+  # y se imprime. (Trazado en Chrome: entre el clic y eso no hay un estado
+  # intermedio con el papel y Turbo a la vez, así que la espera no deja pasar
+  # nada que antes pasara.)
+  def imprime_y_vuelve(en: ".bulto")
     yield
-    assert_eventualmente("la 4×6 no terminó de cargar entera", wait: 10) do
-      documento_cargado?("typeof window.Turbo === 'undefined' && !!document.querySelector('.bulto')")
+    papel = if en == HOJA_DEL_MANIFIESTO
+      "document.body.innerText.includes('MANIFIESTO DE CARGA')"
+    else
+      "!!document.querySelector(#{en.to_json})"
+    end
+    assert_eventualmente("el papel no terminó de cargar entero", wait: 10) do
+      documento_cargado?("typeof window.Turbo === 'undefined' && #{papel}")
+    end
+    if en == HOJA_DEL_MANIFIESTO
+      assert_text "MANIFIESTO DE CARGA"
+      assert_no_selector ".bulto"
+    else
+      assert_selector en
     end
     assert_includes page.current_url, "print=true", "la etiqueta llegó sin el diálogo de impresión"
     assert_includes page.current_url, "volver=1", "la etiqueta no sabe a dónde volver"

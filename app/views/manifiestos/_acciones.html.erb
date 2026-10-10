@@ -58,12 +58,15 @@
           confirm: "Se finaliza #{manifiesto.numero}: #{manifiesto.cantidad_paquetes} paquete(s) pasan a enviado y el manifiesto queda bloqueado. ¿Seguro?") do %>
       Solo Finalizar
     <% end %>
-    <% if manifiesto.cajas.any? %>
-      <%= render ButtonComponent.new(variant: :gold, icon: "printer",
-            href: finalizar_manifiesto_path(manifiesto, imprimir: true), method: :patch,
-            confirm: "Se finaliza #{manifiesto.numero} y salen las etiquetas 4×6 de los #{manifiesto.cajas.size} bulto(s). ¿Seguro?") do %>
-        Finalizar e Imprimir
-      <% end %>
+    <%# C30-05 · Imprime **la hoja del manifiesto**, la que se lleva el
+        transportista, y no las 4×6: *"todas esas etiquetas ya las imprimieron
+        cuando los estaban ingresando"*. Cambia `C21-06`. Por eso ya no espera
+        a que haya cajas: la hoja sale igual sin bultos. Las 4×6 se
+        re-imprimen con «Imprimir las 4×6». %>
+    <%= render ButtonComponent.new(variant: :gold, icon: "printer",
+          href: finalizar_manifiesto_path(manifiesto, imprimir: true), method: :patch,
+          confirm: "Se finaliza #{manifiesto.numero} y sale la hoja del manifiesto para el transportista. ¿Seguro?") do %>
+      Finalizar e Imprimir
     <% end %>
     <p class="text-xs text-gray-500">Pasan los paquetes de <b><%= manifiesto.tipos_envio_nuestros %></b>.</p>
   </div>

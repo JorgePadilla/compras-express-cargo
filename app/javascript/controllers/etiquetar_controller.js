@@ -1,5 +1,6 @@
 import ClienteAutocomplete from "controllers/cliente_autocomplete"
 import { conEnterAvanza } from "controllers/enter_avanza"
+import { enfocar } from "controllers/enfocar"
 
 // El color del encabezado según de qué avisa. Yusef: *"el cerebro hasta el color
 // asocia"*. Las clases ya no viven acá: llegan en `tonosValue` desde
@@ -69,7 +70,10 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
     // no burbujea: va en captura sobre el elemento del controller, que los
     // envuelve a todos, franja incluida. Un frame después: el `open` ya se
     // fue, pero dos `showModal()` en el mismo tick dejan el segundo sin foco.
-    this._alCerrarseUnaPregunta = () => requestAnimationFrame(() => this._siguienteAviso())
+    this._alCerrarseUnaPregunta = () => requestAnimationFrame(() => {
+      this._siguienteAviso()
+      this._revivirElFoco()
+    })
     this.element.addEventListener("close", this._alCerrarseUnaPregunta, true)
     // Al cargar /etiquetar (incluida la navegación Turbo tras iniciar sesión),
     // el cursor arranca en el primer campo: tracking. `autofocus` no es
@@ -1196,8 +1200,25 @@ cerrarQuitarCobro() {
     if (this.hasAvisoModalTarget && this.avisoModalTarget.open) return
     if (!this.hasTrackingTarget) return
 
-    this.trackingTarget.focus()
+    // PR-C30.8 · `enfocar` y no `focus()`: ver `_revivirElFoco`.
+    enfocar(this.trackingTarget)
     this.trackingTarget.scrollIntoView({ block: "center" })
+  }
+
+  // PR-C30.8 · Cerrado un modal con el mouse, el navegador le devuelve el foco
+  // al campo que lo tenía —el tracking, o el que siguió con Enter— pero la
+  // selección del documento queda afuera, donde fue el clic, y lo que teclea
+  // la pistola **no entra** (`enfocar.js`; C30-10 lo encontró en la PESA).
+  // Acá no se elige campo: se revive el que el navegador ya eligió, para no
+  // mover a nadie de donde estaba. Y sin soltarlo: el `blur` del tracking sale
+  // a buscarlo (`checkTracking`). Si quedó otra pregunta abierta, espera a
+  // que se cierre esa.
+  _revivirElFoco() {
+    if (document.querySelector("dialog[open]")) return
+    const campo = document.activeElement
+    if (!campo || !this.element.contains(campo) || !campo.matches("input, textarea, select")) return
+
+    enfocar(campo)
   }
 
   // F2 tiene que dejar el formulario en blanco, siempre. Yusef: "todo, todo.

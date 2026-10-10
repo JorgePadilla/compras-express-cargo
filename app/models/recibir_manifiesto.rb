@@ -15,6 +15,59 @@
 class RecibirManifiesto
   Resultado = Struct.new(:recibidas, :faltantes, :paquetes, keyword_init: true)
 
+  # C21-07 · *"Solo lo que está como enviado."* Lo que Miami ya finalizó y
+  # Honduras todavía no cerró. `en_aduana` es el recibido a medias: parcial es
+  # un estado legítimo (`recibir_caja!`).
+  ESTADOS_POR_RECIBIR = %w[enviado en_aduana].freeze
+
+  def self.pendientes = Manifiesto.activos.where(estado: ESTADOS_POR_RECIBIR)
+
+  def self.pendiente?(manifiesto) = manifiesto.activo? && manifiesto.estado.in?(ESTADOS_POR_RECIBIR)
+
+  # ── C30-09 · ¿De qué manifiesto es lo que se escaneó? ────────────────────
+  #
+  # La pistola de la lista no sabe de qué manifiesto es la caja: lo averigua
+  # por la etiqueta. Yusef:
+  #
+  #   > "A veces vamos a recibir **tres manifiestos de un solo** y hay que
+  #   >  estar seleccionando cada manifiesto, entonces solo crear un search…"
+  #   > "Hemos recibido manifiestos **hasta cinco de un solo**."
+  #
+  # Se puede porque el código de la caja es `<número del manifiesto>-<letra>`
+  # y es **único en toda la tabla** (`CajaManifiesto`): una etiqueta 4×6 dice
+  # sola a qué manifiesto pertenece. No hace falta adivinar.
+  #
+  # Acá solo se **ubica**; recibir sigue siendo `recibir_caja!` /
+  # `recibir_paquete!` del manifiesto que salió, los mismos que usa la pistola
+  # de adentro. Los motivos:
+  #
+  #   :caja               una caja de un manifiesto pendiente — se recibe
+  #   :paquete            un paquete de un interno pendiente — se recibe (`A7-08`)
+  #   :paquete_de_oficial un paquete suelto de un oficial — no: se escanean cajas
+  #   :no_pendiente       una caja de un manifiesto cerrado o que no salió
+  #   :ninguno            nada en ningún manifiesto
+  Ubicacion = Struct.new(:motivo, :manifiesto, :caja, :paquete, keyword_init: true)
+
+  def self.ubicar(codigo)
+    codigo = codigo.to_s.strip
+    return Ubicacion.new(motivo: :ninguno) if codigo.empty?
+
+    caja = CajaManifiesto.includes(:manifiesto).find_by("UPPER(codigo) = ?", codigo.upcase)
+    if caja
+      motivo = pendiente?(caja.manifiesto) ? :caja : :no_pendiente
+      return Ubicacion.new(motivo: motivo, manifiesto: caja.manifiesto, caja: caja)
+    end
+
+    # **Estricto**, no `Paquete.buscar`: ése hace ILIKE sobre descripción,
+    # cliente y número de manifiesto, y acá una lectura mala **recibe**
+    # carga. Es el mismo criterio que la Medición (`C26-02`).
+    paquete = Paquete.where(manifiesto_id: pendientes.select(:id)).por_codigo_de_etiqueta(codigo).first
+    return Ubicacion.new(motivo: :ninguno) if paquete.nil?
+
+    motivo = paquete.manifiesto.tipo_interno? ? :paquete : :paquete_de_oficial
+    Ubicacion.new(motivo: motivo, manifiesto: paquete.manifiesto, paquete: paquete)
+  end
+
   def initialize(manifiesto, user: nil)
     @manifiesto = manifiesto
     @user = user
