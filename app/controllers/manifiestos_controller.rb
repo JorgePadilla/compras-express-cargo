@@ -18,8 +18,28 @@ class ManifiestosController < ApplicationController
     @manifiestos = @manifiestos.page(params[:page]).per(per_page_sanitized)
   end
 
+  # PR-C30.15 · «Editar» edita **acá**, en la misma ficha. Jorge, 2026-10-10:
+  # *"it really don't make sense pressing editar sends me here [/edit], I want
+  # to edit the current view plus all what is in the manifiesto, something
+  # like this view /manifiestos/24"*. La tarjeta «Detalles del Manifiesto» es
+  # un Turbo Frame (`manifiesto-detalles`) que se da vuelta a formulario; las
+  # casas y los paquetes ya se editaban en la ficha.
+  #
+  # Tres formas de llegar:
+  # - el frame pide la ficha («Cancelar» adentro del formulario) → la tarjeta
+  #   de solo lectura, sola;
+  # - `?editar=1` (el pencil de la lista, o recién abierto el candado) → la
+  #   ficha entera con la tarjeta ya en formulario, si el usuario puede;
+  # - lo demás → la ficha de siempre.
   def show
+    if frame_de_detalles?
+      render partial: "manifiestos/detalles", locals: { manifiesto: @manifiesto, editando: false }
+      return
+    end
+
     cargar_contenido
+    @editando = params[:editar].present? && @manifiesto.encabezado_editable_por?(Current.user)
+    assigns_del_formulario if @editando
   end
 
   def new
@@ -44,15 +64,20 @@ class ManifiestosController < ApplicationController
     end
   end
 
-  # PR-C30.14 · Editar es el manifiesto **entero**, como la ficha: el
-  # encabezado de Miami, lo que llena San Pedro, y las casas y los paquetes
-  # (`manifiestos/_contenido`, el mismo partial que `show`). Jorge, 2026-10-10:
-  # *"esta pantalla de editar me debería dejar editar todo lo que está en el
-  # manifiesto, pero solo está la parte de Miami"* · *"editar de manifiesto
-  # debería ser muy parecido a /manifiestos/22"*.
+  # PR-C30.15 · Ya no es una pantalla. Adentro del frame devuelve la tarjeta
+  # en formulario; pedido entero (el lápiz de la lista, un link guardado) va a
+  # la ficha con la tarjeta abierta. PR-C30.14 había hecho de /edit el
+  # manifiesto entero, y eso es lo que Jorge no quiso: dos pantallas para lo
+  # mismo.
   def edit
-    assigns_del_formulario
-    cargar_contenido
+    return if exigir_encabezado_editable
+
+    if frame_de_detalles?
+      assigns_del_formulario
+      render partial: "manifiestos/detalles", locals: { manifiesto: @manifiesto, editando: true }
+    else
+      redirect_to manifiesto_path(@manifiesto, editar: 1)
+    end
   end
 
   # Lo que llena San Pedro también se guarda desde acá (PR-C30.14), con el
@@ -60,19 +85,49 @@ class ManifiestosController < ApplicationController
   # guarda la fecha: si la corrige un supervisor de Miami desde esta pantalla,
   # él queda como «recibido por». Se acepta: es quien puso la fecha que está
   # (la misma regla que en `/guias-y-aduana`).
+  #
+  # PR-C30.15 · Guardar vuelve **a la misma ficha**: la tarjeta pasa a solo
+  # lectura y lo demás se refresca en el lugar (los botones de cierre y lo de
+  # adentro, porque «Empacar sin escanear (N)» depende de los tipos). Un error
+  # vuelve a pintar el formulario adentro del frame, con 422.
   def update
-    unless @manifiesto.editable_por?(Current.user)
-      redirect_to @manifiesto,
-                  alert: "#{@manifiesto.numero} está finalizado: solo #{Manifiesto::QUIEN_ABRE_EL_CANDADO} puede reabrirlo."
-      return
-    end
+    return if exigir_encabezado_editable
 
-    if @manifiesto.update(manifiesto_params)
-      redirect_to @manifiesto, notice: "Manifiesto actualizado exitosamente."
+    # Sin `tipo`: oficial o interno se elige al crear (`A7-07`), y la tarjeta
+    # no lo manda (en /edit iba como hidden). El permit igual lo dejaba cambiar
+    # con un PATCH armado a mano.
+    if @manifiesto.update(manifiesto_params.except(:tipo))
+      mensaje = "Manifiesto actualizado exitosamente."
+      respond_to do |format|
+        format.turbo_stream do
+          @manifiesto.reload
+          cargar_contenido
+          render turbo_stream: [
+            # `replace` y no `update`: el `<turbo-frame>` vive adentro del
+            # partial (lo necesita el frame que pide `edit`), así que un
+            # `update` lo anidaría adentro de sí mismo.
+            turbo_stream.replace("manifiesto-detalles", partial: "manifiestos/detalles",
+                                                        locals: { manifiesto: @manifiesto, editando: false }),
+            turbo_stream.update("manifiesto-contenido", partial: "manifiestos/contenido",
+                                                        locals: { manifiesto: @manifiesto, paquetes: @paquetes }),
+            *streams_del_manifiesto,
+            turbo_stream.prepend("flash-messages", partial: "shared/flash", locals: { notice: mensaje })
+          ]
+        end
+        format.html { redirect_to @manifiesto, notice: mensaje }
+      end
     else
       assigns_del_formulario
-      cargar_contenido
-      render :edit, status: :unprocessable_entity
+      if frame_de_detalles?
+        render partial: "manifiestos/detalles", locals: { manifiesto: @manifiesto, editando: true },
+               status: :unprocessable_entity, formats: [ :html ]
+      else
+        # Sin Turbo (o un pedido armado a mano): la ficha entera con la
+        # tarjeta abierta y el error, no un pedazo suelto sin layout.
+        cargar_contenido
+        @editando = true
+        render :show, status: :unprocessable_entity, formats: [ :html ]
+      end
     end
   end
 
@@ -157,7 +212,7 @@ class ManifiestosController < ApplicationController
     servicio = EmpacarSinEscanear.new(@manifiesto, user: Current.user)
 
     unless servicio.aplica?
-      redirect_back fallback_location: manifiesto_path(@manifiesto), alert: "Este manifiesto no admite empacar sin escanear."
+      redirect_to manifiesto_path(@manifiesto), alert: "Este manifiesto no admite empacar sin escanear."
       return
     end
 
@@ -167,18 +222,15 @@ class ManifiestosController < ApplicationController
       # El estado sale del servicio y no escrito a mano: en el oficial es
       # «recibido en Miami» y en el interno «disponible para entrega», y el
       # aviso tiene que nombrar el que de verdad se buscó (`C23-14`).
-      # PR-C30.14 · `redirect_back`: el botón está también en /edit, y volver
-      # a la ficha sacaría al operario de la pantalla donde estaba.
-      redirect_back fallback_location: manifiesto_path(@manifiesto),
-                    alert: "No hay paquetes para agregar. Entran los que están en " \
+      redirect_to manifiesto_path(@manifiesto),
+                  alert: "No hay paquetes para agregar. Entran los que están en " \
                          "«#{estado_legible(servicio.estado_buscado)}», del tipo " \
                          "#{@manifiesto.tipos_envio_nuestros}, en " \
                          "#{@manifiesto.sucursal_origen&.nombre || "—"} y todavía sin manifiesto."
       return
     end
 
-    redirect_back fallback_location: manifiesto_path(@manifiesto),
-                  notice: "Entraron #{resultado.agregados} paquete(s) sin escanear."
+    redirect_to manifiesto_path(@manifiesto), notice: "Entraron #{resultado.agregados} paquete(s) sin escanear."
   end
 
   # El rótulo del estado tal como lo ve el operario, del **mismo mapa** que pinta
@@ -235,26 +287,26 @@ class ManifiestosController < ApplicationController
   # C30-06 · «Editar» sobre un manifiesto finalizado: abre lo de adentro.
   # *"Que presionen el botón, para que nadie toque algo que no era."*
   #
-  # PR-C30.14 · El cartel con este botón está en la ficha **y** en /edit, así
-  # que se vuelve a la pantalla de donde se apretó (`redirect_back`), no
-  # siempre a la ficha.
+  # PR-C30.15 · Y aterriza con la tarjeta del encabezado **ya en formulario**
+  # (`?editar=1`): el supervisor apretó «Editar» una vez, y lo que se abre es
+  # el manifiesto entero —encabezado, casas y paquetes—, en la misma ficha.
   def abrir_edicion
     @manifiesto.abrir_edicion!(Current.user)
-    redirect_back fallback_location: manifiesto_path(@manifiesto),
-                  notice: "#{@manifiesto.numero} quedó abierto para corregir. Cuando termines, «Cerrar edición»."
+    redirect_to manifiesto_path(@manifiesto, editar: 1),
+                notice: "#{@manifiesto.numero} quedó abierto para corregir. Cuando termines, «Cerrar edición»."
   rescue Manifiesto::NoSePuedeReabrir => e
-    redirect_back fallback_location: manifiesto_path(@manifiesto), alert: e.message
+    redirect_to manifiesto_path(@manifiesto), alert: e.message
   end
 
   # Y se vuelve a bloquear. Lo cierra quien lo puede abrir.
   def cerrar_edicion
     unless @manifiesto.editable_por?(Current.user)
-      return redirect_back fallback_location: manifiesto_path(@manifiesto),
-                           alert: "Solo #{Manifiesto::QUIEN_ABRE_EL_CANDADO} puede cerrar la edición."
+      return redirect_to manifiesto_path(@manifiesto),
+                         alert: "Solo #{Manifiesto::QUIEN_ABRE_EL_CANDADO} puede cerrar la edición."
     end
 
     @manifiesto.cerrar_edicion!
-    redirect_back fallback_location: manifiesto_path(@manifiesto), notice: "#{@manifiesto.numero} quedó bloqueado otra vez."
+    redirect_to manifiesto_path(@manifiesto), notice: "#{@manifiesto.numero} quedó bloqueado otra vez."
   end
 
   # C21-06 · «Solo Finalizar» y «Finalizar e Imprimir». Los paquetes de los
@@ -421,8 +473,8 @@ class ManifiestosController < ApplicationController
   end
 
   # Lo que pintan las casas y la tabla de paquetes (`manifiestos/_contenido`).
-  # Una sola carga para la ficha, /edit y el turbo_stream de cada cambio
-  # (PR-C30.14): eran dos copias de la misma precarga.
+  # Una sola carga para la ficha y el turbo_stream de cada cambio (PR-C30.14):
+  # eran dos copias de la misma precarga.
   private def cargar_contenido
     # C21-04: los tamaños pre-definidos con los que se arma una casa.
     @tamanos = TamanoCaja.activos.ordered
@@ -443,28 +495,68 @@ class ManifiestosController < ApplicationController
     cargar_contenido
     respond_to do |format|
       format.turbo_stream do
+        # PR-C30.15 · La tarjeta del encabezado **no** se reemplaza acá: puede
+        # estar abierta en formulario, con algo tecleado, y escanear un paquete
+        # no puede borrárselo. Sus dos números (paquetes y peso) llegan por su
+        # id en `streams_del_manifiesto`.
         render status: status, turbo_stream: [
           turbo_stream.update("manifiesto-paquetes", partial: "manifiestos/paquetes_table", locals: { manifiesto: @manifiesto, paquetes: @paquetes }),
           turbo_stream.update("manifiesto-cajas-tabla", partial: "manifiestos/cajas_tabla",
                                                         locals: { manifiesto: @manifiesto,
                                                                   editable: @manifiesto.modificable_por?(Current.user) }),
-          # C21-06 · Los botones de cierre **también**. Se actualizaba solo la
-          # tabla, y como «Solo Finalizar» solo se dibuja con `paquetes.any?`,
-          # al agregar el primer paquete la tabla se llenaba y el botón no
-          # aparecía: la única forma de finalizar era recargar la pantalla. Y al
-          # quitar el último pasa al revés — el botón quedaba ofreciendo
-          # finalizar un manifiesto vacío.
-          # Van los dos: el bloque está arriba y abajo porque con la tabla
-          # llena el de arriba queda a una pantalla de distancia. Refrescar uno
-          # solo dejaría al otro mintiendo.
-          turbo_stream.update("manifiesto-acciones-arriba", partial: "manifiestos/acciones", locals: { manifiesto: @manifiesto, paquetes: @paquetes }),
-          turbo_stream.update("manifiesto-acciones-abajo", partial: "manifiestos/acciones", locals: { manifiesto: @manifiesto, paquetes: @paquetes }),
+          *streams_del_manifiesto,
           turbo_stream.prepend("flash-messages", partial: "shared/flash", locals: { tipo => message })
         ]
       end
-      # PR-C30.14 · De vuelta a donde estaba: la tabla vive también en /edit.
-      format.html { redirect_back fallback_location: manifiesto_path(@manifiesto), tipo => message }
+      format.html { redirect_to manifiesto_path(@manifiesto), tipo => message }
     end
+  end
+
+  # PR-C30.15 · Lo que cambia en la ficha cada vez que cambia el manifiesto, lo
+  # cambie un paquete (`respond_to_paquete_change`) o el encabezado (`update`).
+  # Una lista sola para que las dos respuestas no se separen.
+  private def streams_del_manifiesto
+    [
+      # C21-06 · Los botones de cierre **también**. Se actualizaba solo la
+      # tabla, y como «Solo Finalizar» solo se dibuja con `paquetes.any?`, al
+      # agregar el primer paquete la tabla se llenaba y el botón no aparecía:
+      # la única forma de finalizar era recargar la pantalla. Y al quitar el
+      # último pasa al revés — el botón quedaba ofreciendo finalizar un
+      # manifiesto vacío.
+      # Van los dos: el bloque está arriba y abajo porque con la tabla llena el
+      # de arriba queda a una pantalla de distancia. Refrescar uno solo dejaría
+      # al otro mintiendo.
+      turbo_stream.update("manifiesto-acciones-arriba", partial: "manifiestos/acciones", locals: { manifiesto: @manifiesto, paquetes: @paquetes }),
+      turbo_stream.update("manifiesto-acciones-abajo", partial: "manifiestos/acciones", locals: { manifiesto: @manifiesto, paquetes: @paquetes }),
+      # Los dos números de la tarjeta, por su id: están en las dos caras de la
+      # tarjeta (solo lectura y formulario), así que el escaneo los sube sin
+      # tocar lo que se está tecleando.
+      turbo_stream.update("manifiesto-detalles-paquetes", @manifiesto.cantidad_paquetes.to_s),
+      turbo_stream.update("manifiesto-detalles-peso", helpers.peso_total_del_manifiesto(@manifiesto))
+    ]
+  end
+
+  # PR-C30.15 · ¿El pedido viene del frame de la tarjeta? Se pregunta **por su
+  # id** y no con `turbo_frame_request?` a secas: la ficha tiene otro frame
+  # (`manifiesto-paquetes`), y lo que pida desde ahí no puede recibir esta
+  # tarjeta.
+  private def frame_de_detalles?
+    request.headers["Turbo-Frame"] == "manifiesto-detalles"
+  end
+
+  # PR-C30.15 · El candado del encabezado (`Manifiesto#encabezado_editable_por?`),
+  # para `edit` y `update`. Devuelve true si ya contestó que no.
+  private def exigir_encabezado_editable
+    return false if @manifiesto.encabezado_editable_por?(Current.user)
+
+    mensaje =
+      if @manifiesto.reabrible?
+        @manifiesto.motivo_del_candado
+      else
+        "#{@manifiesto.numero} está finalizado: solo #{Manifiesto::QUIEN_ABRE_EL_CANDADO} puede corregir el encabezado."
+      end
+    negar_por_el_candado(mensaje)
+    true
   end
 
   # C21-02 · Lo que la pantalla puede mandar. Las columnas viejas `tipo_envio`,
@@ -482,9 +574,8 @@ class ManifiestosController < ApplicationController
       # `sucursal_origen_id` es lo que despierta la numeración anual. Estaba
       # fuera de esta lista, y por eso `MM2026000001` no corría nunca (RP-46).
       :sucursal_origen_id,
-      # `A7-07` · Oficial o interno. El formulario solo lo deja elegir al crear;
-      # en uno guardado va como hidden, porque el número ya salió y la carga ya
-      # se movió con las reglas de su tipo.
+      # `A7-07` · Oficial o interno. Solo al crear: `update` lo descarta, porque
+      # el número ya salió y la carga ya se movió con las reglas de su tipo.
       :tipo,
       # PR-C30.14 · Lo de San Pedro, que /edit también muestra. Son los
       # mismos dos de `/guias-y-aduana` (`Manifiesto::CAMPOS_DE_SAN_PEDRO`).

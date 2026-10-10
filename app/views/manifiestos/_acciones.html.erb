@@ -21,15 +21,12 @@
     `turbo_stream.update` reemplaza el *contenido* del elemento, así que un
     wrapper adentro del partial se anidaría una vez por actualización.
 
-    PR-C30.14 · `sin_finalizar: true` lo pinta /edit: el cartel del candado sí
-    (ahí se abre y se cierra la edición), los cierres no. En /edit F8 es el
-    «Guardar» del formulario, y con «Solo Finalizar» arriba en el DOM la tecla
-    **finalizaría** el manifiesto: el primer `data-shortcut` gana
-    (`project_una_tecla_por_pantalla`). Por lo mismo /edit no lo envuelve en
-    `#manifiesto-acciones-*`, que es lo que refresca el turbo_stream de cada
-    paquete con este partial entero. %>
-<% sin_finalizar = local_assigns.fetch(:sin_finalizar, false) %>
-<% if manifiesto.creado? && paquetes.any? && !sin_finalizar %>
+    PR-C30.15 · Con la tarjeta de detalles abierta en formulario, «Solo
+    Finalizar» sigue acá con su F8. Hoy la tarjeta va antes en el DOM, pero no
+    es eso lo que la protege (el orden se mueve solo): el formulario lleva
+    `data-teclas-alcance`, y mientras se vea las teclas son suyas
+    (`keyboard_shortcuts_controller`). %>
+<% if manifiesto.creado? && paquetes.any? %>
   <div class="mb-6 flex flex-wrap items-center gap-3">
     <%# Las teclas: F8 es «guardar/confirmar» por convención (C30-02, la hoja
         de Yusef) y finalizar es el commit de esta pantalla. Ojo: este partial se pinta **dos veces**
@@ -123,22 +120,22 @@
         <% if manifiesto.finalizado_at %> el <%= manifiesto.finalizado_at.strftime("%d/%m/%Y %H:%M") %><% end %>.
         Se puede ver, re-imprimir las 4×6, imprimir la hoja y el listado, y exportar.
         Las guías del proveedor y la fecha de recibido en Honduras se siguen pudiendo llenar.
+        <%# C30-06 · «Editar», la palabra de Yusef: *"que le demos un botón que
+            diga editar… y ya podemos editarlo todo otra vez"*.
+
+            PR-C30.15 · El botón ya no está en este cartel: es el «Editar» de
+            arriba, uno solo (`boton_editar_manifiesto`). Este partial se
+            pinta arriba **y** abajo, así que acá salía dos veces, y con el de
+            arriba eran tres «Editar» en la ficha. El cartel dice dónde está
+            y, al que no puede, quién puede. %>
+        <% if manifiesto.reabrible? %>
+          <% if manifiesto.editable_por?(Current.user) %>
+            Para corregirlo, «Editar» arriba lo abre.
+          <% else %>
+            Para corregirlo, <%= Manifiesto::QUIEN_ABRE_EL_CANDADO %> aprieta «Editar».
+          <% end %>
+        <% end %>
       </p>
     </div>
-    <%# C30-06 · «Editar», la palabra de Yusef: *"que le demos un botón que diga
-        editar… y ya podemos editarlo todo otra vez"*. Reemplaza al «Editar
-        igual» de C21-06, que abría solo el encabezado; esto abre lo de adentro
-        (y el encabezado vuelve a estar arriba, en su botón).
-
-        PR-C30.14 · Ya no es solo mientras la carga va en camino: en aduana y
-        recibido también se reabre (decisión de Jorge, 2026-10-10, pendiente
-        de confirmar con Yusef). Lo que no se reabre es el interno, y para su
-        encabezado queda el «Editar» de arriba. %>
-    <% if manifiesto.editable_por?(Current.user) && manifiesto.reabrible? %>
-      <%= render ButtonComponent.new(variant: :secondary, icon: "lock-open",
-            href: abrir_edicion_manifiesto_path(manifiesto), method: :patch,
-            confirm: "Se abre #{manifiesto.numero} para corregirlo: agregar o sacar cajas y paquetes. " \
-                     "Al terminar, «Cerrar edición». ¿Seguro?") do %>Editar<% end %>
-    <% end %>
   </div>
 <% end %>

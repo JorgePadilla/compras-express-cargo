@@ -59,9 +59,21 @@ class ManifiestoCandadoTest < ActionDispatch::IntegrationTest
     assert_match(/finalizado/, flash[:alert], "y no se le contesta que se guardó")
   end
 
-  test "el supervisor de Miami sí puede cambiar un campo de Miami en uno cerrado" do
-    ingresar(users(:supervisor_miami))
+  # PR-C30.15 · Cambia: en uno oficial cerrado, también el supervisor tiene que
+  # apretar «Editar» antes de tocar el encabezado. Yusef: *"que presionen el
+  # botón, para que nadie toque algo que no era"*. Hasta acá le alcanzaba con
+  # el rol, y el candado del encabezado no pedía nada.
+  test "el supervisor de Miami cambia un campo de Miami en uno cerrado solo con el candado abierto" do
+    supervisor = users(:supervisor_miami)
+    ingresar(supervisor)
 
+    patch manifiesto_url(@manifiesto), params: {
+      manifiesto: { consignatario_id: @consignatario.id }
+    }
+    assert_nil @manifiesto.reload.consignatario_id, "sin apretar «Editar», no"
+    assert_match "aprieta «Editar»", flash[:alert]
+
+    @manifiesto.abrir_edicion!(supervisor)
     patch manifiesto_url(@manifiesto), params: {
       manifiesto: { consignatario_id: @consignatario.id }
     }
@@ -82,9 +94,12 @@ class ManifiestoCandadoTest < ActionDispatch::IntegrationTest
   # 48; Jorge eligió el rol el 2026-10-10). El agujero de antes no vuelve: lo que
   # guarda, se guarda — no hay campos que el controller le descarte callado.
   test "la supervisora de Pre-Factura entra al manifiesto y lo que cambia se guarda" do
-    ingresar(users(:supervisor_prefactura))
+    supervisora = users(:supervisor_prefactura)
+    ingresar(supervisora)
     get manifiesto_url(@manifiesto)
     assert_response :success
+
+    @manifiesto.abrir_edicion!(supervisora)
 
     patch manifiesto_url(@manifiesto), params: { manifiesto: { consignatario_id: @consignatario.id } }
     assert_equal @consignatario.id, @manifiesto.reload.consignatario_id
@@ -98,6 +113,7 @@ class ManifiestoCandadoTest < ActionDispatch::IntegrationTest
 
   # C30-06 · «Editar igual» pasó a ser «Editar», y ya no lleva al formulario
   # del encabezado: abre el manifiesto entero (`abrir_edicion`).
+  # PR-C30.15 · Es el de arriba, con F6; el cartel ya no tiene el suyo.
   test "el botón «Editar» del candado no le sale al digitador" do
     ingresar(users(:digitador))
     get manifiesto_url(@manifiesto)
@@ -109,6 +125,6 @@ class ManifiestoCandadoTest < ActionDispatch::IntegrationTest
     ingresar(users(:supervisor_miami))
     get manifiesto_url(@manifiesto)
     assert_response :success
-    assert_select "form[action=?] button", abrir_edicion_manifiesto_path(@manifiesto), text: /Editar/
+    assert_select "form[action=?] button[data-shortcut='F6']", abrir_edicion_manifiesto_path(@manifiesto), text: /Editar/
   end
 end
