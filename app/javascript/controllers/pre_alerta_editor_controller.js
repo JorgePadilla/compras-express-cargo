@@ -44,7 +44,7 @@ export default class extends Controller {
     // C23-13 · Las teclas dicen lo mismo que en el resto de la app.
     //
     // Esta pantalla usaba **F6 para agregar**, **F8 para guardar** y **F9 para
-    // finalizar** — y en las otras veinte F6 es editar, F8 es Excel, F9 es
+    // finalizar** — y en las otras veinte F6 era editar, F8 Excel, F9
     // imprimir. Tres teclas aprendidas acá que hacen otra cosa allá, que es
     // justo lo que Jorge preguntó: *"¿los F los podemos dejar iguales en las
     // pantallas?"*.

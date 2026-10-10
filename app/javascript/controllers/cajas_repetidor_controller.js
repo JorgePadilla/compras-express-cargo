@@ -44,7 +44,7 @@ export default class extends Controller {
     // medidas, le daba Guardar sin apretar Agregar, y esa caja se cobraba sin
     // su peso. Jorge lo llamó "confuso"; además perdía plata.
     //
-    // Va en el form y no en el botón porque los atajos (F9/F10) y el Enter de
+    // Va en el form y no en el botón porque los atajos (F8/F9) y el Enter de
     // la pistola también terminan en `submit`.
     this._form = this.element.closest("form")
     this._form?.addEventListener("submit", this._agregarPendiente)

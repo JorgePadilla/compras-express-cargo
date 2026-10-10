@@ -465,7 +465,7 @@ end %>
                                      banner amarillo (PR-5).
         3) "Es duplicado real"     → pre-rellena el tracking con sufijo (A-Z)
                                      para crear paquete distinto. %>
-  <div data-etiquetar-target="duplicateModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70 p-4">
+  <div data-etiquetar-target="duplicateModal" role="dialog" aria-modal="true" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70 p-4">
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full p-6">
       <%# PR-C29.12 · Atención: no es un error, hay que decidir qué es. %>
       <%= render ModalHeaderComponent.new(tono: :atencion, icono: "exclamation-circle",

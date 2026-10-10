@@ -71,7 +71,16 @@ import { Controller } from "@hotwired/stimulus"
 //
 // Y F8 no aprieta nada **detrás** de un modal abierto: con el foco en el PIN
 // del supervisor, por ejemplo, guardaría el formulario de atrás. Antes lo
-// frenaba la regla del campo; ahora lo frena esto.
+// frenaba la regla del campo; ahora lo frena esto. F1 tampoco: «Nuevo» detrás
+// de un modal se lleva la pantalla con el modal a medio contestar.
+//
+// PR-C30.11 · «Modal abierto» no es solo `<dialog open>`. La app tiene modales
+// hechos con un `div` fijo que se muestra sacándole `hidden` —el «Confirmar»
+// compartido, buscar y mover paquetes en el portal, el duplicado de
+// /etiquetar—, y con ésos F8 apretaba el «Guardar» de atrás. Los dos tipos
+// llevan ahora la misma marca: `<dialog open>`, o `aria-modal="true"` **y
+// visible** (sin `hidden`, que en ellos es lo que los cierra). Un modal nuevo
+// hecho con `div` tiene que llevar `role="dialog" aria-modal="true"`.
 //
 // ⚠️ Una pantalla que escucha F8 ella misma (/etiquetar, medición, el editor
 // de pre-alertas) **no puede** tener un botón con `data-shortcut="F8"`: el
@@ -83,6 +92,8 @@ import { Controller } from "@hotwired/stimulus"
 //   (algunos navegadores usan F-keys para devtools / context menus).
 // Las que disparan aunque el foco esté en un campo.
 const SIEMPRE = [ "F1", "F2", "F8" ]
+// Las que no aprietan nada que esté detrás de un modal abierto.
+const DETRAS_DE_UN_MODAL_NO = [ "F1", "F8" ]
 
 export default class extends Controller {
   connect() {
@@ -106,12 +117,21 @@ export default class extends Controller {
     // Si está editando y la tecla no es de las que siempre valen, no interrumpir.
     if (!SIEMPRE.includes(e.key) && this.isEditing(e.target)) return
 
-    // F8 no guarda lo de atrás de un modal abierto.
-    const modal = document.querySelector("dialog[open]")
-    if (e.key === "F8" && modal && !modal.contains(target)) return
+    // F8 y F1 no aprietan lo de atrás de un modal abierto.
+    const modal = this.modalAbierto()
+    if (DETRAS_DE_UN_MODAL_NO.includes(e.key) && modal && !modal.contains(target)) return
 
     e.preventDefault()
     target.click()
+  }
+
+  // `<dialog open>`, o un modal hecho con `div` (`aria-modal="true"`) que se
+  // está viendo. `getClientRects()` y no `offsetParent`: estos modales son
+  // `position: fixed`, y un fijo visible tiene `offsetParent` en null igual
+  // que uno escondido. Con `hidden` (`display: none`) no tiene rectángulos.
+  modalAbierto() {
+    const candidatos = document.querySelectorAll("dialog[open], [aria-modal='true']")
+    return Array.from(candidatos).find((el) => el.getClientRects().length > 0)
   }
 
   isEditing(el) {

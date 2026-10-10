@@ -94,7 +94,7 @@ export default class extends conEnterAvanza(Controller) {
     // C29-19 · Las notas del cliente que ya se mostraron en esta tanda, por
     // texto: el modal se abre solo con lo que **no** se vio todavía.
     this._notas = []
-    // F9 guarda e imprime (C29-13; F10 también, sin rótulo), F4 reimprime,
+    // F9 guarda e imprime (C29-13; F8 también, sin rótulo: C30-02), F4 reimprime,
     // F5 agrega volumen, F2 limpia — escuchando en `document`, porque el
     // atajo global ignora las F-keys cuando el foco está en un input, y acá
     // siempre está.

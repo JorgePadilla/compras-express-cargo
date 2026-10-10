@@ -1,5 +1,6 @@
 <%# Buscar paquetes modal — controlled by pre-alerta-buscar Stimulus controller %>
-<div data-pre-alerta-buscar-target="modal"
+<%# PR-C30.11 · `aria-modal`: la marca de modal que mira el atajo global. %>
+<div data-pre-alerta-buscar-target="modal" role="dialog" aria-modal="true"
      class="hidden fixed inset-0 z-50 flex items-center justify-center">
   <%# Backdrop %>
   <div data-action="click->pre-alerta-buscar#close" aria-hidden="true"
