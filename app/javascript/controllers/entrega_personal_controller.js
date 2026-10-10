@@ -1,5 +1,6 @@
 import ClienteAutocomplete from "controllers/cliente_autocomplete"
 import { conEnterAvanza } from "controllers/enter_avanza"
+import { enfocar } from "controllers/enfocar"
 
 // PR-6: flow separado para entrega personal. Versión simplificada del
 // etiquetar_controller — no necesita lookup de duplicado de tracking
@@ -17,10 +18,22 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
     // C20-10: `_searchTimeout` era estado muerto — el debounce vive en la base.
     this._handleGlobalKeydown = this.handleKeydown.bind(this)
     document.addEventListener("keydown", this._handleGlobalKeydown)
+    // C30-10 · El último **campo** donde se tecleó, para volver ahí al cancelar
+    // un modal. No alcanza con `activeElement` al abrirlo: si F9 se apretó con
+    // el mouse, en ese momento el foco es el botón.
+    // Los de adentro de un modal no cuentan: son la pregunta, no el paquete.
+    this._alEnfocarCampo = (e) => {
+      const campo = e.target
+      if (!campo.matches?.("input:not([type=hidden]), select, textarea")) return
+      if (campo.closest("dialog") || !this.formTarget.contains(campo)) return
+      this._ultimoCampo = campo
+    }
+    this.element.addEventListener("focusin", this._alEnfocarCampo)
   }
 
   disconnect() {
     document.removeEventListener("keydown", this._handleGlobalKeydown)
+    this.element.removeEventListener("focusin", this._alEnfocarCampo)
     // La gemela: sin el `super` la búsqueda pendiente sobrevivía a la
     // navegación.
     super.disconnect()
@@ -155,8 +168,24 @@ submitFormWithPrint() {
     this._submitWithPrint(cantidad)
   }
 
+  // C30-10 · Cancelar vuelve al campo donde estaba el operario —el último
+  // donde tecleó, sea que apretó F9 o el botón—, o al primero de la pantalla. Con `enfocar` y no
+  // con `focus()`: cerrar el modal con el **mouse** o el dedo deja al campo con
+  // cara de enfocado y sordo al teclado; el navegador ya le devolvió el foco y
+  // un `focus()` encima no hace nada (`controllers/enfocar`). Con Enter o
+  // Escape no se notaba, y por eso ningún test lo veía.
+  //
+  // Esta pantalla no tiene pistola —el tracking EP lo genera el sistema—, así
+  // que «el campo que sigue» es donde el operario estaba tecleando.
   cerrarEtiquetas() {
     this.etiquetasModalTarget.close()
+    enfocar(this._campoDeVuelta())
+  }
+
+  _campoDeVuelta() {
+    const ultimo = this._ultimoCampo
+    if (ultimo && ultimo.isConnected && this.formTarget.contains(ultimo)) return ultimo
+    return this.formTarget.querySelector("[autofocus]")
   }
 
   // Un número mal tecleado no puede grabar 500 paquetes ni tirar 500
@@ -220,8 +249,9 @@ submitFormWithPrint() {
     // C19-02: acá no se enfocaba nada y el cursor quedaba "como en el aire".
     // Vuelve al mismo campo que arranca la pantalla (el [autofocus], hoy el
     // proveedor), para encadenar el siguiente paquete sin agarrar el mouse.
-    const primero = this.formTarget.querySelector("[autofocus]")
-    if (primero) primero.focus()
+    // C30-10 · `enfocar`: esto corre después de cerrar el modal de cuántas
+    // etiquetas, y el `focus()` a secas podía dejar el campo sordo.
+    enfocar(this.formTarget.querySelector("[autofocus]"))
   }
 
   // Handle turbo stream events después del save.
@@ -255,8 +285,7 @@ submitFormWithPrint() {
       // isConnected es por si Turbo reemplazó la página en el medio.
       window.addEventListener("focus", () => {
         if (!this.element.isConnected) return
-        const primero = this.formTarget.querySelector("[autofocus]")
-        if (primero) primero.focus()
+        enfocar(this.formTarget.querySelector("[autofocus]"))
       }, { once: true })
     }
     setTimeout(() => this.clearForm(), 100)

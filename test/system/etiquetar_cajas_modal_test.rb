@@ -108,7 +108,12 @@ class EtiquetarCajasModalTest < ApplicationSystemTestCase
     assert_text "Tracking dividido en 3 cajas", wait: 10
 
     guardar_con_etiquetas("1Z999PEGADA0002", 1)
-    assert_text "guardado exitosamente", wait: 10
+    # PR-C30.10 · Se espera el paquete en la base y no el aviso verde: el
+    # aviso se va solo a los 3 s (`auto-dismiss`), y con la máquina cargada el
+    # test llegaba a mirarlo después. Si el paquete no se grabó, esto falla igual.
+    assert_eventualmente("el segundo paquete no se grabó", wait: 10) do
+      Paquete.where(tracking: "1Z999PEGADA0002").exists?
+    end
 
     assert_equal 1, Paquete.where(tracking: "1Z999PEGADA0002").count,
                  "el segundo paquete se llevó la cantidad del primero"
@@ -200,6 +205,13 @@ class EtiquetarCajasModalTest < ApplicationSystemTestCase
     # Después de imprimir queda abierto el aviso de "guardar en la bolsa de…",
     # que tapa el formulario. El operario le da Listo; acá igual.
     click_on "Listo" if page.has_selector?("[data-etiquetar-target='sucursalModal'][open]", wait: 2)
+    # PR-C30.10 · Y el formulario del paquete anterior tiene que estar limpio
+    # antes de teclear: `clearForm` corre 100 ms después del guardado, y si el
+    # test escribía antes, le borraba el tracking y la descripción al paquete
+    # nuevo — el F9 de después no mandaba nada. La señal es el cliente vacío.
+    assert_eventualmente("el formulario del paquete anterior no se limpió", wait: 10) do
+      find("[data-etiquetar-target='clienteInput']").value.to_s.empty?
+    end
 
     find("#paquete_tracking").set(tracking)
     find("[data-etiquetar-target='clienteInput']").set("Juan")
