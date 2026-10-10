@@ -1,4 +1,6 @@
 class CotizacionItem < ApplicationRecord
+  include TratamientoFiscal  # PR-F2.1: gravado 15 %, la costura de F3
+
   belongs_to :cotizacion, inverse_of: :cotizacion_items
   belongs_to :paquete, optional: true
 

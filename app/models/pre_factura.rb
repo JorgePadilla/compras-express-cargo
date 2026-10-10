@@ -584,15 +584,17 @@ class PreFactura < ApplicationRecord
   # normal — el impuesto se calcula sobre lo que realmente se le cobra al
   # cliente, no sobre el bruto. Con `descuento` en 0 el resultado es idéntico
   # al de antes, así que ninguna pre-factura existente se mueve.
+  #
+  # PR-F2.1 · La cuenta la hace la gema (`Fiscal::Totales`), la misma que va a
+  # imprimir la factura SAR. Da idéntico a la fórmula de antes, centavo por
+  # centavo: `test/services/fiscal/totales_equivalencia_test.rb`.
   def calculate_totals
     vivos = pre_factura_items.reject(&:marked_for_destruction?)
-    sub  = vivos.sum { |i| i.subtotal.to_d }
-    desc = vivos.sum { |i| i.descuento_monto.to_d }
-    base = sub - desc
+    t = Fiscal::Totales.calcular(vivos, moneda: moneda)
 
-    self.subtotal  = sub
-    self.descuento = desc
-    self.impuesto  = (base * isv_rate).round(2, BigDecimal::ROUND_HALF_UP)
-    self.total     = (base + impuesto).round(2, BigDecimal::ROUND_HALF_UP)
+    self.subtotal  = t[:subtotal]
+    self.descuento = t[:descuento]
+    self.impuesto  = t[:impuesto]
+    self.total     = t[:total]
   end
 end
