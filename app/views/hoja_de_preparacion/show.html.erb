@@ -1,0 +1,215 @@
+<%# PR-P.4 · C30-15 · La hoja de preparación. Tres bloques, de arriba abajo,
+    como el diagrama que dibujó Yusef (foto 3): qué se trabaja, de qué
+    manifiestos, y a qué hora se le avisa al cliente.
+
+    Un solo formulario a propósito: «Ver manifiestos» y «Guardar la hoja»
+    mandan todo, así que cambiar los servicios rehace la lista de abajo sin
+    perder la fecha que ya se puso. Lo que se guarda va a la sesión
+    (`session[:pf_hoja]`), no a la base. %>
+<% content_for :head do %>
+  <meta name="turbo-cache-control" content="no-cache">
+<% end %>
+
+<%= render PageHeaderComponent.new(title: "Preparar pre-factura",
+                                   subtitle: "La hoja de preparación: qué se trabaja, de qué manifiestos y cuándo se le avisa al cliente") do |h| %>
+  <% h.with_back do %>
+    <%= render ButtonComponent.new(href: pre_facturas_path, variant: :ghost, icon: "arrow-left", shortcut: "F2") do %>
+      Volver
+    <% end %>
+  <% end %>
+  <% h.with_action do %>
+    <%= render ButtonComponent.new(href: hoja_de_preparacion_path, method: :delete, variant: :outline_navy, icon: "x-mark",
+          confirm: "Se cierra la hoja de preparación y la próxima vez arranca de cero. ¿Seguro?") do %>
+      Cerrar la hoja
+    <% end %>
+  <% end %>
+<% end %>
+
+<%= form_with url: hoja_de_preparacion_path, method: :patch, scope: :hoja, id: "hoja-de-preparacion",
+              class: "space-y-6" do |f| %>
+
+  <%# ── 1 · Qué se trabaja ───────────────────────────────────────────────
+      *"Seleccionar qué tipo de servicio vamos a trabajar"* — en selección
+      múltiple, *"porque en las cajas vienen dos tipos de servicios"* — **o**
+      *"voy a corregir unas prefacturas"*: Jorge preguntó si editar iba ahí
+      mismo, y Yusef: *"sí, yo lo editaría ahí mismo"*. %>
+  <section class="bg-white dark:bg-gray-800 rounded-lg shadow p-6" data-paso="1">
+    <div class="flex items-baseline gap-3 mb-4">
+      <span class="shrink-0 w-7 h-7 rounded-full bg-cec-navy/10 text-cec-navy dark:bg-cec-gold/20 dark:text-cec-gold
+                   flex items-center justify-center text-sm font-bold">1</span>
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">¿Qué vas a trabajar?</h2>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="cursor-pointer">
+        <%= f.radio_button :modo, "nuevas", checked: @hoja.nuevas?, class: "peer sr-only" %>
+        <span class="block h-full rounded-xl border-2 border-gray-200 dark:border-gray-700 p-4
+                     peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 peer-checked:ring-2 peer-checked:ring-cec-gold/30
+                     peer-focus-visible:ring-2 peer-focus-visible:ring-cec-teal-deep">
+          <span class="block font-semibold text-cec-navy dark:text-cec-gold">Pre-facturas nuevas</span>
+          <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">Elegí uno o más servicios.</span>
+        </span>
+      </label>
+      <label class="cursor-pointer">
+        <%= f.radio_button :modo, "editar", checked: @hoja.editar?, class: "peer sr-only" %>
+        <span class="block h-full rounded-xl border-2 border-gray-200 dark:border-gray-700 p-4
+                     peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 peer-checked:ring-2 peer-checked:ring-cec-gold/30
+                     peer-focus-visible:ring-2 peer-focus-visible:ring-cec-teal-deep">
+          <span class="block font-semibold text-cec-navy dark:text-cec-gold">Editar pre-facturas</span>
+          <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">Las que todavía no se le avisaron al cliente.</span>
+        </span>
+      </label>
+    </div>
+
+    <fieldset class="mt-5">
+      <legend class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Servicios (para pre-facturas nuevas)</legend>
+      <%# El vacío va siempre: sin él, destildar todo no mandaría nada y la
+          sesión se quedaría con los de antes. %>
+      <%= hidden_field_tag "hoja[tipo_envio_ids][]", "", id: nil %>
+      <div class="flex flex-wrap gap-3">
+        <% @tipos.each do |tipo| %>
+          <label class="inline-flex items-center gap-2 min-h-11 px-4 rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer
+                        has-[:checked]:border-cec-gold has-[:checked]:bg-cec-gold/10">
+            <%= check_box_tag "hoja[tipo_envio_ids][]", tipo.id, @hoja.tipo_envio_ids.include?(tipo.id),
+                  id: "hoja_tipo_envio_#{tipo.id}", class: "rounded border-gray-300 text-cec-navy focus:ring-cec-teal" %>
+            <span class="text-sm font-medium text-gray-800 dark:text-gray-100"><%= tipo.nombre %></span>
+          </label>
+        <% end %>
+      </div>
+    </fieldset>
+
+    <div class="mt-5 flex justify-end">
+      <%= render ButtonComponent.new(type: :submit, variant: :outline_navy, icon: "arrow-down") do %>Ver manifiestos<% end %>
+    </div>
+  </section>
+
+  <%# ── 2 · Los manifiestos ──────────────────────────────────────────────
+      *"Solo le van a aparecer los que ya fueron recibidos"*, en aduana, y
+      *"cuando… lo terminamos, desaparece de los pendientes"*
+      (`Manifiesto.para_hoja`). Si falta una caja, el manifiesto se queda y la
+      tarjeta lo dice (`C28-14`). %>
+  <section class="bg-white dark:bg-gray-800 rounded-lg shadow p-6" data-paso="2">
+    <div class="flex items-baseline gap-3 mb-4">
+      <span class="shrink-0 w-7 h-7 rounded-full bg-cec-navy/10 text-cec-navy dark:bg-cec-gold/20 dark:text-cec-gold
+                   flex items-center justify-center text-sm font-bold">2</span>
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+        <%= @hoja.editar? ? "Manifiestos con pre-facturas para corregir" : "¿De qué manifiestos?" %>
+      </h2>
+    </div>
+
+    <%= hidden_field_tag "hoja[manifiesto_ids][]", "", id: nil %>
+    <% if @hoja.nuevas? && @hoja.tipo_envio_ids.empty? %>
+      <p class="text-sm text-gray-500 dark:text-gray-400">Elegí arriba los servicios y apretá «Ver manifiestos».</p>
+    <% elsif @manifiestos.empty? %>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        <%= @hoja.editar? ? "No hay pre-facturas sin avisar para corregir." : "No hay manifiestos en aduana con carga sin pre-facturar de esos servicios." %>
+      </p>
+    <% else %>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <% @manifiestos.each do |m| %>
+          <% total = @total_por_manifiesto[m.id].to_i %>
+          <% hechos = @prefacturados_por_manifiesto[m.id].to_i %>
+          <% faltan = @faltan_cajas[m.id].to_i %>
+          <div class="rounded-xl border-2 border-gray-200 dark:border-gray-700 p-4 has-[:checked]:border-cec-gold has-[:checked]:bg-cec-gold/5"
+               data-manifiesto="<%= m.numero %>">
+            <label class="flex items-start gap-3 <%= "cursor-pointer" if @hoja.nuevas? %>">
+              <% if @hoja.nuevas? %>
+                <%= check_box_tag "hoja[manifiesto_ids][]", m.id, @hoja.manifiesto_ids.include?(m.id),
+                      id: "hoja_manifiesto_#{m.id}", class: "mt-1 rounded border-gray-300 text-cec-navy focus:ring-cec-teal" %>
+              <% end %>
+              <span class="flex-1">
+                <span class="flex flex-wrap items-center gap-2">
+                  <span class="font-mono font-bold text-cec-navy dark:text-cec-gold"><%= m.numero %></span>
+                  <%= render StatusBadgeComponent.new(status: m.estado) %>
+                  <% if faltan.positive? %>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 ring-1 ring-red-200">
+                      <%= faltan > 1 ? "faltan #{faltan} cajas" : "falta 1 caja" %>
+                    </span>
+                  <% end %>
+                </span>
+                <span class="block text-sm text-gray-700 dark:text-gray-200 mt-1"><%= m.tipos_envio_nuestros.presence || "—" %></span>
+                <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  <%= hechos %> de <%= total %> paquetes pre-facturados
+                </span>
+              </span>
+            </label>
+
+            <% if @hoja.editar? %>
+              <ul class="mt-3 divide-y divide-gray-100 dark:divide-gray-700 border-t border-gray-100 dark:border-gray-700">
+                <% @pre_facturas_por_manifiesto.fetch(m.id, []).each do |pf| %>
+                  <li class="flex items-center justify-between gap-3 py-2">
+                    <span class="text-sm">
+                      <span class="font-mono font-medium text-gray-900 dark:text-gray-100"><%= pf.numero %></span>
+                      <span class="text-gray-500 dark:text-gray-400">· <%= pf.cliente&.codigo %> <%= pf.cliente&.nombre_completo %></span>
+                    </span>
+                    <%= render ButtonComponent.new(href: edit_pre_factura_path(pf), variant: :secondary, size: :xs,
+                          icon: "pencil-square", label: "Editar la pre-factura #{pf.numero}") %>
+                  </li>
+                <% end %>
+              </ul>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </section>
+
+  <%# ── 3 · La fecha de trabajo ──────────────────────────────────────────
+      C30-16 · No es la fecha que se le promete al cliente al llegar a Miami:
+      es **cuándo el sistema le avisa que ya está disponible**. *"El default
+      es 7 y media"*, y se cambia: *"el marítimo lo notificamos a las 2 de la
+      tarde mientras terminamos el aéreo"*. Sin segundos (`C30-08`). En
+      «editar» no va: cambiar la hora en lote es `PR-P.7`. %>
+  <% if @hoja.nuevas? %>
+    <section class="bg-white dark:bg-gray-800 rounded-lg shadow p-6" data-paso="3">
+      <div class="flex items-baseline gap-3 mb-4">
+        <span class="shrink-0 w-7 h-7 rounded-full bg-cec-navy/10 text-cec-navy dark:bg-cec-gold/20 dark:text-cec-gold
+                     flex items-center justify-center text-sm font-bold">3</span>
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Fecha de trabajo</h2>
+      </div>
+      <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+        A esta hora se le avisa al cliente que su paquete ya está disponible.
+        Por defecto, las <%= HojaDePreparacion.hora_por_defecto %>.
+      </p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
+        <div>
+          <%= label_tag "hoja_fecha", "Fecha", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%= text_field_tag "hoja[fecha]", @hoja.disponible_en.to_date.iso8601, id: "hoja_fecha",
+                data: { controller: "flatpickr" }, autocomplete: "off",
+                class: "block w-full min-h-11 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+        <div>
+          <%= label_tag "hoja_hora", "Hora", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+          <%# Sin segundos: el picker del proyecto en modo solo hora (H:i), y el
+              servidor los tira igual si llegan (`HojaDePreparacion#con`). %>
+          <%= text_field_tag "hoja[hora]", @hoja.disponible_en.strftime("%H:%M"), id: "hoja_hora",
+                data: { controller: "flatpickr", flatpickr_solo_hora_value: true }, autocomplete: "off",
+                class: "block w-full min-h-11 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+        </div>
+      </div>
+      <%# RP-80 · *"El correo, que es obligatorio"*; WhatsApp y SMS esperan
+          proveedor. Se muestran para que nadie crea que ya salen. %>
+      <p class="mt-4 text-sm text-gray-700 dark:text-gray-200" data-canales>
+        <span class="font-medium">Canales:</span> Correo (siempre) · WhatsApp/SMS: pendiente de proveedor
+      </p>
+    </section>
+  <% end %>
+
+  <div class="flex flex-wrap items-center justify-end gap-3">
+    <%= render ButtonComponent.new(type: :submit, variant: :secondary, icon: "check") do %>Guardar la hoja<% end %>
+    <%# «Empezar» va a auditar escaneando (`/pre-factura/auditar`), que llega
+        con `PR-P.5`. Mientras tanto queda **deshabilitado y diciendo por qué**
+        en vez de mandar a `/pre_facturas`: esa es la pre-factura a mano, que
+        no lee esta hoja, y llegar ahí con los manifiestos elegidos haría creer
+        que la hoja sirvió de algo. TODO(PR-P.5): `href: auditar_path`. %>
+    <% if @hoja.nuevas? %>
+      <%= render ButtonComponent.new(type: :button, variant: :primary, icon: "qr-code", disabled: true,
+            title: @hoja.lista? ? "Auditar escaneando llega con PR-P.5" : "Falta elegir servicio y manifiesto") do %>
+        Empezar a auditar
+      <% end %>
+      <p class="w-full text-right text-xs text-gray-500 dark:text-gray-400">
+        El paso siguiente, auditar escaneando, todavía no está: por ahora la hoja se prepara y se guarda.
+      </p>
+    <% end %>
+  </div>
+<% end %>
