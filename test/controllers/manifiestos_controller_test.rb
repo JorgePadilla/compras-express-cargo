@@ -95,7 +95,11 @@ class ManifiestosControllerTest < ActionDispatch::IntegrationTest
   # C21-11 · Las guías ya **no se mandan desde acá**: son de San Pedro y viven en
   # `/guias-y-aduana` desde `PR-U1`. Este test verifica lo contrario de lo que
   # verificaba: que la pantalla de Miami las ignore.
-  test "la pantalla de Miami ya no acepta guías del proveedor" do
+  #
+  # PR-C30.14 · **Al crear.** Al editar volvieron (Jorge: *"me debería dejar
+  # editar todo lo que está en el manifiesto"*); eso se prueba en
+  # `manifiesto_editar_entero_test.rb`.
+  test "la pantalla de Miami no acepta guías del proveedor al crear" do
     post manifiestos_url, params: { manifiesto: {
       tipo_envio_ids: [ tipo_envios(:cer).id ],
       guias_attributes: { "0" => { numero: "286441-1" } }

@@ -44,68 +44,9 @@ end %>
   <% end %>
 
   <%= render FormSectionComponent.new(title: "Lo que llena San Pedro Sula") do |section| %>
-    <div class="max-w-md">
-      <%= f.label :fecha_aduana, "Recibido en Honduras", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
-      <%= f.date_field :fecha_aduana,
-            class: "block w-full min-h-11 rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal",
-            data: { controller: "flatpickr" } %>
-      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">La fecha en que <b>nosotros</b> la recibimos.</p>
-    </div>
-
-    <%# C21-11 · *"El número de guía termina siendo varios"*, con la forma de
-        nuestros splits: 286441-1, -2, -3.
-
-        `PR-U2`: eran tres renglones vacíos fijos. Con cuatro guías había que
-        guardar, volver a entrar y llenar la cuarta; y las tres casillas vacías
-        ocupaban la pantalla siempre. Jorge: *"veo que hay 3 guías por defecto,
-        esto debería ser un poco más dinámico"*.
-
-        El `<template>` se genera **del mismo partial** que las filas de arriba,
-        con `child_index: "NEW_INDEX"`. Y va `ManifiestoGuia.new` y no
-        `guias.build`: `build` agrega a la asociación y pintaría una fila
-        fantasma de más. %>
-    <div class="mt-6 max-w-md" data-controller="guias-repetidor">
-      <span class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Números de guía del proveedor</span>
-      <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
-        Pueden ser varios — como <span class="font-mono">286441-1</span>, <span class="font-mono">-2</span>, <span class="font-mono">-3</span>.
-      </p>
-
-      <div data-guias-repetidor-target="lista" class="space-y-2">
-        <%= f.fields_for :guias do |g| %>
-          <%= render "guias_aduana/guia_fila", gf: g %>
-        <% end %>
-        <%# Sin ninguna guía todavía, una fila lista para escribir: entrar y
-            tener que apretar «Agregar» antes de poder teclear es un paso de más
-            en la pantalla que existe justamente para teclear guías.
-
-            **El `child_index` tiene que ser un número.** Acá decía `"nueva"`, y
-            Rails **tiraba la fila entera en silencio**: `permit` solo reconoce
-            una colección anidada cuando la llave matchea `/\A-?\d+\z/`
-            (`Parameters.nested_attribute?`). Con una llave de texto,
-            `guias_attributes` llegaba al modelo como `{}` — se escribía la
-            guía, salía «guardado.» y no quedaba nada. Jorge: *"siempre sale que
-            faltan guías de proveedor aunque se ponga algo"*.
-
-            El `<template>` de abajo sí puede llevar texto porque el JS lo
-            reemplaza por `Date.now()` antes de que exista en el DOM. %>
-        <% if @manifiesto.guias.empty? %>
-          <%= f.fields_for :guias, ManifiestoGuia.new, child_index: 0 do |g| %>
-            <%= render "guias_aduana/guia_fila", gf: g %>
-          <% end %>
-        <% end %>
-      </div>
-
-      <template data-guias-repetidor-target="template">
-        <%= f.fields_for :guias, ManifiestoGuia.new, child_index: "NEW_INDEX" do |g| %>
-          <%= render "guias_aduana/guia_fila", gf: g %>
-        <% end %>
-      </template>
-
-      <div class="mt-3">
-        <%= render(ButtonComponent.new(variant: :outline_teal, size: :lg, icon: "plus-circle",
-              data: { action: "click->guias-repetidor#agregar" })) { "Agregar guía" } %>
-      </div>
-    </div>
+    <%# PR-C30.14 · Los dos campos viven en un partial: /manifiestos/:id/edit
+        los muestra también. %>
+    <%= render "guias_aduana/campos_san_pedro", f: f, manifiesto: @manifiesto %>
 
     <% section.with_footer do %>
       <%= link_to "Cancelar", guias_aduana_index_path, class: "text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white self-center" %>

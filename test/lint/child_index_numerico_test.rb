@@ -61,7 +61,10 @@ class ChildIndexNumericoTest < ActiveSupport::TestCase
     # verde para siempre. Si `fields_for` cambia de forma, esto avisa.
     assert_operator usos.size, :>=, 5,
                     "el regex dejó de enganchar: había 7 `child_index` en el repo"
-    assert_includes usos.map { |u| u[:archivo] }, "app/views/guias_aduana/edit.html.erb",
+    # PR-C30.14 · Los campos de San Pedro se mudaron a un partial que pintan
+    # `/guias-y-aduana` y la edición del manifiesto; el `child_index` se fue
+    # con ellos.
+    assert_includes usos.map { |u| u[:archivo] }, "app/views/guias_aduana/_campos_san_pedro.html.erb",
                     "la pantalla donde se descubrió el bug tiene que seguir cubierta"
 
     # Y que sepa distinguir: un texto cualquiera es malo, un número no.

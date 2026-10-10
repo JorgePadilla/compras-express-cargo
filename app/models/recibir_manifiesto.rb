@@ -179,8 +179,6 @@ class RecibirManifiesto
 
   def recibidas = @manifiesto.cajas.where.not(recibida_at: nil).to_a
 
-  private
-
   # `en_aduana` no tenía **ni un solo escritor** en todo el sistema: el único
   # camino era el dropdown de la ficha del paquete, uno por uno. Ese es el hueco.
   #
@@ -202,6 +200,10 @@ class RecibirManifiesto
   # no se podía preguntar. No era una regla que faltara de Yusef: era este dato.
   #
   # El valor ya estaba en la mano: `sucursal_entrega` es a dónde llegó el camión.
+  #
+  # PR-C30.14 · **Público**: `Manifiesto#meter!` lo usa para el paquete que
+  # entra a un manifiesto ya recibido (reabierto con «Editar»). Aterriza igual
+  # que los que vinieron en el camión, y no por una copia de estas dos líneas.
   def mover_a_aduana(paquete)
     return false if paquete.en_aduana?
 

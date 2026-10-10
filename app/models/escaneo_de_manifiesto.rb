@@ -59,6 +59,8 @@ class EscaneoDeManifiesto
   # y no a sus hermanas.
   #
   #   ok          → hay uno solo acá: se saca (`remove_paquete`)
+  #   no_se_saca  → está acá, pero ya tiene pre-factura o medición
+  #                 (`Manifiesto#motivo_para_no_sacar`, PR-C30.14)
   #   varios      → el tracking de un split, o el número madre sin sufijo, con
   #                 varias cajas acá: no se adivina cuál no se fue
   #   no_esta_aca → existe, pero no está en este manifiesto
@@ -71,7 +73,12 @@ class EscaneoDeManifiesto
 
     aca = candidatos.select { |p| p.manifiesto_id == @manifiesto.id }
     return Resultado.new(tipo: :no_esta_aca, paquete: candidatos.first) if aca.empty?
-    return Resultado.new(tipo: :ok, paquete: aca.first) if aca.one?
+    # PR-C30.14 · Se dice **antes** de intentar, adentro del modal: si no, el
+    # `DELETE` fallaba después y la pistola sonaba a «sale» sin que saliera.
+    if aca.one?
+      tipo = @manifiesto.motivo_para_no_sacar(aca.first) ? :no_se_saca : :ok
+      return Resultado.new(tipo: tipo, paquete: aca.first)
+    end
 
     Resultado.new(tipo: :varios, candidatos: aca)
   end

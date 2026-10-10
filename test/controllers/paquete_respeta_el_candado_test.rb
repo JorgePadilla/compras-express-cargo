@@ -129,6 +129,23 @@ class PaqueteRespetaElCandadoTest < ActionDispatch::IntegrationTest
     assert_not_equal "Cambiada", @suelto.descripcion, "y lo demás del formulario tampoco se guardó"
   end
 
+  # PR-C30.14 · Uno recibido se reabre, pero el que ya tiene medición en San
+  # Pedro no sale (`Manifiesto::NoSeSaca`), tampoco por el formulario del
+  # paquete: se dice por qué y no se guarda nada.
+  test "de uno recibido y reabierto no saca al que ya se midió, y lo dice" do
+    @finalizado.update_columns(estado: "recibido")
+    @finalizado.abrir_edicion!(@supervisor)
+    @adentro.update_columns(estado: "en_aduana", medicion_sesion: "tanda-1")
+
+    patch paquete_url(@adentro), params: { paquete: { manifiesto_id: "", descripcion: "Cambiada" } }
+
+    assert_response :unprocessable_entity
+    assert_match "ya se midió", response.body
+    @adentro.reload
+    assert_equal @finalizado.id, @adentro.manifiesto_id
+    assert_not_equal "Cambiada", @adentro.descripcion
+  end
+
   test "un manifiesto que no existe no deja al paquete sin manifiesto" do
     @abierto.meter!(@suelto, user: @supervisor)
 

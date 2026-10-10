@@ -28,19 +28,27 @@ class ManifiestoEdicionAbiertaTest < ActiveSupport::TestCase
 
   # ── Cuándo se puede abrir ───────────────────────────────────────────────
 
-  test "un oficial enviado se puede reabrir; abierto, en aduana o recibido, no" do
-    assert @manifiesto.reabrible?
+  # PR-C30.14 · **Cambia a propósito.** Hasta acá decía «un oficial enviado se
+  # puede reabrir; abierto, en aduana o recibido, no»: el límite de C30-06 era
+  # nuestro. Jorge, 2026-10-10, sobre el 21 (recibido): *"esta pantalla de
+  # editar me debería dejar editar todo lo que está en el manifiesto"*.
+  # Decisión de Jorge, pendiente de confirmar con Yusef.
+  test "un oficial finalizado se reabre enviado, en aduana o recibido; abierto no hace falta" do
     assert_not manifiestos(:creado).tap { |m| m.estado = "creado" }.reabrible?
 
-    @manifiesto.estado = "en_aduana"
-    assert_not @manifiesto.reabrible?, "Honduras ya lo está escaneando"
-    @manifiesto.estado = "recibido"
-    assert_not @manifiesto.reabrible?
+    %w[enviado en_aduana recibido].each do |estado|
+      @manifiesto.estado = estado
+      assert @manifiesto.reabrible?, "oficial #{estado}"
+    end
   end
 
-  test "el interno no se reabre: sus estados son otros" do
+  test "el interno no se reabre en ningún estado: sus estados son otros" do
     @manifiesto.tipo = "interno"
-    assert_not @manifiesto.reabrible?
+    %w[enviado en_aduana recibido].each do |estado|
+      @manifiesto.estado = estado
+      assert_not @manifiesto.reabrible?, "interno #{estado}"
+    end
+    assert_match(/es un manifiesto interno/, @manifiesto.motivo_del_candado)
   end
 
   test "el supervisor de Miami lo abre, y queda quién y cuándo" do
@@ -56,17 +64,36 @@ class ManifiestoEdicionAbiertaTest < ActiveSupport::TestCase
     assert_not @manifiesto.reload.edicion_abierta?
   end
 
-  test "ya en aduana no se abre" do
+  # PR-C30.14 · Antes: «ya en aduana no se abre». Ahora se abre, y el interno es
+  # el que no.
+  test "en aduana y recibido también se abren; el interno no" do
     @manifiesto.update!(estado: "en_aduana")
-    error = assert_raises(Manifiesto::NoSePuedeReabrir) { @manifiesto.abrir_edicion!(@supervisor) }
-    assert_match(/recibiendo en Honduras/, error.message)
+    @manifiesto.abrir_edicion!(@supervisor)
+    assert @manifiesto.reload.edicion_abierta?
+
+    @manifiesto.cerrar_edicion!
+    @manifiesto.update!(estado: "recibido")
+    @manifiesto.abrir_edicion!(@supervisor)
+    assert @manifiesto.reload.edicion_abierta?
+
+    @manifiesto.cerrar_edicion!
+    @manifiesto.update_columns(tipo: "interno")
+    error = assert_raises(Manifiesto::NoSePuedeReabrir) { @manifiesto.reload.abrir_edicion!(@supervisor) }
+    assert_match(/solo se reabren los manifiestos oficiales/, error.message)
   end
 
-  test "si Honduras empieza a recibir con la edición abierta, se cierra sola" do
+  # PR-C30.14 · Antes: «si Honduras empieza a recibir con la edición abierta, se
+  # cierra sola» — era derivado de `enviado?`. Sigue derivado de `reabrible?`,
+  # pero ahora en aduana también es reabrible: queda abierta hasta «Cerrar
+  # edición», que es el botón que Yusef pidió apretar.
+  test "si Honduras empieza a recibir con la edición abierta, sigue abierta hasta «Cerrar edición»" do
     @manifiesto.abrir_edicion!(@supervisor)
     @manifiesto.update!(estado: "en_aduana")   # lo que hace `RecibirManifiesto` al primer escaneo
 
-    assert_not @manifiesto.edicion_abierta?
+    assert @manifiesto.edicion_abierta?
+    assert @manifiesto.modificable_por?(@supervisor)
+
+    @manifiesto.cerrar_edicion!
     assert_not @manifiesto.modificable_por?(@supervisor)
   end
 
@@ -163,5 +190,175 @@ class ManifiestoEdicionAbiertaTest < ActiveSupport::TestCase
 
     assert_nil p.reload.caja_manifiesto_id
     assert_equal "recibido_miami", p.estado
+  end
+
+  # ── PR-C30.14 · Sacar y meter en uno que Honduras ya recibe ─────────────
+  #
+  # Decisión de Jorge, 2026-10-10: el que **llegó** se queda donde está y solo
+  # pierde el manifiesto y la caja; el que no llegó vuelve a Miami como hoy; y
+  # el que ya tiene pre-factura o medición no sale.
+
+  test "recibido: el de una caja que se escaneó se queda en aduana, sin manifiesto, y con sus fechas de viaje" do
+    recibir!(con_caja: true)
+    assert_equal "en_aduana", @adentro.reload.estado
+    enviado_el = @adentro.fecha_enviado
+    aduana_el = @adentro.fecha_aduana
+    assert enviado_el.present? && aduana_el.present?
+
+    @manifiesto.sacar!(@adentro)
+    @adentro.reload
+
+    assert_equal "en_aduana", @adentro.estado, "llegó: no vuelve a Miami"
+    assert_nil @adentro.manifiesto_id
+    assert_nil @adentro.caja_manifiesto_id
+    assert_equal sucursales(:zeron_sps).id, @adentro.sucursal_actual_id, "sigue donde aterrizó"
+    assert_equal enviado_el.to_i, @adentro.fecha_enviado.to_i, "viajó: no puede decir que no salió"
+    assert_equal aduana_el.to_i, @adentro.fecha_aduana.to_i
+    assert_equal 0, @manifiesto.reload.cantidad_paquetes
+  end
+
+  test "en aduana: el de una caja que no se escaneó vuelve a Miami, como hoy" do
+    @manifiesto.update!(estado: "en_aduana", sucursal_entrega: sucursales(:zeron_sps))
+    assert_nil @caja.recibida_at
+
+    @manifiesto.sacar!(@adentro)
+    @adentro.reload
+
+    assert_equal "recibido_miami", @adentro.estado
+    assert_nil @adentro.manifiesto_id
+    assert_nil @adentro.fecha_enviado
+  end
+
+  test "recibido con faltantes: lo que dice si llegó es la caja, no el barrido del cierre" do
+    @manifiesto.update!(estado: "en_aduana", sucursal_entrega: sucursales(:zeron_sps))
+    RecibirManifiesto.new(@manifiesto, user: @supervisor).finalizar!(con_faltantes: true)
+    assert_equal "en_aduana", @adentro.reload.estado, "el cierre con faltantes lo barrió a aduana"
+    assert_nil @caja.reload.recibida_at
+
+    @manifiesto.reload.sacar!(@adentro)
+
+    assert_equal "recibido_miami", @adentro.reload.estado
+    assert_nil @adentro.sucursal_actual_id, "vuelve a Miami: no puede seguir diciendo que está en San Pedro"
+  end
+
+  test "sin caja: llegó si ya pasó de enviado; si sigue en enviado, vuelve" do
+    @adentro.update_columns(caja_manifiesto_id: nil, estado: "en_aduana")
+    @manifiesto.update_columns(estado: "recibido")
+    @manifiesto.reload.sacar!(@adentro)
+    assert_equal "en_aduana", @adentro.reload.estado
+
+    otro = paquetes(:recibido)
+    otro.update_columns(manifiesto_id: @manifiesto.id, estado: "enviado_honduras")
+    @manifiesto.update_columns(estado: "en_aduana")
+    @manifiesto.reload.sacar!(otro)
+    assert_equal "recibido_miami", otro.reload.estado
+  end
+
+  test "enviado: el que se saca vuelve a Miami aunque la caja diga recibida" do
+    @caja.update_columns(recibida_at: Time.current)   # no pasa, pero no manda: el manifiesto no llegó
+    @manifiesto.sacar!(@adentro)
+    assert_equal "recibido_miami", @adentro.reload.estado
+  end
+
+  test "con una pre-factura vigente no sale, y se dice cuál" do
+    recibir!(con_caja: true)
+    pf = pre_facturas(:pendiente_maria)
+    @adentro.update_columns(pre_factura_id: pf.id)
+
+    error = assert_raises(Manifiesto::NoSeSaca) { @manifiesto.sacar!(@adentro) }
+    assert_match(/pre-factura #{pf.numero}/, error.message)
+    assert_equal @manifiesto.id, @adentro.reload.manifiesto_id, "no se tocó nada"
+    assert_equal @caja.id, @adentro.caja_manifiesto_id
+  end
+
+  test "con una pre-factura anulada sí sale" do
+    recibir!(con_caja: true)
+    pf = pre_facturas(:pendiente_maria)
+    pf.update_columns(estado: "anulado")
+    @adentro.update_columns(pre_factura_id: pf.id)
+
+    @manifiesto.sacar!(@adentro)
+    assert_nil @adentro.reload.manifiesto_id
+  end
+
+  test "la pre-factura se mira también por sus líneas: anular deja la línea viva, pero vigente la toma" do
+    recibir!(con_caja: true)
+    pf = pre_facturas(:pendiente_maria)
+    # Sin callbacks a propósito: la línea suelta, sin la FK en el paquete.
+    PreFacturaItem.insert_all!([ { pre_factura_id: pf.id, paquete_id: @adentro.id, concepto: "flete",
+                                    subtotal: 1, created_at: Time.current, updated_at: Time.current } ])
+    assert_nil @adentro.reload.pre_factura_id
+
+    assert_raises(Manifiesto::NoSeSaca) { @manifiesto.sacar!(@adentro) }
+
+    pf.update_columns(estado: "anulado")
+    @manifiesto.sacar!(@adentro.reload)
+    assert_nil @adentro.reload.manifiesto_id, "la de una anulada no la retiene"
+  end
+
+  test "con medición no sale" do
+    recibir!(con_caja: true)
+    @adentro.update_columns(medicion_sesion: "tanda-1")
+
+    error = assert_raises(Manifiesto::NoSeSaca) { @manifiesto.sacar!(@adentro) }
+    assert_match(/ya se midió/, error.message)
+    assert_equal @manifiesto.id, @adentro.reload.manifiesto_id
+  end
+
+  test "la pistola de quitar lo dice antes de intentar" do
+    recibir!(con_caja: true)
+    @adentro.update_columns(medicion_sesion: "tanda-1")
+
+    resultado = EscaneoDeManifiesto.new(@manifiesto).para_quitar(@adentro.tracking)
+    assert_equal :no_se_saca, resultado.tipo
+  end
+
+  test "meter en uno recibido: llega a aduana, en la sucursal de entrega" do
+    recibir!(con_caja: true)
+    tarde = paquetes(:recibido)
+    tarde.tareas.update_all(estado: "realizada")
+    tarde.update_columns(tipo_envio_id: @cer.id)
+
+    @manifiesto.meter!(tarde, user: @supervisor)
+    tarde.reload
+
+    assert_equal @manifiesto.id, tarde.manifiesto_id
+    assert_equal "en_aduana", tarde.estado
+    assert_equal sucursales(:zeron_sps).id, tarde.sucursal_actual_id
+    assert_equal @supervisor.id, tarde.fecha_enviado_by_user_id, "pasó por enviado, con quién"
+  end
+
+  test "meter en uno que se está recibiendo: sale a enviado y llega cuando escaneen su caja" do
+    @manifiesto.update!(estado: "en_aduana", sucursal_entrega: sucursales(:zeron_sps))
+    tarde = paquetes(:recibido)
+    tarde.tareas.update_all(estado: "realizada")
+    tarde.update_columns(tipo_envio_id: @cer.id)
+
+    @manifiesto.meter!(tarde, user: @supervisor)
+    assert_equal "enviado_honduras", tarde.reload.estado
+  end
+
+  test "meter en uno que se está recibiendo, a una caja que ya se escaneó: llega" do
+    @manifiesto.update!(sucursal_entrega: sucursales(:zeron_sps))
+    RecibirManifiesto.new(@manifiesto, user: @supervisor).recibir_caja!(@caja)
+    assert @manifiesto.reload.en_aduana?
+    tarde = paquetes(:recibido)
+    tarde.tareas.update_all(estado: "realizada")
+    tarde.update_columns(tipo_envio_id: @cer.id)
+
+    @manifiesto.meter!(tarde, user: @supervisor, caja_manifiesto: @caja)
+    assert_equal "en_aduana", tarde.reload.estado
+  end
+
+  private
+
+  # Honduras recibe: escanea la caja (si `con_caja`) y cierra la recepción.
+  def recibir!(con_caja:)
+    @manifiesto.update!(sucursal_entrega: sucursales(:zeron_sps))
+    recepcion = RecibirManifiesto.new(@manifiesto, user: @supervisor)
+    recepcion.recibir_caja!(@caja) if con_caja
+    recepcion.finalizar!(con_faltantes: true)
+    @manifiesto.reload
+    assert @manifiesto.recibido?
   end
 end

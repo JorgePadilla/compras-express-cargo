@@ -15,11 +15,12 @@
         Lo que lleva cada caja, como en la etiqueta. Para cambiar algo, un supervisor aprieta «Editar».
       </p>
     </div>
-    <div class="flex items-center gap-3">
-      <span class="text-sm text-gray-500 dark:text-gray-400"><%= manifiesto.cajas.size %> bulto(s)</span>
+    <%# PR-C30.14 · Sin partirse, como en `_cajas`. %>
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap"><%= manifiesto.cajas.size %> bulto(s)</span>
       <%= render ButtonComponent.new(variant: :outline_navy, icon: "printer",
             href: etiquetas_manifiesto_cajas_path(manifiesto, print: true),
-            target: "_blank") do %>Imprimir las 4×6<% end %>
+            target: "_blank", class: "whitespace-nowrap") do %>Imprimir las 4×6<% end %>
     </div>
   </div>
   <div class="overflow-x-auto">

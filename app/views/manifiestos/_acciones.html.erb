@@ -19,8 +19,17 @@
 
     **El `div#manifiesto-acciones` que lo envuelve vive en `show`, no acá**:
     `turbo_stream.update` reemplaza el *contenido* del elemento, así que un
-    wrapper adentro del partial se anidaría una vez por actualización. %>
-<% if manifiesto.creado? && paquetes.any? %>
+    wrapper adentro del partial se anidaría una vez por actualización.
+
+    PR-C30.14 · `sin_finalizar: true` lo pinta /edit: el cartel del candado sí
+    (ahí se abre y se cierra la edición), los cierres no. En /edit F8 es el
+    «Guardar» del formulario, y con «Solo Finalizar» arriba en el DOM la tecla
+    **finalizaría** el manifiesto: el primer `data-shortcut` gana
+    (`project_una_tecla_por_pantalla`). Por lo mismo /edit no lo envuelve en
+    `#manifiesto-acciones-*`, que es lo que refresca el turbo_stream de cada
+    paquete con este partial entero. %>
+<% sin_finalizar = local_assigns.fetch(:sin_finalizar, false) %>
+<% if manifiesto.creado? && paquetes.any? && !sin_finalizar %>
   <div class="mb-6 flex flex-wrap items-center gap-3">
     <%# Las teclas: F8 es «guardar/confirmar» por convención (C30-02, la hoja
         de Yusef) y finalizar es el commit de esta pantalla. Ojo: este partial se pinta **dos veces**
@@ -86,7 +95,17 @@
       <p class="text-sm font-semibold text-cec-navy dark:text-cec-gold">Abierto para corregir, aunque ya se finalizó.</p>
       <p class="text-xs text-gray-700 dark:text-gray-300 mt-0.5">
         Lo abrió <%= manifiesto.edicion_abierta_por&.nombre || "—" %> el <%= manifiesto.edicion_abierta_at.strftime("%d/%m/%Y %H:%M") %>.
-        Las cajas y los paquetes se cambian como al armarlo; lo que entra sale a enviado con el resto, y lo que se saca vuelve a la bodega.
+        Las cajas y los paquetes se cambian como al armarlo.
+        <%# PR-C30.14 · Desde que los recibidos se reabren, qué pasa con lo que
+            entra y lo que sale depende de si Honduras ya lo tiene
+            (`Manifiesto#meter!`, `#sacar!`). %>
+        <% if manifiesto.enviado? %>
+          Lo que entra sale a enviado con el resto, y lo que se saca vuelve a la bodega de Miami.
+        <% else %>
+          Lo que entra llega como el resto<%= " (a aduana: la recepción ya se cerró)" if manifiesto.recibido? %>.
+          Lo que se saca y ya llegó a Honduras se queda donde está; lo que no llegó vuelve a Miami;
+          y lo que ya tiene pre-factura o medición no sale.
+        <% end %>
       </p>
     </div>
     <% if manifiesto.editable_por?(Current.user) %>
@@ -109,9 +128,12 @@
     <%# C30-06 · «Editar», la palabra de Yusef: *"que le demos un botón que diga
         editar… y ya podemos editarlo todo otra vez"*. Reemplaza al «Editar
         igual» de C21-06, que abría solo el encabezado; esto abre lo de adentro
-        (y el encabezado vuelve a estar arriba, en su botón). Solo mientras la
-        carga va en camino: ya en Honduras no se reabre, y para el encabezado
-        queda el «Editar» de arriba. %>
+        (y el encabezado vuelve a estar arriba, en su botón).
+
+        PR-C30.14 · Ya no es solo mientras la carga va en camino: en aduana y
+        recibido también se reabre (decisión de Jorge, 2026-10-10, pendiente
+        de confirmar con Yusef). Lo que no se reabre es el interno, y para su
+        encabezado queda el «Editar» de arriba. %>
     <% if manifiesto.editable_por?(Current.user) && manifiesto.reabrible? %>
       <%= render ButtonComponent.new(variant: :secondary, icon: "lock-open",
             href: abrir_edicion_manifiesto_path(manifiesto), method: :patch,

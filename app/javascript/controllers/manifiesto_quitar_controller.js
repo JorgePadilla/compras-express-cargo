@@ -14,6 +14,8 @@ import { Controller } from "@hotwired/stimulus"
 //   ok            → sale, aviso verde, el contador sube
 //   varios        → aviso: escaneá la etiqueta de la caja, no el tracking
 //   no_esta_aca   → aviso rojo: está en otro manifiesto, o en ninguno
+//   no_se_saca    → aviso rojo: está acá, pero tiene pre-factura o medición
+//                   (PR-C30.14); se dice antes de intentar el DELETE
 //   no_encontrado → aviso rojo
 //   bloqueado     → aviso rojo: el candado se cerró mientras tanto
 //
@@ -74,6 +76,10 @@ export default class extends Controller {
         return
       case "no_esta_aca":
         this.dispatch("noEstaAca")
+        this._avisar("error", data.mensaje)
+        return
+      case "no_se_saca":
+        this.dispatch("noSeSaca")
         this._avisar("error", data.mensaje)
         return
       default:

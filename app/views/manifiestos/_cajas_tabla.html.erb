@@ -51,6 +51,15 @@
           <% end %>
         </td>
         <td class="px-4 py-3 text-right whitespace-nowrap">
+          <%# PR-C30.14 · Los tres en una fila. Jorge: *"los botones en la sección
+              de acciones no están bien"* — el lápiz y la impresora quedaban en
+              una línea y el basurero, rojo lleno, abajo: es un `button_to`, o
+              sea un `<form>`, que es de bloque y se parte de los otros dos.
+              `form_class: "contents"` saca al form del flujo (el mismo arreglo
+              que `/etiquetar` y `/recepcion_carga`), y `soft_danger` en vez de
+              `danger` para que los tres se lean como hermanos; el confirm
+              sigue cuidando el borrado. %>
+          <div class="inline-flex items-center justify-end gap-1.5">
           <% if editable %>
             <%= render ButtonComponent.new(variant: :secondary, size: :xs, icon: "pencil-square",
                   label: "Editar la caja #{caja.letra}",
@@ -63,11 +72,12 @@
                 href: etiqueta_manifiesto_caja_path(manifiesto, caja, print: true),
                 target: "_blank", label: "Imprimir la etiqueta de la caja #{caja.letra}") %>
           <% if editable %>
-            <%= render ButtonComponent.new(variant: :danger, size: :xs, icon: "trash",
-                  href: manifiesto_caja_path(manifiesto, caja), method: :delete,
+            <%= render ButtonComponent.new(variant: :soft_danger, size: :xs, icon: "trash",
+                  href: manifiesto_caja_path(manifiesto, caja), method: :delete, form_class: "contents",
                   confirm: "Se elimina la caja #{caja.letra}. Si ya imprimiste su etiqueta, despegala: la próxima caja que agregues va a tomar la primera letra libre. ¿Seguro?",
                   label: "Eliminar caja #{caja.letra}") %>
           <% end %>
+          </div>
         </td>
       </tr>
     <% end %>
