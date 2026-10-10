@@ -11,7 +11,7 @@ class HojaDePreparacionSystemTest < ApplicationSystemTestCase
     @manifiesto.update_columns(estado: "en_aduana")
     paquetes(:recibido).update_columns(manifiesto_id: @manifiesto.id, tipo_envio_id: @cer.id,
                                        estado: "en_aduana", pre_factura_id: nil, venta_id: nil)
-    Configuracion.where(clave: HojaDePreparacion::CLAVE_HORA).delete_all
+    Configuracion.where(clave: "prefactura_hora_disponible").delete_all
 
     ingresar(users(:supervisor_prefactura))
   end

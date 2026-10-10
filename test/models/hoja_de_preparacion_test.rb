@@ -85,7 +85,7 @@ class HojaDePreparacionTest < ActiveSupport::TestCase
   # ── La fecha de trabajo ────────────────────────────────────────────────
 
   test "sin la clave en Configuracion, la hora es 07:30" do
-    Configuracion.where(clave: HojaDePreparacion::CLAVE_HORA).delete_all
+    Configuracion.where(clave: "prefactura_hora_disponible").delete_all
     assert_equal "07:30", HojaDePreparacion.hora_por_defecto
 
     hoja = HojaDePreparacion.new
@@ -93,15 +93,24 @@ class HojaDePreparacionTest < ActiveSupport::TestCase
     assert_equal [ 7, 30, 0 ], [ hoja.disponible_en.hour, hoja.disponible_en.min, hoja.disponible_en.sec ]
   end
 
-  test "con la clave, manda la clave; mal escrita, vuelve a 07:30" do
-    Configuracion.set(HojaDePreparacion::CLAVE_HORA, "13:00")
+  # Un solo lector de la clave: `PreFactura.hora_disponible` (PR-P.2). La hoja
+  # muestra lo mismo que la pre-factura va a usar para avisar.
+  test "con la clave, manda la clave, leída como la lee la pre-factura" do
+    Configuracion.set("prefactura_hora_disponible", "13:00")
     assert_equal "13:00", HojaDePreparacion.hora_por_defecto
 
-    Configuracion.set(HojaDePreparacion::CLAVE_HORA, "08:15:45")
-    assert_equal "08:15", HojaDePreparacion.hora_por_defecto, "sin segundos"
+    Configuracion.set("prefactura_hora_disponible", "8:00")
+    assert_equal "08:00", HojaDePreparacion.hora_por_defecto, "el campo la quiere con dos dígitos"
 
-    Configuracion.set(HojaDePreparacion::CLAVE_HORA, "siete y media")
+    Configuracion.set("prefactura_hora_disponible", "siete y media")
     assert_equal "07:30", HojaDePreparacion.hora_por_defecto
+  end
+
+  test "la hoja y la pre-factura dicen la misma hora" do
+    [ "13:00", "8:00", "08:00:00", "siete y media" ].each do |valor|
+      Configuracion.set("prefactura_hora_disponible", valor)
+      assert_equal PreFactura.notificar_at_para(Date.current), HojaDePreparacion.disponible_por_defecto, valor
+    end
   end
 
   test "la hora que llega con segundos se guarda sin ellos" do

@@ -18,26 +18,27 @@ class HojaDePreparacion
 
   # C30-16 · *"El default es 7 y media… el sistema viene a las 7:30 y empieza a
   # mandar los mensajes."* La hora la administra el equipo en `Configuracion`
-  # (`prefactura_hora_disponible`, como `ventana_aviso_llegada_min`). La clave
-  # la siembra `PR-P.2`, que va en paralelo: hasta que exista, y si alguien la
-  # deja mal escrita, vale 07:30.
-  CLAVE_HORA = "prefactura_hora_disponible".freeze
-  HORA_POR_DEFECTO = "07:30".freeze
+  # (`prefactura_hora_disponible`), y **la lee `PreFactura.hora_disponible`**
+  # (PR-P.2). Esta hoja tenía su propio lector de la misma clave y los dos no
+  # coincidían —QA: uno aceptaba «08:00:00» y el otro «8:00»—, así que la
+  # hoja mostraba una hora y la pre-factura avisaba a otra. Ahora hay uno.
+  #
+  # `HORA` queda solo para lo que teclea el operario en el formulario, que no
+  # es la clave: ahí se aceptan segundos y se tiran (`C30-08`).
   HORA = /\A([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?\z/
 
   attr_reader :modo, :tipo_envio_ids, :manifiesto_ids, :disponible_en
 
+  # La hora por defecto, siempre «HH:MM» para el campo y el rótulo.
   def self.hora_por_defecto
-    hora = Configuracion.get(CLAVE_HORA).to_s.strip
-    hora.match?(HORA) ? hora[0, 5] : HORA_POR_DEFECTO
+    disponible_por_defecto.strftime("%H:%M")
   end
 
   # Hoy a la hora por defecto. Hoy y no mañana: Yusef lo pone *"para ese mismo
   # día pero a una hora específica"*, y si la hora ya pasó el aviso sale al
   # apretar F9 (Fase 14, paso 3).
   def self.disponible_por_defecto
-    h, m = hora_por_defecto.split(":").map(&:to_i)
-    Time.zone.today.in_time_zone.change(hour: h, min: m)
+    PreFactura.notificar_at_para(Time.zone.today)
   end
 
   def self.desde_sesion(datos)
@@ -98,12 +99,10 @@ class HojaDePreparacion
     nuevas? && tipo_envio_ids.any? && manifiestos_elegidos.exists?
   end
 
-  # Las que «editar» ofrece: las que todavía no le avisaron al cliente. El
-  # sello `notificado_at` lo agrega `PR-P.2`; hasta que esté, las que siguen en
-  # `creado` (ni confirmadas ni facturadas).
+  # Las que «editar» ofrece: las que todavía no le avisaron al cliente
+  # (`notificado_at`, el sello de PR-P.2), sin facturar ni anular.
   def self.pre_facturas_editables
-    base = PreFactura.where(estado: "creado").where.not(manifiesto_id: nil)
-    PreFactura.column_names.include?("notificado_at") ? base.where(notificado_at: nil) : base
+    PreFactura.where(estado: "creado", notificado_at: nil).where.not(manifiesto_id: nil)
   end
 
   def to_sesion

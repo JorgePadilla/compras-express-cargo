@@ -10,7 +10,7 @@ class HojaDePreparacionControllerTest < ActionDispatch::IntegrationTest
     @paquete = paquetes(:recibido)
     @paquete.update_columns(manifiesto_id: @manifiesto.id, tipo_envio_id: @cer.id, estado: "en_aduana",
                             pre_factura_id: nil, venta_id: nil)
-    Configuracion.where(clave: HojaDePreparacion::CLAVE_HORA).delete_all
+    Configuracion.where(clave: "prefactura_hora_disponible").delete_all
   end
 
   # ── Quién entra ─────────────────────────────────────────────────────────
