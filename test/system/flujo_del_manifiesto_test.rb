@@ -144,7 +144,13 @@ class FlujoDelManifiestoTest < ApplicationSystemTestCase
     # nodo que devuelve `find` y la vuelve a correr cuando lo encuentra viejo.
     # `click_button` es `find` + `click`, así que hereda el rescate.
     confirmando { click_button "Finalizar e Imprimir", match: :first }
-    esperar_pestana_de_impresion
+    # PR-C30.10 · Finalizar e Imprimir se lleva **esta** pestaña (PR-C29.7):
+    # no nace ninguna nueva, así que `esperar_pestana_de_impresion` solo
+    # gastaba sus 5 s y la base se leía sin esperar al PATCH. Con la máquina
+    # cargada el finalizar tardaba más que eso. Se espera el resultado.
+    assert_eventualmente("el paquete no pasó a enviado", wait: 15) do
+      @paquete.reload.estado == "enviado_honduras"
+    end
     cerrar_pestanas_extra
 
     assert_equal "enviado_honduras", @paquete.reload.estado
