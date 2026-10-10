@@ -25,6 +25,23 @@ class MedicionVolumenesTest < ActionDispatch::IntegrationTest
     assert_select "tr#bulto_#{@otra.first.id} td", text: "Único"
   end
 
+  # Jorge, 2026-10-10: copiar el QR del volumen desde la lista. Tiene que ser el
+  # mismo texto de la etiqueta, y Auditar tiene que reconocerlo como volumen.
+  test "cada volumen trae para copiar el texto de su QR, el mismo de la etiqueta" do
+    get volumenes_medicion_index_path
+
+    assert_select "tr#bulto_#{@juan.first.id} [data-qr-del-volumen]" do |nodos|
+      qr = nodos.first["data-clipboard-text-value"]
+      assert_match(/\AMED /, qr)
+      assert_match(/1de2\z/, qr)
+      assert AuditoriaDeTanda.volumen?(qr), "Auditar lo reconoce como el QR de un volumen"
+      assert_equal @juan_caja.id, Paquete.por_codigo_de_etiqueta(qr).first&.id, "y lleva a una caja de la tanda"
+    end
+    assert_select "tr#bulto_#{@otra.first.id} [data-qr-del-volumen]" do |nodos|
+      assert_no_match(/de\d+\z/, nodos.first["data-clipboard-text-value"], "un volumen único no lleva «1de1»")
+    end
+  end
+
   test "busca por código de cliente" do
     get volumenes_medicion_index_path, params: { q: clientes(:juan).codigo }
 
