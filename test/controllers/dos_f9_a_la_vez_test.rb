@@ -8,7 +8,7 @@ require "test_helper"
 # frena adentro de la transacción, con las cajas ya validadas, y el segundo
 # sale en ese momento. Sin transacción de test: lo creado se borra al final.
 class DosF9ALaVezTest < ActionDispatch::IntegrationTest
-  self.use_transactional_tests = false
+  include SinTransaccionDeTest
 
   setup do
     @user = users(:supervisor_prefactura)
@@ -23,14 +23,7 @@ class DosF9ALaVezTest < ActionDispatch::IntegrationTest
     @bulto, = MedirBulto.new(user: @user).guardar!(paquete_ids: @cajas.map(&:id), volumenes: [ { peso: "4" } ])
   end
 
-  teardown do
-    pfs = PreFactura.joins(:pre_factura_items).where(pre_factura_items: { paquete_id: @cajas.map(&:id) }).distinct.pluck(:id)
-    Paquete.where(id: @cajas.map(&:id)).update_all(pre_factura_id: nil)
-    PreFacturaItem.where(pre_factura_id: pfs).delete_all
-    PreFactura.where(id: pfs).delete_all
-    Bulto.where(sesion: @bulto.sesion).delete_all
-    Paquete.where(id: @cajas.map(&:id)).delete_all
-  end
+  teardown { borrar_lo_creado(@cajas, [ @bulto.sesion ]) }
 
   def pestana
     open_session do |s|

@@ -125,6 +125,45 @@ class AuditarPreFacturaControllerTest < ActionDispatch::IntegrationTest
     assert_match(/El aviso sale el/, data["mensaje"])
   end
 
+  # ── F8 (PR-P.6) ──────────────────────────────────────────────────────
+
+  test "F8 guarda consolidando, sin aviso, y la etiqueta lleva la franja" do
+    con_hoja
+    post guardar_auditar_pre_factura_index_url,
+         params: { sesiones: [ @bulto.sesion ], escaneadas: @cajas.map(&:id), modo: "consolidar" }, as: :json
+    data = response.parsed_body
+
+    assert data["ok"], data["mensaje"]
+    assert_match(/consolidando/, data["mensaje"])
+    pf = PreFactura.find_by!(numero: data["numero"])
+    assert pf.consolidando_at.present?
+    assert_nil pf.notificar_at
+
+    get data["imprimir_url"]
+    assert_includes response.body, "CONSOLIDANDO"
+  end
+
+  test "el volumen de una consolidando la reabre, con sus cajas ya auditadas" do
+    # Otra carga del manifiesto sin pre-facturar: si no, después de F8 el
+    # manifiesto ya no tiene nada pendiente y la hoja deja de estar lista.
+    Paquete.create!(tracking: "1ZOTRA#{SecureRandom.hex(4).upcase}", cliente: @cliente, tipo_envio: @cer,
+                    sucursal_recepcion: sucursales(:miami), manifiesto: @manifiesto,
+                    estado: "en_aduana", descripcion: "x", peso: 1)
+    con_hoja
+    post guardar_auditar_pre_factura_index_url,
+         params: { sesiones: [ @bulto.sesion ], escaneadas: @cajas.map(&:id), modo: "consolidar" }, as: :json
+    pf = PreFactura.find_by!(numero: response.parsed_body["numero"])
+
+    post escanear_volumen_auditar_pre_factura_index_url, params: { codigo: @qr }, as: :json
+    data = response.parsed_body
+
+    assert_equal "consolidando", data["resultado"]
+    assert_equal({ "id" => pf.id, "numero" => pf.numero }, data["pre_factura"])
+    assert_equal [ @bulto.sesion ], data["tandas"].map { |t| t["sesion"] }
+    assert_equal @cajas.map(&:id).sort, data["escaneadas"].sort
+    assert data["lineas"]["total"].positive?
+  end
+
   test "F9 con cajas sin escanear: 422 y nada guardado" do
     con_hoja
     assert_no_difference "PreFactura.count" do

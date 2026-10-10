@@ -31,12 +31,20 @@ class PreFacturaEtiquetaEntregaTest < ActionDispatch::IntegrationTest
     assert_select ".fecha", text: Date.current.strftime("%d/%m/%Y")
   end
 
-  # La columna `consolidando_at` llega con PR-P.2; hasta entonces no hay franja.
+  # PR-P.6 · Sin consolidar —F9— no hay franja; consolidando —F8— sí.
   test "sin consolidar no sale la franja" do
     get etiqueta_entrega_pre_factura_path(@pf)
 
     assert_select ".franja", count: 0
     assert_not_includes response.body, "CONSOLIDANDO"
+  end
+
+  test "consolidando sale la franja" do
+    @pf.update_columns(consolidando_at: Time.current)
+    get etiqueta_entrega_pre_factura_path(@pf)
+
+    assert_select ".franja", minimum: 1
+    assert_includes response.body, "CONSOLIDANDO"
   end
 
   test "quien no es de pre-factura no la ve" do
