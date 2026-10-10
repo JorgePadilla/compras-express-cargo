@@ -89,13 +89,20 @@ class ManifiestoFinalizadoSeCorrigeTest < ActionDispatch::IntegrationTest
     assert_match(/supervisor/, flash[:alert])
   end
 
-  test "ya en aduana no se abre, y se dice por qué" do
+  # PR-C30.14 · Antes: «ya en aduana no se abre, y se dice por qué». Desde la
+  # decisión de Jorge del 2026-10-10 (pendiente de confirmar con Yusef), en
+  # aduana y recibido también se abren; el que no se abre es el interno.
+  test "en aduana también se abre; el interno no, y se dice por qué" do
     @manifiesto.update!(estado: "en_aduana")
     ingresar(@supervisor)
     patch abrir_edicion_manifiesto_url(@manifiesto)
+    assert @manifiesto.reload.edicion_abierta?
 
+    @manifiesto.cerrar_edicion!
+    @manifiesto.update_columns(tipo: "interno")
+    patch abrir_edicion_manifiesto_url(@manifiesto)
     assert_not @manifiesto.reload.edicion_abierta?
-    assert_match(/recibiendo en Honduras/, flash[:alert])
+    assert_match(/solo se reabren los manifiestos oficiales/, flash[:alert])
   end
 
   test "«Cerrar edición» lo bloquea otra vez; el digitador no puede cerrarlo" do
@@ -148,6 +155,20 @@ class ManifiestoFinalizadoSeCorrigeTest < ActionDispatch::IntegrationTest
     assert_equal "recibido_miami", @adentro.estado
     assert_nil @adentro.fecha_enviado
     assert_nil @adentro.caja_manifiesto_id
+  end
+
+  # PR-C30.14 · Uno medido no sale. Con 422: el modal de «Eliminar paquetes»
+  # cuenta como sacado todo lo que vuelve bien, y éste se quedó.
+  test "abierto, uno ya medido no sale: 422 con el porqué, y sigue adentro" do
+    @adentro.update_columns(medicion_sesion: "tanda-medida")
+    @manifiesto.abrir_edicion!(@supervisor)
+    ingresar(@supervisor)
+
+    delete remove_paquete_manifiesto_url(@manifiesto, paquete_id: @adentro.id), headers: TURBO
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, "flash-messages"
+    assert_equal @manifiesto.id, @adentro.reload.manifiesto_id
   end
 
   test "abierto, el supervisor arma y corrige cajas" do

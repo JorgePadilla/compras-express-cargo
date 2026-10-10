@@ -19,16 +19,7 @@ class ManifiestosController < ApplicationController
   end
 
   def show
-    # C21-04: los tamaños pre-definidos con los que se arma una casa.
-    @tamanos = TamanoCaja.activos.ordered
-    @paquetes = @manifiesto.paquetes.includes(:cliente, :sucursal, :sucursal_destino, :caja_manifiesto).order(:created_at)
-    # PR-C29.20 · La tabla de casas pinta, por cada caja, su tamaño y los tipos
-    # de envío que lleva adentro (`CajaManifiesto#tipos_envio_adentro`, que
-    # recorre sus paquetes). Sin precargar eran dos consultas por caja: con 15
-    # cajas la ficha pasaba de 27 consultas a 39.
-    ActiveRecord::Associations::Preloader.new(
-      records: [ @manifiesto ], associations: { cajas: [ :tamano_caja, { paquetes: :tipo_envio } ] }
-    ).call
+    cargar_contenido
   end
 
   def new
@@ -37,7 +28,10 @@ class ManifiestosController < ApplicationController
   end
 
   def create
-    atributos = manifiesto_params
+    # PR-C30.14 · Lo de San Pedro se acepta al editar, no al crear: un
+    # manifiesto que se está armando no salió de Miami, y el formulario de
+    # alta no lo muestra.
+    atributos = manifiesto_params.except(*Manifiesto::CAMPOS_DE_SAN_PEDRO)
     @manifiesto = Manifiesto.new(atributos)
     @manifiesto.sucursal_origen_id = sucursal_origen_para(atributos)
     @manifiesto.user = Current.user
@@ -50,14 +44,26 @@ class ManifiestosController < ApplicationController
     end
   end
 
+  # PR-C30.14 · Editar es el manifiesto **entero**, como la ficha: el
+  # encabezado de Miami, lo que llena San Pedro, y las casas y los paquetes
+  # (`manifiestos/_contenido`, el mismo partial que `show`). Jorge, 2026-10-10:
+  # *"esta pantalla de editar me debería dejar editar todo lo que está en el
+  # manifiesto, pero solo está la parte de Miami"* · *"editar de manifiesto
+  # debería ser muy parecido a /manifiestos/22"*.
   def edit
     assigns_del_formulario
+    cargar_contenido
   end
 
+  # Lo que llena San Pedro también se guarda desde acá (PR-C30.14), con el
+  # mismo candado que el encabezado. `estampar_recibido_hn_por` sella a quien
+  # guarda la fecha: si la corrige un supervisor de Miami desde esta pantalla,
+  # él queda como «recibido por». Se acepta: es quien puso la fecha que está
+  # (la misma regla que en `/guias-y-aduana`).
   def update
     unless @manifiesto.editable_por?(Current.user)
       redirect_to @manifiesto,
-                  alert: "#{@manifiesto.numero} está finalizado: solo el supervisor de Miami puede reabrirlo."
+                  alert: "#{@manifiesto.numero} está finalizado: solo #{Manifiesto::QUIEN_ABRE_EL_CANDADO} puede reabrirlo."
       return
     end
 
@@ -65,6 +71,7 @@ class ManifiestosController < ApplicationController
       redirect_to @manifiesto, notice: "Manifiesto actualizado exitosamente."
     else
       assigns_del_formulario
+      cargar_contenido
       render :edit, status: :unprocessable_entity
     end
   end
@@ -150,7 +157,7 @@ class ManifiestosController < ApplicationController
     servicio = EmpacarSinEscanear.new(@manifiesto, user: Current.user)
 
     unless servicio.aplica?
-      redirect_to @manifiesto, alert: "Este manifiesto no admite empacar sin escanear."
+      redirect_back fallback_location: manifiesto_path(@manifiesto), alert: "Este manifiesto no admite empacar sin escanear."
       return
     end
 
@@ -160,16 +167,18 @@ class ManifiestosController < ApplicationController
       # El estado sale del servicio y no escrito a mano: en el oficial es
       # «recibido en Miami» y en el interno «disponible para entrega», y el
       # aviso tiene que nombrar el que de verdad se buscó (`C23-14`).
-      redirect_to @manifiesto,
-                  alert: "No hay paquetes para agregar. Entran los que están en " \
+      # PR-C30.14 · `redirect_back`: el botón está también en /edit, y volver
+      # a la ficha sacaría al operario de la pantalla donde estaba.
+      redirect_back fallback_location: manifiesto_path(@manifiesto),
+                    alert: "No hay paquetes para agregar. Entran los que están en " \
                          "«#{estado_legible(servicio.estado_buscado)}», del tipo " \
                          "#{@manifiesto.tipos_envio_nuestros}, en " \
                          "#{@manifiesto.sucursal_origen&.nombre || "—"} y todavía sin manifiesto."
       return
     end
 
-    redirect_to @manifiesto,
-                notice: "Entraron #{resultado.agregados} paquete(s) sin escanear."
+    redirect_back fallback_location: manifiesto_path(@manifiesto),
+                  notice: "Entraron #{resultado.agregados} paquete(s) sin escanear."
   end
 
   # El rótulo del estado tal como lo ve el operario, del **mismo mapa** que pinta
@@ -187,6 +196,11 @@ class ManifiestosController < ApplicationController
     # `Manifiesto#sacar!`, que usan también el escaneo para quitar.
     @manifiesto.sacar!(paquete)
     respond_to_paquete_change("Paquete #{paquete.guia} removido del manifiesto.")
+  rescue Manifiesto::NoSeSaca => e
+    # PR-C30.14 · Tiene pre-factura o medición: no sale, y se dice por qué. Con
+    # 422 y no 200: el modal de «Eliminar paquetes» cuenta como sacado todo lo
+    # que vuelve bien, y éste no salió.
+    respond_to_paquete_change(e.message, tipo: :alert, status: :unprocessable_entity)
   end
 
   # C30-06 · «Eliminar paquetes», escaneando. Yusef: *"deseo eliminar paquetes,
@@ -205,6 +219,7 @@ class ManifiestosController < ApplicationController
     mensaje =
       case resultado.tipo
       when :ok then "#{codigo_de(paquete)} · #{paquete.tracking} sale del manifiesto."
+      when :no_se_saca then @manifiesto.motivo_para_no_sacar(paquete)
       when :varios then "«#{codigo}» trae #{resultado.candidatos.size} cajas de este manifiesto: escaneá la etiqueta de la caja que no se fue."
       when :no_esta_aca
         donde = paquete.manifiesto ? "está en el manifiesto #{paquete.manifiesto.numero}" : "no está en ningún manifiesto"
@@ -219,21 +234,27 @@ class ManifiestosController < ApplicationController
 
   # C30-06 · «Editar» sobre un manifiesto finalizado: abre lo de adentro.
   # *"Que presionen el botón, para que nadie toque algo que no era."*
+  #
+  # PR-C30.14 · El cartel con este botón está en la ficha **y** en /edit, así
+  # que se vuelve a la pantalla de donde se apretó (`redirect_back`), no
+  # siempre a la ficha.
   def abrir_edicion
     @manifiesto.abrir_edicion!(Current.user)
-    redirect_to @manifiesto, notice: "#{@manifiesto.numero} quedó abierto para corregir. Cuando termines, «Cerrar edición»."
+    redirect_back fallback_location: manifiesto_path(@manifiesto),
+                  notice: "#{@manifiesto.numero} quedó abierto para corregir. Cuando termines, «Cerrar edición»."
   rescue Manifiesto::NoSePuedeReabrir => e
-    redirect_to @manifiesto, alert: e.message
+    redirect_back fallback_location: manifiesto_path(@manifiesto), alert: e.message
   end
 
   # Y se vuelve a bloquear. Lo cierra quien lo puede abrir.
   def cerrar_edicion
     unless @manifiesto.editable_por?(Current.user)
-      return redirect_to @manifiesto, alert: "Solo un supervisor de Miami puede cerrar la edición."
+      return redirect_back fallback_location: manifiesto_path(@manifiesto),
+                           alert: "Solo #{Manifiesto::QUIEN_ABRE_EL_CANDADO} puede cerrar la edición."
     end
 
     @manifiesto.cerrar_edicion!
-    redirect_to @manifiesto, notice: "#{@manifiesto.numero} quedó bloqueado otra vez."
+    redirect_back fallback_location: manifiesto_path(@manifiesto), notice: "#{@manifiesto.numero} quedó bloqueado otra vez."
   end
 
   # C21-06 · «Solo Finalizar» y «Finalizar e Imprimir». Los paquetes de los
@@ -399,17 +420,30 @@ class ManifiestosController < ApplicationController
     @manifiesto = Manifiesto.find(params[:id])
   end
 
-  def respond_to_paquete_change(message, tipo: :notice)
+  # Lo que pintan las casas y la tabla de paquetes (`manifiestos/_contenido`).
+  # Una sola carga para la ficha, /edit y el turbo_stream de cada cambio
+  # (PR-C30.14): eran dos copias de la misma precarga.
+  private def cargar_contenido
+    # C21-04: los tamaños pre-definidos con los que se arma una casa.
+    @tamanos = TamanoCaja.activos.ordered
     @paquetes = @manifiesto.paquetes.includes(:cliente, :sucursal, :sucursal_destino, :caja_manifiesto).order(:created_at)
-    @manifiesto.reload
-    # C30-07 · La tabla de casas dice qué lleva cada una: si un paquete entra o
-    # sale, esa columna también cambia. Misma precarga que `show`.
+    # PR-C29.20 · La tabla de casas pinta, por cada caja, su tamaño y los tipos
+    # de envío que lleva adentro (`CajaManifiesto#tipos_envio_adentro`, que
+    # recorre sus paquetes). Sin precargar eran dos consultas por caja: con 15
+    # cajas la ficha pasaba de 27 consultas a 39.
     ActiveRecord::Associations::Preloader.new(
       records: [ @manifiesto ], associations: { cajas: [ :tamano_caja, { paquetes: :tipo_envio } ] }
     ).call
+  end
+
+  def respond_to_paquete_change(message, tipo: :notice, status: :ok)
+    # C30-07 · La tabla de casas dice qué lleva cada una: si un paquete entra o
+    # sale, esa columna también cambia. Misma carga que `show`.
+    @manifiesto.reload
+    cargar_contenido
     respond_to do |format|
       format.turbo_stream do
-        render turbo_stream: [
+        render status: status, turbo_stream: [
           turbo_stream.update("manifiesto-paquetes", partial: "manifiestos/paquetes_table", locals: { manifiesto: @manifiesto, paquetes: @paquetes }),
           turbo_stream.update("manifiesto-cajas-tabla", partial: "manifiestos/cajas_tabla",
                                                         locals: { manifiesto: @manifiesto,
@@ -428,7 +462,8 @@ class ManifiestosController < ApplicationController
           turbo_stream.prepend("flash-messages", partial: "shared/flash", locals: { tipo => message })
         ]
       end
-      format.html { redirect_to @manifiesto, tipo => message }
+      # PR-C30.14 · De vuelta a donde estaba: la tabla vive también en /edit.
+      format.html { redirect_back fallback_location: manifiesto_path(@manifiesto), tipo => message }
     end
   end
 
@@ -451,7 +486,11 @@ class ManifiestosController < ApplicationController
       # en uno guardado va como hidden, porque el número ya salió y la carga ya
       # se movió con las reglas de su tipo.
       :tipo,
-      tipo_envio_ids: []
+      # PR-C30.14 · Lo de San Pedro, que /edit también muestra. Son los
+      # mismos dos de `/guias-y-aduana` (`Manifiesto::CAMPOS_DE_SAN_PEDRO`).
+      :fecha_aduana,
+      tipo_envio_ids: [],
+      guias_attributes: %i[id numero position _destroy]
     )
   end
 

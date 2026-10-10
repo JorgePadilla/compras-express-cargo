@@ -4,7 +4,7 @@
     ingresar, que es lo que hace falta"*—, pero las medidas quedan editables,
     porque a veces cortan la caja: *"le decimos «EH cortada»"*. %>
 <div class="bg-white rounded-lg shadow mb-6" data-controller="caja-manifiesto">
-  <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+  <div class="px-6 py-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
     <div class="flex items-baseline gap-3">
       <span class="shrink-0 w-7 h-7 rounded-full bg-cec-navy/10 text-cec-navy dark:bg-cec-gold/20 dark:text-cec-gold
                    flex items-center justify-center text-sm font-bold">1</span>
@@ -26,8 +26,11 @@
         va en dos lugares —el rótulo y el confirm— y tienen que ser el mismo. %>
     <% sin_escanear = EmpacarSinEscanear.new(manifiesto) %>
     <% candidatos = sin_escanear.aplica? ? sin_escanear.candidatos.count : 0 %>
-    <div class="flex items-center gap-3">
-      <span class="text-sm text-gray-500"><%= manifiesto.cajas.size %> bulto(s)</span>
+    <%# PR-C30.14 · `whitespace-nowrap`: con la tarjeta angosta «1 bulto(s)»
+        se partía en dos renglones y los botones partían su texto. Que bajen
+        enteros (`flex-wrap`), no por la mitad. %>
+    <div class="flex flex-wrap items-center justify-end gap-3">
+      <span class="text-sm text-gray-500 whitespace-nowrap"><%= manifiesto.cajas.size %> bulto(s)</span>
 
       <%# **Va afuera del `cajas.any?`, y ése es el punto entero.** El camino
           sin escaneo es el que Yusef se quedó *"porque a veces no da tiempo"*,
@@ -36,7 +39,7 @@
       <% if sin_escanear.aplica? %>
         <%= render ButtonComponent.new(variant: :outline_navy, icon: "bolt",
               href: empacar_sin_escanear_manifiesto_path(manifiesto), method: :post,
-              disabled: candidatos.zero?,
+              disabled: candidatos.zero?, class: "whitespace-nowrap",
               confirm: "Entran #{candidatos} paquete(s) al manifiesto #{manifiesto.numero} " \
                        "sin escanearlos: los de #{manifiesto.tipos_envio_nuestros} que están en " \
                        "#{manifiesto.sucursal_origen&.nombre}. ¿Seguro?") do %>
@@ -55,7 +58,7 @@
             encabezado. %>
         <%= render ButtonComponent.new(variant: :outline_navy, icon: "printer",
               href: etiquetas_manifiesto_cajas_path(manifiesto, print: true),
-              target: "_blank") do %>Imprimir las 4×6<% end %>
+              target: "_blank", class: "whitespace-nowrap") do %>Imprimir las 4×6<% end %>
         <%# C21-01 · La puerta a la pantalla de empacar, que **no tenía ninguna**.
             Existe desde que se armó el módulo, funciona y tiene tests, y hasta
             está en la tabla de pantallas de `docs/07` — pero no se llegaba a
@@ -74,7 +77,7 @@
         <%# C23-10 · Se llamaba «Empacar» a secas. Ahora que al lado hay otro
             que también empaca, el nombre tiene que decir cuál es cuál. %>
         <%= render ButtonComponent.new(variant: :primary, icon: "qr-code",
-              href: manifiesto_empacar_path(manifiesto)) do %>Empacar escaneando<% end %>
+              href: manifiesto_empacar_path(manifiesto), class: "whitespace-nowrap") do %>Empacar escaneando<% end %>
       <% end %>
     </div>
   </div>

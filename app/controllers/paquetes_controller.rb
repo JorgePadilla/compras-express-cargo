@@ -930,7 +930,9 @@ class PaquetesController < ApplicationController
       end
       true
     end || false
-  rescue Manifiesto::NoEntra, ActiveRecord::RecordInvalid => e
+  # PR-C30.14 · `NoSeSaca`: sacarlo del viejo cuando ya tiene pre-factura o
+  # medición en San Pedro. Se dice igual que el que no entra al nuevo.
+  rescue Manifiesto::NoEntra, Manifiesto::NoSeSaca, ActiveRecord::RecordInvalid => e
     @error_de_reasignacion = e.message
     false
   end

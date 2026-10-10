@@ -55,8 +55,12 @@ module PermisosDelSistema
     # Van los **jefes** de Honduras, no todo el grupo que recibe carga: el
     # cajero que escanea las cajas no tiene por qué entrar a la pantalla del
     # manifiesto — hay un test viejo que lo afirma y sigue teniendo razón.
+    # C30-06 · Y el supervisor de Pre-Factura, que es «Pedro» en *"cuando ya
+    # está bloqueado son los supervisores, Pedro y Miami"* (Jorge, 2026-10-10):
+    # entra para corregir uno recibido. Uno cerrado lo toca solo con el candado
+    # abierto (`Manifiesto#modificable_por?`).
     when :manifiestos
-      role.in?(Manifiesto::ROLES_DE_MIAMI)
+      role.in?(Manifiesto::ROLES_DE_MIAMI) || role == "supervisor_prefactura"
     # C21-02 · La pantalla de San Pedro. `PR-M10` había metido a los jefes de
     # Honduras dentro de `:manifiestos` para que pudieran llenar la guía y la
     # fecha; con pantalla propia, `:manifiestos` vuelve a ser de Miami y cada

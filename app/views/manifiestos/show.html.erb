@@ -1,20 +1,17 @@
 <div id="flash-messages"></div>
 
-<%# «Sonidos», debajo del sol, en la esquina de arriba a la derecha (ver
-    `layouts/application`). Jorge, 2026-10-09: *"el botón de sonido va mejor
-    debajo del sol"*. %>
-<% content_for :esquina, render("shared/sonido_config") %>
-<%# C30-06 · Lo de adentro se toca solo si el manifiesto está abierto, o si un
-    supervisor lo reabrió con «Editar». Se pregunta una vez y lo usan las
-    secciones de abajo. %>
-<% puede_cambiar = @manifiesto.modificable_por?(Current.user) %>
 <%= render PageHeaderComponent.new(title: @manifiesto.numero, subtitle: "Manifiesto") do |header|
   # C30-06 · Con el manifiesto finalizado y todavía reabrible, este botón se
   # esconde: la puerta es el «Editar» del cartel de bloqueado, que abre todo
   # y no solo el encabezado. Dos «Editar» en la misma pantalla haciendo cosas
-  # distintas es lo que no tiene que pasar. Ya en Honduras (`en_aduana`,
-  # `recibido`) no se puede reabrir, y queda este, el de C21-06, para
-  # corregir el encabezado.
+  # distintas es lo que no tiene que pasar.
+  #
+  # PR-C30.14 · Este lleva a /edit, que ahora es el manifiesto **entero**
+  # (encabezado, San Pedro, casas y paquetes). Con la edición abierta, o con
+  # el manifiesto todavía armándose, sale; cerrado y reabrible, no. Desde que
+  # los recibidos también se reabren, «cerrado y no reabrible» es solo el
+  # interno ya finalizado, y para él queda este, el de C21-06, para corregir
+  # el encabezado.
   unless @manifiesto.bloqueado? && @manifiesto.reabrible? && !@manifiesto.edicion_abierta?
     header.with_action do
       render ButtonComponent.new(variant: :outline_navy, href: edit_manifiesto_path(@manifiesto), icon: "pencil-square", shortcut: "F6") do
@@ -137,113 +134,9 @@ end %>
   <%= render "manifiestos/acciones", manifiesto: @manifiesto, paquetes: @paquetes %>
 </div>
 
-<% if puede_cambiar %>
-  <%# Paso 1 · Las casas. Va antes de agregar paquetes porque en el camino con
-      pre-etiqueta **es** cómo entran: se arma la caja, se imprime su 4×6 y se
-      escanea cada paquete al meterlo. Estaba metida adentro de la misma tarjeta
-      que «Agregar paquetes», y por eso las dos se leían como una sola cosa. %>
-  <%= render "manifiestos/cajas", manifiesto: @manifiesto %>
-
-  <%# Paso 2 · Agregar paquetes sueltos — el camino sin pre-etiqueta. %>
-  <%# C28-04 · La pistola ahora pregunta antes (`manifiestos#escanear`) y cada
-      respuesta suena distinta. Es pantalla de escaneo: el operario mira la
-      pistola, no la pantalla, así que nada sale mudo. %>
-  <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden mb-6"
-       data-controller="manifiesto-search audio"
-       <%= tag.attributes(atributos_de_audio) %>
-       data-manifiesto-search-url-value="<%= search_paquetes_path %>"
-       data-manifiesto-search-escanear-url-value="<%= escanear_manifiesto_path(@manifiesto) %>"
-       data-manifiesto-search-agregar-url-value="<%= add_paquete_manifiesto_path(@manifiesto) %>"
-       data-manifiesto-search-mover-url-value="<%= mover_paquete_manifiesto_path(@manifiesto) %>"
-       data-action="manifiesto-search:ok->audio#success
-                    manifiesto-search:enEste->audio#notify
-                    manifiesto-search:varios->audio#notify
-                    manifiesto-search:enOtro->audio#alert
-                    manifiesto-search:cerrado->audio#error
-                    manifiesto-search:tipoDistinto->audio#errorTipo
-                    manifiesto-search:sucursalDistinta->audio#errorSucursal
-                    manifiesto-search:fuera->audio#error
-                    manifiesto-search:noEncontrado->audio#error">
-    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-      <div class="flex items-baseline gap-3">
-        <span class="shrink-0 w-7 h-7 rounded-full bg-cec-navy/10 text-cec-navy dark:bg-cec-gold/20 dark:text-cec-gold
-                     flex items-center justify-center text-sm font-bold">2</span>
-        <div>
-          <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Agregar paquetes</h2>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Escaneá y entra solo. Es el camino sin pre-etiqueta: los paquetes van sueltos, sin casa.
-          </p>
-        </div>
-      </div>
-    </div>
-    <div class="p-6">
-      <%# La pistola dispara Enter al terminar de leer, así que Enter **agrega**
-          en vez de solo buscar: el operario escanea uno atrás de otro sin soltar
-          la pistola ni tocar el mouse. Jorge: *"la parte de agregar paquetes
-          tiene que ser rápida, escanear"*. %>
-      <%= label_tag :buscar_paquete, "Escaneá el paquete", class: "block text-base font-medium text-gray-700 dark:text-gray-200 mb-1" %>
-      <input type="text" id="buscar_paquete"
-             placeholder="Escanear la etiqueta, o buscar por tracking o número de recepción…"
-             autocomplete="off"
-             data-manifiesto-search-target="input"
-             data-action="input->manifiesto-search#search keydown->manifiesto-search#teclado"
-             class="block w-full min-h-11 py-4 text-xl rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 shadow-sm font-mono focus:ring-cec-teal focus:border-cec-teal">
-      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-        Enter lo agrega directo. Si lo que escribiste devuelve varios, salen abajo para elegir.
-      </p>
-      <div data-manifiesto-search-target="aviso" class="hidden mt-3 rounded-lg p-3 text-sm"></div>
-      <div data-manifiesto-search-target="results" class="mt-3 hidden"></div>
-    </div>
-
-    <%# C28-04 · Lo que no entró es un modal, como en /empacar (`C25-09`):
-        *"la compu está allá y ellos están acá"*. Enter aprieta el botón que
-        importa, Escape no contesta (`C20-13`), y el foco vuelve a la pistola
-        al cerrar. «Moverlo a este manifiesto» sale **solo** cuando el otro
-        sigue abierto: *"¿desea agregar este a este manifiesto y retirarlo
-        del otro?"*. El «ya está en este» no llega acá: es un aviso chico,
-        *"es error de dedo"*. %>
-    <dialog data-manifiesto-search-target="avisoModal"
-            data-action="cancel->manifiesto-search#avisoCancelar"
-            style="margin: auto"
-            class="rounded-xl p-0 w-[32rem] max-w-[95vw] backdrop:bg-black/60">
-      <%# PR-C29.12 · Bloqueo: el paquete no entró. Era rojo claro. %>
-      <%= render ModalHeaderComponent.new(tono: :bloqueo, centrado: true, kicker: "No entró al manifiesto",
-            titulo_data: { manifiesto_search_target: "avisoTitulo" }) %>
-      <div class="bg-white px-6 py-5">
-        <p class="text-base text-gray-800" data-manifiesto-search-target="avisoTexto"></p>
-      </div>
-      <div class="flex items-center justify-end gap-3 px-6 py-3 bg-gray-50 border-t border-gray-200">
-        <%= render(ButtonComponent.new(variant: :secondary, size: :md, label: "Entendido",
-              data: { manifiesto_search_target: "avisoEntendido", action: "manifiesto-search#avisoEntendido" })) { "Entendido" } %>
-        <%= render(ButtonComponent.new(variant: :primary, size: :md,
-              label: "Agregarlo a este manifiesto y retirarlo del otro",
-              data: { manifiesto_search_target: "avisoMover", action: "manifiesto-search#mover" },
-              hidden: true)) { "Moverlo a este manifiesto" } %>
-      </div>
-    </dialog>
-  </div>
-
-  <%= render "manifiestos/quitar_escaneando", manifiesto: @manifiesto %>
-<% elsif @manifiesto.cajas.any? %>
-  <%# C30-06 / C30-07 · Bloqueado: las casas se ven y se re-imprimen. %>
-  <%= render "manifiestos/cajas_vista", manifiesto: @manifiesto %>
-<% end %>
-
-<%# Packages table.
-
-    C23-10 · **Esto era una copia del partial, palabra por palabra.** El
-    `show` tenía su tabla inline y `_paquetes_table` existía solo para el
-    turbo_stream de `add_paquete` / `remove_paquete`, así que las dos tenían
-    que mantenerse a mano — y no se mantuvieron: la columna «Caja» de `C23-10`
-    entró al partial y la primera carga de la pantalla seguía mostrando la
-    tabla vieja. Se veía aparecer la columna recién después de agregar un
-    paquete, y desaparecer al recargar.
-
-    Es la duplicación de siempre de este repo, esta vez entre una pantalla y su
-    propio partial. Ahora hay una sola tabla. %>
-<%= turbo_frame_tag "manifiesto-paquetes" do %>
-  <%= render "manifiestos/paquetes_table", manifiesto: @manifiesto, paquetes: @paquetes %>
-<% end %>
+<%# PR-C30.14 · Casas, agregar paquetes, sacarlos y la tabla: lo mismo que
+    pinta /edit, del mismo partial. %>
+<%= render "manifiestos/contenido", manifiesto: @manifiesto, paquetes: @paquetes %>
 
 <%# Los cierres, otra vez — acá es donde uno **termina**. Con la tabla llena, el
     bloque de arriba queda a una pantalla de distancia. %>

@@ -100,6 +100,18 @@ class Manifiesto < ApplicationRecord
   before_save :estampar_recibido_hn_por, if: :will_save_change_to_fecha_aduana?
   validate :fecha_aduana_no_es_futura, if: :will_save_change_to_fecha_aduana?
 
+  # PR-C30.14 · El formulario manda **un día** (`2026-10-10`) y la columna
+  # guarda **un momento**: la recepción la sella con la hora
+  # (`RecibirManifiesto#finalizar!`). Sin esto, guardar /edit sin tocar la
+  # fecha la «cambiaba» de las 14:33 a las 00:00, y `estampar_recibido_hn_por`
+  # le ponía como «recibido por» las iniciales de quien guardó el encabezado
+  # en Miami. El mismo día que ya está no es un cambio.
+  def fecha_aduana=(valor)
+    return if valor.is_a?(String) && fecha_aduana && valor.strip == fecha_aduana.to_date.iso8601
+
+    super
+  end
+
   scope :activos, -> { where(activo: true) }
   # C21-11: las guías se mudaron a su propia tabla. Sin el `left_joins` la
   # búsqueda dejaría de encontrar manifiestos por guía **en silencio**, que es
@@ -179,9 +191,19 @@ class Manifiesto < ApplicationRecord
   #
   #   > **2026-08-30: "por hoy solo será supervisor Miami."**
   #
-  # Así que la lista es de uno: el digitador arma manifiestos, pero **no puede
+  # Así que la lista era de uno: el digitador arma manifiestos, pero **no puede
   # reabrir uno cerrado**.
-  ROLES_QUE_ABREN_EL_CANDADO = %w[admin supervisor_miami].freeze
+  #
+  # C30-06 · El 2026-10-09 Yusef lo amplió (audio a1_1119, min 48): *"¿quién
+  # puede editar?… supervisores me imagino — exacto, correcto, cuando ya está
+  # bloqueado son los supervisores, **Pedro y Miami**"*. No hay un rol «supervisor
+  # de San Pedro»: Jorge eligió el 2026-10-10 al de **Pre-Factura**, que es el
+  # que trabaja la carga que llega. El digitador y el cajero siguen sin abrirlo.
+  ROLES_QUE_ABREN_EL_CANDADO = %w[admin supervisor_miami supervisor_prefactura].freeze
+
+  # Cómo se nombra en los avisos a quien puede abrirlo. Uno solo, para que los
+  # mensajes no se queden diciendo «de Miami» cuando la lista cambie.
+  QUIEN_ABRE_EL_CANDADO = "un supervisor (Miami o Pre-Factura)".freeze
 
   def bloqueado?
     !creado?
@@ -218,19 +240,35 @@ class Manifiesto < ApplicationRecord
   # y quién lo abrió. paper_trail se queda con quién lo abrió y quién lo cerró.
   belongs_to :edicion_abierta_por, class_name: "User", optional: true
 
-  # Solo mientras la carga va en camino. Desde `en_aduana` Honduras ya la está
-  # escaneando (`RecibirManifiesto`) y de esos paquetes cuelgan recepción,
-  # medición y pre-factura: sacar o meter uno ahí cambia lo que San Pedro ya
-  # contó. Y solo el **oficial**: es el contenedor de Miami del que habló
+  # Cualquier **oficial** ya finalizado: enviado, en aduana o recibido.
+  #
+  # PR-C30.14 · Hasta acá era solo `enviado?`, y ese límite **lo pusimos
+  # nosotros** en C30-06, no Yusef: desde `en_aduana` Honduras ya escanea, y
+  # de esos paquetes cuelgan recepción, medición y pre-factura. Jorge, el
+  # 2026-10-10, mirando el 21 —recibido— en staging: *"esta pantalla de editar
+  # me debería dejar editar todo lo que está en el manifiesto"*.
+  #
+  # **Confirmado**: Jorge, el 2026-10-10 — *"I already asked this, answer is
+  # yes, allow both but only admin and supervisors"*. Es lo que Yusef dijo en el
+  # audio del 9 (a1_1119, min 48): *"cuando ya está bloqueado son los
+  # supervisores"*. Quiénes, en `ROLES_QUE_ABREN_EL_CANDADO`.
+  #
+  # Lo que San Pedro ya contó se cuida **paquete por paquete** y no cerrando
+  # el manifiesto entero: `sacar!` deja donde está al que ya llegó y no saca al
+  # que tiene pre-factura o medición (`NoSeSaca`), y `meter!` manda a aduana
+  # al que entra a uno ya recibido.
+  #
+  # Y sigue siendo solo el **oficial**: es el contenedor de Miami del que habló
   # Yusef; el interno pone otros estados (`enviado_sucursal`, el destino del
   # camión) que esto no sabe deshacer.
   def reabrible?
-    enviado? && tipo_oficial?
+    bloqueado? && tipo_oficial?
   end
 
-  # Derivado a propósito: si Honduras empieza a recibir con la edición abierta,
-  # `RecibirManifiesto` lo pasa a `en_aduana` y esto deja de ser verdad solo,
-  # sin que ese servicio tenga que acordarse de cerrarla.
+  # Derivado de `reabrible?` a propósito. Hasta PR-C30.14 eso hacía que se
+  # cerrara sola cuando Honduras empezaba a recibir (`en_aduana`); ahora que
+  # los recibidos también se reabren, **se queda abierta hasta «Cerrar
+  # edición»**, que es el botón que Yusef pidió apretar.
   def edicion_abierta?
     edicion_abierta_at.present? && reabrible?
   end
@@ -249,20 +287,22 @@ class Manifiesto < ApplicationRecord
   # mismo texto se separan.
   def motivo_del_candado
     if !reabrible?
-      "#{numero} ya no se puede cambiar: está #{estado.humanize.downcase}."
+      # PR-C30.14 · Desde que los recibidos se reabren, acá solo llega el
+      # interno ya finalizado.
+      "#{numero} ya no se puede cambiar: es un manifiesto interno y está #{estado.humanize.downcase}."
     elsif edicion_abierta?
-      "#{numero} está abierto para corregir, pero solo un supervisor de Miami puede cambiarlo."
+      "#{numero} está abierto para corregir, pero solo #{QUIEN_ABRE_EL_CANDADO} puede cambiarlo."
     else
-      "#{numero} está finalizado y bloqueado: para corregirlo, un supervisor de Miami aprieta «Editar»."
+      "#{numero} está finalizado y bloqueado: para corregirlo, #{QUIEN_ABRE_EL_CANDADO} aprieta «Editar»."
     end
   end
 
   class NoSePuedeReabrir < StandardError; end
 
   def abrir_edicion!(user)
-    raise NoSePuedeReabrir, "Solo el supervisor de Miami puede abrir un manifiesto finalizado." unless editable_por?(user)
+    raise NoSePuedeReabrir, "Solo #{QUIEN_ABRE_EL_CANDADO} puede abrir un manifiesto finalizado." unless editable_por?(user)
     unless reabrible?
-      raise NoSePuedeReabrir, "#{numero} ya se está recibiendo en Honduras (#{estado.humanize.downcase}): no se puede abrir."
+      raise NoSePuedeReabrir, "#{numero} no se puede abrir: solo se reabren los manifiestos oficiales ya finalizados."
     end
 
     update!(edicion_abierta_at: Time.current, edicion_abierta_por: user)
@@ -280,6 +320,8 @@ class Manifiesto < ApplicationRecord
     EmpacarSinEscanear.new(self).estado_buscado
   end
 
+  class NoSeSaca < StandardError; end
+
   # Sacar un paquete: lo que hacía `remove_paquete`, más lo que le faltaba.
   #
   # - Suelta la caja. `mover_paquete` ya lo hacía y `remove_paquete` no: el
@@ -288,8 +330,65 @@ class Manifiesto < ApplicationRecord
   #   paquete ya estaba en `enviado_honduras`: vuelve con el mismo retroceso que
   #   usa /paquetes (`apply_retroceso_cleanup!`), que limpia la fecha y el
   #   usuario de enviado. Si no viajó, no puede decir que salió.
+  #
+  # PR-C30.14 · Con los recibidos reabribles (decisión de Jorge, 2026-10-10)
+  # hay dos casos más, y los dos cuidan lo que San Pedro ya hizo:
+  #
+  # - **El que ya llegó** (`llego_a_honduras?`) no vuelve a Miami: se queda en
+  #   su estado —está en la aduana, físicamente— y solo pierde el manifiesto y
+  #   la caja, con sus fechas de viaje (`conservar_fechas_de_viaje`). Sin
+  #   retroceso.
+  # - **El que ya tiene pre-factura o medición no sale** (`NoSeSaca`), y no se
+  #   deshace nada en cascada: que lo suelte primero quien lo tomó.
   def sacar!(paquete)
-    soltar!(paquete, estado: estado_antes_de_salir)
+    motivo = motivo_para_no_sacar(paquete)
+    raise NoSeSaca, motivo if motivo
+
+    if llego_a_honduras?(paquete)
+      paquete.conservar_fechas_de_viaje = true
+      soltar!(paquete, estado: paquete.estado)
+    else
+      # El cierre «con faltantes» ya le escribió dónde aterrizó
+      # (`mover_a_aduana`), y el retroceso no toca esa columna: volvería a
+      # Miami diciendo que está en San Pedro. En Miami la carga del oficial
+      # no la lleva (`C23-14`), así que vuelve vacía.
+      paquete.sucursal_actual = nil if tipo_oficial? && (en_aduana? || recibido?)
+      soltar!(paquete, estado: estado_antes_de_salir)
+    end
+  end
+
+  # Por qué este paquete no puede salir del manifiesto, o nil. Público porque
+  # la pistola de «Eliminar paquetes» lo dice **antes** de intentar
+  # (`EscaneoDeManifiesto#para_quitar`), y una regla dicha en dos lugares se
+  # separa.
+  def motivo_para_no_sacar(paquete)
+    codigo = paquete.numero_recepcion_visible.presence || paquete.tracking
+    if (pre_factura = pre_factura_vigente_de(paquete))
+      "#{codigo} no sale del manifiesto: ya está en la pre-factura #{pre_factura.numero}. Anulala primero."
+    elsif paquete.medicion_sesion.present?
+      "#{codigo} no sale del manifiesto: ya se midió en San Pedro. Sacalo de su medición primero."
+    end
+  end
+
+  # ¿Llegó a Honduras? Solo se pregunta en un manifiesto que Honduras ya está
+  # recibiendo (`en_aduana`) o recibió; de uno abierto o en camino no llegó
+  # nada.
+  #
+  # Con caja manda **la caja**: llegó si se escaneó al recibir (`recibida_at`).
+  # Ojo, a propósito: la caja que no apareció y se cerró «con faltantes» ya
+  # movió a sus paquetes a `en_aduana` (`RecibirManifiesto#finalizar!`), y aun
+  # así acá cuenta como que **no** llegó y vuelve a Miami. Es lo que pidió
+  # Jorge: lo que dice si llegó es la pistola, no el barrido del cierre.
+  #
+  # Sin caja (el camino sin escaneo) no hay qué escanear, y manda el estado:
+  # llegó si ya pasó de `enviado_honduras`. Un estado fuera del recorrido
+  # (retenido, consolidando) cuenta como llegado: quedarse donde está es la
+  # opción que no deshace nada.
+  def llego_a_honduras?(paquete)
+    return false unless tipo_oficial? && (en_aduana? || recibido?)
+    return paquete.caja_manifiesto.recibida_at.present? if paquete.caja_manifiesto
+
+    !paquete.estado.in?(Paquete::ESTADOS_ORDEN.take(Paquete::ESTADOS_ORDEN.index("en_aduana")))
   end
 
   # Salir del manifiesto **a un estado que decide otro**. Es la parte común de
@@ -319,15 +418,27 @@ class Manifiesto < ApplicationRecord
   # misma guarda de tareas: si tiene una pendiente no entra, igual que no
   # habría dejado finalizar.
   #
+  # PR-C30.14 · Y en uno que Honduras ya recibió llega **como los demás**: a
+  # `en_aduana`, en la sucursal de entrega, por el mismo
+  # `RecibirManifiesto#mover_a_aduana` que usa la recepción (una sola manera
+  # de aterrizar). Lo mismo si entra a una caja que ya se escaneó al recibir.
+  # En uno que se está recibiendo (`en_aduana`) se queda en `enviado_honduras`:
+  # llega cuando escaneen su caja, o con el cierre de la recepción si va suelto.
+  #
   # `cambios` es lo que cada puerta escribe además del manifiesto (el empaque
   # pone su caja). Va todo en una transacción: un paquete trabado no queda
   # adentro a medias.
   def meter!(paquete, user:, **cambios)
     transaction do
       paquete.update!(manifiesto: self, **cambios)
-      if enviado?
+      if bloqueado?
         problema = FinalizarManifiesto.new(self, user: user).enviar(paquete)
         raise NoEntra, "#{paquete.numero_recepcion_visible} no entró: #{problema}." if problema
+
+        if aterriza_al_entrar?(paquete) && !RecibirManifiesto.new(self, user: user).mover_a_aduana(paquete)
+          raise NoEntra, "#{paquete.numero_recepcion_visible} no entró: " \
+                         "#{paquete.errors.full_messages.to_sentence.presence || "no pasó a aduana"}."
+        end
       end
       recalculate_totals!
     end
@@ -462,6 +573,27 @@ class Manifiesto < ApplicationRecord
   end
 
   private
+
+  # ¿El que entra ya está en Honduras? Si la recepción se cerró, o si su caja
+  # ya pasó por la pistola de recibir. Solo el oficial: el interno aterriza en
+  # `disponible_entrega`, por su propia recepción.
+  def aterriza_al_entrar?(paquete)
+    return false unless tipo_oficial?
+
+    recibido? || paquete.caja_manifiesto&.recibida_at.present?
+  end
+
+  # La pre-factura que tiene tomado al paquete, si no está anulada. Se mira
+  # también por las líneas y no solo por `pre_factura_id`: una línea puede
+  # seguir viva apuntando al paquete aunque la FK diga otra cosa.
+  def pre_factura_vigente_de(paquete)
+    directa = paquete.pre_factura
+    return directa if directa && !directa.anulado?
+
+    PreFactura.where.not(estado: "anulado")
+              .where(id: PreFacturaItem.where(paquete_id: paquete.id).select(:pre_factura_id))
+              .first
+  end
 
   def no_deja_afuera_lo_que_tiene_adentro
     adentro = paquetes.includes(:tipo_envio, :sucursal).to_a

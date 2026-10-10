@@ -38,7 +38,9 @@ module CandadoDelManifiesto
         flash[:alert] = mensaje
         render turbo_stream: turbo_stream.refresh(request_id: nil), status: :forbidden
       end
-      format.html { redirect_to manifiesto_path(@manifiesto), alert: mensaje }
+      # PR-C30.14 · A la pantalla de donde vino —la ficha o /edit, que tienen
+      # las mismas secciones—, con la ficha si no se sabe.
+      format.html { redirect_back fallback_location: manifiesto_path(@manifiesto), alert: mensaje }
     end
   end
 

@@ -76,10 +76,18 @@ class ManifiestoCandadoTest < ActionDispatch::IntegrationTest
   # y esta pantalla volvió a ser de Miami.
   #
   # Lo que pueden hacer se prueba en `guias_aduana_test.rb`.
-  test "la supervisora de San Pedro ya no entra al manifiesto" do
+  #
+  # C30-06 · Vuelve a entrar la de **Pre-Factura**, y por otra razón: *"cuando
+  # ya está bloqueado son los supervisores, Pedro y Miami"* (Yusef, a1_1119, min
+  # 48; Jorge eligió el rol el 2026-10-10). El agujero de antes no vuelve: lo que
+  # guarda, se guarda — no hay campos que el controller le descarte callado.
+  test "la supervisora de Pre-Factura entra al manifiesto y lo que cambia se guarda" do
     ingresar(users(:supervisor_prefactura))
     get manifiesto_url(@manifiesto)
-    assert_redirected_to root_path
+    assert_response :success
+
+    patch manifiesto_url(@manifiesto), params: { manifiesto: { consignatario_id: @consignatario.id } }
+    assert_equal @consignatario.id, @manifiesto.reload.consignatario_id
   end
 
   test "el cajero sigue afuera" do

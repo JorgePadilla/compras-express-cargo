@@ -14,6 +14,8 @@ import { Controller } from "@hotwired/stimulus"
 //   ok            → sale, aviso verde, el contador sube
 //   varios        → aviso: escaneá la etiqueta de la caja, no el tracking
 //   no_esta_aca   → aviso rojo: está en otro manifiesto, o en ninguno
+//   no_se_saca    → aviso rojo: está acá, pero tiene pre-factura o medición
+//                   (PR-C30.14); se dice antes de intentar el DELETE
 //   no_encontrado → aviso rojo
 //   bloqueado     → aviso rojo: el candado se cerró mientras tanto
 //
@@ -76,6 +78,10 @@ export default class extends Controller {
         this.dispatch("noEstaAca")
         this._avisar("error", data.mensaje)
         return
+      case "no_se_saca":
+        this.dispatch("noSeSaca")
+        this._avisar("error", data.mensaje)
+        return
       default:
         this.dispatch("noEncontrado")
         this._avisar("error", data.mensaje || "No se encontró.")
@@ -95,6 +101,16 @@ export default class extends Controller {
         // tirar el error acá lo tapaba con «No se pudo sacar».
         if (r.status === 403) {
           return r.text().then((html) => { window.Turbo.renderStreamMessage(html); return null })
+        }
+        // PR-C30.14 · 422: no salió (tiene pre-factura o medición). El aviso
+        // con el porqué viene en el stream; no se cuenta como sacado.
+        if (r.status === 422) {
+          return r.text().then((html) => {
+            window.Turbo.renderStreamMessage(html)
+            this.dispatch("noSeSaca")
+            this._avisar("alerta", "No salió del manifiesto: mirá el aviso de arriba.")
+            return null
+          })
         }
         if (!r.ok) throw new Error(r.status)
         return r.text()

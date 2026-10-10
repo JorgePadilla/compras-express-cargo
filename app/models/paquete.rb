@@ -288,6 +288,11 @@ class Paquete < ApplicationRecord
   #   peso sin que lo trabe algo que nadie tocó. Vaciarlo sí es un error.
   attr_accessor :contenido_en_etiquetar
 
+  # PR-C30.14 · Lo prende `Manifiesto#sacar!` para el paquete que ya llegó a
+  # Honduras: sale del manifiesto sin perder sus fechas de viaje (ver
+  # `sync_dates_from_manifiesto`).
+  attr_accessor :conservar_fechas_de_viaje
+
   validates :descripcion, presence: { message: "hay que decir qué es (Contenido)" },
             if: :contenido_obligatorio?
 
@@ -1667,10 +1672,17 @@ class Paquete < ApplicationRecord
   # Copia las fechas del manifiesto al paquete. Si manifiesto_id pasa
   # a nil (paquete sacado del manifiesto), las fechas se limpian — sin
   # manifiesto no hay despacho registrado.
+  #
+  # PR-C30.14 · Salvo el que **ya llegó** a Honduras y se saca de un manifiesto
+  # recibido (`Manifiesto#sacar!`, `conservar_fechas_de_viaje`): viajó y está
+  # en la aduana, y borrarle la fecha de enviado y la de aduana sería decir
+  # que nunca salió de Miami. Sale del manifiesto, no del viaje.
   def sync_dates_from_manifiesto
     if manifiesto
       self.fecha_enviado = manifiesto.fecha_enviado
       self.fecha_aduana  = manifiesto.fecha_aduana
+    elsif conservar_fechas_de_viaje
+      nil
     else
       self.fecha_enviado = nil
       self.fecha_aduana  = nil

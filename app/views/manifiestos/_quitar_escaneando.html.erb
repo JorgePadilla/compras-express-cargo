@@ -18,11 +18,21 @@
      data-action="manifiesto-quitar:ok->audio#success
                   manifiesto-quitar:varios->audio#notify
                   manifiesto-quitar:noEstaAca->audio#error
+                  manifiesto-quitar:noSeSaca->audio#error
                   manifiesto-quitar:noEncontrado->audio#error">
   <div>
     <h2 class="text-base font-semibold text-gray-800 dark:text-gray-100">¿Un paquete que no se fue?</h2>
+    <% vuelve_a = EstadoPaqueteHelper::ETIQUETAS.fetch(manifiesto.estado_antes_de_salir, manifiesto.estado_antes_de_salir.humanize) %>
     <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-      Escanealo y sale del manifiesto: vuelve a «<%= EstadoPaqueteHelper::ETIQUETAS.fetch(manifiesto.estado_antes_de_salir, manifiesto.estado_antes_de_salir.humanize) %>» y suelta su caja.
+      <%# PR-C30.14 · En uno que Honduras ya recibe, el que llegó no vuelve a
+          Miami (`Manifiesto#sacar!`). Decirle «vuelve a Recibido en Miami» a
+          todos sería mentirle justo al que se queda. %>
+      <% if manifiesto.en_aduana? || manifiesto.recibido? %>
+        Escanealo y sale del manifiesto, y suelta su caja. Si ya llegó a Honduras se queda donde está;
+        si no llegó, vuelve a «<%= vuelve_a %>». Con pre-factura o medición no sale.
+      <% else %>
+        Escanealo y sale del manifiesto: vuelve a «<%= vuelve_a %>» y suelta su caja.
+      <% end %>
     </p>
   </div>
   <%= render(ButtonComponent.new(variant: :danger, icon: "minus-circle",
