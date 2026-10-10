@@ -241,6 +241,22 @@ class ManifiestoEditarEnteroTest < ActionDispatch::IntegrationTest
     assert @abierto.creado?, "guardar no finaliza"
   end
 
+  # `A7-07` · Oficial o interno se elige al crear. La tarjeta no lo manda, y un
+  # PATCH armado a mano tampoco lo cambia: el número y la carga ya siguieron
+  # las reglas de su tipo.
+  test "guardar no cambia el tipo del manifiesto aunque el PATCH lo traiga" do
+    assert @abierto.tipo_oficial?
+    ingresar(@supervisor)
+
+    patch manifiesto_url(@abierto), params: { manifiesto: { tipo: "interno", es_prioridad: "1" } },
+                                    headers: FORM_EN_EL_FRAME
+
+    assert_response :success
+    @abierto.reload
+    assert @abierto.tipo_oficial?, "el tipo no se cambia después de crear"
+    assert @abierto.es_prioridad?, "lo demás sí se guarda"
+  end
+
   test "un error del formulario vuelve a pintar la tarjeta en formulario, 422 y html, adentro del frame" do
     ingresar(@supervisor)
     patch manifiesto_url(@abierto), params: { manifiesto: { fecha_aduana: Date.tomorrow.iso8601 } },

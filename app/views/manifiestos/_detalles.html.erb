@@ -33,8 +33,8 @@
     <% if editando %>
       <%# `data-teclas-alcance`: mientras este formulario está a la vista, las
           teclas F son **de él** (`keyboard_shortcuts_controller`). F8 guarda
-          la tarjeta —no aprieta «Solo Finalizar», que también es F8 y está
-          más arriba en el DOM—, F2 cancela sin salir de la ficha, y F5/F6 no
+          la tarjeta —no aprieta «Solo Finalizar», que también es F8, venga
+          antes o después en el DOM—, F2 cancela sin salir de la ficha, y F5/F6 no
           recargan ni reabren nada que se lleve lo tecleado. %>
       <%= form_with model: manifiesto, class: "p-6 space-y-6", data: { teclas_alcance: true } do |f| %>
         <% if manifiesto.errors.any? %>

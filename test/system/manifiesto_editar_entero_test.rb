@@ -66,9 +66,26 @@ class ManifiestoEditarEnteroSystemTest < ApplicationSystemTestCase
       sleep 0.5
     end
     assert_equal "vivo", page.evaluate_script("window.__marcador"), "F5 recargó la página"
+    # El marcador solo no lo prueba: el F5 que manda chromedriver no llega al
+    # atajo de recarga del navegador, así que la página «sobrevive» aunque nadie
+    # frene la tecla. Lo que la frena es el `preventDefault` del alcance, y eso
+    # se ve desde `window`, que recibe el keydown después que `document`.
+    page.execute_script(<<~JS)
+      window.__f5 = null
+      window.addEventListener("keydown", (e) => { if (e.key === "F5") window.__f5 = e.defaultPrevented }, { once: true })
+    JS
+    tecla(:f5)
+    assert_equal true, page.evaluate_script("window.__f5"), "F5 adentro de la tarjeta no se frena: recargaría"
     assert_selector FORMULARIO
 
-    # F8 es «Guardar» de la tarjeta, no «Solo Finalizar» (también F8, más arriba en el DOM).
+    # F8 es «Guardar» de la tarjeta, no «Solo Finalizar» (también F8). Hoy la
+    # tarjeta va antes en el DOM, y el primer `data-shortcut` gana: sin mover
+    # nada, esto pasaba igual sin el alcance. Se pone «Solo Finalizar» delante,
+    # que es justo lo que el alcance tiene que aguantar.
+    page.execute_script(<<~JS)
+      document.querySelector("#{TARJETA}").before(document.querySelector("#manifiesto-acciones-arriba"))
+    JS
+    assert_selector "#manifiesto-acciones-arriba + #{TARJETA}"
     tecla(:f8)
     assert_text "Manifiesto actualizado exitosamente", wait: 5
     assert_no_selector FORMULARIO

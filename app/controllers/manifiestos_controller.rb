@@ -93,7 +93,10 @@ class ManifiestosController < ApplicationController
   def update
     return if exigir_encabezado_editable
 
-    if @manifiesto.update(manifiesto_params)
+    # Sin `tipo`: oficial o interno se elige al crear (`A7-07`), y la tarjeta
+    # no lo manda (en /edit iba como hidden). El permit igual lo dejaba cambiar
+    # con un PATCH armado a mano.
+    if @manifiesto.update(manifiesto_params.except(:tipo))
       mensaje = "Manifiesto actualizado exitosamente."
       respond_to do |format|
         format.turbo_stream do
@@ -571,9 +574,8 @@ class ManifiestosController < ApplicationController
       # `sucursal_origen_id` es lo que despierta la numeración anual. Estaba
       # fuera de esta lista, y por eso `MM2026000001` no corría nunca (RP-46).
       :sucursal_origen_id,
-      # `A7-07` · Oficial o interno. El formulario solo lo deja elegir al crear;
-      # en uno guardado va como hidden, porque el número ya salió y la carga ya
-      # se movió con las reglas de su tipo.
+      # `A7-07` · Oficial o interno. Solo al crear: `update` lo descarta, porque
+      # el número ya salió y la carga ya se movió con las reglas de su tipo.
       :tipo,
       # PR-C30.14 · Lo de San Pedro, que /edit también muestra. Son los
       # mismos dos de `/guias-y-aduana` (`Manifiesto::CAMPOS_DE_SAN_PEDRO`).

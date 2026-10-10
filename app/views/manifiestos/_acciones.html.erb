@@ -22,9 +22,10 @@
     wrapper adentro del partial se anidaría una vez por actualización.
 
     PR-C30.15 · Con la tarjeta de detalles abierta en formulario, «Solo
-    Finalizar» sigue acá con su F8, y es el primer `data-shortcut="F8"` del
-    DOM. No lo aprieta la tecla: el formulario lleva `data-teclas-alcance`, y
-    mientras se vea las teclas son suyas (`keyboard_shortcuts_controller`). %>
+    Finalizar» sigue acá con su F8. Hoy la tarjeta va antes en el DOM, pero no
+    es eso lo que la protege (el orden se mueve solo): el formulario lleva
+    `data-teclas-alcance`, y mientras se vea las teclas son suyas
+    (`keyboard_shortcuts_controller`). %>
 <% if manifiesto.creado? && paquetes.any? %>
   <div class="mb-6 flex flex-wrap items-center gap-3">
     <%# Las teclas: F8 es «guardar/confirmar» por convención (C30-02, la hoja
