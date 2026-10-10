@@ -212,7 +212,8 @@ class ManifiestoEditarEnteroTest < ActionDispatch::IntegrationTest
 
     delete remove_paquete_manifiesto_url(@abierto, paquete_id: @adentro.id), headers: TURBO
 
-    assert_response :success
+    # 422 y no 200: el modal de «Eliminar paquetes» cuenta como sacado lo que vuelve bien.
+    assert_response :unprocessable_entity
     assert_match "ya se midió", response.body
     assert_equal @abierto.id, @adentro.reload.manifiesto_id
 
