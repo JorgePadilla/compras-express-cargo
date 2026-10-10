@@ -72,11 +72,12 @@ class ManifiestoFinalizadoSeCorrigeTest < ActionDispatch::IntegrationTest
 
   # ── Abrir y cerrar ──────────────────────────────────────────────────────
 
+  # PR-C30.15 · Y aterriza con la tarjeta del encabezado ya en formulario.
   test "el supervisor aprieta «Editar» y queda abierto" do
     ingresar(@supervisor)
     patch abrir_edicion_manifiesto_url(@manifiesto)
 
-    assert_redirected_to manifiesto_url(@manifiesto)
+    assert_redirected_to manifiesto_url(@manifiesto, editar: 1)
     assert @manifiesto.reload.edicion_abierta?
     assert_equal @supervisor, @manifiesto.edicion_abierta_por
   end
@@ -236,12 +237,15 @@ class ManifiestoFinalizadoSeCorrigeTest < ActionDispatch::IntegrationTest
     assert_select "[data-controller~='manifiesto-quitar']", count: 0
   end
 
-  test "cerrado: el «Editar» del encabezado se esconde; la puerta es la del cartel" do
+  # PR-C30.15 · Un solo «Editar», arriba: con el candado cerrado abre el
+  # candado (no lleva al formulario), y el cartel ya no tiene el suyo.
+  test "cerrado: el «Editar» de arriba abre el candado; el cartel no tiene botón" do
     ingresar(@supervisor)
     get manifiesto_url(@manifiesto)
 
     assert_select "a[href=?]", edit_manifiesto_path(@manifiesto), count: 0
-    assert_select "form[action=?] button", abrir_edicion_manifiesto_path(@manifiesto), text: /Editar/
+    assert_select "form[action=?] button[data-shortcut='F6']", abrir_edicion_manifiesto_path(@manifiesto), text: /Editar/
+    assert_select "[data-candado='cerrado'] form", count: 0
   end
 
   test "abierto: cartel con quién lo abrió, «Cerrar edición», cajas, pistola y «Eliminar paquetes»" do
@@ -254,7 +258,7 @@ class ManifiestoFinalizadoSeCorrigeTest < ActionDispatch::IntegrationTest
     assert_select "#buscar_paquete"
     assert_select "[data-controller~='manifiesto-quitar']"
     assert_select "[aria-label=?]", "Editar la caja #{@caja.letra}"
-    assert_select "a[href=?]", edit_manifiesto_path(@manifiesto)
+    assert_select "a[href=?][data-turbo-frame='manifiesto-detalles']", edit_manifiesto_path(@manifiesto)
   end
 
   test "C30-07 · también abierto, cada caja dice qué lleva" do

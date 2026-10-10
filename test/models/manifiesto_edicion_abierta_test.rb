@@ -59,6 +59,23 @@ class ManifiestoEdicionAbiertaTest < ActiveSupport::TestCase
     assert_in_delta Time.current, @manifiesto.edicion_abierta_at, 5
   end
 
+  # PR-C30.15 · El encabezado también espera al candado en el oficial
+  # finalizado: *"que presionen el botón"*. El interno, que no se reabre, lo
+  # sigue corrigiendo directo quien abre el candado (C21-06).
+  test "el encabezado: abierto cualquiera; cerrado, solo el supervisor y con el candado abierto" do
+    assert Manifiesto.find(@manifiesto.id).tap { |m| m.estado = "creado" }.encabezado_editable_por?(@digitador)
+
+    assert_not @manifiesto.encabezado_editable_por?(@supervisor), "cerrado, ni el supervisor"
+    @manifiesto.abrir_edicion!(@supervisor)
+    assert @manifiesto.encabezado_editable_por?(@supervisor)
+    assert_not @manifiesto.encabezado_editable_por?(@digitador), "por la ventana abierta no se cuela"
+
+    @manifiesto.cerrar_edicion!
+    @manifiesto.tipo = "interno"
+    assert @manifiesto.encabezado_editable_por?(@supervisor), "interno: directo, como en C21-06"
+    assert_not @manifiesto.encabezado_editable_por?(@digitador)
+  end
+
   test "el digitador no lo puede abrir" do
     assert_raises(Manifiesto::NoSePuedeReabrir) { @manifiesto.abrir_edicion!(@digitador) }
     assert_not @manifiesto.reload.edicion_abierta?

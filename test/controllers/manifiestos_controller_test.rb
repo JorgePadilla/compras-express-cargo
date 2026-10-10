@@ -122,9 +122,15 @@ class ManifiestosControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "should get edit" do
+  # PR-C30.15 · /edit no es una pantalla: pedido entero va a la ficha con la
+  # tarjeta de detalles abierta (`?editar=1`). Adentro del frame, la tarjeta.
+  test "edit va a la ficha con la tarjeta abierta" do
     get edit_manifiesto_url(@manifiesto)
+    assert_redirected_to manifiesto_url(@manifiesto, editar: 1)
+
+    get edit_manifiesto_url(@manifiesto), headers: { "Turbo-Frame" => "manifiesto-detalles" }
     assert_response :success
+    assert_select "turbo-frame#manifiesto-detalles form[data-teclas-alcance]"
   end
 
   test "should update manifiesto" do
