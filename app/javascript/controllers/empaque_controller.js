@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { enfocar } from "controllers/enfocar"
 
 // C21-01 · El escaneo al empacar.
 //
@@ -24,7 +25,10 @@ export default class extends Controller {
     // `close` no burbujea: va en captura sobre el elemento del controller. Y
     // un frame después, como en /etiquetar: en el mismo tick el `open` todavía
     // no se fue y el `focus()` pega en una página inerte.
-    this._alCerrarseElAviso = () => requestAnimationFrame(() => this.codigoTarget.focus())
+    //
+    // PR-C30.8 · Y con `enfocar`, no con `focus()`: cerrado con el dedo, el
+    // campo quedaba con cara de enfocado y la pistola escribía en el aire.
+    this._alCerrarseElAviso = () => requestAnimationFrame(() => enfocar(this.codigoTarget))
     this.element.addEventListener("close", this._alCerrarseElAviso, true)
     if (this.hasCodigoTarget) this.codigoTarget.focus()
   }

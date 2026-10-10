@@ -197,14 +197,26 @@ class ManifiestosController < ApplicationController
 
     aviso = "Manifiesto #{@manifiesto.numero} finalizado: #{resultado.enviados.size} paquete(s) a enviado."
 
+    # C30-05 · Lo que sale es **la hoja del manifiesto**, no las 4×6. Cambia
+    # `C21-06`, que había leído del diagrama *"finalizar e imprimir todos los
+    # bultos"*. Yusef, 2026-10-09, probándolo en staging: *"lo que tiene que
+    # imprimirme no es esta etiqueta… el que necesito que me imprima después de
+    # finalizado es este. Este es el que ellos imprimen después de finalizado,
+    # porque todas esas etiquetas ya las imprimieron cuando los estaban
+    # ingresando"* — y al darle otra vez: *"me está imprimiendo ésta otra vez"*.
+    # Las 4×6 se siguen re-imprimiendo aparte, con «Imprimir las 4×6».
+    #
+    # Ya no depende de que haya cajas: la hoja sale igual sin bultos (el
+    # manifiesto que se armó sin escanear, `C23-10`), con transportista, totales
+    # y firmas, que es lo que el transportista se lleva.
+    #
     # PR-C29.7 · Con `volver=1`, como «Agregar e imprimir»: esto nace de un
     # PATCH y se lleva **esta** pestaña, así que al terminar no hay nada que
     # cerrar —`window.close()` sobre una pestaña que no abrió un script no hace
-    # nada— y hay que devolverla a la ficha. Sin esto el operario quedaba
-    # mirando las 4×6. Jorge: *"una vez se imprime se regresa a la vista
-    # previa"*.
-    if params[:imprimir].present? && @manifiesto.cajas.any?
-      redirect_to etiquetas_manifiesto_cajas_path(@manifiesto, print: true, volver: 1), notice: aviso
+    # nada— y hay que devolverla a la ficha. Jorge: *"una vez se imprime se
+    # regresa a la vista previa"*. `documento` lo honra igual que las 4×6.
+    if params[:imprimir].present?
+      redirect_to documento_manifiesto_path(@manifiesto, print: true, volver: 1), notice: aviso
     else
       redirect_to @manifiesto, notice: aviso
     end
@@ -219,8 +231,14 @@ class ManifiestosController < ApplicationController
   #
   # C28-01 · Ya no lleva los paquetes: esta hoja se le entrega al transportista.
   # El desglose se fue a `listado`.
+  #
+  # C30-05 · `volver=1` cuando la abre «Finalizar e Imprimir», que se lleva la
+  # pestaña de la ficha: al terminar de imprimir la devuelve, igual que
+  # `CajasManifiestoController#etiquetas`. Un flag y no la URL de vuelta en el
+  # parámetro, que sería un redirect abierto de regalo.
   def documento
     @cajas = @manifiesto.cajas.includes(:tamano_caja)
+    @despues_de_imprimir = manifiesto_path(@manifiesto) if params[:volver] == "1"
     render layout: "print"
   end
 

@@ -135,6 +135,16 @@ class SinNMas1Test < ActionDispatch::IntegrationTest
     end
   end
 
+  # C30-09 · La fila cuenta en memoria también los **paquetes** (`ProgresoDe
+  # Recepcion`): los del interno, y los que viajaron sin caja en el oficial.
+  # Con cajas solamente, este lint no veía si `includes(:paquetes)` faltaba.
+  test "/recepcion_carga con manifiestos que viajaron sin cajas" do
+    @pantalla = -> { get recepcion_carga_index_path }
+    assert_no_crece_con_los_renglones("/recepcion_carga sin cajas") do |i|
+      paquete(i, manifiesto: manifiesto(i, estado: "enviado"), estado: "enviado_honduras")
+    end
+  end
+
   test "el panel de medición de un manifiesto" do
     m = manifiesto(0, estado: "enviado")
     @pantalla = -> { get panel_medicion_index_path(manifiesto_id: m.id) }

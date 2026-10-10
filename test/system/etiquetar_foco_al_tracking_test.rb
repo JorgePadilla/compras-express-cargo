@@ -26,6 +26,7 @@ class EtiquetarFocoAlTrackingTest < ApplicationSystemTestCase
   test "despues de guardar con impresion el foco queda en el tracking" do
     find("#paquete_tracking").set("1Z999FOCO#{SecureRandom.hex(3).upcase}")
     elegir_cliente
+    find("#paquete_descripcion").set("Ropa")  # C30-03: obligatoria
     find("[data-caja-campo='peso']").set("10")
 
     antes = Paquete.count

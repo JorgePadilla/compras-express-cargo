@@ -47,6 +47,7 @@ class CajaEnCursoTest < ApplicationSystemTestCase
     antes = Paquete.count
     find("#paquete_tracking").set("1Z999SINAGREGAR")
     elegir_cliente
+    escribir_contenido
     find("[data-action*='etiquetar#submitForm']", match: :first).click
     esperar { Paquete.count == antes + 2 }
 
@@ -81,6 +82,7 @@ class CajaEnCursoTest < ApplicationSystemTestCase
     antes = Paquete.count
     find("#paquete_tracking").set("1Z999LIMPIA")
     elegir_cliente
+    escribir_contenido
     find("[data-action*='etiquetar#submitForm']", match: :first).click
     esperar { Paquete.count == antes + 2 }
 
@@ -99,6 +101,9 @@ class CajaEnCursoTest < ApplicationSystemTestCase
     antes = Paquete.count
     # Sin cliente el server rechaza: es el error más común de esta pantalla.
     find("#paquete_tracking").set("1Z999SINCLIENTE")
+    # Con contenido: sin él el navegador frena antes de llegar al server
+    # (C30-03), y el test dejaría de probar lo que dice.
+    escribir_contenido
     find("[data-action*='etiquetar#submitForm']", match: :first).click
     sleep 1.5
 
@@ -137,6 +142,12 @@ class CajaEnCursoTest < ApplicationSystemTestCase
     )
   end
 
+
+  # C30-03 · Desde PR-C30.2 la descripción es obligatoria en /etiquetar: sin
+  # ella el `required` frena el envío y estos tests medían otra cosa.
+  def escribir_contenido
+    find("#paquete_descripcion").set("Ropa")
+  end
 
   def abrir_etiquetar
     abrir_sesion_etiquetar(TipoEnvio.activos.order(:nombre).first)

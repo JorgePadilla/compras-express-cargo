@@ -4,7 +4,9 @@
   <title>Bulto — <%= @caja&.codigo %></title>
   <meta charset="UTF-8">
   <%# PR-C29.7 · A esta página se llega también por una visita de Turbo: el
-      redirect de «Finalizar e Imprimir», que es un PATCH de Turbo. Si Turbo
+      redirect de «Agregar e imprimir» o «Guardar e imprimir», que nacen de
+      un formulario de Turbo. (Hasta C30-05 también el de «Finalizar e
+      Imprimir», que ahora saca la hoja del manifiesto y no las 4×6.) Si Turbo
       solo cambiara el body, `window.onload` no volvería a dispararse y el
       diálogo de impresión no se abriría nunca. Hoy Turbo ya recarga entera
       porque el `tailwind` con `data-turbo-track` de la app no está acá —se

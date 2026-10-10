@@ -1,5 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 import { conEnterAvanza } from "controllers/enter_avanza"
+import { enfocar } from "controllers/enfocar"
 
 // C26-02/19 · La estación de Medición (San Pedro).
 //
@@ -51,6 +52,7 @@ export default class extends conEnterAvanza(Controller) {
     "mesa", "plantillaMesa", "mesaTitulo",
     "notasBoton", "notasBotonTexto", "notasModal", "notasCliente", "notasLista", "notasEntendido", "plantillaNota",
     "volumenesContador", "volumenesVacio", "listaVolumenes", "plantillaVolumen", "agregarVolumen", "rotuloVolumen",
+    "volumenesAnteriores",
     "form", "peso", "alto", "largo", "ancho", "guardar", "guardarTexto",
     "banner", "bannerTexto", "bannerFaltan", "bannerReimprimir", "bannerReimprimirTexto", "bannerFacturar",
     "manifiestoNumero", "manifiestoFechas", "manifiestoConteo", "pendientes", "sinPendientes",
@@ -83,6 +85,9 @@ export default class extends conEnterAvanza(Controller) {
     // cuántas mediciones son antes de imprimir la primera.
     this._mesa = []
     this._volumenes = []
+    // C30-11 · Los volúmenes que la tanda tenía antes de medirla de nuevo:
+    // solo para mirarlos, nunca se guardan.
+    this._anteriores = []
     // C27-14 · Las cajas que alguien autorizó a medir sin manifiesto. Se
     // mandan al guardar y el servidor las sella una por una.
     this._saltados = []
@@ -167,13 +172,22 @@ export default class extends conEnterAvanza(Controller) {
     // La caja entra a la mesa. Es lo único que agrega cajas: no hay checkbox
     // ni lista de dónde elegir.
     if (data.remedir_tanda) {
-      // C27-33 · Medir de nuevo: la tanda entera vuelve —sus cajas y sus
-      // volúmenes (C28-08)— para corregir lo que estaba mal. «Corregir» en un
-      // volumen lo trae al formulario; al guardar, la tanda nueva reemplaza a
-      // la vieja.
+      // C27-33 · Medir de nuevo: la tanda entera vuelve —sus cajas— y al
+      // guardar la tanda nueva reemplaza a la vieja.
+      //
+      // C30-11 · Los volúmenes viejos **no** vuelven a la lista: quedan
+      // escritos como «volumen anterior», para mirarlos y nada más. Hasta el
+      // 2026-10-09 volvían como volúmenes agregados, y en la prueba Jorge tuvo
+      // que quitar el viejo con la X antes de guardar el nuevo. Yusef: *"desde
+      // el instante que le dio que lo va a medir de nuevo… se le borre todo…
+      // que solo le diga volumen anterior o algo por el estilo"* — *"lo que
+      // hiciste fue borrar volumen físicamente"*. Con el viejo en la lista,
+      // pesar el nuevo y apretar F9 guardaba **los dos**: dos etiquetas y
+      // dos volúmenes cobrados por las mismas cajas.
       this._mesa.push(...data.hermanas.filter((h) => !this._mesa.some((p) => p.id === h.id)))
       this._reemplazaSesion = data.remedir_tanda.sesion
-      this._volumenes = data.remedir_tanda.volumenes.map((v) => this._numerosDe(v))
+      this._volumenes = []
+      this._anteriores = data.remedir_tanda.volumenes || []
       this._pintar(data)
       this.avisoTarget.textContent = data.mensaje
       this.dispatch("atencion")
@@ -224,7 +238,21 @@ export default class extends conEnterAvanza(Controller) {
     this._abrirNotas()
   }
 
-  _mismaNota(a, b) { return a.etiqueta === b.etiqueta && a.detalle === b.detalle && a.texto === b.texto }
+  // C30-10 · La misma nota es **el mismo texto**, venga con el rótulo que
+  // venga. Una caja trae la nota de grupo como «Nota especial» y otra caja del
+  // mismo consolidado la trae copiada como «Notas de consolidación» (la copia
+  // que hace Miami al vincularla): para el operario es una nota, no dos. El
+  // servidor ya las junta dentro de una caja (`PanelContextoHelper#sin_repetir`);
+  // esto las junta entre cajas de la tanda.
+  //
+  // Salvo que las dos traigan `detalle` y sea distinto: la instrucción del
+  // tracking A y la del B son dos notas aunque digan lo mismo (`sin_repetir`).
+  _mismaNota(a, b) {
+    if (a.detalle && b.detalle && a.detalle !== b.detalle) return false
+    return this._textoDeNota(a) === this._textoDeNota(b)
+  }
+
+  _textoDeNota(n) { return String(n.texto || "").replace(/\s+/g, " ").trim().toLowerCase() }
 
   _pintarBotonNotas() {
     const n = this._notas.length
@@ -680,6 +708,23 @@ export default class extends conEnterAvanza(Controller) {
     this.rotuloVolumenTarget.textContent = `Volumen ${Math.min(n + 1, this.maximoValue || n + 1)}`
     this.volumenesVacioTarget.hidden = n > 0
     this.listaVolumenesTarget.replaceChildren(...this._volumenes.map((v, i) => this._filaVolumen(v, i)))
+    this._pintarAnteriores()
+  }
+
+  // C30-11 · Lo que la tanda medía antes: texto, sin botones. Es la
+  // referencia —*"que solo le diga volumen anterior"*—, no algo que se guarde.
+  _pintarAnteriores() {
+    const anteriores = this._anteriores || []
+    this.volumenesAnterioresTarget.hidden = anteriores.length === 0
+    if (anteriores.length === 0) { this.volumenesAnterioresTarget.textContent = ""; return }
+
+    const uno = (v) => {
+      const medidas = [v.alto, v.largo, v.ancho].filter(Boolean).join("x")
+      return [v.peso && `${v.peso} lb`, medidas && `${medidas} in`].filter(Boolean).join(" · ")
+    }
+    this.volumenesAnterioresTarget.textContent = anteriores.length === 1
+      ? `Volumen anterior: ${uno(anteriores[0])}. Se reemplaza al guardar.`
+      : `Volúmenes anteriores: ${anteriores.map((v, i) => `${i + 1}) ${uno(v)}`).join("; ")}. Se reemplazan al guardar.`
   }
 
   _filaVolumen(v, i) {
@@ -721,7 +766,7 @@ export default class extends conEnterAvanza(Controller) {
 
     this._mesa = this._mesa.filter((p) => p.id !== id)
     this._saltados = this._saltados.filter((s) => s !== id)
-    if (this._mesa.length === 0) { this._grupo = null; this._reemplazaSesion = null }
+    if (this._mesa.length === 0) { this._grupo = null; this._reemplazaSesion = null; this._anteriores = [] }
     this._repintar()
     this.codigoTarget.focus()
   }
@@ -757,11 +802,6 @@ export default class extends conEnterAvanza(Controller) {
 
   // El texto de «Guardar e imprimir N etiquetas» depende de lo que se teclea.
   numerosCambiados() { this._textoDeLosBotones() }
-
-  _numerosDe(b) {
-    const t = (n) => (n === null || n === undefined ? "" : String(n))
-    return { peso: t(b.peso), alto: t(b.alto), largo: t(b.largo), ancho: t(b.ancho) }
-  }
 
   // ── Agregar un volumen ──────────────────────────────────────────────────
   //
@@ -1057,6 +1097,7 @@ export default class extends conEnterAvanza(Controller) {
     this._paquete = null
     this._grupo = null
     this._reemplazaSesion = null
+    this._anteriores = []
     this._yaCompleto = false
     this._mesa = []
     this._volumenes = []
@@ -1146,16 +1187,19 @@ export default class extends conEnterAvanza(Controller) {
   _enfocarPeso() {
     if (this._mesa.length === 0) return
 
-    this.pesoTarget.focus()
+    enfocar(this.pesoTarget)
     this.pesoTarget.select()
   }
 
   // C27-02 · El foco vuelve **al escaneo**, siempre: la mesa se arma pip a pip
   // y el peso se toca (o se llega con Enter en el campo vacío). Antes volvía al
   // peso, y con el bulto eso mandaba el segundo warehouse al campo del peso.
+  //
+  // C30-10 · Con `enfocar` y no con `focus()`: cerrar un modal con el dedo
+  // dejaba el campo con cara de enfocado y sordo a la pistola (`enfocar.js`).
   _enfocarDondeToca() {
     if (this._volverAPeso) { this._volverAPeso = false; this._enfocarPeso(); return }
-    this.codigoTarget.focus()
+    enfocar(this.codigoTarget)
   }
 
   // ── Red ─────────────────────────────────────────────────────────────────
