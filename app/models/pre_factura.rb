@@ -464,6 +464,40 @@ class PreFactura < ApplicationRecord
     :sin_aviso
   end
 
+  # PR-P.9 · Confirmar y Facturar, a mano, sobre una que salió de la auditoría.
+  #
+  # «Confirmar» (`confirmar!`) pasa las cajas a `disponible_entrega` en el acto.
+  # Sobre una **programada** eso se saltea la hora que eligió la hoja y la guarda
+  # de tareas que `HacerDisponibles#hacer_disponible!` pregunta antes; sobre una
+  # **consolidando**, suelta cajas que todavía esperan a las otras. `:error` es
+  # una programada cuyo aviso no salió —casi siempre una tarea que bloquea— y
+  # que el job vuelve a intentar cada minuto: confirmarla a mano es saltearse
+  # justo eso.
+  #
+  # «Facturar» sobre una programada no rompe nada: no toca las cajas, y a la
+  # hora el job igual las pasa y avisa. Sobre una **consolidando** sí: no tiene
+  # hora, así que nadie las pasaría nunca a disponible.
+  #
+  # La regla vive acá y no en `confirmar!`, porque `HacerDisponibles` llama a
+  # `confirmar!` justamente a la hora. Devuelve el porqué, o nil.
+  def motivo_para_no_confirmar
+    return nil unless creado?
+
+    case estado_del_aviso
+    when :programada, :error
+      "Se avisa sola el #{notificar_at.strftime('%d/%m a las %H:%M')}: ahí pasa a disponible. " \
+        "Para adelantarla, cambiá la hora en Preparar pre-factura › Editar."
+    when :consolidando
+      "Está consolidando: se cierra con F9 desde Auditar, que le pone la hora del aviso."
+    end
+  end
+
+  def motivo_para_no_facturar
+    return nil unless creado? && estado_del_aviso == :consolidando
+
+    "Está consolidando: se cierra con F9 desde Auditar antes de facturarla."
+  end
+
   # `RP-78` / `C30-18` · *"¿Y si se equivocan con F9? — Pueden reversarlo y
   # poner F8."* Solo mientras el aviso no salió (`RP-77`: retirar uno ya mandado
   # no se puede, el correo ya está en la bandeja del cliente). Es lo mismo que

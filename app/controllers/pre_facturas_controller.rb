@@ -85,6 +85,11 @@ class PreFacturasController < ApplicationController
   end
 
   def confirmar
+    # PR-P.9 · El botón no sale, pero un pedido armado a mano sí llega.
+    if (motivo = @pre_factura.motivo_para_no_confirmar)
+      return redirect_to edit_pre_factura_path(@pre_factura), alert: motivo
+    end
+
     if @pre_factura.confirmar!
       redirect_to edit_pre_factura_path(@pre_factura), notice: "Pre-factura confirmada."
     else
@@ -93,6 +98,10 @@ class PreFacturasController < ApplicationController
   end
 
   def facturar
+    if (motivo = @pre_factura.motivo_para_no_facturar)
+      return redirect_to edit_pre_factura_path(@pre_factura), alert: motivo
+    end
+
     venta = @pre_factura.facturar!
     if venta
       nd = @pre_factura.nota_debito_auto
