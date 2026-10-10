@@ -56,7 +56,9 @@ class SonidosCableadosTest < ActiveSupport::TestCase
   # agujero que este lint existe para tapar: el operario mira la pistola.
   # C28-04: `manifiesto_search` entra cuando el escaneo del manifiesto empieza
   # a contestar con modales — es la misma pistola que en /empacar.
-  CONTROLLERS_DE_ESCANEO = %w[etiquetar entrega_personal empaque recepcion_carga medicion manifiesto_search].freeze
+  # PR-P.5: `auditar_pre_factura` entra el día que existe, como `empaque` en C21-01.
+  CONTROLLERS_DE_ESCANEO = %w[etiquetar entrega_personal empaque recepcion_carga medicion manifiesto_search
+                              auditar_pre_factura].freeze
 
   # Una línea que abre un modal: `showModal()`, o un target con "Modal" en el
   # nombre al que le sacan el `hidden`. Los banners no cuentan: se ven sin

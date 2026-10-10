@@ -298,6 +298,16 @@ Rails.application.routes.draw do
   # está trabajando, y vive en su sesión como la de `/etiquetar`.
   resource :hoja_de_preparacion, only: %i[show update destroy], path: "pre-factura/hoja",
                                  controller: "hoja_de_preparacion"
+  # PR-P.5 · C30-17 · Auditar escaneando: el QR de un volumen trae la tanda, y
+  # cada etiqueta de Miami «pertenece» o no. F9 guarda. Pide una hoja lista.
+  resources :auditar_pre_factura, only: :index, path: "pre-factura/auditar",
+                                  controller: "auditar_pre_factura" do
+    collection do
+      post :escanear_volumen
+      post :escanear_paquete
+      post :guardar
+    end
+  end
   resources :pre_facturas, except: [ :destroy ] do
     collection { get :facturables }
     member do

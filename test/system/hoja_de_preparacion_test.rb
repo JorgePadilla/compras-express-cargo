@@ -40,7 +40,7 @@ class HojaDePreparacionSystemTest < ApplicationSystemTestCase
     assert_equal "14:05", find("#hoja_hora", visible: :all).value, wait: 5
     assert find("#hoja_manifiesto_#{@manifiesto.id}", visible: :all).checked?
     assert find("#hoja_tipo_envio_#{@cer.id}", visible: :all).checked?
-    assert_selector "button[disabled]", text: "Empezar a auditar"
+    assert_selector "a[href='#{auditar_pre_factura_index_path}']", text: "Empezar a auditar"
 
     # Se acuerda al volver, como /etiquetar.
     visit root_path

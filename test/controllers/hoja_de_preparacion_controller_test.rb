@@ -122,12 +122,14 @@ class HojaDePreparacionControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-manifiesto]", count: 0
   end
 
-  test "«Empezar a auditar» está, pero deshabilitado hasta PR-P.5" do
+  test "«Empezar a auditar» lleva a auditar cuando la hoja está lista, y si no, dice qué falta" do
     ingresar(users(:supervisor_prefactura))
+    get hoja_de_preparacion_url
+    assert_select "button[disabled]", text: /Empezar a auditar/
+
     patch hoja_de_preparacion_url, params: { hoja: { tipo_envio_ids: [ @cer.id ], manifiesto_ids: [ @manifiesto.id ] } }
     get hoja_de_preparacion_url
-
-    assert_select "button[disabled][title=?]", "Auditar escaneando llega con PR-P.5", text: /Empezar a auditar/
+    assert_select "a[href=?]", auditar_pre_factura_index_path, text: /Empezar a auditar/
   end
 
   test "«editar» lista las pre-facturas sin avisar de cada manifiesto, con su link" do

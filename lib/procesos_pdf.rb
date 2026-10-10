@@ -82,8 +82,12 @@ class ProcesosPdf
     # carga"*, con *"una pantallita"* que muestra solo lo enviado.
     { titulo: "Aduana", quien: "pre-factura, escaneando las cajas del manifiesto",
       actor: :persona, ruta: "recepcion_carga_index_path", estado: "en_aduana", existe: true },
-    { titulo: "Pre-factura", quien: "cajero, en San Pedro",
-      actor: :persona, ruta: "pre_facturas_path", existe: true },
+    # PR-P.5 · C30-17 · La pre-factura se arma **escaneando**: el auditor de
+    # pre-factura escanea un QR de volumen —trae la tanda— y cada etiqueta de
+    # Miami. Las cajas siguen en aduana hasta la hora del aviso; a esa hora las
+    # pasa a disponible `HacerDisponibles` (PR-P.2), que es el paso de abajo.
+    { titulo: "Pre-factura", quien: "auditor de pre-factura, escaneando volúmenes y cajas en San Pedro",
+      actor: :persona, ruta: "auditar_pre_factura_index_path", estado: "en_aduana", existe: true },
     # El estado lo escribe hoy `PreFactura#confirmar!`, que es el orden de
     # A7-01. Sigue `existe: false` porque lo que falta es la **pantalla**: nadie
     # escanea la carga al entrar a bodega, y hasta que exista el paso es un
