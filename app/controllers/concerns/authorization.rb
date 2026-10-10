@@ -97,9 +97,14 @@ module Authorization
     roles.any? { |rol| rol_puede?(rol, feature) }
   end
 
+  # PR-F1.3 · Lo que no se puede mover desde /permisos (`NO_EDITABLES`) no se
+  # lee de la tabla: hasta acá, `PermisoDeRol` lo frenaba al validar, pero una
+  # fila metida por SQL igual abría `/permisos`, `/users` o los CAI.
   def rol_puede?(rol, feature)
-    excepcion = permisos_del_rol.dig(rol, feature.to_s)
-    return excepcion unless excepcion.nil?
+    if PermisosDelSistema.editable?(feature)
+      excepcion = permisos_del_rol.dig(rol, feature.to_s)
+      return excepcion unless excepcion.nil?
+    end
 
     PermisosDelSistema.politica(rol, feature)
   end

@@ -31,6 +31,8 @@ class AutorizacionSar < ApplicationRecord
             numericality: { only_integer: true, greater_than_or_equal_to: 1,
                             less_than_or_equal_to: Fiscal::CORRELATIVO_MAXIMO }
   validate :rango_en_orden
+  validate :fechas_en_orden
+  validate :punto_activo, on: :create
   validate :sin_solapar
   validate :arriba_de_lo_emitido
   validate :ficticia_fuera_de_produccion
@@ -48,6 +50,26 @@ class AutorizacionSar < ApplicationRecord
 
   def capacidad
     rango_fin - rango_inicio + 1
+  end
+
+  # El número completo de 16 dígitos, `EEE-PPP-TT-NNNNNNNN` (Art. 10 num. 7).
+  def numero(secuencia)
+    "#{identificador}-#{format('%08d', secuencia)}"
+  end
+
+  def tipo_nombre
+    Fiscal::TIPOS_DE_DOCUMENTO.fetch(tipo_documento, tipo_documento)
+  end
+
+  # Cuántos números de este rango ya salieron. `ultimo` se puede pasar ya
+  # leído, para que un listado no consulte el correlativo fila por fila.
+  def documentos_usados(ultimo = correlativo&.ultimo)
+    (ultimo.to_i - rango_inicio + 1).clamp(0, capacidad)
+  end
+
+  # Para avisar en la pantalla antes de que se corte la facturación.
+  def por_vencer?(al = Fiscal.hoy, dias: 30)
+    !vencida?(al) && fecha_limite_emision <= al + dias
   end
 
   # Art. 62: la fecha límite es el último día en que se puede emitir.
@@ -77,6 +99,23 @@ class AutorizacionSar < ApplicationRecord
   # la gema 0.2.0 (D8 de FISCAL.md).
 
   private
+
+  # QA de PR-F1.3 · La fecha límite no puede ser anterior a la de la
+  # autorización: es un error de tipeo, y la pantalla lo guardaba.
+  def fechas_en_orden
+    return unless fecha_autorizacion && fecha_limite_emision && fecha_limite_emision < fecha_autorizacion
+
+    errors.add(:fecha_limite_emision, "no puede ser anterior a la fecha de autorización")
+  end
+
+  # QA de PR-F1.3 · El formulario solo ofrece puntos activos, pero un
+  # `punto_de_emision_id` forjado cargaba un CAI en uno desactivado. Solo al
+  # crear: desactivar un punto no invalida los CAI que ya tenía.
+  def punto_activo
+    return if punto_de_emision.nil? || punto_de_emision.activo?
+
+    errors.add(:punto_de_emision, "está desactivado")
+  end
 
   def rango_en_orden
     return unless rango_inicio && rango_fin && rango_inicio > rango_fin

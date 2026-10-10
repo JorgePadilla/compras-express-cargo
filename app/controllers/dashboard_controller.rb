@@ -139,6 +139,7 @@ class DashboardController < ApplicationController
           card("Títulos de los roles", nil, "identification",      roles_path,           :red),
           card("Sucursales",           nil, "building-storefront", sucursales_path,      :red),
           card("Empresa",              nil, "building-office-2",   empresa_path,         :red),
+          card("Facturación SAR",      "Puntos de emisión y CAI", "shield-check", autorizaciones_sar_path, :red),
           card("Tasa de Cambio",       nil, "currency-dollar",     tasa_cambio_path,     :red),
           card("Ajustes de Etiqueta",  nil, "printer",             ajustes_etiqueta_path, :red)
           # "Reportes" apuntaba a "#" — se agrega cuando exista (Fase 6).

@@ -1,0 +1,49 @@
+<%# PR-F1.3 · El `EEE-PPP` de una sucursal. Lo asigna la SAR al autorizar el
+    establecimiento; la casa matriz es el 000. %>
+<% campo = "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+<% etiqueta = "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+<%= form_with model: punto, url: punto.persisted? ? punto_de_emision_path(punto) : puntos_de_emision_path, local: true do |f| %>
+  <% if punto.errors.any? %>
+    <div class="mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800 p-4">
+      <ul class="list-disc list-inside text-sm text-red-800 dark:text-red-200">
+        <% punto.errors.full_messages.each do |msg| %><li><%= msg %></li><% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <%= render FormSectionComponent.new(title: "Punto de emisión",
+                                      subtitle: "Una sucursal de Honduras, un punto. Los números salen de la autorización de la SAR.") do |section| %>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="md:col-span-3">
+        <%= f.label :sucursal_id, "Sucursal", class: etiqueta %>
+        <%= f.collection_select :sucursal_id, sucursales, :id, :nombre, { include_blank: "Elegí la sucursal" },
+              required: true, class: campo %>
+      </div>
+
+      <div>
+        <%= f.label :establecimiento, "Establecimiento", class: etiqueta %>
+        <%= f.text_field :establecimiento, required: true, maxlength: 3, inputmode: "numeric", pattern: "\\d{3}",
+              placeholder: "000", class: "#{campo} font-mono" %>
+      </div>
+
+      <div>
+        <%= f.label :punto, "Punto de emisión", class: etiqueta %>
+        <%= f.text_field :punto, required: true, maxlength: 3, inputmode: "numeric", pattern: "\\d{3}",
+              placeholder: "001", class: "#{campo} font-mono" %>
+      </div>
+
+      <div class="flex items-end">
+        <label class="flex items-center gap-2">
+          <%= f.check_box :activo, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Activo</span>
+        </label>
+      </div>
+    </div>
+
+    <% section.with_footer do %>
+      <%= link_to "Cancelar", autorizaciones_sar_path,
+                  class: "text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white self-center" %>
+      <%= render(ButtonComponent.new(variant: :gold, size: :lg, type: :submit, shortcut: "F8")) { "Guardar" } %>
+    <% end %>
+  <% end %>
+<% end %>
