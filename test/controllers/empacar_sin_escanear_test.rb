@@ -184,7 +184,8 @@ class EmpacarSinEscanearTest < ActionDispatch::IntegrationTest
 
     post empacar_sin_escanear_manifiesto_path(@manifiesto)
 
-    assert_match(/no admite/i, flash[:alert])
+    # C30-06 · Lo frena antes el candado del manifiesto, que dice por qué.
+    assert_match(/finalizado y bloqueado/i, flash[:alert])
     assert_nil paquete.reload.manifiesto_id
   end
 

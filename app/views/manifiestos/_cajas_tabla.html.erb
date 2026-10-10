@@ -1,0 +1,75 @@
+<%# Las casas del manifiesto, una por fila — **con lo que llevan adentro**.
+
+    C30-07 · Yusef, con un manifiesto finalizado en pantalla: *"toda esa
+    información la necesitamos… poderla ver acá también, las cajas, todo eso…
+    verla siempre, como en vista previa, en vez de estarle dando imprimir para
+    ver"*. Faltaba qué paquetes van en cada caja (estaba solo en la 4×6 y en el
+    listado impreso) y, con el manifiesto bloqueado, la tabla entera: la ficha
+    no la dibujaba.
+
+    Un solo partial para los dos casos, para que no se separen:
+    `editable: true` con el manifiesto abierto (lápiz y basurero), `false` con
+    el candado puesto. La impresora va siempre — *"podés reimprimir etiquetas,
+    porque esas se te pueden dañar"*.
+
+    `caja.paquetes` viene precargado desde `ManifiestosController#show`
+    (`cajas → paquetes → tipo_envio`): la columna nueva no suma consultas. %>
+<% editable = local_assigns.fetch(:editable, false) %>
+<table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+  <thead class="bg-gray-50 dark:bg-gray-900">
+    <tr>
+      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">#</th>
+      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Código</th>
+      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Tamaño</th>
+      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">T. envío</th>
+      <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Medidas</th>
+      <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Volumen</th>
+      <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Peso</th>
+      <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Paquetes adentro</th>
+      <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Acciones</th>
+    </tr>
+  </thead>
+  <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+    <% manifiesto.cajas.each_with_index do |caja, i| %>
+      <% adentro = caja.paquetes.sort_by { |p| [ p.numero_recepcion.to_s, p.numero_caja.to_i, p.id ] } %>
+      <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 align-top" data-caja="<%= caja.letra %>">
+        <td class="px-4 py-3 text-sm text-gray-500"><%= i + 1 %></td>
+        <td class="px-4 py-3 text-sm font-mono font-medium text-cec-navy dark:text-cec-gold"><%= caja.codigo %></td>
+        <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200"><%= caja.tamano_caja&.nombre || "Especificar" %></td>
+        <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400"><%= caja.tipos_envio_adentro.presence || "—" %></td>
+        <td class="px-4 py-3 text-sm text-right font-mono text-gray-500 dark:text-gray-400"><%= caja.medidas || "—" %></td>
+        <td class="px-4 py-3 text-sm text-right font-mono text-gray-700 dark:text-gray-200"><%= caja.volumen || "—" %></td>
+        <td class="px-4 py-3 text-sm text-right font-mono text-gray-700 dark:text-gray-200"><%= caja.peso || "—" %></td>
+        <td class="px-4 py-3 text-sm">
+          <% if adentro.any? %>
+            <p class="text-xs font-semibold text-gray-600 dark:text-gray-300"><%= adentro.size %> paquete(s)</p>
+            <p class="mt-1 font-mono text-xs leading-5 text-gray-700 dark:text-gray-200">
+              <%= safe_join(adentro.map { |p| etiqueta_codigo_barras(p) || p.tracking }, " · ") %>
+            </p>
+          <% else %>
+            <span class="text-xs text-gray-500 dark:text-gray-400">vacía</span>
+          <% end %>
+        </td>
+        <td class="px-4 py-3 text-right whitespace-nowrap">
+          <% if editable %>
+            <%= render ButtonComponent.new(variant: :secondary, size: :xs, icon: "pencil-square",
+                  label: "Editar la caja #{caja.letra}",
+                  data: { action: "caja-manifiesto#editar",
+                          url: manifiesto_caja_path(manifiesto, caja), letra: caja.letra,
+                          tamano_id: caja.tamano_caja_id, alto: caja.alto, largo: caja.largo,
+                          ancho: caja.ancho, peso: caja.peso }) %>
+          <% end %>
+          <%= render ButtonComponent.new(variant: :secondary, size: :xs, icon: "printer",
+                href: etiqueta_manifiesto_caja_path(manifiesto, caja, print: true),
+                target: "_blank", label: "Imprimir la etiqueta de la caja #{caja.letra}") %>
+          <% if editable %>
+            <%= render ButtonComponent.new(variant: :danger, size: :xs, icon: "trash",
+                  href: manifiesto_caja_path(manifiesto, caja), method: :delete,
+                  confirm: "Se elimina la caja #{caja.letra}. Si ya imprimiste su etiqueta, despegala: la próxima caja que agregues va a tomar la primera letra libre. ¿Seguro?",
+                  label: "Eliminar caja #{caja.letra}") %>
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

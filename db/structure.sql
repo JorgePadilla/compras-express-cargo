@@ -1359,7 +1359,9 @@ CREATE TABLE public.manifiestos (
     recepcion_finalizada_at timestamp(6) without time zone,
     tipo character varying DEFAULT 'oficial'::character varying NOT NULL,
     recibido_hn_por character varying,
-    aviso_llegada_programado_at timestamp(6) without time zone
+    aviso_llegada_programado_at timestamp(6) without time zone,
+    edicion_abierta_por_id bigint,
+    edicion_abierta_at timestamp(6) without time zone
 );
 
 
@@ -5342,6 +5344,13 @@ CREATE INDEX index_manifiestos_on_consignatario_id ON public.manifiestos USING b
 
 
 --
+-- Name: index_manifiestos_on_edicion_abierta_por_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_manifiestos_on_edicion_abierta_por_id ON public.manifiestos USING btree (edicion_abierta_por_id);
+
+
+--
 -- Name: index_manifiestos_on_empresa_manifiesto_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7718,6 +7727,14 @@ ALTER TABLE ONLY public.tarifas
 
 
 --
+-- Name: manifiestos fk_rails_dc083de745; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manifiestos
+    ADD CONSTRAINT fk_rails_dc083de745 FOREIGN KEY (edicion_abierta_por_id) REFERENCES public.users(id);
+
+
+--
 -- Name: tarifas fk_rails_df00b19ef7; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7868,6 +7885,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261009200000'),
 ('20261009190000'),
 ('20261009180000'),
 ('20261009030000'),

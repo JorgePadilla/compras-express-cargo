@@ -1,9 +1,15 @@
 class ManifiestosController < ApplicationController
+  include CandadoDelManifiesto
   # `buscar` (JSON) lo usan operadores que editan paquetes pero no
   # necesariamente tienen rol de Miami — se gatea via authorize_edit
   # del paquete antes de llegar acá.
   before_action :authorize_manifiestos, except: [ :buscar ]
-  before_action :set_manifiesto, only: %i[show edit update add_paquete empacar_sin_escanear remove_paquete finalizar documento listado escanear mover_paquete]
+  before_action :set_manifiesto, only: %i[show edit update add_paquete empacar_sin_escanear remove_paquete finalizar documento listado escanear mover_paquete
+                                          abrir_edicion cerrar_edicion escanear_para_quitar]
+  # C30-06 · Lo de adentro solo se toca con el manifiesto abierto, o reabierto
+  # con «Editar» por un supervisor. Ver `CandadoDelManifiesto`.
+  before_action :exigir_modificable, only: %i[add_paquete escanear mover_paquete empacar_sin_escanear
+                                              remove_paquete escanear_para_quitar]
 
   def index
     @manifiestos = Manifiesto.activos.includes(:empresa_manifiesto).order(created_at: :desc)
@@ -75,9 +81,12 @@ class ManifiestosController < ApplicationController
       return respond_to_paquete_change("#{paquete.guia} no se agregó: #{motivo_del_escaneo(resultado)}", tipo: :alert)
     end
 
-    paquete.update!(manifiesto: @manifiesto)
-    @manifiesto.recalculate_totals!
+    # C30-06 · `meter!` y no un `update!` suelto: en un manifiesto finalizado
+    # y reabierto el paquete tiene que salir como los demás, a enviado.
+    @manifiesto.meter!(paquete, user: Current.user)
     respond_to_paquete_change("Paquete #{paquete.guia} agregado al manifiesto.")
+  rescue Manifiesto::NoEntra => e
+    respond_to_paquete_change(e.message, tipo: :alert)
   end
 
   # C28-04 · Lo que leyó la pistola, **y por qué** entra o no. Solo clasifica
@@ -116,12 +125,15 @@ class ManifiestosController < ApplicationController
 
     otro = paquete.manifiesto
     Paquete.transaction do
-      paquete.update!(manifiesto: @manifiesto, caja_manifiesto: nil,
-                      estado: EtiquetarController::ESTADO_AL_ETIQUETAR)
+      # C30-06 · Por `meter!`, como `add_paquete`: si éste es uno finalizado y
+      # reabierto, el que llega sale a enviado con los demás.
+      @manifiesto.meter!(paquete, user: Current.user, caja_manifiesto: nil,
+                                  estado: @manifiesto.estado_antes_de_salir)
       otro.recalculate_totals!
-      @manifiesto.recalculate_totals!
     end
     respond_to_paquete_change("#{paquete.guia} se movió del manifiesto #{otro.numero} a éste.")
+  rescue Manifiesto::NoEntra => e
+    respond_to_paquete_change(e.message, tipo: :alert)
   end
 
   # C23-10 · El mismo `add_paquete`, pero de un tirón y sin pistola.
@@ -170,12 +182,58 @@ class ManifiestosController < ApplicationController
   def remove_paquete
     paquete = @manifiesto.paquetes.find(params[:paquete_id])
     # PR-C6.22: sacar del manifiesto devuelve a **recibido**, no a empacado.
-    # Con el módulo de empaque todavía sin existir, nadie asigna `empacado`,
-    # así que devolver ahí dejaba el paquete en un estado sin dueño: no lo
-    # produce ninguna pantalla y no lo consume ningún flujo.
-    paquete.update!(manifiesto: nil, estado: EtiquetarController::ESTADO_AL_ETIQUETAR)
-    @manifiesto.recalculate_totals!
+    # C30-06 · Y desde uno finalizado y reabierto, deshace también el enviado:
+    # *"eliminar paquetes que no se fueron"*. Todo eso vive en
+    # `Manifiesto#sacar!`, que usan también el escaneo para quitar.
+    @manifiesto.sacar!(paquete)
     respond_to_paquete_change("Paquete #{paquete.guia} removido del manifiesto.")
+  end
+
+  # C30-06 · «Eliminar paquetes», escaneando. Yusef: *"deseo eliminar paquetes,
+  # y le vas a decir que sí, y empezás a escanear clac, clac, clac"* · *"que
+  # diga agregar paquetes o que diga eliminar paquetes que no se fueron, y
+  # entonces empezás a escanear en un modal"*.
+  #
+  # Igual que el de agregar, esto **solo clasifica** (`EscaneoDeManifiesto#
+  # para_quitar`): el que escribe es `remove_paquete`, que la pantalla llama
+  # cuando la respuesta es `ok`. Una puerta de escritura por acción.
+  def escanear_para_quitar
+    codigo = params[:codigo].to_s.strip
+    resultado = EscaneoDeManifiesto.new(@manifiesto).para_quitar(codigo)
+    paquete = resultado.paquete
+
+    mensaje =
+      case resultado.tipo
+      when :ok then "#{codigo_de(paquete)} · #{paquete.tracking} sale del manifiesto."
+      when :varios then "«#{codigo}» trae #{resultado.candidatos.size} cajas de este manifiesto: escaneá la etiqueta de la caja que no se fue."
+      when :no_esta_aca
+        donde = paquete.manifiesto ? "está en el manifiesto #{paquete.manifiesto.numero}" : "no está en ningún manifiesto"
+        "#{codigo_de(paquete)} no está en este manifiesto: #{donde}."
+      else "No existe ningún paquete con «#{codigo}»."
+      end
+
+    cuerpo = { resultado: resultado.tipo.to_s, mensaje: mensaje }
+    cuerpo[:paquete_id] = paquete.id if resultado.ok?
+    render json: cuerpo
+  end
+
+  # C30-06 · «Editar» sobre un manifiesto finalizado: abre lo de adentro.
+  # *"Que presionen el botón, para que nadie toque algo que no era."*
+  def abrir_edicion
+    @manifiesto.abrir_edicion!(Current.user)
+    redirect_to @manifiesto, notice: "#{@manifiesto.numero} quedó abierto para corregir. Cuando termines, «Cerrar edición»."
+  rescue Manifiesto::NoSePuedeReabrir => e
+    redirect_to @manifiesto, alert: e.message
+  end
+
+  # Y se vuelve a bloquear. Lo cierra quien lo puede abrir.
+  def cerrar_edicion
+    unless @manifiesto.editable_por?(Current.user)
+      return redirect_to @manifiesto, alert: "Solo un supervisor de Miami puede cerrar la edición."
+    end
+
+    @manifiesto.cerrar_edicion!
+    redirect_to @manifiesto, notice: "#{@manifiesto.numero} quedó bloqueado otra vez."
   end
 
   # C21-06 · «Solo Finalizar» y «Finalizar e Imprimir». Los paquetes de los
@@ -344,10 +402,18 @@ class ManifiestosController < ApplicationController
   def respond_to_paquete_change(message, tipo: :notice)
     @paquetes = @manifiesto.paquetes.includes(:cliente, :sucursal, :sucursal_destino, :caja_manifiesto).order(:created_at)
     @manifiesto.reload
+    # C30-07 · La tabla de casas dice qué lleva cada una: si un paquete entra o
+    # sale, esa columna también cambia. Misma precarga que `show`.
+    ActiveRecord::Associations::Preloader.new(
+      records: [ @manifiesto ], associations: { cajas: [ :tamano_caja, { paquetes: :tipo_envio } ] }
+    ).call
     respond_to do |format|
       format.turbo_stream do
         render turbo_stream: [
           turbo_stream.update("manifiesto-paquetes", partial: "manifiestos/paquetes_table", locals: { manifiesto: @manifiesto, paquetes: @paquetes }),
+          turbo_stream.update("manifiesto-cajas-tabla", partial: "manifiestos/cajas_tabla",
+                                                        locals: { manifiesto: @manifiesto,
+                                                                  editable: @manifiesto.modificable_por?(Current.user) }),
           # C21-06 · Los botones de cierre **también**. Se actualizaba solo la
           # tabla, y como «Solo Finalizar» solo se dibuja con `paquetes.any?`,
           # al agregar el primer paquete la tabla se llenaba y el botón no
