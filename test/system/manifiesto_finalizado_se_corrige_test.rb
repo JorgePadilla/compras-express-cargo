@@ -37,8 +37,13 @@ class ManifiestoFinalizadoSeCorrigeSystemTest < ApplicationSystemTestCase
     assert_text "finalizado y bloqueado"
     assert_no_selector "#buscar_paquete"
 
-    confirmando { within("#manifiesto-acciones-arriba") { click_on "Editar" } }
+    # PR-C30.15 · El «Editar» es el de arriba (F6), uno solo; el cartel del
+    # candado ya no tiene el suyo. Aterriza con la tarjeta del encabezado
+    # abierta y lo de adentro editable.
+    assert_no_selector "[data-candado='cerrado'] button"
+    confirmando { find("[data-shortcut='F6']", text: "Editar").click }
     assert_text "Abierto para corregir", wait: 5
+    assert_selector "turbo-frame#manifiesto-detalles form[data-teclas-alcance]"
 
     # Agregar: la misma pistola de siempre.
     find("#buscar_paquete").set(@tarde.numero_recepcion)
