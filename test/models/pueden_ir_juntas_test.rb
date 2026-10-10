@@ -45,6 +45,34 @@ class PuedenIrJuntasTest < ActiveSupport::TestCase
     assert_nil motivo(sps, caja(sucursal: sucursales(:zeron_sps)), misma_tanda: true)
   end
 
+  # QA de PR-P.11a · Un dato que falta no es un dato que choca: la caja sin
+  # sucursal va con cualquiera (la etiqueta de entrega toma la de los demás o
+  # la del cliente). Si no, Auditar y F9 se traban en tandas viejas.
+  test "una caja sin sucursal de retiro va con cualquiera; dos cargadas y distintas no" do
+    sps = caja(sucursal: sucursales(:zeron_sps))
+    tgu = caja(sucursal: sucursales(:humuya_tgu))
+    sin = caja
+    sin.update_columns(sucursal_id: nil)
+
+    assert_nil motivo(sps, sin)
+    assert_nil motivo(sin, sps)
+    assert_nil motivo(sin, sps, misma_tanda: true)
+    # La primera sin sucursal no tapa el choque de las que sí la tienen.
+    problema = PuedenIrJuntas.new([ sin, sps ], tgu).problema
+    assert_equal "otra_sucursal", problema&.motivo
+  end
+
+  test "afuera de Medición, el mensaje de otra sucursal dice qué hacer" do
+    sps = caja(sucursal: sucursales(:zeron_sps))
+    tgu = caja(sucursal: sucursales(:humuya_tgu))
+
+    afuera = PuedenIrJuntas.new([ sps ], tgu).problema.mensaje
+    assert_includes afuera, "corregí la sucursal de retiro"
+    assert_includes afuera, "pre-facturas distintas"
+    adentro = PuedenIrJuntas.new([ sps ], tgu, misma_tanda: true).problema.mensaje
+    assert_not_includes adentro, "pre-facturas distintas", "en Medición la salida es el modal"
+  end
+
   test "la tarifa se compara por el nivel que aplicaría, y Tarifa.clave cae donde cae resolver" do
     base = caja
     de_amazon = caja(proveedor: proveedores(:Amazon))

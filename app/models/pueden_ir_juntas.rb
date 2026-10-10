@@ -52,7 +52,8 @@ class PuedenIrJuntas
     return repetida if @ya.any? { |p| p.id == @nueva.id }
     return otro_cliente if @ya.first.cliente_id != @nueva.cliente_id
     return otro_servicio if @ya.first.tipo_envio_id != @nueva.tipo_envio_id
-    return otra_sucursal if @ya.first.sucursal_id != @nueva.sucursal_id
+    choca = sucursal_que_choca
+    return otra_sucursal(choca) if choca
 
     # La consolidación va antes que las reglas del volumen: su modal tiene
     # salidas («unir», «hago el consolidado») que las otras no.
@@ -120,12 +121,32 @@ class PuedenIrJuntas
   end
 
   # PR-P.11a · La sucursal donde **retira** el cliente (`paquetes.sucursal`).
-  # Una sin sucursal contra una con sucursal también es distinta: la etiqueta
-  # de entrega no sabría a cuál mandar la bolsa.
-  def otra_sucursal
-    Problema.new(motivo: "otra_sucursal",
-                 mensaje: "#{codigo(@nueva)} se retira en #{sucursal_de(@nueva)}, y lo que ya escaneaste " \
-                          "se retira en #{sucursal_de(@ya.first)}. Cada sucursal se factura aparte.")
+  #
+  # QA de PR-P.11a · Solo chocan **dos sucursales cargadas y distintas**. Una
+  # caja sin sucursal va con cualquiera: la etiqueta de entrega ya toma la que
+  # dicen los paquetes y, si ninguno dice, la del cliente
+  # (`EtiquetaDeEntrega#sucursal`). Contar el NULL como «otra» trababa Auditar
+  # y F9 —también en las tandas viejas de una consolidando reabierta— por un
+  # dato que falta, no por uno que choca. Por eso se compara contra **todas**
+  # las ya escaneadas y no contra la primera: la primera puede ser la sin
+  # sucursal.
+  def sucursal_que_choca
+    return nil if @nueva.sucursal_id.nil?
+
+    @ya.find { |p| p.sucursal_id && p.sucursal_id != @nueva.sucursal_id }
+  end
+
+  # En Medición la salida es el modal (quitar la última o empezar de nuevo).
+  # Afuera —Auditar, F9— las tandas ya están medidas, así que el mensaje dice
+  # qué hacer.
+  def otra_sucursal(choca)
+    mensaje = "#{codigo(@nueva)} se retira en #{sucursal_de(@nueva)}, y #{codigo(choca)} " \
+              "en #{sucursal_de(choca)}. Cada sucursal se factura aparte."
+    unless @misma_tanda
+      mensaje += " Si una está mal cargada, corregí la sucursal de retiro de ese paquete; si no, " \
+                 "auditá esas tandas en pre-facturas distintas."
+    end
+    Problema.new(motivo: "otra_sucursal", mensaje: mensaje)
   end
 
   # PR-P.11a · RP-89 · Una tanda prepagada en Miami se cobra con el simbólico

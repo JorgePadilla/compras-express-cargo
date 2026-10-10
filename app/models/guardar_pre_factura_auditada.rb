@@ -185,8 +185,13 @@ class GuardarPreFacturaAuditada
       raise NoSePuede, rechazo.mensaje if rechazo
     end
 
-    cajas.each do |caja|
-      problema = PuedenIrJuntas.new([ cajas.first ], caja).problema
+    # Cada caja contra **todas** las anteriores, no solo la primera: la
+    # sucursal de retiro se compara con las que la tienen cargada, y la primera
+    # puede no tenerla (QA de PR-P.11a, `PuedenIrJuntas#sucursal_que_choca`).
+    cajas.each_with_index do |caja, i|
+      next if i.zero?
+
+      problema = PuedenIrJuntas.new(cajas.first(i), caja).problema
       raise NoSePuede, problema.mensaje if problema && problema.motivo != "repetida"
     end
 

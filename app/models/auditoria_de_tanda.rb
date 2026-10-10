@@ -197,8 +197,10 @@ class AuditoriaDeTanda
   def no_va_junto(primera)
     return nil if @sesiones.empty?
 
-    ya = Paquete.where(medicion_sesion: @sesiones).includes(:cliente, :tipo_envio).order(:id).first
-    problema = PuedenIrJuntas.new([ ya ], primera).problema
+    # Todas las cargadas, no la primera: la sucursal de retiro se compara con
+    # las que la tienen (QA de PR-P.11a, `PuedenIrJuntas#sucursal_que_choca`).
+    ya = Paquete.where(medicion_sesion: @sesiones).includes(:cliente, :tipo_envio, :sucursal).order(:id).to_a
+    problema = PuedenIrJuntas.new(ya, primera).problema
     return nil if problema.nil?
 
     Resultado.new(tipo: :no_va_junto, mensaje: problema.mensaje)

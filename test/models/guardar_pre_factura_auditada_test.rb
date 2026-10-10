@@ -90,6 +90,27 @@ class GuardarPreFacturaAuditadaTest < ActiveSupport::TestCase
     assert_equal "disponible_entrega", cajas.first.reload.estado
   end
 
+  # QA de PR-P.11a · La caja sin sucursal de retiro no traba F9; dos sucursales
+  # cargadas y distintas sí, aunque la primera caja sea la que no tiene.
+  test "F9: la tanda sin sucursal de retiro va con cualquiera, dos sucursales distintas no" do
+    sin, sps, tgu = 3.times.map { caja }
+    sin.update_columns(sucursal_id: nil)
+    sps.update_columns(sucursal_id: sucursales(:zeron_sps).id)
+    tgu.update_columns(sucursal_id: sucursales(:humuya_tgu).id)
+    a, = medir([ sin ], { peso: "2" })
+    b, = medir([ sps ], { peso: "2" })
+    c, = medir([ tgu ], { peso: "2" })
+
+    error = assert_raises(GuardarPreFacturaAuditada::NoSePuede) do
+      guardar([ a.sesion, b.sesion, c.sesion ], [ sin.id, sps.id, tgu.id ])
+    end
+    assert_match(/Cada sucursal se factura aparte/, error.message)
+    assert_match(/corregí la sucursal de retiro/, error.message)
+
+    pf = guardar([ a.sesion, b.sesion ], [ sin.id, sps.id ])
+    assert_equal [ sin.id, sps.id ].sort, pf.paquetes.map(&:id).sort
+  end
+
   test "sin ninguna tanda" do
     assert_raises(GuardarPreFacturaAuditada::NoSePuede) { guardar([], []) }
   end
