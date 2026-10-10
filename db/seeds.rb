@@ -540,16 +540,23 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
 
   # Demo manifiestos
   empresa = EmpresaManifiesto.find_by!(nombre: "PRONTO CARGO")
+  # PR-F1.6 · Desde PR-M2 el manifiesto exige al menos un tipo de envío
+  # **nuestro** (`tipo_envios`, la tabla), no el texto `tipo_envio`. Estos
+  # cuatro demo solo ponían el texto y `db:seed` se caía acá, con lo que nada
+  # de lo de abajo se sembraba en una base nueva.
+  tipos_cer = [ TipoEnvio.find_by!(codigo: "cer") ]
 
   manifiesto_creado = Manifiesto.find_or_create_by!(numero: "MA-000001") do |m|
     m.empresa_manifiesto = empresa
     m.tipo_envio = "CER"
+    m.tipo_envios = tipos_cer
     m.user = digitador
   end
 
   manifiesto_enviado = Manifiesto.find_or_create_by!(numero: "MA-000002") do |m|
     m.empresa_manifiesto = empresa
     m.tipo_envio = "CER"
+    m.tipo_envios = tipos_cer
     m.estado = "enviado"
     m.fecha_enviado = 3.days.ago
     m.user = digitador
@@ -575,6 +582,7 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   maria = Cliente.find_by!(nombre: "Maria", apellido: "Lopez")
 
   pa1 = PreAlerta.find_or_create_by!(numero_documento: "PA-000001") do |pa|
+    pa.titulo = "Zapatos y ropa"  # PR-F1.6: obligatorio desde que la pre-alerta lleva título
     pa.cliente = juan
     pa.tipo_envio = aereo
     pa.con_reempaque = true
@@ -592,6 +600,7 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   end
 
   pa2 = PreAlerta.find_or_create_by!(numero_documento: "PA-000002") do |pa|
+    pa.titulo = "Cosméticos"  # PR-F1.6: obligatorio desde que la pre-alerta lleva título
     pa.cliente = maria
     pa.tipo_envio = maritimo
     pa.con_reempaque = false
@@ -607,6 +616,7 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   end
 
   pa3 = PreAlerta.find_or_create_by!(numero_documento: "PA-000003") do |pa|
+    pa.titulo = "Suplementos"  # PR-F1.6: obligatorio desde que la pre-alerta lleva título
     pa.cliente = juan
     pa.tipo_envio = aereo
     pa.con_reempaque = false
@@ -957,6 +967,7 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   mani_full_a = Manifiesto.find_or_create_by!(numero: "MA-FULL-001") do |m|
     m.empresa_manifiesto = empresa_pronto
     m.tipo_envio = "CER"
+    m.tipo_envios = tipos_cer
     m.estado = "enviado"
     m.fecha_enviado = 18.days.ago
     m.fecha_aduana = 17.days.ago
@@ -966,6 +977,7 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   mani_full_b = Manifiesto.find_or_create_by!(numero: "MA-FULL-002") do |m|
     m.empresa_manifiesto = empresa_pronto
     m.tipo_envio = "CER"
+    m.tipo_envios = tipos_cer
     m.estado = "enviado"
     m.fecha_enviado = 4.days.ago
     m.fecha_aduana = 3.days.ago
