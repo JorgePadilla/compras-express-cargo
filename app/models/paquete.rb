@@ -663,9 +663,14 @@ class Paquete < ApplicationRecord
   # diferencia de `facturables`, **no** mira el estado: el paquete cuya caja no
   # llegó sigue en `enviado_honduras`, y tiene que seguir reteniendo a su
   # manifiesto (`C28-14`).
+  #
+  # PR-P.11a · Lo que un admin **sacó de Medición** (`medicion_descartada_at`:
+  # «perdido», «ya fue entregado») no retiene: nunca se va a medir, así que
+  # nunca va a tener pre-factura por escaneo, y el manifiesto no dejaría la
+  # hoja jamás. Pregunta 6 de P.11 (¿ya estaban facturados?) sigue abierta.
   scope :sin_pre_factura_en_manifiesto, -> {
     where.not(manifiesto_id: nil)
-         .where(pre_factura_id: nil, venta_id: nil)
+         .where(pre_factura_id: nil, venta_id: nil, medicion_descartada_at: nil)
          .where.not(estado: EscaneoDeManifiesto::FUERA_DE_CIRCULACION)
   }
   scope :entregables, -> { where(estado: "facturado", entrega_id: nil) }

@@ -73,8 +73,11 @@ class AuditarPreFacturaController < ApplicationController
     # mismos chequeos que cualquiera.
     if consolidando_abierta?
       tipos = abierta.paquetes.distinct.pluck(:tipo_envio_id)
+      # PR-P.11a · Una consolidando «Sin manifiesto oficial» sigue
+      # aceptando carga así.
       @hoja = HojaDePreparacion.new(modo: "nuevas", tipo_envio_ids: tipos,
                                     manifiesto_ids: Manifiesto.para_hoja(tipos).pluck(:id) + [ abierta.manifiesto_id ],
+                                    sin_manifiesto: abierta.manifiesto_id.nil?,
                                     disponible_en: @hoja.disponible_en)
       return
     end

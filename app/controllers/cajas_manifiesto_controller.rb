@@ -29,7 +29,7 @@ class CajasManifiestoController < ApplicationController
     # C23-05 · Cuando la 4×6 se abrió sola después de agregar, no hay pestaña
     # que cerrar: hay que **devolver** la que se llevó. `volver=1` y no la URL
     # de vuelta en el parámetro, que sería un redirect abierto de regalo.
-    @despues_de_imprimir = despues_de_imprimir
+    @despues_de_imprimir = manifiesto_path(@manifiesto) if params[:volver] == "1"
     render "manifiestos/cajas/etiqueta", layout: "etiqueta_4x6"
   end
 
@@ -47,7 +47,7 @@ class CajasManifiestoController < ApplicationController
     # PR-C29.20 · Cada 4×6 dice los tipos de envío de adentro: sin precargar,
     # una consulta por etiqueta.
     @cajas = @manifiesto.cajas.ordenadas.includes(paquetes: :tipo_envio)
-    @despues_de_imprimir = despues_de_imprimir
+    @despues_de_imprimir = manifiesto_path(@manifiesto) if params[:volver] == "1"
     render "manifiestos/cajas/etiqueta", layout: "etiqueta_4x6"
   end
 
@@ -68,13 +68,13 @@ class CajasManifiestoController < ApplicationController
       # lleva ESTA pestaña, se imprime sola y `@despues_de_imprimir` la
       # devuelve al manifiesto. Sin popup no hay bloqueador que valga.
       if params[:print] == "true"
-        redirect_to etiqueta_manifiesto_caja_path(@manifiesto, @caja, print: true, volver: desde_edit? ? "edit" : 1)
+        redirect_to etiqueta_manifiesto_caja_path(@manifiesto, @caja, print: true, volver: 1)
         return
       end
 
-      redirect_to de_vuelta, notice: "Caja #{@caja.letra} agregada."
+      redirect_to @manifiesto, notice: "Caja #{@caja.letra} agregada."
     else
-      redirect_to de_vuelta, alert: @caja.errors.full_messages.to_sentence
+      redirect_to @manifiesto, alert: @caja.errors.full_messages.to_sentence
     end
   end
 
@@ -91,13 +91,13 @@ class CajasManifiestoController < ApplicationController
     if @caja.update(caja_params)
       @manifiesto.recalculate_totals!
       if params[:print] == "true"
-        redirect_to etiqueta_manifiesto_caja_path(@manifiesto, @caja, print: true, volver: desde_edit? ? "edit" : 1)
+        redirect_to etiqueta_manifiesto_caja_path(@manifiesto, @caja, print: true, volver: 1)
         return
       end
 
-      redirect_to de_vuelta, notice: "Caja #{@caja.letra} actualizada."
+      redirect_to @manifiesto, notice: "Caja #{@caja.letra} actualizada."
     else
-      redirect_to de_vuelta, alert: @caja.errors.full_messages.to_sentence
+      redirect_to @manifiesto, alert: @caja.errors.full_messages.to_sentence
     end
   end
 
@@ -107,35 +107,11 @@ class CajasManifiestoController < ApplicationController
     @manifiesto.recalculate_totals!
     # C28-06 · La letra **sí** vuelve: la próxima caja la toma. Si su
     # etiqueta ya estaba pegada, hay que despegarla, y el aviso lo dice.
-    redirect_to de_vuelta, notice: "Caja #{letra} eliminada. Si su etiqueta ya estaba pegada, despegala: " \
-                                   "la próxima caja va a ser la #{CajaManifiesto.siguiente_letra_de(@manifiesto)}."
+    redirect_to @manifiesto, notice: "Caja #{letra} eliminada. Si su etiqueta ya estaba pegada, despegala: " \
+                                     "la próxima caja va a ser la #{CajaManifiesto.siguiente_letra_de(@manifiesto)}."
   end
 
   private
-
-  # PR-C30.14 · Las casas se arman también desde /edit (`manifiestos/_contenido`,
-  # el mismo partial que la ficha). Agregar, corregir o borrar una caja
-  # devuelve a la pantalla donde se apretó: volver siempre a la ficha sacaba
-  # al operario de /edit a cada caja.
-  #
-  # Sale del Referer y no de un parámetro con la URL, que sería un redirect
-  # abierto de regalo. Lo único que se compara es si venía de /edit.
-  def desde_edit?
-    URI.parse(request.referer.to_s).path == edit_manifiesto_path(@manifiesto)
-  rescue URI::InvalidURIError
-    false
-  end
-
-  def de_vuelta = desde_edit? ? edit_manifiesto_path(@manifiesto) : manifiesto_path(@manifiesto)
-
-  # A dónde vuelve la pestaña que se llevó la 4×6 (`volver=1` a la ficha,
-  # `volver=edit` a /edit). Un valor cerrado, no una URL.
-  def despues_de_imprimir
-    case params[:volver]
-    when "1" then manifiesto_path(@manifiesto)
-    when "edit" then edit_manifiesto_path(@manifiesto)
-    end
-  end
 
   def authorize_manifiestos
     redirect_to root_path, alert: "No tienes permiso para acceder a esta seccion." unless can_access?(:manifiestos)

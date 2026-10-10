@@ -29,6 +29,13 @@ class HojaDePreparacion
 
   attr_reader :modo, :tipo_envio_ids, :manifiesto_ids, :disponible_en
 
+  # PR-P.11a · «Sin manifiesto oficial»: la carga de esos servicios que no vino
+  # en ningún manifiesto oficial —viejos, capeados, o los que andan en un
+  # interno—. Hasta acá solo se pre-facturaba por la puerta a mano; con la
+  # puerta saliendo (Jorge, 2026-10-10), la hoja la ofrece como un
+  # «manifiesto» más. Provisorio hasta RP-85 (pregunta 5 de P.11).
+  def sin_manifiesto? = @sin_manifiesto
+
   # La hora por defecto, siempre «HH:MM» para el campo y el rótulo.
   def self.hora_por_defecto
     disponible_por_defecto.strftime("%H:%M")
@@ -44,14 +51,15 @@ class HojaDePreparacion
   def self.desde_sesion(datos)
     datos = (datos || {}).to_h.stringify_keys
     new(modo: datos["modo"], tipo_envio_ids: datos["tipo_envio_ids"],
-        manifiesto_ids: datos["manifiesto_ids"],
+        manifiesto_ids: datos["manifiesto_ids"], sin_manifiesto: datos["sin_manifiesto"],
         disponible_en: (Time.zone.parse(datos["disponible_en"].to_s) if datos["disponible_en"].present?))
   end
 
-  def initialize(modo: nil, tipo_envio_ids: [], manifiesto_ids: [], disponible_en: nil)
+  def initialize(modo: nil, tipo_envio_ids: [], manifiesto_ids: [], disponible_en: nil, sin_manifiesto: false)
     @modo = MODOS.include?(modo.to_s) ? modo.to_s : "nuevas"
     @tipo_envio_ids = Array(tipo_envio_ids).compact_blank.map(&:to_i).uniq
     @manifiesto_ids = Array(manifiesto_ids).compact_blank.map(&:to_i).uniq
+    @sin_manifiesto = ActiveModel::Type::Boolean.new.cast(sin_manifiesto) || false
     @disponible_en = (disponible_en || self.class.disponible_por_defecto).change(sec: 0)
   end
 
@@ -65,6 +73,7 @@ class HojaDePreparacion
       modo: params.fetch("modo", modo),
       tipo_envio_ids: params.key?("tipo_envio_ids") ? params["tipo_envio_ids"] : tipo_envio_ids,
       manifiesto_ids: params.key?("manifiesto_ids") ? params["manifiesto_ids"] : manifiesto_ids,
+      sin_manifiesto: params.key?("sin_manifiesto") ? params["sin_manifiesto"] : sin_manifiesto?,
       disponible_en: leer_fecha_y_hora(params["fecha"], params["hora"]) || disponible_en
     )
   end
@@ -94,23 +103,50 @@ class HojaDePreparacion
     manifiestos_ofrecidos.where(id: manifiesto_ids)
   end
 
-  # Lista para empezar a auditar: servicio, al menos un manifiesto y la fecha.
+  # Lista para empezar a auditar: servicio, al menos un manifiesto (o «Sin
+  # manifiesto oficial», si todavía hay carga así) y la fecha.
   def lista?
-    nuevas? && tipo_envio_ids.any? && manifiestos_elegidos.exists?
+    nuevas? && tipo_envio_ids.any? && (manifiestos_elegidos.exists? || (sin_manifiesto? && ofrece_sin_manifiesto?))
+  end
+
+  # PR-P.11a · La carga facturable de los servicios elegidos que no vino en un
+  # manifiesto oficial. Solo se ofrece la casilla si hay alguna, como un
+  # manifiesto que ya no tiene nada sale de la lista.
+  def self.carga_sin_manifiesto(tipo_envio_ids)
+    base = Paquete.facturables.where(tipo_envio_id: Array(tipo_envio_ids))
+    base.where(manifiesto_id: nil).or(base.where(manifiesto_id: Manifiesto.tipo_interno.select(:id)))
+  end
+
+  def ofrece_sin_manifiesto?
+    nuevas? && tipo_envio_ids.any? && self.class.carga_sin_manifiesto(tipo_envio_ids).exists?
+  end
+
+  # ¿Esta caja entra con esta hoja, por su manifiesto? La de un manifiesto
+  # elegido, o —con «Sin manifiesto oficial»— la que no tiene ninguno o anda
+  # en un interno. Lo pregunta `AuditoriaDeTanda` al escanear y al guardar.
+  def acepta_manifiesto?(paquete)
+    return true if paquete.manifiesto_id && manifiesto_ids.include?(paquete.manifiesto_id)
+    return false unless sin_manifiesto?
+
+    paquete.manifiesto.nil? || paquete.manifiesto.tipo_interno?
   end
 
   # Las que «editar» ofrece: las que todavía no le avisaron al cliente
   # (`notificado_at`, el sello de PR-P.2), sin facturar ni anular, y que
   # salieron de la auditoría —**consolidando** (F8) o **programadas** (F9)—.
   # Una hecha a mano por `/pre_facturas/new` no tiene aviso que corregir.
+  #
+  # PR-P.11a · «Salió de la auditoría» es `auditado_por_id` (lo escribe
+  # `GuardarPreFacturaAuditada`), no tener manifiesto: una auditada «Sin
+  # manifiesto oficial» no tiene, y también se corrige desde acá.
   def self.pre_facturas_editables
-    base = PreFactura.where(estado: "creado", notificado_at: nil).where.not(manifiesto_id: nil)
+    base = PreFactura.where(estado: "creado", notificado_at: nil).where.not(auditado_por_id: nil)
     base.where.not(consolidando_at: nil).or(base.where.not(notificar_at: nil))
   end
 
   def to_sesion
     { "modo" => modo, "tipo_envio_ids" => tipo_envio_ids, "manifiesto_ids" => manifiesto_ids,
-      "disponible_en" => disponible_en.iso8601 }
+      "sin_manifiesto" => sin_manifiesto?, "disponible_en" => disponible_en.iso8601 }
   end
 
   private

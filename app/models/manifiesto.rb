@@ -281,6 +281,22 @@ class Manifiesto < ApplicationRecord
     creado? || (edicion_abierta? && editable_por?(user))
   end
 
+  # ¿Puede este usuario corregir el **encabezado** (lo de Miami y lo de San
+  # Pedro, la tarjeta «Detalles del Manifiesto»)? Lo preguntan tres lugares —el
+  # «Editar» de arriba, `edit` y `update`— y por eso es uno solo.
+  #
+  # PR-C30.15 · En uno oficial ya finalizado, también el encabezado espera a
+  # que se abra el candado. Hasta acá `update` preguntaba solo
+  # `editable_por?`, así que un supervisor guardaba el encabezado de un
+  # manifiesto cerrado sin apretar nada. Yusef, del mismo candado: *"que
+  # presionen el botón, para que nadie toque algo que no era"*.
+  #
+  # El interno finalizado no se reabre (`reabrible?`), y su encabezado lo sigue
+  # corrigiendo directo quien abre el candado, como en C21-06.
+  def encabezado_editable_por?(user)
+    creado? || (editable_por?(user) && (edicion_abierta? || !reabrible?))
+  end
+
   # Por qué no se puede tocar, dicho para quien lo intentó. Vivía en el concern
   # `CandadoDelManifiesto`; bajó acá porque /paquetes también lo tiene que
   # decir (el formulario del paquete reasigna manifiesto) y dos copias del

@@ -255,32 +255,14 @@ class PreFactura < ApplicationRecord
   # se **acumulan** en `prepagados_miami_detected`: la pre-factura puede venir
   # del armador por volumen, que nunca los anota.
   def agregar_lineas_por_paquete(paquetes)
-    # PR-6b: los prepagados quedan expuestos para que el controller muestre
-    # un flash avisando al cajero. (Análogo al patrón de `nota_debito_auto`
-    # para cambio de servicio.)
-    prepagados_miami = (@prepagados_miami_detected ||= [])
-
     paquetes.each do |paquete|
       if paquete.prepagado_miami?
         # PR-6b: paquete pre-pagado en Miami — línea simbólica editable
-        # en vez de flete completo. La marcamos como `manual` para que
-        # el cajero pueda ajustar el monto antes de facturar.
-        prepagados_miami << paquete
-        # PR-10.a: `peso_cobrar` y `precio_libra` van en nil a propósito. Si
-        # se mandan, `PreFacturaItem#calculate_subtotal_from_peso` corre en
-        # before_validation y sobrescribe el monto simbólico con `peso × 0 = 0`
-        # — el cobro de $1.00 se perdía en silencio desde PR-6b.
+        # en vez de flete completo. PR-P.11a: el cuerpo vive en
+        # `linea_prepagado_miami`, que comparte con el armador por volumen;
+        # acá lleva el peso del paquete, como siempre.
         pre_factura_items.build(
-          paquete: paquete,
-          concepto: "Flete #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia} " \
-                    "(PREPAGADO EN MIAMI#{paquete.prepago_sufijo})",
-          peso_cobrar: paquete.peso_cobrar,
-          precio_libra: BigDecimal("0"),
-          # "la factura la va a hacer por un dólar más impuesto" — el
-          # simbólico está en USD, el documento en Lempiras.
-          subtotal: convertir_a_moneda(PREPAGADO_MIAMI_SIMBOLICO, "USD"),
-          minimo_aplicado: true,
-          origen: "manual"
+          linea_prepagado_miami(paquete, peso_cobrar: paquete.peso_cobrar, precio_libra: BigDecimal("0"))
         )
         next
       end
@@ -351,6 +333,39 @@ class PreFactura < ApplicationRecord
     paquetes.each { |p| aplicar_cobros_automaticos_para(p) }
 
     self
+  end
+
+  # PR-6b · PR-P.11a · La línea simbólica de un paquete **prepagado en Miami**
+  # —los atributos, para `pre_factura_items.build`—: no se cobra el flete,
+  # solo el simbólico, editable por el cajero (`origen: "manual"`). Yusef:
+  # *"la factura la va a hacer por un dólar más impuesto"*; el simbólico está
+  # en USD y el documento en Lempiras, y el ISV lo suma el total como a
+  # cualquier línea.
+  #
+  # Sacado tal cual de `agregar_lineas_por_paquete` para que el armador por
+  # volumen (`ArmarPreFacturaPorVolumen`) cobre **lo mismo** por caja. La
+  # diferencia es el peso: por paquete la línea lleva el de la caja (es su
+  # flete); por volumen va **sin peso ni precio** —el peso ya lo lleva la
+  # línea del volumen, y con él `EtiquetaDeEntrega#libras` lo contaría dos
+  # veces y `LineasPorVolumen` la escondería como una caja más—.
+  #
+  # `minimo_aplicado: true` es lo que la protege (PR-10.a): sin él,
+  # `PreFacturaItem#calculate_subtotal_from_peso` pisaba el monto con
+  # `peso × 0 = 0` y el dólar se perdía en silencio.
+  #
+  # Anota el paquete en `prepagados_miami_detected` (PR-6b): el controller de
+  # la puerta a mano lo usa para el flash, venga de donde venga la línea.
+  def linea_prepagado_miami(paquete, peso_cobrar: nil, precio_libra: nil)
+    (@prepagados_miami_detected ||= []) << paquete
+
+    { paquete: paquete,
+      concepto: "Flete #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia} " \
+                "(PREPAGADO EN MIAMI#{paquete.prepago_sufijo})",
+      peso_cobrar: peso_cobrar,
+      precio_libra: precio_libra,
+      subtotal: convertir_a_moneda(PREPAGADO_MIAMI_SIMBOLICO, "USD"),
+      minimo_aplicado: true,
+      origen: "manual" }
   end
 
   # PR-P.10 · Los totales de un documento **sin guardar**, con la misma cuenta

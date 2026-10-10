@@ -82,6 +82,23 @@ import { Controller } from "@hotwired/stimulus"
 // visible** (sin `hidden`, que en ellos es lo que los cierra). Un modal nuevo
 // hecho con `div` tiene que llevar `role="dialog" aria-modal="true"`.
 //
+// ── PR-C30.15 · El alcance: un formulario que se queda con las teclas ─────
+//
+// Un `[data-teclas-alcance]` **visible** es dueño de las teclas F mientras
+// está a la vista: la tecla se busca **solo adentro** de él, y si ahí no hay
+// botón con esa tecla, se frena (`preventDefault`) y no pasa nada. Nace en la
+// ficha del manifiesto, donde la tarjeta de detalles se abre en formulario en
+// el lugar (Jorge, 2026-10-10: *"I want to edit the current view"*) y la ficha
+// ya tenía sus propias teclas, más arriba en el DOM:
+//
+//   F8 → «Guardar» de la tarjeta, no «Solo Finalizar» (que también es F8).
+//   F2 → «Cancelar» de la tarjeta, no «Volver» a la lista.
+//   F5 → no recarga la página y se lleva lo tecleado.
+//   F6 → no vuelve a pedir el formulario (ni reabre nada) encima del abierto.
+//
+// La regla del modal sigue valiendo **después**: con «Eliminar paquetes»
+// abierto, F8 no guarda la tarjeta de atrás.
+//
 // ⚠️ Una pantalla que escucha F8 ella misma (/etiquetar, medición, el editor
 // de pre-alertas) **no puede** tener un botón con `data-shortcut="F8"`: el
 // global le haría click además y guardaría dos veces. Sus botones van con
@@ -111,8 +128,13 @@ export default class extends Controller {
     // F1: la Ayuda del navegador se frena siempre, antes de mirar nada más.
     if (e.key === "F1") e.preventDefault()
 
-    const target = document.querySelector(`[data-shortcut="${e.key}"]`)
-    if (!target) return
+    // PR-C30.15 · Con un alcance a la vista, la tecla es de él o de nadie.
+    const alcance = this.alcanceVisible()
+    const target = (alcance || document).querySelector(`[data-shortcut="${e.key}"]`)
+    if (!target) {
+      if (alcance) e.preventDefault()
+      return
+    }
 
     // Si está editando y la tecla no es de las que siempre valen, no interrumpir.
     if (!SIEMPRE.includes(e.key) && this.isEditing(e.target)) return
@@ -131,6 +153,13 @@ export default class extends Controller {
   // que uno escondido. Con `hidden` (`display: none`) no tiene rectángulos.
   modalAbierto() {
     const candidatos = document.querySelectorAll("dialog[open], [aria-modal='true']")
+    return Array.from(candidatos).find((el) => el.getClientRects().length > 0)
+  }
+
+  // El primer `[data-teclas-alcance]` que se está viendo. Visible por
+  // `getClientRects()`, igual que `modalAbierto()`.
+  alcanceVisible() {
+    const candidatos = document.querySelectorAll("[data-teclas-alcance]")
     return Array.from(candidatos).find((el) => el.getClientRects().length > 0)
   }
 

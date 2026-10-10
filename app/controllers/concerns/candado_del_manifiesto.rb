@@ -20,7 +20,13 @@ module CandadoDelManifiesto
   def exigir_modificable
     return if @manifiesto.modificable_por?(Current.user)
 
-    mensaje = motivo_del_candado
+    negar_por_el_candado(motivo_del_candado)
+  end
+
+  # PR-C30.15 · La misma respuesta para el encabezado (`ManifiestosController#
+  # edit` y `#update`), que tiene su propia pregunta
+  # (`Manifiesto#encabezado_editable_por?`) pero la misma forma de decir que no.
+  def negar_por_el_candado(mensaje)
     respond_to do |format|
       format.json { render json: { resultado: "bloqueado", ok: false, mensaje: mensaje }, status: :forbidden }
       # Una pestaña vieja que actúa sobre un manifiesto que se acaba de cerrar.
@@ -38,9 +44,8 @@ module CandadoDelManifiesto
         flash[:alert] = mensaje
         render turbo_stream: turbo_stream.refresh(request_id: nil), status: :forbidden
       end
-      # PR-C30.14 · A la pantalla de donde vino —la ficha o /edit, que tienen
-      # las mismas secciones—, con la ficha si no se sabe.
-      format.html { redirect_back fallback_location: manifiesto_path(@manifiesto), alert: mensaje }
+      # PR-C30.15 · A la ficha: /edit ya no es otra pantalla, se edita ahí.
+      format.html { redirect_to manifiesto_path(@manifiesto), alert: mensaje }
     end
   end
 

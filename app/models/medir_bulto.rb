@@ -62,7 +62,7 @@ class MedirBulto
     if reemplaza_sesion && !Bulto.exists?(sesion: reemplaza_sesion)
       raise NoSePuede, "La tanda que se quería corregir ya no existe. Escaneá la caja otra vez."
     end
-    if reemplaza_sesion && (pf = pre_factura_que_la_cobra(reemplaza_sesion))
+    if reemplaza_sesion && (pf = Bulto.pre_factura_que_cobra(reemplaza_sesion))
       raise NoSePuede, "Esa tanda ya se cobra en la pre-factura #{pf.numero}: sus volúmenes no se pueden " \
                        "medir de nuevo desde acá. Anulá la pre-factura primero."
     end
@@ -141,20 +141,18 @@ class MedirBulto
          .find_each(&:destroy!)
   end
 
-  # PR-P.1 · La pre-factura **viva** que cobra algún volumen de la tanda. Con
-  # una, medir de nuevo no puede seguir: el volumen es la línea que le cobra
-  # al cliente (`Bulto has_many :pre_factura_items, restrict`), y borrarlo
-  # dejaría la pre-factura cobrando un número que ya no existe.
+  # PR-P.1 · Medir de nuevo no sigue si una pre-factura **viva** cobra algún
+  # volumen de la tanda: el volumen es la línea que le cobra al cliente
+  # (`Bulto has_many :pre_factura_items, restrict`), y borrarlo dejaría la
+  # pre-factura cobrando un número que ya no existe. La pregunta vive en
+  # `Bulto.pre_factura_que_cobra` (PR-P.11a: `MarcarCobroExcepcion` la hace
+  # también).
   #
   # Una pre-factura **anulada** no frena: sus cajas ya volvieron a estar
   # libres (`anular!`) y medirlas de nuevo es justamente lo que se hace
   # después. Esos volúmenes viejos no se borran —el documento anulado los
   # sigue nombrando— y quedan huérfanos de su tanda: ninguna caja tiene ya su
   # sesión, así que nada los vuelve a contar.
-  def pre_factura_que_la_cobra(sesion)
-    PreFactura.activas.joins(:pre_factura_items)
-              .where(pre_factura_items: { bulto_id: Bulto.where(sesion: sesion).select(:id) }).first
-  end
 
   # En el orden en que vinieron, que es el del escaneo: `where(id:)` los
   # devuelve en el que se le ocurra a la base, y «NO Mezclar» le dice al
@@ -164,7 +162,7 @@ class MedirBulto
     raise NoSePuede, "La tanda no tiene ninguna caja escaneada." if ids.empty?
 
     repetida = ids.tally.find { |_id, veces| veces > 1 }&.first
-    por_id = Paquete.where(id: ids.uniq).includes(:cliente, :tipo_envio).index_by(&:id)
+    por_id = Paquete.where(id: ids.uniq).includes(:cliente, :tipo_envio, :proveedor, :sucursal).index_by(&:id)
     raise NoSePuede, "Alguna de las cajas escaneadas ya no existe." if por_id.size != ids.uniq.size
     raise NoSePuede, repetida_msg(por_id[repetida]) if repetida
 
@@ -190,13 +188,18 @@ class MedirBulto
   # Las guardas de siempre, caja por caja, **antes** de escribir nada; más
   # «NO Mezclar» sobre toda la tanda: sus cajas son del mismo cliente y del
   # mismo servicio, y del mismo consolidado si lo hay.
+  #
+  # PR-P.11a · Con `misma_tanda`: también la misma sucursal, el mismo prepago,
+  # la misma tarifa y el mismo trato de cobro — lo que el volumen necesita para
+  # cobrarse con una sola línea. La pantalla ya lo frena al escanear; esto es
+  # la red para la pestaña vieja o el pedido armado a mano.
   def validar!(cajas, reemplaza_sesion)
     cajas.each { |caja| validar_caja!(caja, reemplaza: reemplaza_sesion) }
 
     cajas.each_with_index do |caja, i|
       next if i.zero?
 
-      problema = PuedenIrJuntas.new(cajas.first(i), caja).problema
+      problema = PuedenIrJuntas.new(cajas.first(i), caja, misma_tanda: true).problema
       raise NoSePuede, problema.mensaje if problema
     end
   end

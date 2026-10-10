@@ -1,23 +1,13 @@
 <div id="flash-messages"></div>
 
 <%= render PageHeaderComponent.new(title: @manifiesto.numero, subtitle: "Manifiesto") do |header|
-  # C30-06 · Con el manifiesto finalizado y todavía reabrible, este botón se
-  # esconde: la puerta es el «Editar» del cartel de bloqueado, que abre todo
-  # y no solo el encabezado. Dos «Editar» en la misma pantalla haciendo cosas
-  # distintas es lo que no tiene que pasar.
-  #
-  # PR-C30.14 · Este lleva a /edit, que ahora es el manifiesto **entero**
-  # (encabezado, San Pedro, casas y paquetes). Con la edición abierta, o con
-  # el manifiesto todavía armándose, sale; cerrado y reabrible, no. Desde que
-  # los recibidos también se reabren, «cerrado y no reabrible» es solo el
-  # interno ya finalizado, y para él queda este, el de C21-06, para corregir
-  # el encabezado.
-  unless @manifiesto.bloqueado? && @manifiesto.reabrible? && !@manifiesto.edicion_abierta?
-    header.with_action do
-      render ButtonComponent.new(variant: :outline_navy, href: edit_manifiesto_path(@manifiesto), icon: "pencil-square", shortcut: "F6") do
-        "Editar"
-      end
-    end
+  # PR-C30.15 · **Un solo «Editar» (F6)**, y edita acá: da vuelta la tarjeta
+  # de detalles a formulario, o —en uno finalizado— abre el candado y aterriza
+  # con todo editable. Qué hace en cada caso y a quién no le sale, en
+  # `ManifiestosHelper#boton_editar_manifiesto`. Reemplaza al de C30-06 (que
+  # se escondía con el candado cerrado) y al «Editar» del cartel del candado.
+  if (editar = boton_editar_manifiesto(@manifiesto))
+    header.with_action { editar }
   end
   # C21-09 · El manifiesto impreso. Desde C30-05 es también lo que saca
   # «Finalizar e Imprimir» (antes sacaba las 4×6 de los bultos); este botón
@@ -48,74 +38,10 @@
   end
 end %>
 
-<%# Manifest details card %>
-<div class="bg-white rounded-lg shadow overflow-hidden mb-6">
-  <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-    <h2 class="text-lg font-semibold text-gray-800">Detalles del Manifiesto</h2>
-    <%= render StatusBadgeComponent.new(status: @manifiesto.estado) %>
-  </div>
-  <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Numero</dt>
-      <dd class="mt-1 text-sm font-mono font-medium text-cec-navy"><%= @manifiesto.numero %></dd>
-    </div>
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Empresa</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.empresa_manifiesto&.nombre || "—" %></dd>
-    </div>
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">T. envío del proveedor</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.tipo_envio_del_proveedor || "—" %></dd>
-    </div>
-    <%# C21-03: los NUESTROS, que son los que deciden qué paquetes salen. %>
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">T. envío nuestros</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.tipos_envio_nuestros.presence || "—" %></dd>
-    </div>
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Consignatario</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.consignatario&.nombre || "—" %></dd>
-    </div>
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Se entrega en</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.sucursal_entrega&.nombre || "—" %></dd>
-    </div>
-    <%# C21-11: son varias, y las llena San Pedro Sula después. %>
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Guías del proveedor</dt>
-      <dd class="mt-1 text-sm font-mono text-gray-900"><%= @manifiesto.numeros_de_guia.join(" · ").presence || "—" %></dd>
-    </div>
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Recibido en Honduras</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= fecha_y_quien(@manifiesto.fecha_aduana, @manifiesto.recibido_hn_por) || "—" %></dd>
-    </div>
-    <div>
-      <%# RP-59 · Lo estampa el sistema al crear, con las iniciales de quien lo
-          creó. Los manifiestos viejos que se crearon antes de esto pueden no
-          tenerlo, y ahí cae al usuario. %>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Expedido Por</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.expedido_por.presence || @manifiesto.user&.iniciales_display || "—" %></dd>
-    </div>
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Paquetes</dt>
-      <dd class="mt-1 text-sm font-semibold text-gray-900"><%= @manifiesto.cantidad_paquetes %></dd>
-    </div>
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Peso Total</dt>
-      <dd class="mt-1 text-sm font-semibold text-gray-900"><%= @manifiesto.peso_total || 0 %> lbs</dd>
-    </div>
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Enviado</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @manifiesto.fecha_enviado&.strftime("%d/%m/%Y %H:%M") || "—" %></dd>
-    </div>
-    <% if @manifiesto.es_prioridad? %>
-      <div>
-        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Prioridad</dt>
-        <dd class="mt-1"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-cec-gold/20 text-cec-navy">ES PRIORIDAD</span></dd>
-      </div>
-    <% end %>
-  </div>
-</div>
+<%# PR-C30.15 · La tarjeta de detalles, que «Editar» da vuelta a formulario en
+    el lugar (`manifiestos/_detalles`). Con `?editar=1` ya viene abierta: es a
+    donde aterrizan el lápiz de la lista y «Editar» sobre uno finalizado. %>
+<%= render "manifiestos/detalles", manifiesto: @manifiesto, editando: @editando %>
 
 <%# ── La pantalla sigue el orden del trabajo ────────────────────────────────
 
@@ -134,9 +60,15 @@ end %>
   <%= render "manifiestos/acciones", manifiesto: @manifiesto, paquetes: @paquetes %>
 </div>
 
-<%# PR-C30.14 · Casas, agregar paquetes, sacarlos y la tabla: lo mismo que
-    pinta /edit, del mismo partial. %>
-<%= render "manifiestos/contenido", manifiesto: @manifiesto, paquetes: @paquetes %>
+<%# PR-C30.14 · Casas, agregar paquetes, sacarlos y la tabla.
+    PR-C30.15 · En `#manifiesto-contenido` para que guardar el encabezado lo
+    refresque: «Empacar sin escanear (N)» cuenta por los tipos de envío y la
+    sucursal, que se acaban de cambiar. El wrapper vive acá y no en el partial
+    por lo mismo que `#manifiesto-acciones-*`: `turbo_stream.update` cambia el
+    contenido, y adentro se anidaría. %>
+<div id="manifiesto-contenido">
+  <%= render "manifiestos/contenido", manifiesto: @manifiesto, paquetes: @paquetes %>
+</div>
 
 <%# Los cierres, otra vez — acá es donde uno **termina**. Con la tabla llena, el
     bloque de arriba queda a una pantalla de distancia. %>
