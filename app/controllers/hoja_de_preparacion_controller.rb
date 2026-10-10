@@ -30,13 +30,23 @@ class HojaDePreparacionController < ApplicationController
       else
         {}
       end
+
+    # PR-P.11a · «Sin manifiesto oficial»: en «nuevas», cuánta carga hay así
+    # (la casilla sale solo si hay); en «editar», las auditadas sin manifiesto,
+    # que no cuelgan de ninguna tarjeta y si no se perderían de la hoja.
+    @sin_manifiesto_total = @hoja.ofrece_sin_manifiesto? ? HojaDePreparacion.carga_sin_manifiesto(@hoja.tipo_envio_ids).count : 0
+    @pre_facturas_sin_manifiesto =
+      @hoja.editar? ? HojaDePreparacion.pre_facturas_editables.where(manifiesto_id: nil).includes(:cliente).order(:numero).to_a : []
   end
 
   def update
-    @hoja = @hoja.con(params.fetch(:hoja, {}).permit(:modo, :fecha, :hora, tipo_envio_ids: [], manifiesto_ids: []))
+    @hoja = @hoja.con(params.fetch(:hoja, {}).permit(:modo, :fecha, :hora, :sin_manifiesto,
+                                                     tipo_envio_ids: [], manifiesto_ids: []))
     # Lo que quedó elegido y ya no se ofrece no se guarda: un manifiesto que
-    # se terminó de pre-facturar no puede seguir «elegido» escondido.
-    @hoja = @hoja.con("manifiesto_ids" => @hoja.manifiestos_elegidos.pluck(:id))
+    # se terminó de pre-facturar no puede seguir «elegido» escondido. Lo
+    # mismo «Sin manifiesto oficial» cuando ya no queda carga así.
+    @hoja = @hoja.con("manifiesto_ids" => @hoja.manifiestos_elegidos.pluck(:id),
+                      "sin_manifiesto" => @hoja.sin_manifiesto? && @hoja.ofrece_sin_manifiesto?)
     session[:pf_hoja] = @hoja.to_sesion
     redirect_to hoja_de_preparacion_path
   end

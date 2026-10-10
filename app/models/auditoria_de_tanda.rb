@@ -62,7 +62,8 @@ class AuditoriaDeTanda
     rechazo = rechazo_de_la_tanda(sesion, cajas)
     return rechazo if rechazo
 
-    Resultado.new(tipo: :ok, sesion: sesion, cajas: cajas, bultos: bultos, aviso: medicion_anterior(codigo, bultos),
+    avisos = [ medicion_anterior(codigo, bultos), prepagadas_aviso(cajas) ].compact
+    Resultado.new(tipo: :ok, sesion: sesion, cajas: cajas, bultos: bultos, aviso: avisos.join(" · ").presence,
                   mensaje: "#{volumenes_texto(bultos)} · #{cajas.size} caja#{"s" if cajas.size != 1}: escaneá cada etiqueta de Miami.")
   end
 
@@ -78,6 +79,17 @@ class AuditoriaDeTanda
     return nil if impreso == hoy
 
     "Esta etiqueta es de una medición anterior: la tanda hoy tiene #{volumenes_texto_n(hoy)} — reimprimí las etiquetas."
+  end
+
+  # PR-P.11a · RP-89 · Una tanda prepagada en Miami entra (el armador pone el
+  # simbólico), pero el auditor tiene que saber que no se le cobra el flete:
+  # es lo que antes decía el modal de la puerta a mano.
+  def prepagadas_aviso(cajas)
+    n = cajas.count(&:prepagado_miami?)
+    return nil if n.zero?
+
+    simbolico = format("%.2f", PreFactura::PREPAGADO_MIAMI_SIMBOLICO)
+    "#{n} caja#{"s" if n != 1} prepagada#{"s" if n != 1} en Miami: se cobra el simbólico de US$#{simbolico} c/u, no el flete."
   end
 
   # ── Una caja (la etiqueta de Miami) ─────────────────────────────────────
@@ -130,21 +142,29 @@ class AuditoriaDeTanda
 
     # RP-85 · Por ahora se rechaza lo que no está en la hoja; si conviene
     # ofrecer agregarlo, es una pregunta abierta.
+    #
+    # PR-P.11a · Lo que no viene en un manifiesto oficial (viejos, capeados,
+    # los de un interno) entra si la hoja eligió «Sin manifiesto oficial»
+    # (`HojaDePreparacion#acepta_manifiesto?`): era el hueco que solo cubría la
+    # puerta a mano.
     if (afuera = cajas.find { |c| !@hoja.tipo_envio_ids.include?(c.tipo_envio_id) })
       return Resultado.new(tipo: :fuera_de_la_hoja,
                            mensaje: "#{codigo_de(afuera)} va por #{afuera.tipo_envio&.nombre}, y la hoja es de " \
                                     "#{nombres_de_tipos}. Cambiá la hoja si toca trabajar ese servicio.")
     end
-    if (afuera = cajas.find { |c| !@hoja.manifiesto_ids.include?(c.manifiesto_id) })
-      return Resultado.new(tipo: :fuera_de_la_hoja,
-                           mensaje: "#{codigo_de(afuera)} es del manifiesto #{afuera.manifiesto&.numero || '—'}, " \
-                                    "que no está en la hoja de preparación.")
+    if (afuera = cajas.find { |c| !@hoja.acepta_manifiesto?(c) })
+      return Resultado.new(tipo: :fuera_de_la_hoja, mensaje: fuera_de_la_hoja_msg(afuera))
     end
 
-    if (prepagada = cajas.find(&:prepagado_miami?))
+    # PR-P.11a · RP-89 · Toda prepagada entra con el simbólico (el aviso lo da
+    # `volumen`); mezclada no: el volumen pesó las dos cosas juntas. Medición
+    # ya no deja medirlas así (`PuedenIrJuntas#prepago_mezclado`); esto es
+    # para las tandas medidas antes.
+    prepagadas = cajas.select(&:prepagado_miami?)
+    if prepagadas.any? && prepagadas.size < cajas.size
       return Resultado.new(tipo: :prepagada,
-                           mensaje: "#{codigo_de(prepagada)} viene prepagada en Miami: es un caso complejo, " \
-                                    "va por Pre-Facturas › A mano (excepciones).")
+                           mensaje: "#{codigo_de(prepagadas.first)} viene prepagada en Miami y el resto de la " \
+                                    "tanda no: medila de nuevo separando las prepagadas.")
     end
 
     no_va_junto(cajas.first)
@@ -182,6 +202,15 @@ class AuditoriaDeTanda
     return nil if problema.nil?
 
     Resultado.new(tipo: :no_va_junto, mensaje: problema.mensaje)
+  end
+
+  def fuera_de_la_hoja_msg(caja)
+    if caja.manifiesto.nil? || caja.manifiesto.tipo_interno?
+      donde = caja.manifiesto ? "viene en el interno #{caja.manifiesto.numero}" : "no viene en ningún manifiesto"
+      return "#{codigo_de(caja)} #{donde}: marcá «Sin manifiesto oficial» en la hoja de preparación."
+    end
+
+    "#{codigo_de(caja)} es del manifiesto #{caja.manifiesto.numero}, que no está en la hoja de preparación."
   end
 
   def no_encontrado(codigo)

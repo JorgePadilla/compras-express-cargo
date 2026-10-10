@@ -28,6 +28,10 @@ class PreFacturaAManoTest < ActionDispatch::IntegrationTest
     MedirBulto.new(user: users(:supervisor_prefactura)).guardar!(paquete_ids: cajas.map(&:id), volumenes: volumenes)
   end
 
+  # PR-P.11a · Medición ya no deja medir juntas prepagadas y no prepagadas: la
+  # tanda mezclada de estos tests es una medida antes, marcada después.
+  def prepagar(paquete) = paquete.update_columns(prepagado_miami: true, prepagado_miami_metodo: "efectivo")
+
   def lps(monto) = ActiveSupport::NumberHelper.number_to_delimited(format("%.2f", monto))
 
   # ── El índice ───────────────────────────────────────────────────────────
@@ -52,8 +56,9 @@ class PreFacturaAManoTest < ActionDispatch::IntegrationTest
   test "el paso 2 muestra la tanda como UNA fila con UN check, y lo demás por paquete" do
     cajas = [ caja, caja ]
     bulto_uno, = medir(cajas, { peso: "6" }, { peso: "12.5" })
-    rechazadas = [ caja(peso: 5), caja(prepagado_miami: true, prepagado_miami_metodo: "efectivo") ]
+    rechazadas = [ caja(peso: 5), caja ]
     rechazada, = medir(rechazadas, { peso: "9" })
+    prepagar(rechazadas.last)
     suelta = caja(peso: 3)
 
     get new_pre_factura_url, params: { cliente_id: @cliente.id }
@@ -110,8 +115,9 @@ class PreFacturaAManoTest < ActionDispatch::IntegrationTest
 
   test "una tanda rechazada se cobra por paquete y el flash dice por qué" do
     normal = caja(peso: 5)
-    prepagada = caja(prepagado_miami: true, prepagado_miami_metodo: "efectivo")
+    prepagada = caja
     medir([ normal, prepagada ], { peso: "8" })
+    prepagar(prepagada)
 
     post pre_facturas_url, params: { cliente_id: @cliente.id, paquete_ids: [ normal.id, prepagada.id ] }
 
@@ -126,8 +132,9 @@ class PreFacturaAManoTest < ActionDispatch::IntegrationTest
   test "el total que muestra la pantalla es el total guardado, con tanda, rechazo, suelto y cargos automáticos" do
     medidas = [ caja(peso: 2), caja(peso: 2, recolecta_solicitada: true, recolecta_monto: 35.0, recolecta_moneda: "USD") ]
     medir(medidas, { peso: "12.3" })
-    rechazadas = [ caja(peso: 6), caja(prepagado_miami: true, prepagado_miami_metodo: "efectivo") ]
+    rechazadas = [ caja(peso: 6), caja ]
     medir(rechazadas, { peso: "9" })
+    prepagar(rechazadas.last)
     suelta = caja(peso: 0.5)
     marcados = [ medidas.map(&:id).join(","), *rechazadas.map(&:id), suelta.id ]
 

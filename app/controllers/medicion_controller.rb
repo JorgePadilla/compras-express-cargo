@@ -159,7 +159,10 @@ class MedicionController < ApplicationController
 
     # «NO Mezclar»: la pizarra del 2026-09-07. La caja rechazada **no entra a
     # la mesa** — la respuesta no trae `mesa: true` y el JS no la agrega.
-    if (problema = PuedenIrJuntas.new(ya_escaneadas, paquete).problema)
+    # PR-P.11a · `misma_tanda`: acá sí van las reglas del volumen —prepagadas
+    # con no prepagadas, otra tarifa, otro trato de cobro—, que Auditar no
+    # pregunta (dos tandas distintas sí van en una pre-factura).
+    if (problema = PuedenIrJuntas.new(ya_escaneadas, paquete, misma_tanda: true).problema)
       return render json: { resultado: "no_mezclar", motivo: problema.motivo, mensaje: problema.mensaje,
                             paquete: datos_de(paquete), choque: choque_json(problema) }
     end
@@ -421,7 +424,7 @@ class MedicionController < ApplicationController
   def ya_escaneadas
     return [] if en_tanda.empty?
 
-    por_id = Paquete.where(id: en_tanda).includes(:cliente, :tipo_envio).index_by(&:id)
+    por_id = Paquete.where(id: en_tanda).includes(:cliente, :tipo_envio, :proveedor, :sucursal).index_by(&:id)
     en_tanda.filter_map { |id| por_id[id] }
   end
 

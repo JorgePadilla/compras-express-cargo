@@ -137,6 +137,24 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_equal "codigo_medicion", foco
   end
 
+  # PR-P.11a · RP-89 · Lo que antes iba a la pre-factura a mano se frena en la
+  # mesa: una prepagada en Miami no se mide con las que no.
+  test "una prepagada en Miami donde hay no prepagadas abre el modal con su título, y no entra a la mesa" do
+    prepagada = caja("1ZFLUJO00000031")
+    prepagada.update_columns(prepagado_miami: true, prepagado_miami_metodo: "efectivo")
+
+    visit medicion_index_path
+    escanear_a_la_mesa(@paquete, 1)
+    escanear(prepagada.tracking)
+
+    assert_selector "dialog[open]", text: "Prepagadas y no prepagadas no se miden juntas", wait: 5
+    assert_selector "dialog[open]", text: "Las prepagadas se miden aparte"
+    within("dialog[open]") { click_on "Quitar el último escaneado" }
+
+    assert_no_selector "dialog[open]", wait: 5
+    assert_selector "[data-medicion-target='mesa'] li", count: 1
+  end
+
   test "«empezar todo de nuevo» deja la mesa vacía" do
     ajena = caja("1ZFLUJO00000005", cliente: clientes(:maria))
 

@@ -25,6 +25,12 @@ class ArmarPreFacturaManualTest < ActiveSupport::TestCase
     MedirBulto.new(user: @user).guardar!(paquete_ids: cajas.map(&:id), volumenes: volumenes)
   end
 
+  # PR-P.11a · Medición ya no deja medir juntas prepagadas y no prepagadas
+  # (`PuedenIrJuntas#prepago_mezclado`), ni cajas con tarifas distintas: las
+  # tandas así de estos tests son las que se midieron **antes**, y se arman
+  # marcando después.
+  def prepagar(paquete) = paquete.update_columns(prepagado_miami: true, prepagado_miami_metodo: "efectivo")
+
   def armar(*paquetes) = ArmarPreFacturaManual.call(cliente: @cliente, paquete_ids: paquetes.map(&:id), user: @user)
   def por_volumen(sesion) = ArmarPreFacturaPorVolumen.call(cliente: @cliente, sesiones: [ sesion ], user: @user)
 
@@ -134,8 +140,9 @@ class ArmarPreFacturaManualTest < ActiveSupport::TestCase
   test "una tanda con una caja prepagada en Miami va por paquete, con el simbólico y el motivo" do
     tarifa_cer
     normal = caja(peso: 5)
-    prepagada = caja(prepagado_miami: true, prepagado_miami_metodo: "efectivo")
+    prepagada = caja
     bulto, = medir([ normal, prepagada ], { peso: "8" })
+    prepagar(prepagada)
 
     r = armar(normal, prepagada)
 
@@ -153,8 +160,9 @@ class ArmarPreFacturaManualTest < ActiveSupport::TestCase
     tarifa_cer
     normal = caja(peso: 5)
     otra = caja(peso: 7)
-    prepagada = caja(prepagado_miami: true, prepagado_miami_metodo: "efectivo")
+    prepagada = caja
     medir([ normal, otra, prepagada ], { peso: "8" })
+    prepagar(prepagada)
 
     r = armar(normal)
 
@@ -164,9 +172,10 @@ class ArmarPreFacturaManualTest < ActiveSupport::TestCase
   test "una tanda con tarifas distintas va por paquete, cada caja con la suya" do
     tarifa_cer
     tarifa_cer(proveedor: proveedores(:Amazon), precio_libra: 3.00)
-    amazon = caja(proveedor: proveedores(:Amazon), peso: 4)
+    amazon = caja(peso: 4)
     otra = caja(peso: 4)
     bulto, = medir([ amazon, otra ], { peso: "8" })
+    amazon.update_columns(proveedor_id: proveedores(:Amazon).id)
 
     r = armar(amazon, otra)
 
@@ -213,8 +222,9 @@ class ArmarPreFacturaManualTest < ActiveSupport::TestCase
     cambio_de_servicio
     medidas = [ caja(peso: 2), caja(peso: 2, recolecta_solicitada: true, recolecta_monto: 35.0, recolecta_moneda: "USD") ]
     medida, = medir(medidas, { peso: "12.3" })
-    rechazadas = [ caja(peso: 6), caja(prepagado_miami: true, prepagado_miami_metodo: "efectivo") ]
+    rechazadas = [ caja(peso: 6), caja ]
     rechazada, = medir(rechazadas, { peso: "9" })
+    prepagar(rechazadas.last)
     suelta = caja(peso: 0.5, solicito_cambio_servicio: true)
 
     r = armar(medidas.first, *rechazadas, suelta)

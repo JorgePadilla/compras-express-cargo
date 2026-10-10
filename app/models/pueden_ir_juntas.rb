@@ -22,12 +22,29 @@
 #
 # Devuelve `nil` si pueden ir juntas, o un motivo con lo que hay que decirle al
 # operario. No decide la UI: quién abre cuál modal es del controller.
+#
+# PR-P.11a · Desde que la pre-factura sale **solo** escaneando (Jorge,
+# 2026-10-10: quitar la de a mano), lo que la puerta a mano resolvía se frena
+# acá, en la mesa, que es donde todavía se puede separar:
+#
+# - `otra_sucursal` — **en todos lados**: la pre-factura es de una sucursal de
+#   retiro (su etiqueta de entrega va pegada en una bolsa), y la tarifa puede
+#   cambiar por sucursal.
+# - `prepago_mezclado`, `otra_tarifa`, `otro_trato_de_cobro` — **solo dentro de
+#   una tanda** (`misma_tanda: true`, Medición): son reglas del **volumen**, que
+#   se cobra con una sola tarifa y un solo trato. Dos tandas distintas sí van
+#   en la misma pre-factura —cada volumen es su línea—, así que Auditar y F9 no
+#   las preguntan.
 class PuedenIrJuntas
   Problema = Struct.new(:motivo, :mensaje, :pre_alerta, keyword_init: true)
 
-  def initialize(ya_escaneadas, candidata)
+  # Los motivos que solo valen dentro de una tanda de Medición.
+  SOLO_DE_TANDA = %w[prepago_mezclado otra_tarifa otro_trato_de_cobro].freeze
+
+  def initialize(ya_escaneadas, candidata, misma_tanda: false)
     @ya = Array(ya_escaneadas).compact
     @nueva = candidata
+    @misma_tanda = misma_tanda
   end
 
   def problema
@@ -35,8 +52,15 @@ class PuedenIrJuntas
     return repetida if @ya.any? { |p| p.id == @nueva.id }
     return otro_cliente if @ya.first.cliente_id != @nueva.cliente_id
     return otro_servicio if @ya.first.tipo_envio_id != @nueva.tipo_envio_id
+    return otra_sucursal if @ya.first.sucursal_id != @nueva.sucursal_id
 
-    otra_consolidacion
+    # La consolidación va antes que las reglas del volumen: su modal tiene
+    # salidas («unir», «hago el consolidado») que las otras no.
+    consolidacion = otra_consolidacion
+    return consolidacion if consolidacion
+    return nil unless @misma_tanda
+
+    prepago_mezclado || otra_tarifa || otro_trato_de_cobro
   end
 
   # La consolidación de un paquete, o nil si va suelto.
@@ -94,6 +118,69 @@ class PuedenIrJuntas
                             "la pre-alerta #{de_la_mesa.numero_documento}. Se facturan aparte.")
     end
   end
+
+  # PR-P.11a · La sucursal donde **retira** el cliente (`paquetes.sucursal`).
+  # Una sin sucursal contra una con sucursal también es distinta: la etiqueta
+  # de entrega no sabría a cuál mandar la bolsa.
+  def otra_sucursal
+    Problema.new(motivo: "otra_sucursal",
+                 mensaje: "#{codigo(@nueva)} se retira en #{sucursal_de(@nueva)}, y lo que ya escaneaste " \
+                          "se retira en #{sucursal_de(@ya.first)}. Cada sucursal se factura aparte.")
+  end
+
+  # PR-P.11a · RP-89 · Una tanda prepagada en Miami se cobra con el simbólico
+  # (`ArmarPreFacturaPorVolumen`); una que mezcla no tiene cómo cobrarse: el
+  # volumen pesa las dos cosas juntas. Provisorio hasta que Yusef conteste si
+  # Medición las rechaza o las separa sola (pregunta 2 de P.11).
+  def prepago_mezclado
+    return nil if @ya.first.prepagado_miami? == @nueva.prepagado_miami?
+
+    Problema.new(motivo: "prepago_mezclado",
+                 mensaje: "#{codigo(@nueva)} #{@nueva.prepagado_miami? ? 'viene' : 'no viene'} prepagada en Miami, " \
+                          "y lo que ya escaneaste #{@ya.first.prepagado_miami? ? 'sí' : 'no'}. " \
+                          "Las prepagadas se miden aparte.")
+  end
+
+  # PR-P.11a · RP-92 · Mismo cliente y servicio no garantiza la misma tarifa:
+  # `Tarifa.resolver` también mira el proveedor y la sucursal. Se compara
+  # **qué nivel aplicaría** (`Tarifa.clave`), que no depende del peso: el peso
+  # del volumen todavía no existe. `ArmarPreFacturaPorVolumen#misma_tarifa!`
+  # queda como la última red, ya con el peso.
+  def otra_tarifa
+    return nil if @ya.first.proveedor_id == @nueva.proveedor_id && @ya.first.sucursal_id == @nueva.sucursal_id
+    return nil if clave_de(@ya.first) == clave_de(@nueva)
+
+    Problema.new(motivo: "otra_tarifa",
+                 mensaje: "#{codigo(@nueva)} se cobra con otra tarifa (proveedor #{@nueva.proveedor&.nombre || '—'}) " \
+                          "que lo que ya escaneaste (#{@ya.first.proveedor&.nombre || '—'}). Se miden aparte.")
+  end
+
+  # PR-P.11a · RP-72 · La excepción de cobro de una caja («solo peso», «solo
+  # volumétrico», `MarcarCobroExcepcion`) aplica al volumen solo si la llevan
+  # todas (`Bulto#solo_peso?`): medida junto con otra se perdía en silencio.
+  # Provisorio hasta que Yusef diga si es siempre aparte o solo un aviso.
+  def otro_trato_de_cobro
+    return nil if @ya.first.cobro_excepcion == @nueva.cobro_excepcion
+
+    Problema.new(motivo: "otro_trato_de_cobro",
+                 mensaje: "#{codigo(@nueva)} se cobra #{trato(@nueva)}, y lo que ya escaneaste " \
+                          "se cobra #{trato(@ya.first)}. Con tratos distintos se miden aparte.")
+  end
+
+  def clave_de(paquete)
+    Tarifa.clave(tipo_envio: paquete.tipo_envio, cliente: paquete.cliente,
+                 proveedor: paquete.proveedor, sucursal: paquete.sucursal)
+  end
+
+  def trato(paquete)
+    case paquete.cobro_excepcion
+    when "solo_peso" then "solo por el peso real"
+    when "solo_volumetrico" then "solo por el volumétrico"
+    else "normal (el mayor de peso y volumen)"
+    end
+  end
+
+  def sucursal_de(paquete) = paquete.sucursal&.nombre || "ninguna sucursal"
 
   def codigo(paquete)
     paquete.numero_recepcion_visible.presence || paquete.tracking
