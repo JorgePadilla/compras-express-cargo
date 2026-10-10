@@ -35,6 +35,17 @@ class SucursalesControllerTest < ActionDispatch::IntegrationTest
     assert_match(/paquetes vinculados/i, flash[:alert])
   end
 
+  # PR-F1.4 · La dirección del establecimiento, que la factura SAR imprime.
+  test "admin carga la dirección de la sucursal" do
+    login_as users(:admin)
+    suc = sucursales(:humuya_tgu)
+    get edit_sucursal_url(suc)
+    assert_select "textarea[name='sucursal[direccion]']"
+
+    patch sucursal_url(suc), params: { sucursal: { direccion: "Col. Humuya, Tegucigalpa" } }
+    assert_equal "Col. Humuya, Tegucigalpa", suc.reload.direccion
+  end
+
   test "digitador no puede acceder al index" do
     login_as users(:digitador)
     get sucursales_url

@@ -42,6 +42,34 @@ class Fiscal::SequenceTest < ActiveSupport::TestCase
     assert_equal 6000, @sequence.issued_count("000-001-01")
   end
 
+  # PR-F1.4 · Corregir el inicio de un CAI sin usar vuelve a alinear, para
+  # arriba o para abajo, y nunca por debajo de un documento emitido.
+  test "corregir el inicio de un CAI sin usar recalcula el contador para los dos lados" do
+    tgu = puntos_de_emision(:tgu)
+    auth = cargar(punto_de_emision: tgu, rango_inicio: 1001, rango_fin: 2000)
+    assert_equal 1000, @sequence.issued_count("001-001-01")
+
+    auth.update!(rango_inicio: 1501)
+    assert_equal 1500, @sequence.issued_count("001-001-01")
+
+    auth.update!(rango_inicio: 1)
+    assert_equal 0, @sequence.issued_count("001-001-01"), "el contador baja: no se había emitido nada"
+  end
+
+  test "recalcular no baja de un documento emitido" do
+    tgu = puntos_de_emision(:tgu)
+    cargar(punto_de_emision: tgu, rango_inicio: 1, rango_fin: 100)
+    linea = Invoicehn::LineItem.new(description: "Flete", quantity: 1, unit_price: Invoicehn::Money.new("10.00"),
+                                    treatment: :gravado_15)
+    2.times do
+      Fiscal.issuance(punto: tgu).issue(customer: Invoicehn::Customer::ConsumidorFinal.new,
+                                        line_items: [ linea ], identifier: "001-001-01")
+    end
+    CorrelativoFiscal.find_by!(punto_de_emision: tgu, tipo_documento: "01").update_columns(ultimo: 0)
+
+    assert_equal 2, @sequence.recalcular(tgu, "01")
+  end
+
   test "un identificador de un punto que no existe o de un tipo que no se emite se rechaza" do
     assert_raises(Invoicehn::ValidationError) { @sequence.peek("009-009-01") }
     assert_raises(Invoicehn::ValidationError) { @sequence.allocate("000-001-02") { nil } }

@@ -76,6 +76,34 @@ module Fiscal
       end
     end
 
+    # PR-F1.4 · El contador vuelto a calcular desde cero: lo emitido de verdad
+    # (`documentos_fiscales`, donde la gema guarda todo lo que numera) y, si el
+    # número que sigue no lo cubre ninguna autorización vigente, el inicio de la
+    # próxima menos uno. Nunca baja de un documento emitido. Lo usa la
+    # corrección del rango de un CAI sin usar, que puede mover el contador para
+    # cualquiera de los dos lados.
+    def recalcular(punto, tipo)
+      CorrelativoFiscal.transaction(requires_new: true) do
+        fila = bloquear(punto, tipo)
+        emitido = self.class.ultimo_emitido(punto.id, tipo)
+        vigentes = AutorizacionSar.usables.del(punto, tipo).where(fecha_limite_emision: Fiscal.hoy..)
+
+        objetivo = emitido
+        unless vigentes.where(rango_inicio: ..emitido + 1, rango_fin: emitido + 1..).exists?
+          proximo = vigentes.where(rango_inicio: emitido + 1..).minimum(:rango_inicio)
+          objetivo = proximo - 1 if proximo
+        end
+        fila.update!(ultimo: objetivo) if fila.ultimo != objetivo
+        fila.ultimo
+      end
+    end
+
+    # El número más alto con documento guardado, 0 si no hay ninguno.
+    def self.ultimo_emitido(punto_id, tipo)
+      numero = DocumentoFiscal.where(punto_de_emision_id: punto_id, tipo_documento: tipo).maximum(:numero)
+      numero ? numero.split("-").last.to_i : 0
+    end
+
     private
 
     def ultimo(identifier)

@@ -7,8 +7,12 @@
 <div class="bg-white rounded-lg shadow p-6 mb-6">
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
     <div>
-      <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Nombre</p>
+      <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Nombre comercial</p>
       <p class="text-sm font-medium text-gray-900"><%= @empresa.nombre %></p>
+    </div>
+    <div>
+      <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Razón social</p>
+      <p class="text-sm"><%= @empresa.razon_social.presence || "—" %></p>
     </div>
     <div>
       <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">RTN</p>
@@ -40,7 +44,7 @@
     </div>
     <div>
       <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">ISV</p>
-      <p class="text-sm"><%= (@empresa.isv_rate.to_f * 100).round(2) %>%</p>
+      <p class="text-sm">15 % (Ley ISV)</p>
     </div>
     <div class="md:col-span-2">
       <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Sitio web</p>

@@ -8,6 +8,8 @@
   <% end %>
 <% end %>
 
+<%= render "autorizaciones_sar/salud", salud: @salud %>
+
 <%= render FormSectionComponent.new(title: "Puntos de emisión",
                                     subtitle: "Uno por sucursal que factura: el EEE-PPP del número de factura.",
                                     densidad: :compacta, class: "mb-6") do %>

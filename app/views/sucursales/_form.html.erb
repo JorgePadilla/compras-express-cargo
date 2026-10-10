@@ -47,6 +47,16 @@
           class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
     </div>
 
+    <%# PR-F1.4 · Sale en la factura SAR como la dirección del establecimiento
+        que emite (Art. 10 num. 1 lit. d). Fuera de la casa matriz, sin ella la
+        sucursal no factura. %>
+    <div class="md:col-span-2">
+      <%= f.label :direccion, "Dirección", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+      <%= f.text_area :direccion, rows: 2,
+          placeholder: "La que va impresa en la factura de esta sucursal",
+          class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+    </div>
+
     <div class="flex items-center gap-3 pt-6">
       <%= f.check_box :activo, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
       <%= f.label :activo, "Sucursal activa", class: "text-sm font-medium text-gray-700 dark:text-gray-200" %>
