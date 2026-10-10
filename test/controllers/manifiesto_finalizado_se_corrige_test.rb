@@ -157,6 +157,20 @@ class ManifiestoFinalizadoSeCorrigeTest < ActionDispatch::IntegrationTest
     assert_nil @adentro.caja_manifiesto_id
   end
 
+  # PR-C30.14 · Uno medido no sale. Con 422: el modal de «Eliminar paquetes»
+  # cuenta como sacado todo lo que vuelve bien, y éste se quedó.
+  test "abierto, uno ya medido no sale: 422 con el porqué, y sigue adentro" do
+    @adentro.update_columns(medicion_sesion: "tanda-medida")
+    @manifiesto.abrir_edicion!(@supervisor)
+    ingresar(@supervisor)
+
+    delete remove_paquete_manifiesto_url(@manifiesto, paquete_id: @adentro.id), headers: TURBO
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, "flash-messages"
+    assert_equal @manifiesto.id, @adentro.reload.manifiesto_id
+  end
+
   test "abierto, el supervisor arma y corrige cajas" do
     @manifiesto.abrir_edicion!(@supervisor)
     ingresar(@supervisor)

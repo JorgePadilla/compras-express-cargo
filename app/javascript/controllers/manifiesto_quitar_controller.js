@@ -102,6 +102,16 @@ export default class extends Controller {
         if (r.status === 403) {
           return r.text().then((html) => { window.Turbo.renderStreamMessage(html); return null })
         }
+        // PR-C30.14 · 422: no salió (tiene pre-factura o medición). El aviso
+        // con el porqué viene en el stream; no se cuenta como sacado.
+        if (r.status === 422) {
+          return r.text().then((html) => {
+            window.Turbo.renderStreamMessage(html)
+            this.dispatch("noSeSaca")
+            this._avisar("alerta", "No salió del manifiesto: mirá el aviso de arriba.")
+            return null
+          })
+        }
         if (!r.ok) throw new Error(r.status)
         return r.text()
       })

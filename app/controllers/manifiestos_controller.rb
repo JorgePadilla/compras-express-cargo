@@ -197,8 +197,10 @@ class ManifiestosController < ApplicationController
     @manifiesto.sacar!(paquete)
     respond_to_paquete_change("Paquete #{paquete.guia} removido del manifiesto.")
   rescue Manifiesto::NoSeSaca => e
-    # PR-C30.14 · Tiene pre-factura o medición: no sale, y se dice por qué.
-    respond_to_paquete_change(e.message, tipo: :alert)
+    # PR-C30.14 · Tiene pre-factura o medición: no sale, y se dice por qué. Con
+    # 422 y no 200: el modal de «Eliminar paquetes» cuenta como sacado todo lo
+    # que vuelve bien, y éste no salió.
+    respond_to_paquete_change(e.message, tipo: :alert, status: :unprocessable_entity)
   end
 
   # C30-06 · «Eliminar paquetes», escaneando. Yusef: *"deseo eliminar paquetes,
@@ -434,14 +436,14 @@ class ManifiestosController < ApplicationController
     ).call
   end
 
-  def respond_to_paquete_change(message, tipo: :notice)
+  def respond_to_paquete_change(message, tipo: :notice, status: :ok)
     # C30-07 · La tabla de casas dice qué lleva cada una: si un paquete entra o
     # sale, esa columna también cambia. Misma carga que `show`.
     @manifiesto.reload
     cargar_contenido
     respond_to do |format|
       format.turbo_stream do
-        render turbo_stream: [
+        render status: status, turbo_stream: [
           turbo_stream.update("manifiesto-paquetes", partial: "manifiestos/paquetes_table", locals: { manifiesto: @manifiesto, paquetes: @paquetes }),
           turbo_stream.update("manifiesto-cajas-tabla", partial: "manifiestos/cajas_tabla",
                                                         locals: { manifiesto: @manifiesto,
