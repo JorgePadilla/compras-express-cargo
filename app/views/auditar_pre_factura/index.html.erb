@@ -1,0 +1,141 @@
+<%# PR-P.5 · C30-17 / C30-18 · Auditar la pre-factura escaneando.
+
+    Yusef, 2026-10-09: *"escanear cualquiera de estas: automáticamente… jala los
+    tres volúmenes… tres de tres, y ahora te dice escanear los paquetes que van
+    con esto"* · *"y te va diciendo: son siete paquetes"* · *"sí, pertenece"*.
+
+    Izquierda, la pistola y lo que contestó. Derecha, lo que se está armando:
+    el cliente en grande (código y nombre), «3 volúmenes · 7 cajas», cada caja
+    con su tilde, los volúmenes con sus números, y las líneas tal como van a
+    quedar —de solo lectura—.
+
+    Es pantalla de pistola, como /medicion: todo JSON, **Enter nunca guarda**
+    (la pistola dispara Enter en cada lectura), cada respuesta suena, botones de
+    48 px. Teclas de la hoja de Yusef (C30-02): F9 guarda e imprime, F2 limpia;
+    F8 —guardar consolidando— llega con PR-P.6. %>
+<% content_for :head do %>
+  <meta name="turbo-cache-control" content="no-cache">
+<% end %>
+<% content_for :esquina, render("shared/sonido_config") %>
+
+<div data-controller="auditar-pre-factura audio"
+     <%= tag.attributes(atributos_de_audio) %>
+     data-auditar-pre-factura-volumen-url-value="<%= escanear_volumen_auditar_pre_factura_index_path %>"
+     data-auditar-pre-factura-paquete-url-value="<%= escanear_paquete_auditar_pre_factura_index_path %>"
+     data-auditar-pre-factura-guardar-url-value="<%= guardar_auditar_pre_factura_index_path %>"
+     data-action="auditar-pre-factura:ok->audio#success
+                  auditar-pre-factura:pertenece->audio#success
+                  auditar-pre-factura:completo->audio#completo
+                  auditar-pre-factura:yaEscaneada->audio#notify
+                  auditar-pre-factura:rechazo->audio#error
+                  auditar-pre-factura:noCorresponde->audio#error
+                  auditar-pre-factura:guardado->audio#completo
+                  auditar-pre-factura:noGuardo->audio#error">
+
+  <%= render PageHeaderComponent.new(title: "Auditar pre-factura",
+                                     subtitle: "Escaneá el QR de un volumen; después, cada etiqueta de Miami") do |h| %>
+    <% h.with_back do %>
+      <%# Sin F2: acá F2 es «Limpiar» (la tanda en pantalla), como en Medición. %>
+      <%= render ButtonComponent.new(href: hoja_de_preparacion_path, variant: :ghost, size: :lg, icon: "arrow-left") do %>
+        Volver a la hoja
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <%# La hoja con la que se trabaja, a la vista: servicios, manifiestos y hora. %>
+  <div class="mb-4 rounded-lg bg-cec-navy/5 ring-1 ring-cec-navy/15 px-4 py-3 text-sm text-gray-700 dark:text-gray-200" data-hoja>
+    <span class="font-semibold text-cec-navy dark:text-cec-gold">Hoja:</span>
+    <%= TipoEnvio.where(id: @hoja.tipo_envio_ids).order(:nombre).pluck(:nombre).join(", ") %> ·
+    <%= Manifiesto.where(id: @hoja.manifiesto_ids).order(:numero).pluck(:numero).join(", ") %> ·
+    aviso el <%= @hoja.disponible_en.strftime("%d/%m/%Y a las %H:%M") %>
+  </div>
+
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+    <%# ── Izquierda: la pistola ── %>
+    <section class="xl:col-span-5 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+      <%= label_tag :codigo_auditoria, "Escaneá", class: "block text-base font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+      <input type="text" id="codigo_auditoria" autocomplete="off" autofocus
+             placeholder="QR del volumen, o etiqueta de Miami…"
+             data-auditar-pre-factura-target="codigo"
+             data-action="keydown->auditar-pre-factura#teclado"
+             class="block w-full min-h-12 py-4 text-xl rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 shadow-sm font-mono focus:ring-cec-teal focus:border-cec-teal">
+      <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+        Primero el QR de cualquier volumen: trae la tanda entera. Después la etiqueta de Miami de cada caja.
+      </p>
+      <div data-auditar-pre-factura-target="aviso" class="hidden mt-4 rounded-lg p-4 text-base" role="status"></div>
+      <ol data-auditar-pre-factura-target="bitacora" class="mt-4 space-y-1 text-sm text-gray-600 dark:text-gray-300"></ol>
+
+      <div class="mt-6 flex flex-wrap justify-end gap-3">
+        <%= render(ButtonComponent.new(variant: :secondary, size: :lg, shortcut: "F2", shortcut_label_only: true,
+              data: { action: "auditar-pre-factura#limpiar" })) { "Limpiar" } %>
+        <%= render(ButtonComponent.new(variant: :gold, size: :lg, icon: "printer", shortcut: "F9", shortcut_label_only: true,
+              data: { auditar_pre_factura_target: "guardarBtn", action: "auditar-pre-factura#guardar" })) { "Guardar, imprimir y avisar" } %>
+      </div>
+    </section>
+
+    <%# ── Derecha: lo que se está armando ── %>
+    <section class="xl:col-span-7 bg-white dark:bg-gray-800 rounded-lg shadow p-6" data-auditar-pre-factura-target="panel">
+      <div data-auditar-pre-factura-target="vacio" class="py-12 text-center text-gray-500 dark:text-gray-400">
+        Todavía nada. Escaneá el QR de un volumen.
+      </div>
+
+      <div data-auditar-pre-factura-target="contenido" hidden>
+        <p class="text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400">Cliente</p>
+        <p class="text-4xl font-bold text-cec-navy dark:text-cec-gold font-mono" data-auditar-pre-factura-target="clienteCodigo"></p>
+        <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100" data-auditar-pre-factura-target="clienteNombre"></p>
+        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300" data-auditar-pre-factura-target="servicio"></p>
+
+        <p class="mt-4 text-xl font-semibold text-gray-900 dark:text-gray-100" data-auditar-pre-factura-target="resumen"></p>
+
+        <h3 class="mt-5 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Cajas</h3>
+        <ul class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2" data-auditar-pre-factura-target="cajas"></ul>
+
+        <h3 class="mt-5 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Volúmenes</h3>
+        <div class="mt-2 overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="text-xs uppercase text-gray-500 dark:text-gray-400">
+              <tr>
+                <th class="py-1 pr-3 text-left">Volumen</th>
+                <th class="py-1 pr-3 text-right">Peso</th>
+                <th class="py-1 pr-3 text-right">VLbs</th>
+                <th class="py-1 pr-3 text-right">Pies³</th>
+                <th class="py-1 pr-3 text-right">Cobra</th>
+                <th class="py-1 text-left">Medidas</th>
+              </tr>
+            </thead>
+            <tbody data-auditar-pre-factura-target="volumenes" class="font-mono text-gray-800 dark:text-gray-100"></tbody>
+          </table>
+        </div>
+
+        <h3 class="mt-5 text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Así queda la pre-factura</h3>
+        <div class="mt-2 text-sm" data-auditar-pre-factura-target="lineas"></div>
+      </div>
+    </section>
+  </div>
+
+  <%# ── «¿Desea agregar algo más?» ──
+      Sale cuando la última caja de la tanda dijo «pertenece». Agregar otro
+      volumen del mismo cliente es cerrar y seguir escaneando; F9 guarda.
+      F8 —guardar consolidando, sin avisar— es PR-P.6: se ve, apagado. %>
+  <dialog data-auditar-pre-factura-target="finModal"
+          data-action="cancel->auditar-pre-factura#seguir"
+          style="margin: auto"
+          class="rounded-xl p-0 w-[34rem] max-w-[95vw] backdrop:bg-black/60">
+    <%= render ModalHeaderComponent.new(tono: :listo, tamano: :grande, kicker: "Están todas las cajas",
+          titulo: "¿Desea agregar algo más a esta pre-factura?") %>
+    <div class="bg-white dark:bg-gray-800 px-6 py-5 text-base text-gray-800 dark:text-gray-100">
+      <p data-auditar-pre-factura-target="finTexto"></p>
+      <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Si es otro volumen del mismo cliente, «Agregar otro volumen» y escanealo.</p>
+    </div>
+    <div class="flex flex-wrap items-center justify-end gap-3 px-6 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+      <%# El foco va acá y no a «Guardar»: si la pistola dispara otra lectura con
+          el modal abierto, su Enter cierra el modal y sigue — nunca guarda. %>
+      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, icon: "plus",
+            data: { auditar_pre_factura_target: "finSeguir", action: "auditar-pre-factura#seguir" })) { "Agregar otro volumen" } %>
+      <%= render(ButtonComponent.new(variant: :outline_navy, size: :lg, type: :button, disabled: true,
+            title: "Guardar consolidando llega con PR-P.6")) { "Consolidando" } %>
+      <%= render(ButtonComponent.new(variant: :gold, size: :lg, icon: "printer", shortcut: "F9", shortcut_label_only: true,
+            data: { auditar_pre_factura_target: "finGuardar", action: "auditar-pre-factura#guardar" })) { "Guardar, imprimir y avisar" } %>
+    </div>
+  </dialog>
+</div>
