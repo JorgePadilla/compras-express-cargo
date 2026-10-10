@@ -53,7 +53,7 @@
         pantalla vieja tampoco les da tecla a estos dos botones —«Solo
         Finalizar» y «Finalizar e Imprimir» salen pelados en la captura—, así
         que no hay memoria muscular que romper. %>
-    <%= render ButtonComponent.new(variant: :primary, icon: "check", shortcut: "F10",
+    <%= render ButtonComponent.new(variant: :primary, icon: "check", shortcut: "F8",
           href: finalizar_manifiesto_path(manifiesto), method: :patch,
           confirm: "Se finaliza #{manifiesto.numero}: #{manifiesto.cantidad_paquetes} paquete(s) pasan a enviado y el manifiesto queda bloqueado. ¿Seguro?") do %>
       Solo Finalizar

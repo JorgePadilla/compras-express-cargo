@@ -205,7 +205,7 @@ class ButtonComponentTest < ViewComponent::TestCase
   end
 
   test "un boton deshabilitado no responde al atajo" do
-    render_inline(ButtonComponent.new(href: "/x", disabled: true, shortcut: "F10")) { "Guardar" }
+    render_inline(ButtonComponent.new(href: "/x", disabled: true, shortcut: "F8")) { "Guardar" }
 
     assert_no_selector "[data-shortcut]"
   end
@@ -216,11 +216,11 @@ class ButtonComponentTest < ViewComponent::TestCase
     # 79 de los 131 botones crudos llevan `data-action`, y varios llevan
     # targets de Stimulus. Pisar el hash `data` los rompería en silencio.
     render_inline(ButtonComponent.new(
-      shortcut: "F10",
+      shortcut: "F8",
       data: { action: "click->etiquetar#guardar", etiquetar_target: "submitBtn" }
     )) { "Guardar" }
 
-    assert_selector "button[data-shortcut='F10']"
+    assert_selector "button[data-shortcut='F8']"
     assert_selector "button[data-etiquetar-target='submitBtn']"
     assert_selector "button[data-action='click->etiquetar#guardar']"
   end

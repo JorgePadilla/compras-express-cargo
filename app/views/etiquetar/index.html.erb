@@ -511,9 +511,9 @@ end %>
   <%# Etiquetar form (PR-7) — card pattern consistente con /paquetes %>
   <%# El `keydown` acá es lo que impide que Enter envíe el formulario: la
       pistola dispara Enter al terminar de leer, y en Miami trabajan solo con
-      teclado. Enter avanza de campo (`formKeydown`); guardar es F9 o F10. %>
+      teclado. Enter avanza de campo (`formKeydown`); guardar es F8 (C30-02; antes F10) y F9 guarda e imprime. %>
   <%# PR-C6.10: el mismo formulario sirve para crear y para actualizar. En modo
-      actualización va PATCH al paquete y F9/F10 guardan encima, sin salir de
+      actualización va PATCH al paquete y F8/F9 guardan encima, sin salir de
       /etiquetar. Yusef: "que te cargue aquí la lista, esto te lo vuelve a
       llenar tal cual como quedó, y actualizan todo lo que quieran". %>
   <%= form_with model: @paquete,
@@ -539,7 +539,7 @@ end %>
          class="mb-5 pb-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-end gap-3">
       <div class="mr-auto text-xs text-gray-400 dark:text-gray-500 hidden sm:flex gap-4">
         <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F2</kbd> Limpiar</span>
-        <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F10</kbd> Guardar</span>
+        <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F8</kbd> Guardar</span>
         <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F9</kbd> Guardar + Imprimir</span>
         <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F11</kbd> Finalizar sesión</span>
       </div>
@@ -548,7 +548,7 @@ end %>
         Limpiar <kbd class="px-1 py-0.5 bg-cec-navy/10 text-cec-navy dark:bg-cec-gold/20 dark:text-cec-gold rounded text-[10px] font-sans">F2</kbd>
       <% end %>
       <%= render ButtonComponent.new(variant: :primary, size: :xs, type: "submit") do %>
-        Guardar <kbd class="px-1 py-0.5 bg-white/20 rounded text-[10px] font-sans">F10</kbd>
+        Guardar <kbd class="px-1 py-0.5 bg-white/20 rounded text-[10px] font-sans">F8</kbd>
       <% end %>
       <%= render ButtonComponent.new(variant: :gold, size: :xs,
             data: { action: "click->etiquetar#submitFormWithPrint" }) do %>
@@ -806,7 +806,7 @@ end %>
          class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4">
       <div class="text-xs text-gray-400 dark:text-gray-500 hidden sm:flex gap-4">
         <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F2</kbd> Limpiar</span>
-        <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F10</kbd> Guardar</span>
+        <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F8</kbd> Guardar</span>
         <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F9</kbd> Guardar + Imprimir</span>
         <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-[11px] font-sans">F11</kbd> Finalizar sesión</span>
       </div>
@@ -817,7 +817,7 @@ end %>
         <% end %>
         <%= render ButtonComponent.new(variant: :primary, type: "submit",
               data: { etiquetar_target: "submitBtn" }) do %>
-          Guardar <kbd class="px-1 py-0.5 bg-white/20 rounded text-[10px] font-sans">F10</kbd>
+          Guardar <kbd class="px-1 py-0.5 bg-white/20 rounded text-[10px] font-sans">F8</kbd>
         <% end %>
         <%= render ButtonComponent.new(variant: :gold,
               data: { action: "click->etiquetar#submitFormWithPrint" }) do %>
