@@ -7,9 +7,10 @@ module Fiscal
   # puede depender de que nadie toque esa línea.
   ZONA = "America/Tegucigalpa".freeze
 
-  # El host de producción, el de `render.yaml`. Staging y producción corren las
-  # dos con `RAILS_ENV=production`, así que `Rails.env` no las distingue.
+  # Los hosts de `render.yaml`. Staging y producción corren las dos con
+  # `RAILS_ENV=production`, así que `Rails.env` no las distingue.
   HOST_DE_PRODUCCION = "cec.comprasexpresscargo.com".freeze
+  HOST_DE_STAGING = "cec-staging.onrender.com".freeze
 
   # Acuerdo 481-2017 Art. 10 num. 7 c), con los códigos de la reforma 609-2017.
   # Solo los que esta app emite.
@@ -32,8 +33,17 @@ module Fiscal
 
   # Ahí no se aceptan autorizaciones ficticias, y las ficticias que hubiera no
   # sirven para emitir (F1.2).
+  #
+  # QA de PR-F1.1 · **Falla cerrado**: con `RAILS_ENV=production`, es
+  # producción salvo que el host sea, exacto, el de staging. Preguntar
+  # «¿es el host de producción?» fallaba abierto: hoy producción contesta en
+  # `cec-production.onrender.com` (el dominio de `render.yaml` no responde), y
+  # Render ya no sincroniza el blueprint, así que el `APP_HOST` real puede no
+  # ser el del yaml. Con un host distinto, la ficticia habría entrado en
+  # producción sin ruido. Al revés, un staging mal configurado rechaza su
+  # ficticia con un error a la vista, que es la falla barata.
   def self.produccion?
-    ENV["APP_HOST"] == HOST_DE_PRODUCCION
+    Rails.env.production? && ENV["APP_HOST"] != HOST_DE_STAGING
   end
 
   def self.normalizar_rtn(valor)
