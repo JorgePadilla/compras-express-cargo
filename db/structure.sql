@@ -87,6 +87,51 @@ END
 $$;
 
 
+--
+-- Name: facturas_respaldo_fiscal(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.facturas_respaldo_fiscal() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  f public.facturas%ROWTYPE;
+  anulada_en_el_libro boolean;
+BEGIN
+  SELECT * INTO f FROM public.facturas WHERE id = NEW.id;
+  IF NOT FOUND THEN
+    RETURN NULL;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM public.documentos_fiscales d
+     WHERE d.numero = f.numero AND d.documentable_type = 'Factura'
+       AND d.documentable_id = f.id AND d.estado = f.estado
+  ) THEN
+    RAISE EXCEPTION 'la factura % no tiene su documento fiscal en estado %', f.numero, f.estado
+      USING ERRCODE = 'restrict_violation';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM public.asientos_fiscales a WHERE a.numero = f.numero AND a.evento = 'emision'
+  ) THEN
+    RAISE EXCEPTION 'la factura % no tiene su asiento de emisión en el libro', f.numero
+      USING ERRCODE = 'restrict_violation';
+  END IF;
+
+  anulada_en_el_libro := EXISTS (
+    SELECT 1 FROM public.asientos_fiscales a WHERE a.numero = f.numero AND a.evento = 'anulacion'
+  );
+  IF (f.estado = 'anulada') IS DISTINCT FROM anulada_en_el_libro THEN
+    RAISE EXCEPTION 'la factura % dice %, y el libro dice otra cosa', f.numero, f.estado
+      USING ERRCODE = 'restrict_violation';
+  END IF;
+
+  RETURN NULL;
+END
+$$;
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -7309,6 +7354,13 @@ CREATE TRIGGER facturas_fiscal_inmutable BEFORE DELETE OR UPDATE ON public.factu
 
 
 --
+-- Name: facturas facturas_respaldo_fiscal; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE CONSTRAINT TRIGGER facturas_respaldo_fiscal AFTER INSERT OR UPDATE ON public.facturas DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION public.facturas_respaldo_fiscal();
+
+
+--
 -- Name: manifiesto_tipo_envios fk_rails_00f8a61e20; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8675,6 +8727,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261011170000'),
 ('20261011160000'),
 ('20261011140000'),
 ('20261011120000'),

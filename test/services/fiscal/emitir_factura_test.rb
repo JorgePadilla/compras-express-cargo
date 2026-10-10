@@ -129,6 +129,27 @@ class Fiscal::EmitirFacturaTest < ActiveSupport::TestCase
     assert_nada_quedo
   end
 
+# QA de PR-F2.2a · Art. 11 num. 2 (Q8 de FISCAL.md): a un consumidor final,
+# pasando L 10,000.00 hay que consignar su identidad. La gema lo rechaza
+# adentro del correlativo: no queda nada, y la pre-factura sigue pendiente.
+# Con la identidad del cliente, sale.
+test "consumidor final por más de L 10,000 sin identidad no se factura, y no consume número" do
+  item = @pf.pre_factura_items.first
+  item.update_columns(subtotal: 9500, peso_cobrar: nil, precio_libra: nil, minimo_aplicado: true)
+  @pf.reload.save!
+  assert_operator @pf.total, :>, 10_000
+  @pf.cliente.update_columns(rtn: nil, identidad: nil)
+
+  error = assert_raises(Invoicehn::ComplianceError) { emitir }
+  assert_match "Art. 11 num. 2", error.message
+  assert_nada_quedo
+
+  @pf.cliente.update_columns(identidad: "0801199012345")
+  factura = emitir
+  assert_equal "000-001-01-00000001", factura.numero
+  assert_match "0801199012345", factura.cliente_identificacion
+end
+
   private
 
   def assert_nada_quedo
