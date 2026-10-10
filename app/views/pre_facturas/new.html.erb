@@ -1,4 +1,22 @@
-<%= render PageHeaderComponent.new(title: "Nueva Pre-Factura", subtitle: "Selecciona cliente y paquetes") %>
+<%= render PageHeaderComponent.new(title: "Pre-Factura a mano", subtitle: "La puerta de las excepciones") %>
+
+<%# PR-P.10 · Jorge, 2026-10-10: desde la Fase 14 la pre-factura se prepara
+    (hoja → auditar → F9) y se cobra por el volumen medido. Esta pantalla queda
+    para lo que el escaneo no cubre — y lo dice arriba, para que nadie la use
+    por costumbre. %>
+<div class="mb-6 p-4 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-900" data-aviso="excepciones">
+  <p class="font-medium">Esta puerta es para las excepciones:</p>
+  <ul class="mt-1 list-disc list-inside space-y-0.5">
+    <li>un paquete prepagado en Miami (lleva el cobro simbólico);</li>
+    <li>una tanda cuyas cajas se cobran con tarifas distintas;</li>
+    <li>un paquete que no se midió, o que no vino en un manifiesto oficial;</li>
+    <li>volver a pre-facturar después de anular.</li>
+  </ul>
+  <p class="mt-2">
+    Lo que tiene volumen medido se cobra igual por volumen, con su tanda entera.
+    <%= link_to "Lo normal es Preparar pre-factura", hoja_de_preparacion_path, class: "font-medium text-cec-navy underline hover:text-cec-navy-light" %>
+  </p>
+</div>
 
 <% if @cliente.nil? %>
   <div class="bg-white rounded-lg shadow p-6">
@@ -51,7 +69,17 @@
   </div>
 
   <% if @paquetes_facturables.any? %>
-    <%= form_tag pre_facturas_path, method: :post do %>
+    <%# PR-P.10 · Las filas salen del mismo armador que `create`
+        (`ArmarPreFacturaManual`, sin guardar): una tanda medida es UNA fila
+        con UN check —el volumen pesó todo lo que tiene adentro, no se elige
+        media—; una tanda que no puede ir por volumen muestra sus cajas sueltas
+        con el porqué; lo demás, paquete por paquete como siempre. %>
+    <% tandas = @preview.por_volumen %>
+    <% rechazadas = @paquetes_facturables.select { |p| @preview.rechazo_de(p) }.group_by(&:medicion_sesion) %>
+    <% sueltos = @paquetes_facturables.reject { |p| @preview.por_volumen?(p) || @preview.rechazo_de(p) } %>
+    <%= form_tag pre_facturas_path, method: :post,
+          data: { controller: "pre-factura-seleccion",
+                  pre_factura_seleccion_url_value: cotizacion_pre_facturas_path(cliente_id: @cliente.id) } do %>
       <%= hidden_field_tag :cliente_id, @cliente.id %>
       <%= hidden_field_tag :manifiesto_id, @manifiesto&.id %>
       <div class="bg-white rounded-lg shadow overflow-hidden">
@@ -59,7 +87,10 @@
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
-                <th class="px-4 py-3 text-left"><input type="checkbox" data-action="change->select-all#toggle" class="rounded"></th>
+                <th class="px-4 py-3 text-left">
+                  <input type="checkbox" aria-label="Marcar todo" class="rounded"
+                         data-pre-factura-seleccion-target="todos" data-action="change->pre-factura-seleccion#todos">
+                </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tracking</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Peso Cobrar</th>
@@ -68,55 +99,91 @@
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-              <% @paquetes_facturables.each do |p| %>
-                <%# PR-10.h: el precio sale de `CotizadorFlete`, el mismo cálculo
-                    que va a hacer la pre-factura. Antes se calculaba acá con la
-                    cadena vieja y se imprimía con "L." un monto que estaba en
-                    dólares. %>
-                <% cot = @cotizaciones[p.id] %>
-                <tr class="hover:bg-gray-50 <%= 'bg-cec-teal/5' if p.prepagado_miami? %>">
-                  <td class="px-4 py-3">
-                    <%= check_box_tag "paquete_ids[]", p.id, false, id: "paquete_#{p.id}", class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+              <% tandas.each do |sesion| %>
+                <% cajas = @preview.cajas_de_la_tanda(sesion) %>
+                <% lineas = @preview.lineas_de_volumen(sesion) %>
+                <tr class="hover:bg-gray-50 bg-cec-navy/5" data-tanda="<%= sesion %>">
+                  <td class="px-4 py-3 align-top">
+                    <%= check_box_tag "paquete_ids[]", cajas.map(&:id).join(","), false,
+                          id: "tanda_#{sesion}", class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal",
+                          data: { pre_factura_seleccion_target: "check", action: "change->pre-factura-seleccion#cambiar" } %>
                   </td>
-                  <td class="px-6 py-3 font-mono text-sm">
-                    <%= truncate(p.tracking, length: 20) %>
-                    <% if p.tracking_secundario.present? %>
-                      <div class="text-[11px] text-gray-500 mt-0.5" title="Tracking secundario"><%= truncate(p.tracking_secundario, length: 22) %></div>
-                    <% end %>
-                    <% if p.prepagado_miami? %>
-                      <%# PR-6b: pill para alertar al cajero que este paquete ya
-                          está pagado. Si lo seleccionan, se agregará línea
-                          simbólica en vez del flete completo. %>
-                      <div class="mt-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-cec-teal/15 text-cec-teal-dark ring-1 ring-cec-teal/40"
-                           title="Pagado en Miami — al agregarlo a la pre-factura se cobra solo el monto simbólico">
-                        ✓ Prepagado Miami
-                      </div>
-                    <% end %>
-                  </td>
-                  <td class="px-6 py-3 text-sm text-gray-600"><%= p.tipo_envio&.nombre || "—" %></td>
-                  <td class="px-6 py-3 text-right text-sm"><%= p.peso_cobrar || "—" %></td>
-                  <td class="px-6 py-3 text-right text-sm">
-                    <% if p.prepagado_miami? %>
-                      <span class="text-cec-teal-dark italic">simbólico</span>
-                    <% else %>
-                      L. <%= number_with_precision(cot.precio_libra, precision: 2, delimiter: ",") %>
-                      <% if cot.aplico_minimo %>
-                        <span class="block text-[10px] text-amber-700 uppercase tracking-wide">mínimo</span>
+                  <td class="px-6 py-3 text-sm align-top">
+                    <label for="tanda_<%= sesion %>" class="font-medium text-cec-navy cursor-pointer">
+                      Tanda medida · <%= pluralize(cajas.size, "caja", plural: "cajas") %>
+                    </label>
+                    <ul class="mt-1 space-y-0.5 text-xs text-gray-700">
+                      <% lineas.each do |linea| %>
+                        <li data-volumen="<%= linea.bulto_id %>">
+                          <%= [ "Volumen", linea.bulto.de_cuantos_texto ].compact.join(" ") %> ·
+                          <%= number_with_precision(linea.peso_cobrar, precision: 2, strip_insignificant_zeros: true) %> lb ·
+                          L. <%= number_with_precision(linea.subtotal, precision: 2, delimiter: ",") %>
+                          <% if linea.concepto.start_with?("⚠") %>
+                            <span class="text-[10px] font-bold text-red-700 uppercase">⚠ sin tarifa cargada</span>
+                          <% elsif linea.minimo_aplicado %>
+                            <span class="text-[10px] text-amber-700 uppercase tracking-wide">mínimo</span>
+                          <% end %>
+                        </li>
                       <% end %>
+                    </ul>
+                    <div class="mt-1 font-mono text-[11px] text-gray-500">
+                      <% cajas.each do |caja| %>
+                        <div>
+                          <%= truncate(caja.tracking, length: 22) %>
+                          <%# Una caja de la tanda que vino en otro manifiesto entra
+                              igual: el volumen la pesó. Se dice, para que no se
+                              cobre sin verla. %>
+                          <% if @manifiesto && caja.manifiesto_id != @manifiesto.id %>
+                            <span class="text-amber-700 font-sans">(otro manifiesto: <%= caja.manifiesto&.numero || "—" %>)</span>
+                          <% end %>
+                        </div>
+                      <% end %>
+                    </div>
+                  </td>
+                  <td class="px-6 py-3 text-sm text-gray-600 align-top"><%= cajas.first&.tipo_envio&.nombre || "—" %></td>
+                  <td class="px-6 py-3 text-right text-sm align-top">
+                    <%= number_with_precision(lineas.sum { |l| l.peso_cobrar.to_d }, precision: 2, strip_insignificant_zeros: true) %>
+                  </td>
+                  <td class="px-6 py-3 text-right text-sm align-top">
+                    <% if lineas.size == 1 %>
+                      L. <%= number_with_precision(lineas.first.precio_libra, precision: 2, delimiter: ",") %>
+                    <% else %>
+                      <span class="text-gray-500 italic">por volumen</span>
                     <% end %>
                   </td>
-                  <td class="px-6 py-3 text-right text-sm font-medium">
-                    <% if p.prepagado_miami? %>
-                      <span class="text-cec-teal-dark">$<%= PreFactura::PREPAGADO_MIAMI_SIMBOLICO %></span>
-                    <% else %>
-                      L. <%= number_with_precision(cot.subtotal, precision: 2, delimiter: ",") %>
-                    <% end %>
+                  <td class="px-6 py-3 text-right text-sm font-medium align-top" data-subtotal-tanda>
+                    L. <%= number_with_precision(lineas.sum { |l| l.subtotal.to_d }, precision: 2, delimiter: ",") %>
                   </td>
                 </tr>
+              <% end %>
+
+              <% rechazadas.each do |sesion, paquetes| %>
+                <tr class="bg-amber-50" data-tanda-rechazada="<%= sesion %>">
+                  <td colspan="6" class="px-6 py-2 text-xs text-amber-900">
+                    <span class="font-medium">Tanda medida que va por paquete, con el peso de Miami:</span>
+                    <%= @preview.rechazos[sesion] %>
+                  </td>
+                </tr>
+                <% paquetes.each do |p| %>
+                  <%= render "fila_paquete", paquete: p, flete: @preview.flete_de(p) %>
+                <% end %>
+              <% end %>
+
+              <% sueltos.each do |p| %>
+                <%= render "fila_paquete", paquete: p, flete: @preview.flete_de(p) %>
               <% end %>
             </tbody>
           </table>
         </div>
+      </div>
+
+      <%# PR-P.10 · El total de lo marcado lo calcula el servidor con el mismo
+          armador y la misma cuenta del documento (ISV half-up): es el total
+          que va a quedar guardado. %>
+      <div class="mt-6 bg-white rounded-lg shadow p-6">
+        <%= turbo_frame_tag "cotizacion_pre_factura", data: { pre_factura_seleccion_target: "frame" } do %>
+          <%= render "cotizacion_total", pre_factura: nil %>
+        <% end %>
       </div>
 
       <div class="mt-6 bg-white rounded-lg shadow p-6">

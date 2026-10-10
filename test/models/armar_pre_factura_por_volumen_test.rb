@@ -217,12 +217,13 @@ class ArmarPreFacturaPorVolumenTest < ActiveSupport::TestCase
     assert_includes error.message, cajas.first.numero_recepcion_visible
   end
 
-  test "una caja prepagada en Miami va por Pre-Facturas › Nueva" do
+  test "una caja prepagada en Miami va por Pre-Facturas › A mano (excepciones)" do
     tarifa_cer
     bulto, = medir([ caja, caja(prepagado_miami: true, prepagado_miami_metodo: "efectivo") ], { peso: "8" })
 
     error = assert_raises(ArmarPreFacturaPorVolumen::NoSePuede) { armar(bulto) }
     assert_includes error.message, "prepagada en Miami"
+    assert_includes error.message, "A mano (excepciones)", "PR-P.10: la puerta se llama así en el índice"
   end
 
   test "las cajas de otro cliente no entran" do

@@ -144,7 +144,7 @@ class AuditoriaDeTanda
     if (prepagada = cajas.find(&:prepagado_miami?))
       return Resultado.new(tipo: :prepagada,
                            mensaje: "#{codigo_de(prepagada)} viene prepagada en Miami: es un caso complejo, " \
-                                    "va por Pre-Facturas › Nueva.")
+                                    "va por Pre-Facturas › A mano (excepciones).")
     end
 
     no_va_junto(cajas.first)

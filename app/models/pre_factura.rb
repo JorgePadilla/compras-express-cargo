@@ -238,9 +238,27 @@ class PreFactura < ApplicationRecord
       fecha_trabajo: Date.current
     )
 
-    paquetes = cliente.paquetes.facturables.where(id: paquete_ids)
-                      .includes(:tipo_envio, :sucursal, :proveedor)
-    prepagados_miami = []
+    pre_factura.agregar_lineas_por_paquete(
+      cliente.paquetes.facturables.where(id: paquete_ids).includes(:tipo_envio, :sucursal, :proveedor)
+    )
+    pre_factura
+  end
+
+  # PR-P.10 · Las líneas **por paquete** —flete con el peso de Miami, el
+  # simbólico del prepagado y los cargos automáticos—, sobre una pre-factura
+  # que ya existe sin guardar. Es el cuerpo de `build_from_paquetes`, sacado
+  # tal cual para que `ArmarPreFacturaManual` lo ponga **al lado** de las
+  # líneas de volumen que arma `ArmarPreFacturaPorVolumen`: lo que no va por
+  # volumen se sigue cobrando exactamente como antes.
+  #
+  # `paquetes` llega ya filtrado a los facturables del cliente. Los prepagados
+  # se **acumulan** en `prepagados_miami_detected`: la pre-factura puede venir
+  # del armador por volumen, que nunca los anota.
+  def agregar_lineas_por_paquete(paquetes)
+    # PR-6b: los prepagados quedan expuestos para que el controller muestre
+    # un flash avisando al cajero. (Análogo al patrón de `nota_debito_auto`
+    # para cambio de servicio.)
+    prepagados_miami = (@prepagados_miami_detected ||= [])
 
     paquetes.each do |paquete|
       if paquete.prepagado_miami?
@@ -252,7 +270,7 @@ class PreFactura < ApplicationRecord
         # se mandan, `PreFacturaItem#calculate_subtotal_from_peso` corre en
         # before_validation y sobrescribe el monto simbólico con `peso × 0 = 0`
         # — el cobro de $1.00 se perdía en silencio desde PR-6b.
-        pre_factura.pre_factura_items.build(
+        pre_factura_items.build(
           paquete: paquete,
           concepto: "Flete #{paquete.tipo_envio&.nombre || 'Paquete'} - #{paquete.guia} " \
                     "(PREPAGADO EN MIAMI#{paquete.prepago_sufijo})",
@@ -260,7 +278,7 @@ class PreFactura < ApplicationRecord
           precio_libra: BigDecimal("0"),
           # "la factura la va a hacer por un dólar más impuesto" — el
           # simbólico está en USD, el documento en Lempiras.
-          subtotal: pre_factura.convertir_a_moneda(PREPAGADO_MIAMI_SIMBOLICO, "USD"),
+          subtotal: convertir_a_moneda(PREPAGADO_MIAMI_SIMBOLICO, "USD"),
           minimo_aplicado: true,
           origen: "manual"
         )
@@ -284,9 +302,9 @@ class PreFactura < ApplicationRecord
         # convierte el precio unitario y el subtotal se recalcula sobre él,
         # para que la factura cuadre a la vista del cliente (peso × precio =
         # subtotal). El mínimo es un total, así que ese se convierte directo.
-        precio   = pre_factura.convertir_a_moneda(tarifa.precio_libra, tarifa.moneda)
+        precio   = convertir_a_moneda(tarifa.precio_libra, tarifa.moneda)
         subtotal = if aplico_minimo
-          pre_factura.convertir_a_moneda(cobro[:subtotal], cobro[:moneda])
+          convertir_a_moneda(cobro[:subtotal], cobro[:moneda])
         else
           (peso_fac * precio).round(2, BigDecimal::ROUND_HALF_UP)
         end
@@ -318,7 +336,7 @@ class PreFactura < ApplicationRecord
         concepto      = "⚠ SIN TARIFA CARGADA — #{paquete.tipo_envio&.nombre || 'servicio'} - #{paquete.guia}"
       end
 
-      pre_factura.pre_factura_items.build(
+      pre_factura_items.build(
         paquete: paquete,
         concepto: concepto,
         peso_cobrar: peso_fac,
@@ -329,15 +347,18 @@ class PreFactura < ApplicationRecord
       )
     end
 
-    # PR-6b: exponemos los paquetes prepagados para que el controller
-    # pueda mostrar un flash/banner avisando al cajero. (Análogo al
-    # patrón de `nota_debito_auto` para cambio de servicio.)
-    pre_factura.instance_variable_set(:@prepagados_miami_detected, prepagados_miami)
-
     # PR-D6.b: cargos automáticos por flags del paquete.
-    paquetes.each { |p| pre_factura.aplicar_cobros_automaticos_para(p) }
+    paquetes.each { |p| aplicar_cobros_automaticos_para(p) }
 
-    pre_factura
+    self
+  end
+
+  # PR-P.10 · Los totales de un documento **sin guardar**, con la misma cuenta
+  # que el `before_save` (descuento → ISV half-up). El preview de
+  # /pre_facturas/new los muestra, y tienen que ser los que se van a guardar.
+  def calcular_totales
+    calculate_totals
+    self
   end
 
   # PR-10.a: convierte un monto a la moneda de ESTA pre-factura, usando la
