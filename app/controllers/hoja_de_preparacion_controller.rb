@@ -41,6 +41,30 @@ class HojaDePreparacionController < ApplicationController
     redirect_to hoja_de_preparacion_path
   end
 
+  # PR-P.7 · La hora del aviso, en lote: todas las programadas de un manifiesto
+  # (`manifiesto_id`), o todas las que la hoja lista en «editar» (sin él).
+  # `ReprogramarAvisos` solo toca las que no avisaron.
+  def reprogramar
+    scope = HojaDePreparacion.pre_facturas_editables
+    scope = scope.where(manifiesto_id: params[:manifiesto_id]) if params[:manifiesto_id].present?
+    movidas = ReprogramarAvisos.new(scope, hora: params[:hora], fecha: params[:fecha]).call
+    redirect_to hoja_de_preparacion_path,
+                notice: movidas.zero? ? "No había pre-facturas programadas para mover." :
+                                        "#{movidas} pre-factura#{"s" if movidas != 1} reprogramada#{"s" if movidas != 1} para las #{params[:hora]}."
+  rescue ReprogramarAvisos::NoSePuede => e
+    redirect_to hoja_de_preparacion_path, alert: e.message
+  end
+
+  # PR-P.7 · *"¿Y si se equivocan con F9? — Pueden reversarlo y poner F8."*
+  def volver_a_consolidar
+    pf = HojaDePreparacion.pre_facturas_editables.find(params[:pre_factura_id])
+    pf.volver_a_consolidar!
+    redirect_to hoja_de_preparacion_path, notice: "#{pf.numero} volvió a consolidando: no se le avisa al cliente."
+  rescue PreFactura::YaAvisada, ActiveRecord::RecordNotFound => e
+    redirect_to hoja_de_preparacion_path,
+                alert: e.is_a?(PreFactura::YaAvisada) ? e.message : "Esa pre-factura ya no se puede corregir: ya avisó, o no está abierta."
+  end
+
   # Cerrar la hoja: la próxima vez arranca de cero, como «Finalizar sesión»
   # en `/etiquetar`.
   def destroy

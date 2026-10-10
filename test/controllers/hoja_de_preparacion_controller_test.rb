@@ -134,14 +134,14 @@ class HojaDePreparacionControllerTest < ActionDispatch::IntegrationTest
 
   test "«editar» lista las pre-facturas sin avisar de cada manifiesto, con su link" do
     pf = pre_facturas(:borrador_juan)
-    pf.update_columns(manifiesto_id: @manifiesto.id, estado: "creado")
+    pf.update_columns(manifiesto_id: @manifiesto.id, estado: "creado", notificar_at: 1.day.from_now)
 
     ingresar(users(:supervisor_prefactura))
     patch hoja_de_preparacion_url, params: { hoja: { modo: "editar" } }
     get hoja_de_preparacion_url
 
     assert_select "[data-manifiesto=?] a[href=?]", @manifiesto.numero, edit_pre_factura_path(pf)
-    assert_select "[data-paso='3']", count: 0, message: "cambiar la hora en lote es PR-P.7"
+    assert_select "[data-paso='3']", count: 0, message: "la hora en lote es el formulario propio de «editar»"
   end
 
   test "el link está en Logística y la tarjeta en el Home" do

@@ -46,7 +46,12 @@ class PreFactura < ApplicationRecord
 
   before_validation :generate_numero, on: :create, if: -> { numero.blank? }
   before_save :calculate_totals
+  # PR-P.7 · Las dos puertas a la fecha, en sync. Va **antes** de
+  # `ajustar_notificar_at`: si la fecha mueve la hora, ése la redondea.
+  before_save :mover_notificar_at_con_la_fecha,
+              if: -> { will_save_change_to_fecha_trabajo? && !will_save_change_to_notificar_at? && notificar_at.present? }
   before_save :ajustar_notificar_at, if: :notificar_at_changed?
+  validate :fecha_de_un_aviso_ya_mandado, if: -> { notificado_at.present? && will_save_change_to_fecha_trabajo? }
 
   # PR-P.2 · La hora a la que la carga queda disponible y se le avisa al
   # cliente, si nadie dice otra. Yusef (`C30-16`): *"siete y media"*. Se cambia
@@ -413,6 +418,55 @@ class PreFactura < ApplicationRecord
     self.notificar_at = notificar_at.in_time_zone.change(sec: 0)
     self.fecha_trabajo = notificar_at.to_date
   end
+
+  # PR-P.7 · QA: el formulario de la pre-factura sigue permitiendo
+  # `fecha_trabajo` suelto, y con P.2 eso dejaba la fecha diciendo un día y el
+  # aviso saliendo otro. Se decidió **mover** el aviso y no bloquear: cambiar el
+  # día de trabajo de una programada es justamente decir «avisá ese día», y la
+  # hora es la que ya tenía (la de la hoja, o la que se reprogramó). Bloquear
+  # obligaría a ir a otra pantalla para algo que la fecha ya dice.
+  def mover_notificar_at_con_la_fecha
+    self.notificar_at = Time.zone.local(fecha_trabajo.year, fecha_trabajo.month, fecha_trabajo.day,
+                                        notificar_at.hour, notificar_at.min)
+  end
+
+  # …salvo que el aviso ya haya salido (`RP-77`): ahí la fecha es historia.
+  # Cambiarla diría que se avisó otro día, y el cliente ya recibió el correo.
+  def fecha_de_un_aviso_ya_mandado
+    errors.add(:fecha_trabajo, "no se cambia: el aviso ya se mandó el #{notificado_at.strftime('%d/%m/%Y %H:%M')}")
+  end
+
+  public
+
+  # ── PR-P.7 · Corregir antes del aviso ─────────────────────────────────
+
+  class YaAvisada < StandardError; end
+
+  # En qué anda el aviso, para la hoja en modo «editar».
+  def estado_del_aviso
+    return :avisada if notificado_at.present?
+    return :consolidando if consolidando_at.present?
+    return :error if notificacion_error.present?
+    return :programada if notificar_at.present?
+
+    :sin_aviso
+  end
+
+  # `RP-78` / `C30-18` · *"¿Y si se equivocan con F9? — Pueden reversarlo y
+  # poner F8."* Solo mientras el aviso no salió (`RP-77`: retirar uno ya mandado
+  # no se puede, el correo ya está en la bandeja del cliente). Es lo mismo que
+  # deja F8: `consolidando_at`, sin hora, y las cajas esperando consolidando.
+  def volver_a_consolidar!
+    raise YaAvisada, "#{numero} ya se le avisó al cliente: no vuelve a consolidando." if notificado_at.present?
+    raise YaAvisada, "#{numero} ya no está abierta (#{estado})." unless creado?
+
+    transaction do
+      update!(consolidando_at: Time.current, notificar_at: nil, notificacion_error: nil)
+      paquetes.reload.where(estado: "en_aduana").find_each { |p| p.update!(estado: "consolidando_honduras") }
+    end
+  end
+
+  private
 
   def vincular_paquetes
     return if anulado?
