@@ -108,10 +108,11 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
       // recibimos 20% por mucho". Funciona en cualquier momento del form.
       e.preventDefault()
       this.toggleTercero()
-    } else if (e.key === "F8" || e.key === "F10") {
-      // F10 es guardar en todo el resto del sistema (pre-facturas, ventas,
-      // caja, financiamientos) y Yusef lo apretó sin pensarlo. F8 se queda de
-      // alias mientras Miami se acostumbra — allá ya lo tienen en el dedo.
+    } else if (e.key === "F8") {
+      // C30-02 · F8 es guardar en todo el sistema: la hoja que Yusef escribió
+      // a mano el 2026-10-09 (*"en casi todo es F8 guardar, F9 guardar e
+      // imprimir"*). Acá F8 ya guardaba —era el alias de Miami— y F10, que
+      // fue guardar en el resto desde C23-13, queda libre.
       e.preventDefault()
       if (this._preguntaAbierta()) return
       this.submitForm()

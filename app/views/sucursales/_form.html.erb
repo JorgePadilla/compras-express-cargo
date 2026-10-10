@@ -106,8 +106,8 @@
     <%= link_to "Cancelar (F2)", sucursales_path,
         class: "text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300",
         data: { shortcut: "F2" } %>
-    <%= f.submit "#{@sucursal.persisted? ? 'Guardar' : 'Crear sucursal'} (F10)",
+    <%= f.submit "#{@sucursal.persisted? ? 'Guardar' : 'Crear sucursal'} (F8)",
         class: "bg-cec-gold text-cec-navy-dark font-semibold px-4 py-2 rounded-lg text-sm",
-        data: { shortcut: "F10" } %>
+        data: { shortcut: "F8" } %>
   </div>
 <% end %>

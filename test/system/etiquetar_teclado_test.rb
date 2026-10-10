@@ -93,33 +93,36 @@ class EtiquetarTecladoTest < ApplicationSystemTestCase
     assert_equal "", campo("paquete_descripcion").value
   end
 
-  # Yusef apretó F10 sin pensarlo, y tiene razón por costumbre: F10 es guardar
-  # en pre-facturas, ventas, caja y financiamientos. /etiquetar era el único
-  # con F8 — que en el resto del sistema es "exportar a Excel".
+  # C30-02 · Guardar es **F8**, en todo el sistema: la hoja que Yusef escribió
+  # a mano (*"en casi todo es F8 guardar, F9 guardar e imprimir"*). Acá ya lo
+  # era —el alias de Miami— y F10, que fue guardar en el resto desde C23-13,
+  # quedó libre.
   #
   # Se observa el evento `submit` del form en vez de contar paquetes: que el
   # `create` guarde bien ya lo cubre `etiquetar_controller_test`. Acá lo que
   # se prueba es que la tecla dispara el envío.
-  test "F10 envia el formulario" do
+  test "F8 envia el formulario" do
     espiar_submit
     campo("paquete_tracking").send_keys("1Z999TECLADO005")
     # C30-03: sin descripción el navegador no deja enviar (`required`).
     campo("paquete_descripcion").set("Ropa")
 
-    page.send_keys(:f10)
-
-    assert_equal 1, submits_observados, "F10 no envió el formulario"
-  end
-
-  test "F8 sigue funcionando mientras Miami se acostumbra" do
-    espiar_submit
-    campo("paquete_tracking").send_keys("1Z999TECLADO006")
-    # C30-03: sin descripción el navegador no deja enviar (`required`).
-    campo("paquete_descripcion").set("Ropa")
-
     page.send_keys(:f8)
 
-    assert_equal 1, submits_observados, "F8 dejó de guardar sin avisarle a Miami"
+    hasta_que("F8 no envió el formulario") { submits_observados == 1 }
+  end
+
+  test "F10 ya no guarda: quedó libre" do
+    espiar_submit
+    campo("paquete_tracking").send_keys("1Z999TECLADO006")
+    campo("paquete_descripcion").set("Ropa")
+
+    page.send_keys(:f10)
+
+    # Lo que se afirma es una ausencia: se le da al navegador el mismo tiempo
+    # que tardó F8 en el test de arriba (un frame) y se mira que no pasó nada.
+    page.evaluate_script("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))")
+    assert_equal 0, submits_observados, "F10 sigue guardando"
   end
 
   test "Enter no envia el formulario ni una sola vez" do
@@ -180,20 +183,21 @@ class EtiquetarTecladoTest < ApplicationSystemTestCase
     JS
   end
 
-  test "el atajo visible dice F10" do
+  test "el atajo visible dice F8" do
     assert_text "Guardar"
-    assert_selector "kbd", text: "F10"
+    assert_selector "kbd", text: "F8"
+    assert_no_selector "kbd", text: "F10"
   end
 
-  test "F10 con el foco FUERA de un campo tampoco guarda dos veces" do
-    # PR-BTN.4. Hay dos listeners de F10 sobre `document`:
+  test "F8 con el foco FUERA de un campo tampoco guarda dos veces" do
+    # PR-BTN.4. Hay dos listeners de guardar sobre `document` (F8 desde C30-02):
     #
     #   · `etiquetar_controller` — llama a `submitForm()`
     #   · `keyboard_shortcuts_controller` — le hace click a `[data-shortcut]`
     #
     # `preventDefault()` no calla al otro (para eso haría falta
     # `stopImmediatePropagation`), así que si un botón de esta pantalla llevara
-    # `shortcut: "F10"`, los dos correrían y el paquete se guardaría DOS veces.
+    # `shortcut: "F8"`, los dos correrían y el paquete se guardaría DOS veces.
     #
     # Por eso los botones de /etiquetar migraron con el `<kbd>` adentro del
     # bloque y nunca con `shortcut:`.
@@ -208,13 +212,25 @@ class EtiquetarTecladoTest < ApplicationSystemTestCase
     campo("paquete_descripcion").set("Ropa")
     page.execute_script("document.activeElement.blur()")
 
-    page.send_keys(:f10)
+    page.send_keys(:f8)
 
+    hasta_que("F8 no envió el formulario") { submits_observados.to_i >= 1 }
     assert_equal 1, submits_observados,
-                 "F10 disparó dos veces: algún botón está registrando data-shortcut"
+                 "F8 disparó dos veces: algún botón está registrando data-shortcut"
   end
 
   private
+
+  # Lo que no es un nodo, con la paciencia de Capybara (el bucle `synchronize`
+  # de sus matchers), sin `sleep`.
+  def hasta_que(mensaje, wait: Capybara.default_max_wait_time)
+    page.document.synchronize(wait, errors: [ Capybara::ExpectationNotMet ]) do
+      raise Capybara::ExpectationNotMet, mensaje unless yield
+    end
+    assert true
+  rescue Capybara::ExpectationNotMet
+    flunk mensaje
+  end
 
 
   # /etiquetar arranca preguntando el tipo de envío de la sesión; hasta que se

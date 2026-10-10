@@ -618,13 +618,14 @@ class MedicionFlujoTest < ApplicationSystemTestCase
   # ── C29 · La pasada del 2026-10-08 ─────────────────────────────────────────
 
   # C29-13 · *"F10 le pusiste. Normalmente es F9… F9 para imprimir siempre"*.
-  # F10 sigue guardando —es «guardar» en todos lados—, y reimprimir pasa a F4.
-  test "F10 también guarda, y F4 reimprime lo último" do
+  # Reimprimir pasa a F4. Y C30-02: F8 —guardar en todos lados desde la hoja de
+  # Yusef, antes F10— también guarda.
+  test "F8 también guarda, y F4 reimprime lo último" do
     visit medicion_index_path
     escanear_a_la_mesa(@paquete, 1)
     teclear "12.5", "10", "12", "14"
     espiar_impresion
-    send_keys :f10
+    send_keys :f8
 
     assert_selector "[data-medicion-target='banner']", text: "una etiqueta", wait: 5
     assert_selector "[data-medicion-target='bannerReimprimir']", text: "(F4)"

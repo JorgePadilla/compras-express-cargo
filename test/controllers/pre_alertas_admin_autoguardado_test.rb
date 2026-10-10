@@ -108,7 +108,7 @@ class PreAlertasAdminAutoguardadoTest < ActionDispatch::IntegrationTest
     assert_select "[data-shortcut]", count: 0
     # El rotulo lo pinta el componente en su propio `<span>`, asi que se afirma
     # por el texto del boton y no contra el HTML crudo.
-    assert_select "a,button", text: /Guardar\s*\(F10\)/, count: 1
+    assert_select "a,button", text: /Guardar\s*\(F8\)/, count: 1
     assert_select "a,button", text: /Agregar Paquete\s*\(F5\)/, count: 1
   end
 end

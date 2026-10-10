@@ -97,9 +97,9 @@ class CajaAgregarEImprimirTest < ActionDispatch::IntegrationTest
 
     # C23-13: «Finalizar e Imprimir» se quedó **sin tecla** —F8 es Excel en toda
     # la app y era la única que significaba dos cosas—. La precondición ahora es
-    # «Solo Finalizar» (F10), que es el otro botón del bloque: sin él en la
-    # página este test no prueba nada.
-    assert_select "[data-shortcut='F10']", { minimum: 1 },
+    # «Solo Finalizar» (F8 desde C30-02; era F10), que es el otro botón del
+    # bloque: sin él en la página este test no prueba nada.
+    assert_select "[data-shortcut='F8']", { minimum: 1 },
                   "sin los botones de finalizar en la página este test no prueba nada"
 
     por_tecla = Hash.new { |h, k| h[k] = [] }
@@ -153,6 +153,10 @@ class CajaAgregarEImprimirTest < ActionDispatch::IntegrationTest
   # en todas las demás pantallas, y era la única tecla del sistema que
   # significaba dos cosas distintas. Ahora va **sin tecla**: finalizar pasa una
   # vez por manifiesto, y la pantalla vieja tampoco le da tecla.
+  #
+  # C30-02 · F8 ahora es **guardar** —la hoja de Yusef— y es la de «Solo
+  # Finalizar». Lo que este test cuida sigue igual: «Finalizar e Imprimir» no
+  # lleva ninguna.
   test "«Finalizar e Imprimir» no le roba la tecla a nadie" do
     @manifiesto.cajas.create!(alto: 23, largo: 23, ancho: 36, peso: 131)
     paquetes(:disponible_entrega_juan)
@@ -161,7 +165,10 @@ class CajaAgregarEImprimirTest < ActionDispatch::IntegrationTest
     get manifiesto_path(@manifiesto)
 
     assert_select "[data-shortcut='F9']", 0, "F9 quedó para el formulario de casas"
-    assert_select "[data-shortcut='F8']", 0, "F8 es Excel en toda la app"
+    # El bloque de cierre sale arriba y abajo: son dos «Solo Finalizar».
+    f8 = css_select("[data-shortcut='F8']").map { |el| el.text.squish }
+    assert f8.any?, "sin «Solo Finalizar» este test no prueba nada"
+    assert f8.all? { |t| t.include?("Solo Finalizar") }, "F8 es «Solo Finalizar», y nada más: #{f8.inspect}"
     assert_select "[data-shortcut='F11']", 0, "no se pudo comprobar que F11 llegue a la página"
   end
 
