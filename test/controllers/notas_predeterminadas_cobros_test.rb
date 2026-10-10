@@ -26,21 +26,14 @@ class NotasPredeterminadasCobrosTest < ActionDispatch::IntegrationTest
     )
   end
 
-  test "la pre-factura ofrece las notas frecuentes" do
-    # El bloque de notas vive en el paso 2 del flujo: recién aparece con un
-    # cliente elegido Y paquetes facturables. Sin eso la página es el buscador.
-    get new_pre_factura_url, params: { cliente_id: cliente_con_paquete_facturable.id }
-
-    assert_response :success
-    assert_match(/Notas frecuentes/, response.body)
-    assert_match @plantilla.titulo, response.body
-  end
-
-  test "editar una pre-factura tambien las ofrece" do
+  # PR-P.11b · La pre-factura a mano (donde nacían las notas) se fue: la
+  # pre-factura nace escaneando, y las notas se escriben al editarla.
+  test "editar una pre-factura ofrece las notas frecuentes" do
     get edit_pre_factura_url(pre_facturas(:borrador_juan))
 
     assert_response :success
     assert_match(/Notas frecuentes/, response.body)
+    assert_match @plantilla.titulo, response.body
   end
 
   test "caja tambien las ofrece" do
@@ -55,7 +48,7 @@ class NotasPredeterminadasCobrosTest < ActionDispatch::IntegrationTest
 
   test "el picker apunta al campo de notas correcto" do
     # Si el selector no matchea, los botones no hacen nada y nadie se entera.
-    get new_pre_factura_url, params: { cliente_id: cliente_con_paquete_facturable.id }
+    get edit_pre_factura_url(pre_facturas(:borrador_juan))
 
     assert_match(/data-plantilla-picker-target-selector-value="#pre_factura_notas"/, response.body)
     assert_match(/id="pre_factura_notas"/, response.body)
@@ -64,24 +57,12 @@ class NotasPredeterminadasCobrosTest < ActionDispatch::IntegrationTest
   test "sin plantillas cargadas no se muestra nada" do
     PlantillaNotaCliente.update_all(activo: false)
 
-    get new_pre_factura_url, params: { cliente_id: cliente_con_paquete_facturable.id }
+    get edit_pre_factura_url(pre_facturas(:borrador_juan))
 
     assert_no_match(/Notas frecuentes/, response.body)
   end
 
   # ── La segunda mitad: verlas desde el paquete ──────────────────────────
-
-  def cliente_con_paquete_facturable
-    cliente = clientes(:juan)
-    Paquete.create!(
-      tracking: "FACT#{SecureRandom.hex(4)}", cliente: cliente,
-      tipo_envio: tipo_envios(:cer), sucursal: sucursales(:zeron_sps),
-      estado: "disponible_entrega", peso: 5, peso_cobrar: 5,
-      cantidad_productos: 1, cantidad_paquetes: 1, descripcion: "x",
-      user: users(:digitador)
-    )
-    cliente
-  end
 
   test "las notas de la pre-factura se ven en el detalle del paquete" do
     pf = pre_facturas(:borrador_juan)

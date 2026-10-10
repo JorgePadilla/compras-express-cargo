@@ -124,14 +124,6 @@ class Manifiesto < ApplicationRecord
   }
   scope :by_estado, ->(estado) { where(estado: estado) }
 
-  # PR-M8 / C21-10. Los manifiestos que todavía tienen carga sin facturar.
-  # Se deriva de los paquetes, no del estado del manifiesto: así la lista se
-  # vacía sola a medida que se factura, sin tener que adivinar en qué estado
-  # lo dejó `RecibirManifiesto#finalizar!`.
-  scope :con_carga_por_facturar, -> {
-    joins(:paquetes).merge(Paquete.facturables).distinct.order(numero: :desc)
-  }
-
   before_validation :generate_numero, on: :create, if: -> { numero.blank? }
 
   def save(**args, &block)

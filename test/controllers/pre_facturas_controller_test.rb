@@ -28,32 +28,32 @@ class PreFacturasControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "should get new without cliente" do
-    get new_pre_factura_url
-    assert_response :success
+  # PR-P.11b · La pre-factura a mano se fue: nace en la hoja → Auditar → F9.
+  # Un marcador viejo a /pre_facturas/new cae en la hoja, no en un 404 ni en
+  # `show` con id «new».
+  test "/pre_facturas/new redirige a la hoja de preparación" do
+    get "/pre_facturas/new"
+    assert_response :found, "302: un 301 se queda en el caché del navegador"
+    assert_redirected_to "/pre-factura/hoja"
+    assert_equal hoja_de_preparacion_path, URI(response.location).path
   end
 
-  test "should get new with cliente_id" do
-    get new_pre_factura_url, params: { cliente_id: @cliente.id }
-    assert_response :success
-  end
-
-  test "create builds pre_factura from paquetes" do
-    paquete = paquetes(:disponible_entrega_juan)
-    assert_difference "PreFactura.count", 1 do
-      post pre_facturas_url, params: {
-        cliente_id: @cliente.id,
-        paquete_ids: [paquete.id]
-      }
+  test "ya no hay create, ni cotización, ni facturables" do
+    assert_not Rails.application.routes.url_helpers.respond_to?(:new_pre_factura_path)
+    assert_not Rails.application.routes.url_helpers.respond_to?(:cotizacion_pre_facturas_path)
+    assert_not Rails.application.routes.url_helpers.respond_to?(:facturables_pre_facturas_path)
+    assert_raises(ActionController::RoutingError) do
+      Rails.application.routes.recognize_path("/pre_facturas", method: :post)
     end
-    assert_redirected_to edit_pre_factura_url(PreFactura.last)
-  end
-
-  test "create fails without paquete_ids" do
     assert_no_difference "PreFactura.count" do
-      post pre_facturas_url, params: { cliente_id: @cliente.id, paquete_ids: [] }
+      post "/pre_facturas", params: { cliente_id: @cliente.id, paquete_ids: [ paquetes(:disponible_entrega_juan).id ] }
     end
-    assert_redirected_to new_pre_factura_url(cliente_id: @cliente.id)
+  end
+
+  test "el índice lleva a preparar con F1, y no tiene otra puerta" do
+    get pre_facturas_url
+    assert_select "a[href=?][data-shortcut=F1]", hoja_de_preparacion_path, text: /Preparar pre-factura/
+    assert_select "a", text: /A mano/, count: 0
   end
 
   test "should show pre_factura" do
@@ -98,13 +98,6 @@ class PreFacturasControllerTest < ActionDispatch::IntegrationTest
     @pre_factura.reload
     assert @pre_factura.anulado?
     assert_redirected_to pre_facturas_url
-  end
-
-  test "facturables returns json for cliente" do
-    get facturables_pre_facturas_url, params: { cliente_id: @cliente.id }, as: :json
-    assert_response :success
-    body = JSON.parse(response.body)
-    assert_kind_of Array, body
   end
 
   test "digitador cannot access pre_facturas" do

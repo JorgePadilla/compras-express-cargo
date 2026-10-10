@@ -1,3 +1,7 @@
+# PR-P.11b · Sin `new`/`create`: la pre-factura nace escaneando (la hoja →
+# Auditar → F9/F8, `GuardarPreFacturaAuditada`). Jorge, 2026-10-10: «quitar la
+# de a mano; todo por escaneo». Acá queda verla, corregirla y llevarla a
+# factura. `/pre_facturas/new` redirige a la hoja (routes).
 class PreFacturasController < ApplicationController
   before_action :require_feature_access
   before_action :set_pre_factura, only: %i[show edit update confirmar facturar anular etiqueta_entrega]
@@ -14,83 +18,11 @@ class PreFacturasController < ApplicationController
   # C30-19 · PR-P.3 · La etiqueta de entrega 4×6. Con `?print=true` imprime y
   # se cierra sola (`_etiqueta_autoprint`), como las otras etiquetas.
   #
-  # Hoy sale del botón de la ficha, para que ya sirva con las pre-facturas
-  # hechas a mano; cuando llegue la auditoría por escaneo (PR-P.5) la van a
-  # imprimir F8 y F9 — *"es la única etapa de todo el sistema que ellos
-  # ocupan de imprimir ese"*.
+  # La imprimen F8 y F9 al auditar, y el botón de la ficha la reimprime —
+  # *"es la única etapa de todo el sistema que ellos ocupan de imprimir ese"*.
   def etiqueta_entrega
     @etiqueta = EtiquetaDeEntrega.new(@pre_factura)
     render layout: "etiqueta_entrega"
-  end
-
-  def new
-    @pre_factura = PreFactura.new
-    @manifiestos = Manifiesto.con_carga_por_facturar
-    @manifiesto = @manifiestos.find_by(id: params[:manifiesto_id])
-    if params[:cliente_id].present?
-      @cliente = Cliente.find(params[:cliente_id])
-      @paquetes_facturables = paquetes_facturables_de(@cliente, @manifiesto)
-      @preview = armar_preview(@cliente, @paquetes_facturables)
-    end
-  end
-
-  # PR-P.10 · El total de lo que está marcado en el paso 2, con el **mismo**
-  # armador que va a usar `create` y la misma cuenta del `before_save`: lo que
-  # dice la pantalla es lo que se guarda. Lo pide el turbo-frame de `new` cada
-  # vez que cambia un check.
-  def cotizacion
-    cliente = Cliente.find(params[:cliente_id])
-    paquete_ids = paquete_ids_param
-    @pre_factura = if paquete_ids.any?
-      ArmarPreFacturaManual.call(cliente: cliente, paquete_ids: paquete_ids, user: Current.user).pre_factura.calcular_totales
-    end
-    render layout: false
-  end
-
-  def create
-    cliente = Cliente.find(params[:cliente_id])
-    paquete_ids = paquete_ids_param
-
-    if paquete_ids.empty?
-      redirect_to new_pre_factura_path(cliente_id: cliente.id),
-                  alert: "Selecciona al menos un paquete."
-      return
-    end
-
-    # PR-P.10 · Lo que tiene volumen medido se cobra por volumen (trae su
-    # tanda entera); lo demás, por paquete como siempre.
-    armado = ArmarPreFacturaManual.call(cliente: cliente, paquete_ids: paquete_ids, user: Current.user)
-    @pre_factura = armado.pre_factura
-    @pre_factura.notas = params.dig(:pre_factura, :notas)
-    # C21-10: el manifiesto que se está trabajando queda guardado en la
-    # pre-factura. Hasta hoy el número se tipeaba a mano en las notas.
-    @pre_factura.manifiesto_id = params[:manifiesto_id].presence
-    prepagados = @pre_factura.prepagados_miami_detected
-
-    if @pre_factura.save
-      # PR-6b: si alguno de los paquetes seleccionados venía prepagado
-      # desde Miami, avisamos al cajero. La línea simbólica ya está
-      # construida; aquí solo flag-eamos visualmente.
-      notice = "Pre-factura #{@pre_factura.numero} creada."
-      if prepagados.any?
-        trackings = prepagados.map(&:tracking).join(", ")
-        notice += " #{prepagados.size} paquete(s) prepagado(s) en Miami detectado(s) (#{trackings}) — agregué cobro simbólico de $#{PreFactura::PREPAGADO_MIAMI_SIMBOLICO} c/u. Ajustá el monto si necesitas antes de facturar."
-      end
-      # PR-P.10 · Una tanda medida que el armador por volumen no acepta se
-      # cobró por paquete, con el peso de Miami. El cajero tiene que saber por qué.
-      if armado.rechazos.any?
-        notice += " #{armado.rechazos.size} tanda(s) medida(s) se cobraron por paquete, con el peso de Miami: " \
-                  "#{armado.rechazos.values.join(' ')}"
-      end
-      redirect_to edit_pre_factura_path(@pre_factura), notice: notice
-    else
-      @cliente = cliente
-      @manifiestos = Manifiesto.con_carga_por_facturar
-      @manifiesto = @manifiestos.find_by(id: params[:manifiesto_id])
-      @paquetes_facturables = paquetes_facturables_de(cliente, @manifiesto)
-      @preview = armar_preview(cliente, @paquetes_facturables)
-      render :new, status: :unprocessable_entity
-    end
   end
 
   def edit
@@ -150,28 +82,6 @@ class PreFacturasController < ApplicationController
     end
   end
 
-  def facturables
-    cliente = Cliente.find(params[:cliente_id])
-    manifiesto = Manifiesto.find_by(id: params[:manifiesto_id])
-    paquetes = paquetes_facturables_de(cliente, manifiesto)
-    cotizaciones = cotizar(cliente, paquetes)
-
-    render json: paquetes.map { |p|
-      c = cotizaciones[p.id]
-      {
-        id: p.id,
-        guia: ERB::Util.html_escape(p.guia),
-        tracking: ERB::Util.html_escape(p.tracking),
-        tipo_envio: ERB::Util.html_escape(p.tipo_envio&.nombre.to_s),
-        peso_cobrar: p.peso_cobrar.to_f,
-        precio_libra: c.precio_libra.to_f,
-        subtotal: c.subtotal.to_f,
-        moneda: c.moneda,
-        aplico_minimo: c.aplico_minimo
-      }
-    }
-  end
-
   private
 
   def require_feature_access
@@ -189,66 +99,6 @@ class PreFacturasController < ApplicationController
                                            .order(:created_at)
                                            .group_by(&:pre_factura_item_id)
     @autorizaciones_por_item.default = []
-  end
-
-  # PR-10.h: lo que se le va a cobrar a cada paquete, indexado por id.
-  #
-  # Antes esta pantalla y el JSON calculaban el precio con la cadena vieja
-  # (`categoria_precio.precio_para || tipo_envio.precio_libra`): sin mínimos,
-  # sin escalones y sin convertir a Lempiras — pero rotulado "L.". Es el mismo
-  # bug de moneda que PR-10.a arregló en `build_from_paquetes`, en el camino que
-  # quedó afuera. Con los precios reales cargados la diferencia dejó de ser
-  # cosmética: un CER de 0.5 lb mostraba $2.25 y la pre-factura cobraba L.173.91.
-  #
-  # Yusef: "queremos que el área de los precios estén establecidos, listo". Mal
-  # puede estar preestablecido si la pantalla dice un número y el sistema cobra
-  # otro.
-  #
-  # `CotizadorFlete` es el mismo servicio que usa /entrega_personal, y hay un
-  # test que verifica que su resultado coincida con el de la pre-factura.
-  #
-  # PR-P.10 · Ya solo lo usa el JSON de `facturables`, que es por paquete. La
-  # pantalla dejó de cotizar acá: ver `armar_preview`.
-  def cotizar(cliente, paquetes)
-    paquetes.index_by(&:id).transform_values do |p|
-      CotizadorFlete.call(
-        tipo_envio: p.tipo_envio,
-        cliente: cliente,
-        proveedor: p.proveedor,
-        sucursal: p.sucursal,
-        # `peso_cobrar` ya es el mayor entre el real y el volumétrico, así que
-        # no se le pasan las medidas: recalcularlas daría lo mismo.
-        peso: p.peso_cobrar
-      )
-    end
-  end
-
-  # PR-P.10 · El paso 2 se cotiza con **el mismo armador** que `create`
-  # (`ArmarPreFacturaManual`, sin guardar), sobre todo lo facturable: así la
-  # pantalla sabe qué va por volumen, qué tanda se rechazó y por qué, y el
-  # precio de cada fila es el de la línea que se va a guardar. Cada fila se
-  # cotiza sola —un volumen o un paquete no cambia de precio por lo que se
-  # marque al lado—, así que armar todo da el mismo precio que armar cualquier
-  # selección.
-  def armar_preview(cliente, paquetes)
-    ArmarPreFacturaManual.call(cliente: cliente, paquete_ids: paquetes.map(&:id), user: Current.user)
-  end
-
-  # PR-P.10 · El check de una tanda manda sus ids juntos («12,13»): no se elige
-  # media tanda.
-  def paquete_ids_param
-    Array(params[:paquete_ids]).flat_map { |v| v.to_s.split(",") }.map(&:to_i).reject(&:zero?).uniq
-  end
-
-  # C21-10. Un solo lugar arma la lista, para que la pantalla, el JSON del
-  # preview y el re-render de error no se separen — que es el bug recurrente
-  # de este repo.
-  def paquetes_facturables_de(cliente, manifiesto)
-    paquetes = cliente.paquetes
-      .facturables
-      .includes(:tipo_envio, :sucursal, :proveedor)
-      .order(:created_at)
-    manifiesto ? paquetes.where(manifiesto_id: manifiesto.id) : paquetes
   end
 
   def apply_filters(scope)

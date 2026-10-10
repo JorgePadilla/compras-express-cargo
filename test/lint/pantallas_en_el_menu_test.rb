@@ -76,7 +76,7 @@ class PantallasEnElMenuTest < ActiveSupport::TestCase
     "rails_mandrill_inbound_health_check" => "endpoint de infraestructura de Action Mailbox",
     "new_categoria_precio"                => "PR-C7.12: las categorías se administran dentro de la Tabla de Servicios",
     "entregables_entregas"                => "lo pide el JS de /entregas para llenar la lista, no es una pantalla",
-    "facturables_pre_facturas"            => "lo pide el JS de /pre_facturas, no es una pantalla",
+    "pre_facturas_new"                    => "PR-P.11b: no es una pantalla, es el redirect del marcador viejo de la pre-factura a mano a la hoja de preparación",
     "etiquetas_grupo_medicion"            => "C26-04: las stickers de un grupo. La URL la arma el controller y la manda en el JSON del escaneo — la pantalla no sabe qué grupo es hasta que alguien escanea una caja",
     "etiquetas_sesion_medicion"           => "C27-06: las etiquetas de una tanda de mediciones, por la misma razón que la de arriba — la sesión no existe hasta que se guarda, y la URL viene en el JSON de `medicion#guardar`",
     "etiqueta_bulto_medicion"             => "C27-09: reimprimir **una** medición. Yusef: *«tendría que volver a escanear el warehouse»* — la puerta es el escaneo, y la URL la manda el controller en el JSON",
