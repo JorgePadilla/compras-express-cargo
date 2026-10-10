@@ -7,15 +7,24 @@
 # tienen. Hasta que salga la primera factura SAR, ese texto dice lo contrario
 # de la verdad en cada PDF.
 #
-# Solo se borra si el texto **empieza** con esa leyenda: un pie que alguien
-# escribió a mano se respeta. Por SQL y no con el modelo: una validación nueva
-# de Empresa (p. ej. el ISV de F2.1) no tiene por qué trabar esta limpieza.
+# Solo se toca si el texto **empieza** con esa leyenda: un pie que alguien
+# escribió a mano se respeta. Y se saca **solo la frase**: lo que la semilla
+# ponía después («Gracias por preferir Compras Express Cargo.») se queda — en
+# producción no corren seeds, y nadie tendría que volver a escribirlo (QA de
+# PR-F1.4). Si no queda nada, NULL.
+#
+# Por SQL y no con el modelo: una validación nueva de Empresa (p. ej. el ISV de
+# F2.1) no tiene por qué trabar esta limpieza.
 class QuitarLeyendaFalsaDeLaFactura < ActiveRecord::Migration[8.0]
   def up
     borradas = execute(<<~SQL).cmd_tuples
       UPDATE empresas
-         SET terminos_factura = NULL, updated_at = CURRENT_TIMESTAMP
-       WHERE terminos_factura ILIKE 'Esta factura es v_lida como comprobante fiscal%'
+         SET terminos_factura = NULLIF(
+               btrim(regexp_replace(terminos_factura,
+                                    '^\s*Esta factura es v.lida como comprobante fiscal\.?\s*', '', 'i')),
+               ''),
+             updated_at = CURRENT_TIMESTAMP
+       WHERE terminos_factura ~* '^\s*Esta factura es v.lida como comprobante fiscal'
     SQL
     say "leyenda falsa quitada de #{borradas} empresa(s)"
   end
