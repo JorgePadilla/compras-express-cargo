@@ -105,7 +105,11 @@ module Fiscal
           documentable = registro.documentable
           registro.destroy!
           retirar(documentable, invoice)
-          @retirados[numero] = documentable if documentable
+          # QA de PR-F1.2 · También el id: si es una anulación que se deshace,
+          # la gema vuelve a guardar la emitida, y tiene que volver con el mismo
+          # id. Con otro, el asiento de la emisión —que no se puede tocar—
+          # quedaría apuntando a un documento que ya no existe.
+          @retirados[numero] = { documentable: documentable, id: registro.id }
         end
       end
       invoice
@@ -139,8 +143,10 @@ module Fiscal
               "#{numero} no es del punto #{punto.prefijo}: el emisor llevaría la dirección de otro establecimiento"
       end
 
-      documentable = estampar(@retirados.delete(numero) || borrador, invoice)
-      DocumentoFiscal.create!(numero: numero, punto_de_emision: punto_del_numero, tipo_documento: tipo,
+      retirado = @retirados.delete(numero) || {}
+      documentable = estampar(retirado[:documentable] || borrador, invoice)
+      DocumentoFiscal.create!(id: retirado[:id], numero: numero, punto_de_emision: punto_del_numero,
+                              tipo_documento: tipo,
                               fecha_emision: invoice.issue_date, estado: invoice.status,
                               cai: invoice.authorization.cai, documento: invoice.to_h,
                               documentable: documentable)

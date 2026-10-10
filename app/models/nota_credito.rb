@@ -100,11 +100,12 @@ class NotaCredito < ApplicationRecord
     self.numero = "NC-#{next_number.to_s.rjust(6, '0')}"
   end
 
+  # PR-F2.1 · La cuenta la hace la gema (`Fiscal::Totales`). Estas líneas no
+  # tienen descuento, así que el documento tampoco tiene columna `descuento`.
   def calculate_totals
-    sub = nota_credito_items.reject(&:marked_for_destruction?)
-                            .sum { |i| i.subtotal.to_d }
-    self.subtotal = sub
-    self.impuesto = (sub * isv_rate).round(2, BigDecimal::ROUND_HALF_UP)
-    self.total    = (sub + impuesto).round(2)
+    t = Fiscal::Totales.calcular(nota_credito_items.reject(&:marked_for_destruction?), moneda: moneda)
+    self.subtotal = t[:subtotal]
+    self.impuesto = t[:impuesto]
+    self.total    = t[:total]
   end
 end

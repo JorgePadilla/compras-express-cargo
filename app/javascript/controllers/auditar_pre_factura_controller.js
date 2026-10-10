@@ -65,6 +65,23 @@ export default class extends Controller {
 
     const codigo = this.codigoTarget.value.trim()
     this.codigoTarget.value = ""
+    this._leer(codigo)
+  }
+
+  // Jorge, 2026-10-10: *"estoy pegando este QR de un volumen y no funciona"*.
+  // Funcionaba, pero esperaba el Enter que la pistola manda sola y un pegado
+  // no: el texto se quedaba en el campo. Pegar es una lectura entera —el ícono
+  // de copiar de /medicion/volumenes copia el QR completo—, así que se manda
+  // como si la pistola lo hubiera leído.
+  pegado(e) {
+    const texto = (e.clipboardData || window.clipboardData)?.getData("text") || ""
+    if (texto.trim().length < 3) return
+    e.preventDefault()
+    this.codigoTarget.value = ""
+    this._leer(texto.trim())
+  }
+
+  _leer(codigo) {
     enfocar(this.codigoTarget)
     if (codigo.length < 3) return
 

@@ -50,6 +50,22 @@ class AuditarPreFacturaSystemTest < ApplicationSystemTestCase
     assert_text "guardada", wait: 5
   end
 
+  # Jorge, 2026-10-10: *"estoy pegando este QR de un volumen y no funciona"*.
+  # El ícono de /medicion/volumenes copia el QR entero; pegarlo es una lectura,
+  # sin el Enter que manda la pistola.
+  test "pegar el QR de un volumen lo lee solo, sin Enter" do
+    preparar_la_hoja
+    click_on "Empezar a auditar"
+    assert_selector "#codigo_auditoria", wait: 5
+
+    pegar @qr
+    assert_text "1 volumen · 2 cajas · faltan 2", wait: 5
+    assert_equal "", find("#codigo_auditoria").value
+
+    pegar @cajas.first.tracking
+    assert_text "faltan 1", wait: 5
+  end
+
   test "Enter no guarda: ni en el campo, ni con el modal abierto" do
     preparar_la_hoja
     visit auditar_pre_factura_index_path
@@ -140,6 +156,19 @@ class AuditarPreFacturaSystemTest < ApplicationSystemTestCase
     page.execute_script("document.querySelector('#hoja_fecha')._flatpickr.setDate('#{fecha}', true)") if fecha
     click_on "Guardar la hoja"
     assert_selector "a", text: "Empezar a auditar", wait: 5
+  end
+
+  # Un pegado de verdad (Ctrl+V) no anda en el Chrome headless de los tests:
+  # se dispara el evento `paste` con su `clipboardData`, que es lo que lee la
+  # pantalla.
+  def pegar(texto)
+    find("#codigo_auditoria").click
+    page.execute_script(<<~JS, texto)
+      const dt = new DataTransfer()
+      dt.setData("text/plain", arguments[0])
+      document.querySelector("#codigo_auditoria")
+        .dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }))
+    JS
   end
 
   def escanear(codigo)
