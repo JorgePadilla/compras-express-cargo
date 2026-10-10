@@ -97,7 +97,7 @@ class ArmarPreFacturaPorVolumen
     prepagadas = cajas.select(&:prepagado_miami?)
     if prepagadas.any?
       raise NoSePuede, "#{codigos(prepagadas)} viene prepagada en Miami: esa pre-factura se hace por " \
-                       "Pre-Facturas › Nueva, que pone el cobro simbólico."
+                       "Pre-Facturas › A mano (excepciones), que pone el cobro simbólico."
     end
 
     [ bultos, cajas ]
@@ -133,7 +133,7 @@ class ArmarPreFacturaPorVolumen
     return if tarifas.uniq.size <= 1
 
     raise NoSePuede, "Las cajas del volumen #{bulto.de_cuantos_texto || bulto.orden} se cobran con tarifas " \
-                     "distintas (proveedor o sucursal): esa pre-factura se hace por Pre-Facturas › Nueva."
+                     "distintas (proveedor o sucursal): esa pre-factura se hace por Pre-Facturas › A mano (excepciones)."
   end
 
   # Las mismas marcas que `build_from_paquetes` —«(mínimo de servicio)» y

@@ -29,7 +29,9 @@ class TeclasPorFamiliaTest < ActiveSupport::TestCase
   # Excel, que era F8, **se queda sin tecla** (`RP-75`). Ver el encabezado de
   # `keyboard_shortcuts_controller.js`.
   FAMILIAS = {
-    "F1"  => /nuev[oa]|crear/i,
+    # PR-P.10 · «Preparar pre-factura» es crear una: desde la Fase 14 la
+    # pre-factura nace en la hoja de preparación, no en /pre_facturas/new.
+    "F1"  => /nuev[oa]|crear|preparar/i,
     "F2"  => /volver|cancelar|limpiar|atr[áa]s/i,
     "F3"  => /.*/,                                   # solo /etiquetar, con su propio handler
     "F4"  => /imprimir|warehouse|recibo|documento/i,

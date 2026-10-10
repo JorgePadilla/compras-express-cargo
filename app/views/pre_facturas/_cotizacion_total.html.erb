@@ -1,0 +1,26 @@
+<%# PR-P.10 · El total de lo marcado en el paso 2. `pre_factura` es la que
+    arma `ArmarPreFacturaManual` sin guardar, con `calcular_totales`: la misma
+    cuenta que el `before_save`, así que es el total que va a quedar guardado.
+    Sin nada marcado, `nil`. %>
+<% if pre_factura.nil? %>
+  <p class="text-sm text-gray-500" id="total_pre_factura">Marcá paquetes o tandas para ver el total.</p>
+<% else %>
+  <% automaticos = pre_factura.pre_factura_items.count { |i| i.origen.to_s.start_with?("auto_") } %>
+  <dl class="grid grid-cols-3 gap-4 text-sm" id="total_pre_factura">
+    <div>
+      <dt class="text-gray-500">Subtotal</dt>
+      <dd class="font-medium" data-monto="subtotal">L. <%= number_with_precision(pre_factura.subtotal, precision: 2, delimiter: ",") %></dd>
+    </div>
+    <div>
+      <dt class="text-gray-500">ISV</dt>
+      <dd class="font-medium" data-monto="impuesto">L. <%= number_with_precision(pre_factura.impuesto, precision: 2, delimiter: ",") %></dd>
+    </div>
+    <div>
+      <dt class="text-gray-500">Total</dt>
+      <dd class="text-lg font-semibold text-cec-navy" data-monto="total">L. <%= number_with_precision(pre_factura.total, precision: 2, delimiter: ",") %></dd>
+    </div>
+  </dl>
+  <% if automaticos.positive? %>
+    <p class="mt-2 text-xs text-gray-500">Incluye <%= pluralize(automaticos, "cargo automático", plural: "cargos automáticos") %> (recolecta, cambio de servicio).</p>
+  <% end %>
+<% end %>

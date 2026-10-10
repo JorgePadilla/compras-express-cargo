@@ -115,13 +115,13 @@ class AuditoriaDeTandaTest < ActiveSupport::TestCase
     assert_equal :fuera_de_la_hoja, auditoria.volumen(qr(otro.first)).tipo
   end
 
-  test "con una caja prepagada en Miami: caso complejo, por Pre-Facturas › Nueva" do
+  test "con una caja prepagada en Miami: caso complejo, por Pre-Facturas › A mano (excepciones)" do
     cajas = [ caja, caja(prepagado_miami: true, prepagado_miami_metodo: "efectivo") ]
     medir(cajas, { peso: "4" })
 
     r = auditoria.volumen(qr(cajas.first))
     assert_equal :prepagada, r.tipo
-    assert_match(/Pre-Facturas › Nueva/, r.mensaje)
+    assert_match(/Pre-Facturas › A mano \(excepciones\)/, r.mensaje)
   end
 
   test "la misma tanda dos veces" do
