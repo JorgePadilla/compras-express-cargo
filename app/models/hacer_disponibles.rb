@@ -44,6 +44,12 @@ class HacerDisponibles
     PreFactura.por_avisar(@ahora).order(:notificar_at, :id).pluck(:id).count { |id| avisar(id) }
   end
 
+  # PR-P.5 · Una sola, ya: la pre-factura auditada con F9 cuya hora ya pasó
+  # (Fase 14, paso 3: *"si la hora ya pasó, sale al apretar F9"*). Es el mismo
+  # `avisar` del barrido —con su lock, su idempotencia y su registro del error—,
+  # para no tener dos caminos que pasen a disponible.
+  def avisar_una(id) = avisar(id)
+
   private
 
   def avisar(id)

@@ -197,19 +197,20 @@
 
   <div class="flex flex-wrap items-center justify-end gap-3">
     <%= render ButtonComponent.new(type: :submit, variant: :secondary, icon: "check") do %>Guardar la hoja<% end %>
-    <%# «Empezar» va a auditar escaneando (`/pre-factura/auditar`), que llega
-        con `PR-P.5`. Mientras tanto queda **deshabilitado y diciendo por qué**
-        en vez de mandar a `/pre_facturas`: esa es la pre-factura a mano, que
-        no lee esta hoja, y llegar ahí con los manifiestos elegidos haría creer
-        que la hoja sirvió de algo. TODO(PR-P.5): `href: auditar_path`. %>
+    <%# PR-P.5 · «Empezar» va a auditar escaneando. Con la hoja a medias queda
+        apagado y diciendo qué falta: `/pre-factura/auditar` sin hoja lista
+        vuelve acá igual. %>
     <% if @hoja.nuevas? %>
-      <%= render ButtonComponent.new(type: :button, variant: :primary, icon: "qr-code", disabled: true,
-            title: @hoja.lista? ? "Auditar escaneando llega con PR-P.5" : "Falta elegir servicio y manifiesto") do %>
-        Empezar a auditar
+      <% if @hoja.lista? %>
+        <%= render ButtonComponent.new(href: auditar_pre_factura_index_path, variant: :primary, icon: "qr-code") do %>
+          Empezar a auditar
+        <% end %>
+      <% else %>
+        <%= render ButtonComponent.new(type: :button, variant: :primary, icon: "qr-code", disabled: true,
+              title: "Falta elegir servicio y manifiesto, y guardar la hoja") do %>
+          Empezar a auditar
+        <% end %>
       <% end %>
-      <p class="w-full text-right text-xs text-gray-500 dark:text-gray-400">
-        El paso siguiente, auditar escaneando, todavía no está: por ahora la hoja se prepara y se guarda.
-      </p>
     <% end %>
   </div>
 <% end %>
