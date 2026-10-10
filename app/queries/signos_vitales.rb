@@ -223,20 +223,42 @@ class SignosVitales
   # cgroup v2, después v1, después la máquina entera. Un límite «max» (v2) o
   # gigantesco (v1, 2^63 redondeado) quiere decir que el contenedor no tiene
   # tope propio, y entonces el tope es la RAM de la máquina.
+  #
+  # 2026-10-10 · Jorge, mirando staging: *"why do we use so much memory?"* —476
+  # de 512 MB, 93 %, en rojo— con Puma ocupando 222 MB. `memory.current` cuenta
+  # también la **caché de archivos** del kernel (el código, las gemas, los
+  # assets, los logs), que se suelta sola cuando la app pide memoria. Lo que se
+  # mide es el *working set*, como Kubernetes y Render: lo usado menos
+  # `inactive_file` de `memory.stat`, la caché que el kernel suelta primero.
   def ram_del_contenedor
     if (actual = leer_entero("/sys/fs/cgroup/memory.current"))
       limite = leer_limite("/sys/fs/cgroup/memory.max")
-      return [ actual, limite || total_de_la_maquina, "contenedor (cgroup v2)" ]
+      cache = dato_de_memory_stat("/sys/fs/cgroup/memory.stat", "inactive_file")
+      return [ actual - cache, limite || total_de_la_maquina, origen_con_cache("cgroup v2", cache) ]
     end
 
     if (actual = leer_entero("/sys/fs/cgroup/memory/memory.usage_in_bytes"))
       limite = leer_limite("/sys/fs/cgroup/memory/memory.limit_in_bytes")
-      return [ actual, limite || total_de_la_maquina, "contenedor (cgroup v1)" ]
+      cache = dato_de_memory_stat("/sys/fs/cgroup/memory/memory.stat", "total_inactive_file")
+      return [ actual - cache, limite || total_de_la_maquina, origen_con_cache("cgroup v1", cache) ]
     end
 
     info = meminfo
     total = info.fetch("MemTotal")
     [ total - info.fetch("MemAvailable"), total, "máquina (/proc/meminfo)" ]
+  end
+
+  # Un valor de `memory.stat` («inactive_file 123456»), o 0 si no está.
+  def dato_de_memory_stat(ruta, clave)
+    @fuente.leer(ruta)[/^#{clave}\s+(\d+)$/, 1].to_i
+  rescue StandardError
+    0
+  end
+
+  def origen_con_cache(cgroup, cache)
+    return "contenedor (#{cgroup})" if cache.zero?
+
+    "contenedor (#{cgroup}), sin #{humano(cache)} de caché de archivos que el kernel suelta solo"
   end
 
   def memoria_del_proceso

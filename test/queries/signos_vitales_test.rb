@@ -44,6 +44,20 @@ class SignosVitalesTest < ActiveSupport::TestCase
     assert_includes ram.detalle, "cgroup v2"
   end
 
+  # Jorge, 2026-10-10: «why do we use so much memory?» — 476 de 512 MB en rojo,
+  # con Puma en 222 MB. La caché de archivos no cuenta: el kernel la suelta sola.
+  test "la RAM del contenedor descuenta la caché de archivos inactiva (working set)" do
+    signos = SignosVitales.new(fuente: FuenteFalsa.new(archivos: {
+      "/sys/fs/cgroup/memory.current" => (476 * MB).to_s, "/sys/fs/cgroup/memory.max" => (512 * MB).to_s,
+      "/sys/fs/cgroup/memory.stat" => "anon #{220 * MB}\nfile #{250 * MB}\ninactive_file #{230 * MB}\nactive_file #{20 * MB}\n"
+    }))
+    ram = medida(signos, :servidor, "RAM")
+
+    assert_equal 48.0, ram.porcentaje
+    assert_equal :bien, ram.nivel
+    assert_includes ram.detalle, "caché de archivos"
+  end
+
   test "RAM con cgroup v1, y un límite gigante es «sin tope»: manda la máquina" do
     signos = SignosVitales.new(fuente: FuenteFalsa.new(archivos: {
       "/sys/fs/cgroup/memory/memory.usage_in_bytes" => (1 * GB).to_s,
