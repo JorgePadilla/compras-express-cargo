@@ -319,7 +319,9 @@ Rails.application.routes.draw do
   # a mano; todo por escaneo»): nace en la hoja → Auditar → F9/F8. Un
   # marcador viejo a /pre_facturas/new cae en la hoja en vez de en un 404. Va
   # **antes** del resource: si no, `/pre_facturas/new` sería `show` con id «new».
-  get "pre_facturas/new", to: redirect("/pre-factura/hoja")
+  # 302 y no el 301 por defecto: un 301 el navegador lo guarda para siempre, y
+  # si la ruta vuelve a servir para algo, los que ya pasaron no la verían.
+  get "pre_facturas/new", to: redirect("/pre-factura/hoja", status: 302)
   resources :pre_facturas, only: %i[index show edit update] do
     member do
       post   :confirmar

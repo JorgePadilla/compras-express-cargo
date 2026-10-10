@@ -33,6 +33,7 @@ class PreFacturasControllerTest < ActionDispatch::IntegrationTest
   # `show` con id «new».
   test "/pre_facturas/new redirige a la hoja de preparación" do
     get "/pre_facturas/new"
+    assert_response :found, "302: un 301 se queda en el caché del navegador"
     assert_redirected_to "/pre-factura/hoja"
     assert_equal hoja_de_preparacion_path, URI(response.location).path
   end
