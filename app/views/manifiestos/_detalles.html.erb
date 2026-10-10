@@ -1,0 +1,111 @@
+<%# PR-C30.15 · La tarjeta «Detalles del Manifiesto», con sus dos caras.
+
+    Jorge, 2026-10-10, después de PR-C30.14 (que había hecho de /edit el
+    manifiesto entero, en otra pantalla): *"it really don't make sense
+    pressing editar sends me here, I want to edit the current view plus all
+    what is in the manifiesto, something like this view /manifiestos/24"*.
+    Así que «Editar» no se va de la ficha: **esta tarjeta se da vuelta a
+    formulario**, y lo demás (casas, agregar y sacar paquetes) ya se editaba
+    abajo, en el mismo lugar.
+
+    Es un Turbo Frame (`manifiesto-detalles`): el «Editar» de arriba lo apunta
+    con `data-turbo-frame`, `edit` devuelve esta tarjeta en formulario,
+    «Cancelar» pide la ficha adentro del frame y vuelve la de solo lectura.
+    El `<turbo-frame>` vive **acá adentro** porque es lo que el frame busca en
+    la respuesta; por eso el turbo_stream de `update` la cambia con `replace`
+    (un `update` la anidaría adentro de sí misma).
+
+    Paquetes y peso llevan id fijo en las dos caras
+    (`manifiesto-detalles-paquetes` / `-peso`): el escaneo de un paquete los
+    sube por ahí, sin repintar la tarjeta y sin borrarle al supervisor lo que
+    está tecleando.
+
+    Locals: `manifiesto` y `editando` (falso si no viene). En formulario, las
+    listas de los selects las carga `assigns_del_formulario`. %>
+<% editando = local_assigns.fetch(:editando, false) %>
+<%= turbo_frame_tag "manifiesto-detalles", class: "block" do %>
+  <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+    <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-gray-800">Detalles del Manifiesto</h2>
+      <%= render StatusBadgeComponent.new(status: manifiesto.estado) %>
+    </div>
+
+    <% if editando %>
+      <%# `data-teclas-alcance`: mientras este formulario está a la vista, las
+          teclas F son **de él** (`keyboard_shortcuts_controller`). F8 guarda
+          la tarjeta —no aprieta «Solo Finalizar», que también es F8, venga
+          antes o después en el DOM—, F2 cancela sin salir de la ficha, y F5/F6 no
+          recargan ni reabren nada que se lleve lo tecleado. %>
+      <%= form_with model: manifiesto, class: "p-6 space-y-6", data: { teclas_alcance: true } do |f| %>
+        <% if manifiesto.errors.any? %>
+          <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+            <ul class="list-disc list-inside">
+              <% manifiesto.errors.full_messages.each do |msg| %><li><%= msg %></li><% end %>
+            </ul>
+          </div>
+        <% end %>
+
+        <%# Lo que no se edita sigue a la vista, como texto: el número ya
+            salió, «expedido por» lo estampa el sistema (RP-59) y la fecha de
+            enviado la pone finalizar. Paquetes y peso los mueve el escaneo. %>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <%= dato_del_manifiesto "Numero", manifiesto.numero, clase: "text-sm font-mono font-medium text-cec-navy" %>
+          <%= dato_del_manifiesto "Expedido Por", manifiesto.expedido_por.presence || manifiesto.user&.iniciales_display || "—" %>
+          <%= dato_del_manifiesto "Fecha Enviado", manifiesto.fecha_enviado&.strftime("%d/%m/%Y %H:%M") || "—" %>
+          <%= dato_del_manifiesto "Paquetes", manifiesto.cantidad_paquetes, id: "manifiesto-detalles-paquetes",
+                                  clase: "text-sm font-semibold text-gray-900" %>
+          <%= dato_del_manifiesto "Peso Total", peso_total_del_manifiesto(manifiesto), id: "manifiesto-detalles-peso",
+                                  clase: "text-sm font-semibold text-gray-900" %>
+        </div>
+
+        <%= render "manifiestos/campos_miami", f: f, manifiesto: manifiesto, grid: "grid grid-cols-1 md:grid-cols-3 gap-4" %>
+
+        <%# Lo de San Pedro, solo en el oficial: el interno no cruza aduana ni
+            lleva guía de proveedor (`A7-07`). Los campos son **el mismo
+            partial** que `/guias-y-aduana`. %>
+        <% if manifiesto.tipo_oficial? %>
+          <%= render FormSectionComponent.new(title: "Lo que llena San Pedro Sula") do %>
+            <%= render "guias_aduana/campos_san_pedro", f: f, manifiesto: manifiesto %>
+          <% end %>
+        <% end %>
+
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+          <%# Vuelve a pedir la ficha **adentro del frame**: el controller
+              contesta solo esta tarjeta, de solo lectura, y lo demás no se
+              mueve. %>
+          <%= render(ButtonComponent.new(variant: :secondary, size: :lg, href: manifiesto_path(manifiesto),
+                                         icon: "x-mark", shortcut: "F2")) { "Cancelar" } %>
+          <%= render(ButtonComponent.new(variant: :gold, size: :lg, type: :submit, shortcut: "F8")) { "Guardar" } %>
+        </div>
+      <% end %>
+    <% else %>
+      <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <%= dato_del_manifiesto "Numero", manifiesto.numero, clase: "text-sm font-mono font-medium text-cec-navy" %>
+        <%= dato_del_manifiesto "Empresa", manifiesto.empresa_manifiesto&.nombre || "—" %>
+        <%= dato_del_manifiesto "T. envío del proveedor", manifiesto.tipo_envio_del_proveedor || "—" %>
+        <%# C21-03: los NUESTROS, que son los que deciden qué paquetes salen. %>
+        <%= dato_del_manifiesto "T. envío nuestros", manifiesto.tipos_envio_nuestros.presence || "—" %>
+        <%= dato_del_manifiesto "Consignatario", manifiesto.consignatario&.nombre || "—" %>
+        <%= dato_del_manifiesto "Se entrega en", manifiesto.sucursal_entrega&.nombre || "—" %>
+        <%# C21-11: son varias, y las llena San Pedro Sula después. %>
+        <%= dato_del_manifiesto "Guías del proveedor", manifiesto.numeros_de_guia.join(" · ").presence || "—",
+                                clase: "text-sm font-mono text-gray-900" %>
+        <%= dato_del_manifiesto "Recibido en Honduras", fecha_y_quien(manifiesto.fecha_aduana, manifiesto.recibido_hn_por) || "—" %>
+        <%# RP-59 · Lo estampa el sistema al crear, con las iniciales de quien lo
+            creó. Los manifiestos viejos que se crearon antes de esto pueden no
+            tenerlo, y ahí cae al usuario. %>
+        <%= dato_del_manifiesto "Expedido Por", manifiesto.expedido_por.presence || manifiesto.user&.iniciales_display || "—" %>
+        <%= dato_del_manifiesto "Paquetes", manifiesto.cantidad_paquetes, id: "manifiesto-detalles-paquetes",
+                                clase: "text-sm font-semibold text-gray-900" %>
+        <%= dato_del_manifiesto "Peso Total", peso_total_del_manifiesto(manifiesto), id: "manifiesto-detalles-peso",
+                                clase: "text-sm font-semibold text-gray-900" %>
+        <%= dato_del_manifiesto "Fecha Enviado", manifiesto.fecha_enviado&.strftime("%d/%m/%Y %H:%M") || "—" %>
+        <% if manifiesto.es_prioridad? %>
+          <%= dato_del_manifiesto "Prioridad",
+                tag.span("ES PRIORIDAD", class: "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-cec-gold/20 text-cec-navy"),
+                clase: "" %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

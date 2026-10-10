@@ -79,6 +79,18 @@ class Bulto < ApplicationRecord
                                 .where.not(bulto_id: nil).select(:bulto_id))
   }
 
+  # PR-P.1 · PR-P.11a · La pre-factura **viva** que cobra algún volumen de
+  # una tanda, o nil. Una anulada no cuenta: sus cajas ya quedaron libres.
+  # La preguntan medir de nuevo (`MedirBulto`) y marcar una excepción de cobro
+  # (`MarcarCobroExcepcion`): las dos cambiarían el peso de una línea que ya
+  # se le está cobrando al cliente.
+  def self.pre_factura_que_cobra(sesion)
+    return nil if sesion.blank?
+
+    PreFactura.activas.joins(:pre_factura_items)
+              .where(pre_factura_items: { bulto_id: where(sesion: sesion).select(:id) }).first
+  end
+
   # Con `pre_factura_items: :pre_factura` precargado, sin otra consulta.
   def pre_factura_vigente
     pre_factura_items.map(&:pre_factura).compact.reject(&:anulado?).first

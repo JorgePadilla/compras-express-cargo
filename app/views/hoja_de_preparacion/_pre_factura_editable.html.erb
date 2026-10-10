@@ -1,0 +1,38 @@
+<%# PR-P.7 · Una pre-factura de la hoja en modo «editar», con su estado del
+    aviso y lo que se le puede hacer antes de que salga. PR-P.11a: partial
+    aparte porque la usan dos tarjetas —la de su manifiesto y «Sin
+    manifiesto oficial»— y una copia a mano diverge. %>
+<li class="py-3" data-pre-factura="<%= pf.numero %>">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <span class="text-sm">
+      <span class="font-mono font-medium text-gray-900 dark:text-gray-100"><%= pf.numero %></span>
+      <span class="text-gray-500 dark:text-gray-400">· <%= pf.cliente&.codigo %> <%= pf.cliente&.nombre_completo %></span>
+    </span>
+    <% case pf.estado_del_aviso %>
+    <% when :consolidando %>
+      <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-cec-gold/20 text-cec-navy" data-aviso="consolidando">Consolidando</span>
+    <% when :error %>
+      <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 ring-1 ring-red-200" data-aviso="error">Error de aviso</span>
+    <% else %>
+      <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-cec-teal/10 text-cec-teal-deep" data-aviso="programada">
+        Programada para <%= pf.notificar_at.strftime("%d/%m %H:%M") %>
+      </span>
+    <% end %>
+  </div>
+  <% if pf.notificacion_error.present? %>
+    <p class="mt-1 text-xs text-red-700" data-notificacion-error><%= pf.notificacion_error %></p>
+  <% end %>
+  <div class="mt-2 flex flex-wrap justify-end gap-2">
+    <% if pf.estado_del_aviso == :consolidando %>
+      <%= render ButtonComponent.new(href: auditar_pre_factura_index_path(pre_factura_id: pf.id), variant: :secondary, size: :xs,
+            icon: "qr-code") do %>Abrir en auditar<% end %>
+    <% else %>
+      <%# RP-77 · Solo mientras no avisó: el aviso ya mandado no se retira. %>
+      <%= render ButtonComponent.new(href: volver_a_consolidar_hoja_de_preparacion_path, method: :patch, params: { pre_factura_id: pf.id },
+            variant: :secondary, size: :xs, icon: "arrow-uturn-left",
+            confirm: "#{pf.numero} vuelve a consolidando: no se le avisa al cliente hasta que se termine. ¿Seguro?") do %>Volver a consolidar<% end %>
+    <% end %>
+    <%= render ButtonComponent.new(href: edit_pre_factura_path(pf), variant: :secondary, size: :xs,
+          icon: "pencil-square", label: "Editar la pre-factura #{pf.numero}") %>
+  </div>
+</li>

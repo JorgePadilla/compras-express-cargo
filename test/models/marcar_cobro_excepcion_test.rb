@@ -187,6 +187,54 @@ class MarcarCobroExcepcionTest < ActiveSupport::TestCase
     assert_no_match(/en vez del real/i, autorizacion.detalle)
   end
 
+  # ── PR-P.11a · La caja medida cobra el volumen de su tanda ─────────────
+  #
+  # Desde C28-08 la pre-factura cobra el **volumen** (`Bulto#peso_cobrar`), no
+  # el peso de la caja. Marcar sin tocar el volumen dejaba la excepción en el
+  # paquete y fuera del cobro.
+
+  # Una caja nueva, sola: la fixture es parte de un envío con hermanas, y
+  # Medición pediría el PIN por las que faltan.
+  def medir_sola(peso:, alto:, largo:, ancho:)
+    @paquete = Paquete.create!(tracking: "1ZEXC#{SecureRandom.hex(5).upcase}", cliente: clientes(:juan),
+                               tipo_envio: tipo_envios(:cer), sucursal_recepcion: sucursales(:miami),
+                               estado: "en_aduana", descripcion: "Generador", peso: peso)
+    bulto = MedirBulto.new(user: @supervisor).guardar!(paquete_ids: [ @paquete.id ],
+                                                       volumenes: [ { peso: peso, alto: alto, largo: largo, ancho: ancho } ]).first
+    @paquete.reload
+    bulto
+  end
+
+  test "marcar recalcula el volumen de la tanda" do
+    # 100 lb reales; 30×30×30 = 27000 in³ ÷ 166 = 162.65 → 163 volumétricas.
+    bulto = medir_sola(peso: "100", alto: "30", largo: "30", ancho: "30")
+    assert_operator bulto.peso_cobrar, :>, 100, "sin excepción gana el volumétrico"
+
+    marcar!(excepcion: "solo_peso", motivo: "carga liviana, por libra")
+
+    assert_equal 100, bulto.reload.peso_cobrar.to_i, "el volumen cobra el peso real"
+
+    marcar!(excepcion: nil, motivo: "era un error")
+    assert_operator bulto.reload.peso_cobrar, :>, 100, "quitarla también recalcula"
+  end
+
+  test "si una pre-factura viva ya cobra la tanda, se niega y no toca nada" do
+    bulto = medir_sola(peso: "100", alto: "30", largo: "30", ancho: "30")
+    antes = bulto.peso_cobrar
+    pf = ArmarPreFacturaPorVolumen.call(cliente: @paquete.cliente, sesiones: [ bulto.sesion ], user: @supervisor)
+    pf.save!
+
+    error = assert_raises(MarcarCobroExcepcion::TandaCobrada) { marcar!(excepcion: "solo_peso", motivo: "por libra") }
+    assert_match(/anulá la pre-factura, marcá la excepción y volvé a auditar/, error.message)
+    assert_includes error.message, pf.numero
+    assert_nil @paquete.reload.cobro_excepcion
+    assert_equal antes, bulto.reload.peso_cobrar
+
+    pf.anular!
+    marcar!(excepcion: "solo_peso", motivo: "por libra")
+    assert_equal 100, bulto.reload.peso_cobrar.to_i, "anulada, ya se puede"
+  end
+
   private
 
   def marcar!(excepcion: "solo_volumetrico", supervisor: @supervisor,

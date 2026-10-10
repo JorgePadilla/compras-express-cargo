@@ -217,13 +217,82 @@ class ArmarPreFacturaPorVolumenTest < ActiveSupport::TestCase
     assert_includes error.message, cajas.first.numero_recepcion_visible
   end
 
-  test "una caja prepagada en Miami va por Pre-Facturas › A mano (excepciones)" do
+  # ── PR-P.11a · Prepagado en Miami (RP-89, provisorio) ───────────────────
+  #
+  # Lo que cobraba la puerta a mano por paquete —US$1 por caja, más ISV— lo
+  # cobra ahora el escaneo, con el volumen en L. 0.00 y su peso a la vista.
+
+  def prepagada(**extra) = caja(prepagado_miami: true, prepagado_miami_metodo: "efectivo", **extra)
+  def simbolicos(pf) = pf.pre_factura_items.select { |i| i.origen == "manual" && i.concepto.include?("PREPAGADO EN MIAMI") }
+
+  test "una tanda toda prepagada: el volumen en cero con su peso, y US$1 por caja suelto" do
+    tarifa_cer(minimo_monto: 20.00, minimo_moneda: "USD")
+    cajas = [ prepagada, prepagada ]
+    bulto, = medir(cajas, { peso: "8" })
+
+    pf = armar(bulto)
+
+    linea = volumenes(pf).first
+    assert_equal 1, volumenes(pf).size
+    assert_equal bulto, linea.bulto
+    assert_equal 0, linea.subtotal, "ya se pagó en Miami: el flete no se cobra"
+    assert_equal BigDecimal("0"), linea.precio_libra
+    assert linea.minimo_aplicado, "nadie le recalcula peso × precio"
+    assert_equal bulto.peso_cobrar, linea.peso_cobrar, "el peso del volumen queda a la vista"
+    assert_includes linea.concepto, "PREPAGADO EN MIAMI"
+    assert_equal 2, cajas_de(pf).size
+    assert cajas_de(pf).all? { |i| i.subtotal.zero? }
+
+    simbolos = simbolicos(pf)
+    assert_equal cajas.map(&:id).sort, simbolos.map(&:paquete_id).sort, "uno por caja"
+    assert simbolos.all? { |i| i.subtotal == a_lps(PreFactura::PREPAGADO_MIAMI_SIMBOLICO) }, "US$1 → L con la tasa"
+    assert simbolos.all? { |i| i.bulto.nil? && i.peso_cobrar.nil? && i.precio_libra.nil? && i.minimo_aplicado },
+           "suelto y sin peso: si no, LineasPorVolumen lo esconde y la etiqueta cuenta las libras dos veces"
+    assert_equal cajas.map(&:id).sort, pf.prepagados_miami_detected.map(&:id).sort
+
+    pf.save!
+    simbolo = a_lps(PreFactura::PREPAGADO_MIAMI_SIMBOLICO)
+    assert_equal simbolo * 2, pf.reload.subtotal, "el dólar sobrevive al guardar"
+    assert_equal (simbolo * 2 * IsvAware.rate).round(2, BigDecimal::ROUND_HALF_UP), pf.impuesto, "US$1 + ISV"
+    assert_equal pf.subtotal + pf.impuesto, pf.total
+  end
+
+  test "la tanda prepagada cobra lo mismo que la puerta a mano por paquete" do
     tarifa_cer
-    bulto, = medir([ caja, caja(prepagado_miami: true, prepagado_miami_metodo: "efectivo") ], { peso: "8" })
+    cajas = [ prepagada, prepagada(recolecta_solicitada: true, recolecta_monto: 35.0, recolecta_moneda: "USD") ]
+    bulto, = medir(cajas, { peso: "8" })
+
+    por_volumen = armar(bulto).tap(&:calcular_totales)
+    por_paquete = PreFactura.build_from_paquetes(@cliente, cajas.map(&:id), user: @user).tap(&:calcular_totales)
+
+    assert_equal por_paquete.subtotal, por_volumen.subtotal
+    assert_equal por_paquete.total, por_volumen.total
+    assert_equal [ cajas.last.id ], por_volumen.pre_factura_items.select { |i| i.origen == "auto_recolecta" }.map(&:paquete_id),
+                 "los cobros automáticos siguen por caja"
+  end
+
+  test "la etiqueta de entrega cuenta el peso del volumen una vez, no el de los simbólicos" do
+    tarifa_cer
+    bulto, = medir([ prepagada, prepagada ], { peso: "8" })
+    pf = armar(bulto)
+    pf.save!
+
+    assert_equal bulto.peso_cobrar, EtiquetaDeEntrega.new(pf.reload).libras
+  end
+
+  test "una tanda que mezcla prepagadas y no prepagadas no se arma: se mide de nuevo separada" do
+    tarifa_cer
+    normal = caja
+    medida_antes = caja
+    bulto, = medir([ normal, medida_antes ], { peso: "8" })
+    # Medición ya no deja juntarlas (`PuedenIrJuntas#prepago_mezclado`): esto
+    # es una tanda medida antes de PR-P.11a.
+    medida_antes.update_columns(prepagado_miami: true, prepagado_miami_metodo: "efectivo")
 
     error = assert_raises(ArmarPreFacturaPorVolumen::NoSePuede) { armar(bulto) }
     assert_includes error.message, "prepagada en Miami"
-    assert_includes error.message, "A mano (excepciones)", "PR-P.10: la puerta se llama así en el índice"
+    assert_includes error.message, "medila de nuevo separando las prepagadas"
+    assert_not_includes error.message, "A mano (excepciones)", "PR-P.11a: la puerta a mano se va"
   end
 
   test "las cajas de otro cliente no entran" do
@@ -238,9 +307,14 @@ class ArmarPreFacturaPorVolumenTest < ActiveSupport::TestCase
   test "si las cajas cotizarían con tarifas distintas, no elige una" do
     tarifa_cer
     tarifa_cer(proveedor: proveedores(:Amazon), precio_libra: 3.00)
-    bulto, = medir([ caja(proveedor: proveedores(:Amazon)), caja ], { peso: "8" })
+    de_amazon = caja
+    bulto, = medir([ de_amazon, caja ], { peso: "8" })
+    # PR-P.11a · Medición ya no las junta (`PuedenIrJuntas#otra_tarifa`): ésta
+    # es una tanda medida antes, y esto la última red.
+    de_amazon.update_columns(proveedor_id: proveedores(:Amazon).id)
 
     error = assert_raises(ArmarPreFacturaPorVolumen::NoSePuede) { armar(bulto) }
     assert_includes error.message, "tarifas distintas"
+    assert_includes error.message, "medila de nuevo separándolas"
   end
 end

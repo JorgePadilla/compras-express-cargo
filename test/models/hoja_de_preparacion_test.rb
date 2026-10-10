@@ -82,6 +82,58 @@ class HojaDePreparacionTest < ActiveSupport::TestCase
     assert_not_includes Manifiesto.para_hoja([ @cer.id ]), @manifiesto
   end
 
+  # PR-P.11a · Lo que un admin sacó de Medición («perdido», «ya fue
+  # entregado») nunca se va a pre-facturar escaneando: no puede dejar al
+  # manifiesto en la hoja para siempre.
+  test "un descartado de medición no lo retiene" do
+    @uno.update_columns(pre_factura_id: pre_facturas(:borrador_juan).id)
+    @dos.update_columns(medicion_descartada_at: Time.current)
+
+    assert_not_includes Manifiesto.para_hoja([ @cer.id ]), @manifiesto
+  end
+
+  # ── PR-P.11a · «Sin manifiesto oficial» ────────────────────────────────
+
+  test "«Sin manifiesto oficial» se ofrece solo si hay carga así, y con ella sola la hoja está lista" do
+    HojaDePreparacion.carga_sin_manifiesto([ @cer.id ]).update_all(estado: "entregado") # lo que traen las fixtures
+    hoja = HojaDePreparacion.new(modo: "nuevas", tipo_envio_ids: [ @cer.id ], sin_manifiesto: true)
+    assert_not hoja.ofrece_sin_manifiesto?
+    assert_not hoja.lista?, "elegido pero sin nada que auditar"
+
+    @uno.update_columns(manifiesto_id: nil)
+    assert hoja.ofrece_sin_manifiesto?
+    assert hoja.lista?, "sin ningún manifiesto elegido"
+    assert_not HojaDePreparacion.new(modo: "nuevas", tipo_envio_ids: [ @cer.id ]).lista?, "sin la casilla, no"
+
+    interno = manifiestos(:creado)
+    interno.update_columns(tipo: "interno")
+    @uno.update_columns(manifiesto_id: interno.id)
+    assert hoja.ofrece_sin_manifiesto?, "la que anda en un interno también"
+    assert hoja.acepta_manifiesto?(@uno.reload)
+    assert_not HojaDePreparacion.new(modo: "nuevas", tipo_envio_ids: [ @cer.id ]).acepta_manifiesto?(@uno)
+  end
+
+  test "la casilla va y vuelve por la sesión, y se destilda" do
+    hoja = HojaDePreparacion.new(modo: "nuevas", tipo_envio_ids: [ @cer.id ]).con("sin_manifiesto" => "1")
+    assert hoja.sin_manifiesto?
+    assert HojaDePreparacion.desde_sesion(JSON.parse(hoja.to_sesion.to_json)).sin_manifiesto?
+    assert hoja.con("modo" => "nuevas").sin_manifiesto?, "sin la clave se queda la de antes"
+    assert_not hoja.con("sin_manifiesto" => "0").sin_manifiesto?
+  end
+
+  test "«editar» ofrece las que salieron de la auditoría, tengan o no manifiesto" do
+    auditada = pre_facturas(:borrador_juan)
+    auditada.update_columns(manifiesto_id: nil, estado: "creado", notificar_at: 1.day.from_now,
+                            auditado_por_id: users(:supervisor_prefactura).id)
+    a_mano = pre_facturas(:pendiente_maria)
+    a_mano.update_columns(manifiesto_id: @manifiesto.id, estado: "creado", notificar_at: 1.day.from_now,
+                          auditado_por_id: nil, notificado_at: nil)
+
+    editables = HojaDePreparacion.pre_facturas_editables
+    assert_includes editables, auditada, "«Sin manifiesto oficial» también se corrige"
+    assert_not_includes editables, a_mano, "una hecha a mano no salió de la auditoría"
+  end
+
   # ── La fecha de trabajo ────────────────────────────────────────────────
 
   test "sin la clave en Configuracion, la hora es 07:30" do
@@ -145,7 +197,9 @@ class HojaDePreparacionTest < ActiveSupport::TestCase
   test "«editar» ofrece los manifiestos con pre-facturas sin avisar" do
     pf = pre_facturas(:borrador_juan)
     # PR-P.7: las que salieron de la auditoría — programadas o consolidando.
-    pf.update_columns(manifiesto_id: @manifiesto.id, estado: "creado", notificar_at: 1.day.from_now)
+    # PR-P.11a: «salió de la auditoría» es `auditado_por_id`, que F9 escribe.
+    pf.update_columns(manifiesto_id: @manifiesto.id, estado: "creado", notificar_at: 1.day.from_now,
+                      auditado_por_id: users(:supervisor_prefactura).id)
 
     hoja = HojaDePreparacion.new(modo: "editar")
     assert_includes hoja.manifiestos_ofrecidos, @manifiesto

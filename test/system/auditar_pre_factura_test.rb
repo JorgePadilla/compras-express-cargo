@@ -77,6 +77,18 @@ class AuditarPreFacturaSystemTest < ApplicationSystemTestCase
     assert_text "faltan 2"
   end
 
+  # PR-P.11a · RP-89 · Una tanda prepagada en Miami se audita como cualquiera,
+  # y la pantalla avisa que se cobra el simbólico (antes: la puerta a mano).
+  test "una tanda prepagada en Miami avisa el simbólico y las líneas lo muestran" do
+    @cajas.each { |c| c.update_columns(prepagado_miami: true, prepagado_miami_metodo: "efectivo") }
+    preparar_la_hoja
+    visit auditar_pre_factura_index_path
+    escanear @qr
+
+    assert_text "2 cajas prepagadas en Miami: se cobra el simbólico de US$1.00 c/u", wait: 5
+    assert_text "PREPAGADO EN MIAMI"
+  end
+
   # PR-P.6 · F8 deja la pre-factura consolidando; cuando llega lo que faltaba,
   # escanear un volumen suyo la reabre, se le agrega la tanda nueva, y F9 la
   # programa.

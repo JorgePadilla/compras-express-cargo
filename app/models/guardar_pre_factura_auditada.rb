@@ -22,9 +22,12 @@
 # - toda caja de cada tanda **nueva** tiene que haberse escaneado — es la
 #   auditoría. Las de las tandas que la pre-factura ya tenía ya se auditaron;
 # - ninguna en otra pre-factura, el grupo completo, dentro de la hoja, sin
-#   prepago (`AuditoriaDeTanda#rechazo_de_la_tanda`, lo mismo que al escanear);
-# - todas del mismo cliente, servicio y pre-alerta consolidada (`PuedenIrJuntas`,
-#   C27-17), también entre la tanda vieja y la nueva;
+#   mezclar prepagadas con no prepagadas en una tanda
+#   (`AuditoriaDeTanda#rechazo_de_la_tanda`, lo mismo que al escanear);
+# - todas del mismo cliente, servicio, sucursal de retiro y pre-alerta
+#   consolidada (`PuedenIrJuntas`, C27-17), también entre la tanda vieja y la
+#   nueva. Las reglas del **volumen** (prepago, tarifa, trato de cobro) no:
+#   dos tandas distintas sí van juntas, cada volumen es su línea (PR-P.11a);
 # - con F9, ninguna con una tarea que bloquee el avance. Se pregunta **acá**, con
 #   el auditor delante: `HacerDisponibles` la frenaría igual, pero a las 7:30 y
 #   sin nadie mirando, y el cliente se quedaría sin aviso.
@@ -182,8 +185,13 @@ class GuardarPreFacturaAuditada
       raise NoSePuede, rechazo.mensaje if rechazo
     end
 
-    cajas.each do |caja|
-      problema = PuedenIrJuntas.new([ cajas.first ], caja).problema
+    # Cada caja contra **todas** las anteriores, no solo la primera: la
+    # sucursal de retiro se compara con las que la tienen cargada, y la primera
+    # puede no tenerla (QA de PR-P.11a, `PuedenIrJuntas#sucursal_que_choca`).
+    cajas.each_with_index do |caja, i|
+      next if i.zero?
+
+      problema = PuedenIrJuntas.new(cajas.first(i), caja).problema
       raise NoSePuede, problema.mensaje if problema && problema.motivo != "repetida"
     end
 
@@ -196,8 +204,12 @@ class GuardarPreFacturaAuditada
     end
   end
 
+  # PR-P.11a · El manifiesto de la pre-factura es el **oficial** de sus cajas:
+  # una auditada «Sin manifiesto oficial» queda sin, y no colgada de un interno
+  # (la hoja en «editar» la lista aparte).
   def atributos_del_modo(cajas)
-    comunes = { manifiesto_id: @abierta&.manifiesto_id || cajas.first.manifiesto_id,
+    oficial = cajas.find { |c| c.manifiesto&.tipo_oficial? }&.manifiesto_id
+    comunes = { manifiesto_id: @abierta&.manifiesto_id || oficial,
                 auditado_por: @user, fecha_trabajo: @hoja.disponible_en.to_date }
     if @modo == :consolidar
       comunes.merge(consolidando_at: @abierta&.consolidando_at || Time.current, notificar_at: nil)

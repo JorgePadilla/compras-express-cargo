@@ -395,7 +395,7 @@ class PaquetesController < ApplicationController
 
     redirect_to @paquete, notice: aviso_de_excepcion
   rescue MarcarCobroExcepcion::NoPermitido, MarcarCobroExcepcion::SinMotivo,
-         MarcarCobroExcepcion::YaFacturado, ArgumentError => e
+         MarcarCobroExcepcion::YaFacturado, MarcarCobroExcepcion::TandaCobrada, ArgumentError => e
     redirect_to @paquete, alert: e.message
   rescue ActiveRecord::RecordInvalid => e
     # El PIN lo valida `Autorizacion`, así que su rechazo llega por acá.

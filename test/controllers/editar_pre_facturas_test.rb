@@ -15,7 +15,8 @@ class EditarPreFacturasTest < ActionDispatch::IntegrationTest
     @pf = pre_facturas(:borrador_juan)
     @pf.update_columns(manifiesto_id: @manifiesto.id, estado: "creado",
                        notificar_at: Time.zone.local(@manana.year, @manana.month, @manana.day, 7, 30),
-                       fecha_trabajo: @manana, notificado_at: nil, consolidando_at: nil)
+                       fecha_trabajo: @manana, notificado_at: nil, consolidando_at: nil,
+                       auditado_por_id: users(:supervisor_prefactura).id)
     @caja = paquetes(:recibido)
     @caja.update_columns(pre_factura_id: @pf.id, estado: "en_aduana", manifiesto_id: @manifiesto.id)
     @pf.pre_factura_items.create!(concepto: "Flete", paquete: @caja, subtotal: 10, origen: "manual")
@@ -47,7 +48,8 @@ class EditarPreFacturasTest < ActionDispatch::IntegrationTest
   test "solo toca las que no avisaron, y no a las consolidando" do
     avisada = pre_facturas(:pendiente_maria)
     hora_vieja = 2.hours.ago.change(sec: 0)
-    avisada.update_columns(manifiesto_id: @manifiesto.id, estado: "creado", notificar_at: hora_vieja, notificado_at: 1.hour.ago)
+    avisada.update_columns(manifiesto_id: @manifiesto.id, estado: "creado", notificar_at: hora_vieja, notificado_at: 1.hour.ago,
+                           auditado_por_id: users(:supervisor_prefactura).id)
 
     ingresar
     patch reprogramar_hoja_de_preparacion_url, params: { hora: "11:30" }
