@@ -20,7 +20,7 @@
       subtitle: "#{@tareas.total_count} #{@incluir_realizadas ? 'en total' : 'abiertas'} en tu área") do |header|
   if can_crear_tareas?
     header.with_action do
-      render ButtonComponent.new(variant: :gold, href: new_tarea_path, icon: "plus", shortcut: "F7") do
+      render ButtonComponent.new(variant: :gold, href: new_tarea_path, icon: "plus", shortcut: "F1") do
         "Nueva tarea"
       end
     end
@@ -143,7 +143,7 @@ end %>
         icon: "clipboard-document-check") do |empty|
     if can_crear_tareas?
       empty.with_action do
-        render ButtonComponent.new(variant: :gold, href: new_tarea_path, icon: "plus", shortcut: "F7") do
+        render ButtonComponent.new(variant: :gold, href: new_tarea_path, icon: "plus", shortcut: "F1") do
           "Nueva tarea"
         end
       end

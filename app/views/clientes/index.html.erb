@@ -1,10 +1,10 @@
 <%# C16-06: el digitador de Miami consulta y no crea. El botón se va entero y
-    no en gris: lleva `shortcut: "F7"`, y el atajo global clickea cualquier
+    no en gris: lleva `shortcut: "F1"`, y el atajo global clickea cualquier
     `[data-shortcut]` que encuentre. %>
 <%= render PageHeaderComponent.new(title: "Clientes", subtitle: "#{@clientes.total_count} clientes registrados") do |header|
   if can_edit_clientes?
     header.with_action do
-      render ButtonComponent.new(variant: :gold, href: new_cliente_path, icon: "plus", shortcut: "F7") do
+      render ButtonComponent.new(variant: :gold, href: new_cliente_path, icon: "plus", shortcut: "F1") do
         "Nuevo Cliente"
       end
     end
@@ -77,7 +77,7 @@ end %>
   ) do |empty|
     if can_edit_clientes?
       empty.with_action do
-        render ButtonComponent.new(variant: :gold, href: new_cliente_path, icon: "plus", shortcut: "F7") do
+        render ButtonComponent.new(variant: :gold, href: new_cliente_path, icon: "plus", shortcut: "F1") do
           "Nuevo Cliente"
         end
       end

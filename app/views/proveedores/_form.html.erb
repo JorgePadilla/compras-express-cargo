@@ -56,8 +56,8 @@
     <%= link_to "Cancelar (F2)", proveedores_path,
         class: "text-sm text-gray-600 hover:text-gray-900",
         data: { shortcut: "F2" } %>
-    <%= f.submit "#{proveedor.persisted? ? 'Guardar' : 'Crear'} (F10)",
+    <%= f.submit "#{proveedor.persisted? ? 'Guardar' : 'Crear'} (F8)",
         class: "inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-cec-gold text-cec-navy-dark hover:bg-cec-gold-dark transition-colors cursor-pointer",
-        data: { shortcut: "F10" } %>
+        data: { shortcut: "F8" } %>
   </div>
 <% end %>
