@@ -46,6 +46,20 @@ class TeclasDeLaHojaTest < ApplicationSystemTestCase
     hasta_que("F8 no guardó") { Proveedor.exists?(nombre: "Tienda F8") }
   end
 
+  # C30-02 · *«Lleno el último campo y aprieto F8»*: con el foco adentro del
+  # campo, guarda — y una sola vez.
+  test "F8 guarda con el foco adentro de un campo, una sola vez" do
+    visit new_proveedor_path
+    find("#proveedor_nombre").set("Tienda F8 en campo")
+    find("#proveedor_notas").click
+    find("#proveedor_notas").send_keys("la última")
+    page.driver.browser.action.send_keys(:f8).perform
+
+    hasta_que("F8 no guardó desde el campo") { Proveedor.exists?(nombre: "Tienda F8 en campo") }
+    assert_no_current_path new_proveedor_path, wait: 5
+    assert_equal 1, Proveedor.where(nombre: "Tienda F8 en campo").count, "F8 guardó dos veces"
+  end
+
   test "F10 y F7 ya no hacen nada" do
     visit new_proveedor_path
     find("#proveedor_nombre").set("Tienda F10")

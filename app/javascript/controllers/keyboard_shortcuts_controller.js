@@ -47,15 +47,42 @@ import { Controller } from "@hotwired/stimulus"
 // prueba. Y en Mac las teclas F se aprietan con `fn` (o con la opción «usar
 // F1, F2… como teclas de función» del sistema).
 //
+// ── Cuáles valen con el foco en un campo ──────────────────────────────────
+//
+// Las teclas F no escriben nada: la regla de «no interrumpir al que escribe»
+// está para que una tecla no se lleve lo tecleado a otra pantalla sin querer.
+// Éstas valen aunque el foco esté en un input/select/textarea:
+//
+//   F1 → la Ayuda del navegador se frena siempre (arriba).
+//   F2 → volver / limpiar, por consistencia con `f2_clear_controller`.
+//   F8 → **guardar**: el gesto natural es *«lleno el último campo y aprieto
+//        F8»*. Con la regla vieja eso no hacía nada en ningún formulario
+//        genérico —en silencio—, y Yusef lo iba a leer como roto (C30-02).
+//
+// F9 **no**, y es a propósito. Las F9 que este handler aprieta son «Descargar
+// PDF» de las fichas y el «PDF» de /paquetes, que exporta el filtro **ya
+// aplicado**: desde adentro de la búsqueda, a medio escribir, bajaría el PDF
+// de un filtro que no es el que se ve en el campo, y un link sin `_blank`
+// se llevaría lo escrito. Donde F9 es «guardar e imprimir» desde un campo
+// —/etiquetar, /entrega_personal, medición, las casas del manifiesto— la
+// pantalla la escucha con su propio handler, que ya vale en los campos.
+//
+// Las demás (F4, F5, F6) siguen sin disparar mientras se escribe.
+//
+// Y F8 no aprieta nada **detrás** de un modal abierto: con el foco en el PIN
+// del supervisor, por ejemplo, guardaría el formulario de atrás. Antes lo
+// frenaba la regla del campo; ahora lo frena esto.
+//
+// ⚠️ Una pantalla que escucha F8 ella misma (/etiquetar, medición, el editor
+// de pre-alertas) **no puede** tener un botón con `data-shortcut="F8"`: el
+// global le haría click además y guardaría dos veces. Sus botones van con
+// `shortcut_label_only`, y `teclas_propias_sin_doble_disparo_test` lo traba.
+//
 // Reglas:
-// - Si el foco está en un input/textarea editable y la tecla no es F1 ni F2,
-//   se ignora (evita interferir con la escritura).
-// - F2 y F1 siempre disparan, aunque esté tipeando: F2 por consistencia con
-//   f2_clear_controller, y F1 porque es la que el navegador se roba.
 // - preventDefault para que el browser no abra menús nativos
 //   (algunos navegadores usan F-keys para devtools / context menus).
 // Las que disparan aunque el foco esté en un campo.
-const SIEMPRE = [ "F1", "F2" ]
+const SIEMPRE = [ "F1", "F2", "F8" ]
 
 export default class extends Controller {
   connect() {
@@ -78,6 +105,10 @@ export default class extends Controller {
 
     // Si está editando y la tecla no es de las que siempre valen, no interrumpir.
     if (!SIEMPRE.includes(e.key) && this.isEditing(e.target)) return
+
+    // F8 no guarda lo de atrás de un modal abierto.
+    const modal = document.querySelector("dialog[open]")
+    if (e.key === "F8" && modal && !modal.contains(target)) return
 
     e.preventDefault()
     target.click()
