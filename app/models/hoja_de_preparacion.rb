@@ -134,7 +134,8 @@ class HojaDePreparacion
   # Las que «editar» ofrece: las que todavía no le avisaron al cliente
   # (`notificado_at`, el sello de PR-P.2), sin facturar ni anular, y que
   # salieron de la auditoría —**consolidando** (F8) o **programadas** (F9)—.
-  # Una hecha a mano por `/pre_facturas/new` no tiene aviso que corregir.
+  # Una que no pasó por la auditoría (las viejas, hechas a mano antes de
+  # PR-P.11b) no tiene aviso que corregir.
   #
   # PR-P.11a · «Salió de la auditoría» es `auditado_por_id` (lo escribe
   # `GuardarPreFacturaAuditada`), no tener manifiesto: una auditada «Sin

@@ -23,8 +23,8 @@
 # primer volumen de su tanda: desde C28-08 una caja es **de la tanda**, no de
 # un volumen, y así la línea sabe su tanda sin otra columna.
 #
-# Lo llaman Auditar/F9 (`GuardarPreFacturaAuditada`, PR-P.5) y la puerta a
-# mano (`ArmarPreFacturaManual`, PR-P.10).
+# Lo llama Auditar/F9/F8 (`GuardarPreFacturaAuditada`, PR-P.5), que desde
+# PR-P.11b es la única puerta por la que nace una pre-factura.
 #
 # PR-P.11a · **Prepagado en Miami** (RP-89, provisorio hasta que Yusef
 # conteste): una tanda **toda** prepagada se arma igual —el volumen en L. 0.00

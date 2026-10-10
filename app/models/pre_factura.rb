@@ -29,8 +29,8 @@ class PreFactura < ApplicationRecord
   # `Paquete#cobrada_o_entregada?` y el bloqueo de borrar del controller— y lo
   # limpian dos (`anular!` y `BajarCajasConPin`). **Nadie lo escribía**: solo
   # los seeds. O sea que el mismo paquete podía entrar en dos pre-facturas
-  # borrador a la vez, y que `Manifiesto.con_carga_por_facturar` siguiera
-  # listando un manifiesto ya facturado entero.
+  # borrador a la vez, y que la lista de manifiestos con carga por facturar
+  # siguiera mostrando uno ya facturado entero.
   #
   # Se estampa al guardar, no al confirmar: un borrador ya reserva el paquete.
   # Se salta cuando el documento está anulado, porque `anular!` acaba de
@@ -246,10 +246,11 @@ class PreFactura < ApplicationRecord
 
   # PR-P.10 · Las líneas **por paquete** —flete con el peso de Miami, el
   # simbólico del prepagado y los cargos automáticos—, sobre una pre-factura
-  # que ya existe sin guardar. Es el cuerpo de `build_from_paquetes`, sacado
-  # tal cual para que `ArmarPreFacturaManual` lo ponga **al lado** de las
-  # líneas de volumen que arma `ArmarPreFacturaPorVolumen`: lo que no va por
-  # volumen se sigue cobrando exactamente como antes.
+  # que ya existe sin guardar. Es el cuerpo de `build_from_paquetes`.
+  #
+  # PR-P.11b · Ninguna pantalla lo llama ya (la puerta a mano se fue): lo usan
+  # los seeds y los tests que necesitan una pre-factura con precio. Se borra en
+  # P.11c, cuando esos pasen a medir y armar por volumen.
   #
   # `paquetes` llega ya filtrado a los facturables del cliente. Los prepagados
   # se **acumulan** en `prepagados_miami_detected`: la pre-factura puede venir
@@ -353,8 +354,8 @@ class PreFactura < ApplicationRecord
   # `PreFacturaItem#calculate_subtotal_from_peso` pisaba el monto con
   # `peso × 0 = 0` y el dólar se perdía en silencio.
   #
-  # Anota el paquete en `prepagados_miami_detected` (PR-6b): el controller de
-  # la puerta a mano lo usa para el flash, venga de donde venga la línea.
+  # Anota el paquete en `prepagados_miami_detected` (PR-6b), venga de donde
+  # venga la línea.
   def linea_prepagado_miami(paquete, peso_cobrar: nil, precio_libra: nil)
     (@prepagados_miami_detected ||= []) << paquete
 
@@ -369,8 +370,8 @@ class PreFactura < ApplicationRecord
   end
 
   # PR-P.10 · Los totales de un documento **sin guardar**, con la misma cuenta
-  # que el `before_save` (descuento → ISV half-up). El preview de
-  # /pre_facturas/new los muestra, y tienen que ser los que se van a guardar.
+  # que el `before_save` (descuento → ISV half-up). Lo usaba el preview de la
+  # pre-factura a mano (PR-P.11b la quitó); quedan los tests, hasta P.11c.
   def calcular_totales
     calculate_totals
     self

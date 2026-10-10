@@ -315,12 +315,12 @@ Rails.application.routes.draw do
       post :guardar
     end
   end
-  resources :pre_facturas, except: [ :destroy ] do
-    collection do
-      get :facturables
-      # PR-P.10 · El total de lo marcado en /pre_facturas/new (turbo-frame).
-      get :cotizacion
-    end
+  # PR-P.11b · La pre-factura a mano se fue (Jorge, 2026-10-10: «quitar la de
+  # a mano; todo por escaneo»): nace en la hoja → Auditar → F9/F8. Un
+  # marcador viejo a /pre_facturas/new cae en la hoja en vez de en un 404. Va
+  # **antes** del resource: si no, `/pre_facturas/new` sería `show` con id «new».
+  get "pre_facturas/new", to: redirect("/pre-factura/hoja")
+  resources :pre_facturas, only: %i[index show edit update] do
     member do
       post   :confirmar
       post   :facturar

@@ -30,7 +30,8 @@ class TeclasPorFamiliaTest < ActiveSupport::TestCase
   # `keyboard_shortcuts_controller.js`.
   FAMILIAS = {
     # PR-P.10 · «Preparar pre-factura» es crear una: desde la Fase 14 la
-    # pre-factura nace en la hoja de preparación, no en /pre_facturas/new.
+    # pre-factura nace en la hoja de preparación (y desde PR-P.11b solo ahí:
+    # /pre_facturas/new redirige a la hoja).
     "F1"  => /nuev[oa]|crear|preparar/i,
     "F2"  => /volver|cancelar|limpiar|atr[áa]s/i,
     "F3"  => /.*/,                                   # solo /etiquetar, con su propio handler

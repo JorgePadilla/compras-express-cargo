@@ -1,13 +1,7 @@
 <%= render PageHeaderComponent.new(title: "Pre-Facturas", subtitle: "#{@pre_facturas.total_count} pre-facturas") do |h| %>
-  <%# PR-P.10 · Jorge, 2026-10-10: la pre-factura a mano *"now doesn't make a
-      lot of sense"*. Lo normal es prepararla (hoja → auditar → F9, que cobra
-      por volumen), así que F1 va ahí; la de a mano queda como la puerta de
-      las excepciones, sin tecla. %>
-  <% h.with_action do %>
-    <%= render ButtonComponent.new(href: new_pre_factura_path, variant: :secondary, icon: "pencil-square") do %>
-      A mano (excepciones)
-    <% end %>
-  <% end %>
+  <%# PR-P.11b · Jorge, 2026-10-10: «quitar la de a mano; todo por escaneo».
+      La pre-factura nace en la hoja → Auditar → F9/F8, que cobra por
+      volumen; F1 va ahí y no hay otra puerta. %>
   <% h.with_action do %>
     <%= render ButtonComponent.new(href: hoja_de_preparacion_path, variant: :primary, icon: "queue-list", shortcut: "F1") do %>
       Preparar pre-factura
@@ -66,6 +60,7 @@
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Manifiesto</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aviso</th>
             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total (LPS)</th>
             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
           </tr>
@@ -89,6 +84,22 @@
               <td class="px-6 py-4 whitespace-nowrap">
                 <%= render StatusBadgeComponent.new(status: pf.estado) %>
               </td>
+              <%# PR-P.11b · En qué anda el aviso al cliente (PR-P.2/P.7): lo
+                  mismo que muestra la hoja en «editar», sin otra consulta. %>
+              <td class="px-6 py-4 whitespace-nowrap" data-aviso="<%= pf.estado_del_aviso %>">
+                <% case pf.estado_del_aviso %>
+                <% when :avisada %>
+                  <span class="text-sm text-gray-600">Avisada <%= pf.notificado_at.strftime("%d/%m %H:%M") %></span>
+                <% when :consolidando %>
+                  <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-cec-gold/20 text-cec-navy">Consolidando</span>
+                <% when :error %>
+                  <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 ring-1 ring-red-200">Error de aviso</span>
+                <% when :programada %>
+                  <span class="text-sm text-gray-600">Programada <%= pf.notificar_at.strftime("%d/%m %H:%M") %></span>
+                <% else %>
+                  <span class="text-sm text-gray-400">—</span>
+                <% end %>
+              </td>
               <td class="px-6 py-4 whitespace-nowrap text-right">
                 <span class="text-sm font-medium text-gray-900">L. <%= number_with_delimiter(pf.total.to_f, precision: 2) %></span>
               </td>
@@ -109,7 +120,7 @@
 <% else %>
   <%= render EmptyStateComponent.new(
     title: "No hay pre-facturas",
-    description: "Se preparan desde «Preparar pre-factura»; las excepciones van «A mano».",
+    description: "Se preparan desde «Preparar pre-factura» → Auditar.",
     icon: "document-text"
   ) %>
 <% end %>
