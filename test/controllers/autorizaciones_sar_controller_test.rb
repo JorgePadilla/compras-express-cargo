@@ -113,6 +113,24 @@ class AutorizacionesSarControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
   end
 
+  # QA de PR-F1.3 · Dos errores que el formulario dejaba pasar.
+  test "la fecha límite antes que la autorización vuelve al formulario" do
+    assert_no_difference -> { AutorizacionSar.count } do
+      post autorizaciones_sar_url, params: { autorizacion_sar: datos(fecha_autorizacion: "2027-12-01",
+                                                                    fecha_limite_emision: "2027-01-01") }
+    end
+    assert_response :unprocessable_entity
+    assert_match "no puede ser anterior a la fecha de autorización", response.body
+  end
+
+  test "un punto desactivado no recibe un CAI aunque se forje el id" do
+    puntos_de_emision(:tgu).update!(activo: false)
+    assert_no_difference -> { AutorizacionSar.count } do
+      post autorizaciones_sar_url, params: { autorizacion_sar: datos }
+    end
+    assert_response :unprocessable_entity
+  end
+
   test "quien no es admin no entra" do
     delete session_url
     entrar(users(:cajero))
