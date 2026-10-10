@@ -24,15 +24,12 @@ class EtiquetaEntregaCabeTest < ApplicationSystemTestCase
     @pf.pre_factura_items.create!(concepto: "Flete", paquete: paquete, peso_cobrar: peso, precio_libra: 1)
   end
 
-  # PR-P.2 trae la columna `consolidando_at`; mientras no exista, la franja se
-  # prende acá de la única forma que llega al servidor de test, que corre en
-  # este mismo proceso.
+  # PR-P.6 · La franja la prende la columna, como en la vida real (F8).
   def con_franja
-    original = EtiquetaDeEntrega.instance_method(:consolidando?)
-    EtiquetaDeEntrega.define_method(:consolidando?) { true }
+    @pf.update_columns(consolidando_at: Time.current)
     yield
   ensure
-    EtiquetaDeEntrega.define_method(:consolidando?, original)
+    @pf.update_columns(consolidando_at: nil)
   end
 
   # La peor: nombre de seis palabras, la sucursal más larga, dos tipos de

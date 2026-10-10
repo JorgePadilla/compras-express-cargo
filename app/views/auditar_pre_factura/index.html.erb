@@ -12,7 +12,7 @@
     Es pantalla de pistola, como /medicion: todo JSON, **Enter nunca guarda**
     (la pistola dispara Enter en cada lectura), cada respuesta suena, botones de
     48 px. Teclas de la hoja de Yusef (C30-02): F9 guarda e imprime, F2 limpia;
-    F8 —guardar consolidando— llega con PR-P.6. %>
+    F8 guarda consolidando (PR-P.6): imprime con la franja y no avisa. %>
 <% content_for :head do %>
   <meta name="turbo-cache-control" content="no-cache">
 <% end %>
@@ -24,6 +24,7 @@
      data-auditar-pre-factura-paquete-url-value="<%= escanear_paquete_auditar_pre_factura_index_path %>"
      data-auditar-pre-factura-guardar-url-value="<%= guardar_auditar_pre_factura_index_path %>"
      data-action="auditar-pre-factura:ok->audio#success
+                  auditar-pre-factura:consolidando->audio#notify
                   auditar-pre-factura:medicionAnterior->audio#alert
                   auditar-pre-factura:pertenece->audio#success
                   auditar-pre-factura:completo->audio#completo
@@ -69,6 +70,11 @@
       <div class="mt-6 flex flex-wrap justify-end gap-3">
         <%= render(ButtonComponent.new(variant: :secondary, size: :lg, shortcut: "F2", shortcut_label_only: true,
               data: { action: "auditar-pre-factura#limpiar" })) { "Limpiar" } %>
+        <%# PR-P.6 · F8 guarda **consolidando**: imprime la etiqueta con la
+            franja y no le avisa a nadie. Es la única pantalla donde F8
+            imprime (Fase 14). %>
+        <%= render(ButtonComponent.new(variant: :outline_navy, size: :lg, icon: "printer", shortcut: "F8", shortcut_label_only: true,
+              data: { action: "auditar-pre-factura#consolidar" })) { "Guardar consolidando" } %>
         <%= render(ButtonComponent.new(variant: :gold, size: :lg, icon: "printer", shortcut: "F9", shortcut_label_only: true,
               data: { auditar_pre_factura_target: "guardarBtn", action: "auditar-pre-factura#guardar" })) { "Guardar, imprimir y avisar" } %>
       </div>
@@ -81,6 +87,9 @@
       </div>
 
       <div data-auditar-pre-factura-target="contenido" hidden>
+        <%# PR-P.6 · La consolidando reabierta: a qué pre-factura se le agrega. %>
+        <p hidden data-auditar-pre-factura-target="abierta"
+           class="mb-3 rounded-lg bg-cec-gold/15 px-3 py-2 text-sm font-semibold text-cec-navy dark:text-cec-gold"></p>
         <p class="text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400">Cliente</p>
         <p class="text-4xl font-bold text-cec-navy dark:text-cec-gold font-mono" data-auditar-pre-factura-target="clienteCodigo"></p>
         <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100" data-auditar-pre-factura-target="clienteNombre"></p>
@@ -117,7 +126,7 @@
   <%# ── «¿Desea agregar algo más?» ──
       Sale cuando la última caja de la tanda dijo «pertenece». Agregar otro
       volumen del mismo cliente es cerrar y seguir escaneando; F9 guarda.
-      F8 —guardar consolidando, sin avisar— es PR-P.6: se ve, apagado. %>
+      F8 guarda consolidando, sin avisar (PR-P.6). %>
   <dialog data-auditar-pre-factura-target="finModal"
           data-action="cancel->auditar-pre-factura#seguir"
           style="margin: auto"
@@ -133,8 +142,9 @@
           el modal abierto, su Enter cierra el modal y sigue — nunca guarda. %>
       <%= render(ButtonComponent.new(variant: :secondary, size: :lg, icon: "plus",
             data: { auditar_pre_factura_target: "finSeguir", action: "auditar-pre-factura#seguir" })) { "Agregar otro volumen" } %>
-      <%= render(ButtonComponent.new(variant: :outline_navy, size: :lg, type: :button, disabled: true,
-            title: "Guardar consolidando llega con PR-P.6")) { "Consolidando" } %>
+      <%# PR-P.6 · F8: guardar e imprimir con CONSOLIDANDO, sin avisar. %>
+      <%= render(ButtonComponent.new(variant: :outline_navy, size: :lg, icon: "printer", shortcut: "F8", shortcut_label_only: true,
+            data: { action: "auditar-pre-factura#consolidar" })) { "Guardar consolidando" } %>
       <%= render(ButtonComponent.new(variant: :gold, size: :lg, icon: "printer", shortcut: "F9", shortcut_label_only: true,
             data: { auditar_pre_factura_target: "finGuardar", action: "auditar-pre-factura#guardar" })) { "Guardar, imprimir y avisar" } %>
     </div>

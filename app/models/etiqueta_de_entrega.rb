@@ -98,7 +98,7 @@ class EtiquetaDeEntrega
   # es"*—: la hora del aviso cuando exista (`notificar_at`, PR-P.2), y si no,
   # la fecha de trabajo de la pre-factura. Con hora solo cuando la hay.
   def fecha
-    if pre_factura.respond_to?(:notificar_at) && pre_factura.notificar_at.present?
+    if pre_factura.notificar_at.present?
       pre_factura.notificar_at.strftime("%d/%m/%Y %H:%M")
     else
       (pre_factura.fecha_trabajo || pre_factura.created_at&.to_date)&.strftime("%d/%m/%Y")
@@ -111,7 +111,7 @@ class EtiquetaDeEntrega
   # pregunta con `respond_to?` y no con `has_attribute?` para que un test
   # pueda dar vuelta una pre-factura sin la columna.
   def consolidando?
-    pre_factura.respond_to?(:consolidando_at) && pre_factura.consolidando_at.present?
+    pre_factura.consolidando_at.present?
   end
 
   private

@@ -18,6 +18,7 @@ class AuditarPreFacturaController < ApplicationController
 
   def escanear_volumen
     resultado = auditoria.volumen(params[:codigo].to_s)
+    return render json: reabrir_json(resultado) if resultado.tipo == :consolidando
     return render json: rechazo_json(resultado) unless resultado.ok?
 
     render json: { resultado: "ok", mensaje: resultado.mensaje }.merge(tanda_json(resultado))
@@ -28,15 +29,14 @@ class AuditarPreFacturaController < ApplicationController
     render json: { resultado: resultado.tipo.to_s, mensaje: resultado.mensaje, caja_id: resultado.caja&.id }
   end
 
+  # F9 (`modo=avisar`) o F8 (`modo=consolidar`, PR-P.6). Con `pre_factura_id`,
+  # sobre la consolidando que la pantalla reabrió.
   def guardar
-    pre_factura = GuardarPreFacturaAuditada.new(hoja: @hoja, sesiones: sesiones,
-                                                escaneadas: Array(params[:escaneadas]), user: Current.user).call
+    pre_factura = guardador(params[:modo]).call
     render json: {
       ok: true, numero: pre_factura.numero, pre_factura_url: pre_factura_path(pre_factura),
       imprimir_url: imprimir_url(pre_factura),
-      mensaje: "Pre-factura #{pre_factura.numero} guardada. " +
-               (pre_factura.notificado_at ? "El cliente ya quedó avisado." :
-                                            "El aviso sale el #{pre_factura.notificar_at.strftime('%d/%m/%Y a las %H:%M')}.")
+      mensaje: "Pre-factura #{pre_factura.numero} guardada. " + cuando_avisa(pre_factura)
     }
   rescue GuardarPreFacturaAuditada::NoSePuede => e
     render json: { ok: false, mensaje: e.message }, status: :unprocessable_entity
@@ -64,7 +64,36 @@ class AuditarPreFacturaController < ApplicationController
 
   def sesiones = Array(params[:sesiones]).map(&:to_s).compact_blank
 
-  def auditoria = AuditoriaDeTanda.new(hoja: @hoja, sesiones: sesiones)
+  def abierta = (@abierta ||= PreFactura.find_by(id: params[:pre_factura_id]) if params[:pre_factura_id].present?)
+
+  def auditoria = AuditoriaDeTanda.new(hoja: @hoja, sesiones: sesiones, abierta: abierta)
+
+  def guardador(modo, con: sesiones)
+    GuardarPreFacturaAuditada.new(hoja: @hoja, sesiones: con, escaneadas: Array(params[:escaneadas]),
+                                  user: Current.user, modo: modo.presence || :avisar,
+                                  pre_factura_id: abierta&.id)
+  end
+
+  def cuando_avisa(pre_factura)
+    return "Queda consolidando: no se le avisa al cliente hasta que se complete." if pre_factura.consolidando_at
+    return "El cliente ya quedó avisado." if pre_factura.notificado_at
+
+    "El aviso sale el #{pre_factura.notificar_at.strftime('%d/%m/%Y a las %H:%M')}."
+  end
+
+  # PR-P.6 · La consolidando, reabierta: sus tandas con todas sus cajas ya
+  # auditadas, para que la pantalla siga desde ahí y se le agregue la nueva.
+  def reabrir_json(resultado)
+    pf = resultado.pre_factura
+    tandas = GuardarPreFacturaAuditada.sesiones_de(pf).map do |sesion|
+      bultos = Bulto.de_la_sesion(sesion).to_a
+      cajas = Paquete.where(medicion_sesion: sesion).includes(:cliente, :tipo_envio).order(:id).to_a
+      datos_de_tanda(sesion, bultos, cajas)
+    end
+    { resultado: "consolidando", mensaje: resultado.mensaje,
+      pre_factura: { id: pf.id, numero: pf.numero }, tandas: tandas,
+      escaneadas: pf.paquetes.pluck(:id), lineas: lineas_json(pf.tap { |p| p.send(:calculate_totals) }) }
+  end
 
   def rechazo_json(resultado)
     json = { resultado: resultado.tipo.to_s, mensaje: resultado.mensaje }
@@ -78,21 +107,20 @@ class AuditarPreFacturaController < ApplicationController
   # a quedar —de solo lectura: las calcula `ArmarPreFacturaPorVolumen` sin
   # guardar nada—.
   def tanda_json(resultado)
-    cajas = resultado.cajas
-    bultos = resultado.bultos
+    datos_de_tanda(resultado.sesion, resultado.bultos, resultado.cajas)
+      .merge(aviso_ndem: resultado.aviso, lineas: vista_previa(sesiones + [ resultado.sesion ]))
+  end
+
+  def datos_de_tanda(sesion, bultos, cajas)
     cliente = cajas.first.cliente
     {
-      sesion: resultado.sesion,
+      sesion: sesion,
       cliente: { codigo: cliente&.codigo, nombre: cliente&.nombre_completo },
       tipo_envio: cajas.first.tipo_envio&.nombre,
       pre_alerta: bultos.first.pre_alerta_en_etiqueta,
       resumen: resumen(bultos, cajas),
-      # Una etiqueta de una medición anterior (el «n de m» impreso no es el de
-      # hoy). nil si está al día.
-      aviso_ndem: resultado.aviso,
       volumenes: bultos.map { |b| volumen_json(b) },
-      cajas: cajas.map { |c| { id: c.id, codigo: helpers.etiqueta_codigo_barras(c) || c.tracking } },
-      lineas: vista_previa(cliente, sesiones + [ resultado.sesion ])
+      cajas: cajas.map { |c| { id: c.id, codigo: helpers.etiqueta_codigo_barras(c) || c.tracking } }
     }
   end
 
@@ -113,25 +141,25 @@ class AuditarPreFacturaController < ApplicationController
     }
   end
 
-  def vista_previa(cliente, todas)
-    pf = ArmarPreFacturaPorVolumen.call(cliente: cliente, sesiones: todas)
-    pf.send(:calculate_totals)
+  # Las líneas tal como van a quedar, sin guardar nada. Con una consolidando
+  # reabierta son las suyas más las de la tanda nueva (`GuardarPreFacturaAuditada`).
+  def vista_previa(todas)
+    lineas_json(guardador(:avisar, con: todas).vista_previa)
+  rescue GuardarPreFacturaAuditada::NoSePuede, ArmarPreFacturaPorVolumen::NoSePuede => e
+    { error: e.message }
+  end
+
+  def lineas_json(pf)
     {
       items: pf.pre_factura_items.select { |i| i.origen == "volumen" || i.subtotal.to_d.positive? }
                .map { |i| { concepto: i.concepto, subtotal: i.subtotal.to_f } },
       subtotal: pf.subtotal.to_f, impuesto: pf.impuesto.to_f, total: pf.total.to_f, moneda: pf.moneda
     }
-  rescue ArmarPreFacturaPorVolumen::NoSePuede => e
-    { error: e.message }
   end
 
-  # PR-P.3 · La etiqueta de entrega 4×6. Si su ruta todavía no existe (P.3 en
-  # QA), la ficha de la pre-factura.
+  # PR-P.3 · La etiqueta de entrega 4×6 —con la franja CONSOLIDANDO si F8 la
+  # dejó así—. Imprime y se cierra sola (`?print=true`).
   def imprimir_url(pre_factura)
-    if respond_to?(:etiqueta_entrega_pre_factura_path, true)
-      etiqueta_entrega_pre_factura_path(pre_factura, print: true)
-    else
-      pre_factura_path(pre_factura)
-    end
+    etiqueta_entrega_pre_factura_path(pre_factura, print: true)
   end
 end

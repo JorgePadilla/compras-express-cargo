@@ -20,14 +20,20 @@ import { enfocar } from "controllers/enfocar"
 //     (`sonidos_cableados_test` lee los dos lados).
 //   · Después de un modal, `enfocar` y no `focus()`: cerrarlo con el dedo deja
 //     el campo sordo a la pistola (C30-10).
-//   · Teclas de la hoja de Yusef (C30-02): F9 guarda e imprime, F2 limpia. F8
-//     —guardar consolidando— es PR-P.6.
+//   · Teclas de la hoja de Yusef (C30-02): F9 guarda e imprime, F2 limpia, y
+//     F8 guarda **consolidando** (PR-P.6): imprime la etiqueta con la franja y
+//     no avisa. Es la única pantalla donde F8 imprime (Fase 14).
+//
+// PR-P.6 · Escanear un volumen de una pre-factura consolidando la **reabre**:
+// sus tandas entran a la pantalla ya auditadas, y la tanda nueva se le agrega
+// —Yusef: *"¿desea agregar más paquetes a este volumen, o nuevo volumen?"*;
+// lo que se construye es «nuevo volumen»—.
 export default class extends Controller {
   static targets = [
     "codigo", "aviso", "bitacora", "guardarBtn",
     "vacio", "contenido", "clienteCodigo", "clienteNombre", "servicio", "resumen",
     "cajas", "volumenes", "lineas",
-    "finModal", "finTexto", "finGuardar", "finSeguir"
+    "finModal", "finTexto", "finGuardar", "finSeguir", "abierta"
   ]
   static values = { volumenUrl: String, paqueteUrl: String, guardarUrl: String }
 
@@ -69,6 +75,9 @@ export default class extends Controller {
     if (e.key === "F9") {
       e.preventDefault()
       this.guardar()
+    } else if (e.key === "F8") {
+      e.preventDefault()
+      this.consolidar()
     } else if (e.key === "F2") {
       if (this.finModalTarget.open) return
       e.preventDefault()
@@ -79,9 +88,14 @@ export default class extends Controller {
   // ── El volumen ──────────────────────────────────────────────────────────
 
   _volumen(codigo) {
-    return this._post(this.volumenUrlValue, { codigo, sesiones: this.sesiones })
+    return this._post(this.volumenUrlValue, { codigo, sesiones: this.sesiones, pre_factura_id: this.preFactura?.id })
       .then((data) => {
-        if (data.resultado === "ok") {
+        if (data.resultado === "consolidando") {
+          this.dispatch("consolidando")
+          this._reabrir(data)
+          this._avisar("alerta", data.mensaje)
+          this._anotar(`Reabierta ${data.pre_factura.numero} · consolidando`)
+        } else if (data.resultado === "ok") {
           this._agregarTanda(data)
           this._anotar(`Volumen · ${data.resumen}`)
           // La etiqueta es de una medición anterior: se avisa con otro sonido,
@@ -105,13 +119,23 @@ export default class extends Controller {
       })
   }
 
-  _agregarTanda(data) {
+  _agregarTanda(data, { pintar = true } = {}) {
     this.sesiones.push(data.sesion)
     data.cajas.forEach((c) => this.cajas.push({ ...c, sesion: data.sesion }))
     this.volumenes = this.volumenes.concat(data.volumenes)
     this.cliente = data.cliente
     this.tipoEnvio = data.tipo_envio
     this.preAlerta = data.pre_alerta
+    if (data.lineas) this.lineas = data.lineas
+    if (pintar) this._pintar()
+  }
+
+  // PR-P.6 · La consolidando, con sus tandas ya auditadas.
+  _reabrir(data) {
+    this._reiniciar()
+    this.preFactura = data.pre_factura
+    data.tandas.forEach((t) => this._agregarTanda(t, { pintar: false }))
+    data.escaneadas.forEach((id) => this.escaneadas.add(id))
     this.lineas = data.lineas
     this._pintar()
   }
@@ -119,7 +143,9 @@ export default class extends Controller {
   // ── Las cajas ───────────────────────────────────────────────────────────
 
   _paquete(codigo) {
-    return this._post(this.paqueteUrlValue, { codigo, sesiones: this.sesiones, escaneadas: [ ...this.escaneadas ] })
+    return this._post(this.paqueteUrlValue, {
+      codigo, sesiones: this.sesiones, escaneadas: [ ...this.escaneadas ], pre_factura_id: this.preFactura?.id
+    })
       .then((data) => {
         switch (data.resultado) {
           case "pertenece":
@@ -171,7 +197,13 @@ export default class extends Controller {
 
   // ── F9 ──────────────────────────────────────────────────────────────────
 
-  guardar() {
+  // F8: guardar consolidando (PR-P.6).
+  consolidar() {
+    this.guardar("consolidar")
+  }
+
+  guardar(modo = "avisar") {
+    if (typeof modo !== "string") modo = "avisar"   // desde un clic llega el evento
     if (this._guardando) return
     if (this.finModalTarget.open) this.finModalTarget.close()
 
@@ -187,7 +219,9 @@ export default class extends Controller {
     // espera la última caja que todavía se estaba consultando, y lo que la
     // pistola lea mientras se guarda espera a que la pantalla quede limpia —si
     // no, una lectura en vuelo se mezclaría con la pre-factura que se cierra.
-    this._cola = this._cola.then(() => this._post(this.guardarUrlValue, { sesiones: this.sesiones, escaneadas: [ ...this.escaneadas ] })
+    this._cola = this._cola.then(() => this._post(this.guardarUrlValue, {
+      sesiones: this.sesiones, escaneadas: [ ...this.escaneadas ], modo, pre_factura_id: this.preFactura?.id
+    })
       .then((data) => {
         if (data.ok) {
           this.dispatch("guardado")
@@ -232,6 +266,7 @@ export default class extends Controller {
     this.tipoEnvio = null
     this.preAlerta = null
     this.lineas = null
+    this.preFactura = null
   }
 
   _pintar() {
@@ -239,6 +274,11 @@ export default class extends Controller {
     this.vacioTarget.hidden = hay
     this.contenidoTarget.hidden = !hay
     if (!hay) return
+
+    this.abiertaTarget.hidden = !this.preFactura
+    this.abiertaTarget.textContent = this.preFactura
+      ? `Agregando a la pre-factura ${this.preFactura.numero}, que estaba consolidando: escaneá el volumen nuevo.`
+      : ""
 
     this.clienteCodigoTarget.textContent = this.cliente?.codigo || "—"
     this.clienteNombreTarget.textContent = this.cliente?.nombre || ""
