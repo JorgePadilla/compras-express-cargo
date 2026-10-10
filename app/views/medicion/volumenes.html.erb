@@ -123,7 +123,7 @@
                     pegado en Auditar hace lo mismo que escanearlo, sin imprimir. %>
                 <% qr = etiqueta_qr_medicion(bulto) %>
                 <div class="flex items-center justify-end gap-1">
-                  <%= render RowActionComponent.new(action: :print, href: etiqueta_bulto_medicion_path(bulto),
+                  <%= render RowActionComponent.new(action: :print, href: etiqueta_bulto_medicion_path(bulto, print: true),
                                                     label: "Reimprimir la etiqueta del volumen") %>
                   <span class="inline-flex" data-controller="clipboard" data-clipboard-text-value="<%= qr %>" data-qr-del-volumen>
                     <%= copy_button(label: "Copiar el QR del volumen: #{qr}", tamano: :fila) %>
