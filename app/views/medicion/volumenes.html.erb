@@ -1,0 +1,132 @@
+<%# C30-12 · Los volúmenes medidos, con buscador.
+
+    Yusef, 2026-10-09: *"¿ahora puedo de alguna manera ver los volúmenes de
+    los paquetes que hemos medido?… que tenga el filtro por cliente o por
+    warehouse, como un buscador"*.
+
+    Una fila por volumen; los de una misma tanda salen seguidos y dicen «1 de
+    2». Las cajas son **de la tanda** (`C28-08`), así que los volúmenes de una
+    tanda muestran las mismas: no se reparte qué caja va en cuál. %>
+<%= render PageHeaderComponent.new(title: "Volúmenes medidos", subtitle: "#{@bultos.total_count} volúmenes") do |h| %>
+  <% h.with_action do %>
+    <%= render ButtonComponent.new(href: medicion_index_path, variant: :secondary, icon: "scale") do %>
+      Ir a Medición
+    <% end %>
+  <% end %>
+<% end %>
+
+<div class="mb-6">
+  <%= render SearchBarComponent.new(url: volumenes_medicion_index_path,
+        placeholder: "Buscar por cliente, warehouse o tracking (o escaneá la etiqueta)...", value: params[:q]) %>
+</div>
+
+<details class="mb-6 bg-white rounded-lg shadow" <%= "open" if @estado || params[:fecha_desde].present? || params[:fecha_hasta].present? %>>
+  <summary class="px-6 py-3 cursor-pointer text-sm font-medium text-gray-700 hover:text-cec-navy flex items-center gap-2">
+    <%= heroicon "funnel", variant: :outline, options: { class: "w-4 h-4" } %>
+    Filtros
+  </summary>
+  <div class="px-6 py-4 border-t border-gray-200">
+    <%= form_tag volumenes_medicion_index_path, method: :get, class: "grid grid-cols-1 md:grid-cols-3 gap-4", data: { controller: "f2-clear", f2_clear_submit_value: "true" } do %>
+      <% if params[:q].present? %>
+        <input type="hidden" name="q" value="<%= params[:q] %>">
+      <% end %>
+      <div>
+        <label for="estado" class="block text-sm font-medium text-gray-700 mb-1">Pre-factura</label>
+        <%= select_tag :estado, options_for_select([ [ "Sin pre-factura", "sin_pre_factura" ], [ "Ya en una pre-factura", "en_pre_factura" ] ], @estado),
+            include_blank: "— Todos —",
+            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+      </div>
+      <div>
+        <label for="fecha_desde" class="block text-sm font-medium text-gray-700 mb-1">Medido desde</label>
+        <%= date_field_tag :fecha_desde, params[:fecha_desde],
+              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm",
+              data: { controller: "flatpickr" } %>
+      </div>
+      <div>
+        <label for="fecha_hasta" class="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+        <%= date_field_tag :fecha_hasta, params[:fecha_hasta],
+              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm",
+              data: { controller: "flatpickr" } %>
+      </div>
+      <div class="md:col-span-3 flex gap-3">
+        <%= render ButtonComponent.new(type: :submit, variant: :primary, icon: "funnel") do %>Aplicar<% end %>
+        <%= link_to "Limpiar", volumenes_medicion_index_path, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900" %>
+      </div>
+    <% end %>
+  </div>
+</details>
+
+<% if @bultos.any? %>
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medido</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Volumen</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medidas (in)</th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Peso</th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">VLbs</th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">A cobrar</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cajas de la tanda</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pre-factura</th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Etiqueta</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @bultos.each do |bulto| %>
+            <% cajas = bulto.paquetes.to_a %>
+            <% pre_factura = bulto.pre_factura_vigente %>
+            <tr class="hover:bg-gray-50 align-top" id="<%= dom_id(bulto) %>">
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                <%= l(bulto.medido_at, format: "%d/%m/%Y %H:%M") %>
+                <div class="text-xs text-gray-400"><%= bulto.user&.nombre || bulto.medido_por %></div>
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap">
+                <span class="text-sm font-mono text-gray-700"><%= bulto.cliente.codigo %></span>
+                <span class="text-sm text-gray-500 ml-1"><%= bulto.cliente.nombre_completo %></span>
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                <%= bulto.de_cuantos_texto || "Único" %>
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm font-mono text-gray-700"><%= bulto.medidas_texto %></td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-700"><%= number_with_precision(bulto.peso, precision: 2) || "—" %></td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-700"><%= number_with_precision(bulto.peso_volumetrico, precision: 2) || "—" %></td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-right font-semibold text-gray-900"><%= number_with_precision(bulto.peso_cobrar, precision: 2) || "—" %> lb</td>
+              <td class="px-4 py-3 text-sm">
+                <div class="text-xs text-gray-500 mb-0.5"><%= pluralize(cajas.size, "caja") %></div>
+                <div class="flex flex-wrap gap-1 max-w-xs">
+                  <% cajas.each do |caja| %>
+                    <span class="px-1.5 py-0.5 rounded bg-gray-100">
+                      <%= link_to (caja.numero_recepcion_visible || caja.tracking), paquete_path(caja),
+                            class: "font-mono text-xs text-cec-navy hover:underline" %>
+                    </span>
+                  <% end %>
+                </div>
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm">
+                <% if pre_factura %>
+                  <%= link_to pre_factura.numero, pre_factura_path(pre_factura), class: "font-mono font-medium text-cec-navy hover:underline" %>
+                <% else %>
+                  <span class="text-gray-400">Sin pre-factura</span>
+                <% end %>
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap text-right">
+                <%= link_to "Reimprimir", etiqueta_bulto_medicion_path(bulto), target: "_blank", rel: "noopener",
+                      class: "text-sm font-medium text-cec-teal-deep hover:underline" %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="mt-4"><%= render PaginationComponent.new(collection: @bultos, label: "volúmenes") %></div>
+<% else %>
+  <%= render EmptyStateComponent.new(
+    title: params[:q].present? ? "Ningún volumen coincide" : "Todavía no hay volúmenes medidos",
+    description: params[:q].present? ? "Probá con el código del cliente, su nombre, o el warehouse de una caja." : "Los volúmenes aparecen acá cuando se guarda una medición.",
+    icon: "cube"
+  ) %>
+<% end %>

@@ -12138,7 +12138,7 @@ Se revisa qué pasa hoy con los volúmenes viejos cuando se guarda la medición
 nueva: si quedan vivos al lado de los nuevos, la pre-factura los vería dos
 veces.
 
-#### C30-12 · Ver los volúmenes medidos, con buscador — 📄 después (11:19 min 90)
+#### C30-12 · Ver los volúmenes medidos, con buscador — ✅ hecho (11:19 min 90)
 
 > "¿Ahora puedo de alguna manera ver los volúmenes de los paquetes que hemos
 >  medido?" — **Jorge:** "Podemos poner una vista, **pero ahorita no**."
@@ -12433,7 +12433,7 @@ Es la etiqueta de `C26-12` (*"ésa es la que van a escanear para entregar"*).
 | `C30-09` | `/recepcion_carga` con un escáner para todos los pendientes | ✅ **Hecho** — `PR-C30.4` (#489): escáner en la lista que ubica la caja en cualquier manifiesto pendiente (mismo código que el de adentro), «6 de 7 · falta B» por fila, «Terminar» e «Imprimir» por fila. De paso: escanear la hoja del manifiesto en un interno recibía un paquete; ya no |
 | `C30-10` | `/medicion`: el foco vuelve a la pistola, y las notas no se repiten | ✅ **Hecho** — `PR-C30.5` (#487), y las gemelas en `PR-C30.8` (#490: manifiesto, `/empacar`, `/etiquetar`) y `PR-C30.10` (#497: `/entrega_personal`). Cerrar un modal con el mouse dejaba la selección afuera del campo: `controllers/enfocar.js`. Las notas salían dos veces porque Miami copia la nota del grupo a la caja |
 | `C30-11` | Medir de nuevo todo junto descarta los volúmenes viejos | ✅ **Hecho** — `PR-C30.5` (#487). El server ya los reemplazaba; la pantalla los volvía a poner en la lista y se guardaban dos. Ahora la lista arranca vacía y el viejo se muestra como «Volumen anterior». Corrige `C27-33` |
-| `C30-12` | Buscador de volúmenes medidos | 📄 Después |
+| `C30-12` | Buscador de volúmenes medidos | ✅ **Hecho** — `PR-C30.13`, pedido por Jorge el 2026-10-10 («falta una sección para ver los volúmenes»). `/medicion/volumenes`, en Logística pegado a Medición y en el Home: una fila por volumen con medidas, peso, VLbs, a cobrar, las cajas de la tanda, quién lo midió, su pre-factura y «Reimprimir». Busca por cliente (código o nombre) o por una caja (warehouse, tracking, o escaneando la etiqueta); filtra por fecha y por si ya está en una pre-factura (una anulada no cuenta). ❓ Los volúmenes **reemplazados** al medir de nuevo no salen: viven en el historial (`paper_trail`) |
 | `C30-13` | Los textos en el idioma del personal | 📄 Espera el Word de Yusef |
 | `C30-15`–`C30-19` | La pre-factura: hoja de preparación, fecha de trabajo, escaneo, F8/F9, etiqueta de entrega | ✅ **Hecha, el happy path** — Fase 14 en `docs/06`, `PR-P.1`–`P.8` (#492, #495, #494, #496, #499, #500, #501, #503); preguntas `RP-78`–`RP-92` |
 

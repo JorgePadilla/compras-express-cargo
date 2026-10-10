@@ -61,6 +61,20 @@ class SinNMas1Test < ActionDispatch::IntegrationTest
     assert_no_crece_con_los_renglones("/paquetes") { |i| paquete(i) }
   end
 
+  # C30-12 · Cada volumen con su cliente, quién lo midió, las cajas de la tanda
+  # y su pre-factura.
+  test "/medicion/volumenes" do
+    @pantalla = -> { get volumenes_medicion_index_path }
+    assert_no_crece_con_los_renglones("/medicion/volumenes") do |i|
+      sesion = "nmas1-#{i}"
+      paquete(i, numero_recepcion: "SPSNMAS1#{i}").update_columns(medicion_sesion: sesion, medido_at: Time.current)
+      bulto = Bulto.create!(cliente: clientes(:juan), user: users(:admin), sesion: sesion, medido_at: Time.current,
+                            peso: 3, alto: 10, largo: 10, ancho: 10)
+      pf = PreFactura.create!(cliente: clientes(:juan), numero: "PFVOL#{i}", estado: "creado", creado_por: users(:admin))
+      pf.pre_factura_items.create!(concepto: "Flete", subtotal: 10, origen: PreFacturaItem::ORIGENES.first, bulto: bulto)
+    end
+  end
+
   test "/pre_alertas" do
     @pantalla = -> { get pre_alertas_path }
     assert_no_crece_con_los_renglones("/pre_alertas") do |i|
