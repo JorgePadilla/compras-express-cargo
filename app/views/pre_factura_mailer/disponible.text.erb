@@ -1,0 +1,11 @@
+Estimado(a) <%= @cliente.nombre_completo %>,
+
+Le informamos que su pedido número <%= @pre_factura.numero %> ya está disponible, con valor <%= @valor %>, con el tipo de envío <%= @tipos_envio.to_sentence(two_words_connector: " y ", last_word_connector: " y ").presence || "—" %> (<%= @cajas == 1 ? "1 paquete" : "#{@cajas} paquetes" %>).
+<% if @sucursales.any? -%>
+
+Por favor acercarse a <%= @sucursales.map { |s| [ s.nombre, (s.direccion if s.respond_to?(:direccion) && s.direccion.present?) ].compact.join(", ") }.join(" o ") %>.
+<% end -%>
+
+Disponible desde el <%= @hora.strftime("%d/%m/%Y") %> a las <%= @hora.strftime("%H:%M") %>.
+
+Compras Express Cargo

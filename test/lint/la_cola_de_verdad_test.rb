@@ -27,12 +27,13 @@ class LaColaDeVerdadTest < ActiveSupport::TestCase
     assert_no_match(/^\s*queue:/, Rails.root.join("config/database.yml").read)
   end
 
-  test "los jobs nocturnos de recurring.yml existen y se pueden instanciar" do
+  test "los jobs de recurring.yml existen y se pueden instanciar" do
     # Dormidos desde que se escribieron. Con la cola conectada, corren: el que
-    # borra pre-alertas vacías a las 3am, cotizaciones expiradas, cuotas vencidas.
+    # borra pre-alertas vacías a las 3am, cotizaciones expiradas, cuotas
+    # vencidas, y desde PR-P.2 el disponible programado, cada minuto.
     tareas = YAML.load_file(Rails.root.join("config/recurring.yml"), aliases: true)["production"]
 
-    assert_equal 3, tareas.size
+    assert_equal 4, tareas.size
     tareas.each_value { |t| assert Object.const_defined?(t["class"]), "#{t["class"]} no existe" }
   end
 
