@@ -1,5 +1,26 @@
 es:
   activerecord:
+    # QA de PR-F1.1 · Sin esto los errores dicen «Rtn debe tener 14 dígitos»,
+    # «Cai no puede estar en blanco» y «tiene un punto de emision asociado».
+    models:
+      punto_de_emision: "punto de emisión"
+      autorizacion_sar: "autorización SAR"
+    attributes:
+      cliente:
+        rtn: "RTN"
+      empresa:
+        rtn: "RTN"
+      autorizacion_sar:
+        cai: "CAI"
+        rango_inicio: "Inicio del rango"
+        rango_fin: "Fin del rango"
+        fecha_limite_emision: "Fecha límite de emisión"
+        tipo_documento: "Tipo de documento"
+        punto_de_emision: "Punto de emisión"
+        ficticia: "Autorización ficticia"
+      punto_de_emision:
+        establecimiento: "Establecimiento"
+        punto: "Punto de emisión"
     errors:
       messages:
         blank: "no puede estar en blanco"
