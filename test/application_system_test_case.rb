@@ -130,6 +130,26 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     nil
   end
 
+  # PR-C30.10 · Afirmar algo que **va a** ser verdad, con la paciencia de Capybara.
+  #
+  # `assert_selector` y compañía ya reintentan, pero lo que no es un nodo —
+  # `document.activeElement`, una fila de la base que escribe el servidor
+  # después del clic— se afirmaba de un tirón, y con la máquina cargada (CI, o
+  # varios agentes a la vez) el test le ganaba a la pantalla. Por ejemplo, el
+  # modal de duplicado lleva el foco en el `requestAnimationFrame` siguiente.
+  #
+  # `synchronize` es el mismo bucle que usan los matchers: reintenta mientras
+  # el bloque diga que no, hasta `wait`, sin un `sleep` fijo que haga lento el
+  # caso bueno ni corto el malo. Si se vence, falla con el mensaje.
+  def assert_eventualmente(mensaje = nil, wait: Capybara.default_max_wait_time)
+    page.document.synchronize(wait, errors: [ Capybara::ExpectationNotMet ]) do
+      raise Capybara::ExpectationNotMet, mensaje.to_s unless yield
+    end
+    assert true
+  rescue Capybara::ExpectationNotMet
+    flunk(mensaje || "la condición no se cumplió en #{wait}s")
+  end
+
   # La ventana de la impresión nace del turbo-stream del guardado, o sea después
   # del click. Esperarla es lo que permite cerrarla dentro del mismo test: si se
   # cierra antes de que nazca, la huérfana igual queda.
