@@ -26,13 +26,16 @@
       </tr>
     </thead>
     <tbody>
-      <% @venta.venta_items.each do |item| %>
+      <%# PR-P.1 · La gemela de la factura del admin: las cajas de un volumen van
+          juntas debajo de él (`LineasPorVolumen`). %>
+      <% LineasPorVolumen.new(@venta.venta_items).each do |item, cajas| %>
         <tr>
           <td class="px-4 py-2 text-sm"><%= item.concepto %></td>
           <td class="px-4 py-2 text-sm text-right"><%= item.peso_cobrar %></td>
           <td class="px-4 py-2 text-sm text-right">L. <%= number_with_delimiter(item.precio_libra.to_f, precision: 2) %></td>
           <td class="px-4 py-2 text-sm text-right">L. <%= number_with_delimiter(item.subtotal.to_f, precision: 2) %></td>
         </tr>
+        <%= render "shared/cajas_del_volumen", cajas: cajas, columnas: 4 if cajas.any? %>
       <% end %>
     </tbody>
     <tfoot class="bg-gray-50">
