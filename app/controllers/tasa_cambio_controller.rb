@@ -58,7 +58,7 @@ class TasaCambioController < ApplicationController
 
     cobro = tarifa.cobro_para(1.5)
     neto = CurrencyAware.convertir(cobro[:subtotal], de: cobro[:moneda], a: "LPS", tasa: tasa)
-    isv = Empresa.instance.isv_rate.to_d
+    isv = IsvAware.rate # QA de PR-F2.1: la tasa de la gema, como los totales
 
     { neto: neto, total: (neto * (1 + isv)).round(2, BigDecimal::ROUND_HALF_UP),
       aplico_minimo: cobro[:aplico_minimo] }

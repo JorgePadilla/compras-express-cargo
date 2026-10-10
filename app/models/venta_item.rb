@@ -1,5 +1,6 @@
 class VentaItem < ApplicationRecord
   include Descontable
+  include TratamientoFiscal  # PR-F2.1: gravado 15 %, la costura de F3
 
   belongs_to :venta, inverse_of: :venta_items
   belongs_to :paquete, optional: true

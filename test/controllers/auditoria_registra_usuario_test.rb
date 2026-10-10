@@ -37,7 +37,11 @@ class AuditoriaRegistraUsuarioTest < ActionDispatch::IntegrationTest
     # No alcanza con que funcione en Paquete: el valor de la auditoria esta en
     # los cambios que mueven dinero. El ISV de la empresa entra en cada
     # factura, asi que es el mismo tipo de dato que la tasa de cambio.
-    patch empresa_url, params: { empresa: { isv_rate: 0.16 } }
+    #
+    # PR-F2.1 · Desde la Fase 15 el ISV sale de la gema y `empresas.isv_rate`
+    # solo acepta 0.15: un 0.16 ya no guarda, y no habria version que mirar.
+    # Se cambia la moneda por defecto, que sigue siendo dato de plata de Empresa.
+    patch empresa_url, params: { empresa: { moneda_default: "USD" } }
 
     version = PaperTrail::Version.where(item_type: "Empresa").order(:created_at).last
     assert_equal @user.id.to_s, version.whodunnit.to_s

@@ -148,16 +148,15 @@ class Venta < ApplicationRecord
 
   # PR-13.b: gemelo de `PreFactura#calculate_totals` — el descuento reduce la
   # base del ISV.
+  # PR-F2.1 · La cuenta la hace la gema, como en la pre-factura.
   def calculate_totals
     vivos = venta_items.reject(&:marked_for_destruction?)
-    sub  = vivos.sum { |i| i.subtotal.to_d }
-    desc = vivos.sum { |i| i.descuento_monto.to_d }
-    base = sub - desc
+    t = Fiscal::Totales.calcular(vivos, moneda: moneda)
 
-    self.subtotal  = sub
-    self.descuento = desc
-    self.impuesto  = (base * isv_rate).round(2, BigDecimal::ROUND_HALF_UP)
-    self.total     = (base + impuesto).round(2, BigDecimal::ROUND_HALF_UP)
+    self.subtotal  = t[:subtotal]
+    self.descuento = t[:descuento]
+    self.impuesto  = t[:impuesto]
+    self.total     = t[:total]
 
     self.saldo_pendiente = total if new_record?
   end
