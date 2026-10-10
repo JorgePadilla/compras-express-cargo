@@ -151,12 +151,16 @@
       <button type="submit" class="px-4 py-2 bg-cec-navy text-white rounded-lg hover:bg-cec-navy-light text-sm font-medium" data-shortcut="F8">Guardar (F8)</button>
     <% end %>
 
-    <% if @pre_factura.creado? %>
+    <%# PR-P.9 · Una que salió de la auditoría pasa a disponible **sola**, a la
+        hora del aviso: Confirmar a mano se saltearía la hora y la guarda de
+        tareas, y en una consolidando soltaría cajas que esperan a otras
+        (`PreFactura#motivo_para_no_confirmar`). En su lugar se dice por qué. %>
+    <% if @pre_factura.creado? && @pre_factura.motivo_para_no_confirmar.nil? %>
       <%= button_to "Confirmar", confirmar_pre_factura_path(@pre_factura), method: :post,
           class: "px-4 py-2 bg-cec-teal text-white rounded-lg hover:bg-cec-teal-dark text-sm font-medium" %>
     <% end %>
 
-    <% if @pre_factura.creado? || @pre_factura.pendiente? %>
+    <% if (@pre_factura.creado? || @pre_factura.pendiente?) && @pre_factura.motivo_para_no_facturar.nil? %>
       <%= button_to "Facturar", facturar_pre_factura_path(@pre_factura), method: :post,
           class: "px-4 py-2 bg-cec-gold text-cec-navy-dark rounded-lg hover:opacity-90 text-sm font-semibold",
           data: { turbo_confirm: "¿Generar venta a partir de esta pre-factura?" } %>
@@ -170,4 +174,10 @@
 
     <%= link_to "Ver imprimible", @pre_factura, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900" %>
   </div>
+
+  <% if (motivo = @pre_factura.motivo_para_no_confirmar) %>
+    <p class="mt-3 text-sm text-cec-navy bg-cec-navy/5 ring-1 ring-cec-navy/15 rounded-lg px-4 py-2" data-motivo-sin-confirmar>
+      <%= motivo %>
+    </p>
+  <% end %>
 <% end %>
