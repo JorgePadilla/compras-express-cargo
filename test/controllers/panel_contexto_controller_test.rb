@@ -81,6 +81,44 @@ class PanelContextoControllerTest < ActionDispatch::IntegrationTest
     assert_match "El celular por Express, la ropa por maritimo", response.body
   end
 
+  # C30-10 · La gemela de la PESA: la franja de /etiquetar arma las notas con
+  # el mismo helper, y una caja ya recibida traía la nota de grupo dos veces
+  # —la de la pre-alerta y la copia que Miami le puso a la caja—.
+  test "la nota de grupo copiada a la caja sale una sola vez" do
+    pa = PreAlerta.create!(numero_documento: "PA-N#{SecureRandom.hex(3).upcase}", cliente: @cliente,
+                           tipo_envio: tipo_envios(:aereo), consolidado: true, estado: "pre_alerta",
+                           titulo: "Consolidado", creado_por_tipo: "usuario", creado_por_id: users(:admin).id,
+                           notas_grupo: "Meter todo en una sola caja")
+    paquete = Paquete.create!(tracking: "1Z999PANELNOTA2", cliente: @cliente, tipo_envio: tipo_envios(:cer),
+                              sucursal_recepcion: sucursales(:miami), estado: "recibido_miami", descripcion: "Ropa")
+    pa.pre_alerta_paquetes.create!(tracking: paquete.tracking, descripcion: "Ropa", fecha: Date.current, paquete: paquete)
+    paquete.update_column(:notas_consolidacion, "Meter todo en una sola caja")
+
+    get panel_contexto_url, params: { cliente_id: @cliente.id, tracking: paquete.tracking }
+
+    assert_response :success
+    assert_equal 1, response.body.scan("Meter todo en una sola caja").size
+  end
+
+  # …pero el mismo texto en dos renglones distintos son dos instrucciones: una
+  # por tracking. Esconder la segunda decía que esa caja no traía ninguna.
+  test "la misma instrucción en dos trackings sale en los dos" do
+    pa = PreAlerta.create!(numero_documento: "PA-N#{SecureRandom.hex(3).upcase}", cliente: @cliente,
+                           tipo_envio: tipo_envios(:aereo), estado: "pre_alerta", titulo: "Dos cajas",
+                           creado_por_tipo: "usuario", creado_por_id: users(:admin).id)
+    pa.pre_alerta_paquetes.create!(tracking: "1Z999FRAGIL0001", descripcion: "Vasos", fecha: Date.current, instrucciones: "Frágil")
+    pa.pre_alerta_paquetes.create!(tracking: "1Z999FRAGIL0002", descripcion: "Platos", fecha: Date.current, instrucciones: "Frágil")
+    # Sin vincular, como las que llegaron antes de que la pre-alerta creara sus
+    # esperados: es el camino de la franja sin tracking.
+    PreAlertaPaquete.where(pre_alerta: pa).update_all(paquete_id: nil)
+
+    get panel_contexto_url, params: { cliente_id: @cliente.id }
+
+    assert_response :success
+    assert_match "1Z999FRAGIL0001", response.body
+    assert_match "1Z999FRAGIL0002", response.body
+  end
+
   test "un cajero no puede abrir la franja" do
     delete session_url
     login_as users(:cajero)

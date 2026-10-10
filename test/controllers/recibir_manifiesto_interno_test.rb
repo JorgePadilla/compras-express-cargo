@@ -65,6 +65,38 @@ class RecibirManifiestoInternoTest < ActionDispatch::IntegrationTest
     assert_equal 1, servicio.paquetes_pendientes.count
   end
 
+  # C30-09 · La pistola del interno buscaba con `Paquete.buscar`, que hace
+  # ILIKE sobre el número del manifiesto, la descripción y el nombre del
+  # cliente. Escanear **la hoja del manifiesto** —que está ahí, en la mano del
+  # que recibe— recibía el primer paquete que saliera, sin que nadie lo bajara
+  # del camión. Una lectura mala no puede mover carga.
+  test "escanear la hoja del manifiesto no recibe ningún paquete" do
+    post escanear_recepcion_carga_url(@manifiesto), params: { codigo: @manifiesto.numero }
+
+    assert_equal "no_es_de_aqui", response.parsed_body["resultado"]
+    assert_equal 2, servicio.paquetes_pendientes.count, "los dos siguen en camino"
+  end
+
+  test "ni el código del cliente, ni la descripción" do
+    [ clientes(:juan).codigo, "Perfumes" ].each do |codigo|
+      post escanear_recepcion_carga_url(@manifiesto), params: { codigo: codigo }
+
+      assert_equal "no_es_de_aqui", response.parsed_body["resultado"], "«#{codigo}» recibió un paquete"
+    end
+    assert_equal 2, servicio.paquetes_pendientes.count
+  end
+
+  # Lo que la etiqueta lleva impreso sigue entrando: el tracking (arriba) y el
+  # número de recepción.
+  test "el número de recepción sigue entrando" do
+    @b.update_columns(numero_recepcion: "RM0002026000777")
+
+    post escanear_recepcion_carga_url(@manifiesto), params: { codigo: "rm0002026000777" }
+
+    assert_equal "ok", response.parsed_body["resultado"]
+    assert_equal "disponible_entrega", @b.reload.estado
+  end
+
   test "el manifiesto pasa a en_aduana mientras se recibe: parcial es legítimo" do
     post escanear_recepcion_carga_url(@manifiesto), params: { codigo: @a.tracking }
 

@@ -110,6 +110,9 @@ export default class extends conEnterAvanza(ClienteAutocomplete) {
 // "esta lógica de las cajas que hicimos para etiquetar también hay que
 // aplicarla en entrega personal".
 submitFormWithPrint() {
+  // C30-03, la gemela de /etiquetar: el contenido vacío se avisa antes de
+  // preguntar cuántas etiquetas, no después de contestarlo.
+  if (!this.formTarget.reportValidity()) return
   if (this._cajasCargadas() > 0) return this._submitWithPrint()
   if (!this.hasEtiquetasModalTarget) return this._submitWithPrint()
 

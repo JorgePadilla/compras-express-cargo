@@ -649,7 +649,14 @@ end %>
             + Agregar tercero <kbd class="px-1 py-0.5 bg-gray-100 border rounded text-[10px]">F4</kbd>
           </button>
         </div>
+        <%# C30-03 · Yusef: *"la descripción me la está dejando dejar vacía … ok,
+            descripción tiene que estar llena"*. `required` como el tracking: el
+            navegador avisa en el campo, igual que en /entrega_personal.
+            Al actualizar, solo si el paquete ya tenía: es la misma regla del
+            servidor (`Paquete#contenido_obligatorio?`) — vaciarlo no, pero un
+            paquete viejo sin contenido se sigue pudiendo corregir. %>
         <%= f.text_area :descripcion, rows: 2, placeholder: "Descripcion del contenido...",
+            required: !@modo_actualizacion || @paquete.descripcion_in_database.present?,
             data: { etiquetar_target: "descripcion" },
             class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
                    focus:ring-cec-teal focus:border-cec-teal" %>

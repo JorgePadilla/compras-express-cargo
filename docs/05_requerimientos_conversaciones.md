@@ -12435,7 +12435,7 @@ Es la etiqueta de `C26-12` (*"ésa es la que van a escanear para entregar"*).
 | `C30-11` | Medir de nuevo todo junto descarta los volúmenes viejos | ⏳ `PR-C30.5` (se verifica) |
 | `C30-12` | Buscador de volúmenes medidos | 📄 Después |
 | `C30-13` | Los textos en el idioma del personal | 📄 Espera el Word de Yusef |
-| `C30-15`–`C30-19` | La pre-factura: hoja de preparación, fecha de trabajo, escaneo, F8/F9, etiqueta de entrega | ⏳ Fase nueva en `docs/06` |
+| `C30-15`–`C30-19` | La pre-factura: hoja de preparación, fecha de trabajo, escaneo, F8/F9, etiqueta de entrega | 📐 **Diseñada** — Fase 14 en `docs/06`, serie `PR-P.1`–`P.7`; preguntas `RP-78`–`RP-91` |
 
 ### Las preguntas que abre
 
@@ -12444,3 +12444,17 @@ Es la etiqueta de `C26-12` (*"ésa es la que van a escanear para entregar"*).
 | `RP-75` | **Excel se queda sin tecla** (`C30-02`): F8 pasa a guardar. ¿Excel lleva otra tecla, o ninguna? |
 | `RP-76` | **Tab en el autocomplete del cliente** (`C30-04`): ¿en qué pantalla fue? La lectura es que Tab elige la opción marcada y pasa al siguiente campo |
 | `RP-77` | **Corregir después de F9** (`C30-18`): ¿se puede pasar a F8 una pre-factura ya notificada? Si el aviso todavía está en cola, ¿se cancela o se manda corregido, como hace el sistema viejo? |
+| `RP-78` | **¿F9 pone los paquetes «disponibles» al apretarlo, o a la hora de la fecha de trabajo?** PR-D1 §A (*"mientras espera la fecha programada, el paquete queda en aduana"*) y `A7-16` dicen a la hora; `C30-15` (*"cuando le das F9"*) se puede leer al instante. Se construye a la hora, para que la web y el correo digan lo mismo (`A7-13`) |
+| `RP-79` | **La línea de la factura es el volumen** (cierra `RP-41`): un escalón y un mínimo por volumen, no por caja. ¿La factura muestra también cada caja en L. 0.00, o solo los volúmenes? |
+| `RP-80` | ❓ **Los canales del aviso** (`C30-16`): *"correo obligatorio, SMS, y si el cliente no se activa con WhatsApp entonces el SMS se elimina"* — ¿es «WhatsApp si lo tiene, si no SMS»? ¿Con qué proveedor? ¿El aviso respeta «no notificar facturas» del cliente, y va a sus correos adicionales? |
+| `RP-81` | **La fecha por defecto**: ¿mañana 7:30 (*"la ponemos mañana"*, `C26-10`) u hoy? ¿Sábado y domingo? ¿Una hora por hoja (aéreo una, marítimo otra)? |
+| `RP-82` | **La etiqueta de entrega** (`C30-19`): ¿una por pre-factura o una por volumen («1 de 3»)? «El volumen», ¿son pies³, VLBS, o cuántos volúmenes? ¿Lleva fecha **y hora** de disponible? |
+| `RP-83` | **El auditor edita paquetes y volúmenes** (`C30-17`): cambiar el peso cambia el cobro, y desde la Fase 13 eso pide PIN de supervisor. ¿Con PIN, o vuelve a Medición? |
+| `RP-84` | **Falta una caja de la tanda** al escanear las de Miami: ¿bloquea, pasa con PIN como `C28-13`, o se puede F8? |
+| `RP-85` | **Una caja fuera de la hoja de preparación** (otro manifiesto, otro servicio, o medida con «saltar manifiesto», `C27-14`): ¿bloquea o avisa? |
+| `RP-86` | **¿Quién audita?** Hoy entra a Pre-Facturas el supervisor de pre-factura, el de caja y el cajero. ¿Un rol propio «auditor de pre-factura»? |
+| `RP-87` | **El manifiesto terminado**: ¿basta con que desaparezca de la lista de la hoja, o quiere verlo con un estado «procesado»? |
+| `RP-88` | **«Agregar a este volumen»** (`C30-18`): ¿dónde se re-pesa? Medición no deja tocar cajas que ya están en una pre-factura |
+| `RP-89` | **Una tanda con proveedores o sucursales de retiro distintos, o con un prepagado de Miami**: ¿con qué se cotiza el volumen? En el happy path esos van por la pre-factura a mano |
+| `RP-90` | **El portal mientras consolida**: ¿el cliente ve «Consolidando en Honduras» o «En aduana»? |
+| `RP-91` | **Buscar por código o nombre del cliente** (lo dice el diagrama): ¿respaldo cuando no hay QR, o solo escanear (`C30-17`)? |

@@ -115,8 +115,10 @@ class MedicionController < ApplicationController
     # escanear no me pregunta si quiero editarlo"*.
     #
     # Medir de nuevo trae **la tanda entera** (C28-08): sus cajas se escanearon
-    # juntas y vuelven juntas, con sus volúmenes puestos para corregirlos. Al
-    # guardar, la tanda nueva reemplaza a la vieja.
+    # juntas y vuelven juntas. Sus volúmenes viajan para que la pantalla los
+    # muestre como «volumen anterior» y nada más (C30-11): la lista de la
+    # pantalla arranca vacía. Al guardar, la tanda nueva reemplaza a la vieja
+    # (`MedirBulto#reemplazar!`).
     if paquete.medicion_sesion.present? && !remedir?
       return render json: { resultado: "ya_tiene_bulto", paquete: datos_de(paquete),
                             tanda: tanda_json(paquete.medicion_sesion),
@@ -163,7 +165,7 @@ class MedicionController < ApplicationController
         hermanas: cajas.map { |h| datos_de(h) },
         mensaje: "Midiendo de nuevo: #{cajas.size} caja#{"s" if cajas.size != 1} y " \
                  "#{volumenes_texto(bultos.size)} del #{paquete.medido_at&.strftime('%d/%m/%Y')} " \
-                 "por #{paquete.medido_por}. Corregí los volúmenes y guardá: las etiquetas viejas dejan de valer."
+                 "por #{paquete.medido_por}. Pesá y medí de nuevo y guardá: lo anterior se reemplaza y sus etiquetas dejan de valer."
       )
     end
     render json: respuesta
@@ -297,7 +299,9 @@ class MedicionController < ApplicationController
     medidos = grupo.paquetes_medidos
     raise ActiveRecord::RecordNotFound, "ninguna medida" if medidos.empty?
 
-    @bultos = Bulto.where(sesion: medidos.filter_map(&:medicion_sesion).uniq).order(:medido_at, :orden).to_a
+    # C30-01 · `:cliente`, porque cada etiqueta lleva ahora su nombre con código.
+    @bultos = Bulto.where(sesion: medidos.filter_map(&:medicion_sesion).uniq).order(:medido_at, :orden)
+                   .includes(:cliente).to_a
     @paquetes = medidos.reject(&:medicion_sesion)
     return render :etiqueta_bulto, layout: "etiqueta_medicion" if @paquetes.empty?
 
@@ -307,7 +311,7 @@ class MedicionController < ApplicationController
   # C27-06 · Las etiquetas de una tanda: una por medición, en el orden en que el
   # operario las fue agregando.
   def etiquetas_sesion
-    @bultos = Bulto.de_la_sesion(params[:sesion]).includes(:paquetes).to_a
+    @bultos = Bulto.de_la_sesion(params[:sesion]).includes(:paquetes, :cliente).to_a
     raise ActiveRecord::RecordNotFound, "sesión vacía" if @bultos.empty?
 
     render :etiqueta_bulto, layout: "etiqueta_medicion"

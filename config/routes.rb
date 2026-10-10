@@ -238,7 +238,14 @@ Rails.application.routes.draw do
     member do
       post :escanear
       patch :finalizar
+      # C30-09 · La hoja del manifiesto, desde la lista: *"lo voy a querer
+      # imprimir para darle al oficio"*.
+      get :documento
     end
+    # C30-09 · La pistola de la lista: cualquier caja de cualquier pendiente,
+    # sin elegir el manifiesto antes. *"Hemos recibido manifiestos hasta cinco
+    # de un solo."*
+    collection { post :escanear_pendientes, path: "escanear" }
   end
 
   # C26-02 · Medición: la estación de San Pedro. Escanear, medir, y la

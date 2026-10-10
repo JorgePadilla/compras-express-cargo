@@ -385,6 +385,13 @@
 
                 <ul data-medicion-target="listaVolumenes" class="space-y-1.5"></ul>
 
+                <%# C30-11 · Al medir de nuevo, lo que la tanda medía antes va
+                    acá, escrito y sin botones. Yusef: *"que solo le diga volumen
+                    anterior o algo por el estilo"*. No está en la lista de
+                    arriba porque esa lista **se guarda**: con el viejo ahí,
+                    F9 guardaba el viejo y el nuevo. %>
+                <p hidden class="mt-2 text-sm text-gray-600 dark:text-gray-300" data-medicion-target="volumenesAnteriores"></p>
+
                 <%# La fila de un volumen ya agregado, con su «×» como en
                     /etiquetar: deshacer no es elegir. C28-08 · Sin «N
                     cajas»: ningún volumen tiene cajas propias. Y
@@ -532,7 +539,8 @@
           warehouse receipt ya tiene medidas y se vuelve a escanear no me pregunta
           si quiero editarlo"*. Yusef la había pedido: *"se equivocan y lo ingresan
           en seis libras, y eran cuatro… se va a poder corregir… medir de nuevo"*.
-          Trae la tanda entera con sus volúmenes (C28-08); al guardar, la
+          Trae la tanda entera (C28-08) con sus volúmenes viejos escritos
+          como «volumen anterior» y la lista vacía (C30-11); al guardar, la
           nueva reemplaza a la vieja. Y reimprimir saca **todas** sus
           etiquetas: la caja no es de un volumen. %>
       <%= render(ButtonComponent.new(variant: :danger, size: :lg, label: "Medir de nuevo la tanda y reemplazar sus etiquetas",
