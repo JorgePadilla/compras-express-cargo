@@ -12,10 +12,21 @@ class FiscalTest < ActiveSupport::TestCase
     end
   end
 
-  test "producción es el host de producción, no RAILS_ENV" do
+  test "producción es todo servidor que no sea staging, no RAILS_ENV solo" do
     en_produccion { assert Fiscal.produccion? }
-    con_app_host("cec-staging.onrender.com") { assert_not Fiscal.produccion? }
+    en_staging { assert_not Fiscal.produccion? }
+    # Desarrollo y tests no son producción, diga lo que diga APP_HOST.
+    con_app_host(Fiscal::HOST_DE_PRODUCCION) { assert_not Fiscal.produccion? }
     con_app_host(nil) { assert_not Fiscal.produccion? }
+  end
+
+  # QA de PR-F1.1 · Falla cerrado. Producción contesta hoy en
+  # cec-production.onrender.com, no en el dominio de render.yaml: un APP_HOST
+  # que no es el del yaml no puede abrirle la puerta a la ficticia.
+  test "un servidor con otro APP_HOST, o sin él, cuenta como producción" do
+    en_servidor("cec-production.onrender.com") { assert Fiscal.produccion? }
+    en_servidor(nil) { assert Fiscal.produccion? }
+    en_servidor("CEC-STAGING.onrender.com") { assert Fiscal.produccion? }
   end
 
   test "el RTN se normaliza sin guiones ni espacios, y el vacío queda nil" do

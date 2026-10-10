@@ -151,8 +151,12 @@ class AutorizacionSarTest < ActiveSupport::TestCase
   end
 
   test "en staging la ficticia entra" do
-    con_app_host("cec-staging.onrender.com") { assert nueva(ficticia: true).valid? }
+    en_staging { assert nueva(ficticia: true).valid? }
     con_app_host(nil) { assert nueva(ficticia: true).valid? }
+  end
+
+  test "en un servidor que no es staging la ficticia no entra, aunque el host no sea el del yaml" do
+    en_servidor("cec-production.onrender.com") { assert_not nueva(ficticia: true).valid? }
   end
 
   test "vencida al día siguiente de la fecha límite, no ese día" do
