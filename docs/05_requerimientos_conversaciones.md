@@ -11297,7 +11297,7 @@ viene a reemplazar **su** bulto: la pantalla tiene que haber preguntado antes.
 | `C27-30` | El sufijo de caja no se ve en el listado | ✅ **Hecho** en `#440` (2026-09-08) — la columna usa el mismo helper que la etiqueta |
 | `C27-31` | `/etiquetar` borra el peso al agregar una caja | ✅ **Hecho** — `#441`. Y es peor de lo reportado: no queda sin cobrar, **se cobra mal** — 30 lb reales facturadas por 6, porque el volumétrico viejo le gana al peso en `nil` |
 | `C27-32` | La pantalla de medición, con el «Agregar» de /etiquetar | ✅ **Hecho** — `#447`. Una tarjeta, la caja una vez, sin cuadritos, «Facturar lo que hay» después de guardar. Y de paso: la clase `hidden` **no esconde** un `ButtonComponent`; se arregló en tres pantallas y hay lint |
-| `C27-33` | Una caja ya medida se puede **medir de nuevo** | ✅ **Hecho** — el modal ofrece «Medir de nuevo»; vuelve el bulto entero con sus números, y al guardar el nuevo reemplaza al viejo (historial en `Bulto`). Lo que se saque de la mesa queda sin medir |
+| `C27-33` | Una caja ya medida se puede **medir de nuevo** | ✅ **Hecho** — el modal ofrece «Medir de nuevo»; vuelve el bulto entero con sus números, y al guardar el nuevo reemplaza al viejo (historial en `Bulto`). Lo que se saque de la mesa queda sin medir. ▶ Desde `C30-11` los números viejos vuelven **solo de referencia** («Volumen anterior»): la lista arranca vacía, porque se guardaban los dos |
 
 ### Las preguntas que abre
 
@@ -12422,20 +12422,20 @@ Es la etiqueta de `C26-12` (*"ésa es la que van a escanear para entregar"*).
 
 | # | Qué | Estado |
 |---|---|---|
-| `C30-01` | Nombre con código en la etiqueta del volumen | ⏳ `PR-C30.1` |
-| `C30-02` | Las teclas de la hoja de Yusef, en todo el sistema | ⏳ `PR-C30.6` — después de los demás, porque toca ~35 pantallas |
-| `C30-03` | Descripción obligatoria en `/etiquetar` | ⏳ `PR-C30.2`; contesta `RP-74` |
+| `C30-01` | Nombre con código en la etiqueta del volumen | ✅ **Hecho** — `PR-C30.1` (#486): fila de arriba con `código · nombre` en las dos etiquetas de medición; el QR baja de 1.0in a **0.90in** para pagarla (v6-H, ~6.6 puntos por módulo a 300 dpi). **Falta escanear uno impreso** en la Dymo con la pistola de pre-factura. Revierte `C26-04` |
+| `C30-02` | Las teclas de la hoja de Yusef, en todo el sistema | ✅ **Hecho** — `PR-C30.6` (#498) y `PR-C30.11` (#502). F8 guarda (47 botones, era F10), F1 crea (23, era F7), Excel sin tecla (`RP-75`). F8 y F1 andan con el foco en un campo, y no aprietan nada detrás de un modal abierto; F9 no, porque en las pantallas genéricas es el PDF. El portal no escuchaba ninguna tecla: ahora sí. De paso: en `entregas/new` F10 buscaba en vez de crear. «F2 le puso crear» no existe en el nuestro: era el sistema viejo. **F1 se prueba a mano** en las máquinas Windows del equipo (Chrome abre la ayuda si no se le gana) |
+| `C30-03` | Descripción obligatoria en `/etiquetar` | ✅ **Hecho** — `PR-C30.2` (#484). Solo en lo que entra por `/etiquetar` (flag `contenido_en_etiquetar`): pre-alertas, importados y splits siguen sin pedirla. Un paquete pre-alertado que llega con el campo vacío **conserva** la descripción de la pre-alerta; uno viejo sin descripción se puede seguir corrigiendo. F9 avisa antes del modal de etiquetas, también en `/entrega_personal` |
 | `C30-04` | Tab en el autocomplete del cliente | ❓ `RP-76` |
-| `C30-05` | «Finalizar e Imprimir» saca la hoja del manifiesto | ⏳ `PR-C30.3`; cambia `C21-06` |
-| `C30-06` | El manifiesto finalizado: «Editar» del supervisor abre paquetes y cajas, y lo bloqueado deja imprimir | ⏳ `PR-C30.7` |
-| `C30-07` | Lo de cada caja a la vista en la ficha | ⏳ con `PR-C30.7` |
-| `C30-08` | Horas sin segundos al cliente | ⏳ con la pre-factura |
-| `C30-09` | `/recepcion_carga` con un escáner para todos los pendientes | ⏳ `PR-C30.4` |
-| `C30-10` | `/medicion`: el foco vuelve a la pistola, y las notas no se repiten | ⏳ `PR-C30.5` |
-| `C30-11` | Medir de nuevo todo junto descarta los volúmenes viejos | ⏳ `PR-C30.5` (se verifica) |
+| `C30-05` | «Finalizar e Imprimir» saca la hoja del manifiesto | ✅ **Hecho** — `PR-C30.3` (#488); cambia `C21-06`. Abre el diálogo, vuelve a la ficha, y ya no exige cajas. Las 4×6 se siguen reimprimiendo aparte |
+| `C30-06` | El manifiesto finalizado: «Editar» del supervisor abre paquetes y cajas, y lo bloqueado deja imprimir | ✅ **Hecho** — `PR-C30.7` (#493). El candado era solo de la vista: ahora lo cuida el server en manifiestos, cajas, empaque **y `/paquetes`** (reasignar manifiesto pasa por `sacar!`/`meter!`, el retroceso de estado por `soltar!`, el split se traba). «Editar» (admin y supervisor de Miami) abre la edición con quién y desde cuándo, y se cierra a mano; solo en un oficial `enviado`, en aduana ya no. «Eliminar paquetes» escaneando en un modal. Una pestaña vieja que choca con el candado se refresca sola. ❓ *"Pedro y Miami"*: San Pedro no entra a `/manifiestos` desde `PR-U1` |
+| `C30-07` | Lo de cada caja a la vista en la ficha | ✅ **Hecho** — `PR-C30.7` (#493): la tabla de cajas con «Paquetes adentro» (cuántos y sus warehouse), de solo lectura cuando está bloqueado |
+| `C30-08` | Horas sin segundos al cliente | ✅ **Hecho** — con la pre-factura: `notificar_at` se guarda con segundos en 0 y el correo dice la hora `HH:MM` (`PR-P.2`, #495) |
+| `C30-09` | `/recepcion_carga` con un escáner para todos los pendientes | ✅ **Hecho** — `PR-C30.4` (#489): escáner en la lista que ubica la caja en cualquier manifiesto pendiente (mismo código que el de adentro), «6 de 7 · falta B» por fila, «Terminar» e «Imprimir» por fila. De paso: escanear la hoja del manifiesto en un interno recibía un paquete; ya no |
+| `C30-10` | `/medicion`: el foco vuelve a la pistola, y las notas no se repiten | ✅ **Hecho** — `PR-C30.5` (#487), y las gemelas en `PR-C30.8` (#490: manifiesto, `/empacar`, `/etiquetar`) y `PR-C30.10` (#497: `/entrega_personal`). Cerrar un modal con el mouse dejaba la selección afuera del campo: `controllers/enfocar.js`. Las notas salían dos veces porque Miami copia la nota del grupo a la caja |
+| `C30-11` | Medir de nuevo todo junto descarta los volúmenes viejos | ✅ **Hecho** — `PR-C30.5` (#487). El server ya los reemplazaba; la pantalla los volvía a poner en la lista y se guardaban dos. Ahora la lista arranca vacía y el viejo se muestra como «Volumen anterior». Corrige `C27-33` |
 | `C30-12` | Buscador de volúmenes medidos | 📄 Después |
 | `C30-13` | Los textos en el idioma del personal | 📄 Espera el Word de Yusef |
-| `C30-15`–`C30-19` | La pre-factura: hoja de preparación, fecha de trabajo, escaneo, F8/F9, etiqueta de entrega | 📐 **Diseñada** — Fase 14 en `docs/06`, serie `PR-P.1`–`P.7`; preguntas `RP-78`–`RP-91` |
+| `C30-15`–`C30-19` | La pre-factura: hoja de preparación, fecha de trabajo, escaneo, F8/F9, etiqueta de entrega | ✅ **Hecha, el happy path** — Fase 14 en `docs/06`, `PR-P.1`–`P.8` (#492, #495, #494, #496, #499, #500, #501, #503); preguntas `RP-78`–`RP-92` |
 
 ### Las preguntas que abre
 
@@ -12458,3 +12458,4 @@ Es la etiqueta de `C26-12` (*"ésa es la que van a escanear para entregar"*).
 | `RP-89` | **Una tanda con proveedores o sucursales de retiro distintos, o con un prepagado de Miami**: ¿con qué se cotiza el volumen? En el happy path esos van por la pre-factura a mano |
 | `RP-90` | **El portal mientras consolida**: ¿el cliente ve «Consolidando en Honduras» o «En aduana»? |
 | `RP-91` | **Buscar por código o nombre del cliente** (lo dice el diagrama): ¿respaldo cuando no hay QR, o solo escanear (`C30-17`)? |
+| `RP-92` | **Una tanda con cajas de proveedores o sucursales distintos** que caen en tarifas distintas: «NO Mezclar» solo asegura mismo cliente y servicio, pero `Tarifa.resolver` mira también proveedor y sucursal. Hoy la pre-factura **rechaza** ese volumen (`PR-P.1`). ¿Pasa en la práctica? Si pasa, ¿qué tarifa gana? |
