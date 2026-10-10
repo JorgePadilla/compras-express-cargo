@@ -51,6 +51,55 @@ class Fiscal::SaludTest < ActiveSupport::TestCase
     assert_equal [ @ficticia.cai ], f.vencidas_con_sobrantes.map(&:cai)
   end
 
+  # QA de PR-F1.4 · El día de la fecha límite todavía se emite: «Vence hoy»,
+  # no «Vence en 0 días».
+  test "el día de la fecha límite, ámbar y «Vence hoy»" do
+    @ficticia.update_columns(fecha_limite_emision: @hoy)
+    assert_equal :ambar, fila.estado
+    assert_equal [ "Vence hoy" ], fila.motivos
+
+    @ficticia.update_columns(fecha_limite_emision: @hoy + 1)
+    assert_equal [ "Vence en 1 día" ], fila.motivos
+  end
+
+  # QA de PR-F1.4 · Cargar el reemplazo alinea el correlativo a su inicio; el
+  # aviso del Art. 42 no puede depender del correlativo, o se borra justo ahí.
+  test "el aviso del Art. 42 sigue después de cargar el CAI siguiente, y cuenta lo emitido" do
+    @ficticia.update_columns(fecha_limite_emision: @hoy - 1)
+    travel_to(@hoy.in_time_zone(Fiscal::ZONA).change(hour: 10)) do
+      AutorizacionSar.create!(punto_de_emision: @sps, tipo_documento: "01", cai: "CAI-NUEVO",
+                              rango_inicio: 5001, rango_fin: 6000, fecha_limite_emision: @hoy + 300)
+    end
+    assert_equal 5000, correlativos_fiscales(:sps_factura).reload.ultimo, "el alta alineó el correlativo"
+
+    f = fila
+    assert_equal :verde, f.estado
+    assert_equal [ @ficticia.cai ], f.vencidas_con_sobrantes.map(&:cai)
+
+    # Con los 5000 números emitidos (o anulados) no queda nada que informar.
+    filas = (1..5000).map do |n|
+      { numero: @ficticia.numero(n), punto_de_emision_id: @sps.id, tipo_documento: "01", fecha_emision: @hoy - 2,
+        estado: n.even? ? "emitida" : "anulada", cai: @ficticia.cai, documento: {} }
+    end
+    DocumentoFiscal.insert_all!(filas)
+    assert_empty fila.vencidas_con_sobrantes
+  end
+
+  test "vencido con sobrantes y el siguiente ya cargado: el rojo dice dónde empieza el siguiente" do
+    @ficticia.update_columns(fecha_limite_emision: @hoy, rango_fin: 100)
+    correlativos_fiscales(:sps_factura).update!(ultimo: 50)
+    travel_to(@hoy.in_time_zone(Fiscal::ZONA).change(hour: 10)) do
+      AutorizacionSar.create!(punto_de_emision: @sps, tipo_documento: "01", cai: "CAI-B",
+                              rango_inicio: 101, rango_fin: 1000, fecha_limite_emision: @hoy + 300)
+    end
+    assert_equal 50, correlativos_fiscales(:sps_factura).reload.ultimo, "el 51 lo cubría la vigente: no se alineó"
+
+    f = Fiscal::Salud.new(@sps, "01", al: @hoy + 1).fila
+    assert_equal :rojo, f.estado
+    assert_includes f.motivos, "El CAI CAI-B empieza en el 101: el correlativo no salta solo hasta ahí"
+    assert_equal [ @ficticia.cai ], f.vencidas_con_sobrantes.map(&:cai)
+  end
+
   test "ámbar con el 10 % del rango, y nunca por debajo de 100 números" do
     # Rango de 5000: el 10 % son 500.
     correlativos_fiscales(:sps_factura).update!(ultimo: 4499)

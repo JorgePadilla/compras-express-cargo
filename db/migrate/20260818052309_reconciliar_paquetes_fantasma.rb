@@ -12,8 +12,18 @@
 # migración no.
 #
 # No toca nada de usuarios: ni `user_id` ni los `*_by_user_id`.
+#
+# PR-F1.8 · Una base que se migra **desde cero** no tiene paquetes, así que no
+# tiene fantasmas; y `Paquete` de hoy no se puede cargar contra el esquema de
+# esta fecha (declara enums sobre columnas que llegan después, como
+# `cobro_excepcion`). Sin paquetes se sale antes de tocar el modelo: en una
+# base con datos hace exactamente lo de siempre.
 class ReconciliarPaquetesFantasma < ActiveRecord::Migration[8.0]
   def up
+    unless select_value("SELECT EXISTS (SELECT 1 FROM paquetes)")
+      return say "sin paquetes: no hay fantasmas que reconciliar"
+    end
+
     resultado = Paquete.reconciliar_fantasmas!
 
     resultado[:reconciliados].each do |fantasma_id, caja_id|

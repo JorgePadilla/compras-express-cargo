@@ -68,10 +68,29 @@ module Fiscal
       Fila.new(punto: @punto, tipo: @tipo, estado: estado(salud, faltan, motivos),
                siguiente: salud[:next_correlative].to_s, quedan: salud[:remaining], dias: salud[:days_remaining],
                autorizacion: autorizacion, faltan_del_emisor: faltan,
-               vencidas_con_sobrantes: salud[:lapsed_with_unused], motivos: motivos)
+               vencidas_con_sobrantes: vencidas_con_sobrantes, motivos: motivos)
     end
 
     private
+
+    # QA de PR-F1.4 · Art. 42, contado con los documentos y no con el contador.
+    # `lapsed_with_unused` de la gema compara el correlativo con el fin del
+    # rango, y cargar el CAI siguiente sube el correlativo a su inicio menos uno
+    # (`alinear_si_hace_falta`): el aviso se borraba justo al cargar el
+    # reemplazo, que es cuando hay que informar. Los anulados cuentan: gastaron
+    # su número.
+    def vencidas_con_sobrantes
+      AutorizacionSar.usables.del(@punto, @tipo).where(fecha_limite_emision: ...@al).order(:rango_inicio)
+                     .select { |a| documentos_en_rango(a) < a.capacidad }.map(&:to_invoicehn)
+    end
+
+    # El número es `EEE-PPP-TT-NNNNNNNN`, de ancho fijo: el orden del texto es
+    # el de los números.
+    def documentos_en_rango(autorizacion)
+      DocumentoFiscal.where(punto_de_emision: @punto, tipo_documento: @tipo,
+                            numero: autorizacion.numero(autorizacion.rango_inicio)..autorizacion.numero(autorizacion.rango_fin))
+                     .count
+    end
 
     def faltan_del_emisor(salud)
       return [ "RTN de la empresa (14 dígitos)" ] unless salud[:issuer_configured]
@@ -84,6 +103,10 @@ module Fiscal
       if salud[:active_authorization].nil?
         motivos << (salud[:authorizations].zero? ? "No tiene autorizaciones cargadas" :
                       "Ninguna autorización vigente cubre el #{salud[:next_correlative]}")
+        posterior = vigente_posterior(salud)
+        if posterior
+          motivos << "El CAI #{posterior.cai} empieza en el #{posterior.rango_inicio}: el correlativo no salta solo hasta ahí"
+        end
       end
       motivos << "Faltan datos del emisor (Art. 10)" if faltan.any?
       motivos
@@ -92,7 +115,10 @@ module Fiscal
     def motivos_ambar(salud, activa)
       motivos = []
       dias = salud[:days_remaining]
-      motivos << "Vence en #{dias} #{dias == 1 ? 'día' : 'días'}" if dias && dias <= DIAS_DE_AVISO
+      # El día de la fecha límite todavía se emite (Art. 62), y es el último.
+      if dias && dias <= DIAS_DE_AVISO
+        motivos << (dias.zero? ? "Vence hoy" : "Vence en #{dias} #{dias == 1 ? 'día' : 'días'}")
+      end
       if salud[:remaining] <= umbral(activa) && !siguiente_cargada?(activa)
         motivos << "Quedan #{salud[:remaining]} números"
       end
@@ -107,6 +133,16 @@ module Fiscal
 
     def umbral(activa)
       [ (activa.capacity * PORCION_DE_AVISO).ceil, MINIMO_DE_AVISO ].max
+    end
+
+    # QA de PR-F1.4 · El CAI vencido con números sin usar y el siguiente ya
+    # cargado a continuación: el correlativo se queda en el vencido (solo se
+    # alinea al crear o corregir un CAI) y la sucursal no factura aunque tenga
+    # un CAI vigente. Que el motivo lo diga, en vez de parecer que falta un CAI.
+    def vigente_posterior(salud)
+      AutorizacionSar.usables.del(@punto, @tipo)
+                     .where(fecha_limite_emision: @al.., rango_inicio: (salud[:next_correlative].sequence + 1)..)
+                     .order(:rango_inicio).first
     end
 
     # Un CAI vigente que arranca justo donde termina el actual: los números no

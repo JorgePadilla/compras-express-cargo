@@ -10,13 +10,15 @@ class LeyendaFalsaDeLaFacturaTest < ActiveSupport::TestCase
     Empresa.connection.exec_update("UPDATE empresas SET terminos_factura = $1", "pie", [ texto ])
   end
 
-  test "borra la leyenda de los seeds viejos, con o sin tilde y con lo que siga" do
-    [ "Esta factura es valida como comprobante fiscal. Gracias por preferir Compras Express Cargo.",
-      "Esta factura es válida como comprobante fiscal.",
-      "ESTA FACTURA ES VALIDA COMO COMPROBANTE FISCAL" ].each do |texto|
+  test "saca solo la leyenda, con o sin tilde, y deja lo que la seguía" do
+    { "Esta factura es valida como comprobante fiscal. Gracias por preferir Compras Express Cargo." =>
+        "Gracias por preferir Compras Express Cargo.",
+      "Esta factura es válida como comprobante fiscal." => nil,
+      "ESTA FACTURA ES VALIDA COMO COMPROBANTE FISCAL" => nil }.each do |texto, queda|
       pie(texto)
       migrar
-      assert_nil empresas(:singleton).reload.terminos_factura, texto
+      quedo = empresas(:singleton).reload.terminos_factura
+      queda.nil? ? assert_nil(quedo, texto) : assert_equal(queda, quedo, texto)
     end
   end
 
