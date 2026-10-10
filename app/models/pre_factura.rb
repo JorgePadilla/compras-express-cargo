@@ -113,6 +113,9 @@ class PreFactura < ApplicationRecord
       pre_factura_items.each do |item|
         venta.venta_items.build(
           paquete: item.paquete,
+          # PR-P.1 · Para que la factura agrupe las cajas bajo su volumen. Es
+          # copiar una columna: ningún monto cambia.
+          bulto: item.bulto,
           concepto: item.concepto,
           peso_cobrar: item.peso_cobrar,
           precio_libra: item.precio_libra,

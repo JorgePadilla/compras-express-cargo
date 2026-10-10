@@ -30,7 +30,12 @@
         </tr>
       </thead>
       <tbody class="bg-white divide-y divide-gray-200">
-        <%= f.fields_for :pre_factura_items do |item_f| %>
+        <%# PR-P.1 · Las cajas de un volumen no se editan una por una: van juntas
+            debajo de él (`LineasPorVolumen`). `fields_for` con la línea suelta
+            solo manda las que se pintan, y nested attributes deja intactas las
+            que no vienen. %>
+        <% LineasPorVolumen.new(@pre_factura.pre_factura_items).each do |linea, cajas| %>
+        <%= f.fields_for :pre_factura_items, linea do |item_f| %>
           <% it = item_f.object %>
           <tr<%= ' class="bg-cec-teal/5"'.html_safe if it.auto? %>>
             <td class="px-6 py-3">
@@ -97,6 +102,8 @@
               <% end %>
             </td>
           </tr>
+        <% end %>
+        <%= render "shared/cajas_del_volumen", cajas: cajas, columnas: 6 if cajas.any? %>
         <% end %>
       </tbody>
       <tfoot class="bg-gray-50">
