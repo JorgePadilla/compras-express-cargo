@@ -45,4 +45,17 @@ class EmpresaTest < ActiveSupport::TestCase
     assert emp.valid?
     assert_equal Invoicehn::TaxTreatment::GRAVADO_15.rate, IsvAware.rate
   end
+
+  # QA de PR-F2.1 · La validación frena lo que se guarda de acá en adelante,
+  # no la fila que ya está. Si la base tuviera otra tasa, nadie que calcule o
+  # rotule el ISV la puede leer: todos van a `IsvAware.rate`.
+  test "una fila vieja con otra tasa no separa el mínimo con ISV, el PDF ni los totales" do
+    Empresa.instance.update_columns(isv_rate: 0.18)
+
+    tarifa = Tarifa.new(minimo_monto: BigDecimal("173.91"))
+    assert_equal BigDecimal("200.0"), tarifa.minimo_monto_con_isv, "el mínimo con ISV, con el 15 de la gema"
+    assert_equal BigDecimal("0.15"), IsvAware.rate
+    pdf_src = File.read(Rails.root.join("app/pdfs/application_pdf.rb"))
+    assert_no_match(/empresa\.isv_rate/, pdf_src, "el rótulo del PDF no lee la columna")
+  end
 end

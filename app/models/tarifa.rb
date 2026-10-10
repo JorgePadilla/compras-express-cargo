@@ -269,10 +269,11 @@ class Tarifa < ApplicationRecord
 
   private
 
+  # QA de PR-F2.1 · La misma tasa que `Fiscal::Totales` (`IsvAware.rate`, la
+  # de la gema), no la columna de `empresas`: si la fila tuviera otro valor,
+  # el mínimo «con ISV» del CRUD y el ISV de la pre-factura se separarían.
   def isv_rate
-    Empresa.instance.isv_rate.to_d
-  rescue StandardError
-    BigDecimal("0.15")
+    IsvAware.rate
   end
 
   # Cuánto se le perdona al peso antes de que suba al siguiente escalón.
