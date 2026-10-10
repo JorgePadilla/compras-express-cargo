@@ -74,7 +74,7 @@ class MedicionController < ApplicationController
   # solo de la mesa: «NO Mezclar» es de la sesión entera —dos volúmenes de la
   # misma mesa son del mismo cliente y del mismo servicio, y eso lo vuelve a
   # verificar `MedirBulto` al guardar—. Si mirara solo la mesa, el error del
-  # segundo volumen saldría recién en F10, con el primero ya medido.
+  # segundo volumen saldría recién al guardar, con el primero ya medido.
   def escanear
     codigo = params[:codigo].to_s.strip
     encontrados = Paquete.por_codigo_de_etiqueta(codigo).includes(:cliente, :tipo_envio, :user).to_a

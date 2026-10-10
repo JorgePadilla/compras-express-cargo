@@ -1168,10 +1168,11 @@ export default class extends conEnterAvanza(Controller) {
     if (e.key === "F5") e.preventDefault()
     if (this._modalAbierto()) return
     // C29-13 · F9 guarda e imprime, como en el resto de la app: *"F9 para
-    // imprimir siempre… solo para que lo tengamos uniforme"*. F10 también
-    // guarda —es «guardar» en todos lados, y en /etiquetar son las dos— y
-    // reimprimir pasa a F4, la de «imprimir un documento».
-    if (e.key === "F9" || e.key === "F10") { e.preventDefault(); this.guardar() }
+    // imprimir siempre… solo para que lo tengamos uniforme"*. Reimprimir pasa
+    // a F4, la de «imprimir un documento».
+    // C30-02 · Y F8 también guarda —es «guardar» en todos lados desde la hoja
+    // de Yusef—, en lugar de F10, que queda libre.
+    if (e.key === "F9" || e.key === "F8") { e.preventDefault(); this.guardar() }
     if (e.key === "F4")  { e.preventDefault(); this.reimprimir() }
     if (e.key === "F5")  { this.agregarVolumen() }
     if (e.key === "F2")  { e.preventDefault(); this.limpiar() }

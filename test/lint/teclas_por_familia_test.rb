@@ -20,20 +20,29 @@ require "test_helper"
 # «Finalizar» allá.
 class TeclasPorFamiliaTest < ActiveSupport::TestCase
   # Qué quiere decir cada tecla, en palabras que aparecen en el rótulo del
-  # botón. Sale de leer lo que la app **hace**, no de una convención escrita:
-  # ver el encabezado de `keyboard_shortcuts_controller.js`.
+  # botón.
+  #
+  # C30-02 · **La hoja de Yusef** (2026-10-09), escrita a mano: *"F8 → Guardar
+  # · F9 → Guardar e Imprimir · F2 → Limpiar · F5 → Agregar · F4 → Imprimir ·
+  # F1 → Crear"*. Cambia la tabla de `C23-13`, que había salido de leer lo que
+  # la app hacía: guardar pasa de F10 a **F8**, nuevo de F7 a **F1**, y el
+  # Excel, que era F8, **se queda sin tecla** (`RP-75`). Ver el encabezado de
+  # `keyboard_shortcuts_controller.js`.
   FAMILIAS = {
+    "F1"  => /nuev[oa]|crear/i,
     "F2"  => /volver|cancelar|limpiar|atr[áa]s/i,
     "F3"  => /.*/,                                   # solo /etiquetar, con su propio handler
     "F4"  => /imprimir|warehouse|recibo|documento/i,
     "F5"  => /agregar|a[ñn]adir/i,
     "F6"  => /editar|modificar/i,
-    "F7"  => /nuev[oa]|crear/i,
-    "F8"  => /excel|exportar/i,
+    "F8"  => /guardar|finalizar|confirmar|aplicar/i,
     "F9"  => /imprimir|pdf/i,
-    "F10" => /guardar|finalizar|confirmar|aplicar/i,
     "F11" => /finalizar|cerrar/i
   }.freeze
+
+  # Las que la hoja dejó libres. Que nada las vuelva a tomar sin decidirlo:
+  # un botón nuevo copiado de una pantalla vieja traería «(F10)» de regalo.
+  LIBRES = %w[F7 F10].freeze
 
   test "ninguna tecla significa dos cosas distintas" do
     fuera = []
@@ -87,6 +96,54 @@ class TeclasPorFamiliaTest < ActiveSupport::TestCase
       lint la pueda ver. Si la escucha el controller de la pantalla, va con
       `shortcut_label_only: true` para no dispararla dos veces.
     MSG
+  end
+
+  # C30-02 · F7 y F10 quedaron libres, y F8 dejó de ser Excel. Esto mira lo
+  # que el lint de arriba no ve: los `<button>` y `f.submit` crudos con
+  # `data-shortcut`, los rótulos escritos a mano («Guardar (F10)», el `<kbd>`
+  # de /etiquetar) y las teclas que escucha cada controller de Stimulus.
+  test "F7 y F10 quedaron libres, en las vistas y en el JS" do
+    viejas = []
+
+    Dir.glob(Rails.root.join("app/views/**/*.erb")).sort.each do |ruta|
+      sin_comentarios = File.read(ruta).gsub(/<%#.*?%>/m, "")
+      sin_comentarios.each_line.with_index(1) do |linea, n|
+        LIBRES.each do |tecla|
+          patron = /shortcut(?::\s*|=)["']#{tecla}["']|\(#{tecla}\)|<kbd[^>]*>#{tecla}</
+          viejas << "  #{corta(ruta)}:#{n}  #{linea.strip[0, 90]}" if linea.match?(patron)
+        end
+      end
+    end
+
+    Dir.glob(Rails.root.join("app/javascript/controllers/**/*.js")).sort.each do |ruta|
+      File.read(ruta).each_line.with_index(1) do |linea, n|
+        next if linea.lstrip.start_with?("//")
+
+        LIBRES.each do |tecla|
+          # Con cualquier comilla: `e.key === 'F10'` es la misma tecla que
+          # `"F10"`, y un lint que solo mira las dobles la deja pasar.
+          viejas << "  #{ruta.sub("#{Rails.root}/", "")}:#{n}  #{linea.strip}" if linea.match?(/["'`]#{tecla}["'`]/)
+        end
+      end
+    end
+
+    assert_empty viejas, <<~MSG
+      Teclas que la hoja de Yusef dejó libres (C30-02):
+
+      #{viejas.join("\n")}
+
+      Guardar es F8 y nuevo es F1. Si de verdad hace falta volver a usar una
+      de éstas, sacala de LIBRES y agregala a FAMILIAS con el porqué.
+    MSG
+  end
+
+  # C30-02 · El Excel perdió su tecla: F8 es guardar.
+  test "exportar no lleva tecla" do
+    con_tecla = []
+    cada_boton_con_tecla do |ruta, tecla, etiqueta|
+      con_tecla << "  #{ruta}  #{tecla} = «#{etiqueta}»" if etiqueta.match?(/excel|exportar/i)
+    end
+    assert_empty con_tecla, "El Excel no lleva tecla desde C30-02 (RP-75):\n#{con_tecla.join("\n")}"
   end
 
   private
