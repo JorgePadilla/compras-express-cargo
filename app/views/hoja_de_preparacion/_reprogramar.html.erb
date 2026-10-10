@@ -1,0 +1,24 @@
+<%# PR-P.7 · Cambiar la hora del aviso en lote (`ReprogramarAvisos`).
+    `manifiesto`: las programadas de ese manifiesto; nil, todas las listadas.
+    Solo mueve las que no avisaron y las programadas: una consolidando no tiene
+    hora, y una que ya avisó no se reprograma. La fecha vacía deja el día que
+    cada una tenía. %>
+<% manifiesto = local_assigns.fetch(:manifiesto, nil) %>
+<% sufijo = manifiesto ? manifiesto.id : "todas" %>
+<%= form_with url: reprogramar_hoja_de_preparacion_path, method: :patch,
+              class: "mt-3 flex flex-wrap items-end gap-3", data: { reprogramar: sufijo } do %>
+  <%= hidden_field_tag :manifiesto_id, manifiesto&.id, id: nil %>
+  <div>
+    <%= label_tag "reprogramar_hora_#{sufijo}", "Hora", class: "block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1" %>
+    <%= text_field_tag :hora, HojaDePreparacion.hora_por_defecto, id: "reprogramar_hora_#{sufijo}",
+          data: { controller: "flatpickr", flatpickr_solo_hora_value: true }, autocomplete: "off",
+          class: "block w-28 min-h-11 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+  </div>
+  <div>
+    <%= label_tag "reprogramar_fecha_#{sufijo}", "Fecha (opcional)", class: "block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1" %>
+    <%= text_field_tag :fecha, nil, id: "reprogramar_fecha_#{sufijo}", data: { controller: "flatpickr" }, autocomplete: "off",
+          placeholder: "la misma",
+          class: "block w-36 min-h-11 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 shadow-sm focus:ring-cec-teal focus:border-cec-teal" %>
+  </div>
+  <%= render ButtonComponent.new(type: :submit, variant: :outline_navy, size: :sm, icon: "clock") do %>Cambiar la hora<% end %>
+<% end %>

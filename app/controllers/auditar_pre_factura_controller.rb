@@ -14,7 +14,12 @@ class AuditarPreFacturaController < ApplicationController
   before_action :autorizar
   before_action :exigir_hoja
 
-  def index; end
+  # PR-P.7 · Con `?pre_factura_id=` (el «Abrir en auditar» de la hoja en modo
+  # editar), la pantalla arranca con esa consolidando reabierta: el mismo
+  # camino que escanear uno de sus volúmenes (PR-P.6).
+  def index
+    @abrir = reabrir_json_de(abierta) if consolidando_abierta?
+  end
 
   def escanear_volumen
     resultado = auditoria.volumen(params[:codigo].to_s)
@@ -55,6 +60,18 @@ class AuditarPreFacturaController < ApplicationController
     @hoja = HojaDePreparacion.desde_sesion(session[:pf_hoja])
     return if @hoja.lista?
 
+    # PR-P.7 · Una consolidando abierta desde «editar pre-facturas» trae su
+    # propia hoja: su servicio, los manifiestos en aduana con carga de ese
+    # servicio, y la hora de la hoja guardada. La tanda nueva pasa por los
+    # mismos chequeos que cualquiera.
+    if consolidando_abierta?
+      tipos = abierta.paquetes.distinct.pluck(:tipo_envio_id)
+      @hoja = HojaDePreparacion.new(modo: "nuevas", tipo_envio_ids: tipos,
+                                    manifiesto_ids: Manifiesto.para_hoja(tipos).pluck(:id) + [ abierta.manifiesto_id ],
+                                    disponible_en: @hoja.disponible_en)
+      return
+    end
+
     mensaje = "Primero la hoja de preparación: servicio, manifiesto y fecha de trabajo."
     respond_to do |format|
       format.json { render json: { resultado: "sin_hoja", ok: false, mensaje: mensaje }, status: :unprocessable_entity }
@@ -65,6 +82,10 @@ class AuditarPreFacturaController < ApplicationController
   def sesiones = Array(params[:sesiones]).map(&:to_s).compact_blank
 
   def abierta = (@abierta ||= PreFactura.find_by(id: params[:pre_factura_id]) if params[:pre_factura_id].present?)
+
+  def consolidando_abierta?
+    abierta.present? && abierta.creado? && abierta.consolidando_at.present? && abierta.notificado_at.nil?
+  end
 
   def auditoria = AuditoriaDeTanda.new(hoja: @hoja, sesiones: sesiones, abierta: abierta)
 
@@ -84,13 +105,17 @@ class AuditarPreFacturaController < ApplicationController
   # PR-P.6 · La consolidando, reabierta: sus tandas con todas sus cajas ya
   # auditadas, para que la pantalla siga desde ahí y se le agregue la nueva.
   def reabrir_json(resultado)
-    pf = resultado.pre_factura
+    reabrir_json_de(resultado.pre_factura).merge(mensaje: resultado.mensaje)
+  end
+
+  def reabrir_json_de(pf)
     tandas = GuardarPreFacturaAuditada.sesiones_de(pf).map do |sesion|
       bultos = Bulto.de_la_sesion(sesion).to_a
       cajas = Paquete.where(medicion_sesion: sesion).includes(:cliente, :tipo_envio).order(:id).to_a
       datos_de_tanda(sesion, bultos, cajas)
     end
-    { resultado: "consolidando", mensaje: resultado.mensaje,
+    { resultado: "consolidando",
+      mensaje: "La pre-factura #{pf.numero} está consolidando: escaneá el volumen nuevo que se le agrega.",
       pre_factura: { id: pf.id, numero: pf.numero }, tandas: tandas,
       escaneadas: pf.paquetes.pluck(:id), lineas: lineas_json(pf.tap { |p| p.send(:calculate_totals) }) }
   end

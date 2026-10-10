@@ -297,7 +297,11 @@ Rails.application.routes.draw do
   # fecha de trabajo, antes de auditar. Singular porque es **la** hoja del que
   # está trabajando, y vive en su sesión como la de `/etiquetar`.
   resource :hoja_de_preparacion, only: %i[show update destroy], path: "pre-factura/hoja",
-                                 controller: "hoja_de_preparacion"
+                                 controller: "hoja_de_preparacion" do
+    # PR-P.7 · Corregir antes del aviso: la hora en lote, y volver a F8.
+    patch :reprogramar
+    patch :volver_a_consolidar
+  end
   # PR-P.5 · C30-17 · Auditar escaneando: el QR de un volumen trae la tanda, y
   # cada etiqueta de Miami «pertenece» o no. F9 guarda. Pide una hoja lista.
   resources :auditar_pre_factura, only: :index, path: "pre-factura/auditar",

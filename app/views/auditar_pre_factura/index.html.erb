@@ -23,6 +23,8 @@
      data-auditar-pre-factura-volumen-url-value="<%= escanear_volumen_auditar_pre_factura_index_path %>"
      data-auditar-pre-factura-paquete-url-value="<%= escanear_paquete_auditar_pre_factura_index_path %>"
      data-auditar-pre-factura-guardar-url-value="<%= guardar_auditar_pre_factura_index_path %>"
+     <%# PR-P.7 · Abierta desde «editar pre-facturas»: arranca reabierta. %>
+     <%= tag.attributes("data-auditar-pre-factura-abrir-value" => @abrir.to_json) if @abrir %>
      data-action="auditar-pre-factura:ok->audio#success
                   auditar-pre-factura:consolidando->audio#notify
                   auditar-pre-factura:medicionAnterior->audio#alert
