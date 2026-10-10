@@ -1340,7 +1340,7 @@ Es el único punto de todo el sistema donde 4 dígitos habilitan cambiar plata.
 
 ---
 
-## Fase 14: Pre-factura por escaneo — hoja de preparación, auditoría y disponible programado (serie PR-P) — 📐 DISEÑADA (2026-10-09)
+## Fase 14: Pre-factura por escaneo — hoja de preparación, auditoría y disponible programado (serie PR-P) — ✅ HAPPY PATH COMPLETO (2026-10-09)
 
 > Sale de la Conversación 30 (`C30-15`…`C30-19`, foto 3 del diagrama). Las
 > `PR-P.n` se siguen **acá**; no confundir con `PR-P2a`/`PR-P2b` (permisos,
@@ -1421,7 +1421,8 @@ volumen de tres cajas cobra **un** mínimo, no tres (`RP-41`, `RP-79`).
 
 | Qué | Cómo | Por qué |
 |---|---|---|
-| `pre_factura_items.bulto_id` | FK con `restrict`; `Bulto has_many :pre_factura_items, dependent: :restrict_with_error` | La línea es el volumen, y volver a medir no puede borrar uno facturado |
+| `pre_factura_items.bulto_id` | FK con `restrict`; `Bulto has_many :pre_factura_items, dependent: :restrict_with_error` | La línea es el volumen, y volver a medir no puede borrar uno facturado (`MedirBulto` lo dice antes de escribir nada) |
+| `venta_items.bulto_id` | Igual, y `facturar!` lo copia | No estaba en el diseño: sin él la venta, el PDF y el portal no tenían cómo agrupar las cajas bajo su volumen, porque la línea del volumen no tiene paquete |
 | `PreFacturaItem::ORIGENES` | + `volumen`, `caja_del_volumen` | Las cajas en L. 0.00 no se recalculan solas |
 | `pre_facturas.notificar_at` | fecha y hora, segundos en 0 | La fecha de trabajo; `fecha_trabajo` se mantiene igual a su día, porque los filtros la leen |
 | `pre_facturas.notificado_at` | sello de idempotencia | Editar después del aviso no lo vuelve a mandar (*"su factura fue editada"* ×5) |
@@ -1435,13 +1436,14 @@ volumen de tres cajas cobra **un** mínimo, no tres (`RP-41`, `RP-79`).
 
 | PR | Qué | Ítems |
 |---|---|---|
-| `PR-P.1` | **La línea es el volumen**: `ArmarPreFacturaPorVolumen`, cajas en L. 0.00 agrupadas bajo su volumen en pre-factura, venta, PDF y la gemela del portal. Dormido: ninguna pantalla lo llama todavía | `C27-10`, `C27-15`, `RP-41` |
-| `PR-P.2` | **Disponible programado**: `HacerDisponibles`, el job cada minuto en `config/recurring.yml`, `PreFacturaMailer#disponible`, y que `anular!` devuelva lo consolidando a aduana | `C30-16`, PR-D1 §A, `A7-16` |
-| `PR-P.3` | **La etiqueta de entrega 4×6**, con la franja CONSOLIDANDO que no tapa el QR (`ENT <número>`) | `C30-19`, `C26-12` |
-| `PR-P.4` | **La hoja de preparación** (`/pre-factura/hoja`) y su link en Logística después de Medición | `C30-15`, `C28-14` |
-| `PR-P.5` | **Auditar escaneando, y F9** (`/pre-factura/auditar`), con el nodo en `lib/procesos_pdf.rb` | `C30-17`, `C30-18`, `C27-16`, `C28-15` |
-| `PR-P.6` | **F8 consolidando**, y una tanda nueva a la que consolida | `C30-18` |
-| `PR-P.7` | **Editar pre-facturas y cambiar la hora en lote**; volver a consolidar solo antes del aviso | `C30-15`, `RP-77` |
+| `PR-P.1` ✅ #492 | **La línea es el volumen**: `ArmarPreFacturaPorVolumen`, cajas en L. 0.00 agrupadas bajo su volumen en pre-factura, venta, PDF y la gemela del portal. Las cajas dicen «incluida en la tanda» (desde `C28-08` una caja es de la tanda, no de un volumen). Rechaza una tanda cuyas cajas caen en tarifas distintas (`RP-92`). `/pre_facturas/new` y el PDF quedan byte a byte iguales | `C27-10`, `C27-15`, `RP-41` |
+| `PR-P.2` ✅ #495 | **Disponible programado**: `HacerDisponibles`, el job cada minuto en `config/recurring.yml` (el worker de staging corre con `RAILS_ENV=production`, así que la sección `production:` vale para los dos), `PreFacturaMailer#disponible`, y que `anular!` devuelva lo consolidando a aduana. El correo ignora `notificar_facturas`: el aviso de retiro es obligatorio. Sin correo, igual pasa a disponible y queda el error escrito | `C30-16`, PR-D1 §A, `A7-16` |
+| `PR-P.3` ✅ #494 | **La etiqueta de entrega 4×6**, con la franja CONSOLIDANDO que no tapa el QR (`ENT <número>`). Provisional por `RP-82`: una por pre-factura, «el volumen» como VLBS totales y cuántos volúmenes | `C30-19`, `C26-12` |
+| `PR-P.4` ✅ #496 | **La hoja de preparación** (`/pre-factura/hoja`) y su link en Logística después de Medición. La hora sale de `PreFactura.hora_disponible`: un solo lector de la configuración | `C30-15`, `C28-14` |
+| `PR-P.5` ✅ #499 | **Auditar escaneando, y F9** (`/pre-factura/auditar`), con el nodo en `lib/procesos_pdf.rb`. Los escaneos se procesan en fila (la pistola le gana al server). Una etiqueta de volumen de una medición anterior carga la tanda de hoy y avisa que hay que reimprimir | `C30-17`, `C30-18`, `C27-16`, `C28-15` |
+| `PR-P.6` ✅ #500 | **F8 consolidando**, y una tanda nueva a la que consolida. Agregar una tanda suma líneas nuevas sin tocar las viejas; el server siempre valida las tandas viejas junto con las nuevas | `C30-18` |
+| `PR-P.7` ✅ #501 | **Editar pre-facturas y cambiar la hora en lote**; volver a consolidar solo antes del aviso (lo frena el modelo, `YaAvisada`). Cambiar la fecha de trabajo de una programada mueve el aviso a ese día con la misma hora | `C30-15`, `RP-77` |
+| `PR-P.8` ✅ #503 | **Dos F9 sobre la misma tanda**: las cajas se bloquean (`FOR UPDATE` por id) antes de validar, y el segundo recibe un 422, no un 500. Y `anular!` toma la pre-factura antes que sus cajas, como todos los demás: al revés era un deadlock con F8. Lo encontró QA en `PR-P.5` | — |
 
 ### Riesgos
 
