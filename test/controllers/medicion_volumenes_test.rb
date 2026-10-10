@@ -49,7 +49,7 @@ class MedicionVolumenesTest < ActionDispatch::IntegrationTest
 
     assert_select "th", text: "Acciones"
     assert_select "tr#bulto_#{@juan.first.id}" do
-      assert_select "a[href=?][title=?][target=_blank]", etiqueta_bulto_medicion_path(@juan.first), "Reimprimir la etiqueta del volumen"
+      assert_select "a[href=?][title=?][target=_blank]", etiqueta_bulto_medicion_path(@juan.first, print: true), "Reimprimir la etiqueta del volumen"
       assert_select "[data-qr-del-volumen] button[data-action='clipboard#copy'].w-7"
     end
   end
