@@ -120,7 +120,9 @@ class TeclasPorFamiliaTest < ActiveSupport::TestCase
         next if linea.lstrip.start_with?("//")
 
         LIBRES.each do |tecla|
-          viejas << "  #{ruta.sub("#{Rails.root}/", "")}:#{n}  #{linea.strip}" if linea.include?(%("#{tecla}"))
+          # Con cualquier comilla: `e.key === 'F10'` es la misma tecla que
+          # `"F10"`, y un lint que solo mira las dobles la deja pasar.
+          viejas << "  #{ruta.sub("#{Rails.root}/", "")}:#{n}  #{linea.strip}" if linea.match?(/["'`]#{tecla}["'`]/)
         end
       end
     end
