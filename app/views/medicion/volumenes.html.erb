@@ -71,7 +71,7 @@
             <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">A cobrar</th>
             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cajas de la tanda</th>
             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pre-factura</th>
-            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Etiqueta</th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Etiqueta · QR</th>
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
@@ -113,8 +113,19 @@
                 <% end %>
               </td>
               <td class="px-4 py-3 whitespace-nowrap text-right">
-                <%= link_to "Reimprimir", etiqueta_bulto_medicion_path(bulto), target: "_blank", rel: "noopener",
-                      class: "text-sm font-medium text-cec-teal-deep hover:underline" %>
+                <%# Jorge, 2026-10-10: *"it would be nice to have it in this view as an
+                    easy copy paste icon"*. Es el **mismo texto** que lleva el QR de la
+                    etiqueta (`etiqueta_qr_medicion`, `MED <código> <peso> <medidas>
+                    1de2`): pegado en Auditar hace lo mismo que escanearlo, sin
+                    imprimir. %>
+                <% qr = etiqueta_qr_medicion(bulto) %>
+                <span class="inline-flex items-center gap-2">
+                  <%= link_to "Reimprimir", etiqueta_bulto_medicion_path(bulto), target: "_blank", rel: "noopener",
+                        class: "text-sm font-medium text-cec-teal-deep hover:underline" %>
+                  <span class="inline-flex" data-controller="clipboard" data-clipboard-text-value="<%= qr %>" data-qr-del-volumen>
+                    <%= copy_button(label: "Copiar el QR del volumen: #{qr}") %>
+                  </span>
+                </span>
               </td>
             </tr>
           <% end %>
