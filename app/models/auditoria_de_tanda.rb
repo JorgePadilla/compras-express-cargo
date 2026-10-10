@@ -18,11 +18,21 @@
 # cajas se escanearon y la manda en cada pedido: no hay estado en el servidor
 # entre un escaneo y el siguiente.
 class AuditoriaDeTanda
-  Resultado = Struct.new(:tipo, :mensaje, :sesion, :cajas, :bultos, :caja, :pre_factura, keyword_init: true) do
+  Resultado = Struct.new(:tipo, :mensaje, :sesion, :cajas, :bultos, :caja, :pre_factura, :aviso, keyword_init: true) do
     def ok? = tipo.in?(%i[ok pertenece])
   end
 
   def self.volumen?(codigo) = Paquete::QR_DE_MEDICION.match?(codigo.to_s.strip)
+
+  # El «n de m» que la etiqueta del volumen lleva al final del QR
+  # (`etiqueta_qr_medicion`: `MED <código> <peso> <medidas> 2de3`). Una
+  # medición sola no lleva nada: es 1 de 1.
+  NDEM = /(?<n>\d+)de(?<m>\d+)\s*\z/i
+
+  def self.total_impreso(codigo)
+    m = NDEM.match(codigo.to_s.strip)
+    m ? m[:m].to_i : 1
+  end
 
   # `hoja`: la hoja de preparación del que audita (sus servicios y manifiestos).
   # `sesiones`: las tandas que ya están en la pantalla.
@@ -49,8 +59,22 @@ class AuditoriaDeTanda
     rechazo = rechazo_de_la_tanda(sesion, cajas)
     return rechazo if rechazo
 
-    Resultado.new(tipo: :ok, sesion: sesion, cajas: cajas, bultos: bultos,
+    Resultado.new(tipo: :ok, sesion: sesion, cajas: cajas, bultos: bultos, aviso: medicion_anterior(codigo, bultos),
                   mensaje: "#{volumenes_texto(bultos)} · #{cajas.size} caja#{"s" if cajas.size != 1}: escaneá cada etiqueta de Miami.")
+  end
+
+  # Después de medir de nuevo (`C30-11`), la etiqueta **vieja** de un volumen
+  # sigue resolviendo a la tanda de hoy —el QR lleva el código de la primera
+  # caja, y la caja es la misma—. Si el «de m» impreso no es lo que la tanda
+  # tiene hoy, el papel está viejo: se avisa, y la tanda de hoy se carga igual
+  # (es la que se cobra).
+  def medicion_anterior(codigo, bultos)
+    impreso = self.class.total_impreso(codigo)
+    hoy = bultos.first&.de_cuantos.to_i
+    hoy = bultos.size if hoy.zero?
+    return nil if impreso == hoy
+
+    "Esta etiqueta es de una medición anterior: la tanda hoy tiene #{volumenes_texto_n(hoy)} — reimprimí las etiquetas."
   end
 
   # ── Una caja (la etiqueta de Miami) ─────────────────────────────────────
@@ -148,9 +172,9 @@ class AuditoriaDeTanda
     end
   end
 
-  def volumenes_texto(bultos)
-    bultos.size == 1 ? "1 volumen" : "#{bultos.size} volúmenes"
-  end
+  def volumenes_texto(bultos) = volumenes_texto_n(bultos.size)
+
+  def volumenes_texto_n(n) = n == 1 ? "1 volumen" : "#{n} volúmenes"
 
   def nombres_de_tipos
     TipoEnvio.where(id: @hoja.tipo_envio_ids).order(:nombre).pluck(:nombre).to_sentence

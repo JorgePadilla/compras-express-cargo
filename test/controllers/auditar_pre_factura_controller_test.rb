@@ -57,13 +57,27 @@ class AuditarPreFacturaControllerTest < ActionDispatch::IntegrationTest
     assert_equal "ok", data["resultado"]
     assert_equal @bulto.sesion, data["sesion"]
     assert_equal({ "codigo" => @cliente.codigo, "nombre" => @cliente.nombre_completo }, data["cliente"])
-    assert_equal "1 volumen · 2 cajas", data["aviso_ndem"]
+    assert_equal "1 volumen · 2 cajas", data["resumen"]
+    assert_nil data["aviso_ndem"], "la etiqueta está al día"
     assert_equal 1, data["volumenes"].size
     assert_equal 4.0, data["volumenes"].first["peso"]
     assert data["volumenes"].first["pies3"].positive?
     assert_equal @cajas.map(&:id).sort, data["cajas"].map { |c| c["id"] }.sort
     assert data["lineas"]["items"].any? { |i| i["concepto"].include?("Volumen") || i["concepto"].include?("Flete") }
     assert data["lineas"]["total"].positive?
+  end
+
+  # Después de medir de nuevo, la etiqueta vieja «1de2» sigue resolviendo a la
+  # tanda de hoy, que tiene un solo volumen.
+  test "una etiqueta de una medición anterior avisa, y carga la tanda de hoy" do
+    con_hoja
+    post escanear_volumen_auditar_pre_factura_index_url, params: { codigo: "#{@qr} 1de2" }, as: :json
+    data = response.parsed_body
+
+    assert_equal "ok", data["resultado"]
+    assert_equal @bulto.sesion, data["sesion"]
+    assert_equal "Esta etiqueta es de una medición anterior: la tanda hoy tiene 1 volumen — reimprimí las etiquetas.",
+                 data["aviso_ndem"]
   end
 
   test "ya pre-facturada: el rechazo trae el link para abrirla" do

@@ -82,10 +82,17 @@ export default class extends Controller {
     return this._post(this.volumenUrlValue, { codigo, sesiones: this.sesiones })
       .then((data) => {
         if (data.resultado === "ok") {
-          this.dispatch("ok")
           this._agregarTanda(data)
-          this._avisar("ok", data.mensaje)
-          this._anotar(`Volumen · ${data.aviso_ndem}`)
+          this._anotar(`Volumen · ${data.resumen}`)
+          // La etiqueta es de una medición anterior: se avisa con otro sonido,
+          // y la tanda de hoy queda cargada igual.
+          if (data.aviso_ndem) {
+            this.dispatch("medicionAnterior")
+            this._avisar("alerta", data.aviso_ndem)
+          } else {
+            this.dispatch("ok")
+            this._avisar("ok", data.mensaje)
+          }
         } else {
           this.dispatch("rechazo")
           this._avisar("error", data.mensaje, data.pre_factura_url)

@@ -86,17 +86,19 @@ class AuditarPreFacturaController < ApplicationController
       cliente: { codigo: cliente&.codigo, nombre: cliente&.nombre_completo },
       tipo_envio: cajas.first.tipo_envio&.nombre,
       pre_alerta: bultos.first.pre_alerta_en_etiqueta,
-      aviso_ndem: aviso_ndem(bultos, cajas),
+      resumen: resumen(bultos, cajas),
+      # Una etiqueta de una medición anterior (el «n de m» impreso no es el de
+      # hoy). nil si está al día.
+      aviso_ndem: resultado.aviso,
       volumenes: bultos.map { |b| volumen_json(b) },
       cajas: cajas.map { |c| { id: c.id, codigo: helpers.etiqueta_codigo_barras(c) || c.tracking } },
       lineas: vista_previa(cliente, sesiones + [ resultado.sesion ])
     }
   end
 
-  # «Escaneaste 1 de 3: los otros dos ya están», que es lo que Yusef pidió en
-  # vez de obligar a escanear los tres (*"solo con uno escanea los otros
-  # dos"*).
-  def aviso_ndem(bultos, cajas)
+  # «3 volúmenes · 7 cajas»: con un QR alcanza (*"solo con uno escanea los
+  # otros dos"*), y la pantalla dice cuántos trae.
+  def resumen(bultos, cajas)
     vol = bultos.size == 1 ? "1 volumen" : "#{bultos.size} volúmenes"
     "#{vol} · #{cajas.size} caja#{"s" if cajas.size != 1}"
   end

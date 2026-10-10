@@ -24,6 +24,7 @@
      data-auditar-pre-factura-paquete-url-value="<%= escanear_paquete_auditar_pre_factura_index_path %>"
      data-auditar-pre-factura-guardar-url-value="<%= guardar_auditar_pre_factura_index_path %>"
      data-action="auditar-pre-factura:ok->audio#success
+                  auditar-pre-factura:medicionAnterior->audio#alert
                   auditar-pre-factura:pertenece->audio#success
                   auditar-pre-factura:completo->audio#completo
                   auditar-pre-factura:yaEscaneada->audio#notify

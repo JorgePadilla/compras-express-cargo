@@ -47,6 +47,25 @@ class AuditoriaDeTandaTest < ActiveSupport::TestCase
     assert_match(/2 volúmenes · 3 cajas/, r.mensaje)
   end
 
+  # Después de medir de nuevo (C30-11): la etiqueta vieja sigue resolviendo a
+  # la tanda de hoy. Si su «n de m» no es el de hoy, el papel está viejo.
+  test "una etiqueta de una medición anterior avisa y carga la tanda de hoy" do
+    cajas = 2.times.map { caja }
+    medir(cajas, { peso: "2" }, { peso: "5" })
+
+    al_dia = auditoria.volumen("#{qr(cajas.first)} 2de2")
+    assert_equal :ok, al_dia.tipo
+    assert_nil al_dia.aviso
+
+    vieja = auditoria.volumen("#{qr(cajas.first)} 2de3")
+    assert_equal :ok, vieja.tipo, "la tanda de hoy se carga igual"
+    assert_equal 2, vieja.bultos.size
+    assert_match(/medición anterior: la tanda hoy tiene 2 volúmenes — reimprimí/, vieja.aviso)
+
+    sin_sufijo = auditoria.volumen(qr(cajas.first))
+    assert_match(/medición anterior/, sin_sufijo.aviso, "sin «n de m» era de un solo volumen")
+  end
+
   test "lo que no empieza con MED no es un volumen, aunque sea la etiqueta de la misma caja" do
     cajas = [ caja ]
     medir(cajas, { peso: "2" })
