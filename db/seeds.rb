@@ -988,6 +988,16 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
   puts "    → /paquetes/#{pkg2.id} — En aduana · retenido + cambio servicio + 3 tareas · #{mani_full_b.numero}"
   puts "    → /paquetes/#{pkg3.id} — Recibido Miami · cliente nuevo + 2 tareas pendientes · sin manifiesto"
   puts "    → /paquetes/#{pkg4.id} — Entregado simple · 3 tareas realizadas · #{mani_full_a.numero}"
+
+  # ── CAI ficticio para facturar en dev y staging (PR-F1.5) ──
+  #
+  # Lo mismo que siembra la migración `SembrarCaiFicticioDeStaging` en el
+  # deploy, leído del mismo archivo. Acá no se exige `SEED_SAMPLE_DATA`
+  # (este bloque ya deja pasar a development); el freno de producción y el de
+  # «ya hay autorizaciones» siguen.
+  require Rails.root.join("lib/cai_ficticio_de_staging")
+  cai = CaiFicticioDeStaging.sembrar!(exigir_datos_de_muestra: false)
+  puts "  ✓ CAI ficticio: #{cai.sembrado? ? cai.autorizaciones.map(&:cai).join(', ') : "no (#{cai.motivo})"}"
 end
 
 # ── Empresa singleton (datos fiscales para PDFs y mailers) ──
