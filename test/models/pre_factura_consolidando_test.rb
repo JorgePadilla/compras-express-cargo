@@ -140,6 +140,30 @@ class PreFacturaConsolidandoTest < ActiveSupport::TestCase
     end
   end
 
+  # QA · El servidor no confía en que la pantalla le mande las tandas viejas:
+  # con la nueva sola, igual se pregunta contra las de la reabierta.
+  test "aunque el pedido traiga solo la tanda nueva, otro servicio no se le agrega" do
+    pf = consolidando
+    cem = [ caja(tipo_envio: tipo_envios(:cem)) ]
+    otro, = medir(cem, { peso: "3" })
+
+    assert_raises(GuardarPreFacturaAuditada::NoSePuede) do
+      guardar([ otro.sesion ], cem.map(&:id), modo: :avisar, pre_factura_id: pf.id)
+    end
+    assert_equal [ @cer.id ], pf.reload.paquetes.map(&:tipo_envio_id).uniq
+  end
+
+  test "F9 con solo la tanda nueva en el pedido igual devuelve las viejas a aduana" do
+    pf = consolidando
+    nuevas = [ caja ]
+    nuevo, = medir(nuevas, { peso: "6" })
+
+    pf = guardar([ nuevo.sesion ], nuevas.map(&:id), modo: :avisar, pre_factura_id: pf.id)
+
+    assert_nil pf.consolidando_at
+    assert (@primeras + nuevas).all? { |c| c.reload.estado == "en_aduana" }
+  end
+
   test "anular una consolidando devuelve las cajas a aduana" do
     pf = consolidando
     pf.anular!

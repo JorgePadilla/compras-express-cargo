@@ -89,7 +89,13 @@ class GuardarPreFacturaAuditada
 
     viejas = @abierta ? self.class.sesiones_de(@abierta) : []
     nuevas = @sesiones - viejas
-    cajas = Paquete.where(medicion_sesion: @sesiones).includes(:cliente, :tipo_envio, :manifiesto).order(:id).to_a
+    # Las cajas de la reabierta **siempre**, las mande la pantalla o no: con
+    # ellas se pregunta `PuedenIrJuntas` entre la tanda vieja y la nueva, las
+    # tareas que bloquean, y F9 las devuelve a aduana. Si se tomaran solo de
+    # `sesiones`, un pedido con la tanda nueva sola le agregaba otro servicio y
+    # dejaba las viejas consolidando con el aviso ya programado.
+    cajas = Paquete.where(medicion_sesion: (viejas + @sesiones).uniq)
+                   .includes(:cliente, :tipo_envio, :manifiesto).order(:id).to_a
     raise NoSePuede, "Esas tandas ya no tienen cajas: se midieron de nuevo. Escaneá otra vez." if cajas.empty?
 
     cliente = @abierta&.cliente || cajas.first.cliente
