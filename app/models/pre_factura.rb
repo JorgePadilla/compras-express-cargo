@@ -198,7 +198,18 @@ class PreFactura < ApplicationRecord
   def anular!
     return false if facturado? || anulado?
 
+    hecho = false
     transaction do
+      # PR-P.8 · La pre-factura se bloquea **antes** que sus cajas, en el mismo
+      # orden que `GuardarPreFacturaAuditada`, `HacerDisponibles` y
+      # `volver_a_consolidar!`. Al revés —cajas primero, como estaba—, anular
+      # en el mismo segundo en que alguien apreta F8 sobre la misma
+      # consolidando era un deadlock que Postgres resuelve abortando a uno
+      # con un 500. Y después del candado se vuelve a mirar: el otro pudo
+      # haberla facturado mientras esperábamos.
+      lock!
+      next if facturado? || anulado?
+
       # Solo se suelta la FK. El estado se queda en `disponible_entrega`, que
       # es donde `confirmar!` lo dejó y donde el paquete físicamente está:
       # anular la pre-factura no devuelve la carga a la aduana. Con la FK en
@@ -211,8 +222,9 @@ class PreFactura < ApplicationRecord
         p.update!(pre_factura_id: nil, **(p.estado == "consolidando_honduras" ? { estado: "en_aduana" } : {}))
       end
       update!(estado: "anulado")
+      hecho = true
     end
-    true
+    hecho
   end
 
   # Builds a PreFactura + items for the given paquete_ids (scoped to the

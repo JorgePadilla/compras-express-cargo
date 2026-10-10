@@ -35,8 +35,25 @@
 # serviría —sus cajas ya están en esta pre-factura y `ArmarPreFacturaPorVolumen`
 # las rechazaría—, y además una tarifa cambiada en el medio movería un monto
 # que ya se imprimió.
+#
+# PR-P.8 · **Con candado.** QA apretó F9 dos veces a la vez sobre la misma
+# tanda (dos pestañas; en la línea es la red que reintenta): las dos pasaban la
+# validación —ninguna veía todavía la pre-factura de la otra— y la segunda
+# moría en `RecordNotUnique` sobre `pre_facturas.numero`, un 500 sin JSON. Que
+# quedara una sola pre-factura era suerte. Ahora, adentro de la transacción y
+# **antes** de armar y validar, se bloquea la pre-factura reabierta (dos F8 que
+# le agregan tandas a la misma se pisaban igual) y **todas** las cajas —las de
+# sus tandas viejas y las nuevas—, en orden de id para que dos guardados no se
+# esperen en cruz. El segundo espera al primero y después ve lo que el primero
+# dejó: las cajas tomadas (el 422 de siempre) o la tanda ya agregada.
 class GuardarPreFacturaAuditada
   class NoSePuede < StandardError; end
+
+  # Cuántas veces se reintenta si el número de pre-factura chocó con el de
+  # otro guardado simultáneo (de **otra** tanda: la misma ya la frena el
+  # candado). `generate_numero` es máximo + 1, y dos que lo calculan a la vez
+  # sacan el mismo.
+  REINTENTOS_POR_NUMERO = 2
 
   MODOS = %i[avisar consolidar].freeze
 
@@ -64,14 +81,17 @@ class GuardarPreFacturaAuditada
   end
 
   def call
-    validar_abierta!
-    pre_factura, cajas, nuevas = armar
-    validar!(cajas, nuevas)
+    raise NoSePuede, "Escaneá primero el QR de un volumen." if @sesiones.empty?
 
-    PreFactura.transaction do
-      pre_factura.assign_attributes(atributos_del_modo(cajas))
-      pre_factura.save!
-      mover_cajas!(cajas)
+    intentos = 0
+    begin
+      pre_factura = guardar_con_candado
+    rescue ActiveRecord::RecordNotUnique => e
+      # La transacción entera se deshizo: volver a empezar es seguro, y el
+      # candado decide de nuevo si las cajas siguen libres.
+      intentos += 1
+      retry if intentos <= REINTENTOS_POR_NUMERO && e.message.include?("numero")
+      raise NoSePuede, "Otra pre-factura se guardó al mismo tiempo y no se pudo numerar esta. Apretá F9 de nuevo."
     end
 
     if @modo == :avisar && pre_factura.notificar_at <= Time.current
@@ -83,6 +103,35 @@ class GuardarPreFacturaAuditada
   end
 
   private
+
+  def guardar_con_candado
+    PreFactura.transaction do
+      # Releída con `FOR UPDATE`: lo que se valida es lo que el otro F8 dejó.
+      # Un objeto nuevo y no `lock!`: en un reintento la de antes trae
+      # cambios a medio guardar.
+      @abierta = PreFactura.lock.find(@abierta.id) if @abierta
+      validar_abierta!
+      bloquear_cajas!
+      # Validar **antes** de armar las líneas: si otro F9 se llevó las cajas
+      # mientras éste esperaba el candado, el rechazo que sale es el de
+      # siempre —«ya está en la pre-factura PF-…»— y no el genérico de
+      # `ArmarPreFacturaPorVolumen`.
+      pre_factura, cajas, = armar { |de_la_tanda, nuevas| validar!(de_la_tanda, nuevas) }
+
+      pre_factura.assign_attributes(atributos_del_modo(cajas))
+      pre_factura.save!
+      mover_cajas!(cajas)
+      pre_factura
+    end
+  end
+
+  # Un solo `SELECT id … ORDER BY id FOR UPDATE` sobre las cajas de las
+  # tandas viejas de la reabierta y de las nuevas: las mismas que `armar` va a
+  # leer, ya bloqueadas.
+  def bloquear_cajas!
+    viejas = @abierta ? self.class.sesiones_de(@abierta) : []
+    Paquete.where(medicion_sesion: (viejas + @sesiones).uniq).order(:id).lock.pluck(:id)
+  end
 
   def armar
     raise NoSePuede, "Escaneá primero el QR de un volumen." if @sesiones.empty?
@@ -98,6 +147,7 @@ class GuardarPreFacturaAuditada
                    .includes(:cliente, :tipo_envio, :manifiesto).order(:id).to_a
     raise NoSePuede, "Esas tandas ya no tienen cajas: se midieron de nuevo. Escaneá otra vez." if cajas.empty?
 
+    yield cajas, nuevas if block_given?
     cliente = @abierta&.cliente || cajas.first.cliente
     return [ ArmarPreFacturaPorVolumen.call(cliente: cliente, sesiones: nuevas, user: @user), cajas, nuevas ] unless @abierta
 
