@@ -294,6 +294,9 @@ Rails.application.routes.draw do
       post   :confirmar
       post   :facturar
       delete :anular
+      # C30-19 · PR-P.3 · La etiqueta de entrega 4×6, la que se escanea al
+      # entregar (C26-12).
+      get    :etiqueta_entrega
     end
     # PR-13.d: el supervisor autoriza un cambio sobre UNA línea. Anidado bajo el
     # item porque el alcance es por línea, no por pre-factura.

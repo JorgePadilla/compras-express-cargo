@@ -27,20 +27,34 @@
     que esperar para medir.
 
     Sin Stimulus y sin `data-shortcut`: esto es un documento de impresión, no
-    una pantalla. %>
+    una pantalla.
+
+    C30-19 · **`data-ajustar-lineas`**: lo mismo, pero dejando envolver. En la
+    etiqueta de entrega 4×6 lo más grande es la sucursal y el nombre del
+    cliente (*"lo que ocupo más grande son la sucursal y el nombre del
+    cliente"*), y un nombre de cinco palabras en un solo renglón tendría que
+    bajar a una letra que no se lee. Con este atributo el texto envuelve y se
+    achica mientras se pase **del alto** que le da el CSS (`max-height` en `em`,
+    así baja con la letra) o del ancho (una palabra sola más larga que la
+    etiqueta). Los que no lo llevan siguen igual que siempre. %>
 <script>
   (function () {
     function ajustar(el) {
       var min = parseFloat(el.getAttribute("data-ajustar-min")) || 6;
       var pt = parseFloat(window.getComputedStyle(el).fontSize) * 72 / 96;
+      var envuelve = el.hasAttribute("data-ajustar-lineas");
       // `white-space: nowrap` es lo que hace medible el ancho: sin él, el
-      // texto envuelve y `scrollWidth` nunca supera a `clientWidth`.
-      el.style.whiteSpace = "nowrap";
+      // texto envuelve y `scrollWidth` nunca supera a `clientWidth`. Con
+      // `data-ajustar-lineas` se lo deja envolver y lo que se mide es el alto.
+      if (!envuelve) el.style.whiteSpace = "nowrap";
+      var sePasa = function () {
+        return el.scrollWidth > el.clientWidth || (envuelve && el.scrollHeight > el.clientHeight);
+      };
       var guarda = 60;
       // `Math.max`: la primera versión comparaba antes de restar y se pasaba
       // del piso hasta 1 pt (un nombre quedó en 5.5 con piso en 6). El piso es
       // el piso: por debajo ya no se lee a la distancia que Yusef pidió.
-      while (el.scrollWidth > el.clientWidth && pt > min && guarda-- > 0) {
+      while (sePasa() && pt > min && guarda-- > 0) {
         pt = Math.max(pt - 1, min);
         el.style.fontSize = pt + "pt";
       }

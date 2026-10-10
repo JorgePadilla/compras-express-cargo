@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <title>Entrega — <%= @etiqueta&.numero %></title>
+  <meta charset="UTF-8">
+  <%# PR-C29.7 · Igual que la 4×6 del bulto: a esta página se puede llegar por
+      una visita de Turbo, y si Turbo solo cambiara el body `window.onload` no
+      volvería a dispararse y el diálogo de impresión no se abriría. %>
+  <meta name="turbo-visit-control" content="reload">
+  <style>
+    /* C30-19 · La etiqueta de ENTREGA: 4 × 6 in, la misma FreeX del bulto,
+       pegada en la bolsa que va al estante de producto terminado y que se
+       escanea al entregar (C26-12).
+
+       Layout propio y no el del bulto (`etiqueta_4x6`): son dos documentos
+       con dos dueños —Miami arma el bulto, San Pedro arma la entrega— y
+       tocar el CSS de uno no puede mover al otro. La mecánica de imprimir es
+       la misma porque son los mismos dos partials.
+
+       **Solo negro**: *"la impresora es negra"*. La franja de consolidando
+       es negro sólido con letra blanca, que en una térmica es lo que más
+       grita sin color.
+
+       Que quepa lo mide `etiqueta_entrega_cabe_test` en Chrome, con el
+       nombre y la sucursal más largos: `overflow: hidden` recorta en
+       silencio, y ninguna fila de esta etiqueta se puede cortar. */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    @page { size: 4in 6in; margin: 0; }
+
+    body { font-family: Arial, Helvetica, sans-serif; color: #000; -webkit-font-smoothing: none; }
+
+    .entrega {
+      width: 4in;
+      height: 6in;
+      padding: .16in;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .entrega + .entrega { page-break-before: always; }
+
+    .rotulo { font-size: 9pt; font-weight: 700; letter-spacing: .08em; }
+
+    /* *"Lo que ocupo más grande son la sucursal y el nombre del cliente… y
+       el tipo de envío."* Los tres arrancan en su tamaño máximo y se achican
+       solos (`data-ajustar`): la sucursal y el nombre pueden envolver a dos
+       renglones (`data-ajustar-lineas` + `max-height` en `em`, que baja con
+       la letra); el tipo de envío va en uno.
+
+       El presupuesto de alto es la restricción real: con la sucursal y el
+       nombre en dos renglones **a tamaño completo**, la franja puesta y el QR,
+       quedan ~14pt de aire (40·2.1 + 32·2.1 + 44·1.15 + franja + QR 1.5in).
+       Subir uno de estos tres se come ese aire: `etiqueta_entrega_cabe_test`
+       tiene ese caso medido. */
+    .sucursal { font-size: 40pt; font-weight: 900; line-height: 1.05; max-height: 2.1em; overflow: hidden; text-transform: uppercase; }
+    .nombre   { font-size: 32pt; font-weight: 700; line-height: 1.05; max-height: 2.1em; overflow: hidden; margin-top: .06in; }
+    .cliente-codigo { font-size: 18pt; font-weight: 700; font-family: "Courier New", monospace; overflow: hidden; }
+    .tipo     { font-size: 44pt; font-weight: 900; line-height: 1.15; overflow: hidden; margin-top: .04in; }
+
+    /* C30-18 · *"Consolidando, así en medio, que estorbe… si alguien va
+       pasando por el estante del producto terminado, vea que el paquete
+       tiene la etiqueta consolidando."* Y *"aquí no puede ser el mismo
+       lugar del QR"*: va en el medio, entre los datos y el QR, de borde a
+       borde, y no tapa nada que se escanee. Los márgenes `auto` la dejan
+       centrada en el aire que haya.
+       (La palabra en mayúsculas no puede ir en este comentario: el `<style>`
+       viaja en el HTML y un test afirma que sin consolidar no aparece.) */
+    .franja {
+      margin: auto -.16in;
+      background: #000;
+      color: #fff;
+      text-align: center;
+      font-size: 34pt;
+      font-weight: 900;
+      letter-spacing: .06em;
+      line-height: 1;
+      padding: .08in 0;
+      overflow: hidden;
+    }
+
+    .abajo { margin-top: auto; display: flex; gap: .12in; align-items: flex-end; }
+    .abajo .qr { flex: 0 0 1.5in; width: 1.5in; height: 1.5in; }
+    .abajo .qr svg { width: 1.5in; height: 1.5in; display: block; }
+    .datos { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: .03in; }
+    .pf     { font-size: 18pt; font-weight: 700; font-family: "Courier New", monospace; overflow: hidden; }
+    .cifra  { display: flex; justify-content: space-between; align-items: baseline; gap: .06in; overflow: hidden; }
+    .cifra .u { font-size: 10pt; font-weight: 700; letter-spacing: .04em; }
+    .cifra .v { font-size: 20pt; font-weight: 700; }
+    .fecha  { font-size: 12pt; font-weight: 700; overflow: hidden; }
+
+    @media screen {
+      body { background: #f3f4f6; padding: 24px; }
+      .entrega { background: #fff; margin: 0 auto 16px; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+    }
+  </style>
+</head>
+<body>
+  <%= yield %>
+  <%# El ajuste va ANTES del autoprint en el markup y corre en DOMContentLoaded;
+      el autoprint imprime en `load`. Ese orden es lo que hace que la impresora
+      reciba el texto ya ajustado — el mismo de `etiqueta_4x6`. %>
+  <%= render "layouts/etiqueta_ajustar_ancho" %>
+  <%= render "layouts/etiqueta_autoprint" %>
+</body>
+</html>
