@@ -77,14 +77,55 @@ class AuditarPreFacturaSystemTest < ApplicationSystemTestCase
     assert_text "faltan 2"
   end
 
+  # PR-P.6 · F8 deja la pre-factura consolidando; cuando llega lo que faltaba,
+  # escanear un volumen suyo la reabre, se le agrega la tanda nueva, y F9 la
+  # programa.
+  test "F8 consolidando, después la tanda nueva, y F9" do
+    # Mañana: si la hora ya pasó, F9 avisa al instante y las cajas no se quedan
+    # en aduana, que es lo que este test mira.
+    preparar_la_hoja(hora: "15:20", fecha: 1.day.from_now.to_date.iso8601)
+    visit auditar_pre_factura_index_path
+    escanear @qr
+    escanear @cajas.first.tracking
+    escanear @cajas.last.tracking
+    assert_selector "[data-auditar-pre-factura-target='finModal'][open]", wait: 5
+
+    window_opened_by { page.driver.browser.action.send_keys(:f8).perform }
+    hasta_que("F8 no guardó") { PreFactura.where(auditado_por: @user).where.not(consolidando_at: nil).exists? }
+    pf = PreFactura.where(auditado_por: @user).last
+    assert_nil pf.notificar_at
+    cerrar_pestanas_extra
+
+    # Llega lo que faltaba: una tanda nueva del mismo cliente.
+    nueva = Paquete.create!(tracking: "1ZNUEVA#{SecureRandom.hex(4).upcase}", cliente: @cliente, tipo_envio: @cer,
+                            sucursal_recepcion: sucursales(:miami), manifiesto: @manifiesto,
+                            estado: "en_aduana", descripcion: "Zapatos", peso: 2)
+    nuevo, = MedirBulto.new(user: @user).guardar!(paquete_ids: [ nueva.id ], volumenes: [ { peso: "3" } ])
+
+    escanear @qr
+    assert_text "Agregando a la pre-factura #{pf.numero}", wait: 5
+    escanear "MED #{nueva.reload.tracking} 3.00"
+    assert_text "faltan 1", wait: 5
+    escanear nueva.tracking
+    assert_selector "[data-auditar-pre-factura-target='finModal'][open]", wait: 5
+
+    window_opened_by { page.driver.browser.action.send_keys(:f9).perform }
+    hasta_que("F9 no programó") { pf.reload.consolidando_at.nil? && pf.notificar_at.present? }
+
+    assert_equal [ 15, 20 ], [ pf.notificar_at.hour, pf.notificar_at.min ]
+    assert_equal [ @bulto.id, nuevo.id ].sort, pf.pre_factura_items.where(origen: "volumen").pluck(:bulto_id).sort
+    assert_equal "en_aduana", nueva.reload.estado
+  end
+
   private
 
-  def preparar_la_hoja(hora: "07:30")
+  def preparar_la_hoja(hora: "07:30", fecha: nil)
     visit hoja_de_preparacion_path
     find("label", text: @cer.nombre, exact_text: true).click
     click_on "Ver manifiestos"
     find("#hoja_manifiesto_#{@manifiesto.id}", visible: :all).check
     page.execute_script("document.querySelector('#hoja_hora')._flatpickr.setDate('#{hora}', true)")
+    page.execute_script("document.querySelector('#hoja_fecha')._flatpickr.setDate('#{fecha}', true)") if fecha
     click_on "Guardar la hoja"
     assert_selector "a", text: "Empezar a auditar", wait: 5
   end

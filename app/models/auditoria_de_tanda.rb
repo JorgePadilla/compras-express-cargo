@@ -36,9 +36,12 @@ class AuditoriaDeTanda
 
   # `hoja`: la hoja de preparación del que audita (sus servicios y manifiestos).
   # `sesiones`: las tandas que ya están en la pantalla.
-  def initialize(hoja:, sesiones: [])
+  # `abierta`: la pre-factura consolidando que la pantalla reabrió (PR-P.6), si
+  # alguna: sus cajas no cuentan como «ya en otra pre-factura».
+  def initialize(hoja:, sesiones: [], abierta: nil)
     @hoja = hoja
     @sesiones = Array(sesiones).map(&:to_s).compact_blank.uniq
+    @abierta = abierta
   end
 
   # ── Un volumen (el QR `MED …`) ───────────────────────────────────────────
@@ -111,8 +114,10 @@ class AuditoriaDeTanda
       return Resultado.new(tipo: :repetido, mensaje: "Esa tanda ya está en pantalla: escaneá sus cajas.")
     end
 
-    if (con_pf = cajas.find(&:pre_factura_id))
+    if (con_pf = cajas.find { |c| c.pre_factura_id && c.pre_factura_id != @abierta&.id })
       pf = PreFactura.find_by(id: con_pf.pre_factura_id)
+      return consolidando(pf, con_pf) if consolidando_reabrible?(pf, con_pf)
+
       return Resultado.new(tipo: :ya_prefacturada, pre_factura: pf,
                            mensaje: "#{codigo_de(con_pf)} ya está en la pre-factura #{pf&.numero}.")
     end
@@ -146,6 +151,26 @@ class AuditoriaDeTanda
   end
 
   private
+
+  # PR-P.6 · Una tanda que está en una pre-factura que F8 dejó **consolidando**
+  # —sin avisar, esperando la carga que falta— no es «ya pre-facturada»: es la
+  # puerta para agregarle la tanda nueva. Yusef: *"tenemos que escanear primero
+  # el volumen… ¿desea agregar más paquetes a este volumen, o nuevo volumen?"*.
+  def consolidando_reabrible?(pf, caja)
+    pf.present? && pf.creado? && pf.consolidando_at.present? && pf.notificado_at.nil? &&
+      pf.cliente_id == caja.cliente_id
+  end
+
+  def consolidando(pf, caja)
+    if @sesiones.any? || @abierta
+      return Resultado.new(tipo: :ya_prefacturada, pre_factura: pf,
+                           mensaje: "#{codigo_de(caja)} está en la pre-factura #{pf.numero}, consolidando. " \
+                                    "Para agregarle carga, limpiá la pantalla (F2) y escaneá primero este volumen.")
+    end
+
+    Resultado.new(tipo: :consolidando, pre_factura: pf,
+                  mensaje: "La pre-factura #{pf.numero} está consolidando: escaneá el volumen nuevo que se le agrega.")
+  end
 
   # C27-17 · Una pre-factura es de un cliente, un servicio y una pre-alerta
   # consolidada: la misma regla que la mesa de medición (`PuedenIrJuntas`).

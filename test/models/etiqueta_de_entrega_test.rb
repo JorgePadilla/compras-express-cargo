@@ -102,13 +102,15 @@ class EtiquetaDeEntregaTest < ActiveSupport::TestCase
     assert_equal "09/10/2026", etiqueta.fecha
   end
 
-  # PR-P.2 trae `consolidando_at`. Hasta entonces la franja no sale nunca, y
-  # cuando la columna exista sale sola.
+  # PR-P.6 · La franja sale con F8 (`consolidando_at` puesto) y no con F9
+  # (`consolidando_at` en nil). Se lee la columna directo: ya existe (PR-P.2).
   test "consolidando solo si la pre-factura lo dice" do
     assert_not etiqueta.consolidando?
 
-    pf = @pf.reload
-    pf.define_singleton_method(:consolidando_at) { Time.current }
-    assert EtiquetaDeEntrega.new(pf).consolidando?
+    @pf.update_columns(consolidando_at: Time.current)
+    assert EtiquetaDeEntrega.new(@pf.reload).consolidando?
+
+    @pf.update_columns(consolidando_at: nil)
+    assert_not EtiquetaDeEntrega.new(@pf.reload).consolidando?
   end
 end
