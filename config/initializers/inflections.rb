@@ -63,4 +63,5 @@ ActiveSupport::Inflector.inflections(:en) do |inflect|
   inflect.irregular "autorizacion_sar", "autorizaciones_sar"
   inflect.irregular "correlativo_fiscal", "correlativos_fiscales"
   inflect.irregular "asiento_fiscal", "asientos_fiscales"
+  inflect.irregular "documento_fiscal", "documentos_fiscales"  # PR-F1.2
 end

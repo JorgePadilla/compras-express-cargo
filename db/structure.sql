@@ -269,8 +269,8 @@ CREATE TABLE public.asientos_fiscales (
     tipo_documento character(2) NOT NULL,
     numero character varying NOT NULL,
     punto_de_emision_id bigint NOT NULL,
-    documento_type character varying NOT NULL,
-    documento_id bigint NOT NULL,
+    documento_type character varying,
+    documento_id bigint,
     referencia character varying,
     fecha_emision date NOT NULL,
     cai character varying NOT NULL,
@@ -883,6 +883,47 @@ CREATE SEQUENCE public.cotizaciones_id_seq
 --
 
 ALTER SEQUENCE public.cotizaciones_id_seq OWNED BY public.cotizaciones.id;
+
+
+--
+-- Name: documentos_fiscales; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.documentos_fiscales (
+    id bigint NOT NULL,
+    numero character varying NOT NULL,
+    punto_de_emision_id bigint NOT NULL,
+    tipo_documento character(2) NOT NULL,
+    fecha_emision date NOT NULL,
+    estado character varying NOT NULL,
+    cai character varying NOT NULL,
+    documento jsonb NOT NULL,
+    documentable_type character varying,
+    documentable_id bigint,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT documentos_fiscales_estado CHECK (((estado)::text = ANY (ARRAY['emitida'::text, 'anulada'::text]))),
+    CONSTRAINT documentos_fiscales_tipo_documento CHECK ((tipo_documento = ANY (ARRAY['01'::bpchar, '06'::bpchar, '07'::bpchar])))
+);
+
+
+--
+-- Name: documentos_fiscales_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.documentos_fiscales_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: documentos_fiscales_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.documentos_fiscales_id_seq OWNED BY public.documentos_fiscales.id;
 
 
 --
@@ -3728,6 +3769,13 @@ ALTER TABLE ONLY public.cotizaciones ALTER COLUMN id SET DEFAULT nextval('public
 
 
 --
+-- Name: documentos_fiscales id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.documentos_fiscales ALTER COLUMN id SET DEFAULT nextval('public.documentos_fiscales_id_seq'::regclass);
+
+
+--
 -- Name: egresos_caja id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -4378,6 +4426,14 @@ ALTER TABLE ONLY public.cotizacion_items
 
 ALTER TABLE ONLY public.cotizaciones
     ADD CONSTRAINT cotizaciones_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: documentos_fiscales documentos_fiscales_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.documentos_fiscales
+    ADD CONSTRAINT documentos_fiscales_pkey PRIMARY KEY (id);
 
 
 --
@@ -5412,6 +5468,34 @@ CREATE UNIQUE INDEX index_cotizaciones_on_numero ON public.cotizaciones USING bt
 --
 
 CREATE INDEX index_cotizaciones_on_venta_id ON public.cotizaciones USING btree (venta_id);
+
+
+--
+-- Name: index_documentos_fiscales_on_documentable; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_documentos_fiscales_on_documentable ON public.documentos_fiscales USING btree (documentable_type, documentable_id);
+
+
+--
+-- Name: index_documentos_fiscales_on_fecha_emision; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_documentos_fiscales_on_fecha_emision ON public.documentos_fiscales USING btree (fecha_emision);
+
+
+--
+-- Name: index_documentos_fiscales_on_numero; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_documentos_fiscales_on_numero ON public.documentos_fiscales USING btree (numero);
+
+
+--
+-- Name: index_documentos_fiscales_on_punto_de_emision_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_documentos_fiscales_on_punto_de_emision_id ON public.documentos_fiscales USING btree (punto_de_emision_id);
 
 
 --
@@ -6992,6 +7076,14 @@ ALTER TABLE ONLY public.tareas
 
 
 --
+-- Name: documentos_fiscales fk_rails_0560d570de; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.documentos_fiscales
+    ADD CONSTRAINT fk_rails_0560d570de FOREIGN KEY (punto_de_emision_id) REFERENCES public.puntos_de_emision(id);
+
+
+--
 -- Name: pre_alerta_paquetes fk_rails_057a3229ab; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8270,6 +8362,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261011120000'),
 ('20261010170000'),
 ('20261010150000'),
 ('20261010130100'),
