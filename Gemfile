@@ -78,3 +78,9 @@ gem "barby", "~> 0.6"
 # o sea aceptando el costo. `barby` se queda: el warehouse del paquete sigue en
 # Code128, que es lo que leen las pistolas de hoy.
 gem "rqrcode", "~> 3.0"
+
+# Fase 15 · Facturación SAR (Acuerdo 481-2017): el número fiscal, el CAI, el
+# rango, las leyendas y el libro. La app le pone los adaptadores de Postgres
+# (`app/services/fiscal/`). D8 de FISCAL.md: desde RubyGems, la 0.2.0 trae las
+# notas de crédito y débito con referencia y los contratos de test.
+gem "invoicehn", "~> 0.2.0"

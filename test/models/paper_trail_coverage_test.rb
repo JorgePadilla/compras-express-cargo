@@ -10,7 +10,7 @@ class PaperTrailCoverageTest < ActiveSupport::TestCase
     WarehouseReceipt Cotizacion NotaDebito NotaCredito Financiamiento
     Sucursal Proveedor MotivoRetencion PlantillaNotaCliente Carrier
     EmpresaManifiesto MotivoEnvioPolitica
-    PuntoDeEmision AutorizacionSar
+    PuntoDeEmision AutorizacionSar DocumentoFiscal
   ].freeze
 
   test "cada modelo audited tiene paper_trail habilitado" do

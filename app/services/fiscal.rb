@@ -49,4 +49,28 @@ module Fiscal
   def self.normalizar_rtn(valor)
     valor.to_s.gsub(/[\s-]/, "").presence
   end
+
+  # PR-F1.2 · La emisión con la gema, armada con los adaptadores de Postgres.
+  # `punto` decide la dirección del establecimiento en el emisor; el número lo
+  # decide el `identifier:` que se le pasa a `#issue` (`punto.identificador`).
+  # `borrador` es el registro de negocio que se estampa con el número (ver
+  # `Fiscal::Store`); sin él, el documento se guarda igual.
+  def self.issuance(punto:, borrador: nil)
+    Invoicehn::Issuance.new(store: Store.new(punto: punto, borrador: borrador),
+                            sequence: Sequence.new, ledger: Ledger.new)
+  end
+
+  # "EEE-PPP-TT" → [PuntoDeEmision, "TT"]. La gema habla en identificadores;
+  # las tablas, en punto y tipo.
+  def self.punto_y_tipo(identificador)
+    establecimiento, punto, tipo = identificador.to_s.split("-")
+    unless TIPOS_DE_DOCUMENTO.key?(tipo)
+      raise Invoicehn::ValidationError, "tipo de documento que no se emite: #{identificador.inspect}"
+    end
+
+    punto_de_emision = PuntoDeEmision.find_by(establecimiento: establecimiento, punto: punto)
+    raise Invoicehn::ValidationError, "no hay punto de emisión #{establecimiento}-#{punto}" unless punto_de_emision
+
+    [ punto_de_emision, tipo ]
+  end
 end
