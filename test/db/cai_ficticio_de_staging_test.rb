@@ -17,10 +17,13 @@ class CaiFicticioDeStagingTest < ActiveSupport::TestCase
     PuntoDeEmision.delete_all
   end
 
-  def migrar(sample: "true", host: "cec-staging.onrender.com")
+  # Un deploy de Render: `RAILS_ENV=production` en los dos servidores, y el
+  # host dice cuál es (`Fiscal.produccion?`, que falla cerrado desde la QA de
+  # PR-F1.1).
+  def migrar(sample: "true", host: Fiscal::HOST_DE_STAGING)
     antes = ENV["SEED_SAMPLE_DATA"]
     sample.nil? ? ENV.delete("SEED_SAMPLE_DATA") : ENV["SEED_SAMPLE_DATA"] = sample
-    con_app_host(host) do
+    en_servidor(host) do
       ActiveRecord::Migration.suppress_messages { SembrarCaiFicticioDeStaging.new.up }
     end
   ensure
@@ -33,9 +36,30 @@ class CaiFicticioDeStagingTest < ActiveSupport::TestCase
     end
   end
 
+  # QA de PR-F1.5 · Quien lo pone en false o en 0 lo quiere apagado.
+  test "SEED_SAMPLE_DATA en false, 0 o vacío no siembra" do
+    [ "false", "0", "", "no" ].each do |valor|
+      assert_no_difference -> { PuntoDeEmision.count + AutorizacionSar.count }, "SEED_SAMPLE_DATA=#{valor.inspect}" do
+        migrar(sample: valor)
+      end
+    end
+  end
+
   test "en el host de producción no hace nada, aunque tenga SEED_SAMPLE_DATA" do
     assert_no_difference -> { PuntoDeEmision.count + AutorizacionSar.count } do
       migrar(host: Fiscal::HOST_DE_PRODUCCION)
+    end
+  end
+
+  # QA de PR-F1.5 · Producción contesta hoy en cec-production.onrender.com, no
+  # en el dominio de render.yaml, y Render ya no sincroniza el blueprint: su
+  # APP_HOST real puede ser cualquiera. Con SEED_SAMPLE_DATA puesto por error,
+  # la regla vieja (`APP_HOST == HOST_DE_PRODUCCION`) sembraba ahí.
+  test "en un servidor que no es staging no hace nada, diga lo que diga APP_HOST" do
+    [ "cec-production.onrender.com", nil, "", "CEC-STAGING.onrender.com", "cec-staging.onrender.com.evil.com" ].each do |host|
+      assert_no_difference -> { PuntoDeEmision.count + AutorizacionSar.count }, "host #{host.inspect}" do
+        migrar(host: host)
+      end
     end
   end
 

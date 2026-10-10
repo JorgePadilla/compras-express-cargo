@@ -10,12 +10,15 @@
 #
 # ── Los frenos, en orden ──────────────────────────────────────────────────
 #
-# 1. `SEED_SAMPLE_DATA` presente: solo staging lo tiene (render.yaml). Lo exige
+# 1. `SEED_SAMPLE_DATA=true` (exacto): solo staging lo tiene (render.yaml). Lo exige
 #    la migración; los seeds ya están adentro de su propio guard de datos de
 #    muestra, que también deja pasar a development.
-# 2. El host no es el de producción. Staging y producción corren las dos con
-#    `RAILS_ENV=production`; si alguien le pusiera `SEED_SAMPLE_DATA` a
-#    producción, esto igual no siembra. El modelo tampoco aceptaría la ficticia.
+# 2. No es producción (`Fiscal.produccion?`). Staging y producción corren las
+#    dos con `RAILS_ENV=production`, y desde la QA de PR-F1.1 la regla falla
+#    cerrado: con RAILS_ENV=production, solo el host exacto de staging no es
+#    producción. Si alguien le pusiera `SEED_SAMPLE_DATA` a producción, esto
+#    igual no siembra, sea cual sea su APP_HOST. El modelo tampoco aceptaría
+#    la ficticia.
 # 3. `autorizaciones_sar` vacía: si alguien ya cargó una por la pantalla
 #    (F1.3), no se le agrega nada encima.
 #
@@ -76,7 +79,9 @@ module CaiFicticioDeStaging
   end
 
   def self.freno(exigir_datos_de_muestra)
-    if exigir_datos_de_muestra && ENV["SEED_SAMPLE_DATA"].blank? then :sin_datos_de_muestra
+    # `"true"` y nada más (QA de PR-F1.5): `SEED_SAMPLE_DATA=false` o `=0`,
+    # que alguien pondría para **apagarlo**, con `.blank?` contaban como puesto.
+    if exigir_datos_de_muestra && ENV["SEED_SAMPLE_DATA"].to_s.strip.downcase != "true" then :sin_datos_de_muestra
     elsif Fiscal.produccion? then :produccion
     elsif AutorizacionSar.exists? then :ya_hay_autorizaciones
     end
