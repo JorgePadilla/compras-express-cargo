@@ -56,4 +56,11 @@ ActiveSupport::Inflector.inflections(:en) do |inflect|
   inflect.irregular "manifiesto_guia", "manifiesto_guias"
   # PR-13.d: sin esto `has_many :autorizaciones` busca la clase `Autorizacione`.
   inflect.irregular "autorizacion", "autorizaciones"
+  # PR-F1.1 · Fase 15 (SAR): el `irregular` de arriba solo mira la última
+  # palabra, así que `autorizacion_sar` daba `autorizacion_sars`, y «fiscal»
+  # da `fiscals`. Cada modelo nuevo, con su par completo.
+  inflect.irregular "punto_de_emision", "puntos_de_emision"
+  inflect.irregular "autorizacion_sar", "autorizaciones_sar"
+  inflect.irregular "correlativo_fiscal", "correlativos_fiscales"
+  inflect.irregular "asiento_fiscal", "asientos_fiscales"
 end

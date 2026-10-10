@@ -11,6 +11,20 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
+-- Name: btree_gist; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS btree_gist WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION btree_gist; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION btree_gist IS 'support for indexing common datatypes in GiST';
+
+
+--
 -- Name: pg_trgm; Type: EXTENSION; Schema: -; Owner: -
 --
 
@@ -22,6 +36,20 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
 --
 
 COMMENT ON EXTENSION pg_trgm IS 'text similarity measurement and index searching based on trigrams';
+
+
+--
+-- Name: asientos_fiscales_solo_agregar(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.asientos_fiscales_solo_agregar() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  RAISE EXCEPTION 'asientos_fiscales solo admite INSERT (% rechazado)', TG_OP
+    USING ERRCODE = 'restrict_violation';
+END
+$$;
 
 
 SET default_tablespace = '';
@@ -232,6 +260,56 @@ CREATE TABLE public.ar_internal_metadata (
 
 
 --
+-- Name: asientos_fiscales; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.asientos_fiscales (
+    id bigint NOT NULL,
+    evento character varying NOT NULL,
+    tipo_documento character(2) NOT NULL,
+    numero character varying NOT NULL,
+    punto_de_emision_id bigint NOT NULL,
+    documento_type character varying NOT NULL,
+    documento_id bigint NOT NULL,
+    referencia character varying,
+    fecha_emision date NOT NULL,
+    cai character varying NOT NULL,
+    cliente_nombre character varying,
+    cliente_rtn character varying,
+    moneda character varying NOT NULL,
+    subtotal numeric(12,2) NOT NULL,
+    descuento numeric(12,2) DEFAULT 0.0 NOT NULL,
+    isv numeric(12,2) NOT NULL,
+    total numeric(12,2) NOT NULL,
+    estado character varying NOT NULL,
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    usuario_id bigint,
+    registrado_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT asientos_fiscales_evento CHECK (((evento)::text = ANY (ARRAY['emision'::text, 'anulacion'::text]))),
+    CONSTRAINT asientos_fiscales_tipo_documento CHECK ((tipo_documento = ANY (ARRAY['01'::bpchar, '06'::bpchar, '07'::bpchar])))
+);
+
+
+--
+-- Name: asientos_fiscales_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.asientos_fiscales_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: asientos_fiscales_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.asientos_fiscales_id_seq OWNED BY public.asientos_fiscales.id;
+
+
+--
 -- Name: autorizaciones; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -270,6 +348,47 @@ CREATE SEQUENCE public.autorizaciones_id_seq
 --
 
 ALTER SEQUENCE public.autorizaciones_id_seq OWNED BY public.autorizaciones.id;
+
+
+--
+-- Name: autorizaciones_sar; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.autorizaciones_sar (
+    id bigint NOT NULL,
+    punto_de_emision_id bigint NOT NULL,
+    tipo_documento character(2) NOT NULL,
+    cai character varying NOT NULL,
+    rango_inicio bigint NOT NULL,
+    rango_fin bigint NOT NULL,
+    fecha_limite_emision date NOT NULL,
+    fecha_autorizacion date,
+    ficticia boolean DEFAULT false NOT NULL,
+    cargada_por_id bigint,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT autorizaciones_sar_rango CHECK (((rango_inicio >= 1) AND (rango_inicio <= rango_fin) AND (rango_fin <= 99999999))),
+    CONSTRAINT autorizaciones_sar_tipo_documento CHECK ((tipo_documento = ANY (ARRAY['01'::bpchar, '06'::bpchar, '07'::bpchar])))
+);
+
+
+--
+-- Name: autorizaciones_sar_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.autorizaciones_sar_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: autorizaciones_sar_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.autorizaciones_sar_id_seq OWNED BY public.autorizaciones_sar.id;
 
 
 --
@@ -646,6 +765,41 @@ ALTER SEQUENCE public.consignatarios_id_seq OWNED BY public.consignatarios.id;
 
 
 --
+-- Name: correlativos_fiscales; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.correlativos_fiscales (
+    id bigint NOT NULL,
+    punto_de_emision_id bigint NOT NULL,
+    tipo_documento character(2) NOT NULL,
+    ultimo bigint DEFAULT 0 NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT correlativos_fiscales_tipo_documento CHECK ((tipo_documento = ANY (ARRAY['01'::bpchar, '06'::bpchar, '07'::bpchar]))),
+    CONSTRAINT correlativos_fiscales_ultimo CHECK (((ultimo >= 0) AND (ultimo <= 99999999)))
+);
+
+
+--
+-- Name: correlativos_fiscales_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.correlativos_fiscales_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: correlativos_fiscales_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.correlativos_fiscales_id_seq OWNED BY public.correlativos_fiscales.id;
+
+
+--
 -- Name: cotizacion_items; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -834,7 +988,8 @@ CREATE TABLE public.empresas (
     sitio_web character varying,
     terminos_factura text,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    razon_social character varying
 );
 
 
@@ -2149,6 +2304,42 @@ ALTER SEQUENCE public.proveedores_id_seq OWNED BY public.proveedores.id;
 
 
 --
+-- Name: puntos_de_emision; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.puntos_de_emision (
+    id bigint NOT NULL,
+    sucursal_id bigint NOT NULL,
+    establecimiento character(3) NOT NULL,
+    punto character(3) NOT NULL,
+    activo boolean DEFAULT true NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT puntos_de_emision_establecimiento_tres_digitos CHECK ((establecimiento ~ '^[0-9]{3}$'::text)),
+    CONSTRAINT puntos_de_emision_punto_tres_digitos CHECK ((punto ~ '^[0-9]{3}$'::text))
+);
+
+
+--
+-- Name: puntos_de_emision_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.puntos_de_emision_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: puntos_de_emision_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.puntos_de_emision_id_seq OWNED BY public.puntos_de_emision.id;
+
+
+--
 -- Name: rc_counters; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2799,7 +2990,8 @@ CREATE TABLE public.sucursales (
     codigo_ep character varying(3),
     retiro_por_defecto boolean DEFAULT false NOT NULL,
     recibe_carga boolean DEFAULT false NOT NULL,
-    recepcion_por_defecto boolean DEFAULT false NOT NULL
+    recepcion_por_defecto boolean DEFAULT false NOT NULL,
+    direccion text
 );
 
 
@@ -3424,10 +3616,24 @@ ALTER TABLE ONLY public.aperturas_caja ALTER COLUMN id SET DEFAULT nextval('publ
 
 
 --
+-- Name: asientos_fiscales id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asientos_fiscales ALTER COLUMN id SET DEFAULT nextval('public.asientos_fiscales_id_seq'::regclass);
+
+
+--
 -- Name: autorizaciones id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.autorizaciones ALTER COLUMN id SET DEFAULT nextval('public.autorizaciones_id_seq'::regclass);
+
+
+--
+-- Name: autorizaciones_sar id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.autorizaciones_sar ALTER COLUMN id SET DEFAULT nextval('public.autorizaciones_sar_id_seq'::regclass);
 
 
 --
@@ -3498,6 +3704,13 @@ ALTER TABLE ONLY public.configuracions ALTER COLUMN id SET DEFAULT nextval('publ
 --
 
 ALTER TABLE ONLY public.consignatarios ALTER COLUMN id SET DEFAULT nextval('public.consignatarios_id_seq'::regclass);
+
+
+--
+-- Name: correlativos_fiscales id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.correlativos_fiscales ALTER COLUMN id SET DEFAULT nextval('public.correlativos_fiscales_id_seq'::regclass);
 
 
 --
@@ -3743,6 +3956,13 @@ ALTER TABLE ONLY public.pre_facturas ALTER COLUMN id SET DEFAULT nextval('public
 --
 
 ALTER TABLE ONLY public.proveedores ALTER COLUMN id SET DEFAULT nextval('public.proveedores_id_seq'::regclass);
+
+
+--
+-- Name: puntos_de_emision id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.puntos_de_emision ALTER COLUMN id SET DEFAULT nextval('public.puntos_de_emision_id_seq'::regclass);
 
 
 --
@@ -4025,11 +4245,35 @@ ALTER TABLE ONLY public.ar_internal_metadata
 
 
 --
+-- Name: asientos_fiscales asientos_fiscales_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asientos_fiscales
+    ADD CONSTRAINT asientos_fiscales_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: autorizaciones autorizaciones_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.autorizaciones
     ADD CONSTRAINT autorizaciones_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: autorizaciones_sar autorizaciones_sar_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.autorizaciones_sar
+    ADD CONSTRAINT autorizaciones_sar_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: autorizaciones_sar autorizaciones_sar_sin_solapar; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.autorizaciones_sar
+    ADD CONSTRAINT autorizaciones_sar_sin_solapar EXCLUDE USING gist (punto_de_emision_id WITH =, tipo_documento WITH =, int8range(rango_inicio, rango_fin, '[]'::text) WITH &&);
 
 
 --
@@ -4110,6 +4354,14 @@ ALTER TABLE ONLY public.configuracions
 
 ALTER TABLE ONLY public.consignatarios
     ADD CONSTRAINT consignatarios_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: correlativos_fiscales correlativos_fiscales_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.correlativos_fiscales
+    ADD CONSTRAINT correlativos_fiscales_pkey PRIMARY KEY (id);
 
 
 --
@@ -4390,6 +4642,14 @@ ALTER TABLE ONLY public.pre_facturas
 
 ALTER TABLE ONLY public.proveedores
     ADD CONSTRAINT proveedores_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: puntos_de_emision puntos_de_emision_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.puntos_de_emision
+    ADD CONSTRAINT puntos_de_emision_pkey PRIMARY KEY (id);
 
 
 --
@@ -4833,6 +5093,41 @@ CREATE UNIQUE INDEX index_aperturas_caja_on_numero ON public.aperturas_caja USIN
 
 
 --
+-- Name: index_asientos_fiscales_on_documento; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_asientos_fiscales_on_documento ON public.asientos_fiscales USING btree (documento_type, documento_id);
+
+
+--
+-- Name: index_asientos_fiscales_on_fecha_emision; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_asientos_fiscales_on_fecha_emision ON public.asientos_fiscales USING btree (fecha_emision);
+
+
+--
+-- Name: index_asientos_fiscales_on_numero_and_evento; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_asientos_fiscales_on_numero_and_evento ON public.asientos_fiscales USING btree (numero, evento);
+
+
+--
+-- Name: index_asientos_fiscales_on_punto_de_emision_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_asientos_fiscales_on_punto_de_emision_id ON public.asientos_fiscales USING btree (punto_de_emision_id);
+
+
+--
+-- Name: index_asientos_fiscales_on_usuario_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_asientos_fiscales_on_usuario_id ON public.asientos_fiscales USING btree (usuario_id);
+
+
+--
 -- Name: index_autorizaciones_on_accion; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4872,6 +5167,20 @@ CREATE INDEX index_autorizaciones_on_pre_factura_item_id ON public.autorizacione
 --
 
 CREATE INDEX index_autorizaciones_on_solicitado_por_id ON public.autorizaciones USING btree (solicitado_por_id);
+
+
+--
+-- Name: index_autorizaciones_sar_on_cargada_por_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_autorizaciones_sar_on_cargada_por_id ON public.autorizaciones_sar USING btree (cargada_por_id);
+
+
+--
+-- Name: index_autorizaciones_sar_unicas; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_autorizaciones_sar_unicas ON public.autorizaciones_sar USING btree (punto_de_emision_id, tipo_documento, cai, rango_inicio);
 
 
 --
@@ -5047,6 +5356,13 @@ CREATE INDEX index_clientes_on_sucursal_retiro_id ON public.clientes USING btree
 --
 
 CREATE UNIQUE INDEX index_configuracions_on_clave ON public.configuracions USING btree (clave);
+
+
+--
+-- Name: index_correlativos_fiscales_unicos; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_correlativos_fiscales_unicos ON public.correlativos_fiscales USING btree (punto_de_emision_id, tipo_documento);
 
 
 --
@@ -5974,6 +6290,20 @@ CREATE INDEX index_proveedores_on_tipo ON public.proveedores USING btree (tipo);
 
 
 --
+-- Name: index_puntos_de_emision_on_establecimiento_and_punto; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_puntos_de_emision_on_establecimiento_and_punto ON public.puntos_de_emision USING btree (establecimiento, punto);
+
+
+--
+-- Name: index_puntos_de_emision_on_sucursal_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_puntos_de_emision_on_sucursal_id ON public.puntos_de_emision USING btree (sucursal_id);
+
+
+--
 -- Name: index_rc_counters_on_proveedor_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6639,6 +6969,13 @@ CREATE INDEX index_warehouse_receipts_on_user_id ON public.warehouse_receipts US
 
 
 --
+-- Name: asientos_fiscales asientos_fiscales_solo_agregar; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER asientos_fiscales_solo_agregar BEFORE DELETE OR UPDATE ON public.asientos_fiscales FOR EACH ROW EXECUTE FUNCTION public.asientos_fiscales_solo_agregar();
+
+
+--
 -- Name: manifiesto_tipo_envios fk_rails_00f8a61e20; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6935,6 +7272,14 @@ ALTER TABLE ONLY public.solid_queue_failed_executions
 
 
 --
+-- Name: asientos_fiscales fk_rails_3b98f5b2c9; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asientos_fiscales
+    ADD CONSTRAINT fk_rails_3b98f5b2c9 FOREIGN KEY (usuario_id) REFERENCES public.users(id);
+
+
+--
 -- Name: ep_counters fk_rails_3c629b8689; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7196,6 +7541,14 @@ ALTER TABLE ONLY public.paquetes
 
 ALTER TABLE ONLY public.bultos
     ADD CONSTRAINT fk_rails_7d15388a09 FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: correlativos_fiscales fk_rails_7d61b8f097; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.correlativos_fiscales
+    ADD CONSTRAINT fk_rails_7d61b8f097 FOREIGN KEY (punto_de_emision_id) REFERENCES public.puntos_de_emision(id);
 
 
 --
@@ -7519,6 +7872,14 @@ ALTER TABLE ONLY public.paquetes
 
 
 --
+-- Name: puntos_de_emision fk_rails_bb07fe8cbd; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.puntos_de_emision
+    ADD CONSTRAINT fk_rails_bb07fe8cbd FOREIGN KEY (sucursal_id) REFERENCES public.sucursales(id);
+
+
+--
 -- Name: paquete_motivos_retencion fk_rails_bb4a99be86; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7612,6 +7973,22 @@ ALTER TABLE ONLY public.solid_queue_scheduled_executions
 
 ALTER TABLE ONLY public.venta_items
     ADD CONSTRAINT fk_rails_c4435e5926 FOREIGN KEY (venta_id) REFERENCES public.ventas(id);
+
+
+--
+-- Name: autorizaciones_sar fk_rails_c6a0ff524d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.autorizaciones_sar
+    ADD CONSTRAINT fk_rails_c6a0ff524d FOREIGN KEY (punto_de_emision_id) REFERENCES public.puntos_de_emision(id);
+
+
+--
+-- Name: autorizaciones_sar fk_rails_c6cb0e4b4c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.autorizaciones_sar
+    ADD CONSTRAINT fk_rails_c6cb0e4b4c FOREIGN KEY (cargada_por_id) REFERENCES public.users(id);
 
 
 --
@@ -7740,6 +8117,14 @@ ALTER TABLE ONLY public.manifiestos
 
 ALTER TABLE ONLY public.tarifas
     ADD CONSTRAINT fk_rails_df00b19ef7 FOREIGN KEY (cliente_id) REFERENCES public.clientes(id);
+
+
+--
+-- Name: asientos_fiscales fk_rails_e1fd0fd6b2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asientos_fiscales
+    ADD CONSTRAINT fk_rails_e1fd0fd6b2 FOREIGN KEY (punto_de_emision_id) REFERENCES public.puntos_de_emision(id);
 
 
 --
@@ -7885,6 +8270,8 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261010130100'),
+('20261010130000'),
 ('20261010120000'),
 ('20261009200000'),
 ('20261009190000'),

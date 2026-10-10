@@ -3,6 +3,7 @@ class Cliente < ApplicationRecord
   # seguridad — aunque es hash y no plaintext, no aporta valor al
   # log y reduce la superficie ante una brecha del audit_log.
   has_paper_trail skip: %i[password_digest]
+  include ConRtn  # PR-F1.1: el RTN del comprador en la factura SAR
 
   # validations: false because admins create clients without passwords;
   # only clients who opt into portal access get a password set later.

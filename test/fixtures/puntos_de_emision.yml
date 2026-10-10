@@ -1,0 +1,19 @@
+# PR-F1.1 · Un punto de emisión por sucursal de Honduras, con los números que
+# va a sembrar F1.5 en staging (FISCAL.md). Miami no factura: no tiene.
+sps:
+  sucursal: zeron_sps
+  establecimiento: "000"
+  punto: "001"
+  activo: true
+
+tgu:
+  sucursal: humuya_tgu
+  establecimiento: "001"
+  punto: "001"
+  activo: true
+
+sam:
+  sucursal: san_manuel
+  establecimiento: "002"
+  punto: "001"
+  activo: true

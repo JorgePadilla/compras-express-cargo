@@ -1,0 +1,5 @@
+# PR-F1.1 · El contador de facturas de SPS, sin nada emitido todavía.
+sps_factura:
+  punto_de_emision: sps
+  tipo_documento: "01"
+  ultimo: 0

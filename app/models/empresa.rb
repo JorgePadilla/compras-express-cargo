@@ -1,6 +1,7 @@
 class Empresa < ApplicationRecord
   has_paper_trail  # PR-D7: audit log — datos de empresa, ISV
   has_one_attached :logo
+  include ConRtn  # PR-F1.1: el RTN del emisor en la factura SAR
 
   validates :nombre, presence: true
   validates :isv_rate, numericality: { greater_than_or_equal_to: 0, less_than: 1 }

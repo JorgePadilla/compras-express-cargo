@@ -1,0 +1,11 @@
+# PR-F1.1 · Un CAI inventado para facturas de SPS, con fechas relativas para
+# que no venza solo un día cualquiera. `ficticia`, como el de staging (F1.5).
+ficticia:
+  punto_de_emision: sps
+  tipo_documento: "01"
+  cai: FICTICIO-TEST-SPS-0001
+  rango_inicio: 1
+  rango_fin: 5000
+  fecha_autorizacion: <%= Date.current - 30 %>
+  fecha_limite_emision: <%= Date.current + 365 %>
+  ficticia: true

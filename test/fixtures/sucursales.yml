@@ -16,6 +16,7 @@ zeron_sps:
   pais: Honduras
   ubicacion: honduras
   codigo_recepcion_prefix: RZE
+  direccion: Dirección de prueba, San Pedro Sula
   activo: true
 
 humuya_tgu:
@@ -25,6 +26,7 @@ humuya_tgu:
   pais: Honduras
   ubicacion: honduras
   codigo_recepcion_prefix: RHU
+  direccion: Dirección de prueba, Tegucigalpa
   activo: true
 
 san_manuel:
@@ -34,4 +36,5 @@ san_manuel:
   pais: Honduras
   ubicacion: honduras
   codigo_recepcion_prefix: RSM
+  direccion: Dirección de prueba, San Manuel
   activo: true
