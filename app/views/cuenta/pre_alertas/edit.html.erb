@@ -167,8 +167,13 @@
 
     <%# Action buttons %>
     <div class="flex flex-col sm:flex-row gap-3 justify-end">
+      <%# C30-02 · «(F2)» es solo el rótulo, sin `data-shortcut`: esta pantalla
+          ya escucha F2 ella misma (`pre-alerta-editor#handleKeydown` → volver),
+          y con el atributo el atajo global le hacía click además — dos visitas
+          por tecla. Es lo que la gemela de admin ya hace con
+          `shortcut_label_only`. %>
       <%= link_to "Volver (F2)", cuenta_pre_alertas_path,
-          class: "text-gray-600 hover:text-gray-800 text-sm font-medium px-4 py-2.5 text-center", data: { shortcut: "F2" } %>
+          class: "text-gray-600 hover:text-gray-800 text-sm font-medium px-4 py-2.5 text-center" %>
       <% if @pre_alerta.consolidando? %>
         <button type="button" data-action="click->pre-alerta-editor#addPaquete"
                 data-pre-alerta-editor-target="addButton"

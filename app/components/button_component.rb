@@ -273,7 +273,7 @@ class ButtonComponent < ViewComponent::Base
   # Un `<a>` deshabilitado no existe en HTML: se le saca el href y se marca con
   # `aria-disabled`. Mismo patrón que `RowActionComponent`, que ya lo resolvió.
   #
-  # Nunca emite `data-shortcut`: un botón apagado no debería responder a F10.
+  # Nunca emite `data-shortcut`: un botón apagado no debería responder a F8.
   def deshabilitado
     if @href
       content_tag :span, role: "button", "aria-disabled": "true",
@@ -309,7 +309,7 @@ class ButtonComponent < ViewComponent::Base
                             options: { class: icon_size, disable_default_class: true })
   end
 
-  # "(F10)" pequeño y semitransparente al final del label cuando hay shortcut.
+  # "(F8)" pequeño y semitransparente al final del label cuando hay shortcut.
   def shortcut_label
     return nil if @shortcut.blank?
 

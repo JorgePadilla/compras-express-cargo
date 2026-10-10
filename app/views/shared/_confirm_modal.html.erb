@@ -1,7 +1,11 @@
 <%# Reusable confirm modal. Driven by confirm-modal Stimulus controller.
     Registers window.cecConfirm(message, { title, danger, confirmLabel, cancelLabel })
     which returns a Promise<boolean>. %>
+<%# PR-C30.11 · `role="dialog" aria-modal="true"`: es lo que dice «modal» a un
+    lector de pantalla, y es la marca que `keyboard_shortcuts_controller` mira
+    para no apretar con F8/F1 un botón de la página que quedó detrás. %>
 <div data-controller="confirm-modal" data-confirm-modal-target="root"
+     role="dialog" aria-modal="true"
      class="hidden fixed inset-0 z-[60] flex items-center justify-center">
   <%# Fondo decorativo: cerrar vive en el boton Cancelar de abajo. %>
   <div data-action="click->confirm-modal#cancel" aria-hidden="true"

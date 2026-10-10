@@ -22,8 +22,8 @@
     wrapper adentro del partial se anidaría una vez por actualización. %>
 <% if manifiesto.creado? && paquetes.any? %>
   <div class="mb-6 flex flex-wrap items-center gap-3">
-    <%# Las teclas: F10 es «guardar/confirmar» por convención y finalizar es el
-        commit de esta pantalla. Ojo: este partial se pinta **dos veces**
+    <%# Las teclas: F8 es «guardar/confirmar» por convención (C30-02, la hoja
+        de Yusef) y finalizar es el commit de esta pantalla. Ojo: este partial se pinta **dos veces**
         —arriba y abajo—, así que la etiqueta sale dos veces y el
         `querySelector` del controller aprieta la de arriba. Es el mismo botón,
         así que está bien.
@@ -33,7 +33,7 @@
         agregar cajas pasa decenas de veces por manifiesto y finalizar una sola,
         así que la tecla se la queda la frecuente (Jorge, 2026-09-02).
 
-        C23-13 · Y de ahí pasó por **F8**, que estuvo mal cuatro días. F8 es
+        C23-13 · Y de ahí pasó por **F8**, que estuvo mal cuatro días. F8 era
         **Excel** en toda la app, y el mapa de teclas mostró que era la única
         tecla del sistema que significaba dos cosas distintas.
 
@@ -52,7 +52,12 @@
         manifiesto**, contra las decenas de veces que se agrega una caja. Y la
         pantalla vieja tampoco les da tecla a estos dos botones —«Solo
         Finalizar» y «Finalizar e Imprimir» salen pelados en la captura—, así
-        que no hay memoria muscular que romper. %>
+        que no hay memoria muscular que romper.
+
+        C30-02 · Hasta acá la historia. Con la hoja de Yusef F8 dejó de ser
+        Excel y pasó a ser guardar/finalizar/confirmar en todo el sistema, así
+        que «Solo Finalizar» lleva **F8**. «Finalizar e Imprimir» sigue sin
+        tecla. %>
     <%= render ButtonComponent.new(variant: :primary, icon: "check", shortcut: "F8",
           href: finalizar_manifiesto_path(manifiesto), method: :patch,
           confirm: "Se finaliza #{manifiesto.numero}: #{manifiesto.cantidad_paquetes} paquete(s) pasan a enviado y el manifiesto queda bloqueado. ¿Seguro?") do %>
