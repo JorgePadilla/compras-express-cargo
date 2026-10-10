@@ -146,7 +146,9 @@ class ApplicationPdf
     end
 
     data += [
-      [ "ISV (#{(empresa.isv_rate * 100).to_i}%):", format_money(impuesto, moneda) ],
+      # QA de PR-F2.1 · La tasa con la que se calculó (`IsvAware.rate`, la de
+      # la gema), no la columna de `empresas`: el rótulo y el monto, de lo mismo.
+      [ "ISV (#{(IsvAware.rate * 100).to_i}%):", format_money(impuesto, moneda) ],
       [ "Total:", format_money(total, moneda) ]
     ]
     data << ["Saldo Pendiente:", format_money(saldo, moneda)] if saldo
