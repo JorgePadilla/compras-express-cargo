@@ -1,4 +1,6 @@
 class NotaCreditoItem < ApplicationRecord
+  include TratamientoFiscal  # PR-F2.1: gravado 15 %, la costura de F3
+
   belongs_to :nota_credito, inverse_of: :nota_credito_items
   belongs_to :paquete, optional: true
 

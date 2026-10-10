@@ -7,17 +7,19 @@
 #
 # El resultado era que si alguien cambiaba la tasa a 18%, el PDF decía 18% y
 # el cálculo seguía aplicando 15%. Ahora ambos leen lo mismo.
+#
+# PR-F2.1 · Fase 15 (D4 de FISCAL.md): la tasa deja de leerse de `empresas` y
+# sale de la gema — `Invoicehn::TaxTreatment::GRAVADO_15`, la tarifa general
+# del Decreto 278-2013 Art. 16. Es la misma que aplica `Fiscal::Totales`, así
+# que la etiqueta «ISV (15%)» y el cálculo no pueden volver a separarse. La
+# columna `empresas.isv_rate` queda, pero `Empresa` solo acepta ese valor (la
+# leen todavía `Tarifa`, `/tasa_cambio` y el PDF). El 18 % y los exentos van
+# por línea en F3 (`TratamientoFiscal`), no cambiando esta tasa.
 module IsvAware
   extend ActiveSupport::Concern
 
-  FALLBACK = BigDecimal("0.15")
-
-  # La tasa vigente. Con fallback duro porque el cálculo de una factura no
-  # puede quedarse sin tasa si la tabla `empresas` está vacía.
   def self.rate
-    Empresa.instance.isv_rate&.to_d || FALLBACK
-  rescue StandardError
-    FALLBACK
+    Invoicehn::TaxTreatment::GRAVADO_15.rate
   end
 
   def isv_rate

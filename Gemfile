@@ -78,3 +78,8 @@ gem "barby", "~> 0.6"
 # o sea aceptando el costo. `barby` se queda: el warehouse del paquete sigue en
 # Code128, que es lo que leen las pistolas de hoy.
 gem "rqrcode", "~> 3.0"
+
+# PR-F2.1 · Fase 15: la facturación SAR sale de la gema `invoicehn` (Money,
+# TaxTreatment, TaxSummary). PR-F1.2 agrega la misma línea; el que mergee
+# segundo resuelve el choque, que es idéntico.
+gem "invoicehn", "~> 0.2.0"

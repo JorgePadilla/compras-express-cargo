@@ -32,4 +32,17 @@ class EmpresaTest < ActiveSupport::TestCase
     emp.isv_rate = 0.15
     assert emp.valid?
   end
+
+  # PR-F2.1 · El ISV lo calcula la gema con la tarifa general; la columna no
+  # puede decir otra cosa, o el PDF imprimiría una tasa que nadie cobra.
+  test "isv_rate solo acepta la tarifa general de la gema" do
+    emp = Empresa.instance
+    emp.isv_rate = 0.18
+    assert_not emp.valid?
+    assert emp.errors[:isv_rate].any?
+
+    emp.isv_rate = "0.1500"
+    assert emp.valid?
+    assert_equal Invoicehn::TaxTreatment::GRAVADO_15.rate, IsvAware.rate
+  end
 end
