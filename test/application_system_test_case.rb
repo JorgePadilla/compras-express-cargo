@@ -1,5 +1,28 @@
 require "test_helper"
 
+# PR-C30.9 · Sin el aviso de «contraseña filtrada» de Chrome.
+#
+# Los usuarios de las fixtures entran con `password123`, y Chrome compara cada
+# login contra su lista de credenciales filtradas. El par `cajero@test.com` +
+# `password123` **está** en esa lista: al loguearse, Chrome abre su propio
+# aviso «cambiá tu contraseña» —ventana del navegador, no de la página— y ese
+# aviso se queda con el teclado. Desde ahí ninguna tecla de WebDriver llega a
+# ninguna página: el campo tiene el foco, `document.hasFocus()` dice que sí,
+# un `KeyboardEvent` sintético anda, y las teclas de verdad se pierden.
+#
+# Se encontró escribiendo el test de /recibir-carga (PR-C30.4): con el cajero
+# no entraba ni una caja. Se acorraló a mano: el cajero con otra clave
+# teclea; el supervisor de pre-factura logueado con el email del cajero y
+# `password123` no teclea; el mismo cajero con este flag teclea. No es la
+# app —un cajero de verdad, con su clave y su pistola, no lo ve—: es el
+# navegador de test. Por eso se apaga en **todos** los Chrome de la suite, y
+# no se cambia la clave de la fixture: el próximo par que caiga en la lista
+# haría lo mismo con otro usuario.
+SIN_AVISO_DE_CONTRASENA_FILTRADA = lambda do |options|
+  options.add_argument("--disable-features=PasswordLeakDetection")
+  options.add_preference("profile.password_manager_leak_detection", false)
+end
+
 # Un Chrome como el de la calle: **con** el bloqueador de popups.
 #
 # Chromedriver arranca Chrome con `--disable-popup-blocking`, así que en los
@@ -18,11 +41,14 @@ Capybara.register_driver :chrome_con_bloqueador_de_popups do |app|
   options.add_argument("--headless=new")
   options.add_argument("--window-size=1400,1400")
   options.exclude_switches = [ "disable-popup-blocking" ]
+  SIN_AVISO_DE_CONTRASENA_FILTRADA.call(options)
   Capybara::Selenium::Driver.new(app, browser: :chrome, options: options)
 end
 
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
-  driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1400 ]
+  driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1400 ] do |options|
+    SIN_AVISO_DE_CONTRASENA_FILTRADA.call(options)
+  end
 
   # ── Hacer observable una carrera ────────────────────────────────────────
   #
@@ -128,6 +154,26 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     navegador.switch_to.window(principal)
   rescue Selenium::WebDriver::Error::NoSuchWindowError
     nil
+  end
+
+  # PR-C30.10 · Afirmar algo que **va a** ser verdad, con la paciencia de Capybara.
+  #
+  # `assert_selector` y compañía ya reintentan, pero lo que no es un nodo —
+  # `document.activeElement`, una fila de la base que escribe el servidor
+  # después del clic— se afirmaba de un tirón, y con la máquina cargada (CI, o
+  # varios agentes a la vez) el test le ganaba a la pantalla. Por ejemplo, el
+  # modal de duplicado lleva el foco en el `requestAnimationFrame` siguiente.
+  #
+  # `synchronize` es el mismo bucle que usan los matchers: reintenta mientras
+  # el bloque diga que no, hasta `wait`, sin un `sleep` fijo que haga lento el
+  # caso bueno ni corto el malo. Si se vence, falla con el mensaje.
+  def assert_eventualmente(mensaje = nil, wait: Capybara.default_max_wait_time)
+    page.document.synchronize(wait, errors: [ Capybara::ExpectationNotMet ]) do
+      raise Capybara::ExpectationNotMet, mensaje.to_s unless yield
+    end
+    assert true
+  rescue Capybara::ExpectationNotMet
+    flunk(mensaje || "la condición no se cumplió en #{wait}s")
   end
 
   # La ventana de la impresión nace del turbo-stream del guardado, o sea después

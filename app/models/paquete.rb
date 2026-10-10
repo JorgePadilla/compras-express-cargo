@@ -653,6 +653,16 @@ class Paquete < ApplicationRecord
   ESTADOS_FACTURABLES = %w[en_aduana disponible_entrega].freeze
 
   scope :facturables, -> { where(estado: ESTADOS_FACTURABLES, pre_factura_id: nil, venta_id: nil) }
+  # PR-P.4 · Lo que retiene a un manifiesto en la hoja de preparación: está en
+  # un manifiesto, todavía no tiene pre-factura ni venta, y sigue viajando. A
+  # diferencia de `facturables`, **no** mira el estado: el paquete cuya caja no
+  # llegó sigue en `enviado_honduras`, y tiene que seguir reteniendo a su
+  # manifiesto (`C28-14`).
+  scope :sin_pre_factura_en_manifiesto, -> {
+    where.not(manifiesto_id: nil)
+         .where(pre_factura_id: nil, venta_id: nil)
+         .where.not(estado: EscaneoDeManifiesto::FUERA_DE_CIRCULACION)
+  }
   scope :entregables, -> { where(estado: "facturado", entrega_id: nil) }
   # Paquetes sin vincular a ninguna pre_alerta_paquete (sueltos en bodega)
   scope :sin_pre_alerta, -> {
@@ -1169,6 +1179,12 @@ class Paquete < ApplicationRecord
   # Error de negocio: se quiso borrar una caja que ya entró a cobro o salió.
   class CajaNoEliminable < StandardError; end
 
+  # C30-06 · Partir o bajar cajas de un paquete que va en un manifiesto que ya
+  # no se puede tocar. Hereda de `CajaNoEliminable` a propósito: las tres
+  # puertas que llaman a `ajustar_split!` (/paquetes, /etiquetar y bajar con
+  # PIN) ya muestran ese error como aviso, y esto es lo mismo — no se puede.
+  class ManifiestoBloqueado < CajaNoEliminable; end
+
   # Cambia un split de N cajas a M. `crear_split!` solo sabía **crear**, así
   # que subir o bajar la cantidad dejaba los registros viejos mezclados con
   # los nuevos. Yusef lo reprodujo dos veces:
@@ -1212,6 +1228,13 @@ class Paquete < ApplicationRecord
 
       hermanas = cajas_del_mismo_split(paquete).to_a
       n = hermanas.size
+
+      # C30-06 · Las cajas nuevas heredan el manifiesto (`attributes.except`
+      # de abajo) y las sobrantes se borran: las dos cosas cambian la carga de
+      # un manifiesto. Si alguno ya viajó y no está abierto para corregir, no.
+      if m != n && (cerrado = hermanas.filter_map(&:manifiesto).uniq.find { |mf| !mf.modificable_por?(Current.user) })
+        raise ManifiestoBloqueado, "No se puede cambiar la cantidad de cajas: #{cerrado.motivo_del_candado}"
+      end
 
       if m < n
         sobrantes = hermanas.select { |c| c.numero_caja.to_i > m }

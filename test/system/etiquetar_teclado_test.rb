@@ -178,9 +178,14 @@ class EtiquetarTecladoTest < ApplicationSystemTestCase
     campo("paquete_tracking").send_keys(otro.tracking, :enter)
     assert_selector "[data-etiquetar-target=duplicateModal]:not(.hidden)", wait: 5
 
-    assert page.evaluate_script(<<~JS), "el foco no entró al modal de duplicado"
-      document.activeElement === document.querySelector("[data-etiquetar-target=duplicateUpdateBtn]")
-    JS
+    # PR-C30.10 · El foco entra en el `requestAnimationFrame` siguiente a
+    # mostrar el modal: afirmarlo de un tirón le ganaba a la pantalla con la
+    # máquina cargada. Se espera como espera Capybara un selector.
+    assert_eventualmente("el foco no entró al modal de duplicado") do
+      page.evaluate_script(<<~JS)
+        document.activeElement === document.querySelector("[data-etiquetar-target=duplicateUpdateBtn]")
+      JS
+    end
   end
 
   test "el atajo visible dice F8" do

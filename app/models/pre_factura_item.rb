@@ -5,7 +5,13 @@ class PreFacturaItem < ApplicationRecord
   # `manual` = línea de paquete o agregada por el cajero a mano.
   # `auto_recolecta` = generada desde paquete.recolecta_solicitada.
   # `auto_servicio_extra` = generada desde paquete.solicito_cambio_servicio.
-  ORIGENES = %w[manual auto_recolecta auto_servicio_extra].freeze
+  #
+  # PR-P.1 · La línea de la factura es **el volumen** (Fase 14, `C27-10`):
+  # `volumen` = el flete de un `Bulto`, cotizado con su `peso_cobrar`;
+  # `caja_del_volumen` = una caja de esa tanda, en L. 0.00, para que
+  # `confirmar!`, `facturar!` y `anular!` la sigan encontrando por
+  # `has_many :paquetes`. Las dos las arma `ArmarPreFacturaPorVolumen`.
+  ORIGENES = %w[manual auto_recolecta auto_servicio_extra volumen caja_del_volumen].freeze
 
   belongs_to :pre_factura, inverse_of: :pre_factura_items
   # PR-13.d: `nullify` y no `destroy` — si se elimina la línea, el registro de
@@ -14,6 +20,8 @@ class PreFacturaItem < ApplicationRecord
   belongs_to :paquete, optional: true
   belongs_to :tarifa_recolecta, optional: true
   belongs_to :servicio_extra, optional: true
+  # PR-P.1 · El volumen que esta línea cobra, o del que la caja forma parte.
+  belongs_to :bulto, optional: true
 
   validates :concepto, presence: true
   validates :subtotal, numericality: { greater_than_or_equal_to: 0 }
@@ -51,6 +59,9 @@ class PreFacturaItem < ApplicationRecord
   def auto?
     origen.to_s.start_with?("auto_")
   end
+
+  # PR-P.1 · La línea que cobra el volumen y las cajas que van adentro.
+  def del_volumen? = origen.in?(%w[volumen caja_del_volumen])
 
   private
 

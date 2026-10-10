@@ -51,6 +51,8 @@ class DashboardController < ApplicationController
     log << card("Guías y aduana",     "La guía del proveedor y la fecha", "document-text",   guias_aduana_index_path, :navy) if can_access?(:guias_aduana)
     log << card("Recibir Carga",      "Escanear las cajas que llegan", "truck",               recepcion_carga_index_path, :navy) if can_access?(:recibir_carga)
     log << card("Medición",           "Pesar y medir en San Pedro", "scale",                  medicion_index_path, :navy) if can_access?(:medicion)
+    # PR-P.4 · La hoja de preparación, el paso que sigue a Medición.
+    log << card("Preparar pre-factura", "Servicios, manifiestos y hora del aviso", "queue-list", hoja_de_preparacion_path, :navy) if can_access?(:pre_facturas)
     log << card("Todos los Paquetes", "Búsqueda y reportes",        "archive-box",            paquetes_path,     :navy) if can_access?(:paquetes)
     groups << { area: "Logística", cards: log } if log.any?
 

@@ -67,7 +67,10 @@
 
             Las dos condiciones salen del contexto y son las correctas: `cajas.any?`
             —la pantalla de empaque no sirve sin casas y ella misma lo dice— y
-            `creado?`, porque `show.html.erb` envuelve este partial entero en él. %>
+            `creado?`, porque `show.html.erb` envuelve este partial entero en él.
+            C30-06 · Ahora lo envuelve `modificable_por?`: también sale con el
+            manifiesto finalizado y reabierto, para la caja que se suma al
+            final — *"agregaron una caja al final… se empacó"*. %>
         <%# C23-10 · Se llamaba «Empacar» a secas. Ahora que al lado hay otro
             que también empaca, el nombre tiene que decir cuál es cuál. %>
         <%= render ButtonComponent.new(variant: :primary, icon: "qr-code",
@@ -207,47 +210,10 @@
   </div>
 
   <% if manifiesto.cajas.any? %>
-    <table class="min-w-full divide-y divide-gray-200">
-      <thead class="bg-gray-50">
-        <tr>
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tamaño</th>
-          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">T. envío</th>
-          <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Medidas</th>
-          <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Volumen</th>
-          <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Peso</th>
-          <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
-        </tr>
-      </thead>
-      <tbody class="bg-white divide-y divide-gray-200">
-        <% manifiesto.cajas.each_with_index do |caja, i| %>
-          <tr class="hover:bg-gray-50">
-            <td class="px-4 py-3 text-sm text-gray-500"><%= i + 1 %></td>
-            <td class="px-4 py-3 text-sm font-mono font-medium text-cec-navy"><%= caja.codigo %></td>
-            <td class="px-4 py-3 text-sm text-gray-700"><%= caja.tamano_caja&.nombre || "Especificar" %></td>
-            <td class="px-4 py-3 text-sm text-gray-500"><%= caja.tipos_envio_adentro.presence || "—" %></td>
-            <td class="px-4 py-3 text-sm text-right font-mono text-gray-500"><%= caja.medidas || "—" %></td>
-            <td class="px-4 py-3 text-sm text-right font-mono text-gray-700"><%= caja.volumen || "—" %></td>
-            <td class="px-4 py-3 text-sm text-right font-mono text-gray-700"><%= caja.peso || "—" %></td>
-            <td class="px-4 py-3 text-right whitespace-nowrap">
-              <%= render ButtonComponent.new(variant: :secondary, size: :xs, icon: "pencil-square",
-                    label: "Editar la caja #{caja.letra}",
-                    data: { action: "caja-manifiesto#editar",
-                            url: manifiesto_caja_path(manifiesto, caja), letra: caja.letra,
-                            tamano_id: caja.tamano_caja_id, alto: caja.alto, largo: caja.largo,
-                            ancho: caja.ancho, peso: caja.peso }) %>
-              <%= render ButtonComponent.new(variant: :secondary, size: :xs, icon: "printer",
-                    href: etiqueta_manifiesto_caja_path(manifiesto, caja, print: true),
-                    target: "_blank", label: "Imprimir la etiqueta de la caja #{caja.letra}") %>
-              <%= render ButtonComponent.new(variant: :danger, size: :xs, icon: "trash",
-                    href: manifiesto_caja_path(manifiesto, caja), method: :delete,
-                    confirm: "Se elimina la caja #{caja.letra}. Si ya imprimiste su etiqueta, despegala: la próxima caja que agregues va a tomar la primera letra libre. ¿Seguro?",
-                    label: "Eliminar caja #{caja.letra}") %>
-            </td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
+    <%# C30-07 · La tabla vive en su propio partial: la ficha la muestra también
+        con el manifiesto bloqueado, sin lápiz ni basurero. %>
+    <div id="manifiesto-cajas-tabla" class="overflow-x-auto">
+      <%= render "manifiestos/cajas_tabla", manifiesto: manifiesto, editable: true %>
+    </div>
   <% end %>
 </div>

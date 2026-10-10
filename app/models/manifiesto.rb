@@ -199,6 +199,140 @@ class Manifiesto < ApplicationRecord
     user&.tiene_rol?(ROLES_QUE_ABREN_EL_CANDADO)
   end
 
+  # ── C30-06 · «Editar» abre el manifiesto entero ───────────────────────
+  #
+  # Yusef, 2026-10-09, sobre uno ya finalizado: *"hay dos cosas que ocupo [en]
+  # el manifiesto: uno, cambiar etiquetas, y dos, eliminar paquetes que no se
+  # fueron"* · *"después de finalizado lo necesitamos corregir, porque a veces
+  # después de finalizado agregamos algo que se quedaba"*. Y cómo: *"que le
+  # demos un botón que diga editar… y ya podemos editarlo todo otra vez, pero
+  # que presionen el botón, para que nadie toque algo que no era"* — *"ya nos
+  # pasó que venían y sin querer tocaban el manifiesto que ya se había ido"*.
+  #
+  # El «Editar igual» de C21-06 abría solo el encabezado. Esto abre **lo de
+  # adentro**: cajas, paquetes por escaneo, sacar los que no se fueron.
+  #
+  # Se guarda en el manifiesto (`edicion_abierta_at` / `_por`) y no se decide
+  # pedido por pedido, porque el botón se aprieta una vez y después se escanea
+  # muchas, y quien abra la ficha mientras tanto tiene que ver que está abierto
+  # y quién lo abrió. paper_trail se queda con quién lo abrió y quién lo cerró.
+  belongs_to :edicion_abierta_por, class_name: "User", optional: true
+
+  # Solo mientras la carga va en camino. Desde `en_aduana` Honduras ya la está
+  # escaneando (`RecibirManifiesto`) y de esos paquetes cuelgan recepción,
+  # medición y pre-factura: sacar o meter uno ahí cambia lo que San Pedro ya
+  # contó. Y solo el **oficial**: es el contenedor de Miami del que habló
+  # Yusef; el interno pone otros estados (`enviado_sucursal`, el destino del
+  # camión) que esto no sabe deshacer.
+  def reabrible?
+    enviado? && tipo_oficial?
+  end
+
+  # Derivado a propósito: si Honduras empieza a recibir con la edición abierta,
+  # `RecibirManifiesto` lo pasa a `en_aduana` y esto deja de ser verdad solo,
+  # sin que ese servicio tenga que acordarse de cerrarla.
+  def edicion_abierta?
+    edicion_abierta_at.present? && reabrible?
+  end
+
+  # ¿Puede este usuario tocar lo de adentro (cajas y paquetes)? Abierto,
+  # cualquiera con la sección. Finalizado, solo quien abre el candado y solo con
+  # la edición abierta: un digitador no se cuela por la ventana que un
+  # supervisor dejó abierta.
+  def modificable_por?(user)
+    creado? || (edicion_abierta? && editable_por?(user))
+  end
+
+  # Por qué no se puede tocar, dicho para quien lo intentó. Vivía en el concern
+  # `CandadoDelManifiesto`; bajó acá porque /paquetes también lo tiene que
+  # decir (el formulario del paquete reasigna manifiesto) y dos copias del
+  # mismo texto se separan.
+  def motivo_del_candado
+    if !reabrible?
+      "#{numero} ya no se puede cambiar: está #{estado.humanize.downcase}."
+    elsif edicion_abierta?
+      "#{numero} está abierto para corregir, pero solo un supervisor de Miami puede cambiarlo."
+    else
+      "#{numero} está finalizado y bloqueado: para corregirlo, un supervisor de Miami aprieta «Editar»."
+    end
+  end
+
+  class NoSePuedeReabrir < StandardError; end
+
+  def abrir_edicion!(user)
+    raise NoSePuedeReabrir, "Solo el supervisor de Miami puede abrir un manifiesto finalizado." unless editable_por?(user)
+    unless reabrible?
+      raise NoSePuedeReabrir, "#{numero} ya se está recibiendo en Honduras (#{estado.humanize.downcase}): no se puede abrir."
+    end
+
+    update!(edicion_abierta_at: Time.current, edicion_abierta_por: user)
+  end
+
+  def cerrar_edicion!
+    update!(edicion_abierta_at: nil, edicion_abierta_por: nil)
+  end
+
+  # El estado al que vuelve un paquete que sale del manifiesto: el mismo que
+  # `EmpacarSinEscanear` busca para meterlo. Una sola fuente — antes
+  # `remove_paquete` escribía `recibido_miami` a mano, y en el interno eso
+  # mandaba a Miami un paquete que estaba disponible en la sucursal.
+  def estado_antes_de_salir
+    EmpacarSinEscanear.new(self).estado_buscado
+  end
+
+  # Sacar un paquete: lo que hacía `remove_paquete`, más lo que le faltaba.
+  #
+  # - Suelta la caja. `mover_paquete` ya lo hacía y `remove_paquete` no: el
+  #   paquete fuera del manifiesto seguía contando en la 4×6 de la caja.
+  # - En uno finalizado (C30-06, *"eliminar paquetes que no se fueron"*) el
+  #   paquete ya estaba en `enviado_honduras`: vuelve con el mismo retroceso que
+  #   usa /paquetes (`apply_retroceso_cleanup!`), que limpia la fecha y el
+  #   usuario de enviado. Si no viajó, no puede decir que salió.
+  def sacar!(paquete)
+    soltar!(paquete, estado: estado_antes_de_salir)
+  end
+
+  # Salir del manifiesto **a un estado que decide otro**. Es la parte común de
+  # `sacar!` —que vuelve al estado de antes de salir— y del retroceso de estado
+  # de /paquetes, donde el supervisor eligió a qué estado vuelve y eso no se
+  # pisa.
+  #
+  # Antes el retroceso soltaba el manifiesto por su cuenta
+  # (`apply_retroceso_cleanup!` ponía `manifiesto_id` en nil) y se quedaba ahí:
+  # la caja seguía apuntando al paquete y el manifiesto seguía contándolo. Dos
+  # caminos para lo mismo, y uno se había quedado corto. Ahora los dos pasan
+  # por acá: suelta la caja, limpia lo de los estados posteriores, deja la
+  # bitácora (`update!`, no `update_column`) y recalcula.
+  def soltar!(paquete, estado:)
+    transaction do
+      paquete.apply_retroceso_cleanup!(estado)
+      paquete.update!(manifiesto: nil, caja_manifiesto: nil, estado: estado)
+      recalculate_totals!
+    end
+  end
+
+  class NoEntra < StandardError; end
+
+  # Meter un paquete. En uno abierto es lo de siempre; en uno finalizado y
+  # reabierto (C30-06) el paquete sale **como los demás** —`enviado_honduras`,
+  # con fecha y usuario— por el mismo `FinalizarManifiesto#enviar`, con su
+  # misma guarda de tareas: si tiene una pendiente no entra, igual que no
+  # habría dejado finalizar.
+  #
+  # `cambios` es lo que cada puerta escribe además del manifiesto (el empaque
+  # pone su caja). Va todo en una transacción: un paquete trabado no queda
+  # adentro a medias.
+  def meter!(paquete, user:, **cambios)
+    transaction do
+      paquete.update!(manifiesto: self, **cambios)
+      if enviado?
+        problema = FinalizarManifiesto.new(self, user: user).enviar(paquete)
+        raise NoEntra, "#{paquete.numero_recepcion_visible} no entró: #{problema}." if problema
+      end
+      recalculate_totals!
+    end
+  end
+
   # C21-02 · Lo que la pantalla de San Pedro tiene para trabajar: la carga que ya
   # salió de Miami y todavía no tiene su guía del proveedor **o** su fecha de
   # recibido en Honduras.
@@ -217,6 +351,29 @@ class Manifiesto < ApplicationRecord
     salidos = tipo_oficial.where(estado: %w[enviado en_aduana recibido])
     salidos.where(fecha_aduana: nil)
            .or(salidos.where.not(id: ManifiestoGuia.select(:manifiesto_id)))
+  }
+
+  # PR-P.4 · C30-15 · Los manifiestos que la hoja de preparación ofrece para
+  # pre-facturar. Yusef: *"solo le van a aparecer los que ya fueron
+  # recibidos"* — en aduana —, y *"cuando ya entra prefactura y lo
+  # seleccionamos y lo terminamos, desaparece de los pendientes"*.
+  #
+  # **Derivado de los datos, sin estado nuevo** (Fase 14): sale de la lista
+  # cuando ya no le queda paquete sin pre-factura de esos servicios. Un paquete
+  # cuya caja no llegó (`C28-14`) sigue sin pre-factura, así que el manifiesto
+  # con faltantes **se queda**, que es lo que tiene que pasar. Los que ya no
+  # viajan (anulado, entregado…) no lo retienen.
+  #
+  # Solo **oficiales**: el interno no se pre-factura, ya viene facturado.
+  ESTADOS_PARA_PRE_FACTURA = %w[en_aduana recibido].freeze
+
+  scope :para_hoja, ->(tipo_envio_ids) {
+    pendientes = Paquete.sin_pre_factura_en_manifiesto
+                        .where(tipo_envio_id: Array(tipo_envio_ids).compact_blank)
+                        .select(:manifiesto_id)
+    tipo_oficial.where(estado: ESTADOS_PARA_PRE_FACTURA, activo: true)
+                .where(id: pendientes)
+                .order(:numero)
   }
 
   # El tipo de envío del proveedor, para mostrar. Lee las dos formas: la

@@ -1,0 +1,16 @@
+<%# PR-P.1 · Las cajas de una tanda, **una vez**, debajo de su último volumen.
+
+    Cada caja lleva su renglón en L. 0.00 —es lo que hace que confirmar,
+    facturar y anular sigan encontrando sus paquetes—, pero imprimirlos uno
+    por uno son cien renglones en cero para un consolidado de cien cajas.
+    Acá van juntas, con su código completo (nunca recortado: es lo que el
+    cliente busca en su papel).
+
+    Locales: `cajas` (las líneas de las cajas) y `columnas` (cuántas tiene la
+    tabla, para que el renglón la cruce entera). %>
+<tr class="bg-gray-50/60 dark:bg-gray-900/30" data-cajas-del-volumen="<%= cajas.size %>">
+  <td colspan="<%= columnas %>" class="px-4 py-1.5 pl-8 text-xs text-gray-600 dark:text-gray-300">
+    <span class="font-medium"><%= cajas.size == 1 ? "1 caja incluida" : "#{cajas.size} cajas incluidas" %>:</span>
+    <span class="font-mono break-words"><%= cajas.map { |c| LineasPorVolumen.codigo(c) }.join(" · ") %></span>
+  </td>
+</tr>

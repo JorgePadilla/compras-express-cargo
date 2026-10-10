@@ -19,9 +19,19 @@
 # reservado con nombre y apellido (*"`empacado` queda reservado para el módulo
 # de empaque, que todavía no existe"*).
 class EmpaqueController < ApplicationController
+  include CandadoDelManifiesto
+
   before_action :authorize_manifiestos
   before_action :set_manifiesto
   before_action :set_caja, only: %i[escanear]
+  # C30-06 · Empacar mete paquetes al manifiesto: con el candado puesto, no.
+  # Contesta `bloqueado` por JSON, que la pistola hace sonar como error.
+  before_action :exigir_modificable, only: %i[alternar escanear omitir]
+  # Un paquete con tarea pendiente no sube a un manifiesto que ya salió: la
+  # misma guarda que no habría dejado finalizar (`FinalizarManifiesto#enviar`).
+  rescue_from Manifiesto::NoEntra do |e|
+    render json: { resultado: "trabado", mensaje: e.message }
+  end
 
   # C23-11 · Se empaca en **varias cajas a la vez**.
   #
@@ -229,10 +239,11 @@ class EmpaqueController < ApplicationController
     @manifiesto.acepta_tipo?(paquete)
   end
 
+  # C30-06 · Por `Manifiesto#meter!`, la misma puerta que la ficha: en uno
+  # finalizado y reabierto, la caja que se suma al final sale a enviado con
+  # todo lo de adentro, como el resto de la carga.
   def empacar!(paquete)
-    paquete.update!(caja_manifiesto: @caja, manifiesto: @manifiesto,
-                    estado: "empacado")
-    @manifiesto.recalculate_totals!
+    @manifiesto.meter!(paquete, user: Current.user, caja_manifiesto: @caja, estado: "empacado")
   end
 
   def fila_de(paquete)

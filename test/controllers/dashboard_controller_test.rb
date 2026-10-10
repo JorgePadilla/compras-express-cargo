@@ -215,7 +215,9 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     # «Medición», que faltaba (Jorge: *"all the options in the left have an
     # icon in the root /"*).
     assert_equal [ "Etiquetar", "Entrega Personal" ], titulos.call("Miami")
-    assert_equal [ "Pre-Alertas", "Manifiestos", "Guías y aduana", "Recibir Carga", "Medición", "Todos los Paquetes" ],
+    # PR-P.4 · Y la hoja de preparación, que sigue a Medición.
+    assert_equal [ "Pre-Alertas", "Manifiestos", "Guías y aduana", "Recibir Carga", "Medición",
+                   "Preparar pre-factura", "Todos los Paquetes" ],
                  titulos.call("Logística")
 
     areas = grupos.keys

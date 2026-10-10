@@ -51,31 +51,13 @@ class FinalizarManifiesto
 
     Manifiesto.transaction do
       paquetes_a_enviar.each do |paquete|
-        # La guarda de tareas abiertas **hay que preguntarla acá**, no confiar en
-        # el modelo. `no_advance_with_open_tareas` compara índices de
-        # `ESTADOS_ORDEN`, y `enviado_sucursal` no está ahí: es un desvío
-        # (`ESTADOS_EXCEPCIONALES`), no un paso del pipeline. Así que en el
-        # manifiesto **interno** el guard no dispara — `new_idx` sale nil y el
-        # método se va sin mirar nada.
-        #
-        # Y la regla es la misma para los dos: el paquete está en la bodega, en
-        # la mano, y la tarea abierta es justo el aviso de que le falta algo
-        # antes de subirse al camión. Que el destino sea Tegucigalpa en vez de
-        # Honduras no la cambia.
-        if paquete.tareas_bloqueantes_pendientes?
-          trabados << [ paquete, "tiene tareas pendientes" ]
-        elsif paquete.update(**cambios_para(paquete))
-          # `ESTADO_FECHA_MAP` estampa `fecha_<estado>_by_user_id` desde
-          # `Current.user`, que en un request es quien apretó el botón. Fuera de
-          # un request —consola, un job— queda en nil, y entonces volveríamos a
-          # perder exactamente lo que perdía el `update_all`. Se rellena con el
-          # usuario que se pasó, sin volver a correr callbacks.
-          if @user && paquete.public_send(columna_de_usuario).nil?
-            paquete.update_column(columna_de_usuario, @user.id)
-          end
-          enviados << paquete
+        # Uno por uno, por `enviar` (abajo), que es también lo que usa el
+        # manifiesto reabierto para el paquete que se suma tarde.
+        problema = enviar(paquete)
+        if problema
+          trabados << [ paquete, problema ]
         else
-          trabados << [ paquete, paquete.errors.full_messages.to_sentence ]
+          enviados << paquete
         end
       end
 
@@ -91,6 +73,38 @@ class FinalizarManifiesto
     end
 
     Resultado.new(enviados: enviados, trabados: trabados)
+  end
+
+  # Un paquete, a enviado. Devuelve `nil` si salió, o el porqué si no.
+  #
+  # C30-06 · Es público porque un manifiesto finalizado que se reabre con
+  # «Editar» tiene que mandar **igual** al paquete que se le agrega después:
+  # *"después de finalizado agregamos algo que se quedaba"*. Una sola regla
+  # para el que salió con todos y el que se sumó tarde (`Manifiesto#meter!`).
+  def enviar(paquete)
+    # La guarda de tareas abiertas **hay que preguntarla acá**, no confiar en
+    # el modelo. `no_advance_with_open_tareas` compara índices de
+    # `ESTADOS_ORDEN`, y `enviado_sucursal` no está ahí: es un desvío
+    # (`ESTADOS_EXCEPCIONALES`), no un paso del pipeline. Así que en el
+    # manifiesto **interno** el guard no dispara — `new_idx` sale nil y el
+    # método se va sin mirar nada.
+    #
+    # Y la regla es la misma para los dos: el paquete está en la bodega, en
+    # la mano, y la tarea abierta es justo el aviso de que le falta algo
+    # antes de subirse al camión. Que el destino sea Tegucigalpa en vez de
+    # Honduras no la cambia.
+    return "tiene tareas pendientes" if paquete.tareas_bloqueantes_pendientes?
+    return paquete.errors.full_messages.to_sentence unless paquete.update(**cambios_para(paquete))
+
+    # `ESTADO_FECHA_MAP` estampa `fecha_<estado>_by_user_id` desde
+    # `Current.user`, que en un request es quien apretó el botón. Fuera de
+    # un request —consola, un job— queda en nil, y entonces volveríamos a
+    # perder exactamente lo que perdía el `update_all`. Se rellena con el
+    # usuario que se pasó, sin volver a correr callbacks.
+    if @user && paquete.public_send(columna_de_usuario).nil?
+      paquete.update_column(columna_de_usuario, @user.id)
+    end
+    nil
   end
 
   private
