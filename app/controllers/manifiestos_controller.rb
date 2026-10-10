@@ -63,7 +63,7 @@ class ManifiestosController < ApplicationController
   def update
     unless @manifiesto.editable_por?(Current.user)
       redirect_to @manifiesto,
-                  alert: "#{@manifiesto.numero} está finalizado: solo el supervisor de Miami puede reabrirlo."
+                  alert: "#{@manifiesto.numero} está finalizado: solo #{Manifiesto::QUIEN_ABRE_EL_CANDADO} puede reabrirlo."
       return
     end
 
@@ -250,7 +250,7 @@ class ManifiestosController < ApplicationController
   def cerrar_edicion
     unless @manifiesto.editable_por?(Current.user)
       return redirect_back fallback_location: manifiesto_path(@manifiesto),
-                           alert: "Solo un supervisor de Miami puede cerrar la edición."
+                           alert: "Solo #{Manifiesto::QUIEN_ABRE_EL_CANDADO} puede cerrar la edición."
     end
 
     @manifiesto.cerrar_edicion!

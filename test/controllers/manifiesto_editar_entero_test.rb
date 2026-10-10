@@ -26,6 +26,40 @@ class ManifiestoEditarEnteroTest < ActionDispatch::IntegrationTest
     @abierto.meter!(@adentro, user: @supervisor, caja_manifiesto: @caja)
   end
 
+  # ── Quién abre el candado ───────────────────────────────────────────────
+  #
+  # Yusef (a1_1119, min 48): *"cuando ya está bloqueado son los supervisores,
+  # Pedro y Miami"*. Jorge, 2026-10-10: el de San Pedro es el de Pre-Factura.
+
+  test "el supervisor de Pre-Factura abre y cierra uno recibido" do
+    recibir!
+    sup_pf = users(:supervisor_prefactura)
+    ingresar(sup_pf)
+
+    patch abrir_edicion_manifiesto_url(@abierto)
+    assert @abierto.reload.edicion_abierta?, "lo abrió"
+    assert_equal sup_pf, @abierto.edicion_abierta_por
+
+    get manifiesto_url(@abierto)
+    assert_response :success
+    assert_contenido_editable
+
+    patch cerrar_edicion_manifiesto_url(@abierto)
+    assert_not @abierto.reload.edicion_abierta?
+  end
+
+  test "el digitador no abre uno recibido, y el cajero ni entra a manifiestos" do
+    recibir!
+    ingresar(@digitador)
+    patch abrir_edicion_manifiesto_url(@abierto)
+    assert_not @abierto.reload.edicion_abierta?
+    assert_match(/supervisor \(Miami o Pre-Factura\)/, flash[:alert])
+
+    ingresar(users(:cajero))
+    get manifiesto_url(@abierto)
+    assert_redirected_to root_path
+  end
+
   # ── La pantalla ─────────────────────────────────────────────────────────
 
   test "abierto: /edit tiene las casas, agregar paquetes y lo de San Pedro, para admin y supervisor" do

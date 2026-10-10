@@ -191,9 +191,19 @@ class Manifiesto < ApplicationRecord
   #
   #   > **2026-08-30: "por hoy solo será supervisor Miami."**
   #
-  # Así que la lista es de uno: el digitador arma manifiestos, pero **no puede
+  # Así que la lista era de uno: el digitador arma manifiestos, pero **no puede
   # reabrir uno cerrado**.
-  ROLES_QUE_ABREN_EL_CANDADO = %w[admin supervisor_miami].freeze
+  #
+  # C30-06 · El 2026-10-09 Yusef lo amplió (audio a1_1119, min 48): *"¿quién
+  # puede editar?… supervisores me imagino — exacto, correcto, cuando ya está
+  # bloqueado son los supervisores, **Pedro y Miami**"*. No hay un rol «supervisor
+  # de San Pedro»: Jorge eligió el 2026-10-10 al de **Pre-Factura**, que es el
+  # que trabaja la carga que llega. El digitador y el cajero siguen sin abrirlo.
+  ROLES_QUE_ABREN_EL_CANDADO = %w[admin supervisor_miami supervisor_prefactura].freeze
+
+  # Cómo se nombra en los avisos a quien puede abrirlo. Uno solo, para que los
+  # mensajes no se queden diciendo «de Miami» cuando la lista cambie.
+  QUIEN_ABRE_EL_CANDADO = "un supervisor (Miami o Pre-Factura)".freeze
 
   def bloqueado?
     !creado?
@@ -236,8 +246,12 @@ class Manifiesto < ApplicationRecord
   # nosotros** en C30-06, no Yusef: desde `en_aduana` Honduras ya escanea, y
   # de esos paquetes cuelgan recepción, medición y pre-factura. Jorge, el
   # 2026-10-10, mirando el 21 —recibido— en staging: *"esta pantalla de editar
-  # me debería dejar editar todo lo que está en el manifiesto"*. Decisión de
-  # Jorge del 2026-10-10, **pendiente de confirmar con Yusef**.
+  # me debería dejar editar todo lo que está en el manifiesto"*.
+  #
+  # **Confirmado**: Jorge, el 2026-10-10 — *"I already asked this, answer is
+  # yes, allow both but only admin and supervisors"*. Es lo que Yusef dijo en el
+  # audio del 9 (a1_1119, min 48): *"cuando ya está bloqueado son los
+  # supervisores"*. Quiénes, en `ROLES_QUE_ABREN_EL_CANDADO`.
   #
   # Lo que San Pedro ya contó se cuida **paquete por paquete** y no cerrando
   # el manifiesto entero: `sacar!` deja donde está al que ya llegó y no saca al
@@ -277,16 +291,16 @@ class Manifiesto < ApplicationRecord
       # interno ya finalizado.
       "#{numero} ya no se puede cambiar: es un manifiesto interno y está #{estado.humanize.downcase}."
     elsif edicion_abierta?
-      "#{numero} está abierto para corregir, pero solo un supervisor de Miami puede cambiarlo."
+      "#{numero} está abierto para corregir, pero solo #{QUIEN_ABRE_EL_CANDADO} puede cambiarlo."
     else
-      "#{numero} está finalizado y bloqueado: para corregirlo, un supervisor de Miami aprieta «Editar»."
+      "#{numero} está finalizado y bloqueado: para corregirlo, #{QUIEN_ABRE_EL_CANDADO} aprieta «Editar»."
     end
   end
 
   class NoSePuedeReabrir < StandardError; end
 
   def abrir_edicion!(user)
-    raise NoSePuedeReabrir, "Solo el supervisor de Miami puede abrir un manifiesto finalizado." unless editable_por?(user)
+    raise NoSePuedeReabrir, "Solo #{QUIEN_ABRE_EL_CANDADO} puede abrir un manifiesto finalizado." unless editable_por?(user)
     unless reabrible?
       raise NoSePuedeReabrir, "#{numero} no se puede abrir: solo se reabren los manifiestos oficiales ya finalizados."
     end
