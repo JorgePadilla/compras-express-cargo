@@ -25,6 +25,7 @@ buscar un PR, mirá acá dónde vive:
 | `PR-BTN.{n}` | Refactor transversal a `ButtonComponent`. No cuelga de ninguna fase | Historial de git y `docs/07` |
 | `PR-P.{n}` | Fase 14 — la pre-factura por escaneo (Conversación 30). **No** es `PR-P2a`/`PR-P2b`, que son de permisos (`RP-58`) | **Este archivo**, Fase 14 |
 | `PR-C{nn}.{n}` | Lo que sale de cada conversación desde la 21 (`PR-C29.7`, `PR-C30.4`) | **`docs/05`**, en la tabla de su conversación |
+| `PR-F{n}.{n}` | Fase 15 — la facturación SAR con la gema `invoicehn` (CAI, puntos de emisión, `Factura` reemplaza a `Venta`) | **Este archivo**, Fase 15 |
 
 La serie `RP-{nn}` **no son PRs**: son las preguntas al cliente. Viven en
 `docs/05` y salen impresas en `docs/entregables/preguntas_para_yusef.pdf`.
@@ -1408,9 +1409,13 @@ volumen de tres cajas cobra **un** mínimo, no tres (`RP-41`, `RP-79`).
 
 ### Qué queda afuera (*"no te quiero meter ahí todavía"*)
 
-- Tarifas especiales por cliente, prepagado en Miami, recolecta y cambio de
+- ~~Tarifas especiales por cliente, prepagado en Miami, recolecta y cambio de
   servicio **dentro** del flujo por escaneo: esas pre-facturas siguen por
-  `/pre_facturas/new`, que no se toca.
+  `/pre_facturas/new`, que no se toca.~~ **Superado el 2026-10-10**: la tarifa
+  por cliente, la recolecta y el cambio de servicio ya los cobraba el escaneo
+  (`ArmarPreFacturaPorVolumen`); el prepagado en Miami lo absorbió `PR-P.11a`, y
+  `/pre_facturas/new` **ya no existe** (`PR-P.11b`): toda pre-factura nace
+  escaneando.
 - «Agregar a **este** volumen» (re-pesar uno ya facturado) y editar los números
   de un volumen desde la pre-factura (`RP-83`, `RP-88`).
 - Las notas/tareas de pre-factura por paquete (*"eso va a quedar para arreglar
@@ -1444,6 +1449,11 @@ volumen de tres cajas cobra **un** mínimo, no tres (`RP-41`, `RP-79`).
 | `PR-P.6` ✅ #500 | **F8 consolidando**, y una tanda nueva a la que consolida. Agregar una tanda suma líneas nuevas sin tocar las viejas; el server siempre valida las tandas viejas junto con las nuevas | `C30-18` |
 | `PR-P.7` ✅ #501 | **Editar pre-facturas y cambiar la hora en lote**; volver a consolidar solo antes del aviso (lo frena el modelo, `YaAvisada`). Cambiar la fecha de trabajo de una programada mueve el aviso a ese día con la misma hora | `C30-15`, `RP-77` |
 | `PR-P.8` ✅ #503 | **Dos F9 sobre la misma tanda**: las cajas se bloquean (`FOR UPDATE` por id) antes de validar, y el segundo recibe un 422, no un 500. Y `anular!` toma la pre-factura antes que sus cajas, como todos los demás: al revés era un deadlock con F8. Lo encontró QA en `PR-P.5` | — |
+| `PR-P.9` ✅ #507 | **«Confirmar» y «Facturar» a mano no se saltean el aviso**: en una programada (o con aviso fallido) no se confirma —pasaba las cajas a disponible saltando la hora y la guarda de tareas—; en una consolidando ni se confirma ni se factura (quedaba sin hora y sus cajas nunca pasaban). `PreFactura#motivo_para_no_confirmar` / `_facturar`, sobre `estado_del_aviso`; también en el servidor | QA del mapa de la pre-factura vieja |
+| `PR-P.10` ✅ #508 | La pre-factura a mano quedó como puerta de excepciones y cobraba por volumen cuando había tanda (`ArmarPreFacturaManual`). **Superado** por P.11 el mismo día | Jorge, 2026-10-10 |
+| `PR-P.11a` ✅ #514 | **El escaneo cubre las excepciones**: tanda toda prepagada en Miami → volumen en L 0.00 con su peso + simbólico US$1 por caja (`RP-93`); prepagadas y no prepagadas no se miden juntas; tarifas distintas, otro trato de cobro y otra sucursal de retiro se frenan al medir (`Tarifa.clave`; una sucursal vacía va con cualquiera); «Sin manifiesto oficial» en la hoja; los descartados no retienen el manifiesto; `MarcarCobroExcepcion` recalcula la tanda o se niega con una pre-factura viva; re-auditar después de anular ya andaba (test) | Jorge, 2026-10-10: *"the old one needs to be replaced with the last conversation with Yusef"* |
+| `PR-P.11b` ✅ #517 | **Se quita la pre-factura a mano**: `/pre_facturas/new` redirige a la hoja; sin `create`, `cotizacion` ni `facturables`; el índice solo ofrece F1 «Preparar pre-factura» y muestra el estado del aviso. Las viejas hechas a mano siguen confirmándose, facturándose y anulándose | Ídem |
+| `PR-P.11c` ⏳ | Los tests y las seeds dejan de usar `build_from_paquetes`, y se borra. Después de la Fase 15 (comparten `pre_factura.rb`) | — |
 
 ### Riesgos
 
@@ -1459,3 +1469,62 @@ volumen de tres cajas cobra **un** mínimo, no tres (`RP-41`, `RP-79`).
    cobrarían dos veces. Se resuelve caja → su `medicion_sesion` actual.
 5. **Las gemelas**: pre-factura y venta en admin, el PDF, y el portal del
    cliente, que además muestra el estado (`RP-90`).
+
+---
+
+## Fase 15: Facturación SAR con la gema `invoicehn` (serie PR-F) — EN CURSO (2026-10-10)
+
+Jorge, 2026-10-10: *"for facturación, we are going to use this gem as a core,
+has all the laws from Honduras… we might need to remove the old building"*.
+
+**Lo que había:** ninguna capa fiscal. Sin CAI, rango autorizado,
+establecimiento/punto de emisión ni fecha límite; `Venta` numerada `VT-000001`
+por MAX+1 sin candado; ISV de una sola tasa sin guardarse en el documento; el
+PDF sin RTN del cliente y con la leyenda «Esta factura es valida como
+comprobante fiscal», falsa sin CAI.
+
+**La gema** (`JorgePadilla/invoicehn`, 0.2.0 mergeada el 2026-10-10, falta
+publicarla en RubyGems): las reglas del Acuerdo 481-2017 con sus reformas
+(609-2017, 725-2018, 817-2018) y la Ley ISV — tabla de tipos reformada (01
+Factura, 06 NC, 07 ND…), NC/ND con referencia al original y motivo,
+correlativo `EEE-PPP-TT-NNNNNNNN`, CAI/rango/fecha límite, ISV por tasa con
+redondeo half-up (Art. 9), validador Arts. 10/11/62, total en letras, anulación
+(Art. 41), reloj configurable, y contratos de test para los adaptadores
+(store / sequence / ledger) que pone la app.
+
+### Decisiones de Jorge (2026-10-10)
+
+| Tema | Decisión |
+|---|---|
+| Venta | Modelo **nuevo `Factura`**; `Venta` se elimina. La costura sigue siendo `PreFactura#facturar!` |
+| NC / ND | Primero se extiende la gema; la app la usa para los tres documentos |
+| CAI | Todavía no hay: pantalla admin para cargarlos; **CAI ficticio solo en staging** |
+| Puntos de emisión | **Uno por sucursal** de Honduras que factura; la factura toma la sucursal de quien factura, y quien factura **tiene que tener sucursal** |
+| ND automática de cambio de servicio | **Se quita**: cobraba el flete dos veces |
+| Anular una factura | PIN de supervisor (cuatro ojos) y motivo; con **cualquier pago** ya no se anula: va nota de crédito |
+| Ventas de staging | Se archivan (`ventas_archivo`) y sus pre-facturas vuelven a pendiente; en producción la migración se frena si hay ventas |
+| NC / ND sin RTN | Solo a clientes con RTN (Arts. 26 y 28); confirmar con el contador |
+| Moneda de las notas | Siempre lempiras |
+| ¿Es producción? | Todo lo que **no** sea `cec-staging.onrender.com` (falla cerrado: un CAI ficticio no puede llegar a producción) |
+
+### Serie
+
+| PR | Qué |
+|---|---|
+| `invoicehn#1` ✅ | La gema 0.2.0 (QA: aprobada; arregló que una anulación que el libro rechazaba quedaba a medias) |
+| `PR-F1.0` ✅ #510 | Las secuencias, PKs e índices de `ventas` que se llamaban `facturas*` pasan a llamarse como su tabla (con `IF EXISTS`: las bases de Render nunca los tuvieron) |
+| `PR-F1.1` ✅ #512 | El esquema: `puntos_de_emision`, `autorizaciones_sar` (rangos que no se pisan, por `EXCLUDE` con `btree_gist`), `correlativos_fiscales`, `asientos_fiscales` (solo se agrega, por trigger), `sucursales.direccion`, `empresas.razon_social`, RTN normalizado a 14 dígitos |
+| `PR-F1.5` ✅ #513 | Staging nace con un CAI ficticio por sucursal (SPS 000-001, TGU 001-001, SAM 002-001; casa matriz por confirmar). Solo con `SEED_SAMPLE_DATA=true` y fuera de producción |
+| `PR-F1.6` ✅ #516 | `db:seed` vuelve a correr entero |
+| `PR-F1.3` #515 | Pantalla «Facturación SAR» (admin, no se puede dar desde /permisos) |
+| `PR-F1.2` ⏳ | La gema en el Gemfile + los adaptadores Postgres (correlativo con `FOR UPDATE`, sin huecos) — espera la gema publicada |
+| `PR-F1.4` ⏳ | Salud por punto (números y días que quedan), razón social, sin la leyenda falsa |
+| `PR-F2.1`–`F2.5` ⏳ | Totales desde la gema (idénticos a hoy), `Factura` dormida, columnas puente, el corte de `Venta` a `Factura`, y borrar lo viejo |
+| `PR-F3` ⏳ | NC/ND fiscales, exonerados, tratamiento por servicio, 18 %, varias pre-facturas en una factura (A7-32), export SAR |
+
+### Preguntas abiertas
+
+Exento/exonerado por servicio; si algo va al 18 %; varias pre-facturas en una
+factura (A7-32); la casa matriz (¿SPS es 000?); la fuente de la tasa de cambio
+(BCH o la fija de 27.10); un consumidor final de más de L 10,000 sin identidad;
+una línea «SIN TARIFA» bloquea la emisión.
