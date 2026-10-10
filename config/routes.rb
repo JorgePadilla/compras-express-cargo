@@ -316,7 +316,11 @@ Rails.application.routes.draw do
     end
   end
   resources :pre_facturas, except: [ :destroy ] do
-    collection { get :facturables }
+    collection do
+      get :facturables
+      # PR-P.10 · El total de lo marcado en /pre_facturas/new (turbo-frame).
+      get :cotizacion
+    end
     member do
       post   :confirmar
       post   :facturar

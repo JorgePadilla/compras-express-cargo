@@ -30,13 +30,26 @@ class PreFacturasController < ApplicationController
     if params[:cliente_id].present?
       @cliente = Cliente.find(params[:cliente_id])
       @paquetes_facturables = paquetes_facturables_de(@cliente, @manifiesto)
-      @cotizaciones = cotizar(@cliente, @paquetes_facturables)
+      @preview = armar_preview(@cliente, @paquetes_facturables)
     end
+  end
+
+  # PR-P.10 · El total de lo que está marcado en el paso 2, con el **mismo**
+  # armador que va a usar `create` y la misma cuenta del `before_save`: lo que
+  # dice la pantalla es lo que se guarda. Lo pide el turbo-frame de `new` cada
+  # vez que cambia un check.
+  def cotizacion
+    cliente = Cliente.find(params[:cliente_id])
+    paquete_ids = paquete_ids_param
+    @pre_factura = if paquete_ids.any?
+      ArmarPreFacturaManual.call(cliente: cliente, paquete_ids: paquete_ids, user: Current.user).pre_factura.calcular_totales
+    end
+    render layout: false
   end
 
   def create
     cliente = Cliente.find(params[:cliente_id])
-    paquete_ids = Array(params[:paquete_ids]).map(&:to_i).reject(&:zero?)
+    paquete_ids = paquete_ids_param
 
     if paquete_ids.empty?
       redirect_to new_pre_factura_path(cliente_id: cliente.id),
@@ -44,7 +57,10 @@ class PreFacturasController < ApplicationController
       return
     end
 
-    @pre_factura = PreFactura.build_from_paquetes(cliente, paquete_ids, user: Current.user)
+    # PR-P.10 · Lo que tiene volumen medido se cobra por volumen (trae su
+    # tanda entera); lo demás, por paquete como siempre.
+    armado = ArmarPreFacturaManual.call(cliente: cliente, paquete_ids: paquete_ids, user: Current.user)
+    @pre_factura = armado.pre_factura
     @pre_factura.notas = params.dig(:pre_factura, :notas)
     # C21-10: el manifiesto que se está trabajando queda guardado en la
     # pre-factura. Hasta hoy el número se tipeaba a mano en las notas.
@@ -60,13 +76,19 @@ class PreFacturasController < ApplicationController
         trackings = prepagados.map(&:tracking).join(", ")
         notice += " #{prepagados.size} paquete(s) prepagado(s) en Miami detectado(s) (#{trackings}) — agregué cobro simbólico de $#{PreFactura::PREPAGADO_MIAMI_SIMBOLICO} c/u. Ajustá el monto si necesitas antes de facturar."
       end
+      # PR-P.10 · Una tanda medida que el armador por volumen no acepta se
+      # cobró por paquete, con el peso de Miami. El cajero tiene que saber por qué.
+      if armado.rechazos.any?
+        notice += " #{armado.rechazos.size} tanda(s) medida(s) se cobraron por paquete, con el peso de Miami: " \
+                  "#{armado.rechazos.values.join(' ')}"
+      end
       redirect_to edit_pre_factura_path(@pre_factura), notice: notice
     else
       @cliente = cliente
       @manifiestos = Manifiesto.con_carga_por_facturar
       @manifiesto = @manifiestos.find_by(id: params[:manifiesto_id])
       @paquetes_facturables = paquetes_facturables_de(cliente, @manifiesto)
-      @cotizaciones = cotizar(cliente, @paquetes_facturables)
+      @preview = armar_preview(cliente, @paquetes_facturables)
       render :new, status: :unprocessable_entity
     end
   end
@@ -184,6 +206,9 @@ class PreFacturasController < ApplicationController
   #
   # `CotizadorFlete` es el mismo servicio que usa /entrega_personal, y hay un
   # test que verifica que su resultado coincida con el de la pre-factura.
+  #
+  # PR-P.10 · Ya solo lo usa el JSON de `facturables`, que es por paquete. La
+  # pantalla dejó de cotizar acá: ver `armar_preview`.
   def cotizar(cliente, paquetes)
     paquetes.index_by(&:id).transform_values do |p|
       CotizadorFlete.call(
@@ -196,6 +221,23 @@ class PreFacturasController < ApplicationController
         peso: p.peso_cobrar
       )
     end
+  end
+
+  # PR-P.10 · El paso 2 se cotiza con **el mismo armador** que `create`
+  # (`ArmarPreFacturaManual`, sin guardar), sobre todo lo facturable: así la
+  # pantalla sabe qué va por volumen, qué tanda se rechazó y por qué, y el
+  # precio de cada fila es el de la línea que se va a guardar. Cada fila se
+  # cotiza sola —un volumen o un paquete no cambia de precio por lo que se
+  # marque al lado—, así que armar todo da el mismo precio que armar cualquier
+  # selección.
+  def armar_preview(cliente, paquetes)
+    ArmarPreFacturaManual.call(cliente: cliente, paquete_ids: paquetes.map(&:id), user: Current.user)
+  end
+
+  # PR-P.10 · El check de una tanda manda sus ids juntos («12,13»): no se elige
+  # media tanda.
+  def paquete_ids_param
+    Array(params[:paquete_ids]).flat_map { |v| v.to_s.split(",") }.map(&:to_i).reject(&:zero?).uniq
   end
 
   # C21-10. Un solo lugar arma la lista, para que la pantalla, el JSON del
