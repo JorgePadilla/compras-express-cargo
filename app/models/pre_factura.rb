@@ -13,6 +13,8 @@ class PreFactura < ApplicationRecord
 
   belongs_to :cliente
   belongs_to :creado_por, class_name: "User", optional: true
+  # PR-P.2 · Quién la auditó escaneando (PR-P.5 lo escribe).
+  belongs_to :auditado_por, class_name: "User", optional: true
 
   # C21-10. *"Lo que vamos a seleccionar, de que estamos procesando, es el
   # manifiesto… ahí es donde deberíamos amarrar el manifiesto, no la guía."*
@@ -44,8 +46,31 @@ class PreFactura < ApplicationRecord
 
   before_validation :generate_numero, on: :create, if: -> { numero.blank? }
   before_save :calculate_totals
+  before_save :ajustar_notificar_at, if: :notificar_at_changed?
+
+  # PR-P.2 · La hora a la que la carga queda disponible y se le avisa al
+  # cliente, si nadie dice otra. Yusef (`C30-16`): *"siete y media"*. Se cambia
+  # sin deploy con `Configuracion.set("prefactura_hora_disponible", "08:00")`,
+  # como `ventana_aviso_llegada_min`.
+  HORA_DISPONIBLE_DEFAULT = "07:30".freeze
+
+  def self.hora_disponible
+    valor = Configuracion.get("prefactura_hora_disponible").to_s.strip
+    valor.match?(/\A([01]?\d|2[0-3]):[0-5]\d\z/) ? valor : HORA_DISPONIBLE_DEFAULT
+  end
+
+  # La fecha de trabajo con la hora de disponible, en la zona de la empresa.
+  def self.notificar_at_para(fecha, hora: hora_disponible)
+    h, m = hora.split(":").map(&:to_i)
+    Time.zone.local(fecha.year, fecha.month, fecha.day, h, m)
+  end
 
   scope :activas,    -> { where.not(estado: "anulado") }
+  # PR-P.2 · Las que ya llegaron a su hora y todavía no avisaron. Va por el
+  # índice parcial `index_pre_facturas_por_avisar`.
+  scope :por_avisar, ->(ahora = Time.current) {
+    activas.where(notificado_at: nil).where.not(notificar_at: nil).where(notificar_at: ..ahora)
+  }
   scope :pendientes, -> { where(estado: "pendiente") }
   scope :recientes,  -> { order(created_at: :desc) }
   scope :by_cliente, ->(id) { where(cliente_id: id) }
@@ -173,7 +198,13 @@ class PreFactura < ApplicationRecord
       # es donde `confirmar!` lo dejó y donde el paquete físicamente está:
       # anular la pre-factura no devuelve la carga a la aduana. Con la FK en
       # nil vuelve a caer en `Paquete.facturables`, que filtra por eso.
-      paquetes.reload.each { |p| p.update!(pre_factura_id: nil) }
+      #
+      # PR-P.2 · Salvo lo que F8 había dejado consolidando (PR-P.6): eso vuelve
+      # a aduana, que es donde espera la carga sin pre-factura. Quedarse en
+      # `consolidando_honduras` la sacaría de `facturables` para siempre.
+      paquetes.reload.each do |p|
+        p.update!(pre_factura_id: nil, **(p.estado == "consolidando_honduras" ? { estado: "en_aduana" } : {}))
+      end
       update!(estado: "anulado")
     end
     true
@@ -371,6 +402,16 @@ class PreFactura < ApplicationRecord
     next_number = (self.class.where("numero LIKE 'PF-%'")
                     .maximum(Arel.sql("CAST(SUBSTRING(numero FROM 4) AS INTEGER)")) || 0) + 1
     self.numero = "PF-#{next_number.to_s.rjust(6, '0')}"
+  end
+
+  # PR-P.2 · `C30-08`: la hora va **sin segundos** —en el papel y en el
+  # correo—, así que se guarda sin ellos. Y `fecha_trabajo` sigue siendo su
+  # día: los filtros y los listados la leen a ella.
+  def ajustar_notificar_at
+    return if notificar_at.nil?
+
+    self.notificar_at = notificar_at.in_time_zone.change(sec: 0)
+    self.fecha_trabajo = notificar_at.to_date
   end
 
   def vincular_paquetes
