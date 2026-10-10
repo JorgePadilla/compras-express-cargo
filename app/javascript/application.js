@@ -1,6 +1,7 @@
 // Configure your import map in config/importmap.rb. Read more: https://github.com/rails/importmap-rails
 import "@hotwired/turbo-rails"
 import "controllers"
+import "controllers/mensajes_de_validacion"
 
 if (window.Turbo && typeof window.Turbo.setConfirmMethod === "function") {
   window.Turbo.setConfirmMethod((message) => {
