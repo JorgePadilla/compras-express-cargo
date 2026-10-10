@@ -657,7 +657,7 @@ end %>
             paquete viejo sin contenido se sigue pudiendo corregir. %>
         <%= f.text_area :descripcion, rows: 2, placeholder: "Descripcion del contenido...",
             required: !@modo_actualizacion || @paquete.descripcion_in_database.present?,
-            data: { etiquetar_target: "descripcion" },
+            data: { etiquetar_target: "descripcion", mensaje_obligatorio: "Escribí qué viene en el paquete." },
             class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
                    focus:ring-cec-teal focus:border-cec-teal" %>
         <%# C19-04: "sellado y compra chino, son más comunes". %>
