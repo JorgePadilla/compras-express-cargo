@@ -60,14 +60,31 @@
       if (params.get("print") !== "true") return;
 
       var cerrar = params.get("cerrar") === "1";
+      // C30-05 · «Finalizar e Imprimir» trae acá la hoja del manifiesto en la
+      // **misma** pestaña de la ficha: no hay pestaña que cerrar, hay que
+      // devolverla. Es el mismo `@despues_de_imprimir` que ya usan las
+      // etiquetas (`layouts/_etiqueta_autoprint`), y la URL la arma el
+      // servidor por lo mismo que allá: un parámetro con la dirección sería un
+      // redirect abierto servido desde nuestro dominio.
+      var despues = <%= raw((@despues_de_imprimir || "").to_json) %>;
+
+      function alTerminar() {
+        if (despues) {
+          // `replace` y no `href`: el Atrás no tiene por qué volver a una hoja
+          // que ya se imprimió.
+          window.location.replace(despues);
+          return;
+        }
+        window.close();
+      }
 
       window.onload = function () {
-        if (cerrar) {
-          window.addEventListener("afterprint", function () { window.close(); }, { once: true });
+        if (cerrar || despues) {
+          window.addEventListener("afterprint", alTerminar, { once: true });
 
           var mq = window.matchMedia("print");
           if (mq && mq.addEventListener) {
-            mq.addEventListener("change", function (e) { if (!e.matches) window.close(); });
+            mq.addEventListener("change", function (e) { if (!e.matches) alTerminar(); });
           }
         }
 
