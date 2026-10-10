@@ -20,7 +20,12 @@
 # el formulario del manifiesto venía llenando ese campo con **nuestro** catálogo:
 # la raíz de que Yusef dijera *"tengo que aprenderme que el tipo de envío del
 # manifiesto es el del proveedor; aquí me pierdo"*.
-class CatalogosDelManifiesto < ActiveRecord::Migration[8.0]
+# PR-F1.8 · Se llamaba `CatalogosDelManifiesto`, igual que el módulo de
+# `lib/catalogos_del_manifiesto.rb` que siembra estos catálogos. Migrando desde
+# cero las dos corren en el mismo proceso, y la siembra (20260831004458) moría
+# con «CatalogosDelManifiesto is not a module». Cambiar el nombre no cambia la
+# versión: las bases que ya la corrieron no la vuelven a correr.
+class CrearCatalogosDelManifiesto < ActiveRecord::Migration[8.0]
   def change
     # Lo que Yusef pidió que saliera impreso en el bloque del transportista:
     #   > "La dirección es tal, porque sale la dirección en la información de la

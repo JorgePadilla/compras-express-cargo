@@ -11,8 +11,14 @@
 # método se testea, un archivo de migración no. El número sale del mes de
 # `fecha_recibido_miami`: un recibido en julio que se numera hoy sale
 # `RMIA2607…`, y está bien — es cuándo se recibió, no cuándo se arregló.
+#
+# PR-F1.8 · Desde cero no hay paquetes que numerar, y `Paquete` de hoy no carga
+# contra el esquema de esta fecha (enums sobre columnas posteriores). Sin
+# paquetes se sale antes de tocar el modelo; con datos, lo de siempre.
 class NumerarRecibidosSinNumero < ActiveRecord::Migration[8.0]
   def up
+    return say "sin paquetes: no hay nada que numerar" unless select_value("SELECT EXISTS (SELECT 1 FROM paquetes)")
+
     resultado = Paquete.numerar_recibidos_sin_numero!
 
     resultado[:numerados].each { |id, tracking, numero| say "paquete #{id} (#{tracking}) → #{numero}" }

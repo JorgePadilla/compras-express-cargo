@@ -1757,42 +1757,6 @@ ALTER SEQUENCE public.numero_recepcion_counters_id_seq OWNED BY public.numero_re
 
 
 --
--- Name: numero_recepcion_rh_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.numero_recepcion_rh_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: numero_recepcion_rm_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.numero_recepcion_rm_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: numero_recepcion_rs_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.numero_recepcion_rs_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
 -- Name: pagos; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -8364,6 +8328,7 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20261011140000'),
 ('20261011120000'),
+('20261010180000'),
 ('20261010170000'),
 ('20261010150000'),
 ('20261010130100'),
