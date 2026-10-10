@@ -12427,7 +12427,7 @@ Es la etiqueta de `C26-12` (*"ésa es la que van a escanear para entregar"*).
 | `C30-03` | Descripción obligatoria en `/etiquetar` | ✅ **Hecho** — `PR-C30.2` (#484). Solo en lo que entra por `/etiquetar` (flag `contenido_en_etiquetar`): pre-alertas, importados y splits siguen sin pedirla. Un paquete pre-alertado que llega con el campo vacío **conserva** la descripción de la pre-alerta; uno viejo sin descripción se puede seguir corrigiendo. F9 avisa antes del modal de etiquetas, también en `/entrega_personal` |
 | `C30-04` | Tab en el autocomplete del cliente | ❓ `RP-76` |
 | `C30-05` | «Finalizar e Imprimir» saca la hoja del manifiesto | ✅ **Hecho** — `PR-C30.3` (#488); cambia `C21-06`. Abre el diálogo, vuelve a la ficha, y ya no exige cajas. Las 4×6 se siguen reimprimiendo aparte |
-| `C30-06` | El manifiesto finalizado: «Editar» del supervisor abre paquetes y cajas, y lo bloqueado deja imprimir | ✅ **Hecho** — `PR-C30.7` (#493). El candado era solo de la vista: ahora lo cuida el server en manifiestos, cajas, empaque **y `/paquetes`** (reasignar manifiesto pasa por `sacar!`/`meter!`, el retroceso de estado por `soltar!`, el split se traba). «Editar» (admin y supervisor de Miami) abre la edición con quién y desde cuándo, y se cierra a mano; solo en un oficial `enviado`, en aduana ya no. «Eliminar paquetes» escaneando en un modal. Una pestaña vieja que choca con el candado se refresca sola. ❓ *"Pedro y Miami"*: San Pedro no entra a `/manifiestos` desde `PR-U1` |
+| `C30-06` | El manifiesto finalizado: «Editar» del supervisor abre paquetes y cajas, y lo bloqueado deja imprimir | ✅ **Hecho** — `PR-C30.7` (#493). El candado era solo de la vista: ahora lo cuida el server en manifiestos, cajas, empaque **y `/paquetes`** (reasignar manifiesto pasa por `sacar!`/`meter!`, el retroceso de estado por `soltar!`, el split se traba). «Editar» abre la edición con quién y desde cuándo, y se cierra a mano. «Eliminar paquetes» escaneando en un modal. Una pestaña vieja que choca con el candado se refresca sola. ▶ **2026-10-10**: también los **recibidos** (en aduana y recibido), y lo abren admin y los supervisores de **Miami y Pre-Factura** (*"Pedro y Miami"*, confirmado por Jorge: `PR-C30.14` #509); y «Editar» edita **en la misma ficha**, sin otra pantalla (`PR-C30.15` #511) |
 | `C30-07` | Lo de cada caja a la vista en la ficha | ✅ **Hecho** — `PR-C30.7` (#493): la tabla de cajas con «Paquetes adentro» (cuántos y sus warehouse), de solo lectura cuando está bloqueado |
 | `C30-08` | Horas sin segundos al cliente | ✅ **Hecho** — con la pre-factura: `notificar_at` se guarda con segundos en 0 y el correo dice la hora `HH:MM` (`PR-P.2`, #495) |
 | `C30-09` | `/recepcion_carga` con un escáner para todos los pendientes | ✅ **Hecho** — `PR-C30.4` (#489): escáner en la lista que ubica la caja en cualquier manifiesto pendiente (mismo código que el de adentro), «6 de 7 · falta B» por fila, «Terminar» e «Imprimir» por fila. De paso: escanear la hoja del manifiesto en un interno recibía un paquete; ya no |
@@ -12459,3 +12459,22 @@ Es la etiqueta de `C26-12` (*"ésa es la que van a escanear para entregar"*).
 | `RP-90` | **El portal mientras consolida**: ¿el cliente ve «Consolidando en Honduras» o «En aduana»? |
 | `RP-91` | **Buscar por código o nombre del cliente** (lo dice el diagrama): ¿respaldo cuando no hay QR, o solo escanear (`C30-17`)? |
 | `RP-92` | **Una tanda con cajas de proveedores o sucursales distintos** que caen en tarifas distintas: «NO Mezclar» solo asegura mismo cliente y servicio, pero `Tarifa.resolver` mira también proveedor y sucursal. Hoy la pre-factura **rechaza** ese volumen (`PR-P.1`). ¿Pasa en la práctica? Si pasa, ¿qué tarifa gana? |
+| `RP-93` | **Prepagado en Miami** (`PR-P.11a`): hoy se cobra un simbólico de **US$1 + ISV por caja**, y el volumen va en L 0.00 con su peso. ¿Es por caja o por pre-factura/volumen? |
+| `RP-94` | ¿Medición tiene que **rechazar** medir juntas cajas prepagadas y no prepagadas (hoy sí), o se separan solas? |
+| `RP-95` | (sigue `RP-92`) Una tanda con cajas que caen en **tarifas distintas** hoy no se puede medir junta. ¿Pasa en la práctica? |
+| `RP-96` | (`RP-72`) Una caja «solo peso» o «solo volumétrico» hoy **se mide aparte** de las que no lo son. ¿O alcanza con un aviso? |
+| `RP-97` | (`RP-85`) Lo que no tiene manifiesto oficial (viejos, capeados, interno) se pre-factura marcando «Sin manifiesto oficial» en la hoja. Los **capeados** medidos con «saltar manifiesto» que nunca pasaron a aduana no aparecen: ¿quién los pasa? |
+| `RP-98` | Los **descartados de medición** («perdido», «ya fue entregado»): ¿ya están facturados en el sistema viejo? Hoy ya no retienen su manifiesto en la hoja |
+| `RP-99` | Anulada una pre-factura que **ya avisó** y vuelta a auditar: hoy el F9 manda el aviso **otra vez**. ¿Está bien? |
+| `RP-100` | (`RP-91`) Sin la pre-factura a mano, ¿hace falta **buscar por código de cliente** cuando falta el QR, o solo escaneando? |
+
+### Después de la reunión — lo que Jorge pidió el 2026-10-10
+
+| PR | Qué | Por qué |
+|---|---|---|
+| `PR-C30.12` #505 | Los avisos del navegador en español en todos los campos obligatorios; la descripción dice «Escribí qué viene en el paquete.» | *"la validación de description está en inglés"*: era el texto de Chrome |
+| `PR-C30.13` #506 | `/medicion/volumenes`, el buscador de volúmenes (`C30-12`) | *"falta una sección como para ver los volúmenes"* |
+| `PR-P.9` #507 | Confirmar y Facturar a mano respetan el aviso programado | Bug encontrado al mapear la pre-factura vieja |
+| `PR-P.10` #508 → `PR-P.11a` #514 + `PR-P.11b` #517 | La pre-factura a mano primero quedó para excepciones y después **se quitó**: todo por escaneo, y el escaneo absorbió las excepciones (`RP-93`–`RP-100`) | *"the old one needs to be replaced with the last conversation with Yusef"* |
+| `PR-C30.14` #509 + `PR-C30.15` #511 | «Editar» del manifiesto: lo de Miami, lo de San Pedro, las cajas y los paquetes, **en la misma ficha**; también los recibidos | *"esta pantalla de editar me debería dejar editar todo"* · *"I want to edit the current view"* |
+| Fase 15 (`docs/06`) | La facturación SAR con `invoicehn` arrancó: #510, #512, #513, #516 y la pantalla de CAIs (#515) | *"we are going to use this gem as a core"* |
