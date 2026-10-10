@@ -59,6 +59,12 @@ class EtiquetaDeEntrega
   # Las libras **a cobrar**: la suma del peso de las líneas de flete. Las
   # líneas automáticas (recolecta, cambio de servicio) y los cargos a mano sin
   # peso no son libras.
+  #
+  # PR-P.1 · En la pre-factura por volumen la línea de flete es el **volumen**
+  # (`origen: "volumen"`); las cajas van debajo en cero y sin peso
+  # (`caja_del_volumen`), así que no suman dos veces.
+  ORIGENES_DE_FLETE = %w[manual volumen].freeze
+
   def libras
     lineas_de_flete.sum { |i| i.peso_cobrar.to_d }
   end
@@ -112,7 +118,7 @@ class EtiquetaDeEntrega
 
   def lineas_de_flete
     @lineas_de_flete ||= pre_factura.pre_factura_items.select do |i|
-      i.origen == "manual" && i.peso_cobrar.present?
+      i.origen.in?(ORIGENES_DE_FLETE) && i.peso_cobrar.present?
     end
   end
 

@@ -37,6 +37,21 @@ class EtiquetaDeEntregaTest < ActiveSupport::TestCase
     assert_equal BigDecimal("14.75"), etiqueta.libras
   end
 
+  # PR-P.1 · En la pre-factura por volumen la línea que cobra es el volumen
+  # (`origen: "volumen"`), y las cajas van en cero y sin peso debajo. Las
+  # libras a cobrar son las del volumen.
+  test "en la pre-factura por volumen, las libras son las del volumen" do
+    Tarifa.create!(tipo_envio: tipo_envios(:cer), precio_libra: 4.50, moneda: "USD")
+    cajas = [ paquete, paquete ]
+    bulto, = MedirBulto.new(user: users(:supervisor_prefactura))
+                       .guardar!(paquete_ids: cajas.map(&:id), volumenes: [ { peso: "12" } ])
+    pf = ArmarPreFacturaPorVolumen.call(cliente: clientes(:juan), sesiones: [ bulto.sesion ])
+    pf.save!
+
+    assert_equal bulto.peso_cobrar.to_d, EtiquetaDeEntrega.new(pf.reload).libras
+    assert EtiquetaDeEntrega.new(pf).libras.positive?
+  end
+
   test "el tipo de envío sale de lo que se cobra" do
     flete(paquete, 1)
     flete(paquete(tipo_envio: tipo_envios(:cem)), 1)
