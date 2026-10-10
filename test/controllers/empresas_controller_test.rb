@@ -23,6 +23,19 @@ class EmpresasControllerTest < ActionDispatch::IntegrationTest
     assert_equal "99991234567890", @empresa.reload.rtn
   end
 
+  # PR-F1.4 · La razón social se carga acá; el ISV ya no se edita.
+  test "guarda la razón social y no toca el ISV" do
+    patch empresa_url, params: { empresa: { razon_social: "Compras Express Cargo, S. de R.L.", isv_rate: 0.18 } }
+    assert_redirected_to empresa_url
+    assert_equal "Compras Express Cargo, S. de R.L.", @empresa.reload.razon_social
+    assert_equal BigDecimal("0.15"), @empresa.isv_rate
+
+    get edit_empresa_url
+    assert_select "input[name='empresa[razon_social]']"
+    assert_select "input[name='empresa[isv_rate]']", count: 0
+    assert_match "15 % (Ley ISV)", response.body
+  end
+
   test "cajero cannot access empresa" do
     delete session_url
     post session_url, params: { email_address: users(:cajero).email_address, password: "password123" }

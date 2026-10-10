@@ -1013,8 +1013,15 @@ if Rails.env.development? || ENV["SEED_SAMPLE_DATA"]
 end
 
 # ── Empresa singleton (datos fiscales para PDFs y mailers) ──
+#
+# PR-F1.4 · Sin la leyenda «Esta factura es valida como comprobante fiscal»:
+# lo que la hace válida es el CAI de la SAR, no un texto al pie, y las facturas
+# de hoy no lo tienen. La razón social no se inventa: si no hay, queda la marca
+# de que falta (la misma de la semilla del CAI ficticio), y se carga en Empresa.
+require Rails.root.join("lib/cai_ficticio_de_staging")
 Empresa.instance.update!(
   nombre: "Compras Express Cargo",
+  razon_social: Empresa.instance.razon_social.presence || CaiFicticioDeStaging::RAZON_SOCIAL_PENDIENTE,
   rtn: "08011998123456",
   telefono: "+504 2550-0000",
   email_contacto: "info@comprasexpresscargo.com",
@@ -1024,7 +1031,7 @@ Empresa.instance.update!(
   moneda_default: "LPS",
   isv_rate: BigDecimal("0.15"),
   sitio_web: "https://comprasexpresscargo.com",
-  terminos_factura: "Esta factura es valida como comprobante fiscal. Gracias por preferir Compras Express Cargo."
+  terminos_factura: "Gracias por preferir Compras Express Cargo."
 )
 puts "  ✓ Empresa singleton"
 

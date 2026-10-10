@@ -1,0 +1,70 @@
+<%# PR-F1.4 · ¿Puede facturar cada sucursal hoy, y cuánto le queda? Lo calcula
+    `Fiscal::Salud` con el `health` de la gema. Arriba de todo porque es lo
+    primero que hay que saber al entrar. %>
+<% ficticias = salud.select(&:ficticia?) %>
+<% if ficticias.any? %>
+  <div class="mb-4 rounded-lg bg-amber-50 dark:bg-amber-900/30 ring-1 ring-amber-300 dark:ring-amber-700 p-4 text-sm text-amber-900 dark:text-amber-200" data-salud="ficticia">
+    <p class="font-semibold">CAI ficticio: documentos de prueba, sin validez fiscal.</p>
+    <p class="mt-1">
+      <%= ficticias.map { |f| "#{f.punto.sucursal.nombre} (#{f.tipo_nombre.downcase})" }.uniq.to_sentence %>
+      <%= ficticias.size == 1 ? "emite" : "emiten" %> con una autorización inventada para staging.
+    </p>
+  </div>
+<% end %>
+
+<% salud.select { |f| f.vencidas_con_sobrantes.any? }.each do |f| %>
+  <div class="mb-4 rounded-lg bg-amber-50 dark:bg-amber-900/30 ring-1 ring-amber-300 dark:ring-amber-700 p-4 text-sm text-amber-900 dark:text-amber-200" data-salud="art-42">
+    <p class="font-semibold"><%= f.punto.sucursal.nombre %> · <%= f.tipo_nombre %>: CAI vencido con números sin usar.</p>
+    <p class="mt-1">
+      <%= f.vencidas_con_sobrantes.map { |a| "#{a.cai} (#{a.range_label}, venció el #{l(a.limit_date, format: '%d/%m/%Y')})" }.to_sentence %>.
+      Hay que informarlo a la SAR dentro de los primeros 10 días hábiles del mes siguiente (Art. 42).
+    </p>
+  </div>
+<% end %>
+
+<%= render FormSectionComponent.new(title: "Estado para facturar",
+                                    subtitle: "Por sucursal y tipo de documento, a hoy.",
+                                    densidad: :compacta, class: "mb-6") do %>
+  <div class="overflow-x-auto -mx-4 sm:-mx-5">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+      <thead class="bg-gray-50 dark:bg-gray-800">
+        <tr>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Sucursal</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Tipo</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Estado</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Número que sigue</th>
+          <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Quedan</th>
+          <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Días</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+        <% salud.each do |f| %>
+          <tr data-salud-fila="<%= f.punto.prefijo %>-<%= f.tipo %>" data-estado="<%= f.estado %>">
+            <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100"><%= f.punto.sucursal.nombre %></td>
+            <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200"><%= f.tipo_nombre %></td>
+            <td class="px-4 py-3 text-sm">
+              <% if f.rojo? %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                  <%= f.no_puede %>
+                </span>
+              <% elsif f.ambar? %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">Se acaba pronto</span>
+              <% else %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cec-teal/10 text-cec-teal-deep dark:text-cec-teal">Puede facturar</span>
+              <% end %>
+              <% if f.motivos.any? %>
+                <ul class="mt-1 text-xs text-gray-600 dark:text-gray-300 list-disc list-inside">
+                  <% f.motivos.each do |motivo| %><li><%= motivo %></li><% end %>
+                  <% f.faltan_del_emisor.each do |campo| %><li>Falta: <%= campo %></li><% end %>
+                </ul>
+              <% end %>
+            </td>
+            <td class="px-4 py-3 text-xs font-mono text-gray-700 dark:text-gray-200 whitespace-nowrap"><%= f.siguiente %></td>
+            <td class="px-4 py-3 text-sm text-right tabular-nums text-gray-700 dark:text-gray-200"><%= f.autorizacion || !f.rojo? ? number_with_delimiter(f.quedan) : "—" %></td>
+            <td class="px-4 py-3 text-sm text-right tabular-nums text-gray-700 dark:text-gray-200"><%= f.dias || "—" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>

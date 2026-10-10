@@ -9,9 +9,16 @@
 
   <div class="bg-white rounded-lg shadow p-6 mb-6">
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div class="md:col-span-2">
-        <%= f.label :nombre, class: "block text-sm font-medium text-gray-700 mb-1" %>
+      <div>
+        <%= f.label :nombre, "Nombre comercial", class: "block text-sm font-medium text-gray-700 mb-1" %>
         <%= f.text_field :nombre, required: true, class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+      </div>
+      <%# PR-F1.4 · El nombre legal, tal como está en el RTN. La factura SAR lo
+          imprime aparte del comercial (Art. 10 num. 1 lit. b y c). %>
+      <div>
+        <%= f.label :razon_social, "Razón social", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= f.text_field :razon_social, placeholder: "Como figura en el RTN",
+              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
       </div>
       <div>
         <%= f.label :rtn, "RTN", class: "block text-sm font-medium text-gray-700 mb-1" %>
@@ -41,9 +48,11 @@
         <%= f.label :moneda_default, "Moneda default", class: "block text-sm font-medium text-gray-700 mb-1" %>
         <%= f.text_field :moneda_default, class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
       </div>
+      <%# PR-F1.4 · El ISV no se edita: lo fija la ley, y desde la Fase 15 lo
+          calcula la gema de facturación. %>
       <div>
-        <%= f.label :isv_rate, "ISV (0-1, ej: 0.15)", class: "block text-sm font-medium text-gray-700 mb-1" %>
-        <%= f.number_field :isv_rate, step: 0.0001, min: 0, max: 0.9999, class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+        <p class="block text-sm font-medium text-gray-700 mb-1">ISV</p>
+        <p class="py-2 text-sm text-gray-900">15 % (Ley ISV)</p>
       </div>
       <div class="md:col-span-2">
         <%= f.label :sitio_web, class: "block text-sm font-medium text-gray-700 mb-1" %>

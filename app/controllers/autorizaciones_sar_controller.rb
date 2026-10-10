@@ -14,6 +14,7 @@ class AutorizacionesSarController < ApplicationController
   before_action :set_puntos, only: %i[new create edit update]
 
   def index
+    @salud = Fiscal::Salud.de_todos
     @puntos = PuntoDeEmision.includes(:sucursal).order(:establecimiento, :punto)
     @sucursales_sin_punto = Sucursal.activas.where(ubicacion: "honduras")
                                     .where.missing(:punto_de_emision).ordered

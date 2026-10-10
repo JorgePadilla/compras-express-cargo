@@ -43,6 +43,12 @@ class AutorizacionSar < ApplicationRecord
   # número que sigue sube el correlativo (ver `Fiscal::Sequence`). Así lo hacen
   # igual la pantalla, la migración de staging, los seeds y la gema.
   after_create { Fiscal::Sequence.new.alinear_si_hace_falta(self) }
+  # PR-F1.4 · Y al corregir el rango de una que todavía no se usó (es la única
+  # que se puede editar): el contador se vuelve a calcular desde lo emitido de
+  # verdad, para arriba o para abajo. Si cambió de punto o de tipo, en los dos.
+  after_update :realinear_correlativo, if: -> { (saved_changes.keys & CAMPOS_DEL_RANGO).any? }
+
+  CAMPOS_DEL_RANGO = %w[punto_de_emision_id tipo_documento rango_inicio rango_fin fecha_limite_emision].freeze
 
   scope :del, ->(punto, tipo) { where(punto_de_emision: punto, tipo_documento: tipo.to_s) }
   scope :reales, -> { where(ficticia: false) }
@@ -151,10 +157,21 @@ class AutorizacionSar < ApplicationRecord
     return unless new_record? || will_save_change_to_rango_inicio? ||
                   will_save_change_to_punto_de_emision_id? || will_save_change_to_tipo_documento?
 
-    ultimo = correlativo&.ultimo.to_i
+    # Al crear, contra el contador; al corregir, contra lo emitido de verdad:
+    # el contador puede estar alineado a esta misma autorización (PR-F1.4), y
+    # bajar su inicio sin documentos emitidos tiene que poder hacerse.
+    ultimo = new_record? ? correlativo&.ultimo.to_i : Fiscal::Sequence.ultimo_emitido(punto_de_emision_id, tipo_documento)
     return if rango_inicio > ultimo
 
     errors.add(:rango_inicio, "tiene que ser mayor que el último número ya emitido (#{ultimo})")
+  end
+
+  def realinear_correlativo
+    secuencia = Fiscal::Sequence.new
+    antes = [ punto_de_emision_id_before_last_save || punto_de_emision_id, tipo_documento_before_last_save || tipo_documento ]
+    [ antes, [ punto_de_emision_id, tipo_documento ] ].uniq.each do |punto_id, tipo|
+      secuencia.recalcular(PuntoDeEmision.find(punto_id), tipo)
+    end
   end
 
   def ficticia_fuera_de_produccion

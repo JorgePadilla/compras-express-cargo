@@ -30,6 +30,15 @@ class AutorizacionesSarControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", autorizacion_sar_path(@ficticia)
   end
 
+  # PR-F1.4 · El panel de salud arriba del listado.
+  test "el listado dice qué sucursal puede facturar hoy, y avisa del CAI ficticio" do
+    get autorizaciones_sar_url
+
+    assert_select "tr[data-salud-fila='000-001-01'][data-estado='verde']"
+    assert_select "tr[data-salud-fila='001-001-01'][data-estado='rojo']", text: /Esta sucursal no puede facturar/
+    assert_select "[data-salud='ficticia']", text: /sin validez fiscal/
+  end
+
   test "Miami no aparece entre las sucursales que facturan" do
     get autorizaciones_sar_url
     assert_select "td", text: "Miami", count: 0

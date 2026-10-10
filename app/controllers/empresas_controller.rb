@@ -23,10 +23,13 @@ class EmpresasController < ApplicationController
     @empresa = Empresa.instance
   end
 
+  # PR-F1.4 · Sin `isv_rate`: el 15 % lo fija la Ley del ISV, no un formulario,
+  # y desde la Fase 15 la gema calcula el impuesto. Con `razon_social`, que la
+  # factura SAR imprime (Art. 10 num. 1 lit. b).
   def empresa_params
     params.require(:empresa).permit(
-      :nombre, :rtn, :telefono, :email_contacto, :direccion,
-      :ciudad, :pais, :moneda_default, :isv_rate, :sitio_web,
+      :nombre, :razon_social, :rtn, :telefono, :email_contacto, :direccion,
+      :ciudad, :pais, :moneda_default, :sitio_web,
       :terminos_factura, :logo
     )
   end

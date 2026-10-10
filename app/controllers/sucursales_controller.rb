@@ -52,7 +52,8 @@ class SucursalesController < ApplicationController
 
   def sucursal_params
     params.require(:sucursal).permit(:codigo, :codigo_ep, :nombre, :pais, :ubicacion, :activo,
-                                      :retiro_por_defecto, :recibe_carga, :recepcion_por_defecto)
+                                      :retiro_por_defecto, :recibe_carga, :recepcion_por_defecto,
+                                      :direccion)
   end
 
   def require_admin_access
