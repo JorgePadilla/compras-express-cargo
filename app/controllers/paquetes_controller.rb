@@ -140,6 +140,15 @@ class PaquetesController < ApplicationController
     if target_estado.present? && target_estado != @paquete.estado &&
        Paquete.transicion_retroceso?(@paquete.estado, target_estado) &&
        params[:confirm_retroceso].to_s == "1"
+      # C30-06 · Si el retroceso lo suelta del manifiesto, sale por
+      # `Manifiesto#soltar!` (caja, totales, bitácora) con el estado que eligió
+      # el supervisor. Se anota antes de la limpieza, que es la que pone
+      # `manifiesto_id` en nil. Si el formulario además lo cambia de
+      # manifiesto, manda eso: `sacar!` + `meter!`.
+      if reasignacion.nil? && @paquete.manifiesto &&
+         @paquete.retroceso_cleanup_preview(target_estado)[:fks].include?(:manifiesto_id)
+        reasignacion = { viejo: @paquete.manifiesto, nuevo: nil, estado: target_estado }
+      end
       @paquete.apply_retroceso_cleanup!(target_estado)
     end
 
@@ -886,7 +895,8 @@ class PaquetesController < ApplicationController
 
   # nil si el formulario no cambia el manifiesto; `:no_existe` si apunta a uno
   # que no está; si no, `{ viejo:, nuevo: }` (cualquiera de los dos puede ser
-  # nil: entrar desde ninguno, o salir a ninguno).
+  # nil: entrar desde ninguno, o salir a ninguno). El retroceso de estado arma
+  # la suya con `estado:` (ver `update`), y ésa sale por `soltar!`.
   def reasignacion_de_manifiesto(attrs)
     return nil unless attrs.key?(:manifiesto_id)
 
@@ -912,7 +922,9 @@ class PaquetesController < ApplicationController
     Paquete.transaction do
       raise ActiveRecord::Rollback unless @paquete.save
 
-      if reasignacion.is_a?(Hash)
+      if reasignacion.is_a?(Hash) && reasignacion[:estado]
+        reasignacion[:viejo].soltar!(@paquete, estado: reasignacion[:estado])
+      elsif reasignacion.is_a?(Hash)
         reasignacion[:viejo]&.sacar!(@paquete)
         reasignacion[:nuevo]&.meter!(@paquete, user: Current.user)
       end

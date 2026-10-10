@@ -150,6 +150,42 @@ class PaqueteRespetaElCandadoTest < ActionDispatch::IntegrationTest
     assert_equal "enviado_honduras", @adentro.estado
   end
 
+  # El retroceso que suelta el manifiesto, con el manifiesto **abierto**: sale
+  # por la misma puerta que `sacar!` (`Manifiesto#soltar!`). Antes ponía
+  # `manifiesto_id` en nil y nada más: la caja seguía apuntándolo y el
+  # manifiesto lo seguía contando.
+  test "un retroceso en un manifiesto abierto suelta la caja y recalcula" do
+    caja = @abierto.cajas.create!(peso: 5, user: @supervisor)
+    @abierto.meter!(@suelto, user: @supervisor, caja_manifiesto: caja, estado: "empacado")
+    assert_equal 1, @abierto.reload.cantidad_paquetes
+
+    patch paquete_url(@suelto), params: { paquete: { estado: "recibido_miami" }, confirm_retroceso: "1" }
+
+    assert_redirected_to paquete_url(@suelto)
+    @suelto.reload
+    assert_nil @suelto.manifiesto_id
+    assert_nil @suelto.caja_manifiesto_id, "la caja lo soltó"
+    assert_equal "recibido_miami", @suelto.estado
+    assert_equal 0, @abierto.reload.cantidad_paquetes, "el manifiesto lo dejó de contar"
+    assert_empty caja.reload.paquetes
+  end
+
+  # Y el estado es **el que eligió el supervisor**, no el de antes de salir:
+  # `sacar!` lo devolvería a `recibido_miami`, el retroceso pidió `empacado`.
+  test "con la edición abierta, el retroceso respeta el estado elegido" do
+    @finalizado.abrir_edicion!(@supervisor)
+
+    patch paquete_url(@adentro), params: { paquete: { estado: "empacado" }, confirm_retroceso: "1" }
+
+    assert_redirected_to paquete_url(@adentro)
+    @adentro.reload
+    assert_nil @adentro.manifiesto_id
+    assert_nil @adentro.caja_manifiesto_id
+    assert_equal "empacado", @adentro.estado, "no lo pisó con el estado de antes de salir"
+    assert_nil @adentro.fecha_enviado
+    assert_equal 0, @finalizado.reload.cantidad_paquetes
+  end
+
   # Partir en cajas crea hermanas que heredan el manifiesto; bajarlas las
   # borra. Las dos cosas cambian la carga de uno que ya viajó.
   test "no se parte en cajas un paquete de un manifiesto finalizado" do

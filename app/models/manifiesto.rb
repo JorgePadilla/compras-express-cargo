@@ -289,10 +289,24 @@ class Manifiesto < ApplicationRecord
   #   usa /paquetes (`apply_retroceso_cleanup!`), que limpia la fecha y el
   #   usuario de enviado. Si no viajó, no puede decir que salió.
   def sacar!(paquete)
-    destino = estado_antes_de_salir
+    soltar!(paquete, estado: estado_antes_de_salir)
+  end
+
+  # Salir del manifiesto **a un estado que decide otro**. Es la parte común de
+  # `sacar!` —que vuelve al estado de antes de salir— y del retroceso de estado
+  # de /paquetes, donde el supervisor eligió a qué estado vuelve y eso no se
+  # pisa.
+  #
+  # Antes el retroceso soltaba el manifiesto por su cuenta
+  # (`apply_retroceso_cleanup!` ponía `manifiesto_id` en nil) y se quedaba ahí:
+  # la caja seguía apuntando al paquete y el manifiesto seguía contándolo. Dos
+  # caminos para lo mismo, y uno se había quedado corto. Ahora los dos pasan
+  # por acá: suelta la caja, limpia lo de los estados posteriores, deja la
+  # bitácora (`update!`, no `update_column`) y recalcula.
+  def soltar!(paquete, estado:)
     transaction do
-      paquete.apply_retroceso_cleanup!(destino)
-      paquete.update!(manifiesto: nil, caja_manifiesto: nil, estado: destino)
+      paquete.apply_retroceso_cleanup!(estado)
+      paquete.update!(manifiesto: nil, caja_manifiesto: nil, estado: estado)
       recalculate_totals!
     end
   end
