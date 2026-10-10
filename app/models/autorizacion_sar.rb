@@ -39,9 +39,16 @@ class AutorizacionSar < ApplicationRecord
   validate :intocable_si_ya_se_emitio, on: :update
 
   before_destroy :no_borrar_si_ya_se_emitio
+  # PR-F1.2 · En la misma transacción del alta: un rango que no arranca en el
+  # número que sigue sube el correlativo (ver `Fiscal::Sequence`). Así lo hacen
+  # igual la pantalla, la migración de staging, los seeds y la gema.
+  after_create { Fiscal::Sequence.new.alinear_si_hace_falta(self) }
 
   scope :del, ->(punto, tipo) { where(punto_de_emision: punto, tipo_documento: tipo.to_s) }
   scope :reales, -> { where(ficticia: false) }
+  # Con las que se puede emitir: en producción, las ficticias no cuentan (F1.5
+  # no las crea ahí, pero esto no depende de eso).
+  scope :usables, -> { Fiscal.produccion? ? reales : all }
 
   # `EEE-PPP-TT`, la llave de la gema.
   def identificador
@@ -95,8 +102,11 @@ class AutorizacionSar < ApplicationRecord
                      .exists?
   end
 
-  # TODO(PR-F1.2): `#to_invoicehn` → `Invoicehn::Authorization`, cuando entre
-  # la gema 0.2.0 (D8 de FISCAL.md).
+  # La autorización como la entiende la gema (Art. 10 num. 3-5).
+  def to_invoicehn
+    Invoicehn::Authorization.new(cai: cai, range_start: numero(rango_inicio), range_end: numero(rango_fin),
+                                 limit_date: fecha_limite_emision)
+  end
 
   private
 

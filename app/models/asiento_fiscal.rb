@@ -20,7 +20,9 @@ class AsientoFiscal < ApplicationRecord
   NUMERO = /\A\d{3}-\d{3}-\d{2}-\d{8}\z/
 
   belongs_to :punto_de_emision
-  belongs_to :documento, polymorphic: true
+  # PR-F1.2: opcional. Lo que el libro referencia es el `DocumentoFiscal` que
+  # guardó el store; el contrato de la gema registra uno que nunca se guardó.
+  belongs_to :documento, polymorphic: true, optional: true
   belongs_to :usuario, class_name: "User", optional: true
 
   validates :evento, inclusion: { in: EVENTOS }

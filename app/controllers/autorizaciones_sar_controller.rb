@@ -34,9 +34,8 @@ class AutorizacionesSarController < ApplicationController
   def create
     @autorizacion = AutorizacionSar.new(autorizacion_params.merge(cargada_por: Current.user))
     if @autorizacion.save
-      # TODO(PR-F1.2): `Fiscal::Sequence#align_to(@autorizacion)` — si el
-      # correlativo está por debajo de `rango_inicio - 1`, subirlo, para que el
-      # primer número emitido sea el primero del rango. Va con la gema.
+      # El correlativo se alinea al rango en la misma transacción del alta
+      # (`AutorizacionSar` after_create → `Fiscal::Sequence`, PR-F1.2).
       redirect_to autorizacion_sar_path(@autorizacion), notice: "Autorización cargada."
     else
       render :new, status: :unprocessable_entity
