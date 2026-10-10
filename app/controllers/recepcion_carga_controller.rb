@@ -15,15 +15,18 @@
 # volumen: *"como solo son **5 o 10 cajas** lo más que se recibe"*.
 class RecepcionCargaController < ApplicationController
   before_action :authorize_recepcion
-  before_action :set_manifiesto, only: %i[show escanear finalizar]
+  before_action :set_manifiesto, only: %i[show escanear finalizar documento]
 
   # *"Solo lo que está como enviado."* Un manifiesto que ya se recibió entero no
   # tiene nada que hacer acá.
+  #
+  # C30-09 · `:paquetes` también: la fila dice cuánto va y qué falta
+  # (`ProgresoDeRecepcion`), y lo cuenta en memoria — en el interno la unidad
+  # es el paquete, y en el oficial los que viajaron sin caja.
   def index
-    @manifiestos = Manifiesto.activos
-                             .where(estado: %w[enviado en_aduana])
-                             .includes(:empresa_manifiesto, :consignatario, :tipo_envios, :tipo_envio_proveedor, :cajas)
-                             .order(fecha_enviado: :desc)
+    @manifiestos = RecibirManifiesto.pendientes
+                                    .includes(:empresa_manifiesto, :consignatario, :tipo_envios, :tipo_envio_proveedor, :cajas, :paquetes)
+                                    .order(fecha_enviado: :desc)
   end
 
   def show
@@ -51,14 +54,52 @@ class RecepcionCargaController < ApplicationController
     return render json: { resultado: "no_es_de_aqui",
                           mensaje: "«#{codigo}» no es una caja de #{@manifiesto.numero}." } if caja.nil?
 
-    if caja.recibida_at.present?
-      return render json: { resultado: "ya_recibida", mensaje: "La caja #{caja.letra} ya estaba recibida." }
-    end
+    render json: recibir_la_caja(caja)
+  end
 
-    servicio.recibir_caja!(caja)
-    render json: { resultado: "ok", caja_id: caja.id, letra: caja.letra,
-                   mensaje: "Caja #{caja.letra} recibida — #{caja.paquetes.size} paquete(s) a aduana.",
-                   faltan: @manifiesto.cajas.where(recibida_at: nil).count }
+  # C30-09 · La pistola de la lista: escanear **sin elegir el manifiesto**.
+  #
+  #   > **Yusef:** "A veces vamos a recibir tres manifiestos de un solo y hay
+  #   >  que estar seleccionando cada manifiesto, entonces solo crear un
+  #   >  search…"
+  #   > **Jorge:** "Vamos a implementar un search para que escanea ahí… todos
+  #   >  los pendientes."
+  #   > **Yusef:** "Si la vuelve a repetir una, solo que avise que ella ya fue
+  #   >  recibida."
+  #
+  # `RecibirManifiesto.ubicar` dice de qué manifiesto es la etiqueta, y de ahí
+  # en adelante es **el mismo camino** que la pistola de adentro
+  # (`recibir_la_caja` / `recibir_el_paquete`): mismas reglas, mismos efectos
+  # —aduana, sucursal, quién recibió, el aviso del interno—. No se cierra solo
+  # al completar: «Terminar» sigue siendo un acto aparte, porque cerrar con
+  # faltantes manda correo (`A7-06`) y eso no se dispara de rebote.
+  def escanear_pendientes
+    codigo = params[:codigo].to_s.strip
+    ubicacion = RecibirManifiesto.ubicar(codigo)
+    @manifiesto = ubicacion.manifiesto
+
+    case ubicacion.motivo
+    when :caja then render json: recibir_la_caja(ubicacion.caja)
+    when :paquete then render json: recibir_el_paquete(ubicacion.paquete)
+    when :paquete_de_oficial
+      render json: { resultado: "no_es_de_aqui", manifiesto: progreso,
+                     mensaje: "«#{codigo}» es un paquete de #{@manifiesto.numero}. Se escanean las cajas, no los paquetes." }
+    when :no_pendiente then render json: caja_fuera_de_recepcion(ubicacion.caja)
+    else
+      render json: { resultado: "no_es_de_aqui",
+                     mensaje: "«#{codigo}» no es de ningún manifiesto pendiente de recibir." }
+    end
+  end
+
+  # C30-09 · *"Acá afuera sería bueno poder darle también imprimir al
+  # manifiesto… lo voy a querer imprimir para darle al oficio."* Es la misma
+  # hoja que imprime Miami (`manifiestos/documento`, la de los bultos: *"el
+  # manifiesto de la caja… es el mismo"*), pero servida por esta puerta: quien
+  # recibe carga no entra a /manifiestos —esa sección es de Miami
+  # (`PermisosDelSistema`)— y el botón le habría dado «no tienes permiso».
+  def documento
+    @cajas = @manifiesto.cajas.includes(:tamano_caja)
+    render "manifiestos/documento", layout: "print"
   end
 
   # Terminar. Si faltan cajas, la primera vez avisa y ofrece las dos salidas de
@@ -91,27 +132,88 @@ class RecepcionCargaController < ApplicationController
 
   # `A7-08` · En el interno la pistola lee el **paquete**, no la caja. Acepta el
   # tracking o el número de recepción, que es lo que la etiqueta lleva impreso.
+  #
+  # C30-09 · **Estricto**, como la pistola de la lista. Era `Paquete.buscar`,
+  # que hace ILIKE sobre el número del manifiesto, la descripción y el cliente:
+  # escanear la hoja del manifiesto —la que el que recibe tiene en la mano—
+  # recibía el primer paquete que saliera, sin que nadie lo bajara del camión.
   def escanear_paquete
     codigo = params[:codigo].to_s.strip
-    paquete = @manifiesto.paquetes.buscar(codigo).first
+    paquete = @manifiesto.paquetes.por_codigo_de_etiqueta(codigo).first
 
     if paquete.nil?
       return render json: { resultado: "no_es_de_aqui",
                             mensaje: "«#{codigo}» no viene en #{@manifiesto.numero}." }
     end
 
+    render json: recibir_el_paquete(paquete)
+  end
+
+  # Una caja de `@manifiesto`, venga de la pistola de adentro o de la de la
+  # lista (C30-09). La respuesta lleva el progreso del manifiesto para que la
+  # fila de la lista diga «6 de 7 · falta 1» sin recargar.
+  def recibir_la_caja(caja)
+    if caja.recibida_at.present?
+      return { resultado: "ya_recibida", manifiesto: progreso,
+               mensaje: "La caja #{caja.letra} de #{@manifiesto.numero} ya estaba recibida." }
+    end
+
+    servicio.recibir_caja!(caja)
+    { resultado: "ok", caja_id: caja.id, letra: caja.letra, manifiesto: progreso,
+      mensaje: "Caja #{caja.letra} de #{@manifiesto.numero} recibida — #{caja.paquetes.size} paquete(s) a aduana.",
+      faltan: @manifiesto.cajas.where(recibida_at: nil).count }
+  end
+
+  def recibir_el_paquete(paquete)
     unless paquete.estado == "enviado_sucursal"
-      return render json: { resultado: "ya_recibida",
-                            mensaje: "#{paquete.tracking} ya estaba recibido." }
+      return { resultado: "ya_recibida", manifiesto: progreso,
+               mensaje: "#{paquete.tracking} ya estaba recibido (#{@manifiesto.numero})." }
     end
 
     servicio.recibir_paquete!(paquete)
     # `A7-08` · *"Con el manifiesto notifique, pero darle una ventana."* El
     # primer paquete escaneado programa el aviso; los demás no hacen nada.
     NotificarLlegadaASucursal.programar(@manifiesto)
-    render json: { resultado: "ok", paquete_id: paquete.id, tracking: paquete.tracking,
-                   mensaje: "#{paquete.tracking} recibido en #{@manifiesto.sucursal_entrega&.nombre}.",
-                   faltan: servicio.paquetes_pendientes.count }
+    { resultado: "ok", paquete_id: paquete.id, tracking: paquete.tracking, manifiesto: progreso,
+      mensaje: "#{paquete.tracking} recibido en #{@manifiesto.sucursal_entrega&.nombre} (#{@manifiesto.numero}).",
+      faltan: servicio.paquetes_pendientes.count }
+  end
+
+  # C30-09 · Una caja que existe pero cuyo manifiesto no está para recibir.
+  # Si ya se cerró, es la repetida de Yusef: *"que avise que ella ya fue
+  # recibida"*. Si se cerró **con ella pendiente**, sus paquetes ya pasaron a
+  # aduana igual (`A7-05`): no hay nada que mover, pero conviene saberlo.
+  def caja_fuera_de_recepcion(caja)
+    if @manifiesto.recibido?
+      mensaje = if caja.recibida_at.present?
+        "La caja #{caja.letra} de #{@manifiesto.numero} ya fue recibida: el manifiesto ya se cerró."
+      else
+        "#{@manifiesto.numero} ya se cerró con la caja #{caja.letra} pendiente: sus paquetes ya pasaron a aduana."
+      end
+      return { resultado: "ya_recibida", mensaje: mensaje }
+    end
+
+    mensaje = if @manifiesto.creado?
+      "La caja #{caja.letra} es de #{@manifiesto.numero}, que Miami todavía no finalizó."
+    else
+      "La caja #{caja.letra} es de #{@manifiesto.numero}, que no está pendiente de recibir."
+    end
+    { resultado: "no_es_de_aqui", mensaje: mensaje }
+  end
+
+  # Recontado con una consulta fresca: `recibir_caja!` acaba de tocar la caja
+  # por otro objeto, y lo que tenga cargado `@manifiesto` puede estar viejo.
+  #
+  # C30-09 · Con el badge del estado ya renderizado: la primera caja pasa el
+  # manifiesto de «Enviado» a «En aduana», y la fila lo tiene que decir. Sale
+  # del mismo `StatusBadgeComponent` que la vista, así el color y el texto no
+  # se escriben dos veces —una en Ruby y otra en JS— para separarse después.
+  def progreso
+    manifiesto = Manifiesto.includes(:cajas, :paquetes).find(@manifiesto.id)
+    ProgresoDeRecepcion.new(manifiesto).to_h.merge(
+      estado: manifiesto.estado,
+      estado_html: view_context.render(StatusBadgeComponent.new(status: manifiesto.estado))
+    )
   end
 
   def aviso_de_cierre(resultado, avisados)

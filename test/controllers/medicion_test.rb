@@ -66,6 +66,42 @@ class MedicionTest < ActionDispatch::IntegrationTest
     assert json["notas"].all? { |n| n["clases"]["wrap"].present? }, "cada nota lleva su color, como en la franja"
   end
 
+  # C30-10 · Jorge, en la PESA: *"esas notas que salieron, salieron a dos pero
+  # repetidas… porque yo lo escribí a uno"*. Miami le **copia** la nota de grupo
+  # a la caja al vincularla (`notas_consolidacion`, PR-D2), y salía dos veces:
+  # como «Nota especial» y como «Notas de consolidación».
+  test "la nota de grupo copiada a la caja sale una sola vez, con el número de su pre-alerta" do
+    pa, = grupo_de_tres(@paquete)
+    pa.update!(notas_grupo: "test")
+    @paquete.update_column(:notas_consolidacion, "test")
+
+    escanear(@paquete.tracking)
+
+    assert_equal [ [ "Nota especial", pa.numero_documento, "test" ] ],
+                 json["notas"].map { |n| n.values_at("etiqueta", "detalle", "texto") }
+  end
+
+  # `link_tracking!` junta las notas de varias pre-alertas con un renglón en
+  # blanco: si todas ya salieron como «Nota especial», la copia sobra. Y si
+  # alguien la editó en la caja y dice otra cosa, sale: para eso se editó.
+  test "la copia que junta varias notas de grupo sobra, y la editada en la caja sale" do
+    pa, = grupo_de_tres(@paquete)
+    pa.update!(notas_grupo: "Todo en una caja")
+    otra = PreAlerta.create!(numero_documento: "PA-N#{SecureRandom.hex(3).upcase}", cliente: clientes(:juan),
+                             tipo_envio: tipo_envios(:aereo), consolidado: false, estado: "pre_alerta",
+                             titulo: "Otra", creado_por_tipo: "usuario", creado_por_id: users(:admin).id,
+                             notas_grupo: "Frágil")
+    otra.pre_alerta_paquetes.create!(tracking: @paquete.tracking, descripcion: "Bulto", fecha: Date.current, paquete: @paquete)
+    @paquete.update_column(:notas_consolidacion, "Todo en una caja\n\nFrágil")
+
+    escanear(@paquete.tracking)
+    assert_equal [ "Todo en una caja", "Frágil" ].sort, json["notas"].map { |n| n["texto"] }.sort
+
+    @paquete.update_column(:notas_consolidacion, "Todo en una caja, y que no la abran")
+    escanear(@paquete.tracking)
+    assert_includes json["notas"].map { |n| n["etiqueta"] }, "Notas de consolidación"
+  end
+
   test "un cliente sin notas no trae ninguna" do
     escanear(@paquete.tracking)
 

@@ -30,8 +30,12 @@ class CajasManifiestoController < ApplicationController
   # `PaquetesController#etiquetas_combinadas`: N etiquetas en una sola pestaña,
   # una por página.
   #
-  # PR-C29.7 · `volver=1` cuando la abre «Finalizar e Imprimir», que se lleva
+  # PR-C29.7 · `volver=1` cuando la abría «Finalizar e Imprimir», que se lleva
   # la pestaña de la ficha: igual que `etiqueta`, la devuelve al terminar.
+  # C30-05 · Finalizar ya no viene acá —saca la hoja del manifiesto, porque
+  # *"todas esas etiquetas ya las imprimieron cuando los estaban ingresando"*—.
+  # El `volver` se queda: es barato y es la puerta de cualquier pantalla que
+  # se lleve la pestaña para re-imprimir las 4×6.
   def etiquetas
     # PR-C29.20 · Cada 4×6 dice los tipos de envío de adentro: sin precargar,
     # una consulta por etiqueta.

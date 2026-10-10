@@ -79,14 +79,30 @@ class ImprimirEnElManifiestoTest < ApplicationSystemTestCase
     assert_equal 41, @caja.reload.peso.to_i
   end
 
-  # Era el que no volvía: redirigía a las 4×6 sin `volver=1`, y al terminar la
-  # pestaña intentaba `window.close()` sobre una pestaña que no abrió ningún
-  # script —el navegador se niega— y el operario quedaba mirando etiquetas.
-  test "«Finalizar e Imprimir» imprime las 4×6 y vuelve al manifiesto finalizado" do
+  # PR-C29.7: era el que no volvía —redirigía a las 4×6 sin `volver=1` y el
+  # operario quedaba mirando etiquetas—.
+  #
+  # C30-05: y además imprimía lo que no era. Yusef: *"lo que tiene que
+  # imprimirme no es esta etiqueta… el que necesito que me imprima después de
+  # finalizado es este"* — la hoja del manifiesto. La vuelta es la misma.
+  test "«Finalizar e Imprimir» imprime la hoja del manifiesto y vuelve al manifiesto finalizado" do
     visit manifiesto_path(@manifiesto)
 
     # Las acciones salen dos veces (arriba y abajo de la ficha): la de arriba.
-    imprime_y_vuelve do
+    imprime_y_vuelve(en: HOJA_DEL_MANIFIESTO) do
+      confirmando { within("#manifiesto-acciones-arriba") { click_on "Finalizar e Imprimir" } }
+    end
+    assert_text "finalizado y bloqueado", wait: 5
+  end
+
+  test "«Finalizar e Imprimir» sin bultos también imprime la hoja y vuelve" do
+    # El manifiesto armado sin escanear (`C23-10`) no tiene cajas. Antes el
+    # botón ni aparecía: lo único que había para imprimir eran 4×6.
+    @paquete.update_columns(caja_manifiesto_id: nil)
+    @caja.destroy!
+    visit manifiesto_path(@manifiesto)
+
+    imprime_y_vuelve(en: HOJA_DEL_MANIFIESTO) do
       confirmando { within("#manifiesto-acciones-arriba") { click_on "Finalizar e Imprimir" } }
     end
     assert_text "finalizado y bloqueado", wait: 5
@@ -121,9 +137,18 @@ class ImprimirEnElManifiestoTest < ApplicationSystemTestCase
     Timeout.timeout(10) { sleep 0.2 while page.driver.browser.window_handles.size > 1 }
   end
 
-  def imprime_y_vuelve
+  # La hoja del manifiesto (layout `print`), por lo que dice arriba y no por
+  # una clase: lo que importa es que sea ESE papel y no una 4×6.
+  HOJA_DEL_MANIFIESTO = :hoja
+
+  def imprime_y_vuelve(en: ".bulto")
     yield
-    assert_selector ".bulto", wait: 5
+    if en == HOJA_DEL_MANIFIESTO
+      assert_text "MANIFIESTO DE CARGA", wait: 5
+      assert_no_selector ".bulto"
+    else
+      assert_selector en, wait: 5
+    end
     assert_includes page.current_url, "print=true", "la etiqueta llegó sin el diálogo de impresión"
     assert_includes page.current_url, "volver=1", "la etiqueta no sabe a dónde volver"
 

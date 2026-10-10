@@ -993,7 +993,8 @@ CREATE TABLE public.venta_items (
     minimo_aplicado boolean DEFAULT false NOT NULL,
     descuento_monto numeric(10,2) DEFAULT 0.0 NOT NULL,
     descuento_porcentaje numeric(5,2),
-    descuento_motivo character varying
+    descuento_motivo character varying,
+    bulto_id bigint
 );
 
 
@@ -2123,7 +2124,8 @@ CREATE TABLE public.pre_factura_items (
     minimo_aplicado boolean DEFAULT false NOT NULL,
     descuento_monto numeric(10,2) DEFAULT 0.0 NOT NULL,
     descuento_porcentaje numeric(5,2),
-    descuento_motivo character varying
+    descuento_motivo character varying,
+    bulto_id bigint
 );
 
 
@@ -5895,6 +5897,13 @@ CREATE INDEX index_pre_alertas_on_tipo_envio_id ON public.pre_alertas USING btre
 
 
 --
+-- Name: index_pre_factura_items_on_bulto_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pre_factura_items_on_bulto_id ON public.pre_factura_items USING btree (bulto_id);
+
+
+--
 -- Name: index_pre_factura_items_on_origen; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6532,6 +6541,13 @@ CREATE INDEX index_users_on_ubicacion ON public.users USING btree (ubicacion);
 
 
 --
+-- Name: index_venta_items_on_bulto_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_venta_items_on_bulto_id ON public.venta_items USING btree (bulto_id);
+
+
+--
 -- Name: index_versions_on_item_type_and_item_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6632,6 +6648,14 @@ ALTER TABLE ONLY public.paquete_motivos_envio_politica
 
 ALTER TABLE ONLY public.recibos
     ADD CONSTRAINT fk_rails_0984618e5f FOREIGN KEY (cliente_id) REFERENCES public.clientes(id);
+
+
+--
+-- Name: venta_items fk_rails_0a40069b03; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.venta_items
+    ADD CONSTRAINT fk_rails_0a40069b03 FOREIGN KEY (bulto_id) REFERENCES public.bultos(id) ON DELETE RESTRICT;
 
 
 --
@@ -7491,6 +7515,14 @@ ALTER TABLE ONLY public.nota_credito_items
 
 
 --
+-- Name: pre_factura_items fk_rails_be8a2a099e; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pre_factura_items
+    ADD CONSTRAINT fk_rails_be8a2a099e FOREIGN KEY (bulto_id) REFERENCES public.bultos(id) ON DELETE RESTRICT;
+
+
+--
 -- Name: users fk_rails_bf7bc7f661; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7809,6 +7841,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261009180000'),
 ('20261009030000'),
 ('20261008163000'),
 ('20261005120000'),

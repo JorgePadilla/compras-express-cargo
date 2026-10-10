@@ -22,11 +22,16 @@
 
     La Dymo 2.25×1.25 **no tiene una fila más** (`etiqueta_medicion_cabe_test`
     lo mide en Chrome), así que los dos entran en filas que ya existen y
-    `data-ajustar` los encoge hasta que quepan. %>
+    `data-ajustar` los encoge hasta que quepan.
+
+    C30-01 · La excepción es el cliente, que sí tiene fila propia, arriba de
+    todo —*"nombre con código … lo bajas todo y pones eso arriba"*—. No sale
+    del aire: la paga el QR, que se achica (ver `medicion/_fila_cliente`). %>
 <% @bultos.each do |b| %>
   <div class="med">
+    <%= render "medicion/fila_cliente", cliente: b.cliente %>
     <div class="arriba">
-    <div class="qr"><%= etiqueta_qr_svg(etiqueta_qr_medicion(b), tamano: "1.0in") %></div>
+    <div class="qr"><%= etiqueta_qr_svg(etiqueta_qr_medicion(b), tamano: "0.90in") %></div>
     <div class="datos">
       <%# Cuántas cajas ampara la tanda va acá, en la fila de la fecha: es la
           que más aire tiene de las seis. Desde C28-08 es la tanda entera y no
@@ -46,8 +51,9 @@
         C29-15 · Y adelante, el número de la pre-alerta, que es con lo que
         pre-factura agrupa: *"solo el número de pre-alerta. PA, tal"*. Va en
         **esta** fila y no en una nueva, porque la Dymo no tiene una fila más
-        ([[project_la_dymo_no_tiene_una_fila_mas]]): es la única a lo ancho
-        de la etiqueta, y `etiqueta_medicion_cabe_test` mide que la peor
+        ([[project_la_dymo_no_tiene_una_fila_mas]]): era la única a lo ancho
+        de la etiqueta —desde C30-01 está también la del cliente, arriba—, y
+        `etiqueta_medicion_cabe_test` mide que la peor
         —décima de diez, con pre-alerta— siga cabiendo. %>
     <% pa = b.pre_alerta_en_etiqueta %>
     <div class="codigo" data-ajustar data-ajustar-min="5"><%= "#{pa} · " if pa %><%= etiqueta_codigo_barras(b.paquetes.first) || b.paquetes.first&.tracking %><%= " · #{b.de_cuantos_texto}" if b.de_cuantos_texto %> · <%= b.medido_por %></div>
