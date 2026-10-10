@@ -29,21 +29,31 @@ module ApplicationHelper
   #
   # Los 3 SVGs (idle/ok/err) viven SIEMPRE en el DOM; el controller solo
   # toggle-ea visibility con CSS → cero reflow al cambiar feedback.
-  def copy_button(label: "Copiar")
+  # `tamano: :fila` lo deja del tamaño y el color de los íconos de una columna
+  # «Acciones» (`RowActionComponent`: 28 px, `gray-500`), para que vaya al lado
+  # de ellos sin verse de otra familia. El de siempre es el chico, pegado a un
+  # dato.
+  COPY_BUTTON_CLASES = {
+    dato: "relative shrink-0 inline-flex items-center justify-center w-5 h-5 rounded text-gray-300 dark:text-gray-600 hover:text-cec-teal hover:bg-gray-100 dark:hover:text-cec-teal-light dark:hover:bg-gray-700 transition-colors align-middle",
+    fila: "relative shrink-0 inline-flex items-center justify-center w-7 h-7 rounded foco-cec text-gray-500 dark:text-gray-400 hover:text-cec-teal dark:hover:text-cec-teal-light transition-colors"
+  }.freeze
+
+  def copy_button(label: "Copiar", tamano: :dato)
+    icono = tamano == :fila ? "w-4 h-4" : "w-3.5 h-3.5"
     button_tag(type: "button",
-               class: "relative shrink-0 inline-flex items-center justify-center w-5 h-5 rounded text-gray-300 dark:text-gray-600 hover:text-cec-teal hover:bg-gray-100 dark:hover:text-cec-teal-light dark:hover:bg-gray-700 transition-colors align-middle",
+               class: COPY_BUTTON_CLASES.fetch(tamano),
                title: label,
                "aria-label": label,
                data: { action: "clipboard#copy", "clipboard-target": "button" }) do
       safe_join([
         content_tag(:span, data: { "clipboard-target": "iconIdle" }) do
-          heroicon("clipboard-document", variant: :outline, options: { class: "w-3.5 h-3.5" })
+          heroicon("clipboard-document", variant: :outline, options: { class: icono })
         end,
         content_tag(:span, class: "hidden text-cec-teal dark:text-cec-teal-light", data: { "clipboard-target": "iconOk" }) do
-          heroicon("check", variant: :solid, options: { class: "w-3.5 h-3.5" })
+          heroicon("check", variant: :solid, options: { class: icono })
         end,
         content_tag(:span, class: "hidden text-red-600 dark:text-red-400", data: { "clipboard-target": "iconErr" }) do
-          heroicon("x-mark", variant: :solid, options: { class: "w-3.5 h-3.5" })
+          heroicon("x-mark", variant: :solid, options: { class: icono })
         end
       ])
     end
