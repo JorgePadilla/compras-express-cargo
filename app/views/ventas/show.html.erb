@@ -34,13 +34,15 @@
       </tr>
     </thead>
     <tbody>
-      <% @venta.venta_items.each do |item| %>
+      <%# PR-P.1 · Las cajas de un volumen van juntas debajo de él (`LineasPorVolumen`). %>
+      <% LineasPorVolumen.new(@venta.venta_items).each do |item, cajas| %>
         <tr class="border-b border-gray-100 dark:border-gray-700">
           <td class="px-4 py-2 text-sm text-gray-900 dark:text-gray-100"><%= item.concepto %></td>
           <td class="px-4 py-2 text-sm text-right text-gray-900 dark:text-gray-100"><%= item.peso_cobrar %></td>
           <td class="px-4 py-2 text-sm text-right text-gray-900 dark:text-gray-100">L. <%= number_with_delimiter(item.precio_libra.to_f, precision: 2) %></td>
           <td class="px-4 py-2 text-sm text-right text-gray-900 dark:text-gray-100">L. <%= number_with_delimiter(item.subtotal.to_f, precision: 2) %></td>
         </tr>
+        <%= render "shared/cajas_del_volumen", cajas: cajas, columnas: 4 if cajas.any? %>
       <% end %>
     </tbody>
     <tfoot class="bg-gray-50 dark:bg-gray-700/40">

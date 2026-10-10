@@ -199,6 +199,10 @@ class EtiquetarController < ApplicationController
         # aplicaron: una corrección de peso normal, sin tocar la cantidad, entra.
         cambios = cambios.except(*MedidasPorCaja::CAMPOS_POR_CAJA) if @reanclado || pesos_aplicados
         @paquete.assign_attributes(cambios)
+        # C30-03: al actualizar, el contenido se exige solo si alguien lo toca
+        # —vaciarlo es error—. Un paquete viejo sin contenido se sigue pudiendo
+        # corregir de peso. Ver `Paquete#contenido_obligatorio?`.
+        @paquete.contenido_en_etiquetar = :al_actualizar
 
         aplicar_prepago_miami(@paquete)
         @paquete.save!
@@ -355,7 +359,7 @@ end
       # un campo de captura vacío —el que `cajas-repetidor` limpió al agregar la
       # caja— no puede llevarse por delante lo que ya tenía. `medidas` ya viene
       # sin blancos; lo que faltaba era lo de afuera.
-      @paquete.assign_attributes(sin_medidas_en_blanco(paquete_params).merge(medidas))
+      @paquete.assign_attributes(con_contenido_del_esperado(sin_medidas_en_blanco(paquete_params), esperado).merge(medidas))
       @paquete.tracking = tracking
       @paquete.tracking_secundario = secundario if secundario && @paquete.tracking_secundario.blank?
     else
@@ -363,6 +367,9 @@ end
     end
     @paquete.estado = ESTADO_AL_ETIQUETAR
     @paquete.user = Current.user
+    # C30-03: lo que se recibe acá lleva contenido, también el esperado que la
+    # pre-alerta dejó sin él. El porqué de la bandera, en `Paquete`.
+    @paquete.contenido_en_etiquetar = :al_recibir
     # El tipo de envío lo manda la sesión de etiquetado, no el form.
     @paquete.tipo_envio_id = @tipo_envio_sesion.id
     # PR-C6.5: y la sucursal donde se está recibiendo, que es de donde sale el
@@ -426,7 +433,11 @@ end
       # solo en `create_single` porque las cajas de un split se guardan por
       # otro camino — y sin esto heredaban todo menos esto.
       sucursal_id: paquete_params[:sucursal_id].presence ||
-                   Cliente.find_by(id: paquete_params[:cliente_id])&.sucursal_retiro_id
+                   Cliente.find_by(id: paquete_params[:cliente_id])&.sucursal_retiro_id,
+      # C30-03: las N cajas, igual que la de `create_single`. Va en los `attrs`
+      # porque `crear_split!` arma y guarda las cajas por su cuenta; si no
+      # viaja acá, un envío de dos cajas se grababa sin contenido.
+      contenido_en_etiquetar: :al_recibir
     )
     # Mismo guard que el single: no se graban cajas bajo el tipo equivocado.
     if (conflicto = conflicto_con_la_sesion(Paquete.new(paquete_params)))
@@ -458,6 +469,8 @@ end
     tracking, secundario = trackings_reconciliados(esperado, escaneado)
     attrs = attrs.merge(tracking: tracking)
     attrs = attrs.merge(tracking_secundario: secundario) if secundario && attrs[:tracking_secundario].blank?
+    # C30-03: y su contenido, a las N cajas — no solo a la Caja 1 que lo reusa.
+    attrs = con_contenido_del_esperado(attrs, esperado)
 
     paquetes = Paquete.crear_split!(attrs: attrs, total_cajas: total_cajas,
                                     por_caja: medidas_por_caja, reusar: esperado)
@@ -509,6 +522,24 @@ end
   rescue ActiveRecord::RecordInvalid => e
     @paquete = e.record
     render_create_error
+  end
+
+  # C30-03: un contenido en blanco no le borra al esperado el que ya traía de
+  # la pre-alerta. Al dar de alta el formulario no viene pre-llenado del
+  # servidor: el contenido lo pone el JS cuando la consulta del tracking
+  # vuelve, y si la pistola le gana, el campo viaja vacío sin que nadie lo
+  # haya vaciado. Desde acá no se distingue un vacío de otro, así que gana el
+  # texto que ya está — exigirlo otra vez era frenar a Miami por algo que el
+  # paquete ya tiene. Sin contenido en ninguno de los dos, la validación del
+  # modelo (`:al_recibir`) sigue dando el 422.
+  #
+  # Al actualizar es otra cosa: ahí el formulario sí llega del servidor con el
+  # contenido puesto (y `required`), así que un vacío es alguien que lo borró,
+  # y eso sigue siendo error (`Paquete#contenido_obligatorio?`).
+  def con_contenido_del_esperado(atributos, esperado)
+    return atributos unless esperado&.descripcion.present? && atributos[:descripcion].blank?
+
+    atributos.merge(descripcion: esperado.descripcion)
   end
 
   # Todo lo que la pantalla necesita para dibujarse, venga de un GET limpio o
