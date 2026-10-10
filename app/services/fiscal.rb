@@ -27,6 +27,28 @@ module Fiscal
   # (ver `Invoicehn::Rtn`). Guiones y espacios son costumbre de escritura.
   RTN = /\A\d{14}\z/
 
+  # ── PR-F2.2a · Por qué una factura no sale ────────────────────────────
+  # Con nombre propio, para que la pantalla de F2.4 los muestre sin adivinar.
+  # Ninguno consume número: todos saltan antes del correlativo o adentro de su
+  # bloque, que se deshace.
+  class EmisionRechazada < StandardError; end
+
+  # Jorge (Q5): quien factura tiene que tener sucursal, y la sucursal un punto
+  # de emisión activo (D9).
+  class SinPuntoDeEmision < EmisionRechazada; end
+
+  # La gema sumó otra cosa que las pre-facturas. Un tripwire: F2.1 prueba la
+  # equivalencia, así que no tendría que pasar nunca; si pasa, no se factura.
+  class TotalesNoCuadran < EmisionRechazada; end
+
+  # Una línea sin concepto (Art. 11 num. 1 lit. d), pre-facturas que no van
+  # juntas, o que ya se facturaron.
+  class PreFacturasNoFacturables < EmisionRechazada; end
+
+  # La anulación no procede: sin motivo, con pagos, con PIN o autorizante que
+  # no sirven, o ya anulada.
+  class AnulacionRechazada < StandardError; end
+
   def self.hoy
     Time.find_zone!(ZONA).today
   end
