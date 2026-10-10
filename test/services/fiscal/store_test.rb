@@ -104,6 +104,9 @@ class Fiscal::StoreTest < ActiveSupport::TestCase
     documento = DocumentoFiscal.find_by!(numero: factura.correlative.to_s)
     assert_equal "emitida", documento.estado
     assert_equal borrador, documento.documentable
+    # QA de PR-F1.2 · Vuelve con el mismo id: el asiento de la emisión no se
+    # puede tocar, y tiene que seguir apuntando a un documento que exista.
+    assert_equal documento, AsientoFiscal.find_by!(numero: documento.numero, evento: "emision").documento
   end
 
   test "anular reemplaza el documento y agrega un asiento, sin tocar el de la emisión" do
