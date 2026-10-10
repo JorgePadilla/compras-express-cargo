@@ -51,9 +51,12 @@ class MedicionController < ApplicationController
     bultos = bultos.where(medido_at: Date.parse(params[:fecha_desde]).beginning_of_day..) if fecha?(:fecha_desde)
     bultos = bultos.where(medido_at: ..Date.parse(params[:fecha_hasta]).end_of_day) if fecha?(:fecha_hasta)
 
+    # Jorge, 2026-10-10: *"¿le falta la paginación?"*. Era fija en 50, así que
+    # con 23 volúmenes no salía nada. Ahora como las demás listas: 25 por página
+    # y el «Por página» (`per_page_sanitized`, `PaginationComponent`).
     @bultos = bultos.includes(:cliente, :user, :paquetes, pre_factura_items: :pre_factura)
                     .order(medido_at: :desc, sesion: :asc, orden: :asc)
-                    .page(params[:page]).per(50)
+                    .page(params[:page]).per(per_page_sanitized)
   end
 
   # C26-17 · Sacar una caja de la lista: perdida, o ya entregada. Solo admin.

@@ -42,6 +42,33 @@ class MedicionVolumenesTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # Jorge, 2026-10-10: *"la columna de etiqueta deberíamos de usar acciones"* y
+  # *"¿le falta la paginación?"*.
+  test "la columna es «Acciones», con reimprimir y copiar el QR como íconos" do
+    get volumenes_medicion_index_path
+
+    assert_select "th", text: "Acciones"
+    assert_select "tr#bulto_#{@juan.first.id}" do
+      assert_select "a[href=?][title=?][target=_blank]", etiqueta_bulto_medicion_path(@juan.first), "Reimprimir la etiqueta del volumen"
+      assert_select "[data-qr-del-volumen] button[data-action='clipboard#copy'].w-7"
+    end
+  end
+
+  test "pagina de a 25 como las demás listas, con el «Por página»" do
+    24.times do |i|
+      c = caja("1ZPAGINA#{i.to_s.rjust(8, '0')}", numero_recepcion: "SPSPAG#{i}")
+      tanda([ c ])
+    end # con los 3 del setup son 27
+
+    get volumenes_medicion_index_path
+    assert_select "tbody tr", 25
+    assert_match(/Mostrando\s*<span[^>]*>\s*1&nbsp;–&nbsp;25/, response.body)
+    assert_select "select option", text: "50"
+
+    get volumenes_medicion_index_path, params: { page: 2 }
+    assert_select "tbody tr", 2
+  end
+
   test "busca por código de cliente" do
     get volumenes_medicion_index_path, params: { q: clientes(:juan).codigo }
 
