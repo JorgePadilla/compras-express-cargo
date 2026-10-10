@@ -55,6 +55,8 @@ class MarcarCobroExcepcion
   class SinMotivo    < StandardError; end
   class YaFacturado  < StandardError; end
   class PinInvalido  < StandardError; end
+  # PR-P.11a · La tanda de la caja ya se cobra en una pre-factura viva.
+  class TandaCobrada < StandardError; end
 
   def initialize(paquete:, excepcion:, supervisor:, pin:, motivo:, solicitado_por: nil)
     @paquete = paquete
@@ -93,6 +95,7 @@ class MarcarCobroExcepcion
       autorizacion.save!
 
       @paquete.update!(cobro_excepcion: @excepcion)
+      recalcular_volumenes!
 
       # El peso nuevo se registra **después** de aplicar, porque lo recalcula el
       # `before_save` del paquete: capturarlo antes guardaría el viejo. Es la
@@ -110,6 +113,33 @@ class MarcarCobroExcepcion
     raise SinMotivo, "El motivo es obligatorio: es el punto del registro." if @motivo.blank?
     raise ArgumentError, "Esa excepción de cobro no existe." unless excepcion_valida?
     raise YaFacturado, facturado_msg if ya_facturado?
+    raise TandaCobrada, tanda_cobrada_msg if tanda_cobrada
+  end
+
+  # PR-P.11a · Desde C28-08 la caja medida no cobra su propio peso: cobra el
+  # **volumen** de su tanda (`Bulto#peso_cobrar`), que lee el trato de cobro de
+  # sus cajas al guardarse. Marcar la excepción sin tocar el volumen la dejaba
+  # en el paquete y fuera del cobro. Se vuelven a guardar los volúmenes de la
+  # tanda —el `before_save` recalcula— y así la pre-factura que se audite
+  # después nace con el peso nuevo.
+  #
+  # Ojo, `RP-72` abierta: el trato aplica al volumen solo si **todas** sus
+  # cajas lo llevan (`Bulto#solo_peso?`); marcar una de varias no mueve nada.
+  def recalcular_volumenes!
+    return if @paquete.medicion_sesion.blank?
+
+    Bulto.de_la_sesion(@paquete.medicion_sesion).each(&:save!)
+  end
+
+  # Si una pre-factura viva ya cobra el volumen, recalcularlo movería una línea
+  # impresa (y `Bulto` no se toca con una pre-factura encima, `MedirBulto`).
+  def tanda_cobrada
+    @tanda_cobrada ||= Bulto.pre_factura_que_cobra(@paquete.medicion_sesion)
+  end
+
+  def tanda_cobrada_msg
+    "#{@paquete.numero_recepcion_visible || @paquete.tracking} se cobra en el volumen de la pre-factura " \
+      "#{tanda_cobrada.numero}: anulá la pre-factura, marcá la excepción y volvé a auditar."
   end
 
   # Solo el rol y el PIN cargado — que el PIN **sea el correcto** lo dice

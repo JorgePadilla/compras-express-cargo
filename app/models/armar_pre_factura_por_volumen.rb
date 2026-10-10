@@ -23,9 +23,16 @@
 # primer volumen de su tanda: desde C28-08 una caja es **de la tanda**, no de
 # un volumen, y así la línea sabe su tanda sin otra columna.
 #
-# **Dormido**: ninguna pantalla lo llama todavía (`PR-P.5` lo conecta). Lo que
-# queda afuera del flujo por escaneo —prepagado en Miami, tarifas especiales—
-# sigue por `/pre_facturas/new`, y acá se rechaza en vez de cobrarse a medias.
+# Lo llaman Auditar/F9 (`GuardarPreFacturaAuditada`, PR-P.5) y la puerta a
+# mano (`ArmarPreFacturaManual`, PR-P.10).
+#
+# PR-P.11a · **Prepagado en Miami** (RP-89, provisorio hasta que Yusef
+# conteste): una tanda **toda** prepagada se arma igual —el volumen en L. 0.00
+# con su peso, las cajas en cero, y **un simbólico de US$1 por caja**
+# (`PreFactura#linea_prepagado_miami`, lo mismo que cobraba la puerta a mano
+# por paquete)—. Una tanda **mezclada** no tiene cómo cobrarse: Medición ya no
+# deja medirla así (`PuedenIrJuntas#prepago_mezclado`), y la que se midió antes
+# se rechaza para medirla de nuevo separada.
 #
 # Devuelve la `PreFactura` **sin guardar**, como `build_from_paquetes`: el que
 # la llama decide cuándo.
@@ -50,8 +57,11 @@ class ArmarPreFacturaPorVolumen
     tandas = @sesiones.map { |sesion| tanda(sesion) }
     pre_factura = PreFactura.new(cliente: @cliente, creado_por: @user, fecha_trabajo: Date.current)
 
-    tandas.each do |bultos, cajas|
-      bultos.each { |bulto| pre_factura.pre_factura_items.build(linea_del_volumen(pre_factura, bulto, cajas)) }
+    tandas.each do |bultos, cajas, prepagada|
+      bultos.each do |bulto|
+        linea = prepagada ? linea_del_volumen_prepagado(bulto, cajas) : linea_del_volumen(pre_factura, bulto, cajas)
+        pre_factura.pre_factura_items.build(linea)
+      end
       cajas.each do |caja|
         pre_factura.pre_factura_items.build(
           paquete: caja, bulto: bultos.first,
@@ -63,11 +73,16 @@ class ArmarPreFacturaPorVolumen
           origen: "caja_del_volumen"
         )
       end
+      # El simbólico, uno por caja y **suelto** (`bulto: nil`, sin peso): si
+      # colgara del volumen, `LineasPorVolumen` lo tomaría por una caja más y
+      # lo escondería, y con peso la etiqueta de entrega contaría las libras
+      # dos veces.
+      cajas.each { |caja| pre_factura.pre_factura_items.build(pre_factura.linea_prepagado_miami(caja)) } if prepagada
     end
 
     # PR-D6.b · Los cargos automáticos siguen siendo **por caja**: la recolecta
     # y el cambio de servicio son de cada paquete, no del volumen.
-    tandas.flat_map(&:last).each { |caja| pre_factura.aplicar_cobros_automaticos_para(caja) }
+    tandas.flat_map { |_bultos, cajas, _prepagada| cajas }.each { |caja| pre_factura.aplicar_cobros_automaticos_para(caja) }
 
     pre_factura
   end
@@ -95,12 +110,26 @@ class ArmarPreFacturaPorVolumen
     end
 
     prepagadas = cajas.select(&:prepagado_miami?)
-    if prepagadas.any?
-      raise NoSePuede, "#{codigos(prepagadas)} viene prepagada en Miami: esa pre-factura se hace por " \
-                       "Pre-Facturas › A mano (excepciones), que pone el cobro simbólico."
+    if prepagadas.any? && prepagadas.size < cajas.size
+      raise NoSePuede, "#{codigos(prepagadas)} viene prepagada en Miami y el resto de la tanda no: " \
+                       "medila de nuevo separando las prepagadas."
     end
 
-    [ bultos, cajas ]
+    [ bultos, cajas, prepagadas.any? ]
+  end
+
+  # PR-P.11a · El volumen de una tanda prepagada: el peso que Medición sacó,
+  # para que la factura y la etiqueta digan cuánto fue, y **L. 0.00** —ya se
+  # pagó en Miami—. Sin cotizar: no hay tarifa que aplicar, y `minimo_aplicado`
+  # es el guard que impide que alguien le recalcule `peso × precio`.
+  def linea_del_volumen_prepagado(bulto, cajas)
+    servicio = cajas.first.tipo_envio&.nombre
+    volumen = [ "Volumen", bulto.de_cuantos_texto ].compact.join(" ")
+    { bulto: bulto,
+      concepto: "Flete #{servicio || 'Paquete'} - #{volumen} · #{cajas.size} caja#{"s" if cajas.size != 1} " \
+                "(PREPAGADO EN MIAMI)",
+      peso_cobrar: bulto.peso_cobrar, precio_libra: BigDecimal("0"), subtotal: BigDecimal("0"),
+      minimo_aplicado: true, origen: "volumen" }
   end
 
   # La línea que cobra: `CotizadorFlete` sobre el `peso_cobrar` del volumen,
@@ -132,8 +161,10 @@ class ArmarPreFacturaPorVolumen
     end
     return if tarifas.uniq.size <= 1
 
+    # PR-P.11a · Medición ya no deja juntarlas (`PuedenIrJuntas#otra_tarifa`,
+    # RP-92); esto queda como la última red, para la tanda medida antes.
     raise NoSePuede, "Las cajas del volumen #{bulto.de_cuantos_texto || bulto.orden} se cobran con tarifas " \
-                     "distintas (proveedor o sucursal): esa pre-factura se hace por Pre-Facturas › A mano (excepciones)."
+                     "distintas (proveedor o sucursal): medila de nuevo separándolas."
   end
 
   # Las mismas marcas que `build_from_paquetes` —«(mínimo de servicio)» y

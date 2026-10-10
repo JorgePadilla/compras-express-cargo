@@ -44,6 +44,20 @@ import { enfocar } from "controllers/enfocar"
 // rama, para que `sonidos_cableados_test` los pueda leer del archivo; y el
 // `showModal()` va en el mismo método que el `dispatch`, que es lo que el lint
 // exige.
+
+// «NO Mezclar» que se resuelve con el modal de dos salidas (quitar la última o
+// empezar de nuevo). PR-P.11a suma los motivos que antes iban a la pre-factura
+// a mano: otra sucursal de retiro, prepagadas con no prepagadas (RP-89), otra
+// tarifa (RP-92) y otro trato de cobro (RP-72). Un motivo que no esté acá cae
+// en el aviso de «repetida», así que cada uno nuevo tiene que entrar.
+const TITULOS_DE_MEZCLA = {
+  otro_cliente: "Es otro cliente",
+  otro_servicio: "Es otro servicio",
+  otra_sucursal: "Se retira en otra sucursal",
+  prepago_mezclado: "Prepagadas y no prepagadas no se miden juntas",
+  otra_tarifa: "Se cobra con otra tarifa",
+  otro_trato_de_cobro: "Tiene otro trato de cobro"
+}
 export default class extends conEnterAvanza(Controller) {
   static targets = [
     "codigo", "aviso",
@@ -299,7 +313,7 @@ export default class extends conEnterAvanza(Controller) {
   // ── «NO Mezclar»: los dos modales que pidió Yusef ───────────────────────
 
   _noMezclar(data) {
-    if (data.motivo === "otro_cliente" || data.motivo === "otro_servicio") {
+    if (data.motivo in TITULOS_DE_MEZCLA) {
       this._mezcla(data)
     } else if (data.motivo === "unible") {
       this._unible(data)
@@ -316,7 +330,7 @@ export default class extends conEnterAvanza(Controller) {
   // empezar todo de nuevo?"*. Las dos salidas son las de él.
   _mezcla(data) {
     this.dispatch("mezcla")
-    this.mezclaTituloTarget.textContent = data.motivo === "otro_cliente" ? "Es otro cliente" : "Es otro servicio"
+    this.mezclaTituloTarget.textContent = TITULOS_DE_MEZCLA[data.motivo]
     this.mezclaTextoTarget.textContent = data.mensaje
     this.mezclaModalTarget.showModal()
     requestAnimationFrame(() => this.mezclaQuitarTarget.focus())

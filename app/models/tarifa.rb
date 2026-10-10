@@ -158,6 +158,39 @@ class Tarifa < ApplicationRecord
     nil
   end
 
+  # PR-P.11a · RP-92 · **Qué nivel** de la cascada le tocaría a un paquete, sin
+  # peso: `{ cliente_id:, proveedor_id:, categoria_precio_id:, sucursal_id: }`
+  # del primer nivel que tiene alguna fila activa para ese servicio, o `nil`
+  # si no hay ninguna. Medición lo usa para no juntar en un volumen cajas que
+  # se cobrarían con tarifas distintas (`PuedenIrJuntas#otra_tarifa`): ahí el
+  # volumen todavía no se pesó, así que `resolver` no sirve.
+  #
+  # Es el mismo recorrido que `buscar_para_peso` —cliente → proveedor →
+  # categoría → lista, y dentro de cada nivel la sucursal concreta antes que la
+  # genérica— **sin** `para_peso`. No cobra nada: `resolver` sigue siendo el
+  # único que elige la tarifa de una línea. Un test exige que los dos caigan en
+  # el mismo nivel (`pueden_ir_juntas_test.rb`).
+  def self.clave(tipo_envio:, cliente: nil, proveedor: nil, sucursal: nil)
+    return nil if tipo_envio.nil?
+
+    base = activas.where(tipo_envio_id: tipo_envio.id)
+    niveles = []
+    niveles << { cliente_id: cliente.id } if cliente&.id
+    niveles << { proveedor_id: proveedor.id, cliente_id: nil } if proveedor
+    if cliente&.categoria_precio_id
+      niveles << { categoria_precio_id: cliente.categoria_precio_id, cliente_id: nil, proveedor_id: nil }
+    end
+    niveles << { cliente_id: nil, proveedor_id: nil, categoria_precio_id: nil }
+
+    niveles.each do |filtro|
+      candidatas = base.where(filtro)
+      return filtro.merge(sucursal_id: sucursal.id) if sucursal && candidatas.exists?(sucursal_id: sucursal.id)
+      return filtro.merge(sucursal_id: nil) if candidatas.exists?(sucursal_id: nil)
+    end
+
+    nil
+  end
+
   # Calcula el cobro del flete para un peso dado.
   # Devuelve { subtotal:, moneda:, peso_facturado:, aplico_minimo: }.
   #

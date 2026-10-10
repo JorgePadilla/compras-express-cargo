@@ -115,13 +115,79 @@ class AuditoriaDeTandaTest < ActiveSupport::TestCase
     assert_equal :fuera_de_la_hoja, auditoria.volumen(qr(otro.first)).tipo
   end
 
-  test "con una caja prepagada en Miami: caso complejo, por Pre-Facturas › A mano (excepciones)" do
-    cajas = [ caja, caja(prepagado_miami: true, prepagado_miami_metodo: "efectivo") ]
+  # ── PR-P.11a · Lo que antes iba por la puerta a mano ───────────────────
+
+  test "una tanda toda prepagada en Miami entra, y avisa que se cobra el simbólico" do
+    cajas = 2.times.map { caja(prepagado_miami: true, prepagado_miami_metodo: "efectivo") }
     medir(cajas, { peso: "4" })
 
-    r = auditoria.volumen(qr(cajas.first))
+    r = auditoria.volumen("#{qr(cajas.first)}")
+    assert_equal :ok, r.tipo
+    assert_match(/2 cajas prepagadas en Miami: se cobra el simbólico de US\$1\.00 c\/u/, r.aviso)
+  end
+
+  test "el aviso del prepago va junto con el de la etiqueta vieja" do
+    cajas = [ caja(prepagado_miami: true, prepagado_miami_metodo: "efectivo") ]
+    medir(cajas, { peso: "4" }, { peso: "2" })
+
+    r = auditoria.volumen(qr(cajas.first)) # sin «n de m»: dice 1, la tanda tiene 2
+    assert_match(/medición anterior/, r.aviso)
+    assert_match(/1 caja prepagada en Miami/, r.aviso)
+  end
+
+  test "una tanda que mezcla prepagadas y no prepagadas se rechaza: medila de nuevo" do
+    normal = caja
+    medida_antes = caja
+    medir([ normal, medida_antes ], { peso: "4" })
+    # Medición ya no deja juntarlas: es una tanda medida antes de PR-P.11a.
+    medida_antes.update_columns(prepagado_miami: true, prepagado_miami_metodo: "efectivo")
+
+    r = auditoria.volumen(qr(normal))
     assert_equal :prepagada, r.tipo
-    assert_match(/Pre-Facturas › A mano \(excepciones\)/, r.mensaje)
+    assert_match(/medila de nuevo separando las prepagadas/, r.mensaje)
+    assert_no_match(/A mano/, r.mensaje)
+  end
+
+  test "sin manifiesto oficial: se rechaza, salvo que la hoja lo haya elegido" do
+    suelta = [ caja(manifiesto: nil) ]
+    medir(suelta, { peso: "2" })
+    interno = manifiestos(:enviado).dup.tap do |m|
+      m.assign_attributes(numero: "MINT#{SecureRandom.hex(3).upcase}", tipo: "interno", sucursal_entrega: sucursales(:zeron_sps))
+      m.save!(validate: false)
+    end
+    del_interno = [ caja(manifiesto: interno) ]
+    medir(del_interno, { peso: "2" })
+
+    r = auditoria.volumen(qr(suelta.first))
+    assert_equal :fuera_de_la_hoja, r.tipo
+    assert_match(/Sin manifiesto oficial/, r.mensaje, "dice qué marcar en la hoja")
+
+    @hoja = @hoja.con("sin_manifiesto" => "1")
+    assert_equal :ok, auditoria.volumen(qr(suelta.first)).tipo
+    assert_equal :ok, auditoria.volumen(qr(del_interno.first)).tipo, "la del interno también"
+
+    otro = [ caja(manifiesto: manifiestos(:creado)) ]
+    medir(otro, { peso: "2" })
+    assert_equal :fuera_de_la_hoja, auditoria.volumen(qr(otro.first)).tipo,
+                 "un oficial que no está en la hoja sigue afuera"
+  end
+
+  test "otra tanda que se retira en otra sucursal no va en la misma pre-factura" do
+    mia, = medir([ caja(sucursal: sucursales(:zeron_sps)) ], { peso: "2" })
+    otra = [ caja(sucursal: sucursales(:humuya_tgu)) ]
+    medir(otra, { peso: "2" })
+
+    r = auditoria([ mia.sesion ]).volumen(qr(otra.first))
+    assert_equal :no_va_junto, r.tipo
+    assert_match(/se retira en/, r.mensaje)
+  end
+
+  test "las reglas del volumen no corren entre tandas: una prepagada y una que no, del mismo cliente, sí" do
+    a, = medir([ caja ], { peso: "2" })
+    prepagadas = [ caja(prepagado_miami: true, prepagado_miami_metodo: "efectivo") ]
+    medir(prepagadas, { peso: "3" })
+
+    assert_equal :ok, auditoria([ a.sesion ]).volumen(qr(prepagadas.first)).tipo
   end
 
   test "la misma tanda dos veces" do

@@ -11,7 +11,8 @@ class EditarPreFacturasSystemTest < ApplicationSystemTestCase
     @pfs = [ pre_facturas(:borrador_juan), pre_facturas(:pendiente_maria) ]
     @pfs.each do |pf|
       pf.update_columns(manifiesto_id: @manifiesto.id, estado: "creado", notificado_at: nil, consolidando_at: nil,
-                        notificar_at: Time.zone.local(manana.year, manana.month, manana.day, 7, 30), fecha_trabajo: manana)
+                        notificar_at: Time.zone.local(manana.year, manana.month, manana.day, 7, 30), fecha_trabajo: manana,
+                        auditado_por_id: users(:supervisor_prefactura).id)
     end
     ingresar(users(:supervisor_prefactura))
   end

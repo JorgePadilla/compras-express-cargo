@@ -134,7 +134,8 @@ class HojaDePreparacionControllerTest < ActionDispatch::IntegrationTest
 
   test "«editar» lista las pre-facturas sin avisar de cada manifiesto, con su link" do
     pf = pre_facturas(:borrador_juan)
-    pf.update_columns(manifiesto_id: @manifiesto.id, estado: "creado", notificar_at: 1.day.from_now)
+    pf.update_columns(manifiesto_id: @manifiesto.id, estado: "creado", notificar_at: 1.day.from_now,
+                      auditado_por_id: users(:supervisor_prefactura).id)
 
     ingresar(users(:supervisor_prefactura))
     patch hoja_de_preparacion_url, params: { hoja: { modo: "editar" } }
@@ -142,6 +143,40 @@ class HojaDePreparacionControllerTest < ActionDispatch::IntegrationTest
 
     assert_select "[data-manifiesto=?] a[href=?]", @manifiesto.numero, edit_pre_factura_path(pf)
     assert_select "[data-paso='3']", count: 0, message: "la hora en lote es el formulario propio de «editar»"
+  end
+
+  # PR-P.11a · «Sin manifiesto oficial»: una tarjeta más, solo si hay carga
+  # así; en «editar», las auditadas sin manifiesto con sus botones.
+  test "«Sin manifiesto oficial» sale como tarjeta, se guarda y deja la hoja lista" do
+    HojaDePreparacion.carga_sin_manifiesto([ @cer.id ]).update_all(estado: "entregado")
+    ingresar(users(:supervisor_prefactura))
+    patch hoja_de_preparacion_url, params: { hoja: { tipo_envio_ids: [ @cer.id ] } }
+    get hoja_de_preparacion_url
+    assert_select "[data-sin-manifiesto]", false, "sin carga así no se ofrece"
+
+    @paquete.update_columns(manifiesto_id: nil)
+    get hoja_de_preparacion_url
+    assert_select "[data-sin-manifiesto] input[type=checkbox][name='hoja[sin_manifiesto]']"
+
+    patch hoja_de_preparacion_url, params: { hoja: { tipo_envio_ids: [ @cer.id ], manifiesto_ids: [ "" ], sin_manifiesto: "1" } }
+    assert session[:pf_hoja]["sin_manifiesto"]
+    get hoja_de_preparacion_url
+    assert_select "a[href=?]", auditar_pre_factura_index_path, text: /Empezar a auditar/
+
+    patch hoja_de_preparacion_url, params: { hoja: { tipo_envio_ids: [ @cer.id ], sin_manifiesto: "0" } }
+    assert_not session[:pf_hoja]["sin_manifiesto"], "se destilda"
+  end
+
+  test "«editar» lista también las auditadas sin manifiesto, con su link" do
+    pf = pre_facturas(:borrador_juan)
+    pf.update_columns(manifiesto_id: nil, estado: "creado", notificar_at: 1.day.from_now,
+                      auditado_por_id: users(:supervisor_prefactura).id)
+
+    ingresar(users(:supervisor_prefactura))
+    patch hoja_de_preparacion_url, params: { hoja: { modo: "editar" } }
+    get hoja_de_preparacion_url
+
+    assert_select "[data-sin-manifiesto] [data-pre-factura=?] a[href=?]", pf.numero, edit_pre_factura_path(pf)
   end
 
   test "el link está en Logística y la tarjeta en el Home" do

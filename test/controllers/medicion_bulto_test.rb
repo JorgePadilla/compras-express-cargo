@@ -87,6 +87,28 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
     assert_match(/se factura aparte/i, json["mensaje"])
   end
 
+  # PR-P.11a · Lo que antes resolvía la pre-factura a mano se frena en la mesa,
+  # con el modal de dos salidas (quitar la última o empezar de nuevo).
+  test "una prepagada en Miami donde hay no prepagadas rebota con su motivo" do
+    prepagada = caja("1ZBULTO000000031", prepagado_miami: true, prepagado_miami_metodo: "efectivo")
+
+    escanear(prepagada.tracking, en_tanda: [ @primera.id ])
+
+    assert_equal "no_mezclar", json["resultado"]
+    assert_equal "prepago_mezclado", json["motivo"]
+    assert_not json["mesa"]
+  end
+
+  test "otra sucursal de retiro también rebota" do
+    @primera.update_columns(sucursal_id: sucursales(:zeron_sps).id)
+    otra = caja("1ZBULTO000000032", sucursal: sucursales(:humuya_tgu))
+
+    escanear(otra.tracking, en_tanda: [ @primera.id ])
+
+    assert_equal "otra_sucursal", json["motivo"]
+    assert_not json["mesa"]
+  end
+
   # Yusef: *"no lo podría hacer porque está consolidando esa carga con otros
   # paquetes… un modal que le diga: hey, no, ese está consolidando con tal
   # pre-alerta, con tal número. Ese va amarrado con otra."*

@@ -178,6 +178,53 @@ class MedirBultoTest < ActiveSupport::TestCase
     assert_match(/se factura aparte/, e.message)
   end
 
+  # ── PR-P.11a · Lo que el volumen necesita para cobrarse con una línea ───
+
+  test "prepagadas en Miami y no prepagadas no se miden juntas" do
+    normal = caja
+    prepagada = caja(prepagado_miami: true, prepagado_miami_metodo: "efectivo")
+
+    e = assert_raises(MedirBulto::NoSePuede) { medir([ normal, prepagada ], { peso: "10" }) }
+    assert_match(/prepagada en Miami.*se miden aparte/, e.message)
+    assert_equal 0, Bulto.count
+
+    assert medir([ prepagada, caja(prepagado_miami: true, prepagado_miami_metodo: "efectivo") ], { peso: "10" }),
+           "todas prepagadas sí"
+  end
+
+  test "dos cajas que se cobrarían con tarifas distintas no se miden juntas (RP-92)" do
+    Tarifa.delete_all
+    Tarifa.create!(tipo_envio: tipo_envios(:cer), precio_libra: 4.50, moneda: "USD")
+    Tarifa.create!(tipo_envio: tipo_envios(:cer), precio_libra: 3.00, moneda: "USD", proveedor: proveedores(:Amazon))
+
+    e = assert_raises(MedirBulto::NoSePuede) do
+      medir([ caja, caja(proveedor: proveedores(:Amazon)) ], { peso: "10" })
+    end
+    assert_match(/otra tarifa/, e.message)
+  end
+
+  test "otro proveedor que cae en la misma tarifa sí va junto" do
+    Tarifa.delete_all
+    Tarifa.create!(tipo_envio: tipo_envios(:cer), precio_libra: 4.50, moneda: "USD")
+
+    assert medir([ caja, caja(proveedor: proveedores(:Amazon)) ], { peso: "10" })
+  end
+
+  test "una caja con excepción de cobro no se mide con otra sin ella (RP-72)" do
+    marcada = caja
+    marcada.update_columns(cobro_excepcion: "solo_peso")
+
+    e = assert_raises(MedirBulto::NoSePuede) { medir([ caja, marcada ], { peso: "10" }) }
+    assert_match(/tratos distintos/, e.message)
+  end
+
+  test "dos sucursales de retiro no se miden juntas" do
+    e = assert_raises(MedirBulto::NoSePuede) do
+      medir([ caja(sucursal: sucursales(:zeron_sps)), caja(sucursal: sucursales(:humuya_tgu)) ], { peso: "10" })
+    end
+    assert_match(/se retira en/, e.message)
+  end
+
   # Yusef: *"le debería tirar un error, un modal que le diga: hey, no, ese está
   # consolidando con tal pre-alerta. **Ese va amarrado con otra**"*. El porqué lo
   # confirmó con Vanessa en la misma reunión: consolidado y suelto llevan
