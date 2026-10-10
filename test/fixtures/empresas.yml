@@ -1,5 +1,6 @@
 singleton:
   nombre: Compras Express Cargo
+  razon_social: Razón social de prueba
   rtn: "08011998123456"
   telefono: "+504 2550-0000"
   email_contacto: info@comprasexpresscargo.com

@@ -5,7 +5,14 @@ class Sucursal < ApplicationRecord
   UBICACIONES = %w[miami honduras otros].freeze
 
   has_many :paquetes, dependent: :restrict_with_error
-  has_many :sub_localidades, dependent: :destroy  # PR-D1.c: bodegas internas
+  # PR-F1.1: de dónde salen sus facturas SAR, una por sucursal que factura. Con
+  # punto de emisión la sucursal no se borra; va antes que `sub_localidades`
+  # para que el freno corra antes de que se borren las bodegas.
+  has_one :punto_de_emision, dependent: :restrict_with_error
+  # PR-D1.c: bodegas internas. El `class_name` lo agregó PR-F1.1: sin él Rails
+  # buscaba `SubLocalidade` (regla latina) y borrar cualquier sucursal sin
+  # paquetes reventaba con NameError.
+  has_many :sub_localidades, class_name: "SubLocalidad", dependent: :destroy
 
   validates :codigo, presence: true, uniqueness: { case_sensitive: false }
   validates :nombre, presence: true

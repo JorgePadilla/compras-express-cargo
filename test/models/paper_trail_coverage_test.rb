@@ -10,6 +10,7 @@ class PaperTrailCoverageTest < ActiveSupport::TestCase
     WarehouseReceipt Cotizacion NotaDebito NotaCredito Financiamiento
     Sucursal Proveedor MotivoRetencion PlantillaNotaCliente Carrier
     EmpresaManifiesto MotivoEnvioPolitica
+    PuntoDeEmision AutorizacionSar
   ].freeze
 
   test "cada modelo audited tiene paper_trail habilitado" do
@@ -38,6 +39,19 @@ class PaperTrailCoverageTest < ActiveSupport::TestCase
       assert_equal 1, p.versions.count
       p.update!(activo: false)
       assert_equal 2, p.versions.count
+    end
+  end
+
+  # PR-F1.1: quién cargó o cambió un CAI es justo lo que se pregunta después.
+  test "AutorizacionSar y PuntoDeEmision graban versiones" do
+    PaperTrail.request(whodunnit: users(:admin).id) do
+      a = autorizaciones_sar(:ficticia)
+      a.update!(fecha_limite_emision: a.fecha_limite_emision + 1)
+      assert_equal users(:admin).id.to_s, a.versions.last.whodunnit
+
+      p = puntos_de_emision(:tgu)
+      p.update!(activo: false)
+      assert_equal "update", p.versions.last.event
     end
   end
 
