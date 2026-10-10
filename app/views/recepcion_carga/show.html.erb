@@ -7,9 +7,14 @@
          suena al tono de respaldo y el volumen del usuario no aplica. %>
      <%= tag.attributes(atributos_de_audio) %>
      data-recepcion-carga-escanear-url-value="<%= escanear_recepcion_carga_path(@manifiesto) %>"
+     <%# C30-09 · `completo`: la caja que cierra el manifiesto suena a los tres
+         tonos de la Medición, acá y en la pistola de la lista. %>
      data-action="recepcion-carga:ok->audio#success
+                  recepcion-carga:completo->audio#completo
                   recepcion-carga:noEsDeAqui->audio#error
                   recepcion-carga:yaRecibida->audio#alert">
+
+  <% content_for :esquina, render("shared/sonido_config") %>
 
   <%= render PageHeaderComponent.new(title: "Recibir #{@manifiesto.numero}",
                                      subtitle: @manifiesto.tipo_interno? ? "Interno de #{@manifiesto.sucursal_origen&.codigo} — escaneá cada paquete al bajarlo" : "Escaneá cada caja al bajarla del camión") do |h| %>
