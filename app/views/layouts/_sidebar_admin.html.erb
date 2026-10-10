@@ -53,6 +53,9 @@
       <%# 5 · C26-02 · Ya recibida: se pesa y se mide cada caja antes de la
           pre-factura. *"Medición se llama."* %>
       <%= sidebar_link "Medición", medicion_index_path, icon: "scale" if can_access?(:medicion) %>
+      <%# C30-12 · Lo ya medido, con buscador por cliente o warehouse. Pegado a
+          Medición porque es su bitácora, no un paso más. %>
+      <%= sidebar_link "Volúmenes medidos", volumenes_medicion_index_path, icon: "cube-transparent" if can_access?(:medicion) %>
       <%# 6 · PR-P.4 · C30-15 · Medido, se prepara la pre-factura: servicios,
           manifiestos y la hora del aviso. Va en Logística y no en Facturación
           porque es el paso que sigue en la bodega —*"es como etiquetando"*—,

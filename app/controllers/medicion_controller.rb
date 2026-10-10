@@ -36,6 +36,26 @@ class MedicionController < ApplicationController
     render json: { manifiesto: manifiesto_json(manifiesto_por_defecto) }
   end
 
+  # C30-12 · Los volúmenes ya medidos. Yusef, recorriendo staging el
+  # 2026-10-09: *"¿ahora puedo de alguna manera ver los volúmenes de los
+  # paquetes que hemos medido?"* — y no había nada: lo medido solo se veía
+  # volviendo a escanear una caja. *"Que tenga el filtro por cliente o por
+  # warehouse, como un buscador."*
+  #
+  # Una fila por volumen, las de una misma tanda juntas; con las cajas de la
+  # tanda, quién lo midió, la pre-factura que lo cobra y su etiqueta.
+  def volumenes
+    @estado = params[:estado].presence_in(%w[sin_pre_factura en_pre_factura])
+    bultos = Bulto.buscar(params[:q])
+    bultos = bultos.public_send(@estado) if @estado
+    bultos = bultos.where(medido_at: Date.parse(params[:fecha_desde]).beginning_of_day..) if fecha?(:fecha_desde)
+    bultos = bultos.where(medido_at: ..Date.parse(params[:fecha_hasta]).end_of_day) if fecha?(:fecha_hasta)
+
+    @bultos = bultos.includes(:cliente, :user, :paquetes, pre_factura_items: :pre_factura)
+                    .order(medido_at: :desc, sesion: :asc, orden: :asc)
+                    .page(params[:page]).per(50)
+  end
+
   # C26-17 · Sacar una caja de la lista: perdida, o ya entregada. Solo admin.
   def descartar
     paquete = Paquete.find(params[:id])
@@ -461,6 +481,13 @@ class MedicionController < ApplicationController
     else
       "#{bultos.size} volúmenes guardados de #{cajas} caja#{"s" if cajas != 1}: #{bultos.size} etiquetas."
     end
+  end
+
+  def fecha?(campo)
+    Date.parse(params[campo].to_s)
+    true
+  rescue Date::Error
+    false
   end
 
   def authorize_medicion

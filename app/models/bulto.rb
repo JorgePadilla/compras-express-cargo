@@ -46,6 +46,44 @@ class Bulto < ApplicationRecord
 
   scope :de_la_sesion, ->(sesion) { where(sesion: sesion).order(:orden) }
 
+  # C30-12 · El buscador de /medicion/volumenes. Yusef, el 2026-10-09: *"¿ahora
+  # puedo de alguna manera ver los volúmenes de los paquetes que hemos
+  # medido?… que tenga el filtro por cliente o por warehouse, como un
+  # buscador"*.
+  #
+  # Por cliente (código o nombre, la misma búsqueda de siempre) o por **una
+  # caja de la tanda**: su warehouse o su tracking, a mano o con la pistola —
+  # la etiqueta de Miami o el QR del volumen, que llevan el código de una caja.
+  # Una caja trae la tanda entera, porque desde `C28-08` las cajas son de la
+  # tanda y no de un volumen.
+  scope :buscar, ->(term) {
+    termino = term.to_s.strip
+    next all if termino.blank?
+
+    q = "%#{sanitize_sql_like(termino)}%"
+    escrita = Paquete.where("paquetes.numero_recepcion ILIKE :q OR paquetes.tracking ILIKE :q", q: q)
+    escaneada = Paquete.por_codigo_de_etiqueta(termino)
+
+    where(sesion: escrita.where.not(medicion_sesion: nil).select(:medicion_sesion))
+      .or(where(sesion: escaneada.where.not(medicion_sesion: nil).select(:medicion_sesion)))
+      .or(where(cliente_id: Cliente.buscar(termino).select(:id)))
+  }
+
+  # La pre-factura que lo cobra. Una anulada no cuenta: `anular!` deja vivos
+  # sus renglones (ver `PreFactura#anular!`), y el volumen vuelve a estar libre.
+  scope :en_pre_factura, -> {
+    where(id: PreFacturaItem.joins(:pre_factura).where.not(pre_facturas: { estado: "anulado" }).select(:bulto_id))
+  }
+  scope :sin_pre_factura, -> {
+    where.not(id: PreFacturaItem.joins(:pre_factura).where.not(pre_facturas: { estado: "anulado" })
+                                .where.not(bulto_id: nil).select(:bulto_id))
+  }
+
+  # Con `pre_factura_items: :pre_factura` precargado, sin otra consulta.
+  def pre_factura_vigente
+    pre_factura_items.map(&:pre_factura).compact.reject(&:anulado?).first
+  end
+
   # Los hermanos de esta medición — las otras que salieron de la misma mesa.
   def hermanos = Bulto.de_la_sesion(sesion)
 

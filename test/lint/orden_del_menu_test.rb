@@ -46,6 +46,7 @@ class OrdenDelMenuTest < ActiveSupport::TestCase
         "guias_aduana_index_path",    # San Pedro le pone guía y fecha al que salió
         "recepcion_carga_index_path", # llegó: se escanean las cajas
         "medicion_index_path",        # C26-02: se pesa y se mide antes de la pre-factura
+        "volumenes_medicion_index_path", # C30-12: la bitácora de lo medido, pegada a Medición
         "hoja_de_preparacion_path",   # PR-P.4: medido, se prepara la pre-factura
         "paquetes_path"               # transversal: el listado de todo
       ]

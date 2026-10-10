@@ -258,6 +258,9 @@ Rails.application.routes.draw do
       post :guardar
       # C26-17 · Lo que falta del manifiesto, para el panel de la derecha.
       get :panel
+      # C30-12 · La bitácora: los volúmenes ya medidos, con buscador por
+      # cliente o warehouse.
+      get :volumenes
     end
     member do
       patch :medir
