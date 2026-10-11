@@ -1435,7 +1435,7 @@ volumen de tres cajas cobra **un** mínimo, no tres (`RP-41`, `RP-79`).
 | `pre_facturas.auditado_por_id`, `notificacion_error` | | Quién auditó; un aviso que falla no frena a los demás (la lección de `PR-C29.19`) |
 | `Configuracion` `prefactura_hora_disponible` | `"07:30"` | Como `ventana_aviso_llegada_min` |
 | Paquete | `en_aduana` → (F8) `consolidando_honduras` → (a la hora) `disponible_entrega` | Sin estados nuevos. F9 devuelve lo consolidando a `en_aduana` para que el paso a disponible pase por `no_advance_with_open_tareas` |
-| Manifiesto | sin estado nuevo: sale de la lista cuando todos sus paquetes tienen pre-factura | `C28-14`: si falta una caja, sigue en la lista. `RP-87` |
+| Manifiesto | sin estado nuevo: sale de la lista cuando todos sus paquetes tienen pre-factura | `C28-14`: si falta una caja, sigue en la lista. `RP-87` ▶ **2026-10-11**: Yusef pide el estado **«Terminado de Prefacturar»** (`C30-23`) |
 
 ### Serie
 
@@ -1447,7 +1447,7 @@ volumen de tres cajas cobra **un** mínimo, no tres (`RP-41`, `RP-79`).
 | `PR-P.4` ✅ #496 | **La hoja de preparación** (`/pre-factura/hoja`) y su link en Logística después de Medición. La hora sale de `PreFactura.hora_disponible`: un solo lector de la configuración | `C30-15`, `C28-14` |
 | `PR-P.5` ✅ #499 | **Auditar escaneando, y F9** (`/pre-factura/auditar`), con el nodo en `lib/procesos_pdf.rb`. Los escaneos se procesan en fila (la pistola le gana al server). Una etiqueta de volumen de una medición anterior carga la tanda de hoy y avisa que hay que reimprimir | `C30-17`, `C30-18`, `C27-16`, `C28-15` |
 | `PR-P.6` ✅ #500 | **F8 consolidando**, y una tanda nueva a la que consolida. Agregar una tanda suma líneas nuevas sin tocar las viejas; el server siempre valida las tandas viejas junto con las nuevas | `C30-18` |
-| `PR-P.7` ✅ #501 | **Editar pre-facturas y cambiar la hora en lote**; volver a consolidar solo antes del aviso (lo frena el modelo, `YaAvisada`). Cambiar la fecha de trabajo de una programada mueve el aviso a ese día con la misma hora | `C30-15`, `RP-77` |
+| `PR-P.7` ✅ #501 | **Editar pre-facturas y cambiar la hora en lote**; volver a consolidar solo antes del aviso (lo frena el modelo, `YaAvisada`). ▶ **2026-10-11**: Yusef quiere que se pueda corregir también después, y que el cliente reciba el aviso otra vez **como «Actualización»** (`RP-77`, `C30-23`). Cambiar la fecha de trabajo de una programada mueve el aviso a ese día con la misma hora | `C30-15`, `RP-77` |
 | `PR-P.8` ✅ #503 | **Dos F9 sobre la misma tanda**: las cajas se bloquean (`FOR UPDATE` por id) antes de validar, y el segundo recibe un 422, no un 500. Y `anular!` toma la pre-factura antes que sus cajas, como todos los demás: al revés era un deadlock con F8. Lo encontró QA en `PR-P.5` | — |
 | `PR-P.9` ✅ #507 | **«Confirmar» y «Facturar» a mano no se saltean el aviso**: en una programada (o con aviso fallido) no se confirma —pasaba las cajas a disponible saltando la hora y la guarda de tareas—; en una consolidando ni se confirma ni se factura (quedaba sin hora y sus cajas nunca pasaban). `PreFactura#motivo_para_no_confirmar` / `_facturar`, sobre `estado_del_aviso`; también en el servidor | QA del mapa de la pre-factura vieja |
 | `PR-P.10` ✅ #508 | La pre-factura a mano quedó como puerta de excepciones y cobraba por volumen cuando había tanda (`ArmarPreFacturaManual`). **Superado** por P.11 el mismo día | Jorge, 2026-10-10 |
