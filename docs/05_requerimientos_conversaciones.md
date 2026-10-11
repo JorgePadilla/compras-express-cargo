@@ -12415,6 +12415,46 @@ Es la etiqueta de `C26-12` (*"ésa es la que van a escanear para entregar"*).
 - **C30-22** · *"Ya decidí que ya podemos empezar a darle el sistema a cada
   quien… lo voy a dividir de acuerdo al área"* (11:19 min 36). Las pruebas con
   el personal arrancan por áreas.
+- **C30-23** · **Las respuestas de Yusef a las preguntas de la pre-factura**,
+  por WhatsApp (2026-10-11). Contestó las ocho del primer bloque del archivo
+  que le mandó Jorge; con sus palabras:
+
+  > 1 (`RP-83`): "Pendiente, deja mañana me reúno, pero creería que él puede
+  >   cambiar toda esa información, para actualizar cualquier solicitud del
+  >   cliente, adicional al sistema; allí probable tocará mandar a remedir y
+  >   pesar."
+  > 2 (`RP-77`): "Si el aviso no ha salido, se actualiza con el último dato. Y
+  >   si ya salió se vuelve a enviar como **Actualización**."
+  > 3 (`RP-78`): "Así está actualmente, no es exactamente cuando se le da F9,
+  >   recordá que también está la programación de fecha y hora. Sí me
+  >   gustaría… que la actualización en sistema web (usuario), correo,
+  >   WhatsApp, SMS, push sea **lo más simultáneo posible**."
+  > 4 (`RP-85`): "Si el paquete se envió por error sin escanear en Miami, y ya
+  >   está en HN, debe dejarlo medir, pesar, unificar siempre y cuando cumpla
+  >   que es **del mismo cliente y tipo de servicio**."
+  > 5 (`RP-88`): "El sistema de medición le dice que debe agregar de estante
+  >   paquetes que fueron medidos y pesados; aquí es donde el marcar una opción
+  >   de **Medir y pesar todo de nuevo** o **solo agregar volumen y peso
+  >   nuevo** (aquí posiblemente consultaré el lunes para reconfirmar)."
+  > 6 (`RP-99`): "Debe actualizar siempre al cliente, y si es actualizada debe
+  >   marcar como **actualizada**; si es anulada y creada nueva debe decir lo
+  >   normal de nueva."
+  > 7 (`RP-87`): "Como en este caso hablamos de manifiestos de la carga, no de
+  >   los paquetes en específico, deberíamos ponerlos con el estatus de
+  >   **Terminado de Prefacturar**."
+  > 8 (`RP-91`/`RP-100`): "Entre más opciones tengamos, mejor: 1. reimprimir
+  >   etiqueta, 2. poder medir y pesar el de pre-factura. Debemos tener la
+  >   opción de búsqueda de acuerdo a código de cliente y nombre, o listado
+  >   general (ya sabes, cámaras); esta opción la ocuparán en medición y
+  >   pre-factura. Debe ir en **bitácora de la pre-factura**, para tener dónde
+  >   buscar uno como administrador."
+
+  Dos cambian lo construido: `RP-77` (`PR-P.7` solo dejaba volver a
+  consolidar antes del aviso, y `HacerDisponibles` no reenvía nunca) y
+  `RP-87` (el manifiesto no tenía estado nuevo, `docs/06` Fase 14). Lo de
+  `RP-85` en Medición ya anda con «saltar manifiesto» y la regla de «NO
+  Mezclar» (mismo cliente y servicio); en la pre-factura entra con «Sin
+  manifiesto oficial» en la hoja.
 
 ---
 
@@ -12436,6 +12476,7 @@ Es la etiqueta de `C26-12` (*"ésa es la que van a escanear para entregar"*).
 | `C30-12` | Buscador de volúmenes medidos | ✅ **Hecho** — `PR-C30.13`, pedido por Jorge el 2026-10-10 («falta una sección para ver los volúmenes»). `/medicion/volumenes`, en Logística pegado a Medición y en el Home: una fila por volumen con medidas, peso, VLbs, a cobrar, las cajas de la tanda, quién lo midió, su pre-factura y «Reimprimir». Busca por cliente (código o nombre) o por una caja (warehouse, tracking, o escaneando la etiqueta); filtra por fecha y por si ya está en una pre-factura (una anulada no cuenta). ❓ Los volúmenes **reemplazados** al medir de nuevo no salen: viven en el historial (`paper_trail`) |
 | `C30-13` | Los textos en el idioma del personal | 📄 Espera el Word de Yusef |
 | `C30-15`–`C30-19` | La pre-factura: hoja de preparación, fecha de trabajo, escaneo, F8/F9, etiqueta de entrega | ✅ **Hecha, el happy path** — Fase 14 en `docs/06`, `PR-P.1`–`P.8` (#492, #495, #494, #496, #499, #500, #501, #503); preguntas `RP-78`–`RP-92` |
+| `C30-23` | Las respuestas de Yusef del 2026-10-11 | ⏳ **Por construir**: el manifiesto «Terminado de Prefacturar» (`RP-87`); el aviso «Actualización» cuando se corrige una ya avisada (`RP-77`, `RP-99`); el buscador por cliente o listado en Medición y Pre-Factura, medir y pesar desde la pre-factura, y la bitácora (`RP-91`, `RP-100`). Esperan a Yusef: `RP-83` y `RP-88` |
 
 ### Las preguntas que abre
 
@@ -12443,30 +12484,30 @@ Es la etiqueta de `C26-12` (*"ésa es la que van a escanear para entregar"*).
 |---|---|
 | `RP-75` | **Excel se queda sin tecla** (`C30-02`): F8 pasa a guardar. ¿Excel lleva otra tecla, o ninguna? |
 | `RP-76` | **Tab en el autocomplete del cliente** (`C30-04`): ¿en qué pantalla fue? La lectura es que Tab elige la opción marcada y pasa al siguiente campo |
-| `RP-77` | **Corregir después de F9** (`C30-18`): ¿se puede pasar a F8 una pre-factura ya notificada? Si el aviso todavía está en cola, ¿se cancela o se manda corregido, como hace el sistema viejo? |
-| `RP-78` | **¿F9 pone los paquetes «disponibles» al apretarlo, o a la hora de la fecha de trabajo?** PR-D1 §A (*"mientras espera la fecha programada, el paquete queda en aduana"*) y `A7-16` dicen a la hora; `C30-15` (*"cuando le das F9"*) se puede leer al instante. Se construye a la hora, para que la web y el correo digan lo mismo (`A7-13`) |
+| `RP-77` | **Corregir después de F9** (`C30-18`): ¿se puede pasar a F8 una pre-factura ya notificada? Si el aviso todavía está en cola, ¿se cancela o se manda corregido, como hace el sistema viejo?. ✅ **Contestada el 2026-10-11** (`C30-23`): si el aviso no salió, sale con el último dato; si ya salió, se manda otra vez **como «Actualización»**. Cambia lo de `PR-P.7` (volver a consolidar solo antes del aviso) |
+| `RP-78` | **¿F9 pone los paquetes «disponibles» al apretarlo, o a la hora de la fecha de trabajo?** PR-D1 §A (*"mientras espera la fecha programada, el paquete queda en aduana"*) y `A7-16` dicen a la hora; `C30-15` (*"cuando le das F9"*) se puede leer al instante. Se construye a la hora, para que la web y el correo digan lo mismo (`A7-13`). ✅ **Contestada el 2026-10-11** (`C30-23`): *"así está actualmente"* — a la hora programada, no al F9. Pide que web, correo, WhatsApp, SMS y push salgan **lo más juntos posible**: va con `RP-80` |
 | `RP-79` | **La línea de la factura es el volumen** (cierra `RP-41`): un escalón y un mínimo por volumen, no por caja. ¿La factura muestra también cada caja en L. 0.00, o solo los volúmenes? |
-| `RP-80` | ❓ **Los canales del aviso** (`C30-16`): *"correo obligatorio, SMS, y si el cliente no se activa con WhatsApp entonces el SMS se elimina"* — ¿es «WhatsApp si lo tiene, si no SMS»? ¿Con qué proveedor? ¿El aviso respeta «no notificar facturas» del cliente, y va a sus correos adicionales? |
+| `RP-80` | ❓ **Los canales del aviso** (`C30-16`): *"correo obligatorio, SMS, y si el cliente no se activa con WhatsApp entonces el SMS se elimina"* — ¿es «WhatsApp si lo tiene, si no SMS»? ¿Con qué proveedor? ¿El aviso respeta «no notificar facturas» del cliente, y va a sus correos adicionales?. ▶ **2026-10-11**: cuando lleguen WhatsApp/SMS/push, que salgan **en el mismo momento** que el correo y el cambio en la web (`RP-78`) |
 | `RP-81` | **La fecha por defecto**: ¿mañana 7:30 (*"la ponemos mañana"*, `C26-10`) u hoy? ¿Sábado y domingo? ¿Una hora por hoja (aéreo una, marítimo otra)? |
 | `RP-82` | **La etiqueta de entrega** (`C30-19`): ¿una por pre-factura o una por volumen («1 de 3»)? «El volumen», ¿son pies³, VLBS, o cuántos volúmenes? ¿Lleva fecha **y hora** de disponible? |
-| `RP-83` | **El auditor edita paquetes y volúmenes** (`C30-17`): cambiar el peso cambia el cobro, y desde la Fase 13 eso pide PIN de supervisor. ¿Con PIN, o vuelve a Medición? |
+| `RP-83` | **El auditor edita paquetes y volúmenes** (`C30-17`): cambiar el peso cambia el cobro, y desde la Fase 13 eso pide PIN de supervisor. ¿Con PIN, o vuelve a Medición?. ⏳ **Yusef la confirma después de reunirse con su equipo** (2026-10-11): *"creería que él puede cambiar toda esa información… allí probable tocará mandar a remedir y pesar"* |
 | `RP-84` | **Falta una caja de la tanda** al escanear las de Miami: ¿bloquea, pasa con PIN como `C28-13`, o se puede F8? |
-| `RP-85` | **Una caja fuera de la hoja de preparación** (otro manifiesto, otro servicio, o medida con «saltar manifiesto», `C27-14`): ¿bloquea o avisa? |
+| `RP-85` | **Una caja fuera de la hoja de preparación** (otro manifiesto, otro servicio, o medida con «saltar manifiesto», `C27-14`): ¿bloquea o avisa?. ◐ **Contestada en parte el 2026-10-11** (`C30-23`): el paquete que se mandó por error **sin escanear en Miami** y ya está en Honduras se deja medir, pesar y unir **si es del mismo cliente y del mismo servicio**. Lo de otro manifiesto sigue abierto |
 | `RP-86` | **¿Quién audita?** Hoy entra a Pre-Facturas el supervisor de pre-factura, el de caja y el cajero. ¿Un rol propio «auditor de pre-factura»? |
-| `RP-87` | **El manifiesto terminado**: ¿basta con que desaparezca de la lista de la hoja, o quiere verlo con un estado «procesado»? |
-| `RP-88` | **«Agregar a este volumen»** (`C30-18`): ¿dónde se re-pesa? Medición no deja tocar cajas que ya están en una pre-factura |
+| `RP-87` | **El manifiesto terminado**: ¿basta con que desaparezca de la lista de la hoja, o quiere verlo con un estado «procesado»?. ✅ **Contestada el 2026-10-11** (`C30-23`): estado **«Terminado de Prefacturar»** — es el manifiesto, no los paquetes |
+| `RP-88` | **«Agregar a este volumen»** (`C30-18`): ¿dónde se re-pesa? Medición no deja tocar cajas que ya están en una pre-factura. ⏳ **Yusef la reconfirma el lunes** (2026-10-11): Medición avisa que hay que traer del estante lo ya medido; ahí, **«Medir y pesar todo de nuevo»** o **«Solo agregar volumen y peso nuevo»** |
 | `RP-89` | **Una tanda con proveedores o sucursales de retiro distintos, o con un prepagado de Miami**: ¿con qué se cotiza el volumen? En el happy path esos van por la pre-factura a mano |
 | `RP-90` | **El portal mientras consolida**: ¿el cliente ve «Consolidando en Honduras» o «En aduana»? |
-| `RP-91` | **Buscar por código o nombre del cliente** (lo dice el diagrama): ¿respaldo cuando no hay QR, o solo escanear (`C30-17`)? |
+| `RP-91` | **Buscar por código o nombre del cliente** (lo dice el diagrama): ¿respaldo cuando no hay QR, o solo escanear (`C30-17`)?. ✅ **Contestada el 2026-10-11** (`C30-23`): *"entre más opciones tengamos, mejor"* — escanear, y además buscar por código o nombre del cliente o en un listado general, en Medición y en Pre-Factura. Ver `RP-100` |
 | `RP-92` | **Una tanda con cajas de proveedores o sucursales distintos** que caen en tarifas distintas: «NO Mezclar» solo asegura mismo cliente y servicio, pero `Tarifa.resolver` mira también proveedor y sucursal. Hoy la pre-factura **rechaza** ese volumen (`PR-P.1`). ¿Pasa en la práctica? Si pasa, ¿qué tarifa gana? |
 | `RP-93` | **Prepagado en Miami** (`PR-P.11a`): hoy se cobra un simbólico de **US$1 + ISV por caja**, y el volumen va en L 0.00 con su peso. ¿Es por caja o por pre-factura/volumen? |
 | `RP-94` | ¿Medición tiene que **rechazar** medir juntas cajas prepagadas y no prepagadas (hoy sí), o se separan solas? |
 | `RP-95` | (sigue `RP-92`) Una tanda con cajas que caen en **tarifas distintas** hoy no se puede medir junta. ¿Pasa en la práctica? |
 | `RP-96` | (`RP-72`) Una caja «solo peso» o «solo volumétrico» hoy **se mide aparte** de las que no lo son. ¿O alcanza con un aviso? |
-| `RP-97` | (`RP-85`) Lo que no tiene manifiesto oficial (viejos, capeados, interno) se pre-factura marcando «Sin manifiesto oficial» en la hoja. Los **capeados** medidos con «saltar manifiesto» que nunca pasaron a aduana no aparecen: ¿quién los pasa? |
+| `RP-97` | (`RP-85`) Lo que no tiene manifiesto oficial (viejos, capeados, interno) se pre-factura marcando «Sin manifiesto oficial» en la hoja. Los **capeados** medidos con «saltar manifiesto» que nunca pasaron a aduana no aparecen: ¿quién los pasa?. ◐ Lo que nunca se escaneó en Miami: ver `RP-85`. Quién pasa los capeados sigue abierto |
 | `RP-98` | Los **descartados de medición** («perdido», «ya fue entregado»): ¿ya están facturados en el sistema viejo? Hoy ya no retienen su manifiesto en la hoja |
-| `RP-99` | Anulada una pre-factura que **ya avisó** y vuelta a auditar: hoy el F9 manda el aviso **otra vez**. ¿Está bien? |
-| `RP-100` | (`RP-91`) Sin la pre-factura a mano, ¿hace falta **buscar por código de cliente** cuando falta el QR, o solo escaneando? |
+| `RP-99` | Anulada una pre-factura que **ya avisó** y vuelta a auditar: hoy el F9 manda el aviso **otra vez**. ¿Está bien?. ✅ **Contestada el 2026-10-11** (`C30-23`): siempre se le avisa al cliente. Si se **corrigió**, el aviso dice que es una actualización; si se **anuló y se hizo otra**, sale el aviso normal de nueva. Hoy ya hace eso último |
+| `RP-100` | (`RP-91`) Sin la pre-factura a mano, ¿hace falta **buscar por código de cliente** cuando falta el QR, o solo escaneando?. ✅ **Contestada el 2026-10-11** (`C30-23`): las dos cosas — reimprimir la etiqueta y **medir y pesar desde la pre-factura** —, el buscador por cliente o listado (*"ya sabes, cámaras"*), y que quede en la **bitácora** de la pre-factura para que un administrador la encuentre |
 
 ### Después de la reunión — lo que Jorge pidió el 2026-10-10
 
