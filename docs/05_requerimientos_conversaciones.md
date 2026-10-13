@@ -12476,7 +12476,7 @@ Es la etiqueta de `C26-12` (*"ésa es la que van a escanear para entregar"*).
 | `C30-12` | Buscador de volúmenes medidos | ✅ **Hecho** — `PR-C30.13`, pedido por Jorge el 2026-10-10 («falta una sección para ver los volúmenes»). `/medicion/volumenes`, en Logística pegado a Medición y en el Home: una fila por volumen con medidas, peso, VLbs, a cobrar, las cajas de la tanda, quién lo midió, su pre-factura y «Reimprimir». Busca por cliente (código o nombre) o por una caja (warehouse, tracking, o escaneando la etiqueta); filtra por fecha y por si ya está en una pre-factura (una anulada no cuenta). ❓ Los volúmenes **reemplazados** al medir de nuevo no salen: viven en el historial (`paper_trail`) |
 | `C30-13` | Los textos en el idioma del personal | 📄 Espera el Word de Yusef |
 | `C30-15`–`C30-19` | La pre-factura: hoja de preparación, fecha de trabajo, escaneo, F8/F9, etiqueta de entrega | ✅ **Hecha, el happy path** — Fase 14 en `docs/06`, `PR-P.1`–`P.8` (#492, #495, #494, #496, #499, #500, #501, #503); preguntas `RP-78`–`RP-92` |
-| `C30-23` | Las respuestas de Yusef del 2026-10-11 | ⏳ **Por construir**: el manifiesto «Terminado de Prefacturar» (`RP-87`); el aviso «Actualización» cuando se corrige una ya avisada (`RP-77`, `RP-99`); el buscador por cliente o listado en Medición y Pre-Factura, medir y pesar desde la pre-factura, y la bitácora (`RP-91`, `RP-100`). Esperan a Yusef: `RP-83` y `RP-88` |
+| `C30-23` | Las respuestas de Yusef del 2026-10-11 | ✅ El manifiesto «Terminado de Prefacturar» (`RP-87`, #545). ⏳ **Por construir**: el aviso «Actualización» cuando se corrige una ya avisada (`RP-77`, `RP-99`); el buscador por cliente o listado en Medición y Pre-Factura, medir y pesar desde la pre-factura, y la bitácora (`RP-91`, `RP-100`). Esperan a Yusef: `RP-83` y `RP-88` |
 
 ### Las preguntas que abre
 
@@ -12489,12 +12489,12 @@ Es la etiqueta de `C26-12` (*"ésa es la que van a escanear para entregar"*).
 | `RP-79` | **La línea de la factura es el volumen** (cierra `RP-41`): un escalón y un mínimo por volumen, no por caja. ¿La factura muestra también cada caja en L. 0.00, o solo los volúmenes? |
 | `RP-80` | ❓ **Los canales del aviso** (`C30-16`): *"correo obligatorio, SMS, y si el cliente no se activa con WhatsApp entonces el SMS se elimina"* — ¿es «WhatsApp si lo tiene, si no SMS»? ¿Con qué proveedor? ¿El aviso respeta «no notificar facturas» del cliente, y va a sus correos adicionales?. ▶ **2026-10-11**: cuando lleguen WhatsApp/SMS/push, que salgan **en el mismo momento** que el correo y el cambio en la web (`RP-78`) |
 | `RP-81` | **La fecha por defecto**: ¿mañana 7:30 (*"la ponemos mañana"*, `C26-10`) u hoy? ¿Sábado y domingo? ¿Una hora por hoja (aéreo una, marítimo otra)? |
-| `RP-82` | **La etiqueta de entrega** (`C30-19`): ¿una por pre-factura o una por volumen («1 de 3»)? «El volumen», ¿son pies³, VLBS, o cuántos volúmenes? ¿Lleva fecha **y hora** de disponible? |
+| `RP-82` | **La etiqueta de entrega** (`C30-19`): ¿una por pre-factura o una por volumen («1 de 3»)? «El volumen», ¿son pies³, VLBS, o cuántos volúmenes? ¿Lleva fecha **y hora** de disponible?. ▶ **2026-10-12** (`C31-17`): son **N** — F9 pregunta cuántas, «1 de N», con QR propio por bolsa (`PR-C31.9b` #536) |
 | `RP-83` | **El auditor edita paquetes y volúmenes** (`C30-17`): cambiar el peso cambia el cobro, y desde la Fase 13 eso pide PIN de supervisor. ¿Con PIN, o vuelve a Medición?. ⏳ **Yusef la confirma después de reunirse con su equipo** (2026-10-11): *"creería que él puede cambiar toda esa información… allí probable tocará mandar a remedir y pesar"* |
 | `RP-84` | **Falta una caja de la tanda** al escanear las de Miami: ¿bloquea, pasa con PIN como `C28-13`, o se puede F8? |
-| `RP-85` | **Una caja fuera de la hoja de preparación** (otro manifiesto, otro servicio, o medida con «saltar manifiesto», `C27-14`): ¿bloquea o avisa?. ◐ **Contestada en parte el 2026-10-11** (`C30-23`): el paquete que se mandó por error **sin escanear en Miami** y ya está en Honduras se deja medir, pesar y unir **si es del mismo cliente y del mismo servicio**. ▶ **2026-10-12**: y la de otro manifiesto **entra** — solo frenan cliente y servicio (`C31-14`) |
+| `RP-85` | **Una caja fuera de la hoja de preparación** (otro manifiesto, otro servicio, o medida con «saltar manifiesto», `C27-14`): ¿bloquea o avisa?. ◐ **Contestada en parte el 2026-10-11** (`C30-23`): el paquete que se mandó por error **sin escanear en Miami** y ya está en Honduras se deja medir, pesar y unir **si es del mismo cliente y del mismo servicio**. ▶ **2026-10-12**: y la de otro manifiesto **entra** — solo frenan cliente y servicio (`C31-14`). ✅ **Cerrada** con `PR-C31.8` #542 |
 | `RP-86` | **¿Quién audita?** Hoy entra a Pre-Facturas el supervisor de pre-factura, el de caja y el cajero. ¿Un rol propio «auditor de pre-factura»? |
-| `RP-87` | **El manifiesto terminado**: ¿basta con que desaparezca de la lista de la hoja, o quiere verlo con un estado «procesado»?. ✅ **Contestada el 2026-10-11** (`C30-23`): estado **«Terminado de Prefacturar»** — es el manifiesto, no los paquetes |
+| `RP-87` | **El manifiesto terminado**: ¿basta con que desaparezca de la lista de la hoja, o quiere verlo con un estado «procesado»?. ✅ **Contestada el 2026-10-11** (`C30-23`): estado **«Terminado de Prefacturar»** — es el manifiesto, no los paquetes. ✅ **Construido** `PR-C31.8b` #545: se deriva (todo pre-facturado), no se sella |
 | `RP-88` | **«Agregar a este volumen»** (`C30-18`): ¿dónde se re-pesa? Medición no deja tocar cajas que ya están en una pre-factura. ⏳ **Yusef la reconfirma el lunes** (2026-10-11): Medición avisa que hay que traer del estante lo ya medido; ahí, **«Medir y pesar todo de nuevo»** o **«Solo agregar volumen y peso nuevo»** |
 | `RP-89` | **Una tanda con proveedores o sucursales de retiro distintos, o con un prepagado de Miami**: ¿con qué se cotiza el volumen? En el happy path esos van por la pre-factura a mano |
 | `RP-90` | **El portal mientras consolida**: ¿el cliente ve «Consolidando en Honduras» o «En aduana»? |
@@ -12557,9 +12557,14 @@ misma reunión:
 >  editar que todo se pudiera ver en una sola, **metí cosas que ya habíamos
 >  sacado**."
 
-Es «Editar en la misma ficha» (`PR-C30.15` #511): la tabla de cajas volvió a
-traer el botón **«Empacar escaneando»** (`manifiestos/_cajas.html.erb`), que
-manda a `/empacar` en vez de escanear en la barra de abajo. Lo que Yusef pide:
+~~Es «Editar en la misma ficha» (`PR-C30.15` #511): la tabla de cajas volvió a
+traer el botón **«Empacar escaneando»**~~. **Corregido el 2026-10-13:** el
+botón está en `_cajas.html.erb` desde #405; #511 solo lo mostró en más estados.
+La causa de verdad, reproducida con un test de sistema antes de tocar nada
+(`la_prueba_de_yusef_test`, rojo en staging): **la barra de abajo («Agregar
+paquetes») metía el paquete al manifiesto sin caja y sin estado**. La caja
+quedaba «vacía», el paquete «sin escanear», y al recibir en San Pedro escanear
+la 4×6 de la caja movía a aduana a nadie. Lo que Yusef pide:
 
 > "Queremos **eliminar ese empacar escaneando**… que sea esta barra que está
 >  abajo." · "El botón que sí necesitamos ahí es **ingresar sin escanear**. Y
@@ -12568,7 +12573,13 @@ manda a `/empacar` en vez de escanear en la barra de abajo. Lo que Yusef pide:
 >  está bien que esté sin escanear, no le afecta, pero **cambia el estatus**."
 
 Yusef: *"corregí esto y me avisás, y hacemos la prueba en videollamada, a las
-cinco de la tarde"*. ⏳ **Es lo primero.**
+cinco de la tarde"*. ✅ **`PR-C31.1` #537 y `PR-C31.1b` #539**: la caja recién
+armada es «la abierta» y lo que se escanea en la barra entra en ella,
+empacado; «Usar esta» vuelve a una anterior; «Empacar sin escanear» deja
+empacado (**revierte la decisión de Jorge del 2026-09-02**, «empacado implica
+caja»); el de la tarea pendiente entra pero no avanza; «Empacar escaneando» y
+la pantalla /empacar se fueron. La recepción dice qué paquete de una caja no
+pudo pasar a aduana, en vez de callarlo.
 
 #### C31-02 · Un paquete ya recibido en San Pedro se dejó meter otra vez al manifiesto (17:39 min 0–6)
 
@@ -12610,6 +12621,9 @@ lo marcó todo, como que ya está"*. Lo que es:
 Es el nombre del estado que el cliente y el personal leen: «Enviado a
 Honduras» en el oficial, «Enviado a sucursal <nombre>» en el interno. ❓ Si el
 país sale del destino del manifiesto o queda fijo hasta que haya otro.
+**Nota del 2026-10-13:** el **paquete** ya decía «Enviado a Honduras»; lo que
+decía «Enviado» a secas era el badge del **manifiesto**. ✅ `PR-C31.4` #540:
+`Manifiesto#estado_texto`, con el país fijo en `PAIS_DE_DESTINO`.
 
 #### C31-06 · La caja sin escanear dice «vacía» (16:07 min 18–30)
 
@@ -12638,8 +12652,10 @@ cálculo más exacto"*.
 >  empaquemos juntas, porque al final acá las vamos a separar… pero no siempre
 >  va a pasar así."
 
-La sucursal de entrega de la caja pasa de una a **varias**, y siempre al
-menos una (*"siempre debemos marcar a dónde va"*: en la prueba una caja de
+**Nota del 2026-10-13:** la caja no tiene sucursal; la tiene el **manifiesto**
+(`sucursal_entrega_id`). ✅ `PR-C31.7` #544: el oficial va a una o varias
+(`manifiesto_sucursales_entrega`), el interno sigue con una. La sucursal de
+entrega pasa de una a **varias**, y siempre al menos una (*"siempre debemos marcar a dónde va"*: en la prueba una caja de
 Diego para Humuya (Tegucigalpa) entró en la de San Pedro porque no tenía marcada la
 sucursal). Revisa `C21`/`C29-07`, donde la sucursal distinta **bloquea**.
 
@@ -12846,31 +12862,58 @@ esto"*: la facturación es de noviembre.
 
 | # | Qué | Estado |
 |---|---|---|
-| `C31-01` | Manifiesto: sacar «Empacar escaneando»; «sin escanear» pasa a empacado | ⏳ **Primero** — lo trajo `PR-C30.15` |
-| `C31-02` | Un paquete ya recibido no vuelve al manifiesto | ⏳ |
-| `C31-03` | Doble clic guarda dos veces | ⏳ |
-| `C31-04` | PIN para «Terminar» y para recibir el manifiesto a mano | ⏳ |
-| `C31-05` | Estado «Enviado a Honduras» | ⏳ |
-| `C31-06` | «Empacado sin escanear» en vez de «vacía» | ⏳ |
-| `C31-07` | Toda caja lleva peso | ⏳ |
-| `C31-08` | Totales pies³ / lbs / VLbs en la ficha del manifiesto | ⏳ |
-| `C31-09` | Una caja para varias sucursales | ⏳ Cambia la estructura; revisa `C29-07` |
-| `C31-10` | Lo de San Pedro editable; la fecha estimada va para adelante y se copia a los paquetes | ⏳ |
-| `C31-11` | Fecha de entrega en días hábiles, feriados, días por servicio | ⏳ `RP-101` |
-| `C31-12` | Sacar «queda anotado con tu nombre» | ⏳ |
+| `C31-01` | Manifiesto: sacar «Empacar escaneando»; «sin escanear» pasa a empacado | ✅ `PR-C31.1` #537 + `PR-C31.1b` #539 (la causa era la barra, no #511) |
+| `C31-02` | Un paquete ya recibido no vuelve al manifiesto | ✅ `PR-C31.2` #543 |
+| `C31-03` | Doble clic guarda dos veces | ✅ `PR-C31.2` #543 — `un_solo_envio` + la tecla sostenida |
+| `C31-04` | PIN para «Terminar» y para recibir el manifiesto a mano | ✅ `PR-C31.3` #546 — «Recibir a mano» = «Marcar recibido con las pendientes» |
+| `C31-05` | Estado «Enviado a Honduras» | ✅ `PR-C31.4` #540 (era el badge del manifiesto) |
+| `C31-06` | «Empacado sin escanear» en vez de «vacía» | ✅ `PR-C31.1` #537 |
+| `C31-07` | Toda caja lleva peso | ✅ `PR-C31.4` #540 — se exige al finalizar, no al armar la caja (C28-05) |
+| `C31-08` | Totales pies³ / lbs / VLbs en la ficha del manifiesto | ✅ `PR-C31.4` #540 |
+| `C31-09` | Una caja para varias sucursales | ✅ `PR-C31.7` #544 — la sucursal es del manifiesto; sin sucursal cuenta como San Pedro |
+| `C31-10` | Lo de San Pedro editable; la fecha estimada va para adelante y se copia a los paquetes | ✅ `PR-C31.5` #538 (+ #541, la migración que chocó con la de #536) |
+| `C31-11` | Fecha de entrega en días hábiles, feriados, días por servicio | ✅ `PR-C31.6` #535 · ❓ `RP-101` construida con supuestos |
+| `C31-12` | Sacar «queda anotado con tu nombre» | ✅ `PR-C31.2` #543 |
 | `C31-13` | Balanza conectada | 📄 Espera la balanza |
-| `C31-14` | La caja de otro manifiesto entra; solo cliente y servicio frenan | ⏳ Cierra `RP-85` |
-| `C31-15` | La hoja por pre-facturador; los manifiestos terminados no aparecen | ✅ la hoja ya es por usuario · ⏳ lo otro con `RP-87` |
-| `C31-16` | «Guardar y empezar a auditar» sin volver arriba | ⏳ |
-| `C31-17` | 4×6 horizontal y más grande; cuántas etiquetas al F9; hora real | ⏳ `RP-102` |
+| `C31-14` | La caja de otro manifiesto entra; solo cliente y servicio frenan | ✅ `PR-C31.8` #542 · cierra `RP-85` |
+| `C31-15` | La hoja por pre-facturador; los manifiestos terminados no aparecen | ✅ la hoja ya es por usuario · ✅ «Terminado de Prefacturar» `PR-C31.8b` #545 |
+| `C31-16` | «Guardar y empezar a auditar» sin volver arriba | ✅ `PR-C31.9` #533 |
+| `C31-17` | 4×6 horizontal y más grande; cuántas etiquetas al F9; hora real | ✅ `PR-C31.9b` #536 · ❓ `RP-102` (qué pasa al entregar) |
 | `C31-18` | Show y editar de la pre-factura | 📄 Espera la reunión de Yusef con su personal |
 | `C31-19` | Dos volúmenes cobrados aparte | ❓ `RP-103` |
-| `C31-20` | La vista del cliente para SAC | ⏳ |
+| `C31-20` | La vista del cliente para SAC | ✅ `PR-C31.10` #532 (bitácora de correos) + `PR-C31.11` #534 |
+
+### Lo que se construyó (2026-10-13)
+
+Todo lo de la tabla de arriba salió en un día, PR por PR, cada uno con sus
+tests y en verde (Tests + System Tests). Lo que vale saber al probarlo:
+
+- **La prueba de Yusef quedó escrita** (`test/system/la_prueba_de_yusef_test.rb`):
+  armar la caja, escanear en la barra, finalizar, recibir la caja en San Pedro
+  y que la carga llegue a aduana y sea facturable. Es la secuencia que se le
+  trabó; la videollamada puede repetirla.
+- **⚠️ Los correos pueden no estar saliendo.** `render.yaml` no define
+  `SMTP_ADDRESS`, y sin eso producción cae a `delivery_method = :test`. La
+  bitácora de correos (#532) los anota como **«Falló — SMTP sin configurar»**:
+  si la pestaña Correos del cliente sale toda en rojo, es eso. Lo revisa
+  Jorge en Render.
+- **Los clientes sin «Sucursal donde retira» pasan a San Pedro Zerón**
+  (#547), por migración de datos. Yusef, 15:32 min 12–18: *"cuando no tiene
+  sucursal esto debería ser San Pedro… ahorita default San Pedro Zerón"*. Al
+  crear ya era obligatoria (`C29-03`).
+- **Se perdió «Omitir»** (meter un paquete de otro tipo de envío): solo vivía
+  en /empacar. La barra lo rechaza, que es lo que Yusef dijo del tipo (*"genera
+  gasto"*). Y el set de N cajas abiertas (`C23-11`) es ahora una caja abierta
+  por operario, que se cambia con «Usar esta».
+- **La 4×6 de entrega acostada** (`@page 6in 4in`) falta probarla en la
+  impresora real (FreeX).
+- **La vista del cliente** la ve todo el que tiene `:clientes`, incluido
+  Miami: pre-facturas y facturas con sus totales. Va con `RP-43`.
 
 ### Las preguntas que abre
 
 | Id | Qué |
 |---|---|
-| `RP-101` | **Días hábiles** (`C31-11`): ¿los días de entrega van por **tipo de envío**, o por tipo y sucursal de entrega? ¿Quién carga los feriados, y uno que cae en sábado corre la fecha? El correo dice «posible fecha»: ¿se le vuelve a escribir al cliente cuando la fecha del manifiesto cambia (`C31-10`)? |
-| `RP-102` | **Cuántas etiquetas al F9** (`C31-17`): ¿el número lo escribe el cajero o sale de algo? Al entregar, ¿se bloquea la entrega hasta escanear todas, o solo avisa? |
+| `RP-101` | **Días hábiles** (`C31-11`): ¿los días de entrega van por **tipo de envío**, o por tipo y sucursal de entrega? ¿Quién carga los feriados, y uno que cae en sábado corre la fecha? El correo dice «posible fecha»: ¿se le vuelve a escribir al cliente cuando la fecha del manifiesto cambia (`C31-10`)?. ▶ **Construido con supuestos** (#535): por **tipo de envío** (arrancan del tope del `sla`: EXPRESS 7, CER/CKA 10, CEM/CKM 17, se corrigen en /servicios); los feriados los carga su equipo en /feriados; un feriado en sábado bloquea el sábado; **no** se reescribe al cliente cuando cambia la fecha |
+| `RP-102` | **Cuántas etiquetas al F9** (`C31-17`): ¿el número lo escribe el cajero o sale de algo? Al entregar, ¿se bloquea la entrega hasta escanear todas, o solo avisa?. ◐ El número lo escribe el cajero (por defecto, los volúmenes); F8 también lo pregunta. Lo de la entrega sigue abierto |
 | `RP-103` | **Dos volúmenes de un mismo cliente** (`C31-19`): *"el cobro es independiente… lo tenemos que corregir"*. ¿Pide sumar los volúmenes de la pre-factura en un solo escalón y un solo mínimo? Eso cambia `RP-79` y la plata: no se toca sin su sí |
