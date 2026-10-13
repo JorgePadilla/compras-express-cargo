@@ -47,6 +47,17 @@ module ActiveSupport
     # de fixture, porque `setup` corre antes del cuerpo del test.
     setup { AperturaCaja.where(estado: "abierta").update_all(fecha: Date.current) }
 
+    # C31-04 · Terminar la recepción pide el PIN de un supervisor. Ninguna
+    # fixture trae PIN (es un dato que cada supervisor pone), así que se arma
+    # uno y se devuelven los tres campos del modal, listos para `params:`.
+    def pin_de_supervisor(motivo: "Llegó todo")
+      @supervisor_con_pin ||= User.create!(
+        nombre: "Supervisora PIN", email_address: "pin-#{SecureRandom.hex(4)}@cec.test", password: "password123",
+        rol: "supervisor_prefactura", ubicacion: "honduras", pin: "1234"
+      )
+      { supervisor_id: @supervisor_con_pin.id, pin: "1234", motivo: motivo }
+    end
+
     # Add more helper methods to be used by all tests here...
   end
 end

@@ -104,13 +104,29 @@ class RecepcionCargaController < ApplicationController
 
   # Terminar. Si faltan cajas, la primera vez avisa y ofrece las dos salidas de
   # `A7-05`: seguir escaneando, o marcar recibido con las pendientes.
+  #
+  # C31-04 · **Con PIN de supervisor**, las dos salidas: «Terminar» y «Marcar
+  # recibido con las pendientes». Yusef: *"esto es con pin… Terminar en recibir
+  # carga, ése es uno. Dos: recibir el manifiesto manualmente también es con
+  # pin"*. El PIN se mira antes de tocar nada; la autorización queda en la
+  # bitácora solo si de verdad se cerró (si faltan cajas y no se eligió
+  # cerrar con pendientes, no pasó nada que registrar).
   def finalizar
+    autorizacion = autorizacion_para_terminar
+    unless autorizacion.valid?
+      redirect_to recepcion_carga_path(@manifiesto),
+                  alert: "No se terminó la recepción: #{autorizacion.errors.full_messages.to_sentence}."
+      return
+    end
+
     resultado = servicio.finalizar!(con_faltantes: params[:con_faltantes].present?)
 
     if resultado.faltantes.any? && params[:con_faltantes].blank?
       redirect_to recepcion_carga_path(@manifiesto), alert: aviso_de_faltantes(resultado)
       return
     end
+
+    autorizacion.save!
 
     # `A7-06` · El correo es del **internacional**: *"si falta una caja, manda un
     # correo al correo tal"*. En el interno el faltante no se pierde de vista —
@@ -129,6 +145,15 @@ class RecepcionCargaController < ApplicationController
   end
 
   private
+
+  # C31-04 · El PIN del que autoriza a cerrar. `concepto` dice cuál de las dos
+  # salidas fue, para leerlo en la bitácora sin abrir nada.
+  def autorizacion_para_terminar
+    concepto = params[:con_faltantes].present? ? "Recibido con pendientes" : "Terminar la recepción"
+    Autorizacion.new(documento: @manifiesto, accion: "recepcion_terminada",
+                     solicitado_por: Current.user, autorizado_por: User.find_by(id: params[:supervisor_id]),
+                     pin: params[:pin], motivo: params[:motivo], concepto: "#{concepto} · #{@manifiesto.numero}")
+  end
 
   # `A7-08` · En el interno la pistola lee el **paquete**, no la caja. Acepta el
   # tracking o el número de recepción, que es lo que la etiqueta lleva impreso.

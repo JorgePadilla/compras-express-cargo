@@ -1,0 +1,63 @@
+<%# C31-04 · Terminar la recepción **con PIN de supervisor**. Yusef apretó
+    «Terminar» para ver qué hacía y *"ya me lo marcó todo, como que ya está"*:
+    *"esto es con pin… Terminar en recibir carga, ése es uno. Dos: recibir el
+    manifiesto manualmente también es con pin"*.
+
+    Un solo partial para las tres puertas —«Terminar la recepción» y «Marcar
+    recibido con las pendientes» en la ficha, y «Terminar» en cada fila de la
+    lista—: si cada una armara su modal, la gemela se queda sin PIN.
+
+    Locals: `manifiesto`, `con_faltantes` (bool), `texto` (el botón),
+    `variant`/`size`/`icon` del botón, y `aviso` (qué pasa al confirmar). %>
+<% con_faltantes = local_assigns.fetch(:con_faltantes, false) %>
+<% autorizantes = User.autorizantes.order(:nombre) %>
+<% variante = local_assigns.fetch(:variant, :primary) %>
+<% tamano = local_assigns.fetch(:size, :md) %>
+<div data-controller="dialogo" class="inline">
+  <%= render(ButtonComponent.new(variant: variante, size: tamano, icon: local_assigns[:icon],
+        data: { action: "dialogo#abrir" },
+        label: "#{texto} — pide el PIN de un supervisor")) { texto } %>
+
+  <dialog data-dialogo-target="dialogo" style="margin: auto"
+          class="rounded-xl p-0 w-[28rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-gray-300 text-left">
+    <%= form_with url: finalizar_recepcion_carga_path(manifiesto, con_faltantes: (true if con_faltantes)), method: :patch do %>
+      <%= render ModalHeaderComponent.new(tono: con_faltantes ? :atencion : :info, tamano: :chico,
+            titulo: "#{texto} · #{manifiesto.numero}", titulo_tag: :h3) do %>
+        <p class="text-xs mt-0.5 opacity-90">Lo autoriza un supervisor con su PIN. Queda registrado quién.</p>
+      <% end %>
+      <div class="p-5 space-y-3 bg-white">
+        <% if local_assigns[:aviso].present? %>
+          <p class="text-sm text-gray-700"><%= aviso %></p>
+        <% end %>
+        <% if autorizantes.any? %>
+          <div>
+            <%= label_tag "supervisor_id_#{manifiesto.id}_#{con_faltantes}", "Supervisor", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= select_tag :supervisor_id, options_from_collection_for_select(autorizantes, :id, :nombre),
+                  id: "supervisor_id_#{manifiesto.id}_#{con_faltantes}",
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+          </div>
+          <div>
+            <%= label_tag "pin_#{manifiesto.id}_#{con_faltantes}", "PIN", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= password_field_tag :pin, nil, id: "pin_#{manifiesto.id}_#{con_faltantes}", inputmode: "numeric",
+                  autocomplete: "off", maxlength: 4, required: true,
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm font-mono tracking-widest" %>
+          </div>
+          <div>
+            <%= label_tag "motivo_#{manifiesto.id}_#{con_faltantes}", "Motivo", class: "block text-sm font-medium text-gray-700 mb-1" %>
+            <%= text_field_tag :motivo, (con_faltantes ? nil : "Llegó todo"), id: "motivo_#{manifiesto.id}_#{con_faltantes}",
+                  required: true, placeholder: "Ej. la caja C no vino en el camión",
+                  class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm" %>
+          </div>
+        <% else %>
+          <p class="text-sm italic text-gray-600">Ningún supervisor tiene PIN asignado todavía: se asigna en /usuarios.</p>
+        <% end %>
+      </div>
+      <div class="flex items-center justify-end gap-2 px-5 py-3 bg-gray-50 border-t border-gray-200">
+        <%= render(ButtonComponent.new(variant: :ghost, size: :sm, data: { action: "dialogo#cerrar" })) { "Cancelar" } %>
+        <% if autorizantes.any? %>
+          <%= render(ButtonComponent.new(variant: con_faltantes ? :danger : :primary, size: :sm, type: "submit")) { texto } %>
+        <% end %>
+      </div>
+    <% end %>
+  </dialog>
+</div>

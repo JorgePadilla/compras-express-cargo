@@ -118,7 +118,7 @@ class RecepcionCargaVariosManifiestosTest < ActionDispatch::IntegrationTest
 
   test "la caja de un manifiesto ya cerrado también avisa que ya fue recibida" do
     escanear(@a2.codigo)
-    patch finalizar_recepcion_carga_path(@dos)
+    patch finalizar_recepcion_carga_path(@dos), params: pin_de_supervisor
     assert_equal "recibido", @dos.reload.estado
 
     escanear(@a2.codigo)
@@ -212,11 +212,14 @@ class RecepcionCargaVariosManifiestosTest < ActionDispatch::IntegrationTest
   # un viaje de más. Es el mismo `finalizar`, sin `con_faltantes`.
 
   test "cada fila trae su «Terminar», que es el finalizar de adentro" do
+    pin_de_supervisor # el modal pide un supervisor con PIN; sin ninguno, no ofrece el submit
     get recepcion_carga_index_path
 
     assert_select "[data-manifiesto-fila='#{@uno.id}'] form[action='#{finalizar_recepcion_carga_path(@uno)}']" do
       assert_select "input[name='_method'][value='patch']"
-      assert_select "button", text: /Terminar/
+      # C31-04 · Adentro del modal del PIN: el que manda es el submit.
+      assert_select "button[type=submit]", text: /Terminar/
+      assert_select "input[name=pin]"
     end
     assert_select "[data-manifiesto-fila] form[action*='con_faltantes']", { count: 0 },
                   "cerrar con pendientes no se aprieta desde una fila"
@@ -225,7 +228,7 @@ class RecepcionCargaVariosManifiestosTest < ActionDispatch::IntegrationTest
   test "terminar desde la lista con todo recibido cierra y vuelve a la lista" do
     escanear(@a2.codigo)
 
-    patch finalizar_recepcion_carga_path(@dos)
+    patch finalizar_recepcion_carga_path(@dos), params: pin_de_supervisor
 
     assert_redirected_to recepcion_carga_index_path
     assert_equal "recibido", @dos.reload.estado
@@ -241,7 +244,7 @@ class RecepcionCargaVariosManifiestosTest < ActionDispatch::IntegrationTest
     escanear(@a1.codigo)
 
     assert_no_enqueued_emails do
-      patch finalizar_recepcion_carga_path(@uno)
+      patch finalizar_recepcion_carga_path(@uno), params: pin_de_supervisor
     end
 
     assert_redirected_to recepcion_carga_path(@uno)

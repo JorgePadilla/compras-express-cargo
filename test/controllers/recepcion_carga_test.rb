@@ -101,10 +101,51 @@ class RecepcionCargaTest < ActionDispatch::IntegrationTest
   test "completar el manifiesto lo deja recibido" do
     escanear(@caja.codigo)
 
-    patch finalizar_recepcion_carga_path(@manifiesto)
+    patch finalizar_recepcion_carga_path(@manifiesto), params: pin_de_supervisor
 
     assert_equal "recibido", @manifiesto.reload.estado
     assert @manifiesto.recepcion_finalizada_at.present?
+  end
+
+  # C31-04 · *"Esto es con pin… Terminar en recibir carga, ése es uno. Dos:
+  # recibir el manifiesto manualmente también es con pin."*
+  test "terminar sin PIN, o con uno equivocado, no cierra nada" do
+    escanear(@caja.codigo)
+
+    patch finalizar_recepcion_carga_path(@manifiesto)
+    assert_redirected_to recepcion_carga_path(@manifiesto)
+    assert_match(/No se terminó la recepción/, flash[:alert])
+    assert_equal "en_aduana", @manifiesto.reload.estado
+
+    patch finalizar_recepcion_carga_path(@manifiesto, con_faltantes: true), params: pin_de_supervisor.merge(pin: "0000")
+    assert_match(/Pin incorrecto/i, flash[:alert])
+    assert_nil @manifiesto.reload.recepcion_finalizada_at
+  end
+
+  test "terminar con PIN queda en la bitácora de autorizaciones, con su manifiesto" do
+    escanear(@caja.codigo)
+
+    assert_difference -> { Autorizacion.by_accion("recepcion_terminada").count }, 1 do
+      patch finalizar_recepcion_carga_path(@manifiesto), params: pin_de_supervisor
+    end
+    autorizacion = Autorizacion.by_accion("recepcion_terminada").last
+    assert_equal @manifiesto, autorizacion.documento
+    assert_equal users(:cajero), autorizacion.solicitado_por
+
+    # La bitácora pinta un manifiesto, que no tiene cliente.
+    post session_url, params: { email_address: users(:admin).email_address, password: "password123" }
+    get autorizaciones_path
+    assert_response :success
+    assert_includes response.body, @manifiesto.numero
+  end
+
+  test "si faltan cajas y no se eligió cerrar con pendientes, no queda autorización: no pasó nada" do
+    @manifiesto.cajas.create!(peso: 19)
+    escanear(@caja.codigo)
+
+    assert_no_difference -> { Autorizacion.count } do
+      patch finalizar_recepcion_carga_path(@manifiesto), params: pin_de_supervisor
+    end
   end
 
   # `A7-05` · Jorge preguntó qué tan dura era la regla —*"puede llegar a
@@ -114,7 +155,7 @@ class RecepcionCargaTest < ActionDispatch::IntegrationTest
     falta = @manifiesto.cajas.create!(peso: 19)
     escanear(@caja.codigo)
 
-    patch finalizar_recepcion_carga_path(@manifiesto)
+    patch finalizar_recepcion_carga_path(@manifiesto), params: pin_de_supervisor
 
     assert_redirected_to recepcion_carga_path(@manifiesto)
     assert_match(/Faltan 1 de 2/, flash[:alert])
@@ -129,7 +170,7 @@ class RecepcionCargaTest < ActionDispatch::IntegrationTest
     escanear(@caja.codigo)
 
     assert_enqueued_emails 1 do
-      patch finalizar_recepcion_carga_path(@manifiesto, con_faltantes: true)
+      patch finalizar_recepcion_carga_path(@manifiesto, con_faltantes: true), params: pin_de_supervisor
     end
 
     assert_equal "recibido", @manifiesto.reload.estado
@@ -177,7 +218,7 @@ class RecepcionCargaTest < ActionDispatch::IntegrationTest
     manifiesto = manifiestos(:enviado)
     suelto = crear_paquete_suelto(manifiesto)
 
-    patch finalizar_recepcion_carga_url(manifiesto)
+    patch finalizar_recepcion_carga_url(manifiesto), params: pin_de_supervisor
 
     assert_equal "en_aduana", suelto.reload.estado
     assert_equal "recibido", manifiesto.reload.estado
@@ -189,7 +230,7 @@ class RecepcionCargaTest < ActionDispatch::IntegrationTest
     manifiesto = manifiestos(:enviado)
     suelto = crear_paquete_suelto(manifiesto)
 
-    patch finalizar_recepcion_carga_url(manifiesto)
+    patch finalizar_recepcion_carga_url(manifiesto), params: pin_de_supervisor
 
     assert_includes Paquete.facturables, suelto.reload
   end
@@ -215,7 +256,7 @@ class RecepcionCargaTest < ActionDispatch::IntegrationTest
     en_caja.update!(caja_manifiesto: caja)
 
     post escanear_recepcion_carga_url(manifiesto), params: { codigo: caja.codigo }, as: :json
-    patch finalizar_recepcion_carga_url(manifiesto)
+    patch finalizar_recepcion_carga_url(manifiesto), params: pin_de_supervisor
 
     assert_equal "en_aduana", en_caja.reload.estado, "el escaneado"
     assert_equal "en_aduana", suelto.reload.estado, "y el suelto"

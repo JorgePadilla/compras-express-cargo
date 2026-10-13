@@ -41,7 +41,7 @@ class NotificarLlegadaASucursalTest < ActionDispatch::IntegrationTest
   end
 
   def cerrar(**params)
-    patch finalizar_recepcion_carga_url(@manifiesto, **params)
+    patch finalizar_recepcion_carga_url(@manifiesto, **params), params: pin_de_supervisor
   end
 
   # ── A quién se le avisa ─────────────────────────────────────────────────
@@ -132,7 +132,7 @@ class NotificarLlegadaASucursalTest < ActionDispatch::IntegrationTest
                                  tipo_envios: [ tipo_envios(:cer) ])
 
     assert_no_difference "ActionMailer::Base.deliveries.size" do
-      perform_enqueued_jobs { patch finalizar_recepcion_carga_url(oficial) }
+      perform_enqueued_jobs { patch finalizar_recepcion_carga_url(oficial), params: pin_de_supervisor }
     end
   end
 

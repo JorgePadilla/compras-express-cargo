@@ -113,7 +113,7 @@ class RecibirManifiestoInternoTest < ActionDispatch::IntegrationTest
   # que no llegó sería decirle al cliente que venga a retirar algo que no está.
 
   test "no cierra de una si falta alguno: avisa y ofrece las dos salidas" do
-    patch finalizar_recepcion_carga_url(@manifiesto)
+    patch finalizar_recepcion_carga_url(@manifiesto), params: pin_de_supervisor
 
     assert_redirected_to recepcion_carga_path(@manifiesto)
     assert_match(/Faltan 2 de 2 paquete/, flash[:alert])
@@ -123,7 +123,7 @@ class RecibirManifiestoInternoTest < ActionDispatch::IntegrationTest
 
   test "cerrar con faltantes deja al que no llegó señalado, no disponible" do
     post escanear_recepcion_carga_url(@manifiesto), params: { codigo: @a.tracking }
-    patch finalizar_recepcion_carga_url(@manifiesto, con_faltantes: true)
+    patch finalizar_recepcion_carga_url(@manifiesto, con_faltantes: true), params: pin_de_supervisor
 
     assert_equal "recibido", @manifiesto.reload.estado
     assert_equal "disponible_entrega", @a.reload.estado
@@ -135,7 +135,7 @@ class RecibirManifiestoInternoTest < ActionDispatch::IntegrationTest
     post escanear_recepcion_carga_url(@manifiesto), params: { codigo: @a.tracking }
     post escanear_recepcion_carga_url(@manifiesto), params: { codigo: @b.tracking }
 
-    patch finalizar_recepcion_carga_url(@manifiesto)
+    patch finalizar_recepcion_carga_url(@manifiesto), params: pin_de_supervisor
 
     assert_redirected_to recepcion_carga_index_path
     assert_equal "recibido", @manifiesto.reload.estado
@@ -147,7 +147,7 @@ class RecibirManifiestoInternoTest < ActionDispatch::IntegrationTest
   # de vista — se queda señalado, que es lo que `A7-09` pidió.
   test "cerrar el interno con faltantes no manda el correo del internacional" do
     assert_no_difference "ActionMailer::Base.deliveries.size" do
-      patch finalizar_recepcion_carga_url(@manifiesto, con_faltantes: true)
+      patch finalizar_recepcion_carga_url(@manifiesto, con_faltantes: true), params: pin_de_supervisor
     end
   end
 

@@ -23,6 +23,7 @@ class RecibirVariosManifiestosTest < ApplicationSystemTestCase
     # aviso «cambiá tu contraseña» y se queda con el teclado — las teclas de
     # WebDriver no llegan a ninguna página. Es del navegador de test, no de la
     # app (PR-C30.9 lo apaga en los drivers).
+    pin_de_supervisor # C31-04 · Terminar pide el PIN de un supervisor
     ingresar(users(:supervisor_prefactura))
     visit recepcion_carga_index_path
     esperar_la_pistola
@@ -50,6 +51,15 @@ class RecibirVariosManifiestosTest < ApplicationSystemTestCase
   end
 
   def escanear(codigo) = find("#codigo_caja").send_keys(codigo, :enter)
+
+  # C31-04 · «Terminar» abre el modal del PIN; adentro se confirma.
+  def terminar_con_pin(manifiesto)
+    within(fila(manifiesto)) { click_on "Terminar" }
+    within("dialog[open]") do
+      find("input[name=pin]").set("1234")
+      click_on "Terminar"
+    end
+  end
 
   def fila(manifiesto) = "[data-manifiesto-fila='#{manifiesto.id}']"
 
@@ -123,7 +133,7 @@ class RecibirVariosManifiestosTest < ApplicationSystemTestCase
     escanear(@b1.codigo)
     assert_selector "#{fila(@uno)} [data-progreso-texto]", text: "2 de 2 · completo", wait: 5
 
-    within(fila(@uno)) { click_on "Terminar" }
+    terminar_con_pin(@uno)
 
     assert_text "MRSV000001 recibido", wait: 5
     assert_no_selector fila(@uno)
@@ -135,7 +145,7 @@ class RecibirVariosManifiestosTest < ApplicationSystemTestCase
     escanear(@a1.codigo)
     assert_selector "#{fila(@uno)} [data-progreso-texto]", text: "1 de 2", wait: 5
 
-    within(fila(@uno)) { click_on "Terminar" }
+    terminar_con_pin(@uno)
 
     assert_current_path recepcion_carga_path(@uno), wait: 5
     assert_text "Faltan 1 de 2: caja(s) B"

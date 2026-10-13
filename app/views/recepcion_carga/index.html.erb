@@ -101,8 +101,9 @@
                     con su confirmación y su correo: eso no se aprieta de rebote
                     desde una fila. Toda fila de esta lista es un pendiente
                     (`RecibirManifiesto.pendientes`), así que va en todas. %>
-                <%= render ButtonComponent.new(variant: :secondary, size: :sm, icon: "check",
-                      href: finalizar_recepcion_carga_path(m), method: :patch, form_class: "inline") do %>Terminar<% end %>
+                <%# C31-04 · Con PIN, el mismo modal que la ficha. %>
+                <%= render "recepcion_carga/terminar_con_pin", manifiesto: m, texto: "Terminar",
+                      icon: "check", variant: :secondary, size: :sm %>
               </div>
             </td>
           </tr>
