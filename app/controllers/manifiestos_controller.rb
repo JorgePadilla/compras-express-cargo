@@ -13,7 +13,7 @@ class ManifiestosController < ApplicationController
                                               remove_paquete escanear_para_quitar]
 
   def index
-    @manifiestos = Manifiesto.activos.includes(:empresa_manifiesto).order(created_at: :desc)
+    @manifiestos = Manifiesto.activos.includes(:empresa_manifiesto, :sucursal_entrega).order(created_at: :desc)
     @manifiestos = @manifiestos.buscar(params[:q]) if params[:q].present?
     @manifiestos = @manifiestos.by_estado(params[:estado]) if params[:estado].present?
     @manifiestos = @manifiestos.page(params[:page]).per(per_page_sanitized)
@@ -339,6 +339,16 @@ class ManifiestosController < ApplicationController
   def finalizar
     resultado = @manifiesto.finalizar!(user: Current.user)
 
+    # C31-07 · *"Aunque sea inventado, tiene que tener un peso."* No se mueve
+    # nada hasta que cada casa tenga el suyo.
+    if resultado.sin_peso?
+      cajas = resultado.cajas_sin_peso.map { |c| "#{c.letra}#{c.numero_bulto}" }
+      redirect_to @manifiesto,
+                  alert: "No se finalizó #{@manifiesto.numero}: #{cajas.size == 1 ? "la caja #{cajas.first} no tiene" : "las cajas #{cajas.to_sentence(last_word_connector: ' y ', two_words_connector: ' y ')} no tienen"} " \
+                         "peso. Toda caja lleva peso, aunque sea aproximado."
+      return
+    end
+
     # C21-06 · Jorge, 2026-08-30: *"bloquear cierre"*. Un paquete trabado no
     # deja finalizar a ninguno — el manifiesto queda igual que estaba y hay que
     # resolver la tarea antes de volver a darle.
@@ -349,7 +359,9 @@ class ManifiestosController < ApplicationController
       return
     end
 
-    aviso = "Manifiesto #{@manifiesto.numero} finalizado: #{resultado.enviados.size} paquete(s) a enviado."
+    # C31-05 · Con el nombre que lee la gente: «Enviado a Honduras».
+    aviso = "Manifiesto #{@manifiesto.numero} finalizado: #{resultado.enviados.size} paquete(s), " \
+            "#{@manifiesto.texto_de_enviado.downcase_first}."
 
     # C30-05 · Lo que sale es **la hoja del manifiesto**, no las 4×6. Cambia
     # `C21-06`, que había leído del diagrama *"finalizar e imprimir todos los
@@ -558,7 +570,8 @@ class ManifiestosController < ApplicationController
       # arma o se borra una caja.
       turbo_stream.update("manifiesto-caja-activa", partial: "manifiestos/caja_activa", locals: { manifiesto: @manifiesto }),
       turbo_stream.update("manifiesto-detalles-paquetes", @manifiesto.cantidad_paquetes.to_s),
-      turbo_stream.update("manifiesto-detalles-peso", helpers.peso_total_del_manifiesto(@manifiesto))
+      # C31-08 · Los tres totales, por su id: la tarjeta no se repinta.
+      *helpers.textos_de_totales(@manifiesto).map { |clave, texto| turbo_stream.update("manifiesto-detalles-#{clave}", texto) }
     ]
   end
 

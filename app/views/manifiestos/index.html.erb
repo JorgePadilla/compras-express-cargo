@@ -57,7 +57,7 @@ end %>
                 <span class="text-sm text-gray-500"><%= manifiesto.tipo_envio_del_proveedor || "—" %></span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <%= render StatusBadgeComponent.new(status: manifiesto.estado) %>
+                <%= render StatusBadgeComponent.new(status: manifiesto.estado, label: manifiesto.estado_texto) %>
               </td>
               <td class="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
                 <span class="text-sm text-gray-700"><%= manifiesto.cantidad_paquetes %></span>

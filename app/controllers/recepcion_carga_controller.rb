@@ -220,7 +220,7 @@ class RecepcionCargaController < ApplicationController
     manifiesto = Manifiesto.includes(:cajas, :paquetes).find(@manifiesto.id)
     ProgresoDeRecepcion.new(manifiesto).to_h.merge(
       estado: manifiesto.estado,
-      estado_html: view_context.render(StatusBadgeComponent.new(status: manifiesto.estado))
+      estado_html: view_context.render(StatusBadgeComponent.new(status: manifiesto.estado, label: manifiesto.estado_texto))
     )
   end
 

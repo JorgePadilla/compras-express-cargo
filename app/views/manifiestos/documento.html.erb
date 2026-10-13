@@ -188,6 +188,9 @@
     <div class="mf-v" style="color:#999;">Este manifiesto todavía no tiene bultos empacados.</div>
   <% end %>
 
+  <%# C31-08 · Los tres totales salen de `Manifiesto#totales`, el mismo que
+      pinta la ficha: la hoja y la pantalla no pueden decir dos números. %>
+  <% totales = @manifiesto.totales %>
   <table class="mf-tot">
     <%# C28-01 · Sin «Cantidad de paquetes»: es la otra mitad del «Esto no
         va» que Yusef escribió a mano. Con los bultos alcanza para que el
@@ -196,11 +199,11 @@
       <td class="label">Cantidad de bultos</td>
       <td class="value"><%= @manifiesto.cantidad_bultos %></td>
       <td class="label">Peso total</td>
-      <td class="value"><%= number_with_precision(@manifiesto.peso_total.to_f, precision: 2) %> LBS</td>
+      <td class="value"><%= number_with_precision(totales[:libras], precision: 2) %> LBS</td>
     </tr>
     <tr>
       <td class="label">Volumen total</td>
-      <td class="value"><%= number_with_precision(@manifiesto.volumen_total.to_f, precision: 2) %> VLBS</td>
+      <td class="value"><%= number_with_precision(totales[:vlbs], precision: 2) %> VLBS</td>
       <%# C23-07 · El total de pies³ es **la suma de los de cada bulto** —
           un total que no cuadra con lo que tiene encima es un papel que nadie
           firma.
@@ -211,7 +214,7 @@
           redondea por su cuenta. Con exactos ya no hay dos cuentas que
           difieran: la suma de la columna y el total son el mismo número. %>
       <td class="label">Pies cúbicos</td>
-      <td class="value"><%= number_with_precision(@cajas.sum { |c| c.pies_cubicos.to_f }, precision: 2) %> PIES³</td>
+      <td class="value"><%= number_with_precision(totales[:pies3], precision: 2) %> PIES³</td>
     </tr>
   </table>
 </div>

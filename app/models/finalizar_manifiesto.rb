@@ -33,10 +33,15 @@
 # Así que si hay uno solo trabado no se mueve nada: la transacción se revierte
 # entera y la pantalla enumera cuáles y por qué.
 class FinalizarManifiesto
-  Resultado = Struct.new(:enviados, :trabados, keyword_init: true) do
-    # Nada pasó y nada se movió: hay que resolver las tareas y volver a darle.
+  Resultado = Struct.new(:enviados, :trabados, :cajas_sin_peso, keyword_init: true) do
+    # Nada pasó y nada se movió: hay que resolver las tareas (o pesar las
+    # casas) y volver a darle.
     def bloqueado?
-      trabados.any?
+      trabados.any? || sin_peso?
+    end
+
+    def sin_peso?
+      Array(cajas_sin_peso).any?
     end
   end
 
@@ -46,6 +51,13 @@ class FinalizarManifiesto
   end
 
   def call
+    # C31-07 · Yusef, 2026-10-12: *"aunque sea inventado, tiene que tener un
+    # peso… todas las cajas al final tienen que tener un peso"*. Se pide **acá**
+    # y no al crear la casa: `C28-05` la deja agregar sin peso a propósito,
+    # porque se arma antes de cerrarla y pesarla.
+    sin_peso = @manifiesto.cajas.reject { |c| c.peso.to_f.positive? }
+    return Resultado.new(enviados: [], trabados: [], cajas_sin_peso: sin_peso) if sin_peso.any?
+
     enviados = []
     trabados = []
 
@@ -72,7 +84,7 @@ class FinalizarManifiesto
       @manifiesto.recalculate_totals!
     end
 
-    Resultado.new(enviados: enviados, trabados: trabados)
+    Resultado.new(enviados: enviados, trabados: trabados, cajas_sin_peso: [])
   end
 
   # Un paquete, a enviado. Devuelve `nil` si salió, o el porqué si no.
