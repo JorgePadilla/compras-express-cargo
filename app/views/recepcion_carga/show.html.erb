@@ -157,14 +157,13 @@
       Yusef eligió *"que no lo bloquee"*: seguir escaneando, o marcar recibido
       con las pendientes. %>
   <div class="flex flex-wrap items-center gap-3">
-    <%= render ButtonComponent.new(variant: :primary, icon: "check",
-          href: finalizar_recepcion_carga_path(@manifiesto), method: :patch) do %>
-      Terminar la recepción
-    <% end %>
-    <%= render ButtonComponent.new(variant: :secondary, icon: "exclamation-triangle",
-          href: finalizar_recepcion_carga_path(@manifiesto, con_faltantes: true), method: :patch,
-          confirm: @manifiesto.tipo_interno? ? "Se cierra #{@manifiesto.numero} aunque falten paquetes. Los que no se escanearon **quedan señalados como pendientes** para que alguien los busque — no se marcan como disponibles. ¿Seguro?" : "Se marca #{@manifiesto.numero} como recibido aunque falten cajas. Los paquetes que iban adentro pasan a aduana igual, y sale un correo con lo que faltó. ¿Seguro?") do %>
-      <%= @manifiesto.tipo_interno? ? "Cerrar y dejar los faltantes señalados" : "Marcar recibido con las pendientes" %>
-    <% end %>
+    <%# C31-04 · Las dos, con PIN de supervisor (`_terminar_con_pin`). El aviso
+        de lo que pasa —que antes era el confirm— va adentro del modal. %>
+    <%= render "recepcion_carga/terminar_con_pin", manifiesto: @manifiesto, texto: "Terminar la recepción",
+          icon: "check", variant: :primary %>
+    <%= render "recepcion_carga/terminar_con_pin", manifiesto: @manifiesto, con_faltantes: true,
+          icon: "exclamation-triangle", variant: :secondary,
+          texto: @manifiesto.tipo_interno? ? "Cerrar y dejar los faltantes señalados" : "Marcar recibido con las pendientes",
+          aviso: @manifiesto.tipo_interno? ? "Se cierra #{@manifiesto.numero} aunque falten paquetes. Los que no se escanearon quedan señalados como pendientes para que alguien los busque — no se marcan como disponibles." : "Se marca #{@manifiesto.numero} como recibido aunque falten cajas. Los paquetes que iban adentro pasan a aduana igual, y sale un correo con lo que faltó." %>
   </div>
 </div>

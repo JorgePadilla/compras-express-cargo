@@ -74,7 +74,7 @@
               </td>
               <td class="px-4 py-3 text-sm">
                 <%= documento_de_autorizacion(a) %>
-                <span class="block text-[11px] text-gray-500"><%= a.documento&.cliente&.codigo %></span>
+                <span class="block text-[11px] text-gray-500"><%= a.documento.try(:cliente)&.codigo %></span>
               </td>
               <td class="px-4 py-3 text-sm text-gray-700"><%= truncate(a.concepto, length: 34) %></td>
               <td class="px-4 py-3 text-sm">

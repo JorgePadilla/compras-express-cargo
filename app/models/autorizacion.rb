@@ -45,7 +45,14 @@ class Autorizacion < ApplicationRecord
   # PR-F2.2a · Y anular una factura SAR. Jorge (Q6): *PIN de supervisor y
   # motivo, cuatro ojos como las notas*; la aplica `Fiscal::AnularFactura`.
   ACCIONES_FACTURA = %w[anular_factura].freeze
-  ACCIONES = (ACCIONES_LINEA + ACCIONES_PAQUETE + ACCIONES_MEDICION + %w[emitir] + ACCIONES_FACTURA).freeze
+  # C31-04 · Y terminar de recibir un manifiesto en Honduras. Yusef apretó
+  # «Terminar» en recibir carga para ver qué hacía, y *"ya me lo marcó todo"*:
+  # *"esto es con pin… Terminar en recibir carga, ése es uno. Dos: recibir el
+  # manifiesto manualmente también es con pin"*. El documento es el
+  # `Manifiesto`.
+  ACCIONES_RECEPCION = %w[recepcion_terminada].freeze
+  ACCIONES = (ACCIONES_LINEA + ACCIONES_PAQUETE + ACCIONES_MEDICION + %w[emitir] + ACCIONES_FACTURA +
+              ACCIONES_RECEPCION).freeze
 
   # Virtuales: llegan del formulario, no se guardan.
   attr_accessor :pin, :valor, :modo
@@ -183,7 +190,8 @@ class Autorizacion < ApplicationRecord
       "descuento" => "Descuento", "eliminar" => "Línea eliminada",
       "emitir" => "Nota emitida", "cobro_excepcion" => "Excepción de cobro",
       "medicion_con_faltantes" => "Medido con faltantes",
-      "anular_factura" => "Factura anulada" }[accion]
+      "anular_factura" => "Factura anulada",
+      "recepcion_terminada" => "Recepción terminada" }[accion]
   end
 
   private
