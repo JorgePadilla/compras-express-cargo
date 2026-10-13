@@ -122,14 +122,44 @@ class HojaDePreparacionControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-manifiesto]", count: 0
   end
 
-  test "«Empezar a auditar» lleva a auditar cuando la hoja está lista, y si no, dice qué falta" do
+  # C31-16 · *"Un solo botón, mejor"*: «Guardar y empezar a auditar» guarda y
+  # entra; con la hoja a medias vuelve a la hoja diciendo qué falta.
+  test "«Guardar y empezar a auditar» guarda y entra a auditar; a medias, vuelve y dice qué falta" do
     ingresar(users(:supervisor_prefactura))
     get hoja_de_preparacion_url
-    assert_select "button[disabled]", text: /Empezar a auditar/
+    assert_select "button[type=submit][name=empezar][data-shortcut=F8]", text: /Guardar y empezar a auditar/
+    assert_select "[data-falta]", text: /Falta elegir el servicio/
 
+    patch hoja_de_preparacion_url, params: { empezar: "1", hoja: { tipo_envio_ids: [ @cer.id ] } }
+    assert_redirected_to hoja_de_preparacion_path
+    assert_equal "Falta elegir al menos un manifiesto para empezar a auditar.", flash[:alert]
+    assert_equal [ @cer.id ], session[:pf_hoja]["tipo_envio_ids"], "lo elegido se guarda igual"
+
+    patch hoja_de_preparacion_url, params: { empezar: "1", hoja: { tipo_envio_ids: [ @cer.id ], manifiesto_ids: [ @manifiesto.id ] } }
+    assert_redirected_to auditar_pre_factura_index_path
+    assert_equal [ @manifiesto.id ], session[:pf_hoja]["manifiesto_ids"]
+  end
+
+  # «Ver manifiestos» es el otro submit: con la hoja lista se queda en la hoja,
+  # que es donde se siguen eligiendo manifiestos.
+  test "«Ver manifiestos» se queda en la hoja aunque esté lista" do
+    ingresar(users(:supervisor_prefactura))
     patch hoja_de_preparacion_url, params: { hoja: { tipo_envio_ids: [ @cer.id ], manifiesto_ids: [ @manifiesto.id ] } }
+
+    assert_redirected_to hoja_de_preparacion_path
+    assert_nil flash[:alert]
+  end
+
+  test "en «editar» no hay auditoría que empezar: el botón solo guarda" do
+    ingresar(users(:supervisor_prefactura))
+    # El radio se cambia en la pantalla: el que manda es el botón de «nuevas».
+    patch hoja_de_preparacion_url, params: { empezar: "1", hoja: { modo: "editar" } }
+    assert_redirected_to hoja_de_preparacion_path
+    assert_nil flash[:alert]
     get hoja_de_preparacion_url
-    assert_select "a[href=?]", auditar_pre_factura_index_path, text: /Empezar a auditar/
+
+    assert_select "button[name=empezar]", count: 0
+    assert_select "button[type=submit][data-shortcut=F8]", text: /Guardar la hoja/
   end
 
   test "«editar» lista las pre-facturas sin avisar de cada manifiesto, con su link" do
@@ -160,8 +190,7 @@ class HojaDePreparacionControllerTest < ActionDispatch::IntegrationTest
 
     patch hoja_de_preparacion_url, params: { hoja: { tipo_envio_ids: [ @cer.id ], manifiesto_ids: [ "" ], sin_manifiesto: "1" } }
     assert session[:pf_hoja]["sin_manifiesto"]
-    get hoja_de_preparacion_url
-    assert_select "a[href=?]", auditar_pre_factura_index_path, text: /Empezar a auditar/
+    assert_predicate HojaDePreparacion.desde_sesion(session[:pf_hoja]), :lista?, "con «Sin manifiesto oficial» alcanza"
 
     patch hoja_de_preparacion_url, params: { hoja: { tipo_envio_ids: [ @cer.id ], sin_manifiesto: "0" } }
     assert_not session[:pf_hoja]["sin_manifiesto"], "se destilda"

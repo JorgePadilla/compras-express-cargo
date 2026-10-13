@@ -109,6 +109,16 @@ class HojaDePreparacion
     nuevas? && tipo_envio_ids.any? && (manifiestos_elegidos.exists? || (sin_manifiesto? && ofrece_sin_manifiesto?))
   end
 
+  # C31-16 · Lo que le falta para estar lista, dicho como lo ve el operario
+  # al lado del botón: «Falta elegir el servicio» o «Falta elegir al menos un
+  # manifiesto». `nil` si está lista o si es «editar», que no audita.
+  def lo_que_falta
+    return nil if editar? || lista?
+    return "Falta elegir el servicio" if tipo_envio_ids.empty?
+
+    "Falta elegir al menos un manifiesto"
+  end
+
   # PR-P.11a · La carga facturable de los servicios elegidos que no vino en un
   # manifiesto oficial. Solo se ofrece la casilla si hay alguna, como un
   # manifiesto que ya no tiene nada sale de la lista.

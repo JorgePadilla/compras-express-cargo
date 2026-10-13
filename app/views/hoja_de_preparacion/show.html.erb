@@ -2,13 +2,19 @@
     como el diagrama que dibujó Yusef (foto 3): qué se trabaja, de qué
     manifiestos, y a qué hora se le avisa al cliente.
 
-    Un solo formulario a propósito: «Ver manifiestos» y «Guardar la hoja»
-    mandan todo, así que cambiar los servicios rehace la lista de abajo sin
-    perder la fecha que ya se puso. Lo que se guarda va a la sesión
+    Un solo formulario a propósito: «Ver manifiestos» y «Guardar y empezar a
+    auditar» mandan todo, así que cambiar los servicios rehace la lista de
+    abajo sin perder la fecha que ya se puso. Lo que se guarda va a la sesión
     (`session[:pf_hoja]`), no a la base. %>
 <% content_for :head do %>
   <meta name="turbo-cache-control" content="no-cache">
 <% end %>
+
+<%# C31-16 · *"Le doy guardar, porque se vuelve para arriba… tengo que venir y
+    volver a bajar."* Todo lo que se manda desde acá y vuelve acá se queda
+    donde estaba (`conservar_scroll_controller`). %>
+<div data-controller="conservar-scroll"
+     data-action="turbo:submit-start->conservar-scroll#anotar turbo:submit-end->conservar-scroll#terminar">
 
 <%= render PageHeaderComponent.new(title: "Preparar pre-factura",
                                    subtitle: "La hoja de preparación: qué se trabaja, de qué manifiestos y cuándo se le avisa al cliente") do |h| %>
@@ -130,22 +136,23 @@
     </section>
   <% end %>
 
-  <div class="flex flex-wrap items-center justify-end gap-3">
-    <%= render ButtonComponent.new(type: :submit, variant: :secondary, icon: "check") do %>Guardar la hoja<% end %>
-    <%# PR-P.5 · «Empezar» va a auditar escaneando. Con la hoja a medias queda
-        apagado y diciendo qué falta: `/pre-factura/auditar` sin hoja lista
-        vuelve acá igual. %>
+  <%# C31-16 · Antes eran dos botones —«Guardar la hoja» y «Empezar a
+      auditar», que se prendía recién después de guardar— y Yusef: *"un solo
+      botón, mejor"*. Guarda y entra a auditar; si a la hoja le falta algo,
+      vuelve acá abajo y lo dice al lado del botón (el aviso de arriba queda
+      fuera de la vista). En «editar» no hay auditoría que empezar: el botón
+      solo guarda, y lo que se corrige son las tarjetas de abajo. %>
+  <div class="flex flex-wrap items-center justify-end gap-3" id="hoja-pie">
     <% if @hoja.nuevas? %>
-      <% if @hoja.lista? %>
-        <%= render ButtonComponent.new(href: auditar_pre_factura_index_path, variant: :primary, icon: "qr-code") do %>
-          Empezar a auditar
-        <% end %>
-      <% else %>
-        <%= render ButtonComponent.new(type: :button, variant: :primary, icon: "qr-code", disabled: true,
-              title: "Falta elegir servicio y manifiesto, y guardar la hoja") do %>
-          Empezar a auditar
-        <% end %>
+      <% if (falta = @hoja.lo_que_falta) %>
+        <%# En gris de entrada; en rojo cuando se apretó y no pudo empezar. %>
+        <p class="text-sm font-medium <%= flash[:alert].present? ? "text-red-700 dark:text-red-300" : "text-gray-500 dark:text-gray-400" %>"
+           data-falta><%= falta %>.</p>
       <% end %>
+      <%= render ButtonComponent.new(type: :submit, variant: :primary, icon: "qr-code", shortcut: "F8",
+            name: "empezar", value: "1") do %>Guardar y empezar a auditar<% end %>
+    <% else %>
+      <%= render ButtonComponent.new(type: :submit, variant: :primary, icon: "check", shortcut: "F8") do %>Guardar la hoja<% end %>
     <% end %>
   </div>
 <% end %>
@@ -153,3 +160,4 @@
 <% if @hoja.editar? %>
   <div class="mt-6"><%= render "hoja_de_preparacion/manifiestos" %></div>
 <% end %>
+</div>
