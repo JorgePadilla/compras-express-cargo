@@ -45,6 +45,9 @@ class ManifiestosController < ApplicationController
 
   def new
     @manifiesto = Manifiesto.new
+    # C31-09 · Viene marcada la de retiro por defecto (San Pedro): es a donde
+    # va casi todo. Se desmarca o se suman las otras; al menos una siempre.
+    @manifiesto.sucursal_entrega_ids = [ Sucursal.retiro_por_defecto&.id ].compact
     assigns_del_formulario
   end
 
@@ -482,8 +485,10 @@ class ManifiestosController < ApplicationController
       "#{codigo_de(paquete)} es #{paquete.tipo_envio&.nombre || "sin tipo"}, " \
         "y este manifiesto lleva #{@manifiesto.tipos_envio_nuestros}."
     when :sucursal_distinta
-      "#{codigo_de(paquete)} retira en #{paquete.sucursal.nombre}, " \
-        "y este manifiesto va a #{@manifiesto.sucursal_entrega.nombre}."
+      # C31-09 · Va a varias, y el que no tiene sucursal cuenta como San Pedro.
+      retira = paquete.sucursal&.nombre || "#{Sucursal.retiro_por_defecto&.nombre} (no tiene sucursal de retiro)"
+      "#{codigo_de(paquete)} retira en #{retira}, " \
+        "y este manifiesto va a #{@manifiesto.sucursales_entrega_texto}."
     when :fuera_de_circulacion
       "#{codigo_de(paquete)} está #{estado_legible(paquete.estado).downcase}: ya no viaja."
     # C31-02 · *"¿Cómo me deja meter algo que ya lo recibí?"*
@@ -625,6 +630,8 @@ class ManifiestosController < ApplicationController
       # C31-10 · La posible fecha de entrega, que se copia a los paquetes.
       :fecha_posible_entrega,
       tipo_envio_ids: [],
+      # C31-09 · Las del oficial, varias. El interno sigue con `sucursal_entrega_id`.
+      sucursal_entrega_ids: [],
       guias_attributes: %i[id numero position _destroy]
     )
   end

@@ -66,4 +66,9 @@ ActiveSupport::Inflector.inflections(:en) do |inflect|
   inflect.irregular "documento_fiscal", "documentos_fiscales"  # PR-F1.2
   # PR-C31.10: sin esto `CorreoEnviado` busca la tabla `correo_enviados`.
   inflect.irregular "correo_enviado", "correos_enviados"
+  # PR-C31.7: las sucursales de entrega del manifiesto oficial. Sin esto
+  # `has_many :sucursales_entrega` no da `sucursal_entrega_ids`, y la tabla de
+  # unión sale `manifiesto_sucursal_entregas`.
+  inflect.irregular "sucursal_entrega", "sucursales_entrega"
+  inflect.irregular "manifiesto_sucursal_entrega", "manifiesto_sucursales_entrega"
 end

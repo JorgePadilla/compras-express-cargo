@@ -61,9 +61,10 @@
     <div class="consig"><%= caja.manifiesto.consignatario.nombre.upcase %></div>
   <% end %>
 
-  <%# C23-04 · A dónde va. %>
-  <% if caja.manifiesto.sucursal_entrega.present? %>
-    <div class="destino">A: <%= caja.manifiesto.sucursal_entrega.nombre.upcase %></div>
+  <%# C23-04 · A dónde va. C31-09: lo que lleva **esta** caja, que puede ser
+      más de una sucursal; se achica al ancho si no cabe. %>
+  <% if (destino = caja.sucursales_adentro).present? %>
+    <div class="destino" data-ajustar data-ajustar-min="10">A: <%= destino.upcase %></div>
   <% end %>
 
   <%# C23-04 · El QR baja de 1.7 a 1.5 in para pagar el renglón del destino.

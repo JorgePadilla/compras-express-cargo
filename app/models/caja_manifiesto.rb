@@ -88,6 +88,20 @@ class CajaManifiesto < ApplicationRecord
     paquetes.filter_map { |p| p.tipo_envio&.nombre }.uniq.sort.join(",")
   end
 
+  # C31-09 · A dónde van los paquetes de **esta** caja, para el «A:» de la
+  # 4×6: un manifiesto va a varias sucursales, y la caja puede ir a una sola
+  # o ser mixta (*"ahí podrías mandar mixto"*). El que no tiene sucursal de
+  # retiro cuenta como la de por defecto, como al escanear. Vacía, dice a
+  # dónde va el manifiesto.
+  def sucursales_adentro
+    # El interno va a donde va el camión, no a donde retira cada uno.
+    return manifiesto.sucursales_entrega_texto if manifiesto&.tipo_interno?
+
+    nombres = paquetes.map { |p| p.sucursal&.nombre || (@por_defecto ||= Sucursal.retiro_por_defecto&.nombre) }
+                      .compact.uniq.sort
+    nombres.any? ? nombres.join(", ") : manifiesto&.sucursales_entrega_texto
+  end
+
   private
 
   def copiar_medidas_del_tamano

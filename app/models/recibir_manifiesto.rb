@@ -213,6 +213,8 @@ class RecibirManifiesto
   # no se podía preguntar. No era una regla que faltara de Yusef: era este dato.
   #
   # El valor ya estaba en la mano: `sucursal_entrega` es a dónde llegó el camión.
+  # C31-09 · El oficial va a varias, y dónde aterriza lo decide
+  # `Manifiesto#sucursal_de_llegada` (con varias, San Pedro).
   #
   # PR-C30.14 · **Público**: `Manifiesto#meter!` lo usa para el paquete que
   # entra a un manifiesto ya recibido (reabierto con «Editar»). Aterriza igual
@@ -221,6 +223,15 @@ class RecibirManifiesto
     return false if paquete.en_aduana?
 
     paquete.update(estado: "en_aduana",
-                   sucursal_actual: @manifiesto.sucursal_entrega || paquete.sucursal_actual)
+                   sucursal_actual: sucursal_de_llegada || paquete.sucursal_actual)
+  end
+
+  private
+
+  # Una vez por recepción, no una consulta por paquete.
+  def sucursal_de_llegada
+    return @sucursal_de_llegada if defined?(@sucursal_de_llegada)
+
+    @sucursal_de_llegada = @manifiesto.sucursal_de_llegada
   end
 end

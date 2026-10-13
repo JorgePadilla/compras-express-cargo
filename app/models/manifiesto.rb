@@ -12,7 +12,17 @@ class Manifiesto < ApplicationRecord
   belongs_to :tipo_envio_proveedor, optional: true
   # C21-03 · *"Le va a preguntar sucursal, ¿sucursal a entregar?… ahorita
   # tenemos Tegu[cigalpa], SPS"*. A dónde llega la carga en Honduras.
+  # C31-09 · Desde PR-C31.7 es **solo del interno** (a dónde va el camión). El
+  # oficial va a varias: `sucursales_entrega`, abajo.
   belongs_to :sucursal_entrega, class_name: "Sucursal", optional: true
+
+  # C31-09 · Yusef: *"podés marcar acá arriba que vas a mandar a varias
+  # sucursales"* · *"si tenemos dos sucursales, Tegus y La Ceiba, muy
+  # probablemente las empaquemos juntas, porque al final acá las vamos a
+  # separar"*. Las del **oficial**, en selección múltiple como los tipos de
+  # envío nuestros.
+  has_many :manifiesto_sucursales_entrega, dependent: :destroy
+  has_many :sucursales_entrega, through: :manifiesto_sucursales_entrega, source: :sucursal
 
   # C21-03 · Los tipos de envío **nuestros** que van adentro, en selección
   # múltiple: *"a veces combinás todo y lo mandás"*. No confundir con
@@ -61,6 +71,13 @@ class Manifiesto < ApplicationRecord
   # se sabe a dónde va el camión. En el oficial sigue siendo opcional, que es
   # como estaba.
   validates :sucursal_entrega, presence: true, if: :tipo_interno?
+  # C31-09 · Y el oficial, desde PR-C31.7, **al menos una**: *"siempre debemos
+  # marcar a dónde va"*. En la prueba una caja de Diego para Humuya entró en
+  # la de San Pedro porque el manifiesto no tenía sucursal marcada, y sin
+  # ninguna acepta todo. La regla vive **donde se elige** —el formulario
+  # siempre manda la lista (`sucursal_entrega_ids=`)—: finalizar y recibir un
+  # oficial viejo sin sucursal son `update!` y no pueden trabarse por esto.
+  validate :al_menos_una_sucursal_de_entrega, if: -> { tipo_oficial? && @sucursales_cambiadas }
   # C29-09 · Editar no puede dejar adentro lo que escanear no deja entrar.
   # Jorge le agregó un tipo a un manifiesto ya armado y anduvo; y Yusef:
   #
@@ -79,8 +96,8 @@ class Manifiesto < ApplicationRecord
   # (`C21-01`) es de otro tipo a propósito. Lo que se frena es el cambio, no
   # lo que ya estaba.
   validate :no_deja_afuera_lo_que_tiene_adentro, on: :update,
-           if: -> { @tipos_cambiados || will_save_change_to_sucursal_entrega_id? }
-  after_save { @tipos_cambiados = false }
+           if: -> { @tipos_cambiados || @sucursales_cambiadas || will_save_change_to_sucursal_entrega_id? }
+  after_save { @tipos_cambiados = @sucursales_cambiadas = false }
 
   # RP-59 · «Expedido por» lo llena el sistema, no el operario.
   #
@@ -610,6 +627,38 @@ class Manifiesto < ApplicationRecord
     super
   end
 
+  # C31-09 · Lo mismo con las sucursales del oficial: la validación de «al
+  # menos una» y la de «no deja afuera lo que tiene adentro» necesitan saber
+  # que se tocaron.
+  def sucursal_entrega_ids=(ids)
+    @sucursales_cambiadas = true
+    @sucursales_que_acepta = nil
+    super
+  end
+
+  # «San Pedro, Humuya»: a dónde va, para la ficha, el impreso y recepción.
+  # El interno, su única.
+  def sucursales_entrega_texto
+    nombres = tipo_interno? ? [ sucursal_entrega&.nombre ].compact : sucursales_entrega.map(&:nombre).sort
+    nombres.join(", ").presence
+  end
+
+  # C31-09 · **Dónde aterriza el camión**, que es lo que `sucursal_actual`
+  # (*"ubicación física actual"*) tiene que decir de la carga al recibirla.
+  #
+  # El interno: su sucursal de entrega, como siempre. El oficial que va a una
+  # sola: ésa, como hasta ahora. El que va a **varias**: la de retiro por
+  # defecto, San Pedro, porque la carga viaja junta y se separa allá —Yusef:
+  # *"al final acá las vamos a separar"*—. Que cada paquete siga después a su
+  # sucursal es un manifiesto interno, que sí escribe `sucursal_actual` al
+  # recibirlo.
+  def sucursal_de_llegada
+    return sucursal_entrega if tipo_interno?
+
+    destinos = sucursales_entrega.to_a
+    destinos.one? ? destinos.first : (Sucursal.retiro_por_defecto if destinos.many?)
+  end
+
   # C29-07 · Y lo mismo con **a dónde va**. Yusef, escaneando en staging el
   # 2026-10-08:
   #
@@ -621,11 +670,15 @@ class Manifiesto < ApplicationRecord
   #   >  así."
   #
   # Lo que se compara es la **sucursal de retiro** del paquete (`sucursal`, la
-  # que la etiqueta imprime como «RETIRA EN») contra la sucursal de entrega del
-  # manifiesto. Un manifiesto sin sucursal de entrega no tiene contra qué
-  # comparar y acepta todo, como hasta hoy. Un paquete sin sucursal de retiro
-  # tampoco se frena acá: no se sabe a dónde va, y ese dato que falta es su
-  # propio problema (`C29-03`), no uno que la pistola pueda resolver.
+  # que la etiqueta imprime como «RETIRA EN») contra las sucursales de entrega
+  # del manifiesto (C31-09: varias). Un manifiesto sin ninguna —los oficiales
+  # de antes de PR-C31.7— no tiene contra qué comparar y acepta todo.
+  #
+  # C31-09 · **Un paquete sin sucursal de retiro cuenta como San Pedro**, la de
+  # retiro por defecto: *"ahorita default San Pedro"*. Antes pasaba siempre
+  # (*"ese dato que falta es su propio problema"*, C29-03), y así una caja sin
+  # sucursal entraba en un manifiesto que va solo a Humuya. Si nadie marcó una
+  # de retiro por defecto, no hay a qué asimilarlo y pasa como antes.
   #
   # **Solo el oficial.** En el interno la sucursal de entrega es a dónde va el
   # camión, y puede llevar carga que no retira ahí: `CerrarManifiestoInterno`
@@ -633,8 +686,32 @@ class Manifiesto < ApplicationRecord
   # manifiesto, no de dónde retira el cliente"*—. Yusef hablaba de empacar en
   # Miami.
   def acepta_sucursal?(paquete)
-    tipo_interno? || sucursal_entrega_id.nil? || paquete.sucursal_id.nil? ||
-      paquete.sucursal_id == sucursal_entrega_id
+    return true if tipo_interno? || sucursales_que_acepta.empty?
+
+    retira = paquete.sucursal_id || retiro_por_defecto_id
+    retira.nil? || sucursales_que_acepta.include?(retira)
+  end
+
+  # La misma regla, en SQL: de `scope`, los paquetes que este manifiesto
+  # acepta por sucursal. La usa «empacar sin escanear», que no puede meter lo
+  # que la pistola no deja entrar.
+  def filtrar_por_sucursal(scope)
+    return scope if tipo_interno? || sucursales_que_acepta.empty?
+
+    sin_sucursal_entra = retiro_por_defecto_id.nil? || sucursales_que_acepta.include?(retiro_por_defecto_id)
+    scope.where(sucursal_id: sin_sucursal_entra ? sucursales_que_acepta + [ nil ] : sucursales_que_acepta)
+  end
+
+  # Los ids, una vez por instancia: `acepta_sucursal?` corre por cada paquete
+  # al validar y en cada lectura de la pistola.
+  def sucursales_que_acepta
+    @sucursales_que_acepta ||= sucursal_entrega_ids
+  end
+
+  def retiro_por_defecto_id
+    return @retiro_por_defecto_id if defined?(@retiro_por_defecto_id)
+
+    @retiro_por_defecto_id = Sucursal.retiro_por_defecto&.id
   end
 
   # Los números de guía del proveedor, para mostrar. Lee las dos formas: la
@@ -712,11 +789,18 @@ class Manifiesto < ApplicationRecord
                        "adentro. Sacalos del manifiesto primero")
     end
 
-    de_otra = will_save_change_to_sucursal_entrega_id? ? adentro.reject { |p| acepta_sucursal?(p) } : []
+    de_otra = @sucursales_cambiadas ? adentro.reject { |p| acepta_sucursal?(p) } : []
     if de_otra.any?
-      errors.add(:base, "La sucursal de entrega no puede ser #{sucursal_entrega.nombre}: hay #{de_otra.size} paquete(s) adentro " \
+      a_donde = sucursales_entrega_texto || "ninguna"
+      errors.add(:base, "No puede ir solo a #{a_donde}: hay #{de_otra.size} paquete(s) adentro " \
                        "que retiran en otra sucursal. Sacalos del manifiesto primero")
     end
+  end
+
+  def al_menos_una_sucursal_de_entrega
+    return if manifiesto_sucursales_entrega.reject(&:marked_for_destruction?).any?
+
+    errors.add(:sucursales_entrega, "hay que marcar al menos una: siempre se marca a dónde va")
   end
 
   def al_menos_un_tipo_de_envio_nuestro

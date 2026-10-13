@@ -249,7 +249,7 @@ class RecepcionCargaTest < ActionDispatch::IntegrationTest
 
   test "C23-14 · recibir una caja deja dicho en qué sucursal quedó la carga" do
     manifiesto = manifiestos(:enviado)
-    manifiesto.update!(sucursal_entrega: sucursales(:zeron_sps))
+    manifiesto.update!(sucursales_entrega: [ sucursales(:zeron_sps) ])
     caja = manifiesto.cajas.create!(alto: 10, largo: 10, ancho: 10, peso: 5)
     paquete = manifiesto.paquetes.first || paquetes(:disponible_entrega_juan)
     paquete.update!(manifiesto: manifiesto, caja_manifiesto: caja,
@@ -267,7 +267,7 @@ class RecepcionCargaTest < ActionDispatch::IntegrationTest
   # llega sin cajas.
   test "C23-14 · el camino sin escaneo también deja dicho dónde quedó" do
     manifiesto = manifiestos(:enviado)
-    manifiesto.update!(sucursal_entrega: sucursales(:zeron_sps))
+    manifiesto.update!(sucursales_entrega: [ sucursales(:zeron_sps) ])
     paquete = paquetes(:disponible_entrega_juan)
     paquete.update!(manifiesto: manifiesto, caja_manifiesto: nil,
                     estado: "enviado_honduras", sucursal_actual: nil)
@@ -281,7 +281,7 @@ class RecepcionCargaTest < ActionDispatch::IntegrationTest
   # que decir que está donde no está.
   test "C23-14 · sin sucursal de entrega no le inventa una" do
     manifiesto = manifiestos(:enviado)
-    manifiesto.update!(sucursal_entrega: nil)
+    manifiesto.update!(sucursales_entrega: [])
     paquete = paquetes(:disponible_entrega_juan)
     paquete.update!(manifiesto: manifiesto, caja_manifiesto: nil,
                     estado: "enviado_honduras", sucursal_actual: nil)

@@ -49,6 +49,8 @@ class FlujoDelManifiestoTest < ApplicationSystemTestCase
     # `peer`—, así que se marca por su id dejando que Capybara haga clic en la
     # etiqueta que la envuelve.
     check "manifiesto_tipo_envio_#{@tipo.id}", allow_label_click: true
+    # C31-09 · A dónde va: al menos una sucursal, siempre.
+    check "manifiesto_sucursal_entrega_#{sucursales(:zeron_sps).id}", allow_label_click: true
     click_on "Crear manifiesto"
 
     assert_selector "h1", text: /M[A-Z]{3}\d{4}/, wait: 5

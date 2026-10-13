@@ -1652,6 +1652,38 @@ ALTER SEQUENCE public.manifiesto_guias_id_seq OWNED BY public.manifiesto_guias.i
 
 
 --
+-- Name: manifiesto_sucursales_entrega; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.manifiesto_sucursales_entrega (
+    id bigint NOT NULL,
+    manifiesto_id bigint NOT NULL,
+    sucursal_id bigint NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: manifiesto_sucursales_entrega_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.manifiesto_sucursales_entrega_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: manifiesto_sucursales_entrega_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.manifiesto_sucursales_entrega_id_seq OWNED BY public.manifiesto_sucursales_entrega.id;
+
+
+--
 -- Name: manifiesto_tipo_envios; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4107,6 +4139,13 @@ ALTER TABLE ONLY public.manifiesto_guias ALTER COLUMN id SET DEFAULT nextval('pu
 
 
 --
+-- Name: manifiesto_sucursales_entrega id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manifiesto_sucursales_entrega ALTER COLUMN id SET DEFAULT nextval('public.manifiesto_sucursales_entrega_id_seq'::regclass);
+
+
+--
 -- Name: manifiesto_tipo_envios id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -4809,6 +4848,14 @@ ALTER TABLE ONLY public.manifiesto_counters
 
 ALTER TABLE ONLY public.manifiesto_guias
     ADD CONSTRAINT manifiesto_guias_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: manifiesto_sucursales_entrega manifiesto_sucursales_entrega_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manifiesto_sucursales_entrega
+    ADD CONSTRAINT manifiesto_sucursales_entrega_pkey PRIMARY KEY (id);
 
 
 --
@@ -6020,6 +6067,20 @@ CREATE INDEX index_manifiesto_guias_on_manifiesto_id ON public.manifiesto_guias 
 --
 
 CREATE UNIQUE INDEX index_manifiesto_guias_on_manifiesto_id_and_numero ON public.manifiesto_guias USING btree (manifiesto_id, numero);
+
+
+--
+-- Name: index_manifiesto_sucursales_entrega_on_sucursal_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_manifiesto_sucursales_entrega_on_sucursal_id ON public.manifiesto_sucursales_entrega USING btree (sucursal_id);
+
+
+--
+-- Name: index_manifiesto_sucursales_entrega_unica; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_manifiesto_sucursales_entrega_unica ON public.manifiesto_sucursales_entrega USING btree (manifiesto_id, sucursal_id);
 
 
 --
@@ -7708,6 +7769,14 @@ ALTER TABLE ONLY public.warehouse_receipts
 
 
 --
+-- Name: manifiesto_sucursales_entrega fk_rails_33d54e946c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manifiesto_sucursales_entrega
+    ADD CONSTRAINT fk_rails_33d54e946c FOREIGN KEY (manifiesto_id) REFERENCES public.manifiestos(id);
+
+
+--
 -- Name: autorizaciones fk_rails_34206603fe; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8812,12 +8881,21 @@ ALTER TABLE ONLY public.tareas
 
 
 --
+-- Name: manifiesto_sucursales_entrega fk_rails_ff00031264; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.manifiesto_sucursales_entrega
+    ADD CONSTRAINT fk_rails_ff00031264 FOREIGN KEY (sucursal_id) REFERENCES public.sucursales(id);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261013180000'),
 ('20261013150100'),
 ('20261013150000'),
 ('20261013120000'),

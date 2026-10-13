@@ -41,6 +41,10 @@
         Se escanean paquetes, no cajas.
       <% else %>
         Cada caja recibida manda sus paquetes a <b>aduana</b>. Se escanean cajas, no paquetes.
+        <%# C31-09 · A dónde va, que pueden ser varias. %>
+        <% if (a_donde = @manifiesto.sucursales_entrega_texto) %>
+          Va a <b><%= a_donde %></b>.
+        <% end %>
       <% end %>
     </p>
     <div data-recepcion-carga-target="aviso" class="hidden mt-4 rounded-lg p-3 text-sm"></div>

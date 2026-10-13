@@ -117,7 +117,7 @@
     </div>
     <div class="mf-v" style="color:#666;">
       <%= @manifiesto.consignatario&.direccion.presence || "—" %><br>
-      <strong>Entrega en:</strong> <%= @manifiesto.sucursal_entrega&.nombre || "—" %>
+      <strong>Entrega en:</strong> <%= @manifiesto.sucursales_entrega_texto || "—" %>
     </div>
   </div>
 </div>
