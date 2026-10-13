@@ -880,6 +880,45 @@ ALTER SEQUENCE public.correlativos_fiscales_id_seq OWNED BY public.correlativos_
 
 
 --
+-- Name: correos_enviados; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.correos_enviados (
+    id bigint NOT NULL,
+    cliente_id bigint,
+    mailer character varying NOT NULL,
+    accion character varying NOT NULL,
+    para character varying,
+    asunto character varying,
+    estado character varying NOT NULL,
+    error text,
+    enviado_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    CONSTRAINT correos_enviados_estado CHECK (((estado)::text = ANY ((ARRAY['enviado'::character varying, 'fallido'::character varying])::text[])))
+);
+
+
+--
+-- Name: correos_enviados_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.correos_enviados_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: correos_enviados_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.correos_enviados_id_seq OWNED BY public.correos_enviados.id;
+
+
+--
 -- Name: cotizacion_items; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3899,6 +3938,13 @@ ALTER TABLE ONLY public.correlativos_fiscales ALTER COLUMN id SET DEFAULT nextva
 
 
 --
+-- Name: correos_enviados id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.correos_enviados ALTER COLUMN id SET DEFAULT nextval('public.correos_enviados_id_seq'::regclass);
+
+
+--
 -- Name: cotizacion_items id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -4568,6 +4614,14 @@ ALTER TABLE ONLY public.consignatarios
 
 ALTER TABLE ONLY public.correlativos_fiscales
     ADD CONSTRAINT correlativos_fiscales_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: correos_enviados correos_enviados_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.correos_enviados
+    ADD CONSTRAINT correos_enviados_pkey PRIMARY KEY (id);
 
 
 --
@@ -5593,6 +5647,13 @@ CREATE UNIQUE INDEX index_configuracions_on_clave ON public.configuracions USING
 --
 
 CREATE UNIQUE INDEX index_correlativos_fiscales_unicos ON public.correlativos_fiscales USING btree (punto_de_emision_id, tipo_documento);
+
+
+--
+-- Name: index_correos_enviados_on_cliente_id_and_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_correos_enviados_on_cliente_id_and_created_at ON public.correos_enviados USING btree (cliente_id, created_at);
 
 
 --
@@ -7717,6 +7778,14 @@ ALTER TABLE ONLY public.solid_queue_blocked_executions
 
 
 --
+-- Name: correos_enviados fk_rails_4dd8f9ce01; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.correos_enviados
+    ADD CONSTRAINT fk_rails_4dd8f9ce01 FOREIGN KEY (cliente_id) REFERENCES public.clientes(id) ON DELETE SET NULL;
+
+
+--
 -- Name: manifiesto_guias fk_rails_4ea5f51fc2; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8691,6 +8760,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261013120000'),
 ('20261011170000'),
 ('20261011160000'),
 ('20261011140000'),
