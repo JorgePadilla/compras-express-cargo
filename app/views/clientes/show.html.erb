@@ -16,235 +16,29 @@
   end
 end %>
 
-<div class="bg-white rounded-lg shadow overflow-hidden">
-  <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-    <h2 class="text-lg font-semibold text-gray-800">Informacion del Cliente</h2>
-    <%= render StatusBadgeComponent.new(status: @cliente.activo? ? "activo" : "inactivo") %>
-  </div>
-
-  <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Codigo</dt>
-      <dd class="mt-1 text-sm font-mono font-medium text-cec-navy"><%= @cliente.codigo %></dd>
-    </div>
-
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre Completo</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @cliente.nombre_completo %></dd>
-    </div>
-
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Identidad</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @cliente.identidad.presence || "—" %></dd>
-    </div>
-
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Email</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @cliente.email.presence || "—" %></dd>
-    </div>
-
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Telefono</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @cliente.telefono.presence || "—" %></dd>
-    </div>
-
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">WhatsApp</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @cliente.telefono_whatsapp.presence || "—" %></dd>
-    </div>
-
-    <div class="md:col-span-2">
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Direccion</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @cliente.direccion.presence || "—" %></dd>
-    </div>
-
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Ciudad</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @cliente.ciudad.presence || "—" %></dd>
-    </div>
-
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Departamento</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @cliente.departamento.presence || "—" %></dd>
-    </div>
-
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Grupo de clientes</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= @cliente.categoria_precio&.nombre || "Sin asignar" %></dd>
-    </div>
-
-    <%# PR-C6.41: el trato de mayorista tiene que verse sin abrir el form —
-        baja lo que se le cobra a este cliente. %>
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cobro solo por volumetrico</dt>
-      <dd class="mt-1 text-sm text-gray-900">
-        <% servicios = @cliente.tipo_envio_solo_volumetricos.order(:nombre) %>
-        <% if servicios.any? %>
-          <div class="flex flex-wrap gap-1">
-            <% servicios.each do |t| %>
-              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                           bg-cec-teal/15 text-cec-teal-dark"><%= t.nombre %></span>
-            <% end %>
-          </div>
-        <% else %>
-          <span class="text-gray-500">No &mdash; se cobra el mayor entre peso y volumen</span>
+<%# PR-C31.11 · `C31-20`. La vista del cliente para SAC: todo lo suyo, en
+    solapas. Yusef: *"si me voy a pre-factura solo me salen las de él, si me voy
+    a paquetes solo me salen los de él"*. Las solapas son enlaces (no JS), como en
+    Catálogos del Manifiesto: la solapa vive en la URL. %>
+<div class="border-b border-gray-200 dark:border-gray-700 mb-6">
+  <nav class="-mb-px flex flex-wrap gap-x-6" aria-label="Lo del cliente">
+    <% [["resumen", "Resumen", nil],
+        ["pre_alertas", "Pre-alertas", @conteos["pre_alertas"]],
+        ["paquetes", "Paquetes", @conteos["paquetes"]],
+        ["pre_facturas", "Pre-facturas", @conteos["pre_facturas"]],
+        ["facturas", "Facturas", @conteos["facturas"]],
+        ["correos", "Correos", @conteos["correos"]]].each do |slug, titulo, cuantos| %>
+      <% activa = @solapa == slug %>
+      <%= link_to cliente_path(@cliente, tab: (slug unless slug == "resumen")),
+            class: "whitespace-nowrap border-b-2 py-3 px-1 text-sm font-medium #{activa ? 'border-cec-teal text-cec-teal' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}",
+            aria: { current: (activa ? "page" : nil) } do %>
+        <%= titulo %>
+        <% if cuantos %>
+          <span class="ml-1 text-xs <%= activa ? "text-cec-teal" : "text-gray-400" %>"><%= cuantos %></span>
         <% end %>
-      </dd>
-    </div>
-
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo Pendiente</dt>
-      <dd class="mt-1 text-sm font-semibold <%= @cliente.saldo_pendiente.positive? ? 'text-cec-danger' : 'text-gray-900' %>">
-        L. <%= number_with_precision(@cliente.saldo_pendiente, precision: 2, delimiter: ",") %>
-      </dd>
-    </div>
-
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Registrado</dt>
-      <dd class="mt-1 text-sm text-gray-900"><%= l(@cliente.created_at, format: :long) rescue @cliente.created_at.strftime("%d/%m/%Y %H:%M") %></dd>
-    </div>
-
-    <%# PR-9.b: las 4 notas permanentes, no solo Miami/Honduras. `notas_caja`
-        y `notas_sac` existían desde PR-D2 y eran editables, pero esta vista
-        nunca las mostraba. Se listan en orden por departamento
-        (User::NOTAS_DEPARTAMENTO_ORDEN) y filtradas por el área del usuario. %>
-    <% Current.user&.notas_permanentes_visibles&.each do |n| %>
-      <% texto = @cliente.public_send(n[:campo]) %>
-      <% next if texto.blank? %>
-      <div class="md:col-span-2">
-        <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Notas <%= n[:etiqueta] %></dt>
-        <dd class="mt-1 text-sm text-gray-900 bg-amber-50 border border-amber-200 rounded-lg p-3"><%= simple_format(texto) %></dd>
-      </div>
+      <% end %>
     <% end %>
-  </div>
+  </nav>
 </div>
 
-<%# ── Acceso al portal ──────────────────────────────────────────────────────
-    PR-C7.37. Yusef, 2026-08-19, parado en esta pantalla:
-
-      *"Yo me voy a clientes, a mi listado de clientes, y administro su usuario."*
-      *"Aquí está cuál es la cuenta de acceso de él. Eso es todo. Y cambiarle la
-       clave por si se le olvidó."*
-
-    `PR-C7.33` dejó el modelo entero —entra con código o con correo, el acceso se
-    corta sin dar de baja, los correos de aviso van aparte— pero nada de eso se
-    veía acá, y la clave no se podía poner desde ningún lado. Un cliente creado
-    por el admin nacía sin clave y no entraba nunca. %>
-<div class="bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-200 dark:ring-gray-700 p-6 mt-6">
-  <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Acceso al portal</h2>
-
-  <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 mt-4">
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Cuenta de acceso</dt>
-      <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
-        <%= @cliente.email.presence || "— sin correo —" %>
-      </dd>
-      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-        O con su código <span class="font-mono"><%= @cliente.codigo %></span>, que sirve igual.
-      </p>
-    </div>
-
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Puede entrar</dt>
-      <dd class="mt-1 text-sm">
-        <% if !@cliente.activo? %>
-          <span class="font-semibold text-cec-danger">No — está dado de baja como cliente</span>
-        <% elsif !@cliente.acceso_habilitado? %>
-          <span class="font-semibold text-cec-danger">No — tiene el acceso cortado</span>
-        <% elsif !@cliente.tiene_clave? %>
-          <span class="font-semibold text-cec-danger">No — todavía no tiene clave</span>
-        <% else %>
-          <span class="font-semibold text-cec-success">Sí</span>
-        <% end %>
-      </dd>
-    </div>
-
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Clave</dt>
-      <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
-        <% if @cliente.tiene_clave? %>
-          Puesta<%= " · actualizada #{l(@cliente.clave_actualizada_at.to_date)}" if @cliente.clave_actualizada_at %>
-        <% else %>
-          <span class="text-cec-danger">Sin poner</span>
-        <% end %>
-      </dd>
-    </div>
-
-    <div>
-      <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Correos para avisarle</dt>
-      <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
-        <% correos = @cliente.cliente_correos.map(&:correo) %>
-        <%= correos.any? ? correos.join(" · ") : "—" %>
-      </dd>
-    </div>
-  </dl>
-
-  <%# C16-06: ponerle la clave es editar. El digitador de Miami no lo ve. %>
-  <% if can_edit_clientes? %>
-  <%# La clave, en su propio formulario: no pasa por `cliente_params`, que lo
-      guardan media docena de pantallas. %>
-  <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-    <%= form_with url: clave_cliente_path(@cliente), method: :patch, scope: :cliente,
-                  class: "flex flex-col sm:flex-row sm:items-end gap-3" do |f| %>
-      <div class="flex-1">
-        <%= f.label :password, @cliente.tiene_clave? ? "Cambiarle la clave" : "Ponerle una clave",
-              class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
-        <%= f.password_field :password, autocomplete: "new-password", maxlength: 72,
-              placeholder: "Mínimo 8 caracteres",
-              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                     focus:ring-cec-teal focus:border-cec-teal" %>
-      </div>
-      <div class="flex-1">
-        <%= f.label :password_confirmation, "Repetirla",
-              class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
-        <%= f.password_field :password_confirmation, autocomplete: "new-password", maxlength: 72,
-              class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm
-                     focus:ring-cec-teal focus:border-cec-teal" %>
-      </div>
-      <%= render(ButtonComponent.new(variant: :primary, type: "submit", icon: "key")) { "Guardar clave" } %>
-    <% end %>
-    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-      Se la decís al cliente y él la cambia cuando entre. Queda registrado en la bitácora.
-    </p>
-  </div>
-  <% end %>
-</div>
-
-<%# PR-9.b: tareas del cliente — las que cualquier área le deja y que el
-    digitador ve (y marca) en la franja de /etiquetar. %>
-<% tareas_cliente = @cliente.tareas.abiertas.includes(:asignado_a).order(:created_at) %>
-<div class="bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden mt-6">
-  <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3">
-    <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100 inline-flex items-center gap-2">
-      <%= heroicon "clipboard-document-check", variant: :solid, options: { class: "w-5 h-5 text-cec-teal" } %>
-      Tareas pendientes del cliente
-    </h2>
-    <% if can_crear_tareas? %>
-      <%= render(ButtonComponent.new(variant: :teal, size: :xs, icon: "plus",
-            href: new_tarea_path(cliente_id: @cliente.id))) { "Nueva tarea" } %>
-    <% end %>
-  </div>
-  <div class="px-6 py-4">
-    <% if tareas_cliente.any? %>
-      <ul class="space-y-2">
-        <% tareas_cliente.each do |tarea| %>
-          <li class="flex items-start gap-3 p-3 rounded-lg bg-slate-50 dark:bg-gray-700/50 ring-1 ring-slate-200 dark:ring-gray-600">
-            <div class="min-w-0 flex-1">
-              <p class="text-sm font-medium text-gray-900 dark:text-gray-100"><%= tarea.titulo %></p>
-              <% if tarea.descripcion.present? %>
-                <p class="text-xs text-gray-600 dark:text-gray-300 mt-0.5 whitespace-pre-line"><%= tarea.descripcion %></p>
-              <% end %>
-            </div>
-            <span class="shrink-0 inline-flex items-center text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-cec-navy/5 dark:bg-cec-navy/30 text-cec-navy dark:text-cec-gold ring-1 ring-cec-navy/20">
-              <%= tarea.departamento_label %>
-            </span>
-          </li>
-        <% end %>
-      </ul>
-    <% else %>
-      <p class="text-xs italic text-gray-400 dark:text-gray-500">— sin tareas pendientes —</p>
-    <% end %>
-  </div>
-</div>
-
-<%= render "shared/bitacora", record: @cliente, label: "Cliente" %>
+<%= render "clientes/#{@solapa}" %>

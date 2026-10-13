@@ -13,6 +13,18 @@ class ClientesController < ApplicationController
   EDICION_ROLES = %w[admin supervisor_miami supervisor_caja supervisor_prefactura
                      cajero sac supervisor_sac entrega_despacho].freeze
 
+  # PR-C31.11 · `C31-20`. La ficha es la vista del cliente para SAC, en solapas.
+  # Yusef, 2026-10-12: *"todo lo que yo vea es de Jorge Padilla nada más…
+  # todos los pre-alertas, todos los paquetes, todas las facturas, todos los
+  # correos enviados, lo que falló"* — y cuando Jorge ofreció *masquerade*:
+  # *"no es eso lo que buscamos, es más como un dashboard"*.
+  #
+  # Las solapas son enlaces con `?tab=` (el patrón de `CatalogosManifiesto`):
+  # el estado vive en la URL, sin rutas nuevas, y volver de un registro cae en
+  # la solapa de donde se salió. «Facturas» son las `ventas`: la `Factura` SAR
+  # todavía no la emite ninguna pantalla.
+  SOLAPAS = %w[resumen pre_alertas paquetes pre_facturas facturas correos].freeze
+
   before_action :set_cliente, only: [ :show, :edit, :update, :clave ]
   before_action :authorize_buscar, only: [ :buscar ]
   before_action :authorize_edicion, only: [ :new, :create, :edit, :update, :clave ]
@@ -34,6 +46,16 @@ class ClientesController < ApplicationController
   end
 
   def show
+    @solapa = SOLAPAS.include?(params[:tab]) ? params[:tab] : SOLAPAS.first
+    @conteos = {
+      "pre_alertas" => @cliente.pre_alertas.count,
+      "paquetes" => @cliente.paquetes.count,
+      "pre_facturas" => @cliente.pre_facturas.count,
+      "facturas" => @cliente.ventas.count,
+      "correos" => @cliente.correos_enviados.count
+    }
+    # Solo la solapa abierta carga sus filas; el resto pone su número y nada más.
+    @registros = registros_de(@solapa)&.page(params[:page])&.per(per_page_sanitized)
   end
 
   def new
@@ -190,6 +212,23 @@ class ClientesController < ApplicationController
 
   def set_cliente
     @cliente = Cliente.find(params[:id])
+  end
+
+  # Lo de este cliente y de nadie más, lo último primero.
+  def registros_de(solapa)
+    case solapa
+    when "pre_alertas"
+      @cliente.pre_alertas.includes(:tipo_envio, :pre_alerta_paquetes).order(created_at: :desc, id: :desc)
+    when "paquetes"
+      @cliente.paquetes.includes(:tipo_envio, :sucursal, :sucursal_destino)
+              .order(created_at: :desc, id: :desc)
+    when "pre_facturas"
+      @cliente.pre_facturas.order(created_at: :desc, id: :desc)
+    when "facturas"
+      @cliente.ventas.order(created_at: :desc, id: :desc)
+    when "correos"
+      @cliente.correos_enviados.recientes
+    end
   end
 
   def authorize_buscar

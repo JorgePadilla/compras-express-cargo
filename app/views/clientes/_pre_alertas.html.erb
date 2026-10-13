@@ -1,0 +1,30 @@
+<%# PR-C31.11 · Las pre-alertas del cliente, la última primero. %>
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden">
+  <% if @registros.any? %>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700" data-solapa="pre_alertas">
+        <thead class="bg-gray-50 dark:bg-gray-900/40">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Número</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo de envío</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Paquetes</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          <% @registros.each do |pa| %>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+              <td class="px-4 py-3 whitespace-nowrap"><%= enlace_del_cliente(pa.numero_documento, pre_alerta_path(pa), :pre_alertas) %></td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300"><%= pa.tipo_envio&.nombre || "—" %></td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-200"><%= pa.pre_alerta_paquetes.size %></td>
+              <td class="px-4 py-3 whitespace-nowrap"><%= render StatusBadgeComponent.new(status: pa.estado) %></td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"><%= pa.created_at.strftime("%d/%m/%Y") %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+  <div class="px-4"><%= render PaginationComponent.new(collection: @registros, label: "pre-alertas") %></div>
+</div>
