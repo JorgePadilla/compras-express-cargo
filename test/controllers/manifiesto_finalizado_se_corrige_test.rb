@@ -49,12 +49,13 @@ class ManifiestoFinalizadoSeCorrigeTest < ActionDispatch::IntegrationTest
     assert_candado_cerrado
   end
 
-  test "cerrado, el empaque tampoco mete paquetes" do
+  # C31-01 · /empacar se fue; lo que quedó es elegir la caja abierta, y
+  # tampoco se toca con el candado puesto.
+  test "cerrado, tampoco se cambia la caja abierta" do
     ingresar(@supervisor)
-    post manifiesto_escanear_empaque_url(@manifiesto, caja_id: @caja.id), params: { codigo: @tarde.tracking }, as: :json
+    patch usar_manifiesto_caja_url(@manifiesto, @caja), as: :turbo_stream
 
-    assert_equal "bloqueado", response.parsed_body["resultado"]
-    assert_nil @tarde.reload.manifiesto_id
+    assert_response :forbidden
   end
 
   test "cerrado, re-imprimir las 4×6 y la hoja sigue andando" do

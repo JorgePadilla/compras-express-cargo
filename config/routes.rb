@@ -177,15 +177,9 @@ Rails.application.routes.draw do
   resources :manifiestos, except: [ :destroy ] do
     # C21-04 · Las casas del manifiesto. Cuelgan del manifiesto porque el
     # manifiesto ya existe cuando se empaca: ése es el cambio de C21-01.
-    # C21-01 · El escaneo al empacar: el «pip pip pip». Cuelga del manifiesto
-    # porque el manifiesto ya existe cuando se empaca — ése es el cambio.
-    get  "empacar", to: "empaque#show", as: :empacar
-    post "empacar/:caja_id/escanear", to: "empaque#escanear", as: :escanear_empaque
-    post "empacar/:caja_id/omitir",   to: "empaque#omitir",   as: :omitir_empaque
-    # C23-11 · Abrir y cerrar una caja del set con el que se está empacando.
-    # Yusef: *"poder seleccionar las tres cajas"* · *"y para desempacarlo, lo
-    # volvemos a marcar"*.
-    post "empacar/:caja_id/alternar", to: "empaque#alternar", as: :alternar_empaque
+    # C31-01 · El escaneo al empacar (/empacar) se fue: Yusef, *"queremos
+    # eliminar ese empacar escaneando… que sea esta barra que está abajo"*.
+    # Se escanea en la ficha y entra en la caja abierta (`usar`).
     resources :cajas, only: %i[create update destroy], controller: "cajas_manifiesto" do
       member do
         get :etiqueta   # C21-05: la 4×6 de un bulto
