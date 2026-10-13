@@ -67,7 +67,7 @@ class ManifiestoEscaneoModalTest < ApplicationSystemTestCase
 
   # C29-07 · *"Algo similar al tipo de envío, el modal así. Exactamente así."*
   test "de otra sucursal: modal rojo como el del tipo, y no entra" do
-    @manifiesto.update!(sucursal_entrega: sucursales(:zeron_sps))
+    @manifiesto.update!(sucursales_entrega: [ sucursales(:zeron_sps) ])
     humuya = paquete("1ZHUMUYASYS001")
     humuya.update!(sucursal: sucursales(:humuya_tgu))
 

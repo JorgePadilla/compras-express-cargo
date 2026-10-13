@@ -69,6 +69,14 @@ class Sucursal < ApplicationRecord
       entre.first
   end
 
+  # La sucursal de retiro por defecto —San Pedro, `retiro_por_defecto`—, la
+  # que el 80% de la carga tiene (C17). C31-09: un paquete sin sucursal de
+  # retiro cuenta como ésta (*"ahorita default San Pedro"*). `nil` si nadie la
+  # marcó en /sucursales.
+  def self.retiro_por_defecto
+    find_by(retiro_por_defecto: true)
+  end
+
   def to_s
     nombre
   end

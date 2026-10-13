@@ -150,7 +150,7 @@ class EtiquetaBultoTest < ActionDispatch::IntegrationTest
 
   # *"Lo último que le falta acá es a dónde va."*
   test "C23-04 · dice a dónde va" do
-    @manifiesto.update!(sucursal_entrega: sucursales(:humuya_tgu))
+    @manifiesto.update!(sucursales_entrega: [ sucursales(:humuya_tgu) ])
 
     get etiqueta_manifiesto_caja_path(@manifiesto, @caja)
 
@@ -160,7 +160,7 @@ class EtiquetaBultoTest < ActionDispatch::IntegrationTest
   # El oficial puede no tenerla (en el interno es obligatoria, `A7-07`): sin
   # sucursal no se inventa un renglón vacío.
   test "C23-04 · sin sucursal de entrega no hay renglón de destino" do
-    @manifiesto.update!(sucursal_entrega: nil)
+    @manifiesto.update!(sucursales_entrega: [])
 
     get etiqueta_manifiesto_caja_path(@manifiesto, @caja)
 

@@ -91,7 +91,8 @@
     .priority{ font-size: 22pt; font-weight: 900; letter-spacing: .02em; margin-top: .04in; }
     .consig  { font-size: 15pt; font-weight: 700; margin-top: .06in; }
     /* C23-04 · *"Lo último que le falta acá es a dónde va."* */
-    .destino { font-size: 17pt; font-weight: 700; margin-top: .03in; }
+    /* C31-09 · Puede ser más de una sucursal: se achica al ancho. */
+    .destino { font-size: 17pt; font-weight: 700; margin-top: .03in; overflow: hidden; }
     .barcode { margin-top: .08in; }
     .barcode svg { width: 100%; height: .85in; }
     <%# RP-54 · El QR **no se estira**. El barcode de arriba sí —Code128 se lee

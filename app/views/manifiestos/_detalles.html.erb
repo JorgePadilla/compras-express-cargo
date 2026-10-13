@@ -85,7 +85,7 @@
         <%# C21-03: los NUESTROS, que son los que deciden qué paquetes salen. %>
         <%= dato_del_manifiesto "T. envío nuestros", manifiesto.tipos_envio_nuestros.presence || "—" %>
         <%= dato_del_manifiesto "Consignatario", manifiesto.consignatario&.nombre || "—" %>
-        <%= dato_del_manifiesto "Se entrega en", manifiesto.sucursal_entrega&.nombre || "—" %>
+        <%= dato_del_manifiesto "Se entrega en", manifiesto.sucursales_entrega_texto || "—" %>
         <%# C21-11: son varias, y las llena San Pedro Sula después. %>
         <%= dato_del_manifiesto "Guías del proveedor", manifiesto.numeros_de_guia.join(" · ").presence || "—",
                                 clase: "text-sm font-mono text-gray-900" %>

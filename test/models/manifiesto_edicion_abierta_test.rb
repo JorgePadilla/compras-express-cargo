@@ -235,7 +235,7 @@ class ManifiestoEdicionAbiertaTest < ActiveSupport::TestCase
   end
 
   test "en aduana: el de una caja que no se escaneó vuelve a Miami, como hoy" do
-    @manifiesto.update!(estado: "en_aduana", sucursal_entrega: sucursales(:zeron_sps))
+    @manifiesto.update!(estado: "en_aduana", sucursales_entrega: [ sucursales(:zeron_sps) ])
     assert_nil @caja.recibida_at
 
     @manifiesto.sacar!(@adentro)
@@ -247,7 +247,7 @@ class ManifiestoEdicionAbiertaTest < ActiveSupport::TestCase
   end
 
   test "recibido con faltantes: lo que dice si llegó es la caja, no el barrido del cierre" do
-    @manifiesto.update!(estado: "en_aduana", sucursal_entrega: sucursales(:zeron_sps))
+    @manifiesto.update!(estado: "en_aduana", sucursales_entrega: [ sucursales(:zeron_sps) ])
     RecibirManifiesto.new(@manifiesto, user: @supervisor).finalizar!(con_faltantes: true)
     assert_equal "en_aduana", @adentro.reload.estado, "el cierre con faltantes lo barrió a aduana"
     assert_nil @caja.reload.recibida_at
@@ -346,7 +346,7 @@ class ManifiestoEdicionAbiertaTest < ActiveSupport::TestCase
   end
 
   test "meter en uno que se está recibiendo: sale a enviado y llega cuando escaneen su caja" do
-    @manifiesto.update!(estado: "en_aduana", sucursal_entrega: sucursales(:zeron_sps))
+    @manifiesto.update!(estado: "en_aduana", sucursales_entrega: [ sucursales(:zeron_sps) ])
     tarde = paquetes(:recibido)
     tarde.tareas.update_all(estado: "realizada")
     tarde.update_columns(tipo_envio_id: @cer.id)
@@ -356,7 +356,7 @@ class ManifiestoEdicionAbiertaTest < ActiveSupport::TestCase
   end
 
   test "meter en uno que se está recibiendo, a una caja que ya se escaneó: llega" do
-    @manifiesto.update!(sucursal_entrega: sucursales(:zeron_sps))
+    @manifiesto.update!(sucursales_entrega: [ sucursales(:zeron_sps) ])
     RecibirManifiesto.new(@manifiesto, user: @supervisor).recibir_caja!(@caja)
     assert @manifiesto.reload.en_aduana?
     tarde = paquetes(:recibido)
@@ -371,7 +371,7 @@ class ManifiestoEdicionAbiertaTest < ActiveSupport::TestCase
 
   # Honduras recibe: escanea la caja (si `con_caja`) y cierra la recepción.
   def recibir!(con_caja:)
-    @manifiesto.update!(sucursal_entrega: sucursales(:zeron_sps))
+    @manifiesto.update!(sucursales_entrega: [ sucursales(:zeron_sps) ])
     recepcion = RecibirManifiesto.new(@manifiesto, user: @supervisor)
     recepcion.recibir_caja!(@caja) if con_caja
     recepcion.finalizar!(con_faltantes: true)

@@ -21,7 +21,7 @@ class ManifiestoEditarEnteroSystemTest < ApplicationSystemTestCase
     @cer = tipo_envios(:cer)
     @sps = sucursales(:zeron_sps)
     @manifiesto = manifiestos(:creado)
-    @manifiesto.update!(sucursal_origen: sucursales(:miami), sucursal_entrega: @sps)
+    @manifiesto.update!(sucursal_origen: sucursales(:miami), sucursales_entrega: [ @sps ])
     @consignatario = Consignatario.create!(nombre: "KARSAM TEST", activo: true)
 
     @adentro = paquetes(:empacado)

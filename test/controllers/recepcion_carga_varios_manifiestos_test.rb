@@ -24,10 +24,13 @@ class RecepcionCargaVariosManifiestosTest < ActionDispatch::IntegrationTest
     @a2 = caja_con_paquete(@dos)
   end
 
+  # C31-09 · El oficial va a sus sucursales (`sucursales_entrega`); el interno
+  # sigue con una sola (`sucursal_entrega`), que le pasan los que lo crean.
   def enviado(numero, **extra)
+    destino = extra[:tipo] == "interno" ? {} : { sucursales_entrega: [ sucursales(:zeron_sps) ] }
     Manifiesto.create!({ numero: numero, estado: "enviado", tipo_envio: "AEREO", fecha_enviado: 1.day.ago,
-                         sucursal_origen: sucursales(:miami), sucursal_entrega: sucursales(:zeron_sps),
-                         user: users(:admin), tipo_envios: [ tipo_envios(:cer) ] }.merge(extra))
+                         sucursal_origen: sucursales(:miami), user: users(:admin),
+                         tipo_envios: [ tipo_envios(:cer) ] }.merge(destino).merge(extra))
   end
 
   def caja_con_paquete(manifiesto)

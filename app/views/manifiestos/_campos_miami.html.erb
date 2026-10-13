@@ -41,15 +41,17 @@
     </div>
     <% end %>
 
+    <%# C31-09 · El interno va a **una**: es a dónde va el camión. El oficial
+        va a varias, más abajo. %>
+    <% if manifiesto.tipo_interno? %>
     <div>
       <%= f.label :sucursal_entrega_id, "Sucursal donde se entrega", class: "block text-base font-medium text-gray-700 dark:text-gray-200 mb-1" %>
       <%= f.collection_select :sucursal_entrega_id, @sucursales_entrega, :id, :nombre,
             { include_blank: "— Seleccionar —" },
             class: "block w-full min-h-11 py-3 rounded-lg border-gray-300 shadow-sm text-base focus:ring-cec-teal focus:border-cec-teal" %>
-      <p class="text-xs text-gray-500 mt-1">
-        <%= manifiesto.tipo_interno? ? "A qué sucursal va la carga. En el interno es obligatorio: es el envío." : "A dónde llega en Honduras." %>
-      </p>
+      <p class="text-xs text-gray-500 mt-1">A qué sucursal va la carga. En el interno es obligatorio: es el envío.</p>
     </div>
+    <% end %>
 
     <% if @sucursales_origen.many? %>
       <div>
@@ -67,6 +69,36 @@
         nombre… solamente quien lo hizo"*— y un campo libre para «quien lo
         hizo» es un campo donde se puede escribir a otro. %>
   </div>
+
+  <%# C31-09 · *"Podés marcar acá arriba que vas a mandar a varias
+      sucursales"* · *"siempre debemos marcar a dónde va"*. Selección
+      múltiple, mínimo una, con las mismas tarjetas que los tipos de envío. %>
+  <% unless manifiesto.tipo_interno? %>
+    <fieldset class="mt-5">
+      <legend class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Sucursales donde se entrega</legend>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+        Mínimo una. Solo entran paquetes que retiran en las marcadas; el que no tiene sucursal cuenta como
+        <%= Sucursal.retiro_por_defecto&.nombre || "la de retiro por defecto" %>.
+      </p>
+      <% elegidas = manifiesto.sucursal_entrega_ids %>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <% @sucursales_entrega.each do |sucursal| %>
+          <label class="cursor-pointer group">
+            <%= check_box_tag "manifiesto[sucursal_entrega_ids][]", sucursal.id, elegidas.include?(sucursal.id),
+                  id: "manifiesto_sucursal_entrega_#{sucursal.id}", class: "peer sr-only" %>
+            <div class="h-full min-h-11 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800
+                        peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 peer-checked:ring-2 peer-checked:ring-cec-gold/30
+                        peer-focus-visible:ring-2 peer-focus-visible:ring-cec-teal-deep
+                        hover:shadow-lg hover:border-cec-gold/50 transition-all duration-200
+                        flex items-center justify-center text-center">
+              <span class="font-bold text-base text-cec-navy dark:text-cec-gold"><%= sucursal.nombre %></span>
+            </div>
+          </label>
+        <% end %>
+      </div>
+      <%= hidden_field_tag "manifiesto[sucursal_entrega_ids][]", "", id: nil %>
+    </fieldset>
+  <% end %>
 
   <%# PR-U4 · La misma tarjeta que los tipos de envío, en chico: es un
       interruptor que se toca con el dedo, no una casilla de 13 px. Va la

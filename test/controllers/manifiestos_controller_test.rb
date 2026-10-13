@@ -160,7 +160,7 @@ class ManifiestosControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "add_paquete no mete un paquete que va a otra sucursal" do
-    @manifiesto.update!(sucursal_entrega: sucursales(:zeron_sps))
+    @manifiesto.update!(sucursales_entrega: [ sucursales(:zeron_sps) ])
     paquete = paquete_del_servicio_del_manifiesto
     paquete.update_columns(sucursal_id: sucursales(:humuya_tgu).id)
 
@@ -252,10 +252,10 @@ class ManifiestosControllerTest < ActionDispatch::IntegrationTest
     paquete.update_columns(sucursal_id: sucursales(:zeron_sps).id, manifiesto_id: @manifiesto.id)
 
     patch manifiesto_url(@manifiesto),
-          params: { manifiesto: { sucursal_entrega_id: sucursales(:humuya_tgu).id } }
+          params: { manifiesto: { sucursal_entrega_ids: [ sucursales(:humuya_tgu).id ] } }
 
     assert_response :unprocessable_entity
-    assert_nil @manifiesto.reload.sucursal_entrega_id
+    assert_empty @manifiesto.reload.sucursal_entrega_ids
   end
 
   # Finalizar también es un `update`, y lo que entró con «Omitir» desde

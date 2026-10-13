@@ -153,7 +153,7 @@ class ManifiestoEscaneoTest < ActionDispatch::IntegrationTest
   # el modal así. Exactamente así."*
 
   test "de otra sucursal: sucursal_distinta, nombrando las dos" do
-    @manifiesto.update!(sucursal_entrega: sucursales(:zeron_sps))
+    @manifiesto.update!(sucursales_entrega: [ sucursales(:zeron_sps) ])
     humuya = paquete("1ZHUMUYA000001")
     humuya.update_columns(sucursal_id: sucursales(:humuya_tgu).id)
 
@@ -165,7 +165,7 @@ class ManifiestoEscaneoTest < ActionDispatch::IntegrationTest
   end
 
   test "si también es de otro tipo, se dice primero el tipo, que es el que genera gasto" do
-    @manifiesto.update!(sucursal_entrega: sucursales(:zeron_sps))
+    @manifiesto.update!(sucursales_entrega: [ sucursales(:zeron_sps) ])
     cem = paquete("1ZHUMUYACEM001", tipo: tipo_envios(:cem))
     cem.update_columns(sucursal_id: sucursales(:humuya_tgu).id)
 
@@ -175,7 +175,7 @@ class ManifiestoEscaneoTest < ActionDispatch::IntegrationTest
   end
 
   test "un manifiesto sin sucursal de entrega acepta cualquiera, como hasta hoy" do
-    @manifiesto.update!(sucursal_entrega: nil)
+    @manifiesto.update!(sucursales_entrega: [])
     humuya = paquete("1ZHUMUYA000002")
     humuya.update_columns(sucursal_id: sucursales(:humuya_tgu).id)
 
@@ -185,7 +185,7 @@ class ManifiestoEscaneoTest < ActionDispatch::IntegrationTest
   end
 
   test "el paquete sin sucursal de retiro no se frena: el dato que falta es otro problema" do
-    @manifiesto.update!(sucursal_entrega: sucursales(:zeron_sps))
+    @manifiesto.update!(sucursales_entrega: [ sucursales(:zeron_sps) ])
     sin = paquete("1ZSINSUCURSAL1")
     sin.update_columns(sucursal_id: nil)
 
@@ -207,7 +207,7 @@ class ManifiestoEscaneoTest < ActionDispatch::IntegrationTest
   end
 
   test "mover no mete un paquete que va a otra sucursal" do
-    @manifiesto.update!(sucursal_entrega: sucursales(:zeron_sps))
+    @manifiesto.update!(sucursales_entrega: [ sucursales(:zeron_sps) ])
     otro = otro_manifiesto(estado: "creado")
     humuya = paquete("1ZHUMUYAMOVER1")
     humuya.update_columns(sucursal_id: sucursales(:humuya_tgu).id, manifiesto_id: otro.id)

@@ -25,7 +25,8 @@ class EtiquetaBultoCabeTest < ApplicationSystemTestCase
     @manifiesto.update!(
       consignatario: Consignatario.create!(nombre: "CORPORACION KARSAM"),
       tipo_envio_proveedor: TipoEnvioProveedor.create!(nombre: "AEREO EXPRESS"),
-      sucursal_entrega: sucursales(:humuya_tgu),
+      # C31-09 · Y va a dos sucursales: el «A:» más largo que puede salir.
+      sucursales_entrega: [ sucursales(:humuya_tgu), sucursales(:zeron_sps) ],
       es_prioridad: true
     )
     @caja = @manifiesto.cajas.create!(alto: 46, largo: 43, ancho: 50, peso: 131.5)
@@ -48,7 +49,7 @@ class EtiquetaBultoCabeTest < ApplicationSystemTestCase
   # largo. Si alguno envuelve a dos renglones, se come una línea.
   test "un consignatario y una sucursal largos tampoco la desbordan" do
     @manifiesto.consignatario.update!(nombre: "CORPORACION KARSAM DE HONDURAS S DE R L")
-    @manifiesto.sucursal_entrega.update!(nombre: "Bulevar Morazán Tegucigalpa")
+    sucursales(:humuya_tgu).update!(nombre: "Bulevar Morazán Tegucigalpa")
 
     visit etiqueta_manifiesto_caja_path(@manifiesto, @caja)
 
