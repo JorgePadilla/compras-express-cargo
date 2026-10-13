@@ -872,7 +872,7 @@ abierto están en `docs/05` — "La tabla de precios recibida (2026-08-05)".
 |---|---|---|---|
 | `PR-M1` | El portal de catálogos del manifiesto — empresas, tipos del proveedor, consignatarios y tamaños | `C21-08` | ✅ #367 |
 | `PR-M2` | El encabezado que Yusef anotó a mano, y el número que por fin lleva el año (`MM2026000001`) | `C21-02`, `C21-03`, `C21-11` | ✅ #368 |
-| `PR-M3` | Las casas del manifiesto — tamaño, medidas editables y volumen ÷166 | `C21-04` | ✅ #369 |
+| `PR-M3` | Las cajas del manifiesto — tamaño, medidas editables y volumen ÷166 | `C21-04` | ✅ #369 |
 | `PR-M4` | La etiqueta 4×6 del bulto, con el número de manifiesto que faltaba | `C21-05` | ✅ #370 |
 | `PR-M5` | El pip pip pip — escanear el paquete al meterlo a la caja | `C21-01` | ✅ #371 |
 | `PR-M6` | Finalizar manda todo a ENVIADO, y el manifiesto queda bloqueado | `C21-06` | ✅ #372 |
@@ -890,7 +890,7 @@ Y lo que salió de mirar el resultado (2026-08-30):
 | `PR-U2` | Las guías, con filas dinámicas en vez de tres renglones fijos | ✅ |
 | `PR-U3` | El date picker del proyecto en todas las fechas, con lint | ✅ |
 | `PR-U4` | El manifiesto, para dedos — y el estándar táctil de `docs/07` | ✅ |
-| `PR-U5` | Empacar y las casas, para dedos | ✅ |
+| `PR-U5` | Empacar y las cajas, para dedos | ✅ |
 | `PR-U6` | La guía del proveedor decía «guardado.» y no se guardaba — un `child_index` de texto que `permit` filtraba entero | ✅ #390 |
 | `PR-C22.1` | En modo actualización F2 no salía del modo — y la tecla para finalizar sesión (`C22-01`, `C22-02`) | ✅ |
 | `PR-P2a` | Varios roles por persona — el caso de Michelle, Caja *y* SAC (`RP-58` paso 2a) | ✅ |

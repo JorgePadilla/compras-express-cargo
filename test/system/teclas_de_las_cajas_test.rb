@@ -1,6 +1,6 @@
 require "application_system_test_case"
 
-# C23-12 · Las teclas del formulario de casas, apretadas de verdad.
+# C23-12 · Las teclas del formulario de cajas, apretadas de verdad.
 #
 # Es la única pregunta que ningún test de integración puede contestar: el HTML
 # sale igual tenga o no la tecla efecto. Lo que decide es **qué hace el
@@ -21,7 +21,7 @@ require "application_system_test_case"
 #
 # Si alguien vuelve a poner estas teclas en el controller global, este archivo
 # se pone rojo — y es el único lugar donde eso se nota.
-class TeclasDeLasCasasTest < ApplicationSystemTestCase
+class TeclasDeLasCajasTest < ApplicationSystemTestCase
   setup do
     ingresar(users(:digitador))
 

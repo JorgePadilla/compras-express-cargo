@@ -49,7 +49,7 @@ class ManifiestoEditarEnteroTest < ActionDispatch::IntegrationTest
       assert_select "#manifiesto-detalles-paquetes", text: @abierto.reload.cantidad_paquetes.to_s
       assert_select "#manifiesto-detalles-libras"
     end
-    assert_select "h2", text: "Casas del manifiesto", count: 0, message: "el frame es la tarjeta sola"
+    assert_select "h2", text: "Cajas del manifiesto", count: 0, message: "el frame es la tarjeta sola"
   end
 
   test "edit pedido entero va a la ficha con la tarjeta abierta (el lápiz de la lista)" do
@@ -339,7 +339,7 @@ class ManifiestoEditarEnteroTest < ActionDispatch::IntegrationTest
     assert_no_match(/target="manifiesto-contenido"/, response.body, "ni lo de adentro: se llevaría la pistola")
   end
 
-  # ── Las casas ───────────────────────────────────────────────────────────
+  # ── Las cajas ───────────────────────────────────────────────────────────
 
   test "las tres acciones de cada caja van juntas y el basurero no es un bloque rojo" do
     ingresar(@supervisor)
@@ -409,7 +409,7 @@ class ManifiestoEditarEnteroTest < ActionDispatch::IntegrationTest
   end
 
   def assert_contenido_editable
-    assert_select "h2", text: "Casas del manifiesto"
+    assert_select "h2", text: "Cajas del manifiesto"
     assert_select "form[action=?]", manifiesto_cajas_path(@abierto)
     assert_select "h2", text: "Agregar paquetes"
     assert_select "#buscar_paquete"

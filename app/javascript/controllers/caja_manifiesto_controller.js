@@ -58,7 +58,7 @@ export default class extends Controller {
     const boton = { F5: this.agregarTarget, F9: this.agregarEImprimirTarget }[e.key]
     if (!boton) return
     // PR-C30.15 · Tecleando en la tarjeta de detalles abierta en formulario
-    // (`data-teclas-alcance`), F5 y F9 no son de las casas: armarían una caja
+    // (`data-teclas-alcance`), F5 y F9 no son de las cajas: armarían una caja
     // y la ficha se recargaría con lo tecleado en la tarjeta. El controller
     // global la frena ahí (no hay F5 adentro), así que tampoco recarga.
     if (e.target instanceof Element && e.target.closest("[data-teclas-alcance]")) return

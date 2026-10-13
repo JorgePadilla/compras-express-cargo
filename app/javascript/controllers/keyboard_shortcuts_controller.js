@@ -64,7 +64,7 @@ import { Controller } from "@hotwired/stimulus"
 // aplicado**: desde adentro de la búsqueda, a medio escribir, bajaría el PDF
 // de un filtro que no es el que se ve en el campo, y un link sin `_blank`
 // se llevaría lo escrito. Donde F9 es «guardar e imprimir» desde un campo
-// —/etiquetar, /entrega_personal, medición, las casas del manifiesto— la
+// —/etiquetar, /entrega_personal, medición, las cajas del manifiesto— la
 // pantalla la escucha con su propio handler, que ya vale en los campos.
 //
 // Las demás (F4, F5, F6) siguen sin disparar mientras se escribe.

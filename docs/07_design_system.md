@@ -540,7 +540,7 @@ chica que la yema de un dedo.
 | Pantalla | Qué se hace ahí |
 |---|---|
 | `/etiquetar` · `/entrega_personal` | Mostrador de Miami, con pistola |
-| `/manifiestos` (new/edit y las casas) | Armar el manifiesto parado en la bodega |
+| `/manifiestos` (new/edit y las cajas) | Armar el manifiesto parado en la bodega |
 | `/recibir-carga` | Bajar el camión en Honduras |
 | `/guias-y-aduana` | San Pedro, cargando guías |
 

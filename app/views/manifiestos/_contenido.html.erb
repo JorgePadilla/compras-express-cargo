@@ -1,13 +1,13 @@
-<%# PR-C30.14 · Lo de adentro del manifiesto: las casas, agregar paquetes,
+<%# PR-C30.14 · Lo de adentro del manifiesto: las cajas, agregar paquetes,
     sacarlos escaneando y la tabla de paquetes. Lo pintan **la ficha y /edit**,
     del mismo partial. Jorge, 2026-10-10, mirando /edit: *"editar de manifiesto
     debería ser muy parecido a /manifiestos/22"* — y una copia en cada pantalla
     es el bug de siempre de este repo: el arreglo que llega a una y no a su
     gemela (`project_duplicacion_entre_pantallas`).
 
-    Locals: `manifiesto` y `paquetes`. Las casas leen además `@tamanos`; los
+    Locals: `manifiesto` y `paquetes`. Las cajas leen además `@tamanos`; los
     tres los carga `ManifiestosController#cargar_contenido`.
-    Va **afuera** de cualquier `form_with`: las casas traen su propio formulario
+    Va **afuera** de cualquier `form_with`: las cajas traen su propio formulario
     y cada basurero es un `button_to`, y un form adentro de otro no se envía. %>
 
 <%# «Sonidos», debajo del sol, en la esquina de arriba a la derecha (ver
@@ -20,7 +20,7 @@
 <% puede_cambiar = manifiesto.modificable_por?(Current.user) %>
 
 <% if puede_cambiar %>
-  <%# Paso 1 · Las casas. Va antes de agregar paquetes porque en el camino con
+  <%# Paso 1 · Las cajas. Va antes de agregar paquetes porque en el camino con
       pre-etiqueta **es** cómo entran: se arma la caja, se imprime su 4×6 y se
       escanea cada paquete al meterlo. Estaba metida adentro de la misma tarjeta
       que «Agregar paquetes», y por eso las dos se leían como una sola cosa. %>
@@ -109,7 +109,7 @@
 
   <%= render "manifiestos/quitar_escaneando", manifiesto: manifiesto %>
 <% elsif manifiesto.cajas.any? %>
-  <%# C30-06 / C30-07 · Bloqueado: las casas se ven y se re-imprimen. %>
+  <%# C30-06 / C30-07 · Bloqueado: las cajas se ven y se re-imprimen. %>
   <%= render "manifiestos/cajas_vista", manifiesto: manifiesto %>
 <% end %>
 

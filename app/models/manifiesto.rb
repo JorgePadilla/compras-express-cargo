@@ -30,7 +30,7 @@ class Manifiesto < ApplicationRecord
   has_many :manifiesto_tipo_envios, dependent: :destroy
   has_many :tipo_envios, through: :manifiesto_tipo_envios
 
-  # C21-04 · Las casas que se arman en Miami. De ellas cuelgan la etiqueta 4×6,
+  # C21-04 · Las cajas que se arman en Miami. De ellas cuelgan la etiqueta 4×6,
   # el escaneo al empacar y el escaneo al recibir en Honduras.
   has_many :cajas, -> { ordenadas }, class_name: "CajaManifiesto",
            dependent: :destroy, inverse_of: :manifiesto
@@ -154,9 +154,9 @@ class Manifiesto < ApplicationRecord
     retry
   end
 
-  # C21-04 · Con casas armadas, el peso y el volumen salen **de las casas** —
+  # C21-04 · Con cajas armadas, el peso y el volumen salen **de las cajas** —
   # que es el reporte por el que el proveedor cobra: *"yo agarro el reporte y
-  # ellos me cobran [según] el reporte"*. Sin casas cae a la suma de paquetes,
+  # ellos me cobran [según] el reporte"*. Sin cajas cae a la suma de paquetes,
   # que es como venía, para no cambiarle el número a lo que ya está grabado.
   def recalculate_totals!
     con_cajas = cajas.any?
@@ -633,19 +633,19 @@ class Manifiesto < ApplicationRecord
   # La ficha mostraba *"cero cero libras"*, y Yusef quiere los tres: *"pies,
   # libras y volumétricas… con eso ya tenemos un cálculo más exacto"*.
   #
-  # Con casas, de las casas —es el reporte por el que cobra el proveedor, igual
-  # que `recalculate_totals!`—; sin casas, de los paquetes. Se calcula al
+  # Con cajas, de las cajas —es el reporte por el que cobra el proveedor, igual
+  # que `recalculate_totals!`—; sin cajas, de los paquetes. Se calcula al
   # momento: `peso_total`/`volumen_total` se guardan al tocar una casa o un
   # paquete, pero los pies³ nunca se guardaron. La hoja impresa lee esto mismo.
   #
   # Va a la base y no a la asociación: después de un escaneo `cajas` puede
   # estar cargada de antes, y el turbo_stream subiría el total viejo.
   def totales
-    casas = CajaManifiesto.where(manifiesto_id: id).to_a
-    if casas.any?
-      { pies3: casas.sum { |c| c.pies_cubicos.to_d },
-        libras: casas.sum { |c| c.peso.to_d },
-        vlbs: casas.sum { |c| c.volumen.to_d } }
+    cajas = CajaManifiesto.where(manifiesto_id: id).to_a
+    if cajas.any?
+      { pies3: cajas.sum { |c| c.pies_cubicos.to_d },
+        libras: cajas.sum { |c| c.peso.to_d },
+        vlbs: cajas.sum { |c| c.volumen.to_d } }
     else
       sueltos = Paquete.where(manifiesto_id: id)
       { pies3: sueltos.pluck(:alto, :largo, :ancho).sum { |medidas| pies_cubicos_de(*medidas) },

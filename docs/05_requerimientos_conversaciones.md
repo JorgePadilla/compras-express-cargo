@@ -7880,12 +7880,12 @@ ella cuelga todo lo de abajo. Y la etiqueta 4×6 **no se puede expresar**:
 > finalizar e imprimir también debería estar abajo"*, *"el botón de imprimir casi
 > ni se mira"* y *"esos botones con fondo blanco cuesta demasiado verlos"*.
 >
-> Iba: **detalles → Finalizar → casas → agregar paquetes → tabla**. O sea que
-> **el cierre estaba arriba de todo lo que hay que hacer antes**. Y «Casas del
+> Iba: **detalles → Finalizar → cajas → agregar paquetes → tabla**. O sea que
+> **el cierre estaba arriba de todo lo que hay que hacer antes**. Y «Cajas del
 > manifiesto» vivía **adentro de la misma tarjeta** que «Agregar paquetes», así
 > que las dos se leían como una sola cosa en vez de como dos caminos distintos.
 >
-> Ahora va en el orden del flujograma —casas → agregar paquetes → tabla →
+> Ahora va en el orden del flujograma —cajas → agregar paquetes → tabla →
 > cerrar—, cada paso con su número y su tarjeta, y **los cierres arriba y
 > abajo**: con la tabla llena el de arriba queda a una pantalla de distancia. Es
 > la misma razón por la que la barra de atajos de `/etiquetar` está en los dos
@@ -8071,7 +8071,15 @@ Va junto con la **sucursal de entrega**, que hoy no existe en el manifiesto:
 
 ---
 
-### C21-04 · Las casas: tamaño pre-definido, medidas editables, volumen ÷166 — ✅ **IMPLEMENTADO en PR-M3**
+### C21-04 · Las cajas: tamaño pre-definido, medidas editables, volumen ÷166 — ✅ **IMPLEMENTADO en PR-M3**
+
+> **2026-10-13 · Eran «cajas», no «casas».** La transcripción de este audio
+> escribió *"casas del manifiesto"* —el whisper confunde la jota—, y así quedó
+> el título de la sección en la pantalla. Jorge lo vio: *"is casas the right
+> word here in manifiestos"*. Todo lo demás de la pantalla ya decía caja
+> («Agregar caja», la 4×6 de la caja, `CajaManifiesto`), y el sistema viejo
+> también (`TamanoCajasPredefinidoVM`). Se corrigió en la pantalla, el código y
+> estos docs.
 
 La pantalla vieja tiene diez tamaños pre-definidos —**Especificar, EH, D, 22
 Cubo, 18 Cubo, D G, EH G, E, Mini D, Mini D Doble**— y se elige **uno a la vez**.
@@ -8131,7 +8139,7 @@ El volumen sale de alto × largo × ancho ÷ **166**, que es exactamente el
 `595.78` que muestra la pantalla vieja para `46×43×50`. **Ya está en el repo**:
 `VolumetricoCalculator::DIVISOR_LB = 166.0`.
 
-Cada casa queda en la tabla con: `#`, letra (A/B/C), **NO. DOC** (`DM7155`), los
+Cada caja queda en la tabla con: `#`, letra (A/B/C), **NO. DOC** (`DM7155`), los
 tipos de envío que lleva (`CER,CKA`), alto, largo, ancho, volumen y peso; y por
 fila, borrar e imprimir. Los botones: **Solo Agregar (F5)** y **Agregar/Imprimir
 (F9)**.
@@ -9136,7 +9144,7 @@ conteo puesto: «Empacar sin escanear (23)».
 
 **El botón aparece sin una sola caja, y ése es el punto entero.** El camino sin
 escaneo es el que Yusef se quedó *"porque a veces no da tiempo"*: ahí no hay
-casas ni pistola. Adentro del `cajas.any?` que gobierna al otro botón, solo
+cajas ni pistola. Adentro del `cajas.any?` que gobierna al otro botón, solo
 habría aparecido cuando ya no hace falta.
 
 Y **los paquetes entran con `update!` uno por uno**, no con `update_all`: es la
@@ -9302,15 +9310,15 @@ El mapa de la ficha queda así:
 |---|---|---|
 | `F2` | Volver | el controller global |
 | `F4` | Imprimir manifiesto | el controller global |
-| `F5` | Agregar caja | **el formulario de casas** |
+| `F5` | Agregar caja | **el formulario de cajas** |
 | `F6` | Editar | el controller global |
 | `F8` | Finalizar e Imprimir | el controller global |
-| `F9` | **Agregar e imprimir** | **el formulario de casas** |
+| `F9` | **Agregar e imprimir** | **el formulario de cajas** |
 | `F10` | Solo Finalizar | el controller global |
 
 **El test que lo cuida es de sistema, y no podía ser otro.** El HTML sale igual
 tenga o no la tecla efecto; lo que decide es qué hace el navegador con el
-`keydown`. `teclas_de_las_casas_test` aprieta F5 y F9 **con el cursor en Peso**
+`keydown`. `teclas_de_las_cajas_test` aprieta F5 y F9 **con el cursor en Peso**
 y afirma que la caja entra. Se verificó rompiéndolo a propósito —sacándole el
 listener al formulario—: tres de sus cuatro tests se ponen rojos.
 
@@ -11768,7 +11776,7 @@ andando, pide la validación al escanear.
 **Lectura.** Un caso más en `EscaneoDeManifiesto`, con el mismo modal rojo que
 el tipo de envío distinto: si el manifiesto tiene sucursal de entrega y la
 sucursal de retiro del paquete es otra, no entra. Y la gemela: `/empacar`
-(empacar escaneando) mete paquetes en las casas del mismo manifiesto, así que
+(empacar escaneando) mete paquetes en las cajas del mismo manifiesto, así que
 lleva la misma regla.
 
 #### C29-08 · **Un sonido distinto para cada error** (min 21–22) — ✅ **HECHO** en `PR-C29.2`
@@ -11844,7 +11852,7 @@ caja de otro manifiesto, y *"ya no tengo pendientes"* al terminar.
 > "F10 le pusiste. **Normalmente es F9**, Jorge. F9 para imprimir siempre."
 > "Solo para que lo tengamos uniforme."
 
-En `/medicion` hoy F10 guarda (y con eso imprime) y F9 reimprime. En las casas
+En `/medicion` hoy F10 guarda (y con eso imprime) y F9 reimprime. En las cajas
 del manifiesto F9 es «guardar e imprimir», y en `/etiquetar` también.
 
 #### C29-14 · **Una X grande en cada caja** escaneada, no solo «quitar la última» (min 48) — ✅ **HECHO** en `PR-C29.4`

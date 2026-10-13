@@ -35,7 +35,7 @@
 class FinalizarManifiesto
   Resultado = Struct.new(:enviados, :trabados, :cajas_sin_peso, keyword_init: true) do
     # Nada pasó y nada se movió: hay que resolver las tareas (o pesar las
-    # casas) y volver a darle.
+    # cajas) y volver a darle.
     def bloqueado?
       trabados.any? || sin_peso?
     end
