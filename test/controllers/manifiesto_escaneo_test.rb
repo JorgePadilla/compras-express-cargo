@@ -120,8 +120,9 @@ class ManifiestoEscaneoTest < ActionDispatch::IntegrationTest
     assert_response :success
     @paquete.reload
     assert_equal @manifiesto, @paquete.manifiesto
-    assert_nil @paquete.caja_manifiesto_id
-    assert_equal "recibido_miami", @paquete.estado
+    assert_nil @paquete.caja_manifiesto_id, "éste no tiene cajas: entra suelto"
+    # C31-01 · Entra como cualquiera que se escanea acá: empacado.
+    assert_equal "empacado", @paquete.estado
     assert_equal 0, otro.reload.cantidad_paquetes
     assert_equal 1, @manifiesto.reload.cantidad_paquetes
   end

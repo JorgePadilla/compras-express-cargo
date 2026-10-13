@@ -36,18 +36,33 @@ class EmpacarSinEscanearTest < ActionDispatch::IntegrationTest
     assert_equal @manifiesto, dos.reload.manifiesto
   end
 
-  # **El estado no cambia** — decisión de Jorge, 2026-09-02. Yusef dice *"ya
-  # todo fue empacado"* pero está describiendo el acto: `empacado` en este
-  # sistema implica caja, y sin escaneo no hay caja
-  # (`project_manifiesto_dos_caminos`).
-  test "los paquetes se quedan en recibido_miami, sin caja" do
+  # C31-01 · **Cambia el estado.** Era al revés —decisión de Jorge del
+  # 2026-09-02: `empacado` implica caja—, y Yusef lo corrigió en la prueba del
+  # 2026-10-12: *"está bien que esté sin escanear, no le afecta, pero cambia el
+  # estatus"*. Sin caja, eso sí: no se escaneó en ninguna.
+  test "los paquetes quedan empacados, sin caja" do
     paquete = paquete_candidato(tracking: "1ZSINESC0003")
 
     post empacar_sin_escanear_manifiesto_path(@manifiesto)
 
     paquete.reload
-    assert_equal "recibido_miami", paquete.estado
+    assert_equal "empacado", paquete.estado
     assert_nil paquete.caja_manifiesto_id
+  end
+
+  # *"Que los ingrese y no tire error."* El de la tarea pendiente entra al
+  # manifiesto pero no avanza, y el aviso lo nombra; el resto entra igual.
+  test "el que tiene una tarea pendiente entra sin avanzar, y no frena a los demás" do
+    libre = paquete_candidato(tracking: "1ZSINESC0010")
+    trabado = paquete_candidato(tracking: "1ZSINESC0011")
+    Tarea.create!(paquete: trabado, titulo: "Revisar", estado: "pendiente", bloquea_avance: true)
+
+    post empacar_sin_escanear_manifiesto_path(@manifiesto)
+
+    assert_equal "empacado", libre.reload.estado
+    assert_equal @manifiesto, trabado.reload.manifiesto
+    assert_equal "recibido_miami", trabado.estado
+    assert_match(/tareas pendientes/, flash[:notice])
   end
 
   test "recalcula los totales del manifiesto" do
@@ -212,13 +227,16 @@ class EmpacarSinEscanearTest < ActionDispatch::IntegrationTest
     assert_no_match(/Empacar sin escanear \(/, response.body)
   end
 
-  # *"O sea, aquí está empacar escaneando. Y aquí sería sin escanear."*
-  test "el de la pistola dice que es escaneando" do
-    @manifiesto.cajas.create!(alto: 10, largo: 10, ancho: 10, peso: 5)
+  # C31-01 · «Empacar escaneando» se fue: *"queremos eliminar ese empacar
+  # escaneando… que sea esta barra que está abajo"*. La barra dice en qué caja
+  # entra lo que se escanee.
+  test "la ficha ya no manda a /empacar: la barra dice en qué caja entra" do
+    caja = @manifiesto.cajas.create!(alto: 10, largo: 10, ancho: 10, peso: 5)
 
     get manifiesto_path(@manifiesto)
 
-    assert_select "a[href=?]", manifiesto_empacar_path(@manifiesto), text: /Empacar escaneando/
+    assert_select "a[href=?]", manifiesto_empacar_path(@manifiesto), count: 0
+    assert_select "[data-caja-activa=?]", caja.letra, text: /#{Regexp.escape(caja.codigo)}/
   end
 
   # *"Tienen que saber ellos qué son los que hicieron sin escanear."*

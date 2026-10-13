@@ -452,6 +452,42 @@ class Manifiesto < ApplicationRecord
     end
   end
 
+  # C31-01 · Meter un paquete **empacándolo**: lo que hacen la barra de la ficha
+  # y «Empacar sin escanear». Yusef, en la prueba del 2026-10-12, con todo
+  # «sin escanear» en pantalla: *"si yo le doy empacar sin escanear… siempre
+  # diga que está empacado… está bien que esté sin escanear, no le afecta,
+  # pero cambia el estatus"*.
+  #
+  # `caja` es la caja abierta de quien escanea (`CajaActivaDelManifiesto`), o
+  # nil cuando no hay cajas o el camino es sin escanear.
+  def empacar!(paquete, user:, caja: nil)
+    meter!(paquete, user: user, **cambios_al_entrar(paquete, caja: caja))
+  end
+
+  # Lo que un paquete se lleva al entrar, además del manifiesto.
+  #
+  # - **La caja**, si hay una abierta: es la que dice dónde viaja, y la que al
+  #   escanearse en San Pedro lo pasa a aduana (`RecibirManifiesto#recibir_caja!`).
+  # - **`empacado`**, solo en el oficial y desde `recibido_miami`. En el interno
+  #   la carga sale de `disponible_entrega`, y empacado sería un paso atrás.
+  # - El que tiene una **tarea pendiente** entra igual pero no avanza: la guarda
+  #   del modelo (`no_advance_with_open_tareas`) lo frenaría con un error, y
+  #   Yusef pidió que *"no tire error"*. Lo frena el cierre, que lo dice
+  #   (`FinalizarManifiesto`).
+  #
+  # Esto **revierte la decisión de Jorge del 2026-09-02** (`empacado` implica
+  # caja, y el camino sin escaneo dejaba `recibido_miami`): Yusef lo corrigió
+  # mirando la pantalla.
+  def cambios_al_entrar(paquete, caja: nil)
+    cambios = { caja_manifiesto: caja }
+    if tipo_oficial? && paquete.estado.in?(%w[recibido_miami empacado]) && !paquete.tareas_bloqueantes_pendientes?
+      # `estado: "empacado"` escrito así, literal: `procesos_pdf_test` busca
+      # quién escribe cada estado con esa forma.
+      cambios.merge!(estado: "empacado")
+    end
+    cambios
+  end
+
   # C21-02 · Lo que la pantalla de San Pedro tiene para trabajar: la carga que ya
   # salió de Miami y todavía no tiene su guía del proveedor **o** su fecha de
   # recibido en Honduras.

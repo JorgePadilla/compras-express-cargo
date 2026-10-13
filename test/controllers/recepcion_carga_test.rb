@@ -50,6 +50,20 @@ class RecepcionCargaTest < ActionDispatch::IntegrationTest
                         "un manifiesto que Miami todavía no finalizó no se recibe"
   end
 
+  # C31-01 · El que no puede pasar a aduana se nombra. `mover_a_aduana` usa
+  # `update` y el resultado se tiraba: la pantalla decía «1 paquete(s) a
+  # aduana» con el paquete trabado en enviado.
+  test "la caja dice cuál de adentro no pasó a aduana, y por qué" do
+    Tarea.create!(paquete: @paquete, titulo: "Revisar", estado: "pendiente", bloquea_avance: true)
+
+    escanear(@caja.codigo)
+
+    assert_equal "ok", json["resultado"], "no frena la recepción (A7-05)"
+    assert_match(/0 paquete\(s\) a aduana/, json["mensaje"])
+    assert_match(/No pasaron: .*tareas pendientes/, json["mensaje"])
+    assert_equal "enviado_honduras", @paquete.reload.estado
+  end
+
   # *"Escanearon cada caja, cada etiqueta de manifiesto. No escanean los
   # paquetes, solo escanean las cajas"* (`A7-06`).
   test "se escanean cajas, y sus paquetes pasan a aduana" do

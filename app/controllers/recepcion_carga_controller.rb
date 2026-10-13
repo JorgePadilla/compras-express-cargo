@@ -158,10 +158,18 @@ class RecepcionCargaController < ApplicationController
                mensaje: "La caja #{caja.letra} de #{@manifiesto.numero} ya estaba recibida." }
     end
 
-    servicio.recibir_caja!(caja)
+    trabados = servicio.recibir_caja!(caja)
+    mensaje = "Caja #{caja.letra} de #{@manifiesto.numero} recibida — " \
+              "#{caja.paquetes.size - trabados.size} paquete(s) a aduana."
+    # C31-01 · El que no pudo pasar se nombra, con el porqué: decir «N a
+    # aduana» con uno trabado es lo que dejaba a San Pedro sin entender.
+    if trabados.any?
+      mensaje += " No pasaron: " + trabados.map { |p|
+        "#{p.numero_recepcion_visible.presence || p.tracking} (#{p.errors.full_messages.to_sentence.presence || p.estado.humanize})"
+      }.join(", ") + "."
+    end
     { resultado: "ok", caja_id: caja.id, letra: caja.letra, manifiesto: progreso,
-      mensaje: "Caja #{caja.letra} de #{@manifiesto.numero} recibida — #{caja.paquetes.size} paquete(s) a aduana.",
-      faltan: @manifiesto.cajas.where(recibida_at: nil).count }
+      mensaje: mensaje, faltan: @manifiesto.cajas.where(recibida_at: nil).count }
   end
 
   def recibir_el_paquete(paquete)

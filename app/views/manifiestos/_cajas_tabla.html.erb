@@ -15,6 +15,9 @@
     `caja.paquetes` viene precargado desde `ManifiestosController#show`
     (`cajas → paquetes → tipo_envio`): la columna nueva no suma consultas. %>
 <% editable = local_assigns.fetch(:editable, false) %>
+<%# C31-01 · La caja en la que entra lo que se escanea en la barra. Solo con el
+    manifiesto abierto: bloqueado no entra nada. %>
+<% activa = editable ? caja_activa_del_manifiesto(manifiesto) : nil %>
 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
   <thead class="bg-gray-50 dark:bg-gray-900">
     <tr>
@@ -32,7 +35,9 @@
   <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
     <% manifiesto.cajas.each_with_index do |caja, i| %>
       <% adentro = caja.paquetes.sort_by { |p| [ p.numero_recepcion.to_s, p.numero_caja.to_i, p.id ] } %>
-      <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 align-top" data-caja="<%= caja.letra %>">
+      <% es_activa = activa&.id == caja.id %>
+      <tr class="<%= es_activa ? "bg-cec-gold/10" : "hover:bg-gray-50 dark:hover:bg-gray-700/40" %> align-top"
+          data-caja="<%= caja.letra %>" <%= "data-caja-activa-fila" if es_activa %>>
         <td class="px-4 py-3 text-sm text-gray-500"><%= i + 1 %></td>
         <td class="px-4 py-3 text-sm font-mono font-medium text-cec-navy dark:text-cec-gold"><%= caja.codigo %></td>
         <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200"><%= caja.tamano_caja&.nombre || "Especificar" %></td>
@@ -47,7 +52,9 @@
               <%= safe_join(adentro.map { |p| etiqueta_codigo_barras(p) || p.tracking }, " · ") %>
             </p>
           <% else %>
-            <span class="text-xs text-gray-500 dark:text-gray-400">vacía</span>
+            <%# C31-06 · Yusef: *"aquí en vez de vacía deberías decir empacado sin
+                escanear"* — la caja que se armó y se llenó sin pistola. %>
+            <span class="text-xs text-gray-500 dark:text-gray-400">Empacado sin escanear</span>
           <% end %>
         </td>
         <td class="px-4 py-3 text-right whitespace-nowrap">
@@ -61,6 +68,16 @@
               sigue cuidando el borrado. %>
           <div class="inline-flex items-center justify-end gap-1.5">
           <% if editable %>
+            <%# C31-01 · «Usar esta»: lo que se escanee abajo entra en esta caja.
+                La recién armada ya es la abierta; esto es para volver a una
+                anterior. %>
+            <% if es_activa %>
+              <span class="inline-flex items-center rounded-full bg-cec-gold/20 px-2.5 py-1 text-xs font-semibold text-cec-navy dark:text-cec-gold">Abierta</span>
+            <% else %>
+              <%= render ButtonComponent.new(variant: :secondary, size: :xs, icon: "inbox-arrow-down",
+                    href: usar_manifiesto_caja_path(manifiesto, caja), method: :patch, form_class: "contents",
+                    label: "Usar la caja #{caja.letra}: lo que escanees entra en ella") { "Usar esta" } %>
+            <% end %>
             <%= render ButtonComponent.new(variant: :secondary, size: :xs, icon: "pencil-square",
                   label: "Editar la caja #{caja.letra}",
                   data: { action: "caja-manifiesto#editar",

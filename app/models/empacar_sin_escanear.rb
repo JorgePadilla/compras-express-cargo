@@ -20,13 +20,15 @@
 #
 # ── Las dos decisiones que el audio no traía (Jorge, 2026-09-02) ─────────────
 #
-# **1 · El estado no cambia.** Yusef dice *"ya todo fue empacado"*, pero está
-# describiendo el acto, no el estatus: `empacado` en este sistema **implica
-# caja**, y sin escaneo no hay caja. Lo escribe solo el camino con pistola y
-# está documentado que nada puede exigirlo (`project_manifiesto_dos_caminos`).
-# Así que acá los paquetes **se quedan en `recibido_miami`** y solo se atan al
-# manifiesto — que es lo mismo que ya hacía `add_paquete`, y por eso sacarlos
-# después con `remove_paquete` los deja donde estaban.
+# **1 · ~~El estado no cambia~~ — revertida en C31-01 (2026-10-12).** Jorge
+# había decidido que `empacado` implica caja y que acá los paquetes se quedaban
+# en `recibido_miami`. En la prueba de punta a punta Yusef lo corrigió mirando
+# la pantalla: *"si yo le doy empacar sin escanear… siempre diga que está
+# empacado… está bien que esté sin escanear, no le afecta, pero **cambia el
+# estatus**"*. Ahora entran como cualquier paquete que se escanea, por
+# `Manifiesto#cambios_al_entrar` —empacados, sin caja—, y el que tiene una
+# tarea pendiente entra pero no avanza (`trabados`): *"que los ingrese y no
+# tire error"*.
 #
 # **2 · Filtra por la sucursal de origen del manifiesto.** Él dijo «todos los
 # del tipo de servicio». En Miami eso da igual porque hoy todo sale de ahí, pero
@@ -58,7 +60,7 @@
 # `NotificarLlegadaASucursal` avisa por ésos—. Lo que todavía está en aduana no
 # se ha trabajado; mandarlo a otra sucursal sería moverlo antes de saber qué es.
 class EmpacarSinEscanear
-  Resultado = Struct.new(:agregados, keyword_init: true) do
+  Resultado = Struct.new(:agregados, :trabados, keyword_init: true) do
     def ninguno? = agregados.zero?
   end
 
@@ -106,21 +108,23 @@ class EmpacarSinEscanear
   # `update!` uno por uno y **no `update_all`**. Es la lección que dejó escrita
   # `FinalizarManifiesto`: el `update_all` saltea la bitácora de paper_trail, y
   # en un módulo donde alguien va a preguntar «¿quién metió esto?» eso es justo
-  # lo que se necesita. Acá el estado no cambia, pero el `manifiesto_id` sí, y
-  # esa es la pregunta.
+  # lo que se necesita.
   def call
     agregados = 0
+    trabados = []
 
     Manifiesto.transaction do
       candidatos.find_each do |paquete|
-        paquete.update!(manifiesto: @manifiesto)
+        cambios = @manifiesto.cambios_al_entrar(paquete)
+        trabados << paquete if @manifiesto.tipo_oficial? && !cambios.key?(:estado)
+        paquete.update!(manifiesto: @manifiesto, **cambios)
         agregados += 1
       end
 
       @manifiesto.recalculate_totals! if agregados.positive?
     end
 
-    Resultado.new(agregados: agregados)
+    Resultado.new(agregados: agregados, trabados: trabados)
   end
 
   # El estado que Yusef nombró, con su nombre. Vive acá y no suelto en el

@@ -10,15 +10,16 @@
 # medida, porque la cortan… le decimos «EH cortada»"*.
 class CajasManifiestoController < ApplicationController
   include CandadoDelManifiesto
+  include CajaActivaDelManifiesto
 
   before_action :authorize_manifiestos
   before_action :set_manifiesto
-  before_action :set_caja, only: %i[update destroy etiqueta]
+  before_action :set_caja, only: %i[update destroy etiqueta usar]
   # C30-06 · Armar, corregir y borrar cajas, solo con el manifiesto abierto (o
   # reabierto con «Editar»). Re-imprimir las 4×6 queda siempre: *"podés
   # reimprimir etiquetas, porque esas se te pueden dañar… lo que no vas a poder
   # hacer es modificar nada, hasta que le dejes editar"*.
-  before_action :exigir_modificable, only: %i[create update destroy]
+  before_action :exigir_modificable, only: %i[create update destroy usar]
 
   # C21-05 · La 4×6 del bulto. Yusef escribió a mano sobre la etiqueta impresa
   # lo que le faltaba —**«Falta el número del manifiesto»**— y, junto al código
@@ -57,6 +58,10 @@ class CajasManifiestoController < ApplicationController
 
     if @caja.save
       @manifiesto.recalculate_totals!
+      # C31-01 · La caja recién armada es la que se llena: lo que se escanee
+      # ahora en la barra entra en ella. Es la secuencia exacta de Yusef —
+      # *"le pongo 20 libras y le doy a agregar e imprimir"*, y a escanear.
+      guardar_caja_activa(@manifiesto, @caja)
 
       # C23-05 · *"Después de que le damos a agregar, de un solo… te las
       # imprimo"* · *"sí, que le tire la que está haciendo de un solo"*.
@@ -98,6 +103,24 @@ class CajasManifiestoController < ApplicationController
       redirect_to @manifiesto, notice: "Caja #{@caja.letra} actualizada."
     else
       redirect_to @manifiesto, alert: @caja.errors.full_messages.to_sentence
+    end
+  end
+
+  # C31-01 · «Usar esta»: cambiar la caja en la que entra lo que se escanea. Se
+  # contesta con la tabla de cajas y el cartel de la barra, sin recargar: el
+  # operario tiene la pistola en la mano y la barra tiene el foco.
+  def usar
+    guardar_caja_activa(@manifiesto, @caja)
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: [
+          turbo_stream.update("manifiesto-cajas-tabla", partial: "manifiestos/cajas_tabla",
+                                                        locals: { manifiesto: @manifiesto, editable: true }),
+          turbo_stream.update("manifiesto-caja-activa", partial: "manifiestos/caja_activa",
+                                                        locals: { manifiesto: @manifiesto })
+        ]
+      end
+      format.html { redirect_to @manifiesto, notice: "Lo que escanees entra en la caja #{@caja.letra}." }
     end
   end
 
