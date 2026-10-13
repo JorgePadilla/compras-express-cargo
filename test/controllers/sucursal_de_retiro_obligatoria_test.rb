@@ -29,6 +29,21 @@ class SucursalDeRetiroObligatoriaTest < ActionDispatch::IntegrationTest
     assert_match "hay que elegir dónde va a retirar", response.body
   end
 
+  # Jorge, 2026-10-13: *"deberíamos poner default la opción de SPS cuando se
+  # está creando el cliente"*. Viene marcada en las dos puertas; se cambia si
+  # retira en otra, y sigue sin poder quedar vacía.
+  test "al crear, la sucursal viene marcada en San Pedro, en /clientes y en el registro" do
+    sps = sucursales(:zeron_sps)
+
+    entrar_como :admin
+    get new_cliente_url
+    assert_select "select[name='cliente[sucursal_retiro_id]'] option[selected][value='#{sps.id}']"
+
+    delete session_url
+    get new_registro_url
+    assert_select "select[name='cliente[sucursal_retiro_id]'] option[selected][value='#{sps.id}']"
+  end
+
   test "con la sucursal elegida, sí" do
     entrar_como :admin
 
