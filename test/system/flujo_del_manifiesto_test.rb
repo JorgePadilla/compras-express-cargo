@@ -159,7 +159,7 @@ class FlujoDelManifiestoTest < ApplicationSystemTestCase
     abrir_manifiestos
     crear_manifiesto
 
-    # Sin casas, la barra avisa que entra suelto.
+    # Sin cajas, la barra avisa que entra suelto.
     assert_text "Sin cajas: el paquete entra suelto", wait: 5
 
     find("label", text: tamano_cajas(:mediana).nombre).click

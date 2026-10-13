@@ -26,7 +26,7 @@ class ManifiestosController < ApplicationController
   # to edit the current view plus all what is in the manifiesto, something
   # like this view /manifiestos/24"*. La tarjeta «Detalles del Manifiesto» es
   # un Turbo Frame (`manifiesto-detalles`) que se da vuelta a formulario; las
-  # casas y los paquetes ya se editaban en la ficha.
+  # cajas y los paquetes ya se editaban en la ficha.
   #
   # Tres formas de llegar:
   # - el frame pide la ficha («Cancelar» adentro del formulario) → la tarjeta
@@ -317,7 +317,7 @@ class ManifiestosController < ApplicationController
   #
   # PR-C30.15 · Y aterriza con la tarjeta del encabezado **ya en formulario**
   # (`?editar=1`): el supervisor apretó «Editar» una vez, y lo que se abre es
-  # el manifiesto entero —encabezado, casas y paquetes—, en la misma ficha.
+  # el manifiesto entero —encabezado, cajas y paquetes—, en la misma ficha.
   def abrir_edicion
     @manifiesto.abrir_edicion!(Current.user)
     redirect_to manifiesto_path(@manifiesto, editar: 1),
@@ -517,14 +517,14 @@ class ManifiestosController < ApplicationController
     @manifiesto = Manifiesto.find(params[:id])
   end
 
-  # Lo que pintan las casas y la tabla de paquetes (`manifiestos/_contenido`).
+  # Lo que pintan las cajas y la tabla de paquetes (`manifiestos/_contenido`).
   # Una sola carga para la ficha y el turbo_stream de cada cambio (PR-C30.14):
   # eran dos copias de la misma precarga.
   private def cargar_contenido
     # C21-04: los tamaños pre-definidos con los que se arma una casa.
     @tamanos = TamanoCaja.activos.ordered
     @paquetes = @manifiesto.paquetes.includes(:cliente, :sucursal, :sucursal_destino, :caja_manifiesto).order(:created_at)
-    # PR-C29.20 · La tabla de casas pinta, por cada caja, su tamaño y los tipos
+    # PR-C29.20 · La tabla de cajas pinta, por cada caja, su tamaño y los tipos
     # de envío que lleva adentro (`CajaManifiesto#tipos_envio_adentro`, que
     # recorre sus paquetes). Sin precargar eran dos consultas por caja: con 15
     # cajas la ficha pasaba de 27 consultas a 39.
@@ -534,7 +534,7 @@ class ManifiestosController < ApplicationController
   end
 
   def respond_to_paquete_change(message, tipo: :notice, status: :ok)
-    # C30-07 · La tabla de casas dice qué lleva cada una: si un paquete entra o
+    # C30-07 · La tabla de cajas dice qué lleva cada una: si un paquete entra o
     # sale, esa columna también cambia. Misma carga que `show`.
     @manifiesto.reload
     cargar_contenido

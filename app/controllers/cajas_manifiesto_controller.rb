@@ -1,7 +1,7 @@
-# C21-04 · Armar las casas de un manifiesto.
+# C21-04 · Armar las cajas de un manifiesto.
 #
 # La pantalla vieja tiene dos botones —**Solo Agregar (F5)** y
-# **Agregar/Imprimir (F9)**— y una tabla con las casas armadas. Acá va la mitad
+# **Agregar/Imprimir (F9)**— y una tabla con las cajas armadas. Acá va la mitad
 # de datos; la impresión de la 4×6 llega en `PR-M4`.
 #
 # El tamaño pre-definido pre-llena las medidas y **el cursor va al peso**:

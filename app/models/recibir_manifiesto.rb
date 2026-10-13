@@ -103,7 +103,7 @@ class RecibirManifiesto
   #
   # Yusef, describiendo lo que ya hacen: *"yo veo que escanean el manifiesto y
   # empiezan a **escanear paquete por paquete** para cuadrar el manifiesto"*. El
-  # interno lleva carga suelta, no casas armadas.
+  # interno lleva carga suelta, no cajas armadas.
   #
   # «Escaneado» no necesita columna nueva: el paquete **se mueve al escanearlo**,
   # igual que en el oficial una caja mueve a los suyos en el acto. Lo que no se

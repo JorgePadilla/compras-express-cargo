@@ -79,7 +79,7 @@ class ManifiestoEstadoPesoTotalesTest < ActiveSupport::TestCase
 
   # ── C31-08 ──────────────────────────────────────────────────────────────
 
-  test "con casas, los tres totales salen de las casas" do
+  test "con cajas, los tres totales salen de las cajas" do
     @manifiesto.cajas.create!(alto: 12, largo: 12, ancho: 12, peso: 20)   # 1 pie³
     @manifiesto.cajas.create!(alto: 24, largo: 12, ancho: 12, peso: 30.5) # 2 pies³
 
@@ -90,7 +90,7 @@ class ManifiestoEstadoPesoTotalesTest < ActiveSupport::TestCase
     assert_equal @manifiesto.cajas.sum(:volumen), totales[:vlbs]
   end
 
-  test "sin casas, salen de los paquetes" do
+  test "sin cajas, salen de los paquetes" do
     paquete_en(@manifiesto, alto: 12, largo: 12, ancho: 12, peso: 8, volumen: 10.41)
     paquete_en(@manifiesto)   # sin medidas: no suma pies³
 

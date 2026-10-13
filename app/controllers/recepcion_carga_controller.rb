@@ -30,7 +30,7 @@ class RecepcionCargaController < ApplicationController
   end
 
   def show
-    # `A7-08` · El interno se cuadra **paquete por paquete**: no lleva casas.
+    # `A7-08` · El interno se cuadra **paquete por paquete**: no lleva cajas.
     if @manifiesto.tipo_interno?
       @pendientes = servicio.paquetes_pendientes.includes(:cliente).to_a
       @recibidos = @manifiesto.paquetes.where(estado: "disponible_entrega").includes(:cliente).to_a

@@ -1,6 +1,6 @@
 require "test_helper"
 
-# C21-04 · Las casas del manifiesto.
+# C21-04 · Las cajas del manifiesto.
 #
 # Yusef, mostrando la bodega por cámara: *"solo vamos a etiquetar la caja ahí
 # empacada"*. Es la entidad que `docs/06` daba por faltante desde la
@@ -105,8 +105,8 @@ class CajaManifiestoTest < ActiveSupport::TestCase
     assert_not_equal a1.codigo, a2.codigo
   end
 
-  # *"Yo agarro el reporte y ellos me cobran [según] el reporte."* Con casas
-  # armadas, el total del manifiesto es el de las casas — no la suma de los
+  # *"Yo agarro el reporte y ellos me cobran [según] el reporte."* Con cajas
+  # armadas, el total del manifiesto es el de las cajas — no la suma de los
   # paquetes sueltos.
   test "los totales del manifiesto salen de las cajas, que es lo que el proveedor cobra" do
     @manifiesto.cajas.create!(tamano_caja: @mini_d, peso: 131)

@@ -1,6 +1,6 @@
 require "test_helper"
 
-# C23-05 · «Agregar e imprimir», el segundo botón de las casas.
+# C23-05 · «Agregar e imprimir», el segundo botón de las cajas.
 #
 #   > "Acá un detalle que sería bueno, que **después de que le damos a agregar,
 #   >  de un solo** te… te las imprimo."
@@ -164,7 +164,7 @@ class CajaAgregarEImprimirTest < ActionDispatch::IntegrationTest
 
     get manifiesto_path(@manifiesto)
 
-    assert_select "[data-shortcut='F9']", 0, "F9 quedó para el formulario de casas"
+    assert_select "[data-shortcut='F9']", 0, "F9 quedó para el formulario de cajas"
     # El bloque de cierre sale arriba y abajo: son dos «Solo Finalizar».
     f8 = css_select("[data-shortcut='F8']").map { |el| el.text.squish }
     assert f8.any?, "sin «Solo Finalizar» este test no prueba nada"
@@ -177,7 +177,7 @@ class CajaAgregarEImprimirTest < ActionDispatch::IntegrationTest
   # Tres tests acá afirmaban que el formulario tenía dónde teclearlo y que se
   # guardaba. El sistema viejo lo fabrica (`"DM" + id`) y nadie lo escribe;
   # acá la caja se identifica por `codigo`. Que no vuelva el campo.
-  test "RP-61 · el formulario de casas no pide ningún No. Doc" do
+  test "RP-61 · el formulario de cajas no pide ningún No. Doc" do
     get manifiesto_path(@manifiesto)
 
     assert_select "input[name='caja_manifiesto[numero_doc]']", 0

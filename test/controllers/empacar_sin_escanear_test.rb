@@ -208,7 +208,7 @@ class EmpacarSinEscanearTest < ActionDispatch::IntegrationTest
 
   # **El botón tiene que estar sin una sola caja**, que es el punto entero: el
   # camino sin escaneo se quedó *"porque a veces no da tiempo"*, y ahí no hay
-  # casas ni pistola. Adentro del `cajas.any?` solo aparecería cuando ya no
+  # cajas ni pistola. Adentro del `cajas.any?` solo aparecería cuando ya no
   # hace falta.
   test "el botón aparece aunque el manifiesto no tenga ninguna caja" do
     paquete_candidato(tracking: "1ZSINCAJAS01")

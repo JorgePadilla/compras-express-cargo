@@ -4,7 +4,7 @@ require "test_helper"
 #
 # Yusef, describiendo lo que ya hacen a mano: *"yo veo que escanean el manifiesto
 # y empiezan a **escanear paquete por paquete** para cuadrar el manifiesto"*. El
-# interno lleva carga suelta, no casas armadas, así que la unidad que la pistola
+# interno lleva carga suelta, no cajas armadas, así que la unidad que la pistola
 # lee es el paquete.
 #
 # Y llega a `disponible_entrega` **en la sucursal destino**, que es lo que

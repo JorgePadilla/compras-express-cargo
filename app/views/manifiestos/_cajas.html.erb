@@ -1,4 +1,4 @@
-<%# C21-04 · Las casas del manifiesto.
+<%# C21-04 · Las cajas del manifiesto.
     El tamaño pre-definido pre-llena las medidas y el foco salta al peso —
     *"te ponen solo el cursor a peso, porque es lo que le vas a meter a
     ingresar, que es lo que hace falta"*—, pero las medidas quedan editables,
@@ -9,7 +9,7 @@
       <span class="shrink-0 w-7 h-7 rounded-full bg-cec-navy/10 text-cec-navy dark:bg-cec-gold/20 dark:text-cec-gold
                    flex items-center justify-center text-sm font-bold">1</span>
       <div>
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Casas del manifiesto</h2>
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Cajas del manifiesto</h2>
         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
           El camino con pre-etiqueta: se arma la caja, se imprime su 4×6 y se escanea cada paquete abajo, en «Agregar paquetes»: entra en la caja abierta.
           El volumen sale de alto × largo × ancho ÷ 166 — es el reporte por el que cobra el proveedor.
@@ -34,7 +34,7 @@
 
       <%# **Va afuera del `cajas.any?`, y ése es el punto entero.** El camino
           sin escaneo es el que Yusef se quedó *"porque a veces no da tiempo"*,
-          y ahí no hay casas ni pistola: si el botón viviera adentro de la
+          y ahí no hay cajas ni pistola: si el botón viviera adentro de la
           condición, solo aparecería cuando ya no hace falta. %>
       <% if sin_escanear.aplica? %>
         <%= render ButtonComponent.new(variant: :outline_navy, icon: "bolt",

@@ -36,7 +36,7 @@
     <p class="text-xs text-gray-500 mt-1">
       <% if @manifiesto.tipo_interno? %>
         <%# `A7-08` · *"Empiezan a escanear paquete por paquete para cuadrar el
-            manifiesto."* El interno lleva carga suelta, no casas. %>
+            manifiesto."* El interno lleva carga suelta, no cajas. %>
         Cada paquete queda <b>disponible en <%= @manifiesto.sucursal_entrega&.nombre %></b> al escanearlo.
         Se escanean paquetes, no cajas.
       <% else %>
