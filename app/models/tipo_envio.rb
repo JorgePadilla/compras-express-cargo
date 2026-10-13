@@ -8,6 +8,9 @@ class TipoEnvio < ApplicationRecord
   # incluso ese borrado excepcional.
   has_many :manifiesto_tipo_envios, dependent: :destroy
   validates :nombre, presence: true
+  # C31-11 · Cuántos días hábiles tarda el servicio, para la «posible fecha de
+  # entrega» (`FechaDeEntrega`). Vacío = el correo no promete fecha.
+  validates :dias_entrega, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
 
   scope :activos, -> { where(activo: true) }
   scope :aereos, -> { where(modalidad: "aereo") }

@@ -95,6 +95,11 @@ module PaqueteTimelineHelper
       else
         []
       end
+    # C31-11 · La «posible fecha de entrega» se fija al recibir —días hábiles
+    # desde acá—, así que va colgada de este paso y no solo de «Disponible».
+    when :fecha_recibido_miami
+      fecha = paquete.fecha_posible_entrega
+      fecha ? [ [ "calendar", "Posible entrega #{fecha.strftime('%d/%m/%Y')}" ] ] : []
     when :fecha_pre_alerta
       pa = paquete.pre_alerta_paquetes.first&.pre_alerta
       return [] unless pa

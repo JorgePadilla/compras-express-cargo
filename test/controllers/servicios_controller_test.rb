@@ -251,4 +251,38 @@ class ServiciosControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(%r{href="/categorias-precio"}, response.body,
                     "el listado de grupos dejó de ser una pantalla")
   end
+
+  # C31-11 · Los días hábiles de entrega se editan donde viven los servicios:
+  # *"para mí debería estar donde vos tengas los tipos de servicio"*.
+  test "editar_dias cambia los días de entrega del servicio" do
+    cer = tipo_envios(:cer)
+
+    get servicios_url
+    assert_select "form[action=?]", dias_entrega_servicio_path(cer)
+
+    patch dias_entrega_servicio_url(cer), params: { dias_entrega: "12" }
+
+    assert_redirected_to servicios_path(anchor: "servicio-#{cer.id}")
+    assert_equal 12, cer.reload.dias_entrega
+  end
+
+  test "editar_dias vacío deja el servicio sin fecha, y un cero no entra" do
+    cer = tipo_envios(:cer)
+
+    patch dias_entrega_servicio_url(cer), params: { dias_entrega: "0" }
+    assert_equal 10, cer.reload.dias_entrega
+    assert flash[:alert].present?
+
+    patch dias_entrega_servicio_url(cer), params: { dias_entrega: "" }
+    assert_nil cer.reload.dias_entrega
+  end
+
+  test "editar_dias es de admin" do
+    login_as users(:digitador)
+
+    patch dias_entrega_servicio_url(tipo_envios(:cer)), params: { dias_entrega: "3" }
+
+    assert_redirected_to root_path
+    assert_equal 10, tipo_envios(:cer).reload.dias_entrega
+  end
 end

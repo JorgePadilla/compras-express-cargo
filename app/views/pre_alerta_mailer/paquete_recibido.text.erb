@@ -5,6 +5,10 @@ Tu paquete con tracking <%= @paquete.tracking %> ha sido recibido en nuestra bod
 Nota sobre este paquete:
 <%= @nota %>
 <% end %>
+<% if @fecha_entrega %>
+Posible fecha de entrega: <%= @fecha_entrega %>.
+<% else %>
 Sera incluido en el proximo envio disponible.
+<% end %>
 
 Gracias por usar Compras Express Cargo.

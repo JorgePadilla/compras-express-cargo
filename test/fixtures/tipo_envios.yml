@@ -7,6 +7,7 @@ express:
   precio_libra: 7.50
   modalidad: aereo
   sla: 3-7 dias habiles
+  dias_entrega: 7
 
 cer:
   nombre: CER
@@ -17,6 +18,7 @@ cer:
   precio_libra: 4.50
   modalidad: aereo
   sla: 6-10 dias habiles
+  dias_entrega: 10
 
 cem:
   nombre: CEM
@@ -27,6 +29,7 @@ cem:
   precio_libra: 2.50
   modalidad: maritimo
   sla: 14-17 dias habiles
+  dias_entrega: 17
 
 cka:
   nombre: CKA
@@ -37,6 +40,7 @@ cka:
   precio_libra: 4.00
   modalidad: aereo
   sla: 6-10 dias habiles
+  dias_entrega: 10
   max_paquetes_por_accion: 1
 
 ckm:
@@ -48,6 +52,7 @@ ckm:
   precio_libra: 1.90
   modalidad: maritimo
   sla: 14-17 dias habiles
+  dias_entrega: 17
   max_paquetes_por_accion: 1
 
 # Backwards-compat aliases for existing tests that reference :aereo / :maritimo
@@ -60,6 +65,7 @@ aereo:
   precio_libra: 4.50
   modalidad: aereo
   sla: 6-10 dias habiles
+  dias_entrega: 10
 
 maritimo:
   nombre: CEM Legacy
@@ -70,3 +76,4 @@ maritimo:
   precio_libra: 2.50
   modalidad: maritimo
   sla: 14-17 dias habiles
+  dias_entrega: 17

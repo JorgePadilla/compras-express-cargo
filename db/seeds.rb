@@ -54,15 +54,15 @@ puts "  ✓ #{Sucursal.count} sucursales (retiro por defecto: #{Sucursal.find_by
 # ── Tipos de envio (v4.0 — ver docs/approved/pre_alerta_v4.docx) ──
 [
   { nombre: "EXPRESS", codigo: "express", con_reempaque: true,  consolidable: true,
-    precio_libra: 7.50, modalidad: "aereo",    sla: "3-7 dias habiles",   max_paquetes_por_accion: nil },
+    precio_libra: 7.50, modalidad: "aereo",    sla: "3-7 dias habiles", dias_entrega: 7,   max_paquetes_por_accion: nil },
   { nombre: "CER",     codigo: "cer",     con_reempaque: true,  consolidable: true,
-    precio_libra: 4.50, modalidad: "aereo",    sla: "6-10 dias habiles",  max_paquetes_por_accion: nil },
+    precio_libra: 4.50, modalidad: "aereo",    sla: "6-10 dias habiles", dias_entrega: 10,  max_paquetes_por_accion: nil },
   { nombre: "CEM",     codigo: "cem",     con_reempaque: true,  consolidable: true,
-    precio_libra: 2.50, modalidad: "maritimo", sla: "14-17 dias habiles", max_paquetes_por_accion: nil },
+    precio_libra: 2.50, modalidad: "maritimo", sla: "14-17 dias habiles", dias_entrega: 17, max_paquetes_por_accion: nil },
   { nombre: "CKA",     codigo: "cka",     con_reempaque: false, consolidable: false,
-    precio_libra: 4.00, modalidad: "aereo",    sla: "6-10 dias habiles",  max_paquetes_por_accion: 1 },
+    precio_libra: 4.00, modalidad: "aereo",    sla: "6-10 dias habiles", dias_entrega: 10,  max_paquetes_por_accion: 1 },
   { nombre: "CKM",     codigo: "ckm",     con_reempaque: false, consolidable: false,
-    precio_libra: 1.90, modalidad: "maritimo", sla: "14-17 dias habiles", max_paquetes_por_accion: 1 }
+    precio_libra: 1.90, modalidad: "maritimo", sla: "14-17 dias habiles", dias_entrega: 17, max_paquetes_por_accion: 1 }
 ].each do |attrs|
   te = TipoEnvio.find_or_initialize_by(codigo: attrs[:codigo])
   te.assign_attributes(attrs)

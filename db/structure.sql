@@ -1391,6 +1391,38 @@ ALTER SEQUENCE public.facturas_id_seq OWNED BY public.facturas.id;
 
 
 --
+-- Name: feriados; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.feriados (
+    id bigint NOT NULL,
+    fecha date NOT NULL,
+    nombre character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: feriados_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.feriados_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: feriados_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.feriados_id_seq OWNED BY public.feriados.id;
+
+
+--
 -- Name: financiamiento_cuotas; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3525,7 +3557,8 @@ CREATE TABLE public.tipo_envios (
     precio_libra numeric(10,2),
     modalidad character varying,
     sla character varying,
-    max_paquetes_por_accion integer
+    max_paquetes_por_accion integer,
+    dias_entrega integer
 );
 
 
@@ -4020,6 +4053,13 @@ ALTER TABLE ONLY public.factura_items ALTER COLUMN id SET DEFAULT nextval('publi
 --
 
 ALTER TABLE ONLY public.facturas ALTER COLUMN id SET DEFAULT nextval('public.facturas_id_seq'::regclass);
+
+
+--
+-- Name: feriados id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.feriados ALTER COLUMN id SET DEFAULT nextval('public.feriados_id_seq'::regclass);
 
 
 --
@@ -4711,6 +4751,14 @@ ALTER TABLE ONLY public.factura_items
 
 ALTER TABLE ONLY public.facturas
     ADD CONSTRAINT facturas_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: feriados feriados_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.feriados
+    ADD CONSTRAINT feriados_pkey PRIMARY KEY (id);
 
 
 --
@@ -5872,6 +5920,13 @@ CREATE UNIQUE INDEX index_facturas_on_numero ON public.facturas USING btree (num
 --
 
 CREATE INDEX index_facturas_on_punto_de_emision_id ON public.facturas USING btree (punto_de_emision_id);
+
+
+--
+-- Name: index_feriados_on_fecha; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_feriados_on_fecha ON public.feriados USING btree (fecha);
 
 
 --
@@ -8763,6 +8818,8 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20261013150000'),
 ('20261013120000'),
+('20261013100100'),
+('20261013100000'),
 ('20261011170000'),
 ('20261011160000'),
 ('20261011140000'),
