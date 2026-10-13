@@ -218,6 +218,58 @@ class ManifiestoEscaneoTest < ActionDispatch::IntegrationTest
     assert_match(/no se movió/, flash[:alert])
   end
 
+  # C31-02 · Yusef, con un paquete medido en San Pedro metido otra vez en un
+  # manifiesto: *"¿Cómo me deja meter algo que ya lo recibí?"*
+  test "lo que ya se midió en San Pedro no vuelve a un manifiesto" do
+    @paquete.update_columns(medicion_sesion: "tanda-#{SecureRandom.hex(3)}", medido_at: Time.current)
+
+    escanear(@paquete.numero_recepcion)
+
+    assert_equal "ya_en_honduras", json["resultado"]
+    assert_match(/ya se recibió en Honduras \(ya se midió en San Pedro\): no vuelve a un manifiesto/, json["mensaje"])
+  end
+
+  test "lo que ya está en aduana tampoco, y lo dice con el estado" do
+    @paquete.update_columns(estado: "en_aduana")
+
+    escanear(@paquete.numero_recepcion)
+
+    assert_equal "ya_en_honduras", json["resultado"]
+    assert_match(/en aduana/, json["mensaje"])
+  end
+
+  test "lo que ya está en una pre-factura tampoco" do
+    pf = PreFactura.create!(cliente: @paquete.cliente, estado: "creado",
+                            creado_por: users(:cajero), fecha_trabajo: Date.current)
+    @paquete.update_columns(pre_factura_id: pf.id)
+
+    escanear(@paquete.numero_recepcion)
+
+    assert_equal "ya_en_honduras", json["resultado"]
+    assert_match(/pre-factura #{pf.numero}/, json["mensaje"])
+  end
+
+  # La puerta que escribe dice lo mismo: un pedido armado a mano, o la lista
+  # de resultados de una pestaña vieja, no lo mete.
+  test "add_paquete no mete lo que ya se recibió en Honduras" do
+    @paquete.update_columns(medicion_sesion: "tanda-#{SecureRandom.hex(3)}", medido_at: Time.current)
+
+    post add_paquete_manifiesto_url(@manifiesto), params: { paquete_id: @paquete.id }
+
+    assert_nil @paquete.reload.manifiesto_id
+    assert_match(/no se agregó: .*ya se recibió en Honduras/, flash[:alert])
+  end
+
+  # El interno lleva justamente lo que ya llegó, de una sucursal a otra.
+  test "el interno sí lleva lo que ya está disponible en Honduras" do
+    interno = Manifiesto.create!(numero: "MA-INT-#{SecureRandom.hex(3)}", estado: "creado", tipo: "interno",
+                                 user: users(:digitador), tipo_envios: [ tipo_envios(:cer) ],
+                                 sucursal_origen: sucursales(:zeron_sps), sucursal_entrega: sucursales(:humuya_tgu))
+    @paquete.update_columns(estado: "disponible_entrega", medido_at: Time.current)
+
+    assert EscaneoDeManifiesto.new(interno).clasificar(@paquete).ok?
+  end
+
   private
 
   def escanear(codigo)

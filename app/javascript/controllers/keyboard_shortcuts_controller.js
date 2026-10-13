@@ -144,6 +144,10 @@ export default class extends Controller {
     if (DETRAS_DE_UN_MODAL_NO.includes(e.key) && modal && !modal.contains(target)) return
 
     e.preventDefault()
+    // C31-03 · La tecla sostenida repite el `keydown`, y cada repetición era un
+    // clic más: F8 apretado un poco largo guardaba dos veces. Cuenta la
+    // primera; las demás solo se frenan.
+    if (e.repeat) return
     target.click()
   }
 

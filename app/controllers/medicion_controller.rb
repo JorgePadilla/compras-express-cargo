@@ -153,11 +153,15 @@ class MedicionController < ApplicationController
     # va a escapar. **Hay que poner una opción ahí.**"* El modal rojo sigue
     # saliendo —esa información vale, la caja de verdad no pasó por aduana—,
     # pero con la salida puesta, y quien la usa deja su nombre.
+    #
+    # C31-12 · Lo de su nombre se registra pero **no se dice**. Yusef: *"eso que
+    # queda registrado con tu nombre no se lo pongas: ellos van a creer que el
+    # paquete va a pasar al nombre de [quien mide]"*.
     if !paquete.estado.in?(Paquete::ESTADOS_FACTURABLES) && !saltar_manifiesto?
       return render json: { resultado: "no_esta_en_honduras", paquete: datos_de(paquete),
                             puede_saltar: true, estado: paquete.estado.humanize,
                             mensaje: "#{codigo_de(paquete)} está «#{paquete.estado.humanize}»: no pasó por Recibir Carga. " \
-                                     "Se puede medir igual —queda anotado con tu nombre— o pasala primero por su manifiesto." }
+                                     "Se puede medir igual, o pasala primero por su manifiesto." }
     end
 
     # «NO Mezclar»: la pizarra del 2026-09-07. La caja rechazada **no entra a

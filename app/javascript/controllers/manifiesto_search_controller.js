@@ -23,6 +23,8 @@ import { enfocar } from "controllers/enfocar"
 //   tipo_distinto   → modal rojo: *"ahí sí, porque genera gasto"*
 //   sucursal_distinta → modal rojo (C29-07): *"algo similar al tipo de
 //                     envío, el modal así. Exactamente así"*
+//   ya_en_honduras  → modal rojo (C31-02): *"¿cómo me deja meter algo que ya
+//                     lo recibí?"*
 //   no_encontrado   → modal rojo
 //
 // Y siempre, con o sin error, el campo queda vacío y con el foco: *"cuando hay
@@ -132,6 +134,13 @@ export default class extends Controller {
       case "sucursal_distinta":
         this.dispatch("sucursalDistinta")
         this._abrirAviso("Va a otra sucursal", data.mensaje, null)
+        this.avisoModalTarget.showModal()
+        break
+      // C31-02 · Ya se recibió en Honduras —medido, pre-facturado o en
+      // aduana—: no vuelve a viajar desde Miami.
+      case "ya_en_honduras":
+        this.dispatch("yaEnHonduras")
+        this._abrirAviso("Ya se recibió en Honduras", data.mensaje, null)
         this.avisoModalTarget.showModal()
         break
       // C30-06 · El candado: una pestaña vieja escaneando en un manifiesto que
