@@ -11,7 +11,7 @@
       <div>
         <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Casas del manifiesto</h2>
         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-          El camino con pre-etiqueta: se arma la caja, se imprime su 4×6 y se escanea cada paquete al meterlo.
+          El camino con pre-etiqueta: se arma la caja, se imprime su 4×6 y se escanea cada paquete abajo, en «Agregar paquetes»: entra en la caja abierta.
           El volumen sale de alto × largo × ancho ÷ 166 — es el reporte por el que cobra el proveedor.
         </p>
       </div>
@@ -59,25 +59,10 @@
         <%= render ButtonComponent.new(variant: :outline_navy, icon: "printer",
               href: etiquetas_manifiesto_cajas_path(manifiesto, print: true),
               target: "_blank", class: "whitespace-nowrap") do %>Imprimir las 4×6<% end %>
-        <%# C21-01 · La puerta a la pantalla de empacar, que **no tenía ninguna**.
-            Existe desde que se armó el módulo, funciona y tiene tests, y hasta
-            está en la tabla de pantallas de `docs/07` — pero no se llegaba a
-            ella desde ningún lado: había que escribir la URL.
-
-            Va acá y no en el encabezado de la ficha por el orden real del
-            trabajo: se arman las casas, se imprimen sus etiquetas, y con esas
-            etiquetas en la mano se empaca. El botón está donde está la mano.
-
-            Las dos condiciones salen del contexto y son las correctas: `cajas.any?`
-            —la pantalla de empaque no sirve sin casas y ella misma lo dice— y
-            `creado?`, porque `show.html.erb` envuelve este partial entero en él.
-            C30-06 · Ahora lo envuelve `modificable_por?`: también sale con el
-            manifiesto finalizado y reabierto, para la caja que se suma al
-            final — *"agregaron una caja al final… se empacó"*. %>
-        <%# C23-10 · Se llamaba «Empacar» a secas. Ahora que al lado hay otro
-            que también empaca, el nombre tiene que decir cuál es cuál. %>
-        <%= render ButtonComponent.new(variant: :primary, icon: "qr-code",
-              href: manifiesto_empacar_path(manifiesto), class: "whitespace-nowrap") do %>Empacar escaneando<% end %>
+        <%# C31-01 · Acá estaba «Empacar escaneando», la puerta a /empacar. Yusef,
+            en la prueba del 2026-10-12: *"queremos eliminar ese empacar
+            escaneando… que sea esta barra que está abajo"*. Se escanea en la
+            barra de «Agregar paquetes», y entra en la caja abierta. %>
       <% end %>
     </div>
   </div>

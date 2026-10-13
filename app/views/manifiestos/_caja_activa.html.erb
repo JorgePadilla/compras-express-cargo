@@ -1,0 +1,12 @@
+<%# C31-01 · Dónde entra lo que se escanea, dicho arriba de la pistola. Sin
+    cajas, el paquete va suelto —el camino sin pre-etiqueta—, y eso también se
+    dice: lo que en la prueba confundió fue que la pantalla no lo decía. %>
+<% caja = caja_activa_del_manifiesto(manifiesto) %>
+<% if caja %>
+  <p data-caja-activa="<%= caja.letra %>"
+     class="mb-2 inline-flex items-center gap-2 rounded-full bg-cec-gold/15 px-3 py-1 text-sm font-semibold text-cec-navy dark:text-cec-gold">
+    Entra en la caja <span class="font-mono"><%= caja.codigo %></span>
+  </p>
+<% else %>
+  <p class="mb-2 text-sm text-gray-500 dark:text-gray-400">Sin cajas: el paquete entra suelto, sin caja.</p>
+<% end %>

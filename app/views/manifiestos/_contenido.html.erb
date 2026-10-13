@@ -53,7 +53,7 @@
         <div>
           <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Agregar paquetes</h2>
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Escaneá y entra solo. Es el camino sin pre-etiqueta: los paquetes van sueltos, sin casa.
+            Escaneá y entra solo, en la caja abierta. Sin cajas —el camino sin pre-etiqueta— va suelto.
           </p>
         </div>
       </div>
@@ -63,6 +63,7 @@
           en vez de solo buscar: el operario escanea uno atrás de otro sin soltar
           la pistola ni tocar el mouse. Jorge: *"la parte de agregar paquetes
           tiene que ser rápida, escanear"*. %>
+      <div id="manifiesto-caja-activa"><%= render "manifiestos/caja_activa", manifiesto: manifiesto %></div>
       <%= label_tag :buscar_paquete, "Escaneá el paquete", class: "block text-base font-medium text-gray-700 dark:text-gray-200 mb-1" %>
       <input type="text" id="buscar_paquete"
              placeholder="Escanear la etiqueta, o buscar por tracking o número de recepción…"

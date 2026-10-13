@@ -91,63 +91,30 @@ class FlujoDelManifiestoTest < ApplicationSystemTestCase
 
   # ── Camino con pre-etiqueta ─────────────────────────────────────────────
   #
-  # Éste es el que prueba el link nuevo: sin el botón «Empacar», el paso 4 no
-  # tiene puerta y el test se queda parado.
+  # C31-01 · Ya no pasa por /empacar: la caja recién armada es la abierta, y lo
+  # que se escanea en la barra de abajo entra en ella. Yusef: *"queremos
+  # eliminar ese empacar escaneando… que sea esta barra que está abajo"*.
 
-  test "con pre-etiqueta: armar la casa, empacar escaneando y finalizar, solo con clics" do
+  test "con pre-etiqueta: armar la casa, escanear en la barra y finalizar, solo con clics" do
     abrir_manifiestos
     crear_manifiesto
-    agregar_el_paquete
 
     # La casa: elegir tamaño y pesarla.
     find("label", text: tamano_cajas(:mediana).nombre).click
     fill_in "caja_manifiesto_peso", with: "12.5"
     click_on "Agregar caja"
     assert_text "1 bulto(s)", wait: 5
+    assert_selector "[data-caja-activa]", wait: 5
 
-    # El paso que no tenía puerta.
-    click_on "Empacar"
-    assert_selector "h1", text: "Empacar", wait: 5
+    # El «pip pip pip»: el paquete entra a la caja escaneándolo en la barra.
+    find("#buscar_paquete").set(@paquete.numero_recepcion)
+    find("#buscar_paquete").send_keys(:enter)
+    within("#manifiesto-paquetes") { assert_text @paquete.tracking, wait: 5 }
+    assert_eventualmente("no entró a la caja", wait: 5) { @paquete.reload.caja_manifiesto_id.present? }
 
-    # El «pip pip pip»: el paquete entra a la caja escaneándolo.
-    find("#codigo_empaque").set(@paquete.numero_recepcion)
-    find("#codigo_empaque").send_keys(:enter)
-    assert_text @paquete.tracking, wait: 5
-
-    click_on "Volver al manifiesto"
-    assert_selector "h1", text: /M[A-Z]{3}\d{4}/, wait: 5
-
-    # ── `click_button` y no `first(...).click`: el nodo se muere en el medio ──
-    #
-    # Acá se venía abajo en CI —`StaleElementReferenceError`, ~2 de cada 3
-    # corridas— y en local nunca, ni con la suite en paralelo.
-    #
-    # La causa es el **preview de caché de Turbo**. «Volver al manifiesto» es un
-    # GET normal, y esta pantalla ya se había visitado, así que Turbo pinta al
-    # instante el snapshot cacheado (`<html data-turbo-preview>`) y recién
-    # cuando llega la respuesta fresca reemplaza el body. El `assert_selector`
-    # del h1 pasa contra el preview, o sea que no protege de nada.
-    #
-    # Y ahí está la trampa: `first(...)` ubica el botón **en el preview**,
-    # `.click` lo aprieta en un segundo viaje, y si el body fresco entra en el
-    # medio el nodo ya no existe. En local la respuesta vuelve tan rápido que la
-    # ventana no existe; en CI sí.
-    #
-    # Se reprodujo a propósito con `demorar("/manifiestos/")` —el helper que ya
-    # estaba para hacer observables las carreras— y forzando el swap entre el
-    # `first` y el `.click`. Con eso, el A/B es limpio:
-    #
-    #     first(:button, …)                → MURIÓ
-    #     find(:button, …, match: :first)  → SOBREVIVIÓ
-    #
-    # Porque **`first` no recarga y `find` sí**: Capybara le guarda la query al
-    # nodo que devuelve `find` y la vuelve a correr cuando lo encuentra viejo.
-    # `click_button` es `find` + `click`, así que hereda el rescate.
+    # `click_button` y no `first(...).click`: ver `nodos_que_no_recargan_test`
+    # — el preview de caché de Turbo mata el nodo que `first` no recarga.
     confirmando { click_button "Finalizar e Imprimir", match: :first }
-    # PR-C30.10 · Finalizar e Imprimir se lleva **esta** pestaña (PR-C29.7):
-    # no nace ninguna nueva, así que `esperar_pestana_de_impresion` solo
-    # gastaba sus 5 s y la base se leía sin esperar al PATCH. Con la máquina
-    # cargada el finalizar tardaba más que eso. Se espera el resultado.
     assert_eventualmente("el paquete no pasó a enviado", wait: 15) do
       @paquete.reload.estado == "enviado_honduras"
     end
@@ -186,20 +153,18 @@ class FlujoDelManifiestoTest < ApplicationSystemTestCase
 
   # ── Y el que documenta la puerta misma ──────────────────────────────────
 
-  test "la ficha del manifiesto ofrece empacar escaneando en cuanto hay una casa" do
+  test "la ficha ya no ofrece empacar escaneando: la barra dice en qué caja entra" do
     abrir_manifiestos
     crear_manifiesto
 
-    # C23-10 · Sin casas no hay nada que **escanear**, y la pantalla de empaque
-    # lo diría sola. Ojo: «Empacar sin escanear» sí está desde el principio y a
-    # propósito —ése es el camino que no usa casas ni pistola—, así que la
-    # afirmación tiene que nombrar cuál de los dos, no decir «Empacar» a secas.
-    assert_no_link "Empacar escaneando"
+    # Sin casas, la barra avisa que entra suelto.
+    assert_text "Sin cajas: el paquete entra suelto", wait: 5
 
     find("label", text: tamano_cajas(:mediana).nombre).click
     fill_in "caja_manifiesto_peso", with: "12.5"
     click_on "Agregar caja"
 
-    assert_selector "a", text: "Empacar escaneando", wait: 5
+    assert_selector "[data-caja-activa]", text: /Entra en la caja/, wait: 5
+    assert_no_link "Empacar escaneando"
   end
 end

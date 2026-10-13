@@ -187,7 +187,12 @@ Rails.application.routes.draw do
     # volvemos a marcar"*.
     post "empacar/:caja_id/alternar", to: "empaque#alternar", as: :alternar_empaque
     resources :cajas, only: %i[create update destroy], controller: "cajas_manifiesto" do
-      member     { get :etiqueta }   # C21-05: la 4×6 de un bulto
+      member do
+        get :etiqueta   # C21-05: la 4×6 de un bulto
+        # C31-01 · «Usar esta»: la caja en la que entra lo que se escanea en la
+        # barra de la ficha.
+        patch :usar
+      end
       collection { get :etiquetas }  # C21-05: las de todo el manifiesto, de un tiro
     end
     member do

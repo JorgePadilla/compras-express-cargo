@@ -1,5 +1,6 @@
 class ManifiestosController < ApplicationController
   include CandadoDelManifiesto
+  include CajaActivaDelManifiesto
   # `buscar` (JSON) lo usan operadores que editan paquetes pero no
   # necesariamente tienen rol de Miami — se gatea via authorize_edit
   # del paquete antes de llegar acá.
@@ -145,8 +146,11 @@ class ManifiestosController < ApplicationController
 
     # C30-06 · `meter!` y no un `update!` suelto: en un manifiesto finalizado
     # y reabierto el paquete tiene que salir como los demás, a enviado.
-    @manifiesto.meter!(paquete, user: Current.user)
-    respond_to_paquete_change("Paquete #{paquete.guia} agregado al manifiesto.")
+    # C31-01 · Por `empacar!`: entra **en la caja abierta** y queda empacado.
+    # Antes entraba suelto y sin estado, y todo salía «sin escanear».
+    caja = caja_activa_del_manifiesto
+    @manifiesto.empacar!(paquete, user: Current.user, caja: caja)
+    respond_to_paquete_change(mensaje_al_entrar(paquete.reload, caja))
   rescue Manifiesto::NoEntra => e
     respond_to_paquete_change(e.message, tipo: :alert)
   end
@@ -189,8 +193,11 @@ class ManifiestosController < ApplicationController
     Paquete.transaction do
       # C30-06 · Por `meter!`, como `add_paquete`: si éste es uno finalizado y
       # reabierto, el que llega sale a enviado con los demás.
-      @manifiesto.meter!(paquete, user: Current.user, caja_manifiesto: nil,
-                                  estado: @manifiesto.estado_antes_de_salir)
+      # C31-01 · Vuelve al estado de antes de salir y entra empacándose, como
+      # cualquier otro que se escanea acá: a la caja abierta.
+      cambios = { estado: @manifiesto.estado_antes_de_salir }
+                .merge(@manifiesto.cambios_al_entrar(paquete, caja: caja_activa_del_manifiesto))
+      @manifiesto.meter!(paquete, user: Current.user, **cambios)
       otro.recalculate_totals!
     end
     respond_to_paquete_change("#{paquete.guia} se movió del manifiesto #{otro.numero} a éste.")
@@ -230,7 +237,23 @@ class ManifiestosController < ApplicationController
       return
     end
 
-    redirect_to manifiesto_path(@manifiesto), notice: "Entraron #{resultado.agregados} paquete(s) sin escanear."
+    aviso = "Entraron #{resultado.agregados} paquete(s), empacados sin escanear."
+    if resultado.trabados.any?
+      aviso += " #{resultado.trabados.size} tiene(n) tareas pendientes y no avanzan hasta cerrarlas: " \
+               "#{resultado.trabados.map { |p| p.numero_recepcion_visible.presence || p.tracking }.to_sentence}."
+    end
+    redirect_to manifiesto_path(@manifiesto), notice: aviso
+  end
+
+  # C31-01 · Lo que dice la barra al entrar un paquete: **en qué caja** quedó,
+  # o que va suelto. Y si tiene una tarea pendiente, que entró pero no avanza.
+  private def mensaje_al_entrar(paquete, caja)
+    donde = caja ? "entró a la caja #{caja.letra}" : "entró al manifiesto, sin caja"
+    texto = "Paquete #{paquete.guia} #{donde}."
+    if paquete.tareas_bloqueantes_pendientes?
+      texto += " Tiene tareas pendientes: queda en #{estado_legible(paquete.estado).downcase} hasta cerrarlas."
+    end
+    texto
   end
 
   # El rótulo del estado tal como lo ve el operario, del **mismo mapa** que pinta
@@ -531,6 +554,9 @@ class ManifiestosController < ApplicationController
       # Los dos números de la tarjeta, por su id: están en las dos caras de la
       # tarjeta (solo lectura y formulario), así que el escaneo los sube sin
       # tocar lo que se está tecleando.
+      # C31-01 · El cartel «Entra en la caja …» de la barra: cambia cuando se
+      # arma o se borra una caja.
+      turbo_stream.update("manifiesto-caja-activa", partial: "manifiestos/caja_activa", locals: { manifiesto: @manifiesto }),
       turbo_stream.update("manifiesto-detalles-paquetes", @manifiesto.cantidad_paquetes.to_s),
       turbo_stream.update("manifiesto-detalles-peso", helpers.peso_total_del_manifiesto(@manifiesto))
     ]

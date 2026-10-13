@@ -76,14 +76,27 @@ class RecibirManifiesto
   # Una caja escaneada. Sus paquetes pasan a aduana en el acto: *"en el instante
   # en que se están recibiendo, todos los paquetes que vienen amarrados en ese
   # manifiesto van marcándose como aduana"* (`A7-04`).
+  #
+  # C31-01 · Devuelve **los que no pudieron pasar** (una tarea abierta en el
+  # camino, un dato que ya no valida). Antes el resultado de `mover_a_aduana`
+  # se tiraba, y la pantalla decía «N a aduana» con alguno trabado en enviado:
+  # el mismo silencio que dejó la prueba de Yusef sin entender por qué la
+  # pre-factura no los tomaba. No frena la recepción (`A7-05`): lo dice.
   def recibir_caja!(caja)
+    trabados = []
     CajaManifiesto.transaction do
       caja.update!(recibida_at: Time.current, recibida_por_id: @user&.id)
-      caja.paquetes.each { |paquete| mover_a_aduana(paquete) }
+      caja.paquetes.each do |paquete|
+        # Se pregunta **antes**: un `update` que falla deja el estado nuevo
+        # asignado en memoria, y después ya dice `en_aduana` sin estarlo.
+        ya_estaba = paquete.en_aduana?
+        trabados << paquete unless mover_a_aduana(paquete) || ya_estaba
+      end
       # El manifiesto queda «en aduana» mientras se recibe: parcial es un estado
       # legítimo, no un error.
       @manifiesto.update!(estado: "en_aduana") if @manifiesto.enviado?
     end
+    trabados
   end
 
   # `A7-08` · En el **interno** se escanean paquetes, no cajas.
