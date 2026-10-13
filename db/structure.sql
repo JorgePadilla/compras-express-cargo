@@ -8818,6 +8818,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261013150100'),
 ('20261013150000'),
 ('20261013120000'),
 ('20261013100100'),
