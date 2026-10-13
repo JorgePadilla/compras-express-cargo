@@ -408,6 +408,9 @@ class MedicionBultoTest < ActionDispatch::IntegrationTest
     assert json["puede_saltar"], "el aviso tiene que traer la puerta"
     assert_not json["mesa"]
     assert_match(/Se puede medir igual/, json["mensaje"])
+    # C31-12 · Sin «con tu nombre»: *"van a creer que el paquete va a pasar
+    # al nombre de [quien mide]"*.
+    assert_no_match(/tu nombre/, json["mensaje"])
   end
 
   test "con el permiso puesto, la misma caja entra a la mesa marcada" do

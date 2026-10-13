@@ -64,6 +64,9 @@ export default class extends Controller {
     if (e.target instanceof Element && e.target.closest("[data-teclas-alcance]")) return
 
     e.preventDefault()
+    // C31-03 · F5 o F9 sostenidos repiten el `keydown`, y `requestSubmit` no
+    // mira si el botón quedó deshabilitado: eran dos cajas. Cuenta la primera.
+    if (e.repeat) return
     // `requestSubmit(boton)` y no `boton.click()`: el submitter viaja con el
     // envío, y de él salen el `name="print"` de «Agregar e imprimir» y su
     // `data-turbo="false"`. Con un `click()` sintético también viajarían, pero

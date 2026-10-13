@@ -668,6 +668,21 @@ class Manifiesto < ApplicationRecord
     fecha_aduana.present? && numeros_de_guia.any?
   end
 
+  # La pre-factura que tiene tomado al paquete, si no está anulada. Se mira
+  # también por las líneas y no solo por `pre_factura_id`: una línea puede
+  # seguir viva apuntando al paquete aunque la FK diga otra cosa.
+  #
+  # Pública desde C31-02: `EscaneoDeManifiesto` la usa para no dejar entrar a
+  # un manifiesto lo que ya se pre-facturó en Honduras.
+  def pre_factura_vigente_de(paquete)
+    directa = paquete.pre_factura
+    return directa if directa && !directa.anulado?
+
+    PreFactura.where.not(estado: "anulado")
+              .where(id: PreFacturaItem.where(paquete_id: paquete.id).select(:pre_factura_id))
+              .first
+  end
+
   private
 
   # Los pies³ de un paquete suelto, exactos como los de la casa (`C25-05`).
@@ -684,18 +699,6 @@ class Manifiesto < ApplicationRecord
     return false unless tipo_oficial?
 
     recibido? || paquete.caja_manifiesto&.recibida_at.present?
-  end
-
-  # La pre-factura que tiene tomado al paquete, si no está anulada. Se mira
-  # también por las líneas y no solo por `pre_factura_id`: una línea puede
-  # seguir viva apuntando al paquete aunque la FK diga otra cosa.
-  def pre_factura_vigente_de(paquete)
-    directa = paquete.pre_factura
-    return directa if directa && !directa.anulado?
-
-    PreFactura.where.not(estado: "anulado")
-              .where(id: PreFacturaItem.where(paquete_id: paquete.id).select(:pre_factura_id))
-              .first
   end
 
   def no_deja_afuera_lo_que_tiene_adentro

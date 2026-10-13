@@ -486,6 +486,9 @@ class ManifiestosController < ApplicationController
         "y este manifiesto va a #{@manifiesto.sucursal_entrega.nombre}."
     when :fuera_de_circulacion
       "#{codigo_de(paquete)} está #{estado_legible(paquete.estado).downcase}: ya no viaja."
+    # C31-02 · *"¿Cómo me deja meter algo que ya lo recibí?"*
+    when :ya_en_honduras
+      "#{codigo_de(paquete)} ya se recibió en Honduras (#{resultado.detalle}): no vuelve a un manifiesto."
     when :varios
       "«#{codigo}» trae #{resultado.candidatos.size} cajas que no están en este manifiesto: elegí cuál."
     else

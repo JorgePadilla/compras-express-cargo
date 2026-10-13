@@ -576,7 +576,9 @@
               data: { medicion_target: "descarteNota" },
               class: "block w-full min-h-12 text-lg rounded-lg border border-gray-500 dark:border-gray-400 shadow-sm focus:ring-cec-teal-deep focus:border-cec-teal-deep" %>
       </div>
-      <p class="text-sm text-gray-500">La caja **no** cambia de estado: solo deja de esperarse acá, con tu nombre y la hora.</p>
+      <%# C31-12 · Sin «con tu nombre»: Yusef, *"van a creer que el paquete va a
+          pasar al nombre de [quien mide]"*. Quién fue se sigue registrando. %>
+      <p class="text-sm text-gray-500">La caja **no** cambia de estado: solo deja de esperarse acá. Queda registrada la hora.</p>
       <p hidden class="text-base font-medium text-red-700" data-medicion-target="descarteError"></p>
     </div>
     <div class="flex items-center justify-end gap-3 px-6 py-3 bg-gray-50 border-t border-gray-200">
@@ -603,7 +605,7 @@
       <p class="text-xl text-gray-900">Se va a seguir sin estas cajas:</p>
       <ul class="text-lg font-mono text-red-800 space-y-1" data-medicion-target="excepcionFaltantes"></ul>
       <p class="text-base text-gray-600">La pre-factura va a quedar <strong>abierta</strong>, esperando lo que falta: nadie le cobra al cliente con esto.</p>
-      <p class="text-base text-gray-600">Queda anotado en la pre-alerta con tu nombre, la hora y lo que faltaba.</p>
+      <p class="text-base text-gray-600">Queda anotado en la pre-alerta lo que faltaba y la hora.</p>
       <p hidden class="text-base font-medium text-red-700" data-medicion-target="excepcionError"></p>
     </div>
     <div class="flex items-center justify-end gap-3 px-8 py-4 bg-gray-50 border-t border-gray-200">
