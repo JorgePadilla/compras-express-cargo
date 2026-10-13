@@ -48,7 +48,26 @@ class HojaDePreparacionController < ApplicationController
     @hoja = @hoja.con("manifiesto_ids" => @hoja.manifiestos_elegidos.pluck(:id),
                       "sin_manifiesto" => @hoja.sin_manifiesto? && @hoja.ofrece_sin_manifiesto?)
     session[:pf_hoja] = @hoja.to_sesion
-    redirect_to hoja_de_preparacion_path
+
+    # C31-16 · Yusef: *"le doy guardar, porque se vuelve para arriba… tengo
+    # que venir y volver a bajar… un solo botón, mejor"*. «Guardar y empezar
+    # a auditar» (`empezar`) guarda y, si la hoja quedó lista, entra a
+    # auditar. Si no, vuelve a la hoja **donde estaba** (la vista se acuerda
+    # del scroll, `conservar_scroll_controller`; un ancla no serviría: `fetch`
+    # pierde el `#` en la redirección), y lo que falta se dice también al lado
+    # del botón, que es donde está mirando: el aviso de arriba queda fuera de
+    # la vista.
+    # «Ver manifiestos» no lleva `empezar` y se queda en la hoja aunque esté
+    # lista: es el botón para seguir eligiendo. Tampoco empieza nada si se
+    # acaba de elegir «editar»: el radio se cambia en la pantalla y el botón
+    # de abajo todavía es el de «nuevas»; guarda y muestra las de corregir.
+    if params[:empezar].blank? || @hoja.editar?
+      redirect_to hoja_de_preparacion_path
+    elsif @hoja.lista?
+      redirect_to auditar_pre_factura_index_path
+    else
+      redirect_to hoja_de_preparacion_path, alert: "#{@hoja.lo_que_falta} para empezar a auditar."
+    end
   end
 
   # PR-P.7 · La hora del aviso, en lote: todas las programadas de un manifiesto

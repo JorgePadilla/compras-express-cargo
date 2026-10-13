@@ -17,7 +17,7 @@ class PantallasEnElMenuTest < ActiveSupport::TestCase
   EXENTAS = {
     "preview_view_components" => "previews de ViewComponent, herramienta de desarrollo",
     "categoria_precios"       => "PR-C7.12: se administran dentro de la Tabla de Servicios; Jorge: 'no le veo mucho valor'",
-    "auditar_pre_factura_index" => "PR-P.5: la puerta es «Empezar a auditar» de la hoja de preparación (que sí está en el menú); " \
+    "auditar_pre_factura_index" => "PR-P.5 / C31-16: la puerta es «Guardar y empezar a auditar» de la hoja de preparación (que sí está en el menú); " \
                                  "sin hoja lista no hay contra qué auditar y redirige a ella"
   }.freeze
 

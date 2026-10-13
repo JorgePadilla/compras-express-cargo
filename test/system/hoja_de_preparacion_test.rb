@@ -35,22 +35,45 @@ class HojaDePreparacionSystemTest < ApplicationSystemTestCase
     # 3 · La hora: 07:30 por defecto, y se cambia sin segundos.
     assert_equal "07:30", find("#hoja_hora", visible: :all).value
     page.execute_script("document.querySelector('#hoja_hora')._flatpickr.setDate('14:05', true)")
-    click_on "Guardar la hoja"
 
-    assert_equal "14:05", find("#hoja_hora", visible: :all).value, wait: 5
-    assert find("#hoja_manifiesto_#{@manifiesto.id}", visible: :all).checked?
-    assert find("#hoja_tipo_envio_#{@cer.id}", visible: :all).checked?
-    assert_selector "a[href='#{auditar_pre_factura_index_path}']", text: "Empezar a auditar"
+    # C31-16 · Un solo botón: guarda y entra a auditar.
+    click_on "Guardar y empezar a auditar"
+    assert_selector "#codigo_auditoria", wait: 5
 
     # Se acuerda al volver, como /etiquetar.
-    visit root_path
     visit hoja_de_preparacion_path
     assert_equal "14:05", find("#hoja_hora", visible: :all).value
+    assert find("#hoja_manifiesto_#{@manifiesto.id}", visible: :all).checked?
+    assert find("#hoja_tipo_envio_#{@cer.id}", visible: :all).checked?
 
     # Y se cierra.
     confirmando { click_on "Cerrar la hoja" }
     assert_text "Hoja de preparación cerrada", wait: 5
     assert_equal "07:30", find("#hoja_hora", visible: :all).value
+  end
+
+  # C31-16 · *"Le doy guardar, porque se vuelve para arriba… tengo que venir
+  # y volver a bajar."* Con la hoja a medias, el botón de abajo vuelve a la
+  # hoja **donde estaba**, y lo que falta se dice al lado del botón.
+  test "a medias, «Guardar y empezar a auditar» se queda abajo y dice qué falta" do
+    page.driver.browser.manage.window.resize_to(1400, 600)
+    visit hoja_de_preparacion_path
+    find("label", text: @cer.nombre, exact_text: true).click
+    click_on "Ver manifiestos"
+    assert_selector "[data-manifiesto='#{@manifiesto.numero}']", wait: 5
+    # El que scrollea en este layout es el `<main>`, no la ventana.
+    assert_operator page.evaluate_script("document.querySelector('main').scrollHeight - document.querySelector('main').clientHeight"), :>, 200,
+                    "la hoja entra entera en la ventana: no hay scroll que perder"
+
+    page.execute_script("document.querySelector('main').scrollTop = document.querySelector('main').scrollHeight")
+    abajo = page.evaluate_script("document.querySelector('main').scrollTop")
+    click_on "Guardar y empezar a auditar"
+
+    assert_selector "[data-falta].text-red-700", text: "Falta elegir al menos un manifiesto", wait: 5
+    assert_current_path hoja_de_preparacion_path
+    assert_operator page.evaluate_script("document.querySelector('main').scrollTop"), :>, abajo - 150, "volvió para arriba"
+  ensure
+    page.driver.browser.manage.window.resize_to(1400, 1400)
   end
 
   private

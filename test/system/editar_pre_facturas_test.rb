@@ -20,7 +20,7 @@ class EditarPreFacturasSystemTest < ApplicationSystemTestCase
   test "de 07:30 a 11:30, todas las del manifiesto" do
     visit hoja_de_preparacion_path
     find("label", text: "Editar pre-facturas").click
-    click_on "Guardar la hoja"
+    click_on "Guardar y empezar a auditar"
     assert_selector "[data-pre-factura='#{@pfs.first.numero}'] [data-aviso='programada']", text: /07:30/, wait: 5
 
     page.execute_script("document.querySelector('#reprogramar_hora_#{@manifiesto.id}')._flatpickr.setDate('11:30', true)")

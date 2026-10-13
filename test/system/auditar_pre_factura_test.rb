@@ -28,8 +28,6 @@ class AuditarPreFacturaSystemTest < ApplicationSystemTestCase
 
   test "hoja, volumen, cajas y F9: la pre-factura queda con la hora de la hoja" do
     preparar_la_hoja(hora: "14:05")
-    click_on "Empezar a auditar"
-    assert_selector "#codigo_auditoria", wait: 5
 
     escanear @qr
     assert_text @cliente.codigo, wait: 5
@@ -55,8 +53,6 @@ class AuditarPreFacturaSystemTest < ApplicationSystemTestCase
   # sin el Enter que manda la pistola.
   test "pegar el QR de un volumen lo lee solo, sin Enter" do
     preparar_la_hoja
-    click_on "Empezar a auditar"
-    assert_selector "#codigo_auditoria", wait: 5
 
     pegar @qr
     assert_text "1 volumen · 2 cajas · faltan 2", wait: 5
@@ -154,8 +150,9 @@ class AuditarPreFacturaSystemTest < ApplicationSystemTestCase
     find("#hoja_manifiesto_#{@manifiesto.id}", visible: :all).check
     page.execute_script("document.querySelector('#hoja_hora')._flatpickr.setDate('#{hora}', true)")
     page.execute_script("document.querySelector('#hoja_fecha')._flatpickr.setDate('#{fecha}', true)") if fecha
-    click_on "Guardar la hoja"
-    assert_selector "a", text: "Empezar a auditar", wait: 5
+    # C31-16 · Un solo botón: guarda la hoja y entra a auditar.
+    click_on "Guardar y empezar a auditar"
+    assert_selector "#codigo_auditoria", wait: 5
   end
 
   # Un pegado de verdad (Ctrl+V) no anda en el Chrome headless de los tests:
