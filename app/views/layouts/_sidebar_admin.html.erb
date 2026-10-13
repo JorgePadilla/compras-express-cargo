@@ -160,5 +160,13 @@
       <%= sidebar_link "Ajustes de Etiqueta", ajustes_etiqueta_path, icon: "printer" %>
       <%# "Reportes" apuntaba a "#" — se agrega cuando exista (Fase 6). %>
     <% end %>
+
+    <%# Datos de prueba: solo en local y en staging (`DatosDePrueba.habilitados?`).
+        Al final y aparte, para que nadie lo confunda con una pantalla del trabajo. %>
+    <% if DatosDePrueba.habilitados? %>
+      <%= sidebar_section "Pruebas" do %>
+        <%= sidebar_link "Datos de prueba", datos_de_prueba_path, icon: "beaker" %>
+      <% end %>
+    <% end %>
   <% end %>
 </ul>

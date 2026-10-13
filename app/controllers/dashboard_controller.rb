@@ -147,6 +147,16 @@ class DashboardController < ApplicationController
           # "Reportes" apuntaba a "#" — se agrega cuando exista (Fase 6).
         ]
       }
+
+      # Datos de prueba: solo en local y en staging. La misma pregunta que la
+      # ruta y la barra (`DatosDePrueba.habilitados?`); en producción no hay
+      # tarjeta, ni link, ni pantalla.
+      if DatosDePrueba.habilitados?
+        groups << {
+          area: "Pruebas",
+          cards: [ card("Datos de prueba", "Pre-alertas, volúmenes y manifiestos", "beaker", datos_de_prueba_path, :red) ]
+        }
+      end
     end
 
     groups
