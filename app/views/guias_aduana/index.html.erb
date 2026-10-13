@@ -40,7 +40,7 @@ end %>
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40">
               <td class="px-6 py-4 whitespace-nowrap">
                 <span class="font-mono font-medium text-cec-navy dark:text-cec-gold"><%= m.numero %></span>
-                <div class="mt-1"><%= render StatusBadgeComponent.new(status: m.estado) %></div>
+                <div class="mt-1"><%= render StatusBadgeComponent.new(status: m.estado, label: m.estado_texto) %></div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-200">
                 <%= m.empresa_manifiesto&.nombre || "—" %>

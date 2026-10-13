@@ -537,6 +537,57 @@ class Manifiesto < ApplicationRecord
     tipo_envio_proveedor&.nombre.presence || tipo_envio.presence
   end
 
+  # ── C31-05 · El estado como lo lee la gente ────────────────────────────
+  #
+  # Yusef, 2026-10-12, al «Finalizar e Imprimir»: *"el instante que hay que
+  # finalizar e imprimir es que ya se envió… hay que cambiarlo a **enviado a
+  # Honduras**, porque ahorita todo va para Honduras. Cuando ya tengamos más, le
+  # vamos a ampliar"*. Y por qué no la sucursal: *"si vos le pones enviado a
+  # Humuya, va a creer que ya está en Honduras y lo estamos mandando a la
+  # sucursal… eso lo vamos a poner en la **interna**"*.
+  #
+  # El enum no cambia (`enviado` lo leen recepción, aduana y la hoja): cambia el
+  # rótulo. El país va fijo hasta que haya otro destino (Guatemala, El Salvador).
+  PAIS_DE_DESTINO = "Honduras".freeze
+
+  def estado_texto
+    enviado? ? texto_de_enviado : estado.to_s.humanize
+  end
+
+  # Lo que dice el manifiesto una vez finalizado. Aparte de `estado_texto`
+  # porque el confirm de «Finalizar» lo necesita **antes** de que lo esté.
+  def texto_de_enviado
+    return "Enviado a #{PAIS_DE_DESTINO}" unless tipo_interno?
+
+    [ "Enviado a sucursal", sucursal_entrega&.nombre ].compact.join(" ")
+  end
+
+  # ── C31-08 · Los tres totales de la ficha ──────────────────────────────
+  #
+  # La ficha mostraba *"cero cero libras"*, y Yusef quiere los tres: *"pies,
+  # libras y volumétricas… con eso ya tenemos un cálculo más exacto"*.
+  #
+  # Con casas, de las casas —es el reporte por el que cobra el proveedor, igual
+  # que `recalculate_totals!`—; sin casas, de los paquetes. Se calcula al
+  # momento: `peso_total`/`volumen_total` se guardan al tocar una casa o un
+  # paquete, pero los pies³ nunca se guardaron. La hoja impresa lee esto mismo.
+  #
+  # Va a la base y no a la asociación: después de un escaneo `cajas` puede
+  # estar cargada de antes, y el turbo_stream subiría el total viejo.
+  def totales
+    casas = CajaManifiesto.where(manifiesto_id: id).to_a
+    if casas.any?
+      { pies3: casas.sum { |c| c.pies_cubicos.to_d },
+        libras: casas.sum { |c| c.peso.to_d },
+        vlbs: casas.sum { |c| c.volumen.to_d } }
+    else
+      sueltos = Paquete.where(manifiesto_id: id)
+      { pies3: sueltos.pluck(:alto, :largo, :ancho).sum { |medidas| pies_cubicos_de(*medidas) },
+        libras: sueltos.sum(:peso_cobrar).to_d,
+        vlbs: sueltos.sum(:volumen).to_d }
+    end
+  end
+
   # Los tipos NUESTROS que van adentro, en una línea: «CER, CKA».
   def tipos_envio_nuestros
     tipo_envios.map(&:nombre).join(", ")
@@ -617,6 +668,13 @@ class Manifiesto < ApplicationRecord
   end
 
   private
+
+  # Los pies³ de un paquete suelto, exactos como los de la casa (`C25-05`).
+  def pies_cubicos_de(alto, largo, ancho)
+    return 0.to_d unless alto && largo && ancho
+
+    VolumetricoCalculator.pies_cubicos_exactos(VolumetricoCalculator.pulgadas_cubicas(alto, largo, ancho)).to_d
+  end
 
   # ¿El que entra ya está en Honduras? Si la recepción se cerró, o si su caja
   # ya pasó por la pistola de recibir. Solo el oficial: el interno aterriza en

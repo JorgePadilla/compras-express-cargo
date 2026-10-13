@@ -23,10 +23,30 @@ module ManifiestosHelper
     end
   end
 
-  # PR-C30.15 · El peso de la tarjeta de detalles. Lo pintan sus dos caras y el
-  # turbo_stream de cada paquete (`#manifiesto-detalles-peso`): un solo texto.
-  def peso_total_del_manifiesto(manifiesto)
-    "#{manifiesto.peso_total || 0} lbs"
+  # C31-08 · Los tres totales de la tarjeta de detalles: pies³, libras y libras
+  # volumétricas. Yusef veía *"cero cero libras"* y pidió los tres: *"con eso ya
+  # tenemos un cálculo más exacto"*. Lo pintan las dos caras de la tarjeta y el
+  # turbo_stream de cada escaneo (`#manifiesto-detalles-pies3/-libras/-vlbs`):
+  # un solo texto. Reemplaza al «Peso Total» de PR-C30.15.
+  TOTALES_DE_LA_FICHA = [
+    [ :pies3, "Pies³", "pies³" ],
+    [ :libras, "Libras", "lbs" ],
+    [ :vlbs, "Libras vol.", "VLbs" ]
+  ].freeze
+
+  def textos_de_totales(manifiesto)
+    totales = manifiesto.totales
+    TOTALES_DE_LA_FICHA.to_h do |clave, _rotulo, unidad|
+      [ clave, "#{number_with_precision(totales[clave], precision: 2, delimiter: ',')} #{unidad}" ]
+    end
+  end
+
+  def datos_de_totales(manifiesto)
+    textos = textos_de_totales(manifiesto)
+    safe_join(TOTALES_DE_LA_FICHA.map do |clave, rotulo, _unidad|
+      dato_del_manifiesto(rotulo, textos[clave], id: "manifiesto-detalles-#{clave}",
+                                                 clase: "text-sm font-semibold text-gray-900")
+    end)
   end
 
   # PR-C30.15 · **Un solo «Editar» (F6)**, arriba en la ficha. Hasta PR-C30.14

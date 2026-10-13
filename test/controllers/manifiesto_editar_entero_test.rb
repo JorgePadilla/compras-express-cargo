@@ -47,7 +47,7 @@ class ManifiestoEditarEnteroTest < ActionDispatch::IntegrationTest
       assert_select "a[href=?][data-shortcut='F2']", manifiesto_path(@abierto), text: /Cancelar/
       assert_select "button[type='submit'][data-shortcut='F8']", text: /Guardar/
       assert_select "#manifiesto-detalles-paquetes", text: @abierto.reload.cantidad_paquetes.to_s
-      assert_select "#manifiesto-detalles-peso"
+      assert_select "#manifiesto-detalles-libras"
     end
     assert_select "h2", text: "Casas del manifiesto", count: 0, message: "el frame es la tarjeta sola"
   end
@@ -69,7 +69,10 @@ class ManifiestoEditarEnteroTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame#manifiesto-detalles" do
       assert_select "form", count: 0
       assert_select "#manifiesto-detalles-paquetes", text: @abierto.reload.cantidad_paquetes.to_s
-      assert_select "#manifiesto-detalles-peso", text: /lbs/
+      # C31-08 · Los tres totales: pies³, libras y volumétricas.
+      assert_select "#manifiesto-detalles-pies3", text: /pies³/
+      assert_select "#manifiesto-detalles-libras", text: /10\.00 lbs/
+      assert_select "#manifiesto-detalles-vlbs", text: /VLbs/
     end
     assert_select "#manifiesto-contenido"
     assert_select "#manifiesto-acciones-arriba form[action=?]", finalizar_manifiesto_path(@abierto)
@@ -329,7 +332,9 @@ class ManifiestoEditarEnteroTest < ActionDispatch::IntegrationTest
     assert_equal @abierto.id, tarde.reload.manifiesto_id
     assert_equal @abierto.reload.cantidad_paquetes.to_s,
                  stream(response.body, "update", "manifiesto-detalles-paquetes").to_s[%r{<template>(.*)</template>}m, 1]
-    assert_match(/lbs/, stream(response.body, "update", "manifiesto-detalles-peso"))
+    assert_match(/lbs/, stream(response.body, "update", "manifiesto-detalles-libras"))
+    assert_match(/pies³/, stream(response.body, "update", "manifiesto-detalles-pies3"))
+    assert_match(/VLbs/, stream(response.body, "update", "manifiesto-detalles-vlbs"))
     assert_nil stream(response.body, "replace", "manifiesto-detalles"), "una tarjeta abierta perdería lo tecleado"
     assert_no_match(/target="manifiesto-contenido"/, response.body, "ni lo de adentro: se llevaría la pistola")
   end

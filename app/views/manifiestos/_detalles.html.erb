@@ -15,10 +15,10 @@
     la respuesta; por eso el turbo_stream de `update` la cambia con `replace`
     (un `update` la anidaría adentro de sí misma).
 
-    Paquetes y peso llevan id fijo en las dos caras
-    (`manifiesto-detalles-paquetes` / `-peso`): el escaneo de un paquete los
-    sube por ahí, sin repintar la tarjeta y sin borrarle al supervisor lo que
-    está tecleando.
+    Paquetes y totales llevan id fijo en las dos caras
+    (`manifiesto-detalles-paquetes` / `-pies3` / `-libras` / `-vlbs`, C31-08):
+    el escaneo de un paquete los sube por ahí, sin repintar la tarjeta y sin
+    borrarle al supervisor lo que está tecleando.
 
     Locals: `manifiesto` y `editando` (falso si no viene). En formulario, las
     listas de los selects las carga `assigns_del_formulario`. %>
@@ -27,7 +27,7 @@
   <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
     <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
       <h2 class="text-lg font-semibold text-gray-800">Detalles del Manifiesto</h2>
-      <%= render StatusBadgeComponent.new(status: manifiesto.estado) %>
+      <%= render StatusBadgeComponent.new(status: manifiesto.estado, label: manifiesto.estado_texto) %>
     </div>
 
     <% if editando %>
@@ -54,8 +54,7 @@
           <%= dato_del_manifiesto "Fecha Enviado", manifiesto.fecha_enviado&.strftime("%d/%m/%Y %H:%M") || "—" %>
           <%= dato_del_manifiesto "Paquetes", manifiesto.cantidad_paquetes, id: "manifiesto-detalles-paquetes",
                                   clase: "text-sm font-semibold text-gray-900" %>
-          <%= dato_del_manifiesto "Peso Total", peso_total_del_manifiesto(manifiesto), id: "manifiesto-detalles-peso",
-                                  clase: "text-sm font-semibold text-gray-900" %>
+          <%= datos_de_totales(manifiesto) %>
         </div>
 
         <%= render "manifiestos/campos_miami", f: f, manifiesto: manifiesto, grid: "grid grid-cols-1 md:grid-cols-3 gap-4" %>
@@ -97,8 +96,7 @@
         <%= dato_del_manifiesto "Expedido Por", manifiesto.expedido_por.presence || manifiesto.user&.iniciales_display || "—" %>
         <%= dato_del_manifiesto "Paquetes", manifiesto.cantidad_paquetes, id: "manifiesto-detalles-paquetes",
                                 clase: "text-sm font-semibold text-gray-900" %>
-        <%= dato_del_manifiesto "Peso Total", peso_total_del_manifiesto(manifiesto), id: "manifiesto-detalles-peso",
-                                clase: "text-sm font-semibold text-gray-900" %>
+        <%= datos_de_totales(manifiesto) %>
         <%= dato_del_manifiesto "Fecha Enviado", manifiesto.fecha_enviado&.strftime("%d/%m/%Y %H:%M") || "—" %>
         <% if manifiesto.es_prioridad? %>
           <%= dato_del_manifiesto "Prioridad",
