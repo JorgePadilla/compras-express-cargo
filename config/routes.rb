@@ -147,6 +147,15 @@ Rails.application.routes.draw do
   # de Yusef y se borran: *"elimina el feriado y lo agrega"*.
   resources :feriados, except: :show
 
+  # Datos de prueba: solo en local y en staging (`DatosDePrueba.habilitados?`).
+  # La pregunta va en una lambda y no alrededor de las rutas a propósito: se
+  # hace en cada pedido, así un test puede probar que en producción es un 404.
+  scope constraints: ->(_pedido) { DatosDePrueba.habilitados? } do
+    get  "datos-de-prueba",             to: "datos_de_prueba#index",             as: :datos_de_prueba
+    post "datos-de-prueba/pre-alertas", to: "datos_de_prueba#crear_pre_alertas", as: :pre_alertas_datos_de_prueba
+    post "datos-de-prueba/manifiesto",  to: "datos_de_prueba#crear_manifiesto",  as: :manifiesto_datos_de_prueba
+  end
+
   # PR-10.b: cotización de flete en vivo (JSON) para el "valor a pagar".
   get "cotizador", to: "cotizador#show"
 

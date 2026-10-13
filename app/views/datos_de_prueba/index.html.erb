@@ -1,0 +1,176 @@
+<%# Datos de prueba: solo en local y en staging (`DatosDePrueba`). Jorge,
+    2026-10-13: *"create things like this manifests base on tipo de envios,
+    pre-alertas volumenes for testing"*. %>
+<% campo = "block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+<% etiqueta = "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+<%# San Pedro marcada, como al crear un cliente (`Sucursal.para_cliente_nuevo`). %>
+<% por_defecto = Sucursal.para_cliente_nuevo&.id || @sucursales.first&.id %>
+<% tarjeta = "h-full min-h-11 px-3 py-2 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800
+              peer-checked:border-cec-gold peer-checked:bg-cec-gold/5 peer-checked:ring-2 peer-checked:ring-cec-gold/30
+              peer-focus-visible:ring-2 peer-focus-visible:ring-cec-teal-deep
+              flex items-center justify-center text-center text-sm font-bold text-cec-navy dark:text-cec-gold" %>
+
+<%= render PageHeaderComponent.new(title: "Datos de prueba",
+                                   subtitle: "Pre-alertas, volúmenes y manifiestos para recorrer el flujo") %>
+
+<div class="mb-4 p-4 bg-cec-gold/10 dark:bg-cec-gold/10 border border-cec-gold/40 rounded-lg">
+  <div class="flex items-start gap-2">
+    <%= heroicon "beaker", variant: :solid, options: { class: "w-5 h-5 text-cec-navy dark:text-cec-gold shrink-0 mt-0.5" } %>
+    <p class="text-sm text-gray-700 dark:text-gray-200">
+      Esta pantalla existe solo en local y en staging: en producción no aparece.
+      Todo lo que se crea acá lleva un tracking que empieza con <strong class="font-mono"><%= DatosDePrueba::PREFIJO %></strong>,
+      y si no ponés un cliente, va a nombre de un cliente de prueba (<span class="font-mono"><%= DatosDePrueba::PREFIJO %>-TGU</span>, …).
+      No se manda ningún correo.
+    </p>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-5">
+  <%= form_with url: pre_alertas_datos_de_prueba_path, method: :post, local: true do %>
+    <%= render FormSectionComponent.new(title: "Pre-alertas",
+                                        subtitle: "Una pre-alerta por paquete. Recibidas en Miami quedan listas para escanear en el manifiesto; sin recibir, para probar /etiquetar.") do |section| %>
+      <fieldset class="mb-4">
+        <legend class="<%= etiqueta %>">Tipo de envío</legend>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <% @tipo_envios.each_with_index do |tipo, i| %>
+            <label class="cursor-pointer">
+              <%= radio_button_tag :tipo_envio_id, tipo.id, i.zero?, id: "pa_tipo_envio_#{tipo.id}", class: "peer sr-only" %>
+              <div class="<%= tarjeta %>"><%= tipo.nombre %></div>
+            </label>
+          <% end %>
+        </div>
+      </fieldset>
+
+      <fieldset class="mb-4">
+        <legend class="<%= etiqueta %>">Sucursal donde retiran</legend>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <% @sucursales.each do |sucursal| %>
+            <label class="cursor-pointer">
+              <%= radio_button_tag :sucursal_id, sucursal.id, sucursal.id == por_defecto, id: "pa_sucursal_#{sucursal.id}", class: "peer sr-only" %>
+              <div class="<%= tarjeta %>"><%= sucursal.nombre %></div>
+            </label>
+          <% end %>
+        </div>
+      </fieldset>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <%= label_tag :cantidad, "Cuántas pre-alertas", class: etiqueta %>
+          <%= number_field_tag :cantidad, 10, min: 1, max: DatosDePrueba::MAX_PRE_ALERTAS, class: campo %>
+        </div>
+        <div>
+          <%= label_tag :volumenes, "Volúmenes por paquete", class: etiqueta %>
+          <%= number_field_tag :volumenes, 1, min: 1, max: DatosDePrueba::MAX_VOLUMENES, class: campo %>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Más de 1: un envío partido en cajas, como en /etiquetar.</p>
+        </div>
+        <div>
+          <%= label_tag :cliente_codigo, "Cliente (opcional)", class: etiqueta %>
+          <%= text_field_tag :cliente_codigo, nil, placeholder: "C123", class: "#{campo} font-mono uppercase" %>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Vacío: el cliente de prueba de esa sucursal.</p>
+        </div>
+      </div>
+
+      <label class="mt-4 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+        <%= hidden_field_tag :recibir, "0", id: nil %>
+        <%= check_box_tag :recibir, "1", true, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+        Recibir en Miami (quedan en «Recibido en Miami», con número de recepción)
+      </label>
+
+      <% section.with_footer do %>
+        <%= render(ButtonComponent.new(variant: :gold, size: :lg, type: :submit, icon: "plus")) { "Crear pre-alertas" } %>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <%= form_with url: manifiesto_datos_de_prueba_path, method: :post, local: true do %>
+    <%= render FormSectionComponent.new(title: "Manifiesto",
+                                        subtitle: "Oficial, desde Miami, con cajas de 20 lb ya armadas. Lo normal es dejarlo vacío y escanear los paquetes en la barra.") do |section| %>
+      <fieldset class="mb-4">
+        <legend class="<%= etiqueta %>">Tipos de envío que lleva</legend>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <% @tipo_envios.each_with_index do |tipo, i| %>
+            <label class="cursor-pointer">
+              <%= check_box_tag "tipo_envio_ids[]", tipo.id, i.zero?, id: "m_tipo_envio_#{tipo.id}", class: "peer sr-only" %>
+              <div class="<%= tarjeta %>"><%= tipo.nombre %></div>
+            </label>
+          <% end %>
+        </div>
+      </fieldset>
+
+      <fieldset class="mb-4">
+        <legend class="<%= etiqueta %>">Se entrega en</legend>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <% @sucursales.each do |sucursal| %>
+            <label class="cursor-pointer">
+              <%= check_box_tag "sucursal_entrega_ids[]", sucursal.id, sucursal.id == por_defecto, id: "m_sucursal_#{sucursal.id}", class: "peer sr-only" %>
+              <div class="<%= tarjeta %>"><%= sucursal.nombre %></div>
+            </label>
+          <% end %>
+        </div>
+      </fieldset>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <%= label_tag :cajas, "Cajas", class: etiqueta %>
+          <%= number_field_tag :cajas, 1, min: 0, max: DatosDePrueba::MAX_CAJAS, class: campo %>
+        </div>
+      </div>
+
+      <label class="mt-4 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+        <%= hidden_field_tag :llenar, "0", id: nil %>
+        <%= check_box_tag :llenar, "1", false, class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
+        Meterle ya los paquetes de prueba sueltos que le entran (sin escanear)
+      </label>
+
+      <% section.with_footer do %>
+        <%= render(ButtonComponent.new(variant: :gold, size: :lg, type: :submit, icon: "plus")) { "Crear manifiesto" } %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>
+
+<% if @manifiestos.any? %>
+  <p class="mb-5 text-sm text-gray-600 dark:text-gray-300">
+    Manifiestos abiertos:
+    <% @manifiestos.each_with_index do |m, i| %>
+      <%= ", " unless i.zero? %><%= link_to m.numero, manifiesto_path(m), class: "font-mono font-medium text-cec-navy dark:text-cec-gold underline" %>
+    <% end %>
+  </p>
+<% end %>
+
+<%= render FormSectionComponent.new(title: "Paquetes de prueba sin manifiesto",
+                                    subtitle: "Para escanear: en el manifiesto, el código de la etiqueta; en /etiquetar, el tracking.",
+                                    densidad: :al_borde) do %>
+  <% if @sueltos.any? %>
+    <div class="overflow-x-auto">
+      <table id="datos-de-prueba-sueltos" class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-900">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código de la etiqueta</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tracking</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Caja</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Retira en</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          <% @sueltos.each do |p| %>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+              <td class="px-4 py-2 text-sm font-mono text-gray-900 dark:text-gray-100"><%= etiqueta_codigo_barras(p) %></td>
+              <td class="px-4 py-2 text-sm font-mono"><%= link_to p.tracking, paquete_path(p), class: "text-cec-navy dark:text-cec-gold underline" %></td>
+              <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300"><%= "#{p.numero_caja}/#{p.cantidad_paquetes}" if p.cantidad_paquetes.to_i > 1 %></td>
+              <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300"><%= p.tipo_envio&.nombre %></td>
+              <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300"><%= p.sucursal&.nombre %></td>
+              <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 font-mono"><%= p.cliente&.codigo %></td>
+              <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300"><%= EstadoPaqueteHelper::ETIQUETAS.fetch(p.estado, p.estado.humanize) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="px-6 py-8 text-sm text-center text-gray-500 dark:text-gray-400">No hay paquetes de prueba sueltos. Creá un lote arriba.</p>
+  <% end %>
+<% end %>
