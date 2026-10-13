@@ -541,7 +541,6 @@ chica que la yema de un dedo.
 |---|---|
 | `/etiquetar` · `/entrega_personal` | Mostrador de Miami, con pistola |
 | `/manifiestos` (new/edit y las casas) | Armar el manifiesto parado en la bodega |
-| `/manifiestos/:id/empacar` | Escanear paquetes a la caja |
 | `/recibir-carga` | Bajar el camión en Honduras |
 | `/guias-y-aduana` | San Pedro, cargando guías |
 

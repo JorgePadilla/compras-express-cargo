@@ -101,15 +101,6 @@ class SinNMas1Test < ActionDispatch::IntegrationTest
     end
   end
 
-  test "empacar un manifiesto" do
-    m = manifiesto(0)
-    @pantalla = -> { get manifiesto_empacar_path(m) }
-    assert_no_crece_con_los_renglones("/manifiestos/:id/empacar") do |i|
-      caja = m.cajas.create!(tamano_caja: tamano_cajas(:mediana), peso: 10, user: users(:admin))
-      paquete(i, manifiesto: m, caja_manifiesto_id: caja.id)
-    end
-  end
-
   test "/clientes" do
     @pantalla = -> { get clientes_path }
     assert_no_crece_con_los_renglones("/clientes") do |i|
