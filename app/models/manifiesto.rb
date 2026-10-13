@@ -569,7 +569,55 @@ class Manifiesto < ApplicationRecord
   PAIS_DE_DESTINO = "Honduras".freeze
 
   def estado_texto
+    return TERMINADO_DE_PREFACTURAR if terminado_de_prefacturar?
+
     enviado? ? texto_de_enviado : estado.to_s.humanize
+  end
+
+  # ── RP-87 · «Terminado de Prefacturar» ─────────────────────────────────
+  #
+  # Yusef, contestando por escrito el 2026-10-11 (`C30-23`): *"como en este
+  # caso hablamos de manifiestos de la carga, no de los paquetes en
+  # específico, deberíamos ponerlos con el estatus de **Terminado de
+  # Prefacturar**"*. Y en la prueba del 2026-10-12 (`C31-15`), mirando la hoja:
+  # *"el montón de guías que ya no deberían de aparecer, porque ya se
+  # terminaron"*.
+  #
+  # **Se deriva, no se guarda.** Es exactamente lo contrario de lo que retiene
+  # al manifiesto en la hoja (`para_hoja`): oficial, en aduana o recibido, con
+  # algo pre-facturado y **nada** que siga esperando su pre-factura
+  # (`Paquete.sin_pre_factura_en_manifiesto`, que ya cuenta la caja que no
+  # llegó, `C28-14`). Así no hay un sello que se desincronice cuando se anula
+  # una pre-factura o se corrige otra: si un paquete vuelve a quedar sin, el
+  # manifiesto vuelve solo a la hoja y deja de decir «terminado». El enum no
+  # se toca: lo leen recepción, aduana y la hoja.
+  TERMINADO_DE_PREFACTURAR = "Terminado de Prefacturar".freeze
+
+  def terminado_de_prefacturar?
+    return @terminado_de_prefacturar if defined?(@terminado_de_prefacturar)
+
+    @terminado_de_prefacturar = self.class.terminados_de_prefacturar_entre([ self ]).include?(id)
+  end
+
+  # Los ids de `manifiestos` que ya terminaron, en dos consultas para toda una
+  # lista —los índices pintan un badge por fila—. `precargar_terminados`
+  # se lo deja anotado a cada uno.
+  def self.terminados_de_prefacturar_entre(manifiestos)
+    candidatos = manifiestos.select { |m| m.tipo_oficial? && m.estado.in?(ESTADOS_PARA_PRE_FACTURA) }.map(&:id)
+    return [] if candidatos.empty?
+
+    con_algo = Paquete.where(manifiesto_id: candidatos).where.not(pre_factura_id: nil).distinct.pluck(:manifiesto_id)
+    pendientes = Paquete.sin_pre_factura_en_manifiesto.where(manifiesto_id: con_algo).distinct.pluck(:manifiesto_id)
+    con_algo - pendientes
+  end
+
+  # Sobre una relación **ya cargada** (`.load`), para que la vista recorra los
+  # mismos objetos que quedaron anotados.
+  def self.precargar_terminados(manifiestos)
+    lista = manifiestos.to_a
+    ids = terminados_de_prefacturar_entre(lista)
+    lista.each { |m| m.instance_variable_set(:@terminado_de_prefacturar, ids.include?(m.id)) }
+    lista
   end
 
   # Lo que dice el manifiesto una vez finalizado. Aparte de `estado_texto`

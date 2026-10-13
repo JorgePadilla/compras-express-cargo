@@ -16,7 +16,9 @@ class ManifiestosController < ApplicationController
     @manifiestos = Manifiesto.activos.includes(:empresa_manifiesto, :sucursal_entrega).order(created_at: :desc)
     @manifiestos = @manifiestos.buscar(params[:q]) if params[:q].present?
     @manifiestos = @manifiestos.by_estado(params[:estado]) if params[:estado].present?
-    @manifiestos = @manifiestos.page(params[:page]).per(per_page_sanitized)
+    @manifiestos = @manifiestos.page(params[:page]).per(per_page_sanitized).load
+    # RP-87 · «Terminado de Prefacturar» en el badge, sin una consulta por fila.
+    Manifiesto.precargar_terminados(@manifiestos)
   end
 
   # PR-C30.15 · «Editar» edita **acá**, en la misma ficha. Jorge, 2026-10-10:

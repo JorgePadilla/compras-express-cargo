@@ -32,7 +32,9 @@ class GuiasAduanaController < ApplicationController
     base = base.where(estado: %w[enviado en_aduana recibido]) if @todos
     base = base.esperando_datos_de_san_pedro unless @todos
 
-    @manifiestos = base.order(fecha_enviado: :desc)
+    # RP-87 · El badge dice «Terminado de Prefacturar»: una consulta para todos.
+    @manifiestos = base.order(fecha_enviado: :desc).load
+    Manifiesto.precargar_terminados(@manifiestos)
     @pendientes = Manifiesto.activos.esperando_datos_de_san_pedro.count
   end
 
