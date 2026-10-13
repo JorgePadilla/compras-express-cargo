@@ -86,19 +86,8 @@
               </td>
               <%# PR-P.11b · En qué anda el aviso al cliente (PR-P.2/P.7): lo
                   mismo que muestra la hoja en «editar», sin otra consulta. %>
-              <td class="px-6 py-4 whitespace-nowrap" data-aviso="<%= pf.estado_del_aviso %>">
-                <% case pf.estado_del_aviso %>
-                <% when :avisada %>
-                  <span class="text-sm text-gray-600">Avisada <%= pf.notificado_at.strftime("%d/%m %H:%M") %></span>
-                <% when :consolidando %>
-                  <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-cec-gold/20 text-cec-navy">Consolidando</span>
-                <% when :error %>
-                  <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 ring-1 ring-red-200">Error de aviso</span>
-                <% when :programada %>
-                  <span class="text-sm text-gray-600">Programada <%= pf.notificar_at.strftime("%d/%m %H:%M") %></span>
-                <% else %>
-                  <span class="text-sm text-gray-400">—</span>
-                <% end %>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <%= render "pre_facturas/estado_del_aviso", pf: pf %>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right">
                 <span class="text-sm font-medium text-gray-900">L. <%= number_with_delimiter(pf.total.to_f, precision: 2) %></span>

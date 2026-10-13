@@ -38,10 +38,13 @@ class AuditarPreFacturaSystemTest < ApplicationSystemTestCase
     escanear @cajas.last.tracking
     assert_selector "[data-auditar-pre-factura-target='finModal'][open]", wait: 5
 
-    nueva = window_opened_by { page.driver.browser.action.send_keys(:f9).perform }
+    # C31-17 · F9 pregunta cuántas etiquetas, con los volúmenes puestos; Enter
+    # imprime.
+    nueva = cuantas_etiquetas(:f9, esperadas: 1)
     hasta_que("no se guardó la pre-factura") { PreFactura.where(auditado_por: @user).exists? }
 
     pf = PreFactura.where(auditado_por: @user).last
+    assert_equal 1, pf.etiquetas
     assert_equal [ 14, 5 ], [ pf.notificar_at.hour, pf.notificar_at.min ]
     assert_equal @cajas.map(&:id).sort, pf.paquetes.map(&:id).sort
     within_window(nueva) { assert_no_current_path "about:blank", wait: 5 }
@@ -114,7 +117,7 @@ class AuditarPreFacturaSystemTest < ApplicationSystemTestCase
     escanear @cajas.last.tracking
     assert_selector "[data-auditar-pre-factura-target='finModal'][open]", wait: 5
 
-    window_opened_by { page.driver.browser.action.send_keys(:f8).perform }
+    cuantas_etiquetas(:f8, esperadas: 1)
     hasta_que("F8 no guardó") { PreFactura.where(auditado_por: @user).where.not(consolidando_at: nil).exists? }
     pf = PreFactura.where(auditado_por: @user).last
     assert_nil pf.notificar_at
@@ -133,7 +136,8 @@ class AuditarPreFacturaSystemTest < ApplicationSystemTestCase
     escanear nueva.tracking
     assert_selector "[data-auditar-pre-factura-target='finModal'][open]", wait: 5
 
-    window_opened_by { page.driver.browser.action.send_keys(:f9).perform }
+    # Dos volúmenes ya: la tanda vieja y la nueva.
+    cuantas_etiquetas(:f9, esperadas: 2)
     hasta_que("F9 no programó") { pf.reload.consolidando_at.nil? && pf.notificar_at.present? }
 
     assert_equal [ 15, 20 ], [ pf.notificar_at.hour, pf.notificar_at.min ]
@@ -141,7 +145,55 @@ class AuditarPreFacturaSystemTest < ApplicationSystemTestCase
     assert_equal "en_aduana", nueva.reload.estado
   end
 
+  # C31-17 · *"Cuántas etiquetas el F9"*: se cambia el número, sale con eso
+  # —una por bolsa, «i de N»— y queda guardado para reimprimir.
+  test "F9 pregunta cuántas etiquetas: se cambia a 3 y salen 3" do
+    preparar_la_hoja
+    escanear @qr
+    escanear @cajas.first.tracking
+    escanear @cajas.last.tracking
+    assert_selector "[data-auditar-pre-factura-target='finModal'][open]", wait: 5
+
+    page.driver.browser.action.send_keys(:f9).perform
+    input = find("[data-auditar-pre-factura-target='etiquetasInput']")
+    assert_equal "1", input.value
+    input.send_keys(:backspace, "3")
+    nueva = window_opened_by { input.send_keys(:enter) }
+
+    hasta_que("no se guardó con 3 etiquetas") { PreFactura.where(auditado_por: @user, etiquetas: 3).exists? }
+    within_window(nueva) do
+      assert_selector ".entrega", count: 3, wait: 5
+      assert_selector ".bolsa", text: "3 de 3"
+    end
+  end
+
+  test "Escape en «¿Cuántas etiquetas?» vuelve sin guardar, y la pistola sigue" do
+    preparar_la_hoja
+    escanear @qr
+    escanear @cajas.first.tracking
+    escanear @cajas.last.tracking
+    assert_selector "[data-auditar-pre-factura-target='finModal'][open]", wait: 5
+
+    page.driver.browser.action.send_keys(:f9).perform
+    assert_selector "[data-auditar-pre-factura-target='etiquetasModal'][open]", wait: 5
+    page.driver.browser.action.send_keys(:escape).perform
+
+    assert_no_selector "[data-auditar-pre-factura-target='etiquetasModal'][open]", wait: 3
+    assert_equal 0, PreFactura.where(auditado_por: @user).count
+    assert_equal 1, page.driver.browser.window_handles.size, "abrió la pestaña de la etiqueta sin guardar"
+    hasta_que("el foco no volvió al campo de la pistola") { page.evaluate_script("document.activeElement.id") == "codigo_auditoria" }
+  end
+
   private
+
+  # F9 o F8 → «¿Cuántas etiquetas?» con los volúmenes puestos → Enter abre la
+  # etiqueta. Devuelve la pestaña.
+  def cuantas_etiquetas(tecla, esperadas:)
+    page.driver.browser.action.send_keys(tecla).perform
+    input = find("[data-auditar-pre-factura-target='etiquetasModal'][open] [data-auditar-pre-factura-target='etiquetasInput']", wait: 5)
+    assert_equal esperadas.to_s, input.value, "el número por defecto son los volúmenes"
+    window_opened_by { page.driver.browser.action.send_keys(:enter).perform }
+  end
 
   def preparar_la_hoja(hora: "07:30", fecha: nil)
     visit hoja_de_preparacion_path

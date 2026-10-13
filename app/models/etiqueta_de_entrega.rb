@@ -28,6 +28,14 @@
 #
 # Si `RP-82` contesta otra cosa, cambia este archivo y la vista; el QR y el
 # resto no se mueven.
+#
+# ── C31-17 · Ahora son N ─────────────────────────────────────────────────
+#
+# Yusef, 2026-10-12: *"igual también cuántas etiquetas el F9… igual que Miami
+# cuando imprimimos paquetitos… es cuántos paquetes metimos en esa
+# prefactura"*. El F9 de auditar pregunta cuántas (`pre_facturas.etiquetas`)
+# y sale una por bolsa, «1 de 3». Las de antes, sin el número, siguen siendo
+# una. Escanearlas todas al entregar es `RP-102`, todavía sin construir.
 class EtiquetaDeEntrega
   attr_reader :pre_factura
 
@@ -40,6 +48,20 @@ class EtiquetaDeEntrega
   # por teclado en distribución es-419 puede no entregar la barra. El prefijo
   # dice qué es lo que se escaneó, como `MED`.
   def qr = "ENT #{pre_factura.numero}"
+
+  # C31-17 · Cuántas etiquetas salen: las que pidió el F9, o una.
+  def etiquetas = pre_factura.etiquetas.presence || 1
+
+  # El QR de la etiqueta `i` de N. Con una sola, el de siempre. Con varias,
+  # cada bolsa lleva el suyo —`ENT PF-000123 2 DE 3`—: *"cuando ellos escaneen
+  # la factura va a habilitar que tiene que escanear éstos"* (`RP-102`), y con
+  # el mismo QR en las tres no se sabría cuál falta. Los dos primeros pedazos
+  # siguen siendo `ENT <número>`, así que quien lea solo eso lee lo mismo. Con
+  # espacios y letras, por lo mismo que `ENT` no lleva `|`.
+  def qr_de(i) = etiquetas > 1 ? "#{qr} #{i} DE #{etiquetas}" : qr
+
+  # «1 de 3», como el volumen (`Bulto#de_cuantos_texto`). Con una, nada.
+  def de_cuantos_texto(i) = etiquetas > 1 ? "#{i} de #{etiquetas}" : nil
 
   def numero = pre_factura.numero
 

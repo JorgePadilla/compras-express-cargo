@@ -125,6 +125,31 @@ class AuditarPreFacturaControllerTest < ActionDispatch::IntegrationTest
     assert_match(/El aviso sale el/, data["mensaje"])
   end
 
+  # C31-17 · Lo que contestó «¿Cuántas etiquetas?» queda en la pre-factura, y
+  # la etiqueta sale esas veces. Un número fuera de rango no rompe el guardado:
+  # se lleva al tope.
+  test "F9 guarda cuántas etiquetas, y la etiqueta sale esas veces" do
+    con_hoja(hora: "14:30", fecha: 1.day.from_now.to_date.iso8601)
+    post guardar_auditar_pre_factura_index_url,
+         params: { sesiones: [ @bulto.sesion ], escaneadas: @cajas.map(&:id), etiquetas: 2 }, as: :json
+    data = response.parsed_body
+
+    assert data["ok"], data["mensaje"]
+    assert_equal 2, PreFactura.find_by!(numero: data["numero"]).etiquetas
+    get data["imprimir_url"]
+    assert_select ".entrega", count: 2
+    assert_select ".bolsa", text: "2 de 2"
+  end
+
+  test "un número de etiquetas fuera de rango se lleva al tope" do
+    con_hoja(hora: "14:30", fecha: 1.day.from_now.to_date.iso8601)
+    post guardar_auditar_pre_factura_index_url,
+         params: { sesiones: [ @bulto.sesion ], escaneadas: @cajas.map(&:id), etiquetas: 500 }, as: :json
+
+    assert response.parsed_body["ok"], response.parsed_body["mensaje"]
+    assert_equal PreFactura::ETIQUETAS_MAX, PreFactura.find_by!(numero: response.parsed_body["numero"]).etiquetas
+  end
+
   # ── F8 (PR-P.6) ──────────────────────────────────────────────────────
 
   test "F8 guarda consolidando, sin aviso, y la etiqueta lleva la franja" do

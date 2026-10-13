@@ -33,6 +33,7 @@
                   auditar-pre-factura:yaEscaneada->audio#notify
                   auditar-pre-factura:rechazo->audio#error
                   auditar-pre-factura:noCorresponde->audio#error
+                  auditar-pre-factura:cuantasEtiquetas->audio#notify
                   auditar-pre-factura:guardado->audio#completo
                   auditar-pre-factura:noGuardo->audio#error">
 
@@ -149,6 +150,39 @@
             data: { action: "auditar-pre-factura#consolidar" })) { "Guardar consolidando" } %>
       <%= render(ButtonComponent.new(variant: :gold, size: :lg, icon: "printer", shortcut: "F9", shortcut_label_only: true,
             data: { auditar_pre_factura_target: "finGuardar", action: "auditar-pre-factura#guardar" })) { "Guardar, imprimir y avisar" } %>
+    </div>
+  </dialog>
+
+  <%# ── ¿Cuántas etiquetas? ──
+      C31-17 · Yusef: *"igual también cuántas etiquetas el F9… igual que
+      Miami cuando imprimimos paquetitos… es cuántos paquetes metimos en esa
+      prefactura"*. Sale con F9 y con F8 —las dos imprimen—, con el número de
+      volúmenes ya puesto; Enter imprime, Escape vuelve. Es el modal de
+      /etiquetar, con las mismas teclas: acá Enter **sí** actúa, porque el
+      modal no es el campo de la pistola. El número se guarda en la
+      pre-factura y reimprimir (F4 en la ficha) saca las mismas. %>
+  <dialog data-auditar-pre-factura-target="etiquetasModal"
+          data-action="cancel->auditar-pre-factura#cerrarEtiquetas"
+          style="margin: auto"
+          class="rounded-xl p-0 w-[22rem] max-w-[95vw] backdrop:bg-black/50 ring-2 ring-cec-gold">
+    <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, centrado: true,
+          kicker: "Una por bolsa", titulo: "¿Cuántas etiquetas se imprimen?") %>
+    <div class="bg-white dark:bg-gray-800 px-6 py-5 text-center">
+      <%# `autocomplete=off` y los `data-*-ignore`, como en /etiquetar: los
+          gestores de contraseñas le ofrecen tarjetas a un número chico. %>
+      <input type="number" min="1" max="<%= PreFactura::ETIQUETAS_MAX %>" value="1" step="1"
+             data-auditar-pre-factura-target="etiquetasInput"
+             data-action="keydown->auditar-pre-factura#etiquetasKeydown"
+             autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other"
+             aria-label="Cantidad de etiquetas"
+             class="w-28 text-center text-3xl font-bold rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-cec-navy dark:text-cec-gold shadow-sm focus:ring-cec-teal focus:border-cec-teal">
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Una por bolsa, «1 de N». Viene puesto el número de volúmenes.</p>
+    </div>
+    <div class="flex items-center justify-end gap-3 px-6 py-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+      <%= render ButtonComponent.new(variant: :secondary, size: :lg,
+            data: { action: "auditar-pre-factura#cerrarEtiquetas" }) do %>Cancelar<% end %>
+      <%= render ButtonComponent.new(variant: :gold, size: :lg, icon: "printer",
+            data: { action: "auditar-pre-factura#confirmarEtiquetas" }) do %>Imprimir<% end %>
     </div>
   </dialog>
 </div>

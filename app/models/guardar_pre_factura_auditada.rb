@@ -60,8 +60,11 @@ class GuardarPreFacturaAuditada
 
   MODOS = %i[avisar consolidar].freeze
 
-  def initialize(hoja:, sesiones:, escaneadas:, user:, modo: :avisar, pre_factura_id: nil)
+  # C31-17 · `etiquetas`: cuántas de entrega pidió el operario al F9/F8 (una
+  # por bolsa). Sin ella se queda la que tenía la pre-factura.
+  def initialize(hoja:, sesiones:, escaneadas:, user:, modo: :avisar, pre_factura_id: nil, etiquetas: nil)
     @hoja = hoja
+    @etiquetas = etiquetas.to_i.clamp(1, PreFactura::ETIQUETAS_MAX) if etiquetas.present?
     @sesiones = Array(sesiones).map(&:to_s).compact_blank.uniq
     @escaneadas = Array(escaneadas).map(&:to_i).to_set
     @user = user
@@ -211,6 +214,7 @@ class GuardarPreFacturaAuditada
     oficial = cajas.find { |c| c.manifiesto&.tipo_oficial? }&.manifiesto_id
     comunes = { manifiesto_id: @abierta&.manifiesto_id || oficial,
                 auditado_por: @user, fecha_trabajo: @hoja.disponible_en.to_date }
+    comunes[:etiquetas] = @etiquetas if @etiquetas
     if @modo == :consolidar
       comunes.merge(consolidando_at: @abierta&.consolidando_at || Time.current, notificar_at: nil)
     else

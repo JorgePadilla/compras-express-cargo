@@ -8,6 +8,28 @@ class PreFacturasControllerTest < ActionDispatch::IntegrationTest
     @cliente = clientes(:juan)
   end
 
+  # C31-17 · *"Necesitamos tener la hora real en algún lado"*: la ficha dice
+  # cuándo se programó el aviso, cuándo salió, o por qué no salió. La lista lo
+  # dice con el mismo partial.
+  test "la ficha dice la hora del aviso: programado, enviado, o el error" do
+    hora = Time.zone.local(2026, 10, 14, 7, 30)
+    @pre_factura.update_columns(notificar_at: hora, notificado_at: nil, consolidando_at: nil, notificacion_error: nil)
+    get pre_factura_url(@pre_factura)
+    assert_select "[data-aviso-al-cliente] [data-aviso=programada]", text: "Programado para 14/10 07:30"
+
+    @pre_factura.update_columns(notificado_at: hora + 2.minutes)
+    get pre_factura_url(@pre_factura)
+    assert_select "[data-aviso-al-cliente] [data-aviso=avisada]", text: "Aviso enviado 14/10 07:32"
+
+    @pre_factura.update_columns(notificacion_error: "14/10/2026 07:32 · El cliente no tiene correo")
+    get pre_factura_url(@pre_factura)
+    assert_select "[data-aviso-al-cliente] [data-aviso=avisada]", text: /Disponible sin aviso/
+    assert_select "[data-aviso-al-cliente] [data-notificacion-error]", text: /no tiene correo/
+
+    get pre_facturas_url
+    assert_select "[data-aviso=avisada]", text: /Disponible sin aviso 14\/10 07:32/
+  end
+
   test "should get index" do
     get pre_facturas_url
     assert_response :success

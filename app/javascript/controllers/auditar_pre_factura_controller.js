@@ -23,6 +23,9 @@ import { enfocar } from "controllers/enfocar"
 //   · Teclas de la hoja de Yusef (C30-02): F9 guarda e imprime, F2 limpia, y
 //     F8 guarda **consolidando** (PR-P.6): imprime la etiqueta con la franja y
 //     no avisa. Es la única pantalla donde F8 imprime (Fase 14).
+//   · C31-17 · Antes de imprimir, F9 y F8 preguntan **cuántas etiquetas**
+//     (una por bolsa), con el número de volúmenes puesto. Enter o un F9/F8
+//     más imprime; Escape vuelve sin guardar.
 //
 // PR-P.6 · Escanear un volumen de una pre-factura consolidando la **reabre**:
 // sus tandas entran a la pantalla ya auditadas, y la tanda nueva se le agrega
@@ -33,7 +36,8 @@ export default class extends Controller {
     "codigo", "aviso", "bitacora", "guardarBtn",
     "vacio", "contenido", "clienteCodigo", "clienteNombre", "servicio", "resumen",
     "cajas", "volumenes", "lineas",
-    "finModal", "finTexto", "finGuardar", "finSeguir", "abierta"
+    "finModal", "finTexto", "finGuardar", "finSeguir", "abierta",
+    "etiquetasModal", "etiquetasInput"
   ]
   static values = { volumenUrl: String, paqueteUrl: String, guardarUrl: String, abrir: Object }
 
@@ -42,7 +46,11 @@ export default class extends Controller {
     this._reiniciar()
     this._teclaGlobal = this.teclaGlobal.bind(this)
     document.addEventListener("keydown", this._teclaGlobal)
-    this._alCerrar = () => requestAnimationFrame(() => enfocar(this.codigoTarget))
+    // Si al cerrarse el «¿Desea agregar algo más?» se abrió «¿Cuántas
+    // etiquetas?» (F9 con el primero abierto), el foco es del número.
+    this._alCerrar = () => requestAnimationFrame(() => {
+      if (!this.etiquetasModalTarget.open) enfocar(this.codigoTarget)
+    })
     this.finModalTarget.addEventListener("close", this._alCerrar)
     // PR-P.7 · Abierta desde «editar pre-facturas»: la consolidando, ya cargada.
     if (this.abrirValue?.pre_factura) {
@@ -94,6 +102,17 @@ export default class extends Controller {
   }
 
   teclaGlobal(e) {
+    // C31-17 · Con «¿Cuántas etiquetas?» abierto, un F9 o F8 más imprime con
+    // el número que está —el que pide el modal— y F2 no limpia nada.
+    if (this.etiquetasModalTarget.open) {
+      if (e.key === "F9" || e.key === "F8") {
+        e.preventDefault()
+        this.confirmarEtiquetas()
+      } else if (e.key === "F2") {
+        e.preventDefault()
+      }
+      return
+    }
     if (e.key === "F9") {
       e.preventDefault()
       this.guardar()
@@ -224,10 +243,59 @@ export default class extends Controller {
     this.guardar("consolidar")
   }
 
+  // C31-17 · F9 y F8 ya no guardan de una: primero «¿Cuántas etiquetas?».
   guardar(modo = "avisar") {
     if (typeof modo !== "string") modo = "avisar"   // desde un clic llega el evento
     if (this._guardando) return
     if (this.finModalTarget.open) this.finModalTarget.close()
+
+    // Sin nada escaneado no hay etiquetas que contar: sigue de una y el
+    // servidor dice qué falta, como siempre.
+    if (this.sesiones.length === 0) return this._guardar(modo, null)
+
+    this._modoPendiente = modo
+    this.etiquetasInputTarget.value = String(Math.max(this.volumenes.length, 1))
+    // Ningún modal de una pantalla de pistola abre mudo (A1-10).
+    this.dispatch("cuantasEtiquetas")
+    this.etiquetasModalTarget.showModal()
+    requestAnimationFrame(() => this.etiquetasInputTarget.select())
+  }
+
+  // Enter imprime; Escape vuelve. Como en /etiquetar: acá Enter **sí** actúa,
+  // porque el modal no es el campo de la pistola.
+  etiquetasKeydown(e) {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      this.confirmarEtiquetas()
+    } else if (e.key === "Escape") {
+      e.preventDefault()
+      this.cerrarEtiquetas()
+    }
+  }
+
+  confirmarEtiquetas() {
+    const n = parseInt(this.etiquetasInputTarget.value, 10)
+    const max = parseInt(this.etiquetasInputTarget.max, 10) || 99
+    if (!Number.isInteger(n) || n < 1 || n > max) {
+      this.etiquetasInputTarget.select()
+      return
+    }
+    this.etiquetasModalTarget.close()
+    // Todavía adentro del gesto (el Enter, el clic o el F9 del modal): la
+    // pestaña de la etiqueta se abre en `_guardar`, ya mismo.
+    this._guardar(this._modoPendiente || "avisar", n)
+  }
+
+  // Escape o «Cancelar»: no se guarda nada, y la pistola sigue.
+  cerrarEtiquetas(e) {
+    if (e?.type === "cancel") e.preventDefault()
+    this.etiquetasModalTarget.close()
+    this._modoPendiente = null
+    enfocar(this.codigoTarget)
+  }
+
+  _guardar(modo, etiquetas) {
+    if (this._guardando) return
 
     // La pestaña de la etiqueta se abre **acá**, en el gesto (la tecla o el
     // clic), y recién después se le da la dirección: abierta al volver del
@@ -242,7 +310,7 @@ export default class extends Controller {
     // pistola lea mientras se guarda espera a que la pantalla quede limpia —si
     // no, una lectura en vuelo se mezclaría con la pre-factura que se cierra.
     this._cola = this._cola.then(() => this._post(this.guardarUrlValue, {
-      sesiones: this.sesiones, escaneadas: [ ...this.escaneadas ], modo, pre_factura_id: this.preFactura?.id
+      sesiones: this.sesiones, escaneadas: [ ...this.escaneadas ], modo, pre_factura_id: this.preFactura?.id, etiquetas
     })
       .then((data) => {
         if (data.ok) {
@@ -270,6 +338,7 @@ export default class extends Controller {
   }
 
   limpiar() {
+    if (this.etiquetasModalTarget.open) this.etiquetasModalTarget.close()
     this._reiniciar()
     this._pintar()
     this.avisoTarget.classList.add("hidden")
