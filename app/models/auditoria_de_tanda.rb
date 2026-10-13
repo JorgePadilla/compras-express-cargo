@@ -140,20 +140,23 @@ class AuditoriaDeTanda
                                     "falta medir lo demás, o que un supervisor autorice facturar lo que hay.")
     end
 
-    # RP-85 · Por ahora se rechaza lo que no está en la hoja; si conviene
-    # ofrecer agregarlo, es una pregunta abierta.
+    # El servicio tiene que ser uno de los de la hoja.
     #
-    # PR-P.11a · Lo que no viene en un manifiesto oficial (viejos, capeados,
-    # los de un interno) entra si la hoja eligió «Sin manifiesto oficial»
-    # (`HojaDePreparacion#acepta_manifiesto?`): era el hueco que solo cubría la
-    # puerta a mano.
+    # C31-14 · **El manifiesto ya no frena** (cierra `RP-85`). Yusef,
+    # 2026-10-12: *"aquí todo debe dejarte meter de otros manifiestos. Lo que no
+    # debe dejarte meter… es que sean de diferentes tipos de envío. Y el nombre,
+    # lógico"* · *"le quitamos la restricción de otro manifiesto… porque puede
+    # estar cruzado… está muy estricto"*. Hasta acá había un quinto paso
+    # (`HojaDePreparacion#acepta_manifiesto?`) que rechazaba la caja de un
+    # manifiesto que no estaba en la hoja, o sin manifiesto oficial si la hoja
+    # no marcó «Sin manifiesto oficial». Quedan el servicio (acá) y cliente y
+    # servicio entre tandas (`PuedenIrJuntas`, en `no_va_junto`). Lo corre
+    # también `GuardarPreFacturaAuditada#validar!` al guardar: es esta misma
+    # regla, no una copia.
     if (afuera = cajas.find { |c| !@hoja.tipo_envio_ids.include?(c.tipo_envio_id) })
       return Resultado.new(tipo: :fuera_de_la_hoja,
                            mensaje: "#{codigo_de(afuera)} va por #{afuera.tipo_envio&.nombre}, y la hoja es de " \
                                     "#{nombres_de_tipos}. Cambiá la hoja si toca trabajar ese servicio.")
-    end
-    if (afuera = cajas.find { |c| !@hoja.acepta_manifiesto?(c) })
-      return Resultado.new(tipo: :fuera_de_la_hoja, mensaje: fuera_de_la_hoja_msg(afuera))
     end
 
     # PR-P.11a · RP-89 · Toda prepagada entra con el simbólico (el aviso lo da
@@ -204,15 +207,6 @@ class AuditoriaDeTanda
     return nil if problema.nil?
 
     Resultado.new(tipo: :no_va_junto, mensaje: problema.mensaje)
-  end
-
-  def fuera_de_la_hoja_msg(caja)
-    if caja.manifiesto.nil? || caja.manifiesto.tipo_interno?
-      donde = caja.manifiesto ? "viene en el interno #{caja.manifiesto.numero}" : "no viene en ningún manifiesto"
-      return "#{codigo_de(caja)} #{donde}: marcá «Sin manifiesto oficial» en la hoja de preparación."
-    end
-
-    "#{codigo_de(caja)} es del manifiesto #{caja.manifiesto.numero}, que no está en la hoja de preparación."
   end
 
   def no_encontrado(codigo)
