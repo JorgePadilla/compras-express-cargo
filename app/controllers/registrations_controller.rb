@@ -7,7 +7,9 @@ class RegistrationsController < ApplicationController
   layout "application"
 
   def new
-    @cliente = Cliente.new
+    # Gemela de `/clientes`: San Pedro marcada, el cliente la cambia si retira
+    # en otra.
+    @cliente = Cliente.new(sucursal_retiro: Sucursal.para_cliente_nuevo)
     @sucursales_retiro = Sucursal.de_retiro
   end
 

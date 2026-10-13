@@ -61,7 +61,9 @@ class ClientesController < ApplicationController
   def new
     # El orden importa: `cargar_catalogos` arma el megacuadro y necesita saber
     # de qué cliente se trata, aunque todavía no exista.
-    @cliente = Cliente.new
+    # La sucursal de retiro viene marcada en San Pedro: sigue siendo
+    # obligatoria (C29-03), pero casi todos retiran ahí y se cambia si no.
+    @cliente = Cliente.new(sucursal_retiro: Sucursal.para_cliente_nuevo)
     cargar_catalogos
   end
 

@@ -77,6 +77,14 @@ class Sucursal < ApplicationRecord
     find_by(retiro_por_defecto: true)
   end
 
+  # La que viene marcada al crear un cliente: la de por defecto, o San Pedro
+  # (`SPS`) si nadie marcó ninguna. Jorge, 2026-10-13: *"deberíamos poner
+  # default la opción de SPS cuando se está creando el cliente"*; es la misma
+  # que la migración de #547 les puso a los que no tenían.
+  def self.para_cliente_nuevo
+    retiro_por_defecto || find_by(codigo: "SPS")
+  end
+
   def to_s
     nombre
   end
