@@ -1719,7 +1719,8 @@ CREATE TABLE public.manifiestos (
     recibido_hn_por character varying,
     aviso_llegada_programado_at timestamp(6) without time zone,
     edicion_abierta_por_id bigint,
-    edicion_abierta_at timestamp(6) without time zone
+    edicion_abierta_at timestamp(6) without time zone,
+    fecha_posible_entrega date
 );
 
 

@@ -98,6 +98,7 @@ class Manifiesto < ApplicationRecord
   # Jorge, 2026-09-06 · Y las de quien puso la fecha de recibido en Honduras.
   # Solo cuando la fecha cambia: agregar una guía no toca a quien la recibió.
   before_save :estampar_recibido_hn_por, if: :will_save_change_to_fecha_aduana?
+  after_save :copiar_fecha_posible_entrega_a_los_paquetes, if: :saved_change_to_fecha_posible_entrega?
   validate :fecha_aduana_no_es_futura, if: :will_save_change_to_fecha_aduana?
 
   # PR-C30.14 · El formulario manda **un día** (`2026-10-10`) y la columna
@@ -171,7 +172,7 @@ class Manifiesto < ApplicationRecord
   # de recibido en Honduras siguen escribiéndose después de que la carga salió:
   # *"lo ingresan después… le ingresa la encargada de operaciones en San Pedro
   # Sula"* (`C21-02`). Un candado total las dejaría afuera.
-  CAMPOS_DE_SAN_PEDRO = %w[fecha_aduana guias_attributes].freeze
+  CAMPOS_DE_SAN_PEDRO = %w[fecha_aduana fecha_posible_entrega guias_attributes].freeze
 
   # Quiénes son «Miami» para el manifiesto: los que lo arman.
   ROLES_DE_MIAMI = %w[supervisor_miami digitador_miami].freeze
@@ -726,6 +727,31 @@ class Manifiesto < ApplicationRecord
   # Quién escribió cada guía no se sella acá: eso lo tiene `paper_trail`.
   def estampar_recibido_hn_por
     self.recibido_hn_por = fecha_aduana.present? ? Current.user&.iniciales_display : nil
+  end
+
+  # C31-10 · La posible fecha de entrega del manifiesto **es** la de su carga.
+  # Yusef: *"¿la fecha del manifiesto? — la fecha de todos los paquetes que
+  # están en ese manifiesto"* · *"aunque sea mayor o menor, tiene que
+  # permitirme cambiarlo… atrás y para el frente"*. Por eso no se valida
+  # contra hoy, como `fecha_aduana`.
+  #
+  # Pisa la que cada paquete tenía (la calculada al recibirlo en Miami, o una
+  # puesta a mano): el cambio de vuelo es justo la noticia que la corrige. No
+  # toca la carga que ya no viaja (entregada, anulada…), y borrar la fecha del
+  # manifiesto no les borra la suya a los paquetes.
+  #
+  # `save(validate: false)` y no `update_columns`: la bitácora (paper_trail)
+  # tiene que decir quién movió la fecha; y un paquete viejo con un dato que
+  # hoy no valida no puede frenar el cambio de fecha de todo el manifiesto.
+  def copiar_fecha_posible_entrega_a_los_paquetes
+    return if fecha_posible_entrega.blank?
+
+    momento = fecha_posible_entrega.in_time_zone
+    paquetes.where.not(estado: EscaneoDeManifiesto::FUERA_DE_CIRCULACION).find_each do |paquete|
+      paquete.fecha_posible_entrega = momento
+      paquete.fecha_posible_entrega_by_user_id = Current.user&.id
+      paquete.save!(validate: false)
+    end
   end
 
   # «Recibido en Honduras» es el día en que **nosotros** la recibimos: una fecha

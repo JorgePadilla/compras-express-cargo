@@ -606,6 +606,8 @@ class ManifiestosController < ApplicationController
       # PR-C30.14 · Lo de San Pedro, que /edit también muestra. Son los
       # mismos dos de `/guias-y-aduana` (`Manifiesto::CAMPOS_DE_SAN_PEDRO`).
       :fecha_aduana,
+      # C31-10 · La posible fecha de entrega, que se copia a los paquetes.
+      :fecha_posible_entrega,
       tipo_envio_ids: [],
       guias_attributes: %i[id numero position _destroy]
     )

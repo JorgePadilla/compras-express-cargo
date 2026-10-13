@@ -282,6 +282,31 @@ class GuiasAduanaTest < ActionDispatch::IntegrationTest
     assert_match(/futura/, response.body)
   end
 
+  # C31-10 · La posible fecha de entrega es otra fecha: una estimación, que va
+  # para adelante o para atrás, y se copia a todos los paquetes. Yusef: *"no
+  # salió en el vuelo del martes sino que salió en el del jueves… venir,
+  # actualizar… la fecha de todos los paquetes que están en ese manifiesto"*.
+  test "la posible fecha de entrega acepta el futuro y se copia a los paquetes" do
+    paquete = Paquete.create!(tracking: "1ZFECHAPOSIBLE01", cliente: clientes(:juan), estado: "enviado_honduras",
+                              manifiesto: @manifiesto)
+    entregado = Paquete.create!(tracking: "1ZFECHAPOSIBLE02", cliente: clientes(:juan), estado: "entregado",
+                                manifiesto: @manifiesto)
+    ingresar(users(:supervisor_prefactura))
+    jueves = Date.current + 9
+
+    patch guias_aduana_url(@manifiesto), params: { manifiesto: { fecha_posible_entrega: jueves.to_s } }
+
+    assert_redirected_to guias_aduana_index_path
+    assert_equal jueves, @manifiesto.reload.fecha_posible_entrega
+    assert_equal jueves, paquete.reload.fecha_posible_entrega.to_date
+    assert_equal users(:supervisor_prefactura).id, paquete.fecha_posible_entrega_by_user_id
+    assert_nil entregado.reload.fecha_posible_entrega, "la carga entregada ya no tiene posible fecha"
+
+    # Y para atrás: *"aunque sea mayor o menor, tiene que permitirme cambiarlo"*.
+    patch guias_aduana_url(@manifiesto), params: { manifiesto: { fecha_posible_entrega: (Date.current + 2).to_s } }
+    assert_equal Date.current + 2, paquete.reload.fecha_posible_entrega.to_date
+  end
+
   test "una fecha futura que ya estaba guardada no traba agregar la guía" do
     futura = Date.current + 5
     @manifiesto.update_columns(fecha_aduana: Time.zone.parse(futura.to_s))
