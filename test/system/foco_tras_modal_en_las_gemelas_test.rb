@@ -54,27 +54,6 @@ class FocoTrasModalEnLasGemelasTest < ApplicationSystemTestCase
     assert_equal manifiesto, bueno.reload.manifiesto
   end
 
-  test "empacar: «Entendido» con el dedo y la pistola sigue escaneando" do
-    manifiesto = manifiestos(:creado)
-    manifiesto.update!(sucursal_origen: sucursales(:miami), tipo_envios: [ tipo_envios(:express) ])
-    caja = manifiesto.cajas.create!(alto: 10, largo: 10, ancho: 10, peso: 5)
-    ajeno = paquete("1ZGEMELAAJENO01", tipo: tipo_envios(:cer))
-    bueno = paquete("1ZGEMELABUENO01", tipo: tipo_envios(:express))
-
-    visit manifiesto_empacar_path(manifiesto)
-    find("#codigo_empaque").send_keys(ajeno.numero_recepcion, :enter)
-    assert_selector "dialog[open]", text: "Tipo de envío distinto", wait: 5
-    within("dialog[open]") { click_on "Entendido" }
-    assert_no_selector "dialog[open]", wait: 5
-    esperar_un_frame
-
-    teclear(bueno.numero_recepcion)
-    assert_equal bueno.numero_recepcion, find("#codigo_empaque").value, "la pistola escribió en el aire"
-    teclear(:enter)
-    assert_text "entró a la caja", wait: 5
-    assert_equal caja.id, bueno.reload.caja_manifiesto_id
-  end
-
   test "etiquetar: cerrar el aviso de la bolsa con el mouse y el tracking recibe la pistola" do
     abrir_sesion_etiquetar(TipoEnvio.activos.order(:nombre).first)
     page.execute_script(<<~JS)

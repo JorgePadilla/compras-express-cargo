@@ -235,7 +235,8 @@ class EmpacarSinEscanearTest < ActionDispatch::IntegrationTest
 
     get manifiesto_path(@manifiesto)
 
-    assert_select "a[href=?]", manifiesto_empacar_path(@manifiesto), count: 0
+    assert_select "a[href=?]", "/manifiestos/#{@manifiesto.id}/empacar", count: 0
+    assert_no_match(/Empacar escaneando/, response.body)
     assert_select "[data-caja-activa=?]", caja.letra, text: /#{Regexp.escape(caja.codigo)}/
   end
 

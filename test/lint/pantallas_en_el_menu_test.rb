@@ -80,7 +80,6 @@ class PantallasEnElMenuTest < ActiveSupport::TestCase
     "etiquetas_grupo_medicion"            => "C26-04: las stickers de un grupo. La URL la arma el controller y la manda en el JSON del escaneo — la pantalla no sabe qué grupo es hasta que alguien escanea una caja",
     "etiquetas_sesion_medicion"           => "C27-06: las etiquetas de una tanda de mediciones, por la misma razón que la de arriba — la sesión no existe hasta que se guarda, y la URL viene en el JSON de `medicion#guardar`",
     "etiqueta_bulto_medicion"             => "C27-09: reimprimir **una** medición. Yusef: *«tendría que volver a escanear el warehouse»* — la puerta es el escaneo, y la URL la manda el controller en el JSON",
-    "manifiesto_empacar"                  => "C31-01: Yusef pidió sacar «Empacar escaneando» (*«que sea esta barra que está abajo»*); la pantalla se borra en el PR siguiente (PR-C31.1b)",
     "edit_paquete"                        => "el paquete se edita **dentro** de su ficha; el listado enlaza a `paquete_path` con el título «Abrir paquete (Editar dentro)»",
     # Las dos de abajo son deuda encontrada por este lint, no decisiones. Se
     # anotan para que se vean; sacarlas de acá es enlazarlas o borrar la ruta.
@@ -109,8 +108,10 @@ class PantallasEnElMenuTest < ActiveSupport::TestCase
     assert_operator pantallas_anidadas.size, :>=, 40,
                     "el barrido dejó de enganchar: había más de 40 rutas que mirar"
 
-    assert_includes pantallas_anidadas.keys, "manifiesto_empacar",
-                    "la que motivó este lint tiene que estar entre las que mira"
+    # La que motivó este lint —`/manifiestos/:id/empacar`— se borró en C31-01.
+    # Su hermana de la misma familia: una pantalla anidada del manifiesto.
+    assert_includes pantallas_anidadas.keys, "listado_manifiesto",
+                    "las pantallas anidadas del manifiesto tienen que estar entre las que mira"
   end
 
   private

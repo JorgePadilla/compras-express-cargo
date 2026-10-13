@@ -57,7 +57,7 @@ class SonidosCableadosTest < ActiveSupport::TestCase
   # C28-04: `manifiesto_search` entra cuando el escaneo del manifiesto empieza
   # a contestar con modales — es la misma pistola que en /empacar.
   # PR-P.5: `auditar_pre_factura` entra el día que existe, como `empaque` en C21-01.
-  CONTROLLERS_DE_ESCANEO = %w[etiquetar entrega_personal empaque recepcion_carga medicion manifiesto_search
+  CONTROLLERS_DE_ESCANEO = %w[etiquetar entrega_personal recepcion_carga medicion manifiesto_search
                               auditar_pre_factura].freeze
 
   # Una línea que abre un modal: `showModal()`, o un target con "Modal" en el

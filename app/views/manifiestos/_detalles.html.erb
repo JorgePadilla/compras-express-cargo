@@ -90,6 +90,8 @@
         <%= dato_del_manifiesto "Guías del proveedor", manifiesto.numeros_de_guia.join(" · ").presence || "—",
                                 clase: "text-sm font-mono text-gray-900" %>
         <%= dato_del_manifiesto "Recibido en Honduras", fecha_y_quien(manifiesto.fecha_aduana, manifiesto.recibido_hn_por) || "—" %>
+        <%# C31-10 · La que ve el cliente; se copia a los paquetes. %>
+        <%= dato_del_manifiesto "Posible fecha de entrega", manifiesto.fecha_posible_entrega&.strftime("%d/%m/%Y") || "—" %>
         <%# RP-59 · Lo estampa el sistema al crear, con las iniciales de quien lo
             creó. Los manifiestos viejos que se crearon antes de esto pueden no
             tenerlo, y ahí cae al usuario. %>
