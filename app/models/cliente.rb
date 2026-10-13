@@ -40,6 +40,9 @@ class Cliente < ApplicationRecord
   has_many :tareas, dependent: :destroy
   # Los correos a los que además hay que avisarle. El de **acceso** es `email`.
   has_many :cliente_correos, dependent: :destroy
+  # PR-C31.10 · Lo que se le mandó y lo que falló (`C31-20`). Es un log: borrar
+  # al cliente no lo frena, la fila queda sin cliente (la FK es `ON DELETE SET NULL`).
+  has_many :correos_enviados, dependent: :nullify
   accepts_nested_attributes_for :cliente_correos, allow_destroy: true,
                                 reject_if: ->(a) { a[:correo].blank? }
 

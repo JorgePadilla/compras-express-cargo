@@ -64,4 +64,6 @@ ActiveSupport::Inflector.inflections(:en) do |inflect|
   inflect.irregular "correlativo_fiscal", "correlativos_fiscales"
   inflect.irregular "asiento_fiscal", "asientos_fiscales"
   inflect.irregular "documento_fiscal", "documentos_fiscales"  # PR-F1.2
+  # PR-C31.10: sin esto `CorreoEnviado` busca la tabla `correo_enviados`.
+  inflect.irregular "correo_enviado", "correos_enviados"
 end
