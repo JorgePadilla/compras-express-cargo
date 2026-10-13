@@ -63,7 +63,7 @@ class GuiasAduanaController < ApplicationController
   # pantalla lo acepta sola.
   def guias_aduana_params
     params.require(:manifiesto)
-          .permit(:fecha_aduana, guias_attributes: %i[id numero position _destroy])
+          .permit(:fecha_aduana, :fecha_posible_entrega, guias_attributes: %i[id numero position _destroy])
           .slice(*Manifiesto::CAMPOS_DE_SAN_PEDRO)
   end
 end

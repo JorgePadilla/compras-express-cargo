@@ -16,6 +16,20 @@
   <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">La fecha en que <b>nosotros</b> la recibimos.</p>
 </div>
 
+<%# C31-10 · La otra fecha, la que ve el cliente. Yusef: *"no salió en el
+    vuelo del martes sino que salió en el del jueves… venir, actualizar"* —
+    y se copia a todos los paquetes del manifiesto. Va para adelante o para
+    atrás: es una estimación, no lo que ya pasó. %>
+<div class="mt-6 max-w-md">
+  <%= f.label :fecha_posible_entrega, "Posible fecha de entrega", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+  <%= f.date_field :fecha_posible_entrega,
+        class: "block w-full min-h-11 rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal",
+        data: { controller: "flatpickr" } %>
+  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+    Se copia a todos los paquetes del manifiesto. Si cambia el vuelo, se corrige acá.
+  </p>
+</div>
+
 <%# C21-11 · *"El número de guía termina siendo varios"*, con la forma de
     nuestros splits: 286441-1, -2, -3.
 

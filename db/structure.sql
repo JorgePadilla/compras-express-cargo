@@ -1687,7 +1687,8 @@ CREATE TABLE public.manifiestos (
     recibido_hn_por character varying,
     aviso_llegada_programado_at timestamp(6) without time zone,
     edicion_abierta_por_id bigint,
-    edicion_abierta_at timestamp(6) without time zone
+    edicion_abierta_at timestamp(6) without time zone,
+    fecha_posible_entrega date
 );
 
 
@@ -8760,6 +8761,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261013150000'),
 ('20261013120000'),
 ('20261011170000'),
 ('20261011160000'),
