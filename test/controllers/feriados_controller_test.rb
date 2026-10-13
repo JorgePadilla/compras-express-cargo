@@ -19,6 +19,15 @@ class FeriadosControllerTest < ActionDispatch::IntegrationTest
     assert_operator response.body.index("Feriado que viene"), :<, response.body.index("Feriado que pasó")
   end
 
+  test "sin feriados se ve el estado vacío" do
+    Feriado.delete_all
+
+    get feriados_path
+
+    assert_response :success
+    assert_match "No hay feriados cargados", response.body
+  end
+
   test "el formulario usa el date picker del proyecto" do
     get new_feriado_path
 
