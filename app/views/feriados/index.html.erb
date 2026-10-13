@@ -1,0 +1,61 @@
+<%# C31-11 · Los feriados que no cuentan como día hábil para la «posible fecha
+    de entrega». Los carga el equipo de Yusef: cambian cada año (la semana
+    morazánica, la semana santa). %>
+<%= render PageHeaderComponent.new(title: "Feriados",
+                                   subtitle: "Días que no cuentan para la posible fecha de entrega") do |h| %>
+  <% h.with_action do %>
+    <%= render ButtonComponent.new(href: new_feriado_path, variant: :primary, icon: "plus", shortcut: "F1") do %>
+      Nuevo Feriado
+    <% end %>
+  <% end %>
+<% end %>
+
+<div class="mb-4 p-4 bg-cec-navy/5 dark:bg-cec-navy/20 border border-cec-navy/20 rounded-lg">
+  <div class="flex items-start gap-2">
+    <%= heroicon "information-circle", variant: :solid, options: { class: "w-5 h-5 text-cec-navy dark:text-cec-gold shrink-0 mt-0.5" } %>
+    <p class="text-sm text-gray-700 dark:text-gray-200">
+      La fecha de entrega se cuenta en <strong>días hábiles</strong> desde el día siguiente a la recepción:
+      de lunes a viernes, sin domingos ni feriados. El sábado cuenta solo si es el último día.
+      Los días de cada servicio se cambian en la <%= link_to "Tabla de Servicios", servicios_path, class: "font-medium text-cec-navy dark:text-cec-gold underline" %>.
+    </p>
+  </div>
+</div>
+
+<% if @proximos.any? || @pasados.any? %>
+  <% [ [ "Próximos", @proximos ], [ "Pasados", @pasados ] ].each do |titulo, feriados| %>
+    <% next if feriados.empty? %>
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden mb-5 <%= "opacity-70" if titulo == "Pasados" %>">
+      <div class="px-6 py-3 border-b border-gray-200 dark:border-gray-700">
+        <h2 class="text-sm font-bold text-gray-800 dark:text-gray-100"><%= titulo %></h2>
+      </div>
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-900">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Día</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          <% feriados.each do |feriado| %>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+              <td class="px-6 py-4 text-sm font-mono text-gray-900 dark:text-gray-100"><%= feriado.fecha.strftime("%d/%m/%Y") %></td>
+              <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400"><%= l(feriado.fecha, format: "%A") %></td>
+              <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100"><%= feriado.nombre %></td>
+              <td class="px-6 py-4 text-right text-sm whitespace-nowrap">
+                <%= render RowActionComponent.new(action: :edit, href: edit_feriado_path(feriado), label: "Editar feriado") %>
+                <%= render RowActionComponent.new(action: :delete, href: feriado_path(feriado),
+                                                  confirm: "¿Eliminar el feriado #{feriado.nombre}?", label: "Eliminar feriado") %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+<% else %>
+  <%= render EmptyStateComponent.new(title: "No hay feriados cargados",
+                                     description: "Agregá los feriados del año para que la fecha de entrega no los cuente como día hábil.",
+                                     icon: "calendar-days") %>
+<% end %>

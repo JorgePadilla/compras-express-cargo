@@ -373,8 +373,11 @@ class Paquete < ApplicationRecord
     "enviado_honduras"      => %i[fecha_enviado fecha_enviado_by_user_id],
     "en_aduana"             => %i[fecha_aduana fecha_aduana_by_user_id],
     "consolidando_honduras" => %i[fecha_consolidando fecha_consolidando_by_user_id],
-    "disponible_entrega"    => %i[fecha_disponible fecha_disponible_by_user_id
-                                  fecha_posible_entrega fecha_posible_entrega_by_user_id],
+    # C31-11 · `fecha_posible_entrega` ya no va acá: desde que se calcula al
+    # **recibir** (días hábiles desde la recepción) no es una fecha de
+    # «disponible», y un retroceso a aduana le borraba al cliente la fecha que
+    # el correo le prometió.
+    "disponible_entrega"    => %i[fecha_disponible fecha_disponible_by_user_id],
     "en_reparto"            => %i[fecha_en_reparto fecha_en_reparto_by_user_id],
     "entregado"             => %i[fecha_entregado fecha_entregado_by_user_id]
   }.freeze
@@ -749,6 +752,24 @@ class Paquete < ApplicationRecord
 
   def estado_terminal?
     entregado? || anulado? || retornado? || desechado?
+  end
+
+  # C31-11 · La «posible fecha de entrega» que va en el correo de recibido y
+  # que el cliente ve en su portal: los días hábiles del servicio
+  # (`tipo_envios.dias_entrega`) contados desde la recepción, con la regla del
+  # sábado de Yusef (`FechaDeEntrega`).
+  #
+  # Nunca pisa una fecha que ya tenga: si alguien la puso a mano, o la corrigió
+  # desde el manifiesto (`C31-10`), esa manda. Va con `update` y no con
+  # `update_columns` para que quede en el historial con quién recibió.
+  def fijar_fecha_posible_entrega
+    return if fecha_posible_entrega.present?
+
+    fecha = FechaDeEntrega.calcular(desde: fecha_recibido_miami || Time.current,
+                                    dias: tipo_envio&.dias_entrega)
+    return unless fecha
+
+    update(fecha_posible_entrega: fecha.in_time_zone)
   end
 
   # Aplica un cambio de servicio: deja el tipo nuevo y guarda de cuál venía.

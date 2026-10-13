@@ -143,8 +143,9 @@ class EntregaPersonalController < ApplicationController
   def respond_saved(paquetes)
     @paquete = paquetes.first
     # C18-06: en Entrega Personal no hay pre-alerta; el correo sale solo si se
-    # marcó «enviado según política».
-    notificar_recibido(@paquete, pre_alerta_vinculada: false)
+    # marcó «enviado según política». La fecha de entrega (C31-11) sí la lleva
+    # cada caja, con o sin correo.
+    notificar_recibido(@paquete, pre_alerta_vinculada: false, cajas: paquetes)
     msg = paquetes.size > 1 ?
             "Entrega personal registrada — #{paquetes.size} cajas, tracking #{@paquete.tracking}" :
             "Entrega personal registrada — tracking #{@paquete.tracking}"

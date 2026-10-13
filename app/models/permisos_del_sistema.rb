@@ -129,6 +129,9 @@ module PermisosDelSistema
          :servicios, :proveedores, :motivos_retencion, :motivos_envio_politica,
          :plantillas_notas_cliente, :plantillas_descripcion, :categoria_precios,
          :tasa_cambio, :ajustes_etiqueta,
+         # C31-11 · Los feriados de la fecha de entrega. Los carga el equipo de
+         # Yusef —Manal y Vanesa, que son admin—, como el resto de catálogos.
+         :feriados,
          # PR-F1.3 · Facturación SAR: los CAI y los puntos de emisión. Un CAI mal
          # cargado sale impreso en facturas que no se pueden corregir.
          :autorizaciones_sar,

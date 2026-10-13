@@ -7,6 +7,10 @@
   <%= simple_format(@nota) %>
 <% end %>
 
-<p>Sera incluido en el proximo envio disponible.</p>
+<% if @fecha_entrega %>
+  <p>Posible fecha de entrega: <strong><%= @fecha_entrega %></strong>.</p>
+<% else %>
+  <p>Sera incluido en el proximo envio disponible.</p>
+<% end %>
 
 <p>Gracias por usar Compras Express Cargo.</p>

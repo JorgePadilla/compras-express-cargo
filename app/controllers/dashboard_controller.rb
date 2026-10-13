@@ -120,6 +120,8 @@ class DashboardController < ApplicationController
           # PR-C7.12: los grupos de clientes ya no tienen tarjeta propia — se
           # administran dentro de la Tabla de Servicios, que es donde vive su precio.
           card("Tabla de Servicios",     "Precios, escalones, mínimos y grupos", "currency-dollar", servicios_path,                 :gold),
+          # C31-11 · Pegada a la Tabla de Servicios, como en la barra.
+          card("Feriados",               "No cuentan para la fecha de entrega", "calendar-days", feriados_path, :gold),
           card("Tarifas de Recolecta",   nil, "map-pin",                 tarifas_recolecta_path,    :gold),
           card("Servicios Extra",        nil, "puzzle-piece",            servicios_extra_path,      :gold),
           card("Proveedores",            nil, "shopping-bag",            proveedores_path,          :gold),
