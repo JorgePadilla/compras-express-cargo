@@ -22,13 +22,34 @@ class PreFacturaEtiquetaEntregaTest < ActionDispatch::IntegrationTest
     get etiqueta_entrega_pre_factura_path(@pf)
 
     assert_response :success
-    assert_includes response.body, etiqueta_qr_svg("ENT PF-000001", tamano: "1.5in"),
+    assert_includes response.body, etiqueta_qr_svg("ENT PF-000001", tamano: "2.2in"),
                     "el QR tiene que decir «ENT <número>»"
     assert_select ".nombre", text: "Juan Perez"
     assert_select ".cliente-codigo", text: "CEC-001"
     assert_select ".pf", text: "PF-000001"
     assert_select ".cifra", text: /LBS A COBRAR\s*10\.00/
     assert_select ".fecha", text: Date.current.strftime("%d/%m/%Y")
+  end
+
+  # C31-17 · *"Cuántas etiquetas el F9"*: las que se guardaron al auditar,
+  # una por bolsa, cada una con su «i de N» y su QR. Reimprimir (F4) saca las
+  # mismas, porque las lee de la pre-factura.
+  test "con etiquetas guardadas salen esas, «i de N», con un QR por bolsa" do
+    @pf.update_columns(etiquetas: 3)
+    get etiqueta_entrega_pre_factura_path(@pf, print: true)
+
+    assert_select ".entrega", count: 3
+    assert_select ".bolsa", text: "2 de 3"
+    (1..3).each do |i|
+      assert_includes response.body, etiqueta_qr_svg("ENT PF-000001 #{i} DE 3", tamano: "2.2in")
+    end
+  end
+
+  test "sin el número, una sola y sin «1 de 1»" do
+    get etiqueta_entrega_pre_factura_path(@pf)
+
+    assert_select ".entrega", count: 1
+    assert_select ".bolsa", count: 0
   end
 
   # PR-P.6 · Sin consolidar —F9— no hay franja; consolidando —F8— sí.

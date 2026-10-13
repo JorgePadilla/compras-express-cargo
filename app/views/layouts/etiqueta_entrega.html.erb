@@ -26,13 +26,17 @@
        silencio, y ninguna fila de esta etiqueta se puede cortar. */
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    @page { size: 4in 6in; margin: 0; }
+    /* C31-17 · **Horizontal**: Yusef la pidió así en la prueba del
+       2026-10-12 (*"se imprime horizontal"*). La misma FreeX 4×6, con la
+       hoja acostada: 6 de ancho y 4 de alto. ⚠️ Que el driver de la FreeX
+       respete el `size` acostado se prueba en la impresora de verdad. */
+    @page { size: 6in 4in; margin: 0; }
 
     body { font-family: Arial, Helvetica, sans-serif; color: #000; -webkit-font-smoothing: none; }
 
     .entrega {
-      width: 4in;
-      height: 6in;
+      width: 6in;
+      height: 4in;
       padding: .16in;
       display: flex;
       flex-direction: column;
@@ -40,32 +44,39 @@
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
+    /* Una por bolsa (C31-17): cada etiqueta en su hoja. */
     .entrega + .entrega { page-break-before: always; }
 
-    .rotulo { font-size: 9pt; font-weight: 700; letter-spacing: .08em; }
+    /* Arriba, a la izquierda lo que se lee de lejos y a la derecha el QR.
+       C31-17: *"donde retira está grande, necesita ser grande"* · *"el
+       tipo de envío… tal vez más grande todavía"* · *"el código, un poquito
+       grandecito"*. El nombre (C30-19) se queda, más chico que el código.
+       Arrancan en su tamaño máximo y se achican solos (`data-ajustar`): la
+       sucursal y el nombre pueden envolver a dos renglones
+       (`data-ajustar-lineas` + `max-height` en `em`, que baja con la letra).
 
-    /* *"Lo que ocupo más grande son la sucursal y el nombre del cliente… y
-       el tipo de envío."* Los tres arrancan en su tamaño máximo y se achican
-       solos (`data-ajustar`): la sucursal y el nombre pueden envolver a dos
-       renglones (`data-ajustar-lineas` + `max-height` en `em`, que baja con
-       la letra); el tipo de envío va en uno.
+       El presupuesto de alto es la restricción real (3.68in = 265pt útiles):
+       la columna de la izquierda con sucursal y nombre en dos renglones **a
+       tamaño completo** son ~180pt, la franja ~36 y la fila de abajo ~32.
+       Subir uno se come el aire: `etiqueta_entrega_cabe_test` lo mide. */
+    .arriba { display: flex; gap: .14in; align-items: flex-start; }
+    .izq { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+    .rotulo { font-size: 8pt; font-weight: 700; letter-spacing: .08em; }
+    .sucursal { font-size: 32pt; font-weight: 900; line-height: 1.15; max-height: 2.35em; overflow: hidden; text-transform: uppercase; }
+    .tipo     { font-size: 34pt; font-weight: 900; line-height: 1.1; overflow: hidden; margin-top: .02in; }
+    .cliente-codigo { font-size: 24pt; font-weight: 700; font-family: "Courier New", monospace; line-height: 1.2; overflow: hidden; }
+    .nombre   { font-size: 15pt; font-weight: 700; line-height: 1.15; max-height: 2.35em; overflow: hidden; margin-top: .02in; }
 
-       El presupuesto de alto es la restricción real: con la sucursal y el
-       nombre en dos renglones **a tamaño completo**, la franja puesta y el QR,
-       quedan ~14pt de aire (40·2.1 + 32·2.1 + 44·1.15 + franja + QR 1.5in).
-       Subir uno de estos tres se come ese aire: `etiqueta_entrega_cabe_test`
-       tiene ese caso medido. */
-    .sucursal { font-size: 40pt; font-weight: 900; line-height: 1.05; max-height: 2.1em; overflow: hidden; text-transform: uppercase; }
-    .nombre   { font-size: 32pt; font-weight: 700; line-height: 1.05; max-height: 2.1em; overflow: hidden; margin-top: .06in; }
-    .cliente-codigo { font-size: 18pt; font-weight: 700; font-family: "Courier New", monospace; overflow: hidden; }
-    .tipo     { font-size: 44pt; font-weight: 900; line-height: 1.15; overflow: hidden; margin-top: .04in; }
+    /* C31-17 · *"El QR… mejor que sea algo grande y que lo lea bien el
+       celular."* 2.2in, arriba a la derecha. */
+    .arriba .qr { flex: 0 0 2.2in; width: 2.2in; height: 2.2in; }
+    .arriba .qr svg { width: 2.2in; height: 2.2in; display: block; }
 
     /* C30-18 · *"Consolidando, así en medio, que estorbe… si alguien va
        pasando por el estante del producto terminado, vea que el paquete
        tiene la etiqueta consolidando."* Y *"aquí no puede ser el mismo
-       lugar del QR"*: va en el medio, entre los datos y el QR, de borde a
-       borde, y no tapa nada que se escanee. Los márgenes `auto` la dejan
-       centrada en el aire que haya.
+       lugar del QR"*: acostada, va de borde a borde **debajo** del QR y
+       encima del número de PF, y no tapa nada que se escanee.
        (La palabra en mayúsculas no puede ir en este comentario: el `<style>`
        viaja en el HTML y un test afirma que sin consolidar no aparece.) */
     .franja {
@@ -73,23 +84,27 @@
       background: #000;
       color: #fff;
       text-align: center;
-      font-size: 34pt;
+      font-size: 26pt;
       font-weight: 900;
       letter-spacing: .06em;
       line-height: 1;
-      padding: .08in 0;
+      padding: .06in 0;
       overflow: hidden;
     }
 
-    .abajo { margin-top: auto; display: flex; gap: .12in; align-items: flex-end; }
-    .abajo .qr { flex: 0 0 1.5in; width: 1.5in; height: 1.5in; }
-    .abajo .qr svg { width: 1.5in; height: 1.5in; display: block; }
-    .datos { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: .03in; }
-    .pf     { font-size: 18pt; font-weight: 700; font-family: "Courier New", monospace; overflow: hidden; }
-    .cifra  { display: flex; justify-content: space-between; align-items: baseline; gap: .06in; overflow: hidden; }
-    .cifra .u { font-size: 10pt; font-weight: 700; letter-spacing: .04em; }
-    .cifra .v { font-size: 20pt; font-weight: 700; }
-    .fecha  { font-size: 12pt; font-weight: 700; overflow: hidden; }
+    /* Abajo: el número de PF grande —*"es importante que sea algo grande,
+       porque también lo confirmamos"*—, la bolsa («1 de 3») y lo chico:
+       *"las medidas y todo eso, en pequeño está perfecto"*. */
+    .abajo { margin-top: auto; display: flex; gap: .14in; align-items: flex-end; }
+    /* El PF no cede ancho: lo que se aprieta son las cifras, que envuelven. */
+    .pf     { flex: 0 0 auto; font-size: 26pt; font-weight: 700; font-family: "Courier New", monospace; line-height: 1.2; overflow: hidden; }
+    .bolsa  { flex: 0 0 auto; font-size: 18pt; font-weight: 900; line-height: 1.2; white-space: nowrap; }
+    .datos  { flex: 1 1 auto; min-width: 0; text-align: right; }
+    .cifras { display: flex; flex-wrap: wrap; justify-content: flex-end; column-gap: .1in; }
+    .cifra  { white-space: nowrap; }
+    .cifra .u { font-size: 7pt; font-weight: 700; letter-spacing: .04em; }
+    .cifra .v { font-size: 11pt; font-weight: 700; }
+    .fecha  { font-size: 10pt; font-weight: 700; overflow: hidden; }
 
     @media screen {
       body { background: #f3f4f6; padding: 24px; }

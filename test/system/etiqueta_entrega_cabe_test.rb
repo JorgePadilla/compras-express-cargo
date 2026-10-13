@@ -1,13 +1,16 @@
 require "application_system_test_case"
 
-# C30-19 · PR-P.3 · La etiqueta de entrega cabe en la 4×6, con el nombre y la
-# sucursal más largos y la franja de consolidando puesta.
+# C30-19 · PR-P.3 · La etiqueta de entrega cabe, con el nombre y la sucursal
+# más largos y la franja de consolidando puesta.
 #
 # Se mide en Chrome y no a ojo, como la del bulto y la de medición:
 # `overflow: hidden` recorta **en silencio**, y ninguna fila de esta etiqueta
-# se puede cortar — el nombre y la sucursal son justo lo que Yusef pidió más
-# grande (*"lo que ocupo más grande son la sucursal y el nombre del
-# cliente… y el tipo de envío"*).
+# se puede cortar.
+#
+# C31-17 · Ahora **horizontal** (6 × 4 in) y con otra jerarquía: grande la
+# sucursal, el tipo de envío, el código, el número de PF y el QR (*"que lo lea
+# bien el celular"*); chico lo demás (*"las medidas y todo eso, en pequeño
+# está perfecto"*). Y una por bolsa.
 class EtiquetaEntregaCabeTest < ApplicationSystemTestCase
   setup do
     ingresar(users(:supervisor_prefactura))
@@ -60,46 +63,81 @@ class EtiquetaEntregaCabeTest < ApplicationSystemTestCase
   # renglones a tamaño completo ocupan el alto máximo — el ajuste no los toca,
   # así que lo único que la salva es el presupuesto del layout.
   test "sucursal y nombre en dos renglones a tamaño completo, con la franja, caben" do
-    clientes(:juan).update_columns(nombre: "Juan Carlos", apellido: "Perez Lopez")
-    sucursales(:zeron_sps).update_columns(nombre: "Zerón San Pedro")
+    clientes(:juan).update_columns(nombre: "María Fernanda", apellido: "Rodríguez Castellanos")
+    sucursales(:zeron_sps).update_columns(nombre: "Sucursal Centro")
     flete(paquete, 999.99)
 
     con_franja { visit etiqueta_entrega_pre_factura_path(@pf) }
 
     assert_operator caja_de(".sucursal")[:height], :>, puntos(".sucursal") * 1.5, "la sucursal no quedó en dos renglones"
     assert_operator caja_de(".nombre")[:height], :>, puntos(".nombre") * 1.5, "el nombre no quedó en dos renglones"
+    assert_equal 32, (puntos(".sucursal") * 72 / 96).round, "la sucursal se achicó: no es el caso a tamaño completo"
     assert_cabe
   end
 
+  test "va acostada: 6 de ancho por 4 de alto" do
+    flete(paquete, 1)
+
+    visit etiqueta_entrega_pre_factura_path(@pf)
+
+    etiqueta = caja_de(".entrega")
+    assert_in_delta 6 * 96, etiqueta[:width], 1
+    assert_in_delta 4 * 96, etiqueta[:height], 1
+    assert_includes page.html, "size: 6in 4in"
+  end
+
   # *"Así en medio, que estorbe"* — pero *"aquí no puede ser el mismo lugar
-  # del QR"*: la franja va entre los datos y el QR, y no lo toca.
-  test "la franja va en el medio y no tapa el QR" do
+  # del QR"*: acostada, la franja va de borde a borde debajo del QR y de los
+  # datos de arriba, y encima del número de PF. No toca nada que se escanee.
+  test "la franja va entre arriba y abajo, de borde a borde, y no tapa el QR" do
     la_peor
 
     con_franja { visit etiqueta_entrega_pre_factura_path(@pf) }
 
     franja = caja_de(".franja")
     qr = caja_de(".qr svg")
-    tipo = caja_de(".tipo")
     etiqueta = caja_de(".entrega")
 
-    assert_operator franja[:bottom], :<=, qr[:top], "la franja se mete en el QR"
-    assert_operator franja[:top], :>=, tipo[:bottom], "la franja tapa el tipo de envío"
+    assert_operator franja[:top], :>=, qr[:bottom], "la franja se mete en el QR"
+    assert_operator franja[:top], :>=, caja_de(".izq")[:bottom], "la franja tapa los datos de arriba"
+    assert_operator franja[:bottom], :<=, caja_de(".abajo")[:top], "la franja tapa el número de PF"
     assert_in_delta etiqueta[:width], franja[:width], 1, "la franja va de borde a borde"
-    medio = (franja[:top] + franja[:bottom]) / 2
-    assert_operator medio, :>, etiqueta[:top] + etiqueta[:height] * 0.3, "la franja quedó arriba, no en el medio"
-    assert_operator medio, :<, etiqueta[:top] + etiqueta[:height] * 0.7, "la franja quedó abajo, no en el medio"
+    assert_operator franja[:top], :>, etiqueta[:top] + etiqueta[:height] * 0.3, "la franja quedó arriba, no en el medio"
   end
 
-  test "lo más grande es la sucursal, el nombre y el tipo de envío" do
+  # C31-17 · Grande: sucursal, tipo, código y PF. Chico: las cifras y la
+  # fecha. Y el QR de 2.2in, que es lo que lee un celular sin pelear.
+  test "lo grande es la sucursal, el tipo, el código y el PF; lo chico, las cifras y la fecha; el QR, 2.2in" do
     flete(paquete, 12.5)
 
     visit etiqueta_entrega_pre_factura_path(@pf)
 
     assert_cabe
-    grandes = %w[.sucursal .nombre .tipo].map { |s| puntos(s) }
-    chicos = %w[.cliente-codigo .pf .fecha].map { |s| puntos(s) }
-    assert_operator grandes.min, :>, chicos.max, "#{grandes} contra #{chicos}"
+    grandes = %w[.sucursal .tipo .cliente-codigo .pf].map { |s| puntos(s) }
+    chicos = [ ".cifra .v", ".fecha" ].map { |s| puntos(s) }
+    assert_operator grandes.min, :>, chicos.max * 2, "#{grandes} contra #{chicos}"
+    assert_operator grandes.min, :>, puntos(".nombre"), "el nombre quedó más grande que lo que Yusef pidió grande"
+    assert_operator caja_de(".qr svg")[:width], :>=, 2.2 * 96 - 1, "el QR quedó chico para el celular"
+  end
+
+  # C31-17 · *"Cuántas etiquetas el F9"*: una por bolsa, cada una entera.
+  # Es la más apretada: «1 de 3» le quita lugar a las cifras, que envuelven, y
+  # con la franja puesta.
+  test "con tres etiquetas salen tres, cada una «i de 3» y entera, con la franja puesta" do
+    la_peor
+    @pf.update_columns(etiquetas: 3)
+
+    con_franja { visit etiqueta_entrega_pre_factura_path(@pf) }
+
+    assert_selector ".entrega", count: 3
+    assert_equal [ "1 de 3", "2 de 3", "3 de 3" ], all(".bolsa").map(&:text)
+    assert_equal 26, (puntos(".pf") * 72 / 96).round, "el número de PF se achicó para hacerle lugar a lo chico"
+    3.times do |i|
+      e = page.evaluate_script("(function(){var e=document.querySelectorAll('.entrega')[#{i}];" \
+                               "return [e.scrollHeight, e.clientHeight, e.scrollWidth, e.clientWidth];})()")
+      assert_operator e[0], :<=, e[1], "la #{i + 1} se recorta por abajo"
+      assert_operator e[2], :<=, e[3], "la #{i + 1} se recorta de ancho"
+    end
   end
 
   # Mismo ciclo que las otras etiquetas: `?print=true` abre el diálogo al

@@ -28,6 +28,20 @@ class EtiquetaDeEntregaTest < ActiveSupport::TestCase
     assert_equal "ENT #{@pf.numero}", etiqueta.qr
   end
 
+  # C31-17 · Una por bolsa. Con varias, cada QR dice cuál es; los dos primeros
+  # pedazos siguen siendo `ENT <número>`.
+  test "con varias etiquetas, cada una tiene su QR y su «i de N»; con una, el de siempre" do
+    assert_equal 1, etiqueta.etiquetas
+    assert_equal "ENT #{@pf.numero}", etiqueta.qr_de(1)
+    assert_nil etiqueta.de_cuantos_texto(1)
+
+    @pf.update_columns(etiquetas: 3)
+    assert_equal 3, etiqueta.etiquetas
+    assert_equal "ENT #{@pf.numero} 2 DE 3", etiqueta.qr_de(2)
+    assert_equal "2 de 3", etiqueta.de_cuantos_texto(2)
+    assert_equal [ "ENT", @pf.numero ], etiqueta.qr_de(3).split.first(2)
+  end
+
   test "las libras a cobrar suman solo las líneas de flete" do
     flete(paquete, 10.5)
     flete(paquete, 4.25)

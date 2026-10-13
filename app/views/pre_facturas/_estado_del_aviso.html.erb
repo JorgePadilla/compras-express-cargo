@@ -1,0 +1,36 @@
+<%# En qué anda el aviso al cliente (PR-P.2/P.7), con su hora: la lista
+    (PR-P.11b) y la ficha lo dicen igual.
+
+    C31-17 · Yusef: *"necesitamos tener la hora real en algún lado"*. La
+    etiqueta dice la hora **programada**; acá también la del envío.
+    «Aviso enviado» es `notificado_at`: cuando `HacerDisponibles` puso el
+    correo en la cola, segundos antes de que salga. Si salió sin correo
+    —el cliente no tiene—, quedó disponible igual y lo dice
+    `notificacion_error`.
+
+    `detalle: true` (la ficha) muestra además el texto del error. %>
+<% detalle = local_assigns.fetch(:detalle, false) %>
+<span data-aviso="<%= pf.estado_del_aviso %>">
+  <% case pf.estado_del_aviso %>
+  <% when :avisada %>
+    <% if pf.notificacion_error.present? %>
+      <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 ring-1 ring-red-200">Disponible sin aviso <%= pf.notificado_at.strftime("%d/%m %H:%M") %></span>
+    <% else %>
+      <span class="text-sm text-gray-600">Aviso enviado <%= pf.notificado_at.strftime("%d/%m %H:%M") %></span>
+    <% end %>
+  <% when :consolidando %>
+    <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-cec-gold/20 text-cec-navy">Consolidando</span>
+  <% when :error %>
+    <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 ring-1 ring-red-200">Error de aviso</span>
+    <% if pf.notificar_at %>
+      <span class="text-sm text-gray-600">· programado para <%= pf.notificar_at.strftime("%d/%m %H:%M") %></span>
+    <% end %>
+  <% when :programada %>
+    <span class="text-sm text-gray-600">Programado para <%= pf.notificar_at.strftime("%d/%m %H:%M") %></span>
+  <% else %>
+    <span class="text-sm text-gray-400">—</span>
+  <% end %>
+</span>
+<% if detalle && pf.notificacion_error.present? %>
+  <p class="mt-1 text-xs text-red-700" data-notificacion-error><%= pf.notificacion_error %></p>
+<% end %>

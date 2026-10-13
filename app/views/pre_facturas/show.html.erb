@@ -8,6 +8,11 @@
       <p class="font-mono font-bold text-lg"><%= @pre_factura.numero %></p>
       <p class="text-sm text-gray-500"><%= @pre_factura.created_at.strftime("%d/%m/%Y") %></p>
       <p class="text-sm mt-1"><%= render StatusBadgeComponent.new(status: @pre_factura.estado) %></p>
+      <%# C31-17 · *"Necesitamos tener la hora real en algún lado"*: el aviso
+          al cliente, programado o enviado, y el error si no salió. %>
+      <div class="mt-1 print:hidden" data-aviso-al-cliente>
+        <%= render "pre_facturas/estado_del_aviso", pf: @pre_factura, detalle: true %>
+      </div>
     </div>
   </div>
 
@@ -93,7 +98,9 @@
     <%# C30-19 · PR-P.3 · La etiqueta de entrega 4×6, en pestaña nueva: imprime
         y se cierra sola. F4, la tecla de imprimir de la familia (foto de las
         teclas, C30). Va desde ya para las pre-facturas hechas a mano; la
-        auditoría por escaneo (PR-P.5) la va a imprimir con F8/F9. %>
+        auditoría por escaneo (PR-P.5) la va a imprimir con F8/F9.
+        C31-17 · Saca las mismas que se pidieron al F9 (`etiquetas`), una por
+        bolsa. %>
     <%= render ButtonComponent.new(variant: :outline_navy, size: :sm, icon: "printer", target: "_blank", shortcut: "F4",
           href: etiqueta_entrega_pre_factura_path(@pre_factura, print: true)) do %>Imprimir etiqueta<% end %>
     <%= link_to "Volver (F2)", pre_facturas_path, class: "px-4 py-2 text-sm text-gray-600 hover:text-gray-900", data: { shortcut: "F2" } %>

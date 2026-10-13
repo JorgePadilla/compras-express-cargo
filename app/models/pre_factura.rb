@@ -43,6 +43,11 @@ class PreFactura < ApplicationRecord
 
   validates :numero, presence: true, uniqueness: { case_sensitive: false }
   validates :estado, presence: true, inclusion: { in: ESTADOS }
+  # C31-17 · Cuántas etiquetas de entrega: las pregunta el F9 de auditar, una
+  # por bolsa. Vacía en las de antes (imprimen una). El tope es el del modal de
+  # /etiquetar, y la base tiene el mismo (`pre_facturas_etiquetas_rango`).
+  ETIQUETAS_MAX = 99
+  validates :etiquetas, numericality: { only_integer: true, in: 1..ETIQUETAS_MAX }, allow_nil: true
 
   before_validation :generate_numero, on: :create, if: -> { numero.blank? }
   before_save :calculate_totals

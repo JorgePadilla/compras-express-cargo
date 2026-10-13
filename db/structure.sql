@@ -2468,7 +2468,9 @@ CREATE TABLE public.pre_facturas (
     consolidando_at timestamp(6) without time zone,
     auditado_por_id bigint,
     notificacion_error text,
-    factura_id bigint
+    factura_id bigint,
+    etiquetas integer,
+    CONSTRAINT pre_facturas_etiquetas_rango CHECK (((etiquetas IS NULL) OR ((etiquetas >= 1) AND (etiquetas <= 99))))
 );
 
 
@@ -8760,6 +8762,7 @@ ALTER TABLE ONLY public.tareas
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261013150000'),
 ('20261013120000'),
 ('20261011170000'),
 ('20261011160000'),

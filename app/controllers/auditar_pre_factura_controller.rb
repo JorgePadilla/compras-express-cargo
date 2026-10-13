@@ -99,10 +99,11 @@ class AuditarPreFacturaController < ApplicationController
 
   def auditoria = AuditoriaDeTanda.new(hoja: @hoja, sesiones: sesiones, abierta: abierta)
 
+  # C31-17 · `etiquetas`: lo que contestó «¿Cuántas etiquetas?» al F9/F8.
   def guardador(modo, con: sesiones)
     GuardarPreFacturaAuditada.new(hoja: @hoja, sesiones: con, escaneadas: Array(params[:escaneadas]),
                                   user: Current.user, modo: modo.presence || :avisar,
-                                  pre_factura_id: abierta&.id)
+                                  pre_factura_id: abierta&.id, etiquetas: params[:etiquetas].presence)
   end
 
   def cuando_avisa(pre_factura)
