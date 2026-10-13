@@ -105,14 +105,17 @@ class AuditoriaDeTandaTest < ActiveSupport::TestCase
     assert_equal :grupo_incompleto, auditoria.volumen(qr(cajas.first)).tipo
   end
 
-  test "fuera de la hoja, por servicio o por manifiesto (RP-85: por ahora se rechaza)" do
+  # C31-14 · Cierra `RP-85`. Yusef: *"todo debe dejarte meter de otros
+  # manifiestos. Lo que no debe dejarte meter… es que sean de diferentes tipos
+  # de envío"*.
+  test "otro servicio queda fuera de la hoja; otro manifiesto entra" do
     cem = [ caja(tipo_envio: tipo_envios(:cem)) ]
     medir(cem, { peso: "2" })
     assert_equal :fuera_de_la_hoja, auditoria.volumen(qr(cem.first)).tipo
 
     otro = [ caja(manifiesto: manifiestos(:creado)) ]
     medir(otro, { peso: "2" })
-    assert_equal :fuera_de_la_hoja, auditoria.volumen(qr(otro.first)).tipo
+    assert_equal :ok, auditoria.volumen(qr(otro.first)).tipo
   end
 
   # ── PR-P.11a · Lo que antes iba por la puerta a mano ───────────────────
@@ -148,7 +151,10 @@ class AuditoriaDeTandaTest < ActiveSupport::TestCase
     assert_no_match(/A mano/, r.mensaje)
   end
 
-  test "sin manifiesto oficial: se rechaza, salvo que la hoja lo haya elegido" do
+  # C31-14 · Tampoco frena venir sin manifiesto oficial (suelta, o en un
+  # interno): la casilla «Sin manifiesto oficial» de la hoja ya no hace falta
+  # para auditarla.
+  test "sin manifiesto oficial o en un interno, entra igual" do
     suelta = [ caja(manifiesto: nil) ]
     medir(suelta, { peso: "2" })
     interno = manifiestos(:enviado).dup.tap do |m|
@@ -158,18 +164,29 @@ class AuditoriaDeTandaTest < ActiveSupport::TestCase
     del_interno = [ caja(manifiesto: interno) ]
     medir(del_interno, { peso: "2" })
 
-    r = auditoria.volumen(qr(suelta.first))
-    assert_equal :fuera_de_la_hoja, r.tipo
-    assert_match(/Sin manifiesto oficial/, r.mensaje, "dice qué marcar en la hoja")
-
-    @hoja = @hoja.con("sin_manifiesto" => "1")
     assert_equal :ok, auditoria.volumen(qr(suelta.first)).tipo
-    assert_equal :ok, auditoria.volumen(qr(del_interno.first)).tipo, "la del interno también"
+    assert_equal :ok, auditoria.volumen(qr(del_interno.first)).tipo
+  end
 
-    otro = [ caja(manifiesto: manifiestos(:creado)) ]
-    medir(otro, { peso: "2" })
-    assert_equal :fuera_de_la_hoja, auditoria.volumen(qr(otro.first)).tipo,
-                 "un oficial que no está en la hoja sigue afuera"
+  # Lo que sí sigue frenando entre tandas: el cliente y el servicio
+  # (`PuedenIrJuntas`), aunque la otra venga de otro manifiesto.
+  test "de otro manifiesto entra, pero de otro cliente o de otro servicio no va junto" do
+    mia, = medir([ caja ], { peso: "2" })
+
+    ajena = [ caja(manifiesto: manifiestos(:creado), cliente: clientes(:maria)) ]
+    medir(ajena, { peso: "2" })
+    assert_equal :no_va_junto, auditoria([ mia.sesion ]).volumen(qr(ajena.first)).tipo
+
+    # Con la hoja de los dos servicios, para que no lo frene el paso del servicio.
+    @hoja = HojaDePreparacion.new(modo: "nuevas", tipo_envio_ids: [ @cer.id, tipo_envios(:cem).id ],
+                                  manifiesto_ids: [ @manifiesto.id ])
+    otro_servicio = [ caja(manifiesto: manifiestos(:creado), tipo_envio: tipo_envios(:cem)) ]
+    medir(otro_servicio, { peso: "2" })
+    assert_equal :no_va_junto, auditoria([ mia.sesion ]).volumen(qr(otro_servicio.first)).tipo
+
+    misma = [ caja(manifiesto: manifiestos(:creado)) ]
+    medir(misma, { peso: "2" })
+    assert_equal :ok, auditoria([ mia.sesion ]).volumen(qr(misma.first)).tipo
   end
 
   test "otra tanda que se retira en otra sucursal no va en la misma pre-factura" do

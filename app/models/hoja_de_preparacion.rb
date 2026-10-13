@@ -131,15 +131,10 @@ class HojaDePreparacion
     nuevas? && tipo_envio_ids.any? && self.class.carga_sin_manifiesto(tipo_envio_ids).exists?
   end
 
-  # ¿Esta caja entra con esta hoja, por su manifiesto? La de un manifiesto
-  # elegido, o —con «Sin manifiesto oficial»— la que no tiene ninguno o anda
-  # en un interno. Lo pregunta `AuditoriaDeTanda` al escanear y al guardar.
-  def acepta_manifiesto?(paquete)
-    return true if paquete.manifiesto_id && manifiesto_ids.include?(paquete.manifiesto_id)
-    return false unless sin_manifiesto?
-
-    paquete.manifiesto.nil? || paquete.manifiesto.tipo_interno?
-  end
+  # C31-14 · Aquí vivía `acepta_manifiesto?`, que `AuditoriaDeTanda` usaba para
+  # rechazar la caja de un manifiesto que no estaba en la hoja. Yusef lo quitó:
+  # *"todo debe dejarte meter de otros manifiestos"*. Los manifiestos de la hoja
+  # siguen diciendo qué se lista para auditar, no qué se rechaza.
 
   # Las que «editar» ofrece: las que todavía no le avisaron al cliente
   # (`notificado_at`, el sello de PR-P.2), sin facturar ni anular, y que

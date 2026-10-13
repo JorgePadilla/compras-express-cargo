@@ -109,8 +109,6 @@ class HojaDePreparacionTest < ActiveSupport::TestCase
     interno.update_columns(tipo: "interno")
     @uno.update_columns(manifiesto_id: interno.id)
     assert hoja.ofrece_sin_manifiesto?, "la que anda en un interno también"
-    assert hoja.acepta_manifiesto?(@uno.reload)
-    assert_not HojaDePreparacion.new(modo: "nuevas", tipo_envio_ids: [ @cer.id ]).acepta_manifiesto?(@uno)
   end
 
   test "la casilla va y vuelve por la sesión, y se destilda" do

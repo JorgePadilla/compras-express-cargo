@@ -129,14 +129,13 @@ class GuardarPreFacturaAuditadaTest < ActiveSupport::TestCase
     assert_equal 0, pf.pre_factura_items.find { |i| i.origen == "volumen" }.subtotal
   end
 
-  test "«Sin manifiesto oficial»: la caja sin manifiesto entra, y la pre-factura queda sin manifiesto" do
+  # C31-14 · Ya no hace falta marcar «Sin manifiesto oficial» para que entre:
+  # Yusef, *"todo debe dejarte meter de otros manifiestos"*.
+  test "la caja sin manifiesto entra, y la pre-factura queda sin manifiesto" do
     cajas = [ caja(manifiesto: nil) ]
     bulto, = medir(cajas, { peso: "2" })
 
-    error = assert_raises(GuardarPreFacturaAuditada::NoSePuede) { guardar([ bulto.sesion ], cajas.map(&:id)) }
-    assert_match(/Sin manifiesto oficial/, error.message)
-
-    pf = guardar([ bulto.sesion ], cajas.map(&:id), hoja: @hoja.con("sin_manifiesto" => "1"))
+    pf = guardar([ bulto.sesion ], cajas.map(&:id))
     assert pf.persisted?
     assert_nil pf.manifiesto_id
     assert_includes HojaDePreparacion.pre_facturas_editables, pf, "se corrige desde «editar» como las demás"
