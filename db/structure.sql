@@ -8895,6 +8895,7 @@ ALTER TABLE ONLY public.manifiesto_sucursales_entrega
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261013200000'),
 ('20261013180000'),
 ('20261013150100'),
 ('20261013150000'),
