@@ -485,7 +485,7 @@ end
     # C17-02: una vez, a la Caja 1 — el bloqueo por tareas es por caja.
     Tarea.atar_al_paquete!(paquetes.first)
     # Un correo por envío, no uno por caja.
-    notificar_recibido(paquetes.first, pre_alerta_vinculada: vinculadas > 0)
+    notificar_recibido(paquetes.first, pre_alerta_vinculada: vinculadas > 0, cajas: paquetes)
     @paquetes_hoy = paquetes_hoy_count
 
     respond_to do |format|

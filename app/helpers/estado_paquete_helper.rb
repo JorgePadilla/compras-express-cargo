@@ -123,4 +123,13 @@ module EstadoPaqueteHelper
     codigo = sucursal&.codigo
     codigo.present? ? "#{base} #{codigo.upcase}" : base
   end
+
+  # C31-11 · La «posible fecha de entrega» como la lee el cliente —«viernes
+  # 23/10»—, la misma que le dijo el correo de recibido. Se calla cuando el
+  # paquete ya terminó (entregado, anulado…): ahí la promesa ya no dice nada.
+  def posible_entrega_de(paquete)
+    return if paquete.fecha_posible_entrega.blank? || paquete.estado_terminal?
+
+    FechaDeEntrega.texto(paquete.fecha_posible_entrega)
+  end
 end

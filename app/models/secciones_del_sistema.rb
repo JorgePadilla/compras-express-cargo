@@ -52,6 +52,8 @@ module SeccionesDelSistema
     catalogos_manifiesto: { nombre: "Catálogos del Manifiesto",  grupo: "Configuración" },
     sucursales:           { nombre: "Sucursales",                grupo: "Configuración" },
     servicios:            { nombre: "Tabla de Servicios",        grupo: "Configuración" },
+    feriados:             { nombre: "Feriados",                  grupo: "Configuración",
+                            ayuda: "Días que no cuentan para la posible fecha de entrega." },
     servicios_extra:      { nombre: "Servicios Extra",           grupo: "Configuración" },
     tarifas_recolecta:    { nombre: "Tarifas de Recolecta",      grupo: "Configuración" },
     categoria_precios:    { nombre: "Categorías de Precio",      grupo: "Configuración" },

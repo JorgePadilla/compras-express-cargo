@@ -139,6 +139,13 @@ Rails.application.routes.draw do
   # tarifas nacen con ella (`RedondeoMediaLibraSiempre`). Por eso se fue el
   # `member { patch :redondeo }` que existía desde PR-C6.20.
   resources :servicios, only: %i[index new create edit update destroy]
+  # C31-11 · Los días hábiles de entrega de cada servicio se editan en la misma
+  # tabla: *"para mí debería estar donde vos tengas los tipos de servicio"*.
+  patch "servicios/dias/:tipo_envio_id", to: "servicios#editar_dias", as: :dias_entrega_servicio
+
+  # C31-11 · Los feriados que no cuentan como día hábil. Los carga el equipo
+  # de Yusef y se borran: *"elimina el feriado y lo agrega"*.
+  resources :feriados, except: :show
 
   # PR-10.b: cotización de flete en vivo (JSON) para el "valor a pagar".
   get "cotizador", to: "cotizador#show"

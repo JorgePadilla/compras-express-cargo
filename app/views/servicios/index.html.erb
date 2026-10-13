@@ -22,7 +22,7 @@
 
 <% @tipo_envios.each do |te| %>
   <% filas = @tarifas[te.id] || [] %>
-  <div class="bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden mb-5">
+  <div id="servicio-<%= te.id %>" class="bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden mb-5 scroll-mt-4">
     <div class="px-6 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3">
       <div class="flex items-baseline gap-2">
         <span class="font-mono font-bold text-cec-navy dark:text-cec-gold"><%= te.codigo.to_s.upcase %></span>
@@ -47,6 +47,24 @@
         Se cobra en <strong>medias libras</strong>: de .10 sube a media, de .60 sube a la libra.
       </p>
     </div>
+
+    <%# C31-11 · Los días hábiles de entrega del servicio, con los que se cuenta
+        la «posible fecha de entrega» del correo de recibido. Yusef: *"para mí
+        debería estar donde vos tengas los tipos de servicio"*. Sin tecla: hay
+        un formulario por servicio en la misma pantalla, y una tecla apretaría
+        siempre el primero. %>
+    <%= form_with url: dias_entrega_servicio_path(te), method: :patch, local: true,
+                  class: "px-6 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-gray-200" do %>
+      <%= label_tag "dias_entrega_#{te.id}", "Entrega en" %>
+      <%= number_field_tag :dias_entrega, te.dias_entrega, id: "dias_entrega_#{te.id}", min: 1, step: 1,
+            class: "w-20 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 shadow-sm text-sm py-1 focus:ring-cec-teal focus:border-cec-teal" %>
+      <span>días hábiles</span>
+      <%= render(ButtonComponent.new(variant: :secondary, size: :sm, type: :submit, label: "Guardar días de #{te.nombre}")) { "Guardar" } %>
+      <% if te.dias_entrega.blank? %>
+        <span class="text-xs text-gray-500 dark:text-gray-400">Sin días, el correo de recibido no da fecha.</span>
+      <% end %>
+      <%= link_to "Feriados", feriados_path, class: "ml-auto text-xs font-medium text-cec-navy dark:text-cec-gold underline" %>
+    <% end %>
 
     <% if filas.any? %>
       <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">

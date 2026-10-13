@@ -15,7 +15,18 @@ module NotificaRecibido
 
   private
 
-  def notificar_recibido(paquete, pre_alerta_vinculada:)
+  #
+  # C31-11 · Antes del correo se fija la «posible fecha de entrega», que es lo
+  # que el correo ahora dice en lugar de *"será incluido en el próximo envío
+  # disponible"*. Va **arriba** de las guardas a propósito: el cliente la ve en
+  # su portal aunque el paquete no tenga pre-alerta y no le llegue correo. Y se
+  # guarda antes de encolar, porque el job del correo vuelve a leer el paquete.
+  #
+  # `cajas` son las N de un split: un correo por envío, pero la fecha la lleva
+  # cada caja.
+  def notificar_recibido(paquete, pre_alerta_vinculada:, cajas: [ paquete ])
+    cajas.each(&:fijar_fecha_posible_entrega)
+
     return unless pre_alerta_vinculada || paquete.enviado_por_politica?
     return if paquete.cliente&.email.blank?
 

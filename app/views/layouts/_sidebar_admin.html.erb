@@ -142,6 +142,9 @@
           campo; los grupos de clientes se administran dentro de la Tabla de
           Servicios, que es donde vive su precio. %>
       <%= sidebar_link "Tabla de Servicios", servicios_path, icon: "currency-dollar" %>
+      <%# C31-11 · Pegado a la Tabla de Servicios: los días de entrega de cada
+          servicio viven ahí, y los feriados son la otra mitad de la cuenta. %>
+      <%= sidebar_link "Feriados", feriados_path, icon: "calendar-days" %>
       <%= sidebar_link "Tarifas de Recolecta", tarifas_recolecta_path, icon: "map-pin" %>
       <%= sidebar_link "Servicios Extra", servicios_extra_path, icon: "puzzle-piece" %>
       <%= sidebar_link "Proveedores", proveedores_path, icon: "shopping-bag" %>

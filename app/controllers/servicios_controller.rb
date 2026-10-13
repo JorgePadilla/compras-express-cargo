@@ -65,6 +65,21 @@ class ServiciosController < ApplicationController
     redirect_to servicios_path, notice: "Tarifa eliminada."
   end
 
+  # C31-11 · Los días hábiles que tarda cada servicio, para la «posible fecha de
+  # entrega». Yusef: en el sistema viejo eran un catálogo aparte («Días posibles
+  # de entrega») y *"para mí debería estar donde vos tengas los tipos de
+  # servicio"*. Cambiarlo no toca los paquetes ya recibidos: la fecha se fija al
+  # recibir.
+  def editar_dias
+    tipo = TipoEnvio.find(params[:tipo_envio_id])
+    if tipo.update(dias_entrega: params[:dias_entrega].presence)
+      aviso = tipo.dias_entrega ? "#{tipo.nombre}: entrega en #{tipo.dias_entrega} días hábiles." : "#{tipo.nombre}: sin días de entrega."
+      redirect_to servicios_path(anchor: "servicio-#{tipo.id}"), notice: aviso
+    else
+      redirect_to servicios_path(anchor: "servicio-#{tipo.id}"), alert: tipo.errors.full_messages.to_sentence
+    end
+  end
+
   private
 
 

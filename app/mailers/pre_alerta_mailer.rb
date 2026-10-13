@@ -9,6 +9,11 @@ class PreAlertaMailer < ApplicationMailer
     # Dónde se recibió, que ya no es siempre Miami (C18-02). Los viejos no
     # tienen sucursal de recepción: para ellos sigue siendo Miami.
     @sucursal = paquete.sucursal_recepcion&.nombre || "Miami"
+    # C31-11 · La «posible fecha de entrega» en días hábiles, que reemplaza el
+    # *"será incluido en el próximo envío disponible"*. La fija
+    # `notificar_recibido` antes de encolar; si el servicio no tiene días
+    # cargados no hay fecha, y el correo dice lo de antes.
+    @fecha_entrega = paquete.fecha_posible_entrega && FechaDeEntrega.texto(paquete.fecha_posible_entrega)
     return unless @cliente.email.present?
 
     mail to: @cliente.email, subject: "Paquete #{paquete.guia} recibido en #{@sucursal}"
