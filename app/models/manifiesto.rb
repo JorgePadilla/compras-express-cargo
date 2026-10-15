@@ -520,10 +520,14 @@ class Manifiesto < ApplicationRecord
   # son de la carga que cruza aduana; un manifiesto interno no las tiene y no las
   # va a tener nunca. Sin el filtro, cada envío de SPS a Tegucigalpa aparecería
   # en `/guias-y-aduana` como «le falta la guía» y no se iría nunca de la lista.
+  #
+  # C32-05 · **Solo la guía.** La fecha de recibido en Honduras ya no se le pide
+  # a San Pedro: la pone la recepción al terminar (`RecibirManifiesto#finalizar!`).
+  # Yusef: *"¿y por qué tengo que poner esto?… es cuando yo le escaneé"*. Con la
+  # fecha en la condición, todo manifiesto seguiría en la bandeja hasta recibirse.
   scope :esperando_datos_de_san_pedro, -> {
-    salidos = tipo_oficial.where(estado: %w[enviado en_aduana recibido])
-    salidos.where(fecha_aduana: nil)
-           .or(salidos.where.not(id: ManifiestoGuia.select(:manifiesto_id)))
+    tipo_oficial.where(estado: %w[enviado en_aduana recibido])
+                .where.not(id: ManifiestoGuia.select(:manifiesto_id))
   }
 
   # PR-P.4 · C30-15 · Los manifiestos que la hoja de preparación ofrece para
@@ -790,7 +794,15 @@ class Manifiesto < ApplicationRecord
   # Lo que San Pedro tiene que poner, ¿ya está? Decide si el botón de la
   # bandeja dice «Completar» o «Corregir».
   def datos_de_san_pedro_completos?
-    fecha_aduana.present? && numeros_de_guia.any?
+    numeros_de_guia.any?
+  end
+
+  # C32-05 · «Recibido en Honduras» **no se pregunta**: la pone la recepción al
+  # terminar de recibir. Antes de eso no hay nada que escribir —Yusef: *"no le
+  # he recibido… esto es antes"*—, y una vez puesta se corrige (C31-10). El
+  # `recibido?` cubre los recibidos de antes de que la recepción la estampara.
+  def fecha_aduana_corregible?
+    fecha_aduana.present? || recibido?
   end
 
   # La pre-factura que tiene tomado al paquete, si no está anulada. Se mira

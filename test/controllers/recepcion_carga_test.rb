@@ -37,6 +37,16 @@ class RecepcionCargaTest < ActionDispatch::IntegrationTest
     assert_select "td", text: "PRONTO CARGO"
   end
 
+  # C32-06 · *"Solo te hizo falta si fue enviado a Tegucigalpa o San Pedro, a
+  # la sucursal."*
+  test "la lista dice a qué sucursal va cada manifiesto" do
+    @manifiesto.update!(sucursal_entrega_ids: [ sucursales(:zeron_sps).id, sucursales(:humuya_tgu).id ])
+
+    get recepcion_carga_index_path
+
+    assert_select "td[data-columna='va-a']", text: @manifiesto.reload.sucursales_entrega_texto
+  end
+
   # *"Es mejor una pantallita que ahí buscara y que solo le aparezca lo que
   # tiene que meter… solo lo que está como enviado."*
   test "solo aparecen los manifiestos que vienen en camino" do
@@ -105,6 +115,19 @@ class RecepcionCargaTest < ActionDispatch::IntegrationTest
 
     assert_equal "recibido", @manifiesto.reload.estado
     assert @manifiesto.recepcion_finalizada_at.present?
+  end
+
+  # C32-05 · «Recibido en Honduras» no se le pide a San Pedro: la pone esto.
+  # Yusef: *"este recibido debería ser cuando yo reciba carga aquí"*.
+  test "terminar de recibir pone la fecha de recibido en Honduras, y quién" do
+    users(:cajero).update!(iniciales: "CJ")
+    escanear(@caja.codigo)
+
+    patch finalizar_recepcion_carga_path(@manifiesto), params: pin_de_supervisor
+
+    @manifiesto.reload
+    assert_in_delta Time.current, @manifiesto.fecha_aduana, 1.minute
+    assert_equal "CJ", @manifiesto.recibido_hn_por
   end
 
   # C31-04 · *"Esto es con pin… Terminar en recibir carga, ése es uno. Dos:

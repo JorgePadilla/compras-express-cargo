@@ -13189,8 +13189,8 @@ queda *a confirmar*:
 | `C32-02` | 4×6 de entrega más grande: sucursal de retiro, consolidado, tipo, código y nombre en dos líneas | ⏳ · ❓ `RP-105` |
 | `C32-03` | Medición: modal «tiene más paquetes en el manifiesto» al cerrar el volumen; probar con un consolidado | ⏳ |
 | `C32-04` | Línea de tiempo: pasos «Medido» y «Facturado en caja», con quién y al segundo | ⏳ · ❓ qué es «facturado en caja» |
-| `C32-05` | «Recibido en Honduras» de solo lectura en Guías y aduana; la pone la recepción | ⏳ |
-| `C32-06` | Columna «Va a» en la lista de `/recepcion_carga` | ⏳ |
+| `C32-05` | «Recibido en Honduras» de solo lectura en Guías y aduana; la pone la recepción | ✅ **Hecho** — `PR-C32.1`: antes de recibir no es un campo (*«Se pone sola al terminar de recibir la carga»*), y un PATCH a mano tampoco la escribe; la estampa `RecibirManifiesto#finalizar!` con las iniciales de quien recibe, y después se corrige (`Manifiesto#fecha_aduana_corregible?`). La bandeja de `/guias-y-aduana` ya no la cuenta como faltante: lo pendiente es solo la guía |
+| `C32-06` | Columna «Va a» en la lista de `/recepcion_carga` | ✅ **Hecho** — `PR-C32.1`: `sucursales_entrega_texto`, la misma frase de la ficha (C31-09) |
 | `C32-07` | Qué caja imprime «Imprimir» después de editar otra | ❓ revisar |
 | `C32-11` | La hoja del transportista: Yusef la va a validar con la empresa transportadora | 📄 Esperando a Yusef |
 | `C32-12` | Ventana de 3 / 3–12 / más de 12 meses también en pre-factura y factura | 📄 Yusef lo va a averiguar |

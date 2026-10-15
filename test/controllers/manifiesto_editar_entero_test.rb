@@ -42,7 +42,9 @@ class ManifiestoEditarEnteroTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame#manifiesto-detalles form[data-teclas-alcance][action=?]", manifiesto_path(@abierto) do
       assert_select "select[name='manifiesto[consignatario_id]']"
       assert_select "input[name='manifiesto[tipo_envio_ids][]']"
-      assert_select "input[name='manifiesto[fecha_aduana]']"
+      # C32-05 · Sin recibir, la fecha de recibido no es un campo: la pone la recepción.
+      assert_select "input[name='manifiesto[fecha_aduana]']", 0
+      assert_select "[data-campo='recibido-en-honduras']", text: /Se pone sola/
       assert_select "[data-controller='guias-repetidor'] input[name^='manifiesto[guias_attributes]']"
       assert_select "a[href=?][data-shortcut='F2']", manifiesto_path(@abierto), text: /Cancelar/
       assert_select "button[type='submit'][data-shortcut='F8']", text: /Guardar/
@@ -260,7 +262,11 @@ class ManifiestoEditarEnteroTest < ActionDispatch::IntegrationTest
     assert @abierto.es_prioridad?, "lo demás sí se guarda"
   end
 
+  # El error de muestra es la fecha de recibido en el futuro, que solo se puede
+  # mandar para corregir una que ya está (C32-05).
   test "un error del formulario vuelve a pintar la tarjeta en formulario, 422 y html, adentro del frame" do
+    ayer = 1.day.ago.change(usec: 0)
+    @abierto.update_columns(fecha_aduana: ayer)
     ingresar(@supervisor)
     patch manifiesto_url(@abierto), params: { manifiesto: { fecha_aduana: Date.tomorrow.iso8601 } },
                                     headers: FORM_EN_EL_FRAME
@@ -270,10 +276,11 @@ class ManifiestoEditarEnteroTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame#manifiesto-detalles form[data-teclas-alcance]" do
       assert_select "li", text: /fecha futura/
     end
-    assert_nil @abierto.reload.fecha_aduana
+    assert_equal ayer, @abierto.reload.fecha_aduana
   end
 
   test "un error sin Turbo pinta la ficha entera con la tarjeta abierta" do
+    @abierto.update_columns(fecha_aduana: 1.day.ago)
     ingresar(@supervisor)
     patch manifiesto_url(@abierto), params: { manifiesto: { fecha_aduana: Date.tomorrow.iso8601 } }
 

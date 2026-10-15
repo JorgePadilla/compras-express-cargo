@@ -23,9 +23,13 @@ class RecepcionCargaController < ApplicationController
   # C30-09 · `:paquetes` también: la fila dice cuánto va y qué falta
   # (`ProgresoDeRecepcion`), y lo cuenta en memoria — en el interno la unidad
   # es el paquete, y en el oficial los que viajaron sin caja.
+  #
+  # C32-06 · Y a dónde va (`sucursales_entrega_texto`): el oficial, a las suyas;
+  # el interno, a la única.
   def index
     @manifiestos = RecibirManifiesto.pendientes
-                                    .includes(:empresa_manifiesto, :consignatario, :tipo_envios, :tipo_envio_proveedor, :cajas, :paquetes)
+                                    .includes(:empresa_manifiesto, :consignatario, :tipo_envios, :tipo_envio_proveedor, :cajas, :paquetes,
+                                              :sucursales_entrega, :sucursal_entrega)
                                     .order(fecha_enviado: :desc)
   end
 
