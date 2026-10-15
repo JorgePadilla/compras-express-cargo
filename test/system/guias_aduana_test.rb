@@ -59,23 +59,23 @@ class GuiasAduanaTest < ApplicationSystemTestCase
     assert_equal ["286441-2"], @manifiesto.reload.guias.pluck(:numero)
   end
 
-  test "con la guía y la fecha puestas, deja de aparecer en lo que falta" do
+  # C32-05 · La fecha de recibido ya no se pide: la pone la recepción. Con la
+  # guía alcanza para salir de lo que falta.
+  test "con la guía puesta deja de aparecer en lo que falta, y la fecha de recibido no se pide" do
+    @manifiesto.update_columns(fecha_aduana: nil)
     visit edit_guias_aduana_path(@manifiesto)
+    assert_no_selector "input[name='manifiesto[fecha_aduana]']", visible: :all
+    assert_text "Se pone sola al terminar de recibir la carga"
+
     all("input[name*='guias_attributes'][type='text']").first.set("286441-1")
-    # El campo real queda `hidden` detrás del `altInput` de flatpickr, así que
-    # se escribe por la instancia y no tecleando.
-    page.execute_script(<<~JS)
-      const i = document.querySelector("input[name='manifiesto[fecha_aduana]']")
-      i._flatpickr ? i._flatpickr.setDate("2026-08-20", true) : (i.value = "2026-08-20")
-    JS
     click_on "Guardar"
 
     assert_text "guardado", wait: 5
     @manifiesto.reload
-    assert_equal ["286441-1"], @manifiesto.guias.pluck(:numero)
-    assert @manifiesto.fecha_aduana.present?, "la fecha de aduana tampoco se guardó"
+    assert_equal [ "286441-1" ], @manifiesto.guias.pluck(:numero)
+    assert_nil @manifiesto.fecha_aduana
     refute Manifiesto.esperando_datos_de_san_pedro.exists?(@manifiesto.id),
-           "con la guía y la fecha puestas ya no le falta nada"
+           "con la guía puesta ya no le falta nada"
   end
 
   test "el calendario que sale es el del proyecto, y en español" do

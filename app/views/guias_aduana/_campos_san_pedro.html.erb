@@ -8,12 +8,24 @@
     pidió que tuviera *"todo lo que está en el manifiesto"*. Una copia en cada una es como se separan — y este bloque
     ya tiene dos arreglos que no se pueden perder (el `<template>` desde el
     mismo partial y el `child_index` numérico). %>
-<div class="max-w-md">
-  <%= f.label :fecha_aduana, "Recibido en Honduras", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
-  <%= f.date_field :fecha_aduana,
-        class: "block w-full min-h-11 rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal",
-        data: { controller: "flatpickr" } %>
-  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">La fecha en que <b>nosotros</b> la recibimos.</p>
+<%# C32-05 · La fecha de recibido **no se pregunta**: la pone la recepción al
+    terminar de recibir (`RecibirManifiesto#finalizar!`). Yusef, llenando esta
+    pantalla: *"¿y por qué tengo que poner esto?… no le he recibido, esto es
+    antes"*. Antes de recibir se muestra que va a salir sola; después, se
+    puede corregir (`Manifiesto#fecha_aduana_corregible?`). %>
+<div class="max-w-md" data-campo="recibido-en-honduras">
+  <% if manifiesto.fecha_aduana_corregible? %>
+    <%= f.label :fecha_aduana, "Recibido en Honduras", class: "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1" %>
+    <%= f.date_field :fecha_aduana,
+          class: "block w-full min-h-11 rounded-lg border-gray-300 shadow-sm focus:ring-cec-teal focus:border-cec-teal",
+          data: { controller: "flatpickr" } %>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+      La puso la recepción<%= " (#{manifiesto.recibido_hn_por})" if manifiesto.recibido_hn_por.present? %>. Se cambia solo para corregirla.
+    </p>
+  <% else %>
+    <span class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Recibido en Honduras</span>
+    <p class="text-sm text-gray-500 dark:text-gray-400">Se pone sola al terminar de recibir la carga.</p>
+  <% end %>
 </div>
 
 <%# C31-10 · La otra fecha, la que ve el cliente. Yusef: *"no salió en el

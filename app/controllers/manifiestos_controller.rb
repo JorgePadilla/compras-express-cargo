@@ -102,7 +102,11 @@ class ManifiestosController < ApplicationController
     # Sin `tipo`: oficial o interno se elige al crear (`A7-07`), y la tarjeta
     # no lo manda (en /edit iba como hidden). El permit igual lo dejaba cambiar
     # con un PATCH armado a mano.
-    if @manifiesto.update(manifiesto_params.except(:tipo))
+    # C32-05 · La fecha de recibido, igual que en `/guias-y-aduana`: solo para
+    # corregir la que puso la recepción.
+    atributos = manifiesto_params.except(:tipo)
+    atributos = atributos.except(:fecha_aduana) unless @manifiesto.fecha_aduana_corregible?
+    if @manifiesto.update(atributos)
       mensaje = "Manifiesto actualizado exitosamente."
       respond_to do |format|
         format.turbo_stream do

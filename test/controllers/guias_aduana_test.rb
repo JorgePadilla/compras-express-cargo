@@ -75,7 +75,19 @@ class GuiasAduanaTest < ActionDispatch::IntegrationTest
 
   # ── Los dos campos ───────────────────────────────────────────────────────
 
-  test "guarda la fecha de recibido en Honduras" do
+  # C32-05 · Yusef: *"fecha recibido en Honduras, ¿y por qué tengo que poner
+  # esto?… no le he recibido, esto es antes"*. La pone la recepción.
+  test "antes de recibir, la fecha de recibido no se escribe aunque la manden" do
+    ingresar(users(:supervisor_prefactura))
+
+    patch guias_aduana_url(@manifiesto), params: { manifiesto: { fecha_aduana: "2026-08-30" } }
+
+    assert_redirected_to guias_aduana_index_path
+    assert_nil @manifiesto.reload.fecha_aduana
+  end
+
+  test "la que puso la recepción se corrige" do
+    @manifiesto.update_columns(fecha_aduana: Time.zone.parse("2026-08-31 14:33"))
     ingresar(users(:supervisor_prefactura))
 
     patch guias_aduana_url(@manifiesto), params: { manifiesto: { fecha_aduana: "2026-08-30" } }
@@ -115,12 +127,12 @@ class GuiasAduanaTest < ActionDispatch::IntegrationTest
     ingresar(users(:supervisor_prefactura))
 
     patch guias_aduana_url(@manifiesto), params: { manifiesto: {
-      fecha_aduana: "2026-08-30",
+      fecha_posible_entrega: "2026-08-30",
       consignatario_id: consignatario.id, es_prioridad: true, expedido_por: "alguien"
     } }
 
     @manifiesto.reload
-    assert_equal Date.new(2026, 8, 30), @manifiesto.fecha_aduana.to_date, "lo suyo sí entró"
+    assert_equal Date.new(2026, 8, 30), @manifiesto.fecha_posible_entrega, "lo suyo sí entró"
     assert_nil @manifiesto.consignatario_id
     assert_not @manifiesto.es_prioridad?
     assert_nil @manifiesto.expedido_por
@@ -132,9 +144,9 @@ class GuiasAduanaTest < ActionDispatch::IntegrationTest
     assert @manifiesto.bloqueado?
     ingresar(users(:supervisor_prefactura))
 
-    patch guias_aduana_url(@manifiesto), params: { manifiesto: { fecha_aduana: "2026-08-30" } }
+    patch guias_aduana_url(@manifiesto), params: { manifiesto: { guias_attributes: { "0" => { numero: "286441-1" } } } }
 
-    assert_equal Date.new(2026, 8, 30), @manifiesto.reload.fecha_aduana.to_date
+    assert_equal [ "286441-1" ], @manifiesto.reload.numeros_de_guia
   end
 
   # ── El `<template>` de la fila nueva ─────────────────────────────────────
@@ -207,7 +219,19 @@ class GuiasAduanaTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "select[name='manifiesto[consignatario_id]']", 0
     assert_select "input[name='manifiesto[es_prioridad]']", 0
+  end
+
+  # C32-05 · Antes de recibir, la fecha no es un campo: se avisa que sale sola.
+  test "sin recibir, la fecha de recibido no es un campo; ya recibida, se corrige" do
+    ingresar(users(:supervisor_prefactura))
+    get edit_guias_aduana_url(@manifiesto)
+    assert_select "input[name='manifiesto[fecha_aduana]']", 0
+    assert_select "[data-campo='recibido-en-honduras']", text: /Se pone sola al terminar de recibir/
+
+    @manifiesto.update_columns(fecha_aduana: Time.zone.parse("2026-08-30"), recibido_hn_por: "SP")
+    get edit_guias_aduana_url(@manifiesto)
     assert_select "input[name='manifiesto[fecha_aduana]']"
+    assert_select "[data-campo='recibido-en-honduras']", text: /La puso la recepción \(SP\)/
   end
 
   private
@@ -228,6 +252,7 @@ class GuiasAduanaTest < ActionDispatch::IntegrationTest
   # haciendo la acción."* Hermana de `expedido_por` (`RP-59`).
 
   test "la fecha de recibido lleva las iniciales de quien la puso" do
+    @manifiesto.update_columns(fecha_aduana: Time.zone.parse("2026-08-31"), recibido_hn_por: "RC")
     users(:supervisor_prefactura).update!(iniciales: "SP")
     ingresar(users(:supervisor_prefactura))
 
@@ -237,6 +262,7 @@ class GuiasAduanaTest < ActionDispatch::IntegrationTest
   end
 
   test "si otro corrige la fecha, las iniciales son las del que corrigió" do
+    @manifiesto.update_columns(fecha_aduana: Time.zone.parse("2026-08-31"), recibido_hn_por: "RC")
     users(:supervisor_prefactura).update!(iniciales: "SP")
     users(:admin).update!(iniciales: "AD")
     ingresar(users(:supervisor_prefactura))
@@ -273,12 +299,14 @@ class GuiasAduanaTest < ActionDispatch::IntegrationTest
   # «Recibido en Honduras» es el día en que nosotros la recibimos. Las filas
   # que Jorge vio decían 10/09 y 12/09 con el calendario en el 6.
   test "una fecha de recibido en el futuro no se acepta" do
+    ayer = Time.zone.parse(Date.yesterday.to_s)
+    @manifiesto.update_columns(fecha_aduana: ayer)
     ingresar(users(:supervisor_prefactura))
 
     patch guias_aduana_url(@manifiesto), params: { manifiesto: { fecha_aduana: (Date.current + 3).to_s } }
 
     assert_response :unprocessable_entity
-    assert_nil @manifiesto.reload.fecha_aduana
+    assert_equal ayer, @manifiesto.reload.fecha_aduana
     assert_match(/futura/, response.body)
   end
 

@@ -1,5 +1,6 @@
 <%# C21-02 · La bandeja de San Pedro: lo que salió de Miami y todavía no tiene
-    su guía del proveedor o su fecha de recibido en Honduras. %>
+    su guía del proveedor. La fecha de recibido en Honduras la pone la
+    recepción (C32-05). %>
 <%= render PageHeaderComponent.new(
       title: "Guías y aduana",
       subtitle: @todos ? "Toda la carga que salió de Miami" : "Lo que falta completar") do |header|
@@ -57,10 +58,11 @@ end %>
               </td>
               <%# …y quién la recibió: «30/08/2026 · SP». %>
               <td class="px-6 py-4 whitespace-nowrap text-sm" data-columna="recibido">
+                <%# C32-05 · Ya no «Falta»: no es de San Pedro, la pone la recepción. %>
                 <% if m.fecha_aduana %>
                   <span class="text-gray-700 dark:text-gray-200"><%= fecha_y_quien(m.fecha_aduana, m.recibido_hn_por) %></span>
                 <% else %>
-                  <span class="text-amber-700 dark:text-amber-500 font-medium">Falta</span>
+                  <span class="text-gray-500 dark:text-gray-400">Al recibir la carga</span>
                 <% end %>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right">
@@ -76,6 +78,6 @@ end %>
 <% else %>
   <%= render EmptyStateComponent.new(
         title: @todos ? "Todavía no salió carga de Miami" : "No falta nada por completar",
-        description: @todos ? "Cuando Miami finalice un manifiesto va a aparecer acá." : "Toda la carga que salió tiene su guía del proveedor y su fecha de recibido.",
+        description: @todos ? "Cuando Miami finalice un manifiesto va a aparecer acá." : "Toda la carga que salió tiene su guía del proveedor.",
         icon: "document-text") %>
 <% end %>

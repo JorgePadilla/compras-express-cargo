@@ -44,6 +44,9 @@
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo de envío</th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Empresa</th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Consignatario</th>
+          <%# C32-06 · *"Solo te hizo falta si fue enviado a Tegucigalpa o San
+              Pedro, a la sucursal."* La ficha ya lo decía (C31-09); la lista no. %>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Va a</th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Salió de Miami</th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recibido</th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
@@ -63,6 +66,7 @@
             </td>
             <td class="px-6 py-4 text-sm text-gray-700"><%= m.empresa_manifiesto&.nombre || "—" %></td>
             <td class="px-6 py-4 text-sm text-gray-700"><%= m.consignatario&.nombre || "—" %></td>
+            <td class="px-6 py-4 text-sm font-medium text-gray-900" data-columna="va-a"><%= m.sucursales_entrega_texto || "—" %></td>
             <td class="px-6 py-4 text-sm text-gray-500"><%= m.fecha_enviado&.strftime("%d/%m/%Y") || "—" %></td>
             <%# C30-09 · *"Algo que te vaya diciendo cuál quedó pendiente… si 7
                 cajas iban 6 nada más, falta una."* Cuántas y **cuáles**, por

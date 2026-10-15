@@ -22,7 +22,8 @@ class GuiasAduanaController < ApplicationController
 
   # *"Solo le aparece lo que tiene que meter"* — la misma idea con la que Yusef
   # pidió la pantalla de recibir carga. Por defecto, lo que sigue esperando su
-  # guía o su fecha; con `?todos=1`, también lo ya completo, para poder corregir.
+  # guía (la fecha de recibido ya no: la pone la recepción, C32-05); con
+  # `?todos=1`, también lo ya completo, para poder corregir.
   def index
     @todos = params[:todos].present?
     # `A7-07` · `tipo_oficial`: los internos no cruzan aduana, así que no tienen
@@ -63,9 +64,14 @@ class GuiasAduanaController < ApplicationController
   # La lista blanca **es** `CAMPOS_DE_SAN_PEDRO`, derivada y no copiada: si
   # algún día San Pedro llena un campo más, se agrega en el modelo y esta
   # pantalla lo acepta sola.
+  #
+  # C32-05 · La fecha de recibido solo se acepta para **corregirla**: antes de
+  # que la recepción la ponga, la pantalla no la muestra y un PATCH a mano
+  # tampoco la escribe.
   def guias_aduana_params
-    params.require(:manifiesto)
-          .permit(:fecha_aduana, :fecha_posible_entrega, guias_attributes: %i[id numero position _destroy])
-          .slice(*Manifiesto::CAMPOS_DE_SAN_PEDRO)
+    permitidos = params.require(:manifiesto)
+                       .permit(:fecha_aduana, :fecha_posible_entrega, guias_attributes: %i[id numero position _destroy])
+                       .slice(*Manifiesto::CAMPOS_DE_SAN_PEDRO)
+    @manifiesto.fecha_aduana_corregible? ? permitidos : permitidos.except(:fecha_aduana)
   end
 end
