@@ -605,6 +605,8 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     teclear "9", "9", "9", "9"
     espiar_impresion
     send_keys :f9
+    # C32-03 · Las dos son de Juan: guardar una sola avisa, y se elige medirla igual.
+    within("dialog[open]", text: "¿Medís solo estos?", wait: 5) { click_on "Medir solo estos" }
 
     assert_selector "[data-medicion-target='manifiestoConteo']", text: "medidos 1 · faltan 1", wait: 5
     assert_selector "[data-medicion-target='pendientes'] li", count: 1
@@ -754,6 +756,63 @@ class MedicionFlujoTest < ApplicationSystemTestCase
     assert_selector "[data-medicion-target='tandaCompleto']", text: "COMPLETADO", wait: 5
     assert_selector "[data-medicion-target='tandaConsolidado']", text: "llevás 3"
     assert_no_selector "[data-medicion-target='tandaAusentes']", visible: :visible
+  end
+
+  # C32-03 · Yusef: *"me dejaste medir solo 3 de los 20 que venían, eso está
+  # bien, pero… debería de decirle: hey, esta persona tiene más paquetes en el
+  # manifiesto… ¿desea medir y pesar solo estos?… o que corrija y siga
+  # escaneando"*. Un aviso al guardar, que no bloquea.
+  test "al guardar una parte de lo del cliente en el manifiesto, avisa; seguir escaneando no guarda, medir solo estos sí" do
+    manifiesto = Manifiesto.create!(tipo_envios: [ tipo_envios(:cer) ], sucursal_origen: sucursales(:miami),
+                                    estado: "recibido", fecha_enviado: Time.zone.parse("2026-10-01"),
+                                    fecha_aduana: Time.zone.parse("2026-10-06"))
+    segunda = caja("1ZAVISO00000002")
+    tercera = caja("1ZAVISO00000003")
+    [ @paquete, segunda, tercera ].each { |p| p.update!(manifiesto: manifiesto) }
+
+    visit medicion_index_path
+    escanear_a_la_mesa(@paquete, 1)
+    escanear_a_la_mesa(segunda, 2)
+    teclear "20", "10", "12", "14"
+    send_keys :f9
+
+    assert_selector "dialog[open]", text: "¿Medís solo estos?", wait: 5
+    assert_selector "dialog[open]", text: "tiene 3 en el manifiesto #{manifiesto.numero}. Llevás 2; faltan 1."
+    assert_selector "dialog[open] li", text: tercera.reload.numero_recepcion
+    within("dialog[open]") { click_on "Seguir escaneando" }
+
+    assert_no_selector "dialog[open]", wait: 5
+    assert_equal 0, Bulto.count, "seguir escaneando no guarda nada"
+    assert_selector "[data-medicion-target='mesa'] li", count: 2
+    assert_equal "codigo_medicion", foco, "vuelve a la pistola"
+
+    espiar_impresion
+    send_keys :f9
+    assert_selector "dialog[open]", text: "¿Medís solo estos?", wait: 5
+    within("dialog[open]") { click_on "Medir solo estos" }
+
+    assert_selector "[data-medicion-target='banner']", text: "2 cajas en un solo volumen", wait: 5
+    assert_equal 1, Bulto.count
+    assert_equal [ @paquete.id, segunda.id ].sort, Bulto.first.paquetes.pluck(:id).sort
+  end
+
+  test "con todo lo del cliente en la mesa, guardar no avisa" do
+    manifiesto = Manifiesto.create!(tipo_envios: [ tipo_envios(:cer) ], sucursal_origen: sucursales(:miami),
+                                    estado: "recibido", fecha_enviado: Time.zone.parse("2026-10-01"),
+                                    fecha_aduana: Time.zone.parse("2026-10-06"))
+    segunda = caja("1ZAVISO00000012")
+    [ @paquete, segunda ].each { |p| p.update!(manifiesto: manifiesto) }
+
+    visit medicion_index_path
+    escanear_a_la_mesa(@paquete, 1)
+    escanear_a_la_mesa(segunda, 2)
+    teclear "20", "10", "12", "14"
+    espiar_impresion
+    send_keys :f9
+
+    assert_selector "[data-medicion-target='banner']", text: "2 cajas en un solo volumen", wait: 5
+    assert_no_selector "dialog[open]"
+    assert_equal 1, Bulto.count
   end
 
   # C29-17 · Con el consolidado de Sofía en la mesa, una caja de Sofía sin
