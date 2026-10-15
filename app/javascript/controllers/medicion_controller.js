@@ -81,7 +81,8 @@ export default class extends conEnterAvanza(Controller) {
     "yaMedidoModal", "yaMedidoTexto", "yaMedidoLista", "yaMedidoJunto",
     "excepcionModal", "excepcionFaltantes", "excepcionError", "confirmarParcial",
     "autorizarModal", "autorizarFaltantes", "autorizarSupervisor", "autorizarPin", "autorizarMotivo",
-    "autorizarError", "confirmarAutorizacion"
+    "autorizarError", "confirmarAutorizacion",
+    "sueltosModal", "sueltosTexto", "sueltosLista", "sueltosSeguir"
   ]
   static values = {
     escanearUrl: String, guardarUrl: String, panelUrl: String, unirUrlTemplate: String,
@@ -584,11 +585,8 @@ export default class extends conEnterAvanza(Controller) {
     this.tandaGrupoTarget.hidden = !hay
     if (!hay) { this._yaCompleto = false; return }
 
-    const enTanda = new Set(this._idsDeLaTanda())
-    const enMesa = (c) => !!(c.id && enTanda.has(c.id))
-    const cajasEnMesa = g.cajas.filter(enMesa).length
+    const { enMesa, cajasEnMesa, faltan } = this._cuentaDelGrupo(g)
     const medidas = g.cajas.filter((c) => c.estado === "medida").length
-    const faltan = g.cajas.filter((c) => c.estado !== "medida" && !enMesa(c))
 
     // C28-11 · El número, **grande**. Yusef, mirando la línea con el conteo:
     // *"eso sí se necesita hacer más grande. Así como está, pero más grande.
@@ -639,6 +637,16 @@ export default class extends conEnterAvanza(Controller) {
     this.tandaAusentesTarget.hidden = ausentes.length === 0
     this.tandaAusentesTarget.textContent = ausentes.length === 0 ? "" :
       `No están acá: ${ausentes.map((c) => `${c.wr || c.tracking} (${c.donde})`).join(", ")}`
+  }
+
+  // Lo que está en la mesa y lo que falta del grupo a la vista. Lo usan la
+  // línea de la tanda y el aviso de F9 (C32-03): si los dos contaran por su
+  // lado, el modal podría decir «faltan 2» con la línea diciendo «faltan 1».
+  _cuentaDelGrupo(g) {
+    const enTanda = new Set(this._idsDeLaTanda())
+    const enMesa = (c) => !!(c.id && enTanda.has(c.id))
+    return { enMesa, cajasEnMesa: g.cajas.filter(enMesa).length,
+             faltan: g.cajas.filter((c) => c.estado !== "medida" && !enMesa(c)) }
   }
 
   // Un dibujito por caja. Solo el sufijo: el número madre ya está en la mesa y
@@ -885,8 +893,57 @@ export default class extends conEnterAvanza(Controller) {
       return
     }
 
-    this._enviarTanda({ paquete_ids: this._idsDeLaTanda(), volumenes, reemplaza_sesion: this._reemplazaSesion || null,
-                        saltar_manifiesto: this._saltados })
+    const cuerpo = { paquete_ids: this._idsDeLaTanda(), volumenes, reemplaza_sesion: this._reemplazaSesion || null,
+                     saltar_manifiesto: this._saltados }
+    if (this._avisarSueltos(cuerpo)) return
+
+    this._enviarTanda(cuerpo)
+  }
+
+  // ── C32-03 · El cliente tiene más en el manifiesto ──────────────────────
+  //
+  // Yusef, el 2026-10-14: *"me dejaste medir solo 3 de los 20 que venían, eso
+  // está bien, pero si la persona hace eso, debería de decirle: hey, esta
+  // persona tiene más paquetes en el manifiesto… ¿desea medir y pesar solo
+  // estos?… y el que diga sí, y ya, o que corrija y siga escaneando"* · *"es
+  // más que todo un warning"*. Avisa y **no bloquea**: el PIN es para las
+  // cajas de un consolidado o un split (C28-13), no para los sueltos.
+  //
+  // Solo en la cuenta del cliente por manifiesto (`del_manifiesto`, C29-16).
+  // Un consolidado ya tiene su modal y su banner de «Medir lo que hay».
+  _avisarSueltos(cuerpo) {
+    const g = this._grupo
+    if (!g || !g.del_manifiesto || g.total <= 1) return false
+
+    const { cajasEnMesa, faltan } = this._cuentaDelGrupo(g)
+    if (faltan.length === 0) return false
+
+    this._tandaConAviso = cuerpo
+    this.sueltosTextoTarget.textContent =
+      `${g.cliente} tiene ${g.total} en el manifiesto ${g.del_manifiesto}. Llevás ${cajasEnMesa}; faltan ${faltan.length}.`
+    this.sueltosListaTarget.replaceChildren(...faltan.map((c) => {
+      const li = document.createElement("li")
+      li.textContent = `${c.wr || c.tracking} · ${c.donde}`
+      return li
+    }))
+    this.dispatch("atencion")
+    this.sueltosModalTarget.showModal()
+    // El foco en «Seguir escaneando»: si la pistola dispara con el modal
+    // abierto, su Enter no puede guardar la tanda.
+    requestAnimationFrame(() => this.sueltosSeguirTarget.focus())
+    return true
+  }
+
+  sueltosMedirSolo() {
+    const cuerpo = this._tandaConAviso
+    this._tandaConAviso = null
+    this.sueltosModalTarget.close()
+    if (cuerpo) this._enviarTanda(cuerpo)
+  }
+
+  sueltosSeguir() {
+    this._tandaConAviso = null
+    this.sueltosModalTarget.close()
   }
 
   _enviarTanda(cuerpo) {
@@ -1196,7 +1253,8 @@ export default class extends conEnterAvanza(Controller) {
     return this.problemaModalTarget.open || this.excepcionModalTarget.open ||
            this.descarteModalTarget.open || this.mezclaModalTarget.open ||
            this.consolidadoModalTarget.open || this.autorizarModalTarget.open ||
-           this.notasModalTarget.open || this.unirModalTarget.open || this.yaMedidoModalTarget.open
+           this.notasModalTarget.open || this.unirModalTarget.open || this.yaMedidoModalTarget.open ||
+           this.sueltosModalTarget.open
   }
 
   _enfocarPeso() {

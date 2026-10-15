@@ -719,6 +719,28 @@
     </div>
   </dialog>
 
+  <%# ── C32-03 · Al guardar, el cliente tiene más en el manifiesto ────────
+
+      Yusef, el 2026-10-14: *"esta persona tiene más paquetes en el
+      manifiesto… ¿desea medir y pesar solo estos?… un modal… y el que diga
+      sí, y ya, o que corrija y siga escaneando"*. Es un aviso: «Medir solo
+      estos» guarda la tanda como está. %>
+  <dialog data-medicion-target="sueltosModal" data-action="cancel->medicion#avisoCancelar"
+          style="margin: auto" class="rounded-xl p-0 w-[46rem] max-w-[95vw] backdrop:bg-black/70">
+    <%= render ModalHeaderComponent.new(tono: :atencion, tamano: :grande, kicker: "Tiene más paquetes en el manifiesto",
+          titulo: "¿Medís solo estos?") %>
+    <div class="bg-white px-8 py-6 space-y-3">
+      <p class="text-xl text-gray-900" data-medicion-target="sueltosTexto"></p>
+      <ul class="text-lg font-mono text-cec-navy space-y-1" data-medicion-target="sueltosLista"></ul>
+    </div>
+    <div class="flex flex-wrap items-center justify-end gap-3 px-8 py-4 bg-gray-50 border-t border-gray-200">
+      <%= render(ButtonComponent.new(variant: :secondary, size: :lg, label: "Medir solo estos",
+            data: { action: "medicion#sueltosMedirSolo" })) { "Medir solo estos" } %>
+      <%= render(ButtonComponent.new(variant: :primary, size: :lg, label: "Seguir escaneando",
+            data: { medicion_target: "sueltosSeguir", action: "medicion#sueltosSeguir" })) { "Seguir escaneando" } %>
+    </div>
+  </dialog>
+
   <%# ── C29-18 · El consolidado ya tiene cajas medidas ─────────────────────
 
       Yusef: *"este paquete está consolidando con otro, traer el resto y medir,
