@@ -13120,6 +13120,37 @@ Tegucigalpa"*.
   semanas, y de diciembre y enero; no se entiende si cambia lo de `C31-21`
   (Honduras del 3–4 al 11 de noviembre). No se corrige `C31-21`.
 
+#### Lo que se había quedado afuera (repaso del 2026-10-15)
+
+Una segunda transcripción de la misma grabación (`whisper small`, ocho
+pedazos de 6 min, sin bucles), cruzada contra lo de arriba línea por línea.
+Lo demás coincide, con los mismos minutos. Esto sale **solo del audio** y
+queda *a confirmar*:
+
+- **C32-11** · ❓ **La hoja del transportista, a validar con la empresa**
+  (min 6–12). Justo después del confirm *«…sale la hoja del manifiesto para
+  el transportista. ¿Seguro?»* (`manifiestos/_acciones.html.erb`):
+  > "A mí no me sale bien eso… ahorita lo probé con dos cajas… yo sé que el
+  >  botón funciona, no lo voy a tocar." · "Pensé mandar a averiguar de esto
+  >  en la empresa, que me pregunten **si está bien la hoja** y todo."
+
+  No se entiende qué es lo que no le sale bien, ni quién dice cada frase.
+  Lo que sí: Yusef piensa mandarle la hoja de `PR-C28.1` a la empresa
+  transportadora para que diga si el formato le sirve. Hasta que conteste,
+  la hoja no se toca.
+- **C32-12** · **La ventana de meses, también en pre-factura y factura**
+  (min 18–24). `C32-01` la pide para manifiestos y paquetes; enseguida
+  Yusef la estira: *"igual creería yo que en prefactura va a haber que
+  arreglarlo un poquito, y en factura… ahí sí va a haber que ver los
+  paquetes y factura, porque ya voy a averiguar todo eso"*. Hoy la ventana
+  (`incluir_3_12_meses`) solo existe en `PaquetesController`. No es pedido
+  todavía: él va a averiguar.
+- **C32-13** · ❓ **«Terminar» un manifiesto pidió el PIN** (min 12–18).
+  Intentando ver por qué quiso el historial, alguien le da *«Terminar»* a
+  un manifiesto y se topa con el PIN: *"ni tu PIN, no tengo… bueno, no fue
+  esto"*. Es el PIN de `PR-C31.3` (#546) haciendo lo que tiene que hacer;
+  se anota porque es la primera vez que Yusef lo encuentra en uso.
+
 ### Lo que quedó abierto
 
 | # | Qué | Estado |
@@ -13131,6 +13162,8 @@ Tegucigalpa"*.
 | `C32-05` | «Recibido en Honduras» de solo lectura en Guías y aduana; la pone la recepción | ⏳ |
 | `C32-06` | Columna «Va a» en la lista de `/recepcion_carga` | ⏳ |
 | `C32-07` | Qué caja imprime «Imprimir» después de editar otra | ❓ revisar |
+| `C32-11` | La hoja del transportista: Yusef la va a validar con la empresa transportadora | 📄 Esperando a Yusef |
+| `C32-12` | Ventana de 3 / 3–12 / más de 12 meses también en pre-factura y factura | 📄 Yusef lo va a averiguar |
 | `C31-18` | Show e impresión de la pre-factura | 📄 Sigue esperando al personal (`C32-08`) |
 
 ### Las preguntas que abre
