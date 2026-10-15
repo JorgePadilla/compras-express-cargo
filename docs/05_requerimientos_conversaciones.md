@@ -12925,3 +12925,217 @@ tests y en verde (Tests + System Tests). Lo que vale saber al probarlo:
 | `RP-101` | **Días hábiles** (`C31-11`): ¿los días de entrega van por **tipo de envío**, o por tipo y sucursal de entrega? ¿Quién carga los feriados, y uno que cae en sábado corre la fecha? El correo dice «posible fecha»: ¿se le vuelve a escribir al cliente cuando la fecha del manifiesto cambia (`C31-10`)?. ▶ **Construido con supuestos** (#535): por **tipo de envío** (arrancan del tope del `sla`: EXPRESS 7, CER/CKA 10, CEM/CKM 17, se corrigen en /servicios); los feriados los carga su equipo en /feriados; un feriado en sábado bloquea el sábado; **no** se reescribe al cliente cuando cambia la fecha |
 | `RP-102` | **Cuántas etiquetas al F9** (`C31-17`): ¿el número lo escribe el cajero o sale de algo? Al entregar, ¿se bloquea la entrega hasta escanear todas, o solo avisa?. ◐ El número lo escribe el cajero (por defecto, los volúmenes); F8 también lo pregunta. Lo de la entrega sigue abierto |
 | `RP-103` | **Dos volúmenes de un mismo cliente** (`C31-19`): *"el cobro es independiente… lo tenemos que corregir"*. ¿Pide sumar los volúmenes de la pre-factura en un solo escalón y un solo mínimo? Eso cambia `RP-79` y la plata: no se toca sin su sí |
+
+---
+
+## Conversación 32 (2026-10-14) — la prueba otra vez, ahora sin trabarse: el historial de manifiestos, la 4×6 más grande todavía, y el aviso en la PESA
+
+Una grabación de la tarde, en persona, en la oficina (Plaud `2026-10-14
+17:39:40`, 43 min). Yusef repite en staging la prueba de `C31`, con datos
+sacados de la pantalla nueva de datos de prueba (#550): pre-alertas,
+`/etiquetar`, el manifiesto con la barra, guías y aduana, recibir carga,
+medición y la pre-factura. **Esta vez el circuito pasó entero**; lo que sale
+es casi todo lo que le falta alrededor.
+
+| Audio | Duración | De qué |
+|---|---|---|
+| 17:39 | 43 min | La prueba de punta a punta; el historial de manifiestos; la etiqueta de entrega; el aviso en medición |
+
+> ⚠️ **Sobre el transcript.** Plaud no generó resumen ni transcripción de
+> esta grabación (`get_note` y `get_transcript` vuelven vacíos), así que va
+> `whisper small` en ocho pedazos de 6 minutos, todos con
+> `--condition_on_previous_text False` (sin bucles esta vez). El «min» es el
+> del pedazo. De min 24 en adelante hay tramos largos de conversación
+> personal (la carga atrasada, el pago de la quincena, dónde comer) que no se
+> documentan. Lo que no se entiende se marca con ❓.
+
+El resumen que hizo Yusef al final (min 36–42), con el orden en que lo dijo:
+
+> "La reunión de hoy es que ocupamos **la vista de manifiesto**… la
+>  **impresión prefactura**, que es donde hay que agrandar el tamaño de las
+>  letras… y en medición, **la alarma de que tiene más paquetes en el mismo
+>  manifiesto**: un warning, que si desea continuar o si desea agregar otros
+>  volúmenes, entonces ahí él decide."
+
+### Lo que pide — 🔴 primero
+
+#### C32-01 · El **historial de manifiestos**, con filtros que se marcan (min 6–24)
+
+Mirando la lista, Yusef pregunta si los manifiestos *"van a estar siempre o
+se van a eliminar cuando ya terminemos"*, y muestra el del sistema viejo:
+
+> "Lo tenemos en el actual y todos dicen enviado, enviado, aduana, enviado…
+>  aquí está el **historial del año**… acá tiene la fecha de creado, fecha de
+>  enviado y fecha que van." · "Esto sí lo ocupamos así, para nosotros tener
+>  una información más inclusiva."
+
+Jorge ofrece esconder los terminados y Yusef prefiere el filtro:
+
+> "Si me vas a hacer esto, mejor **haces el de cheque**, porque yo ocupo
+>  marcar cuáles están enviados, cuáles están en aduana; a veces quiero saber
+>  **recibido y aduana**, o quiero ver cualquier…" · "Un filtro más amplio…
+>  cuándo empezaron a prefacturar, **con qué empresa, qué tipo de envío**."
+
+El buscador de hoy le agarra de más (*"escribo esto y me agarra los dos, yo
+quiero éste exclusivamente"*); lo que quiere es *"un buscador que le doy CER y
+me salgan todos los que traen CER"*. Y para que no cargue, **la ventana de
+tiempo que ya tiene «Todos los paquetes»**:
+
+> "Lo que hicimos con Roger… para no cargar tanto la base de datos, no
+>  limpiándola, sino que solo nos incluía **hasta tres meses**; si yo quiero ver
+>  de tres meses a doce, le doy click, y si quiero ver de más de doce meses,
+>  le doy a tanto." · "Lo normal que nosotros buscamos es de 1 a 2 meses. 3 es
+>  como mucho." · "En manifiestos y en paquetería, como 3 meses por máximo
+>  también."
+
+Hoy `ManifiestosController#index` tiene un buscador y **un** estado
+(`by_estado`), sin ventana de tiempo. La ventana ya existe en paquetes
+(`incluir_3_12_meses`, `PaquetesController`): se copia. Jorge: *"lo voy a
+mover a otro lado"*; Yusef: *"analizalo bien tranquilo, no te compliques tanto"*.
+❓ `RP-104`.
+
+#### C32-02 · La etiqueta de entrega 4×6, **todavía más grande** (min 30–36)
+
+Sigue a `C31-17` (#536 ya la acostó y la agrandó). Al verla impresa:
+
+> "Ya la cambiaste, pero sí necesitas **letras más grandes**." · "El
+>  consolidado más grande, el tipo envío grande, para la sucursal, **donde
+>  va, eso sí bastante grande**." · "El código un poquito más grande y **el
+>  nombre sí más grande**… lo más que se pueda; puede hacerle **dos líneas**."
+> "Vamos a **sacrificar lo bonito**… ocupamos que se vea." · "El lugar de
+>  retiro es **esencial, grandísimo**."
+
+Lo que no se entiende: *"esta como era San Pedro no debía haber dicho nada
+aquí; cuando diga Tegus… que va para Tegus"* — ❓ si en la de San Pedro la
+sucursal sobra y solo se destaca cuando va a otra. `RP-105`. La vista es
+`app/views/pre_facturas/etiqueta_entrega.html.erb`.
+
+Y la **pre-factura impresa** con F9 *"salió toda fea"*: Jorge *"hasta ahí me
+enfoqué a arreglar los primeros pasos"*. Es el show y la impresión de
+`C31-18`, que siguen esperando la lista del personal.
+
+#### C32-03 · Medición: **avisar** cuando se mide una parte de lo del cliente (min 18–24, 36–42)
+
+> "Me dejaste medir solo 3 de los 20 que venían, eso está bien, pero si la
+>  persona hace eso, debería de decirle: hey, **esta persona tiene más
+>  paquetes en el manifiesto**… ¿desea medir y pesar solo estos artículos?…
+>  un modal… y el que diga sí, y ya, o que corrija y siga escaneando."
+> "Es más que todo un **warning**, porque la idea es que midan y pesen todos
+>  los volúmenes de un solo; pero si él no lo está haciendo es por alguna
+>  razón."
+
+`C29-16` ya lo **dice** en la línea de la tanda (*"Diego tiene 5 en el
+manifiesto · llevás 3 · faltan 2"*, `medicion_controller.js`). Lo nuevo es que
+**pregunte** al cerrar el volumen: un modal con «Medir solo estos» y «Seguir
+escaneando». Avisa, no bloquea.
+
+Y lo que falta probar: *"medir y pesar de acuerdo a los consolidados, no
+consolidado"* — esta vez no hubo un consolidado para probarlo.
+
+#### C32-04 · La línea de tiempo del paquete: **quién y a qué hora**, para buscar en cámara (min 12–18)
+
+> "En el paquete necesitamos qué fecha y hora se prefacturó… y fecha que se
+>  **midió**, quién lo midió, quién lo prefacturó, quién lo **facturó en
+>  caja**, quién lo **entregó**… con fecha, hora, al minuto, segundo, porque
+>  es **para buscar en cámara**."
+
+Al cliente, no: *"no les vas a poner que va a estar el martes a las 2 de la
+tarde… el martes, y no tiene hora"*.
+
+Lo que ya hay: la línea de tiempo de la ficha del paquete muestra cada paso
+con `%H:%M:%S` y las iniciales de quien lo hizo, y la pre-factura ya aparece
+como el paso **«Consolidando»** (lo estampa `PreFactura` al pasar los paquetes
+a `consolidando_honduras`). Lo que falta:
+
+- **Medido**: `medido_at` y `medido_por` existen en `paquetes` pero no son un
+  paso de `TIMELINE_STEPS`.
+- **Facturado en caja**: no hay un paso. ❓ Si es el cobro de la factura o el
+  «Disponible».
+- Llamar los pasos con las palabras de Yusef: «Pre-facturado» en vez de
+  «Consolidando».
+
+#### C32-05 · «Recibido en Honduras» no se pregunta: se pone sola (min 6–12)
+
+En *Guías y aduana* Yusef llena la guía y la posible fecha de entrega
+(*"esta carga que salió el miércoles la vamos a entregar el sábado 25"*), y se
+traba en el otro campo:
+
+> "Fecha recibido en Honduras, ¿y por qué tengo que poner esto?… eso no es
+>  automático… es cuando yo le escaneé, porque es la fecha que se recibió." ·
+> "No le he recibido… **esto es antes**." · "Este recibido debería ser
+>  cuando yo reciba carga aquí."
+
+Ya es casi así: `RecibirManifiesto#finalizar!` estampa `fecha_aduana` al
+terminar de recibir **si está vacía**. Lo que sobra es el campo
+(`guias_aduana/_campos_san_pedro.html.erb`, «Recibido en Honduras»): se le
+pide antes de que pase, y si lo llena, la recepción ya no la pisa. Pasa a
+**solo lectura**: vacía hasta que se recibe, y la pone `/recepcion_carga`.
+Corregirla queda para un supervisor (`C31-10`).
+
+#### C32-06 · Recibir carga: **a qué sucursal va** cada manifiesto, en la lista (min 6–12)
+
+> "Esto me está excelente: el tipo envío de nosotros, más el tipo envío como
+>  salió de allá… bajo cuál empresa le enviamos. **Solo te hizo falta si fue
+>  enviado a Tegucigalpa o San Pedro**, a la sucursal."
+
+La ficha de la recepción ya dice *«Va a …»* (`C31-09`); la **lista** de
+`/recepcion_carga` (tipo de envío, empresa, consignatario, salió de Miami,
+recibido, estado) no tiene la columna. Y lo que viene: *"más adelante pienso
+mandar directo a Tegucigalpa… puede que venga a San Pedro pero va para
+Tegucigalpa"*.
+
+### Lo que se probó y quedó bien
+
+- **`/etiquetar`** (min 0–6): *"en el sistema de etiquetar está bastante
+  bien, no le encuentro un error"*.
+- **La barra del manifiesto** (min 0–6, `C31-01`): metió tres paquetes sin
+  elegir caja y entraron, *"está bien, porque al final va a ser así"*; y
+  *"sigue escanear y empacada… me parece excelente"*.
+- **La pistola con un espacio de más** (min 6–12): *"agarró un espacio extra
+  y no tiró error, la detectó bien"*.
+- **Varias guías a la vez** y la **posible fecha que se copia a todos los
+  paquetes** del manifiesto (min 6–12, `C31-10`): *"excelente"*.
+- **Recibir carga** (min 6–12): una caja de 5 y otra de 3 pasaron a aduana
+  al escanearlas, y el manifiesto se completó.
+- **Reimprimir lo escaneado** en *Volúmenes y mediciones* (min 24–30,
+  `PR-C30.21`): *"ahí está, está bien, excelente"*.
+- **Datos de prueba** (#550): *"facilito, man"* — cinco paquetes en un par
+  de minutos.
+
+### Notas — 📄
+
+- **C32-07** · ❓ **La etiqueta de la caja que se editó** (min 0–6). Yusef
+  le puso 125 lb a una caja, «Guardar cambios», imprimió, y salió la
+  etiqueta **de la otra** caja (*"esta era la que yo tenía marcada en ese
+  momento"*). Después dijo *"yo fui el que se equivocó"*. No se abre como
+  bug, pero vale mirar si «Imprimir» después de editar imprime la caja
+  **abierta** (la de «Usar esta») y no la recién editada.
+- **C32-08** · El personal de Yusef está con mucha carga atrasada esta semana
+  (*"tienen chamba para mañana"*), así que la reunión con los de pre-factura
+  de `C31-18` no va a ser antes del sábado: *"no creo esta semana… te soy
+  sincero, Jorge"*.
+- **C32-09** · Jorge: *"para mí Miami está casi cerrado"*; Yusef: *"para mí
+  también"*. Lo que queda abierto está de San Pedro para adelante.
+- **C32-10** · ❓ Los viajes: Yusef habla de irse otra vez a las tres
+  semanas, y de diciembre y enero; no se entiende si cambia lo de `C31-21`
+  (Honduras del 3–4 al 11 de noviembre). No se corrige `C31-21`.
+
+### Lo que quedó abierto
+
+| # | Qué | Estado |
+|---|---|---|
+| `C32-01` | Historial de manifiestos: estados que se marcan, empresa, tipo de envío, buscador exacto, ventana de 3 / 3–12 / más de 12 meses | ⏳ · ❓ `RP-104` |
+| `C32-02` | 4×6 de entrega más grande: sucursal de retiro, consolidado, tipo, código y nombre en dos líneas | ⏳ · ❓ `RP-105` |
+| `C32-03` | Medición: modal «tiene más paquetes en el manifiesto» al cerrar el volumen; probar con un consolidado | ⏳ |
+| `C32-04` | Línea de tiempo: pasos «Medido» y «Facturado en caja», con quién y al segundo | ⏳ · ❓ qué es «facturado en caja» |
+| `C32-05` | «Recibido en Honduras» de solo lectura en Guías y aduana; la pone la recepción | ⏳ |
+| `C32-06` | Columna «Va a» en la lista de `/recepcion_carga` | ⏳ |
+| `C32-07` | Qué caja imprime «Imprimir» después de editar otra | ❓ revisar |
+| `C31-18` | Show e impresión de la pre-factura | 📄 Sigue esperando al personal (`C32-08`) |
+
+### Las preguntas que abre
+
+| Id | Qué |
+|---|---|
+| `RP-104` | **El historial de manifiestos** (`C32-01`): ¿qué estados van en los cheques (enviado, en aduana, recibido, terminado de prefacturar, cerrado)? ¿Por defecto qué se ve marcado? ¿Las fechas de la lista son creado / enviado / recibido, o también «empezó a prefacturar»? ¿Reemplaza a `/manifiestos` o es una pantalla aparte? |
+| `RP-105` | **La sucursal en la 4×6 de entrega** (`C32-02`): *"como era San Pedro no debía haber dicho nada"* — ¿en San Pedro la sucursal no se imprime, o se imprime igual de grande en todas? |
