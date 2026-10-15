@@ -12994,6 +12994,36 @@ Hoy `ManifiestosController#index` tiene un buscador y **un** estado
 mover a otro lado"*; Yusef: *"analizalo bien tranquilo, no te compliques tanto"*.
 ❓ `RP-104`.
 
+> **Decisión de Jorge (2026-10-15): el historial es una sección nueva, con
+> filtros.** Es su *"lo voy a mover a otro lado"* del audio. `/manifiestos`
+> queda como está, la pantalla de trabajo de Miami, y el historial es una
+> pantalla aparte para **consultar**: no se arma ni se edita nada desde ahí.
+> Contesta la última pregunta de `RP-104` (*¿reemplaza a `/manifiestos` o es
+> aparte?*).
+>
+> Lo que lleva, con lo que pidió Yusef:
+>
+> - **Estados con casillas**, que se marcan de a varios (*"recibido y
+>   aduana"*), no un select de uno. Hoy el modelo tiene `creado`, `enviado`,
+>   `en_aduana` y `recibido`. «Terminado de Prefacturar» no es un estado
+>   guardado: se calcula (`PR-C31.8b`, #545), así que filtrar por él es una
+>   condición aparte.
+> - **Empresa transportadora y tipo de envío** como filtros: son los
+>   *"campos pre-creados"* que dijo Yusef.
+> - **Buscador exacto** por número: *"le doy CER y me salgan todos los que
+>   traen CER"*, sin traer otros de más.
+> - **Ventana de tiempo** como en «Todos los paquetes»: hasta 3 meses por
+>   defecto, con opciones de 3–12 y de más de 12 (`incluir_3_12_meses` en
+>   `PaquetesController`).
+> - **En la lista, las fechas** de creado, enviado y recibido (o aduana), como
+>   en el del sistema viejo, y a qué sucursal va.
+>
+> Para construirla falta lo que sigue abierto en `RP-104`: qué estados vienen
+> marcados por defecto, y si la fecha en que *"empezó a prefacturar"* va en
+> la lista o es solo un filtro. Y como es una pantalla nueva, necesita **su
+> link en el menú**, en el lugar que le toque del recorrido: lo revisan
+> `orden_del_menu_test.rb` y `pantallas_en_el_menu_test.rb`.
+
 #### C32-02 · La etiqueta de entrega 4×6, **todavía más grande** (min 30–36)
 
 Sigue a `C31-17` (#536 ya la acostó y la agrandó). Al verla impresa:
@@ -13155,7 +13185,7 @@ queda *a confirmar*:
 
 | # | Qué | Estado |
 |---|---|---|
-| `C32-01` | Historial de manifiestos: estados que se marcan, empresa, tipo de envío, buscador exacto, ventana de 3 / 3–12 / más de 12 meses | ⏳ · ❓ `RP-104` |
+| `C32-01` | Historial de manifiestos, **sección nueva** (decisión de Jorge, 2026-10-15): estados que se marcan, empresa, tipo de envío, buscador exacto, ventana de 3 / 3–12 / más de 12 meses | ⏳ · ❓ `RP-104` |
 | `C32-02` | 4×6 de entrega más grande: sucursal de retiro, consolidado, tipo, código y nombre en dos líneas | ⏳ · ❓ `RP-105` |
 | `C32-03` | Medición: modal «tiene más paquetes en el manifiesto» al cerrar el volumen; probar con un consolidado | ⏳ |
 | `C32-04` | Línea de tiempo: pasos «Medido» y «Facturado en caja», con quién y al segundo | ⏳ · ❓ qué es «facturado en caja» |
@@ -13170,5 +13200,5 @@ queda *a confirmar*:
 
 | Id | Qué |
 |---|---|
-| `RP-104` | **El historial de manifiestos** (`C32-01`): ¿qué estados van en los cheques (enviado, en aduana, recibido, terminado de prefacturar, cerrado)? ¿Por defecto qué se ve marcado? ¿Las fechas de la lista son creado / enviado / recibido, o también «empezó a prefacturar»? ¿Reemplaza a `/manifiestos` o es una pantalla aparte? |
+| `RP-104` | **El historial de manifiestos** (`C32-01`): ¿qué estados van en los cheques (enviado, en aduana, recibido, terminado de prefacturar, cerrado)? ¿Por defecto qué se ve marcado? ¿Las fechas de la lista son creado / enviado / recibido, o también «empezó a prefacturar»? ~~¿Reemplaza a `/manifiestos` o es una pantalla aparte?~~ **Aparte**: una sección nueva con filtros (decisión de Jorge, 2026-10-15) |
 | `RP-105` | **La sucursal en la 4×6 de entrega** (`C32-02`): *"como era San Pedro no debía haber dicho nada"* — ¿en San Pedro la sucursal no se imprime, o se imprime igual de grande en todas? |
