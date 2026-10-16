@@ -39,6 +39,18 @@ class HistorialManifiestosTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", historial_manifiestos_path, text: /Historial de manifiestos/
   end
 
+  # Jorge: *"use the icons and colors as manifiestos for tipo de envio"*.
+  test "el tipo de envío sale con su ícono, en el filtro y en la lista, como en el manifiesto" do
+    ingresar(users(:digitador))
+    get historial_manifiestos_path
+
+    assert_select "[data-filtro='tipos-de-envio'] label input[name='tipo_envio_ids[]'].sr-only", minimum: 1
+    assert_select "[data-filtro='tipos-de-envio'] label svg", minimum: 1
+    assert_select "tr[data-manifiesto=?] td[data-columna='tipos-de-envio'] span", @creado.numero, text: /CER/ do
+      assert_select "svg"
+    end
+  end
+
   # ── Los filtros ─────────────────────────────────────────────────────────
 
   test "al entrar vienen todos los estados marcados y salen todos los manifiestos" do
