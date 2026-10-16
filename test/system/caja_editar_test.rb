@@ -80,4 +80,30 @@ class CajaEditarSystemTest < ApplicationSystemTestCase
     assert_equal 41, @caja.reload.peso.to_i
     assert_equal 1, @manifiesto.cajas.count, "no agregó otra"
   end
+  # C32-07 · Yusef editó una caja, guardó, imprimió, y salió la etiqueta de la
+  # otra: *"esta era la que yo tenía marcada en ese momento"*. «Guardar e
+  # imprimir» imprime la editada aunque la Abierta sea otra; y con «Guardar
+  # cambios» la fila editada queda marcada, distinta de la Abierta.
+  test "con dos cajas, guardar e imprimir la que no está abierta imprime esa, y guardar la marca" do
+    otra = @manifiesto.cajas.create!(alto: 10, largo: 10, ancho: 10)
+    con_csrf do
+      visit manifiesto_path(@manifiesto)
+      page.execute_script("window.open = function(){}")
+      find("button[aria-label='Editar la caja B']").click
+      find("#caja_manifiesto_peso").set("125")
+      click_button "Guardar e imprimir"
+
+      assert_current_path(%r{/cajas/#{otra.id}/etiqueta}, wait: 5)
+    end
+    assert_equal 125, otra.reload.peso.to_i
+
+    visit manifiesto_path(@manifiesto)
+    find("button[aria-label='Editar la caja A']").click
+    find("#caja_manifiesto_peso").set("7")
+    page.driver.browser.action.send_keys(:f5).perform
+
+    assert_text "Caja A actualizada", wait: 5
+    assert_selector "tr[data-caja='A'][data-caja-editada]", text: "Recién editada"
+    assert_no_selector "tr[data-caja='B'][data-caja-editada]"
+  end
 end

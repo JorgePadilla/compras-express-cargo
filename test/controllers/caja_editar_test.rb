@@ -19,7 +19,8 @@ class CajaEditarTest < ActionDispatch::IntegrationTest
     patch manifiesto_caja_path(@manifiesto, @caja),
           params: { caja_manifiesto: { alto: 20, largo: 23, ancho: 36, peso: 131 } }
 
-    assert_redirected_to manifiesto_path(@manifiesto)
+    # C32-07 · Vuelve a la ficha con la fila marcada como recién editada.
+    assert_redirected_to manifiesto_path(@manifiesto, editada: @caja.id)
     @caja.reload
     assert_equal 20, @caja.alto.to_i
     assert_equal 131, @caja.peso.to_i
