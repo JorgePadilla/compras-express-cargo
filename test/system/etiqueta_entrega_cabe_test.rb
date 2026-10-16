@@ -64,14 +64,15 @@ class EtiquetaEntregaCabeTest < ApplicationSystemTestCase
   # así que lo único que la salva es el presupuesto del layout.
   test "sucursal y nombre en dos renglones a tamaño completo, con la franja, caben" do
     clientes(:juan).update_columns(nombre: "María Fernanda", apellido: "Rodríguez Castellanos")
-    sucursales(:zeron_sps).update_columns(nombre: "Sucursal Centro")
+    # C32-02 · Un nombre de verdad (`db/seeds.rb`): a 42pt «HUMUYA» / «TGU».
+    sucursales(:zeron_sps).update_columns(nombre: "Humuya TGU")
     flete(paquete, 999.99)
 
     con_franja { visit etiqueta_entrega_pre_factura_path(@pf) }
 
     assert_operator caja_de(".sucursal")[:height], :>, puntos(".sucursal") * 1.5, "la sucursal no quedó en dos renglones"
     assert_operator caja_de(".nombre")[:height], :>, puntos(".nombre") * 1.5, "el nombre no quedó en dos renglones"
-    assert_equal 32, (puntos(".sucursal") * 72 / 96).round, "la sucursal se achicó: no es el caso a tamaño completo"
+    assert_equal 42, (puntos(".sucursal") * 72 / 96).round, "la sucursal se achicó: no es el caso a tamaño completo"
     assert_cabe
   end
 
