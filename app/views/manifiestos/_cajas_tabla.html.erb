@@ -18,6 +18,9 @@
 <%# C31-01 · La caja en la que entra lo que se escanea en la barra. Solo con el
     manifiesto abierto: bloqueado no entra nada. %>
 <% activa = editable ? caja_activa_del_manifiesto(manifiesto) : nil %>
+<%# C32-07 · La que se acaba de guardar desde el lápiz, para que no se confunda
+    con la Abierta: es la de su fila la que hay que imprimir. %>
+<% editada = local_assigns[:editada].to_s %>
 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
   <thead class="bg-gray-50 dark:bg-gray-900">
     <tr>
@@ -36,10 +39,16 @@
     <% manifiesto.cajas.each_with_index do |caja, i| %>
       <% adentro = caja.paquetes.sort_by { |p| [ p.numero_recepcion.to_s, p.numero_caja.to_i, p.id ] } %>
       <% es_activa = activa&.id == caja.id %>
-      <tr class="<%= es_activa ? "bg-cec-gold/10" : "hover:bg-gray-50 dark:hover:bg-gray-700/40" %> align-top"
-          data-caja="<%= caja.letra %>" <%= "data-caja-activa-fila" if es_activa %>>
+      <% es_editada = editada.present? && editada == caja.id.to_s %>
+      <tr class="<%= es_activa ? "bg-cec-gold/10" : "hover:bg-gray-50 dark:hover:bg-gray-700/40" %> <%= "ring-2 ring-inset ring-cec-teal" if es_editada %> align-top"
+          data-caja="<%= caja.letra %>" <%= "data-caja-activa-fila" if es_activa %> <%= "data-caja-editada" if es_editada %>>
         <td class="px-4 py-3 text-sm text-gray-500"><%= i + 1 %></td>
-        <td class="px-4 py-3 text-sm font-mono font-medium text-cec-navy dark:text-cec-gold"><%= caja.codigo %></td>
+        <td class="px-4 py-3 text-sm font-mono font-medium text-cec-navy dark:text-cec-gold">
+          <%= caja.codigo %>
+          <% if es_editada %>
+            <span class="ml-1 inline-flex items-center rounded-full bg-cec-teal/15 px-2 py-0.5 font-sans text-[10px] font-semibold text-cec-teal-dark dark:text-cec-teal">Recién editada</span>
+          <% end %>
+        </td>
         <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200"><%= caja.tamano_caja&.nombre || "Especificar" %></td>
         <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400"><%= caja.tipos_envio_adentro.presence || "—" %></td>
         <td class="px-4 py-3 text-sm text-right font-mono text-gray-500 dark:text-gray-400"><%= caja.medidas || "—" %></td>

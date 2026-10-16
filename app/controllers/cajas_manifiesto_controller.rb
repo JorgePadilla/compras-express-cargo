@@ -100,7 +100,11 @@ class CajasManifiestoController < ApplicationController
         return
       end
 
-      redirect_to @manifiesto, notice: "Caja #{@caja.letra} actualizada."
+      # C32-07 · La fila recién editada se marca. Yusef editó una caja,
+      # guardó, imprimió y salió la etiqueta de otra: *"esta era la que yo
+      # tenía marcada en ese momento"*. La única fila resaltada era la
+      # Abierta, y el formulario ya había vuelto a «Agregar».
+      redirect_to manifiesto_path(@manifiesto, editada: @caja.id), notice: "Caja #{@caja.letra} actualizada."
     else
       redirect_to @manifiesto, alert: @caja.errors.full_messages.to_sentence
     end

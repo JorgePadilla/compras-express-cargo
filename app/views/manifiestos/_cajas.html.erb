@@ -201,7 +201,7 @@
     <%# C30-07 · La tabla vive en su propio partial: la ficha la muestra también
         con el manifiesto bloqueado, sin lápiz ni basurero. %>
     <div id="manifiesto-cajas-tabla" class="overflow-x-auto">
-      <%= render "manifiestos/cajas_tabla", manifiesto: manifiesto, editable: true %>
+      <%= render "manifiestos/cajas_tabla", manifiesto: manifiesto, editable: true, editada: params[:editada] %>
     </div>
   <% end %>
 </div>
