@@ -63,4 +63,22 @@ class ManifiestoTerminadoDePrefacturarTest < ActiveSupport::TestCase
     assert lista.find { |m| m.id == @manifiesto.id }.terminado_de_prefacturar?
     assert_not lista.find { |m| m.id == otro.id }.terminado_de_prefacturar?
   end
+  # C32-01 · El historial filtra con la consulta, la vista pinta con el
+  # método: tienen que decir lo mismo en cada caso, o el filtro «Terminado»
+  # traería manifiestos que la fila no llama así.
+  test "la consulta y el método dicen lo mismo" do
+    casos = {
+      "con uno esperando" => -> { pre_facturar(@uno) },
+      "todo pre-facturado" => -> { pre_facturar(@uno, @dos) },
+      "todo, pero en camino" => -> { pre_facturar(@uno, @dos); @manifiesto.update_columns(estado: "enviado") }
+    }
+    casos.each do |nombre, preparar|
+      Paquete.where(manifiesto_id: @manifiesto.id).update_all(pre_factura_id: nil)
+      @manifiesto.update_columns(estado: "recibido")
+      preparar.call
+
+      assert_equal Manifiesto.terminados_de_prefacturar_entre([ releido ]).include?(@manifiesto.id),
+                   Manifiesto.terminados_de_prefacturar.exists?(@manifiesto.id), nombre
+    end
+  end
 end

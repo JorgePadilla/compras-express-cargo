@@ -216,8 +216,9 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     # icon in the root /"*).
     assert_equal [ "Etiquetar", "Entrega Personal" ], titulos.call("Miami")
     # PR-P.4 · Y la hoja de preparación, que sigue a Medición. C30-12 · Con
-    # los volúmenes medidos pegados a Medición, que son su bitácora.
-    assert_equal [ "Pre-Alertas", "Manifiestos", "Guías y aduana", "Recibir Carga", "Medición",
+    # los volúmenes medidos pegados a Medición, que son su bitácora. C32-01 ·
+    # Y el historial pegado a Manifiestos, por lo mismo.
+    assert_equal [ "Pre-Alertas", "Manifiestos", "Historial de manifiestos", "Guías y aduana", "Recibir Carga", "Medición",
                    "Volúmenes medidos", "Preparar pre-factura", "Todos los Paquetes" ],
                  titulos.call("Logística")
 

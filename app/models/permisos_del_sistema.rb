@@ -77,6 +77,12 @@ module PermisosDelSistema
     # lado entra a lo suyo por su puerta.
     when :guias_aduana
       role.in?(Authorization::ROLES_DE_SAN_PEDRO)
+    # C32-01 · El historial es de consulta y lo miran los dos lados: Miami, que
+    # los arma, y los jefes de San Pedro, que los reciben — *"para nosotros
+    # tener una información más inclusiva"*. Los que entran a una de las dos
+    # pantallas del manifiesto.
+    when :historial_manifiestos
+      politica(rol, :manifiestos) || politica(rol, :guias_aduana)
     # C26-02 · La estación de Medición en San Pedro: pesar y medir cada caja
     # antes de la pre-factura. La gente de Honduras que recibe carga, más el
     # rol de estación (`C26-15`), que solo ve esto.

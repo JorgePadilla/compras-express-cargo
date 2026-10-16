@@ -30,7 +30,7 @@
     <% end %>
   <% end %>
 
-  <% if can_access?(:pre_alertas) || can_access?(:paquetes) || can_access?(:manifiestos) || can_access?(:recibir_carga) || can_access?(:medicion) || can_access?(:guias_aduana) || can_access?(:pre_facturas) %>
+  <% if can_access?(:pre_alertas) || can_access?(:paquetes) || can_access?(:manifiestos) || can_access?(:historial_manifiestos) || can_access?(:recibir_carga) || can_access?(:medicion) || can_access?(:guias_aduana) || can_access?(:pre_facturas) %>
     <%= sidebar_section "Logistica" do %>
       <%# El grupo va **en orden de proceso**, siguiendo a la carga (Jorge,
           2026-09-01: *"en los menú pongamos por orden de proceso los botones,
@@ -41,6 +41,9 @@
       <%# 2 · Mover la carga: se arma en Miami y se recibe en Honduras, pero es
           un solo recorrido y vive junto. %>
       <%= sidebar_link "Manifiestos", manifiestos_path, icon: "cube" if can_access?(:manifiestos) %>
+      <%# C32-01 · El historial, pegado a su pantalla como «Volúmenes medidos» a
+          Medición (C30-12): es la bitácora de los manifiestos, para consultar. %>
+      <%= sidebar_link "Historial de manifiestos", historial_manifiestos_path, icon: "clock" if can_access?(:historial_manifiestos) %>
       <%# 3 · C21-02 · Lo que San Pedro le pone al manifiesto ya salido: la guía
           del proveedor y la fecha de recibido en Honduras. Va acá y no adentro
           de Manifiestos porque son dos áreas distintas con dos roles distintos.
