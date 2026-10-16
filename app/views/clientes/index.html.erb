@@ -16,6 +16,7 @@ end %>
 </div>
 
 <% if @clientes.any? %>
+  <%= render PaginationComponent.new(collection: @clientes, label: "clientes", posicion: :arriba) %>
   <div class="bg-white rounded-lg shadow overflow-hidden">
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-gray-200">
@@ -66,9 +67,7 @@ end %>
     </div>
   </div>
 
-  <div class="mt-4">
-    <%= render PaginationComponent.new(collection: @clientes, label: "clientes") %>
-  </div>
+  <%= render PaginationComponent.new(collection: @clientes, label: "clientes") %>
 <% else %>
   <%= render EmptyStateComponent.new(
     title: params[:q].present? ? "No se encontraron clientes" : "No hay clientes registrados",

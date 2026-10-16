@@ -1,6 +1,7 @@
 <%= render PageHeaderComponent.new(title: "Mis Recibos", subtitle: "#{@recibos.total_count} recibos") %>
 
 <% if @recibos.any? %>
+  <%= render PaginationComponent.new(collection: @recibos, label: "recibos", posicion: :arriba) %>
   <div class="bg-white rounded-lg shadow overflow-hidden">
     <table class="min-w-full divide-y divide-gray-200">
       <thead class="bg-gray-50">
@@ -31,7 +32,7 @@
       </tbody>
     </table>
   </div>
-  <div class="mt-4"><%= render PaginationComponent.new(collection: @recibos, label: "recibos") %></div>
+  <%= render PaginationComponent.new(collection: @recibos, label: "recibos") %>
 <% else %>
   <%= render EmptyStateComponent.new(title: "No hay recibos", description: "Veras tus recibos aqui cuando realices pagos.", icon: "receipt-percent") %>
 <% end %>

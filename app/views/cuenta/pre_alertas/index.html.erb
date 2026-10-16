@@ -24,6 +24,7 @@
 
 <%# Card grid (draft card + real pre-alertas) %>
 <div data-controller="draft-banner">
+  <%= render PaginationComponent.new(collection: @pre_alertas, label: "pre-alertas", posicion: :arriba) %>
   <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
     <%# Draft card — revealed by Stimulus when localStorage has a draft %>
     <div data-draft-banner-target="card"
@@ -66,9 +67,7 @@
   </div>
 
   <% if @pre_alertas.any? %>
-    <div class="mt-6">
-      <%= render PaginationComponent.new(collection: @pre_alertas, label: "pre-alertas") %>
-    </div>
+    <%= render PaginationComponent.new(collection: @pre_alertas, label: "pre-alertas") %>
   <% else %>
     <div data-draft-banner-target="emptyState">
       <%= render EmptyStateComponent.new(

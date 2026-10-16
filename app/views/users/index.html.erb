@@ -11,6 +11,7 @@ end %>
 </div>
 
 <% if @users.any? %>
+  <%= render PaginationComponent.new(collection: @users, label: "usuarios", posicion: :arriba) %>
   <div class="bg-white rounded-lg shadow overflow-hidden">
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-gray-200">
@@ -65,9 +66,7 @@ end %>
     </div>
   </div>
 
-  <div class="mt-4">
-    <%= render PaginationComponent.new(collection: @users, label: "usuarios") %>
-  </div>
+  <%= render PaginationComponent.new(collection: @users, label: "usuarios") %>
 <% else %>
   <%= render EmptyStateComponent.new(
     title: params[:q].present? ? "No se encontraron usuarios" : "No hay usuarios registrados",

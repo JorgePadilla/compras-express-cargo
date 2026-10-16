@@ -1,10 +1,19 @@
-<%# Pagination compuesta — summary izq, controles centro, per-page der. %>
+<%# Pagination compuesta — summary izq, controles y per-page der. El `nav` lo
+    pone este componente, con un nombre por posición (PR-PAG.1); el
+    `_paginator` de Kaminari solo dibuja los links. %>
 <% if empty? %>
-  <div class="text-sm text-gray-500 dark:text-gray-400 italic py-2">
+  <div class="<%= margen %> text-sm text-gray-600 dark:text-gray-300 italic py-2">
     Sin <%= @label %> que mostrar.
   </div>
+<% elsif fuera_de_rango? %>
+  <div class="<%= margen %> py-3 text-base text-gray-700 dark:text-gray-200">
+    Esta página ya no tiene <%= @label %>.
+    <%= link_to "Ir a la primera página", primera_pagina_url,
+          class: "inline-flex min-h-11 items-center font-semibold text-cec-teal-deep dark:text-cec-teal-light underline" %>
+  </div>
 <% else %>
-  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-3 text-sm text-gray-600 dark:text-gray-300">
+  <div class="<%= margen %> flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-2 text-sm text-gray-700 dark:text-gray-200"
+       data-paginacion="<%= @posicion %>">
     <%# Summary %>
     <div>
       <% if single_page? %>
@@ -24,21 +33,23 @@
     <%# Controles + per-page %>
     <div class="flex items-center gap-3 flex-wrap">
       <% unless single_page? %>
-        <%= helpers.paginate @collection %>
+        <nav aria-label="<%= nav_label %>">
+          <%= helpers.paginate @collection %>
+        </nav>
       <% end %>
 
       <% if show_per_page_selector? %>
-        <label class="inline-flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-          <span>Por página:</span>
-          <select onchange="window.location.href = this.value"
-                  class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 text-xs py-1 pr-7 focus:ring-cec-teal focus:border-cec-teal">
-            <% @per_page_options.each do |opt| %>
+        <div class="inline-flex items-center gap-2">
+          <label for="<%= selector_id %>" class="text-sm text-gray-700 dark:text-gray-200">Por página:</label>
+          <select id="<%= selector_id %>" onchange="window.location.href = this.value"
+                  class="min-h-11 rounded-md border border-gray-500 dark:border-gray-400 dark:bg-gray-700 dark:text-gray-100 text-sm py-2 pr-8 focus:ring-cec-teal-deep focus:border-cec-teal-deep">
+            <% opciones_por_pagina.each do |opt| %>
               <option value="<%= per_page_url(opt) %>" <%= "selected" if opt == per_page %>>
                 <%= opt %>
               </option>
             <% end %>
           </select>
-        </label>
+        </div>
       <% end %>
     </div>
   </div>

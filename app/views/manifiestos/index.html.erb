@@ -20,6 +20,7 @@ end %>
 </div>
 
 <% if @manifiestos.any? %>
+  <%= render PaginationComponent.new(collection: @manifiestos, label: "manifiestos", posicion: :arriba) %>
   <div class="bg-white rounded-lg shadow overflow-hidden">
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-gray-200">
@@ -78,9 +79,7 @@ end %>
     </div>
   </div>
 
-  <div class="mt-4">
-    <%= render PaginationComponent.new(collection: @manifiestos, label: "manifiestos") %>
-  </div>
+  <%= render PaginationComponent.new(collection: @manifiestos, label: "manifiestos") %>
 <% else %>
   <%= render EmptyStateComponent.new(
     title: params[:q].present? ? "No se encontraron manifiestos" : "No hay manifiestos",

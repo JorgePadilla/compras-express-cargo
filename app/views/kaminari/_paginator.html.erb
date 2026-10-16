@@ -1,6 +1,7 @@
-<%# Kaminari paginator — CEC custom, Tailwind 4. %>
+<%# Kaminari paginator — CEC custom, Tailwind 4. El `nav` con su nombre lo
+    pone `PaginationComponent` (PR-PAG.1): arriba y abajo se llaman distinto. %>
 <%= paginator.render do %>
-  <nav role="navigation" aria-label="Paginación" class="inline-flex items-center gap-1">
+  <div class="inline-flex flex-wrap items-center gap-1">
     <%= prev_page_tag %>
     <%= first_page_tag unless current_page.first? || current_page.try(:near_to_first_page?) %>
     <% each_page do |page| %>
@@ -12,5 +13,5 @@
     <% end %>
     <%= last_page_tag unless current_page.last? || current_page.try(:near_to_last_page?) %>
     <%= next_page_tag %>
-  </nav>
+  </div>
 <% end %>

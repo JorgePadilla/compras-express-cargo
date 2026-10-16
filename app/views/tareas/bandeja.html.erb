@@ -49,6 +49,7 @@ end %>
 </div>
 
 <% if @tareas.any? %>
+  <%= render PaginationComponent.new(collection: @tareas, label: "tareas", posicion: :arriba) %>
   <div class="bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden">
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -133,9 +134,7 @@ end %>
     </div>
   </div>
 
-  <div class="mt-4">
-    <%= render PaginationComponent.new(collection: @tareas, label: "tareas") %>
-  </div>
+  <%= render PaginationComponent.new(collection: @tareas, label: "tareas") %>
 <% else %>
   <%= render EmptyStateComponent.new(
         title: @solo_mias ? "No tenés tareas asignadas" : "No hay tareas abiertas en tu área",
