@@ -183,6 +183,10 @@ Rails.application.routes.draw do
     collection { get :buscar }
   end
 
+  # C32-01 · El historial: todos los manifiestos, por período, con filtros. Solo
+  # consulta; se arma y se edita en `/manifiestos`.
+  resources :historial_manifiestos, only: :index, path: "historial-de-manifiestos"
+
   resources :manifiestos, except: [ :destroy ] do
     # C21-04 · Las casas del manifiesto. Cuelgan del manifiesto porque el
     # manifiesto ya existe cuando se empaca: ése es el cambio de C21-01.

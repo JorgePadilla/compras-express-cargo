@@ -48,6 +48,7 @@ class DashboardController < ApplicationController
     # el del trabajo (`orden_del_menu_test`). «Medición» faltaba.
     log << card("Pre-Alertas",        "Recepciones esperadas",      "bell-alert",             pre_alertas_path,  :navy) if can_access?(:pre_alertas)
     log << card("Manifiestos",        "Empaque y envío",            "cube",                   manifiestos_path,  :navy) if can_access?(:manifiestos)
+    log << card("Historial de manifiestos", "Todos, por fecha y estado", "clock",         historial_manifiestos_path, :navy) if can_access?(:historial_manifiestos)
     log << card("Guías y aduana",     "La guía del proveedor y la fecha", "document-text",   guias_aduana_index_path, :navy) if can_access?(:guias_aduana)
     log << card("Recibir Carga",      "Escanear las cajas que llegan", "truck",               recepcion_carga_index_path, :navy) if can_access?(:recibir_carga)
     log << card("Medición",           "Pesar y medir en San Pedro", "scale",                  medicion_index_path, :navy) if can_access?(:medicion)

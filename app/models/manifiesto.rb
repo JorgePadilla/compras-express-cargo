@@ -615,6 +615,37 @@ class Manifiesto < ApplicationRecord
     con_algo - pendientes
   end
 
+  # C32-01 · Lo mismo que `terminados_de_prefacturar_entre`, pero como
+  # **consulta**: el historial filtra por «Terminado de Prefacturar» antes de
+  # paginar, y no puede traerse todos los manifiestos para preguntarle a cada
+  # uno. Las dos formas tienen que decir lo mismo (lo afirma
+  # `manifiesto_terminado_de_prefacturar_test`).
+  scope :terminados_de_prefacturar, -> {
+    tipo_oficial.where(estado: ESTADOS_PARA_PRE_FACTURA)
+                .where(id: Paquete.where.not(pre_factura_id: nil).select(:manifiesto_id))
+                .where.not(id: Paquete.sin_pre_factura_en_manifiesto.select(:manifiesto_id))
+  }
+
+  # C32-01 · El buscador del historial es **exacto**. Yusef, con el de hoy:
+  # *"escribo esto y me agarra los dos, yo quiero éste exclusivamente"* · *"un
+  # buscador que le doy CER y me salgan todos los que traen CER"*. Número de
+  # manifiesto, número de guía o código del tipo de envío, enteros y sin
+  # distinguir mayúsculas — no «que contenga», que es `buscar`.
+  scope :buscar_exacto, ->(texto) {
+    q = sanitize_sql_like(texto.to_s.strip)
+    por_guia = ManifiestoGuia.where("manifiesto_guias.numero ILIKE ?", q).select(:manifiesto_id)
+    por_tipo = ManifiestoTipoEnvio.joins(:tipo_envio).where("tipo_envios.codigo ILIKE ?", q).select(:manifiesto_id)
+    where("manifiestos.numero ILIKE :q OR manifiestos.numero_guia ILIKE :q", q: q)
+      .or(where(id: por_guia)).or(where(id: por_tipo))
+  }
+
+  # C32-01 · *"Cuándo empezaron a prefacturar"*: la primera pre-factura de
+  # algún paquete de cada manifiesto, en una consulta para toda la página.
+  def self.inicio_de_prefactura_por_id(ids)
+    Paquete.where(manifiesto_id: ids).joins(:pre_factura)
+           .group(:manifiesto_id).minimum("pre_facturas.created_at")
+  end
+
   # Sobre una relación **ya cargada** (`.load`), para que la vista recorra los
   # mismos objetos que quedaron anotados.
   def self.precargar_terminados(manifiestos)

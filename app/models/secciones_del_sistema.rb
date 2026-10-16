@@ -22,6 +22,7 @@ module SeccionesDelSistema
 
     # ── Logística: mover la carga ──
     manifiestos:          { nombre: "Manifiestos",               grupo: "Logística" },
+    historial_manifiestos: { nombre: "Historial de manifiestos", grupo: "Logística" },
     guias_aduana:         { nombre: "Guías y aduana",            grupo: "Logística" },
     recibir_carga:        { nombre: "Recibir Carga",             grupo: "Logística" },
     medicion:             { nombre: "Medición",                  grupo: "Logística" },

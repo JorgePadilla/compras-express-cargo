@@ -43,6 +43,7 @@ class OrdenDelMenuTest < ActiveSupport::TestCase
       archivo: ADMIN, seccion: "Logistica", rutas: [
         "pre_alertas_path",           # el cliente avisa que viene, antes que nada
         "manifiestos_path",           # Miami lo arma y lo envía
+        "historial_manifiestos_path", # C32-01: la bitácora de los manifiestos, pegada a su pantalla
         "guias_aduana_index_path",    # San Pedro le pone guía y fecha al que salió
         "recepcion_carga_index_path", # llegó: se escanean las cajas
         "medicion_index_path",        # C26-02: se pesa y se mide antes de la pre-factura
