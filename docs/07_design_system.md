@@ -567,6 +567,38 @@ pantalla que no escala. Suben a `py-3 text-base` y listo.
 
 ---
 
+## Paginación — arriba y abajo, un solo componente
+
+**Regla:** toda lista paginada dibuja `PaginationComponent` **dos veces**: una
+encima de la tabla, con `posicion: :arriba`, y otra debajo, sin posición. La
+vista no lo envuelve en un `div` con margen: el componente pone el suyo (`mb-3`
+arriba, `mt-4` abajo). Lo hace cumplir `test/lint/paginacion_arriba_y_abajo_test.rb`.
+
+```erb
+<% if @ventas.any? %>
+  <%= render PaginationComponent.new(collection: @ventas, label: "ventas", posicion: :arriba) %>
+  <table>…</table>
+  <%= render PaginationComponent.new(collection: @ventas, label: "ventas") %>
+<% end %>
+```
+
+Jorge, 2026-10-15: *"make sure the pagination is visible in the bottom and top,
+try to make pagination all the same in all views"*. Las 28 listas ya usaban el
+componente, pero solo abajo, y cada una con su envoltorio (`mt-4`, `mt-6`,
+nada).
+
+- El de arriba **no se dibuja** cuando todo entra en una página y no hay
+  selector: repetiría el «Mostrando N» del subtítulo.
+- Cada uno es un `nav` con su nombre («Paginación, arriba» / «…, abajo»): dos
+  `nav` con el mismo nombre confunden al lector de pantalla.
+- Los links miden 44 px (`min-h-11`, ver «Tamaño táctil»). Anterior/Siguiente
+  conservan su texto para el lector también en el celular (`sr-only
+  sm:not-sr-only`, nunca `hidden`).
+- Dentro de una tarjeta (las solapas de `clientes/show`) se deja un `px-4`:
+  es el borde de la tarjeta, no un margen.
+
+---
+
 ## Fechas — siempre `flatpickr`, nunca el picker del navegador
 
 **Regla:** ningún `date_field` / `date_field_tag` sin

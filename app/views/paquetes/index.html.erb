@@ -357,6 +357,8 @@ end %>
     <button type="button" data-action="click->bulk-selection#clear" class="text-white/80 hover:text-white text-xs underline">Limpiar selección</button>
   </div>
 
+  <%= render PaginationComponent.new(collection: @paquetes, label: "paquetes", posicion: :arriba) %>
+
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
@@ -582,9 +584,7 @@ end %>
     </div>
   </div>
 
-  <div class="mt-4">
-    <%= render PaginationComponent.new(collection: @paquetes, label: "paquetes") %>
-  </div>
+  <%= render PaginationComponent.new(collection: @paquetes, label: "paquetes") %>
 
   <%# Footer bulk actions: preview de paquetes seleccionados + 3 botones
       duplicados del header. Visible solo cuando hay ≥1 selección. Yusef

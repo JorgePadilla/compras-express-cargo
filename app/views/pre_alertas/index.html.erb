@@ -78,6 +78,7 @@
 </details>
 
 <% if @pre_alertas.any? %>
+  <%= render PaginationComponent.new(collection: @pre_alertas, label: "pre-alertas", posicion: :arriba) %>
   <div class="bg-white rounded-lg shadow overflow-hidden">
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-gray-200">
@@ -145,9 +146,7 @@
     </div>
   </div>
 
-  <div class="mt-4">
-    <%= render PaginationComponent.new(collection: @pre_alertas, label: "pre-alertas") %>
-  </div>
+  <%= render PaginationComponent.new(collection: @pre_alertas, label: "pre-alertas") %>
 <% else %>
   <%= render EmptyStateComponent.new(
     title: params[:q].present? || params[:estado].present? ? "No se encontraron pre-alertas" : "No hay pre-alertas",

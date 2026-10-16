@@ -1,6 +1,7 @@
 <%= render PageHeaderComponent.new(title: "Mis Financiamientos", subtitle: "#{@financiamientos.total_count} financiamientos") %>
 
 <% if @financiamientos.any? %>
+  <%= render PaginationComponent.new(collection: @financiamientos, label: "financiamientos", posicion: :arriba) %>
   <div class="bg-white rounded-lg shadow overflow-hidden">
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-gray-200">
@@ -42,7 +43,7 @@
       </table>
     </div>
   </div>
-  <div class="mt-4"><%= render PaginationComponent.new(collection: @financiamientos, label: "financiamientos") %></div>
+  <%= render PaginationComponent.new(collection: @financiamientos, label: "financiamientos") %>
 <% else %>
   <%= render EmptyStateComponent.new(
     title: "Sin financiamientos",

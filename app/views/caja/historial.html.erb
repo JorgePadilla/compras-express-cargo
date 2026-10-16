@@ -5,6 +5,7 @@
 </div>
 
 <% if @aperturas.any? %>
+  <%= render PaginationComponent.new(collection: @aperturas, label: "aperturas", posicion: :arriba) %>
   <div class="bg-white rounded-lg shadow overflow-hidden">
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-gray-200">
@@ -43,7 +44,7 @@
       </table>
     </div>
   </div>
-  <div class="mt-4"><%= render PaginationComponent.new(collection: @aperturas, label: "aperturas") %></div>
+  <%= render PaginationComponent.new(collection: @aperturas, label: "aperturas") %>
 <% else %>
   <%= render EmptyStateComponent.new(
     title: "Sin historial",

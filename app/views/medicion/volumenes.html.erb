@@ -57,6 +57,7 @@
 </details>
 
 <% if @bultos.any? %>
+  <%= render PaginationComponent.new(collection: @bultos, label: "volúmenes", posicion: :arriba) %>
   <div class="bg-white rounded-lg shadow overflow-hidden">
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-gray-200">
@@ -136,7 +137,7 @@
       </table>
     </div>
   </div>
-  <div class="mt-4"><%= render PaginationComponent.new(collection: @bultos, label: "volúmenes") %></div>
+  <%= render PaginationComponent.new(collection: @bultos, label: "volúmenes") %>
 <% else %>
   <%= render EmptyStateComponent.new(
     title: params[:q].present? ? "Ningún volumen coincide" : "Todavía no hay volúmenes medidos",

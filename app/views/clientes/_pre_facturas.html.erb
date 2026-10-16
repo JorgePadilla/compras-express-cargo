@@ -1,6 +1,7 @@
 <%# PR-C31.11 · Las pre-facturas del cliente, la última primero. %>
 <div class="bg-white dark:bg-gray-800 rounded-lg shadow ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden">
   <% if @registros.any? %>
+    <div class="px-4"><%= render PaginationComponent.new(collection: @registros, label: "pre-facturas", posicion: :arriba) %></div>
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700" data-solapa="pre_facturas">
         <thead class="bg-gray-50 dark:bg-gray-900/40">
