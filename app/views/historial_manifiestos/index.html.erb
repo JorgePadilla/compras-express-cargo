@@ -4,49 +4,51 @@
 <%= render PageHeaderComponent.new(title: "Historial de manifiestos",
       subtitle: "#{@manifiestos.total_count} manifiestos") %>
 
-<%= form_tag historial_manifiestos_path, method: :get,
-      class: "mb-6 bg-white dark:bg-gray-800 rounded-lg shadow px-6 py-5 space-y-5",
+<%# Accesible (Jorge, 2026-10-15: *"some components seem too small, make sure
+    the page is accessible"*): todo lo que se toca mide 44 px (`docs/07`,
+    «Tamaño táctil»), los textos van en `text-base`, los grupos de casillas son
+    `fieldset` con su `legend`, y el foco es `cec-teal-deep`, que es la tinta
+    que pasa contraste. %>
+<% campo = "block w-full min-h-11 rounded-lg border border-gray-500 dark:border-gray-400 dark:bg-gray-900 dark:text-gray-100 shadow-sm py-2.5 text-base focus:border-cec-teal-deep focus:ring-cec-teal-deep" %>
+<% rotulo = "block text-base font-medium text-gray-800 dark:text-gray-100 mb-1.5" %>
+<%= form_tag historial_manifiestos_path, method: :get, role: "search", "aria-label": "Filtros del historial",
+      class: "mb-6 bg-white dark:bg-gray-800 rounded-lg shadow px-6 py-6 space-y-6",
       data: { controller: "f2-clear", f2_clear_submit_value: "true", turbo: false } do %>
   <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
     <div>
-      <label for="q" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Buscar</label>
+      <label for="q" class="<%= rotulo %>">Buscar</label>
       <%= text_field_tag :q, params[:q], autocomplete: "off", placeholder: "Número, guía o tipo de envío (CER)",
-            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
-      <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Exacto: trae solo los que dicen eso, entero.</p>
+            "aria-describedby": "q_ayuda", class: campo %>
+      <p id="q_ayuda" class="text-sm text-gray-600 dark:text-gray-300 mt-1.5">Exacto: trae solo los que dicen eso, entero.</p>
     </div>
     <div>
-      <label for="empresa_manifiesto_id" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Empresa</label>
+      <label for="empresa_manifiesto_id" class="<%= rotulo %>">Empresa</label>
       <%= select_tag :empresa_manifiesto_id,
             options_from_collection_for_select(@empresas, :id, :nombre, params[:empresa_manifiesto_id]),
-            include_blank: "— Todas —",
-            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+            include_blank: "— Todas —", class: campo %>
     </div>
     <div>
-      <label for="tipo" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Manifiesto</label>
+      <label for="tipo" class="<%= rotulo %>">Manifiesto</label>
       <%= select_tag :tipo, options_for_select([ [ "Oficial", "oficial" ], [ "Interno", "interno" ] ], params[:tipo]),
-            include_blank: "— Oficial e interno —",
-            class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm focus:ring-cec-teal focus:border-cec-teal" %>
+            include_blank: "— Oficial e interno —", class: campo %>
     </div>
   </div>
 
-  <div>
-    <span class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Estado</span>
-    <div class="flex flex-wrap gap-x-5 gap-y-2" data-filtro="estados">
+  <fieldset>
+    <legend class="<%= rotulo %>">Estado</legend>
+    <div class="flex flex-wrap gap-3" data-filtro="estados">
       <% HistorialManifiestosController::ESTADOS.each do |valor, texto| %>
-        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
-          <%= check_box_tag "estados[]", valor, @estados.include?(valor), id: "estado_#{valor}",
-                class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-          <%= texto %>
-        </label>
+        <%= render "historial_manifiestos/casilla", name: "estados[]", value: valor,
+              checked: @estados.include?(valor), id: "estado_#{valor}", texto: texto %>
       <% end %>
     </div>
-  </div>
+  </fieldset>
 
   <%# Las tarjetas de tipo de envío, con el ícono y el color de cada servicio:
       las mismas del formulario del manifiesto (`shared/_tipo_envio_casilla`).
       Ninguna marcada es todas. %>
   <fieldset>
-    <legend class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Tipo de envío</legend>
+    <legend class="<%= rotulo %>">Tipo de envío</legend>
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3" data-filtro="tipos-de-envio">
       <% @tipo_envios.each do |tipo| %>
         <%= render "shared/tipo_envio_casilla", tipo: tipo, name: "tipo_envio_ids[]",
@@ -56,35 +58,32 @@
   </fieldset>
 
   <%# *"Lo normal que nosotros buscamos es de 1 a 2 meses. 3 es como mucho."* %>
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-5 items-end pt-4 border-t border-gray-100 dark:border-gray-700">
-    <div>
-      <label for="desde" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Creado desde</label>
-      <%= date_field_tag :desde, params[:desde], class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm",
-            data: { controller: "flatpickr" } %>
+  <fieldset class="pt-5 border-t border-gray-200 dark:border-gray-700">
+    <legend class="sr-only">Período</legend>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-end">
+      <div>
+        <label for="desde" class="<%= rotulo %>">Creado desde</label>
+        <%= date_field_tag :desde, params[:desde], class: campo, data: { controller: "flatpickr" } %>
+      </div>
+      <div>
+        <label for="hasta" class="<%= rotulo %>">Hasta</label>
+        <%= date_field_tag :hasta, params[:hasta], class: campo, data: { controller: "flatpickr" } %>
+      </div>
+      <div class="lg:col-span-2">
+        <p class="text-base text-gray-700 dark:text-gray-200 mb-1.5">Sin fechas: los últimos 3 meses. Para más atrás:</p>
+        <div class="flex flex-wrap gap-3">
+          <%= render "historial_manifiestos/casilla", name: :incluir_3_12_meses, value: "1",
+                checked: params[:incluir_3_12_meses] == "1", id: "incluir_3_12_meses", texto: "Incluir 3–12 meses" %>
+          <%= render "historial_manifiestos/casilla", name: :incluir_mas_1_ano, value: "1",
+                checked: params[:incluir_mas_1_ano] == "1", id: "incluir_mas_1_ano", texto: "Incluir más de 1 año" %>
+        </div>
+      </div>
     </div>
-    <div>
-      <label for="hasta" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Hasta</label>
-      <%= date_field_tag :hasta, params[:hasta], class: "block w-full rounded-lg border-gray-300 shadow-sm text-sm",
-            data: { controller: "flatpickr" } %>
-    </div>
-    <div class="md:col-span-2 flex flex-wrap gap-x-5 gap-y-2 pb-2">
-      <span class="text-sm text-gray-500 dark:text-gray-400">Sin fechas: los últimos 3 meses.</span>
-      <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
-        <%= check_box_tag :incluir_3_12_meses, "1", params[:incluir_3_12_meses] == "1",
-              class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-        Incluir 3-12 meses
-      </label>
-      <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
-        <%= check_box_tag :incluir_mas_1_ano, "1", params[:incluir_mas_1_ano] == "1",
-              class: "rounded border-gray-300 text-cec-teal focus:ring-cec-teal" %>
-        Incluir &gt; 1 año
-      </label>
-    </div>
-  </div>
+  </fieldset>
 
-  <div class="flex gap-3">
-    <%= render(ButtonComponent.new(variant: :primary, type: :submit, icon: "magnifying-glass")) { "Buscar" } %>
-    <%= render(ButtonComponent.new(variant: :ghost, href: historial_manifiestos_path, icon: "x-mark")) { "Limpiar" } %>
+  <div class="flex flex-wrap gap-3">
+    <%= render(ButtonComponent.new(variant: :primary, size: :lg, type: :submit, icon: "magnifying-glass")) { "Buscar" } %>
+    <%= render(ButtonComponent.new(variant: :secondary, size: :lg, href: historial_manifiestos_path, icon: "x-mark")) { "Limpiar filtros" } %>
   </div>
 <% end %>
 
@@ -92,18 +91,19 @@
   <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <caption class="sr-only">Manifiestos que cumplen los filtros</caption>
         <thead class="bg-gray-50 dark:bg-gray-900">
           <tr>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Manifiesto</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo de envío</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Empresa</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Va a</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Creado</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Enviado</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Recibido</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Inició pre-factura</th>
-            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Paquetes</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Manifiesto</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Tipo de envío</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Empresa</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Va a</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Estado</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Creado</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Enviado</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Recibido</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Inició pre-factura</th>
+            <th scope="col" class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Paquetes</th>
           </tr>
         </thead>
         <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -131,7 +131,7 @@
                     <% end %>
                   </div>
                 <% else %>
-                  <span class="text-gray-400">—</span>
+                  <span class="text-gray-500">—</span>
                 <% end %>
               </td>
               <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200"><%= m.tipo_interno? ? "—" : (m.empresa_manifiesto&.nombre || "—") %></td>

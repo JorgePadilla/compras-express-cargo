@@ -48,6 +48,23 @@ export default class extends Controller {
     }
     this.fp = flatpickr(target, opts)
     this._noEsUnaTarjeta()
+    this._conSuNombre(target)
+  }
+
+  // Con `altInput` el `<label for>` apunta al input **escondido**, y el que se
+  // ve y se toca queda sin nombre: el lector de pantalla anuncia «campo de
+  // edición» a secas, y tocar el rótulo no lleva a la fecha. El visible toma
+  // el nombre del rótulo (Jorge, 2026-10-15: *"make sure the page is
+  // accessible"*), en las fechas de toda la app y no solo en la que se miró.
+  _conSuNombre(target) {
+    const alt = this.fp?.altInput
+    if (!alt || !target.id) return
+
+    const rotulo = document.querySelector(`label[for="${CSS.escape(target.id)}"]`)
+    if (!rotulo) return
+
+    alt.id = `${target.id}_visible`
+    rotulo.htmlFor = alt.id
   }
 
   // Chrome ofrecía **tarjetas de crédito guardadas** al hacer clic en una fecha.
