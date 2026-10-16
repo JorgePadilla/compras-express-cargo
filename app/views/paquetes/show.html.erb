@@ -1058,6 +1058,13 @@ end %>
                     <span class="text-[10px] text-gray-400 dark:text-gray-500">· <%= step[:user].rol_label %></span>
                   <% end %>
                 </p>
+              <%# C32-04 · Medido: la PESA guarda las iniciales, no el usuario. %>
+              <% elsif step[:quien] %>
+                <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5 flex-wrap">
+                  <span class="font-mono font-bold text-gray-700 dark:text-gray-100 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-[10px] tracking-wide">
+                    <%= step[:quien] %>
+                  </span>
+                </p>
               <% end %>
 
               <%# Línea 4 (solo si modificada): captura original. %>

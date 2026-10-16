@@ -12,6 +12,17 @@ class PaquetesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  # C32-04 · La línea de tiempo dice cuándo se midió y quién, al segundo.
+  test "la ficha muestra Medido con la hora al segundo y las iniciales de la PESA" do
+    @paquete.update_columns(medido_at: Time.zone.parse("2026-10-14 15:42:07"), medido_por: "MD")
+
+    get paquete_url(@paquete)
+
+    assert_select "li", text: /Medido.*14\/10\/2026 15:42:07.*MD/m
+    assert_select "li", text: /Pre-facturado/
+    assert_select "li", text: /Facturado en caja/
+  end
+
   test "should search paquetes" do
     get paquetes_url, params: { q: "1Z999" }
     assert_response :success

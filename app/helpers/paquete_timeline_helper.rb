@@ -6,6 +6,12 @@ module PaqueteTimelineHelper
   # Cada item: { label, fecha_attr, user_attr, icon, accent, optional? }.
   # `optional: true` => no se renderiza si la fecha está en blanco
   # (no aplica a todos los paquetes — ej. recolecta es opt-in).
+  #
+  # C32-04 · `derivado: true` => no hay columna `fecha_*` en el paquete: la
+  # fecha y quién salen de otro lado (`timeline_paso_derivado`). Yusef: *"en el
+  # paquete necesitamos qué fecha y hora se prefacturó… y fecha que se midió,
+  # quién lo midió, quién lo prefacturó, quién lo facturó en caja, quién lo
+  # entregó… al minuto, segundo, porque es para buscar en cámara"*.
   TIMELINE_STEPS = [
     { label: "Solicitud Recolecta", fecha_attr: :fecha_solicito_recolecta, user_attr: :fecha_solicito_recolecta_by_user_id, icon: "phone-arrow-up-right", accent: "navy", optional: true },
     { label: "Pre-Alerta",         fecha_attr: :fecha_pre_alerta,        user_attr: :fecha_pre_alerta_by_user_id,        icon: "bell-alert",     accent: "navy"  },
@@ -13,8 +19,11 @@ module PaqueteTimelineHelper
     { label: "Empacado",           fecha_attr: :fecha_empacado,          user_attr: :fecha_empacado_by_user_id,          icon: "cube",           accent: "navy"  },
     { label: "Enviado a HND",      fecha_attr: :fecha_enviado,           user_attr: :fecha_enviado_by_user_id,           icon: "paper-airplane", accent: "gold"  },
     { label: "Aduana",             fecha_attr: :fecha_aduana,            user_attr: :fecha_aduana_by_user_id,            icon: "shield-check",   accent: "gold"  },
+    { label: "Medido",             fecha_attr: :medido,                  derivado: true,                                 icon: "scale",          accent: "gold"  },
+    { label: "Pre-facturado",      fecha_attr: :pre_facturado,           derivado: true,                                 icon: "document-text",  accent: "gold"  },
     { label: "Consolidando",       fecha_attr: :fecha_consolidando,      user_attr: :fecha_consolidando_by_user_id,      icon: "archive-box",    accent: "gold"  },
     { label: "Disponible",         fecha_attr: :fecha_disponible,        user_attr: :fecha_disponible_by_user_id,        icon: "check-badge",    accent: "teal"  },
+    { label: "Facturado en caja",  fecha_attr: :facturado_en_caja,       derivado: true,                                 icon: "banknotes",      accent: "teal"  },
     { label: "En reparto",         fecha_attr: :fecha_en_reparto,        user_attr: :fecha_en_reparto_by_user_id,        icon: "truck",          accent: "teal"  },
     { label: "Entregado",          fecha_attr: :fecha_entregado,         user_attr: :fecha_entregado_by_user_id,         icon: "hand-thumb-up",  accent: "teal"  }
   ].freeze
@@ -29,12 +38,17 @@ module PaqueteTimelineHelper
     # Pre-fetch versions + users (incluye whodunnits de paper_trail) en
     # 2 queries totales para evitar N+1.
     versions = paquete.versions.where(event: [ "create", "update" ]).order(:created_at).to_a
-    audit_by_attr = TIMELINE_STEPS.each_with_object({}) do |step, h|
+    audit_by_attr = TIMELINE_STEPS.reject { |s| s[:derivado] }.each_with_object({}) do |step, h|
       h[step[:fecha_attr]] = fecha_audit_info(versions, step[:fecha_attr])
     end
     users_index ||= paquete_timeline_users_index(paquete, audit_by_attr)
 
     TIMELINE_STEPS.filter_map do |step|
+      if step[:derivado]
+        next step.merge(timeline_paso_derivado(paquete, step[:fecha_attr]), modificada: false,
+                        contexto: timeline_step_contexto(paquete, step[:fecha_attr]))
+      end
+
       fecha = paquete.send(step[:fecha_attr])
       next if step[:optional] && fecha.blank?
 
@@ -52,6 +66,37 @@ module PaqueteTimelineHelper
         last_edit_user: last_edit && users_index[last_edit[:by_user_id].to_s],
         contexto: timeline_step_contexto(paquete, step[:fecha_attr])
       )
+    end
+  end
+
+  # C32-04 · Los pasos que no tienen columna propia en el paquete. Devuelve
+  # `fecha:` y quién: `user:` cuando hay un User, o `quien:` cuando lo que hay
+  # son iniciales sueltas (la medición las guarda como texto, `medido_por`).
+  #
+  # - **Medido**: lo que estampa la PESA (`MedirBulto`, `MedirPaquete`).
+  # - **Pre-facturado**: cuándo el paquete entró a su pre-factura (la línea),
+  #   y quién la guardó auditada o, si no, quién la creó. Cubre el F9, que no
+  #   pasa por «Consolidando» (ese paso es solo el F8).
+  # - **Facturado en caja**: cuándo la venta quedó **cobrada** (Jorge,
+  #   2026-10-15: *cuando se cobra*), y quién registró el último pago.
+  def timeline_paso_derivado(paquete, clave)
+    case clave
+    when :medido
+      { fecha: paquete.medido_at, user: nil, quien: paquete.medido_por.presence }
+    when :pre_facturado
+      pf = paquete.pre_factura
+      return { fecha: nil, user: nil } unless pf
+
+      linea = pf.pre_factura_items.where(paquete_id: paquete.id).minimum(:created_at)
+      { fecha: linea || pf.created_at, user: pf.auditado_por || pf.creado_por }
+    when :facturado_en_caja
+      venta = paquete.venta
+      return { fecha: nil, user: nil } unless venta&.pagada_at
+
+      pago = venta.pagos.where.not(registrado_por_id: nil).order(:pagado_at, :id).last
+      { fecha: venta.pagada_at, user: pago&.registrado_por }
+    else
+      { fecha: nil, user: nil }
     end
   end
 
@@ -112,6 +157,12 @@ module PaqueteTimelineHelper
     when :fecha_aduana
       bodega = paquete.sub_localidad_actual&.codigo
       bodega ? [ [ "building-storefront", "Bodega #{bodega}" ] ] : []
+    when :pre_facturado
+      pf = paquete.pre_factura
+      pf ? [ [ "document-text", pf.numero, pre_factura_path(pf) ] ] : []
+    when :facturado_en_caja
+      venta = paquete.venta
+      venta&.pagada_at ? [ [ "banknotes", venta.numero, venta_path(venta) ] ] : []
     when :fecha_consolidando
       pieces = []
       pieces << [ "building-storefront", "Bodega #{paquete.sub_localidad_actual.codigo}" ] if paquete.sub_localidad_actual
@@ -151,7 +202,7 @@ module PaqueteTimelineHelper
   # los whodunnit de paper_trail (first_set / last_edit) en una sola
   # query.
   def paquete_timeline_users_index(paquete, audit_by_attr = {})
-    user_ids = TIMELINE_STEPS.map { |s| paquete.send(s[:user_attr]) }.compact
+    user_ids = TIMELINE_STEPS.filter_map { |s| s[:user_attr] && paquete.send(s[:user_attr]) }
     audit_by_attr.each_value do |info|
       user_ids << info[:first_set][:by_user_id] if info[:first_set]&.dig(:by_user_id)
       user_ids << info[:last_edit][:by_user_id] if info[:last_edit]&.dig(:by_user_id)
