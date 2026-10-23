@@ -111,6 +111,45 @@
   outline-color: var(--color-cec-teal-light);
 }
 
+/* ─── Las piezas de una pantalla de escritorio (PR-A11Y.2) ───
+   Jorge, 2026-10-23: *"hay botones bien diferentes, siento que ocupamos
+   estandarizar los colores y tamaños de los botones y textos"*. Había 19
+   estilos de `<h2>` y 60 de `<th>`, y cada formulario armaba su campo con
+   200 caracteres de clases. Estas son las de docs/07 «Estándar de
+   pantalla», con el contraste ya medido: una pantalla migra cambiando una
+   clase. Van en `@layer components`, así una utilidad en la vista les gana
+   cuando hace falta.
+
+   Las pantallas táctiles (docs/07 «Tamaño táctil») suman `min-h-11
+   text-base` encima: el campo es el mismo, más alto. */
+@layer components {
+  /* Rótulo de un campo. gray-800: 14.7:1. */
+  .cec-rotulo {
+    @apply block text-sm font-medium text-gray-800 dark:text-gray-100 mb-1;
+  }
+  /* El campo: borde gray-500 (4.8:1, pasa el 3:1 de un control) y el foco
+     en teal-deep, la tinta que pasa contraste. `px-3` porque no hay plugin
+     de forms: sin él, el texto toca el borde. */
+  .cec-campo {
+    @apply block w-full rounded-lg border border-gray-500 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm
+           placeholder:text-gray-500
+           focus:border-cec-teal-deep focus:ring-1 focus:ring-cec-teal-deep focus:outline-none
+           dark:border-gray-400 dark:bg-gray-900 dark:text-gray-100;
+  }
+  /* La ayuda debajo del campo. gray-600: 7.56:1; gray-400 era 2.6. */
+  .cec-ayuda {
+    @apply mt-1 text-xs text-gray-600 dark:text-gray-300;
+  }
+  /* El título de una sección o tarjeta. El h1 lo pone PageHeaderComponent. */
+  .cec-h2 {
+    @apply text-lg font-semibold text-cec-navy dark:text-gray-100;
+  }
+  /* El encabezado de una columna. Con `scope="col"` en el `<th>`. */
+  .cec-th {
+    @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300;
+  }
+}
+
 /* Glass card */
 .glass-card {
   background: rgb(255 255 255 / 0.8);

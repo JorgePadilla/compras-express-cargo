@@ -241,6 +241,11 @@ class ButtonComponent < ViewComponent::Base
       attrs[:data] = data if data.any?
 
       attrs["aria-label"] = @label if @label.present?
+      # PR-A11Y.2 · El «(F8)» de al lado se ve, pero un `label:` lo pisa en el
+      # nombre accesible. `aria-keyshortcuts` se lo dice al lector de
+      # pantalla siempre, también con `shortcut_label_only` (la tecla anda
+      # igual, la aprieta otro controller).
+      attrs["aria-keyshortcuts"] = @shortcut if @shortcut.present?
       attrs
     end
   end
