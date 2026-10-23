@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { anunciar } from "controllers/anunciar"
 
 // Buscar algo tecleando y elegirlo con el teclado. Base compartida por TODOS
 // los autocompletes del sistema: cliente, tercero, proveedor, manifiesto,
@@ -87,22 +88,8 @@ export default class BusquedaAutocomplete extends Controller {
     if (!campo.hasAttribute("aria-expanded")) campo.setAttribute("aria-expanded", "false")
   }
 
-  // Una sola región para todos: la de los layouts (PR-A11Y.5) si ya está, y
-  // si no, se crea. Se vacía antes de escribir para que repetir el mismo
-  // texto («3 resultados» dos veces) se vuelva a anunciar.
-  _anunciar(texto) {
-    let region = document.getElementById("aviso-lector")
-    if (!region) {
-      region = document.createElement("div")
-      region.id = "aviso-lector"
-      region.className = "sr-only"
-      region.setAttribute("role", "status")
-      region.setAttribute("aria-live", "polite")
-      document.body.appendChild(region)
-    }
-    region.textContent = ""
-    setTimeout(() => { region.textContent = texto }, 50)
-  }
+  // A las regiones fijas de los layouts (`anunciar.js`, PR-A11Y.5).
+  _anunciar(texto) { anunciar(texto) }
 
   // ── Comportamiento compartido ────────────────────────────────────────────
 
