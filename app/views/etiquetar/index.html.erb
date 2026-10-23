@@ -182,7 +182,7 @@ end %>
   </div>
 
   <%# Flash messages area %>
-  <div id="flash-messages" class="mb-4">
+  <div id="flash-messages" class="mb-4" data-controller="anuncia-cambios">
     <% if flash[:notice] %>
       <div class="p-3 bg-cec-teal/10 text-cec-teal-dark border border-cec-teal/30 rounded-lg text-sm" data-controller="auto-dismiss"><%= flash[:notice] %></div>
     <% end %>

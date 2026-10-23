@@ -13,7 +13,7 @@
     <%= render "cuenta/pre_alertas/header", pre_alerta: @pre_alerta %>
   </div>
 
-  <div id="flash"></div>
+  <div id="flash" data-controller="anuncia-cambios"></div>
 
   <% if @pre_alerta.consolidando? %>
     <div data-pre-alerta-editor-target="status"

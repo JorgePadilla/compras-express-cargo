@@ -116,7 +116,7 @@
                 **se queda acá** después de un escaneo bueno. La ayuda es una
                 línea y no tres: Yusef, *"no lo van a leer, no van a ver bien"*.
                 Después de guardar, acá se escribe el resultado. %>
-            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400" data-medicion-target="aviso">Escaneá una por una todas las cajas de la tanda.</p>
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400" data-medicion-target="aviso" data-controller="anuncia-cambios">Escaneá una por una todas las cajas de la tanda.</p>
           </div>
 
           <%# ── b…e · la tanda: aparece con la primera caja ─────────────── %>
@@ -230,7 +230,7 @@
           que hay» (C29-20; se llamaba «Facturar»), que abre el modal rojo de
           siempre. Se va con el escaneo siguiente. %>
       <div hidden class="rounded-lg bg-cec-teal/10 text-cec-teal-dark p-4" data-medicion-target="banner">
-        <p class="text-lg font-semibold" data-medicion-target="bannerTexto"></p>
+        <p class="text-lg font-semibold" data-medicion-target="bannerTexto" data-controller="anuncia-cambios"></p>
         <p hidden class="mt-1 text-base text-amber-900" data-medicion-target="bannerFaltan"></p>
         <div class="mt-3 flex flex-wrap items-center gap-3">
           <%# C29-13 · Reimprimir deja F9 —que ahora guarda— y pasa a F4,
