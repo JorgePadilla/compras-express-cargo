@@ -60,6 +60,50 @@ export default class BusquedaAutocomplete extends Controller {
   // envuelta en un `<li>`. El resto usa `<div>` y no envuelve nada.
   get _envoltorio() { return null }
 
+  // ── Lo que oye un lector de pantalla ────────────────────────────────────
+  //
+  // PR-A11Y.4. El teclado andaba (flechas, Enter, Tab, Escape) pero nadie se
+  // lo decía a un lector de pantalla: no había ni un `role` en los ocho
+  // widgets. La fila activa se marcaba solo con el fondo teal, así que con
+  // las flechas no se oía nada, y «No se encontraron resultados» tampoco.
+  //
+  // El patrón es el combobox de ARIA 1.2: el foco se queda en el campo, la
+  // lista es un `listbox`, y `aria-activedescendant` dice cuál es la activa.
+  // Se arma la primera vez que hace falta, y no en `connect()`, porque los
+  // que heredan tienen su propio `connect()` y no llaman a `super`.
+  _prepararAria() {
+    const campo = this._campo
+    const lista = this._lista
+    if (!campo || !lista) return
+
+    if (!lista.id) {
+      BusquedaAutocomplete._siguienteId = (BusquedaAutocomplete._siguienteId || 0) + 1
+      lista.id = `${this.identifier}-lista-${BusquedaAutocomplete._siguienteId}`
+    }
+    lista.setAttribute("role", "listbox")
+    campo.setAttribute("role", "combobox")
+    campo.setAttribute("aria-autocomplete", "list")
+    campo.setAttribute("aria-controls", lista.id)
+    if (!campo.hasAttribute("aria-expanded")) campo.setAttribute("aria-expanded", "false")
+  }
+
+  // Una sola región para todos: la de los layouts (PR-A11Y.5) si ya está, y
+  // si no, se crea. Se vacía antes de escribir para que repetir el mismo
+  // texto («3 resultados» dos veces) se vuelva a anunciar.
+  _anunciar(texto) {
+    let region = document.getElementById("aviso-lector")
+    if (!region) {
+      region = document.createElement("div")
+      region.id = "aviso-lector"
+      region.className = "sr-only"
+      region.setAttribute("role", "status")
+      region.setAttribute("aria-live", "polite")
+      document.body.appendChild(region)
+    }
+    region.textContent = ""
+    setTimeout(() => { region.textContent = texto }, 50)
+  }
+
   // ── Comportamiento compartido ────────────────────────────────────────────
 
   // Cuánto se espera antes de salir a buscar. Es un getter y no una constante
@@ -131,6 +175,7 @@ export default class BusquedaAutocomplete extends Controller {
   }
 
   pintar(items) {
+    this._prepararAria()
     const env = this._envoltorio
     const envolver = (html) => (env ? `<${env}>${html}</${env}>` : html)
     // C20-10: ¿había un Enter esperando esta lista?
@@ -146,10 +191,14 @@ export default class BusquedaAutocomplete extends Controller {
         return
       }
       this._lista.innerHTML = envolver(
-        `<div class="px-4 py-3 text-sm text-gray-500 italic">${this._textoVacio()}</div>`
+        `<div class="px-4 py-3 text-sm text-gray-600 italic" role="presentation">${this._textoVacio()}</div>`
       )
       this._listaDe = this._campo.value.trim()
       this.abrir()
+      // Los modales sobreescriben `abrir()` (su lista no se esconde nunca):
+      // el «abierta» se marca igual.
+      this._marcarAbierta(true)
+      this._anunciar(this._textoVacio())
       return
     }
 
@@ -158,7 +207,8 @@ export default class BusquedaAutocomplete extends Controller {
     const id = this.identifier
 
     this._lista.innerHTML = items.map((item, i) => `
-      <button type="button"
+      <button type="button" role="option" aria-selected="false" tabindex="-1"
+        id="${this._lista.id}-${i}"
         class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between"
         data-action="click->${id}#elegir mousemove->${id}#sobrevolar"
         data-index="${i}"
@@ -171,6 +221,7 @@ export default class BusquedaAutocomplete extends Controller {
     this._listaDe = this._campo.value.trim()
 
     this.abrir()
+    this._marcarAbierta(true)
     // El primero queda activo para confirmarlo con Enter sin tocar el mouse:
     // Miami trabaja solo con teclado, "usamos las manos para trabajar".
     this._activo = 0
@@ -178,6 +229,9 @@ export default class BusquedaAutocomplete extends Controller {
     // scroll hacia una fila que va a desaparecer es puro salto visual.
     this._resaltar({ scroll: !pendiente })
     this._alPintar(items)
+    if (!pendiente) {
+      this._anunciar(items.length === 1 ? "1 resultado" : `${items.length} resultados`)
+    }
 
     if (!pendiente) return
 
@@ -193,11 +247,19 @@ export default class BusquedaAutocomplete extends Controller {
   _items() { return Array.from(this._lista.querySelectorAll("[data-index]")) }
 
   _resaltar({ scroll = true } = {}) {
+    let activa = null
     this._items().forEach((el, i) => {
       const activo = i === this._activo
       el.classList.toggle("bg-cec-teal/10", activo)
+      el.setAttribute("aria-selected", String(activo))
+      if (activo) activa = el
       if (activo && scroll) el.scrollIntoView({ block: "nearest" })
     })
+    if (activa?.id) {
+      this._campo.setAttribute("aria-activedescendant", activa.id)
+    } else {
+      this._campo.removeAttribute("aria-activedescendant")
+    }
   }
 
   _mover(delta) {
@@ -361,7 +423,17 @@ export default class BusquedaAutocomplete extends Controller {
     this._cancelarBusqueda()
   }
 
-  _ocultarLista() { this._lista.classList.add("hidden") }
+  _ocultarLista() {
+    this._lista.classList.add("hidden")
+    this._marcarAbierta(false)
+  }
+
+  _marcarAbierta(abierta) {
+    const campo = this._campo
+    if (!campo || campo.getAttribute("role") !== "combobox") return
+    campo.setAttribute("aria-expanded", String(abierta))
+    if (!abierta) campo.removeAttribute("aria-activedescendant")
+  }
 
   _cancelarBusqueda() {
     if (this._timeout) { clearTimeout(this._timeout); this._timeout = null }
@@ -371,7 +443,11 @@ export default class BusquedaAutocomplete extends Controller {
     this._olvidarPendiente()
   }
 
-  abrir() { this._lista.classList.remove("hidden") }
+  abrir() {
+    this._prepararAria()
+    this._lista.classList.remove("hidden")
+    this._marcarAbierta(true)
+  }
 
   clickAfuera(e) {
     if (!this._lista.contains(e.target) && e.target !== this._campo) this.cerrar()
