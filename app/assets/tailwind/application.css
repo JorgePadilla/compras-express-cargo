@@ -320,6 +320,23 @@ aside#sidebar nav::-webkit-scrollbar { width: 0; height: 0; display: none; }
 @media (min-width: 1024px) {
   aside#sidebar.is-collapsed { width: 4rem; }
   aside#sidebar.is-collapsed .sidebar-label { display: none; }
+  /* PR-A11Y.3 · Adentro de un link, el texto colapsado se esconde a la
+     vista pero no al lector de pantalla: con `display:none` el link se
+     quedaba sin nombre (el `title` no cuenta, docs/07). El título de la
+     sección sí se va, porque nombra la lista con `aria-labelledby`, que lee
+     aunque esté escondido. */
+  aside#sidebar.is-collapsed .sidebar-link .sidebar-label {
+    display: inline;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
   aside#sidebar.is-collapsed .sidebar-icon-only { display: block !important; }
   aside#sidebar:not(.is-collapsed) { width: 16rem; }
   aside#sidebar:not(.is-collapsed) .sidebar-icon-only { display: none !important; }
