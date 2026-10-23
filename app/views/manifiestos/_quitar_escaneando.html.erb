@@ -40,8 +40,9 @@
 
   <dialog data-manifiesto-quitar-target="modal"
           style="margin: auto"
-          class="rounded-xl p-0 w-[34rem] max-w-[95vw] backdrop:bg-black/60">
-    <%= render ModalHeaderComponent.new(tono: :bloqueo, kicker: manifiesto.numero,
+          class="rounded-xl p-0 w-[34rem] max-w-[95vw] backdrop:bg-black/60"
+          aria-labelledby="manifiestos-quitar-escaneando-dialogo-1-titulo">
+    <%= render ModalHeaderComponent.new(titulo_id: "manifiestos-quitar-escaneando-dialogo-1-titulo", tono: :bloqueo, kicker: manifiesto.numero,
           titulo: "Eliminar paquetes que no se fueron") %>
     <div class="bg-white dark:bg-gray-800 px-6 py-5">
       <%= label_tag :quitar_paquete, "Escaneá el paquete que sale", class: "block text-base font-medium text-gray-700 dark:text-gray-200 mb-1" %>

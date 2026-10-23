@@ -279,9 +279,10 @@ end %>
       mismo número. %>
   <dialog data-entrega-personal-target="etiquetasModal"
           style="margin: auto"
-          class="rounded-xl p-0 w-[22rem] max-w-[95vw] backdrop:bg-black/50 ring-2 ring-cec-gold">
+          class="rounded-xl p-0 w-[22rem] max-w-[95vw] backdrop:bg-black/50 ring-2 ring-cec-gold"
+          aria-labelledby="entrega-personal-dialogo-1-titulo">
     <%# PR-C29.12 · El mismo que /etiquetar: info, con `ModalHeaderComponent`. %>
-    <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, centrado: true,
+    <%= render ModalHeaderComponent.new(titulo_id: "entrega-personal-dialogo-1-titulo", tono: :info, tamano: :chico, centrado: true,
           kicker: "No se midió ninguna caja", titulo: "¿Cuántas etiquetas se imprimen?") %>
     <div class="bg-white px-6 py-5 text-center">
       <input type="number" min="1" max="99" value="1" step="1"

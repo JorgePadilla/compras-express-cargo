@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { abrirModalDeDiv } from "controllers/modal_de_div"
 
 export default class extends Controller {
   static targets = ["modal", "trackingLabel", "body", "loading", "list", "empty",
@@ -16,6 +17,8 @@ export default class extends Controller {
 
     // Show modal
     this.modalTarget.classList.remove("hidden")
+    // PR-A11Y.7 · Foco adentro, Tab que no se escapa, Escape cierra.
+    this._modal = abrirModalDeDiv(this.modalTarget, { alCerrar: () => this.close() })
 
     // Show loading, hide others
     this.loadingTarget.classList.remove("hidden")
@@ -36,6 +39,8 @@ export default class extends Controller {
   close() {
     this.modalTarget.classList.add("hidden")
     this.listTarget.innerHTML = ""
+    this._modal?.cerrar()
+    this._modal = null
   }
 
   selectDestino(event) {

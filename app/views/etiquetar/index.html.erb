@@ -263,10 +263,11 @@ end %>
       tiene la etiqueta en la mano y va a guardar la caja. %>
   <dialog data-etiquetar-target="sucursalModal"
           style="margin: auto"
-          class="rounded-xl p-0 w-[24rem] max-w-[95vw] backdrop:bg-black/50 ring-2 ring-red-400">
+          class="rounded-xl p-0 w-[24rem] max-w-[95vw] backdrop:bg-black/50 ring-2 ring-red-400"
+          aria-labelledby="etiquetar-dialogo-1-titulo">
     <%# PR-C29.12 · Bloqueo, en rojo como lo pidió Yusef: *"le salga en rojo
         'sucursal Tegucigalpa'"*. Era rojo claro; ahora es la franja de bloqueo. %>
-    <%= render ModalHeaderComponent.new(tono: :bloqueo, tamano: :grande, centrado: true, kicker: "Guardar en la bolsa de",
+    <%= render ModalHeaderComponent.new(titulo_id: "etiquetar-dialogo-1-titulo", tono: :bloqueo, tamano: :grande, centrado: true, kicker: "Guardar en la bolsa de",
           titulo_data: { etiquetar_target: "sucursalModalTexto" }) %>
     <div class="flex items-center justify-center px-6 py-3 bg-white border-t border-gray-200">
       <%= render ButtonComponent.new(variant: :primary,
@@ -294,11 +295,12 @@ end %>
   <dialog data-etiquetar-target="avisoModal"
           data-action="cancel->etiquetar#avisoCancelar"
           style="margin: auto"
-          class="rounded-xl p-0 w-[30rem] max-w-[95vw] backdrop:bg-black/60">
+          class="rounded-xl p-0 w-[30rem] max-w-[95vw] backdrop:bg-black/60"
+          aria-labelledby="etiquetar-dialogo-2-titulo">
     <%# PR-C29.12 · El tono lo cambia el JS según de qué avisa, leyendo las
         clases de `ModalHeaderComponent::TONOS` (`data-etiquetar-tonos-value`):
         la retención es bloqueo, la tarea es atención y la nota es notas. %>
-    <%= render ModalHeaderComponent.new(tono: :notas, centrado: true,
+    <%= render ModalHeaderComponent.new(titulo_id: "etiquetar-dialogo-2-titulo", tono: :notas, centrado: true,
           data: { etiquetar_target: "avisoEncabezado" },
           kicker_data: { etiquetar_target: "avisoTipo" }, titulo_data: { etiquetar_target: "avisoTitulo" }) %>
     <div class="bg-white px-6 py-5">
@@ -332,8 +334,9 @@ end %>
       caja, este modal ni aparece. %>
   <dialog data-etiquetar-target="etiquetasModal"
           style="margin: auto"
-          class="rounded-xl p-0 w-[22rem] max-w-[95vw] backdrop:bg-black/50 ring-2 ring-cec-gold">
-    <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, centrado: true,
+          class="rounded-xl p-0 w-[22rem] max-w-[95vw] backdrop:bg-black/50 ring-2 ring-cec-gold"
+          aria-labelledby="etiquetar-dialogo-3-titulo">
+    <%= render ModalHeaderComponent.new(titulo_id: "etiquetar-dialogo-3-titulo", tono: :info, tamano: :chico, centrado: true,
           kicker: "No se midió ninguna caja", titulo: "¿Cuántas etiquetas se imprimen?") %>
     <div class="bg-white px-6 py-5 text-center">
       <%# `autocomplete=off` y los `data-*-ignore`: es un campo numérico chico y
@@ -391,9 +394,10 @@ end %>
   </div>
 
   <dialog data-etiquetar-target="quitarCobroModal" style="margin: auto"
-          class="rounded-xl p-0 w-[26rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-amber-400">
+          class="rounded-xl p-0 w-[26rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-amber-400"
+          aria-labelledby="etiquetar-dialogo-4-titulo">
     <%= form_with url: quitar_cambio_servicio_etiquetar_path(@paquete), method: :post do %>
-      <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, titulo: "Quitar el cobro por cambio de servicio", titulo_tag: :h3) do %>
+      <%= render ModalHeaderComponent.new(titulo_id: "etiquetar-dialogo-4-titulo", tono: :info, tamano: :chico, titulo: "Quitar el cobro por cambio de servicio", titulo_tag: :h3) do %>
         <p class="text-xs mt-0.5 opacity-90">Lo autoriza un supervisor con su PIN. Queda registrado quién.</p>
       <% end %>
       <div class="p-5 space-y-3 bg-white">
@@ -465,10 +469,10 @@ end %>
                                      banner amarillo (PR-5).
         3) "Es duplicado real"     → pre-rellena el tracking con sufijo (A-Z)
                                      para crear paquete distinto. %>
-  <div data-etiquetar-target="duplicateModal" role="dialog" aria-modal="true" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70 p-4">
+  <div data-etiquetar-target="duplicateModal" role="dialog" aria-modal="true" aria-labelledby="etiquetar-duplicado-titulo" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70 p-4">
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full p-6">
       <%# PR-C29.12 · Atención: no es un error, hay que decidir qué es. %>
-      <%= render ModalHeaderComponent.new(tono: :atencion, icono: "exclamation-circle",
+      <%= render ModalHeaderComponent.new(titulo_id: "etiquetar-duplicado-titulo", tono: :atencion, icono: "exclamation-circle",
             titulo: "Tracking ya existe en el sistema", titulo_tag: :h3,
             class: "-mx-6 -mt-6 mb-5 rounded-t-xl") %>
 

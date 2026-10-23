@@ -8,7 +8,7 @@
 
     El botón Confirmar arranca deshabilitado a propósito: se prende cuando el
     Stimulus registra un destino elegido. %>
-<div data-pre-alerta-mover-target="modal" role="dialog" aria-modal="true"
+<div data-pre-alerta-mover-target="modal" role="dialog" aria-modal="true" aria-labelledby="mover-paquete-titulo"
      class="hidden fixed inset-0 z-50 flex items-center justify-center">
   <%# Fondo decorativo: cerrar vive en los botones de abajo. %>
   <div data-action="click->pre-alerta-mover#close" aria-hidden="true"
@@ -16,7 +16,7 @@
 
   <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
     <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, cerrar: "click->pre-alerta-mover#close") do %>
-      <h3 class="text-lg font-bold">
+      <h3 id="mover-paquete-titulo" class="text-lg font-bold">
         Mover paquete <span data-pre-alerta-mover-target="trackingLabel" class="font-mono"></span>
       </h3>
     <% end %>

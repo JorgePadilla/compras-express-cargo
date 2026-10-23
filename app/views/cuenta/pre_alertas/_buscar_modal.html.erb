@@ -1,6 +1,6 @@
 <%# Buscar paquetes modal — controlled by pre-alerta-buscar Stimulus controller %>
 <%# PR-C30.11 · `aria-modal`: la marca de modal que mira el atajo global. %>
-<div data-pre-alerta-buscar-target="modal" role="dialog" aria-modal="true"
+<div data-pre-alerta-buscar-target="modal" role="dialog" aria-modal="true" aria-labelledby="buscar-paquetes-titulo"
      class="hidden fixed inset-0 z-50 flex items-center justify-center">
   <%# Backdrop %>
   <div data-action="click->pre-alerta-buscar#close" aria-hidden="true"
@@ -9,7 +9,7 @@
   <%# Card %>
   <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden">
     <%# Header %>
-    <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, icono: "magnifying-glass",
+    <%= render ModalHeaderComponent.new(titulo_id: "buscar-paquetes-titulo", tono: :info, tamano: :chico, icono: "magnifying-glass",
           titulo: "Buscar Paquetes", titulo_tag: :h3, cerrar: "click->pre-alerta-buscar#close") do %>
       <p class="text-xs opacity-90">Agrega paquetes existentes a esta pre-alerta</p>
     <% end %>
@@ -18,10 +18,11 @@
     <div class="px-6 py-3 border-b border-gray-100 bg-gray-50">
       <div class="relative">
         <%= heroicon "magnifying-glass", variant: :outline,
-              options: { class: "w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" } %>
+              options: { class: "w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2", "aria-hidden": "true" } %>
         <input type="text"
                data-pre-alerta-buscar-target="filterInput"
                data-action="input->pre-alerta-buscar#filter"
+               aria-label="Filtrar por tracking o descripción"
                placeholder="Filtrar por tracking o descripcion..."
                class="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm
                       focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal">

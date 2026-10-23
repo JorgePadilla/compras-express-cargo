@@ -133,8 +133,9 @@
   <dialog data-auditar-pre-factura-target="finModal"
           data-action="cancel->auditar-pre-factura#seguir"
           style="margin: auto"
-          class="rounded-xl p-0 w-[34rem] max-w-[95vw] backdrop:bg-black/60">
-    <%= render ModalHeaderComponent.new(tono: :listo, tamano: :grande, kicker: "Están todas las cajas",
+          class="rounded-xl p-0 w-[34rem] max-w-[95vw] backdrop:bg-black/60"
+          aria-labelledby="auditar-pre-factura-dialogo-1-titulo">
+    <%= render ModalHeaderComponent.new(titulo_id: "auditar-pre-factura-dialogo-1-titulo", tono: :listo, tamano: :grande, kicker: "Están todas las cajas",
           titulo: "¿Desea agregar algo más a esta pre-factura?") %>
     <div class="bg-white dark:bg-gray-800 px-6 py-5 text-base text-gray-800 dark:text-gray-100">
       <p data-auditar-pre-factura-target="finTexto"></p>
@@ -164,8 +165,9 @@
   <dialog data-auditar-pre-factura-target="etiquetasModal"
           data-action="cancel->auditar-pre-factura#cerrarEtiquetas"
           style="margin: auto"
-          class="rounded-xl p-0 w-[22rem] max-w-[95vw] backdrop:bg-black/50 ring-2 ring-cec-gold">
-    <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, centrado: true,
+          class="rounded-xl p-0 w-[22rem] max-w-[95vw] backdrop:bg-black/50 ring-2 ring-cec-gold"
+          aria-labelledby="auditar-pre-factura-dialogo-2-titulo">
+    <%= render ModalHeaderComponent.new(titulo_id: "auditar-pre-factura-dialogo-2-titulo", tono: :info, tamano: :chico, centrado: true,
           kicker: "Una por bolsa", titulo: "¿Cuántas etiquetas se imprimen?") %>
     <div class="bg-white dark:bg-gray-800 px-6 py-5 text-center">
       <%# `autocomplete=off` y los `data-*-ignore`, como en /etiquetar: los
