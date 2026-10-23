@@ -1562,7 +1562,7 @@ Lo que se midió ese día, en un clon de staging:
 | 0 | El test de fecha que trababa staging (#565) | ✅ |
 | B1 | **Bug:** Enter sobre «Cancelar» confirmaba en el modal compartido (`PR-A11Y.1`, #566) | ✅ |
 | A | Reglas en `docs/07` «Estándar de pantalla», clases `.cec-campo`/`.cec-rotulo`/`.cec-ayuda`/`.cec-h2`/`.cec-th`, `<title>` desde `PageHeaderComponent`, `aria-keyshortcuts`, estado vacío en `h2`, buscador con nombre (`PR-A11Y.2`) | ✅ |
-| B2 | Layouts: skip link, el logo deja de ser `h1`, `aria-current`, menú móvil con `aria-expanded` y Escape, sidebar colapsado con texto `sr-only` | ⏳ |
+| B2 | Layouts: skip link, el logo deja de ser `h1`, `aria-current`, menú móvil con `aria-expanded` y Escape, sidebar colapsado con texto `sr-only` (`PR-A11Y.3`, #568). **Bug de paso:** el «Menú» del celular no abría nada en el admin desde el hover-expand (8e4b8b3): el controller vivía en el `<aside>` y el botón está afuera | ✅ |
 | B3 | `busqueda_autocomplete.js` con ARIA de combobox (los 8 widgets), la opción activa con `aria-activedescendant` y «N resultados» anunciado (`PR-A11Y.4`, #569) | ✅ |
 | B4 | Región `aria-live`; los errores no se borran solos; el escaneo se anuncia | ⏳ |
 | B5 | flatpickr: copiar `required`/`aria-describedby`, deshacer en `disconnect` | ⏳ |

@@ -21,7 +21,7 @@ import { Controller } from "@hotwired/stimulus"
 //     ...
 //   </aside>
 export default class extends Controller {
-  static targets = ["menu", "backdrop", "pinIcon", "positionIcon"]
+  static targets = ["menu", "backdrop", "pinIcon", "positionIcon", "boton"]
   static values  = {
     url: String,
     collapsed: Boolean,
@@ -34,19 +34,44 @@ export default class extends Controller {
     this.applyState()
   }
 
+  disconnect() {
+    document.removeEventListener("keydown", this._alTeclear)
+  }
+
   // ── Mobile drawer (legacy) ──────────────────────────────────
+  // PR-A11Y.3 · El botón «Menú» dice si está abierto (`aria-expanded`), el
+  // foco entra al primer link al abrir, y Escape cierra y lo devuelve al
+  // botón. Antes el foco se quedaba atrás del fondo oscuro.
   toggle() {
     if (!this.hasMenuTarget) return
-    this.menuTarget.classList.toggle("-translate-x-full")
-    this.backdropTarget?.classList.toggle("hidden")
-    document.body.classList.toggle("overflow-hidden")
+    if (this.menuTarget.classList.contains("-translate-x-full")) {
+      this.open()
+    } else {
+      this.close()
+    }
+  }
+
+  open() {
+    this.menuTarget.classList.remove("-translate-x-full")
+    if (this.hasBackdropTarget) this.backdropTarget.classList.remove("hidden")
+    document.body.classList.add("overflow-hidden")
+    if (this.hasBotonTarget) this.botonTarget.setAttribute("aria-expanded", "true")
+    this._alTeclear ||= (e) => { if (e.key === "Escape") this.close() }
+    document.addEventListener("keydown", this._alTeclear)
+    this.menuTarget.querySelector("nav a, a")?.focus()
   }
 
   close() {
     if (!this.hasMenuTarget) return
+    const estabaAbierto = !this.menuTarget.classList.contains("-translate-x-full")
     this.menuTarget.classList.add("-translate-x-full")
-    this.backdropTarget?.classList.add("hidden")
+    if (this.hasBackdropTarget) this.backdropTarget.classList.add("hidden")
     document.body.classList.remove("overflow-hidden")
+    document.removeEventListener("keydown", this._alTeclear)
+    if (this.hasBotonTarget) {
+      this.botonTarget.setAttribute("aria-expanded", "false")
+      if (estabaAbierto && window.innerWidth < 1024) this.botonTarget.focus()
+    }
   }
 
   navigate() {
@@ -68,6 +93,18 @@ export default class extends Controller {
     this.applyState()
   }
 
+  // PR-A11Y.3 · Con teclado no hay hover: el rail colapsado se expande
+  // cuando el foco entra, y se cierra cuando sale (no al pasar de un link a
+  // otro adentro).
+  alEnfocar() {
+    this.expand()
+  }
+
+  alDesenfocar(e) {
+    if (this.menuTarget.contains(e.relatedTarget)) return
+    this.collapse()
+  }
+
   togglePin(e) {
     e?.preventDefault()
     this.pinnedValue = !this.pinnedValue
@@ -84,9 +121,12 @@ export default class extends Controller {
     this.persist({ position: this.positionValue })
   }
 
-  // Aplica las clases visuales al <aside> según el estado actual.
+  // Aplica las clases visuales al <aside> según el estado actual. El
+  // controller vive en el contenedor (para alcanzar el «Menú» del celular),
+  // así que el `<aside>` es el target `menu`, no `this.element`.
   applyState() {
-    const el = this.element
+    if (!this.hasMenuTarget) return
+    const el = this.menuTarget
     el.classList.toggle("is-collapsed", this.collapsedValue)
     el.classList.toggle("is-pinned",    this.pinnedValue)
     el.classList.toggle("is-right",     this.positionValue === "right")
@@ -99,12 +139,14 @@ export default class extends Controller {
 
     if (this.hasPinIconTarget) {
       this.pinIconTarget.setAttribute("aria-pressed", String(this.pinnedValue))
-      this.pinIconTarget.setAttribute("title", this.pinnedValue ? "Desfijar sidebar" : "Fijar sidebar")
+      const pin = this.pinnedValue ? "Desfijar sidebar" : "Fijar sidebar"
+      this.pinIconTarget.setAttribute("title", pin)
+      this.pinIconTarget.setAttribute("aria-label", pin)
     }
     if (this.hasPositionIconTarget) {
-      this.positionIconTarget.setAttribute(
-        "title", this.positionValue === "right" ? "Mover sidebar a la izquierda" : "Mover sidebar a la derecha"
-      )
+      const lado = this.positionValue === "right" ? "Mover sidebar a la izquierda" : "Mover sidebar a la derecha"
+      this.positionIconTarget.setAttribute("title", lado)
+      this.positionIconTarget.setAttribute("aria-label", lado)
     }
   }
 

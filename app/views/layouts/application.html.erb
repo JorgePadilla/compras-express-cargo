@@ -41,19 +41,27 @@
      ].compact.join(" ") %>
   <body class="<%= body_classes %>" data-controller="keyboard-shortcuts">
     <% if authenticated? %>
-      <div class="flex h-full">
+      <%# PR-A11Y.3 · Saltar el menú: con teclado había que pasar por los ~50
+          links del sidebar en cada pantalla antes de llegar al contenido. %>
+      <a href="#contenido" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[70] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-white focus:text-cec-navy focus:font-semibold focus:shadow-lg foco-cec">Saltar al contenido</a>
+      <%# PR-A11Y.3 · El controller del sidebar vive acá y no en el `<aside>`:
+          el botón «Menú» del celular y el fondo oscuro están afuera del
+          `<aside>`, y Stimulus solo le pasa la acción a un controller que los
+          contenga. Desde el hover-expand (8e4b8b3) el «Menú» del celular no
+          abría nada. %>
+      <div class="flex h-full"
+        data-controller="sidebar"
+        data-sidebar-url-value="<%= preferencia_sidebar_path %>"
+        data-sidebar-collapsed-value="<%= sidebar_collapsed_init %>"
+        data-sidebar-pinned-value="<%= sidebar_pinned_init %>"
+        data-sidebar-position-value="<%= sidebar_position_init %>">
         <%# ========== SIDEBAR ==========
             Hover-expand: arranca colapsado (w-16) en desktop. Hover quita
             `is-collapsed` → expande a w-64. Si está pinned, no auto-colapsa.
             Cuando expanded sin pin, queda fixed con shadow para overlay
             sobre el main. Mobile: comportamiento drawer con -translate-x-full. %>
         <aside id="sidebar"
-          data-controller="sidebar"
-          data-sidebar-url-value="<%= preferencia_sidebar_path %>"
-          data-sidebar-collapsed-value="<%= sidebar_collapsed_init %>"
-          data-sidebar-pinned-value="<%= sidebar_pinned_init %>"
-          data-sidebar-position-value="<%= sidebar_position_init %>"
-          data-action="mouseenter->sidebar#expand mouseleave->sidebar#collapse"
+          data-action="mouseenter->sidebar#expand mouseleave->sidebar#collapse focusin->sidebar#alEnfocar focusout->sidebar#alDesenfocar"
           class="fixed inset-y-0 left-0 z-40 w-64 sidebar-gradient text-white
                  transform -translate-x-full transition-all duration-200 ease-out
                  lg:translate-x-0 lg:z-30 flex flex-col
@@ -67,10 +75,12 @@
               un badge circular gold con "CEC" centrado para dar
               jerarquía visual al top del rail. %>
           <div class="border-b border-white/10 transition-all duration-200">
-            <%= link_to root_path, class: "block" do %>
+            <%# El logo no es un `h1`: el `h1` de cada pantalla lo pone
+                PageHeaderComponent, y con este había dos. %>
+            <%= link_to root_path, class: "block foco-cec", "aria-label": "Inicio · Compras Express" do %>
               <%# Expanded label %>
               <div class="sidebar-label p-4">
-                <h1 class="text-xl font-bold text-white whitespace-nowrap">Compras Express</h1>
+                <p class="text-xl font-bold text-white whitespace-nowrap">Compras Express</p>
                 <p class="text-xs text-gray-400 whitespace-nowrap">Sistema de Carga</p>
               </div>
               <%# Collapsed badge %>
@@ -83,7 +93,7 @@
           </div>
 
           <%# Navigation %>
-          <nav class="flex-1 overflow-y-auto py-4">
+          <nav class="flex-1 overflow-y-auto py-4" aria-label="Menú principal">
             <%= render "layouts/sidebar_admin" %>
           </nav>
 
@@ -130,8 +140,8 @@
 
               <%# Logout %>
               <%= link_to session_path, data: { turbo_method: :delete },
-                  class: "flex-1 flex items-center justify-center gap-2 p-1.5 rounded-md text-red-400 hover:text-red-300 hover:bg-red-500/10 text-sm transition-colors",
-                  title: "Cerrar sesión" do %>
+                  class: "flex-1 flex items-center justify-center gap-2 p-1.5 rounded-md foco-cec text-red-400 hover:text-red-300 hover:bg-red-500/10 text-sm transition-colors",
+                  title: "Cerrar sesión", "aria-label": "Cerrar sesión" do %>
                 <%= heroicon "arrow-right-start-on-rectangle", variant: :outline, options: { class: "w-4 h-4 shrink-0" } %>
                 <span class="sidebar-label">Salir</span>
               <% end %>
@@ -156,8 +166,10 @@
                      <%= 'lg:mr-64'  if sidebar_position_init == 'right' && sidebar_pinned_init %>">
           <%# Top bar (mobile) %>
           <header class="bg-white dark:bg-gray-800 shadow-sm px-4 py-3 flex items-center justify-between lg:hidden">
-            <button type="button" data-action="click->sidebar#toggle" class="rounded foco-cec text-gray-600 dark:text-gray-200 p-1" aria-label="Menu">
-              <%= heroicon "bars-3", variant: :outline, options: { class: "w-6 h-6" } %>
+            <button type="button" data-action="click->sidebar#toggle" data-sidebar-target="boton"
+                    class="rounded foco-cec text-gray-600 dark:text-gray-200 p-1"
+                    aria-label="Menú" aria-controls="sidebar" aria-expanded="false">
+              <%= heroicon "bars-3", variant: :outline, options: { class: "w-6 h-6", "aria-hidden": "true" } %>
             </button>
             <span class="font-bold text-cec-navy dark:text-cec-gold">CEC</span>
             <%= render "shared/theme_toggle" %>
@@ -186,7 +198,7 @@
           </div>
 
           <%# Page content %>
-          <div class="flex-1 p-4 md:p-6 lg:px-8 lg:pb-8 lg:pt-9">
+          <div id="contenido" tabindex="-1" class="flex-1 p-4 md:p-6 lg:px-8 lg:pb-8 lg:pt-9">
             <% if notice = flash[:notice] %>
               <div class="mb-4 p-3 bg-cec-teal/10 text-cec-teal-dark border border-cec-teal/30 dark:bg-cec-teal/20 dark:text-cec-teal-light dark:border-cec-teal/50 rounded-xl text-sm flex items-center gap-2"
                    role="status" aria-live="polite" data-controller="auto-dismiss">
