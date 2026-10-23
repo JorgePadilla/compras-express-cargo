@@ -112,7 +112,7 @@
             <% end %>
             <% if alert = flash[:alert] %>
               <div class="mb-4 p-3 bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/40 dark:text-red-200 dark:border-red-800 rounded-xl text-sm flex items-center gap-2"
-                   role="alert" data-controller="auto-dismiss">
+                   role="alert" data-controller="auto-dismiss" data-auto-dismiss-delay-value="10000">
                 <%= heroicon "exclamation-circle", variant: :mini, options: { class: "w-5 h-5 shrink-0", "aria-hidden" => "true" } %>
                 <span><%= alert %></span>
               </div>
@@ -127,5 +127,10 @@
     <% end %>
 
     <%= render "shared/confirm_modal" %>
+    <%# PR-A11Y.5 · Lo que el JS le dice al lector de pantalla
+        (`controllers/anunciar.js`). Viven fijas desde que carga la página:
+        una región `aria-live` que aparece junto con su texto no se escucha. %>
+    <div id="aviso-lector" class="sr-only" role="status" aria-live="polite"></div>
+    <div id="aviso-lector-urgente" class="sr-only" role="alert" aria-live="assertive"></div>
   </body>
 </html>

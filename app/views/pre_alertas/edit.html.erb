@@ -24,7 +24,7 @@
     <%= render "pre_alertas/header", pre_alerta: @pre_alerta %>
   </div>
 
-  <div id="flash"></div>
+  <div id="flash" data-controller="anuncia-cambios"></div>
 
   <%# PR-C6.47: la consolidación ya se cerró.
       El portal directamente no deja editarla (`Cuenta::PreAlertasController`

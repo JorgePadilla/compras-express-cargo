@@ -1,10 +1,14 @@
+<%# El flash que mete un turbo-stream (`#flash-messages`, `#flash`). El
+    contenedor lleva `data-controller="anuncia-cambios"`, que se lo dice al
+    lector de pantalla (PR-A11Y.5); `data-flash="alert"` lo marca urgente.
+    El error se queda 10 s, no 3. %>
 <% if local_assigns[:notice] %>
-  <div class="p-3 bg-cec-teal/10 text-cec-teal-dark border border-cec-teal/30 rounded-lg text-sm" data-controller="auto-dismiss">
+  <div class="p-3 bg-cec-teal/10 text-cec-teal-dark border border-cec-teal/30 rounded-lg text-sm" data-controller="auto-dismiss" data-flash="notice">
     <%= notice %>
   </div>
 <% end %>
 <% if local_assigns[:alert] %>
-  <div class="p-3 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm" data-controller="auto-dismiss">
+  <div class="p-3 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm" data-controller="auto-dismiss" data-auto-dismiss-delay-value="10000" data-flash="alert">
     <%= alert %>
   </div>
 <% end %>
