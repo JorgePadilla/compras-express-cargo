@@ -39,7 +39,8 @@ class ProveedoresController < ApplicationController
     term = params[:q].to_s.strip
     @proveedores = Proveedor.activos.buscar(term).ordered.limit(12)
     render json: @proveedores.map { |p|
-      { id: p.id, codigo: p.codigo, nombre: p.nombre, tipo: p.tipo }
+      # Escapado como `clientes#buscar`: el autocomplete pinta con `innerHTML`.
+      { id: p.id, codigo: ERB::Util.html_escape(p.codigo), nombre: ERB::Util.html_escape(p.nombre), tipo: p.tipo }
     }
   end
 

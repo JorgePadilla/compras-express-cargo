@@ -1,4 +1,5 @@
 import BusquedaAutocomplete from "controllers/busqueda_autocomplete"
+import { esc } from "controllers/escapar"
 
 // Modal para asignar / cambiar el Tercero (cliente final) de un paquete.
 // Reemplaza el flow viejo de "Asignar → edit mode", que confundía a los
@@ -51,7 +52,7 @@ export default class extends BusquedaAutocomplete {
     if (btn) {
       btn.disabled = true
       btn.classList.add("opacity-60")
-      btn.innerHTML = `<span class="text-sm italic text-cec-purple-dark">Asignando ${datos.codigo} — ${datos.nombre}…</span>`
+      btn.innerHTML = `<span class="text-sm italic text-cec-purple-dark">Asignando ${esc(datos.codigo)} — ${esc(datos.nombre)}…</span>`
     }
     if (this.hasFormTarget) this.formTarget.requestSubmit()
   }
