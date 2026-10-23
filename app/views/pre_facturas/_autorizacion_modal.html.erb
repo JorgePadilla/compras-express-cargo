@@ -3,10 +3,11 @@
     El servidor los aplica en una transacción o en ninguna, así que el registro
     no puede quedar desalineado de lo que se cambió. %>
 <dialog data-autorizacion-modal-target="dialog"
-        class="rounded-lg shadow-xl p-0 w-full max-w-md backdrop:bg-black/40">
+        class="rounded-lg shadow-xl p-0 w-full max-w-md backdrop:bg-black/40"
+        aria-labelledby="pre-facturas-autorizacion-modal-dialogo-1-titulo">
   <%= form_with url: "#", method: :post, data: { autorizacion_modal_target: "form" },
                 class: "divide-y divide-gray-200" do %>
-    <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, titulo: "Autorizar cambio", titulo_tag: :h3) do %>
+    <%= render ModalHeaderComponent.new(titulo_id: "pre-facturas-autorizacion-modal-dialogo-1-titulo", tono: :info, tamano: :chico, titulo: "Autorizar cambio", titulo_tag: :h3) do %>
       <p class="mt-1 text-sm opacity-90" data-autorizacion-modal-target="concepto"></p>
       <p class="mt-0.5 text-xs opacity-80 font-mono" data-autorizacion-modal-target="actual"></p>
     <% end %>

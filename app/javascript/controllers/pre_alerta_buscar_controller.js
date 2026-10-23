@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { abrirModalDeDiv } from "controllers/modal_de_div"
 
 export default class extends Controller {
   static targets = ["modal", "filterInput", "loading", "list", "empty",
@@ -7,6 +8,8 @@ export default class extends Controller {
 
   open() {
     this.modalTarget.classList.remove("hidden")
+    // PR-A11Y.7 · Foco al filtro, Tab que no se escapa, Escape cierra.
+    this._modal = abrirModalDeDiv(this.modalTarget, { alCerrar: () => this.close(), foco: this.filterInputTarget })
     this.filterInputTarget.value = ""
     this.paqueteIdFieldTarget.value = ""
     if (this.hasPapIdFieldTarget) this.papIdFieldTarget.value = ""
@@ -32,6 +35,8 @@ export default class extends Controller {
   close() {
     this.modalTarget.classList.add("hidden")
     this.listTarget.innerHTML = ""
+    this._modal?.cerrar()
+    this._modal = null
   }
 
   filter() {

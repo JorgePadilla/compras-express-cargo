@@ -18,10 +18,14 @@
         data: { action: "dialogo#abrir" },
         label: "#{texto} — pide el PIN de un supervisor")) { texto } %>
 
+  <%# El id lleva el manifiesto y la puerta: el partial sale varias veces en
+      la misma página (una por fila en la lista, dos en la ficha). %>
+  <% titulo_id = "terminar-con-pin-#{manifiesto.id}-#{con_faltantes}-titulo" %>
   <dialog data-dialogo-target="dialogo" style="margin: auto"
-          class="rounded-xl p-0 w-[28rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-gray-300 text-left">
+          class="rounded-xl p-0 w-[28rem] max-w-[95vw] backdrop:bg-black/40 ring-1 ring-gray-300 text-left"
+          aria-labelledby="<%= titulo_id %>">
     <%= form_with url: finalizar_recepcion_carga_path(manifiesto, con_faltantes: (true if con_faltantes)), method: :patch do %>
-      <%= render ModalHeaderComponent.new(tono: con_faltantes ? :atencion : :info, tamano: :chico,
+      <%= render ModalHeaderComponent.new(titulo_id: titulo_id, tono: con_faltantes ? :atencion : :info, tamano: :chico,
             titulo: "#{texto} · #{manifiesto.numero}", titulo_tag: :h3) do %>
         <p class="text-xs mt-0.5 opacity-90">Lo autoriza un supervisor con su PIN. Queda registrado quién.</p>
       <% end %>

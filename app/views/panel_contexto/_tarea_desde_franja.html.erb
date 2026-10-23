@@ -7,9 +7,11 @@
   <%= render(ButtonComponent.new(variant: :outline_teal, size: :xs, icon: "plus", type: :button,
         data: { action: "dialogo#abrir" })) { "Dejar una tarea" } %>
 
+  <% titulo_id = "tarea-desde-franja-#{cliente.id}-#{paquete&.id}-titulo" %>
   <dialog data-dialogo-target="dialogo"
-          class="rounded-xl p-0 w-full max-w-md shadow-xl backdrop:bg-black/50 dark:bg-gray-800 dark:text-gray-100">
-    <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, titulo: "Dejar una tarea", titulo_tag: :h3) do %>
+          class="rounded-xl p-0 w-full max-w-md shadow-xl backdrop:bg-black/50 dark:bg-gray-800 dark:text-gray-100"
+          aria-labelledby="<%= titulo_id %>">
+    <%= render ModalHeaderComponent.new(titulo_id: titulo_id, tono: :info, tamano: :chico, titulo: "Dejar una tarea", titulo_tag: :h3) do %>
       <p class="mt-0.5 text-xs opacity-90">
         Para <%= cliente.nombre_completo %><% if paquete %>, en el paquete <span class="font-mono"><%= paquete.tracking %></span><% elsif tracking.present? %>; se ata al paquete <span class="font-mono"><%= tracking %></span> al guardarlo<% end %>.
       </p>

@@ -89,9 +89,10 @@
     <dialog data-manifiesto-search-target="avisoModal"
             data-action="cancel->manifiesto-search#avisoCancelar"
             style="margin: auto"
-            class="rounded-xl p-0 w-[32rem] max-w-[95vw] backdrop:bg-black/60">
+            class="rounded-xl p-0 w-[32rem] max-w-[95vw] backdrop:bg-black/60"
+            aria-labelledby="manifiestos-contenido-dialogo-1-titulo">
       <%# PR-C29.12 · Bloqueo: el paquete no entró. Era rojo claro. %>
-      <%= render ModalHeaderComponent.new(tono: :bloqueo, centrado: true, kicker: "No entró al manifiesto",
+      <%= render ModalHeaderComponent.new(titulo_id: "manifiestos-contenido-dialogo-1-titulo", tono: :bloqueo, centrado: true, kicker: "No entró al manifiesto",
             titulo_data: { manifiesto_search_target: "avisoTitulo" }) %>
       <div class="bg-white px-6 py-5">
         <p class="text-base text-gray-800" data-manifiesto-search-target="avisoTexto"></p>

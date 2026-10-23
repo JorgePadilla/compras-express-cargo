@@ -5,11 +5,12 @@
     Se abre automáticamente al render (via script al final). %>
 <dialog id="estado-transition-dialog"
         class="rounded-xl shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm w-full max-w-md p-0 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 ring-1 ring-gray-200 dark:ring-gray-700"
-        style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0;">
+        style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0;"
+        aria-labelledby="paquetes-estado-transition-modal-dialogo-1-titulo">
   <%# PR-C29.12 · Sin permiso es bloqueo; retroceder es atención: se puede,
       pero hay que decidirlo. %>
   <% if block_info[:motivo] == :rol %>
-    <%= render ModalHeaderComponent.new(tono: :bloqueo, tamano: :chico, icono: "lock-closed",
+    <%= render ModalHeaderComponent.new(titulo_id: "paquetes-estado-transition-modal-dialogo-1-titulo", tono: :bloqueo, tamano: :chico, icono: "lock-closed",
           titulo: "No tienes permiso para cambiar el estado", titulo_tag: :h3) %>
   <% else %>
     <%= render ModalHeaderComponent.new(tono: :atencion, tamano: :chico, icono: "exclamation-triangle",

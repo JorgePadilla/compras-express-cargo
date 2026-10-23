@@ -10,9 +10,10 @@
   </button>
 
   <dialog data-emitir-nota-modal-target="dialog"
-          class="rounded-lg shadow-xl p-0 w-full max-w-md backdrop:bg-black/40">
+          class="rounded-lg shadow-xl p-0 w-full max-w-md backdrop:bg-black/40"
+          aria-labelledby="shared-emitir-nota-modal-dialogo-1-titulo">
     <%= form_with url: url, method: :post, class: "divide-y divide-gray-200" do %>
-      <%= render ModalHeaderComponent.new(tono: :info, tamano: :chico, titulo: "Emitir #{nota.numero}", titulo_tag: :h3) do %>
+      <%= render ModalHeaderComponent.new(titulo_id: "shared-emitir-nota-modal-dialogo-1-titulo", tono: :info, tamano: :chico, titulo: "Emitir #{nota.numero}", titulo_tag: :h3) do %>
         <p class="mt-1 text-sm opacity-90"><%= advertencia %></p>
         <p class="mt-2 text-lg font-bold">
           L. <%= number_with_precision(nota.total, precision: 2, delimiter: ",") %>
