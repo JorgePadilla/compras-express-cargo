@@ -5,10 +5,22 @@ export default class extends Controller {
 
   connect() {
     this._pending = null
+    // PR-A11Y.1 · Enter no confirma desde el documento: lo aprieta el botón
+    // que tiene el foco, como cualquier botón. Antes un Enter en «Cancelar»
+    // (donde abre el foco, justamente para no confirmar sin querer)
+    // confirmaba igual, y el botón de confirmar es rojo por defecto.
+    //
+    // Tab no se escapa a la página de atrás: va y vuelve entre los dos botones.
     this._onKeydown = (e) => {
       if (this.rootTarget.classList.contains("hidden")) return
-      if (e.key === "Escape") this.cancel()
-      if (e.key === "Enter") this.confirm()
+      if (e.key === "Escape") {
+        e.preventDefault()
+        this.cancel()
+      } else if (e.key === "Tab") {
+        e.preventDefault()
+        const siguiente = document.activeElement === this.cancelBtnTarget ? this.confirmBtnTarget : this.cancelBtnTarget
+        siguiente.focus()
+      }
     }
     document.addEventListener("keydown", this._onKeydown)
 
@@ -45,6 +57,8 @@ export default class extends Controller {
       }
     }
 
+    // Al cerrar, el foco vuelve al que abrió el modal y no se pierde en el body.
+    this._previo = document.activeElement
     this.rootTarget.classList.remove("hidden")
     // Focus the cancel button by default to avoid accidental confirms.
     setTimeout(() => this.cancelBtnTarget.focus(), 0)
@@ -64,6 +78,8 @@ export default class extends Controller {
 
   _resolveAndClose(value) {
     this.rootTarget.classList.add("hidden")
+    if (this._previo?.isConnected) this._previo.focus()
+    this._previo = null
     const resolve = this._pending
     this._pending = null
     if (resolve) resolve(value)
