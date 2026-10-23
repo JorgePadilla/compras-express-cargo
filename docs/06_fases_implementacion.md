@@ -1564,9 +1564,10 @@ Lo que se midió ese día, en un clon de staging:
 | A | Reglas en `docs/07` «Estándar de pantalla», clases `.cec-campo`/`.cec-rotulo`/`.cec-ayuda`/`.cec-h2`/`.cec-th`, `<title>` desde `PageHeaderComponent`, `aria-keyshortcuts`, estado vacío en `h2`, buscador con nombre (`PR-A11Y.2`) | ✅ |
 | B2 | Layouts: skip link, el logo deja de ser `h1`, `aria-current`, menú móvil con `aria-expanded` y Escape, sidebar colapsado con texto `sr-only` (`PR-A11Y.3`, #568). **Bug de paso:** el «Menú» del celular no abría nada en el admin desde el hover-expand (8e4b8b3): el controller vivía en el `<aside>` y el botón está afuera | ✅ |
 | B3 | `busqueda_autocomplete.js` con ARIA de combobox (los 8 widgets), la opción activa con `aria-activedescendant` y «N resultados» anunciado (`PR-A11Y.4`, #569) | ✅ |
-| B4 | Región `aria-live`; los errores no se borran solos; el escaneo se anuncia | ⏳ |
-| B5 | flatpickr: copiar `required`/`aria-describedby`, deshacer en `disconnect` | ⏳ |
-| B6 | Los modales hechos con `div` pasan a `<dialog>`; nombre en los 32 sin nombre | ⏳ |
-| C | axe-core en los system tests, con presupuesto por pantalla | ⏳ |
+| B4 | Regiones `aria-live` fijas en los layouts (`anunciar.js`), `anuncia-cambios` en 13 avisos y contenedores de flash, los errores duran 10 s y auto-dismiss espera con el mouse o el foco encima (`PR-A11Y.5`, #570) | ✅ |
+| B5 | flatpickr: el visible toma `aria-required`, `aria-describedby` y compañía; el rótulo vuelve a su input en `disconnect` (`PR-A11Y.6`, #571) | ✅ |
+| B6 | Nombre en los 28 `<dialog>` que no lo tenían y en los `div` con `role="dialog"`; buscar y mover (los de `div`) con foco adentro, Tab que no se escapa y Escape (`modal_de_div.js`), en vez de pasarlos a `<dialog>`. Lint `dialogos_con_nombre_test` (`PR-A11Y.7`, #572) | ✅ |
+| C | axe-core en 35 pantallas con trinquete: `test/system/accesibilidad_test.rb` y `bin/rails a11y:presupuesto` (`PR-A11Y.8`, #574). 8 ya dan 0; las que más cargan son paquetes/show 82, home 40, clientes/show 34, manifiestos/show 33 | ✅ |
+| — | **Seguridad, de paso:** la revisión de Gemini en #569 marcó un XSS posible en los autocompletes. Era real y venía de antes: cuatro endpoints de búsqueda mandaban sin escapar el título de la pre-alerta (lo escribe el cliente), y dos modales volvían a meter el `dataset` en `innerHTML` (#573) | ✅ |
 | D | Barrido pantalla por pantalla, de las primeras vistas a las nuevas: portal cliente → clientes y sesión → paquetes → pre-alertas admin → caja/ventas/cotizaciones/notas → entregas → las táctiles → el resto por presupuesto | ⏳ |
 | E | Lints con trinquete: `link_to`/`button_to` de solo ícono, `th` sin `scope`, texto chico, gris sin contraste, `<dialog>` sin nombre | ⏳ |
