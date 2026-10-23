@@ -26,6 +26,7 @@ buscar un PR, mirá acá dónde vive:
 | `PR-P.{n}` | Fase 14 — la pre-factura por escaneo (Conversación 30). **No** es `PR-P2a`/`PR-P2b`, que son de permisos (`RP-58`) | **Este archivo**, Fase 14 |
 | `PR-C{nn}.{n}` | Lo que sale de cada conversación desde la 21 (`PR-C29.7`, `PR-C30.4`) | **`docs/05`**, en la tabla de su conversación |
 | `PR-F{n}.{n}` | Fase 15 — la facturación SAR con la gema `invoicehn` (CAI, puntos de emisión, `Factura` reemplaza a `Venta`) | **Este archivo**, Fase 15 |
+| `PR-A11Y.{n}` | Accesibilidad y estándar de pantalla (texto, botones, formularios, tablas), transversal como `PR-BTN` | **Este archivo**, al final; las reglas en `docs/07` «Estándar de pantalla» |
 
 La serie `RP-{nn}` **no son PRs**: son las preguntas al cliente. Viven en
 `docs/05` y salen impresas en `docs/entregables/preguntas_para_yusef.pdf`.
@@ -1528,3 +1529,44 @@ Exento/exonerado por servicio; si algo va al 18 %; varias pre-facturas en una
 factura (A7-32); la casa matriz (¿SPS es 000?); la fuente de la tasa de cambio
 (BCH o la fija de 27.10); un consumidor final de más de L 10,000 sin identidad;
 una línea «SIN TARIFA» bloquea la emisión.
+
+---
+
+## Accesibilidad y estándar de pantalla (serie PR-A11Y) — EN CURSO (2026-10-23)
+
+Jorge, 2026-10-23: *"revisemos todo el proyecto y asegurémonos que todo sea
+accesible"*, y el mismo día: *"hay botones bien diferentes, siento que
+ocupamos estandarizar los colores y tamaños de los botones y textos,
+particularmente de las primeras vistas que hicimos"*.
+
+Decidido con Jorge: **primero la base y después las pantallas**, y axe-core en
+los system tests **con trinquete** (las violaciones de hoy son el presupuesto,
+y no pueden subir).
+
+Lo que se midió ese día, en un clon de staging:
+
+| Hueco | Cuánto |
+|---|---|
+| Botones crudos (presupuesto de `botones_test.rb`) | 206 en 96 archivos |
+| `link_to` con forma de botón, que ese lint no ve | 46 |
+| Estilos distintos de `<h2>` / de `<th>` | 19 / 60; 551 `<th>` y 10 con `scope` |
+| `text-[9–11px]` en pantalla | 227 |
+| `text-gray-300`/`400` sobre fondo claro | unos 166 |
+| Campos sin nombre accesible | unos 110 (31 con solo placeholder) |
+| `<dialog>` sin nombre | 32 de 36 |
+| Autocompletes con ARIA de combobox | 0 de 8 |
+| `<title>` propio | 14 de 165 páginas |
+
+| Fase | Qué | Estado |
+|---|---|---|
+| 0 | El test de fecha que trababa staging (#565) | ✅ |
+| B1 | **Bug:** Enter sobre «Cancelar» confirmaba en el modal compartido (`PR-A11Y.1`, #566) | ✅ |
+| A | Reglas en `docs/07` «Estándar de pantalla», clases `.cec-campo`/`.cec-rotulo`/`.cec-ayuda`/`.cec-h2`/`.cec-th`, `<title>` desde `PageHeaderComponent`, `aria-keyshortcuts`, estado vacío en `h2`, buscador con nombre (`PR-A11Y.2`) | ✅ |
+| B2 | Layouts: skip link, el logo deja de ser `h1`, `aria-current`, menú móvil con `aria-expanded` y Escape, sidebar colapsado con texto `sr-only` | ⏳ |
+| B3 | `busqueda_autocomplete.js` con ARIA de combobox (los 8 widgets) | ⏳ |
+| B4 | Región `aria-live`; los errores no se borran solos; el escaneo se anuncia | ⏳ |
+| B5 | flatpickr: copiar `required`/`aria-describedby`, deshacer en `disconnect` | ⏳ |
+| B6 | Los modales hechos con `div` pasan a `<dialog>`; nombre en los 32 sin nombre | ⏳ |
+| C | axe-core en los system tests, con presupuesto por pantalla | ⏳ |
+| D | Barrido pantalla por pantalla, de las primeras vistas a las nuevas: portal cliente → clientes y sesión → paquetes → pre-alertas admin → caja/ventas/cotizaciones/notas → entregas → las táctiles → el resto por presupuesto | ⏳ |
+| E | Lints con trinquete: `link_to`/`button_to` de solo ícono, `th` sin `scope`, texto chico, gris sin contraste, `<dialog>` sin nombre | ⏳ |
