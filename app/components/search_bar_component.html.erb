@@ -1,12 +1,17 @@
-<%= form_with url: @url, method: :get, data: { turbo_frame: "_top" }, class: "w-full" do |f| %>
+<%# PR-A11Y.2 · `role="search"` y un nombre para el campo: con solo el
+    placeholder, el lector de pantalla decía «campo de edición» y nada más, y
+    el placeholder se va apenas se escribe. El foco en teal-deep: el teal de
+    marca da 2.46:1. %>
+<%= form_with url: @url, method: :get, data: { turbo_frame: "_top" }, class: "w-full", role: "search" do |f| %>
   <div class="flex items-center gap-1">
     <div class="relative flex-1">
       <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-        <%= helpers.heroicon "magnifying-glass", variant: :outline, options: { class: "w-5 h-5 text-gray-400" } %>
+        <%= helpers.heroicon "magnifying-glass", variant: :outline, options: { class: "w-5 h-5 text-gray-500", "aria-hidden": "true" } %>
       </div>
       <%= f.text_field @param, value: @value, placeholder: @placeholder,
-          class: "block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm
-                 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cec-teal focus:border-cec-teal",
+          "aria-label": @placeholder.to_s.sub(/[.…\s]+\z/, "").presence || "Buscar",
+          class: "block w-full pl-10 pr-3 py-2 border border-gray-500 rounded-lg text-sm
+                 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cec-teal-deep focus:border-cec-teal-deep",
           autocomplete: "off" %>
     </div>
     <% if @value.present? %>

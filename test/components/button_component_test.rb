@@ -252,4 +252,17 @@ class ButtonComponentTest < ViewComponent::TestCase
 
     assert_selector "button.w-full[data-action='click->x#y']"
   end
+
+  # PR-A11Y.2 · Con `label:` el «(F8)» visible no entra en el nombre: la tecla
+  # se la dice `aria-keyshortcuts`.
+  test "la tecla va en aria-keyshortcuts, también con label y con shortcut_label_only" do
+    render_inline(ButtonComponent.new(shortcut: "F8", label: "Guardar el paquete")) { "Guardar" }
+    assert_selector "button[aria-keyshortcuts='F8'][aria-label='Guardar el paquete']"
+
+    render_inline(ButtonComponent.new(shortcut: "F2", shortcut_label_only: true)) { "Limpiar" }
+    assert_selector "button[aria-keyshortcuts='F2']"
+
+    render_inline(ButtonComponent.new) { "Sin tecla" }
+    assert_no_selector "[aria-keyshortcuts]"
+  end
 end

@@ -523,6 +523,97 @@ app/components/
 
 ---
 
+## Estándar de pantalla — texto, botones, formularios y tablas
+
+Jorge, 2026-10-23, dos pedidos el mismo día:
+
+> *"revisemos todo el proyecto y asegurémonos que todo sea accesible"*
+>
+> *"hay botones bien diferentes, siento que ocupamos estandarizar los colores y
+> tamaños de los botones y textos, particularmente de las primeras vistas que
+> hicimos"*
+
+Lo que se midió ese día: 19 estilos de `<h2>`, 60 de `<th>`, `text-[9–11px]`
+en 227 lugares, unos 110 campos sin nombre y 234 `ButtonComponent` sin una
+regla de qué tamaño va dónde. Las pantallas viejas se escribieron antes de que
+existieran las reglas de este documento, y cada una armó las suyas. Esta
+sección es la regla, y la serie **PR-A11Y** las va migrando (el plan y su
+avance están en `docs/06`, al final).
+
+### Texto
+
+| Qué | Clase | Contraste sobre blanco |
+|---|---|---:|
+| Título de la pantalla (`h1`) | lo pone `PageHeaderComponent`, no se escribe | 14.67 |
+| Título de sección o tarjeta (`h2`) | `.cec-h2` (`text-lg font-semibold`) | 14.43 |
+| Cuerpo, celdas de tabla | `text-sm` + `text-gray-700` o más oscuro | 10.3 |
+| Ayuda, notas, fechas secundarias | `text-xs` + `text-gray-600` (`.cec-ayuda`) | 7.56 |
+
+- **El mínimo en pantalla es `text-xs` (12 px).** `text-[9px]`, `[10px]` y
+  `[11px]` quedan para lo que se imprime: etiquetas, hojas y el WR.
+- **Texto gris: 600 o más oscuro sobre blanco.** `text-gray-400` da 2.6:1 y
+  `gray-500` (4.84) es el límite justo: sirve para placeholders e íconos, no
+  para leer. Un ícono decorativo puede ser 400.
+- Un nivel de heading no se salta: después del `h1` va `h2`.
+  `EmptyStateComponent` sale en `h2`, y adentro de una sección se le pasa
+  `titulo_tag: :h3`.
+
+### Botones
+
+Siempre `ButtonComponent`. El **color** dice qué hace el botón:
+
+| Intención | Variant |
+|---|---|
+| Guardar, Facturar: cerrar el trabajo del formulario | `gold`, una por pantalla |
+| La acción principal que no es guardar (Nuevo, Buscar, Imprimir) | `primary` |
+| Acciones alternas | `secondary` |
+| Cancelar, Volver, Limpiar | `ghost` («Volver» en `with_back`) |
+| Borrar | `danger` |
+| Anular | `soft_danger` |
+
+`teal`, `outline_navy`, `outline_teal` y `warning` siguen existiendo para lo
+que ya los usa, pero una pantalla nueva no los necesita. En el barrido, el
+botón que los usa sin una razón escrita pasa a la intención que le toca.
+
+El **tamaño** depende del tipo de pantalla, no del gusto del día:
+
+| Pantalla | Botones del header y del formulario | Botones en una fila de tabla |
+|---|---|---|
+| Escritorio: todo lo que no está en la tabla de abajo | `:md` (el default, no se escribe) | `:sm` |
+| Táctil (ver «Tamaño táctil») | `:lg` | `:lg` o `min-h-11` |
+
+`:xs` es para adentro de un chip o de un campo, no para acciones.
+
+### Formularios
+
+- Cada campo tiene su rótulo: `<label for>` (o `f.label`) con `.cec-rotulo`.
+  **El placeholder no es un rótulo**: se va apenas se escribe, y el lector de
+  pantalla no siempre lo lee.
+- Un grupo de casillas o radios es un `<fieldset>` con su `<legend>`, no un
+  `<label>` suelto arriba de la grilla.
+- El campo es `.cec-campo`: borde gray-500 (4.84, pasa el 3:1 de un control)
+  y el foco en `cec-teal-deep`. En una pantalla táctil se le suma
+  `min-h-11 text-base`.
+- La ayuda va en `.cec-ayuda`, atada con `aria-describedby` cuando explica el
+  campo.
+
+### Tablas
+
+- `<th scope="col" class="cec-th">`. Una tabla que no tiene título visible
+  lleva `<caption class="sr-only">`.
+- Una columna de acciones también tiene encabezado, aunque sea `sr-only`
+  («Acciones»): un `<th>` vacío se lee como nada.
+
+### La página
+
+- El `<title>` sale solo del título de `PageHeaderComponent` («Proveedores ·
+  Compras Express Cargo»). Una vista que necesita otro usa
+  `content_for(:title)`.
+- Una imagen que es adorno lleva `alt: ""`. Una que dice algo, como el logo
+  de una empresa, lleva su nombre.
+
+---
+
 ## Tamaño táctil — 44 px de lado en las pantallas de bodega
 
 **Regla:** en las pantallas que se usan con el dedo, todo lo que se toca mide
@@ -543,6 +634,15 @@ chica que la yema de un dedo.
 | `/manifiestos` (new/edit y las cajas) | Armar el manifiesto parado en la bodega |
 | `/recibir-carga` | Bajar el camión en Honduras |
 | `/guias-y-aduana` | San Pedro, cargando guías |
+
+**Las que no**, aunque se parezcan: las de consulta, que se usan sentado y con
+mouse. El historial de manifiestos se hizo a 44 px en `PR-C32.8` y Jorge lo
+devolvió el 2026-10-23: *"los botones están bien grandes, esta parte no es
+touch"*. Ahí va el tamaño de los filtros de «Todos los paquetes» (`text-sm`,
+`ButtonComponent` en `:md`), y lo que sí se queda es lo de accesibilidad que no
+es tamaño: rótulo con su campo, `fieldset` + `legend`, bordes gris 500 y el
+foco en `cec-teal-deep`. Una pantalla entra en la tabla de arriba cuando se usa
+con el dedo, no porque tenga casillas.
 
 **El patrón de selección**, para no reinventarlo cada vez: `<label>` con un
 `<input class="peer sr-only">` adentro y un `<div>` estilado al lado. La firma
