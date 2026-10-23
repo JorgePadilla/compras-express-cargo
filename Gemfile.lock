@@ -75,6 +75,10 @@ GEM
     addressable (2.8.9)
       public_suffix (>= 2.0.2, < 8.0)
     ast (2.4.3)
+    axe-core-api (4.14.0)
+      dumb_delegator
+    axe-core-capybara (4.14.0)
+      axe-core-api (= 4.14.0)
     barby (0.7.0)
     base64 (0.3.0)
     bcrypt (3.1.22)
@@ -112,6 +116,7 @@ GEM
       irb (~> 1.10)
       reline (>= 0.3.8)
     drb (2.2.3)
+    dumb_delegator (1.1.0)
     erb (6.0.2)
     erubi (1.13.1)
     et-orbi (1.4.0)
@@ -423,6 +428,7 @@ PLATFORMS
   x86_64-linux-musl
 
 DEPENDENCIES
+  axe-core-capybara (~> 4.14)
   barby (~> 0.6)
   bcrypt (~> 3.1.7)
   bootsnap
