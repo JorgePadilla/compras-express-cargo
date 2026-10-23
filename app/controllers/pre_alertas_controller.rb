@@ -21,12 +21,16 @@ class PreAlertasController < ApplicationController
                             .buscar(term)
                             .order(created_at: :desc)
                             .limit(12)
+    # Escapado acá, como `clientes#buscar`: el autocomplete lo pinta con
+    # `innerHTML`, y el título y el nombre los escribe el cliente. Sin esto,
+    # un título con HTML corría en el navegador del personal (lo marcó la
+    # revisión de Gemini en #569).
     render json: @resultados.map { |pa|
       {
         id: pa.id,
         numero: pa.numero_documento,
-        titulo: pa.titulo.presence || "(sin título)",
-        cliente: "#{pa.cliente.codigo} — #{pa.cliente.nombre_completo}",
+        titulo: ERB::Util.html_escape(pa.titulo.presence || "(sin título)"),
+        cliente: ERB::Util.html_escape("#{pa.cliente.codigo} — #{pa.cliente.nombre_completo}"),
         consolidado: pa.consolidado,
         estado: pa.estado
       }
@@ -269,9 +273,11 @@ class PreAlertasController < ApplicationController
       numero_documento: pa.numero_documento,
       # El código del cliente va en el título porque acá el destino puede ser
       # de OTRO cliente — es el dato que decide si es el correcto.
-      titulo: "#{pa.cliente.codigo} · #{pa.titulo}",
-      tipo_envio: te&.nombre || "—",
-      tipo_envio_descripcion: te&.con_reempaque ? "#{modalidad} con Reempaque" : "#{modalidad} sin Reempaque",
+      # Escapado: «Mover paquete» lo pinta con `innerHTML` y el título lo
+      # escribe el cliente.
+      titulo: ERB::Util.html_escape("#{pa.cliente.codigo} · #{pa.titulo}"),
+      tipo_envio: ERB::Util.html_escape(te&.nombre || "—"),
+      tipo_envio_descripcion: ERB::Util.html_escape(te&.con_reempaque ? "#{modalidad} con Reempaque" : "#{modalidad} sin Reempaque"),
       consolidado: pa.consolidado,
       paquetes_count: pa.pre_alerta_paquetes.size,
       created_at: pa.created_at.strftime("%d/%m/%Y")

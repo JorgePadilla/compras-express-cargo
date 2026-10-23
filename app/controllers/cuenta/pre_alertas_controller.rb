@@ -205,9 +205,10 @@ module Cuenta
         {
           id: pa.id,
           numero_documento: pa.numero_documento,
-          titulo: pa.titulo,
-          tipo_envio: te.nombre,
-          tipo_envio_descripcion: desc,
+          # Escapado: el modal lo pinta con `innerHTML` (igual que en admin).
+          titulo: ERB::Util.html_escape(pa.titulo),
+          tipo_envio: ERB::Util.html_escape(te.nombre),
+          tipo_envio_descripcion: ERB::Util.html_escape(desc),
           consolidado: pa.consolidado,
           paquetes_count: pa.pre_alerta_paquetes.size,
           created_at: pa.created_at.strftime("%d/%m/%Y")

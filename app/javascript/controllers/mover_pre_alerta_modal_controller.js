@@ -1,4 +1,5 @@
 import BusquedaAutocomplete from "controllers/busqueda_autocomplete"
+import { esc } from "controllers/escapar"
 
 // Modal para mover un paquete a otra pre-alerta.
 //
@@ -54,9 +55,9 @@ export default class extends BusquedaAutocomplete {
       this.selectedSummaryTarget.innerHTML = `
         <div class="px-4 py-2 bg-cec-teal/10 dark:bg-cec-teal/20 ring-1 ring-cec-teal/30 rounded-lg">
           <p class="text-xs font-semibold uppercase tracking-wider text-cec-teal-dark dark:text-cec-teal-light">Seleccionada:</p>
-          <p class="font-mono text-sm font-semibold text-cec-navy dark:text-cec-gold">${numero}</p>
-          <p class="text-xs text-gray-700 dark:text-gray-200 truncate">${titulo || ""}</p>
-          <p class="text-xs text-gray-500 dark:text-gray-400 truncate">${cliente || ""}</p>
+          <p class="font-mono text-sm font-semibold text-cec-navy dark:text-cec-gold">${esc(numero)}</p>
+          <p class="text-xs text-gray-700 dark:text-gray-200 truncate">${esc(titulo)}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 truncate">${esc(cliente)}</p>
         </div>
       `
       this.selectedSummaryTarget.classList.remove("hidden")
