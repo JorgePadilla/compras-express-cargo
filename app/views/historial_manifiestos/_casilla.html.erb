@@ -1,16 +1,17 @@
-<%# Una casilla del filtro, con el patrón de selección del sistema (`docs/07`,
-    «Tamaño táctil»): `peer sr-only` + una pastilla de 44 px de alto. El
-    tilde aparece al marcarla, así que el estado no depende solo del color.
-    Locals: `name`, `value`, `checked`, `id`, `texto`. %>
+<%# Una casilla del filtro, con el patrón de selección del sistema (`docs/07`):
+    `peer sr-only` + una pastilla. El tilde aparece al marcarla, así que el
+    estado no depende solo del color. Del tamaño de escritorio y no de 44 px:
+    el historial no es táctil (Jorge, 2026-10-23). Locals: `name`, `value`,
+    `checked`, `id`, `texto`. %>
 <label class="cursor-pointer">
   <%= check_box_tag name, value, checked, id: id, class: "peer sr-only" %>
-  <span class="inline-flex min-h-11 items-center gap-2 rounded-xl border-2 border-gray-400 bg-white px-4 text-base font-medium text-gray-800
-               dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100
-               hover:border-cec-gold/60 transition-colors
-               peer-checked:border-cec-gold peer-checked:bg-cec-gold/10 peer-checked:ring-2 peer-checked:ring-cec-gold/30
+  <span class="inline-flex items-center gap-1.5 rounded-lg border border-gray-500 bg-white px-3 py-1.5 text-sm font-medium text-gray-800
+               dark:border-gray-500 dark:bg-gray-800 dark:text-gray-100
+               hover:border-cec-gold transition-colors
+               peer-checked:border-cec-gold peer-checked:bg-cec-gold/10 peer-checked:ring-1 peer-checked:ring-cec-gold
                peer-checked:[&>svg]:visible
                peer-focus-visible:ring-2 peer-focus-visible:ring-cec-teal-deep">
-    <%= heroicon "check", variant: :solid, options: { class: "invisible w-5 h-5 text-cec-navy dark:text-cec-gold", "aria-hidden": "true" } %>
+    <%= heroicon "check", variant: :solid, options: { class: "invisible w-4 h-4 text-cec-navy dark:text-cec-gold", "aria-hidden": "true" } %>
     <%= texto %>
   </span>
 </label>
