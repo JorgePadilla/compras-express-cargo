@@ -56,15 +56,32 @@ export default class extends Controller {
   // edición» a secas, y tocar el rótulo no lleva a la fecha. El visible toma
   // el nombre del rótulo (Jorge, 2026-10-15: *"make sure the page is
   // accessible"*), en las fechas de toda la app y no solo en la que se miró.
+  //
+  // PR-A11Y.6 · Y lo demás que el input escondido sabía y el visible no: qué
+  // ayuda lo describe, si tiene un error, y `aria-required` (el `required` ya
+  // lo copiaba flatpickr, pero no todos los lectores lo leen sin el aria). El
+  // rótulo se devuelve a su input en `disconnect`, para que un montaje
+  // siguiente lo encuentre donde lo busca; el test del caché de Turbo pasa
+  // con o sin esto, así que es una red y no un arreglo.
   _conSuNombre(target) {
     const alt = this.fp?.altInput
-    if (!alt || !target.id) return
+    if (!alt) return
 
+    for (const attr of ["aria-label", "aria-labelledby", "aria-describedby", "aria-invalid", "aria-required"]) {
+      if (target.hasAttribute(attr)) alt.setAttribute(attr, target.getAttribute(attr))
+    }
+    if (target.required) {
+      alt.required = true
+      alt.setAttribute("aria-required", "true")
+    }
+
+    if (!target.id) return
     const rotulo = document.querySelector(`label[for="${CSS.escape(target.id)}"]`)
     if (!rotulo) return
 
     alt.id = `${target.id}_visible`
     rotulo.htmlFor = alt.id
+    this._rotulo = { label: rotulo, para: target.id }
   }
 
   // Chrome ofrecía **tarjetas de crédito guardadas** al hacer clic en una fecha.
@@ -92,6 +109,10 @@ export default class extends Controller {
   }
 
   disconnect() {
+    if (this._rotulo) {
+      this._rotulo.label.htmlFor = this._rotulo.para
+      this._rotulo = null
+    }
     if (this.fp) {
       this.fp.destroy()
       this.fp = null
