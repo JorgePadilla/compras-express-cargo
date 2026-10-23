@@ -544,6 +544,15 @@ chica que la yema de un dedo.
 | `/recibir-carga` | Bajar el camión en Honduras |
 | `/guias-y-aduana` | San Pedro, cargando guías |
 
+**Las que no**, aunque se parezcan: las de consulta, que se usan sentado y con
+mouse. El historial de manifiestos se hizo a 44 px en `PR-C32.8` y Jorge lo
+devolvió el 2026-10-23: *"los botones están bien grandes, esta parte no es
+touch"*. Ahí va el tamaño de los filtros de «Todos los paquetes» (`text-sm`,
+`ButtonComponent` en `:md`), y lo que sí se queda es lo de accesibilidad que no
+es tamaño: rótulo con su campo, `fieldset` + `legend`, bordes gris 500 y el
+foco en `cec-teal-deep`. Una pantalla entra en la tabla de arriba cuando se usa
+con el dedo, no porque tenga casillas.
+
 **El patrón de selección**, para no reinventarlo cada vez: `<label>` con un
 `<input class="peer sr-only">` adentro y un `<div>` estilado al lado. La firma
 visual del sistema es
