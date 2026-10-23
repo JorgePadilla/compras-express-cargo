@@ -22,4 +22,15 @@ class PageHeaderComponent < ViewComponent::Base
     @title = title
     @subtitle = subtitle
   end
+
+  # PR-A11Y.2 · La pestaña dice en qué pantalla estás. De 165 páginas, 14
+  # ponían su `<title>`; el resto se llamaba «Compras Express Cargo», y es lo
+  # primero que lee un lector de pantalla al llegar. El título del header ya
+  # es el nombre de la pantalla, así que sale de acá. La vista que puso el
+  # suyo con `content_for(:title)` lo conserva.
+  def before_render
+    return if helpers.content_for?(:title)
+
+    helpers.content_for(:title, "#{@title} · Compras Express Cargo")
+  end
 end
