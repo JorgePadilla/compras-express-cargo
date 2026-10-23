@@ -108,8 +108,12 @@ class FechaPosibleEntregaAlRecibirTest < ActionDispatch::IntegrationTest
   # La gemela: lo que ve el cliente en su portal y lo que ve SAC en admin.
   test "el cliente la ve en su pre-alerta, y admin en la gemela" do
     paquete = paquetes(:recibido)
-    # `created_at` de ahora: el home del cliente muestra los cinco más nuevos.
-    paquete.update_columns(fecha_posible_entrega: Time.zone.local(2026, 10, 27), created_at: Time.current)
+    # El home del cliente muestra los cinco más nuevos, así que este tiene que
+    # ser el más nuevo de todos. No alcanza con `Time.current`: el test viaja
+    # al 16/10 y las fixtures se cargan con la fecha real, así que desde el
+    # 17/10 eran más nuevas que «ahora» y lo sacaban del home.
+    paquete.update_columns(fecha_posible_entrega: Time.zone.local(2026, 10, 27),
+                           created_at: Paquete.maximum(:created_at) + 1.second)
     pre_alerta = pre_alertas(:recibida)
 
     get pre_alerta_path(pre_alerta)
