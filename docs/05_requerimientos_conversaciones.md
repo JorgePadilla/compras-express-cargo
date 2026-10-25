@@ -13472,6 +13472,19 @@ El caso de fondo es una revendedora con **dos casilleros** al mismo nombre y
 distinto correo, uno por sucursal: *"le voy a hacer otro casillero con su
 mismo nombre… donde voy a decir Tegucigalpa, te lo hice a San Pedro"*.
 
+**▶ Verificado (2026-10-25).** Con una tarea que bloquea, el manifiesto interno:
+- **Deja entrar** el paquete y lo dice. Al escanear ya lo decía. Al empacar
+  sin escanear entraba callado, y ahora lo nombra: *«tiene tareas pendientes
+  y el manifiesto no se finaliza hasta cerrarlas»*.
+- **No sale.** `FinalizarManifiesto#enviar` traba el cierre entero, igual que
+  en el oficial. Con la nota «dejar en San Pedro» puesta como tarea, el
+  camión a Tegucigalpa no se finaliza con ese paquete adentro.
+- Si la tarea se abrió con el paquete **ya en el camión**, al recibirlo en
+  destino se recibe y el escaneo nombra la tarea. No se frena, porque un
+  paquete que queda en `enviado_sucursal` después del cierre ya no se puede
+  volver a escanear. Es la regla de la caja del oficial (`A7-05`: no frena,
+  lo dice).
+
 ### C33-10 · La entrega equivocada por el número de casillero (14:09, min 6–12)
 
 Un paquete se le entregó a otra clienta, que lo pagó, y ahora hay que
@@ -13540,7 +13553,7 @@ pero no bloquea la cuenta. Es parecido, y se anota. No es pedido nuevo.
 | `C33-06` | Entrar con el código sin distinguir mayúsculas | ✅ `Cliente.con_codigo` en `autenticar` y `para_recuperar` |
 | `C33-07` | Canales: WhatsApp/SMS por Twilio, push; el retenido hasta por WhatsApp | 📄 `RP-80` |
 | `C33-08` | App del cliente | 📄 Visión, sin fecha |
-| `C33-09` | Tarea «se queda en San Pedro» que frene el manifiesto interno | ❓ Verificar |
+| `C33-09` | Tarea «se queda en San Pedro» que frene el manifiesto interno | ✅ Verificado: entra y se dice, no sale (el cierre se traba); empacar sin escanear y la recepción ahora lo dicen |
 | `C33-11` | Doble autenticación | ❓ `RP-107` |
 
 ### Las preguntas que abre

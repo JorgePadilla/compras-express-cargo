@@ -211,9 +211,16 @@ class RecepcionCargaController < ApplicationController
     # `A7-08` · *"Con el manifiesto notifique, pero darle una ventana."* El
     # primer paquete escaneado programa el aviso; los demás no hacen nada.
     NotificarLlegadaASucursal.programar(@manifiesto)
+    mensaje = "#{paquete.tracking} recibido en #{@manifiesto.sucursal_entrega&.nombre} (#{@manifiesto.numero})."
+    # C33-09 · Una tarea que se abrió con el paquete ya en el camión. El cierre
+    # la habría frenado (`FinalizarManifiesto`); acá ya llegó, y no recibirlo
+    # lo dejaría como faltante sin poder volver a escanearlo. Se recibe y se
+    # dice, como la caja del oficial (`A7-05`: no frena, lo dice).
+    if paquete.tareas_bloqueantes_pendientes?
+      mensaje += " Tiene tareas pendientes: #{paquete.tareas.abiertas.where(bloquea_avance: true).pluck(:titulo).to_sentence}."
+    end
     { resultado: "ok", paquete_id: paquete.id, tracking: paquete.tracking, manifiesto: progreso,
-      mensaje: "#{paquete.tracking} recibido en #{@manifiesto.sucursal_entrega&.nombre} (#{@manifiesto.numero}).",
-      faltan: servicio.paquetes_pendientes.count }
+      mensaje: mensaje, faltan: servicio.paquetes_pendientes.count }
   end
 
   # C30-09 · Una caja que existe pero cuyo manifiesto no está para recibir.
