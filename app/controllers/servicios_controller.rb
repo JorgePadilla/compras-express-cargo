@@ -72,7 +72,10 @@ class ServiciosController < ApplicationController
   # recibir.
   def editar_dias
     tipo = TipoEnvio.find(params[:tipo_envio_id])
-    if tipo.update(dias_entrega: params[:dias_entrega].presence)
+    cambios = { dias_entrega: params[:dias_entrega].presence }
+    # C33-05 · En el mismo renglón va la «Línea 2» del casillero en Miami.
+    cambios[:linea_2_casillero] = params[:linea_2_casillero].to_s.squish.upcase.presence if params.key?(:linea_2_casillero)
+    if tipo.update(cambios)
       aviso = tipo.dias_entrega ? "#{tipo.nombre}: entrega en #{tipo.dias_entrega} días hábiles." : "#{tipo.nombre}: sin días de entrega."
       redirect_to servicios_path(anchor: "servicio-#{tipo.id}"), notice: aviso
     else
