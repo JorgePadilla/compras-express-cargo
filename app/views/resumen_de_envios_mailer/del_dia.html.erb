@@ -1,0 +1,32 @@
+<p>Hola <%= @cliente.nombre_completo %>,</p>
+
+<p>
+  <%= @paquetes.size == 1 ? "Tu paquete salió hoy" : "Tus #{@paquetes.size} paquetes salieron hoy" %>
+  de Miami hacia Honduras.
+</p>
+
+<% @por_tipo.each do |tipo, paquetes| %>
+  <h3 style="font-size:15px; margin:20px 0 4px;"><%= tipo %></h3>
+  <table cellpadding="6" cellspacing="0" border="0" style="border-collapse: collapse; margin: 0 0 8px;">
+    <thead>
+      <tr style="background:#f3f4f6;">
+        <th align="left" style="font-size:12px; text-transform:uppercase; color:#6b7280;">Tracking</th>
+        <th align="left" style="font-size:12px; text-transform:uppercase; color:#6b7280;">Contenido</th>
+        <th align="left" style="font-size:12px; text-transform:uppercase; color:#6b7280;">Fecha probable de entrega</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% paquetes.each do |paquete| %>
+        <tr>
+          <td style="font-family:monospace;"><%= paquete.tracking %></td>
+          <td><%= paquete.descripcion %></td>
+          <td><%= paquete.fecha_posible_entrega ? FechaDeEntrega.texto(paquete.fecha_posible_entrega) : "—" %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
+
+<p style="color:#6b7280; font-size:13px;">Te avisaremos cuando esté disponible para retirar.</p>
+
+<p>Compras Express Cargo</p>

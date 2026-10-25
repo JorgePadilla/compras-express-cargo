@@ -13235,7 +13235,7 @@ en el sistema:
 |---|---|---|---|---|---|
 | 1 | Inmediatamente | Al **crear una pre-alerta** | Al cliente | `sac@comprasexpresshn.com` | ✅ Desde el 2026-10-25: el de creación lleva la copia, del portal y del personal (`C33-02`) |
 | 2 | Inmediatamente | Al **recibir el paquete** en la sucursal, en Etiquetar (Miami, México, China, Panamá) | Al cliente | — | 🟡 `PreAlertaMailer#paquete_recibido` sale **solo si tiene pre-alerta o nota de política** (decisión de Jorge del 2026-08-26, `NotificaRecibido`). La planilla no pone condición: ❓ `RP-106` |
-| 3 | Resumen al final del día, tipo 6 pm | Todos los paquetes **enviados** ese día, con su información: envío, trackings, contenidos y la nueva fecha probable de entrega | Al cliente | — | ❌ No existe (`C33-03`) |
+| 3 | Resumen al final del día, tipo 6 pm | Todos los paquetes **enviados** ese día, con su información: envío, trackings, contenidos y la nueva fecha probable de entrega | Al cliente | — | ✅ Desde el 2026-10-25, `ResumenDeEnviados` a las 18:00 (`C33-03`) |
 | 4 | Inmediatamente, o programado según la **fecha y hora de trabajo** de la pre-factura | **Disponible** en la sucursal asignada para entrega. Si va a una sucursal que es el **último destino**, que no avise hasta confirmar el contenido de la pre-factura allá | Al cliente | — | 🟡 Lo programado existe (`HacerDisponibles`, `PR-P.2`). La sucursal externa **no**: hoy el F9 avisa «disponible» aunque la carga siga en San Pedro (`C33-04`) |
 | 5 | Inmediatamente | **Crear casillero nuevo** | (al cliente) | — | ❌ No hay correo de bienvenida (`C33-05`) |
 | 6 | Inmediatamente | **Información general de casillero**, cuando se le quiere mandar a alguien que **todavía no es cliente**. Área de SAC | A un correo específico | — | ❌ (`C33-05`) |
@@ -13311,6 +13311,23 @@ Lo que falta:
 - El que ya avisó no se repite: un sello por paquete, como
   `llegada_notificada_at`.
 - Sin correo, no se manda y queda dicho, igual que en `HacerDisponibles`.
+
+**▶ Hecho (2026-10-25).**
+- `ResumenDeEnviados` corre por `config/recurring.yml` con
+  `every day at 6pm America/Tegucigalpa`. La zona va escrita: sin ella,
+  solid_queue toma la hora del servidor (UTC en Render) y serían las 12 del
+  día en Honduras.
+- Cuenta los paquetes con `fecha_enviado` (cierre del manifiesto oficial) que
+  todavía no tienen el sello `envio_notificado_at`, y manda un correo por
+  cliente, agrupado por tipo de envío, con tracking, contenido y fecha
+  probable.
+- El interno no entra: a ése se le avisa al llegar.
+- No filtra por «hoy»: el sello dice qué falta. Si el worker estuvo caído,
+  el siguiente se pone al día. Lo que ya había salido antes del deploy lo
+  selló la migración.
+- El cliente sin correo se sella igual y queda contado en el log.
+- Si el paquete deja de haber salido (retroceso, o se saca del manifiesto),
+  el sello se borra y vuelve a contarse cuando salga.
 
 ### C33-04 · La sucursal que no es San Pedro: no avisar con el F9, avisar cuando llegue completo allá
 
@@ -13552,7 +13569,7 @@ pero no bloquea la cuenta. Es parecido, y se anota. No es pedido nuevo.
 |---|---|---|
 | `C33-01` | La planilla de notificaciones, como lista de trabajo | 📄 Las filas abajo; el texto de cada correo lo da Yusef |
 | `C33-02` | Copia de la pre-alerta a `sac@comprasexpresshn.com` | ✅ El primer correo de cada pre-alerta, del portal o del personal; la casilla se cambia en `Configuracion` si `RP-109` dice otra |
-| `C33-03` | Resumen diario a las 18:00 de lo enviado, un correo por cliente | ❌ Falta |
+| `C33-03` | Resumen diario a las 18:00 de lo enviado, un correo por cliente | ✅ `ResumenDeEnviados`, 18:00 de Honduras; texto provisional hasta la plantilla de Yusef |
 | `C33-04` | Sucursal externa: el F9 no avisa; avisa la recepción en destino, con todas las etiquetas grandes | ❌ Falta — hueco verificado; esperando `RP-108` |
 | `C33-05` | Correos del casillero: nuevo, información general a un correo, información actualizada desde el perfil | 🟡 Las direcciones y «Mis Direcciones» en el portal, hechas; faltan los tres correos |
 | `C33-06` | Entrar con el código sin distinguir mayúsculas | ✅ `Cliente.con_codigo` en `autenticar` y `para_recuperar` |
