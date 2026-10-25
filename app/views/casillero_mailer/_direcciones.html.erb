@@ -1,0 +1,16 @@
+<%# C33-05 · Las direcciones, como en «Mis Direcciones» del portal. Estilos en
+    línea: el correo no carga Tailwind. %>
+<% direcciones.bloques.each do |bloque| %>
+  <h3 style="font-size:15px; margin:20px 0 2px;"><%= bloque.titulo %></h3>
+  <% if bloque.descripcion.present? %>
+    <p style="margin:0 0 6px; color:#6b7280; font-size:12px;"><%= bloque.descripcion %></p>
+  <% end %>
+  <table cellpadding="3" cellspacing="0" border="0" style="border-collapse: collapse; margin: 0 0 8px;">
+    <% bloque.campos.each do |etiqueta, valor| %>
+      <tr>
+        <td style="color:#6b7280; font-size:13px; padding-right:12px;"><%= etiqueta %></td>
+        <td style="font-family:monospace; font-size:13px;"><%= valor %></td>
+      </tr>
+    <% end %>
+  </table>
+<% end %>

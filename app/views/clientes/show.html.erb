@@ -3,6 +3,16 @@
     `[data-shortcut]`). %>
 <%= render PageHeaderComponent.new(title: @cliente.nombre_completo, subtitle: @cliente.codigo) do |header|
   if can_edit_clientes?
+    # C33-05 · *"Es un botón en el perfil de cliente"*: las direcciones del
+    # casillero, actualizadas, a su correo. Sin correo no hay a dónde.
+    if @cliente.email.present?
+      header.with_action do
+        render ButtonComponent.new(variant: :secondary, href: enviar_casillero_cliente_path(@cliente), method: :post,
+                                   icon: "envelope", confirm: "¿Enviarle a #{@cliente.email} las direcciones de su casillero?") do
+          "Enviar casillero"
+        end
+      end
+    end
     header.with_action do
       render ButtonComponent.new(variant: :secondary, href: edit_cliente_path(@cliente), icon: "pencil-square", shortcut: "F6") do
         "Editar"

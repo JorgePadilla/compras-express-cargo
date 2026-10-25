@@ -25,9 +25,15 @@ class ClientesController < ApplicationController
   # todavía no la emite ninguna pantalla.
   SOLAPAS = %w[resumen pre_alertas paquetes pre_facturas facturas correos].freeze
 
-  before_action :set_cliente, only: [ :show, :edit, :update, :clave ]
+  before_action :set_cliente, only: [ :show, :edit, :update, :clave, :enviar_casillero ]
   before_action :authorize_buscar, only: [ :buscar ]
-  before_action :authorize_edicion, only: [ :new, :create, :edit, :update, :clave ]
+  before_action :authorize_edicion, only: [ :new, :create, :edit, :update, :clave, :enviar_casillero,
+                                            :informacion_casillero, :enviar_informacion_casillero ]
+  # C33-05 · Manda a un correo que se escribe a mano: que no sirva para
+  # mandar cientos. Por usuario, no por IP: la oficina comparte una.
+  rate_limit to: 20, within: 10.minutes, by: -> { Current.user&.id.to_s },
+             with: -> { redirect_to informacion_casillero_clientes_path, alert: "Demasiados correos seguidos. Espera unos minutos." },
+             only: :enviar_informacion_casillero
 
   def index
     base = Cliente.activos.includes(:categoria_precio, :sucursal_retiro)
@@ -78,6 +84,9 @@ class ClientesController < ApplicationController
     # preguntar a dónde le gustaría retirar"*.
     @cliente.exigir_sucursal_retiro = true
     if @cliente.save
+      # C33-05 · *"Crear casillero nuevo"*, inmediatamente: la bienvenida con
+      # sus direcciones. La gemela es `RegistrationsController#create`.
+      CasilleroMailer.bienvenida(@cliente).deliver_later if @cliente.email.present?
       redirect_to @cliente, notice: "Cliente creado exitosamente."
     else
       cargar_catalogos
@@ -180,6 +189,34 @@ class ClientesController < ApplicationController
     else
       redirect_to @cliente, alert: @cliente.errors.full_messages.to_sentence
     end
+  end
+
+  # C33-05 · *"Mandarle a Jorge toda la información actualizada de los
+  # casilleros… es un botón en el perfil de cliente"* (Yusef, 2026-10-24).
+  def enviar_casillero
+    return redirect_to(@cliente, alert: "El cliente no tiene correo.") if @cliente.email.blank?
+
+    CasilleroMailer.informacion_actualizada(@cliente).deliver_later
+    redirect_to @cliente, notice: "Información del casillero enviada a #{@cliente.email}."
+  end
+
+  # C33-05 · *"Cuando queramos enviarle información a un correo de una persona
+  # no cliente aún… mandales la dirección de casillero a alguien"*. Es de SAC,
+  # y va con los mismos roles que editan clientes (que incluyen a SAC).
+  def informacion_casillero
+  end
+
+  def enviar_informacion_casillero
+    @correo = params[:correo].to_s.strip
+    @nombre = params[:nombre].to_s.squish
+
+    unless @correo.match?(URI::MailTo::EMAIL_REGEXP)
+      flash.now[:alert] = "Escribí un correo válido."
+      return render :informacion_casillero, status: :unprocessable_entity
+    end
+
+    CasilleroMailer.informacion_general(@correo, nombre: @nombre).deliver_later
+    redirect_to informacion_casillero_clientes_path, notice: "Información del casillero enviada a #{@correo}."
   end
 
   private

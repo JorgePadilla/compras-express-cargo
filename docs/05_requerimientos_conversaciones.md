@@ -13237,9 +13237,9 @@ en el sistema:
 | 2 | Inmediatamente | Al **recibir el paquete** en la sucursal, en Etiquetar (Miami, México, China, Panamá) | Al cliente | — | 🟡 `PreAlertaMailer#paquete_recibido` sale **solo si tiene pre-alerta o nota de política** (decisión de Jorge del 2026-08-26, `NotificaRecibido`). La planilla no pone condición: ❓ `RP-106` |
 | 3 | Resumen al final del día, tipo 6 pm | Todos los paquetes **enviados** ese día, con su información: envío, trackings, contenidos y la nueva fecha probable de entrega | Al cliente | — | ❌ No existe (`C33-03`) |
 | 4 | Inmediatamente, o programado según la **fecha y hora de trabajo** de la pre-factura | **Disponible** en la sucursal asignada para entrega. Si va a una sucursal que es el **último destino**, que no avise hasta confirmar el contenido de la pre-factura allá | Al cliente | — | 🟡 Lo programado existe (`HacerDisponibles`, `PR-P.2`). La sucursal externa **no**: hoy el F9 avisa «disponible» aunque la carga siga en San Pedro (`C33-04`) |
-| 5 | Inmediatamente | **Crear casillero nuevo** | (al cliente) | — | ❌ No hay correo de bienvenida (`C33-05`) |
-| 6 | Inmediatamente | **Información general de casillero**, cuando se le quiere mandar a alguien que **todavía no es cliente**. Área de SAC | A un correo específico | — | ❌ (`C33-05`) |
-| 7 | Inmediatamente | **Información actualizada de casillero** a un cliente que ya existe. Va en el perfil del cliente | Al cliente | — | ❌ (`C33-05`) |
+| 5 | Inmediatamente | **Crear casillero nuevo** | (al cliente) | — | ✅ Desde el 2026-10-25: `CasilleroMailer#bienvenida`, desde /clientes y desde /registro (`C33-05`) |
+| 6 | Inmediatamente | **Información general de casillero**, cuando se le quiere mandar a alguien que **todavía no es cliente**. Área de SAC | A un correo específico | — | ✅ /clientes → «Información de casillero» (`C33-05`) |
+| 7 | Inmediatamente | **Información actualizada de casillero** a un cliente que ya existe. Va en el perfil del cliente | Al cliente | — | ✅ Botón «Enviar casillero» en la ficha (`C33-05`) |
 
 Las columnas de canal (`CORREO · PUSH · SMS · WHATSAPP`) vinieron vacías en
 la planilla. Lo que se dijo de canales va en `C33-07`. Y de los correos de
@@ -13403,6 +13403,19 @@ link del menú apuntaba a `#`.
   `[CÓDIGO] [CÓDIGO_CLIENTE] [NOMBRE_COMPLETO]`, con un código adelante que no
   se sabe qué era. Se confirma con la plantilla de Yusef.
 
+**▶ Los tres correos (2026-10-25).** `CasilleroMailer`, con las direcciones de
+arriba:
+- `bienvenida`: al crear el cliente en /clientes y al registrarse en el
+  portal, si tiene correo.
+- `informacion_actualizada`: el botón «Enviar casillero» en la ficha del
+  cliente (lo ven los que editan clientes).
+- `informacion_general`: en /clientes → «Información de casillero», un correo
+  y un nombre opcional. Las direcciones van con «su código y nombre» como
+  instrucción, más el link para abrir el casillero. La pantalla la usan los
+  mismos roles que editan clientes, que incluyen a SAC, con un límite de 20
+  correos cada 10 minutos por usuario.
+- El texto de los tres es provisional hasta la plantilla de Yusef.
+
 ### C33-06 · Entrar con el código: que no importen las mayúsculas (14:09, min 0–6)
 
 Probando el portal con la cuenta de prueba de Nery (código `C1`):
@@ -13554,7 +13567,7 @@ pero no bloquea la cuenta. Es parecido, y se anota. No es pedido nuevo.
 | `C33-02` | Copia de la pre-alerta a `sac@comprasexpresshn.com` | ✅ El primer correo de cada pre-alerta, del portal o del personal; la casilla se cambia en `Configuracion` si `RP-109` dice otra |
 | `C33-03` | Resumen diario a las 18:00 de lo enviado, un correo por cliente | ❌ Falta |
 | `C33-04` | Sucursal externa: el F9 no avisa; avisa la recepción en destino, con todas las etiquetas grandes | ❌ Falta — hueco verificado; esperando `RP-108` |
-| `C33-05` | Correos del casillero: nuevo, información general a un correo, información actualizada desde el perfil | 🟡 Las direcciones y «Mis Direcciones» en el portal, hechas; faltan los tres correos |
+| `C33-05` | Correos del casillero: nuevo, información general a un correo, información actualizada desde el perfil | ✅ `CasilleroMailer` y «Mis Direcciones»; el texto es provisional hasta la plantilla de Yusef |
 | `C33-06` | Entrar con el código sin distinguir mayúsculas | ✅ `Cliente.con_codigo` en `autenticar` y `para_recuperar` |
 | `C33-07` | Canales: WhatsApp/SMS por Twilio, push; el retenido hasta por WhatsApp | 📄 `RP-80` |
 | `C33-08` | App del cliente | 📄 Visión, sin fecha |

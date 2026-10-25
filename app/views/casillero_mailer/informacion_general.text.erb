@@ -1,0 +1,8 @@
+Hola<%= " #{@nombre}" if @nombre %>,
+
+Estas son las direcciones del casillero de Compras Express Cargo en Miami. Para recibir a su nombre, en «Nombre» va su código de casillero y su nombre completo, y en la Línea 2 el servicio que quiere:
+
+<%= render "casillero_mailer/direcciones", direcciones: @direcciones %>
+¿Todavía no tiene casillero? Lo abre en <%= new_registro_url %>
+
+Compras Express Cargo
