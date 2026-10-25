@@ -13385,6 +13385,9 @@ y el correo sí lo pasa a minúsculas. Con `c1` no entra. Lo mismo en
 `Cliente.para_recuperar` (olvidé mi contraseña). Arreglo chico: comparar el
 código sin distinguir mayúsculas, en los dos.
 
+**▶ Hecho (2026-10-25):** los dos buscan con `Cliente.con_codigo`, que compara
+`UPPER(codigo)`. `c1` entra como `C1`, y «olvidé mi contraseña» también.
+
 De paso, el porqué de entrar con código: *"hay clientes que **ni tienen
 correo**, y ese es donde nosotros tenemos el gap… que puedan accesar ya sea
 con correo o con número de teléfono o número de casillero"*. Con código ya se
@@ -13521,7 +13524,7 @@ pero no bloquea la cuenta. Es parecido, y se anota. No es pedido nuevo.
 | `C33-03` | Resumen diario a las 18:00 de lo enviado, un correo por cliente | ❌ Falta |
 | `C33-04` | Sucursal externa: el F9 no avisa; avisa la recepción en destino, con todas las etiquetas grandes | ❌ Falta — hueco verificado; esperando `RP-108` |
 | `C33-05` | Correos del casillero: nuevo, información general a un correo, información actualizada desde el perfil | ❌ Falta — plantillas de Yusef |
-| `C33-06` | Entrar con el código sin distinguir mayúsculas | ❌ Falta — chico |
+| `C33-06` | Entrar con el código sin distinguir mayúsculas | ✅ `Cliente.con_codigo` en `autenticar` y `para_recuperar` |
 | `C33-07` | Canales: WhatsApp/SMS por Twilio, push; el retenido hasta por WhatsApp | 📄 `RP-80` |
 | `C33-08` | App del cliente | 📄 Visión, sin fecha |
 | `C33-09` | Tarea «se queda en San Pedro» que frene el manifiesto interno | ❓ Verificar |
