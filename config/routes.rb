@@ -489,6 +489,8 @@ Rails.application.routes.draw do
     end
     resources :financiamientos, only: %i[index show]
     resources :entregas, only: %i[index show]
+    # C33-05 · El casillero en Miami, uno por servicio.
+    resource :direcciones, only: :show
   end
 
   root "dashboard#index"
