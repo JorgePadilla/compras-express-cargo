@@ -13233,7 +13233,7 @@ en el sistema:
 
 | # | Cuándo | Qué | A quién | Copia | Hoy en el sistema |
 |---|---|---|---|---|---|
-| 1 | Inmediatamente | Al **crear una pre-alerta** | Al cliente | `sac@comprasexpresshn.com` | 🟡 `PreAlertaMailer#confirmacion` sale al crearla o moverla desde el portal, **sin copia** (`C33-02`) |
+| 1 | Inmediatamente | Al **crear una pre-alerta** | Al cliente | `sac@comprasexpresshn.com` | ✅ Desde el 2026-10-25: el de creación lleva la copia, del portal y del personal (`C33-02`) |
 | 2 | Inmediatamente | Al **recibir el paquete** en la sucursal, en Etiquetar (Miami, México, China, Panamá) | Al cliente | — | 🟡 `PreAlertaMailer#paquete_recibido` sale **solo si tiene pre-alerta o nota de política** (decisión de Jorge del 2026-08-26, `NotificaRecibido`). La planilla no pone condición: ❓ `RP-106` |
 | 3 | Resumen al final del día, tipo 6 pm | Todos los paquetes **enviados** ese día, con su información: envío, trackings, contenidos y la nueva fecha probable de entrega | Al cliente | — | ❌ No existe (`C33-03`) |
 | 4 | Inmediatamente, o programado según la **fecha y hora de trabajo** de la pre-factura | **Disponible** en la sucursal asignada para entrega. Si va a una sucursal que es el **último destino**, que no avise hasta confirmar el contenido de la pre-factura allá | Al cliente | — | 🟡 Lo programado existe (`HacerDisponibles`, `PR-P.2`). La sucursal externa **no**: hoy el F9 avisa «disponible» aunque la carga siga en San Pedro (`C33-04`) |
@@ -13268,6 +13268,19 @@ ahorita."* Los correos *"se llenan"* y los van borrando a mano. ❓ `RP-109`:
 Lo que falta: `PreAlertaMailer#confirmacion` con `cc:` a SAC. Hoy sale desde
 el portal y no cuando la crea el personal. Tiene que salir en los dos casos, o
 se aclara cuál.
+
+**▶ Hecho (2026-10-25).** Jorge decidió que la copia va **solo en el correo de
+creación**. Los que salen cuando el cliente mueve, agrega o borra un paquete
+siguen yendo solo al cliente: si no, SAC recibe un correo por movimiento.
+- `PreAlerta#enviar_confirmacion`: el primer correo de la pre-alerta (el que
+  la marca `notificado`) lleva `cc:` a SAC; los siguientes, no.
+- Sale al crearla en el wizard del portal, en el alta directa del portal y en
+  el alta del personal (`PreAlertasController#create`), que antes no mandaba
+  nada.
+- Si el cliente no tiene correo, la confirmación sale igual, solo a SAC.
+- La casilla es `sac@comprasexpresshn.com`, salvo que
+  `Configuracion "correo_copia_pre_alertas"` diga otra (`RP-109`).
+- La copia queda en la bitácora de correos como `cc: …`.
 
 ### C33-03 · El resumen de las 6 de la tarde: lo que salió hoy, un correo por cliente (16:24, min 0–6)
 
@@ -13538,7 +13551,7 @@ pero no bloquea la cuenta. Es parecido, y se anota. No es pedido nuevo.
 | # | Qué | Estado |
 |---|---|---|
 | `C33-01` | La planilla de notificaciones, como lista de trabajo | 📄 Las filas abajo; el texto de cada correo lo da Yusef |
-| `C33-02` | Copia de la pre-alerta a `sac@comprasexpresshn.com` | ❌ Falta — chico; depende de `RP-109` |
+| `C33-02` | Copia de la pre-alerta a `sac@comprasexpresshn.com` | ✅ El primer correo de cada pre-alerta, del portal o del personal; la casilla se cambia en `Configuracion` si `RP-109` dice otra |
 | `C33-03` | Resumen diario a las 18:00 de lo enviado, un correo por cliente | ❌ Falta |
 | `C33-04` | Sucursal externa: el F9 no avisa; avisa la recepción en destino, con todas las etiquetas grandes | ❌ Falta — hueco verificado; esperando `RP-108` |
 | `C33-05` | Correos del casillero: nuevo, información general a un correo, información actualizada desde el perfil | 🟡 Las direcciones y «Mis Direcciones» en el portal, hechas; faltan los tres correos |

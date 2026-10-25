@@ -46,6 +46,7 @@ module Cuenta
 
         if @pre_alerta.save
           session.delete(:pre_alerta_wizard)
+          @pre_alerta.enviar_confirmacion
           redirect_to edit_cuenta_pre_alerta_path(@pre_alerta), notice: "Pre-alerta creada exitosamente."
         else
           @tipo_envios = TipoEnvio.where(activo: true).order(:nombre)
@@ -175,8 +176,8 @@ module Cuenta
         end
       end
 
-      PreAlertaMailer.confirmacion(@pre_alerta).deliver_later unless origen_quedo_vacia
-      PreAlertaMailer.confirmacion(destino).deliver_later
+      @pre_alerta.enviar_confirmacion unless origen_quedo_vacia
+      destino.enviar_confirmacion
 
       if origen_quedo_vacia
         redirect_to cuenta_pre_alertas_path,
@@ -238,7 +239,7 @@ module Cuenta
       pap.destroy!
 
       quedo_vacia = @pre_alerta.reload.deleted_at.present?
-      PreAlertaMailer.confirmacion(@pre_alerta).deliver_later unless quedo_vacia
+      @pre_alerta.enviar_confirmacion unless quedo_vacia
 
       respond_to do |format|
         format.turbo_stream {
@@ -390,7 +391,7 @@ module Cuenta
             source_pa.soft_delete!
             source_pa_vacia = true
           else
-            PreAlertaMailer.confirmacion(source_pa).deliver_later
+            source_pa.enviar_confirmacion
           end
         else
           @pre_alerta.pre_alerta_paquetes.create!(
@@ -416,7 +417,7 @@ module Cuenta
         return
       end
 
-      PreAlertaMailer.confirmacion(@pre_alerta).deliver_later
+      @pre_alerta.enviar_confirmacion
 
       notice = if source_pa_vacia && source_pa
         "Paquete agregado. La pre-alerta #{source_pa.numero_documento} quedó vacía y fue eliminada."
@@ -487,8 +488,7 @@ module Cuenta
           else
             # All other cases: save, notify, go home with success modal
             session.delete(:pre_alerta_wizard)
-            @pre_alerta.update_column(:notificado, true)
-            PreAlertaMailer.confirmacion(@pre_alerta).deliver_later
+            @pre_alerta.enviar_confirmacion
             redirect_to cuenta_root_path,
                         flash: { success_modal: "¡Pre-alerta #{@pre_alerta.numero_documento} registrada exitosamente!" }
           end
@@ -618,11 +618,11 @@ module Cuenta
           source_pa.soft_delete!
           source_pa_vacia = true
         else
-          PreAlertaMailer.confirmacion(source_pa).deliver_later
+          source_pa.enviar_confirmacion
         end
       end
 
-      PreAlertaMailer.confirmacion(@pre_alerta).deliver_later
+      @pre_alerta.enviar_confirmacion
 
       notice = source_pa_vacia ?
         "Paquete agregado. La pre-alerta #{source_pa.numero_documento} quedó vacía y fue eliminada." :

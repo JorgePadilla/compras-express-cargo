@@ -67,4 +67,45 @@ class PreAlertaMailerTest < ActionMailer::TestCase
     email = PreAlertaMailer.confirmacion(pre_alerta)
     assert_nil email.to
   end
+
+  # ── C33-02 · La copia a SAC ──
+
+  test "confirmacion con copia a SAC" do
+    pre_alerta = pre_alertas(:activa)
+
+    email = PreAlertaMailer.confirmacion(pre_alerta, copia_a_sac: true)
+
+    assert_equal [ pre_alerta.cliente.email ], email.to
+    assert_equal [ PreAlertaMailer::CORREO_DE_SAC ], email.cc
+  end
+
+  test "sin la copia no hay cc" do
+    assert_nil PreAlertaMailer.confirmacion(pre_alertas(:activa)).cc
+  end
+
+  test "la casilla de SAC sale de la configuracion si esta cargada (RP-109)" do
+    Configuracion.set("correo_copia_pre_alertas", "supervision@example.com")
+
+    email = PreAlertaMailer.confirmacion(pre_alertas(:activa), copia_a_sac: true)
+
+    assert_equal [ "supervision@example.com" ], email.cc
+  end
+
+  test "el cliente sin correo: con copia sale solo a SAC, sin copia no sale" do
+    pre_alerta = pre_alertas(:activa)
+    pre_alerta.cliente.email = nil
+
+    con_copia = PreAlertaMailer.confirmacion(pre_alerta, copia_a_sac: true)
+    assert_equal [ PreAlertaMailer::CORREO_DE_SAC ], con_copia.to
+    assert_nil con_copia.cc
+    assert_nil PreAlertaMailer.confirmacion(pre_alerta).to
+  end
+
+  test "la copia queda anotada en la bitacora" do
+    assert_difference("CorreoEnviado.count") do
+      PreAlertaMailer.confirmacion(pre_alertas(:activa), copia_a_sac: true).deliver_now
+    end
+
+    assert_includes CorreoEnviado.last.para, "cc: #{PreAlertaMailer::CORREO_DE_SAC}"
+  end
 end
