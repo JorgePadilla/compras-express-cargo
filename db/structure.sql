@@ -2253,7 +2253,8 @@ CREATE TABLE public.paquetes (
     salto_manifiesto_at timestamp(6) without time zone,
     salto_manifiesto_por character varying,
     salto_manifiesto_estado character varying,
-    medicion_sesion character varying
+    medicion_sesion character varying,
+    envio_notificado_at timestamp(6) without time zone
 );
 
 
@@ -8895,6 +8896,7 @@ ALTER TABLE ONLY public.manifiesto_sucursales_entrega
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261025180000'),
 ('20261013200000'),
 ('20261013180000'),
 ('20261013150100'),

@@ -140,9 +140,11 @@ class FinalizarManifiesto
   # que manda. Sin esto, un paquete de un cliente de SPS metido en el manifiesto
   # a Tegucigalpa se marcaría como que va a SPS.
   #
-  # **No notifica nada**, y es a propósito: *"solo en sistema va a cambiar el
-  # estatus"*. Al cliente se le avisa cuando la carga **llega**, no cuando sale
-  # (`A7-08`, que es `PR-I4`).
+  # **No notifica nada al cerrar**, y es a propósito: *"solo en sistema va a
+  # cambiar el estatus"*. Del oficial, lo que salió se le cuenta al cliente en
+  # el resumen de las 6 de la tarde (`ResumenDeEnviados`, C33-03): un correo
+  # por cliente con todo lo del día, no uno por manifiesto. Del interno se le
+  # avisa cuando la carga **llega** (`A7-08`, que es `PR-I4`).
   def cambios_para(_paquete)
     return { estado: "enviado_honduras" } unless @manifiesto.tipo_interno?
 

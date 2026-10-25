@@ -749,6 +749,12 @@ class Paquete < ApplicationRecord
   # controller) para que el flow desde manifiestos#add_paquete también
   # sincronice las fechas al añadir un paquete a un manifiesto ya enviado.
   before_save :sync_dates_from_manifiesto, if: :manifiesto_id_changed?
+  # C33-03 · Si el paquete deja de haber salido (retroceso, o se saca del
+  # manifiesto antes de viajar), se olvida que se le avisó: cuando vuelva a
+  # salir, el resumen de las 6 pm lo cuenta otra vez. Va después de
+  # `sync_dates_from_manifiesto`, que es uno de los que borra la fecha.
+  before_save -> { self.envio_notificado_at = nil },
+              if: -> { will_save_change_to_fecha_enviado? && fecha_enviado.nil? }
 
   def estado_terminal?
     entregado? || anulado? || retornado? || desechado?
