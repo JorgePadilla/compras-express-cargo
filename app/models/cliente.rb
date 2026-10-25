@@ -286,7 +286,8 @@ class Cliente < ApplicationRecord
   # y quedaron en las dos: el correo sigue sirviendo para entrar, para notificar
   # y para recuperar la clave.
   #
-  # `codigo` tiene índice único en la base, así que entrar por ahí es sólido.
+  # `codigo` tiene índice único en la base, así que entrar por ahí es sólido
+  # (desde C33-06, sin distinguir mayúsculas: `con_codigo`).
   # `email` **no** —la unicidad la pone solo el modelo, o sea que no alcanza a
   # los 9.000 importados—, y por eso el de correo va segundo: si hay repetidos,
   # el código es el camino que no miente.
@@ -297,9 +298,23 @@ class Cliente < ApplicationRecord
     valor = identificador.to_s.strip
     return nil if valor.blank?
 
-    con_acceso.authenticate_by(codigo: valor, password: password) ||
-      con_acceso.authenticate_by(email: valor.downcase, password: password)
+    if (por_codigo = con_acceso.con_codigo(valor).first)
+      return por_codigo if por_codigo.authenticate(password)
+    else
+      # Sin cliente con ese código igual se calcula un hash, como hace
+      # `authenticate_by`: que el tiempo de respuesta no diga si existe.
+      new(password: password)
+    end
+
+    con_acceso.authenticate_by(email: valor.downcase, password: password)
   end
+
+  # C33-06 · El código, sin importar mayúsculas. Yusef, 2026-10-24, probando el
+  # portal con `c1`: *"si le eliminas eso sería bueno, lo de la mayúscula…
+  # **porque la gente no entiende**"*. La unicidad ya era case-insensitive en el
+  # modelo (`validates :codigo`), así que no puede haber dos que solo difieran
+  # en eso.
+  scope :con_codigo, ->(valor) { where("UPPER(clientes.codigo) = ?", valor.to_s.strip.upcase) }
 
   # ¿Ya le pusieron clave? Sin esto, `acceso_habilitado` miente: la casilla puede
   # estar marcada y el cliente igual no entra, porque el admin lo creó desde
@@ -323,7 +338,7 @@ class Cliente < ApplicationRecord
     valor = identificador.to_s.strip
     return nil if valor.blank?
 
-    con_acceso.find_by(codigo: valor) || con_acceso.find_by(email: valor.downcase)
+    con_acceso.con_codigo(valor).first || con_acceso.find_by(email: valor.downcase)
   end
 
   # Le pone (o le cambia) la clave. `clave_actualizada_at` es lo que deja la
