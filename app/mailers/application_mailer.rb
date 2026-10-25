@@ -52,7 +52,8 @@ class ApplicationMailer < ActionMailer::Base
       cliente: cliente_del_correo,
       mailer: self.class.name,
       accion: action_name.to_s,
-      para: Array(message.to).join(", ").truncate(255),
+      # La copia también: si no, la de SAC (C33-02) no queda en la solapa.
+      para: [ *Array(message.to), *Array(message.cc).map { |c| "cc: #{c}" } ].join(", ").truncate(255),
       asunto: message.subject.to_s.truncate(255),
       estado: estado,
       error: error&.truncate(2000),
